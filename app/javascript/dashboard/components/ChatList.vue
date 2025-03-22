@@ -215,6 +215,7 @@ export default {
       allChatList: 'getAllStatusChats',
       unAssignedChatsList: 'getUnAssignedChats',
       chatListLoading: 'getChatListLoadingStatus',
+      currentUserID: 'getCurrentUserID',
       activeInbox: 'getSelectedInbox',
       conversationStats: 'conversationStats/getStats',
       appliedFilters: 'getAppliedConversationFilters',
@@ -280,15 +281,39 @@ export default {
       return getUserPermissions(this.currentUser, this.currentAccountId);
     },
     assigneeTabItems() {
-      return filterItemsByPermission(
-        ASSIGNEE_TYPE_TAB_PERMISSIONS,
-        this.userPermissions,
-        item => item.permissions
-      ).map(({ key, count: countKey }) => ({
-        key,
-        name: this.$t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
-        count: this.conversationStats[countKey] || 0,
-      }));
+      const agentList = this.agentList;
+      const currentUserID = this.currentUserID;
+      const agentCurrent = agentList.find(item => item.id === currentUserID);
+      const showOnlyMine =
+        agentCurrent?.custom_attributes?.showOnlyMine || false;
+
+      if (showOnlyMine) {
+        const ASSIGNEE_TYPE_TAB_PERMISSIONS_ME = {
+          me: ASSIGNEE_TYPE_TAB_PERMISSIONS.me
+        };
+
+        return filterItemsByPermission(
+          ASSIGNEE_TYPE_TAB_PERMISSIONS_ME,
+          this.userPermissions,
+          item => item.permissions
+        ).map(({ key, count: countKey }) => ({
+          key,
+          name: this.$t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
+          count: this.conversationStats[countKey] || 0,
+        }));
+
+      } else {
+
+        return filterItemsByPermission(
+          ASSIGNEE_TYPE_TAB_PERMISSIONS,
+          this.userPermissions,
+          item => item.permissions
+        ).map(({ key, count: countKey }) => ({
+          key,
+          name: this.$t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
+          count: this.conversationStats[countKey] || 0,
+        }));
+      }
     },
     showAssigneeInConversationCard() {
       return (

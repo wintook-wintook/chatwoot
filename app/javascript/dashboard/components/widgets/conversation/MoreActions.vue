@@ -3,7 +3,6 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import EmailTranscriptModal from './EmailTranscriptModal.vue';
 import ResolveAction from '../../buttons/ResolveAction.vue';
-import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import {
   CMD_MUTE_CONVERSATION,
   CMD_SEND_TRANSCRIPT,
@@ -18,23 +17,22 @@ export default {
   data() {
     return {
       showEmailActionsModal: false,
+      textButtonMA: '',
+      colorSchemeMA: '',
+      botMA: null,
     };
+  },
+  props: {
+    chatBot: {
+      type: Object,
+      default: () => { },
+    },
   },
   computed: {
     ...mapGetters({
       currentChat: 'getSelectedChat',
-      callInfo: 'webphone/getCallInfo',
-      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
-      accountId: 'getCurrentAccountId',
+      currentUser: 'getCurrentUser',
     }),
-    currentContact() {
-      return this.$store.getters['contacts/getContact'](
-        this.currentChat.meta.sender.id
-      );
-    },
-    isWavoipFeatureEnabled() {
-      return this.isFeatureEnabledonAccount(this.accountId, FEATURE_FLAGS.WAVOIP);
-    },
   },
   mounted() {
     this.$emitter.on(CMD_MUTE_CONVERSATION, this.mute);
@@ -47,30 +45,47 @@ export default {
     this.$emitter.off(CMD_SEND_TRANSCRIPT, this.toggleEmailActionsModal);
   },
   methods: {
-    async startCall() {
-      if (!this.currentContact) {
-        useAlert(this.$t('WEBPHONE.CONTACT_NOT_FOUND'));
-        return;
-      }
+    async getBotConversation() {
+      const { access_token } = this.currentUser;
+      const { account_id, id: display_id, inbox_id } = this.currentChat;
+      const params = new URLSearchParams({ access_token, account_id, display_id, inbox_id });
       try {
-        await this.$store.dispatch('webphone/outcomingCall', {
-          contact_name: this.currentContact.name,
-          profile_picture: this.currentContact.thumbnail,
-          phone: this.currentContact.phone_number,
-          chat_id: this.currentChat.id,
+        let response = await fetch(`${process.env.WINTOOK_BOT}/api/getBotConversation?${params.toString()}`, {
+          method: 'GET'
         });
-      } catch (error) {
-        if (error.message === 'Número não existe') {
-          useAlert(this.$t('WEBPHONE.CONTACT_INVALID'));
-        } else if (
-          error.message === 'Linha ocupada, tente mais tarde ou faça um upgrade'
-        ) {
-          useAlert(this.$t('WEBPHONE.ALL_INSTANCE_BUSY'));
-        } else if (error.message === 'Limite de ligações atingido') {
-          useAlert(this.$t('WEBPHONE.CALL_LIMIT'));
+        const result = await response.json();
+
+        if (response.status === 200) {
+          this.chatBot = result;
+          useAlert(result.toastMessage);
         } else {
-          useAlert(this.$t('WEBPHONE.ERROR_TO_MADE_CALL'));
+          console.error("Error:", result);
         }
+      } catch (error) {
+        console.error("Fetch error:", error);
+      }
+    },
+    async setBotConversation() {
+      const { access_token } = this.currentUser;
+      const { account_id, id: display_id, inbox_id } = this.currentChat;
+      const params = new URLSearchParams({ access_token, account_id, display_id, inbox_id });
+      try {
+        let response = await fetch(`${process.env.WINTOOK_BOT}/api/setBotConversation?${params.toString()}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        let result = await response.json();
+
+        if (response.status === 200) {
+          this.chatBot = result;
+          useAlert(result.toastMessage);
+        }
+      } catch (error) {
+        console.error(error);
+        return error;
       }
     },
     mute() {
@@ -90,48 +105,21 @@ export default {
 
 <template>
   <div class="relative flex items-center gap-2 actions--container">
-    <woot-button
-    v-if="isWavoipFeatureEnabled"
-      v-tooltip="$t('WEBPHONE.CALL')"
-      variant="clear"
-      color-scheme="secondary"
-      icon="call"
-      :disabled="callInfo && callInfo.id"
-      @click="startCall"
-    />
-    <woot-button
-      v-if="!currentChat.muted"
-      v-tooltip="$t('CONTACT_PANEL.MUTE_CONTACT')"
-      variant="clear"
-      color-scheme="secondary"
-      icon="speaker-mute"
-      @click="mute"
-    />
-    <woot-button
-      v-else
-      v-tooltip.left="$t('CONTACT_PANEL.UNMUTE_CONTACT')"
-      variant="clear"
-      color-scheme="secondary"
-      icon="speaker-1"
-      @click="unmute"
-    />
-    <woot-button
-      v-tooltip="$t('CONTACT_PANEL.SEND_TRANSCRIPT')"
-      variant="clear"
-      color-scheme="secondary"
-      icon="share"
-      @click="toggleEmailActionsModal"
-    />
-    <ResolveAction
-      :conversation-id="currentChat.id"
-      :status="currentChat.status"
-    />
-    <EmailTranscriptModal
-      v-if="showEmailActionsModal"
-      :show="showEmailActionsModal"
-      :current-chat="currentChat"
-      @cancel="toggleEmailActionsModal"
-    />
+    <woot-button v-if="chatBot.inbox_bot && chatBot.account_bot" v-tooltip="'Bot EVAi'" title=" 'Bot Eva' "
+      :color-scheme="chatBot.colorScheme" icon-size="14" variant="smooth" size="small expanded"
+      @click="setBotConversation">
+      {{ chatBot.textButton }}
+    </woot-button>
+
+    <woot-button v-if="!currentChat.muted" v-tooltip="$t('CONTACT_PANEL.MUTE_CONTACT')" variant="clear"
+      color-scheme="secondary" icon="speaker-mute" @click="mute" />
+    <woot-button v-else v-tooltip.left="$t('CONTACT_PANEL.UNMUTE_CONTACT')" variant="clear" color-scheme="secondary"
+      icon="speaker-1" @click="unmute" />
+    <woot-button v-tooltip="$t('CONTACT_PANEL.SEND_TRANSCRIPT')" variant="clear" color-scheme="secondary" icon="share"
+      @click="toggleEmailActionsModal" />
+    <ResolveAction :conversation-id="currentChat.id" :status="currentChat.status" />
+    <EmailTranscriptModal v-if="showEmailActionsModal" :show="showEmailActionsModal" :current-chat="currentChat"
+      @cancel="toggleEmailActionsModal" />
   </div>
 </template>
 

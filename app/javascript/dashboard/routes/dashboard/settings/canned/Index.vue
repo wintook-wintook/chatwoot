@@ -2,6 +2,12 @@
 import { useAlert } from 'dashboard/composables';
 import AddCanned from './AddCanned.vue';
 import EditCanned from './EditCanned.vue';
+import CannedTabs from '../wintook/canned/CannedTabs.vue';
+import MenuSystem from '../wintook/canned/MenuSystem.vue';
+import ForumBots from '../integrations/Addons/ForumBots.vue';
+import SystemSettings from '../integrations/Addons/SystemSettings.vue';
+import Synonyms from '../wintook/canned/Synonyms.vue';
+import Vocabulary from '../wintook/canned/Vocabulary.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'dashboard/composables/useI18n';
@@ -12,6 +18,7 @@ const store = useStore();
 const { t } = useI18n();
 
 const showAddPopup = ref(false);
+const selectedTabIndex = ref(0);
 const loading = ref({});
 const showEditPopup = ref(false);
 const showDeleteConfirmationPopup = ref(false);
@@ -23,6 +30,7 @@ const records = computed(() =>
   getters.getSortedCannedResponses.value(sortOrder.value)
 );
 const uiFlags = computed(() => getters.getUIFlags.value);
+const currentUser = computed(() => getters.getCurrentUser.value);
 
 const deleteConfirmText = computed(
   () =>
@@ -50,8 +58,61 @@ const fetchCannedResponses = async () => {
   }
 };
 
+const fetchCannedResponses_v1 = async () => {
+  const wintook_api = process.env.WINTOOK_API;
+  const url = `${wintook_api}/accounts/1/canned_responses`;
+  const options = {
+    method: 'GET',
+  };
+
+  try {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    console.log(responseData);
+    data.trained = responseData.trained;
+    return responseData;
+  } catch (error) {
+    console.error('Error occurred:', error.message || error);
+    throw error;
+  }
+};
+
+const setTraining = async (data) => {
+  const wintook_openai = process.env.WINTOOK_OPENAI;
+  const { access_token } = currentUser.value;
+  const { id } = data;
+  const url = `${wintook_openai}/v1/responses/setTraining/${id}`;
+
+  const options = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "access-token": access_token,
+    },
+  };
+
+  try {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status} - ${response.statusText}`);
+    }
+    const result = await response.json();
+    console.log(result);
+    data.trained = result.trained;
+    return result;
+  } catch (error) {
+    console.error("Error occurred:", error.message || error);
+    throw error;
+  }
+};
+
 onMounted(() => {
   fetchCannedResponses();
+  // fetchCannedResponses_v1();
 });
 
 const showAlertMessage = message => {
@@ -107,8 +168,6 @@ const confirmDeletion = () => {
   <div class="flex-1 overflow-auto">
     <BaseSettingsHeader
       :title="$t('CANNED_MGMT.HEADER')"
-      :description="$t('CANNED_MGMT.DESCRIPTION')"
-      :link-text="$t('CANNED_MGMT.LEARN_MORE')"
       feature-name="canned_responses"
     >
       <template #actions>
@@ -121,8 +180,12 @@ const confirmDeletion = () => {
         </woot-button>
       </template>
     </BaseSettingsHeader>
+    <CannedTabs
+      :selected-tab-index="selectedTabIndex"
+      @update:selectedTabIndex="selectedTabIndex = $event"
+    />
 
-    <div class="mt-6 flex-1">
+    <div v-if="selectedTabIndex == 0" class="mt-6 flex-1">
       <woot-loading-state
         v-if="uiFlags.fetchingList"
         :message="$t('CANNED_MGMT.LOADING')"
@@ -197,11 +260,41 @@ const confirmDeletion = () => {
                 :is-loading="loading[cannedItem.id]"
                 @click="openDeletePopup(cannedItem, index)"
               />
+
+              <!-- Andrés Liverio 100823 **Wintook** -->
+              <woot-button
+                  v-show="cannedItem.trained"
+                  v-tooltip.top="'Eliminar Entrenamiento!'"
+                  variant="smooth"
+                  color-scheme="success"
+                  size="tiny"
+                  icon="bot"
+                  class-names="grey-btn"
+                  :is-loading="loading[cannedItem.id]"
+                  @click="setTraining(cannedItem, index)"
+                />
+                <woot-button
+                  v-show="!cannedItem.trained"
+                  v-tooltip.top="'Generar Entrenamiento'"
+                  variant="smooth"
+                  color-scheme="alert"
+                  size="tiny"
+                  icon="bot"
+                  class-names="grey-btn"
+                  :is-loading="loading[cannedItem.id]"
+                  @click="setTraining(cannedItem, index)"
+                />
+                <!-- Andrés Liverio 100823 **Wintook** -->
             </td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <Vocabulary v-if="selectedTabIndex == 1" />
+    <Synonyms v-if="selectedTabIndex == 2" />
+    <ForumBots v-if="selectedTabIndex == 3" />
+    <SystemSettings v-if="selectedTabIndex == 4" />
 
     <woot-modal :show.sync="showAddPopup" :on-close="hideAddPopup">
       <AddCanned :on-close="hideAddPopup" />
@@ -213,6 +306,7 @@ const confirmDeletion = () => {
         :id="activeResponse.id"
         :edshort-code="activeResponse.short_code"
         :edcontent="activeResponse.content"
+        :edactive-response="activeResponse"
         :on-close="hideEditPopup"
       />
     </woot-modal>

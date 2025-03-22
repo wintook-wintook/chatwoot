@@ -13,6 +13,7 @@ import auditlogs from './auditlogs/audit.routes';
 import billing from './billing/billing.routes';
 import campaigns from './campaigns/campaigns.routes';
 import canned from './canned/canned.routes';
+import chatgpt from './chatgpt/chatgpt.routes';
 import inbox from './inbox/inbox.routes';
 import integrations from './integrations/integrations.routes';
 import labels from './labels/labels.routes';
@@ -51,6 +52,7 @@ export default {
     ...billing.routes,
     ...campaigns.routes,
     ...canned.routes,
+    ...chatgpt.routes,
     ...inbox.routes,
     ...integrations.routes,
     ...labels.routes,

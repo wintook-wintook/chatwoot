@@ -112,6 +112,14 @@ export default {
       type: String,
       required: true,
     },
+    eventSuggestionResponseBotEva: {
+      type: Function,
+      default: () => {},
+    },
+    eventSuggestionResponseBotElyza: {
+      type: Function,
+      default: () => {},
+    },
   },
   setup() {
     const { setSignatureFlagForInbox, fetchSignatureFlagFromUISettings } =
@@ -350,6 +358,29 @@ export default {
         :message="message"
         @replaceText="replaceText"
       />
+
+      <woot-button
+        v-if="!isFetchingAppIntegrations"
+        v-tooltip.top-end="'Sugerencia respuesta botEVA'"
+        icon="bot"
+        color-scheme="primary"
+        variant="smooth"
+        size="small"
+        :title="$t('CONVERSATION.FOOTER.WHATSAPP_TEMPLATES')"
+        @click="eventSuggestionResponseBotEva"
+      />
+
+      <woot-button
+        v-if="!isFetchingAppIntegrations"
+        v-tooltip.top-end="'Sugerencia respuesta botElyza'"
+        icon="wand"
+        color-scheme="primary"
+        variant="smooth"
+        size="small"
+        :title="$t('CONVERSATION.FOOTER.WHATSAPP_TEMPLATES')"
+        @click="eventSuggestionResponseBotElyza"
+      />
+      
       <transition name="modal-fade">
         <div
           v-show="$refs.uploadRef && $refs.uploadRef.dropActive"

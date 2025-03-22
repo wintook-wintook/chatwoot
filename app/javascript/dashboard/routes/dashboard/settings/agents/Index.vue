@@ -267,6 +267,7 @@ const confirmDeletion = () => {
         :type="currentAgent.role"
         :email="currentAgent.email"
         :availability="currentAgent.availability_status"
+        :current="currentAgent"
         :custom-role-id="currentAgent.custom_role_id"
         @close="hideEditPopup"
       />

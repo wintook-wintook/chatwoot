@@ -11,6 +11,7 @@ import PreChatFormSettings from './PreChatForm/Settings.vue';
 import WeeklyAvailability from './components/WeeklyAvailability.vue';
 import GreetingsEditor from 'shared/components/GreetingsEditor.vue';
 import ConfigurationPage from './settingsPage/ConfigurationPage.vue';
+import QuestionsPage from './settingsPage/QuestionsPage.vue';
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
 import MicrosoftReauthorize from './channels/microsoft/Reauthorize.vue';
 import WidgetBuilder from './WidgetBuilder.vue';
@@ -24,6 +25,7 @@ export default {
     BotConfiguration,
     CollaboratorsPage,
     ConfigurationPage,
+    QuestionsPage,
     FacebookReauthorize,
     GreetingsEditor,
     PreChatFormSettings,
@@ -147,6 +149,16 @@ export default {
           {
             key: 'configuration',
             name: this.$t('INBOX_MGMT.TABS.CONFIGURATION'),
+          },
+        ];
+      }
+
+      if ( this.isAWhatsAppChannel ) {
+        visibleToAllChannelTabs = [
+          ...visibleToAllChannelTabs,
+          {
+            key: 'questions',
+            name: 'Preguntas de Calificación (Beta)',
           },
         ];
       }
@@ -806,6 +818,9 @@ export default {
     </div>
     <div v-if="selectedTabKey === 'configuration'">
       <ConfigurationPage :inbox="inbox" />
+    </div>
+    <div v-if="selectedTabKey === 'questions'">
+      <QuestionsPage :inbox="inbox" />
     </div>
     <div v-if="selectedTabKey === 'preChatForm'">
       <PreChatFormSettings :inbox="inbox" />

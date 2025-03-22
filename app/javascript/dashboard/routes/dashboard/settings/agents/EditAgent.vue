@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required, minLength } from '@vuelidate/validators';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -30,6 +30,11 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  // Andres Liverio
+  current: {
+    type: Object,
+    default: () => ({}), // Corrected
+  },
   customRoleId: {
     type: Number,
     default: null,
@@ -42,6 +47,10 @@ const { AVAILABILITY_STATUS_KEYS } = wootConstants;
 
 const store = useStore();
 const { t } = useI18n();
+
+// Andres Liverio
+const showOnlyMine = ref(false);
+const disabledOnlyMine = ref(false);
 
 const agentName = ref(props.name);
 const agentAvailability = ref(props.availability);
@@ -63,6 +72,12 @@ const v$ = useVuelidate(rules, {
 const pageTitle = computed(
   () => `${t('AGENT_MGMT.EDIT.TITLE')} - ${props.name}`
 );
+
+// Andres Liverio
+onMounted(() => {
+  const agent = props.current;
+  showOnlyMine.value = agent?.custom_attributes?.showOnlyMine || false; // Andres Liverio
+});
 
 const uiFlags = useMapGetter('agents/getUIFlags');
 const getCustomRoles = useMapGetter('customRole/getCustomRoles');
@@ -116,6 +131,7 @@ const editAgent = async () => {
       id: props.id,
       name: agentName.value,
       availability: agentAvailability.value,
+      custom_attributes: { showOnlyMine: showOnlyMine.value }, // Andres Liverio
     };
 
     if (selectedRole.value.name.startsWith('custom_')) {
@@ -170,6 +186,14 @@ const resetPassword = async () => {
           <span v-if="v$.selectedRoleId.$error" class="message">
             {{ $t('AGENT_MGMT.EDIT.FORM.AGENT_TYPE.ERROR') }}
           </span>
+        </label>
+      </div>
+
+      <div class="flex gap-2 w-full">
+        <input v-model="showOnlyMine" type="checkbox" 
+          :value="false" :disabled="disabledOnlyMine"/>
+        <label>
+          {{ 'Mostar solo conversaciones asignadas al agente.' }}
         </label>
       </div>
 

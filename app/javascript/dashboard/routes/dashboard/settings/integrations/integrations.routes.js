@@ -3,6 +3,7 @@ const SettingsWrapper = () => import('../SettingsWrapper.vue');
 const IntegrationHooks = () => import('./IntegrationHooks.vue');
 const Index = () => import('./Index.vue');
 const Webhook = () => import('./Webhooks/Index.vue');
+const Bots = () => import('./Bots/Index.vue');
 const DashboardApps = () => import('./DashboardApps/Index.vue');
 const Captain = () => import('./Captain/Index.vue');
 const Slack = () => import('./Slack.vue');
@@ -35,6 +36,14 @@ export default {
           path: 'webhook',
           component: Webhook,
           name: 'settings_integrations_webhook',
+          meta: {
+            permissions: ['administrator'],
+          },
+        },
+        {
+          path: 'bots_inboxes',
+          component: Bots,
+          name: 'settings_integrations_bots_inboxes',
           meta: {
             permissions: ['administrator'],
           },

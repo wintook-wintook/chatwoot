@@ -188,19 +188,22 @@ es:
     online:
       delete: "%{contact_name} está conectado, por favor inténtalo más tarde"
   integration_apps:
+    bots_inboxes:
+      name: "Activación de Bot"
+      description: "Dashboard Apps allow you to create and embed applications that display user information, orders, or payment history, providing more context to your customer support agents."
     dashboard_apps:
       name: "Panel de aplicaciones"
       description: "Las aplicaciones de panel te permiten crear e incrustar aplicaciones que muestran información de usuario, pedidos o historial de pagos, proporcionando más contexto a tus agentes de soporte al cliente."
     dyte:
       name: "Dyte"
-      description: "Dyte es un producto que integra funcionalidades de audio y video en tu aplicación. Con esta integración, tus agentes pueden iniciar llamadas de video/voz con tus clientes directamente desde Chatwoot."
+      description: "Dyte es un producto que integra funcionalidades de audio y video en tu aplicación. Con esta integración, tus agentes pueden iniciar llamadas de video/voz con tus clientes directamente desde Wintook."
       meeting_name: "%{agent_name} ha iniciado una reunión"
     slack:
       name: "Slack"
-      description: "Integra Chatwoot con Slack para mantener a tu equipo sincronizado. Esta integración te permite recibir notificaciones de nuevas conversaciones y responder directamente desde la interfaz de Slack."
+      description: "Integra Wintook con Slack para mantener a tu equipo sincronizado. Esta integración te permite recibir notificaciones de nuevas conversaciones y responder directamente desde la interfaz de Slack."
     webhooks:
       name: "Webhook"
-      description: "Los eventos de webhook proporcionan actualizaciones en tiempo real sobre las actividades en tu cuenta de Chatwoot. Puedes suscribirte a los eventos que prefieras y Chatwoot te enviará llamadas HTTP con las actualizaciones."
+      description: "Los eventos de webhook proporcionan actualizaciones en tiempo real sobre las actividades en tu cuenta de Wintook. Puedes suscribirte a los eventos que prefieras y Wintook te enviará llamadas HTTP con las actualizaciones."
     dialogflow:
       name: "Dialogflow"
       description: "Construye chatbots con Dialogflow e intégralos fácilmente en tu bandeja de entrada. Estos bots pueden manejar consultas iniciales antes de transferirlas a un agente de servicio al cliente."

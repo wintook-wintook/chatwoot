@@ -27,8 +27,21 @@ class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseCont
     @canned_response = Current.account.canned_responses.find(params[:id])
   end
 
+  # def canned_response_params
+  #   params.require(:canned_response).permit(:short_code, :content)
+  # end
+
   def canned_response_params
-    params.require(:canned_response).permit(:short_code, :content)
+    params.require(:canned_response).permit(
+      :short_code, 
+      :content, 
+      :content_prompts, 
+      :menu, 
+      :opcion, 
+      :content_full, 
+      :url_content, 
+      :url_short_code
+    )
   end
 
   def canned_responses

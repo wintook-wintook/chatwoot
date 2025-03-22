@@ -278,7 +278,7 @@ export default {
           variant="icon"
           @click="showCannedResponseModal"
         />
-        <template v-if="canDeleteMessage()">
+        <!-- <template v-if="canDeleteMessage()">
           <hr />
           <menu-item
             :option="{
@@ -288,7 +288,7 @@ export default {
             variant="icon"
             @click="openDeleteModal"
           />
-        </template>
+        </template> -->
       </div>
     </woot-context-menu>
   </div>

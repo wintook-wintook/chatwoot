@@ -242,9 +242,24 @@ export default {
     },
     onSubmit() {
       const { emailAddress, fullName, phoneNumber, message } = this.formValues;
+      let phoneNumberAux = "";
+      if (phoneNumber.startsWith('+521')) {
+        // Si ya empieza con +521, lo dejamos como está
+        phoneNumberAux = phoneNumber;
+      } else if (phoneNumber.startsWith('+52')) {
+        // Si empieza con +52 pero no tiene el 1 después, se lo agregamos
+        if (phoneNumber.charAt(3) !== '1') {
+          phoneNumberAux = `+521${phoneNumber.slice(3)}`;
+        } else {
+          phoneNumberAux = phoneNumber; // Si ya tiene +52 seguido de 1, lo dejamos igual
+        }
+      } else {
+        // Si no empieza con +52, lo dejamos tal como está
+        phoneNumberAux = phoneNumber;
+      }
       this.$emit('submit', {
         fullName,
-        phoneNumber,
+        phoneNumber: phoneNumberAux,
         emailAddress,
         message,
         activeCampaignId: this.activeCampaign.id,

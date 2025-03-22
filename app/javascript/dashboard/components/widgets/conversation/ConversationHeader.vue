@@ -14,6 +14,11 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import Linear from './linear/index.vue';
 
 export default {
+  data() {
+    return {
+      chatBot: false,
+    };
+  },
   components: {
     BackButton,
     InboxName,
@@ -26,7 +31,7 @@ export default {
   props: {
     chat: {
       type: Object,
-      default: () => {},
+      default: () => { },
     },
     isContactPanelOpen: {
       type: Boolean,
@@ -52,6 +57,7 @@ export default {
   computed: {
     ...mapGetters({
       currentChat: 'getSelectedChat',
+      currentUser: 'getCurrentUser',
       accountId: 'getCurrentAccountId',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
       appIntegrations: 'integrations/getAppIntegrations',
@@ -96,11 +102,10 @@ export default {
       return this.$t('CONVERSATION.HEADER.SNOOZED_UNTIL_NEXT_REPLY');
     },
     contactPanelToggleText() {
-      return `${
-        this.isContactPanelOpen
-          ? this.$t('CONVERSATION.HEADER.CLOSE')
-          : this.$t('CONVERSATION.HEADER.OPEN')
-      } ${this.$t('CONVERSATION.HEADER.DETAILS')}`;
+      return `${this.isContactPanelOpen
+        ? this.$t('CONVERSATION.HEADER.CLOSE')
+        : this.$t('CONVERSATION.HEADER.OPEN')
+        } ${this.$t('CONVERSATION.HEADER.DETAILS')}`;
     },
     inbox() {
       const { inbox_id: inboxId } = this.chat;
@@ -124,87 +129,75 @@ export default {
       );
     },
   },
+  watch: {
+    'chat.messages'() {
+      this.getBotConversation();
+    },
+  },
+
+  methods: {
+    async getBotConversation() {
+      const { access_token } = this.currentUser;
+      const { account_id, id: display_id, inbox_id } = this.currentChat;
+      const params = new URLSearchParams({ access_token, account_id, display_id, inbox_id });
+      try {
+        let response = await fetch(`${process.env.WINTOOK_BOT}/api/getBotConversation?${params.toString()}`, {
+          method: 'GET'
+        });
+        const result = await response.json();
+        if (response.status === 200) {
+          this.chatBot = result;
+        } else {
+          console.error("Error:", result);
+        }
+      } catch (error) {
+        console.error("Fetch error:", error);
+      }
+    },
+  },
 };
 </script>
 
 <template>
   <div
-    class="flex flex-col items-center justify-between px-4 py-2 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50 md:flex-row"
-  >
-    <div
-      class="flex flex-col items-center justify-center flex-1 w-full min-w-0"
-      :class="isInboxView ? 'sm:flex-row' : 'md:flex-row'"
-    >
+    class="flex flex-col items-center justify-between px-4 py-2 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50 md:flex-row">
+    <div class="flex flex-col items-center justify-center flex-1 w-full min-w-0"
+      :class="isInboxView ? 'sm:flex-row' : 'md:flex-row'">
       <div class="flex items-center justify-start max-w-full min-w-0 w-fit">
-        <BackButton
-          v-if="showBackButton"
-          :back-url="backButtonUrl"
-          class="ltr:ml-0 rtl:mr-0 rtl:ml-4"
-        />
-        <Thumbnail
-          :src="currentContact.thumbnail"
-          :badge="inboxBadge"
-          :username="currentContact.name"
-          :status="currentContact.availability_status"
-        />
-        <div
-          class="flex flex-col items-start min-w-0 ml-2 overflow-hidden rtl:ml-0 rtl:mr-2 w-fit"
-        >
-          <div
-            class="flex flex-row items-center max-w-full gap-1 p-0 m-0 w-fit"
-          >
-            <woot-button
-              variant="link"
-              color-scheme="secondary"
+        <BackButton v-if="showBackButton" :back-url="backButtonUrl" class="ltr:ml-0 rtl:mr-0 rtl:ml-4" />
+        <Thumbnail :src="currentContact.thumbnail" :badge="inboxBadge" :username="currentContact.name"
+          :status="currentContact.availability_status" />
+        <div class="flex flex-col items-start min-w-0 ml-2 overflow-hidden rtl:ml-0 rtl:mr-2 w-fit">
+          <div class="flex flex-row items-center max-w-full gap-1 p-0 m-0 w-fit">
+            <woot-button variant="link" color-scheme="secondary"
               class="[&>span]:overflow-hidden [&>span]:whitespace-nowrap [&>span]:text-ellipsis min-w-0"
-              @click.prevent="$emit('contactPanelToggle')"
-            >
-              <span
-                class="text-base font-medium leading-tight text-slate-900 dark:text-slate-100"
-              >
+              @click.prevent="$emit('contactPanelToggle')">
+              <span class="text-base font-medium leading-tight text-slate-900 dark:text-slate-100">
                 {{ currentContact.name }}
               </span>
             </woot-button>
-            <fluent-icon
-              v-if="!isHMACVerified"
-              v-tooltip="$t('CONVERSATION.UNVERIFIED_SESSION')"
-              size="14"
-              class="text-yellow-600 dark:text-yellow-500 my-0 mx-0 min-w-[14px]"
-              icon="warning"
-            />
+            <fluent-icon v-if="!isHMACVerified" v-tooltip="$t('CONVERSATION.UNVERIFIED_SESSION')" size="14"
+              class="text-yellow-600 dark:text-yellow-500 my-0 mx-0 min-w-[14px]" icon="warning" />
           </div>
 
           <div
-            class="flex items-center gap-2 overflow-hidden text-xs conversation--header--actions text-ellipsis whitespace-nowrap"
-          >
+            class="flex items-center gap-2 overflow-hidden text-xs conversation--header--actions text-ellipsis whitespace-nowrap">
             <InboxName v-if="hasMultipleInboxes" :inbox="inbox" />
-            <span
-              v-if="isSnoozed"
-              class="font-medium text-yellow-600 dark:text-yellow-500"
-            >
+            <span v-if="isSnoozed" class="font-medium text-yellow-600 dark:text-yellow-500">
               {{ snoozedDisplayText }}
             </span>
-            <woot-button
-              class="p-0"
-              size="small"
-              variant="link"
-              @click="$emit('contactPanelToggle')"
-            >
+            <woot-button class="p-0" size="small" variant="link" @click="$emit('contactPanelToggle')">
               {{ contactPanelToggleText }}
             </woot-button>
           </div>
         </div>
       </div>
-      <div
-        class="flex flex-row items-center justify-end flex-grow gap-2 mt-3 header-actions-wrap lg:mt-0"
-        :class="{ 'justify-end': isContactPanelOpen }"
-      >
+      <div class="flex flex-row items-center justify-end flex-grow gap-2 mt-3 header-actions-wrap lg:mt-0"
+        :class="{ 'justify-end': isContactPanelOpen }">
         <SLACardLabel v-if="hasSlaPolicyId" :chat="chat" show-extended-info />
-        <Linear
-          v-if="isLinearIntegrationEnabled && isLinearFeatureEnabled"
-          :conversation-id="currentChat.id"
-        />
-        <MoreActions :conversation-id="currentChat.id" />
+        <Linear v-if="isLinearIntegrationEnabled && isLinearFeatureEnabled" :conversation-id="currentChat.id" />
+        <!-- <MoreActions :conversation-id="currentChat.id" />-->
+        <more-actions :conversation-id="currentChat.id" :chatBot="chatBot" />
       </div>
     </div>
   </div>
