@@ -213,6 +213,14 @@ es:
     openai:
       name: "OpenAI"
       description: "Aprovecha el poder de los grandes modelos de lenguaje de OpenAI con funciones como sugerencias de respuestas, resúmenes, reformulación de mensajes, corrección ortográfica y clasificación de etiquetas."
+    # DEV0002
+    crmzeus:
+      name: "Kontrolya"
+      description: "Integración de Kontrolya para la sincronización de contactos."
+    # DEV0002
+    tracking_bot:
+      name: "Bot de Seguimientos"
+      description: "Automatiza cualquier tipo de seguimiento: ventas, cobranza, recordatorios y más, mantiene activos los procesos sin depender de que el usuario recuerde hacerlo."
     linear:
       name: "Lineal"
       description: "Crea problemas en Linear directamente desde tu ventana de conversación. Alternativamente, enlaza problemas existentes en Linear para un proceso de seguimiento de problemas más eficiente y ágil."

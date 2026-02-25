@@ -1,3 +1,4 @@
+<!-- DEV0002 -->
 <script>
 import { isEmptyObject } from '../../../../helper/commons';
 import { mapGetters } from 'vuex';
@@ -85,12 +86,30 @@ export default {
     closeDeletePopup() {
       this.showDeleteConfirmationPopup = false;
     },
+    async webhookDelete(selectedHook) {
+      // Verificar si es CRM Zeus y tiene webhook_id en settings
+      if (selectedHook.app_id === 'crmzeus' && selectedHook.settings?.webhook_id) {
+        try {
+          const webhookId = selectedHook.settings.webhook_id;
+          console.log(`🗑️ Eliminando webhook ID: ${webhookId} para CRM Zeus`);
+
+          await this.$store.dispatch('webhooks/delete', webhookId);
+          console.log(`✅ Webhook ${webhookId} eliminado exitosamente`);
+        } catch (error) {
+          console.error(`❌ Error eliminando webhook:`, error);
+          throw error; // Re-lanzar para que lo maneje confirmDeletion
+        }
+      } else {
+        console.log(`ℹ️ No es CRM Zeus o no tiene webhook_id, saltando eliminación de webhook`);
+      }
+    },
     async confirmDeletion() {
       try {
         await this.$store.dispatch('integrations/deleteHook', {
           hookId: this.selectedHook.id,
           appId: this.selectedHook.app_id,
         });
+        await this.webhookDelete(this.selectedHook);
         this.alertMessage = this.$t(
           'INTEGRATION_APPS.DELETE.API.SUCCESS_MESSAGE'
         );
@@ -109,29 +128,17 @@ export default {
 
 <template>
   <div class="overflow-auto p-4 max-w-full my-auto flex flex-wrap h-full">
-    <woot-button
-      v-if="showAddButton"
-      color-scheme="success"
-      class-names="button--fixed-top"
-      icon="add-circle"
-      @click="openAddHookModal"
-    >
+    <woot-button v-if="showAddButton" color-scheme="success" class-names="button--fixed-top" icon="add-circle"
+      @click="openAddHookModal">
       {{ $t('INTEGRATION_APPS.ADD_BUTTON') }}
     </woot-button>
     <div v-if="showIntegrationHooks" class="w-full">
       <div v-if="isIntegrationMultiple">
-        <MultipleIntegrationHooks
-          :integration-id="integrationId"
-          @delete="openDeletePopup"
-        />
+        <MultipleIntegrationHooks :integration-id="integrationId" @delete="openDeletePopup" />
       </div>
 
       <div v-if="isIntegrationSingle">
-        <SingleIntegrationHooks
-          :integration-id="integrationId"
-          @add="openAddHookModal"
-          @delete="openDeletePopup"
-        />
+        <SingleIntegrationHooks :integration-id="integrationId" @add="openAddHookModal" @delete="openDeletePopup" />
       </div>
     </div>
 
@@ -139,14 +146,8 @@ export default {
       <NewHook :integration-id="integrationId" @close="hideAddHookModal" />
     </woot-modal>
 
-    <woot-delete-modal
-      :show.sync="showDeleteConfirmationPopup"
-      :on-close="closeDeletePopup"
-      :on-confirm="confirmDeletion"
-      :title="deleteTitle"
-      :message="deleteMessage"
-      :confirm-text="confirmText"
-      :reject-text="cancelText"
-    />
+    <woot-delete-modal :show.sync="showDeleteConfirmationPopup" :on-close="closeDeletePopup"
+      :on-confirm="confirmDeletion" :title="deleteTitle" :message="deleteMessage" :confirm-text="confirmText"
+      :reject-text="cancelText" />
   </div>
 </template>

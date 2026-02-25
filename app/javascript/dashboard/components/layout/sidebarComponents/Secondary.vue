@@ -36,6 +36,11 @@ export default {
       type: Array,
       default: () => [],
     },
+    // Nueva prop para tipos de proceso kanban
+    kanbanTypes: {
+      type: Array,
+      default: () => [],
+    },
     menuConfig: {
       type: Object,
       default: () => {},
@@ -45,6 +50,11 @@ export default {
       default: () => {},
     },
     isOnChatwootCloud: {
+      type: Boolean,
+      default: false,
+    },
+    // NUEVA prop para el estado de colapso
+    isCollapsed: {
       type: Boolean,
       default: false,
     },
@@ -85,17 +95,18 @@ export default {
     },
 
     hideAllInboxForAgents() {
-    return (
-      this.isFeatureEnabledonAccount(
-        this.accountId,
-        'hide_all_inbox_for_agent'
-      ) && this.currentRole !== 'administrator'
-    );
-  },
-  inboxSection() {
-    if (this.hideAllInboxForAgents && this.currentRole !== 'administrator') {
-      return {};
-    }
+      return (
+        this.isFeatureEnabledonAccount(
+          this.accountId,
+          'hide_all_inbox_for_agent'
+        ) && this.currentRole !== 'administrator'
+      );
+    },
+    
+    inboxSection() {
+      if (this.hideAllInboxForAgents && this.currentRole !== 'administrator') {
+        return {};
+      }
       return {
         icon: 'folder',
         label: 'INBOXES',
@@ -123,6 +134,7 @@ export default {
           ),
       };
     },
+
     labelSection() {
       return {
         icon: 'number-symbol',
@@ -147,6 +159,7 @@ export default {
         })),
       };
     },
+
     contactLabelSection() {
       return {
         icon: 'number-symbol',
@@ -170,6 +183,111 @@ export default {
         })),
       };
     },
+
+    //KANBAN0725 - inicio
+    kanbanLabelSection() {
+      return {
+        icon: 'number-symbol',
+        label: 'LABELS',
+        hasSubMenu: true,
+        key: 'kanban_label',
+        newLink: this.showNewLink(FEATURE_FLAGS.TEAM_MANAGEMENT),
+        newLinkTag: 'NEW_LABEL',
+        toState: frontendURL(`accounts/${this.accountId}/settings/labels`),
+        toStateName: 'labels_list',
+        showModalForNewItem: true,
+        modalName: 'AddLabel',
+        dataTestid: 'sidebar-kanban-new-label-button',
+        children: this.labels.map(label => ({
+          id: label.id,
+          label: label.title,
+          color: label.color,
+          truncateLabel: true,
+          toState: frontendURL(
+            `accounts/${this.accountId}/kanban/label/${label.title}`
+          ),
+        })),
+      };
+    },
+    //KANBAN0725 - fin
+
+    //KANBAN0725 - INI para los estados
+    kanbanStatesSection() {
+      return {
+        icon: 'workflow', // o 'status' o 'clipboard-flow'
+        label: 'ESTADOS', // o 'KANBAN_STATES'
+        hasSubMenu: true,
+        key: 'kanban_states',
+        // No necesita newLink ya que los estados son fijos
+        children: [
+          {
+            id: 'open',
+            label: 'AQUI CONTACTO INICIAL',
+            color: '#3b82f6', // Azul para contacto inicial
+            truncateLabel: false,
+            toState: frontendURL(
+              `accounts/${this.accountId}/kanban/status/open`
+            ),
+          },
+          {
+            id: 'pending', 
+            label: 'NECESIDADES',
+            color: '#f59e0b', // Amarillo para en progreso
+            truncateLabel: false,
+            toState: frontendURL(
+              `accounts/${this.accountId}/kanban/status/pending`
+            ),
+          },
+          {
+            id: 'resolved',
+            label: 'CIERRE', 
+            color: '#10b981', // Verde para completado
+            truncateLabel: false,
+            toState: frontendURL(
+              `accounts/${this.accountId}/kanban/status/resolved`
+            ),
+          },
+          {
+            id: 'helpme',
+            label: 'POSTVENTA',
+            color: '#8b5cf6', // Púrpura para postventa
+            truncateLabel: false,
+            toState: frontendURL(
+              `accounts/${this.accountId}/kanban/status/snoozed`
+            ),
+          },
+        ],
+      };
+    }, 
+    //KANBAN0725 -FIN para los estados 
+
+    // Nueva sección para tipos de proceso kanban
+    kanbanTypesSection() {
+      return {
+        icon: 'clipboard-list', // Icono para tipos de proceso
+        label: 'TIPO_DE_PROCESO',
+        hasSubMenu: true,
+        key: 'kanban_types',
+        newLink: this.showNewLink(FEATURE_FLAGS.TEAM_MANAGEMENT),
+        newLinkTag: 'NEW_KANBAN_TYPE',
+        // toState: frontendURL(`accounts/${this.accountId}/settings/kanban`),
+        toState: frontendURL(`accounts/${this.accountId}/settings/kanban`),
+        toStateName: 'kanban_types_list',
+        showModalForNewItem: true,
+        modalName: 'AddKanbanType',
+        dataTestid: 'sidebar-kanban-new-type-button',
+        children: this.kanbanTypes.map(kanbanType => ({
+          id: kanbanType.id,
+          label: kanbanType.name,
+          color: kanbanType.color || '#3b82f6',
+          truncateLabel: true,
+          toState: frontendURL(
+            `accounts/${this.accountId}/kanban/type/${kanbanType.id}`
+          ),
+        })),
+      };
+    },
+
     teamSection() {
       return {
         icon: 'people-team',
@@ -189,6 +307,7 @@ export default {
         })),
       };
     },
+
     foldersSection() {
       return {
         icon: 'folder',
@@ -207,6 +326,7 @@ export default {
           })),
       };
     },
+
     contactSegmentsSection() {
       return {
         icon: 'folder',
@@ -225,9 +345,19 @@ export default {
           })),
       };
     },
+
     additionalSecondaryMenuItems() {
       let conversationMenuItems = [this.inboxSection, this.labelSection];
       let contactMenuItems = [this.contactLabelSection];
+      
+      //KANBAN0725 - INI - Agregando tipos de proceso a kanban
+      let kanbanMenuItems = [
+       // this.kanbanStatesSection, 
+        this.kanbanTypesSection, // Nueva sección para tipos de proceso
+        //this.kanbanLabelSection
+      ];
+      //KANBAN0725 - FIN 
+      
       if (this.teams.length) {
         conversationMenuItems = [this.teamSection, ...conversationMenuItems];
       }
@@ -237,9 +367,11 @@ export default {
       if (this.contactCustomViews.length) {
         contactMenuItems = [this.contactSegmentsSection, ...contactMenuItems];
       }
+      
       return {
         conversations: conversationMenuItems,
         contacts: contactMenuItems,
+        kanban: kanbanMenuItems,
       };
     },
   },
@@ -247,6 +379,18 @@ export default {
     showAddLabelPopup() {
       this.$emit('addLabel');
     },
+    // Nuevo método para tipos de proceso kanban
+    showAddKanbanTypePopup() {
+      console.log('🔄 Secondary: showAddKanbanTypePopup llamado');
+      console.log('🔄 Secondary: Emitiendo evento addKanbanType');
+      this.$emit('addKanbanType');
+    },
+    
+    // NUEVO: Método para alternar el sidebar
+    toggleSidebar() {
+      this.$emit('toggleSidebar');
+    },
+    
     toggleAccountModal() {
       this.$emit('toggleAccounts');
     },
@@ -260,25 +404,85 @@ export default {
 <template>
   <div
     v-if="hasSecondaryMenu"
-    class="flex flex-col w-48 h-full px-2 pb-8 overflow-auto text-sm bg-white border-r dark:bg-slate-900 dark:border-slate-800/50 rtl:border-r-0 rtl:border-l border-slate-50"
+    :class="[
+      'flex flex-col h-full px-2 pb-8 text-sm bg-white border-r dark:bg-slate-900 dark:border-slate-800/50 rtl:border-r-0 rtl:border-l border-slate-50 transition-all duration-200',
+      {
+        'overflow-hidden': isCollapsed,
+        'overflow-auto': !isCollapsed,
+        'w-12': isCollapsed,
+        'w-48': !isCollapsed
+      }
+    ]"
   >
-    <AccountContext @toggleAccounts="toggleAccountModal" />
+    <!-- Header con botón de colapso -->
+    <div class="flex items-center justify-between pt-2 mb-2">
+      <AccountContext 
+        v-if="!isCollapsed" 
+        @toggleAccounts="toggleAccountModal" 
+      />
+      
+      <!-- Botón de colapso/expandir -->
+      <button
+        :class="[
+          'p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors',
+          {
+            'ml-auto': !isCollapsed,
+            'mx-auto': isCollapsed
+          }
+        ]"
+        @click="toggleSidebar"
+        :title="isCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'"
+      >
+        <fluent-icon
+          :icon="isCollapsed ? 'panel-right-expand' : 'panel-left-contract'"
+          size="16"
+          class="text-slate-600 dark:text-slate-400"
+        />
+      </button>
+    </div>
+
+    <!-- Menú items -->
     <transition-group
       name="menu-list"
       tag="ul"
-      class="pt-2 mb-0 ml-0 list-none"
+      class="mb-0 ml-0 list-none"
     >
-      <SecondaryNavItem
-        v-for="menuItem in accessibleMenuItems"
-        :key="menuItem.toState"
-        :menu-item="menuItem"
-      />
-      <SecondaryNavItem
-        v-for="menuItem in additionalSecondaryMenuItems[menuConfig.parentNav]"
-        :key="menuItem.key"
-        :menu-item="menuItem"
-        @addLabel="showAddLabelPopup"
-      />
+      <!-- Solo mostrar si no está colapsado -->
+      <template v-if="!isCollapsed">
+        <SecondaryNavItem
+          v-for="menuItem in accessibleMenuItems"
+          :key="menuItem.toState"
+          :menu-item="menuItem"
+        />
+        <SecondaryNavItem
+          v-for="menuItem in additionalSecondaryMenuItems[menuConfig.parentNav]"
+          :key="menuItem.key"
+          :menu-item="menuItem"
+          @addLabel="showAddLabelPopup"
+          @addKanbanType="showAddKanbanTypePopup"
+        />
+      </template>
+      
+      <!-- Iconos mínimos cuando está colapsado -->
+      <template v-else>
+        <li
+          v-for="menuItem in accessibleMenuItems"
+          :key="menuItem.toState + '-collapsed'"
+          class="mb-2"
+        >
+          <router-link
+            :to="menuItem.toState"
+            class="flex items-center justify-center w-8 h-8 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+            :title="menuItem.label"
+          >
+            <fluent-icon
+              :icon="menuItem.icon"
+              size="16"
+              class="text-slate-600 dark:text-slate-400"
+            />
+          </router-link>
+        </li>
+      </template>
     </transition-group>
   </div>
 </template>

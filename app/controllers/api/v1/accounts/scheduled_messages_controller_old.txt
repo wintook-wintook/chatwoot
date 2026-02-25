@@ -1,0 +1,102 @@
+# Proyecto: DEV0001
+class Api::V1::Accounts::ScheduledMessagesController < Api::V1::Accounts::BaseController
+    before_action :fetch_conversation, only: [:index, :create]
+    before_action :fetch_scheduled_message, only: [:show, :update, :destroy]
+    
+    def index
+      @scheduled_messages = if @conversation
+                             Current.account.scheduled_messages.where(conversation_id: @conversation.id)
+                           else
+                             Current.account.scheduled_messages
+                           end
+      @scheduled_messages = @scheduled_messages.where(sent: false) if params[:pending].present?
+      
+      render json: @scheduled_messages
+    end
+    
+    def show
+      render json: @scheduled_message
+    end
+    
+    def create
+      # Capturar el parámetro de timezone
+      timezone = params[:timezone] || Current.user.preferences&.dig(:timezone) || 'UTC'
+      
+      Time.use_zone(timezone) do
+        # Crear los atributos para el mensaje programado
+        message_attributes = {
+          content: params[:content],
+          scheduled_at: params[:scheduled_at].present? ? Time.zone.parse(params[:scheduled_at]) : nil,
+          message_type: params[:message_type] || 'outgoing',
+          additional_attributes: params[:additional_attributes]
+        }
+        
+        @scheduled_message = Current.account.scheduled_messages.new(message_attributes)
+        @scheduled_message.user = Current.user
+        
+        # Asignar la conversación usando @conversation obtenida en fetch_conversation
+        if @conversation
+          @scheduled_message.conversation = @conversation
+        else
+          return render json: { error: 'Se requiere una conversación válida' }, status: :unprocessable_entity
+        end
+        
+        if @scheduled_message.save
+          render json: @scheduled_message, status: :created
+        else
+          render json: { errors: @scheduled_message.errors }, status: :unprocessable_entity
+        end
+      end
+    end
+    
+    def update
+      # Manejar la zona horaria también en las actualizaciones
+      timezone = params[:timezone] || Current.user.preferences&.dig(:timezone) || 'UTC'
+      
+      Time.use_zone(timezone) do
+        # Crear los atributos para actualizar
+        message_attributes = {}
+        message_attributes[:content] = params[:content] if params[:content].present?
+        message_attributes[:scheduled_at] = Time.zone.parse(params[:scheduled_at]) if params[:scheduled_at].present?
+        message_attributes[:message_type] = params[:message_type] if params[:message_type].present?
+        message_attributes[:additional_attributes] = params[:additional_attributes] if params[:additional_attributes].present?
+        
+        if @scheduled_message.update(message_attributes)
+          render json: @scheduled_message
+        else
+          render json: { errors: @scheduled_message.errors }, status: :unprocessable_entity
+        end
+      end
+    end
+    
+    def destroy
+      @scheduled_message.destroy
+      head :no_content
+    end
+    
+    private
+    
+    def fetch_conversation
+      return unless params[:conversation_id].present?
+      
+      conversation_identifier = params[:conversation_id]
+      
+      # Primero intentar buscar por display_id
+      @conversation = Current.account.conversations.find_by(display_id: conversation_identifier)
+      
+      # Si no se encuentra por display_id, intentar buscar por id
+      @conversation ||= Current.account.conversations.find_by(id: conversation_identifier)
+      
+      # Si todavía no se encuentra, devolver un error
+      unless @conversation
+        render json: { error: "Conversación no encontrada con identificador: #{conversation_identifier}" }, status: :not_found
+        return
+      end
+    end
+    
+    def fetch_scheduled_message
+      @scheduled_message = Current.account.scheduled_messages.find(params[:id])
+    rescue ActiveRecord::RecordNotFound
+      render json: { error: "Mensaje programado no encontrado con ID: #{params[:id]}" }, status: :not_found
+    end
+  end

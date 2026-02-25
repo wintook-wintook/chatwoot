@@ -24,7 +24,9 @@ import sla from './sla/sla.routes';
 import teams from './teams/teams.routes';
 import customRoles from './customRoles/customRole.routes';
 import profile from './profile/profile.routes';
-
+// KANBAN0725
+import kanban from './kanban/kanban.routes'; // ← AGREGAR ESTA LÍNEA
+// KANBAN0725
 export default {
   routes: [
     {
@@ -62,5 +64,8 @@ export default {
     ...teams.routes,
     ...customRoles.routes,
     ...profile.routes,
+    // KANBAN0725
+    ...kanban.routes, // ← AGREGAR ESTA LÍNEA
+    // KANBAN0725
   ],
 };

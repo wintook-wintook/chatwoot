@@ -1,5 +1,91 @@
 {
   "CONVERSATION": {
+    "SCHEDULE_MESSAGE": {      
+      "TEMPLATES": "Plantillas",
+      "TEMPLATE_SELECTED": "Plantilla seleccionada",
+      "TEMPLATE_LANGUAGE": "Idioma",
+      "CLEAR_TEMPLATE": "Quitar plantilla",
+      "TEMPLATE_CONTENT": "Contenido de la plantilla",
+      "TEMPLATE_PROCESSING": "Procesando plantilla...",
+      "TEMPLATE_VARIABLES": "Variables de la plantilla",
+      "ENTER_VALUE_FOR": "Ingresa valor para",
+      "SEARCH_TEMPLATES": "Buscar plantillas...",
+      "DOUBLE_CLICK_TO_SELECT": "Doble clic para seleccionar",
+      "NO_TEMPLATES_AVAILABLE": "No hay plantillas disponibles",
+      "NO_TEMPLATES_SUBTITLE": "Las plantillas de WhatsApp aparecerán aquí cuando estén disponibles",
+      "NO_TEMPLATES_FOUND": "No se encontraron plantillas",
+      "SEARCH_TERM": "Término de búsqueda",
+      "TEMPLATE_SELECTED_SUCCESS": "Plantilla '{name}' seleccionada correctamente",
+      "TEMPLATE_CONTACT_ONLY": "Las plantillas solo pueden enviarse a contactos",
+      "SCHEDULE_TEMPLATE": "Programar plantilla",
+      "TEMPLATE_SUCCESS": "Plantilla programada correctamente",
+      
+      "SEND_TO_CONTACT": "Enviar a contacto",
+      "SEND_TO_CONTACT_DESC": "El mensaje se enviará directamente al contacto",
+      "SEND_AS_REMINDER": "Enviar como recordatorio",
+      "SEND_AS_REMINDER_DESC": "Se enviará como recordatorio privado para agentes",
+      
+      "CONTROL_MESSAGES": "Control de mensajes",
+      "ALL_RECIPIENTS": "Todos los destinatarios",
+      "CONTACT_ONLY": "Solo contactos",
+      "AGENT_ONLY": "Solo agentes",
+      "MESSAGE_CONTENT": "Contenido del mensaje",
+      "SCHEDULED_FOR": "Programado para",
+      "STATUS": "Estado",
+      "ACTIONS": "Acciones",
+      "CONTACT": "Contacto",
+      "REMINDER": "Recordatorio",
+      "EDIT": "Editar",
+      "DELETE": "Eliminar",
+      "CONFIRM_DELETE": "¿Estás seguro de que deseas eliminar este mensaje programado?",
+      "DELETE_SUCCESS": "Mensaje programado eliminado correctamente",
+      "ERROR_DELETING": "Error al eliminar el mensaje programado",
+      
+      "EDITING_MESSAGE": "Editando mensaje programado",
+      "CANCEL_EDIT": "Cancelar edición",
+      "UPDATE_MESSAGE": "Actualizar mensaje",
+      "UPDATE_SUCCESS": "Mensaje programado actualizado correctamente",
+      
+      "REMINDER_PLACEHOLDER": "Escribe tu recordatorio...",
+      "MESSAGE_PLACEHOLDER": "Escribe tu mensaje...",
+      "SCHEDULE_REMINDER": "Programar recordatorio",
+      "SCHEDULE_MESSAGE": "Programar mensaje",
+      
+      "LOADING_MESSAGES": "Cargando mensajes programados...",
+      "NO_MESSAGES": "No hay mensajes programados",
+      "NO_MESSAGES_SUBTITLE": "Los mensajes programados aparecerán aquí",
+      "ERROR_LOADING": "Error al cargar los mensajes programados",
+      "ERROR": "Error al procesar la solicitud",
+      
+      "GENERAL": "General",
+      
+      "ALL_MESSAGES": "Todos los mensajes",
+      "PENDING_MESSAGES": "Mensajes pendientes",
+      "SENT_MESSAGES": "Mensajes enviados",
+      "SENT": "Enviado",
+      "PENDING": "Pendiente",
+      "REFRESH": "Actualizar",
+      
+      "TIMEZONE": "Zona horaria",
+      "TIMEZONE_PLACEHOLDER": "Selecciona zona horaria",
+      "TIMEZONE_SELECT": "Seleccionar",
+      "TIMEZONE_DESELECT": "Deseleccionar",
+      
+      "RECIPIENT_TYPE": "Tipo de destinatario",
+      "SCHEDULED_AT": "Fecha y hora programada",
+      "SCHEDULED_AT_PLACEHOLDER": "Selecciona fecha y hora",
+      "SCHEDULED_AT_ERROR": "La fecha y hora son requeridas",
+      "MESSAGE": "Mensaje",
+      "MESSAGE_ERROR": "El mensaje es requerido",
+      "CONFIRM": "Confirmar",
+      "CANCEL": "Cancelar",
+      
+      "TITLE": "Programar mensaje",
+      "DESC": "Programa mensajes para enviar automáticamente",
+      
+      "SUCCESS": "Mensaje programado correctamente",
+      "REMINDER_SUCCESS": "Recordatorio programado correctamente"
+    },
     "SELECT_A_CONVERSATION": "Por favor selecciona una conversación del panel izquierdo",
     "CSAT_REPLY_MESSAGE": "Por favor califica la conversación",
     "404": "Lo siento, no podemos encontrar la conversación. Por favor intenta de nuevo",
@@ -12,6 +98,13 @@
     "NO_INBOX_2": " para comenzar",
     "NO_INBOX_AGENT": "¡Oh no! Parece que no eres parte de ninguna bandeja de entrada. Por favor contacta a tu administrador",
     "SEARCH_MESSAGES": "Buscar mensajes en conversaciones",
+    "KANBAN": {
+      "TITLE": "Tipo de oportunidad asignado",
+      "SELECTOR": "Seleccionar tipo de oportunidad",
+      "NOT_FOUND": "No se encontraron tipos de oportunidad",
+      "SEARCH": "Buscar tipo de oportunidad..."
+
+    },
     "EMPTY_STATE": {
       "CMD_BAR": "para abrir el menú de comandos",
       "KEYBOARD_SHORTCUTS": "para ver los atajos de teclado"
@@ -105,6 +198,33 @@
         "FAILED": "No se pudo cambiar la prioridad. Por favor intenta de nuevo."
       }
     },
+  "STAGE_TYPE": {
+  "TITLE": "Tipo de Proceso Asignada",
+  "OPTIONS": {
+    "NONE": "Sin asignar",
+    "LOADING": "Cargando tipos..."
+  },
+  "CHANGE_STAGE_TYPE": {
+    "SELECT_PLACEHOLDER": "Seleccionar tipo de proceso",
+    "INPUT_PLACEHOLDER": "Buscar tipo de proceso",
+    "NO_RESULTS": "No se encontraron tipos de proceso",
+    "SUCCESSFUL": "Tipo de proceso de la conversación %{conversationId} cambiado exitosamente",
+    "FAILED": "No se pudo cambiar el tipo de proceso. Por favor intenta de nuevo."
+  }
+},
+ "KANBAN_TYPE": {
+      "TITLE": "Tipo de Proceso", 
+      "OPTIONS": {
+        "NONE": "Sin asignar"
+      },
+      "CHANGE_KANBAN_TYPE": {
+        "SELECT_PLACEHOLDER": "Selecciona un tipo de proceso",
+        "INPUT_PLACEHOLDER": "Buscar tipos de proceso", 
+        "NO_RESULTS": "No se encontraron tipos de proceso",
+        "SUCCESSFUL": "Tipo de proceso {kanbanType} asignado exitosamente",
+        "FAILED": "Error al asignar tipo de proceso"
+      }
+    },
     "CARD_CONTEXT_MENU": {
       "PENDING": "Marcar como pendiente",
       "RESOLVED": "Marcar como resuelto",
@@ -160,6 +280,7 @@
       "TIP_AUDIORECORDER_PERMISSION": "Permitir acceso al audio",
       "TIP_AUDIORECORDER_ERROR": "No se pudo abrir el audio",
       "DRAG_DROP": "Arrastra y suelta aquí para adjuntar",
+      "BOARD_KANBAN": "Tablero oportunidades",
       "START_AUDIO_RECORDING": "Iniciar grabación de audio",
       "STOP_AUDIO_RECORDING": "Detener grabación de audio",
       "EMAIL_HEAD": {

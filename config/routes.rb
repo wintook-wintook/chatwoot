@@ -41,6 +41,18 @@ Rails.application.routes.draw do
         end
 
         scope module: :accounts do
+          
+          # KANBAN0725
+          resources :kanban_type_processes do
+            get :conversation_kanban_info, on: :collection, path: 'conversation/:conversation_id/kanban_info'
+            resources :kanban_processes do
+              member do
+                patch :reorder
+              end
+            end
+          end
+          resources :kanban_processes, only: [:destroy]
+          # KANBAN0725
           namespace :actions do
             resource :contact_merge, only: [:create]
           end
@@ -80,11 +92,27 @@ Rails.application.routes.draw do
           namespace :channels do
             resource :twilio_channel, only: [:create]
           end
+
+          # KANBAN0725
+          namespace :conversations do
+            resources :kanban, only: [] do
+              collection do
+                get :filter_by_kanban_type
+                get :filter_by_kanban_process
+                get :filter_by_both_kanban
+              end
+            end
+          end
+          # KANBAN0725
+
           resources :conversations, only: [:index, :create, :show, :update] do
             collection do
               get :meta
               get :search
               post :filter
+              # KANBAN0725
+              get :available_kanban_types 
+              # KANBAN0725
             end
             scope module: :conversations do
               resources :messages, only: [:index, :create, :destroy] do
@@ -111,6 +139,12 @@ Rails.application.routes.draw do
               post :unread
               post :custom_attributes
               get :attachments
+              # KANBAN0725
+              patch :assign_kanban_type    
+              patch :update_kanban_process
+              patch :update_kanban_process_only     
+              patch :bulk_update_kanban
+              # KANBAN0725
             end
           end
 
@@ -141,6 +175,138 @@ Rails.application.routes.draw do
               resources :labels, only: [:create, :index]
               resources :notes
             end
+              
+            # =========================================================================
+            # 🤖 SEGUIMIENTOS AUTOMÁTICOS CON IA - Contact Trackings
+            # proyecto@contact_tracking v2.0
+            # =========================================================================
+            # Sistema de seguimientos programables con integración de IA para:
+            # - Generación de mensajes contextuales con OpenAI (GPT-4o-mini)
+            # - Soporte nativo para WhatsApp Cloud API con plantillas HSM
+            # - Múltiples intentos automáticos con intervalos configurables
+            # - Análisis de intención para reprogramación inteligente
+            # - Estados del ciclo de vida completo del seguimiento
+            # 
+            # Estados disponibles:
+            # - pending: Creado, esperando ejecución
+            # - scheduled: Programado en cola de Sidekiq
+            # - active: En proceso de ejecución
+            # - paused: Pausado manualmente por el agente
+            # - completed: Finalizado exitosamente
+            # - cancelled: Cancelado por el agente
+            # - failed: Falló en la ejecución
+            # 
+            # Endpoints disponibles:
+            # -------------------------------------------------------------------------
+            # GET    /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings
+            #        Lista todos los seguimientos del contacto
+            #        Params opcionales: ?conversation_id=X&status=pending&inbox_id=Y
+            # 
+            # POST   /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings
+            #        Crea un nuevo seguimiento
+            #        Body: { contact_tracking: { objective, scheduled_for, ... } }
+            # 
+            # PATCH  /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings/:id
+            #        Actualiza un seguimiento existente
+            # 
+            # DELETE /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings/:id
+            #        Elimina permanentemente un seguimiento
+            # 
+            # POST   /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings/:id/pause
+            #        Pausa temporalmente la ejecución
+            #        Útil cuando el cliente solicita espera o no está disponible
+            # 
+            # POST   /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings/:id/resume
+            #        Reanuda un seguimiento pausado
+            #        Continúa con los intentos restantes
+            # 
+            # POST   /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings/:id/cancel
+            #        Cancela definitivamente el seguimiento
+            #        Acción irreversible, usar cuando el seguimiento ya no aplica
+            # 
+            # Integración con servicios:
+            # -------------------------------------------------------------------------
+            # - OpenAI API: Generación de mensajes personalizados (AiFollowupService)
+            # - WhatsApp Cloud API: Envío de mensajes y plantillas (WhatsappCloudService)
+            # - Sidekiq: Ejecución programada de seguimientos (ContactTrackingJob)
+            # - Sidekiq Cron: Jobs periódicos (ExecutePendingJob, CleanupJob)
+            # 
+            # Componentes frontend:
+            # -------------------------------------------------------------------------
+            # - ContactTrackingModal.vue: Modal de gestión en panel de contacto
+            # - Store Vuex: contactTrackings (state management)
+            # - API Client: contactTrackings.js (comunicación con backend)
+            # - Filtrado automático por conversación e inbox actual
+            # 
+            # Jobs automáticos (Sidekiq):
+            # -------------------------------------------------------------------------
+            # - ContactTrackingJob: Ejecuta seguimientos individuales
+            # - ExecutePendingJob: Busca y programa seguimientos pendientes (cada 5 min)
+            # - CleanupJob: Limpia seguimientos completados antiguos (diario a las 3 AM)
+            # 
+            # Ejemplo de uso (crear seguimiento):
+            # -------------------------------------------------------------------------
+            # POST /api/v1/accounts/1/contacts/123/contact_trackings
+            # Authorization: Bearer YOUR_ACCESS_TOKEN
+            # Content-Type: application/json
+            # 
+            # {
+            #   "contact_tracking": {
+            #     "objective": "Seguimiento cotización plan premium",
+            #     "scheduled_for": "2025-11-10T09:00:00Z",
+            #     "max_attempts": 3,
+            #     "interval_days": 2,
+            #     "inbox_id": 1,
+            #     "conversation_id": 456,
+            #     "ai_context": "Cliente interesado en plan premium, presupuesto $5K, evaluando opciones"
+            #   }
+            # }
+            # 
+            # Respuesta exitosa:
+            # {
+            #   "id": 1,
+            #   "contact_id": 123,
+            #   "conversation_id": 456,
+            #   "inbox_id": 1,
+            #   "objective": "Seguimiento cotización plan premium",
+            #   "scheduled_for": "2025-11-10T09:00:00Z",
+            #   "max_attempts": 3,
+            #   "attempt_count": 0,
+            #   "interval_days": 2,
+            #   "ai_context": "Cliente interesado en plan premium, presupuesto $5K",
+            #   "status": "pending",
+            #   "last_attempt_at": null,
+            #   "last_message_sent": null,
+            #   "created_at": "2025-01-07T10:00:00Z",
+            #   "updated_at": "2025-01-07T10:00:00Z"
+            # }
+            # 
+            # Documentación completa:
+            # -------------------------------------------------------------------------
+            # Backend: outputs/README.md
+            # Frontend: outputs/FRONTEND_README.md
+            # Instalación: outputs/INSTALACION_BACKEND_RAPIDA.md
+            # Prompts IA: outputs/prompt_completo_y_optimizado_para_integrar_OpenAI.md
+            # =========================================================================
+            resources :contact_trackings, only: [:index, :create, :update, :destroy] do
+              collection do
+                post :improve_text        # Mejorar texto con IA
+              end
+              member do
+                post :pause   # Pausar temporalmente el seguimiento
+                post :resume  # Reanudar seguimiento pausado
+                post :cancel  # Cancelar definitivamente el seguimiento
+              end
+            end
+            # =========================================================================
+            # FIN: proyecto@contact_tracking v2.0
+            # =========================================================================
+            # =========================================================================
+            # 📅 SEGUIMIENTOS AUTOMÁTICOS V2.00 - Contact Schedules
+            # #SEGUIMIENTOS_V2.00
+            # =========================================================================
+
+            
           end
           resources :csat_survey_responses, only: [:index] do
             collection do
@@ -251,6 +417,17 @@ Rails.application.routes.draw do
               end
             end
           end
+
+          #KANBAN0725
+          resources :kanban_type_processes, path: 'kanban_processes' do
+            resources :kanban_processes, path: 'kanban_type_processes' do
+              collection do
+                patch :bulk_reorder
+              end
+            end
+          end
+          #KANBAN0725
+
           resources :working_hours, only: [:update]
 
           resources :portals do
@@ -525,4 +702,40 @@ Rails.application.routes.draw do
   # ----------------------------------------------------------------------
   # Routes for testing
   resources :widget_tests, only: [:index] unless Rails.env.production?
+
+
+
+  # Proyecto: DEV0001
+  namespace :api do
+    namespace :v1 do
+      resources :accounts do
+        scope module: :accounts do
+          # Ruta para todos los mensajes programados de una cuenta
+          resources :scheduled_messages, only: [:index]
+          
+          # Rutas para mensajes programados dentro de una conversación
+          resources :conversations do
+            resources :scheduled_messages, only: [:index, :create]
+          end
+          
+          # Rutas para operaciones individuales de mensajes programados (show, update, destroy)
+          # Estas rutas son "shallow" para no necesitar el conversation_id en estas operaciones
+          resources :scheduled_messages, only: [:show, :update, :destroy]
+        end
+      end
+    end
+  end
+
+  #KANBAN0725
+  namespace :conversations do
+    resources :kanban, only: [:index] do
+      collection do
+        get :filter_by_kanban_type
+        get :filter_by_kanban_process
+        get :filter_by_both_kanban
+      end
+    end
+  end
+  #KANBAN0725
+
 end

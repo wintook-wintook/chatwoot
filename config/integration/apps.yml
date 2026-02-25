@@ -14,6 +14,56 @@ bots:
   i18n_key: bots_inboxes
   hook_type: account
   allow_multiple_hooks: true
+
+
+tracking_bot:
+  id: tracking_bot
+  logo: tracking_bot.png
+  i18n_key: tracking_bot
+  action: /tracking_bot
+  hook_type: inbox
+  allow_multiple_hooks: true
+  settings_json_schema: {
+    "type": "object",
+    "properties": {
+      "model_ia": { 
+        "type": "string",
+        "enum": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
+      }
+    },
+    "required": ["model_ia"],
+    "additionalProperties": false
+  }
+  settings_form_schema: [
+    {
+      "label": "Modelo de IA",
+      "type": "select",
+      "name": "model_ia",
+      "validation": "required",
+      "validationName": "Modelo IA",
+      "help_text": "Selecciona el modelo según tu necesidad de velocidad, inteligencia y costo",
+      "options": [
+        { 
+          "label": "GPT-4o Mini ⚡⚡⚡ - ⭐⭐⭐ - 💰 (Recomendado: Balance perfecto)", 
+          "value": "gpt-4o-mini" 
+        },
+        { 
+          "label": "GPT-4o ⚡⚡ - ⭐⭐⭐⭐⭐ - 💰💰💰 (Casos complejos)", 
+          "value": "gpt-4o" 
+        },
+        { 
+          "label": "GPT-4 Turbo ⚡⚡⚡ - ⭐⭐⭐⭐ - 💰💰 (Alto volumen)", 
+          "value": "gpt-4-turbo" 
+        },
+        { 
+          "label": "GPT-3.5 Turbo ⚡⚡⚡⚡ - ⭐⭐ - 💰 (Máxima economía)", 
+          "value": "gpt-3.5-turbo" 
+        }
+      ]
+    }
+  ]
+  visible_properties: ['model_ia']
+  
 captain:
   id: captain
   logo: captain.png
@@ -246,3 +296,67 @@ google_translate:
 #     },
 #   ]
 #   visible_properties: ["organization_id"]
+# DEV0002
+crmzeus:
+  id: crmzeus
+  logo: crmzeus.png
+  i18n_key: crmzeus
+  action: /crmzeus
+  hook_type: account
+  allow_multiple_hooks: false
+  settings_json_schema: {
+    "type": "object",
+    "properties": {
+      "api_url_base": { "type": "string" },
+      "api_access_token": { "type": "string" },
+      "webhook": { 
+        "type": "string",
+        "default": "https://api.wintook.com/api/v1/${access_token}/webhook"
+      },
+      "webhook_id": { 
+        "type": "number",
+        "default": 0
+      }
+    },
+    "required": ["api_url_base", "api_access_token", "webhook", "webhook_id"],
+    "additionalProperties": false,
+  }
+  settings_form_schema: [
+    {
+      "label": "Direccion Url Kontrolya",
+      "type": "url",
+      "name": "api_url_base",
+      "validation": "required",
+      "validationName": "API Url Kontrolya",
+    },
+    {
+      "label": "Access Token Kontrolya",
+      "type": "text",
+      "name": "api_access_token",
+      "validation": "required",
+      "validationName": "Access Token Kontrolya",
+    },
+    {
+      "label": "Webhook URL",
+      "type": "text",
+      "name": "webhook",
+      "validation": "required|url",
+      "validationName": "Webhook URL",
+      "value": "https://api.wintook.com/api/v1/${access_token}/webhook",
+      "help": "URL donde Kontrolya enviará las notificaciones"
+    },
+    {
+      "label": "Webhook ID",
+      "type": "number",
+      "name": "webhook_id",
+      "validation": "required",
+      "validationName": "Webhook ID",
+      "value": 0,
+      "hidden": true,
+      "disabled": true,
+      "help": "Identificador numérico único para el webhook (generado automáticamente)"
+    }
+  ]
+  visible_properties: ['api_url_base', 'api_access_token', 'webhook']
+  # DEV0002
+

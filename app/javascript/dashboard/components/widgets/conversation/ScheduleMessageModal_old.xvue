@@ -1,0 +1,374 @@
+<!-- Proyecto: DEV0001 -->
+<!-- app/javascript/dashboard/components/widgets/conversation/ScheduleMessageModal.vue -->
+<template>
+    <woot-modal :show.sync="show" :on-close="onClose">
+      <div class="flex flex-col h-auto overflow-auto">
+        <woot-modal-header :header-title="$t('CONVERSATION.SCHEDULE_MESSAGE.TITLE')"
+          :header-content="$t('CONVERSATION.SCHEDULE_MESSAGE.DESC')" />
+        <form class="flex flex-col w-full" @submit.prevent="scheduleMessage">
+          <div class="w-full">
+            <!-- Selector de zona horaria con la misma estructura que países -->
+            <div class="w-full">
+              <label>
+                {{ $t('CONVERSATION.SCHEDULE_MESSAGE.TIMEZONE') }}
+              </label>
+              <multiselect v-model="selectedTimezone" track-by="value" label="label" :placeholder="$t('CONVERSATION.SCHEDULE_MESSAGE.TIMEZONE_PLACEHOLDER')
+                " selected-label :select-label="$t('CONVERSATION.SCHEDULE_MESSAGE.TIMEZONE_SELECT')
+                  " :deselect-label="$t('CONVERSATION.SCHEDULE_MESSAGE.TIMEZONE_DESELECT')
+                    " :custom-label="timezoneNameWithCode" :max-height="160" :options="timezones" allow-empty
+                :option-height="104" />
+            </div>
+  
+            <!-- Campo de mensaje -->
+            <div class="editor-wrap">
+              <label>
+                {{ $t('CONVERSATION.SCHEDULE_MESSAGE.MESSAGE') }}
+              </label>
+              <div>
+                <WootMessageEditor v-model="message" class="message-editor" :class="{ editor_warning: v$.message.$error }"
+                  :placeholder="$t('CONVERSATION.SCHEDULE_MESSAGE.MESSAGE_PLACEHOLDER')
+                    " @blur="v$.message.$touch" />
+                <span v-if="v$.message.$error" class="editor-warning__message">
+                  {{ $t('CONVERSATION.SCHEDULE_MESSAGE.MESSAGE_ERROR') }}
+                </span>
+              </div>
+            </div>
+  
+            <!-- Campo de fecha y hora programada -->
+            <label :class="{ error: v$.scheduledAt.$error }">
+              {{ $t('CONVERSATION.SCHEDULE_MESSAGE.SCHEDULED_AT') }}
+              <WootDateTimePicker :value="scheduledAt" :min-date="new Date()"
+                :confirm-text="$t('CONVERSATION.SCHEDULE_MESSAGE.CONFIRM')" :placeholder="$t('CONVERSATION.SCHEDULE_MESSAGE.SCHEDULED_AT_PLACEHOLDER')
+                  " @change="onChange" />
+              <span v-if="v$.scheduledAt.$error" class="message">
+                {{ $t('CONVERSATION.SCHEDULE_MESSAGE.SCHEDULED_AT_ERROR') }}
+              </span>
+            </label>
+          </div>
+  
+          <div class="flex flex-row justify-end w-full gap-2 px-0 py-2">
+            <woot-button :disabled="isSubmitDisabled" :is-loading="isCreating">
+              {{ $t('CONVERSATION.SCHEDULE_MESSAGE.CONFIRM') }}
+            </woot-button>
+            <woot-button variant="clear" @click.prevent="onClose">
+              {{ $t('CONVERSATION.SCHEDULE_MESSAGE.CANCEL') }}
+            </woot-button>
+          </div>
+        </form>
+      </div>
+    </woot-modal>
+  </template>
+  
+  <script>
+  import { useVuelidate } from '@vuelidate/core';
+  import { required } from '@vuelidate/validators';
+  import { useAlert } from 'dashboard/composables';
+  import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
+  import WootDateTimePicker from 'dashboard/components/ui/DateTimePicker.vue';
+  import Multiselect from 'vue-multiselect';
+  import { mapActions, mapGetters } from 'vuex';
+  import messageAPI from 'dashboard/api/inbox/message';
+  import timeZoneData from './timezones.json';
+  
+  export default {
+    components: {
+      WootDateTimePicker,
+      WootMessageEditor,
+      Multiselect,
+    },
+    props: {
+      show: {
+        type: Boolean,
+        default: false,
+      },
+      conversationId: {
+        type: [Number, String],
+        required: true,
+      },
+      currentUser: {
+        type: Object,
+        default: () => ({}),
+      },
+    },
+    setup() {
+      return { v$: useVuelidate() };
+    },
+    data() {
+      return {
+        message: '',
+        scheduledAt: null,
+        selectedTimezone: {
+          value: 'UTC',
+          label: 'UTC',
+        },
+        timezones: [],
+      };
+    },
+    validations() {
+      return {
+        message: {
+          required,
+        },
+        scheduledAt: {
+          required,
+        },
+      };
+    },
+    computed: {
+      ...mapGetters({
+        uiFlags: 'scheduledMessages/getUIFlags',
+      }),
+      isSubmitDisabled() {
+        return !this.message || !this.scheduledAt || this.isCreating;
+      },
+      isCreating() {
+        return this.uiFlags.isCreating;
+      },
+    },
+    watch: {
+      show(newVal) {
+        if (newVal) {
+          // El modal se acaba de mostrar, detectar zona horaria
+          this.detectUserTimezone();
+        }
+      }
+    },
+    mounted() {
+      this.timezones = Object.keys(timeZoneData).map(key => ({
+        label: key,
+        value: timeZoneData[key],
+      }));
+      
+      // Detectar zona horaria una vez cargados los datos
+      this.detectUserTimezone();
+    },
+    methods: {
+      ...mapActions('scheduledMessages', ['create']),
+  
+      detectUserTimezone() {
+        const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        console.log('Zona horaria detectada:', browserTimezone);
+        
+        // Buscar si la zona horaria del navegador está en nuestra lista
+        const matchedTimezone = this.timezones.find(tz => tz.value === browserTimezone);
+  
+        if (matchedTimezone) {
+          // Si encontramos coincidencia, establecerla como predeterminada
+          this.selectedTimezone = matchedTimezone;
+        } else {
+          // Si no hay coincidencia, intentar encontrar la más cercana
+          this.setClosestTimezone(browserTimezone);
+        }
+      },
+  
+      setClosestTimezone(browserTimezone) {
+        // Obtener el offset de la zona del navegador
+        const date = new Date();
+        const browserOffset = -date.getTimezoneOffset() / 60;
+        
+        // Función para obtener el offset de una zona horaria
+        const getTimezoneOffset = (timezone) => {
+          try {
+            const dateInTz = new Date().toLocaleString('en-US', {timeZone: timezone});
+            const dateInLocal = new Date(dateInTz);
+            return -dateInLocal.getTimezoneOffset() / 60;
+          } catch (e) {
+            return 0; // Valor seguro en caso de error
+          }
+        };
+        
+        // Encontrar la zona con offset más cercano
+        let closestTimezone = this.timezones[0];
+        let minDifference = Math.abs(getTimezoneOffset(closestTimezone.value) - browserOffset);
+        
+        this.timezones.forEach(tz => {
+          const difference = Math.abs(getTimezoneOffset(tz.value) - browserOffset);
+          if (difference < minDifference) {
+            minDifference = difference;
+            closestTimezone = tz;
+          }
+        });
+        
+        this.selectedTimezone = closestTimezone;
+      },
+  
+      onClose() {
+        this.$emit('close');
+      },
+  
+      onChange(value) {
+        this.scheduledAt = value;
+      },
+  
+      timezoneNameWithCode({ label, value }) {
+        if (!value) return label;
+        if (!label && !value) return '';
+        return `${label}`;
+      },
+  
+      // Método principal para programar el mensaje
+      async scheduleMessage() {
+        this.v$.$touch();
+        if (this.v$.$invalid) {
+          return;
+        }
+  
+        try {
+          // Extraer solo el valor de la zona horaria
+          const timezone = this.selectedTimezone
+            ? this.selectedTimezone.value
+            : 'UTC';
+  
+          // Usar la acción del store para crear el mensaje programado
+          const scheduledMessageData = await this.create({
+            conversationId: this.conversationId,
+            content: this.message,
+            scheduled_at: this.scheduledAt,
+            timezone: timezone,
+          });
+  
+          console.log('Mensaje programado creado exitosamente:', scheduledMessageData);
+  
+          // Enviar notificación privada
+          await this.sendPrivateNotification(scheduledMessageData, timezone);
+  
+          // Mostrar mensaje de éxito
+          useAlert(this.$t('CONVERSATION.SCHEDULE_MESSAGE.SUCCESS'));
+  
+          // Limpiar formulario y cerrar modal
+          this.resetForm();
+          this.onClose();
+  
+          return scheduledMessageData;
+        } catch (error) {
+          console.error('Error al programar mensaje:', error);
+          const errorMessage =
+            error.message || this.$t('CONVERSATION.SCHEDULE_MESSAGE.ERROR');
+          useAlert(errorMessage);
+        }
+      },
+  
+      // Método para enviar la notificación privada
+      async sendPrivateNotification(scheduledMessageData, timezone) {
+        const messageContent = this.formatPrivateMessage(scheduledMessageData, timezone);
+  
+        try {
+          await messageAPI.create({
+            conversationId: this.conversationId,
+            message: messageContent,
+            private: true,
+            contentAttributes: {
+              message_action: "scheduled_message_created",
+              scheduled_message_id: scheduledMessageData.id
+            },
+            echo_id: null,
+            files: null,
+          });
+          console.log('Mensaje privado enviado exitosamente');
+        } catch (err) {
+          console.log('Error al enviar mensaje privado:', err);
+          // No lanzamos el error porque la notificación privada no es crítica
+        }
+      },
+  
+      // Método para formatear el mensaje privado
+      formatPrivateMessage(scheduledMessageData, timezone) {
+        const scheduledDate = new Date(this.scheduledAt);
+        const currentDate = new Date();
+  
+        // Formatear fechas
+        const formattedScheduledDate = this.formatDate(scheduledDate, timezone);
+        const formattedCurrentDate = this.formatDate(currentDate, timezone);
+  
+        // Calcular tiempo hasta el envío
+        const timeUntilSend = this.calculateTimeUntilSend(scheduledDate, currentDate);
+  
+        // Truncar el mensaje si es muy largo
+        const messagePreview = this.truncateMessage(this.message, 200);
+  
+        // Construir el mensaje privado
+        return `📅 **MENSAJE PROGRAMADO**
+  
+  ⏰ **Programado para:** ${formattedScheduledDate}
+  📍 **Detalles:**
+  • Programado por: ${this.currentUser.name || this.currentUser.email}
+  • Fecha de programación: ${formattedCurrentDate}
+  • Zona horaria: ${timezone}
+  💡 Nota: Este mensaje se enviará automáticamente a la hora programada.`;
+      },
+  
+      // Método auxiliar para formatear fechas
+      formatDate(date, timezone) {
+        return date.toLocaleString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: timezone,
+          timeZoneName: 'short'
+        });
+      },
+  
+      // Método auxiliar para calcular el tiempo hasta el envío
+      calculateTimeUntilSend(scheduledDate, currentDate) {
+        const timeDiff = scheduledDate - currentDate;
+        const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
+        const minutesDiff = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+  
+        if (hoursDiff > 0) {
+          return `${hoursDiff} hora${hoursDiff > 1 ? 's' : ''} y ${minutesDiff} minuto${minutesDiff > 1 ? 's' : ''}`;
+        }
+        return `${minutesDiff} minuto${minutesDiff > 1 ? 's' : ''}`;
+      },
+  
+      // Método auxiliar para truncar mensajes largos
+      truncateMessage(message, maxLength) {
+        if (message.length > maxLength) {
+          return message.substring(0, maxLength) + '...';
+        }
+        return message;
+      },
+  
+      // Método para resetear el formulario
+      resetForm() {
+        this.message = '';
+        this.scheduledAt = null;
+        
+        // En lugar de resetear a UTC, mantenemos la zona horaria detectada
+        // No es necesario volver a llamar a detectUserTimezone() aquí
+        // ya que solo queremos mantener la zona horaria actual
+      },
+    },
+  };
+  </script>
+  
+  <style lang="scss" scoped>
+  ::v-deep .ProseMirror-woot-style {
+    height: 5rem;
+  }
+  
+  .message-editor {
+    @apply px-3;
+  
+    ::v-deep {
+      .ProseMirror-menubar {
+        @apply rounded-tl-[4px];
+      }
+    }
+  }
+  
+  .timezone-selector {
+    margin-top: 1rem;
+  }
+  
+  .editor-warning__message {
+    @apply text-red-500 text-xs mt-1;
+  }
+  
+  ::v-deep {
+    .multiselect .multiselect__tags .multiselect__single {
+      @apply pl-0;
+    }
+  }
+  </style>

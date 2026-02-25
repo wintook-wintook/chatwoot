@@ -1,0 +1,57 @@
+# Proyecto: DEV0001
+# class ScheduledMessagesDeliveryJob < ApplicationJob
+#     queue_as :scheduled_messages
+    
+#     def perform
+#       ScheduledMessage.pending.find_each do |scheduled_message|
+#         begin
+#           scheduled_message.deliver!
+#         rescue => e
+#           Rails.logger.error "Error al entregar el mensaje programado ID #{scheduled_message.id}: #{e.message}"
+#         end
+#       end
+#     end
+#   end
+
+  # app/jobs/scheduled_messages_delivery_job.rb
+# class ScheduledMessagesDeliveryJob < ApplicationJob
+#   queue_as :scheduled_messages
+  
+#   def perform
+#     Rails.logger.info "Ejecutando ScheduledMessagesDeliveryJob"
+    
+#     pending_messages = ScheduledMessage.pending
+#     Rails.logger.info "Encontrados #{pending_messages.count} mensajes pendientes"
+    
+#     pending_messages.find_each do |scheduled_message|
+#       begin
+#         Rails.logger.info "Procesando mensaje programado ID: #{scheduled_message.id}"
+#         scheduled_message.deliver!
+#       rescue => e
+#         Rails.logger.error "Error al entregar el mensaje programado ID #{scheduled_message.id}: #{e.message}"
+#         Rails.logger.error e.backtrace.join("\n") if e.backtrace
+#       end
+#     end
+    
+#     Rails.logger.info "ScheduledMessagesDeliveryJob completado"
+#   end
+# end
+
+# app/jobs/scheduled_messages_delivery_job.rb
+class ScheduledMessagesDeliveryJob < ApplicationJob
+    queue_as :low  # Usamos la misma cola que otros jobs similares en Chatwoot
+  
+    def perform
+      # Similar al enfoque utilizado en ReopenSnoozedConversationsJob
+      ScheduledMessage.where(sent: false)
+                     .where(scheduled_at: 3.days.ago..Time.current)
+                     .find_each(batch_size: 100) do |scheduled_message|
+        begin
+          Rails.logger.info "Procesando mensaje programado ID: #{scheduled_message.id}"
+          scheduled_message.deliver!
+        rescue => e
+          Rails.logger.error "Error al entregar el mensaje programado ID #{scheduled_message.id}: #{e.message}"
+        end
+      end
+    end
+  end

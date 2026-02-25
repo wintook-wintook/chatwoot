@@ -1,0 +1,272 @@
+<script>
+// import ScheduleMessagesForm from './ScheduleMessagesForm.vue';
+import { VeTable } from "vue-easytable";
+import { mapGetters } from "vuex";
+
+export default {
+  components: {
+    VeTable,
+  },
+  data() {
+    return {
+      searchQuery: "",
+      dataTable: {},
+    }
+  },
+  props: {
+    show: {
+      type: Boolean,
+      default: false,
+    },
+    contact: {
+      type: Object,
+      default: () => ({}),
+    },
+    integration:  {
+      type: Object,
+      default: () => ({}),
+    },
+    showOrganization: { type: Boolean, default: false },
+    onClose: { type: Function, default: () => { } },
+    onSelected: { type: Function, default: () => { } },
+  },
+  computed: {
+    ...mapGetters({
+      currentUser: "getCurrentUser",
+      getAccount: "accounts/getAccount",
+    }),
+    columns() {
+      return [
+        {
+          field: "NOMBRE_COMERCIAL",
+          key: "NOMBRE_COMERCIAL",
+          title: "Nombre Comercial",
+          width: 350,
+          align: "left",
+          renderBodyCell: ({ row }) => (
+            <div class="button-wrapper">
+              <woot-button
+                variant="link"
+                color-scheme="secondary"
+                class-names="grey-btn"
+                icon="building-bank"
+                onClick={() => this.onSelected(row)}
+              >
+                {`${row.NOMBRE_COMERCIAL}`}
+              </woot-button>
+            </div>
+          ),
+        },
+      ];
+    },
+  },
+  methods: {
+    onClose() {
+      this.$emit('close');
+    },
+
+    async onSearchSubmit() {
+      console.log("on:onSearchSubmit", this.searchQuery)
+      this.getOrganizations()
+    },
+    async getOrganizations() {
+      const hook = this.integration.hooks[0];
+        const { api_url_base, api_access_token } = hook.settings || {};
+        const url_base = api_url_base.endsWith('/')
+            ? api_url_base.slice(0, -1)
+            : api_url_base;
+      if (!this.searchQuery) {
+        return; // Salir si searchQuery está vacío
+      }
+      try {
+        const response = await fetch(`${url_base}/apiCrm/externalAccess/accessToken/api/v1/catalog/getLst_Organizacion`, {
+          method: "POST",
+          headers: {
+            "api_access_token": api_access_token,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ filter: this.searchQuery }),
+        });
+
+        const result = await response.json();
+        if (result.total) {
+          this.dataTable = result.resources;
+        } else {
+          throw new Error("La respuesta no fue exitosa");
+        }
+      } catch (error) {
+        console.error("Error al realizar la solicitud:", error);
+        throw error;
+      }
+    },
+
+
+    // onCancel() {
+    //   this.$emit('cancel');
+    // },
+    // onSuccess() {
+    //   this.$emit('cancel');
+    // },
+    // async onSubmit(params, isFromWhatsApp) {
+    //   const data = await this.$store.dispatch('contactConversations/create', {
+    //     params,
+    //     isFromWhatsApp,
+    //   });
+    //   return data;
+    // },
+  },
+};
+</script>
+<!-- DEV0002 -->
+<!-- app/javascript/dashboard/routes/dashboard/conversation/contact/AddOrganization.vue -->
+<!-- eslint-disable vue/no-mutating-props -->
+<template>
+  <woot-modal :show.sync="showOrganization" :on-close="onClose">
+    <div class="flex flex-col h-auto overflow-auto">
+      <woot-modal-header :header-title="'Lista de Organizaciones'"
+        :header-content="'Lista de organizaciones para asignación al contacto.'" />
+
+      <header class="table-actions-wrap mt-4">
+        <div class="w-full flex items-center relative mx-2">
+          <div class="flex items-center absolute h-full left-2.5">
+            <fluent-icon icon="search" class="h-5 text-sm leading-9 text-slate-700 dark:text-slate-200" />
+          </div>
+          <input type="text" :placeholder="'Buscar Organizacion...'"
+            class="!pl-9 !pr-[3.75rem] !text-sm !w-full !h-[2.375rem] !m-0 border-slate-100 dark:border-slate-600"
+            v-model.trim="searchQuery" @keyup.enter="onSearchSubmit" />
+          <woot-button :is-loading="false"
+            class="absolute h-8 px-2 py-0 ml-2 transition-transform duration-100 ease-linear clear right-1"
+            :class-names="searchButtonClass" @click="onSearchSubmit">
+            {{ $t('CONTACTS_PAGE.SEARCH_BUTTON') }}
+          </woot-button>
+        </div>
+      </header>
+
+      <section class="table-actions-wrap">
+        <ve-table :fixed-header="true" max-height="calc(100vh - 34.2rem)" :columns="columns" :table-data="dataTable"
+          :border-around="true" />
+      </section>
+
+    </div>
+  </woot-modal>
+</template>
+
+
+<style lang="scss" scoped>
+@import "~dashboard/assets/scss/mixins";
+
+.org-table-wrap {
+  flex: 1 1;
+  height: 100%;
+  overflow: hidden;
+}
+
+.org-table-wrap::v-deep {
+  .ve-table {
+    padding-bottom: var(--space-large);
+    margin: var(--space-large);
+  }
+
+  .row--user-block {
+    align-items: center;
+    display: flex;
+    text-align: left;
+
+    .user-block {
+      min-width: 0;
+    }
+
+    .user-thumbnail-box {
+      margin-right: var(--space-small);
+    }
+
+    .user-name {
+      font-size: var(--font-size-small);
+      font-weight: var(--font-weight-medium);
+      margin: 0;
+      text-transform: capitalize;
+    }
+
+    .view-details--button {
+      color: var(--color-body);
+    }
+
+    .user-email {
+      margin: 0;
+    }
+  }
+
+  .ve-table-header-th {
+    padding: var(--space-small) var(--space-two) !important;
+  }
+
+  .ve-table-body-td {
+    padding: var(--space-small) var(--space-two) !important;
+  }
+
+  .ve-table-header-th {
+    font-size: var(--font-size-mini) !important;
+  }
+
+  .ve-table-sort {
+    top: -4px;
+  }
+}
+
+.filters-wrap {
+  padding: var(--space-normal);
+  border-radius: var(--border-radius-large);
+  border: 1px solid var(--color-border);
+  background: var(--color-background-light);
+  margin-bottom: var(--space-normal);
+}
+
+.filter-actions {
+  margin-top: var(--space-normal);
+}
+
+.table-actions-wrap {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-small) var(--space-normal) var(--space-small) var(--space-normal);
+  // padding: var(--space-small) var(--space-zero) var(--space-small) var(--space-zero);
+}
+
+.left-aligned-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.right-aligned-wrap {
+  display: flex;
+}
+
+.search-wrap {
+  width: 250px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  margin-right: var(--space-small);
+
+  .search-icon {
+    position: absolute;
+    top: 1px;
+    left: var(--space-one);
+    height: 3.8rem;
+    line-height: 3.6rem;
+    font-size: var(--font-size-medium);
+    color: var(--b-700);
+  }
+
+  .contact-search {
+    margin: 0;
+    height: 3.8rem;
+    width: 100%;
+    padding-left: var(--space-large);
+    padding-right: 6rem;
+    border-color: var(--s-100);
+  }
+}
+</style>

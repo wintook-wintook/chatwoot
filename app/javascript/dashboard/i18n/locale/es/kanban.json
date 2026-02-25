@@ -1,0 +1,315 @@
+{
+  "KANBAN": {
+    "HEADER": "Tablero oportunidad",
+    "DESCRIPTION": "Gestiona tus flujos de trabajo con un sistema tablero visual",
+    "LEARN_MORE": "Aprende más",
+    "HEADER_BTN_TXT": "Agregar Etapa",
+    
+    "BOARD": {
+      "TITLE": "Tablero oportunidad",
+      "SELECT_PROCESS": "Seleccionar tipo de oportunidad",
+      "NO_PROCESSES": "No hay etapas disponibles",
+      "NO_TYPE_PROCESSES": "No hay columnas disponibles",
+      "CREATE_FIRST_PROCESS": "Crear Primer etapa",
+      "ADD_TYPE_PROCESSES_HINT": "Agregar columnas desde la configuración",
+      "MANAGE_PROCESSES": "Gestionar etapas",
+      "NO_CONVERSATIONS": "No hay conversaciones en esta etapa",
+      "DRAG_CONVERSATIONS": "Arrastra conversaciones aquí",
+      "RETRY": "Reintentar",
+      "LOADING_CONVERSATIONS": "Cargando conversaciones",
+      "UPDATING_CONVERSATIONS": "Actualizar conversaciones",
+      "CONVERSATION": "Conversaciones"
+        },
+
+    "TYPE_PROCESSES": {
+      "TITLE": "Tipos de oportunidad",
+      "DESCRIPTION": "Gestiona los diferentes tipos de oportunidad para tu organización",
+      "HEADER": "Tipos de oportunidad",
+      "ADD_NEW": "Agregar nuevo tipo de oportunidad",
+      "CREATE_FIRST": "Crear primer tipo de oportunidad",
+      "NO_RECORDS": "No se encontraron tipos de oportunidad",
+      "EDIT": "Editar",
+      "DELETE": "Eliminar",
+      "DEFAULT": "Por defecto",
+      "SYSTEM": "Sistema",
+      "CONFIRM_DELETE": "¿Estás seguro de que deseas eliminar este tipo de oportunidad?",
+      "FORM": {
+        "PROCESS_NAME": {
+          "LABEL": "Nombre del etapa",
+          "PLACEHOLDER": "Ingresa el nombre del etapa",
+          "TYPE": "Nombre del tipo de oportunidad",
+          "TYPEP": "Ingresa el nombre del tipo de oportunidad"
+        },
+        "DESCRIPTION": {
+          "LABEL": "Descripción",
+          "PLACEHOLDER": "Ingresa una descripción (opcional)"
+        },
+        "COLOR": {
+          "LABEL": "Color"
+        },
+        "DEFAULT_PROCESS": "Establecer como tipo de oportunidad por defecto",
+        "SYSTEM_PROCESS": "tipo de oportunidad del sistema",
+        "CREATE": "Crear tipo de oportunidad",
+        "UPDATE": "Actualizar tipo de oportunidad",
+        "CANCEL": "Cancelar"
+      },
+      "ADD": {
+        "TITLE": "Agregar tipo de oportunidad",
+        "DESC": "Crea un nuevo tipo de oportunidad para organizar tus flujos de trabajo"
+      },
+        "EDITETAPA": {
+        "TITLE": "Editar tipo de oportunidad",
+        "DESC": "Editar un nuevo tipo de oportunidad"
+      },
+     
+      "SUCCESS": {
+        "CREATED": "tipo de oportunidad creado exitosamente",
+        "UPDATED": "tipo de oportunidad actualizado exitosamente",
+        "DELETED": "tipo de oportunidad eliminado exitosamente"
+      },
+      "ERROR": {
+        "CREATING": "Error al crear el tipo de oportunidad",
+        "UPDATING": "Error al actuaºlizar el tipo de oportunidad",
+        "DELETING": "Error al eliminar el tipo de oportunidad",
+        "LOADING": "Error al cargar tipos de oportunidad"
+      }
+      
+    },
+
+    "PROCESSES": {
+      "TITLE": "Etapas de la oportunidad",
+      "DESCRIPTION": "Gestiona las etapas específicas dentro de cada tipo de oportunidad",
+      "HEADER": "Etapas de la oportunidad",
+      "ADD_NEW": "Agregar nueva etapa",
+      "NO_RECORDS": "No se encontraron etapas",
+      "CREATE_FIRST": "Crear Primer etapa",
+      "SELECT_TYPE_FIRST": "Por favor selecciona un tipo de oportunidad primero",
+      "EDIT": "Editar",
+      "DELETE": "Eliminar",
+      "DEFAULT": "Por Defecto",
+      "SYSTEM": "Sistema",
+      "CONFIRM_DELETE": "¿Estás seguro de que quieres eliminar esta etapa?",
+      "SELECT_TYPE": "Seleccionar tipo de oportunidad",
+      "CHOOSE_TYPE": "Elige un tipo de oportunidad",
+      "SELECT_MESSAGE": "Selecciona un tipo de oportunidad",
+      "SELECT_DESCRIPTION": "Elige un tipo de oportunidad para ver y gestionar sus etapas",
+      "CREATE_MODAL_TITLE": "Crear Nuevo etapa",
+      "EDIT_MODAL_TITLE": "Editar etapa",
+      "FORM": {
+        "KANBAN_PROCESS_ID": "ID del etapa",
+        "KANBAN_PROCESS_ID_PLACEHOLDER": "Ingresa el identificador del etapa",
+        "PROCESS_NAME": {
+          "LABEL": "Nombre de la etapa",
+          "PLACEHOLDER": "Ingresa el nombre de la etapa"
+        },
+        "DESCRIPTION": {
+          "LABEL": "Descripción",
+          "PLACEHOLDER": "Ingresa una descripción (opcional)"
+        },
+        "COLOR": {
+          "LABEL": "Color"
+        },
+        "POSITION": {
+          "LABEL": "Posición",
+          "PLACEHOLDER": "Ingresa la posición"
+        },
+        "DEFAULT": "Establecer como etapa por defecto",
+        "DEFAULT_PROCESS": "Establecer como etapa por defecto",
+        "SYSTEM_PROCESS": "etapa del sistema",
+        "CANCEL": "Cancelar",
+        "CREATE": "Crear",
+        "UPDATE": "Actualizar"
+      },
+      "ADD": {
+        "TITLE": "Agregar etapa de las oportunidades",
+        "DESC": "Crea una nueva etapa dentro del tipo de oportunidad seleccionado",
+        "TITLE2": "Agregar tipo de oportunidad",
+        "DESC2": "Crea un nuevo tipo de oportunidad"
+      },
+      "EDITETAPA": {
+        "TITLE": "Editar etapa"
+      },
+      "VALIDATIONS": {
+        "KANBAN_PROCESS_ID_REQUIRED": "El ID del etapa es requerido"
+      },
+      "SUCCESS": {
+        "CREATED": "etapa creado exitosamente",
+        "UPDATED": "etapa actualizado exitosamente",
+        "DELETED": "etapa eliminado exitosamente",
+        "REORDERED": "Etapas reordenados exitosamente"
+      },
+      "ERROR": {
+        "LOADING": "Error al cargar etapas",
+        "CREATING": "Error al crear el etapa de las oportunidades",
+        "UPDATING": "Error al actualizar el etapa de las oportunidades",
+        "DELETING": "Error al eliminar el etapa de las oportunidades",
+        "SAVING": "Error al guardar etapa",
+        "REORDERING": "Error al reordenar etapas"
+      }
+    },
+
+    "TYPE_PROCESSES": {
+      "TITLE": "Tipos de oportunidad",
+      "DESCRIPTION": "Gestiona los diferentes tipos de oportunidad para tu organización",
+      "ADD_NEW": "Agregar",
+      "NO_RECORDS": "No se encontraron columnas",
+      "EDIT": "Editar",
+      "DELETE": "Eliminar",
+      "DEFAULT": "Por Defecto",
+      "SYSTEM": "Sistema",
+      "CONFIRM_DELETE": "¿Estás seguro de que quieres eliminar esta columna?",
+      "CANNOT_DELETE_SYSTEM": "Las columnas del sistema no se pueden eliminar",
+      "CREATE_MODAL_TITLE": "Crear Nueva Columna",
+      "EDIT_MODAL_TITLE": "Editar Columna",
+       "EDITKANBAN": {
+        "TITLE": "Editar tipo de oportunidad"
+      },
+      "FORM": {
+        "TYPE_PROCESS_NAME": "Nombre de la Columna",
+        "TYPE_PROCESS_NAME_PLACEHOLDER": "Ingresa el nombre de la columna",
+        "POSITION": "Posición",
+        "DEFAULT": "Establecer como columna por defecto",
+        "CANCEL": "Cancelar",
+        "CREATE": "Crear",
+        "UPDATE": "Actualizar",
+        "PROCESS_NAME": {
+          "LABEL": "Nombre del tipo de oportunidad",
+          "PLACEHOLDER": "Ingresa el nombre del tipo de oportunidad"
+        },
+        "DESCRIPTION": {
+          "LABEL": "Descripción",
+          "PLACEHOLDER": "Ingresa una descripción (opcional)"
+        },
+        "COLOR": {
+          "LABEL": "Color"
+        },
+        "DEFAULT": "Establecer como tipo de oportunidad por defecto",
+        "DEFAULT_PROCESS": "Establecer como tipo de oportunidad por defecto",
+        "SYSTEM_PROCESS": "etapa del sistema",
+        "CANCEL": "Cancelar",
+        "CREATE": "Crear",
+        "UPDATE": "Actualizar"
+      },
+      "VALIDATIONS": {
+        "TYPE_PROCESS_NAME_REQUIRED": "El nombre de la columna es requerido",
+        "POSITION_REQUIRED": "La posición debe ser un número positivo"
+      },
+       "ADD": {
+        "TITLE2": "Agregar tipo de oportunidad",
+        "DESC2": "Crea un nuevo tipo de oportunidad"
+      },
+       "EDITETAPA": {
+        "TITLE": "Editar tipo de oportunidad",
+        "DESC": "Editar un nuevo tipo de oportunidad"
+      },
+      "SUCCESS": {
+        "CREATED": "Columna creada exitosamente",
+        "UPDATED": "Columna actualizada exitosamente",
+        "DELETED": "Columna eliminada exitosamente",
+        "REORDERED": "Columnas reordenadas exitosamente"
+      },
+      "ERROR": {
+        "LOADING": "Error al cargar columnas",
+        "SAVING": "Error al guardar columna",
+        "DELETING": "Error al eliminar columna",
+        "REORDERING": "Error al reordenar columnas"
+      }
+    },
+
+    "KANBAN_TYPE_MGMT": {
+      "HEADER": {
+        "TITLE": "Tipos de oportunidad",
+        "DESCRIPTION": "Gestiona los tipos de oportunidad para organizar tu flujo de trabajo",
+        "ADD_BUTTON": "Agregar tipo de oportunidad"
+      },
+      "EMPTY_STATE": {
+        "MESSAGE": "No se encontraron tipos de oportunidad",
+        "NEW_BUTTON": "Crear Primer tipo de oportunidad"
+      },
+      "BADGES": {
+        "DEFAULT": "Por Defecto",
+        "SYSTEM": "Sistema"
+      },
+      "ACTIONS": {
+        "EDIT": "Editar",
+        "DELETE": "Eliminar",
+        "SYSTEM_PROTECTED": "Los tipos de sistema no se pueden eliminar"
+      },
+      "DELETE": {
+        "CONFIRM_MESSAGE": "¿Estás seguro de que quieres eliminar \"{name}\"?",
+        "SUCCESS_MESSAGE": "tipo de oportunidad eliminado exitosamente",
+        "ERROR_MESSAGE": "Error al eliminar tipo de oportunidad"
+      },
+      "ADD": {
+        "TITLE": "Agregar tipo de oportunidad",
+        "DESC": "Crear un nuevo tipo de oportunidad para organizar tu tablero de oportunidades",
+        "API": {
+          "SUCCESS_MESSAGE": "tipo de oportunidad creado exitosamente",
+          "ERROR_MESSAGE": "Error al crear tipo de oportunidad",
+          "ERROR_MESSAGE": {
+            "NAME_REQUIRED": "El nombre del tipo de oportunidad es requerido",
+            "NAME_MINIMUM_LENGTH": "El nombre debe tener al menos 2 caracteres"
+          }
+        }
+      },
+      "EDIT": {
+        "TITLE": "Editar tipo de oportunidad",
+        "DESC": "Actualizar la información del tipo de oportunidad",
+        "API": {
+          "SUCCESS_MESSAGE": "tipo de oportunidad actualizado exitosamente",
+          "ERROR_MESSAGE": "Error al actualizar tipo de oportunidad"
+        }
+      },
+      "FORM": {
+        "NAME": {
+          "LABEL": "Nombre del tipo de oportunidad",
+          "PLACEHOLDER": "ej: Ventas, Soporte, Desarrollo"
+        },
+        "DESCRIPTION": {
+          "LABEL": "Descripción",
+          "PLACEHOLDER": "Describe el propósito de este tipo de oportunidad"
+        },
+        "COLOR": {
+          "LABEL": "Color"
+        },
+        "IS_DEFAULT": {
+          "LABEL": "Establecer como tipo de oportunidad por defecto"
+        },
+        "CREATE": "Crear tipo de oportunidad",
+        "UPDATE": "Actualizar tipo de oportunidad",
+        "CANCEL": "Cancelar"
+      }
+    },
+
+    "COLUMN": {
+      "ITEMS": "elementos",
+      "NO_ITEMS": "No hay elementos en esta columna",
+      "ADD_ITEM": "Agregar Elemento"
+    },
+
+    "COMMON": {
+      "LOADING": "Cargando...",
+      "FETCHING_TYPE_PROCESSES": "Obteniendo tipos de oportunidad",
+      "FETCHING_PROCESSES": "Obteniendo Etapas de las oportunidades",
+      "NAME": "Nombre",
+      "DESCRIPTION": "Descripción", 
+      "COLOR": "Color",
+      "POSITION": "Posición",
+      "ACTIONS": "Acciones",
+      "CONFIRM_DELETION": "Confirmar eliminación",
+      "DELETE_MESSAGE": "¿Estás seguro de que deseas eliminar",
+      "YES_DELETE": "Sí, eliminar",
+      "NO_CANCEL": "No, cancelar"
+    },
+
+    "SUCCESS": {
+      "ITEM_MOVED": "Elemento movido exitosamente"
+    },
+
+    "ERROR": {
+      "LOADING_DATA": "Error al cargar datos del tablero",
+      "LOADING_PROCESS": "Error al cargar datos del etapa",
+      "MOVING_ITEM": "Error al mover elemento"
+    }
+  }
+}

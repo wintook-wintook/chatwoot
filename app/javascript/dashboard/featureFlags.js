@@ -6,6 +6,9 @@ export const FEATURE_FLAGS = {
   CAMPAIGNS: 'campaigns',
   CANNED_RESPONSES: 'canned_responses',
   CHATGPT: 'chatgpt',
+  //KANBAN0725
+  KANBAN: 'kanban',
+  //KANBAN0725
   CRM: 'crm',
   CUSTOM_ATTRIBUTES: 'custom_attributes',
   INBOX_MANAGEMENT: 'inbox_management',

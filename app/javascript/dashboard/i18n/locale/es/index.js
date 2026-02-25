@@ -29,12 +29,13 @@ import settings from './settings.json';
 import signup from './signup.json';
 import teamsSettings from './teamsSettings.json';
 import whatsappTemplates from './whatsappTemplates.json';
-import webphone from './webphone.json';
 import sla from './sla.json';
 import inbox from './inbox.json';
 import general from './general.json';
 import datePicker from './datePicker.json';
-import customRole from './customRole.json';
+// Importar todos los archivos JSON de inglés
+import kanban from './kanban.json';
+import contactTracking from './contactTracking.js';
 
 export default {
   ...advancedFilters,
@@ -72,6 +73,6 @@ export default {
   ...inbox,
   ...general,
   ...datePicker,
-  ...customRole,
-  ...webphone,
+  ...kanban,
+  ...contactTracking,
 };

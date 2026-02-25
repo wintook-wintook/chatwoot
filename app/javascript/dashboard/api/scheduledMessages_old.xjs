@@ -1,0 +1,65 @@
+// Proyecto: DEV0001
+// app/javascript/dashboard/api/scheduledMessages.js
+
+/* global axios */
+import endPoints from './endPoints';
+
+class ScheduledMessagesAPI {
+  constructor() {
+    // El accountId se obtiene de manera dinámica
+  }
+
+  get accountId() {
+    // Intenta obtener el accountId del store de Vuex o del context window
+    if (window.store) {
+      return window.store.state.auth.currentAccountId;
+    }
+    
+    // Fallback: intenta obtenerlo del URL actual
+    const match = window.location.pathname.match(/accounts\/(\d+)/);
+    return match ? match[1] : null;
+  }
+
+  get baseUrl() {
+    const accountId = this.accountId;
+    if (!accountId) {
+      console.error('No se pudo obtener el accountId');
+      return '';
+    }
+    return `/api/v1/accounts/${accountId}`;
+  }
+
+  get(conversationId) {
+    return axios.get(`${this.baseUrl}/conversations/${conversationId}/scheduled_messages`);
+  }
+
+  create({ conversation_id, content, scheduled_at, timezone, accountId }) {
+    // Si se pasa accountId, úsalo; si no, intenta obtenerlo
+    const effectiveAccountId = accountId || this.accountId;
+    const baseUrl = `/api/v1/accounts/${effectiveAccountId}`;
+    const url = `${baseUrl}/conversations/${conversation_id}/scheduled_messages`;
+    
+    console.log('Creating scheduled message with URL:', url);
+    console.log('AccountId:', effectiveAccountId);
+    
+    return axios.post(url, {
+      content,
+      scheduled_at,
+      timezone
+    });
+  }
+
+  update(id, data) {
+    return axios.patch(`${this.baseUrl}/scheduled_messages/${id}`, data);
+  }
+
+  delete(id) {
+    return axios.delete(`${this.baseUrl}/scheduled_messages/${id}`);
+  }
+
+  getAll(params = {}) {
+    return axios.get(`${this.baseUrl}/scheduled_messages`, { params });
+  }
+}
+
+export default new ScheduledMessagesAPI();

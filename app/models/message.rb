@@ -133,6 +133,11 @@ class Message < ApplicationRecord
 
   after_create_commit :execute_after_create_commit_callbacks
 
+  # ⭐ SENTIMENT ANALYSIS - proyecto@contact_tracking
+  # Analiza respuestas de clientes y ajusta seguimientos automáticamente
+  after_create_commit :analyze_for_active_trackings, if: :incoming?
+
+
   after_update_commit :dispatch_update_event
 
   def content_attributes_for(user)
@@ -432,6 +437,31 @@ class Message < ApplicationRecord
     conversation.update_columns(last_activity_at: created_at)
     # rubocop:enable Rails/SkipsModelValidations
   end
+
+
+  # def should_auto_acknowledge?
+  #   # Solo para mensajes entrantes de clientes
+  #   incoming? && 
+  #   conversation.present? &&
+  # #  !private? &&
+  #   message_type != 'activity'
+  # end
+
+  # def trigger_auto_acknowledgment
+  #    AutoAcknowledgmentJob.perform_later(id)
+  # end
+
+  # ⭐ SENTIMENT ANALYSIS - proyecto@contact_tracking
+  # Analiza respuestas del cliente y ajusta seguimientos activos según sentimiento
+  # Para revertir: Eliminar este método completo
+  def analyze_for_active_trackings
+    # Queue job de análisis (asíncrono, no bloquea creación del mensaje)
+    ContactTrackingResponseAnalyzerJob.perform_later(id)
+  rescue StandardError => e
+    # No fallar la creación del mensaje si el análisis falla
+    Rails.logger.error "[Message] Error queueing sentiment analysis: #{e.message}"
+  end
+
 end
 
 Message.prepend_mod_with('Message')

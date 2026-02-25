@@ -68,6 +68,21 @@ export default {
       segments: 'customViews/getCustomViews',
       getAppliedContactFilters: 'contacts/getAppliedContactFilters',
     }),
+
+    // CONTACTSYNC 
+    // Estos se actualizarán automáticamente cuando el store cambie
+    integrations() {
+      return this.$store.getters['integrations/getAppIntegrations'];
+    },
+    crmzeusIntegration() {
+      return this.integrations.find(integration => integration.id === 'crmzeus');
+    },
+    isIntegrationEnabled() {
+      return this.crmzeusIntegration?.enabled || false;
+    },
+    // CONTACTSYNC
+
+
     showEmptySearchResult() {
       const hasEmptyResults = !!this.searchQuery && this.records.length === 0;
       return hasEmptyResults;
@@ -147,8 +162,11 @@ export default {
       }
     },
   },
-  mounted() {
+  async mounted() { // CONTACTSYNC
     this.fetchContacts(this.pageParameter);
+    // CONTACTSYNC
+    await this.$store.dispatch('integrations/get');
+    // CONTACTSYNC
   },
   methods: {
     updatePageParam(page) {
@@ -445,8 +463,12 @@ export default {
       :contact="selectedContact"
       :on-close="closeContactInfoPanel"
     />
-    <CreateContact :show="showCreateModal" @cancel="onToggleCreate" />
-    <woot-modal :show.sync="showImportModal" :on-close="onToggleImport">
+    <!-- <CreateContact :show="showCreateModal" @cancel="onToggleCreate" />
+      -->
+      <!-- CONTACTSYNC -->
+      <CreateContact :show="showCreateModal" @cancel="onToggleCreate" :is-integration-enabled="isIntegrationEnabled"/>
+      <!-- CONTACTSYNC -->
+      <woot-modal :show.sync="showImportModal" :on-close="onToggleImport">
       <ImportContacts v-if="showImportModal" :on-close="onToggleImport" />
     </woot-modal>
     <woot-modal

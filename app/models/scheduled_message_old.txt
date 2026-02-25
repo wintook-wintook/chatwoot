@@ -1,0 +1,56 @@
+# app/models/scheduled_message.rb
+class ScheduledMessage < ApplicationRecord
+    belongs_to :account
+    belongs_to :conversation
+    belongs_to :user
+    
+    validates :content, presence: true
+    validates :scheduled_at, presence: true
+    
+    scope :pending, -> { where(sent: false).where('scheduled_at <= ?', Time.current) }
+    
+    def deliver!
+      Rails.logger.info "Intentando entregar mensaje programado ID: #{id}"
+      
+      return if sent?
+      
+      # Verificar que la conversación existe
+      unless conversation.present?
+        Rails.logger.error "Error al entregar mensaje programado ID #{id}: La conversación no existe"
+        return
+      end
+      
+      # Obtener el inbox de la conversación
+      inbox_id = conversation.inbox_id
+      
+      begin
+        # Preparar los atributos adicionales (asegurarse de que sea un hash)
+        safe_additional_attributes = additional_attributes.is_a?(Hash) ? additional_attributes : {}
+        
+        # Incluir el inbox_id al crear el mensaje
+        message = conversation.messages.create!(
+          account_id: account_id,
+          inbox_id: inbox_id,
+          message_type: message_type || 'outgoing', 
+          content: content,
+          sender: user,
+          additional_attributes: safe_additional_attributes,
+          content_type: 'text',
+          content_attributes: {}
+        )
+        
+        update!(
+          sent: true,
+          sent_at: Time.current
+        )
+        
+        Rails.logger.info "Mensaje programado ID #{id} entregado exitosamente como mensaje ID #{message.id}"
+        
+        message
+      rescue => e
+        Rails.logger.error "Error al entregar mensaje programado ID #{id}: #{e.message}"
+        Rails.logger.error e.backtrace.join("\n") if e.backtrace
+        # No volver a lanzar la excepción para que otros mensajes puedan procesarse
+      end
+    end
+  end

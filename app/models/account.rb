@@ -20,6 +20,8 @@
 #  index_accounts_on_status  (status)
 #
 
+# KANBAN0725-MODEL
+
 class Account < ApplicationRecord
   # used for single column multi flags
   include FlagShihTzu
@@ -27,6 +29,13 @@ class Account < ApplicationRecord
   include Featurable
   include CacheKeys
 
+  has_many :scheduled_messages, dependent: :destroy
+  
+  # KANBAN0725
+  has_many :kanban_type_processes, dependent: :destroy
+  has_many :kanban_processes, dependent: :destroy
+  # KANBAN0725
+  
   DEFAULT_QUERY_SETTING = {
     flag_query_mode: :bit_operator,
     check_for_column: false

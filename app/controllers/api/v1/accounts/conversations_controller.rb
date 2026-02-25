@@ -1,3 +1,4 @@
+# KANBAN0725-CONTROLLER
 class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseController
   include Events::Types
   include DateRangeHelper
@@ -5,6 +6,32 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   before_action :conversation, except: [:index, :meta, :search, :create, :filter]
   before_action :inbox, :contact, :contact_inbox, only: [:create]
+
+  # def index
+  #   # ✅ AGREGAR FILTROS KANBAN ANTES DEL conversation_finder:
+  #   if params[:kanban_type_process_id].present? || params[:kanban_process_id].present?
+  #     # Aplicar filtros Kanban directamente
+  #     conversations_query = Current.account.conversations
+  #     conversations_query = conversations_query.where(kanban_type_process_id: params[:kanban_type_process_id]) if params[:kanban_type_process_id].present?
+  #     conversations_query = conversations_query.where(kanban_process_id: params[:kanban_process_id]) if params[:kanban_process_id].present?
+      
+  #     @conversations = conversations_query.includes(:kanban_type_process, :kanban_process, :assignee, :contact, :inbox)
+  #                                       .page(params[:page])
+  #     @conversations_count = { all_count: conversations_query.count }
+      
+  #     # Renderizar directamente
+  #     render json: {
+  #       payload: @conversations.as_json(include: [:kanban_type_process, :kanban_process, :assignee, :contact, :inbox]),
+  #       meta: @conversations_count
+  #     }
+  #   else
+  #     # Usar el flujo normal existente
+  #     result = conversation_finder.perform
+  #     @conversations = result[:conversations]
+  #     @conversations_count = result[:count]
+  #   end
+  # end
+
 
   def index
     result = conversation_finder.perform
@@ -28,6 +55,22 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   def show; end
+  # def show
+  #   render json: format_conversation_response(@conversation)
+  # end
+
+  # def show
+  #   render json: @conversation.as_json(
+  #     include: {
+  #       kanban_type_process: {
+  #         only: [:id, :process_name, :default, :is_system]
+  #       },
+  #       kanban_process: {
+  #         only: [:id, :type_process_name, :position, :default, :is_system]
+  #       }
+  #     }
+  #   )
+  # end
 
   def create
     ActiveRecord::Base.transaction do
@@ -38,6 +81,117 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def update
     @conversation.update!(permitted_update_params)
+
+    if @conversation.update(conversation_params)
+      render json: @conversation
+    else
+      render json: { errors: @conversation.errors }, status: :unprocessable_entity
+    end
+  end
+
+  # ✅ MÉTODO ORIGINAL MANTENIDO: update_kanban_process
+  def update_kanban_process
+    # @conversation = Current.account.conversations.find(params[:id])
+    @conversation = Current.account.conversations.find_by!(display_id: params[:id])
+    if @conversation.update(kanban_process_params)
+      render json: @conversation.as_json(include: [:kanban_type_process, :kanban_process])
+    else
+      render json: { errors: @conversation.errors }, status: :unprocessable_entity
+    end
+  end
+
+  # ✅ NUEVO MÉTODO MEJORADO: update_kanban_process_enhanced
+  def update_kanban_process_enhanced
+    Rails.logger.info "🔄 CONTROLLER: update_kanban_process_enhanced iniciado para conversación #{params[:id]}"
+    Rails.logger.info "📊 CONTROLLER: Parámetros recibidos: #{kanban_process_params_enhanced}"
+
+    @conversation = Current.account.conversations.find(params[:id])
+    
+    # Llamar al servicio para actualizar kanban
+    result = update_conversation_kanban_fields(@conversation, kanban_process_params_enhanced)
+    
+    if result[:success]
+      Rails.logger.info "✅ CONTROLLER: Conversación actualizada exitosamente"
+      render json: format_conversation_response(@conversation)
+    else
+      Rails.logger.error "❌ CONTROLLER: Error: #{result[:errors]}"
+      render json: { 
+        error: 'Failed to update conversation kanban process',
+        details: result[:errors]
+      }, status: :unprocessable_entity
+    end
+  end
+
+  # ✅ NUEVO MÉTODO: Actualizar solo kanban_process_id
+  def update_kanban_process_only
+    Rails.logger.info "🔄 CONTROLLER: update_kanban_process_only para conversación #{params[:id]}"
+    
+    @conversation = Current.account.conversations.find(params[:id])
+    kanban_process_id = params[:kanban_process_id]
+    
+    # Validar que el kanban_process existe y pertenece a la cuenta
+    if kanban_process_id.present?
+      kanban_process = validate_kanban_process(kanban_process_id)
+      return render_unauthorized_kanban_process unless kanban_process
+    end
+
+    # Actualizar solo el kanban_process_id
+    if @conversation.update(kanban_process_id: kanban_process_id)
+      Rails.logger.info "✅ CONTROLLER: kanban_process_id actualizado a #{kanban_process_id}"
+      render json: format_conversation_response(@conversation)
+    else
+      Rails.logger.error "❌ CONTROLLER: Error actualizando: #{@conversation.errors.full_messages}"
+      render json: { 
+        error: 'Failed to update kanban process',
+        details: @conversation.errors.full_messages
+      }, status: :unprocessable_entity
+    end
+  end
+
+  # ✅ NUEVO MÉTODO: Actualización masiva de campos kanban
+  def bulk_update_kanban
+    Rails.logger.info "🔄 CONTROLLER: bulk_update_kanban para conversación #{params[:id]}"
+    
+    @conversation = Current.account.conversations.find(params[:id])
+    
+    # Parámetros que pueden venir en el request
+    kanban_type_process_id = params[:kanban_type_process_id]
+    kanban_process_id = params[:kanban_process_id]
+    
+    # Construir hash de actualización dinámicamente
+    update_params = {}
+    
+    # Si se proporciona kanban_type_process_id
+    if kanban_type_process_id.present?
+      kanban_type_process = validate_kanban_type_process(kanban_type_process_id)
+      return render_unauthorized_kanban_type_process unless kanban_type_process
+      update_params[:kanban_type_process_id] = kanban_type_process_id
+    end
+    
+    # Si se proporciona kanban_process_id
+    if kanban_process_id.present?
+      kanban_process = validate_kanban_process(kanban_process_id, kanban_type_process_id)
+      return render_unauthorized_kanban_process unless kanban_process
+      update_params[:kanban_process_id] = kanban_process_id
+    end
+    
+    # Si ambos son nil, limpiar kanban
+    if kanban_type_process_id.nil? && kanban_process_id.nil?
+      update_params = { kanban_type_process_id: nil, kanban_process_id: nil }
+    end
+
+    Rails.logger.info "📊 CONTROLLER: Parámetros de actualización: #{update_params}"
+
+    if @conversation.update(update_params)
+      Rails.logger.info "✅ CONTROLLER: Actualización bulk exitosa"
+      render json: format_conversation_response(@conversation)
+    else
+      Rails.logger.error "❌ CONTROLLER: Error en bulk update: #{@conversation.errors.full_messages}"
+      render json: { 
+        error: 'Failed to bulk update kanban fields',
+        details: @conversation.errors.full_messages
+      }, status: :unprocessable_entity
+    end
   end
 
   def filter
@@ -117,6 +271,140 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   private
+
+  # ✅ SERVICIO: Lógica principal de actualización kanban
+  def update_conversation_kanban_fields(conversation, params)
+    Rails.logger.info "🔧 SERVICE: update_conversation_kanban_fields iniciado"
+    
+    # Validar kanban_type_process si está presente
+    if params[:kanban_type_process_id].present?
+      kanban_type_process = validate_kanban_type_process(params[:kanban_type_process_id])
+      return { success: false, errors: ['Unauthorized kanban type process'] } unless kanban_type_process
+    end
+
+    # Validar kanban_process si está presente
+    if params[:kanban_process_id].present?
+      kanban_process = validate_kanban_process(params[:kanban_process_id], params[:kanban_type_process_id])
+      return { success: false, errors: ['Unauthorized kanban process'] } unless kanban_process
+    end
+
+    # Actualizar la conversación
+    if conversation.update(params)
+      Rails.logger.info "✅ SERVICE: Conversación actualizada con éxito"
+      { success: true, conversation: conversation }
+    else
+      Rails.logger.error "❌ SERVICE: Error actualizando conversación: #{conversation.errors.full_messages}"
+      { success: false, errors: conversation.errors.full_messages }
+    end
+  end
+
+  # ✅ VALIDACIÓN: Verificar que kanban_type_process pertenece a la cuenta
+  def validate_kanban_type_process(kanban_type_process_id)
+    Rails.logger.info "🔍 VALIDATION: Validando kanban_type_process_id: #{kanban_type_process_id}"
+    
+    kanban_type_process = Current.account.kanban_type_processes.find_by(id: kanban_type_process_id)
+    
+    if kanban_type_process
+      Rails.logger.info "✅ VALIDATION: kanban_type_process válido: #{kanban_type_process.process_name}"
+    else
+      Rails.logger.warn "⚠️ VALIDATION: kanban_type_process no encontrado o no autorizado"
+    end
+    
+    kanban_type_process
+  end
+
+  # ✅ VALIDACIÓN: Verificar que kanban_process pertenece a la cuenta y al tipo
+  def validate_kanban_process(kanban_process_id, kanban_type_process_id = nil)
+    Rails.logger.info "🔍 VALIDATION: Validando kanban_process_id: #{kanban_process_id}"
+    Rails.logger.info "🔍 VALIDATION: Para kanban_type_process_id: #{kanban_type_process_id}"
+    
+    # Query base: debe pertenecer a la cuenta
+    query = Current.account.kanban_processes.where(id: kanban_process_id)
+    
+    # Si se especifica kanban_type_process_id, también validar esa relación
+    if kanban_type_process_id.present?
+      query = query.where(kanban_type_process_id: kanban_type_process_id)
+    end
+    
+    kanban_process = query.first
+    
+    if kanban_process
+      Rails.logger.info "✅ VALIDATION: kanban_process válido: #{kanban_process.type_process_name}"
+    else
+      Rails.logger.warn "⚠️ VALIDATION: kanban_process no encontrado o no autorizado"
+    end
+    
+    kanban_process
+  end
+
+ # ✅ FORMATO: Respuesta estándar de conversación con datos kanban (versión simple)
+def format_conversation_response(conversation)
+  conversation.as_json(
+    include: {
+      kanban_type_process: {
+        only: [:id, :process_name, :default, :is_system],
+        include: {
+          kanban_processes: {
+            only: [:id, :type_process_name, :position, :default, :is_system]
+          }
+        }
+      },
+      kanban_process: {
+        only: [:id, :type_process_name, :position, :default, :is_system]
+      },
+      messages: {
+        include: {
+          sender: {
+            only: [:id, :name, :available_name, :avatar_url, :email, :thumbnail]
+          },
+          attachments: {
+            only: [:id, :file_type, :file_url, :thumb_url, :data_url]
+          }
+        }
+      },
+      inbox: {
+        only: [:id, :name, :channel_type]
+      },
+      contact: {
+        only: [:id, :name, :email, :phone_number, :identifier, :thumbnail, :additional_attributes]
+      },
+      labels: {
+        only: [:id, :title, :description, :color, :show_on_sidebar]
+      }
+    }
+  )
+end
+
+  # ✅ ERRORS: Respuestas de error estándar
+  def render_unauthorized_kanban_type_process
+    render json: { 
+      error: 'Kanban type process not found or not authorized for this account' 
+    }, status: :unprocessable_entity
+  end
+
+  def render_unauthorized_kanban_process
+    render json: { 
+      error: 'Kanban process not found or not authorized for this account' 
+    }, status: :unprocessable_entity
+  end
+
+  def conversation_params
+    # Parámetros originales mantenidos
+    params.require(:conversation).permit(
+      :kanban_type_process_id,
+      :kanban_process_id
+    )
+  end
+
+  # ✅ PARAMS ORIGINALES: Mantenidos para compatibilidad
+  def kanban_process_params
+    params.require(:conversation).permit(:kanban_type_process_id, :kanban_process_id)
+  end
+
+  # ✅ PARAMS MEJORADOS: Para métodos nuevos
+  def kanban_process_params_enhanced
+    params.permit(:kanban_type_process_id, :kanban_process_id)
+  end
 
   def permitted_update_params
     # TODO: Move the other conversation attributes to this method and remove specific endpoints for each attribute

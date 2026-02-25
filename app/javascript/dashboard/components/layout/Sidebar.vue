@@ -1,4 +1,5 @@
 <script>
+// KANBAN0725
 import { mapGetters } from 'vuex';
 import { getSidebarItems } from './config/default-sidebar';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
@@ -6,6 +7,7 @@ import { useRoute, useRouter } from 'dashboard/composables/route';
 
 import PrimarySidebar from './sidebarComponents/Primary.vue';
 import SecondarySidebar from './sidebarComponents/Secondary.vue';
+// import AddKanbanType from '../modals/AddKanbanType.vue'; // Ruta correcta: subir un nivel y entrar a modals
 import { routesWithPermissions } from '../../routes';
 import {
   getUserPermissions,
@@ -16,6 +18,7 @@ export default {
   components: {
     PrimarySidebar,
     SecondarySidebar,
+   // AddKanbanType, // Registrar el modal
   },
   props: {
     showSecondarySidebar: {
@@ -74,6 +77,10 @@ export default {
   data() {
     return {
       showOptionsMenu: false,
+      // NUEVO: Estado para controlar el colapso del sidebar secundario
+      isSecondarySidebarCollapsed: false,
+      // NUEVO: Estado para controlar el modal de kanban type
+      showAddKanbanTypeModal: false,
     };
   },
 
@@ -90,6 +97,35 @@ export default {
       labels: 'labels/getLabelsOnSidebar',
       teams: 'teams/getMyTeams',
     }),
+
+    // NUEVA: Computed property para kanbanTypes
+    kanbanTypes() {
+      console.log('🔄 Sidebar: Computando kanbanTypes desde store...');
+      
+      const storeData = this.$store.state.kanbanTypeProcesses;
+      console.log('📊 Sidebar: Store data:', storeData);
+      
+      if (!storeData || !storeData.records) {
+        console.log('❌ Sidebar: No hay datos en el store');
+        return [];
+      }
+
+      const types = Object.values(storeData.records).map(record => ({
+        id: record.id,
+        name: record.process_name,
+        color: record.color || '#3b82f6', // Color por defecto
+        default: record.default,
+        is_system: record.is_system,
+        account_id: record.account_id,
+        created_at: record.created_at,
+        updated_at: record.updated_at,
+        kanban_processes: record.kanban_processes || [],
+      }));
+
+      console.log('✅ Sidebar: Kanban types mapeados:', types);
+      return types;
+    },
+
     activeCustomView() {
       if (this.activePrimaryMenu.key === 'contacts') {
         return 'contact';
@@ -154,10 +190,21 @@ export default {
       const { secondaryMenu } = this.sideMenuConfig;
       const { name: currentRoute } = this.$route;
 
+      console.log('🔍 Debug Sidebar - Ruta actual:', currentRoute);
+      console.log('🔍 Debug Sidebar - Menús secundarios:', secondaryMenu);
+
       const activeSecondaryMenu =
-        secondaryMenu.find(menuItem =>
-          menuItem.routes.includes(currentRoute)
-        ) || {};
+        secondaryMenu.find(menuItem => {
+          const isRouteIncluded = menuItem.routes.includes(currentRoute);
+          console.log(`🔍 Debug Sidebar - Menu ${menuItem.parentNav}:`, {
+            routes: menuItem.routes,
+            currentRoute,
+            isIncluded: isRouteIncluded
+          });
+          return isRouteIncluded;
+        }) || {};
+
+      console.log('🔍 Debug Sidebar - Menu activo encontrado:', activeSecondaryMenu);
       return activeSecondaryMenu;
     },
     activePrimaryMenu() {
@@ -175,13 +222,41 @@ export default {
         ) && this.currentRole !== 'administrator'
       );
     },
+
+    // NUEVO: Computed para determinar si debemos mostrar el sidebar secundario
+    shouldShowSecondarySidebar() {
+      // Si la prop dice que no se muestre, respetarla
+      if (!this.showSecondarySidebar) return false;
+      
+      // Para rutas de kanban, siempre mostrar el sidebar
+      const currentRoute = this.$route.name;
+      const kanbanRoutes = ['kanban_dashboard', 'kanban_board', 'kanban_processes', 'kanban_label', 'kanban_status', 'kanban_type'];
+      
+      if (kanbanRoutes.includes(currentRoute)) {
+        console.log('🔍 Debug - Ruta de kanban detectada, forzando sidebar:', currentRoute);
+        return true;
+      }
+      
+      // Para otras rutas, usar la lógica normal
+      return Object.keys(this.activeSecondaryMenu).length > 0;
+    },
   },
 
   watch: {
     activeCustomView() {
       this.fetchCustomViews();
     },
+    // NUEVO: Watch para recargar kanbanTypes cuando cambie la cuenta
+    accountId: {
+      handler(newAccountId) {
+        if (newAccountId) {
+          this.loadKanbanTypes();
+        }
+      },
+      immediate: true,
+    },
   },
+
   mounted() {
     this.$store.dispatch('labels/get');
     this.$store.dispatch('inboxes/get');
@@ -189,6 +264,20 @@ export default {
     this.$store.dispatch('teams/get');
     this.$store.dispatch('attributes/get');
     this.fetchCustomViews();
+    // NUEVO: Cargar kanban types
+    this.loadKanbanTypes();
+    
+    // NUEVO: Restaurar estado del sidebar desde localStorage
+    const savedState = localStorage.getItem('secondarySidebarCollapsed');
+    if (savedState !== null) {
+      this.isSecondarySidebarCollapsed = JSON.parse(savedState);
+    }
+
+    // DEBUG: Verificar configuración del sidebar
+    console.log('🔍 Debug Sidebar mounted:');
+    console.log('- Ruta actual:', this.$route.name);
+    console.log('- activeSecondaryMenu:', this.activeSecondaryMenu);
+    console.log('- shouldShowSecondarySidebar:', this.shouldShowSecondarySidebar);
   },
 
   methods: {
@@ -197,6 +286,40 @@ export default {
         this.$store.dispatch('customViews/get', this.activeCustomView);
       }
     },
+
+    // NUEVO: Método para alternar el colapso del sidebar secundario
+    toggleSecondarySidebar() {
+      this.isSecondarySidebarCollapsed = !this.isSecondarySidebarCollapsed;
+      // Opcional: Guardar el estado en localStorage
+      localStorage.setItem('secondarySidebarCollapsed', this.isSecondarySidebarCollapsed);
+    },
+
+    // NUEVO: Método para cargar kanban types
+    async loadKanbanTypes() {
+      try {
+        console.log('🔄 Sidebar: Cargando kanbanTypes...');
+        await this.$store.dispatch('kanbanTypeProcesses/get');
+        console.log('✅ Sidebar: kanbanTypes cargados correctamente');
+      } catch (error) {
+        console.error('❌ Sidebar: Error cargando kanbanTypes:', error);
+      }
+    },
+
+    // NUEVO: Método para manejar la creación de nuevos tipos
+    showAddKanbanTypePopup() {
+          console.log('AQUI🔄 Sidebar: Crear nuevo tipo de proceso');
+          console.log('🔄 Sidebar: showAddKanbanTypeModal antes:', this.showAddKanbanTypeModal);
+          this.showAddKanbanTypeModal = true;
+          console.log('🔄 Sidebar: showAddKanbanTypeModal después:', this.showAddKanbanTypeModal); 
+    },
+
+    // NUEVO: Método para cerrar el modal y recargar datos
+    onKanbanTypeModalClose() {
+      this.showAddKanbanTypeModal = false;
+      // Recargar los tipos de proceso
+      this.loadKanbanTypes();
+    },
+
     toggleSupportChatWindow() {
       window.$chatwoot.toggle();
     },
@@ -227,18 +350,37 @@ export default {
       @openNotificationPanel="openNotificationPanel"
     />
     <SecondarySidebar
-      v-if="showSecondarySidebar"
-      :class="sidebarClassName"
+      v-if="shouldShowSecondarySidebar"
+      :class="[
+        sidebarClassName,
+        {
+          'w-12 overflow-hidden': isSecondarySidebarCollapsed,
+          'w-48': !isSecondarySidebarCollapsed
+        }
+      ]"
       :account-id="accountId"
       :inboxes="inboxes"
       :labels="labels"
       :teams="teams"
       :custom-views="customViews"
+      :kanban-types="kanbanTypes"
       :menu-config="activeSecondaryMenu"
       :current-user="currentUser"
       :is-on-chatwoot-cloud="isOnChatwootCloud"
+      :is-collapsed="isSecondarySidebarCollapsed"
       @addLabel="showAddLabelPopup"
+      @addKanbanType="showAddKanbanTypePopup"
       @toggleAccounts="toggleAccountModal"
+      @toggleSidebar="toggleSecondarySidebar"
     />
+
+    <!-- Modal para crear nuevo tipo de proceso -->
+    <!-- <woot-modal
+      v-if="showAddKanbanTypeModal"
+      :show="showAddKanbanTypeModal"
+      @close="onKanbanTypeModalClose"
+    >
+      <AddKanbanType @close="onKanbanTypeModalClose" />
+    </woot-modal> -->
   </aside>
 </template>

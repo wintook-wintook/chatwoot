@@ -5,6 +5,9 @@ import campaigns from './sidebarItems/campaigns';
 import settings from './sidebarItems/settings';
 import notifications from './sidebarItems/notifications';
 import primaryMenu from './sidebarItems/primaryMenu';
+// KANBAN0725
+import kanban from './sidebarItems/kanban'; // Añade esta línea
+// KANBAN0725
 
 export const getSidebarItems = accountId => ({
   primaryMenu: primaryMenu(accountId),
@@ -15,5 +18,8 @@ export const getSidebarItems = accountId => ({
     campaigns(accountId),
     settings(accountId),
     notifications(accountId),
+    // KANBAN0725
+    kanban(accountId),
+    // KANBAN0725 
   ],
 });

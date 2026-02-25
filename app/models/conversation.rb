@@ -49,6 +49,8 @@
 #  index_conversations_on_waiting_since               (waiting_since)
 #
 
+# KANBAN0725-MODEL
+
 class Conversation < ApplicationRecord
   include Labelable
   include AssignmentHandler
@@ -59,6 +61,8 @@ class Conversation < ApplicationRecord
   include PushDataHelper
   include ConversationMuteHelpers
 
+  has_many :scheduled_messages, dependent: :destroy
+
   validates :account_id, presence: true
   validates :inbox_id, presence: true
   validates :contact_id, presence: true
@@ -67,6 +71,10 @@ class Conversation < ApplicationRecord
   validates :custom_attributes, jsonb_attributes_length: true
   validates :uuid, uniqueness: true
   validate :validate_referer_url
+
+  # KANBAN0725
+   validate :kanban_processes_belong_to_account
+  # KANBAN0725
 
   enum status: { open: 0, resolved: 1, pending: 2, snoozed: 3 }
   enum priority: { low: 0, medium: 1, high: 2, urgent: 3 }
@@ -88,6 +96,11 @@ class Conversation < ApplicationRecord
     ).sort_on_last_user_message_at
   }
 
+  # KANBAN0725
+  scope :by_kanban_type, ->(type_id) { where(kanban_type_process_id: type_id) }
+  scope :by_kanban_process, ->(process_id) { where(kanban_process_id: process_id) }
+  # KANBAN0725
+
   belongs_to :account
   belongs_to :inbox
   belongs_to :assignee, class_name: 'User', optional: true, inverse_of: :assigned_conversations
@@ -95,6 +108,11 @@ class Conversation < ApplicationRecord
   belongs_to :contact_inbox
   belongs_to :team, optional: true
   belongs_to :campaign, optional: true
+
+  # KANBAN0725
+  belongs_to :kanban_type_process, optional: true
+  belongs_to :kanban_process, optional: true
+  # KANBAN0725
 
   has_many :mentions, dependent: :destroy_async
   has_many :messages, dependent: :destroy_async, autosave: true
@@ -204,6 +222,24 @@ class Conversation < ApplicationRecord
   end
 
   private
+
+  # KANBAN0725
+  def kanban_processes_belong_to_account
+    if kanban_type_process && kanban_type_process.account_id != account_id
+      errors.add(:kanban_type_process, 'must belong to the same account')
+    end
+    
+    if kanban_process && kanban_process.account_id != account_id
+      errors.add(:kanban_process, 'must belong to the same account')
+    end
+    
+    # Validar que kanban_process pertenezca al kanban_type_process
+    if kanban_process && kanban_type_process && 
+       kanban_process.kanban_type_process_id != kanban_type_process.id
+      errors.add(:kanban_process, 'must belong to the selected kanban type process')
+    end
+  end
+  # KANBAN0725
 
   def execute_after_update_commit_callbacks
     notify_status_change

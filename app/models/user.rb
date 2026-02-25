@@ -50,6 +50,8 @@ class User < ApplicationRecord
   include SsoAuthenticatable
   include UserAttributeHelpers
 
+  has_many :scheduled_messages
+  
   devise :database_authenticatable,
          :registerable,
          :recoverable,

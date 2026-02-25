@@ -26,3 +26,90 @@ remove_stale_contact_inboxes_job.rb:
   cron: '30 22 * * *'
   class: 'Internal::RemoveStaleContactInboxesJob'
   queue: scheduled_jobs
+
+# Proyecto: DEV0001
+# config/sidekiq_scheduler.yml o similar
+scheduled_messages_delivery:
+  cron: '* * * * *'  # Ejecutar cada minuto
+  class: ScheduledMessagesDeliveryJob
+  queue: low
+  description: "Entrega los mensajes programados cuando llega su hora"
+
+
+
+
+
+# =========================================================================
+# 📅 SEGUIMIENTOS AUTOMÁTICOS V2.00 - Contact Schedules Processor
+# #SEGUIMIENTOS_V2.00
+# =========================================================================
+# Job que procesa seguimientos programados listos para ejecutar.
+# Busca ContactSchedules con scheduled_for <= NOW() y status activo,
+# luego encola FollowUpJob para cada uno.
+#
+# Flujo: Cron (cada minuto) → ProcessContactSchedulesJob → FollowUpJob → Envío
+#
+# Frecuencia: Cada minuto (*/1 * * * *)
+# Queue: scheduled_jobs (prioridad media)
+# Relación: Invoca FollowUpJob.perform_later(schedule.id)
+#
+# Validar cron expression en: https://crontab.guru/#*/1_*_*_*_*
+
+# process_contact_schedules_job:
+#   cron: '*/1 * * * *'  # Ejecutar cada minuto
+#   class: 'ProcessContactSchedulesJob'
+#   queue: scheduled_jobs
+#   description: "Procesa y envía los seguimientos programados de contactos"
+# =========================================================================
+
+
+
+
+# ================================================================================
+# proyecto@contact_tracking
+# ================================================================================
+# Archivo: schedule.yml
+# Descripción: Configuración de Sidekiq-Cron para jobs programados
+# Ubicación: config/schedule.yml
+# Dependencia: gem 'sidekiq-cron'
+# Autor: Chatwoot Follow-up AI Bot
+# Versión: 1.0.0
+# ================================================================================
+
+# ==============================================================================
+# Job: Ejecutar trackings pendientes
+# ==============================================================================
+# Descripción: Busca y ejecuta trackings que deben ejecutarse
+# Frecuencia: Cada 5 minutos
+# Queue: scheduled_jobs
+# ==============================================================================
+execute_pending_trackings:
+  cron: "*/1 * * * *"
+  class: "ContactTrackings::ExecutePendingJob"
+  queue: scheduled_jobs
+  description: "Execute pending contact tracking follow-ups"
+
+# ==============================================================================
+# Job: Limpieza de trackings antiguos
+# ==============================================================================
+# Descripción: Elimina trackings completados/cancelados/fallidos antiguos
+# Frecuencia: Diario a las 2 AM
+# Queue: low_priority
+# Retención: 90 días
+# ==============================================================================
+cleanup_old_trackings:
+  cron: "0 2 * * *"
+  class: "ContactTrackings::CleanupJob"
+  queue: low_priority
+  description: "Clean up old completed/cancelled trackings (older than 90 days)"
+
+# ==============================================================================
+# NOTAS IMPORTANTES
+# ==============================================================================
+# 1. Asegurar que sidekiq-cron esté instalado: gem 'sidekiq-cron'
+# 2. Cargar schedule después de deploy:
+#    rails runner "Sidekiq::Cron::Job.load_from_hash(YAML.load_file('config/schedule.yml'))"
+# 3. Verificar jobs cargados:
+#    rails runner "Sidekiq::Cron::Job.all.each { |j| puts j.name }"
+# 4. Para producción, considerar ajustar frecuencia según carga
+# ==============================================================================

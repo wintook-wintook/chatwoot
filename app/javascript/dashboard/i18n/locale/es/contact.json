@@ -138,6 +138,7 @@
         "LABEL": "Número de teléfono",
         "HELP": "El número de teléfono debe estar en formato E.164, por ejemplo: +1415555555 [+][código de país][código de área][número de teléfono local]. Puedes seleccionar el código de marcación desde el menú desplegable.",
         "ERROR": "El número de teléfono debe estar vacío o en formato E.164",
+        "NO_ERROR": "Oprima ENTER para buscar contacto de implemetacion...",
         "DIAL_CODE_ERROR": "Por favor selecciona un código de marcación de la lista",
         "DUPLICATE": "Este número de teléfono está en uso para otro contacto."
       },
@@ -384,6 +385,30 @@
     },
     "DROPDOWN_ITEM": {
       "ID": "(ID: {identifier})"
+    }
+  },
+  "CONTACT": {
+    "SUCCESS": {
+      "FOUND_IN_CRM": "Contacto encontrado en CRM exitosamente"
+    },
+    "INFO": {
+      "NOT_FOUND_IN_CRM": "Contacto no encontrado en CRMZeus"
+    },
+    "WARNINGS": {
+      "SEARCHING_ALTERNATIVE": "Iniciando búsqueda alternativa..."
+    },
+    "ERRORS": {
+      "BAD_REQUEST": "Solicitud incorrecta. Verifique los datos enviados",
+      "UNAUTHORIZED": "No tiene autorización para acceder al CRM. Verifique sus credenciales",
+      "FORBIDDEN": "Acceso prohibido al recurso del CRM",
+      "UNPROCESSABLE_ENTITY": "Los datos enviados no son válidos",
+      "RATE_LIMIT": "Demasiadas solicitudes. Intente nuevamente en unos momentos",
+      "SERVER_ERROR": "Error en el servidor del CRM. Intente más tarde",
+      "UNKNOWN_HTTP_ERROR": "Error HTTP {status}. Contacte soporte técnico",
+      "NETWORK_ERROR": "No se puede conectar con el CRM. Verifique su conexión",
+      "TIMEOUT": "La solicitud tardó demasiado. Intente nuevamente",
+      "INVALID_RESPONSE": "Respuesta inválida del CRM",
+      "UNEXPECTED_ERROR": "Error inesperado al buscar contacto"
     }
   }
 }

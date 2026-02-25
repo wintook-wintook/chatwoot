@@ -7,6 +7,10 @@ import { routes as inboxRoutes } from './inbox/routes';
 import { frontendURL } from '../../helper/URLHelper';
 import helpcenterRoutes from './helpcenter/helpcenter.routes';
 
+// KANBAN0725
+import { routes as kanbanRoutes } from './kanban/routes'; // Añade esta línea
+// KANBAN0725
+
 const AppContainer = () => import('./Dashboard.vue');
 const Captain = () => import('./Captain.vue');
 const Suspended = () => import('./suspended/Index.vue');
@@ -32,6 +36,9 @@ export default {
         ...contactRoutes,
         ...searchRoutes,
         ...notificationRoutes,
+        // KANBAN0725
+        ...kanbanRoutes
+        // KANBAN0725
       ],
     },
     {

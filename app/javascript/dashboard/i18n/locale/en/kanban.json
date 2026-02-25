@@ -1,0 +1,315 @@
+{
+  "KANBAN": {
+    "HEADER": "Opportunities Board",
+    "DESCRIPTION": "Manage your workflows with a visual Opportunities system",
+    "LEARN_MORE": "Learn more",
+    "HEADER_BTN_TXT": "Add Stage",
+    
+    "BOARD": {
+      "TITLE": "Opportunities Board",
+      "SELECT_PROCESS": "Select Opportunities Types",
+      "NO_PROCESSES": "No processes available",
+      "NO_TYPE_PROCESSES": "No columns available",
+      "CREATE_FIRST_PROCESS": "Create First stage",
+      "ADD_TYPE_PROCESSES_HINT": "Add columns from settings",
+      "MANAGE_PROCESSES": "Manage Processes",
+      "NO_CONVERSATIONS": "There are no conversations at this stage.",
+      "DRAG_CONVERSATIONS": "Drag conversations here",
+      "RETRY": "Retry",
+      "LOADING_CONVERSATIONS": "Loading conversations",
+      "UPDATING_CONVERSATIONS": "Updating conversations",
+      "CONVERSATION": "Conversations"
+    },
+
+    "TYPE_PROCESSES": {
+      "TITLE": "Opportunities Types",
+      "DESCRIPTION": "Manage different Opportunities Types for your organization",
+      "HEADER": "Opportunities Types",
+      "ADD_NEW": "Add new Opportunities Types",
+      "CREATE_FIRST": "Create first Opportunities Types",
+      "NO_RECORDS": "No Opportunities Types found",
+      "EDIT": "Edit",
+      "DELETE": "Delete",
+      "DEFAULT": "Default",
+      "SYSTEM": "System",
+      "CONFIRM_DELETE": "Are you sure you want to delete this Opportunities Types?",
+      "FORM": {
+        "PROCESS_NAME": {
+          "LABEL": "stage name",
+          "PLACEHOLDER": "Enter the stage name",
+          "TYPE": "Opportunities Types name",
+          "TYPEP": "Enter the Opportunities Types name"
+        },
+        "DESCRIPTION": {
+          "LABEL": "Description",
+          "PLACEHOLDER": "Enter a description (optional)"
+        },
+        "COLOR": {
+          "LABEL": "Color"
+        },
+        "DEFAULT_PROCESS": "Set as default Opportunities Types",
+        "SYSTEM_PROCESS": "System Opportunities Types",
+        "CREATE": "Create Opportunities Types",
+        "UPDATE": "Update Opportunities Types",
+        "CANCEL": "Cancel"
+      },
+      "ADD": {
+        "TITLE": "Add Opportunities Types",
+        "DESC": "Create a new Opportunities Types to organize your workflows"
+      },
+        "EDITETAPA": {
+        "TITLE": "Edit Opportunities Types",
+        "DESC": "Edit a new Opportunities Types"
+      },
+     
+      "SUCCESS": {
+        "CREATED": "Opportunities Types created successfully",
+        "UPDATED": "Opportunities Types updated successfully",
+        "DELETED": "Opportunities Types deleted successfully"
+      },
+      "ERROR": {
+        "CREATING": "Error creating Opportunities Types",
+        "UPDATING": "Error updating Opportunities Types",
+        "DELETING": "Error deleting Opportunities Types",
+        "LOADING": "Error loading stage types"
+      }
+      
+    },
+
+    "PROCESSES": {
+      "TITLE": "Opportunities stages",
+      "DESCRIPTION": "Manage specific processes within each Opportunities Types",
+      "HEADER": "Opportunities stages",
+      "ADD_NEW": "Add New Stage",
+      "NO_RECORDS": "No stages found",
+      "CREATE_FIRST": "Create First stage",
+      "SELECT_TYPE_FIRST": "Please select a Opportunities Types first",
+      "EDIT": "Edit",
+      "DELETE": "Delete",
+      "DEFAULT": "Default",
+      "SYSTEM": "System",
+      "CONFIRM_DELETE": "Are you sure you want to delete this stage?",
+      "SELECT_TYPE": "Select Opportunities Types",
+      "CHOOSE_TYPE": "Choose a Opportunities Types",
+      "SELECT_MESSAGE": "Select a Opportunities Types",
+      "SELECT_DESCRIPTION": "Choose a Opportunities Types to view and manage its processes",
+      "CREATE_MODAL_TITLE": "Create New stage",
+      "EDIT_MODAL_TITLE": "Edit stage",
+      "FORM": {
+        "KANBAN_PROCESS_ID": "stage ID",
+        "KANBAN_PROCESS_ID_PLACEHOLDER": "Enter the stage identifier",
+        "PROCESS_NAME": {
+          "LABEL": "Stage name",
+          "PLACEHOLDER": "Enter the stage name"
+        },
+        "DESCRIPTION": {
+          "LABEL": "Description",
+          "PLACEHOLDER": "Enter a description (optional)"
+        },
+        "COLOR": {
+          "LABEL": "Color"
+        },
+        "POSITION": {
+          "LABEL": "Position",
+          "PLACEHOLDER": "Enter the position"
+        },
+        "DEFAULT": "Set as default stage",
+        "DEFAULT_PROCESS": "Set as default stage",
+        "SYSTEM_PROCESS": "System stage",
+        "CANCEL": "Cancel",
+        "CREATE": "Create",
+        "UPDATE": "Update"
+      },
+      "ADD": {
+        "TITLE": "Add Opportunities stage",
+        "DESC": "Create a new stage within the selected Opportunities Types",
+        "TITLE2": "Add Opportunities Types",
+        "DESC2": "Create a new Opportunities Types for Opportunities"
+      },
+      "EDITETAPA": {
+        "TITLE": "Edit Stage"
+      },
+      "VALIDATIONS": {
+        "KANBAN_PROCESS_ID_REQUIRED": "stage ID is required"
+      },
+      "SUCCESS": {
+        "CREATED": "stage created successfully",
+        "UPDATED": "stage updated successfully",
+        "DELETED": "stage deleted successfully",
+        "REORDERED": "Processes reordered successfully"
+      },
+      "ERROR": {
+        "LOADING": "Error loading processes",
+        "CREATING": "Error creating Opportunities stage",
+        "UPDATING": "Error updating Opportunities stage",
+        "DELETING": "Error deleting Opportunities stage",
+        "SAVING": "Error saving stage",
+        "REORDERING": "Error reordering processes"
+      }
+    },
+
+    "TYPE_PROCESSES": {
+      "TITLE": "Opportunities Types",
+      "DESCRIPTION": "Manage different Opportunities Types for your organization",
+      "ADD_NEW": "Add",
+      "NO_RECORDS": "No columns found",
+      "EDIT": "Edit",
+      "DELETE": "Delete",
+      "DEFAULT": "Default",
+      "SYSTEM": "System",
+      "CONFIRM_DELETE": "Are you sure you want to delete this column?",
+      "CANNOT_DELETE_SYSTEM": "System columns cannot be deleted",
+      "CREATE_MODAL_TITLE": "Create New Column",
+      "EDIT_MODAL_TITLE": "Edit Column",
+       "EDITKANBAN": {
+        "TITLE": "Edit Opportunities Types"
+      },
+      "FORM": {
+        "TYPE_PROCESS_NAME": "Column Name",
+        "TYPE_PROCESS_NAME_PLACEHOLDER": "Enter the column name",
+        "POSITION": "Position",
+        "DEFAULT": "Set as default column",
+        "CANCEL": "Cancel",
+        "CREATE": "Create",
+        "UPDATE": "Update",
+        "PROCESS_NAME": {
+          "LABEL": "Opportunities Types name",
+          "PLACEHOLDER": "Enter the Opportunities Types name"
+        },
+        "DESCRIPTION": {
+          "LABEL": "Description",
+          "PLACEHOLDER": "Enter a description (optional)"
+        },
+        "COLOR": {
+          "LABEL": "Color"
+        },
+        "DEFAULT": "Set as default Opportunities Types",
+        "DEFAULT_PROCESS": "Set as default Opportunities Types",
+        "SYSTEM_PROCESS": "System stage",
+        "CANCEL": "Cancel",
+        "CREATE": "Create",
+        "UPDATE": "Update"
+      },
+      "VALIDATIONS": {
+        "TYPE_PROCESS_NAME_REQUIRED": "Column name is required",
+        "POSITION_REQUIRED": "Position must be a positive number"
+      },
+       "ADD": {
+        "TITLE2": "Add Opportunities Types",
+        "DESC2": "Create a new Opportunities Types"
+      },
+       "EDITETAPA": {
+        "TITLE": "Edit Opportunities Types",
+        "DESC": "Edit a new Opportunities Types"
+      },
+      "SUCCESS": {
+        "CREATED": "Column created successfully",
+        "UPDATED": "Column updated successfully",
+        "DELETED": "Column deleted successfully",
+        "REORDERED": "Columns reordered successfully"
+      },
+      "ERROR": {
+        "LOADING": "Error loading columns",
+        "SAVING": "Error saving column",
+        "DELETING": "Error deleting column",
+        "REORDERING": "Error reordering columns"
+      }
+    },
+
+    "KANBAN_TYPE_MGMT": {
+      "HEADER": {
+        "TITLE": "Opportunities Types",
+        "DESCRIPTION": "Manage Opportunities Types to organize your workflow",
+        "ADD_BUTTON": "Add Opportunities Types"
+      },
+      "EMPTY_STATE": {
+        "MESSAGE": "No Opportunities Types found",
+        "NEW_BUTTON": "Create First Opportunities Types"
+      },
+      "BADGES": {
+        "DEFAULT": "Default",
+        "SYSTEM": "System"
+      },
+      "ACTIONS": {
+        "EDIT": "Edit",
+        "DELETE": "Delete",
+        "SYSTEM_PROTECTED": "System types cannot be deleted"
+      },
+      "DELETE": {
+        "CONFIRM_MESSAGE": "Are you sure you want to delete \"{name}\"?",
+        "SUCCESS_MESSAGE": "Opportunities Types deleted successfully",
+        "ERROR_MESSAGE": "Error deleting Opportunities Types"
+      },
+      "ADD": {
+        "TITLE": "Add Opportunities Types",
+        "DESC": "Create a new Opportunities Types to organize your Opportunities Board",
+        "API": {
+          "SUCCESS_MESSAGE": "Opportunities Types created successfully",
+          "ERROR_MESSAGE": "Error creating Opportunities Types",
+          "ERROR_MESSAGE": {
+            "NAME_REQUIRED": "Opportunities Types name is required",
+            "NAME_MINIMUM_LENGTH": "Name must be at least 2 characters"
+          }
+        }
+      },
+      "EDIT": {
+        "TITLE": "Edit Opportunities Types",
+        "DESC": "Update Opportunities Types information",
+        "API": {
+          "SUCCESS_MESSAGE": "Opportunities Types updated successfully",
+          "ERROR_MESSAGE": "Error updating Opportunities Types"
+        }
+      },
+      "FORM": {
+        "NAME": {
+          "LABEL": "Opportunities Types name",
+          "PLACEHOLDER": "e.g: Sales, Support, Development"
+        },
+        "DESCRIPTION": {
+          "LABEL": "Description",
+          "PLACEHOLDER": "Describe the purpose of this Opportunities Types"
+        },
+        "COLOR": {
+          "LABEL": "Color"
+        },
+        "IS_DEFAULT": {
+          "LABEL": "Set as default Opportunities Types"
+        },
+        "CREATE": "Create Opportunities Types",
+        "UPDATE": "Update Opportunities Types",
+        "CANCEL": "Cancel"
+      }
+    },
+
+    "COLUMN": {
+      "ITEMS": "items",
+      "NO_ITEMS": "No items in this column",
+      "ADD_ITEM": "Add Item"
+    },
+
+    "COMMON": {
+      "LOADING": "Loading...",
+      "FETCHING_TYPE_PROCESSES": "Fetching Opportunities Types",
+      "FETCHING_PROCESSES": "Fetching Opportunities stages",
+      "NAME": "Name",
+      "DESCRIPTION": "Description", 
+      "COLOR": "Color",
+      "POSITION": "Position",
+      "ACTIONS": "Actions",
+      "CONFIRM_DELETION": "Confirm deletion",
+      "DELETE_MESSAGE": "Are you sure you want to delete",
+      "YES_DELETE": "Yes, delete",
+      "NO_CANCEL": "No, cancel"
+    },
+
+    "SUCCESS": {
+      "ITEM_MOVED": "Item moved successfully"
+    },
+
+    "ERROR": {
+      "LOADING_DATA": "Error loading Opportunities data",
+      "LOADING_PROCESS": "Error loading stage data",
+      "MOVING_ITEM": "Error moving item"
+    }
+  }
+}

@@ -42,6 +42,10 @@ export const actions = {
       } = response.data;
       commit(types.default.ADD_WEBHOOK, webhook);
       commit(types.default.SET_WEBHOOK_UI_FLAG, { creatingItem: false });
+      // DEV0002
+      // Retornar la respuesta completa tal como viene del API
+      return webhook;
+
     } catch (error) {
       commit(types.default.SET_WEBHOOK_UI_FLAG, { creatingItem: false });
       throw error;

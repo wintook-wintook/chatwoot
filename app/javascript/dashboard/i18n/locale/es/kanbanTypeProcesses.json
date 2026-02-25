@@ -1,0 +1,100 @@
+{
+  "KANBAN_TYPE_PROCESSES": {
+    "HEADER": "Kanban Type Processes",
+    "DESCRIPTION": "Manage your kanban type processes to organize conversations in different workflows. Create custom processes or use system defaults.",
+    "LEARN_MORE": "Learn more about kanban processes",
+    "LOADING": "Fetching kanban type processes",
+    "HEADER_BTN_TXT": "Add new type process",
+    "SIDEBAR_TXT": "<p><b>Kanban Type Processes</b></p><p>Kanban type processes allow you to organize conversations into different workflows. Each type process can have multiple stages (kanban processes) that represent the progression of a conversation through your support workflow.</p><p>You can create custom type processes for different teams or use cases, such as 'Support Tickets', 'Sales Pipeline', or 'Bug Reports'. Each type process automatically gets default stages like 'To Do', 'In Progress', and 'Done'.</p><p>To add a new kanban type process, click on the 'Add new type process' button.</p>",
+    "TITLE": "Manage Kanban Type Processes",
+    "CREATE_BUTTON": "Create New Type Process",
+    "SYSTEM_PROCESSES": "System Processes",
+    "CUSTOM_PROCESSES": "Custom Processes",
+    "NO_CUSTOM_PROCESSES": "There are no custom type processes configured for this account yet",
+    "LIST": {
+      "404": "There are no kanban type processes configured for this account.",
+      "LOADING": "Fetching kanban type processes...",
+      "TABLE_HEADER": [
+        "Name",
+        "Description",
+        "Processes",
+        "Actions"
+      ],
+      "EDIT_TOOLTIP": "Edit type process",
+      "DELETE_TOOLTIP": "Delete type process"
+    },
+    "FORM": {
+      "CANCEL": "Cancel",
+      "DESC": "Create or modify kanban type processes to organize your conversation workflows. Each type process will have its own set of kanban stages.",
+      "NAME": {
+        "LABEL": "Name",
+        "PLACEHOLDER": "Enter process type name",
+        "ERROR": "A name for the kanban type process is required",
+        "REQUIRED_ERROR": "Name is required",
+        "TOO_SHORT_ERROR": "Name must be at least 2 characters",
+        "TOO_LONG_ERROR": "Name must be 50 characters or less"
+      },
+      "DESCRIPTION": {
+        "LABEL": "Description",
+        "PLACEHOLDER": "Enter a description for this process type",
+        "TOO_LONG_ERROR": "Description must be 255 characters or less"
+      },
+      "OPTIONS": {
+        "LABEL": "Options",
+        "SET_AS_DEFAULT": "Set as default process",
+        "IS_SYSTEM": "System process (managed by Chatwoot)"
+      },
+      "METADATA": {
+        "LABEL": "Metadata",
+        "CREATED_AT": "Created at",
+        "UPDATED_AT": "Updated at"
+      },
+      "EDIT_SUBMIT": "Update type process",
+      "ADD_SUBMIT": "Create type process"
+    },
+    "CREATE": {
+      "TITLE": "Add new kanban type process",
+      "API": {
+        "SUCCESS_MESSAGE": "Kanban type process created successfully",
+        "ERROR_MESSAGE": "Could not create kanban type process. Please try again later"
+      }
+    },
+    "EDIT": {
+      "BUTTON_TEXT": "Edit",
+      "TITLE": "Edit kanban type process",
+      "API": {
+        "SUCCESS_MESSAGE": "Kanban type process updated successfully",
+        "ERROR_MESSAGE": "Could not update kanban type process. Please try again later"
+      }
+    },
+    "DELETE": {
+      "BUTTON_TEXT": "Delete",
+      "API": {
+        "SUCCESS_MESSAGE": "Kanban type process deleted successfully",
+        "ERROR_MESSAGE": "Could not delete kanban type process. Please try again later"
+      },
+      "CONFIRM": {
+        "TITLE": "Confirm Deletion",
+        "MESSAGE": "Are you sure you want to delete the kanban type process '%{name}'? This action cannot be undone.",
+        "SYSTEM_ERROR": "Cannot delete system kanban type process",
+        "HAS_CONVERSATIONS_ERROR": "Cannot delete kanban type process with associated conversations",
+        "YES": "Yes, Delete",
+        "NO": "No, Keep it"
+      }
+    },
+    "BADGES": {
+      "DEFAULT": "Default",
+      "SYSTEM": "System"
+    },
+    "STATS": {
+      "PROCESSES": "processes",
+      "CONVERSATIONS": "conversations"
+    },
+    "ERRORS": {
+      "FETCH_FAILED": "Failed to load kanban type processes",
+      "SAVE_FAILED": "Failed to save kanban type process",
+      "DELETE_FAILED": "Failed to delete kanban type process",
+      "UNAUTHORIZED": "You don't have permission to perform this action"
+    }
+  }
+}

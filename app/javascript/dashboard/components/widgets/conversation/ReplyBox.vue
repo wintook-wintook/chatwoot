@@ -1178,7 +1178,7 @@ export default {
       <AttachmentPreview class="flex-col mt-4" :attachments="attachedFiles" @removeAttachment="removeAttachment" />
     </div>
     <MessageSignatureMissingAlert v-if="isSignatureEnabledForInbox && !isSignatureAvailable" />
-    <ReplyBottomPanel :conversation-id="conversationId" :enable-multiple-file-upload="enableMultipleFileUpload"
+    <ReplyBottomPanel :popout-reply-box="popoutReplyBox" :conversation-id="conversationId" :enable-multiple-file-upload="enableMultipleFileUpload"
       :has-whatsapp-templates="hasWhatsappTemplates" :inbox="inbox" :is-on-private-note="isOnPrivateNote"
       :is-recording-audio="isRecordingAudio" :is-send-disabled="isReplyButtonDisabled" :mode="replyType"
       :on-file-upload="onFileUpload" :on-send="onSendReply" :recording-audio-duration-text="recordingAudioDurationText"
@@ -1188,8 +1188,7 @@ export default {
       :toggle-audio-recorder-play-pause="toggleAudioRecorderPlayPause" :toggle-audio-recorder="toggleAudioRecorder"
       :toggle-emoji-picker="toggleEmojiPicker" :message="message" :portal-slug="connectedPortalSlug"
       :new-conversation-modal-active="newConversationModalActive" @selectWhatsappTemplate="openWhatsappTemplateModal"
-      @toggleEditor="toggleRichContentEditor" @replaceText="replaceText" @toggleInsertArticle="toggleInsertArticle" 
-
+      @toggleEditor="toggleRichContentEditor" @replaceText="replaceText" @toggleInsertArticle="toggleInsertArticle"
       :event-suggestion-response-bot-eva="eventSuggestionResponseBotEva"
       :event-suggestion-response-bot-elyza="eventSuggestionResponseBotElyza" />
     <WhatsappTemplates :inbox-id="inbox.id" :show="showWhatsAppTemplatesModal" @close="hideWhatsappTemplatesModal"
@@ -1198,10 +1197,9 @@ export default {
     <woot-confirm-modal ref="confirmDialog" :title="$t('CONVERSATION.REPLYBOX.UNDEFINED_VARIABLES.TITLE')"
       :description="undefinedVariableMessage" />
 
-    <AssistanceBotElyzaModal :show="showAssistanceBotElyzaModal" 
-      :on-close="hideAssistanceBotElyzaModal" @cancel="hideAssistanceBotElyzaModal"
-      @messageProcessed="messageProcessed"
-      :currentChat="currentChat" :inReplyTo="inReplyTo"/>
+    <AssistanceBotElyzaModal :show="showAssistanceBotElyzaModal" :on-close="hideAssistanceBotElyzaModal"
+      @cancel="hideAssistanceBotElyzaModal" @messageProcessed="messageProcessed" :currentChat="currentChat"
+      :inReplyTo="inReplyTo" />
   </div>
 </template>
 

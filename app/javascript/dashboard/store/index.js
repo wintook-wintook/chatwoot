@@ -48,6 +48,18 @@ import draftMessages from './modules/draftMessages';
 import SLAReports from './modules/SLAReports';
 import webphone from './modules/webphone';
 
+import scheduledMessages from './modules/scheduledMessages';
+//KANBAN0725
+import kanbanTypeProcesses from './modules/kanbanTypeProcesses';
+import kanbanProcesses from './modules/kanbanProcesses';
+import kanbanConversations from './modules/kanbanConversations';
+//KANBAN0725
+// ============================================================
+// proyecto@contact_tracking
+// /home/chatwoot/chatwoot/app/javascript/dashboard/store/index.js
+import contactTrackings from './modules/contactTrackings';
+// ===========================================================
+
 const plugins = [];
 
 Vue.use(Vuex);
@@ -99,6 +111,13 @@ export default new Vuex.Store({
     sla,
     slaReports: SLAReports,
     webphone,
+    scheduledMessages,
+    //KANBAN0725
+    kanbanTypeProcesses,
+    kanbanProcesses,
+    kanbanConversations,
+    //KANBAN0725
+    contactTrackings,// proyecto@contact_tracking    
   },
   plugins,
 });
