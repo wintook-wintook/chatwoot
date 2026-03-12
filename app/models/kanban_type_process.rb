@@ -6,17 +6,13 @@
 #  default      :boolean          default(FALSE)
 #  is_system    :boolean          default(FALSE)
 #  process_name :string           not null
-#  created_at   :datetime         not null
-#  updated_at   :datetime         not null
+#  created_at   :datetime
+#  updated_at   :datetime
 #  account_id   :bigint           not null
 #
 # Indexes
 #
-#  index_kanban_type_processes_on_account_id                   (account_id)
-#  index_kanban_type_processes_on_account_id_and_default       (account_id,default)
-#  index_kanban_type_processes_on_account_id_and_is_system     (account_id,is_system)
-#  index_kanban_type_processes_on_account_id_and_process_name  (account_id,process_name) UNIQUE
-#  unique_default_kanban_type_process_per_account              (account_id) UNIQUE WHERE ("default" = true)
+#  unique_default_kanban_type_process_per_account  (account_id)
 #
 # Foreign Keys
 #

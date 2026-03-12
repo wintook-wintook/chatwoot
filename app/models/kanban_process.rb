@@ -14,13 +14,8 @@
 #
 # Indexes
 #
-#  index_kanban_processes_on_account_id                             (account_id)
-#  index_kanban_processes_on_account_id_and_default                 (account_id,default)
-#  index_kanban_processes_on_account_id_and_is_system               (account_id,is_system)
-#  index_kanban_processes_on_account_id_and_kanban_type_process_id  (account_id,kanban_type_process_id)
-#  index_kanban_processes_on_kanban_type_process_id                 (kanban_type_process_id)
-#  unique_default_kanban_process_per_type                           (kanban_type_process_id) UNIQUE WHERE ("default" = true)
-#  unique_position_per_kanban_type                                  (kanban_type_process_id,position) UNIQUE
+#  index_kanban_processes_on_account_id              (account_id)
+#  index_kanban_processes_on_kanban_type_process_id  (kanban_type_process_id)
 #
 # Foreign Keys
 #

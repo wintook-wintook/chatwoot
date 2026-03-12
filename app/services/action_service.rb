@@ -75,6 +75,25 @@ class ActionService
     end
   end
 
+  # proyecto@automatizaciones: asigna el tipo de oportunidad y el proceso default del Kanban a la conversación.
+  # Al asignar 'nil' limpia ambos campos. Al asignar un tipo válido busca su KanbanProcess con default: true
+  # para que la conversación aparezca en el tablero Kanban desde el primer momento.
+  def assign_kanban_type_process(params)
+    kanban_type_process_id = params[0]
+    if kanban_type_process_id.to_s == 'nil'
+      @conversation.update!(kanban_type_process_id: nil, kanban_process_id: nil)
+    else
+      ktp = @account.kanban_type_processes.find_by(id: kanban_type_process_id)
+      if ktp.present?
+        default_process = ktp.kanban_processes.find_by(default: true)
+        @conversation.update!(
+          kanban_type_process_id: ktp.id,
+          kanban_process_id: default_process&.id
+        )
+      end
+    end
+  end
+
   private
 
   def agent_belongs_to_inbox?(agent_ids)

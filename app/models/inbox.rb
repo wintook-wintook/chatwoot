@@ -8,6 +8,7 @@
 #  allow_agent_to_delete_message :boolean          default(TRUE), not null
 #  allow_messages_after_resolved :boolean          default(TRUE)
 #  auto_assignment_config        :jsonb
+#  bot                           :boolean          default(FALSE), not null
 #  business_name                 :string
 #  channel_type                  :string
 #  csat_response_visible         :boolean          default(FALSE), not null
@@ -15,13 +16,14 @@
 #  email_address                 :string
 #  enable_auto_assignment        :boolean          default(TRUE)
 #  enable_email_collect          :boolean          default(TRUE)
-#  external_token                :string           default(""), not null
+#  external_token                :string
 #  greeting_enabled              :boolean          default(FALSE)
 #  greeting_message              :string
 #  lock_to_single_conversation   :boolean          default(FALSE), not null
 #  name                          :string           not null
 #  out_of_office_message         :string
 #  sender_name_type              :integer          default("friendly"), not null
+#  set_questions                 :boolean          default(FALSE)
 #  timezone                      :string           default("UTC")
 #  working_hours_enabled         :boolean          default(FALSE)
 #  created_at                    :datetime         not null

@@ -41,6 +41,8 @@ const settings = accountId => ({
     'settings_teams_new',
     'sla_list',
     'custom_roles_list',
+    'website_sketch_list', // ← Website Sketch API MNDN 
+    'tracking_templates_list', // proyecto@tracking_templates
   ],
   menuItems: [
     {
@@ -121,18 +123,18 @@ const settings = accountId => ({
       toStateName: 'automation_list',
       featureFlag: FEATURE_FLAGS.AUTOMATIONS,
     },
-    {
-      icon: 'bot',
-      label: 'AGENT_BOTS',
-      hasSubMenu: false,
-      meta: {
-        permissions: ['administrator'],
-      },
-      globalConfigFlag: 'csmlEditorHost',
-      toState: frontendURL(`accounts/${accountId}/settings/agent-bots`),
-      toStateName: 'agent_bots',
-      featureFlag: FEATURE_FLAGS.AGENT_BOTS,
-    },
+    // {
+    //   icon: 'bot',
+    //   label: 'AGENT_BOTS',
+    //   hasSubMenu: false,
+    //   meta: {
+    //     permissions: ['administrator'],
+    //   },
+    //   globalConfigFlag: 'csmlEditorHost',
+    //   toState: frontendURL(`accounts/${accountId}/settings/agent-bots`),
+    //   toStateName: 'agent_bots',
+    //   featureFlag: FEATURE_FLAGS.AGENT_BOTS,
+    // },
     {
       icon: 'flash-settings',
       label: 'MACROS',
@@ -168,6 +170,18 @@ const settings = accountId => ({
       toStateName: 'chatgpt_list',
       featureFlag: FEATURE_FLAGS.CANNED_RESPONSES,
     },
+    { // proyecto@tracking_templates
+      icon: 'document-outline',
+      label: 'TRACKING_TEMPLATES',
+      hasSubMenu: false,
+      meta: {
+        permissions: ['administrator', 'agent', 'custom_role'],
+      },
+      toState: frontendURL(
+        `accounts/${accountId}/settings/tracking-templates/list`
+      ),
+      toStateName: 'tracking_templates_list',
+    },
     {
       icon: 'flash-on',
       label: 'INTEGRATIONS',
@@ -179,6 +193,19 @@ const settings = accountId => ({
       toStateName: 'settings_applications',
       featureFlag: FEATURE_FLAGS.INTEGRATIONS,
     },
+    // Website Sketch API MNDN -INI
+    {
+      icon: 'search',
+      label: 'SITE_ANALYSIS',
+      hasSubMenu: false,
+      meta: {
+        permissions: ['administrator'],
+      },
+      toState: frontendURL(`accounts/${accountId}/settings/website-sketch/list`),
+      toStateName: 'website_sketch_list',
+    },
+    // Website Sketch API MNDN -FIN
+
     // {
     //   icon: 'key',
     //   label: 'AUDIT_LOGS',

@@ -36,6 +36,8 @@ import datePicker from './datePicker.json';
 // Importar todos los archivos JSON de inglés
 import kanban from './kanban.json';
 
+import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
+
 export default {
   ...advancedFilters,
   ...agentBots,
@@ -72,5 +74,6 @@ export default {
   ...inbox,
   ...general,
   ...datePicker,
-  ...kanban
+  ...kanban,
+  ...trackingTemplates, // proyecto@tracking_templates
 };

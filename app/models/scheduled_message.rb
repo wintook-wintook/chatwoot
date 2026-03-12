@@ -25,8 +25,6 @@
 #
 #  index_scheduled_messages_on_account_id       (account_id)
 #  index_scheduled_messages_on_conversation_id  (conversation_id)
-#  index_scheduled_messages_on_is_template      (is_template)
-#  index_scheduled_messages_on_template_name    (template_name)
 #  index_scheduled_messages_on_user_id          (user_id)
 #
 # Foreign Keys
@@ -35,8 +33,6 @@
 #  fk_rails_...  (conversation_id => conversations.id)
 #  fk_rails_...  (user_id => users.id)
 #
-# Proyecto: DEV0001
-# app/models/scheduled_message.rb
 
 # class ScheduledMessage < ApplicationRecord
 #     belongs_to :account

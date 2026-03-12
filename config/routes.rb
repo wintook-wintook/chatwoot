@@ -79,6 +79,7 @@ Rails.application.routes.draw do
             end
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
+          resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] # proyecto@tracking_templates
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
           end
@@ -110,6 +111,7 @@ Rails.application.routes.draw do
               get :meta
               get :search
               post :filter
+              post :search_by_contacts  # proyecto@search_by_contacts - Search conversations by phone numbers and/or emails
               # KANBAN0725
               get :available_kanban_types 
               # KANBAN0725

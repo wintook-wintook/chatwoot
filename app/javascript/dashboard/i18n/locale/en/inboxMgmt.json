@@ -8,6 +8,11 @@
     "LIST": {
       "404": "There are no inboxes attached to this account."
     },
+    "SEARCH": {
+      "PLACEHOLDER": "Search inboxes...",
+      "NO_RESULTS": "No inboxes match your search criteria."
+    },
+    "ALL_CHANNELS": "All channels",
     "CREATE_FLOW": [
       {
         "title": "Choose Channel",

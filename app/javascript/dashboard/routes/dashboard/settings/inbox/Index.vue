@@ -4,7 +4,8 @@ import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
 import { useAdmin } from 'dashboard/composables/useAdmin';
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
-import { computed, ref } from 'vue';
+import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'dashboard/composables/useI18n';
 import { useStoreGetters, useStore } from 'dashboard/composables/store';
 import ChannelName from './components/ChannelName.vue';
@@ -17,8 +18,71 @@ const { isAdmin } = useAdmin();
 const showDeletePopup = ref(false);
 const selectedInbox = ref({});
 
+// Search & filter state
+const searchQuery = ref('');
+const selectedChannelType = ref('');
+const currentPage = ref(1);
+const PAGE_SIZE = 5;
+
 const inboxesList = computed(() => getters['inboxes/getInboxes'].value);
 const uiFlags = computed(() => getters['inboxes/getUIFlags'].value);
+
+// Channel type options for the filter dropdown
+const channelTypeOptions = computed(() => [
+  { value: '', label: t('INBOX_MGMT.ALL_CHANNELS') },
+  { value: 'Channel::WebWidget', label: t('INBOX_MGMT.CHANNELS.WEB_WIDGET') },
+  { value: 'Channel::Whatsapp', label: t('INBOX_MGMT.CHANNELS.WHATSAPP') },
+  { value: 'Channel::Email', label: t('INBOX_MGMT.CHANNELS.EMAIL') },
+  {
+    value: 'Channel::FacebookPage',
+    label: t('INBOX_MGMT.CHANNELS.MESSENGER'),
+  },
+  {
+    value: 'Channel::TwilioSms',
+    label: t('INBOX_MGMT.CHANNELS.TWILIO_SMS'),
+  },
+  { value: 'Channel::Telegram', label: t('INBOX_MGMT.CHANNELS.TELEGRAM') },
+  { value: 'Channel::Line', label: t('INBOX_MGMT.CHANNELS.LINE') },
+  { value: 'Channel::Api', label: t('INBOX_MGMT.CHANNELS.API') },
+  { value: 'Channel::Sms', label: t('INBOX_MGMT.CHANNELS.SMS') },
+]);
+
+// Filtered inboxes based on search and channel type
+const filteredInboxes = computed(() => {
+  let result = inboxesList.value;
+
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    result = result.filter(inbox =>
+      inbox.name.toLowerCase().includes(query)
+    );
+  }
+
+  if (selectedChannelType.value) {
+    result = result.filter(
+      inbox => inbox.channel_type === selectedChannelType.value
+    );
+  }
+
+  return result;
+});
+
+const totalCount = computed(() => filteredInboxes.value.length);
+
+// Paginated subset of filtered inboxes
+const paginatedInboxes = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE;
+  return filteredInboxes.value.slice(start, start + PAGE_SIZE);
+});
+
+// Reset page when filters change
+watch([searchQuery, selectedChannelType], () => {
+  currentPage.value = 1;
+});
+
+const onPageChange = page => {
+  currentPage.value = page;
+};
 
 const deleteConfirmText = computed(
   () => `${t('INBOX_MGMT.DELETE.CONFIRM.YES')} ${selectedInbox.value.name}`
@@ -29,7 +93,8 @@ const deleteRejectText = computed(
 );
 
 const confirmDeleteMessage = computed(
-  () => `${t('INBOX_MGMT.DELETE.CONFIRM.MESSAGE')} ${selectedInbox.value.name}?`
+  () =>
+    `${t('INBOX_MGMT.DELETE.CONFIRM.MESSAGE')} ${selectedInbox.value.name}?`
 );
 const confirmPlaceHolderText = computed(
   () =>
@@ -86,14 +151,55 @@ const openDelete = inbox => {
         </template>
       </BaseSettingsHeader>
     </template>
+
+    <template #preBody>
+      <div
+        v-if="inboxesList.length"
+        class="flex items-center gap-3 mb-4"
+      >
+        <div class="relative w-[70%]">
+          <fluent-icon
+            icon="search"
+            class="absolute ltr:left-2 rtl:right-2 top-2.5 text-slate-400"
+            size="14"
+          />
+          <input
+            v-model="searchQuery"
+            type="text"
+            :placeholder="$t('INBOX_MGMT.SEARCH.PLACEHOLDER')"
+            class="!mb-0 ltr:pl-8 rtl:pr-8 ltr:pr-3 rtl:pl-3 py-2 w-full border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-woot-500"
+          />
+        </div>
+        <select
+          v-model="selectedChannelType"
+          class="!mb-0 w-[30%] py-2 px-3 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-woot-500"
+        >
+          <option
+            v-for="opt in channelTypeOptions"
+            :key="opt.value"
+            :value="opt.value"
+          >
+            {{ opt.label }}
+          </option>
+        </select>
+      </div>
+    </template>
+
     <template #body>
+      <p
+        v-if="!paginatedInboxes.length"
+        class="flex items-center justify-center text-base text-slate-700 dark:text-slate-100 py-8"
+      >
+        {{ $t('INBOX_MGMT.SEARCH.NO_RESULTS') }}
+      </p>
       <table
+        v-else
         class="min-w-full overflow-x-auto divide-y divide-slate-75 dark:divide-slate-700"
       >
         <tbody
           class="divide-y divide-slate-25 dark:divide-slate-800 flex-1 text-slate-700 dark:text-slate-100"
         >
-          <tr v-for="inbox in inboxesList" :key="inbox.id">
+          <tr v-for="inbox in paginatedInboxes" :key="inbox.id">
             <td class="py-4 ltr:pr-4 rtl:pl-4">
               <div class="flex items-center flex-row gap-4">
                 <Thumbnail
@@ -171,6 +277,12 @@ const openDelete = inbox => {
           </tr>
         </tbody>
       </table>
+      <TableFooter
+        :current-page="currentPage"
+        :total-count="totalCount"
+        :page-size="PAGE_SIZE"
+        @pageChange="onPageChange"
+      />
     </template>
 
     <woot-confirm-delete-modal

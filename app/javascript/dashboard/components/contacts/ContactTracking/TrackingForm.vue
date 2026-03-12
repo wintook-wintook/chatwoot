@@ -11,6 +11,60 @@
 <template>
     <form @submit.prevent="handleSubmit" class="space-y-2 flex-1 flex flex-col w-full">
 
+            <!-- Aviso de duplicación desde seguimiento completado -->
+            <div v-if="duplicateSource" class="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                <fluent-icon icon="copy" size="16" class="text-blue-600 dark:text-blue-400 shrink-0" />
+                <p class="text-xs text-blue-800 dark:text-blue-200">
+                    <strong>Continuación del seguimiento</strong>
+                </p>
+            </div>
+
+            <!-- Aviso de edición restringida después del primer intento -->
+            <div v-if="isAfterFirstAttempt" class="flex items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
+                <fluent-icon icon="warning" size="16" class="text-yellow-600 dark:text-yellow-400 shrink-0" />
+                <p class="text-xs text-yellow-800 dark:text-yellow-200">
+                    Ya se envió el primer intento. Solo puedes modificar el <strong>Objetivo</strong>, <strong>Contexto IA</strong> y <strong>Prompt Complementario</strong>.
+                </p>
+            </div>
+
+            <!-- Selector de plantilla de seguimiento -->
+            <div v-if="trackingTemplates.length > 0 && !isAfterFirstAttempt" class="flex items-center gap-2">
+                <div class="flex-1 min-w-0 pt-1">
+                    <MultiselectDropdown
+                        :options="templateOptions"
+                        :selected-item="selectedTemplateItem"
+                        :has-thumbnail="false"
+                        multiselector-title="Plantillas de seguimiento"
+                        multiselector-placeholder="Seleccionar plantilla..."
+                        no-search-result="No se encontraron plantillas"
+                        input-placeholder="Buscar plantilla..."
+                        @click="onSelectTemplate"
+                    />
+                </div>
+                <woot-button
+                    v-if="templateApplied"
+                    variant="smooth"
+                    color-scheme="alert"
+                    @click="onClearTemplate"
+                >
+                    Limpiar
+                </woot-button>
+                <woot-button
+                    variant="smooth"
+                    color-scheme="secondary"
+                    icon="arrow-clockwise"
+                    :is-loading="isLoadingTemplates"
+                    @click="$emit('reload-templates')"
+                />
+                <woot-button
+                    variant="smooth"
+                    :is-disabled="!selectedTemplateId"
+                    @click="onApplyTemplate"
+                >
+                    Aplicar
+                </woot-button>
+            </div>
+
             <!-- Objetivo -->
             <woot-input v-model.trim="formData.objective" :label="$t('CONTACT_TRACKING.FORM.OBJECTIVE.LABEL')"
                 :placeholder="$t('CONTACT_TRACKING.FORM.OBJECTIVE.PLACEHOLDER')" :class="{ error: errors.objective }"
@@ -26,8 +80,8 @@
                     :index="activeContextTab"
                     @change="onContextTabChange"
                 >
-                    <woot-tabs-item name="📝 Contexto" />
-                    <woot-tabs-item name="💡 Prompt Complementario" />
+                    <woot-tabs-item name="📝 Contexto" :show-badge="false" />
+                    <woot-tabs-item name="💡 Prompt Complementario" :show-badge="false" />
                 </woot-tabs>
 
                 <!-- Tab 0: Contexto -->
@@ -101,7 +155,7 @@
                     {{ $t('CONTACT_TRACKING.FORM.SCHEDULED_FOR.LABEL') }}
                     <span class="text-red-500">*</span>
                     <input v-model="formData.scheduled_for" type="datetime-local" :min="minDateTime"
-                        :disabled="!!editingTracking"
+                        :disabled="!!editingTracking || isAfterFirstAttempt"
                         class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800"
                         :class="{ 'border-red-500 dark:border-red-500': errors.scheduled_for }"
                         @blur="validateField('scheduled_for')" @input="clearError('scheduled_for')" />
@@ -116,7 +170,7 @@
                         {{ $t('CONTACT_TRACKING.FORM.MAX_ATTEMPTS.LABEL') }}
                     </span>
                     <input v-model.number="formData.max_attempts" type="number" min="1" max="6"
-                        :disabled="!!editingTracking"
+                        :disabled="!!editingTracking || isAfterFirstAttempt"
                         class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-2 border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800" />
                 </label>
 
@@ -126,7 +180,7 @@
                         ⏱️ Tiempo entre intentos
                     </span>
                     <input v-model.number="formData.retry_interval_value" type="number" :min="getMinValue()"
-                        :disabled="!!editingTracking"
+                        :disabled="!!editingTracking || isAfterFirstAttempt"
                         class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-2 border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800"
                         :class="{ 'border-red-500': !intervalValidation.isValid }" placeholder="Ej: 30"
                         @blur="validateIntervalField" />
@@ -138,7 +192,7 @@
                         Intervalo
                     </span>
                     <select v-model="formData.retry_interval_unit" @change="adjustMinValue"
-                        :disabled="!!editingTracking"
+                        :disabled="!!editingTracking || isAfterFirstAttempt"
                         class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-2 border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800">
                         <option value="minutes">Minutos</option>
                         <option value="hours">Horas</option>
@@ -211,14 +265,27 @@
 <script>
 import { useTrackingForm } from '../../../composables/useTrackingForm';
 import { formatDateTime, getAttemptEstimatedTime } from '../../../helper/trackingHelpers';
+import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
 
 export default {
     name: 'TrackingForm',
+
+    components: {
+        MultiselectDropdown,
+    },
 
     props: {
         contactId: {
             type: Number,
             required: true,
+        },
+        trackingTemplates: {
+            type: Array,
+            default: () => [],
+        },
+        isLoadingTemplates: {
+            type: Boolean,
+            default: false,
         },
         conversationId: {
             type: Number,
@@ -236,13 +303,19 @@ export default {
             type: Object,
             default: null,
         },
+        duplicateSource: {
+            type: Object,
+            default: null,
+        },
     },
 
-    emits: ['submit', 'cancel', 'close', 'update:maxAttempts'],
+    emits: ['submit', 'cancel', 'close', 'update:maxAttempts', 'reload-templates', 'apply-template', 'clear-template'],
 
     data() {
         return {
-            activeContextTab: 0,  // ⭐ Tab activo: 0 = Contexto, 1 = Prompt Complementario
+            activeContextTab: 0,
+            selectedTemplateId: null,
+            templateApplied: false,  // ⭐ Tab activo: 0 = Contexto, 1 = Prompt Complementario
             originalAiContext: null,  // Guarda texto original antes de mejorar con IA
             originalComplementaryPrompt: null,  // Guarda texto original antes de mejorar con IA
             // [FEATURE:AI_LOADING_INDICATOR] - Estado de carga para botones de IA
@@ -251,6 +324,17 @@ export default {
     },
 
     computed: {
+        isAfterFirstAttempt() {
+            return (this.editingTracking?.attempt_count ?? 0) > 0;
+        },
+        templateOptions() {
+            return this.trackingTemplates.map(t => ({ id: t.id, name: t.name }));
+        },
+        selectedTemplateItem() {
+            if (!this.selectedTemplateId) return {};
+            const tpl = this.trackingTemplates.find(t => t.id === this.selectedTemplateId);
+            return tpl ? { id: tpl.id, name: tpl.name } : {};
+        },
         canGeneratePrompt() {
             const hasObjective = this.formData.objective && this.formData.objective.trim();
             const hasContext = this.formData.ai_context && this.formData.ai_context.trim();
@@ -265,6 +349,14 @@ export default {
             // Limpiar textos originales guardados
             this.originalAiContext = null;
             this.originalComplementaryPrompt = null;
+        },
+        duplicateSource(newTracking) {
+            if (newTracking) {
+                this.loadDuplicateData(newTracking);
+                this.activeContextTab = 0;
+                this.originalAiContext = null;
+                this.originalComplementaryPrompt = null;
+            }
         },
     },
 
@@ -285,7 +377,22 @@ export default {
             getIntervalHelpText,
             submitForm,
             resetForm,  // ⭐ Extraer resetForm del composable
+            loadDuplicateData,
         } = useTrackingForm(props, emit);
+
+        // Expuesto vía ref para que el modal padre pueda cargar una plantilla
+        const applyFromTemplate = (template) => {
+            if (!template) return;
+            formData.value.objective = template.objective || '';
+            formData.value.ai_context = template.ai_context || '';
+            formData.value.complementary_prompt = template.complementary_prompt || '';
+        };
+
+        const clearTemplateFields = () => {
+            formData.value.objective = '';
+            formData.value.ai_context = '';
+            formData.value.complementary_prompt = '';
+        };
 
         return {
             formData,
@@ -302,13 +409,34 @@ export default {
             validateIntervalField,
             getIntervalHelpText,
             submitForm,
-            resetForm,  // ⭐ Exponer resetForm para que el padre lo pueda llamar
+            resetForm,
+            loadDuplicateData,
+            applyFromTemplate,
+            clearTemplateFields,
         };
     },
 
     methods: {
         onContextTabChange(index) {
             this.activeContextTab = index;
+        },
+
+        onSelectTemplate(item) {
+            this.selectedTemplateId = item?.id || null;
+        },
+
+        onApplyTemplate() {
+            if (!this.selectedTemplateId) return;
+            this.$emit('apply-template', this.selectedTemplateId);
+            this.selectedTemplateId = null;
+            this.templateApplied = true;
+        },
+
+        onClearTemplate() {
+            this.clearTemplateFields();
+            this.selectedTemplateId = null;
+            this.templateApplied = false;
+            this.$emit('clear-template');
         },
 
         async improveWithAI(field) {
@@ -433,6 +561,7 @@ export default {
             }
             this.$emit('close');
         },
+
 
         formatDateTime,
     },

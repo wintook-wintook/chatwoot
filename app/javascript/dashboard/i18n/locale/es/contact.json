@@ -17,6 +17,7 @@
     "IP_ADDRESS": "Dirección IP",
     "CREATED_AT_LABEL": "Creado",
     "NEW_MESSAGE": "Nuevo mensaje",
+    "PRIVATE_CONVERSATION": "Iniciar conversación privada",
     "CONVERSATIONS": {
       "NO_RECORDS_FOUND": "No hay conversaciones anteriores asociadas a este contacto.",
       "TITLE": "Conversaciones anteriores"
@@ -222,6 +223,30 @@
       "SUCCESS_MESSAGE": "¡Mensaje enviado!",
       "GO_TO_CONVERSATION": "Ver",
       "ERROR_MESSAGE": "¡No se pudo enviar! intenta de nuevo"
+    },
+    "PRIVATE": {
+      "TITLE": "Nueva conversación privada",
+      "DESC": "Inicia una nueva conversación con una nota privada. Este mensaje solo será visible para los agentes.",
+      "NOTE_LABEL": "Nota privada (solo visible para agentes)",
+      "PLACEHOLDER": "Escribe tu nota privada aquí...",
+      "SUBMIT": "Crear conversación",
+      "SUCCESS_MESSAGE": "¡Conversación privada creada!",
+      "ERROR_MESSAGE": "No se pudo crear la conversación. Intenta de nuevo.",
+      "CHECKING": "Verificando conversaciones existentes...",
+      "EXISTING_TITLE": "Conversaciones existentes",
+      "EXISTING_DESC": "Este contacto ya tiene conversaciones. Puedes abrir una existente o crear una nueva conversación privada.",
+      "GO_TO_LAST": "Abrir última conversación",
+      "CREATE_NEW_ANYWAY": "Crear nueva conversación",
+      "NO_MESSAGES": "Sin mensajes"
+    },
+    "FROM_CONTACTS": {
+      "BUTTON": "Nueva conversación",
+      "TITLE": "Nueva conversación",
+      "DESC": "Selecciona un contacto de los más recientes o busca para iniciar una nueva conversación privada.",
+      "SEARCH_PLACEHOLDER": "Buscar contactos por nombre, email o teléfono...",
+      "NO_RESULTS": "No se encontraron contactos para esta búsqueda.",
+      "NO_CONTACTS": "No se encontraron contactos recientes.",
+      "BACK": "Volver"
     }
   },
   "CONTACTS_PAGE": {

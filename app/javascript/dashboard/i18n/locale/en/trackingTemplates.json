@@ -1,0 +1,110 @@
+{
+  "TRACKING_TEMPLATES": {
+    "HEADER": "Tracking Templates",
+    "HEADER_BTN_TXT": "New Template",
+    "DESCRIPTION": "Tracking templates allow you to save frequent configurations to reuse when creating new trackings.",
+    "LOADING": "Loading templates...",
+    "SEARCH_PLACEHOLDER": "Search by name...",
+    "FILTER_BY_TAG": "Filter by tag",
+    "ALL_TAGS": "All tags",
+    "ALL_CHANNELS": "All channels",
+    "NO_TEMPLATES": "No tracking templates found. Click \"New Template\" to create the first one.",
+    "NO_RESULTS": "No templates found with the applied filters.",
+    "BACK_TO_LIST": "Back to list",
+    "TABLE": {
+      "NAME": "Name",
+      "OBJECTIVE": "Objective",
+      "TAGS": "Tags",
+      "CHANNEL": "Channel",
+      "ACTIONS": "Actions",
+      "CREATED_BY": "Created by",
+      "CREATED_AT": "Created"
+    },
+    "FORM": {
+      "NAME": {
+        "LABEL": "Template name",
+        "PLACEHOLDER": "E.g.: Post-demo follow-up",
+        "ERROR": "Name is required (2-100 characters)"
+      },
+      "OBJECTIVE": {
+        "LABEL": "Objective",
+        "PLACEHOLDER": "E.g.: Follow-up after product demonstration",
+        "ERROR": "Objective is required (5-500 characters)"
+      },
+      "AI_CONTEXT": {
+        "LABEL": "AI Context",
+        "PLACEHOLDER": "Instructions for AI when generating follow-up messages..."
+      },
+      "COMPLEMENTARY_PROMPT": {
+        "LABEL": "Complementary Prompt",
+        "PLACEHOLDER": "Additional instructions for Q&A..."
+      },
+      "TAGS": {
+        "LABEL": "Tags",
+        "PLACEHOLDER": "Type and press Enter to add...",
+        "HELP": "Add tags to organize your templates"
+      },
+      "WHATSAPP_TEMPLATES": {
+        "LABEL": "WhatsApp Templates",
+        "HELP": "WhatsApp template names associated with each attempt"
+      },
+      "WHATSAPP_SECTION": {
+        "TITLE": "WhatsApp Templates by Attempt",
+        "NO_INBOXES": "No channels with tracking_bot integration enabled. Configure the integration in an inbox from Integrations.",
+        "INBOX_LABEL": "Channel (Inbox)",
+        "SELECT_INBOX": "Select a channel...",
+        "MAX_ATTEMPTS": "Num. attempts",
+        "LOADING": "Loading channel templates...",
+        "NO_TEMPLATES": "This channel has no WhatsApp templates configured. Contact the administrator to add templates in Meta Business.",
+        "NOT_WHATSAPP": "This channel is not WhatsApp type. WhatsApp templates only apply to WhatsApp channels."
+      }
+    },
+    "CREATE": {
+      "TITLE": "New Template",
+      "BTN_TEXT": "Create Template",
+      "API": {
+        "SUCCESS_MESSAGE": "Template created successfully",
+        "ERROR_MESSAGE": "Could not create the template"
+      }
+    },
+    "EDIT": {
+      "TITLE": "Edit Template",
+      "BTN_TEXT": "Save Changes",
+      "CANCEL": "Cancel",
+      "API": {
+        "SUCCESS_MESSAGE": "Template updated successfully",
+        "ERROR_MESSAGE": "Could not update the template"
+      }
+    },
+    "DELETE": {
+      "TITLE": "Delete Template",
+      "CONFIRM_MESSAGE": "Are you sure you want to delete the template \"%{name}\"? This action cannot be undone.",
+      "CONFIRM_YES": "Yes, delete",
+      "CONFIRM_NO": "Cancel",
+      "API": {
+        "SUCCESS_MESSAGE": "Template deleted successfully",
+        "ERROR_MESSAGE": "Could not delete the template"
+      }
+    },
+    "SAVE_AS_TEMPLATE": {
+      "TITLE": "Save as Template",
+      "BTN_TEXT": "Save as Template",
+      "NAME_LABEL": "Template name",
+      "NAME_PLACEHOLDER": "E.g.: Post-quote follow-up",
+      "TAGS_LABEL": "Tags (optional)",
+      "TAGS_PLACEHOLDER": "Type and press Enter...",
+      "SAVE_BTN": "Save Template",
+      "CANCEL_BTN": "Cancel",
+      "API": {
+        "SUCCESS_MESSAGE": "Template saved successfully",
+        "ERROR_MESSAGE": "Could not save the template"
+      }
+    },
+    "SELECTOR": {
+      "LABEL": "Load from template",
+      "PLACEHOLDER": "Select a template...",
+      "NONE": "No template",
+      "APPLIED_MESSAGE": "Template \"%{name}\" applied. Fields are editable."
+    }
+  }
+}

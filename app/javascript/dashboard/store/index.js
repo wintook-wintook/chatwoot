@@ -60,6 +60,10 @@ import kanbanConversations from './modules/kanbanConversations';
 import contactTrackings from './modules/contactTrackings';
 // ===========================================================
 
+
+// proyecto@tracking_templates
+import trackingTemplates from './modules/trackingTemplates';
+
 const plugins = [];
 
 Vue.use(Vuex);
@@ -118,6 +122,7 @@ export default new Vuex.Store({
     kanbanConversations,
     //KANBAN0725
     contactTrackings,// proyecto@contact_tracking    
+    trackingTemplates, // proyecto@tracking_templates
   },
   plugins,
 });

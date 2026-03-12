@@ -11,6 +11,8 @@ import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
 import SocialIcons from './SocialIcons.vue';
 import EditContact from './EditContact.vue';
 import NewConversation from './NewConversation.vue';
+import NewPrivateConversation from './NewPrivateConversation.vue'; // proyecto@conversation_private
+import NewConversationFromContacts from './NewConversationFromContacts.vue'; // proyecto@conversation_private
 import ContactMergeModal from 'dashboard/modules/contact/ContactMergeModal.vue';
 import { getCountryFlag } from 'dashboard/helper/flag';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
@@ -30,6 +32,8 @@ export default {
     Thumbnail,
     SocialIcons,
     NewConversation,
+    NewPrivateConversation,
+    NewConversationFromContacts,
     ContactMergeModal,
     ScheduleMessageModal,
   },
@@ -79,6 +83,8 @@ export default {
       isInitializing: false,
       suppressAlerts: false, // ← NUEVO: Flag para suprimir alertas
       // kanbanTypeProcess: 0,
+      showPrivateConversationModal: false, // proyecto@conversation_private
+      showNewConversationFromContacts: false, // proyecto@conversation_private
     };
   },
   computed: {
@@ -334,6 +340,10 @@ export default {
         this.showConversationModal
       );
     },
+    // proyecto@conversation_private - abre/cierra modal de conversación privada desde contactos
+    togglePrivateConversationModal() {
+      this.showPrivateConversationModal = !this.showPrivateConversationModal;
+    },
     toggleDeleteModal() {
       this.showDeleteModal = !this.showDeleteModal;
     },
@@ -411,7 +421,7 @@ export default {
         <div v-if="showAvatar" class="flex items-start w-full min-w-0 gap-2">
           <h3
             class="flex-shrink max-w-full min-w-0 my-0 text-base capitalize break-words text-slate-800 dark:text-slate-100">
-            {{ crmContact.name ||  contact.name }}
+            {{ crmContact.name || contact.name }}
           </h3>
           <div class="flex flex-row items-center gap-1">
             <fluent-icon v-if="contact.created_at" v-tooltip.left="`${$t('CONTACT_PANEL.CREATED_AT_LABEL')} ${dynamicTime(
@@ -458,19 +468,48 @@ export default {
 
         <woot-button v-tooltip="$t('EDIT_CONTACT.BUTTON_LABEL')" :title="$t('EDIT_CONTACT.BUTTON_LABEL')" icon="edit"
           variant="smooth" size="small" @click="toggleEditModal" />
+
+
+
+
+
         <woot-button v-tooltip="$t('CONTACT_PANEL.MERGE_CONTACT')" :title="$t('CONTACT_PANEL.MERGE_CONTACT')"
           icon="merge" variant="smooth" size="small" color-scheme="secondary" :disabled="uiFlags.isMerging"
           @click="openMergeModal" />
+
+
+        <!-- proyecto@conversation_private - botón solo en contactos (sin conversationId): inicia nota privada -->
+        <woot-button v-if="!conversationId" v-tooltip="$t('CONTACT_PANEL.PRIVATE_CONVERSATION')"
+          :title="$t('CONTACT_PANEL.PRIVATE_CONVERSATION')" icon="lock-closed" size="small" color-scheme="warning"
+          @click="togglePrivateConversationModal" />
+
+        <!-- proyecto@conversation_private - botón solo en conversaciones (con conversationId): seleccionar contacto nuevo -->
+        <woot-button v-if="conversationId" v-tooltip="$t('NEW_CONVERSATION.FROM_CONTACTS.BUTTON')"
+          :title="$t('NEW_CONVERSATION.FROM_CONTACTS.BUTTON')" icon="chat" size="small" color-scheme="warning"
+          @click="showNewConversationFromContacts = true" />
+
+
+
+
         <woot-button v-if="isAdmin" v-tooltip="$t('DELETE_CONTACT.BUTTON_LABEL')"
           :title="$t('DELETE_CONTACT.BUTTON_LABEL')" icon="delete" variant="smooth" size="small" color-scheme="alert"
           :disabled="uiFlags.isDeleting" @click="toggleDeleteModal" />
 
       </div>
       <EditContact v-if="showEditModal" :show="showEditModal" :contact="contact" :crm-contact="crmContact"
-        :contact-found-in-crm="contactFoundInCRM" @cancel="toggleEditModal" @suppress-alerts="handleSuppressAlerts" 
+        :contact-found-in-crm="contactFoundInCRM" @cancel="toggleEditModal" @suppress-alerts="handleSuppressAlerts"
         :is-integration-enabled="isIntegrationEnabled" />
       <NewConversation v-if="contact.id" :show="showConversationModal" :contact="contact"
         @cancel="toggleConversationModal" />
+
+      <!-- proyecto@conversation_private - modal conversación privada (desde contactos) -->
+      <NewPrivateConversation v-if="contact.id" :show="showPrivateConversationModal" :contact="contact"
+        @cancel="togglePrivateConversationModal" />
+      <!-- proyecto@conversation_private - modal selección de contacto nuevo (desde conversaciones) -->
+      <NewConversationFromContacts :show="showNewConversationFromContacts"
+        @cancel="showNewConversationFromContacts = false" />
+
+
       <ContactMergeModal v-if="showMergeModal" :primary-contact="contact" :show="showMergeModal"
         @close="toggleMergeModal" />
     </div>

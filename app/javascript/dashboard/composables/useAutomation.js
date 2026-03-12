@@ -32,11 +32,21 @@ export function useAutomation() {
   const labels = useMapGetter('labels/getLabels');
   const teams = useMapGetter('teams/getTeams');
   const slaPolicies = useMapGetter('sla/getSLA');
+  // proyecto@automatizaciones: obtiene los tipos de oportunidad del store para la acción assign_kanban_type_process
+  const kanbanTypeProcesses = useMapGetter('kanbanTypeProcesses/getKanbanTypeProcesses');
 
   const booleanFilterOptions = computed(() => [
     { id: true, name: t('FILTER.ATTRIBUTE_LABELS.TRUE') },
     { id: false, name: t('FILTER.ATTRIBUTE_LABELS.FALSE') },
   ]);
+
+  // proyecto@automatizaciones: mapea process_name → name para que sea compatible con addNoneToList/search_select
+  const kanbanTypeProcessOptions = computed(() =>
+    (kanbanTypeProcesses.value || []).map(ktp => ({
+      id: ktp.id,
+      name: ktp.process_name,
+    }))
+  );
 
   const statusFilterOptions = computed(() => {
     const statusFilters = t('CHAT_LIST.CHAT_STATUS_FILTER_ITEMS');
@@ -207,6 +217,7 @@ export function useAutomation() {
       labels: labels.value,
       teams: teams.value,
       slaPolicies: slaPolicies.value,
+      kanbanTypeProcesses: kanbanTypeProcessOptions.value, // proyecto@automatizaciones
       languages,
       type,
     });

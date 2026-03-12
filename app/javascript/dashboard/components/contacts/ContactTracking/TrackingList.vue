@@ -81,7 +81,8 @@ import {
     getStatusClass,
     getStatusLabel,
     canCancel,
-    canEdit
+    canEdit,
+    canDuplicate
 } from '../../../helper/trackingHelpers';
 
 export default {
@@ -111,7 +112,7 @@ export default {
         },
     },
 
-    emits: ['edit', 'pause', 'resume', 'cancel', 'refresh', 'add-new'],
+    emits: ['edit', 'pause', 'resume', 'cancel', 'refresh', 'add-new', 'duplicate'],
 
     data() {
         return {
@@ -295,6 +296,16 @@ export default {
                                         onClick={() => this.$emit('edit', row)}
                                     />
                                 )}
+                                {this.canDuplicate(row.status) && (
+                                    <woot-button
+                                        color-scheme="secondary"
+                                        variant="smooth"
+                                        size="small"
+                                        icon="copy"
+                                        v-tooltip="Repetir Seguimiento"
+                                        onClick={() => this.$emit('duplicate', row)}
+                                    />
+                                )}
                             </div>
                         );
                     },
@@ -309,6 +320,7 @@ export default {
         getStatusLabel,
         canCancel,
         canEdit,
+        canDuplicate,
     },
 };
 </script>

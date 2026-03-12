@@ -37,7 +37,7 @@
 #  paused_at                  :datetime
 #  response_adjustments_count :integer          default(0), not null
 #  retry_interval_unit        :string           default("minutes")
-#  retry_interval_value       :integer          default(15)
+#  retry_interval_value       :integer          default(30)
 #  scheduled_for              :datetime         not null
 #  status                     :string           default("pending"), not null
 #  whatsapp_templates         :json
@@ -51,16 +51,16 @@
 #
 # Indexes
 #
-#  index_contact_trackings_on_account_id              (account_id)
-#  index_contact_trackings_on_contact_id              (contact_id)
-#  index_contact_trackings_on_conversation_and_inbox  (conversation_id,inbox_id)
-#  index_contact_trackings_on_conversation_id         (conversation_id)
-#  index_contact_trackings_on_inbox_id                (inbox_id)
-#  index_contact_trackings_on_scheduled_for           (scheduled_for)
-#  index_contact_trackings_on_sentiment               (((last_sentiment_analysis ->> 'sentiment'::text)))
-#  index_contact_trackings_on_status                  (status)
-#  index_contact_trackings_on_status_and_scheduled    (status,scheduled_for)
-#  index_unique_active_tracking_per_contact           (contact_id,status) UNIQUE WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))
+#  index_contact_trackings_on_account_id                    (account_id)
+#  index_contact_trackings_on_contact_id                    (contact_id)
+#  index_contact_trackings_on_conversation_id               (conversation_id)
+#  index_contact_trackings_on_conversation_id_and_inbox_id  (conversation_id,inbox_id)
+#  index_contact_trackings_on_inbox_id                      (inbox_id)
+#  index_contact_trackings_on_scheduled_for                 (scheduled_for)
+#  index_contact_trackings_on_sentiment                     (((last_sentiment_analysis ->> 'sentiment'::text)))
+#  index_contact_trackings_on_status                        (status)
+#  index_contact_trackings_on_status_and_scheduled_for      (status,scheduled_for)
+#  index_unique_active_tracking_per_contact                 (contact_id,status) UNIQUE WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))
 #
 # Foreign Keys
 #

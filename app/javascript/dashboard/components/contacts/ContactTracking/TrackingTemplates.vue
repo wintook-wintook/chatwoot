@@ -12,10 +12,8 @@
     <div class="space-y-3 flex-1 flex flex-col">
 
         <!-- Sin plantillas disponibles -->
-        <div 
-            v-if="availableTemplates.length === 0 && !isLoadingTemplates"
-            class="flex items-center justify-center flex-1 bg-slate-50 dark:bg-slate-800 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600"
-        >
+        <div v-if="availableTemplates.length === 0 && !isLoadingTemplates"
+            class="flex items-center justify-center flex-1 bg-slate-50 dark:bg-slate-800 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600">
             <div class="text-center px-8 py-12">
                 <fluent-icon icon="warning" size="56" class="text-yellow-500 mb-4" />
                 <h4 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
@@ -35,30 +33,19 @@
 
         <!-- Sub-tabs por intento -->
         <div v-else class="flex-1 flex flex-col">
-            <woot-tabs 
-                class="font-medium [&_.tabs]:p-0 mb-4 attempt-tabs"
-                :index="activeTemplateTab" 
-                @change="onTemplateTabChange"
-            >
-                <woot-tabs-item 
-                    v-for="(template, index) in localTemplates"
-                    :key="index" 
-                    :name="getAttemptTabName(index, maxAttempts)"
-                    :show-badge="!!localTemplates[index]" 
-                />
+            <woot-tabs class="font-medium [&_.tabs]:p-0 mb-4 attempt-tabs" :index="activeTemplateTab"
+                @change="onTemplateTabChange">
+                <woot-tabs-item v-for="(template, index) in localTemplates" :key="index"
+                    :name="getAttemptTabName(index, maxAttempts)" />
             </woot-tabs>
 
             <!-- Contenido del sub-tab actual -->
             <div class="flex-1 flex flex-col space-y-2 overflow-y-auto">
-                <div 
-                    v-for="(template, index) in localTemplates"
-                    v-show="activeTemplateTab === index" 
-                    :key="index"
-                    class="flex-1 flex flex-col space-y-2"
-                >
+                <div v-for="(template, index) in localTemplates" v-show="activeTemplateTab === index" :key="index"
+                    class="flex-1 flex flex-col space-y-2">
                     <!-- Layout de dos columnas -->
                     <div class="grid grid-cols-1 lg:grid-cols-[45%_54%] gap-2">
-                        
+
                         <!-- Columna Izquierda: Selector + Info -->
                         <div class="space-y-2">
 
@@ -67,18 +54,11 @@
                                 <label class="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
                                     📱 Plantilla para este intento:
                                 </label>
-                                <select 
-                                    v-model="localTemplates[index]"
+                                <select v-model="localTemplates[index]"
                                     class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-1 border-slate-200 dark:border-slate-600 rounded-lg px-5 py-2 text-sm font-normal focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-all hover:border-green-400"
-                                    :disabled="isLoadingTemplates"
-                                    @change="updateTemplates"
-                                >
+                                    :disabled="isLoadingTemplates" @change="updateTemplates">
                                     <option value="">📝 Sin plantilla - Mensaje normal</option>
-                                    <option 
-                                        v-for="tpl in availableTemplates" 
-                                        :key="tpl.id"
-                                        :value="tpl.name"
-                                    >
+                                    <option v-for="tpl in availableTemplates" :key="tpl.id" :value="tpl.name">
                                         📱 {{ tpl.name }} ({{ tpl.language }})
                                     </option>
                                 </select>
@@ -94,7 +74,8 @@
                                     <strong class="text-slate-800 dark:text-slate-200">Importante:</strong>
                                     <ul class="mt-2 space-y-1 list-disc list-inside">
                                         <li>Las plantillas deben estar aprobadas por Meta Business</li>
-                                        <li>Si no seleccionas plantilla, se enviará mensaje normal (solo válido dentro de ventana de 24h)</li>
+                                        <li>Si no seleccionas plantilla, se enviará mensaje normal (solo válido dentro
+                                            de ventana de 24h)</li>
                                         <li>Puedes combinar plantillas y mensajes normales según el intento</li>
                                     </ul>
                                 </div>
@@ -106,22 +87,19 @@
                         <div>
 
                             <!-- Preview de la plantilla seleccionada -->
-                            <template-preview
-                                v-if="localTemplates[index]"
-                                :template-name="localTemplates[index]"
-                                :available-templates="availableTemplates"
-                            />
+                            <template-preview v-if="localTemplates[index]" :template-name="localTemplates[index]"
+                                :available-templates="availableTemplates" />
 
                             <!-- Mensaje cuando no hay plantilla -->
-                            <div 
-                                v-else
-                                class="no-template-message h-full flex flex-col items-center justify-center p-6"
-                            >
-                                <fluent-icon icon="chat-empty" size="40" class="text-slate-300 dark:text-slate-600 mb-2" />
+                            <div v-else
+                                class="no-template-message h-full flex flex-col items-center justify-center p-6">
+                                <fluent-icon icon="chat-empty" size="40"
+                                    class="text-slate-300 dark:text-slate-600 mb-2" />
                                 <h4 class="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-1.5 text-center">
                                     Sin plantilla
                                 </h4>
-                                <p class="text-xs text-slate-500 dark:text-slate-500 text-center max-w-xs leading-relaxed">
+                                <p
+                                    class="text-xs text-slate-500 dark:text-slate-500 text-center max-w-xs leading-relaxed">
                                     Se usará un mensaje normal con IA. Solo funciona con ventana de 24h abierta.
                                 </p>
                             </div>
@@ -145,7 +123,7 @@ import { extractTemplateBody } from '../../../helper/trackingHelpers';
 
 export default {
     name: 'TrackingTemplates',
-    
+
     components: {
         Spinner,
         TemplatePreview,
@@ -181,10 +159,6 @@ export default {
         ...mapGetters({
             inboxes: 'inboxes/getInboxes',
         }),
-
-        currentInbox() {
-            return this.inboxes.find(i => i.id === this.inboxId);
-        },
     },
 
     watch: {
@@ -204,34 +178,31 @@ export default {
 
         inboxId: {
             immediate: true,
-            handler(newInboxId) {
+            async handler(newInboxId) {
                 if (newInboxId) {
-                    this.loadWhatsAppTemplates();
+                    await this.loadWhatsAppTemplates();
                 }
-            },
-        },
-
-        currentInbox: {
-            immediate: true,
-            handler() {
-                this.loadWhatsAppTemplates();
             },
         },
     },
 
     methods: {
-        loadWhatsAppTemplates() {
-            if (!this.currentInbox) {
-                console.warn('[TrackingTemplates] Inbox no encontrado');
-                this.availableTemplates = [];
-                return;
-            }
-
+        async loadWhatsAppTemplates() {
             this.isLoadingTemplates = true;
 
             try {
-                if (this.currentInbox.message_templates && Array.isArray(this.currentInbox.message_templates)) {
-                    this.availableTemplates = this.currentInbox.message_templates.map(template => ({
+                // 1. Forzar carga de inboxes si no están disponibles
+                if (!this.inboxes || this.inboxes.length === 0) {
+                    console.log('[TrackingTemplates] Inboxes no disponibles, forzando carga...');
+                    await this.$store.dispatch('inboxes/get');
+                }
+
+                // 2. Usar el getter optimizado del store que busca en message_templates
+                //    Y en additional_attributes.message_templates, además filtra plantillas con media
+                const templates = this.$store.getters['inboxes/getWhatsAppTemplates'](this.inboxId);
+
+                if (templates && templates.length > 0) {
+                    this.availableTemplates = templates.map(template => ({
                         id: template.id || template.name,
                         name: template.name,
                         language: template.language,
@@ -243,7 +214,7 @@ export default {
 
                     console.log(`[TrackingTemplates] Cargadas ${this.availableTemplates.length} plantillas para inbox ${this.inboxId}`);
                 } else {
-                    console.warn('[TrackingTemplates] No hay message_templates en el inbox');
+                    console.warn('[TrackingTemplates] No se encontraron plantillas para el inbox', this.inboxId);
                     this.availableTemplates = [];
                 }
             } catch (error) {

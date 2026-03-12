@@ -118,6 +118,12 @@ export const AUTOMATIONS = {
         name: 'Send Attachment',
         attributeI18nKey: 'SEND_ATTACHMENT',
       },
+      // proyecto@automatizaciones: acción para asignar tipo de oportunidad (KanbanTypeProcess) a la conversación
+      {
+        key: 'assign_kanban_type_process',
+        name: 'Asignar tipo de oportunidad',
+        attributeI18nKey: 'ASSIGN_KANBAN_TYPE_PROCESS',
+      },
     ],
   },
   conversation_created: {
@@ -248,6 +254,12 @@ export const AUTOMATIONS = {
         key: 'send_attachment',
         name: 'Send Attachment',
         attributeI18nKey: 'SEND_ATTACHMENT',
+      },
+      // proyecto@automatizaciones: acción para asignar tipo de oportunidad (KanbanTypeProcess) a la conversación
+      {
+        key: 'assign_kanban_type_process',
+        name: 'Asignar tipo de oportunidad',
+        attributeI18nKey: 'ASSIGN_KANBAN_TYPE_PROCESS',
       },
     ],
   },
@@ -394,6 +406,12 @@ export const AUTOMATIONS = {
         name: 'Send Attachment',
         attributeI18nKey: 'SEND_ATTACHMENT',
       },
+      // proyecto@automatizaciones: acción para asignar tipo de oportunidad (KanbanTypeProcess) a la conversación
+      {
+        key: 'assign_kanban_type_process',
+        name: 'Asignar tipo de oportunidad',
+        attributeI18nKey: 'ASSIGN_KANBAN_TYPE_PROCESS',
+      },
     ],
   },
   conversation_opened: {
@@ -527,6 +545,12 @@ export const AUTOMATIONS = {
         name: 'Send Attachment',
         attributeI18nKey: 'SEND_ATTACHMENT',
       },
+      // proyecto@automatizaciones: acción para asignar tipo de oportunidad (KanbanTypeProcess) a la conversación
+      {
+        key: 'assign_kanban_type_process',
+        name: 'Asignar tipo de oportunidad',
+        attributeI18nKey: 'ASSIGN_KANBAN_TYPE_PROCESS',
+      },
     ],
   },
 };
@@ -625,6 +649,12 @@ export const AUTOMATION_ACTION_TYPES = [
   {
     key: 'add_sla',
     label: 'Add SLA',
+    inputType: 'search_select',
+  },
+  // proyecto@automatizaciones: registro del tipo de acción global; inputType search_select muestra dropdown con opción None
+  {
+    key: 'assign_kanban_type_process',
+    label: 'Asignar tipo de oportunidad',
     inputType: 'search_select',
   },
 ];

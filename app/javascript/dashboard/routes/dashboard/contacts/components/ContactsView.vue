@@ -13,6 +13,7 @@ import contactFilterItems from '../contactFilterItems';
 import filterQueryGenerator from '../../../../helper/filterQueryGenerator';
 import AddCustomViews from 'dashboard/routes/dashboard/customviews/AddCustomViews.vue';
 import DeleteCustomViews from 'dashboard/routes/dashboard/customviews/DeleteCustomViews.vue';
+import NewPrivateConversation from 'dashboard/routes/dashboard/conversation/contact/NewPrivateConversation.vue'; // proyecto@conversation_private
 import { CONTACTS_EVENTS } from '../../../../helper/AnalyticsHelper/events';
 import countries from 'shared/constants/countries.js';
 import { generateValuesForEditCustomViews } from 'dashboard/helper/customViewsHelper';
@@ -31,6 +32,7 @@ export default {
     ContactsAdvancedFilters,
     AddCustomViews,
     DeleteCustomViews,
+    NewPrivateConversation,
   },
   props: {
     label: { type: String, default: '' },
@@ -57,6 +59,8 @@ export default {
       filterType: FILTER_TYPE_CONTACT,
       showAddSegmentsModal: false,
       showDeleteSegmentsModal: false,
+      showPrivateConversationModal: false, // proyecto@conversation_private
+      selectedContactForConversation: null, // proyecto@conversation_private
       appliedFilter: [],
     };
   },
@@ -377,9 +381,9 @@ export default {
           filter_operator: filter.filter_operator,
           values: Array.isArray(filter.values)
             ? generateValuesForEditCustomViews(
-                filter,
-                this.setParamsForEditSegmentModal()
-              )
+              filter,
+              this.setParamsForEditSegmentModal()
+            )
             : [],
           query_operator: filter.query_operator,
           custom_attribute_type: filter.custom_attribute_type,
@@ -402,6 +406,19 @@ export default {
         this.fetchContacts(DEFAULT_PAGE);
       }
     },
+    // proyecto@conversation_private - maneja evento newConversation emitido por ContactsTable
+    onNewConversation(contactId) {
+      const contact = this.records.find(item => item.id === contactId);
+      if (contact) {
+        this.selectedContactForConversation = contact;
+        this.showPrivateConversationModal = true;
+      }
+    },
+    // proyecto@conversation_private - cierra el modal y limpia el contacto seleccionado
+    closePrivateConversationModal() {
+      this.showPrivateConversationModal = false;
+      this.selectedContactForConversation = null;
+    },
   },
 };
 </script>
@@ -409,84 +426,42 @@ export default {
 <template>
   <div class="flex flex-row w-full">
     <div class="flex flex-col h-full" :class="wrapClass">
-      <ContactsHeader
-        :search-query="searchQuery"
-        :header-title="pageTitle"
-        :segments-id="segmentsId"
-        this-selected-contact-id=""
-        @onInputSearch="onInputSearch"
-        @onToggleCreate="onToggleCreate"
-        @onToggleFilter="onToggleFilters"
-        @onSearchSubmit="onSearchSubmit"
-        @onToggleImport="onToggleImport"
-        @onExportSubmit="onExportSubmit"
-        @onToggleSaveFilter="onToggleSaveFilters"
-        @onToggleDeleteFilter="onToggleDeleteFilters"
-        @onToggleEditFilter="onToggleFilters"
-      />
-      <ContactsTable
-        :contacts="records"
-        :show-search-empty-state="showEmptySearchResult"
-        :is-loading="uiFlags.isFetching"
-        :on-click-contact="openContactInfoPanel"
-        :active-contact-id="selectedContactId"
-        @onSortChange="onSortChange"
-      />
-      <TableFooter
-        class="border-t border-slate-75 dark:border-slate-700/50"
-        :current-page="Number(meta.currentPage)"
-        :total-count="meta.count"
-        :page-size="15"
-        @pageChange="onPageChange"
-      />
+      <ContactsHeader :search-query="searchQuery" :header-title="pageTitle" :segments-id="segmentsId"
+        this-selected-contact-id="" @onInputSearch="onInputSearch" @onToggleCreate="onToggleCreate"
+        @onToggleFilter="onToggleFilters" @onSearchSubmit="onSearchSubmit" @onToggleImport="onToggleImport"
+        @onExportSubmit="onExportSubmit" @onToggleSaveFilter="onToggleSaveFilters"
+        @onToggleDeleteFilter="onToggleDeleteFilters" @onToggleEditFilter="onToggleFilters" />
+      <ContactsTable :contacts="records" :show-search-empty-state="showEmptySearchResult"
+        :is-loading="uiFlags.isFetching" :on-click-contact="openContactInfoPanel" :active-contact-id="selectedContactId"
+        @onSortChange="onSortChange" />
+      <TableFooter class="border-t border-slate-75 dark:border-slate-700/50" :current-page="Number(meta.currentPage)"
+        :total-count="meta.count" :page-size="15" @pageChange="onPageChange" />
     </div>
 
-    <AddCustomViews
-      v-if="showAddSegmentsModal"
-      :custom-views-query="segmentsQuery"
-      :filter-type="filterType"
-      :open-last-saved-item="openSavedItemInSegment"
-      @close="onCloseAddSegmentsModal"
-    />
-    <DeleteCustomViews
-      v-if="showDeleteSegmentsModal"
-      :show-delete-popup.sync="showDeleteSegmentsModal"
-      :active-custom-view="activeSegment"
-      :custom-views-id="segmentsId"
-      :active-filter-type="filterType"
-      :open-last-item-after-delete="openLastItemAfterDeleteInSegment"
-      @close="onCloseDeleteSegmentsModal"
-    />
+    <AddCustomViews v-if="showAddSegmentsModal" :custom-views-query="segmentsQuery" :filter-type="filterType"
+      :open-last-saved-item="openSavedItemInSegment" @close="onCloseAddSegmentsModal" />
+    <DeleteCustomViews v-if="showDeleteSegmentsModal" :show-delete-popup.sync="showDeleteSegmentsModal"
+      :active-custom-view="activeSegment" :custom-views-id="segmentsId" :active-filter-type="filterType"
+      :open-last-item-after-delete="openLastItemAfterDeleteInSegment" @close="onCloseDeleteSegmentsModal" />
 
-    <ContactInfoPanel
-      v-if="showContactViewPane"
-      :contact="selectedContact"
-      :on-close="closeContactInfoPanel"
-    />
+    <ContactInfoPanel v-if="showContactViewPane" :contact="selectedContact" :on-close="closeContactInfoPanel" />
     <!-- <CreateContact :show="showCreateModal" @cancel="onToggleCreate" />
       -->
-      <!-- CONTACTSYNC -->
-      <CreateContact :show="showCreateModal" @cancel="onToggleCreate" :is-integration-enabled="isIntegrationEnabled"/>
-      <!-- CONTACTSYNC -->
-      <woot-modal :show.sync="showImportModal" :on-close="onToggleImport">
+    <!-- CONTACTSYNC -->
+    <CreateContact :show="showCreateModal" @cancel="onToggleCreate" :is-integration-enabled="isIntegrationEnabled" />
+    <!-- CONTACTSYNC -->
+    <woot-modal :show.sync="showImportModal" :on-close="onToggleImport">
       <ImportContacts v-if="showImportModal" :on-close="onToggleImport" />
     </woot-modal>
-    <woot-modal
-      :show.sync="showFiltersModal"
-      :on-close="closeAdvanceFiltersModal"
-      size="medium"
-    >
-      <ContactsAdvancedFilters
-        v-if="showFiltersModal"
-        :on-close="closeAdvanceFiltersModal"
-        :initial-filter-types="contactFilterItems"
-        :initial-applied-filters="appliedFilter"
-        :active-segment-name="activeSegmentName"
-        :is-segments-view="hasActiveSegments"
-        @applyFilter="onApplyFilter"
-        @updateSegment="onUpdateSegment"
-        @clearFilters="clearFilters"
-      />
+    <woot-modal :show.sync="showFiltersModal" :on-close="closeAdvanceFiltersModal" size="medium">
+      <ContactsAdvancedFilters v-if="showFiltersModal" :on-close="closeAdvanceFiltersModal"
+        :initial-filter-types="contactFilterItems" :initial-applied-filters="appliedFilter"
+        :active-segment-name="activeSegmentName" :is-segments-view="hasActiveSegments" @applyFilter="onApplyFilter"
+        @updateSegment="onUpdateSegment" @clearFilters="clearFilters" />
     </woot-modal>
+
+    <!-- proyecto@conversation_private - modal conversación privada desde tabla de contactos -->
+    <NewPrivateConversation v-if="selectedContactForConversation" :show="showPrivateConversationModal"
+      :contact="selectedContactForConversation" @cancel="closePrivateConversationModal" />
   </div>
 </template>

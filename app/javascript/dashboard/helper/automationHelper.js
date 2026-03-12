@@ -109,6 +109,7 @@ export const getActionOptions = ({
   teams,
   labels,
   slaPolicies,
+  kanbanTypeProcesses, // proyecto@automatizaciones: tipos de oportunidad del Kanban para el dropdown de la acción
   type,
 }) => {
   const actionsMap = {
@@ -119,6 +120,7 @@ export const getActionOptions = ({
     remove_label: generateConditionOptions(labels, 'title'),
     change_priority: PRIORITY_CONDITION_VALUES,
     add_sla: slaPolicies,
+    assign_kanban_type_process: addNoneToList(kanbanTypeProcesses), // proyecto@automatizaciones
   };
   return actionsMap[type];
 };

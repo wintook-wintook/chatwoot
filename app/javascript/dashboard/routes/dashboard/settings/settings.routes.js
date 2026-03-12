@@ -27,6 +27,9 @@ import profile from './profile/profile.routes';
 // KANBAN0725
 import kanban from './kanban/kanban.routes'; // ← AGREGAR ESTA LÍNEA
 // KANBAN0725
+
+import trackingTemplates from './trackingTemplates/trackingTemplates.routes'; // proyecto@tracking_templates
+
 export default {
   routes: [
     {
@@ -67,5 +70,6 @@ export default {
     // KANBAN0725
     ...kanban.routes, // ← AGREGAR ESTA LÍNEA
     // KANBAN0725
+    ...trackingTemplates.routes, // proyecto@tracking_templates
   ],
 };

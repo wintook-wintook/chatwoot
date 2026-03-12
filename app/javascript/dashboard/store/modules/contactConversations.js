@@ -6,6 +6,7 @@ import ConversationApi from '../../api/conversations';
 export const createMessagePayload = (payload, message) => {
   const { content, cc_emails, bcc_emails } = message;
   payload.append('message[content]', content);
+  if (message.private) payload.append('message[private]', true); // proyecto@conversation_private - soporte para nota privada en FormData
   if (cc_emails) payload.append('message[cc_emails]', cc_emails);
   if (bcc_emails) payload.append('message[bcc_emails]', bcc_emails);
 };
@@ -38,7 +39,10 @@ export const createWhatsAppConversationPayload = ({ params }) => {
     inbox_id: inboxId,
     contact_id: contactId,
     source_id: sourceId,
-    message,
+    message: {
+      ...message,
+      ...(message.private ? { private: true } : {}), // proyecto@conversation_private - propagar flag private en payload WhatsApp
+    },
     assignee_id: assigneeId,
   };
 

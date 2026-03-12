@@ -15,8 +15,28 @@
 
 <template>
     <woot-modal :show="show" :on-close="onClose" size="medium">
-        <woot-modal-header :header-title="$t('CONTACT_TRACKING.TITLE')"
-            :header-content="$t('CONTACT_TRACKING.DESCRIPTION')" />
+        <!-- Header personalizado con botón Volver a la derecha -->
+        <div class="flex items-start justify-between px-8 pt-8 pb-0">
+            <div>
+                <h2 class="text-base font-semibold leading-6 text-slate-800 dark:text-slate-50">
+                    {{ $t('CONTACT_TRACKING.TITLE') }}
+                </h2>
+                <p class="mt-2 text-sm leading-5 text-slate-600 dark:text-slate-300">
+                    {{ $t('CONTACT_TRACKING.DESCRIPTION') }}
+                </p>
+            </div>
+            <woot-button
+                v-if="activeTab !== 0"
+                
+                color-scheme="success"
+                icon="chevron-left"
+                size="small"
+                class="shrink-0 mt-6"
+                @click="returnToList"
+            >
+                Volver a Seguimientos
+            </woot-button>
+        </div>
 
         <!-- Alerta de integración -->
         <div v-if="!integrationAvailable && hasCheckedIntegration" class="callout warning">
@@ -28,24 +48,11 @@
 
         <div class="w-full flex flex-col">
 
-            <!-- Botón Volver (solo visible cuando NO está en Seguimientos Activos) -->
-            <div v-if="activeTab !== 0" class="px-6 pt-4 pb-2">
-                <woot-button
-                    variant="smooth"
-                    color-scheme="secondary"
-                    icon="chevron-left"
-                    size="small"
-                    @click="returnToList"
-                >
-                    Volver a Seguimientos Activos
-                </woot-button>
-            </div>
+            
+
 
             <!-- Tabs Principales (solo visibles cuando NO está en Seguimientos Activos) -->
-            <woot-tabs
-                v-if="activeTab !== 0"
-                class="font-medium [&_.tabs]:p-0 mb-4 px-6"
-                :index="mappedTabIndex"
+            <woot-tabs v-if="activeTab !== 0" class="font-medium [&_.tabs]:p-0 mb-4 px-6" :index="mappedTabIndex"
                 @change="onVisibleTabChange">
                 <woot-tabs-item v-for="tab in visibleTabs" :key="tab.key" :name="tab.name" :show-badge="tab.showBadge"
                     :badge-count="tab.badgeCount" />
@@ -55,42 +62,28 @@
                 <div class="h-full flex flex-col">
 
                     <!-- TAB 0: LISTA DE SEGUIMIENTOS -->
-                    <TrackingList
-                        v-show="activeTab === 0"
-                        class="px-6 pb-6 h-full overflow-auto"
-                        :contact-id="contactId"
-                        :conversation-id="conversationId"
-                        :trackings="localTrackings"
-                        :is-loading="isLoadingTrackings"
-                        @edit="handleEdit"
-                        @pause="handlePause"
-                        @resume="handleResume"
-                        @cancel="handleCancel"
-                        @refresh="loadTrackings"
-                        @add-new="handleAddNew" />
+                    <TrackingList v-show="activeTab === 0" class="px-6 pb-6 h-full overflow-auto"
+                        :contact-id="contactId" :conversation-id="conversationId" :trackings="localTrackings"
+                        :is-loading="isLoadingTrackings" @edit="handleEdit" @pause="handlePause" @resume="handleResume"
+                        @cancel="handleCancel" @refresh="loadTrackings" @add-new="handleAddNew"
+                        @duplicate="handleDuplicate" />
 
                     <!-- TAB 1: FORMULARIO -->
-                    <TrackingForm
-                        ref="trackingFormRef"
-                        v-show="activeTab === 1"
-                        class="px-6 pb-6 h-full overflow-auto"
-                        :contact-id="contactId"
-                        :conversation-id="conversationId"
-                        :current-chat="currentChat"
-                        :integration-available="integrationAvailable"
-                        :editing-tracking="editingTracking"
-                        @submit="handleSubmit"
-                        @cancel="handleCancelEdit"
-                        @close="onClose"
-                        @update:maxAttempts="maxAttempts = $event" />
+                    <TrackingForm ref="trackingFormRef" v-show="activeTab === 1" class="px-6 pb-6 h-full overflow-auto"
+                        :contact-id="contactId" :conversation-id="conversationId" :current-chat="currentChat"
+                        :integration-available="integrationAvailable" :editing-tracking="editingTracking"
+                        :duplicate-source="duplicateSourceTracking"
+                        :tracking-templates="filteredTrackingTemplates"
+                        :is-loading-templates="isLoadingTemplates"
+                        @submit="handleSubmit" @cancel="handleCancelEdit" @close="onClose"
+                        @update:maxAttempts="maxAttempts = $event"
+                        @reload-templates="reloadTemplates"
+                        @apply-template="handleApplyTemplate"
+                        @clear-template="handleClearTemplate" />
 
                     <!-- TAB 2: PLANTILLAS WHATSAPP -->
-                    <TrackingTemplates
-                        v-show="activeTab === 2"
-                        class="px-6 pb-6 h-full overflow-auto"
-                        :inbox-id="currentChat.inbox_id"
-                        :max-attempts="maxAttempts"
-                        :templates="whatsappTemplates"
+                    <TrackingTemplates v-show="activeTab === 2" class="px-6 pb-6 h-full overflow-auto"
+                        :inbox-id="currentChat.inbox_id" :max-attempts="maxAttempts" :templates="whatsappTemplates"
                         @update:templates="updateTemplates" />
 
                 </div>
@@ -98,14 +91,34 @@
         </div>
 
         <!-- Modal de Reanudacion -->
-        <ResumeTrackingModal
-            v-if="trackingToResume"
-            :show="showResumeModal"
-            :tracking="trackingToResume"
-            :contact-id="contactId"
-            @close="handleResumeModalClose"
-            @resumed="handleResumeSuccess"
-        />
+        <ResumeTrackingModal v-if="trackingToResume" :show="showResumeModal" :tracking="trackingToResume"
+            :contact-id="contactId" @close="handleResumeModalClose" @resumed="handleResumeSuccess" />
+
+        <!-- Modal de Cancelación -->
+        <CancelTrackingModal v-if="trackingToCancel" :show="showCancelModal" :tracking="trackingToCancel"
+            :is-loading="isCancelling" @close="handleCancelModalClose" @confirm="handleCancelConfirm" />
+
+        <!-- Modal informativo de plantillas -->
+        <woot-modal :show="showTemplateWarning" :on-close="closeTemplateWarning" size="small">
+            <div class="flex flex-col p-6">
+                <woot-modal-header
+                    header-title="Plantillas incompletas"
+                    :header-content="templateWarningMessage"
+                />
+                <div class="flex items-start gap-3 p-4 mb-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
+                    <fluent-icon icon="warning" size="20" class="text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" />
+                    <div class="text-sm text-yellow-800 dark:text-yellow-200">
+                        <p class="font-medium mb-1">Todos los intentos deben tener una plantilla asignada.</p>
+                        <p>Asigna una plantilla a cada intento antes de guardar el seguimiento.</p>
+                    </div>
+                </div>
+                <div class="flex justify-end pt-2">
+                    <woot-button @click="closeTemplateWarning">
+                        Entendido
+                    </woot-button>
+                </div>
+            </div>
+        </woot-modal>
     </woot-modal>
 </template>
 
@@ -116,6 +129,7 @@ import TrackingForm from './TrackingForm.vue';
 import TrackingTemplates from './TrackingTemplates.vue';
 import TrackingList from './TrackingList.vue';
 import ResumeTrackingModal from './ResumeTrackingModal.vue';
+import CancelTrackingModal from './CancelTrackingModal.vue';
 import { normalizeTrackingsResponse } from '../../../helper/trackingHelpers';
 
 export default {
@@ -126,6 +140,7 @@ export default {
         TrackingTemplates,
         TrackingList,
         ResumeTrackingModal,
+        CancelTrackingModal,
     },
 
     props: {
@@ -161,21 +176,42 @@ export default {
             // Modal de reanudacion
             showResumeModal: false,
             trackingToResume: null,
+            // Modal de cancelación
+            showCancelModal: false,
+            trackingToCancel: null,
+            isCancelling: false,
+            // Modal informativo de plantillas
+            showTemplateWarning: false,
+            templateWarningMessage: '',
+            // Plantillas de seguimiento
+            selectedTemplateId: null,
+            isLoadingTemplates: false,
+            // Duplicación de seguimiento completado
+            duplicateSourceTracking: null,
         };
     },
 
     computed: {
         ...mapGetters({
             inboxes: 'inboxes/getInboxes',
+            allTrackingTemplates: 'trackingTemplates/getTemplates',
         }),
+
+        filteredTrackingTemplates() {
+            const inboxId = this.currentChat?.inbox_id;
+            if (!inboxId) return this.allTrackingTemplates;
+            return this.allTrackingTemplates.filter(
+                t => t.inbox_id === inboxId || t.inbox_id === Number(inboxId)
+            );
+        },
 
         tabs() {
             const baseTabs = [
                 {
                     key: 0,
                     name: 'Seguimientos Activos',
-                    showBadge: this.trackingsCount > 0,
-                    badgeCount: this.trackingsCount,
+                    showBadge: false,
+                    badgeCount: 0,
                 },
                 {
                     key: 1,
@@ -185,12 +221,12 @@ export default {
                 },
             ];
 
-            if (this.isWhatsAppChannel) {
+            if (this.isWhatsAppChannel && !this.isAfterFirstAttempt) {
                 baseTabs.push({
                     key: 2,
                     name: 'Plantillas WhatsApp',
-                    showBadge: this.hasTemplatesConfigured,
-                    badgeCount: this.configuredTemplatesCount,
+                    showBadge: false,
+                    badgeCount: 0,
                 });
             }
 
@@ -209,6 +245,10 @@ export default {
             if (this.activeTab === 1) return 0;
             if (this.activeTab === 2) return 1;
             return 0;
+        },
+
+        isAfterFirstAttempt() {
+            return (this.editingTracking?.attempt_count ?? 0) > 0;
         },
 
         isWhatsAppChannel() {
@@ -266,6 +306,7 @@ export default {
             // Cancelar cualquier edición/creación activa y volver a la lista
             this.editingTracking = null;
             this.isCreatingNew = false;
+            this.duplicateSourceTracking = null;
             this.whatsappTemplates = ['', '', ''];
 
             // Resetear formulario hijo
@@ -295,6 +336,13 @@ export default {
         async loadData() {
             await this.checkIntegration();
             await this.loadTrackings();
+            this.loadTemplatesSilently();
+        },
+
+        async loadTemplatesSilently() {
+            try {
+                await this.$store.dispatch('trackingTemplates/get');
+            } catch (_) { /* silencioso */ }
         },
 
         async checkIntegration() {
@@ -362,10 +410,8 @@ export default {
 
                     // Si hay alguna plantilla configurada, todas deben estar presentes
                     if (templatesCount > 0 && templatesCount < maxAttempts) {
-                        useAlert(
-                            `Debes configurar ${maxAttempts} plantillas (tienes ${templatesCount}). ` +
-                            `Completa todas las plantillas o déjalas todas vacías para usar mensajes con IA.`
-                        );
+                        this.templateWarningMessage = `Tienes ${templatesCount} de ${maxAttempts} plantillas configuradas.`;
+                        this.showTemplateWarning = true;
                         return;
                     }
 
@@ -373,10 +419,8 @@ export default {
                     if (templatesCount > 0) {
                         for (let i = 0; i < maxAttempts; i++) {
                             if (!this.whatsappTemplates[i] || !this.whatsappTemplates[i].trim()) {
-                                useAlert(
-                                    `La plantilla para el intento ${i + 1} no puede estar vacía. ` +
-                                    `Debes configurar todas las plantillas del 1 al ${maxAttempts}.`
-                                );
+                                this.templateWarningMessage = `La plantilla del intento ${i + 1} está vacía.`;
+                                this.showTemplateWarning = true;
                                 return;
                             }
                         }
@@ -472,6 +516,7 @@ export default {
         handleAddNew() {
             this.isCreatingNew = true;
             this.editingTracking = null;  // ⭐ Esto dispara el watcher que resetea el formulario
+            this.duplicateSourceTracking = null;
             this.whatsappTemplates = ['', '', ''];
             this.maxAttempts = 3;
 
@@ -489,8 +534,21 @@ export default {
         handleEdit(tracking) {
             this.editingTracking = tracking;
             this.isCreatingNew = false;
+            this.duplicateSourceTracking = null;
             this.whatsappTemplates = tracking.whatsapp_templates || ['', '', ''];
             this.maxAttempts = tracking.max_attempts || 3;
+            // Cambiar al tab de Captura de Seguimiento
+            this.activeTab = 1;
+        },
+
+        handleDuplicate(tracking) {
+            this.editingTracking = null;  // Asegura que se creará nuevo (no update)
+            this.isCreatingNew = false;
+            this.duplicateSourceTracking = tracking;
+            this.maxAttempts = tracking.max_attempts || 3;
+            this.whatsappTemplates = tracking.whatsapp_templates
+                ? [...tracking.whatsapp_templates]
+                : ['', '', ''];
             // Cambiar al tab de Captura de Seguimiento
             this.activeTab = 1;
         },
@@ -533,19 +591,68 @@ export default {
             await this.loadTrackings();
         },
 
-        async handleCancel(trackingId) {
-            const confirmed = confirm('¿Estás seguro de cancelar este seguimiento?');
-            if (!confirmed) return;
+        handleCancel(trackingId) {
+            const tracking = this.localTrackings.find(t => t.id === trackingId);
+            if (!tracking) return;
+            this.trackingToCancel = tracking;
+            this.showCancelModal = true;
+        },
 
+        handleCancelModalClose() {
+            this.showCancelModal = false;
+            this.trackingToCancel = null;
+        },
+
+        closeTemplateWarning() {
+            this.showTemplateWarning = false;
+            this.templateWarningMessage = '';
+        },
+
+        async handleCancelConfirm() {
+            if (!this.trackingToCancel) return;
+            this.isCancelling = true;
             try {
                 await this.$store.dispatch('contactTrackings/cancel', {
                     contactId: this.contactId,
-                    trackingId,
+                    trackingId: this.trackingToCancel.id,
                 });
                 useAlert('Seguimiento cancelado correctamente');
+                this.handleCancelModalClose();
                 await this.loadTrackings();
             } catch (error) {
                 useAlert('Error al cancelar seguimiento');
+            } finally {
+                this.isCancelling = false;
+            }
+        },
+
+        async reloadTemplates() {
+            this.isLoadingTemplates = true;
+            try {
+                await this.$store.dispatch('trackingTemplates/get');
+            } finally {
+                this.isLoadingTemplates = false;
+            }
+        },
+
+        handleClearTemplate() {
+            this.whatsappTemplates = ['', '', ''];
+            this.maxAttempts = 3;
+        },
+
+        handleApplyTemplate(templateId) {
+            const template = this.$store.getters['trackingTemplates/getTemplateById'](templateId);
+            if (!template) return;
+
+            // Poblar campos del formulario
+            if (this.$refs.trackingFormRef?.applyFromTemplate) {
+                this.$refs.trackingFormRef.applyFromTemplate(template);
+            }
+
+            // Poblar plantillas WhatsApp y número de intentos si la plantilla las tiene
+            if (Array.isArray(template.whatsapp_templates) && template.whatsapp_templates.some(t => t)) {
+                this.whatsappTemplates = [...template.whatsapp_templates];
+                this.maxAttempts = template.whatsapp_templates.length;
             }
         },
 
@@ -557,6 +664,7 @@ export default {
             this.$emit('close');
             this.editingTracking = null;
             this.isCreatingNew = false;
+            this.duplicateSourceTracking = null;
             this.whatsappTemplates = ['', '', ''];
             this.activeTab = 0; // Resetear al tab inicial (Lista)
         },

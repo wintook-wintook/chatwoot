@@ -4,7 +4,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   include DateRangeHelper
   include HmacConcern
 
-  before_action :conversation, except: [:index, :meta, :search, :create, :filter]
+  before_action :conversation, except: [:index, :meta, :search, :create, :filter, :search_by_contacts]
   before_action :inbox, :contact, :contact_inbox, only: [:create]
 
   # def index
@@ -202,6 +202,37 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
          CustomExceptions::CustomFilter::InvalidOperator,
          CustomExceptions::CustomFilter::InvalidValue => e
     render_could_not_create_error(e.message)
+  end
+
+
+  # ================================================================================
+  # proyecto@search_by_contacts
+  # ================================================================================
+  # POST /api/v1/accounts/:account_id/conversations/search_by_contacts
+  # Search conversations by list of phone numbers and/or emails
+  # Params:
+  #   phone_numbers: Array of phone numbers in E.164 format (e.g., ["+573001234567"])
+  #   emails: Array of email addresses (e.g., ["cliente@email.com"])
+  #   status: optional filter by conversation status (open, resolved, pending, snoozed, all)
+  #   page: optional pagination page number
+  def search_by_contacts
+    validate_search_by_contacts_params
+
+    result = ::Conversations::ContactListSearchService.new(
+      account: Current.account,
+      user: current_user,
+      params: search_by_contacts_params
+    ).perform
+
+    if result[:error].present?
+      render json: { error: result[:error] }, status: :unprocessable_entity
+      return
+    end
+
+    @conversations = result[:conversations]
+    @conversations_count = result[:count]
+    # Uses the same view as filter action
+    render 'filter'
   end
 
   def mute
@@ -476,6 +507,28 @@ end
   def assignee?
     @conversation.assignee_id? && Current.user == @conversation.assignee
   end
+
+
+  # proyecto@search_by_contacts - params helper
+  def search_by_contacts_params
+    {
+      phone_numbers: params[:phone_numbers],
+      emails: params[:emails],
+      status: params[:status] || 'all',
+      assignee_type: 'all',  # Siempre 'all' para este endpoint
+      page: params[:page] || 1
+    }
+  end
+
+  # proyecto@search_by_contacts - validation helper
+  def validate_search_by_contacts_params
+    return if params[:phone_numbers].present? || params[:emails].present?
+
+    render json: { error: 'At least one phone_number or email is required' }, status: :unprocessable_entity
+  end
+  # ================================================================================
+  # FIN proyecto@search_by_contacts
+  # ================================================================================
 end
 
 Api::V1::Accounts::ConversationsController.prepend_mod_with('Api::V1::Accounts::ConversationsController')

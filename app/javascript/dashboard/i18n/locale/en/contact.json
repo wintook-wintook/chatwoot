@@ -17,6 +17,7 @@
     "IP_ADDRESS": "IP Address",
     "CREATED_AT_LABEL": "Created",
     "NEW_MESSAGE": "New message",
+    "PRIVATE_CONVERSATION": "Start Private Conversation",
     "CONVERSATIONS": {
       "NO_RECORDS_FOUND": "There are no previous conversations associated to this contact.",
       "TITLE": "Previous Conversations"
@@ -50,6 +51,24 @@
       "CONTACT_LABELS": "Contact Labels",
       "PREVIOUS_CONVERSATIONS": "Previous Conversations",
       "NO_RECORDS_FOUND": "No attributes found"
+    },
+    "SCHEDULE_TRACKING": "Automated Follow-ups Bot",
+    "ACTIVE_TRACKINGS": "Active Follow-ups",
+    "ADD_NOTE": "Add note",
+    "EDIT_NOTE": "Edit last note",
+    "INTEGRATION_WARNING": {
+      "TITLE": "⚠️ Required Integrations",
+      "MESSAGE": "To use the follow-up system you need to activate the following integrations:",
+      "TRACKING_BOT": "Follow-ups Bot",
+      "OPENAI": "OpenAI",
+      "NOT_ACTIVE": "Not active",
+      "INSTRUCTIONS_TITLE": "How to activate them?",
+      "STEP_1": "Go to Settings → Integrations",
+      "STEP_2": "Activate 'Follow-ups Bot' for this inbox",
+      "STEP_3": "Activate 'OpenAI' with your API Key",
+      "CANCEL": "Cancel",
+      "ACCEPT": "Accept",
+      "GO_TO_INTEGRATIONS": "Go to Integrations"
     }
   },
   "EDIT_CONTACT": {
@@ -94,7 +113,8 @@
       "TITLE": "Confirm Deletion",
       "MESSAGE": "Are you want sure to delete this note?",
       "YES": "Yes, Delete it",
-      "NO": "No, Keep it"
+      "NO": "No, Keep it",
+      "SUCCESS": "Note deleted successfully"
     }
   },
   "DELETE_CONTACT": {
@@ -221,6 +241,30 @@
       "SUCCESS_MESSAGE": "Message sent!",
       "GO_TO_CONVERSATION": "View",
       "ERROR_MESSAGE": "Couldn't send! try again"
+    },
+    "PRIVATE": {
+      "TITLE": "New Private Conversation",
+      "DESC": "Start a new conversation with a private note. This message will only be visible to agents.",
+      "NOTE_LABEL": "Private Note (only visible to agents)",
+      "PLACEHOLDER": "Write your private note here...",
+      "SUBMIT": "Create Conversation",
+      "SUCCESS_MESSAGE": "Private conversation created!",
+      "ERROR_MESSAGE": "Could not create conversation. Please try again.",
+      "CHECKING": "Checking existing conversations...",
+      "EXISTING_TITLE": "Existing Conversations",
+      "EXISTING_DESC": "This contact already has conversations. You can open an existing one or create a new private conversation.",
+      "GO_TO_LAST": "Open Last Conversation",
+      "CREATE_NEW_ANYWAY": "Create New Conversation",
+      "NO_MESSAGES": "No messages"
+    },
+    "FROM_CONTACTS": {
+      "BUTTON": "New Conversation",
+      "TITLE": "New Conversation",
+      "DESC": "Select a contact from the most recent ones or search to start a new private conversation.",
+      "SEARCH_PLACEHOLDER": "Search contacts by name, email or phone...",
+      "NO_RESULTS": "No contacts found for this search.",
+      "NO_CONTACTS": "No recent contacts found.",
+      "BACK": "Back"
     }
   },
   "CONTACTS_PAGE": {
@@ -248,7 +292,8 @@
         "COMPANY": "Company",
         "EMAIL_ADDRESS": "Email Address"
       },
-      "VIEW_DETAILS": "View details"
+      "VIEW_DETAILS": "View details",
+      "NEW_CONVERSATION": "New conversation"
     }
   },
   "CONTACT_PROFILE": {
@@ -280,7 +325,43 @@
       "TITLE": "Shift + Enter to create a note"
     },
     "CONTENT_HEADER": {
-      "DELETE": "Delete note"
+      "DELETE": "Delete note",
+      "EDIT": "Edit note"
+    },
+    "EDIT": {
+      "SAVE": "Save",
+      "CANCEL": "Cancel"
+    },
+    "MODAL": {
+      "ADD_TITLE": "Add note",
+      "EDIT_TITLE": "Edit last note",
+      "CANCEL": "Cancel",
+      "UPDATE": "Save changes",
+      "CREATE": "Add note",
+      "UPDATE_SUCCESS": "Note updated successfully",
+      "CREATE_SUCCESS": "Note added successfully",
+      "ERROR": "Error saving note"
+    },
+    "CRUD_MODAL": {
+      "TITLE": "Notes — {name}",
+      "SUBTITLE": "View, filter and manage contact notes",
+      "FILTER_PLACEHOLDER": "Filter by content or author…",
+      "ADD_BUTTON": "Add note",
+      "REFRESH_TOOLTIP": "Refresh notes",
+      "FILTER_IA_TOOLTIP": "Filter AI notes only",
+      "MARK_IA": "Mark as AI note",
+      "UNMARK_IA": "Unmark as AI note",
+      "PROCESS_IA_BUTTON": "Process for AI",
+      "PROCESS_IA_TOOLTIP": "Process the marked note with AI to generate a structured context",
+      "PROCESS_IA_SUCCESS": "Note processed and updated successfully",
+      "NEW_NOTE_LABEL": "New note",
+      "SAVE_BUTTON": "Save",
+      "COL_CONTENT": "Content",
+      "COL_USER": "Author",
+      "COL_DATE": "Date",
+      "COL_ACTIONS": "Actions",
+      "NO_RESULTS": "No notes match your search",
+      "COUNT": "{count} of {total} notes"
     }
   },
   "EVENTS": {
