@@ -51,24 +51,6 @@
       "CONTACT_LABELS": "Etiquetas de contacto",
       "PREVIOUS_CONVERSATIONS": "Conversaciones anteriores",
       "NO_RECORDS_FOUND": "No se encontraron atributos"
-    },
-    "SCHEDULE_TRACKING": "BotSeguimientos Automatizados",
-    "ACTIVE_TRACKINGS": "Seguimientos Activos",
-    "ADD_NOTE": "Agregar nota",
-    "EDIT_NOTE": "Editar última nota",
-    "INTEGRATION_WARNING": {
-      "TITLE": "⚠️ Integraciones Requeridas",
-      "MESSAGE": "Para usar el sistema de seguimientos necesitas activar las siguientes integraciones:",
-      "TRACKING_BOT": "Bot de Seguimientos",
-      "OPENAI": "OpenAI",
-      "NOT_ACTIVE": "No activa",
-      "INSTRUCTIONS_TITLE": "¿Cómo activarlas?",
-      "STEP_1": "Ve a Configuración → Integraciones",
-      "STEP_2": "Activa 'Bot de Seguimientos' para este inbox",
-      "STEP_3": "Activa 'OpenAI' con tu API Key",
-      "CANCEL": "Cancelar",
-      "ACCEPT": "Aceptar",
-      "GO_TO_INTEGRATIONS": "Ir a Integraciones"
     }
   },
   "EDIT_CONTACT": {
@@ -113,8 +95,7 @@
       "TITLE": "Confirmar eliminación",
       "MESSAGE": "¿Estás seguro de que deseas eliminar esta nota?",
       "YES": "Sí, eliminarla",
-      "NO": "No, mantenerla",
-      "SUCCESS": "Nota eliminada correctamente"
+      "NO": "No, mantenerla"
     }
   },
   "DELETE_CONTACT": {
@@ -293,8 +274,7 @@
         "COMPANY": "Empresa",
         "EMAIL_ADDRESS": "Dirección de correo electrónico"
       },
-      "VIEW_DETAILS": "Ver detalles",
-      "NEW_CONVERSATION": "Nueva conversación"
+      "VIEW_DETAILS": "Ver detalles"
     }
   },
   "CONTACT_PROFILE": {
@@ -326,45 +306,7 @@
       "TITLE": "Shift + Enter para crear una nota"
     },
     "CONTENT_HEADER": {
-      "DELETE": "Eliminar nota",
-      "EDIT": "Editar nota"
-    },
-    "EDIT": {
-      "SAVE": "Guardar",
-      "CANCEL": "Cancelar"
-    },
-    "MODAL": {
-      "ADD_TITLE": "Agregar nota",
-      "EDIT_TITLE": "Editar última nota",
-      "EDIT_LAST": "Editar última nota",
-      "ADD_NEW": "Nueva nota",
-      "CANCEL": "Cancelar",
-      "UPDATE": "Guardar cambios",
-      "CREATE": "Agregar nota",
-      "UPDATE_SUCCESS": "Nota actualizada correctamente",
-      "CREATE_SUCCESS": "Nota agregada correctamente",
-      "ERROR": "Error al guardar la nota"
-    },
-    "CRUD_MODAL": {
-      "TITLE": "Notas — {name}",
-      "SUBTITLE": "Ver, filtrar y gestionar las notas del contacto",
-      "FILTER_PLACEHOLDER": "Filtrar por contenido o autor…",
-      "ADD_BUTTON": "Agregar nota",
-      "REFRESH_TOOLTIP": "Actualizar notas",
-      "FILTER_IA_TOOLTIP": "Filtrar solo notas para IA",
-      "MARK_IA": "Marcar como nota para IA",
-      "UNMARK_IA": "Quitar marca de nota para IA",
-      "PROCESS_IA_BUTTON": "Procesar para IA",
-      "PROCESS_IA_TOOLTIP": "Procesa la nota marcada con IA para generar un contexto estructurado",
-      "PROCESS_IA_SUCCESS": "Nota procesada y actualizada correctamente",
-      "NEW_NOTE_LABEL": "Nueva nota",
-      "SAVE_BUTTON": "Guardar",
-      "COL_CONTENT": "Contenido",
-      "COL_USER": "Autor",
-      "COL_DATE": "Fecha",
-      "COL_ACTIONS": "Acciones",
-      "NO_RESULTS": "Ninguna nota coincide con la búsqueda",
-      "COUNT": "{count} de {total} notas"
+      "DELETE": "Eliminar nota"
     }
   },
   "EVENTS": {

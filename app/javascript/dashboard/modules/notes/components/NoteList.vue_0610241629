@@ -1,13 +1,3 @@
-<!--
-  ============================================================
-  proyecto@contacts_notes
-  ============================================================
-  Archivo: NoteList.vue
-  Descripción: Lista de notas de un contacto.
-               Modificado: método onEditNote y evento @edit="onEditNote"
-               en ContactNote para propagar la edición hacia arriba.
-  ============================================================
--->
 <script>
 import AddNote from './AddNote.vue';
 import ContactNote from './ContactNote.vue';
@@ -35,7 +25,6 @@ export default {
     onAddNote(value) {
       this.$emit('add', value);
     },
-    // proyecto@contacts_notes - NUEVO
     onEditNote(value) {
       this.$emit('edit', value);
     },

@@ -224,6 +224,13 @@ export const formatDateTime = (dateString) => {
   export const canEdit = (status) => {
     return !['completed', 'cancelled', 'failed'].includes(status);
   };
+
+  /**
+   * Valida si un seguimiento completado puede duplicarse
+   * @param {string} status - Estado actual
+   * @returns {boolean}
+   */
+  export const canDuplicate = (status) => status === 'completed';
   
   /**
    * Obtiene el mínimo datetime permitido (fecha actual)
@@ -358,7 +365,139 @@ export const formatDateTime = (dateString) => {
     if (!text) return '';
     return text.replace(/\{\{(\d+)\}\}/g, (match, num) => `[Variable ${num}]`);
   };
-  
+
+  /**
+   * ⭐ NUEVO: Reemplaza variables Liquid con datos reales del contacto
+   * Soporta: {{contact.name}}, {{contact.custom_attributes.X}}, {{1}}, {{2}}, etc.
+   * @param {string} text - Texto con variables
+   * @param {object} contactData - Datos del contacto
+   * @param {object} trackingData - Datos del tracking (opcional)
+   * @returns {object} { text: string, replacements: array }
+   */
+  export const replaceTemplateVariablesWithData = (text, contactData = {}, trackingData = {}) => {
+    if (!text) return { text: '', replacements: [] };
+
+    const replacements = [];
+    let processedText = text;
+
+    // ⭐ Procesar variables Liquid: {{contact.name}}, {{contact.custom_attributes.X}}
+    // Regex actualizado para soportar números en nombres de atributos (ej: factura_monto_568)
+    processedText = processedText.replace(
+      /\{\{([a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)+)\}\}/gi,
+      (match, varPath) => {
+        const value = resolveLiquidVariable(varPath, contactData, trackingData);
+        const displayValue = value || `[${varPath}]`;
+        replacements.push({
+          variable: varPath,
+          value: value,
+          resolved: !!value
+        });
+        return displayValue;
+      }
+    );
+
+    // ⭐ Procesar variables numeradas legacy: {{1}}, {{2}}
+    processedText = processedText.replace(
+      /\{\{(\d+)\}\}/g,
+      (match, num) => {
+        const value = resolveNumberedVariable(parseInt(num), contactData, trackingData);
+        const displayValue = value || `[Variable ${num}]`;
+        replacements.push({
+          variable: `{{${num}}}`,
+          value: value,
+          resolved: !!value
+        });
+        return displayValue;
+      }
+    );
+
+    return { text: processedText, replacements };
+  };
+
+  /**
+   * Resuelve una variable Liquid a su valor
+   */
+  const resolveLiquidVariable = (varPath, contactData, trackingData) => {
+    const parts = varPath.toLowerCase().split('.');
+    const root = parts.shift();
+
+    switch (root) {
+      case 'contact':
+        return resolveContactVariable(parts, contactData);
+      case 'tracking':
+        return resolveTrackingVariable(parts, trackingData);
+      case 'current_date':
+        return new Date().toLocaleDateString('es-MX');
+      case 'current_time':
+        return getCurrentTime();
+      default:
+        return null;
+    }
+  };
+
+  /**
+   * Resuelve variable de contacto
+   */
+  const resolveContactVariable = (parts, contactData) => {
+    if (!parts.length || !contactData) return null;
+
+    const property = parts.shift();
+
+    switch (property) {
+      case 'name':
+        return contactData.name;
+      case 'first_name':
+        return contactData.name?.split(' ')[0];
+      case 'last_name':
+        return contactData.name?.split(' ').slice(1).join(' ');
+      case 'email':
+        return contactData.email;
+      case 'phone_number':
+      case 'phone':
+        return contactData.phone_number;
+      case 'custom_attributes':
+        const attrKey = parts.shift();
+        return contactData.custom_attributes?.[attrKey];
+      default:
+        // Intentar como atributo directo o custom_attribute
+        return contactData[property] || contactData.custom_attributes?.[property];
+    }
+  };
+
+  /**
+   * Resuelve variable de tracking
+   */
+  const resolveTrackingVariable = (parts, trackingData) => {
+    if (!parts.length || !trackingData) return null;
+
+    const property = parts.shift();
+
+    switch (property) {
+      case 'objective':
+        return trackingData.objective;
+      case 'ai_context':
+        return trackingData.ai_context;
+      default:
+        return trackingData[property];
+    }
+  };
+
+  /**
+   * Resuelve variable numerada (mapeo por posición)
+   */
+  const resolveNumberedVariable = (num, contactData, trackingData) => {
+    switch (num) {
+      case 1:
+        return contactData.name || contactData.phone_number;
+      case 2:
+        return trackingData.objective || contactData.custom_attributes?.producto;
+      case 3:
+        return contactData.custom_attributes?.monto || new Date().toLocaleDateString('es-MX');
+      default:
+        return null;
+    }
+  };
+
   /**
    * Verifica si un canal es WhatsApp
    * @param {string} channelType - Tipo de canal
@@ -428,6 +567,7 @@ export const formatDateTime = (dateString) => {
     canResume,
     canCancel,
     canEdit,
+    canDuplicate,
     getMinDateTime,
     toDatetimeLocal,
     validateInterval,
@@ -435,6 +575,7 @@ export const formatDateTime = (dateString) => {
     normalizeTrackingsResponse,
     extractTemplateBody,
     replaceTemplateVariables,
+    replaceTemplateVariablesWithData,
     isWhatsAppChannel,
     getCurrentTime,
     truncateText,

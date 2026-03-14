@@ -7,6 +7,5 @@ if resource.user.present?
     json.partial! 'api/v1/models/agent', formats: [:json], resource: resource.user
   end
 end
-json.is_for_ia resource.is_for_ia # proyecto@contacts_notes - expone campo nota especial IA
 json.created_at resource.created_at.to_i
 json.updated_at resource.updated_at.to_i

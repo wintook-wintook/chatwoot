@@ -11,7 +11,6 @@ class Api::V1::Accounts::Contacts::NotesController < Api::V1::Accounts::Contacts
     @note = @contact.notes.create!(note_params)
   end
 
-  # proyecto@contacts_notes - acción PATCH para editar contenido e is_for_ia
   def update
     @note.update(note_params)
   end
@@ -27,8 +26,7 @@ class Api::V1::Accounts::Contacts::NotesController < Api::V1::Accounts::Contacts
     @note ||= @contact.notes.find(params[:id])
   end
 
-  # proyecto@contacts_notes - permite :is_for_ia para nota especial IA
   def note_params
-    params.require(:note).permit(:content, :is_for_ia).merge({ contact_id: @contact.id, user_id: Current.user.id })
+    params.require(:note).permit(:content).merge({ contact_id: @contact.id, user_id: Current.user.id })
   end
 end

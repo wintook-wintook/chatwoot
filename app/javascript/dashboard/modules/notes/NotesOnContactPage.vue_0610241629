@@ -1,13 +1,3 @@
-<!--
-  ============================================================
-  proyecto@contacts_notes
-  ============================================================
-  Archivo: NotesOnContactPage.vue
-  Descripción: Contenedor principal de notas en la página de contacto.
-               Modificado: método onUpdate para despachar contactNotes/update,
-               @edit="onUpdate" en NoteList.
-  ============================================================
--->
 <script>
 import { mapGetters } from 'vuex';
 import NoteList from './components/NoteList.vue';
@@ -42,11 +32,6 @@ export default {
       const { contactId } = this;
       this.$store.dispatch('contactNotes/create', { content, contactId });
     },
-    // proyecto@contacts_notes - NUEVO
-    onUpdate({ noteId, content }) {
-      const { contactId } = this;
-      this.$store.dispatch('contactNotes/update', { noteId, contactId, content });
-    },
     onDelete(noteId) {
       const { contactId } = this;
       this.$store.dispatch('contactNotes/delete', { noteId, contactId });
@@ -60,7 +45,6 @@ export default {
     :is-fetching="uiFlags.isFetching"
     :notes="notes"
     @add="onAdd"
-    @edit="onUpdate"
     @delete="onDelete"
   />
 </template>

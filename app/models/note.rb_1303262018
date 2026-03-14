@@ -20,9 +20,6 @@
 #
 class Note < ApplicationRecord
   before_validation :ensure_account_id
-  # proyecto@contacts_notes - callback para garantizar una sola nota IA por contacto
-  before_save :ensure_single_ia_note, if: -> { is_for_ia? && is_for_ia_changed? }
-
   validates :content, presence: true
   validates :account_id, presence: true
   validates :contact_id, presence: true
@@ -33,17 +30,10 @@ class Note < ApplicationRecord
   belongs_to :user
 
   scope :latest, -> { order(created_at: :desc) }
-  # proyecto@contacts_notes - scope para filtrar nota especial para IA
-  scope :for_ia, -> { where(is_for_ia: true) }
 
   private
 
   def ensure_account_id
     self.account_id = contact&.account_id
-  end
-
-  # proyecto@contacts_notes - desmarca otras notas del contacto al marcar una como IA
-  def ensure_single_ia_note
-    contact.notes.where.not(id: id).where(is_for_ia: true).update_all(is_for_ia: false)
   end
 end

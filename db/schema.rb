@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_02_13_170000) do
+ActiveRecord::Schema[7.0].define(version: 2026_03_04_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -870,7 +870,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_02_13_170000) do
     t.bigint "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "is_for_ia", default: false, null: false
     t.index ["account_id"], name: "index_notes_on_account_id"
+    t.index ["contact_id", "is_for_ia"], name: "index_notes_on_contact_id_and_is_for_ia"
     t.index ["contact_id"], name: "index_notes_on_contact_id"
     t.index ["user_id"], name: "index_notes_on_user_id"
   end

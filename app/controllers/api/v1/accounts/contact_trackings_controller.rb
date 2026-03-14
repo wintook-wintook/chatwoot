@@ -228,6 +228,29 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
   # Parámetros:
   #   - text: Texto a mejorar
   # ==============================================================================
+  # def improve_text
+  #   text = params[:text]&.strip
+  #   mode = params[:mode] || 'improve'
+
+  #   if text.blank?
+  #     render json: { error: 'El texto es requerido' }, status: :unprocessable_entity
+  #     return
+  #   end
+
+  #   begin
+  #     improved = case mode
+  #                when 'generate_prompt'
+  #                  generate_prompt_with_ai(text, params[:context], params[:objective])
+  #                else
+  #                  improve_text_with_ai(text)
+  #                end
+  #     render json: { improved_text: improved }
+  #   rescue StandardError => e
+  #     Rails.logger.error "[ImproveText] Error: #{e.message}"
+  #     render json: { error: 'Error al procesar el texto' }, status: :internal_server_error
+  #   end
+  # end
+
   def improve_text
     text = params[:text]&.strip
     mode = params[:mode] || 'improve'
@@ -241,6 +264,8 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
       improved = case mode
                  when 'generate_prompt'
                    generate_prompt_with_ai(text, params[:context], params[:objective])
+                 when 'process_contact_context' # proyecto@contacts_notes - modo para estructurar notas como contexto IA
+                   process_contact_context_with_ai(text)
                  else
                    improve_text_with_ai(text)
                  end
