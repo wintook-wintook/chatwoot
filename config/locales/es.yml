@@ -227,6 +227,10 @@ es:
     captain:
       name: "Capitán"
       description: "Captain es un asistente nativo de inteligencia artificial diseñado para tu producto y entrenado en la base de conocimientos de tu empresa. Responde como un humano y resuelve eficazmente las consultas de los clientes. Configúralo fácilmente para tus buzones de entrada."
+    daiko:
+      name: "Bot Vendedor"
+      description: "Tu vendedor automatizado 24/7 que responde a tus clientes en segundo, consulta precios, productos y existencias y genera cotizaciones y pedidos."
+     
   public_portal:
     search:
       search_placeholder: Buscar artículo por título o cuerpo...

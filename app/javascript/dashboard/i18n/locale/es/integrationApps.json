@@ -57,7 +57,8 @@
     },
     "SIDEBAR_DESCRIPTION": {
       "DIALOGFLOW": "Dialogflow es una plataforma de comprensión del lenguaje natural que facilita el diseño e integración de una interfaz de usuario conversacional en tu aplicación móvil, aplicación web, dispositivo, bot, sistema de respuesta de voz interactiva, y más. <br /> <br /> La integración de Dialogflow con %{installationName} te permite configurar un bot de Dialogflow con tus bandejas de entrada, lo que permite que el bot maneje las consultas inicialmente y las transfiera a un agente cuando sea necesario. Dialogflow se puede usar para calificar los leads, reducir la carga de trabajo de los agentes proporcionando respuestas a preguntas frecuentes, etc. <br /> <br /> Para añadir Dialogflow, necesitas crear una Cuenta de Servicio en tu consola de proyecto de Google y compartir las credenciales. Por favor, consulta la documentación de Dialogflow para más información.",
-      "BOT DE SEGUIMIENTOS": "Automatiza cualquier tipo de seguimiento: ventas, cobranza, recordatorios y más, mantiene activos los procesos sin depender de que el usuario recuerde hacerlo."
+      "BOT DE SEGUIMIENTOS": "Automatiza cualquier tipo de seguimiento: ventas, cobranza, recordatorios y más, mantiene activos los procesos sin depender de que el usuario recuerde hacerlo.",
+      "BOT VENDEDOR": "Tu vendedor automatizado 24/7 que responde a tus clientes en segundo, consulta precios, productos y existencias y genera cotizaciones y pedidos."
     }
   }
 }

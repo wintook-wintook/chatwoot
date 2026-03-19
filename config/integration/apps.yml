@@ -360,3 +360,52 @@ crmzeus:
   visible_properties: ['api_url_base', 'api_access_token', 'webhook']
   # DEV0002
 
+daiko:
+  id: daiko
+  logo: daiko.png
+  i18n_key: daiko
+  action: /daiko
+  hook_type: inbox
+  allow_multiple_hooks: true
+  settings_json_schema: {
+    "type": "object",
+    "properties": {
+      "api_url_base": { "type": "string" },
+      "api_access_token": { "type": "string" },
+      "contact_id": { "type": "string" },
+      "almacen_id": { "type": "string" },
+    },
+    "required": ["api_url_base", "api_access_token","contact_id","almacen_id"],
+    "additionalProperties": false,
+  }
+  settings_form_schema: [
+    {
+      "label": "Direccion Url CRMZeus",
+      "type": "url",
+      "name": "api_url_base",
+      "validation": "required",
+      "validationName": "API Url CRMZeus",
+    },
+    {
+      "label": "Access Token CRMZeus",
+      "type": "text",
+      "name": "api_access_token",
+      "validation": "required",
+      "validationName": "Access Token CRMZeus",
+    },
+    {
+      "label": "Identificador de Invitado",
+      "type": "number",
+      "name": "contact_id",
+      "validation": "required",
+      "validationName": "Identificador de Invitado",
+    },
+    {
+      "label": "Identificador de Almacén",
+      "type": "number",
+      "name": "almacen_id",
+      "validation": "required",
+      "validationName": "Identificador de Almacén",
+    }
+  ]
+  visible_properties: ['api_url_base', 'api_access_token', "contact_id","almacen_id"]

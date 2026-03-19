@@ -75,4 +75,7 @@ yalc.lock
 yarn-debug.log*
 .yarn-integrity
 
-/storybook-static
+/storybook-staticpnpm-lock.yaml
+pnpm-workspace.yaml
+pnpm-lock.yaml
+start-dev.sh
