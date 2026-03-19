@@ -360,6 +360,8 @@ class Message < ApplicationRecord
     return unless incoming?
 
     conversation.open! if conversation.snoozed?
+    # [channel_meta] pending → open cuando el contacto envía un mensaje
+    conversation.open! if conversation.pending?
 
     reopen_resolved_conversation if conversation.resolved?
   end
