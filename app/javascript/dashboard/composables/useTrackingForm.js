@@ -149,6 +149,27 @@ export function useTrackingForm(props, emit) {
     };
   };
 
+  const loadDuplicateData = (tracking) => {
+    formData.value = {
+      objective: tracking.objective || '',
+      scheduled_for: '',  // Vacío: el usuario debe elegir nueva fecha
+      inbox_id: tracking.inbox_id || '',
+      max_attempts: tracking.max_attempts || 3,
+      retry_interval_value: tracking.retry_interval_value || 3,
+      retry_interval_unit: tracking.retry_interval_unit || 'minutes',
+      use_ai: true,
+      ai_context: tracking.ai_context || '',
+      complementary_prompt: tracking.complementary_prompt || '',
+    };
+
+    errors.value = {
+      objective: '',
+      scheduled_for: '',
+      inbox_id: '',
+      ai_context: '',
+    };
+  };
+
   const resetForm = () => {
     formData.value = {
       objective: '',
@@ -276,5 +297,6 @@ export function useTrackingForm(props, emit) {
     getIntervalHelpText,
     submitForm,
     resetForm,
+    loadDuplicateData,
   };
 }
