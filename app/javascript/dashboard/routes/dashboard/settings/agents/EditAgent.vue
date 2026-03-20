@@ -1,4 +1,7 @@
 <script setup>
+// ================================================================================
+// proyecto@user_contact
+// ================================================================================
 import { ref, computed, onMounted } from 'vue';
 import { useVuelidate } from '@vuelidate/core';
 import { required, minLength } from '@vuelidate/validators';
@@ -8,6 +11,7 @@ import { useAlert } from 'dashboard/composables';
 import WootSubmitButton from 'dashboard/components/buttons/FormSubmitButton.vue';
 import Auth from '../../../../api/auth';
 import wootConstants from 'dashboard/constants/globals';
+import ContactAPI from 'dashboard/api/contacts';
 
 const props = defineProps({
   id: {
@@ -39,6 +43,15 @@ const props = defineProps({
     type: Number,
     default: null,
   },
+  // proyecto@user_contact
+  agentContactId: {
+    type: Number,
+    default: null,
+  },
+  agentContact: {
+    type: Object,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['close']);
@@ -51,6 +64,13 @@ const { t } = useI18n();
 // Andres Liverio
 const showOnlyMine = ref(false);
 const disabledOnlyMine = ref(false);
+
+// proyecto@user_contact
+const agentContactId = ref(props.agentContactId);
+const contactSearch = ref('');
+const contactResults = ref([]);
+const selectedContact = ref(props.agentContact || null);
+const showContactDropdown = ref(false);
 
 const agentName = ref(props.name);
 const agentAvailability = ref(props.availability);
@@ -78,6 +98,35 @@ onMounted(() => {
   const agent = props.current;
   showOnlyMine.value = agent?.custom_attributes?.showOnlyMine || false; // Andres Liverio
 });
+
+const onContactSearch = async () => {
+  if (contactSearch.value.length < 2) {
+    contactResults.value = [];
+    showContactDropdown.value = false;
+    return;
+  }
+  try {
+    const response = await ContactAPI.search(contactSearch.value, 1);
+    contactResults.value = response.data.payload || [];
+    showContactDropdown.value = contactResults.value.length > 0;
+  } catch {
+    contactResults.value = [];
+  }
+};
+
+const selectContact = contact => {
+  selectedContact.value = contact;
+  agentContactId.value = contact.id;
+  contactSearch.value = '';
+  contactResults.value = [];
+  showContactDropdown.value = false;
+};
+
+const clearContact = () => {
+  selectedContact.value = null;
+  agentContactId.value = null;
+  contactSearch.value = '';
+};
 
 const uiFlags = useMapGetter('agents/getUIFlags');
 const getCustomRoles = useMapGetter('customRole/getCustomRoles');
@@ -132,6 +181,7 @@ const editAgent = async () => {
       name: agentName.value,
       availability: agentAvailability.value,
       custom_attributes: { showOnlyMine: showOnlyMine.value }, // Andres Liverio
+      agent_contact_id: agentContactId.value, // proyecto@user_contact
     };
 
     if (selectedRole.value.name.startsWith('custom_')) {
@@ -217,6 +267,51 @@ const resetPassword = async () => {
           </span>
         </label>
       </div>
+
+      <!-- proyecto@user_contact: selector de contacto vinculado al agente -->
+      <div class="w-full mt-2">
+        <label>{{ 'Contacto WhatsApp del agente' }}</label>
+        <div v-if="selectedContact" class="flex items-center gap-2 p-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+          <span class="flex-1 text-sm">
+            {{ selectedContact.name }}
+            <span v-if="selectedContact.phone_number" class="text-slate-500 ml-1">
+              ({{ selectedContact.phone_number }})
+            </span>
+          </span>
+          <woot-button
+            icon="dismiss"
+            variant="clear"
+            size="tiny"
+            color-scheme="secondary"
+            @click.prevent="clearContact"
+          />
+        </div>
+        <div v-else class="relative">
+          <input
+            v-model="contactSearch"
+            type="text"
+            placeholder="Buscar contacto por nombre o teléfono..."
+            @input="onContactSearch"
+          />
+          <div
+            v-if="showContactDropdown"
+            class="absolute z-50 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded shadow-lg max-h-48 overflow-y-auto"
+          >
+            <div
+              v-for="contact in contactResults"
+              :key="contact.id"
+              class="px-3 py-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 text-sm"
+              @mousedown.prevent="selectContact(contact)"
+            >
+              {{ contact.name }}
+              <span v-if="contact.phone_number" class="text-slate-500 ml-1">
+                {{ contact.phone_number }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- fin proyecto@user_contact -->
 
       <div class="flex flex-row justify-end w-full gap-2 px-0 py-2">
         <div class="w-[50%]">

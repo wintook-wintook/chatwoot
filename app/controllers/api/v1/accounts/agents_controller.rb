@@ -72,12 +72,26 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
     @agent = agents.find(params[:id])
   end
 
+  # def account_user_attributes
+  #   [:role, :availability, :auto_offline]
+  # end
   def account_user_attributes
-    [:role, :availability, :auto_offline]
+    # ================================================================================
+    # proyecto@user_contact
+    # ================================================================================
+    [:role, :availability, :auto_offline, :agent_contact_id]
+    # ================================================================================
   end
 
+  # def allowed_agent_params
+  #   [:name, :email, :name, :role, :availability, :auto_offline, custom_attributes: {}]
+  # end
   def allowed_agent_params
-    [:name, :email, :name, :role, :availability, :auto_offline, custom_attributes: {}]
+    # ================================================================================
+    # proyecto@user_contact
+    # ================================================================================
+    [:name, :email, :name, :role, :availability, :auto_offline, :agent_contact_id, custom_attributes: {}]
+    # ================================================================================
   end
 
   def agent_params

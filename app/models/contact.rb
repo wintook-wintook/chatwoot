@@ -56,6 +56,13 @@ class Contact < ApplicationRecord
   # ================================================================================
   has_many :contact_trackings, dependent: :destroy
   # ================================================================================
+    # proyecto@user_contact
+  # ================================================================================
+  has_many :agent_account_users, class_name: 'AccountUser',
+                                 foreign_key: 'agent_contact_id',
+                                 dependent: :nullify,
+                                 inverse_of: :agent_contact
+  # ================================================================================
   has_many :conversations, dependent: :destroy_async
   has_many :contact_inboxes, dependent: :destroy_async
   has_many :csat_survey_responses, dependent: :destroy_async

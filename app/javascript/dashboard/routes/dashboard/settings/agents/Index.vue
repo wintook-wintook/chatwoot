@@ -71,6 +71,10 @@ const verifiedAdministrators = computed(() => {
 });
 
 const showEditAction = agent => {
+  // proyecto@user_contact: los administradores siempre pueden ser editados
+  if (agent.role === 'administrator') {
+    return true;
+  }
   return currentUserId.value !== agent.id;
 };
 
@@ -78,13 +82,9 @@ const showDeleteAction = agent => {
   if (currentUserId.value === agent.id) {
     return false;
   }
-
-  if (!agent.confirmed) {
-    return true;
-  }
-
+  // proyecto@user_contact: los administradores no se pueden eliminar
   if (agent.role === 'administrator') {
-    return verifiedAdministrators.value.length !== 1;
+    return false;
   }
   return true;
 };
@@ -225,6 +225,15 @@ const confirmDeletion = () => {
                 {{ $t('AGENT_MGMT.LIST.VERIFICATION_PENDING') }}
               </span>
             </td>
+            <!-- proyecto@user_contact -->
+            <td class="py-4 ltr:pr-4 rtl:pl-4">
+              <div v-if="agent.agent_contact" class="flex flex-col">
+                <span class="text-sm font-medium">{{ agent.agent_contact.name }}</span>
+                <span class="text-xs text-slate-500">{{ agent.agent_contact.phone_number }}</span>
+              </div>
+              <span v-else class="text-xs text-slate-400">—</span>
+            </td>
+
             <td class="py-4">
               <div class="flex justify-end gap-1">
                 <woot-button
@@ -260,6 +269,7 @@ const confirmDeletion = () => {
     </woot-modal>
 
     <woot-modal :show.sync="showEditPopup" :on-close="hideEditPopup">
+      <!-- proyecto@user_contact -->
       <EditAgent
         v-if="showEditPopup"
         :id="currentAgent.id"
@@ -269,6 +279,8 @@ const confirmDeletion = () => {
         :availability="currentAgent.availability_status"
         :current="currentAgent"
         :custom-role-id="currentAgent.custom_role_id"
+        :agent-contact-id="currentAgent.agent_contact_id"
+        :agent-contact="currentAgent.agent_contact"
         @close="hideEditPopup"
       />
     </woot-modal>
