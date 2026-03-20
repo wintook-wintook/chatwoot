@@ -54,13 +54,15 @@ export const actions = {
 
       console.log('📥 API Response:', response.data);
 
-      commit(types.SET_CONTACT_TRACKINGS, response.data);
+      // Convertir array a objeto { id: tracking } para que el getter funcione correctamente
+      const trackingsList = response.data.trackings || (Array.isArray(response.data) ? response.data : []);
+      const trackingsObj = {};
+      trackingsList.forEach(t => {
+        if (t && t.id) trackingsObj[t.id] = t;
+      });
+      commit(types.SET_CONTACT_TRACKINGS, trackingsObj);
 
-      // Devolver los datos correctamente
-      if (response.data.trackings) {
-        return response.data.trackings;
-      }
-      return response.data;
+      return trackingsList;
 
     } catch (error) {
       console.error('[ContactTrackings] Error fetching:', error);

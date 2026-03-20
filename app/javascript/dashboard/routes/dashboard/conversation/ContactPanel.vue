@@ -83,7 +83,7 @@ export default {
       // proyecto@CONTACT_PANEL - NUEVO: Estado del modal
       // ============================================================
       showTrackingModal: false,
-      showIntegrationWarning: false, // ← NUEVO
+      showIntegrationWarning: false,
     };
   },
   computed: {
@@ -220,94 +220,27 @@ export default {
     // Estructura real: array de apps con hooks anidados
     // ============================================================
     hasRequiredIntegrations() {
-      // 1. Verificar que tenemos un inbox ID
       const currentInboxId = this.currentChat?.inbox_id;
-      if (!currentInboxId) {
-        console.log('[ContactPanel] ❌ No inbox ID found');
-        return false;
-      }
+      if (!currentInboxId) return false;
 
-      // 2. Obtener las apps de integraciones
       const apps = this.$store.getters['integrations/getAppIntegrations'];
+      if (!apps || !Array.isArray(apps) || apps.length === 0) return false;
 
-      // Validar que existan apps
-      if (!apps || !Array.isArray(apps) || apps.length === 0) {
-        console.log('[ContactPanel] ❌ No apps found');
-        return false;
-      }
-
-      console.log('[ContactPanel] 📋 Apps disponibles:', apps);
-      console.log('[ContactPanel] 🏢 Current inbox ID:', currentInboxId);
-
-      // 3. Buscar la app tracking_bot
       const trackingBotApp = apps.find(app => app.id === 'tracking_bot');
+      if (!trackingBotApp || !trackingBotApp.enabled) return false;
 
-      if (!trackingBotApp) {
-        console.log('[ContactPanel] ❌ tracking_bot app not found');
-        return false;
-      }
+      const hasActiveHookForInbox = (trackingBotApp.hooks || []).some(
+        hook => hook.status === true && hook.inbox?.id === Number(currentInboxId)
+      );
 
-      console.log('[ContactPanel] 🤖 tracking_bot app:', trackingBotApp);
-
-      // 4. Verificar que tracking_bot esté enabled
-      if (!trackingBotApp.enabled) {
-        console.log('[ContactPanel] ❌ tracking_bot is not enabled');
-        return false;
-      }
-
-      // 5. Verificar que tenga hooks activos para este inbox
-      const trackingBotHooks = trackingBotApp.hooks || [];
-      const hasActiveHookForInbox = trackingBotHooks.some(hook => {
-        const isActive = hook.status === true;
-        const matchesInbox = hook.inbox?.id === Number(currentInboxId);
-
-        console.log('[ContactPanel] 🔍 Checking tracking_bot hook:', {
-          hookId: hook.id,
-          inboxId: hook.inbox?.id,
-          inboxName: hook.inbox?.name,
-          status: hook.status,
-          isActive,
-          matchesInbox
-        });
-
-        return isActive && matchesInbox;
-      });
-
-      // 6. Buscar la app openai
       const openAIApp = apps.find(app => app.id === 'openai');
+      if (!openAIApp || !openAIApp.enabled) return false;
 
-      if (!openAIApp) {
-        console.log('[ContactPanel] ❌ openai app not found');
-        return false;
-      }
+      const hasActiveOpenAIHook = (openAIApp.hooks || []).some(
+        hook => hook.status === true
+      );
 
-      console.log('[ContactPanel] 🧠 openai app:', openAIApp);
-
-      // 7. Verificar que openai esté enabled
-      if (!openAIApp.enabled) {
-        console.log('[ContactPanel] ❌ openai is not enabled');
-        return false;
-      }
-
-      // 8. Verificar que openai tenga al menos un hook activo
-      const openAIHooks = openAIApp.hooks || [];
-      const hasActiveOpenAIHook = openAIHooks.some(hook => hook.status === true);
-
-      console.log('[ContactPanel] 🔍 OpenAI hooks:', openAIHooks);
-
-      // 9. Resultado final
-      const result = hasActiveHookForInbox && hasActiveOpenAIHook;
-
-      console.log('[ContactPanel] ✅ Final check:', {
-        inbox: currentInboxId,
-        trackingBotEnabled: trackingBotApp.enabled,
-        hasActiveHookForInbox,
-        openAIEnabled: openAIApp.enabled,
-        hasActiveOpenAIHook,
-        RESULT: result
-      });
-
-      return result;
+      return hasActiveHookForInbox && hasActiveOpenAIHook;
     },
     // ============================================================
     // proyecto@CONTACT_PANEL - CORREGIDO: Validar integraciones
@@ -318,9 +251,6 @@ export default {
     // proyecto@CONTACT_PANEL - NUEVO: Mostrar botón si hay contacto e integraciones
     // ============================================================
     showTrackingButton() {
-
-      console.log("this.hasRequiredIntegrations", this.hasRequiredIntegrations)
-      console.log("this.contact.id", this.contact.id)
       return this.contact.id;
     },
   },
@@ -328,6 +258,7 @@ export default {
     conversationId(newConversationId, prevConversationId) {
       if (newConversationId && newConversationId !== prevConversationId) {
         this.getContactDetails();
+        this.loadContactTrackings();
       }
     },
     contactId() {
@@ -343,9 +274,6 @@ export default {
     this.conversationSidebarItems = this.conversationSidebarItemsOrder;
     this.getContactDetails();
     this.$store.dispatch('attributes/get', 0);
-    // ============================================================
-    // proyecto@CONTACT_PANEL - NUEVO: Cargar trackings al montar
-    // ============================================================
     this.loadContactTrackings();
   },
 
@@ -385,33 +313,9 @@ export default {
      * Abrir modal de seguimientos
      */
     openTrackingModal() {
-      console.log('🔵 openTrackingModal called');
-      console.log('🔵 contactId:', this.contactId);
-      console.log('🔵 conversationId:', this.conversationId);
       this.showTrackingModal = true;
-      console.log('🔵 showTrackingModal:', this.showTrackingModal);
     },
 
-    handleTrackingClick() {
-      if (!this.hasRequiredIntegrations) {
-        // alert(
-        //   'Las integraciones requeridas no están activas.\n\n' +
-        //   'Debes habilitar Tracking Bot y OpenAI para usar esta función.'
-        // );
-        alert(JSON.stringify({
-          trackingBot: this.hasRequiredIntegrations,
-          inbox: this.currentChat?.inbox_id,
-        }, null, 2));
-        return;
-      }
-
-      // Si todo OK
-      this.openTrackingModal();
-    },
-
-    /**
-     * Cerrar modal de seguimientos
-     */
     closeTrackingModal() {
       this.showTrackingModal = false;
       // Recargar trackings después de cerrar el modal
@@ -472,17 +376,19 @@ export default {
     <!-- Condición: Solo mostrar si hay contacto Y están habilitadas las integraciones tracking_bot y openai -->
     <!-- ============================================================ -->
     <div v-if="this.contact.id" class="tracking-action-section">
-      <woot-button variant="smooth" size="small" color-scheme="secondary" icon="calendar-clock" class="tracking-button"
+      <woot-button variant="smooth" size="small" :color-scheme="activeTrackingsCount > 0 ? 'success' : 'secondary'" icon="calendar-clock" class="tracking-button"
         @click="handleTrackingClick">
         {{ $t('CONTACT_PANEL.SCHEDULE_TRACKING') }}
         <span v-if="activeTrackingsCount > 0" class="tracking-badge">
           {{ activeTrackingsCount }}
         </span>
       </woot-button>
+
     </div>
     <!-- ============================================================ -->
     <!-- FIN: Botón Programar Seguimiento                             -->
     <!-- ============================================================ -->
+
 
     <Draggable :list="conversationSidebarItems" :disabled="!dragEnabled" animation="200" class="list-group"
       ghost-class="ghost" handle=".drag-handle" @start="dragging = true" @end="onDragEnd">
@@ -557,12 +463,14 @@ export default {
     <!-- ============================================================ -->
     <!-- FIN: Modal de Seguimientos                                   -->
     <!-- ============================================================ -->
-    <!-- En ContactPanel.vue -->
-    <template>
-      <ContactTrackingModal :show="showTrackingModal" :contact-id="contact.id" :conversation-id="conversationId"
-        :current-chat="currentChat" @close="closeTrackingModal" />
-    </template>
-
+    <ContactTrackingModal
+      v-if="showTrackingModal && contact.id"
+      :show="showTrackingModal"
+      :contact-id="contact.id"
+      :conversation-id="conversationId"
+      :current-chat="currentChat"
+      @close="closeTrackingModal"
+    />
 
     <!-- Modal de Advertencia de Integraciones -->
     <Modal :show.sync="showIntegrationWarning" :on-close="closeIntegrationWarning">
