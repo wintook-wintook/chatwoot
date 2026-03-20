@@ -64,7 +64,7 @@ export default {
         OBJECTIVE: 'Objetivo',
         SCHEDULED_FOR: 'Programado Para',
         INBOX: 'Canal',
-        ATTEMPTS: 'Intentos',
+        ATTEMPTS: 'Recordatorios',
         STATUS: 'Estado',
         ACTIONS: 'Acciones',
       },
@@ -84,6 +84,7 @@ export default {
         RESUME: 'Reanudar',
         CANCEL: 'Cancelar',
         EDIT: 'Editar',
+        DUPLICATE: 'Duplicar seguimiento',
       },
       
       FILTERS: {
@@ -99,6 +100,14 @@ export default {
       
       CONFIRM: {
         CANCEL_MESSAGE: '¿Estás seguro de cancelar este seguimiento?',
+      },
+
+      CANCEL_MODAL: {
+        TITLE: 'Cancelar Seguimiento',
+        DESCRIPTION: 'Esta acción no se puede deshacer.',
+        WARNING: 'El seguimiento será cancelado y no podrá reactivarse.',
+        DISMISS: 'Volver',
+        CONFIRM: 'Sí, cancelar',
       },
 
       RESUME_MODAL: {
@@ -125,22 +134,4 @@ export default {
       },
     },
     
-    CONTACT_PANEL: {
-      SCHEDULE_TRACKING: 'BotSeguimientos Automatizados',
-      ACTIVE_TRACKINGS: 'Seguimientos Activos',
-      INTEGRATION_WARNING : {
-        TITLE: "⚠️ Integraciones Requeridas",
-      MESSAGE: "Para usar el sistema de seguimientos necesitas activar las siguientes integraciones:",
-      TRACKING_BOT: "Bot de Seguimientos",
-      OPENAI: "OpenAI",
-      NOT_ACTIVE: "No activa",
-      INSTRUCTIONS_TITLE: "¿Cómo activarlas?",
-      STEP_1: "Ve a Configuración → Integraciones",
-      STEP_2: "Activa 'Bot de Seguimientos' para este inbox",
-      STEP_3: "Activa 'OpenAI' con tu API Key",
-      CANCEL: "Cancelar",
-      ACCEPT: "Aceptar",
-      GO_TO_INTEGRATIONS: "Ir a Integraciones"
-      }
-    },
   };

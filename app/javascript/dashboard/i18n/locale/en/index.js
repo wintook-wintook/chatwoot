@@ -37,6 +37,7 @@ import datePicker from './datePicker.json';
 import kanban from './kanban.json';
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
+import contactTracking from './contactTracking.js'; // proyecto@contact_tracking 
 
 export default {
   ...advancedFilters,
@@ -76,4 +77,5 @@ export default {
   ...datePicker,
   ...kanban,
   ...trackingTemplates, // proyecto@tracking_templates
+  ...contactTracking, // proyecto@contact_tracking 
 };
