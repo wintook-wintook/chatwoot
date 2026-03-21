@@ -409,3 +409,44 @@ daiko:
     }
   ]
   visible_properties: ['api_url_base', 'api_access_token', "contact_id","almacen_id"]
+
+  # proyecto@commands_agents
+command_bot:
+  id: command_bot
+  logo: commandbot.png
+  i18n_key: command_bot
+  action: /command_bot
+  hook_type: inbox
+  allow_multiple_hooks: true
+  settings_json_schema: {
+    "type": "object",
+    "properties": {
+      "agent_phone": {
+        "type": "string"
+      },
+      "agent_id": {
+        "type": "string"
+      }
+    },
+    "required": ["agent_phone", "agent_id"],
+    "additionalProperties": false
+  }
+  settings_form_schema: [
+    {
+      "label": "Teléfono del Agente (formato E.164)",
+      "type": "text",
+      "name": "agent_phone",
+      "validation": "required",
+      "validationName": "Teléfono del Agente",
+      "help_text": "Número de teléfono del agente autorizado para enviar comandos. Ejemplo: +521234567890"
+    },
+    {
+      "label": "ID del Agente",
+      "type": "text",
+      "name": "agent_id",
+      "validation": "required",
+      "validationName": "ID del Agente",
+      "help_text": "ID numérico del agente en Chatwoot"
+    }
+  ]
+  visible_properties: ['agent_phone', 'agent_id']

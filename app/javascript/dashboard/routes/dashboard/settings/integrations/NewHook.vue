@@ -32,6 +32,7 @@ export default {
     ...mapGetters({
       uiFlags: 'integrations/getUIFlags',
       dialogFlowEnabledInboxes: 'inboxes/dialogFlowEnabledInboxes',
+      allAgents: 'agents/getAgents', // proyecto@commands_agents
       currentUser: 'getCurrentUser',
     }),
     inboxes() {
@@ -52,16 +53,42 @@ export default {
       return this.integration.hooks.map(hook => hook.inbox?.id);
     },
     formItems() {
+      // proyecto@commands_agents: INI
+      if (this.isCommandBot) {
+        return this.integration.settings_form_schema.filter(
+          item => item.name !== 'agent_id'
+        );
+      }
+      // proyecto@commands_agents: FIN
       return this.integration.settings_form_schema;
     },
     isIntegrationDialogflow() {
       return this.integration.id === 'dialogflow';
     },
+    // proyecto@commands_agents: INI
+    isCommandBot() {
+      return this.integration.id === 'command_bot';
+    },
+    // proyecto@commands_agents: Opciones de agentes confirmados para el selector
+    agentOptions() {
+      return this.allAgents
+        .filter(agent => agent.confirmed)
+        .map(agent => ({
+          label: `${agent.name} (${agent.email})`,
+          value: String(agent.id),
+        }));
+    },
+    // proyecto@commands_agents: FIN
     isIntegrationCRMZeus() {
       return this.integration.id === 'crmzeus';
     },
   },
   mounted() {
+     // proyecto@commands_agents: INI
+    if (this.isCommandBot) {
+      this.$store.dispatch('agents/get');
+    }
+     // proyecto@commands_agents: FIN
     console.log("🔍 Componente montado");
     console.log("👤 Current user:", this.currentUser);
     console.log("🔧 Integration:", this.integration);
@@ -389,6 +416,18 @@ export default {
         v-for="item in formItems"
         :key="item.name"
         v-bind="item"
+      />
+      <!-- proyecto@commands_agents: Selector dinámico de agente autorizado -->
+      <formulate-input
+        v-if="isCommandBot"
+        :options="agentOptions"
+        type="select"
+        name="agent_id"
+        label="Agente Autorizado"
+        placeholder="Seleccionar agente"
+        validation="required"
+        validation-name="Agente"
+        help="Agente autorizado para enviar comandos en este inbox"
       />
       <formulate-input
         v-if="isHookTypeInbox"

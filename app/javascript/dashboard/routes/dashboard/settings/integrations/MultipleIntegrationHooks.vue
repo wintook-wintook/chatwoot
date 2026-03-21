@@ -16,6 +16,7 @@ export default {
   computed: {
     ...mapGetters({
       globalConfig: 'globalConfig/get',
+      agents: 'agents/getAgents', // proyecto@commands_agents
     }),
     hookHeaders() {
       return this.integration.visible_properties;
@@ -28,13 +29,29 @@ export default {
       return hooks.map(hook => ({
         ...hook,
         id: hook.id,
-        properties: this.hookHeaders.map(property =>
-          hook.settings[property] ? hook.settings[property] : '--'
-        ),
+        // proyecto@commands_agents: INI
+        properties: this.hookHeaders.map(property => {
+          const value = hook.settings[property];
+          if (!value) return '--';
+          // proyecto@commands_agents: mostrar nombre del agente en lugar del ID
+          if (property === 'agent_id') {
+            const agent = this.agents.find(a => a.id === Number(value));
+            return agent ? agent.name : `Agente #${value}`;
+          }
+          return value;
+        }),
+        //properties: this.hookHeaders.map(property =>
+        //  hook.settings[property] ? hook.settings[property] : '--'
+        //),
+        // proyecto@commands_agents: FIN
       }));
     },
   },
-  mounted() {},
+  mounted() {
+    // proyecto@commands_agents: INI
+    this.$store.dispatch('agents/get');
+  },
+    // proyecto@commands_agents: FIN
   methods: {
     inboxName(hook) {
       return hook.inbox ? hook.inbox.name : '';
@@ -44,12 +61,31 @@ export default {
 </script>
 
 <template>
-  <div class="flex flex-row gap-4">
-    <div class="w-full lg:w-3/5">
+  <!-- proyecto@commands_agents: INI -->
+  <!-- <div class="flex flex-row gap-4"> -->
+  <div class="flex flex-col gap-4 w-full">
+    <div>
+      <p class="font-semibold text-sm mb-1">{{ integration.name }}</p>
+      <p
+        class="text-sm text-slate-500"
+        v-dompurify-html="
+          $t(
+            `INTEGRATION_APPS.SIDEBAR_DESCRIPTION.${integration.id.toUpperCase()}`,
+            { installationName: globalConfig.installationName }
+          )
+        "
+      />
+    </div>
+    <!--<div class="w-full lg:w-3/5"> -->
+    <div class="w-full">
+    <!-- proyecto@commands_agents: FIN -->
       <table v-if="hasConnectedHooks" class="woot-table">
         <thead>
           <th v-for="hookHeader in hookHeaders" :key="hookHeader">
-            {{ hookHeader }}
+            <!-- proyecto@commands_agents: INI -->
+            <!--{{ hookHeader }}-->
+            {{ hookHeader === 'agent_id' ? 'Agente' : hookHeader }}
+            <!-- proyecto@commands_agents: FIN -->
           </th>
           <th v-if="isHookTypeInbox">
             {{ $t('INTEGRATION_APPS.LIST.INBOX') }}
@@ -88,19 +124,6 @@ export default {
           })
         }}
       </p>
-    </div>
-    <div class="hidden w-1/3 lg:block">
-      <p>
-        <b>{{ integration.name }}</b>
-      </p>
-      <p
-        v-dompurify-html="
-          $t(
-            `INTEGRATION_APPS.SIDEBAR_DESCRIPTION.${integration.name.toUpperCase()}`,
-            { installationName: globalConfig.installationName }
-          )
-        "
-      />
     </div>
   </div>
 </template>

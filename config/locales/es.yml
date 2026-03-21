@@ -224,6 +224,11 @@ es:
     linear:
       name: "Lineal"
       description: "Crea problemas en Linear directamente desde tu ventana de conversación. Alternativamente, enlaza problemas existentes en Linear para un proceso de seguimiento de problemas más eficiente y ágil."
+    #  proyecto@commands_agents
+    command_bot:
+      name: "Bot Comando"
+      description: "Bot de Comandos permite a los agentes ejecutar acciones automatizadas desde una conversación. Escribe /sigue para crear un seguimiento paso a paso sin salir del chat."
+    # proyecto@commands_agents     
     captain:
       name: "Capitán"
       description: "Captain es un asistente nativo de inteligencia artificial diseñado para tu producto y entrenado en la base de conocimientos de tu empresa. Responde como un humano y resuelve eficazmente las consultas de los clientes. Configúralo fácilmente para tus buzones de entrada."

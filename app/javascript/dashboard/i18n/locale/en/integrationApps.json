@@ -57,7 +57,9 @@
     },
     "SIDEBAR_DESCRIPTION": {
       "DIALOGFLOW": "Dialogflow is a natural language understanding platform that makes it easy to design and integrate a conversational user interface into your mobile app, web application, device, bot, interactive voice response system, and so on. <br /> <br /> Dialogflow integration with %{installationName} allows you to configure a Dialogflow bot with your inboxes which lets the bot handle the queries initially and hand them over to an agent when needed. Dialogflow can be used to qualifying the leads, reduce the workload of agents by providing frequently asked questions etc. <br /> <br /> To add Dialogflow, you need to create a Service Account in your Google project console and share the credentials. Please refer to the Dialogflow docs for more information.",
-      "SELLER BOT": "Your automated 24/7 seller that responds to your customers in seconds, checks prices, products and stock, and generates quotes and orders."
+      "SELLER BOT": "Your automated 24/7 seller that responds to your customers in seconds, checks prices, products and stock, and generates quotes and orders.",
+      "DAIKO": "Your automated 24/7 seller that responds to your customers in seconds, checks prices, products and stock, and generates quotes and orders.",
+      "COMMAND_BOT": "Command Bot allows agents to execute automated actions directly from a conversation by sending text commands. <br /><br /> Configure this bot so an authorized agent can type commands like <b>/sigue</b> and the system will guide them step by step to create a follow-up without leaving the conversation. <br /><br /> Set up one hook per inbox where you want to enable commands, specifying the authorized agent and their phone number."
     }
   }
 }

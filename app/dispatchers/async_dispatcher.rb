@@ -12,6 +12,7 @@ class AsyncDispatcher < BaseDispatcher
     [
       AutomationRuleListener.instance,
       CampaignListener.instance,
+      CommandAgentListener.instance, # proyecto@commands_agents
       CsatSurveyListener.instance,
       HookListener.instance,
       InstallationWebhookListener.instance,

@@ -113,3 +113,14 @@ cleanup_old_trackings:
 #    rails runner "Sidekiq::Cron::Job.all.each { |j| puts j.name }"
 # 4. Para producción, considerar ajustar frecuencia según carga
 # ==============================================================================
+# proyecto@commands_agents
+# ================================================================================
+# Job: Expirar sesiones de comando abandonadas
+# Descripcion: Expira CommandSessions activas cuyo expires_at ya vencio
+# Frecuencia: Cada 5 minutos
+# ================================================================================
+expire_command_sessions:
+  cron: "*/5 * * * *"
+  class: "CommandSessionExpirationJob"
+  queue: scheduled_jobs
+  description: "Expire abandoned command sessions after 30 minutes of inactivity"
