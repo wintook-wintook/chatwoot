@@ -94,6 +94,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    isOnBotMode: {
+      type: Boolean,
+      default: false,
+    },
     enableMultipleFileUpload: {
       type: Boolean,
       default: true,
@@ -171,6 +175,7 @@ export default {
     wrapClass() {
       return {
         'is-note-mode': this.isNote,
+        'is-bot-mode': this.isOnBotMode,
       };
     },
     buttonClass() {
@@ -265,7 +270,7 @@ export default {
 
 <template>
   <div class="bottom-box" :class="wrapClass">
-    <div class="left-wrap">
+    <div v-if="!isOnBotMode" class="left-wrap">
       <woot-button v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_EMOJI_ICON')"
         :title="$t('CONVERSATION.REPLYBOX.TIP_EMOJI_ICON')" icon="emoji" emoji="😊" color-scheme="secondary"
         variant="smooth" size="small" @click="toggleEmojiPicker" />
@@ -321,7 +326,10 @@ export default {
         color-scheme="secondary" variant="smooth" size="small"
         :title="$t('HELP_CENTER.ARTICLE_SEARCH.OPEN_ARTICLE_SEARCH')" @click="toggleInsertArticle" />
     </div>
-    <div class="right-wrap">
+    <div v-if="isOnBotMode" class="bot-hint">
+      {{ $t('CONVERSATION.REPLYBOX.BOT_ENTER_HINT') }}
+    </div>
+    <div v-else class="right-wrap">
       <woot-button size="small" :class-names="buttonClass" :is-disabled="isSendDisabled" @click="onSend">
         {{ sendButtonText }}
       </woot-button>
@@ -336,6 +344,10 @@ export default {
   &.is-note-mode {
     @apply bg-yellow-100 dark:bg-yellow-800;
   }
+
+  &.is-bot-mode {
+    @apply bg-woot-50 dark:bg-woot-900;
+  }
 }
 
 .left-wrap {
@@ -344,6 +356,10 @@ export default {
 
 .right-wrap {
   @apply flex;
+}
+
+.bot-hint {
+  @apply text-xs text-woot-600 dark:text-woot-300 italic;
 }
 
 ::v-deep .file-uploads {

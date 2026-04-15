@@ -49,15 +49,20 @@ module CommandAgents
       # Firmado por el usuario autorizado del hook (o primer usuario de la cuenta)
       # @param text [String]
       def reply(text)
-        Messages::MessageBuilder.new(
-          authorized_user,
-          @conversation,
-          {
-            content:      text,
-            private:      false,
-            message_type: :outgoing
-          }
-        ).perform
+        # Si el comando vino de un mensaje outgoing (tab Bots del dashboard) → privado
+        # Si vino de un mensaje incoming (WhatsApp/widget) → público
+        is_private = @message.outgoing?
+
+        # proyecto@commands_agents: bot_reply=true evita que el listener procese este mensaje
+        @conversation.messages.create!(
+          account_id:         @account.id,
+          inbox_id:           @inbox.id,
+          message_type:       :outgoing,
+          content:            text,
+          private:            is_private,
+          sender:             authorized_user,
+          content_attributes: { 'bot_reply' => true }
+        )
       rescue StandardError => e
         Rails.logger.error "[Commands::Base] Error al responder: #{e.message}"
       end

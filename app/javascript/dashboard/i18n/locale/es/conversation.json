@@ -261,6 +261,7 @@
       "DISABLE_SIGN_TOOLTIP": "Deshabilitar firma",
       "MSG_INPUT": "Shift + enter para nueva línea. Comienza con '/' para seleccionar una respuesta predefinida.",
       "PRIVATE_MSG_INPUT": "Shift + enter para nueva línea. Esto será visible solo para los agentes",
+      "BOT_CMD_INPUT": "Escribe /sigue para crear un seguimiento o /siguecancelar para cancelar uno.",
       "MESSAGE_SIGNATURE_NOT_CONFIGURED": "La firma del mensaje no está configurada, por favor configúrala en la configuración del perfil.",
       "CLICK_HERE": "Haz clic aquí para actualizar",
       "WHATSAPP_TEMPLATES": "Plantillas de Whatsapp"
@@ -268,6 +269,9 @@
     "REPLYBOX": {
       "REPLY": "Responder",
       "PRIVATE_NOTE": "Nota privada",
+      "BOT_COMMAND": "Bots",
+      "BOT_INVALID_COMMAND": "Comando no reconocido. Usa /sigue o /siguecancelar.",
+      "BOT_ENTER_HINT": "Presiona Enter para enviar el comando",
       "SEND": "Enviar",
       "CREATE": "Agregar nota",
       "INSERT_READ_MORE": "Leer más",

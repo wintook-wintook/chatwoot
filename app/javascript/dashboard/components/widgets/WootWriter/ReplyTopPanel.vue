@@ -36,6 +36,10 @@ export default {
     const handleNoteClick = () => {
       setReplyMode(REPLY_EDITOR_MODES.NOTE);
     };
+    const handleBotClick = () => {
+      console.log('[ReplyTopPanel] Modo BOT activado');
+      setReplyMode(REPLY_EDITOR_MODES.BOT);
+    };
     const keyboardEvents = {
       'Alt+KeyP': {
         action: () => handleNoteClick(),
@@ -51,6 +55,7 @@ export default {
     return {
       handleReplyClick,
       handleNoteClick,
+      handleBotClick,
     };
   },
   computed: {
@@ -73,6 +78,11 @@ export default {
     noteButtonClass() {
       return {
         'is-active': this.mode === REPLY_EDITOR_MODES.NOTE,
+      };
+    },
+    botButtonClass() {
+      return {
+        'is-active': this.mode === REPLY_EDITOR_MODES.BOT,
       };
     },
     charLengthClass() {
@@ -121,6 +131,11 @@ export default {
         @click="handleNoteClick">
         {{ $t('CONVERSATION.REPLYBOX.PRIVATE_NOTE') }}
       </woot-button>
+
+      <woot-button class="button--bot" variant="clear" color-scheme="primary" :class="botButtonClass"
+        @click="handleBotClick">
+        {{ $t('CONVERSATION.REPLYBOX.BOT_COMMAND') }}
+      </woot-button>
     </div>
     <div class="flex items-center mx-4 my-0">
       <div v-if="isMessageLengthReachingThreshold" class="text-xs">
@@ -165,7 +180,7 @@ export default {
   }
 
   .button--note {
-    @apply border-l-0 rounded-none;
+    @apply border-l-0 rounded-none text-yellow-600 dark:text-yellow-600 bg-transparent dark:bg-transparent;
 
     &.is-active {
       @apply border-r border-b-0 bg-yellow-100 dark:bg-yellow-800 border-t-0 border-slate-50 dark:border-slate-700;
@@ -176,9 +191,18 @@ export default {
       @apply text-yellow-700 dark:text-yellow-700;
     }
   }
-}
 
-.button--note {
-  @apply text-yellow-600 dark:text-yellow-600 bg-transparent dark:bg-transparent;
+  .button--bot {
+    @apply border-l-0 rounded-none text-woot-600 dark:text-woot-400 bg-transparent dark:bg-transparent;
+
+    &.is-active {
+      @apply border-r border-b-0 bg-woot-50 dark:bg-woot-900 border-t-0 border-slate-50 dark:border-slate-700;
+    }
+
+    &:hover,
+    &:active {
+      @apply text-woot-700 dark:text-woot-300;
+    }
+  }
 }
 </style>

@@ -138,6 +138,9 @@ export default {
       );
     },
     showRichContentEditor() {
+      if (this.isOnBotMode) {
+        return false;
+      }
       if (this.isOnPrivateNote || this.isRichEditorEnabled) {
         return true;
       }
@@ -185,6 +188,7 @@ export default {
         .length;
     },
     isPrivate() {
+      if (this.isOnBotMode) return true;
       if (this.currentChat.can_reply || this.isAWhatsAppChannel) {
         return this.isOnPrivateNote;
       }
@@ -197,6 +201,9 @@ export default {
       return this.$store.getters['inboxes/getInbox'](this.inboxId);
     },
     messagePlaceHolder() {
+      if (this.isOnBotMode) {
+        return this.$t('CONVERSATION.FOOTER.BOT_CMD_INPUT');
+      }
       return this.isPrivate
         ? this.$t('CONVERSATION.FOOTER.PRIVATE_MSG_INPUT')
         : this.$t('CONVERSATION.FOOTER.MSG_INPUT');
@@ -270,7 +277,8 @@ export default {
     },
     replyBoxClass() {
       return {
-        'is-private': this.isPrivate,
+        'is-private': this.isPrivate && !this.isOnBotMode,
+        'is-bot': this.isOnBotMode,
         'is-focused': this.isFocused || this.hasAttachments,
       };
     },
@@ -294,6 +302,9 @@ export default {
     },
     isOnPrivateNote() {
       return this.replyType === REPLY_EDITOR_MODES.NOTE;
+    },
+    isOnBotMode() {
+      return this.replyType === REPLY_EDITOR_MODES.BOT;
     },
     isOnExpandedLayout() {
       const {
@@ -391,7 +402,7 @@ export default {
 
       this.setCCAndToEmailsFromLastChat();
 
-      if (this.isOnPrivateNote) {
+      if (this.isOnPrivateNote || this.isOnBotMode) {
         return;
       }
 
@@ -419,7 +430,7 @@ export default {
 
       // Determine if the user is potentially typing a slash command.
       // This is true if the message starts with a slash and the rich content editor is not active.
-      this.hasSlashCommand = startsWithSlash && !this.showRichContentEditor;
+      this.hasSlashCommand = startsWithSlash && !this.showRichContentEditor && !this.isOnBotMode;
       this.showMentions = this.hasSlashCommand;
 
       // If a slash command is active, extract the command text after the slash.
@@ -598,6 +609,13 @@ export default {
         },
       };
     },
+    onBotModeKeydown(e) {
+      if (!this.isOnBotMode) return;
+      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        this.onSendReply();
+      }
+    },
     isAValidEvent(selectedKey) {
       return (
         !this.showUserMentions &&
@@ -662,6 +680,21 @@ export default {
     confirmOnSendReply() {
       if (this.isReplyButtonDisabled) {
         return;
+      }
+      if (this.isOnBotMode) {
+        const content = this.message.trim().toLowerCase();
+        const knownCommands = ['/sigue', '/siguecancelar'];
+        const isNewCommand = knownCommands.some(cmd => content.startsWith(cmd));
+        const isCancelCommand = ['/salir', '/salirsigue', '/exit'].some(cmd => content.startsWith(cmd));
+        const isReply = !content.startsWith('/');
+        if (!isNewCommand && !isCancelCommand && !isReply) {
+          useAlert(this.$t('CONVERSATION.REPLYBOX.BOT_INVALID_COMMAND'));
+          return;
+        }
+        if (content.startsWith('/') && !isNewCommand && !isCancelCommand) {
+          useAlert(this.$t('CONVERSATION.REPLYBOX.BOT_INVALID_COMMAND'));
+          return;
+        }
       }
       if (!this.showMentions) {
         const isOnWhatsApp =
@@ -1166,7 +1199,7 @@ export default {
       <ResizableTextArea v-else-if="!showRichContentEditor" ref="messageInput" v-model="message" class="input"
         :placeholder="messagePlaceHolder" :min-height="4" :signature="signatureToApply" allow-signature
         :send-with-signature="sendWithSignature" @typingOff="onTypingOff" @typingOn="onTypingOn" @focus="onFocus"
-        @blur="onBlur" />
+        @blur="onBlur" @keydown.native="onBotModeKeydown" />
       <WootMessageEditor v-else v-model="message" :editor-id="editorStateId" class="input" :is-private="isOnPrivateNote"
         :placeholder="messagePlaceHolder" :update-selection-with="updateEditorSelectionWith" :min-height="4"
         enable-variables :variables="messageVariables" :signature="signatureToApply" allow-signature
@@ -1180,6 +1213,7 @@ export default {
     <MessageSignatureMissingAlert v-if="isSignatureEnabledForInbox && !isSignatureAvailable" />
     <ReplyBottomPanel :popout-reply-box="popoutReplyBox" :conversation-id="conversationId" :enable-multiple-file-upload="enableMultipleFileUpload"
       :has-whatsapp-templates="hasWhatsappTemplates" :inbox="inbox" :is-on-private-note="isOnPrivateNote"
+      :is-on-bot-mode="isOnBotMode"
       :is-recording-audio="isRecordingAudio" :is-send-disabled="isReplyButtonDisabled" :mode="replyType"
       :on-file-upload="onFileUpload" :on-send="onSendReply" :recording-audio-duration-text="recordingAudioDurationText"
       :recording-audio-state="recordingAudioState" :send-button-text="replyButtonLabel"
@@ -1237,6 +1271,18 @@ export default {
 
       >input {
         @apply bg-yellow-100 dark:bg-yellow-800;
+      }
+    }
+  }
+
+  &.is-bot {
+    @apply bg-woot-50 dark:bg-woot-900;
+
+    .reply-box__top {
+      @apply bg-woot-50 dark:bg-woot-900;
+
+      >textarea {
+        @apply bg-woot-50 dark:bg-woot-900;
       }
     }
   }

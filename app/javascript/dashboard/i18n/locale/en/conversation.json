@@ -222,6 +222,7 @@
       "DISABLE_SIGN_TOOLTIP": "Disable signature",
       "MSG_INPUT": "Shift + enter for new line. Start with '/' to select a Canned Response.",
       "PRIVATE_MSG_INPUT": "Shift + enter for new line. This will be visible only to Agents",
+      "BOT_CMD_INPUT": "Type /sigue to create a follow-up or /siguecancelar to cancel one.",
       "MESSAGE_SIGNATURE_NOT_CONFIGURED": "Message signature is not configured, please configure it in profile settings.",
       "CLICK_HERE": "Click here to update",
       "WHATSAPP_TEMPLATES": "Whatsapp Templates"
@@ -229,6 +230,9 @@
     "REPLYBOX": {
       "REPLY": "Reply",
       "PRIVATE_NOTE": "Private Note",
+      "BOT_COMMAND": "Bots",
+      "BOT_INVALID_COMMAND": "Command not recognized. Use /sigue or /siguecancelar.",
+      "BOT_ENTER_HINT": "Press Enter to send the command",
       "SEND": "Send",
       "CREATE": "Add Note",
       "INSERT_READ_MORE": "Read more",

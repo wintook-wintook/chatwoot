@@ -79,3 +79,4 @@ yarn-debug.log*
 pnpm-workspace.yaml
 pnpm-lock.yaml
 start-dev.sh
+.claude/

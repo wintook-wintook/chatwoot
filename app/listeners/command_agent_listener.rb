@@ -30,7 +30,12 @@ class CommandAgentListener < BaseListener
 
     hook = find_command_bot_hook(message)
     return unless hook
-    return unless authorized_agent?(message, hook)
+
+    # proyecto@commands_agents: mensajes desde el tab Bots del dashboard ya son de un usuario
+    # autenticado — omitir la verificación de teléfono
+    unless bot_command_from_dashboard?(message)
+      return unless authorized_agent?(message, hook)
+    end
 
     Rails.logger.info "[CommandAgentListener] Comando detectado '#{message.content.strip}' " \
                       "por agente #{message.sender_id} en conversación #{message.conversation_id}"
@@ -40,12 +45,26 @@ class CommandAgentListener < BaseListener
 
   private
 
-  # El mensaje debe ser incoming (escrito desde el widget) y cumplir una de:
+  # El mensaje debe ser incoming (escrito desde el widget) o saliente privado
+  # (enviado desde el tab "Bots" del dashboard), y cumplir una de:
   #   a) Empieza con '/' -> nuevo comando
   #   b) Hay sesion activa en esa conversacion -> respuesta al flujo en curso
   def command_message?(message)
+    return true if bot_command_from_dashboard?(message)
     return false unless message.incoming?
     return false if message.content.blank?
+
+    message.content.strip.start_with?('/') ||
+      CommandSession.active_for_conversation(message.conversation_id).present?
+  end
+
+  # Detecta mensajes enviados desde el tab Bots del dashboard:
+  # outgoing + privado + sin marca bot_reply (los mensajes generados por el bot
+  # tienen content_attributes['bot_reply'] = true)
+  def bot_command_from_dashboard?(message)
+    return false if message.content.blank?
+    return false unless message.outgoing? && message.private?
+    return false if message.content_attributes&.dig('bot_reply')  # excluye respuestas del bot
 
     message.content.strip.start_with?('/') ||
       CommandSession.active_for_conversation(message.conversation_id).present?
