@@ -390,7 +390,7 @@
           "PLACEHOLDER": "Configure channel token"
         },
         "SUBMIT_BUTTON": "Create NotificaMe Channel",
-        "API": { 
+        "API": {
           "ERROR_MESSAGE": "We were not able to save the NotificaMe channel"
         }
       },
@@ -492,6 +492,13 @@
         "EMAIL_PLACEHOLDER": "Enter email address",
         "HELP": "To add your Google account as a channel, you need to authenticate your Google account by clicking on 'Sign in with Google' ",
         "ERROR_MESSAGE": "There was an error connecting to Google, please try again"
+      },
+      "WHATSAPP_EMBEDDED": {
+        "DESCRIPTION": "Conectá tu cuenta de WhatsApp Business a través de Meta para configurar tu inbox automáticamente.",
+        "CONNECT_BUTTON": "Conectar con Meta",
+        "CONNECTED": "Conectado con Meta",
+        "CONNECT_CANCELLED": "La conexión con Meta fue cancelada. Por favor intentá de nuevo.",
+        "FETCHING_PHONE": "Obteniendo número de teléfono..."
       }
     },
     "DETAILS": {

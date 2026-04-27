@@ -155,6 +155,10 @@
   value:
   display_title: 'Facebook Config ID'
   description: 'The Facebook Config ID for WhatsApp Embedded'
+- name: WHATSAPP_EMBEDDED_FACEBOOK_APP_SECRET
+  value:
+  display_title: 'Facebook App Secret'
+  description: 'The Facebook App Secret for WhatsApp Embedded (server-side only, never exponer al frontend)'
 - name: WHATSAPP_EMBEDDED_FACEBOOK_TOKEN
   value:
   display_title: 'Facebook Token'
