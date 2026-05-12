@@ -1,0 +1,142 @@
+<!-- @knowledge_sources -->
+<!-- Tarjeta individual de una fuente de conocimiento configurada. -->
+<script>
+export default {
+  name: 'KnowledgeSourceCard',
+  props: {
+    source: { type: Object, required: true },
+    syncing: { type: Boolean, default: false },
+  },
+  emits: ['sync', 'delete'],
+  data() {
+    return { copied: false };
+  },
+  computed: {
+    sourceIcon() {
+      return this.source.source_type === 'canned_response'
+        ? 'chat-multiple'
+        : 'globe';
+    },
+    sourceLabel() {
+      return this.source.source_type === 'canned_response'
+        ? 'Respuestas Predefinidas'
+        : 'Discourse';
+    },
+    lastSynced() {
+      if (!this.source.last_synced_at) return 'Nunca sincronizado';
+      return new Date(this.source.last_synced_at).toLocaleString('es-MX', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      });
+    },
+    statusClass() {
+      return this.source.status === 'active'
+        ? 'bg-green-50 text-green-700'
+        : 'bg-slate-50 text-slate-500';
+    },
+    discourseUrl() {
+      return this.source.config && this.source.config.url
+        ? this.source.config.url
+        : null;
+    },
+    hasWebhookSecret() {
+      return !!(this.source.config && this.source.config.webhook_secret);
+    },
+    categoryId() {
+      return this.source.config && this.source.config.category_id
+        ? this.source.config.category_id
+        : null;
+    },
+    webhookUrl() {
+      return `${window.location.origin}/webhooks/discourse/${this.source.id}`;
+    },
+  },
+  methods: {
+    async copyWebhookUrl() {
+      await navigator.clipboard.writeText(this.webhookUrl);
+      this.copied = true;
+      setTimeout(() => { this.copied = false; }, 2000);
+    },
+  },
+};
+</script>
+
+<template>
+  <div
+    class="flex flex-col gap-3 p-4 bg-white rounded-xl border border-slate-100 shadow-sm"
+  >
+    <div class="flex items-start justify-between">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-woot-50">
+          <fluent-icon :icon="sourceIcon" size="20" class="text-woot-500" />
+        </div>
+        <div>
+          <p class="font-semibold text-slate-800 text-sm">{{ source.name }}</p>
+          <p class="text-xs text-slate-500">{{ sourceLabel }}</p>
+        </div>
+      </div>
+      <span class="text-xs font-medium px-2 rounded-full" :class="statusClass">
+        {{ source.status === 'active' ? 'Activo' : 'Inactivo' }}
+      </span>
+    </div>
+
+    <div v-if="discourseUrl" class="text-xs text-slate-500 truncate">
+      {{ discourseUrl }}
+    </div>
+
+    <div v-if="source.source_type === 'discourse'" class="bg-slate-50 rounded px-2 py-1.5 flex flex-col gap-0.5">
+      <div class="flex items-center justify-between mb-0.5">
+        <p class="text-xs text-slate-400 font-medium">URL del webhook</p>
+        <button
+          class="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded transition-colors"
+          :class="copied ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'"
+          @click="copyWebhookUrl"
+        >
+          <fluent-icon :icon="copied ? 'checkmark' : 'copy'" size="12" />
+          {{ copied ? 'Copiado' : 'Copiar' }}
+        </button>
+      </div>
+      <p class="text-xs text-slate-600 font-mono break-all">
+        {{ webhookUrl }}
+      </p>
+    </div>
+
+    <div v-if="source.source_type === 'discourse'" class="flex items-center gap-1.5 text-xs">
+      <fluent-icon icon="folder" size="13" class="text-slate-400" />
+      <span class="text-slate-500">
+        {{ categoryId ? `Categoría ID: ${categoryId}` : 'Todas las categorías' }}
+      </span>
+    </div>
+
+    <div v-if="source.source_type === 'discourse'" class="flex items-center gap-1.5 text-xs">
+      <fluent-icon icon="plug-connected" size="13" :class="hasWebhookSecret ? 'text-green-500' : 'text-slate-300'" />
+      <span :class="hasWebhookSecret ? 'text-green-600' : 'text-slate-400'">
+        {{ hasWebhookSecret ? 'Webhook configurado' : 'Sin webhook secret' }}
+      </span>
+    </div>
+
+    <div class="text-xs text-slate-400">
+      Ultima sync: {{ lastSynced }}
+    </div>
+
+    <div class="flex gap-2 pt-1 border-t border-slate-100">
+      <woot-button
+        size="small"
+        variant="smooth"
+        color-scheme="primary"
+        icon="arrow-clockwise"
+        :disabled="syncing"
+        @click="$emit('sync', source)"
+      >
+        {{ syncing ? 'Sincronizando...' : 'Sincronizar' }}
+      </woot-button>
+      <woot-button
+        size="small"
+        variant="smooth"
+        color-scheme="alert"
+        icon="delete"
+        @click="$emit('delete', source)"
+      />
+    </div>
+  </div>
+</template>

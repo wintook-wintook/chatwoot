@@ -80,6 +80,15 @@ Rails.application.routes.draw do
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] # proyecto@tracking_templates
+
+          # @knowledge_sources
+          get    'knowledge_base/items',            to: 'knowledge_base#items'
+          get    'knowledge_base/sources',          to: 'knowledge_base#sources'
+          post   'knowledge_base/sources',          to: 'knowledge_base#create_source'
+          patch  'knowledge_base/sources/:id',      to: 'knowledge_base#update'
+          delete 'knowledge_base/sources/:id',      to: 'knowledge_base#destroy'
+          post   'knowledge_base/sources/:id/sync', to: 'knowledge_base#sync'
+          post   'knowledge_base/search',           to: 'knowledge_base#search'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
           end
@@ -624,6 +633,7 @@ Rails.application.routes.draw do
   post 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#process_payload'
   get 'webhooks/instagram', to: 'webhooks/instagram#verify'
   post 'webhooks/instagram', to: 'webhooks/instagram#events'
+  post 'webhooks/discourse/:source_id', to: 'webhooks/discourse#process_payload' # @knowledge_sources
 
   namespace :twitter do
     resource :callback, only: [:show]

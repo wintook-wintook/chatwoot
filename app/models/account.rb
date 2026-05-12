@@ -4,24 +4,16 @@
 #
 #  id                    :integer          not null, primary key
 #  auto_resolve_duration :integer
-#  bot                   :boolean          default(FALSE), not null
 #  custom_attributes     :jsonb
-#  date_alert            :date
-#  date_end              :date
-#  date_start            :date
 #  domain                :string(100)
 #  feature_flags         :bigint           default(0), not null
 #  limits                :jsonb
 #  locale                :integer          default("en")
 #  name                  :string           not null
-#  show_license          :boolean          default(FALSE), not null
 #  status                :integer          default("active")
 #  support_email         :string(100)
-#  system_settings       :jsonb
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
-#  license_period_id     :integer
-#  type_license_id       :integer          default(1), not null
 #
 # Indexes
 #
@@ -63,6 +55,8 @@ class Account < ApplicationRecord
   has_many :macros, dependent: :destroy_async
   has_many :campaigns, dependent: :destroy_async
   has_many :canned_responses, dependent: :destroy_async
+  has_many :knowledge_sources, dependent: :destroy # @knowledge_sources
+  has_many :knowledge_items, dependent: :destroy   # @knowledge_sources
   has_many :categories, dependent: :destroy_async, class_name: '::Category'
   has_many :contacts, dependent: :destroy_async
   has_many :conversations, dependent: :destroy_async

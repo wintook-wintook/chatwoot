@@ -11,6 +11,7 @@ const settings = accountId => ({
     'auditlogs_list',
     'billing_settings_index',
     'canned_list',
+    'knowledge_sources_list', // @knowledge_sources
     'chatgpt_list',
     'general_settings_index',
     'general_settings',
@@ -158,6 +159,18 @@ const settings = accountId => ({
       ),
       toStateName: 'canned_list',
       featureFlag: FEATURE_FLAGS.CANNED_RESPONSES,
+    },
+    { // @knowledge_sources
+      icon: 'library',
+      label: 'KNOWLEDGE_SOURCES',
+      hasSubMenu: false,
+      meta: {
+        permissions: ['administrator', 'agent', 'custom_role'],
+      },
+      toState: frontendURL(
+        `accounts/${accountId}/settings/knowledge-sources/list`
+      ),
+      toStateName: 'knowledge_sources_list',
     },
     {
       icon: 'bot',

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_03_04_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_05_11_100002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -397,6 +397,30 @@ ActiveRecord::Schema[7.0].define(version: 2026_03_04_120000) do
     t.index ["phone_number"], name: "index_channel_whatsapp_on_phone_number", unique: true
   end
 
+  create_table "command_sessions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "inbox_id", null: false
+    t.string "command", null: false
+    t.string "current_step", null: false
+    t.jsonb "collected_data", default: {}
+    t.string "status", default: "active", null: false
+    t.text "last_error"
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_command_sessions_on_account_id"
+    t.index ["contact_id"], name: "index_command_sessions_on_contact_id"
+    t.index ["conversation_id", "status"], name: "index_command_sessions_on_conversation_and_status"
+    t.index ["conversation_id"], name: "index_command_sessions_on_conversation_id"
+    t.index ["conversation_id"], name: "index_unique_active_session_per_conversation", unique: true, where: "((status)::text = 'active'::text)"
+    t.index ["inbox_id"], name: "index_command_sessions_on_inbox_id"
+    t.index ["status", "expires_at"], name: "index_command_sessions_on_status_and_expires_at"
+    t.index ["user_id"], name: "index_command_sessions_on_user_id"
+  end
+
   create_table "contact_inboxes", force: :cascade do |t|
     t.bigint "contact_id"
     t.bigint "inbox_id"
@@ -437,6 +461,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_03_04_120000) do
     t.integer "response_adjustments_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "keyword_actions", default: [], null: false
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
     t.index ["contact_id", "status"], name: "index_unique_active_tracking_per_contact", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))"
@@ -692,6 +717,36 @@ ActiveRecord::Schema[7.0].define(version: 2026_03_04_120000) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.jsonb "settings", default: {}
+  end
+
+  create_table "knowledge_items", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "knowledge_source_id", null: false
+    t.string "source_type", null: false
+    t.integer "source_id", null: false
+    t.string "title"
+    t.text "content", null: false
+    t.vector "embedding", limit: 1536
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "source_type", "source_id"], name: "idx_knowledge_items_source", unique: true
+    t.index ["account_id"], name: "index_knowledge_items_on_account_id"
+    t.index ["embedding"], name: "idx_knowledge_items_embedding", opclass: :vector_cosine_ops, using: :ivfflat
+    t.index ["knowledge_source_id"], name: "index_knowledge_items_on_knowledge_source_id"
+  end
+
+  create_table "knowledge_sources", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "source_type", null: false
+    t.string "name", null: false
+    t.jsonb "config", default: {}
+    t.string "status", default: "active"
+    t.datetime "last_synced_at", precision: nil
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "source_type"], name: "index_knowledge_sources_on_account_id_and_source_type"
+    t.index ["account_id"], name: "index_knowledge_sources_on_account_id"
   end
 
   create_table "labels", force: :cascade do |t|
@@ -1018,9 +1073,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_03_04_120000) do
     t.datetime "updated_at", null: false
     t.bigint "inbox_id"
     t.bigint "user_id"
+    t.jsonb "keyword_actions", default: [], null: false
+    t.integer "retry_interval_value", default: 1
+    t.string "retry_interval_unit", default: "days"
+    t.integer "kbase_hook_id"
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
+    t.index ["kbase_hook_id"], name: "index_tracking_templates_on_kbase_hook_id"
     t.index ["user_id"], name: "index_tracking_templates_on_user_id"
   end
 
@@ -1088,11 +1148,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_03_04_120000) do
   add_foreign_key "account_users", "contacts", column: "agent_contact_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "command_sessions", "accounts"
+  add_foreign_key "command_sessions", "contacts"
+  add_foreign_key "command_sessions", "conversations"
+  add_foreign_key "command_sessions", "inboxes"
+  add_foreign_key "command_sessions", "users"
   add_foreign_key "contact_trackings", "accounts"
   add_foreign_key "contact_trackings", "contacts"
   add_foreign_key "contact_trackings", "conversations"
   add_foreign_key "contact_trackings", "inboxes"
   add_foreign_key "inboxes", "portals"
+  add_foreign_key "knowledge_items", "accounts"
+  add_foreign_key "knowledge_items", "knowledge_sources"
+  add_foreign_key "knowledge_sources", "accounts"
   add_foreign_key "scheduled_messages", "accounts"
   add_foreign_key "scheduled_messages", "conversations"
   add_foreign_key "scheduled_messages", "users"

@@ -38,6 +38,7 @@ import kanban from './kanban.json';
 import contactTracking from './contactTracking.js';
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
+import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
 
 export default {
   ...advancedFilters,
@@ -78,4 +79,5 @@ export default {
   ...kanban,
   ...contactTracking,
   ...trackingTemplates, // proyecto@tracking_templates
+  ...knowledgeSources, // @knowledge_sources
 };
