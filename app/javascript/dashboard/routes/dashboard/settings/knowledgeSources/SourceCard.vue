@@ -131,6 +131,7 @@ export default {
         {{ syncing ? 'Sincronizando...' : 'Sincronizar' }}
       </woot-button>
       <woot-button
+        v-if="source.source_type !== 'canned_response'"
         size="small"
         variant="smooth"
         color-scheme="alert"

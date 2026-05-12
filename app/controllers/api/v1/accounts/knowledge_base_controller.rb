@@ -23,6 +23,10 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
 
   # GET /api/v1/accounts/:account_id/knowledge_base/sources
   def sources
+    current_account.knowledge_sources.find_or_create_by(source_type: 'canned_response') do |s|
+      s.name = 'Respuestas Predefinidas'
+      s.status = 'active'
+    end
     render json: current_account.knowledge_sources.order(:created_at)
   end
 
