@@ -461,7 +461,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_11_100002) do
     t.integer "response_adjustments_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.jsonb "keyword_actions", default: [], null: false
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
     t.index ["contact_id", "status"], name: "index_unique_active_tracking_per_contact", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))"
@@ -1073,14 +1072,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_11_100002) do
     t.datetime "updated_at", null: false
     t.bigint "inbox_id"
     t.bigint "user_id"
-    t.jsonb "keyword_actions", default: [], null: false
-    t.integer "retry_interval_value", default: 1
-    t.string "retry_interval_unit", default: "days"
-    t.integer "kbase_hook_id"
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
-    t.index ["kbase_hook_id"], name: "index_tracking_templates_on_kbase_hook_id"
     t.index ["user_id"], name: "index_tracking_templates_on_user_id"
   end
 
