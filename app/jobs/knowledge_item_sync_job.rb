@@ -32,9 +32,10 @@ class KnowledgeItemSyncJob < ApplicationJob
     return unless embedding
 
     item = KnowledgeItem.find_or_initialize_by(
-      account_id: account.id,
+      account_id:  account.id,
       source_type: source_type,
-      source_id: source_id
+      source_id:   source_id,
+      chunk_index: 0
     )
 
     item.assign_attributes(

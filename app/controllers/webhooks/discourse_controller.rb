@@ -4,7 +4,7 @@
 # Discourse firma cada request con HMAC-SHA256 usando el webhook_secret.
 class Webhooks::DiscourseController < ActionController::API
   TOPIC_EVENTS = %w[topic_created topic_edited topic_destroyed].freeze
-  POST_EVENTS  = %w[post_created post_edited].freeze
+  POST_EVENTS  = %w[post_created post_edited post_destroyed].freeze
 
   def process_payload
     source = KnowledgeSource.find_by(id: params[:source_id], source_type: 'discourse')
@@ -18,7 +18,9 @@ class Webhooks::DiscourseController < ActionController::API
     topic_id = resolve_topic_id(event)
     return head :unprocessable_entity unless topic_id
 
-    action = event == 'topic_destroyed' ? 'destroy' : 'upsert'
+    return head :ok unless allowed_category?(source, event)
+
+    action = (event == 'topic_destroyed' || event == 'post_destroyed') ? 'destroy' : 'upsert'
 
     DiscourseTopicSyncJob.perform_later(
       source_id: source.id,
@@ -41,6 +43,21 @@ class Webhooks::DiscourseController < ActionController::API
       topic = params[:topic]
       topic&.dig(:id)&.to_i.then { |id| id&.positive? ? id : nil }
     end
+  end
+
+  def allowed_category?(source, event)
+    category_ids = source.config&.dig('category_ids')
+    return true if category_ids.blank?
+
+    allowed = category_ids.map(&:to_i)
+
+    topic_category_id = if POST_EVENTS.include?(event)
+                          params.dig(:post, :category_id).to_i
+                        else
+                          params.dig(:topic, :category_id).to_i
+                        end
+
+    allowed.include?(topic_category_id)
   end
 
   def valid_signature?(source)

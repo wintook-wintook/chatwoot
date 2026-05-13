@@ -7,7 +7,7 @@ export default {
     source: { type: Object, required: true },
     syncing: { type: Boolean, default: false },
   },
-  emits: ['sync', 'delete'],
+  emits: ['sync', 'delete', 'edit'],
   data() {
     return { copied: false };
   },
@@ -21,6 +21,13 @@ export default {
       return this.source.source_type === 'canned_response'
         ? 'Respuestas Predefinidas'
         : 'Discourse';
+    },
+    isSyncing() {
+      return this.source.sync_status === 'syncing';
+    },
+    syncProgress() {
+      if (!this.isSyncing || !this.source.sync_jobs_pending) return '';
+      return `${this.source.sync_jobs_pending} restantes`;
     },
     lastSynced() {
       if (!this.source.last_synced_at) return 'Nunca sincronizado';
@@ -42,10 +49,12 @@ export default {
     hasWebhookSecret() {
       return !!(this.source.config && this.source.config.webhook_secret);
     },
-    categoryId() {
-      return this.source.config && this.source.config.category_id
-        ? this.source.config.category_id
-        : null;
+    webhookProvisioned() {
+      return !!(this.source.config && this.source.config.discourse_webhook_id);
+    },
+    categoryIds() {
+      const ids = this.source.config?.category_ids;
+      return Array.isArray(ids) && ids.length ? ids : null;
     },
     webhookUrl() {
       return `${window.location.origin}/webhooks/discourse/${this.source.id}`;
@@ -71,51 +80,62 @@ export default {
           <fluent-icon :icon="sourceIcon" size="20" class="text-woot-500" />
         </div>
         <div>
-          <p class="font-semibold text-slate-800 text-sm">{{ source.name }}</p>
-          <p class="text-xs text-slate-500">{{ sourceLabel }}</p>
+          <p class="font-semibold text-slate-800 text-base">{{ source.name }}</p>
+          <p class="text-sm text-slate-500">{{ sourceLabel }}</p>
         </div>
       </div>
-      <span class="text-xs font-medium px-2 rounded-full" :class="statusClass">
+      <span class="text-sm font-medium px-2 rounded-full" :class="statusClass">
         {{ source.status === 'active' ? 'Activo' : 'Inactivo' }}
       </span>
     </div>
 
-    <div v-if="discourseUrl" class="text-xs text-slate-500 truncate">
+    <div v-if="discourseUrl" class="text-sm text-slate-500 truncate">
       {{ discourseUrl }}
     </div>
 
     <div v-if="source.source_type === 'discourse'" class="bg-slate-50 rounded px-2 py-1.5 flex flex-col gap-0.5">
       <div class="flex items-center justify-between mb-0.5">
-        <p class="text-xs text-slate-400 font-medium">URL del webhook</p>
+        <p class="text-sm text-slate-400 font-medium">URL del webhook</p>
         <button
-          class="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded transition-colors"
+          class="flex items-center gap-1 text-sm px-1.5 py-0.5 rounded transition-colors"
           :class="copied ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'"
           @click="copyWebhookUrl"
         >
-          <fluent-icon :icon="copied ? 'checkmark' : 'copy'" size="12" />
+          <fluent-icon :icon="copied ? 'checkmark' : 'copy'" size="13" />
           {{ copied ? 'Copiado' : 'Copiar' }}
         </button>
       </div>
-      <p class="text-xs text-slate-600 font-mono break-all">
+      <p class="text-sm text-slate-600 font-mono break-all">
         {{ webhookUrl }}
       </p>
     </div>
 
-    <div v-if="source.source_type === 'discourse'" class="flex items-center gap-1.5 text-xs">
-      <fluent-icon icon="folder" size="13" class="text-slate-400" />
+    <div v-if="source.source_type === 'discourse'" class="flex items-center gap-1.5 text-sm">
+      <fluent-icon icon="folder" size="14" class="text-slate-400" />
       <span class="text-slate-500">
-        {{ categoryId ? `Categoría ID: ${categoryId}` : 'Todas las categorías' }}
+        {{ categoryIds ? `${categoryIds.length} categoría(s) filtrada(s)` : 'Todas las categorías' }}
       </span>
     </div>
 
-    <div v-if="source.source_type === 'discourse'" class="flex items-center gap-1.5 text-xs">
-      <fluent-icon icon="plug-connected" size="13" :class="hasWebhookSecret ? 'text-green-500' : 'text-slate-300'" />
-      <span :class="hasWebhookSecret ? 'text-green-600' : 'text-slate-400'">
-        {{ hasWebhookSecret ? 'Webhook configurado' : 'Sin webhook secret' }}
+    <div v-if="source.source_type === 'discourse'" class="flex items-center gap-1.5 text-sm">
+      <fluent-icon icon="plug-connected" size="14" :class="webhookProvisioned ? 'text-green-500' : 'text-slate-300'" />
+      <span :class="webhookProvisioned ? 'text-green-600' : 'text-slate-400'">
+        {{ webhookProvisioned ? 'Webhook activo en Discourse' : 'Webhook no configurado' }}
       </span>
     </div>
 
-    <div class="text-xs text-slate-400">
+    <!-- Indicador de sincronización en progreso -->
+    <div
+      v-if="isSyncing"
+      class="flex items-center gap-2 px-3 py-2 bg-woot-50 border border-woot-100 rounded-lg"
+    >
+      <span class="inline-block w-2 h-2 rounded-full bg-woot-500 animate-pulse" />
+      <span class="text-sm text-woot-700 font-medium">
+        Sincronizando{{ syncProgress ? ` — ${syncProgress}` : '...' }}
+      </span>
+    </div>
+
+    <div v-else class="text-sm text-slate-400">
       Ultima sync: {{ lastSynced }}
     </div>
 
@@ -130,6 +150,14 @@ export default {
       >
         {{ syncing ? 'Sincronizando...' : 'Sincronizar' }}
       </woot-button>
+      <woot-button
+        v-if="source.source_type !== 'canned_response'"
+        size="small"
+        variant="smooth"
+        color-scheme="secondary"
+        icon="edit"
+        @click="$emit('edit', source)"
+      />
       <woot-button
         v-if="source.source_type !== 'canned_response'"
         size="small"

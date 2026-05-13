@@ -2,15 +2,17 @@
 #
 # Table name: knowledge_sources
 #
-#  id             :bigint           not null, primary key
-#  config         :jsonb
-#  last_synced_at :datetime
-#  name           :string           not null
-#  source_type    :string           not null
-#  status         :string           default("active")
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  account_id     :bigint           not null
+#  id                :bigint           not null, primary key
+#  config            :jsonb
+#  last_synced_at    :datetime
+#  name              :string           not null
+#  source_type       :string           not null
+#  status            :string           default("active")
+#  sync_jobs_pending :integer          default(0), not null
+#  sync_status       :string           default("idle"), not null
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  account_id        :bigint           not null
 #
 # Indexes
 #
@@ -21,9 +23,6 @@
 #
 #  fk_rails_...  (account_id => accounts.id)
 #
-# @knowledge_sources
-# Fuente de conocimiento configurada por cuenta.
-# source_type: 'canned_response' | 'discourse'
 class KnowledgeSource < ApplicationRecord
   belongs_to :account
   has_many :knowledge_items, dependent: :destroy

@@ -1,10 +1,16 @@
 # @knowledge_sources
 # Job para sincronizar un topic individual de Discourse.
-# Obtiene el contenido via API, genera embedding y hace upsert/delete en knowledge_items.
+# Obtiene el contenido via API, lo divide en chunks, genera embeddings y hace upsert en knowledge_items.
+# bulk: true → decrementa sync_jobs_pending en la fuente y finaliza cuando llega a 0.
 class DiscourseTopicSyncJob < ApplicationJob
   queue_as :default
 
-  def perform(source_id:, topic_id:, action:)
+  # Chunking: ~1,500 tokens por chunk (6,000 chars), bien por debajo del límite de 8,191 tokens.
+  # El solapamiento preserva contexto entre chunks contiguos.
+  CHUNK_SIZE    = 6_000
+  CHUNK_OVERLAP = 800
+
+  def perform(source_id:, topic_id:, action:, bulk: false, category_name: nil)
     source  = KnowledgeSource.find_by(id: source_id)
     return unless source
 
@@ -13,46 +19,185 @@ class DiscourseTopicSyncJob < ApplicationJob
 
     case action
     when 'upsert'
-      upsert_topic(account, source, config, topic_id)
+      upsert_topic(account, source, config, topic_id, category_name)
     when 'destroy'
       KnowledgeItem.where(account_id: account.id, source_type: 'discourse', source_id: topic_id).destroy_all
     end
+  ensure
+    finalize_bulk(source) if bulk && source
   end
 
   private
 
-  def upsert_topic(account, source, config, topic_id)
+  def finalize_bulk(source)
+    source.with_lock do
+      source.reload
+      remaining = [source.sync_jobs_pending - 1, 0].max
+      if remaining.zero?
+        source.update!(sync_status: 'idle', sync_jobs_pending: 0, last_synced_at: Time.current)
+        Rails.logger.info "[DiscourseTopicSync] Source #{source.id} bulk sync completed"
+      else
+        source.update_column(:sync_jobs_pending, remaining)
+      end
+    end
+  rescue StandardError => e
+    Rails.logger.error "[DiscourseTopicSync] Error finalizing bulk for source #{source.id}: #{e.message}"
+  end
+
+  def upsert_topic(account, source, config, topic_id, category_name = nil)
     topic = fetch_topic(config, topic_id)
     return unless topic
+    return if category_about_topic?(config, topic)
 
     title   = topic['title'].to_s.strip
     content = extract_content(topic)
     return if content.blank?
 
-    text_to_embed = "#{title}\n\n#{content}"
-    embedding = generate_embedding(account, text_to_embed)
-    return unless embedding
+    chunks   = split_into_chunks(content)
+    total    = chunks.size
+    cat_id   = topic['category_id'].to_i
+    cat_name = category_name || fetch_category_name(config, cat_id)
+    url      = "#{config['url'].to_s.chomp('/')}/t/#{topic['slug']}/#{topic_id}"
 
-    item = KnowledgeItem.find_or_initialize_by(
-      account_id:  account.id,
-      source_type: 'discourse',
-      source_id:   topic_id
-    )
+    # Eliminar chunks obsoletos si el topic se redujo
+    KnowledgeItem.where(account_id: account.id, source_type: 'discourse', source_id: topic_id)
+                 .where('chunk_index >= ?', total)
+                 .destroy_all
 
-    item.assign_attributes(
-      knowledge_source_id: source.id,
-      title:     title,
-      content:   content,
-      embedding: embedding,
-      metadata:  {
-        url:      "#{config['url'].to_s.chomp('/')}/t/#{topic['slug']}/#{topic_id}",
-        tags:     topic['tags'] || [],
-        category: topic['category_id']
-      }
-    )
-    item.save!
+    chunks.each_with_index do |chunk_text, idx|
+      chunk_title   = total > 1 ? "#{title} (#{idx + 1}/#{total})" : title
+      text_to_embed = "#{chunk_title}\n\n#{chunk_text}"
+      embedding     = generate_embedding(account, text_to_embed)
+      next unless embedding
 
-    Rails.logger.info "[DiscourseTopicSync] Upserted topic #{topic_id} — #{title}"
+      item = KnowledgeItem.find_or_initialize_by(
+        account_id:  account.id,
+        source_type: 'discourse',
+        source_id:   topic_id,
+        chunk_index: idx
+      )
+
+      item.assign_attributes(
+        knowledge_source_id: source.id,
+        title:     chunk_title,
+        content:   chunk_text,
+        embedding: embedding,
+        metadata:  {
+          url:           url,
+          tags:          topic['tags'] || [],
+          category:      cat_id,
+          category_name: cat_name,
+          chunk_index:   idx,
+          chunk_total:   total
+        }
+      )
+      item.save!
+    end
+
+    Rails.logger.info "[DiscourseTopicSync] Upserted topic #{topic_id} — #{title} (#{total} chunk(s))"
+  end
+
+  # Divide el texto en chunks de CHUNK_SIZE chars con CHUNK_OVERLAP de solapamiento.
+  # Respeta límites naturales: primero párrafos, luego oraciones.
+  def split_into_chunks(text)
+    return [text] if text.length <= CHUNK_SIZE
+
+    segments = split_into_segments(text)
+    chunks   = []
+    buffer   = +''
+
+    segments.each do |seg|
+      candidate = buffer.empty? ? seg : "#{buffer}\n\n#{seg}"
+
+      if candidate.length > CHUNK_SIZE && buffer.present?
+        chunks << buffer.strip
+        # Solapamiento: cola del chunk anterior para preservar contexto
+        overlap = buffer.length > CHUNK_OVERLAP ? buffer.last(CHUNK_OVERLAP).sub(/\A\S+\s*/, '') : buffer
+        buffer  = overlap.blank? ? +seg : +"#{overlap}\n\n#{seg}"
+      else
+        buffer = +candidate
+      end
+    end
+
+    chunks << buffer.strip if buffer.present?
+    chunks.reject(&:blank?)
+  end
+
+  # Divide en párrafos; si un párrafo supera CHUNK_SIZE, lo subdivide por oraciones.
+  def split_into_segments(text)
+    text.split(/\n{2,}/).flat_map do |para|
+      para = para.strip
+      next [] if para.blank?
+
+      if para.length <= CHUNK_SIZE
+        [para]
+      else
+        para.scan(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/).map(&:strip).reject(&:blank?)
+      end
+    end
+  end
+
+  def extract_content(topic)
+    first_post = topic.dig('post_stream', 'posts', 0)
+    return unless first_post
+
+    ActionView::Base.full_sanitizer.sanitize(first_post['cooked'].to_s).squish
+  end
+
+  # Devuelve true si el topic es el "About the X category" creado automáticamente por Discourse.
+  # Cada categoría tiene un topic_id que apunta a ese topic especial — lo comparamos con la categoría del topic.
+  def category_about_topic?(config, topic)
+    topic_id    = topic['id'].to_i
+    category_id = topic['category_id'].to_i
+    return false unless category_id.positive?
+
+    base_url     = config['url'].to_s.chomp('/')
+    api_key      = config['api_key'].to_s
+    api_username = config['api_username'].to_s.presence || 'system'
+
+    uri  = URI("#{base_url}/c/#{category_id}/show.json")
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl      = uri.scheme == 'https'
+    http.open_timeout = 5
+    http.read_timeout = 8
+
+    req = Net::HTTP::Get.new(uri)
+    req['Api-Key']      = api_key if api_key.present?
+    req['Api-Username'] = api_username
+    res = http.request(req)
+    return false unless res.is_a?(Net::HTTPSuccess)
+
+    cat_data          = JSON.parse(res.body)['category'] || {}
+    category_topic_id = cat_data['topic_id'].to_i
+    if category_topic_id.zero?
+      # Algunas versiones omiten topic_id pero incluyen topic_url: /t/slug/ID
+      category_topic_id = cat_data['topic_url'].to_s.split('/').last.to_i
+    end
+    topic_id == category_topic_id
+  rescue StandardError
+    false
+  end
+
+  def fetch_category_name(config, category_id)
+    return nil unless category_id.positive?
+
+    base_url = config['url'].to_s.chomp('/')
+    uri      = URI("#{base_url}/c/#{category_id}/show.json")
+    http     = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl      = uri.scheme == 'https'
+    http.open_timeout = 5
+    http.read_timeout = 8
+
+    request = Net::HTTP::Get.new(uri)
+    request['Api-Key']      = config['api_key'].to_s if config['api_key'].present?
+    request['Api-Username'] = config['api_username'].to_s.presence || 'system'
+
+    response = http.request(request)
+    return nil unless response.is_a?(Net::HTTPSuccess)
+
+    JSON.parse(response.body).dig('category', 'name')
+  rescue StandardError
+    nil
   end
 
   def fetch_topic(config, topic_id)
@@ -78,14 +223,6 @@ class DiscourseTopicSyncJob < ApplicationJob
   rescue StandardError => e
     Rails.logger.error "[DiscourseTopicSync] Error fetching topic #{topic_id}: #{e.message}"
     nil
-  end
-
-  def extract_content(topic)
-    first_post = topic.dig('post_stream', 'posts', 0)
-    return unless first_post
-
-    cooked = first_post['cooked'].to_s
-    ActionView::Base.full_sanitizer.sanitize(cooked).squish
   end
 
   def generate_embedding(account, text)

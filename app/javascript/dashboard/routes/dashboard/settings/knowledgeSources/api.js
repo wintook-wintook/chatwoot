@@ -14,6 +14,10 @@ export default {
     return axios.get(`${base(accountId)}/items`, { params });
   },
 
+  getItemCategories(accountId, knowledge_source_id) {
+    return axios.get(`${base(accountId)}/item_categories`, { params: { knowledge_source_id } });
+  },
+
   getSources(accountId) {
     return axios.get(`${base(accountId)}/sources`);
   },
@@ -40,5 +44,9 @@ export default {
 
   search(accountId, query, { limit = 5, threshold = 0.7 } = {}) {
     return axios.post(`${base(accountId)}/search`, { query, limit, threshold });
+  },
+
+  getDiscourseCategories(accountId, { url, api_key, api_username = 'system' }) {
+    return axios.post(`${base(accountId)}/discourse_categories`, { url, api_key, api_username });
   },
 };

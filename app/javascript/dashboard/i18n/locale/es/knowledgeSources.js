@@ -6,7 +6,7 @@
 export default {
   KNOWLEDGE_SOURCES: {
     TITLE: 'Base de Conocimiento',
-    DESCRIPTION: 'Administra las fuentes de conocimiento para tus respuestas automáticas',
+    DESCRIPTION: 'Administra las fuentes de información que alimentan la búsqueda semántica. Conecta foros Discourse o usa las Respuestas Predefinidas para que el asistente encuentre contenido relevante en cada conversación.',
 
     ACTIONS: {
       ADD: 'Agregar Fuente',

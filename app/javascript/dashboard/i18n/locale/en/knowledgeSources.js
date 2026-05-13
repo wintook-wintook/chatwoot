@@ -6,7 +6,7 @@
 export default {
   KNOWLEDGE_SOURCES: {
     TITLE: 'Knowledge Base',
-    DESCRIPTION: 'Manage knowledge sources for your automatic responses',
+    DESCRIPTION: 'Manage the information sources that power semantic search. Connect Discourse forums or use Canned Responses so the assistant finds relevant content in every conversation.',
 
     ACTIONS: {
       ADD: 'Add Source',

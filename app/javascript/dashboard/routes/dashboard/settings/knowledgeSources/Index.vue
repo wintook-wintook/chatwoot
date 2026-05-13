@@ -18,10 +18,17 @@ export default {
       loadingSources: false,
       loadingItems: false,
       showAddModal: false,
+      editingSource: null,
       saving: false,
+      showDeleteModal: false,
+      deletingSource: null,
+      syncPollTimer: null,
       syncingId: null,
       activeTab: 0,
       searchQuery: '',
+      filterSourceId: '',
+      filterCategoryId: '',
+      filterCategories: [],
       currentPage: 1,
       itemsPerPage: 5,
       totalItems: 0,
@@ -31,6 +38,7 @@ export default {
       testResults: [],
       testSearching: false,
       testSearched: false,
+      viewingResult: null,
     };
   },
   computed: {
@@ -60,6 +68,23 @@ export default {
     sourceTypeLabel() {
       return type => (type === 'canned_response' ? 'Respuesta Predefinida' : 'Discourse');
     },
+    sourceById() {
+      return Object.fromEntries(this.sources.map(s => [s.id, s]));
+    },
+    selectedSourceIsDiscourse() {
+      if (!this.filterSourceId) return false;
+      const src = this.sources.find(s => s.id === Number(this.filterSourceId));
+      return src?.source_type === 'discourse';
+    },
+    formatDate() {
+      return iso => {
+        if (!iso) return '—';
+        return new Date(iso).toLocaleString('es-MX', {
+          day: '2-digit', month: '2-digit', year: '2-digit',
+          hour: '2-digit', minute: '2-digit',
+        });
+      };
+    },
     similarityColor() {
       return score => {
         if (score >= 0.6) return 'text-green-600 bg-green-50';
@@ -80,16 +105,40 @@ export default {
     this.fetchSources();
     this.fetchItems();
   },
+  beforeUnmount() {
+    this.stopSyncPolling();
+  },
   methods: {
     async fetchSources() {
       this.loadingSources = true;
       try {
         const { data } = await KnowledgeBaseAPI.getSources(this.accountId);
         this.sources = data;
+        this.manageSyncPolling();
       } catch {
         useAlert('Error al cargar las fuentes');
       } finally {
         this.loadingSources = false;
+      }
+    },
+    manageSyncPolling() {
+      const anySyncing = this.sources.some(s => s.sync_status === 'syncing');
+      if (anySyncing && !this.syncPollTimer) {
+        this.syncPollTimer = setInterval(async () => {
+          const { data } = await KnowledgeBaseAPI.getSources(this.accountId);
+          this.sources = data;
+          if (!data.some(s => s.sync_status === 'syncing')) {
+            this.stopSyncPolling();
+          }
+        }, 4000);
+      } else if (!anySyncing) {
+        this.stopSyncPolling();
+      }
+    },
+    stopSyncPolling() {
+      if (this.syncPollTimer) {
+        clearInterval(this.syncPollTimer);
+        this.syncPollTimer = null;
       }
     },
     async fetchItems() {
@@ -99,6 +148,8 @@ export default {
           page: this.currentPage,
           per_page: this.itemsPerPage,
           search: this.searchQuery || undefined,
+          knowledge_source_id: this.filterSourceId || undefined,
+          category_id: this.filterCategoryId || undefined,
         });
         this.items = data.items || data;
         this.totalItems = data.total || this.items.length;
@@ -111,15 +162,27 @@ export default {
     async onSaveSource(payload) {
       this.saving = true;
       try {
-        const { data } = await KnowledgeBaseAPI.createSource(this.accountId, payload);
-        this.sources.push(data);
+        if (this.editingSource) {
+          const { data } = await KnowledgeBaseAPI.updateSource(this.accountId, this.editingSource.id, payload);
+          const idx = this.sources.findIndex(s => s.id === this.editingSource.id);
+          if (idx !== -1) this.sources.splice(idx, 1, data);
+          useAlert('Fuente actualizada correctamente');
+        } else {
+          const { data } = await KnowledgeBaseAPI.createSource(this.accountId, payload);
+          this.sources.push(data);
+          useAlert('Fuente agregada correctamente');
+        }
         this.showAddModal = false;
-        useAlert('Fuente agregada correctamente');
+        this.editingSource = null;
       } catch {
-        useAlert('Error al agregar la fuente');
+        useAlert(this.editingSource ? 'Error al actualizar la fuente' : 'Error al agregar la fuente');
       } finally {
         this.saving = false;
       }
+    },
+    onEditSource(source) {
+      this.editingSource = source;
+      this.showAddModal = true;
     },
     async onSync(source) {
       this.syncingId = source.id;
@@ -134,18 +197,42 @@ export default {
         this.syncingId = null;
       }
     },
-    async onDelete(source) {
-      if (!window.confirm('Eliminar la fuente "' + source.name + '"?')) return;
+    onDelete(source) {
+      this.deletingSource = source;
+      this.showDeleteModal = true;
+    },
+    closeDeleteModal() {
+      this.showDeleteModal = false;
+      this.deletingSource = null;
+    },
+    async confirmDelete() {
+      if (!this.deletingSource) return;
       try {
-        await KnowledgeBaseAPI.deleteSource(this.accountId, source.id);
-        this.sources = this.sources.filter(s => s.id !== source.id);
+        await KnowledgeBaseAPI.deleteSource(this.accountId, this.deletingSource.id);
+        this.sources = this.sources.filter(s => s.id !== this.deletingSource.id);
         await this.fetchItems();
-        useAlert('Fuente eliminada');
+        useAlert('Fuente eliminada correctamente');
       } catch {
         useAlert('Error al eliminar la fuente');
+      } finally {
+        this.closeDeleteModal();
       }
     },
     onSearch() {
+      this.currentPage = 1;
+      this.fetchItems();
+    },
+    async onFilterSource() {
+      this.filterCategoryId = '';
+      this.filterCategories = [];
+      this.currentPage = 1;
+      this.fetchItems();
+      if (this.filterSourceId) {
+        const { data } = await KnowledgeBaseAPI.getItemCategories(this.accountId, this.filterSourceId);
+        this.filterCategories = data.categories || [];
+      }
+    },
+    onFilterCategory() {
       this.currentPage = 1;
       this.fetchItems();
     },
@@ -191,7 +278,11 @@ export default {
 
 <template>
   <div class="flex-1 overflow-auto">
-    <BaseSettingsHeader title="Base de Conocimiento" feature-name="knowledge_sources">
+    <BaseSettingsHeader
+      :title="$t('KNOWLEDGE_SOURCES.TITLE')"
+      :description="$t('KNOWLEDGE_SOURCES.DESCRIPTION')"
+      feature-name="knowledge_sources"
+    >
       <template #actions>
         <woot-button icon="add-circle" @click="showAddModal = true">
           Agregar Fuente
@@ -213,11 +304,32 @@ export default {
 
       <!-- Tab: Contenido indexado -->
       <div v-if="activeTab === 0">
-        <div class="mb-4 flex gap-2">
+        <div class="mb-4 flex gap-2 flex-wrap">
+          <select
+            v-model="filterSourceId"
+            class="input w-52"
+            @change="onFilterSource"
+          >
+            <option value="">Todas las fuentes</option>
+            <option v-for="s in sources" :key="s.id" :value="s.id">
+              {{ s.name }}
+            </option>
+          </select>
+
+          <select
+            v-model="filterCategoryId"
+            class="input w-48"
+            @change="onFilterCategory"
+          >
+            <option value="">Todas las categorías</option>
+            <option v-for="cat in filterCategories" :key="cat.id" :value="cat.id">
+              {{ cat.name }}
+            </option>
+          </select>
           <input
             v-model="searchQuery"
             type="text"
-            class="input flex-1"
+            class="input flex-1 min-w-[160px]"
             placeholder="Buscar en el contenido indexado..."
             @keydown.enter="onSearch"
           />
@@ -244,38 +356,58 @@ export default {
         <!-- Tabla -->
         <template v-else>
           <div class="overflow-x-auto rounded-lg border border-slate-200">
-            <table class="w-full">
+            <table class="w-full min-w-[860px]">
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200">
-                  <th class="text-left px-4 py-3 text-sm font-semibold text-slate-500 w-8"></th>
-                  <th class="text-left px-4 py-3 text-sm font-semibold text-slate-500">Título</th>
-                  <th class="text-left px-4 py-3 text-sm font-semibold text-slate-500">Contenido</th>
-                  <th class="text-left px-4 py-3 text-sm font-semibold text-slate-500 w-40">Tipo</th>
+                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-8"></th>
+                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500">Título</th>
+                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500">Contenido</th>
+                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-24">Categoría</th>
+                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-36">Tipo</th>
+                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-32">Creado</th>
+                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-32">Actualizado</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr
                   v-for="item in filteredItems"
                   :key="item.id"
-                  class="bg-white hover:bg-slate-50 transition-colors"
+                  class="bg-white hover:bg-slate-50 transition-colors cursor-pointer"
+                  @click="viewingResult = item"
                 >
-                  <td class="px-4 py-3">
+                  <td class="px-3 py-3">
                     <fluent-icon
                       :icon="item.source_type === 'canned_response' ? 'chat-multiple' : 'globe'"
-                      size="18"
+                      size="16"
                       class="text-slate-400"
                     />
                   </td>
-                  <td class="px-4 py-3 font-medium text-slate-700 text-sm max-w-[220px] truncate">
+                  <td class="px-3 py-3 font-medium text-slate-700 text-sm max-w-[180px] truncate">
                     {{ item.title || '—' }}
                   </td>
-                  <td class="px-4 py-3 text-slate-500 text-sm max-w-[420px]">
+                  <td class="px-3 py-3 text-slate-500 text-sm max-w-[260px]">
                     <span class="line-clamp-2 leading-relaxed">{{ item.content }}</span>
                   </td>
-                  <td class="px-4 py-3">
-                    <span class="inline-flex items-center px-2.5 py-1 rounded text-sm font-medium bg-slate-100 text-slate-600">
+                  <td class="px-3 py-3">
+                    <span
+                      v-if="item.metadata && item.metadata.category"
+                      class="inline-flex items-center gap-1 text-sm text-slate-500"
+                    >
+                      <fluent-icon icon="folder" size="12" />
+                      {{ item.metadata.category_name || item.metadata.category }}
+                    </span>
+                    <span v-else class="text-sm text-slate-300">—</span>
+                  </td>
+                  <td class="px-3 py-3">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-sm font-medium bg-slate-100 text-slate-600">
                       {{ sourceTypeLabel(item.source_type) }}
                     </span>
+                  </td>
+                  <td class="px-3 py-3 text-sm text-slate-400">
+                    {{ formatDate(item.created_at) }}
+                  </td>
+                  <td class="px-3 py-3 text-sm text-slate-400">
+                    {{ formatDate(item.updated_at) }}
                   </td>
                 </tr>
               </tbody>
@@ -332,6 +464,7 @@ export default {
             :source="source"
             :syncing="syncingId === source.id"
             @sync="onSync"
+            @edit="onEditSource"
             @delete="onDelete"
           />
         </div>
@@ -427,14 +560,21 @@ export default {
             <div
               v-for="(result, idx) in testResults"
               :key="result.id"
-              class="bg-white border border-slate-200 rounded-lg p-4 flex flex-col gap-2"
+              class="bg-white border border-slate-200 rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:border-woot-300 hover:shadow-sm transition-all"
+              @click="viewingResult = result"
             >
               <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                   <span class="text-xs font-bold text-slate-400">#{{ idx + 1 }}</span>
                   <span class="text-sm font-semibold text-slate-700">{{ result.title || '—' }}</span>
                   <span class="text-xs text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">
                     {{ sourceTypeLabel(result.source_type) }}
+                  </span>
+                  <span
+                    v-if="result.metadata && result.metadata.chunk_total > 1"
+                    class="text-xs text-woot-600 bg-woot-50 px-1.5 py-0.5 rounded font-medium"
+                  >
+                    chunk {{ result.metadata.chunk_index + 1 }}/{{ result.metadata.chunk_total }}
                   </span>
                 </div>
                 <span
@@ -454,7 +594,17 @@ export default {
                 />
               </div>
 
-              <p class="text-xs text-slate-500">{{ result.content }}</p>
+              <p class="text-xs text-slate-500 line-clamp-3">{{ result.content }}</p>
+
+              <a
+                v-if="result.metadata && result.metadata.url"
+                :href="result.metadata.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-xs text-woot-500 hover:underline truncate"
+              >
+                {{ result.metadata.url }}
+              </a>
             </div>
             </div>
           </div>
@@ -467,8 +617,69 @@ export default {
     <AddSourceModal
       :show="showAddModal"
       :saving="saving"
-      @close="showAddModal = false"
+      :source="editingSource"
+      @close="showAddModal = false; editingSource = null"
       @save="onSaveSource"
+    />
+
+    <!-- Modal visor de contenido completo -->
+    <woot-modal
+      v-if="viewingResult"
+      :show="!!viewingResult"
+      :on-close="() => viewingResult = null"
+    >
+      <div class="flex flex-col gap-4 p-6 w-full max-w-2xl">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex flex-col gap-1">
+            <h3 class="text-base font-semibold text-slate-800">
+              {{ viewingResult.title }}
+            </h3>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">
+                {{ sourceTypeLabel(viewingResult.source_type) }}
+              </span>
+              <span
+                v-if="viewingResult.metadata && viewingResult.metadata.chunk_total > 1"
+                class="text-xs text-woot-600 bg-woot-50 px-1.5 py-0.5 rounded font-medium"
+              >
+                chunk {{ viewingResult.metadata.chunk_index + 1 }}/{{ viewingResult.metadata.chunk_total }}
+              </span>
+              <span
+                v-if="viewingResult.similarity != null"
+                class="text-xs font-bold px-2 py-0.5 rounded-full"
+                :class="similarityColor(viewingResult.similarity)"
+              >
+                {{ (viewingResult.similarity * 100).toFixed(1) }}% similitud
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-50 rounded-lg p-4 max-h-[60vh] overflow-y-auto">
+          <p class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{{ viewingResult.content }}</p>
+        </div>
+
+        <a
+          v-if="viewingResult.metadata && viewingResult.metadata.url"
+          :href="viewingResult.metadata.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-xs text-woot-500 hover:underline truncate"
+        >
+          {{ viewingResult.metadata.url }}
+        </a>
+      </div>
+    </woot-modal>
+
+    <woot-delete-modal
+      :show.sync="showDeleteModal"
+      :on-close="closeDeleteModal"
+      :on-confirm="confirmDelete"
+      title="Eliminar fuente de conocimiento"
+      message="Esta acción eliminará permanentemente la fuente y todo el contenido indexado asociado (embeddings). No se puede deshacer."
+      :message-value="deletingSource ? deletingSource.name : ''"
+      confirm-text="Sí, eliminar"
+      reject-text="Cancelar"
     />
   </div>
 </template>

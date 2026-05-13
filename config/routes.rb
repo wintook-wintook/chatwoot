@@ -83,12 +83,14 @@ Rails.application.routes.draw do
 
           # @knowledge_sources
           get    'knowledge_base/items',            to: 'knowledge_base#items'
+          get    'knowledge_base/item_categories', to: 'knowledge_base#item_categories'
           get    'knowledge_base/sources',          to: 'knowledge_base#sources'
           post   'knowledge_base/sources',          to: 'knowledge_base#create_source'
           patch  'knowledge_base/sources/:id',      to: 'knowledge_base#update'
           delete 'knowledge_base/sources/:id',      to: 'knowledge_base#destroy'
           post   'knowledge_base/sources/:id/sync', to: 'knowledge_base#sync'
           post   'knowledge_base/search',           to: 'knowledge_base#search'
+          post   'knowledge_base/discourse_categories', to: 'knowledge_base#discourse_categories'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
           end
