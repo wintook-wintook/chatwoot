@@ -75,6 +75,9 @@ class Inbox < ApplicationRecord
   has_one :agent_bot, through: :agent_bot_inbox
   has_many :webhooks, dependent: :destroy_async
   has_many :hooks, dependent: :destroy_async, class_name: 'Integrations::Hook'
+  has_many :contact_trackings, dependent: :destroy
+  has_many :command_sessions, dependent: :destroy
+  has_many :tracking_templates, dependent: :destroy
 
   enum sender_name_type: { friendly: 0, professional: 1 }
 
