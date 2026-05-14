@@ -184,7 +184,7 @@ const settings = accountId => ({
       featureFlag: FEATURE_FLAGS.CANNED_RESPONSES,
     },
     { // proyecto@tracking_templates
-      icon: 'document-outline',
+      icon: 'document-list-clock',
       label: 'TRACKING_TEMPLATES',
       hasSubMenu: false,
       meta: {
