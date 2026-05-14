@@ -80,6 +80,7 @@ Rails.application.routes.draw do
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] # proyecto@tracking_templates
+          resources :contact_tracking_imports, only: [:create] # proyecto@import_seguimiento
 
           # @knowledge_sources
           get    'knowledge_base/items',            to: 'knowledge_base#items'
@@ -301,7 +302,7 @@ Rails.application.routes.draw do
             # Instalación: outputs/INSTALACION_BACKEND_RAPIDA.md
             # Prompts IA: outputs/prompt_completo_y_optimizado_para_integrar_OpenAI.md
             # =========================================================================
-            resources :contact_trackings, only: [:index, :create, :update, :destroy] do
+            resources :contact_trackings, only: [:index, :show, :create, :update, :destroy] do
               collection do
                 post :improve_text        # Mejorar texto con IA
               end
