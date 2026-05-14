@@ -36,7 +36,7 @@
         "PLACEHOLDER": "Instrucciones para la IA al generar mensajes de seguimiento..."
       },
       "COMPLEMENTARY_PROMPT": {
-        "LABEL": "Prompt Complementario",
+        "LABEL": "Entrenamiento",
         "PLACEHOLDER": "Instrucciones adicionales para preguntas y respuestas..."
       },
       "TAGS": {
@@ -47,6 +47,15 @@
       "WHATSAPP_TEMPLATES": {
         "LABEL": "Plantillas WhatsApp",
         "HELP": "Nombres de plantillas WhatsApp asociadas a cada intento"
+      },
+      "RETRY_INTERVAL": {
+        "TITLE": "Tiempo entre intentos",
+        "VALUE_LABEL": "Valor",
+        "UNIT_LABEL": "Unidad",
+        "MINUTES": "Minutos",
+        "HOURS": "Horas",
+        "DAYS": "Días",
+        "HELP": "Este intervalo se usa para programar cada intento del seguimiento, incluido el primero."
       },
       "WHATSAPP_SECTION": {
         "TITLE": "Plantillas WhatsApp por Intento",
@@ -106,5 +115,37 @@
       "NONE": "Sin plantilla",
       "APPLIED_MESSAGE": "Plantilla \"%{name}\" aplicada. Los campos son editables."
     }
+  },
+  "TRACKING_IMPORT": {
+    "BTN_OPEN": "Importar desde Excel",
+    "TITLE": "Importar Seguimientos desde Excel",
+    "DESCRIPTION": "Sube un archivo .xlsx, .xls o .csv con los contactos a procesar. Cada fila creará un seguimiento automático usando la plantilla indicada.",
+    "DROP_HINT": "Arrastra el archivo aquí o haz clic para seleccionar",
+    "FORMATS": "Formatos aceptados: .xlsx, .xls, .csv",
+    "INVALID_FORMAT": "Formato no válido. Usa un archivo .xlsx, .xls o .csv.",
+    "DOWNLOAD_TEMPLATE": "Descargar plantilla de ejemplo (.csv)",
+    "COLUMNS_TITLE": "Columnas esperadas en el archivo:",
+    "COL_TEMPLATE_NAME": "nombre exacto de la plantilla de seguimiento",
+    "COL_SCHEDULED_FOR": "fecha/hora del primer intento (ej: 2026-04-15 09:00)",
+    "COL_PHONE": "teléfono del contacto (al menos uno requerido)",
+    "COL_NAME": "nombre exacto del contacto (al menos uno requerido)",
+    "COL_INBOX": "ID del inbox (solo si la plantilla no tiene uno)",
+    "COL_MAX_ATTEMPTS": "número de intentos (default: 3)",
+    "COL_INTERVAL_VALUE": "valor del intervalo entre intentos (default: 30)",
+    "COL_INTERVAL_UNIT": "unidad del intervalo: minutes, hours o days",
+    "COL_AI_CONTEXT": "contexto IA (opcional, sobrescribe el de la plantilla)",
+    "COL_COMPLEMENTARY": "prompt complementario (opcional)",
+    "REQUIRED_NOTE": "obligatorio",
+    "CANCEL": "Cancelar",
+    "IMPORT_BTN": "Importar",
+    "UPLOAD_ERROR": "Error al procesar el archivo. Intenta de nuevo.",
+    "RESULT_INSERTED": "Seguimientos creados",
+    "RESULT_SKIPPED": "Omitidos (ya tenían seguimiento activo)",
+    "RESULT_ERRORS": "Con errores",
+    "ERROR_DETAIL_TITLE": "Detalle de errores por fila:",
+    "ERROR_ROW": "Fila",
+    "ERROR_MESSAGE": "Mensaje",
+    "IMPORT_ANOTHER": "Importar otro archivo",
+    "CLOSE": "Cerrar"
   }
 }
