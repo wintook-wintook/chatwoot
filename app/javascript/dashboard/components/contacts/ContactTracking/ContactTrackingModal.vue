@@ -188,6 +188,8 @@ export default {
             isLoadingTemplates: false,
             // Duplicación de seguimiento completado
             duplicateSourceTracking: null,
+            // Cache estable del tipo de canal — no se pierde por actualizaciones WebSocket
+            _isWhatsAppDetected: false,
         };
     },
 
@@ -221,7 +223,7 @@ export default {
                 },
             ];
 
-            if (this.isWhatsAppChannel && !this.isAfterFirstAttempt) {
+            if (this.isWhatsAppChannel) {
                 baseTabs.push({
                     key: 2,
                     name: 'Plantillas WhatsApp',
@@ -252,11 +254,8 @@ export default {
         },
 
         isWhatsAppChannel() {
-            if (!this.currentChat || !this.currentChat.meta) return false;
-            const channelType = this.currentChat.meta.channel;
-            return channelType === 'Channel::Whatsapp' ||
-                channelType === 'whatsapp' ||
-                channelType === 'Channel::WhatsappCloud';
+            // Devuelve el valor cacheado — inmune a pérdidas de currentChat por WebSocket
+            return this._isWhatsAppDetected;
         },
 
         hasTemplatesConfigured() {
@@ -277,8 +276,21 @@ export default {
             immediate: true,
             handler(newVal) {
                 if (newVal) {
+                    this._trySetWhatsApp();
                     this.loadData();
+                } else {
+                    // Resetear al cerrar para que la próxima apertura evalúe de nuevo
+                    this._isWhatsAppDetected = false;
                 }
+            },
+        },
+        currentChat: {
+            // Solo actualizar cache cuando el objeto tiene datos confiables
+            handler(newChat) {
+                if (newChat?.inbox_id || newChat?.meta?.channel) {
+                    this._trySetWhatsApp();
+                }
+                // Si newChat está vacío o sin propiedades clave, NO se toca el cache
             },
         },
     },
@@ -290,6 +302,27 @@ export default {
     },
 
     methods: {
+        // =====================================================
+        // DETECCIÓN ESTABLE DE CANAL WHATSAPP
+        // =====================================================
+        _trySetWhatsApp() {
+            const inboxId = this.currentChat?.inbox_id;
+            if (inboxId) {
+                const inbox = this.$store.getters['inboxes/getInbox'](inboxId);
+                if (inbox?.channel_type) {
+                    this._isWhatsAppDetected = inbox.channel_type === 'Channel::Whatsapp';
+                    return;
+                }
+            }
+            const ch = this.currentChat?.meta?.channel;
+            if (ch) {
+                this._isWhatsAppDetected = ch === 'Channel::Whatsapp' ||
+                    ch === 'whatsapp' ||
+                    ch === 'Channel::WhatsappCloud';
+            }
+            // Si no hay datos confiables, no modificar el cache
+        },
+
         // =====================================================
         // NAVEGACIÓN DE TABS
         // =====================================================
@@ -445,7 +478,10 @@ export default {
                         complementary_prompt: formData.complementary_prompt || null,  // ⭐ NUEVO: Instrucciones para preguntas
 
                         // ⭐ Incluir plantillas WhatsApp si es canal WhatsApp
-                        whatsapp_templates: this.isWhatsAppChannel ? this.whatsappTemplates : []
+                        whatsapp_templates: this.isWhatsAppChannel ? this.whatsappTemplates : [],
+
+                        // proyecto@contact_tracking: palabras clave de acción
+                        keyword_actions: formData.keyword_actions || []
                     }
                 };
 

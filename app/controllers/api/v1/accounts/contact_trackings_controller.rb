@@ -69,7 +69,7 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
       )
     end
 
-    @trackings = @trackings.order(scheduled_for: :desc).page(params[:page])
+    @trackings = @trackings.order(created_at: :desc).page(params[:page])
 
     render json: {
       trackings: @trackings.map { |t| tracking_json(t) },
@@ -228,29 +228,6 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
   # Parámetros:
   #   - text: Texto a mejorar
   # ==============================================================================
-  # def improve_text
-  #   text = params[:text]&.strip
-  #   mode = params[:mode] || 'improve'
-
-  #   if text.blank?
-  #     render json: { error: 'El texto es requerido' }, status: :unprocessable_entity
-  #     return
-  #   end
-
-  #   begin
-  #     improved = case mode
-  #                when 'generate_prompt'
-  #                  generate_prompt_with_ai(text, params[:context], params[:objective])
-  #                else
-  #                  improve_text_with_ai(text)
-  #                end
-  #     render json: { improved_text: improved }
-  #   rescue StandardError => e
-  #     Rails.logger.error "[ImproveText] Error: #{e.message}"
-  #     render json: { error: 'Error al procesar el texto' }, status: :internal_server_error
-  #   end
-  # end
-
   def improve_text
     text = params[:text]&.strip
     mode = params[:mode] || 'improve'
@@ -343,7 +320,8 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
       :complementary_prompt,       # ⭐ NUEVO - Instrucciones adicionales para responder preguntas
       :quote_id,
       :status,
-      whatsapp_templates: []       # ⭐ NUEVO - Array de strings
+      whatsapp_templates: [],        # ⭐ NUEVO - Array de strings
+      keyword_actions: [:keyword, :action, :direction] # proyecto@contact_tracking
     )
   end
 
@@ -357,7 +335,7 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
       contact_id: tracking.contact_id,
       conversation_id: tracking.conversation_id,
       inbox_id: tracking.inbox_id,
-      inbox_name: tracking.inbox.name,
+      inbox_name: tracking.inbox&.name,
       objective: tracking.objective,
       scheduled_for: tracking.scheduled_for,
       max_attempts: tracking.max_attempts,
@@ -373,6 +351,9 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
       
       # ⭐ NUEVO: Plantillas WhatsApp
       whatsapp_templates: tracking.whatsapp_templates || [],
+
+      # proyecto@contact_tracking: palabras clave de acción
+      keyword_actions: tracking.keyword_actions || [],
       
       # Campos existentes
       ai_context: tracking.ai_context,
@@ -545,5 +526,61 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
 
     generated = response_body.dig('choices', 0, 'message', 'content')&.strip
     generated.presence || text
+  end
+
+  def process_contact_context_with_ai(text)
+    api_key = get_openai_api_key
+    raise 'API key de OpenAI no configurada' unless api_key.present?
+
+    require 'net/http'
+    require 'json'
+
+    uri = URI('https://api.openai.com/v1/chat/completions')
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.read_timeout = 15
+
+    request = Net::HTTP::Post.new(uri)
+    request['Authorization'] = "Bearer #{api_key}"
+    request['Content-Type'] = 'application/json'
+
+    prompt = <<~PROMPT
+      Eres un procesador de contexto de contactos para un sistema de seguimientos empresarial con IA.
+
+      Tu tarea es tomar las notas redactadas por el agente y transformarlas en un CONTEXTO ESTRUCTURADO
+      que pueda ser consumido eficientemente por una IA en futuros procesos de seguimiento.
+
+      REGLAS:
+      - Organiza la información en secciones claras y etiquetadas
+      - Extrae datos clave: intereses, historial, preferencias, objeciones, estado actual
+      - Elimina información irrelevante o redundante
+      - Usa lenguaje conciso y directo, orientado a datos
+      - NO inventes ni supongas información que no esté en el texto original
+      - Responde ÚNICAMENTE con el contexto estructurado, sin explicaciones adicionales
+
+      FORMATO DE SALIDA:
+      INTERÉS: [producto o servicio de interés]
+      HISTORIAL: [interacciones previas relevantes]
+      PREFERENCIAS: [preferencias o requisitos detectados]
+      OBJECIONES: [objeciones o puntos de resistencia]
+      ESTADO ACTUAL: [situación actual del contacto en el proceso]
+      NOTAS ADICIONALES: [cualquier otro dato relevante]
+
+      NOTAS DEL AGENTE:
+      #{text}
+    PROMPT
+
+    request.body = {
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 1200,
+      temperature: 0.2
+    }.to_json
+
+    response = http.request(request)
+    response_body = JSON.parse(response.body)
+
+    processed = response_body.dig('choices', 0, 'message', 'content')&.strip
+    processed.presence || text
   end
 end

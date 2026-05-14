@@ -28,6 +28,7 @@
 #  attempt_count              :integer          default(0), not null
 #  complementary_prompt       :text
 #  interval_days              :integer
+#  keyword_actions            :jsonb            not null
 #  last_attempt_at            :datetime
 #  last_error                 :string
 #  last_message_sent          :text
@@ -154,7 +155,7 @@ class ContactTracking < ApplicationRecord
 
   # Verifica si el seguimiento puede pausarse
   def can_pause?
-    active? || scheduled?
+    pending? || active? || scheduled?
   end
 
   # Verifica si el seguimiento puede reanudarse
@@ -416,6 +417,7 @@ class ContactTracking < ApplicationRecord
   # Cancela el seguimiento
   def cancel!
     return false unless can_cancel?
+    cancel_existing_jobs
     update(status: 'cancelled')
   end
 
@@ -501,6 +503,8 @@ class ContactTracking < ApplicationRecord
   def ensure_whatsapp_templates_array
     self.whatsapp_templates = [] if whatsapp_templates.nil?
     self.whatsapp_templates = [] unless whatsapp_templates.is_a?(Array)
+    # proyecto@contact_tracking: keyword_actions
+    self.keyword_actions = [] unless keyword_actions.is_a?(Array)
   end
 
   def schedule_job
