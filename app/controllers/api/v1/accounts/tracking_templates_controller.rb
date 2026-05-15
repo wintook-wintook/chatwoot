@@ -47,7 +47,10 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
   def tracking_template_params
     params.require(:tracking_template).permit(
       :name, :objective, :ai_context, :complementary_prompt, :inbox_id,
-      whatsapp_templates: [], tags: []
+      :retry_interval_value, :retry_interval_unit, # proyecto@automatizacion_tracking
+      whatsapp_templates: [],
+      tags: [],
+      keyword_actions: [:keyword, :action, :direction] # proyecto@contact_tracking
     )
   end
 
@@ -56,7 +59,8 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
     json['creator'] = if template.user
                         { id: template.user.id, name: template.user.available_name || template.user.name }
                       end
-    json['inbox_name'] = template.inbox&.name
+    json['inbox_name']      = template.inbox&.name
+    json['keyword_actions'] = template.keyword_actions || [] # proyecto@contact_tracking
     json
   end
 end

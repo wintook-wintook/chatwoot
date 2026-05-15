@@ -23,7 +23,7 @@
             <div v-if="isAfterFirstAttempt" class="flex items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
                 <fluent-icon icon="warning" size="16" class="text-yellow-600 dark:text-yellow-400 shrink-0" />
                 <p class="text-xs text-yellow-800 dark:text-yellow-200">
-                    Ya se envió el primer intento. Solo puedes modificar el <strong>Objetivo</strong>, <strong>Contexto IA</strong> y <strong>Prompt Complementario</strong>.
+                    Ya se envió el primer intento. Solo puedes modificar el <strong>Objetivo</strong>, <strong>Contexto IA</strong> y <strong>Entrenamiento</strong>.
                 </p>
             </div>
 
@@ -72,27 +72,113 @@
                 @input="clearError('objective')" />
 
             
-            <!-- Contexto IA y Prompt Complementario (en tabs) -->
-            <div class="flex-1 flex flex-col">
-                <!-- Tabs para Contexto y Prompt Complementario -->
-                <woot-tabs
-                    class="context-tabs [&_.tabs]:p-0 [&_.tabs]:mb-2"
-                    :index="activeContextTab"
-                    @change="onContextTabChange"
-                >
-                    <woot-tabs-item name="📝 Contexto" :show-badge="false" />
-                    <woot-tabs-item name="💡 Prompt Complementario" :show-badge="false" />
-                </woot-tabs>
+            <!-- Tabs: Entrenamiento | Contexto — proyecto@contact_tracking -->
+            <div class="flex-1 flex flex-col -mt-1">
+                <div class="flex items-center justify-between mb-2">
+                    <woot-tabs
+                        class="form-tabs [&_.tabs]:p-0 [&_.tabs]:mb-0"
+                        :index="activeFormTab"
+                        @change="activeFormTab = $event"
+                    >
+                        <woot-tabs-item name="Entrenamiento" :show-badge="false" />
+                        <woot-tabs-item
+                            name="Contexto *"
+                            :show-badge="!!(errors.ai_context)"
+                            :badge-count="1"
+                        />
+                    </woot-tabs>
 
-                <!-- Tab 0: Contexto -->
-                <div v-show="activeContextTab === 0">
-                    <textarea v-model="formData.ai_context" rows="5"
+                    <!-- Botones tab Entrenamiento -->
+                    <div v-show="activeFormTab === 0" class="flex items-center gap-2">
+                        <a href="#"
+                            class="text-xs text-slate-400 hover:text-woot-500 dark:text-slate-500 dark:hover:text-woot-400"
+                            title="Expandir editor"
+                            @click.prevent="showPromptModal = true">
+                            <fluent-icon icon="arrow-expand" size="14" />
+                        </a>
+                        <a href="#"
+                            class="text-xs inline-flex items-center gap-1"
+                            :class="canGeneratePrompt && !isImprovingAI ? 'text-woot-500 hover:text-woot-600 cursor-pointer' : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'"
+                            @click.prevent="canGeneratePrompt && !isImprovingAI && improveWithAI('complementary_prompt')">
+                            <span v-if="isImprovingAI" class="inline-block w-4 h-4 border-2 border-woot-500 border-t-transparent rounded-full animate-spin"></span>
+                            <span v-else>✨</span>
+                            {{ isImprovingAI ? 'Procesando...' : 'Generar Prompt con IA' }}
+                        </a>
+                        <a v-if="originalComplementaryPrompt" href="#"
+                            class="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                            @click.prevent="restoreOriginal('complementary_prompt')">
+                            ↩ Restaurar original
+                        </a>
+                    </div>
+
+                    <!-- Botones tab Contexto -->
+                    <div v-show="activeFormTab === 1" class="flex items-center gap-2">
+                        <a href="#"
+                            class="text-xs text-slate-400 hover:text-woot-500 dark:text-slate-500 dark:hover:text-woot-400"
+                            title="Expandir editor"
+                            @click.prevent="showContextModal = true">
+                            <fluent-icon icon="arrow-expand" size="14" />
+                        </a>
+                        <a href="#"
+                            class="text-xs inline-flex items-center gap-1"
+                            :class="formData.ai_context && formData.ai_context.trim() && !isImprovingAI ? 'text-woot-500 hover:text-woot-600 cursor-pointer' : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'"
+                            @click.prevent="formData.ai_context && formData.ai_context.trim() && !isImprovingAI && improveWithAI('ai_context')">
+                            <span v-if="isImprovingAI" class="inline-block w-4 h-4 border-2 border-woot-500 border-t-transparent rounded-full animate-spin"></span>
+                            <span v-else>✨</span>
+                            {{ isImprovingAI ? 'Procesando...' : 'Mejorar con IA' }}
+                        </a>
+                        <a v-if="originalAiContext" href="#"
+                            class="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                            @click.prevent="restoreOriginal('ai_context')">
+                            ↩ Restaurar original
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Tab: Entrenamiento (complementary_prompt) -->
+                <div v-show="activeFormTab === 0" class="flex flex-col gap-1">
+                    <textarea v-model="formData.complementary_prompt" rows="7"
+                        placeholder="Instrucciones adicionales para responder preguntas del cliente sobre este seguimiento. Ejemplo: Precios, horarios de atención, información de contacto específica..."
+                        class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200" />
+                    <span class="text-xs text-slate-500 dark:text-slate-400">
+                        Este prompt se usará cuando el cliente haga preguntas relacionadas con el seguimiento.
+                    </span>
+                </div>
+
+                <!-- Tab: Contexto (ai_context) -->
+                <div v-show="activeFormTab === 1" class="flex flex-col gap-1">
+                    <textarea v-model="formData.ai_context" rows="7"
                         :placeholder="$t('CONTACT_TRACKING.FORM.AI_CONTEXT.PLACEHOLDER')"
                         class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
                         :class="{ 'border-red-500 dark:border-red-500': errors.ai_context }"
                         @blur="validateField('ai_context')"
                         @input="clearError('ai_context')" />
-                    <div class="flex justify-between items-center mt-1">
+                    <div class="flex justify-between items-center">
+                        <span v-if="errors.ai_context" class="text-red-500 text-xs">
+                            {{ errors.ai_context }}
+                        </span>
+                        <span v-else class="text-xs text-slate-500 dark:text-slate-400">
+                            {{ $t('CONTACT_TRACKING.FORM.AI_CONTEXT.HELP') }}
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal expandido: Contexto IA -->
+            <woot-modal :show="showContextModal" :on-close="() => showContextModal = false" size="medium">
+                <woot-modal-header
+                    header-title="📝 Contexto IA"
+                    header-content="Describe el contexto del seguimiento. La IA usará esta información para generar mensajes personalizados."
+                />
+                <div class="px-8 pb-6 flex flex-col gap-3">
+                    <textarea v-model="formData.ai_context" rows="16"
+                        :placeholder="$t('CONTACT_TRACKING.FORM.AI_CONTEXT.PLACEHOLDER')"
+                        class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+                        :class="{ 'border-red-500 dark:border-red-500': errors.ai_context }"
+                        @blur="validateField('ai_context')"
+                        @input="clearError('ai_context')" />
+                    <div class="flex justify-between items-center">
                         <span v-if="errors.ai_context" class="text-red-500 text-xs">
                             {{ errors.ai_context }}
                         </span>
@@ -105,7 +191,6 @@
                                 @click.prevent="restoreOriginal('ai_context')">
                                 ↩ Restaurar original
                             </a>
-                            <!-- [FEATURE:AI_LOADING_INDICATOR] - Botón con estado de carga -->
                             <a href="#"
                                 class="text-xs inline-flex items-center gap-1"
                                 :class="formData.ai_context && formData.ai_context.trim() && !isImprovingAI ? 'text-woot-500 hover:text-woot-600 cursor-pointer' : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'"
@@ -116,14 +201,26 @@
                             </a>
                         </div>
                     </div>
+                    <div class="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <woot-button type="button" @click.prevent="showContextModal = false">
+                            Listo
+                        </woot-button>
+                    </div>
                 </div>
+            </woot-modal>
 
-                <!-- Tab 1: Prompt Complementario -->
-                <div v-show="activeContextTab === 1">
-                    <textarea v-model="formData.complementary_prompt" rows="5"
+
+            <!-- Modal de Entrenamiento (complementary_prompt) expandido -->
+            <woot-modal :show="showPromptModal" :on-close="() => showPromptModal = false" size="medium">
+                <woot-modal-header
+                    header-title="💡 Entrenamiento"
+                    header-content="Instrucciones adicionales para responder preguntas del cliente sobre este seguimiento."
+                />
+                <div class="px-8 pb-6 flex flex-col gap-3">
+                    <textarea v-model="formData.complementary_prompt" rows="16"
                         placeholder="Instrucciones adicionales para responder preguntas del cliente sobre este seguimiento. Ejemplo: Precios, horarios de atención, información de contacto específica..."
                         class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200" />
-                    <div class="flex justify-between items-center mt-1">
+                    <div class="flex justify-between items-center">
                         <span class="text-xs text-slate-500 dark:text-slate-400">
                             Este prompt se usará cuando el cliente haga preguntas relacionadas con el seguimiento.
                         </span>
@@ -133,7 +230,6 @@
                                 @click.prevent="restoreOriginal('complementary_prompt')">
                                 ↩ Restaurar original
                             </a>
-                            <!-- [FEATURE:AI_LOADING_INDICATOR] - Botón con estado de carga -->
                             <a href="#"
                                 class="text-xs inline-flex items-center gap-1"
                                 :class="canGeneratePrompt && !isImprovingAI ? 'text-woot-500 hover:text-woot-600 cursor-pointer' : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'"
@@ -144,9 +240,13 @@
                             </a>
                         </div>
                     </div>
+                    <div class="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <woot-button type="button" @click.prevent="showPromptModal = false">
+                            Listo
+                        </woot-button>
+                    </div>
                 </div>
-            </div>
-
+            </woot-modal>
 
             <!-- Fecha y Hora + Intentos + Tiempo + Unidad -->
             <div class="flex gap-4">
@@ -313,9 +413,11 @@ export default {
 
     data() {
         return {
-            activeContextTab: 0,
+            activeFormTab: 0,
+            showContextModal: false,
+            showPromptModal: false,
             selectedTemplateId: null,
-            templateApplied: false,  // ⭐ Tab activo: 0 = Contexto, 1 = Prompt Complementario
+            templateApplied: false,
             originalAiContext: null,  // Guarda texto original antes de mejorar con IA
             originalComplementaryPrompt: null,  // Guarda texto original antes de mejorar con IA
             // [FEATURE:AI_LOADING_INDICATOR] - Estado de carga para botones de IA
@@ -344,16 +446,12 @@ export default {
 
     watch: {
         editingTracking() {
-            // Siempre iniciar en tab Contexto al crear/editar seguimiento
-            this.activeContextTab = 0;
-            // Limpiar textos originales guardados
             this.originalAiContext = null;
             this.originalComplementaryPrompt = null;
         },
         duplicateSource(newTracking) {
             if (newTracking) {
                 this.loadDuplicateData(newTracking);
-                this.activeContextTab = 0;
                 this.originalAiContext = null;
                 this.originalComplementaryPrompt = null;
             }
@@ -386,6 +484,13 @@ export default {
             formData.value.objective = template.objective || '';
             formData.value.ai_context = template.ai_context || '';
             formData.value.complementary_prompt = template.complementary_prompt || '';
+            // proyecto@automatizacion_tracking: copiar intervalo entre intentos desde la plantilla
+            if (template.retry_interval_value) formData.value.retry_interval_value = template.retry_interval_value;
+            if (template.retry_interval_unit)  formData.value.retry_interval_unit  = template.retry_interval_unit;
+            // proyecto@contact_tracking: copiar palabras clave de acción desde la plantilla
+            formData.value.keyword_actions = Array.isArray(template.keyword_actions)
+                ? template.keyword_actions.map(ka => ({ ...ka }))
+                : [];
         };
 
         const clearTemplateFields = () => {
@@ -417,10 +522,6 @@ export default {
     },
 
     methods: {
-        onContextTabChange(index) {
-            this.activeContextTab = index;
-        },
-
         onSelectTemplate(item) {
             this.selectedTemplateId = item?.id || null;
         },
@@ -481,7 +582,12 @@ export default {
 
                 const response = await this.$store.dispatch('contactTrackings/improveText', payload);
                 if (response?.improved_text) {
-                    this.formData[field] = response.improved_text;
+                    let generatedText = response.improved_text;
+                    // Al generar el prompt complementario, agregar el contexto al final como dato
+                    if (isGeneratePrompt && this.formData.ai_context?.trim()) {
+                        generatedText += `\n\nCONTEXTO:\n${this.formData.ai_context.trim()}`;
+                    }
+                    this.formData[field] = generatedText;
                 }
             } catch (error) {
                 console.error('Error mejorando texto con IA:', error);

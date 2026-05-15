@@ -10,6 +10,9 @@
 class ContactTrackingJob < ApplicationJob
   queue_as :scheduled_jobs
 
+  # ⭐ GPT-style: incluir historial real de conversación en el prompt
+  GPT_HISTORY_ENABLED = ENV.fetch('TRACKING_GPT_HISTORY_ENABLED', 'false') == 'true'
+
   def perform(tracking_id)
     tracking = ContactTracking.find_by(id: tracking_id)
     return unless tracking
@@ -85,23 +88,14 @@ class ContactTrackingJob < ApplicationJob
         Rails.logger.info "[ContactTracking] 📱 ✅ VENTANA CERRADA → Enviando solo PLANTILLA"
         success = send_whatsapp_template(tracking)
       elsif is_whatsapp && window_open
-        # CASO 3: WhatsApp ventana ABIERTA - MENSAJE PERSONALIZADO basado en plantilla + IA
-        Rails.logger.info "[ContactTracking] 🪟 ✅ VENTANA ABIERTA → Mensaje personalizado #{has_template ? '(basado en plantilla + IA)' : '(solo IA)'}"
-  
-        # Si tiene plantilla, obtener su contenido para usar como base
-        template_content = nil
-        if has_template
-          template_name = tracking.current_template
-          template_content = get_template_body_text(tracking, template_name)
-          Rails.logger.info "[ContactTracking] 📄 Usando contenido de plantilla '#{template_name}' como base"
-        end
-  
-        # Generar mensaje personalizado con IA usando contenido de plantilla (si existe)
-        message_body = generate_message(tracking, template_content)
+        # CASO 3: WhatsApp ventana ABIERTA - MENSAJE GENERADO CON IA (plantillas ignoradas)
+        Rails.logger.info "[ContactTracking] 🪟 ✅ VENTANA ABIERTA → Mensaje generado con IA pura (plantillas ignoradas)"
+
+        message_body = generate_message(tracking)
         success = send_message_via_chatwoot(tracking, message_body)
-  
+
         if success
-          Rails.logger.info "[ContactTracking] ✅ Mensaje personalizado enviado #{template_content ? '(basado en plantilla)' : ''}"
+          Rails.logger.info "[ContactTracking] ✅ Mensaje personalizado enviado con IA"
         else
           Rails.logger.error "[ContactTracking] ❌ Error al enviar mensaje personalizado"
         end
@@ -201,7 +195,7 @@ class ContactTrackingJob < ApplicationJob
     # Intentar generar mensaje con IA si está disponible
     if tracking.account.hooks.find_by(app_id: 'openai', status: 'enabled')
       ai_message = generate_ai_message(tracking, template_content)
-      return ai_message if ai_message.present?
+      return "#{ai_message} #IA" if ai_message.present?
     end
 
     # ⭐ FALLBACK MEJORADO: SIEMPRE generar mensaje simple, nunca plantilla cruda
@@ -219,71 +213,66 @@ class ContactTrackingJob < ApplicationJob
       require 'json'
 
       api_key = hook.settings['api_key']
-
       contact_name = tracking.contact.name || 'Hola'
 
-      # ⭐ NUEVO: Incluir complementary_prompt si existe
       complementary_instructions = tracking.complementary_prompt.present? ?
         "\n\nINSTRUCCIONES ADICIONALES DEL AGENTE:\n#{tracking.complementary_prompt}" : ''
 
-      # Construir prompt base
-      base_context = <<~CONTEXT
+      # proyecto@contacts_notes - incluir nota especial para IA del contacto si existe
+      ia_note = tracking.contact.notes.for_ia.first
+      contact_profile = ia_note.present? ?
+        "\n\nPERFIL DEL CONTACTO:\n#{ActionController::Base.helpers.strip_tags(ia_note.content)}" : ''
+
+      # ⭐ PASO 1 — System prompt: contexto permanente del seguimiento (GPT-style)
+      system_prompt = <<~SYSTEM.strip
         Eres un asistente de seguimiento al cliente para #{tracking.account.name}.
 
         INFORMACIÓN DEL CLIENTE:
-        - Nombre: #{contact_name}
+        - Nombre: #{contact_name}#{contact_profile}
 
         CONTEXTO INTERNO (no mencionar al cliente):
         - Objetivo: #{tracking.objective}
         - Contexto: #{tracking.ai_context}
         - Este es el intento número #{tracking.attempt_count + 1} de #{tracking.max_attempts}#{complementary_instructions}
-      CONTEXT
 
-      # Si hay contenido de plantilla, usarla como BASE y personalizar con contexto
-      if template_content.present?
-        prompt = <<~PROMPT
-          #{base_context}
+        REGLAS GENERALES:
+        - Nunca menciones "intentos", "seguimiento automático" ni detalles técnicos
+        - Mantén un tono cordial y profesional, como si lo escribiera un agente humano
+        - Máximo 2 oraciones
+        - En español
+        - NO incluyas comillas al inicio ni al final del mensaje
+      SYSTEM
 
-          PLANTILLA BASE (intento #{tracking.attempt_count + 1} de #{tracking.max_attempts}):
+      # ⭐ PASO 1 — Tarea final: el pedido concreto de generar el mensaje
+      task_prompt = if template_content.present?
+        <<~TASK.strip
+          PLANTILLA BASE (intento #{tracking.attempt_count + 1}):
           "#{template_content}"
 
-          TAREA:
-          Usa la PLANTILLA BASE como estructura principal del mensaje y PERSONALÍZALA usando:
-          1. El OBJETIVO del seguimiento
-          2. El CONTEXTO proporcionado (ai_context)
-          3. Las INSTRUCCIONES ADICIONALES del agente (si las hay)
-          4. El nombre del cliente: "#{contact_name}"
-
-          REGLAS:
-          - MANTÉN la estructura y propósito de la plantilla
-          - PERSONALIZA con los datos del contexto (fechas, productos, situación específica)
-          - Reemplaza los placeholders genéricos con información real del contexto
-          - Dirige el mensaje al cliente por su nombre
-          - Mantén un tono cordial y profesional
-          - NO menciones "intentos", "seguimiento automático" ni detalles técnicos
-          - Máximo 2-3 oraciones
-          - En español
-          - NO incluyas comillas al inicio ni al final del mensaje
-
+          Usa la plantilla como estructura principal y PERSONALÍZALA con los datos del contexto.
+          REGLAS: Mantén estructura y propósito. Reemplaza placeholders con info real del contexto.
+          NO expandas con información adicional. NO agregues precios ni condiciones fuera de la plantilla.
           Genera solo el mensaje final, sin comillas, sin explicaciones.
-        PROMPT
+        TASK
       else
-        prompt = <<~PROMPT
-          #{base_context}
-
-          TAREA:
-          Genera un mensaje breve, profesional y amigable para dar seguimiento al cliente.
-          El mensaje debe:
-          - Dirigirte al cliente por su nombre de forma natural (ej: "Hola #{contact_name}")
-          - Ser cordial y personalizado según el objetivo y contexto
-          - NO mencionar "intentos", "seguimiento automático" u otros detalles técnicos
-          - Ser conversacional, como si lo escribiera un agente humano
-          - Máximo 2-3 oraciones
-          - En español
-
+        <<~TASK.strip
+          Genera un mensaje corto y natural para retomar contacto con el cliente.
+          Dirígete al cliente por su nombre. Céntrate en el OBJETIVO.
+          No des información extra ni repitas lo mismo que en mensajes anteriores.
           Genera solo el mensaje, sin explicaciones adicionales.
-        PROMPT
+        TASK
       end
+
+      # ⭐ PASO 2 — Construir array de mensajes con o sin historial
+      messages = [{ role: 'system', content: system_prompt }]
+
+      if GPT_HISTORY_ENABLED
+        history = build_conversation_history(tracking)
+        messages.concat(history)
+        Rails.logger.info "[ContactTracking] 🧠 Modo GPT: #{history.size} mensajes del historial incluidos"
+      end
+
+      messages << { role: 'user', content: task_prompt }
 
       uri = URI('https://api.openai.com/v1/chat/completions')
       http = Net::HTTP.new(uri.host, uri.port)
@@ -294,8 +283,8 @@ class ContactTrackingJob < ApplicationJob
       request['Content-Type'] = 'application/json'
 
       request.body = {
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: prompt }],
+        model: 'gpt-4o-mini',
+        messages: messages,
         max_tokens: 150,
         temperature: 0.7
       }.to_json
@@ -306,9 +295,8 @@ class ContactTrackingJob < ApplicationJob
       ai_message = response_body.dig('choices', 0, 'message', 'content')&.strip
 
       if ai_message.present?
-        # Eliminar comillas al inicio y final si la IA las incluyó
         ai_message = ai_message.gsub(/\A["']+|["']+\z/, '').strip
-        Rails.logger.info "[ContactTracking] 🤖 Mensaje generado con IA"
+        Rails.logger.info "[ContactTracking] 🤖 Mensaje generado con IA (#{GPT_HISTORY_ENABLED ? 'GPT-mode' : 'standard'})"
         return ai_message
       end
     rescue StandardError => e
@@ -316,6 +304,36 @@ class ContactTrackingJob < ApplicationJob
     end
 
     nil
+  end
+
+  # ⭐ PASO 2 — Construye el historial de conversación en formato OpenAI messages
+  # Retorna [] si no hay conversación o si GPT_HISTORY_ENABLED está desactivado
+  def build_conversation_history(tracking)
+    return [] unless tracking.conversation_id.present?
+
+    begin
+      messages = Message.where(conversation_id: tracking.conversation_id)
+                        .where('created_at > ?', tracking.created_at)
+                        .where(message_type: [0, 1]) # 0=incoming, 1=outgoing
+                        .order(created_at: :asc)
+                        .limit(10)
+                        .to_a
+
+      return [] if messages.empty?
+
+      messages.filter_map do |msg|
+        content = msg.content.to_s.strip
+        next if content.blank?
+
+        {
+          role: msg.incoming? ? 'user' : 'assistant',
+          content: content.truncate(300)
+        }
+      end
+    rescue StandardError => e
+      Rails.logger.warn "[ContactTracking] ⚠️ Error construyendo historial GPT: #{e.message}"
+      []
+    end
   end
 
   def generate_simple_message(tracking)

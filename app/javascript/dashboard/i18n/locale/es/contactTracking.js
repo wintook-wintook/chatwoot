@@ -84,7 +84,6 @@ export default {
         RESUME: 'Reanudar',
         CANCEL: 'Cancelar',
         EDIT: 'Editar',
-        DUPLICATE: 'Duplicar seguimiento',
       },
       
       FILTERS: {
@@ -132,6 +131,27 @@ export default {
         CANCEL_SUCCESS: 'Seguimiento cancelado correctamente',
         ERROR: 'Ocurrió un error. Intenta de nuevo',
       },
+
+      // proyecto@contact_tracking: palabras clave de acción
+      KEYWORD_ACTIONS: {
+        SECTION_TITLE: 'Palabras clave de acción',
+        SECTION_DESCRIPTION: 'Cuando un mensaje contenga exactamente esta palabra, se ejecuta la acción indicada de forma silenciosa.',
+        ADD_BTN: 'Agregar palabra clave',
+        KEYWORD_PLACEHOLDER: 'ej: #cancelar',
+        ACTIONS: {
+          LABEL: 'Acción',
+          CANCEL: 'Cancelar seguimiento',
+          PAUSE: 'Pausar seguimiento',
+        },
+        DIRECTIONS: {
+          LABEL: 'Dirección',
+          INCOMING: 'Mensaje entrante',
+          OUTGOING: 'Mensaje saliente',
+          BOTH: 'Ambas',
+        },
+        EMPTY: 'Sin palabras clave configuradas.',
+        REMOVE: 'Eliminar',
+      },
     },
-    
+
   };

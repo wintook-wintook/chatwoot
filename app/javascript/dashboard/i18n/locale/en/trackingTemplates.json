@@ -36,7 +36,7 @@
         "PLACEHOLDER": "Instructions for AI when generating follow-up messages..."
       },
       "COMPLEMENTARY_PROMPT": {
-        "LABEL": "Complementary Prompt",
+        "LABEL": "Entrenamiento",
         "PLACEHOLDER": "Additional instructions for Q&A..."
       },
       "TAGS": {
@@ -47,6 +47,15 @@
       "WHATSAPP_TEMPLATES": {
         "LABEL": "WhatsApp Templates",
         "HELP": "WhatsApp template names associated with each attempt"
+      },
+      "RETRY_INTERVAL": {
+        "TITLE": "Time between attempts",
+        "VALUE_LABEL": "Value",
+        "UNIT_LABEL": "Unit",
+        "MINUTES": "Minutes",
+        "HOURS": "Hours",
+        "DAYS": "Days",
+        "HELP": "This interval is used to schedule each tracking attempt, including the first one."
       },
       "WHATSAPP_SECTION": {
         "TITLE": "WhatsApp Templates by Attempt",

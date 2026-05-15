@@ -137,6 +137,8 @@ class Message < ApplicationRecord
   # Analiza respuestas de clientes y ajusta seguimientos automáticamente
   after_create_commit :analyze_for_active_trackings, if: :incoming?
 
+  # proyecto@contact_tracking: evalúa keywords de acción en mensajes salientes
+  after_create_commit :check_keyword_actions_for_outgoing, unless: :incoming?
 
   after_update_commit :dispatch_update_event
 
@@ -256,6 +258,9 @@ class Message < ApplicationRecord
 
     true
   end
+
+   # Agrega esto al final del archivo, antes del último 'end'
+   # after_create_commit :trigger_auto_acknowledgment, if: :should_auto_acknowledge?
 
   private
 
@@ -440,7 +445,6 @@ class Message < ApplicationRecord
     # rubocop:enable Rails/SkipsModelValidations
   end
 
-
   # def should_auto_acknowledge?
   #   # Solo para mensajes entrantes de clientes
   #   incoming? && 
@@ -462,6 +466,13 @@ class Message < ApplicationRecord
   rescue StandardError => e
     # No fallar la creación del mensaje si el análisis falla
     Rails.logger.error "[Message] Error queueing sentiment analysis: #{e.message}"
+  end
+
+  # proyecto@contact_tracking: evalúa keywords de acción en mensajes salientes
+  def check_keyword_actions_for_outgoing
+    ContactTrackings::KeywordCheckerJob.perform_later(id)
+  rescue StandardError => e
+    Rails.logger.error "[Message] Error queueing keyword checker: #{e.message}"
   end
 
 end

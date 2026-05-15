@@ -12,8 +12,11 @@
 <script>
 import { mapGetters } from 'vuex';
 import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
+import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 
 export default {
+  components: { KeywordActionsEditor },
+
   props: {
     templateData: {
       type: Object,
@@ -36,14 +39,21 @@ export default {
         complementary_prompt: '',
         tags: [],
         whatsapp_templates: ['', '', ''],
+        retry_interval_value: 1, // proyecto@automatizacion_tracking
+        retry_interval_unit: 'days', // proyecto@automatizacion_tracking
+        keyword_actions: [], // proyecto@contact_tracking
       },
-      // Tabs Contexto IA / Prompt Complementario
+      // Tabs Contexto IA / Entrenamiento
       activeContextTab: 0,
       originalAiContext: null,
       originalComplementaryPrompt: null,
       isImprovingAI: false,
+      showPromptModal: false, // proyecto@automatizacion_tracking: modal expandido para entrenamiento
+      showAiContextModal: false,
+      showValidationModal: false,
       // WhatsApp / Inbox
       selectedInboxId: null,
+      selectedKbaseHookId: null,
       maxAttempts: 3,
       availableWATemplates: [],
       isLoadingWATemplates: false,
@@ -93,6 +103,10 @@ export default {
       return this.form.whatsapp_templates
         .slice(0, this.maxAttempts)
         .every(tpl => tpl && tpl.trim() !== '');
+    },
+    // proyecto@automatizacion_tracking: mínimo 3 si la unidad es minutos, 1 en el resto
+    minIntervalValue() {
+      return this.form.retry_interval_unit === 'minutes' ? 3 : 1;
     },
     isFormValid() {
       return (
@@ -152,6 +166,27 @@ export default {
     attemptTabs() {
       return Array.from({ length: this.maxAttempts }, (_, i) => i);
     },
+    reglasTabIndex() {
+      return this.selectedInboxIsWhatsApp ? 3 : 2;
+    },
+    validationErrors() {
+      const errors = [];
+      if (!this.isNameValid) errors.push('Nombre de la plantilla es requerido (mínimo 2 caracteres).');
+      if (!this.isObjectiveValid) errors.push('Objetivo es requerido (mínimo 5 caracteres).');
+      if (!this.isAiContextValid) errors.push('Contexto IA es requerido (mínimo 10 caracteres).');
+      if (!this.isComplementaryPromptValid) errors.push('Entrenamiento es requerido (mínimo 10 caracteres).');
+      if (!this.isInboxValid) errors.push('Debes seleccionar un Canal (Inbox).');
+      if (!this.isWhatsappTemplatesValid) errors.push('Todos los intentos de WhatsApp deben tener una plantilla asignada.');
+      return errors;
+    },
+    discourseHooks() {
+      const apps = this.appIntegrations || [];
+      const app = apps.find(a => a.id === 'discourse');
+      if (!app) return [];
+      return (app.hooks || [])
+        .filter(h => h.status === true)
+        .map(h => ({ id: h.id, name: h.settings?.url || `Discourse #${h.id}` }));
+    },
   },
   watch: {
     templateData: {
@@ -168,6 +203,11 @@ export default {
             whatsapp_templates: Array.isArray(val.whatsapp_templates)
               ? [...val.whatsapp_templates]
               : ['', '', ''],
+            retry_interval_value: val.retry_interval_value || 1, // proyecto@automatizacion_tracking
+            retry_interval_unit: val.retry_interval_unit || 'days', // proyecto@automatizacion_tracking
+            keyword_actions: Array.isArray(val.keyword_actions) // proyecto@contact_tracking
+              ? val.keyword_actions.map(ka => ({ ...ka }))
+              : [],
           };
           if (
             this.form.whatsapp_templates.length > 0 &&
@@ -178,6 +218,9 @@ export default {
           // Pre-seleccionar inbox guardado
           if (val.inbox_id) {
             this.selectedInboxId = val.inbox_id;
+          }
+          if (val.kbase_hook_id) {
+            this.selectedKbaseHookId = val.kbase_hook_id;
           }
         }
         // Reset AI state
@@ -193,8 +236,28 @@ export default {
         this.availableWATemplates = [];
       }
     },
+    selectedInboxIsWhatsApp(isWA) {
+      if (!isWA) {
+        if (this.activeContextTab === 2) {
+          // Estaba en Plantillas WhatsApp → resetear
+          this.activeContextTab = 0;
+        } else if (this.activeContextTab === 3) {
+          // Estaba en Reglas (índice 3 con WA) → pasa a índice 2 sin WA
+          this.activeContextTab = 2;
+        }
+      } else if (this.activeContextTab === 2) {
+        // Estaba en Reglas (índice 2 sin WA) → pasa a índice 3 con WA
+        this.activeContextTab = 3;
+      }
+    },
     maxAttempts(newVal) {
       this.adjustTemplatesArray(newVal);
+    },
+    // proyecto@automatizacion_tracking: ajusta el valor si queda por debajo del mínimo al cambiar unidad
+    'form.retry_interval_unit'(newUnit) {
+      if (newUnit === 'minutes' && this.form.retry_interval_value < 3) {
+        this.form.retry_interval_value = 3;
+      }
     },
   },
   async mounted() {
@@ -214,7 +277,10 @@ export default {
       this.$emit('cancel');
     },
     onSubmit() {
-      if (!this.isFormValid) return;
+      if (!this.isFormValid) {
+        this.showValidationModal = true;
+        return;
+      }
       const payload = {
         tracking_template: {
           name: this.form.name,
@@ -226,6 +292,10 @@ export default {
           whatsapp_templates: this.selectedInboxIsWhatsApp
             ? this.form.whatsapp_templates.slice(0, this.maxAttempts)
             : [],
+          retry_interval_value: this.form.retry_interval_value, // proyecto@automatizacion_tracking
+          retry_interval_unit: this.form.retry_interval_unit,   // proyecto@automatizacion_tracking
+          keyword_actions: this.form.keyword_actions || [],      // proyecto@contact_tracking
+          kbase_hook_id: this.selectedKbaseHookId || null,
         },
       };
       if (!this.isCreateMode) {
@@ -358,9 +428,6 @@ export default {
             class="mt-1 w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
             :class="form.name && !isNameValid ? 'border-red-400' : 'border-slate-200 dark:border-slate-600'"
           />
-          <span v-if="form.name && !isNameValid" class="text-xs text-red-500 mt-1">
-            {{ $t('TRACKING_TEMPLATES.FORM.NAME.ERROR') }}
-          </span>
         </label>
 
         <label class="w-3/5">
@@ -375,40 +442,105 @@ export default {
             class="mt-1 w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
             :class="form.objective && !isObjectiveValid ? 'border-red-400' : 'border-slate-200 dark:border-slate-600'"
           />
-          <span v-if="form.objective && !isObjectiveValid" class="text-xs text-red-500 mt-1">
-            {{ $t('TRACKING_TEMPLATES.FORM.OBJECTIVE.ERROR') }}
+        </label>
+      </div>
+
+      <!-- Intervalo entre intentos + Canal -->
+      <div class="flex gap-3">
+        <label class="flex-1">
+          <span class="text-xs font-medium text-slate-600 dark:text-slate-400">⏱️ Tiempo entre intentos</span>
+          <input
+            v-model.number="form.retry_interval_value"
+            type="number"
+            :min="minIntervalValue"
+            class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+          />
+        </label>
+        <label class="flex-1">
+          <span class="text-xs font-medium text-slate-600 dark:text-slate-400">Intervalo</span>
+          <select
+            v-model="form.retry_interval_unit"
+            class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+          >
+            <option value="minutes">Minutos</option>
+            <option value="hours">Horas</option>
+            <option value="days">Días</option>
+          </select>
+        </label>
+        <label class="flex-1">
+          <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
+            {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.INBOX_LABEL') }}
+            <span class="text-red-500">*</span>
           </span>
+          <select
+            v-model="selectedInboxId"
+            class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+          >
+            <option :value="null">
+              {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.SELECT_INBOX') }}
+            </option>
+            <option
+              v-for="inbox in trackingBotInboxes"
+              :key="inbox.id"
+              :value="inbox.id"
+            >
+              {{ inbox.name }}
+            </option>
+          </select>
+        </label>
+        <label class="flex-1">
+          <span class="text-xs font-medium text-slate-600 dark:text-slate-400">Base de Conocimiento</span>
+          <select
+            v-model="selectedKbaseHookId"
+            class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+          >
+            <option :value="null">— Sin base de conocimiento —</option>
+            <option
+              v-for="hook in discourseHooks"
+              :key="hook.id"
+              :value="hook.id"
+            >
+              {{ hook.name }}
+            </option>
+          </select>
         </label>
       </div>
 
       <!-- Contexto IA y Prompt Complementario (en tabs) -->
       <div class="flex-1 flex flex-col">
-        <woot-tabs
-          class="context-tabs [&_.tabs]:p-0 [&_.tabs]:mb-2"
-          :index="activeContextTab"
-          @change="onContextTabChange"
-        >
-          <woot-tabs-item name="Contexto IA *" :show-badge="false" />
-          <woot-tabs-item name="Prompt Complementario *" :show-badge="false" />
-        </woot-tabs>
+        <div class="flex items-end justify-between">
+          <woot-tabs
+            class="context-tabs [&_.tabs]:p-0 [&_.tabs]:mb-0 flex-1"
+            :index="activeContextTab"
+            @change="onContextTabChange"
+          >
+            <woot-tabs-item name="🧠  Contexto IA *" :show-badge="false" />
+            <woot-tabs-item name="💡  Entrenamiento *" :show-badge="false" />
+            <woot-tabs-item v-if="selectedInboxIsWhatsApp" name="📱  Plantillas WhatsApp" :show-badge="false" />
+            <woot-tabs-item name="📋  Reglas" :show-badge="false" />
+          </woot-tabs>
+          <a
+            v-if="activeContextTab === 0 || activeContextTab === 1"
+            href="#"
+            class="text-slate-400 hover:text-woot-500 dark:text-slate-500 dark:hover:text-woot-400 pb-2 pl-2"
+            title="Expandir editor"
+            @click.prevent="activeContextTab === 0 ? showAiContextModal = true : showPromptModal = true"
+          >
+            <fluent-icon icon="arrow-expand" size="18" />
+          </a>
+        </div>
 
         <!-- Tab 0: Contexto IA -->
-        <div v-show="activeContextTab === 0">
+        <div v-show="activeContextTab === 0" class="mt-2">
           <textarea
             v-model="form.ai_context"
-            rows="4"
+            rows="10"
             :placeholder="$t('TRACKING_TEMPLATES.FORM.AI_CONTEXT.PLACEHOLDER')"
             class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
           />
           <div class="flex justify-between items-center mt-1">
             <span class="text-xs text-slate-500 dark:text-slate-400">
               Instrucciones para la IA al generar mensajes de seguimiento
-              <span v-if="form.ai_context && !isAiContextValid" class="text-red-500 ml-1">
-                (mínimo 10 caracteres)
-              </span>
-              <span v-else-if="!form.ai_context.trim()" class="text-red-500 ml-1">
-                *Requerido
-              </span>
             </span>
             <div class="flex gap-3">
               <a
@@ -435,23 +567,17 @@ export default {
           </div>
         </div>
 
-        <!-- Tab 1: Prompt Complementario -->
-        <div v-show="activeContextTab === 1">
+        <!-- Tab 1: Entrenamiento -->
+        <div v-show="activeContextTab === 1" class="mt-2">
           <textarea
             v-model="form.complementary_prompt"
-            rows="4"
+            rows="10"
             :placeholder="$t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')"
             class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
           />
           <div class="flex justify-between items-center mt-1">
             <span class="text-xs text-slate-500 dark:text-slate-400">
               Este prompt se usa cuando el cliente hace preguntas relacionadas con el seguimiento
-              <span v-if="form.complementary_prompt && !isComplementaryPromptValid" class="text-red-500 ml-1">
-                (mínimo 10 caracteres)
-              </span>
-              <span v-else-if="!form.complementary_prompt.trim()" class="text-red-500 ml-1">
-                *Requerido
-              </span>
             </span>
             <div class="flex gap-3">
               <a
@@ -477,75 +603,30 @@ export default {
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- ============================================ -->
-      <!-- Sección: Plantillas WhatsApp -->
-      <!-- ============================================ -->
-      <div class="border-t border-slate-200 dark:border-slate-700 pt-4">
-        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-          {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.TITLE') }}
-        </h3>
-
-        <!-- Sin inboxes con tracking_bot -->
-        <div
-          v-if="!hasTrackingBotInboxes"
-          class="p-3 rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 text-sm text-yellow-700 dark:text-yellow-300"
-        >
-          {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.NO_INBOXES') }}
-        </div>
-
-        <template v-else>
-          <!-- Inbox + Intentos -->
-          <div class="flex gap-3 mb-3">
-            <label class="flex-1">
-              <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
-                {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.INBOX_LABEL') }}
-                <span class="text-red-500">*</span>
-              </span>
-              <select
-                v-model="selectedInboxId"
-                class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-              >
-                <option :value="null">
-                  {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.SELECT_INBOX') }}
-                </option>
-                <option
-                  v-for="inbox in trackingBotInboxes"
-                  :key="inbox.id"
-                  :value="inbox.id"
-                >
-                  {{ inbox.name }}
-                </option>
-              </select>
-              <span v-if="!selectedInboxId" class="text-xs text-red-500 mt-1">
-                *Requerido
-              </span>
-            </label>
-
-            <label v-if="selectedInboxIsWhatsApp" class="w-36">
-              <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
-                {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.MAX_ATTEMPTS') }}
-              </span>
-              <input
-                v-model.number="maxAttempts"
-                type="number"
-                min="1"
-                max="6"
-                class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-              />
-            </label>
-          </div>
-
+        <!-- Tab 2: Plantillas WhatsApp (solo cuando canal es WhatsApp) -->
+        <div v-if="selectedInboxIsWhatsApp" v-show="activeContextTab === 2" class="mt-2">
           <!-- Selector WA por intento -->
-          <div v-if="selectedInboxIsWhatsApp && availableWATemplates.length > 0">
-            <!-- Tabs -->
-            <div class="flex gap-1 mb-2 flex-wrap">
+          <div v-if="availableWATemplates.length > 0">
+            <div class="flex items-center gap-6 mb-2 flex-wrap">
+              <label class="w-28 shrink-0">
+                <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.MAX_ATTEMPTS') }}
+                </span>
+                <input
+                  v-model.number="maxAttempts"
+                  type="number"
+                  min="1"
+                  max="6"
+                  class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                />
+              </label>
+              <div class="flex gap-2 flex-wrap mt-4">
               <button
                 v-for="idx in attemptTabs"
                 :key="idx"
                 type="button"
-                class="px-3 py-1.5 text-xs rounded-md transition-colors"
+                class="px-4 py-2 text-sm rounded-md transition-colors"
                 :class="activeTemplateTab === idx
                   ? 'bg-woot-500 text-white'
                   : form.whatsapp_templates[idx]
@@ -557,16 +638,8 @@ export default {
                 <span v-if="form.whatsapp_templates[idx]" class="ml-1">&#10003;</span>
                 <span v-else class="ml-1">!</span>
               </button>
+              </div>
             </div>
-            <!-- Aviso cuando faltan plantillas -->
-            <p
-              v-if="!isWhatsappTemplatesValid"
-              class="text-xs text-red-500 mb-2"
-            >
-              *Todos los intentos deben tener una plantilla asignada
-            </p>
-
-            <!-- Selector del intento activo -->
             <div
               v-for="idx in attemptTabs"
               v-show="activeTemplateTab === idx"
@@ -587,8 +660,6 @@ export default {
                   {{ tpl.name }} ({{ tpl.language }})
                 </option>
               </select>
-
-              <!-- Preview -->
               <div
                 v-if="form.whatsapp_templates[idx]"
                 class="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 p-2 rounded border border-slate-100 dark:border-slate-700"
@@ -599,29 +670,23 @@ export default {
           </div>
 
           <!-- Loading -->
-          <div
-            v-else-if="selectedInboxIsWhatsApp && isLoadingWATemplates"
-            class="text-sm text-slate-500 py-2"
-          >
+          <div v-else-if="isLoadingWATemplates" class="text-sm text-slate-500 py-2">
             {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.LOADING') }}
           </div>
 
           <!-- Sin plantillas WA -->
           <div
-            v-else-if="selectedInboxIsWhatsApp && !isLoadingWATemplates && availableWATemplates.length === 0"
+            v-else-if="!isLoadingWATemplates"
             class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400"
           >
             {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.NO_TEMPLATES') }}
           </div>
+        </div>
 
-          <!-- Inbox no es WhatsApp -->
-          <div
-            v-else-if="selectedInboxId && !selectedInboxIsWhatsApp"
-            class="p-3 rounded-md bg-blue-50 dark:bg-blue-900/20 text-sm text-blue-600 dark:text-blue-300"
-          >
-            {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.NOT_WHATSAPP') }}
-          </div>
-        </template>
+        <!-- Tab Reglas (índice 3 con WA, 2 sin WA) -->
+        <div v-show="activeContextTab === reglasTabIndex" class="mt-2">
+          <keyword-actions-editor v-model="form.keyword_actions" />
+        </div>
       </div>
 
       <!-- Botones -->
@@ -633,14 +698,78 @@ export default {
         >
           {{ $t('TRACKING_TEMPLATES.EDIT.CANCEL') }}
         </woot-button>
-        <woot-button
-          :is-disabled="!isFormValid"
-          @click.prevent="onSubmit"
-        >
+        <woot-button @click.prevent="onSubmit">
           {{ submitText }}
         </woot-button>
       </div>
     </form>
+
+    <!-- Modal de validación -->
+    <woot-modal :show="showValidationModal" :on-close="() => showValidationModal = false" size="small">
+      <woot-modal-header
+        header-title="⚠️ Información incompleta"
+        header-content="Corrige los siguientes errores antes de guardar la plantilla."
+      />
+      <div class="px-8 pb-6 flex flex-col gap-3">
+        <ul class="space-y-2">
+          <li
+            v-for="(error, i) in validationErrors"
+            :key="i"
+            class="flex items-start gap-2 text-sm text-red-600 dark:text-red-400"
+          >
+            <span class="mt-0.5">•</span>
+            <span>{{ error }}</span>
+          </li>
+        </ul>
+        <div class="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-700">
+          <woot-button type="button" @click="showValidationModal = false">
+            Entendido
+          </woot-button>
+        </div>
+      </div>
+    </woot-modal>
+
+    <!-- Modal expandido: Contexto IA -->
+    <woot-modal :show="showAiContextModal" :on-close="() => showAiContextModal = false" size="medium">
+      <woot-modal-header
+        header-title="🧠 Contexto IA"
+        header-content="Instrucciones para la IA al generar mensajes de seguimiento."
+      />
+      <div class="px-8 pb-6 flex flex-col gap-3">
+        <textarea
+          v-model="form.ai_context"
+          rows="20"
+          :placeholder="$t('TRACKING_TEMPLATES.FORM.AI_CONTEXT.PLACEHOLDER')"
+          class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+        />
+        <div class="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-700">
+          <woot-button type="button" @click="showAiContextModal = false">
+            Listo
+          </woot-button>
+        </div>
+      </div>
+    </woot-modal>
+
+    <!-- Modal expandido: Entrenamiento -->
+    <woot-modal :show="showPromptModal" :on-close="() => showPromptModal = false" size="medium">
+      <woot-modal-header
+        header-title="💡 Entrenamiento"
+        header-content="Instrucciones adicionales para responder preguntas del cliente sobre esta plantilla."
+      />
+      <div class="px-8 pb-6 flex flex-col gap-3">
+        <textarea
+          v-model="form.complementary_prompt"
+          rows="20"
+          :placeholder="$t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')"
+          class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+        />
+        <div class="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-700">
+          <woot-button type="button" @click="showPromptModal = false">
+            Listo
+          </woot-button>
+        </div>
+      </div>
+    </woot-modal>
   </div>
 </template>
 

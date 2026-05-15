@@ -1,5 +1,5 @@
 # rubocop:disable Layout/LineLength
-
+# /home/chatwoot/chatwoot/app/models/contact.rb
 # == Schema Information
 #
 # Table name: contacts
@@ -57,7 +57,13 @@ class Contact < ApplicationRecord
   # ================================================================================
   has_many :contact_trackings, dependent: :destroy
   # ================================================================================
-    # proyecto@user_contact
+  # ================================================================================
+  # proyecto@commands_agents
+  # ================================================================================
+  has_many :command_sessions, dependent: :destroy
+  # ================================================================================
+  # ================================================================================
+  # proyecto@user_contact
   # ================================================================================
   has_many :agent_account_users, class_name: 'AccountUser',
                                  foreign_key: 'agent_contact_id',
@@ -78,6 +84,7 @@ class Contact < ApplicationRecord
   before_save :sync_contact_attributes
 
   enum contact_type: { visitor: 0, lead: 1, customer: 2 }
+  
 
   scope :order_on_last_activity_at, lambda { |direction|
     order(
