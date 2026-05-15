@@ -72,29 +72,24 @@
                 @input="clearError('objective')" />
 
             
-            <!-- Tabs: Entrenamiento | Contexto | Reglas — proyecto@contact_tracking -->
+            <!-- Tabs: Entrenamiento | Contexto — proyecto@contact_tracking -->
             <div class="flex-1 flex flex-col -mt-1">
-                <woot-tabs
-                    class="form-tabs [&_.tabs]:p-0 [&_.tabs]:mb-2"
-                    :index="activeFormTab"
-                    @change="activeFormTab = $event"
-                >
-                    <woot-tabs-item name="Entrenamiento" :show-badge="false" />
-                    <woot-tabs-item
-                        name="Contexto *"
-                        :show-badge="!!(errors.ai_context)"
-                        :badge-count="1"
-                    />
-                    <woot-tabs-item
-                        name="Reglas"
-                        :show-badge="!!(formData.keyword_actions && formData.keyword_actions.length > 0)"
-                        :badge-count="formData.keyword_actions ? formData.keyword_actions.length : 0"
-                    />
-                </woot-tabs>
+                <div class="flex items-center justify-between mb-2">
+                    <woot-tabs
+                        class="form-tabs [&_.tabs]:p-0 [&_.tabs]:mb-0"
+                        :index="activeFormTab"
+                        @change="activeFormTab = $event"
+                    >
+                        <woot-tabs-item name="Entrenamiento" :show-badge="false" />
+                        <woot-tabs-item
+                            name="Contexto *"
+                            :show-badge="!!(errors.ai_context)"
+                            :badge-count="1"
+                        />
+                    </woot-tabs>
 
-                <!-- Tab: Entrenamiento (complementary_prompt) -->
-                <div v-show="activeFormTab === 0" class="flex flex-col gap-1">
-                    <div class="flex justify-end items-center gap-2 mb-1">
+                    <!-- Botones tab Entrenamiento -->
+                    <div v-show="activeFormTab === 0" class="flex items-center gap-2">
                         <a href="#"
                             class="text-xs text-slate-400 hover:text-woot-500 dark:text-slate-500 dark:hover:text-woot-400"
                             title="Expandir editor"
@@ -115,17 +110,9 @@
                             ↩ Restaurar original
                         </a>
                     </div>
-                    <textarea v-model="formData.complementary_prompt" rows="7"
-                        placeholder="Instrucciones adicionales para responder preguntas del cliente sobre este seguimiento. Ejemplo: Precios, horarios de atención, información de contacto específica..."
-                        class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200" />
-                    <span class="text-xs text-slate-500 dark:text-slate-400">
-                        Este prompt se usará cuando el cliente haga preguntas relacionadas con el seguimiento.
-                    </span>
-                </div>
 
-                <!-- Tab: Contexto (ai_context) -->
-                <div v-show="activeFormTab === 1" class="flex flex-col gap-1">
-                    <div class="flex justify-end items-center gap-2 mb-1">
+                    <!-- Botones tab Contexto -->
+                    <div v-show="activeFormTab === 1" class="flex items-center gap-2">
                         <a href="#"
                             class="text-xs text-slate-400 hover:text-woot-500 dark:text-slate-500 dark:hover:text-woot-400"
                             title="Expandir editor"
@@ -146,6 +133,20 @@
                             ↩ Restaurar original
                         </a>
                     </div>
+                </div>
+
+                <!-- Tab: Entrenamiento (complementary_prompt) -->
+                <div v-show="activeFormTab === 0" class="flex flex-col gap-1">
+                    <textarea v-model="formData.complementary_prompt" rows="7"
+                        placeholder="Instrucciones adicionales para responder preguntas del cliente sobre este seguimiento. Ejemplo: Precios, horarios de atención, información de contacto específica..."
+                        class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200" />
+                    <span class="text-xs text-slate-500 dark:text-slate-400">
+                        Este prompt se usará cuando el cliente haga preguntas relacionadas con el seguimiento.
+                    </span>
+                </div>
+
+                <!-- Tab: Contexto (ai_context) -->
+                <div v-show="activeFormTab === 1" class="flex flex-col gap-1">
                     <textarea v-model="formData.ai_context" rows="7"
                         :placeholder="$t('CONTACT_TRACKING.FORM.AI_CONTEXT.PLACEHOLDER')"
                         class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
@@ -162,10 +163,6 @@
                     </div>
                 </div>
 
-                <!-- Tab: Reglas (keyword_actions) -->
-                <div v-show="activeFormTab === 2">
-                    <keyword-actions-editor v-model="formData.keyword_actions" />
-                </div>
             </div>
 
             <!-- Modal expandido: Contexto IA -->
@@ -369,14 +366,12 @@
 import { useTrackingForm } from '../../../composables/useTrackingForm';
 import { formatDateTime, getAttemptEstimatedTime } from '../../../helper/trackingHelpers';
 import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
-import KeywordActionsEditor from './KeywordActionsEditor.vue';
 
 export default {
     name: 'TrackingForm',
 
     components: {
         MultiselectDropdown,
-        KeywordActionsEditor,
     },
 
     props: {

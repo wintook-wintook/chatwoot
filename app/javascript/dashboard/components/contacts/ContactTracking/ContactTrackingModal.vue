@@ -15,81 +15,87 @@
 
 <template>
     <woot-modal :show="show" :on-close="onClose" size="medium">
-        <!-- Header personalizado con botón Volver a la derecha -->
-        <div class="flex items-start justify-between px-8 pt-8 pb-0">
-            <div>
-                <h2 class="text-base font-semibold leading-6 text-slate-800 dark:text-slate-50">
-                    {{ $t('CONTACT_TRACKING.TITLE') }}
-                </h2>
-                <p class="mt-2 text-sm leading-5 text-slate-600 dark:text-slate-300">
-                    {{ $t('CONTACT_TRACKING.DESCRIPTION') }}
+        <!-- Wrapper de altura fija: el modal nunca cambia de tamaño al cambiar de tab -->
+        <div class="flex flex-col overflow-hidden" style="height: 800px;">
+
+            <!-- Header: shrink-0 para que no crezca ni encoja -->
+            <div class="flex items-start justify-between px-8 pt-8 pb-0 shrink-0">
+                <div>
+                    <h2 class="text-base font-semibold leading-6 text-slate-800 dark:text-slate-50">
+                        {{ $t('CONTACT_TRACKING.TITLE') }}
+                    </h2>
+                    <p class="mt-2 text-sm leading-5 text-slate-600 dark:text-slate-300">
+                        {{ $t('CONTACT_TRACKING.DESCRIPTION') }}
+                    </p>
+                </div>
+                <!-- visibility:hidden reserva el espacio del botón aunque esté oculto -->
+                <woot-button
+                    color-scheme="success"
+                    icon="chevron-left"
+                    size="small"
+                    :style="{ visibility: activeTab !== 0 ? 'visible' : 'hidden' }"
+                    :class="['shrink-0 mt-6', activeTab === 0 ? 'pointer-events-none' : '']"
+                    @click="returnToList"
+                >
+                    Volver a Seguimientos
+                </woot-button>
+            </div>
+
+            <!-- Alerta de integración -->
+            <div v-if="!integrationAvailable && hasCheckedIntegration" class="callout warning shrink-0">
+                <p>
+                    <fluent-icon icon="warning" size="16" />
+                    {{ $t('CONTACT_TRACKING.INTEGRATION_NOT_AVAILABLE') }}
                 </p>
             </div>
-            <woot-button
-                v-if="activeTab !== 0"
-                
-                color-scheme="success"
-                icon="chevron-left"
-                size="small"
-                class="shrink-0 mt-6"
-                @click="returnToList"
-            >
-                Volver a Seguimientos
-            </woot-button>
-        </div>
 
-        <!-- Alerta de integración -->
-        <div v-if="!integrationAvailable && hasCheckedIntegration" class="callout warning">
-            <p>
-                <fluent-icon icon="warning" size="16" />
-                {{ $t('CONTACT_TRACKING.INTEGRATION_NOT_AVAILABLE') }}
-            </p>
-        </div>
+            <!-- Tabs: visibility:hidden reserva el espacio aunque estén ocultos -->
+            <div class="shrink-0 px-6 pt-2" :style="{ visibility: activeTab !== 0 ? 'visible' : 'hidden' }">
+                <woot-tabs class="font-medium [&_.tabs]:p-0" :index="mappedTabIndex"
+                    @change="onVisibleTabChange">
+                    <woot-tabs-item v-for="tab in visibleTabs" :key="tab.key" :name="tab.name" :show-badge="tab.showBadge"
+                        :badge-count="tab.badgeCount" />
+                </woot-tabs>
+            </div>
 
-        <div class="w-full flex flex-col">
+            <!-- Área de contenido: flex-1 ocupa el espacio restante fijo -->
+            <div class="flex-1 overflow-hidden">
 
-            
+                <!-- TAB 0: LISTA DE SEGUIMIENTOS -->
+                <TrackingList v-show="activeTab === 0" class="px-6 pb-6 h-full overflow-auto"
+                    :contact-id="contactId" :conversation-id="conversationId" :trackings="localTrackings"
+                    :is-loading="isLoadingTrackings" @edit="handleEdit" @pause="handlePause" @resume="handleResume"
+                    @cancel="handleCancel" @refresh="loadTrackings" @add-new="handleAddNew"
+                    @duplicate="handleDuplicate" />
 
+                <!-- TAB 1: FORMULARIO -->
+                <TrackingForm ref="trackingFormRef" v-show="activeTab === 1" class="px-6 pb-6 h-full overflow-auto"
+                    :contact-id="contactId" :conversation-id="conversationId" :current-chat="currentChat"
+                    :integration-available="integrationAvailable" :editing-tracking="editingTracking"
+                    :duplicate-source="duplicateSourceTracking"
+                    :tracking-templates="filteredTrackingTemplates"
+                    :is-loading-templates="isLoadingTemplates"
+                    @submit="handleSubmit" @cancel="handleCancelEdit" @close="onClose"
+                    @update:maxAttempts="maxAttempts = $event"
+                    @reload-templates="reloadTemplates"
+                    @apply-template="handleApplyTemplate"
+                    @clear-template="handleClearTemplate" />
 
-            <!-- Tabs Principales (solo visibles cuando NO está en Seguimientos Activos) -->
-            <woot-tabs v-if="activeTab !== 0" class="font-medium [&_.tabs]:p-0 mb-4 px-6" :index="mappedTabIndex"
-                @change="onVisibleTabChange">
-                <woot-tabs-item v-for="tab in visibleTabs" :key="tab.key" :name="tab.name" :show-badge="tab.showBadge"
-                    :badge-count="tab.badgeCount" />
-            </woot-tabs>
-
-            <div class="flex-1 p-0 h-[520px] overflow-hidden">
-                <div class="h-full flex flex-col">
-
-                    <!-- TAB 0: LISTA DE SEGUIMIENTOS -->
-                    <TrackingList v-show="activeTab === 0" class="px-6 pb-6 h-full overflow-auto"
-                        :contact-id="contactId" :conversation-id="conversationId" :trackings="localTrackings"
-                        :is-loading="isLoadingTrackings" @edit="handleEdit" @pause="handlePause" @resume="handleResume"
-                        @cancel="handleCancel" @refresh="loadTrackings" @add-new="handleAddNew"
-                        @duplicate="handleDuplicate" />
-
-                    <!-- TAB 1: FORMULARIO -->
-                    <TrackingForm ref="trackingFormRef" v-show="activeTab === 1" class="px-6 pb-6 h-full overflow-auto"
-                        :contact-id="contactId" :conversation-id="conversationId" :current-chat="currentChat"
-                        :integration-available="integrationAvailable" :editing-tracking="editingTracking"
-                        :duplicate-source="duplicateSourceTracking"
-                        :tracking-templates="filteredTrackingTemplates"
-                        :is-loading-templates="isLoadingTemplates"
-                        @submit="handleSubmit" @cancel="handleCancelEdit" @close="onClose"
-                        @update:maxAttempts="maxAttempts = $event"
-                        @reload-templates="reloadTemplates"
-                        @apply-template="handleApplyTemplate"
-                        @clear-template="handleClearTemplate" />
-
-                    <!-- TAB 2: PLANTILLAS WHATSAPP -->
-                    <TrackingTemplates v-show="activeTab === 2" class="px-6 pb-6 h-full overflow-auto"
-                        :inbox-id="currentChat.inbox_id" :max-attempts="maxAttempts" :templates="whatsappTemplates"
-                        @update:templates="updateTemplates" />
-
+                <!-- TAB 3: REGLAS (keyword_actions) -->
+                <div v-show="activeTab === 3" class="px-6 pb-6 h-full overflow-auto">
+                    <KeywordActionsEditor
+                        v-if="$refs.trackingFormRef"
+                        v-model="$refs.trackingFormRef.formData.keyword_actions"
+                    />
                 </div>
+
+                <!-- TAB 2: PLANTILLAS WHATSAPP -->
+                <TrackingTemplates v-show="activeTab === 2" class="px-6 pb-6 h-full overflow-auto"
+                    :inbox-id="currentChat.inbox_id" :max-attempts="maxAttempts" :templates="whatsappTemplates"
+                    @update:templates="updateTemplates" />
+
             </div>
         </div>
-
         <!-- Modal de Reanudacion -->
         <ResumeTrackingModal v-if="trackingToResume" :show="showResumeModal" :tracking="trackingToResume"
             :contact-id="contactId" @close="handleResumeModalClose" @resumed="handleResumeSuccess" />
@@ -130,6 +136,7 @@ import TrackingTemplates from './TrackingTemplates.vue';
 import TrackingList from './TrackingList.vue';
 import ResumeTrackingModal from './ResumeTrackingModal.vue';
 import CancelTrackingModal from './CancelTrackingModal.vue';
+import KeywordActionsEditor from './KeywordActionsEditor.vue';
 import { normalizeTrackingsResponse } from '../../../helper/trackingHelpers';
 
 export default {
@@ -141,6 +148,7 @@ export default {
         TrackingList,
         ResumeTrackingModal,
         CancelTrackingModal,
+        KeywordActionsEditor,
     },
 
     props: {
@@ -232,20 +240,24 @@ export default {
                 });
             }
 
+            baseTabs.push({
+                key: 3,
+                name: 'Reglas',
+                showBadge: !!(this.$refs.trackingFormRef?.formData?.keyword_actions?.length),
+                badgeCount: this.$refs.trackingFormRef?.formData?.keyword_actions?.length || 0,
+            });
+
             return baseTabs;
         },
 
         visibleTabs() {
-            // Cuando NO está en Seguimientos Activos, mostrar solo Captura y Plantillas
             return this.tabs.filter(tab => tab.key !== 0);
         },
 
         mappedTabIndex() {
-            // Mapear el activeTab real al índice en visibleTabs
-            // activeTab 1 (Captura) → índice 0 en visibleTabs
-            // activeTab 2 (Plantillas) → índice 1 en visibleTabs
             if (this.activeTab === 1) return 0;
             if (this.activeTab === 2) return 1;
+            if (this.activeTab === 3) return this.isWhatsAppChannel ? 2 : 1;
             return 0;
         },
 
@@ -354,9 +366,6 @@ export default {
         },
 
         onVisibleTabChange(visibleIndex) {
-            // Mapear el índice de visibleTabs al activeTab real
-            // índice 0 en visibleTabs → activeTab 1 (Captura)
-            // índice 1 en visibleTabs → activeTab 2 (Plantillas)
             const realIndex = this.visibleTabs[visibleIndex]?.key;
             if (realIndex !== undefined) {
                 this.onTabChange(realIndex);
