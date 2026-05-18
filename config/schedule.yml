@@ -124,3 +124,15 @@ expire_command_sessions:
   class: "CommandSessionExpirationJob"
   queue: scheduled_jobs
   description: "Expire abandoned command sessions after 30 minutes of inactivity"
+# ==============================================================================
+# proyecto@google_calendar
+# ================================================================================
+# Job: Alertas de eventos de Google Calendar
+# Descripcion: Envía notificaciones a agentes con eventos próximos
+# Frecuencia: Cada 5 minutos
+# ================================================================================
+calendar_alert_job:
+  cron: "*/5 * * * *"
+  class: "CalendarAlertJob"
+  queue: scheduled_jobs
+  description: "Send Google Calendar event reminders to agents"

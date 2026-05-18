@@ -287,6 +287,8 @@
     "CUSTOM_ROLES": "Roles Personalizados",
     "BETA": "Beta",
     "REPORTS_OVERVIEW": "Resumen",
+    "GOOGLE_CALENDAR": "Google Calendar",
+    "GOOGLE_CALENDAR_VIEW": "Google Calendar",
     "REAUTHORIZE": "La conexión de tu bandeja de entrada ha expirado, por favor reconéctate para continuar recibiendo y enviando mensajes",
     "HELP_CENTER": {
       "TITLE": "Centro de Ayuda",

@@ -42,7 +42,8 @@ class Notification < ApplicationRecord
     participating_conversation_new_message: 5,
     sla_missed_first_response: 6,
     sla_missed_next_response: 7,
-    sla_missed_resolution: 8
+    sla_missed_resolution: 8,
+    calendar_event_reminder: 9
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -99,7 +100,8 @@ class Notification < ApplicationRecord
       'conversation_mention' => 'notifications.notification_title.conversation_mention',
       'sla_missed_first_response' => 'notifications.notification_title.sla_missed_first_response',
       'sla_missed_next_response' => 'notifications.notification_title.sla_missed_next_response',
-      'sla_missed_resolution' => 'notifications.notification_title.sla_missed_resolution'
+      'sla_missed_resolution' => 'notifications.notification_title.sla_missed_resolution',
+      'calendar_event_reminder' => 'notifications.notification_title.calendar_event_reminder'
     }
 
     i18n_key = notification_title_map[notification_type]
@@ -107,6 +109,8 @@ class Notification < ApplicationRecord
 
     if notification_type == 'conversation_creation'
       I18n.t(i18n_key, display_id: conversation.display_id, inbox_name: primary_actor.inbox.name)
+    elsif notification_type == 'calendar_event_reminder'
+      I18n.t(i18n_key)
     elsif %w[conversation_assignment assigned_conversation_new_message participating_conversation_new_message
              conversation_mention].include?(notification_type)
       I18n.t(i18n_key, display_id: conversation.display_id)
@@ -124,6 +128,10 @@ class Notification < ApplicationRecord
       message_body(secondary_actor)
     when 'conversation_assignment', 'sla_missed_next_response', 'sla_missed_resolution'
       message_body(conversation.messages.incoming.last)
+    when 'calendar_event_reminder'
+      title = meta&.dig('event_summary') || I18n.t('notifications.calendar_event_reminder.no_title')
+      minutes = meta&.dig('minutes_before') || 15
+      I18n.t('notifications.calendar_event_reminder.body', title: title, minutes: minutes)
     else
       ''
     end

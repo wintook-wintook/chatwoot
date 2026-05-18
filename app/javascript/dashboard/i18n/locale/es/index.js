@@ -39,6 +39,7 @@ import contactTracking from './contactTracking.js';
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
 import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
+import googleCalendar from './googleCalendar.js'; // proyecto@google_calendar
 
 export default {
   ...advancedFilters,
@@ -80,4 +81,5 @@ export default {
   ...contactTracking,
   ...trackingTemplates, // proyecto@tracking_templates
   ...knowledgeSources, // @knowledge_sources
+  ...googleCalendar, // proyecto@google_calendar
 };

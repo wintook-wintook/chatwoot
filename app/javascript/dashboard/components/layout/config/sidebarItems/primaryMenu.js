@@ -70,6 +70,14 @@ const primaryMenuItems = accountId => [
     toStateName: 'default_portal_articles',
   },
   {
+    icon: 'calendar',
+    key: 'google_calendar',
+    label: 'GOOGLE_CALENDAR',
+    toState: frontendURL(`accounts/${accountId}/google-calendar`),
+    toStateName: 'google_calendar',
+    roles: ['administrator', 'agent'],
+  },
+  {
     icon: 'settings',
     key: 'settings',
     label: 'SETTINGS',

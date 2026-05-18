@@ -63,6 +63,8 @@ import contactTrackings from './modules/contactTrackings';
 
 // proyecto@tracking_templates
 import trackingTemplates from './modules/trackingTemplates';
+// proyecto@google_calendar
+import googleCalendar from './modules/googleCalendar';
 
 const plugins = [];
 
@@ -123,6 +125,7 @@ export default new Vuex.Store({
     //KANBAN0725
     contactTrackings,// proyecto@contact_tracking    
     trackingTemplates, // proyecto@tracking_templates
+    googleCalendar, // proyecto@google_calendar
   },
   plugins,
 });

@@ -395,6 +395,16 @@ Rails.application.routes.draw do
             resource :authorization, only: [:create]
           end
 
+          namespace :google_calendar do
+            resource :authorization, only: [:create, :destroy]
+            resources :events, only: [:index, :create, :update] do
+              collection do
+                get :agent_events
+              end
+            end
+            resource :availability, only: [:show], controller: 'availability'
+          end
+
           resources :webhooks, only: [:index, :create, :update, :destroy]
           namespace :integrations do
             resources :apps, only: [:index, :show]
@@ -649,6 +659,7 @@ Rails.application.routes.draw do
 
   get 'microsoft/callback', to: 'microsoft/callbacks#show'
   get 'google/callback', to: 'google/callbacks#show'
+  get 'google_calendar/callback', to: 'google_calendar_callback#show'
 
   # ----------------------------------------------------------------------
   # Routes for external service verifications

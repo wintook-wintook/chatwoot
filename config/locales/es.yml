@@ -126,6 +126,10 @@ es:
       sla_missed_first_response: "Primera respuesta al objetivo de SLA perdida para la conversación (#%{display_id})"
       sla_missed_next_response: "Falta la siguiente respuesta del SLA para la conversación (#%{display_id})"
       sla_missed_resolution: "Falta la siguiente respuesta del SLA para la conversación (#%{display_id})"
+      calendar_event_reminder: "Recordatorio de calendario"
+    calendar_event_reminder:
+      body: "\"%{title}\" comienza en %{minutes} minutos"
+      no_title: "Evento sin título"
     attachment: "Adjunto"
     no_content: "Sin contenido"
   conversations:

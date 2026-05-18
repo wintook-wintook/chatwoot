@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_13_200000) do
+ActiveRecord::Schema[7.0].define(version: 2026_05_16_053028) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1087,6 +1087,21 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_13_200000) do
     t.index ["user_id"], name: "index_tracking_templates_on_user_id"
   end
 
+  create_table "user_calendar_integrations", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "account_id", null: false
+    t.string "google_email"
+    t.jsonb "tokens", default: {}
+    t.jsonb "enabled_calendar_ids", default: []
+    t.boolean "alert_enabled", default: true
+    t.integer "alert_minutes_before", default: 15
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_user_calendar_integrations_on_account_id"
+    t.index ["user_id", "account_id"], name: "index_user_calendar_integrations_on_user_id_and_account_id", unique: true
+    t.index ["user_id"], name: "index_user_calendar_integrations_on_user_id"
+  end
+
   create_table "users", id: :serial, force: :cascade do |t|
     t.string "provider", default: "email", null: false
     t.string "uid", default: "", null: false
@@ -1170,6 +1185,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_13_200000) do
   add_foreign_key "tracking_templates", "accounts"
   add_foreign_key "tracking_templates", "inboxes"
   add_foreign_key "tracking_templates", "users"
+  add_foreign_key "user_calendar_integrations", "accounts"
+  add_foreign_key "user_calendar_integrations", "users"
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").
       after(:insert).

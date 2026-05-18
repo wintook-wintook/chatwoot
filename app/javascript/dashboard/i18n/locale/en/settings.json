@@ -287,6 +287,8 @@
     "CUSTOM_ROLES": "Custom Roles",
     "BETA": "Beta",
     "REPORTS_OVERVIEW": "Overview",
+    "GOOGLE_CALENDAR": "Google Calendar",
+    "GOOGLE_CALENDAR_VIEW": "Google Calendar",
     "REAUTHORIZE": "Your inbox connection has expired, please reconnect to continue receiving and sending messages",
     "HELP_CENTER": {
       "TITLE": "Help Center",

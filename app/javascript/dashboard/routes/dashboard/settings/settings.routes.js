@@ -30,6 +30,7 @@ import kanban from './kanban/kanban.routes'; // ← AGREGAR ESTA LÍNEA
 
 import trackingTemplates from './trackingTemplates/trackingTemplates.routes'; // proyecto@tracking_templates
 import knowledgeSources from './knowledgeSources/knowledgeSources.routes'; // @knowledge_sources
+import googleCalendar from './googleCalendar/googleCalendar.routes'; // proyecto@google_calendar
 
 export default {
   routes: [
@@ -73,5 +74,6 @@ export default {
     // KANBAN0725
     ...trackingTemplates.routes, // proyecto@tracking_templates
     ...knowledgeSources.routes, // @knowledge_sources
+    ...googleCalendar.routes, // proyecto@google_calendar
   ],
 };

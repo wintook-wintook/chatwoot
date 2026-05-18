@@ -38,7 +38,8 @@ import kanban from './kanban.json';
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
 import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
-import contactTracking from './contactTracking.js'; // proyecto@contact_tracking 
+import contactTracking from './contactTracking.js'; // proyecto@contact_tracking
+import googleCalendar from './googleCalendar.js'; // proyecto@google_calendar 
 
 export default {
   ...advancedFilters,
@@ -79,5 +80,6 @@ export default {
   ...kanban,
   ...trackingTemplates, // proyecto@tracking_templates
   ...knowledgeSources, // @knowledge_sources
-  ...contactTracking, // proyecto@contact_tracking 
+  ...contactTracking, // proyecto@contact_tracking
+  ...googleCalendar, // proyecto@google_calendar
 };
