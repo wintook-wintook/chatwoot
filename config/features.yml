@@ -124,3 +124,5 @@
   enabled: true
 - name: wavoip
   enabled: false
+- name: google_calendar
+  enabled: false

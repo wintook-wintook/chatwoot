@@ -73,6 +73,7 @@ const primaryMenuItems = accountId => [
     icon: 'calendar',
     key: 'google_calendar',
     label: 'GOOGLE_CALENDAR',
+    featureFlag: FEATURE_FLAGS.GOOGLE_CALENDAR,
     toState: frontendURL(`accounts/${accountId}/google-calendar`),
     toStateName: 'google_calendar',
     roles: ['administrator', 'agent'],
