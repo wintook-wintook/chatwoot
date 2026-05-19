@@ -1,6 +1,7 @@
 class Api::V1::Accounts::GoogleCalendar::AvailabilityController < Api::V1::Accounts::BaseController
   def show
     integrations = UserCalendarIntegration.where(account: Current.account)
+    integrations = integrations.where(user_id: params[:agent_ids]) if params[:agent_ids].present?
 
     availability = integrations.filter_map do |integration|
       service = GoogleCalendarService.new(integration)
