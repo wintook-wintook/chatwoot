@@ -22,22 +22,15 @@ export default {
     ...mapGetters({
       globalConfig: 'globalConfig/get',
     }),
-    wabaEmbeddedSignup() {
-      return {
-      isEmbeddedSignupEnabled: this.globalConfig.wabaEmbeddedSignup,
-      };
+    isEmbeddedSignupEnabled() { // proyecto@waba_chatwoot — fix: boolean vs string
+      const val = this.globalConfig.wabaEmbeddedSignup;
+      return val === true || val === 'true';
     },
   },
   data() {
     return {
       provider: 'whatsapp_cloud',
-      isEmbeddedSignupEnabled: false,
     };
-  },
-  created() {
-    console.log(this.globalConfig); // Verifica si globalConfig está trayendo los datos correctos
-    console.log(this.globalConfig.wabaEmbeddedSignup); // Asegúrate de que esta propiedad existe
-    this.isEmbeddedSignupEnabled = this.globalConfig.wabaEmbeddedSignup || false;
   },
 };
 </script>

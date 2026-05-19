@@ -41,9 +41,10 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
                          ['MAILER_INBOUND_EMAIL_DOMAIN']
                        when 'unoapi'
                          %w[UNOAPI_AUTH_TOKEN]
-                       when 'whatsapp_embedded'
-                         %w[WHATSAPP_EMBEDDED_LICENSE_KEY WHATSAPP_EMBEDDED_FACEBOOK_APP_ID WHATSAPP_EMBEDDED_FACEBOOK_CONFIG_ID
-                            WHATSAPP_EMBEDDED_FACEBOOK_TOKEN WABA_EMBEDDED_SIGNUP]
+                       when 'whatsapp_embedded' # proyecto@waba_chatwoot
+                         %w[WHATSAPP_EMBEDDED_FACEBOOK_APP_ID WHATSAPP_EMBEDDED_FACEBOOK_APP_SECRET
+                            WHATSAPP_EMBEDDED_FACEBOOK_CONFIG_ID WHATSAPP_EMBEDDED_FACEBOOK_API_VERSION
+                            WABA_EMBEDDED_SIGNUP]
                        else
                          %w[ENABLE_ACCOUNT_SIGNUP FIREBASE_PROJECT_ID FIREBASE_CREDENTIALS]
                        end
