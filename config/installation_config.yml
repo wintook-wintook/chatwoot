@@ -140,30 +140,28 @@
   description: 'The Auth Token for UNO API. Find more details on how to configure UNOAPI here: https://github.com/clairton/unoapi-cloud/tree/main'
 # End of UNOAPI Channel Config
 
-# MARK: WhatsApp Embedded
-- name: WHATSAPP_EMBEDDED_LICENSE_KEY
-  value:
-  display_title: 'License Key'
-  description: >
-    The license key for WhatsApp Embedded
-    This key is required to access WhatsApp's embedded functionality. Contact us via WhatsApp: https://bit.ly/3zfMVgT
+# MARK: WhatsApp Embedded — proyecto@waba_chatwoot
 - name: WHATSAPP_EMBEDDED_FACEBOOK_APP_ID
   value:
-  display_title: 'Facebook App ID'
-  description: 'The Facebook App ID for WhatsApp Embedded'
+  display_title: 'WhatsApp App ID'
+  description: 'The Facebook App ID for WhatsApp Business API integration'
+- name: WHATSAPP_EMBEDDED_FACEBOOK_APP_SECRET
+  value:
+  display_title: 'WhatsApp App Secret'
+  description: 'The App Secret for WhatsApp Embedded Signup flow (required for embedded signup)'
 - name: WHATSAPP_EMBEDDED_FACEBOOK_CONFIG_ID
   value:
-  display_title: 'Facebook Config ID'
-  description: 'The Facebook Config ID for WhatsApp Embedded'
-- name: WHATSAPP_EMBEDDED_FACEBOOK_TOKEN
-  value:
-  display_title: 'Facebook Token'
-  description: 'The Facebook Token for WhatsApp Embedded'
+  display_title: 'WhatsApp Configuration ID'
+  description: 'The Configuration ID for WhatsApp Embedded Signup flow (required for embedded signup)'
+- name: WHATSAPP_EMBEDDED_FACEBOOK_API_VERSION
+  value: 'v22.0'
+  display_title: 'WhatsApp API Version'
+  description: "Configure this if you want to use a different WhatsApp API version. Make sure it's prefixed with `v`"
 - name: WABA_EMBEDDED_SIGNUP
   type: boolean
   value: false
-  display_title: 'WABA Embedded Signup'
-  description: 'Enable WABA Embedded Signup'
+  display_title: 'Enable WhatsApp Embedded Signup'
+  description: 'Enable the Embedded Signup flow for WhatsApp Cloud inboxes'
   locked: false
 # End of WhatsApp Embedded
 

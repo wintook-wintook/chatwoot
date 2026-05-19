@@ -34,11 +34,10 @@ class DashboardController < ActionController::Base
       'DEPLOYMENT_ENV',
       'CSML_EDITOR_HOST',
       'CONVERSATION_STYLE_CSS',
+      # proyecto@waba_chatwoot — variables expuestas al frontend (sin token)
       'WABA_EMBEDDED_SIGNUP',
       'WHATSAPP_EMBEDDED_FACEBOOK_APP_ID',
-      'WHATSAPP_EMBEDDED_FACEBOOK_CONFIG_ID',
-      'WHATSAPP_EMBEDDED_FACEBOOK_TOKEN',
-      'WHATSAPP_EMBEDDED_LICENSE_KEY'
+      'WHATSAPP_EMBEDDED_FACEBOOK_CONFIG_ID'
     ).merge(app_config)
   end
 
@@ -73,11 +72,10 @@ class DashboardController < ActionController::Base
       UNOAPI_AUTH_TOKEN: GlobalConfigService.load('UNOAPI_AUTH_TOKEN', ''),
       CAPTAIN_APP_URL: GlobalConfigService.load('CAPTAIN_APP_URL', ''),
       CAPTAIN_API_URL: GlobalConfigService.load('CAPTAIN_API_URL', ''),
-      # WHATSAPP_EMBEDDED_LICENSE_KEY: GlobalConfigService.load('WHATSAPP_EMBEDDED_LICENSE_KEY', ''),
-      # WHATSAPP_EMBEDDED_FACEBOOK_APP_ID: GlobalConfigService.load('WHATSAPP_EMBEDDED_FACEBOOK_APP_ID', ''),
-      # WHATSAPP_EMBEDDED_FACEBOOK_CONFIG_ID: GlobalConfigService.load('WHATSAPP_EMBEDDED_FACEBOOK_CONFIG_ID', ''),
-      # WHATSAPP_EMBEDDED_FACEBOOK_TOKEN: GlobalConfigService.load('WHATSAPP_EMBEDDED_FACEBOOK_TOKEN', ''),
-      # WABA_EMBEDDED_SIGNUP: GlobalConfigService.load('WABA_EMBEDDED_SIGNUP', 'false'),
+      # proyecto@waba_chatwoot — config de embedded signup (APP_SECRET solo backend)
+      WHATSAPP_EMBEDDED_FACEBOOK_APP_ID: GlobalConfigService.load('WHATSAPP_EMBEDDED_FACEBOOK_APP_ID', ''),
+      WHATSAPP_EMBEDDED_FACEBOOK_CONFIG_ID: GlobalConfigService.load('WHATSAPP_EMBEDDED_FACEBOOK_CONFIG_ID', ''),
+      WABA_EMBEDDED_SIGNUP: GlobalConfigService.load('WABA_EMBEDDED_SIGNUP', 'false'),
       GIT_SHA: GIT_HASH
     }
   end
