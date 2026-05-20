@@ -9,12 +9,18 @@ import FullCalendar from '@fullcalendar/vue';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import listPlugin from '@fullcalendar/list';
 import esLocale from '@fullcalendar/core/locales/es';
 
 const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+const AGENT_COLORS = ['#f43f5e', '#fb923c', '#a3e635', '#22d3ee', '#818cf8', '#e879f9'];
 
 function eventColor(eventId) {
   return COLORS[(eventId?.charCodeAt(0) || 0) % COLORS.length];
+}
+
+function agentColor(agentId) {
+  return AGENT_COLORS[(agentId || 0) % AGENT_COLORS.length];
 }
 
 export default {
@@ -22,14 +28,20 @@ export default {
   components: { FullCalendar },
   props: {
     events: { type: Array, default: () => [] },
+    availability: { type: Array, default: () => [] },
   },
-  emits: ['rangeChanged', 'eventDropped'],
+  emits: ['rangeChanged', 'eventDropped', 'eventClicked'],
   watch: {
-    events(newEvents) {
+    events() { this.syncEvents(); },
+    availability() { this.syncEvents(); },
+  },
+  methods: {
+    syncEvents() {
       const api = this.$refs.fullCalendar?.getApi();
       if (!api) return;
       api.removeAllEvents();
-      newEvents.forEach(e => {
+
+      this.events.forEach(e => {
         api.addEvent({
           id: e.id,
           title: e.summary || this.$t('GOOGLE_CALENDAR.EVENTS.ALL_DAY'),
@@ -40,23 +52,38 @@ export default {
           borderColor: eventColor(e.id),
         });
       });
+
+      this.availability.forEach(agent => {
+        const color = agentColor(agent.agent_id);
+        (agent.busy || []).forEach((period, i) => {
+          api.addEvent({
+            id: `busy-${agent.agent_id}-${i}`,
+            start: period.start,
+            end: period.end,
+            display: 'background',
+            backgroundColor: color + '33',
+            classNames: ['fc-agent-busy'],
+          });
+        });
+      });
     },
   },
   computed: {
     calendarOptions() {
       return {
-        plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+        plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
         locale: esLocale,
         initialView: 'timeGridWeek',
         headerToolbar: {
           left: 'prev,next today',
           center: 'title',
-          right: 'timeGridWeek,dayGridMonth',
+          right: 'timeGridWeek,dayGridMonth,listWeek',
         },
         buttonText: {
           today: this.$t('GOOGLE_CALENDAR.AGENDA.TODAY'),
           week: this.$t('GOOGLE_CALENDAR.CALENDAR.WEEK'),
           month: this.$t('GOOGLE_CALENDAR.CALENDAR.MONTH'),
+          list: this.$t('GOOGLE_CALENDAR.CALENDAR.AGENDA'),
         },
         height: '100%',
         editable: true,
@@ -146,5 +173,31 @@ export default {
 
 .fc-wrapper .fc-event:active {
   cursor: grabbing;
+}
+
+.fc-wrapper .fc-list-table {
+  font-size: 0.8125rem;
+}
+
+.fc-wrapper .fc-list-day-cushion {
+  background-color: theme('colors.slate.50');
+  font-weight: 600;
+}
+
+.fc-wrapper .fc-list-event:hover td {
+  background-color: theme('colors.woot.50 / 40%');
+  cursor: pointer;
+}
+
+.dark .fc-wrapper .fc-list-day-cushion {
+  background-color: theme('colors.slate.800');
+}
+
+.dark .fc-wrapper .fc-list-event:hover td {
+  background-color: theme('colors.slate.700');
+}
+
+.dark .fc-wrapper .fc-list-empty {
+  background-color: theme('colors.slate.900');
 }
 </style>

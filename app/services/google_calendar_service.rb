@@ -18,16 +18,23 @@ class GoogleCalendarService
     response['items'] || []
   end
 
-  def create_event(calendar_id: 'primary', summary:, start_time:, end_time:, description: nil, attendees: [])
-    body = {
-      summary: summary,
-      description: description,
-      start: { dateTime: start_time.utc.iso8601, timeZone: 'UTC' },
-      end:   { dateTime: end_time.utc.iso8601,   timeZone: 'UTC' },
-      attendees: attendees.map { |email| { email: email } }
-    }.compact
+  def create_event(calendar_id: 'primary', summary:, start_time: nil, end_time: nil, due_date: nil, end_date: nil, all_day: false, description: nil, attendees: [])
+    body = { summary: summary, description: description }
 
-    post("/calendars/#{CGI.escape(calendar_id)}/events", body)
+    if all_day
+      date = due_date.presence || start_time&.to_date&.iso8601 || Date.today.iso8601
+      parsed_end = end_date.presence ? Date.parse(end_date) : nil
+      parsed_start = Date.parse(date)
+      end_date_val = (parsed_end && parsed_end > parsed_start ? parsed_end : parsed_start + 1).iso8601
+      body[:start] = { date: date }
+      body[:end]   = { date: end_date_val }
+    else
+      body[:start] = { dateTime: start_time.utc.iso8601, timeZone: 'UTC' }
+      body[:end]   = { dateTime: end_time.utc.iso8601,   timeZone: 'UTC' }
+      body[:attendees] = attendees.map { |email| { email: email } } if attendees.any?
+    end
+
+    post("/calendars/#{CGI.escape(calendar_id)}/events", body.compact)
   end
 
   def update_event(event_id, calendar_id: 'primary', start_time:, end_time:, summary: nil, description: nil, attendees: nil)
@@ -39,6 +46,36 @@ class GoogleCalendarService
     body[:description] = description if description
     body[:attendees]   = attendees.map { |e| { email: e } } if attendees
     patch("/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}", body)
+  end
+
+  def list_calendars
+    response = get('/users/me/calendarList')
+    (response['items'] || []).map do |cal|
+      {
+        id: cal['id'],
+        summary: cal['summary'],
+        background_color: cal['backgroundColor'] || '#6366f1',
+        foreground_color: cal['foregroundColor'] || '#ffffff',
+        primary: cal['primary'] || false,
+        access_role: cal['accessRole']
+      }
+    end
+  end
+
+  def subscribe_calendar(calendar_id)
+    response = HTTParty.post(
+      "#{CALENDAR_API}/users/me/calendarList",
+      headers: auth_headers,
+      body: { id: calendar_id }.to_json
+    )
+    handle_response(response)
+  end
+
+  def list_events_for_calendars(calendar_ids:, time_min:, time_max:)
+    calendar_ids.flat_map do |cal_id|
+      list_events(calendar_id: cal_id, time_min: time_min, time_max: time_max)
+        .map { |e| e.merge('calendarId' => cal_id) }
+    end.sort_by { |e| e.dig('start', 'dateTime') || e.dig('start', 'date') || '' }
   end
 
   def free_busy(calendars:, time_min:, time_max:)

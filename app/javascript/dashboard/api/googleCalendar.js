@@ -31,6 +31,22 @@ class GoogleCalendarAPI extends ApiClient {
     });
   }
 
+  getCalendars() {
+    return axios.get(`${this.url}/calendars`);
+  }
+
+  updateCalendars(enabledIds) {
+    return axios.patch(`${this.url}/calendars`, { enabled_ids: enabledIds });
+  }
+
+  subscribeCalendar(calendarId) {
+    return axios.post(`${this.url}/calendars/subscribe`, { calendar_id: calendarId });
+  }
+
+  shareAgenda(payload) {
+    return axios.post(`${this.url}/sharing`, payload);
+  }
+
   getAvailability(params = {}) {
     return axios.get(`${this.url}/availability`, { params });
   }

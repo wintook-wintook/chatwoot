@@ -2,10 +2,13 @@ class Api::V1::Accounts::GoogleCalendar::EventsController < Api::V1::Accounts::B
   before_action :require_integration
 
   def index
-    events = calendar_service.list_events(
-      time_min: time_min,
-      time_max: time_max
-    )
+    enabled_ids = @integration.enabled_calendar_ids.presence || ['primary']
+    events = if enabled_ids.size == 1
+               calendar_service.list_events(calendar_id: enabled_ids.first, time_min: time_min, time_max: time_max)
+                               .map { |e| e.merge('calendarId' => enabled_ids.first) }
+             else
+               calendar_service.list_events_for_calendars(calendar_ids: enabled_ids, time_min: time_min, time_max: time_max)
+             end
     render json: { events: events, google_email: @integration.google_email }
   rescue StandardError => e
     render json: { error: e.message }, status: :unprocessable_entity
@@ -14,10 +17,13 @@ class Api::V1::Accounts::GoogleCalendar::EventsController < Api::V1::Accounts::B
   def create
     event = calendar_service.create_event(
       summary:     params[:summary],
-      start_time:  Time.parse(params[:start_time]),
-      end_time:    Time.parse(params[:end_time]),
       description: params[:description],
-      attendees:   Array(params[:attendees])
+      attendees:   Array(params[:attendees]),
+      all_day:     params[:all_day].in?([true, 'true', '1']),
+      start_time:  params[:start_time].present? ? Time.parse(params[:start_time]) : nil,
+      end_time:    params[:end_time].present? ? Time.parse(params[:end_time]) : nil,
+      due_date:    params[:due_date],
+      end_date:    params[:end_date]
     )
     render json: { event: event }, status: :created
   rescue StandardError => e
