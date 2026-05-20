@@ -828,5 +828,6 @@ export default {
     <!-- ===== SECCIÓN ORIGINAL MANTENIDA ===== -->
     <ContactDetailsItem compact :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_LABELS')" />
     <ConversationLabels :conversation-id="conversationId" />
+
   </div>
 </template>

@@ -36,6 +36,8 @@ import {
 
 import Synchronizer from './Synchronizer';
 import ScheduleMessageModal from 'dashboard/components/widgets/conversation/ScheduleMessageModal';
+import CreateEventModal from 'dashboard/components/GoogleCalendar/CreateEventModal.vue'; // google_calendar
+import { FEATURE_FLAGS } from 'dashboard/featureFlags'; // google_calendar
 
 export default {
   components: {
@@ -49,6 +51,7 @@ export default {
     ContactMergeModal,
     ContactNotesCrudModal, // proyecto@contacts_notes
     ScheduleMessageModal,
+    CreateEventModal, // google_calendar
   },
 
   mixins: [Synchronizer],
@@ -91,6 +94,7 @@ export default {
       showMergeModal: false,
       showDeleteModal: false,
       showNotesCrudModal: false, // proyecto@contacts_notes
+      showCreateEventModal: false, // google_calendar
       crmContact: {},
       showScheduleModal: false,
       showPrivateConversationModal: false, // proyecto@conversation_private
@@ -106,6 +110,8 @@ export default {
       currentUser: 'getCurrentUser',
       uiFlags: 'contacts/getUIFlags',
       currentChat: 'getSelectedChat',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
+      accountId: 'getCurrentAccountId',
     }),
 
     // Estos se actualizarán automáticamente cuando el store cambie
@@ -169,6 +175,16 @@ export default {
       const { idcontacto_crmzeus = 0, idorganizacion_crmzeus = 0 } =
         custom_attributes;
       return idcontacto_crmzeus > 0 && idorganizacion_crmzeus > 0;
+    },
+    // google_calendar
+    showCalendarButton() {
+      return !!(
+        this.conversationId &&
+        this.isFeatureEnabledonAccount(this.accountId, FEATURE_FLAGS.GOOGLE_CALENDAR)
+      );
+    },
+    calendarPrefillEmail() {
+      return this.contact?.email || '';
     },
   },
   watch: {
@@ -510,6 +526,16 @@ export default {
           :title="$t('DELETE_CONTACT.BUTTON_LABEL')" icon="delete" variant="smooth" size="small" color-scheme="alert"
           :disabled="uiFlags.isDeleting" @click="toggleDeleteModal" />
 
+        <!-- google_calendar - crear evento desde conversación -->
+        <woot-button
+          v-if="showCalendarButton"
+          v-tooltip="$t('GOOGLE_CALENDAR.CREATE_FROM_CONVERSATION')"
+          icon="calendar"
+          variant="smooth"
+          size="small"
+          @click="showCreateEventModal = true"
+        />
+
       </div>
       <EditContact v-if="showEditModal" :show="showEditModal" :contact="contact" :crm-contact="crmContact"
         :contact-found-in-crm="contactFoundInCRM" @cancel="toggleEditModal" @suppress-alerts="handleSuppressAlerts" 
@@ -535,6 +561,15 @@ export default {
       :contact-name="contact.name"
       @close="showNotesCrudModal = false"
     />
+    <!-- google_calendar - modal crear evento desde conversación -->
+    <CreateEventModal
+      v-if="showCalendarButton"
+      :show="showCreateEventModal"
+      :prefill-email="calendarPrefillEmail"
+      @close="showCreateEventModal = false"
+      @created="showCreateEventModal = false"
+    />
+
     <woot-delete-modal v-if="showDeleteModal" :show.sync="showDeleteModal" :on-close="closeDelete"
       :on-confirm="confirmDeletion" :title="$t('DELETE_CONTACT.CONFIRM.TITLE')"
       :message="$t('DELETE_CONTACT.CONFIRM.MESSAGE')" :message-value="confirmDeleteMessage"
