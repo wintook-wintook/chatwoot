@@ -402,7 +402,13 @@ Rails.application.routes.draw do
                 get :agent_events
               end
             end
+            resource :calendars, only: [:show, :update], controller: 'calendars' do
+              collection do
+                post :subscribe
+              end
+            end
             resource :availability, only: [:show], controller: 'availability'
+            resource :sharing, only: [:create], controller: 'sharing'
           end
 
           resources :webhooks, only: [:index, :create, :update, :destroy]

@@ -2,6 +2,8 @@ import GoogleCalendarAPI from '../../api/googleCalendar';
 
 const state = {
   events: [],
+  calendars: [],
+  enabledCalendarIds: [],
   availability: [],
   connected: false,
   googleEmail: null,
@@ -9,11 +11,14 @@ const state = {
     isFetching: false,
     isCreating: false,
     isConnecting: false,
+    isFetchingCalendars: false,
   },
 };
 
 const getters = {
   getCalendarEvents: s => s.events,
+  getCalendars: s => s.calendars,
+  getEnabledCalendarIds: s => s.enabledCalendarIds,
   getCalendarAvailability: s => s.availability,
   isCalendarConnected: s => s.connected,
   getCalendarEmail: s => s.googleEmail,
@@ -23,6 +28,20 @@ const getters = {
 const mutations = {
   SET_CALENDAR_EVENTS(s, events) {
     s.events = events;
+  },
+  SET_CALENDARS(s, { calendars, enabledIds }) {
+    s.enabledCalendarIds = enabledIds;
+    const allEnabled = enabledIds.length === 0;
+    s.calendars = calendars.map(c => ({
+      ...c,
+      enabled: allEnabled || enabledIds.includes(c.id),
+    }));
+  },
+  TOGGLE_CALENDAR(s, calendarId) {
+    s.calendars = s.calendars.map(c =>
+      c.id === calendarId ? { ...c, enabled: !c.enabled } : c
+    );
+    s.enabledCalendarIds = s.calendars.filter(c => c.enabled).map(c => c.id);
   },
   SET_CALENDAR_AVAILABILITY(s, availability) {
     s.availability = availability;
@@ -55,6 +74,39 @@ const actions = {
     }
   },
 
+  fetchCalendars: async ({ commit }) => {
+    commit('SET_CALENDAR_UI_FLAG', { isFetchingCalendars: true });
+    try {
+      const { data } = await GoogleCalendarAPI.getCalendars();
+      commit('SET_CALENDARS', {
+        calendars: data.calendars || [],
+        enabledIds: data.enabled_ids || [],
+      });
+    } catch {
+      // silently ignore — user may not have calendars endpoint yet
+    } finally {
+      commit('SET_CALENDAR_UI_FLAG', { isFetchingCalendars: false });
+    }
+  },
+
+  subscribeCalendar: async ({ commit }, calendarId) => {
+    const { data } = await GoogleCalendarAPI.subscribeCalendar(calendarId);
+    commit('SET_CALENDARS', {
+      calendars: data.calendars || [],
+      enabledIds: data.enabled_ids || [],
+    });
+  },
+
+  toggleCalendar: async ({ commit, state: s, dispatch }, calendarId) => {
+    commit('TOGGLE_CALENDAR', calendarId);
+    try {
+      await GoogleCalendarAPI.updateCalendars(s.enabledCalendarIds);
+      dispatch('fetchEvents');
+    } catch {
+      commit('TOGGLE_CALENDAR', calendarId); // revert on error
+    }
+  },
+
   fetchAvailability: async ({ commit }, params = {}) => {
     try {
       const { data } = await GoogleCalendarAPI.getAvailability(params);
@@ -81,6 +133,7 @@ const actions = {
           clearInterval(poll);
           commit('SET_CALENDAR_UI_FLAG', { isConnecting: false });
           dispatch('fetchEvents');
+          dispatch('fetchCalendars');
           dispatch('fetchAvailability');
         }
       }, 600);
@@ -94,6 +147,7 @@ const actions = {
       await GoogleCalendarAPI.disconnect();
       commit('SET_CALENDAR_CONNECTED', { connected: false });
       commit('SET_CALENDAR_EVENTS', []);
+      commit('SET_CALENDARS', { calendars: [], enabledIds: [] });
     } catch (error) {
       throw new Error(error);
     }
@@ -101,6 +155,10 @@ const actions = {
 
   updateEvent: async (_, { eventId, start_time, end_time, summary, description, attendees }) => {
     await GoogleCalendarAPI.updateEvent(eventId, { start_time, end_time, summary, description, attendees });
+  },
+
+  shareAgenda: async (_, payload) => {
+    await GoogleCalendarAPI.shareAgenda(payload);
   },
 
   createEvent: async ({ commit, dispatch }, payload) => {

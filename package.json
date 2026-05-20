@@ -36,6 +36,7 @@
     "@fullcalendar/core": "5",
     "@fullcalendar/daygrid": "5",
     "@fullcalendar/interaction": "5",
+    "@fullcalendar/list": "5",
     "@fullcalendar/timegrid": "5",
     "@fullcalendar/vue": "5",
     "@hcaptcha/vue-hcaptcha": "^0.3.2",
