@@ -22,15 +22,20 @@ class Api::V1::Accounts::Whatsapp::AuthorizationsController < Api::V1::Accounts:
   before_action :authorize_request
 
   def create
-    channel = Whatsapp::EmbeddedSignupService.new(
+    service = Whatsapp::EmbeddedSignupService.new(
       account: Current.account,
       params: embedded_signup_params
-    ).perform
+    )
+    channel = service.perform
+    webhook = service.webhook_result
     render json: {
       success: true,
       id: channel.inbox.id,
       name: channel.inbox.name,
-      channel_type: 'whatsapp'
+      channel_type: 'whatsapp',
+      webhook_configured: webhook[:success],
+      webhook_url: webhook[:url],
+      verify_token: webhook[:token]
     }
   rescue ArgumentError => e
     render json: { success: false, error: e.message }, status: :unprocessable_entity
