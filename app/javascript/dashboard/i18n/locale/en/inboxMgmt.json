@@ -492,6 +492,15 @@
         "EMAIL_PLACEHOLDER": "Enter email address",
         "HELP": "To add your Google account as a channel, you need to authenticate your Google account by clicking on 'Sign in with Google' ",
         "ERROR_MESSAGE": "There was an error connecting to Google, please try again"
+      },
+      "WHATSAPP_EMBEDDED": {
+        "DESCRIPTION": "Click the button below to connect your WhatsApp Business account via Facebook.",
+        "CONNECT_BUTTON": "Connect with Facebook",
+        "CONNECTED": "Connected",
+        "CONNECT_CANCELLED": "Connection cancelled. Please try again.",
+        "PROCESSING": "Creating your inbox, please wait...",
+        "APP_ID_MISSING": "WhatsApp Embedded Signup is not configured. Contact your administrator.",
+        "SDK_NOT_LOADED": "Facebook SDK is not loaded yet. Please try again."
       }
     },
     "DETAILS": {

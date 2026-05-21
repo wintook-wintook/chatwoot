@@ -105,6 +105,10 @@ Rails.application.routes.draw do
           namespace :channels do
             resource :twilio_channel, only: [:create]
           end
+          # proyecto@waba_chatwoot
+          namespace :whatsapp do
+            resource :authorization, only: [:create]
+          end
 
           # KANBAN0725
           namespace :conversations do

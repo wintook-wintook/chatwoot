@@ -21,11 +21,10 @@ const {
   DISABLE_USER_PROFILE_UPDATE: disableUserProfileUpdate,
   DEPLOYMENT_ENV: deploymentEnv,
   CONVERSATION_STYLE_CSS: conversationStyleCss,
+  // proyecto@waba_chatwoot — sin token; el APP_SECRET solo vive en backend
   WABA_EMBEDDED_SIGNUP: wabaEmbeddedSignup,
-  WHATSAPP_EMBEDDED_LICENSE_KEY: whatsappEmbeddedLicenseKey,
   WHATSAPP_EMBEDDED_FACEBOOK_APP_ID: whatsappEmbeddedFacebookAppId,
   WHATSAPP_EMBEDDED_FACEBOOK_CONFIG_ID: whatsappEmbeddedFacebookConfigId,
-  WHATSAPP_EMBEDDED_FACEBOOK_TOKEN: whatsappEmbeddedFacebookToken,
 } = window.globalConfig || {};
 
 const state = {
@@ -51,12 +50,9 @@ const state = {
   termsURL,
   widgetBrandURL,
   conversationStyleCss: conversationStyleCss || '',
-  wabaEmbeddedSignup: wabaEmbeddedSignup || '',
-  whatsappEmbeddedLicenseKey: whatsappEmbeddedLicenseKey || '',
-  whatsappEmbeddedFacebookAppId: whatsappEmbeddedFacebookAppId || '',
-  whatsappEmbeddedFacebookConfigId: whatsappEmbeddedFacebookConfigId || '',
-  whatsappEmbeddedFacebookToken: whatsappEmbeddedFacebookToken || '',
-
+  wabaEmbeddedSignup: wabaEmbeddedSignup || '', // proyecto@waba_chatwoot
+  whatsappEmbeddedFacebookAppId: whatsappEmbeddedFacebookAppId || '', // proyecto@waba_chatwoot
+  whatsappEmbeddedFacebookConfigId: whatsappEmbeddedFacebookConfigId || '', // proyecto@waba_chatwoot
 };
 
 export const getters = {
