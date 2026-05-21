@@ -34,6 +34,8 @@ export function useAutomation() {
   const slaPolicies = useMapGetter('sla/getSLA');
   // proyecto@automatizaciones: obtiene los tipos de oportunidad del store para la acción assign_kanban_type_process
   const kanbanTypeProcesses = useMapGetter('kanbanTypeProcesses/getKanbanTypeProcesses');
+  // proyecto@automatizacion_tracking: obtiene todas las plantillas de seguimiento del store
+  const trackingTemplates = useMapGetter('trackingTemplates/getTemplates');
 
   const booleanFilterOptions = computed(() => [
     { id: true, name: t('FILTER.ATTRIBUTE_LABELS.TRUE') },
@@ -209,15 +211,35 @@ export function useAutomation() {
   /**
    * Gets the action dropdown values for a given type.
    * @param {string} type - The type of action.
+   * @param {Array} conditions - Optional automation conditions; used to filter tracking templates by inbox.
    * @returns {Array} An array of action dropdown values.
    */
-  const getActionDropdownValues = type => {
+  // proyecto@automatizacion_tracking: acepta conditions para filtrar plantillas por inbox cuando type === 'assign_tracking_template'
+  const getActionDropdownValues = (type, conditions = []) => {
+    let templates = trackingTemplates.value || [];
+
+    if (type === 'assign_tracking_template' && conditions.length > 0) {
+      const inboxCondition = conditions.find(c => c.attribute_key === 'inbox_id');
+      if (inboxCondition) {
+        const inboxIds = (inboxCondition.values || []).map(v =>
+          typeof v === 'object' ? v.id : v
+        );
+        if (inboxIds.length > 0) {
+          const inboxIdSet = new Set(inboxIds.map(Number));
+          templates = templates.filter(t => inboxIdSet.has(Number(t.inbox_id)));
+        }
+      }
+    }
+
+    const trackingTemplateOptions = templates.map(t => ({ id: t.id, name: t.name }));
+
     return getActionOptions({
       agents: agents.value,
       labels: labels.value,
       teams: teams.value,
       slaPolicies: slaPolicies.value,
       kanbanTypeProcesses: kanbanTypeProcessOptions.value, // proyecto@automatizaciones
+      trackingTemplates: trackingTemplateOptions, // proyecto@automatizacion_tracking
       languages,
       type,
     });
