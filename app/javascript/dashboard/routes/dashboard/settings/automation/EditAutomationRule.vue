@@ -259,7 +259,7 @@ export default {
               :key="i"
               v-model="automation.actions[i]"
               :action-types="automationActionTypes"
-              :dropdown-values="getActionDropdownValues(action.action_name)"
+              :dropdown-values="getActionDropdownValues(action.action_name, automation.conditions)"
               :show-action-input="
                 showActionInput(automationActionTypes, action.action_name)
               "
