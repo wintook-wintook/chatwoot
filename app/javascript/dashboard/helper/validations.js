@@ -132,6 +132,8 @@ const validateSingleAction = action => {
     'snooze_conversation',
     'resolve_conversation',
     'remove_assigned_team',
+    'cancel_active_tracking',
+    'pause_active_tracking',
   ];
 
   if (
