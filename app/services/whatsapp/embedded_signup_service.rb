@@ -33,8 +33,12 @@ class Whatsapp::EmbeddedSignupService
     @client.validate_token_access(@access_token, @waba_id)
     @phone_info = @client.fetch_phone_info(@waba_id, @access_token, @phone_number_id)
     channel = create_or_find_channel
-    setup_webhooks(channel)
+    @webhook_result = setup_webhooks(channel)
     channel
+  end
+
+  def webhook_result
+    @webhook_result || { success: false, url: nil, token: nil }
   end
 
   private
@@ -88,19 +92,21 @@ class Whatsapp::EmbeddedSignupService
 
   def setup_webhooks(channel)
     frontend_url = ENV.fetch('FRONTEND_URL', '')
-    phone_number = channel.phone_number
-    callback_url = "#{frontend_url}/webhooks/whatsapp/#{phone_number}"
+    phone_number_encoded = CGI.escape(channel.phone_number)
+    callback_url = "#{frontend_url}/webhooks/whatsapp/#{phone_number_encoded}"
     verify_token = channel.provider_config['webhook_verify_token']
 
-    unless @phone_info[:verified]
-      @client.register_phone(@phone_info[:phone_number_id], @access_token)
-    end
+    @client.register_phone(@phone_info[:phone_number_id], @access_token) unless @phone_info[:verified]
 
     response = @client.subscribe_webhook(@waba_id, @access_token, callback_url, verify_token)
-    unless response.success?
-      Rails.logger.error "[WHATSAPP] Webhook setup failed: #{response.body}"
+    if response.success?
+      { success: true, url: callback_url, token: verify_token }
+    else
+      Rails.logger.error "[WHATSAPP] Webhook setup failed (#{response.code}): #{response.body}"
+      { success: false, url: callback_url, token: verify_token, error: response.body }
     end
   rescue StandardError => e
     Rails.logger.error "[WHATSAPP] Webhook setup error: #{e.message}"
+    { success: false, url: callback_url, token: verify_token, error: e.message }
   end
 end
