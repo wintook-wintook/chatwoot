@@ -47,11 +47,19 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     active_trackings = find_active_trackings(message)
 
-    MessageCoordinator.new(
-      message:          message,
-      trackings:        active_trackings,
-      tracking_handler: method(:process_message_for_tracking)
-    ).route
+    botseller_available = defined?(BotSeller::Dispatcher) && BotSeller::Dispatcher.configured?
+
+    if active_trackings.any?
+      Rails.logger.info "[Coordinator] 📋 #{active_trackings.count} seguimiento(s) activo(s)"
+      tracking_replied = active_trackings.any? { |t| process_message_for_tracking(t, message) }
+      if !tracking_replied && botseller_available
+        Rails.logger.info '[Coordinator] 🤖 Tracking sin respuesta → escalando a [@botseller]'
+        BotSeller::Dispatcher.new(message).dispatch
+      end
+    elsif botseller_available
+      Rails.logger.info '[Coordinator] 🤖 Sin seguimiento, @botseller disponible → [@botseller]'
+      BotSeller::Dispatcher.new(message).dispatch
+    end
 
   rescue StandardError => e
     Rails.logger.error "[Coordinator] ❌ Error: #{e.message}"
