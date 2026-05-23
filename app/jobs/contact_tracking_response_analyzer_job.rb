@@ -42,6 +42,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     message = Message.find_by(id: message_id)
     return unless message&.incoming?
     return unless message_has_content?(message)
+    return if already_replied_by_bot?(message)
 
     Rails.logger.info "[Coordinator] 🔍 Mensaje ##{message_id}: \"#{message_text_for_ai(message).truncate(80)}\""
 
@@ -183,6 +184,14 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       .where(contact_id: message.sender&.id)
       .where(conversation_id: message.conversation_id)
       .where(status: %w[active scheduled pending paused])
+  end
+
+  def already_replied_by_bot?(message)
+    message.conversation.messages
+           .where(message_type: Message.message_types[:outgoing])
+           .where('created_at > ?', message.created_at)
+           .where("content_attributes->>'sentiment_auto_reply' = 'true'")
+           .exists?
   end
 
   # ==============================================================================
