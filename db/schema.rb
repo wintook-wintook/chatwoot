@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_05_20_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_05_20_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -464,7 +464,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_20_100000) do
     t.jsonb "keyword_actions", default: [], null: false
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
-    t.index ["contact_id", "status"], name: "index_unique_active_tracking_per_contact", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))"
+    t.index ["contact_id", "status"], name: "index_unique_active_tracking_per_contact", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('scheduled'::character varying)::text, ('active'::character varying)::text, ('paused'::character varying)::text]))"
     t.index ["contact_id"], name: "index_contact_trackings_on_contact_id"
     t.index ["conversation_id", "inbox_id"], name: "index_contact_trackings_on_conversation_id_and_inbox_id"
     t.index ["conversation_id"], name: "index_contact_trackings_on_conversation_id"
@@ -717,30 +717,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_20_100000) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.jsonb "settings", default: {}
-  end
-
-  create_table "kanban_processes", force: :cascade do |t|
-    t.string "type_process_name", null: false
-    t.boolean "default", default: false
-    t.boolean "is_system", default: false
-    t.integer "position", default: 0
-    t.bigint "account_id", null: false
-    t.bigint "kanban_type_process_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_kanban_processes_on_account_id"
-    t.index ["kanban_type_process_id"], name: "index_kanban_processes_on_kanban_type_process_id"
-  end
-
-  create_table "kanban_type_processes", force: :cascade do |t|
-    t.string "process_name", null: false
-    t.boolean "default", default: false
-    t.boolean "is_system", default: false
-    t.bigint "account_id", null: false
-    t.datetime "created_at"
-    t.datetime "updated_at"
-    t.index ["account_id"], name: "index_kanban_type_processes_on_account_id"
-    t.index ["account_id"], name: "unique_default_kanban_type_process_per_account", unique: true, where: "(\"default\" = true)"
   end
 
   create_table "knowledge_items", force: :cascade do |t|
@@ -1100,10 +1076,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_20_100000) do
     t.datetime "updated_at", null: false
     t.bigint "inbox_id"
     t.bigint "user_id"
-    t.jsonb "keyword_actions", default: [], null: false
     t.integer "retry_interval_value", default: 1
     t.string "retry_interval_unit", default: "days"
+    t.jsonb "keyword_actions", default: [], null: false
     t.integer "kbase_hook_id"
+    t.jsonb "calendar_integration_ids", default: [], null: false
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
@@ -1200,9 +1177,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_05_20_100000) do
   add_foreign_key "contact_trackings", "conversations"
   add_foreign_key "contact_trackings", "inboxes"
   add_foreign_key "inboxes", "portals"
-  add_foreign_key "kanban_processes", "accounts"
-  add_foreign_key "kanban_processes", "kanban_type_processes"
-  add_foreign_key "kanban_type_processes", "accounts"
   add_foreign_key "knowledge_items", "accounts"
   add_foreign_key "knowledge_items", "knowledge_sources"
   add_foreign_key "knowledge_sources", "accounts"
