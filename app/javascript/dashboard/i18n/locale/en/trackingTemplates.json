@@ -114,6 +114,14 @@
       "PLACEHOLDER": "Select a template...",
       "NONE": "No template",
       "APPLIED_MESSAGE": "Template \"%{name}\" applied. Fields are editable."
+    },
+    "CALENDARS": {
+      "TAB_TITLE": "Agendas",
+      "TITLE": "Linked agendas",
+      "DESCRIPTION": "Select the agents whose Google Calendar agenda will be linked to this template.",
+      "LOADING": "Loading agendas...",
+      "NONE_AVAILABLE": "No agents with Google Calendar connected. Agents must connect their calendar from Settings.",
+      "SELECTED_COUNT": "%{count} agenda(s) selected"
     }
   }
 }

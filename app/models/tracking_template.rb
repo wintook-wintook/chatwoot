@@ -10,22 +10,23 @@
 #
 # Table name: tracking_templates
 #
-#  id                   :bigint           not null, primary key
-#  ai_context           :text
-#  complementary_prompt :text
-#  keyword_actions      :jsonb            not null
-#  name                 :string           not null
-#  objective            :string           not null
-#  retry_interval_unit  :string           default("days")
-#  retry_interval_value :integer          default(1)
-#  tags                 :json
-#  whatsapp_templates   :json
-#  created_at           :datetime         not null
-#  updated_at           :datetime         not null
-#  account_id           :bigint           not null
-#  inbox_id             :bigint
-#  kbase_hook_id        :integer
-#  user_id              :bigint
+#  id                       :bigint           not null, primary key
+#  ai_context               :text
+#  calendar_integration_ids :jsonb            not null
+#  complementary_prompt     :text
+#  keyword_actions          :jsonb            not null
+#  name                     :string           not null
+#  objective                :string           not null
+#  retry_interval_unit      :string           default("days")
+#  retry_interval_value     :integer          default(1)
+#  tags                     :json
+#  whatsapp_templates       :json
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  account_id               :bigint           not null
+#  inbox_id                 :bigint
+#  kbase_hook_id            :integer
+#  user_id                  :bigint
 #
 # Indexes
 #
