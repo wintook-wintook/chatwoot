@@ -12,6 +12,7 @@
 #
 #  id                       :bigint           not null, primary key
 #  ai_context               :text
+#  calendar_event_duration  :integer          default(30)
 #  calendar_integration_ids :jsonb            not null
 #  complementary_prompt     :text
 #  keyword_actions          :jsonb            not null

@@ -44,6 +44,7 @@ export default {
         retry_interval_unit: 'days', // proyecto@automatizacion_tracking
         keyword_actions: [], // proyecto@contact_tracking
         calendar_integration_ids: [],
+        calendar_event_duration: 30,
       },
       // Tabs Contexto IA / Entrenamiento
       activeContextTab: 0,
@@ -218,6 +219,10 @@ export default {
             calendar_integration_ids: Array.isArray(val.calendar_integration_ids)
               ? [...val.calendar_integration_ids]
               : [],
+<<<<<<< HEAD
+=======
+            calendar_event_duration: val.calendar_event_duration || 30,
+>>>>>>> f7fcb151 (feat: agregar tab de Agendas con vinculación de Google Calendar y duración del evento en plantillas de seguimiento)
           };
           if (
             this.form.whatsapp_templates.length > 0 &&
@@ -308,6 +313,10 @@ export default {
           keyword_actions: this.form.keyword_actions || [],      // proyecto@contact_tracking
           kbase_hook_id: this.selectedKbaseHookId || null,
           calendar_integration_ids: this.form.calendar_integration_ids || [],
+<<<<<<< HEAD
+=======
+          calendar_event_duration: this.form.calendar_event_duration || 30,
+>>>>>>> f7fcb151 (feat: agregar tab de Agendas con vinculación de Google Calendar y duración del evento en plantillas de seguimiento)
         },
       };
       if (!this.isCreateMode) {
@@ -725,6 +734,30 @@ export default {
           <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
             {{ $t('TRACKING_TEMPLATES.CALENDARS.DESCRIPTION') }}
           </p>
+<<<<<<< HEAD
+=======
+
+          <!-- Duración del evento -->
+          <div class="mb-4">
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2">
+              {{ $t('TRACKING_TEMPLATES.CALENDARS.EVENT_DURATION') }}
+            </span>
+            <div class="flex gap-2">
+              <button
+                v-for="option in [{value: 30, label: '30 min'}, {value: 60, label: '1 hora'}, {value: 120, label: '2 horas'}]"
+                :key="option.value"
+                type="button"
+                class="px-4 py-2 text-sm rounded-md border transition-colors"
+                :class="form.calendar_event_duration === option.value
+                  ? 'bg-woot-500 text-white border-woot-500'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'"
+                @click="form.calendar_event_duration = option.value"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+          </div>
+>>>>>>> f7fcb151 (feat: agregar tab de Agendas con vinculación de Google Calendar y duración del evento en plantillas de seguimiento)
           <div v-if="isLoadingCalendars" class="text-sm text-slate-500 py-2">
             {{ $t('TRACKING_TEMPLATES.CALENDARS.LOADING') }}
           </div>

@@ -121,7 +121,8 @@
       "DESCRIPTION": "Selecciona los agentes cuya agenda de Google Calendar quedará vinculada a esta plantilla.",
       "LOADING": "Cargando agendas...",
       "NONE_AVAILABLE": "No hay agentes con Google Calendar conectado. Los agentes deben conectar su calendario desde Configuración.",
-      "SELECTED_COUNT": "%{count} agenda(s) seleccionada(s)"
+      "SELECTED_COUNT": "%{count} agenda(s) seleccionada(s)",
+      "EVENT_DURATION": "Duración del evento"
     }
   },
   "TRACKING_IMPORT": {
