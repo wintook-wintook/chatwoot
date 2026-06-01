@@ -121,7 +121,8 @@
       "DESCRIPTION": "Select the agents whose Google Calendar agenda will be linked to this template.",
       "LOADING": "Loading agendas...",
       "NONE_AVAILABLE": "No agents with Google Calendar connected. Agents must connect their calendar from Settings.",
-      "SELECTED_COUNT": "%{count} agenda(s) selected"
+      "SELECTED_COUNT": "%{count} agenda(s) selected",
+      "EVENT_DURATION": "Event duration"
     }
   }
 }
