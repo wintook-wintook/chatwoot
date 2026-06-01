@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# proyecto@bot_seguimiento_calendar
 # ================================================================================
 # proyecto@contact_tracking - BOT CONVERSACIONAL DE SEGUIMIENTOS
 # ================================================================================
@@ -86,7 +87,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       end
     end
 
-    # [2] RouterService — clasifica ruta via IA
+    # [2] proyecto@bot_seguimiento_calendar — Detección de elección de slot
+    if pending_slot_selection?(tracking)
+      Rails.logger.info "[TrackingBot] 📅 PENDING_SLOT detectado → procesando elección de horario"
+      return handle_slot_selection(tracking, message)
+    end
+
+    # [3] RouterService — clasifica ruta via IA
     route_result = classify_route(tracking, message)
     route        = route_result[:route]
 
@@ -96,6 +103,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                 true
               when :interested
                 handle_interested(tracking, message, route_result[:confidence])
+                true
+              when :book_appointment
+                handle_book_appointment(tracking, message)
                 true
               when :reschedule
                 handle_reschedule(tracking, message, route_result)
@@ -339,6 +349,186 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   # ==============================================================================
+  # proyecto@bot_seguimiento_calendar
+  # Handler: Agendar cita via Google Calendar
+  # ==============================================================================
+  def handle_book_appointment(tracking, message)
+    Rails.logger.info "[TrackingBot] 📅 BOOK_APPOINTMENT → buscando disponibilidad en calendarios"
+
+    cal_ids = tracking.calendar_integration_ids.presence
+
+    unless cal_ids.present?
+      Rails.logger.info '[TrackingBot] 📅 Sin calendar_integration_ids en plantilla → fallback :interested'
+      handle_interested(tracking, message, 0.9)
+      return
+    end
+
+    timezone = message.conversation.inbox.timezone.presence || 'America/Mexico_City'
+    slots    = ContactTrackings::AvailabilitySlotService.new(
+      calendar_integration_ids: cal_ids,
+      timezone: timezone
+    ).call
+
+    if slots.empty?
+      Rails.logger.info '[TrackingBot] 📅 Sin slots disponibles → fallback :interested'
+      reply = generate_action_reply(tracking, message, :book_appointment_no_slots)
+      send_auto_reply(tracking, message, reply)
+      tracking.disable_auto_retry_mode!
+      tracking.update!(
+        ai_context: "#{tracking.ai_context}\n\n📅 [BA] Cliente quiso agendar pero no había disponibilidad. Requiere atención humana."
+      )
+      tracking.pause!
+      notify_admin_interested(tracking, message)
+      create_private_note(tracking, message, "📅 Cliente quiso agendar una cita pero no había horarios disponibles en el calendario. Requiere atención humana.")
+      return
+    end
+
+    reply = format_slots_message(slots, timezone)
+    send_auto_reply(tracking, message, reply)
+
+    slots_json = slots.map { |s| { slot: s[:slot].utc.iso8601, end_time: s[:end_time].utc.iso8601, agent_name: s[:agent_name], cal_id: s[:calendar_integration_id] } }
+    tracking.update!(
+      ai_context: "#{tracking.ai_context}\n\n📅 [PENDING_SLOT] Esperando elección de horario.\nSlots ofrecidos: #{slots_json.to_json}"
+    )
+
+    Rails.logger.info "[TrackingBot] 📅 #{slots.size} slots enviados al contacto — esperando elección"
+  end
+
+  def pending_slot_selection?(tracking)
+    tracking.ai_context.to_s.include?('[PENDING_SLOT]')
+  end
+
+  def handle_slot_selection(tracking, message)
+    slots_json = tracking.ai_context.to_s.match(/Slots ofrecidos: (\[.*?\])/m)&.captures&.first
+    slots = slots_json ? JSON.parse(slots_json) : []
+
+    if slots.empty?
+      Rails.logger.warn '[TrackingBot] 📅 PENDING_SLOT sin slots en ai_context → limpiando estado'
+      clear_pending_slot(tracking)
+      return false
+    end
+
+    choice = parse_slot_choice(message_text_for_ai(message), slots.size)
+
+    if choice.nil?
+      Rails.logger.info '[TrackingBot] 📅 Elección no reconocida → repreguntando'
+      reply = "No entendí tu elección 😊 Por favor respondé con el número del horario que preferís (1 al #{slots.size})."
+      send_auto_reply(tracking, message, reply)
+      return true
+    end
+
+    selected = slots[choice - 1]
+    Rails.logger.info "[TrackingBot] 📅 Slot elegido: opción #{choice} — #{selected['slot']}"
+    confirm_and_create_appointment(tracking, message, selected)
+    true
+  rescue StandardError => e
+    Rails.logger.error "[TrackingBot] ❌ Error en handle_slot_selection: #{e.message}"
+    clear_pending_slot(tracking)
+    false
+  end
+
+  def parse_slot_choice(text, max)
+    # Números escritos como dígito: "1", "2", etc.
+    match = text.match(/\b([1-#{max}])\b/)
+    return match[1].to_i if match
+
+    # Números escritos en palabras
+    word_map = { 'uno' => 1, 'primera' => 1, 'primero' => 1, 'primer' => 1,
+                 'dos' => 2, 'segunda' => 2, 'segundo' => 2,
+                 'tres' => 3, 'tercera' => 3, 'tercero' => 3,
+                 'cuatro' => 4, 'cuarta' => 4, 'cuarto' => 4,
+                 'cinco' => 5, 'quinta' => 5, 'quinto' => 5 }
+    word_map.each do |word, num|
+      return num if text.downcase.include?(word) && num <= max
+    end
+
+    nil
+  end
+
+  def clear_pending_slot(tracking)
+    cleaned = tracking.ai_context.to_s
+                      .gsub(/\n\n📅 \[PENDING_SLOT\].*?(\n\n|\z)/m, '\1')
+                      .strip
+    tracking.update_columns(ai_context: cleaned)
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ No se pudo limpiar PENDING_SLOT: #{e.message}"
+  end
+
+  def confirm_and_create_appointment(tracking, message, selected_slot)
+    timezone    = message.conversation.inbox.timezone.presence || 'America/Mexico_City'
+    slot_start  = Time.parse(selected_slot['slot'])
+    slot_end    = Time.parse(selected_slot['end_time'])
+    agent_name  = selected_slot['agent_name']
+    cal_id      = selected_slot['cal_id']
+    contact     = message.sender
+    contact_name = contact&.name || 'Cliente'
+
+    integration = UserCalendarIntegration.find_by(id: cal_id)
+
+    event_created = false
+    if integration
+      begin
+        service = GoogleCalendarService.new(integration)
+        attendees = [contact.email].compact.select(&:present?)
+        service.create_event(
+          summary:     "Cita con #{contact_name} — #{tracking.objective.truncate(60)}",
+          description: "Contacto: #{contact_name}\nTeléfono: #{contact&.phone_number}\nObjetivo: #{tracking.objective}",
+          start_time:  slot_start,
+          end_time:    slot_end,
+          attendees:   attendees
+        )
+        event_created = true
+        Rails.logger.info "[TrackingBot] 📅 Evento creado en Google Calendar para #{slot_start}"
+      rescue StandardError => e
+        Rails.logger.error "[TrackingBot] ❌ Error creando evento en Google Calendar: #{e.message}"
+      end
+    end
+
+    local_start = slot_start.in_time_zone(timezone)
+    local_end   = slot_end.in_time_zone(timezone)
+    day_names   = %w[domingo lunes martes miércoles jueves viernes sábado]
+    month_names = %w[enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre]
+    fecha_texto = "#{day_names[local_start.wday]} #{local_start.day} de #{month_names[local_start.month - 1]}"
+    hora_texto  = "#{local_start.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs"
+
+    reply = "✅ ¡Perfecto! Tu cita está agendada para el #{fecha_texto} de #{local_start.year} a las #{hora_texto}.\nTe esperamos. Si necesitás cambiarla, avisanos con anticipación. 😊"
+    send_auto_reply(tracking, message, reply)
+
+    clear_pending_slot(tracking)
+    tracking.disable_auto_retry_mode!
+    tracking.update!(
+      ai_context: "#{tracking.ai_context}\n\n✅ [CITA AGENDADA] #{fecha_texto} #{hora_texto} con #{agent_name}. Evento en Google Calendar: #{event_created ? 'creado' : 'error al crear'}."
+    )
+    tracking.pause!
+
+    nota = "📅 Cita agendada con #{contact_name}\n• Fecha: #{fecha_texto} de #{local_start.year}\n• Hora: #{hora_texto}\n• Agente: #{agent_name}\n• Evento en Calendar: #{event_created ? '✅ creado' : '⚠️ no se pudo crear'}"
+    create_private_note(tracking, message, nota)
+    notify_admin_interested(tracking, message)
+
+    Rails.logger.info "[TrackingBot] ✅ Cita confirmada y seguimiento pausado"
+  rescue StandardError => e
+    Rails.logger.error "[TrackingBot] ❌ Error en confirm_and_create_appointment: #{e.message}"
+    send_auto_reply(tracking, message, "Lo siento, tuve un problema al confirmar la cita. Un asesor te contactará pronto.")
+    clear_pending_slot(tracking)
+  end
+
+  def format_slots_message(slots, timezone)
+    day_names = %w[domingo lunes martes miércoles jueves viernes sábado]
+    month_names = %w[ene feb mar abr may jun jul ago sep oct nov dic]
+    numbers    = %w[1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣]
+
+    lines = slots.each_with_index.map do |s, i|
+      local    = s[:slot].in_time_zone(timezone)
+      local_end = s[:end_time].in_time_zone(timezone)
+      day      = day_names[local.wday]
+      month    = month_names[local.month - 1]
+      "#{numbers[i]} #{day} #{local.day} #{month} · #{local.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs"
+    end
+
+    "¡Con gusto! 📅 Tenemos los siguientes horarios disponibles:\n\n#{lines.join("\n")}\n\n¿Cuál te viene bien? Respondé con el número de tu preferencia."
+  end
+
+  # ==============================================================================
   # Generación de respuestas para acciones específicas
   # ==============================================================================
   def generate_action_reply(tracking, message, reply_type, extra_data = {})
@@ -400,6 +590,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       "Con gusto te reagendo 📅 ¿Para qué fecha y hora prefieres que te contactemos?"
     when :reschedule_error, :general_error
       "Lo siento, tuve un problema al procesar tu solicitud. Un agente se pondrá en contacto contigo pronto."
+    when :book_appointment_no_slots
+      "¡Gracias por tu interés! 😊 En este momento no tenemos horarios disponibles en agenda. Un asesor se pondrá en contacto contigo a la brevedad para coordinar una cita."
     end
   end
 

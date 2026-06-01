@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# proyecto@bot_seguimiento_calendar
 # ================================================================================
 # proyecto@contact_tracking - ROUTER DE INTENCIONES
 # ================================================================================
@@ -12,12 +13,13 @@
 #   Llama a GPT con un prompt de clasificación y retorna una ruta simbólica.
 #
 # RUTAS POSIBLES:
-#   :rejected   → El cliente rechaza / no le interesa / pide que no le contacten
-#   :interested → El cliente muestra interés claro en avanzar
-#   :reschedule → El cliente solicita cambiar la fecha/hora de contacto
-#   :discourse  → El cliente tiene una duda que requiere búsqueda en base de conocimiento
-#   :botseller  → El mensaje es un comando o consulta para el bot de ventas
-#   :tracking   → Conversación normal, sin acción especial (default)
+#   :rejected         → El cliente rechaza / no le interesa / pide que no le contacten
+#   :interested       → El cliente muestra interés claro en avanzar
+#   :reschedule       → El cliente solicita cambiar la fecha/hora de contacto
+#   :book_appointment → El cliente pide explícitamente agendar una cita, reunión o llamada
+#   :discourse        → El cliente tiene una duda que requiere búsqueda en base de conocimiento
+#   :botseller        → El mensaje es un comando o consulta para el bot de ventas
+#   :tracking         → Conversación normal, sin acción especial (default)
 #
 # RETORNO:
 #   {
@@ -33,14 +35,14 @@
 
 module ContactTrackings
   class RouterService
-    VALID_ROUTES = %w[rejected interested reschedule discourse botseller tracking].freeze
+    VALID_ROUTES = %w[rejected interested reschedule book_appointment discourse botseller tracking].freeze
 
     CLASSIFICATION_PROMPT = <<~PROMPT.strip
       Eres un clasificador de intenciones. Analiza el mensaje del cliente y responde
       ÚNICAMENTE con un JSON con la siguiente estructura, sin explicación adicional:
 
       {
-        "intent": "<una de: rejected | interested | reschedule | discourse | tracking>",
+        "intent": "<una de: rejected | interested | reschedule | book_appointment | discourse | tracking>",
         "confidence": <número entre 0.0 y 1.0>,
         "reschedule_data": {
           "relative_minutes": <null o número>,
@@ -53,13 +55,15 @@ module ContactTrackings
       }
 
       Definiciones:
-      - "rejected":   el cliente rechaza la oferta, dice que no le interesa, pide que no le contacten o similar.
-      - "interested": el cliente muestra interés explícito en avanzar, comprar, saber más, agendar reunión, etc.
-      - "reschedule": el cliente solicita cambiar cuándo se le contacta (mañana, en 2 horas, el lunes, etc.).
-      - "discourse":  el cliente tiene una duda técnica, funcional, de proceso o pide ayuda/soporte que requiere
-                      consultar una base de conocimiento. Incluye preguntas sobre cómo hacer algo, errores,
-                      configuraciones, procesos, etc.
-      - "tracking":   cualquier otro mensaje conversacional que no encaje en las categorías anteriores.
+      - "rejected":          el cliente rechaza la oferta, dice que no le interesa, pide que no le contacten o similar.
+      - "interested":        el cliente muestra interés explícito en avanzar o comprar, pero SIN pedir una cita concreta.
+      - "reschedule":        el cliente solicita cambiar cuándo se le contacta (mañana, en 2 horas, el lunes, etc.).
+      - "book_appointment":  el cliente pide explícitamente agendar una cita, reunión, llamada o quiere saber
+                             cuándo hay disponibilidad de horarios. Ejemplos: "quiero agendar una cita",
+                             "podemos hacer una llamada?", "cuándo tienen disponibilidad", "me gustaría reunirme".
+      - "discourse":         el cliente tiene una duda técnica, funcional, de proceso o pide ayuda/soporte que
+                             requiere consultar una base de conocimiento.
+      - "tracking":          cualquier otro mensaje conversacional que no encaje en las categorías anteriores.
 
       IMPORTANTE: Si el mensaje del cliente es una confirmación breve ("es correcto", "sí", "correcto",
       "así es", "exacto", etc.) y el historial reciente muestra que el bot acaba de pedir confirmación

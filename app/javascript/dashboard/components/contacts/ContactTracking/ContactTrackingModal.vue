@@ -490,7 +490,10 @@ export default {
                         whatsapp_templates: this.isWhatsAppChannel ? this.whatsappTemplates : [],
 
                         // proyecto@contact_tracking: palabras clave de acción
-                        keyword_actions: formData.keyword_actions || []
+                        keyword_actions: formData.keyword_actions || [],
+
+                        // proyecto@bot_seguimiento_calendar: calendarios vinculados desde la plantilla
+                        calendar_integration_ids: formData.calendar_integration_ids || []
                     }
                 };
 

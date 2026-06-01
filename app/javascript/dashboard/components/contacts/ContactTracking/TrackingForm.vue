@@ -491,6 +491,10 @@ export default {
             formData.value.keyword_actions = Array.isArray(template.keyword_actions)
                 ? template.keyword_actions.map(ka => ({ ...ka }))
                 : [];
+            // proyecto@bot_seguimiento_calendar: copiar calendarios vinculados desde la plantilla
+            formData.value.calendar_integration_ids = Array.isArray(template.calendar_integration_ids)
+                ? [...template.calendar_integration_ids]
+                : [];
         };
 
         const clearTemplateFields = () => {

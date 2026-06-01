@@ -26,6 +26,7 @@
 #  id                         :bigint           not null, primary key
 #  ai_context                 :text
 #  attempt_count              :integer          default(0), not null
+#  calendar_integration_ids   :jsonb            not null
 #  complementary_prompt       :text
 #  interval_days              :integer
 #  keyword_actions            :jsonb            not null
