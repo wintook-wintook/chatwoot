@@ -3,14 +3,15 @@
 # Obtiene el contenido via API, lo divide en chunks, genera embeddings y hace upsert en knowledge_items.
 # bulk: true → decrementa sync_jobs_pending en la fuente y finaliza cuando llega a 0.
 class DiscourseTopicSyncJob < ApplicationJob
-  queue_as :default
+  queue_as :low
 
   # Chunking: ~1,500 tokens por chunk (6,000 chars), bien por debajo del límite de 8,191 tokens.
   # El solapamiento preserva contexto entre chunks contiguos.
   CHUNK_SIZE    = 6_000
   CHUNK_OVERLAP = 800
 
-  def perform(source_id:, topic_id:, action:, bulk: false, category_name: nil)
+  def perform(source_id:, topic_id:, action:, bulk: false, category_name: nil, attempt: 0)
+    @skip_finalize = false
     source  = KnowledgeSource.find_by(id: source_id)
     return unless source
 
@@ -19,12 +20,23 @@ class DiscourseTopicSyncJob < ApplicationJob
 
     case action
     when 'upsert'
-      upsert_topic(account, source, config, topic_id, category_name)
+      result = upsert_topic(account, source, config, topic_id, category_name, attempt: attempt)
+      if result == :rate_limited && attempt < 3
+        wait = (attempt + 1) * 20 + rand(10)
+        Rails.logger.warn "[DiscourseTopicSync] 429 topic #{topic_id}, re-encolando en #{wait}s (intento #{attempt + 1}/4)"
+        self.class.set(wait: wait.seconds).perform_later(
+          source_id: source_id, topic_id: topic_id, action: action,
+          bulk: bulk, category_name: category_name, attempt: attempt + 1
+        )
+        @skip_finalize = true  # El job re-encolado decrementará el contador cuando termine
+      elsif result == :rate_limited
+        Rails.logger.warn "[DiscourseTopicSync] Topic #{topic_id} — 429 persistente tras 4 intentos, se omite"
+      end
     when 'destroy'
       KnowledgeItem.where(account_id: account.id, source_type: 'discourse', source_id: topic_id).destroy_all
     end
   ensure
-    finalize_bulk(source) if bulk && source
+    finalize_bulk(source) if bulk && source && !@skip_finalize
   end
 
   private
@@ -44,8 +56,9 @@ class DiscourseTopicSyncJob < ApplicationJob
     Rails.logger.error "[DiscourseTopicSync] Error finalizing bulk for source #{source.id}: #{e.message}"
   end
 
-  def upsert_topic(account, source, config, topic_id, category_name = nil)
+  def upsert_topic(account, source, config, topic_id, category_name = nil, attempt: 0)
     topic = fetch_topic(config, topic_id)
+    return :rate_limited if topic == :rate_limited
     return unless topic
     return if category_about_topic?(config, topic)
 
@@ -139,9 +152,12 @@ class DiscourseTopicSyncJob < ApplicationJob
 
   def extract_content(topic)
     first_post = topic.dig('post_stream', 'posts', 0)
-    return unless first_post
+    return nil unless first_post
 
-    ActionView::Base.full_sanitizer.sanitize(first_post['cooked'].to_s).squish
+    sanitizer = ActionView::Base.full_sanitizer
+    body = sanitizer.sanitize(first_post['cooked'].to_s).squish
+
+    body.presence || topic['title'].to_s.strip.presence
   end
 
   # Devuelve true si el topic es el "About the X category" creado automáticamente por Discourse.
@@ -153,7 +169,7 @@ class DiscourseTopicSyncJob < ApplicationJob
 
     base_url     = config['url'].to_s.chomp('/')
     api_key      = config['api_key'].to_s
-    api_username = config['api_username'].to_s.presence || 'system'
+    api_username = config['username'].to_s.presence || 'system'
 
     uri  = URI("#{base_url}/c/#{category_id}/show.json")
     http = Net::HTTP.new(uri.host, uri.port)
@@ -190,7 +206,7 @@ class DiscourseTopicSyncJob < ApplicationJob
 
     request = Net::HTTP::Get.new(uri)
     request['Api-Key']      = config['api_key'].to_s if config['api_key'].present?
-    request['Api-Username'] = config['api_username'].to_s.presence || 'system'
+    request['Api-Username'] = config['username'].to_s.presence || 'system'
 
     response = http.request(request)
     return nil unless response.is_a?(Net::HTTPSuccess)
@@ -203,7 +219,7 @@ class DiscourseTopicSyncJob < ApplicationJob
   def fetch_topic(config, topic_id)
     base_url     = config['url'].to_s.chomp('/')
     api_key      = config['api_key'].to_s
-    api_username = config['api_username'].to_s.presence || 'system'
+    api_username = config['username'].to_s.presence || 'system'
 
     uri  = URI("#{base_url}/t/#{topic_id}.json")
     http = Net::HTTP.new(uri.host, uri.port)
@@ -217,7 +233,13 @@ class DiscourseTopicSyncJob < ApplicationJob
     request['Content-Type'] = 'application/json'
 
     response = http.request(request)
-    return unless response.is_a?(Net::HTTPSuccess)
+
+    return :rate_limited if response.code.to_i == 429
+
+    unless response.is_a?(Net::HTTPSuccess)
+      Rails.logger.warn "[DiscourseTopicSync] HTTP #{response.code} fetching topic #{topic_id} — skipping"
+      return nil
+    end
 
     JSON.parse(response.body)
   rescue StandardError => e

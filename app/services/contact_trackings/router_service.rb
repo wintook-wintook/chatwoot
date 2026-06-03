@@ -15,7 +15,7 @@
 #   :rejected   → El cliente rechaza / no le interesa / pide que no le contacten
 #   :interested → El cliente muestra interés claro en avanzar
 #   :reschedule → El cliente solicita cambiar la fecha/hora de contacto
-#   :discourse  → El cliente tiene una duda que requiere búsqueda en base de conocimiento
+#   :kbase      → El cliente tiene una duda que requiere búsqueda en base de conocimiento
 #   :botseller  → El mensaje es un comando o consulta para el bot de ventas
 #   :tracking   → Conversación normal, sin acción especial (default)
 #
@@ -33,14 +33,14 @@
 
 module ContactTrackings
   class RouterService
-    VALID_ROUTES = %w[rejected interested reschedule discourse botseller tracking].freeze
+    VALID_ROUTES = %w[rejected interested reschedule kbase botseller tracking].freeze
 
     CLASSIFICATION_PROMPT = <<~PROMPT.strip
       Eres un clasificador de intenciones. Analiza el mensaje del cliente y responde
       ÚNICAMENTE con un JSON con la siguiente estructura, sin explicación adicional:
 
       {
-        "intent": "<una de: rejected | interested | reschedule | discourse | tracking>",
+        "intent": "<una de: rejected | interested | reschedule | kbase | tracking>",
         "confidence": <número entre 0.0 y 1.0>,
         "reschedule_data": {
           "relative_minutes": <null o número>,
@@ -56,14 +56,14 @@ module ContactTrackings
       - "rejected":   el cliente rechaza la oferta, dice que no le interesa, pide que no le contacten o similar.
       - "interested": el cliente muestra interés explícito en avanzar, comprar, saber más, agendar reunión, etc.
       - "reschedule": el cliente solicita cambiar cuándo se le contacta (mañana, en 2 horas, el lunes, etc.).
-      - "discourse":  el cliente tiene una duda técnica, funcional, de proceso o pide ayuda/soporte que requiere
+      - "kbase":      el cliente tiene una duda técnica, funcional, de proceso o pide ayuda/soporte que requiere
                       consultar una base de conocimiento. Incluye preguntas sobre cómo hacer algo, errores,
                       configuraciones, procesos, etc.
       - "tracking":   cualquier otro mensaje conversacional que no encaje en las categorías anteriores.
 
       IMPORTANTE: Si el mensaje del cliente es una confirmación breve ("es correcto", "sí", "correcto",
       "así es", "exacto", etc.) y el historial reciente muestra que el bot acaba de pedir confirmación
-      sobre una consulta técnica, clasifica como "discourse" para continuar respondiendo esa consulta.
+      sobre una consulta técnica, clasifica como "kbase" para continuar respondiendo esa consulta.
 
       Si el intent NO es "reschedule", el campo "reschedule_data" debe ser null.
 
@@ -95,9 +95,9 @@ module ContactTrackings
         return fallback('unknown_intent')
       end
 
-      # Si la ruta es :discourse pero no hay base de conocimiento → :tracking
-      if intent == 'discourse' && !@kbase_available
-        Rails.logger.info '[RouterService] 📚 :discourse solicitado pero kbase no disponible → :tracking'
+      # Si la ruta es :kbase pero no hay base de conocimiento disponible → :tracking
+      if intent == 'kbase' && !@kbase_available
+        Rails.logger.info '[RouterService] 📚 :kbase solicitado pero kbase no disponible → :tracking'
         intent = 'tracking'
       end
 
