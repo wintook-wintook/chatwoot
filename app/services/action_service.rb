@@ -135,6 +135,8 @@ class ActionService
       complementary_prompt: template.complementary_prompt,
       whatsapp_templates: templates,
       keyword_actions: template.keyword_actions.is_a?(Array) ? template.keyword_actions : [],
+      calendar_integration_ids: template.calendar_integration_ids.is_a?(Array) ? template.calendar_integration_ids : [],
+      tracking_template_id: template.id,
       max_attempts: max_att,
       scheduled_for: Time.current + interval_minutes.minutes,
       retry_interval_value: interval_value,

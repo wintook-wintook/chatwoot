@@ -4,15 +4,16 @@
 
 module ContactTrackings
   class AvailabilitySlotService
-    WORK_HOUR_START = 9
-    WORK_HOUR_END   = 18
-    SLOT_DURATION   = 60  # minutos
-    DAYS_AHEAD      = 5   # días hábiles a consultar
-    MAX_SLOTS       = 5   # máximo de slots a retornar
+    WORK_HOUR_START    = 9
+    WORK_HOUR_END      = 18
+    DEFAULT_DURATION   = 30  # minutos
+    DAYS_AHEAD         = 5   # días hábiles a consultar
+    MAX_SLOTS          = 5   # máximo de slots a retornar
 
-    def initialize(calendar_integration_ids:, timezone: 'America/Mexico_City')
+    def initialize(calendar_integration_ids:, timezone: 'America/Mexico_City', slot_duration: DEFAULT_DURATION)
       @calendar_integration_ids = Array(calendar_integration_ids).map(&:to_i).uniq
-      @timezone = timezone.presence || 'America/Mexico_City'
+      @timezone      = timezone.presence || 'America/Mexico_City'
+      @slot_duration = slot_duration.to_i.positive? ? slot_duration.to_i : DEFAULT_DURATION
     end
 
     def call
@@ -60,7 +61,7 @@ module ContactTrackings
       current    = time_min
 
       while current < time_max
-        slot_end = current + SLOT_DURATION.minutes
+        slot_end = current + @slot_duration.minutes
 
         if within_work_hours?(current, slot_end) && !overlaps_busy?(current, slot_end, busy_periods)
           slots << {
@@ -72,7 +73,7 @@ module ContactTrackings
           break if slots.size >= MAX_SLOTS
         end
 
-        current += SLOT_DURATION.minutes
+        current += @slot_duration.minutes
       end
 
       slots
@@ -94,10 +95,10 @@ module ContactTrackings
     end
 
     def align_to_slot(time)
-      remainder = time.min % SLOT_DURATION
+      remainder = time.min % @slot_duration
       return time.change(sec: 0) if remainder.zero?
 
-      (time + (SLOT_DURATION - remainder).minutes).change(sec: 0)
+      (time + (@slot_duration - remainder).minutes).change(sec: 0)
     end
 
     def business_days_from_now(days)

@@ -50,6 +50,7 @@
 #  conversation_id            :bigint
 #  inbox_id                   :bigint           not null
 #  quote_id                   :integer
+#  tracking_template_id       :integer
 #
 # Indexes
 #
@@ -80,6 +81,7 @@ class ContactTracking < ApplicationRecord
   belongs_to :conversation, optional: true
   belongs_to :inbox
   belongs_to :account
+  belongs_to :tracking_template, optional: true
 
   # ==============================================================================
   # Serializers - Para campos JSON

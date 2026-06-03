@@ -219,10 +219,7 @@ export default {
             calendar_integration_ids: Array.isArray(val.calendar_integration_ids)
               ? [...val.calendar_integration_ids]
               : [],
-<<<<<<< HEAD
-=======
             calendar_event_duration: val.calendar_event_duration || 30,
->>>>>>> f7fcb151 (feat: agregar tab de Agendas con vinculación de Google Calendar y duración del evento en plantillas de seguimiento)
           };
           if (
             this.form.whatsapp_templates.length > 0 &&
@@ -313,10 +310,7 @@ export default {
           keyword_actions: this.form.keyword_actions || [],      // proyecto@contact_tracking
           kbase_hook_id: this.selectedKbaseHookId || null,
           calendar_integration_ids: this.form.calendar_integration_ids || [],
-<<<<<<< HEAD
-=======
           calendar_event_duration: this.form.calendar_event_duration || 30,
->>>>>>> f7fcb151 (feat: agregar tab de Agendas con vinculación de Google Calendar y duración del evento en plantillas de seguimiento)
         },
       };
       if (!this.isCreateMode) {
@@ -734,8 +728,6 @@ export default {
           <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
             {{ $t('TRACKING_TEMPLATES.CALENDARS.DESCRIPTION') }}
           </p>
-<<<<<<< HEAD
-=======
 
           <!-- Duración del evento -->
           <div class="mb-4">
@@ -757,7 +749,6 @@ export default {
               </button>
             </div>
           </div>
->>>>>>> f7fcb151 (feat: agregar tab de Agendas con vinculación de Google Calendar y duración del evento en plantillas de seguimiento)
           <div v-if="isLoadingCalendars" class="text-sm text-slate-500 py-2">
             {{ $t('TRACKING_TEMPLATES.CALENDARS.LOADING') }}
           </div>

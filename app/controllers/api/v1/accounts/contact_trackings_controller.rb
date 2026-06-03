@@ -320,6 +320,7 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
       :complementary_prompt,       # ⭐ NUEVO - Instrucciones adicionales para responder preguntas
       :quote_id,
       :status,
+      :tracking_template_id,                             # proyecto@bot_seguimiento_calendar
       whatsapp_templates: [],                            # ⭐ NUEVO - Array de strings
       keyword_actions: [:keyword, :action, :direction],  # proyecto@contact_tracking
       calendar_integration_ids: []                       # proyecto@bot_seguimiento_calendar
@@ -355,7 +356,11 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
 
       # proyecto@contact_tracking: palabras clave de acción
       keyword_actions: tracking.keyword_actions || [],
-      
+
+      # proyecto@bot_seguimiento_calendar
+      calendar_integration_ids: tracking.calendar_integration_ids || [],
+      tracking_template_id: tracking.tracking_template_id,
+
       # Campos existentes
       ai_context: tracking.ai_context,
       complementary_prompt: tracking.complementary_prompt,  # ⭐ NUEVO - Instrucciones para preguntas

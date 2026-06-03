@@ -355,7 +355,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def handle_book_appointment(tracking, message)
     Rails.logger.info "[TrackingBot] 📅 BOOK_APPOINTMENT → buscando disponibilidad en calendarios"
 
-    cal_ids = tracking.calendar_integration_ids.presence
+    cal_ids = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
 
     unless cal_ids.present?
       Rails.logger.info '[TrackingBot] 📅 Sin calendar_integration_ids en plantilla → fallback :interested'
@@ -364,9 +364,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     timezone = message.conversation.inbox.timezone.presence || 'America/Mexico_City'
+    duration = tracking.tracking_template&.calendar_event_duration || 30
     slots    = ContactTrackings::AvailabilitySlotService.new(
       calendar_integration_ids: cal_ids,
-      timezone: timezone
+      timezone: timezone,
+      slot_duration: duration
     ).call
 
     if slots.empty?
@@ -518,11 +520,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     numbers    = %w[1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣]
 
     lines = slots.each_with_index.map do |s, i|
-      local    = s[:slot].in_time_zone(timezone)
+      local     = s[:slot].in_time_zone(timezone)
       local_end = s[:end_time].in_time_zone(timezone)
-      day      = day_names[local.wday]
-      month    = month_names[local.month - 1]
-      "#{numbers[i]} #{day} #{local.day} #{month} · #{local.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs"
+      day       = day_names[local.wday]
+      month     = month_names[local.month - 1]
+      agent     = s[:agent_name].presence || 'Agenda'
+      "#{numbers[i]} #{day} #{local.day} #{month} · #{local.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs — #{agent}"
     end
 
     "¡Con gusto! 📅 Tenemos los siguientes horarios disponibles:\n\n#{lines.join("\n")}\n\n¿Cuál te viene bien? Respondé con el número de tu preferencia."

@@ -180,6 +180,8 @@ export default {
             editingTracking: null,
             isCreatingNew: false,
             whatsappTemplates: ['', '', ''],
+            calendarIntegrationIds: [],
+            trackingTemplateId: null,
             maxAttempts: 3,
             // Modal de reanudacion
             showResumeModal: false,
@@ -353,6 +355,8 @@ export default {
             this.isCreatingNew = false;
             this.duplicateSourceTracking = null;
             this.whatsappTemplates = ['', '', ''];
+            this.calendarIntegrationIds = [];
+            this.trackingTemplateId = null;
 
             // Resetear formulario hijo
             this.$nextTick(() => {
@@ -492,8 +496,9 @@ export default {
                         // proyecto@contact_tracking: palabras clave de acción
                         keyword_actions: formData.keyword_actions || [],
 
-                        // proyecto@bot_seguimiento_calendar: calendarios vinculados desde la plantilla
-                        calendar_integration_ids: formData.calendar_integration_ids || []
+                        // proyecto@bot_seguimiento_calendar: calendarios y plantilla vinculados
+                        calendar_integration_ids: this.calendarIntegrationIds,
+                        tracking_template_id: this.trackingTemplateId
                     }
                 };
 
@@ -512,6 +517,8 @@ export default {
                 this.editingTracking = null;
                 this.isCreatingNew = false;
                 this.whatsappTemplates = ['', '', ''];
+                this.calendarIntegrationIds = [];
+            this.trackingTemplateId = null;
 
                 // Resetear formulario hijo
                 if (this.$refs.trackingFormRef?.resetForm) {
@@ -566,6 +573,8 @@ export default {
             this.editingTracking = null;  // ⭐ Esto dispara el watcher que resetea el formulario
             this.duplicateSourceTracking = null;
             this.whatsappTemplates = ['', '', ''];
+            this.calendarIntegrationIds = [];
+            this.trackingTemplateId = null;
             this.maxAttempts = 3;
 
             // Resetear formulario hijo explícitamente
@@ -584,6 +593,10 @@ export default {
             this.isCreatingNew = false;
             this.duplicateSourceTracking = null;
             this.whatsappTemplates = tracking.whatsapp_templates || ['', '', ''];
+            this.calendarIntegrationIds = Array.isArray(tracking.calendar_integration_ids)
+                ? [...tracking.calendar_integration_ids]
+                : [];
+            this.trackingTemplateId = tracking.tracking_template_id || null;
             this.maxAttempts = tracking.max_attempts || 3;
             // Cambiar al tab de Captura de Seguimiento
             this.activeTab = 1;
@@ -685,6 +698,8 @@ export default {
 
         handleClearTemplate() {
             this.whatsappTemplates = ['', '', ''];
+            this.calendarIntegrationIds = [];
+            this.trackingTemplateId = null;
             this.maxAttempts = 3;
         },
 
@@ -696,6 +711,12 @@ export default {
             if (this.$refs.trackingFormRef?.applyFromTemplate) {
                 this.$refs.trackingFormRef.applyFromTemplate(template);
             }
+
+            // Guardar calendar_integration_ids y duración directamente en el modal
+            this.calendarIntegrationIds = Array.isArray(template.calendar_integration_ids)
+                ? [...template.calendar_integration_ids]
+                : [];
+            this.trackingTemplateId = template.id || null;
 
             // Poblar plantillas WhatsApp y número de intentos si la plantilla las tiene
             if (Array.isArray(template.whatsapp_templates) && template.whatsapp_templates.some(t => t)) {
@@ -714,6 +735,8 @@ export default {
             this.isCreatingNew = false;
             this.duplicateSourceTracking = null;
             this.whatsappTemplates = ['', '', ''];
+            this.calendarIntegrationIds = [];
+            this.trackingTemplateId = null;
             this.activeTab = 0; // Resetear al tab inicial (Lista)
         },
     },
