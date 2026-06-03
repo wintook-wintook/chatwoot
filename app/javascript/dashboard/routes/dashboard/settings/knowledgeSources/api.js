@@ -46,7 +46,11 @@ export default {
     return axios.post(`${base(accountId)}/search`, { query, limit, threshold });
   },
 
-  getDiscourseCategories(accountId, { url, api_key, api_username = 'system' }) {
-    return axios.post(`${base(accountId)}/discourse_categories`, { url, api_key, api_username });
+  getSearchSettings(accountId) {
+    return axios.get(`${base(accountId)}/search_settings`);
+  },
+
+  updateSearchSettings(accountId, payload) {
+    return axios.patch(`${base(accountId)}/search_settings`, payload);
   },
 };

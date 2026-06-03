@@ -92,6 +92,8 @@ Rails.application.routes.draw do
           post   'knowledge_base/sources/:id/sync', to: 'knowledge_base#sync'
           post   'knowledge_base/search',           to: 'knowledge_base#search'
           post   'knowledge_base/discourse_categories', to: 'knowledge_base#discourse_categories'
+          get    'knowledge_base/search_settings',  to: 'knowledge_base#search_settings'
+          patch  'knowledge_base/search_settings',  to: 'knowledge_base#update_search_settings'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
           end
@@ -656,8 +658,6 @@ Rails.application.routes.draw do
   post 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#process_payload'
   get 'webhooks/instagram', to: 'webhooks/instagram#verify'
   post 'webhooks/instagram', to: 'webhooks/instagram#events'
-  post 'webhooks/discourse/:source_id', to: 'webhooks/discourse#process_payload' # @knowledge_sources
-
   namespace :twitter do
     resource :callback, only: [:show]
   end

@@ -77,7 +77,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       end
     end
 
-    # [2] RouterService — clasifica ruta via IA
+    # [2] RouterService — solo clasifica acciones de estado (rejected, interested, reschedule)
+    # Si kbase está disponible, siempre se intenta antes del fallback conversacional,
+    # sin depender de que el router clasifique la intención como :kbase.
     route_result = classify_route(tracking, message)
     route        = route_result[:route]
 
@@ -91,32 +93,16 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
               when :reschedule
                 handle_reschedule(tracking, message, route_result)
                 true
-              when :discourse
-                Rails.logger.info '[TrackingBot] 📚 Derivando a @discourse'
-                kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
-                if kbase_replied
-                  true
-                else
-                  Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → fallback conversacional'
-                  generate_and_send_conversational_reply(tracking, message)
-                end
               when :botseller
                 if BotSeller::Dispatcher.configured?
                   Rails.logger.info '[TrackingBot] 🤖 Derivando a @botseller'
                   BotSeller::Dispatcher.new(message).dispatch
                   true
                 else
-                  generate_and_send_conversational_reply(tracking, message)
+                  try_kbase_then_conversational(tracking, message)
                 end
-              else # :tracking
-                replied = generate_and_send_conversational_reply(tracking, message)
-                if !replied && kbase_available?(message, tracking)
-                  Rails.logger.info '[TrackingBot] 📚 Sin respuesta conversacional → fallback @discourse'
-                  KnowledgeBaseResponseService.new(message, tracking: tracking).perform
-                  true
-                else
-                  replied
-                end
+              else # :tracking o :kbase — kbase decide si tiene respuesta
+                try_kbase_then_conversational(tracking, message)
               end
 
     save_sentiment_analysis(tracking, route_result, message)
@@ -125,6 +111,19 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error en tracking ##{tracking.id}: #{e.message}"
     false
+  end
+
+  def try_kbase_then_conversational(tracking, message)
+    if kbase_available?(message, tracking)
+      Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
+      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
+      if kbase_replied
+        Rails.logger.info '[TrackingBot] ✅ KBase respondió'
+        return true
+      end
+      Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → fallback conversacional'
+    end
+    generate_and_send_conversational_reply(tracking, message)
   end
 
   def classify_route(tracking, message)
@@ -153,16 +152,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def kbase_available?(message, tracking = nil)
-    account = message.account
-    inbox   = message.inbox
-    hook    = account.hooks.find_by(app_id: 'discourse', inbox_id: inbox.id, status: 'enabled')
-    url     = hook&.settings&.dig('url').presence || ENV.fetch('DISCOURSE_URL', '')
-    return false unless url.present?
+    return false unless tracking.present?
 
-    # Si se pasa un tracking, verificar que la plantilla mencione @discourse
-    return tracking.complementary_prompt.to_s.include?('@discourse') if tracking.present?
+    cp = tracking.complementary_prompt.to_s
 
-    true
+    if cp.include?('@buscar_predeterminadas')
+      message.account.knowledge_items.where(source_type: 'canned_response').exists?
+    elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
+      source_name = match[1].strip
+      message.account.knowledge_sources.active.exists?(name: source_name)
+    elsif cp.match?(/@discourse\b/i)
+      message.account.hooks.exists?(app_id: 'discourse', inbox_id: message.inbox_id, status: 'enabled')
+    else
+      false
+    end
   rescue StandardError
     false
   end
@@ -185,7 +188,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     reply_text = generate_conversational_reply(tracking, message)
     return false if reply_text.blank?
 
-    reply_text = "#{reply_text}\n\n@TrackingBot" if DEBUG_TAG
+    reply_text = "#{reply_text}\n\n_@TrackingBot_"
     send_auto_reply(tracking, message, reply_text)
     Rails.logger.info '[TrackingBot] ✅ Respuesta enviada → respondió TrackingBot'
     true
@@ -210,8 +213,14 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       inbox_timezone = message.conversation.inbox.timezone || 'America/Mexico_City'
       next_contact = tracking.scheduled_for.in_time_zone(inbox_timezone).strftime('%d/%m/%Y a las %H:%M')
 
-      # Strip @discourse markers so GPT doesn't output them literally as text
-      clean_cp = tracking.complementary_prompt.to_s.gsub(/@discourse\b[^\n]*/i, '').strip
+      # Si el prompt contiene directivas kbase, no pasarlo al LLM conversacional:
+      # el prompt está diseñado para operar con la kbase y GPT lo simula literalmente
+      # generando output tipo "CONSULTA GENERADA / DEBUG / RESULTADO RECIBIDO".
+      cp_raw = tracking.complementary_prompt.to_s
+      has_kbase_directive = cp_raw.match?(/@buscar_predeterminadas\b/i) ||
+                            cp_raw.match?(/@buscar_foro\([^)]*\)/i) ||
+                            cp_raw.match?(/@discourse\b/i)
+      clean_cp = has_kbase_directive ? '' : cp_raw.strip
 
       system_prompt = <<~SYSTEM.strip
         Eres un asesor de ventas para #{tracking.account.name}.

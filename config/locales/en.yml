@@ -207,6 +207,9 @@ en:
     online:
       delete: "%{contact_name} is Online, please try again later"
   integration_apps:
+    discourse:
+      name: "Discourse"
+      description: "Connect your Discourse forum to use it as a knowledge base. Wintook will index your topics and use semantic search to automatically answer customer questions."
     dashboard_apps:
       name: "Dashboard Apps"
       description: "Dashboard Apps allow you to create and embed applications that display user information, orders, or payment history, providing more context to your customer support agents."

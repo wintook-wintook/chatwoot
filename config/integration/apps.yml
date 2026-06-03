@@ -63,6 +63,51 @@ tracking_bot:
     }
   ]
   visible_properties: ['model_ia']
+
+discourse:
+  id: discourse
+  logo: discourse.png
+  i18n_key: discourse
+  action: /discourse
+  hook_type: inbox
+  allow_multiple_hooks: true
+  settings_json_schema: {
+    "type": "object",
+    "properties": {
+      "url": { "type": "string" },
+      "api_key": { "type": "string" },
+      "username": { "type": "string" }
+    },
+    "required": ["url", "api_key"],
+    "additionalProperties": false
+  }
+  settings_form_schema: [
+    {
+      "label": "URL del foro",
+      "type": "url",
+      "name": "url",
+      "validation": "required",
+      "validationName": "URL",
+      "help_text": "URL base de tu instancia de Discourse. Ej: https://foro.ejemplo.com"
+    },
+    {
+      "label": "API Key",
+      "type": "text",
+      "name": "api_key",
+      "validation": "required",
+      "validationName": "API Key",
+      "help_text": "Clave API de Discourse (Admin → API → Keys)"
+    },
+    {
+      "label": "Usuario API",
+      "type": "text",
+      "name": "username",
+      "validationName": "Usuario",
+      "help_text": "Usuario de Discourse para las peticiones (por defecto: system)"
+    }
+  ]
+  visible_properties: ['url', 'username']
+
   
 captain:
   id: captain

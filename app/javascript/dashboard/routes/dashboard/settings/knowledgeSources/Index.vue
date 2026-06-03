@@ -39,6 +39,13 @@ export default {
       testSearching: false,
       testSearched: false,
       viewingResult: null,
+      kbaseSettings: {
+        similarity_threshold: 0.60,
+        max_results: 5,
+        max_context_chars: 2000,
+      },
+      kbaseSettingsSaving: false,
+      kbaseSettingsLoading: false,
     };
   },
   computed: {
@@ -51,6 +58,7 @@ export default {
         { name: 'Contenido indexado' },
         { name: `Fuentes (${this.sources.length})` },
         { name: 'Prueba de búsqueda' },
+        { name: 'Configuración' },
       ];
     },
     filteredItems() {
@@ -99,6 +107,7 @@ export default {
   watch: {
     activeTab(val) {
       if (val === 2) this.clearTest();
+      if (val === 3) this.fetchSearchSettings();
     },
   },
   mounted() {
@@ -271,6 +280,28 @@ export default {
       this.testQuery = '';
       this.testResults = [];
       this.testSearched = false;
+    },
+    async fetchSearchSettings() {
+      this.kbaseSettingsLoading = true;
+      try {
+        const { data } = await KnowledgeBaseAPI.getSearchSettings(this.accountId);
+        this.kbaseSettings = { ...data };
+      } catch {
+        useAlert('Error al cargar la configuración');
+      } finally {
+        this.kbaseSettingsLoading = false;
+      }
+    },
+    async saveSearchSettings() {
+      this.kbaseSettingsSaving = true;
+      try {
+        await KnowledgeBaseAPI.updateSearchSettings(this.accountId, this.kbaseSettings);
+        useAlert('Configuración guardada correctamente');
+      } catch {
+        useAlert('Error al guardar la configuración');
+      } finally {
+        this.kbaseSettingsSaving = false;
+      }
     },
   },
 };
@@ -467,6 +498,88 @@ export default {
             @edit="onEditSource"
             @delete="onDelete"
           />
+        </div>
+      </div>
+
+      <!-- Tab: Configuración -->
+      <div v-if="activeTab === 3">
+        <div v-if="kbaseSettingsLoading" class="flex justify-center py-12">
+          <span class="text-slate-400 text-sm">Cargando configuración...</span>
+        </div>
+
+        <div v-else class="max-w-lg flex flex-col gap-6">
+          <p class="text-sm text-slate-500">
+            Estos valores se aplican a todas las búsquedas semánticas de esta cuenta al responder mensajes automáticamente.
+          </p>
+
+          <!-- Umbral de similitud -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3">
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700">Umbral de similitud</h3>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Similitud mínima para que un resultado se considere relevante. Valores bajos incluyen más resultados; valores altos solo los más exactos.
+              </p>
+            </div>
+            <div class="flex items-center gap-4">
+              <input
+                v-model.number="kbaseSettings.similarity_threshold"
+                type="range"
+                min="0.1"
+                max="0.99"
+                step="0.01"
+                class="flex-1"
+              />
+              <span class="text-sm font-mono font-semibold text-woot-600 w-10 text-right">
+                {{ kbaseSettings.similarity_threshold }}
+              </span>
+            </div>
+            <div class="flex justify-between text-xs text-slate-400">
+              <span>0.1 — más resultados</span>
+              <span>0.99 — solo exactos</span>
+            </div>
+          </div>
+
+          <!-- Resultados máximos -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3">
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700">Resultados máximos</h3>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Cantidad máxima de fragmentos relevantes que se envían al modelo para generar la respuesta.
+              </p>
+            </div>
+            <input
+              v-model.number="kbaseSettings.max_results"
+              type="number"
+              min="1"
+              max="20"
+              class="input w-28"
+            />
+          </div>
+
+          <!-- Caracteres de contexto -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3">
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700">Caracteres de contexto</h3>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Límite de caracteres del contexto combinado que se entrega al modelo. Valores más altos permiten respuestas más ricas pero consumen más tokens.
+              </p>
+            </div>
+            <input
+              v-model.number="kbaseSettings.max_context_chars"
+              type="number"
+              min="500"
+              max="10000"
+              step="100"
+              class="input w-36"
+            />
+          </div>
+
+          <woot-button
+            :loading="kbaseSettingsSaving"
+            @click="saveSearchSettings"
+          >
+            Guardar configuración
+          </woot-button>
         </div>
       </div>
 
