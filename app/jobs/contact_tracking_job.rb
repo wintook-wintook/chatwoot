@@ -724,7 +724,14 @@ class ContactTrackingJob < ApplicationJob
   def find_or_create_conversation(tracking)
     if tracking.conversation_id.present?
       conversation = Conversation.find_by(id: tracking.conversation_id)
-      return conversation if conversation&.open?
+      if conversation
+        return conversation if conversation.open?
+
+        # Reabrir la conversación original en lugar de crear una nueva
+        conversation.update!(status: :open)
+        Rails.logger.info "[ContactTracking] 🔄 Conversación ##{conversation.id} reabierta para envío de seguimiento"
+        return conversation
+      end
     end
 
     conversation = Conversation
@@ -737,14 +744,29 @@ class ContactTrackingJob < ApplicationJob
                    .last
 
     unless conversation
-      conversation = Conversation.create!(
-        account_id: tracking.account_id,
-        inbox_id: tracking.inbox_id,
-        contact_id: tracking.contact_id,
-        contact_inbox: find_or_create_contact_inbox(tracking),
-        status: :open
-      )
-      Rails.logger.info "[ContactTracking] 🆕 Nueva conversación creada: ID #{conversation.id}"
+      # Buscar conversación resuelta antes de crear una nueva
+      conversation = Conversation
+                     .where(
+                       account_id: tracking.account_id,
+                       inbox_id: tracking.inbox_id,
+                       contact_id: tracking.contact_id
+                     )
+                     .order(created_at: :desc)
+                     .first
+
+      if conversation
+        conversation.update!(status: :open)
+        Rails.logger.info "[ContactTracking] 🔄 Conversación ##{conversation.id} reabierta (sin conversation_id en tracking)"
+      else
+        conversation = Conversation.create!(
+          account_id: tracking.account_id,
+          inbox_id: tracking.inbox_id,
+          contact_id: tracking.contact_id,
+          contact_inbox: find_or_create_contact_inbox(tracking),
+          status: :open
+        )
+        Rails.logger.info "[ContactTracking] 🆕 Nueva conversación creada: ID #{conversation.id}"
+      end
     end
 
     conversation

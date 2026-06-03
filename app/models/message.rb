@@ -26,9 +26,7 @@
 #
 #  index_messages_on_account_created_type               (account_id,created_at,message_type)
 #  index_messages_on_account_id                         (account_id)
-#  index_messages_on_account_id_and_inbox_id            (account_id,inbox_id)
 #  index_messages_on_additional_attributes_campaign_id  (((additional_attributes -> 'campaign_id'::text))) USING gin
-#  index_messages_on_content                            (content) USING gin
 #  index_messages_on_conversation_account_type_created  (conversation_id,account_id,message_type,created_at)
 #  index_messages_on_conversation_id                    (conversation_id)
 #  index_messages_on_created_at                         (created_at)
@@ -461,10 +459,12 @@ class Message < ApplicationRecord
   # Analiza respuestas del cliente y ajusta seguimientos activos según sentimiento
   # Para revertir: Eliminar este método completo
   def analyze_for_active_trackings
-    # Queue job de análisis (asíncrono, no bloquea creación del mensaje)
-    ContactTrackingResponseAnalyzerJob.perform_later(id)
+    # Wait 5s so automation rules (EventDispatcherJob) have time to create a
+    # ContactTracking before the analyzer runs — prevents the double-reply race
+    # where Job#1 sees no tracking and dispatches to BotSeller, then Job#2
+    # (re-queued by action_service.rb) finds the tracking and also replies.
+    ContactTrackingResponseAnalyzerJob.set(wait: 5.seconds).perform_later(id)
   rescue StandardError => e
-    # No fallar la creación del mensaje si el análisis falla
     Rails.logger.error "[Message] Error queueing sentiment analysis: #{e.message}"
   end
 

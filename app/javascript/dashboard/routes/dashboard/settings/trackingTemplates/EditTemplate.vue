@@ -13,6 +13,7 @@
 import { mapGetters } from 'vuex';
 import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
+import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 
 export default {
   components: { KeywordActionsEditor },
@@ -42,9 +43,13 @@ export default {
         retry_interval_value: 1, // proyecto@automatizacion_tracking
         retry_interval_unit: 'days', // proyecto@automatizacion_tracking
         keyword_actions: [], // proyecto@contact_tracking
+        calendar_integration_ids: [],
+        calendar_event_duration: 30,
       },
       // Tabs Contexto IA / Entrenamiento
       activeContextTab: 0,
+      calendarIntegrations: [],
+      isLoadingCalendars: false,
       originalAiContext: null,
       originalComplementaryPrompt: null,
       isImprovingAI: false,
@@ -169,6 +174,9 @@ export default {
     reglasTabIndex() {
       return this.selectedInboxIsWhatsApp ? 3 : 2;
     },
+    agendasTabIndex() {
+      return this.reglasTabIndex + 1;
+    },
     validationErrors() {
       const errors = [];
       if (!this.isNameValid) errors.push('Nombre de la plantilla es requerido (mínimo 2 caracteres).');
@@ -208,6 +216,10 @@ export default {
             keyword_actions: Array.isArray(val.keyword_actions) // proyecto@contact_tracking
               ? val.keyword_actions.map(ka => ({ ...ka }))
               : [],
+            calendar_integration_ids: Array.isArray(val.calendar_integration_ids)
+              ? [...val.calendar_integration_ids]
+              : [],
+            calendar_event_duration: val.calendar_event_duration || 30,
           };
           if (
             this.form.whatsapp_templates.length > 0 &&
@@ -271,6 +283,7 @@ export default {
     if (this.selectedInboxId && this.selectedInboxIsWhatsApp) {
       this.loadWATemplates();
     }
+    this.loadCalendarIntegrations();
   },
   methods: {
     onCancel() {
@@ -296,6 +309,8 @@ export default {
           retry_interval_unit: this.form.retry_interval_unit,   // proyecto@automatizacion_tracking
           keyword_actions: this.form.keyword_actions || [],      // proyecto@contact_tracking
           kbase_hook_id: this.selectedKbaseHookId || null,
+          calendar_integration_ids: this.form.calendar_integration_ids || [],
+          calendar_event_duration: this.form.calendar_event_duration || 30,
         },
       };
       if (!this.isCreateMode) {
@@ -401,6 +416,25 @@ export default {
     getTemplateBody(templateName) {
       const tpl = this.availableWATemplates.find(t => t.name === templateName);
       return tpl ? tpl.body : '';
+    },
+    async loadCalendarIntegrations() {
+      this.isLoadingCalendars = true;
+      try {
+        const { data } = await TrackingTemplatesAPI.getCalendarIntegrations();
+        this.calendarIntegrations = data || [];
+      } catch (e) {
+        this.calendarIntegrations = [];
+      } finally {
+        this.isLoadingCalendars = false;
+      }
+    },
+    toggleCalendarIntegration(id) {
+      const idx = this.form.calendar_integration_ids.indexOf(id);
+      if (idx === -1) {
+        this.form.calendar_integration_ids.push(id);
+      } else {
+        this.form.calendar_integration_ids.splice(idx, 1);
+      }
     },
   },
 };
@@ -518,6 +552,7 @@ export default {
             <woot-tabs-item name="💡  Entrenamiento *" :show-badge="false" />
             <woot-tabs-item v-if="selectedInboxIsWhatsApp" name="📱  Plantillas WhatsApp" :show-badge="false" />
             <woot-tabs-item name="📋  Reglas" :show-badge="false" />
+            <woot-tabs-item name="📅  Agendas" :show-badge="false" />
           </woot-tabs>
           <a
             v-if="activeContextTab === 0 || activeContextTab === 1"
@@ -686,6 +721,69 @@ export default {
         <!-- Tab Reglas (índice 3 con WA, 2 sin WA) -->
         <div v-show="activeContextTab === reglasTabIndex" class="mt-2">
           <keyword-actions-editor v-model="form.keyword_actions" />
+        </div>
+
+        <!-- Tab Agendas -->
+        <div v-show="activeContextTab === agendasTabIndex" class="mt-2">
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            {{ $t('TRACKING_TEMPLATES.CALENDARS.DESCRIPTION') }}
+          </p>
+
+          <!-- Duración del evento -->
+          <div class="mb-4">
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2">
+              {{ $t('TRACKING_TEMPLATES.CALENDARS.EVENT_DURATION') }}
+            </span>
+            <div class="flex gap-2">
+              <button
+                v-for="option in [{value: 30, label: '30 min'}, {value: 60, label: '1 hora'}, {value: 120, label: '2 horas'}]"
+                :key="option.value"
+                type="button"
+                class="px-4 py-2 text-sm rounded-md border transition-colors"
+                :class="form.calendar_event_duration === option.value
+                  ? 'bg-woot-500 text-white border-woot-500'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'"
+                @click="form.calendar_event_duration = option.value"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+          </div>
+          <div v-if="isLoadingCalendars" class="text-sm text-slate-500 py-2">
+            {{ $t('TRACKING_TEMPLATES.CALENDARS.LOADING') }}
+          </div>
+          <div v-else-if="calendarIntegrations.length === 0" class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400">
+            {{ $t('TRACKING_TEMPLATES.CALENDARS.NONE_AVAILABLE') }}
+          </div>
+          <div v-else class="space-y-2">
+            <label
+              v-for="integration in calendarIntegrations"
+              :key="integration.id"
+              class="flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-colors"
+              :class="form.calendar_integration_ids.includes(integration.id)
+                ? 'border-woot-400 bg-woot-50 dark:bg-woot-900/20'
+                : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'"
+              @click.prevent="toggleCalendarIntegration(integration.id)"
+            >
+              <input
+                type="checkbox"
+                :checked="form.calendar_integration_ids.includes(integration.id)"
+                class="accent-woot-500"
+                @change.prevent
+              />
+              <div class="flex flex-col">
+                <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {{ integration.user_name }}
+                </span>
+                <span class="text-xs text-slate-500 dark:text-slate-400">
+                  {{ integration.google_email }}
+                </span>
+              </div>
+            </label>
+            <p v-if="form.calendar_integration_ids.length > 0" class="text-xs text-woot-600 dark:text-woot-400 pt-1">
+              {{ $t('TRACKING_TEMPLATES.CALENDARS.SELECTED_COUNT', { count: form.calendar_integration_ids.length }) }}
+            </p>
+          </div>
         </div>
       </div>
 

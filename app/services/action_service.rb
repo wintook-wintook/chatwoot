@@ -135,11 +135,17 @@ class ActionService
       complementary_prompt: template.complementary_prompt,
       whatsapp_templates: templates,
       keyword_actions: template.keyword_actions.is_a?(Array) ? template.keyword_actions : [],
+      calendar_integration_ids: template.calendar_integration_ids.is_a?(Array) ? template.calendar_integration_ids : [],
+      tracking_template_id: template.id,
       max_attempts: max_att,
       scheduled_for: Time.current + interval_minutes.minutes,
       retry_interval_value: interval_value,
       retry_interval_unit: interval_unit
     )
+
+    # Note: no re-queuing here. The initial job in message.rb already runs with
+    # a 5-second delay so it sees the tracking. Re-queuing caused double replies
+    # because BotSeller responses lack the sentiment_auto_reply flag.
   rescue StandardError => e
     Rails.logger.error "[AutomationAction] assign_tracking_template error: #{e.message}"
   end

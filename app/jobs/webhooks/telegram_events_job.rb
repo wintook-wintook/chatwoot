@@ -1,5 +1,5 @@
 class Webhooks::TelegramEventsJob < ApplicationJob
-  queue_as :default
+  queue_as :high
 
   def perform(params = {})
     return unless params[:bot_token]

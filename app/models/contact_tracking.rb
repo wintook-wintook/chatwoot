@@ -26,6 +26,7 @@
 #  id                         :bigint           not null, primary key
 #  ai_context                 :text
 #  attempt_count              :integer          default(0), not null
+#  calendar_integration_ids   :jsonb            not null
 #  complementary_prompt       :text
 #  interval_days              :integer
 #  keyword_actions            :jsonb            not null
@@ -49,6 +50,7 @@
 #  conversation_id            :bigint
 #  inbox_id                   :bigint           not null
 #  quote_id                   :integer
+#  tracking_template_id       :integer
 #
 # Indexes
 #
@@ -61,7 +63,7 @@
 #  index_contact_trackings_on_sentiment                     (((last_sentiment_analysis ->> 'sentiment'::text)))
 #  index_contact_trackings_on_status                        (status)
 #  index_contact_trackings_on_status_and_scheduled_for      (status,scheduled_for)
-#  index_unique_active_tracking_per_contact                 (contact_id,status) UNIQUE WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))
+#  index_unique_active_tracking_per_contact                 (contact_id,status) UNIQUE WHERE ((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('scheduled'::character varying)::text, ('active'::character varying)::text, ('paused'::character varying)::text]))
 #
 # Foreign Keys
 #
@@ -79,6 +81,7 @@ class ContactTracking < ApplicationRecord
   belongs_to :conversation, optional: true
   belongs_to :inbox
   belongs_to :account
+  belongs_to :tracking_template, optional: true
 
   # ==============================================================================
   # Serializers - Para campos JSON

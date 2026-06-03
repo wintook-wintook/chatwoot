@@ -79,7 +79,11 @@ Rails.application.routes.draw do
             end
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
-          resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] # proyecto@tracking_templates
+          resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
+            collection do
+              get :calendar_integrations
+            end
+          end
           resources :contact_tracking_imports, only: [:create] # proyecto@import_seguimiento
 
           # @knowledge_sources
