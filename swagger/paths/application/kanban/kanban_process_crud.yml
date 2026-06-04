@@ -1,0 +1,96 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - name: id
+    in: path
+    type: integer
+    required: true
+    description: ID de la etapa Kanban
+get:
+  tags:
+    - Kanban
+  operationId: kanbanProcessShow
+  summary: Ver etapa Kanban
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Detalle de la etapa
+      schema:
+        $ref: '#/definitions/kanban_process'
+    '404':
+      description: No encontrado
+patch:
+  tags:
+    - Kanban
+  operationId: kanbanProcessUpdate
+  summary: Actualizar etapa Kanban
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        properties:
+          kanban_process:
+            type: object
+            properties:
+              type_process_name:
+                type: string
+              position:
+                type: integer
+              default:
+                type: boolean
+  responses:
+    '200':
+      description: Etapa actualizada
+      schema:
+        $ref: '#/definitions/kanban_process'
+    '422':
+      description: Parámetros inválidos
+delete:
+  tags:
+    - Kanban
+  operationId: kanbanProcessDestroy
+  summary: Eliminar etapa Kanban
+  description: No se puede eliminar si existen conversaciones asignadas a esta etapa.
+  security:
+    - userApiKey: []
+  responses:
+    '204':
+      description: Eliminada correctamente
+    '422':
+      description: No se puede eliminar porque tiene conversaciones asociadas
+
+reorder:
+  tags:
+    - Kanban
+  operationId: kanbanProcessReorder
+  summary: Reordenar etapas de un tipo de proceso
+  description: Reordena masivamente las etapas de un tipo de proceso enviando el nuevo orden.
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        properties:
+          kanban_processes:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: integer
+  responses:
+    '200':
+      description: Etapas reordenadas
+      schema:
+        type: object
+        properties:
+          message:
+            type: string
+            example: Processes reordered successfully

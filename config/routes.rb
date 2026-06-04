@@ -736,8 +736,8 @@ Rails.application.routes.draw do
 
   # ---------------------------------------------------------------------
   # Routes for swagger docs
-  get '/swagger/*path', to: 'swagger#respond'
-  get '/swagger', to: 'swagger#respond'
+  get '/apidocs/*path', to: 'swagger#respond'
+  get '/apidocs', to: 'swagger#respond'
 
   # ----------------------------------------------------------------------
   # Routes for testing

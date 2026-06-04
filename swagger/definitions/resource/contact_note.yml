@@ -1,0 +1,23 @@
+type: object
+properties:
+  id:
+    type: integer
+  contact_id:
+    type: integer
+  content:
+    type: string
+    description: Contenido de la nota
+  user:
+    type: object
+    description: Usuario que creó la nota
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time

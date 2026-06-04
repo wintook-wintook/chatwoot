@@ -1,0 +1,81 @@
+type: object
+properties:
+  id:
+    type: integer
+    description: ID único del seguimiento
+  contact_id:
+    type: integer
+    description: ID del contacto asociado
+  conversation_id:
+    type: integer
+    description: ID interno de la conversación relacionada
+  inbox_id:
+    type: integer
+    description: ID del inbox
+  inbox_name:
+    type: string
+    description: Nombre del inbox
+  objective:
+    type: string
+    description: Objetivo o descripción del seguimiento
+  scheduled_for:
+    type: string
+    format: date-time
+    description: Fecha y hora programada para el próximo intento
+  status:
+    type: string
+    enum: [pending, scheduled, active, paused, completed, cancelled, failed]
+    description: Estado actual del seguimiento
+  max_attempts:
+    type: integer
+    description: Número máximo de intentos
+  attempt_count:
+    type: integer
+    description: Número de intentos realizados hasta ahora
+  attempts_remaining:
+    type: integer
+    description: Intentos restantes (max_attempts - attempt_count)
+  interval_days:
+    type: integer
+    description: (Legacy) Intervalo entre intentos en días
+  retry_interval_value:
+    type: integer
+    description: Valor del intervalo entre reintentos
+  retry_interval_unit:
+    type: string
+    enum: [minutes, hours, days]
+    description: Unidad del intervalo entre reintentos
+  whatsapp_templates:
+    type: array
+    items:
+      type: string
+    description: Nombres de plantillas WhatsApp por intento (en orden)
+  ai_context:
+    type: string
+    description: Contexto adicional para la generación de mensajes con IA
+  complementary_prompt:
+    type: string
+    description: Instrucciones adicionales para que el bot responda preguntas
+  quote_id:
+    type: integer
+    description: ID de cotización relacionada
+  paused_at:
+    type: string
+    format: date-time
+    description: Fecha y hora en que se pausó el seguimiento
+  last_attempt_at:
+    type: string
+    format: date-time
+    description: Fecha y hora del último intento ejecutado
+  last_message_sent:
+    type: string
+    description: Texto del último mensaje enviado
+  last_error:
+    type: string
+    description: Descripción del último error ocurrido (si status=failed)
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time

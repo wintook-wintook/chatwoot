@@ -1,0 +1,98 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - name: contact_id
+    in: path
+    type: integer
+    required: true
+    description: ID del contacto
+  - name: id
+    in: path
+    type: integer
+    required: true
+    description: ID del seguimiento
+get:
+  tags:
+    - Contact Trackings
+  operationId: contactTrackingsShow
+  summary: Ver detalle de un seguimiento
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Detalle del seguimiento
+      schema:
+        type: object
+        properties:
+          tracking:
+            $ref: '#/definitions/contact_tracking'
+    '404':
+      description: Seguimiento no encontrado
+patch:
+  tags:
+    - Contact Trackings
+  operationId: contactTrackingsUpdate
+  summary: Actualizar un seguimiento
+  description: >
+    Actualiza los campos de un seguimiento existente. No es posible cambiar el `contact_id` ni el `account_id`.
+    Si se envía `conversation_id`, se tratará como `display_id` (compatibilidad con el frontend).
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        properties:
+          contact_tracking:
+            type: object
+            properties:
+              objective:
+                type: string
+              scheduled_for:
+                type: string
+                format: date-time
+              inbox_id:
+                type: integer
+              conversation_id:
+                type: integer
+              max_attempts:
+                type: integer
+              retry_interval_value:
+                type: integer
+              retry_interval_unit:
+                type: string
+                enum: [minutes, hours, days]
+              ai_context:
+                type: string
+              complementary_prompt:
+                type: string
+              whatsapp_templates:
+                type: array
+                items:
+                  type: string
+  responses:
+    '200':
+      description: Seguimiento actualizado
+      schema:
+        type: object
+        properties:
+          tracking:
+            $ref: '#/definitions/contact_tracking'
+    '403':
+      description: Sin acceso al inbox especificado
+    '422':
+      description: Parámetros inválidos
+delete:
+  tags:
+    - Contact Trackings
+  operationId: contactTrackingsDestroy
+  summary: Eliminar un seguimiento
+  description: Elimina permanentemente un seguimiento. Esta acción no puede deshacerse.
+  security:
+    - userApiKey: []
+  responses:
+    '204':
+      description: Seguimiento eliminado
+    '404':
+      description: Seguimiento no encontrado

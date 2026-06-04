@@ -1,0 +1,56 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+get:
+  tags:
+    - Kanban
+  operationId: kanbanTypeProcessesIndex
+  summary: Listar tipos de proceso Kanban
+  description: >
+    Retorna todos los tipos de proceso Kanban de la cuenta (columnas de primer nivel del tablero),
+    incluyendo sus procesos/etapas anidados.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de tipos de proceso con sus etapas
+      schema:
+        type: array
+        items:
+          $ref: '#/definitions/kanban_type_process'
+post:
+  tags:
+    - Kanban
+  operationId: kanbanTypeProcessesCreate
+  summary: Crear tipo de proceso Kanban
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        required:
+          - kanban_type_process
+        properties:
+          kanban_type_process:
+            type: object
+            required:
+              - process_name
+            properties:
+              process_name:
+                type: string
+                description: Nombre del tipo de proceso (ej. "Ventas", "Soporte")
+              default:
+                type: boolean
+                description: Marcar como tipo por defecto
+              is_system:
+                type: boolean
+                description: Es un proceso de sistema (no borrable)
+  responses:
+    '201':
+      description: Tipo de proceso creado
+      schema:
+        $ref: '#/definitions/kanban_type_process'
+    '422':
+      description: Parámetros inválidos

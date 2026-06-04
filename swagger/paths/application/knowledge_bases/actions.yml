@@ -1,0 +1,220 @@
+# Acciones sobre artículos individuales de la base de conocimiento
+
+reprocess:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesReprocess
+  summary: Reprocesar artículo
+  description: Reinicia el procesamiento y vectorización de un artículo con estado fallido o archivado.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Reprocesamiento iniciado
+    '422':
+      description: El artículo no puede ser reprocesado en su estado actual
+
+sync:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesSync
+  summary: Sincronizar artículo desde su URL de origen
+  description: Actualiza el contenido del artículo descargando de nuevo la URL de origen.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Artículo sincronizado
+      schema:
+        type: object
+        properties:
+          message:
+            type: string
+          changes:
+            type: object
+    '422':
+      description: Error al sincronizar
+
+images:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesImages
+  summary: Imágenes del artículo
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de imágenes extraídas del artículo
+
+internal_links:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesInternalLinks
+  summary: Enlaces internos del artículo
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de enlaces internos
+
+external_links:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesExternalLinks
+  summary: Enlaces externos del artículo
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de enlaces externos
+
+social_links:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesSocialLinks
+  summary: Redes sociales detectadas en el artículo
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de enlaces a redes sociales
+
+headings:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesHeadings
+  summary: Encabezados del artículo
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de encabezados H1-H6
+
+metadata:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesMetadata
+  summary: Metadatos del artículo
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Metadatos extraídos del artículo
+
+chunks:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesChunks
+  summary: Fragmentos vectorizados del artículo
+  description: Retorna los chunks/fragmentos generados durante la vectorización del artículo.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de fragmentos vectorizados
+
+search_in_content:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesSearchInContent
+  summary: Buscar dentro del contenido de un artículo
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      schema:
+        type: object
+        properties:
+          query:
+            type: string
+  responses:
+    '200':
+      description: Resultados de búsqueda dentro del artículo
+
+train_internal_links:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesTrainInternalLinks
+  summary: Vectorizar todos los enlaces internos del artículo
+  description: Procesa y vectoriza todos los enlaces internos detectados en el artículo.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Vectorización de enlaces internos iniciada
+
+internal_links_list:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesInternalLinksList
+  summary: Listar enlaces internos con metadatos de vectorización
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de enlaces internos con estado de vectorización
+
+train_specific_internal_link:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesTrainSpecificInternalLink
+  summary: Vectorizar una URL interna específica
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      schema:
+        type: object
+        properties:
+          url:
+            type: string
+  responses:
+    '200':
+      description: Vectorización iniciada para la URL especificada
+
+delete_internal_link:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesDeleteInternalLink
+  summary: Eliminar un enlace interno del artículo
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Enlace interno eliminado
+
+retrain_internal_link:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesRetrainInternalLink
+  summary: Re-vectorizar un enlace interno
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Re-vectorización iniciada
+
+clear_all_internal_links:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesClearAllInternalLinks
+  summary: Eliminar todos los enlaces internos del artículo
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Todos los enlaces internos eliminados
+
+delete_embeddings:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesDeleteEmbeddings
+  summary: Eliminar todos los vectores/embeddings del artículo
+  description: Elimina los embeddings vectoriales, útil para forzar una re-vectorización completa.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Embeddings eliminados

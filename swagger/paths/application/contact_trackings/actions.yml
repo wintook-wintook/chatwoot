@@ -1,0 +1,131 @@
+# Acciones de control del ciclo de vida: pause, resume, cancel
+
+pause:
+  tags:
+    - Contact Trackings
+  operationId: contactTrackingsPause
+  summary: Pausar un seguimiento
+  description: >
+    Pausa temporalmente la ejecución de un seguimiento activo o programado (`pending`, `scheduled`, `active`).
+    El seguimiento puede reanudarse posteriormente con el endpoint `/resume`.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Seguimiento pausado correctamente
+      schema:
+        type: object
+        properties:
+          message:
+            type: string
+            example: Seguimiento pausado correctamente
+          tracking:
+            $ref: '#/definitions/contact_tracking'
+    '422':
+      description: No se puede pausar en el estado actual
+
+resume:
+  tags:
+    - Contact Trackings
+  operationId: contactTrackingsResume
+  summary: Reanudar un seguimiento pausado
+  description: >
+    Reanuda la ejecución de un seguimiento en estado `paused`.
+    Opcionalmente se puede especificar la fecha del siguiente intento.
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      schema:
+        type: object
+        properties:
+          scheduled_for:
+            type: string
+            format: date-time
+            description: Fecha/hora del siguiente intento (opcional; si no se envía se calcula automáticamente)
+  responses:
+    '200':
+      description: Seguimiento reanudado correctamente
+      schema:
+        type: object
+        properties:
+          message:
+            type: string
+            example: Seguimiento reanudado correctamente
+          tracking:
+            $ref: '#/definitions/contact_tracking'
+    '422':
+      description: No se puede reanudar en el estado actual
+
+cancel:
+  tags:
+    - Contact Trackings
+  operationId: contactTrackingsCancel
+  summary: Cancelar un seguimiento
+  description: >
+    Cancela definitivamente un seguimiento. Esta acción es irreversible: el seguimiento
+    no podrá reanudarse. Usar cuando el seguimiento ya no aplica.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Seguimiento cancelado correctamente
+      schema:
+        type: object
+        properties:
+          message:
+            type: string
+            example: Seguimiento cancelado
+          tracking:
+            $ref: '#/definitions/contact_tracking'
+    '422':
+      description: No se puede cancelar en el estado actual
+
+improve_text:
+  tags:
+    - Contact Trackings
+  operationId: contactTrackingsImproveText
+  summary: Mejorar texto con IA
+  description: >
+    Utiliza OpenAI (GPT-4o-mini) para mejorar la redacción de un texto o generar un prompt
+    operativo estructurado para el bot. El modo `improve` corrige gramática y estilo;
+    el modo `generate_prompt` construye un prompt operativo a partir del objetivo y contexto.
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        required:
+          - text
+        properties:
+          text:
+            type: string
+            description: Texto a mejorar o instrucciones adicionales
+          mode:
+            type: string
+            enum: [improve, generate_prompt]
+            default: improve
+            description: Modo de operación de la IA
+          context:
+            type: string
+            description: Contexto del seguimiento (solo para mode=generate_prompt)
+          objective:
+            type: string
+            description: Objetivo del seguimiento (solo para mode=generate_prompt)
+  responses:
+    '200':
+      description: Texto procesado exitosamente
+      schema:
+        type: object
+        properties:
+          improved_text:
+            type: string
+            example: Estimado cliente, le escribimos para darle seguimiento a su cotización.
+    '422':
+      description: El campo text es requerido
+    '500':
+      description: Error al procesar la solicitud con IA

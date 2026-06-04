@@ -1,0 +1,193 @@
+# Endpoints de kanban sobre conversaciones individuales y filtros
+
+assign_kanban_type:
+  tags:
+    - Kanban
+  operationId: conversationAssignKanbanType
+  summary: Asignar tipo de proceso Kanban a una conversación
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      schema:
+        type: object
+        properties:
+          kanban_type_process_id:
+            type: integer
+            description: ID del tipo de proceso a asignar
+  responses:
+    '200':
+      description: Tipo de proceso asignado correctamente
+
+update_kanban_process:
+  tags:
+    - Kanban
+  operationId: conversationUpdateKanbanProcess
+  summary: Asignar etapa Kanban a una conversación
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      schema:
+        type: object
+        properties:
+          kanban_process_id:
+            type: integer
+            description: ID de la etapa a asignar
+  responses:
+    '200':
+      description: Etapa asignada correctamente
+
+update_kanban_process_only:
+  tags:
+    - Kanban
+  operationId: conversationUpdateKanbanProcessOnly
+  summary: Actualizar solo la etapa Kanban (sin cambiar tipo)
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      schema:
+        type: object
+        properties:
+          kanban_process_id:
+            type: integer
+  responses:
+    '200':
+      description: Etapa actualizada correctamente
+
+bulk_update_kanban:
+  tags:
+    - Kanban
+  operationId: conversationBulkUpdateKanban
+  summary: Actualización masiva de campos Kanban de una conversación
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      schema:
+        type: object
+        properties:
+          kanban_type_process_id:
+            type: integer
+          kanban_process_id:
+            type: integer
+  responses:
+    '200':
+      description: Campos Kanban actualizados
+
+available_kanban_types:
+  tags:
+    - Kanban
+  operationId: conversationsAvailableKanbanTypes
+  summary: Tipos de proceso Kanban disponibles para conversaciones
+  description: Retorna los tipos de proceso Kanban disponibles en la cuenta para asignar a conversaciones.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de tipos disponibles
+
+filter_by_kanban_type:
+  tags:
+    - Kanban
+  operationId: conversationsFilterByKanbanType
+  summary: Filtrar conversaciones por tipo de proceso Kanban
+  security:
+    - userApiKey: []
+  parameters:
+    - in: query
+      name: kanban_type_process_id
+      type: integer
+      required: false
+      description: ID del tipo de proceso Kanban
+    - in: query
+      name: status
+      type: string
+      required: false
+    - in: query
+      name: assignee_id
+      type: integer
+      required: false
+  responses:
+    '200':
+      description: Conversaciones filtradas
+      schema:
+        type: object
+        properties:
+          data:
+            type: array
+            items:
+              $ref: '#/definitions/conversation'
+          meta:
+            type: object
+
+filter_by_kanban_process:
+  tags:
+    - Kanban
+  operationId: conversationsFilterByKanbanProcess
+  summary: Filtrar conversaciones por etapa Kanban
+  security:
+    - userApiKey: []
+  parameters:
+    - in: query
+      name: kanban_process_id
+      type: integer
+      required: false
+    - in: query
+      name: status
+      type: string
+      required: false
+  responses:
+    '200':
+      description: Conversaciones filtradas
+      schema:
+        type: object
+        properties:
+          data:
+            type: array
+            items:
+              $ref: '#/definitions/conversation'
+          meta:
+            type: object
+
+filter_by_both_kanban:
+  tags:
+    - Kanban
+  operationId: conversationsFilterByBothKanban
+  summary: Filtrar conversaciones por tipo y etapa Kanban
+  security:
+    - userApiKey: []
+  parameters:
+    - in: query
+      name: kanban_type_process_id
+      type: integer
+      required: false
+    - in: query
+      name: kanban_process_id
+      type: integer
+      required: false
+    - in: query
+      name: status
+      type: string
+      required: false
+    - in: query
+      name: assignee_id
+      type: integer
+      required: false
+  responses:
+    '200':
+      description: Conversaciones filtradas
+      schema:
+        type: object
+        properties:
+          data:
+            type: array
+            items:
+              $ref: '#/definitions/conversation'
+          meta:
+            type: object

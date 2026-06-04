@@ -1,0 +1,27 @@
+type: object
+properties:
+  id:
+    type: integer
+  kanban_type_process_id:
+    type: integer
+    description: ID del tipo de proceso al que pertenece esta etapa
+  account_id:
+    type: integer
+  type_process_name:
+    type: string
+    description: Nombre de la etapa (ej. "Contactado", "Propuesta enviada", "Cerrado")
+  position:
+    type: integer
+    description: Posición/orden en el tablero Kanban
+  default:
+    type: boolean
+    description: Es la etapa por defecto al asignar el tipo de proceso
+  is_system:
+    type: boolean
+    description: Etapa de sistema (no eliminable)
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time
