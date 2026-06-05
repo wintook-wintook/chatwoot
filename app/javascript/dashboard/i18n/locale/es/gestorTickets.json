@@ -55,7 +55,13 @@
       "CREATE_BUTTON": "+ Nueva regla",
       "CREATE_TITLE": "Crear regla",
       "EDIT_TITLE": "Editar regla",
-      "EMPTY": "Sin reglas configuradas. Las reglas automatizan asignaciones y escalados."
+      "EMPTY": "Sin reglas configuradas. Las reglas automatizan asignaciones y escalados.",
+      "DELETE": {
+        "TITLE": "Eliminar regla",
+        "MESSAGE": "Esta acción no se puede deshacer. ¿Eliminar la regla",
+        "YES": "Eliminar",
+        "NO": "Cancelar"
+      }
     },
     "CREATE_BUTTON": "+ Crear ticket",
     "NO_TICKET": "Sin ticket activo",
@@ -92,7 +98,12 @@
       "COLOR_LABEL": "Color",
       "PREFIX_LABEL": "Prefijo del folio",
       "PREFIX_HELP": "Se usa en el folio con el token {PREFIX}. Si lo dejas vacío se genera automáticamente.",
-      "DELETE_CONFIRM": "¿Eliminar el tipo \"{name}\"? Los tickets con este tipo quedarán sin tipo asignado."
+      "DELETE": {
+        "TITLE": "Eliminar tipo de caso",
+        "MESSAGE": "Los tickets con este tipo quedarán sin tipo asignado. ¿Eliminar",
+        "YES": "Eliminar",
+        "NO": "Cancelar"
+      }
     },
     "FOLIO": {
       "TITLE": "Configuración de folio",

@@ -43,7 +43,7 @@
           color-scheme="alert"
           icon="delete"
           :is-loading="deletingId === type.id"
-          @click="confirmDelete(type)"
+          @click="openDelete(type)"
         />
       </div>
     </div>
@@ -97,6 +97,18 @@
         </form>
       </div>
     </woot-modal>
+
+    <!-- Confirmación de borrado (estilo Chatwoot) -->
+    <woot-delete-modal
+      :show.sync="showDeleteModal"
+      :on-close="closeDelete"
+      :on-confirm="confirmDelete"
+      :title="$t('CASE_TICKETS.TYPES.DELETE.TITLE')"
+      :message="$t('CASE_TICKETS.TYPES.DELETE.MESSAGE')"
+      :message-value="deleteMessageValue"
+      :confirm-text="$t('CASE_TICKETS.TYPES.DELETE.YES')"
+      :reject-text="$t('CASE_TICKETS.TYPES.DELETE.NO')"
+    />
   </div>
 </template>
 
@@ -114,6 +126,8 @@ export default {
       form: { name: '', color: '#3b82f6', prefix: '' },
       deletingId: null,
       palette: PALETTE,
+      showDeleteModal: false,
+      typeToDelete: null,
     };
   },
   computed: {
@@ -123,6 +137,9 @@ export default {
     }),
     isFetching() { return this.typesUiFlags.isFetching; },
     isSaving()   { return this.typesUiFlags.isSaving; },
+    deleteMessageValue() {
+      return this.typeToDelete ? ` "${this.typeToDelete.name}"?` : '';
+    },
   },
   mounted() {
     this.$store.dispatch('caseTickets/fetchTypes');
@@ -148,11 +165,21 @@ export default {
         this.showModal = false;
       } catch (_e) { /* silent */ }
     },
-    async confirmDelete(type) {
-      if (!window.confirm(this.$t('CASE_TICKETS.TYPES.DELETE_CONFIRM', { name: type.name }))) return;
+    openDelete(type) {
+      this.typeToDelete = type;
+      this.showDeleteModal = true;
+    },
+    closeDelete() {
+      this.showDeleteModal = false;
+      this.typeToDelete = null;
+    },
+    async confirmDelete() {
+      const type = this.typeToDelete;
+      if (!type) return;
+      this.showDeleteModal = false;
       this.deletingId = type.id;
       try { await this.$store.dispatch('caseTickets/deleteType', type.id); }
-      finally { this.deletingId = null; }
+      finally { this.deletingId = null; this.typeToDelete = null; }
     },
   },
 };

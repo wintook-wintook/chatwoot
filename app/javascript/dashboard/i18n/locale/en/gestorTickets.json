@@ -55,7 +55,13 @@
       "CREATE_BUTTON": "+ New rule",
       "CREATE_TITLE": "Create rule",
       "EDIT_TITLE": "Edit rule",
-      "EMPTY": "No rules configured. Rules automate assignments and escalations."
+      "EMPTY": "No rules configured. Rules automate assignments and escalations.",
+      "DELETE": {
+        "TITLE": "Delete rule",
+        "MESSAGE": "This action cannot be undone. Delete rule",
+        "YES": "Delete",
+        "NO": "Cancel"
+      }
     },
     "CREATE_BUTTON": "+ Create ticket",
     "NO_TICKET": "No active ticket",
@@ -92,7 +98,12 @@
       "COLOR_LABEL": "Color",
       "PREFIX_LABEL": "Folio prefix",
       "PREFIX_HELP": "Used in the folio via the {PREFIX} token. Leave empty to auto-generate.",
-      "DELETE_CONFIRM": "Delete type \"{name}\"? Tickets with this type will be left untyped."
+      "DELETE": {
+        "TITLE": "Delete case type",
+        "MESSAGE": "Tickets with this type will be left untyped. Delete",
+        "YES": "Delete",
+        "NO": "Cancel"
+      }
     },
     "FOLIO": {
       "TITLE": "Folio settings",

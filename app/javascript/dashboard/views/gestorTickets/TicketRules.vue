@@ -65,7 +65,7 @@
               />
             </button>
             <woot-button size="tiny" variant="clear" color-scheme="secondary" icon="edit" @click="openEditModal(rule)" />
-            <woot-button size="tiny" variant="clear" color-scheme="alert" icon="delete" :is-loading="deletingId === rule.id" @click="confirmDelete(rule)" />
+            <woot-button size="tiny" variant="clear" color-scheme="alert" icon="delete" :is-loading="deletingId === rule.id" @click="openDelete(rule)" />
           </div>
         </div>
 
@@ -226,6 +226,18 @@
         </form>
       </div>
     </woot-modal>
+
+    <!-- Confirmación de borrado (estilo Chatwoot) -->
+    <woot-delete-modal
+      :show.sync="showDeleteModal"
+      :on-close="closeDelete"
+      :on-confirm="confirmDelete"
+      :title="$t('CASE_TICKETS.RULES.DELETE.TITLE')"
+      :message="$t('CASE_TICKETS.RULES.DELETE.MESSAGE')"
+      :message-value="deleteMessageValue"
+      :confirm-text="$t('CASE_TICKETS.RULES.DELETE.YES')"
+      :reject-text="$t('CASE_TICKETS.RULES.DELETE.NO')"
+    />
   </div>
 </template>
 
@@ -317,6 +329,8 @@ export default {
       editingRule: null,
       form: DEFAULT_FORM(),
       deletingId: null,
+      showDeleteModal: false,
+      ruleToDelete: null,
     };
   },
   computed: {
@@ -334,6 +348,9 @@ export default {
     // Tipos de la cuenta como opciones {value: id (string), label: name}
     typeOptions() {
       return this.caseTypes.map(t => ({ value: String(t.id), label: t.name }));
+    },
+    deleteMessageValue() {
+      return this.ruleToDelete ? ` "${this.ruleToDelete.name}"?` : '';
     },
   },
   mounted() {
@@ -418,11 +435,21 @@ export default {
         name: rule.name, conditions: rule.conditions, actions: rule.actions,
       });
     },
-    async confirmDelete(rule) {
-      if (!window.confirm(`¿Eliminar la regla "${rule.name}"?`)) return;
+    openDelete(rule) {
+      this.ruleToDelete = rule;
+      this.showDeleteModal = true;
+    },
+    closeDelete() {
+      this.showDeleteModal = false;
+      this.ruleToDelete = null;
+    },
+    async confirmDelete() {
+      const rule = this.ruleToDelete;
+      if (!rule) return;
+      this.showDeleteModal = false;
       this.deletingId = rule.id;
       try { await this.$store.dispatch('caseTickets/deleteRule', rule.id); }
-      finally { this.deletingId = null; }
+      finally { this.deletingId = null; this.ruleToDelete = null; }
     },
     fieldLabel(field)    { return CONDITION_FIELDS.find(f => f.value === field)?.label || field; },
     operatorLabel(op)    { return [...OPERATORS_SELECT, ...OPERATORS_TEXT, ...OPERATORS_NUMBER].find(o => o.value === op)?.label || op; },
