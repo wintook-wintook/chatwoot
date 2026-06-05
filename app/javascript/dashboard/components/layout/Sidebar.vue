@@ -225,19 +225,17 @@ export default {
 
     // NUEVO: Computed para determinar si debemos mostrar el sidebar secundario
     shouldShowSecondarySidebar() {
-      // Si la prop dice que no se muestre, respetarla
-      if (!this.showSecondarySidebar) return false;
-      
-      // Para rutas de kanban, siempre mostrar el sidebar
       const currentRoute = this.$route.name;
-      const kanbanRoutes = ['kanban_dashboard', 'kanban_board', 'kanban_processes', 'kanban_label', 'kanban_status', 'kanban_type'];
-      
-      if (kanbanRoutes.includes(currentRoute)) {
-        console.log('🔍 Debug - Ruta de kanban detectada, forzando sidebar:', currentRoute);
-        return true;
-      }
-      
-      // Para otras rutas, usar la lógica normal
+
+      // Rutas que siempre muestran el sidebar sin importar la preferencia del usuario
+      const alwaysShowRoutes = [
+        'kanban_dashboard', 'kanban_board', 'kanban_processes', 'kanban_label', 'kanban_status', 'kanban_type',
+        'gestorTickets_index', 'gestorTickets_detail', 'gestorTickets_rules', 'gestorTickets_metrics', // @tickets_cases
+      ];
+      if (alwaysShowRoutes.includes(currentRoute)) return true;
+
+      // Para el resto, respetar la preferencia del usuario
+      if (!this.showSecondarySidebar) return false;
       return Object.keys(this.activeSecondaryMenu).length > 0;
     },
   },

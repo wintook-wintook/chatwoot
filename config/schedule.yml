@@ -136,3 +136,17 @@ calendar_alert_job:
   class: "CalendarAlertJob"
   queue: scheduled_jobs
   description: "Send Google Calendar event reminders to agents"
+
+# ================================================================================
+# @tickets_cases
+# ================================================================================
+# Job: Monitor de SLA del Gestor de Tickets
+# Descripción: Actualiza sla_status (on_time/at_risk/overdue) y cierra tickets
+#              resueltos sin actividad por más de 72h
+# Frecuencia: Cada 15 minutos
+# ================================================================================
+case_sla_monitor_job:
+  cron: "*/15 * * * *"
+  class: "CaseSlaMonitorJob"
+  queue: scheduled_jobs
+  description: "Monitor SLA status of CaseTickets and auto-close stale resolved tickets"

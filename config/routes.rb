@@ -105,6 +105,24 @@ Rails.application.routes.draw do
             post :execute, on: :member
           end
           resources :sla_policies, only: [:index, :create, :show, :update, :destroy]
+
+          # =========================================================================
+          # @tickets_cases — Gestor de Tickets
+          # =========================================================================
+          resources :case_tickets, only: [:index, :show, :create] do
+            collection do
+              get :metrics
+            end
+            member do
+              patch :transition
+              patch :assign
+            end
+            resources :case_events, only: [:index]
+          end
+          resources :case_rules, only: [:index, :create, :update, :destroy]
+          resources :case_types, only: [:index, :create, :update, :destroy]
+          resource  :case_folio_config, only: [:show, :update], controller: 'case_folio_configs'
+          # =========================================================================
           resources :custom_roles, only: [:index, :create, :show, :update, :destroy]
           resources :campaigns, only: [:index, :create, :show, :update, :destroy]
           resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]

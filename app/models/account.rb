@@ -38,6 +38,11 @@ class Account < ApplicationRecord
   
 
   has_many :tracking_templates, dependent: :destroy # proyecto@tracking_templates
+  has_many :case_tickets,       dependent: :destroy # @tickets_cases
+  has_many :case_rules,         dependent: :destroy # @tickets_cases
+  has_many :case_types,         dependent: :destroy # @tickets_cases
+  has_many :case_folio_counters, dependent: :destroy # @tickets_cases
+  has_one  :case_folio_config,  dependent: :destroy # @tickets_cases
   DEFAULT_QUERY_SETTING = {
     flag_query_mode: :bit_operator,
     check_for_column: false

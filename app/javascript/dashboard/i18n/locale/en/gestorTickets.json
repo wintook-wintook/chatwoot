@@ -1,0 +1,157 @@
+{
+  "CASE_TICKETS": {
+    "SECTION_TITLE": "Ticket",
+    "SIDEBAR": {
+      "PRIMARY_LABEL": "Tickets",
+      "TITLE": "Ticket Manager",
+      "ALL_TICKETS": "All tickets",
+      "METRICS": "Metrics",
+      "RULES": "Automation rules"
+    },
+    "METRICS": {
+      "TITLE": "Ticket Metrics",
+      "LOADING": "Loading metrics...",
+      "EMPTY": "No data for the selected period",
+      "TOTAL_PERIOD": "Tickets in period",
+      "TOTAL_OPEN": "Active tickets",
+      "SLA_OVERDUE": "SLA overdue",
+      "SLA_AT_RISK": "SLA at risk",
+      "SLA_COMPLIANCE": "SLA compliance",
+      "AVG_RESOLUTION": "Avg. resolution time",
+      "RESOLVED_PERIOD": "Resolved in period",
+      "BY_STATUS": "By status",
+      "BY_TYPE": "By type",
+      "BY_PRIORITY": "By priority",
+      "BY_SLA": "SLA status",
+      "PERIOD_FROM": "Period:",
+      "PERIOD_TO": "to"
+    },
+    "LIST": {
+      "LOADING": "Loading tickets...",
+      "EMPTY": "No tickets match the current filters",
+      "SEARCH_PLACEHOLDER": "Search by folio, title or contact…",
+      "DATE_RANGE": "Date range",
+      "APPLY": "Apply",
+      "ALL_STATUSES": "All statuses",
+      "ALL_PRIORITIES": "All priorities",
+      "SORT_BY": "Sort by",
+      "SORT_FIELDS": {
+        "created_at": "Date",
+        "priority": "Priority",
+        "status": "Status",
+        "sla_status": "SLA"
+      },
+      "SORT_ASC": "Ascending",
+      "SORT_DESC": "Descending",
+      "CLEAR_FILTERS": "Clear filters",
+      "RESULTS_COUNT": "{from}–{to} of {total}",
+      "PER_PAGE": "Per page",
+      "FIRST": "First",
+      "PREV": "Previous",
+      "NEXT": "Next",
+      "LAST": "Last"
+    },
+    "RULES": {
+      "CREATE_BUTTON": "+ New rule",
+      "CREATE_TITLE": "Create rule",
+      "EDIT_TITLE": "Edit rule",
+      "EMPTY": "No rules configured. Rules automate assignments and escalations."
+    },
+    "CREATE_BUTTON": "+ Create ticket",
+    "NO_TICKET": "No active ticket",
+    "VIEW_TIMELINE": "View history",
+    "CHANGE_STATUS": "Change status",
+    "SLA_OVERDUE": "SLA overdue",
+    "MODAL": {
+      "TITLE_CREATE": "Create ticket",
+      "CASE_TYPE_LABEL": "Case type",
+      "TITLE_LABEL": "Title",
+      "TITLE_PLACEHOLDER": "Briefly describe the issue",
+      "PRIORITY_LABEL": "Priority",
+      "DESCRIPTION_LABEL": "Description",
+      "DESCRIPTION_PLACEHOLDER": "Additional detail (optional)",
+      "CANCEL": "Cancel",
+      "SUBMIT": "Create ticket",
+      "SUCCESS": "Ticket created successfully",
+      "ERROR": "Error creating ticket"
+    },
+    "TIMELINE": {
+      "TITLE": "Ticket history",
+      "EMPTY": "No events recorded",
+      "CLOSE": "Close",
+      "ACTOR_SYSTEM": "System",
+      "ACTOR_BOT": "Bot"
+    },
+    "TYPES": {
+      "TITLE": "Case types",
+      "HELP": "Define your account's case types. Each ticket is classified with one of these types.",
+      "CREATE_BUTTON": "+ New type",
+      "CREATE_TITLE": "Create case type",
+      "EDIT_TITLE": "Edit case type",
+      "NAME_LABEL": "Name",
+      "COLOR_LABEL": "Color",
+      "PREFIX_LABEL": "Folio prefix",
+      "PREFIX_HELP": "Used in the folio via the {PREFIX} token. Leave empty to auto-generate.",
+      "DELETE_CONFIRM": "Delete type \"{name}\"? Tickets with this type will be left untyped."
+    },
+    "FOLIO": {
+      "TITLE": "Folio settings",
+      "SAVE": "Save",
+      "ENABLED": "Auto-generate folio for new tickets",
+      "TEMPLATE_LABEL": "Folio template",
+      "PREVIEW": "Preview",
+      "TOKENS_TITLE": "Available tokens",
+      "SCOPE_LABEL": "Sequence scope",
+      "PER_TYPE": "Independent sequence per case type",
+      "RESET_LABEL": "Sequence reset",
+      "RESET": {
+        "never": "Never (continuous sequence)",
+        "daily": "Daily",
+        "monthly": "Monthly",
+        "yearly": "Yearly"
+      },
+      "NOTE": "Changes only affect tickets created from now on. Existing folios are not modified.",
+      "SAVED": "Folio settings saved",
+      "SAVE_ERROR": "Error saving settings"
+    },
+    "STATUSES": {
+      "open": "Open",
+      "classified": "Classified",
+      "in_progress": "In progress",
+      "waiting_on_customer": "Waiting on customer",
+      "waiting_on_internal": "Waiting on team",
+      "escalated": "Escalated",
+      "resolved": "Resolved",
+      "closed": "Closed",
+      "cancelled": "Cancelled",
+      "on_time": "On time",
+      "at_risk": "At risk",
+      "overdue": "Overdue"
+    },
+    "PRIORITIES": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "EVENT_TYPES": {
+      "ticket_created": "Ticket created",
+      "ticket_classified": "Ticket classified",
+      "status_changed": "Status changed",
+      "assigned": "Assigned",
+      "reassigned": "Reassigned",
+      "escalated": "Escalated",
+      "message_received": "Message received",
+      "message_sent": "Message sent",
+      "tracking_triggered": "Tracking triggered",
+      "tracking_paused": "Tracking paused",
+      "resolved": "Resolved",
+      "reopened": "Reopened",
+      "closed": "Closed",
+      "sla_at_risk": "SLA at risk",
+      "sla_overdue": "SLA overdue",
+      "error_detected": "Error detected",
+      "internal_note": "Internal note"
+    }
+  }
+}

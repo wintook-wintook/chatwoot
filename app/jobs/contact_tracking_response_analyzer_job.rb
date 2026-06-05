@@ -78,6 +78,28 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def process_message_for_tracking(tracking, message)
     Rails.logger.info "[TrackingBot] 🔍 Tracking ##{tracking.id} (#{tracking.status})"
 
+    # [Gestor de Tickets] hook — falla silenciosamente para no romper el bot @tickets_cases
+    begin
+      ticket = Cases::OrchestratorService.new(
+        account:      message.account,
+        contact:      message.conversation.contact,
+        conversation: message.conversation
+      ).find_active_ticket
+
+      if ticket
+        ticket.update_columns(first_response_at: Time.current) if ticket.first_response_at.nil?
+        ticket.case_events.create!(
+          account:    message.account,
+          event_type: :message_received,
+          origin:     :bot,
+          payload:    { message_id: message.id }
+        )
+        Cases::RuleEngineService.new(ticket, trigger_message: message).evaluate!
+      end
+    rescue StandardError => e
+      Rails.logger.error "[GestorTickets] hook error: #{e.message}"
+    end
+
     # [1] Keywords — prioridad máxima, sin IA (solo si hay texto)
     if message.content.present? && defined?(ContactTrackings::KeywordActionService)
       keyword_service = ContactTrackings::KeywordActionService.new(tracking, message.content, 'incoming')
@@ -138,8 +160,15 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         Rails.logger.info '[TrackingBot] ✅ KBase respondió'
         return true
       end
-      Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → fallback conversacional'
+      Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → intentando @crear_ticket'
     end
+
+    # @tickets_cases: si la directiva @crear_ticket está en el prompt, crea ticket y confirma
+    if Cases::TicketCreatorService.new(message, tracking: tracking).create_if_needed
+      Rails.logger.info '[TrackingBot] 🎫 Ticket creado via @crear_ticket'
+      return true
+    end
+
     generate_and_send_conversational_reply(tracking, message)
   end
 
