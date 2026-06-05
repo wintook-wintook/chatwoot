@@ -1,6 +1,6 @@
 {
   "TRACKING_TEMPLATES": {
-    "HEADER": "Plantillas de Seguimiento",
+    "HEADER": "Agentes IA",
     "HEADER_BTN_TXT": "Nueva Plantilla",
     "DESCRIPTION": "Las plantillas de seguimiento permiten guardar configuraciones frecuentes para reutilizarlas al crear nuevos seguimientos.",
     "LOADING": "Cargando plantillas...",

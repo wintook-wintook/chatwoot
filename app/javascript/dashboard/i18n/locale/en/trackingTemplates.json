@@ -1,14 +1,14 @@
 {
   "TRACKING_TEMPLATES": {
-    "HEADER": "Tracking Templates",
+    "HEADER": "AI Agents",
     "HEADER_BTN_TXT": "New Template",
-    "DESCRIPTION": "Tracking templates allow you to save frequent configurations to reuse when creating new trackings.",
+    "DESCRIPTION": "AI Agents allow you to save frequent configurations to reuse when creating new trackings.",
     "LOADING": "Loading templates...",
     "SEARCH_PLACEHOLDER": "Search by name...",
     "FILTER_BY_TAG": "Filter by tag",
     "ALL_TAGS": "All tags",
     "ALL_CHANNELS": "All channels",
-    "NO_TEMPLATES": "No tracking templates found. Click \"New Template\" to create the first one.",
+    "NO_TEMPLATES": "No AI agents found. Click \"New Template\" to create the first one.",
     "NO_RESULTS": "No templates found with the applied filters.",
     "BACK_TO_LIST": "Back to list",
     "TABLE": {
