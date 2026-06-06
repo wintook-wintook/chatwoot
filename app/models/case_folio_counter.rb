@@ -15,13 +15,6 @@
 #
 #  index_case_folio_counters_on_account_id_and_counter_key  (account_id,counter_key) UNIQUE
 #
-# ================================================================================
-# @tickets_cases
-# ================================================================================
-# Modelo: CaseFolioCounter
-# Descripción: Contador atómico de folios. Una fila por (account_id, counter_key).
-#              El incremento se hace con UPSERT atómico (ver FolioGeneratorService).
-# ================================================================================
 
 class CaseFolioCounter < ApplicationRecord
   belongs_to :account

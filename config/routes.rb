@@ -109,18 +109,27 @@ Rails.application.routes.draw do
           # =========================================================================
           # @tickets_cases — Gestor de Tickets
           # =========================================================================
-          resources :case_tickets, only: [:index, :show, :create] do
+          resources :case_tickets, only: [:index, :show, :create, :update] do
             collection do
               get :metrics
+              get :kb_portals
             end
             member do
               patch :transition
               patch :assign
+              patch :escalate
+              patch :change_approval
+              post :generate_article
             end
             resources :case_events, only: [:index]
+            # @tickets_cases 2E — relaciones entre tickets
+            resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
           resources :case_types, only: [:index, :create, :update, :destroy]
+          resources :case_services, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
+          resources :case_categories, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
+          resources :case_sla_policies, only: [:index, :create, :update, :destroy] # @tickets_cases 2I
           resource  :case_folio_config, only: [:show, :update], controller: 'case_folio_configs'
           # =========================================================================
           resources :custom_roles, only: [:index, :create, :show, :update, :destroy]

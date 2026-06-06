@@ -5,10 +5,13 @@ const gestorTickets = accountId => ({
   parentNav: 'gestorTickets',
   routes: [
     'gestorTickets_index',
+    'gestorTickets_kanban',
     'gestorTickets_detail',
     'gestorTickets_rules',
     'gestorTickets_metrics',
     'gestorTickets_types',
+    'gestorTickets_classification',
+    'gestorTickets_sla',
     'gestorTickets_config',
   ],
   menuItems: [
@@ -18,6 +21,13 @@ const gestorTickets = accountId => ({
       hasSubMenu: false,
       toState: frontendURL(`accounts/${accountId}/tickets`),
       toStateName: 'gestorTickets_index',
+    },
+    {
+      icon: 'table-switch',
+      label: 'TICKET_KANBAN',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/tickets/kanban`),
+      toStateName: 'gestorTickets_kanban',
     },
     {
       icon: 'document',
@@ -39,6 +49,20 @@ const gestorTickets = accountId => ({
       hasSubMenu: false,
       toState: frontendURL(`accounts/${accountId}/tickets/rules`),
       toStateName: 'gestorTickets_rules',
+    },
+    {
+      icon: 'folder',
+      label: 'TICKET_CLASSIFICATION',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/tickets/classification`),
+      toStateName: 'gestorTickets_classification',
+    },
+    {
+      icon: 'clock',
+      label: 'TICKET_SLA',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/tickets/sla`),
+      toStateName: 'gestorTickets_sla',
     },
     {
       icon: 'number-symbol',

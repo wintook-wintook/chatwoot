@@ -9,6 +9,12 @@ export const routes = [
     component: () => import('../../../views/gestorTickets/Index.vue'),
   },
   {
+    path: frontendURL('accounts/:accountId/tickets/kanban'),
+    name: 'gestorTickets_kanban',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/gestorTickets/Kanban.vue'),
+  },
+  {
     path: frontendURL('accounts/:accountId/tickets/rules'),
     name: 'gestorTickets_rules',
     meta: { permissions: ['administrator'] },
@@ -21,6 +27,12 @@ export const routes = [
     component: () => import('../../../views/gestorTickets/TicketTypes.vue'),
   },
   {
+    path: frontendURL('accounts/:accountId/tickets/classification'),
+    name: 'gestorTickets_classification',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/gestorTickets/Classification.vue'),
+  },
+  {
     path: frontendURL('accounts/:accountId/tickets/config'),
     name: 'gestorTickets_config',
     meta: { permissions: ['administrator'] },
@@ -31,6 +43,12 @@ export const routes = [
     name: 'gestorTickets_metrics',
     meta: { permissions: ['administrator', 'agent'] },
     component: () => import('../../../views/gestorTickets/Metrics.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/tickets/sla'),
+    name: 'gestorTickets_sla',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/gestorTickets/SlaConfig.vue'),
   },
   {
     path: frontendURL('accounts/:accountId/tickets/:id'),

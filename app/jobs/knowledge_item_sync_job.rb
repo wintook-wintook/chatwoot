@@ -52,15 +52,25 @@ class KnowledgeItemSyncJob < ApplicationJob
     account.knowledge_sources.active.find_by(source_type: source_type) ||
       account.knowledge_sources.create!(
         source_type: source_type,
-        name: source_type == 'canned_response' ? 'Respuestas Predefinidas' : source_type.humanize,
+        name: knowledge_source_name(source_type),
         status: 'active'
       )
+  end
+
+  def knowledge_source_name(source_type)
+    case source_type
+    when 'canned_response' then 'Respuestas Predefinidas'
+    when 'article'         then 'Base de Conocimiento' # @tickets_cases 2H
+    else source_type.humanize
+    end
   end
 
   def find_record(account, source_type, source_id)
     case source_type
     when 'canned_response'
       account.canned_responses.find_by(id: source_id)
+    when 'article' # @tickets_cases 2H
+      account.articles.find_by(id: source_id)
     end
   end
 
@@ -68,6 +78,8 @@ class KnowledgeItemSyncJob < ApplicationJob
     case source_type
     when 'canned_response'
       "#{record.short_code}: #{record.content}"
+    when 'article' # @tickets_cases 2H — título + descripción + cuerpo (sin etiquetas).
+      [record.title, record.description, strip_html(record.content)].compact_blank.join("\n\n")
     end
   end
 
@@ -75,6 +87,8 @@ class KnowledgeItemSyncJob < ApplicationJob
     case source_type
     when 'canned_response'
       record.short_code
+    when 'article'
+      record.title
     end
   end
 
@@ -82,9 +96,19 @@ class KnowledgeItemSyncJob < ApplicationJob
     case source_type
     when 'canned_response'
       { short_code: record.short_code }
+    when 'article' # @tickets_cases 2H
+      { article_id: record.id, portal_id: record.portal_id, category_id: record.category_id,
+        slug: record.slug, status: record.status }
     else
       {}
     end
+  end
+
+  # Quita etiquetas HTML básicas del contenido del artículo para vectorizar texto plano.
+  def strip_html(text)
+    return text if text.blank?
+
+    ActionView::Base.full_sanitizer.sanitize(text)
   end
 
   def generate_embedding(account, text)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_04_000008) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_06_000005) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -237,6 +237,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_04_000008) do
     t.datetime "updated_at", precision: nil, null: false
   end
 
+  create_table "case_categories", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "parent_id"
+    t.string "name", null: false
+    t.boolean "active", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "position"], name: "index_case_categories_on_account_id_and_position"
+    t.index ["parent_id"], name: "index_case_categories_on_parent_id"
+  end
+
   create_table "case_events", force: :cascade do |t|
     t.bigint "case_ticket_id", null: false
     t.bigint "account_id", null: false
@@ -284,6 +296,44 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_04_000008) do
     t.index ["account_id", "active", "position"], name: "index_case_rules_on_account_id_and_active_and_position"
   end
 
+  create_table "case_services", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.string "color", default: "#64748b", null: false
+    t.boolean "active", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "position"], name: "index_case_services_on_account_id_and_position"
+  end
+
+  create_table "case_sla_policies", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_type_id"
+    t.integer "ticket_kind"
+    t.integer "priority", null: false
+    t.integer "first_response_time_target"
+    t.integer "resolution_time_target"
+    t.boolean "business_hours_only", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "case_type_id", "ticket_kind", "priority"], name: "index_case_sla_policies_unique_scope", unique: true
+    t.index ["account_id", "priority"], name: "index_case_sla_policies_on_account_id_and_priority"
+  end
+
+  create_table "case_ticket_relations", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "ticket_id", null: false
+    t.bigint "related_ticket_id", null: false
+    t.integer "relation_type", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_ticket_relations_on_account_id"
+    t.index ["related_ticket_id"], name: "index_case_ticket_relations_on_related_ticket_id"
+    t.index ["ticket_id", "related_ticket_id", "relation_type"], name: "index_case_ticket_relations_unique", unique: true
+  end
+
   create_table "case_tickets", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "contact_id", null: false
@@ -309,11 +359,28 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_04_000008) do
     t.datetime "updated_at", null: false
     t.bigint "case_type_id"
     t.string "folio"
+    t.integer "ticket_kind", default: 1, null: false
+    t.integer "impact"
+    t.integer "urgency"
+    t.bigint "affected_service_id"
+    t.bigint "category_id"
+    t.integer "escalation_level", default: 0, null: false
+    t.integer "closure_type"
+    t.text "closure_cause"
+    t.text "closure_solution"
+    t.boolean "customer_confirmed", default: false, null: false
+    t.bigint "kb_article_id"
+    t.integer "sla_paused_minutes", default: 0, null: false
+    t.datetime "sla_paused_since"
     t.index ["account_id", "case_type_id"], name: "index_case_tickets_on_account_id_and_case_type_id"
     t.index ["account_id", "contact_id"], name: "index_case_tickets_on_account_id_and_contact_id"
     t.index ["account_id", "folio"], name: "index_case_tickets_on_account_and_folio", unique: true, where: "(folio IS NOT NULL)"
     t.index ["account_id", "sla_status"], name: "index_case_tickets_on_account_id_and_sla_status"
     t.index ["account_id", "status"], name: "index_case_tickets_on_account_id_and_status"
+    t.index ["account_id", "ticket_kind"], name: "index_case_tickets_on_account_id_and_ticket_kind"
+    t.index ["affected_service_id"], name: "index_case_tickets_on_affected_service_id"
+    t.index ["category_id"], name: "index_case_tickets_on_category_id"
+    t.index ["kb_article_id"], name: "index_case_tickets_on_kb_article_id"
     t.index ["metadata"], name: "index_case_tickets_on_metadata", using: :gin
   end
 

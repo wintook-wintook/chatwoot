@@ -45,18 +45,30 @@ class Cases::OrchestratorService
     )
   end
 
-  def create_for_manual(title:, priority:, case_type_id: nil, description: nil)
-    ticket = CaseTicket.create!(
+  def create_for_manual(title:, priority: nil, case_type_id: nil, description: nil,
+                        ticket_kind: nil, impact: nil, urgency: nil,
+                        affected_service_id: nil, category_id: nil)
+    attrs = {
       account:       @account,
       contact:       @contact,
       conversation:  @conversation,
       case_type:     resolve_case_type(case_type_id),
       origin:        :manual,
-      priority:      priority,
       assignee_type: :agent,
       title:         title,
       description:   description
-    )
+    }
+    # priority: si viene vacío y hay impacto+urgencia, lo deriva la matriz ITIL;
+    # si no, aplica el default del modelo (medium).
+    attrs[:priority]    = priority    if priority.present?
+    attrs[:ticket_kind] = ticket_kind if ticket_kind.present?
+    attrs[:impact]      = impact      if impact.present?
+    attrs[:urgency]     = urgency     if urgency.present?
+    # Resueltos dentro del scope de la cuenta (evita vincular registros de otra cuenta).
+    attrs[:affected_service_id] = @account.case_services.where(id: affected_service_id).pick(:id) if affected_service_id.present?
+    attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id)        if category_id.present?
+
+    ticket = CaseTicket.create!(attrs)
     Cases::RuleEngineService.new(ticket).evaluate!
     ticket
   end

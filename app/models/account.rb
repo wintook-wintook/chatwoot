@@ -41,6 +41,9 @@ class Account < ApplicationRecord
   has_many :case_tickets,       dependent: :destroy # @tickets_cases
   has_many :case_rules,         dependent: :destroy # @tickets_cases
   has_many :case_types,         dependent: :destroy # @tickets_cases
+  has_many :case_services,      dependent: :destroy # @tickets_cases 2B
+  has_many :case_categories,    dependent: :destroy # @tickets_cases 2B
+  has_many :case_sla_policies,  dependent: :destroy # @tickets_cases 2I
   has_many :case_folio_counters, dependent: :destroy # @tickets_cases
   has_one  :case_folio_config,  dependent: :destroy # @tickets_cases
   DEFAULT_QUERY_SETTING = {

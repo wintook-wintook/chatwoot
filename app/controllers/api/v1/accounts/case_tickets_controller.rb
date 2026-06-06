@@ -19,7 +19,7 @@
 # ================================================================================
 
 class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseController
-  before_action :set_ticket, only: %i[show transition assign]
+  before_action :set_ticket, only: %i[show update transition assign escalate change_approval generate_article]
 
   # GET /api/v1/accounts/:account_id/case_tickets/metrics
   def metrics
@@ -44,6 +44,20 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     }
   end
 
+  # GET /api/v1/accounts/:account_id/case_tickets/kb_portals
+  # @tickets_cases 2H — portales + categorías para el selector de "Generar artículo".
+  def kb_portals
+    portals = Current.account.portals.map do |p|
+      {
+        id:             p.id,
+        name:           p.name,
+        default_locale: p.default_locale,
+        categories:     p.categories.map { |c| { id: c.id, name: c.name, locale: c.locale } }
+      }
+    end
+    render json: { portals: portals }
+  end
+
   PER_PAGE_DEFAULT = 25
   PER_PAGE_MAX     = 100
   SORTABLE_COLUMNS = %w[created_at priority sla_status status].freeze
@@ -55,6 +69,9 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     tickets = apply_search(tickets)
     tickets = tickets.where(status:       CaseTicket.statuses[params[:status]])      if params[:status].present?
     tickets = tickets.where(case_type_id: params[:case_type_id])                     if params[:case_type_id].present?
+    tickets = tickets.where(ticket_kind:  CaseTicket.ticket_kinds[params[:ticket_kind]]) if params[:ticket_kind].present?
+    tickets = tickets.where(affected_service_id: params[:affected_service_id])       if params[:affected_service_id].present?
+    tickets = tickets.where(category_id:  params[:category_id])                       if params[:category_id].present?
     tickets = tickets.where(priority:     CaseTicket.priorities[params[:priority]])  if params[:priority].present?
     tickets = tickets.where(sla_status:  CaseTicket.sla_statuses[params[:sla_status]]) if params[:sla_status].present?
     tickets = apply_assignee(tickets)
@@ -83,15 +100,33 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       contact:      Current.account.contacts.find(ticket_params[:contact_id]),
       conversation: resolve_conversation
     ).create_for_manual(
-      case_type_id: ticket_params[:case_type_id],
-      title:        ticket_params[:title],
-      priority:     ticket_params[:priority],
-      description:  ticket_params[:description]
+      case_type_id:        ticket_params[:case_type_id],
+      title:               ticket_params[:title],
+      priority:            ticket_params[:priority],
+      description:         ticket_params[:description],
+      ticket_kind:         ticket_params[:ticket_kind],
+      impact:              ticket_params[:impact],
+      urgency:             ticket_params[:urgency],
+      affected_service_id: ticket_params[:affected_service_id],
+      category_id:         ticket_params[:category_id]
     )
 
     render json: { case_ticket: ticket_json(ticket) }, status: :created
   rescue ActiveRecord::RecordNotFound => e
     render json: { error: e.message }, status: :not_found
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
+  end
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id
+  # @tickets_cases 2F — edita los campos ITIL de Problema/Cambio (custom_attributes).
+  def update
+    incoming = update_params[:custom_attributes]&.to_h || {}
+    if incoming.key?('requires_approval')
+      incoming['requires_approval'] = ActiveModel::Type::Boolean.new.cast(incoming['requires_approval'])
+    end
+    @ticket.update!(custom_attributes: @ticket.custom_attributes.merge(incoming))
+    render json: { case_ticket: ticket_json(@ticket.reload) }
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
   end
@@ -105,7 +140,24 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       }, status: :unprocessable_entity
     end
 
-    @ticket.transition!(new_status, actor: current_user, reason: params[:reason])
+    @ticket.transition!(new_status, actor: current_user, reason: params[:reason], closure: closure_params)
+
+    # @tickets_cases 2F — propagación opcional de la resolución de un problema a sus incidentes.
+    propagated = []
+    if @ticket.kind_problem? && new_status == 'resolved' &&
+       ActiveModel::Type::Boolean.new.cast(params[:propagate_to_incidents])
+      propagated = @ticket.propagate_resolution_to_incidents!(actor: current_user)
+    end
+
+    render json: { case_ticket: ticket_json(@ticket.reload), propagated_incidents: propagated }
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/change_approval
+  # @tickets_cases 2F — aprueba o rechaza un cambio (status: approved|rejected).
+  def change_approval
+    @ticket.set_change_approval!(params[:status], actor: current_user, reason: params[:reason])
     render json: { case_ticket: ticket_json(@ticket.reload) }
   rescue StandardError => e
     render json: { error: e.message }, status: :unprocessable_entity
@@ -138,7 +190,74 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
   end
 
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/escalate
+  # @tickets_cases 2D — sube el nivel de escalamiento; reasigna a team/agente opcional.
+  def escalate
+    team     = params[:team_id].present?     ? Current.account.teams.find_by(id: params[:team_id]) : nil
+    assignee = params[:assignee_id].present? ? Current.account.users.find_by(id: params[:assignee_id]) : nil
+
+    @ticket.escalate!(actor: current_user, reason: params[:reason], team: team, assignee: assignee)
+    render json: { case_ticket: ticket_json(@ticket.reload) }
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # POST /api/v1/accounts/:account_id/case_tickets/:id/generate_article
+  # @tickets_cases 2H — crea un Article nativo desde el cierre y lo enlaza al ticket;
+  # luego encola la vectorización (KnowledgeItemSyncJob) para que la IA (Fase 3) lo encuentre.
+  def generate_article
+    portal = Current.account.portals.find_by(id: params[:portal_id])
+    return render json: { error: 'Selecciona un portal válido' }, status: :unprocessable_entity unless portal
+
+    category = portal.categories.find_by(id: params[:category_id]) if params[:category_id].present?
+
+    article = portal.articles.new(
+      account:  Current.account,
+      author:   current_user,
+      category: category,
+      title:    params[:title].presence   || @ticket.title,
+      content:  params[:content].presence || default_article_content,
+      status:   ActiveModel::Type::Boolean.new.cast(params[:published]) ? :published : :draft
+    )
+    article.locale = params[:locale] if params[:locale].present?
+    article.save!
+
+    @ticket.update!(kb_article: article)
+    @ticket.case_events.create!(
+      account: Current.account, event_type: :article_generated, origin: :agent, actor: current_user,
+      payload: { article_id: article.id, title: article.title }
+    )
+
+    # Vectorización asíncrona (solo artículos generados desde tickets — decisión 2H).
+    KnowledgeItemSyncJob.perform_later(
+      action: 'upsert', source_type: 'article', source_id: article.id, account_id: Current.account.id
+    )
+
+    render json: { case_ticket: ticket_json(@ticket.reload), article: article_summary(article) }, status: :created
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
+  end
+
   private
+
+  # @tickets_cases 2H — cuerpo del artículo precargado desde el cierre documentado (2G).
+  def default_article_content
+    parts = []
+    parts << "## Síntoma\n\n#{@ticket.description}"       if @ticket.description.present?
+    parts << "## Causa\n\n#{@ticket.closure_cause}"       if @ticket.closure_cause.present?
+    parts << "## Solución\n\n#{@ticket.closure_solution}" if @ticket.closure_solution.present?
+    parts.join("\n\n")
+  end
+
+  def article_summary(article)
+    {
+      id:        article.id,
+      title:     article.title,
+      status:    article.status,
+      slug:      article.slug,
+      portal_id: article.portal_id
+    }
+  end
 
   def set_ticket
     @ticket = Current.account.case_tickets.find(params[:id])
@@ -149,7 +268,23 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   def ticket_params
     params.require(:case_ticket).permit(
       :contact_id, :conversation_id, :case_type_id, :title,
-      :priority, :description
+      :priority, :description,
+      :ticket_kind, :impact, :urgency, :affected_service_id, :category_id
+    )
+  end
+
+  # @tickets_cases 2G — datos de cierre documentado (nil si no vienen en el request).
+  def closure_params
+    return nil if params[:closure].blank?
+
+    params[:closure].permit(:closure_type, :closure_cause, :closure_solution, :customer_confirmed).to_h
+  end
+
+  # @tickets_cases 2F — solo los campos ITIL de Problema/Cambio (approval_status excluido:
+  # se controla por change_approval para mantener la auditoría).
+  def update_params
+    params.require(:case_ticket).permit(
+      custom_attributes: (CaseTicket::PROBLEM_FIELDS + CaseTicket::CHANGE_FIELDS)
     )
   end
 
@@ -167,9 +302,19 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       description:                ticket.description,
       case_type_id:               ticket.case_type_id,
       case_type:                  case_type_json(ticket.case_type),
+      ticket_kind:                ticket.ticket_kind,
+      impact:                     ticket.impact,
+      urgency:                    ticket.urgency,
+      affected_service_id:        ticket.affected_service_id,
+      affected_service:           ref_json(ticket.affected_service),
+      category_id:                ticket.category_id,
+      category:                   ref_json(ticket.category),
       origin:                     ticket.origin,
       priority:                   ticket.priority,
       status:                     ticket.status,
+      escalation_level:           ticket.escalation_level,
+      requires_approval:          ticket.requires_approval?,
+      change_approval_status:     ticket.change_approval_status,
       assignee_type:              ticket.assignee_type,
       sla_status:                 ticket.sla_status,
       first_response_time_target: ticket.first_response_time_target,
@@ -177,6 +322,12 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       first_response_at:          ticket.first_response_at,
       resolved_at:                ticket.resolved_at,
       closed_at:                  ticket.closed_at,
+      closure_type:               ticket.closure_type,
+      closure_cause:              ticket.closure_cause,
+      closure_solution:           ticket.closure_solution,
+      customer_confirmed:         ticket.customer_confirmed,
+      kb_article_id:              ticket.kb_article_id,
+      kb_article:                 kb_article_json(ticket.kb_article),
       metadata:                   ticket.metadata,
       custom_attributes:          ticket.custom_attributes,
       created_at:                 ticket.created_at,
@@ -198,6 +349,20 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     return nil unless type
 
     { id: type.id, name: type.name, color: type.color }
+  end
+
+  # @tickets_cases 2B — referencia ligera para servicio afectado / categoría.
+  def ref_json(record)
+    return nil unless record
+
+    { id: record.id, name: record.name }
+  end
+
+  # @tickets_cases 2H — resumen del artículo KB enlazado.
+  def kb_article_json(article)
+    return nil unless article
+
+    { id: article.id, title: article.title, status: article.status, slug: article.slug, portal_id: article.portal_id }
   end
 
   # Búsqueda por folio / título / descripción / nombre de contacto (ILIKE).

@@ -42,7 +42,14 @@ class CaseEvent < ApplicationRecord
     sla_at_risk:        13,
     sla_overdue:        14,
     error_detected:     15,
-    internal_note:      16
+    internal_note:      16,
+    in_diagnosis:       17,
+    validating:         18,
+    related:            19,
+    change_approved:    20,
+    change_rejected:    21,
+    problem_propagated: 22,
+    article_generated:  23
   }
 
   enum origin: { bot: 0, agent: 1, system: 2 }

@@ -67,6 +67,11 @@ class Cases::RuleEngineService
   def field_value(field)
     case field
     when 'case_type'                 then @ticket.case_type_id # @tickets_cases: condición compara contra id
+    when 'ticket_kind'               then @ticket.ticket_kind  # @tickets_cases 2B
+    when 'impact'                    then @ticket.impact
+    when 'urgency'                   then @ticket.urgency
+    when 'affected_service'          then @ticket.affected_service_id
+    when 'category'                  then @ticket.category_id
     when 'origin'                    then @ticket.origin
     when 'priority'                  then @ticket.priority
     when 'status'                    then @ticket.status
@@ -117,10 +122,12 @@ class Cases::RuleEngineService
       log_action(type, value)
 
     when 'escalate'
-      return unless @ticket.can_transition_to?(:escalated)
+      # @tickets_cases 2D: sube el nivel (N1→N2→N3) y marca estado escalado si procede.
+      return if @ticket.escalation_level >= CaseTicket::MAX_ESCALATION_LEVEL
 
-      @ticket.transition!(:escalated)
-      log_action(type, 'escalated')
+      team = value.present? ? find_team(value) : nil
+      @ticket.escalate!(reason: 'Regla automática', team: team)
+      log_action(type, "level #{@ticket.escalation_level}")
 
     when 'close_ticket'
       return unless @ticket.can_transition_to?(:closed)

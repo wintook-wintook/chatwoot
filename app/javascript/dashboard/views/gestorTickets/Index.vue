@@ -214,10 +214,12 @@ const QUICK_FILTERS = [
   { key: 'unassigned',  label: 'Sin asignar' },
 ];
 
-// Solo los 9 estados de ticket (sin los estados SLA que comparten el bloque STATUSES).
+// Los 13 estados de ticket (sin los estados SLA que comparten el bloque STATUSES).
+// Orden = flujo del ciclo de vida ITIL (@tickets_cases 2A).
 const STATUS_OPTIONS = [
-  'open', 'classified', 'in_progress', 'waiting_on_customer',
-  'waiting_on_internal', 'escalated', 'resolved', 'closed', 'cancelled',
+  'open', 'classified', 'assigned', 'in_diagnosis', 'in_progress',
+  'waiting_on_customer', 'waiting_on_third_party', 'waiting_on_internal',
+  'escalated', 'resolved', 'validating', 'closed', 'cancelled',
 ];
 const PRIORITY_OPTIONS = ['low', 'medium', 'high', 'urgent'];
 const SORT_FIELDS = ['created_at', 'priority', 'status', 'sla_status'];

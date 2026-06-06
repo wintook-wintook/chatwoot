@@ -22,16 +22,51 @@ class CaseTicketsAPI extends ApiClient {
     return axios.get(`${this.url}/${ticketId}/case_events`);
   }
 
-  transition(ticketId, status, reason = null) {
-    return axios.patch(`${this.url}/${ticketId}/transition`, { status, reason });
+  transition(ticketId, status, reason = null, extra = {}) {
+    return axios.patch(`${this.url}/${ticketId}/transition`, {
+      status,
+      reason,
+      ...extra,
+    });
   }
 
   assign(ticketId, params) {
     return axios.patch(`${this.url}/${ticketId}/assign`, params);
   }
 
+  escalate(ticketId, params = {}) {
+    return axios.patch(`${this.url}/${ticketId}/escalate`, params);
+  }
+
   getMetrics(params = {}) {
     return axios.get(`${this.url}/metrics`, { params });
+  }
+
+  // @tickets_cases 2F — aprobación/rechazo de un cambio
+  changeApproval(ticketId, params) {
+    return axios.patch(`${this.url}/${ticketId}/change_approval`, params);
+  }
+
+  // @tickets_cases 2H — base de conocimiento
+  getKbPortals() {
+    return axios.get(`${this.url}/kb_portals`);
+  }
+
+  generateArticle(ticketId, params) {
+    return axios.post(`${this.url}/${ticketId}/generate_article`, params);
+  }
+
+  // @tickets_cases 2E — relaciones entre tickets
+  getRelations(ticketId) {
+    return axios.get(`${this.url}/${ticketId}/relations`);
+  }
+
+  createRelation(ticketId, params) {
+    return axios.post(`${this.url}/${ticketId}/relations`, params);
+  }
+
+  deleteRelation(ticketId, relationId) {
+    return axios.delete(`${this.url}/${ticketId}/relations/${relationId}`);
   }
 }
 

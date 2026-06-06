@@ -137,9 +137,9 @@ export default {
       this.isSaving = true;
       try {
         await this.$store.dispatch('caseTickets/updateFolioConfig', this.form);
-        bus.$emit('newToastMessage', { message: this.$t('CASE_TICKETS.FOLIO.SAVED'), type: 'success' });
+        this.$emitter.emit('newToastMessage', { message: this.$t('CASE_TICKETS.FOLIO.SAVED'), type: 'success' });
       } catch (_e) {
-        bus.$emit('newToastMessage', { message: this.$t('CASE_TICKETS.FOLIO.SAVE_ERROR'), type: 'error' });
+        this.$emitter.emit('newToastMessage', { message: this.$t('CASE_TICKETS.FOLIO.SAVE_ERROR'), type: 'error' });
       } finally {
         this.isSaving = false;
       }
