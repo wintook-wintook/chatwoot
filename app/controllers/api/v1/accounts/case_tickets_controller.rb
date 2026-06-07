@@ -29,18 +29,28 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     render json: {
       period:   { from: date_from, to: date_to },
       summary: {
-        total:                  tickets.count,
-        total_open:             open_tickets.count,
-        sla_overdue:            open_tickets.overdue.count,
-        sla_at_risk:            open_tickets.at_risk.count,
-        avg_resolution_minutes: avg_resolution_minutes(tickets),
-        sla_compliance_rate:    sla_compliance_rate(tickets),
-        resolved_this_period:   tickets.resolved.count + tickets.closed.count
+        total:                      tickets.count,
+        total_open:                 open_tickets.count,
+        sla_overdue:                open_tickets.overdue.count,
+        sla_at_risk:                open_tickets.at_risk.count,
+        avg_resolution_minutes:     avg_resolution_minutes(tickets),
+        avg_first_response_minutes: avg_first_response_minutes(tickets), # @tickets_cases 2J
+        sla_compliance_rate:        sla_compliance_rate(tickets),
+        resolved_this_period:       tickets.resolved.count + tickets.closed.count,
+        reopened:                   reopened_count(tickets),            # @tickets_cases 2J
+        open_problems:              open_tickets.kind_problem.count,    # @tickets_cases 2J
+        pending_changes:            pending_changes_count(open_tickets), # @tickets_cases 2J
+        csat_avg:                   csat_stats(tickets)[:avg],          # @tickets_cases 2J
+        csat_count:                 csat_stats(tickets)[:count]
       },
       by_status:     enum_counts(tickets, :status,     CaseTicket.statuses),
       by_type:       type_counts(tickets),
       by_priority:   enum_counts(tickets, :priority,   CaseTicket.priorities),
-      by_sla_status: enum_counts(tickets, :sla_status, CaseTicket.sla_statuses)
+      by_sla_status: enum_counts(tickets, :sla_status, CaseTicket.sla_statuses),
+      by_category:   category_counts(tickets),  # @tickets_cases 2J
+      by_service:    service_counts(tickets),   # @tickets_cases 2J
+      by_assignee:   assignee_counts(tickets),  # @tickets_cases 2J
+      daily:         daily_series(tickets)      # @tickets_cases 2J
     }
   end
 
@@ -469,5 +479,74 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
     on_time = finished.where(sla_status: %w[on_time at_risk]).count
     ((on_time.to_f / total) * 100).round(1)
+  end
+
+  # ── @tickets_cases 2J — métricas ampliadas ────────────────────
+  def avg_first_response_minutes(tickets)
+    result = tickets.where.not(first_response_at: nil)
+                    .average("EXTRACT(EPOCH FROM (first_response_at - created_at)) / 60")
+    result&.round(1)
+  end
+
+  def reopened_count(tickets)
+    CaseEvent.where(case_ticket_id: tickets.select(:id), event_type: :reopened).count
+  end
+
+  # Cambios abiertos que requieren aprobación y aún no están aprobados.
+  def pending_changes_count(open_tickets)
+    open_tickets.kind_change
+                .where("custom_attributes->>'requires_approval' = 'true'")
+                .where("COALESCE(custom_attributes->>'approval_status', 'pending') <> 'approved'")
+                .count
+  end
+
+  def category_counts(tickets)
+    raw = tickets.group(:category_id).count
+    Current.account.case_categories.each_with_object({}) do |cat, h|
+      count = raw[cat.id] || 0
+      h[cat.name] = count if count.positive?
+    end
+  end
+
+  def service_counts(tickets)
+    raw = tickets.group(:affected_service_id).count
+    Current.account.case_services.each_with_object({}) do |svc, h|
+      count = raw[svc.id] || 0
+      h[svc.name] = count if count.positive?
+    end
+  end
+
+  def assignee_counts(tickets)
+    raw = tickets.group(:assignee_id).count
+    result = {}
+    Current.account.users.each do |user|
+      count = raw[user.id] || 0
+      result[user.name] = count if count.positive?
+    end
+    unassigned = raw[nil] || 0
+    result['— Sin asignar'] = unassigned if unassigned.positive?
+    result
+  end
+
+  # Serie diaria: creados vs resueltos por día dentro del período.
+  def daily_series(tickets)
+    created  = tickets.group("DATE(case_tickets.created_at)").count
+    resolved = tickets.where.not(resolved_at: nil).group("DATE(case_tickets.resolved_at)").count
+
+    (date_from..date_to).map do |day|
+      key = day.to_s
+      { date: key, created: created[day] || created[key] || 0, resolved: resolved[day] || resolved[key] || 0 }
+    end
+  end
+
+  def csat_stats(tickets)
+    convo_ids = tickets.where.not(conversation_id: nil).distinct.pluck(:conversation_id)
+    return { avg: nil, count: 0 } if convo_ids.blank?
+
+    responses = Current.account.csat_survey_responses.where(conversation_id: convo_ids)
+    count = responses.count
+    return { avg: nil, count: 0 } if count.zero?
+
+    { avg: responses.average(:rating)&.round(2), count: count }
   end
 end
