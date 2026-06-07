@@ -95,6 +95,7 @@ const state = {
   },
   // 2C — Tablero Kanban (lista plana, se agrupa por estado en el front)
   boardTickets: [],
+  boardSlaOverdue: 0, // conteo global de vencidos para el badge del tab
   boardUiFlags: {
     isFetching: false,
   },
@@ -187,6 +188,9 @@ export const getters = {
   },
   getBoardTickets(_state) {
     return _state.boardTickets;
+  },
+  getBoardSlaOverdue(_state) {
+    return _state.boardSlaOverdue;
   },
   getBoardUIFlags(_state) {
     return _state.boardUiFlags;
@@ -714,7 +718,10 @@ export const actions = {
         per_page: 100,
         ...filters,
       });
-      commit(SET_CASE_BOARD, data.case_tickets || []);
+      commit(SET_CASE_BOARD, {
+        tickets: data.case_tickets || [],
+        slaOverdue: (data.meta && data.meta.sla_overdue_count) || 0,
+      });
     } finally {
       commit(SET_CASE_BOARD_UI_FLAG, { isFetching: false });
     }
@@ -875,8 +882,9 @@ export const mutations = {
   [SET_CASE_CATEGORIES_UI_FLAG](_state, flags) {
     _state.categoriesUiFlags = { ..._state.categoriesUiFlags, ...flags };
   },
-  [SET_CASE_BOARD](_state, tickets) {
+  [SET_CASE_BOARD](_state, { tickets, slaOverdue }) {
     _state.boardTickets = tickets;
+    _state.boardSlaOverdue = slaOverdue;
   },
   [SET_CASE_BOARD_UI_FLAG](_state, flags) {
     _state.boardUiFlags = { ..._state.boardUiFlags, ...flags };

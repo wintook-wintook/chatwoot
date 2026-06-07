@@ -7,6 +7,13 @@
 <script>
 import { mapGetters } from 'vuex';
 
+// Filtros rápidos (pestañas) — mismo set que el listado (Index.vue).
+const QUICK_FILTERS = [
+  { key: 'all', label: 'Todos' },
+  { key: 'sla_overdue', label: 'SLA vencido' },
+  { key: 'unassigned', label: 'Sin asignar' },
+];
+
 // Columnas operativas: cada una agrupa uno o más estados del ciclo de vida (2A).
 const COLUMNS = [
   { key: 'new', statuses: ['open', 'classified'] },
@@ -44,6 +51,8 @@ export default {
   data() {
     return {
       columns: COLUMNS,
+      quickFilters: QUICK_FILTERS,
+      quickFilter: 'all',
       filters: {
         q: '',
         ticket_kind: '',
@@ -66,11 +75,16 @@ export default {
     ...mapGetters({
       boardTickets: 'caseTickets/getBoardTickets',
       boardUiFlags: 'caseTickets/getBoardUIFlags',
+      slaOverdueCount: 'caseTickets/getBoardSlaOverdue',
       services: 'caseTickets/getServices',
       agents: 'agents/getAgents',
     }),
     isFetching() {
       return this.boardUiFlags.isFetching;
+    },
+    activeQuickTabIndex() {
+      const i = QUICK_FILTERS.findIndex(f => f.key === this.quickFilter);
+      return i < 0 ? 0 : i;
     },
     priorityOptions() {
       return this.$t('CASE_TICKETS.PRIORITIES');
@@ -109,11 +123,22 @@ export default {
           f[k] = this.filters[k];
         }
       });
+      // Filtro rápido (pestañas): sobrescribe assignee / añade sla_status.
+      if (this.quickFilter === 'sla_overdue') f.sla_status = 'overdue';
+      if (this.quickFilter === 'unassigned') f.assignee_id = 'unassigned';
       this.$store.dispatch('caseTickets/fetchBoardTickets', f);
     },
     onSearchInput() {
       clearTimeout(this.searchDebounce);
       this.searchDebounce = setTimeout(() => this.fetch(), 350);
+    },
+    clearSearch() {
+      this.filters.q = '';
+      this.fetch();
+    },
+    onQuickTabChange(index) {
+      this.quickFilter = QUICK_FILTERS[index].key;
+      this.fetch();
     },
     columnLabel(key) {
       return this.$t(`CASE_TICKETS.KANBAN.COLUMNS.${key}`);
@@ -232,17 +257,46 @@ export default {
       <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
         {{ $t('CASE_TICKETS.KANBAN.TITLE') }}
       </h1>
-      <div class="flex flex-wrap items-center gap-2">
-        <input
-          v-model="filters.q"
-          type="text"
-          class="w-56 mb-0 text-sm"
-          :placeholder="$t('CASE_TICKETS.KANBAN.SEARCH_PLACEHOLDER')"
-          @input="onSearchInput"
+
+      <!-- Filtros rápidos como pestañas nativas (mismo estilo que el listado) -->
+      <woot-tabs :index="activeQuickTabIndex" @change="onQuickTabChange">
+        <woot-tabs-item
+          v-for="(f, i) in quickFilters"
+          :key="f.key"
+          :index="i"
+          :name="f.label"
+          :count="f.key === 'sla_overdue' ? slaOverdueCount : 0"
+          :show-badge="f.key === 'sla_overdue' && slaOverdueCount > 0"
         />
+      </woot-tabs>
+
+      <!-- Toolbar compacto: búsqueda + dropdowns -->
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="relative flex-1 min-w-[220px]">
+          <fluent-icon
+            icon="search"
+            size="16"
+            class="absolute -translate-y-1/2 left-3 top-1/2 text-slate-400 dark:text-slate-500"
+          />
+          <input
+            v-model="filters.q"
+            type="text"
+            class="w-full pl-9 pr-9 !mb-0 text-sm"
+            :placeholder="$t('CASE_TICKETS.KANBAN.SEARCH_PLACEHOLDER')"
+            @input="onSearchInput"
+          />
+          <button
+            v-if="filters.q"
+            type="button"
+            class="absolute -translate-y-1/2 right-3 top-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            @click="clearSearch"
+          >
+            <fluent-icon icon="dismiss" size="14" />
+          </button>
+        </div>
         <select
           v-model="filters.ticket_kind"
-          class="mb-0 text-sm w-44"
+          class="!mb-0 text-sm w-40"
           @change="fetch"
         >
           <option value="">{{ $t('CASE_TICKETS.KANBAN.ALL_KINDS') }}</option>
@@ -256,7 +310,7 @@ export default {
         </select>
         <select
           v-model="filters.priority"
-          class="mb-0 text-sm w-40"
+          class="!mb-0 text-sm w-36"
           @change="fetch"
         >
           <option value="">{{ $t('CASE_TICKETS.LIST.ALL_PRIORITIES') }}</option>
@@ -270,7 +324,7 @@ export default {
         </select>
         <select
           v-model="filters.affected_service_id"
-          class="mb-0 text-sm w-44"
+          class="!mb-0 text-sm w-40"
           @change="fetch"
         >
           <option value="">{{ $t('CASE_TICKETS.KANBAN.ALL_SERVICES') }}</option>
@@ -280,13 +334,10 @@ export default {
         </select>
         <select
           v-model="filters.assignee_id"
-          class="mb-0 text-sm w-44"
+          class="!mb-0 text-sm w-40"
           @change="fetch"
         >
           <option value="">{{ $t('CASE_TICKETS.KANBAN.ALL_AGENTS') }}</option>
-          <option value="unassigned">
-            {{ $t('CASE_TICKETS.KANBAN.UNASSIGNED') }}
-          </option>
           <option v-for="a in agents" :key="a.id" :value="a.id">
             {{ a.name }}
           </option>
