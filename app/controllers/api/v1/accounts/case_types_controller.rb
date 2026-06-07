@@ -62,8 +62,22 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
       prefix:     type.prefix,
       color:      type.color,
       position:   type.position,
+      # @tickets_cases 2K — campos personalizados para render dinámico en alta/detalle.
+      custom_fields: type.case_type_fields.ordered.map { |f| field_json(f) },
       created_at: type.created_at,
       updated_at: type.updated_at
+    }
+  end
+
+  def field_json(field)
+    {
+      id:         field.id,
+      key:        field.key,
+      label:      field.label,
+      field_type: field.field_type,
+      options:    field.options,
+      required:   field.required,
+      position:   field.position
     }
   end
 end

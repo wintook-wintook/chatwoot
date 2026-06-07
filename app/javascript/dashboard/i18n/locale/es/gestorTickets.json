@@ -304,6 +304,37 @@
         "NO": "Cancelar"
       }
     },
+    "CUSTOM_FIELDS": {
+      "MANAGE_BUTTON": "Campos",
+      "MODAL_TITLE": "Campos personalizados",
+      "DETAIL_TITLE": "Información adicional",
+      "LOADING": "Cargando campos...",
+      "EMPTY": "Este tipo aún no tiene campos personalizados.",
+      "ADD_TITLE": "Agregar campo",
+      "EDIT_TITLE": "Editar campo",
+      "LABEL_LABEL": "Etiqueta",
+      "KEY_LABEL": "Clave",
+      "KEY_PLACEHOLDER": "numero_serie",
+      "TYPE_LABEL": "Tipo de campo",
+      "REQUIRED_LABEL": "Obligatorio",
+      "REQUIRED_BADGE": "Obligatorio",
+      "OPTIONS_LABEL": "Opciones",
+      "OPTIONS_PLACEHOLDER": "Separa las opciones con comas: Bajo, Medio, Alto",
+      "ADD": "Agregar",
+      "SAVE": "Guardar",
+      "CANCEL_EDIT": "Cancelar",
+      "CLOSE": "Cerrar",
+      "SAVE_ERROR": "No se pudo guardar el campo.",
+      "YES": "Sí",
+      "NO": "No",
+      "TYPES": {
+        "text": "Texto",
+        "number": "Número",
+        "date": "Fecha",
+        "list": "Lista",
+        "checkbox": "Casilla"
+      }
+    },
     "CLASSIFICATION": {
       "TITLE": "Clasificación",
       "BACK": "Volver",

@@ -21,6 +21,7 @@
 class CaseType < ApplicationRecord
   belongs_to :account
   has_many   :case_tickets, dependent: :nullify
+  has_many   :case_type_fields, dependent: :destroy # @tickets_cases 2K
 
   validates :name,  presence: true, length: { maximum: 100 }
   validates :color, presence: true

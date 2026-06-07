@@ -17,6 +17,7 @@ import caseServicesAPI from '../../api/caseServices';
 import caseCategoriesAPI from '../../api/caseCategories';
 import caseFolioConfigAPI from '../../api/caseFolioConfig';
 import caseSlaPoliciesAPI from '../../api/caseSlaPolicies';
+import caseTypeFieldsAPI from '../../api/caseTypeFields';
 import {
   SET_CASE_TICKET_UI_FLAG,
   SET_ACTIVE_CASE_TICKET,
@@ -39,6 +40,8 @@ import {
   SET_CASE_RELATIONS_UI_FLAG,
   SET_CASE_SLA_POLICIES,
   SET_CASE_SLA_POLICIES_UI_FLAG,
+  SET_CASE_TYPE_FIELDS,
+  SET_CASE_TYPE_FIELDS_UI_FLAG,
 } from '../mutation-types';
 
 const CLOSED_STATUSES = ['closed', 'cancelled'];
@@ -108,6 +111,13 @@ const state = {
     isSaving: false,
     isDeleting: false,
   },
+  // 2K — Campos personalizados por tipo de caso, indexados por caseTypeId
+  typeFields: {},
+  typeFieldsUiFlags: {
+    isFetching: false,
+    isSaving: false,
+    isDeleting: false,
+  },
 };
 
 export const getters = {
@@ -141,6 +151,11 @@ export const getters = {
   },
   getTypesUIFlags(_state) {
     return _state.typesUiFlags;
+  },
+  // 2K — campos personalizados de un tipo de caso
+  getTypeFields: _state => caseTypeId => _state.typeFields[caseTypeId] || [],
+  getTypeFieldsUIFlags(_state) {
+    return _state.typeFieldsUiFlags;
   },
   getServices(_state) {
     return _state.services;
@@ -446,6 +461,67 @@ export const actions = {
     }
   },
 
+  // ── 2K — Campos personalizados por tipo de caso ─────────────
+  async fetchTypeFields({ commit }, caseTypeId) {
+    commit(SET_CASE_TYPE_FIELDS_UI_FLAG, { isFetching: true });
+    try {
+      const { data } = await caseTypeFieldsAPI.getAll(caseTypeId);
+      commit(SET_CASE_TYPE_FIELDS, {
+        caseTypeId,
+        fields: data.case_type_fields || [],
+      });
+    } finally {
+      commit(SET_CASE_TYPE_FIELDS_UI_FLAG, { isFetching: false });
+    }
+  },
+
+  async createTypeField({ commit, state: s }, { caseTypeId, ...payload }) {
+    commit(SET_CASE_TYPE_FIELDS_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await caseTypeFieldsAPI.createField(caseTypeId, payload);
+      commit(SET_CASE_TYPE_FIELDS, {
+        caseTypeId,
+        fields: [...(s.typeFields[caseTypeId] || []), data.case_type_field],
+      });
+      return data.case_type_field;
+    } finally {
+      commit(SET_CASE_TYPE_FIELDS_UI_FLAG, { isSaving: false });
+    }
+  },
+
+  async updateTypeField({ commit, state: s }, { caseTypeId, id, ...payload }) {
+    commit(SET_CASE_TYPE_FIELDS_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await caseTypeFieldsAPI.updateField(
+        caseTypeId,
+        id,
+        payload
+      );
+      commit(SET_CASE_TYPE_FIELDS, {
+        caseTypeId,
+        fields: (s.typeFields[caseTypeId] || []).map(f =>
+          f.id === id ? data.case_type_field : f
+        ),
+      });
+      return data.case_type_field;
+    } finally {
+      commit(SET_CASE_TYPE_FIELDS_UI_FLAG, { isSaving: false });
+    }
+  },
+
+  async deleteTypeField({ commit, state: s }, { caseTypeId, id }) {
+    commit(SET_CASE_TYPE_FIELDS_UI_FLAG, { isDeleting: true });
+    try {
+      await caseTypeFieldsAPI.deleteField(caseTypeId, id);
+      commit(SET_CASE_TYPE_FIELDS, {
+        caseTypeId,
+        fields: (s.typeFields[caseTypeId] || []).filter(f => f.id !== id),
+      });
+    } finally {
+      commit(SET_CASE_TYPE_FIELDS_UI_FLAG, { isDeleting: false });
+    }
+  },
+
   // ── 2B — Servicios afectados ────────────────────────────────
   async fetchServices({ commit }) {
     commit(SET_CASE_SERVICES_UI_FLAG, { isFetching: true });
@@ -728,6 +804,12 @@ export const mutations = {
   },
   [SET_CASE_RELATIONS_UI_FLAG](_state, flags) {
     _state.relationsUiFlags = { ..._state.relationsUiFlags, ...flags };
+  },
+  [SET_CASE_TYPE_FIELDS](_state, { caseTypeId, fields }) {
+    _state.typeFields = { ..._state.typeFields, [caseTypeId]: fields };
+  },
+  [SET_CASE_TYPE_FIELDS_UI_FLAG](_state, flags) {
+    _state.typeFieldsUiFlags = { ..._state.typeFieldsUiFlags, ...flags };
   },
   [SET_CASE_SLA_POLICIES](_state, policies) {
     _state.slaPolicies = policies;

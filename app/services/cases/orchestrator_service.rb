@@ -47,7 +47,7 @@ class Cases::OrchestratorService
 
   def create_for_manual(title:, priority: nil, case_type_id: nil, description: nil,
                         ticket_kind: nil, impact: nil, urgency: nil,
-                        affected_service_id: nil, category_id: nil)
+                        affected_service_id: nil, category_id: nil, custom_attributes: {})
     attrs = {
       account:       @account,
       contact:       @contact,
@@ -56,7 +56,9 @@ class Cases::OrchestratorService
       origin:        :manual,
       assignee_type: :agent,
       title:         title,
-      description:   description
+      description:   description,
+      # @tickets_cases 2K — valores de los campos personalizados del tipo de caso.
+      custom_attributes: custom_attributes || {}
     }
     # priority: si viene vacío y hay impacto+urgencia, lo deriva la matriz ITIL;
     # si no, aplica el default del modelo (medium).

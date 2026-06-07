@@ -105,6 +105,13 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
   # POST /api/v1/accounts/:account_id/case_tickets
   def create
+    case_type = Current.account.case_types.find_by(id: ticket_params[:case_type_id])
+    custom = custom_field_values(case_type)
+    missing = missing_required_fields(case_type, custom)
+    if missing.any?
+      return render json: { error: ["Campos requeridos: #{missing.join(', ')}"] }, status: :unprocessable_entity
+    end
+
     ticket = Cases::OrchestratorService.new(
       account:      Current.account,
       contact:      Current.account.contacts.find(ticket_params[:contact_id]),
@@ -118,7 +125,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       impact:              ticket_params[:impact],
       urgency:             ticket_params[:urgency],
       affected_service_id: ticket_params[:affected_service_id],
-      category_id:         ticket_params[:category_id]
+      category_id:         ticket_params[:category_id],
+      custom_attributes:   custom
     )
 
     render json: { case_ticket: ticket_json(ticket) }, status: :created
@@ -283,6 +291,29 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     )
   end
 
+  # @tickets_cases 2K — valores de los campos personalizados, acotados a las claves
+  # definidas para el tipo de caso (ignora cualquier clave no declarada).
+  def custom_field_values(case_type)
+    return {} if case_type.nil?
+
+    raw = params.dig(:case_ticket, :custom_attributes)
+    return {} if raw.blank?
+
+    permitted_keys = case_type.case_type_fields.pluck(:key)
+    raw.to_unsafe_h.stringify_keys.slice(*permitted_keys)
+  end
+
+  # @tickets_cases 2K — etiquetas de los campos requeridos sin valor capturado.
+  def missing_required_fields(case_type, values)
+    return [] if case_type.nil?
+
+    case_type.case_type_fields.where(required: true).ordered.filter_map do |field|
+      value = values[field.key]
+      blank = field.field_checkbox? ? !ActiveModel::Type::Boolean.new.cast(value) : value.to_s.strip.blank?
+      field.label if blank
+    end
+  end
+
   # @tickets_cases 2G — datos de cierre documentado (nil si no vienen en el request).
   def closure_params
     return nil if params[:closure].blank?
@@ -358,7 +389,15 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   def case_type_json(type)
     return nil unless type
 
-    { id: type.id, name: type.name, color: type.color }
+    {
+      id:    type.id,
+      name:  type.name,
+      color: type.color,
+      # @tickets_cases 2K — definiciones para mostrar los campos personalizados con etiqueta.
+      custom_fields: type.case_type_fields.ordered.map do |f|
+        { key: f.key, label: f.label, field_type: f.field_type, options: f.options, required: f.required }
+      end
+    }
   end
 
   # @tickets_cases 2B — referencia ligera para servicio afectado / categoría.

@@ -126,7 +126,9 @@ Rails.application.routes.draw do
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
-          resources :case_types, only: [:index, :create, :update, :destroy]
+          resources :case_types, only: [:index, :create, :update, :destroy] do
+            resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K
+          end
           resources :case_services, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_categories, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_sla_policies, only: [:index, :create, :update, :destroy] # @tickets_cases 2I

@@ -35,6 +35,8 @@ export default {
         priority: 'medium',
         description: '',
       },
+      // 2K — valores de los campos personalizados del tipo seleccionado
+      customValues: {},
     };
   },
   computed: {
@@ -77,6 +79,37 @@ export default {
         (PRIORITY_MATRIX[this.form.impact] || {})[this.form.urgency] || null
       );
     },
+    // 2K — campos personalizados del tipo de caso seleccionado.
+    selectedTypeFields() {
+      const type = (this.types || []).find(
+        t => t.id === this.form.case_type_id
+      );
+      return (type && type.custom_fields) || [];
+    },
+    // ¿Todos los campos requeridos tienen valor?
+    customFieldsValid() {
+      return this.selectedTypeFields.every(f => {
+        if (!f.required) return true;
+        const v = this.customValues[f.key];
+        if (f.field_type === 'checkbox') return v === true;
+        return v !== undefined && v !== null && String(v).trim() !== '';
+      });
+    },
+  },
+  watch: {
+    // Al cambiar de tipo, inicializa los valores de sus campos (checkbox→false).
+    selectedTypeFields: {
+      immediate: true,
+      handler(fields) {
+        const next = {};
+        fields.forEach(f => {
+          const fallback = f.field_type === 'checkbox' ? false : '';
+          next[f.key] =
+            f.key in this.customValues ? this.customValues[f.key] : fallback;
+        });
+        this.customValues = next;
+      },
+    },
   },
   mounted() {
     this.$store.dispatch('caseTickets/fetchTypes').then(() => {
@@ -103,6 +136,10 @@ export default {
           // Si la matriz deriva la prioridad, no se envía la manual (el backend la calcula).
           priority: this.derivedPriority ? undefined : this.form.priority,
           description: this.form.description.trim() || undefined,
+          // 2K — solo se envían si el tipo define campos personalizados.
+          custom_attributes: this.selectedTypeFields.length
+            ? this.customValues
+            : undefined,
         });
         this.$emit('created', ticket);
         this.$emit('close');
@@ -294,6 +331,65 @@ export default {
           />
         </label>
 
+        <!-- 2K — Campos personalizados del tipo de caso -->
+        <template v-if="selectedTypeFields.length">
+          <div class="pt-1 border-t border-slate-100 dark:border-slate-700" />
+          <label
+            v-for="field in selectedTypeFields"
+            :key="field.id"
+            class="flex flex-col gap-1"
+            :class="{
+              'flex-row items-center gap-2': field.field_type === 'checkbox',
+            }"
+          >
+            <input
+              v-if="field.field_type === 'checkbox'"
+              v-model="customValues[field.key]"
+              type="checkbox"
+            />
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-300"
+            >
+              {{ field.label
+              }}<span v-if="field.required" class="text-red-500"> *</span>
+            </span>
+            <select
+              v-if="field.field_type === 'list'"
+              v-model="customValues[field.key]"
+              class="input"
+              :required="field.required"
+            >
+              <option value="">
+                {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+              </option>
+              <option v-for="opt in field.options" :key="opt" :value="opt">
+                {{ opt }}
+              </option>
+            </select>
+            <input
+              v-else-if="field.field_type === 'number'"
+              v-model="customValues[field.key]"
+              type="number"
+              class="input"
+              :required="field.required"
+            />
+            <input
+              v-else-if="field.field_type === 'date'"
+              v-model="customValues[field.key]"
+              type="date"
+              class="input"
+              :required="field.required"
+            />
+            <input
+              v-else-if="field.field_type === 'text'"
+              v-model="customValues[field.key]"
+              type="text"
+              class="input"
+              :required="field.required"
+            />
+          </label>
+        </template>
+
         <!-- Acciones -->
         <div class="flex justify-end gap-2 mt-2">
           <woot-button
@@ -307,7 +403,7 @@ export default {
           <woot-button
             type="submit"
             :is-loading="isCreating"
-            :disabled="!form.title.trim()"
+            :disabled="!form.title.trim() || !customFieldsValid"
           >
             {{ $t('CASE_TICKETS.MODAL.SUBMIT') }}
           </woot-button>

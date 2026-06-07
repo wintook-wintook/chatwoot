@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_06_000005) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_07_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -382,6 +382,23 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_06_000005) do
     t.index ["category_id"], name: "index_case_tickets_on_category_id"
     t.index ["kb_article_id"], name: "index_case_tickets_on_kb_article_id"
     t.index ["metadata"], name: "index_case_tickets_on_metadata", using: :gin
+  end
+
+  create_table "case_type_fields", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_type_id", null: false
+    t.string "key", null: false
+    t.string "label", null: false
+    t.integer "field_type", default: 0, null: false
+    t.jsonb "options", default: [], null: false
+    t.boolean "required", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "case_type_id", "position"], name: "index_case_type_fields_on_scope_position"
+    t.index ["account_id"], name: "index_case_type_fields_on_account_id"
+    t.index ["case_type_id", "key"], name: "index_case_type_fields_unique_key", unique: true
+    t.index ["case_type_id"], name: "index_case_type_fields_on_case_type_id"
   end
 
   create_table "case_types", force: :cascade do |t|
@@ -1353,6 +1370,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_06_000005) do
   add_foreign_key "account_users", "contacts", column: "agent_contact_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "case_type_fields", "accounts"
+  add_foreign_key "case_type_fields", "case_types"
   add_foreign_key "command_sessions", "accounts"
   add_foreign_key "command_sessions", "contacts"
   add_foreign_key "command_sessions", "conversations"

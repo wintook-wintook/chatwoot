@@ -103,6 +103,27 @@ export default {
     riskLevelOptions() {
       return ['low', 'medium', 'high'];
     },
+    // @tickets_cases 2K — campos personalizados del tipo con su valor capturado.
+    customFieldRows() {
+      const defs = this.ticket?.case_type?.custom_fields || [];
+      const attrs = this.ticket?.custom_attributes || {};
+      return defs
+        .filter(
+          d => d.key in attrs && attrs[d.key] !== '' && attrs[d.key] !== null
+        )
+        .map(d => ({
+          key: d.key,
+          label: d.label,
+          value:
+            d.field_type === 'checkbox'
+              ? this.$t(
+                  attrs[d.key]
+                    ? 'CASE_TICKETS.CUSTOM_FIELDS.YES'
+                    : 'CASE_TICKETS.CUSTOM_FIELDS.NO'
+                )
+              : String(attrs[d.key]),
+        }));
+    },
     // @tickets_cases 2G
     isClosed() {
       return this.ticket?.status === 'closed';
@@ -769,6 +790,34 @@ export default {
             <span
               class="text-sm font-medium text-slate-700 dark:text-slate-200"
               >{{ formatDate(ticket.resolved_at) }}</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Campos personalizados (2K) -->
+      <div
+        v-if="customFieldRows.length"
+        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+      >
+        <h3
+          class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
+        >
+          {{ $t('CASE_TICKETS.CUSTOM_FIELDS.DETAIL_TITLE') }}
+        </h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div
+            v-for="row in customFieldRows"
+            :key="row.key"
+            class="flex flex-col gap-0.5"
+          >
+            <span
+              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+              >{{ row.label }}</span
+            >
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ row.value }}</span
             >
           </div>
         </div>

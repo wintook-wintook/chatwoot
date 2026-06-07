@@ -304,6 +304,37 @@
         "NO": "Cancel"
       }
     },
+    "CUSTOM_FIELDS": {
+      "MANAGE_BUTTON": "Fields",
+      "MODAL_TITLE": "Custom fields",
+      "DETAIL_TITLE": "Additional information",
+      "LOADING": "Loading fields...",
+      "EMPTY": "This type has no custom fields yet.",
+      "ADD_TITLE": "Add field",
+      "EDIT_TITLE": "Edit field",
+      "LABEL_LABEL": "Label",
+      "KEY_LABEL": "Key",
+      "KEY_PLACEHOLDER": "serial_number",
+      "TYPE_LABEL": "Field type",
+      "REQUIRED_LABEL": "Required",
+      "REQUIRED_BADGE": "Required",
+      "OPTIONS_LABEL": "Options",
+      "OPTIONS_PLACEHOLDER": "Separate options with commas: Low, Medium, High",
+      "ADD": "Add",
+      "SAVE": "Save",
+      "CANCEL_EDIT": "Cancel",
+      "CLOSE": "Close",
+      "SAVE_ERROR": "Could not save the field.",
+      "YES": "Yes",
+      "NO": "No",
+      "TYPES": {
+        "text": "Text",
+        "number": "Number",
+        "date": "Date",
+        "list": "List",
+        "checkbox": "Checkbox"
+      }
+    },
     "CLASSIFICATION": {
       "TITLE": "Classification",
       "BACK": "Back",
