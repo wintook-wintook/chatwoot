@@ -287,6 +287,18 @@
       "ACTOR_SYSTEM": "System",
       "ACTOR_BOT": "Bot"
     },
+    "JOURNEY": {
+      "TITLE": "Ticket progress",
+      "LOADING": "Loading progress...",
+      "CURRENT": "Current",
+      "CREATED": "Created",
+      "CURRENTLY": "Currently",
+      "VIEWS": {
+        "diagram": "Journey",
+        "timeline": "History",
+        "stepper": "Lifecycle"
+      }
+    },
     "TYPES": {
       "TITLE": "Case types",
       "HELP": "Define your account's case types. Each ticket is classified with one of these types.",

@@ -287,6 +287,18 @@
       "ACTOR_SYSTEM": "Sistema",
       "ACTOR_BOT": "Bot"
     },
+    "JOURNEY": {
+      "TITLE": "Avance del ticket",
+      "LOADING": "Cargando avance...",
+      "CURRENT": "Actual",
+      "CREATED": "Creado",
+      "CURRENTLY": "Actualmente",
+      "VIEWS": {
+        "diagram": "Recorrido",
+        "timeline": "Historial",
+        "stepper": "Ciclo de vida"
+      }
+    },
     "TYPES": {
       "TITLE": "Tipos de caso",
       "HELP": "Define los tipos de caso de tu cuenta. Cada ticket se clasifica con uno de estos tipos.",

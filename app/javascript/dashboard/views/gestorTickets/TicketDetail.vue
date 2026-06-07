@@ -4,9 +4,11 @@
 -->
 <script>
 import { mapGetters } from 'vuex';
+import JourneyView from './JourneyView.vue';
 
 export default {
   name: 'TicketDetail',
+  components: { JourneyView },
   props: {
     ticketId: { type: Number, required: true },
   },
@@ -556,18 +558,6 @@ export default {
         }[sla] || 'text-slate-700 dark:text-slate-200'
       );
     },
-    eventDotColor(type) {
-      const map = {
-        ticket_created: 'bg-blue-500',
-        resolved: 'bg-green-500',
-        closed: 'bg-slate-500',
-        escalated: 'bg-red-500',
-        sla_overdue: 'bg-red-500',
-        sla_at_risk: 'bg-yellow-500',
-        reopened: 'bg-yellow-500',
-      };
-      return map[type] || 'bg-slate-300 dark:bg-slate-600';
-    },
     statusLabel(key) {
       return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key;
     },
@@ -583,20 +573,6 @@ export default {
         hour: '2-digit',
         minute: '2-digit',
       });
-    },
-    actorName(event) {
-      if (event.actor?.name) return event.actor.name;
-      return event.origin === 'bot'
-        ? this.$t('CASE_TICKETS.TIMELINE.ACTOR_BOT')
-        : this.$t('CASE_TICKETS.TIMELINE.ACTOR_SYSTEM');
-    },
-    payloadSummary(event) {
-      const p = event.payload || {};
-      if (p.from && p.to)
-        return `${this.statusLabel(p.from)} → ${this.statusLabel(p.to)}`;
-      if (p.content) return p.content.slice(0, 80);
-      if (p.team) return `Equipo: ${p.team}`;
-      return null;
     },
   },
 };
@@ -1118,61 +1094,12 @@ export default {
         </ul>
       </div>
 
-      <!-- Timeline -->
-      <div
-        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-      >
-        <h3
-          class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
-        >
-          Historial
-        </h3>
-
-        <div
-          v-if="isFetchingEvents"
-          class="text-sm text-slate-400 dark:text-slate-500"
-        >
-          Cargando eventos...
-        </div>
-        <div
-          v-else-if="!events.length"
-          class="text-sm text-slate-400 dark:text-slate-500"
-        >
-          {{ $t('CASE_TICKETS.TIMELINE.EMPTY') }}
-        </div>
-
-        <ul v-else class="flex flex-col gap-4 p-0 m-0 list-none">
-          <li
-            v-for="event in events"
-            :key="event.id"
-            class="flex items-start gap-4"
-          >
-            <div
-              class="flex-shrink-0 w-2.5 h-2.5 mt-1 rounded-full"
-              :class="eventDotColor(event.event_type)"
-            />
-            <div class="flex-1 min-w-0">
-              <p
-                class="m-0 text-sm font-medium text-slate-700 dark:text-slate-200"
-              >
-                {{
-                  $t(`CASE_TICKETS.EVENT_TYPES.${event.event_type}`) ||
-                  event.event_type
-                }}
-              </p>
-              <p
-                v-if="payloadSummary(event)"
-                class="mt-0.5 m-0 text-sm text-slate-500 dark:text-slate-400"
-              >
-                {{ payloadSummary(event) }}
-              </p>
-              <p class="mt-0.5 m-0 text-xs text-slate-400 dark:text-slate-500">
-                {{ actorName(event) }} · {{ formatDate(event.created_at) }}
-              </p>
-            </div>
-          </li>
-        </ul>
-      </div>
+      <!-- Avance del ticket (2L) — 3 vistas conmutables -->
+      <JourneyView
+        :events="events"
+        :ticket="ticket"
+        :is-fetching="isFetchingEvents"
+      />
     </div>
 
     <!-- Modal de escalamiento (2D) -->
