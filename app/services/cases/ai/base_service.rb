@@ -86,6 +86,36 @@ class Cases::Ai::BaseService
     nil
   end
 
+  # Embeddings en lote (una sola llamada). Recibe un array de textos y devuelve un
+  # array de vectores en el MISMO orden (la API conserva el orden por `index`), o
+  # nil ante cualquier fallo.
+  def embed_batch(texts)
+    key = api_key
+    return nil if key.blank? || texts.blank?
+
+    require 'net/http'
+    uri               = URI(EMBEDDINGS_URL)
+    http              = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl      = true
+    http.read_timeout = 30
+
+    request                  = Net::HTTP::Post.new(uri)
+    request['Authorization'] = "Bearer #{key}"
+    request['Content-Type']  = 'application/json'
+    request.body             = { model: EMBEDDING_MODEL, input: texts }.to_json
+
+    response = http.request(request)
+    return nil unless response.is_a?(Net::HTTPSuccess)
+
+    data = JSON.parse(response.body)['data']
+    return nil if data.blank?
+
+    data.sort_by { |d| d['index'] }.map { |d| d['embedding'] }
+  rescue StandardError => e
+    Rails.logger.error("[Cases::Ai] batch embedding error: #{e.message}")
+    nil
+  end
+
   private
 
   def post(key, body)

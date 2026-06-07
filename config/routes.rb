@@ -124,6 +124,7 @@ Rails.application.routes.draw do
               delete :dismiss_ai_suggestion # @tickets_cases 3B
               post :suggest_reply # @tickets_cases 3C
               post :summarize # @tickets_cases 3E
+              post :detect_duplicates # @tickets_cases 3D
             end
             resources :case_events, only: [:index]
             # @tickets_cases 2E — relaciones entre tickets

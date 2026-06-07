@@ -369,6 +369,17 @@
         "SOLUTION_LABEL": "Solución sugerida",
         "SUGGEST_CLOSE": "Sugerir con IA",
         "ERROR": "No se pudo generar el resumen"
+      },
+      "DUPLICATE": {
+        "TITLE": "Detección de repetidos",
+        "SCAN": "Analizar",
+        "RESCAN": "Volver a analizar",
+        "HINT": "Busca incidentes similares para detectar problemas recurrentes.",
+        "NONE": "No se encontraron incidentes similares.",
+        "SUGGEST_PROBLEM": "Hay varios incidentes similares. Considera crear un Problema y vincularlos.",
+        "LINK": "Vincular",
+        "LINKED": "Ticket vinculado como duplicado",
+        "ERROR": "No se pudo analizar duplicados"
       }
     },
     "TYPES": {

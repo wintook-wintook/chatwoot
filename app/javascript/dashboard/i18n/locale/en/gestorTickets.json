@@ -369,6 +369,17 @@
         "SOLUTION_LABEL": "Suggested solution",
         "SUGGEST_CLOSE": "Suggest with AI",
         "ERROR": "Could not generate the summary"
+      },
+      "DUPLICATE": {
+        "TITLE": "Duplicate detection",
+        "SCAN": "Scan",
+        "RESCAN": "Re-scan",
+        "HINT": "Find similar incidents to detect recurring problems.",
+        "NONE": "No similar incidents found.",
+        "SUGGEST_PROBLEM": "There are several similar incidents. Consider creating a Problem and linking them.",
+        "LINK": "Link",
+        "LINKED": "Ticket linked as duplicate",
+        "ERROR": "Could not analyze duplicates"
       }
     },
     "TYPES": {

@@ -50,6 +50,10 @@ export default {
       // 3E — resumen + causa raíz
       summaryResult: null,
       isSummarizing: false,
+      // 3D — detección de repetidos
+      duplicateResult: null,
+      isDetectingDuplicates: false,
+      linkingDuplicateId: null,
       // 2H — base de conocimiento
       showArticleModal: false,
       kbPortals: [],
@@ -186,6 +190,10 @@ export default {
     // @tickets_cases 3E — ¿está activo el resumen/causa raíz?
     summarizeEnabled() {
       return !!this.ticket?.ai_actions?.summarize;
+    },
+    // @tickets_cases 3D — ¿está activa la detección de repetidos?
+    duplicateEnabled() {
+      return !!this.ticket?.ai_actions?.duplicate;
     },
     // @tickets_cases 2G
     isClosed() {
@@ -381,6 +389,53 @@ export default {
       } finally {
         this.isSummarizing = false;
       }
+    },
+    // @tickets_cases 3D — detección de incidentes repetidos
+    async detectDuplicates() {
+      this.isDetectingDuplicates = true;
+      try {
+        this.duplicateResult = await this.$store.dispatch(
+          'caseTickets/detectDuplicates',
+          this.ticketId
+        );
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.AI.DUPLICATE.ERROR'),
+        });
+      } finally {
+        this.isDetectingDuplicates = false;
+      }
+    },
+    // Vincula un match como duplicado (reusa las relaciones 2E).
+    async linkDuplicate(match) {
+      this.linkingDuplicateId = match.id;
+      try {
+        await this.$store.dispatch('caseTickets/createRelation', {
+          ticketId: this.ticketId,
+          relatedTicketId: match.id,
+          relationType: 'duplicate',
+        });
+        // quita el match ya vinculado de la lista
+        this.duplicateResult = {
+          ...this.duplicateResult,
+          matches: this.duplicateResult.matches.filter(m => m.id !== match.id),
+        };
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.AI.DUPLICATE.LINKED'),
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.AI.DUPLICATE.ERROR'),
+        });
+      } finally {
+        this.linkingDuplicateId = null;
+      }
+    },
+    goToTicket(id) {
+      this.$router.push({
+        name: 'gestorTickets_detail',
+        params: { id },
+      });
     },
     // @tickets_cases 3E — prellena el modal de cierre con causa raíz + solución de la IA
     async suggestCloseWithAi() {
@@ -1469,6 +1524,102 @@ export default {
             </p>
           </div>
         </div>
+      </div>
+
+      <!-- Detección de repetidos (3D) -->
+      <div
+        v-if="duplicateEnabled"
+        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+      >
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <fluent-icon
+              icon="wand"
+              size="18"
+              class="text-rose-600 dark:text-rose-300"
+            />
+            <h3
+              class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
+            >
+              {{ $t('CASE_TICKETS.AI.DUPLICATE.TITLE') }}
+            </h3>
+          </div>
+          <woot-button
+            size="small"
+            variant="smooth"
+            icon="wand"
+            :is-loading="isDetectingDuplicates"
+            @click="detectDuplicates"
+          >
+            {{
+              duplicateResult
+                ? $t('CASE_TICKETS.AI.DUPLICATE.RESCAN')
+                : $t('CASE_TICKETS.AI.DUPLICATE.SCAN')
+            }}
+          </woot-button>
+        </div>
+        <p
+          v-if="!duplicateResult && !isDetectingDuplicates"
+          class="m-0 text-sm text-slate-400 dark:text-slate-500"
+        >
+          {{ $t('CASE_TICKETS.AI.DUPLICATE.HINT') }}
+        </p>
+        <template v-if="duplicateResult">
+          <p
+            v-if="!duplicateResult.matches.length"
+            class="m-0 text-sm text-slate-400 dark:text-slate-500"
+          >
+            {{ $t('CASE_TICKETS.AI.DUPLICATE.NONE') }}
+          </p>
+          <template v-else>
+            <div
+              v-if="duplicateResult.suggest_problem"
+              class="flex items-start gap-2 p-2.5 mb-3 text-sm rounded-lg bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300"
+            >
+              <fluent-icon
+                icon="warning"
+                size="16"
+                class="mt-0.5 flex-shrink-0"
+              />
+              <span>{{ $t('CASE_TICKETS.AI.DUPLICATE.SUGGEST_PROBLEM') }}</span>
+            </div>
+            <div class="flex flex-col gap-2">
+              <div
+                v-for="m in duplicateResult.matches"
+                :key="m.id"
+                class="flex items-center gap-3 p-2.5 border rounded-lg border-slate-75 dark:border-slate-700 bg-slate-25 dark:bg-slate-800"
+              >
+                <span
+                  class="px-1.5 py-0.5 text-xs font-medium rounded-full bg-rose-100 text-rose-700 dark:bg-rose-800 dark:text-rose-100"
+                  >{{ Math.round(m.similarity * 100) }}%</span
+                >
+                <button
+                  type="button"
+                  class="flex-1 min-w-0 text-left"
+                  @click="goToTicket(m.id)"
+                >
+                  <span
+                    class="font-mono text-xs text-slate-400 dark:text-slate-500"
+                    >{{ m.folio }}</span
+                  >
+                  <span
+                    class="block text-sm truncate text-slate-700 dark:text-slate-200"
+                    >{{ m.title }}</span
+                  >
+                </button>
+                <woot-button
+                  size="tiny"
+                  variant="smooth"
+                  icon="link"
+                  :is-loading="linkingDuplicateId === m.id"
+                  @click="linkDuplicate(m)"
+                >
+                  {{ $t('CASE_TICKETS.AI.DUPLICATE.LINK') }}
+                </woot-button>
+              </div>
+            </div>
+          </template>
+        </template>
       </div>
 
       <!-- Avance del ticket (2L) — 3 vistas conmutables -->

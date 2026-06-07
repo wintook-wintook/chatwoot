@@ -595,6 +595,12 @@ export const actions = {
     return data.summary;
   },
 
+  // ── 3D — Detección de incidentes repetidos (efímera) ────────
+  async detectDuplicates(_ctx, ticketId) {
+    const { data } = await caseTicketsAPI.detectDuplicates(ticketId);
+    return data.duplicates;
+  },
+
   // ── 2B — Servicios afectados ────────────────────────────────
   async fetchServices({ commit }) {
     commit(SET_CASE_SERVICES_UI_FLAG, { isFetching: true });

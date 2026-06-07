@@ -21,7 +21,8 @@
 class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseController
   before_action :set_ticket,
                 only: %i[show update transition assign escalate change_approval generate_article
-                         apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize]
+                         apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize
+                         detect_duplicates]
 
   # GET /api/v1/accounts/:account_id/case_tickets/metrics
   def metrics
@@ -315,6 +316,16 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     render json: { summary: result }
   end
 
+  # @tickets_cases 3D — detecta incidentes repetidos (efímero, alimenta 2E/2F).
+  def detect_duplicates
+    return render json: { error: 'IA de duplicados desactivada' }, status: :unprocessable_entity unless ai_config.active?(:duplicate)
+
+    result = Cases::Ai::DuplicateDetector.new(account: Current.account).detect(@ticket)
+    return render json: { error: 'No se pudo analizar duplicados' }, status: :unprocessable_entity if result.nil?
+
+    render json: { duplicates: result }
+  end
+
   private
 
   # @tickets_cases 2H — cuerpo del artículo precargado desde el cierre documentado (2G).
@@ -455,7 +466,11 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
   # @tickets_cases 3C/3E — acciones de IA habilitadas (para que la UI muestre/oculte).
   def ai_actions_json
-    { 'reply' => ai_config.active?(:reply), 'summarize' => ai_config.active?(:summarize) }
+    {
+      'reply'     => ai_config.active?(:reply),
+      'summarize' => ai_config.active?(:summarize),
+      'duplicate' => ai_config.active?(:duplicate)
+    }
   end
 
   # @tickets_cases 3B — sugerencia de clasificación de la IA (enriquecida con

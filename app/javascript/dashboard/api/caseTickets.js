@@ -89,6 +89,11 @@ class CaseTicketsAPI extends ApiClient {
   summarize(ticketId) {
     return axios.post(`${this.url}/${ticketId}/summarize`);
   }
+
+  // @tickets_cases 3D — detección de incidentes repetidos
+  detectDuplicates(ticketId) {
+    return axios.post(`${this.url}/${ticketId}/detect_duplicates`);
+  }
 }
 
 export default new CaseTicketsAPI();
