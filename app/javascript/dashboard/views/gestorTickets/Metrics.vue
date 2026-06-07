@@ -56,7 +56,8 @@ const BAR_OPTIONS = {
     xAxes: [{ gridLines: { drawOnChartArea: false } }],
     yAxes: [
       {
-        ticks: { beginAtZero: true, precision: 0 },
+        // min:0 fuerza el origen en cero (beginAtZero no siempre se respeta en chart.js 2.9)
+        ticks: { min: 0, beginAtZero: true, precision: 0 },
         gridLines: { drawOnChartArea: false },
       },
     ],
@@ -72,21 +73,31 @@ const DAILY_OPTIONS = {
     xAxes: [{ gridLines: { drawOnChartArea: false } }],
     yAxes: [
       {
-        ticks: { beginAtZero: true, precision: 0 },
+        ticks: { min: 0, beginAtZero: true, precision: 0 },
         gridLines: { drawOnChartArea: false },
       },
     ],
   },
 };
 
-const CARD_NEUTRAL =
-  'bg-white dark:bg-slate-800 border-slate-75 dark:border-slate-700';
-const CARD_ALERT =
-  'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
-const CARD_WARNING =
-  'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
-const CARD_SUCCESS =
-  'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
+// Donas: leyenda ABAJO para que el círculo quede centrado y del mismo tamaño en todas las tarjetas
+// (con leyenda a la derecha el ancho variable de la leyenda descentraba y deformaba cada dona)
+const DOUGHNUT_OPTIONS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  cutoutPercentage: 62,
+  legend: {
+    display: true,
+    position: 'bottom',
+    labels: { boxWidth: 12, padding: 12, usePointStyle: true },
+  },
+};
+
+// Colores de valor para KPIs (acento sobre el número, no sobre la tarjeta → look limpio tipo Resumen)
+const VALUE_NEUTRAL = 'text-woot-800 dark:text-woot-300';
+const VALUE_ALERT = 'text-red-600 dark:text-red-400';
+const VALUE_WARNING = 'text-yellow-600 dark:text-yellow-400';
+const VALUE_SUCCESS = 'text-green-600 dark:text-green-400';
 
 export default {
   name: 'GestorTicketsMetrics',
@@ -96,6 +107,7 @@ export default {
       selectedPeriod: '30d',
       barOptions: BAR_OPTIONS,
       dailyOptions: DAILY_OPTIONS,
+      doughnutOptions: DOUGHNUT_OPTIONS,
     };
   },
   computed: {
@@ -296,77 +308,100 @@ export default {
       };
     },
 
-    complianceCardClass() {
+    complianceValueClass() {
       const r = this.metrics?.summary?.sla_compliance_rate;
-      if (r == null) return CARD_NEUTRAL;
-      if (r >= 90) return CARD_SUCCESS;
-      if (r >= 70) return CARD_WARNING;
-      return CARD_ALERT;
+      if (r == null) return VALUE_NEUTRAL;
+      if (r >= 90) return VALUE_SUCCESS;
+      if (r >= 70) return VALUE_WARNING;
+      return VALUE_ALERT;
     },
 
-    summaryCards() {
+    // KPIs agrupados en tarjetas temáticas (estilo Resumen): Volumen / SLA / Tiempos / ITIL
+    metricGroups() {
       const s = this.metrics?.summary || {};
       return [
         {
-          value: s.total ?? 0,
-          label: this.$t('CASE_TICKETS.METRICS.TOTAL_PERIOD'),
-          cardClass: CARD_NEUTRAL,
+          header: this.$t('CASE_TICKETS.METRICS.GROUP_VOLUME'),
+          metrics: [
+            {
+              value: s.total ?? 0,
+              label: this.$t('CASE_TICKETS.METRICS.TOTAL_PERIOD'),
+              valueClass: VALUE_NEUTRAL,
+            },
+            {
+              value: s.total_open ?? 0,
+              label: this.$t('CASE_TICKETS.METRICS.TOTAL_OPEN'),
+              valueClass: VALUE_NEUTRAL,
+            },
+            {
+              value: s.resolved_this_period ?? 0,
+              label: this.$t('CASE_TICKETS.METRICS.RESOLVED_PERIOD'),
+              valueClass: VALUE_SUCCESS,
+            },
+            {
+              value: s.reopened ?? 0,
+              label: this.$t('CASE_TICKETS.METRICS.REOPENED'),
+              valueClass: s.reopened > 0 ? VALUE_WARNING : VALUE_NEUTRAL,
+            },
+          ],
         },
         {
-          value: s.total_open ?? 0,
-          label: this.$t('CASE_TICKETS.METRICS.TOTAL_OPEN'),
-          cardClass: CARD_NEUTRAL,
+          header: this.$t('CASE_TICKETS.METRICS.GROUP_SLA'),
+          metrics: [
+            {
+              value: s.sla_overdue ?? 0,
+              label: this.$t('CASE_TICKETS.METRICS.SLA_OVERDUE'),
+              valueClass: s.sla_overdue > 0 ? VALUE_ALERT : VALUE_NEUTRAL,
+            },
+            {
+              value: s.sla_at_risk ?? 0,
+              label: this.$t('CASE_TICKETS.METRICS.SLA_AT_RISK'),
+              valueClass: s.sla_at_risk > 0 ? VALUE_WARNING : VALUE_NEUTRAL,
+            },
+            {
+              value:
+                s.sla_compliance_rate != null
+                  ? s.sla_compliance_rate + '%'
+                  : '—',
+              label: this.$t('CASE_TICKETS.METRICS.SLA_COMPLIANCE'),
+              valueClass: this.complianceValueClass,
+            },
+          ],
         },
         {
-          value: s.sla_overdue ?? 0,
-          label: this.$t('CASE_TICKETS.METRICS.SLA_OVERDUE'),
-          cardClass: s.sla_overdue > 0 ? CARD_ALERT : CARD_NEUTRAL,
+          header: this.$t('CASE_TICKETS.METRICS.GROUP_TIMES'),
+          metrics: [
+            {
+              value: this.avgResolutionText,
+              label: this.$t('CASE_TICKETS.METRICS.AVG_RESOLUTION'),
+              valueClass: VALUE_NEUTRAL,
+            },
+            {
+              value: this.avgFirstResponseText,
+              label: this.$t('CASE_TICKETS.METRICS.AVG_FIRST_RESPONSE'),
+              valueClass: VALUE_NEUTRAL,
+            },
+          ],
         },
         {
-          value: s.sla_at_risk ?? 0,
-          label: this.$t('CASE_TICKETS.METRICS.SLA_AT_RISK'),
-          cardClass: s.sla_at_risk > 0 ? CARD_WARNING : CARD_NEUTRAL,
-        },
-        {
-          value:
-            s.sla_compliance_rate != null ? s.sla_compliance_rate + '%' : '—',
-          label: this.$t('CASE_TICKETS.METRICS.SLA_COMPLIANCE'),
-          cardClass: this.complianceCardClass,
-        },
-        {
-          value: this.avgResolutionText,
-          label: this.$t('CASE_TICKETS.METRICS.AVG_RESOLUTION'),
-          cardClass: CARD_NEUTRAL,
-        },
-        {
-          value: this.avgFirstResponseText,
-          label: this.$t('CASE_TICKETS.METRICS.AVG_FIRST_RESPONSE'),
-          cardClass: CARD_NEUTRAL,
-        },
-        {
-          value: s.resolved_this_period ?? 0,
-          label: this.$t('CASE_TICKETS.METRICS.RESOLVED_PERIOD'),
-          cardClass: CARD_SUCCESS,
-        },
-        {
-          value: s.reopened ?? 0,
-          label: this.$t('CASE_TICKETS.METRICS.REOPENED'),
-          cardClass: s.reopened > 0 ? CARD_WARNING : CARD_NEUTRAL,
-        },
-        {
-          value: s.open_problems ?? 0,
-          label: this.$t('CASE_TICKETS.METRICS.OPEN_PROBLEMS'),
-          cardClass: CARD_NEUTRAL,
-        },
-        {
-          value: s.pending_changes ?? 0,
-          label: this.$t('CASE_TICKETS.METRICS.PENDING_CHANGES'),
-          cardClass: s.pending_changes > 0 ? CARD_WARNING : CARD_NEUTRAL,
-        },
-        {
-          value: this.csatText,
-          label: this.$t('CASE_TICKETS.METRICS.CSAT'),
-          cardClass: CARD_NEUTRAL,
+          header: this.$t('CASE_TICKETS.METRICS.GROUP_ITIL'),
+          metrics: [
+            {
+              value: s.open_problems ?? 0,
+              label: this.$t('CASE_TICKETS.METRICS.OPEN_PROBLEMS'),
+              valueClass: VALUE_NEUTRAL,
+            },
+            {
+              value: s.pending_changes ?? 0,
+              label: this.$t('CASE_TICKETS.METRICS.PENDING_CHANGES'),
+              valueClass: s.pending_changes > 0 ? VALUE_WARNING : VALUE_NEUTRAL,
+            },
+            {
+              value: this.csatText,
+              label: this.$t('CASE_TICKETS.METRICS.CSAT'),
+              valueClass: VALUE_NEUTRAL,
+            },
+          ],
         },
       ];
     },
@@ -477,38 +512,45 @@ export default {
       v-else-if="metrics"
       class="flex flex-col flex-1 gap-6 p-6 overflow-y-auto"
     >
-      <!-- Cards resumen -->
-      <div
-        class="grid gap-4"
-        style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))"
-      >
+      <!-- KPIs agrupados (estilo Resumen) -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div
-          v-for="card in summaryCards"
-          :key="card.label"
-          class="flex flex-col items-center justify-center gap-1 p-4 text-center border rounded-lg"
-          :class="card.cardClass"
+          v-for="group in metricGroups"
+          :key="group.header"
+          class="flex flex-col p-4 bg-white border rounded-md shadow-sm dark:bg-slate-800 border-slate-75 dark:border-slate-700"
         >
-          <span
-            class="text-3xl font-bold leading-none text-slate-800 dark:text-slate-100"
-            >{{ card.value }}</span
+          <h3
+            class="mb-6 text-xl font-medium text-slate-800 dark:text-slate-100"
           >
-          <span
-            class="text-xs text-center text-slate-500 dark:text-slate-400"
-            >{{ card.label }}</span
-          >
+            {{ group.header }}
+          </h3>
+          <div class="flex flex-wrap items-end gap-x-8 gap-y-3">
+            <div
+              v-for="m in group.metrics"
+              :key="m.label"
+              class="flex flex-col"
+            >
+              <p
+                class="text-sm leading-tight text-slate-600 dark:text-slate-300"
+              >
+                {{ m.label }}
+              </p>
+              <p class="mt-1 mb-0 text-3xl font-medium" :class="m.valueClass">
+                {{ m.value }}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Serie diaria: creados vs resueltos (2J) -->
       <div
-        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+        class="p-4 bg-white border rounded-md shadow-sm dark:bg-slate-800 border-slate-75 dark:border-slate-700"
       >
-        <h3
-          class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
-        >
+        <h3 class="mb-4 text-xl font-medium text-slate-800 dark:text-slate-100">
           {{ $t('CASE_TICKETS.METRICS.DAILY') }}
         </h3>
-        <div v-if="hasDailyData" class="h-64">
+        <div v-if="hasDailyData" class="chart-box">
           <BarChart
             :key="'daily' + chartKey"
             :collection="dailyChartData"
@@ -530,14 +572,14 @@ export default {
       >
         <!-- Por estado — barra vertical -->
         <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          class="p-4 bg-white border rounded-md shadow-sm dark:bg-slate-800 border-slate-75 dark:border-slate-700"
         >
           <h3
-            class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
+            class="mb-4 text-xl font-medium text-slate-800 dark:text-slate-100"
           >
             {{ $t('CASE_TICKETS.METRICS.BY_STATUS') }}
           </h3>
-          <div v-if="hasStatusData" class="h-56">
+          <div v-if="hasStatusData" class="chart-box">
             <BarChart
               :key="'status' + chartKey"
               :collection="statusChartData"
@@ -554,17 +596,18 @@ export default {
 
         <!-- Por tipo — dona -->
         <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          class="p-4 bg-white border rounded-md shadow-sm dark:bg-slate-800 border-slate-75 dark:border-slate-700"
         >
           <h3
-            class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
+            class="mb-4 text-xl font-medium text-slate-800 dark:text-slate-100"
           >
             {{ $t('CASE_TICKETS.METRICS.BY_TYPE') }}
           </h3>
-          <div v-if="hasTypeData" class="h-56">
+          <div v-if="hasTypeData" class="chart-box">
             <DoughnutChart
               :key="'type' + chartKey"
               :collection="typeChartData"
+              :chart-options="doughnutOptions"
             />
           </div>
           <p
@@ -577,17 +620,18 @@ export default {
 
         <!-- Por prioridad — dona -->
         <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          class="p-4 bg-white border rounded-md shadow-sm dark:bg-slate-800 border-slate-75 dark:border-slate-700"
         >
           <h3
-            class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
+            class="mb-4 text-xl font-medium text-slate-800 dark:text-slate-100"
           >
             {{ $t('CASE_TICKETS.METRICS.BY_PRIORITY') }}
           </h3>
-          <div v-if="hasPriorityData" class="h-56">
+          <div v-if="hasPriorityData" class="chart-box">
             <DoughnutChart
               :key="'prio' + chartKey"
               :collection="priorityChartData"
+              :chart-options="doughnutOptions"
             />
           </div>
           <p
@@ -600,15 +644,19 @@ export default {
 
         <!-- Por SLA — dona -->
         <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          class="p-4 bg-white border rounded-md shadow-sm dark:bg-slate-800 border-slate-75 dark:border-slate-700"
         >
           <h3
-            class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
+            class="mb-4 text-xl font-medium text-slate-800 dark:text-slate-100"
           >
             {{ $t('CASE_TICKETS.METRICS.BY_SLA') }}
           </h3>
-          <div v-if="hasSlaData" class="h-56">
-            <DoughnutChart :key="'sla' + chartKey" :collection="slaChartData" />
+          <div v-if="hasSlaData" class="chart-box">
+            <DoughnutChart
+              :key="'sla' + chartKey"
+              :collection="slaChartData"
+              :chart-options="doughnutOptions"
+            />
           </div>
           <p
             v-else
@@ -620,17 +668,18 @@ export default {
 
         <!-- Por categoría — dona (2J) -->
         <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          class="p-4 bg-white border rounded-md shadow-sm dark:bg-slate-800 border-slate-75 dark:border-slate-700"
         >
           <h3
-            class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
+            class="mb-4 text-xl font-medium text-slate-800 dark:text-slate-100"
           >
             {{ $t('CASE_TICKETS.METRICS.BY_CATEGORY') }}
           </h3>
-          <div v-if="hasCategoryData" class="h-56">
+          <div v-if="hasCategoryData" class="chart-box">
             <DoughnutChart
               :key="'cat' + chartKey"
               :collection="categoryChartData"
+              :chart-options="doughnutOptions"
             />
           </div>
           <p
@@ -643,17 +692,18 @@ export default {
 
         <!-- Por servicio — dona (2J) -->
         <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          class="p-4 bg-white border rounded-md shadow-sm dark:bg-slate-800 border-slate-75 dark:border-slate-700"
         >
           <h3
-            class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
+            class="mb-4 text-xl font-medium text-slate-800 dark:text-slate-100"
           >
             {{ $t('CASE_TICKETS.METRICS.BY_SERVICE') }}
           </h3>
-          <div v-if="hasServiceData" class="h-56">
+          <div v-if="hasServiceData" class="chart-box">
             <DoughnutChart
               :key="'svc' + chartKey"
               :collection="serviceChartData"
+              :chart-options="doughnutOptions"
             />
           </div>
           <p
@@ -666,14 +716,14 @@ export default {
 
         <!-- Por responsable — barra (2J) -->
         <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          class="p-4 bg-white border rounded-md shadow-sm dark:bg-slate-800 border-slate-75 dark:border-slate-700"
         >
           <h3
-            class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
+            class="mb-4 text-xl font-medium text-slate-800 dark:text-slate-100"
           >
             {{ $t('CASE_TICKETS.METRICS.BY_ASSIGNEE') }}
           </h3>
-          <div v-if="hasAssigneeData" class="h-56">
+          <div v-if="hasAssigneeData" class="chart-box">
             <BarChart
               :key="'asg' + chartKey"
               :collection="assigneeChartData"
@@ -707,3 +757,16 @@ export default {
     </div>
   </div>
 </template>
+
+<style lang="scss" scoped>
+// vue-chartjs envuelve el canvas en un div propio sin altura → caía al default de 400px de
+// chart.js (gráficos gigantes/dispares). Fijamos la altura y forzamos ese div interno a 100%.
+.chart-box {
+  height: 16rem;
+
+  ::v-deep > div {
+    position: relative;
+    height: 100% !important;
+  }
+}
+</style>
