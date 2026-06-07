@@ -427,9 +427,115 @@ export default {
         <div
           class="flex flex-col self-stretch w-full gap-4 px-8 pb-8 overflow-y-auto"
         >
-          <!-- Sección: campos definidos (tarjeta estilo reglas, scroll a 3) -->
+          <!-- Formulario alta/edición (arriba, a lo ancho — estilo reglas) -->
+          <form
+            class="flex flex-col w-full gap-3 p-4 border rounded-lg bg-slate-25 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700"
+            @submit.prevent="saveField"
+          >
+            <span
+              class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+            >
+              {{
+                editingField
+                  ? $t('CASE_TICKETS.CUSTOM_FIELDS.EDIT_TITLE')
+                  : $t('CASE_TICKETS.CUSTOM_FIELDS.ADD_TITLE')
+              }}
+            </span>
+            <!-- Campos en una sola fila ancha -->
+            <div class="flex flex-wrap items-end gap-3">
+              <label class="flex flex-col flex-1 min-w-[160px] gap-1">
+                <span
+                  class="text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >{{ $t('CASE_TICKETS.CUSTOM_FIELDS.LABEL_LABEL') }} *</span
+                >
+                <input
+                  v-model="fieldForm.label"
+                  type="text"
+                  class="w-full !mb-0"
+                  maxlength="100"
+                  required
+                />
+              </label>
+              <label class="flex flex-col flex-1 min-w-[160px] gap-1">
+                <span
+                  class="text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >{{ $t('CASE_TICKETS.CUSTOM_FIELDS.KEY_LABEL') }} *</span
+                >
+                <input
+                  v-model="fieldForm.key"
+                  type="text"
+                  class="w-full font-mono !mb-0"
+                  maxlength="60"
+                  :disabled="!!editingField"
+                  :placeholder="
+                    $t('CASE_TICKETS.CUSTOM_FIELDS.KEY_PLACEHOLDER')
+                  "
+                  @input="onKeyInput"
+                />
+              </label>
+              <label class="flex flex-col w-44 gap-1">
+                <span
+                  class="text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >{{ $t('CASE_TICKETS.CUSTOM_FIELDS.TYPE_LABEL') }}</span
+                >
+                <select v-model="fieldForm.field_type" class="w-full !mb-0">
+                  <option v-for="t in fieldTypeKeys" :key="t" :value="t">
+                    {{ $t(`CASE_TICKETS.CUSTOM_FIELDS.TYPES.${t}`) }}
+                  </option>
+                </select>
+              </label>
+              <label class="flex items-center gap-2 pb-2.5">
+                <input v-model="fieldForm.required" type="checkbox" />
+                <span
+                  class="text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >{{ $t('CASE_TICKETS.CUSTOM_FIELDS.REQUIRED_LABEL') }}</span
+                >
+              </label>
+            </div>
+            <label
+              v-if="fieldForm.field_type === 'list'"
+              class="flex flex-col gap-1"
+            >
+              <span
+                class="text-xs font-medium text-slate-600 dark:text-slate-300"
+                >{{ $t('CASE_TICKETS.CUSTOM_FIELDS.OPTIONS_LABEL') }}</span
+              >
+              <input
+                v-model="fieldForm.optionsText"
+                type="text"
+                class="w-full !mb-0"
+                :placeholder="
+                  $t('CASE_TICKETS.CUSTOM_FIELDS.OPTIONS_PLACEHOLDER')
+                "
+              />
+            </label>
+            <div class="flex justify-end gap-2">
+              <woot-button
+                v-if="editingField"
+                variant="clear"
+                color-scheme="secondary"
+                type="button"
+                @click="resetFieldForm"
+              >
+                {{ $t('CASE_TICKETS.CUSTOM_FIELDS.CANCEL_EDIT') }}
+              </woot-button>
+              <woot-button
+                type="submit"
+                :is-loading="fieldSaving"
+                :disabled="!fieldFormValid"
+              >
+                {{
+                  editingField
+                    ? $t('CASE_TICKETS.CUSTOM_FIELDS.SAVE')
+                    : $t('CASE_TICKETS.CUSTOM_FIELDS.ADD')
+                }}
+              </woot-button>
+            </div>
+          </form>
+
+          <!-- Sección: campos definidos (abajo, scroll a 3 — estilo reglas) -->
           <div
-            class="flex flex-col gap-2 p-4 border rounded-lg bg-slate-25 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700"
+            class="flex flex-col w-full gap-2 p-4 border rounded-lg bg-slate-25 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700"
           >
             <span
               class="text-sm font-semibold text-slate-800 dark:text-slate-100"
@@ -502,113 +608,6 @@ export default {
               </div>
             </div>
           </div>
-
-          <!-- Formulario alta/edición (tarjeta estilo reglas) -->
-          <form
-            class="flex flex-col gap-3 p-4 border rounded-lg bg-slate-25 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700"
-            @submit.prevent="saveField"
-          >
-            <span
-              class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-            >
-              {{
-                editingField
-                  ? $t('CASE_TICKETS.CUSTOM_FIELDS.EDIT_TITLE')
-                  : $t('CASE_TICKETS.CUSTOM_FIELDS.ADD_TITLE')
-              }}
-            </span>
-            <div class="flex gap-3">
-              <label class="flex flex-col flex-1 gap-1">
-                <span
-                  class="text-xs font-medium text-slate-600 dark:text-slate-300"
-                  >{{ $t('CASE_TICKETS.CUSTOM_FIELDS.LABEL_LABEL') }} *</span
-                >
-                <input
-                  v-model="fieldForm.label"
-                  type="text"
-                  class="w-full"
-                  maxlength="100"
-                  required
-                />
-              </label>
-              <label class="flex flex-col flex-1 gap-1">
-                <span
-                  class="text-xs font-medium text-slate-600 dark:text-slate-300"
-                  >{{ $t('CASE_TICKETS.CUSTOM_FIELDS.KEY_LABEL') }} *</span
-                >
-                <input
-                  v-model="fieldForm.key"
-                  type="text"
-                  class="w-full font-mono"
-                  maxlength="60"
-                  :disabled="!!editingField"
-                  :placeholder="
-                    $t('CASE_TICKETS.CUSTOM_FIELDS.KEY_PLACEHOLDER')
-                  "
-                  @input="onKeyInput"
-                />
-              </label>
-            </div>
-            <div class="flex gap-3">
-              <label class="flex flex-col flex-1 gap-1">
-                <span
-                  class="text-xs font-medium text-slate-600 dark:text-slate-300"
-                  >{{ $t('CASE_TICKETS.CUSTOM_FIELDS.TYPE_LABEL') }}</span
-                >
-                <select v-model="fieldForm.field_type" class="w-full">
-                  <option v-for="t in fieldTypeKeys" :key="t" :value="t">
-                    {{ $t(`CASE_TICKETS.CUSTOM_FIELDS.TYPES.${t}`) }}
-                  </option>
-                </select>
-              </label>
-              <label class="flex items-end flex-1 gap-2 pb-2">
-                <input v-model="fieldForm.required" type="checkbox" />
-                <span
-                  class="text-xs font-medium text-slate-600 dark:text-slate-300"
-                  >{{ $t('CASE_TICKETS.CUSTOM_FIELDS.REQUIRED_LABEL') }}</span
-                >
-              </label>
-            </div>
-            <label
-              v-if="fieldForm.field_type === 'list'"
-              class="flex flex-col gap-1"
-            >
-              <span
-                class="text-xs font-medium text-slate-600 dark:text-slate-300"
-                >{{ $t('CASE_TICKETS.CUSTOM_FIELDS.OPTIONS_LABEL') }}</span
-              >
-              <input
-                v-model="fieldForm.optionsText"
-                type="text"
-                class="w-full"
-                :placeholder="
-                  $t('CASE_TICKETS.CUSTOM_FIELDS.OPTIONS_PLACEHOLDER')
-                "
-              />
-            </label>
-            <div class="flex justify-end gap-2">
-              <woot-button
-                v-if="editingField"
-                variant="clear"
-                color-scheme="secondary"
-                type="button"
-                @click="resetFieldForm"
-              >
-                {{ $t('CASE_TICKETS.CUSTOM_FIELDS.CANCEL_EDIT') }}
-              </woot-button>
-              <woot-button
-                type="submit"
-                :is-loading="fieldSaving"
-                :disabled="!fieldFormValid"
-              >
-                {{
-                  editingField
-                    ? $t('CASE_TICKETS.CUSTOM_FIELDS.SAVE')
-                    : $t('CASE_TICKETS.CUSTOM_FIELDS.ADD')
-                }}
-              </woot-button>
-            </div>
-          </form>
 
           <div
             class="flex justify-end flex-shrink-0 gap-4 pt-4 border-t border-slate-100 dark:border-slate-700"
