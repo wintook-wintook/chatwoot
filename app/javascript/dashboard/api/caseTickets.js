@@ -68,6 +68,17 @@ class CaseTicketsAPI extends ApiClient {
   deleteRelation(ticketId, relationId) {
     return axios.delete(`${this.url}/${ticketId}/relations/${relationId}`);
   }
+
+  // @tickets_cases 3B — clasificación sugerida por IA
+  applyAiSuggestion(ticketId, fields) {
+    return axios.post(`${this.url}/${ticketId}/apply_ai_suggestion`, {
+      fields,
+    });
+  }
+
+  dismissAiSuggestion(ticketId) {
+    return axios.delete(`${this.url}/${ticketId}/dismiss_ai_suggestion`);
+  }
 }
 
 export default new CaseTicketsAPI();

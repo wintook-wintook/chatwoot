@@ -249,6 +249,7 @@
     "TICKET_TYPES": "Case types",
     "TICKET_CLASSIFICATION": "Classification",
     "TICKET_SLA": "SLA",
+    "TICKET_AI": "Artificial Intelligence",
     "TICKET_CONFIG": "Folio settings",
     "ALL_KANBAN": "All Opportunities Board",
     "TIPO_DE_PROCESO": "Available Opportunities",

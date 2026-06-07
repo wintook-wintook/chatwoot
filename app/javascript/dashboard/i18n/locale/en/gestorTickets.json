@@ -299,6 +299,54 @@
         "stepper": "Lifecycle"
       }
     },
+    "AI": {
+      "TITLE": "Artificial Intelligence",
+      "BACK": "Back",
+      "SAVE": "Save",
+      "SAVED": "AI settings saved",
+      "SAVE_ERROR": "Could not save settings",
+      "LOADING": "Loading settings...",
+      "HELP": "Configure how AI assists ticket management. For each action choose the mode: off, suggest to the agent, or apply automatically.",
+      "NO_KEY": "No active OpenAI integration on this account. AI won't work until you set it up in Integrations.",
+      "ENABLED_LABEL": "Enable AI in the Ticket Manager",
+      "ENABLED_HELP": "Master switch. If off, no AI action runs.",
+      "SOON": "Coming soon",
+      "MODES": {
+        "off": "Off",
+        "suggest": "Suggest",
+        "auto": "Automatic"
+      },
+      "ACTIONS": {
+        "classify": {
+          "LABEL": "Automatic classification",
+          "HELP": "On ticket creation, infers kind, service, category, impact and urgency."
+        },
+        "reply": {
+          "LABEL": "Suggested reply",
+          "HELP": "Proposes a reply to the customer based on the knowledge base."
+        },
+        "summarize": {
+          "LABEL": "Summary and root cause",
+          "HELP": "Generates a case summary and suggests the root cause."
+        },
+        "duplicate": {
+          "LABEL": "Duplicate detection",
+          "HELP": "Detects similar incidents and suggests creating or linking a Problem."
+        },
+        "follow_up": {
+          "LABEL": "Automatic follow-up",
+          "HELP": "Drafts customer follow-ups based on the ticket status."
+        }
+      },
+      "SUGGESTION": {
+        "TITLE": "AI-suggested classification",
+        "CONFIDENCE": "{pct}% confidence",
+        "APPLY": "Apply",
+        "DISMISS": "Dismiss",
+        "APPLIED": "Classification applied",
+        "ERROR": "Could not process the suggestion"
+      }
+    },
     "TYPES": {
       "TITLE": "Case types",
       "HELP": "Define your account's case types. Each ticket is classified with one of these types.",
@@ -446,6 +494,8 @@
       "change_rejected": "Change rejected",
       "problem_propagated": "Resolution propagated to incidents",
       "article_generated": "KB article generated",
+      "ai_classified": "Classified by AI",
+      "ai_suggested": "Classification suggested by AI",
       "reassigned": "Reassigned",
       "escalated": "Escalated",
       "message_received": "Message received",

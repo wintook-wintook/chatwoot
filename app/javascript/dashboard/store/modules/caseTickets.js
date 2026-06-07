@@ -18,6 +18,7 @@ import caseCategoriesAPI from '../../api/caseCategories';
 import caseFolioConfigAPI from '../../api/caseFolioConfig';
 import caseSlaPoliciesAPI from '../../api/caseSlaPolicies';
 import caseTypeFieldsAPI from '../../api/caseTypeFields';
+import caseAiConfigAPI from '../../api/caseAiConfig';
 import {
   SET_CASE_TICKET_UI_FLAG,
   SET_ACTIVE_CASE_TICKET,
@@ -42,6 +43,8 @@ import {
   SET_CASE_SLA_POLICIES_UI_FLAG,
   SET_CASE_TYPE_FIELDS,
   SET_CASE_TYPE_FIELDS_UI_FLAG,
+  SET_CASE_AI_CONFIG,
+  SET_CASE_AI_CONFIG_UI_FLAG,
 } from '../mutation-types';
 
 const CLOSED_STATUSES = ['closed', 'cancelled'];
@@ -118,6 +121,12 @@ const state = {
     isSaving: false,
     isDeleting: false,
   },
+  // 3A — Configuración de IA por cuenta
+  aiConfig: null,
+  aiConfigUiFlags: {
+    isFetching: false,
+    isSaving: false,
+  },
 };
 
 export const getters = {
@@ -156,6 +165,13 @@ export const getters = {
   getTypeFields: _state => caseTypeId => _state.typeFields[caseTypeId] || [],
   getTypeFieldsUIFlags(_state) {
     return _state.typeFieldsUiFlags;
+  },
+  // 3A — configuración de IA
+  getAiConfig(_state) {
+    return _state.aiConfig;
+  },
+  getAiConfigUIFlags(_state) {
+    return _state.aiConfigUiFlags;
   },
   getServices(_state) {
     return _state.services;
@@ -522,6 +538,51 @@ export const actions = {
     }
   },
 
+  // ── 3A — Configuración de IA ────────────────────────────────
+  async fetchAiConfig({ commit }) {
+    commit(SET_CASE_AI_CONFIG_UI_FLAG, { isFetching: true });
+    try {
+      const { data } = await caseAiConfigAPI.get();
+      commit(SET_CASE_AI_CONFIG, data.case_ai_config);
+    } finally {
+      commit(SET_CASE_AI_CONFIG_UI_FLAG, { isFetching: false });
+    }
+  },
+
+  async updateAiConfig({ commit }, payload) {
+    commit(SET_CASE_AI_CONFIG_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await caseAiConfigAPI.updateConfig(payload);
+      commit(SET_CASE_AI_CONFIG, data.case_ai_config);
+      return data.case_ai_config;
+    } finally {
+      commit(SET_CASE_AI_CONFIG_UI_FLAG, { isSaving: false });
+    }
+  },
+
+  // ── 3B — Sugerencia de clasificación IA ─────────────────────
+  async applyAiSuggestion({ commit, state: s }, { ticketId, fields }) {
+    const { data } = await caseTicketsAPI.applyAiSuggestion(ticketId, fields);
+    commit(
+      SET_CASE_TICKETS_LIST,
+      s.ticketsList.map(t =>
+        t.id === data.case_ticket.id ? data.case_ticket : t
+      )
+    );
+    return data.case_ticket;
+  },
+
+  async dismissAiSuggestion({ commit, state: s }, ticketId) {
+    const { data } = await caseTicketsAPI.dismissAiSuggestion(ticketId);
+    commit(
+      SET_CASE_TICKETS_LIST,
+      s.ticketsList.map(t =>
+        t.id === data.case_ticket.id ? data.case_ticket : t
+      )
+    );
+    return data.case_ticket;
+  },
+
   // ── 2B — Servicios afectados ────────────────────────────────
   async fetchServices({ commit }) {
     commit(SET_CASE_SERVICES_UI_FLAG, { isFetching: true });
@@ -810,6 +871,12 @@ export const mutations = {
   },
   [SET_CASE_TYPE_FIELDS_UI_FLAG](_state, flags) {
     _state.typeFieldsUiFlags = { ..._state.typeFieldsUiFlags, ...flags };
+  },
+  [SET_CASE_AI_CONFIG](_state, config) {
+    _state.aiConfig = config;
+  },
+  [SET_CASE_AI_CONFIG_UI_FLAG](_state, flags) {
+    _state.aiConfigUiFlags = { ..._state.aiConfigUiFlags, ...flags };
   },
   [SET_CASE_SLA_POLICIES](_state, policies) {
     _state.slaPolicies = policies;

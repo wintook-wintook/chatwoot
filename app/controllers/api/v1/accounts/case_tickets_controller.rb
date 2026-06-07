@@ -19,7 +19,9 @@
 # ================================================================================
 
 class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseController
-  before_action :set_ticket, only: %i[show update transition assign escalate change_approval generate_article]
+  before_action :set_ticket,
+                only: %i[show update transition assign escalate change_approval generate_article
+                         apply_ai_suggestion dismiss_ai_suggestion]
 
   # GET /api/v1/accounts/:account_id/case_tickets/metrics
   def metrics
@@ -256,6 +258,42 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
   end
 
+  # @tickets_cases 3B — aplica la clasificación sugerida por la IA (modo suggest).
+  # Solo escribe los campos enviados que la IA propuso y que aún están vacíos
+  # (no pisa lo que el agente ya definió). Recalcula prioridad por la matriz.
+  def apply_ai_suggestion
+    suggestion = @ticket.metadata['ai_classification']
+    return render json: { error: 'No hay sugerencia de IA para este ticket' }, status: :unprocessable_entity if suggestion.blank?
+
+    fields = Array(params[:fields]).map(&:to_s).presence ||
+             %w[ticket_kind impact urgency affected_service_id category_id]
+    attrs = {}
+    fields.each do |f|
+      value = suggestion[f]
+      next if value.blank?
+      next if @ticket.public_send(f).present? # no pisa decisiones humanas
+
+      attrs[f.to_sym] = value
+    end
+    @ticket.update!(attrs) if attrs.any?
+
+    @ticket.update_columns(metadata: @ticket.metadata.merge('ai_classification' => suggestion.merge('applied' => true)))
+    @ticket.case_events.create!(
+      account: Current.account, event_type: :ai_classified, origin: :agent, actor: current_user,
+      payload: suggestion.slice('ticket_kind', 'impact', 'urgency', 'affected_service_id', 'category_id', 'confidence')
+                         .merge('applied' => attrs.keys.map(&:to_s))
+    )
+    render json: { case_ticket: ticket_json(@ticket.reload) }
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
+  end
+
+  # @tickets_cases 3B — descarta la sugerencia de IA sin aplicarla.
+  def dismiss_ai_suggestion
+    @ticket.update_columns(metadata: @ticket.metadata.except('ai_classification'))
+    render json: { case_ticket: ticket_json(@ticket.reload) }
+  end
+
   private
 
   # @tickets_cases 2H — cuerpo del artículo precargado desde el cierre documentado (2G).
@@ -370,6 +408,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       kb_article_id:              ticket.kb_article_id,
       kb_article:                 kb_article_json(ticket.kb_article),
       metadata:                   ticket.metadata,
+      ai_classification:          ai_classification_json(ticket), # @tickets_cases 3B
       custom_attributes:          ticket.custom_attributes,
       created_at:                 ticket.created_at,
       updated_at:                 ticket.updated_at,
@@ -384,6 +423,18 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
   def valid_transitions_for(ticket)
     CaseTicket::VALID_TRANSITIONS[ticket.status] || []
+  end
+
+  # @tickets_cases 3B — sugerencia de clasificación de la IA (enriquecida con
+  # nombres de servicio/categoría para que la UI muestre etiquetas legibles).
+  def ai_classification_json(ticket)
+    suggestion = ticket.metadata['ai_classification']
+    return nil if suggestion.blank?
+
+    suggestion.merge(
+      'affected_service_name' => ref_json(ticket.account.case_services.find_by(id: suggestion['affected_service_id']))&.dig(:name),
+      'category_name'         => ref_json(ticket.account.case_categories.find_by(id: suggestion['category_id']))&.dig(:name)
+    )
   end
 
   def case_type_json(type)

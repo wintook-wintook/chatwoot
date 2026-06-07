@@ -32,7 +32,7 @@ class Cases::OrchestratorService
     ticket = find_active_ticket
     return ticket if ticket
 
-    CaseTicket.create!(
+    ticket = CaseTicket.create!(
       account:          @account,
       contact:          @contact,
       conversation:     @conversation,
@@ -43,6 +43,8 @@ class Cases::OrchestratorService
       assignee_type:    :bot,
       title:            title_from_message(message)
     )
+    enqueue_ai_classification(ticket) # @tickets_cases 3B
+    ticket
   end
 
   def create_for_manual(title:, priority: nil, case_type_id: nil, description: nil,
@@ -72,10 +74,21 @@ class Cases::OrchestratorService
 
     ticket = CaseTicket.create!(attrs)
     Cases::RuleEngineService.new(ticket).evaluate!
+    enqueue_ai_classification(ticket) # @tickets_cases 3B
     ticket
   end
 
   private
+
+  # @tickets_cases 3B — encola la clasificación IA si la cuenta la tiene activa
+  # (off/suggest/auto). El job se autoprotege; corre en background sin bloquear.
+  def enqueue_ai_classification(ticket)
+    return unless CaseAiConfig.for_account(@account).active?(:classify)
+
+    Cases::Ai::ClassifyJob.perform_later(ticket.id)
+  rescue StandardError => e
+    Rails.logger.error("[GestorTickets] enqueue ai classify: #{e.message}")
+  end
 
   # Tipo de caso por defecto de la cuenta (el primero por posición).
   # Garantiza que la cuenta tenga sus tipos por defecto creados.

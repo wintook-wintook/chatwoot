@@ -51,6 +51,12 @@ export const routes = [
     component: () => import('../../../views/gestorTickets/SlaConfig.vue'),
   },
   {
+    path: frontendURL('accounts/:accountId/tickets/ai'),
+    name: 'gestorTickets_ai',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/gestorTickets/AiConfig.vue'),
+  },
+  {
     path: frontendURL('accounts/:accountId/tickets/:id'),
     name: 'gestorTickets_detail',
     meta: { permissions: ['administrator', 'agent'] },

@@ -299,6 +299,54 @@
         "stepper": "Ciclo de vida"
       }
     },
+    "AI": {
+      "TITLE": "Inteligencia Artificial",
+      "BACK": "Volver",
+      "SAVE": "Guardar",
+      "SAVED": "Configuración de IA guardada",
+      "SAVE_ERROR": "No se pudo guardar la configuración",
+      "LOADING": "Cargando configuración...",
+      "HELP": "Configura cómo la IA asiste en la gestión de tickets. Por cada acción eliges el modo: desactivado, sugerir al agente, o aplicar automáticamente.",
+      "NO_KEY": "No hay una integración de OpenAI activa en esta cuenta. La IA no funcionará hasta configurarla en Integraciones.",
+      "ENABLED_LABEL": "Activar IA en el Gestor de Tickets",
+      "ENABLED_HELP": "Interruptor general. Si está apagado, ninguna acción de IA se ejecuta.",
+      "SOON": "Próximamente",
+      "MODES": {
+        "off": "Desactivado",
+        "suggest": "Sugerir",
+        "auto": "Automático"
+      },
+      "ACTIONS": {
+        "classify": {
+          "LABEL": "Clasificación automática",
+          "HELP": "Al crear un ticket, deduce tipo, servicio, categoría, impacto y urgencia."
+        },
+        "reply": {
+          "LABEL": "Respuesta sugerida",
+          "HELP": "Propone una respuesta al cliente basada en la base de conocimiento."
+        },
+        "summarize": {
+          "LABEL": "Resumen y causa raíz",
+          "HELP": "Genera un resumen del caso y sugiere la causa raíz."
+        },
+        "duplicate": {
+          "LABEL": "Detección de repetidos",
+          "HELP": "Detecta incidentes similares y sugiere crear o vincular un Problema."
+        },
+        "follow_up": {
+          "LABEL": "Seguimiento automático",
+          "HELP": "Redacta seguimientos al cliente según el estado del ticket."
+        }
+      },
+      "SUGGESTION": {
+        "TITLE": "Clasificación sugerida por IA",
+        "CONFIDENCE": "{pct}% de confianza",
+        "APPLY": "Aplicar",
+        "DISMISS": "Descartar",
+        "APPLIED": "Clasificación aplicada",
+        "ERROR": "No se pudo procesar la sugerencia"
+      }
+    },
     "TYPES": {
       "TITLE": "Tipos de caso",
       "HELP": "Define los tipos de caso de tu cuenta. Cada ticket se clasifica con uno de estos tipos.",
@@ -446,6 +494,8 @@
       "change_rejected": "Cambio rechazado",
       "problem_propagated": "Resolución propagada a incidentes",
       "article_generated": "Artículo KB generado",
+      "ai_classified": "Clasificado por IA",
+      "ai_suggested": "Clasificación sugerida por IA",
       "reassigned": "Reasignado",
       "escalated": "Escalado",
       "message_received": "Mensaje recibido",

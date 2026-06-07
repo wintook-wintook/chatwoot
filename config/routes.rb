@@ -120,6 +120,8 @@ Rails.application.routes.draw do
               patch :escalate
               patch :change_approval
               post :generate_article
+              post :apply_ai_suggestion # @tickets_cases 3B
+              delete :dismiss_ai_suggestion # @tickets_cases 3B
             end
             resources :case_events, only: [:index]
             # @tickets_cases 2E — relaciones entre tickets
@@ -133,6 +135,7 @@ Rails.application.routes.draw do
           resources :case_categories, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_sla_policies, only: [:index, :create, :update, :destroy] # @tickets_cases 2I
           resource  :case_folio_config, only: [:show, :update], controller: 'case_folio_configs'
+          resource  :case_ai_config, only: [:show, :update], controller: 'case_ai_configs' # @tickets_cases 3A
           # =========================================================================
           resources :custom_roles, only: [:index, :create, :show, :update, :destroy]
           resources :campaigns, only: [:index, :create, :show, :update, :destroy]

@@ -249,6 +249,7 @@
     "TICKET_TYPES": "Tipos de caso",
     "TICKET_CLASSIFICATION": "Clasificación",
     "TICKET_SLA": "SLA",
+    "TICKET_AI": "Inteligencia Artificial",
     "TICKET_CONFIG": "Configuración de folio",
     "ALL_KANBAN": "Todo tablero oportunidades ",
     "TIPO_DE_PROCESO": "Tableros disponibles",

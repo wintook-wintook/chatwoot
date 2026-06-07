@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_07_000001) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_07_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -235,6 +235,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_07_000001) do
     t.text "content"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+  end
+
+  create_table "case_ai_configs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.boolean "enabled", default: false, null: false
+    t.jsonb "modes", default: {}, null: false
+    t.string "model_override"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_ai_configs_on_account_id", unique: true
   end
 
   create_table "case_categories", force: :cascade do |t|
@@ -1370,6 +1380,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_07_000001) do
   add_foreign_key "account_users", "contacts", column: "agent_contact_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "case_ai_configs", "accounts"
   add_foreign_key "case_type_fields", "accounts"
   add_foreign_key "case_type_fields", "case_types"
   add_foreign_key "command_sessions", "accounts"

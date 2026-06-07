@@ -126,6 +126,52 @@ export default {
               : String(attrs[d.key]),
         }));
     },
+    // @tickets_cases 3B — sugerencia de clasificación pendiente de aprobar.
+    aiSuggestion() {
+      const s = this.ticket?.ai_classification;
+      if (!s || s.applied) return null;
+      return s;
+    },
+    aiSuggestionRows() {
+      const s = this.aiSuggestion;
+      if (!s) return [];
+      const rows = [];
+      if (s.ticket_kind) {
+        rows.push({
+          label: this.$t('CASE_TICKETS.MODAL.TICKET_KIND_LABEL'),
+          value: this.$t(`CASE_TICKETS.TICKET_KIND.${s.ticket_kind}`),
+        });
+      }
+      if (s.impact) {
+        rows.push({
+          label: this.$t('CASE_TICKETS.MODAL.IMPACT_LABEL'),
+          value: this.$t(`CASE_TICKETS.IMPACT.${s.impact}`),
+        });
+      }
+      if (s.urgency) {
+        rows.push({
+          label: this.$t('CASE_TICKETS.MODAL.URGENCY_LABEL'),
+          value: this.$t(`CASE_TICKETS.URGENCY.${s.urgency}`),
+        });
+      }
+      if (s.affected_service_name) {
+        rows.push({
+          label: this.$t('CASE_TICKETS.MODAL.AFFECTED_SERVICE_LABEL'),
+          value: s.affected_service_name,
+        });
+      }
+      if (s.category_name) {
+        rows.push({
+          label: this.$t('CASE_TICKETS.MODAL.CATEGORY_LABEL'),
+          value: s.category_name,
+        });
+      }
+      return rows;
+    },
+    aiConfidencePct() {
+      const c = this.aiSuggestion?.confidence;
+      return c == null ? null : Math.round(c * 100);
+    },
     // @tickets_cases 2G
     isClosed() {
       return this.ticket?.status === 'closed';
@@ -245,6 +291,36 @@ export default {
     },
     closureTypeLabel(t) {
       return this.$t(`CASE_TICKETS.CLOSURE.TYPES.${t}`) || t;
+    },
+    // @tickets_cases 3B — aplicar / descartar la sugerencia de clasificación de IA
+    async applyAiSuggestion() {
+      try {
+        await this.$store.dispatch('caseTickets/applyAiSuggestion', {
+          ticketId: this.ticketId,
+        });
+        this.$store.dispatch('caseTickets/fetchEvents', {
+          ticketId: this.ticketId,
+        });
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.AI.SUGGESTION.APPLIED'),
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.AI.SUGGESTION.ERROR'),
+        });
+      }
+    },
+    async dismissAiSuggestion() {
+      try {
+        await this.$store.dispatch(
+          'caseTickets/dismissAiSuggestion',
+          this.ticketId
+        );
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.AI.SUGGESTION.ERROR'),
+        });
+      }
     },
     // @tickets_cases 2H — base de conocimiento
     buildArticleContent() {
@@ -697,6 +773,70 @@ export default {
       v-else-if="ticket"
       class="flex flex-col flex-1 gap-6 p-6 overflow-y-auto"
     >
+      <!-- Sugerencia de clasificación IA (3B, modo suggest) -->
+      <div
+        v-if="aiSuggestion"
+        class="p-4 border rounded-lg bg-violet-50 border-violet-200 dark:bg-violet-900/20 dark:border-violet-800"
+      >
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="flex items-center gap-2">
+            <fluent-icon
+              icon="wand"
+              size="18"
+              class="text-violet-600 dark:text-violet-300"
+            />
+            <span
+              class="text-sm font-semibold text-violet-800 dark:text-violet-200"
+              >{{ $t('CASE_TICKETS.AI.SUGGESTION.TITLE') }}</span
+            >
+            <span
+              v-if="aiConfidencePct !== null"
+              class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-violet-100 text-violet-700 dark:bg-violet-800 dark:text-violet-100"
+              >{{
+                $t('CASE_TICKETS.AI.SUGGESTION.CONFIDENCE', {
+                  pct: aiConfidencePct,
+                })
+              }}</span
+            >
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-2 mb-3">
+          <div
+            v-for="row in aiSuggestionRows"
+            :key="row.label"
+            class="flex flex-col gap-0.5"
+          >
+            <span
+              class="text-xs tracking-wide uppercase text-violet-400 dark:text-violet-500"
+              >{{ row.label }}</span
+            >
+            <span
+              class="text-sm font-medium text-violet-800 dark:text-violet-100"
+              >{{ row.value }}</span
+            >
+          </div>
+        </div>
+        <p
+          v-if="aiSuggestion.reasoning"
+          class="m-0 mb-3 text-xs italic text-violet-600 dark:text-violet-300"
+        >
+          {{ aiSuggestion.reasoning }}
+        </p>
+        <div class="flex justify-end gap-2">
+          <woot-button
+            size="small"
+            variant="clear"
+            color-scheme="secondary"
+            @click="dismissAiSuggestion"
+          >
+            {{ $t('CASE_TICKETS.AI.SUGGESTION.DISMISS') }}
+          </woot-button>
+          <woot-button size="small" icon="checkmark" @click="applyAiSuggestion">
+            {{ $t('CASE_TICKETS.AI.SUGGESTION.APPLY') }}
+          </woot-button>
+        </div>
+      </div>
+
       <!-- Información -->
       <div
         class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
