@@ -358,6 +358,17 @@
         "COPIED_BTN": "Copiado",
         "COPIED": "Respuesta copiada al portapapeles",
         "ERROR": "No se pudo generar la respuesta"
+      },
+      "SUMMARY": {
+        "TITLE": "Resumen y causa raíz",
+        "GENERATE": "Generar",
+        "REGENERATE": "Regenerar",
+        "HINT": "Genera un resumen del caso, la causa raíz y la solución sugerida.",
+        "SUMMARY_LABEL": "Resumen",
+        "ROOT_CAUSE_LABEL": "Causa raíz",
+        "SOLUTION_LABEL": "Solución sugerida",
+        "SUGGEST_CLOSE": "Sugerir con IA",
+        "ERROR": "No se pudo generar el resumen"
       }
     },
     "TYPES": {

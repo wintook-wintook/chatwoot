@@ -358,6 +358,17 @@
         "COPIED_BTN": "Copied",
         "COPIED": "Reply copied to clipboard",
         "ERROR": "Could not generate the reply"
+      },
+      "SUMMARY": {
+        "TITLE": "Summary and root cause",
+        "GENERATE": "Generate",
+        "REGENERATE": "Regenerate",
+        "HINT": "Generate a case summary, root cause and suggested solution.",
+        "SUMMARY_LABEL": "Summary",
+        "ROOT_CAUSE_LABEL": "Root cause",
+        "SOLUTION_LABEL": "Suggested solution",
+        "SUGGEST_CLOSE": "Suggest with AI",
+        "ERROR": "Could not generate the summary"
       }
     },
     "TYPES": {

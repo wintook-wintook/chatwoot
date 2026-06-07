@@ -47,6 +47,9 @@ export default {
       replySuggestion: null,
       isSuggestingReply: false,
       replyCopied: false,
+      // 3E — resumen + causa raíz
+      summaryResult: null,
+      isSummarizing: false,
       // 2H — base de conocimiento
       showArticleModal: false,
       kbPortals: [],
@@ -179,6 +182,10 @@ export default {
     // @tickets_cases 3C — ¿está activa la respuesta sugerida para este ticket?
     replyEnabled() {
       return !!this.ticket?.ai_actions?.reply;
+    },
+    // @tickets_cases 3E — ¿está activo el resumen/causa raíz?
+    summarizeEnabled() {
+      return !!this.ticket?.ai_actions?.summarize;
     },
     // @tickets_cases 2G
     isClosed() {
@@ -357,6 +364,42 @@ export default {
         });
       } catch (e) {
         this.replyCopied = false;
+      }
+    },
+    // @tickets_cases 3E — generar resumen + causa raíz
+    async generateSummary() {
+      this.isSummarizing = true;
+      try {
+        this.summaryResult = await this.$store.dispatch(
+          'caseTickets/summarizeTicket',
+          this.ticketId
+        );
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.AI.SUMMARY.ERROR'),
+        });
+      } finally {
+        this.isSummarizing = false;
+      }
+    },
+    // @tickets_cases 3E — prellena el modal de cierre con causa raíz + solución de la IA
+    async suggestCloseWithAi() {
+      this.isSummarizing = true;
+      try {
+        const res = await this.$store.dispatch(
+          'caseTickets/summarizeTicket',
+          this.ticketId
+        );
+        if (res?.root_cause) this.closeForm.closure_cause = res.root_cause;
+        if (res?.suggested_solution) {
+          this.closeForm.closure_solution = res.suggested_solution;
+        }
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.AI.SUMMARY.ERROR'),
+        });
+      } finally {
+        this.isSummarizing = false;
       }
     },
     // @tickets_cases 2H — base de conocimiento
@@ -1356,6 +1399,78 @@ export default {
         </template>
       </div>
 
+      <!-- Resumen + causa raíz (3E) -->
+      <div
+        v-if="summarizeEnabled"
+        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+      >
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <fluent-icon
+              icon="wand"
+              size="18"
+              class="text-indigo-600 dark:text-indigo-300"
+            />
+            <h3
+              class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
+            >
+              {{ $t('CASE_TICKETS.AI.SUMMARY.TITLE') }}
+            </h3>
+          </div>
+          <woot-button
+            size="small"
+            variant="smooth"
+            icon="wand"
+            :is-loading="isSummarizing"
+            @click="generateSummary"
+          >
+            {{
+              summaryResult
+                ? $t('CASE_TICKETS.AI.SUMMARY.REGENERATE')
+                : $t('CASE_TICKETS.AI.SUMMARY.GENERATE')
+            }}
+          </woot-button>
+        </div>
+        <p
+          v-if="!summaryResult && !isSummarizing"
+          class="m-0 text-sm text-slate-400 dark:text-slate-500"
+        >
+          {{ $t('CASE_TICKETS.AI.SUMMARY.HINT') }}
+        </p>
+        <div v-if="summaryResult" class="flex flex-col gap-3">
+          <div v-if="summaryResult.summary" class="flex flex-col gap-1">
+            <span
+              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+              >{{ $t('CASE_TICKETS.AI.SUMMARY.SUMMARY_LABEL') }}</span
+            >
+            <p class="m-0 text-sm text-slate-700 dark:text-slate-200">
+              {{ summaryResult.summary }}
+            </p>
+          </div>
+          <div v-if="summaryResult.root_cause" class="flex flex-col gap-1">
+            <span
+              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+              >{{ $t('CASE_TICKETS.AI.SUMMARY.ROOT_CAUSE_LABEL') }}</span
+            >
+            <p class="m-0 text-sm text-slate-700 dark:text-slate-200">
+              {{ summaryResult.root_cause }}
+            </p>
+          </div>
+          <div
+            v-if="summaryResult.suggested_solution"
+            class="flex flex-col gap-1"
+          >
+            <span
+              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+              >{{ $t('CASE_TICKETS.AI.SUMMARY.SOLUTION_LABEL') }}</span
+            >
+            <p class="m-0 text-sm text-slate-700 dark:text-slate-200">
+              {{ summaryResult.suggested_solution }}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- Avance del ticket (2L) — 3 vistas conmutables -->
       <JourneyView
         :events="events"
@@ -1771,6 +1886,18 @@ export default {
           <p class="m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ $t('CASE_TICKETS.CLOSURE.HELP') }}
           </p>
+          <woot-button
+            v-if="summarizeEnabled"
+            type="button"
+            size="small"
+            variant="smooth"
+            icon="wand"
+            class="self-start"
+            :is-loading="isSummarizing"
+            @click="suggestCloseWithAi"
+          >
+            {{ $t('CASE_TICKETS.AI.SUMMARY.SUGGEST_CLOSE') }}
+          </woot-button>
           <label class="flex flex-col gap-1">
             <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
               >{{ $t('CASE_TICKETS.CLOSURE.TYPE') }} *</span

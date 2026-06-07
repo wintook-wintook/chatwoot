@@ -21,7 +21,7 @@
 class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseController
   before_action :set_ticket,
                 only: %i[show update transition assign escalate change_approval generate_article
-                         apply_ai_suggestion dismiss_ai_suggestion suggest_reply]
+                         apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize]
 
   # GET /api/v1/accounts/:account_id/case_tickets/metrics
   def metrics
@@ -305,6 +305,16 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     render json: { suggestion: result }
   end
 
+  # @tickets_cases 3E — resumen + causa raíz sugerida (efímero, alimenta cierre/artículo).
+  def summarize
+    return render json: { error: 'IA de resumen desactivada' }, status: :unprocessable_entity unless ai_config.active?(:summarize)
+
+    result = Cases::Ai::Summarizer.new(account: Current.account).summarize(@ticket)
+    return render json: { error: 'No se pudo generar el resumen' }, status: :unprocessable_entity if result.nil?
+
+    render json: { summary: result }
+  end
+
   private
 
   # @tickets_cases 2H — cuerpo del artículo precargado desde el cierre documentado (2G).
@@ -443,9 +453,9 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     @ai_config ||= CaseAiConfig.for_account(Current.account)
   end
 
-  # @tickets_cases 3C — acciones de IA habilitadas (para que la UI muestre/oculte).
+  # @tickets_cases 3C/3E — acciones de IA habilitadas (para que la UI muestre/oculte).
   def ai_actions_json
-    { 'reply' => ai_config.active?(:reply) }
+    { 'reply' => ai_config.active?(:reply), 'summarize' => ai_config.active?(:summarize) }
   end
 
   # @tickets_cases 3B — sugerencia de clasificación de la IA (enriquecida con

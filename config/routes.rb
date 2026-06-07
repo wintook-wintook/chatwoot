@@ -123,6 +123,7 @@ Rails.application.routes.draw do
               post :apply_ai_suggestion # @tickets_cases 3B
               delete :dismiss_ai_suggestion # @tickets_cases 3B
               post :suggest_reply # @tickets_cases 3C
+              post :summarize # @tickets_cases 3E
             end
             resources :case_events, only: [:index]
             # @tickets_cases 2E — relaciones entre tickets

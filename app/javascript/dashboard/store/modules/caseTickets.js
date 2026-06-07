@@ -589,6 +589,12 @@ export const actions = {
     return data.suggestion;
   },
 
+  // ── 3E — Resumen + causa raíz sugerida (efímera) ────────────
+  async summarizeTicket(_ctx, ticketId) {
+    const { data } = await caseTicketsAPI.summarize(ticketId);
+    return data.summary;
+  },
+
   // ── 2B — Servicios afectados ────────────────────────────────
   async fetchServices({ commit }) {
     commit(SET_CASE_SERVICES_UI_FLAG, { isFetching: true });

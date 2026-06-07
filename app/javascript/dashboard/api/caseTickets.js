@@ -84,6 +84,11 @@ class CaseTicketsAPI extends ApiClient {
   suggestReply(ticketId) {
     return axios.post(`${this.url}/${ticketId}/suggest_reply`);
   }
+
+  // @tickets_cases 3E — resumen + causa raíz sugerida
+  summarize(ticketId) {
+    return axios.post(`${this.url}/${ticketId}/summarize`);
+  }
 }
 
 export default new CaseTicketsAPI();
