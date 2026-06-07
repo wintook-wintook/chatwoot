@@ -6,13 +6,25 @@
 <template>
   <div class="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900">
     <!-- Header -->
-    <div class="flex-shrink-0 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50">
-      <h1 class="m-0 mb-4 text-xl font-bold text-slate-800 dark:text-slate-100">
+    <div class="flex-shrink-0 px-6 pt-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50">
+      <h1 class="m-0 mb-3 text-xl font-bold text-slate-800 dark:text-slate-100">
         {{ $t('CASE_TICKETS.SIDEBAR.TITLE') }}
       </h1>
 
-      <!-- Toolbar: búsqueda + fechas + orden -->
-      <div class="flex flex-wrap items-center gap-2 mb-3">
+      <!-- Filtros rápidos como pestañas nativas -->
+      <woot-tabs :index="activeQuickTabIndex" @change="onQuickTabChange">
+        <woot-tabs-item
+          v-for="(f, i) in quickFilters"
+          :key="f.key"
+          :index="i"
+          :name="f.label"
+          :count="f.key === 'sla_overdue' ? slaOverdueCount : 0"
+          :show-badge="f.key === 'sla_overdue' && slaOverdueCount > 0"
+        />
+      </woot-tabs>
+
+      <!-- Toolbar compacto: búsqueda + dropdowns + fecha + orden -->
+      <div class="flex flex-wrap items-center gap-2 py-3">
         <!-- Búsqueda -->
         <div class="relative flex-1 min-w-[220px]">
           <fluent-icon icon="search" size="16" class="absolute -translate-y-1/2 left-3 top-1/2 text-slate-400 dark:text-slate-500" />
@@ -33,8 +45,26 @@
           </button>
         </div>
 
-        <!-- Rango de fechas -->
+        <!-- Estado -->
+        <select v-model="statusFilter" class="!mb-0 w-40 text-sm" @change="onFilterChange">
+          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_STATUSES') }}</option>
+          <option v-for="s in statusOptions" :key="s" :value="s">{{ statusLabel(s) }}</option>
+        </select>
+
+        <!-- Prioridad -->
+        <select v-model="priorityFilter" class="!mb-0 w-36 text-sm" @change="onFilterChange">
+          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_PRIORITIES') }}</option>
+          <option v-for="p in priorityOptions" :key="p" :value="p">{{ priorityLabel(p) }}</option>
+        </select>
+
+        <!-- Tipo (dinámico desde la cuenta) -->
+        <select v-model="activeType" class="!mb-0 w-40 text-sm" @change="onFilterChange">
+          <option v-for="t in typeFilters" :key="t.id" :value="t.id">{{ t.name }}</option>
+        </select>
+
+        <!-- Rango de fechas (no-margin + auto-width para alinear y acotar el ancho como los selects) -->
         <WootDateRangePicker
+          class="no-margin auto-width w-56"
           :value="dateRange"
           :placeholder="$t('CASE_TICKETS.LIST.DATE_RANGE')"
           :confirm-text="$t('CASE_TICKETS.LIST.APPLY')"
@@ -57,59 +87,15 @@
             <fluent-icon :icon="sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'" size="16" />
           </button>
         </div>
-      </div>
 
-      <!-- Toolbar: selects de estado/prioridad + limpiar -->
-      <div class="flex flex-wrap items-center gap-2 mb-3">
-        <select v-model="statusFilter" class="!mb-0 w-44 text-sm" @change="onFilterChange">
-          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_STATUSES') }}</option>
-          <option v-for="s in statusOptions" :key="s" :value="s">{{ statusLabel(s) }}</option>
-        </select>
-        <select v-model="priorityFilter" class="!mb-0 w-40 text-sm" @change="onFilterChange">
-          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_PRIORITIES') }}</option>
-          <option v-for="p in priorityOptions" :key="p" :value="p">{{ priorityLabel(p) }}</option>
-        </select>
+        <!-- Limpiar -->
         <button
           v-if="hasActiveFilters"
           type="button"
-          class="px-3 py-1 text-sm rounded-full text-woot-600 dark:text-woot-400 hover:bg-woot-50 dark:hover:bg-woot-800/30"
+          class="px-3 py-1 text-sm rounded text-woot-600 dark:text-woot-400 hover:bg-woot-50 dark:hover:bg-woot-800/30"
           @click="clearFilters"
         >
           ✕ {{ $t('CASE_TICKETS.LIST.CLEAR_FILTERS') }}
-        </button>
-      </div>
-
-      <!-- Filtros rápidos -->
-      <div class="flex flex-wrap gap-1 mb-2">
-        <button
-          v-for="f in quickFilters"
-          :key="f.key"
-          class="relative px-3 py-1 text-sm border rounded-full transition-colors"
-          :class="activeFilter === f.key
-            ? 'bg-woot-500 border-woot-500 text-white'
-            : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-woot-500'"
-          @click="applyFilter(f.key)"
-        >
-          {{ f.label }}
-          <span
-            v-if="f.key === 'sla_overdue'"
-            class="absolute flex items-center justify-center text-[9px] font-bold rounded-full -top-1 -right-1 w-3.5 h-3.5 bg-red-500 text-white"
-          >!</span>
-        </button>
-      </div>
-
-      <!-- Filtro por tipo (dinámico desde la cuenta) -->
-      <div class="flex flex-wrap gap-1">
-        <button
-          v-for="t in typeFilters"
-          :key="t.id"
-          class="px-3 py-1 text-sm border rounded-full transition-colors"
-          :class="activeType === t.id
-            ? 'bg-woot-500 border-woot-500 text-white'
-            : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-woot-500'"
-          @click="applyType(t.id)"
-        >
-          {{ t.name }}
         </button>
       </div>
     </div>
@@ -252,6 +238,11 @@ export default {
     }),
     isFetchingList()  { return this.uiFlags.isFetchingList; },
     quickFilters()    { return QUICK_FILTERS; },
+    activeQuickTabIndex() {
+      const i = QUICK_FILTERS.findIndex(f => f.key === this.activeFilter);
+      return i < 0 ? 0 : i;
+    },
+    slaOverdueCount() { return this.meta.sla_overdue_count || 0; },
     statusOptions()   { return STATUS_OPTIONS; },
     priorityOptions() { return PRIORITY_OPTIONS; },
     perPageOptions()  { return PER_PAGE_OPTIONS; },
@@ -334,10 +325,8 @@ export default {
       this.currentPage = 1;
       this.fetch();
     },
-    applyType(key) {
-      this.activeType = key;
-      this.currentPage = 1;
-      this.fetch();
+    onQuickTabChange(index) {
+      this.applyFilter(QUICK_FILTERS[index].key);
     },
     clearFilters() {
       this.search = '';

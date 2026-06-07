@@ -97,7 +97,10 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
     render json: {
       case_tickets: tickets.map { |t| ticket_json(t) },
-      meta: pagination_meta(tickets)
+      meta: pagination_meta(tickets).merge(
+        # conteo global (sin filtros) para el badge del tab "SLA vencido"
+        sla_overdue_count: Current.account.case_tickets.where.not(status: %w[closed cancelled]).overdue.count
+      )
     }
   end
 
