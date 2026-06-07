@@ -601,6 +601,12 @@ export const actions = {
     return data.duplicates;
   },
 
+  // ── 3F — Seguimiento sugerido al cliente (efímero) ──────────
+  async followUp(_ctx, ticketId) {
+    const { data } = await caseTicketsAPI.followUp(ticketId);
+    return data.follow_up;
+  },
+
   // ── 2B — Servicios afectados ────────────────────────────────
   async fetchServices({ commit }) {
     commit(SET_CASE_SERVICES_UI_FLAG, { isFetching: true });

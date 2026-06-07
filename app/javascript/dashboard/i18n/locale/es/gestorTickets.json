@@ -380,6 +380,17 @@
         "LINK": "Vincular",
         "LINKED": "Ticket vinculado como duplicado",
         "ERROR": "No se pudo analizar duplicados"
+      },
+      "FOLLOWUP": {
+        "TITLE": "Seguimiento sugerido",
+        "GENERATE": "Generar",
+        "REGENERATE": "Regenerar",
+        "AUTO_BADGE": "Generado automáticamente",
+        "HINT": "Redacta un mensaje de seguimiento para el cliente según el estado del ticket.",
+        "COPY": "Copiar",
+        "COPIED_BTN": "Copiado",
+        "COPIED": "Seguimiento copiado al portapapeles",
+        "ERROR": "No se pudo generar el seguimiento"
       }
     },
     "TYPES": {
@@ -531,6 +542,7 @@
       "article_generated": "Artículo KB generado",
       "ai_classified": "Clasificado por IA",
       "ai_suggested": "Clasificación sugerida por IA",
+      "ai_followup": "Seguimiento redactado por IA",
       "reassigned": "Reasignado",
       "escalated": "Escalado",
       "message_received": "Mensaje recibido",

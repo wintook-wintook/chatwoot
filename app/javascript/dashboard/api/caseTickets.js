@@ -94,6 +94,11 @@ class CaseTicketsAPI extends ApiClient {
   detectDuplicates(ticketId) {
     return axios.post(`${this.url}/${ticketId}/detect_duplicates`);
   }
+
+  // @tickets_cases 3F — seguimiento sugerido al cliente
+  followUp(ticketId) {
+    return axios.post(`${this.url}/${ticketId}/follow_up`);
+  }
 }
 
 export default new CaseTicketsAPI();

@@ -125,6 +125,7 @@ Rails.application.routes.draw do
               post :suggest_reply # @tickets_cases 3C
               post :summarize # @tickets_cases 3E
               post :detect_duplicates # @tickets_cases 3D
+              post :follow_up # @tickets_cases 3F
             end
             resources :case_events, only: [:index]
             # @tickets_cases 2E — relaciones entre tickets

@@ -150,3 +150,10 @@ case_sla_monitor_job:
   class: "CaseSlaMonitorJob"
   queue: scheduled_jobs
   description: "Monitor SLA status of CaseTickets and auto-close stale resolved tickets"
+
+# @tickets_cases 3F — redacta seguimientos para tickets en espera estancados
+case_ai_follow_up_scan_job:
+  cron: "0 * * * *"
+  class: "Cases::Ai::FollowUpScanJob"
+  queue: scheduled_jobs
+  description: "Draft AI follow-up messages for stale waiting CaseTickets"

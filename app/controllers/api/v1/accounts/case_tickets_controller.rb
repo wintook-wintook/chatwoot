@@ -22,7 +22,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   before_action :set_ticket,
                 only: %i[show update transition assign escalate change_approval generate_article
                          apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize
-                         detect_duplicates]
+                         detect_duplicates follow_up]
 
   # GET /api/v1/accounts/:account_id/case_tickets/metrics
   def metrics
@@ -326,6 +326,16 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     render json: { duplicates: result }
   end
 
+  # @tickets_cases 3F — redacta un seguimiento al cliente (efímero/on-demand).
+  def follow_up
+    return render json: { error: 'IA de seguimiento desactivada' }, status: :unprocessable_entity unless ai_config.active?(:follow_up)
+
+    message = Cases::Ai::FollowUp.new(account: Current.account).draft(@ticket)
+    return render json: { error: 'No se pudo generar el seguimiento' }, status: :unprocessable_entity if message.blank?
+
+    render json: { follow_up: { message: message } }
+  end
+
   private
 
   # @tickets_cases 2H — cuerpo del artículo precargado desde el cierre documentado (2G).
@@ -442,6 +452,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       metadata:                   ticket.metadata,
       ai_classification:          ai_classification_json(ticket), # @tickets_cases 3B
       ai_actions:                 ai_actions_json,                # @tickets_cases 3C
+      ai_follow_up:               ai_follow_up_json(ticket),      # @tickets_cases 3F
       custom_attributes:          ticket.custom_attributes,
       created_at:                 ticket.created_at,
       updated_at:                 ticket.updated_at,
@@ -469,8 +480,17 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     {
       'reply'     => ai_config.active?(:reply),
       'summarize' => ai_config.active?(:summarize),
-      'duplicate' => ai_config.active?(:duplicate)
+      'duplicate' => ai_config.active?(:duplicate),
+      'follow_up' => ai_config.active?(:follow_up)
     }
+  end
+
+  # @tickets_cases 3F — seguimiento pendiente redactado por el job programado.
+  def ai_follow_up_json(ticket)
+    fu = ticket.metadata['ai_follow_up']
+    return nil if fu.blank? || fu['status'] != 'pending'
+
+    { 'message' => fu['message'], 'drafted_at' => fu['drafted_at'] }
   end
 
   # @tickets_cases 3B — sugerencia de clasificación de la IA (enriquecida con

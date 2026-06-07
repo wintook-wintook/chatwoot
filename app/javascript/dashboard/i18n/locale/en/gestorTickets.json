@@ -380,6 +380,17 @@
         "LINK": "Link",
         "LINKED": "Ticket linked as duplicate",
         "ERROR": "Could not analyze duplicates"
+      },
+      "FOLLOWUP": {
+        "TITLE": "Suggested follow-up",
+        "GENERATE": "Generate",
+        "REGENERATE": "Regenerate",
+        "AUTO_BADGE": "Auto-generated",
+        "HINT": "Draft a follow-up message for the customer based on the ticket status.",
+        "COPY": "Copy",
+        "COPIED_BTN": "Copied",
+        "COPIED": "Follow-up copied to clipboard",
+        "ERROR": "Could not generate the follow-up"
       }
     },
     "TYPES": {
@@ -531,6 +542,7 @@
       "article_generated": "KB article generated",
       "ai_classified": "Classified by AI",
       "ai_suggested": "Classification suggested by AI",
+      "ai_followup": "Follow-up drafted by AI",
       "reassigned": "Reassigned",
       "escalated": "Escalated",
       "message_received": "Message received",

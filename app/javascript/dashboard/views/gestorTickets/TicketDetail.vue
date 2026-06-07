@@ -54,6 +54,10 @@ export default {
       duplicateResult: null,
       isDetectingDuplicates: false,
       linkingDuplicateId: null,
+      // 3F — seguimiento sugerido
+      followUpResult: null,
+      isFollowingUp: false,
+      followUpCopied: false,
       // 2H — base de conocimiento
       showArticleModal: false,
       kbPortals: [],
@@ -194,6 +198,20 @@ export default {
     // @tickets_cases 3D — ¿está activa la detección de repetidos?
     duplicateEnabled() {
       return !!this.ticket?.ai_actions?.duplicate;
+    },
+    // @tickets_cases 3F — ¿está activo el seguimiento sugerido?
+    followUpEnabled() {
+      return !!this.ticket?.ai_actions?.follow_up;
+    },
+    // Seguimiento pendiente redactado por el job programado (si lo hay).
+    pendingFollowUp() {
+      return this.ticket?.ai_follow_up || null;
+    },
+    // Texto a mostrar: el generado on-demand, o el pendiente del job.
+    followUpMessage() {
+      return (
+        this.followUpResult?.message || this.pendingFollowUp?.message || ''
+      );
     },
     // @tickets_cases 2G
     isClosed() {
@@ -436,6 +454,35 @@ export default {
         name: 'gestorTickets_detail',
         params: { id },
       });
+    },
+    // @tickets_cases 3F — generar seguimiento sugerido
+    async generateFollowUp() {
+      this.isFollowingUp = true;
+      this.followUpCopied = false;
+      try {
+        this.followUpResult = await this.$store.dispatch(
+          'caseTickets/followUp',
+          this.ticketId
+        );
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.AI.FOLLOWUP.ERROR'),
+        });
+      } finally {
+        this.isFollowingUp = false;
+      }
+    },
+    async copyFollowUp() {
+      if (!this.followUpMessage) return;
+      try {
+        await navigator.clipboard.writeText(this.followUpMessage);
+        this.followUpCopied = true;
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.AI.FOLLOWUP.COPIED'),
+        });
+      } catch (e) {
+        this.followUpCopied = false;
+      }
     },
     // @tickets_cases 3E — prellena el modal de cierre con causa raíz + solución de la IA
     async suggestCloseWithAi() {
@@ -1619,6 +1666,72 @@ export default {
               </div>
             </div>
           </template>
+        </template>
+      </div>
+
+      <!-- Seguimiento sugerido (3F) -->
+      <div
+        v-if="followUpEnabled"
+        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+      >
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <fluent-icon
+              icon="wand"
+              size="18"
+              class="text-emerald-600 dark:text-emerald-300"
+            />
+            <h3
+              class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
+            >
+              {{ $t('CASE_TICKETS.AI.FOLLOWUP.TITLE') }}
+            </h3>
+            <span
+              v-if="pendingFollowUp && !followUpResult"
+              class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-800 dark:text-emerald-100"
+              >{{ $t('CASE_TICKETS.AI.FOLLOWUP.AUTO_BADGE') }}</span
+            >
+          </div>
+          <woot-button
+            size="small"
+            variant="smooth"
+            icon="wand"
+            :is-loading="isFollowingUp"
+            @click="generateFollowUp"
+          >
+            {{
+              followUpMessage
+                ? $t('CASE_TICKETS.AI.FOLLOWUP.REGENERATE')
+                : $t('CASE_TICKETS.AI.FOLLOWUP.GENERATE')
+            }}
+          </woot-button>
+        </div>
+        <p
+          v-if="!followUpMessage && !isFollowingUp"
+          class="m-0 text-sm text-slate-400 dark:text-slate-500"
+        >
+          {{ $t('CASE_TICKETS.AI.FOLLOWUP.HINT') }}
+        </p>
+        <template v-if="followUpMessage">
+          <div
+            class="p-3 text-sm whitespace-pre-line rounded-lg bg-emerald-50 text-slate-700 dark:bg-emerald-900/20 dark:text-slate-200"
+          >
+            {{ followUpMessage }}
+          </div>
+          <div class="flex justify-end mt-3">
+            <woot-button
+              size="small"
+              variant="clear"
+              :icon="followUpCopied ? 'checkmark' : 'copy'"
+              @click="copyFollowUp"
+            >
+              {{
+                followUpCopied
+                  ? $t('CASE_TICKETS.AI.FOLLOWUP.COPIED_BTN')
+                  : $t('CASE_TICKETS.AI.FOLLOWUP.COPY')
+              }}
+            </woot-button>
+          </div>
         </template>
       </div>
 
