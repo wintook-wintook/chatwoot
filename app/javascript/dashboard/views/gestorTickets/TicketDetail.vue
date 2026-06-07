@@ -43,6 +43,10 @@ export default {
         closure_solution: '',
         customer_confirmed: false,
       },
+      // 3C — respuesta sugerida desde KB
+      replySuggestion: null,
+      isSuggestingReply: false,
+      replyCopied: false,
       // 2H — base de conocimiento
       showArticleModal: false,
       kbPortals: [],
@@ -171,6 +175,10 @@ export default {
     aiConfidencePct() {
       const c = this.aiSuggestion?.confidence;
       return c == null ? null : Math.round(c * 100);
+    },
+    // @tickets_cases 3C — ¿está activa la respuesta sugerida para este ticket?
+    replyEnabled() {
+      return !!this.ticket?.ai_actions?.reply;
     },
     // @tickets_cases 2G
     isClosed() {
@@ -320,6 +328,35 @@ export default {
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.AI.SUGGESTION.ERROR'),
         });
+      }
+    },
+    // @tickets_cases 3C — generar respuesta sugerida desde la KB
+    async generateReply() {
+      this.isSuggestingReply = true;
+      this.replyCopied = false;
+      try {
+        this.replySuggestion = await this.$store.dispatch(
+          'caseTickets/suggestReply',
+          this.ticketId
+        );
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.AI.REPLY.ERROR'),
+        });
+      } finally {
+        this.isSuggestingReply = false;
+      }
+    },
+    async copyReply() {
+      if (!this.replySuggestion?.reply) return;
+      try {
+        await navigator.clipboard.writeText(this.replySuggestion.reply);
+        this.replyCopied = true;
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.AI.REPLY.COPIED'),
+        });
+      } catch (e) {
+        this.replyCopied = false;
       }
     },
     // @tickets_cases 2H — base de conocimiento
@@ -1232,6 +1269,91 @@ export default {
             />
           </li>
         </ul>
+      </div>
+
+      <!-- Respuesta sugerida desde KB (3C) -->
+      <div
+        v-if="replyEnabled"
+        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+      >
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <fluent-icon
+              icon="wand"
+              size="18"
+              class="text-teal-600 dark:text-teal-300"
+            />
+            <h3
+              class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
+            >
+              {{ $t('CASE_TICKETS.AI.REPLY.TITLE') }}
+            </h3>
+          </div>
+          <woot-button
+            size="small"
+            variant="smooth"
+            icon="wand"
+            :is-loading="isSuggestingReply"
+            @click="generateReply"
+          >
+            {{
+              replySuggestion
+                ? $t('CASE_TICKETS.AI.REPLY.REGENERATE')
+                : $t('CASE_TICKETS.AI.REPLY.GENERATE')
+            }}
+          </woot-button>
+        </div>
+
+        <p
+          v-if="!replySuggestion && !isSuggestingReply"
+          class="m-0 text-sm text-slate-400 dark:text-slate-500"
+        >
+          {{ $t('CASE_TICKETS.AI.REPLY.HINT') }}
+        </p>
+
+        <template v-if="replySuggestion">
+          <p
+            v-if="replySuggestion.no_context"
+            class="m-0 text-sm text-amber-600 dark:text-amber-400"
+          >
+            {{ $t('CASE_TICKETS.AI.REPLY.NO_CONTEXT') }}
+          </p>
+          <template v-else>
+            <div
+              class="p-3 text-sm whitespace-pre-line rounded-lg bg-teal-50 text-slate-700 dark:bg-teal-900/20 dark:text-slate-200"
+            >
+              {{ replySuggestion.reply }}
+            </div>
+            <div
+              v-if="replySuggestion.sources && replySuggestion.sources.length"
+              class="flex flex-wrap items-center gap-1.5 mt-2"
+            >
+              <span class="text-xs text-slate-400 dark:text-slate-500"
+                >{{ $t('CASE_TICKETS.AI.REPLY.SOURCES') }}:</span
+              >
+              <span
+                v-for="(src, idx) in replySuggestion.sources"
+                :key="idx"
+                class="px-1.5 py-0.5 text-xs rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                >{{ src.title }}</span
+              >
+            </div>
+            <div class="flex justify-end mt-3">
+              <woot-button
+                size="small"
+                variant="clear"
+                :icon="replyCopied ? 'checkmark' : 'copy'"
+                @click="copyReply"
+              >
+                {{
+                  replyCopied
+                    ? $t('CASE_TICKETS.AI.REPLY.COPIED_BTN')
+                    : $t('CASE_TICKETS.AI.REPLY.COPY')
+                }}
+              </woot-button>
+            </div>
+          </template>
+        </template>
       </div>
 
       <!-- Avance del ticket (2L) — 3 vistas conmutables -->

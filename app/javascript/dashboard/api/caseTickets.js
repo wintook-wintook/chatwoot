@@ -79,6 +79,11 @@ class CaseTicketsAPI extends ApiClient {
   dismissAiSuggestion(ticketId) {
     return axios.delete(`${this.url}/${ticketId}/dismiss_ai_suggestion`);
   }
+
+  // @tickets_cases 3C — respuesta sugerida desde la base de conocimiento
+  suggestReply(ticketId) {
+    return axios.post(`${this.url}/${ticketId}/suggest_reply`);
+  }
 }
 
 export default new CaseTicketsAPI();

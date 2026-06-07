@@ -345,6 +345,19 @@
         "DISMISS": "Descartar",
         "APPLIED": "Clasificación aplicada",
         "ERROR": "No se pudo procesar la sugerencia"
+      },
+      "REPLY": {
+        "TITLE": "Respuesta sugerida",
+        "GENERATE": "Generar",
+        "REGENERATE": "Regenerar",
+        "HINT": "Genera una respuesta para el cliente basada en la base de conocimiento.",
+        "NO_CONTEXT": "No se encontró información relevante en la base de conocimiento para esta consulta.",
+        "SOURCES": "Fuentes",
+        "COPY": "Copiar",
+        "COPY_BTN": "Copiar",
+        "COPIED_BTN": "Copiado",
+        "COPIED": "Respuesta copiada al portapapeles",
+        "ERROR": "No se pudo generar la respuesta"
       }
     },
     "TYPES": {

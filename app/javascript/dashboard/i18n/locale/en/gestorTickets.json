@@ -345,6 +345,19 @@
         "DISMISS": "Dismiss",
         "APPLIED": "Classification applied",
         "ERROR": "Could not process the suggestion"
+      },
+      "REPLY": {
+        "TITLE": "Suggested reply",
+        "GENERATE": "Generate",
+        "REGENERATE": "Regenerate",
+        "HINT": "Generate a reply for the customer based on the knowledge base.",
+        "NO_CONTEXT": "No relevant information was found in the knowledge base for this query.",
+        "SOURCES": "Sources",
+        "COPY": "Copy",
+        "COPY_BTN": "Copy",
+        "COPIED_BTN": "Copied",
+        "COPIED": "Reply copied to clipboard",
+        "ERROR": "Could not generate the reply"
       }
     },
     "TYPES": {

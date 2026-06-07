@@ -583,6 +583,12 @@ export const actions = {
     return data.case_ticket;
   },
 
+  // ── 3C — Respuesta sugerida desde KB (efímera, no se persiste) ──
+  async suggestReply(_ctx, ticketId) {
+    const { data } = await caseTicketsAPI.suggestReply(ticketId);
+    return data.suggestion;
+  },
+
   // ── 2B — Servicios afectados ────────────────────────────────
   async fetchServices({ commit }) {
     commit(SET_CASE_SERVICES_UI_FLAG, { isFetching: true });

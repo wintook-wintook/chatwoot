@@ -21,7 +21,7 @@
 class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseController
   before_action :set_ticket,
                 only: %i[show update transition assign escalate change_approval generate_article
-                         apply_ai_suggestion dismiss_ai_suggestion]
+                         apply_ai_suggestion dismiss_ai_suggestion suggest_reply]
 
   # GET /api/v1/accounts/:account_id/case_tickets/metrics
   def metrics
@@ -294,6 +294,17 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     render json: { case_ticket: ticket_json(@ticket.reload) }
   end
 
+  # @tickets_cases 3C — genera una respuesta sugerida desde la base de conocimiento
+  # (efímera: no se persiste, la UI decide qué hacer con ella).
+  def suggest_reply
+    return render json: { error: 'IA de respuesta desactivada' }, status: :unprocessable_entity unless ai_config.active?(:reply)
+
+    result = Cases::Ai::ReplySuggester.new(account: Current.account).suggest(@ticket)
+    return render json: { error: 'No se pudo generar la respuesta' }, status: :unprocessable_entity if result.nil?
+
+    render json: { suggestion: result }
+  end
+
   private
 
   # @tickets_cases 2H — cuerpo del artículo precargado desde el cierre documentado (2G).
@@ -409,6 +420,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       kb_article:                 kb_article_json(ticket.kb_article),
       metadata:                   ticket.metadata,
       ai_classification:          ai_classification_json(ticket), # @tickets_cases 3B
+      ai_actions:                 ai_actions_json,                # @tickets_cases 3C
       custom_attributes:          ticket.custom_attributes,
       created_at:                 ticket.created_at,
       updated_at:                 ticket.updated_at,
@@ -423,6 +435,17 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
   def valid_transitions_for(ticket)
     CaseTicket::VALID_TRANSITIONS[ticket.status] || []
+  end
+
+  # @tickets_cases 3A — config de IA de la cuenta (memoizada para no consultar
+  # por cada ticket al serializar la lista).
+  def ai_config
+    @ai_config ||= CaseAiConfig.for_account(Current.account)
+  end
+
+  # @tickets_cases 3C — acciones de IA habilitadas (para que la UI muestre/oculte).
+  def ai_actions_json
+    { 'reply' => ai_config.active?(:reply) }
   end
 
   # @tickets_cases 3B — sugerencia de clasificación de la IA (enriquecida con

@@ -18,6 +18,8 @@
 
 class Cases::Ai::BaseService
   API_URL = 'https://api.openai.com/v1/chat/completions'
+  EMBEDDINGS_URL = 'https://api.openai.com/v1/embeddings'
+  EMBEDDING_MODEL = 'text-embedding-3-small'
   DEFAULT_MODEL = 'gpt-4o-mini'
   READ_TIMEOUT = 45
 
@@ -56,6 +58,32 @@ class Cases::Ai::BaseService
     return nil if content.blank?
 
     json ? safe_parse(content) : content
+  end
+
+  # Genera el embedding (vector 1536) de un texto, para búsqueda semántica en
+  # knowledge_items. Devuelve el array o nil ante cualquier fallo.
+  def embed(text)
+    key = api_key
+    return nil if key.blank? || text.blank?
+
+    require 'net/http'
+    uri               = URI(EMBEDDINGS_URL)
+    http              = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl      = true
+    http.read_timeout = 15
+
+    request                  = Net::HTTP::Post.new(uri)
+    request['Authorization'] = "Bearer #{key}"
+    request['Content-Type']  = 'application/json'
+    request.body             = { model: EMBEDDING_MODEL, input: text }.to_json
+
+    response = http.request(request)
+    return nil unless response.is_a?(Net::HTTPSuccess)
+
+    JSON.parse(response.body).dig('data', 0, 'embedding')
+  rescue StandardError => e
+    Rails.logger.error("[Cases::Ai] embedding error: #{e.message}")
+    nil
   end
 
   private
