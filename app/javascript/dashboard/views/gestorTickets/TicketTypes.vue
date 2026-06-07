@@ -418,81 +418,98 @@ export default {
       :on-close="closeFields"
       size="medium"
     >
-      <div class="flex flex-col h-auto overflow-auto">
+      <div class="flex flex-col overflow-hidden max-h-[90vh]">
         <woot-modal-header
           :header-title="$t('CASE_TICKETS.CUSTOM_FIELDS.MODAL_TITLE')"
           :header-content="fieldsType ? fieldsType.name : ''"
         />
 
-        <div class="flex flex-col self-stretch w-full gap-4 px-8 pb-8">
-          <!-- Lista de campos existentes -->
+        <div
+          class="flex flex-col self-stretch w-full gap-4 px-8 pb-8 overflow-y-auto"
+        >
+          <!-- Sección: campos definidos (tarjeta estilo reglas, scroll a 3) -->
           <div
-            v-if="fieldsLoading"
-            class="py-4 text-sm text-center text-slate-400"
+            class="flex flex-col gap-2 p-4 border rounded-lg bg-slate-25 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700"
           >
-            {{ $t('CASE_TICKETS.CUSTOM_FIELDS.LOADING') }}
-          </div>
-          <div
-            v-else-if="!currentFields.length"
-            class="py-4 text-sm text-center text-slate-400 dark:text-slate-500"
-          >
-            {{ $t('CASE_TICKETS.CUSTOM_FIELDS.EMPTY') }}
-          </div>
-          <div v-else class="flex flex-col gap-2">
-            <div
-              v-for="field in currentFields"
-              :key="field.id"
-              class="flex items-center gap-3 p-2.5 bg-slate-25 border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+            <span
+              class="text-sm font-semibold text-slate-800 dark:text-slate-100"
             >
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
+              {{ $t('CASE_TICKETS.CUSTOM_FIELDS.DEFINED_TITLE') }}
+            </span>
+
+            <div
+              v-if="fieldsLoading"
+              class="py-2 text-sm text-center text-slate-400"
+            >
+              {{ $t('CASE_TICKETS.CUSTOM_FIELDS.LOADING') }}
+            </div>
+            <div
+              v-else-if="!currentFields.length"
+              class="py-2 text-sm text-center text-slate-400 dark:text-slate-500"
+            >
+              {{ $t('CASE_TICKETS.CUSTOM_FIELDS.EMPTY') }}
+            </div>
+            <div
+              v-else
+              class="flex flex-col gap-2 pr-1 overflow-y-auto max-h-[12.5rem]"
+            >
+              <div
+                v-for="field in currentFields"
+                :key="field.id"
+                class="flex items-center gap-3 p-2.5 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+              >
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="text-sm font-medium text-slate-800 dark:text-slate-100"
+                      >{{ field.label }}</span
+                    >
+                    <span
+                      v-if="field.required"
+                      class="px-1.5 py-0.5 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                      >{{
+                        $t('CASE_TICKETS.CUSTOM_FIELDS.REQUIRED_BADGE')
+                      }}</span
+                    >
+                  </div>
                   <span
-                    class="text-sm font-medium text-slate-800 dark:text-slate-100"
-                    >{{ field.label }}</span
+                    class="font-mono text-xs text-slate-400 dark:text-slate-500"
                   >
-                  <span
-                    v-if="field.required"
-                    class="px-1.5 py-0.5 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
-                    >{{ $t('CASE_TICKETS.CUSTOM_FIELDS.REQUIRED_BADGE') }}</span
-                  >
+                    {{ field.key }} ·
+                    {{
+                      $t(`CASE_TICKETS.CUSTOM_FIELDS.TYPES.${field.field_type}`)
+                    }}
+                    <template v-if="field.field_type === 'list'">
+                      ({{ (field.options || []).join(', ') }})</template
+                    >
+                  </span>
                 </div>
-                <span
-                  class="font-mono text-xs text-slate-400 dark:text-slate-500"
-                >
-                  {{ field.key }} ·
-                  {{
-                    $t(`CASE_TICKETS.CUSTOM_FIELDS.TYPES.${field.field_type}`)
-                  }}
-                  <template v-if="field.field_type === 'list'">
-                    ({{ (field.options || []).join(', ') }})</template
-                  >
-                </span>
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="edit"
+                  @click="editField(field)"
+                />
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="alert"
+                  icon="delete"
+                  :is-loading="deletingFieldId === field.id"
+                  @click="removeField(field)"
+                />
               </div>
-              <woot-button
-                size="tiny"
-                variant="clear"
-                color-scheme="secondary"
-                icon="edit"
-                @click="editField(field)"
-              />
-              <woot-button
-                size="tiny"
-                variant="clear"
-                color-scheme="alert"
-                icon="delete"
-                :is-loading="deletingFieldId === field.id"
-                @click="removeField(field)"
-              />
             </div>
           </div>
 
-          <!-- Formulario alta/edición -->
+          <!-- Formulario alta/edición (tarjeta estilo reglas) -->
           <form
-            class="flex flex-col gap-3 p-3 border rounded-lg border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800"
+            class="flex flex-col gap-3 p-4 border rounded-lg bg-slate-25 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700"
             @submit.prevent="saveField"
           >
             <span
-              class="text-sm font-semibold text-slate-700 dark:text-slate-200"
+              class="text-sm font-semibold text-slate-800 dark:text-slate-100"
             >
               {{
                 editingField
@@ -593,7 +610,9 @@ export default {
             </div>
           </form>
 
-          <div class="flex justify-end">
+          <div
+            class="flex justify-end flex-shrink-0 gap-4 pt-4 border-t border-slate-100 dark:border-slate-700"
+          >
             <woot-button
               variant="clear"
               color-scheme="secondary"

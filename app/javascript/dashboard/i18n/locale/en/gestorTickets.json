@@ -418,6 +418,7 @@
       "MANAGE_BUTTON": "Fields",
       "MODAL_TITLE": "Custom fields",
       "DETAIL_TITLE": "Additional information",
+      "DEFINED_TITLE": "Defined fields",
       "LOADING": "Loading fields...",
       "EMPTY": "This type has no custom fields yet.",
       "ADD_TITLE": "Add field",
