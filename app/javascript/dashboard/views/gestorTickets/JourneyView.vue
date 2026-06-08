@@ -237,65 +237,57 @@ export default {
 
     <template v-else>
       <!-- ── Vista 1: Diagrama de recorrido ─────────────────────── -->
-      <div v-if="view === 'diagram'" class="flex flex-col">
+      <div v-if="view === 'diagram'" class="relative">
+        <!-- Espina vertical continua (detrás de los nodos) -->
+        <span
+          v-if="journeyNodes.length > 1"
+          class="absolute left-[9px] top-2.5 bottom-3 w-0.5 bg-slate-200 dark:bg-slate-600"
+        />
         <div
           v-for="(node, idx) in journeyNodes"
           :key="idx"
-          class="relative flex gap-3"
-          :class="node.branch ? 'pl-6' : ''"
+          class="relative flex gap-4"
+          :class="idx < journeyNodes.length - 1 ? 'pb-5' : ''"
         >
-          <!-- Conector vertical -->
-          <div class="relative flex flex-col items-center">
+          <!-- Nodo (punto con halo que enmascara la espina) -->
+          <span
+            class="z-10 flex-shrink-0 w-[18px] h-[18px] mt-1 rounded-full ring-4 ring-white dark:ring-slate-800"
+            :class="[
+              statusDot(node.state),
+              node.current ? '!ring-woot-100 dark:!ring-woot-900' : '',
+            ]"
+          >
             <span
-              class="z-10 flex-shrink-0 w-3 h-3 rounded-full ring-2 ring-white dark:ring-slate-800"
-              :class="[
-                statusDot(node.state),
-                node.current
-                  ? 'ring-woot-400 dark:ring-woot-500 scale-125'
-                  : '',
-              ]"
+              v-if="node.current"
+              class="block w-full h-full rounded-full animate-ping opacity-50"
+              :class="statusDot(node.state)"
             />
-            <span
-              v-if="idx < journeyNodes.length - 1"
-              class="w-px flex-1 my-0.5"
-              :class="
-                node.branch
-                  ? 'border-l border-dashed border-slate-300 dark:border-slate-600'
-                  : 'bg-slate-200 dark:bg-slate-600'
-              "
-            />
-          </div>
+          </span>
           <!-- Contenido del nodo -->
-          <div class="flex-1 min-w-0 pb-4">
-            <div class="flex items-center gap-2">
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
               <span
-                class="text-sm font-semibold text-slate-700 dark:text-slate-100"
+                class="text-sm font-semibold text-slate-800 dark:text-slate-100"
                 >{{ statusLabel(node.state) }}</span
               >
               <span
                 v-if="node.current"
-                class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-woot-100 text-woot-700 dark:bg-woot-800 dark:text-woot-100"
+                class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-woot-100 text-woot-700 dark:bg-woot-800 dark:text-woot-100"
                 >{{ $t('CASE_TICKETS.JOURNEY.CURRENT') }}</span
               >
             </div>
             <p
               v-if="node.reason"
-              class="m-0 mt-0.5 text-sm italic text-slate-500 dark:text-slate-400"
+              class="m-0 mt-1 text-sm italic text-slate-500 dark:text-slate-400"
             >
               {{ quotedReason(node.reason) }}
             </p>
-            <p
-              v-if="!node.isStart"
-              class="m-0 mt-0.5 text-xs text-slate-400 dark:text-slate-500"
-            >
-              {{ node.actor }} · {{ formatDate(node.at) }}
-            </p>
-            <p
-              v-else
-              class="m-0 mt-0.5 text-xs text-slate-400 dark:text-slate-500"
-            >
-              {{ $t('CASE_TICKETS.JOURNEY.CREATED') }} ·
-              {{ formatDate(node.at) }}
+            <p class="m-0 mt-1 text-xs text-slate-400 dark:text-slate-500">
+              <template v-if="node.isStart">
+                {{ $t('CASE_TICKETS.JOURNEY.CREATED') }}
+              </template>
+              <template v-else> {{ node.actor }} </template>
+              · {{ formatDate(node.at) }}
             </p>
           </div>
         </div>

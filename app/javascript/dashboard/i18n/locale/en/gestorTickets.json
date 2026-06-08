@@ -108,6 +108,11 @@
     "VIEW_TIMELINE": "View history",
     "CHANGE_STATUS": "Change status",
     "SLA_OVERDUE": "SLA overdue",
+    "DETAIL_TABS": {
+      "SUMMARY": "Summary",
+      "JOURNEY": "Progress",
+      "AI": "AI assistant"
+    },
     "MODAL": {
       "TITLE_CREATE": "Create ticket",
       "CASE_TYPE_LABEL": "Case type",

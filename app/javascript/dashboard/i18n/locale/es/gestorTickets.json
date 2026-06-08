@@ -108,6 +108,11 @@
     "VIEW_TIMELINE": "Ver historial",
     "CHANGE_STATUS": "Cambiar estado",
     "SLA_OVERDUE": "SLA vencido",
+    "DETAIL_TABS": {
+      "SUMMARY": "Resumen",
+      "JOURNEY": "Avance",
+      "AI": "Asistente IA"
+    },
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",
       "CASE_TYPE_LABEL": "Tipo de caso",

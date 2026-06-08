@@ -1,12 +1,19 @@
 <!--
   @tickets_cases 3A — Configuración de IA por cuenta (mixto configurable).
-  Toggle global + modo por acción (off / suggest / auto). Solo `classify` (3B)
-  está implementado; el resto se muestra como "próximamente".
+  Toggle global + modo por acción (off / suggest / auto). Las 5 acciones de la
+  Fase 3 están implementadas (3B classify, 3C reply, 3E summarize, 3D duplicate,
+  3F follow_up); cualquiera fuera de esta lista se muestra como "próximamente".
 -->
 <script>
 import { mapGetters } from 'vuex';
 
-const IMPLEMENTED = ['classify'];
+const IMPLEMENTED = [
+  'classify',
+  'reply',
+  'summarize',
+  'duplicate',
+  'follow_up',
+];
 
 export default {
   name: 'AiConfig',

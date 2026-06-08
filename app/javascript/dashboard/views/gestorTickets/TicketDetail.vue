@@ -6,6 +6,9 @@
 import { mapGetters } from 'vuex';
 import JourneyView from './JourneyView.vue';
 
+// @tickets_cases — pestaña activa del detalle, recordada por usuario.
+const DETAIL_TAB_KEY = 'gestorTickets.detailTab';
+
 export default {
   name: 'TicketDetail',
   components: { JourneyView },
@@ -14,6 +17,8 @@ export default {
   },
   data() {
     return {
+      // @tickets_cases — pestaña activa del detalle (Resumen / Avance / IA).
+      activeDetailTab: localStorage.getItem(DETAIL_TAB_KEY) || 'detail',
       showTransitionMenu: false,
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
@@ -213,6 +218,36 @@ export default {
         this.followUpResult?.message || this.pendingFollowUp?.message || ''
       );
     },
+    // @tickets_cases — ¿hay alguna acción de IA activa? (define la pestaña IA)
+    hasAiCards() {
+      return (
+        this.replyEnabled ||
+        this.summarizeEnabled ||
+        this.duplicateEnabled ||
+        this.followUpEnabled
+      );
+    },
+    // @tickets_cases — pestañas del detalle (la de IA solo si hay acciones).
+    detailTabs() {
+      const tabs = [
+        { key: 'detail', label: this.$t('CASE_TICKETS.DETAIL_TABS.SUMMARY') },
+        { key: 'journey', label: this.$t('CASE_TICKETS.DETAIL_TABS.JOURNEY') },
+      ];
+      if (this.hasAiCards) {
+        tabs.push({ key: 'ai', label: this.$t('CASE_TICKETS.DETAIL_TABS.AI') });
+      }
+      return tabs;
+    },
+    activeDetailTabIndex() {
+      const idx = this.detailTabs.findIndex(
+        t => t.key === this.activeDetailTab
+      );
+      return idx === -1 ? 0 : idx;
+    },
+    // Clave de la pestaña realmente visible (autocorrige si la guardada ya no existe).
+    currentTabKey() {
+      return this.detailTabs[this.activeDetailTabIndex]?.key || 'detail';
+    },
     // @tickets_cases 2G
     isClosed() {
       return this.ticket?.status === 'closed';
@@ -283,6 +318,12 @@ export default {
     this.$store.dispatch('teams/get');
   },
   methods: {
+    onDetailTabChange(index) {
+      const tab = this.detailTabs[index];
+      if (!tab) return;
+      this.activeDetailTab = tab.key;
+      localStorage.setItem(DETAIL_TAB_KEY, tab.key);
+    },
     loadTicket() {
       if (!this.ticket) {
         this.$store.dispatch('caseTickets/fetchTicket', this.ticketId);
@@ -943,6 +984,22 @@ export default {
       </div>
     </div>
 
+    <!-- Pestañas del detalle (pinneadas, no scrollean) -->
+    <div
+      v-if="ticket"
+      class="flex-shrink-0 px-6 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
+    >
+      <woot-tabs :index="activeDetailTabIndex" @change="onDetailTabChange">
+        <woot-tabs-item
+          v-for="(t, i) in detailTabs"
+          :key="t.key"
+          :index="i"
+          :name="t.label"
+          :show-badge="false"
+        />
+      </woot-tabs>
+    </div>
+
     <!-- Loading -->
     <div
       v-if="!ticket && isFetchingList"
@@ -1019,8 +1076,9 @@ export default {
         </div>
       </div>
 
-      <!-- Información -->
+      <!-- ════ Pestaña Resumen: Información ════ -->
       <div
+        v-show="currentTabKey === 'detail'"
         class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
       >
         <h3
@@ -1096,6 +1154,7 @@ export default {
       <!-- Campos personalizados (2K) -->
       <div
         v-if="customFieldRows.length"
+        v-show="currentTabKey === 'detail'"
         class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
       >
         <h3
@@ -1124,6 +1183,7 @@ export default {
       <!-- Cierre documentado (2G) -->
       <div
         v-if="isClosed"
+        v-show="currentTabKey === 'detail'"
         class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
       >
         <h3
@@ -1217,6 +1277,7 @@ export default {
       <!-- Detalles de Problema (2F) -->
       <div
         v-if="isProblem"
+        v-show="currentTabKey === 'detail'"
         class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
       >
         <div class="flex items-center justify-between mb-4">
@@ -1260,6 +1321,7 @@ export default {
       <!-- Detalles de Cambio (2F) -->
       <div
         v-if="isChange"
+        v-show="currentTabKey === 'detail'"
         class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
       >
         <div class="flex items-center justify-between mb-4">
@@ -1358,6 +1420,7 @@ export default {
 
       <!-- Tickets relacionados (2E) -->
       <div
+        v-show="currentTabKey === 'detail'"
         class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
       >
         <div class="flex items-center justify-between mb-4">
@@ -1416,9 +1479,10 @@ export default {
         </ul>
       </div>
 
-      <!-- Respuesta sugerida desde KB (3C) -->
+      <!-- ════ Pestaña IA: Respuesta sugerida desde KB (3C) ════ -->
       <div
         v-if="replyEnabled"
+        v-show="currentTabKey === 'ai'"
         class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
       >
         <div class="flex items-center justify-between gap-2 mb-3">
@@ -1504,6 +1568,7 @@ export default {
       <!-- Resumen + causa raíz (3E) -->
       <div
         v-if="summarizeEnabled"
+        v-show="currentTabKey === 'ai'"
         class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
       >
         <div class="flex items-center justify-between gap-2 mb-3">
@@ -1576,6 +1641,7 @@ export default {
       <!-- Detección de repetidos (3D) -->
       <div
         v-if="duplicateEnabled"
+        v-show="currentTabKey === 'ai'"
         class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
       >
         <div class="flex items-center justify-between gap-2 mb-3">
@@ -1672,6 +1738,7 @@ export default {
       <!-- Seguimiento sugerido (3F) -->
       <div
         v-if="followUpEnabled"
+        v-show="currentTabKey === 'ai'"
         class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
       >
         <div class="flex items-center justify-between gap-2 mb-3">
@@ -1735,8 +1802,9 @@ export default {
         </template>
       </div>
 
-      <!-- Avance del ticket (2L) — 3 vistas conmutables -->
+      <!-- ════ Pestaña Avance del ticket (2L) — 3 vistas conmutables ════ -->
       <JourneyView
+        v-show="currentTabKey === 'journey'"
         :events="events"
         :ticket="ticket"
         :is-fetching="isFetchingEvents"
