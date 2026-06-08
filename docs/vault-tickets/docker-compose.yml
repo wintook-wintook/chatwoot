@@ -1,0 +1,29 @@
+# code-server (VS Code en el navegador) para ver/editar la bóveda de tickets
+# como Obsidian (extensión Foam: wikilinks, backlinks, grafo).
+#
+#   cd /opt/chatwoot/docs/vault-tickets && docker compose up -d
+#   abrir  http://<IP-del-servidor>:8080   (password en .env)
+#
+# Monta TODO el repo para que sea un workspace real; abre la bóveda como carpeta.
+services:
+  code-server:
+    image: codercom/code-server:latest
+    container_name: tickets-vault-codeserver
+    user: "0:0"
+    environment:
+      - PASSWORD=${PASSWORD:-changeme}
+      - HOME=/root
+    volumes:
+      - /opt/chatwoot:/home/coder/project
+      - codeserver-config:/root/.config
+    ports:
+      - "8080:8080"
+    command: >
+      --bind-addr 0.0.0.0:8080
+      --auth password
+      --disable-telemetry
+      /home/coder/project/docs/vault-tickets
+    restart: unless-stopped
+
+volumes:
+  codeserver-config:
