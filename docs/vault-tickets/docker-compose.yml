@@ -16,8 +16,11 @@ services:
     volumes:
       - /opt/chatwoot:/home/coder/project
       - codeserver-config:/root/.config
+      # Extensiones (Foam) y datos de usuario: persistir para sobrevivir recreaciones.
+      - codeserver-data:/root/.local/share/code-server
     ports:
-      - "8080:8080"
+      # Solo accesible local: nginx (tickets-kb.wintook.com) hace de reverse proxy.
+      - "127.0.0.1:8080:8080"
     command: >
       --bind-addr 0.0.0.0:8080
       --auth password
@@ -27,3 +30,4 @@ services:
 
 volumes:
   codeserver-config:
+  codeserver-data:

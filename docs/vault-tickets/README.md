@@ -20,7 +20,7 @@ vault-tickets/
 ## Verla por navegador (desde el servidor) — code-server + Foam
 
 Ya está montado un **code-server** (VS Code en el navegador) con la extensión
-**Foam** (wikilinks, backlinks, grafo estilo Obsidian).
+**Foam** (wikilinks, backlinks, grafo estilo Obsidian), detrás de nginx + Cloudflare.
 
 ```bash
 cd /opt/chatwoot/docs/vault-tickets
@@ -29,8 +29,13 @@ docker compose down       # apagar
 docker compose logs -f    # ver logs
 ```
 
-- URL: `http://<IP-del-servidor>:8080`
+- **URL: `https://tickets-kb.wintook.com`** (TLS por Cloudflare).
 - Contraseña: en el archivo `.env` (NO se versiona; `chmod 600`).
+- code-server escucha solo en `127.0.0.1:8080`; nginx
+  (`/etc/nginx/sites-available/tickets-kb.wintook.com`) hace de reverse proxy con
+  WebSocket. El puerto 8080 **no** queda expuesto a internet.
+- DNS: registro de `tickets-kb` → IP del servidor, **proxied** en Cloudflare.
+- Foam y extensiones persisten en el volumen `codeserver-data` (sobreviven `up -d`).
 - Comandos Foam útiles (Ctrl+Shift+P): **Foam: Show Graph**, navegación por
   `[[wikilinks]]`, panel de backlinks.
 
