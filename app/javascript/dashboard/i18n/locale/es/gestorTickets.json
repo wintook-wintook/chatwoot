@@ -104,6 +104,7 @@
       }
     },
     "CREATE_BUTTON": "+ Crear ticket",
+    "PANEL_BUTTON": "Tickets ({count})",
     "NO_TICKET": "Sin ticket activo",
     "VIEW_TIMELINE": "Ver historial",
     "CHANGE_STATUS": "Cambiar estado",
@@ -131,7 +132,15 @@
       "CANCEL": "Cancelar",
       "SUBMIT": "Crear ticket",
       "SUCCESS": "Ticket creado correctamente",
-      "ERROR": "Error al crear el ticket"
+      "ERROR": "Error al crear el ticket",
+      "TITLE_LIST": "Tickets del contacto",
+      "EMPTY_LIST": "Sin tickets en proceso",
+      "NEW_TICKET": "Crear ticket",
+      "OPEN_DETAIL": "Abrir",
+      "BACK": "Volver",
+      "TAB_TICKET": "Datos del ticket",
+      "TAB_CUSTOM": "Campos personalizados",
+      "NO_CUSTOM_FIELDS": "Este tipo no tiene campos personalizados"
     },
     "ESCALATION": {
       "BUTTON": "Escalar",

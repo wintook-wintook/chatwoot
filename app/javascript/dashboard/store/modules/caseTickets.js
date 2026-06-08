@@ -22,6 +22,7 @@ import caseAiConfigAPI from '../../api/caseAiConfig';
 import {
   SET_CASE_TICKET_UI_FLAG,
   SET_ACTIVE_CASE_TICKET,
+  SET_CONTACT_CASE_TICKETS,
   SET_CASE_TICKET_EVENTS,
   SET_CASE_TICKETS_LIST,
   SET_CASE_TICKETS_META,
@@ -52,6 +53,8 @@ const CLOSED_STATUSES = ['closed', 'cancelled'];
 const state = {
   // Fase 3 — panel derecho
   activeTickets: {},
+  // Panel de contacto — todos los tickets en proceso por contactId
+  contactTickets: {},
   events: {},
   uiFlags: {
     isFetching: false,
@@ -134,6 +137,9 @@ export const getters = {
   // Fase 3
   getActiveTicket: _state => contactId =>
     _state.activeTickets[contactId] || null,
+  // Tickets en proceso del contacto (panel de conversación)
+  getContactTickets: _state => contactId =>
+    _state.contactTickets[contactId] || [],
   getTicketEvents: _state => ticketId => _state.events[ticketId] || [],
   getUIFlags(_state) {
     return _state.uiFlags;
@@ -226,6 +232,25 @@ export const actions = {
       commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
     } catch (_e) {
       commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket: null });
+    } finally {
+      commit(SET_CASE_TICKET_UI_FLAG, { isFetching: false });
+    }
+  },
+
+  // Lista de tickets en proceso (no cerrados/cancelados) del contacto.
+  async fetchContactTickets({ commit }, { contactId }) {
+    commit(SET_CASE_TICKET_UI_FLAG, { isFetching: true });
+    try {
+      const { data } = await caseTicketsAPI.getAll({
+        contact_id: contactId,
+        per_page: 50,
+      });
+      const tickets = (data.case_tickets || []).filter(
+        t => !CLOSED_STATUSES.includes(t.status)
+      );
+      commit(SET_CONTACT_CASE_TICKETS, { contactId, tickets });
+    } catch (_e) {
+      commit(SET_CONTACT_CASE_TICKETS, { contactId, tickets: [] });
     } finally {
       commit(SET_CASE_TICKET_UI_FLAG, { isFetching: false });
     }
@@ -845,6 +870,12 @@ export const mutations = {
   },
   [SET_ACTIVE_CASE_TICKET](_state, { contactId, ticket }) {
     _state.activeTickets = { ..._state.activeTickets, [contactId]: ticket };
+  },
+  [SET_CONTACT_CASE_TICKETS](_state, { contactId, tickets }) {
+    _state.contactTickets = {
+      ..._state.contactTickets,
+      [contactId]: tickets || [],
+    };
   },
   [SET_CASE_TICKET_EVENTS](_state, { ticketId, events }) {
     _state.events = { ..._state.events, [ticketId]: events };
