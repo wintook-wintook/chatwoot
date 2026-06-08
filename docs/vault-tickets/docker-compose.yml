@@ -4,7 +4,8 @@
 #   cd /opt/chatwoot/docs/vault-tickets && docker compose up -d
 #   abrir  http://<IP-del-servidor>:8080   (password en .env)
 #
-# Monta TODO el repo para que sea un workspace real; abre la bóveda como carpeta.
+# Monta TODO el repo para que sea un workspace real; abre el WORKSPACE multi-raíz
+# (docs/vaults.code-workspace) que muestra ambas bóvedas: Tickets + Base de Conocimiento.
 services:
   code-server:
     image: codercom/code-server:latest
@@ -19,13 +20,13 @@ services:
       # Extensiones (Foam) y datos de usuario: persistir para sobrevivir recreaciones.
       - codeserver-data:/root/.local/share/code-server
     ports:
-      # Solo accesible local: nginx (tickets-kb.wintook.com) hace de reverse proxy.
+      # Solo accesible local: nginx (vaults.wintook.com) hace de reverse proxy.
       - "127.0.0.1:8080:8080"
     command: >
       --bind-addr 0.0.0.0:8080
       --auth password
       --disable-telemetry
-      /home/coder/project/docs/vault-tickets
+      /home/coder/project/docs/vaults.code-workspace
     restart: unless-stopped
 
 volumes:

@@ -29,12 +29,15 @@ docker compose down       # apagar
 docker compose logs -f    # ver logs
 ```
 
-- **URL: `https://tickets-kb.wintook.com`** (TLS por Cloudflare).
+- Abre el **workspace multi-raíz** `docs/vaults.code-workspace`, que muestra **dos
+  bóvedas** como raíces separadas: **📋 Tickets (MGCI)** y **📚 Base de Conocimiento**
+  (`docs/vault-kbase/`). Foam combina ambas en un solo grafo (`Ctrl+Shift+P → Foam: Show Graph`).
+- **URL: `https://vaults.wintook.com`** (TLS por Cloudflare).
 - Contraseña: en el archivo `.env` (NO se versiona; `chmod 600`).
 - code-server escucha solo en `127.0.0.1:8080`; nginx
-  (`/etc/nginx/sites-available/tickets-kb.wintook.com`) hace de reverse proxy con
+  (`/etc/nginx/sites-available/vaults.wintook.com`) hace de reverse proxy con
   WebSocket. El puerto 8080 **no** queda expuesto a internet.
-- DNS: registro de `tickets-kb` → IP del servidor, **proxied** en Cloudflare.
+- DNS: registro de `vaults` → IP del servidor, **proxied** en Cloudflare.
 - Foam y extensiones persisten en el volumen `codeserver-data` (sobreviven `up -d`).
 - Comandos Foam útiles (Ctrl+Shift+P): **Foam: Show Graph**, navegación por
   `[[wikilinks]]`, panel de backlinks.
