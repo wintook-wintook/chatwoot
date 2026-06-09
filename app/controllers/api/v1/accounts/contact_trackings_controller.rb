@@ -393,13 +393,10 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
   # Private Methods - IA
   # ==============================================================================
 
+  # Cada cuenta usa su propia integración OpenAI (sin fallback a ENV global, multi-tenant).
   def get_openai_api_key
-    # Prioridad 1: Integración de cuenta
     hook = Current.account.hooks.find_by(app_id: 'openai', status: 'enabled')
-    return hook.settings['api_key'] if hook && hook.settings['api_key'].present?
-
-    # Prioridad 2: ENV
-    ENV['OPENAI_API_KEY']
+    hook&.settings&.dig('api_key').presence
   end
 
   def improve_text_with_ai(text)
