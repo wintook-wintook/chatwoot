@@ -117,7 +117,7 @@
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",
       "CASE_TYPE_LABEL": "Tipo de caso",
-      "TICKET_KIND_LABEL": "Tipo ITIL",
+      "TICKET_KIND_LABEL": "Naturaleza del caso (ITIL)",
       "AFFECTED_SERVICE_LABEL": "Servicio afectado",
       "CATEGORY_LABEL": "Categoría",
       "IMPACT_LABEL": "Impacto",
