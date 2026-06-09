@@ -149,7 +149,11 @@ export default {
     },
   },
   mounted() {
-    this.fetchTickets();
+    // Sin tickets en proceso → abrir directo en el alta (evita la lista vacía).
+    if (!this.tickets.length) this.view = 'create';
+    this.fetchTickets().then(() => {
+      this.view = this.tickets.length ? 'list' : 'create';
+    });
     this.$store.dispatch('caseTickets/fetchTypes').then(() => {
       if (!this.form.case_type_id && this.types.length) {
         this.form.case_type_id = this.types[0].id;
@@ -160,8 +164,8 @@ export default {
   },
   methods: {
     fetchTickets() {
-      if (!this.contactId) return;
-      this.$store.dispatch('caseTickets/fetchContactTickets', {
+      if (!this.contactId) return Promise.resolve();
+      return this.$store.dispatch('caseTickets/fetchContactTickets', {
         contactId: this.contactId,
       });
     },
@@ -330,116 +334,125 @@ export default {
       <!-- ───────────── Vista LISTA ───────────── -->
       <div
         v-if="view === 'list'"
-        class="flex flex-col self-stretch w-full gap-3 pb-8"
+        class="flex flex-col self-stretch w-full gap-3 px-8 pt-4 pb-8"
       >
-        <div v-if="isFetching" class="py-6 text-sm text-center text-slate-400">
-          {{ $t('CASE_TICKETS.LIST.LOADING') }}
-        </div>
-
-        <div
-          v-else-if="!tickets.length"
-          class="py-6 text-sm text-center text-slate-400 dark:text-slate-500"
-        >
-          {{ $t('CASE_TICKETS.MODAL.EMPTY_LIST') }}
-        </div>
-
-        <div v-else class="flex flex-col gap-2">
+        <!-- Altura fija = contenido del alta (27rem) + barra de pestañas (~41px)
+             + gap (12px) ≈ 485px, para que el modal mida igual en lista y alta.
+             -mr-4/pr-4 dejan la barra de scroll en un canalón para que las
+             tarjetas conserven márgenes simétricos a ambos lados. -->
+        <div class="h-[485px] overflow-y-auto -mr-4 pr-4">
           <div
-            v-for="ticket in tickets"
-            :key="ticket.id"
-            class="flex flex-col gap-2 p-3 border rounded-lg"
-            :class="cardClass(ticket)"
+            v-if="isFetching"
+            class="py-6 text-sm text-center text-slate-400"
           >
-            <!-- Badges -->
-            <div class="flex flex-wrap gap-1">
-              <span
-                v-if="ticket.case_type"
-                class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded text-white"
-                :style="{ backgroundColor: ticket.case_type.color }"
-              >
-                {{ ticket.case_type.name }}
-              </span>
-              <span
-                class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
-              >
-                {{ statusLabel(ticket.status) }}
-              </span>
-              <span
-                class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
-                :class="priorityBadge(ticket.priority)"
-              >
-                {{ priorityLabel(ticket.priority) }}
-              </span>
-              <span
-                class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
-                :class="slaBadge(ticket.sla_status)"
-              >
-                {{ slaLabel(ticket) }}
-              </span>
-            </div>
+            {{ $t('CASE_TICKETS.LIST.LOADING') }}
+          </div>
 
-            <!-- Folio + título -->
-            <div class="flex flex-col">
-              <span
-                v-if="ticket.folio"
-                class="font-mono text-xs text-slate-400 dark:text-slate-500"
-              >
-                {{ ticket.folio }}
-              </span>
-              <p
-                class="m-0 text-sm text-slate-700 dark:text-slate-200 line-clamp-2"
-              >
-                {{ ticket.title }}
-              </p>
-            </div>
+          <div
+            v-else-if="!tickets.length"
+            class="py-6 text-sm text-center text-slate-400 dark:text-slate-500"
+          >
+            {{ $t('CASE_TICKETS.MODAL.EMPTY_LIST') }}
+          </div>
 
-            <!-- Acciones -->
-            <div class="flex items-center gap-1">
-              <woot-button
-                size="tiny"
-                variant="clear"
-                color-scheme="secondary"
-                @click="openTimeline(ticket)"
-              >
-                {{ $t('CASE_TICKETS.VIEW_TIMELINE') }}
-              </woot-button>
+          <div v-else class="flex flex-col gap-2">
+            <div
+              v-for="ticket in tickets"
+              :key="ticket.id"
+              class="flex flex-col gap-2 p-3 border rounded-lg"
+              :class="cardClass(ticket)"
+            >
+              <!-- Badges -->
+              <div class="flex flex-wrap gap-1">
+                <span
+                  v-if="ticket.case_type"
+                  class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded text-white"
+                  :style="{ backgroundColor: ticket.case_type.color }"
+                >
+                  {{ ticket.case_type.name }}
+                </span>
+                <span
+                  class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
+                >
+                  {{ statusLabel(ticket.status) }}
+                </span>
+                <span
+                  class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
+                  :class="priorityBadge(ticket.priority)"
+                >
+                  {{ priorityLabel(ticket.priority) }}
+                </span>
+                <span
+                  class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
+                  :class="slaBadge(ticket.sla_status)"
+                >
+                  {{ slaLabel(ticket) }}
+                </span>
+              </div>
 
-              <div class="relative">
+              <!-- Folio + título -->
+              <div class="flex flex-col">
+                <span
+                  v-if="ticket.folio"
+                  class="font-mono text-xs text-slate-400 dark:text-slate-500"
+                >
+                  {{ ticket.folio }}
+                </span>
+                <p
+                  class="m-0 text-sm text-slate-700 dark:text-slate-200 line-clamp-2"
+                >
+                  {{ ticket.title }}
+                </p>
+              </div>
+
+              <!-- Acciones -->
+              <div class="flex items-center gap-1">
                 <woot-button
                   size="tiny"
                   variant="clear"
                   color-scheme="secondary"
-                  icon="chevron-down"
-                  :is-loading="isTransitioning"
-                  :disabled="!validTransitions(ticket).length"
-                  @click="toggleTransitionMenu(ticket.id)"
+                  @click="openTimeline(ticket)"
                 >
-                  {{ $t('CASE_TICKETS.CHANGE_STATUS') }}
+                  {{ $t('CASE_TICKETS.VIEW_TIMELINE') }}
                 </woot-button>
-                <ul
-                  v-if="transitionMenuFor === ticket.id"
-                  class="absolute left-0 z-50 py-1 mt-1 list-none bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[160px]"
-                >
-                  <li
-                    v-for="s in validTransitions(ticket)"
-                    :key="s"
-                    class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                    @click="transitionTo(ticket, s)"
-                  >
-                    {{ statusLabel(s) }}
-                  </li>
-                </ul>
-              </div>
 
-              <woot-button
-                size="tiny"
-                variant="clear"
-                color-scheme="secondary"
-                icon="open"
-                @click="openDetail(ticket.id)"
-              >
-                {{ $t('CASE_TICKETS.MODAL.OPEN_DETAIL') }}
-              </woot-button>
+                <div class="relative">
+                  <woot-button
+                    size="tiny"
+                    variant="clear"
+                    color-scheme="secondary"
+                    icon="chevron-down"
+                    :is-loading="isTransitioning"
+                    :disabled="!validTransitions(ticket).length"
+                    @click="toggleTransitionMenu(ticket.id)"
+                  >
+                    {{ $t('CASE_TICKETS.CHANGE_STATUS') }}
+                  </woot-button>
+                  <ul
+                    v-if="transitionMenuFor === ticket.id"
+                    class="absolute left-0 z-50 py-1 mt-1 list-none bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[160px]"
+                  >
+                    <li
+                      v-for="s in validTransitions(ticket)"
+                      :key="s"
+                      class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                      @click="transitionTo(ticket, s)"
+                    >
+                      {{ statusLabel(s) }}
+                    </li>
+                  </ul>
+                </div>
+
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="open"
+                  @click="openDetail(ticket.id)"
+                >
+                  {{ $t('CASE_TICKETS.MODAL.OPEN_DETAIL') }}
+                </woot-button>
+              </div>
             </div>
           </div>
         </div>
@@ -455,7 +468,7 @@ export default {
       <!-- ───────────── Vista CREAR ───────────── -->
       <form
         v-else
-        class="flex flex-col self-stretch w-full gap-4 pb-8"
+        class="flex flex-col self-stretch w-full gap-3 pb-8"
         @submit.prevent="onSubmit"
       >
         <woot-tabs :index="activeTabIndex" @change="onTabChange">
@@ -468,244 +481,256 @@ export default {
           />
         </woot-tabs>
 
-        <!-- Tab: Datos del ticket -->
-        <div v-show="activeTab === 'ticket'" class="grid grid-cols-2 gap-4">
-          <!-- Tipo de caso -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.CASE_TYPE_LABEL') }}
-            </span>
-            <select v-model="form.case_type_id" class="input" required>
-              <option v-for="t in types" :key="t.id" :value="t.id">
-                {{ t.name }}
-              </option>
-            </select>
-          </label>
-
-          <!-- Tipo ITIL -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.TICKET_KIND_LABEL') }}
-            </span>
-            <select v-model="form.ticket_kind" class="input">
-              <option
-                v-for="(label, key) in ticketKindOptions"
-                :key="key"
-                :value="key"
-              >
-                {{ label }}
-              </option>
-            </select>
-          </label>
-
-          <!-- Título (ancho completo) -->
-          <label class="flex flex-col col-span-2 gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.TITLE_LABEL') }}
-            </span>
-            <input
-              v-model="form.title"
-              type="text"
-              class="input"
-              :placeholder="$t('CASE_TICKETS.MODAL.TITLE_PLACEHOLDER')"
-              maxlength="255"
-              required
-            />
-          </label>
-
-          <!-- Servicio afectado -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.AFFECTED_SERVICE_LABEL') }}
-            </span>
-            <select v-model="form.affected_service_id" class="input">
-              <option :value="null">
-                {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
-              </option>
-              <option v-for="s in services" :key="s.id" :value="s.id">
-                {{ s.name }}
-              </option>
-            </select>
-          </label>
-
-          <!-- Categoría -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.CATEGORY_LABEL') }}
-            </span>
-            <select v-model="form.category_id" class="input">
-              <option :value="null">
-                {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
-              </option>
-              <option v-for="c in flatCategories" :key="c.id" :value="c.id">
-                {{ c.label }}
-              </option>
-            </select>
-          </label>
-
-          <!-- Impacto -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.IMPACT_LABEL') }}
-            </span>
-            <select v-model="form.impact" class="input">
-              <option :value="null">
-                {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
-              </option>
-              <option
-                v-for="(label, key) in impactOptions"
-                :key="key"
-                :value="key"
-              >
-                {{ label }}
-              </option>
-            </select>
-          </label>
-
-          <!-- Urgencia -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.URGENCY_LABEL') }}
-            </span>
-            <select v-model="form.urgency" class="input">
-              <option :value="null">
-                {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
-              </option>
-              <option
-                v-for="(label, key) in urgencyOptions"
-                :key="key"
-                :value="key"
-              >
-                {{ label }}
-              </option>
-            </select>
-          </label>
-
-          <!-- Prioridad (ancho completo) -->
-          <label class="flex flex-col col-span-2 gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.PRIORITY_LABEL') }}
-            </span>
-            <select
-              v-model="form.priority"
-              class="input"
-              :disabled="!!derivedPriority"
-            >
-              <option
-                v-for="(label, key) in priorityOptions"
-                :key="key"
-                :value="key"
-              >
-                {{ label }}
-              </option>
-            </select>
-            <span
-              v-if="derivedPriority"
-              class="text-xs text-slate-500 dark:text-slate-400"
-            >
-              {{
-                $t('CASE_TICKETS.MODAL.PRIORITY_DERIVED', {
-                  priority: priorityOptions[derivedPriority],
-                })
-              }}
-            </span>
-          </label>
-
-          <!-- Descripción (ancho completo) -->
-          <label class="flex flex-col col-span-2 gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.DESCRIPTION_LABEL') }}
-            </span>
-            <textarea
-              v-model="form.description"
-              class="input"
-              rows="2"
-              :placeholder="$t('CASE_TICKETS.MODAL.DESCRIPTION_PLACEHOLDER')"
-            />
-          </label>
-        </div>
-
-        <!-- Tab: Campos personalizados (2K) -->
-        <div v-show="activeTab === 'custom'">
+        <!-- Altura fija del área de pestañas para que el modal no cambie de
+             tamaño al alternar pestañas (misma altura que la vista lista). -->
+        <div class="min-h-[27rem]">
+          <!-- Tab: Datos del ticket -->
           <div
-            v-if="!selectedTypeFields.length"
-            class="py-6 text-sm text-center text-slate-400 dark:text-slate-500"
+            v-show="activeTab === 'ticket'"
+            class="grid grid-cols-2 gap-3 [&_.input]:!mb-0"
           >
-            {{ $t('CASE_TICKETS.MODAL.NO_CUSTOM_FIELDS') }}
-          </div>
-          <div v-else class="grid grid-cols-2 gap-4">
-            <label
-              v-for="field in selectedTypeFields"
-              :key="field.id"
-              class="flex flex-col gap-1"
-              :class="{
-                'flex-row items-center gap-2': field.field_type === 'checkbox',
-              }"
-            >
-              <input
-                v-if="field.field_type === 'checkbox'"
-                v-model="customValues[field.key]"
-                type="checkbox"
-              />
+            <!-- Tipo de caso -->
+            <label class="flex flex-col gap-1">
               <span
                 class="text-sm font-medium text-slate-700 dark:text-slate-300"
               >
-                {{ field.label
-                }}<span v-if="field.required" class="text-red-500"> *</span>
+                {{ $t('CASE_TICKETS.MODAL.CASE_TYPE_LABEL') }}
               </span>
-              <select
-                v-if="field.field_type === 'list'"
-                v-model="customValues[field.key]"
-                class="input"
-                :required="field.required"
-              >
-                <option value="">
-                  {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
-                </option>
-                <option v-for="opt in field.options" :key="opt" :value="opt">
-                  {{ opt }}
+              <select v-model="form.case_type_id" class="input" required>
+                <option v-for="t in types" :key="t.id" :value="t.id">
+                  {{ t.name }}
                 </option>
               </select>
+            </label>
+
+            <!-- Tipo ITIL -->
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.MODAL.TICKET_KIND_LABEL') }}
+              </span>
+              <select v-model="form.ticket_kind" class="input">
+                <option
+                  v-for="(label, key) in ticketKindOptions"
+                  :key="key"
+                  :value="key"
+                >
+                  {{ label }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Título (ancho completo) -->
+            <label class="flex flex-col col-span-2 gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.MODAL.TITLE_LABEL') }}
+              </span>
               <input
-                v-else-if="field.field_type === 'number'"
-                v-model="customValues[field.key]"
-                type="number"
-                class="input"
-                :required="field.required"
-              />
-              <input
-                v-else-if="field.field_type === 'date'"
-                v-model="customValues[field.key]"
-                type="date"
-                class="input"
-                :required="field.required"
-              />
-              <input
-                v-else-if="field.field_type === 'text'"
-                v-model="customValues[field.key]"
+                v-model="form.title"
                 type="text"
                 class="input"
-                :required="field.required"
+                :placeholder="$t('CASE_TICKETS.MODAL.TITLE_PLACEHOLDER')"
+                maxlength="255"
+                required
               />
             </label>
+
+            <!-- Descripción (ancho completo) -->
+            <label class="flex flex-col col-span-2 gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.MODAL.DESCRIPTION_LABEL') }}
+              </span>
+              <textarea
+                v-model="form.description"
+                class="input !h-24"
+                :placeholder="$t('CASE_TICKETS.MODAL.DESCRIPTION_PLACEHOLDER')"
+              />
+            </label>
+
+            <!-- Servicio afectado -->
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.MODAL.AFFECTED_SERVICE_LABEL') }}
+              </span>
+              <select v-model="form.affected_service_id" class="input">
+                <option :value="null">
+                  {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+                </option>
+                <option v-for="s in services" :key="s.id" :value="s.id">
+                  {{ s.name }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Categoría -->
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.MODAL.CATEGORY_LABEL') }}
+              </span>
+              <select v-model="form.category_id" class="input">
+                <option :value="null">
+                  {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+                </option>
+                <option v-for="c in flatCategories" :key="c.id" :value="c.id">
+                  {{ c.label }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Impacto · Urgencia · Prioridad en una sola línea -->
+            <div class="grid grid-cols-3 col-span-2 gap-3">
+              <!-- Impacto -->
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.MODAL.IMPACT_LABEL') }}
+                </span>
+                <select v-model="form.impact" class="input">
+                  <option :value="null">
+                    {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+                  </option>
+                  <option
+                    v-for="(label, key) in impactOptions"
+                    :key="key"
+                    :value="key"
+                  >
+                    {{ label }}
+                  </option>
+                </select>
+              </label>
+
+              <!-- Urgencia -->
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.MODAL.URGENCY_LABEL') }}
+                </span>
+                <select v-model="form.urgency" class="input">
+                  <option :value="null">
+                    {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+                  </option>
+                  <option
+                    v-for="(label, key) in urgencyOptions"
+                    :key="key"
+                    :value="key"
+                  >
+                    {{ label }}
+                  </option>
+                </select>
+              </label>
+
+              <!-- Prioridad -->
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.MODAL.PRIORITY_LABEL') }}
+                </span>
+                <select
+                  v-model="form.priority"
+                  class="input"
+                  :disabled="!!derivedPriority"
+                >
+                  <option
+                    v-for="(label, key) in priorityOptions"
+                    :key="key"
+                    :value="key"
+                  >
+                    {{ label }}
+                  </option>
+                </select>
+                <span
+                  v-if="derivedPriority"
+                  class="text-xs text-slate-500 dark:text-slate-400"
+                >
+                  {{
+                    $t('CASE_TICKETS.MODAL.PRIORITY_DERIVED', {
+                      priority: priorityOptions[derivedPriority],
+                    })
+                  }}
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Tab: Campos personalizados (2K) -->
+          <div v-show="activeTab === 'custom'">
+            <div
+              v-if="!selectedTypeFields.length"
+              class="py-6 text-sm text-center text-slate-400 dark:text-slate-500"
+            >
+              {{ $t('CASE_TICKETS.MODAL.NO_CUSTOM_FIELDS') }}
+            </div>
+            <div v-else class="grid grid-cols-2 gap-3 [&_.input]:!mb-0">
+              <label
+                v-for="field in selectedTypeFields"
+                :key="field.id"
+                class="flex"
+                :class="
+                  field.field_type === 'checkbox'
+                    ? 'flex-row items-center col-span-2 gap-2.5 px-3 py-2.5 border rounded-md cursor-pointer border-slate-200 dark:border-slate-600 bg-slate-25 dark:bg-slate-800'
+                    : 'flex-col gap-1'
+                "
+              >
+                <input
+                  v-if="field.field_type === 'checkbox'"
+                  v-model="customValues[field.key]"
+                  type="checkbox"
+                  class="w-4 h-4 shrink-0"
+                />
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ field.label
+                  }}<span v-if="field.required" class="text-red-500"> *</span>
+                </span>
+                <select
+                  v-if="field.field_type === 'list'"
+                  v-model="customValues[field.key]"
+                  class="input"
+                  :required="field.required"
+                >
+                  <option value="">
+                    {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+                  </option>
+                  <option v-for="opt in field.options" :key="opt" :value="opt">
+                    {{ opt }}
+                  </option>
+                </select>
+                <input
+                  v-else-if="field.field_type === 'number'"
+                  v-model="customValues[field.key]"
+                  type="number"
+                  class="input"
+                  :required="field.required"
+                />
+                <input
+                  v-else-if="field.field_type === 'date'"
+                  v-model="customValues[field.key]"
+                  type="date"
+                  class="input"
+                  :required="field.required"
+                />
+                <input
+                  v-else-if="field.field_type === 'text'"
+                  v-model="customValues[field.key]"
+                  type="text"
+                  class="input"
+                  :required="field.required"
+                />
+              </label>
+            </div>
           </div>
         </div>
 
