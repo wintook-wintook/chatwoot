@@ -107,7 +107,8 @@ class KnowledgeBaseResponseService
     reply_text = generate_reply_canned(question, context)
     return false if reply_text.blank?
 
-    source_tag = @account.knowledge_sources.find_by(source_type: 'canned_response')&.name || 'Respuestas Predefinidas'
+    source_tag = @account.knowledge_sources.find_by(source_type: 'canned_response')&.name ||
+                 I18n.t('knowledge_sources.names.canned_response', locale: @account.locale.presence || I18n.default_locale)
     send_reply("#{reply_text}\n\n_#{source_tag}_")
     true
   end
@@ -439,11 +440,10 @@ class KnowledgeBaseResponseService
       User.first
   end
 
+  # Cada cuenta usa su propia integración OpenAI (sin fallback a ENV global, multi-tenant).
   def openai_api_key
     hook = @account.hooks.find_by(app_id: 'openai', status: 'enabled')
-    return hook.settings['api_key'] if hook&.settings&.dig('api_key').present?
-
-    ENV['OPENAI_API_KEY']
+    hook&.settings&.dig('api_key').presence
   end
 
   def kbase_setting(key)
