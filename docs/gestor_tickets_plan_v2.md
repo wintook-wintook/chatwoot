@@ -71,7 +71,7 @@
   <!-- MSG 6a: AnalyzerJob → KBaseSvc y=264 -->
   <line x1="228" y1="264" x2="660" y2="264" stroke="#6d28d9" stroke-width="1.5"/>
   <polygon points="652,260 660,264 652,268" fill="#6d28d9"/>
-  <text x="444" y="259" text-anchor="middle" font-size="10" fill="#1e293b" font-family="Segoe UI, system-ui, sans-serif">search(@buscar_foro / @buscar_predeterminadas)</text>
+  <text x="444" y="259" text-anchor="middle" font-size="10" fill="#1e293b" font-family="Segoe UI, system-ui, sans-serif">search(@buscar_foro / @buscar_predefinidas)</text>
   <rect x="657" y="264" width="6" height="30" rx="1" fill="#ddd6fe" stroke="#7c3aed" stroke-width="0.8"/>
   <!-- MSG 7a return: KBaseSvc → AnalyzerJob y=294 -->
   <line x1="657" y1="294" x2="228" y2="294" stroke="#6d28d9" stroke-width="1.5" stroke-dasharray="5,3"/>
@@ -409,12 +409,12 @@ cancelled         → (ninguna — terminal)
 
 ## Directiva `@crear_ticket`
 
-Se agrega en el `complementary_prompt` del `ContactTracking`, igual que `@buscar_foro` y `@buscar_predeterminadas`.
+Se agrega en el `complementary_prompt` del `ContactTracking`, igual que `@buscar_foro` y `@buscar_predefinidas`.
 
 ### Orden de ejecución en el job
 
 ```
-[1] KnowledgeBaseResponseService  (@buscar_predeterminadas / @buscar_foro)
+[1] KnowledgeBaseResponseService  (@buscar_predefinidas / @buscar_foro)
       → si resuelve: responde y termina
       → si NO resuelve: continúa
 
@@ -429,7 +429,7 @@ Se agrega en el `complementary_prompt` del `ContactTracking`, igual que `@buscar
 
 | Directiva | Servicio | Qué hace |
 |---|---|---|
-| `@buscar_predeterminadas` | `KnowledgeBaseResponseService` | Busca en pgvector (respuestas predefinidas) |
+| `@buscar_predefinidas` | `KnowledgeBaseResponseService` | Busca en pgvector (respuestas predefinidas) |
 | `@buscar_foro(nombre)` | `KnowledgeBaseResponseService` | Busca en Discourse via API semántica |
 | `@crear_ticket` | `Cases::TicketCreatorService` | Crea `CaseTicket` si KBase no resolvió |
 | Texto libre | IA (GPT) | Contexto, tono, instrucciones de comportamiento |

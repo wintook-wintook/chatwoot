@@ -3,9 +3,10 @@
 # ================================================================================
 # proyecto@contact_tracking - BASE DE CONOCIMIENTO
 # ================================================================================
-# Tres modos según la directiva en complementary_prompt:
+# Cuatro modos según la directiva en complementary_prompt:
 #
-#   @buscar_predeterminadas       → pgvector sobre knowledge_items (canned_responses)
+#   @buscar_predefinidas          → pgvector sobre knowledge_items (Respuestas predefinidas)
+#   @buscar_articulo              → pgvector sobre knowledge_items (artículos del Centro de Ayuda)
 #   @buscar_foro(nombre_fuente)   → Discourse AI semantic search via KnowledgeSource
 #   @discourse                    → Discourse AI semantic search via integración del inbox
 #
@@ -46,7 +47,9 @@ class KnowledgeBaseResponseService
 
     case directive[:mode]
     when :canned_response
-      perform_pgvector(question)
+      perform_pgvector(question, 'canned_response')
+    when :article
+      perform_pgvector(question, 'article')
     when :knowledge_source
       perform_discourse(question, directive[:source_name])
     when :discourse_integration
@@ -68,8 +71,10 @@ class KnowledgeBaseResponseService
 
   def detect_directive
     cp = @tracking&.complementary_prompt.to_s
-    if cp.include?('@buscar_predeterminadas')
+    if cp.match?(/@buscar_predefinidas\b/i)
       { mode: :canned_response }
+    elsif cp.match?(/@buscar_art[ií]culo\b/i)
+      { mode: :article }
     elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
       { mode: :knowledge_source, source_name: match[1].strip }
     elsif cp.match?(/@discourse\b/i)
@@ -78,15 +83,15 @@ class KnowledgeBaseResponseService
   end
 
   # ==============================================================================
-  # MODO 1 — Canned responses (pgvector)
+  # MODO 1 — pgvector local (Respuestas predefinidas / artículos del Centro de Ayuda)
   # ==============================================================================
 
-  def perform_pgvector(question)
+  def perform_pgvector(question, source_type)
     embedding = generate_embedding_openai(question)
     return false unless embedding
 
     items = @account.knowledge_items
-                    .where(source_type: 'canned_response')
+                    .where(source_type: source_type)
                     .search_by_embedding(
                       embedding,
                       limit:     kbase_setting('max_results'),
@@ -94,26 +99,26 @@ class KnowledgeBaseResponseService
                     )
 
     if items.empty?
-      Rails.logger.info '[KBase] ⚠️ Sin resultados en canned responses'
+      Rails.logger.info "[KBase] ⚠️ Sin resultados en #{source_type}"
       return false
     end
 
-    Rails.logger.info "[KBase] ✅ #{items.size} resultado(s) en canned responses"
+    Rails.logger.info "[KBase] ✅ #{items.size} resultado(s) en #{source_type}"
 
     context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(1200)}" }
                    .join("\n\n")
                    .truncate(kbase_setting('max_context_chars'))
 
-    reply_text = generate_reply_canned(question, context)
+    reply_text = generate_contextual_reply(question, context)
     return false if reply_text.blank?
 
-    source_tag = @account.knowledge_sources.find_by(source_type: 'canned_response')&.name ||
-                 I18n.t('knowledge_sources.names.canned_response', locale: @account.locale.presence || I18n.default_locale)
+    source_tag = @account.knowledge_sources.find_by(source_type: source_type)&.name ||
+                 I18n.t("knowledge_sources.names.#{source_type}", locale: @account.locale.presence || I18n.default_locale)
     send_reply("#{reply_text}\n\n_#{source_tag}_")
     true
   end
 
-  def generate_reply_canned(question, context)
+  def generate_contextual_reply(question, context)
     api_key = openai_api_key
     return nil unless api_key
 
