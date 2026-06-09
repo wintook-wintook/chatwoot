@@ -1,0 +1,31 @@
+type: object
+properties:
+  id:
+    type: integer
+  contact_id:
+    type: integer
+  account_id:
+    type: integer
+  inbox_id:
+    type: integer
+  conversation_id:
+    type: integer
+  scheduled_at:
+    type: string
+    format: date-time
+    description: Fecha y hora programada del seguimiento
+  notes:
+    type: string
+    description: Notas o instrucciones del seguimiento
+  status:
+    type: string
+    enum: [pending, active, paused, completed, cancelled]
+  reason:
+    type: string
+    description: Razón de cancelación (cuando status=cancelled)
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time

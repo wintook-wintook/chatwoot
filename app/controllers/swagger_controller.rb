@@ -1,6 +1,9 @@
 class SwaggerController < ApplicationController
   def respond
-    if Rails.env.development? || Rails.env.test?
+    swagger_enabled = Rails.env.development? || Rails.env.test? ||
+                      ActiveModel::Type::Boolean.new.cast(ENV.fetch('SWAGGER_ENABLED', false))
+
+    if swagger_enabled
       render inline: Rails.root.join('swagger', derived_path).read
     else
       head :not_found

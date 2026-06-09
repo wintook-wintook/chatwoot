@@ -1,0 +1,50 @@
+type: object
+properties:
+  id:
+    type: integer
+    description: ID único de la plantilla
+  account_id:
+    type: integer
+    description: ID de la cuenta propietaria
+  name:
+    type: string
+    description: Nombre descriptivo de la plantilla
+  objective:
+    type: string
+    description: Objetivo por defecto del seguimiento
+  ai_context:
+    type: string
+    description: Contexto para la generación de mensajes con IA
+  complementary_prompt:
+    type: string
+    description: Instrucciones adicionales para el bot
+  inbox_id:
+    type: integer
+    description: Inbox por defecto al aplicar la plantilla
+  inbox_name:
+    type: string
+    description: Nombre del inbox asociado
+  tags:
+    type: array
+    items:
+      type: string
+    description: Etiquetas de clasificación
+  whatsapp_templates:
+    type: array
+    items:
+      type: string
+    description: Nombres de plantillas WhatsApp por intento
+  creator:
+    type: object
+    description: Usuario que creó la plantilla
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time

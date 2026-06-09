@@ -1,0 +1,75 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - name: id
+    in: path
+    type: integer
+    required: true
+    description: ID de la plantilla de seguimiento
+get:
+  tags:
+    - Tracking Templates
+  operationId: trackingTemplatesShow
+  summary: Ver detalle de una plantilla
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Detalle de la plantilla
+      schema:
+        $ref: '#/definitions/tracking_template'
+    '404':
+      description: Plantilla no encontrada
+patch:
+  tags:
+    - Tracking Templates
+  operationId: trackingTemplatesUpdate
+  summary: Actualizar una plantilla de seguimiento
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        properties:
+          tracking_template:
+            type: object
+            properties:
+              name:
+                type: string
+              objective:
+                type: string
+              ai_context:
+                type: string
+              complementary_prompt:
+                type: string
+              inbox_id:
+                type: integer
+              tags:
+                type: array
+                items:
+                  type: string
+              whatsapp_templates:
+                type: array
+                items:
+                  type: string
+  responses:
+    '200':
+      description: Plantilla actualizada
+      schema:
+        $ref: '#/definitions/tracking_template'
+    '422':
+      description: Parámetros inválidos
+delete:
+  tags:
+    - Tracking Templates
+  operationId: trackingTemplatesDestroy
+  summary: Eliminar una plantilla de seguimiento
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Plantilla eliminada
+    '404':
+      description: Plantilla no encontrada

@@ -1,0 +1,26 @@
+type: object
+properties:
+  id:
+    type: integer
+  account_id:
+    type: integer
+  process_name:
+    type: string
+    description: Nombre del tipo de proceso Kanban (columna principal)
+  default:
+    type: boolean
+    description: Es el tipo de proceso por defecto
+  is_system:
+    type: boolean
+    description: Es un proceso de sistema (no editable/eliminable por usuarios)
+  kanban_processes:
+    type: array
+    description: Etapas/pasos dentro de este tipo de proceso
+    items:
+      $ref: '#/definitions/kanban_process'
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time

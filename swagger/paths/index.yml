@@ -211,6 +211,21 @@
   delete:
     $ref: ./application/agents/delete.yml
 
+# Tracking Templates (proyecto@tracking_templates)
+/api/v1/accounts/{account_id}/tracking_templates:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  $ref: ./application/tracking_templates/index.yml
+/api/v1/accounts/{account_id}/tracking_templates/{id}:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+      description: ID de la plantilla de seguimiento
+  $ref: ./application/tracking_templates/crud.yml
+
 # Canned Responses
 /api/v1/accounts/{account_id}/canned_responses:
   parameters:
@@ -268,6 +283,67 @@
   $ref: ./application/contact_inboxes/create.yml
 /api/v1/accounts/{account_id}/contacts/{id}/contactable_inboxes:
   $ref: ./application/contactable_inboxes/get.yml
+
+# Contact Trackings (proyecto@contact_tracking)
+/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_trackings:
+  $ref: ./application/contact_trackings/index.yml
+/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_trackings/{id}:
+  $ref: ./application/contact_trackings/crud.yml
+/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_trackings/{id}/pause:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: contact_id
+      in: path
+      type: integer
+      required: true
+      description: ID del contacto
+    - name: id
+      in: path
+      type: integer
+      required: true
+      description: ID del seguimiento
+  post:
+    $ref: ./application/contact_trackings/actions.yml#/pause
+/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_trackings/{id}/resume:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: contact_id
+      in: path
+      type: integer
+      required: true
+      description: ID del contacto
+    - name: id
+      in: path
+      type: integer
+      required: true
+      description: ID del seguimiento
+  post:
+    $ref: ./application/contact_trackings/actions.yml#/resume
+/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_trackings/{id}/cancel:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: contact_id
+      in: path
+      type: integer
+      required: true
+      description: ID del contacto
+    - name: id
+      in: path
+      type: integer
+      required: true
+      description: ID del seguimiento
+  post:
+    $ref: ./application/contact_trackings/actions.yml#/cancel
+/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_trackings/improve_text:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: contact_id
+      in: path
+      type: integer
+      required: true
+      description: ID del contacto
+  post:
+    $ref: ./application/contact_trackings/actions.yml#/improve_text
 
 
 # Automation Rule
@@ -333,6 +409,13 @@
     - $ref: '#/parameters/account_id'
   post:
     $ref: ./application/conversation/filter.yml
+
+# Search by contacts (proyecto@search_by_contacts)
+/api/v1/accounts/{account_id}/conversations/search_by_contacts:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  post:
+    $ref: ./application/conversation/search_by_contacts.yml
 /api/v1/accounts/{account_id}/conversations/{conversation_id}:
   parameters:
     - $ref: '#/parameters/account_id'
@@ -599,3 +682,414 @@
       description: The numeric ID of the user
   get:
     $ref: './application/reports/conversation/agent.yml'
+
+
+# ============================================================
+# Custom Project APIs
+# ============================================================
+
+# Kanban - Tipos de proceso
+/api/v1/accounts/{account_id}/kanban_processes:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  $ref: ./application/kanban/kanban_type_processes.yml
+/api/v1/accounts/{account_id}/kanban_processes/{id}:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+      description: ID del tipo de proceso Kanban
+  $ref: ./application/kanban/kanban_type_process_crud.yml
+
+# Kanban - Info de conversación por tipo
+/api/v1/accounts/{account_id}/kanban_processes/{kanban_type_process_id}/conversation/{conversation_id}/kanban_info:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: kanban_type_process_id
+      in: path
+      type: integer
+      required: true
+      description: ID del tipo de proceso Kanban
+    - name: conversation_id
+      in: path
+      type: integer
+      required: true
+      description: display_id de la conversación
+  get:
+    $ref: ./application/kanban/kanban_type_process_conversation_info.yml
+
+# Kanban - Etapas (procesos) dentro de un tipo
+/api/v1/accounts/{account_id}/kanban_processes/{kanban_type_process_id}/kanban_type_processes:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: kanban_type_process_id
+      in: path
+      type: integer
+      required: true
+      description: ID del tipo de proceso Kanban padre
+  $ref: ./application/kanban/kanban_processes.yml
+/api/v1/accounts/{account_id}/kanban_processes/{kanban_type_process_id}/kanban_type_processes/{id}:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: kanban_type_process_id
+      in: path
+      type: integer
+      required: true
+      description: ID del tipo de proceso Kanban padre
+    - name: id
+      in: path
+      type: integer
+      required: true
+      description: ID de la etapa Kanban
+  $ref: ./application/kanban/kanban_process_crud.yml
+/api/v1/accounts/{account_id}/kanban_processes/{kanban_type_process_id}/kanban_type_processes/bulk_reorder:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: kanban_type_process_id
+      in: path
+      type: integer
+      required: true
+  patch:
+    $ref: ./application/kanban/kanban_process_crud.yml#/reorder
+
+# Kanban - Filtros de conversaciones
+/api/v1/accounts/{account_id}/conversations/kanban/filter_by_kanban_type:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  get:
+    $ref: ./application/kanban/conversation_kanban.yml#/filter_by_kanban_type
+/api/v1/accounts/{account_id}/conversations/kanban/filter_by_kanban_process:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  get:
+    $ref: ./application/kanban/conversation_kanban.yml#/filter_by_kanban_process
+/api/v1/accounts/{account_id}/conversations/kanban/filter_by_both_kanban:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  get:
+    $ref: ./application/kanban/conversation_kanban.yml#/filter_by_both_kanban
+
+# Kanban - Tipos disponibles para conversaciones
+/api/v1/accounts/{account_id}/conversations/available_kanban_types:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  get:
+    $ref: ./application/kanban/conversation_kanban.yml#/available_kanban_types
+
+# Kanban - Asignación en conversaciones individuales
+/api/v1/accounts/{account_id}/conversations/{conversation_id}/assign_kanban_type:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - $ref: '#/parameters/conversation_id'
+  patch:
+    $ref: ./application/kanban/conversation_kanban.yml#/assign_kanban_type
+/api/v1/accounts/{account_id}/conversations/{conversation_id}/update_kanban_process:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - $ref: '#/parameters/conversation_id'
+  patch:
+    $ref: ./application/kanban/conversation_kanban.yml#/update_kanban_process
+/api/v1/accounts/{account_id}/conversations/{conversation_id}/update_kanban_process_only:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - $ref: '#/parameters/conversation_id'
+  patch:
+    $ref: ./application/kanban/conversation_kanban.yml#/update_kanban_process_only
+/api/v1/accounts/{account_id}/conversations/{conversation_id}/bulk_update_kanban:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - $ref: '#/parameters/conversation_id'
+  patch:
+    $ref: ./application/kanban/conversation_kanban.yml#/bulk_update_kanban
+
+
+# Knowledge Base
+/api/v1/accounts/{account_id}/knowledge_bases:
+  $ref: ./application/knowledge_bases/index.yml
+/api/v1/accounts/{account_id}/knowledge_bases/{id}:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+      description: ID del artículo
+  $ref: ./application/knowledge_bases/crud.yml
+
+# Knowledge Base - Acciones sobre artículos
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/reprocess:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  post:
+    $ref: ./application/knowledge_bases/actions.yml#/reprocess
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/sync:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  post:
+    $ref: ./application/knowledge_bases/actions.yml#/sync
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/images:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  get:
+    $ref: ./application/knowledge_bases/actions.yml#/images
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/internal_links:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  get:
+    $ref: ./application/knowledge_bases/actions.yml#/internal_links
+  delete:
+    $ref: ./application/knowledge_bases/actions.yml#/delete_internal_link
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/external_links:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  get:
+    $ref: ./application/knowledge_bases/actions.yml#/external_links
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/social_links:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  get:
+    $ref: ./application/knowledge_bases/actions.yml#/social_links
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/headings:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  get:
+    $ref: ./application/knowledge_bases/actions.yml#/headings
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/metadata:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  get:
+    $ref: ./application/knowledge_bases/actions.yml#/metadata
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/chunks:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  get:
+    $ref: ./application/knowledge_bases/actions.yml#/chunks
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/search_in_content:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  post:
+    $ref: ./application/knowledge_bases/actions.yml#/search_in_content
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/train_internal_links:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  post:
+    $ref: ./application/knowledge_bases/actions.yml#/train_internal_links
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/internal_links_list:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  get:
+    $ref: ./application/knowledge_bases/actions.yml#/internal_links_list
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/train_specific_internal_link:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  post:
+    $ref: ./application/knowledge_bases/actions.yml#/train_specific_internal_link
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/retrain_internal_link:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  post:
+    $ref: ./application/knowledge_bases/actions.yml#/retrain_internal_link
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/internal_links/clear_all:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  delete:
+    $ref: ./application/knowledge_bases/actions.yml#/clear_all_internal_links
+/api/v1/accounts/{account_id}/knowledge_bases/{id}/delete_embeddings:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  delete:
+    $ref: ./application/knowledge_bases/actions.yml#/delete_embeddings
+
+# Knowledge Base - Acciones de colección
+/api/v1/accounts/{account_id}/knowledge_bases/import_url:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  post:
+    $ref: ./application/knowledge_bases/collection_actions.yml#/import_url
+/api/v1/accounts/{account_id}/knowledge_bases/crawl_website:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  post:
+    $ref: ./application/knowledge_bases/collection_actions.yml#/crawl_website
+/api/v1/accounts/{account_id}/knowledge_bases/import_from_sketch:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  post:
+    $ref: ./application/knowledge_bases/collection_actions.yml#/import_from_sketch
+/api/v1/accounts/{account_id}/knowledge_bases/statistics:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  get:
+    $ref: ./application/knowledge_bases/collection_actions.yml#/statistics
+/api/v1/accounts/{account_id}/knowledge_bases/semantic_search:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  post:
+    $ref: ./application/knowledge_bases/collection_actions.yml#/semantic_search
+
+# Knowledge Base - Búsqueda (namespace)
+/api/v1/accounts/{account_id}/knowledge_bases/search:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  post:
+    $ref: ./application/knowledge_bases/search.yml#/search
+/api/v1/accounts/{account_id}/knowledge_bases/search/suggestions:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  get:
+    $ref: ./application/knowledge_bases/search.yml#/suggestions
+/api/v1/accounts/{account_id}/knowledge_bases/search/popular:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  get:
+    $ref: ./application/knowledge_bases/search.yml#/popular
+/api/v1/accounts/{account_id}/knowledge_bases/search/analytics:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  get:
+    $ref: ./application/knowledge_bases/search.yml#/analytics
+/api/v1/accounts/{account_id}/knowledge_bases/internal_link_chunks/{chunk_id}:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: chunk_id
+      in: path
+      type: integer
+      required: true
+      description: ID del chunk de enlace interno
+  delete:
+    tags:
+      - Knowledge Base
+    operationId: knowledgeBasesDeleteInternalLinkChunk
+    summary: Eliminar chunk de enlace interno
+    security:
+      - userApiKey: []
+    responses:
+      '200':
+        description: Chunk eliminado
+
+
+# Contact Schedules (Seguimientos v2)
+/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_schedules:
+  $ref: ./application/contact_schedules/index.yml
+/api/v1/accounts/{account_id}/contact_schedules/{id}:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+      description: ID del seguimiento v2
+  $ref: ./application/contact_schedules/crud.yml
+/api/v1/accounts/{account_id}/contact_schedules/{id}/pause:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  post:
+    $ref: ./application/contact_schedules/crud.yml#/pause
+/api/v1/accounts/{account_id}/contact_schedules/{id}/resume:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  post:
+    $ref: ./application/contact_schedules/crud.yml#/resume
+/api/v1/accounts/{account_id}/contact_schedules/{id}/cancel:
+  parameters:
+    - $ref: '#/parameters/account_id'
+    - name: id
+      in: path
+      type: integer
+      required: true
+  post:
+    $ref: ./application/contact_schedules/crud.yml#/cancel
+
+
+# Contact Notes
+/api/v1/accounts/{account_id}/contacts/{contact_id}/notes:
+  $ref: ./application/contacts/notes/index.yml
+/api/v1/accounts/{account_id}/contacts/{contact_id}/notes/{id}:
+  $ref: ./application/contacts/notes/crud.yml
+
+
+# Website Sketch
+/api/v1/accounts/{account_id}/website_sketch:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  get:
+    $ref: ./application/website_sketch.yml#/show
+/api/v1/accounts/{account_id}/website_sketch/status:
+  parameters:
+    - $ref: '#/parameters/account_id'
+  get:
+    $ref: ./application/website_sketch.yml#/status

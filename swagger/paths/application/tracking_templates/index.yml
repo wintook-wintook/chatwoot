@@ -1,0 +1,91 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - in: query
+    name: search
+    type: string
+    required: false
+    description: Filtrar por nombre de plantilla
+  - in: query
+    name: tag
+    type: string
+    required: false
+    description: Filtrar por etiqueta (tag)
+  - in: query
+    name: inbox_id
+    type: integer
+    required: false
+    description: Filtrar por inbox asociado
+get:
+  tags:
+    - Tracking Templates
+  operationId: trackingTemplatesList
+  summary: Listar plantillas de seguimiento
+  description: >
+    Retorna todas las plantillas de seguimiento de la cuenta, con soporte de filtros
+    por nombre, etiqueta e inbox. Las plantillas permiten reutilizar configuraciones
+    de seguimiento incluyendo objetivo, contexto de IA, plantillas de WhatsApp y prompt complementario.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de plantillas de seguimiento
+      schema:
+        type: array
+        items:
+          $ref: '#/definitions/tracking_template'
+    '401':
+      description: No autorizado
+post:
+  tags:
+    - Tracking Templates
+  operationId: trackingTemplatesCreate
+  summary: Crear una plantilla de seguimiento
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        required:
+          - tracking_template
+        properties:
+          tracking_template:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+                description: Nombre descriptivo de la plantilla
+                example: Seguimiento cotización
+              objective:
+                type: string
+                description: Objetivo del seguimiento al aplicar esta plantilla
+              ai_context:
+                type: string
+                description: Contexto para la generación de mensajes con IA
+              complementary_prompt:
+                type: string
+                description: Instrucciones adicionales para el bot (cómo responder preguntas)
+              inbox_id:
+                type: integer
+                description: Inbox por defecto al aplicar esta plantilla
+              tags:
+                type: array
+                items:
+                  type: string
+                description: Etiquetas para clasificar la plantilla
+              whatsapp_templates:
+                type: array
+                items:
+                  type: string
+                description: Lista de nombres de plantillas WhatsApp por intento
+  responses:
+    '201':
+      description: Plantilla creada exitosamente
+      schema:
+        $ref: '#/definitions/tracking_template'
+    '422':
+      description: Parámetros inválidos

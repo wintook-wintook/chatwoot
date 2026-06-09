@@ -1,19 +1,18 @@
 {
   "swagger": "2.0",
   "info": {
-    "description": "This is the API documentation for Chatwoot server.",
+    "description": "Documentación de la API para el servidor Wintook.",
     "version": "1.0.0",
-    "title": "Chatwoot",
-    "termsOfService": "https://www.chatwoot.com/terms-of-service/",
+    "title": "Wintook",
     "contact": {
-      "email": "hello@chatwoot.com"
+      "email": "hello@wintook.com"
     },
     "license": {
       "name": "MIT License",
       "url": "https://opensource.org/licenses/MIT"
     }
   },
-  "host": "app.chatwoot.com",
+  "host": "app.wintook.com",
   "basePath": "/",
   "schemes": [
     "https"
@@ -1614,6 +1613,276 @@
         }
       }
     },
+    "/api/v1/accounts/{account_id}/tracking_templates": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "in": "query",
+          "name": "search",
+          "type": "string",
+          "required": false,
+          "description": "Filtrar por nombre de plantilla"
+        },
+        {
+          "in": "query",
+          "name": "tag",
+          "type": "string",
+          "required": false,
+          "description": "Filtrar por etiqueta (tag)"
+        },
+        {
+          "in": "query",
+          "name": "inbox_id",
+          "type": "integer",
+          "required": false,
+          "description": "Filtrar por inbox asociado"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Tracking Templates"
+        ],
+        "operationId": "trackingTemplatesList",
+        "summary": "Listar plantillas de seguimiento",
+        "description": "Retorna todas las plantillas de seguimiento de la cuenta, con soporte de filtros por nombre, etiqueta e inbox. Las plantillas permiten reutilizar configuraciones de seguimiento incluyendo objetivo, contexto de IA, plantillas de WhatsApp y prompt complementario.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de plantillas de seguimiento",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/tracking_template"
+              }
+            }
+          },
+          "401": {
+            "description": "No autorizado"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tracking Templates"
+        ],
+        "operationId": "trackingTemplatesCreate",
+        "summary": "Crear una plantilla de seguimiento",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "tracking_template"
+              ],
+              "properties": {
+                "tracking_template": {
+                  "type": "object",
+                  "required": [
+                    "name"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Nombre descriptivo de la plantilla",
+                      "example": "Seguimiento cotización"
+                    },
+                    "objective": {
+                      "type": "string",
+                      "description": "Objetivo del seguimiento al aplicar esta plantilla"
+                    },
+                    "ai_context": {
+                      "type": "string",
+                      "description": "Contexto para la generación de mensajes con IA"
+                    },
+                    "complementary_prompt": {
+                      "type": "string",
+                      "description": "Instrucciones adicionales para el bot (cómo responder preguntas)"
+                    },
+                    "inbox_id": {
+                      "type": "integer",
+                      "description": "Inbox por defecto al aplicar esta plantilla"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Etiquetas para clasificar la plantilla"
+                    },
+                    "whatsapp_templates": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Lista de nombres de plantillas WhatsApp por intento"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Plantilla creada exitosamente",
+            "schema": {
+              "$ref": "#/definitions/tracking_template"
+            }
+          },
+          "422": {
+            "description": "Parámetros inválidos"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/tracking_templates/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID de la plantilla de seguimiento"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Tracking Templates"
+        ],
+        "operationId": "trackingTemplatesShow",
+        "summary": "Ver detalle de una plantilla",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle de la plantilla",
+            "schema": {
+              "$ref": "#/definitions/tracking_template"
+            }
+          },
+          "404": {
+            "description": "Plantilla no encontrada"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Tracking Templates"
+        ],
+        "operationId": "trackingTemplatesUpdate",
+        "summary": "Actualizar una plantilla de seguimiento",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "tracking_template": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "objective": {
+                      "type": "string"
+                    },
+                    "ai_context": {
+                      "type": "string"
+                    },
+                    "complementary_prompt": {
+                      "type": "string"
+                    },
+                    "inbox_id": {
+                      "type": "integer"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "whatsapp_templates": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plantilla actualizada",
+            "schema": {
+              "$ref": "#/definitions/tracking_template"
+            }
+          },
+          "422": {
+            "description": "Parámetros inválidos"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Tracking Templates"
+        ],
+        "operationId": "trackingTemplatesDestroy",
+        "summary": "Eliminar una plantilla de seguimiento",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plantilla eliminada"
+          },
+          "404": {
+            "description": "Plantilla no encontrada"
+          }
+        }
+      }
+    },
     "/api/v1/accounts/{account_id}/canned_responses": {
       "parameters": [
         {
@@ -2439,6 +2708,663 @@
           },
           "422": {
             "description": "Incorrect payload"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_trackings": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "contact_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del contacto"
+        },
+        {
+          "in": "query",
+          "name": "conversation_id",
+          "type": "integer",
+          "required": false,
+          "description": "Filtrar por ID de conversación (display_id del frontend)"
+        },
+        {
+          "in": "query",
+          "name": "inbox_id",
+          "type": "integer",
+          "required": false,
+          "description": "Filtrar por ID de inbox"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "enum": [
+            "pending",
+            "scheduled",
+            "active",
+            "paused",
+            "completed",
+            "cancelled",
+            "failed"
+          ],
+          "description": "Filtrar por estado del seguimiento"
+        },
+        {
+          "in": "query",
+          "name": "date_from",
+          "type": "string",
+          "format": "date-time",
+          "required": false,
+          "description": "Fecha inicio (scheduled_for >= date_from)"
+        },
+        {
+          "in": "query",
+          "name": "date_to",
+          "type": "string",
+          "format": "date-time",
+          "required": false,
+          "description": "Fecha fin (scheduled_for <= date_to)"
+        },
+        {
+          "in": "query",
+          "name": "search",
+          "type": "string",
+          "required": false,
+          "description": "Búsqueda en objective y last_message_sent"
+        },
+        {
+          "$ref": "#/parameters/page"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Contact Trackings"
+        ],
+        "operationId": "contactTrackingsList",
+        "summary": "Listar seguimientos de un contacto",
+        "description": "Lista todos los seguimientos programados de un contacto, con soporte de filtros avanzados por conversación, inbox, estado, rango de fechas y búsqueda de texto.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de seguimientos con metadatos de paginación",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "trackings": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/contact_tracking"
+                  }
+                },
+                "meta": {
+                  "$ref": "#/definitions/pagination_meta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autorizado"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Contact Trackings"
+        ],
+        "operationId": "contactTrackingsCreate",
+        "summary": "Crear un seguimiento",
+        "description": "Crea un nuevo seguimiento automático para el contacto. El estado inicial es `pending`. Soporta integración con IA (OpenAI) para generación de mensajes y plantillas de WhatsApp.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "contact_tracking"
+              ],
+              "properties": {
+                "contact_tracking": {
+                  "type": "object",
+                  "required": [
+                    "objective",
+                    "scheduled_for",
+                    "inbox_id"
+                  ],
+                  "properties": {
+                    "objective": {
+                      "type": "string",
+                      "description": "Objetivo o descripción del seguimiento",
+                      "example": "Seguimiento cotización plan premium"
+                    },
+                    "scheduled_for": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Fecha y hora programada de ejecución (ISO 8601)",
+                      "example": "2025-11-10T09:00:00Z"
+                    },
+                    "inbox_id": {
+                      "type": "integer",
+                      "description": "ID del inbox por el que se enviará el mensaje"
+                    },
+                    "conversation_id": {
+                      "type": "integer",
+                      "description": "display_id de la conversación relacionada (el frontend usa display_id)"
+                    },
+                    "max_attempts": {
+                      "type": "integer",
+                      "description": "Número máximo de intentos automáticos",
+                      "default": 3
+                    },
+                    "retry_interval_value": {
+                      "type": "integer",
+                      "description": "Valor del intervalo entre intentos",
+                      "default": 30
+                    },
+                    "retry_interval_unit": {
+                      "type": "string",
+                      "enum": [
+                        "minutes",
+                        "hours",
+                        "days"
+                      ],
+                      "description": "Unidad del intervalo entre intentos",
+                      "default": "minutes"
+                    },
+                    "ai_context": {
+                      "type": "string",
+                      "description": "Contexto adicional para la generación de mensajes con IA"
+                    },
+                    "complementary_prompt": {
+                      "type": "string",
+                      "description": "Instrucciones adicionales para que el bot responda preguntas específicas"
+                    },
+                    "quote_id": {
+                      "type": "integer",
+                      "description": "ID de cotización relacionada (opcional)"
+                    },
+                    "whatsapp_templates": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Lista de nombres de plantillas WhatsApp por intento (en orden)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Seguimiento creado exitosamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "tracking": {
+                  "$ref": "#/definitions/contact_tracking"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin acceso al inbox especificado"
+          },
+          "422": {
+            "description": "Parámetros inválidos"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_trackings/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "contact_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del contacto"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del seguimiento"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Contact Trackings"
+        ],
+        "operationId": "contactTrackingsShow",
+        "summary": "Ver detalle de un seguimiento",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle del seguimiento",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "tracking": {
+                  "$ref": "#/definitions/contact_tracking"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Seguimiento no encontrado"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Contact Trackings"
+        ],
+        "operationId": "contactTrackingsUpdate",
+        "summary": "Actualizar un seguimiento",
+        "description": "Actualiza los campos de un seguimiento existente. No es posible cambiar el `contact_id` ni el `account_id`. Si se envía `conversation_id`, se tratará como `display_id` (compatibilidad con el frontend).\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "contact_tracking": {
+                  "type": "object",
+                  "properties": {
+                    "objective": {
+                      "type": "string"
+                    },
+                    "scheduled_for": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "inbox_id": {
+                      "type": "integer"
+                    },
+                    "conversation_id": {
+                      "type": "integer"
+                    },
+                    "max_attempts": {
+                      "type": "integer"
+                    },
+                    "retry_interval_value": {
+                      "type": "integer"
+                    },
+                    "retry_interval_unit": {
+                      "type": "string",
+                      "enum": [
+                        "minutes",
+                        "hours",
+                        "days"
+                      ]
+                    },
+                    "ai_context": {
+                      "type": "string"
+                    },
+                    "complementary_prompt": {
+                      "type": "string"
+                    },
+                    "whatsapp_templates": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seguimiento actualizado",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "tracking": {
+                  "$ref": "#/definitions/contact_tracking"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin acceso al inbox especificado"
+          },
+          "422": {
+            "description": "Parámetros inválidos"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Contact Trackings"
+        ],
+        "operationId": "contactTrackingsDestroy",
+        "summary": "Eliminar un seguimiento",
+        "description": "Elimina permanentemente un seguimiento. Esta acción no puede deshacerse.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Seguimiento eliminado"
+          },
+          "404": {
+            "description": "Seguimiento no encontrado"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_trackings/{id}/pause": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "contact_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del contacto"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del seguimiento"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Contact Trackings"
+        ],
+        "operationId": "contactTrackingsPause",
+        "summary": "Pausar un seguimiento",
+        "description": "Pausa temporalmente la ejecución de un seguimiento activo o programado (`pending`, `scheduled`, `active`). El seguimiento puede reanudarse posteriormente con el endpoint `/resume`.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seguimiento pausado correctamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Seguimiento pausado correctamente"
+                },
+                "tracking": {
+                  "$ref": "#/definitions/contact_tracking"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No se puede pausar en el estado actual"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_trackings/{id}/resume": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "contact_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del contacto"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del seguimiento"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Contact Trackings"
+        ],
+        "operationId": "contactTrackingsResume",
+        "summary": "Reanudar un seguimiento pausado",
+        "description": "Reanuda la ejecución de un seguimiento en estado `paused`. Opcionalmente se puede especificar la fecha del siguiente intento.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "scheduled_for": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Fecha/hora del siguiente intento (opcional; si no se envía se calcula automáticamente)"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seguimiento reanudado correctamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Seguimiento reanudado correctamente"
+                },
+                "tracking": {
+                  "$ref": "#/definitions/contact_tracking"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No se puede reanudar en el estado actual"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_trackings/{id}/cancel": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "contact_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del contacto"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del seguimiento"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Contact Trackings"
+        ],
+        "operationId": "contactTrackingsCancel",
+        "summary": "Cancelar un seguimiento",
+        "description": "Cancela definitivamente un seguimiento. Esta acción es irreversible: el seguimiento no podrá reanudarse. Usar cuando el seguimiento ya no aplica.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seguimiento cancelado correctamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Seguimiento cancelado"
+                },
+                "tracking": {
+                  "$ref": "#/definitions/contact_tracking"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No se puede cancelar en el estado actual"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_trackings/improve_text": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "contact_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del contacto"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Contact Trackings"
+        ],
+        "operationId": "contactTrackingsImproveText",
+        "summary": "Mejorar texto con IA",
+        "description": "Utiliza OpenAI (GPT-4o-mini) para mejorar la redacción de un texto o generar un prompt operativo estructurado para el bot. El modo `improve` corrige gramática y estilo; el modo `generate_prompt` construye un prompt operativo a partir del objetivo y contexto.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "text"
+              ],
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "Texto a mejorar o instrucciones adicionales"
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "improve",
+                    "generate_prompt"
+                  ],
+                  "default": "improve",
+                  "description": "Modo de operación de la IA"
+                },
+                "context": {
+                  "type": "string",
+                  "description": "Contexto del seguimiento (solo para mode=generate_prompt)"
+                },
+                "objective": {
+                  "type": "string",
+                  "description": "Objetivo del seguimiento (solo para mode=generate_prompt)"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Texto procesado exitosamente",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "improved_text": {
+                  "type": "string",
+                  "example": "Estimado cliente, le escribimos para darle seguimiento a su cotización."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "El campo text es requerido"
+          },
+          "500": {
+            "description": "Error al procesar la solicitud con IA"
           }
         }
       }
@@ -3285,6 +4211,114 @@
             "schema": {
               "$ref": "#/definitions/bad_request_error"
             }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/conversations/search_by_contacts": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Conversations"
+        ],
+        "operationId": "conversationSearchByContacts",
+        "summary": "Buscar conversaciones por contactos",
+        "description": "Busca conversaciones filtrando por una lista de números de teléfono y/o correos electrónicos. Retorna todas las conversaciones cuyo contacto coincida con alguno de los identificadores proporcionados. Útil para integrar sistemas externos que buscan interacciones por teléfono o email sin conocer los IDs internos.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "phone_numbers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Lista de números de teléfono en formato E.164",
+                  "example": [
+                    "+573001234567",
+                    "+573109876543"
+                  ]
+                },
+                "emails": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Lista de correos electrónicos",
+                  "example": [
+                    "cliente@email.com"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "resolved",
+                    "pending",
+                    "snoozed",
+                    "all"
+                  ],
+                  "required": false,
+                  "description": "Filtrar por estado de conversación (default= all)"
+                },
+                "page": {
+                  "type": "integer",
+                  "required": false,
+                  "description": "Número de página para paginación"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de conversaciones encontradas",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/conversation"
+                  }
+                },
+                "meta": {
+                  "type": "object",
+                  "properties": {
+                    "all_count": {
+                      "type": "integer"
+                    },
+                    "assigned_count": {
+                      "type": "integer"
+                    },
+                    "unassigned_count": {
+                      "type": "integer"
+                    },
+                    "resolved_count": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Parámetros inválidos (se requiere al menos phone_numbers o emails)"
           }
         }
       }
@@ -5339,6 +6373,3151 @@
           }
         }
       }
+    },
+    "/api/v1/accounts/{account_id}/kanban_processes": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanTypeProcessesIndex",
+        "summary": "Listar tipos de proceso Kanban",
+        "description": "Retorna todos los tipos de proceso Kanban de la cuenta (columnas de primer nivel del tablero), incluyendo sus procesos/etapas anidados.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de tipos de proceso con sus etapas",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/kanban_type_process"
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanTypeProcessesCreate",
+        "summary": "Crear tipo de proceso Kanban",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "kanban_type_process"
+              ],
+              "properties": {
+                "kanban_type_process": {
+                  "type": "object",
+                  "required": [
+                    "process_name"
+                  ],
+                  "properties": {
+                    "process_name": {
+                      "type": "string",
+                      "description": "Nombre del tipo de proceso (ej. \"Ventas\", \"Soporte\")"
+                    },
+                    "default": {
+                      "type": "boolean",
+                      "description": "Marcar como tipo por defecto"
+                    },
+                    "is_system": {
+                      "type": "boolean",
+                      "description": "Es un proceso de sistema (no borrable)"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Tipo de proceso creado",
+            "schema": {
+              "$ref": "#/definitions/kanban_type_process"
+            }
+          },
+          "422": {
+            "description": "Parámetros inválidos"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/kanban_processes/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del tipo de proceso Kanban"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanTypeProcessShow",
+        "summary": "Ver tipo de proceso Kanban",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle del tipo de proceso con sus etapas",
+            "schema": {
+              "$ref": "#/definitions/kanban_type_process"
+            }
+          },
+          "404": {
+            "description": "No encontrado"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanTypeProcessUpdate",
+        "summary": "Actualizar tipo de proceso Kanban",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "kanban_type_process": {
+                  "type": "object",
+                  "properties": {
+                    "process_name": {
+                      "type": "string"
+                    },
+                    "default": {
+                      "type": "boolean"
+                    },
+                    "is_system": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tipo de proceso actualizado",
+            "schema": {
+              "$ref": "#/definitions/kanban_type_process"
+            }
+          },
+          "422": {
+            "description": "Parámetros inválidos"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanTypeProcessDestroy",
+        "summary": "Eliminar tipo de proceso Kanban",
+        "description": "No se puede eliminar si existen conversaciones asociadas al tipo de proceso.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Eliminado correctamente"
+          },
+          "422": {
+            "description": "No se puede eliminar porque tiene conversaciones asociadas"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/kanban_processes/{kanban_type_process_id}/conversation/{conversation_id}/kanban_info": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "kanban_type_process_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del tipo de proceso Kanban"
+        },
+        {
+          "name": "conversation_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "display_id de la conversación"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanConversationInfo",
+        "summary": "Info Kanban de una conversación",
+        "description": "Retorna el estado Kanban de una conversación específica: a qué tipo de proceso y proceso/etapa está asignada actualmente.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Info Kanban de la conversación",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "display_id": {
+                  "type": "integer"
+                },
+                "kanban_type_process_id": {
+                  "type": "integer"
+                },
+                "kanban_process_id": {
+                  "type": "integer"
+                },
+                "hasKanbanTypeProcess": {
+                  "type": "boolean"
+                },
+                "hasKanbanProcess": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conversación no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/kanban_processes/{kanban_type_process_id}/kanban_type_processes": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "kanban_type_process_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del tipo de proceso Kanban padre"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanProcessesIndex",
+        "summary": "Listar etapas de un tipo de proceso",
+        "description": "Retorna todas las etapas/pasos de un tipo de proceso Kanban, ordenadas por posición.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de etapas",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/kanban_process"
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanProcessesCreate",
+        "summary": "Crear etapa en un tipo de proceso",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "kanban_process"
+              ],
+              "properties": {
+                "kanban_process": {
+                  "type": "object",
+                  "required": [
+                    "type_process_name"
+                  ],
+                  "properties": {
+                    "type_process_name": {
+                      "type": "string",
+                      "description": "Nombre de la etapa (ej. \"Contactado\", \"Propuesta enviada\")"
+                    },
+                    "position": {
+                      "type": "integer",
+                      "description": "Posición en el tablero (orden)"
+                    },
+                    "default": {
+                      "type": "boolean",
+                      "description": "Marcar como etapa por defecto"
+                    },
+                    "is_system": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Etapa creada",
+            "schema": {
+              "$ref": "#/definitions/kanban_process"
+            }
+          },
+          "422": {
+            "description": "Parámetros inválidos"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/kanban_processes/{kanban_type_process_id}/kanban_type_processes/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID de la etapa Kanban"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanProcessShow",
+        "summary": "Ver etapa Kanban",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle de la etapa",
+            "schema": {
+              "$ref": "#/definitions/kanban_process"
+            }
+          },
+          "404": {
+            "description": "No encontrado"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanProcessUpdate",
+        "summary": "Actualizar etapa Kanban",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "kanban_process": {
+                  "type": "object",
+                  "properties": {
+                    "type_process_name": {
+                      "type": "string"
+                    },
+                    "position": {
+                      "type": "integer"
+                    },
+                    "default": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Etapa actualizada",
+            "schema": {
+              "$ref": "#/definitions/kanban_process"
+            }
+          },
+          "422": {
+            "description": "Parámetros inválidos"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanProcessDestroy",
+        "summary": "Eliminar etapa Kanban",
+        "description": "No se puede eliminar si existen conversaciones asignadas a esta etapa.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Eliminada correctamente"
+          },
+          "422": {
+            "description": "No se puede eliminar porque tiene conversaciones asociadas"
+          }
+        }
+      },
+      "reorder": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanProcessReorder",
+        "summary": "Reordenar etapas de un tipo de proceso",
+        "description": "Reordena masivamente las etapas de un tipo de proceso enviando el nuevo orden.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "kanban_processes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Etapas reordenadas",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Processes reordered successfully"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/kanban_processes/{kanban_type_process_id}/kanban_type_processes/bulk_reorder": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "kanban_type_process_id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "kanbanProcessReorder",
+        "summary": "Reordenar etapas de un tipo de proceso",
+        "description": "Reordena masivamente las etapas de un tipo de proceso enviando el nuevo orden.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "kanban_processes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Etapas reordenadas",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Processes reordered successfully"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/conversations/kanban/filter_by_kanban_type": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "conversationsFilterByKanbanType",
+        "summary": "Filtrar conversaciones por tipo de proceso Kanban",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kanban_type_process_id",
+            "type": "integer",
+            "required": false,
+            "description": "ID del tipo de proceso Kanban"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "assignee_id",
+            "type": "integer",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversaciones filtradas",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/conversation"
+                  }
+                },
+                "meta": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/conversations/kanban/filter_by_kanban_process": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "conversationsFilterByKanbanProcess",
+        "summary": "Filtrar conversaciones por etapa Kanban",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kanban_process_id",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversaciones filtradas",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/conversation"
+                  }
+                },
+                "meta": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/conversations/kanban/filter_by_both_kanban": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "conversationsFilterByBothKanban",
+        "summary": "Filtrar conversaciones por tipo y etapa Kanban",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kanban_type_process_id",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "kanban_process_id",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "type": "string",
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "assignee_id",
+            "type": "integer",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversaciones filtradas",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/conversation"
+                  }
+                },
+                "meta": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/conversations/available_kanban_types": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "conversationsAvailableKanbanTypes",
+        "summary": "Tipos de proceso Kanban disponibles para conversaciones",
+        "description": "Retorna los tipos de proceso Kanban disponibles en la cuenta para asignar a conversaciones.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de tipos disponibles"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/conversations/{conversation_id}/assign_kanban_type": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "$ref": "#/parameters/conversation_id"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "conversationAssignKanbanType",
+        "summary": "Asignar tipo de proceso Kanban a una conversación",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "kanban_type_process_id": {
+                  "type": "integer",
+                  "description": "ID del tipo de proceso a asignar"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tipo de proceso asignado correctamente"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/conversations/{conversation_id}/update_kanban_process": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "$ref": "#/parameters/conversation_id"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "conversationUpdateKanbanProcess",
+        "summary": "Asignar etapa Kanban a una conversación",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "kanban_process_id": {
+                  "type": "integer",
+                  "description": "ID de la etapa a asignar"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Etapa asignada correctamente"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/conversations/{conversation_id}/update_kanban_process_only": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "$ref": "#/parameters/conversation_id"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "conversationUpdateKanbanProcessOnly",
+        "summary": "Actualizar solo la etapa Kanban (sin cambiar tipo)",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "kanban_process_id": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Etapa actualizada correctamente"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/conversations/{conversation_id}/bulk_update_kanban": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "$ref": "#/parameters/conversation_id"
+        }
+      ],
+      "patch": {
+        "tags": [
+          "Kanban"
+        ],
+        "operationId": "conversationBulkUpdateKanban",
+        "summary": "Actualización masiva de campos Kanban de una conversación",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "kanban_type_process_id": {
+                  "type": "integer"
+                },
+                "kanban_process_id": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campos Kanban actualizados"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "enum": [
+            "pending",
+            "processing",
+            "processed",
+            "failed",
+            "archived"
+          ],
+          "description": "Filtrar por estado del artículo"
+        },
+        {
+          "in": "query",
+          "name": "source_type",
+          "type": "string",
+          "required": false,
+          "enum": [
+            "url",
+            "text",
+            "file",
+            "internal"
+          ],
+          "description": "Filtrar por tipo de fuente"
+        },
+        {
+          "in": "query",
+          "name": "language",
+          "type": "string",
+          "required": false,
+          "description": "Filtrar por idioma (ej. \"es\", \"en\")"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "type": "string",
+          "required": false,
+          "description": "Búsqueda de texto en título y contenido"
+        },
+        {
+          "$ref": "#/parameters/page"
+        },
+        {
+          "in": "query",
+          "name": "per_page",
+          "type": "integer",
+          "required": false,
+          "description": "Artículos por página (default 20)"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesIndex",
+        "summary": "Listar artículos de la base de conocimiento",
+        "description": "Retorna todos los artículos de la base de conocimiento de la cuenta con soporte de filtros por estado, tipo de fuente, idioma y búsqueda de texto. Los artículos almacenan contenido vectorizado para búsqueda semántica con IA.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada de artículos",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "articles": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/knowledge_base_article"
+                  }
+                },
+                "meta": {
+                  "$ref": "#/definitions/pagination_meta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesCreate",
+        "summary": "Crear artículo en la base de conocimiento",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "knowledge_base"
+              ],
+              "properties": {
+                "knowledge_base": {
+                  "type": "object",
+                  "required": [
+                    "title"
+                  ],
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "description": "Título del artículo"
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "Contenido en texto plano o markdown"
+                    },
+                    "source_url": {
+                      "type": "string",
+                      "description": "URL de origen (si es artículo de tipo url)"
+                    },
+                    "source_type": {
+                      "type": "string",
+                      "enum": [
+                        "url",
+                        "text",
+                        "file",
+                        "internal"
+                      ]
+                    },
+                    "language": {
+                      "type": "string",
+                      "default": "es"
+                    }
+                  }
+                },
+                "auto_process": {
+                  "type": "boolean",
+                  "description": "Si true, inicia el procesamiento/vectorización inmediatamente",
+                  "default": false
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Artículo creado",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "article": {
+                  "$ref": "#/definitions/knowledge_base_article"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Parámetros inválidos"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del artículo"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesShow",
+        "summary": "Ver artículo",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle del artículo",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "article": {
+                  "$ref": "#/definitions/knowledge_base_article"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Artículo no encontrado"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesUpdate",
+        "summary": "Actualizar artículo",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "knowledge_base": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "content": {
+                      "type": "string"
+                    },
+                    "source_url": {
+                      "type": "string"
+                    },
+                    "language": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "auto_reprocess": {
+                  "type": "boolean",
+                  "description": "Si true, reprocesa/vectoriza el contenido actualizado"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Artículo actualizado",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "article": {
+                  "$ref": "#/definitions/knowledge_base_article"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Parámetros inválidos"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesDestroy",
+        "summary": "Eliminar artículo",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Artículo eliminado",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Artículo no encontrado"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/reprocess": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "post": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesReprocess",
+        "summary": "Reprocesar artículo",
+        "description": "Reinicia el procesamiento y vectorización de un artículo con estado fallido o archivado.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reprocesamiento iniciado"
+          },
+          "422": {
+            "description": "El artículo no puede ser reprocesado en su estado actual"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/sync": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "post": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesSync",
+        "summary": "Sincronizar artículo desde su URL de origen",
+        "description": "Actualiza el contenido del artículo descargando de nuevo la URL de origen.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Artículo sincronizado",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "changes": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error al sincronizar"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/images": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesImages",
+        "summary": "Imágenes del artículo",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de imágenes extraídas del artículo"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/internal_links": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesInternalLinks",
+        "summary": "Enlaces internos del artículo",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de enlaces internos"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesDeleteInternalLink",
+        "summary": "Eliminar un enlace interno del artículo",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Enlace interno eliminado"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/external_links": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesExternalLinks",
+        "summary": "Enlaces externos del artículo",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de enlaces externos"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/social_links": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesSocialLinks",
+        "summary": "Redes sociales detectadas en el artículo",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de enlaces a redes sociales"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/headings": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesHeadings",
+        "summary": "Encabezados del artículo",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de encabezados H1-H6"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/metadata": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesMetadata",
+        "summary": "Metadatos del artículo",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metadatos extraídos del artículo"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/chunks": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesChunks",
+        "summary": "Fragmentos vectorizados del artículo",
+        "description": "Retorna los chunks/fragmentos generados durante la vectorización del artículo.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de fragmentos vectorizados"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/search_in_content": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "post": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesSearchInContent",
+        "summary": "Buscar dentro del contenido de un artículo",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultados de búsqueda dentro del artículo"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/train_internal_links": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "post": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesTrainInternalLinks",
+        "summary": "Vectorizar todos los enlaces internos del artículo",
+        "description": "Procesa y vectoriza todos los enlaces internos detectados en el artículo.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vectorización de enlaces internos iniciada"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/internal_links_list": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesInternalLinksList",
+        "summary": "Listar enlaces internos con metadatos de vectorización",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de enlaces internos con estado de vectorización"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/train_specific_internal_link": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "post": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesTrainSpecificInternalLink",
+        "summary": "Vectorizar una URL interna específica",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vectorización iniciada para la URL especificada"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/retrain_internal_link": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "post": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesRetrainInternalLink",
+        "summary": "Re-vectorizar un enlace interno",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Re-vectorización iniciada"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/internal_links/clear_all": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesClearAllInternalLinks",
+        "summary": "Eliminar todos los enlaces internos del artículo",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Todos los enlaces internos eliminados"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/{id}/delete_embeddings": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesDeleteEmbeddings",
+        "summary": "Eliminar todos los vectores/embeddings del artículo",
+        "description": "Elimina los embeddings vectoriales, útil para forzar una re-vectorización completa.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Embeddings eliminados"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/import_url": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesImportUrl",
+        "summary": "Importar artículo desde URL",
+        "description": "Crea un artículo descargando y procesando el contenido de una URL externa.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "url"
+              ],
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "URL a importar",
+                  "example": "https://ejemplo.com/articulo"
+                },
+                "auto_process": {
+                  "type": "boolean",
+                  "default": true
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Artículo importado y vectorización iniciada"
+          },
+          "422": {
+            "description": "URL inválida o no accesible"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/crawl_website": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesCrawlWebsite",
+        "summary": "Rastrear sitio web completo",
+        "description": "Inicia el rastreo de un sitio web para importar múltiples páginas como artículos.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "url"
+              ],
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "URL raíz del sitio a rastrear"
+                },
+                "max_pages": {
+                  "type": "integer",
+                  "description": "Máximo de páginas a importar",
+                  "default": 50
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rastreo iniciado"
+          },
+          "422": {
+            "description": "URL inválida"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/import_from_sketch": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesImportFromSketch",
+        "summary": "Importar desde Website Sketch",
+        "description": "Importa contenido analizado previamente con el endpoint de Website Sketch.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "cache_key": {
+                  "type": "string",
+                  "description": "cache_key obtenido del endpoint /website_sketch"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Artículos importados desde el sketch"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/statistics": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesStatistics",
+        "summary": "Estadísticas de la base de conocimiento",
+        "description": "Retorna estadísticas generales: cantidad de artículos por estado, idioma, tipo de fuente, etc.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estadísticas de la knowledge base"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/semantic_search": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesSemanticSearch",
+        "summary": "Búsqueda semántica en la base de conocimiento",
+        "description": "Realiza una búsqueda semántica (vectorial) en todos los artículos de la base de conocimiento. Útil para encontrar contenido relevante sin coincidencia exacta de palabras.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "query"
+              ],
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "description": "Consulta en lenguaje natural"
+                },
+                "limit": {
+                  "type": "integer",
+                  "default": 10
+                },
+                "min_similarity": {
+                  "type": "number",
+                  "format": "float",
+                  "default": 0.3
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultados de búsqueda semántica"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/search": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBaseSearch",
+        "summary": "Búsqueda semántica (namespace search)",
+        "description": "Endpoint principal de búsqueda semántica en la base de conocimiento. Usa embeddings vectoriales para encontrar fragmentos relevantes a la consulta.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "query"
+              ],
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "description": "Texto de búsqueda en lenguaje natural"
+                },
+                "limit": {
+                  "type": "integer",
+                  "default": 10,
+                  "description": "Número máximo de resultados (máx. 50)"
+                },
+                "min_similarity": {
+                  "type": "number",
+                  "format": "float",
+                  "default": 0.3,
+                  "description": "Similitud mínima (0.0 - 1.0)"
+                },
+                "search_type": {
+                  "type": "string",
+                  "enum": [
+                    "semantic",
+                    "keyword",
+                    "hybrid"
+                  ],
+                  "default": "semantic"
+                },
+                "article_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "description": "Limitar búsqueda a artículos específicos"
+                },
+                "conversation_id": {
+                  "type": "integer",
+                  "description": "ID de conversación (para logging)"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultados de búsqueda",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/knowledge_base_search_result"
+                  }
+                },
+                "total": {
+                  "type": "integer"
+                },
+                "response_time_ms": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Query requerida o limit > 50"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/search/suggestions": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBaseSearchSuggestions",
+        "summary": "Sugerencias de búsqueda",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "type": "string",
+            "required": false,
+            "description": "Texto parcial para sugerir completados"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "type": "integer",
+            "required": false,
+            "default": 5
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de sugerencias",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string"
+                },
+                "suggestions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/search/popular": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBaseSearchPopular",
+        "summary": "Consultas más populares",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "timeframe",
+            "type": "string",
+            "default": "30d",
+            "description": "Período (ej. 7d, 30d, 3m)"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "type": "integer",
+            "default": 10
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de consultas más frecuentes",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "popular_queries": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "query": {
+                        "type": "string"
+                      },
+                      "count": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/search/analytics": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBaseSearchAnalytics",
+        "summary": "Analíticas de búsqueda",
+        "description": "Estadísticas de uso de la búsqueda: consultas por día, usuarios activos, calidad de resultados.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "timeframe",
+            "type": "string",
+            "default": "30d"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Datos analíticos de búsqueda"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/knowledge_bases/internal_link_chunks/{chunk_id}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "chunk_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del chunk de enlace interno"
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Knowledge Base"
+        ],
+        "operationId": "knowledgeBasesDeleteInternalLinkChunk",
+        "summary": "Eliminar chunk de enlace interno",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chunk eliminado"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contacts/{contact_id}/contact_schedules": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "contact_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del contacto"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Contact Schedules"
+        ],
+        "operationId": "contactSchedulesIndex",
+        "summary": "Listar seguimientos v2 de un contacto",
+        "description": "Lista todos los seguimientos programados (v2) de un contacto. Contact Schedules es la segunda versión del sistema de seguimientos, complementaria a Contact Trackings.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de seguimientos v2",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/contact_schedule"
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Contact Schedules"
+        ],
+        "operationId": "contactSchedulesCreate",
+        "summary": "Crear seguimiento v2 para un contacto",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "contact_schedule": {
+                  "type": "object",
+                  "properties": {
+                    "scheduled_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Fecha y hora programada"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "description": "Notas del seguimiento"
+                    },
+                    "inbox_id": {
+                      "type": "integer"
+                    },
+                    "conversation_id": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Seguimiento v2 creado",
+            "schema": {
+              "$ref": "#/definitions/contact_schedule"
+            }
+          },
+          "422": {
+            "description": "Parámetros inválidos"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contact_schedules/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del seguimiento v2"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Contact Schedules"
+        ],
+        "operationId": "contactSchedulesShow",
+        "summary": "Ver seguimiento v2",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle del seguimiento v2",
+            "schema": {
+              "$ref": "#/definitions/contact_schedule"
+            }
+          },
+          "404": {
+            "description": "No encontrado"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Contact Schedules"
+        ],
+        "operationId": "contactSchedulesUpdate",
+        "summary": "Actualizar seguimiento v2",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "contact_schedule": {
+                  "type": "object",
+                  "properties": {
+                    "scheduled_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "inbox_id": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seguimiento v2 actualizado",
+            "schema": {
+              "$ref": "#/definitions/contact_schedule"
+            }
+          },
+          "422": {
+            "description": "Parámetros inválidos"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Contact Schedules"
+        ],
+        "operationId": "contactSchedulesDestroy",
+        "summary": "Eliminar seguimiento v2",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Eliminado"
+          }
+        }
+      },
+      "pause": {
+        "tags": [
+          "Contact Schedules"
+        ],
+        "operationId": "contactSchedulesPause",
+        "summary": "Pausar seguimiento v2",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seguimiento pausado"
+          },
+          "422": {
+            "description": "No se puede pausar en el estado actual"
+          }
+        }
+      },
+      "resume": {
+        "tags": [
+          "Contact Schedules"
+        ],
+        "operationId": "contactSchedulesResume",
+        "summary": "Reanudar seguimiento v2",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seguimiento reanudado"
+          },
+          "422": {
+            "description": "No se puede reanudar en el estado actual"
+          }
+        }
+      },
+      "cancel": {
+        "tags": [
+          "Contact Schedules"
+        ],
+        "operationId": "contactSchedulesCancel",
+        "summary": "Cancelar seguimiento v2 con razón",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "reason": {
+                  "type": "string",
+                  "description": "Razón de cancelación"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seguimiento cancelado"
+          },
+          "422": {
+            "description": "No se puede cancelar en el estado actual"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contact_schedules/{id}/pause": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "post": {
+        "tags": [
+          "Contact Schedules"
+        ],
+        "operationId": "contactSchedulesPause",
+        "summary": "Pausar seguimiento v2",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seguimiento pausado"
+          },
+          "422": {
+            "description": "No se puede pausar en el estado actual"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contact_schedules/{id}/resume": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "post": {
+        "tags": [
+          "Contact Schedules"
+        ],
+        "operationId": "contactSchedulesResume",
+        "summary": "Reanudar seguimiento v2",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seguimiento reanudado"
+          },
+          "422": {
+            "description": "No se puede reanudar en el estado actual"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contact_schedules/{id}/cancel": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "post": {
+        "tags": [
+          "Contact Schedules"
+        ],
+        "operationId": "contactSchedulesCancel",
+        "summary": "Cancelar seguimiento v2 con razón",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "reason": {
+                  "type": "string",
+                  "description": "Razón de cancelación"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seguimiento cancelado"
+          },
+          "422": {
+            "description": "No se puede cancelar en el estado actual"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contacts/{contact_id}/notes": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "contact_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del contacto"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Contact Notes"
+        ],
+        "operationId": "contactNotesIndex",
+        "summary": "Listar notas de un contacto",
+        "description": "Retorna todas las notas del contacto ordenadas por fecha de creación descendente.",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de notas",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/contact_note"
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Contact Notes"
+        ],
+        "operationId": "contactNotesCreate",
+        "summary": "Crear nota para un contacto",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "note"
+              ],
+              "properties": {
+                "note": {
+                  "type": "object",
+                  "required": [
+                    "content"
+                  ],
+                  "properties": {
+                    "content": {
+                      "type": "string",
+                      "description": "Contenido de la nota"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Nota creada",
+            "schema": {
+              "$ref": "#/definitions/contact_note"
+            }
+          },
+          "422": {
+            "description": "Contenido requerido"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/contacts/{contact_id}/notes/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        },
+        {
+          "name": "contact_id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID del contacto"
+        },
+        {
+          "name": "id",
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "ID de la nota"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Contact Notes"
+        ],
+        "operationId": "contactNotesShow",
+        "summary": "Ver nota",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle de la nota",
+            "schema": {
+              "$ref": "#/definitions/contact_note"
+            }
+          },
+          "404": {
+            "description": "Nota no encontrada"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Contact Notes"
+        ],
+        "operationId": "contactNotesUpdate",
+        "summary": "Actualizar nota",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "data",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "note": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Nota actualizada",
+            "schema": {
+              "$ref": "#/definitions/contact_note"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Contact Notes"
+        ],
+        "operationId": "contactNotesDestroy",
+        "summary": "Eliminar nota",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Nota eliminada"
+          },
+          "404": {
+            "description": "Nota no encontrada"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/website_sketch": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Website Sketch"
+        ],
+        "operationId": "websiteSketchShow",
+        "summary": "Analizar sitio web",
+        "description": "Analiza la estructura y contenido de un sitio web dado su URL. Si el análisis tarda más de 10 segundos, devuelve status `processing` con un `cache_key` que puede consultarse periódicamente con el endpoint `/website_sketch/status`.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "url",
+            "type": "string",
+            "required": true,
+            "description": "URL del sitio web a analizar",
+            "example": "https://ejemplo.com"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Análisis completado",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean"
+                },
+                "data": {
+                  "type": "object",
+                  "description": "Datos extraídos del sitio (título, descripción, páginas, etc.)"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Análisis en proceso (background)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean"
+                },
+                "status": {
+                  "type": "string",
+                  "example": "processing"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "cache_key": {
+                  "type": "string",
+                  "description": "Clave para consultar el resultado con /website_sketch/status"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error al procesar el sitio"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{account_id}/website_sketch/status": {
+      "parameters": [
+        {
+          "$ref": "#/parameters/account_id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Website Sketch"
+        ],
+        "operationId": "websiteSketchStatus",
+        "summary": "Consultar estado del análisis de sitio web",
+        "description": "Consulta el resultado de un análisis de sitio web iniciado previamente. Usar cuando el endpoint principal devolvió status `processing`.\n",
+        "security": [
+          {
+            "userApiKey": [
+
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cache_key",
+            "type": "string",
+            "required": true,
+            "description": "cache_key devuelto por el endpoint /website_sketch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado actual del análisis",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "processing",
+                    "completed"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "description": "Datos del análisis (presente cuando status=completed)"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -6211,6 +10390,492 @@
         "settings": {
           "type": "object",
           "description": "The associated settings for the integration"
+        }
+      }
+    },
+    "contact_tracking": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "ID único del seguimiento"
+        },
+        "contact_id": {
+          "type": "integer",
+          "description": "ID del contacto asociado"
+        },
+        "conversation_id": {
+          "type": "integer",
+          "description": "ID interno de la conversación relacionada"
+        },
+        "inbox_id": {
+          "type": "integer",
+          "description": "ID del inbox"
+        },
+        "inbox_name": {
+          "type": "string",
+          "description": "Nombre del inbox"
+        },
+        "objective": {
+          "type": "string",
+          "description": "Objetivo o descripción del seguimiento"
+        },
+        "scheduled_for": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Fecha y hora programada para el próximo intento"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "scheduled",
+            "active",
+            "paused",
+            "completed",
+            "cancelled",
+            "failed"
+          ],
+          "description": "Estado actual del seguimiento"
+        },
+        "max_attempts": {
+          "type": "integer",
+          "description": "Número máximo de intentos"
+        },
+        "attempt_count": {
+          "type": "integer",
+          "description": "Número de intentos realizados hasta ahora"
+        },
+        "attempts_remaining": {
+          "type": "integer",
+          "description": "Intentos restantes (max_attempts - attempt_count)"
+        },
+        "interval_days": {
+          "type": "integer",
+          "description": "(Legacy) Intervalo entre intentos en días"
+        },
+        "retry_interval_value": {
+          "type": "integer",
+          "description": "Valor del intervalo entre reintentos"
+        },
+        "retry_interval_unit": {
+          "type": "string",
+          "enum": [
+            "minutes",
+            "hours",
+            "days"
+          ],
+          "description": "Unidad del intervalo entre reintentos"
+        },
+        "whatsapp_templates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Nombres de plantillas WhatsApp por intento (en orden)"
+        },
+        "ai_context": {
+          "type": "string",
+          "description": "Contexto adicional para la generación de mensajes con IA"
+        },
+        "complementary_prompt": {
+          "type": "string",
+          "description": "Instrucciones adicionales para que el bot responda preguntas"
+        },
+        "quote_id": {
+          "type": "integer",
+          "description": "ID de cotización relacionada"
+        },
+        "paused_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Fecha y hora en que se pausó el seguimiento"
+        },
+        "last_attempt_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Fecha y hora del último intento ejecutado"
+        },
+        "last_message_sent": {
+          "type": "string",
+          "description": "Texto del último mensaje enviado"
+        },
+        "last_error": {
+          "type": "string",
+          "description": "Descripción del último error ocurrido (si status=failed)"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "tracking_template": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "ID único de la plantilla"
+        },
+        "account_id": {
+          "type": "integer",
+          "description": "ID de la cuenta propietaria"
+        },
+        "name": {
+          "type": "string",
+          "description": "Nombre descriptivo de la plantilla"
+        },
+        "objective": {
+          "type": "string",
+          "description": "Objetivo por defecto del seguimiento"
+        },
+        "ai_context": {
+          "type": "string",
+          "description": "Contexto para la generación de mensajes con IA"
+        },
+        "complementary_prompt": {
+          "type": "string",
+          "description": "Instrucciones adicionales para el bot"
+        },
+        "inbox_id": {
+          "type": "integer",
+          "description": "Inbox por defecto al aplicar la plantilla"
+        },
+        "inbox_name": {
+          "type": "string",
+          "description": "Nombre del inbox asociado"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Etiquetas de clasificación"
+        },
+        "whatsapp_templates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Nombres de plantillas WhatsApp por intento"
+        },
+        "creator": {
+          "type": "object",
+          "description": "Usuario que creó la plantilla",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "pagination_meta": {
+      "type": "object",
+      "description": "Metadatos de paginación (Kaminari)",
+      "properties": {
+        "current_page": {
+          "type": "integer",
+          "description": "Página actual"
+        },
+        "next_page": {
+          "type": "integer",
+          "description": "Página siguiente (null si no hay)"
+        },
+        "prev_page": {
+          "type": "integer",
+          "description": "Página anterior (null si no hay)"
+        },
+        "total_pages": {
+          "type": "integer",
+          "description": "Total de páginas"
+        },
+        "total_count": {
+          "type": "integer",
+          "description": "Total de registros"
+        }
+      }
+    },
+    "kanban_type_process": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "account_id": {
+          "type": "integer"
+        },
+        "process_name": {
+          "type": "string",
+          "description": "Nombre del tipo de proceso Kanban (columna principal)"
+        },
+        "default": {
+          "type": "boolean",
+          "description": "Es el tipo de proceso por defecto"
+        },
+        "is_system": {
+          "type": "boolean",
+          "description": "Es un proceso de sistema (no editable/eliminable por usuarios)"
+        },
+        "kanban_processes": {
+          "type": "array",
+          "description": "Etapas/pasos dentro de este tipo de proceso",
+          "items": {
+            "$ref": "#/definitions/kanban_process"
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "kanban_process": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "kanban_type_process_id": {
+          "type": "integer",
+          "description": "ID del tipo de proceso al que pertenece esta etapa"
+        },
+        "account_id": {
+          "type": "integer"
+        },
+        "type_process_name": {
+          "type": "string",
+          "description": "Nombre de la etapa (ej. \"Contactado\", \"Propuesta enviada\", \"Cerrado\")"
+        },
+        "position": {
+          "type": "integer",
+          "description": "Posición/orden en el tablero Kanban"
+        },
+        "default": {
+          "type": "boolean",
+          "description": "Es la etapa por defecto al asignar el tipo de proceso"
+        },
+        "is_system": {
+          "type": "boolean",
+          "description": "Etapa de sistema (no eliminable)"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "knowledge_base_article": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "account_id": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string",
+          "description": "Título del artículo"
+        },
+        "content": {
+          "type": "string",
+          "description": "Contenido en texto plano o markdown"
+        },
+        "source_url": {
+          "type": "string",
+          "description": "URL de origen del artículo"
+        },
+        "source_type": {
+          "type": "string",
+          "enum": [
+            "url",
+            "text",
+            "file",
+            "internal"
+          ],
+          "description": "Tipo de fuente del contenido"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "processing",
+            "processed",
+            "failed",
+            "archived"
+          ],
+          "description": "Estado de procesamiento/vectorización"
+        },
+        "language": {
+          "type": "string",
+          "description": "Código de idioma (ej. \"es\", \"en\")"
+        },
+        "chunks_count": {
+          "type": "integer",
+          "description": "Número de fragmentos vectorizados generados"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "knowledge_base_search_result": {
+      "type": "object",
+      "properties": {
+        "content_id": {
+          "type": "integer",
+          "description": "ID del artículo que contiene el fragmento"
+        },
+        "chunk_id": {
+          "type": "string",
+          "description": "ID único del fragmento vectorizado"
+        },
+        "title": {
+          "type": "string",
+          "description": "Título del artículo"
+        },
+        "url": {
+          "type": "string",
+          "description": "URL del artículo"
+        },
+        "content": {
+          "type": "string",
+          "description": "Fragmento de texto relevante"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "integer"
+        },
+        "similarity_score": {
+          "type": "number",
+          "format": "float",
+          "description": "Puntuación de similitud (0.0 - 1.0)"
+        },
+        "similarity_percentage": {
+          "type": "number",
+          "format": "float",
+          "description": "Similitud en porcentaje (0 - 100)"
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Metadatos adicionales del fragmento"
+        }
+      }
+    },
+    "contact_schedule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "contact_id": {
+          "type": "integer"
+        },
+        "account_id": {
+          "type": "integer"
+        },
+        "inbox_id": {
+          "type": "integer"
+        },
+        "conversation_id": {
+          "type": "integer"
+        },
+        "scheduled_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Fecha y hora programada del seguimiento"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Notas o instrucciones del seguimiento"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "active",
+            "paused",
+            "completed",
+            "cancelled"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "description": "Razón de cancelación (cuando status=cancelled)"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "contact_note": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "contact_id": {
+          "type": "integer"
+        },
+        "content": {
+          "type": "string",
+          "description": "Contenido de la nota"
+        },
+        "user": {
+          "type": "object",
+          "description": "Usuario que creó la nota",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },
@@ -7514,7 +12179,14 @@
         "Teams",
         "Webhooks",
         "Automation Rule",
-        "Help Center"
+        "Help Center",
+        "Contact Trackings",
+        "Tracking Templates",
+        "Contact Schedules",
+        "Contact Notes",
+        "Kanban",
+        "Knowledge Base",
+        "Website Sketch"
       ]
     },
     {

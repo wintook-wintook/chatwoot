@@ -1,0 +1,81 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - name: id
+    in: path
+    type: integer
+    required: true
+    description: ID del artículo
+get:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesShow
+  summary: Ver artículo
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Detalle del artículo
+      schema:
+        type: object
+        properties:
+          article:
+            $ref: '#/definitions/knowledge_base_article'
+    '404':
+      description: Artículo no encontrado
+patch:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesUpdate
+  summary: Actualizar artículo
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        properties:
+          knowledge_base:
+            type: object
+            properties:
+              title:
+                type: string
+              content:
+                type: string
+              source_url:
+                type: string
+              language:
+                type: string
+          auto_reprocess:
+            type: boolean
+            description: Si true, reprocesa/vectoriza el contenido actualizado
+  responses:
+    '200':
+      description: Artículo actualizado
+      schema:
+        type: object
+        properties:
+          article:
+            $ref: '#/definitions/knowledge_base_article'
+          message:
+            type: string
+    '422':
+      description: Parámetros inválidos
+delete:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesDestroy
+  summary: Eliminar artículo
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Artículo eliminado
+      schema:
+        type: object
+        properties:
+          message:
+            type: string
+    '404':
+      description: Artículo no encontrado

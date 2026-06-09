@@ -1,0 +1,35 @@
+type: object
+properties:
+  id:
+    type: integer
+  account_id:
+    type: integer
+  title:
+    type: string
+    description: Título del artículo
+  content:
+    type: string
+    description: Contenido en texto plano o markdown
+  source_url:
+    type: string
+    description: URL de origen del artículo
+  source_type:
+    type: string
+    enum: [url, text, file, internal]
+    description: Tipo de fuente del contenido
+  status:
+    type: string
+    enum: [pending, processing, processed, failed, archived]
+    description: Estado de procesamiento/vectorización
+  language:
+    type: string
+    description: Código de idioma (ej. "es", "en")
+  chunks_count:
+    type: integer
+    description: Número de fragmentos vectorizados generados
+  created_at:
+    type: string
+    format: date-time
+  updated_at:
+    type: string
+    format: date-time

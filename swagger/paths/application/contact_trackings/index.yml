@@ -1,0 +1,145 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - name: contact_id
+    in: path
+    type: integer
+    required: true
+    description: ID del contacto
+  - in: query
+    name: conversation_id
+    type: integer
+    required: false
+    description: Filtrar por ID de conversación (display_id del frontend)
+  - in: query
+    name: inbox_id
+    type: integer
+    required: false
+    description: Filtrar por ID de inbox
+  - in: query
+    name: status
+    type: string
+    required: false
+    enum: [pending, scheduled, active, paused, completed, cancelled, failed]
+    description: Filtrar por estado del seguimiento
+  - in: query
+    name: date_from
+    type: string
+    format: date-time
+    required: false
+    description: Fecha inicio (scheduled_for >= date_from)
+  - in: query
+    name: date_to
+    type: string
+    format: date-time
+    required: false
+    description: Fecha fin (scheduled_for <= date_to)
+  - in: query
+    name: search
+    type: string
+    required: false
+    description: Búsqueda en objective y last_message_sent
+  - $ref: '#/parameters/page'
+get:
+  tags:
+    - Contact Trackings
+  operationId: contactTrackingsList
+  summary: Listar seguimientos de un contacto
+  description: >
+    Lista todos los seguimientos programados de un contacto, con soporte de filtros avanzados
+    por conversación, inbox, estado, rango de fechas y búsqueda de texto.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de seguimientos con metadatos de paginación
+      schema:
+        type: object
+        properties:
+          trackings:
+            type: array
+            items:
+              $ref: '#/definitions/contact_tracking'
+          meta:
+            $ref: '#/definitions/pagination_meta'
+    '401':
+      description: No autorizado
+post:
+  tags:
+    - Contact Trackings
+  operationId: contactTrackingsCreate
+  summary: Crear un seguimiento
+  description: >
+    Crea un nuevo seguimiento automático para el contacto. El estado inicial es `pending`.
+    Soporta integración con IA (OpenAI) para generación de mensajes y plantillas de WhatsApp.
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        required:
+          - contact_tracking
+        properties:
+          contact_tracking:
+            type: object
+            required:
+              - objective
+              - scheduled_for
+              - inbox_id
+            properties:
+              objective:
+                type: string
+                description: Objetivo o descripción del seguimiento
+                example: Seguimiento cotización plan premium
+              scheduled_for:
+                type: string
+                format: date-time
+                description: Fecha y hora programada de ejecución (ISO 8601)
+                example: "2025-11-10T09:00:00Z"
+              inbox_id:
+                type: integer
+                description: ID del inbox por el que se enviará el mensaje
+              conversation_id:
+                type: integer
+                description: display_id de la conversación relacionada (el frontend usa display_id)
+              max_attempts:
+                type: integer
+                description: Número máximo de intentos automáticos
+                default: 3
+              retry_interval_value:
+                type: integer
+                description: Valor del intervalo entre intentos
+                default: 30
+              retry_interval_unit:
+                type: string
+                enum: [minutes, hours, days]
+                description: Unidad del intervalo entre intentos
+                default: minutes
+              ai_context:
+                type: string
+                description: Contexto adicional para la generación de mensajes con IA
+              complementary_prompt:
+                type: string
+                description: Instrucciones adicionales para que el bot responda preguntas específicas
+              quote_id:
+                type: integer
+                description: ID de cotización relacionada (opcional)
+              whatsapp_templates:
+                type: array
+                items:
+                  type: string
+                description: Lista de nombres de plantillas WhatsApp por intento (en orden)
+  responses:
+    '201':
+      description: Seguimiento creado exitosamente
+      schema:
+        type: object
+        properties:
+          tracking:
+            $ref: '#/definitions/contact_tracking'
+    '403':
+      description: Sin acceso al inbox especificado
+    '422':
+      description: Parámetros inválidos

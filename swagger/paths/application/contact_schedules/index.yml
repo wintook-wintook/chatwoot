@@ -1,0 +1,60 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - name: contact_id
+    in: path
+    type: integer
+    required: true
+    description: ID del contacto
+get:
+  tags:
+    - Contact Schedules
+  operationId: contactSchedulesIndex
+  summary: Listar seguimientos v2 de un contacto
+  description: >
+    Lista todos los seguimientos programados (v2) de un contacto.
+    Contact Schedules es la segunda versión del sistema de seguimientos,
+    complementaria a Contact Trackings.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de seguimientos v2
+      schema:
+        type: array
+        items:
+          $ref: '#/definitions/contact_schedule'
+post:
+  tags:
+    - Contact Schedules
+  operationId: contactSchedulesCreate
+  summary: Crear seguimiento v2 para un contacto
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        properties:
+          contact_schedule:
+            type: object
+            properties:
+              scheduled_at:
+                type: string
+                format: date-time
+                description: Fecha y hora programada
+              notes:
+                type: string
+                description: Notas del seguimiento
+              inbox_id:
+                type: integer
+              conversation_id:
+                type: integer
+  responses:
+    '201':
+      description: Seguimiento v2 creado
+      schema:
+        $ref: '#/definitions/contact_schedule'
+    '422':
+      description: Parámetros inválidos
