@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_07_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_09_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -945,7 +945,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_07_000002) do
     t.integer "chunk_index", default: 0, null: false
     t.index ["account_id", "source_type", "source_id", "chunk_index"], name: "idx_knowledge_items_source", unique: true
     t.index ["account_id"], name: "index_knowledge_items_on_account_id"
-    t.index ["embedding"], name: "idx_knowledge_items_embedding", opclass: :vector_cosine_ops, using: :ivfflat
     t.index ["knowledge_source_id"], name: "index_knowledge_items_on_knowledge_source_id"
   end
 
@@ -960,6 +959,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_07_000002) do
     t.datetime "updated_at", null: false
     t.string "sync_status", default: "idle", null: false
     t.integer "sync_jobs_pending", default: 0, null: false
+    t.index ["account_id", "source_type"], name: "idx_unique_native_knowledge_sources", unique: true, where: "((source_type)::text = ANY ((ARRAY['canned_response'::character varying, 'article'::character varying])::text[]))"
     t.index ["account_id", "source_type"], name: "index_knowledge_sources_on_account_id_and_source_type"
     t.index ["account_id"], name: "index_knowledge_sources_on_account_id"
   end
