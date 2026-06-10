@@ -68,6 +68,18 @@
           <option v-for="t in typeFilters" :key="t.id" :value="t.id">{{ t.name }}</option>
         </select>
 
+        <!-- Origen (@tickets_cases Fase C) -->
+        <select
+          v-model="originFilter"
+          class="!mb-0 w-36 text-sm"
+          @change="onFilterChange"
+        >
+          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_ORIGINS') }}</option>
+          <option v-for="o in originOptions" :key="o" :value="o">
+            {{ originLabel(o) }}
+          </option>
+        </select>
+
         <!-- Rango de fechas (no-margin + auto-width para alinear y acotar el ancho como los selects) -->
         <WootDateRangePicker
           class="no-margin auto-width w-56"
@@ -230,6 +242,15 @@ const STATUS_OPTIONS = [
   'escalated', 'resolved', 'validating', 'closed', 'cancelled',
 ];
 const PRIORITY_OPTIONS = ['low', 'medium', 'high', 'urgent'];
+// @tickets_cases Fase C — orígenes del ticket (incluye 'internal').
+const ORIGIN_OPTIONS = [
+  'whatsapp',
+  'web',
+  'email',
+  'bot',
+  'manual',
+  'internal',
+];
 const SORT_FIELDS = ['created_at', 'priority', 'status', 'sla_status'];
 const PER_PAGE_OPTIONS = [25, 50, 100];
 
@@ -244,6 +265,7 @@ export default {
       dateRange: [],        // [Date, Date]
       statusFilter: '',
       priorityFilter: '',
+      originFilter: '', // @tickets_cases Fase C
       activeFilter: 'all',
       activeType: '',       // '' = todos, o un case_type_id
       sortBy: 'created_at',
@@ -268,6 +290,9 @@ export default {
     slaOverdueCount() { return this.meta.sla_overdue_count || 0; },
     statusOptions()   { return STATUS_OPTIONS; },
     priorityOptions() { return PRIORITY_OPTIONS; },
+    originOptions() {
+      return ORIGIN_OPTIONS;
+    },
     perPageOptions()  { return PER_PAGE_OPTIONS; },
     sortOptions() {
       return SORT_FIELDS.map(value => ({
@@ -294,6 +319,7 @@ export default {
         this.dateRange.length > 0 ||
         !!this.statusFilter ||
         !!this.priorityFilter ||
+        !!this.originFilter ||
         this.activeFilter !== 'all' ||
         !!this.activeType
       );
@@ -317,6 +343,7 @@ export default {
       if (this.dateRange[1])       filters.date_to = this.formatDateParam(this.dateRange[1]);
       if (this.statusFilter)       filters.status = this.statusFilter;
       if (this.priorityFilter)     filters.priority = this.priorityFilter;
+      if (this.originFilter)       filters.origin = this.originFilter;
       if (this.activeFilter === 'sla_overdue') filters.sla_status = 'overdue';
       if (this.activeFilter === 'unassigned')  filters.assignee_id = 'null';
       if (this.activeType)         filters.case_type_id = this.activeType;
@@ -362,6 +389,7 @@ export default {
       this.dateRange = [];
       this.statusFilter = '';
       this.priorityFilter = '';
+      this.originFilter = '';
       this.activeFilter = 'all';
       this.activeType = '';
       this.currentPage = 1;
@@ -409,6 +437,9 @@ export default {
     },
     statusLabel(key)   { return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key; },
     priorityLabel(key) { return this.$t(`CASE_TICKETS.PRIORITIES.${key}`) || key; },
+    originLabel(key) {
+      return this.$t(`CASE_TICKETS.ORIGINS.${key}`) || key;
+    },
     formatDate(dateStr) {
       if (!dateStr) return '';
       return new Date(dateStr).toLocaleDateString(undefined, {

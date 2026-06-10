@@ -74,6 +74,7 @@
       "APPLY": "Aplicar",
       "ALL_STATUSES": "Todos los estados",
       "ALL_PRIORITIES": "Todas las prioridades",
+      "ALL_ORIGINS": "Todos los orígenes",
       "SORT_BY": "Ordenar por",
       "SORT_FIELDS": {
         "created_at": "Fecha",
@@ -549,6 +550,14 @@
       "medium": "Media",
       "high": "Alta",
       "urgent": "Urgente"
+    },
+    "ORIGINS": {
+      "whatsapp": "WhatsApp",
+      "web": "Web",
+      "email": "Correo",
+      "bot": "Bot",
+      "manual": "Manual",
+      "internal": "Interno"
     },
     "TICKET_KIND": {
       "incident": "Incidente",

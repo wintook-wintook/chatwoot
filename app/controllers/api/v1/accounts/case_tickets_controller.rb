@@ -86,6 +86,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     tickets = tickets.where(affected_service_id: params[:affected_service_id])       if params[:affected_service_id].present?
     tickets = tickets.where(category_id:  params[:category_id])                       if params[:category_id].present?
     tickets = tickets.where(priority:     CaseTicket.priorities[params[:priority]])  if params[:priority].present?
+    tickets = tickets.where(origin:       CaseTicket.origins[params[:origin]])       if params[:origin].present? # @tickets_cases Fase C
     tickets = tickets.where(sla_status:  CaseTicket.sla_statuses[params[:sla_status]]) if params[:sla_status].present?
     tickets = apply_assignee(tickets)
     tickets = tickets.where(contact_id:  params[:contact_id])                        if params[:contact_id].present?

@@ -74,6 +74,7 @@
       "APPLY": "Apply",
       "ALL_STATUSES": "All statuses",
       "ALL_PRIORITIES": "All priorities",
+      "ALL_ORIGINS": "All origins",
       "SORT_BY": "Sort by",
       "SORT_FIELDS": {
         "created_at": "Date",
@@ -549,6 +550,14 @@
       "medium": "Medium",
       "high": "High",
       "urgent": "Urgent"
+    },
+    "ORIGINS": {
+      "whatsapp": "WhatsApp",
+      "web": "Web",
+      "email": "Email",
+      "bot": "Bot",
+      "manual": "Manual",
+      "internal": "Internal"
     },
     "TICKET_KIND": {
       "incident": "Incident",
