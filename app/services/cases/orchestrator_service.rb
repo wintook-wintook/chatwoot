@@ -14,7 +14,7 @@
 # ================================================================================
 
 class Cases::OrchestratorService
-  def initialize(account:, contact:, conversation: nil)
+  def initialize(account:, contact: nil, conversation: nil)
     @account      = account
     @contact      = contact
     @conversation = conversation
@@ -75,6 +75,31 @@ class Cases::OrchestratorService
     ticket = CaseTicket.create!(attrs)
     Cases::RuleEngineService.new(ticket).evaluate!
     enqueue_ai_classification(ticket) # @tickets_cases 3B
+    ticket
+  end
+
+  # @tickets_cases Fase C — ticket interno (agente→agente, sin contacto).
+  # requester = agente solicitante; assignee = agente que lo atenderá (opcional).
+  # No encola clasificación IA (no hay mensaje de cliente que clasificar).
+  def create_internal(requester:, title:, assignee: nil, priority: nil, case_type_id: nil,
+                      description: nil, ticket_kind: nil, custom_attributes: {})
+    attrs = {
+      account:       @account,
+      contact:       nil,
+      requester:     requester,
+      case_type:     resolve_case_type(case_type_id),
+      origin:        :internal,
+      assignee:      assignee,
+      assignee_type: assignee ? :agent : :bot,
+      title:         title,
+      description:   description,
+      custom_attributes: custom_attributes || {}
+    }
+    attrs[:priority]    = priority    if priority.present?
+    attrs[:ticket_kind] = ticket_kind if ticket_kind.present?
+
+    ticket = CaseTicket.create!(attrs)
+    Cases::RuleEngineService.new(ticket).evaluate!
     ticket
   end
 

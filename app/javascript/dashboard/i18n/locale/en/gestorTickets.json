@@ -150,6 +150,18 @@
       "SUCCESS": "Assignment updated",
       "ERROR": "Could not update the assignment"
     },
+    "INTERNAL": {
+      "TITLE": "Create internal ticket",
+      "NEW_BUTTON": "Internal ticket",
+      "ASSIGNEE_LABEL": "Assign to (agent)",
+      "ASSIGNEE_NONE": "— Unassigned —",
+      "TITLE_PLACEHOLDER": "Briefly describe the request",
+      "SUBMIT": "Create internal ticket",
+      "SUCCESS": "Internal ticket created",
+      "ERROR": "Could not create the internal ticket",
+      "BADGE": "Internal",
+      "REQUESTER_LABEL": "Requester"
+    },
     "ESCALATION": {
       "BUTTON": "Escalate",
       "LEVEL_TITLE": "Escalation level",

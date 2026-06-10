@@ -1179,6 +1179,20 @@ export default {
               >{{ formatDate(ticket.resolved_at) }}</span
             >
           </div>
+          <!-- @tickets_cases Fase C — solicitante en tickets internos -->
+          <div
+            v-if="ticket.is_internal && ticket.requester"
+            class="flex flex-col gap-0.5"
+          >
+            <span
+              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+              >{{ $t('CASE_TICKETS.INTERNAL.REQUESTER_LABEL') }}</span
+            >
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ ticket.requester.name }}</span
+            >
+          </div>
         </div>
       </div>
 

@@ -7,9 +7,15 @@
   <div class="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900">
     <!-- Header -->
     <div class="flex-shrink-0 px-6 pt-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50">
-      <h1 class="m-0 mb-3 text-xl font-bold text-slate-800 dark:text-slate-100">
-        {{ $t('CASE_TICKETS.SIDEBAR.TITLE') }}
-      </h1>
+      <div class="flex items-center justify-between mb-3">
+        <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
+          {{ $t('CASE_TICKETS.SIDEBAR.TITLE') }}
+        </h1>
+        <!-- @tickets_cases Fase C — alta de ticket interno (agente→agente) -->
+        <woot-button size="small" icon="add" @click="showInternalModal = true">
+          {{ $t('CASE_TICKETS.INTERNAL.NEW_BUTTON') }}
+        </woot-button>
+      </div>
 
       <!-- Filtros rápidos como pestañas nativas -->
       <woot-tabs :index="activeQuickTabIndex" @change="onQuickTabChange">
@@ -134,6 +140,13 @@
           <span class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded" :class="priorityBadge(ticket.priority)">
             {{ priorityLabel(ticket.priority) }}
           </span>
+          <!-- @tickets_cases Fase C — distintivo de ticket interno -->
+          <span
+            v-if="ticket.is_internal"
+            class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-300"
+          >
+            {{ $t('CASE_TICKETS.INTERNAL.BADGE') }}
+          </span>
         </div>
 
         <!-- Título y status -->
@@ -187,12 +200,21 @@
         </div>
       </div>
     </div>
+
+    <!-- @tickets_cases Fase C — modal de alta de ticket interno -->
+    <CaseTicketInternalModal
+      v-if="showInternalModal"
+      :show="showInternalModal"
+      @created="onInternalCreated"
+      @close="showInternalModal = false"
+    />
   </div>
 </template>
 
 <script>
 import { mapGetters } from 'vuex';
 import WootDateRangePicker from 'dashboard/components/ui/DateRangePicker.vue';
+import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
 
 const QUICK_FILTERS = [
   { key: 'all',         label: 'Todos' },
@@ -213,9 +235,10 @@ const PER_PAGE_OPTIONS = [25, 50, 100];
 
 export default {
   name: 'GestorTicketsIndex',
-  components: { WootDateRangePicker },
+  components: { WootDateRangePicker, CaseTicketInternalModal },
   data() {
     return {
+      showInternalModal: false, // @tickets_cases Fase C
       search: '',
       searchDebounce: null,
       dateRange: [],        // [Date, Date]
@@ -281,6 +304,12 @@ export default {
     this.fetch();
   },
   methods: {
+    // @tickets_cases Fase C — tras crear un ticket interno, refresca el listado.
+    onInternalCreated() {
+      this.showInternalModal = false;
+      this.currentPage = 1;
+      this.fetch();
+    },
     fetch() {
       const filters = { page: this.currentPage, per_page: this.perPage };
       if (this.search.trim())      filters.q = this.search.trim();

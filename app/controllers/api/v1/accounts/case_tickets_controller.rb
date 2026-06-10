@@ -111,6 +111,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
   # POST /api/v1/accounts/:account_id/case_tickets
   def create
+    return create_internal_ticket if internal_ticket_requested?
+
     case_type = Current.account.case_types.find_by(id: ticket_params[:case_type_id])
     custom = custom_field_values(case_type)
     missing = missing_required_fields(case_type, custom)
@@ -134,6 +136,23 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       category_id:         ticket_params[:category_id],
       custom_attributes:   custom
     )
+
+    render json: { case_ticket: ticket_json(ticket) }, status: :created
+  rescue ActiveRecord::RecordNotFound => e
+    render json: { error: e.message }, status: :not_found
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
+  end
+
+  # @tickets_cases Fase C — alta de ticket interno (agente→agente, sin contacto).
+  # El solicitante es el usuario actual; el assignee es el agente que lo atenderá.
+  def create_internal_ticket
+    custom = custom_fields_or_render_error
+    return if performed? # ya respondió con el error de campos requeridos
+
+    ticket = Cases::OrchestratorService.new(account: Current.account)
+                                       .create_internal(**internal_ticket_attrs(custom))
+    notify_assignee(ticket) # @tickets_cases Fase A — avisa al agente asignado
 
     render json: { case_ticket: ticket_json(ticket) }, status: :created
   rescue ActiveRecord::RecordNotFound => e
@@ -365,8 +384,21 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     params.require(:case_ticket).permit(
       :contact_id, :conversation_id, :case_type_id, :title,
       :priority, :description,
-      :ticket_kind, :impact, :urgency, :affected_service_id, :category_id
+      :ticket_kind, :impact, :urgency, :affected_service_id, :category_id,
+      :internal, :assignee_id # @tickets_cases Fase C — ticket interno
     )
+  end
+
+  # @tickets_cases Fase C — valida y devuelve los campos personalizados; si falta
+  # alguno requerido, renderiza el error (el caller corta con `performed?`).
+  def custom_fields_or_render_error
+    case_type = Current.account.case_types.find_by(id: ticket_params[:case_type_id])
+    custom = custom_field_values(case_type)
+    missing = missing_required_fields(case_type, custom)
+    if missing.any?
+      render json: { error: ["Campos requeridos: #{missing.join(', ')}"] }, status: :unprocessable_entity
+    end
+    custom
   end
 
   # @tickets_cases 2K — valores de los campos personalizados, acotados a las claves
@@ -459,6 +491,9 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       contact_tracking_id:        ticket.contact_tracking_id,
       assignee_id:                ticket.assignee_id,
       team_id:                    ticket.team_id,
+      requester_id:               ticket.requester_id,                # @tickets_cases Fase C
+      requester:                  ref_user_json(ticket.requester),    # @tickets_cases Fase C
+      is_internal:                ticket.internal?,                   # @tickets_cases Fase C
       can_transition_to:          valid_transitions_for(ticket)
     }
   end
@@ -524,6 +559,13 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     { id: record.id, name: record.name }
   end
 
+  # @tickets_cases Fase C — referencia ligera de usuario (solicitante interno).
+  def ref_user_json(user)
+    return nil unless user
+
+    { id: user.id, name: user.name, thumbnail: user.avatar_url }
+  end
+
   # @tickets_cases 2H — resumen del artículo KB enlazado.
   def kb_article_json(article)
     return nil unless article
@@ -559,23 +601,54 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     touched
   end
 
-  # @tickets_cases Fase A — notifica al agente recién asignado (bell nativo).
-  # Solo si hay assignee, cambió respecto al previo y no es auto-asignación.
-  # Falla en silencio para no romper la asignación si la notificación tiene problemas.
+  # @tickets_cases Fase A — notifica al agente recién asignado (solo si cambió).
   def notify_new_assignee(previous_assignee_id)
-    assignee = @ticket.assignee
-    return if assignee.nil?
-    return if assignee.id == previous_assignee_id
-    return if assignee.id == current_user&.id
+    return if @ticket.assignee_id == previous_assignee_id
+
+    notify_assignee(@ticket)
+  end
+
+  # @tickets_cases Fase A — notificación nativa (bell) al agente asignado de un ticket.
+  # No notifica auto-asignaciones. Falla en silencio para no romper el flujo principal.
+  def notify_assignee(ticket)
+    assignee = ticket.assignee
+    return if assignee.nil? || assignee.id == current_user&.id
 
     NotificationBuilder.new(
       notification_type: 'case_ticket_assignment',
       user:              assignee,
       account:           Current.account,
-      primary_actor:     @ticket
+      primary_actor:     ticket
     ).perform
   rescue StandardError => e
     Rails.logger.error("[GestorTickets] notificación de asignación: #{e.message}")
+  end
+
+  # @tickets_cases Fase C — kwargs para OrchestratorService#create_internal.
+  def internal_ticket_attrs(custom)
+    {
+      requester:         current_user,
+      assignee:          resolve_internal_assignee,
+      case_type_id:      ticket_params[:case_type_id],
+      title:             ticket_params[:title],
+      priority:          ticket_params[:priority],
+      description:       ticket_params[:description],
+      ticket_kind:       ticket_params[:ticket_kind],
+      custom_attributes: custom
+    }
+  end
+
+  # @tickets_cases Fase C — ¿el request pide un ticket interno?
+  def internal_ticket_requested?
+    ActiveModel::Type::Boolean.new.cast(params.dig(:case_ticket, :internal))
+  end
+
+  # @tickets_cases Fase C — agente al que se asigna el ticket interno (opcional).
+  def resolve_internal_assignee
+    id = params.dig(:case_ticket, :assignee_id)
+    return nil if id.blank?
+
+    Current.account.users.find(id)
   end
 
   # Tipo de asignación derivado (nunca se setea a mano): agente → equipo → bot.

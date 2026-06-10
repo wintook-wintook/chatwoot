@@ -37,10 +37,11 @@
 #  assignee_id                :bigint
 #  case_type_id               :bigint
 #  category_id                :bigint
-#  contact_id                 :bigint           not null
+#  contact_id                 :bigint
 #  contact_tracking_id        :bigint
 #  conversation_id            :bigint
 #  kb_article_id              :bigint
+#  requester_id               :bigint
 #  team_id                    :bigint
 #
 # Indexes
@@ -55,6 +56,11 @@
 #  index_case_tickets_on_category_id                  (category_id)
 #  index_case_tickets_on_kb_article_id                (kb_article_id)
 #  index_case_tickets_on_metadata                     (metadata) USING gin
+#  index_case_tickets_on_requester_id                 (requester_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (requester_id => users.id)
 #
 
 class CaseTicket < ApplicationRecord
@@ -96,7 +102,8 @@ class CaseTicket < ApplicationRecord
   CHANGE_APPROVAL_STATUSES = %w[pending approved rejected].freeze
 
   belongs_to :account
-  belongs_to :contact
+  belongs_to :contact,           optional: true # @tickets_cases Fase C — nil en tickets internos
+  belongs_to :requester,         class_name: 'User', optional: true # @tickets_cases Fase C — agente solicitante (interno)
   belongs_to :conversation,      optional: true
   belongs_to :contact_tracking,  optional: true
   belongs_to :assignee,          class_name: 'User', optional: true
@@ -110,7 +117,8 @@ class CaseTicket < ApplicationRecord
   has_many   :ticket_relations,        class_name: 'CaseTicketRelation', foreign_key: :ticket_id,         dependent: :destroy, inverse_of: :ticket
   has_many   :inverse_ticket_relations, class_name: 'CaseTicketRelation', foreign_key: :related_ticket_id, dependent: :destroy, inverse_of: :related_ticket
 
-  enum origin:       { whatsapp: 0, web: 1, email: 2, bot: 3, manual: 4 }
+  # @tickets_cases Fase C — `internal` (5) al final: ticket agente→agente sin cliente.
+  enum origin:       { whatsapp: 0, web: 1, email: 2, bot: 3, manual: 4, internal: 5 }
   enum priority:     { low: 0, medium: 1, high: 2, urgent: 3 }
   enum status:       { open: 0, classified: 1, in_progress: 2, waiting_on_customer: 3,
                        waiting_on_internal: 4, escalated: 5, resolved: 6, closed: 7, cancelled: 8,
@@ -132,6 +140,11 @@ class CaseTicket < ApplicationRecord
   validates :status,        presence: true
   validates :assignee_type, presence: true
   validates :sla_status,    presence: true
+  # @tickets_cases Fase C — externo lleva contacto; interno lleva solicitante.
+  validate :contact_or_requester_present
+
+  # @tickets_cases Fase C — tickets internos (origin: internal, sin contacto).
+  scope :internal, -> { where(origin: :internal) }
 
   before_validation :derive_priority_from_matrix # @tickets_cases 2B
   before_create :assign_sla_targets
@@ -394,6 +407,14 @@ class CaseTicket < ApplicationRecord
       origin:     :system,
       payload:    { case_type: case_type&.name, priority: priority, origin: origin }
     )
+  end
+
+  # @tickets_cases Fase C — todo ticket es de un contacto (externo) o de un agente
+  # solicitante (interno). No puede quedarse sin ambos.
+  def contact_or_requester_present
+    return if contact_id.present? || requester_id.present?
+
+    errors.add(:base, 'Debe tener un contacto o un solicitante interno')
   end
 
   def event_type_for_transition(old_status, new_status)

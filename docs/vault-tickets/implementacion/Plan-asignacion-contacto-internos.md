@@ -100,7 +100,14 @@ AHORA: +ContactInfoPanel.vue (ficha)→ CaseTicketPanel → modal(contactId, con
 
 ---
 
-## Fase C — Tickets internos (agente → agente)
+## Fase C — Tickets internos (agente → agente) ✅ HECHA
+
+> **Estado:** implementada y verificada en navegador (Puppeteer, cuenta 2).
+> Migración `contact_id` nullable + `requester_id`, `origin: internal`, modal
+> [+ Ticket interno], badge INTERNO, solicitante en el detalle, notificación al
+> asignado (reutiliza Fase A). Ver [[Historial-de-implementacion]] (entrada Fase C).
+> **Mejora futura (no bloqueante):** filtro dedicado por `origin` en el listado.
+
 
 Decisión de modelo: `contact_id` nullable + `requester_id` + `origin: internal`.
 

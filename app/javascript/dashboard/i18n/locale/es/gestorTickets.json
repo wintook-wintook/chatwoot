@@ -150,6 +150,18 @@
       "SUCCESS": "Asignación actualizada",
       "ERROR": "No se pudo actualizar la asignación"
     },
+    "INTERNAL": {
+      "TITLE": "Crear ticket interno",
+      "NEW_BUTTON": "Ticket interno",
+      "ASSIGNEE_LABEL": "Asignar a (agente)",
+      "ASSIGNEE_NONE": "— Sin asignar —",
+      "TITLE_PLACEHOLDER": "Describe brevemente la solicitud",
+      "SUBMIT": "Crear ticket interno",
+      "SUCCESS": "Ticket interno creado",
+      "ERROR": "No se pudo crear el ticket interno",
+      "BADGE": "Interno",
+      "REQUESTER_LABEL": "Solicitante"
+    },
     "ESCALATION": {
       "BUTTON": "Escalar",
       "LEVEL_TITLE": "Nivel de escalamiento",
