@@ -188,28 +188,21 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   end
 
   # PATCH /api/v1/accounts/:account_id/case_tickets/:id/assign
+  # Agente y equipo COEXISTEN (equipo = cola responsable, agente = persona).
+  # Cada campo se actualiza solo si viene en el request; valor vacío/`none`/`0`
+  # lo limpia. `assignee_type` se DERIVA (agente → equipo → bot), nunca se setea
+  # a mano. Acepta `assignee_id` y/o `team_id`.
   def assign
-    if params[:assignee_id].present?
-      user = Current.account.users.find_by(id: params[:assignee_id])
-      return render json: { error: 'Agente no encontrado' }, status: :not_found unless user
+    return render json: { error: 'Se requiere assignee_id o team_id' }, status: :unprocessable_entity unless apply_assignment_params
 
-      @ticket.update!(assignee: user, assignee_type: :agent)
-      @ticket.case_events.create!(account: Current.account, event_type: :assigned,
-                                  origin: :agent, actor: current_user,
-                                  payload: { assignee_id: user.id, assignee_name: user.name })
-    elsif params[:team_id].present?
-      team = Current.account.teams.find_by(id: params[:team_id])
-      return render json: { error: 'Equipo no encontrado' }, status: :not_found unless team
-
-      @ticket.update!(team: team, assignee_type: :team)
-      @ticket.case_events.create!(account: Current.account, event_type: :assigned,
-                                  origin: :agent, actor: current_user,
-                                  payload: { team_id: team.id, team_name: team.name })
-    else
-      return render json: { error: 'Se requiere assignee_id o team_id' }, status: :unprocessable_entity
-    end
+    @ticket.assignee_type = derived_assignee_type
+    @ticket.save!
+    @ticket.case_events.create!(account: Current.account, event_type: :assigned,
+                                origin: :agent, actor: current_user, payload: assignment_payload)
 
     render json: { case_ticket: ticket_json(@ticket.reload) }
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: 'Agente o equipo no encontrado' }, status: :not_found
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
   end
@@ -547,6 +540,44 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       'case_tickets.description ILIKE :q OR contacts.name ILIKE :q',
       q: term
     )
+  end
+
+  # Aplica los campos de asignación presentes en el request (agente y/o equipo).
+  # Devuelve true si tocó algún campo. Valor vacío/`none`/`0` limpia la FK.
+  def apply_assignment_params
+    touched = false
+    if params.key?(:assignee_id)
+      @ticket.assignee = blank_assignment?(params[:assignee_id]) ? nil : Current.account.users.find(params[:assignee_id])
+      touched = true
+    end
+    if params.key?(:team_id)
+      @ticket.team = blank_assignment?(params[:team_id]) ? nil : Current.account.teams.find(params[:team_id])
+      touched = true
+    end
+    touched
+  end
+
+  # Tipo de asignación derivado (nunca se setea a mano): agente → equipo → bot.
+  def derived_assignee_type
+    return :agent if @ticket.assignee_id
+    return :team if @ticket.team_id
+
+    :bot
+  end
+
+  # Valores que representan "sin asignar" al asignar agente/equipo (limpia la FK).
+  def blank_assignment?(value)
+    value.to_s.strip.blank? || %w[null none unassigned 0].include?(value.to_s.strip.downcase)
+  end
+
+  # Payload del evento :assigned con el estado resultante de agente y equipo.
+  def assignment_payload
+    {
+      assignee_id:   @ticket.assignee_id,
+      assignee_name: @ticket.assignee&.name,
+      team_id:       @ticket.team_id,
+      team_name:     @ticket.team&.name
+    }
   end
 
   # Filtro por agente. 'null'/'none'/'unassigned' → tickets sin asignar (IS NULL).

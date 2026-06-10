@@ -49,7 +49,14 @@ tags: [tickets, plan, asignacion, contacto, internos, notificaciones]
 
 ---
 
-## Fase A — Asignación manual a agente / equipo (UI + pulido backend)
+## Fase A — Asignación manual a agente / equipo (UI + pulido backend) ✅ NÚCLEO HECHO
+
+> **Estado:** núcleo implementado y verificado en navegador (Puppeteer, cuenta 2):
+> agente + equipo coexisten, des-asignación, `assignee_type` derivado, evento.
+> Ver [[Historial-de-implementacion]] (entrada Fase A núcleo).
+> **Pendiente:** parte 2 — notificación nativa al agente asignado (A1 "encolar
+> notificación" + el bloque C4) → paso aparte por el bitfield de notification_settings.
+
 
 ```
 TicketDetail.vue                 store/caseTickets.js          API

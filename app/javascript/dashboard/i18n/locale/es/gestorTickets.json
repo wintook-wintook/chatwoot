@@ -142,6 +142,14 @@
       "TAB_CUSTOM": "Campos personalizados",
       "NO_CUSTOM_FIELDS": "Este tipo no tiene campos personalizados"
     },
+    "ASSIGN": {
+      "TITLE": "Asignación",
+      "TEAM_LABEL": "Equipo",
+      "AGENT_LABEL": "Agente",
+      "NONE": "— Sin asignar —",
+      "SUCCESS": "Asignación actualizada",
+      "ERROR": "No se pudo actualizar la asignación"
+    },
     "ESCALATION": {
       "BUTTON": "Escalar",
       "LEVEL_TITLE": "Nivel de escalamiento",

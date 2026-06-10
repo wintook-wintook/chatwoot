@@ -142,6 +142,14 @@
       "TAB_CUSTOM": "Custom fields",
       "NO_CUSTOM_FIELDS": "This type has no custom fields"
     },
+    "ASSIGN": {
+      "TITLE": "Assignment",
+      "TEAM_LABEL": "Team",
+      "AGENT_LABEL": "Agent",
+      "NONE": "— Unassigned —",
+      "SUCCESS": "Assignment updated",
+      "ERROR": "Could not update the assignment"
+    },
     "ESCALATION": {
       "BUTTON": "Escalate",
       "LEVEL_TITLE": "Escalation level",
