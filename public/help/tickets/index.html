@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Manual de uso · Gestor de Tickets</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --fg: #1e293b;
+        --muted: #64748b;
+        --border: #e2e8f0;
+        --accent: #4f46e5;
+        --soft: #eef2ff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f172a;
+          --card: #1e293b;
+          --fg: #e2e8f0;
+          --muted: #94a3b8;
+          --border: #334155;
+          --accent: #818cf8;
+          --soft: #1e1b4b;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        line-height: 1.65;
+        padding: 2rem 1rem 4rem;
+      }
+      main { width: 80%; max-width: 80%; margin: 0 auto; }
+      header.hero {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2.5rem;
+        margin-bottom: 1.5rem;
+      }
+      header.hero h1 { margin: 0 0 .25rem; font-size: 1.9rem; }
+      header.hero p { color: var(--muted); margin: 0; }
+
+      nav.toc {
+        background: var(--soft);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 2rem;
+      }
+      nav.toc strong { display: block; margin-bottom: .5rem; font-size: .9rem; }
+      nav.toc ol { margin: 0; padding-left: 1.25rem; }
+      nav.toc a { color: var(--accent); text-decoration: none; }
+      nav.toc a:hover { text-decoration: underline; }
+
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2rem 2.25rem;
+        margin-bottom: 1.5rem;
+      }
+      section h2 {
+        margin: 0 0 .75rem;
+        font-size: 1.3rem;
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        cursor: pointer;
+        user-select: none;
+      }
+      /* Chevron del acordeón */
+      section h2::after {
+        content: "▾";
+        margin-left: auto;
+        font-size: 1rem;
+        color: var(--muted);
+        transition: transform .15s ease;
+      }
+      section.collapsed h2 { margin-bottom: 0; }
+      section.collapsed h2::after { transform: rotate(-90deg); }
+      /* Oculta todo el contenido de la sección menos el título cuando está colapsada */
+      section.collapsed > *:not(h2) { display: none; }
+      section h2 .num {
+        background: var(--accent);
+        color: #fff;
+        width: 1.8rem;
+        height: 1.8rem;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .95rem;
+        flex-shrink: 0;
+      }
+      h3 { font-size: 1.05rem; margin: 1.5rem 0 .4rem; }
+      p { margin: .6rem 0; }
+      ul { padding-left: 1.25rem; margin: .5rem 0; }
+      li { margin: .35rem 0; }
+      code {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: .1rem .4rem;
+        font-size: .85em;
+      }
+      figure {
+        margin: 1.25rem 0 .5rem;
+      }
+      figure img {
+        max-width: 100%;
+        max-height: 240px;
+        width: auto;
+        height: auto;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        display: block;
+        margin: 0 auto;
+        cursor: zoom-in;
+        transition: box-shadow .15s ease;
+      }
+      figure img:hover { box-shadow: 0 4px 16px rgba(0,0,0,.18); }
+      figcaption {
+        color: var(--muted);
+        font-size: .82rem;
+        margin-top: .5rem;
+        text-align: center;
+      }
+      figcaption::after {
+        content: " · 🔍 clic para ampliar";
+        opacity: .7;
+      }
+      /* Lightbox */
+      .lightbox {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        z-index: 1000;
+        cursor: zoom-out;
+      }
+      .lightbox img {
+        max-width: 95%;
+        max-height: 95%;
+        border-radius: 8px;
+        box-shadow: 0 8px 40px rgba(0,0,0,.5);
+      }
+      .tip {
+        background: var(--soft);
+        border-left: 3px solid var(--accent);
+        border-radius: 0 8px 8px 0;
+        padding: .75rem 1rem;
+        margin: 1rem 0;
+        font-size: .92rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        font-size: .92rem;
+      }
+      th, td {
+        border: 1px solid var(--border);
+        padding: .5rem .75rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      th { background: var(--bg); }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: .85rem;
+        margin-top: 2rem;
+      }
+      footer a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <h1>Manual de uso · Gestor de Tickets</h1>
+        <p>Sistema de tickets ITIL de Wintook — guía paso a paso con capturas reales.</p>
+      </header>
+
+      <nav class="toc">
+        <strong>Contenido</strong>
+        <ol>
+          <li><a href="#intro">Conceptos básicos</a></li>
+          <li><a href="#listado">El listado de tickets</a></li>
+          <li><a href="#crear">Crear un ticket</a></li>
+          <li><a href="#detalle">El detalle de un ticket</a></li>
+          <li><a href="#kanban">El tablero (Kanban)</a></li>
+          <li><a href="#metricas">Métricas</a></li>
+          <li><a href="#config">Configuración (tipos, reglas, SLA)</a></li>
+          <li><a href="#folio">Configuración del folio</a></li>
+          <li><a href="#ia">Inteligencia Artificial</a></li>
+          <li><a href="#ciclo">Ciclo de vida, estados y cierre</a></li>
+          <li><a href="#itil">Flujo ITIL avanzado</a></li>
+          <li><a href="#glosario">Glosario ITIL</a></li>
+        </ol>
+      </nav>
+
+      <!-- 1 -->
+      <section id="intro">
+        <h2><span class="num">1</span> Conceptos básicos</h2>
+        <h3 style="margin-top:0">Cómo acceder</h3>
+        <p>
+          El Gestor de Tickets vive en su propio icono (📋) en la barra lateral
+          izquierda. Al entrar verás el menú del módulo: <em>Todos los tickets,
+          Tablero, Métricas</em> y la configuración. Si no ves el icono, el módulo
+          puede no estar habilitado para tu cuenta — contacta al administrador.
+        </p>
+        <p>
+          Un <strong>ticket</strong> registra un caso de soporte asociado a un
+          <strong>contacto</strong>. Puede enlazarse a una conversación (y desde
+          una misma conversación pueden abrirse varios tickets), o crearse de
+          forma independiente.
+        </p>
+        <h3>Cómo se clasifica un ticket</h3>
+        <table>
+          <tr><th>Campo</th><th>Qué es</th></tr>
+          <tr><td><strong>Tipo de caso</strong></td><td>Categoría configurable por cuenta, con color (p. ej. Soporte).</td></tr>
+          <tr><td><strong>Naturaleza del caso (ITIL)</strong></td><td>Incidente, Solicitud de servicio, Problema, Cambio o Consulta.</td></tr>
+          <tr><td><strong>Impacto × Urgencia</strong></td><td>Determinan automáticamente la <strong>Prioridad</strong> según la matriz ITIL estándar.</td></tr>
+          <tr><td><strong>SLA</strong></td><td>Acuerdo de tiempo de atención; el sistema vigila si está en riesgo o vencido.</td></tr>
+        </table>
+      </section>
+
+      <!-- 2 -->
+      <section id="listado">
+        <h2><span class="num">2</span> El listado de tickets</h2>
+        <p>
+          Es la vista principal (icono de portapapeles en la barra lateral →
+          <em>Todos los tickets</em>). Muestra todos los tickets con sus badges
+          de tipo, prioridad, estado y estado de SLA.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/listado.png" alt="Listado de tickets" />
+          <figcaption>Listado con filtros, búsqueda y pestañas rápidas (Todos · SLA vencido · Sin asignar).</figcaption>
+        </figure>
+        <ul>
+          <li><strong>Búsqueda</strong> por folio, título o contacto.</li>
+          <li><strong>Filtros</strong> por estado, prioridad, tipo y rango de fechas.</li>
+          <li><strong>Pestañas rápidas</strong>: <em>SLA vencido</em> y <em>Sin asignar</em> destacan lo urgente.</li>
+          <li>Clic en cualquier fila para abrir el <a href="#detalle">detalle</a>.</li>
+        </ul>
+      </section>
+
+      <!-- 3 -->
+      <section id="crear">
+        <h2><span class="num">3</span> Crear un ticket</h2>
+        <p>
+          Desde una conversación, abre el panel del contacto (derecha) y pulsa el
+          botón <strong>“Tickets (N)”</strong>. Se abre el modal; si el contacto
+          no tiene tickets en proceso, arranca directamente en el formulario de
+          alta.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/modal-crear.png" alt="Modal de creación de ticket" />
+          <figcaption>Formulario de alta, pestaña “Datos del ticket”.</figcaption>
+        </figure>
+        <h3>Dos formas de crear un ticket</h3>
+        <ul>
+          <li><strong>Manual</strong> — desde el panel del contacto o de la conversación, con el botón de tickets (lo descrito arriba).</li>
+          <li><strong>Automática</strong> — el bot puede crearlo solo mediante la directiva <code>@crear_ticket</code> durante una conversación, sin intervención del agente.</li>
+        </ul>
+
+        <h3>Campos del formulario</h3>
+        <ul>
+          <li><strong>Tipo de caso</strong> y <strong>Naturaleza del caso (ITIL)</strong> — la clasificación.</li>
+          <li><strong>Título</strong> (obligatorio) y <strong>Descripción</strong>.</li>
+          <li><strong>Servicio afectado</strong> y <strong>Categoría</strong> (opcionales).</li>
+          <li><strong>Impacto</strong> y <strong>Urgencia</strong>: al completarlos, la <strong>Prioridad</strong> se calcula sola y queda bloqueada.</li>
+          <li>La pestaña <strong>“Campos personalizados”</strong> muestra los campos extra definidos para ese tipo de caso.</li>
+        </ul>
+        <div class="tip">
+          💡 Si dejas Impacto o Urgencia en “Sin especificar”, la prioridad no se
+          deriva y puedes elegirla a mano.
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="detalle">
+        <h2><span class="num">4</span> El detalle de un ticket</h2>
+        <p>El detalle se organiza en tres pestañas:</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/detalle.png" alt="Detalle del ticket" />
+          <figcaption>Pestaña “Resumen”: información del ticket y tickets relacionados.</figcaption>
+        </figure>
+        <ul>
+          <li><strong>Resumen</strong> — datos clave (tipo, estado, prioridad, SLA, fecha) y tickets relacionados.</li>
+          <li><strong>Avance</strong> — el recorrido del caso (ver <a href="#ciclo">Ciclo de vida</a>).</li>
+          <li><strong>Asistente IA</strong> — acciones de IA bajo demanda.</li>
+        </ul>
+        <p>
+          Desde la cabecera puedes <strong>Cambiar estado</strong> y
+          <strong>Escalar</strong> el ticket (ver <a href="#itil">Flujo ITIL</a>).
+        </p>
+
+        <h3>Pestaña “Avance”</h3>
+        <p>Muestra cómo progresa el ticket, en tres subvistas: <strong>Recorrido</strong> (línea de tiempo), <strong>Historial</strong> (cada evento registrado) y <strong>Ciclo de vida</strong> (posición en el pipeline de estados).</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/detalle-avance.png" alt="Pestaña Avance — recorrido del ticket" />
+          <figcaption>Subvista “Recorrido”: línea de tiempo del caso.</figcaption>
+        </figure>
+
+        <h3>Pestaña “Asistente IA”</h3>
+        <p>
+          Reúne las acciones de IA que puedes lanzar <strong>bajo demanda</strong>
+          sobre el ticket (requiere la IA activada — ver
+          <a href="#ia">Inteligencia Artificial</a>):
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/detalle-ia.png" alt="Pestaña Asistente IA" />
+          <figcaption>Generar respuesta, resumen y causa raíz, detección de repetidos y seguimiento.</figcaption>
+        </figure>
+      </section>
+
+      <!-- 5 -->
+      <section id="kanban">
+        <h2><span class="num">5</span> El tablero (Kanban)</h2>
+        <p>
+          La opción <strong>Tablero</strong> muestra los tickets en columnas por
+          estado. Útil para ver la carga de trabajo de un vistazo y arrastrar
+          tickets entre fases.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/kanban.png" alt="Tablero Kanban de tickets" />
+          <figcaption>Columnas por estado (Nuevo · Asignado/Diagnóstico · En proceso · En espera…).</figcaption>
+        </figure>
+      </section>
+
+      <!-- 6 -->
+      <section id="metricas">
+        <h2><span class="num">6</span> Métricas</h2>
+        <p>
+          Panel de indicadores del módulo, con selector de período (7 / 30 / 90
+          días / Todo).
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/metricas.png" alt="Métricas de tickets" />
+          <figcaption>Volumen, cumplimiento de SLA, tiempos de atención e indicadores ITIL.</figcaption>
+        </figure>
+        <ul>
+          <li><strong>Volumen</strong>: tickets del período, activos, resueltos y reabiertos.</li>
+          <li><strong>SLA</strong>: vencidos, en riesgo y % de cumplimiento.</li>
+          <li><strong>Tiempos</strong>: resolución promedio y primera respuesta.</li>
+          <li><strong>ITIL y calidad</strong>: problemas abiertos, cambios pendientes y CSAT.</li>
+          <li>Gráfico <strong>Creados vs resueltos</strong> y desgloses por estado, tipo y prioridad.</li>
+        </ul>
+      </section>
+
+      <!-- 7 -->
+      <section id="config">
+        <h2><span class="num">7</span> Configuración</h2>
+        <p>Desde la barra lateral del módulo se configuran las reglas del negocio.</p>
+
+        <h3>Tipos de caso</h3>
+        <p>
+          El <strong>tipo de caso</strong> es la categoría propia de la cuenta con
+          la que se clasifica cada ticket. Cada tipo tiene:
+        </p>
+        <ul>
+          <li><strong>Nombre</strong> y <strong>color</strong> — para identificarlo de un vistazo (el badge de color que ves en el listado y el Kanban).</li>
+          <li><strong>Prefijo</strong> — se usa en el folio del ticket (p. ej. <code>SOP-0001</code> para Soporte). Si no lo defines, se genera de las 3 primeras letras del nombre.</li>
+          <li><strong>Campos personalizados</strong> — datos extra propios de ese tipo (ver abajo).</li>
+        </ul>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/tipos.png" alt="Listado de tipos de caso" />
+          <figcaption>Tipos de caso de la cuenta. Cada fila tiene su botón “Campos”.</figcaption>
+        </figure>
+
+        <h4 style="margin:1.5rem 0 .3rem">Campos personalizados — qué son y por qué</h4>
+        <p>
+          No todos los tipos de caso necesitan la misma información. Un ticket de
+          <em>Soporte</em> quizá necesita el <strong>número de serie</strong> del
+          equipo; uno de <em>Implementación</em>, la <strong>fecha de
+          go-live</strong>. En vez de llenar el formulario base de campos que
+          sobran, cada tipo define <strong>sus propios campos</strong>.
+        </p>
+        <p><strong>¿Por qué usarlos?</strong></p>
+        <ul>
+          <li><strong>Capturas datos estructurados</strong> desde el inicio, sin perderlos en el texto libre de la descripción.</li>
+          <li><strong>Estandarizas</strong> qué se pide para cada tipo de caso (y puedes marcar campos como <em>obligatorios</em>).</li>
+          <li>Quedan <strong>asociados al ticket</strong> para consultarlos, reportar o automatizar después.</li>
+        </ul>
+
+        <h4 style="margin:1.25rem 0 .3rem">Cómo definirlos</h4>
+        <p>En el listado, pulsa <strong>“Campos”</strong> en la fila del tipo. Se abre el editor:</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/tipo-campos.png" alt="Editor de campos personalizados" />
+          <figcaption>Alta de campo (arriba) y campos ya definidos (abajo).</figcaption>
+        </figure>
+        <table>
+          <tr><th>Dato del campo</th><th>Qué pones</th><th>Por qué</th></tr>
+          <tr><td><strong>Etiqueta</strong> <em>(obligatorio)</em></td><td>Lo que ve el agente, ej. “Número de serie”.</td><td>Texto visible en el formulario del ticket.</td></tr>
+          <tr><td><strong>Clave</strong> <em>(obligatorio)</em></td><td>Identificador técnico en minúsculas, ej. <code>serial_number</code>.</td><td>Es la llave con la que se guarda el valor; única por tipo y no debería cambiar.</td></tr>
+          <tr><td><strong>Tipo de campo</strong></td><td>Texto · Número · Fecha · Lista · Casilla.</td><td>Define qué control se muestra y qué se puede capturar.</td></tr>
+          <tr><td><strong>Obligatorio</strong></td><td>Casilla.</td><td>Si se marca, no se puede crear el ticket sin ese dato.</td></tr>
+        </table>
+
+        <p><strong>Los 5 tipos de campo</strong></p>
+        <table>
+          <tr><th>Tipo</th><th>Para qué sirve</th></tr>
+          <tr><td><strong>Texto</strong></td><td>Texto libre corto (nombres, códigos, referencias).</td></tr>
+          <tr><td><strong>Número</strong></td><td>Valores numéricos (cantidades, versiones).</td></tr>
+          <tr><td><strong>Fecha</strong></td><td>Selector de fecha (vencimientos, go-live).</td></tr>
+          <tr><td><strong>Lista</strong></td><td>Desplegable con opciones predefinidas (ej. Bajo/Medio/Alto). Requiere al menos una opción.</td></tr>
+          <tr><td><strong>Casilla</strong></td><td>Sí/No (booleano), ej. “¿Requiere visita?”.</td></tr>
+        </table>
+
+        <h4 style="margin:1.25rem 0 .3rem">Dónde se usan</h4>
+        <p>
+          Al <a href="#crear">crear un ticket</a> de ese tipo, los campos
+          aparecen en la pestaña <strong>“Campos personalizados”</strong> del
+          modal. Los valores capturados quedan guardados <strong>en cada
+          ticket</strong>, junto al resto de sus datos.
+        </p>
+        <div class="tip">
+          💡 Los campos son <strong>por tipo de caso</strong>: si cambias el tipo
+          de un ticket, verás los campos del nuevo tipo. Define la
+          <strong>Clave</strong> con cuidado — es estable y se usa para guardar el
+          valor; la <strong>Etiqueta</strong> sí la puedes reescribir cuando
+          quieras.
+        </div>
+
+        <h3>Reglas de automatización</h3>
+        <p>
+          Una regla es un <strong>“SI… ENTONCES…”</strong>: si un ticket cumple
+          ciertas <strong>condiciones</strong>, el sistema ejecuta unas
+          <strong>acciones</strong> automáticamente (asignar, cambiar prioridad,
+          escalar…). Se evalúan cuando el ticket se crea o cambia, sin
+          intervención manual.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/reglas.png" alt="Listado de reglas de automatización" />
+          <figcaption>Listado de reglas, cada una con su patrón SI → ENTONCES.</figcaption>
+        </figure>
+
+        <h4 style="margin:1.25rem 0 .3rem">Cómo capturar una regla</h4>
+        <p>Pulsa <strong>“+ Nueva regla”</strong>. El formulario tiene tres partes:</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/regla-form.png" alt="Constructor de regla" />
+          <figcaption>Encabezado · condiciones (SI) · acciones (ENTONCES).</figcaption>
+        </figure>
+
+        <p><strong>1. Datos generales</strong></p>
+        <table>
+          <tr><th>Campo</th><th>Qué pones</th><th>Por qué</th></tr>
+          <tr><td><strong>Nombre</strong> <em>(obligatorio)</em></td><td>Texto descriptivo, ej. “Soporte urgente → escalar”.</td><td>Para identificarla en el listado.</td></tr>
+          <tr><td><strong>Posición</strong></td><td>Número (menor = se evalúa antes).</td><td>Define el <em>orden</em> de evaluación, clave por la regla de la cascada (ver abajo).</td></tr>
+          <tr><td><strong>Descripción</strong></td><td>Nota opcional.</td><td>Documentar para qué sirve.</td></tr>
+          <tr><td><strong>Activa</strong></td><td>Casilla.</td><td>Apagar la regla sin borrarla.</td></tr>
+          <tr><td><strong>Continuar si coincide</strong></td><td>Casilla.</td><td>Por defecto, al primer match la evaluación <em>para</em>. Márcala para que sigan evaluándose las reglas siguientes (encadenar varias).</td></tr>
+        </table>
+
+        <p><strong>2. Condiciones (SI)</strong></p>
+        <p>
+          Cada condición es <code>campo · operador · valor</code>. Si hay varias,
+          deben cumplirse <strong>todas</strong> (Y lógico). Si no agregas
+          ninguna, la regla aplica a <strong>todos</strong> los tickets.
+        </p>
+        <table>
+          <tr><th>Campos disponibles</th><th>Operadores</th></tr>
+          <tr>
+            <td>Tipo de caso · Naturaleza ITIL · Impacto · Urgencia · Servicio afectado · Categoría · Origen · Prioridad · Estado · Estado SLA · Contenido del mensaje · Minutos sin respuesta</td>
+            <td>es · no es · contiene · ≥ · ≤ · está en lista · no está en lista</td>
+          </tr>
+        </table>
+
+        <p><strong>3. Acciones (ENTONCES)</strong></p>
+        <p>Lo que se ejecuta cuando la regla coincide (puedes encadenar varias):</p>
+        <ul>
+          <li><strong>Asignar responsable</strong> / <strong>Asignar equipo</strong> — enruta el ticket.</li>
+          <li><strong>Cambiar prioridad</strong> / <strong>Cambiar estado</strong>.</li>
+          <li><strong>Escalar</strong> — sube de nivel (N1 → N2 → N3), opcionalmente a un equipo.</li>
+          <li><strong>Cerrar ticket</strong> · <strong>Notificar agente</strong>.</li>
+        </ul>
+
+        <h4 style="margin:1.25rem 0 .3rem">Cómo se evalúan (la cascada)</h4>
+        <ol>
+          <li>Se recorren las reglas <strong>activas</strong>, ordenadas por <strong>posición</strong> (menor primero).</li>
+          <li>La primera cuyas condiciones se cumplan <strong>ejecuta sus acciones</strong>.</li>
+          <li>Y ahí <strong>para</strong>… salvo que tenga marcado <em>“Continuar si coincide”</em>, en cuyo caso sigue con las siguientes.</li>
+        </ol>
+        <div class="tip">
+          ⚠️ Por eso la <strong>posición importa</strong>: pon arriba las reglas
+          más específicas/urgentes. Una regla genérica colocada primera podría
+          “consumir” el match y evitar que se evalúen las de abajo.
+        </div>
+
+        <div class="tip">
+          <strong>Ejemplos reales</strong> (de la captura del listado):
+          <ul style="margin:.4rem 0 0">
+            <li><strong>Soporte → Equipo Soporte:</strong> SI tipo de caso <em>es Soporte</em> → asignar equipo <em>Soporte Técnico</em>.</li>
+            <li><strong>SLA vencido → Escalar:</strong> SI estado SLA <em>es Vencido</em> Y tipo <em>es Soporte</em> → escalar + asignar a <em>Soporte Senior</em>.</li>
+            <li><strong>Urgente → Notificar:</strong> SI prioridad <em>es Urgente</em> → escalar + notificar al supervisor.</li>
+          </ul>
+        </div>
+
+        <h3>SLA</h3>
+        <p>
+          Un <strong>SLA</strong> (Acuerdo de Nivel de Servicio) es el compromiso
+          de <em>cuánto tiempo</em> puede tardar el equipo en atender un ticket.
+          Aquí defines <strong>políticas</strong> que fijan ese tiempo, y el
+          sistema vigila automáticamente cada ticket: lo marca
+          <em>a tiempo</em>, <em>en riesgo</em> o <em>vencido</em>.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/sla.png" alt="Listado de políticas de SLA" />
+          <figcaption>Listado de políticas. “Gana la más específica” (lo vemos abajo).</figcaption>
+        </figure>
+
+        <h4 style="margin:1.25rem 0 .3rem">Los dos objetivos de tiempo</h4>
+        <p>Cada política puede fijar uno o ambos (al menos uno es obligatorio):</p>
+        <ul>
+          <li><strong>1ª respuesta</strong> — máximo para dar la primera respuesta al cliente. Mide la rapidez en <em>reaccionar</em>.</li>
+          <li><strong>Resolución</strong> — máximo para dejar el ticket resuelto. Mide la rapidez en <em>solucionar</em>.</li>
+        </ul>
+        <p>
+          Mientras el ticket no tiene primera respuesta, el reloj se compara
+          contra el objetivo de <strong>1ª respuesta</strong>; una vez
+          respondido, pasa a medirse contra el de <strong>resolución</strong>.
+        </p>
+
+        <h4 style="margin:1.25rem 0 .3rem">Cómo capturar una política</h4>
+        <p>Pulsa <strong>“+ Nueva política”</strong> y completa el formulario:</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/sla-form.png" alt="Formulario de nueva política de SLA" />
+          <figcaption>Alta de política de SLA.</figcaption>
+        </figure>
+        <table>
+          <tr><th>Campo</th><th>Qué pones</th><th>Por qué</th></tr>
+          <tr>
+            <td><strong>Prioridad</strong> <em>(obligatorio)</em></td>
+            <td>Baja, Media, Alta o Urgente.</td>
+            <td>Es el eje principal: a más prioridad, menos tiempo. Una política siempre aplica a una prioridad.</td>
+          </tr>
+          <tr>
+            <td><strong>Naturaleza ITIL</strong></td>
+            <td>Una naturaleza concreta o <em>“Cualquiera”</em>.</td>
+            <td>Permite que, p. ej., un <em>Cambio</em> urgente tenga un tiempo distinto a un <em>Incidente</em> urgente.</td>
+          </tr>
+          <tr>
+            <td><strong>Tipo de caso</strong></td>
+            <td>Un tipo concreto o <em>“Cualquiera”</em>.</td>
+            <td>Permite afinar por categoría de la cuenta (p. ej. “Soporte” vs “Facturación”).</td>
+          </tr>
+          <tr>
+            <td><strong>1ª respuesta (min)</strong></td>
+            <td>Minutos. Vacío = sin objetivo de primera respuesta.</td>
+            <td>Define el compromiso de reacción. Ej.: <code>15</code> = 15 min.</td>
+          </tr>
+          <tr>
+            <td><strong>Resolución (min)</strong></td>
+            <td>Minutos. Vacío = sin objetivo de resolución.</td>
+            <td>Define el compromiso de cierre. Ej.: <code>240</code> = 4 h, <code>1440</code> = 1 día.</td>
+          </tr>
+          <tr>
+            <td><strong>Contar solo horario laboral</strong></td>
+            <td>Casilla.</td>
+            <td>Si se marca, el reloj solo corre en horas hábiles (no cuenta noches/fines de semana).</td>
+          </tr>
+          <tr>
+            <td><strong>Activa</strong></td>
+            <td>Casilla.</td>
+            <td>Permite desactivar una política sin borrarla.</td>
+          </tr>
+        </table>
+        <div class="tip">
+          ⏱️ Los tiempos se capturan <strong>en minutos</strong>. Atajos
+          mentales: <code>60</code>=1 h · <code>240</code>=4 h · <code>480</code>=8 h
+          (jornada) · <code>1440</code>=1 día · <code>4320</code>=3 días.
+        </div>
+        <div class="tip">
+          🔒 No puedes tener dos políticas para el mismo ámbito exacto (misma
+          combinación de prioridad + tipo de caso + naturaleza ITIL).
+        </div>
+
+        <h4 style="margin:1.25rem 0 .3rem">“Gana la más específica”</h4>
+        <p>
+          Un ticket puede encajar en varias políticas a la vez. El sistema elige
+          siempre la <strong>más específica</strong> que coincida, en este orden:
+        </p>
+        <ol>
+          <li>Tipo de caso <strong>y</strong> naturaleza ITIL definidos (la más concreta).</li>
+          <li>Solo tipo de caso definido.</li>
+          <li>Solo naturaleza ITIL definida.</li>
+          <li>Solo prioridad (las genéricas “Cualquiera / Cualquiera”).</li>
+        </ol>
+        <p>
+          Si no hay ninguna política que aplique, el sistema usa unos
+          <strong>valores por defecto</strong> según la prioridad.
+        </p>
+        <div class="tip">
+          <strong>Ejemplo.</strong> Tienes dos políticas para prioridad
+          <em>Urgente</em>: una genérica (Cualquiera/Cualquiera → resolución 4 h)
+          y una para <em>Cambio</em> (resolución 8 h). Un ticket urgente de tipo
+          <em>Cambio</em> usará la de <strong>8 h</strong> por ser más específica;
+          cualquier otro ticket urgente usará la genérica de 4 h.
+        </div>
+
+        <h4 style="margin:1.25rem 0 .3rem">Cómo se ve el cumplimiento</h4>
+        <p>Según el tiempo transcurrido frente al objetivo, el ticket muestra:</p>
+        <table>
+          <tr><th>Estado</th><th>Cuándo</th></tr>
+          <tr><td><strong>A tiempo</strong></td><td>Va por debajo del 80 % del tiempo objetivo.</td></tr>
+          <tr><td><strong>En riesgo</strong></td><td>Llegó al 80 % del tiempo objetivo (señal de alerta temprana).</td></tr>
+          <tr><td><strong style="color:#dc2626">Vencido</strong></td><td>Alcanzó o superó el 100 % del objetivo.</td></tr>
+        </table>
+        <div class="tip">
+          ⏸️ <strong>El reloj se pausa</strong> cuando el ticket entra en un estado
+          de espera (p. ej. “En espera del cliente”) y se reanuda al salir. Así no
+          se penaliza el tiempo en que la pelota está del lado del cliente.
+        </div>
+
+        <div class="tip">
+          También encontrarás <strong>Clasificación</strong> (servicios afectados
+          y categorías que alimentan los filtros y la matriz de prioridad).
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="folio">
+        <h2><span class="num">8</span> Configuración del folio</h2>
+        <p>
+          El <strong>folio</strong> es el identificador legible de cada ticket
+          (lo que ves como <code>SOP-0001</code>). Aquí defines su formato y cómo
+          se numera.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/folio.png" alt="Configuración del folio" />
+          <figcaption>Plantilla, vista previa en vivo, tokens y reglas del consecutivo.</figcaption>
+        </figure>
+
+        <h4 style="margin:1.25rem 0 .3rem">La plantilla y sus tokens</h4>
+        <p>
+          Escribes una <strong>plantilla</strong> combinando texto fijo y
+          <em>tokens</em> entre llaves. La <strong>vista previa</strong> muestra al
+          instante cómo quedaría. Tokens disponibles:
+        </p>
+        <table>
+          <tr><th>Token</th><th>Qué inserta</th></tr>
+          <tr><td><code>{PREFIX}</code></td><td>Prefijo del tipo de caso (ej. <code>SOP</code>).</td></tr>
+          <tr><td><code>{SEQ}</code> / <code>{SEQ:5}</code></td><td>Consecutivo. Con <code>:n</code> lo rellena a <em>n</em> dígitos (ej. <code>{SEQ:5}</code> → <code>00001</code>).</td></tr>
+          <tr><td><code>{YYYY}</code> / <code>{YY}</code></td><td>Año, 4 o 2 dígitos.</td></tr>
+          <tr><td><code>{MM}</code> / <code>{DD}</code></td><td>Mes / día (2 dígitos).</td></tr>
+        </table>
+        <div class="tip">
+          Ejemplo: <code>{PREFIX}-{YYYY}-{SEQ:5}</code> produce
+          <code>SOP-2026-00001</code>.
+        </div>
+
+        <h4 style="margin:1.25rem 0 .3rem">Alcance y reinicio del consecutivo</h4>
+        <table>
+          <tr><th>Opción</th><th>Qué hace</th><th>Por qué</th></tr>
+          <tr>
+            <td><strong>Consecutivo independiente por tipo</strong></td>
+            <td>Activado: cada tipo de caso lleva su propia numeración (Soporte 1,2,3… y Comercial 1,2,3…). Desactivado: un solo consecutivo global.</td>
+            <td>Útil si quieres numerar por área en vez de un correlativo único.</td>
+          </tr>
+          <tr>
+            <td><strong>Reinicio del consecutivo</strong></td>
+            <td>Nunca · Diario · Mensual · Anual.</td>
+            <td>Reinicia la cuenta a 1 al cambiar el período (combínalo con <code>{YYYY}</code>/<code>{MM}</code> para que el folio no se repita).</td>
+          </tr>
+        </table>
+        <div class="tip">
+          ⚠️ Los cambios <strong>solo afectan a los tickets nuevos</strong>. Los
+          folios ya emitidos no se modifican. También puedes apagar el folio
+          automático con el interruptor superior.
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="ia">
+        <h2><span class="num">9</span> Inteligencia Artificial</h2>
+        <p>
+          La IA puede asistir en varias tareas del ticket. El diseño es
+          <strong>configurable por acción</strong>: tú decides, para cada una, si
+          está apagada, si <em>sugiere</em> (propone y un agente aprueba) o si se
+          <em>aplica automáticamente</em>.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/ai.png" alt="Configuración de Inteligencia Artificial" />
+          <figcaption>Interruptor general + modo por cada acción de IA.</figcaption>
+        </figure>
+
+        <h4 style="margin:1.25rem 0 .3rem">El interruptor general</h4>
+        <p>
+          <strong>“Activar IA en el Gestor de Tickets”</strong> es el interruptor
+          maestro: si está apagado, <strong>ninguna</strong> acción de IA se
+          ejecuta, sin importar su modo individual.
+        </p>
+        <div class="tip">
+          🔑 La IA usa la <strong>integración de OpenAI de la cuenta</strong>. Si
+          no hay una activa, las acciones no funcionarán hasta configurarla en
+          <em>Integraciones</em>.
+        </div>
+
+        <h4 style="margin:1.25rem 0 .3rem">Los tres modos</h4>
+        <table>
+          <tr><th>Modo</th><th>Qué hace</th></tr>
+          <tr><td><strong>Desactivado</strong></td><td>Esa acción no corre.</td></tr>
+          <tr><td><strong>Sugerir</strong></td><td>La IA propone y un agente decide si aplicar o descartar. Recomendado para empezar.</td></tr>
+          <tr><td><strong>Automático</strong></td><td>La IA aplica el resultado directamente, sin intervención.</td></tr>
+        </table>
+
+        <h4 style="margin:1.25rem 0 .3rem">Las acciones disponibles</h4>
+        <table>
+          <tr><th>Acción</th><th>Qué hace</th></tr>
+          <tr><td><strong>Clasificación automática</strong></td><td>Al crear un ticket, deduce tipo, servicio, categoría, impacto y urgencia.</td></tr>
+          <tr><td><strong>Respuesta sugerida</strong></td><td>Propone una respuesta al cliente basada en la base de conocimiento.</td></tr>
+          <tr><td><strong>Resumen y causa raíz</strong></td><td>Genera un resumen del caso y sugiere la causa raíz.</td></tr>
+          <tr><td><strong>Detección de repetidos</strong></td><td>Detecta incidentes similares y sugiere crear o vincular un Problema.</td></tr>
+          <tr><td><strong>Seguimiento automático</strong></td><td>Redacta seguimientos al cliente según el estado del ticket.</td></tr>
+        </table>
+        <div class="tip">
+          💡 Estrategia habitual: empezar todo en <strong>Sugerir</strong> para
+          validar la calidad, y pasar a <strong>Automático</strong> solo las
+          acciones en las que confíes (p. ej. clasificación).
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="ciclo">
+        <h2><span class="num">10</span> Ciclo de vida, estados y cierre</h2>
+        <p>
+          Cada ticket avanza por una serie de <strong>estados</strong>. Solo se
+          permiten transiciones válidas (no puedes “saltar” pasos arbitrarios), y
+          cada cambio queda registrado en el <a href="#detalle">Avance</a>.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/detalle-ciclo.png" alt="Ciclo de vida del ticket" />
+          <figcaption>Subvista “Ciclo de vida”: el pipeline de estados y dónde está el ticket.</figcaption>
+        </figure>
+
+        <h4 style="margin:1.25rem 0 .3rem">Los estados</h4>
+        <table>
+          <tr><th>Estado</th><th>Significado</th></tr>
+          <tr><td><strong>Nuevo</strong></td><td>Recién creado, sin clasificar.</td></tr>
+          <tr><td><strong>Clasificado</strong></td><td>Ya tiene tipo/naturaleza/prioridad.</td></tr>
+          <tr><td><strong>Asignado</strong></td><td>Tiene responsable o equipo.</td></tr>
+          <tr><td><strong>En diagnóstico</strong></td><td>Se está investigando.</td></tr>
+          <tr><td><strong>En proceso</strong></td><td>Se está resolviendo.</td></tr>
+          <tr><td><strong>En espera</strong> (del cliente / de tercero / interna)</td><td>Pausado esperando a alguien. <strong>Pausan el reloj de SLA.</strong></td></tr>
+          <tr><td><strong>Escalado</strong></td><td>Subido de nivel (ver <a href="#itil">abajo</a>).</td></tr>
+          <tr><td><strong>Resuelto</strong></td><td>Solucionado, pendiente de validar.</td></tr>
+          <tr><td><strong>Validando con cliente</strong></td><td>Confirmando con el cliente antes de cerrar.</td></tr>
+          <tr><td><strong>Cerrado</strong></td><td>Finalizado (terminal).</td></tr>
+          <tr><td><strong>Cancelado</strong></td><td>Anulado sin resolver (terminal).</td></tr>
+        </table>
+        <div class="tip">
+          Flujo típico: <strong>Nuevo → Clasificado → Asignado → En diagnóstico /
+          En proceso → Resuelto → Validando → Cerrado</strong>. Desde “En proceso”
+          puedes pasar a un estado de espera o escalar; <em>Cerrado</em> y
+          <em>Cancelado</em> no tienen salida.
+        </div>
+
+        <h4 style="margin:1.25rem 0 .3rem">Cierre del ticket</h4>
+        <p>
+          Un ticket <strong>no se puede cerrar sin documentar</strong>. Al
+          cerrarlo se exigen tres datos:
+        </p>
+        <table>
+          <tr><th>Dato</th><th>Qué es</th></tr>
+          <tr><td><strong>Tipo de cierre</strong></td><td>Resuelto · Duplicado · No aplica · Cancelado.</td></tr>
+          <tr><td><strong>Causa</strong></td><td>Por qué ocurrió el caso.</td></tr>
+          <tr><td><strong>Solución</strong></td><td>Qué se hizo para resolverlo.</td></tr>
+        </table>
+        <div class="tip">
+          📌 Esto obliga a dejar trazabilidad: todo ticket cerrado queda
+          documentado para auditoría y para alimentar la base de conocimiento.
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="itil">
+        <h2><span class="num">11</span> Flujo ITIL avanzado</h2>
+
+        <h3 style="margin-top:0">Escalamiento (N1 → N2 → N3)</h3>
+        <p>
+          El botón <strong>“Escalar”</strong> de la cabecera sube el ticket de
+          nivel cuando un equipo no puede resolverlo: <strong>N1</strong> (primer
+          nivel) → <strong>N2</strong> → <strong>N3</strong> (máximo). Puede
+          reasignarlo a otro equipo y marca el estado <em>Escalado</em>. El nivel
+          actual se ve como badge (N1/N2/N3) en la cabecera.
+        </p>
+
+        <h3>Problema</h3>
+        <p>
+          Un ticket de naturaleza <strong>Problema</strong> suma una tarjeta
+          <strong>“Detalles del problema”</strong> con <strong>causa raíz</strong>
+          y <strong>solución temporal</strong> (workaround). Cuando se resuelve, su
+          solución puede <strong>propagarse a los incidentes vinculados</strong>,
+          cerrándolos en cascada.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/detalle-problema.png" alt="Detalles del problema" />
+          <figcaption>Resumen de un Problema: causa raíz y solución temporal.</figcaption>
+        </figure>
+
+        <h3>Cambio</h3>
+        <p>
+          Un ticket de naturaleza <strong>Cambio</strong> maneja datos de gestión
+          de cambios (nivel de riesgo, plan de rollback, ventana programada). Si el
+          cambio <strong>requiere aprobación</strong>, <strong>no puede pasar a “En
+          proceso” hasta que sea aprobado</strong> — un control para que no se
+          ejecuten cambios sin visto bueno.
+        </p>
+
+        <h3>Relaciones entre tickets</h3>
+        <p>
+          Desde el Resumen, <strong>“+ Vincular ticket”</strong> conecta este
+          ticket con otro. Sirve para agrupar duplicados y para enlazar incidentes
+          con su problema o cambio de origen.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/vincular.png" alt="Vincular ticket relacionado" />
+          <figcaption>Modal “Vincular ticket relacionado”.</figcaption>
+        </figure>
+        <table>
+          <tr><th>Tipo de relación</th><th>Significado</th></tr>
+          <tr><td><strong>Duplicado de</strong></td><td>Este ticket repite a otro.</td></tr>
+          <tr><td><strong>Padre / hijo</strong></td><td>Jerarquía entre tickets.</td></tr>
+          <tr><td><strong>Incidente → Problema</strong></td><td>El incidente pertenece a un problema.</td></tr>
+          <tr><td><strong>Incidente → Cambio</strong></td><td>El incidente se asocia a un cambio.</td></tr>
+          <tr><td><strong>Cambio → Problema</strong></td><td>El cambio resuelve un problema.</td></tr>
+        </table>
+      </section>
+
+      <!-- 12 -->
+      <section id="glosario">
+        <h2><span class="num">12</span> Glosario ITIL</h2>
+        <table>
+          <tr><th>Término</th><th>Qué significa</th></tr>
+          <tr><td><strong>Incidente</strong></td><td>Algo que no funciona y afecta al servicio.</td></tr>
+          <tr><td><strong>Solicitud de servicio</strong></td><td>Una petición planificada (alta de usuario, acceso…).</td></tr>
+          <tr><td><strong>Problema</strong></td><td>La causa de fondo de uno o varios incidentes.</td></tr>
+          <tr><td><strong>Cambio</strong></td><td>Una modificación controlada del entorno.</td></tr>
+          <tr><td><strong>Consulta</strong></td><td>Una duda o pregunta del cliente.</td></tr>
+          <tr><td><strong>SLA</strong></td><td>Compromiso de tiempo de atención (1ª respuesta / resolución).</td></tr>
+          <tr><td><strong>Impacto / Urgencia</strong></td><td>Cuánto afecta / qué tan pronto se necesita. Juntos derivan la prioridad.</td></tr>
+          <tr><td><strong>Prioridad</strong></td><td>Orden de atención (Baja / Media / Alta / Urgente).</td></tr>
+          <tr><td><strong>Escalamiento</strong></td><td>Subir el ticket a un nivel de soporte mayor (N1→N2→N3).</td></tr>
+          <tr><td><strong>Folio</strong></td><td>Identificador legible del ticket (ej. <code>SOP-0001</code>).</td></tr>
+          <tr><td><strong>Causa raíz</strong></td><td>El motivo de fondo que origina el problema.</td></tr>
+          <tr><td><strong>Solución temporal</strong></td><td>Apaño que restablece el servicio mientras se resuelve la causa raíz.</td></tr>
+        </table>
+        <p style="text-align:center;margin-top:1.5rem">
+          <a href="#intro">↑ Volver al inicio</a>
+        </p>
+      </section>
+
+      <footer>
+        Wintook · Gestor de Tickets — manual interno
+      </footer>
+    </main>
+
+    <script>
+      (function () {
+        var sections = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+
+        // --- Acordeón: colapsa todo menos la primera sección ---
+        sections.forEach(function (sec, i) {
+          if (i > 0) sec.classList.add('collapsed');
+          var h2 = sec.querySelector('h2');
+          if (h2) {
+            h2.addEventListener('click', function () {
+              sec.classList.toggle('collapsed');
+            });
+          }
+        });
+
+        function openSection(id) {
+          var sec = document.getElementById(id);
+          if (sec && sec.tagName === 'SECTION') {
+            sec.classList.remove('collapsed');
+            sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+
+        // --- Enlaces internos (#id) abren la sección destino ---
+        document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+          a.addEventListener('click', function (e) {
+            var id = a.getAttribute('href').slice(1);
+            if (document.getElementById(id)) {
+              e.preventDefault();
+              openSection(id);
+              if (history.replaceState) history.replaceState(null, '', '#' + id);
+            }
+          });
+        });
+
+        // Si se entra con un #ancla, abre esa sección
+        if (location.hash.length > 1) openSection(location.hash.slice(1));
+
+        // --- Lightbox de imágenes ---
+        document.querySelectorAll('figure img').forEach(function (img) {
+          img.addEventListener('click', function () {
+            var box = document.createElement('div');
+            box.className = 'lightbox';
+            var full = document.createElement('img');
+            full.src = img.src;
+            box.appendChild(full);
+            box.addEventListener('click', function () { box.remove(); });
+            document.body.appendChild(box);
+          });
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') {
+            var lb = document.querySelector('.lightbox');
+            if (lb) lb.remove();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

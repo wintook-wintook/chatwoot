@@ -105,6 +105,42 @@ Rails.application.routes.draw do
             post :execute, on: :member
           end
           resources :sla_policies, only: [:index, :create, :show, :update, :destroy]
+
+          # =========================================================================
+          # @tickets_cases — Gestor de Tickets
+          # =========================================================================
+          resources :case_tickets, only: [:index, :show, :create, :update] do
+            collection do
+              get :metrics
+              get :kb_portals
+            end
+            member do
+              patch :transition
+              patch :assign
+              patch :escalate
+              patch :change_approval
+              post :generate_article
+              post :apply_ai_suggestion # @tickets_cases 3B
+              delete :dismiss_ai_suggestion # @tickets_cases 3B
+              post :suggest_reply # @tickets_cases 3C
+              post :summarize # @tickets_cases 3E
+              post :detect_duplicates # @tickets_cases 3D
+              post :follow_up # @tickets_cases 3F
+            end
+            resources :case_events, only: [:index]
+            # @tickets_cases 2E — relaciones entre tickets
+            resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
+          end
+          resources :case_rules, only: [:index, :create, :update, :destroy]
+          resources :case_types, only: [:index, :create, :update, :destroy] do
+            resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K
+          end
+          resources :case_services, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
+          resources :case_categories, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
+          resources :case_sla_policies, only: [:index, :create, :update, :destroy] # @tickets_cases 2I
+          resource  :case_folio_config, only: [:show, :update], controller: 'case_folio_configs'
+          resource  :case_ai_config, only: [:show, :update], controller: 'case_ai_configs' # @tickets_cases 3A
+          # =========================================================================
           resources :custom_roles, only: [:index, :create, :show, :update, :destroy]
           resources :campaigns, only: [:index, :create, :show, :update, :destroy]
           resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]

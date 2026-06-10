@@ -79,3 +79,6 @@ yarn-debug.log*
 pnpm-workspace.yaml
 pnpm-lock.yaml
 start-dev.sh
+
+# VSCode/code-server workspace files
+docs/vaults.code-workspace

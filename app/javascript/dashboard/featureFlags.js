@@ -38,4 +38,6 @@ export const FEATURE_FLAGS = {
   CUSTOM_ROLES: 'custom_roles',
   WAVOIP: 'wavoip',
   GOOGLE_CALENDAR: 'google_calendar',
+  // @tickets_cases — Gestor de Tickets
+  CASE_MANAGEMENT: 'case_management',
 };

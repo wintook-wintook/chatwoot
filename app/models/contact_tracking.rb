@@ -26,6 +26,7 @@
 #  id                         :bigint           not null, primary key
 #  ai_context                 :text
 #  attempt_count              :integer          default(0), not null
+#  calendar_event_duration    :integer          default(30)
 #  calendar_integration_ids   :jsonb            not null
 #  complementary_prompt       :text
 #  interval_days              :integer
@@ -63,7 +64,7 @@
 #  index_contact_trackings_on_sentiment                     (((last_sentiment_analysis ->> 'sentiment'::text)))
 #  index_contact_trackings_on_status                        (status)
 #  index_contact_trackings_on_status_and_scheduled_for      (status,scheduled_for)
-#  index_unique_active_tracking_per_contact                 (contact_id,status) UNIQUE WHERE ((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('scheduled'::character varying)::text, ('active'::character varying)::text, ('paused'::character varying)::text]))
+#  index_unique_active_tracking_per_contact                 (contact_id,status) UNIQUE WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))
 #
 # Foreign Keys
 #

@@ -27,7 +27,7 @@ class KnowledgeSource < ApplicationRecord
   belongs_to :account
   has_many :knowledge_items, dependent: :destroy
 
-  validates :source_type, presence: true, inclusion: { in: %w[canned_response discourse] }
+  validates :source_type, presence: true, inclusion: { in: %w[canned_response discourse article] }
   validates :name, presence: true
 
   scope :active, -> { where(status: 'active') }

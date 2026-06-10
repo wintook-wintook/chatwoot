@@ -78,6 +78,15 @@ const primaryMenuItems = accountId => [
     toStateName: 'google_calendar',
     roles: ['administrator', 'agent'],
   },
+  // @tickets_cases
+  {
+    icon: 'clipboard',
+    key: 'gestorTickets',
+    label: 'TICKETS',
+    featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+    toState: frontendURL(`accounts/${accountId}/tickets`),
+    toStateName: 'gestorTickets_index',
+  },
   {
     icon: 'settings',
     key: 'settings',

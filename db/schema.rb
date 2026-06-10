@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_03_162748) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_07_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -235,6 +235,191 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_162748) do
     t.text "content"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+  end
+
+  create_table "case_ai_configs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.boolean "enabled", default: false, null: false
+    t.jsonb "modes", default: {}, null: false
+    t.string "model_override"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_ai_configs_on_account_id", unique: true
+  end
+
+  create_table "case_categories", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "parent_id"
+    t.string "name", null: false
+    t.boolean "active", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "position"], name: "index_case_categories_on_account_id_and_position"
+    t.index ["parent_id"], name: "index_case_categories_on_parent_id"
+  end
+
+  create_table "case_events", force: :cascade do |t|
+    t.bigint "case_ticket_id", null: false
+    t.bigint "account_id", null: false
+    t.bigint "actor_id"
+    t.integer "event_type", null: false
+    t.integer "origin", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id", "created_at"], name: "index_case_events_on_account_id_and_created_at"
+    t.index ["case_ticket_id", "event_type"], name: "index_case_events_on_case_ticket_id_and_event_type"
+    t.index ["payload"], name: "index_case_events_on_payload", using: :gin
+  end
+
+  create_table "case_folio_configs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.boolean "enabled", default: true, null: false
+    t.string "template", default: "{PREFIX}-{SEQ:5}", null: false
+    t.boolean "per_type", default: true, null: false
+    t.string "reset_period", default: "never", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_folio_configs_on_account_id", unique: true
+  end
+
+  create_table "case_folio_counters", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "counter_key", null: false
+    t.integer "value", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "counter_key"], name: "index_case_folio_counters_on_account_id_and_counter_key", unique: true
+  end
+
+  create_table "case_rules", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.boolean "active", default: true, null: false
+    t.boolean "continue_on_match", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.jsonb "conditions", default: [], null: false
+    t.jsonb "actions", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "active", "position"], name: "index_case_rules_on_account_id_and_active_and_position"
+  end
+
+  create_table "case_services", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.string "color", default: "#64748b", null: false
+    t.boolean "active", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "position"], name: "index_case_services_on_account_id_and_position"
+  end
+
+  create_table "case_sla_policies", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_type_id"
+    t.integer "ticket_kind"
+    t.integer "priority", null: false
+    t.integer "first_response_time_target"
+    t.integer "resolution_time_target"
+    t.boolean "business_hours_only", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "case_type_id", "ticket_kind", "priority"], name: "index_case_sla_policies_unique_scope", unique: true
+    t.index ["account_id", "priority"], name: "index_case_sla_policies_on_account_id_and_priority"
+  end
+
+  create_table "case_ticket_relations", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "ticket_id", null: false
+    t.bigint "related_ticket_id", null: false
+    t.integer "relation_type", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_ticket_relations_on_account_id"
+    t.index ["related_ticket_id"], name: "index_case_ticket_relations_on_related_ticket_id"
+    t.index ["ticket_id", "related_ticket_id", "relation_type"], name: "index_case_ticket_relations_unique", unique: true
+  end
+
+  create_table "case_tickets", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "conversation_id"
+    t.bigint "contact_tracking_id"
+    t.bigint "assignee_id"
+    t.bigint "team_id"
+    t.integer "origin", default: 0, null: false
+    t.integer "priority", default: 1, null: false
+    t.integer "status", default: 0, null: false
+    t.integer "assignee_type", default: 0, null: false
+    t.integer "sla_status", default: 0, null: false
+    t.string "title", null: false
+    t.text "description"
+    t.integer "first_response_time_target"
+    t.integer "resolution_time_target"
+    t.datetime "first_response_at"
+    t.datetime "resolved_at"
+    t.datetime "closed_at"
+    t.jsonb "metadata", default: {}, null: false
+    t.jsonb "custom_attributes", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "case_type_id"
+    t.string "folio"
+    t.integer "ticket_kind", default: 1, null: false
+    t.integer "impact"
+    t.integer "urgency"
+    t.bigint "affected_service_id"
+    t.bigint "category_id"
+    t.integer "escalation_level", default: 0, null: false
+    t.integer "closure_type"
+    t.text "closure_cause"
+    t.text "closure_solution"
+    t.boolean "customer_confirmed", default: false, null: false
+    t.bigint "kb_article_id"
+    t.integer "sla_paused_minutes", default: 0, null: false
+    t.datetime "sla_paused_since"
+    t.index ["account_id", "case_type_id"], name: "index_case_tickets_on_account_id_and_case_type_id"
+    t.index ["account_id", "contact_id"], name: "index_case_tickets_on_account_id_and_contact_id"
+    t.index ["account_id", "folio"], name: "index_case_tickets_on_account_and_folio", unique: true, where: "(folio IS NOT NULL)"
+    t.index ["account_id", "sla_status"], name: "index_case_tickets_on_account_id_and_sla_status"
+    t.index ["account_id", "status"], name: "index_case_tickets_on_account_id_and_status"
+    t.index ["account_id", "ticket_kind"], name: "index_case_tickets_on_account_id_and_ticket_kind"
+    t.index ["affected_service_id"], name: "index_case_tickets_on_affected_service_id"
+    t.index ["category_id"], name: "index_case_tickets_on_category_id"
+    t.index ["kb_article_id"], name: "index_case_tickets_on_kb_article_id"
+    t.index ["metadata"], name: "index_case_tickets_on_metadata", using: :gin
+  end
+
+  create_table "case_type_fields", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_type_id", null: false
+    t.string "key", null: false
+    t.string "label", null: false
+    t.integer "field_type", default: 0, null: false
+    t.jsonb "options", default: [], null: false
+    t.boolean "required", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "case_type_id", "position"], name: "index_case_type_fields_on_scope_position"
+    t.index ["account_id"], name: "index_case_type_fields_on_account_id"
+    t.index ["case_type_id", "key"], name: "index_case_type_fields_unique_key", unique: true
+    t.index ["case_type_id"], name: "index_case_type_fields_on_case_type_id"
+  end
+
+  create_table "case_types", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.string "color", default: "#3b82f6", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "prefix", default: "", null: false
+    t.index ["account_id", "position"], name: "index_case_types_on_account_id_and_position"
   end
 
   create_table "categories", force: :cascade do |t|
@@ -463,10 +648,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_162748) do
     t.datetime "updated_at", null: false
     t.jsonb "keyword_actions", default: [], null: false
     t.jsonb "calendar_integration_ids", default: [], null: false
+    t.integer "calendar_event_duration", default: 30
     t.integer "tracking_template_id"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
-    t.index ["contact_id", "status"], name: "index_unique_active_tracking_per_contact", unique: true, where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('scheduled'::character varying)::text, ('active'::character varying)::text, ('paused'::character varying)::text]))"
+    t.index ["contact_id", "status"], name: "index_unique_active_tracking_per_contact", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))"
     t.index ["contact_id"], name: "index_contact_trackings_on_contact_id"
     t.index ["conversation_id", "inbox_id"], name: "index_contact_trackings_on_conversation_id_and_inbox_id"
     t.index ["conversation_id"], name: "index_contact_trackings_on_conversation_id"
@@ -719,6 +905,30 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_162748) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.jsonb "settings", default: {}
+  end
+
+  create_table "kanban_processes", force: :cascade do |t|
+    t.string "type_process_name", null: false
+    t.boolean "default", default: false
+    t.boolean "is_system", default: false
+    t.integer "position", default: 0
+    t.bigint "account_id", null: false
+    t.bigint "kanban_type_process_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_kanban_processes_on_account_id"
+    t.index ["kanban_type_process_id"], name: "index_kanban_processes_on_kanban_type_process_id"
+  end
+
+  create_table "kanban_type_processes", force: :cascade do |t|
+    t.string "process_name", null: false
+    t.boolean "default", default: false
+    t.boolean "is_system", default: false
+    t.bigint "account_id", null: false
+    t.datetime "created_at"
+    t.datetime "updated_at"
+    t.index ["account_id"], name: "index_kanban_type_processes_on_account_id"
+    t.index ["account_id"], name: "unique_default_kanban_type_process_per_account", unique: true, where: "(\"default\" = true)"
   end
 
   create_table "knowledge_items", force: :cascade do |t|
@@ -1078,9 +1288,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_162748) do
     t.datetime "updated_at", null: false
     t.bigint "inbox_id"
     t.bigint "user_id"
+    t.jsonb "keyword_actions", default: [], null: false
     t.integer "retry_interval_value", default: 1
     t.string "retry_interval_unit", default: "days"
-    t.jsonb "keyword_actions", default: [], null: false
     t.integer "kbase_hook_id"
     t.jsonb "calendar_integration_ids", default: [], null: false
     t.integer "calendar_event_duration", default: 30
@@ -1170,6 +1380,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_162748) do
   add_foreign_key "account_users", "contacts", column: "agent_contact_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "case_ai_configs", "accounts"
+  add_foreign_key "case_type_fields", "accounts"
+  add_foreign_key "case_type_fields", "case_types"
   add_foreign_key "command_sessions", "accounts"
   add_foreign_key "command_sessions", "contacts"
   add_foreign_key "command_sessions", "conversations"
@@ -1180,6 +1393,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_03_162748) do
   add_foreign_key "contact_trackings", "conversations"
   add_foreign_key "contact_trackings", "inboxes"
   add_foreign_key "inboxes", "portals"
+  add_foreign_key "kanban_processes", "accounts"
+  add_foreign_key "kanban_processes", "kanban_type_processes"
+  add_foreign_key "kanban_type_processes", "accounts"
   add_foreign_key "knowledge_items", "accounts"
   add_foreign_key "knowledge_items", "knowledge_sources"
   add_foreign_key "knowledge_sources", "accounts"

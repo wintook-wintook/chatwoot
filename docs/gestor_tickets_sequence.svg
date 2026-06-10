@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="628" viewBox="0 0 960 628">
+  <rect width="960" height="628" fill="#f8fafc" rx="8"/>
+
+  <!-- Title -->
+  <text x="480" y="20" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b" font-family="Segoe UI, system-ui, sans-serif">Diagrama de Secuencia — Gestor de Tickets</text>
+
+  <!-- PARTICIPANT BOXES -->
+  <!-- Cliente lx=85 -->
+  <rect x="35" y="28" width="100" height="36" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="85" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#1e3a8a" font-family="Segoe UI, system-ui, sans-serif">Cliente</text>
+  <text x="85" y="61" text-anchor="middle" font-size="9" fill="#1e3a8a" font-family="Segoe UI, system-ui, sans-serif">(WhatsApp)</text>
+
+  <!-- AnalyzerJob lx=225 -->
+  <rect x="168" y="28" width="114" height="36" rx="4" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5"/>
+  <text x="225" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#0c4a6e" font-family="Segoe UI, system-ui, sans-serif">AnalyzerJob</text>
+  <text x="225" y="61" text-anchor="middle" font-size="9" fill="#0c4a6e" font-family="Segoe UI, system-ui, sans-serif">ContactTracking</text>
+
+  <!-- OrchestratorSvc lx=375 -->
+  <rect x="315" y="28" width="120" height="36" rx="4" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="375" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#14532d" font-family="Segoe UI, system-ui, sans-serif">Orchestrator</text>
+  <text x="375" y="61" text-anchor="middle" font-size="9" fill="#14532d" font-family="Segoe UI, system-ui, sans-serif">Service</text>
+
+  <!-- RuleEngineSvc lx=515 -->
+  <rect x="455" y="28" width="120" height="36" rx="4" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="515" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#78350f" font-family="Segoe UI, system-ui, sans-serif">RuleEngine</text>
+  <text x="515" y="61" text-anchor="middle" font-size="9" fill="#78350f" font-family="Segoe UI, system-ui, sans-serif">Service</text>
+
+  <!-- KBaseSvc lx=660 -->
+  <rect x="598" y="28" width="124" height="36" rx="4" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="660" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#4c1d95" font-family="Segoe UI, system-ui, sans-serif">KBase</text>
+  <text x="660" y="61" text-anchor="middle" font-size="9" fill="#4c1d95" font-family="Segoe UI, system-ui, sans-serif">Service</text>
+
+  <!-- TicketCreatorSvc lx=820 -->
+  <rect x="755" y="28" width="130" height="36" rx="4" fill="#fce7f3" stroke="#db2777" stroke-width="1.5"/>
+  <text x="820" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#831843" font-family="Segoe UI, system-ui, sans-serif">TicketCreator</text>
+  <text x="820" y="61" text-anchor="middle" font-size="9" fill="#831843" font-family="Segoe UI, system-ui, sans-serif">Service</text>
+
+  <!-- LIFELINES -->
+  <line x1="85"  y1="64" x2="85"  y2="555" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="225" y1="64" x2="225" y2="555" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="375" y1="64" x2="375" y2="555" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="515" y1="64" x2="515" y2="555" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="660" y1="64" x2="660" y2="555" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="820" y1="64" x2="820" y2="555" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- AnalyzerJob activation bar -->
+  <rect x="222" y="90" width="6" height="410" rx="1" fill="#bae6fd" stroke="#0284c7" stroke-width="0.8"/>
+
+  <!-- ===== MESSAGES 1–5 (pre-alt) ===== -->
+
+  <!-- 1. Cliente → AnalyzerJob: mensaje entrante y=92 -->
+  <line x1="85" y1="92" x2="222" y2="92" stroke="#1d4ed8" stroke-width="1.5"/>
+  <polygon points="214,88 222,92 214,96" fill="#1d4ed8"/>
+  <text x="153" y="88" text-anchor="middle" font-size="10" fill="#1e293b" font-weight="500" font-family="Segoe UI, system-ui, sans-serif">mensaje entrante</text>
+
+  <!-- 2. AnalyzerJob → OrchestratorSvc y=120 -->
+  <line x1="228" y1="120" x2="375" y2="120" stroke="#15803d" stroke-width="1.5"/>
+  <polygon points="367,116 375,120 367,124" fill="#15803d"/>
+  <text x="301" y="115" text-anchor="middle" font-size="10" fill="#1e293b" font-family="Segoe UI, system-ui, sans-serif">find_or_create_ticket</text>
+  <rect x="372" y="120" width="6" height="32" rx="1" fill="#bbf7d0" stroke="#16a34a" stroke-width="0.8"/>
+
+  <!-- 3. OrchestratorSvc → AnalyzerJob return y=152 -->
+  <line x1="372" y1="152" x2="228" y2="152" stroke="#15803d" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <polygon points="236,148 228,152 236,156" fill="#15803d"/>
+  <text x="301" y="147" text-anchor="middle" font-size="10" fill="#374151" font-style="italic" font-family="Segoe UI, system-ui, sans-serif">CaseTicket + Event: ticket_created</text>
+
+  <!-- 4. AnalyzerJob → RuleEngineSvc y=180 -->
+  <line x1="228" y1="180" x2="515" y2="180" stroke="#b45309" stroke-width="1.5"/>
+  <polygon points="507,176 515,180 507,184" fill="#b45309"/>
+  <text x="371" y="175" text-anchor="middle" font-size="10" fill="#1e293b" font-family="Segoe UI, system-ui, sans-serif">evaluate!(ticket)</text>
+  <rect x="512" y="180" width="6" height="30" rx="1" fill="#fde68a" stroke="#d97706" stroke-width="0.8"/>
+
+  <!-- 5. RuleEngineSvc → AnalyzerJob return y=210 -->
+  <line x1="512" y1="210" x2="228" y2="210" stroke="#b45309" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <polygon points="236,206 228,210 236,214" fill="#b45309"/>
+  <text x="371" y="205" text-anchor="middle" font-size="10" fill="#374151" font-style="italic" font-family="Segoe UI, system-ui, sans-serif">acciones aplicadas (assign, priority...)</text>
+
+  <!-- ===== ALT BOX y=228..554 ===== -->
+  <rect x="18" y="228" width="932" height="326" rx="4" fill="none" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <rect x="18" y="228" width="28" height="18" rx="2" fill="#64748b"/>
+  <text x="32" y="241" text-anchor="middle" font-size="10" font-weight="700" fill="white" font-family="Segoe UI, system-ui, sans-serif">alt</text>
+
+  <!-- ALT 1 label -->
+  <text x="480" y="247" text-anchor="middle" font-size="10" font-weight="600" fill="#1d4ed8" font-family="Segoe UI, system-ui, sans-serif">[KnowledgeBase resuelve la consulta]</text>
+
+  <!-- 6a. AnalyzerJob → KBaseSvc y=264 -->
+  <line x1="228" y1="264" x2="660" y2="264" stroke="#6d28d9" stroke-width="1.5"/>
+  <polygon points="652,260 660,264 652,268" fill="#6d28d9"/>
+  <text x="444" y="259" text-anchor="middle" font-size="10" fill="#1e293b" font-family="Segoe UI, system-ui, sans-serif">search(@buscar_foro / @buscar_predeterminadas)</text>
+  <rect x="657" y="264" width="6" height="30" rx="1" fill="#ddd6fe" stroke="#7c3aed" stroke-width="0.8"/>
+
+  <!-- 7a. KBaseSvc → AnalyzerJob return y=294 -->
+  <line x1="657" y1="294" x2="228" y2="294" stroke="#6d28d9" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <polygon points="236,290 228,294 236,298" fill="#6d28d9"/>
+  <text x="444" y="289" text-anchor="middle" font-size="10" fill="#374151" font-style="italic" font-family="Segoe UI, system-ui, sans-serif">respuesta encontrada</text>
+
+  <!-- 8a. AnalyzerJob → Cliente return y=322 -->
+  <line x1="222" y1="322" x2="85" y2="322" stroke="#1d4ed8" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <polygon points="93,318 85,322 93,326" fill="#1d4ed8"/>
+  <text x="153" y="317" text-anchor="middle" font-size="10" fill="#374151" font-style="italic" font-family="Segoe UI, system-ui, sans-serif">respuesta al cliente</text>
+  <text x="153" y="331" text-anchor="middle" font-size="9" fill="#64748b" font-family="Segoe UI, system-ui, sans-serif">CaseEvent: message_sent</text>
+
+  <!-- Divider between alt sections -->
+  <line x1="18" y1="352" x2="950" y2="352" stroke="#64748b" stroke-width="1" stroke-dasharray="5,3"/>
+
+  <!-- ALT 2 label -->
+  <text x="480" y="370" text-anchor="middle" font-size="10" font-weight="600" fill="#be185d" font-family="Segoe UI, system-ui, sans-serif">[KBase sin resultados + directiva @crear_ticket presente]</text>
+
+  <!-- 6b. AnalyzerJob → KBaseSvc y=388 -->
+  <line x1="228" y1="388" x2="660" y2="388" stroke="#6d28d9" stroke-width="1.5"/>
+  <polygon points="652,384 660,388 652,392" fill="#6d28d9"/>
+  <text x="444" y="383" text-anchor="middle" font-size="10" fill="#1e293b" font-family="Segoe UI, system-ui, sans-serif">search(@buscar_foro)</text>
+  <rect x="657" y="388" width="6" height="27" rx="1" fill="#ddd6fe" stroke="#7c3aed" stroke-width="0.8"/>
+
+  <!-- 7b. KBaseSvc → AnalyzerJob return y=415 -->
+  <line x1="657" y1="415" x2="228" y2="415" stroke="#6d28d9" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <polygon points="236,411 228,415 236,419" fill="#6d28d9"/>
+  <text x="444" y="410" text-anchor="middle" font-size="10" fill="#374151" font-style="italic" font-family="Segoe UI, system-ui, sans-serif">sin resultados</text>
+
+  <!-- 8b. AnalyzerJob → TicketCreatorSvc y=444 -->
+  <line x1="228" y1="444" x2="820" y2="444" stroke="#9d174d" stroke-width="1.5"/>
+  <polygon points="812,440 820,444 812,448" fill="#9d174d"/>
+  <text x="524" y="439" text-anchor="middle" font-size="10" fill="#1e293b" font-family="Segoe UI, system-ui, sans-serif">detect @crear_ticket → create_from_directive</text>
+  <rect x="817" y="444" width="6" height="36" rx="1" fill="#fbcfe8" stroke="#db2777" stroke-width="0.8"/>
+
+  <!-- 9b. TicketCreatorSvc → Cliente y=480 -->
+  <line x1="817" y1="480" x2="85" y2="480" stroke="#9d174d" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <polygon points="93,476 85,480 93,484" fill="#9d174d"/>
+  <text x="452" y="475" text-anchor="middle" font-size="10" fill="#374151" font-style="italic" font-family="Segoe UI, system-ui, sans-serif">"Tu caso fue registrado, un asesor te contactará"</text>
+  <text x="452" y="490" text-anchor="middle" font-size="9" fill="#64748b" font-family="Segoe UI, system-ui, sans-serif">CaseEvent: ticket_created</text>
+
+  <!-- SlaMonitorJob note -->
+  <rect x="18" y="566" width="932" height="50" rx="6" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+  <text x="480" y="585" text-anchor="middle" font-size="11" font-weight="700" fill="#14532d" font-family="Segoe UI, system-ui, sans-serif">CaseSlaMonitorJob — Sidekiq cron cada 15 min</text>
+  <text x="480" y="601" text-anchor="middle" font-size="10" fill="#374151" font-family="Segoe UI, system-ui, sans-serif">Detecta SLA at_risk / overdue → RuleEngine → escalado automatico → auto-cierre 72h post resolved</text>
+</svg>

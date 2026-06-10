@@ -63,6 +63,8 @@ import contactTrackings from './modules/contactTrackings';
 
 // proyecto@tracking_templates
 import trackingTemplates from './modules/trackingTemplates';
+// @tickets_cases
+import caseTickets from './modules/caseTickets';
 // proyecto@google_calendar
 import googleCalendar from './modules/googleCalendar';
 
@@ -126,6 +128,7 @@ export default new Vuex.Store({
     contactTrackings,// proyecto@contact_tracking    
     trackingTemplates, // proyecto@tracking_templates
     googleCalendar, // proyecto@google_calendar
+    caseTickets, // @tickets_cases
   },
   plugins,
 });
