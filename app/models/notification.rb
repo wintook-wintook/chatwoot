@@ -43,7 +43,10 @@ class Notification < ApplicationRecord
     sla_missed_first_response: 6,
     sla_missed_next_response: 7,
     sla_missed_resolution: 8,
-    calendar_event_reminder: 9
+    calendar_event_reminder: 9,
+    # @tickets_cases Fase A — asignación de ticket a un agente. Append al final:
+    # el bit de los flags de notification_settings se deriva de este entero.
+    case_ticket_assignment: 10
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -53,7 +56,7 @@ class Notification < ApplicationRecord
   after_destroy_commit :dispatch_destroy_event
   after_update_commit :dispatch_update_event
 
-  PRIMARY_ACTORS = ['Conversation'].freeze
+  PRIMARY_ACTORS = %w[Conversation CaseTicket].freeze # @tickets_cases Fase A
 
   def push_event_data
     # Secondary actor could be nil for cases like system assigning conversation
@@ -101,7 +104,8 @@ class Notification < ApplicationRecord
       'sla_missed_first_response' => 'notifications.notification_title.sla_missed_first_response',
       'sla_missed_next_response' => 'notifications.notification_title.sla_missed_next_response',
       'sla_missed_resolution' => 'notifications.notification_title.sla_missed_resolution',
-      'calendar_event_reminder' => 'notifications.notification_title.calendar_event_reminder'
+      'calendar_event_reminder' => 'notifications.notification_title.calendar_event_reminder',
+      'case_ticket_assignment' => 'notifications.notification_title.case_ticket_assignment'
     }
 
     i18n_key = notification_title_map[notification_type]
@@ -111,6 +115,8 @@ class Notification < ApplicationRecord
       I18n.t(i18n_key, display_id: conversation.display_id, inbox_name: primary_actor.inbox.name)
     elsif notification_type == 'calendar_event_reminder'
       I18n.t(i18n_key)
+    elsif notification_type == 'case_ticket_assignment'
+      I18n.t(i18n_key, folio: primary_actor.folio)
     elsif %w[conversation_assignment assigned_conversation_new_message participating_conversation_new_message
              conversation_mention].include?(notification_type)
       I18n.t(i18n_key, display_id: conversation.display_id)
@@ -132,6 +138,8 @@ class Notification < ApplicationRecord
       title = meta&.dig('event_summary') || I18n.t('notifications.calendar_event_reminder.no_title')
       minutes = meta&.dig('minutes_before') || 15
       I18n.t('notifications.calendar_event_reminder.body', title: title, minutes: minutes)
+    when 'case_ticket_assignment'
+      primary_actor.title.to_s
     else
       ''
     end

@@ -193,12 +193,14 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # lo limpia. `assignee_type` se DERIVA (agente → equipo → bot), nunca se setea
   # a mano. Acepta `assignee_id` y/o `team_id`.
   def assign
+    previous_assignee_id = @ticket.assignee_id
     return render json: { error: 'Se requiere assignee_id o team_id' }, status: :unprocessable_entity unless apply_assignment_params
 
     @ticket.assignee_type = derived_assignee_type
     @ticket.save!
     @ticket.case_events.create!(account: Current.account, event_type: :assigned,
                                 origin: :agent, actor: current_user, payload: assignment_payload)
+    notify_new_assignee(previous_assignee_id)
 
     render json: { case_ticket: ticket_json(@ticket.reload) }
   rescue ActiveRecord::RecordNotFound
@@ -555,6 +557,25 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       touched = true
     end
     touched
+  end
+
+  # @tickets_cases Fase A — notifica al agente recién asignado (bell nativo).
+  # Solo si hay assignee, cambió respecto al previo y no es auto-asignación.
+  # Falla en silencio para no romper la asignación si la notificación tiene problemas.
+  def notify_new_assignee(previous_assignee_id)
+    assignee = @ticket.assignee
+    return if assignee.nil?
+    return if assignee.id == previous_assignee_id
+    return if assignee.id == current_user&.id
+
+    NotificationBuilder.new(
+      notification_type: 'case_ticket_assignment',
+      user:              assignee,
+      account:           Current.account,
+      primary_actor:     @ticket
+    ).perform
+  rescue StandardError => e
+    Rails.logger.error("[GestorTickets] notificación de asignación: #{e.message}")
   end
 
   # Tipo de asignación derivado (nunca se setea a mano): agente → equipo → bot.

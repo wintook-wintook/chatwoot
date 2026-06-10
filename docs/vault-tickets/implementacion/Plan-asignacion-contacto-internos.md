@@ -49,13 +49,14 @@ tags: [tickets, plan, asignacion, contacto, internos, notificaciones]
 
 ---
 
-## Fase A — Asignación manual a agente / equipo (UI + pulido backend) ✅ NÚCLEO HECHO
+## Fase A — Asignación manual a agente / equipo (UI + pulido backend) ✅ HECHA (bell)
 
-> **Estado:** núcleo implementado y verificado en navegador (Puppeteer, cuenta 2):
-> agente + equipo coexisten, des-asignación, `assignee_type` derivado, evento.
-> Ver [[Historial-de-implementacion]] (entrada Fase A núcleo).
-> **Pendiente:** parte 2 — notificación nativa al agente asignado (A1 "encolar
-> notificación" + el bloque C4) → paso aparte por el bitfield de notification_settings.
+> **Estado:** núcleo + notificación in-app implementados y verificados en navegador
+> (Puppeteer, cuenta 2): agente + equipo coexisten, des-asignación, `assignee_type`
+> derivado, evento, y **notificación nativa en la campana** que enruta al ticket.
+> Ver [[Historial-de-implementacion]] (entradas Fase A núcleo + parte 2).
+> **Diferido (no bloqueante):** delivery email/push (flags off por defecto) +
+> checkbox en `NotificationPreferences.vue`. La campana ya funciona.
 
 
 ```

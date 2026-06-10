@@ -142,6 +142,20 @@ class CaseTicket < ApplicationRecord
     VALID_TRANSITIONS[status].include?(new_status.to_s)
   end
 
+  # @tickets_cases Fase A — payload para notificaciones nativas (bell/ActionCable).
+  # Notification#push_event_data invoca esto sobre el primary_actor.
+  # `meta.assignee` es obligatorio: el frontend (NotificationTable) lo lee sin
+  # optional-chaining → si falta `meta`, rompe el render de toda la lista.
+  def push_event_data
+    {
+      id:     id,
+      folio:  folio,
+      title:  title,
+      status: status,
+      meta:   { assignee: assignee&.push_event_data }
+    }
+  end
+
   def transition!(new_status, actor: nil, reason: nil, closure: nil)
     raise "Transición inválida: #{status} → #{new_status}" unless can_transition_to?(new_status)
     # @tickets_cases 2F — un cambio que requiere aprobación no puede ejecutarse sin aprobarse.
