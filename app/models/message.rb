@@ -461,13 +461,36 @@ class Message < ApplicationRecord
   # Analiza respuestas del cliente y ajusta seguimientos activos según sentimiento
   # Para revertir: Eliminar este método completo
   def analyze_for_active_trackings
-    # Wait 5s so automation rules (EventDispatcherJob) have time to create a
-    # ContactTracking before the analyzer runs — prevents the double-reply race
-    # where Job#1 sees no tracking and dispatches to BotSeller, then Job#2
-    # (re-queued by action_service.rb) finds the tracking and also replies.
-    ContactTrackingResponseAnalyzerJob.set(wait: 5.seconds).perform_later(id)
+    # Solo esperamos si una automatización (EventDispatcherJob, queue :critical)
+    # va a crear un ContactTracking nuevo para esta conversación — le damos
+    # tiempo a que se ejecute antes del analyzer, evitando el race condition
+    # donde Job#1 ve "sin tracking" y despacha a BotSeller, y luego el tracking
+    # recién creado provoca una segunda respuesta. Si no aplica ninguna
+    # automatización, procesamos el mensaje sin demora.
+    wait = will_trigger_tracking_automation? ? 5.seconds : 0.seconds
+    ContactTrackingResponseAnalyzerJob.set(wait: wait).perform_later(id)
   rescue StandardError => e
     Rails.logger.error "[Message] Error queueing sentiment analysis: #{e.message}"
+  end
+
+  # proyecto@contact_tracking: ¿alguna AutomationRule (conversation_created,
+  # conversation_opened o message_created) con acción assign_tracking_template
+  # va a crear un ContactTracking para esta conversación? Si el contacto ya
+  # tiene uno activo, la acción no crea uno nuevo (ver action_service.rb) y
+  # el analyzer ya lo verá sin esperar.
+  TRACKING_AUTOMATION_EVENTS = %w[conversation_created conversation_opened message_created].freeze
+
+  def will_trigger_tracking_automation?
+    active_statuses = %w[pending scheduled active paused]
+    return false if ContactTracking.where(contact_id: conversation.contact_id, status: active_statuses).exists?
+
+    account.automation_rules.active.where(event_name: TRACKING_AUTOMATION_EVENTS).any? do |rule|
+      rule.actions.any? { |action| action['action_name'] == 'assign_tracking_template' } &&
+        AutomationRules::ConditionsFilterService.new(rule, conversation, message: self).perform
+    end
+  rescue StandardError => e
+    Rails.logger.error "[Message] Error checking tracking automation: #{e.message}"
+    true
   end
 
   # proyecto@contact_tracking: evalúa keywords de acción en mensajes salientes
