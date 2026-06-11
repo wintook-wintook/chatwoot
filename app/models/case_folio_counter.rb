@@ -30,7 +30,7 @@ class CaseFolioCounter < ApplicationRecord
       'RETURNING value',
       account_id, counter_key
     ])
-    connection.select_value(sql).to_i
+    exec_counter_sql(sql)
   end
 
   # @tickets_cases — eleva el contador a AL MENOS min_value (nunca lo baja).
@@ -45,6 +45,14 @@ class CaseFolioCounter < ApplicationRecord
       'RETURNING value',
       account_id, counter_key, min_value.to_i
     ])
-    connection.select_value(sql).to_i
+    exec_counter_sql(sql)
   end
+
+  # uncached: en un request el query cache cachearía el `RETURNING value` y las llamadas
+  # repetidas (p.ej. el reintento de folio) devolverían el mismo valor cacheado. Estas
+  # son escrituras (UPSERT) que SIEMPRE deben ejecutarse → fuera del cache.
+  def self.exec_counter_sql(sql)
+    uncached { connection.select_value(sql).to_i }
+  end
+  private_class_method :exec_counter_sql
 end
