@@ -19,6 +19,9 @@
 # ================================================================================
 
 class Cases::FolioGeneratorService
+  # Reintentos acotados ante colisión de folio (contador desincronizado).
+  RETRY_LIMIT = 10
+
   def initialize(ticket, config: nil, now: nil)
     @ticket  = ticket
     @account = ticket.account
@@ -27,14 +30,43 @@ class Cases::FolioGeneratorService
   end
 
   # Genera y retorna el folio (string). No persiste — el caller asigna ticket.folio.
+  # Robusto a colisiones: si el folio candidato ya existe (p.ej. el contador quedó
+  # detrás de folios sembrados/importados a mano), adelanta el contador al máximo
+  # real y reintenta de forma acotada. Si aun así no resuelve, retorna nil (el folio
+  # es opcional y el índice único es parcial sobre NOT NULL) para no bloquear el alta.
   def generate
     return nil unless @config.enabled?
 
-    seq = CaseFolioCounter.next_value!(@account.id, counter_key)
-    render_template(seq)
+    folio = render_next
+    return folio unless folio_taken?(folio)
+
+    fast_forward_counter! # contador detrás del máximo real → resincroniza una vez
+    RETRY_LIMIT.times do
+      folio = render_next
+      return folio unless folio_taken?(folio)
+    end
+
+    Rails.logger.warn("[Folio] no se pudo generar folio único (cuenta #{@account.id}, key #{counter_key})")
+    nil
   end
 
   private
+
+  def render_next
+    render_template(CaseFolioCounter.next_value!(@account.id, counter_key))
+  end
+
+  def folio_taken?(folio)
+    folio.present? && @account.case_tickets.exists?(folio: folio)
+  end
+
+  # Eleva el contador al mayor consecutivo numérico ya presente en los folios de la
+  # cuenta (lee los dígitos finales). Atómico; nunca baja el contador.
+  def fast_forward_counter!
+    max_seq = @account.case_tickets.where.not(folio: nil).pluck(:folio)
+                      .filter_map { |f| f[/(\d+)\s*\z/, 1]&.to_i }.max.to_i
+    CaseFolioCounter.set_min_value!(@account.id, counter_key, max_seq)
+  end
 
   def counter_key
     parts = []
