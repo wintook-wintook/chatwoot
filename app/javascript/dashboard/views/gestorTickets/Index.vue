@@ -229,9 +229,10 @@ import WootDateRangePicker from 'dashboard/components/ui/DateRangePicker.vue';
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
 
 const QUICK_FILTERS = [
-  { key: 'all',         label: 'Todos' },
-  { key: 'sla_overdue', label: 'SLA vencido' },
-  { key: 'unassigned',  label: 'Sin asignar' },
+  { key: 'mine', label: 'Mis Tickets' },
+  { key: 'unassigned', label: 'Sin Asignar' },
+  { key: 'all', label: 'Todos' },
+  { key: 'sla_overdue', label: 'SLA vencidos' },
 ];
 
 // Los 13 estados de ticket (sin los estados SLA que comparten el bloque STATUSES).
@@ -266,7 +267,7 @@ export default {
       statusFilter: '',
       priorityFilter: '',
       originFilter: '', // @tickets_cases Fase C
-      activeFilter: 'all',
+      activeFilter: 'mine',
       activeType: '',       // '' = todos, o un case_type_id
       sortBy: 'created_at',
       sortOrder: 'desc',
@@ -280,6 +281,7 @@ export default {
       meta:          'caseTickets/getTicketsMeta',
       uiFlags:       'caseTickets/getUIFlags',
       types:         'caseTickets/getTypes',
+      currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
     }),
     isFetchingList()  { return this.uiFlags.isFetchingList; },
     quickFilters()    { return QUICK_FILTERS; },
@@ -320,7 +322,7 @@ export default {
         !!this.statusFilter ||
         !!this.priorityFilter ||
         !!this.originFilter ||
-        this.activeFilter !== 'all' ||
+        this.activeFilter !== 'mine' ||
         !!this.activeType
       );
     },
@@ -346,6 +348,7 @@ export default {
       if (this.originFilter)       filters.origin = this.originFilter;
       if (this.activeFilter === 'sla_overdue') filters.sla_status = 'overdue';
       if (this.activeFilter === 'unassigned')  filters.assignee_id = 'null';
+      if (this.activeFilter === 'mine')        filters.assignee_id = this.currentUserID;
       if (this.activeType)         filters.case_type_id = this.activeType;
       filters.sort_by = this.sortBy;
       filters.sort_order = this.sortOrder;
@@ -390,7 +393,7 @@ export default {
       this.statusFilter = '';
       this.priorityFilter = '';
       this.originFilter = '';
-      this.activeFilter = 'all';
+      this.activeFilter = 'mine';
       this.activeType = '';
       this.currentPage = 1;
       this.fetch();

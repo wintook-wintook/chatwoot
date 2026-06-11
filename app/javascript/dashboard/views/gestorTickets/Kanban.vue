@@ -10,9 +10,10 @@ import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets
 
 // Filtros rápidos (pestañas) — mismo set que el listado (Index.vue).
 const QUICK_FILTERS = [
+  { key: 'mine', label: 'Mis Tickets' },
+  { key: 'unassigned', label: 'Sin Asignar' },
   { key: 'all', label: 'Todos' },
-  { key: 'sla_overdue', label: 'SLA vencido' },
-  { key: 'unassigned', label: 'Sin asignar' },
+  { key: 'sla_overdue', label: 'SLA vencidos' },
 ];
 
 // Columnas operativas: cada una agrupa uno o más estados del ciclo de vida (2A).
@@ -54,7 +55,7 @@ export default {
     return {
       columns: COLUMNS,
       quickFilters: QUICK_FILTERS,
-      quickFilter: 'all',
+      quickFilter: 'mine',
       showInternalModal: false, // @tickets_cases Fase C
       filters: {
         q: '',
@@ -81,6 +82,7 @@ export default {
       slaOverdueCount: 'caseTickets/getBoardSlaOverdue',
       services: 'caseTickets/getServices',
       agents: 'agents/getAgents',
+      currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
     }),
     isFetching() {
       return this.boardUiFlags.isFetching;
@@ -134,6 +136,7 @@ export default {
       // Filtro rápido (pestañas): sobrescribe assignee / añade sla_status.
       if (this.quickFilter === 'sla_overdue') f.sla_status = 'overdue';
       if (this.quickFilter === 'unassigned') f.assignee_id = 'unassigned';
+      if (this.quickFilter === 'mine') f.assignee_id = this.currentUserID;
       this.$store.dispatch('caseTickets/fetchBoardTickets', f);
     },
     onSearchInput() {
