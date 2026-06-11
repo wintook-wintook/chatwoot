@@ -19,7 +19,7 @@ import contactTrackingBulkAssignsAPI from 'dashboard/api/contactTrackingBulkAssi
 import { getMinDateTime } from '../../../helper/trackingHelpers';
 import ReviewContactsModal from './ReviewContactsModal.vue';
 
-const MAX_BULK_ASSIGN = 30;
+const MAX_BULK_ASSIGN = 100;
 
 export default {
   components: { ReviewContactsModal },
@@ -215,7 +215,7 @@ export default {
           v-if="exceedsLimit"
           class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md text-sm text-yellow-800 dark:text-yellow-200"
         >
-          {{ $t('BULK_TRACKING_ASSIGN.MODAL.LIMIT_EXCEEDED', { max: 30 }) }}
+          {{ $t('BULK_TRACKING_ASSIGN.MODAL.LIMIT_EXCEEDED', { max: MAX_BULK_ASSIGN }) }}
         </div>
 
         <div class="flex justify-end gap-2 mt-6">
