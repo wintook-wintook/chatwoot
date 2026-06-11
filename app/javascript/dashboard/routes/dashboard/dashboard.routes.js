@@ -10,6 +10,8 @@ import helpcenterRoutes from './helpcenter/helpcenter.routes';
 // KANBAN0725
 import { routes as kanbanRoutes } from './kanban/routes'; // Añade esta línea
 // KANBAN0725
+// @tickets_cases
+import { routes as gestorTicketsRoutes } from './gestorTickets/routes';
 
 const AppContainer = () => import('./Dashboard.vue');
 const Captain = () => import('./Captain.vue');
@@ -37,8 +39,10 @@ export default {
         ...searchRoutes,
         ...notificationRoutes,
         // KANBAN0725
-        ...kanbanRoutes
+        ...kanbanRoutes,
         // KANBAN0725
+        // @tickets_cases
+        ...gestorTicketsRoutes
       ],
     },
     {

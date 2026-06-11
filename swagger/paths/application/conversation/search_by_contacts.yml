@@ -1,0 +1,61 @@
+tags:
+  - Conversations
+operationId: conversationSearchByContacts
+summary: Buscar conversaciones por contactos
+description: >
+  Busca conversaciones filtrando por una lista de números de teléfono y/o correos electrónicos.
+  Retorna todas las conversaciones cuyo contacto coincida con alguno de los identificadores proporcionados.
+  Útil para integrar sistemas externos que buscan interacciones por teléfono o email sin conocer los IDs internos.
+security:
+  - userApiKey: []
+parameters:
+  - in: body
+    name: data
+    required: true
+    schema:
+      type: object
+      properties:
+        phone_numbers:
+          type: array
+          items:
+            type: string
+          description: Lista de números de teléfono en formato E.164
+          example: ["+573001234567", "+573109876543"]
+        emails:
+          type: array
+          items:
+            type: string
+          description: Lista de correos electrónicos
+          example: ["cliente@email.com"]
+        status:
+          type: string
+          enum: [open, resolved, pending, snoozed, all]
+          required: false
+          description: Filtrar por estado de conversación (default= all)
+        page:
+          type: integer
+          required: false
+          description: Número de página para paginación
+responses:
+  '200':
+    description: Lista de conversaciones encontradas
+    schema:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/definitions/conversation'
+        meta:
+          type: object
+          properties:
+            all_count:
+              type: integer
+            assigned_count:
+              type: integer
+            unassigned_count:
+              type: integer
+            resolved_count:
+              type: integer
+  '422':
+    description: Parámetros inválidos (se requiere al menos phone_numbers o emails)

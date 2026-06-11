@@ -1,0 +1,62 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - name: contact_id
+    in: path
+    type: integer
+    required: true
+    description: ID del contacto
+  - name: id
+    in: path
+    type: integer
+    required: true
+    description: ID de la nota
+get:
+  tags:
+    - Contact Notes
+  operationId: contactNotesShow
+  summary: Ver nota
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Detalle de la nota
+      schema:
+        $ref: '#/definitions/contact_note'
+    '404':
+      description: Nota no encontrada
+patch:
+  tags:
+    - Contact Notes
+  operationId: contactNotesUpdate
+  summary: Actualizar nota
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        properties:
+          note:
+            type: object
+            properties:
+              content:
+                type: string
+  responses:
+    '200':
+      description: Nota actualizada
+      schema:
+        $ref: '#/definitions/contact_note'
+delete:
+  tags:
+    - Contact Notes
+  operationId: contactNotesDestroy
+  summary: Eliminar nota
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Nota eliminada
+    '404':
+      description: Nota no encontrada

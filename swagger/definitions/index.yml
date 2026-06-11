@@ -61,6 +61,26 @@ integrations_app:
 integrations_hook:
   $ref: ./resource/integrations/hook.yml
 
+# Custom Project APIs - proyecto@contact_tracking, proyecto@tracking_templates, kanban, knowledge_base
+contact_tracking:
+  $ref: ./resource/contact_tracking.yml
+tracking_template:
+  $ref: ./resource/tracking_template.yml
+pagination_meta:
+  $ref: ./resource/pagination_meta.yml
+kanban_type_process:
+  $ref: ./resource/kanban_type_process.yml
+kanban_process:
+  $ref: ./resource/kanban_process.yml
+knowledge_base_article:
+  $ref: ./resource/knowledge_base_article.yml
+knowledge_base_search_result:
+  $ref: ./resource/knowledge_base_search_result.yml
+contact_schedule:
+  $ref: ./resource/contact_schedule.yml
+contact_note:
+  $ref: ./resource/contact_note.yml
+
 ## public resources
 public_contact:
   $ref: ./resource/public/contact.yml

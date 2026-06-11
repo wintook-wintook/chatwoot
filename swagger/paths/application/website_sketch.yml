@@ -1,0 +1,77 @@
+show:
+  tags:
+    - Website Sketch
+  operationId: websiteSketchShow
+  summary: Analizar sitio web
+  description: >
+    Analiza la estructura y contenido de un sitio web dado su URL.
+    Si el análisis tarda más de 10 segundos, devuelve status `processing` con un `cache_key`
+    que puede consultarse periódicamente con el endpoint `/website_sketch/status`.
+  security:
+    - userApiKey: []
+  parameters:
+    - in: query
+      name: url
+      type: string
+      required: true
+      description: URL del sitio web a analizar
+      example: https://ejemplo.com
+  responses:
+    '200':
+      description: Análisis completado
+      schema:
+        type: object
+        properties:
+          success:
+            type: boolean
+          data:
+            type: object
+            description: Datos extraídos del sitio (título, descripción, páginas, etc.)
+    '202':
+      description: Análisis en proceso (background)
+      schema:
+        type: object
+        properties:
+          success:
+            type: boolean
+          status:
+            type: string
+            example: processing
+          message:
+            type: string
+          cache_key:
+            type: string
+            description: Clave para consultar el resultado con /website_sketch/status
+    '500':
+      description: Error al procesar el sitio
+
+status:
+  tags:
+    - Website Sketch
+  operationId: websiteSketchStatus
+  summary: Consultar estado del análisis de sitio web
+  description: >
+    Consulta el resultado de un análisis de sitio web iniciado previamente.
+    Usar cuando el endpoint principal devolvió status `processing`.
+  security:
+    - userApiKey: []
+  parameters:
+    - in: query
+      name: cache_key
+      type: string
+      required: true
+      description: cache_key devuelto por el endpoint /website_sketch
+  responses:
+    '200':
+      description: Estado actual del análisis
+      schema:
+        type: object
+        properties:
+          success:
+            type: boolean
+          status:
+            type: string
+            enum: [processing, completed]
+          data:
+            type: object
+            description: Datos del análisis (presente cuando status=completed)

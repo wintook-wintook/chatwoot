@@ -1,0 +1,32 @@
+type: object
+properties:
+  content_id:
+    type: integer
+    description: ID del artículo que contiene el fragmento
+  chunk_id:
+    type: string
+    description: ID único del fragmento vectorizado
+  title:
+    type: string
+    description: Título del artículo
+  url:
+    type: string
+    description: URL del artículo
+  content:
+    type: string
+    description: Fragmento de texto relevante
+  content_type:
+    type: string
+  priority:
+    type: integer
+  similarity_score:
+    type: number
+    format: float
+    description: Puntuación de similitud (0.0 - 1.0)
+  similarity_percentage:
+    type: number
+    format: float
+    description: Similitud en porcentaje (0 - 100)
+  metadata:
+    type: object
+    description: Metadatos adicionales del fragmento

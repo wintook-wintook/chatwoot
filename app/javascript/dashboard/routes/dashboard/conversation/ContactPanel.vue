@@ -27,6 +27,8 @@ import Modal from 'dashboard/components/Modal.vue';
 // proyecto@CONTACT_PANEL - NUEVO: Importar componentes
 // ============================================================
 import ContactTrackingModal from 'dashboard/components/contacts/ContactTracking/ContactTrackingModal.vue';
+// @tickets_cases
+import CaseTicketPanel from 'dashboard/components/contacts/CaseTicket/CaseTicketPanel.vue';
 
 export default {
   components: {
@@ -44,6 +46,7 @@ export default {
     // ============================================================
     ContactTrackingModal,
     Modal,
+    CaseTicketPanel, // @tickets_cases
   },
   props: {
     conversationId: {
@@ -388,6 +391,16 @@ export default {
     <!-- ============================================================ -->
     <!-- FIN: Botón Programar Seguimiento                             -->
     <!-- ============================================================ -->
+
+    <!-- @tickets_cases: Sección Ticket asociado (solo si la feature case_management está activa) -->
+    <woot-feature-toggle feature-key="case_management">
+      <CaseTicketPanel
+        v-if="contact.id"
+        :contact-id="contact.id"
+        :conversation-id="conversationId"
+      />
+    </woot-feature-toggle>
+    <!-- FIN @tickets_cases -->
 
 
     <Draggable :list="conversationSidebarItems" :disabled="!dragEnabled" animation="200" class="list-group"

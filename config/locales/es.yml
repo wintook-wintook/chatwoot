@@ -127,6 +127,7 @@ es:
       sla_missed_next_response: "Falta la siguiente respuesta del SLA para la conversación (#%{display_id})"
       sla_missed_resolution: "Falta la siguiente respuesta del SLA para la conversación (#%{display_id})"
       calendar_event_reminder: "Recordatorio de calendario"
+      case_ticket_assignment: "El ticket %{folio} te ha sido asignado"
     calendar_event_reminder:
       body: "\"%{title}\" comienza en %{minutes} minutos"
       no_title: "Evento sin título"
@@ -192,6 +193,9 @@ es:
     online:
       delete: "%{contact_name} está conectado, por favor inténtalo más tarde"
   integration_apps:
+    discourse:
+      name: "Discourse"
+      description: "Conecta tu foro de Discourse para usarlo como base de conocimiento. Wintook indexará tus topics y usará búsqueda semántica para responder preguntas de clientes automáticamente."
     bots_inboxes:
       name: "Activación de Bot"
       description: "Dashboard Apps allow you to create and embed applications that display user information, orders, or payment history, providing more context to your customer support agents."

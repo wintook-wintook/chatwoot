@@ -121,7 +121,7 @@ class DiscourseKnowledgeSyncJob < ApplicationJob
 
     request = Net::HTTP::Get.new(uri)
     request['Api-Key']      = config['api_key'].to_s if config['api_key'].present?
-    request['Api-Username'] = config['api_username'].to_s.presence || 'system'
+    request['Api-Username'] = config['username'].to_s.presence || 'system'
     request['Content-Type'] = 'application/json'
 
     response = http.request(request)

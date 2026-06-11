@@ -126,3 +126,7 @@
   enabled: false
 - name: google_calendar
   enabled: false
+# @tickets_cases — Gestor de Tickets (MGCI). Off por defecto; se activa por cuenta desde el super admin.
+# IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
+- name: case_management
+  enabled: false

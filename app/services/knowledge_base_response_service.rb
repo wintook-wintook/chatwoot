@@ -1,8 +1,26 @@
 # frozen_string_literal: true
 
-# Responde mensajes de contactos sin seguimiento activo usando Discourse como
-# base de conocimiento y OpenAI para generar respuestas conversacionales.
+# ================================================================================
+# proyecto@contact_tracking - BASE DE CONOCIMIENTO
+# ================================================================================
+# Tres modos según la directiva en complementary_prompt:
+#
+#   @buscar_predeterminadas       → pgvector sobre knowledge_items (canned_responses)
+#   @buscar_foro(nombre_fuente)   → Discourse AI semantic search via KnowledgeSource
+#   @discourse                    → Discourse AI semantic search via integración del inbox
+#
+# RETORNO: true si se envió respuesta, false si no hay resultados o error.
+# ================================================================================
+
 class KnowledgeBaseResponseService
+  # Configuración para modo pgvector (canned responses)
+  DEFAULTS = {
+    'similarity_threshold' => 0.20,
+    'max_results'          => 3,
+    'max_context_chars'    => 6000
+  }.freeze
+
+  # Configuración para modo Discourse
   MAX_RESULTS    = 3
   MAX_HISTORY    = 6
   MAX_POST_CHARS = 2000
@@ -10,81 +28,187 @@ class KnowledgeBaseResponseService
   def initialize(message, tracking: nil)
     @message      = message
     @tracking     = tracking
-    @contact      = message.conversation.contact
     @account      = message.account
     @inbox        = message.inbox
     @conversation = message.conversation
   end
 
   def perform
-    return false unless kb_enabled?
+    directive = detect_directive
+    unless directive
+      Rails.logger.info '[KBase] ⏭️  Sin directiva kbase → skip'
+      return false
+    end
     return false if @message.content.blank?
 
     question = @message.content.strip
-    Rails.logger.info "[KnowledgeBase] 🔍 Pregunta: #{question.truncate(80)}"
+    Rails.logger.info "[KBase] 🔍 Modo: #{directive[:mode]}#{" (#{directive[:source_name]})" if directive[:source_name]}"
 
-    result   = search_discourse(question)
-    if result[:context].blank?
-      Rails.logger.info '[KnowledgeBase] ⚠️ Sin resultados en Discourse → sin respuesta'
+    case directive[:mode]
+    when :canned_response
+      perform_pgvector(question)
+    when :knowledge_source
+      perform_discourse(question, directive[:source_name])
+    when :discourse_integration
+      perform_discourse_integration(question)
+    else
+      false
+    end
+  rescue StandardError => e
+    Rails.logger.error "[KBase] ❌ Error: #{e.message}"
+    Rails.logger.error e.backtrace.first(3).join("\n")
+    false
+  end
+
+  private
+
+  # ==============================================================================
+  # Detección de directiva
+  # ==============================================================================
+
+  def detect_directive
+    cp = @tracking&.complementary_prompt.to_s
+    if cp.include?('@buscar_predeterminadas')
+      { mode: :canned_response }
+    elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
+      { mode: :knowledge_source, source_name: match[1].strip }
+    elsif cp.match?(/@discourse\b/i)
+      { mode: :discourse_integration }
+    end
+  end
+
+  # ==============================================================================
+  # MODO 1 — Canned responses (pgvector)
+  # ==============================================================================
+
+  def perform_pgvector(question)
+    embedding = generate_embedding_openai(question)
+    return false unless embedding
+
+    items = @account.knowledge_items
+                    .where(source_type: 'canned_response')
+                    .search_by_embedding(
+                      embedding,
+                      limit:     kbase_setting('max_results'),
+                      threshold: kbase_setting('similarity_threshold')
+                    )
+
+    if items.empty?
+      Rails.logger.info '[KBase] ⚠️ Sin resultados en canned responses'
       return false
     end
 
-    history  = load_history
-    answer   = ask_openai(question, result[:context], history)
+    Rails.logger.info "[KBase] ✅ #{items.size} resultado(s) en canned responses"
 
+    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(1200)}" }
+                   .join("\n\n")
+                   .truncate(kbase_setting('max_context_chars'))
+
+    reply_text = generate_reply_canned(question, context)
+    return false if reply_text.blank?
+
+    source_tag = @account.knowledge_sources.find_by(source_type: 'canned_response')&.name || 'Respuestas Predefinidas'
+    send_reply("#{reply_text}\n\n_#{source_tag}_")
+    true
+  end
+
+  def generate_reply_canned(question, context)
+    api_key = openai_api_key
+    return nil unless api_key
+
+    first_name    = @message.sender&.name&.split&.first || 'cliente'
+    objective     = @tracking&.objective.to_s
+    system_prompt = <<~SYSTEM.strip
+      Eres un asesor de #{@account.name}. Responde como un humano amable y conocedor.
+      NUNCA menciones que eres un bot ni que consultaste una base de datos.
+      #{objective.present? ? "Objetivo de la conversación: #{objective}" : ""}
+    SYSTEM
+
+    user_prompt = <<~USER.strip
+      El cliente #{first_name} preguntó: "#{question.truncate(300)}"
+
+      Información relevante:
+      #{context}
+
+      Respondé usando esa información de forma completa y útil. Tono natural y conversacional.
+      No uses prefijos como "Asesor:" ni comillas al inicio o final.
+    USER
+
+    call_openai_simple([
+      { role: 'system', content: system_prompt },
+      { role: 'user',   content: user_prompt }
+    ], max_tokens: 800)
+      &.gsub(/\A[A-Za-záéíóúñÁÉÍÓÚÑ\s]{2,20}:\s*\n?/, '')
+      &.strip
+  end
+
+  # ==============================================================================
+  # MODO 2 — Discourse AI semantic search
+  # ==============================================================================
+
+  def perform_discourse(question, source_name)
+    source = @account.knowledge_sources.active
+                     .where('LOWER(name) = LOWER(?)', source_name)
+                     .first
+    unless source
+      Rails.logger.warn "[KBase] ⚠️ KnowledgeSource '#{source_name}' no encontrado o inactivo"
+      return false
+    end
+
+    result = search_discourse(question, source.config)
+    if result[:context].blank?
+      Rails.logger.info '[KBase] ⚠️ Sin resultados en Discourse → sin respuesta'
+      return false
+    end
+
+    history    = load_history
+    answer     = ask_openai_with_history(question, result[:context], history)
     return false unless answer.present?
 
     footer = build_sources_footer(result[:sources], question)
     answer += footer if footer.present?
 
     save_history(history, question, answer)
-    reply(answer)
-    true
-  rescue StandardError => e
-    Rails.logger.error "[KnowledgeBase] ❌ Error: #{e.message}"
-    false
-  end
-
-  private
-
-  # Hook de Discourse configurado para este inbox (con fallback a ENV)
-  def discourse_hook
-    @discourse_hook ||= @account.hooks.find_by(app_id: 'discourse', inbox_id: @inbox.id, status: 'enabled')
-  end
-
-  def discourse_url
-    url = discourse_hook&.settings&.dig('url').presence || ENV.fetch('DISCOURSE_URL', '')
-    url.chomp('/')
-  end
-
-  def discourse_api_key
-    discourse_hook&.settings&.dig('api_key').presence || ENV.fetch('DISCOURSE_API_KEY', '')
-  end
-
-  def discourse_username
-    discourse_hook&.settings&.dig('username').presence || ENV.fetch('DISCOURSE_USERNAME', 'system')
-  end
-
-  def kb_enabled?
-    return false unless discourse_hook.present?
-
-    hook = @account.hooks.find_by(app_id: 'openai', status: 'enabled')
-    return false unless hook&.settings&.dig('api_key').present?
-
+    send_reply(answer)
     true
   end
 
-  # ---------------------------------------------------------------
-  # Búsqueda semántica en Discourse (discourse-ai plugin)
-  # Paso 1: semantic search → obtiene post IDs y blurbs
-  # Paso 2: fetch_post_content → obtiene el Markdown completo de cada post
-  # El contexto completo se inyecta al system prompt para RAG real
-  # ---------------------------------------------------------------
-  def search_discourse(query)
-    require 'net/http'
-    require 'json'
+  # ==============================================================================
+  # MODO 3 — Discourse integration (hook configurado por inbox)
+  # ==============================================================================
 
-    uri       = URI("#{discourse_url}/discourse-ai/embeddings/semantic-search.json")
+  def perform_discourse_integration(question)
+    hook = @account.hooks.find_by(app_id: 'discourse', inbox_id: @inbox.id, status: 'enabled')
+    unless hook
+      Rails.logger.warn '[KBase] ⚠️ @discourse: no hay integración Discourse activa para este inbox'
+      return false
+    end
+
+    result = search_discourse(question, hook.settings)
+    if result[:context].blank?
+      Rails.logger.info '[KBase] ⚠️ @discourse: sin resultados → sin respuesta'
+      return false
+    end
+
+    history = load_history
+    answer  = ask_openai_with_history(question, result[:context], history)
+    return false unless answer.present?
+
+    footer = build_sources_footer(result[:sources], question)
+    answer += footer if footer.present?
+
+    save_history(history, question, answer)
+    send_reply(answer)
+    true
+  end
+
+  # Llama al endpoint de Discourse AI semantic search y obtiene el contenido completo
+  def search_discourse(query, config)
+    url      = config['url'].to_s.chomp('/')
+    api_key  = config['api_key'].to_s
+    username = config['username'].presence || 'system'
+
+    uri       = URI("#{url}/discourse-ai/embeddings/semantic-search.json")
     uri.query = URI.encode_www_form(q: query)
 
     http              = Net::HTTP.new(uri.host, uri.port)
@@ -92,170 +216,118 @@ class KnowledgeBaseResponseService
     http.read_timeout = 10
 
     request = Net::HTTP::Get.new(uri)
-    request['Api-Key']      = discourse_api_key if discourse_api_key.present?
-    request['Api-Username'] = discourse_username
+    request['Api-Key']      = api_key if api_key.present?
+    request['Api-Username'] = username
     request['Content-Type'] = 'application/json'
 
     response  = http.request(request)
     data      = JSON.parse(response.body)
-
     posts     = data['posts']  || []
     topics    = data['topics'] || []
     topic_map = topics.index_by { |t| t['id'] }
 
-    Rails.logger.info "[KnowledgeBase] 📚 #{posts.size} resultados en semantic-search"
-
-    if ENV.fetch('TRACKING_DEBUG_TAG', 'false') == 'true'
-      Rails.logger.debug "[KnowledgeBase] 🔬 RAW semantic-search: #{data.to_json.truncate(800)}"
-    end
+    Rails.logger.info "[KBase] 📚 #{posts.size} resultado(s) en Discourse semantic-search"
 
     sources = []
-    context = posts.first(MAX_RESULTS).filter_map do |post|
+    context = posts.first(MAX_RESULTS).each_with_index.filter_map do |post, idx|
+      sleep(1.5) if idx.positive?  # evitar rate limit entre fetches consecutivos
+
       topic = topic_map[post['topic_id']]
       next unless topic
 
-      post_id = post['id']
-      title   = topic['title'].to_s.strip
-      blurb   = post['blurb'].to_s.strip
-      slug    = topic['slug'].to_s
-      tid     = topic['id'].to_s
-      url     = "#{discourse_url}/t/#{slug}/#{tid}"
+      post_id  = post['id']
+      title    = topic['title'].to_s.strip
+      post_url = "#{url}/t/#{topic['slug']}/#{topic['id']}"
 
-      # Obtener contenido completo del post (RAG real)
-      full_content = fetch_post_content(post_id)
-      content      = full_content.presence || blurb
+      full_content = fetch_post_content(post_id, url, api_key, username)
+      content      = full_content.presence || post['blurb'].to_s.strip
+      next if content.blank?
 
-      Rails.logger.info "[KnowledgeBase]   📄 post##{post_id} — #{title.truncate(50)}"
-      Rails.logger.info "[KnowledgeBase]      blurb:  #{blurb.truncate(80)}"
-      Rails.logger.info "[KnowledgeBase]      full:   #{content.truncate(120)} (#{content.length} chars)"
+      Rails.logger.info "[KBase]   📄 post##{post_id} — #{title.truncate(50)} (#{content.length} chars)"
 
-      sources << { title: title, url: url }
-      "## #{title}\n#{content}\nFuente: #{url}"
+      sources << { title: title, url: post_url }
+      "## #{title}\n#{content}\nFuente: #{post_url}"
     end.join("\n\n")
-
-    Rails.logger.info "[KnowledgeBase] 📝 Contexto total inyectado: #{context.length} chars"
 
     { context: context, sources: sources }
   rescue StandardError => e
-    Rails.logger.error "[KnowledgeBase] ❌ Error buscando en Discourse: #{e.message}"
+    Rails.logger.error "[KBase] ❌ Error en Discourse search: #{e.message}"
     { context: '', sources: [] }
   end
 
-  # ---------------------------------------------------------------
-  # Obtiene el Markdown completo de un post vía API de Discourse
-  # Endpoint: GET /posts/{post_id}.json
-  # Retorna el campo `raw` (Markdown original), truncado a MAX_POST_CHARS
-  # ---------------------------------------------------------------
-  def fetch_post_content(post_id)
+  # GET /posts/:id.json → campo `raw` (Markdown original)
+  def fetch_post_content(post_id, url, api_key, username)
     return '' unless post_id.present?
 
-    uri               = URI("#{discourse_url}/posts/#{post_id}.json")
+    uri               = URI("#{url}/posts/#{post_id}.json")
     http              = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl      = uri.scheme == 'https'
     http.read_timeout = 8
 
-    request                  = Net::HTTP::Get.new(uri)
-    request['Api-Key']       = discourse_api_key if discourse_api_key.present?
-    request['Api-Username']  = discourse_username
-    request['Content-Type']  = 'application/json'
+    request = Net::HTTP::Get.new(uri)
+    request['Api-Key']      = api_key if api_key.present?
+    request['Api-Username'] = username
+    request['Content-Type'] = 'application/json'
 
     response = http.request(request)
-
     unless response.is_a?(Net::HTTPSuccess)
-      Rails.logger.warn "[KnowledgeBase] ⚠️ post##{post_id} retornó HTTP #{response.code}"
+      Rails.logger.warn "[KBase] ⚠️ post##{post_id} retornó HTTP #{response.code}"
       return ''
     end
 
-    post_data = JSON.parse(response.body)
-    raw       = post_data['raw'].to_s.strip
-
-    if ENV.fetch('TRACKING_DEBUG_TAG', 'false') == 'true'
-      Rails.logger.debug "[KnowledgeBase] 🔬 RAW post##{post_id}: #{raw.truncate(400)}"
-    end
-
-    raw.truncate(MAX_POST_CHARS)
+    JSON.parse(response.body)['raw'].to_s.strip.truncate(MAX_POST_CHARS)
   rescue StandardError => e
-    Rails.logger.warn "[KnowledgeBase] ⚠️ No se pudo obtener post##{post_id}: #{e.message}"
+    Rails.logger.warn "[KBase] ⚠️ No se pudo obtener post##{post_id}: #{e.message}"
     ''
   end
 
-  # ---------------------------------------------------------------
-  # Historial de conversación almacenado en conversation.additional_attributes
-  # ---------------------------------------------------------------
-  def history_key
-    'kb_history'
-  end
+  # ==============================================================================
+  # Historial de conversación (guardado en conversation.additional_attributes)
+  # ==============================================================================
 
   def load_history
-    @conversation.additional_attributes&.dig(history_key) || []
+    @conversation.additional_attributes&.dig('kb_history') || []
   end
 
   def save_history(history, question, answer)
     history << { 'q' => question, 'a' => answer }
-    history = history.last(MAX_HISTORY)
-
-    attrs = (@conversation.additional_attributes || {}).merge(history_key => history)
+    history  = history.last(MAX_HISTORY)
+    attrs    = (@conversation.additional_attributes || {}).merge('kb_history' => history)
     @conversation.update_columns(additional_attributes: attrs)
   rescue StandardError => e
-    Rails.logger.warn "[KnowledgeBase] ⚠️ No se pudo guardar historial: #{e.message}"
+    Rails.logger.warn "[KBase] ⚠️ No se pudo guardar historial: #{e.message}"
   end
 
-  # ---------------------------------------------------------------
-  # Llamada a OpenAI
-  # ---------------------------------------------------------------
-  def ask_openai(question, context, history)
-    hook    = @account.hooks.find_by(app_id: 'openai', status: 'enabled')
-    api_key = hook.settings['api_key']
+  # ==============================================================================
+  # OpenAI — con historial (para Discourse)
+  # ==============================================================================
 
-    require 'net/http'
-    require 'json'
+  def ask_openai_with_history(question, context, history)
+    api_key = openai_api_key
+    return nil unless api_key
 
-    uri               = URI('https://api.openai.com/v1/chat/completions')
-    http              = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl      = true
-    http.read_timeout = 30
-
-    request                  = Net::HTTP::Post.new(uri)
-    request['Authorization'] = "Bearer #{api_key}"
-    request['Content-Type']  = 'application/json'
-    request.body = {
-      model:       ENV.fetch('OPENAI_GPT_MODEL', 'gpt-4o-mini'),
-      messages:    build_messages(question, context, history),
-      max_tokens:  600,
-      temperature: 0.5
-    }.to_json
-
-    response = http.request(request)
-    result   = JSON.parse(response.body)
-    result.dig('choices', 0, 'message', 'content')&.strip
-  rescue StandardError => e
-    Rails.logger.error "[KnowledgeBase] ❌ Error OpenAI: #{e.message}"
-    nil
+    call_openai_simple(build_messages(question, context, history), max_tokens: 600)
   end
 
   def build_messages(question, context, history)
+    # Usa complementary_prompt si existe, limpiando la directiva @buscar_foro
     system_content = if @tracking&.complementary_prompt.present?
-      # Strip @discourse markers — GPT ya tiene el contexto inyectado, no debe
-      # interpretar @discourse como un comando a escribir literalmente
-      @tracking.complementary_prompt.gsub(/@discourse\b[^\n]*/i, '').strip
-    else
-      <<~PROMPT.strip
-        Eres un agente de soporte técnico de #{@account.name}. Tu función es responder
-        preguntas de clientes de forma conversacional, clara y guiada, como lo haría
-        un experto de soporte.
-
-        Reglas:
-        - Usá el contenido del foro como referencia, pero respondé con tus propias palabras.
-        - No copies textualmente los artículos del foro.
-        - Si necesitás más información para responder con precisión, hacé UNA pregunta de seguimiento.
-        - Respondé en el mismo idioma que el cliente.
-        - Sé conciso. Si hay pasos, enuméralos.
-        - No menciones que consultaste un foro o base de conocimiento.
-      PROMPT
-    end
+                       @tracking.complementary_prompt
+                                .gsub(/@buscar_foro\([^)]+\)/i, '')
+                                .gsub(/@discourse\b/i, '')
+                                .strip
+                     else
+                       <<~PROMPT.strip
+                         Eres un agente de soporte de #{@account.name}. Respondé preguntas
+                         de forma conversacional y concisa, como lo haría un experto de soporte.
+                         - Usá el contenido del foro como referencia, respondé con tus propias palabras.
+                         - Si necesitás más información, hacé UNA pregunta de seguimiento.
+                         - Respondé en el mismo idioma que el cliente.
+                         - No menciones que consultaste un foro o base de conocimiento.
+                       PROMPT
+                     end
 
     system_content += "\n\nContenido relevante del foro:\n#{context}" if context.present?
-
 
     messages = [{ role: 'system', content: system_content }]
     history.each do |h|
@@ -265,6 +337,10 @@ class KnowledgeBaseResponseService
     messages << { role: 'user', content: question }
     messages
   end
+
+  # ==============================================================================
+  # Footer de fuentes
+  # ==============================================================================
 
   def build_sources_footer(sources, question = nil)
     return '' if sources.empty?
@@ -276,31 +352,103 @@ class KnowledgeBaseResponseService
     title_words    = top[:title].downcase.scan(/[a-záéíóúñü]{4,}/).to_set
     overlap        = (question_words & title_words).size
 
-    Rails.logger.info "[KnowledgeBase] 🔗 Overlap con fuente '#{top[:title].truncate(40)}': #{overlap} palabras"
-
+    Rails.logger.info "[KBase] 🔗 Overlap fuente '#{top[:title].truncate(40)}': #{overlap} palabras"
     return '' if overlap.zero?
 
     "\n\n📚 Más información: #{top[:url]}"
   end
 
-  # ---------------------------------------------------------------
-  # Enviar respuesta al contacto en la conversación
-  # ---------------------------------------------------------------
-  def reply(text)
-    bot_user = @account.users.first
-    text = "#{text}\n\n@KBase" if ENV.fetch('TRACKING_DEBUG_TAG', 'false') == 'true'
+  # ==============================================================================
+  # Envío de respuesta
+  # ==============================================================================
 
-    @conversation.messages.create!(
-      account_id:         @account.id,
-      inbox_id:           @inbox.id,
-      message_type:       :outgoing,
-      content:            text,
-      private:            false,
-      sender:             bot_user,
-      content_attributes: { 'bot_reply' => true }
-    )
-    Rails.logger.info '[KnowledgeBase] ✅ Respuesta enviada → respondió KBase'
+  def send_reply(text)
+    reply_message = Messages::MessageBuilder.new(
+      bot_user,
+      @conversation,
+      { content: text, private: false }
+    ).perform
+
+    if reply_message.present?
+      reply_message.content_attributes[:sentiment_auto_reply] = true
+      reply_message.save!
+    end
   rescue StandardError => e
-    Rails.logger.error "[KnowledgeBase] ❌ Error enviando respuesta: #{e.message}"
+    Rails.logger.error "[KBase] ❌ Error enviando respuesta: #{e.message}"
+  end
+
+  # ==============================================================================
+  # Utilidades
+  # ==============================================================================
+
+  def call_openai_simple(messages, max_tokens: 600)
+    api_key = openai_api_key
+    return nil unless api_key
+
+    require 'net/http'
+    require 'json'
+
+    uri               = URI('https://api.openai.com/v1/chat/completions')
+    http              = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl      = true
+    http.read_timeout = 45
+
+    request                  = Net::HTTP::Post.new(uri)
+    request['Authorization'] = "Bearer #{api_key}"
+    request['Content-Type']  = 'application/json'
+    request.body = {
+      model:       ENV.fetch('OPENAI_GPT_MODEL', 'gpt-4o-mini'),
+      messages:    messages,
+      max_tokens:  max_tokens,
+      temperature: 0.5
+    }.to_json
+
+    response = http.request(request)
+    JSON.parse(response.body).dig('choices', 0, 'message', 'content')&.strip
+  rescue StandardError => e
+    Rails.logger.error "[KBase] ❌ Error OpenAI: #{e.message}"
+    nil
+  end
+
+  def generate_embedding_openai(text)
+    api_key = openai_api_key
+    return nil unless api_key
+
+    uri               = URI('https://api.openai.com/v1/embeddings')
+    http              = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl      = true
+    http.read_timeout = 10
+
+    request                  = Net::HTTP::Post.new(uri)
+    request['Authorization'] = "Bearer #{api_key}"
+    request['Content-Type']  = 'application/json'
+    request.body = { model: 'text-embedding-3-small', input: text }.to_json
+
+    response = http.request(request)
+    return nil unless response.is_a?(Net::HTTPSuccess)
+
+    JSON.parse(response.body).dig('data', 0, 'embedding')
+  rescue StandardError => e
+    Rails.logger.error "[KBase] ❌ Error embedding: #{e.message}"
+    nil
+  end
+
+  def bot_user
+    @account.users.first ||
+      AccountUser.where(account_id: @account.id).first&.user ||
+      User.first
+  end
+
+  def openai_api_key
+    hook = @account.hooks.find_by(app_id: 'openai', status: 'enabled')
+    return hook.settings['api_key'] if hook&.settings&.dig('api_key').present?
+
+    ENV['OPENAI_API_KEY']
+  end
+
+  def kbase_setting(key)
+    overrides = @account.custom_attributes&.dig('kbase_search') || {}
+    value     = overrides[key.to_s]
+    value.present? ? value.to_f : DEFAULTS[key.to_s]
   end
 end

@@ -44,6 +44,14 @@ export default {
         unreadCount: this.meta.unreadCount,
       });
 
+      // @tickets_cases Fase A — los tickets no tienen conversación: van a su detalle.
+      if (primaryActorType === 'CaseTicket') {
+        this.$router.push(
+          `/app/accounts/${this.accountId}/tickets/${primaryActorId}`
+        );
+        return;
+      }
+
       this.$router.push(
         `/app/accounts/${this.accountId}/conversations/${conversationId}`
       );

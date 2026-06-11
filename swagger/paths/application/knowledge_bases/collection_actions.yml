@@ -1,0 +1,127 @@
+# Acciones de colección sobre knowledge_bases (sin ID de artículo)
+
+import_url:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesImportUrl
+  summary: Importar artículo desde URL
+  description: Crea un artículo descargando y procesando el contenido de una URL externa.
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        required:
+          - url
+        properties:
+          url:
+            type: string
+            description: URL a importar
+            example: https://ejemplo.com/articulo
+          auto_process:
+            type: boolean
+            default: true
+  responses:
+    '201':
+      description: Artículo importado y vectorización iniciada
+    '422':
+      description: URL inválida o no accesible
+
+crawl_website:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesCrawlWebsite
+  summary: Rastrear sitio web completo
+  description: Inicia el rastreo de un sitio web para importar múltiples páginas como artículos.
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        required:
+          - url
+        properties:
+          url:
+            type: string
+            description: URL raíz del sitio a rastrear
+          max_pages:
+            type: integer
+            description: Máximo de páginas a importar
+            default: 50
+  responses:
+    '200':
+      description: Rastreo iniciado
+    '422':
+      description: URL inválida
+
+import_from_sketch:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesImportFromSketch
+  summary: Importar desde Website Sketch
+  description: Importa contenido analizado previamente con el endpoint de Website Sketch.
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      schema:
+        type: object
+        properties:
+          cache_key:
+            type: string
+            description: cache_key obtenido del endpoint /website_sketch
+  responses:
+    '201':
+      description: Artículos importados desde el sketch
+
+statistics:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesStatistics
+  summary: Estadísticas de la base de conocimiento
+  description: "Retorna estadísticas generales: cantidad de artículos por estado, idioma, tipo de fuente, etc."
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Estadísticas de la knowledge base
+
+semantic_search:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesSemanticSearch
+  summary: Búsqueda semántica en la base de conocimiento
+  description: >
+    Realiza una búsqueda semántica (vectorial) en todos los artículos de la base de conocimiento.
+    Útil para encontrar contenido relevante sin coincidencia exacta de palabras.
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        required:
+          - query
+        properties:
+          query:
+            type: string
+            description: Consulta en lenguaje natural
+          limit:
+            type: integer
+            default: 10
+          min_similarity:
+            type: number
+            format: float
+            default: 0.3
+  responses:
+    '200':
+      description: Resultados de búsqueda semántica

@@ -16,6 +16,7 @@
 #
 # Indexes
 #
+#  idx_unique_native_knowledge_sources                    (account_id,source_type) UNIQUE WHERE ((source_type)::text = ANY ((ARRAY['canned_response'::character varying, 'article'::character varying])::text[]))
 #  index_knowledge_sources_on_account_id                  (account_id)
 #  index_knowledge_sources_on_account_id_and_source_type  (account_id,source_type)
 #
@@ -27,7 +28,7 @@ class KnowledgeSource < ApplicationRecord
   belongs_to :account
   has_many :knowledge_items, dependent: :destroy
 
-  validates :source_type, presence: true, inclusion: { in: %w[canned_response discourse] }
+  validates :source_type, presence: true, inclusion: { in: %w[canned_response discourse article] }
   validates :name, presence: true
 
   scope :active, -> { where(status: 'active') }

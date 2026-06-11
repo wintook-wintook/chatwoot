@@ -1,0 +1,61 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - name: kanban_type_process_id
+    in: path
+    type: integer
+    required: true
+    description: ID del tipo de proceso Kanban padre
+get:
+  tags:
+    - Kanban
+  operationId: kanbanProcessesIndex
+  summary: Listar etapas de un tipo de proceso
+  description: Retorna todas las etapas/pasos de un tipo de proceso Kanban, ordenadas por posición.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de etapas
+      schema:
+        type: array
+        items:
+          $ref: '#/definitions/kanban_process'
+post:
+  tags:
+    - Kanban
+  operationId: kanbanProcessesCreate
+  summary: Crear etapa en un tipo de proceso
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        required:
+          - kanban_process
+        properties:
+          kanban_process:
+            type: object
+            required:
+              - type_process_name
+            properties:
+              type_process_name:
+                type: string
+                description: Nombre de la etapa (ej. "Contactado", "Propuesta enviada")
+              position:
+                type: integer
+                description: Posición en el tablero (orden)
+              default:
+                type: boolean
+                description: Marcar como etapa por defecto
+              is_system:
+                type: boolean
+  responses:
+    '201':
+      description: Etapa creada
+      schema:
+        $ref: '#/definitions/kanban_process'
+    '422':
+      description: Parámetros inválidos

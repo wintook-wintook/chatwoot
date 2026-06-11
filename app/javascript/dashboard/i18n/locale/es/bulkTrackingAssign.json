@@ -1,0 +1,37 @@
+{
+  "BULK_TRACKING_ASSIGN": {
+    "HEADER": {
+      "BUTTON_LABEL": "Asignar Agente IA"
+    },
+    "MODAL": {
+      "TITLE": "Asignación masiva de Agentes IA",
+      "DESCRIPTION": "Aplica un Agente IA a todos los contactos que coinciden con el filtro actual.",
+      "TEMPLATE_LABEL": "Agente IA",
+      "TEMPLATE_PLACEHOLDER": "Selecciona un Agente IA",
+      "SCHEDULED_FOR_LABEL": "Fecha y hora de inicio",
+      "SKIP_ACTIVE": "Omitir contactos que ya tienen un Agente IA activo",
+      "CONTACTS_COUNT_PREFIX": "Contactos que recibirán el Agente IA:",
+      "CONTACTS_COUNT_SUFFIX": "(clic para revisar)",
+      "LIMIT_EXCEEDED": "La selección supera el límite de {max} contactos. Ajusta el filtro o excluye contactos antes de confirmar.",
+      "CANCEL": "Cancelar",
+      "CONFIRM": "Confirmar",
+      "CLOSE": "Cerrar",
+      "ERROR_GENERIC": "Ocurrió un error al asignar el Agente IA.",
+      "RESULT_INSERTED": "Agentes IA asignados",
+      "RESULT_SKIPPED": "Contactos omitidos",
+      "RESULT_ERRORS": "Errores",
+      "SUCCESS_SUMMARY": "Agentes IA asignados: {inserted} | Omitidos: {skipped} | Errores: {errors}"
+    },
+    "REVIEW": {
+      "TITLE": "Revisar contactos seleccionados",
+      "OF": "de",
+      "SELECTED": "seleccionados",
+      "COL_NAME": "Nombre",
+      "COL_PHONE": "Teléfono",
+      "COL_ACTION": "Acción",
+      "UNDO": "Deshacer",
+      "EXCLUDE": "Excluir",
+      "BACK": "Volver"
+    }
+  }
+}

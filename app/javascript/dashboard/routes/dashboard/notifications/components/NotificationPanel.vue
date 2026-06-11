@@ -18,6 +18,7 @@ export default {
       meta: 'notifications/getMeta',
       records: 'notifications/getNotifications',
       uiFlags: 'notifications/getUIFlags',
+      accountId: 'getCurrentAccountId',
     }),
     totalUnreadNotifications() {
       return this.meta.unreadCount;
@@ -69,10 +70,17 @@ export default {
         primaryActorType,
         unreadCount: this.meta.unreadCount,
       });
-      this.$router.push({
-        name: 'inbox_conversation',
-        params: { conversation_id: conversationId },
-      });
+      // @tickets_cases Fase A — los tickets no tienen conversación: van a su detalle.
+      if (primaryActorType === 'CaseTicket') {
+        this.$router.push(
+          `/app/accounts/${this.accountId}/tickets/${primaryActorId}`
+        );
+      } else {
+        this.$router.push({
+          name: 'inbox_conversation',
+          params: { conversation_id: conversationId },
+        });
+      }
       this.$emit('close');
     },
     onClickNextPage() {

@@ -623,7 +623,9 @@ module CommandAgents
           # si no, se genera desde el ai_context de la plantilla via IA
           complementary_prompt: template.complementary_prompt.present? \
             ? template.complementary_prompt \
-            : generate_complementary_prompt(template.objective, template.ai_context.to_s)
+            : generate_complementary_prompt(template.objective, template.ai_context.to_s),
+          calendar_integration_ids: template.calendar_integration_ids.is_a?(Array) ? template.calendar_integration_ids : [],
+          tracking_template_id: template.id
         )
 
         @session.complete!

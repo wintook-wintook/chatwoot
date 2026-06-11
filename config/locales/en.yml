@@ -142,6 +142,7 @@ en:
       sla_missed_next_response: "SLA target next response missed for conversation (#%{display_id})"
       sla_missed_resolution: "SLA target resolution missed for conversation (#%{display_id})"
       calendar_event_reminder: "Calendar reminder"
+      case_ticket_assignment: "Ticket %{folio} has been assigned to you"
     calendar_event_reminder:
       body: "\"%{title}\" starts in %{minutes} minutes"
       no_title: "Untitled event"
@@ -207,6 +208,9 @@ en:
     online:
       delete: "%{contact_name} is Online, please try again later"
   integration_apps:
+    discourse:
+      name: "Discourse"
+      description: "Connect your Discourse forum to use it as a knowledge base. Wintook will index your topics and use semantic search to automatically answer customer questions."
     dashboard_apps:
       name: "Dashboard Apps"
       description: "Dashboard Apps allow you to create and embed applications that display user information, orders, or payment history, providing more context to your customer support agents."

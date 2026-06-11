@@ -1,0 +1,34 @@
+# code-server (VS Code en el navegador) para ver/editar la bóveda de tickets
+# como Obsidian (extensión Foam: wikilinks, backlinks, grafo).
+#
+#   cd /opt/chatwoot/docs/vault-tickets && docker compose up -d
+#   abrir  http://<IP-del-servidor>:8080   (password en .env)
+#
+# Monta TODO el repo para que sea un workspace real; abre el WORKSPACE multi-raíz
+# (docs/vaults.code-workspace) que muestra ambas bóvedas: Tickets + Base de Conocimiento.
+services:
+  code-server:
+    image: codercom/code-server:latest
+    container_name: tickets-vault-codeserver
+    user: "0:0"
+    environment:
+      - PASSWORD=${PASSWORD:-changeme}
+      - HOME=/root
+    volumes:
+      - /opt/chatwoot:/home/coder/project
+      - codeserver-config:/root/.config
+      # Extensiones (Foam) y datos de usuario: persistir para sobrevivir recreaciones.
+      - codeserver-data:/root/.local/share/code-server
+    ports:
+      # Solo accesible local: nginx (vaults.wintook.com) hace de reverse proxy.
+      - "127.0.0.1:8080:8080"
+    command: >
+      --bind-addr 0.0.0.0:8080
+      --auth password
+      --disable-telemetry
+      /home/coder/project/docs/vaults.code-workspace
+    restart: unless-stopped
+
+volumes:
+  codeserver-config:
+  codeserver-data:

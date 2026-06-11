@@ -135,19 +135,17 @@ class ActionService
       complementary_prompt: template.complementary_prompt,
       whatsapp_templates: templates,
       keyword_actions: template.keyword_actions.is_a?(Array) ? template.keyword_actions : [],
+      calendar_integration_ids: template.calendar_integration_ids.is_a?(Array) ? template.calendar_integration_ids : [],
+      tracking_template_id: template.id,
       max_attempts: max_att,
       scheduled_for: Time.current + interval_minutes.minutes,
       retry_interval_value: interval_value,
       retry_interval_unit: interval_unit
     )
 
-    # Re-encolar el analyzer para que el bot responda al mensaje que disparó la
-    # automatización, en caso de que el primer análisis haya corrido antes de que
-    # existiera el tracking (race condition con EventDispatcherJob).
-    last_incoming = @conversation.messages.where(message_type: :incoming).last
-    if last_incoming && last_incoming.created_at > 60.seconds.ago
-      ContactTrackingResponseAnalyzerJob.set(wait: 3.seconds).perform_later(last_incoming.id)
-    end
+    # Note: no re-queuing here. The initial job in message.rb already runs with
+    # a 5-second delay so it sees the tracking. Re-queuing caused double replies
+    # because BotSeller responses lack the sentiment_auto_reply flag.
   rescue StandardError => e
     Rails.logger.error "[AutomationAction] assign_tracking_template error: #{e.message}"
   end

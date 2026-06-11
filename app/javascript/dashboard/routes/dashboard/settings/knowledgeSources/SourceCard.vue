@@ -4,23 +4,16 @@
 export default {
   name: 'KnowledgeSourceCard',
   props: {
-    source: { type: Object, required: true },
+    source:  { type: Object,  required: true },
     syncing: { type: Boolean, default: false },
   },
   emits: ['sync', 'delete', 'edit'],
-  data() {
-    return { copied: false };
-  },
   computed: {
     sourceIcon() {
-      return this.source.source_type === 'canned_response'
-        ? 'chat-multiple'
-        : 'globe';
+      return this.source.source_type === 'canned_response' ? 'chat-multiple' : 'globe';
     },
     sourceLabel() {
-      return this.source.source_type === 'canned_response'
-        ? 'Respuestas Predefinidas'
-        : 'Discourse';
+      return this.source.source_type === 'canned_response' ? 'Respuestas Predefinidas' : 'Discourse';
     },
     isSyncing() {
       return this.source.sync_status === 'syncing';
@@ -42,38 +35,19 @@ export default {
         : 'bg-slate-50 text-slate-500';
     },
     discourseUrl() {
-      return this.source.config && this.source.config.url
-        ? this.source.config.url
-        : null;
+      return this.source.config?.url || null;
     },
-    hasWebhookSecret() {
-      return !!(this.source.config && this.source.config.webhook_secret);
-    },
-    webhookProvisioned() {
-      return !!(this.source.config && this.source.config.discourse_webhook_id);
-    },
-    categoryIds() {
-      const ids = this.source.config?.category_ids;
-      return Array.isArray(ids) && ids.length ? ids : null;
-    },
-    webhookUrl() {
-      return `${window.location.origin}/webhooks/discourse/${this.source.id}`;
-    },
-  },
-  methods: {
-    async copyWebhookUrl() {
-      await navigator.clipboard.writeText(this.webhookUrl);
-      this.copied = true;
-      setTimeout(() => { this.copied = false; }, 2000);
+    discourseUsername() {
+      return this.source.config?.username || null;
     },
   },
 };
 </script>
 
 <template>
-  <div
-    class="flex flex-col gap-3 p-4 bg-white rounded-xl border border-slate-100 shadow-sm"
-  >
+  <div class="flex flex-col gap-3 p-4 bg-white rounded-xl border border-slate-100 shadow-sm">
+
+    <!-- Header -->
     <div class="flex items-start justify-between">
       <div class="flex items-center gap-3">
         <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-woot-50">
@@ -89,42 +63,18 @@ export default {
       </span>
     </div>
 
+    <!-- URL del foro -->
     <div v-if="discourseUrl" class="text-sm text-slate-500 truncate">
       {{ discourseUrl }}
     </div>
 
-    <div v-if="source.source_type === 'discourse'" class="bg-slate-50 rounded px-2 py-1.5 flex flex-col gap-0.5">
-      <div class="flex items-center justify-between mb-0.5">
-        <p class="text-sm text-slate-400 font-medium">URL del webhook</p>
-        <button
-          class="flex items-center gap-1 text-sm px-1.5 py-0.5 rounded transition-colors"
-          :class="copied ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'"
-          @click="copyWebhookUrl"
-        >
-          <fluent-icon :icon="copied ? 'checkmark' : 'copy'" size="13" />
-          {{ copied ? 'Copiado' : 'Copiar' }}
-        </button>
-      </div>
-      <p class="text-sm text-slate-600 font-mono break-all">
-        {{ webhookUrl }}
-      </p>
+    <!-- Usuario API -->
+    <div v-if="discourseUsername && source.source_type === 'discourse'" class="flex items-center gap-1.5 text-sm text-slate-400">
+      <fluent-icon icon="person" size="14" />
+      <span>{{ discourseUsername }}</span>
     </div>
 
-    <div v-if="source.source_type === 'discourse'" class="flex items-center gap-1.5 text-sm">
-      <fluent-icon icon="folder" size="14" class="text-slate-400" />
-      <span class="text-slate-500">
-        {{ categoryIds ? `${categoryIds.length} categoría(s) filtrada(s)` : 'Todas las categorías' }}
-      </span>
-    </div>
-
-    <div v-if="source.source_type === 'discourse'" class="flex items-center gap-1.5 text-sm">
-      <fluent-icon icon="plug-connected" size="14" :class="webhookProvisioned ? 'text-green-500' : 'text-slate-300'" />
-      <span :class="webhookProvisioned ? 'text-green-600' : 'text-slate-400'">
-        {{ webhookProvisioned ? 'Webhook activo en Discourse' : 'Webhook no configurado' }}
-      </span>
-    </div>
-
-    <!-- Indicador de sincronización en progreso -->
+    <!-- Sincronización en progreso -->
     <div
       v-if="isSyncing"
       class="flex items-center gap-2 px-3 py-2 bg-woot-50 border border-woot-100 rounded-lg"
@@ -134,11 +84,11 @@ export default {
         Sincronizando{{ syncProgress ? ` — ${syncProgress}` : '...' }}
       </span>
     </div>
-
     <div v-else class="text-sm text-slate-400">
-      Ultima sync: {{ lastSynced }}
+      Última sync: {{ lastSynced }}
     </div>
 
+    <!-- Acciones -->
     <div class="flex gap-2 pt-1 border-t border-slate-100">
       <woot-button
         size="small"
@@ -167,5 +117,6 @@ export default {
         @click="$emit('delete', source)"
       />
     </div>
+
   </div>
 </template>

@@ -40,6 +40,8 @@ import contactTracking from './contactTracking.js';
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
 import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
 import googleCalendar from './googleCalendar.js'; // proyecto@google_calendar
+import gestorTickets from './gestorTickets.json'; // @tickets_cases
+import bulkTrackingAssign from './bulkTrackingAssign.json'; // proyecto@bulk_tracking_assign
 
 export default {
   ...advancedFilters,
@@ -82,4 +84,6 @@ export default {
   ...trackingTemplates, // proyecto@tracking_templates
   ...knowledgeSources, // @knowledge_sources
   ...googleCalendar, // proyecto@google_calendar
+  ...gestorTickets, // @tickets_cases
+  ...bulkTrackingAssign, // proyecto@bulk_tracking_assign
 };

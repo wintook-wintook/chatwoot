@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# proyecto@bot_seguimiento_calendar
 # ================================================================================
 # proyecto@contact_tracking - BOT CONVERSACIONAL DE SEGUIMIENTOS
 # ================================================================================
@@ -77,6 +78,28 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def process_message_for_tracking(tracking, message)
     Rails.logger.info "[TrackingBot] 🔍 Tracking ##{tracking.id} (#{tracking.status})"
 
+    # [Gestor de Tickets] hook — falla silenciosamente para no romper el bot @tickets_cases
+    begin
+      ticket = Cases::OrchestratorService.new(
+        account:      message.account,
+        contact:      message.conversation.contact,
+        conversation: message.conversation
+      ).find_active_ticket
+
+      if ticket
+        ticket.update_columns(first_response_at: Time.current) if ticket.first_response_at.nil?
+        ticket.case_events.create!(
+          account:    message.account,
+          event_type: :message_received,
+          origin:     :bot,
+          payload:    { message_id: message.id }
+        )
+        Cases::RuleEngineService.new(ticket, trigger_message: message).evaluate!
+      end
+    rescue StandardError => e
+      Rails.logger.error "[GestorTickets] hook error: #{e.message}"
+    end
+
     # [1] Keywords — prioridad máxima, sin IA (solo si hay texto)
     if message.content.present? && defined?(ContactTrackings::KeywordActionService)
       keyword_service = ContactTrackings::KeywordActionService.new(tracking, message.content, 'incoming')
@@ -86,7 +109,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       end
     end
 
-    # [2] RouterService — clasifica ruta via IA
+    # [2] proyecto@bot_seguimiento_calendar — Detección de elección de slot
+    if pending_slot_selection?(tracking)
+      Rails.logger.info "[TrackingBot] 📅 PENDING_SLOT detectado → procesando elección de horario"
+      return handle_slot_selection(tracking, message)
+    end
+
+    # [3] RouterService — clasifica ruta via IA
     route_result = classify_route(tracking, message)
     route        = route_result[:route]
 
@@ -97,35 +126,22 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
               when :interested
                 handle_interested(tracking, message, route_result[:confidence])
                 true
+              when :book_appointment
+                handle_book_appointment(tracking, message)
+                true
               when :reschedule
                 handle_reschedule(tracking, message, route_result)
                 true
-              when :discourse
-                Rails.logger.info '[TrackingBot] 📚 Derivando a @discourse'
-                kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
-                if kbase_replied
-                  true
-                else
-                  Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → fallback conversacional'
-                  generate_and_send_conversational_reply(tracking, message)
-                end
               when :botseller
                 if BotSeller::Dispatcher.configured?
                   Rails.logger.info '[TrackingBot] 🤖 Derivando a @botseller'
                   BotSeller::Dispatcher.new(message).dispatch
                   true
                 else
-                  generate_and_send_conversational_reply(tracking, message)
+                  try_kbase_then_conversational(tracking, message)
                 end
-              else # :tracking
-                replied = generate_and_send_conversational_reply(tracking, message)
-                if !replied && kbase_available?(message, tracking)
-                  Rails.logger.info '[TrackingBot] 📚 Sin respuesta conversacional → fallback @discourse'
-                  KnowledgeBaseResponseService.new(message, tracking: tracking).perform
-                  true
-                else
-                  replied
-                end
+              else # :tracking o :kbase — kbase decide si tiene respuesta
+                try_kbase_then_conversational(tracking, message)
               end
 
     save_sentiment_analysis(tracking, route_result, message)
@@ -134,6 +150,26 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error en tracking ##{tracking.id}: #{e.message}"
     false
+  end
+
+  def try_kbase_then_conversational(tracking, message)
+    if kbase_available?(message, tracking)
+      Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
+      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
+      if kbase_replied
+        Rails.logger.info '[TrackingBot] ✅ KBase respondió'
+        return true
+      end
+      Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → intentando @crear_ticket'
+    end
+
+    # @tickets_cases: si la directiva @crear_ticket está en el prompt, crea ticket y confirma
+    if Cases::TicketCreatorService.new(message, tracking: tracking).create_if_needed
+      Rails.logger.info '[TrackingBot] 🎫 Ticket creado via @crear_ticket'
+      return true
+    end
+
+    generate_and_send_conversational_reply(tracking, message)
   end
 
   def classify_route(tracking, message)
@@ -162,16 +198,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def kbase_available?(message, tracking = nil)
-    account = message.account
-    inbox   = message.inbox
-    hook    = account.hooks.find_by(app_id: 'discourse', inbox_id: inbox.id, status: 'enabled')
-    url     = hook&.settings&.dig('url').presence || ENV.fetch('DISCOURSE_URL', '')
-    return false unless url.present?
+    return false unless tracking.present?
 
-    # Si se pasa un tracking, verificar que la plantilla mencione @discourse
-    return tracking.complementary_prompt.to_s.include?('@discourse') if tracking.present?
+    cp = tracking.complementary_prompt.to_s
 
-    true
+    if cp.include?('@buscar_predeterminadas')
+      message.account.knowledge_items.where(source_type: 'canned_response').exists?
+    elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
+      source_name = match[1].strip
+      message.account.knowledge_sources.active.exists?(name: source_name)
+    elsif cp.match?(/@discourse\b/i)
+      message.account.hooks.exists?(app_id: 'discourse', inbox_id: message.inbox_id, status: 'enabled')
+    else
+      false
+    end
   rescue StandardError
     false
   end
@@ -202,7 +242,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     reply_text = generate_conversational_reply(tracking, message)
     return false if reply_text.blank?
 
-    reply_text = "#{reply_text}\n\n@TrackingBot" if DEBUG_TAG
+    reply_text = "#{reply_text}\n\n_@TrackingBot_"
     send_auto_reply(tracking, message, reply_text)
     Rails.logger.info '[TrackingBot] ✅ Respuesta enviada → respondió TrackingBot'
     true
@@ -227,8 +267,14 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       inbox_timezone = message.conversation.inbox.timezone || 'America/Mexico_City'
       next_contact = tracking.scheduled_for.in_time_zone(inbox_timezone).strftime('%d/%m/%Y a las %H:%M')
 
-      # Strip @discourse markers so GPT doesn't output them literally as text
-      clean_cp = tracking.complementary_prompt.to_s.gsub(/@discourse\b[^\n]*/i, '').strip
+      # Si el prompt contiene directivas kbase, no pasarlo al LLM conversacional:
+      # el prompt está diseñado para operar con la kbase y GPT lo simula literalmente
+      # generando output tipo "CONSULTA GENERADA / DEBUG / RESULTADO RECIBIDO".
+      cp_raw = tracking.complementary_prompt.to_s
+      has_kbase_directive = cp_raw.match?(/@buscar_predeterminadas\b/i) ||
+                            cp_raw.match?(/@buscar_foro\([^)]*\)/i) ||
+                            cp_raw.match?(/@discourse\b/i)
+      clean_cp = has_kbase_directive ? '' : cp_raw.strip
 
       system_prompt = <<~SYSTEM.strip
         Eres un asesor de ventas para #{tracking.account.name}.
@@ -339,6 +385,189 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   # ==============================================================================
+  # proyecto@bot_seguimiento_calendar
+  # Handler: Agendar cita via Google Calendar
+  # ==============================================================================
+  def handle_book_appointment(tracking, message)
+    Rails.logger.info "[TrackingBot] 📅 BOOK_APPOINTMENT → buscando disponibilidad en calendarios"
+
+    cal_ids = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
+
+    unless cal_ids.present?
+      Rails.logger.info '[TrackingBot] 📅 Sin calendar_integration_ids en plantilla → fallback :interested'
+      handle_interested(tracking, message, 0.9)
+      return
+    end
+
+    timezone = message.conversation.inbox.timezone.presence || 'America/Mexico_City'
+    duration = tracking.tracking_template&.calendar_event_duration || 30
+    slots    = ContactTrackings::AvailabilitySlotService.new(
+      calendar_integration_ids: cal_ids,
+      timezone: timezone,
+      slot_duration: duration
+    ).call
+
+    if slots.empty?
+      Rails.logger.info '[TrackingBot] 📅 Sin slots disponibles → fallback :interested'
+      reply = generate_action_reply(tracking, message, :book_appointment_no_slots)
+      send_auto_reply(tracking, message, reply)
+      tracking.disable_auto_retry_mode!
+      tracking.update!(
+        ai_context: "#{tracking.ai_context}\n\n📅 [BA] Cliente quiso agendar pero no había disponibilidad. Requiere atención humana."
+      )
+      tracking.pause!
+      notify_admin_interested(tracking, message)
+      create_private_note(tracking, message, "📅 Cliente quiso agendar una cita pero no había horarios disponibles en el calendario. Requiere atención humana.")
+      return
+    end
+
+    reply = format_slots_message(slots, timezone)
+    send_auto_reply(tracking, message, reply)
+
+    slots_json = slots.map { |s| { slot: s[:slot].utc.iso8601, end_time: s[:end_time].utc.iso8601, agent_name: s[:agent_name], cal_id: s[:calendar_integration_id] } }
+    tracking.update!(
+      ai_context: "#{tracking.ai_context}\n\n📅 [PENDING_SLOT] Esperando elección de horario.\nSlots ofrecidos: #{slots_json.to_json}"
+    )
+
+    Rails.logger.info "[TrackingBot] 📅 #{slots.size} slots enviados al contacto — esperando elección"
+  end
+
+  def pending_slot_selection?(tracking)
+    tracking.ai_context.to_s.include?('[PENDING_SLOT]')
+  end
+
+  def handle_slot_selection(tracking, message)
+    slots_json = tracking.ai_context.to_s.match(/Slots ofrecidos: (\[.*?\])/m)&.captures&.first
+    slots = slots_json ? JSON.parse(slots_json) : []
+
+    if slots.empty?
+      Rails.logger.warn '[TrackingBot] 📅 PENDING_SLOT sin slots en ai_context → limpiando estado'
+      clear_pending_slot(tracking)
+      return false
+    end
+
+    choice = parse_slot_choice(message_text_for_ai(message), slots.size)
+
+    if choice.nil?
+      Rails.logger.info '[TrackingBot] 📅 Elección no reconocida → repreguntando'
+      reply = "No entendí tu elección 😊 Por favor respondé con el número del horario que preferís (1 al #{slots.size})."
+      send_auto_reply(tracking, message, reply)
+      return true
+    end
+
+    selected = slots[choice - 1]
+    Rails.logger.info "[TrackingBot] 📅 Slot elegido: opción #{choice} — #{selected['slot']}"
+    confirm_and_create_appointment(tracking, message, selected)
+    true
+  rescue StandardError => e
+    Rails.logger.error "[TrackingBot] ❌ Error en handle_slot_selection: #{e.message}"
+    clear_pending_slot(tracking)
+    false
+  end
+
+  def parse_slot_choice(text, max)
+    # Números escritos como dígito: "1", "2", etc.
+    match = text.match(/\b([1-#{max}])\b/)
+    return match[1].to_i if match
+
+    # Números escritos en palabras
+    word_map = { 'uno' => 1, 'primera' => 1, 'primero' => 1, 'primer' => 1,
+                 'dos' => 2, 'segunda' => 2, 'segundo' => 2,
+                 'tres' => 3, 'tercera' => 3, 'tercero' => 3,
+                 'cuatro' => 4, 'cuarta' => 4, 'cuarto' => 4,
+                 'cinco' => 5, 'quinta' => 5, 'quinto' => 5 }
+    word_map.each do |word, num|
+      return num if text.downcase.include?(word) && num <= max
+    end
+
+    nil
+  end
+
+  def clear_pending_slot(tracking)
+    cleaned = tracking.ai_context.to_s
+                      .gsub(/\n\n📅 \[PENDING_SLOT\].*?(\n\n|\z)/m, '\1')
+                      .strip
+    tracking.update_columns(ai_context: cleaned)
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ No se pudo limpiar PENDING_SLOT: #{e.message}"
+  end
+
+  def confirm_and_create_appointment(tracking, message, selected_slot)
+    timezone    = message.conversation.inbox.timezone.presence || 'America/Mexico_City'
+    slot_start  = Time.parse(selected_slot['slot'])
+    slot_end    = Time.parse(selected_slot['end_time'])
+    agent_name  = selected_slot['agent_name']
+    cal_id      = selected_slot['cal_id']
+    contact     = message.sender
+    contact_name = contact&.name || 'Cliente'
+
+    integration = UserCalendarIntegration.find_by(id: cal_id)
+
+    event_created = false
+    if integration
+      begin
+        service = GoogleCalendarService.new(integration)
+        attendees = [contact.email].compact.select(&:present?)
+        service.create_event(
+          summary:     "Cita con #{contact_name} — #{tracking.objective.truncate(60)}",
+          description: "Contacto: #{contact_name}\nTeléfono: #{contact&.phone_number}\nObjetivo: #{tracking.objective}",
+          start_time:  slot_start,
+          end_time:    slot_end,
+          attendees:   attendees
+        )
+        event_created = true
+        Rails.logger.info "[TrackingBot] 📅 Evento creado en Google Calendar para #{slot_start}"
+      rescue StandardError => e
+        Rails.logger.error "[TrackingBot] ❌ Error creando evento en Google Calendar: #{e.message}"
+      end
+    end
+
+    local_start = slot_start.in_time_zone(timezone)
+    local_end   = slot_end.in_time_zone(timezone)
+    day_names   = %w[domingo lunes martes miércoles jueves viernes sábado]
+    month_names = %w[enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre]
+    fecha_texto = "#{day_names[local_start.wday]} #{local_start.day} de #{month_names[local_start.month - 1]}"
+    hora_texto  = "#{local_start.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs"
+
+    reply = "✅ ¡Perfecto! Tu cita está agendada para el #{fecha_texto} de #{local_start.year} a las #{hora_texto}.\nTe esperamos. Si necesitás cambiarla, avisanos con anticipación. 😊"
+    send_auto_reply(tracking, message, reply)
+
+    clear_pending_slot(tracking)
+    tracking.disable_auto_retry_mode!
+    tracking.update!(
+      ai_context: "#{tracking.ai_context}\n\n✅ [CITA AGENDADA] #{fecha_texto} #{hora_texto} con #{agent_name}. Evento en Google Calendar: #{event_created ? 'creado' : 'error al crear'}."
+    )
+    tracking.pause!
+
+    nota = "📅 Cita agendada con #{contact_name}\n• Fecha: #{fecha_texto} de #{local_start.year}\n• Hora: #{hora_texto}\n• Agente: #{agent_name}\n• Evento en Calendar: #{event_created ? '✅ creado' : '⚠️ no se pudo crear'}"
+    create_private_note(tracking, message, nota)
+    notify_admin_interested(tracking, message)
+
+    Rails.logger.info "[TrackingBot] ✅ Cita confirmada y seguimiento pausado"
+  rescue StandardError => e
+    Rails.logger.error "[TrackingBot] ❌ Error en confirm_and_create_appointment: #{e.message}"
+    send_auto_reply(tracking, message, "Lo siento, tuve un problema al confirmar la cita. Un asesor te contactará pronto.")
+    clear_pending_slot(tracking)
+  end
+
+  def format_slots_message(slots, timezone)
+    day_names = %w[domingo lunes martes miércoles jueves viernes sábado]
+    month_names = %w[ene feb mar abr may jun jul ago sep oct nov dic]
+    numbers    = %w[1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣]
+
+    lines = slots.each_with_index.map do |s, i|
+      local     = s[:slot].in_time_zone(timezone)
+      local_end = s[:end_time].in_time_zone(timezone)
+      day       = day_names[local.wday]
+      month     = month_names[local.month - 1]
+      agent     = s[:agent_name].presence || 'Agenda'
+      "#{numbers[i]} #{day} #{local.day} #{month} · #{local.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs — #{agent}"
+    end
+
+    "¡Con gusto! 📅 Tenemos los siguientes horarios disponibles:\n\n#{lines.join("\n")}\n\n¿Cuál te viene bien? Respondé con el número de tu preferencia."
+  end
+
+  # ==============================================================================
   # Generación de respuestas para acciones específicas
   # ==============================================================================
   def generate_action_reply(tracking, message, reply_type, extra_data = {})
@@ -400,6 +629,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       "Con gusto te reagendo 📅 ¿Para qué fecha y hora prefieres que te contactemos?"
     when :reschedule_error, :general_error
       "Lo siento, tuve un problema al procesar tu solicitud. Un agente se pondrá en contacto contigo pronto."
+    when :book_appointment_no_slots
+      "¡Gracias por tu interés! 😊 En este momento no tenemos horarios disponibles en agenda. Un asesor se pondrá en contacto contigo a la brevedad para coordinar una cita."
     end
   end
 

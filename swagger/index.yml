@@ -1,15 +1,14 @@
 swagger: "2.0"
 info:
-  description: This is the API documentation for Chatwoot server.
+  description: Documentación de la API para el servidor Wintook.
   version: 1.0.0
-  title: Chatwoot
-  termsOfService:	https://www.chatwoot.com/terms-of-service/
+  title: Wintook
   contact:
-    email: hello@chatwoot.com
+    email: hello@wintook.com
   license:
     name: MIT License
     url: https://opensource.org/licenses/MIT
-host: app.chatwoot.com
+host: app.wintook.com
 basePath: /
 schemes:
   - https
@@ -71,6 +70,13 @@ x-tagGroups:
       - Webhooks
       - Automation Rule
       - Help Center
+      - Contact Trackings
+      - Tracking Templates
+      - Contact Schedules
+      - Contact Notes
+      - Kanban
+      - Knowledge Base
+      - Website Sketch
   - name: Client
     tags:
       - Contacts API
