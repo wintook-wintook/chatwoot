@@ -43,6 +43,9 @@ export default {
         urgency: null,
         priority: 'medium',
         description: '',
+        // @tickets_cases — asignación manual al crear ('' = automático/reglas)
+        assignee_id: '',
+        team_id: '',
       },
       // 2K — valores de los campos personalizados del tipo seleccionado
       customValues: {},
@@ -55,6 +58,8 @@ export default {
       services: 'caseTickets/getServices',
       categories: 'caseTickets/getCategories',
       getContactTickets: 'caseTickets/getContactTickets',
+      agents: 'agents/getAgents', // @tickets_cases — asignación manual
+      teams: 'teams/getTeams',
     }),
     tickets() {
       return this.getContactTickets(this.contactId);
@@ -76,6 +81,8 @@ export default {
     tabs() {
       return [
         { key: 'ticket', label: this.$t('CASE_TICKETS.MODAL.TAB_TICKET') },
+        // @tickets_cases — asignación manual (antes de campos personalizados).
+        { key: 'assign', label: this.$t('CASE_TICKETS.MODAL.TAB_ASSIGN') },
         { key: 'custom', label: this.$t('CASE_TICKETS.MODAL.TAB_CUSTOM') },
       ];
     },
@@ -161,6 +168,9 @@ export default {
     });
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('caseTickets/fetchCategories');
+    // @tickets_cases — agentes y equipos para la asignación manual.
+    this.$store.dispatch('agents/get');
+    this.$store.dispatch('teams/get');
   },
   methods: {
     fetchTickets() {
@@ -226,6 +236,9 @@ export default {
           // Si la matriz deriva la prioridad, no se envía la manual (el backend la calcula).
           priority: this.derivedPriority ? undefined : this.form.priority,
           description: this.form.description.trim() || undefined,
+          // @tickets_cases — asignación manual ('' = automático/reglas deciden).
+          assignee_id: this.form.assignee_id || undefined,
+          team_id: this.form.team_id || undefined,
           // 2K — solo se envían si el tipo define campos personalizados.
           custom_attributes: this.selectedTypeFields.length
             ? this.customValues
@@ -257,6 +270,8 @@ export default {
         urgency: null,
         priority: 'medium',
         description: '',
+        assignee_id: '',
+        team_id: '',
       };
     },
     statusLabel(key) {
@@ -662,6 +677,46 @@ export default {
                 </span>
               </label>
             </div>
+          </div>
+
+          <!-- Tab: Asignación manual (@tickets_cases) -->
+          <div
+            v-show="activeTab === 'assign'"
+            class="grid grid-cols-2 gap-3 [&_.input]:!mb-0"
+          >
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.ASSIGN.TEAM_LABEL') }}
+              </span>
+              <select v-model="form.team_id" class="input">
+                <option value="">
+                  {{ $t('CASE_TICKETS.MODAL.ASSIGN_AUTO') }}
+                </option>
+                <option v-for="tm in teams" :key="tm.id" :value="tm.id">
+                  {{ tm.name }}
+                </option>
+              </select>
+            </label>
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.ASSIGN.AGENT_LABEL') }}
+              </span>
+              <select v-model="form.assignee_id" class="input">
+                <option value="">
+                  {{ $t('CASE_TICKETS.MODAL.ASSIGN_AUTO') }}
+                </option>
+                <option v-for="ag in agents" :key="ag.id" :value="ag.id">
+                  {{ ag.name }}
+                </option>
+              </select>
+            </label>
+            <p class="col-span-2 text-xs text-slate-400 dark:text-slate-500">
+              {{ $t('CASE_TICKETS.MODAL.ASSIGN_HINT') }}
+            </p>
           </div>
 
           <!-- Tab: Campos personalizados (2K) -->

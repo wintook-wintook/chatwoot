@@ -135,8 +135,11 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       urgency:             ticket_params[:urgency],
       affected_service_id: ticket_params[:affected_service_id],
       category_id:         ticket_params[:category_id],
-      custom_attributes:   custom
+      custom_attributes:   custom,
+      assignee_id:         ticket_params[:assignee_id], # @tickets_cases — asignación manual al crear
+      team_id:             ticket_params[:team_id]
     )
+    notify_assignee(ticket) # @tickets_cases Fase A — avisa al agente si se asignó a mano
 
     render json: { case_ticket: ticket_json(ticket) }, status: :created
   rescue ActiveRecord::RecordNotFound => e
@@ -386,7 +389,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       :contact_id, :conversation_id, :case_type_id, :title,
       :priority, :description,
       :ticket_kind, :impact, :urgency, :affected_service_id, :category_id,
-      :internal, :assignee_id # @tickets_cases Fase C — ticket interno
+      :internal, :assignee_id, :team_id # @tickets_cases — interno + asignación manual al crear
     )
   end
 

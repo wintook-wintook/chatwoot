@@ -140,7 +140,10 @@
       "OPEN_DETAIL": "Open",
       "BACK": "Back",
       "TAB_TICKET": "Ticket details",
+      "TAB_ASSIGN": "Manual assignment",
       "TAB_CUSTOM": "Custom fields",
+      "ASSIGN_AUTO": "— Automatic (rules) —",
+      "ASSIGN_HINT": "If left automatic, the automation rules decide the assignment. What you pick here takes precedence over the rules.",
       "NO_CUSTOM_FIELDS": "This type has no custom fields"
     },
     "ASSIGN": {

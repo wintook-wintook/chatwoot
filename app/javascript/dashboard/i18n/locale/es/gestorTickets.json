@@ -140,7 +140,10 @@
       "OPEN_DETAIL": "Abrir",
       "BACK": "Volver",
       "TAB_TICKET": "Datos del ticket",
+      "TAB_ASSIGN": "Asignación manual",
       "TAB_CUSTOM": "Campos personalizados",
+      "ASSIGN_AUTO": "— Automático (reglas) —",
+      "ASSIGN_HINT": "Si lo dejas en automático, las reglas de automatización deciden la asignación. Lo que elijas aquí tiene prioridad sobre las reglas.",
       "NO_CUSTOM_FIELDS": "Este tipo no tiene campos personalizados"
     },
     "ASSIGN": {
