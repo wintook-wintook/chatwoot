@@ -20,6 +20,8 @@ export default {
         team_id: '',
         case_type_id: null,
         ticket_kind: 'service_request',
+        affected_service_id: null,
+        category_id: null,
         title: '',
         priority: 'medium',
         description: '',
@@ -34,9 +36,22 @@ export default {
       types: 'caseTickets/getTypes',
       agents: 'agents/getAgents',
       teams: 'teams/getTeams',
+      services: 'caseTickets/getServices',
+      categories: 'caseTickets/getCategories',
     }),
     ticketKindOptions() {
       return this.$t('CASE_TICKETS.TICKET_KIND');
+    },
+    // Categorías aplanadas (categoría + subcategorías con guion) para el select.
+    flatCategories() {
+      const out = [];
+      (this.categories || []).forEach(c => {
+        out.push({ id: c.id, label: c.name });
+        (c.subcategories || []).forEach(sub => {
+          out.push({ id: sub.id, label: `— ${sub.name}` });
+        });
+      });
+      return out;
     },
     // 2K — campos personalizados del tipo de caso seleccionado.
     selectedTypeFields() {
@@ -81,6 +96,8 @@ export default {
     });
     this.$store.dispatch('agents/get');
     this.$store.dispatch('teams/get');
+    this.$store.dispatch('caseTickets/fetchServices');
+    this.$store.dispatch('caseTickets/fetchCategories');
   },
   methods: {
     async onSubmit() {
@@ -91,6 +108,8 @@ export default {
           team_id: this.form.team_id || undefined,
           case_type_id: this.form.case_type_id,
           ticket_kind: this.form.ticket_kind,
+          affected_service_id: this.form.affected_service_id || undefined,
+          category_id: this.form.category_id || undefined,
           title: this.form.title.trim(),
           priority: this.form.priority,
           description: this.form.description.trim() || undefined,
@@ -208,6 +227,40 @@ export default {
               </option>
               <option value="urgent">
                 {{ $t('CASE_TICKETS.PRIORITIES.urgent') }}
+              </option>
+            </select>
+          </label>
+
+          <!-- Servicio afectado -->
+          <label class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-300"
+            >
+              {{ $t('CASE_TICKETS.MODAL.AFFECTED_SERVICE_LABEL') }}
+            </span>
+            <select v-model="form.affected_service_id" class="input">
+              <option :value="null">
+                {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+              </option>
+              <option v-for="s in services" :key="s.id" :value="s.id">
+                {{ s.name }}
+              </option>
+            </select>
+          </label>
+
+          <!-- Categoría -->
+          <label class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-300"
+            >
+              {{ $t('CASE_TICKETS.MODAL.CATEGORY_LABEL') }}
+            </span>
+            <select v-model="form.category_id" class="input">
+              <option :value="null">
+                {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+              </option>
+              <option v-for="c in flatCategories" :key="c.id" :value="c.id">
+                {{ c.label }}
               </option>
             </select>
           </label>

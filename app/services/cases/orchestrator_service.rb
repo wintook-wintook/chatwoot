@@ -91,7 +91,8 @@ class Cases::OrchestratorService
   # requester = agente solicitante; assignee = agente que lo atenderá (opcional).
   # No encola clasificación IA (no hay mensaje de cliente que clasificar).
   def create_internal(requester:, title:, assignee: nil, team: nil, priority: nil, case_type_id: nil,
-                      description: nil, ticket_kind: nil, custom_attributes: {})
+                      description: nil, ticket_kind: nil, affected_service_id: nil, category_id: nil,
+                      custom_attributes: {})
     attrs = {
       account:       @account,
       contact:       nil,
@@ -107,6 +108,9 @@ class Cases::OrchestratorService
     }
     attrs[:priority]    = priority    if priority.present?
     attrs[:ticket_kind] = ticket_kind if ticket_kind.present?
+    # Resueltos dentro del scope de la cuenta (evita vincular registros de otra cuenta).
+    attrs[:affected_service_id] = @account.case_services.where(id: affected_service_id).pick(:id) if affected_service_id.present?
+    attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id)        if category_id.present?
 
     ticket = CaseTicket.create!(attrs)
     # Asignación manual presente (agente/equipo) → las reglas no reasignan.

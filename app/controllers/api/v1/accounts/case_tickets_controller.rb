@@ -631,15 +631,17 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # @tickets_cases Fase C — kwargs para OrchestratorService#create_internal.
   def internal_ticket_attrs(custom)
     {
-      requester:         current_user,
-      assignee:          resolve_internal_assignee,
-      team:              resolve_internal_team,
-      case_type_id:      ticket_params[:case_type_id],
-      title:             ticket_params[:title],
-      priority:          ticket_params[:priority],
-      description:       ticket_params[:description],
-      ticket_kind:       ticket_params[:ticket_kind],
-      custom_attributes: custom
+      requester:           current_user,
+      assignee:            resolve_internal_assignee,
+      team:                resolve_internal_team,
+      case_type_id:        ticket_params[:case_type_id],
+      title:               ticket_params[:title],
+      priority:            ticket_params[:priority],
+      description:         ticket_params[:description],
+      ticket_kind:         ticket_params[:ticket_kind],
+      affected_service_id: ticket_params[:affected_service_id],
+      category_id:         ticket_params[:category_id],
+      custom_attributes:   custom
     }
   end
 
