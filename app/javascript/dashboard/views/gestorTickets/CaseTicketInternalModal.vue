@@ -259,8 +259,7 @@ export default {
               </span>
               <textarea
                 v-model="form.description"
-                rows="3"
-                class="input"
+                class="input !h-24"
                 :placeholder="$t('CASE_TICKETS.MODAL.DESCRIPTION_PLACEHOLDER')"
               />
             </label>
