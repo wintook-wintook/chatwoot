@@ -17,7 +17,7 @@
 class ContactTrackings::BulkAssignService
   ACTIVE_STATUSES      = %w[pending scheduled active paused].freeze
   DEFAULT_MAX_ATTEMPTS = 3
-  MAX_BULK_ASSIGN      = 30 # Límite de seguridad por asignación masiva
+  MAX_BULK_ASSIGN      = 100 # Límite de seguridad por asignación masiva
 
   def initialize(account:, current_user:, filter_payload:, template_id:, scheduled_for:,
                   excluded_contact_ids: [], skip_active: true)
