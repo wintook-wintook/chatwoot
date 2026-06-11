@@ -195,8 +195,9 @@ export default {
           />
         </woot-tabs>
 
-        <!-- Altura fija para que el modal no salte al cambiar de pestaña. -->
-        <div class="min-h-[27rem]">
+        <!-- Altura fija para que el modal no salte al cambiar de pestaña.
+             32rem cubre el tab más alto ("Datos", ~504px con Impacto/Urgencia). -->
+        <div class="min-h-[32rem]">
           <!-- Tab: Datos del ticket -->
           <div
             v-show="activeTab === 'ticket'"
