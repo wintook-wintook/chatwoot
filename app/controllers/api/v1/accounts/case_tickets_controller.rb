@@ -633,6 +633,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     {
       requester:         current_user,
       assignee:          resolve_internal_assignee,
+      team:              resolve_internal_team,
       case_type_id:      ticket_params[:case_type_id],
       title:             ticket_params[:title],
       priority:          ticket_params[:priority],
@@ -653,6 +654,14 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     return nil if id.blank?
 
     Current.account.users.find(id)
+  end
+
+  # @tickets_cases Fase C — equipo al que se asigna el ticket interno (opcional).
+  def resolve_internal_team
+    id = params.dig(:case_ticket, :team_id)
+    return nil if id.blank?
+
+    Current.account.teams.find(id)
   end
 
   # Tipo de asignación derivado (nunca se setea a mano): agente → equipo → bot.

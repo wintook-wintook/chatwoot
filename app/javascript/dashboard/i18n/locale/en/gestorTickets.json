@@ -164,7 +164,8 @@
       "SUCCESS": "Internal ticket created",
       "ERROR": "Could not create the internal ticket",
       "BADGE": "Internal",
-      "REQUESTER_LABEL": "Requester"
+      "REQUESTER_LABEL": "Requester",
+      "CUSTOM_FIELDS": "Custom fields"
     },
     "ESCALATION": {
       "BUTTON": "Escalate",

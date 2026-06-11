@@ -90,7 +90,7 @@ class Cases::OrchestratorService
   # @tickets_cases Fase C — ticket interno (agente→agente, sin contacto).
   # requester = agente solicitante; assignee = agente que lo atenderá (opcional).
   # No encola clasificación IA (no hay mensaje de cliente que clasificar).
-  def create_internal(requester:, title:, assignee: nil, priority: nil, case_type_id: nil,
+  def create_internal(requester:, title:, assignee: nil, team: nil, priority: nil, case_type_id: nil,
                       description: nil, ticket_kind: nil, custom_attributes: {})
     attrs = {
       account:       @account,
@@ -99,7 +99,8 @@ class Cases::OrchestratorService
       case_type:     resolve_case_type(case_type_id),
       origin:        :internal,
       assignee:      assignee,
-      assignee_type: assignee ? :agent : :bot,
+      team:          team,
+      assignee_type: assignee ? :agent : (team ? :team : :bot),
       title:         title,
       description:   description,
       custom_attributes: custom_attributes || {}
@@ -108,7 +109,8 @@ class Cases::OrchestratorService
     attrs[:ticket_kind] = ticket_kind if ticket_kind.present?
 
     ticket = CaseTicket.create!(attrs)
-    Cases::RuleEngineService.new(ticket).evaluate!
+    # Asignación manual presente (agente/equipo) → las reglas no reasignan.
+    Cases::RuleEngineService.new(ticket, skip_assignment: assignee.present? || team.present?).evaluate!
     ticket
   end
 

@@ -164,7 +164,8 @@
       "SUCCESS": "Ticket interno creado",
       "ERROR": "No se pudo crear el ticket interno",
       "BADGE": "Interno",
-      "REQUESTER_LABEL": "Solicitante"
+      "REQUESTER_LABEL": "Solicitante",
+      "CUSTOM_FIELDS": "Campos personalizados"
     },
     "ESCALATION": {
       "BUTTON": "Escalar",
