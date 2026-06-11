@@ -15,6 +15,7 @@ export default {
   emits: ['close', 'created'],
   data() {
     return {
+      activeTab: 'ticket', // 'ticket' | 'assign' | 'custom'
       form: {
         assignee_id: '',
         team_id: '',
@@ -39,6 +40,17 @@ export default {
       services: 'caseTickets/getServices',
       categories: 'caseTickets/getCategories',
     }),
+    tabs() {
+      return [
+        { key: 'ticket', label: this.$t('CASE_TICKETS.MODAL.TAB_TICKET') },
+        { key: 'assign', label: this.$t('CASE_TICKETS.MODAL.TAB_ASSIGN') },
+        { key: 'custom', label: this.$t('CASE_TICKETS.MODAL.TAB_CUSTOM') },
+      ];
+    },
+    activeTabIndex() {
+      const idx = this.tabs.findIndex(t => t.key === this.activeTab);
+      return idx === -1 ? 0 : idx;
+    },
     ticketKindOptions() {
       return this.$t('CASE_TICKETS.TICKET_KIND');
     },
@@ -100,6 +112,10 @@ export default {
     this.$store.dispatch('caseTickets/fetchCategories');
   },
   methods: {
+    onTabChange(index) {
+      const tab = this.tabs[index];
+      if (tab) this.activeTab = tab.key;
+    },
     async onSubmit() {
       try {
         const ticket = await this.$store.dispatch('caseTickets/createTicket', {
@@ -141,226 +157,255 @@ export default {
         class="flex flex-col self-stretch w-full gap-3 p-8 pt-4"
         @submit.prevent="onSubmit"
       >
-        <div class="grid grid-cols-2 gap-3 [&_.input]:!mb-0">
-          <!-- Equipo -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.ASSIGN.TEAM_LABEL') }}
-            </span>
-            <select v-model="form.team_id" class="input">
-              <option value="">
-                {{ $t('CASE_TICKETS.INTERNAL.ASSIGNEE_NONE') }}
-              </option>
-              <option v-for="tm in teams" :key="tm.id" :value="tm.id">
-                {{ tm.name }}
-              </option>
-            </select>
-          </label>
+        <woot-tabs :index="activeTabIndex" @change="onTabChange">
+          <woot-tabs-item
+            v-for="(t, i) in tabs"
+            :key="t.key"
+            :index="i"
+            :name="t.label"
+            :show-badge="false"
+          />
+        </woot-tabs>
 
-          <!-- Agente -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.INTERNAL.ASSIGNEE_LABEL') }}
-            </span>
-            <select v-model="form.assignee_id" class="input">
-              <option value="">
-                {{ $t('CASE_TICKETS.INTERNAL.ASSIGNEE_NONE') }}
-              </option>
-              <option v-for="ag in agents" :key="ag.id" :value="ag.id">
-                {{ ag.name }}
-              </option>
-            </select>
-          </label>
-
-          <!-- Tipo de caso -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.CASE_TYPE_LABEL') }}
-            </span>
-            <select v-model="form.case_type_id" class="input">
-              <option v-for="t in types" :key="t.id" :value="t.id">
-                {{ t.name }}
-              </option>
-            </select>
-          </label>
-
-          <!-- Naturaleza ITIL -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.TICKET_KIND_LABEL') }}
-            </span>
-            <select v-model="form.ticket_kind" class="input">
-              <option
-                v-for="(label, key) in ticketKindOptions"
-                :key="key"
-                :value="key"
-              >
-                {{ label }}
-              </option>
-            </select>
-          </label>
-
-          <!-- Prioridad -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.PRIORITY_LABEL') }}
-            </span>
-            <select v-model="form.priority" class="input">
-              <option value="low">
-                {{ $t('CASE_TICKETS.PRIORITIES.low') }}
-              </option>
-              <option value="medium">
-                {{ $t('CASE_TICKETS.PRIORITIES.medium') }}
-              </option>
-              <option value="high">
-                {{ $t('CASE_TICKETS.PRIORITIES.high') }}
-              </option>
-              <option value="urgent">
-                {{ $t('CASE_TICKETS.PRIORITIES.urgent') }}
-              </option>
-            </select>
-          </label>
-
-          <!-- Servicio afectado -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.AFFECTED_SERVICE_LABEL') }}
-            </span>
-            <select v-model="form.affected_service_id" class="input">
-              <option :value="null">
-                {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
-              </option>
-              <option v-for="s in services" :key="s.id" :value="s.id">
-                {{ s.name }}
-              </option>
-            </select>
-          </label>
-
-          <!-- Categoría -->
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.CATEGORY_LABEL') }}
-            </span>
-            <select v-model="form.category_id" class="input">
-              <option :value="null">
-                {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
-              </option>
-              <option v-for="c in flatCategories" :key="c.id" :value="c.id">
-                {{ c.label }}
-              </option>
-            </select>
-          </label>
-
-          <!-- Título -->
-          <label class="flex flex-col col-span-2 gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.TITLE_LABEL') }}
-            </span>
-            <input
-              v-model="form.title"
-              type="text"
-              class="input"
-              :placeholder="$t('CASE_TICKETS.INTERNAL.TITLE_PLACEHOLDER')"
-              required
-            />
-          </label>
-
-          <!-- Descripción -->
-          <label class="flex flex-col col-span-2 gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-300"
-            >
-              {{ $t('CASE_TICKETS.MODAL.DESCRIPTION_LABEL') }}
-            </span>
-            <textarea
-              v-model="form.description"
-              rows="3"
-              class="input"
-              :placeholder="$t('CASE_TICKETS.MODAL.DESCRIPTION_PLACEHOLDER')"
-            />
-          </label>
-
-          <!-- Campos personalizados (2K) del tipo -->
-          <template v-if="selectedTypeFields.length">
-            <div
-              class="col-span-2 pt-1 mt-1 text-xs font-semibold tracking-wide uppercase border-t text-slate-400 dark:text-slate-500 border-slate-100 dark:border-slate-700"
-            >
-              {{ $t('CASE_TICKETS.INTERNAL.CUSTOM_FIELDS') }}
-            </div>
-            <label
-              v-for="field in selectedTypeFields"
-              :key="field.key"
-              class="flex"
-              :class="
-                field.field_type === 'checkbox'
-                  ? 'flex-row items-center col-span-2 gap-2.5 px-3 py-2.5 border rounded-md cursor-pointer border-slate-200 dark:border-slate-600 bg-slate-25 dark:bg-slate-800'
-                  : 'flex-col gap-1'
-              "
-            >
-              <input
-                v-if="field.field_type === 'checkbox'"
-                v-model="customValues[field.key]"
-                type="checkbox"
-                class="w-4 h-4 shrink-0"
-              />
+        <!-- Altura fija para que el modal no salte al cambiar de pestaña. -->
+        <div class="min-h-[22rem]">
+          <!-- Tab: Datos del ticket -->
+          <div
+            v-show="activeTab === 'ticket'"
+            class="grid grid-cols-2 gap-3 [&_.input]:!mb-0"
+          >
+            <!-- Tipo de caso -->
+            <label class="flex flex-col gap-1">
               <span
                 class="text-sm font-medium text-slate-700 dark:text-slate-300"
               >
-                {{ field.label
-                }}<span v-if="field.required" class="text-red-500"> *</span>
+                {{ $t('CASE_TICKETS.MODAL.CASE_TYPE_LABEL') }}
               </span>
-              <select
-                v-if="field.field_type === 'list'"
-                v-model="customValues[field.key]"
-                class="input"
-                :required="field.required"
-              >
-                <option value="">
-                  {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
-                </option>
-                <option v-for="opt in field.options" :key="opt" :value="opt">
-                  {{ opt }}
+              <select v-model="form.case_type_id" class="input">
+                <option v-for="t in types" :key="t.id" :value="t.id">
+                  {{ t.name }}
                 </option>
               </select>
+            </label>
+
+            <!-- Naturaleza ITIL -->
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.MODAL.TICKET_KIND_LABEL') }}
+              </span>
+              <select v-model="form.ticket_kind" class="input">
+                <option
+                  v-for="(label, key) in ticketKindOptions"
+                  :key="key"
+                  :value="key"
+                >
+                  {{ label }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Prioridad -->
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.MODAL.PRIORITY_LABEL') }}
+              </span>
+              <select v-model="form.priority" class="input">
+                <option value="low">
+                  {{ $t('CASE_TICKETS.PRIORITIES.low') }}
+                </option>
+                <option value="medium">
+                  {{ $t('CASE_TICKETS.PRIORITIES.medium') }}
+                </option>
+                <option value="high">
+                  {{ $t('CASE_TICKETS.PRIORITIES.high') }}
+                </option>
+                <option value="urgent">
+                  {{ $t('CASE_TICKETS.PRIORITIES.urgent') }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Servicio afectado -->
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.MODAL.AFFECTED_SERVICE_LABEL') }}
+              </span>
+              <select v-model="form.affected_service_id" class="input">
+                <option :value="null">
+                  {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+                </option>
+                <option v-for="s in services" :key="s.id" :value="s.id">
+                  {{ s.name }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Categoría -->
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.MODAL.CATEGORY_LABEL') }}
+              </span>
+              <select v-model="form.category_id" class="input">
+                <option :value="null">
+                  {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+                </option>
+                <option v-for="c in flatCategories" :key="c.id" :value="c.id">
+                  {{ c.label }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Título -->
+            <label class="flex flex-col col-span-2 gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.MODAL.TITLE_LABEL') }}
+              </span>
               <input
-                v-else-if="field.field_type === 'number'"
-                v-model="customValues[field.key]"
-                type="number"
-                class="input"
-                :required="field.required"
-              />
-              <input
-                v-else-if="field.field_type === 'date'"
-                v-model="customValues[field.key]"
-                type="date"
-                class="input"
-                :required="field.required"
-              />
-              <input
-                v-else-if="field.field_type === 'text'"
-                v-model="customValues[field.key]"
+                v-model="form.title"
                 type="text"
                 class="input"
-                :required="field.required"
+                :placeholder="$t('CASE_TICKETS.INTERNAL.TITLE_PLACEHOLDER')"
+                required
               />
             </label>
-          </template>
+
+            <!-- Descripción -->
+            <label class="flex flex-col col-span-2 gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.MODAL.DESCRIPTION_LABEL') }}
+              </span>
+              <textarea
+                v-model="form.description"
+                rows="3"
+                class="input"
+                :placeholder="$t('CASE_TICKETS.MODAL.DESCRIPTION_PLACEHOLDER')"
+              />
+            </label>
+          </div>
+
+          <!-- Tab: Asignación -->
+          <div
+            v-show="activeTab === 'assign'"
+            class="grid grid-cols-2 gap-3 [&_.input]:!mb-0"
+          >
+            <!-- Equipo -->
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.ASSIGN.TEAM_LABEL') }}
+              </span>
+              <select v-model="form.team_id" class="input">
+                <option value="">
+                  {{ $t('CASE_TICKETS.INTERNAL.ASSIGNEE_NONE') }}
+                </option>
+                <option v-for="tm in teams" :key="tm.id" :value="tm.id">
+                  {{ tm.name }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Agente -->
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.INTERNAL.ASSIGNEE_LABEL') }}
+              </span>
+              <select v-model="form.assignee_id" class="input">
+                <option value="">
+                  {{ $t('CASE_TICKETS.INTERNAL.ASSIGNEE_NONE') }}
+                </option>
+                <option v-for="ag in agents" :key="ag.id" :value="ag.id">
+                  {{ ag.name }}
+                </option>
+              </select>
+            </label>
+            <p class="col-span-2 text-xs text-slate-400 dark:text-slate-500">
+              {{ $t('CASE_TICKETS.MODAL.ASSIGN_HINT') }}
+            </p>
+          </div>
+
+          <!-- Tab: Campos personalizados (2K) -->
+          <div v-show="activeTab === 'custom'">
+            <div
+              v-if="!selectedTypeFields.length"
+              class="py-6 text-sm text-center text-slate-400 dark:text-slate-500"
+            >
+              {{ $t('CASE_TICKETS.MODAL.NO_CUSTOM_FIELDS') }}
+            </div>
+            <div v-else class="grid grid-cols-2 gap-3 [&_.input]:!mb-0">
+              <label
+                v-for="field in selectedTypeFields"
+                :key="field.key"
+                class="flex"
+                :class="
+                  field.field_type === 'checkbox'
+                    ? 'flex-row items-center col-span-2 gap-2.5 px-3 py-2.5 border rounded-md cursor-pointer border-slate-200 dark:border-slate-600 bg-slate-25 dark:bg-slate-800'
+                    : 'flex-col gap-1'
+                "
+              >
+                <input
+                  v-if="field.field_type === 'checkbox'"
+                  v-model="customValues[field.key]"
+                  type="checkbox"
+                  class="w-4 h-4 shrink-0"
+                />
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ field.label
+                  }}<span v-if="field.required" class="text-red-500"> *</span>
+                </span>
+                <select
+                  v-if="field.field_type === 'list'"
+                  v-model="customValues[field.key]"
+                  class="input"
+                  :required="field.required"
+                >
+                  <option value="">
+                    {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+                  </option>
+                  <option v-for="opt in field.options" :key="opt" :value="opt">
+                    {{ opt }}
+                  </option>
+                </select>
+                <input
+                  v-else-if="field.field_type === 'number'"
+                  v-model="customValues[field.key]"
+                  type="number"
+                  class="input"
+                  :required="field.required"
+                />
+                <input
+                  v-else-if="field.field_type === 'date'"
+                  v-model="customValues[field.key]"
+                  type="date"
+                  class="input"
+                  :required="field.required"
+                />
+                <input
+                  v-else-if="field.field_type === 'text'"
+                  v-model="customValues[field.key]"
+                  type="text"
+                  class="input"
+                  :required="field.required"
+                />
+              </label>
+            </div>
+          </div>
         </div>
 
         <div class="flex items-center justify-end gap-2">
