@@ -7,6 +7,13 @@
 <script>
 import { mapGetters } from 'vuex';
 
+// Espejo de Cases::PriorityMatrix (backend). impacto × urgencia → prioridad.
+const PRIORITY_MATRIX = {
+  high: { low: 'high', medium: 'high', high: 'urgent' },
+  medium: { low: 'low', medium: 'medium', high: 'high' },
+  low: { low: 'low', medium: 'low', high: 'medium' },
+};
+
 export default {
   name: 'CaseTicketInternalModal',
   props: {
@@ -24,6 +31,8 @@ export default {
         affected_service_id: null,
         category_id: null,
         title: '',
+        impact: null,
+        urgency: null,
         priority: 'medium',
         description: '',
       },
@@ -53,6 +62,22 @@ export default {
     },
     ticketKindOptions() {
       return this.$t('CASE_TICKETS.TICKET_KIND');
+    },
+    priorityOptions() {
+      return this.$t('CASE_TICKETS.PRIORITIES');
+    },
+    impactOptions() {
+      return this.$t('CASE_TICKETS.IMPACT');
+    },
+    urgencyOptions() {
+      return this.$t('CASE_TICKETS.URGENCY');
+    },
+    // Prioridad derivada por matriz cuando hay impacto y urgencia.
+    derivedPriority() {
+      if (!this.form.impact || !this.form.urgency) return null;
+      return (
+        (PRIORITY_MATRIX[this.form.impact] || {})[this.form.urgency] || null
+      );
     },
     // Categorías aplanadas (categoría + subcategorías con guion) para el select.
     flatCategories() {
@@ -127,7 +152,10 @@ export default {
           affected_service_id: this.form.affected_service_id || undefined,
           category_id: this.form.category_id || undefined,
           title: this.form.title.trim(),
-          priority: this.form.priority,
+          impact: this.form.impact || undefined,
+          urgency: this.form.urgency || undefined,
+          // Si la matriz deriva la prioridad, no se envía la manual (el backend la calcula).
+          priority: this.derivedPriority ? undefined : this.form.priority,
           description: this.form.description.trim() || undefined,
           custom_attributes: this.selectedTypeFields.length
             ? this.customValues
@@ -168,7 +196,7 @@ export default {
         </woot-tabs>
 
         <!-- Altura fija para que el modal no salte al cambiar de pestaña. -->
-        <div class="min-h-[22rem]">
+        <div class="min-h-[27rem]">
           <!-- Tab: Datos del ticket -->
           <div
             v-show="activeTab === 'ticket'"
@@ -206,27 +234,35 @@ export default {
               </select>
             </label>
 
-            <!-- Prioridad -->
-            <label class="flex flex-col gap-1">
+            <!-- Título -->
+            <label class="flex flex-col col-span-2 gap-1">
               <span
                 class="text-sm font-medium text-slate-700 dark:text-slate-300"
               >
-                {{ $t('CASE_TICKETS.MODAL.PRIORITY_LABEL') }}
+                {{ $t('CASE_TICKETS.MODAL.TITLE_LABEL') }}
               </span>
-              <select v-model="form.priority" class="input">
-                <option value="low">
-                  {{ $t('CASE_TICKETS.PRIORITIES.low') }}
-                </option>
-                <option value="medium">
-                  {{ $t('CASE_TICKETS.PRIORITIES.medium') }}
-                </option>
-                <option value="high">
-                  {{ $t('CASE_TICKETS.PRIORITIES.high') }}
-                </option>
-                <option value="urgent">
-                  {{ $t('CASE_TICKETS.PRIORITIES.urgent') }}
-                </option>
-              </select>
+              <input
+                v-model="form.title"
+                type="text"
+                class="input"
+                :placeholder="$t('CASE_TICKETS.INTERNAL.TITLE_PLACEHOLDER')"
+                required
+              />
+            </label>
+
+            <!-- Descripción -->
+            <label class="flex flex-col col-span-2 gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                {{ $t('CASE_TICKETS.MODAL.DESCRIPTION_LABEL') }}
+              </span>
+              <textarea
+                v-model="form.description"
+                rows="3"
+                class="input"
+                :placeholder="$t('CASE_TICKETS.MODAL.DESCRIPTION_PLACEHOLDER')"
+              />
             </label>
 
             <!-- Servicio afectado -->
@@ -263,36 +299,87 @@ export default {
               </select>
             </label>
 
-            <!-- Título -->
-            <label class="flex flex-col col-span-2 gap-1">
-              <span
-                class="text-sm font-medium text-slate-700 dark:text-slate-300"
-              >
-                {{ $t('CASE_TICKETS.MODAL.TITLE_LABEL') }}
-              </span>
-              <input
-                v-model="form.title"
-                type="text"
-                class="input"
-                :placeholder="$t('CASE_TICKETS.INTERNAL.TITLE_PLACEHOLDER')"
-                required
-              />
-            </label>
+            <!-- Impacto · Urgencia · Prioridad en una sola línea -->
+            <div class="grid grid-cols-3 col-span-2 gap-3">
+              <!-- Impacto -->
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.MODAL.IMPACT_LABEL') }}
+                </span>
+                <select v-model="form.impact" class="input">
+                  <option :value="null">
+                    {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+                  </option>
+                  <option
+                    v-for="(label, key) in impactOptions"
+                    :key="key"
+                    :value="key"
+                  >
+                    {{ label }}
+                  </option>
+                </select>
+              </label>
 
-            <!-- Descripción -->
-            <label class="flex flex-col col-span-2 gap-1">
-              <span
-                class="text-sm font-medium text-slate-700 dark:text-slate-300"
-              >
-                {{ $t('CASE_TICKETS.MODAL.DESCRIPTION_LABEL') }}
-              </span>
-              <textarea
-                v-model="form.description"
-                rows="3"
-                class="input"
-                :placeholder="$t('CASE_TICKETS.MODAL.DESCRIPTION_PLACEHOLDER')"
-              />
-            </label>
+              <!-- Urgencia -->
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.MODAL.URGENCY_LABEL') }}
+                </span>
+                <select v-model="form.urgency" class="input">
+                  <option :value="null">
+                    {{ $t('CASE_TICKETS.MODAL.UNSPECIFIED') }}
+                  </option>
+                  <option
+                    v-for="(label, key) in urgencyOptions"
+                    :key="key"
+                    :value="key"
+                  >
+                    {{ label }}
+                  </option>
+                </select>
+              </label>
+
+              <!-- Prioridad -->
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('CASE_TICKETS.MODAL.PRIORITY_LABEL') }}
+                </span>
+                <select
+                  v-model="form.priority"
+                  class="input"
+                  :disabled="!!derivedPriority"
+                >
+                  <option value="low">
+                    {{ $t('CASE_TICKETS.PRIORITIES.low') }}
+                  </option>
+                  <option value="medium">
+                    {{ $t('CASE_TICKETS.PRIORITIES.medium') }}
+                  </option>
+                  <option value="high">
+                    {{ $t('CASE_TICKETS.PRIORITIES.high') }}
+                  </option>
+                  <option value="urgent">
+                    {{ $t('CASE_TICKETS.PRIORITIES.urgent') }}
+                  </option>
+                </select>
+                <span
+                  v-if="derivedPriority"
+                  class="text-xs text-slate-500 dark:text-slate-400"
+                >
+                  {{
+                    $t('CASE_TICKETS.MODAL.PRIORITY_DERIVED', {
+                      priority: priorityOptions[derivedPriority],
+                    })
+                  }}
+                </span>
+              </label>
+            </div>
           </div>
 
           <!-- Tab: Asignación -->

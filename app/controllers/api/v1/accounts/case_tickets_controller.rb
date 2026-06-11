@@ -639,6 +639,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       priority:            ticket_params[:priority],
       description:         ticket_params[:description],
       ticket_kind:         ticket_params[:ticket_kind],
+      impact:              ticket_params[:impact],
+      urgency:             ticket_params[:urgency],
       affected_service_id: ticket_params[:affected_service_id],
       category_id:         ticket_params[:category_id],
       custom_attributes:   custom
