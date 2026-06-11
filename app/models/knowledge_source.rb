@@ -16,6 +16,7 @@
 #
 # Indexes
 #
+#  idx_unique_native_knowledge_sources                    (account_id,source_type) UNIQUE WHERE ((source_type)::text = ANY ((ARRAY['canned_response'::character varying, 'article'::character varying])::text[]))
 #  index_knowledge_sources_on_account_id                  (account_id)
 #  index_knowledge_sources_on_account_id_and_source_type  (account_id,source_type)
 #

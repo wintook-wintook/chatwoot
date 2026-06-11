@@ -14,7 +14,7 @@
 # ================================================================================
 
 class Cases::OrchestratorService
-  def initialize(account:, contact:, conversation: nil)
+  def initialize(account:, contact: nil, conversation: nil)
     @account      = account
     @contact      = contact
     @conversation = conversation
@@ -49,14 +49,22 @@ class Cases::OrchestratorService
 
   def create_for_manual(title:, priority: nil, case_type_id: nil, description: nil,
                         ticket_kind: nil, impact: nil, urgency: nil,
-                        affected_service_id: nil, category_id: nil, custom_attributes: {})
+                        affected_service_id: nil, category_id: nil, custom_attributes: {},
+                        assignee_id: nil, team_id: nil)
+    # @tickets_cases — asignación manual al crear (opcional). Resueltos dentro de
+    # la cuenta. Si el agente asignó a mano, gana sobre las reglas (skip_assignment).
+    assignee = @account.users.find_by(id: assignee_id) if assignee_id.present?
+    team     = @account.teams.find_by(id: team_id)     if team_id.present?
+
     attrs = {
       account:       @account,
       contact:       @contact,
       conversation:  @conversation,
       case_type:     resolve_case_type(case_type_id),
       origin:        :manual,
-      assignee_type: :agent,
+      assignee:      assignee,
+      team:          team,
+      assignee_type: assignee ? :agent : (team ? :team : :bot),
       title:         title,
       description:   description,
       # @tickets_cases 2K — valores de los campos personalizados del tipo de caso.
@@ -73,8 +81,44 @@ class Cases::OrchestratorService
     attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id)        if category_id.present?
 
     ticket = CaseTicket.create!(attrs)
-    Cases::RuleEngineService.new(ticket).evaluate!
+    # Asignación manual presente → las reglas no reasignan (sí enriquecen lo demás).
+    Cases::RuleEngineService.new(ticket, skip_assignment: assignee.present? || team.present?).evaluate!
     enqueue_ai_classification(ticket) # @tickets_cases 3B
+    ticket
+  end
+
+  # @tickets_cases Fase C — ticket interno (agente→agente, sin contacto).
+  # requester = agente solicitante; assignee = agente que lo atenderá (opcional).
+  # No encola clasificación IA (no hay mensaje de cliente que clasificar).
+  def create_internal(requester:, title:, assignee: nil, team: nil, priority: nil, case_type_id: nil,
+                      description: nil, ticket_kind: nil, impact: nil, urgency: nil,
+                      affected_service_id: nil, category_id: nil, custom_attributes: {})
+    attrs = {
+      account:       @account,
+      contact:       nil,
+      requester:     requester,
+      case_type:     resolve_case_type(case_type_id),
+      origin:        :internal,
+      assignee:      assignee,
+      team:          team,
+      assignee_type: assignee ? :agent : (team ? :team : :bot),
+      title:         title,
+      description:   description,
+      custom_attributes: custom_attributes || {}
+    }
+    # priority: si viene vacío y hay impacto+urgencia, lo deriva la matriz ITIL;
+    # si no, aplica el default del modelo (medium).
+    attrs[:priority]    = priority    if priority.present?
+    attrs[:ticket_kind] = ticket_kind if ticket_kind.present?
+    attrs[:impact]      = impact      if impact.present?
+    attrs[:urgency]     = urgency     if urgency.present?
+    # Resueltos dentro del scope de la cuenta (evita vincular registros de otra cuenta).
+    attrs[:affected_service_id] = @account.case_services.where(id: affected_service_id).pick(:id) if affected_service_id.present?
+    attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id)        if category_id.present?
+
+    ticket = CaseTicket.create!(attrs)
+    # Asignación manual presente (agente/equipo) → las reglas no reasignan.
+    Cases::RuleEngineService.new(ticket, skip_assignment: assignee.present? || team.present?).evaluate!
     ticket
   end
 

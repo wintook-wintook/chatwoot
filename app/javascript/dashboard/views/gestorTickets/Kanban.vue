@@ -6,12 +6,14 @@
 -->
 <script>
 import { mapGetters } from 'vuex';
+import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
 
 // Filtros rápidos (pestañas) — mismo set que el listado (Index.vue).
 const QUICK_FILTERS = [
+  { key: 'mine', label: 'Mis Tickets' },
+  { key: 'unassigned', label: 'Sin Asignar' },
   { key: 'all', label: 'Todos' },
-  { key: 'sla_overdue', label: 'SLA vencido' },
-  { key: 'unassigned', label: 'Sin asignar' },
+  { key: 'sla_overdue', label: 'SLA vencidos' },
 ];
 
 // Columnas operativas: cada una agrupa uno o más estados del ciclo de vida (2A).
@@ -48,11 +50,13 @@ const SLA_BADGE = {
 
 export default {
   name: 'TicketKanban',
+  components: { CaseTicketInternalModal }, // @tickets_cases Fase C
   data() {
     return {
       columns: COLUMNS,
       quickFilters: QUICK_FILTERS,
-      quickFilter: 'all',
+      quickFilter: 'mine',
+      showInternalModal: false, // @tickets_cases Fase C
       filters: {
         q: '',
         ticket_kind: '',
@@ -78,6 +82,7 @@ export default {
       slaOverdueCount: 'caseTickets/getBoardSlaOverdue',
       services: 'caseTickets/getServices',
       agents: 'agents/getAgents',
+      currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
     }),
     isFetching() {
       return this.boardUiFlags.isFetching;
@@ -116,6 +121,11 @@ export default {
     this.$store.dispatch('agents/get');
   },
   methods: {
+    // @tickets_cases Fase C — tras crear un ticket interno, refresca el tablero.
+    onInternalCreated() {
+      this.showInternalModal = false;
+      this.fetch();
+    },
     fetch() {
       const f = {};
       Object.keys(this.filters).forEach(k => {
@@ -126,6 +136,7 @@ export default {
       // Filtro rápido (pestañas): sobrescribe assignee / añade sla_status.
       if (this.quickFilter === 'sla_overdue') f.sla_status = 'overdue';
       if (this.quickFilter === 'unassigned') f.assignee_id = 'unassigned';
+      if (this.quickFilter === 'mine') f.assignee_id = this.currentUserID;
       this.$store.dispatch('caseTickets/fetchBoardTickets', f);
     },
     onSearchInput() {
@@ -254,9 +265,15 @@ export default {
     <div
       class="flex flex-col flex-shrink-0 gap-3 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
-        {{ $t('CASE_TICKETS.KANBAN.TITLE') }}
-      </h1>
+      <div class="flex items-center justify-between">
+        <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
+          {{ $t('CASE_TICKETS.KANBAN.TITLE') }}
+        </h1>
+        <!-- @tickets_cases Fase C — alta de ticket interno -->
+        <woot-button size="small" icon="add" @click="showInternalModal = true">
+          {{ $t('CASE_TICKETS.INTERNAL.NEW_BUTTON') }}
+        </woot-button>
+      </div>
 
       <!-- Filtros rápidos como pestañas nativas (mismo estilo que el listado) -->
       <woot-tabs :index="activeQuickTabIndex" @change="onQuickTabChange">
@@ -493,5 +510,13 @@ export default {
         </form>
       </div>
     </woot-modal>
+
+    <!-- @tickets_cases Fase C — modal de alta de ticket interno -->
+    <CaseTicketInternalModal
+      v-if="showInternalModal"
+      :show="showInternalModal"
+      @created="onInternalCreated"
+      @close="showInternalModal = false"
+    />
   </div>
 </template>

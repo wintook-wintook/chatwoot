@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_07_000002) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -346,7 +346,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_07_000002) do
 
   create_table "case_tickets", force: :cascade do |t|
     t.bigint "account_id", null: false
-    t.bigint "contact_id", null: false
+    t.bigint "contact_id"
     t.bigint "conversation_id"
     t.bigint "contact_tracking_id"
     t.bigint "assignee_id"
@@ -382,6 +382,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_07_000002) do
     t.bigint "kb_article_id"
     t.integer "sla_paused_minutes", default: 0, null: false
     t.datetime "sla_paused_since"
+    t.bigint "requester_id"
     t.index ["account_id", "case_type_id"], name: "index_case_tickets_on_account_id_and_case_type_id"
     t.index ["account_id", "contact_id"], name: "index_case_tickets_on_account_id_and_contact_id"
     t.index ["account_id", "folio"], name: "index_case_tickets_on_account_and_folio", unique: true, where: "(folio IS NOT NULL)"
@@ -392,6 +393,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_07_000002) do
     t.index ["category_id"], name: "index_case_tickets_on_category_id"
     t.index ["kb_article_id"], name: "index_case_tickets_on_kb_article_id"
     t.index ["metadata"], name: "index_case_tickets_on_metadata", using: :gin
+    t.index ["requester_id"], name: "index_case_tickets_on_requester_id"
   end
 
   create_table "case_type_fields", force: :cascade do |t|
@@ -945,7 +947,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_07_000002) do
     t.integer "chunk_index", default: 0, null: false
     t.index ["account_id", "source_type", "source_id", "chunk_index"], name: "idx_knowledge_items_source", unique: true
     t.index ["account_id"], name: "index_knowledge_items_on_account_id"
-    t.index ["embedding"], name: "idx_knowledge_items_embedding", opclass: :vector_cosine_ops, using: :ivfflat
     t.index ["knowledge_source_id"], name: "index_knowledge_items_on_knowledge_source_id"
   end
 
@@ -960,6 +961,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_07_000002) do
     t.datetime "updated_at", null: false
     t.string "sync_status", default: "idle", null: false
     t.integer "sync_jobs_pending", default: 0, null: false
+    t.index ["account_id", "source_type"], name: "idx_unique_native_knowledge_sources", unique: true, where: "((source_type)::text = ANY ((ARRAY['canned_response'::character varying, 'article'::character varying])::text[]))"
     t.index ["account_id", "source_type"], name: "index_knowledge_sources_on_account_id_and_source_type"
     t.index ["account_id"], name: "index_knowledge_sources_on_account_id"
   end
@@ -1381,6 +1383,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_07_000002) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "case_ai_configs", "accounts"
+  add_foreign_key "case_tickets", "users", column: "requester_id"
   add_foreign_key "case_type_fields", "accounts"
   add_foreign_key "case_type_fields", "case_types"
   add_foreign_key "command_sessions", "accounts"

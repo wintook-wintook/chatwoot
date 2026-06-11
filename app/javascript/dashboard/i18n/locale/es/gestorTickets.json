@@ -74,6 +74,7 @@
       "APPLY": "Aplicar",
       "ALL_STATUSES": "Todos los estados",
       "ALL_PRIORITIES": "Todas las prioridades",
+      "ALL_ORIGINS": "Todos los orígenes",
       "SORT_BY": "Ordenar por",
       "SORT_FIELDS": {
         "created_at": "Fecha",
@@ -139,8 +140,32 @@
       "OPEN_DETAIL": "Abrir",
       "BACK": "Volver",
       "TAB_TICKET": "Datos del ticket",
+      "TAB_ASSIGN": "Asignación manual",
       "TAB_CUSTOM": "Campos personalizados",
+      "ASSIGN_AUTO": "— Automático (reglas) —",
+      "ASSIGN_HINT": "Si lo dejas en automático, las reglas de automatización deciden la asignación. Lo que elijas aquí tiene prioridad sobre las reglas.",
       "NO_CUSTOM_FIELDS": "Este tipo no tiene campos personalizados"
+    },
+    "ASSIGN": {
+      "TITLE": "Asignación",
+      "TEAM_LABEL": "Equipo",
+      "AGENT_LABEL": "Agente",
+      "NONE": "— Sin asignar —",
+      "SUCCESS": "Asignación actualizada",
+      "ERROR": "No se pudo actualizar la asignación"
+    },
+    "INTERNAL": {
+      "TITLE": "Crear ticket interno",
+      "NEW_BUTTON": "Ticket interno",
+      "ASSIGNEE_LABEL": "Asignar a (agente)",
+      "ASSIGNEE_NONE": "— Sin asignar —",
+      "TITLE_PLACEHOLDER": "Describe brevemente la solicitud",
+      "SUBMIT": "Crear ticket interno",
+      "SUCCESS": "Ticket interno creado",
+      "ERROR": "No se pudo crear el ticket interno",
+      "BADGE": "Interno",
+      "REQUESTER_LABEL": "Solicitante",
+      "CUSTOM_FIELDS": "Campos personalizados"
     },
     "ESCALATION": {
       "BUTTON": "Escalar",
@@ -529,6 +554,14 @@
       "medium": "Media",
       "high": "Alta",
       "urgent": "Urgente"
+    },
+    "ORIGINS": {
+      "whatsapp": "WhatsApp",
+      "web": "Web",
+      "email": "Correo",
+      "bot": "Bot",
+      "manual": "Manual",
+      "internal": "Interno"
     },
     "TICKET_KIND": {
       "incident": "Incidente",

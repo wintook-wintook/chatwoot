@@ -142,6 +142,7 @@ en:
       sla_missed_next_response: "SLA target next response missed for conversation (#%{display_id})"
       sla_missed_resolution: "SLA target resolution missed for conversation (#%{display_id})"
       calendar_event_reminder: "Calendar reminder"
+      case_ticket_assignment: "Ticket %{folio} has been assigned to you"
     calendar_event_reminder:
       body: "\"%{title}\" starts in %{minutes} minutes"
       no_title: "Untitled event"

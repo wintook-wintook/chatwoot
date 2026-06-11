@@ -48,6 +48,7 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 - [[Feature-flag-case_management]] — activar el módulo por cuenta
 - [[Pruebas-en-browser]] — credenciales, Chrome, Puppeteer
 - [[Pendiente]] — lo que falta
+- [[Plan-asignacion-contacto-internos]] — plan: asignación manual · ticket desde contacto · tickets internos
 - [[Historial-de-implementacion]] — changelog de todo lo resuelto
 
 ---

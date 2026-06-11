@@ -13,7 +13,8 @@ export default {
   components: { CaseTicketModal },
   props: {
     contactId: { type: [Number, String], required: true },
-    conversationId: { type: [Number, String], required: true },
+    // Opcional: la ficha de contacto (sin conversación) lo monta sin este prop.
+    conversationId: { type: [Number, String], default: null },
   },
   data() {
     return {

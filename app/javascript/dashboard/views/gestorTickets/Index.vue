@@ -7,9 +7,15 @@
   <div class="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900">
     <!-- Header -->
     <div class="flex-shrink-0 px-6 pt-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50">
-      <h1 class="m-0 mb-3 text-xl font-bold text-slate-800 dark:text-slate-100">
-        {{ $t('CASE_TICKETS.SIDEBAR.TITLE') }}
-      </h1>
+      <div class="flex items-center justify-between mb-3">
+        <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
+          {{ $t('CASE_TICKETS.SIDEBAR.TITLE') }}
+        </h1>
+        <!-- @tickets_cases Fase C — alta de ticket interno (agente→agente) -->
+        <woot-button size="small" icon="add" @click="showInternalModal = true">
+          {{ $t('CASE_TICKETS.INTERNAL.NEW_BUTTON') }}
+        </woot-button>
+      </div>
 
       <!-- Filtros rápidos como pestañas nativas -->
       <woot-tabs :index="activeQuickTabIndex" @change="onQuickTabChange">
@@ -60,6 +66,18 @@
         <!-- Tipo (dinámico desde la cuenta) -->
         <select v-model="activeType" class="!mb-0 w-40 text-sm" @change="onFilterChange">
           <option v-for="t in typeFilters" :key="t.id" :value="t.id">{{ t.name }}</option>
+        </select>
+
+        <!-- Origen (@tickets_cases Fase C) -->
+        <select
+          v-model="originFilter"
+          class="!mb-0 w-36 text-sm"
+          @change="onFilterChange"
+        >
+          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_ORIGINS') }}</option>
+          <option v-for="o in originOptions" :key="o" :value="o">
+            {{ originLabel(o) }}
+          </option>
         </select>
 
         <!-- Rango de fechas (no-margin + auto-width para alinear y acotar el ancho como los selects) -->
@@ -134,6 +152,13 @@
           <span class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded" :class="priorityBadge(ticket.priority)">
             {{ priorityLabel(ticket.priority) }}
           </span>
+          <!-- @tickets_cases Fase C — distintivo de ticket interno -->
+          <span
+            v-if="ticket.is_internal"
+            class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-300"
+          >
+            {{ $t('CASE_TICKETS.INTERNAL.BADGE') }}
+          </span>
         </div>
 
         <!-- Título y status -->
@@ -187,17 +212,27 @@
         </div>
       </div>
     </div>
+
+    <!-- @tickets_cases Fase C — modal de alta de ticket interno -->
+    <CaseTicketInternalModal
+      v-if="showInternalModal"
+      :show="showInternalModal"
+      @created="onInternalCreated"
+      @close="showInternalModal = false"
+    />
   </div>
 </template>
 
 <script>
 import { mapGetters } from 'vuex';
 import WootDateRangePicker from 'dashboard/components/ui/DateRangePicker.vue';
+import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
 
 const QUICK_FILTERS = [
-  { key: 'all',         label: 'Todos' },
-  { key: 'sla_overdue', label: 'SLA vencido' },
-  { key: 'unassigned',  label: 'Sin asignar' },
+  { key: 'mine', label: 'Mis Tickets' },
+  { key: 'unassigned', label: 'Sin Asignar' },
+  { key: 'all', label: 'Todos' },
+  { key: 'sla_overdue', label: 'SLA vencidos' },
 ];
 
 // Los 13 estados de ticket (sin los estados SLA que comparten el bloque STATUSES).
@@ -208,20 +243,31 @@ const STATUS_OPTIONS = [
   'escalated', 'resolved', 'validating', 'closed', 'cancelled',
 ];
 const PRIORITY_OPTIONS = ['low', 'medium', 'high', 'urgent'];
+// @tickets_cases Fase C — orígenes del ticket (incluye 'internal').
+const ORIGIN_OPTIONS = [
+  'whatsapp',
+  'web',
+  'email',
+  'bot',
+  'manual',
+  'internal',
+];
 const SORT_FIELDS = ['created_at', 'priority', 'status', 'sla_status'];
 const PER_PAGE_OPTIONS = [25, 50, 100];
 
 export default {
   name: 'GestorTicketsIndex',
-  components: { WootDateRangePicker },
+  components: { WootDateRangePicker, CaseTicketInternalModal },
   data() {
     return {
+      showInternalModal: false, // @tickets_cases Fase C
       search: '',
       searchDebounce: null,
       dateRange: [],        // [Date, Date]
       statusFilter: '',
       priorityFilter: '',
-      activeFilter: 'all',
+      originFilter: '', // @tickets_cases Fase C
+      activeFilter: 'mine',
       activeType: '',       // '' = todos, o un case_type_id
       sortBy: 'created_at',
       sortOrder: 'desc',
@@ -235,6 +281,7 @@ export default {
       meta:          'caseTickets/getTicketsMeta',
       uiFlags:       'caseTickets/getUIFlags',
       types:         'caseTickets/getTypes',
+      currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
     }),
     isFetchingList()  { return this.uiFlags.isFetchingList; },
     quickFilters()    { return QUICK_FILTERS; },
@@ -245,6 +292,9 @@ export default {
     slaOverdueCount() { return this.meta.sla_overdue_count || 0; },
     statusOptions()   { return STATUS_OPTIONS; },
     priorityOptions() { return PRIORITY_OPTIONS; },
+    originOptions() {
+      return ORIGIN_OPTIONS;
+    },
     perPageOptions()  { return PER_PAGE_OPTIONS; },
     sortOptions() {
       return SORT_FIELDS.map(value => ({
@@ -271,7 +321,8 @@ export default {
         this.dateRange.length > 0 ||
         !!this.statusFilter ||
         !!this.priorityFilter ||
-        this.activeFilter !== 'all' ||
+        !!this.originFilter ||
+        this.activeFilter !== 'mine' ||
         !!this.activeType
       );
     },
@@ -281,6 +332,12 @@ export default {
     this.fetch();
   },
   methods: {
+    // @tickets_cases Fase C — tras crear un ticket interno, refresca el listado.
+    onInternalCreated() {
+      this.showInternalModal = false;
+      this.currentPage = 1;
+      this.fetch();
+    },
     fetch() {
       const filters = { page: this.currentPage, per_page: this.perPage };
       if (this.search.trim())      filters.q = this.search.trim();
@@ -288,8 +345,10 @@ export default {
       if (this.dateRange[1])       filters.date_to = this.formatDateParam(this.dateRange[1]);
       if (this.statusFilter)       filters.status = this.statusFilter;
       if (this.priorityFilter)     filters.priority = this.priorityFilter;
+      if (this.originFilter)       filters.origin = this.originFilter;
       if (this.activeFilter === 'sla_overdue') filters.sla_status = 'overdue';
       if (this.activeFilter === 'unassigned')  filters.assignee_id = 'null';
+      if (this.activeFilter === 'mine')        filters.assignee_id = this.currentUserID;
       if (this.activeType)         filters.case_type_id = this.activeType;
       filters.sort_by = this.sortBy;
       filters.sort_order = this.sortOrder;
@@ -333,7 +392,8 @@ export default {
       this.dateRange = [];
       this.statusFilter = '';
       this.priorityFilter = '';
-      this.activeFilter = 'all';
+      this.originFilter = '';
+      this.activeFilter = 'mine';
       this.activeType = '';
       this.currentPage = 1;
       this.fetch();
@@ -380,6 +440,9 @@ export default {
     },
     statusLabel(key)   { return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key; },
     priorityLabel(key) { return this.$t(`CASE_TICKETS.PRIORITIES.${key}`) || key; },
+    originLabel(key) {
+      return this.$t(`CASE_TICKETS.ORIGINS.${key}`) || key;
+    },
     formatDate(dateStr) {
       if (!dateStr) return '';
       return new Date(dateStr).toLocaleDateString(undefined, {

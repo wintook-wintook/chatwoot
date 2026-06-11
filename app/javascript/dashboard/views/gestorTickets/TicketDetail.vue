@@ -84,6 +84,7 @@ export default {
       relationsUiFlags: 'caseTickets/getRelationsUIFlags',
       uiFlags: 'caseTickets/getUIFlags',
       teams: 'teams/getTeams',
+      agents: 'agents/getAgents',
     }),
     ticket() {
       return this.getTicketById(this.ticketId);
@@ -316,6 +317,7 @@ export default {
   mounted() {
     this.loadTicket();
     this.$store.dispatch('teams/get');
+    this.$store.dispatch('agents/get');
   },
   methods: {
     onDetailTabChange(index) {
@@ -708,6 +710,35 @@ export default {
           rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
         }[status] || 'bg-slate-100 text-slate-700'
       );
+    },
+    // @tickets_cases Fase A — asignación manual (agente y equipo coexisten).
+    onAssignAgent(event) {
+      this.assign({ assigneeId: event.target.value || null });
+    },
+    onAssignTeam(event) {
+      this.assign({ teamId: event.target.value || null });
+    },
+    async assign(payload) {
+      try {
+        await this.$store.dispatch('caseTickets/assignTicket', {
+          ticketId: this.ticketId,
+          contactId: this.ticket?.contact_id,
+          ...payload,
+        });
+        // Refresca el ticket del detalle (getTicketById lee de ticketsList) y su timeline.
+        this.$store.dispatch('caseTickets/fetchTicket', this.ticketId);
+        this.$store.dispatch('caseTickets/fetchEvents', {
+          ticketId: this.ticketId,
+        });
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.ASSIGN.SUCCESS'),
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error || this.$t('CASE_TICKETS.ASSIGN.ERROR'),
+        });
+      }
     },
     // @tickets_cases 2D — escalamiento por niveles
     openEscalate() {
@@ -1147,6 +1178,68 @@ export default {
               class="text-sm font-medium text-slate-700 dark:text-slate-200"
               >{{ formatDate(ticket.resolved_at) }}</span
             >
+          </div>
+          <!-- @tickets_cases Fase C — solicitante en tickets internos -->
+          <div
+            v-if="ticket.is_internal && ticket.requester"
+            class="flex flex-col gap-0.5"
+          >
+            <span
+              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+              >{{ $t('CASE_TICKETS.INTERNAL.REQUESTER_LABEL') }}</span
+            >
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ ticket.requester.name }}</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ Pestaña Resumen: Asignación (Fase A) ════ -->
+      <div
+        v-show="currentTabKey === 'detail'"
+        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+      >
+        <h3
+          class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
+        >
+          {{ $t('CASE_TICKETS.ASSIGN.TITLE') }}
+        </h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="flex flex-col gap-1">
+            <label
+              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+              >{{ $t('CASE_TICKETS.ASSIGN.TEAM_LABEL') }}</label
+            >
+            <select
+              class="input"
+              :value="ticket.team_id || ''"
+              :disabled="uiFlags.isTransitioning"
+              @change="onAssignTeam"
+            >
+              <option value="">{{ $t('CASE_TICKETS.ASSIGN.NONE') }}</option>
+              <option v-for="tm in teams" :key="tm.id" :value="tm.id">
+                {{ tm.name }}
+              </option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-1">
+            <label
+              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+              >{{ $t('CASE_TICKETS.ASSIGN.AGENT_LABEL') }}</label
+            >
+            <select
+              class="input"
+              :value="ticket.assignee_id || ''"
+              :disabled="uiFlags.isTransitioning"
+              @change="onAssignAgent"
+            >
+              <option value="">{{ $t('CASE_TICKETS.ASSIGN.NONE') }}</option>
+              <option v-for="ag in agents" :key="ag.id" :value="ag.id">
+                {{ ag.name }}
+              </option>
+            </select>
           </div>
         </div>
       </div>

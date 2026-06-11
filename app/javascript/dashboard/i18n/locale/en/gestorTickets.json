@@ -74,6 +74,7 @@
       "APPLY": "Apply",
       "ALL_STATUSES": "All statuses",
       "ALL_PRIORITIES": "All priorities",
+      "ALL_ORIGINS": "All origins",
       "SORT_BY": "Sort by",
       "SORT_FIELDS": {
         "created_at": "Date",
@@ -139,8 +140,32 @@
       "OPEN_DETAIL": "Open",
       "BACK": "Back",
       "TAB_TICKET": "Ticket details",
+      "TAB_ASSIGN": "Manual assignment",
       "TAB_CUSTOM": "Custom fields",
+      "ASSIGN_AUTO": "— Automatic (rules) —",
+      "ASSIGN_HINT": "If left automatic, the automation rules decide the assignment. What you pick here takes precedence over the rules.",
       "NO_CUSTOM_FIELDS": "This type has no custom fields"
+    },
+    "ASSIGN": {
+      "TITLE": "Assignment",
+      "TEAM_LABEL": "Team",
+      "AGENT_LABEL": "Agent",
+      "NONE": "— Unassigned —",
+      "SUCCESS": "Assignment updated",
+      "ERROR": "Could not update the assignment"
+    },
+    "INTERNAL": {
+      "TITLE": "Create internal ticket",
+      "NEW_BUTTON": "Internal ticket",
+      "ASSIGNEE_LABEL": "Assign to (agent)",
+      "ASSIGNEE_NONE": "— Unassigned —",
+      "TITLE_PLACEHOLDER": "Briefly describe the request",
+      "SUBMIT": "Create internal ticket",
+      "SUCCESS": "Internal ticket created",
+      "ERROR": "Could not create the internal ticket",
+      "BADGE": "Internal",
+      "REQUESTER_LABEL": "Requester",
+      "CUSTOM_FIELDS": "Custom fields"
     },
     "ESCALATION": {
       "BUTTON": "Escalate",
@@ -529,6 +554,14 @@
       "medium": "Medium",
       "high": "High",
       "urgent": "Urgent"
+    },
+    "ORIGINS": {
+      "whatsapp": "WhatsApp",
+      "web": "Web",
+      "email": "Email",
+      "bot": "Bot",
+      "manual": "Manual",
+      "internal": "Internal"
     },
     "TICKET_KIND": {
       "incident": "Incident",

@@ -34,9 +34,12 @@ class Cases::RuleEngineService
     'not_in'   => ->(v, ref) { !Array(ref).map(&:to_s).include?(v.to_s) }
   }.freeze
 
-  def initialize(ticket, trigger_message: nil)
+  # @tickets_cases — skip_assignment: cuando el agente asignó a mano al crear,
+  # las acciones assign_agent/assign_team NO corren (gana el humano); el resto sí.
+  def initialize(ticket, trigger_message: nil, skip_assignment: false)
     @ticket          = ticket
     @trigger_message = trigger_message
+    @skip_assignment = skip_assignment
   end
 
   def evaluate!
@@ -98,11 +101,15 @@ class Cases::RuleEngineService
 
     case type
     when 'assign_agent'
+      return if @skip_assignment # asignación manual ya definida → no reasignar
+
       user = find_user(value)
       @ticket.update!(assignee: user, assignee_type: :agent) if user
       log_action(type, "agent #{value}")
 
     when 'assign_team'
+      return if @skip_assignment # asignación manual ya definida → no reasignar
+
       team = find_team(value)
       @ticket.update!(team: team, assignee_type: :team) if team
       log_action(type, "team #{value}")
