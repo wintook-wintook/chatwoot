@@ -14,6 +14,7 @@ import filterQueryGenerator from '../../../../helper/filterQueryGenerator';
 import AddCustomViews from 'dashboard/routes/dashboard/customviews/AddCustomViews.vue';
 import DeleteCustomViews from 'dashboard/routes/dashboard/customviews/DeleteCustomViews.vue';
 import NewPrivateConversation from 'dashboard/routes/dashboard/conversation/contact/NewPrivateConversation.vue'; // proyecto@conversation_private
+import BulkAssignModal from 'dashboard/components/contacts/BulkTrackingAssign/BulkAssignModal.vue'; // proyecto@bulk_tracking_assign
 import { CONTACTS_EVENTS } from '../../../../helper/AnalyticsHelper/events';
 import countries from 'shared/constants/countries.js';
 import { generateValuesForEditCustomViews } from 'dashboard/helper/customViewsHelper';
@@ -33,6 +34,7 @@ export default {
     AddCustomViews,
     DeleteCustomViews,
     NewPrivateConversation,
+    BulkAssignModal, // proyecto@bulk_tracking_assign
   },
   props: {
     label: { type: String, default: '' },
@@ -62,6 +64,7 @@ export default {
       showPrivateConversationModal: false, // proyecto@conversation_private
       selectedContactForConversation: null, // proyecto@conversation_private
       appliedFilter: [],
+      showBulkAssignModal: false, // proyecto@bulk_tracking_assign
     };
   },
   computed: {
@@ -145,6 +148,26 @@ export default {
     },
     activeSegmentName() {
       return this.activeSegment?.name;
+    },
+    // proyecto@bulk_tracking_assign
+    bulkAssignFilterPayload() {
+      if (this.hasActiveSegments) {
+        return this.activeSegment?.query?.payload || [];
+      }
+      if (this.hasAppliedFilters) {
+        return this.segmentsQuery?.payload || [];
+      }
+      if (this.label) {
+        return [
+          {
+            attribute_key: 'labels',
+            filter_operator: 'equal_to',
+            values: [this.label],
+            query_operator: null,
+          },
+        ];
+      }
+      return [];
     },
   },
   watch: {
@@ -419,6 +442,23 @@ export default {
       this.showPrivateConversationModal = false;
       this.selectedContactForConversation = null;
     },
+    // proyecto@bulk_tracking_assign
+    onToggleBulkAssign() {
+      this.showBulkAssignModal = true;
+    },
+    onCloseBulkAssign() {
+      this.showBulkAssignModal = false;
+    },
+    onBulkAssignSuccess(result) {
+      const errorsCount = result?.errors?.length || 0;
+      useAlert(
+        this.$t('BULK_TRACKING_ASSIGN.MODAL.SUCCESS_SUMMARY', {
+          inserted: result?.inserted || 0,
+          skipped: result?.skipped || 0,
+          errors: errorsCount,
+        })
+      );
+    },
   },
 };
 </script>
@@ -426,11 +466,12 @@ export default {
 <template>
   <div class="flex flex-row w-full">
     <div class="flex flex-col h-full" :class="wrapClass">
-      <ContactsHeader :search-query="searchQuery" :header-title="pageTitle" :segments-id="segmentsId"
+      <ContactsHeader :search-query="searchQuery" :header-title="pageTitle" :segments-id="segmentsId" :label="label"
         this-selected-contact-id="" @onInputSearch="onInputSearch" @onToggleCreate="onToggleCreate"
         @onToggleFilter="onToggleFilters" @onSearchSubmit="onSearchSubmit" @onToggleImport="onToggleImport"
         @onExportSubmit="onExportSubmit" @onToggleSaveFilter="onToggleSaveFilters"
-        @onToggleDeleteFilter="onToggleDeleteFilters" @onToggleEditFilter="onToggleFilters" />
+        @onToggleDeleteFilter="onToggleDeleteFilters" @onToggleEditFilter="onToggleFilters"
+        @onToggleBulkAssign="onToggleBulkAssign" />
       <ContactsTable :contacts="records" :show-search-empty-state="showEmptySearchResult"
         :is-loading="uiFlags.isFetching" :on-click-contact="openContactInfoPanel" :active-contact-id="selectedContactId"
         @onSortChange="onSortChange" />
@@ -463,5 +504,9 @@ export default {
     <!-- proyecto@conversation_private - modal conversación privada desde tabla de contactos -->
     <NewPrivateConversation v-if="selectedContactForConversation" :show="showPrivateConversationModal"
       :contact="selectedContactForConversation" @cancel="closePrivateConversationModal" />
+
+    <!-- proyecto@bulk_tracking_assign - modal de asignación masiva de seguimientos -->
+    <BulkAssignModal :show="showBulkAssignModal" :filter-payload="bulkAssignFilterPayload"
+      @close="onCloseBulkAssign" @success="onBulkAssignSuccess" />
   </div>
 </template>

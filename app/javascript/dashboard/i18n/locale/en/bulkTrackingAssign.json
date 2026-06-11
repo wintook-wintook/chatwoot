@@ -1,0 +1,37 @@
+{
+  "BULK_TRACKING_ASSIGN": {
+    "HEADER": {
+      "BUTTON_LABEL": "Assign AI Agent"
+    },
+    "MODAL": {
+      "TITLE": "Bulk AI Agent assignment",
+      "DESCRIPTION": "Apply an AI Agent to all contacts matching the current filter.",
+      "TEMPLATE_LABEL": "AI Agent",
+      "TEMPLATE_PLACEHOLDER": "Select an AI Agent",
+      "SCHEDULED_FOR_LABEL": "Start date and time",
+      "SKIP_ACTIVE": "Skip contacts that already have an active AI Agent",
+      "CONTACTS_COUNT_PREFIX": "Contacts that will receive the AI Agent:",
+      "CONTACTS_COUNT_SUFFIX": "(click to review)",
+      "LIMIT_EXCEEDED": "The selection exceeds the limit of {max} contacts. Adjust the filter or exclude contacts before confirming.",
+      "CANCEL": "Cancel",
+      "CONFIRM": "Confirm",
+      "CLOSE": "Close",
+      "ERROR_GENERIC": "An error occurred while assigning the AI Agent.",
+      "RESULT_INSERTED": "AI Agents assigned",
+      "RESULT_SKIPPED": "Contacts skipped",
+      "RESULT_ERRORS": "Errors",
+      "SUCCESS_SUMMARY": "AI Agents assigned: {inserted} | Skipped: {skipped} | Errors: {errors}"
+    },
+    "REVIEW": {
+      "TITLE": "Review selected contacts",
+      "OF": "of",
+      "SELECTED": "selected",
+      "COL_NAME": "Name",
+      "COL_PHONE": "Phone",
+      "COL_ACTION": "Action",
+      "UNDO": "Undo",
+      "EXCLUDE": "Exclude",
+      "BACK": "Back"
+    }
+  }
+}
