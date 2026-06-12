@@ -21,10 +21,16 @@ asumir que algo falta (el módulo avanza rápido). Ver también [[Estado-actual]
       o conservar con histórico. Ver [[Borrado-y-cascadas]].
 ### 📅 Agendado de citas / Google Calendar
 
-- [ ] **Verificar creación de evento en vivo (TC-04)** — `confirm_and_create_appointment`
-      (`contact_tracking_response_analyzer_job.rb:495`) ya llama `GoogleCalendarService#create_event`
-      al elegir un número de slot. Falta probar end-to-end que el evento aparece en el
-      calendario. Ver [[Testeo-funcional]].
+- [x] ~~**Verificar creación de evento en vivo (TC-04)**~~ — ✅ **HECHO**: TC-04 PASS,
+      evento real creado en Google Calendar (conv #29, "1" → evento 2026-06-15 09:00 UTC).
+      Ver [[Testeo-funcional]].
+- [ ] **Timezone del inbox en UTC** — el inbox 4 tiene `timezone = UTC`, así que los slots,
+      el horario laboral (9-18) y la hora mostrada al cliente se calculan en UTC (no es bug
+      de código). Si el negocio opera en México, configurar el inbox en `America/Mexico_City`
+      o el evento cae a las 03:00 MX. Revisar config de inbox. Ver [[Testeo-funcional]] TC-04.
+- [ ] **Cita sin invitado cuando el contacto no tiene email** — `confirm_and_create_appointment`
+      solo agrega `attendees` si el contacto tiene email; los contactos de WhatsApp no, así que
+      el evento se crea sin invitar al contacto. Decidir si capturar email o notificar por otro medio.
 - [ ] **Negociación de cita multi-turno** — hoy el flujo es single-shot (ofrece 5 slots
       → espera un **número**). Entrar en una "conversación de agendar" hasta **confirmar**:
       manejar "ninguno me sirve", proponer otras fechas, interpretar lenguaje natural

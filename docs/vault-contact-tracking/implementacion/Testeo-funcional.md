@@ -64,8 +64,22 @@ Setup de referencia: cuenta **2**, inbox **4** (`kontrolyaBots_bot`), automatiza
 | **Tiempo** | **1.1 s** (rama local, sin OpenAI; sin delay). |
 | **Resultado** | ✅ comportamiento esperado, ⚠️ con limitaciones de UX (solo número, no fechas). |
 
-> **TC-04 (pendiente):** responder con un número válido (ej. `1`) y verificar que se
-> crea el evento en Google Calendar (cerrar el pendiente "Cierre del agendado de citas").
+---
+
+## TC-04 · Confirmar slot por número → crea evento en Google Calendar (conv #29)
+
+| Campo | Valor |
+|---|---|
+| **Objetivo** | Verificar que al elegir un número de slot válido se crea el evento real en Google Calendar. |
+| **Precondición** | Conv #29 con `[PENDING_SLOT]` activo (slots de *lunes 15* ya ofrecidos en TC-03). |
+| **Pasos** | Contacto #27 envía **"1"** (incoming). |
+| **Real (2026-06-12)** | #1000 IN "1" 19:40:38 → #1001 OUT (+**2.1 s**): *"✅ ¡Perfecto! Tu cita está agendada para el lunes 15 de junio de 2026 a las 09:00 – 09:30 hs…"*. Log: `Slot elegido: opción 1 — 2026-06-15T09:00:00Z` → `Evento creado en Google Calendar`. |
+| **Verificación en Google** | ✅ Evento *"Cita con Andres Liverio — CONFIRMACION CUMPLIMINTO REQUERIMIENTO"* (id `3glebg80mk1…`) a las **2026-06-15 09:00 UTC**. Confirmado con `GoogleCalendarService#list_events`. |
+| **Estado del tracking** | #42 pasó a `paused` (cierre del flujo de agenda). |
+| **Tiempo** | **2.1 s**. |
+| **Resultado** | ✅ **PASS** — el agendado funciona end-to-end (slot → evento real). |
+| **Obs. 1 (timezone)** | El evento quedó 09:00 **UTC** = 03:00 hora México. NO es bug de cálculo: el **inbox 4 tiene timezone `UTC`** (y `Time.zone` app = UTC); slots, horario 9-18 y mensaje al cliente son todos UTC, consistentes. Si el negocio es México, falta configurar el inbox en `America/Mexico_City`. |
+| **Obs. 2 (attendees)** | `attendees=[]` porque el contacto de WhatsApp **no tiene email** → no se le envía invitación. El evento se crea igual. |
 
 ## Comparativa de tiempos
 
@@ -74,12 +88,13 @@ Setup de referencia: cuenta **2**, inbox **4** (`kontrolyaBots_bot`), automatiza
 | TC-01 | nueva | ✅ #41 | `:kbase` | Discourse (foro) | **17.5 s** |
 | TC-02 | existente | ❌ (ya existía) | `:book_appointment` | Google Calendar | **3.3 s** |
 | TC-03 | existente | ❌ | selección de slot (local) | — (regex, sin OpenAI) | **1.1 s** |
+| TC-04 | existente | ❌ | confirmar slot → crea evento | Google Calendar (create_event) | **2.1 s** |
 
 El **+5 s** solo aplica al **primer** mensaje (cuando una automatización va a crear el
 tracking). En mensajes posteriores no hay delay.
 
 ## Pendiente de testear (ampliar el estudio)
-- [ ] Crear evento real al elegir un slot (`:book_appointment` → calendar event).
+- [x] Crear evento real al elegir un slot (`:book_appointment` → calendar event). ✅ TC-04 PASS
 - [ ] Latencia del 1er mensaje (¿reducir o condicionar el +5 s?).
 - [ ] Fallback cuando Discourse/OpenAI fallan (¿pierde la persona del prompt?).
 - [ ] Rutas `:rejected` / `:interested` / `:reschedule` end-to-end.
@@ -88,7 +103,7 @@ tracking). En mensajes posteriores no hay delay.
 ### 📅 Casos de testeo de agendado (cubrir en la doc de Testeo Funcional)
 > Derivados de los pendientes de [[Pendiente]] sección "Agendado de citas". Incluir como
 > casos cuando se genere el entregable de Testeo Funcional.
-- [ ] **TC-04** — Elegir número válido → verificar evento creado en Google Calendar.
+- [x] **TC-04** — Elegir número válido → verificar evento creado en Google Calendar. ✅ **PASS** (ver arriba).
 - [ ] **TC-05** — Mover una cita ya agendada (¿qué responde? hoy no soportado).
 - [ ] **TC-06** — Cancelar una cita ya agendada (hoy no soportado).
 - [ ] **TC-07** — Calendario desconfigurado entre ofrecer y confirmar (¿confirma cita falsa? = bug).

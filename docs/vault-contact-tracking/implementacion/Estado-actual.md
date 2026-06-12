@@ -31,8 +31,11 @@ Snapshot en la rama `dashboard_contact_tracking` (deriva del último `develop`).
 
 - **Análisis de sentimiento** — campo + índice + `ResponseAnalyzerJob` presentes;
   revisar profundidad real de la lógica y si hay vista que lo muestre.
-- **Agendado de citas (`:book_appointment`)** — hay `AvailabilitySlotService`;
-  confirmar el cierre del flujo (crear el evento en el calendario, no solo proponer).
+- ~~**Agendado de citas (`:book_appointment`)**~~ — ✅ **confirmado end-to-end** (TC-04):
+  propone slots (`AvailabilitySlotService`) y **crea el evento real** en Google Calendar
+  (`confirm_and_create_appointment` → `GoogleCalendarService#create_event`). Limitaciones
+  abiertas: mover/cancelar cita, negociación multi-turno, timezone del inbox. Ver
+  [[Testeo-funcional]] y [[Pendiente]].
 - **KBase / BotSeller en el router** — rutas y flags (`kbase_hook_id`,
   `kbase_available`, `botseller_available`) existen; confirmar integración real.
 
