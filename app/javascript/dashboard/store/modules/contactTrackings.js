@@ -21,6 +21,9 @@ export const state = {
   // proyecto@contact_tracking — Dashboard
   metrics: null,
   metricsFlags: { isFetching: false },
+  list: [],
+  listMeta: { page: 1, per_page: 25, total: 0, total_pages: 0 },
+  listFlags: { isFetching: false },
 };
 
 export const getters = {
@@ -34,6 +37,9 @@ export const getters = {
   // proyecto@contact_tracking — Dashboard
   getMetrics: $state => $state.metrics,
   getMetricsFlags: $state => $state.metricsFlags,
+  getList: $state => $state.list,
+  getListMeta: $state => $state.listMeta,
+  getListFlags: $state => $state.listFlags,
 };
 
 export const actions = {
@@ -47,6 +53,18 @@ export const actions = {
       return data;
     } finally {
       commit('SET_TRACKING_METRICS_FLAG', { isFetching: false });
+    }
+  },
+
+  async fetchList({ commit, rootGetters }, params = {}) {
+    const accountId = rootGetters.getCurrentAccountId;
+    commit('SET_TRACKING_LIST_FLAG', { isFetching: true });
+    try {
+      const { data } = await ContactTrackingsAPI.getList(accountId, params);
+      commit('SET_TRACKING_LIST', { list: data.trackings || [], meta: data.meta || {} });
+      return data;
+    } finally {
+      commit('SET_TRACKING_LIST_FLAG', { isFetching: false });
     }
   },
 
@@ -244,6 +262,13 @@ export const mutations = {
   },
   SET_TRACKING_METRICS_FLAG($state, flags) {
     $state.metricsFlags = { ...$state.metricsFlags, ...flags };
+  },
+  SET_TRACKING_LIST($state, { list, meta }) {
+    Vue.set($state, 'list', list);
+    Vue.set($state, 'listMeta', { ...$state.listMeta, ...meta });
+  },
+  SET_TRACKING_LIST_FLAG($state, flags) {
+    $state.listFlags = { ...$state.listFlags, ...flags };
   },
 };
 

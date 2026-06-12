@@ -7,6 +7,7 @@ import { mapGetters } from 'vuex';
 import DoughnutChart from 'dashboard/components/widgets/chart/DoughnutChart';
 import BarChart from 'dashboard/components/widgets/chart/BarChart';
 import HorizontalBarChart from 'dashboard/components/widgets/chart/HorizontalBarChart';
+import TrackingsTable from './TrackingsTable.vue';
 
 const STATUS_META = {
   pending: { label: 'Pendiente', color: '#94a3b8' },
@@ -19,9 +20,10 @@ const STATUS_META = {
 };
 
 export default {
-  components: { DoughnutChart, BarChart, HorizontalBarChart },
+  components: { DoughnutChart, BarChart, HorizontalBarChart, TrackingsTable },
   data() {
     return {
+      activeTab: 'list',
       filters: { date_from: '', date_to: '', inbox_id: '', template_id: '', status: '' },
       statusOptions: Object.keys(STATUS_META),
       statusMeta: STATUS_META,
@@ -173,6 +175,7 @@ export default {
         Dashboard de Seguimientos
       </h1>
       <woot-button
+        v-if="activeTab === 'summary'"
         variant="smooth"
         size="small"
         icon="arrow-clockwise"
@@ -183,6 +186,27 @@ export default {
       </woot-button>
     </div>
 
+    <!-- Pestañas -->
+    <div class="flex gap-1 border-b border-slate-100 dark:border-slate-700">
+      <button
+        class="px-3 py-2 text-sm -mb-px border-b-2"
+        :class="activeTab === 'list' ? 'border-woot-500 text-woot-600 font-medium' : 'border-transparent text-slate-500'"
+        @click="activeTab = 'list'"
+      >
+        Listado
+      </button>
+      <button
+        class="px-3 py-2 text-sm -mb-px border-b-2"
+        :class="activeTab === 'summary' ? 'border-woot-500 text-woot-600 font-medium' : 'border-transparent text-slate-500'"
+        @click="activeTab = 'summary'"
+      >
+        Resumen
+      </button>
+    </div>
+
+    <TrackingsTable v-if="activeTab === 'list'" />
+
+    <div v-show="activeTab === 'summary'" class="flex flex-col gap-4">
     <!-- Filtros -->
     <div class="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
       <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
@@ -349,6 +373,7 @@ export default {
         </tbody>
       </table>
       <p v-else class="text-sm text-slate-400 py-4 text-center">No hay seguimientos vencidos. 🎉</p>
+    </div>
     </div>
   </div>
 </template>
