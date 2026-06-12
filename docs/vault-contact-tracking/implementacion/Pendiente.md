@@ -9,6 +9,13 @@ tags: [contact-tracking, pendiente, todo]
 Tareas abiertas e integraciones a medias. Confirmar contra el código antes de
 asumir que algo falta (el módulo avanza rápido). Ver también [[Estado-actual]].
 
+- [ ] **Alinear UI al nombre "Agente IA"** — en producto las plantillas de seguimiento
+      se llaman **Agente IA**, pero la UI todavía dice "plantilla de seguimiento". Revisar
+      labels e i18n (`es`/`en`): acción de automatización `assign_tracking_template`
+      (`routes/dashboard/settings/automation/constants.js:663` "Asignar plantilla de
+      seguimiento"), sección `settings/trackingTemplates/*`, `bulkTrackingAssign.json`,
+      `trackingTemplates.json`, `contactTracking.js`. Cambiar solo etiquetas visibles, NO
+      claves de código/columnas (`tracking_template` sigue igual). Ver [[Vision-y-convenciones]].
 - [ ] **Cierre del agendado de citas** — `AvailabilitySlotService` propone slots;
       confirmar/implementar la creación real del evento en el calendario tras
       `:book_appointment` (usar `calendar_integration_ids` + `calendar_event_duration`).
