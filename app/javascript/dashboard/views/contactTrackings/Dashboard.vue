@@ -5,6 +5,8 @@
 // ================================================================================
 import { mapGetters } from 'vuex';
 import DoughnutChart from 'dashboard/components/widgets/chart/DoughnutChart';
+import BarChart from 'dashboard/components/widgets/chart/BarChart';
+import HorizontalBarChart from 'dashboard/components/widgets/chart/HorizontalBarChart';
 
 const STATUS_META = {
   pending: { label: 'Pendiente', color: '#94a3b8' },
@@ -17,7 +19,7 @@ const STATUS_META = {
 };
 
 export default {
-  components: { DoughnutChart },
+  components: { DoughnutChart, BarChart, HorizontalBarChart },
   computed: {
     ...mapGetters({
       metrics: 'contactTrackings/getMetrics',
@@ -49,6 +51,66 @@ export default {
           },
         ],
       };
+    },
+
+    // Fase 2 — por canal (inbox)
+    byInbox() {
+      return this.metrics?.by_inbox || [];
+    },
+    hasInboxData() {
+      return this.byInbox.some(x => x.count > 0);
+    },
+    inboxChartData() {
+      return {
+        labels: this.byInbox.map(x => x.name),
+        datasets: [
+          {
+            data: this.byInbox.map(x => x.count),
+            backgroundColor: '#3b82f6',
+            barPercentage: 0.6,
+          },
+        ],
+      };
+    },
+
+    // Fase 2 — por Agente IA (template), total vs éxito
+    byTemplate() {
+      return this.metrics?.by_template || [];
+    },
+    hasTemplateData() {
+      return this.byTemplate.some(x => x.total > 0);
+    },
+    templateChartData() {
+      return {
+        labels: this.byTemplate.map(x => x.name),
+        datasets: [
+          {
+            label: 'Total',
+            data: this.byTemplate.map(x => x.total),
+            backgroundColor: '#94a3b8',
+            barPercentage: 0.6,
+          },
+          {
+            label: 'Éxito',
+            data: this.byTemplate.map(x => x.success),
+            backgroundColor: '#16a34a',
+            barPercentage: 0.6,
+          },
+        ],
+      };
+    },
+
+    // Fase 2 — embudo de intención
+    funnelStages() {
+      const f = this.metrics?.funnel || {};
+      const created = f.created || 0;
+      const pct = v => (created ? Math.round((v / created) * 100) : 0);
+      return [
+        { label: 'Creados', value: f.created || 0, pct: 100, color: '#3b82f6' },
+        { label: 'Respondieron', value: f.replied || 0, pct: pct(f.replied), color: '#6366f1' },
+        { label: 'Interesados', value: f.interested || 0, pct: pct(f.interested), color: '#8b5cf6' },
+        { label: 'Citas', value: f.appointment || 0, pct: pct(f.appointment), color: '#16a34a' },
+      ];
     },
   },
   mounted() {
@@ -114,6 +176,43 @@ export default {
         <DoughnutChart :collection="statusChartData" />
       </div>
       <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos todavía.</p>
+    </div>
+
+    <!-- Canal + Agente IA -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+        <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Por canal</p>
+        <div v-if="hasInboxData" class="h-56">
+          <HorizontalBarChart :collection="inboxChartData" />
+        </div>
+        <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos.</p>
+      </div>
+      <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+        <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Por Agente IA (total vs éxito)</p>
+        <div v-if="hasTemplateData" class="h-56">
+          <BarChart :collection="templateChartData" />
+        </div>
+        <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos.</p>
+      </div>
+    </div>
+
+    <!-- Embudo de intención -->
+    <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+      <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Embudo de intención</p>
+      <div class="flex flex-col gap-2">
+        <div v-for="stage in funnelStages" :key="stage.label" class="flex items-center gap-3">
+          <span class="w-28 text-xs text-slate-500 dark:text-slate-400 shrink-0">{{ stage.label }}</span>
+          <div class="flex-1 h-5 rounded bg-slate-100 dark:bg-slate-700 overflow-hidden">
+            <div
+              class="h-full rounded transition-all"
+              :style="{ width: stage.pct + '%', backgroundColor: stage.color }"
+            />
+          </div>
+          <span class="w-16 text-right text-xs text-slate-600 dark:text-slate-300 shrink-0">
+            {{ stage.value }} ({{ stage.pct }}%)
+          </span>
+        </div>
+      </div>
     </div>
 
     <!-- Vencidos -->

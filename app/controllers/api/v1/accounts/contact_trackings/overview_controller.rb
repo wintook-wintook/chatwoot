@@ -17,6 +17,9 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
     render json: {
       summary: summary(scope),
       by_status: by_status(scope),
+      by_inbox: by_inbox(scope),
+      by_template: by_template(scope),
+      funnel: funnel(scope),
       lists: { overdue: overdue_list(scope) }
     }
   end
@@ -49,6 +52,34 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
   def by_status(scope)
     counts = scope.group(:status).count
     ContactTracking.statuses.keys.index_with { |s| counts[s] || 0 }
+  end
+
+  # Fase 2 — distribución por canal (inbox), con nombre para el chart
+  def by_inbox(scope)
+    counts = scope.group(:inbox_id).count
+    names  = Current.account.inboxes.where(id: counts.keys).pluck(:id, :name).to_h
+    counts.map { |inbox_id, count| { inbox_id: inbox_id, name: names[inbox_id] || "Inbox #{inbox_id}", count: count } }
+  end
+
+  # Fase 2 — por Agente IA (tracking_template), con total y éxito (completed)
+  def by_template(scope)
+    with_tpl = scope.where.not(tracking_template_id: nil)
+    totals   = with_tpl.group(:tracking_template_id).count
+    success  = with_tpl.where(status: 'completed').group(:tracking_template_id).count
+    names    = Current.account.tracking_templates.where(id: totals.keys).pluck(:id, :name).to_h
+    totals.map do |tpl_id, total|
+      { template_id: tpl_id, name: names[tpl_id] || "Agente IA #{tpl_id}", total: total, success: success[tpl_id] || 0 }
+    end
+  end
+
+  # Fase 2 — embudo de intención (usa last_intent / appointment_at)
+  def funnel(scope)
+    {
+      created:     scope.count,
+      replied:     scope.where.not(last_intent: nil).count,
+      interested:  scope.where(last_intent: %w[interested book_appointment reschedule]).count,
+      appointment: scope.where.not(appointment_at: nil).count
+    }
   end
 
   def overdue(scope)
