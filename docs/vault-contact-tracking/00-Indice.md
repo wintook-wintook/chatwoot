@@ -46,6 +46,7 @@ enlazada con `[[wikilinks]]`. Esta bóveda es la versión **navegable** del skil
 
 - [[Archivos-reales]] — rutas exactas backend + frontend construidas
 - [[Automatizaciones]] — reglas que crean/pausan/cancelan seguimientos (`assign_tracking_template`)
+- [[Directivas-complementary-prompt]] — `@buscar_predefinidas` / `@buscar_foro` / `@discourse` y su detección
 - [[Bulk-assign]] — asignación masiva por filtro (commit `8cae85fd`), límite 30
 - [[Importacion-excel-csv]] — parser nativo XLSX/CSV, normalización E.164, límite 50
 - [[Estado-actual]] — qué está hecho y qué falta

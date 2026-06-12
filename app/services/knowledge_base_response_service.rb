@@ -5,7 +5,7 @@
 # ================================================================================
 # Tres modos según la directiva en complementary_prompt:
 #
-#   @buscar_predeterminadas       → pgvector sobre knowledge_items (canned_responses)
+#   @buscar_predefinidas          → pgvector sobre knowledge_items (canned_responses)
 #   @buscar_foro(nombre_fuente)   → Discourse AI semantic search via KnowledgeSource
 #   @discourse                    → Discourse AI semantic search via integración del inbox
 #
@@ -68,7 +68,7 @@ class KnowledgeBaseResponseService
 
   def detect_directive
     cp = @tracking&.complementary_prompt.to_s
-    if cp.include?('@buscar_predeterminadas')
+    if cp.include?('@buscar_predefinidas')
       { mode: :canned_response }
     elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
       { mode: :knowledge_source, source_name: match[1].strip }
