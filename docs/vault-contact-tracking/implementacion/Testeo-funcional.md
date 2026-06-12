@@ -50,12 +50,30 @@ Setup de referencia: cuenta **2**, inbox **4** (`kontrolyaBots_bot`), automatiza
 
 ---
 
+## TC-03 · Selección de slot de cita (conv #29)
+
+| Campo | Valor |
+|---|---|
+| **Objetivo** | Verificar cómo se responde a la elección de horario tras proponer slots (`:book_appointment`). |
+| **Precondición** | Conv #29, contacto #27 con Tracking #42; ya se ofrecieron slots (estado `[PENDING_SLOT]` en `ai_context`). |
+| **Setup previo** | #995 IN "Y si quiero agendar una demostración?" → #996 OUT (9.8 s) propuso slots de *lunes 15* (calendario de Admin). |
+| **Sub-hallazgo A — outgoing no dispara IA** | El mensaje #997 "martes 16 a las 16:00" se mandó como **agente (outgoing, User#5)** → la IA **no** respondió. Es esperado: `message.rb:138` `analyze_for_active_trackings, if: :incoming?`. |
+| **Sub-hallazgo B — selección solo por número** | #998 **IN** (Contact#27) "martes 16 a las 16:00" → respondió #999 (+**1.1 s**): *"No entendí tu elección 😊 … respondé con el número (1 al 5)."* `parse_slot_choice` (`:468`) **solo** acepta dígito 1-5 aislado (`/\b([1-5])\b/`) o palabra (uno…cinco). **No interpreta fechas**, ni siquiera si coinciden con una opción ofrecida. |
+| **Riesgo (falso positivo)** | Una frase con un dígito 1-5 suelto (ej. "a las 3") seleccionaría la **opción 3** aunque sea una hora, no la opción. ("16:00"/"15" no matchean por no ser 1-5 aislado.) |
+| **Sub-hallazgo C — creación de evento SÍ existe** | Al elegir un número válido → `confirm_and_create_appointment` (`:495`) llama `GoogleCalendarService#create_event` y **crea el evento real** en Google Calendar con el contacto como invitado. Falta probar en vivo (TC-04). |
+| **Tiempo** | **1.1 s** (rama local, sin OpenAI; sin delay). |
+| **Resultado** | ✅ comportamiento esperado, ⚠️ con limitaciones de UX (solo número, no fechas). |
+
+> **TC-04 (pendiente):** responder con un número válido (ej. `1`) y verificar que se
+> crea el evento en Google Calendar (cerrar el pendiente "Cierre del agendado de citas").
+
 ## Comparativa de tiempos
 
 | Caso | Conv | Crea tracking | Ruta | Busca en | Tiempo |
 |---|---|---|---|---|---|
 | TC-01 | nueva | ✅ #41 | `:kbase` | Discourse (foro) | **17.5 s** |
 | TC-02 | existente | ❌ (ya existía) | `:book_appointment` | Google Calendar | **3.3 s** |
+| TC-03 | existente | ❌ | selección de slot (local) | — (regex, sin OpenAI) | **1.1 s** |
 
 El **+5 s** solo aplica al **primer** mensaje (cuando una automatización va a crear el
 tracking). En mensajes posteriores no hay delay.
