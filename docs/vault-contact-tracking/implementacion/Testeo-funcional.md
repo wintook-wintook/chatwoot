@@ -84,3 +84,15 @@ tracking). En mensajes posteriores no hay delay.
 - [ ] Fallback cuando Discourse/OpenAI fallan (¿pierde la persona del prompt?).
 - [ ] Rutas `:rejected` / `:interested` / `:reschedule` end-to-end.
 - [ ] Verificar que el seguimiento programado (saliente) se dispara mañana (TC-01, sched +1 día).
+
+### 📅 Casos de testeo de agendado (cubrir en la doc de Testeo Funcional)
+> Derivados de los pendientes de [[Pendiente]] sección "Agendado de citas". Incluir como
+> casos cuando se genere el entregable de Testeo Funcional.
+- [ ] **TC-04** — Elegir número válido → verificar evento creado en Google Calendar.
+- [ ] **TC-05** — Mover una cita ya agendada (¿qué responde? hoy no soportado).
+- [ ] **TC-06** — Cancelar una cita ya agendada (hoy no soportado).
+- [ ] **TC-07** — Calendario desconfigurado entre ofrecer y confirmar (¿confirma cita falsa? = bug).
+- [ ] **TC-08** — Varios agentes con calendario: ¿qué disponibilidad propone (balance)?
+- [ ] **⭐ TC-09 — Agente sin calendario configurado / desconfigurado** — qué debe responder
+      el seguimiento (hoy: `:interested` o `:book_appointment_no_slots` + escala a humano,
+      sin mensaje específico). *(Pendiente marcado por el usuario para el Testeo Funcional.)*
