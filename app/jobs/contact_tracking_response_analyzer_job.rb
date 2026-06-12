@@ -323,7 +323,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     send_auto_reply(tracking, message, reply_text)
     tracking.disable_auto_retry_mode!
     tracking.update!(
-      ai_context: "#{tracking.ai_context}\n\n⏸️ [IN] PAUSADO: Cliente rechazó\nMensaje: \"#{message_text_for_ai(message).truncate(100)}\""
+      ai_context: "#{tracking.ai_context}\n\n⏸️ [IN] PAUSADO: Cliente rechazó\nMensaje: \"#{message_text_for_ai(message).truncate(100)}\"",
+      outcome: 'rejected'   # proyecto@contact_tracking: dashboard
     )
     tracking.pause!
     create_private_note(tracking, message, "Cliente rechazó el seguimiento: \"#{message_text_for_ai(message).truncate(100)}\"")
@@ -337,7 +338,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     reply_text = generate_action_reply(tracking, message, :interested)
     send_auto_reply(tracking, message, reply_text)
     tracking.update!(
-      ai_context: "#{tracking.ai_context}\n\n⏸️ [IP] PAUSADO: Cliente mostró interés\nMensaje: \"#{message_text_for_ai(message).truncate(100)}\"\nRequiere atención humana."
+      ai_context: "#{tracking.ai_context}\n\n⏸️ [IP] PAUSADO: Cliente mostró interés\nMensaje: \"#{message_text_for_ai(message).truncate(100)}\"\nRequiere atención humana.",
+      outcome: 'interested'   # proyecto@contact_tracking: dashboard
     )
     tracking.pause!
     notify_admin_interested(tracking, message)
@@ -535,7 +537,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     clear_pending_slot(tracking)
     tracking.disable_auto_retry_mode!
     tracking.update!(
-      ai_context: "#{tracking.ai_context}\n\n✅ [CITA AGENDADA] #{fecha_texto} #{hora_texto} con #{agent_name}. Evento en Google Calendar: #{event_created ? 'creado' : 'error al crear'}."
+      ai_context: "#{tracking.ai_context}\n\n✅ [CITA AGENDADA] #{fecha_texto} #{hora_texto} con #{agent_name}. Evento en Google Calendar: #{event_created ? 'creado' : 'error al crear'}.",
+      appointment_at: slot_start,   # proyecto@contact_tracking: dashboard KPI citas
+      outcome: 'appointment'
     )
     tracking.pause!
 
@@ -670,6 +674,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return unless tracking.respond_to?(:last_sentiment_analysis=)
 
     tracking.update_columns(
+      last_intent: route_result&.dig(:route)&.to_s || 'tracking',   # proyecto@contact_tracking: dashboard
       last_sentiment_analysis: {
         sentiment:       route_result&.dig(:route)&.to_s || 'tracking',
         confidence:      route_result&.dig(:confidence) || 1.0,
