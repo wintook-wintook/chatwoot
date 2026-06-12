@@ -87,6 +87,14 @@ const primaryMenuItems = accountId => [
     toState: frontendURL(`accounts/${accountId}/tickets`),
     toStateName: 'gestorTickets_index',
   },
+  // proyecto@contact_tracking — Dashboard de Seguimientos
+  {
+    icon: 'arrow-trending-lines',
+    key: 'contactTrackingsDashboard',
+    label: 'TRACKING_DASHBOARD',
+    toState: frontendURL(`accounts/${accountId}/tracking-dashboard`),
+    toStateName: 'contact_trackings_dashboard',
+  },
   {
     icon: 'settings',
     key: 'settings',

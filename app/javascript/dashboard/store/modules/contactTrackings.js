@@ -18,6 +18,9 @@ export const state = {
     isUpdating: false,
     isDeleting: false,
   },
+  // proyecto@contact_tracking — Dashboard
+  metrics: null,
+  metricsFlags: { isFetching: false },
 };
 
 export const getters = {
@@ -28,9 +31,25 @@ export const getters = {
   },
   getUIFlags: $state => $state.uiFlags,
   getTrackingById: $state => id => $state.records[id],
+  // proyecto@contact_tracking — Dashboard
+  getMetrics: $state => $state.metrics,
+  getMetricsFlags: $state => $state.metricsFlags,
 };
 
 export const actions = {
+  // proyecto@contact_tracking — Dashboard: agregados a nivel cuenta
+  async fetchMetrics({ commit, rootGetters }, params = {}) {
+    const accountId = rootGetters.getCurrentAccountId;
+    commit('SET_TRACKING_METRICS_FLAG', { isFetching: true });
+    try {
+      const { data } = await ContactTrackingsAPI.getOverview(accountId, params);
+      commit('SET_TRACKING_METRICS', data);
+      return data;
+    } finally {
+      commit('SET_TRACKING_METRICS_FLAG', { isFetching: false });
+    }
+  },
+
   async fetch({ commit, rootGetters }, { contactId, conversationId = null }) {
     // ⭐ Obtener desde currentChat primero (más confiable), con fallback
     const currentChat = rootGetters.getSelectedChat;
@@ -217,6 +236,14 @@ export const mutations = {
 
   [types.SET_CONTACT_TRACKING_UI_FLAG]($state, uiFlags) {
     $state.uiFlags = { ...$state.uiFlags, ...uiFlags };
+  },
+
+  // proyecto@contact_tracking — Dashboard
+  SET_TRACKING_METRICS($state, data) {
+    Vue.set($state, 'metrics', data);
+  },
+  SET_TRACKING_METRICS_FLAG($state, flags) {
+    $state.metricsFlags = { ...$state.metricsFlags, ...flags };
   },
 };
 
