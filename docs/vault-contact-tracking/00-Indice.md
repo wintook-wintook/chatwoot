@@ -13,8 +13,9 @@ enlazada con `[[wikilinks]]`. Esta bóveda es la versión **navegable** del skil
 índice delgado que apunta aquí (para que Claude cargue solo lo relevante).
 
 > **Convención del módulo:** tablas/columnas/enums y **código en inglés**; etiquetas
-> de **UI en español** (i18n `es`/`en`). Migraciones siempre al final. **1 solo
-> tracking activo por contacto** (índice único). **No hay feature flag**: el módulo
+> de **UI en español** (i18n `es`/`en`). Migraciones siempre al final. **1 tracking
+> activo por `(contacto, inbox)`** (índice único; permite paralelo por canal, ver
+> [[Seguimiento-por-canal]]). **No hay feature flag**: el módulo
 > está siempre activo. Commit solo cuando se pida.
 >
 > **⭐ "Agente IA" = `tracking_template`** (nombre de producto/UI ↔ nombre en código).

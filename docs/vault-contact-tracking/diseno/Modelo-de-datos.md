@@ -39,9 +39,9 @@ archivo (fuente de verdad). Columnas relevantes:
 
 ### Índices clave
 
-- `index_unique_active_tracking_per_contact` — **UNIQUE parcial** sobre
-  `(contact_id, status)` para `pending/scheduled/active/paused` ⇒ **1 activo por contacto**
-  (sin importar el inbox; limitación + solución en [[Seguimiento-por-canal]]).
+- `index_unique_active_tracking_per_contact_inbox` — **UNIQUE parcial** sobre
+  `(contact_id, inbox_id, status)` para `pending/scheduled/active/paused` ⇒ **1 activo por
+  `(contacto, inbox)`** (permite paralelo en canales distintos; ver [[Seguimiento-por-canal]]).
 - `index_contact_trackings_on_status_and_scheduled_for` — para el cron de pendientes.
 - `index_contact_trackings_on_sentiment` — expresión sobre `last_sentiment_analysis->>'sentiment'`.
 

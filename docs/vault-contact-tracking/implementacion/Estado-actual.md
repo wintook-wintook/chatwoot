@@ -24,7 +24,8 @@ Snapshot en la rama `dashboard_contact_tracking` (deriva del último `develop`).
 | Router de intención | `RouterService` (rejected/interested/reschedule/book/kbase/botseller) |
 | Keyword actions | `KeywordActionService` + `KeywordCheckerJob` (out) + analyzer (in) |
 | Slots de calendario | `AvailabilitySlotService` sobre `UserCalendarIntegration` |
-| Concurrencia | lock pesimista + dedup <60 s + índice único 1-activo-por-contacto |
+| Concurrencia | lock pesimista + dedup <60 s + índice único 1-activo-por-`(contacto,inbox)` |
+| Multicanal | 1 seguimiento activo por `(contacto, inbox)` → paralelo por canal ([[Seguimiento-por-canal]]) |
 | Terminología UI | "Agente IA" alineado en i18n (es/en) + labels hardcodeados (automation, TrackingForm, EditTemplate) |
 
 ## ⚠️ Parcial / a confirmar

@@ -63,12 +63,9 @@ asumir que algo falta (el módulo avanza rápido). Ver también [[Estado-actual]
 
 ### 📡 Multicanal
 
-- [ ] **Permitir seguimientos en paralelo por canal** — hoy un contacto solo puede tener
-      **1 seguimiento activo en total**, sin importar el inbox (índice único `(contact_id,
-      status)` + validación + guardas, todas por contacto). Para permitir 1 activo por
-      `(contacto, inbox)`: índice `(contact_id, inbox_id, status)` + ajustar validación y
-      las guardas de `action_service`/`bulk_assign_service`/`message.rb`. La respuesta ya
-      está OK (`find_active_trackings` filtra por conversación). Solución detallada en
-      [[Seguimiento-por-canal]].
+- [x] ~~**Permitir seguimientos en paralelo por canal**~~ — ✅ **IMPLEMENTADO** (2026-06-12):
+      índice `(contact_id, inbox_id, status)` + validación + guardas por `(contacto, inbox)`.
+      Verificado: mismo contacto en 2 inboxes = permitido; 2 en el mismo inbox = bloqueado
+      (modelo + BD). Ver [[Seguimiento-por-canal]].
 
 > Cuando se cierre un punto, muévelo a [[Estado-actual]] como ✅.

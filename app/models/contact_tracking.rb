@@ -64,7 +64,7 @@
 #  index_contact_trackings_on_sentiment                     (((last_sentiment_analysis ->> 'sentiment'::text)))
 #  index_contact_trackings_on_status                        (status)
 #  index_contact_trackings_on_status_and_scheduled_for      (status,scheduled_for)
-#  index_unique_active_tracking_per_contact                 (contact_id,status) UNIQUE WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))
+#  index_unique_active_tracking_per_contact_inbox           (contact_id,inbox_id,status) UNIQUE WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))
 #
 # Foreign Keys
 #
@@ -127,7 +127,7 @@ class ContactTracking < ApplicationRecord
   
   validate :scheduled_for_cannot_be_in_past, on: :create
   validate :conversation_belongs_to_inbox, if: :conversation_id?
-  validate :only_one_active_tracking_per_contact, on: :create
+  validate :only_one_active_tracking_per_contact_and_inbox, on: :create
   validate :all_templates_must_be_present, if: :using_templates?
 
   # ==============================================================================
@@ -444,18 +444,20 @@ class ContactTracking < ApplicationRecord
   end
 
   # Verifica que solo exista un tracking activo por contacto
-  def only_one_active_tracking_per_contact
+  # proyecto@contact_tracking: 1 seguimiento activo por (contacto, inbox).
+  # Permite seguimientos en paralelo en canales (inboxes) distintos.
+  def only_one_active_tracking_per_contact_and_inbox
     active_statuses = %w[pending scheduled active paused]
 
     existing = ContactTracking
-      .where(contact_id: contact_id)
+      .where(contact_id: contact_id, inbox_id: inbox_id)
       .where(status: active_statuses)
       .where.not(id: id)
       .exists?
 
     if existing
       errors.add(:base,
-        'Ya existe un seguimiento activo para este contacto. ' \
+        'Ya existe un seguimiento activo para este contacto en este canal. ' \
         'Completa o cancela el actual antes de crear uno nuevo.')
     end
   end
