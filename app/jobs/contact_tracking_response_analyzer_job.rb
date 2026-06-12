@@ -202,7 +202,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     cp = tracking.complementary_prompt.to_s
 
-    if cp.include?('@buscar_predeterminadas')
+    if cp.include?('@buscar_predefinidas')
       message.account.knowledge_items.where(source_type: 'canned_response').exists?
     elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
       source_name = match[1].strip
@@ -271,7 +271,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       # el prompt está diseñado para operar con la kbase y GPT lo simula literalmente
       # generando output tipo "CONSULTA GENERADA / DEBUG / RESULTADO RECIBIDO".
       cp_raw = tracking.complementary_prompt.to_s
-      has_kbase_directive = cp_raw.match?(/@buscar_predeterminadas\b/i) ||
+      has_kbase_directive = cp_raw.match?(/@buscar_predefinidas\b/i) ||
                             cp_raw.match?(/@buscar_foro\([^)]*\)/i) ||
                             cp_raw.match?(/@discourse\b/i)
       clean_cp = has_kbase_directive ? '' : cp_raw.strip
