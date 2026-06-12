@@ -35,6 +35,16 @@ seguimiento es proactivo y programado, no reactivo.
 | API | controllers en `api/v1/accounts/*` | [[API-y-rutas]] |
 | Frontend | `dashboard/...` (Vue + Vuex) | [[Frontend]] |
 
+## ⭐ Terminología: "Agente IA" = `tracking_template`
+
+En **producto y UI** una plantilla de seguimiento se llama **"Agente IA"**. En el
+código y la base de datos sigue siendo `tracking_template` / `tracking_templates`. Son
+lo mismo:
+
+- "Asignar un Agente IA" a un contacto/filtro = crear `ContactTracking` desde una
+  `tracking_template` (manual, masivo, importación o **automatización**).
+- Donde una nota diga "plantilla", léelo como "Agente IA" de cara al usuario.
+
 ## Convenciones
 
 - **Código/columnas/enums en inglés; UI en español** (i18n `es` y `en`).

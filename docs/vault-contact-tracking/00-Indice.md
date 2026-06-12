@@ -16,6 +16,11 @@ enlazada con `[[wikilinks]]`. Esta bóveda es la versión **navegable** del skil
 > de **UI en español** (i18n `es`/`en`). Migraciones siempre al final. **1 solo
 > tracking activo por contacto** (índice único). **No hay feature flag**: el módulo
 > está siempre activo. Commit solo cuando se pida.
+>
+> **⭐ "Agente IA" = `tracking_template`** (nombre de producto/UI ↔ nombre en código).
+> Un seguimiento se crea desde un Agente IA por **4 vías**: manual (TrackingForm),
+> **automatización** ([[Automatizaciones]]), masiva ([[Bulk-assign]]) e importación
+> ([[Importacion-excel-csv]]).
 
 ---
 
@@ -40,6 +45,7 @@ enlazada con `[[wikilinks]]`. Esta bóveda es la versión **navegable** del skil
 ## 🛠️ Implementación (estado real)
 
 - [[Archivos-reales]] — rutas exactas backend + frontend construidas
+- [[Automatizaciones]] — reglas que crean/pausan/cancelan seguimientos (`assign_tracking_template`)
 - [[Bulk-assign]] — asignación masiva por filtro (commit `8cae85fd`), límite 30
 - [[Importacion-excel-csv]] — parser nativo XLSX/CSV, normalización E.164, límite 50
 - [[Estado-actual]] — qué está hecho y qué falta
