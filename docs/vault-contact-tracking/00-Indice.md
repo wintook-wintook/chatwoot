@@ -48,6 +48,7 @@ enlazada con `[[wikilinks]]`. Esta bóveda es la versión **navegable** del skil
 - [[Automatizaciones]] — reglas que crean/pausan/cancelan seguimientos (`assign_tracking_template`)
 - [[Directivas-complementary-prompt]] — `@buscar_predefinidas` / `@buscar_foro` / `@discourse` y su detección
 - [[Borrado-y-cascadas]] — qué pasa con trackings/tickets al borrar contacto/conversación/tracking
+- [[Seguimiento-por-canal]] — limitación "1 activo por contacto" (no por canal) + solución
 - [[Testeo-funcional]] — 🧪 casos reales de testeo (TC-01 @discourse, TC-02 agenda) + tiempos
 - [[Bulk-assign]] — asignación masiva por filtro (commit `8cae85fd`), límite 30
 - [[Importacion-excel-csv]] — parser nativo XLSX/CSV, normalización E.164, límite 50
