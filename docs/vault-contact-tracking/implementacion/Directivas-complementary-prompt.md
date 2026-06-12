@@ -9,7 +9,7 @@ tags: [contact-tracking, directivas, kbase, prompt]
 El campo `complementary_prompt` (UI: **"Entrenamiento"**) puede llevar **directivas**
 que cambian cómo se responde al cliente cuando éste contesta. Se detectan sobre el
 texto del `complementary_prompt` del tracking. Ver cómo entra al prompt en
-[[diseno/Servicios-y-jobs|Servicios-y-jobs]] y el detalle del system prompt
+[[Servicios-y-jobs]] y el detalle del system prompt
 conversacional en `contact_tracking_response_analyzer_job.rb:251` (`generate_conversational_reply`).
 
 ## Las 3 directivas (modos KB)
