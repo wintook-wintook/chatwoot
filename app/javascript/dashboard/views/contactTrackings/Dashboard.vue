@@ -20,10 +20,19 @@ const STATUS_META = {
 
 export default {
   components: { DoughnutChart, BarChart, HorizontalBarChart },
+  data() {
+    return {
+      filters: { date_from: '', date_to: '', inbox_id: '', template_id: '', status: '' },
+      statusOptions: Object.keys(STATUS_META),
+      statusMeta: STATUS_META,
+    };
+  },
   computed: {
     ...mapGetters({
       metrics: 'contactTrackings/getMetrics',
       metricsFlags: 'contactTrackings/getMetricsFlags',
+      inboxes: 'inboxes/getInboxes',
+      templates: 'trackingTemplates/getTemplates',
     }),
     summary() {
       return this.metrics?.summary || {};
@@ -112,13 +121,42 @@ export default {
         { label: 'Citas', value: f.appointment || 0, pct: pct(f.appointment), color: '#16a34a' },
       ];
     },
+
+    // Fase 3 — serie temporal
+    hasTimeseries() {
+      return (this.metrics?.timeseries || []).some(p => p.created > 0 || p.completed > 0);
+    },
+    timeseriesChartData() {
+      const ts = this.metrics?.timeseries || [];
+      return {
+        labels: ts.map(p => p.date.slice(5)),
+        datasets: [
+          { label: 'Creados', data: ts.map(p => p.created), backgroundColor: '#3b82f6', barPercentage: 0.7 },
+          { label: 'Completados', data: ts.map(p => p.completed), backgroundColor: '#16a34a', barPercentage: 0.7 },
+        ],
+      };
+    },
+
+    // Fase 3 — próximas citas
+    appointmentsList() {
+      return this.metrics?.lists?.appointments || [];
+    },
   },
   mounted() {
     this.fetchMetrics();
+    this.$store.dispatch('trackingTemplates/get');
   },
   methods: {
     fetchMetrics() {
-      this.$store.dispatch('contactTrackings/fetchMetrics');
+      const params = {};
+      Object.entries(this.filters).forEach(([k, v]) => {
+        if (v) params[k] = v;
+      });
+      this.$store.dispatch('contactTrackings/fetchMetrics', params);
+    },
+    resetFilters() {
+      this.filters = { date_from: '', date_to: '', inbox_id: '', template_id: '', status: '' };
+      this.fetchMetrics();
     },
     formatDate(value) {
       if (!value) return '—';
@@ -143,6 +181,41 @@ export default {
       >
         Actualizar
       </woot-button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+        Desde
+        <input v-model="filters.date_from" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1" />
+      </label>
+      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+        Hasta
+        <input v-model="filters.date_to" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1" />
+      </label>
+      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+        Canal
+        <select v-model="filters.inbox_id" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1">
+          <option value="">Todos</option>
+          <option v-for="ib in inboxes" :key="ib.id" :value="ib.id">{{ ib.name }}</option>
+        </select>
+      </label>
+      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+        Agente IA
+        <select v-model="filters.template_id" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1">
+          <option value="">Todos</option>
+          <option v-for="tpl in templates" :key="tpl.id" :value="tpl.id">{{ tpl.name }}</option>
+        </select>
+      </label>
+      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+        Estado
+        <select v-model="filters.status" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1">
+          <option value="">Todos</option>
+          <option v-for="s in statusOptions" :key="s" :value="s">{{ statusMeta[s].label }}</option>
+        </select>
+      </label>
+      <woot-button variant="smooth" size="small" @click="fetchMetrics">Aplicar</woot-button>
+      <woot-button variant="clear" size="small" @click="resetFilters">Limpiar</woot-button>
     </div>
 
     <!-- KPIs -->
@@ -213,6 +286,39 @@ export default {
           </span>
         </div>
       </div>
+    </div>
+
+    <!-- Serie temporal -->
+    <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+      <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Creados vs Completados (por día)</p>
+      <div v-if="hasTimeseries" class="h-56">
+        <BarChart :collection="timeseriesChartData" />
+      </div>
+      <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos en el rango.</p>
+    </div>
+
+    <!-- Próximas citas -->
+    <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+      <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">
+        📅 Próximas citas ({{ appointmentsList.length }})
+      </p>
+      <table v-if="appointmentsList.length" class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
+            <th class="py-2">Contacto</th>
+            <th class="py-2">Cuándo</th>
+            <th class="py-2">Objetivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="a in appointmentsList" :key="a.id" class="border-b border-slate-50 dark:border-slate-700/50">
+            <td class="py-2 text-slate-700 dark:text-slate-200">{{ a.contact_name || '—' }}</td>
+            <td class="py-2 text-slate-500 dark:text-slate-400">{{ formatDate(a.appointment_at) }}</td>
+            <td class="py-2 text-slate-600 dark:text-slate-300 truncate max-w-xs">{{ a.objective }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else class="text-sm text-slate-400 py-4 text-center">No hay citas próximas.</p>
     </div>
 
     <!-- Vencidos -->

@@ -20,7 +20,8 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
       by_inbox: by_inbox(scope),
       by_template: by_template(scope),
       funnel: funnel(scope),
-      lists: { overdue: overdue_list(scope) }
+      timeseries: timeseries(scope),
+      lists: { overdue: overdue_list(scope), appointments: appointments_list(scope) }
     }
   end
 
@@ -30,6 +31,7 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
     rel = ContactTracking.where(account_id: Current.account.id)
     rel = rel.where(inbox_id: params[:inbox_id]) if params[:inbox_id].present?
     rel = rel.where(tracking_template_id: params[:template_id]) if params[:template_id].present?
+    rel = rel.where(status: params[:status]) if params[:status].present?
     rel = rel.where('created_at >= ?', params[:date_from]) if params[:date_from].present?
     rel = rel.where('created_at <= ?', params[:date_to]) if params[:date_to].present?
     rel
@@ -84,6 +86,40 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
 
   def overdue(scope)
     scope.where(status: %w[pending scheduled]).where('scheduled_for < ?', Time.current)
+  end
+
+  # Fase 3 — serie temporal: creados vs completados por día (rango o últimos 30 días)
+  def timeseries(scope)
+    end_date   = parse_date(params[:date_to]) || Date.current
+    start_date = parse_date(params[:date_from]) || (end_date - 29)
+    start_date = end_date - 89 if (end_date - start_date).to_i > 90 # tope de seguridad
+    range      = start_date.beginning_of_day..end_date.end_of_day
+
+    created   = scope.where(created_at: range).group(Arel.sql('DATE(created_at)')).count
+    completed = scope.where(status: 'completed').where(updated_at: range).group(Arel.sql('DATE(updated_at)')).count
+
+    (start_date..end_date).map do |d|
+      { date: d.iso8601, created: created[d] || 0, completed: completed[d] || 0 }
+    end
+  end
+
+  # Fase 3 — próximas citas agendadas
+  def appointments_list(scope)
+    scope.where('appointment_at >= ?', Time.current).order(appointment_at: :asc).limit(20).map do |t|
+      {
+        id:             t.id,
+        contact_name:   t.contact&.name,
+        appointment_at: t.appointment_at,
+        inbox_id:       t.inbox_id,
+        objective:      t.objective
+      }
+    end
+  end
+
+  def parse_date(value)
+    value.present? ? Date.parse(value) : nil
+  rescue ArgumentError
+    nil
   end
 
   def overdue_list(scope)
