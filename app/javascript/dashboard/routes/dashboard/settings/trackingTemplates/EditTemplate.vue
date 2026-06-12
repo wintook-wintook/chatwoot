@@ -179,7 +179,7 @@ export default {
     },
     validationErrors() {
       const errors = [];
-      if (!this.isNameValid) errors.push('Nombre de la plantilla es requerido (mínimo 2 caracteres).');
+      if (!this.isNameValid) errors.push('Nombre del Agente IA es requerido (mínimo 2 caracteres).');
       if (!this.isObjectiveValid) errors.push('Objetivo es requerido (mínimo 5 caracteres).');
       if (!this.isAiContextValid) errors.push('Contexto IA es requerido (mínimo 10 caracteres).');
       if (!this.isComplementaryPromptValid) errors.push('Entrenamiento es requerido (mínimo 10 caracteres).');
@@ -806,7 +806,7 @@ export default {
     <woot-modal :show="showValidationModal" :on-close="() => showValidationModal = false" size="small">
       <woot-modal-header
         header-title="⚠️ Información incompleta"
-        header-content="Corrige los siguientes errores antes de guardar la plantilla."
+        header-content="Corrige los siguientes errores antes de guardar el Agente IA."
       />
       <div class="px-8 pb-6 flex flex-col gap-3">
         <ul class="space-y-2">
@@ -852,7 +852,7 @@ export default {
     <woot-modal :show="showPromptModal" :on-close="() => showPromptModal = false" size="medium">
       <woot-modal-header
         header-title="💡 Entrenamiento"
-        header-content="Instrucciones adicionales para responder preguntas del cliente sobre esta plantilla."
+        header-content="Instrucciones adicionales para responder preguntas del cliente sobre este Agente IA."
       />
       <div class="px-8 pb-6 flex flex-col gap-3">
         <textarea

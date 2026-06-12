@@ -482,7 +482,8 @@ class Message < ApplicationRecord
 
   def will_trigger_tracking_automation?
     active_statuses = %w[pending scheduled active paused]
-    return false if ContactTracking.where(contact_id: conversation.contact_id, status: active_statuses).exists?
+    # Acotado al inbox de la conversación: el seguimiento se crea por (contacto, inbox)
+    return false if ContactTracking.where(contact_id: conversation.contact_id, inbox_id: conversation.inbox_id, status: active_statuses).exists?
 
     account.automation_rules.active.where(event_name: TRACKING_AUTOMATION_EVENTS).any? do |rule|
       rule.actions.any? { |action| action['action_name'] == 'assign_tracking_template' } &&

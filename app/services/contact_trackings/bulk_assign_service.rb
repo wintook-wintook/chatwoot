@@ -62,14 +62,15 @@ class ContactTrackings::BulkAssignService
   end
 
   def process_contact(contact, template)
-    if @skip_active && ContactTracking.where(contact_id: contact.id, status: ACTIVE_STATUSES).exists?
-      @results[:skipped] += 1
-      return
-    end
-
     inbox_id, conversation_id = resolve_inbox_and_conversation(contact, template)
     unless inbox_id
       add_error(contact, "No se pudo determinar el inbox para este contacto. Configura un inbox en la plantilla '#{template.name}'.")
+      return
+    end
+
+    # Omitir solo si ya hay un seguimiento activo EN ESTE CANAL (inbox)
+    if @skip_active && ContactTracking.where(contact_id: contact.id, inbox_id: inbox_id, status: ACTIVE_STATUSES).exists?
+      @results[:skipped] += 1
       return
     end
 

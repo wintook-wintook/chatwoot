@@ -27,17 +27,17 @@
                 </p>
             </div>
 
-            <!-- Selector de plantilla de seguimiento -->
+            <!-- Selector de Agente IA -->
             <div v-if="trackingTemplates.length > 0 && !isAfterFirstAttempt" class="flex items-center gap-2">
                 <div class="flex-1 min-w-0 pt-1">
                     <MultiselectDropdown
                         :options="templateOptions"
                         :selected-item="selectedTemplateItem"
                         :has-thumbnail="false"
-                        multiselector-title="Plantillas de seguimiento"
-                        multiselector-placeholder="Seleccionar plantilla..."
-                        no-search-result="No se encontraron plantillas"
-                        input-placeholder="Buscar plantilla..."
+                        multiselector-title="Agentes IA"
+                        multiselector-placeholder="Seleccionar Agente IA..."
+                        no-search-result="No se encontraron Agentes IA"
+                        input-placeholder="Buscar Agente IA..."
                         @click="onSelectTemplate"
                     />
                 </div>

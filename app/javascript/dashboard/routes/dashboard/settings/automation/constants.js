@@ -657,10 +657,10 @@ export const AUTOMATION_ACTION_TYPES = [
     label: 'Asignar tipo de oportunidad',
     inputType: 'search_select',
   },
-  // proyecto@automatizacion_tracking: muestra dropdown de plantillas filtradas por inbox de las condiciones
+  // proyecto@automatizacion_tracking: muestra dropdown de Agentes IA filtrados por inbox de las condiciones
   {
     key: 'assign_tracking_template',
-    label: 'Asignar plantilla de seguimiento',
+    label: 'Asignar Agente IA',
     inputType: 'search_select',
   },
   // proyecto@automatizacion_tracking: cancela el seguimiento activo del contacto en el inbox de las condiciones

@@ -1,7 +1,7 @@
 // ================================================================================
 // proyecto@tracking_templates
 // ================================================================================
-// Rutas: Settings > Plantillas de Seguimiento
+// Rutas: Settings > Agentes IA (tracking templates)
 // Path: accounts/:accountId/settings/tracking-templates/list
 // ================================================================================
 
