@@ -89,7 +89,7 @@ const primaryMenuItems = accountId => [
   },
   // proyecto@contact_tracking — Dashboard de Seguimientos
   {
-    icon: 'arrow-trending-lines',
+    icon: 'tracking-dashboard',
     key: 'contactTrackingsDashboard',
     label: 'TRACKING_DASHBOARD',
     toState: frontendURL(`accounts/${accountId}/tracking-dashboard`),
