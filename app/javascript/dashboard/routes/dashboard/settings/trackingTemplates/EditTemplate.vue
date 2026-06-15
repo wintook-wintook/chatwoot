@@ -14,9 +14,12 @@ import { mapGetters } from 'vuex';
 import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
+// proyecto@ai_agent_attachments
+import MentionBox from 'dashboard/components/widgets/mentions/MentionBox.vue';
+import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 
 export default {
-  components: { KeywordActionsEditor },
+  components: { KeywordActionsEditor, MentionBox },
 
   props: {
     templateData: {
@@ -63,6 +66,16 @@ export default {
       availableWATemplates: [],
       isLoadingWATemplates: false,
       activeTemplateTab: 0,
+      // proyecto@ai_agent_attachments
+      attachments: [],
+      isLoadingAttachments: false,
+      isUploadingAttachment: false,
+      attachmentName: '',
+      attachmentFile: null,
+      attachmentError: '',
+      // autocompletado @adjunto: en el textarea de Entrenamiento
+      showAttachmentMentions: false,
+      attachmentQuery: '',
     };
   },
   computed: {
@@ -177,6 +190,22 @@ export default {
     agendasTabIndex() {
       return this.reglasTabIndex + 1;
     },
+    // proyecto@ai_agent_attachments: tab "📎 Archivos" tras "📅 Agendas"
+    archivosTabIndex() {
+      return this.agendasTabIndex + 1;
+    },
+    // Adjuntos filtrados por lo escrito tras "@adjunto:" (slug del name)
+    filteredAttachmentMentions() {
+      const q = (this.attachmentQuery || '').toLowerCase();
+      return this.attachments
+        .filter(a => !q || a.name.toLowerCase().includes(q))
+        .map(a => ({
+          key: a.id,
+          name: a.name,
+          description: a.name,
+          filename: a.filename,
+        }));
+    },
     validationErrors() {
       const errors = [];
       if (!this.isNameValid) errors.push('Nombre del Agente IA es requerido (mínimo 2 caracteres).');
@@ -239,6 +268,12 @@ export default {
         this.activeContextTab = 0;
         this.originalAiContext = null;
         this.originalComplementaryPrompt = null;
+        // proyecto@ai_agent_attachments: cargar adjuntos del agente (solo en edición)
+        this.attachments = [];
+        this.closeAttachmentMentions();
+        if (val && val.id) {
+          this.loadAttachments();
+        }
       },
     },
     selectedInboxId(newVal) {
@@ -436,6 +471,124 @@ export default {
         this.form.calendar_integration_ids.splice(idx, 1);
       }
     },
+    // ── proyecto@ai_agent_attachments: gestión de archivos del Agente IA ──────────
+    async loadAttachments() {
+      if (!this.form.id) return;
+      this.isLoadingAttachments = true;
+      try {
+        const { data } = await AiAgentAttachmentsAPI.list(this.form.id);
+        this.attachments = data || [];
+      } catch (e) {
+        this.attachments = [];
+      } finally {
+        this.isLoadingAttachments = false;
+      }
+    },
+    onAttachmentFileChange(event) {
+      const file = event.target.files && event.target.files[0];
+      this.attachmentFile = file || null;
+      // Sugerir un name slug a partir del filename si está vacío
+      if (file && !this.attachmentName) {
+        this.attachmentName = file.name
+          .replace(/\.[^.]+$/, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9_-]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 60);
+      }
+    },
+    async uploadAttachment() {
+      this.attachmentError = '';
+      const name = (this.attachmentName || '').trim();
+      if (!name || !/^[a-zA-Z0-9_-]+$/.test(name)) {
+        this.attachmentError = this.$t(
+          'TRACKING_TEMPLATES.FORM.ATTACHMENTS.INVALID_NAME'
+        );
+        return;
+      }
+      if (!this.attachmentFile) {
+        this.attachmentError = this.$t(
+          'TRACKING_TEMPLATES.FORM.ATTACHMENTS.NO_FILE'
+        );
+        return;
+      }
+      this.isUploadingAttachment = true;
+      try {
+        const { data } = await AiAgentAttachmentsAPI.upload(this.form.id, {
+          name,
+          file: this.attachmentFile,
+        });
+        this.attachments.push(data);
+        this.attachmentName = '';
+        this.attachmentFile = null;
+        if (this.$refs.attachmentFileInput) {
+          this.$refs.attachmentFileInput.value = '';
+        }
+      } catch (e) {
+        this.attachmentError =
+          e?.response?.data?.errors?.join(', ') ||
+          this.$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.UPLOAD_ERROR');
+      } finally {
+        this.isUploadingAttachment = false;
+      }
+    },
+    async deleteAttachment(attachment) {
+      try {
+        await AiAgentAttachmentsAPI.remove(this.form.id, attachment.id);
+        this.attachments = this.attachments.filter(a => a.id !== attachment.id);
+      } catch (e) {
+        // noop: se mantiene en la lista si falla
+      }
+    },
+    copyDirective(attachment) {
+      const token = `@adjunto:${attachment.name}`;
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(token);
+      }
+    },
+    // ── Autocompletado @adjunto: en el textarea de Entrenamiento ──────────────────
+    onComplementaryInput(event) {
+      if (!this.attachments.length) {
+        this.closeAttachmentMentions();
+        return;
+      }
+      const pos = event.target.selectionStart;
+      const before = this.form.complementary_prompt.slice(0, pos);
+      const match = before.match(/@adjunto:([a-zA-Z0-9_-]*)$/);
+      if (match) {
+        this.attachmentQuery = match[1];
+        this.showAttachmentMentions = true;
+      } else {
+        this.closeAttachmentMentions();
+      }
+    },
+    insertAttachmentMention(item) {
+      const textarea = this.$refs.complementaryTextarea;
+      const pos = textarea ? textarea.selectionStart : this.form.complementary_prompt.length;
+      const before = this.form.complementary_prompt.slice(0, pos);
+      const after = this.form.complementary_prompt.slice(pos);
+      const newBefore = before.replace(
+        /@adjunto:[a-zA-Z0-9_-]*$/,
+        `@adjunto:${item.name} `
+      );
+      this.form.complementary_prompt = newBefore + after;
+      this.closeAttachmentMentions();
+      this.$nextTick(() => {
+        if (textarea) {
+          const caret = newBefore.length;
+          textarea.focus();
+          textarea.setSelectionRange(caret, caret);
+        }
+      });
+    },
+    closeAttachmentMentions() {
+      this.showAttachmentMentions = false;
+      this.attachmentQuery = '';
+    },
+    // Retrasar el cierre para que el click en un ítem del dropdown se procese antes del blur
+    onComplementaryBlur() {
+      setTimeout(() => this.closeAttachmentMentions(), 150);
+    },
   },
 };
 </script>
@@ -553,6 +706,7 @@ export default {
             <woot-tabs-item v-if="selectedInboxIsWhatsApp" name="📱  Plantillas WhatsApp" :show-badge="false" />
             <woot-tabs-item name="📋  Reglas" :show-badge="false" />
             <woot-tabs-item name="📅  Agendas" :show-badge="false" />
+            <woot-tabs-item name="📎  Archivos" :show-badge="false" />
           </woot-tabs>
           <a
             v-if="activeContextTab === 0 || activeContextTab === 1"
@@ -604,12 +758,35 @@ export default {
 
         <!-- Tab 1: Entrenamiento -->
         <div v-show="activeContextTab === 1" class="mt-2">
-          <textarea
-            v-model="form.complementary_prompt"
-            rows="10"
-            :placeholder="$t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')"
-            class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
-          />
+          <!-- proyecto@ai_agent_attachments: contenedor relativo para el dropdown @adjunto: -->
+          <div class="relative">
+            <textarea
+              ref="complementaryTextarea"
+              v-model="form.complementary_prompt"
+              rows="10"
+              :placeholder="$t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')"
+              class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+              @input="onComplementaryInput"
+              @click="onComplementaryInput"
+              @keyup="onComplementaryInput"
+              @keydown.esc="closeAttachmentMentions"
+              @blur="onComplementaryBlur"
+            />
+            <mention-box
+              v-if="showAttachmentMentions && filteredAttachmentMentions.length"
+              :items="filteredAttachmentMentions"
+              @mention-select="insertAttachmentMention"
+            >
+              <template #default="{ item }">
+                <p class="max-w-full min-w-0 mb-0 overflow-hidden text-sm font-medium text-slate-900 dark:text-slate-100 text-ellipsis whitespace-nowrap">
+                  @adjunto:{{ item.name }}
+                </p>
+                <p class="max-w-full min-w-0 mb-0 overflow-hidden text-xs text-slate-500 dark:text-slate-300 text-ellipsis whitespace-nowrap">
+                  {{ item.filename }}
+                </p>
+              </template>
+            </mention-box>
+          </div>
           <div class="flex justify-between items-center mt-1">
             <span class="text-xs text-slate-500 dark:text-slate-400">
               Este prompt se usa cuando el cliente hace preguntas relacionadas con el seguimiento
@@ -784,6 +961,98 @@ export default {
               {{ $t('TRACKING_TEMPLATES.CALENDARS.SELECTED_COUNT', { count: form.calendar_integration_ids.length }) }}
             </p>
           </div>
+        </div>
+
+        <!-- Tab Archivos (proyecto@ai_agent_attachments) -->
+        <div v-show="activeContextTab === archivosTabIndex" class="mt-2">
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.DESCRIPTION') }}
+          </p>
+
+          <!-- En modo creación hay que guardar primero para tener un Agente IA al que adjuntar -->
+          <div
+            v-if="!form.id"
+            class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400"
+          >
+            {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.SAVE_FIRST') }}
+          </div>
+
+          <template v-else>
+            <!-- Subir archivo -->
+            <div class="flex flex-wrap items-end gap-2 mb-3">
+              <label class="flex-1 min-w-[160px]">
+                <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.NAME_LABEL') }}
+                </span>
+                <input
+                  v-model="attachmentName"
+                  type="text"
+                  :placeholder="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.NAME_PLACEHOLDER')"
+                  class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                />
+              </label>
+              <input
+                ref="attachmentFileInput"
+                type="file"
+                class="text-sm text-slate-600 dark:text-slate-300 max-w-[220px]"
+                @change="onAttachmentFileChange"
+              />
+              <woot-button
+                size="small"
+                :is-loading="isUploadingAttachment"
+                :disabled="isUploadingAttachment"
+                @click.prevent="uploadAttachment"
+              >
+                {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.UPLOAD') }}
+              </woot-button>
+            </div>
+            <p v-if="attachmentError" class="text-xs text-red-500 mb-2">
+              {{ attachmentError }}
+            </p>
+
+            <!-- Listado -->
+            <div v-if="isLoadingAttachments" class="text-sm text-slate-500 py-2">
+              {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.LOADING') }}
+            </div>
+            <div
+              v-else-if="attachments.length === 0"
+              class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400"
+            >
+              {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.EMPTY') }}
+            </div>
+            <ul v-else class="space-y-2">
+              <li
+                v-for="att in attachments"
+                :key="att.id"
+                class="flex items-center gap-3 p-2.5 rounded-md border border-slate-200 dark:border-slate-600"
+              >
+                <fluent-icon icon="document" size="18" class="text-slate-400 shrink-0" />
+                <div class="flex flex-col min-w-0 flex-1">
+                  <code class="text-xs font-semibold text-woot-600 dark:text-woot-400">
+                    @adjunto:{{ att.name }}
+                  </code>
+                  <span class="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    {{ att.filename }}
+                  </span>
+                </div>
+                <a
+                  href="#"
+                  class="text-xs text-slate-500 hover:text-woot-500"
+                  :title="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.COPY')"
+                  @click.prevent="copyDirective(att)"
+                >
+                  {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.COPY') }}
+                </a>
+                <a
+                  href="#"
+                  class="text-xs text-red-500 hover:text-red-600"
+                  @click.prevent="deleteAttachment(att)"
+                >
+                  {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.DELETE') }}
+                </a>
+              </li>
+            </ul>
+          </template>
         </div>
       </div>
 

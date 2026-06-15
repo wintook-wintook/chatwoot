@@ -39,6 +39,20 @@
         "LABEL": "Entrenamiento",
         "PLACEHOLDER": "Additional instructions for Q&A..."
       },
+      "ATTACHMENTS": {
+        "DESCRIPTION": "Upload files and reference them in Training with @adjunto:name so the AI Agent sends them in the conversation.",
+        "SAVE_FIRST": "Save the AI Agent first to be able to attach files.",
+        "NAME_LABEL": "Name (key)",
+        "NAME_PLACEHOLDER": "e.g. catalogo_2026",
+        "UPLOAD": "Upload",
+        "LOADING": "Loading files...",
+        "EMPTY": "No files yet. Upload one to use it with @adjunto:name.",
+        "COPY": "Copy",
+        "DELETE": "Delete",
+        "INVALID_NAME": "The name only allows letters, numbers, hyphen and underscore (no spaces).",
+        "NO_FILE": "Select a file to upload.",
+        "UPLOAD_ERROR": "Could not upload the file."
+      },
       "TAGS": {
         "LABEL": "Tags",
         "PLACEHOLDER": "Type and press Enter to add...",

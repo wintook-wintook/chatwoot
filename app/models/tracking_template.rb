@@ -49,6 +49,9 @@ class TrackingTemplate < ApplicationRecord
   belongs_to :inbox, optional: true
   belongs_to :user, optional: true
 
+  # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por @adjunto:name
+  has_many :ai_agent_attachments, dependent: :destroy
+
   validates :name, presence: true, length: { minimum: 2, maximum: 100 },
                    uniqueness: { scope: :account_id, case_sensitive: false }
   validates :objective, presence: true, length: { minimum: 5, maximum: 500 }
