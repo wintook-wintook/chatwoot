@@ -23,7 +23,6 @@ export default {
   components: { DoughnutChart, BarChart, HorizontalBarChart, TrackingsTable },
   data() {
     return {
-      activeTab: 'list',
       filters: { date_from: '', date_to: '', inbox_id: '', template_id: '', status: '' },
       statusOptions: Object.keys(STATUS_META),
       statusMeta: STATUS_META,
@@ -36,6 +35,22 @@ export default {
       inboxes: 'inboxes/getInboxes',
       templates: 'trackingTemplates/getTemplates',
     }),
+    // La pestaña activa la determina la ruta (menú secundario)
+    activeTab() {
+      return this.$route.name === 'contact_trackings_metrics' ? 'summary' : 'list';
+    },
+    // El HorizontalBarChart compartido no fija maintainAspectRatio, por eso no
+    // llenaba el alto del contenedor y desalineaba las tarjetas. Lo forzamos y
+    // mostramos las etiquetas del eje Y (nombres de canal).
+    inboxChartOptions() {
+      return {
+        maintainAspectRatio: false,
+        scales: {
+          xAxes: [{ display: false, ticks: { beginAtZero: true } }],
+          yAxes: [{ display: true, gridLines: { drawOnChartArea: false } }],
+        },
+      };
+    },
     summary() {
       return this.metrics?.summary || {};
     },
@@ -172,7 +187,7 @@ export default {
   <div class="flex flex-col flex-1 w-full h-full overflow-auto p-4 gap-4">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-medium text-slate-800 dark:text-slate-100">
-        Dashboard de Seguimientos
+        {{ activeTab === 'summary' ? 'Resumen de Seguimientos' : 'Listado de Seguimientos' }}
       </h1>
       <woot-button
         v-if="activeTab === 'summary'"
@@ -186,52 +201,34 @@ export default {
       </woot-button>
     </div>
 
-    <!-- Pestañas -->
-    <div class="flex gap-1 border-b border-slate-100 dark:border-slate-700">
-      <button
-        class="px-3 py-2 text-sm -mb-px border-b-2"
-        :class="activeTab === 'list' ? 'border-woot-500 text-woot-600 font-medium' : 'border-transparent text-slate-500'"
-        @click="activeTab = 'list'"
-      >
-        Listado
-      </button>
-      <button
-        class="px-3 py-2 text-sm -mb-px border-b-2"
-        :class="activeTab === 'summary' ? 'border-woot-500 text-woot-600 font-medium' : 'border-transparent text-slate-500'"
-        @click="activeTab = 'summary'"
-      >
-        Resumen
-      </button>
-    </div>
-
     <TrackingsTable v-if="activeTab === 'list'" />
 
     <div v-show="activeTab === 'summary'" class="flex flex-col gap-4">
     <!-- Filtros -->
     <div class="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Desde
         <input v-model="filters.date_from" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1" />
       </label>
-      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Hasta
         <input v-model="filters.date_to" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1" />
       </label>
-      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Canal
         <select v-model="filters.inbox_id" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1">
           <option value="">Todos</option>
           <option v-for="ib in inboxes" :key="ib.id" :value="ib.id">{{ ib.name }}</option>
         </select>
       </label>
-      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Agente IA
         <select v-model="filters.template_id" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1">
           <option value="">Todos</option>
           <option v-for="tpl in templates" :key="tpl.id" :value="tpl.id">{{ tpl.name }}</option>
         </select>
       </label>
-      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Estado
         <select v-model="filters.status" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1">
           <option value="">Todos</option>
@@ -280,7 +277,7 @@ export default {
       <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
         <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Por canal</p>
         <div v-if="hasInboxData" class="h-56">
-          <HorizontalBarChart :collection="inboxChartData" />
+          <HorizontalBarChart :collection="inboxChartData" :chart-options="inboxChartOptions" />
         </div>
         <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos.</p>
       </div>

@@ -8,4 +8,10 @@ export const routes = [
     meta: { permissions: ['administrator', 'agent'] },
     component: () => import('../../../views/contactTrackings/Dashboard.vue'),
   },
+  {
+    path: frontendURL('accounts/:accountId/tracking-dashboard/metrics'),
+    name: 'contact_trackings_metrics',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/contactTrackings/Dashboard.vue'),
+  },
 ];

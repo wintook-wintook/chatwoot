@@ -120,40 +120,40 @@ export default {
   <div class="flex flex-col gap-4">
     <!-- Filtros -->
     <div class="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1 flex-1 min-w-[160px]">
+      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1 flex-1 min-w-[160px]">
         Buscar
         <input v-model="filters.q" type="text" placeholder="Contacto u objetivo…" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1" @keyup.enter="fetch(1)" />
       </label>
-      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Estado
         <select v-model="filters.status" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1">
           <option value="">Todos</option>
           <option v-for="s in statusOptions" :key="s" :value="s">{{ statusMeta[s].label }}</option>
         </select>
       </label>
-      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Canal
         <select v-model="filters.inbox_id" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1">
           <option value="">Todos</option>
           <option v-for="ib in inboxes" :key="ib.id" :value="ib.id">{{ ib.name }}</option>
         </select>
       </label>
-      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Agente IA
         <select v-model="filters.template_id" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1">
           <option value="">Todos</option>
           <option v-for="tpl in templates" :key="tpl.id" :value="tpl.id">{{ tpl.name }}</option>
         </select>
       </label>
-      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Desde
         <input v-model="filters.date_from" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1" />
       </label>
-      <label class="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1">
+      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Hasta
         <input v-model="filters.date_to" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1" />
       </label>
-      <label class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 pb-1">
+      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1 pb-1">
         <input v-model="filters.overdue" type="checkbox" /> Solo vencidos
       </label>
       <woot-button variant="smooth" size="small" @click="fetch(1)">Aplicar</woot-button>
