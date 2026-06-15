@@ -187,7 +187,7 @@ export default {
   <div class="flex flex-col flex-1 w-full h-full overflow-auto p-4 gap-4">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-medium text-slate-800 dark:text-slate-100">
-        {{ activeTab === 'summary' ? 'Resumen de Seguimientos' : 'Listado de Seguimientos' }}
+        {{ activeTab === 'summary' ? 'Resumen de Seguimientos' : 'Seguimientos' }}
       </h1>
       <woot-button
         v-if="activeTab === 'summary'"
@@ -205,42 +205,41 @@ export default {
 
     <div v-show="activeTab === 'summary'" class="flex flex-col gap-4">
     <!-- Filtros -->
-    <div class="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+    <div class="flex flex-col gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+      <div class="flex flex-wrap items-end gap-3">
       <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Desde
-        <input v-model="filters.date_from" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1" />
+        <input v-model="filters.date_from" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2" />
       </label>
       <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Hasta
-        <input v-model="filters.date_to" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1" />
+        <input v-model="filters.date_to" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2" />
       </label>
       <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Canal
-        <select v-model="filters.inbox_id" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1">
+        <select v-model="filters.inbox_id" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2">
           <option value="">Todos</option>
           <option v-for="ib in inboxes" :key="ib.id" :value="ib.id">{{ ib.name }}</option>
         </select>
       </label>
       <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Agente IA
-        <select v-model="filters.template_id" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1">
+        <select v-model="filters.template_id" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2">
           <option value="">Todos</option>
           <option v-for="tpl in templates" :key="tpl.id" :value="tpl.id">{{ tpl.name }}</option>
         </select>
       </label>
       <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
         Estado
-        <select v-model="filters.status" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1">
+        <select v-model="filters.status" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2">
           <option value="">Todos</option>
           <option v-for="s in statusOptions" :key="s" :value="s">{{ statusMeta[s].label }}</option>
         </select>
       </label>
-      <div class="flex flex-col gap-1">
-        <span class="block h-5" aria-hidden="true" />
-        <div class="flex items-center gap-3">
-          <woot-button variant="smooth" size="small" @click="fetchMetrics">Aplicar</woot-button>
-          <woot-button variant="clear" size="small" @click="resetFilters">Limpiar</woot-button>
-        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <woot-button variant="smooth" size="small" @click="fetchMetrics">Aplicar</woot-button>
+        <woot-button variant="clear" size="small" @click="resetFilters">Limpiar</woot-button>
       </div>
     </div>
 
