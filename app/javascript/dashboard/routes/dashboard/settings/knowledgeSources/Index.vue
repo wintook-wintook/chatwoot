@@ -74,7 +74,18 @@ export default {
       return Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
     },
     sourceTypeLabel() {
-      return type => (type === 'canned_response' ? 'Respuesta Predefinida' : 'Discourse');
+      return type =>
+        ({
+          canned_response: 'Respuesta predefinida',
+          article: 'Centro de Ayuda',
+        }[type] || 'Discourse');
+    },
+    sourceTypeIcon() {
+      return type =>
+        ({
+          canned_response: 'chat-multiple',
+          article: 'library',
+        }[type] || 'globe');
     },
     sourceById() {
       return Object.fromEntries(this.sources.map(s => [s.id, s]));
@@ -200,8 +211,10 @@ export default {
         useAlert('Sincronizacion iniciada — los items apareceran en unos momentos');
         await this.fetchSources();
         setTimeout(() => this.fetchItems(), 3000);
-      } catch {
-        useAlert('Error al sincronizar la fuente');
+      } catch (error) {
+        useAlert(
+          error?.response?.data?.error || 'Error al sincronizar la fuente'
+        );
       } finally {
         this.syncingId = null;
       }
@@ -408,7 +421,7 @@ export default {
                 >
                   <td class="px-3 py-3">
                     <fluent-icon
-                      :icon="item.source_type === 'canned_response' ? 'chat-multiple' : 'globe'"
+                      :icon="sourceTypeIcon(item.source_type)"
                       size="16"
                       class="text-slate-400"
                     />

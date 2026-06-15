@@ -153,11 +153,9 @@ class Cases::Ai::BaseService
     ENV.fetch('OPENAI_GPT_MODEL', DEFAULT_MODEL)
   end
 
-  # Reusa la integración OpenAI de la cuenta (mismo patrón que KnowledgeBaseResponseService).
+  # Cada cuenta usa su propia integración OpenAI (sin fallback a ENV global, multi-tenant).
   def api_key
     hook = @account.hooks.find_by(app_id: 'openai', status: 'enabled')
-    return hook.settings['api_key'] if hook&.settings&.dig('api_key').present?
-
-    ENV['OPENAI_API_KEY']
+    hook&.settings&.dig('api_key').presence
   end
 end

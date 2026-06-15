@@ -192,6 +192,10 @@ es:
   contacts:
     online:
       delete: "%{contact_name} está conectado, por favor inténtalo más tarde"
+  knowledge_sources:
+    names:
+      canned_response: "Respuestas predefinidas"
+      article: "Centro de Ayuda"
   integration_apps:
     discourse:
       name: "Discourse"

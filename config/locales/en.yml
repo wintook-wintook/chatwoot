@@ -207,6 +207,10 @@ en:
   contacts:
     online:
       delete: "%{contact_name} is Online, please try again later"
+  knowledge_sources:
+    names:
+      canned_response: "Canned Responses"
+      article: "Help Center"
   integration_apps:
     discourse:
       name: "Discourse"

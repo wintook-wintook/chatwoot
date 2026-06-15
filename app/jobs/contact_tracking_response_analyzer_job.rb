@@ -219,8 +219,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     cp = tracking.complementary_prompt.to_s
 
-    if cp.include?('@buscar_predefinidas')
+    if cp.match?(/@buscar_predefinidas\b/i)
       message.account.knowledge_items.where(source_type: 'canned_response').exists?
+    elsif cp.match?(/@buscar_art[ií]culo\b/i)
+      message.account.knowledge_items.where(source_type: 'article').exists?
     elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
       source_name = match[1].strip
       message.account.knowledge_sources.active.exists?(name: source_name)
@@ -289,6 +291,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       # generando output tipo "CONSULTA GENERADA / DEBUG / RESULTADO RECIBIDO".
       cp_raw = tracking.complementary_prompt.to_s
       has_kbase_directive = cp_raw.match?(/@buscar_predefinidas\b/i) ||
+                            cp_raw.match?(/@buscar_art[ií]culo\b/i) ||
                             cp_raw.match?(/@buscar_foro\([^)]*\)/i) ||
                             cp_raw.match?(/@discourse\b/i)
       # proyecto@bot_seguimiento_calendar — @agendar_calendar no debe filtrarse al LLM conversacional
@@ -780,12 +783,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # ==============================================================================
   # Utilidades
   # ==============================================================================
+  # Cada cuenta usa su propia integración OpenAI (sin fallback a ENV global, multi-tenant).
   def get_api_key(account)
-    if account
-      hook = account.hooks.find_by(app_id: 'openai', status: 'enabled')
-      return { key: hook.settings['api_key'], source: 'account_integration' } if hook&.settings&.dig('api_key').present?
-    end
-    return { key: ENV['OPENAI_API_KEY'], source: 'env' } if ENV['OPENAI_API_KEY'].present?
+    return nil unless account
+
+    hook = account.hooks.find_by(app_id: 'openai', status: 'enabled')
+    return { key: hook.settings['api_key'], source: 'account_integration' } if hook&.settings&.dig('api_key').present?
+
     nil
   end
 
