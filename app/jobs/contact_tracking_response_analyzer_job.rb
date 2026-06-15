@@ -169,7 +169,24 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return true
     end
 
+    # proyecto@bot_seguimiento_calendar — @agendar_calendar: ofrece horarios de Google Calendar
+    if agendar_calendar_directive?(tracking) && calendar_configured?(tracking)
+      Rails.logger.info '[TrackingBot] 📅 @agendar_calendar → ofreciendo horarios de calendario'
+      handle_book_appointment(tracking, message)
+      return true
+    end
+
     generate_and_send_conversational_reply(tracking, message)
+  end
+
+  # proyecto@bot_seguimiento_calendar
+  def agendar_calendar_directive?(tracking)
+    tracking&.complementary_prompt.to_s.match?(/@agendar_calendar\b/i)
+  end
+
+  # proyecto@bot_seguimiento_calendar
+  def calendar_configured?(tracking)
+    (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).present?
   end
 
   def classify_route(tracking, message)
@@ -274,7 +291,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       has_kbase_directive = cp_raw.match?(/@buscar_predefinidas\b/i) ||
                             cp_raw.match?(/@buscar_foro\([^)]*\)/i) ||
                             cp_raw.match?(/@discourse\b/i)
-      clean_cp = has_kbase_directive ? '' : cp_raw.strip
+      # proyecto@bot_seguimiento_calendar — @agendar_calendar no debe filtrarse al LLM conversacional
+      clean_cp = has_kbase_directive ? '' : cp_raw.gsub(/@agendar_calendar\b/i, '').strip
 
       system_prompt = <<~SYSTEM.strip
         Eres un asesor de ventas para #{tracking.account.name}.
