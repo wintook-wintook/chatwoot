@@ -153,11 +153,16 @@ export default {
         Hasta
         <input v-model="filters.date_to" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1" />
       </label>
-      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1 pb-1">
-        <input v-model="filters.overdue" type="checkbox" /> Solo vencidos
-      </label>
-      <woot-button variant="smooth" size="small" @click="fetch(1)">Aplicar</woot-button>
-      <woot-button variant="clear" size="small" @click="resetFilters">Limpiar</woot-button>
+      <div class="flex flex-col gap-1">
+        <span class="h-5" aria-hidden="true" />
+        <div class="flex items-center gap-3">
+          <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1">
+            <input v-model="filters.overdue" type="checkbox" /> Solo vencidos
+          </label>
+          <woot-button variant="smooth" size="small" @click="fetch(1)">Aplicar</woot-button>
+          <woot-button variant="clear" size="small" @click="resetFilters">Limpiar</woot-button>
+        </div>
+      </div>
     </div>
 
     <!-- Tabla -->

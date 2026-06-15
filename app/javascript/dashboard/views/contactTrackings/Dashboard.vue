@@ -235,8 +235,13 @@ export default {
           <option v-for="s in statusOptions" :key="s" :value="s">{{ statusMeta[s].label }}</option>
         </select>
       </label>
-      <woot-button variant="smooth" size="small" @click="fetchMetrics">Aplicar</woot-button>
-      <woot-button variant="clear" size="small" @click="resetFilters">Limpiar</woot-button>
+      <div class="flex flex-col gap-1">
+        <span class="h-5" aria-hidden="true" />
+        <div class="flex items-center gap-3">
+          <woot-button variant="smooth" size="small" @click="fetchMetrics">Aplicar</woot-button>
+          <woot-button variant="clear" size="small" @click="resetFilters">Limpiar</woot-button>
+        </div>
+      </div>
     </div>
 
     <!-- KPIs -->
