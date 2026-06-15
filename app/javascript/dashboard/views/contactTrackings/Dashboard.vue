@@ -236,7 +236,7 @@ export default {
         </select>
       </label>
       <div class="flex flex-col gap-1">
-        <span class="h-5" aria-hidden="true" />
+        <span class="block h-5" aria-hidden="true" />
         <div class="flex items-center gap-3">
           <woot-button variant="smooth" size="small" @click="fetchMetrics">Aplicar</woot-button>
           <woot-button variant="clear" size="small" @click="resetFilters">Limpiar</woot-button>
