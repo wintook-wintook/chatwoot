@@ -45,6 +45,23 @@ const STATUS_DOT = {
   cancelled: 'bg-slate-400',
 };
 
+// @tickets_cases — Recorrido "Fases + desvíos": espina obligatoria de 5 fases
+// (cada una agrupa sus sub-estados); 'En espera' y 'Escalado' NO son fases de la
+// espina sino desvíos que se dibujan sangrados bajo la fase donde ocurrieron.
+const SPINE = [
+  { key: 'new', dot: 'bg-blue-500', states: ['open', 'classified'] },
+  { key: 'assigned', dot: 'bg-cyan-500', states: ['assigned', 'in_diagnosis'] },
+  { key: 'progress', dot: 'bg-sky-500', states: ['in_progress'] },
+  { key: 'resolved', dot: 'bg-green-500', states: ['resolved', 'validating'] },
+  { key: 'closed', dot: 'bg-slate-500', states: ['closed', 'cancelled'] },
+];
+const DETOUR_KIND = {
+  waiting_on_customer: 'waiting',
+  waiting_on_third_party: 'waiting',
+  waiting_on_internal: 'waiting',
+  escalated: 'escalated',
+};
+
 export default {
   name: 'JourneyView',
   props: {
@@ -84,7 +101,67 @@ export default {
           actor: this.actorName(e),
           at: e.created_at,
           eventType: e.event_type,
+          toLevel: e.payload.to_level, // @tickets_cases 2D — nivel de escalado (N1/N2/N3)
         }));
+    },
+    // @tickets_cases — Recorrido "Fases + desvíos": espina de 5 fases con el
+    // sub-estado realmente alcanzado, y los desvíos (espera/escalado) sangrados
+    // bajo la fase en la que ocurrieron. No se inventan pasos no recorridos.
+    phaseJourney() {
+      if (!this.ticket) return [];
+      const phases = SPINE.map(p => ({
+        key: p.key,
+        dot: p.dot,
+        reached: false,
+        subState: null,
+        meta: null,
+        current: false,
+        detoursAfter: [],
+      }));
+      const steps = [
+        {
+          to: 'open',
+          at: this.ticket.created_at,
+          actor: '',
+          reason: '',
+          isStart: true,
+        },
+        ...this.transitions,
+      ];
+      let curIdx = 0;
+      steps.forEach(s => {
+        const idx = SPINE.findIndex(p => p.states.includes(s.to));
+        if (idx >= 0) {
+          const ph = phases[idx];
+          ph.reached = true;
+          ph.subState = s.to;
+          ph.meta = {
+            at: s.at,
+            actor: s.actor,
+            reason: s.reason,
+            isStart: !!s.isStart,
+          };
+          curIdx = idx;
+        } else if (DETOUR_KIND[s.to]) {
+          phases[curIdx].detoursAfter.push({
+            kind: DETOUR_KIND[s.to],
+            state: s.to,
+            at: s.at,
+            actor: s.actor,
+            reason: s.reason,
+            level: s.toLevel,
+          });
+        }
+      });
+      const cur = this.ticket.status;
+      const curSpine = SPINE.findIndex(p => p.states.includes(cur));
+      if (curSpine >= 0) phases[curSpine].current = true;
+      phases.forEach(ph =>
+        ph.detoursAfter.forEach(d => {
+          d.current = d.state === cur;
+        })
+      );
+      return phases;
     },
     // Nodos del recorrido: creación (open) + cada destino de transición.
     journeyNodes() {
@@ -148,6 +225,15 @@ export default {
     },
     statusLabel(key) {
       return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key;
+    },
+    // @tickets_cases — etiqueta de fase reutilizando las columnas del Tablero
+    phaseLabel(key) {
+      return this.$t(`CASE_TICKETS.KANBAN.COLUMNS.${key}`) || key;
+    },
+    detourBadge(kind) {
+      return kind === 'escalated'
+        ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
     },
     quotedReason(reason) {
       return `«${reason}»`;
@@ -236,59 +322,91 @@ export default {
     </div>
 
     <template v-else>
-      <!-- ── Vista 1: Diagrama de recorrido ─────────────────────── -->
+      <!-- ── Vista 1: Recorrido por fases (espina + desvíos) ─────── -->
       <div v-if="view === 'diagram'" class="relative">
         <!-- Espina vertical continua (detrás de los nodos) -->
         <span
-          v-if="journeyNodes.length > 1"
           class="absolute left-[9px] top-2.5 bottom-3 w-0.5 bg-slate-200 dark:bg-slate-600"
         />
         <div
-          v-for="(node, idx) in journeyNodes"
-          :key="idx"
+          v-for="(ph, idx) in phaseJourney"
+          :key="ph.key"
           class="relative flex gap-4"
-          :class="idx < journeyNodes.length - 1 ? 'pb-5' : ''"
+          :class="idx < phaseJourney.length - 1 ? 'pb-5' : ''"
         >
-          <!-- Nodo (punto con halo que enmascara la espina) -->
+          <!-- Nodo de fase (punto con halo que enmascara la espina) -->
           <span
             class="z-10 flex-shrink-0 w-[18px] h-[18px] mt-1 rounded-full ring-4 ring-white dark:ring-slate-800"
             :class="[
-              statusDot(node.state),
-              node.current ? '!ring-woot-100 dark:!ring-woot-900' : '',
+              ph.reached ? ph.dot : 'bg-slate-200 dark:bg-slate-600',
+              ph.current ? '!ring-woot-100 dark:!ring-woot-900' : '',
             ]"
           >
             <span
-              v-if="node.current"
+              v-if="ph.current"
               class="block w-full h-full rounded-full animate-ping opacity-50"
-              :class="statusDot(node.state)"
+              :class="ph.dot"
             />
           </span>
-          <!-- Contenido del nodo -->
-          <div class="flex-1 min-w-0">
+          <!-- Contenido de la fase -->
+          <div class="flex-1 min-w-0" :class="ph.reached ? '' : 'opacity-40'">
             <div class="flex flex-wrap items-center gap-2">
               <span
                 class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-                >{{ statusLabel(node.state) }}</span
+                >{{ phaseLabel(ph.key) }}</span
               >
               <span
-                v-if="node.current"
+                v-if="ph.reached && ph.subState"
+                class="text-xs text-slate-500 dark:text-slate-400"
+                >→ {{ statusLabel(ph.subState) }}</span
+              >
+              <span
+                v-if="ph.current"
                 class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-woot-100 text-woot-700 dark:bg-woot-800 dark:text-woot-100"
                 >{{ $t('CASE_TICKETS.JOURNEY.CURRENT') }}</span
               >
             </div>
             <p
-              v-if="node.reason"
+              v-if="ph.meta && ph.meta.reason"
               class="m-0 mt-1 text-sm italic text-slate-500 dark:text-slate-400"
             >
-              {{ quotedReason(node.reason) }}
+              {{ quotedReason(ph.meta.reason) }}
             </p>
-            <p class="m-0 mt-1 text-xs text-slate-400 dark:text-slate-500">
-              <template v-if="node.isStart">
+            <p
+              v-if="ph.reached"
+              class="m-0 mt-1 text-xs text-slate-400 dark:text-slate-500"
+            >
+              <template v-if="ph.meta && ph.meta.isStart">
                 {{ $t('CASE_TICKETS.JOURNEY.CREATED') }}
               </template>
-              <template v-else> {{ node.actor }} </template>
-              · {{ formatDate(node.at) }}
+              <template v-else> {{ ph.meta && ph.meta.actor }} </template>
+              · {{ formatDate(ph.meta && ph.meta.at) }}
             </p>
+            <!-- Desvíos (espera / escalado) bajo la fase -->
+            <div
+              v-for="(d, di) in ph.detoursAfter"
+              :key="`detour-${idx}-${di}`"
+              class="flex flex-wrap items-center gap-2 mt-1.5 text-xs"
+            >
+              <span class="text-slate-400 dark:text-slate-500">↳</span>
+              <span
+                class="px-1.5 py-0.5 rounded font-medium"
+                :class="detourBadge(d.kind)"
+              >
+                {{ d.kind === 'escalated' ? '⚠' : '⏸' }}
+                {{ statusLabel(d.state)
+                }}<template v-if="d.level != null">
+                  · N{{ d.level + 1 }}</template>
+              </span>
+              <span class="text-slate-400 dark:text-slate-500">
+                {{
+                  d.current
+                    ? $t('CASE_TICKETS.JOURNEY.CURRENTLY')
+                    : $t('CASE_TICKETS.JOURNEY.RETURNED')
+                }}
+                · {{ formatDate(d.at) }}
+              </span>
+            </div>
           </div>
         </div>
       </div>

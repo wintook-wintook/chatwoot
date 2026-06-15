@@ -336,6 +336,7 @@
       "CURRENT": "Current",
       "CREATED": "Created",
       "CURRENTLY": "Currently",
+      "RETURNED": "Returned",
       "VIEWS": {
         "diagram": "Journey",
         "timeline": "History",
