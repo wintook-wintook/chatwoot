@@ -266,7 +266,7 @@ export default {
     <!-- Donut por estado -->
     <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
       <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Seguimientos por estado</p>
-      <div v-if="hasStatusData" class="h-64">
+      <div v-if="hasStatusData" class="chart-box h-64">
         <DoughnutChart :collection="statusChartData" />
       </div>
       <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos todavía.</p>
@@ -276,14 +276,14 @@ export default {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
         <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Por canal</p>
-        <div v-if="hasInboxData" class="h-56">
+        <div v-if="hasInboxData" class="chart-box h-56">
           <HorizontalBarChart :collection="inboxChartData" :chart-options="inboxChartOptions" />
         </div>
         <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos.</p>
       </div>
       <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
         <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Por Agente IA (total vs éxito)</p>
-        <div v-if="hasTemplateData" class="h-56">
+        <div v-if="hasTemplateData" class="chart-box h-56">
           <BarChart :collection="templateChartData" />
         </div>
         <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos.</p>
@@ -312,7 +312,7 @@ export default {
     <!-- Serie temporal -->
     <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
       <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Creados vs Completados (por día)</p>
-      <div v-if="hasTimeseries" class="h-56">
+      <div v-if="hasTimeseries" class="chart-box h-56">
         <BarChart :collection="timeseriesChartData" />
       </div>
       <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos en el rango.</p>
@@ -374,3 +374,15 @@ export default {
     </div>
   </div>
 </template>
+
+<style lang="scss" scoped>
+// vue-chartjs envuelve el canvas en un div propio sin altura → chart.js cae a su
+// default de 400px (gráficos gigantes que se solapan). Fijamos la altura en el
+// wrapper (.chart-box + h-XX de Tailwind) y forzamos ese div interno a 100%.
+.chart-box {
+  ::v-deep > div {
+    position: relative;
+    height: 100% !important;
+  }
+}
+</style>
