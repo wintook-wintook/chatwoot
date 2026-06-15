@@ -9,6 +9,7 @@ import primaryMenu from './sidebarItems/primaryMenu';
 import kanban from './sidebarItems/kanban'; // Añade esta línea
 // KANBAN0725
 import gestorTickets from './sidebarItems/gestorTickets'; // @tickets_cases
+import contactTrackings from './sidebarItems/contactTrackings'; // proyecto@contact_tracking
 
 export const getSidebarItems = accountId => ({
   primaryMenu: primaryMenu(accountId),
@@ -23,5 +24,6 @@ export const getSidebarItems = accountId => ({
     kanban(accountId),
     // KANBAN0725
     gestorTickets(accountId), // @tickets_cases
+    contactTrackings(accountId), // proyecto@contact_tracking
   ],
 });
