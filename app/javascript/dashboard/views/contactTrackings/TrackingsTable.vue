@@ -194,7 +194,7 @@ export default {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col flex-1 min-h-0 gap-4">
     <!-- Barra de filtros: búsqueda + botón modal + chips activos -->
     <div class="flex flex-col gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
       <div class="flex items-center gap-3">
@@ -287,14 +287,13 @@ export default {
       </div>
     </woot-modal>
 
-    <!-- Tabla -->
-    <div class="rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 overflow-x-auto">
+    <!-- Tabla: ocupa el alto disponible y scrollea; el footer queda al fondo del panel -->
+    <div class="flex-1 min-h-0 overflow-auto rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
       <table class="w-full text-sm">
         <thead>
           <tr class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
             <th class="p-3">Contacto</th>
             <th class="p-3">Estado</th>
-            <th class="p-3">Intención / Resultado</th>
             <th class="p-3">Objetivo</th>
             <th class="p-3">Programado</th>
             <th class="p-3">Canal</th>
@@ -310,9 +309,6 @@ export default {
           >
             <td class="p-3 text-slate-700 dark:text-slate-200">{{ row.contact_name || '—' }}</td>
             <td class="p-3 font-medium" :class="statusColor(row.status)">{{ statusLabel(row.status) }}</td>
-            <td class="p-3 text-slate-500 dark:text-slate-400">
-              {{ row.last_intent || '—' }}<span v-if="row.outcome"> · {{ row.outcome }}</span>
-            </td>
             <td class="p-3 text-slate-600 dark:text-slate-300 truncate max-w-[16rem]">{{ row.objective }}</td>
             <td class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ formatDate(row.scheduled_for) }}</td>
             <td class="p-3 text-slate-500 dark:text-slate-400">{{ row.inbox_name || '—' }}</td>
@@ -396,7 +392,7 @@ export default {
             </td>
           </tr>
           <tr v-if="!rows.length && !flags.isFetching">
-            <td colspan="8" class="p-6 text-center text-slate-400">Sin seguimientos con esos filtros.</td>
+            <td colspan="7" class="p-6 text-center text-slate-400">Sin seguimientos con esos filtros.</td>
           </tr>
         </tbody>
       </table>
