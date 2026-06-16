@@ -6,33 +6,37 @@ tags: [ai-agent-attachments, pendiente]
 
 # Pendiente
 
-## Decisiones por confirmar
+## Decisiones (confirmadas)
 
-- [ ] **Modelo de datos:** Opción A (tabla `ai_agent_attachments` + `name`) vs Opción B
-      (`has_many_attached :ai_files`). Recomendada **A**. → [[Modelo-de-datos]]
-- [ ] **Punto de intercepción** de `@adjunto:nombre`: job de envío vs servicio de
-      respuesta. → [[Directiva-y-envio]]
-- [ ] **Límite de adjuntos por mensaje** y validación de tipo/peso por canal (WhatsApp).
+- [x] **Modelo de datos:** Opción A (tabla `ai_agent_attachments` + `name`). → [[Modelo-de-datos]]
+- [x] **Punto de intercepción** de `@adjunto:nombre`: job de envío
+      (`resolve_attachment_directives`). → [[Directiva-y-envio]]
+- [x] **Límite de adjuntos por mensaje**: `MAX_DIRECTIVE_ATTACHMENTS=5`.
+- [ ] **Validación de tipo/peso por canal** (WhatsApp): aún pendiente.
 
 ## Backend
 
 - [x] Migración `create_ai_agent_attachments` (migrada).
 - [x] Modelo `AiAgentAttachment` + asociación en `TrackingTemplate`.
 - [x] Controlador CRUD de adjuntos + rutas anidadas.
-- [ ] Parser de `@adjunto:nombre` + adjuntar blob al mensaje saliente.
+- [x] Parser de `@adjunto:nombre` + adjuntar blob al mensaje saliente
+      (`resolve_attachment_directives` + reuso de `signed_id`).
 
 ## Frontend
 
 - [x] Tab "📎 Archivos" en `EditTemplate.vue` (índice dinámico `agendasTabIndex + 1`).
-- [x] Subir / listar / borrar + snippet copiable `@adjunto:nombre`.
-- [x] **Autocompletado `@adjunto:`** en el textarea del prompt complementario,
-      reutilizando `MentionBox.vue` + `useKeyboardNavigableList`. → [[Frontend]]
+- [x] Subir / listar (scroll, ~3 visibles) / borrar + snippet copiable `@adjunto:nombre`.
+- [x] **Selector de adjuntos** en modal que inserta `@adjunto:nombre` en el cursor
+      (reemplaza el autocompletado con `MentionBox`). → [[Frontend]]
+- [x] **Selector de directivas** en modal (`@buscar_*`, `@discourse`, `@agendar_calendar`,
+      `@crear_ticket`); `@buscar_foro` ofrece las fuentes Discourse existentes.
+- [x] Área de subida en una línea con botón estilo Chatwoot y "Subir archivo".
 - [x] i18n `es`/`en` bajo `TRACKING_TEMPLATES.FORM.ATTACHMENTS.*`.
-- [ ] **Renombrar** adjunto en la UI (la API `rename` ya existe).
-- [ ] Verificar corriendo la app (subir → autocompletar → guardar prompt).
+- [x] **Renombrar** adjunto en la UI (inline, usando la API `rename`).
+- [ ] Verificar corriendo la app el flujo UI (subir → insertar directiva → guardar prompt).
 
 ## Calidad
 
-- [ ] Specs de modelo (unicidad de `name`), request specs del controlador.
+- [x] Specs de modelo (unicidad de `name`) + request specs del controlador + spec del job.
 - [ ] Caso de testeo funcional (subir archivo → directiva → envío en conversación).
 - [ ] Verificar límites del canal WhatsApp con un envío real.

@@ -15,11 +15,12 @@ import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 // proyecto@ai_agent_attachments
-import MentionBox from 'dashboard/components/widgets/mentions/MentionBox.vue';
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
+// @knowledge_sources: fuentes Discourse para la directiva @buscar_foro
+import KnowledgeSourcesAPI from 'dashboard/routes/dashboard/settings/knowledgeSources/api';
 
 export default {
-  components: { KeywordActionsEditor, MentionBox },
+  components: { KeywordActionsEditor },
 
   props: {
     templateData: {
@@ -61,7 +62,6 @@ export default {
       showValidationModal: false,
       // WhatsApp / Inbox
       selectedInboxId: null,
-      selectedKbaseHookId: null,
       maxAttempts: 3,
       availableWATemplates: [],
       isLoadingWATemplates: false,
@@ -73,15 +73,26 @@ export default {
       attachmentName: '',
       attachmentFile: null,
       attachmentError: '',
-      // autocompletado @adjunto: en el textarea de Entrenamiento
-      showAttachmentMentions: false,
-      attachmentQuery: '',
+      // renombrado inline de un adjunto
+      editingAttachmentId: null,
+      editingAttachmentName: '',
+      renameError: '',
+      // selector de archivos para insertar @adjunto:nombre en el Entrenamiento
+      showAttachmentPicker: false,
+      // selector de directivas para insertar @buscar_..., @discourse, etc.
+      showDirectivePicker: false,
+      // 'inline' | 'modal': textarea donde se insertará + posición del cursor
+      pickerTarget: 'inline',
+      pickerInsertPos: null,
+      // fuentes Discourse de la cuenta (para la directiva @buscar_foro)
+      discourseSources: [],
     };
   },
   computed: {
     ...mapGetters({
       appIntegrations: 'integrations/getAppIntegrations',
       inboxes: 'inboxes/getInboxes',
+      accountId: 'getCurrentAccountId',
     }),
     isCreateMode() {
       return this.mode === 'create';
@@ -194,17 +205,47 @@ export default {
     archivosTabIndex() {
       return this.agendasTabIndex + 1;
     },
-    // Adjuntos filtrados por lo escrito tras "@adjunto:" (slug del name)
-    filteredAttachmentMentions() {
-      const q = (this.attachmentQuery || '').toLowerCase();
-      return this.attachments
-        .filter(a => !q || a.name.toLowerCase().includes(q))
-        .map(a => ({
-          key: a.id,
-          name: a.name,
-          description: a.name,
-          filename: a.filename,
-        }));
+    // proyecto@contact_tracking: catálogo de directivas del Entrenamiento.
+    // @buscar_foro se expande en una opción por cada fuente Discourse existente.
+    directiveCatalog() {
+      const items = [
+        {
+          token: '@buscar_predefinidas',
+          label: 'Responde con tus Respuestas predefinidas (búsqueda semántica).',
+        },
+        {
+          token: '@buscar_articulo',
+          label: 'Responde con los artículos del Centro de Ayuda.',
+        },
+      ];
+      if (this.discourseSources.length) {
+        this.discourseSources.forEach(source => {
+          items.push({
+            token: `@buscar_foro(${source.name})`,
+            label: `Busca en la fuente Discourse «${source.name}».`,
+          });
+        });
+      } else {
+        items.push({
+          token: '@buscar_foro(nombre_fuente)',
+          label: 'Busca en una fuente Discourse. Reemplaza «nombre_fuente».',
+        });
+      }
+      items.push(
+        {
+          token: '@discourse',
+          label: 'Busca en el Discourse conectado al canal.',
+        },
+        {
+          token: '@agendar_calendar',
+          label: 'Permite agendar una cita en Google Calendar.',
+        },
+        {
+          token: '@crear_ticket',
+          label: 'Crea un ticket automáticamente.',
+        }
+      );
+      return items;
     },
     validationErrors() {
       const errors = [];
@@ -215,14 +256,6 @@ export default {
       if (!this.isInboxValid) errors.push('Debes seleccionar un Canal (Inbox).');
       if (!this.isWhatsappTemplatesValid) errors.push('Todos los intentos de WhatsApp deben tener una plantilla asignada.');
       return errors;
-    },
-    discourseHooks() {
-      const apps = this.appIntegrations || [];
-      const app = apps.find(a => a.id === 'discourse');
-      if (!app) return [];
-      return (app.hooks || [])
-        .filter(h => h.status === true)
-        .map(h => ({ id: h.id, name: h.settings?.url || `Discourse #${h.id}` }));
     },
   },
   watch: {
@@ -260,9 +293,6 @@ export default {
           if (val.inbox_id) {
             this.selectedInboxId = val.inbox_id;
           }
-          if (val.kbase_hook_id) {
-            this.selectedKbaseHookId = val.kbase_hook_id;
-          }
         }
         // Reset AI state
         this.activeContextTab = 0;
@@ -270,7 +300,8 @@ export default {
         this.originalComplementaryPrompt = null;
         // proyecto@ai_agent_attachments: cargar adjuntos del agente (solo en edición)
         this.attachments = [];
-        this.closeAttachmentMentions();
+        this.showAttachmentPicker = false;
+        this.showDirectivePicker = false;
         if (val && val.id) {
           this.loadAttachments();
         }
@@ -319,6 +350,7 @@ export default {
       this.loadWATemplates();
     }
     this.loadCalendarIntegrations();
+    this.loadDiscourseSources();
   },
   methods: {
     onCancel() {
@@ -343,7 +375,6 @@ export default {
           retry_interval_value: this.form.retry_interval_value, // proyecto@automatizacion_tracking
           retry_interval_unit: this.form.retry_interval_unit,   // proyecto@automatizacion_tracking
           keyword_actions: this.form.keyword_actions || [],      // proyecto@contact_tracking
-          kbase_hook_id: this.selectedKbaseHookId || null,
           calendar_integration_ids: this.form.calendar_integration_ids || [],
           calendar_event_duration: this.form.calendar_event_duration || 30,
         },
@@ -484,6 +515,18 @@ export default {
         this.isLoadingAttachments = false;
       }
     },
+    // @knowledge_sources: fuentes Discourse activas para @buscar_foro(nombre)
+    async loadDiscourseSources() {
+      if (!this.accountId) return;
+      try {
+        const { data } = await KnowledgeSourcesAPI.getSources(this.accountId);
+        this.discourseSources = (data || []).filter(
+          s => s.source_type === 'discourse' && s.status === 'active'
+        );
+      } catch (e) {
+        this.discourseSources = [];
+      }
+    },
     onAttachmentFileChange(event) {
       const file = event.target.files && event.target.files[0];
       this.attachmentFile = file || null;
@@ -546,34 +589,72 @@ export default {
         navigator.clipboard.writeText(token);
       }
     },
-    // ── Autocompletado @adjunto: en el textarea de Entrenamiento ──────────────────
-    onComplementaryInput(event) {
-      if (!this.attachments.length) {
-        this.closeAttachmentMentions();
+    startRenameAttachment(attachment) {
+      this.renameError = '';
+      this.editingAttachmentId = attachment.id;
+      this.editingAttachmentName = attachment.name;
+    },
+    cancelRenameAttachment() {
+      this.editingAttachmentId = null;
+      this.editingAttachmentName = '';
+      this.renameError = '';
+    },
+    async saveRenameAttachment(attachment) {
+      const name = (this.editingAttachmentName || '').trim();
+      this.renameError = '';
+      if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+        this.renameError = this.$t(
+          'TRACKING_TEMPLATES.FORM.ATTACHMENTS.INVALID_NAME'
+        );
         return;
       }
-      const pos = event.target.selectionStart;
-      const before = this.form.complementary_prompt.slice(0, pos);
-      const match = before.match(/@adjunto:([a-zA-Z0-9_-]*)$/);
-      if (match) {
-        this.attachmentQuery = match[1];
-        this.showAttachmentMentions = true;
-      } else {
-        this.closeAttachmentMentions();
+      if (name === attachment.name) {
+        this.cancelRenameAttachment();
+        return;
+      }
+      try {
+        const { data } = await AiAgentAttachmentsAPI.rename(
+          this.form.id,
+          attachment.id,
+          name
+        );
+        const updated = data || { ...attachment, name };
+        this.attachments = this.attachments.map(a =>
+          a.id === attachment.id ? { ...a, ...updated } : a
+        );
+        this.cancelRenameAttachment();
+      } catch (e) {
+        this.renameError = this.$t(
+          'TRACKING_TEMPLATES.FORM.ATTACHMENTS.RENAME_ERROR'
+        );
       }
     },
-    insertAttachmentMention(item) {
-      const textarea = this.$refs.complementaryTextarea;
-      const pos = textarea ? textarea.selectionStart : this.form.complementary_prompt.length;
-      const before = this.form.complementary_prompt.slice(0, pos);
-      const after = this.form.complementary_prompt.slice(pos);
-      const newBefore = before.replace(
-        /@adjunto:[a-zA-Z0-9_-]*$/,
-        `@adjunto:${item.name} `
-      );
+    // ── Selectores: insertar tokens (@adjunto:, @buscar_..., etc.) en el Entrenamiento ──
+    // Recuerda el textarea activo y la posición del cursor antes de abrir un modal
+    rememberInsertPos(target) {
+      this.pickerTarget = target;
+      const textarea =
+        target === 'modal'
+          ? this.$refs.complementaryModalTextarea
+          : this.$refs.complementaryTextarea;
+      this.pickerInsertPos = textarea
+        ? textarea.selectionStart
+        : (this.form.complementary_prompt || '').length;
+    },
+    // Inserta un token aislado por espacios en la posición recordada
+    insertTokenAtPrompt(rawToken) {
+      const text = this.form.complementary_prompt || '';
+      const pos = this.pickerInsertPos == null ? text.length : this.pickerInsertPos;
+      const before = text.slice(0, pos);
+      const after = text.slice(pos);
+      const needsSpaceBefore = before.length && !/\s$/.test(before);
+      const newBefore = `${before}${needsSpaceBefore ? ' ' : ''}${rawToken} `;
       this.form.complementary_prompt = newBefore + after;
-      this.closeAttachmentMentions();
       this.$nextTick(() => {
+        const textarea =
+          this.pickerTarget === 'modal'
+            ? this.$refs.complementaryModalTextarea
+            : this.$refs.complementaryTextarea;
         if (textarea) {
           const caret = newBefore.length;
           textarea.focus();
@@ -581,13 +662,27 @@ export default {
         }
       });
     },
-    closeAttachmentMentions() {
-      this.showAttachmentMentions = false;
-      this.attachmentQuery = '';
+    openAttachmentPicker(target = 'inline') {
+      this.rememberInsertPos(target);
+      this.showAttachmentPicker = true;
     },
-    // Retrasar el cierre para que el click en un ítem del dropdown se procese antes del blur
-    onComplementaryBlur() {
-      setTimeout(() => this.closeAttachmentMentions(), 150);
+    closeAttachmentPicker() {
+      this.showAttachmentPicker = false;
+    },
+    insertAttachmentDirective(attachment) {
+      this.showAttachmentPicker = false;
+      this.insertTokenAtPrompt(`@adjunto:${attachment.name}`);
+    },
+    openDirectivePicker(target = 'inline') {
+      this.rememberInsertPos(target);
+      this.showDirectivePicker = true;
+    },
+    closeDirectivePicker() {
+      this.showDirectivePicker = false;
+    },
+    insertDirective(directive) {
+      this.showDirectivePicker = false;
+      this.insertTokenAtPrompt(directive.token);
     },
   },
 };
@@ -675,22 +770,6 @@ export default {
             </option>
           </select>
         </label>
-        <label class="flex-1">
-          <span class="text-xs font-medium text-slate-600 dark:text-slate-400">Base de Conocimiento</span>
-          <select
-            v-model="selectedKbaseHookId"
-            class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-          >
-            <option :value="null">— Sin base de conocimiento —</option>
-            <option
-              v-for="hook in discourseHooks"
-              :key="hook.id"
-              :value="hook.id"
-            >
-              {{ hook.name }}
-            </option>
-          </select>
-        </label>
       </div>
 
       <!-- Contexto IA y Prompt Complementario (en tabs) -->
@@ -708,15 +787,37 @@ export default {
             <woot-tabs-item name="📅  Agendas" :show-badge="false" />
             <woot-tabs-item name="📎  Archivos" :show-badge="false" />
           </woot-tabs>
-          <a
-            v-if="activeContextTab === 0 || activeContextTab === 1"
-            href="#"
-            class="text-slate-400 hover:text-woot-500 dark:text-slate-500 dark:hover:text-woot-400 pb-2 pl-2"
-            title="Expandir editor"
-            @click.prevent="activeContextTab === 0 ? showAiContextModal = true : showPromptModal = true"
-          >
-            <fluent-icon icon="arrow-expand" size="18" />
-          </a>
+          <div class="flex items-center gap-2 pb-2 pl-2 shrink-0">
+            <!-- proyecto@contact_tracking: insertar directiva (@buscar_..., @discourse, etc.) -->
+            <a
+              v-if="activeContextTab === 1"
+              href="#"
+              class="text-woot-500 hover:text-woot-600 dark:text-woot-400 dark:hover:text-woot-300"
+              title="Insertar directiva"
+              @click.prevent="openDirectivePicker('inline')"
+            >
+              <fluent-icon icon="code" size="18" />
+            </a>
+            <!-- proyecto@ai_agent_attachments: insertar @adjunto:nombre desde un selector -->
+            <a
+              v-if="activeContextTab === 1 && attachments.length"
+              href="#"
+              class="text-green-500 hover:text-green-600 dark:text-green-400 dark:hover:text-green-300"
+              :title="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.INSERT_BTN')"
+              @click.prevent="openAttachmentPicker('inline')"
+            >
+              <fluent-icon icon="attach" size="18" />
+            </a>
+            <a
+              v-if="activeContextTab === 0 || activeContextTab === 1"
+              href="#"
+              class="text-slate-400 hover:text-woot-500 dark:text-slate-500 dark:hover:text-woot-400"
+              title="Expandir editor"
+              @click.prevent="activeContextTab === 0 ? showAiContextModal = true : showPromptModal = true"
+            >
+              <fluent-icon icon="arrow-expand" size="18" />
+            </a>
+          </div>
         </div>
 
         <!-- Tab 0: Contexto IA -->
@@ -758,35 +859,13 @@ export default {
 
         <!-- Tab 1: Entrenamiento -->
         <div v-show="activeContextTab === 1" class="mt-2">
-          <!-- proyecto@ai_agent_attachments: contenedor relativo para el dropdown @adjunto: -->
-          <div class="relative">
-            <textarea
-              ref="complementaryTextarea"
-              v-model="form.complementary_prompt"
-              rows="10"
-              :placeholder="$t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')"
-              class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
-              @input="onComplementaryInput"
-              @click="onComplementaryInput"
-              @keyup="onComplementaryInput"
-              @keydown.esc="closeAttachmentMentions"
-              @blur="onComplementaryBlur"
-            />
-            <mention-box
-              v-if="showAttachmentMentions && filteredAttachmentMentions.length"
-              :items="filteredAttachmentMentions"
-              @mention-select="insertAttachmentMention"
-            >
-              <template #default="{ item }">
-                <p class="max-w-full min-w-0 mb-0 overflow-hidden text-sm font-medium text-slate-900 dark:text-slate-100 text-ellipsis whitespace-nowrap">
-                  @adjunto:{{ item.name }}
-                </p>
-                <p class="max-w-full min-w-0 mb-0 overflow-hidden text-xs text-slate-500 dark:text-slate-300 text-ellipsis whitespace-nowrap">
-                  {{ item.filename }}
-                </p>
-              </template>
-            </mention-box>
-          </div>
+          <textarea
+            ref="complementaryTextarea"
+            v-model="form.complementary_prompt"
+            rows="10"
+            :placeholder="$t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')"
+            class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+          />
           <div class="flex justify-between items-center mt-1">
             <span class="text-xs text-slate-500 dark:text-slate-400">
               Este prompt se usa cuando el cliente hace preguntas relacionadas con el seguimiento
@@ -979,32 +1058,43 @@ export default {
 
           <template v-else>
             <!-- Subir archivo -->
-            <div class="flex flex-wrap items-end gap-2 mb-3">
-              <label class="flex-1 min-w-[160px]">
-                <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
-                  {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.NAME_LABEL') }}
-                </span>
+            <div class="mb-3">
+              <span class="block text-xs font-medium text-slate-600 dark:text-slate-400">
+                {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.NAME_LABEL') }}
+              </span>
+              <div class="flex items-center gap-2 mt-1">
                 <input
                   v-model="attachmentName"
                   type="text"
                   :placeholder="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.NAME_PLACEHOLDER')"
-                  class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                  class="flex-1 min-w-0 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
                 />
-              </label>
-              <input
-                ref="attachmentFileInput"
-                type="file"
-                class="text-sm text-slate-600 dark:text-slate-300 max-w-[220px]"
-                @change="onAttachmentFileChange"
-              />
-              <woot-button
-                size="small"
-                :is-loading="isUploadingAttachment"
-                :disabled="isUploadingAttachment"
-                @click.prevent="uploadAttachment"
-              >
-                {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.UPLOAD') }}
-              </woot-button>
+                <!-- input nativo oculto: el filename largo no se muestra -->
+                <input
+                  ref="attachmentFileInput"
+                  type="file"
+                  class="hidden"
+                  @change="onAttachmentFileChange"
+                />
+                <woot-button
+                  color-scheme="success"
+                  size="small"
+                  class="shrink-0 upload-ctl-btn"
+                  :icon="attachmentFile ? 'checkmark' : 'attach'"
+                  @click.prevent="$refs.attachmentFileInput.click()"
+                >
+                  {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.SELECT_FILE') }}
+                </woot-button>
+                <woot-button
+                  size="small"
+                  class="shrink-0 upload-ctl-btn min-w-[96px] justify-center"
+                  :is-loading="isUploadingAttachment"
+                  :is-disabled="isUploadingAttachment || !attachmentFile"
+                  @click.prevent="uploadAttachment"
+                >
+                  {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.UPLOAD') }}
+                </woot-button>
+              </div>
             </div>
             <p v-if="attachmentError" class="text-xs text-red-500 mb-2">
               {{ attachmentError }}
@@ -1020,36 +1110,76 @@ export default {
             >
               {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.EMPTY') }}
             </div>
-            <ul v-else class="space-y-2">
+            <ul v-else class="space-y-2 max-h-[208px] overflow-y-auto pr-1">
               <li
                 v-for="att in attachments"
                 :key="att.id"
                 class="flex items-center gap-3 p-2.5 rounded-md border border-slate-200 dark:border-slate-600"
               >
                 <fluent-icon icon="document" size="18" class="text-slate-400 shrink-0" />
-                <div class="flex flex-col min-w-0 flex-1">
-                  <code class="text-xs font-semibold text-woot-600 dark:text-woot-400">
-                    @adjunto:{{ att.name }}
-                  </code>
-                  <span class="text-xs text-slate-500 dark:text-slate-400 truncate">
-                    {{ att.filename }}
-                  </span>
-                </div>
-                <a
-                  href="#"
-                  class="text-xs text-slate-500 hover:text-woot-500"
-                  :title="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.COPY')"
-                  @click.prevent="copyDirective(att)"
-                >
-                  {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.COPY') }}
-                </a>
-                <a
-                  href="#"
-                  class="text-xs text-red-500 hover:text-red-600"
-                  @click.prevent="deleteAttachment(att)"
-                >
-                  {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.DELETE') }}
-                </a>
+                <!-- Modo renombrar -->
+                <template v-if="editingAttachmentId === att.id">
+                  <div class="flex flex-col min-w-0 flex-1 gap-1">
+                    <div class="flex items-center gap-1">
+                      <span class="text-xs text-slate-400 shrink-0">@adjunto:</span>
+                      <input
+                        v-model="editingAttachmentName"
+                        type="text"
+                        class="reset-base box-border w-full h-8 m-0 text-xs rounded border border-solid border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-2 outline-none focus:border-woot-500"
+                        @keyup.enter="saveRenameAttachment(att)"
+                        @keyup.esc="cancelRenameAttachment"
+                      />
+                    </div>
+                    <span v-if="renameError" class="text-xs text-red-500">{{ renameError }}</span>
+                  </div>
+                  <a
+                    href="#"
+                    class="text-xs text-woot-500 hover:text-woot-600"
+                    @click.prevent="saveRenameAttachment(att)"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.RENAME_SAVE') }}
+                  </a>
+                  <a
+                    href="#"
+                    class="text-xs text-slate-500 hover:text-slate-600"
+                    @click.prevent="cancelRenameAttachment"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.RENAME_CANCEL') }}
+                  </a>
+                </template>
+                <!-- Modo normal -->
+                <template v-else>
+                  <div class="flex flex-col min-w-0 flex-1">
+                    <code class="text-xs font-semibold text-woot-600 dark:text-woot-400">
+                      @adjunto:{{ att.name }}
+                    </code>
+                    <span class="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {{ att.filename }}
+                    </span>
+                  </div>
+                  <a
+                    href="#"
+                    class="text-xs text-slate-500 hover:text-woot-500"
+                    :title="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.COPY')"
+                    @click.prevent="copyDirective(att)"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.COPY') }}
+                  </a>
+                  <a
+                    href="#"
+                    class="text-xs text-slate-500 hover:text-woot-500"
+                    @click.prevent="startRenameAttachment(att)"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.RENAME') }}
+                  </a>
+                  <a
+                    href="#"
+                    class="text-xs text-red-500 hover:text-red-600"
+                    @click.prevent="deleteAttachment(att)"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.DELETE') }}
+                  </a>
+                </template>
               </li>
             </ul>
           </template>
@@ -1124,9 +1254,30 @@ export default {
         header-content="Instrucciones adicionales para responder preguntas del cliente sobre este Agente IA."
       />
       <div class="px-8 pb-6 flex flex-col gap-3">
+        <!-- selectores de tokens: directiva (@buscar_...) y adjunto (@adjunto:) -->
+        <div class="flex items-center gap-2 justify-start">
+          <a
+            href="#"
+            class="text-woot-500 hover:text-woot-600 dark:text-woot-400 dark:hover:text-woot-300"
+            title="Insertar directiva"
+            @click.prevent="openDirectivePicker('modal')"
+          >
+            <fluent-icon icon="code" size="18" />
+          </a>
+          <a
+            v-if="attachments.length"
+            href="#"
+            class="text-green-500 hover:text-green-600 dark:text-green-400 dark:hover:text-green-300"
+            :title="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.INSERT_BTN')"
+            @click.prevent="openAttachmentPicker('modal')"
+          >
+            <fluent-icon icon="attach" size="18" />
+          </a>
+        </div>
         <textarea
+          ref="complementaryModalTextarea"
           v-model="form.complementary_prompt"
-          rows="20"
+          rows="12"
           :placeholder="$t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')"
           class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
         />
@@ -1135,6 +1286,64 @@ export default {
             Listo
           </woot-button>
         </div>
+      </div>
+    </woot-modal>
+
+    <!-- proyecto@ai_agent_attachments: selector de archivos para insertar @adjunto:nombre -->
+    <woot-modal :show="showAttachmentPicker" :on-close="closeAttachmentPicker" size="medium">
+      <woot-modal-header
+        :header-title="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.PICKER_TITLE')"
+        :header-content="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.PICKER_HELP')"
+      />
+      <div class="px-8 pb-6">
+        <ul class="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+          <li v-for="att in attachments" :key="att.id">
+            <button
+              type="button"
+              class="w-full flex items-center justify-between gap-3 text-left rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 hover:border-woot-500 hover:bg-woot-25 dark:hover:bg-slate-800 transition-colors"
+              @click="insertAttachmentDirective(att)"
+            >
+              <span class="min-w-0">
+                <span class="block text-sm font-medium text-woot-600 dark:text-woot-400 truncate">
+                  @adjunto:{{ att.name }}
+                </span>
+                <span class="block text-xs text-slate-500 dark:text-slate-400 truncate">
+                  {{ att.filename }}
+                </span>
+              </span>
+              <fluent-icon icon="add" size="16" class="shrink-0 text-slate-400" />
+            </button>
+          </li>
+        </ul>
+      </div>
+    </woot-modal>
+
+    <!-- proyecto@contact_tracking: selector de directivas para el Entrenamiento -->
+    <woot-modal :show="showDirectivePicker" :on-close="closeDirectivePicker" size="medium">
+      <woot-modal-header
+        header-title="⚡ Insertar directiva"
+        header-content="Haz clic en una directiva para insertarla en el Entrenamiento. El bot la ejecutará al responder."
+      />
+      <div class="px-8 pb-6">
+        <ul class="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+          <li v-for="dir in directiveCatalog" :key="dir.token">
+            <button
+              type="button"
+              class="w-full flex items-center justify-between gap-3 text-left rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 hover:border-woot-500 hover:bg-woot-25 dark:hover:bg-slate-800 transition-colors"
+              @click="insertDirective(dir)"
+            >
+              <span class="min-w-0">
+                <span class="block text-sm font-medium text-woot-600 dark:text-woot-400 truncate">
+                  {{ dir.token }}
+                </span>
+                <span class="block text-xs text-slate-500 dark:text-slate-400">
+                  {{ dir.label }}
+                </span>
+              </span>
+              <fluent-icon icon="add" size="16" class="shrink-0 text-slate-400" />
+            </button>
+          </li>
+        </ul>
       </div>
     </woot-modal>
   </div>
@@ -1151,5 +1360,11 @@ input,
 textarea {
   height: auto !important;
   font-size: 14px !important;
+}
+
+/* proyecto@ai_agent_attachments: botones de subida a la misma altura que el input */
+.upload-ctl-btn {
+  height: 38px !important;
+  margin-bottom: 12px;
 }
 </style>
