@@ -3,7 +3,11 @@ import { frontendURL } from '../../../../helper/URLHelper';
 
 const contactTrackings = accountId => ({
   parentNav: 'contactTrackingsDashboard',
-  routes: ['contact_trackings_dashboard', 'contact_trackings_metrics'],
+  routes: [
+    'contact_trackings_dashboard',
+    'contact_trackings_agents',
+    'contact_trackings_metrics',
+  ],
   menuItems: [
     {
       icon: 'list',
@@ -11,6 +15,13 @@ const contactTrackings = accountId => ({
       hasSubMenu: false,
       toState: frontendURL(`accounts/${accountId}/tracking-dashboard`),
       toStateName: 'contact_trackings_dashboard',
+    },
+    {
+      icon: 'bot',
+      label: 'TRACKING_AGENTS',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/tracking-dashboard/agents`),
+      toStateName: 'contact_trackings_agents',
     },
     {
       icon: 'arrow-trending-lines',
