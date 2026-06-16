@@ -498,7 +498,7 @@ origin: { bot: 0, agent: 1, system: 2 }</code></pre>
     <div class="table-wrap">
       <table>
         <tr><th>Directiva</th><th>Quién la lee</th><th>Servicio</th><th>Qué hace</th></tr>
-        <tr><td><code>@buscar_predeterminadas</code></td><td>Código (regex)</td><td><code>KnowledgeBaseResponseService</code></td><td>Busca en pgvector</td></tr>
+        <tr><td><code>@buscar_predefinidas</code></td><td>Código (regex)</td><td><code>KnowledgeBaseResponseService</code></td><td>Busca en pgvector</td></tr>
         <tr><td><code>@buscar_foro(nombre)</code></td><td>Código (regex)</td><td><code>KnowledgeBaseResponseService</code></td><td>Busca en Discourse API</td></tr>
         <tr><td><code>@crear_ticket</code></td><td>Código (regex)</td><td><code>Cases::TicketCreatorService</code></td><td>Crea CaseTicket si KBase no resolvió</td></tr>
         <tr><td>Texto libre</td><td>IA (GPT)</td><td>—</td><td>Contexto, tono, instrucciones de comportamiento</td></tr>
@@ -518,7 +518,7 @@ Usa @crear_ticket para registrar el caso y avisa al cliente que un asesor lo ate
 flowchart LR
     MSG([📨 Mensaje recibido]) --> KB
 
-    KB{{"[1] KnowledgeBase\n@buscar_predeterminadas\n@buscar_foro(nombre)"}}
+    KB{{"[1] KnowledgeBase\n@buscar_predefinidas\n@buscar_foro(nombre)"}}
     KB -- ✅ Resuelve --> R1([Responde al cliente\nFIN])
     KB -- ❌ No resuelve --> TC
 

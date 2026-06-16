@@ -39,18 +39,25 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
 
   # GET /api/v1/accounts/:account_id/knowledge_base/sources
   def sources
-    current_account.knowledge_sources.find_or_create_by(source_type: 'canned_response') do |s|
-      s.name = 'Respuestas Predefinidas'
-      s.status = 'active'
+    ensure_default_sources
+    # Orden: Respuestas predefinidas → Centro de Ayuda → resto (Discourse, etc.)
+    order = Arel.sql(
+      "CASE source_type WHEN 'canned_response' THEN 0 WHEN 'article' THEN 1 ELSE 2 END, created_at"
+    )
+    # openai_configured: el front avisa/deshabilita el sync si la cuenta no tiene integración OpenAI.
+    configured = openai_api_key.present?
+    list = current_account.knowledge_sources.order(order).map do |source|
+      source.as_json.merge(openai_configured: configured)
     end
-    render json: current_account.knowledge_sources.order(:created_at)
+    render json: list
   end
 
   # POST /api/v1/accounts/:account_id/knowledge_base/sources
   def create_source
     source = current_account.knowledge_sources.new(source_params)
     if source.save
-      DiscourseKnowledgeSyncJob.perform_later(source_id: source.id) if source.source_type == 'discourse'
+      # Las fuentes Discourse se consultan en vivo (Discourse AI semantic-search),
+      # no se vectorizan localmente. No hay sync de ingesta.
       render json: source, status: :created
     else
       render json: { errors: source.errors.full_messages }, status: :unprocessable_entity
@@ -76,11 +83,22 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
   def sync
     case @source.source_type
     when 'canned_response'
+      return render_openai_required unless openai_api_key.present?
+
       sync_canned_responses
+      render json: { message: 'Sincronización iniciada' }
+    when 'article'
+      return render_openai_required unless openai_api_key.present?
+
+      # Re-vectoriza todos los artículos del Centro de Ayuda (incluye los aún sin vectorizar).
+      sync_articles
+      render json: { message: 'Sincronización iniciada' }
     when 'discourse'
-      DiscourseKnowledgeSyncJob.perform_later(source_id: @source.id)
+      # Discourse se busca en vivo vía el plugin Discourse AI; no hay sync local.
+      render json: { message: 'Las fuentes Discourse se consultan en vivo; no requieren sincronización.' }
+    else
+      render json: { message: 'Sincronización iniciada' }
     end
-    render json: { message: 'Sincronización iniciada' }
   end
 
   # POST /api/v1/accounts/:account_id/knowledge_base/discourse_categories
@@ -177,6 +195,21 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
 
   private
 
+  # Fuentes nativas de Chatwoot que no se configuran (a diferencia de Discourse):
+  # 'canned_response' (Respuestas predefinidas) y 'article' (Centro de Ayuda).
+  # Siempre deben aparecer por defecto en la lista, con nombre localizado.
+  def ensure_default_sources
+    locale = current_account.locale.presence || I18n.default_locale
+    %w[canned_response article].each do |type|
+      # create_or_find_by se apoya en el índice único parcial para resolver la race
+      # de dos requests concurrentes sin crear fuentes duplicadas.
+      current_account.knowledge_sources.create_or_find_by(source_type: type) do |s|
+        s.name   = I18n.t("knowledge_sources.names.#{type}", locale: locale)
+        s.status = 'active'
+      end
+    end
+  end
+
   def item_json(item)
     {
       id: item.id,
@@ -199,12 +232,30 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     params.require(:knowledge_source).permit(:name, :source_type, :status, config: {})
   end
 
+  def render_openai_required
+    render json: {
+      error: 'Configura la integración de OpenAI en la cuenta para vectorizar esta fuente.'
+    }, status: :unprocessable_entity
+  end
+
   def sync_canned_responses
     current_account.canned_responses.find_each do |cr|
       KnowledgeItemSyncJob.perform_later(
         action: 'upsert',
         source_type: 'canned_response',
         source_id: cr.id,
+        account_id: current_account.id
+      )
+    end
+    @source.update(last_synced_at: Time.current)
+  end
+
+  def sync_articles
+    current_account.articles.find_each do |article|
+      KnowledgeItemSyncJob.perform_later(
+        action: 'upsert',
+        source_type: 'article',
+        source_id: article.id,
         account_id: current_account.id
       )
     end
@@ -233,10 +284,9 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     nil
   end
 
+  # Cada cuenta usa su propia integración OpenAI (sin fallback a ENV global, multi-tenant).
   def openai_api_key
     hook = current_account.hooks.find_by(app_id: 'openai', status: 'enabled')
-    return hook.settings['api_key'] if hook&.settings&.dig('api_key').present?
-
-    ENV['OPENAI_API_KEY']
+    hook&.settings&.dig('api_key').presence
   end
 end

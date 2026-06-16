@@ -51,6 +51,18 @@ class ContactTrackingsAPI {
     const url = this.buildUrl(accountId, contactId, '/improve_text');
     return axios.post(url, { text, mode, context, objective });
   }
+
+  // proyecto@contact_tracking — Dashboard: agregados a nivel cuenta
+  getOverview(accountId, params = {}) {
+    const url = `${API_VERSION}/accounts/${accountId}/contact_trackings/overview`;
+    return axios.get(url, { params });
+  }
+
+  // proyecto@contact_tracking — Dashboard: listado filtrable/paginado
+  getList(accountId, params = {}) {
+    const url = `${API_VERSION}/accounts/${accountId}/contact_trackings/list`;
+    return axios.get(url, { params });
+  }
 }
 
 export default new ContactTrackingsAPI();

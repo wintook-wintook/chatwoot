@@ -32,6 +32,9 @@ archivo (fuente de verdad). Columnas relevantes:
 | `calendar_integration_ids` | jsonb (not null) | IDs de `UserCalendarIntegration` para agendar |
 | `calendar_event_duration` | integer | default 30 min |
 | `last_sentiment_analysis` | jsonb | análisis del último mensaje (indexado por `->>'sentiment'`) |
+| `appointment_at` | datetime (index) | cita agendada — Fase 0 del Dashboard de Seguimientos |
+| `last_intent` | string (index) | última intención (espejo de `last_sentiment_analysis->>'sentiment'`) |
+| `outcome` | string | resultado del seguimiento: `appointment`/`interested`/`rejected`/… |
 | `response_adjustments_count` | integer | repeticiones en modo auto-retry |
 | `last_attempt_at` / `last_message_sent` / `last_error` | datetime/text/string | telemetría del último intento |
 | `paused_at` | datetime | cuándo se pausó |

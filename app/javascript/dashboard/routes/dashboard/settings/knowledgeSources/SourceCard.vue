@@ -10,10 +10,30 @@ export default {
   emits: ['sync', 'delete', 'edit'],
   computed: {
     sourceIcon() {
-      return this.source.source_type === 'canned_response' ? 'chat-multiple' : 'globe';
+      return {
+        canned_response: 'chat-multiple',
+        article: 'library',
+      }[this.source.source_type] || 'globe';
     },
     sourceLabel() {
-      return this.source.source_type === 'canned_response' ? 'Respuestas Predefinidas' : 'Discourse';
+      return {
+        canned_response: 'Respuestas predefinidas',
+        article: 'Centro de Ayuda',
+      }[this.source.source_type] || 'Discourse';
+    },
+    // Solo las fuentes configurables (Discourse) se editan/borran.
+    // Las nativas (Respuestas predefinidas, Centro de Ayuda) son fijas.
+    isConfigurable() {
+      return this.source.source_type === 'discourse';
+    },
+    // Fuentes vectorizadas localmente: el sync re-vectoriza (incluye las aún sin vectorizar).
+    // Discourse queda fuera: se busca en vivo, no hay copia local que sincronizar.
+    isSyncable() {
+      return ['canned_response', 'article'].includes(this.source.source_type);
+    },
+    // Sin integración OpenAI no se puede vectorizar: avisamos y bloqueamos el sync.
+    needsOpenai() {
+      return this.isSyncable && this.source.openai_configured === false;
     },
     isSyncing() {
       return this.source.sync_status === 'syncing';
@@ -74,34 +94,48 @@ export default {
       <span>{{ discourseUsername }}</span>
     </div>
 
-    <!-- Sincronización en progreso -->
+    <!-- Aviso: falta integración OpenAI para poder vectorizar -->
     <div
-      v-if="isSyncing"
-      class="flex items-center gap-2 px-3 py-2 bg-woot-50 border border-woot-100 rounded-lg"
+      v-if="needsOpenai"
+      class="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg"
     >
-      <span class="inline-block w-2 h-2 rounded-full bg-woot-500 animate-pulse" />
-      <span class="text-sm text-woot-700 font-medium">
-        Sincronizando{{ syncProgress ? ` — ${syncProgress}` : '...' }}
+      <fluent-icon icon="warning" size="14" class="text-amber-500" />
+      <span class="text-sm text-amber-700">
+        Configura la integración de OpenAI para vectorizar esta fuente.
       </span>
     </div>
-    <div v-else class="text-sm text-slate-400">
-      Última sync: {{ lastSynced }}
-    </div>
+
+    <!-- Sincronización en progreso (solo fuentes sincronizables) -->
+    <template v-if="isSyncable">
+      <div
+        v-if="isSyncing"
+        class="flex items-center gap-2 px-3 py-2 bg-woot-50 border border-woot-100 rounded-lg"
+      >
+        <span class="inline-block w-2 h-2 rounded-full bg-woot-500 animate-pulse" />
+        <span class="text-sm text-woot-700 font-medium">
+          Sincronizando{{ syncProgress ? ` — ${syncProgress}` : '...' }}
+        </span>
+      </div>
+      <div v-else class="text-sm text-slate-400">
+        Última sync: {{ lastSynced }}
+      </div>
+    </template>
 
     <!-- Acciones -->
-    <div class="flex gap-2 pt-1 border-t border-slate-100">
+    <div v-if="isSyncable || isConfigurable" class="flex gap-2 pt-1 border-t border-slate-100">
       <woot-button
+        v-if="isSyncable"
         size="small"
         variant="smooth"
         color-scheme="primary"
         icon="arrow-clockwise"
-        :disabled="syncing"
+        :disabled="syncing || needsOpenai"
         @click="$emit('sync', source)"
       >
         {{ syncing ? 'Sincronizando...' : 'Sincronizar' }}
       </woot-button>
       <woot-button
-        v-if="source.source_type !== 'canned_response'"
+        v-if="isConfigurable"
         size="small"
         variant="smooth"
         color-scheme="secondary"
@@ -109,7 +143,7 @@ export default {
         @click="$emit('edit', source)"
       />
       <woot-button
-        v-if="source.source_type !== 'canned_response'"
+        v-if="isConfigurable"
         size="small"
         variant="smooth"
         color-scheme="alert"

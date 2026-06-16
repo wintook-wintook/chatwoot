@@ -663,13 +663,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_15_000001) do
     t.jsonb "calendar_integration_ids", default: [], null: false
     t.integer "calendar_event_duration", default: 30
     t.integer "tracking_template_id"
+    t.datetime "appointment_at"
+    t.string "last_intent"
+    t.string "outcome"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
+    t.index ["appointment_at"], name: "index_contact_trackings_on_appointment_at"
     t.index ["contact_id", "inbox_id", "status"], name: "index_unique_active_tracking_per_contact_inbox", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))"
     t.index ["contact_id"], name: "index_contact_trackings_on_contact_id"
     t.index ["conversation_id", "inbox_id"], name: "index_contact_trackings_on_conversation_id_and_inbox_id"
     t.index ["conversation_id"], name: "index_contact_trackings_on_conversation_id"
     t.index ["inbox_id"], name: "index_contact_trackings_on_inbox_id"
+    t.index ["last_intent"], name: "index_contact_trackings_on_last_intent"
     t.index ["scheduled_for"], name: "index_contact_trackings_on_scheduled_for"
     t.index ["status", "scheduled_for"], name: "index_contact_trackings_on_status_and_scheduled_for"
     t.index ["status"], name: "index_contact_trackings_on_status"

@@ -15,7 +15,7 @@ tags: [tickets, servicios, jobs, hook, bot]
 
 ---
 
-## Directiva `@crear_ticket` (patrón igual a `@buscar_foro` / `@buscar_predeterminadas`)
+## Directiva `@crear_ticket` (patrón igual a `@buscar_foro` / `@buscar_predefinidas`)
 
 Se agrega en el `complementary_prompt` del `ContactTracking`, igual que las directivas de búsqueda existentes.
 
@@ -47,7 +47,7 @@ Usa @crear_ticket para registrar el caso y avisa al cliente que un asesor lo ate
 ### Orden de ejecución en el job
 
 ```
-[1] KnowledgeBaseResponseService  (@buscar_predeterminadas / @buscar_foro)
+[1] KnowledgeBaseResponseService  (@buscar_predefinidas / @buscar_foro)
       → si resuelve: responde y termina
       → si NO resuelve: continúa
 
@@ -62,7 +62,7 @@ Usa @crear_ticket para registrar el caso y avisa al cliente que un asesor lo ate
 
 | Directiva en `complementary_prompt` | Quién la lee | Servicio | Qué hace |
 |-------------------------------------|-------------|----------|----------|
-| `@buscar_predeterminadas` | Código | `KnowledgeBaseResponseService` | Busca en pgvector (respuestas predefinidas) |
+| `@buscar_predefinidas` | Código | `KnowledgeBaseResponseService` | Busca en pgvector (respuestas predefinidas) |
 | `@buscar_foro(nombre)` | Código | `KnowledgeBaseResponseService` | Busca en Discourse via API semántica |
 | `@crear_ticket` | Código | `Cases::TicketCreatorService` | Crea `CaseTicket` en Wintook si KBase no resolvió |
 | Texto libre | IA (GPT) | — | Contexto, tono, instrucciones de comportamiento |

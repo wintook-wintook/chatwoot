@@ -88,6 +88,10 @@ Rails.application.routes.draw do
           end
           resources :contact_tracking_imports, only: [:create] # proyecto@import_seguimiento
           resources :contact_tracking_bulk_assigns, only: [:create] # proyecto@bulk_tracking_assign
+          namespace :contact_trackings do # proyecto@contact_tracking — dashboard
+            resource :overview, only: [:show], controller: :overview
+            get 'list', to: 'list#index' # listado filtrable a nivel cuenta
+          end
 
           # @knowledge_sources
           get    'knowledge_base/items',            to: 'knowledge_base#items'

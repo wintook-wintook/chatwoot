@@ -25,6 +25,7 @@
 #
 #  id                         :bigint           not null, primary key
 #  ai_context                 :text
+#  appointment_at             :datetime
 #  attempt_count              :integer          default(0), not null
 #  calendar_event_duration    :integer          default(30)
 #  calendar_integration_ids   :jsonb            not null
@@ -33,10 +34,12 @@
 #  keyword_actions            :jsonb            not null
 #  last_attempt_at            :datetime
 #  last_error                 :string
+#  last_intent                :string
 #  last_message_sent          :text
 #  last_sentiment_analysis    :jsonb
 #  max_attempts               :integer          default(3), not null
 #  objective                  :string           not null
+#  outcome                    :string
 #  paused_at                  :datetime
 #  response_adjustments_count :integer          default(0), not null
 #  retry_interval_unit        :string           default("minutes")
@@ -56,10 +59,12 @@
 # Indexes
 #
 #  index_contact_trackings_on_account_id                    (account_id)
+#  index_contact_trackings_on_appointment_at                (appointment_at)
 #  index_contact_trackings_on_contact_id                    (contact_id)
 #  index_contact_trackings_on_conversation_id               (conversation_id)
 #  index_contact_trackings_on_conversation_id_and_inbox_id  (conversation_id,inbox_id)
 #  index_contact_trackings_on_inbox_id                      (inbox_id)
+#  index_contact_trackings_on_last_intent                   (last_intent)
 #  index_contact_trackings_on_scheduled_for                 (scheduled_for)
 #  index_contact_trackings_on_sentiment                     (((last_sentiment_analysis ->> 'sentiment'::text)))
 #  index_contact_trackings_on_status                        (status)

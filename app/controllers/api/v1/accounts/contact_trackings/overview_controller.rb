@@ -1,0 +1,140 @@
+# frozen_string_literal: true
+
+# ================================================================================
+# proyecto@contact_tracking — Dashboard de Seguimientos (Fase 1)
+# ================================================================================
+# GET /api/v1/accounts/:account_id/contact_trackings/overview
+#   Devuelve agregados a nivel cuenta para el dashboard:
+#   summary (KPIs), by_status (donut) y lists.overdue (tabla de vencidos).
+#   Filtros opcionales: inbox_id, template_id, date_from, date_to.
+# ================================================================================
+class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Accounts::BaseController
+  ACTIVE_STATUSES = %w[pending scheduled active paused].freeze
+  CLOSED_STATUSES = %w[completed cancelled failed].freeze
+
+  def show
+    scope = base_scope
+    render json: {
+      summary: summary(scope),
+      by_status: by_status(scope),
+      by_inbox: by_inbox(scope),
+      by_template: by_template(scope),
+      funnel: funnel(scope),
+      timeseries: timeseries(scope),
+      lists: { overdue: overdue_list(scope), appointments: appointments_list(scope) }
+    }
+  end
+
+  private
+
+  def base_scope
+    rel = ContactTracking.where(account_id: Current.account.id)
+    rel = rel.where(inbox_id: params[:inbox_id]) if params[:inbox_id].present?
+    rel = rel.where(tracking_template_id: params[:template_id]) if params[:template_id].present?
+    rel = rel.where(status: params[:status]) if params[:status].present?
+    rel = rel.where('created_at >= ?', params[:date_from]) if params[:date_from].present?
+    rel = rel.where('created_at <= ?', params[:date_to]) if params[:date_to].present?
+    rel
+  end
+
+  def summary(scope)
+    completed = scope.where(status: 'completed').count
+    closed    = scope.where(status: CLOSED_STATUSES).count
+    {
+      active:       scope.where(status: ACTIVE_STATUSES).count,
+      overdue:      overdue(scope).count,
+      due_24h:      scope.where(status: ACTIVE_STATUSES, scheduled_for: Time.current..24.hours.from_now).count,
+      appointments: scope.where.not(appointment_at: nil).count,
+      success_rate: closed.zero? ? 0 : (completed.to_f / closed).round(2),
+      avg_attempts: scope.where(status: CLOSED_STATUSES).average(:attempt_count)&.round(1) || 0,
+      total:        scope.count
+    }
+  end
+
+  def by_status(scope)
+    counts = scope.group(:status).count
+    ContactTracking.statuses.keys.index_with { |s| counts[s] || 0 }
+  end
+
+  # Fase 2 — distribución por canal (inbox), con nombre para el chart
+  def by_inbox(scope)
+    counts = scope.group(:inbox_id).count
+    names  = Current.account.inboxes.where(id: counts.keys).pluck(:id, :name).to_h
+    counts.map { |inbox_id, count| { inbox_id: inbox_id, name: names[inbox_id] || "Inbox #{inbox_id}", count: count } }
+  end
+
+  # Fase 2 — por Agente IA (tracking_template), con total y éxito (completed)
+  def by_template(scope)
+    with_tpl = scope.where.not(tracking_template_id: nil)
+    totals   = with_tpl.group(:tracking_template_id).count
+    success  = with_tpl.where(status: 'completed').group(:tracking_template_id).count
+    names    = Current.account.tracking_templates.where(id: totals.keys).pluck(:id, :name).to_h
+    totals.map do |tpl_id, total|
+      { template_id: tpl_id, name: names[tpl_id] || "Agente IA #{tpl_id}", total: total, success: success[tpl_id] || 0 }
+    end
+  end
+
+  # Fase 2 — embudo de intención (usa last_intent / appointment_at)
+  def funnel(scope)
+    {
+      created:     scope.count,
+      replied:     scope.where.not(last_intent: nil).count,
+      interested:  scope.where(last_intent: %w[interested book_appointment reschedule]).count,
+      appointment: scope.where.not(appointment_at: nil).count
+    }
+  end
+
+  def overdue(scope)
+    scope.where(status: %w[pending scheduled]).where('scheduled_for < ?', Time.current)
+  end
+
+  # Fase 3 — serie temporal: creados vs completados por día (rango o últimos 30 días)
+  def timeseries(scope)
+    end_date   = parse_date(params[:date_to]) || Date.current
+    start_date = parse_date(params[:date_from]) || (end_date - 29)
+    start_date = end_date - 89 if (end_date - start_date).to_i > 90 # tope de seguridad
+    range      = start_date.beginning_of_day..end_date.end_of_day
+
+    created   = scope.where(created_at: range).group(Arel.sql('DATE(created_at)')).count
+    completed = scope.where(status: 'completed').where(updated_at: range).group(Arel.sql('DATE(updated_at)')).count
+
+    (start_date..end_date).map do |d|
+      { date: d.iso8601, created: created[d] || 0, completed: completed[d] || 0 }
+    end
+  end
+
+  # Fase 3 — próximas citas agendadas
+  def appointments_list(scope)
+    scope.where('appointment_at >= ?', Time.current).order(appointment_at: :asc).limit(20).map do |t|
+      {
+        id:             t.id,
+        contact_name:   t.contact&.name,
+        appointment_at: t.appointment_at,
+        inbox_id:       t.inbox_id,
+        objective:      t.objective
+      }
+    end
+  end
+
+  def parse_date(value)
+    value.present? ? Date.parse(value) : nil
+  rescue ArgumentError
+    nil
+  end
+
+  def overdue_list(scope)
+    overdue(scope).order(scheduled_for: :asc).limit(20).map do |t|
+      {
+        id:            t.id,
+        status:        t.status,
+        objective:     t.objective,
+        scheduled_for: t.scheduled_for,
+        inbox_id:      t.inbox_id,
+        contact_id:    t.contact_id,
+        contact_name:  t.contact&.name,
+        attempt_count: t.attempt_count,
+        max_attempts:  t.max_attempts
+      }
+    end
+  end
+end
