@@ -530,19 +530,22 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     integration = UserCalendarIntegration.find_by(id: cal_id)
 
     event_created = false
+    event_id = nil
     if integration
       begin
         service = GoogleCalendarService.new(integration)
         attendees = [contact.email].compact.select(&:present?)
-        service.create_event(
+        result = service.create_event(
           summary:     "Cita con #{contact_name} — #{tracking.objective.truncate(60)}",
           description: "Contacto: #{contact_name}\nTeléfono: #{contact&.phone_number}\nObjetivo: #{tracking.objective}",
           start_time:  slot_start,
           end_time:    slot_end,
           attendees:   attendees
         )
+        # Guardamos el id del evento para poder moverlo/cancelarlo después (#2/#3)
+        event_id = result['id'] if result.is_a?(Hash)
         event_created = true
-        Rails.logger.info "[TrackingBot] 📅 Evento creado en Google Calendar para #{slot_start}"
+        Rails.logger.info "[TrackingBot] 📅 Evento creado en Google Calendar para #{slot_start} (id: #{event_id})"
       rescue StandardError => e
         Rails.logger.error "[TrackingBot] ❌ Error creando evento en Google Calendar: #{e.message}"
       end
@@ -584,7 +587,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     tracking.update!(
       ai_context: "#{tracking.ai_context}\n\n✅ [CITA AGENDADA] #{fecha_texto} #{hora_texto} con #{agent_name}. Evento en Google Calendar: creado.",
       appointment_at: slot_start,   # proyecto@contact_tracking: dashboard KPI citas
-      outcome: 'appointment'
+      outcome: 'appointment',
+      appointment_event_id: event_id,        # referencia para mover/cancelar (#2/#3)
+      appointment_calendar_id: cal_id
     )
     tracking.pause!
 

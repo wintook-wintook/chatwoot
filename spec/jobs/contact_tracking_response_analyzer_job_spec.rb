@@ -99,7 +99,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
 
     context 'cuando el evento se crea en el calendario' do
       before do
-        allow(GoogleCalendarService).to receive(:new).and_return(double(create_event: true))
+        allow(GoogleCalendarService).to receive(:new).and_return(double(create_event: { 'id' => 'evt_abc123' }))
       end
 
       it 'confirma la cita al cliente y marca el outcome appointment' do
@@ -109,6 +109,13 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
         job.send(:confirm_and_create_appointment, tracking, message, selected_slot)
         expect(tracking.reload.outcome).to eq('appointment')
         expect(tracking.appointment_at).to be_present
+      end
+
+      it 'guarda la referencia del evento para poder moverlo/cancelarlo' do
+        allow(job).to receive(:send_auto_reply)
+        job.send(:confirm_and_create_appointment, tracking, message, selected_slot)
+        expect(tracking.reload.appointment_event_id).to eq('evt_abc123')
+        expect(tracking.appointment_calendar_id).to eq(123)
       end
     end
 

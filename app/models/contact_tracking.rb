@@ -50,6 +50,8 @@
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  account_id                 :bigint           not null
+#  appointment_calendar_id    :bigint
+#  appointment_event_id       :string
 #  contact_id                 :bigint           not null
 #  conversation_id            :bigint
 #  inbox_id                   :bigint           not null
