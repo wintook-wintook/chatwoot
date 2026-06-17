@@ -16,14 +16,17 @@ module ContactTrackings
       @slot_duration = slot_duration.to_i.positive? ? slot_duration.to_i : DEFAULT_DURATION
     end
 
-    def call
+    # `from:` permite anclar la búsqueda cerca de un día/hora pedido por el cliente
+    # (negociación multi-turno); por defecto busca desde "ahora + 1h".
+    def call(from: nil)
       return [] if @calendar_integration_ids.empty?
 
       integrations = UserCalendarIntegration.where(id: @calendar_integration_ids)
       return [] if integrations.empty?
 
-      time_min = align_to_slot(Time.current + 1.hour)
-      time_max = business_days_from_now(DAYS_AHEAD)
+      start_at = [Time.current + 1.hour, from].compact.max
+      time_min = align_to_slot(start_at)
+      time_max = business_days_from_now(start_at, DAYS_AHEAD)
 
       all_slots = []
 
@@ -36,6 +39,34 @@ module ContactTrackings
       end
 
       all_slots.sort_by { |s| s[:slot] }.first(MAX_SLOTS)
+    end
+
+    # Verifica si un horario EXACTO propuesto por el cliente está libre (dentro del
+    # horario laboral y sin choque) en alguna de las agendas. Devuelve el slot con la
+    # agenda que lo tiene libre, o nil. Usado por la negociación multi-turno.
+    def slot_for(requested_start)
+      return nil if requested_start.blank? || @calendar_integration_ids.empty?
+
+      aligned  = align_to_slot(requested_start)
+      slot_end = aligned + @slot_duration.minutes
+      return nil if aligned < Time.current
+      return nil unless within_work_hours?(aligned, slot_end)
+
+      UserCalendarIntegration.where(id: @calendar_integration_ids).each do |integration|
+        busy = fetch_busy_periods(integration, aligned - 1.hour, slot_end + 1.hour)
+        next if overlaps_busy?(aligned, slot_end, busy)
+
+        return {
+          slot:                    aligned,
+          end_time:                slot_end,
+          agent_name:              integration.user&.name || 'Agente',
+          calendar_integration_id: integration.id
+        }
+      end
+      nil
+    rescue StandardError => e
+      Rails.logger.warn "[AvailabilitySlotService] ⚠️ slot_for falló: #{e.message}"
+      nil
     end
 
     private
@@ -101,8 +132,8 @@ module ContactTrackings
       (time + (@slot_duration - remainder).minutes).change(sec: 0)
     end
 
-    def business_days_from_now(days)
-      date  = Time.current
+    def business_days_from_now(start_time, days)
+      date  = start_time
       count = 0
       while count < days
         date  += 1.day

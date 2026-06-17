@@ -34,10 +34,12 @@ asumir que algo falta (el módulo avanza rápido). Ver también [[Estado-actual]
       (`[PENDING_EMAIL]` + `prompt_for_email`/`handle_pending_email`). Si lo da, se guarda en el
       contacto y se le invita al evento; si responde "sin correo"/omite, se agenda igual sin
       invitado. Si ya tenía email, confirma directo.
-- [ ] **Negociación de cita multi-turno** — hoy el flujo es single-shot (ofrece 5 slots
-      → espera un **número**). Entrar en una "conversación de agendar" hasta **confirmar**:
-      manejar "ninguno me sirve", proponer otras fechas, interpretar lenguaje natural
-      (hoy `parse_slot_choice` solo acepta dígito 1-5/palabra; ver [[Testeo-funcional]] TC-03).
+- [x] ~~**Negociación de cita multi-turno**~~ — ✅ **HECHO**: si el cliente, en vez de elegir
+      número, propone otra fecha/hora, `handle_slot_negotiation` la interpreta (IA →
+      `parse_requested_datetime`), verifica disponibilidad (`AvailabilitySlotService#slot_for`)
+      y: confirma si está libre, ofrece horarios cercanos si está ocupada o si solo dio el día
+      (`call(from:)`), o repregunta. Un dígito 1-5 dentro de una frase de hora ya no se confunde
+      con elegir slot (`looks_like_datetime_proposal?`). Ver [[Testeo-funcional]] TC-03.
 - [x] ~~**Mover una cita ya agendada**~~ — ✅ **HECHO**: se persiste `appointment_event_id` +
       `appointment_calendar_id`; `confirm_and_create_appointment` reutiliza la cita
       (`create_or_move_calendar_event`): misma agenda → `update_event` (mueve), otra agenda →

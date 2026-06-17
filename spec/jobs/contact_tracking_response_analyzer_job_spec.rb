@@ -302,6 +302,17 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
           job.send(:handle_slot_selection, tracking, message)
         end
       end
+
+      context 'cuando propone una hora (un dígito dentro de una frase de fecha/hora)' do
+        let(:contact) { create(:contact, account: account, email: 'ya@mail.com') }
+        let(:content) { 'a la 1 de la tarde' }
+
+        it 'no elige el slot 1: deriva a la negociación' do
+          expect(job).to receive(:handle_slot_negotiation).with(tracking, message, anything)
+          expect(job).not_to receive(:confirm_and_create_appointment)
+          job.send(:handle_slot_selection, tracking, message)
+        end
+      end
     end
 
     describe '#handle_pending_email' do
@@ -345,6 +356,89 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
           expect(job).not_to have_received(:confirm_and_create_appointment)
           expect(tracking.reload.ai_context).to include('[PENDING_EMAIL]')
         end
+      end
+    end
+  end
+
+  describe '#handle_slot_negotiation' do
+    let(:inbox) { create(:inbox, account: account, timezone: 'America/Mexico_City') }
+    let(:contact) { create(:contact, account: account, email: 'cli@mail.com') }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation,
+                       sender: contact, message_type: :incoming, content: 'mejor el jueves a las 5')
+    end
+    let(:tracking) do
+      ContactTracking.create!(
+        account: account, contact: contact, inbox: inbox,
+        objective: 'Vender', scheduled_for: 1.hour.from_now, status: 'active',
+        tracking_template_id: tracking_template.id,
+        ai_context: "📅 [PENDING_SLOT] Esperando.\nSlots ofrecidos: [{}]"
+      )
+    end
+    let(:current_slots) { [{ 'slot' => 'x', 'cal_id' => 1 }] }
+    let(:slot_service) { instance_double(ContactTrackings::AvailabilitySlotService) }
+
+    def slot_hash(hour)
+      {
+        slot: 2.days.from_now.change(hour: hour, min: 0),
+        end_time: 2.days.from_now.change(hour: hour + 1, min: 0),
+        agent_name: 'Ana', calendar_integration_id: 123
+      }
+    end
+
+    before do
+      tracking_template.update!(calendar_integration_ids: [123])
+      allow(ContactTrackings::AvailabilitySlotService).to receive(:new).and_return(slot_service)
+      allow(job).to receive(:send_auto_reply)
+    end
+
+    context 'cuando propone una hora exacta disponible' do
+      before do
+        allow(job).to receive(:parse_requested_datetime).and_return({ at: 1.day.from_now.change(hour: 17), exact: true })
+        allow(slot_service).to receive(:slot_for).and_return(slot_hash(17))
+        allow(job).to receive(:confirm_and_create_appointment)
+      end
+
+      it 'confirma ese horario' do
+        expect(job).to receive(:confirm_and_create_appointment).with(tracking, message, hash_including('cal_id' => 123))
+        job.send(:handle_slot_negotiation, tracking, message, current_slots)
+      end
+    end
+
+    context 'cuando la hora exacta está ocupada' do
+      before do
+        allow(job).to receive(:parse_requested_datetime).and_return({ at: 1.day.from_now.change(hour: 17), exact: true })
+        allow(slot_service).to receive(:slot_for).and_return(nil)
+        allow(slot_service).to receive(:call).and_return([slot_hash(9)])
+      end
+
+      it 'avisa que no está disponible y vuelve a dejar PENDING_SLOT' do
+        expect(job).to receive(:send_auto_reply).with(tracking, message, /no está disponible/i)
+        job.send(:handle_slot_negotiation, tracking, message, current_slots)
+        expect(tracking.reload.ai_context).to include('[PENDING_SLOT]')
+      end
+    end
+
+    context 'cuando solo da el día (sin hora)' do
+      before do
+        allow(job).to receive(:parse_requested_datetime).and_return({ at: 2.days.from_now.change(hour: 10), exact: false })
+        allow(slot_service).to receive(:call).and_return([slot_hash(9)])
+      end
+
+      it 'ofrece los horarios de ese día sin chequear una hora exacta' do
+        expect(slot_service).not_to receive(:slot_for)
+        expect(job).to receive(:send_auto_reply).with(tracking, message, /Para ese día/i)
+        job.send(:handle_slot_negotiation, tracking, message, current_slots)
+      end
+    end
+
+    context 'cuando no se puede interpretar la fecha' do
+      before { allow(job).to receive(:parse_requested_datetime).and_return(nil) }
+
+      it 'repregunta de forma suave manteniendo el estado' do
+        expect(job).to receive(:send_auto_reply).with(tracking, message, /qué día y a qué hora/i)
+        job.send(:handle_slot_negotiation, tracking, message, current_slots)
       end
     end
   end

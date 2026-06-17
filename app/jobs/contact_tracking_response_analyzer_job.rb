@@ -464,14 +464,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return
     end
 
-    reply = format_slots_message(slots, timezone)
-    send_auto_reply(tracking, message, reply)
-
-    slots_json = slots.map { |s| { slot: s[:slot].utc.iso8601, end_time: s[:end_time].utc.iso8601, agent_name: s[:agent_name], cal_id: s[:calendar_integration_id] } }
-    tracking.update!(
-      ai_context: "#{tracking.ai_context}\n\n📅 [PENDING_SLOT] Esperando elección de horario.\nSlots ofrecidos: #{slots_json.to_json}"
-    )
-
+    offer_slots(tracking, message, slots, format_slots_message(slots, timezone))
     Rails.logger.info "[TrackingBot] 📅 #{slots.size} slots enviados al contacto — esperando elección"
   end
 
@@ -489,30 +482,164 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return false
     end
 
-    choice = parse_slot_choice(message_text_for_ai(message), slots.size)
+    text   = message_text_for_ai(message)
+    choice = parse_slot_choice(text, slots.size)
 
-    if choice.nil?
-      Rails.logger.info '[TrackingBot] 📅 Elección no reconocida → repreguntando'
-      reply = "No entendí tu elección 😊 Por favor respondé con el número del horario que preferís (1 al #{slots.size})."
-      send_auto_reply(tracking, message, reply)
-      return true
+    # Un dígito 1-5 dentro de una frase con fecha/hora ("a las 5 de la tarde", "el jueves
+    # a las 3") NO es una elección de slot: es una propuesta → negociamos.
+    if choice.nil? || looks_like_datetime_proposal?(text)
+      Rails.logger.info '[TrackingBot] 📅 No es elección de número → intentando negociar fecha/hora'
+      return handle_slot_negotiation(tracking, message, slots)
     end
 
     selected = slots[choice - 1]
     Rails.logger.info "[TrackingBot] 📅 Slot elegido: opción #{choice} — #{selected['slot']}"
-
-    # Si el contacto ya tiene email, confirmamos directo; si no, lo pedimos (opcional)
-    # para poder invitarlo al evento del calendario.
-    if message.sender&.email.present?
-      confirm_and_create_appointment(tracking, message, selected)
-    else
-      prompt_for_email(tracking, message, selected)
-    end
+    proceed_with_selected_slot(tracking, message, selected)
     true
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error en handle_slot_selection: #{e.message}"
     clear_pending_slot(tracking)
     false
+  end
+
+  # Si el contacto ya tiene email, confirma directo; si no, pide el email (opcional)
+  # para invitarlo al evento. Ambos caminos limpian el estado [PENDING_SLOT].
+  def proceed_with_selected_slot(tracking, message, selected)
+    if message.sender&.email.present?
+      confirm_and_create_appointment(tracking, message, selected)
+    else
+      prompt_for_email(tracking, message, selected)
+    end
+  end
+
+  # proyecto@bot_seguimiento_calendar — negociación multi-turno: el cliente, en vez de
+  # elegir un número, propone otra fecha/hora. Intentamos interpretarla, verificar
+  # disponibilidad y: confirmarla si está libre, ofrecer cercanas si no, o repreguntar.
+  def handle_slot_negotiation(tracking, message, current_slots)
+    timezone  = appointment_timezone(tracking, message)
+    requested = parse_requested_datetime(tracking, message, timezone)
+
+    if requested
+      cal_ids  = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
+      duration = tracking.tracking_template&.calendar_event_duration || 30
+      service  = ContactTrackings::AvailabilitySlotService.new(
+        calendar_integration_ids: cal_ids, timezone: timezone, slot_duration: duration
+      )
+
+      # Si dio fecha Y hora concretas, intentamos confirmar ese horario exacto.
+      if requested[:exact]
+        slot = service.slot_for(requested[:at])
+        if slot
+          Rails.logger.info "[TrackingBot] 📅 Horario propuesto disponible (#{requested[:at]}) → confirmando"
+          selected = {
+            'slot' => slot[:slot].utc.iso8601, 'end_time' => slot[:end_time].utc.iso8601,
+            'agent_name' => slot[:agent_name], 'cal_id' => slot[:calendar_integration_id]
+          }
+          clear_pending_slot(tracking)
+          proceed_with_selected_slot(tracking, message, selected)
+          return true
+        end
+      end
+
+      # Hora exacta ocupada, o solo dio el día: ofrecemos horarios cerca de lo pedido.
+      alternatives = service.call(from: requested[:at].beginning_of_day)
+      if alternatives.any?
+        intro = requested[:exact] ? 'Uy, ese horario no está disponible 😕. Estos son los más cercanos:'
+                                  : '¡Claro! Para ese día tengo estos horarios:'
+        Rails.logger.info '[TrackingBot] 📅 Ofreciendo horarios cercanos a lo pedido'
+        reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone)}\n\n¿Cuál te viene bien? Respondé con el número."
+        offer_slots(tracking, message, alternatives, reply)
+        return true
+      end
+    end
+
+    # No pudimos interpretar la fecha/hora (o no hay alternativas): repreguntamos suave,
+    # manteniendo el estado [PENDING_SLOT] para que pueda elegir o proponer de nuevo.
+    Rails.logger.info '[TrackingBot] 📅 Sin fecha interpretable → repreguntando'
+    send_auto_reply(tracking, message,
+                    "Puedo agendarte en alguno de estos horarios 🙂. Respondé con el número " \
+                    "(1 al #{current_slots.size}), o decime qué día y a qué hora te acomoda.")
+    true
+  rescue StandardError => e
+    Rails.logger.error "[TrackingBot] ❌ Error en handle_slot_negotiation: #{e.message}"
+    send_auto_reply(tracking, message,
+                    "Respondé con el número del horario (1 al #{current_slots.size}) que prefieras, por favor 🙂.")
+    true
+  end
+
+  # Extrae (vía IA) una fecha/hora concreta del mensaje del cliente y la convierte a Time
+  # en la zona del agente. Devuelve nil si no propone una fecha/hora interpretable.
+  def parse_requested_datetime(tracking, message, timezone)
+    api_key_data = get_api_key(tracking.account)
+    key = api_key_data&.dig(:key)
+    return nil if key.blank?
+
+    text  = message_text_for_ai(message).to_s.truncate(200)
+    today = Time.current.in_time_zone(timezone).strftime('%Y-%m-%d (%A)')
+    data  = extract_datetime_json(key, today, text)
+    return nil unless data.is_a?(Hash)
+
+    rd = {
+      specific_date: data['specific_date'].presence,
+      specific_time: data['specific_time'].presence,
+      relative_days: data['relative_days'].presence&.to_i
+    }.compact
+    return nil if rd.empty?
+
+    at = calculate_reschedule_datetime(rd, timezone)
+    return nil unless at
+
+    { at: at, exact: rd[:specific_time].present? }
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ No se pudo interpretar la fecha pedida: #{e.message}"
+    nil
+  end
+
+  def extract_datetime_json(api_key, today, text)
+    require 'net/http'
+    require 'json'
+
+    prompt = <<~PROMPT
+      Hoy es #{today}. El cliente quiere agendar y puede proponer una fecha/hora en su mensaje.
+      Devuelve SOLO un JSON: {"specific_date": "YYYY-MM-DD" o null, "specific_time": "HH:MM" (24h) o null, "relative_days": número o null}.
+      Si no propone ninguna fecha/hora concreta, deja todo en null.
+      Mensaje del cliente: "#{text}"
+    PROMPT
+
+    uri               = URI('https://api.openai.com/v1/chat/completions')
+    http              = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl      = true
+    http.read_timeout = 10
+
+    request                  = Net::HTTP::Post.new(uri)
+    request['Authorization'] = "Bearer #{api_key}"
+    request['Content-Type']  = 'application/json'
+    request.body = {
+      model:           'gpt-4o-mini',
+      messages:        [{ role: 'user', content: prompt }],
+      max_tokens:      120,
+      temperature:     0,
+      response_format: { type: 'json_object' }
+    }.to_json
+
+    response = http.request(request)
+    content  = JSON.parse(response.body).dig('choices', 0, 'message', 'content')
+    content.present? ? JSON.parse(content) : nil
+  end
+
+  # Pistas de que el mensaje propone una fecha/hora (y no elige un número de la lista):
+  # días, meses, "mañana/hoy/tarde", "a las N", "am/pm" o un "HH:MM".
+  DATETIME_PROPOSAL_HINT = /
+    \b(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|
+       hoy|mañana|pasado|tarde|noche|mediod[ií]a|
+       enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b
+    | \d{1,2}:\d{2}
+    | \b[ap]\.?m\.?\b
+    | \bla?s?\s+\d{1,2}\b
+  /ix
+
+  def looks_like_datetime_proposal?(text)
+    text.to_s.match?(DATETIME_PROPOSAL_HINT)
   end
 
   def parse_slot_choice(text, max)
@@ -765,21 +892,36 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     send_auto_reply(tracking, message, 'Lo siento, tuve un problema al cancelar la cita. Un asesor te contactará pronto.')
   end
 
-  def format_slots_message(slots, timezone)
+  def format_slots_lines(slots, timezone)
     day_names = %w[domingo lunes martes miércoles jueves viernes sábado]
     month_names = %w[ene feb mar abr may jun jul ago sep oct nov dic]
     numbers    = %w[1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣]
 
-    lines = slots.each_with_index.map do |s, i|
+    slots.each_with_index.map do |s, i|
       local     = s[:slot].in_time_zone(timezone)
       local_end = s[:end_time].in_time_zone(timezone)
       day       = day_names[local.wday]
       month     = month_names[local.month - 1]
       agent     = s[:agent_name].presence || 'Agenda'
       "#{numbers[i]} #{day} #{local.day} #{month} · #{local.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs — #{agent}"
-    end
+    end.join("\n")
+  end
 
-    "¡Con gusto! 📅 Tenemos los siguientes horarios disponibles:\n\n#{lines.join("\n")}\n\n¿Cuál te viene bien? Respondé con el número de tu preferencia."
+  def format_slots_message(slots, timezone)
+    "¡Con gusto! 📅 Tenemos los siguientes horarios disponibles:\n\n#{format_slots_lines(slots, timezone)}\n\n¿Cuál te viene bien? Respondé con el número de tu preferencia."
+  end
+
+  # Envía un mensaje con horarios y deja el seguimiento esperando la elección
+  # (estado [PENDING_SLOT] con los slots serializados en ai_context).
+  def offer_slots(tracking, message, slots, reply)
+    send_auto_reply(tracking, message, reply)
+    slots_json = slots.map do |s|
+      { slot: s[:slot].utc.iso8601, end_time: s[:end_time].utc.iso8601,
+        agent_name: s[:agent_name], cal_id: s[:calendar_integration_id] }
+    end
+    tracking.update!(
+      ai_context: "#{tracking.ai_context}\n\n📅 [PENDING_SLOT] Esperando elección de horario.\nSlots ofrecidos: #{slots_json.to_json}"
+    )
   end
 
   # ==============================================================================
