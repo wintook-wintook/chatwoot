@@ -24,12 +24,20 @@ class Api::V1::Accounts::TrackingTemplates::AttachmentsController < Api::V1::Acc
   end
 
   def update
+    old_name = @attachment.name
     @attachment.update!(name: params[:name])
+    # Mantiene vivas las referencias @adjunto:viejo → @adjunto:nuevo en el agente y sus seguimientos
+    if old_name != @attachment.name
+      AiAgentAttachments::DirectiveReferenceService.rename(@tracking_template, old_name, @attachment.name)
+    end
     render json: attachment_json(@attachment)
   end
 
   def destroy
+    name = @attachment.name
     @attachment.destroy!
+    # Limpia las referencias @adjunto:name colgantes en el agente y sus seguimientos vivos
+    AiAgentAttachments::DirectiveReferenceService.remove(@tracking_template, name)
     head :ok
   end
 
