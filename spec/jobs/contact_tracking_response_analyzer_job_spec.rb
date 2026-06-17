@@ -256,6 +256,42 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
   end
 
+  describe '#booking_requested? (la directiva @agendar_calendar no es eager)' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation,
+                       sender: contact, message_type: :incoming, content: 'quiero una cita')
+    end
+    let(:tracking) { ContactTracking.new(account: account, tracking_template: tracking_template, inbox: inbox) }
+
+    before { allow(job).to receive(:get_api_key).and_return({ key: 'sk-test' }) }
+
+    context 'con DETECT_INTENT activo' do
+      before { stub_const("#{described_class}::DETECT_INTENT", true) }
+
+      it 'no re-evalúa la intención (el router ya decidió la ruta)' do
+        expect(job).not_to receive(:appointment_intent?)
+        expect(job.send(:booking_requested?, tracking, message)).to be(false)
+      end
+    end
+
+    context 'con DETECT_INTENT apagado' do
+      before { stub_const("#{described_class}::DETECT_INTENT", false) }
+
+      it 'agenda cuando el cliente expresa intención de cita' do
+        allow(ContactTrackings::RouterService).to receive(:new).and_return(double(classify: { route: :book_appointment }))
+        expect(job.send(:booking_requested?, tracking, message)).to be(true)
+      end
+
+      it 'NO agenda en un mensaje normal sin intención de cita' do
+        allow(ContactTrackings::RouterService).to receive(:new).and_return(double(classify: { route: :tracking }))
+        expect(job.send(:booking_requested?, tracking, message)).to be(false)
+      end
+    end
+  end
+
   describe 'email opcional del invitado al agendar' do
     let(:inbox) { create(:inbox, account: account) }
     let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }

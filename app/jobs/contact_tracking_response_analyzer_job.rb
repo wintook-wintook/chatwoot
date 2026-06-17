@@ -180,9 +180,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return true
     end
 
-    # proyecto@bot_seguimiento_calendar — @agendar_calendar: ofrece horarios de Google Calendar
-    if agendar_calendar_directive?(tracking) && calendar_configured?(tracking)
-      Rails.logger.info '[TrackingBot] 📅 @agendar_calendar → ofreciendo horarios de calendario'
+    # proyecto@bot_seguimiento_calendar — @agendar_calendar: ofrece horarios SOLO cuando el
+    # cliente realmente pide/acepta una cita (no en cualquier mensaje). Así el agente
+    # conversa normal y agenda cuando corresponde, no de forma "eager".
+    if agendar_calendar_directive?(tracking) && calendar_configured?(tracking) && booking_requested?(tracking, message)
+      Rails.logger.info '[TrackingBot] 📅 @agendar_calendar + intención de cita → ofreciendo horarios'
       handle_book_appointment(tracking, message)
       return true
     end
@@ -206,6 +208,31 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     tracking&.tracking_template&.timezone.presence ||
       message&.conversation&.inbox&.timezone.presence ||
       'America/Mexico_City'
+  end
+
+  # ¿Hay que ofrecer cita ahora por la directiva @agendar_calendar?
+  # - Si DETECT_INTENT está activo, el router ya resolvió la ruta :book_appointment;
+  #   llegar aquí significa que NO era cita → no re-evaluamos (evita doble clasificación).
+  # - Si DETECT_INTENT está apagado, evaluamos la intención solo para esta decisión, así
+  #   la directiva agenda únicamente cuando el cliente lo pide/acepta (no "eager").
+  def booking_requested?(tracking, message)
+    return false if DETECT_INTENT
+
+    appointment_intent?(tracking, message)
+  end
+
+  def appointment_intent?(tracking, message)
+    key = get_api_key(message.account)&.dig(:key)
+    return false if key.blank?
+
+    result = ContactTrackings::RouterService.new(
+      tracking, message, key,
+      recent_messages: get_recent_context(message, 4)
+    ).classify
+    result[:route] == :book_appointment
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ appointment_intent? falló: #{e.message}"
+    false
   end
 
   def classify_route(tracking, message)
