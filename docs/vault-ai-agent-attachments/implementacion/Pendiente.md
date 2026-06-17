@@ -21,6 +21,13 @@ tags: [ai-agent-attachments, pendiente]
 - [x] Controlador CRUD de adjuntos + rutas anidadas.
 - [x] Parser de `@adjunto:nombre` + adjuntar blob al mensaje saliente
       (`resolve_attachment_directives` + reuso de `signed_id`).
+- [x] **Reescritura de referencias** al renombrar/borrar un adjunto
+      (`AiAgentAttachments::DirectiveReferenceService`): actualiza el prompt del agente
+      y los seguimientos vivos. → [[Directiva-y-envio]]
+- [ ] **Enviar `@adjunto:` también desde la base de conocimiento**
+      (`KnowledgeBaseResponseService`): hoy `@adjunto:` solo se resuelve en la ruta
+      conversacional (`:tracking`); si el agente usa directivas kbase (`@buscar_*`,
+      `@discourse`) el mensaje se rutea a la kbase y no envía adjuntos.
 
 ## Frontend
 
@@ -38,5 +45,6 @@ tags: [ai-agent-attachments, pendiente]
 ## Calidad
 
 - [x] Specs de modelo (unicidad de `name`) + request specs del controlador + spec del job.
+- [x] Spec de `DirectiveReferenceService` (rename/remove, boundary, estados vivos).
 - [ ] Caso de testeo funcional (subir archivo → directiva → envío en conversación).
 - [ ] Verificar límites del canal WhatsApp con un envío real.
