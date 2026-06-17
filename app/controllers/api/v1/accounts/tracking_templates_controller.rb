@@ -55,6 +55,7 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
     params.require(:tracking_template).permit(
       :name, :objective, :ai_context, :complementary_prompt, :inbox_id,
       :retry_interval_value, :retry_interval_unit, :calendar_event_duration, # proyecto@automatizacion_tracking
+      :timezone, # proyecto@bot_seguimiento_calendar
       whatsapp_templates: [],
       tags: [],
       keyword_actions: [:keyword, :action, :direction], # proyecto@contact_tracking

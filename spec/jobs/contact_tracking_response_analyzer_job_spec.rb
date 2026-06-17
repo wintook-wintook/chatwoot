@@ -232,6 +232,30 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
   end
 
+  describe '#appointment_timezone' do
+    let(:inbox) { create(:inbox, account: account, timezone: 'America/New_York') }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation, sender: contact, message_type: :incoming)
+    end
+    let(:tracking) { ContactTracking.new(account: account, tracking_template: tracking_template, inbox: inbox) }
+
+    it 'usa la zona horaria del Agente IA cuando está definida' do
+      tracking_template.update!(timezone: 'America/Mexico_City')
+      expect(job.send(:appointment_timezone, tracking, message)).to eq('America/Mexico_City')
+    end
+
+    it 'cae a la zona del inbox cuando el Agente IA no tiene zona' do
+      tracking_template.update!(timezone: nil)
+      expect(job.send(:appointment_timezone, tracking, message)).to eq('America/New_York')
+    end
+
+    it 'usa el default cuando no hay zona ni en el agente ni en el inbox' do
+      expect(job.send(:appointment_timezone, nil, nil)).to eq('America/Mexico_City')
+    end
+  end
+
   describe 'email opcional del invitado al agendar' do
     let(:inbox) { create(:inbox, account: account) }
     let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }

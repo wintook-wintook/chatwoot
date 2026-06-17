@@ -200,6 +200,14 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).present?
   end
 
+  # proyecto@bot_seguimiento_calendar — zona horaria para agendar (slots, hora mostrada,
+  # evento). Prioridad: la del Agente IA (tracking_template) → la del inbox → default.
+  def appointment_timezone(tracking, message)
+    tracking&.tracking_template&.timezone.presence ||
+      message&.conversation&.inbox&.timezone.presence ||
+      'America/Mexico_City'
+  end
+
   def classify_route(tracking, message)
     unless DETECT_INTENT
       Rails.logger.info '[TrackingBot] ⏭️  RouterService desactivado (TRACKING_DETECT_INTENT=false) → :tracking'
@@ -294,7 +302,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         "PERFIL DEL CONTACTO: #{ActionController::Base.helpers.strip_tags(ia_note.content)}\n" : ''
 
       tracking.reload
-      inbox_timezone = message.conversation.inbox.timezone || 'America/Mexico_City'
+      inbox_timezone = appointment_timezone(tracking, message)
       next_contact = tracking.scheduled_for.in_time_zone(inbox_timezone).strftime('%d/%m/%Y a las %H:%M')
 
       # Si el prompt contiene directivas kbase, no pasarlo al LLM conversacional:
@@ -384,7 +392,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     Rails.logger.info "[TrackingBot] 📅 RESCHEDULE → Reagendando seguimiento"
 
     reschedule_data = action_data[:reschedule_data] || {}
-    inbox_timezone = message.conversation.inbox.timezone || 'America/Mexico_City'
+    inbox_timezone = appointment_timezone(tracking, message)
 
     if reschedule_data.empty?
       Rails.logger.info "[TrackingBot] ❓ Sin fecha/hora → solicitando cuándo"
@@ -434,7 +442,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return
     end
 
-    timezone = message.conversation.inbox.timezone.presence || 'America/Mexico_City'
+    timezone = appointment_timezone(tracking, message)
     duration = tracking.tracking_template&.calendar_event_duration || 30
     slots    = ContactTrackings::AvailabilitySlotService.new(
       calendar_integration_ids: cal_ids,
@@ -601,7 +609,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def confirm_and_create_appointment(tracking, message, selected_slot)
-    timezone    = message.conversation.inbox.timezone.presence || 'America/Mexico_City'
+    timezone    = appointment_timezone(tracking, message)
     slot_start  = Time.parse(selected_slot['slot'])
     slot_end    = Time.parse(selected_slot['end_time'])
     agent_name  = selected_slot['agent_name']

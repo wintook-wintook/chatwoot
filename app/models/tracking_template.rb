@@ -21,6 +21,7 @@
 #  retry_interval_unit      :string           default("days")
 #  retry_interval_value     :integer          default(1)
 #  tags                     :json
+#  timezone                 :string
 #  whatsapp_templates       :json
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
@@ -58,6 +59,8 @@ class TrackingTemplate < ApplicationRecord
   # proyecto@automatizacion_tracking: intervalo entre intentos (opcional, mismo comportamiento que ContactTracking)
   validates :retry_interval_value, numericality: { greater_than: 0 }, allow_nil: true
   validates :retry_interval_unit, inclusion: { in: %w[minutes hours days] }, allow_nil: true
+  # proyecto@bot_seguimiento_calendar: zona horaria para agendar (slots, hora mostrada, evento)
+  validates :timezone, inclusion: { in: TZInfo::Timezone.all_identifiers }, allow_blank: true
   # proyecto@contact_tracking: palabras clave de acción
   validate :keyword_actions_valid_structure
 
