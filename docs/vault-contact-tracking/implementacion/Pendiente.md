@@ -54,9 +54,10 @@ asumir que algo falta (el módulo avanza rápido). Ver también [[Estado-actual]
 - [ ] **Política multi-agente de slots** — `AvailabilitySlotService` propone los **5 slots
       más tempranos combinados** de todos los `calendar_integration_ids`, sin balancear entre
       agentes. Definir si debe balancear o filtrar por el agente del seguimiento.
-- [ ] **Respuesta cuando el agente no tiene calendario configurado** — hoy cae a
-      `:interested` (sin calendar_ids) o `:book_appointment_no_slots` + escala a humano
-      (integración borrada), sin mensaje específico. Definir el mensaje esperado.
+- [x] ~~**Respuesta cuando el agente no tiene calendario configurado**~~ — ✅ **HECHO**:
+      `handle_no_calendar_configured` con mensaje específico (`:book_appointment_no_calendar`:
+      "no puedo confirmar el horario de forma automática, un asesor te contactará") en vez del
+      genérico de interés; escala a humano (nota + aviso admin), pausa y `outcome=interested`.
 - [ ] **Sentimiento end-to-end** — revisar `ResponseAnalyzerJob` y si hay dashboard
       que consuma `last_sentiment_analysis` (índice ya existe).
 - [ ] **KBase real en el router** — la ruta `:kbase` y `kbase_hook_id` existen;

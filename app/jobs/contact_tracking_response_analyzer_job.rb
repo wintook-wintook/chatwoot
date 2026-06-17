@@ -454,6 +454,24 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     send_auto_reply(tracking, message, generate_action_reply(tracking, message, :general_error))
   end
 
+  # proyecto@bot_seguimiento_calendar — el cliente quiere una cita pero este Agente IA
+  # no tiene calendarios vinculados: no podemos ofrecer horarios automáticamente, así que
+  # damos un mensaje claro y escalamos a un asesor para coordinar manualmente.
+  def handle_no_calendar_configured(tracking, message)
+    Rails.logger.info '[TrackingBot] 📅 Sin calendarios vinculados → escalando a humano para coordinar cita'
+    send_auto_reply(tracking, message, generate_action_reply(tracking, message, :book_appointment_no_calendar))
+    tracking.disable_auto_retry_mode!
+    tracking.update!(
+      ai_context: "#{tracking.ai_context}\n\n📅 [BA] Cliente quiso agendar pero el agente no tiene calendarios vinculados. Requiere atención humana.",
+      outcome: 'interested'
+    )
+    tracking.pause!
+    notify_admin_interested(tracking, message)
+    create_private_note(tracking, message,
+                        '📅 El cliente quiso agendar una cita pero este Agente IA no tiene calendarios de Google ' \
+                        'vinculados. Coordinar la cita manualmente. Requiere atención humana.')
+  end
+
   # ==============================================================================
   # proyecto@bot_seguimiento_calendar
   # Handler: Agendar cita via Google Calendar
@@ -464,8 +482,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     cal_ids = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
 
     unless cal_ids.present?
-      Rails.logger.info '[TrackingBot] 📅 Sin calendar_integration_ids en plantilla → fallback :interested'
-      handle_interested(tracking, message, 0.9)
+      handle_no_calendar_configured(tracking, message)
       return
     end
 
@@ -1015,6 +1032,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       "Lo siento, tuve un problema al procesar tu solicitud. Un agente se pondrá en contacto contigo pronto."
     when :book_appointment_no_slots
       "¡Gracias por tu interés! 😊 En este momento no tenemos horarios disponibles en agenda. Un asesor se pondrá en contacto contigo a la brevedad para coordinar una cita."
+    when :book_appointment_no_calendar
+      "¡Con gusto te agendamos! 😊 En este momento no puedo confirmar el horario de forma automática, así que un asesor se pondrá en contacto contigo a la brevedad para coordinar tu cita."
     end
   end
 

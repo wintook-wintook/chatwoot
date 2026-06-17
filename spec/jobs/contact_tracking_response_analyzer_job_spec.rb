@@ -292,6 +292,44 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
   end
 
+  describe '#handle_book_appointment sin calendarios vinculados' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation,
+                       sender: contact, message_type: :incoming, content: 'quiero una cita')
+    end
+    let(:tracking) do
+      ContactTracking.create!(
+        account: account, contact: contact, inbox: inbox,
+        objective: 'Vender', scheduled_for: 1.hour.from_now, status: 'active',
+        tracking_template_id: tracking_template.id
+      )
+    end
+
+    before do
+      tracking_template.update!(calendar_integration_ids: [])
+      allow(job).to receive(:notify_admin_interested)
+      allow(job).to receive(:create_private_note)
+    end
+
+    it 'no busca slots y envía un mensaje específico (no el genérico de interés)' do
+      expect(ContactTrackings::AvailabilitySlotService).not_to receive(:new)
+      expect(job).to receive(:send_auto_reply).with(tracking, message, /no puedo confirmar el horario de forma automática/i)
+      job.send(:handle_book_appointment, tracking, message)
+    end
+
+    it 'escala a un humano y pausa el seguimiento' do
+      allow(job).to receive(:send_auto_reply)
+      expect(job).to receive(:notify_admin_interested).with(tracking, message)
+      expect(job).to receive(:create_private_note).with(tracking, message, /atención humana/i)
+      job.send(:handle_book_appointment, tracking, message)
+      expect(tracking.reload.outcome).to eq('interested')
+      expect(tracking.status).to eq('paused')
+    end
+  end
+
   describe 'email opcional del invitado al agendar' do
     let(:inbox) { create(:inbox, account: account) }
     let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
