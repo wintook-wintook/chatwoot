@@ -48,6 +48,14 @@ class GoogleCalendarService
     patch("/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}", body)
   end
 
+  # Borra un evento. `delete` lanza ante un error real de la API; si Google responde
+  # 404/410 (el evento ya no existe) lo tratamos como éxito idempotente. Por eso, si
+  # no se levantó excepción, el evento ya no está en el calendario → devolvemos true.
+  def delete_event(event_id, calendar_id: 'primary')
+    delete("/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}")
+    true
+  end
+
   def list_calendars
     response = get('/users/me/calendarList')
     (response['items'] || []).map do |cal|
@@ -140,6 +148,14 @@ class GoogleCalendarService
       headers: auth_headers,
       body: body.to_json
     )
+    handle_response(response)
+  end
+
+  def delete(path)
+    response = HTTParty.delete("#{CALENDAR_API}#{path}", headers: auth_headers)
+    # Un evento que ya no existe (404/410) es un borrado idempotente, no un error.
+    return :already_gone if [404, 410].include?(response.code)
+
     handle_response(response)
   end
 

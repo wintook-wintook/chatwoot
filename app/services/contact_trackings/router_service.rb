@@ -17,6 +17,7 @@
 #   :interested       → El cliente muestra interés claro en avanzar
 #   :reschedule       → El cliente solicita cambiar la fecha/hora de contacto
 #   :book_appointment → El cliente pide explícitamente agendar una cita, reunión o llamada
+#   :cancel_appointment → El cliente pide cancelar (anular) una cita ya agendada
 #   :kbase            → El cliente tiene una duda que requiere búsqueda en base de conocimiento
 #   :botseller        → El mensaje es un comando o consulta para el bot de ventas
 #   :tracking         → Conversación normal, sin acción especial (default)
@@ -35,14 +36,14 @@
 
 module ContactTrackings
   class RouterService
-    VALID_ROUTES = %w[rejected interested reschedule book_appointment kbase botseller tracking].freeze
+    VALID_ROUTES = %w[rejected interested reschedule book_appointment cancel_appointment kbase botseller tracking].freeze
 
     CLASSIFICATION_PROMPT = <<~PROMPT.strip
       Eres un clasificador de intenciones. Analiza el mensaje del cliente y responde
       ÚNICAMENTE con un JSON con la siguiente estructura, sin explicación adicional:
 
       {
-        "intent": "<una de: rejected | interested | reschedule | book_appointment | kbase | tracking>",
+        "intent": "<una de: rejected | interested | reschedule | book_appointment | cancel_appointment | kbase | tracking>",
         "confidence": <número entre 0.0 y 1.0>,
         "reschedule_data": {
           "relative_minutes": <null o número>,
@@ -61,6 +62,9 @@ module ContactTrackings
       - "book_appointment":  el cliente pide explícitamente agendar una cita, reunión, llamada o quiere saber
                              cuándo hay disponibilidad de horarios. Ejemplos: "quiero agendar una cita",
                              "podemos hacer una llamada?", "cuándo tienen disponibilidad", "me gustaría reunirme".
+      - "cancel_appointment": el cliente pide CANCELAR una cita YA agendada (no reagendar a otra hora, sino
+                             anularla). Ejemplos: "quiero cancelar mi cita", "ya no voy a poder asistir",
+                             "cancela la reunión", "anula la cita".
       - "kbase":             el cliente tiene una duda técnica, funcional, de proceso o pide ayuda/soporte que
                              requiere consultar una base de conocimiento. Incluye preguntas sobre cómo hacer algo,
                              errores, configuraciones, procesos, etc.

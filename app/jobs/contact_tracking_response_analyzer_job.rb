@@ -134,6 +134,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
               when :reschedule
                 handle_reschedule(tracking, message, route_result)
                 true
+              when :cancel_appointment
+                handle_cancel_appointment(tracking, message)
+                true
               when :botseller
                 if BotSeller::Dispatcher.configured?
                   Rails.logger.info '[TrackingBot] 🤖 Derivando a @botseller'
@@ -527,29 +530,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     contact     = message.sender
     contact_name = contact&.name || 'Cliente'
 
-    integration = UserCalendarIntegration.find_by(id: cal_id)
-
-    event_created = false
-    event_id = nil
-    if integration
-      begin
-        service = GoogleCalendarService.new(integration)
-        attendees = [contact.email].compact.select(&:present?)
-        result = service.create_event(
-          summary:     "Cita con #{contact_name} — #{tracking.objective.truncate(60)}",
-          description: "Contacto: #{contact_name}\nTeléfono: #{contact&.phone_number}\nObjetivo: #{tracking.objective}",
-          start_time:  slot_start,
-          end_time:    slot_end,
-          attendees:   attendees
-        )
-        # Guardamos el id del evento para poder moverlo/cancelarlo después (#2/#3)
-        event_id = result['id'] if result.is_a?(Hash)
-        event_created = true
-        Rails.logger.info "[TrackingBot] 📅 Evento creado en Google Calendar para #{slot_start} (id: #{event_id})"
-      rescue StandardError => e
-        Rails.logger.error "[TrackingBot] ❌ Error creando evento en Google Calendar: #{e.message}"
-      end
-    end
+    event_created, event_id = create_or_move_calendar_event(tracking, message, slot_start, slot_end, cal_id)
 
     local_start = slot_start.in_time_zone(timezone)
     local_end   = slot_end.in_time_zone(timezone)
@@ -602,6 +583,99 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     Rails.logger.error "[TrackingBot] ❌ Error en confirm_and_create_appointment: #{e.message}"
     send_auto_reply(tracking, message, "Lo siento, tuve un problema al confirmar la cita. Un asesor te contactará pronto.")
     clear_pending_slot(tracking)
+  end
+
+  # Crea el evento en Google Calendar; si el seguimiento YA tiene una cita agendada
+  # (appointment_event_id) en la misma agenda, la MUEVE (update_event) en vez de crear
+  # una nueva, evitando duplicados. Si la nueva cita cae en otra agenda, crea el evento
+  # nuevo y borra el anterior. Devuelve [event_created (bool), event_id (String|nil)].
+  def create_or_move_calendar_event(tracking, message, slot_start, slot_end, cal_id)
+    integration = UserCalendarIntegration.find_by(id: cal_id)
+    return [false, nil] unless integration
+
+    contact      = message.sender
+    contact_name = contact&.name || 'Cliente'
+    summary      = "Cita con #{contact_name} — #{tracking.objective.truncate(60)}"
+    description  = "Contacto: #{contact_name}\nTeléfono: #{contact&.phone_number}\nObjetivo: #{tracking.objective}"
+    attendees    = [contact&.email].compact.select(&:present?)
+    service      = GoogleCalendarService.new(integration)
+
+    existing_event_id = tracking.appointment_event_id
+    if existing_event_id.present? && tracking.appointment_calendar_id == cal_id
+      service.update_event(existing_event_id, summary: summary, description: description,
+                                              start_time: slot_start, end_time: slot_end, attendees: attendees)
+      Rails.logger.info "[TrackingBot] 📅 Evento movido en Google Calendar (id: #{existing_event_id}) → #{slot_start}"
+      [true, existing_event_id]
+    else
+      result   = service.create_event(summary: summary, description: description,
+                                       start_time: slot_start, end_time: slot_end, attendees: attendees)
+      event_id = result.is_a?(Hash) ? result['id'] : nil
+      Rails.logger.info "[TrackingBot] 📅 Evento creado en Google Calendar para #{slot_start} (id: #{event_id})"
+      delete_stale_appointment_event(tracking, cal_id)
+      [true, event_id]
+    end
+  rescue StandardError => e
+    Rails.logger.error "[TrackingBot] ❌ Error creando/moviendo evento en Google Calendar: #{e.message}"
+    [false, nil]
+  end
+
+  # Borra (best-effort) el evento de una cita previa que vivía en OTRA agenda, para no
+  # dejar un evento duplicado/huérfano cuando la cita se mueve a un calendario distinto.
+  def delete_stale_appointment_event(tracking, new_cal_id)
+    old_event_id = tracking.appointment_event_id
+    old_cal_id   = tracking.appointment_calendar_id
+    return if old_event_id.blank? || old_cal_id == new_cal_id
+
+    old_integration = UserCalendarIntegration.find_by(id: old_cal_id)
+    return unless old_integration
+
+    GoogleCalendarService.new(old_integration).delete_event(old_event_id)
+    Rails.logger.info "[TrackingBot] 📅 Evento previo borrado de la agenda anterior (id: #{old_event_id})"
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ No se pudo borrar el evento previo: #{e.message}"
+  end
+
+  # proyecto@bot_seguimiento_calendar — cancela una cita YA agendada: borra el evento
+  # del calendario y limpia los campos de cita del seguimiento. Si no hay cita activa,
+  # se trata como un rechazo normal.
+  def handle_cancel_appointment(tracking, message)
+    event_id = tracking.appointment_event_id
+    if event_id.blank?
+      Rails.logger.info '[TrackingBot] 🗑️  CANCEL sin cita activa → tratado como rejected'
+      return handle_rejected(tracking, message, 0.9)
+    end
+
+    deleted     = false
+    integration = UserCalendarIntegration.find_by(id: tracking.appointment_calendar_id)
+    if integration
+      begin
+        GoogleCalendarService.new(integration).delete_event(event_id)
+        deleted = true
+        Rails.logger.info "[TrackingBot] 🗑️  Evento cancelado en Google Calendar (id: #{event_id})"
+      rescue StandardError => e
+        Rails.logger.error "[TrackingBot] ❌ Error cancelando evento en Google Calendar: #{e.message}"
+      end
+    end
+
+    send_auto_reply(tracking, message,
+                    'Listo, cancelé tu cita. 🙌 Si más adelante querés agendar otra, escribime cuando gustes. 😊')
+
+    tracking.disable_auto_retry_mode!
+    tracking.update!(
+      appointment_at: nil,
+      appointment_event_id: nil,
+      appointment_calendar_id: nil,
+      outcome: 'cancelled',
+      ai_context: "#{tracking.ai_context}\n\n🗑️ [CITA CANCELADA] El cliente canceló su cita. Evento en Calendar: #{deleted ? 'borrado' : 'no se pudo borrar (revisar)'}."
+    )
+
+    nota = "🗑️ Cita cancelada por el cliente.\n• Evento en Calendar: #{deleted ? '✅ borrado' : '⚠️ no se pudo borrar, revisar manualmente'}"
+    create_private_note(tracking, message, nota)
+    notify_admin_interested(tracking, message)
+    Rails.logger.info '[TrackingBot] 🗑️  Cita cancelada y seguimiento actualizado'
+  rescue StandardError => e
+    Rails.logger.error "[TrackingBot] ❌ Error en handle_cancel_appointment: #{e.message}"
+    send_auto_reply(tracking, message, 'Lo siento, tuve un problema al cancelar la cita. Un asesor te contactará pronto.')
   end
 
   def format_slots_message(slots, timezone)

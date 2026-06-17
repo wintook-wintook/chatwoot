@@ -119,6 +119,29 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       end
     end
 
+    context 'cuando el seguimiento ya tenía una cita en la misma agenda' do
+      let(:calendar_service) { instance_double(GoogleCalendarService) }
+
+      before do
+        tracking.update!(appointment_event_id: 'evt_old', appointment_calendar_id: 123)
+        allow(GoogleCalendarService).to receive(:new).and_return(calendar_service)
+        allow(calendar_service).to receive(:update_event).and_return('id' => 'evt_old')
+        allow(calendar_service).to receive(:create_event)
+        allow(job).to receive(:send_auto_reply)
+      end
+
+      it 'mueve el evento existente en vez de crear uno nuevo' do
+        job.send(:confirm_and_create_appointment, tracking, message, selected_slot)
+        expect(calendar_service).to have_received(:update_event).with('evt_old', any_args)
+        expect(calendar_service).not_to have_received(:create_event)
+      end
+
+      it 'conserva el mismo appointment_event_id' do
+        job.send(:confirm_and_create_appointment, tracking, message, selected_slot)
+        expect(tracking.reload.appointment_event_id).to eq('evt_old')
+      end
+    end
+
     context 'cuando el evento NO se puede crear (calendario desconfigurado)' do
       before do
         failing = instance_double(GoogleCalendarService)
@@ -145,6 +168,66 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
         allow(job).to receive(:send_auto_reply)
         expect(job).to receive(:create_private_note).with(tracking, message, /atención humana/i)
         job.send(:confirm_and_create_appointment, tracking, message, selected_slot)
+      end
+    end
+  end
+
+  describe '#handle_cancel_appointment' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation, sender: contact, message_type: :incoming)
+    end
+    let(:tracking) do
+      ContactTracking.create!(
+        account: account, contact: contact, inbox: inbox,
+        objective: 'Vender producto', scheduled_for: 1.hour.from_now,
+        status: 'paused', tracking_template_id: tracking_template.id
+      )
+    end
+    let(:calendar_service) { instance_double(GoogleCalendarService) }
+
+    before do
+      allow(job).to receive(:create_private_note)
+      allow(job).to receive(:notify_admin_interested)
+      allow(job).to receive(:send_auto_reply)
+    end
+
+    context 'cuando hay una cita activa' do
+      before do
+        tracking.update!(appointment_at: 1.day.from_now, appointment_event_id: 'evt_1',
+                         appointment_calendar_id: 123, outcome: 'appointment')
+        allow(UserCalendarIntegration).to receive(:find_by).and_return(instance_double(UserCalendarIntegration))
+        allow(GoogleCalendarService).to receive(:new).and_return(calendar_service)
+        allow(calendar_service).to receive(:delete_event).and_return(true)
+      end
+
+      it 'borra el evento del calendario' do
+        job.send(:handle_cancel_appointment, tracking, message)
+        expect(calendar_service).to have_received(:delete_event).with('evt_1')
+      end
+
+      it 'limpia los campos de cita y marca el outcome cancelled' do
+        job.send(:handle_cancel_appointment, tracking, message)
+        tracking.reload
+        expect(tracking.appointment_event_id).to be_nil
+        expect(tracking.appointment_calendar_id).to be_nil
+        expect(tracking.appointment_at).to be_nil
+        expect(tracking.outcome).to eq('cancelled')
+      end
+
+      it 'avisa al cliente que la cita fue cancelada' do
+        expect(job).to receive(:send_auto_reply).with(tracking, message, /cancel/i)
+        job.send(:handle_cancel_appointment, tracking, message)
+      end
+    end
+
+    context 'cuando NO hay una cita activa' do
+      it 'lo trata como un rechazo y no intenta borrar nada del calendario' do
+        expect(job).to receive(:handle_rejected).with(tracking, message, anything)
+        expect(GoogleCalendarService).not_to receive(:new)
+        job.send(:handle_cancel_appointment, tracking, message)
       end
     end
   end
