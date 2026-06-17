@@ -35,16 +35,17 @@ asumir que algo falta (el módulo avanza rápido). Ver también [[Estado-actual]
       → espera un **número**). Entrar en una "conversación de agendar" hasta **confirmar**:
       manejar "ninguno me sirve", proponer otras fechas, interpretar lenguaje natural
       (hoy `parse_slot_choice` solo acepta dígito 1-5/palabra; ver [[Testeo-funcional]] TC-03).
-- [ ] **Mover una cita ya agendada** — no soportado. `confirm_and_create_appointment`
-      **no guarda el `event_id`** del evento creado, así que aunque existe
-      `GoogleCalendarService#update_event`, no hay cómo identificar qué mover. `:reschedule`
-      hoy reagenda el **tracking**, no el evento. Guardar `event_id` y usar `update_event`.
-- [ ] **Cancelar una cita ya agendada** — no soportado. `GoogleCalendarService` **no tiene
-      `delete_event`** y no se guarda `event_id`. Implementar borrado del evento al cancelar.
-- [ ] **BUG: confirmación falsa de cita** — si el calendario se desconfigura entre ofrecer
-      y confirmar, `confirm_and_create_appointment` deja `event_created = false` pero **igual
-      responde "✅ ¡Perfecto! Tu cita está agendada…"**. No confirmar al cliente si el evento
-      no se creó (responder error / escalar a humano).
+- [x] ~~**Mover una cita ya agendada**~~ — ✅ **HECHO**: se persiste `appointment_event_id` +
+      `appointment_calendar_id`; `confirm_and_create_appointment` reutiliza la cita
+      (`create_or_move_calendar_event`): misma agenda → `update_event` (mueve), otra agenda →
+      crea nuevo y borra el viejo (`delete_stale_appointment_event`). Evita duplicados.
+- [x] ~~**Cancelar una cita ya agendada**~~ — ✅ **HECHO**: nuevo `GoogleCalendarService#delete_event`
+      (idempotente ante 404/410), ruta `:cancel_appointment` en `RouterService` y
+      `handle_cancel_appointment` (borra el evento, limpia los campos de cita, `outcome=cancelled`;
+      sin cita activa se trata como rechazo).
+- [x] ~~**BUG: confirmación falsa de cita**~~ — ✅ **HECHO**: si `create_event` falla, ya **no** se
+      confirma; se avisa que un asesor confirmará, se escala a humano (nota + aviso admin) y
+      **no** se marca `outcome=appointment` (no contamina el KPI).
 - [ ] **Política multi-agente de slots** — `AvailabilitySlotService` propone los **5 slots
       más tempranos combinados** de todos los `calendar_integration_ids`, sin balancear entre
       agentes. Definir si debe balancear o filtrar por el agente del seguimiento.
