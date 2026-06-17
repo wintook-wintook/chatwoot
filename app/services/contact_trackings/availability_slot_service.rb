@@ -28,17 +28,16 @@ module ContactTrackings
       time_min = align_to_slot(start_at)
       time_max = business_days_from_now(start_at, DAYS_AHEAD)
 
-      all_slots = []
+      slots_by_agent = {}
 
       integrations.each do |integration|
         busy_periods = fetch_busy_periods(integration, time_min, time_max)
-        slots = free_slots_for(integration, busy_periods, time_min, time_max)
-        all_slots.concat(slots)
+        slots_by_agent[integration.id] = free_slots_for(integration, busy_periods, time_min, time_max)
       rescue StandardError => e
         Rails.logger.warn "[AvailabilitySlotService] ⚠️ Error en integración ##{integration.id}: #{e.message}"
       end
 
-      all_slots.sort_by { |s| s[:slot] }.first(MAX_SLOTS)
+      balance_slots(slots_by_agent)
     end
 
     # Verifica si un horario EXACTO propuesto por el cliente está libre (dentro del
@@ -70,6 +69,24 @@ module ContactTrackings
     end
 
     private
+
+    # Reparte los horarios ofrecidos entre los agentes para (a) no ofrecer el mismo
+    # horario dos veces y (b) no sobrecargar a un solo agente: agrupa por horario y,
+    # en cada uno, elige al agente con MENOS citas asignadas hasta ahora (desempate
+    # estable por id). Devuelve los MAX_SLOTS horarios distintos más tempranos.
+    def balance_slots(slots_by_agent)
+      by_time = Hash.new { |h, k| h[k] = [] }
+      slots_by_agent.each_value do |slots|
+        slots.each { |s| by_time[s[:slot]] << s }
+      end
+
+      load = Hash.new(0)
+      by_time.keys.sort.first(MAX_SLOTS).map do |time|
+        chosen = by_time[time].min_by { |s| [load[s[:calendar_integration_id]], s[:calendar_integration_id]] }
+        load[chosen[:calendar_integration_id]] += 1
+        chosen
+      end
+    end
 
     def fetch_busy_periods(integration, time_min, time_max)
       calendar_ids = integration.enabled_calendar_ids.presence || ['primary']

@@ -51,9 +51,10 @@ asumir que algo falta (el módulo avanza rápido). Ver también [[Estado-actual]
 - [x] ~~**BUG: confirmación falsa de cita**~~ — ✅ **HECHO**: si `create_event` falla, ya **no** se
       confirma; se avisa que un asesor confirmará, se escala a humano (nota + aviso admin) y
       **no** se marca `outcome=appointment` (no contamina el KPI).
-- [ ] **Política multi-agente de slots** — `AvailabilitySlotService` propone los **5 slots
-      más tempranos combinados** de todos los `calendar_integration_ids`, sin balancear entre
-      agentes. Definir si debe balancear o filtrar por el agente del seguimiento.
+- [x] ~~**Política multi-agente de slots**~~ — ✅ **HECHO** (reparto): `AvailabilitySlotService#balance_slots`
+      agrupa los horarios libres por hora y, en cada uno, elige al agente con menos citas
+      asignadas (desempate por id). Así no se ofrece el mismo horario dos veces ni se sobrecarga
+      a un solo agente; devuelve los 5 horarios distintos más tempranos.
 - [x] ~~**Respuesta cuando el agente no tiene calendario configurado**~~ — ✅ **HECHO**:
       `handle_no_calendar_configured` con mensaje específico (`:book_appointment_no_calendar`:
       "no puedo confirmar el horario de forma automática, un asesor te contactará") en vez del
