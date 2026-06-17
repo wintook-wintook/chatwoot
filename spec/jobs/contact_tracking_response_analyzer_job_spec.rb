@@ -231,4 +231,97 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       end
     end
   end
+
+  describe 'email opcional del invitado al agendar' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation,
+                       sender: contact, message_type: :incoming, content: content)
+    end
+    let(:slot) do
+      {
+        'slot' => 1.day.from_now.change(hour: 15).utc.iso8601,
+        'end_time' => 1.day.from_now.change(hour: 15, min: 30).utc.iso8601,
+        'agent_name' => 'Ana', 'cal_id' => 123
+      }
+    end
+
+    before { allow(job).to receive(:send_auto_reply) }
+
+    describe '#handle_slot_selection con el slot ya elegido' do
+      let(:content) { '1' }
+      let(:tracking) do
+        ContactTracking.create!(
+          account: account, contact: contact, inbox: inbox,
+          objective: 'Vender', scheduled_for: 1.hour.from_now,
+          status: 'active', tracking_template_id: tracking_template.id,
+          ai_context: "📅 [PENDING_SLOT] Esperando elección.\nSlots ofrecidos: #{[slot].to_json}"
+        )
+      end
+
+      context 'cuando el contacto NO tiene email' do
+        let(:contact) { create(:contact, account: account, email: nil) }
+
+        it 'no confirma todavía: pide el email y deja el estado PENDING_EMAIL' do
+          expect(job).not_to receive(:confirm_and_create_appointment)
+          job.send(:handle_slot_selection, tracking, message)
+          expect(tracking.reload.ai_context).to include('[PENDING_EMAIL]')
+        end
+      end
+
+      context 'cuando el contacto YA tiene email' do
+        let(:contact) { create(:contact, account: account, email: 'ya@mail.com') }
+
+        it 'confirma directo sin pedir email' do
+          expect(job).to receive(:confirm_and_create_appointment).with(tracking, message, hash_including('cal_id' => 123))
+          job.send(:handle_slot_selection, tracking, message)
+        end
+      end
+    end
+
+    describe '#handle_pending_email' do
+      let(:contact) { create(:contact, account: account, email: nil) }
+      let(:tracking) do
+        ContactTracking.create!(
+          account: account, contact: contact, inbox: inbox,
+          objective: 'Vender', scheduled_for: 1.hour.from_now,
+          status: 'active', tracking_template_id: tracking_template.id,
+          ai_context: "📧 [PENDING_EMAIL] Esperando email para la cita.\nCita elegida: #{slot.to_json}"
+        )
+      end
+
+      before { allow(job).to receive(:confirm_and_create_appointment) }
+
+      context 'cuando el cliente envía un email válido' do
+        let(:content) { 'mi correo es ana@mail.com, gracias' }
+
+        it 'guarda el email en el contacto y confirma la cita' do
+          job.send(:handle_pending_email, tracking, message)
+          expect(contact.reload.email).to eq('ana@mail.com')
+          expect(job).to have_received(:confirm_and_create_appointment).with(tracking, message, hash_including('cal_id' => 123))
+        end
+      end
+
+      context 'cuando el cliente omite el email' do
+        let(:content) { 'sin correo' }
+
+        it 'no guarda email pero agenda igual' do
+          job.send(:handle_pending_email, tracking, message)
+          expect(contact.reload.email).to be_blank
+          expect(job).to have_received(:confirm_and_create_appointment)
+        end
+      end
+
+      context 'cuando la respuesta no es un email ni un "sin correo"' do
+        let(:content) { 'y a qué hora exactamente?' }
+
+        it 'repregunta y mantiene el estado sin confirmar' do
+          job.send(:handle_pending_email, tracking, message)
+          expect(job).not_to have_received(:confirm_and_create_appointment)
+          expect(tracking.reload.ai_context).to include('[PENDING_EMAIL]')
+        end
+      end
+    end
+  end
 end

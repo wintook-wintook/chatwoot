@@ -28,9 +28,11 @@ asumir que algo falta (el módulo avanza rápido). Ver también [[Estado-actual]
       el horario laboral (9-18) y la hora mostrada al cliente se calculan en UTC (no es bug
       de código). Si el negocio opera en México, configurar el inbox en `America/Mexico_City`
       o el evento cae a las 03:00 MX. Revisar config de inbox. Ver [[Testeo-funcional]] TC-04.
-- [ ] **Cita sin invitado cuando el contacto no tiene email** — `confirm_and_create_appointment`
-      solo agrega `attendees` si el contacto tiene email; los contactos de WhatsApp no, así que
-      el evento se crea sin invitar al contacto. Decidir si capturar email o notificar por otro medio.
+- [x] ~~**Cita sin invitado cuando el contacto no tiene email**~~ — ✅ **HECHO** (email opcional):
+      si el contacto no tiene email, tras elegir el horario el bot lo pide una vez
+      (`[PENDING_EMAIL]` + `prompt_for_email`/`handle_pending_email`). Si lo da, se guarda en el
+      contacto y se le invita al evento; si responde "sin correo"/omite, se agenda igual sin
+      invitado. Si ya tenía email, confirma directo.
 - [ ] **Negociación de cita multi-turno** — hoy el flujo es single-shot (ofrece 5 slots
       → espera un **número**). Entrar en una "conversación de agendar" hasta **confirmar**:
       manejar "ninguno me sirve", proponer otras fechas, interpretar lenguaje natural

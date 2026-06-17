@@ -117,6 +117,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return handle_slot_selection(tracking, message)
     end
 
+    # [2b] proyecto@bot_seguimiento_calendar — Esperando el email (opcional) para la cita
+    if pending_email_selection?(tracking)
+      Rails.logger.info '[TrackingBot] 📧 PENDING_EMAIL detectado → procesando email'
+      return handle_pending_email(tracking, message)
+    end
+
     # [3] RouterService — clasifica ruta via IA
     route_result = classify_route(tracking, message)
     route        = route_result[:route]
@@ -486,7 +492,14 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     selected = slots[choice - 1]
     Rails.logger.info "[TrackingBot] 📅 Slot elegido: opción #{choice} — #{selected['slot']}"
-    confirm_and_create_appointment(tracking, message, selected)
+
+    # Si el contacto ya tiene email, confirmamos directo; si no, lo pedimos (opcional)
+    # para poder invitarlo al evento del calendario.
+    if message.sender&.email.present?
+      confirm_and_create_appointment(tracking, message, selected)
+    else
+      prompt_for_email(tracking, message, selected)
+    end
     true
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error en handle_slot_selection: #{e.message}"
@@ -519,6 +532,72 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     tracking.update_columns(ai_context: cleaned)
   rescue StandardError => e
     Rails.logger.warn "[TrackingBot] ⚠️ No se pudo limpiar PENDING_SLOT: #{e.message}"
+  end
+
+  # proyecto@bot_seguimiento_calendar — pedir email (opcional) antes de confirmar la cita
+  EMAIL_PATTERN     = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i
+  SKIP_EMAIL_WORDS  = /\b(sin\s+(correo|email)|no\s+tengo|no\s+quiero|omitir|no\s+gracias|sin\s+invitaci[oó]n)\b/i
+
+  def pending_email_selection?(tracking)
+    tracking.ai_context.to_s.include?('[PENDING_EMAIL]')
+  end
+
+  def prompt_for_email(tracking, message, selected_slot)
+    send_auto_reply(tracking, message,
+                    '¡Perfecto! 📧 ¿A qué correo te envío la invitación de la cita? ' \
+                    'Si preferís, escribí "sin correo" y la agendo igual.')
+    clear_pending_slot(tracking)
+    tracking.update!(
+      ai_context: "#{tracking.ai_context}\n\n📧 [PENDING_EMAIL] Esperando email para la cita.\nCita elegida: #{selected_slot.to_json}"
+    )
+  end
+
+  def handle_pending_email(tracking, message)
+    slot_json = tracking.ai_context.to_s.match(/Cita elegida: (\{.*?\})/m)&.captures&.first
+    selected  = slot_json ? JSON.parse(slot_json) : nil
+
+    if selected.nil?
+      Rails.logger.warn '[TrackingBot] 📧 PENDING_EMAIL sin cita en ai_context → limpiando estado'
+      clear_pending_email(tracking)
+      return false
+    end
+
+    text  = message_text_for_ai(message).to_s.strip
+    email = text[EMAIL_PATTERN]
+
+    if email
+      begin
+        message.sender.update!(email: email)
+        Rails.logger.info "[TrackingBot] 📧 Email capturado para la cita: #{email}"
+      rescue StandardError => e
+        Rails.logger.warn "[TrackingBot] ⚠️ No se pudo guardar el email (#{e.message}) → se agenda sin invitado"
+      end
+    elsif text.match?(SKIP_EMAIL_WORDS) || text.blank?
+      Rails.logger.info '[TrackingBot] 📧 Cliente omitió el email → se agenda sin invitado'
+    else
+      # No es un email ni un "sin correo" claro → repreguntamos sin perder el estado
+      send_auto_reply(tracking, message,
+                      'No reconocí un correo válido 😅. Escribí tu email (ej: nombre@correo.com) ' \
+                      'o "sin correo" para agendar sin invitación.')
+      return true
+    end
+
+    clear_pending_email(tracking)
+    confirm_and_create_appointment(tracking, message, selected)
+    true
+  rescue StandardError => e
+    Rails.logger.error "[TrackingBot] ❌ Error en handle_pending_email: #{e.message}"
+    clear_pending_email(tracking)
+    false
+  end
+
+  def clear_pending_email(tracking)
+    cleaned = tracking.ai_context.to_s
+                      .gsub(/\n\n📧 \[PENDING_EMAIL\].*?(\n\n|\z)/m, '\1')
+                      .strip
+    tracking.update_columns(ai_context: cleaned)
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ No se pudo limpiar PENDING_EMAIL: #{e.message}"
   end
 
   def confirm_and_create_appointment(tracking, message, selected_slot)
