@@ -39,6 +39,28 @@
         "LABEL": "Entrenamiento",
         "PLACEHOLDER": "Instrucciones adicionales para preguntas y respuestas..."
       },
+      "ATTACHMENTS": {
+        "DESCRIPTION": "Sube archivos y referéncialos en el Entrenamiento con @adjunto:nombre para que el Agente IA los envíe en la conversación.",
+        "SAVE_FIRST": "Guarda primero el Agente IA para poder adjuntar archivos.",
+        "NAME_LABEL": "Nombre (clave)",
+        "NAME_PLACEHOLDER": "p. ej. catalogo_2026",
+        "SELECT_FILE": "Seleccionar archivo",
+        "UPLOAD": "Subir archivo",
+        "LOADING": "Cargando archivos...",
+        "EMPTY": "Aún no hay archivos. Sube uno para usarlo con @adjunto:nombre.",
+        "INSERT_BTN": "Insertar archivo",
+        "PICKER_TITLE": "📎 Insertar archivo",
+        "PICKER_HELP": "Haz clic en un archivo para insertar @adjunto:nombre en el Entrenamiento.",
+        "COPY": "Copiar",
+        "RENAME": "Renombrar",
+        "RENAME_SAVE": "Guardar",
+        "RENAME_CANCEL": "Cancelar",
+        "RENAME_ERROR": "No se pudo renombrar (¿nombre repetido o inválido?).",
+        "DELETE": "Eliminar",
+        "INVALID_NAME": "El nombre solo admite letras, números, guion y guion bajo (sin espacios).",
+        "NO_FILE": "Selecciona un archivo para subir.",
+        "UPLOAD_ERROR": "No se pudo subir el archivo."
+      },
       "TAGS": {
         "LABEL": "Etiquetas",
         "PLACEHOLDER": "Escribe y presiona Enter para agregar...",

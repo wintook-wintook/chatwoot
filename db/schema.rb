@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_12_130000) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_15_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -117,6 +117,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_12_130000) do
     t.integer "bot_type", default: 0
     t.jsonb "bot_config", default: {}
     t.index ["account_id"], name: "index_agent_bots_on_account_id"
+  end
+
+  create_table "ai_agent_attachments", force: :cascade do |t|
+    t.bigint "tracking_template_id", null: false
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_ai_agent_attachments_on_account_id"
+    t.index ["tracking_template_id", "name"], name: "index_ai_agent_attachments_on_template_and_name", unique: true
+    t.index ["tracking_template_id"], name: "index_ai_agent_attachments_on_tracking_template_id"
   end
 
   create_table "applied_slas", force: :cascade do |t|
@@ -1387,6 +1398,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_12_130000) do
   add_foreign_key "account_users", "contacts", column: "agent_contact_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "ai_agent_attachments", "accounts"
+  add_foreign_key "ai_agent_attachments", "tracking_templates"
   add_foreign_key "case_ai_configs", "accounts"
   add_foreign_key "case_tickets", "users", column: "requester_id"
   add_foreign_key "case_type_fields", "accounts"
