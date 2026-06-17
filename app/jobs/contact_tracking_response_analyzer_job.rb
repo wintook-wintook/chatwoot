@@ -555,19 +555,40 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     fecha_texto = "#{day_names[local_start.wday]} #{local_start.day} de #{month_names[local_start.month - 1]}"
     hora_texto  = "#{local_start.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs"
 
+    # No confirmar una cita que NO se creó en el calendario: sería una confirmación
+    # falsa al cliente. En su lugar escalamos a un asesor humano y NO marcamos el
+    # seguimiento como `appointment` (no contaminar el KPI con citas inexistentes).
+    unless event_created
+      Rails.logger.warn '[TrackingBot] ⚠️ Evento NO creado en Calendar → no se confirma la cita, se escala a humano'
+      send_auto_reply(tracking, message,
+                      "¡Gracias por elegir un horario! 🙌 Estoy terminando de confirmar tu cita para el " \
+                      "#{fecha_texto} a las #{hora_texto}. Un asesor te confirmará en breve, disculpá la demora. 😊")
+      clear_pending_slot(tracking)
+      tracking.disable_auto_retry_mode!
+      tracking.update!(
+        ai_context: "#{tracking.ai_context}\n\n⚠️ [CITA NO CONFIRMADA] El cliente eligió #{fecha_texto} #{hora_texto} con #{agent_name} pero el evento no pudo crearse en Google Calendar. Requiere atención humana."
+      )
+      tracking.pause!
+      create_private_note(tracking, message,
+                          "⚠️ El cliente eligió una cita (#{fecha_texto} de #{local_start.year}, #{hora_texto}, #{agent_name}) " \
+                          'pero NO se pudo crear el evento en Google Calendar. Confirmar manualmente con el cliente y agendar. Requiere atención humana.')
+      notify_admin_interested(tracking, message)
+      return
+    end
+
     reply = "✅ ¡Perfecto! Tu cita está agendada para el #{fecha_texto} de #{local_start.year} a las #{hora_texto}.\nTe esperamos. Si necesitás cambiarla, avisanos con anticipación. 😊"
     send_auto_reply(tracking, message, reply)
 
     clear_pending_slot(tracking)
     tracking.disable_auto_retry_mode!
     tracking.update!(
-      ai_context: "#{tracking.ai_context}\n\n✅ [CITA AGENDADA] #{fecha_texto} #{hora_texto} con #{agent_name}. Evento en Google Calendar: #{event_created ? 'creado' : 'error al crear'}.",
+      ai_context: "#{tracking.ai_context}\n\n✅ [CITA AGENDADA] #{fecha_texto} #{hora_texto} con #{agent_name}. Evento en Google Calendar: creado.",
       appointment_at: slot_start,   # proyecto@contact_tracking: dashboard KPI citas
       outcome: 'appointment'
     )
     tracking.pause!
 
-    nota = "📅 Cita agendada con #{contact_name}\n• Fecha: #{fecha_texto} de #{local_start.year}\n• Hora: #{hora_texto}\n• Agente: #{agent_name}\n• Evento en Calendar: #{event_created ? '✅ creado' : '⚠️ no se pudo crear'}"
+    nota = "📅 Cita agendada con #{contact_name}\n• Fecha: #{fecha_texto} de #{local_start.year}\n• Hora: #{hora_texto}\n• Agente: #{agent_name}\n• Evento en Calendar: ✅ creado"
     create_private_note(tracking, message, nota)
     notify_admin_interested(tracking, message)
 

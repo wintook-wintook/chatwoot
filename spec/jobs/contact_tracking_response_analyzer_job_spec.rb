@@ -65,4 +65,80 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       expect(signed_ids.size).to eq(1)
     end
   end
+
+  describe '#confirm_and_create_appointment' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation, sender: contact, message_type: :incoming)
+    end
+    let(:tracking) do
+      ContactTracking.create!(
+        account: account, contact: contact, inbox: inbox,
+        objective: 'Vender producto', scheduled_for: 1.hour.from_now,
+        status: 'scheduled', tracking_template_id: tracking_template.id,
+        ai_context: '[PENDING_SLOT] Esperando elección.'
+      )
+    end
+    let(:selected_slot) do
+      {
+        'slot' => 1.day.from_now.change(hour: 15).utc.iso8601,
+        'end_time' => 1.day.from_now.change(hour: 15, min: 30).utc.iso8601,
+        'agent_name' => 'Ana',
+        'cal_id' => 123
+      }
+    end
+
+    before do
+      allow(job).to receive(:create_private_note)
+      allow(job).to receive(:notify_admin_interested)
+      allow(tracking).to receive(:pause!).and_return(true)
+      allow(UserCalendarIntegration).to receive(:find_by).and_return(instance_double(UserCalendarIntegration))
+    end
+
+    context 'cuando el evento se crea en el calendario' do
+      before do
+        allow(GoogleCalendarService).to receive(:new).and_return(double(create_event: true))
+      end
+
+      it 'confirma la cita al cliente y marca el outcome appointment' do
+        expect(job).to receive(:send_auto_reply) do |_t, _m, reply|
+          expect(reply).to include('agendada')
+        end
+        job.send(:confirm_and_create_appointment, tracking, message, selected_slot)
+        expect(tracking.reload.outcome).to eq('appointment')
+        expect(tracking.appointment_at).to be_present
+      end
+    end
+
+    context 'cuando el evento NO se puede crear (calendario desconfigurado)' do
+      before do
+        failing = instance_double(GoogleCalendarService)
+        allow(failing).to receive(:create_event).and_raise(StandardError, 'calendar gone')
+        allow(GoogleCalendarService).to receive(:new).and_return(failing)
+      end
+
+      it 'NO confirma la cita al cliente y le avisa que un asesor confirmará' do
+        expect(job).to receive(:send_auto_reply) do |_t, _m, reply|
+          expect(reply).not_to include('agendada')
+          expect(reply).to include('asesor')
+        end
+        job.send(:confirm_and_create_appointment, tracking, message, selected_slot)
+      end
+
+      it 'no marca el seguimiento como appointment (no contamina el KPI)' do
+        allow(job).to receive(:send_auto_reply)
+        job.send(:confirm_and_create_appointment, tracking, message, selected_slot)
+        expect(tracking.reload.outcome).not_to eq('appointment')
+        expect(tracking.appointment_at).to be_nil
+      end
+
+      it 'deja una nota privada que requiere atención humana' do
+        allow(job).to receive(:send_auto_reply)
+        expect(job).to receive(:create_private_note).with(tracking, message, /atención humana/i)
+        job.send(:confirm_and_create_appointment, tracking, message, selected_slot)
+      end
+    end
+  end
 end
