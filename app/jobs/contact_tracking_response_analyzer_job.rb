@@ -762,7 +762,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       end
     end
 
-    clean = content.gsub(/@adjunto:[a-zA-Z0-9_-]+/i, '')
+    # Quita la directiva del texto, incluyendo una extensión opcional pegada
+    # (la IA a veces escribe @adjunto:ficha_tecnica.svg y dejaría ".svg" colgando).
+    clean = content.gsub(/@adjunto:[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9]{1,8})?/i, '')
                    .gsub(/[ \t]{2,}/, ' ')
                    .gsub(/ +([.,;:!?])/, '\1')
                    .gsub(/\n{3,}/, "\n\n")

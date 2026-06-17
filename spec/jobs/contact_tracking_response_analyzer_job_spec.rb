@@ -41,6 +41,14 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       expect(signed_ids.size).to eq(1)
     end
 
+    it 'resolves the name and strips a trailing extension the IA may append' do
+      content = 'Te envío la ficha. @adjunto:catalogo.svg'
+      clean, signed_ids = job.send(:resolve_attachment_directives, tracking, content)
+
+      expect(signed_ids.size).to eq(1)
+      expect(clean).to eq('Te envío la ficha.')
+    end
+
     it 'returns the content unchanged when the agent has no template' do
       orphan = ContactTracking.new(account: account, tracking_template: nil)
       clean, signed_ids = job.send(:resolve_attachment_directives, orphan, 'texto @adjunto:catalogo')
