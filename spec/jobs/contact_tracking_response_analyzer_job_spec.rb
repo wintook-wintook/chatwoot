@@ -580,4 +580,64 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       expect(ctx.scan(/\[PENDING_EMAIL\]/).size).to eq(1)
     end
   end
+
+  # Reproduce la conversación #35: con una cita ya agendada, "para la próxima semana el
+  # mismo día a la misma hora" se clasificaba :reschedule y movía solo el recordatorio
+  # (scheduled_for), dejando la cita del calendario sin tocar pero diciendo "tu cita fue
+  # agendada…". Ahora reagendar con cita activa MUEVE la cita en el calendario.
+  describe '#handle_reschedule con cita activa (mueve la cita, no el recordatorio)' do
+    let(:inbox)   { create(:inbox, account: account, timezone: 'America/Mexico_City') }
+    let(:contact) { create(:contact, account: account, email: 'cli@mail.com') }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation,
+                       sender: contact, message_type: :incoming, content: 'cámbiala para el 25 a las 10:30')
+    end
+    let(:slot_service) { instance_double(ContactTrackings::AvailabilitySlotService) }
+    let(:tracking) do
+      ContactTracking.create!(
+        account: account, contact: contact, inbox: inbox, tracking_template_id: tracking_template.id,
+        objective: 'Vender', scheduled_for: 1.hour.from_now, status: 'paused',
+        max_attempts: 3, attempt_count: 0,
+        appointment_at: Time.zone.parse('2026-06-19 16:30'), appointment_event_id: 'evt_1',
+        appointment_calendar_id: 7, outcome: 'appointment'
+      )
+    end
+
+    before do
+      tracking_template.update!(calendar_integration_ids: [7])
+      allow(ContactTrackings::AvailabilitySlotService).to receive(:new).and_return(slot_service)
+      allow(job).to receive(:send_auto_reply)
+    end
+
+    def move_slot(time_str)
+      t = Time.zone.parse(time_str)
+      { slot: t, end_time: t + 30.minutes, agent_name: 'Admin', calendar_integration_id: 7 }
+    end
+
+    it 'mueve la cita al horario pedido cuando está disponible (no toca el recordatorio)' do
+      allow(slot_service).to receive(:slot_for).and_return(move_slot('2026-06-25 16:30'))
+      expect(job).not_to receive(:handle_followup_reschedule)
+      expect(job).to receive(:confirm_and_create_appointment).with(tracking, message, hash_including('cal_id' => 7))
+      job.send(:handle_reschedule, tracking, message, { reschedule_data: { specific_date: '2026-06-25', specific_time: '10:30' } })
+    end
+
+    it 'ofrece horarios cuando la hora pedida está ocupada' do
+      allow(slot_service).to receive(:slot_for).and_return(nil)
+      allow(slot_service).to receive(:call).and_return([move_slot('2026-06-25 17:00')])
+      expect(job).to receive(:offer_slots).with(tracking, message, anything, /no está disponible/i)
+      job.send(:handle_reschedule, tracking, message, { reschedule_data: { specific_date: '2026-06-25', specific_time: '10:30' } })
+    end
+
+    it 'sin cita activa, reagenda el recordatorio (comportamiento original)' do
+      tracking.update!(appointment_event_id: nil, appointment_calendar_id: nil, appointment_at: nil, outcome: nil)
+      expect(job).to receive(:handle_followup_reschedule).with(tracking, message, anything)
+      job.send(:handle_reschedule, tracking, message, { reschedule_data: { relative_days: 2 } })
+    end
+
+    it 'conserva la hora de la cita actual cuando el cliente solo da el día' do
+      target = job.send(:move_target_time, tracking, { relative_days: 7 }, 'America/Mexico_City')
+      expect(target.in_time_zone('America/Mexico_City').strftime('%H:%M')).to eq('10:30')
+    end
+  end
 end
