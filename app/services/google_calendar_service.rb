@@ -34,7 +34,9 @@ class GoogleCalendarService
       body[:attendees] = attendees.map { |email| { email: email } } if attendees.any?
     end
 
-    post("/calendars/#{CGI.escape(calendar_id)}/events", body.compact)
+    # sendUpdates=all: Google envía el correo de invitación (.ics) a TODOS los invitados,
+    # de cualquier dominio (no solo gmail). Sin esto, los invitados no-Google no se enteran.
+    post("/calendars/#{CGI.escape(calendar_id)}/events", body.compact, query: { sendUpdates: 'all' })
   end
 
   def update_event(event_id, calendar_id: 'primary', start_time:, end_time:, summary: nil, description: nil, attendees: nil)
@@ -45,7 +47,8 @@ class GoogleCalendarService
     body[:summary]     = summary     if summary
     body[:description] = description if description
     body[:attendees]   = attendees.map { |e| { email: e } } if attendees
-    patch("/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}", body)
+    # sendUpdates=all: notifica por correo a los invitados (de cualquier dominio) al mover la cita.
+    patch("/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}", body, query: { sendUpdates: 'all' })
   end
 
   # Borra un evento. `delete` lanza ante un error real de la API; si Google responde
@@ -133,20 +136,22 @@ class GoogleCalendarService
     handle_response(response)
   end
 
-  def patch(path, body)
+  def patch(path, body, query: {})
     response = HTTParty.patch(
       "#{CALENDAR_API}#{path}",
       headers: auth_headers,
-      body: body.to_json
+      body: body.to_json,
+      query: query
     )
     handle_response(response)
   end
 
-  def post(path, body)
+  def post(path, body, query: {})
     response = HTTParty.post(
       "#{CALENDAR_API}#{path}",
       headers: auth_headers,
-      body: body.to_json
+      body: body.to_json,
+      query: query
     )
     handle_response(response)
   end

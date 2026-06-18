@@ -8,7 +8,7 @@ export default {
       CONNECTING: 'Connecting...',
       MODAL: {
         TITLE: 'Connect Google Calendar',
-        DESCRIPTION: 'Chatwoot will request the following permissions on your Google account:',
+        DESCRIPTION: 'The following permissions will be requested on your Google account:',
         PERMISSIONS: [
           'Read your calendar events',
           'Create and edit events on your behalf',

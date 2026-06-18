@@ -416,6 +416,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def handle_reschedule(tracking, message, action_data)
+    # Si ya hay una cita agendada en el calendario, "reagendar" significa MOVER la cita
+    # (no el recordatorio del seguimiento). Antes esto solo movía scheduled_for y la IA
+    # respondía "tu cita fue agendada…" sin tocar el evento de Google Calendar.
+    if tracking.appointment_event_id.present?
+      Rails.logger.info '[TrackingBot] 📅 RESCHEDULE con cita activa → moviendo la cita en el calendario'
+      return handle_move_appointment(tracking, message, action_data)
+    end
+
+    handle_followup_reschedule(tracking, message, action_data)
+  end
+
+  # Reagenda el recordatorio del seguimiento (scheduled_for). Comportamiento original,
+  # usado cuando NO hay una cita de calendario activa.
+  def handle_followup_reschedule(tracking, message, action_data)
     Rails.logger.info "[TrackingBot] 📅 RESCHEDULE → Reagendando seguimiento"
 
     reschedule_data = action_data[:reschedule_data] || {}
@@ -452,6 +466,95 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error en reschedule: #{e.message}"
     send_auto_reply(tracking, message, generate_action_reply(tracking, message, :general_error))
+  end
+
+  # Mueve una cita YA agendada a una nueva fecha/hora: intenta la hora exacta en la
+  # misma agenda de la cita; si está ocupada (o el cliente solo dio el día), ofrece
+  # horarios cercanos. Reutiliza confirm_and_create_appointment, que con un
+  # appointment_event_id existente en la misma agenda hace update_event (mueve, no duplica).
+  def handle_move_appointment(tracking, message, action_data)
+    reschedule_data = action_data[:reschedule_data] || {}
+    return ask_move_when(tracking, message) if reschedule_data.empty?
+
+    cal_ids = appointment_calendar_ids(tracking)
+    return handle_followup_reschedule(tracking, message, action_data) if cal_ids.blank?
+
+    timezone = appointment_timezone(tracking, message)
+    target   = move_target_time(tracking, reschedule_data, timezone)
+
+    return if try_move_to_exact_slot(tracking, message, target, cal_ids, timezone)
+
+    offer_move_alternatives(tracking, message, target, cal_ids, timezone)
+  rescue StandardError => e
+    Rails.logger.error "[TrackingBot] ❌ Error moviendo la cita: #{e.message}"
+    send_auto_reply(tracking, message, generate_action_reply(tracking, message, :general_error))
+  end
+
+  def ask_move_when(tracking, message)
+    send_auto_reply(tracking, message, generate_action_reply(tracking, message, :reschedule_ask_when))
+    tracking.update!(
+      ai_context: "#{tracking.ai_context}\n\n⏳ ESPERANDO FECHA: Cliente quiere mover su cita pero no indicó cuándo."
+    )
+  end
+
+  # Intenta mover la cita a la hora exacta pedida, en la misma agenda. Devuelve true si
+  # confirmó el movimiento, false si ese horario no estaba libre.
+  def try_move_to_exact_slot(tracking, message, target, cal_ids, timezone)
+    return false if target.blank?
+
+    same_cal = [tracking.appointment_calendar_id].compact.presence || cal_ids
+    slot = slot_service_for(same_cal, tracking, timezone).slot_for(target)
+    return false unless slot
+
+    Rails.logger.info "[TrackingBot] 📅 Moviendo cita a #{target} (agenda #{slot[:calendar_integration_id]})"
+    confirm_and_create_appointment(tracking, message, slot_payload(slot))
+    true
+  end
+
+  # Hora pedida ocupada o sin hora interpretable: ofrece horarios cercanos para mover.
+  def offer_move_alternatives(tracking, message, target, cal_ids, timezone)
+    service = slot_service_for(cal_ids, tracking, timezone)
+    alternatives = target ? service.call(from: target.beginning_of_day) : service.call
+
+    if alternatives.any?
+      Rails.logger.info '[TrackingBot] 📅 Hora pedida no disponible → ofreciendo horarios para mover la cita'
+      reply = "Uy, ese horario no está disponible 😕. Para mover tu cita tengo estos horarios:\n\n" \
+              "#{format_slots_lines(alternatives, timezone)}\n\n¿Cuál te viene bien? Respondé con el número."
+      offer_slots(tracking, message, alternatives, reply)
+    else
+      send_auto_reply(tracking, message,
+                      'No encontré disponibilidad para mover tu cita 😕. Un asesor te contactará para coordinarla.')
+    end
+  end
+
+  def appointment_calendar_ids(tracking)
+    (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
+  end
+
+  def slot_service_for(cal_ids, tracking, timezone)
+    ContactTrackings::AvailabilitySlotService.new(
+      calendar_integration_ids: cal_ids, timezone: timezone,
+      slot_duration: tracking.tracking_template&.calendar_event_duration || 30
+    )
+  end
+
+  def slot_payload(slot)
+    { 'slot' => slot[:slot].utc.iso8601, 'end_time' => slot[:end_time].utc.iso8601,
+      'agent_name' => slot[:agent_name], 'cal_id' => slot[:calendar_integration_id] }
+  end
+
+  # Fecha/hora destino para mover la cita. Si el cliente dio una hora explícita, la usa;
+  # si solo dio el día (ej. "la próxima semana"), conserva la hora de la cita actual
+  # ("mismo día a la misma hora").
+  def move_target_time(tracking, reschedule_data, timezone)
+    base = calculate_reschedule_datetime(reschedule_data, timezone)
+    return base if reschedule_data[:specific_time].present? ||
+                   reschedule_data[:relative_minutes].present? ||
+                   reschedule_data[:relative_hours].present?
+    return base if tracking.appointment_at.blank?
+
+    appt_local = tracking.appointment_at.in_time_zone(timezone)
+    base.in_time_zone(timezone).change(hour: appt_local.hour, min: appt_local.min, sec: 0)
   end
 
   # proyecto@bot_seguimiento_calendar — el cliente quiere una cita pero este Agente IA
@@ -517,7 +620,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def handle_slot_selection(tracking, message)
-    slots_json = tracking.ai_context.to_s.match(/Slots ofrecidos: (\[.*?\])/m)&.captures&.first
+    slots_json = tracking.ai_context.to_s.scan(/Slots ofrecidos: (\[.*?\])/m).flatten.last
     slots = slots_json ? JSON.parse(slots_json) : []
 
     if slots.empty?
@@ -705,8 +808,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def clear_pending_slot(tracking)
+    # Elimina TODOS los bloques [PENDING_SLOT] (cada uno es "header\nSlots ofrecidos: <json una línea>").
+    # No depende del separador \n\n entre bloques: la regex anterior consumía ese \n\n y dejaba
+    # vivo un segundo bloque adyacente, provocando estados apilados y elección del slot equivocado.
     cleaned = tracking.ai_context.to_s
-                      .gsub(/\n\n📅 \[PENDING_SLOT\].*?(\n\n|\z)/m, '\1')
+                      .gsub(/\n*📅 \[PENDING_SLOT\][^\n]*\nSlots ofrecidos: [^\n]*/, '')
                       .strip
     tracking.update_columns(ai_context: cleaned)
   rescue StandardError => e
@@ -726,13 +832,14 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                     '¡Perfecto! 📧 ¿A qué correo te envío la invitación de la cita? ' \
                     'Si preferís, escribí "sin correo" y la agendo igual.')
     clear_pending_slot(tracking)
+    clear_pending_email(tracking)
     tracking.update!(
       ai_context: "#{tracking.ai_context}\n\n📧 [PENDING_EMAIL] Esperando email para la cita.\nCita elegida: #{selected_slot.to_json}"
     )
   end
 
   def handle_pending_email(tracking, message)
-    slot_json = tracking.ai_context.to_s.match(/Cita elegida: (\{.*?\})/m)&.captures&.first
+    slot_json = tracking.ai_context.to_s.scan(/Cita elegida: (\{.*?\})/m).flatten.last
     selected  = slot_json ? JSON.parse(slot_json) : nil
 
     if selected.nil?
@@ -771,8 +878,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def clear_pending_email(tracking)
+    # Elimina TODOS los bloques [PENDING_EMAIL] ("header\nCita elegida: <json una línea>"),
+    # robusto ante bloques adyacentes (mismo problema que clear_pending_slot).
     cleaned = tracking.ai_context.to_s
-                      .gsub(/\n\n📧 \[PENDING_EMAIL\].*?(\n\n|\z)/m, '\1')
+                      .gsub(/\n*📧 \[PENDING_EMAIL\][^\n]*\nCita elegida: [^\n]*/, '')
                       .strip
     tracking.update_columns(ai_context: cleaned)
   rescue StandardError => e
@@ -959,6 +1068,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # (estado [PENDING_SLOT] con los slots serializados en ai_context).
   def offer_slots(tracking, message, slots, reply)
     send_auto_reply(tracking, message, reply)
+    # Nunca debe haber más de un estado pendiente a la vez: al (re)ofrecer horarios
+    # (incluida la negociación), borramos cualquier PENDING_SLOT/PENDING_EMAIL previo
+    # antes de escribir el nuevo, para no apilar bloques y elegir el slot equivocado.
+    clear_pending_slot(tracking)
+    clear_pending_email(tracking)
     slots_json = slots.map do |s|
       { slot: s[:slot].utc.iso8601, end_time: s[:end_time].utc.iso8601,
         agent_name: s[:agent_name], cal_id: s[:calendar_integration_id] }

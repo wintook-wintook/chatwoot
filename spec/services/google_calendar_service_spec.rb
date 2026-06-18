@@ -30,4 +30,38 @@ RSpec.describe GoogleCalendarService do
       expect { service.delete_event('evt_x') }.to raise_error(/Google Calendar API error 500/)
     end
   end
+
+  # proyecto@bot_seguimiento_calendar — la invitación debe llegar por correo a invitados
+  # de CUALQUIER dominio (no solo gmail): hay que pasar sendUpdates=all.
+  describe 'envío de invitaciones por correo (sendUpdates=all)' do
+    let(:ok) { instance_double(HTTParty::Response, success?: true, parsed_response: { 'id' => 'evt_1' }) }
+
+    it 'create_event pasa sendUpdates=all e incluye al invitado no-gmail como attendee' do
+      allow(HTTParty).to receive(:post).and_return(ok)
+
+      service.create_event(
+        summary: 'Cita', start_time: Time.current, end_time: 30.minutes.from_now,
+        attendees: ['cliente@hotmail.com']
+      )
+
+      expect(HTTParty).to have_received(:post) do |_url, opts|
+        expect(opts[:query]).to include(sendUpdates: 'all')
+        expect(opts[:body]).to include('cliente@hotmail.com')
+      end
+    end
+
+    it 'update_event pasa sendUpdates=all al mover la cita' do
+      allow(HTTParty).to receive(:patch).and_return(ok)
+
+      service.update_event(
+        'evt_1', start_time: Time.current, end_time: 30.minutes.from_now,
+                 attendees: ['cliente@outlook.com']
+      )
+
+      expect(HTTParty).to have_received(:patch) do |_url, opts|
+        expect(opts[:query]).to include(sendUpdates: 'all')
+        expect(opts[:body]).to include('cliente@outlook.com')
+      end
+    end
+  end
 end
