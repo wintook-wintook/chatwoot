@@ -517,7 +517,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def handle_slot_selection(tracking, message)
-    slots_json = tracking.ai_context.to_s.match(/Slots ofrecidos: (\[.*?\])/m)&.captures&.first
+    slots_json = tracking.ai_context.to_s.scan(/Slots ofrecidos: (\[.*?\])/m).flatten.last
     slots = slots_json ? JSON.parse(slots_json) : []
 
     if slots.empty?
@@ -705,8 +705,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def clear_pending_slot(tracking)
+    # Elimina TODOS los bloques [PENDING_SLOT] (cada uno es "header\nSlots ofrecidos: <json una línea>").
+    # No depende del separador \n\n entre bloques: la regex anterior consumía ese \n\n y dejaba
+    # vivo un segundo bloque adyacente, provocando estados apilados y elección del slot equivocado.
     cleaned = tracking.ai_context.to_s
-                      .gsub(/\n\n📅 \[PENDING_SLOT\].*?(\n\n|\z)/m, '\1')
+                      .gsub(/\n*📅 \[PENDING_SLOT\][^\n]*\nSlots ofrecidos: [^\n]*/, '')
                       .strip
     tracking.update_columns(ai_context: cleaned)
   rescue StandardError => e
@@ -726,13 +729,14 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                     '¡Perfecto! 📧 ¿A qué correo te envío la invitación de la cita? ' \
                     'Si preferís, escribí "sin correo" y la agendo igual.')
     clear_pending_slot(tracking)
+    clear_pending_email(tracking)
     tracking.update!(
       ai_context: "#{tracking.ai_context}\n\n📧 [PENDING_EMAIL] Esperando email para la cita.\nCita elegida: #{selected_slot.to_json}"
     )
   end
 
   def handle_pending_email(tracking, message)
-    slot_json = tracking.ai_context.to_s.match(/Cita elegida: (\{.*?\})/m)&.captures&.first
+    slot_json = tracking.ai_context.to_s.scan(/Cita elegida: (\{.*?\})/m).flatten.last
     selected  = slot_json ? JSON.parse(slot_json) : nil
 
     if selected.nil?
@@ -771,8 +775,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def clear_pending_email(tracking)
+    # Elimina TODOS los bloques [PENDING_EMAIL] ("header\nCita elegida: <json una línea>"),
+    # robusto ante bloques adyacentes (mismo problema que clear_pending_slot).
     cleaned = tracking.ai_context.to_s
-                      .gsub(/\n\n📧 \[PENDING_EMAIL\].*?(\n\n|\z)/m, '\1')
+                      .gsub(/\n*📧 \[PENDING_EMAIL\][^\n]*\nCita elegida: [^\n]*/, '')
                       .strip
     tracking.update_columns(ai_context: cleaned)
   rescue StandardError => e
@@ -959,6 +965,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # (estado [PENDING_SLOT] con los slots serializados en ai_context).
   def offer_slots(tracking, message, slots, reply)
     send_auto_reply(tracking, message, reply)
+    # Nunca debe haber más de un estado pendiente a la vez: al (re)ofrecer horarios
+    # (incluida la negociación), borramos cualquier PENDING_SLOT/PENDING_EMAIL previo
+    # antes de escribir el nuevo, para no apilar bloques y elegir el slot equivocado.
+    clear_pending_slot(tracking)
+    clear_pending_email(tracking)
     slots_json = slots.map do |s|
       { slot: s[:slot].utc.iso8601, end_time: s[:end_time].utc.iso8601,
         agent_name: s[:agent_name], cal_id: s[:calendar_integration_id] }

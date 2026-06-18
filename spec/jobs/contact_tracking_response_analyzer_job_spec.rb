@@ -516,4 +516,68 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       end
     end
   end
+
+  # Reproduce el bug de la conversación #35: jueves → "mañana" apilaba un segundo
+  # [PENDING_SLOT] sin limpiar el viejo, y la limpieza no borraba bloques adyacentes,
+  # con lo que se elegía/agendaba el día equivocado.
+  describe 'estado de cita en ai_context (anti-apilado)' do
+    let(:contact) { create(:contact, account: account) }
+    let(:inbox)   { create(:inbox, account: account) }
+    let(:persisted_tracking) do
+      ContactTracking.create!(
+        account: account, contact: contact, inbox: inbox, tracking_template_id: tracking_template.id,
+        objective: 'Agendar cita de prueba', scheduled_for: 1.day.from_now,
+        status: 'active', max_attempts: 3, attempt_count: 0, ai_context: 'BASE'
+      )
+    end
+
+    before { allow(job).to receive(:send_auto_reply) }
+
+    def slot(time_str, cal_id: 7)
+      t = Time.zone.parse(time_str)
+      { slot: t, end_time: t + 30.minutes, agent_name: 'Admin', calendar_integration_id: cal_id }
+    end
+
+    def offered_slots(tracking)
+      json = tracking.reload.ai_context.to_s.scan(/Slots ofrecidos: (\[.*?\])/m).flatten.last
+      json ? JSON.parse(json) : []
+    end
+
+    it 'mantiene un solo PENDING_SLOT al re-ofrecer (negociación jueves → mañana)' do
+      job.send(:offer_slots, persisted_tracking, nil, [slot('2026-06-18 13:00')], 'jueves')
+      job.send(:offer_slots, persisted_tracking, nil, [slot('2026-06-19 09:00')], 'viernes')
+
+      ctx = persisted_tracking.reload.ai_context
+      expect(ctx.scan(/\[PENDING_SLOT\]/).size).to eq(1)
+      # el bloque vigente es el del viernes (el último ofrecido), no el del jueves
+      expect(offered_slots(persisted_tracking).first['slot']).to eq(slot('2026-06-19 09:00')[:slot].utc.iso8601)
+    end
+
+    it 'clear_pending_slot borra TODOS los bloques, incluso adyacentes' do
+      persisted_tracking.update!(
+        ai_context: "BASE\n\n📅 [PENDING_SLOT] Esperando elección de horario.\nSlots ofrecidos: [{\"slot\":\"A\"}]" \
+                    "\n\n📅 [PENDING_SLOT] Esperando elección de horario.\nSlots ofrecidos: [{\"slot\":\"B\"}]"
+      )
+      job.send(:clear_pending_slot, persisted_tracking)
+      expect(persisted_tracking.reload.ai_context.scan(/\[PENDING_SLOT\]/).size).to eq(0)
+    end
+
+    it 'clear_pending_email borra TODOS los bloques, incluso adyacentes' do
+      persisted_tracking.update!(
+        ai_context: "BASE\n\n📧 [PENDING_EMAIL] Esperando email para la cita.\nCita elegida: {\"slot\":\"A\"}" \
+                    "\n\n📧 [PENDING_EMAIL] Esperando email para la cita.\nCita elegida: {\"slot\":\"B\"}"
+      )
+      job.send(:clear_pending_email, persisted_tracking)
+      expect(persisted_tracking.reload.ai_context.scan(/\[PENDING_EMAIL\]/).size).to eq(0)
+    end
+
+    it 'al pasar a PENDING_EMAIL no quedan PENDING_SLOT vivos' do
+      job.send(:offer_slots, persisted_tracking, nil, [slot('2026-06-19 09:00')], 'viernes')
+      job.send(:prompt_for_email, persisted_tracking, nil, { 'slot' => '2026-06-19T15:00:00Z' })
+
+      ctx = persisted_tracking.reload.ai_context
+      expect(ctx.scan(/\[PENDING_SLOT\]/).size).to eq(0)
+      expect(ctx.scan(/\[PENDING_EMAIL\]/).size).to eq(1)
+    end
+  end
 end
