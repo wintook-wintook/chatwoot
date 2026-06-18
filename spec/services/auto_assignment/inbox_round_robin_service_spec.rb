@@ -28,8 +28,8 @@ describe AutoAssignment::InboxRoundRobinService do
     end
 
     it 'validates the queue and correct it before performing round robin' do
-      # adding some invalid ids to queue
-      inbox_round_robin_service.add_agent_to_queue([2, 3, 5, 9])
+      # adding some invalid ids to queue (uno por uno: MockRedis no soporta lpush variádico)
+      [2, 3, 5, 9].each { |id| inbox_round_robin_service.add_agent_to_queue(id) }
       expect(inbox_round_robin_service.send(:queue).map(&:to_i)).not_to match_array(inbox_members.map(&:user_id))
       inbox_round_robin_service.available_agent
       # the service have refreshed the redis queue before performing

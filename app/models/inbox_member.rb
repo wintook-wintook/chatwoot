@@ -22,17 +22,20 @@ class InboxMember < ApplicationRecord
   belongs_to :user
   belongs_to :inbox
 
-  after_create :add_agent_to_round_robin
-  after_destroy :remove_agent_from_round_robin
+  # Reconstruimos la cola Redis completa desde la DB en cada alta/baja en lugar de
+  # hacer lpush/lrem incremental: el add/remove incremental se desincroniza si Redis
+  # se reinicia o falla un callback, dejando el inbox "sin recibir" hasta quitar y
+  # volver a agregar colaboradores. reset_queue limpia y reconstruye la cola desde
+  # los inbox_members de la DB, así queda siempre exactamente igual que la DB.
+  after_create :sync_round_robin_queue
+  after_destroy :sync_round_robin_queue
 
   private
 
-  def add_agent_to_round_robin
-    ::AutoAssignment::InboxRoundRobinService.new(inbox: inbox).add_agent_to_queue(user_id)
-  end
+  def sync_round_robin_queue
+    return if inbox.blank?
 
-  def remove_agent_from_round_robin
-    ::AutoAssignment::InboxRoundRobinService.new(inbox: inbox).remove_agent_from_queue(user_id) if inbox.present?
+    ::AutoAssignment::InboxRoundRobinService.new(inbox: inbox).reset_queue
   end
 end
 
