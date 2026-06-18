@@ -20,15 +20,6 @@
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (tracking_template_id => tracking_templates.id)
 #
-# ================================================================================
-# proyecto@ai_agent_attachments
-# ================================================================================
-# Modelo: AiAgentAttachment
-# Descripción: archivo adjunto a un Agente IA (TrackingTemplate). El binario vive en
-#   ActiveStorage (:file). `name` es la clave (slug) que referencia la directiva
-#   @adjunto:name escrita en el prompt complementario del agente.
-# Asociaciones: tracking_template, account, has_one_attached :file
-# ================================================================================
 
 class AiAgentAttachment < ApplicationRecord
   belongs_to :tracking_template
