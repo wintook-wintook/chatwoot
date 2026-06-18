@@ -144,7 +144,10 @@
       "LOADING": "Loading agendas...",
       "NONE_AVAILABLE": "No agents with Google Calendar connected. Agents must connect their calendar from Settings.",
       "SELECTED_COUNT": "%{count} agenda(s) selected",
-      "EVENT_DURATION": "Event duration"
+      "EVENT_DURATION": "Event duration",
+      "TIMEZONE": "Time zone",
+      "TIMEZONE_INHERIT": "Use the channel's (inbox)",
+      "TIMEZONE_HELP": "Time zone used to offer slots, show the time to the customer and create the event. If left empty, the channel's is used."
     }
   }
 }

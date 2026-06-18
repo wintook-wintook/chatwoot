@@ -18,6 +18,8 @@ import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 // @knowledge_sources: fuentes Discourse para la directiva @buscar_foro
 import KnowledgeSourcesAPI from 'dashboard/routes/dashboard/settings/knowledgeSources/api';
+// proyecto@bot_seguimiento_calendar: lista de zonas horarias (reutiliza Horario laboral)
+import { timeZoneOptions } from 'dashboard/routes/dashboard/settings/inbox/helpers/businessHour';
 
 export default {
   components: { KeywordActionsEditor },
@@ -49,6 +51,7 @@ export default {
         keyword_actions: [], // proyecto@contact_tracking
         calendar_integration_ids: [],
         calendar_event_duration: 30,
+        timezone: '', // proyecto@bot_seguimiento_calendar: hereda del inbox si queda vacío
       },
       // Tabs Contexto IA / Entrenamiento
       activeContextTab: 0,
@@ -205,6 +208,10 @@ export default {
     archivosTabIndex() {
       return this.agendasTabIndex + 1;
     },
+    // proyecto@bot_seguimiento_calendar: zonas horarias para el selector de Agendas
+    timeZones() {
+      return timeZoneOptions();
+    },
     // proyecto@contact_tracking: catálogo de directivas del Entrenamiento.
     // @buscar_foro se expande en una opción por cada fuente Discourse existente.
     directiveCatalog() {
@@ -282,6 +289,7 @@ export default {
               ? [...val.calendar_integration_ids]
               : [],
             calendar_event_duration: val.calendar_event_duration || 30,
+            timezone: val.timezone || '',
           };
           if (
             this.form.whatsapp_templates.length > 0 &&
@@ -377,6 +385,7 @@ export default {
           keyword_actions: this.form.keyword_actions || [],      // proyecto@contact_tracking
           calendar_integration_ids: this.form.calendar_integration_ids || [],
           calendar_event_duration: this.form.calendar_event_duration || 30,
+          timezone: this.form.timezone || '', // proyecto@bot_seguimiento_calendar
         },
       };
       if (!this.isCreateMode) {
@@ -1005,6 +1014,28 @@ export default {
               </button>
             </div>
           </div>
+
+          <!-- proyecto@bot_seguimiento_calendar: zona horaria del agente para agendar -->
+          <div class="mb-4">
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2">
+              {{ $t('TRACKING_TEMPLATES.CALENDARS.TIMEZONE') }}
+            </span>
+            <select
+              v-model="form.timezone"
+              class="w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200"
+            >
+              <option value="">
+                {{ $t('TRACKING_TEMPLATES.CALENDARS.TIMEZONE_INHERIT') }}
+              </option>
+              <option v-for="tz in timeZones" :key="tz.label" :value="tz.value">
+                {{ tz.label }}
+              </option>
+            </select>
+            <p class="text-xs text-slate-400 dark:text-slate-500 pt-1">
+              {{ $t('TRACKING_TEMPLATES.CALENDARS.TIMEZONE_HELP') }}
+            </p>
+          </div>
+
           <div v-if="isLoadingCalendars" class="text-sm text-slate-500 py-2">
             {{ $t('TRACKING_TEMPLATES.CALENDARS.LOADING') }}
           </div>

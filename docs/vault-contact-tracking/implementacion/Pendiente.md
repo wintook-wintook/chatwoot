@@ -24,33 +24,41 @@ asumir que algo falta (el módulo avanza rápido). Ver también [[Estado-actual]
 - [x] ~~**Verificar creación de evento en vivo (TC-04)**~~ — ✅ **HECHO**: TC-04 PASS,
       evento real creado en Google Calendar (conv #29, "1" → evento 2026-06-15 09:00 UTC).
       Ver [[Testeo-funcional]].
-- [ ] **Timezone del inbox en UTC** — el inbox 4 tiene `timezone = UTC`, así que los slots,
-      el horario laboral (9-18) y la hora mostrada al cliente se calculan en UTC (no es bug
-      de código). Si el negocio opera en México, configurar el inbox en `America/Mexico_City`
-      o el evento cae a las 03:00 MX. Revisar config de inbox. Ver [[Testeo-funcional]] TC-04.
-- [ ] **Cita sin invitado cuando el contacto no tiene email** — `confirm_and_create_appointment`
-      solo agrega `attendees` si el contacto tiene email; los contactos de WhatsApp no, así que
-      el evento se crea sin invitar al contacto. Decidir si capturar email o notificar por otro medio.
-- [ ] **Negociación de cita multi-turno** — hoy el flujo es single-shot (ofrece 5 slots
-      → espera un **número**). Entrar en una "conversación de agendar" hasta **confirmar**:
-      manejar "ninguno me sirve", proponer otras fechas, interpretar lenguaje natural
-      (hoy `parse_slot_choice` solo acepta dígito 1-5/palabra; ver [[Testeo-funcional]] TC-03).
-- [ ] **Mover una cita ya agendada** — no soportado. `confirm_and_create_appointment`
-      **no guarda el `event_id`** del evento creado, así que aunque existe
-      `GoogleCalendarService#update_event`, no hay cómo identificar qué mover. `:reschedule`
-      hoy reagenda el **tracking**, no el evento. Guardar `event_id` y usar `update_event`.
-- [ ] **Cancelar una cita ya agendada** — no soportado. `GoogleCalendarService` **no tiene
-      `delete_event`** y no se guarda `event_id`. Implementar borrado del evento al cancelar.
-- [ ] **BUG: confirmación falsa de cita** — si el calendario se desconfigura entre ofrecer
-      y confirmar, `confirm_and_create_appointment` deja `event_created = false` pero **igual
-      responde "✅ ¡Perfecto! Tu cita está agendada…"**. No confirmar al cliente si el evento
-      no se creó (responder error / escalar a humano).
-- [ ] **Política multi-agente de slots** — `AvailabilitySlotService` propone los **5 slots
-      más tempranos combinados** de todos los `calendar_integration_ids`, sin balancear entre
-      agentes. Definir si debe balancear o filtrar por el agente del seguimiento.
-- [ ] **Respuesta cuando el agente no tiene calendario configurado** — hoy cae a
-      `:interested` (sin calendar_ids) o `:book_appointment_no_slots` + escala a humano
-      (integración borrada), sin mensaje específico. Definir el mensaje esperado.
+- [x] ~~**Timezone del inbox en UTC**~~ — ✅ **HECHO** (zona horaria propia del Agente IA):
+      el inbox default `UTC` hacía que los slots 9-18, la hora mostrada y el evento cayeran en UTC.
+      Ahora cada Agente IA tiene su campo `timezone` (migración + validación + UI en la pestaña
+      Agendas, reutiliza la lista de Horario laboral). El job resuelve con `appointment_timezone`:
+      Agente IA → inbox → default `America/Mexico_City`. Ver [[Testeo-funcional]] TC-04.
+- [x] ~~**Cita sin invitado cuando el contacto no tiene email**~~ — ✅ **HECHO** (email opcional):
+      si el contacto no tiene email, tras elegir el horario el bot lo pide una vez
+      (`[PENDING_EMAIL]` + `prompt_for_email`/`handle_pending_email`). Si lo da, se guarda en el
+      contacto y se le invita al evento; si responde "sin correo"/omite, se agenda igual sin
+      invitado. Si ya tenía email, confirma directo.
+- [x] ~~**Negociación de cita multi-turno**~~ — ✅ **HECHO**: si el cliente, en vez de elegir
+      número, propone otra fecha/hora, `handle_slot_negotiation` la interpreta (IA →
+      `parse_requested_datetime`), verifica disponibilidad (`AvailabilitySlotService#slot_for`)
+      y: confirma si está libre, ofrece horarios cercanos si está ocupada o si solo dio el día
+      (`call(from:)`), o repregunta. Un dígito 1-5 dentro de una frase de hora ya no se confunde
+      con elegir slot (`looks_like_datetime_proposal?`). Ver [[Testeo-funcional]] TC-03.
+- [x] ~~**Mover una cita ya agendada**~~ — ✅ **HECHO**: se persiste `appointment_event_id` +
+      `appointment_calendar_id`; `confirm_and_create_appointment` reutiliza la cita
+      (`create_or_move_calendar_event`): misma agenda → `update_event` (mueve), otra agenda →
+      crea nuevo y borra el viejo (`delete_stale_appointment_event`). Evita duplicados.
+- [x] ~~**Cancelar una cita ya agendada**~~ — ✅ **HECHO**: nuevo `GoogleCalendarService#delete_event`
+      (idempotente ante 404/410), ruta `:cancel_appointment` en `RouterService` y
+      `handle_cancel_appointment` (borra el evento, limpia los campos de cita, `outcome=cancelled`;
+      sin cita activa se trata como rechazo).
+- [x] ~~**BUG: confirmación falsa de cita**~~ — ✅ **HECHO**: si `create_event` falla, ya **no** se
+      confirma; se avisa que un asesor confirmará, se escala a humano (nota + aviso admin) y
+      **no** se marca `outcome=appointment` (no contamina el KPI).
+- [x] ~~**Política multi-agente de slots**~~ — ✅ **HECHO** (reparto): `AvailabilitySlotService#balance_slots`
+      agrupa los horarios libres por hora y, en cada uno, elige al agente con menos citas
+      asignadas (desempate por id). Así no se ofrece el mismo horario dos veces ni se sobrecarga
+      a un solo agente; devuelve los 5 horarios distintos más tempranos.
+- [x] ~~**Respuesta cuando el agente no tiene calendario configurado**~~ — ✅ **HECHO**:
+      `handle_no_calendar_configured` con mensaje específico (`:book_appointment_no_calendar`:
+      "no puedo confirmar el horario de forma automática, un asesor te contactará") en vez del
+      genérico de interés; escala a humano (nota + aviso admin), pausa y `outcome=interested`.
 - [ ] **Sentimiento end-to-end** — revisar `ResponseAnalyzerJob` y si hay dashboard
       que consuma `last_sentiment_analysis` (índice ya existe).
 - [ ] **KBase real en el router** — la ruta `:kbase` y `kbase_hook_id` existen;
