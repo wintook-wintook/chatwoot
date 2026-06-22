@@ -51,7 +51,7 @@ class Cases::PortalTicketService
 
     Cases::PortalThreadSeeder.new(
       conversation: conversation, ticket: ticket, body: @message,
-      new_conversation: is_new, attachments: @attachments
+      new_conversation: is_new, attachments: @attachments, portal: @portal
     ).perform
 
     ticket

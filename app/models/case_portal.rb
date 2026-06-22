@@ -4,17 +4,19 @@
 #
 # Table name: case_portals
 #
-#  id            :bigint           not null, primary key
-#  custom_domain :string
-#  enabled       :boolean          default(TRUE), not null
-#  intro         :text
-#  locale        :string           default("es"), not null
-#  name          :string           not null
-#  slug          :string           not null
-#  created_at    :datetime         not null
-#  updated_at    :datetime         not null
-#  account_id    :bigint           not null
-#  inbox_id      :bigint
+#  id                      :bigint           not null, primary key
+#  acuse_template_language :string           default("es"), not null
+#  acuse_template_name     :string
+#  custom_domain           :string
+#  enabled                 :boolean          default(TRUE), not null
+#  intro                   :text
+#  locale                  :string           default("es"), not null
+#  name                    :string           not null
+#  slug                    :string           not null
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  account_id              :bigint           not null
+#  inbox_id                :bigint
 #
 # Indexes
 #
@@ -35,8 +37,8 @@
 # Help Center nativo de Chatwoot.
 class CasePortal < ApplicationRecord
   # @tickets_cases — canales que permiten una conversación NUEVA iniciada por el
-  # negocio (R1: API y Email; WhatsApp queda para R2 por requerir plantilla).
-  COMPATIBLE_CHANNELS = %w[Channel::Api Channel::Email].freeze
+  # negocio. R1: API y Email. R2: WhatsApp (requiere plantilla de acuse aprobada).
+  COMPATIBLE_CHANNELS = %w[Channel::Api Channel::Email Channel::Whatsapp].freeze
 
   belongs_to :account
   belongs_to :inbox, optional: true
@@ -49,6 +51,12 @@ class CasePortal < ApplicationRecord
                    format: { with: /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/, message: 'solo minúsculas, números y guiones' }
   validates :custom_domain, uniqueness: true, allow_nil: true
   validate  :inbox_compatible
+  validate  :whatsapp_needs_template
+
+  # ¿El inbox destino es WhatsApp? (el acuse va por plantilla aprobada).
+  def whatsapp_destination?
+    inbox&.channel_type == 'Channel::Whatsapp'
+  end
 
   scope :enabled, -> { where(enabled: true) }
 
@@ -78,6 +86,13 @@ class CasePortal < ApplicationRecord
     unless COMPATIBLE_CHANNELS.include?(inbox.channel_type)
       errors.add(:inbox, 'canal no compatible (usa API o Email)')
     end
+  end
+
+  # WhatsApp no admite texto libre iniciado por el negocio → exige plantilla de acuse.
+  def whatsapp_needs_template
+    return unless whatsapp_destination?
+
+    errors.add(:acuse_template_name, 'es obligatorio para un portal de WhatsApp') if acuse_template_name.blank?
   end
 
   def normalize_slug

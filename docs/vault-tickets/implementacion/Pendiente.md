@@ -11,7 +11,7 @@ tags: [tickets, pendiente, todo]
 - **Tailwind por CDN** — las vistas del portal cargan Tailwind vía CDN (rápido para el MVP); migrar al build de assets para producción.
 - ~~**Admin UI del portal**~~ ✅ **hecho** — vista "Portales del cliente" (`Portals.vue`, CRUD) + toggle público por tipo en `TicketTypes.vue`.
 - ~~**Admin elige inbox destino (API/Email)**~~ ✅ **hecho** (R1) — selector "Canal destino" en el portal; acuse por ese canal.
-- **R2 — destino WhatsApp + plantilla de acuse** — permitir inbox WhatsApp como destino con plantilla aprobada (folio como parámetro), ver [[Plan-User-Portal]] §10.
+- ~~**R2 — destino WhatsApp + plantilla de acuse**~~ ✅ **hecho** (config/lógica/UI). **Pendiente de verificación real**: envío de la plantilla necesita un WhatsApp conectado + plantilla aprobada en Meta (el inbox de prueba tiene 0 plantillas). Mapeo v1: folio = `{{1}}`; extender `processed_params` si la plantilla usa más parámetros.
 - **Directiva bot `@estado_ticket`** (P2) — consultar estado por el canal de origen (ej. WhatsApp) sin teclear folio.
 - **Adjuntos: límites + throttle** — definir tipos/tamaño permitidos en el form público y rate-limit anti-spam.
 - **Dominio propio** (P2/P3) — subdominio (`soporte.dominio.com`) y marca blanca (`custom_domain` ya existe en `case_portals`, reusa el patrón del Help Center).
@@ -25,7 +25,10 @@ tags: [tickets, pendiente, todo]
 
 ### Unir ticket + conversación (U1) — hecho, mejoras futuras
 - ~~**U1 — leer/responder al cliente desde el ticket**~~ ✅ **hecho** (pestaña Conversación + caja de respuesta + IA "usar en la conversación").
-- **U1 v2 (futuro)**: adjuntos en la respuesta, actualización en tiempo real, y respuestas predefinidas/canned dentro de la caja del ticket.
+- **Reply box: decisión (pragmática)** — la caja del ticket es simple a propósito; para
+  editor rico/adjuntos/canned/firma se usa "Ir a la conversación" (ReplyBox nativo). NO
+  se embebe el ReplyBox nativo en el ticket (acoplado a `currentChat`, frágil).
+- **U1 v2 (futuro, opcional)**: adjuntos básicos en la caja del ticket + tiempo real.
 
 ### General
 - **Panel de contacto** (3er punto de entrada del diseño) — mostrar tickets históricos del contacto en su perfil. NO se hizo.

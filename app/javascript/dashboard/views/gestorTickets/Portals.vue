@@ -14,10 +14,17 @@ const emptyForm = () => ({
   enabled: true,
   intro: '',
   inbox_id: null,
+  acuse_template_name: '',
+  acuse_template_language: 'es',
 });
 
-// Canales que permiten una conversación nueva iniciada por el negocio (R1).
-const COMPATIBLE_CHANNELS = ['Channel::Api', 'Channel::Email'];
+// Canales que permiten una conversación nueva iniciada por el negocio.
+// R1: API/Email. R2: WhatsApp (requiere plantilla de acuse aprobada).
+const COMPATIBLE_CHANNELS = [
+  'Channel::Api',
+  'Channel::Email',
+  'Channel::Whatsapp',
+];
 
 export default {
   name: 'Portals',
@@ -39,11 +46,16 @@ export default {
       types: 'caseTickets/getTypes',
       inboxes: 'inboxes/getInboxes',
     }),
-    // Inboxes que pueden recibir tickets del portal (conversación nueva): API/Email.
+    // Inboxes que pueden recibir tickets del portal (conversación nueva): API/Email/WhatsApp.
     compatibleInboxes() {
       return this.inboxes.filter(i =>
         COMPATIBLE_CHANNELS.includes(i.channel_type)
       );
+    },
+    // ¿El inbox destino elegido es WhatsApp? → requiere plantilla de acuse.
+    isWhatsappDestination() {
+      const sel = this.inboxes.find(i => i.id === this.form.inbox_id);
+      return sel?.channel_type === 'Channel::Whatsapp';
     },
     isFetching() {
       return this.uiFlags.isFetching;
@@ -70,6 +82,7 @@ export default {
     channelLabel(channelType) {
       if (channelType === 'Channel::Email') return 'Email';
       if (channelType === 'Channel::Api') return 'API';
+      if (channelType === 'Channel::Whatsapp') return 'WhatsApp';
       return channelType;
     },
     openCreate() {
@@ -86,6 +99,8 @@ export default {
         enabled: portal.enabled,
         intro: portal.intro || '',
         inbox_id: portal.inbox_id || null,
+        acuse_template_name: portal.acuse_template_name || '',
+        acuse_template_language: portal.acuse_template_language || 'es',
       };
       this.showModal = true;
     },
@@ -353,6 +368,41 @@ export default {
             }}</span>
           </label>
 
+          <!-- R2: si el destino es WhatsApp, la plantilla del acuse es obligatoria -->
+          <div
+            v-if="isWhatsappDestination"
+            class="flex flex-col gap-3 p-3 border border-dashed rounded-lg border-slate-300 dark:border-slate-600 bg-slate-25 dark:bg-slate-800/40"
+          >
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{
+              $t('CASE_TICKETS.PORTALS.WA_TEMPLATE_TITLE')
+            }}</span>
+            <label class="flex flex-col gap-1">
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                >{{ $t('CASE_TICKETS.PORTALS.WA_TEMPLATE_NAME') }} *</span
+              >
+              <input
+                v-model="form.acuse_template_name"
+                type="text"
+                class="w-full font-mono"
+                :placeholder="$t('CASE_TICKETS.PORTALS.WA_TEMPLATE_PLACEHOLDER')"
+              />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                >{{ $t('CASE_TICKETS.PORTALS.WA_TEMPLATE_LANG') }}</span
+              >
+              <input
+                v-model="form.acuse_template_language"
+                type="text"
+                class="w-32 font-mono"
+                placeholder="es"
+              />
+            </label>
+            <span class="text-xs text-slate-400 dark:text-slate-500">{{
+              $t('CASE_TICKETS.PORTALS.WA_TEMPLATE_HELP')
+            }}</span>
+          </div>
+
           <label class="flex flex-col gap-1">
             <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
               >{{ $t('CASE_TICKETS.PORTALS.INTRO_LABEL') }}</span
@@ -384,7 +434,10 @@ export default {
             <woot-button
               type="submit"
               :is-loading="isSaving"
-              :disabled="!form.name.trim()"
+              :disabled="
+                !form.name.trim() ||
+                (isWhatsappDestination && !form.acuse_template_name.trim())
+              "
             >
               {{
                 editing

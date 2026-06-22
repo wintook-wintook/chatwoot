@@ -17,12 +17,13 @@
 # ================================================================================
 
 class Cases::PortalThreadSeeder
-  def initialize(conversation:, ticket:, body:, new_conversation:, attachments: nil)
+  def initialize(conversation:, ticket:, body:, new_conversation:, attachments: nil, portal: nil)
     @conversation     = conversation
     @ticket           = ticket
     @body             = body.to_s
     @new_conversation = new_conversation
     @attachments      = attachments.presence
+    @portal           = portal
   end
 
   def perform
@@ -61,17 +62,34 @@ class Cases::PortalThreadSeeder
   end
 
   # Respuesta pública con el folio: lo que ve el cliente por su canal.
+  # En WhatsApp se envía como plantilla aprobada (regla de 24h de Meta).
   def create_public_reply
     build_message(
-      content:      public_reply_content,
-      message_type: 'outgoing',
-      private:      false
+      content:         public_reply_content,
+      message_type:    'outgoing',
+      private:         false,
+      template_params: whatsapp_template_params
     )
   end
 
-  def build_message(content:, message_type:, private:, attachments: nil)
+  # @tickets_cases R2 — si el inbox destino es WhatsApp y el portal tiene plantilla
+  # configurada, arma los template_params (folio como parámetro {{1}}).
+  # send_on_whatsapp_service envía la plantilla cuando template_params está presente.
+  def whatsapp_template_params
+    return nil unless @conversation.inbox&.channel_type == 'Channel::Whatsapp'
+    return nil if @portal&.acuse_template_name.blank?
+
+    {
+      name:             @portal.acuse_template_name,
+      language:         @portal.acuse_template_language.presence || 'es',
+      processed_params: { '1' => (@ticket.folio || "##{@ticket.id}") }
+    }
+  end
+
+  def build_message(content:, message_type:, private:, attachments: nil, template_params: nil)
     params = { content: content, message_type: message_type, private: private }
     params[:attachments] = attachments if attachments.present?
+    params[:template_params] = template_params if template_params.present?
     Messages::MessageBuilder.new(nil, @conversation, params).perform
   rescue StandardError => e
     Rails.logger.error("[GestorTickets][Portal] seed message error (#{message_type}): #{e.message}")

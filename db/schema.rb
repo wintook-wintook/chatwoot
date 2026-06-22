@@ -303,6 +303,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.text "intro"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "acuse_template_name"
+    t.string "acuse_template_language", default: "es", null: false
     t.index ["account_id"], name: "index_case_portals_on_account_id"
     t.index ["custom_domain"], name: "index_case_portals_on_custom_domain", unique: true, where: "(custom_domain IS NOT NULL)"
     t.index ["inbox_id"], name: "index_case_portals_on_inbox_id"

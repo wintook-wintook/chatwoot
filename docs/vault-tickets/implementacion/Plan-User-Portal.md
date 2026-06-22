@@ -302,7 +302,7 @@ en implementación** (preferible reusar para que HC y portal de tickets comparta
 ### Fases del refinamiento
 ```
 R1 — destino API (actual) + Email     ✅ IMPLEMENTADO (2026-06-22)
-R2 — destino WhatsApp + plantilla de acuse (config de plantilla en el portal)  ⏳ pendiente
+R2 — destino WhatsApp + plantilla de acuse  ✅ IMPLEMENTADO (config/lógica/UI; envío real pend. de WhatsApp conectado + plantilla aprobada)
 ```
 
 > ✅ **R1 hecho:** el admin elige el inbox destino (API/Email) del portal; las
