@@ -13,7 +13,11 @@ const emptyForm = () => ({
   locale: 'es',
   enabled: true,
   intro: '',
+  inbox_id: null,
 });
+
+// Canales que permiten una conversación nueva iniciada por el negocio (R1).
+const COMPATIBLE_CHANNELS = ['Channel::Api', 'Channel::Email'];
 
 export default {
   name: 'Portals',
@@ -33,7 +37,14 @@ export default {
       portals: 'caseTickets/getPortals',
       uiFlags: 'caseTickets/getPortalsUIFlags',
       types: 'caseTickets/getTypes',
+      inboxes: 'inboxes/getInboxes',
     }),
+    // Inboxes que pueden recibir tickets del portal (conversación nueva): API/Email.
+    compatibleInboxes() {
+      return this.inboxes.filter(i =>
+        COMPATIBLE_CHANNELS.includes(i.channel_type)
+      );
+    },
     isFetching() {
       return this.uiFlags.isFetching;
     },
@@ -50,10 +61,16 @@ export default {
   mounted() {
     this.$store.dispatch('caseTickets/fetchPortals');
     this.$store.dispatch('caseTickets/fetchTypes');
+    this.$store.dispatch('inboxes/get');
   },
   methods: {
     fullUrl(portal) {
       return `${window.location.origin}${portal.public_path}`;
+    },
+    channelLabel(channelType) {
+      if (channelType === 'Channel::Email') return 'Email';
+      if (channelType === 'Channel::Api') return 'API';
+      return channelType;
     },
     openCreate() {
       this.editing = null;
@@ -68,6 +85,7 @@ export default {
         locale: portal.locale,
         enabled: portal.enabled,
         intro: portal.intro || '',
+        inbox_id: portal.inbox_id || null,
       };
       this.showModal = true;
     },
@@ -224,6 +242,13 @@ export default {
             class="font-mono text-xs truncate text-woot-500 hover:underline"
             >{{ fullUrl(portal) }}</a
           >
+          <span class="text-xs text-slate-400 dark:text-slate-500">
+            {{ $t('CASE_TICKETS.PORTALS.DESTINATION') }}:
+            {{ portal.inbox_name || '—' }}
+            <template v-if="portal.inbox_channel">
+              · {{ channelLabel(portal.inbox_channel) }}</template
+            >
+          </span>
         </div>
         <woot-button
           size="tiny"
@@ -309,6 +334,23 @@ export default {
             <select v-model="form.locale" class="w-32">
               <option v-for="l in locales" :key="l" :value="l">{{ l }}</option>
             </select>
+          </label>
+
+          <label class="flex flex-col gap-1">
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ $t('CASE_TICKETS.PORTALS.INBOX_LABEL') }}</span
+            >
+            <select v-model="form.inbox_id" class="w-full">
+              <option :value="null">
+                {{ $t('CASE_TICKETS.PORTALS.INBOX_DEFAULT') }}
+              </option>
+              <option v-for="i in compatibleInboxes" :key="i.id" :value="i.id">
+                {{ i.name }} · {{ channelLabel(i.channel_type) }}
+              </option>
+            </select>
+            <span class="text-xs text-slate-400 dark:text-slate-500">{{
+              $t('CASE_TICKETS.PORTALS.INBOX_HELP')
+            }}</span>
           </label>
 
           <label class="flex flex-col gap-1">

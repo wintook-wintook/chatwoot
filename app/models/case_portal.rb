@@ -34,6 +34,10 @@
 # (/portal/:slug) o, en el futuro, por `custom_domain` (Host), igual que el
 # Help Center nativo de Chatwoot.
 class CasePortal < ApplicationRecord
+  # @tickets_cases — canales que permiten una conversación NUEVA iniciada por el
+  # negocio (R1: API y Email; WhatsApp queda para R2 por requerir plantilla).
+  COMPATIBLE_CHANNELS = %w[Channel::Api Channel::Email].freeze
+
   belongs_to :account
   belongs_to :inbox, optional: true
 
@@ -44,6 +48,7 @@ class CasePortal < ApplicationRecord
   validates :slug, presence: true, uniqueness: true,
                    format: { with: /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/, message: 'solo minúsculas, números y guiones' }
   validates :custom_domain, uniqueness: true, allow_nil: true
+  validate  :inbox_compatible
 
   scope :enabled, -> { where(enabled: true) }
 
@@ -64,6 +69,16 @@ class CasePortal < ApplicationRecord
   end
 
   private
+
+  # El inbox destino debe ser de la cuenta y de un canal que permita conversación nueva.
+  def inbox_compatible
+    return if inbox.blank?
+
+    errors.add(:inbox, 'no pertenece a la cuenta') if inbox.account_id != account_id
+    unless COMPATIBLE_CHANNELS.include?(inbox.channel_type)
+      errors.add(:inbox, 'canal no compatible (usa API o Email)')
+    end
+  end
 
   def normalize_slug
     self.slug = slug.presence || name

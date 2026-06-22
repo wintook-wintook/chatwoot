@@ -55,6 +55,11 @@ class Public::CasePortalController < PublicController
       custom_attributes: custom_attributes_param, attachments: params[:attachments]
     ).perform
     render :create
+  rescue ArgumentError => e
+    # Identificador faltante para el canal del portal (p. ej. Email sin correo).
+    @case_types = @portal.public_case_types
+    @error = e.message
+    render :new, status: :unprocessable_entity
   rescue StandardError => e
     Rails.logger.error("[GestorTickets][Portal] create error: #{e.message}")
     @case_types = @portal.public_case_types

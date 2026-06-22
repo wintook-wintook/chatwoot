@@ -52,7 +52,7 @@ class Api::V1::Accounts::CasePortalsController < Api::V1::Accounts::BaseControll
   end
 
   def portal_params
-    params.require(:case_portal).permit(:name, :slug, :locale, :enabled, :intro, :custom_domain)
+    params.require(:case_portal).permit(:name, :slug, :locale, :enabled, :intro, :custom_domain, :inbox_id)
   end
 
   def portal_json(portal)
@@ -65,6 +65,8 @@ class Api::V1::Accounts::CasePortalsController < Api::V1::Accounts::BaseControll
       intro:              portal.intro,
       custom_domain:      portal.custom_domain,
       inbox_id:           portal.inbox_id,
+      inbox_name:         portal.inbox&.name,
+      inbox_channel:      portal.inbox&.channel_type,
       public_path:        "/portal/#{portal.slug}",
       public_types_count: portal.public_case_types.count,
       created_at:         portal.created_at,

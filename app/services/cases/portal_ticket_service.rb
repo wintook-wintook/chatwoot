@@ -34,7 +34,9 @@ class Cases::PortalTicketService
   end
 
   def perform
-    contact_inbox = build_contact_inbox
+    inbox = @portal.ensure_inbox!
+    validate_identifier!(inbox)
+    contact_inbox = build_contact_inbox(inbox)
     contact       = contact_inbox.contact
     conversation, is_new = resolve_conversation(contact, contact_inbox)
 
@@ -57,10 +59,18 @@ class Cases::PortalTicketService
 
   private
 
-  # [A] find_or_create contacto + contact_inbox del portal (por email/teléfono).
-  def build_contact_inbox
+  # El canal del inbox destino exige cierto identificador (Email→correo, WhatsApp→móvil).
+  def validate_identifier!(inbox)
+    case inbox.channel_type
+    when 'Channel::Email'
+      raise ArgumentError, 'Este portal requiere un correo electrónico.' if @email.blank?
+    end
+  end
+
+  # [A] find_or_create contacto + contact_inbox del inbox destino (por email/teléfono).
+  def build_contact_inbox(inbox)
     ContactInboxWithContactBuilder.new(
-      inbox: @portal.ensure_inbox!,
+      inbox: inbox,
       contact_attributes: {
         name:         @name.presence,
         email:        @email,
@@ -69,11 +79,13 @@ class Cases::PortalTicketService
     ).perform
   end
 
-  # [B] reusa la conversación abierta más reciente del contacto; si no hay, crea una
-  # nueva en el inbox "Portal". Devuelve [conversation, is_new].
+  # [B] reusa la conversación abierta del contacto EN EL INBOX DEL PORTAL; si no hay,
+  # crea una nueva ahí. Así el acuse sale por el canal definido en el portal.
+  # Devuelve [conversation, is_new].
   def resolve_conversation(contact, contact_inbox)
     existing = contact.conversations
-                      .where(account_id: @account.id, status: REUSABLE_STATUSES)
+                      .where(account_id: @account.id, inbox_id: contact_inbox.inbox_id,
+                             status: REUSABLE_STATUSES)
                       .order(last_activity_at: :desc, created_at: :desc)
                       .first
     return [existing, false] if existing

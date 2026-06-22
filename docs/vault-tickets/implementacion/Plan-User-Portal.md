@@ -301,9 +301,14 @@ en implementación** (preferible reusar para que HC y portal de tickets comparta
 
 ### Fases del refinamiento
 ```
-R1 — destino API (actual) + Email     ← bajo esfuerzo; Email = match natural osTicket
-R2 — destino WhatsApp + plantilla de acuse (config de plantilla en el portal)
+R1 — destino API (actual) + Email     ✅ IMPLEMENTADO (2026-06-22)
+R2 — destino WhatsApp + plantilla de acuse (config de plantilla en el portal)  ⏳ pendiente
 ```
+
+> ✅ **R1 hecho:** el admin elige el inbox destino (API/Email) del portal; las
+> conversaciones nacen ahí y el acuse del folio sale por ese canal (en Email, por
+> correo). Validación de canal compatible + guard de identificador (Email exige
+> correo). Ver [[Historial-de-implementacion]].
 
 ---
 
