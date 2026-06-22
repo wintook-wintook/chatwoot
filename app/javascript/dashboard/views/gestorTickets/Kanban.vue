@@ -33,6 +33,25 @@ const COLUMNS = [
   { key: 'closed', statuses: ['closed', 'cancelled'] },
 ];
 
+// Modo simple (osTicket): fusiona "Asignado" dentro de "En progreso" → 5 columnas.
+const SIMPLE_COLUMNS = [
+  { key: 'new', statuses: ['open', 'classified'] },
+  {
+    key: 'progress',
+    statuses: ['assigned', 'in_diagnosis', 'in_progress', 'escalated'],
+  },
+  {
+    key: 'waiting',
+    statuses: [
+      'waiting_on_customer',
+      'waiting_on_third_party',
+      'waiting_on_internal',
+    ],
+  },
+  { key: 'resolved', statuses: ['resolved', 'validating'] },
+  { key: 'closed', statuses: ['closed', 'cancelled'] },
+];
+
 const PRIORITY_DOT = {
   urgent: 'bg-red-500',
   high: 'bg-orange-500',
@@ -53,7 +72,6 @@ export default {
   components: { CaseTicketInternalModal }, // @tickets_cases Fase C
   data() {
     return {
-      columns: COLUMNS,
       quickFilters: QUICK_FILTERS,
       quickFilter: 'mine',
       showInternalModal: false, // @tickets_cases Fase C
@@ -83,9 +101,14 @@ export default {
       services: 'caseTickets/getServices',
       agents: 'agents/getAgents',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
+      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
     }),
     isFetching() {
       return this.boardUiFlags.isFetching;
+    },
+    // Columnas del tablero: simples (5) por defecto, completas (6) en modo ITIL.
+    columns() {
+      return this.itilEnabled ? COLUMNS : SIMPLE_COLUMNS;
     },
     activeQuickTabIndex() {
       const i = QUICK_FILTERS.findIndex(f => f.key === this.quickFilter);
@@ -119,6 +142,7 @@ export default {
     this.fetch();
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('agents/get');
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
   },
   methods: {
     // @tickets_cases Fase C — tras crear un ticket interno, refresca el tablero.

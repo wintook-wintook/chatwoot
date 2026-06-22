@@ -167,7 +167,7 @@
             <span v-if="ticket.folio" class="mr-1 font-mono text-xs text-slate-400 dark:text-slate-500">{{ ticket.folio }}</span>
             {{ ticket.title }}
           </p>
-          <span class="text-xs text-slate-500 dark:text-slate-400">{{ statusLabel(ticket.status) }}</span>
+          <span class="text-xs text-slate-500 dark:text-slate-400">{{ statusLabel(displayStatus(ticket.status)) }}</span>
         </div>
 
         <!-- SLA tiempo restante -->
@@ -227,7 +227,10 @@
 import { mapGetters } from 'vuex';
 import WootDateRangePicker from 'dashboard/components/ui/DateRangePicker.vue';
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
-import { SIMPLE_FILTER_STATUSES } from 'dashboard/helper/caseSimpleStatus'; // modo simple/ITIL
+import {
+  SIMPLE_FILTER_STATUSES,
+  toSimpleStatus,
+} from 'dashboard/helper/caseSimpleStatus'; // modo simple/ITIL
 
 const QUICK_FILTERS = [
   { key: 'mine', label: 'Mis Tickets' },
@@ -442,6 +445,7 @@ export default {
       }[p] || 'bg-slate-100 text-slate-700';
     },
     statusLabel(key)   { return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key; },
+    displayStatus(s)   { return this.itilEnabled ? s : toSimpleStatus(s); },
     priorityLabel(key) { return this.$t(`CASE_TICKETS.PRIORITIES.${key}`) || key; },
     originLabel(key) {
       return this.$t(`CASE_TICKETS.ORIGINS.${key}`) || key;

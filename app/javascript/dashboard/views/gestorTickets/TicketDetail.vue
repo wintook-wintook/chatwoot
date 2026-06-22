@@ -5,7 +5,10 @@
 <script>
 import { mapGetters } from 'vuex';
 import JourneyView from './JourneyView.vue';
-import { SIMPLE_TRANSITION_TARGETS } from '../../helper/caseSimpleStatus';
+import {
+  SIMPLE_TRANSITION_TARGETS,
+  toSimpleStatus,
+} from '../../helper/caseSimpleStatus';
 
 // @tickets_cases — pestaña activa del detalle, recordada por usuario.
 const DETAIL_TAB_KEY = 'gestorTickets.detailTab';
@@ -897,6 +900,10 @@ export default {
     statusLabel(key) {
       return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key;
     },
+    // Modo simple: colapsa el estado ITIL a su etiqueta simple para mostrar.
+    displayStatus(status) {
+      return this.itilEnabled ? status : toSimpleStatus(status);
+    },
     priorityLabel(key) {
       return this.$t(`CASE_TICKETS.PRIORITIES.${key}`) || key;
     },
@@ -944,7 +951,7 @@ export default {
             >
             <span
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
-              >{{ statusLabel(ticket.status) }}</span
+              >{{ statusLabel(displayStatus(ticket.status)) }}</span
             >
             <span
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
@@ -1151,7 +1158,7 @@ export default {
             >
             <span
               class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ statusLabel(ticket.status) }}</span
+              >{{ statusLabel(displayStatus(ticket.status)) }}</span
             >
           </div>
           <div class="flex flex-col gap-0.5">

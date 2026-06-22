@@ -10,14 +10,16 @@ tags: [tickets, pendiente, todo]
 - **i18n `en` del portal** — la copy de las vistas ERB está hoy en español; `<html lang>` ya sale de `portal.locale`. Falta extraer textos a locales es/en.
 - **Tailwind por CDN** — las vistas del portal cargan Tailwind vía CDN (rápido para el MVP); migrar al build de assets para producción.
 - ~~**Admin UI del portal**~~ ✅ **hecho** — vista "Portales del cliente" (`Portals.vue`, CRUD) + toggle público por tipo en `TicketTypes.vue`.
+- ~~**Admin elige inbox destino (API/Email)**~~ ✅ **hecho** (R1) — selector "Canal destino" en el portal; acuse por ese canal.
+- **R2 — destino WhatsApp + plantilla de acuse** — permitir inbox WhatsApp como destino con plantilla aprobada (folio como parámetro), ver [[Plan-User-Portal]] §10.
 - **Directiva bot `@estado_ticket`** (P2) — consultar estado por el canal de origen (ej. WhatsApp) sin teclear folio.
 - **Adjuntos: límites + throttle** — definir tipos/tamaño permitidos en el form público y rate-limit anti-spam.
 - **Dominio propio** (P2/P3) — subdominio (`soporte.dominio.com`) y marca blanca (`custom_domain` ya existe en `case_portals`, reusa el patrón del Help Center).
 - **Acuse por email** cuando la conversación nace en el inbox Portal (hoy el acuse vive en la conversación; sale por el canal si se reusó uno externo).
 
-### Modo simple (osTicket) — tras la Fase S1 (ver [[Plan-Modo-Simple]])
-- **S2 — colapsar badges de estado**: en modo simple mostrar los estados ITIL con su
-  etiqueta simple (`SIMPLE_STATUS_MAP`) en Index/TicketDetail/Panel + columnas del Kanban.
+### Modo simple (osTicket) — tras las Fases S1+S2 (ver [[Plan-Modo-Simple]])
+- ~~**S2 — colapsar badges de estado**~~ ✅ **hecho** — Index/TicketDetail con `displayStatus`
+  + Kanban con columnas simples (5). (Panel de conversación no muestra texto de estado).
 - **S3 — métricas y reglas**: ocultar KPIs ITIL (problemas/cambios) en `Metrics` y
   filtrar los campos ITIL del builder de `TicketRules` cuando el modo es simple.
 
