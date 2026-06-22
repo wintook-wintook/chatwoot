@@ -1,15 +1,17 @@
 <!--
   @tickets_cases U1 — Unir ticket + conversación.
-  Muestra el hilo de la conversación vinculada y permite responder (público o nota
-  privada) sin salir del ticket, reusando la API de mensajes del inbox.
+  Muestra el hilo de la conversación vinculada con el componente NATIVO de Chatwoot
+  (widgets/conversation/Message.vue) para que se vea idéntico al inbox, y permite
+  responder (público o nota privada) sin salir del ticket.
 -->
 <script>
 import MessageApi from 'dashboard/api/inbox/message';
-import { MESSAGE_TYPE } from 'shared/constants/messages';
+import Message from 'dashboard/components/widgets/conversation/Message.vue';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 
 export default {
   name: 'TicketConversation',
+  components: { Message },
   props: {
     conversationId: { type: [Number, String], required: true },
   },
@@ -79,19 +81,6 @@ export default {
         this.isSending = false;
       }
     },
-    isIncoming(m) {
-      return m.message_type === MESSAGE_TYPE.INCOMING;
-    },
-    isActivity(m) {
-      return m.message_type === MESSAGE_TYPE.ACTIVITY;
-    },
-    senderName(m) {
-      return m.sender?.name || (this.isIncoming(m) ? '' : this.$t('CASE_TICKETS.CONVERSATION.SYSTEM'));
-    },
-    formatTime(m) {
-      const ts = typeof m.created_at === 'number' ? m.created_at * 1000 : m.created_at;
-      return new Date(ts).toLocaleString();
-    },
   },
 };
 </script>
@@ -111,9 +100,9 @@ export default {
       </a>
     </div>
 
-    <!-- Hilo -->
+    <!-- Hilo con el componente NATIVO de Chatwoot -->
     <div
-      class="flex-1 min-h-0 p-3 space-y-3 overflow-y-auto border rounded-lg bg-slate-25 dark:bg-slate-800/40 border-slate-100 dark:border-slate-700"
+      class="flex-1 min-h-0 overflow-y-auto border rounded-lg bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-700"
     >
       <div v-if="isLoading" class="py-6 text-sm text-center text-slate-400">
         {{ $t('CASE_TICKETS.CONVERSATION.LOADING') }}
@@ -124,46 +113,13 @@ export default {
       >
         {{ $t('CASE_TICKETS.CONVERSATION.EMPTY') }}
       </div>
-
-      <template v-for="m in messages">
-        <!-- Actividad del sistema -->
-        <div
-          v-if="isActivity(m)"
+      <ul v-else class="conversation-panel !p-3">
+        <Message
+          v-for="m in messages"
           :key="m.id"
-          class="text-[11px] text-center text-slate-400 dark:text-slate-500"
-        >
-          {{ m.content }}
-        </div>
-        <!-- Mensaje (entrante / saliente / nota privada) -->
-        <div
-          v-else
-          :key="m.id"
-          class="flex"
-          :class="isIncoming(m) ? 'justify-start' : 'justify-end'"
-        >
-          <div
-            class="max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words"
-            :class="
-              m.private
-                ? 'bg-amber-50 text-amber-900 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-100 dark:border-amber-900/50'
-                : isIncoming(m)
-                  ? 'bg-white text-slate-800 border border-slate-100 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700'
-                  : 'bg-woot-500 text-white'
-            "
-          >
-            <div
-              v-if="m.private"
-              class="mb-0.5 text-[10px] font-semibold uppercase tracking-wide opacity-70"
-            >
-              {{ $t('CASE_TICKETS.CONVERSATION.PRIVATE') }}
-            </div>
-            <div>{{ m.content }}</div>
-            <div class="mt-1 text-[10px] opacity-60">
-              {{ senderName(m) }} · {{ formatTime(m) }}
-            </div>
-          </div>
-        </div>
-      </template>
+          :data="m"
+        />
+      </ul>
     </div>
 
     <!-- Caja de respuesta -->
