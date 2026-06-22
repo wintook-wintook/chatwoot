@@ -1,0 +1,22 @@
+<section class="max-w-3xl mx-auto px-4 py-12 text-center">
+  <h1 class="text-3xl sm:text-4xl font-bold mb-3">¿En qué podemos ayudarte?</h1>
+  <p class="text-slate-500 dark:text-slate-400 mb-8">
+    <%= @portal.intro.presence || 'Abre una solicitud o consulta el estado de un ticket.' %>
+  </p>
+
+  <div class="grid sm:grid-cols-2 gap-5 text-left">
+    <a href="<%= new_case_portal_ticket_path(@portal.slug) %>"
+       class="group rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 hover:border-indigo-500 hover:shadow-lg transition">
+      <div class="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 flex items-center justify-center text-xl mb-4">✉️</div>
+      <h2 class="font-semibold mb-1 group-hover:text-indigo-600">Abrir una solicitud</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400">Crea un ticket y recibe tu número de folio para darle seguimiento.</p>
+    </a>
+
+    <a href="<%= case_portal_status_path(@portal.slug) %>"
+       class="group rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 hover:border-indigo-500 hover:shadow-lg transition">
+      <div class="w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 flex items-center justify-center text-xl mb-4">🔎</div>
+      <h2 class="font-semibold mb-1 group-hover:text-indigo-600">Consultar estado</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400">Revisa el avance de tu ticket con tu correo o WhatsApp y el folio.</p>
+    </a>
+  </div>
+</section>

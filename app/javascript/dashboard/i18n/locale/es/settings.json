@@ -250,6 +250,7 @@
     "TICKET_CLASSIFICATION": "Clasificación",
     "TICKET_SLA": "SLA",
     "TICKET_AI": "Inteligencia Artificial",
+    "TICKET_PORTALS": "Portales del cliente",
     "TICKET_CONFIG": "Configuración de folio",
     "ALL_KANBAN": "Todo tablero oportunidades ",
     "TIPO_DE_PROCESO": "Tableros disponibles",

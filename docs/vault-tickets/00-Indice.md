@@ -21,6 +21,7 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 
 ## 🧭 Empezar aquí (al retomar)
 
+0. [[Referencia-osTicket]] — ⭐ norte del proyecto: MGCI se hace lo más parecido a osTicket
 1. [[Vision-y-convenciones]] — qué es, para qué, reglas del módulo
 2. [[case_type-tabla-configurable]] — ⭐ cambio arquitectónico que rompe el diseño original
 3. [[Trampas]] — ⚠️ leer SIEMPRE antes de tocar nada
@@ -49,6 +50,7 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 - [[Pruebas-en-browser]] — credenciales, Chrome, Puppeteer
 - [[Pendiente]] — lo que falta
 - [[Plan-asignacion-contacto-internos]] — plan: asignación manual · ticket desde contacto · tickets internos
+- [[Plan-User-Portal]] — 🌐 plan: superficie del cliente estilo osTicket (Open/Check/KB)
 - [[Historial-de-implementacion]] — changelog de todo lo resuelto
 
 ---

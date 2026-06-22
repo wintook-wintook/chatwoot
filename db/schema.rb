@@ -292,6 +292,23 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.index ["account_id", "counter_key"], name: "index_case_folio_counters_on_account_id_and_counter_key", unique: true
   end
 
+  create_table "case_portals", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id"
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.string "custom_domain"
+    t.string "locale", default: "es", null: false
+    t.boolean "enabled", default: true, null: false
+    t.text "intro"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_portals_on_account_id"
+    t.index ["custom_domain"], name: "index_case_portals_on_custom_domain", unique: true, where: "(custom_domain IS NOT NULL)"
+    t.index ["inbox_id"], name: "index_case_portals_on_inbox_id"
+    t.index ["slug"], name: "index_case_portals_on_slug", unique: true
+  end
+
   create_table "case_rules", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -421,6 +438,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "prefix", default: "", null: false
+    t.boolean "public", default: false, null: false
     t.index ["account_id", "position"], name: "index_case_types_on_account_id_and_position"
   end
 
@@ -1383,6 +1401,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "case_ai_configs", "accounts"
+  add_foreign_key "case_portals", "accounts"
+  add_foreign_key "case_portals", "inboxes"
   add_foreign_key "case_tickets", "users", column: "requester_id"
   add_foreign_key "case_type_fields", "accounts"
   add_foreign_key "case_type_fields", "case_types"

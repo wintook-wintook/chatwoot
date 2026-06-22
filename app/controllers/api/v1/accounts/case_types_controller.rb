@@ -52,7 +52,7 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
   end
 
   def type_params
-    params.require(:case_type).permit(:name, :color, :position, :prefix)
+    params.require(:case_type).permit(:name, :color, :position, :prefix, :public)
   end
 
   def type_json(type)
@@ -62,6 +62,8 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
       prefix:     type.prefix,
       color:      type.color,
       position:   type.position,
+      # @tickets_cases — User Portal: visible en el formulario público del cliente.
+      public:     type[:public],
       # @tickets_cases 2K — campos personalizados para render dinámico en alta/detalle.
       custom_fields: type.case_type_fields.ordered.map { |f| field_json(f) },
       created_at: type.created_at,

@@ -95,7 +95,7 @@ export default {
   methods: {
     openCreate() {
       this.editing = null;
-      this.form = { name: '', color: '#3b82f6', prefix: '' };
+      this.form = { name: '', color: '#3b82f6', prefix: '', public: false };
       this.showModal = true;
     },
     openEdit(type) {
@@ -104,8 +104,19 @@ export default {
         name: type.name,
         color: type.color,
         prefix: type.prefix || '',
+        public: !!type.public,
       };
       this.showModal = true;
+    },
+    async togglePublic(type) {
+      try {
+        await this.$store.dispatch('caseTickets/updateType', {
+          id: type.id,
+          public: !type.public,
+        });
+      } catch (_e) {
+        /* silent */
+      }
     },
     async save() {
       try {
@@ -281,6 +292,19 @@ export default {
         >
         <woot-button
           size="tiny"
+          :variant="type.public ? 'smooth' : 'clear'"
+          :color-scheme="type.public ? 'success' : 'secondary'"
+          icon="globe"
+          @click="togglePublic(type)"
+        >
+          {{
+            type.public
+              ? $t('CASE_TICKETS.TYPES.PUBLIC_ON')
+              : $t('CASE_TICKETS.TYPES.PUBLIC_OFF')
+          }}
+        </woot-button>
+        <woot-button
+          size="tiny"
           variant="clear"
           color-scheme="secondary"
           icon="list"
@@ -388,6 +412,19 @@ export default {
             <span class="text-xs text-slate-400 dark:text-slate-500">{{
               $t('CASE_TICKETS.TYPES.PREFIX_HELP')
             }}</span>
+          </label>
+
+          <label class="flex items-start gap-2">
+            <input v-model="form.public" type="checkbox" class="mt-1" />
+            <span class="flex flex-col">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                >{{ $t('CASE_TICKETS.TYPES.PUBLIC_LABEL') }}</span
+              >
+              <span class="text-xs text-slate-400 dark:text-slate-500">{{
+                $t('CASE_TICKETS.TYPES.PUBLIC_HELP')
+              }}</span>
+            </span>
           </label>
 
           <div class="flex justify-end gap-2 mt-2">

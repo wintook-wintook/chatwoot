@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es" class="">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consultar estado — Soporte Kontrolya</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+    function toggleDark() { document.documentElement.classList.toggle('dark'); }
+    function lookup(e) {
+      e.preventDefault();
+      document.getElementById('result').classList.remove('hidden');
+      document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+    }
+  </script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col">
+
+  <div class="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 text-xs text-center py-1">
+    BOCETO · Consultar estado · datos de ejemplo
+  </div>
+
+  <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+    <div class="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">K</div>
+        <div class="font-semibold">Soporte Kontrolya</div>
+      </a>
+      <div class="flex items-center gap-2 text-sm">
+        <a href="new.html" class="px-3 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700">Abrir solicitud</a>
+        <button onclick="toggleDark()" class="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700">🌓</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1">
+    <div class="max-w-3xl mx-auto px-4 py-8">
+      <nav class="text-sm text-slate-400 mb-4"><a href="index.html" class="hover:text-indigo-500">Inicio</a> › Consultar estado</nav>
+      <h1 class="text-2xl font-bold mb-1">Consultar el estado de tu ticket</h1>
+      <p class="text-slate-500 dark:text-slate-400 mb-6">Ingresa tu correo o WhatsApp y el folio que recibiste.</p>
+
+      <!-- Formulario de consulta -->
+      <form onsubmit="lookup(event)" class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 grid sm:grid-cols-2 gap-4 mb-8">
+        <div>
+          <label class="block text-sm font-medium mb-1">Correo o WhatsApp <span class="text-rose-500">*</span></label>
+          <input required class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="maria@empresa.com" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Folio <span class="text-rose-500">*</span></label>
+          <input required class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="SOP-00123" value="SOP-00123" />
+        </div>
+        <div class="sm:col-span-2 flex justify-end">
+          <button type="submit" class="px-6 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium">Consultar</button>
+        </div>
+      </form>
+
+      <!-- Resultado (read-only) -->
+      <div id="result" class="hidden">
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
+          <!-- cabecera del ticket -->
+          <div class="p-6 border-b border-slate-200 dark:border-slate-700">
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <div class="font-mono text-sm text-slate-400">SOP-00123</div>
+                <h2 class="text-lg font-semibold">No puedo emitir facturas</h2>
+              </div>
+              <span class="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">En progreso</span>
+            </div>
+            <div class="grid sm:grid-cols-3 gap-4 mt-5 text-sm">
+              <div>
+                <div class="text-slate-400">Tipo</div>
+                <div class="font-medium">Soporte técnico</div>
+              </div>
+              <div>
+                <div class="text-slate-400">Prioridad</div>
+                <div class="font-medium">Alta</div>
+              </div>
+              <div>
+                <div class="text-slate-400">Creado</div>
+                <div class="font-medium">22 jun 2026, 10:14</div>
+              </div>
+            </div>
+            <!-- badge SLA -->
+            <div class="mt-4 inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300">
+              ⏱ SLA en riesgo · resolución estimada en 1 h 45 min
+            </div>
+          </div>
+
+          <!-- timeline público -->
+          <div class="p-6">
+            <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-4">Avance del ticket</h3>
+            <ol class="relative border-l-2 border-slate-200 dark:border-slate-700 ml-2 space-y-6">
+              <li class="ml-6">
+                <span class="absolute -left-[9px] w-4 h-4 rounded-full bg-emerald-500"></span>
+                <div class="text-sm font-medium">Solicitud recibida</div>
+                <div class="text-xs text-slate-400">22 jun 2026, 10:14 · folio SOP-00123 asignado</div>
+              </li>
+              <li class="ml-6">
+                <span class="absolute -left-[9px] w-4 h-4 rounded-full bg-emerald-500"></span>
+                <div class="text-sm font-medium">Asignado a un agente</div>
+                <div class="text-xs text-slate-400">22 jun 2026, 10:20 · equipo Soporte Técnico</div>
+              </li>
+              <li class="ml-6">
+                <span class="absolute -left-[9px] w-4 h-4 rounded-full bg-blue-500 ring-4 ring-blue-100 dark:ring-blue-500/20"></span>
+                <div class="text-sm font-medium">En progreso</div>
+                <div class="text-xs text-slate-400">22 jun 2026, 10:32 · un asesor está revisando tu caso</div>
+              </li>
+              <li class="ml-6 opacity-50">
+                <span class="absolute -left-[9px] w-4 h-4 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+                <div class="text-sm font-medium">Resuelto</div>
+                <div class="text-xs text-slate-400">pendiente</div>
+              </li>
+            </ol>
+          </div>
+
+          <!-- nota: solo lectura -->
+          <div class="px-6 pb-6">
+            <p class="text-xs text-slate-400">Esta vista es solo de consulta. Para responder, usa el mismo canal por el que abriste el ticket.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-slate-200 dark:border-slate-700 py-6 text-center text-xs text-slate-400">
+    Kontrolya · Portal de soporte
+  </footer>
+</body>
+</html>

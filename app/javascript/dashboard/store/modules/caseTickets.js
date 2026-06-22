@@ -19,6 +19,7 @@ import caseFolioConfigAPI from '../../api/caseFolioConfig';
 import caseSlaPoliciesAPI from '../../api/caseSlaPolicies';
 import caseTypeFieldsAPI from '../../api/caseTypeFields';
 import caseAiConfigAPI from '../../api/caseAiConfig';
+import casePortalsAPI from '../../api/casePortals';
 import {
   SET_CASE_TICKET_UI_FLAG,
   SET_ACTIVE_CASE_TICKET,
@@ -46,6 +47,8 @@ import {
   SET_CASE_TYPE_FIELDS_UI_FLAG,
   SET_CASE_AI_CONFIG,
   SET_CASE_AI_CONFIG_UI_FLAG,
+  SET_CASE_PORTALS,
+  SET_CASE_PORTALS_UI_FLAG,
 } from '../mutation-types';
 
 const CLOSED_STATUSES = ['closed', 'cancelled'];
@@ -78,6 +81,13 @@ const state = {
   // Tipos de caso configurables por cuenta
   types: [],
   typesUiFlags: {
+    isFetching: false,
+    isSaving: false,
+    isDeleting: false,
+  },
+  // User Portal — portales públicos del cliente
+  portals: [],
+  portalsUiFlags: {
     isFetching: false,
     isSaving: false,
     isDeleting: false,
@@ -167,6 +177,13 @@ export const getters = {
   },
   getTypesUIFlags(_state) {
     return _state.typesUiFlags;
+  },
+  // User Portal
+  getPortals(_state) {
+    return _state.portals;
+  },
+  getPortalsUIFlags(_state) {
+    return _state.portalsUiFlags;
   },
   // 2K — campos personalizados de un tipo de caso
   getTypeFields: _state => caseTypeId => _state.typeFields[caseTypeId] || [],
@@ -520,6 +537,52 @@ export const actions = {
       );
     } finally {
       commit(SET_CASE_TYPES_UI_FLAG, { isDeleting: false });
+    }
+  },
+
+  // ── User Portal — portales públicos del cliente ─────────────
+  async fetchPortals({ commit }) {
+    commit(SET_CASE_PORTALS_UI_FLAG, { isFetching: true });
+    try {
+      const { data } = await casePortalsAPI.get();
+      commit(SET_CASE_PORTALS, data.case_portals || []);
+    } finally {
+      commit(SET_CASE_PORTALS_UI_FLAG, { isFetching: false });
+    }
+  },
+  async createPortal({ commit, state: s }, payload) {
+    commit(SET_CASE_PORTALS_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await casePortalsAPI.create({ case_portal: payload });
+      commit(SET_CASE_PORTALS, [...s.portals, data.case_portal]);
+      return data.case_portal;
+    } finally {
+      commit(SET_CASE_PORTALS_UI_FLAG, { isSaving: false });
+    }
+  },
+  async updatePortal({ commit, state: s }, { id, ...payload }) {
+    commit(SET_CASE_PORTALS_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await casePortalsAPI.update(id, { case_portal: payload });
+      commit(
+        SET_CASE_PORTALS,
+        s.portals.map(p => (p.id === id ? data.case_portal : p))
+      );
+      return data.case_portal;
+    } finally {
+      commit(SET_CASE_PORTALS_UI_FLAG, { isSaving: false });
+    }
+  },
+  async deletePortal({ commit, state: s }, id) {
+    commit(SET_CASE_PORTALS_UI_FLAG, { isDeleting: true });
+    try {
+      await casePortalsAPI.delete(id);
+      commit(
+        SET_CASE_PORTALS,
+        s.portals.filter(p => p.id !== id)
+      );
+    } finally {
+      commit(SET_CASE_PORTALS_UI_FLAG, { isDeleting: false });
     }
   },
 
@@ -917,6 +980,12 @@ export const mutations = {
   },
   [SET_CASE_TYPES_UI_FLAG](_state, flags) {
     _state.typesUiFlags = { ..._state.typesUiFlags, ...flags };
+  },
+  [SET_CASE_PORTALS](_state, portals) {
+    _state.portals = portals;
+  },
+  [SET_CASE_PORTALS_UI_FLAG](_state, flags) {
+    _state.portalsUiFlags = { ..._state.portalsUiFlags, ...flags };
   },
   [SET_CASE_SERVICES](_state, services) {
     _state.services = services;

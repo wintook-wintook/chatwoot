@@ -138,6 +138,7 @@ Rails.application.routes.draw do
           resources :case_services, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_categories, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_sla_policies, only: [:index, :create, :update, :destroy] # @tickets_cases 2I
+          resources :case_portals, only: [:index, :create, :update, :destroy] # @tickets_cases — User Portal
           resource  :case_folio_config, only: [:show, :update], controller: 'case_folio_configs'
           resource  :case_ai_config, only: [:show, :update], controller: 'case_ai_configs' # @tickets_cases 3A
           # =========================================================================
@@ -677,6 +678,14 @@ Rails.application.routes.draw do
   get 'hc/:slug/:locale/categories/:category_slug', to: 'public/api/v1/portals/categories#show'
   get 'hc/:slug/:locale/categories/:category_slug/articles', to: 'public/api/v1/portals/articles#index'
   get 'hc/:slug/articles/:article_slug', to: 'public/api/v1/portals/articles#show'
+
+  # ----------------------------------------------------------------------
+  # @tickets_cases — User Portal (P1): superficie pública del cliente (estilo osTicket).
+  # Se resuelve por slug (/portal/:slug). HTML server-rendered.
+  get  'portal/:slug',         to: 'public/case_portal#show',   as: :case_portal
+  get  'portal/:slug/new',     to: 'public/case_portal#new',    as: :new_case_portal_ticket
+  post 'portal/:slug/tickets', to: 'public/case_portal#create', as: :case_portal_tickets
+  get  'portal/:slug/status',  to: 'public/case_portal#status', as: :case_portal_status
 
   # ----------------------------------------------------------------------
   # Used in mailer templates
