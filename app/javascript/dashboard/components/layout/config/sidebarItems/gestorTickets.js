@@ -14,6 +14,7 @@ const gestorTickets = accountId => ({
     'gestorTickets_sla',
     'gestorTickets_ai',
     'gestorTickets_portals',
+    'gestorTickets_settings',
     'gestorTickets_config',
   ],
   menuItems: [
@@ -79,6 +80,13 @@ const gestorTickets = accountId => ({
       hasSubMenu: false,
       toState: frontendURL(`accounts/${accountId}/tickets/portals`),
       toStateName: 'gestorTickets_portals',
+    },
+    {
+      icon: 'settings',
+      label: 'TICKET_SETTINGS',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/tickets/settings`),
+      toStateName: 'gestorTickets_settings',
     },
     {
       icon: 'number-symbol',

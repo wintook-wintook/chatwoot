@@ -458,6 +458,20 @@
         "NO": "Cancelar"
       }
     },
+    "SETTINGS": {
+      "TITLE": "Ajustes del módulo",
+      "BACK": "Volver",
+      "LOADING": "Cargando ajustes...",
+      "HELP": "Elige cómo se comporta el gestor de tickets. El modo simple se parece a osTicket; el modo ITIL activa la gestión avanzada.",
+      "MODE_SIMPLE": "Modo simple (osTicket)",
+      "MODE_SIMPLE_DESC": "Experiencia sencilla: estados básicos y prioridad directa. Oculta los campos ITIL avanzados.",
+      "MODE_ITIL": "Modo ITIL (avanzado)",
+      "MODE_ITIL_DESC": "Activa estados ITIL completos, matriz Impacto×Urgencia, naturaleza del ticket, problema/cambio y aprobaciones.",
+      "NOTE_DATA": "No se borra ni modifica ningún dato: el modo solo cambia lo que se muestra.",
+      "NOTE_REVERSIBLE": "Puedes cambiar de modo cuando quieras.",
+      "SAVED": "Ajustes guardados",
+      "SAVE_ERROR": "No se pudieron guardar los ajustes."
+    },
     "PORTALS": {
       "TITLE": "Portales del cliente",
       "HELP": "Crea portales públicos (estilo osTicket) donde tus clientes abren y consultan tickets sin iniciar sesión.",

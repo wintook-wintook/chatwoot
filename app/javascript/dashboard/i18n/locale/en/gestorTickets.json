@@ -458,6 +458,20 @@
         "NO": "Cancel"
       }
     },
+    "SETTINGS": {
+      "TITLE": "Module settings",
+      "BACK": "Back",
+      "LOADING": "Loading settings...",
+      "HELP": "Choose how the ticket manager behaves. Simple mode resembles osTicket; ITIL mode enables advanced management.",
+      "MODE_SIMPLE": "Simple mode (osTicket)",
+      "MODE_SIMPLE_DESC": "Streamlined experience: basic statuses and direct priority. Hides advanced ITIL fields.",
+      "MODE_ITIL": "ITIL mode (advanced)",
+      "MODE_ITIL_DESC": "Enables full ITIL statuses, Impact×Urgency matrix, ticket nature, problem/change and approvals.",
+      "NOTE_DATA": "No data is deleted or changed: the mode only affects what is shown.",
+      "NOTE_REVERSIBLE": "You can switch modes anytime.",
+      "SAVED": "Settings saved",
+      "SAVE_ERROR": "Could not save settings."
+    },
     "PORTALS": {
       "TITLE": "Customer portals",
       "HELP": "Create public portals (osTicket-style) where your customers open and track tickets without signing in.",

@@ -334,6 +334,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.index ["account_id", "position"], name: "index_case_services_on_account_id_and_position"
   end
 
+  create_table "case_settings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.boolean "itil_enabled", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_settings_on_account_id", unique: true
+  end
+
   create_table "case_sla_policies", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "case_type_id"
@@ -1403,6 +1411,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
   add_foreign_key "case_ai_configs", "accounts"
   add_foreign_key "case_portals", "accounts"
   add_foreign_key "case_portals", "inboxes"
+  add_foreign_key "case_settings", "accounts"
   add_foreign_key "case_tickets", "users", column: "requester_id"
   add_foreign_key "case_type_fields", "accounts"
   add_foreign_key "case_type_fields", "case_types"

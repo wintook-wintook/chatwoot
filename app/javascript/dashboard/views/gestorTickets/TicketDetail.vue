@@ -5,6 +5,7 @@
 <script>
 import { mapGetters } from 'vuex';
 import JourneyView from './JourneyView.vue';
+import { SIMPLE_TRANSITION_TARGETS } from '../../helper/caseSimpleStatus';
 
 // @tickets_cases — pestaña activa del detalle, recordada por usuario.
 const DETAIL_TAB_KEY = 'gestorTickets.detailTab';
@@ -85,6 +86,7 @@ export default {
       uiFlags: 'caseTickets/getUIFlags',
       teams: 'teams/getTeams',
       agents: 'agents/getAgents',
+      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
     }),
     ticket() {
       return this.getTicketById(this.ticketId);
@@ -279,7 +281,10 @@ export default {
       return this.uiFlags.isTransitioning;
     },
     validTransitions() {
-      return this.ticket?.can_transition_to || [];
+      const all = this.ticket?.can_transition_to || [];
+      // Modo simple (osTicket): solo se ofrecen los estados destino simples.
+      if (this.itilEnabled) return all;
+      return all.filter(s => SIMPLE_TRANSITION_TARGETS.includes(s));
     },
     // @tickets_cases 2D — nivel y disponibilidad de escalamiento.
     escalationLabel() {
@@ -318,6 +323,7 @@ export default {
     this.loadTicket();
     this.$store.dispatch('teams/get');
     this.$store.dispatch('agents/get');
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
   },
   methods: {
     onDetailTabChange(index) {

@@ -227,6 +227,7 @@
 import { mapGetters } from 'vuex';
 import WootDateRangePicker from 'dashboard/components/ui/DateRangePicker.vue';
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
+import { SIMPLE_FILTER_STATUSES } from 'dashboard/helper/caseSimpleStatus'; // modo simple/ITIL
 
 const QUICK_FILTERS = [
   { key: 'mine', label: 'Mis Tickets' },
@@ -282,6 +283,7 @@ export default {
       uiFlags:       'caseTickets/getUIFlags',
       types:         'caseTickets/getTypes',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
+      itilEnabled:   'caseTickets/getItilEnabled', // modo simple/ITIL
     }),
     isFetchingList()  { return this.uiFlags.isFetchingList; },
     quickFilters()    { return QUICK_FILTERS; },
@@ -290,7 +292,7 @@ export default {
       return i < 0 ? 0 : i;
     },
     slaOverdueCount() { return this.meta.sla_overdue_count || 0; },
-    statusOptions()   { return STATUS_OPTIONS; },
+    statusOptions()   { return this.itilEnabled ? STATUS_OPTIONS : SIMPLE_FILTER_STATUSES; },
     priorityOptions() { return PRIORITY_OPTIONS; },
     originOptions() {
       return ORIGIN_OPTIONS;
@@ -329,6 +331,7 @@ export default {
   },
   mounted() {
     this.$store.dispatch('caseTickets/fetchTypes');
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     this.fetch();
   },
   methods: {

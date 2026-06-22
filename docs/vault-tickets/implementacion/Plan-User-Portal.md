@@ -263,6 +263,50 @@ en implementación** (preferible reusar para que HC y portal de tickets comparta
 
 ---
 
+## 10. Canal destino del portal (refinamiento · 2026-06-22)
+
+> **Idea:** un portal puede enrutar sus tickets a un **inbox destino configurable**
+> (no solo al inbox API "Portal"), siempre que el canal permita una **conversación
+> NUEVA iniciada por el negocio**. El form ya pide **Nombre + Móvil + Correo**, que
+> da el identificador que cada canal necesita.
+
+### Matriz de canales
+
+| Canal destino | ¿Conversación NUEVA? | Requisito |
+|---|---|---|
+| **API** ("Portal", default) | ✅ siempre | — (acuse vive en dashboard / Check Status) |
+| **Email** | ✅ | correo del cliente (acuse por email) |
+| **WhatsApp** | ⚠️ solo con **plantilla aprobada** (regla 24h Meta) | móvil + plantilla |
+| Web Widget | ⚠️ el cliente la ve solo si vuelve al widget | identidad del visitante |
+| **Telegram / Messenger / Instagram** | ❌ no se puede iniciar | — |
+
+### Regla de resolución (afina la §2)
+```
+¿el contacto tiene conversación ABIERTA? (cualquier canal)
+   SÍ → reusar ese hilo  (Telegram/Messenger SÍ funcionan por reuso)
+   NO → crear NUEVA en el inbox destino del portal (API / Email / WhatsApp)
+```
+> Telegram/Messenger/Instagram: válidos por **reuso** (el cliente ya escribió), pero
+> **no** como destino de conversación nueva.
+
+### Config del portal (nuevos campos)
+- `inbox_id` (ya existe) → ahora **seleccionable** por el admin entre inboxes compatibles
+  (API/Email/WhatsApp), con fallback al inbox API "Portal".
+- Si el destino es **WhatsApp**: configurar **plantilla de acuse**:
+  - `acuse_template_name` — nombre de la plantilla aprobada en Meta.
+  - orden de parámetros → folio, tipo, prioridad… (ej. plantilla
+    *"Tu solicitud quedó registrada con folio {{1}}. Tipo: {{2}}…"*).
+  - Al abrir el ticket, el `PortalThreadSeeder` envía esa plantilla con el folio inyectado
+    en vez del texto plano (que Meta rechazaría fuera de la ventana de 24h).
+
+### Fases del refinamiento
+```
+R1 — destino API (actual) + Email     ← bajo esfuerzo; Email = match natural osTicket
+R2 — destino WhatsApp + plantilla de acuse (config de plantilla en el portal)
+```
+
+---
+
 ## 🔗 Relacionado
 - [[Referencia-osTicket]] · [[Conciliacion-osTicket-MGCI]]
 - [[Servicios-Directiva-Integracion]] (Orchestrator/RuleEngine a reusar)

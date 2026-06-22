@@ -48,6 +48,7 @@ export default {
       teams: 'teams/getTeams',
       services: 'caseTickets/getServices',
       categories: 'caseTickets/getCategories',
+      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
     }),
     tabs() {
       return [
@@ -135,6 +136,7 @@ export default {
     this.$store.dispatch('teams/get');
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('caseTickets/fetchCategories');
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
   },
   methods: {
     onTabChange(index) {
@@ -219,8 +221,8 @@ export default {
               </select>
             </label>
 
-            <!-- Naturaleza ITIL -->
-            <label class="flex flex-col gap-1">
+            <!-- Naturaleza ITIL (oculto en modo simple) -->
+            <label v-if="itilEnabled" class="flex flex-col gap-1">
               <span
                 class="text-sm font-medium text-slate-700 dark:text-slate-300"
               >
@@ -301,10 +303,13 @@ export default {
               </select>
             </label>
 
-            <!-- Impacto · Urgencia · Prioridad en una sola línea -->
-            <div class="grid grid-cols-3 col-span-2 gap-3">
+            <!-- Impacto · Urgencia · Prioridad (impacto/urgencia ocultos en modo simple) -->
+            <div
+              class="col-span-2 gap-3"
+              :class="itilEnabled ? 'grid grid-cols-3' : ''"
+            >
               <!-- Impacto -->
-              <label class="flex flex-col gap-1">
+              <label v-if="itilEnabled" class="flex flex-col gap-1">
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
@@ -325,7 +330,7 @@ export default {
               </label>
 
               <!-- Urgencia -->
-              <label class="flex flex-col gap-1">
+              <label v-if="itilEnabled" class="flex flex-col gap-1">
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >

@@ -20,6 +20,7 @@ import caseSlaPoliciesAPI from '../../api/caseSlaPolicies';
 import caseTypeFieldsAPI from '../../api/caseTypeFields';
 import caseAiConfigAPI from '../../api/caseAiConfig';
 import casePortalsAPI from '../../api/casePortals';
+import caseSettingsAPI from '../../api/caseSettings';
 import {
   SET_CASE_TICKET_UI_FLAG,
   SET_ACTIVE_CASE_TICKET,
@@ -49,6 +50,8 @@ import {
   SET_CASE_AI_CONFIG_UI_FLAG,
   SET_CASE_PORTALS,
   SET_CASE_PORTALS_UI_FLAG,
+  SET_CASE_SETTINGS,
+  SET_CASE_SETTINGS_UI_FLAG,
 } from '../mutation-types';
 
 const CLOSED_STATUSES = ['closed', 'cancelled'];
@@ -91,6 +94,14 @@ const state = {
     isFetching: false,
     isSaving: false,
     isDeleting: false,
+  },
+  // Modo simple (osTicket) vs ITIL — ajustes del módulo
+  settings: {
+    itil_enabled: false,
+  },
+  settingsUiFlags: {
+    isFetching: false,
+    isSaving: false,
   },
   // 2B — Servicios afectados configurables por cuenta
   services: [],
@@ -184,6 +195,13 @@ export const getters = {
   },
   getPortalsUIFlags(_state) {
     return _state.portalsUiFlags;
+  },
+  // Modo simple/ITIL
+  getItilEnabled(_state) {
+    return _state.settings.itil_enabled;
+  },
+  getSettingsUIFlags(_state) {
+    return _state.settingsUiFlags;
   },
   // 2K — campos personalizados de un tipo de caso
   getTypeFields: _state => caseTypeId => _state.typeFields[caseTypeId] || [],
@@ -583,6 +601,29 @@ export const actions = {
       );
     } finally {
       commit(SET_CASE_PORTALS_UI_FLAG, { isDeleting: false });
+    }
+  },
+
+  // ── Modo simple (osTicket) vs ITIL ──────────────────────────
+  async fetchSettings({ commit }) {
+    commit(SET_CASE_SETTINGS_UI_FLAG, { isFetching: true });
+    try {
+      const { data } = await caseSettingsAPI.show();
+      commit(SET_CASE_SETTINGS, data);
+    } finally {
+      commit(SET_CASE_SETTINGS_UI_FLAG, { isFetching: false });
+    }
+  },
+  async updateSettings({ commit }, payload) {
+    commit(SET_CASE_SETTINGS_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await caseSettingsAPI.updateSettings({
+        case_setting: payload,
+      });
+      commit(SET_CASE_SETTINGS, data);
+      return data;
+    } finally {
+      commit(SET_CASE_SETTINGS_UI_FLAG, { isSaving: false });
     }
   },
 
@@ -986,6 +1027,12 @@ export const mutations = {
   },
   [SET_CASE_PORTALS_UI_FLAG](_state, flags) {
     _state.portalsUiFlags = { ..._state.portalsUiFlags, ...flags };
+  },
+  [SET_CASE_SETTINGS](_state, settings) {
+    _state.settings = { ..._state.settings, ...settings };
+  },
+  [SET_CASE_SETTINGS_UI_FLAG](_state, flags) {
+    _state.settingsUiFlags = { ..._state.settingsUiFlags, ...flags };
   },
   [SET_CASE_SERVICES](_state, services) {
     _state.services = services;

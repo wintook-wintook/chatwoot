@@ -15,6 +15,12 @@ tags: [tickets, pendiente, todo]
 - **Dominio propio** (P2/P3) — subdominio (`soporte.dominio.com`) y marca blanca (`custom_domain` ya existe en `case_portals`, reusa el patrón del Help Center).
 - **Acuse por email** cuando la conversación nace en el inbox Portal (hoy el acuse vive en la conversación; sale por el canal si se reusó uno externo).
 
+### Modo simple (osTicket) — tras la Fase S1 (ver [[Plan-Modo-Simple]])
+- **S2 — colapsar badges de estado**: en modo simple mostrar los estados ITIL con su
+  etiqueta simple (`SIMPLE_STATUS_MAP`) en Index/TicketDetail/Panel + columnas del Kanban.
+- **S3 — métricas y reglas**: ocultar KPIs ITIL (problemas/cambios) en `Metrics` y
+  filtrar los campos ITIL del builder de `TicketRules` cuando el modo es simple.
+
 ### General
 - **Panel de contacto** (3er punto de entrada del diseño) — mostrar tickets históricos del contacto en su perfil. NO se hizo.
 - **Reglas pre-cargadas por defecto** (las 7 del diseño) — el seed automático no se implementó; las reglas se crean manualmente desde la UI.

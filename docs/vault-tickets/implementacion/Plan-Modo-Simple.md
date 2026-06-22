@@ -3,10 +3,14 @@ titulo: Plan — Modo simple (osTicket) por defecto · ITIL opcional
 tipo: plan
 tags: [tickets, osticket, itil, modo-simple, plan]
 fecha: 2026-06-22
-estado: propuesta
+estado: Fase S1 implementada y verificada · S2/S3 pendientes
 ---
 
 # 🎚️ Plan — Modo simple (osTicket) por defecto
+
+> ✅ **Fase S1 IMPLEMENTADA** (2026-06-22): toggle por cuenta (default simple),
+> modales de creación atenuados y dropdowns de estado simples. Falta S2 (colapso
+> de badges + Kanban) y S3 (métricas/reglas). Ver [[Historial-de-implementacion]].
 
 > **Decisión (2026-06-22):** osTicket NO tiene ITIL. El ITIL de MGCI es un
 > **superset opcional**, no parte de la paridad osTicket. NO se quita (ya está
@@ -105,19 +109,14 @@ cancelled                  Cancelado                        "Cancelado"     → 
 
 ---
 
-## 5. Puntos abiertos (decidir antes de implementar)
+## 5. Decisiones cerradas (2026-06-22)
 
-1. **¿Reglas/IA pueden poner estados ITIL en modo simple?**
-   - (a) Sí (backend permisivo); la UI los colapsa al mostrar. *(recomendado: menos invasivo)*
-   - (b) En modo simple, suprimir auto-transiciones a estados ITIL-only.
-2. **Métricas ITIL en simple:** ¿ocultar las tarjetas de problemas/cambios o dejarlas en 0?
-3. **Tickets ya existentes en estado ITIL** al activar/desactivar el modo: se muestran
-   con su etiqueta simple (no hay migración de datos). ¿OK?
-4. **Granularidad del toggle:** ¿un solo `itil_enabled`, o sub-toggles
-   (estados / matriz impacto-urgencia / problema-cambio) por separado? *(recomiendo
-   uno solo para empezar; sub-toggles después si se piden)*.
-5. **¿Dónde vive el toggle en el admin?** ¿pantalla nueva "Ajustes del módulo" o
-   dentro de una existente (ej. junto a Folio/IA)?
+1. **Reglas/IA SÍ pueden poner estados ITIL en modo simple** → backend permisivo;
+   la UI los **colapsa** al mostrar (vía `SIMPLE_STATUS_MAP`). Menos invasivo.
+2. **Métricas ITIL en simple:** se **ocultan** las tarjetas de problemas/cambios (Fase S3).
+3. **Tickets ya en estado ITIL:** se muestran con su etiqueta simple; **sin migración** de datos.
+4. **Un solo toggle `itil_enabled`** (sin sub-toggles por ahora).
+5. **El toggle vive en una pantalla nueva "Ajustes"** del módulo (`gestorTickets_settings`).
 
 ---
 

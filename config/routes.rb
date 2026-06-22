@@ -139,6 +139,7 @@ Rails.application.routes.draw do
           resources :case_categories, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_sla_policies, only: [:index, :create, :update, :destroy] # @tickets_cases 2I
           resources :case_portals, only: [:index, :create, :update, :destroy] # @tickets_cases — User Portal
+          resource  :case_setting, only: [:show, :update] # @tickets_cases — modo simple/ITIL
           resource  :case_folio_config, only: [:show, :update], controller: 'case_folio_configs'
           resource  :case_ai_config, only: [:show, :update], controller: 'case_ai_configs' # @tickets_cases 3A
           # =========================================================================
