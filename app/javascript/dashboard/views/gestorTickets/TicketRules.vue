@@ -243,6 +243,7 @@
 
 <script>
 import { mapGetters } from 'vuex';
+import { SIMPLE_FILTER_STATUSES } from 'dashboard/helper/caseSimpleStatus'; // modo simple/ITIL
 
 const DEFAULT_FORM = () => ({
   name: '',
@@ -342,13 +343,16 @@ export default {
       rules:       'caseTickets/getRules',
       rulesUiFlags:'caseTickets/getRulesUIFlags',
       caseTypes:   'caseTickets/getTypes',
+      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
     }),
     isFetching() { return this.rulesUiFlags.isFetching; },
     isSaving()   { return this.rulesUiFlags.isSaving; },
     conditionFields() { return CONDITION_FIELDS; },
-    actionTypes()     { return ACTION_TYPES; },
+    // Modo simple: oculta la acción ITIL "Escalar".
+    actionTypes()     { return this.itilEnabled ? ACTION_TYPES : ACTION_TYPES.filter(a => a.value !== 'escalate'); },
     priorityOptions() { return VALUE_OPTIONS.priority; },
-    statusOptions()   { return VALUE_OPTIONS.status; },
+    // Modo simple: solo estados simples como opción.
+    statusOptions()   { return this.itilEnabled ? VALUE_OPTIONS.status : VALUE_OPTIONS.status.filter(o => SIMPLE_FILTER_STATUSES.includes(o.value)); },
     // Tipos de la cuenta como opciones {value: id (string), label: name}
     typeOptions() {
       return this.caseTypes.map(t => ({ value: String(t.id), label: t.name }));
@@ -360,6 +364,7 @@ export default {
   mounted() {
     this.$store.dispatch('caseTickets/fetchRules');
     this.$store.dispatch('caseTickets/fetchTypes');
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
   },
   methods: {
     openCreateModal() {
@@ -405,6 +410,7 @@ export default {
     },
     valueOptionsFor(field) {
       if (field === 'case_type') return this.typeOptions;
+      if (field === 'status') return this.statusOptions;
       return VALUE_OPTIONS[field] || [];
     },
     addAction() {

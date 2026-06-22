@@ -3,15 +3,14 @@ titulo: Plan — Modo simple (osTicket) por defecto · ITIL opcional
 tipo: plan
 tags: [tickets, osticket, itil, modo-simple, plan]
 fecha: 2026-06-22
-estado: Fases S1+S2 implementadas y verificadas · S3 pendiente
+estado: COMPLETO (S1+S2+S3) implementado y verificado
 ---
 
 # 🎚️ Plan — Modo simple (osTicket) por defecto
 
-> ✅ **Fases S1+S2 IMPLEMENTADAS** (2026-06-22): toggle por cuenta (default simple),
-> modales atenuados, dropdowns de estado simples, **colapso de badges de estado**
-> (listado/detalle) y **Kanban con 5 columnas simples**. Falta S3 (métricas/reglas).
-> Ver [[Historial-de-implementacion]].
+> ✅ **COMPLETO (S1+S2+S3)** (2026-06-22): toggle por cuenta (default simple),
+> modales atenuados, dropdowns/badges de estado simples, Kanban de 5 columnas,
+> y métricas/reglas sin vocabulario ITIL. Ver [[Historial-de-implementacion]].
 
 > **Decisión (2026-06-22):** osTicket NO tiene ITIL. El ITIL de MGCI es un
 > **superset opcional**, no parte de la paridad osTicket. NO se quita (ya está

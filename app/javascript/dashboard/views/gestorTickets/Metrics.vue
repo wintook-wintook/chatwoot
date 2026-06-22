@@ -114,6 +114,7 @@ export default {
     ...mapGetters({
       metrics: 'caseTickets/getMetrics',
       uiFlags: 'caseTickets/getUIFlags',
+      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
     }),
     isLoading() {
       return this.uiFlags.isFetchingList;
@@ -384,18 +385,27 @@ export default {
           ],
         },
         {
-          header: this.$t('CASE_TICKETS.METRICS.GROUP_ITIL'),
+          // Modo simple (osTicket): se ocultan los KPIs ITIL (problemas/cambios),
+          // queda solo CSAT y el grupo se titula "Calidad".
+          header: this.itilEnabled
+            ? this.$t('CASE_TICKETS.METRICS.GROUP_ITIL')
+            : this.$t('CASE_TICKETS.METRICS.GROUP_QUALITY'),
           metrics: [
-            {
-              value: s.open_problems ?? 0,
-              label: this.$t('CASE_TICKETS.METRICS.OPEN_PROBLEMS'),
-              valueClass: VALUE_NEUTRAL,
-            },
-            {
-              value: s.pending_changes ?? 0,
-              label: this.$t('CASE_TICKETS.METRICS.PENDING_CHANGES'),
-              valueClass: s.pending_changes > 0 ? VALUE_WARNING : VALUE_NEUTRAL,
-            },
+            ...(this.itilEnabled
+              ? [
+                  {
+                    value: s.open_problems ?? 0,
+                    label: this.$t('CASE_TICKETS.METRICS.OPEN_PROBLEMS'),
+                    valueClass: VALUE_NEUTRAL,
+                  },
+                  {
+                    value: s.pending_changes ?? 0,
+                    label: this.$t('CASE_TICKETS.METRICS.PENDING_CHANGES'),
+                    valueClass:
+                      s.pending_changes > 0 ? VALUE_WARNING : VALUE_NEUTRAL,
+                  },
+                ]
+              : []),
             {
               value: this.csatText,
               label: this.$t('CASE_TICKETS.METRICS.CSAT'),
@@ -408,6 +418,7 @@ export default {
   },
   mounted() {
     this.fetch();
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
   },
   methods: {
     fetch() {

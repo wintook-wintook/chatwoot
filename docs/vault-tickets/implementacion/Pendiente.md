@@ -20,8 +20,8 @@ tags: [tickets, pendiente, todo]
 ### Modo simple (osTicket) — tras las Fases S1+S2 (ver [[Plan-Modo-Simple]])
 - ~~**S2 — colapsar badges de estado**~~ ✅ **hecho** — Index/TicketDetail con `displayStatus`
   + Kanban con columnas simples (5). (Panel de conversación no muestra texto de estado).
-- **S3 — métricas y reglas**: ocultar KPIs ITIL (problemas/cambios) en `Metrics` y
-  filtrar los campos ITIL del builder de `TicketRules` cuando el modo es simple.
+- ~~**S3 — métricas y reglas**~~ ✅ **hecho** — Metrics oculta KPIs ITIL (grupo "Calidad" con solo CSAT)
+  y TicketRules filtra estados a simples + oculta la acción "Escalar". **Modo simple completo (S1+S2+S3).**
 
 ### General
 - **Panel de contacto** (3er punto de entrada del diseño) — mostrar tickets históricos del contacto en su perfil. NO se hizo.

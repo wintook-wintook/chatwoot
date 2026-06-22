@@ -16,6 +16,7 @@
       "GROUP_SLA": "SLA",
       "GROUP_TIMES": "Tiempos de atención",
       "GROUP_ITIL": "ITIL y calidad",
+      "GROUP_QUALITY": "Calidad",
       "TOTAL_PERIOD": "Tickets en el período",
       "TOTAL_OPEN": "Tickets activos",
       "SLA_OVERDUE": "SLA vencidos",
