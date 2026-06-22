@@ -23,6 +23,10 @@ tags: [tickets, pendiente, todo]
 - ~~**S3 — métricas y reglas**~~ ✅ **hecho** — Metrics oculta KPIs ITIL (grupo "Calidad" con solo CSAT)
   y TicketRules filtra estados a simples + oculta la acción "Escalar". **Modo simple completo (S1+S2+S3).**
 
+### Unir ticket + conversación (U1) — hecho, mejoras futuras
+- ~~**U1 — leer/responder al cliente desde el ticket**~~ ✅ **hecho** (pestaña Conversación + caja de respuesta + IA "usar en la conversación").
+- **U1 v2 (futuro)**: adjuntos en la respuesta, actualización en tiempo real, y respuestas predefinidas/canned dentro de la caja del ticket.
+
 ### General
 - **Panel de contacto** (3er punto de entrada del diseño) — mostrar tickets históricos del contacto en su perfil. NO se hizo.
 - **Reglas pre-cargadas por defecto** (las 7 del diseño) — el seed automático no se implementó; las reglas se crean manualmente desde la UI.

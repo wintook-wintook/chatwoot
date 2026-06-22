@@ -113,8 +113,24 @@
     "SLA_OVERDUE": "SLA overdue",
     "DETAIL_TABS": {
       "SUMMARY": "Summary",
+      "CONVERSATION": "Conversation",
       "JOURNEY": "Progress",
       "AI": "AI assistant"
+    },
+    "CONVERSATION": {
+      "SUBTITLE": "Thread with the customer",
+      "OPEN_FULL": "Go to conversation",
+      "LOADING": "Loading messages...",
+      "EMPTY": "No messages in this conversation yet.",
+      "PRIVATE": "Internal note",
+      "SYSTEM": "System",
+      "REPLY_PLACEHOLDER": "Write a reply to the customer...",
+      "NOTE_PLACEHOLDER": "Write an internal note (not visible to the customer)...",
+      "PRIVATE_TOGGLE": "Private note",
+      "SEND": "Reply",
+      "ADD_NOTE": "Add note",
+      "LOAD_ERROR": "Could not load messages.",
+      "SEND_ERROR": "Could not send the message."
     },
     "MODAL": {
       "TITLE_CREATE": "Create ticket",
@@ -402,6 +418,7 @@
         "COPY_BTN": "Copy",
         "COPIED_BTN": "Copied",
         "COPIED": "Reply copied to clipboard",
+        "USE_IN_CONVERSATION": "Use in conversation",
         "ERROR": "Could not generate the reply"
       },
       "SUMMARY": {

@@ -113,8 +113,24 @@
     "SLA_OVERDUE": "SLA vencido",
     "DETAIL_TABS": {
       "SUMMARY": "Resumen",
+      "CONVERSATION": "Conversación",
       "JOURNEY": "Avance",
       "AI": "Asistente IA"
+    },
+    "CONVERSATION": {
+      "SUBTITLE": "Hilo con el cliente",
+      "OPEN_FULL": "Ir a la conversación",
+      "LOADING": "Cargando mensajes...",
+      "EMPTY": "Aún no hay mensajes en esta conversación.",
+      "PRIVATE": "Nota interna",
+      "SYSTEM": "Sistema",
+      "REPLY_PLACEHOLDER": "Escribe una respuesta al cliente...",
+      "NOTE_PLACEHOLDER": "Escribe una nota interna (no la ve el cliente)...",
+      "PRIVATE_TOGGLE": "Nota privada",
+      "SEND": "Responder",
+      "ADD_NOTE": "Agregar nota",
+      "LOAD_ERROR": "No se pudieron cargar los mensajes.",
+      "SEND_ERROR": "No se pudo enviar el mensaje."
     },
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",
@@ -402,6 +418,7 @@
         "COPY_BTN": "Copiar",
         "COPIED_BTN": "Copiado",
         "COPIED": "Respuesta copiada al portapapeles",
+        "USE_IN_CONVERSATION": "Usar en la conversación",
         "ERROR": "No se pudo generar la respuesta"
       },
       "SUMMARY": {

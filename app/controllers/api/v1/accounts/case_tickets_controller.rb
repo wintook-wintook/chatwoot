@@ -492,6 +492,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       updated_at:                 ticket.updated_at,
       contact_id:                 ticket.contact_id,
       conversation_id:            ticket.conversation_id,
+      conversation_display_id:    ticket.conversation&.display_id, # @tickets_cases U1
+
       contact_tracking_id:        ticket.contact_tracking_id,
       assignee_id:                ticket.assignee_id,
       team_id:                    ticket.team_id,

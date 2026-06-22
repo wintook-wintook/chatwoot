@@ -5,6 +5,7 @@
 <script>
 import { mapGetters } from 'vuex';
 import JourneyView from './JourneyView.vue';
+import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
 import {
   SIMPLE_TRANSITION_TARGETS,
   toSimpleStatus,
@@ -15,7 +16,7 @@ const DETAIL_TAB_KEY = 'gestorTickets.detailTab';
 
 export default {
   name: 'TicketDetail',
-  components: { JourneyView },
+  components: { JourneyView, TicketConversation },
   props: {
     ticketId: { type: Number, required: true },
   },
@@ -237,8 +238,18 @@ export default {
     detailTabs() {
       const tabs = [
         { key: 'detail', label: this.$t('CASE_TICKETS.DETAIL_TABS.SUMMARY') },
-        { key: 'journey', label: this.$t('CASE_TICKETS.DETAIL_TABS.JOURNEY') },
       ];
+      // @tickets_cases U1 — pestaña Conversación si el ticket tiene conversación.
+      if (this.ticket?.conversation_display_id) {
+        tabs.push({
+          key: 'conversation',
+          label: this.$t('CASE_TICKETS.DETAIL_TABS.CONVERSATION'),
+        });
+      }
+      tabs.push({
+        key: 'journey',
+        label: this.$t('CASE_TICKETS.DETAIL_TABS.JOURNEY'),
+      });
       if (this.hasAiCards) {
         tabs.push({ key: 'ai', label: this.$t('CASE_TICKETS.DETAIL_TABS.AI') });
       }
@@ -443,6 +454,15 @@ export default {
       } catch (e) {
         this.replyCopied = false;
       }
+    },
+    // @tickets_cases U1 — lleva la sugerencia de la IA a la caja de respuesta de
+    // la conversación (cambia a la pestaña Conversación y precarga el texto).
+    useReplyInConversation() {
+      const text = this.replySuggestion?.reply;
+      if (!text) return;
+      this.activeDetailTab = 'conversation';
+      localStorage.setItem(DETAIL_TAB_KEY, 'conversation');
+      this.$nextTick(() => this.$refs.ticketConversation?.setReply(text));
     },
     // @tickets_cases 3E — generar resumen + causa raíz
     async generateSummary() {
@@ -1653,7 +1673,16 @@ export default {
                 >{{ src.title }}</span
               >
             </div>
-            <div class="flex justify-end mt-3">
+            <div class="flex justify-end gap-2 mt-3">
+              <woot-button
+                v-if="ticket.conversation_display_id"
+                size="small"
+                variant="smooth"
+                icon="arrow-reply"
+                @click="useReplyInConversation"
+              >
+                {{ $t('CASE_TICKETS.AI.REPLY.USE_IN_CONVERSATION') }}
+              </woot-button>
               <woot-button
                 size="small"
                 variant="clear"
@@ -1907,6 +1936,16 @@ export default {
           </div>
         </template>
       </div>
+
+      <!-- ════ Pestaña Conversación (U1) — hilo + responder sin salir del ticket ════ -->
+      <TicketConversation
+        v-if="ticket.conversation_display_id"
+        v-show="currentTabKey === 'conversation'"
+        ref="ticketConversation"
+        :key="ticket.conversation_display_id"
+        :conversation-id="ticket.conversation_display_id"
+        class="flex-1 min-h-0"
+      />
 
       <!-- ════ Pestaña Avance del ticket (2L) — 3 vistas conmutables ════ -->
       <JourneyView
