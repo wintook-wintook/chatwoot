@@ -51,6 +51,7 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 - [[Pendiente]] — lo que falta
 - [[Plan-asignacion-contacto-internos]] — plan: asignación manual · ticket desde contacto · tickets internos
 - [[Plan-User-Portal]] — 🌐 plan: superficie del cliente estilo osTicket (Open/Check/KB)
+- [[Plan-Modo-Simple]] — 🎚️ plan: modo simple (osTicket) por defecto, ITIL opcional vía toggle
 - [[Historial-de-implementacion]] — changelog de todo lo resuelto
 
 ---
