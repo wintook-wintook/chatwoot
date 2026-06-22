@@ -30,6 +30,10 @@ tags: [tickets, pendiente, todo]
   se embebe el ReplyBox nativo en el ticket (acoplado a `currentChat`, frágil).
 - **U1 v2 (futuro, opcional)**: adjuntos básicos en la caja del ticket + tiempo real.
 
+### Kanban — mejoras (tras notificar-al-mover)
+- ~~**Notificar al cliente al mover**~~ ✅ **hecho** (checkbox + plantilla por estado + envío por el canal).
+- **Futuro Kanban**: plantillas de aviso configurables por cuenta; acciones rápidas en la tarjeta (asignar/prioridad/abrir); SLA en cuenta regresiva con color; avatar del asignado; mover instantáneo con "Deshacer"; swimlanes.
+
 ### General
 - **Panel de contacto** (3er punto de entrada del diseño) — mostrar tickets históricos del contacto en su perfil. NO se hizo.
 - **Reglas pre-cargadas por defecto** (las 7 del diseño) — el seed automático no se implementó; las reglas se crean manualmente desde la UI.

@@ -56,6 +56,18 @@
       "MOVE_TO": "Move to:",
       "MOVE_NOTE": "Note (what you did)",
       "MOVE_NOTE_PLACEHOLDER": "Optional: describe the action taken",
+      "NOTIFY_LABEL": "Notify the customer on their channel",
+      "NOTIFY_PLACEHOLDER": "Message the customer will receive",
+      "NOTIFY_HELP": "Sent through the ticket's channel (WhatsApp, email, etc.) when moving.",
+      "NOTIFY_SENT": "Notification sent to the customer",
+      "NOTIFY_ERROR": "The ticket was moved, but the notification could not be sent.",
+      "NOTIFY_TEMPLATES": {
+        "in_progress": "Hi, your request {folio} is now being handled. We'll keep you posted.",
+        "waiting_on_customer": "Hi, regarding your request {folio} we need some extra info to continue. Can you help?",
+        "resolved": "Good news! Your request {folio} has been resolved. If you need anything else, reply here.",
+        "closed": "Your request {folio} has been closed. Thanks for reaching out.",
+        "cancelled": "Your request {folio} has been cancelled. If this was a mistake, reply here."
+      },
       "CANCEL": "Cancel",
       "CONFIRM": "Move",
       "COLUMNS": {
