@@ -561,8 +561,18 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def slot_service_for(cal_ids, tracking, timezone)
     ContactTrackings::AvailabilitySlotService.new(
       calendar_integration_ids: cal_ids, timezone: timezone,
-      slot_duration: tracking.tracking_template&.calendar_event_duration || 30
+      slot_duration: tracking.tracking_template&.calendar_event_duration || 30,
+      working_hours: working_hours_for(tracking, nil)
     )
+  end
+
+  # proyecto@bot_seguimiento_calendar — horarios del inbox (Opción A). Solo si el inbox los
+  # tiene habilitados; si no, devuelve nil y el slot service usa su default (9–18 lun–vie).
+  def working_hours_for(tracking, message)
+    inbox = message&.conversation&.inbox || tracking&.inbox
+    return nil unless inbox&.working_hours_enabled?
+
+    inbox.working_hours
   end
 
   def slot_payload(slot)
@@ -627,7 +637,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     slots    = ContactTrackings::AvailabilitySlotService.new(
       calendar_integration_ids: cal_ids,
       timezone: timezone,
-      slot_duration: duration
+      slot_duration: duration,
+      working_hours: working_hours_for(tracking, message)
     ).call
 
     if slots.empty?
@@ -723,7 +734,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       cal_ids  = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
       duration = tracking.tracking_template&.calendar_event_duration || 30
       service  = ContactTrackings::AvailabilitySlotService.new(
-        calendar_integration_ids: cal_ids, timezone: timezone, slot_duration: duration
+        calendar_integration_ids: cal_ids, timezone: timezone, slot_duration: duration,
+        working_hours: working_hours_for(tracking, message)
       )
 
       # Si dio fecha Y hora concretas, intentamos confirmar ese horario exacto.
@@ -1102,6 +1114,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     day_names = %w[domingo lunes martes miércoles jueves viernes sábado]
     month_names = %w[ene feb mar abr may jun jul ago sep oct nov dic]
     numbers    = %w[1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣]
+    tz_label   = timezone_label(timezone)
 
     slots.each_with_index.map do |s, i|
       local     = s[:slot].in_time_zone(timezone)
@@ -1109,8 +1122,18 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       day       = day_names[local.wday]
       month     = month_names[local.month - 1]
       agent     = s[:agent_name].presence || 'Agenda'
-      "#{numbers[i]} #{day} #{local.day} #{month} · #{local.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs — #{agent}"
+      "#{numbers[i]} #{day} #{local.day} #{month} · #{local.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs (hora de #{tz_label}) — #{agent}"
     end.join("\n")
+  end
+
+  # proyecto@bot_seguimiento_calendar — nombre amigable de la zona del agente/inbox para
+  # mostrarle al contacto. Usa el nombre que ya provee Rails (ActiveSupport::TimeZone);
+  # fallback a la ciudad del identificador IANA.
+  def timezone_label(timezone)
+    tz   = timezone.to_s
+    name = ActiveSupport::TimeZone[tz]&.name.presence || tz
+    name = name.split('/').last.to_s.tr('_', ' ') if name.include?('/') # IANA → ciudad
+    name.presence || 'tu zona'
   end
 
   def format_slots_message(slots, timezone)

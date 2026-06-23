@@ -6,6 +6,56 @@ require 'rails_helper'
 RSpec.describe ContactTrackings::AvailabilitySlotService do
   subject(:service) { described_class.new(calendar_integration_ids: [1, 2]) }
 
+  describe '#within_work_hours? con working_hours del inbox (Opción A)' do
+    def wh(day, open_h = nil, close_h = nil, closed: false)
+      instance_double(WorkingHour, day_of_week: day, closed_all_day?: closed,
+                                   open_hour: open_h, open_minutes: 0, close_hour: close_h, close_minutes: 0)
+    end
+
+    let(:tz) { 'America/Mexico_City' }
+    # lunes 09–13; martes y domingo cerrados
+    let(:working_hours) { [wh(1, 9, 13), wh(2, closed: true), wh(0, closed: true)] }
+
+    subject(:service) do
+      described_class.new(calendar_integration_ids: [1], timezone: tz, working_hours: working_hours)
+    end
+
+    it 'acepta un slot dentro de la ventana del lunes' do
+      start = Time.find_zone(tz).local(2026, 6, 15, 9, 0) # lunes 09:00
+      expect(service.send(:within_work_hours?, start, start + 30.minutes)).to be(true)
+    end
+
+    it 'rechaza un slot que termina pasado el cierre (12:45–13:15 > 13:00)' do
+      start = Time.find_zone(tz).local(2026, 6, 15, 12, 45)
+      expect(service.send(:within_work_hours?, start, start + 30.minutes)).to be(false)
+    end
+
+    it 'rechaza un día cerrado (martes)' do
+      start = Time.find_zone(tz).local(2026, 6, 16, 10, 0) # martes
+      expect(service.send(:within_work_hours?, start, start + 30.minutes)).to be(false)
+    end
+  end
+
+  describe '#within_work_hours? sin working_hours (default 9–18 lun–vie)' do
+    let(:tz) { 'America/Mexico_City' }
+    subject(:service) { described_class.new(calendar_integration_ids: [1], timezone: tz) }
+
+    it 'acepta lunes 10:00' do
+      start = Time.find_zone(tz).local(2026, 6, 15, 10, 0)
+      expect(service.send(:within_work_hours?, start, start + 30.minutes)).to be(true)
+    end
+
+    it 'rechaza sábado' do
+      start = Time.find_zone(tz).local(2026, 6, 20, 10, 0) # sábado
+      expect(service.send(:within_work_hours?, start, start + 30.minutes)).to be(false)
+    end
+
+    it 'rechaza fuera del horario (18:00)' do
+      start = Time.find_zone(tz).local(2026, 6, 15, 18, 0)
+      expect(service.send(:within_work_hours?, start, start + 30.minutes)).to be(false)
+    end
+  end
+
   describe '#balance_slots (reparto entre agentes)' do
     def slot(time, agent_id)
       { slot: time, end_time: time + 30.minutes, agent_name: "Agente #{agent_id}", calendar_integration_id: agent_id }

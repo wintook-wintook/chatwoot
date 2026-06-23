@@ -379,6 +379,17 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
   end
 
+  describe '#timezone_label' do
+    it 'normaliza un identificador IANA a la ciudad' do
+      expect(job.send(:timezone_label, 'America/Mexico_City')).to eq('Mexico City')
+      expect(job.send(:timezone_label, 'America/Argentina/Buenos_Aires')).to eq('Buenos Aires')
+    end
+
+    it 'deja el nombre amigable tal cual' do
+      expect(job.send(:timezone_label, 'UTC')).to eq('UTC')
+    end
+  end
+
   describe '#handle_book_appointment sin calendarios vinculados' do
     let(:inbox) { create(:inbox, account: account) }
     let(:contact) { create(:contact, account: account) }
