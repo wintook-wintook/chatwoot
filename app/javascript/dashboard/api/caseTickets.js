@@ -99,6 +99,15 @@ class CaseTicketsAPI extends ApiClient {
   followUp(ticketId) {
     return axios.post(`${this.url}/${ticketId}/follow_up`);
   }
+
+  // @tickets_cases — bloqueo de ticket (evitar choque de agentes)
+  lock(ticketId) {
+    return axios.patch(`${this.url}/${ticketId}/lock`);
+  }
+
+  unlock(ticketId) {
+    return axios.patch(`${this.url}/${ticketId}/unlock`);
+  }
 }
 
 export default new CaseTicketsAPI();

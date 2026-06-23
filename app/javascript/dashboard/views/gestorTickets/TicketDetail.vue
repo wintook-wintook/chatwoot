@@ -6,6 +6,8 @@
 import { mapGetters } from 'vuex';
 import JourneyView from './JourneyView.vue';
 import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
+import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
+import CaseTicketsAPI from 'dashboard/api/caseTickets';
 import {
   SIMPLE_TRANSITION_TARGETS,
   toSimpleStatus,
@@ -16,7 +18,7 @@ const DETAIL_TAB_KEY = 'gestorTickets.detailTab';
 
 export default {
   name: 'TicketDetail',
-  components: { JourneyView, TicketConversation },
+  components: { JourneyView, TicketConversation, TicketTasks },
   props: {
     ticketId: { type: Number, required: true },
   },
@@ -24,6 +26,7 @@ export default {
     return {
       // @tickets_cases — pestaña activa del detalle (Resumen / Avance / IA).
       activeDetailTab: localStorage.getItem(DETAIL_TAB_KEY) || 'detail',
+      lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
       showTransitionMenu: false,
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
@@ -91,7 +94,13 @@ export default {
       teams: 'teams/getTeams',
       agents: 'agents/getAgents',
       itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
+      currentUserID: 'getCurrentUserID', // @tickets_cases — bloqueo de ticket
     }),
+    // ¿Otro agente tiene bloqueado este ticket?
+    lockedByOther() {
+      const lb = this.ticket?.locked_by;
+      return !!lb && lb.id !== this.currentUserID;
+    },
     ticket() {
       return this.getTicketById(this.ticketId);
     },
@@ -338,8 +347,29 @@ export default {
     this.$store.dispatch('teams/get');
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
+    this.acquireLock();
+  },
+  beforeDestroy() {
+    this.releaseLock();
   },
   methods: {
+    // @tickets_cases — toma el bloqueo del ticket al abrir; si lo tiene otro, no
+    // lo toma (el banner avisará). Refresca el ticket para reflejar el estado.
+    async acquireLock() {
+      try {
+        await CaseTicketsAPI.lock(this.ticketId);
+        this.lockedAcquired = true;
+      } catch (e) {
+        this.lockedAcquired = false; // 409: lo tiene otro agente
+      } finally {
+        this.$store.dispatch('caseTickets/fetchTicket', this.ticketId);
+      }
+    },
+    releaseLock() {
+      if (!this.lockedAcquired) return;
+      this.lockedAcquired = false;
+      CaseTicketsAPI.unlock(this.ticketId).catch(() => {});
+    },
     onDetailTabChange(index) {
       const tab = this.detailTabs[index];
       if (!tab) return;
@@ -1049,6 +1079,17 @@ export default {
     </div>
 
     <!-- Pestañas del detalle (pinneadas, no scrollean) -->
+    <!-- @tickets_cases — bloqueo: aviso si otro agente está trabajando el ticket -->
+    <div
+      v-if="ticket && lockedByOther"
+      class="flex items-center gap-2 px-6 py-2 text-sm flex-shrink-0 bg-amber-50 text-amber-800 border-b border-amber-100 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-900/50"
+    >
+      <fluent-icon icon="lock-closed" size="16" />
+      <span>{{
+        $t('CASE_TICKETS.LOCK.BANNER', { name: ticket.locked_by.name })
+      }}</span>
+    </div>
+
     <div
       v-if="ticket"
       class="flex-shrink-0 px-6 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
@@ -1139,6 +1180,13 @@ export default {
           </woot-button>
         </div>
       </div>
+
+      <!-- ════ Pestaña Resumen: Tareas/subtareas (osTicket Tasks) ════ -->
+      <TicketTasks
+        v-show="currentTabKey === 'detail'"
+        :key="`tasks-${ticket.id}`"
+        :ticket-id="ticket.id"
+      />
 
       <!-- ════ Pestaña Resumen: Información ════ -->
       <div

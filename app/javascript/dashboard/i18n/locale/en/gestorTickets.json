@@ -144,6 +144,17 @@
       "LOAD_ERROR": "Could not load messages.",
       "SEND_ERROR": "Could not send the message."
     },
+    "LOCK": {
+      "BANNER": "{name} is currently working on this ticket."
+    },
+    "TASKS": {
+      "TITLE": "Tasks",
+      "LOADING": "Loading tasks...",
+      "EMPTY": "No tasks yet. Add steps to resolve this ticket.",
+      "UNASSIGNED": "Unassigned",
+      "ADD_PLACEHOLDER": "New task...",
+      "ADD": "Add"
+    },
     "MODAL": {
       "TITLE_CREATE": "Create ticket",
       "CASE_TYPE_LABEL": "Case type",

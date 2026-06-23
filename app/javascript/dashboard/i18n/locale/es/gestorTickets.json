@@ -144,6 +144,17 @@
       "LOAD_ERROR": "No se pudieron cargar los mensajes.",
       "SEND_ERROR": "No se pudo enviar el mensaje."
     },
+    "LOCK": {
+      "BANNER": "{name} está trabajando en este ticket ahora mismo."
+    },
+    "TASKS": {
+      "TITLE": "Tareas",
+      "LOADING": "Cargando tareas...",
+      "EMPTY": "Sin tareas. Agrega pasos para resolver este ticket.",
+      "UNASSIGNED": "Sin asignar",
+      "ADD_PLACEHOLDER": "Nueva tarea...",
+      "ADD": "Agregar"
+    },
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",
       "CASE_TYPE_LABEL": "Tipo de caso",

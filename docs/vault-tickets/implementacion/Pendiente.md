@@ -34,6 +34,15 @@ tags: [tickets, pendiente, todo]
 - ~~**Notificar al cliente al mover**~~ ✅ **hecho** (checkbox + plantilla por estado + envío por el canal).
 - **Futuro Kanban**: plantillas de aviso configurables por cuenta; acciones rápidas en la tarjeta (asignar/prioridad/abrir); SLA en cuenta regresiva con color; avatar del asignado; mover instantáneo con "Deshacer"; swimlanes.
 
+### Tareas + Bloqueo de ticket — hecho, mejoras futuras
+- ~~**Tareas/subtareas (checklist) en el ticket**~~ ✅ **hecho** (`case_tasks`, checklist con responsable/borrar/agregar, "Tareas {done}/{total}").
+- ~~**Bloqueo de ticket (lock con TTL 3 min)**~~ ✅ **hecho** (banner "X está trabajando en este ticket ahora mismo"; toma en mounted, libera en beforeDestroy; API 409 si lo tiene otro).
+- **Futuro Tareas**: fecha límite (`due_at` ya existe en BD, falta UI); reordenar (drag); plantillas de checklist por tipo de caso; "convertir tarea en ticket".
+- **Futuro Lock**: aviso en tiempo real (hoy solo al abrir/refrescar); "tomar el control" forzado por admin; heartbeat para renovar el lock mientras se escribe.
+
+### Email-to-ticket — PENDIENTE (no implementado)
+- Crear ticket automáticamente desde un correo entrante (inbox Email) — estilo osTicket "Email Piping". Decidir mapeo (asunto→título, remitente→contacto, tipo por defecto) y reusar `PortalTicketService`/`PortalThreadSeeder`.
+
 ### General
 - **Panel de contacto** (3er punto de entrada del diseño) — mostrar tickets históricos del contacto en su perfil. NO se hizo.
 - **Reglas pre-cargadas por defecto** (las 7 del diseño) — el seed automático no se implementó; las reglas se crean manualmente desde la UI.

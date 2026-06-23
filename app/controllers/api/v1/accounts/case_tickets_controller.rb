@@ -22,7 +22,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   before_action :set_ticket,
                 only: %i[show update transition assign escalate change_approval generate_article
                          apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize
-                         detect_duplicates follow_up]
+                         detect_duplicates follow_up lock unlock]
 
   # GET /api/v1/accounts/:account_id/case_tickets/metrics
   def metrics
@@ -230,6 +230,24 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     render json: { error: 'Agente o equipo no encontrado' }, status: :not_found
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
+  end
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/lock
+  # @tickets_cases — bloqueo de ticket: lo toma el agente actual si no lo tiene otro.
+  def lock
+    if @ticket.locked_by_other?(current_user)
+      render json: { error: 'locked', locked_by: ref_user_json(@ticket.locked_by), locked_at: @ticket.locked_at },
+             status: :conflict
+    else
+      @ticket.update_columns(locked_by_id: current_user.id, locked_at: Time.current)
+      render json: { case_ticket: ticket_json(@ticket) }
+    end
+  end
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/unlock
+  def unlock
+    @ticket.update_columns(locked_by_id: nil, locked_at: nil) if @ticket.locked_by_id == current_user&.id
+    head :no_content
   end
 
   # PATCH /api/v1/accounts/:account_id/case_tickets/:id/escalate
@@ -499,6 +517,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       team_id:                    ticket.team_id,
       requester_id:               ticket.requester_id,                # @tickets_cases Fase C
       requester:                  ref_user_json(ticket.requester),    # @tickets_cases Fase C
+      locked_by:                  (ref_user_json(ticket.locked_by) if ticket.lock_active?), # @tickets_cases — bloqueo
+      locked_at:                  (ticket.locked_at if ticket.lock_active?),
       is_internal:                ticket.internal?,                   # @tickets_cases Fase C
       can_transition_to:          valid_transitions_for(ticket)
     }

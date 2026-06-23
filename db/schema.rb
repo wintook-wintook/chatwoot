@@ -359,6 +359,22 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.index ["account_id", "priority"], name: "index_case_sla_policies_on_account_id_and_priority"
   end
 
+  create_table "case_tasks", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_ticket_id", null: false
+    t.bigint "assignee_id"
+    t.string "title", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "due_at"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_tasks_on_account_id"
+    t.index ["assignee_id"], name: "index_case_tasks_on_assignee_id"
+    t.index ["case_ticket_id", "position"], name: "index_case_tasks_on_case_ticket_id_and_position"
+    t.index ["case_ticket_id"], name: "index_case_tasks_on_case_ticket_id"
+  end
+
   create_table "case_ticket_relations", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "ticket_id", null: false
@@ -410,6 +426,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.integer "sla_paused_minutes", default: 0, null: false
     t.datetime "sla_paused_since"
     t.bigint "requester_id"
+    t.bigint "locked_by_id"
+    t.datetime "locked_at"
     t.index ["account_id", "case_type_id"], name: "index_case_tickets_on_account_id_and_case_type_id"
     t.index ["account_id", "contact_id"], name: "index_case_tickets_on_account_id_and_contact_id"
     t.index ["account_id", "folio"], name: "index_case_tickets_on_account_and_folio", unique: true, where: "(folio IS NOT NULL)"
@@ -419,6 +437,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.index ["affected_service_id"], name: "index_case_tickets_on_affected_service_id"
     t.index ["category_id"], name: "index_case_tickets_on_category_id"
     t.index ["kb_article_id"], name: "index_case_tickets_on_kb_article_id"
+    t.index ["locked_by_id"], name: "index_case_tickets_on_locked_by_id"
     t.index ["metadata"], name: "index_case_tickets_on_metadata", using: :gin
     t.index ["requester_id"], name: "index_case_tickets_on_requester_id"
   end
@@ -1414,6 +1433,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
   add_foreign_key "case_portals", "accounts"
   add_foreign_key "case_portals", "inboxes"
   add_foreign_key "case_settings", "accounts"
+  add_foreign_key "case_tasks", "accounts"
+  add_foreign_key "case_tasks", "case_tickets"
+  add_foreign_key "case_tasks", "users", column: "assignee_id"
+  add_foreign_key "case_tickets", "users", column: "locked_by_id"
   add_foreign_key "case_tickets", "users", column: "requester_id"
   add_foreign_key "case_type_fields", "accounts"
   add_foreign_key "case_type_fields", "case_types"

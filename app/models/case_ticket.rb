@@ -18,6 +18,7 @@
 #  first_response_time_target :integer
 #  folio                      :string
 #  impact                     :integer
+#  locked_at                  :datetime
 #  metadata                   :jsonb            not null
 #  origin                     :integer          default("whatsapp"), not null
 #  priority                   :integer          default("medium"), not null
@@ -41,6 +42,7 @@
 #  contact_tracking_id        :bigint
 #  conversation_id            :bigint
 #  kb_article_id              :bigint
+#  locked_by_id               :bigint
 #  requester_id               :bigint
 #  team_id                    :bigint
 #
@@ -55,11 +57,13 @@
 #  index_case_tickets_on_affected_service_id          (affected_service_id)
 #  index_case_tickets_on_category_id                  (category_id)
 #  index_case_tickets_on_kb_article_id                (kb_article_id)
+#  index_case_tickets_on_locked_by_id                 (locked_by_id)
 #  index_case_tickets_on_metadata                     (metadata) USING gin
 #  index_case_tickets_on_requester_id                 (requester_id)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (locked_by_id => users.id)
 #  fk_rails_...  (requester_id => users.id)
 #
 
@@ -92,6 +96,19 @@ class CaseTicket < ApplicationRecord
   # @tickets_cases 2D — escalation_level: 0 = N1, 1 = N2, 2 = N3.
   MAX_ESCALATION_LEVEL = 2
 
+  # @tickets_cases — el bloqueo de ticket expira solo tras este tiempo de inactividad.
+  LOCK_TTL = 3.minutes
+
+  # ¿Hay un bloqueo vigente (no expirado)?
+  def lock_active?
+    locked_by_id.present? && locked_at.present? && locked_at > LOCK_TTL.ago
+  end
+
+  # ¿Lo tiene bloqueado OTRO agente (no este)?
+  def locked_by_other?(user)
+    lock_active? && locked_by_id != user&.id
+  end
+
   # @tickets_cases 2I — estados en los que el reloj de SLA se pausa.
   WAITING_STATUSES = %w[waiting_on_customer waiting_on_third_party waiting_on_internal].freeze
 
@@ -107,12 +124,14 @@ class CaseTicket < ApplicationRecord
   belongs_to :conversation,      optional: true
   belongs_to :contact_tracking,  optional: true
   belongs_to :assignee,          class_name: 'User', optional: true
+  belongs_to :locked_by,         class_name: 'User', optional: true # @tickets_cases — bloqueo de ticket
   belongs_to :team,              optional: true
   belongs_to :case_type,         optional: true # @tickets_cases: tipo configurable por cuenta
   belongs_to :affected_service,  class_name: 'CaseService',  optional: true # @tickets_cases 2B
   belongs_to :category,          class_name: 'CaseCategory', optional: true # @tickets_cases 2B
   belongs_to :kb_article,        class_name: 'Article', optional: true # @tickets_cases 2H
   has_many   :case_events,       dependent: :destroy
+  has_many   :case_tasks,        dependent: :destroy # @tickets_cases — tareas/subtareas
   # @tickets_cases 2E — relaciones dirigidas (este ticket como origen y como destino).
   has_many   :ticket_relations,        class_name: 'CaseTicketRelation', foreign_key: :ticket_id,         dependent: :destroy, inverse_of: :ticket
   has_many   :inverse_ticket_relations, class_name: 'CaseTicketRelation', foreign_key: :related_ticket_id, dependent: :destroy, inverse_of: :related_ticket

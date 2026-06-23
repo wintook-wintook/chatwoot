@@ -126,10 +126,14 @@ Rails.application.routes.draw do
               post :summarize # @tickets_cases 3E
               post :detect_duplicates # @tickets_cases 3D
               post :follow_up # @tickets_cases 3F
+              patch :lock   # @tickets_cases — bloqueo de ticket
+              patch :unlock # @tickets_cases — bloqueo de ticket
             end
             resources :case_events, only: [:index]
             # @tickets_cases 2E — relaciones entre tickets
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
+            # @tickets_cases — tareas/subtareas del ticket
+            resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
           resources :case_types, only: [:index, :create, :update, :destroy] do
