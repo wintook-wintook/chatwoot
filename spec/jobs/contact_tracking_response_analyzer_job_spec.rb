@@ -330,6 +330,72 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
   end
 
+  describe '#handle_book_appointment cuando el contacto YA tiene una cita activa' do
+    let(:inbox) { create(:inbox, account: account, timezone: 'America/Mexico_City') }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation,
+                       sender: contact, message_type: :incoming, content: '¿cuándo es mi cita?')
+    end
+    let(:tracking) do
+      ContactTracking.create!(
+        account: account, contact: contact, inbox: inbox,
+        objective: 'Vender', scheduled_for: 1.hour.from_now, status: 'active',
+        tracking_template_id: tracking_template.id,
+        appointment_at: Time.zone.parse('2026-06-15 09:00').in_time_zone('America/Mexico_City'),
+        appointment_event_id: 'evt_existente', appointment_calendar_id: 123, outcome: 'appointment'
+      )
+    end
+
+    before do
+      tracking_template.update!(calendar_integration_ids: [123])
+      allow(job).to receive(:send_auto_reply)
+    end
+
+    it 'NO vuelve a ofrecer slots nuevos' do
+      expect(ContactTrackings::AvailabilitySlotService).not_to receive(:new)
+      job.send(:handle_book_appointment, tracking, message)
+    end
+
+    it 'le recuerda al cliente la cita existente y le ofrece moverla o cancelarla' do
+      expect(job).to receive(:send_auto_reply)
+        .with(tracking, message, /ya tenés una cita agendada para el .*moverla.*cancelarla/im)
+      job.send(:handle_book_appointment, tracking, message)
+    end
+
+    it 'no toca el outcome ni los datos de la cita existente' do
+      job.send(:handle_book_appointment, tracking, message)
+      expect(tracking.reload.outcome).to eq('appointment')
+      expect(tracking.appointment_event_id).to eq('evt_existente')
+    end
+  end
+
+  describe '#handle_reschedule con cita activa enruta a mover la cita (no el recordatorio)' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation,
+                       sender: contact, message_type: :incoming, content: 'quiero mover mi cita')
+    end
+    let(:tracking) do
+      ContactTracking.create!(
+        account: account, contact: contact, inbox: inbox,
+        objective: 'Vender', scheduled_for: 1.hour.from_now, status: 'active',
+        tracking_template_id: tracking_template.id,
+        appointment_at: 1.day.from_now, appointment_event_id: 'evt_1', appointment_calendar_id: 123
+      )
+    end
+
+    it 'con appointment_event_id presente llama a handle_move_appointment' do
+      action_data = { route: :reschedule, reschedule_data: { specific_date: '2026-06-16' } }
+      expect(job).to receive(:handle_move_appointment).with(tracking, message, action_data)
+      expect(job).not_to receive(:handle_followup_reschedule)
+      job.send(:handle_reschedule, tracking, message, action_data)
+    end
+  end
+
   describe 'email opcional del invitado al agendar' do
     let(:inbox) { create(:inbox, account: account) }
     let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }

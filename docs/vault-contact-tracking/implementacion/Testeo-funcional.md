@@ -81,6 +81,48 @@ Setup de referencia: cuenta **2**, inbox **4** (`kontrolyaBots_bot`), automatiza
 | **Obs. 1 (timezone)** | El evento quedó 09:00 **UTC** = 03:00 hora México. NO es bug de cálculo: el **inbox 4 tiene timezone `UTC`** (y `Time.zone` app = UTC); slots, horario 9-18 y mensaje al cliente son todos UTC, consistentes. Si el negocio es México, falta configurar el inbox en `America/Mexico_City`. |
 | **Obs. 2 (attendees)** | `attendees=[]` porque el contacto de WhatsApp **no tiene email** → no se le envía invitación. El evento se crea igual. |
 
+## TC-05 · Mover una cita ya agendada (`:reschedule` con cita activa)
+
+| Campo | Valor |
+|---|---|
+| **Objetivo** | Verificar que, con una cita ya creada en Google Calendar, "reagendar" **mueve el evento** (no solo el recordatorio del seguimiento) y no duplica la cita. |
+| **Precondición** | Tracking con `appointment_event_id` + `appointment_calendar_id` (cita activa). Directiva `@agendar_calendar` + calendario vinculado. |
+| **Pasos** | Contacto (incoming) pide mover: *"quiero mover mi cita al martes 16"*. |
+| **Esperado** | (a) Router → `:reschedule`. (b) Como hay `appointment_event_id` → `handle_reschedule` enruta a **`handle_move_appointment`** (NO a `handle_followup_reschedule`). (c) Hora exacta libre en la **misma agenda** → `update_event` (mueve, no duplica). (d) Si está ocupada o solo da el día → ofrece horarios cercanos para mover. |
+| **Verificación (spec)** | ✅ `spec/jobs/contact_tracking_response_analyzer_job_spec.rb` — *"#handle_reschedule con cita activa enruta a mover la cita"*: con `appointment_event_id` presente llama a `handle_move_appointment` y **no** a `handle_followup_reschedule`. También *"#handle_reschedule con cita activa (mueve la cita, no el recordatorio)"*. |
+| **Refs código** | `contact_tracking_response_analyzer_job.rb:418` (`handle_reschedule`, guard `appointment_event_id.present?`) → `:475` (`handle_move_appointment`). |
+| **Resultado** | ✅ **PASS** (verificado por spec). Falta corrida en vivo end-to-end (mover evento real en Google). |
+
+---
+
+## TC-06 · Cancelar una cita ya agendada (`:cancel_appointment`)
+
+| Campo | Valor |
+|---|---|
+| **Objetivo** | Verificar que cancelar borra el evento en Google Calendar, limpia los campos de cita y marca `outcome='cancelled'`. |
+| **Precondición** | Tracking con cita activa (`appointment_event_id`, `appointment_calendar_id`, `outcome='appointment'`). |
+| **Pasos** | Contacto (incoming): *"quiero cancelar mi cita"* / *"ya no voy a poder asistir"*. |
+| **Esperado** | (a) Router → `:cancel_appointment`. (b) `handle_cancel_appointment` → `GoogleCalendarService#delete_event`. (c) Mensaje de confirmación al cliente. (d) Limpia `appointment_at`/`appointment_event_id`/`appointment_calendar_id`, `outcome='cancelled'`, pausa el seguimiento, nota privada + notifica admin. (e) **Sin cita activa** → se trata como `:rejected`. |
+| **Verificación (spec)** | ✅ `#handle_cancel_appointment` — casos "cuando hay una cita activa" (borra evento + limpia campos) y "cuando NO hay una cita activa" (cae en `handle_rejected`). |
+| **Refs código** | `contact_tracking_response_analyzer_job.rb:1034` (`handle_cancel_appointment`). |
+| **Resultado** | ✅ **PASS** (verificado por spec). Falta corrida en vivo (borrado real en Google). |
+
+---
+
+## TC-06b · Consultar/insistir con una cita ya agendada → recuerda la cita (no re-ofrece slots)
+
+| Campo | Valor |
+|---|---|
+| **Objetivo** | Verificar que cuando el contacto **ya tiene una cita activa** y pregunta *"¿cuándo es mi cita?"* (o vuelve a pedir agendar), el bot le **recuerda la cita existente** y le ofrece mover/cancelar — en vez de volver a ofrecer horarios nuevos. |
+| **Bug original** | `:book_appointment` (el router clasifica así *"quiere saber cuándo hay disponibilidad"*) llamaba a `handle_book_appointment`, que **no verificaba** si ya existía cita → ofrecía slots nuevos. El cliente nunca era informado de que ya tenía cita. |
+| **Fix (2026-06-23)** | Guard al inicio de `handle_book_appointment`: si `appointment_event_id` + `appointment_at` presentes → `inform_existing_appointment` (no busca slots). Respuesta: *"Ya tenés una cita agendada para el {fecha}. 📅 Si querés, puedo moverla a otro horario o cancelarla. ¿Qué preferís?"*. Luego `:reschedule`/`:cancel_appointment` resuelven (ver TC-05/TC-06). |
+| **Verificación (spec)** | ✅ `#handle_book_appointment cuando el contacto YA tiene una cita activa`: (a) NO instancia `AvailabilitySlotService`; (b) responde recordando la cita + ofrece mover/cancelar; (c) no toca `outcome` ni los datos de la cita. |
+| **Refs código** | `contact_tracking_response_analyzer_job.rb:582` (guard en `handle_book_appointment`) → `:627` (`inform_existing_appointment`). |
+| **Resultado** | ✅ **PASS** (verificado por spec). |
+| **Límite conocido** | El guard es determinista cuando el router cae en `:book_appointment`. Si el LLM clasifica *"¿cuándo es mi cita?"* como `:tracking`, va al reply conversacional (tiene la cita en `ai_context`, sin garantía). Posible mejora: ruta explícita `:appointment_query` en `RouterService`. |
+
+---
+
 ## Comparativa de tiempos
 
 | Caso | Conv | Crea tracking | Ruta | Busca en | Tiempo |
@@ -104,8 +146,9 @@ tracking). En mensajes posteriores no hay delay.
 > Derivados de los pendientes de [[Pendiente]] sección "Agendado de citas". Incluir como
 > casos cuando se genere el entregable de Testeo Funcional.
 - [x] **TC-04** — Elegir número válido → verificar evento creado en Google Calendar. ✅ **PASS** (ver arriba).
-- [ ] **TC-05** — Mover una cita ya agendada (¿qué responde? hoy no soportado).
-- [ ] **TC-06** — Cancelar una cita ya agendada (hoy no soportado).
+- [x] **TC-05** — Mover una cita ya agendada → `handle_move_appointment` (mueve el evento, no duplica). ✅ **PASS** (spec).
+- [x] **TC-06** — Cancelar una cita ya agendada → `handle_cancel_appointment` (borra evento + limpia). ✅ **PASS** (spec).
+- [x] **TC-06b** — Ya tengo cita y pregunto/insisto → recuerda la cita (no re-ofrece slots). ✅ **PASS** (spec, fix 2026-06-23).
 - [ ] **TC-07** — Calendario desconfigurado entre ofrecer y confirmar (¿confirma cita falsa? = bug).
 - [ ] **TC-08** — Varios agentes con calendario: ¿qué disponibilidad propone (balance)?
 - [ ] **⭐ TC-09 — Agente sin calendario configurado / desconfigurado** — qué debe responder

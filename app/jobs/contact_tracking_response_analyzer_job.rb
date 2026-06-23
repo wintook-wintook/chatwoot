@@ -580,6 +580,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # Handler: Agendar cita via Google Calendar
   # ==============================================================================
   def handle_book_appointment(tracking, message)
+    # Si el contacto YA tiene una cita activa, no ofrezcas slots nuevos: recuérdale la cita
+    # existente y ofrécele moverla o cancelarla (responde "ya tenés una cita el X").
+    if tracking.appointment_event_id.present? && tracking.appointment_at.present?
+      return inform_existing_appointment(tracking, message)
+    end
+
     Rails.logger.info "[TrackingBot] 📅 BOOK_APPOINTMENT → buscando disponibilidad en calendarios"
 
     cal_ids = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
@@ -613,6 +619,26 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     offer_slots(tracking, message, slots, format_slots_message(slots, timezone))
     Rails.logger.info "[TrackingBot] 📅 #{slots.size} slots enviados al contacto — esperando elección"
+  end
+
+  # El contacto pregunta/insiste por una cita pero ya tiene una agendada: en lugar de
+  # volver a ofrecer horarios, le recordamos la cita existente y le ofrecemos mover o
+  # cancelar (esas rutas las resuelven :reschedule y :cancel_appointment).
+  def inform_existing_appointment(tracking, message)
+    timezone  = appointment_timezone(tracking, message)
+    formatted = format_appointment_datetime(tracking.appointment_at, timezone)
+    Rails.logger.info "[TrackingBot] 📅 El contacto ya tiene una cita (#{formatted}) → recordando en vez de re-ofrecer"
+    send_auto_reply(
+      tracking, message,
+      "Ya tenés una cita agendada para el #{formatted}. 📅 Si querés, puedo *moverla* a otro horario o *cancelarla*. ¿Qué preferís?"
+    )
+  end
+
+  def format_appointment_datetime(at, timezone)
+    day_names   = %w[domingo lunes martes miércoles jueves viernes sábado]
+    month_names = %w[enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre]
+    local = at.in_time_zone(timezone)
+    "#{day_names[local.wday]} #{local.day} de #{month_names[local.month - 1]} a las #{local.strftime('%H:%M')}"
   end
 
   def pending_slot_selection?(tracking)
