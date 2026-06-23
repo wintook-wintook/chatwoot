@@ -149,10 +149,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                   BotSeller::Dispatcher.new(message).dispatch
                   true
                 else
-                  try_kbase_then_conversational(tracking, message)
+                  try_kbase_then_conversational(tracking, message, route_result)
                 end
               else # :tracking o :kbase — kbase decide si tiene respuesta
-                try_kbase_then_conversational(tracking, message)
+                try_kbase_then_conversational(tracking, message, route_result)
               end
 
     save_sentiment_analysis(tracking, route_result, message)
@@ -163,7 +163,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     false
   end
 
-  def try_kbase_then_conversational(tracking, message)
+  def try_kbase_then_conversational(tracking, message, route_result = nil)
     if kbase_available?(message, tracking)
       Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
       kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
@@ -180,16 +180,66 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return true
     end
 
-    # proyecto@bot_seguimiento_calendar — @agendar_calendar: ofrece horarios SOLO cuando el
-    # cliente realmente pide/acepta una cita (no en cualquier mensaje). Así el agente
-    # conversa normal y agenda cuando corresponde, no de forma "eager".
-    if agendar_calendar_directive?(tracking) && calendar_configured?(tracking) && booking_requested?(tracking, message)
-      Rails.logger.info '[TrackingBot] 📅 @agendar_calendar + intención de cita → ofreciendo horarios'
-      handle_book_appointment(tracking, message)
-      return true
+    # proyecto@bot_seguimiento_calendar — @agendar_calendar (appointment-aware): el clasificador
+    # ve el ESTADO DE LA CITA y decide la acción concreta (consultar/agendar/mover/cancelar). No
+    # es "eager": appointment_action es null salvo que el cliente realmente hable de una cita.
+    if agendar_calendar_directive?(tracking) && calendar_configured?(tracking)
+      appt = classify_appointment(tracking, message, route_result)
+      if appt && appt[:appointment_action]
+        Rails.logger.info "[TrackingBot] 📅 @agendar_calendar → acción de cita: #{appt[:appointment_action]}"
+        dispatch_appointment_action(tracking, message, appt)
+        return true
+      end
     end
 
     generate_and_send_conversational_reply(tracking, message)
+  end
+
+  # proyecto@bot_seguimiento_calendar — clasificación appointment-aware. Si DETECT_INTENT está
+  # activo ya tenemos el route_result (con appointment_action); si no, clasificamos solo para
+  # esta decisión, alimentando al LLM con el estado real de la cita.
+  def classify_appointment(tracking, message, route_result = nil)
+    return route_result if route_result&.key?(:appointment_action)
+
+    key = get_api_key(message.account)&.dig(:key)
+    return nil if key.blank?
+
+    ContactTrackings::RouterService.new(
+      tracking, message, key,
+      appointment_state: appointment_state_summary(tracking, message),
+      recent_messages:   get_recent_context(message, 4)
+    ).classify
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ classify_appointment falló: #{e.message}"
+    nil
+  end
+
+  # Despacha según la acción de cita resuelta por el LLM. Reutiliza los handlers existentes;
+  # cuando el contacto NO tiene cita, "query"/"move" degradan a agendar una nueva.
+  def dispatch_appointment_action(tracking, message, appt)
+    has_appt = tracking.appointment_event_id.present? && tracking.appointment_at.present?
+
+    case appt[:appointment_action]
+    when :query
+      has_appt ? inform_existing_appointment(tracking, message) : handle_book_appointment(tracking, message)
+    when :move
+      has_appt ? handle_reschedule(tracking, message, appt) : handle_book_appointment(tracking, message)
+    when :cancel
+      handle_cancel_appointment(tracking, message)
+    else # :book_new
+      handle_book_appointment(tracking, message)
+    end
+  end
+
+  # proyecto@bot_seguimiento_calendar — resumen legible del estado de la cita para que el LLM
+  # (clasificación y redacción) decida con contexto en vez de a ciegas.
+  def appointment_state_summary(tracking, message)
+    unless tracking.appointment_event_id.present? && tracking.appointment_at.present?
+      return 'El contacto NO tiene ninguna cita agendada todavía.'
+    end
+
+    timezone = appointment_timezone(tracking, message)
+    "El contacto YA tiene una cita agendada para el #{format_appointment_datetime(tracking.appointment_at, timezone)}."
   end
 
   # proyecto@bot_seguimiento_calendar
@@ -210,31 +260,6 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       'America/Mexico_City'
   end
 
-  # ¿Hay que ofrecer cita ahora por la directiva @agendar_calendar?
-  # - Si DETECT_INTENT está activo, el router ya resolvió la ruta :book_appointment;
-  #   llegar aquí significa que NO era cita → no re-evaluamos (evita doble clasificación).
-  # - Si DETECT_INTENT está apagado, evaluamos la intención solo para esta decisión, así
-  #   la directiva agenda únicamente cuando el cliente lo pide/acepta (no "eager").
-  def booking_requested?(tracking, message)
-    return false if DETECT_INTENT
-
-    appointment_intent?(tracking, message)
-  end
-
-  def appointment_intent?(tracking, message)
-    key = get_api_key(message.account)&.dig(:key)
-    return false if key.blank?
-
-    result = ContactTrackings::RouterService.new(
-      tracking, message, key,
-      recent_messages: get_recent_context(message, 4)
-    ).classify
-    result[:route] == :book_appointment
-  rescue StandardError => e
-    Rails.logger.warn "[TrackingBot] ⚠️ appointment_intent? falló: #{e.message}"
-    false
-  end
-
   def classify_route(tracking, message)
     unless DETECT_INTENT
       Rails.logger.info '[TrackingBot] ⏭️  RouterService desactivado (TRACKING_DETECT_INTENT=false) → :tracking'
@@ -253,7 +278,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       api_key_data[:key],
       kbase_available:     kbase_available?(message, tracking),
       botseller_available: BotSeller::Dispatcher.configured?,
-      recent_messages:     get_recent_context(message, 4)
+      recent_messages:     get_recent_context(message, 4),
+      appointment_state:   appointment_state_summary(tracking, message)
     ).classify
   rescue StandardError => e
     Rails.logger.warn "[TrackingBot] ⚠️ RouterService falló: #{e.message} → :tracking"
@@ -349,6 +375,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
         #{contact_profile}
         OBJETIVO DE LA CONVERSACIÓN: #{tracking.objective}
+        ESTADO DE LA CITA: #{appointment_state_summary(tracking, message)} (si el cliente pregunta por su cita, respóndele con esta fecha/hora exacta; no inventes ni ofrezcas horarios nuevos)
         PRÓXIMO CONTACTO PROGRAMADO: #{next_contact} (si el cliente pide reagendar, infórmale amablemente que su próximo contacto ya está programado para esa fecha y que si necesita cambiarlo debe comunicarse con un asesor)
         #{tracking.ai_context.present? ? "BASE DE CONOCIMIENTO:\n#{tracking.ai_context.truncate(800)}\n" : ""}
         #{clean_cp.present? ? "INSTRUCCIONES ADICIONALES:\n#{clean_cp}" : ""}

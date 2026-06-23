@@ -24,11 +24,17 @@
 #
 # RETORNO:
 #   {
-#     route:          Symbol,  # una de las rutas anteriores
-#     confidence:     Float,   # 0.0 - 1.0
-#     method:         String,  # 'ai' | 'error' | 'no_key'
-#     reschedule_data: Hash    # solo cuando route == :reschedule
+#     route:               Symbol,  # una de las rutas anteriores
+#     confidence:          Float,   # 0.0 - 1.0
+#     method:              String,  # 'ai' | 'error' | 'no_key'
+#     appointment_action:  Symbol,  # :query | :book_new | :move | :cancel | nil (sobre la cita)
+#     reschedule_data:     Hash     # cuando hay fecha/hora (reschedule o move)
 #   }
+#
+# APPOINTMENT-AWARE (proyecto@bot_seguimiento_calendar):
+#   El clasificador recibe el ESTADO DE LA CITA del contacto (si ya tiene una y cuándo) y
+#   decide una `appointment_action` concreta. Esto evita parchar con guards y permite
+#   distinguir "consultar / mover / cancelar la mía" de "agendar una nueva".
 #
 # ACTIVACIÓN:
 #   Solo se usa cuando TRACKING_DETECT_INTENT=true en variables de entorno.
@@ -37,6 +43,7 @@
 module ContactTrackings
   class RouterService
     VALID_ROUTES = %w[rejected interested reschedule book_appointment cancel_appointment kbase botseller tracking].freeze
+    VALID_APPOINTMENT_ACTIONS = %w[query book_new move cancel].freeze
 
     CLASSIFICATION_PROMPT = <<~PROMPT.strip
       Eres un clasificador de intenciones. Analiza el mensaje del cliente y responde
@@ -45,6 +52,7 @@ module ContactTrackings
       {
         "intent": "<una de: rejected | interested | reschedule | book_appointment | cancel_appointment | kbase | tracking>",
         "confidence": <número entre 0.0 y 1.0>,
+        "appointment_action": "<null | query | book_new | move | cancel>",
         "reschedule_data": {
           "relative_minutes": <null o número>,
           "relative_hours":   <null o número>,
@@ -70,11 +78,25 @@ module ContactTrackings
                              errores, configuraciones, procesos, etc.
       - "tracking":          cualquier otro mensaje conversacional que no encaje en las categorías anteriores.
 
+      "appointment_action" — SOLO sobre una CITA/reunión/llamada de calendario (NO el recordatorio
+      del seguimiento). Decide mirando el ESTADO DE LA CITA de más abajo:
+      - "query":    el cliente pregunta por su cita YA agendada (cuándo es, a qué hora, confirmar o
+                    ver detalles). Solo válido si el contacto YA tiene una cita.
+      - "book_new": el cliente quiere agendar una cita/reunión/llamada NUEVA.
+      - "move":     el cliente quiere cambiar la fecha/hora de su cita YA agendada. Llena
+                    "reschedule_data" con la nueva fecha/hora si la menciona.
+      - "cancel":   el cliente quiere anular/cancelar su cita YA agendada.
+      - null:       el mensaje NO trata sobre una cita de calendario.
+      Si "appointment_action" no es null, prioriza esa acción para temas de cita.
+
       IMPORTANTE: Si el mensaje del cliente es una confirmación breve ("es correcto", "sí", "correcto",
       "así es", "exacto", etc.) y el historial reciente muestra que el bot acaba de pedir confirmación
       sobre una consulta técnica, clasifica como "kbase" para continuar respondiendo esa consulta.
 
-      Si el intent NO es "reschedule", el campo "reschedule_data" debe ser null.
+      Llena "reschedule_data" cuando el cliente mencione una fecha/hora (para "reschedule" o para
+      "appointment_action": "move"); si no menciona ninguna, déjalo en null.
+
+      ESTADO DE LA CITA: %{appointment_state}
 
       Historial reciente de la conversación:
       %{recent_context}
@@ -83,13 +105,15 @@ module ContactTrackings
       Mensaje del cliente: "%{message}"
     PROMPT
 
-    def initialize(tracking, message, api_key, kbase_available: false, botseller_available: false, recent_messages: '')
+    def initialize(tracking, message, api_key, kbase_available: false, botseller_available: false, recent_messages: '',
+                   appointment_state: nil)
       @tracking            = tracking
       @message             = message
       @api_key             = api_key
       @kbase_available     = kbase_available
       @botseller_available = botseller_available
       @recent_messages     = recent_messages
+      @appointment_state   = appointment_state
     end
 
     def classify
@@ -117,14 +141,16 @@ module ContactTrackings
 
       confidence = parsed['confidence'].to_f.clamp(0.0, 1.0)
       result = {
-        route:      intent.to_sym,
-        confidence: confidence,
-        method:     'ai'
+        route:              intent.to_sym,
+        confidence:         confidence,
+        method:             'ai',
+        appointment_action: parse_appointment_action(parsed['appointment_action'])
       }
 
-      result[:reschedule_data] = parse_reschedule_data(parsed['reschedule_data']) if intent == 'reschedule'
+      result[:reschedule_data] = parse_reschedule_data(parsed['reschedule_data']) if parsed['reschedule_data'].present?
 
-      Rails.logger.info "[RouterService] 🧭 Ruta: :#{intent} (confianza: #{confidence.round(2)})"
+      Rails.logger.info "[RouterService] 🧭 Ruta: :#{intent} (conf: #{confidence.round(2)})" \
+                        "#{result[:appointment_action] ? " · cita: #{result[:appointment_action]}" : ''}"
       result
 
     rescue JSON::ParserError => e
@@ -142,9 +168,10 @@ module ContactTrackings
       require 'json'
 
       prompt = CLASSIFICATION_PROMPT % {
-        objective:      @tracking.objective.truncate(200),
-        message:        @message.content.truncate(400),
-        recent_context: @recent_messages.presence || '(sin historial previo)'
+        objective:         @tracking.objective.truncate(200),
+        message:           @message.content.truncate(400),
+        recent_context:    @recent_messages.presence || '(sin historial previo)',
+        appointment_state: @appointment_state.presence || 'El contacto no tiene ninguna cita agendada.'
       }
 
       uri               = URI('https://api.openai.com/v1/chat/completions')
@@ -167,6 +194,11 @@ module ContactTrackings
       JSON.parse(response.body).dig('choices', 0, 'message', 'content')
     end
 
+    def parse_appointment_action(value)
+      action = value.to_s.strip.downcase
+      VALID_APPOINTMENT_ACTIONS.include?(action) ? action.to_sym : nil
+    end
+
     def parse_reschedule_data(data)
       return {} if data.nil? || !data.is_a?(Hash)
 
@@ -182,9 +214,10 @@ module ContactTrackings
 
     def fallback(reason)
       {
-        route:      :tracking,
-        confidence: 1.0,
-        method:     reason
+        route:              :tracking,
+        confidence:         1.0,
+        method:             reason,
+        appointment_action: nil
       }
     end
   end
