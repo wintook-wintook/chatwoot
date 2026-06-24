@@ -12,7 +12,7 @@ El Agente IA es `tracking_templates` (esquema vivo en la cabecera de
 
 ## Decisión: cómo asociar los archivos
 
-Dos opciones; la directiva `@adjunto:nombre` necesita una **clave estable y única por
+Dos opciones; la directiva `{{nombre}}` necesita una **clave estable y única por
 agente**, no solo el filename del blob (que puede repetirse o tener espacios).
 
 ### Opción A — Tabla intermedia `ai_agent_attachments` (recomendada)
@@ -24,7 +24,7 @@ ai_agent_attachments
   id                    :bigint  PK
   tracking_template_id  :bigint  FK → tracking_templates  (not null)
   account_id            :bigint  FK → accounts            (not null)
-  name                  :string  not null   # clave de @adjunto:name
+  name                  :string  not null   # clave de {{name}}
   created_at/updated_at :datetime
 
 índices:
@@ -32,7 +32,7 @@ ai_agent_attachments
   index_ai_agent_attachments_on_template_and_name  (tracking_template_id, name) UNIQUE
 ```
 
-- `name` **único por agente** → `@adjunto:catalogo` resuelve sin ambigüedad.
+- `name` **único por agente** → `{{catalogo}}` resuelve sin ambigüedad.
 - El binario real va en `active_storage_blobs/attachments` (nativo Chatwoot).
 - Asociación: `TrackingTemplate has_many :ai_agent_attachments, dependent: :destroy`.
 

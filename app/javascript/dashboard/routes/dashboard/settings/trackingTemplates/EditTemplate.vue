@@ -80,7 +80,7 @@ export default {
       editingAttachmentId: null,
       editingAttachmentName: '',
       renameError: '',
-      // selector de archivos para insertar @adjunto:nombre en el Entrenamiento
+      // selector de archivos para insertar {{nombre}} en el Entrenamiento
       showAttachmentPicker: false,
       // selector de directivas para insertar @buscar_..., @discourse, etc.
       showDirectivePicker: false,
@@ -593,7 +593,7 @@ export default {
       }
     },
     copyDirective(attachment) {
-      const token = `@adjunto:${attachment.name}`;
+      const token = `{{${attachment.name}}}`;
       if (navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(token);
       }
@@ -638,7 +638,7 @@ export default {
         );
       }
     },
-    // ── Selectores: insertar tokens (@adjunto:, @buscar_..., etc.) en el Entrenamiento ──
+    // ── Selectores: insertar tokens ({{nombre}}, @buscar_..., etc.) en el Entrenamiento ──
     // Recuerda el textarea activo y la posición del cursor antes de abrir un modal
     rememberInsertPos(target) {
       this.pickerTarget = target;
@@ -680,7 +680,7 @@ export default {
     },
     insertAttachmentDirective(attachment) {
       this.showAttachmentPicker = false;
-      this.insertTokenAtPrompt(`@adjunto:${attachment.name}`);
+      this.insertTokenAtPrompt(`{{${attachment.name}}}`);
     },
     openDirectivePicker(target = 'inline') {
       this.rememberInsertPos(target);
@@ -807,7 +807,7 @@ export default {
             >
               <fluent-icon icon="code" size="18" />
             </a>
-            <!-- proyecto@ai_agent_attachments: insertar @adjunto:nombre desde un selector -->
+            <!-- proyecto@ai_agent_attachments: insertar {{nombre}} desde un selector -->
             <a
               v-if="activeContextTab === 1 && attachments.length"
               href="#"
@@ -1076,7 +1076,12 @@ export default {
         <!-- Tab Archivos (proyecto@ai_agent_attachments) -->
         <div v-show="activeContextTab === archivosTabIndex" class="mt-2">
           <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.DESCRIPTION') }}
+            {{
+              $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.DESCRIPTION', {
+                open: '{{',
+                close: '}}',
+              })
+            }}
           </p>
 
           <!-- En modo creación hay que guardar primero para tener un Agente IA al que adjuntar -->
@@ -1139,7 +1144,12 @@ export default {
               v-else-if="attachments.length === 0"
               class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400"
             >
-              {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.EMPTY') }}
+              {{
+                $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.EMPTY', {
+                  open: '{{',
+                  close: '}}',
+                })
+              }}
             </div>
             <ul v-else class="space-y-2 max-h-[208px] overflow-y-auto pr-1">
               <li
@@ -1152,7 +1162,7 @@ export default {
                 <template v-if="editingAttachmentId === att.id">
                   <div class="flex flex-col min-w-0 flex-1 gap-1">
                     <div class="flex items-center gap-1">
-                      <span class="text-xs text-slate-400 shrink-0">@adjunto:</span>
+                      <span class="text-xs text-slate-400 shrink-0">{{ '{{' }}</span>
                       <input
                         v-model="editingAttachmentName"
                         type="text"
@@ -1160,6 +1170,7 @@ export default {
                         @keyup.enter="saveRenameAttachment(att)"
                         @keyup.esc="cancelRenameAttachment"
                       />
+                      <span class="text-xs text-slate-400 shrink-0">{{ '}}' }}</span>
                     </div>
                     <span v-if="renameError" class="text-xs text-red-500">{{ renameError }}</span>
                   </div>
@@ -1182,7 +1193,7 @@ export default {
                 <template v-else>
                   <div class="flex flex-col min-w-0 flex-1">
                     <code class="text-xs font-semibold text-woot-600 dark:text-woot-400">
-                      @adjunto:{{ att.name }}
+                      {{ `{{${att.name}}}` }}
                     </code>
                     <span class="text-xs text-slate-500 dark:text-slate-400 truncate">
                       {{ att.filename }}
@@ -1285,7 +1296,7 @@ export default {
         header-content="Instrucciones adicionales para responder preguntas del cliente sobre este Agente IA."
       />
       <div class="px-8 pb-6 flex flex-col gap-3">
-        <!-- selectores de tokens: directiva (@buscar_...) y adjunto (@adjunto:) -->
+        <!-- selectores de tokens: directiva (@buscar_...) y adjunto ({{nombre}}) -->
         <div class="flex items-center gap-2 justify-start">
           <a
             href="#"
@@ -1320,11 +1331,16 @@ export default {
       </div>
     </woot-modal>
 
-    <!-- proyecto@ai_agent_attachments: selector de archivos para insertar @adjunto:nombre -->
+    <!-- proyecto@ai_agent_attachments: selector de archivos para insertar {{nombre}} -->
     <woot-modal :show="showAttachmentPicker" :on-close="closeAttachmentPicker" size="medium">
       <woot-modal-header
         :header-title="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.PICKER_TITLE')"
-        :header-content="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.PICKER_HELP')"
+        :header-content="
+          $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.PICKER_HELP', {
+            open: '{{',
+            close: '}}',
+          })
+        "
       />
       <div class="px-8 pb-6">
         <ul class="space-y-2 max-h-[320px] overflow-y-auto pr-1">
@@ -1336,7 +1352,7 @@ export default {
             >
               <span class="min-w-0">
                 <span class="block text-sm font-medium text-woot-600 dark:text-woot-400 truncate">
-                  @adjunto:{{ att.name }}
+                  {{ `{{${att.name}}}` }}
                 </span>
                 <span class="block text-xs text-slate-500 dark:text-slate-400 truncate">
                   {{ att.filename }}

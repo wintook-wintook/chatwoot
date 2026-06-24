@@ -83,7 +83,7 @@ Rails.application.routes.draw do
             collection do
               get :calendar_integrations
             end
-            # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por @adjunto:name
+            # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
           end
           resources :contact_tracking_imports, only: [:create] # proyecto@import_seguimiento
