@@ -3,7 +3,7 @@
 Notas atómicas (Markdown + wikilinks `[[ ]]`) del módulo **AI Agent Attachments**:
 permite **adjuntar archivos a un Agente IA** (`tracking_template`) y que el agente los
 **envíe en la conversación** cuando el prompt complementario invoca la directiva
-**`@adjunto:nombre`**. Reutiliza el almacenamiento de archivos nativo de Chatwoot
+**`{{nombre}}`**. Reutiliza el almacenamiento de archivos nativo de Chatwoot
 (ActiveStorage). Empieza por **[[00-Indice]]**.
 
 ```
@@ -20,7 +20,7 @@ vault-ai-agent-attachments/
 ## Relación con otras bóvedas
 
 - **Contact Tracking** (`vault-contact-tracking`): este módulo **extiende** el Agente IA
-  (`tracking_template`) de ese módulo. La directiva `@adjunto:nombre` sigue el mismo
+  (`tracking_template`) de ese módulo. La directiva `{{nombre}}` sigue el mismo
   patrón que `@agendar_calendar` / `@buscar_predefinidas` del prompt complementario.
 
 ## Convención (heredada de Contact Tracking)

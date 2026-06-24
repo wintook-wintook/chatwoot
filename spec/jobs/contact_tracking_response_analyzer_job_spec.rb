@@ -16,7 +16,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
 
     it 'resolves an existing directive and strips the token from the text' do
-      content = 'Aquí tienes @adjunto:catalogo y nada más.'
+      content = 'Aquí tienes {{catalogo}} y nada más.'
       clean, signed_ids = job.send(:resolve_attachment_directives, tracking, content)
 
       expect(clean).to eq('Aquí tienes y nada más.')
@@ -24,12 +24,12 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
 
     it 'returns the signed_id of the existing blob (reuses storage)' do
-      _clean, signed_ids = job.send(:resolve_attachment_directives, tracking, '@adjunto:catalogo')
+      _clean, signed_ids = job.send(:resolve_attachment_directives, tracking, '{{catalogo}}')
       expect(signed_ids.first).to eq(attachment.file.blob.signed_id)
     end
 
     it 'ignores unknown directives without breaking the rest' do
-      content = 'Mira @adjunto:catalogo pero no @adjunto:inexistente.'
+      content = 'Mira {{catalogo}} pero no {{inexistente}}.'
       clean, signed_ids = job.send(:resolve_attachment_directives, tracking, content)
 
       expect(signed_ids.size).to eq(1)
@@ -37,12 +37,12 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
 
     it 'is case-insensitive when resolving the name' do
-      _clean, signed_ids = job.send(:resolve_attachment_directives, tracking, '@adjunto:CATALOGO')
+      _clean, signed_ids = job.send(:resolve_attachment_directives, tracking, '{{CATALOGO}}')
       expect(signed_ids.size).to eq(1)
     end
 
-    it 'resolves the name and strips a trailing extension the IA may append' do
-      content = 'Te envío la ficha. @adjunto:catalogo.svg'
+    it 'tolerates internal spaces in the directive ({{ catalogo }})' do
+      content = 'Te envío la ficha. {{ catalogo }}'
       clean, signed_ids = job.send(:resolve_attachment_directives, tracking, content)
 
       expect(signed_ids.size).to eq(1)
@@ -51,9 +51,9 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
 
     it 'returns the content unchanged when the agent has no template' do
       orphan = ContactTracking.new(account: account, tracking_template: nil)
-      clean, signed_ids = job.send(:resolve_attachment_directives, orphan, 'texto @adjunto:catalogo')
+      clean, signed_ids = job.send(:resolve_attachment_directives, orphan, 'texto {{catalogo}}')
 
-      expect(clean).to eq('texto @adjunto:catalogo')
+      expect(clean).to eq('texto {{catalogo}}')
       expect(signed_ids).to be_empty
     end
 
@@ -61,7 +61,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       stub_const("#{described_class}::MAX_DIRECTIVE_ATTACHMENTS", 1)
       create(:ai_agent_attachment, tracking_template: tracking_template, account: account, name: 'precios')
 
-      _clean, signed_ids = job.send(:resolve_attachment_directives, tracking, '@adjunto:catalogo @adjunto:precios')
+      _clean, signed_ids = job.send(:resolve_attachment_directives, tracking, '{{catalogo}} {{precios}}')
       expect(signed_ids.size).to eq(1)
     end
   end

@@ -2,7 +2,7 @@
 # proyecto@ai_agent_attachments
 # ================================================================================
 # Servicio: AiAgentAttachments::DirectiveReferenceService
-# Descripción: mantiene "vivas" las referencias @adjunto:nombre cuando un adjunto
+# Descripción: mantiene "vivas" las referencias {{nombre}} cuando un adjunto
 #   de un Agente IA se renombra o se borra. Reescribe el token en:
 #     (a) el prompt complementario del propio Agente IA (TrackingTemplate), y
 #     (b) los prompts congelados de los seguimientos VIVOS que referencian ese agente
@@ -18,15 +18,15 @@ module AiAgentAttachments
     LIVE_STATUSES = %w[pending scheduled active paused].freeze
 
     class << self
-      # Renombra @adjunto:old_name → @adjunto:new_name en el agente y sus seguimientos vivos.
+      # Renombra {{old_name}} → {{new_name}} en el agente y sus seguimientos vivos.
       def rename(template, old_name, new_name)
         return if template.nil? || old_name.blank? || new_name.blank? || old_name == new_name
 
-        replacement = "@adjunto:#{new_name}"
+        replacement = "{{#{new_name}}}"
         rewrite(template, old_name) { |text| text.gsub(directive_regex(old_name), replacement) }
       end
 
-      # Elimina las referencias @adjunto:name colgantes tras borrar el adjunto.
+      # Elimina las referencias {{name}} colgantes tras borrar el adjunto.
       def remove(template, name)
         return if template.nil? || name.blank?
 
@@ -35,24 +35,25 @@ module AiAgentAttachments
 
       private
 
-      # Token exacto: el carácter siguiente no puede ser parte de un slug, para no
-      # tocar nombres más largos con el mismo prefijo (p. ej. @adjunto:cat vs catalogo).
+      # Token exacto {{name}} (admite espacios internos: {{ name }}). El `\}\}` justo tras
+      # el nombre evita tocar slugs más largos con el mismo prefijo ({{cat}} vs {{catalogo}}).
       def directive_regex(name)
-        /@adjunto:#{Regexp.escape(name)}(?![A-Za-z0-9_-])/i
+        /\{\{\s*#{Regexp.escape(name)}\s*\}\}/i
       end
 
       def rewrite(template, name)
         # (a) Prompt del Agente IA
         prompt = template.complementary_prompt.to_s
-        if prompt.include?("@adjunto:#{name}")
+        if prompt.match?(directive_regex(name))
           new_prompt = yield(prompt)
           template.update_columns(complementary_prompt: new_prompt) if new_prompt != prompt
         end
 
-        # (b) Seguimientos vivos que copiaron el prompt
+        # (b) Seguimientos vivos que copiaron el prompt. El LIKE es un prefiltro coarse
+        # (lo reconfirma la regex); por eso usamos la forma canónica {{name}}.
         ContactTracking
           .where(tracking_template_id: template.id, status: LIVE_STATUSES)
-          .where('complementary_prompt LIKE ?', "%@adjunto:#{name}%")
+          .where('complementary_prompt LIKE ?', "%{{#{name}}}%")
           .find_each do |tracking|
             current = tracking.complementary_prompt.to_s
             updated = yield(current)

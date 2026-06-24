@@ -11,7 +11,7 @@ tags: [ai-agent-attachments, vision]
 **AI Agent Attachments** permite **adjuntar archivos a un Agente IA** (un
 `tracking_template`) y que el agente los **envíe automáticamente en la conversación**
 cuando su lógica lo decide. El disparo se declara en el **prompt complementario** del
-Agente IA mediante la directiva **`@adjunto:nombre`**.
+Agente IA mediante la directiva **`{{nombre}}`**.
 
 No es un sistema de archivos nuevo: **reutiliza ActiveStorage**, la forma nativa de
 Chatwoot de guardar adjuntos (la misma que usan los mensajes).
@@ -21,7 +21,7 @@ Chatwoot de guardar adjuntos (la misma que usan los mensajes).
 - **Tab "📎 Archivos"** en la edición del Agente IA, **después** del tab "📅 Agendas"
   (`EditTemplate.vue`). Subir, listar, renombrar (`nombre`) y borrar archivos.
 - Cada archivo tiene un **`nombre`** (clave estable) usado por la directiva.
-- **Directiva `@adjunto:nombre`** en el prompt complementario → al dispararse, el
+- **Directiva `{{nombre}}`** en el prompt complementario → al dispararse, el
   archivo se adjunta al mensaje saliente del Agente IA. Ver [[Directiva-y-envio]].
 
 ## Fuera de alcance (por ahora)

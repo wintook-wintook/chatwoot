@@ -1,5 +1,5 @@
 ---
-titulo: Frontend — tab "📎 Archivos" + autocompletado @adjunto:
+titulo: Frontend — tab "📎 Archivos" + autocompletado {{nombre}}
 tipo: diseno
 tags: [ai-agent-attachments, frontend, autocomplete]
 ---
@@ -30,16 +30,16 @@ tags: [ai-agent-attachments, frontend, autocomplete]
 1. **Subir** uno o varios archivos (input file / drag&drop) → POST a la API de adjuntos
    del Agente IA (ver [[API-y-rutas]]).
 2. **Listar** los adjuntos existentes: `nombre`, filename, tamaño, tipo, fecha.
-3. **Editar `nombre`** (la clave que usará `@adjunto:nombre`). Forzar slug
+3. **Editar `nombre`** (la clave que usará `{{nombre}}`). Forzar slug
    (`[a-zA-Z0-9_-]`, sin espacios) para que la directiva quede inequívoca.
 4. **Borrar** un adjunto.
 5. **Pista de uso:** mostrar, junto a cada archivo, el snippet copiable
-   `@adjunto:nombre` para pegar en el tab "Entrenamiento".
+   `{{nombre}}` para pegar en el tab "Entrenamiento".
 
-## ⭐ Autocompletado `@adjunto:` en el prompt complementario
+## ⭐ Autocompletado `{{nombre}}` en el prompt complementario
 
-Al escribir **`@adjunto:`** en el textarea del tab "Entrenamiento", desplegar un dropdown
-con los archivos de ESE agente y, al elegir, insertar `@adjunto:nombre`.
+Al escribir **`{{nombre}}`** en el textarea del tab "Entrenamiento", desplegar un dropdown
+con los archivos de ESE agente y, al elegir, insertar `{{nombre}}`.
 
 ### Reutilizar lo que ya existe en Chatwoot
 
@@ -52,13 +52,13 @@ con los archivos de ESE agente y, al elegir, insertar `@adjunto:nombre`.
 
 ```
 1. En @input / @keyup, leer el texto ANTES del cursor (selectionStart).
-2. Detectar el patrón abierto:  /@adjunto:([a-zA-Z0-9_-]*)$/
+2. Detectar el patrón abierto:  /\{\{\s*([a-zA-Z0-9_-]*)$/
    - si NO matchea → ocultar dropdown.
-   - si matchea → query = grupo capturado (lo escrito tras los dos puntos).
+   - si matchea → query = grupo capturado (lo escrito tras las llaves de apertura).
 3. Filtrar la lista de adjuntos del agente por `name` que incluya `query`.
 4. Mostrar <MentionBox :items="filtrados"> posicionado bajo el cursor.
 5. @mentionSelect(item):
-   - reemplazar el fragmento "@adjunto:<query>" por "@adjunto:<item.name> ".
+   - reemplazar el fragmento "{{query}}" por "{{item.name}} ".
    - reposicionar el cursor tras el token, ocultar dropdown.
 ```
 
