@@ -246,13 +246,17 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     "El contacto YA tiene una cita agendada para el #{format_appointment_datetime(tracking.appointment_at, timezone)}."
   end
 
-  # proyecto@bot_seguimiento_calendar — fecha de hoy (zona del agente, día en español) para que
-  # el RouterService resuelva referencias relativas ("el viernes", "ese mismo día") a fechas
-  # absolutas. Sin este ancla, el LLM no puede convertir días de semana a YYYY-MM-DD.
+  # proyecto@bot_seguimiento_calendar — contexto de fechas (zona del agente) para el RouterService.
+  # En vez de pedirle al LLM que CALCULE fechas (poco confiable: confunde "próximo martes" con otro
+  # día), le damos la tabla de las próximas 2 semanas ya resueltas para que solo BUSQUE en ella.
   def router_current_date(tracking, message)
     day_names = %w[domingo lunes martes miércoles jueves viernes sábado]
     now = Time.current.in_time_zone(appointment_timezone(tracking, message))
-    "#{now.strftime('%Y-%m-%d')} (#{day_names[now.wday]})"
+    upcoming = (1..13).map do |i|
+      d = now + i.days
+      "- #{day_names[d.wday]}: #{d.strftime('%Y-%m-%d')}"
+    end.join("\n")
+    "Hoy es #{now.strftime('%Y-%m-%d')} (#{day_names[now.wday]}). Próximas fechas:\n#{upcoming}"
   end
 
   # proyecto@bot_seguimiento_calendar

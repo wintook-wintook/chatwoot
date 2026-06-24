@@ -96,10 +96,13 @@ module ContactTrackings
       Llena "reschedule_data" cuando el cliente mencione una fecha/hora (para "reschedule" o para
       "appointment_action": "move"); si no menciona ninguna, déjalo en null.
 
-      Hoy es %{today}. En "reschedule_data" expresá las fechas SIEMPRE como "specific_date" absoluta
-      (YYYY-MM-DD), resolviendo cualquier referencia relativa con: la fecha de hoy, el historial
-      reciente y la cita actual de ESTADO DE LA CITA. Incluí "specific_time" (HH:MM 24h) cuando el
-      cliente mencione una hora.
+      %{today}
+      En "reschedule_data" expresá las fechas SIEMPRE como "specific_date" absoluta (YYYY-MM-DD),
+      tomándola de la lista de "Próximas fechas" de arriba según el día que mencione el cliente
+      (p. ej. "el próximo martes" → la fecha que figura como martes). NO calcules la fecha a mano:
+      usá la que está en la lista. Para "ese mismo día" / "la misma fecha", usá la fecha de la cita
+      actual de ESTADO DE LA CITA. Incluí "specific_time" (HH:MM 24h) solo cuando mencione una hora
+      concreta.
 
       ESTADO DE LA CITA: %{appointment_state}
 
