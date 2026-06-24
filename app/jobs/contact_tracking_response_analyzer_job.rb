@@ -210,7 +210,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     ContactTrackings::RouterService.new(
       tracking, message, key,
       appointment_state: appointment_state_summary(tracking, message),
-      recent_messages:   get_recent_context(message, 4)
+      recent_messages:   get_recent_context(message, 4),
+      current_date:      router_current_date(tracking, message)
     ).classify
   rescue StandardError => e
     Rails.logger.warn "[TrackingBot] ⚠️ classify_appointment falló: #{e.message}"
@@ -243,6 +244,15 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     timezone = appointment_timezone(tracking, message)
     "El contacto YA tiene una cita agendada para el #{format_appointment_datetime(tracking.appointment_at, timezone)}."
+  end
+
+  # proyecto@bot_seguimiento_calendar — fecha de hoy (zona del agente, día en español) para que
+  # el RouterService resuelva referencias relativas ("el viernes", "ese mismo día") a fechas
+  # absolutas. Sin este ancla, el LLM no puede convertir días de semana a YYYY-MM-DD.
+  def router_current_date(tracking, message)
+    day_names = %w[domingo lunes martes miércoles jueves viernes sábado]
+    now = Time.current.in_time_zone(appointment_timezone(tracking, message))
+    "#{now.strftime('%Y-%m-%d')} (#{day_names[now.wday]})"
   end
 
   # proyecto@bot_seguimiento_calendar
@@ -315,7 +325,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       kbase_available:     kbase_available?(message, tracking),
       botseller_available: BotSeller::Dispatcher.configured?,
       recent_messages:     get_recent_context(message, 4),
-      appointment_state:   appointment_state_summary(tracking, message)
+      appointment_state:   appointment_state_summary(tracking, message),
+      current_date:        router_current_date(tracking, message)
     ).classify
   rescue StandardError => e
     Rails.logger.warn "[TrackingBot] ⚠️ RouterService falló: #{e.message} → :tracking"

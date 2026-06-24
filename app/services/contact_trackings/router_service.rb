@@ -96,6 +96,11 @@ module ContactTrackings
       Llena "reschedule_data" cuando el cliente mencione una fecha/hora (para "reschedule" o para
       "appointment_action": "move"); si no menciona ninguna, déjalo en null.
 
+      Hoy es %{today}. En "reschedule_data" expresá las fechas SIEMPRE como "specific_date" absoluta
+      (YYYY-MM-DD), resolviendo cualquier referencia relativa con: la fecha de hoy, el historial
+      reciente y la cita actual de ESTADO DE LA CITA. Incluí "specific_time" (HH:MM 24h) cuando el
+      cliente mencione una hora.
+
       ESTADO DE LA CITA: %{appointment_state}
 
       Historial reciente de la conversación:
@@ -106,7 +111,7 @@ module ContactTrackings
     PROMPT
 
     def initialize(tracking, message, api_key, kbase_available: false, botseller_available: false, recent_messages: '',
-                   appointment_state: nil)
+                   appointment_state: nil, current_date: nil)
       @tracking            = tracking
       @message             = message
       @api_key             = api_key
@@ -114,6 +119,7 @@ module ContactTrackings
       @botseller_available = botseller_available
       @recent_messages     = recent_messages
       @appointment_state   = appointment_state
+      @current_date        = current_date
     end
 
     def classify
@@ -171,7 +177,8 @@ module ContactTrackings
         objective:         @tracking.objective.truncate(200),
         message:           @message.content.truncate(400),
         recent_context:    @recent_messages.presence || '(sin historial previo)',
-        appointment_state: @appointment_state.presence || 'El contacto no tiene ninguna cita agendada.'
+        appointment_state: @appointment_state.presence || 'El contacto no tiene ninguna cita agendada.',
+        today:             @current_date.presence || Time.current.strftime('%Y-%m-%d (%A)')
       }
 
       uri               = URI('https://api.openai.com/v1/chat/completions')
