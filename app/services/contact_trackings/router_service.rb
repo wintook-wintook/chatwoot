@@ -58,6 +58,8 @@ module ContactTrackings
           "relative_hours":   <null o número>,
           "relative_days":    <null o número>,
           "specific_date":    <null o "YYYY-MM-DD">,
+          "weekday":          <null o 1..7 — 1=lunes(Mon) ... 7=domingo(Sun)>,
+          "weeks_ahead":      <null o número>,
           "specific_time":    <null o "HH:MM">,
           "time_of_day":      <null | "morning" | "afternoon" | "evening">,
           "natural":          <null o descripción natural como "mañana a las 3pm">
@@ -98,15 +100,14 @@ module ContactTrackings
       "appointment_action": "move"); si no menciona ninguna, déjalo en null.
 
       %{today}
-      En "reschedule_data" expresá las fechas SIEMPRE como "specific_date" absoluta (YYYY-MM-DD),
-      tomándola de la lista de "Próximas fechas" de arriba. Para un día de la semana ("el martes",
-      "el próximo martes"), usá la PRIMERA fecha de la lista con ese día (la MÁS CERCANA). Elegí
-      una posterior SOLO si el cliente lo dice explícitamente ("en dos semanas", "la semana
-      siguiente"). NO calcules la fecha a mano: usá la que está en la lista. Para "ese mismo día" /
-      "la misma fecha", usá la fecha de la cita actual de ESTADO DE LA CITA. Incluí "specific_time"
-      (HH:MM 24h) solo cuando mencione una hora concreta. Si menciona una FRANJA sin hora exacta
-      ("por la mañana/tarde/noche"), poné "time_of_day" (morning/afternoon/evening) y dejá
-      "specific_time" en null.
+      Reglas para "reschedule_data" (NO calcules fechas a mano; el sistema las resuelve):
+      - Día de la semana en CUALQUIER idioma ("el martes", "next Tuesday", "terça"): poné "weekday"
+        (1=lunes/Mon ... 7=domingo/Sun) y dejá "specific_date" en null. "weeks_ahead" SOLO si lo
+        dice explícito ("en dos semanas"=2, "la semana que viene"=1); si no, dejalo null/0.
+      - Fecha de calendario explícita ("el 30 de junio", "5/7"): poné "specific_date" (YYYY-MM-DD).
+      - "ese mismo día" / "la misma fecha": usá la fecha de la cita actual de ESTADO DE LA CITA.
+      - Hora concreta: "specific_time" (HH:MM 24h). Franja sin hora ("por la mañana/tarde/noche"):
+        "time_of_day" (morning/afternoon/evening) y "specific_time" en null.
 
       ESTADO DE LA CITA: %{appointment_state}
 
@@ -221,20 +222,33 @@ module ContactTrackings
         relative_hours:   data['relative_hours']&.to_i,
         relative_days:    data['relative_days']&.to_i,
         specific_date:    data['specific_date'].presence,
+        weekday:          parse_weekday(data['weekday']),
+        weeks_ahead:      parse_weeks_ahead(data['weeks_ahead']),
         specific_time:    data['specific_time'].presence,
         time_of_day:      parse_time_of_day(data['time_of_day']),
         natural:          data['natural'].presence
       }.compact
 
-      # `natural` (descripción legible) y `time_of_day` (franja sin día) no son, por sí solos,
-      # una fecha accionable: sin un día/hora REAL no hay reagendado pedido, así que devolvemos
-      # vacío para que el handler pregunte cuándo en vez de mover la cita a ciegas.
-      parsed.except(:natural, :time_of_day).empty? ? {} : parsed
+      # `natural` (descripción legible), `time_of_day` (franja) y `weeks_ahead` (offset sin día)
+      # no son, por sí solos, una fecha accionable: sin un día/hora REAL no hay reagendado pedido,
+      # así que devolvemos vacío para que el handler pregunte cuándo en vez de mover a ciegas.
+      parsed.except(:natural, :time_of_day, :weeks_ahead).empty? ? {} : parsed
     end
 
     def parse_time_of_day(value)
       tod = value.to_s.strip.downcase
       %w[morning afternoon evening].include?(tod) ? tod : nil
+    end
+
+    # Día de la semana en ISO (1=lunes ... 7=domingo). Idioma-neutro: el LLM ya lo mapeó a número.
+    def parse_weekday(value)
+      n = value.to_i
+      (1..7).cover?(n) ? n : nil
+    end
+
+    def parse_weeks_ahead(value)
+      n = value.to_i
+      n.positive? ? n : nil
     end
 
     def fallback(reason)

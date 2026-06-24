@@ -246,17 +246,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     "El contacto YA tiene una cita agendada para el #{format_appointment_datetime(tracking.appointment_at, timezone)}."
   end
 
-  # proyecto@bot_seguimiento_calendar — contexto de fechas (zona del agente) para el RouterService.
-  # En vez de pedirle al LLM que CALCULE fechas (poco confiable: confunde "próximo martes" con otro
-  # día), le damos la tabla de las próximas 2 semanas ya resueltas para que solo BUSQUE en ella.
+  # proyecto@bot_seguimiento_calendar — fecha de hoy (zona del agente) para el RouterService.
+  # Solo sirve de ancla para fechas de calendario explícitas ("el 30 de junio" → necesita el año):
+  # los días de la semana ("el próximo martes") los resuelve Ruby de forma determinística, no el LLM.
   def router_current_date(tracking, message)
     day_names = %w[domingo lunes martes miércoles jueves viernes sábado]
     now = Time.current.in_time_zone(appointment_timezone(tracking, message))
-    upcoming = (1..13).map do |i|
-      d = now + i.days
-      "- #{day_names[d.wday]}: #{d.strftime('%Y-%m-%d')}"
-    end.join("\n")
-    "Hoy es #{now.strftime('%Y-%m-%d')} (#{day_names[now.wday]}). Próximas fechas:\n#{upcoming}"
+    "Hoy es #{now.strftime('%Y-%m-%d')} (#{day_names[now.wday]})"
   end
 
   # proyecto@bot_seguimiento_calendar
@@ -1626,19 +1622,45 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return reschedule_data[:relative_hours].hours.from_now if reschedule_data[:relative_hours]
       return reschedule_data[:relative_days].days.from_now.change(hour: 10, min: 0, sec: 0) if reschedule_data[:relative_days]
 
+      # Día: el weekday (resuelto en Ruby, determinístico) tiene prioridad sobre specific_date.
+      date_str = resolve_reschedule_date(reschedule_data, timezone)
+
       if reschedule_data[:specific_time]
         hour, minute = reschedule_data[:specific_time].split(':').map(&:to_i)
-        if reschedule_data[:specific_date]
-          Time.zone.parse(reschedule_data[:specific_date]).change(hour: hour, min: minute, sec: 0)
+        if date_str
+          Time.zone.parse(date_str).change(hour: hour, min: minute, sec: 0)
         else
           target = now.change(hour: hour, min: minute, sec: 0)
           target < now ? target + 1.day : target
         end
-      elsif reschedule_data[:specific_date]
-        Time.zone.parse("#{reschedule_data[:specific_date]} 10:00:00")
+      elsif date_str
+        Time.zone.parse("#{date_str} 10:00:00")
       else
         1.hour.from_now
       end
     end
+  end
+
+  # Resuelve la FECHA (YYYY-MM-DD) del pedido. Si el cliente nombró un día de la semana, lo
+  # calcula Ruby (próxima ocurrencia + weeks_ahead), en vez de confiar en la aritmética del LLM.
+  # Cae a specific_date (fecha de calendario explícita) si no hay weekday.
+  def resolve_reschedule_date(reschedule_data, timezone)
+    if reschedule_data[:weekday].present?
+      return weekday_to_date(reschedule_data[:weekday], reschedule_data[:weeks_ahead], timezone)&.iso8601
+    end
+
+    reschedule_data[:specific_date].presence
+  end
+
+  # Próxima ocurrencia de un día de semana ISO (1=lunes ... 7=domingo) en la zona del agente.
+  # Si hoy ES ese día, devuelve el de la semana siguiente (no hoy). `weeks_ahead` suma semanas.
+  def weekday_to_date(weekday_iso, weeks_ahead, timezone)
+    wday = weekday_iso.to_i
+    return nil unless (1..7).cover?(wday)
+
+    today      = Time.current.in_time_zone(timezone).to_date
+    days_until = (wday - today.cwday) % 7
+    days_until = 7 if days_until.zero?
+    today + days_until.days + (weeks_ahead.to_i * 7).days
   end
 end
