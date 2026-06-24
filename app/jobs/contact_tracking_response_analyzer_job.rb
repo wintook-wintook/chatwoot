@@ -138,7 +138,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                 handle_interested(tracking, message, route_result[:confidence])
                 true
               when :book_appointment
-                handle_book_appointment(tracking, message)
+                handle_book_appointment(tracking, message, route_result)
                 true
               when :reschedule
                 handle_reschedule(tracking, message, route_result)
@@ -225,13 +225,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     case appt[:appointment_action]
     when :query
-      has_appt ? inform_existing_appointment(tracking, message) : handle_book_appointment(tracking, message)
+      has_appt ? inform_existing_appointment(tracking, message) : handle_book_appointment(tracking, message, appt)
     when :move
-      has_appt ? handle_reschedule(tracking, message, appt) : handle_book_appointment(tracking, message)
+      has_appt ? handle_reschedule(tracking, message, appt) : handle_book_appointment(tracking, message, appt)
     when :cancel
       handle_cancel_appointment(tracking, message)
     else # :book_new
-      handle_book_appointment(tracking, message)
+      handle_book_appointment(tracking, message, appt)
     end
   end
 
@@ -663,7 +663,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar
   # Handler: Agendar cita via Google Calendar
   # ==============================================================================
-  def handle_book_appointment(tracking, message)
+  def handle_book_appointment(tracking, message, appt = nil)
     # Si el contacto YA tiene una cita activa, no ofrezcas slots nuevos: recuérdale la cita
     # existente y ofrécele moverla o cancelarla (responde "ya tenés una cita el X").
     if tracking.appointment_event_id.present? && tracking.appointment_at.present?
@@ -681,12 +681,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     timezone = appointment_timezone(tracking, message)
     duration = tracking.tracking_template&.calendar_event_duration || 30
-    slots    = ContactTrackings::AvailabilitySlotService.new(
+    service  = ContactTrackings::AvailabilitySlotService.new(
       calendar_integration_ids: cal_ids,
       timezone: timezone,
       slot_duration: duration,
       working_hours: working_hours_for(tracking, message)
-    ).call
+    )
+
+    # Si el cliente pidió una fecha/hora concreta ("el viernes a las 16:00"), respetala:
+    # confirmá ese horario si está libre, o ofrecé alternativas cerca del día pedido. Solo
+    # si no pidió nada concreto caemos al comportamiento por defecto (primeros disponibles).
+    requested = requested_datetime_for_booking(appt, timezone)
+    return if try_book_requested_slot(tracking, message, service, requested)
+
+    slots = requested ? service.call(from: requested[:at].beginning_of_day) : service.call
 
     if slots.empty?
       Rails.logger.info '[TrackingBot] 📅 Sin slots disponibles → fallback :interested'
@@ -702,8 +710,43 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return
     end
 
-    offer_slots(tracking, message, slots, format_slots_message(slots, timezone))
+    # Si pidió una hora exacta que estaba ocupada, lo avisamos antes de las alternativas.
+    reply = if requested&.dig(:exact)
+              "Uy, ese horario no está disponible 😕. Estos son los más cercanos:\n\n" \
+                "#{format_slots_lines(slots, timezone)}\n\n¿Cuál te viene bien? Respondé con el número."
+            else
+              format_slots_message(slots, timezone)
+            end
+    offer_slots(tracking, message, slots, reply)
     Rails.logger.info "[TrackingBot] 📅 #{slots.size} slots enviados al contacto — esperando elección"
+  end
+
+  # Convierte el reschedule_data del router (si trae fecha/hora) en { at:, exact: } para la
+  # reserva inicial. `exact` es true solo si el cliente dio una HORA concreta.
+  def requested_datetime_for_booking(appt, timezone)
+    rd = appt.is_a?(Hash) ? appt[:reschedule_data] : nil
+    return nil if rd.blank?
+
+    at = calculate_reschedule_datetime(rd, timezone)
+    return nil if at.blank?
+
+    { at: at, exact: rd[:specific_time].present? }
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ requested_datetime_for_booking falló: #{e.message}"
+    nil
+  end
+
+  # Si el cliente pidió una hora exacta y está libre, la confirma directo (pide email si hace
+  # falta) y limpia cualquier estado pendiente. Devuelve true si tomó el horario, false si no.
+  def try_book_requested_slot(tracking, message, service, requested)
+    return false unless requested&.dig(:exact)
+
+    slot = service.slot_for(requested[:at])
+    return false unless slot
+
+    Rails.logger.info "[TrackingBot] 📅 Horario pedido disponible (#{requested[:at]}) → confirmando"
+    proceed_with_selected_slot(tracking, message, slot_payload(slot))
+    true
   end
 
   # El contacto pregunta/insiste por una cita pero ya tiene una agendada: en lugar de
