@@ -87,6 +87,9 @@ export default {
       // 'inline' | 'modal': textarea donde se insertará + posición del cursor
       pickerTarget: 'inline',
       pickerInsertPos: null,
+      // scroll del textarea al abrir el picker; se restaura tras insertar para que la
+      // vista no salte al final (focus + setSelectionRange fuerza scroll al cursor).
+      pickerScrollTop: 0,
       // fuentes Discourse de la cuenta (para la directiva @buscar_foro)
       discourseSources: [],
     };
@@ -659,6 +662,7 @@ export default {
       this.pickerInsertPos = textarea
         ? textarea.selectionStart
         : (this.form.complementary_prompt || '').length;
+      this.pickerScrollTop = textarea ? textarea.scrollTop : 0;
     },
     // Inserta un token aislado por espacios en la posición recordada
     insertTokenAtPrompt(rawToken) {
@@ -678,6 +682,8 @@ export default {
           const caret = newBefore.length;
           textarea.focus();
           textarea.setSelectionRange(caret, caret);
+          // Restaura el scroll previo: evita el salto al final al recuperar el foco.
+          textarea.scrollTop = this.pickerScrollTop;
         }
       });
     },
