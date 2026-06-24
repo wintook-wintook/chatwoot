@@ -4,7 +4,7 @@
 # Controlador: TrackingTemplates::AttachmentsController
 # Descripción: CRUD de adjuntos de un Agente IA (anidado bajo tracking_templates,
 #   account-scoped). Cada adjunto tiene un `name` (slug) que la directiva
-#   @adjunto:name usa en el prompt complementario.
+#   {{name}} usa en el prompt complementario.
 # Acciones: index, create (multipart: file + name), update (renombrar), destroy
 # ================================================================================
 
@@ -26,7 +26,7 @@ class Api::V1::Accounts::TrackingTemplates::AttachmentsController < Api::V1::Acc
   def update
     old_name = @attachment.name
     @attachment.update!(name: params[:name])
-    # Mantiene vivas las referencias @adjunto:viejo → @adjunto:nuevo en el agente y sus seguimientos
+    # Mantiene vivas las referencias {{viejo}} → {{nuevo}} en el agente y sus seguimientos
     if old_name != @attachment.name
       AiAgentAttachments::DirectiveReferenceService.rename(@tracking_template, old_name, @attachment.name)
     end
@@ -36,7 +36,7 @@ class Api::V1::Accounts::TrackingTemplates::AttachmentsController < Api::V1::Acc
   def destroy
     name = @attachment.name
     @attachment.destroy!
-    # Limpia las referencias @adjunto:name colgantes en el agente y sus seguimientos vivos
+    # Limpia las referencias {{name}} colgantes en el agente y sus seguimientos vivos
     AiAgentAttachments::DirectiveReferenceService.remove(@tracking_template, name)
     head :ok
   end

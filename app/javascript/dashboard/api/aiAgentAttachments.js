@@ -4,7 +4,7 @@
 // ================================================================================
 // API Client: AiAgentAttachmentsAPI
 // Descripción: adjuntos de un Agente IA, anidados bajo tracking_templates/:id/attachments
-//   (account-scoped). El `name` (slug) es la clave de la directiva @adjunto:name.
+//   (account-scoped). El `name` (slug) es la clave de la directiva {{name}}.
 // ================================================================================
 
 import ApiClient from './ApiClient';

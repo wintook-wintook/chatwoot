@@ -16,7 +16,7 @@ código aún no existe.
 ## Hecho
 
 - [x] Bóveda de diseño creada (esta carpeta), espejo de `vault-contact-tracking`.
-- [x] Decidida la directiva: **`@adjunto:nombre`**.
+- [x] Decidida la directiva: **`{{nombre}}`**.
 - [x] Anclado el punto de UI: tab "📎 Archivos" tras "📅 Agendas" en `EditTemplate.vue`.
 - [x] Confirmado: almacenamiento con **ActiveStorage** (nativo Chatwoot); se **extiende**
       `tracking_template` (no entidad nueva).
@@ -26,8 +26,8 @@ código aún no existe.
       `TrackingTemplate`, controlador CRUD anidado y rutas. Rutas y validaciones verificadas.
 - [x] **Frontend construido:** api client `aiAgentAttachments.js`, tab "📎 Archivos" en
       `EditTemplate.vue` (subir/listar/borrar + snippet copiable) y **autocompletado
-      `@adjunto:`** con `MentionBox` en el textarea de Entrenamiento. i18n es/en.
-- [x] **Parser de envío construido:** `send_auto_reply` resuelve `@adjunto:nombre`,
+      `{{nombre}}`** con `MentionBox` en el textarea de Entrenamiento. i18n es/en.
+- [x] **Parser de envío construido:** `send_auto_reply` resuelve `{{nombre}}`,
       reutiliza el blob (signed_id → MessageBuilder), limpia el texto y respeta
       `MAX_DIRECTIVE_ATTACHMENTS`. Sintaxis OK, código limpio en rubocop. → [[Directiva-y-envio]]
 
@@ -42,5 +42,5 @@ código aún no existe.
 
 - Verificación **visual** de la GUI (tab Archivos + autocompletado) en navegador.
 - UI: renombrar adjunto (API ya lo soporta).
-- Soporte de `@adjunto:` en el mensaje proactivo y combinado con directivas kbase.
+- Soporte de `{{nombre}}` en el mensaje proactivo y combinado con directivas kbase.
 - Validación de tipo/peso por canal. Ver [[Archivos-reales]] y [[Pendiente]].

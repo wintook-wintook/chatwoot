@@ -27,7 +27,7 @@ class AiAgentAttachment < ApplicationRecord
 
   has_one_attached :file
 
-  # Slug inequívoco para que el token @adjunto:name termine sin ambigüedad al parsearse.
+  # Slug inequívoco para que el token {{name}} termine sin ambigüedad al parsearse.
   NAME_FORMAT = /\A[a-zA-Z0-9_-]+\z/
 
   validates :name, presence: true,

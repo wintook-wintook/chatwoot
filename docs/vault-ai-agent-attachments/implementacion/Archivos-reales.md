@@ -19,7 +19,7 @@ tags: [ai-agent-attachments, archivos]
 - [x] `app/controllers/api/v1/accounts/tracking_templates/attachments_controller.rb`
       — CRUD de adjuntos (index/create/update/destroy) **(NUEVO)**
 - [x] `config/routes.rb` — `resources :attachments` anidado en `tracking_templates` **(EDITADO)**
-- [x] Parseo + envío de `@adjunto:nombre` en
+- [x] Parseo + envío de `{{nombre}}` en
       `app/jobs/contact_tracking_response_analyzer_job.rb` (`send_auto_reply` +
       `resolve_attachment_directives` + hint al system prompt + const
       `MAX_DIRECTIVE_ATTACHMENTS`). Reutiliza el blob vía signed_id en MessageBuilder. **(EDITADO)**
@@ -29,7 +29,7 @@ tags: [ai-agent-attachments, archivos]
 - [x] `app/javascript/dashboard/api/aiAgentAttachments.js` — api client (list/upload/rename/remove) **(NUEVO)**
 - [x] `app/javascript/dashboard/routes/dashboard/settings/trackingTemplates/EditTemplate.vue`
       — tab "📎 Archivos" (idx `archivosTabIndex = agendasTabIndex + 1`), subir/listar/borrar +
-      snippet copiable, y **autocompletado `@adjunto:`** con `MentionBox` en el textarea de
+      snippet copiable, y **autocompletado `{{nombre}}`** con `MentionBox` en el textarea de
       Entrenamiento **(EDITADO)**
 - [x] i18n `TRACKING_TEMPLATES.FORM.ATTACHMENTS.*` en `es` y `en` **(EDITADO)**
 

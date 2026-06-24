@@ -35,8 +35,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   AI_GENERATED_REPLIES = ENV.fetch('SENTIMENT_AI_GENERATED_REPLIES', 'true') == 'true'
   DETECT_INTENT        = ENV.fetch('TRACKING_DETECT_INTENT', 'false') == 'true'
   DEBUG_TAG            = ENV.fetch('TRACKING_DEBUG_TAG', 'false') == 'true'
-  # proyecto@ai_agent_attachments: máximo de archivos adjuntados por respuesta (@adjunto:)
+  # proyecto@ai_agent_attachments: máximo de archivos adjuntados por respuesta ({{nombre}})
   MAX_DIRECTIVE_ATTACHMENTS = ENV.fetch('AI_AGENT_MAX_ATTACHMENTS', '5').to_i
+  # Directiva de adjunto: {{nombre}} (admite espacios internos: {{ catalogo }}). El nombre
+  # referencia un archivo del Agente IA (ai_agent_attachments) por su `name`.
+  ATTACHMENT_DIRECTIVE = /\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/
 
   # ==============================================================================
   # Método Principal
@@ -412,7 +415,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         PRÓXIMO CONTACTO PROGRAMADO: #{next_contact} (si el cliente pide reagendar, infórmale amablemente que su próximo contacto ya está programado para esa fecha y que si necesita cambiarlo debe comunicarse con un asesor)
         #{tracking.ai_context.present? ? "BASE DE CONOCIMIENTO:\n#{tracking.ai_context.truncate(800)}\n" : ""}
         #{clean_cp.present? ? "INSTRUCCIONES ADICIONALES:\n#{clean_cp}" : ""}
-        #{clean_cp.include?('@adjunto:') ? "ENVÍO DE ARCHIVOS: Para enviar un archivo al cliente, escribe la directiva EXACTA (por ejemplo @adjunto:nombre) dentro de tu respuesta, tal cual y sin comillas; el sistema la sustituirá por el archivo adjunto. No la describas ni la traduzcas." : ""}
+        #{clean_cp.match?(ATTACHMENT_DIRECTIVE) ? "ENVÍO DE ARCHIVOS: Para enviar un archivo al cliente, escribe la directiva EXACTA (por ejemplo {{nombre}}) dentro de tu respuesta, tal cual y sin comillas; el sistema la sustituirá por el archivo adjunto. No la describas ni la traduzcas." : ""}
       SYSTEM
 
       user_prompt = <<~USER.strip
@@ -1317,7 +1320,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return unless AUTO_REPLY_ENABLED
     return if reply_content.blank?
 
-    # proyecto@ai_agent_attachments: resuelve @adjunto:nombre → archivos del Agente IA
+    # proyecto@ai_agent_attachments: resuelve {{nombre}} → archivos del Agente IA
     clean_content, attachment_signed_ids = resolve_attachment_directives(tracking, reply_content)
     return if clean_content.blank? && attachment_signed_ids.empty?
 
@@ -1339,13 +1342,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   # proyecto@ai_agent_attachments
-  # Extrae las directivas @adjunto:nombre del texto de la IA, resuelve cada nombre a un
+  # Extrae las directivas {{nombre}} del texto de la IA, resuelve cada nombre a un
   # archivo del Agente IA (tracking_template) y devuelve [texto_limpio, signed_ids_de_blobs].
   # Reutiliza el blob ActiveStorage existente (sin duplicar almacenamiento) pasando su
   # signed_id a MessageBuilder, que lo trata como adjunto existente.
   def resolve_attachment_directives(tracking, content)
     template = tracking.tracking_template
-    names = content.scan(/@adjunto:([a-zA-Z0-9_-]+)/i).flatten
+    names = content.scan(ATTACHMENT_DIRECTIVE).flatten
     return [content, []] if names.blank? || template.nil?
 
     signed_ids = []
@@ -1356,13 +1359,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       if attachment&.file&.attached?
         signed_ids << attachment.file.blob.signed_id
       else
-        Rails.logger.warn "[TrackingBot] 📎 @adjunto:#{name} no encontrado en Agente IA ##{template.id}"
+        Rails.logger.warn "[TrackingBot] 📎 {{#{name}}} no encontrado en Agente IA ##{template.id}"
       end
     end
 
-    # Quita la directiva del texto, incluyendo una extensión opcional pegada
-    # (la IA a veces escribe @adjunto:ficha_tecnica.svg y dejaría ".svg" colgando).
-    clean = content.gsub(/@adjunto:[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9]{1,8})?/i, '')
+    # Quita la directiva del texto. {{ }} es autodelimitado, así que no hay extensión colgada.
+    clean = content.gsub(ATTACHMENT_DIRECTIVE, '')
                    .gsub(/[ \t]{2,}/, ' ')
                    .gsub(/ +([.,;:!?])/, '\1')
                    .gsub(/\n{3,}/, "\n\n")
