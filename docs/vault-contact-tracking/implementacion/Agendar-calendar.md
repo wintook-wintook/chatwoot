@@ -150,6 +150,32 @@ Puedo moverla o cancelarla. ¿Qué preferís?"* — **no re-ofrece horarios**.
 
 ---
 
+## Interpretación de la fecha/hora pedida
+
+El `RouterService` llena `reschedule_data` con lo que pidió el cliente. La regla de oro:
+**el LLM entiende el lenguaje, Ruby calcula las fechas** (el modelo es poco confiable con
+aritmética de calendario).
+
+| Pedido del cliente | Campo del router | Resolución |
+|--------------------|------------------|------------|
+| "el martes", "next Tuesday", "terça" | `weekday` (1=lunes … 7=domingo, ISO) | Ruby calcula la **próxima ocurrencia** de ese día (`weekday_to_date`). Idioma-neutro. |
+| "en dos semanas", "la semana que viene" | `weeks_ahead` (entero) | Suma semanas a la próxima ocurrencia. Solo si es explícito. |
+| "el 30 de junio", "5/7" | `specific_date` (YYYY-MM-DD) | Fecha de calendario explícita. `weekday` tiene prioridad si ambos vienen. |
+| "a las 16:00", "4 de la tarde" | `specific_time` (HH:MM) | Hora exacta → intenta ese horario puntual. |
+| "por la mañana/tarde/noche" | `time_of_day` (morning/afternoon/evening) | Franja sin hora exacta. |
+
+- **Días de semana → determinístico:** "el próximo martes" desde un miércoles = el martes
+  más cercano (no el de la semana siguiente). Si hoy ES ese día, va al de la semana próxima.
+  `weekday` gana sobre `specific_date` aunque el LLM redundante mande una fecha mal.
+- **Franja horaria** (`time_of_day`): la búsqueda se **ancla al inicio de la franja**
+  (tarde→12:00, noche→18:00, mañana→inicio del día) vía `booking_search_anchor`, así los
+  primeros slots disponibles caen dentro de la franja pedida. Franjas: **mañana <12, tarde
+  12–18, noche ≥18**.
+- **Hora exacta libre** → la confirma directo (pide email si falta). **Hora exacta ocupada**
+  o **solo día/franja** → ofrece los horarios de ese día/franja para que elija.
+
+---
+
 ## Zona horaria (anclada a Google)
 
 `appointment_timezone` — prioridad:
@@ -189,6 +215,29 @@ Al confirmar (`confirm_and_create_appointment`):
 - **Sin disponibilidad** (`book_appointment_no_slots`): misma pausa + nota "requiere
   atención humana".
 - **Ya tiene cita y pide otra**: nunca duplica; recuerda la existente y ofrece mover/cancelar.
+
+---
+
+## Ejemplo real anotado (conversación #49)
+
+Caso real de punta a punta (hoy = miércoles 24/06, zona México). Muestra reservar con
+día+franja, elegir, mover por franja, consultar y conversar — todo en un mismo hilo.
+
+| # | Cliente | Bot | Qué pasó por dentro |
+|---|---------|-----|---------------------|
+| 1 | "Quiero una cita **por la tarde el día martes**" | Ofrece *martes 30 jun · 12:00 / 13:00 / 14:00…* | `book_new`. `weekday=2` → Ruby resuelve **martes 30** (no el de la otra semana). `time_of_day=afternoon` → búsqueda anclada a **12:00**. Ofrece slots de la tarde. `[PENDING_SLOT]` |
+| 2 | "**4**" | "📧 ¿A qué correo…?" | Elección por número (`handle_slot_selection`). Sin email guardado → `[PENDING_EMAIL]` |
+| 3 | "aliverio.mx@gmail.com" | "✅ Tu cita está agendada para el **martes 30 a las 15:00–16:00**" | `confirm_and_create_appointment` → crea el evento en Google, guarda `appointment_event_id`, manda invitación |
+| 4 | "Mi cita la puedo **cambiar por la mañana**" | "✅ Tu cita está agendada para el **martes 30 a las 09:00–10:00**" | `move` con `time_of_day=morning`. Mueve el **mismo evento** de Google (no duplica) a un horario de la mañana |
+| 5 | "**recuérdame cuándo es la cita**" | "Ya tenés una cita agendada para el **martes 30 a las 09:00**. Puedo moverla o cancelarla." | `query` → `inform_existing_appointment` (no re-ofrece horarios) |
+| 6 | "Quiero un servicio… **¿qué ofrecen?**" | Lista de servicios | `appointment_action=null` → **respuesta conversacional** (no toca el calendario) |
+| 7 | "ese día quiero una **endodoncia**" | "Ya tenés una cita el martes 30 a las 09:00…" | El LLM lo asocia a la cita existente → `query` → recuerda la cita |
+| 8 | "Gracias" | "¡De nada! Te esperamos el martes 30 a las 09:00 para tu endodoncia 🦷" | Cierre conversacional, con la cita en contexto |
+
+**Lo que valida este hilo:** resolución determinística del día (#1), franja al reservar (#1)
+y al mover (#4), selección por número (#2), creación y **movimiento del mismo evento** en
+Google (#3/#4), consulta de cita existente sin re-ofrecer (#5/#7), y convivencia con
+respuestas no-cita (#6) — todo bajo la misma directiva `@agendar_calendar`.
 
 ---
 
