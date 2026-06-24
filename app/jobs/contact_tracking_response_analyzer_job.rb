@@ -253,11 +253,44 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   # proyecto@bot_seguimiento_calendar — zona horaria para agendar (slots, hora mostrada,
-  # evento). Prioridad: la del Agente IA (tracking_template) → la del inbox → default.
+  # evento). Se ancla a la zona REAL de Google Calendar para que la hora del chat coincida
+  # con la que el contacto ve en su agenda. Si no hay calendario/falla la API, cae a la del
+  # Agente IA (tracking_template) → la del inbox → default.
   def appointment_timezone(tracking, message)
-    tracking&.tracking_template&.timezone.presence ||
+    google_calendar_timezone(tracking).presence ||
+      tracking&.tracking_template&.timezone.presence ||
       message&.conversation&.inbox&.timezone.presence ||
       'America/Mexico_City'
+  end
+
+  # proyecto@bot_seguimiento_calendar — lee la zona horaria de la cuenta de Google Calendar
+  # vinculada (la que el usuario ve en su calendario) y la cachea 12h en Redis para no pegar
+  # a la API en cada mensaje. Devuelve el IANA tz o nil si no hay calendario / falla.
+  def google_calendar_timezone(tracking)
+    cal_id = appointment_timezone_calendar_id(tracking)
+    return nil if cal_id.blank?
+
+    cache_key = "gcal_tz::#{cal_id}"
+    cached = Redis::Alfred.get(cache_key)
+    return cached if cached.present?
+
+    integration = UserCalendarIntegration.find_by(id: cal_id)
+    return nil if integration.nil?
+
+    tz = GoogleCalendarService.new(integration).account_timezone
+    Redis::Alfred.setex(cache_key, tz, 12.hours) if tz.present?
+    tz
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ google_calendar_timezone falló: #{e.message}"
+    nil
+  end
+
+  # Agenda de referencia para la zona: la de la cita ya creada, o la primera configurada.
+  def appointment_timezone_calendar_id(tracking)
+    return nil if tracking.blank?
+
+    tracking.appointment_calendar_id.presence ||
+      Array(appointment_calendar_ids(tracking)).first
   end
 
   def classify_route(tracking, message)

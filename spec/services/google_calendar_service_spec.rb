@@ -31,6 +31,22 @@ RSpec.describe GoogleCalendarService do
     end
   end
 
+  describe '#account_timezone' do
+    it 'devuelve el IANA tz de la cuenta de Google' do
+      response = instance_double(HTTParty::Response, success?: true, parsed_response: { 'value' => 'America/Argentina/Buenos_Aires' })
+      allow(HTTParty).to receive(:get).and_return(response)
+
+      expect(service.account_timezone).to eq('America/Argentina/Buenos_Aires')
+    end
+
+    it 'devuelve nil cuando la API falla (no rompe el flujo)' do
+      response = instance_double(HTTParty::Response, success?: false, code: 500, body: 'boom')
+      allow(HTTParty).to receive(:get).and_return(response)
+
+      expect(service.account_timezone).to be_nil
+    end
+  end
+
   # proyecto@bot_seguimiento_calendar — la invitación debe llegar por correo a invitados
   # de CUALQUIER dominio (no solo gmail): hay que pasar sendUpdates=all.
   describe 'envío de invitaciones por correo (sendUpdates=all)' do

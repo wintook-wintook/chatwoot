@@ -127,6 +127,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
         allow(GoogleCalendarService).to receive(:new).and_return(calendar_service)
         allow(calendar_service).to receive(:update_event).and_return('id' => 'evt_old')
         allow(calendar_service).to receive(:create_event)
+        allow(calendar_service).to receive(:account_timezone).and_return(nil)
         allow(job).to receive(:send_auto_reply)
       end
 
@@ -253,6 +254,38 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
 
     it 'usa el default cuando no hay zona ni en el agente ni en el inbox' do
       expect(job.send(:appointment_timezone, nil, nil)).to eq('America/Mexico_City')
+    end
+
+    it 'ancla a la zona de Google Calendar por encima de la del agente y el inbox' do
+      tracking_template.update!(timezone: 'America/Mexico_City')
+      allow(job).to receive(:google_calendar_timezone).with(tracking).and_return('America/Argentina/Buenos_Aires')
+      expect(job.send(:appointment_timezone, tracking, message)).to eq('America/Argentina/Buenos_Aires')
+    end
+  end
+
+  describe '#google_calendar_timezone' do
+    let(:tracking) { ContactTracking.new(account: account, tracking_template: tracking_template) }
+
+    it 'devuelve nil cuando el tracking no tiene calendario configurado' do
+      expect(job.send(:google_calendar_timezone, tracking)).to be_nil
+    end
+
+    it 'devuelve el valor cacheado en Redis sin pegar a la API de Google' do
+      allow(job).to receive(:appointment_timezone_calendar_id).with(tracking).and_return(7)
+      allow(Redis::Alfred).to receive(:get).with('gcal_tz::7').and_return('America/Bogota')
+      expect(UserCalendarIntegration).not_to receive(:find_by)
+      expect(job.send(:google_calendar_timezone, tracking)).to eq('America/Bogota')
+    end
+
+    it 'lee la zona de Google y la cachea cuando no está en Redis' do
+      integration = instance_double(UserCalendarIntegration)
+      gcal = instance_double(GoogleCalendarService, account_timezone: 'America/Argentina/Buenos_Aires')
+      allow(job).to receive(:appointment_timezone_calendar_id).with(tracking).and_return(7)
+      allow(Redis::Alfred).to receive(:get).with('gcal_tz::7').and_return(nil)
+      allow(UserCalendarIntegration).to receive(:find_by).with(id: 7).and_return(integration)
+      allow(GoogleCalendarService).to receive(:new).with(integration).and_return(gcal)
+      expect(Redis::Alfred).to receive(:setex).with('gcal_tz::7', 'America/Argentina/Buenos_Aires', 12.hours)
+      expect(job.send(:google_calendar_timezone, tracking)).to eq('America/Argentina/Buenos_Aires')
     end
   end
 
@@ -771,6 +804,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     before do
       tracking_template.update!(calendar_integration_ids: [7])
       allow(ContactTrackings::AvailabilitySlotService).to receive(:new).and_return(slot_service)
+      allow(job).to receive(:google_calendar_timezone).and_return(nil)
       allow(job).to receive(:send_auto_reply)
     end
 
