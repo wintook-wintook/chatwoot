@@ -554,14 +554,31 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return handle_followup_reschedule(tracking, message, action_data) if cal_ids.blank?
 
     timezone = appointment_timezone(tracking, message)
-    target   = move_target_time(tracking, reschedule_data, timezone)
 
-    return if try_move_to_exact_slot(tracking, message, target, cal_ids, timezone)
+    # Si el cliente dio una HORA concreta, intentamos ese horario exacto (o alternativas si
+    # está ocupado). Si solo dio el DÍA, NO asumimos la hora anterior: ofrecemos los horarios
+    # disponibles de ese día para que elija.
+    if reschedule_move_has_time?(reschedule_data)
+      target = move_target_time(tracking, reschedule_data, timezone)
+      return if try_move_to_exact_slot(tracking, message, target, cal_ids, timezone)
 
-    offer_move_alternatives(tracking, message, target, cal_ids, timezone)
+      offer_move_alternatives(tracking, message, target, cal_ids, timezone)
+    else
+      day = calculate_reschedule_datetime(reschedule_data, timezone)
+      offer_move_alternatives(tracking, message, day, cal_ids, timezone,
+                              intro: '¡Claro! Para ese día tengo estos horarios:')
+    end
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error moviendo la cita: #{e.message}"
     send_auto_reply(tracking, message, generate_action_reply(tracking, message, :general_error))
+  end
+
+  # ¿El pedido de reagendado trae una HORA concreta? (no solo un día). relative_days o
+  # specific_date sin hora = solo día → ofrecemos los horarios disponibles de ese día.
+  def reschedule_move_has_time?(reschedule_data)
+    reschedule_data[:specific_time].present? ||
+      reschedule_data[:relative_minutes].present? ||
+      reschedule_data[:relative_hours].present?
   end
 
   def ask_move_when(tracking, message)
@@ -585,15 +602,17 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     true
   end
 
-  # Hora pedida ocupada o sin hora interpretable: ofrece horarios cercanos para mover.
-  def offer_move_alternatives(tracking, message, target, cal_ids, timezone)
+  # Ofrece horarios para mover la cita, anclados al día pedido. `intro` permite distinguir
+  # "ese horario está ocupado" (hora pedida no libre) de "para ese día tengo estos horarios"
+  # (el cliente dio solo el día).
+  def offer_move_alternatives(tracking, message, target, cal_ids, timezone, intro: nil)
     service = slot_service_for(cal_ids, tracking, timezone)
     alternatives = target ? service.call(from: target.beginning_of_day) : service.call
 
     if alternatives.any?
-      Rails.logger.info '[TrackingBot] 📅 Hora pedida no disponible → ofreciendo horarios para mover la cita'
-      reply = "Uy, ese horario no está disponible 😕. Para mover tu cita tengo estos horarios:\n\n" \
-              "#{format_slots_lines(alternatives, timezone)}\n\n¿Cuál te viene bien? Respondé con el número."
+      Rails.logger.info '[TrackingBot] 📅 Ofreciendo horarios para mover la cita'
+      intro ||= 'Uy, ese horario no está disponible 😕. Para mover tu cita tengo estos horarios:'
+      reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone)}\n\n¿Cuál te viene bien? Respondé con el número."
       offer_slots(tracking, message, alternatives, reply)
     else
       send_auto_reply(tracking, message,
