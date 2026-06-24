@@ -566,10 +566,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       target = move_target_time(tracking, reschedule_data, timezone)
       return if try_move_to_exact_slot(tracking, message, target, cal_ids, timezone)
 
-      offer_move_alternatives(tracking, message, target, cal_ids, timezone)
+      offer_move_alternatives(tracking, message, target&.beginning_of_day, cal_ids, timezone)
     else
-      day = calculate_reschedule_datetime(reschedule_data, timezone)
-      offer_move_alternatives(tracking, message, day, cal_ids, timezone,
+      day  = calculate_reschedule_datetime(reschedule_data, timezone)
+      from = booking_search_anchor(day, reschedule_data[:time_of_day], timezone)
+      offer_move_alternatives(tracking, message, from, cal_ids, timezone,
                               intro: '¡Claro! Para ese día tengo estos horarios:')
     end
   rescue StandardError => e
@@ -606,12 +607,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     true
   end
 
-  # Ofrece horarios para mover la cita, anclados al día pedido. `intro` permite distinguir
-  # "ese horario está ocupado" (hora pedida no libre) de "para ese día tengo estos horarios"
-  # (el cliente dio solo el día).
-  def offer_move_alternatives(tracking, message, target, cal_ids, timezone, intro: nil)
+  # Ofrece horarios para mover la cita, anclados a `from` (inicio del día o de la franja pedida).
+  # `intro` permite distinguir "ese horario está ocupado" (hora pedida no libre) de "para ese
+  # día tengo estos horarios" (el cliente dio solo el día/franja).
+  def offer_move_alternatives(tracking, message, from, cal_ids, timezone, intro: nil)
     service = slot_service_for(cal_ids, tracking, timezone)
-    alternatives = target ? service.call(from: target.beginning_of_day) : service.call
+    alternatives = from ? service.call(from: from) : service.call
 
     if alternatives.any?
       Rails.logger.info '[TrackingBot] 📅 Ofreciendo horarios para mover la cita'
@@ -717,7 +718,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     requested = requested_datetime_for_booking(appt, timezone)
     return if try_book_requested_slot(tracking, message, service, requested)
 
-    slots = requested ? service.call(from: requested[:at].beginning_of_day) : service.call
+    slots = if requested
+              from = booking_search_anchor(requested[:at], requested[:time_of_day], timezone)
+              service.call(from: from)
+            else
+              service.call
+            end
 
     if slots.empty?
       Rails.logger.info '[TrackingBot] 📅 Sin slots disponibles → fallback :interested'
@@ -753,10 +759,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     at = calculate_reschedule_datetime(rd, timezone)
     return nil if at.blank?
 
-    { at: at, exact: rd[:specific_time].present? }
+    { at: at, exact: rd[:specific_time].present?, time_of_day: rd[:time_of_day] }
   rescue StandardError => e
     Rails.logger.warn "[TrackingBot] ⚠️ requested_datetime_for_booking falló: #{e.message}"
     nil
+  end
+
+  # Inicio de la búsqueda de slots para un día dado, respetando la franja pedida: "tarde"
+  # arranca a las 12:00, "noche" a las 18:00, "mañana" (o sin franja) desde el inicio del día.
+  # Como el servicio devuelve los primeros disponibles desde aquí, así caen en la franja pedida.
+  TIME_OF_DAY_START = { 'afternoon' => 12, 'evening' => 18 }.freeze
+  def booking_search_anchor(day, time_of_day, timezone)
+    local = day.in_time_zone(timezone)
+    hour  = TIME_OF_DAY_START[time_of_day.to_s]
+    hour ? local.change(hour: hour, min: 0, sec: 0) : local.beginning_of_day
   end
 
   # Si el cliente pidió una hora exacta y está libre, la confirma directo (pide email si hace

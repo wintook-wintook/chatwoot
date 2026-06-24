@@ -59,6 +59,7 @@ module ContactTrackings
           "relative_days":    <null o número>,
           "specific_date":    <null o "YYYY-MM-DD">,
           "specific_time":    <null o "HH:MM">,
+          "time_of_day":      <null | "morning" | "afternoon" | "evening">,
           "natural":          <null o descripción natural como "mañana a las 3pm">
         }
       }
@@ -102,7 +103,8 @@ module ContactTrackings
       (p. ej. "el próximo martes" → la fecha que figura como martes). NO calcules la fecha a mano:
       usá la que está en la lista. Para "ese mismo día" / "la misma fecha", usá la fecha de la cita
       actual de ESTADO DE LA CITA. Incluí "specific_time" (HH:MM 24h) solo cuando mencione una hora
-      concreta.
+      concreta. Si menciona una FRANJA sin hora exacta ("por la mañana/tarde/noche"), poné
+      "time_of_day" (morning/afternoon/evening) y dejá "specific_time" en null.
 
       ESTADO DE LA CITA: %{appointment_state}
 
@@ -218,13 +220,19 @@ module ContactTrackings
         relative_days:    data['relative_days']&.to_i,
         specific_date:    data['specific_date'].presence,
         specific_time:    data['specific_time'].presence,
+        time_of_day:      parse_time_of_day(data['time_of_day']),
         natural:          data['natural'].presence
       }.compact
 
-      # `natural` es solo una descripción legible ("cambiar la cita"); sin un campo de
-      # fecha/hora REAL no hay reagendado pedido. Devolvemos vacío para que el handler
-      # pregunte cuándo, en vez de mover la cita a hoy conservando la hora vieja.
-      parsed.except(:natural).empty? ? {} : parsed
+      # `natural` (descripción legible) y `time_of_day` (franja sin día) no son, por sí solos,
+      # una fecha accionable: sin un día/hora REAL no hay reagendado pedido, así que devolvemos
+      # vacío para que el handler pregunte cuándo en vez de mover la cita a ciegas.
+      parsed.except(:natural, :time_of_day).empty? ? {} : parsed
+    end
+
+    def parse_time_of_day(value)
+      tod = value.to_s.strip.downcase
+      %w[morning afternoon evening].include?(tod) ? tod : nil
     end
 
     def fallback(reason)
