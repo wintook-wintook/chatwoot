@@ -59,6 +59,18 @@ class GoogleCalendarService
     true
   end
 
+  # Zona horaria de la cuenta de Google (la que el usuario ve en su Google Calendar).
+  # Google muestra los eventos en ESTA zona sin importar el `timeZone` con que se creó el
+  # evento. Anclar el bot a esta zona evita que la hora del chat y la del calendario difieran.
+  # Devuelve el IANA tz (p.ej. "America/Mexico_City") o nil si la API falla.
+  def account_timezone
+    response = get('/users/me/settings/timezone')
+    response['value'].presence
+  rescue StandardError => e
+    Rails.logger.warn "[GoogleCalendarService] ⚠️ account_timezone falló: #{e.message}"
+    nil
+  end
+
   def list_calendars
     response = get('/users/me/calendarList')
     (response['items'] || []).map do |cal|

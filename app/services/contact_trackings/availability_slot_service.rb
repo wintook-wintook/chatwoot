@@ -10,10 +10,15 @@ module ContactTrackings
     DAYS_AHEAD         = 5   # días hábiles a consultar
     MAX_SLOTS          = 5   # máximo de slots a retornar
 
-    def initialize(calendar_integration_ids:, timezone: 'America/Mexico_City', slot_duration: DEFAULT_DURATION)
+    # `working_hours:` — colección de WorkingHour del inbox (Opción A). Si es nil/vacía, se
+    # usa el horario por defecto (9–18, lun–vie). Quien llama solo lo pasa cuando el inbox
+    # tiene working_hours_enabled?, así un inbox sin configurar mantiene el comportamiento previo.
+    def initialize(calendar_integration_ids:, timezone: 'America/Mexico_City', slot_duration: DEFAULT_DURATION,
+                   working_hours: nil)
       @calendar_integration_ids = Array(calendar_integration_ids).map(&:to_i).uniq
       @timezone      = timezone.presence || 'America/Mexico_City'
       @slot_duration = slot_duration.to_i.positive? ? slot_duration.to_i : DEFAULT_DURATION
+      @work_windows  = build_work_windows(working_hours)
     end
 
     # `from:` permite anclar la búsqueda cerca de un día/hora pedido por el cliente
@@ -131,11 +136,40 @@ module ContactTrackings
       local_start = slot_start.in_time_zone(@timezone)
       local_end   = slot_end.in_time_zone(@timezone)
 
+      return default_work_hours?(local_start, local_end) if @work_windows.nil?
+
+      window = @work_windows[local_start.wday]
+      return false if window.blank?
+
+      day_start = local_start.beginning_of_day
+      start_min = ((local_start - day_start) / 60).round
+      end_min   = ((local_end - day_start) / 60).round
+      start_min >= window[:open] && end_min <= window[:close]
+    end
+
+    # Horario por defecto (sin working_hours del inbox): 9–18, lun–vie. En zona @timezone.
+    def default_work_hours?(local_start, local_end)
       return false if local_start.saturday? || local_start.sunday?
 
       local_start.hour >= WORK_HOUR_START &&
         local_start.hour < WORK_HOUR_END &&
         (local_end.hour < WORK_HOUR_END || (local_end.hour == WORK_HOUR_END && local_end.min == 0))
+    end
+
+    # Normaliza los WorkingHour del inbox a { day_of_week => { open: min, close: min } }.
+    # Los días cerrados (closed_all_day o sin registro) quedan ausentes → no disponibles.
+    def build_work_windows(working_hours)
+      records = working_hours.respond_to?(:to_a) ? working_hours.to_a : Array(working_hours)
+      return nil if records.blank?
+
+      records.each_with_object({}) do |wh, acc|
+        next if wh.closed_all_day?
+
+        acc[wh.day_of_week] = {
+          open:  (wh.open_hour.to_i * 60) + wh.open_minutes.to_i,
+          close: (wh.close_hour.to_i * 60) + wh.close_minutes.to_i
+        }
+      end
     end
 
     def overlaps_busy?(slot_start, slot_end, busy_periods)
@@ -149,14 +183,25 @@ module ContactTrackings
       (time + (@slot_duration - remainder).minutes).change(sec: 0)
     end
 
+    # Avanza el horizonte de búsqueda contando solo días ABIERTOS (según working_hours del
+    # inbox, o lun–vie por defecto). Guard de 60 iteraciones por si todos los días están cerrados.
     def business_days_from_now(start_time, days)
       date  = start_time
       count = 0
-      while count < days
+      guard = 0
+      while count < days && guard < 60
         date  += 1.day
-        count += 1 unless date.saturday? || date.sunday?
+        count += 1 if open_day?(date)
+        guard += 1
       end
       date.end_of_day
+    end
+
+    def open_day?(time)
+      local = time.in_time_zone(@timezone)
+      return !(local.saturday? || local.sunday?) if @work_windows.nil?
+
+      @work_windows[local.wday].present?
     end
   end
 end

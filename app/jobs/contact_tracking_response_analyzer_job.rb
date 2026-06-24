@@ -138,7 +138,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                 handle_interested(tracking, message, route_result[:confidence])
                 true
               when :book_appointment
-                handle_book_appointment(tracking, message)
+                handle_book_appointment(tracking, message, route_result)
                 true
               when :reschedule
                 handle_reschedule(tracking, message, route_result)
@@ -152,10 +152,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                   BotSeller::Dispatcher.new(message).dispatch
                   true
                 else
-                  try_kbase_then_conversational(tracking, message)
+                  try_kbase_then_conversational(tracking, message, route_result)
                 end
               else # :tracking o :kbase — kbase decide si tiene respuesta
-                try_kbase_then_conversational(tracking, message)
+                try_kbase_then_conversational(tracking, message, route_result)
               end
 
     save_sentiment_analysis(tracking, route_result, message)
@@ -166,7 +166,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     false
   end
 
-  def try_kbase_then_conversational(tracking, message)
+  def try_kbase_then_conversational(tracking, message, route_result = nil)
     if kbase_available?(message, tracking)
       Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
       kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
@@ -183,16 +183,76 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return true
     end
 
-    # proyecto@bot_seguimiento_calendar — @agendar_calendar: ofrece horarios SOLO cuando el
-    # cliente realmente pide/acepta una cita (no en cualquier mensaje). Así el agente
-    # conversa normal y agenda cuando corresponde, no de forma "eager".
-    if agendar_calendar_directive?(tracking) && calendar_configured?(tracking) && booking_requested?(tracking, message)
-      Rails.logger.info '[TrackingBot] 📅 @agendar_calendar + intención de cita → ofreciendo horarios'
-      handle_book_appointment(tracking, message)
-      return true
+    # proyecto@bot_seguimiento_calendar — @agendar_calendar (appointment-aware): el clasificador
+    # ve el ESTADO DE LA CITA y decide la acción concreta (consultar/agendar/mover/cancelar). No
+    # es "eager": appointment_action es null salvo que el cliente realmente hable de una cita.
+    if agendar_calendar_directive?(tracking) && calendar_configured?(tracking)
+      appt = classify_appointment(tracking, message, route_result)
+      if appt && appt[:appointment_action]
+        Rails.logger.info "[TrackingBot] 📅 @agendar_calendar → acción de cita: #{appt[:appointment_action]}"
+        dispatch_appointment_action(tracking, message, appt)
+        return true
+      end
     end
 
     generate_and_send_conversational_reply(tracking, message)
+  end
+
+  # proyecto@bot_seguimiento_calendar — clasificación appointment-aware. Si DETECT_INTENT está
+  # activo ya tenemos el route_result (con appointment_action); si no, clasificamos solo para
+  # esta decisión, alimentando al LLM con el estado real de la cita.
+  def classify_appointment(tracking, message, route_result = nil)
+    return route_result if route_result&.key?(:appointment_action)
+
+    key = get_api_key(message.account)&.dig(:key)
+    return nil if key.blank?
+
+    ContactTrackings::RouterService.new(
+      tracking, message, key,
+      appointment_state: appointment_state_summary(tracking, message),
+      recent_messages:   get_recent_context(message, 4),
+      current_date:      router_current_date(tracking, message)
+    ).classify
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ classify_appointment falló: #{e.message}"
+    nil
+  end
+
+  # Despacha según la acción de cita resuelta por el LLM. Reutiliza los handlers existentes;
+  # cuando el contacto NO tiene cita, "query"/"move" degradan a agendar una nueva.
+  def dispatch_appointment_action(tracking, message, appt)
+    has_appt = tracking.appointment_event_id.present? && tracking.appointment_at.present?
+
+    case appt[:appointment_action]
+    when :query
+      has_appt ? inform_existing_appointment(tracking, message) : handle_book_appointment(tracking, message, appt)
+    when :move
+      has_appt ? handle_reschedule(tracking, message, appt) : handle_book_appointment(tracking, message, appt)
+    when :cancel
+      handle_cancel_appointment(tracking, message)
+    else # :book_new
+      handle_book_appointment(tracking, message, appt)
+    end
+  end
+
+  # proyecto@bot_seguimiento_calendar — resumen legible del estado de la cita para que el LLM
+  # (clasificación y redacción) decida con contexto en vez de a ciegas.
+  def appointment_state_summary(tracking, message)
+    unless tracking.appointment_event_id.present? && tracking.appointment_at.present?
+      return 'El contacto NO tiene ninguna cita agendada todavía.'
+    end
+
+    timezone = appointment_timezone(tracking, message)
+    "El contacto YA tiene una cita agendada para el #{format_appointment_datetime(tracking.appointment_at, timezone)}."
+  end
+
+  # proyecto@bot_seguimiento_calendar — fecha de hoy (zona del agente) para el RouterService.
+  # Solo sirve de ancla para fechas de calendario explícitas ("el 30 de junio" → necesita el año):
+  # los días de la semana ("el próximo martes") los resuelve Ruby de forma determinística, no el LLM.
+  def router_current_date(tracking, message)
+    day_names = %w[domingo lunes martes miércoles jueves viernes sábado]
+    now = Time.current.in_time_zone(appointment_timezone(tracking, message))
+    "Hoy es #{now.strftime('%Y-%m-%d')} (#{day_names[now.wday]})"
   end
 
   # proyecto@bot_seguimiento_calendar
@@ -206,36 +266,44 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   # proyecto@bot_seguimiento_calendar — zona horaria para agendar (slots, hora mostrada,
-  # evento). Prioridad: la del Agente IA (tracking_template) → la del inbox → default.
+  # evento). Se ancla a la zona REAL de Google Calendar para que la hora del chat coincida
+  # con la que el contacto ve en su agenda. Si no hay calendario/falla la API, cae a la del
+  # Agente IA (tracking_template) → la del inbox → default.
   def appointment_timezone(tracking, message)
-    tracking&.tracking_template&.timezone.presence ||
+    google_calendar_timezone(tracking).presence ||
+      tracking&.tracking_template&.timezone.presence ||
       message&.conversation&.inbox&.timezone.presence ||
       'America/Mexico_City'
   end
 
-  # ¿Hay que ofrecer cita ahora por la directiva @agendar_calendar?
-  # - Si DETECT_INTENT está activo, el router ya resolvió la ruta :book_appointment;
-  #   llegar aquí significa que NO era cita → no re-evaluamos (evita doble clasificación).
-  # - Si DETECT_INTENT está apagado, evaluamos la intención solo para esta decisión, así
-  #   la directiva agenda únicamente cuando el cliente lo pide/acepta (no "eager").
-  def booking_requested?(tracking, message)
-    return false if DETECT_INTENT
+  # proyecto@bot_seguimiento_calendar — lee la zona horaria de la cuenta de Google Calendar
+  # vinculada (la que el usuario ve en su calendario) y la cachea 12h en Redis para no pegar
+  # a la API en cada mensaje. Devuelve el IANA tz o nil si no hay calendario / falla.
+  def google_calendar_timezone(tracking)
+    cal_id = appointment_timezone_calendar_id(tracking)
+    return nil if cal_id.blank?
 
-    appointment_intent?(tracking, message)
+    cache_key = "gcal_tz::#{cal_id}"
+    cached = Redis::Alfred.get(cache_key)
+    return cached if cached.present?
+
+    integration = UserCalendarIntegration.find_by(id: cal_id)
+    return nil if integration.nil?
+
+    tz = GoogleCalendarService.new(integration).account_timezone
+    Redis::Alfred.setex(cache_key, tz, 12.hours) if tz.present?
+    tz
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ google_calendar_timezone falló: #{e.message}"
+    nil
   end
 
-  def appointment_intent?(tracking, message)
-    key = get_api_key(message.account)&.dig(:key)
-    return false if key.blank?
+  # Agenda de referencia para la zona: la de la cita ya creada, o la primera configurada.
+  def appointment_timezone_calendar_id(tracking)
+    return nil if tracking.blank?
 
-    result = ContactTrackings::RouterService.new(
-      tracking, message, key,
-      recent_messages: get_recent_context(message, 4)
-    ).classify
-    result[:route] == :book_appointment
-  rescue StandardError => e
-    Rails.logger.warn "[TrackingBot] ⚠️ appointment_intent? falló: #{e.message}"
-    false
+    tracking.appointment_calendar_id.presence ||
+      Array(appointment_calendar_ids(tracking)).first
   end
 
   def classify_route(tracking, message)
@@ -256,7 +324,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       api_key_data[:key],
       kbase_available:     kbase_available?(message, tracking),
       botseller_available: BotSeller::Dispatcher.configured?,
-      recent_messages:     get_recent_context(message, 4)
+      recent_messages:     get_recent_context(message, 4),
+      appointment_state:   appointment_state_summary(tracking, message),
+      current_date:        router_current_date(tracking, message)
     ).classify
   rescue StandardError => e
     Rails.logger.warn "[TrackingBot] ⚠️ RouterService falló: #{e.message} → :tracking"
@@ -352,6 +422,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
         #{contact_profile}
         OBJETIVO DE LA CONVERSACIÓN: #{tracking.objective}
+        ESTADO DE LA CITA: #{appointment_state_summary(tracking, message)} (si el cliente pregunta por su cita, respóndele con esta fecha/hora exacta; no inventes ni ofrezcas horarios nuevos)
         PRÓXIMO CONTACTO PROGRAMADO: #{next_contact} (si el cliente pide reagendar, infórmale amablemente que su próximo contacto ya está programado para esa fecha y que si necesita cambiarlo debe comunicarse con un asesor)
         #{tracking.ai_context.present? ? "BASE DE CONOCIMIENTO:\n#{tracking.ai_context.truncate(800)}\n" : ""}
         #{clean_cp.present? ? "INSTRUCCIONES ADICIONALES:\n#{clean_cp}" : ""}
@@ -483,14 +554,32 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return handle_followup_reschedule(tracking, message, action_data) if cal_ids.blank?
 
     timezone = appointment_timezone(tracking, message)
-    target   = move_target_time(tracking, reschedule_data, timezone)
 
-    return if try_move_to_exact_slot(tracking, message, target, cal_ids, timezone)
+    # Si el cliente dio una HORA concreta, intentamos ese horario exacto (o alternativas si
+    # está ocupado). Si solo dio el DÍA, NO asumimos la hora anterior: ofrecemos los horarios
+    # disponibles de ese día para que elija.
+    if reschedule_move_has_time?(reschedule_data)
+      target = move_target_time(tracking, reschedule_data, timezone)
+      return if try_move_to_exact_slot(tracking, message, target, cal_ids, timezone)
 
-    offer_move_alternatives(tracking, message, target, cal_ids, timezone)
+      offer_move_alternatives(tracking, message, target&.beginning_of_day, cal_ids, timezone)
+    else
+      day  = calculate_reschedule_datetime(reschedule_data, timezone)
+      from = booking_search_anchor(day, reschedule_data[:time_of_day], timezone)
+      offer_move_alternatives(tracking, message, from, cal_ids, timezone,
+                              intro: '¡Claro! Para ese día tengo estos horarios:')
+    end
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error moviendo la cita: #{e.message}"
     send_auto_reply(tracking, message, generate_action_reply(tracking, message, :general_error))
+  end
+
+  # ¿El pedido de reagendado trae una HORA concreta? (no solo un día). relative_days o
+  # specific_date sin hora = solo día → ofrecemos los horarios disponibles de ese día.
+  def reschedule_move_has_time?(reschedule_data)
+    reschedule_data[:specific_time].present? ||
+      reschedule_data[:relative_minutes].present? ||
+      reschedule_data[:relative_hours].present?
   end
 
   def ask_move_when(tracking, message)
@@ -514,15 +603,17 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     true
   end
 
-  # Hora pedida ocupada o sin hora interpretable: ofrece horarios cercanos para mover.
-  def offer_move_alternatives(tracking, message, target, cal_ids, timezone)
+  # Ofrece horarios para mover la cita, anclados a `from` (inicio del día o de la franja pedida).
+  # `intro` permite distinguir "ese horario está ocupado" (hora pedida no libre) de "para ese
+  # día tengo estos horarios" (el cliente dio solo el día/franja).
+  def offer_move_alternatives(tracking, message, from, cal_ids, timezone, intro: nil)
     service = slot_service_for(cal_ids, tracking, timezone)
-    alternatives = target ? service.call(from: target.beginning_of_day) : service.call
+    alternatives = from ? service.call(from: from) : service.call
 
     if alternatives.any?
-      Rails.logger.info '[TrackingBot] 📅 Hora pedida no disponible → ofreciendo horarios para mover la cita'
-      reply = "Uy, ese horario no está disponible 😕. Para mover tu cita tengo estos horarios:\n\n" \
-              "#{format_slots_lines(alternatives, timezone)}\n\n¿Cuál te viene bien? Respondé con el número."
+      Rails.logger.info '[TrackingBot] 📅 Ofreciendo horarios para mover la cita'
+      intro ||= 'Uy, ese horario no está disponible 😕. Para mover tu cita tengo estos horarios:'
+      reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone)}\n\n¿Cuál te viene bien? Respondé con el número."
       offer_slots(tracking, message, alternatives, reply)
     else
       send_auto_reply(tracking, message,
@@ -537,8 +628,18 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def slot_service_for(cal_ids, tracking, timezone)
     ContactTrackings::AvailabilitySlotService.new(
       calendar_integration_ids: cal_ids, timezone: timezone,
-      slot_duration: tracking.tracking_template&.calendar_event_duration || 30
+      slot_duration: tracking.tracking_template&.calendar_event_duration || 30,
+      working_hours: working_hours_for(tracking, nil)
     )
+  end
+
+  # proyecto@bot_seguimiento_calendar — horarios del inbox (Opción A). Solo si el inbox los
+  # tiene habilitados; si no, devuelve nil y el slot service usa su default (9–18 lun–vie).
+  def working_hours_for(tracking, message)
+    inbox = message&.conversation&.inbox || tracking&.inbox
+    return nil unless inbox&.working_hours_enabled?
+
+    inbox.working_hours
   end
 
   def slot_payload(slot)
@@ -582,7 +683,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar
   # Handler: Agendar cita via Google Calendar
   # ==============================================================================
-  def handle_book_appointment(tracking, message)
+  def handle_book_appointment(tracking, message, appt = nil)
+    # Si el contacto YA tiene una cita activa, no ofrezcas slots nuevos: recuérdale la cita
+    # existente y ofrécele moverla o cancelarla (responde "ya tenés una cita el X").
+    if tracking.appointment_event_id.present? && tracking.appointment_at.present?
+      return inform_existing_appointment(tracking, message)
+    end
+
     Rails.logger.info "[TrackingBot] 📅 BOOK_APPOINTMENT → buscando disponibilidad en calendarios"
 
     cal_ids = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
@@ -594,11 +701,25 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     timezone = appointment_timezone(tracking, message)
     duration = tracking.tracking_template&.calendar_event_duration || 30
-    slots    = ContactTrackings::AvailabilitySlotService.new(
+    service  = ContactTrackings::AvailabilitySlotService.new(
       calendar_integration_ids: cal_ids,
       timezone: timezone,
-      slot_duration: duration
-    ).call
+      slot_duration: duration,
+      working_hours: working_hours_for(tracking, message)
+    )
+
+    # Si el cliente pidió una fecha/hora concreta ("el viernes a las 16:00"), respetala:
+    # confirmá ese horario si está libre, o ofrecé alternativas cerca del día pedido. Solo
+    # si no pidió nada concreto caemos al comportamiento por defecto (primeros disponibles).
+    requested = requested_datetime_for_booking(appt, timezone)
+    return if try_book_requested_slot(tracking, message, service, requested)
+
+    slots = if requested
+              from = booking_search_anchor(requested[:at], requested[:time_of_day], timezone)
+              service.call(from: from)
+            else
+              service.call
+            end
 
     if slots.empty?
       Rails.logger.info '[TrackingBot] 📅 Sin slots disponibles → fallback :interested'
@@ -614,8 +735,73 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return
     end
 
-    offer_slots(tracking, message, slots, format_slots_message(slots, timezone))
+    # Si pidió una hora exacta que estaba ocupada, lo avisamos antes de las alternativas.
+    reply = if requested&.dig(:exact)
+              "Uy, ese horario no está disponible 😕. Estos son los más cercanos:\n\n" \
+                "#{format_slots_lines(slots, timezone)}\n\n¿Cuál te viene bien? Respondé con el número."
+            else
+              format_slots_message(slots, timezone)
+            end
+    offer_slots(tracking, message, slots, reply)
     Rails.logger.info "[TrackingBot] 📅 #{slots.size} slots enviados al contacto — esperando elección"
+  end
+
+  # Convierte el reschedule_data del router (si trae fecha/hora) en { at:, exact: } para la
+  # reserva inicial. `exact` es true solo si el cliente dio una HORA concreta.
+  def requested_datetime_for_booking(appt, timezone)
+    rd = appt.is_a?(Hash) ? appt[:reschedule_data] : nil
+    return nil if rd.blank?
+
+    at = calculate_reschedule_datetime(rd, timezone)
+    return nil if at.blank?
+
+    { at: at, exact: rd[:specific_time].present?, time_of_day: rd[:time_of_day] }
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ requested_datetime_for_booking falló: #{e.message}"
+    nil
+  end
+
+  # Inicio de la búsqueda de slots para un día dado, respetando la franja pedida: "tarde"
+  # arranca a las 12:00, "noche" a las 18:00, "mañana" (o sin franja) desde el inicio del día.
+  # Como el servicio devuelve los primeros disponibles desde aquí, así caen en la franja pedida.
+  TIME_OF_DAY_START = { 'afternoon' => 12, 'evening' => 18 }.freeze
+  def booking_search_anchor(day, time_of_day, timezone)
+    local = day.in_time_zone(timezone)
+    hour  = TIME_OF_DAY_START[time_of_day.to_s]
+    hour ? local.change(hour: hour, min: 0, sec: 0) : local.beginning_of_day
+  end
+
+  # Si el cliente pidió una hora exacta y está libre, la confirma directo (pide email si hace
+  # falta) y limpia cualquier estado pendiente. Devuelve true si tomó el horario, false si no.
+  def try_book_requested_slot(tracking, message, service, requested)
+    return false unless requested&.dig(:exact)
+
+    slot = service.slot_for(requested[:at])
+    return false unless slot
+
+    Rails.logger.info "[TrackingBot] 📅 Horario pedido disponible (#{requested[:at]}) → confirmando"
+    proceed_with_selected_slot(tracking, message, slot_payload(slot))
+    true
+  end
+
+  # El contacto pregunta/insiste por una cita pero ya tiene una agendada: en lugar de
+  # volver a ofrecer horarios, le recordamos la cita existente y le ofrecemos mover o
+  # cancelar (esas rutas las resuelven :reschedule y :cancel_appointment).
+  def inform_existing_appointment(tracking, message)
+    timezone  = appointment_timezone(tracking, message)
+    formatted = format_appointment_datetime(tracking.appointment_at, timezone)
+    Rails.logger.info "[TrackingBot] 📅 El contacto ya tiene una cita (#{formatted}) → recordando en vez de re-ofrecer"
+    send_auto_reply(
+      tracking, message,
+      "Ya tenés una cita agendada para el #{formatted}. 📅 Si querés, puedo *moverla* a otro horario o *cancelarla*. ¿Qué preferís?"
+    )
+  end
+
+  def format_appointment_datetime(at, timezone)
+    day_names   = %w[domingo lunes martes miércoles jueves viernes sábado]
+    month_names = %w[enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre]
+    local = at.in_time_zone(timezone)
+    "#{day_names[local.wday]} #{local.day} de #{month_names[local.month - 1]} a las #{local.strftime('%H:%M')}"
   end
 
   def pending_slot_selection?(tracking)
@@ -673,7 +859,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       cal_ids  = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
       duration = tracking.tracking_template&.calendar_event_duration || 30
       service  = ContactTrackings::AvailabilitySlotService.new(
-        calendar_integration_ids: cal_ids, timezone: timezone, slot_duration: duration
+        calendar_integration_ids: cal_ids, timezone: timezone, slot_duration: duration,
+        working_hours: working_hours_for(tracking, message)
       )
 
       # Si dio fecha Y hora concretas, intentamos confirmar ese horario exacto.
@@ -1052,6 +1239,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     day_names = %w[domingo lunes martes miércoles jueves viernes sábado]
     month_names = %w[ene feb mar abr may jun jul ago sep oct nov dic]
     numbers    = %w[1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣]
+    tz_label   = timezone_label(timezone)
 
     slots.each_with_index.map do |s, i|
       local     = s[:slot].in_time_zone(timezone)
@@ -1059,8 +1247,18 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       day       = day_names[local.wday]
       month     = month_names[local.month - 1]
       agent     = s[:agent_name].presence || 'Agenda'
-      "#{numbers[i]} #{day} #{local.day} #{month} · #{local.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs — #{agent}"
+      "#{numbers[i]} #{day} #{local.day} #{month} · #{local.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs (hora de #{tz_label}) — #{agent}"
     end.join("\n")
+  end
+
+  # proyecto@bot_seguimiento_calendar — nombre amigable de la zona del agente/inbox para
+  # mostrarle al contacto. Usa el nombre que ya provee Rails (ActiveSupport::TimeZone);
+  # fallback a la ciudad del identificador IANA.
+  def timezone_label(timezone)
+    tz   = timezone.to_s
+    name = ActiveSupport::TimeZone[tz]&.name.presence || tz
+    name = name.split('/').last.to_s.tr('_', ' ') if name.include?('/') # IANA → ciudad
+    name.presence || 'tu zona'
   end
 
   def format_slots_message(slots, timezone)
@@ -1424,19 +1622,45 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return reschedule_data[:relative_hours].hours.from_now if reschedule_data[:relative_hours]
       return reschedule_data[:relative_days].days.from_now.change(hour: 10, min: 0, sec: 0) if reschedule_data[:relative_days]
 
+      # Día: el weekday (resuelto en Ruby, determinístico) tiene prioridad sobre specific_date.
+      date_str = resolve_reschedule_date(reschedule_data, timezone)
+
       if reschedule_data[:specific_time]
         hour, minute = reschedule_data[:specific_time].split(':').map(&:to_i)
-        if reschedule_data[:specific_date]
-          Time.zone.parse(reschedule_data[:specific_date]).change(hour: hour, min: minute, sec: 0)
+        if date_str
+          Time.zone.parse(date_str).change(hour: hour, min: minute, sec: 0)
         else
           target = now.change(hour: hour, min: minute, sec: 0)
           target < now ? target + 1.day : target
         end
-      elsif reschedule_data[:specific_date]
-        Time.zone.parse("#{reschedule_data[:specific_date]} 10:00:00")
+      elsif date_str
+        Time.zone.parse("#{date_str} 10:00:00")
       else
         1.hour.from_now
       end
     end
+  end
+
+  # Resuelve la FECHA (YYYY-MM-DD) del pedido. Si el cliente nombró un día de la semana, lo
+  # calcula Ruby (próxima ocurrencia + weeks_ahead), en vez de confiar en la aritmética del LLM.
+  # Cae a specific_date (fecha de calendario explícita) si no hay weekday.
+  def resolve_reschedule_date(reschedule_data, timezone)
+    if reschedule_data[:weekday].present?
+      return weekday_to_date(reschedule_data[:weekday], reschedule_data[:weeks_ahead], timezone)&.iso8601
+    end
+
+    reschedule_data[:specific_date].presence
+  end
+
+  # Próxima ocurrencia de un día de semana ISO (1=lunes ... 7=domingo) en la zona del agente.
+  # Si hoy ES ese día, devuelve el de la semana siguiente (no hoy). `weeks_ahead` suma semanas.
+  def weekday_to_date(weekday_iso, weeks_ahead, timezone)
+    wday = weekday_iso.to_i
+    return nil unless (1..7).cover?(wday)
+
+    today      = Time.current.in_time_zone(timezone).to_date
+    days_until = (wday - today.cwday) % 7
+    days_until = 7 if days_until.zero?
+    today + days_until.days + (weeks_ahead.to_i * 7).days
   end
 end

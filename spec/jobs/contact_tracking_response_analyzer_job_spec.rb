@@ -127,6 +127,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
         allow(GoogleCalendarService).to receive(:new).and_return(calendar_service)
         allow(calendar_service).to receive(:update_event).and_return('id' => 'evt_old')
         allow(calendar_service).to receive(:create_event)
+        allow(calendar_service).to receive(:account_timezone).and_return(nil)
         allow(job).to receive(:send_auto_reply)
       end
 
@@ -254,9 +255,41 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     it 'usa el default cuando no hay zona ni en el agente ni en el inbox' do
       expect(job.send(:appointment_timezone, nil, nil)).to eq('America/Mexico_City')
     end
+
+    it 'ancla a la zona de Google Calendar por encima de la del agente y el inbox' do
+      tracking_template.update!(timezone: 'America/Mexico_City')
+      allow(job).to receive(:google_calendar_timezone).with(tracking).and_return('America/Argentina/Buenos_Aires')
+      expect(job.send(:appointment_timezone, tracking, message)).to eq('America/Argentina/Buenos_Aires')
+    end
   end
 
-  describe '#booking_requested? (la directiva @agendar_calendar no es eager)' do
+  describe '#google_calendar_timezone' do
+    let(:tracking) { ContactTracking.new(account: account, tracking_template: tracking_template) }
+
+    it 'devuelve nil cuando el tracking no tiene calendario configurado' do
+      expect(job.send(:google_calendar_timezone, tracking)).to be_nil
+    end
+
+    it 'devuelve el valor cacheado en Redis sin pegar a la API de Google' do
+      allow(job).to receive(:appointment_timezone_calendar_id).with(tracking).and_return(7)
+      allow(Redis::Alfred).to receive(:get).with('gcal_tz::7').and_return('America/Bogota')
+      expect(UserCalendarIntegration).not_to receive(:find_by)
+      expect(job.send(:google_calendar_timezone, tracking)).to eq('America/Bogota')
+    end
+
+    it 'lee la zona de Google y la cachea cuando no está en Redis' do
+      integration = instance_double(UserCalendarIntegration)
+      gcal = instance_double(GoogleCalendarService, account_timezone: 'America/Argentina/Buenos_Aires')
+      allow(job).to receive(:appointment_timezone_calendar_id).with(tracking).and_return(7)
+      allow(Redis::Alfred).to receive(:get).with('gcal_tz::7').and_return(nil)
+      allow(UserCalendarIntegration).to receive(:find_by).with(id: 7).and_return(integration)
+      allow(GoogleCalendarService).to receive(:new).with(integration).and_return(gcal)
+      expect(Redis::Alfred).to receive(:setex).with('gcal_tz::7', 'America/Argentina/Buenos_Aires', 12.hours)
+      expect(job.send(:google_calendar_timezone, tracking)).to eq('America/Argentina/Buenos_Aires')
+    end
+  end
+
+  describe '#classify_appointment (appointment-aware, no eager)' do
     let(:inbox) { create(:inbox, account: account) }
     let(:contact) { create(:contact, account: account) }
     let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
@@ -268,27 +301,125 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
 
     before { allow(job).to receive(:get_api_key).and_return({ key: 'sk-test' }) }
 
-    context 'con DETECT_INTENT activo' do
-      before { stub_const("#{described_class}::DETECT_INTENT", true) }
-
-      it 'no re-evalúa la intención (el router ya decidió la ruta)' do
-        expect(job).not_to receive(:appointment_intent?)
-        expect(job.send(:booking_requested?, tracking, message)).to be(false)
+    context 'cuando ya hay route_result con appointment_action (DETECT_INTENT activo)' do
+      it 'reutiliza el route_result y NO vuelve a clasificar' do
+        route_result = { route: :tracking, appointment_action: nil }
+        expect(ContactTrackings::RouterService).not_to receive(:new)
+        expect(job.send(:classify_appointment, tracking, message, route_result)).to eq(route_result)
       end
     end
 
-    context 'con DETECT_INTENT apagado' do
-      before { stub_const("#{described_class}::DETECT_INTENT", false) }
-
-      it 'agenda cuando el cliente expresa intención de cita' do
-        allow(ContactTrackings::RouterService).to receive(:new).and_return(double(classify: { route: :book_appointment }))
-        expect(job.send(:booking_requested?, tracking, message)).to be(true)
+    context 'cuando el route_result no trae appointment_action (DETECT_INTENT apagado)' do
+      it 'clasifica pasando el estado de la cita al router' do
+        disabled = { route: :tracking, confidence: 1.0, method: 'disabled' }
+        expect(ContactTrackings::RouterService).to receive(:new)
+          .with(tracking, message, 'sk-test', hash_including(:appointment_state))
+          .and_return(double(classify: { route: :book_appointment, appointment_action: :book_new }))
+        result = job.send(:classify_appointment, tracking, message, disabled)
+        expect(result[:appointment_action]).to eq(:book_new)
       end
 
-      it 'NO agenda en un mensaje normal sin intención de cita' do
-        allow(ContactTrackings::RouterService).to receive(:new).and_return(double(classify: { route: :tracking }))
-        expect(job.send(:booking_requested?, tracking, message)).to be(false)
+      it 'no es eager: appointment_action nil en un mensaje normal' do
+        allow(ContactTrackings::RouterService).to receive(:new)
+          .and_return(double(classify: { route: :tracking, appointment_action: nil }))
+        result = job.send(:classify_appointment, tracking, message, nil)
+        expect(result[:appointment_action]).to be_nil
       end
+    end
+  end
+
+  describe '#dispatch_appointment_action' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation,
+                       sender: contact, message_type: :incoming, content: 'sobre mi cita')
+    end
+
+    context 'con una cita activa' do
+      let(:tracking) do
+        ContactTracking.create!(
+          account: account, contact: contact, inbox: inbox, objective: 'Vender',
+          scheduled_for: 1.hour.from_now, status: 'active', tracking_template_id: tracking_template.id,
+          appointment_at: 1.day.from_now, appointment_event_id: 'evt_1', appointment_calendar_id: 123
+        )
+      end
+
+      it ':query recuerda la cita existente (no re-ofrece)' do
+        expect(job).to receive(:inform_existing_appointment).with(tracking, message)
+        expect(job).not_to receive(:handle_book_appointment)
+        job.send(:dispatch_appointment_action, tracking, message, { appointment_action: :query })
+      end
+
+      it ':move enruta a reagendar (mover la cita) pasando el payload' do
+        appt = { appointment_action: :move, reschedule_data: { specific_date: '2026-06-16' } }
+        expect(job).to receive(:handle_reschedule).with(tracking, message, appt)
+        job.send(:dispatch_appointment_action, tracking, message, appt)
+      end
+
+      it ':cancel cancela la cita' do
+        expect(job).to receive(:handle_cancel_appointment).with(tracking, message)
+        job.send(:dispatch_appointment_action, tracking, message, { appointment_action: :cancel })
+      end
+    end
+
+    context 'sin cita activa' do
+      let(:tracking) do
+        ContactTracking.create!(
+          account: account, contact: contact, inbox: inbox, objective: 'Vender',
+          scheduled_for: 1.hour.from_now, status: 'active', tracking_template_id: tracking_template.id
+        )
+      end
+
+      it ':query degrada a ofrecer agendar una nueva' do
+        expect(job).to receive(:handle_book_appointment).with(tracking, message)
+        job.send(:dispatch_appointment_action, tracking, message, { appointment_action: :query })
+      end
+
+      it ':book_new ofrece agendar' do
+        expect(job).to receive(:handle_book_appointment).with(tracking, message)
+        job.send(:dispatch_appointment_action, tracking, message, { appointment_action: :book_new })
+      end
+    end
+  end
+
+  describe '#appointment_state_summary' do
+    let(:inbox) { create(:inbox, account: account, timezone: 'America/Mexico_City') }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation,
+                       sender: contact, message_type: :incoming, content: 'hola')
+    end
+
+    it 'describe la cita cuando existe' do
+      tracking = ContactTracking.create!(
+        account: account, contact: contact, inbox: inbox, objective: 'Vender',
+        scheduled_for: 1.hour.from_now, status: 'active', tracking_template_id: tracking_template.id,
+        appointment_at: Time.find_zone('America/Mexico_City').local(2026, 6, 15, 9, 0),
+        appointment_event_id: 'evt_1', appointment_calendar_id: 123
+      )
+      expect(job.send(:appointment_state_summary, tracking, message)).to match(/YA tiene.*lunes 15 de junio a las 09:00/)
+    end
+
+    it 'indica que no hay cita cuando no existe' do
+      tracking = ContactTracking.create!(
+        account: account, contact: contact, inbox: inbox, objective: 'Vender',
+        scheduled_for: 1.hour.from_now, status: 'active', tracking_template_id: tracking_template.id
+      )
+      expect(job.send(:appointment_state_summary, tracking, message)).to match(/NO tiene ninguna cita/)
+    end
+  end
+
+  describe '#timezone_label' do
+    it 'normaliza un identificador IANA a la ciudad' do
+      expect(job.send(:timezone_label, 'America/Mexico_City')).to eq('Mexico City')
+      expect(job.send(:timezone_label, 'America/Argentina/Buenos_Aires')).to eq('Buenos Aires')
+    end
+
+    it 'deja el nombre amigable tal cual' do
+      expect(job.send(:timezone_label, 'UTC')).to eq('UTC')
     end
   end
 
@@ -327,6 +458,72 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       job.send(:handle_book_appointment, tracking, message)
       expect(tracking.reload.outcome).to eq('interested')
       expect(tracking.status).to eq('paused')
+    end
+  end
+
+  describe '#handle_book_appointment cuando el contacto YA tiene una cita activa' do
+    let(:inbox) { create(:inbox, account: account, timezone: 'America/Mexico_City') }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation,
+                       sender: contact, message_type: :incoming, content: '¿cuándo es mi cita?')
+    end
+    let(:tracking) do
+      ContactTracking.create!(
+        account: account, contact: contact, inbox: inbox,
+        objective: 'Vender', scheduled_for: 1.hour.from_now, status: 'active',
+        tracking_template_id: tracking_template.id,
+        appointment_at: Time.zone.parse('2026-06-15 09:00').in_time_zone('America/Mexico_City'),
+        appointment_event_id: 'evt_existente', appointment_calendar_id: 123, outcome: 'appointment'
+      )
+    end
+
+    before do
+      tracking_template.update!(calendar_integration_ids: [123])
+      allow(job).to receive(:send_auto_reply)
+    end
+
+    it 'NO vuelve a ofrecer slots nuevos' do
+      expect(ContactTrackings::AvailabilitySlotService).not_to receive(:new)
+      job.send(:handle_book_appointment, tracking, message)
+    end
+
+    it 'le recuerda al cliente la cita existente y le ofrece moverla o cancelarla' do
+      expect(job).to receive(:send_auto_reply)
+        .with(tracking, message, /ya tenés una cita agendada para el .*moverla.*cancelarla/im)
+      job.send(:handle_book_appointment, tracking, message)
+    end
+
+    it 'no toca el outcome ni los datos de la cita existente' do
+      job.send(:handle_book_appointment, tracking, message)
+      expect(tracking.reload.outcome).to eq('appointment')
+      expect(tracking.appointment_event_id).to eq('evt_existente')
+    end
+  end
+
+  describe '#handle_reschedule con cita activa enruta a mover la cita (no el recordatorio)' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:message) do
+      create(:message, account: account, inbox: inbox, conversation: conversation,
+                       sender: contact, message_type: :incoming, content: 'quiero mover mi cita')
+    end
+    let(:tracking) do
+      ContactTracking.create!(
+        account: account, contact: contact, inbox: inbox,
+        objective: 'Vender', scheduled_for: 1.hour.from_now, status: 'active',
+        tracking_template_id: tracking_template.id,
+        appointment_at: 1.day.from_now, appointment_event_id: 'evt_1', appointment_calendar_id: 123
+      )
+    end
+
+    it 'con appointment_event_id presente llama a handle_move_appointment' do
+      action_data = { route: :reschedule, reschedule_data: { specific_date: '2026-06-16' } }
+      expect(job).to receive(:handle_move_appointment).with(tracking, message, action_data)
+      expect(job).not_to receive(:handle_followup_reschedule)
+      job.send(:handle_reschedule, tracking, message, action_data)
     end
   end
 
@@ -607,6 +804,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     before do
       tracking_template.update!(calendar_integration_ids: [7])
       allow(ContactTrackings::AvailabilitySlotService).to receive(:new).and_return(slot_service)
+      allow(job).to receive(:google_calendar_timezone).and_return(nil)
       allow(job).to receive(:send_auto_reply)
     end
 
