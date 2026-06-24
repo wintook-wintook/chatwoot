@@ -209,7 +209,7 @@ module ContactTrackings
     def parse_reschedule_data(data)
       return {} if data.nil? || !data.is_a?(Hash)
 
-      {
+      parsed = {
         relative_minutes: data['relative_minutes']&.to_i,
         relative_hours:   data['relative_hours']&.to_i,
         relative_days:    data['relative_days']&.to_i,
@@ -217,6 +217,11 @@ module ContactTrackings
         specific_time:    data['specific_time'].presence,
         natural:          data['natural'].presence
       }.compact
+
+      # `natural` es solo una descripción legible ("cambiar la cita"); sin un campo de
+      # fecha/hora REAL no hay reagendado pedido. Devolvemos vacío para que el handler
+      # pregunte cuándo, en vez de mover la cita a hoy conservando la hora vieja.
+      parsed.except(:natural).empty? ? {} : parsed
     end
 
     def fallback(reason)
