@@ -100,6 +100,12 @@ export default {
     isCreateMode() {
       return this.mode === 'create';
     },
+    // proyecto@ai_agent_attachments: las llaves literales NO pueden ir dentro de un
+    // mustache {{ }} (Vue 2 corta en el primer }} y rompe el template). Se exponen como
+    // datos para usarlas en interpolaciones y como params de i18n.
+    braceParams() {
+      return { open: '{{', close: '}}' };
+    },
     formTitle() {
       return this.isCreateMode
         ? this.$t('TRACKING_TEMPLATES.CREATE.TITLE')
@@ -592,8 +598,12 @@ export default {
         // noop: se mantiene en la lista si falla
       }
     },
+    // Token de adjunto {{nombre}} como string de runtime (no literal en el template).
+    attachmentToken(name) {
+      return `${this.braceParams.open}${name}${this.braceParams.close}`;
+    },
     copyDirective(attachment) {
-      const token = `{{${attachment.name}}}`;
+      const token = this.attachmentToken(attachment.name);
       if (navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(token);
       }
@@ -680,7 +690,7 @@ export default {
     },
     insertAttachmentDirective(attachment) {
       this.showAttachmentPicker = false;
-      this.insertTokenAtPrompt(`{{${attachment.name}}}`);
+      this.insertTokenAtPrompt(this.attachmentToken(attachment.name));
     },
     openDirectivePicker(target = 'inline') {
       this.rememberInsertPos(target);
@@ -1077,10 +1087,7 @@ export default {
         <div v-show="activeContextTab === archivosTabIndex" class="mt-2">
           <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
             {{
-              $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.DESCRIPTION', {
-                open: '{{',
-                close: '}}',
-              })
+              $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.DESCRIPTION', braceParams)
             }}
           </p>
 
@@ -1144,12 +1151,7 @@ export default {
               v-else-if="attachments.length === 0"
               class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400"
             >
-              {{
-                $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.EMPTY', {
-                  open: '{{',
-                  close: '}}',
-                })
-              }}
+              {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.EMPTY', braceParams) }}
             </div>
             <ul v-else class="space-y-2 max-h-[208px] overflow-y-auto pr-1">
               <li
@@ -1162,7 +1164,9 @@ export default {
                 <template v-if="editingAttachmentId === att.id">
                   <div class="flex flex-col min-w-0 flex-1 gap-1">
                     <div class="flex items-center gap-1">
-                      <span class="text-xs text-slate-400 shrink-0">{{ '{{' }}</span>
+                      <span class="text-xs text-slate-400 shrink-0">{{
+                        braceParams.open
+                      }}</span>
                       <input
                         v-model="editingAttachmentName"
                         type="text"
@@ -1170,7 +1174,9 @@ export default {
                         @keyup.enter="saveRenameAttachment(att)"
                         @keyup.esc="cancelRenameAttachment"
                       />
-                      <span class="text-xs text-slate-400 shrink-0">{{ '}}' }}</span>
+                      <span class="text-xs text-slate-400 shrink-0">{{
+                        braceParams.close
+                      }}</span>
                     </div>
                     <span v-if="renameError" class="text-xs text-red-500">{{ renameError }}</span>
                   </div>
@@ -1193,7 +1199,7 @@ export default {
                 <template v-else>
                   <div class="flex flex-col min-w-0 flex-1">
                     <code class="text-xs font-semibold text-woot-600 dark:text-woot-400">
-                      {{ `{{${att.name}}}` }}
+                      {{ attachmentToken(att.name) }}
                     </code>
                     <span class="text-xs text-slate-500 dark:text-slate-400 truncate">
                       {{ att.filename }}
@@ -1336,10 +1342,7 @@ export default {
       <woot-modal-header
         :header-title="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.PICKER_TITLE')"
         :header-content="
-          $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.PICKER_HELP', {
-            open: '{{',
-            close: '}}',
-          })
+          $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.PICKER_HELP', braceParams)
         "
       />
       <div class="px-8 pb-6">
@@ -1352,7 +1355,7 @@ export default {
             >
               <span class="min-w-0">
                 <span class="block text-sm font-medium text-woot-600 dark:text-woot-400 truncate">
-                  {{ `{{${att.name}}}` }}
+                  {{ attachmentToken(att.name) }}
                 </span>
                 <span class="block text-xs text-slate-500 dark:text-slate-400 truncate">
                   {{ att.filename }}
