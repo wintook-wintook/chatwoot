@@ -1,7 +1,7 @@
 ---
 titulo: "@agendar_calendar — agendar/consultar/mover/cancelar citas en Google Calendar"
 tipo: implementacion
-tags: [contact-tracking, directivas, calendar, google-calendar, citas, appointment-aware]
+tags: [contact-tracking, directivas, calendar, google-calendar, citas, appointment-aware, multi-calendario]
 ---
 
 # `@agendar_calendar` — citas en Google Calendar
@@ -128,9 +128,10 @@ Puedo moverla o cancelarla. ¿Qué preferís?"* — **no re-ofrece horarios**.
                                             │
                                             ▼
                               confirm_and_create_appointment
-                                  → crea/mueve evento en Google
+                                  → crea/mueve evento en el calendario libre
                                   → guarda appointment_event_id
-                                    + appointment_calendar_id
+                                    + appointment_calendar_id (cuenta)
+                                    + appointment_calendar_gid (calendario)
                                   → invitación por correo (sendUpdates=all)
 ```
 
@@ -146,7 +147,48 @@ Puedo moverla o cancelarla. ¿Qué preferís?"* — **no re-ofrece horarios**.
 - **Si no:** default **9–18, lunes a viernes**.
 - Slots de duración `calendar_event_duration` (default **30 min**).
 - Respeta el `freeBusy` de Google (no choca con ocupados).
-- Reparte entre varios agentes sin repetir horario; **máximo 5 slots**.
+- Reparte entre varios **recursos** sin repetir horario; **máximo 5 slots** (ver multi-calendario abajo).
+
+---
+
+## Agendas y calendarios destino (multi-calendario)
+
+El Agente IA puede agendar en **varias cuentas** de Google y, dentro de cada una, en
+**varios calendarios**. La clave del modelo:
+
+> **Cada calendario marcado es un "recurso" independiente.** El bot mira la disponibilidad
+> de **todos** y crea la cita en el que esté libre; si varios están libres a la misma hora,
+> **reparte** (round-robin por `balance_slots`).
+
+### Configuración (en el Agente IA / template)
+
+- `calendar_integration_ids` (jsonb `[]`) — qué **cuentas** de Google están vinculadas.
+- `booking_calendar_ids` (jsonb `{}`) — mapa `{ integration_id => [google_calendar_id, …] }`:
+  en qué calendarios de cada cuenta se puede agendar. **Sin entrada para una cuenta → modo
+  legado**: lee la unión de sus `enabled_calendar_ids` y crea en `primary` (comportamiento previo).
+
+En la UI (tab **Agendas**): un **modal con árbol** agrupado por cuenta (su calendario
+**Primario** + sus **Secundarios**, con casillas) y una **lista consolidada** de los
+seleccionados con opción de **quitar**. Una cuenta queda vinculada cuando tiene ≥1 calendario
+marcado.
+
+### Cómo se calcula y se crea
+
+`AvailabilitySlotService` (`resources_for`) convierte cada `(cuenta, calendario)` en un
+recurso `{ gcal:, read: }`:
+
+- **Modo configurado:** un recurso por calendario marcado → `read = [gcal]` (cada calendario
+  solo bloquea su **propia** ocupación).
+- **Modo legado:** un recurso por cuenta → `read = enabled_calendar_ids`, `gcal = 'primary'`.
+
+Cada slot lleva `calendar_integration_id` **y** `google_calendar_id`. Al confirmar, el evento
+se crea en ese `google_calendar_id` y se guarda en `appointment_calendar_gid` (para mover/cancelar
+en el calendario correcto).
+
+> ⚠️ **Cuidado:** como cada calendario marcado solo se bloquea a sí mismo, marcar **varios
+> calendarios de la MISMA persona** permite citas en paralelo a la misma hora (correcto si son
+> recursos separados como *sillones/salas*; no si es una sola persona). Para un mismo profesional,
+> marcá **un solo calendario**.
 
 ---
 
@@ -176,6 +218,26 @@ aritmética de calendario).
 
 ---
 
+## Presentación de horarios (configurable)
+
+Cómo el bot **lista los horarios** al cliente se elige en el Agente IA con
+`slots_presentation` (string, default `detailed`). `format_slots_lines` ramifica según el
+valor. **La numeración 1-5 siempre refleja la posición en `slots`**, así la elección por
+número del cliente sigue mapeando bien sin importar el agrupamiento.
+
+| Valor | Estilo | Ejemplo |
+|-------|--------|---------|
+| `detailed` *(default)* | Todo en cada línea | `1️⃣ jueves 25 jun · 09:00 – 10:00 hs (hora de Mexico City) — Admin` |
+| `by_agent` | Agrupado por agenda (encabezado profesional + zona) | `👤 Admin (hora de Mexico City)` ↵ `   1️⃣ jueves 25 jun · 09:00 – 10:00 hs` |
+| `simple` | Sin zona ni profesional | `1️⃣ jueves 25 jun · 09:00 – 10:00 hs` |
+| `by_day` | Agrupado por día, solo hora de inicio | `📅 jueves 25 jun` ↵ `   1️⃣ 09:00   2️⃣ 10:00` |
+
+> En `by_agent`/`by_day` la numeración puede quedar **no contigua** dentro de un grupo
+> (ej. Admin = 1️⃣2️⃣4️⃣5️⃣, otro = 3️⃣): es correcto, cada número sigue apuntando a su slot.
+> Default `detailed` = comportamiento histórico (no cambia nada existente).
+
+---
+
 ## Zona horaria (anclada a Google)
 
 `appointment_timezone` — prioridad:
@@ -202,8 +264,10 @@ Marcadores en `ai_context`:
 
 Al confirmar (`confirm_and_create_appointment`):
 
-- Crea el evento (o lo **mueve** si ya existía: `create_or_move_calendar_event`).
-- Guarda `appointment_event_id` + `appointment_calendar_id` (para mover/cancelar luego).
+- Crea el evento en el `google_calendar_id` del slot (o lo **mueve** si ya existía en ese mismo
+  calendario: `create_or_move_calendar_event`; si cambió de calendario, crea nuevo + borra el viejo).
+- Guarda `appointment_event_id` + `appointment_calendar_id` (cuenta) + `appointment_calendar_gid`
+  (calendario de Google real) — necesarios para mover/cancelar en el lugar correcto.
 - Envía la invitación por correo a todos los invitados (`sendUpdates=all`, cualquier dominio).
 
 ---
@@ -246,7 +310,13 @@ respuestas no-cita (#6) — todo bajo la misma directiva `@agendar_calendar`.
 - `app/jobs/contact_tracking_response_analyzer_job.rb` — orquestador (gate, clasificación,
   despacho, handlers, zona horaria).
 - `app/services/contact_trackings/router_service.rb` — `appointment_action` + estado al LLM.
-- `app/services/contact_trackings/availability_slot_service.rb` — slots, working_hours, freeBusy.
-- `app/services/google_calendar_service.rb` — CRUD de eventos + `account_timezone`.
+- `app/services/contact_trackings/availability_slot_service.rb` — slots, working_hours, freeBusy,
+  **recursos por (cuenta, calendario)** (`resources_for`, `balance_slots`).
+- `app/services/google_calendar_service.rb` — CRUD de eventos (con `calendar_id`) + `account_timezone`
+  + `list_calendars`.
+- `app/controllers/api/v1/accounts/tracking_templates_controller.rb` — `calendar_integrations`
+  (devuelve calendarios escribibles por cuenta) + params `booking_calendar_ids` / `slots_presentation`.
+- `app/javascript/.../trackingTemplates/EditTemplate.vue` — tab Agendas: modal árbol, lista con
+  quitar, selector de presentación.
 
 Relacionado: [[Servicios-y-jobs]] · [[Directivas-complementary-prompt]] · [[Testeo-funcional]] · [[Ciclo-de-vida]]
