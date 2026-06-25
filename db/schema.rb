@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_17_130000) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_24_120200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -692,6 +692,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_17_130000) do
     t.string "outcome"
     t.string "appointment_event_id"
     t.bigint "appointment_calendar_id"
+    t.string "appointment_calendar_gid"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
     t.index ["appointment_at"], name: "index_contact_trackings_on_appointment_at"
@@ -1484,6 +1485,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_17_130000) do
     t.jsonb "calendar_integration_ids", default: [], null: false
     t.integer "calendar_event_duration", default: 30
     t.string "timezone"
+    t.jsonb "booking_calendar_ids", default: {}, null: false
+    t.string "slots_presentation", default: "detailed", null: false
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
