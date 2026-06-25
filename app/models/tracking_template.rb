@@ -12,6 +12,7 @@
 #
 #  id                       :bigint           not null, primary key
 #  ai_context               :text
+#  booking_calendar_ids     :jsonb            not null
 #  calendar_event_duration  :integer          default(30)
 #  calendar_integration_ids :jsonb            not null
 #  complementary_prompt     :text
@@ -20,6 +21,7 @@
 #  objective                :string           not null
 #  retry_interval_unit      :string           default("days")
 #  retry_interval_value     :integer          default(1)
+#  slots_presentation       :string           default("detailed"), not null
 #  tags                     :json
 #  timezone                 :string
 #  whatsapp_templates       :json

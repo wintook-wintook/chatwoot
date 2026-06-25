@@ -50,6 +50,11 @@ export default {
         retry_interval_unit: 'days', // proyecto@automatizacion_tracking
         keyword_actions: [], // proyecto@contact_tracking
         calendar_integration_ids: [],
+        // proyecto@bot_seguimiento_calendar: { integration_id: google_calendar_id } — en qué
+        // calendario de Google se crea la cita por agenda. Sin entrada → 'primary'.
+        booking_calendar_ids: {},
+        // proyecto@bot_seguimiento_calendar: formato de presentación de horarios al cliente
+        slots_presentation: 'detailed',
         calendar_event_duration: 30,
         timezone: '', // proyecto@bot_seguimiento_calendar: hereda del inbox si queda vacío
       },
@@ -57,6 +62,10 @@ export default {
       activeContextTab: 0,
       calendarIntegrations: [],
       isLoadingCalendars: false,
+      // proyecto@bot_seguimiento_calendar: modal árbol de calendarios agendables.
+      // Selección temporal mientras el modal está abierto: { integration_id: [cal_ids] }.
+      showCalendarModal: false,
+      calendarModalSelection: {},
       originalAiContext: null,
       originalComplementaryPrompt: null,
       isImprovingAI: false,
@@ -102,6 +111,58 @@ export default {
     }),
     isCreateMode() {
       return this.mode === 'create';
+    },
+    // proyecto@bot_seguimiento_calendar: formatos de presentación de horarios (con mini-preview)
+    slotsPresentationOptions() {
+      const t = key => this.$t(`TRACKING_TEMPLATES.CALENDARS.PRESENTATION.${key}`);
+      return [
+        {
+          value: 'detailed',
+          label: t('DETAILED'),
+          preview: '1️⃣ jue 25 jun · 09:00 – 10:00 hs (hora de Mexico City) — Admin',
+        },
+        {
+          value: 'by_agent',
+          label: t('BY_AGENT'),
+          preview:
+            '👤 Admin (hora de Mexico City)\n   1️⃣ jue 25 jun · 09:00 – 10:00 hs',
+        },
+        {
+          value: 'simple',
+          label: t('SIMPLE'),
+          preview: '1️⃣ jue 25 jun · 09:00 – 10:00 hs',
+        },
+        {
+          value: 'by_day',
+          label: t('BY_DAY'),
+          preview: '📅 jue 25 jun\n   1️⃣ 09:00   2️⃣ 10:00',
+        },
+      ];
+    },
+    // proyecto@bot_seguimiento_calendar: lista plana de todos los calendarios seleccionados
+    // (de todas las cuentas) para el tab Agendas. Cada ítem trae su cuenta para poder quitarlo.
+    allSelectedCalendars() {
+      const linked = (this.form.calendar_integration_ids || []).map(String);
+      const result = [];
+      this.calendarIntegrations.forEach(integration => {
+        if (!linked.includes(String(integration.id))) return;
+        const all = this.bookableCalendarsFor(integration);
+        this.selectedBookingCalendars(integration).forEach(id => {
+          const cal = all.find(c => c.id === id) || {
+            id,
+            summary: id,
+            background_color: '#94a3b8',
+            primary: false,
+          };
+          result.push({
+            ...cal,
+            integrationId: integration.id,
+            email: integration.google_email,
+            key: `${integration.id}:${id}`,
+          });
+        });
+      });
+      return result;
     },
     // proyecto@ai_agent_attachments: las llaves literales NO pueden ir dentro de un
     // mustache {{ }} (Vue 2 corta en el primer }} y rompe el template). Se exponen como
@@ -297,6 +358,11 @@ export default {
             calendar_integration_ids: Array.isArray(val.calendar_integration_ids)
               ? [...val.calendar_integration_ids]
               : [],
+            booking_calendar_ids:
+              val.booking_calendar_ids && typeof val.booking_calendar_ids === 'object'
+                ? { ...val.booking_calendar_ids }
+                : {},
+            slots_presentation: val.slots_presentation || 'detailed',
             calendar_event_duration: val.calendar_event_duration || 30,
             timezone: val.timezone || '',
           };
@@ -393,6 +459,8 @@ export default {
           retry_interval_unit: this.form.retry_interval_unit,   // proyecto@automatizacion_tracking
           keyword_actions: this.form.keyword_actions || [],      // proyecto@contact_tracking
           calendar_integration_ids: this.form.calendar_integration_ids || [],
+          booking_calendar_ids: this.bookingCalendarIdsPayload(),
+          slots_presentation: this.form.slots_presentation || 'detailed',
           calendar_event_duration: this.form.calendar_event_duration || 30,
           timezone: this.form.timezone || '', // proyecto@bot_seguimiento_calendar
         },
@@ -512,13 +580,99 @@ export default {
         this.isLoadingCalendars = false;
       }
     },
-    toggleCalendarIntegration(id) {
-      const idx = this.form.calendar_integration_ids.indexOf(id);
-      if (idx === -1) {
-        this.form.calendar_integration_ids.push(id);
+    // ── proyecto@bot_seguimiento_calendar: calendarios agendables ────────────────
+    // Cada calendario marcado es un destino válido (el bot busca disponibilidad en todos
+    // y crea la cita en el que esté libre). La cuenta (integración) queda vinculada cuando
+    // tiene al menos un calendario marcado.
+    bookableCalendarsFor(integration) {
+      return Array.isArray(integration.calendars) ? integration.calendars : [];
+    },
+    // Por defecto (sin selección guardada) marcamos el calendario principal de la cuenta.
+    defaultBookingCalendars(integration) {
+      const primary = this.bookableCalendarsFor(integration).find(c => c.primary);
+      return primary ? [primary.id] : [];
+    },
+    selectedBookingCalendars(integration) {
+      const stored = this.form.booking_calendar_ids[String(integration.id)];
+      return Array.isArray(stored) ? stored : this.defaultBookingCalendars(integration);
+    },
+    integrationById(integrationId) {
+      return this.calendarIntegrations.find(i => i.id === integrationId);
+    },
+    // Quita un calendario de la lista consolidada; si la cuenta queda sin calendarios,
+    // se desvincula (sale de calendar_integration_ids).
+    removeSelectedCalendar(integrationId, calId) {
+      const integration = this.integrationById(integrationId);
+      if (!integration) return;
+      const current = this.selectedBookingCalendars(integration).filter(
+        id => id !== calId
+      );
+      if (current.length) {
+        this.$set(this.form.booking_calendar_ids, String(integrationId), current);
       } else {
-        this.form.calendar_integration_ids.splice(idx, 1);
+        this.$delete(this.form.booking_calendar_ids, String(integrationId));
+        this.form.calendar_integration_ids = this.form.calendar_integration_ids.filter(
+          id => id !== integrationId
+        );
       }
+    },
+    // ── Modal de selección (árbol agrupado por cuenta) ───────────────────────────
+    openCalendarModal() {
+      const selection = {};
+      const linked = (this.form.calendar_integration_ids || []).map(String);
+      this.calendarIntegrations.forEach(integration => {
+        selection[String(integration.id)] = linked.includes(String(integration.id))
+          ? [...this.selectedBookingCalendars(integration)]
+          : [];
+      });
+      this.calendarModalSelection = selection;
+      this.showCalendarModal = true;
+    },
+    closeCalendarModal() {
+      this.showCalendarModal = false;
+      this.calendarModalSelection = {};
+    },
+    isModalCalendarChecked(integrationId, calId) {
+      return (this.calendarModalSelection[String(integrationId)] || []).includes(calId);
+    },
+    toggleModalCalendar(integrationId, calId) {
+      const key = String(integrationId);
+      const current = [...(this.calendarModalSelection[key] || [])];
+      const idx = current.indexOf(calId);
+      if (idx === -1) {
+        current.push(calId);
+      } else {
+        current.splice(idx, 1);
+      }
+      this.$set(this.calendarModalSelection, key, current);
+    },
+    confirmCalendarModal() {
+      const booking = {};
+      const integrationIds = [];
+      Object.entries(this.calendarModalSelection).forEach(([intId, calIds]) => {
+        const cals = Array.isArray(calIds) ? calIds.filter(Boolean) : [];
+        if (cals.length) {
+          booking[intId] = cals;
+          integrationIds.push(Number(intId));
+        }
+      });
+      this.form.booking_calendar_ids = booking;
+      this.form.calendar_integration_ids = integrationIds;
+      this.closeCalendarModal();
+    },
+    // Lista consolidada de calendarios seleccionados (todas las cuentas) para el tab Agendas.
+    bookingCalendarIdsPayload() {
+      const selected = (this.form.calendar_integration_ids || []).map(String);
+      return Object.entries(this.form.booking_calendar_ids || {}).reduce(
+        (acc, [intId, calIds]) => {
+          const cals = Array.isArray(calIds) ? calIds.filter(Boolean) : [];
+          if (selected.includes(String(intId)) && cals.length) {
+            acc[String(intId)] = cals;
+          }
+          return acc;
+        },
+        {}
+      );
     },
     // ── proyecto@ai_agent_attachments: gestión de archivos del Agente IA ──────────
     async loadAttachments() {
@@ -1052,40 +1206,90 @@ export default {
             </p>
           </div>
 
+          <!-- proyecto@bot_seguimiento_calendar: una sola lista de calendarios + modal árbol -->
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
+              {{ $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_LABEL') }}
+            </span>
+            <button
+              v-if="!isLoadingCalendars && calendarIntegrations.length > 0"
+              type="button"
+              class="text-xs text-woot-600 dark:text-woot-400 hover:underline"
+              @click.prevent="openCalendarModal"
+            >
+              + {{ $t('TRACKING_TEMPLATES.CALENDARS.SELECT_CALENDARS') }}
+            </button>
+          </div>
+
           <div v-if="isLoadingCalendars" class="text-sm text-slate-500 py-2">
             {{ $t('TRACKING_TEMPLATES.CALENDARS.LOADING') }}
           </div>
           <div v-else-if="calendarIntegrations.length === 0" class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400">
             {{ $t('TRACKING_TEMPLATES.CALENDARS.NONE_AVAILABLE') }}
           </div>
-          <div v-else class="space-y-2">
-            <label
-              v-for="integration in calendarIntegrations"
-              :key="integration.id"
-              class="flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-colors"
-              :class="form.calendar_integration_ids.includes(integration.id)
-                ? 'border-woot-400 bg-woot-50 dark:bg-woot-900/20'
-                : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'"
-              @click.prevent="toggleCalendarIntegration(integration.id)"
-            >
-              <input
-                type="checkbox"
-                :checked="form.calendar_integration_ids.includes(integration.id)"
-                class="accent-woot-500"
-                @change.prevent
-              />
-              <div class="flex flex-col">
-                <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-                  {{ integration.user_name }}
+          <template v-else>
+            <div v-if="allSelectedCalendars.length" class="flex flex-wrap gap-1.5">
+              <span
+                v-for="item in allSelectedCalendars"
+                :key="item.key"
+                :title="item.email"
+                class="inline-flex items-center gap-1.5 text-xs rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 pl-2 pr-1 py-1"
+              >
+                <span
+                  class="inline-block w-2 h-2 rounded-sm flex-shrink-0"
+                  :style="{ backgroundColor: item.background_color }"
+                />
+                <span class="text-slate-700 dark:text-slate-200">{{ item.summary }}</span>
+                <span v-if="item.primary" class="text-slate-400 dark:text-slate-500">
+                  · {{ $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_PRIMARY') }}
                 </span>
-                <span class="text-xs text-slate-500 dark:text-slate-400">
-                  {{ integration.google_email }}
-                </span>
-              </div>
-            </label>
-            <p v-if="form.calendar_integration_ids.length > 0" class="text-xs text-woot-600 dark:text-woot-400 pt-1">
-              {{ $t('TRACKING_TEMPLATES.CALENDARS.SELECTED_COUNT', { count: form.calendar_integration_ids.length }) }}
+                <button
+                  type="button"
+                  class="text-slate-400 hover:text-red-500 leading-none ml-0.5"
+                  :aria-label="$t('TRACKING_TEMPLATES.CALENDARS.REMOVE_CALENDAR')"
+                  @click.prevent="removeSelectedCalendar(item.integrationId, item.id)"
+                >
+                  ×
+                </button>
+              </span>
+            </div>
+            <div v-else class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400">
+              {{ $t('TRACKING_TEMPLATES.CALENDARS.EMPTY_SELECTION') }}
+            </div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">
+              {{ $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_HINT') }}
             </p>
+          </template>
+
+          <!-- proyecto@bot_seguimiento_calendar: formato de presentación de horarios -->
+          <div class="mt-5">
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2">
+              {{ $t('TRACKING_TEMPLATES.CALENDARS.PRESENTATION_LABEL') }}
+            </span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label
+                v-for="opt in slotsPresentationOptions"
+                :key="opt.value"
+                class="flex flex-col gap-1 p-3 rounded-md border cursor-pointer transition-colors"
+                :class="form.slots_presentation === opt.value
+                  ? 'border-woot-400 bg-woot-50 dark:bg-woot-900/20'
+                  : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'"
+              >
+                <span class="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    class="accent-woot-500"
+                    :value="opt.value"
+                    :checked="form.slots_presentation === opt.value"
+                    @change="form.slots_presentation = opt.value"
+                  />
+                  <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+                    {{ opt.label }}
+                  </span>
+                </span>
+                <pre class="text-[11px] leading-snug text-slate-500 dark:text-slate-400 whitespace-pre-wrap font-sans pl-6">{{ opt.preview }}</pre>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -1254,6 +1458,69 @@ export default {
         </woot-button>
       </div>
     </form>
+
+    <!-- proyecto@bot_seguimiento_calendar: modal árbol de calendarios agendables -->
+    <woot-modal :show="showCalendarModal" :on-close="closeCalendarModal" size="small">
+      <woot-modal-header
+        :header-title="$t('TRACKING_TEMPLATES.CALENDARS.MODAL_TITLE')"
+        :header-content="$t('TRACKING_TEMPLATES.CALENDARS.MODAL_SUBTITLE')"
+      />
+      <div class="px-8 pb-6 flex flex-col gap-4">
+        <!-- Una sección por cuenta: su Primario y sus Secundarios -->
+        <div
+          v-for="integration in calendarIntegrations"
+          :key="integration.id"
+          class="flex flex-col gap-1"
+        >
+          <p class="text-xs font-medium text-slate-600 dark:text-slate-300">
+            {{ integration.user_name }}
+            <span class="font-normal text-slate-400 dark:text-slate-500">· {{ integration.google_email }}</span>
+          </p>
+          <div
+            v-if="bookableCalendarsFor(integration).length === 0"
+            class="text-xs text-slate-400 dark:text-slate-500 italic py-1 pl-1"
+          >
+            {{ $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_PRIMARY_FALLBACK') }}
+          </div>
+          <div v-else class="space-y-0.5">
+            <label
+              v-for="cal in bookableCalendarsFor(integration)"
+              :key="cal.id"
+              class="flex items-center gap-2 text-sm cursor-pointer p-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              <input
+                type="checkbox"
+                class="accent-woot-500"
+                :checked="isModalCalendarChecked(integration.id, cal.id)"
+                @change="toggleModalCalendar(integration.id, cal.id)"
+              />
+              <span
+                class="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                :style="{ backgroundColor: cal.background_color }"
+              />
+              <span class="text-slate-700 dark:text-slate-200">{{ cal.summary }}</span>
+              <span
+                class="text-xs"
+                :class="cal.primary ? 'text-woot-500' : 'text-slate-400 dark:text-slate-500'"
+              >
+                ({{ cal.primary
+                  ? $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_PRIMARY')
+                  : $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_SECONDARY') }})
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
+          <woot-button variant="clear" type="button" @click="closeCalendarModal">
+            {{ $t('TRACKING_TEMPLATES.CALENDARS.MODAL_CANCEL') }}
+          </woot-button>
+          <woot-button type="button" @click="confirmCalendarModal">
+            {{ $t('TRACKING_TEMPLATES.CALENDARS.MODAL_DONE') }}
+          </woot-button>
+        </div>
+      </div>
+    </woot-modal>
 
     <!-- Modal de validación -->
     <woot-modal :show="showValidationModal" :on-close="() => showValidationModal = false" size="small">

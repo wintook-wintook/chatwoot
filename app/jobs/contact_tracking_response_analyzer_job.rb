@@ -613,7 +613,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     if alternatives.any?
       Rails.logger.info '[TrackingBot] 📅 Ofreciendo horarios para mover la cita'
       intro ||= 'Uy, ese horario no está disponible 😕. Para mover tu cita tengo estos horarios:'
-      reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone)}\n\n¿Cuál te viene bien? Respondé con el número."
+      reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, slots_presentation_for(tracking))}\n\n¿Cuál te viene bien? Respondé con el número."
       offer_slots(tracking, message, alternatives, reply)
     else
       send_auto_reply(tracking, message,
@@ -625,11 +625,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
   end
 
-  def slot_service_for(cal_ids, tracking, timezone)
+  def slot_service_for(cal_ids, tracking, timezone, message: nil)
     ContactTrackings::AvailabilitySlotService.new(
       calendar_integration_ids: cal_ids, timezone: timezone,
       slot_duration: tracking.tracking_template&.calendar_event_duration || 30,
-      working_hours: working_hours_for(tracking, nil)
+      working_hours: working_hours_for(tracking, message),
+      booking_calendars: tracking.tracking_template&.booking_calendar_ids || {}
     )
   end
 
@@ -644,7 +645,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
   def slot_payload(slot)
     { 'slot' => slot[:slot].utc.iso8601, 'end_time' => slot[:end_time].utc.iso8601,
-      'agent_name' => slot[:agent_name], 'cal_id' => slot[:calendar_integration_id] }
+      'agent_name' => slot[:agent_name], 'cal_id' => slot[:calendar_integration_id],
+      'gcal' => slot[:google_calendar_id] }
   end
 
   # Fecha/hora destino para mover la cita. Si el cliente dio una hora explícita, la usa;
@@ -700,13 +702,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     timezone = appointment_timezone(tracking, message)
-    duration = tracking.tracking_template&.calendar_event_duration || 30
-    service  = ContactTrackings::AvailabilitySlotService.new(
-      calendar_integration_ids: cal_ids,
-      timezone: timezone,
-      slot_duration: duration,
-      working_hours: working_hours_for(tracking, message)
-    )
+    service  = slot_service_for(cal_ids, tracking, timezone, message: message)
 
     # Si el cliente pidió una fecha/hora concreta ("el viernes a las 16:00"), respetala:
     # confirmá ese horario si está libre, o ofrecé alternativas cerca del día pedido. Solo
@@ -736,11 +732,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     # Si pidió una hora exacta que estaba ocupada, lo avisamos antes de las alternativas.
+    presentation = slots_presentation_for(tracking)
     reply = if requested&.dig(:exact)
               "Uy, ese horario no está disponible 😕. Estos son los más cercanos:\n\n" \
-                "#{format_slots_lines(slots, timezone)}\n\n¿Cuál te viene bien? Respondé con el número."
+                "#{format_slots_lines(slots, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número."
             else
-              format_slots_message(slots, timezone)
+              format_slots_message(slots, timezone, presentation)
             end
     offer_slots(tracking, message, slots, reply)
     Rails.logger.info "[TrackingBot] 📅 #{slots.size} slots enviados al contacto — esperando elección"
@@ -857,23 +854,15 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     if requested
       cal_ids  = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
-      duration = tracking.tracking_template&.calendar_event_duration || 30
-      service  = ContactTrackings::AvailabilitySlotService.new(
-        calendar_integration_ids: cal_ids, timezone: timezone, slot_duration: duration,
-        working_hours: working_hours_for(tracking, message)
-      )
+      service  = slot_service_for(cal_ids, tracking, timezone, message: message)
 
       # Si dio fecha Y hora concretas, intentamos confirmar ese horario exacto.
       if requested[:exact]
         slot = service.slot_for(requested[:at])
         if slot
           Rails.logger.info "[TrackingBot] 📅 Horario propuesto disponible (#{requested[:at]}) → confirmando"
-          selected = {
-            'slot' => slot[:slot].utc.iso8601, 'end_time' => slot[:end_time].utc.iso8601,
-            'agent_name' => slot[:agent_name], 'cal_id' => slot[:calendar_integration_id]
-          }
           clear_pending_slot(tracking)
-          proceed_with_selected_slot(tracking, message, selected)
+          proceed_with_selected_slot(tracking, message, slot_payload(slot))
           return true
         end
       end
@@ -884,7 +873,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         intro = requested[:exact] ? 'Uy, ese horario no está disponible 😕. Estos son los más cercanos:'
                                   : '¡Claro! Para ese día tengo estos horarios:'
         Rails.logger.info '[TrackingBot] 📅 Ofreciendo horarios cercanos a lo pedido'
-        reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone)}\n\n¿Cuál te viene bien? Respondé con el número."
+        reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, slots_presentation_for(tracking))}\n\n¿Cuál te viene bien? Respondé con el número."
         offer_slots(tracking, message, alternatives, reply)
         return true
       end
@@ -1084,10 +1073,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     slot_end    = Time.parse(selected_slot['end_time'])
     agent_name  = selected_slot['agent_name']
     cal_id      = selected_slot['cal_id']
+    gcal        = selected_slot['gcal'].presence || 'primary'
     contact     = message.sender
     contact_name = contact&.name || 'Cliente'
 
-    event_created, event_id = create_or_move_calendar_event(tracking, message, slot_start, slot_end, cal_id)
+    event_created, event_id = create_or_move_calendar_event(tracking, message, slot_start, slot_end, cal_id, gcal)
 
     local_start = slot_start.in_time_zone(timezone)
     local_end   = slot_end.in_time_zone(timezone)
@@ -1127,7 +1117,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       appointment_at: slot_start,   # proyecto@contact_tracking: dashboard KPI citas
       outcome: 'appointment',
       appointment_event_id: event_id,        # referencia para mover/cancelar (#2/#3)
-      appointment_calendar_id: cal_id
+      appointment_calendar_id: cal_id,
+      appointment_calendar_gid: gcal         # calendario de Google donde quedó el evento
     )
     tracking.pause!
 
@@ -1146,7 +1137,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # (appointment_event_id) en la misma agenda, la MUEVE (update_event) en vez de crear
   # una nueva, evitando duplicados. Si la nueva cita cae en otra agenda, crea el evento
   # nuevo y borra el anterior. Devuelve [event_created (bool), event_id (String|nil)].
-  def create_or_move_calendar_event(tracking, message, slot_start, slot_end, cal_id)
+  def create_or_move_calendar_event(tracking, message, slot_start, slot_end, cal_id, gcal = 'primary')
     integration = UserCalendarIntegration.find_by(id: cal_id)
     return [false, nil] unless integration
 
@@ -1157,18 +1148,22 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     attendees    = [contact&.email].compact.select(&:present?)
     service      = GoogleCalendarService.new(integration)
 
+    # Solo se MUEVE en el lugar (update) si el evento previo vive en EXACTAMENTE el mismo
+    # calendario (misma cuenta y mismo gid). Si cambió de cuenta o de calendario, se crea
+    # uno nuevo en `gcal` y se borra el anterior (delete_stale), evitando duplicados.
     existing_event_id = tracking.appointment_event_id
-    if existing_event_id.present? && tracking.appointment_calendar_id == cal_id
-      service.update_event(existing_event_id, summary: summary, description: description,
+    old_gid           = tracking.appointment_calendar_gid.presence || 'primary'
+    if existing_event_id.present? && tracking.appointment_calendar_id == cal_id && old_gid == gcal
+      service.update_event(existing_event_id, calendar_id: gcal, summary: summary, description: description,
                                               start_time: slot_start, end_time: slot_end, attendees: attendees)
-      Rails.logger.info "[TrackingBot] 📅 Evento movido en Google Calendar (id: #{existing_event_id}) → #{slot_start}"
+      Rails.logger.info "[TrackingBot] 📅 Evento movido en Google Calendar (cal: #{gcal}, id: #{existing_event_id}) → #{slot_start}"
       [true, existing_event_id]
     else
-      result   = service.create_event(summary: summary, description: description,
+      result   = service.create_event(calendar_id: gcal, summary: summary, description: description,
                                        start_time: slot_start, end_time: slot_end, attendees: attendees)
       event_id = result.is_a?(Hash) ? result['id'] : nil
-      Rails.logger.info "[TrackingBot] 📅 Evento creado en Google Calendar para #{slot_start} (id: #{event_id})"
-      delete_stale_appointment_event(tracking, cal_id)
+      Rails.logger.info "[TrackingBot] 📅 Evento creado en Google Calendar (cal: #{gcal}) para #{slot_start} (id: #{event_id})"
+      delete_stale_appointment_event(tracking, cal_id, gcal)
       [true, event_id]
     end
   rescue StandardError => e
@@ -1178,16 +1173,18 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
   # Borra (best-effort) el evento de una cita previa que vivía en OTRA agenda, para no
   # dejar un evento duplicado/huérfano cuando la cita se mueve a un calendario distinto.
-  def delete_stale_appointment_event(tracking, new_cal_id)
+  def delete_stale_appointment_event(tracking, new_cal_id, new_gid)
     old_event_id = tracking.appointment_event_id
     old_cal_id   = tracking.appointment_calendar_id
-    return if old_event_id.blank? || old_cal_id == new_cal_id
+    old_gid      = tracking.appointment_calendar_gid.presence || 'primary'
+    # Si el evento previo vive en el MISMO calendario que el nuevo, no hay nada que limpiar.
+    return if old_event_id.blank? || (old_cal_id == new_cal_id && old_gid == new_gid)
 
     old_integration = UserCalendarIntegration.find_by(id: old_cal_id)
     return unless old_integration
 
-    GoogleCalendarService.new(old_integration).delete_event(old_event_id)
-    Rails.logger.info "[TrackingBot] 📅 Evento previo borrado de la agenda anterior (id: #{old_event_id})"
+    GoogleCalendarService.new(old_integration).delete_event(old_event_id, calendar_id: old_gid)
+    Rails.logger.info "[TrackingBot] 📅 Evento previo borrado de la agenda anterior (cal: #{old_gid}, id: #{old_event_id})"
   rescue StandardError => e
     Rails.logger.warn "[TrackingBot] ⚠️ No se pudo borrar el evento previo: #{e.message}"
   end
@@ -1206,7 +1203,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     integration = UserCalendarIntegration.find_by(id: tracking.appointment_calendar_id)
     if integration
       begin
-        GoogleCalendarService.new(integration).delete_event(event_id)
+        GoogleCalendarService.new(integration).delete_event(
+          event_id, calendar_id: tracking.appointment_calendar_gid.presence || 'primary'
+        )
         deleted = true
         Rails.logger.info "[TrackingBot] 🗑️  Evento cancelado en Google Calendar (id: #{event_id})"
       rescue StandardError => e
@@ -1222,6 +1221,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       appointment_at: nil,
       appointment_event_id: nil,
       appointment_calendar_id: nil,
+      appointment_calendar_gid: nil,
       outcome: 'cancelled',
       ai_context: "#{tracking.ai_context}\n\n🗑️ [CITA CANCELADA] El cliente canceló su cita. Evento en Calendar: #{deleted ? 'borrado' : 'no se pudo borrar (revisar)'}."
     )
@@ -1235,20 +1235,72 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     send_auto_reply(tracking, message, 'Lo siento, tuve un problema al cancelar la cita. Un asesor te contactará pronto.')
   end
 
-  def format_slots_lines(slots, timezone)
-    day_names = %w[domingo lunes martes miércoles jueves viernes sábado]
-    month_names = %w[ene feb mar abr may jun jul ago sep oct nov dic]
-    numbers    = %w[1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣]
-    tz_label   = timezone_label(timezone)
+  SLOT_DAY_NAMES     = %w[domingo lunes martes miércoles jueves viernes sábado].freeze
+  SLOT_MONTH_NAMES   = %w[ene feb mar abr may jun jul ago sep oct nov dic].freeze
+  SLOT_NUMBERS       = %w[1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣].freeze
+  SLOTS_PRESENTATIONS = %w[detailed by_agent simple by_day].freeze
 
+  # proyecto@bot_seguimiento_calendar — formato configurable (en el Agente IA) con el que se
+  # listan los horarios. La numeración 1-5 SIEMPRE refleja la posición en `slots`, para que la
+  # elección por número del cliente siga mapeando bien sin importar el agrupamiento.
+  def slots_presentation_for(tracking)
+    value = tracking.tracking_template&.slots_presentation
+    SLOTS_PRESENTATIONS.include?(value) ? value : 'detailed'
+  end
+
+  def format_slots_lines(slots, timezone, presentation = 'detailed')
+    case presentation
+    when 'by_agent' then format_slots_by_agent(slots, timezone)
+    when 'simple'   then format_slots_simple(slots, timezone)
+    when 'by_day'   then format_slots_by_day(slots, timezone)
+    else format_slots_detailed(slots, timezone)
+    end
+  end
+
+  # "jueves 25 jun · 09:00 – 10:00 hs"
+  def slot_date_range_text(slot, timezone)
+    local     = slot[:slot].in_time_zone(timezone)
+    local_end = slot[:end_time].in_time_zone(timezone)
+    day       = SLOT_DAY_NAMES[local.wday]
+    month     = SLOT_MONTH_NAMES[local.month - 1]
+    "#{day} #{local.day} #{month} · #{local.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs"
+  end
+
+  # A) Detallado (default): fecha, rango, zona y profesional en cada línea.
+  def format_slots_detailed(slots, timezone)
+    tz_label = timezone_label(timezone)
     slots.each_with_index.map do |s, i|
-      local     = s[:slot].in_time_zone(timezone)
-      local_end = s[:end_time].in_time_zone(timezone)
-      day       = day_names[local.wday]
-      month     = month_names[local.month - 1]
-      agent     = s[:agent_name].presence || 'Agenda'
-      "#{numbers[i]} #{day} #{local.day} #{month} · #{local.strftime('%H:%M')} – #{local_end.strftime('%H:%M')} hs (hora de #{tz_label}) — #{agent}"
+      agent = s[:agent_name].presence || 'Agenda'
+      "#{SLOT_NUMBERS[i]} #{slot_date_range_text(s, timezone)} (hora de #{tz_label}) — #{agent}"
     end.join("\n")
+  end
+
+  # B) Simple: sin zona ni profesional.
+  def format_slots_simple(slots, timezone)
+    slots.each_with_index.map do |s, i|
+      "#{SLOT_NUMBERS[i]} #{slot_date_range_text(s, timezone)}"
+    end.join("\n")
+  end
+
+  # E) Agrupado por agenda: encabezado por profesional + zona, sus horarios debajo.
+  def format_slots_by_agent(slots, timezone)
+    tz_label = timezone_label(timezone)
+    grouped  = slots.each_with_index.group_by { |s, _i| s[:agent_name].presence || 'Agenda' }
+    grouped.map do |agent, items|
+      lines = items.map { |s, i| "   #{SLOT_NUMBERS[i]} #{slot_date_range_text(s, timezone)}" }
+      "👤 #{agent} (hora de #{tz_label})\n#{lines.join("\n")}"
+    end.join("\n\n")
+  end
+
+  # D) Agrupado por día: encabezado por fecha, solo la hora de inicio en cada opción.
+  def format_slots_by_day(slots, timezone)
+    grouped = slots.each_with_index.group_by { |s, _i| s[:slot].in_time_zone(timezone).to_date }
+    grouped.map do |_date, items|
+      local  = items.first[0][:slot].in_time_zone(timezone)
+      header = "📅 #{SLOT_DAY_NAMES[local.wday]} #{local.day} #{SLOT_MONTH_NAMES[local.month - 1]}"
+      opts   = items.map { |s, i| "#{SLOT_NUMBERS[i]} #{s[:slot].in_time_zone(timezone).strftime('%H:%M')}" }
+      "#{header}\n   #{opts.join('   ')}"
+    end.join("\n\n")
   end
 
   # proyecto@bot_seguimiento_calendar — nombre amigable de la zona del agente/inbox para
@@ -1261,8 +1313,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     name.presence || 'tu zona'
   end
 
-  def format_slots_message(slots, timezone)
-    "¡Con gusto! 📅 Tenemos los siguientes horarios disponibles:\n\n#{format_slots_lines(slots, timezone)}\n\n¿Cuál te viene bien? Respondé con el número de tu preferencia."
+  def format_slots_message(slots, timezone, presentation = 'detailed')
+    "¡Con gusto! 📅 Tenemos los siguientes horarios disponibles:\n\n#{format_slots_lines(slots, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número de tu preferencia."
   end
 
   # Envía un mensaje con horarios y deja el seguimiento esperando la elección

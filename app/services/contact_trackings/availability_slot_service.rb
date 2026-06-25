@@ -13,12 +13,19 @@ module ContactTrackings
     # `working_hours:` — colección de WorkingHour del inbox (Opción A). Si es nil/vacía, se
     # usa el horario por defecto (9–18, lun–vie). Quien llama solo lo pasa cuando el inbox
     # tiene working_hours_enabled?, así un inbox sin configurar mantiene el comportamiento previo.
+    #
+    # `booking_calendars:` — mapa { integration_id => [google_calendar_id, ...] } que define,
+    # por agenda, en QUÉ calendarios se puede agendar. Cada calendario marcado es un RECURSO
+    # independiente: se mira su disponibilidad por separado y la cita se crea en el que esté
+    # libre (se reparte si hay varios). Si una agenda no figura en el mapa → modo legado: se
+    # leen sus `enabled_calendar_ids` (unión) y la cita se crea en 'primary' (comportamiento previo).
     def initialize(calendar_integration_ids:, timezone: 'America/Mexico_City', slot_duration: DEFAULT_DURATION,
-                   working_hours: nil)
+                   working_hours: nil, booking_calendars: {})
       @calendar_integration_ids = Array(calendar_integration_ids).map(&:to_i).uniq
       @timezone      = timezone.presence || 'America/Mexico_City'
       @slot_duration = slot_duration.to_i.positive? ? slot_duration.to_i : DEFAULT_DURATION
       @work_windows  = build_work_windows(working_hours)
+      @booking_calendars = booking_calendars.is_a?(Hash) ? booking_calendars : {}
     end
 
     # `from:` permite anclar la búsqueda cerca de un día/hora pedido por el cliente
@@ -33,16 +40,19 @@ module ContactTrackings
       time_min = align_to_slot(start_at)
       time_max = business_days_from_now(start_at, DAYS_AHEAD)
 
-      slots_by_agent = {}
+      slots_by_resource = {}
 
       integrations.each do |integration|
-        busy_periods = fetch_busy_periods(integration, time_min, time_max)
-        slots_by_agent[integration.id] = free_slots_for(integration, busy_periods, time_min, time_max)
-      rescue StandardError => e
-        Rails.logger.warn "[AvailabilitySlotService] ⚠️ Error en integración ##{integration.id}: #{e.message}"
+        resources_for(integration).each do |res|
+          busy = fetch_busy_periods(integration, res[:read], time_min, time_max)
+          key  = [integration.id, res[:gcal]]
+          slots_by_resource[key] = free_slots_for(integration, res[:gcal], busy, time_min, time_max)
+        rescue StandardError => e
+          Rails.logger.warn "[AvailabilitySlotService] ⚠️ Error en agenda ##{integration.id}/#{res[:gcal]}: #{e.message}"
+        end
       end
 
-      balance_slots(slots_by_agent)
+      balance_slots(slots_by_resource)
     end
 
     # Verifica si un horario EXACTO propuesto por el cliente está libre (dentro del
@@ -57,15 +67,18 @@ module ContactTrackings
       return nil unless within_work_hours?(aligned, slot_end)
 
       UserCalendarIntegration.where(id: @calendar_integration_ids).each do |integration|
-        busy = fetch_busy_periods(integration, aligned - 1.hour, slot_end + 1.hour)
-        next if overlaps_busy?(aligned, slot_end, busy)
+        resources_for(integration).each do |res|
+          busy = fetch_busy_periods(integration, res[:read], aligned - 1.hour, slot_end + 1.hour)
+          next if overlaps_busy?(aligned, slot_end, busy)
 
-        return {
-          slot:                    aligned,
-          end_time:                slot_end,
-          agent_name:              integration.user&.name || 'Agente',
-          calendar_integration_id: integration.id
-        }
+          return {
+            slot:                    aligned,
+            end_time:                slot_end,
+            agent_name:              integration.user&.name || 'Agente',
+            calendar_integration_id: integration.id,
+            google_calendar_id:      res[:gcal]
+          }
+        end
       end
       nil
     rescue StandardError => e
@@ -75,26 +88,46 @@ module ContactTrackings
 
     private
 
-    # Reparte los horarios ofrecidos entre los agentes para (a) no ofrecer el mismo
-    # horario dos veces y (b) no sobrecargar a un solo agente: agrupa por horario y,
-    # en cada uno, elige al agente con MENOS citas asignadas hasta ahora (desempate
-    # estable por id). Devuelve los MAX_SLOTS horarios distintos más tempranos.
-    def balance_slots(slots_by_agent)
+    # Recursos agendables de una integración. Cada uno es { gcal:, read: } donde `gcal` es el
+    # calendario donde se CREA la cita y `read` los calendarios cuya ocupación lo bloquea.
+    # - Con calendarios configurados en el agente (booking_calendars): un recurso por calendario
+    #   marcado (gcal == read == ese calendario). Marcado = se puede agendar ahí.
+    # - Sin configurar (legado): un solo recurso, lee la unión de enabled_calendar_ids y crea en 'primary'.
+    def resources_for(integration)
+      configured = @booking_calendars[integration.id.to_s] || @booking_calendars[integration.id]
+      configured = Array(configured).map(&:to_s).reject(&:blank?).uniq
+
+      if configured.present?
+        configured.map { |gcal| { gcal: gcal, read: [gcal] } }
+      else
+        [{ gcal: 'primary', read: integration.enabled_calendar_ids.presence || ['primary'] }]
+      end
+    end
+
+    # Reparte los horarios ofrecidos entre los recursos (cuenta+calendario) para (a) no ofrecer
+    # el mismo horario dos veces y (b) no sobrecargar a un solo recurso: agrupa por horario y,
+    # en cada uno, elige el recurso con MENOS citas asignadas hasta ahora (desempate estable).
+    # Devuelve los MAX_SLOTS horarios distintos más tempranos.
+    def balance_slots(slots_by_resource)
       by_time = Hash.new { |h, k| h[k] = [] }
-      slots_by_agent.each_value do |slots|
+      slots_by_resource.each_value do |slots|
         slots.each { |s| by_time[s[:slot]] << s }
       end
 
       load = Hash.new(0)
       by_time.keys.sort.first(MAX_SLOTS).map do |time|
-        chosen = by_time[time].min_by { |s| [load[s[:calendar_integration_id]], s[:calendar_integration_id]] }
-        load[chosen[:calendar_integration_id]] += 1
+        chosen = by_time[time].min_by { |s| [load[resource_key(s)], resource_key(s).join('::')] }
+        load[resource_key(chosen)] += 1
         chosen
       end
     end
 
-    def fetch_busy_periods(integration, time_min, time_max)
-      calendar_ids = integration.enabled_calendar_ids.presence || ['primary']
+    def resource_key(slot)
+      [slot[:calendar_integration_id], slot[:google_calendar_id]]
+    end
+
+    def fetch_busy_periods(integration, calendar_ids, time_min, time_max)
+      calendar_ids = Array(calendar_ids).presence || ['primary']
       service  = GoogleCalendarService.new(integration)
       response = service.free_busy(calendars: calendar_ids, time_min: time_min, time_max: time_max)
 
@@ -108,7 +141,7 @@ module ContactTrackings
       []
     end
 
-    def free_slots_for(integration, busy_periods, time_min, time_max)
+    def free_slots_for(integration, gcal, busy_periods, time_min, time_max)
       agent_name = integration.user&.name || 'Agente'
       slots      = []
       current    = time_min
@@ -121,7 +154,8 @@ module ContactTrackings
             slot:                    current,
             end_time:                slot_end,
             agent_name:              agent_name,
-            calendar_integration_id: integration.id
+            calendar_integration_id: integration.id,
+            google_calendar_id:      gcal
           }
           break if slots.size >= MAX_SLOTS
         end
