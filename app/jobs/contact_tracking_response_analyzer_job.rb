@@ -390,7 +390,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     reply_text = generate_conversational_reply(tracking, message)
     return false if reply_text.blank?
 
-    reply_text = "#{reply_text}\n\n_@TB_"
+    reply_text = "#{reply_text}\n\n-TB"
     send_auto_reply(tracking, message, reply_text)
     Rails.logger.info '[TrackingBot] ✅ Respuesta enviada → respondió TrackingBot'
     true
