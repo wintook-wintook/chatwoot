@@ -3,6 +3,7 @@
 <script>
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SourceCard from './SourceCard.vue';
 import AddSourceModal from './AddSourceModal.vue';
@@ -49,9 +50,19 @@ export default {
     };
   },
   computed: {
-    ...mapGetters({ currentUser: 'getCurrentUser' }),
+    ...mapGetters({
+      currentUser: 'getCurrentUser',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
+    }),
     accountId() {
       return this.currentUser.account_id;
+    },
+    // Las fuentes Google reutilizan la conexión de Google Calendar.
+    googleEnabled() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.GOOGLE_CALENDAR
+      );
     },
     tabs() {
       return [
@@ -231,6 +242,13 @@ export default {
     onEditSource(source) {
       this.editingSource = source;
       this.showAddModal = true;
+    },
+    // Una fuente Google queda inoperante si la cuenta no tiene la feature.
+    isGoogleSourceDisabled(source) {
+      return (
+        ['google_doc', 'google_sheet'].includes(source.source_type) &&
+        !this.googleEnabled
+      );
     },
     async onSync(source) {
       this.syncingId = source.id;
@@ -600,6 +618,7 @@ export default {
             :key="source.id"
             :source="source"
             :syncing="syncingId === source.id"
+            :google-disabled="isGoogleSourceDisabled(source)"
             @sync="onSync"
             @edit="onEditSource"
             @delete="onDelete"

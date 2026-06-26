@@ -90,6 +90,12 @@ class KnowledgeBaseResponseService
     end
   end
 
+  # Las fuentes Google (Doc/Sheet) reutilizan la conexión de Google Calendar:
+  # si la cuenta no tiene esa feature, las directivas {{doc:}}/{{hoja:}} no operan.
+  def google_feature_enabled?
+    @account.feature_enabled?('google_calendar')
+  end
+
   # ==============================================================================
   # MODO 1 — pgvector local (Respuestas predefinidas / artículos del Centro de Ayuda)
   # ==============================================================================
@@ -134,6 +140,8 @@ class KnowledgeBaseResponseService
   # ==============================================================================
 
   def perform_google_doc(question, source_name)
+    return false unless google_feature_enabled?
+
     source = @account.knowledge_sources.active
                      .where(source_type: 'google_doc')
                      .where('LOWER(name) = LOWER(?)', source_name)
@@ -176,6 +184,8 @@ class KnowledgeBaseResponseService
   # ==============================================================================
 
   def perform_google_sheet(question, source_name)
+    return false unless google_feature_enabled?
+
     source = @account.knowledge_sources.active
                      .where(source_type: 'google_sheet')
                      .where('LOWER(name) = LOWER(?)', source_name)

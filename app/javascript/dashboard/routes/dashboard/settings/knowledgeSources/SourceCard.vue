@@ -6,6 +6,9 @@ export default {
   props: {
     source: { type: Object, required: true },
     syncing: { type: Boolean, default: false },
+    // True cuando es una fuente Google pero la cuenta no tiene la feature
+    // google_calendar activada: se deshabilita sync y la directiva no opera.
+    googleDisabled: { type: Boolean, default: false },
   },
   emits: ['sync', 'delete', 'edit'],
   computed: {
@@ -121,9 +124,21 @@ export default {
       <span>{{ discourseUsername }}</span>
     </div>
 
+    <!-- Aviso: la feature Google (Calendario) está desactivada para la cuenta -->
+    <div
+      v-if="googleDisabled"
+      class="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg"
+    >
+      <fluent-icon icon="warning" size="14" class="text-amber-500" />
+      <span class="text-sm text-amber-700">
+        Integración de Google desactivada para esta cuenta: esta fuente y su
+        directiva no funcionan hasta reactivarla.
+      </span>
+    </div>
+
     <!-- Aviso: falta integración OpenAI para poder vectorizar -->
     <div
-      v-if="needsOpenai"
+      v-if="needsOpenai && !googleDisabled"
       class="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg"
     >
       <fluent-icon icon="warning" size="14" class="text-amber-500" />
@@ -172,7 +187,7 @@ export default {
         variant="smooth"
         color-scheme="primary"
         icon="arrow-clockwise"
-        :disabled="syncing || needsOpenai"
+        :disabled="syncing || needsOpenai || googleDisabled"
         @click="$emit('sync', source)"
       >
         {{ syncing ? 'Sincronizando...' : 'Sincronizar' }}
