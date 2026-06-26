@@ -101,7 +101,8 @@ class SheetQueryService
       sin texto extra. Esquema:
       { "operations": [ { "op": "sum|avg|min|max|count|filter|list", "column": "<encabezado o null>" } ],
         "filters": [ { "column": "<encabezado>", "operator": "=|!=|>|<|>=|<=|contains|in", "value": "<texto o lista>" } ] }
-      Reglas: usa exactamente los encabezados dados. Para "cuántos" usa count. Para "cuáles/lista" usa list.
+      Reglas: usa exactamente los encabezados dados. Para "cuántos" usa count.
+      Para "cuáles/lista/reporte/detalle/muéstrame/dame las facturas" usa list (enumera las filas).
       Si la pregunta solo describe facturas con condiciones y NO dice qué calcular, usá op "count".
       Para "X o Y" sobre el mismo campo (ej. "México y Argentina"), usá operator "in" con value como lista: ["México","Argentina"].
       Si la pregunta combina condiciones de DISTINTOS campos unidas por "o"/grupos separados
@@ -112,10 +113,15 @@ class SheetQueryService
       Si la pregunta pide VARIAS cosas a la vez (ej. "cuántas y cuánto suman"), incluí UNA entrada por cada
       cálculo en "operations". Los "filters" aplican a todas las operaciones de la pregunta.
       Si la pregunta menciona (aunque sea con otra forma gramatical) uno de los "Valores posibles" listados,
-      filtra por esa columna con operator "=" y ese valor exacto, NO inventes condiciones de fecha ni rangos.
+      filtra por esa columna con operator "=" y ese valor exacto.
+      Para periodos relativos (mes pasado, este mes, próximo mes, esta semana, hoy, etc.) calculá el rango
+      CONCRETO de fechas a partir de la "Fecha de hoy" y filtrá la columna de fecha adecuada con DOS condiciones:
+      operator ">=" (inicio) y "<=" (fin), valores en formato YYYY-MM-DD. Elegí la columna de fecha según la
+      acción: vencer/cobrar → fecha de vencimiento; emitir/facturar → fecha de emisión.
     SYS
     categories_block = categories.map { |col, vals| "#{col} = [#{vals.join(', ')}]" }.join('; ')
     user = <<~USR.strip
+      Fecha de hoy: #{Date.current.iso8601}
       Encabezados: #{headers.join(', ')}
       Valores posibles: #{categories_block.presence || '(ninguno categórico)'}
       Primeras filas: #{sample.to_json}
@@ -235,12 +241,31 @@ class SheetQueryService
       else a_num == e_num
       end
     else
+      a_date = parse_date(actual)
+      e_date = parse_date(expected)
+      return compare_dates(a_date, e_date, operator) if a_date && e_date && %w[> < >= <=].include?(operator)
+
       case operator
       when 'contains' then actual.downcase.include?(expected.downcase)
       when '!=' then actual.casecmp(expected) != 0
       else actual.casecmp(expected).zero?
       end
     end
+  end
+
+  def compare_dates(a_date, e_date, operator)
+    case operator
+    when '>'  then a_date > e_date
+    when '<'  then a_date < e_date
+    when '>=' then a_date >= e_date
+    when '<=' then a_date <= e_date
+    end
+  end
+
+  def parse_date(str)
+    Date.iso8601(str.to_s)
+  rescue ArgumentError
+    nil
   end
 
   def aggregate(op, rows, col)
