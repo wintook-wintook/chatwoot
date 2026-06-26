@@ -18,6 +18,7 @@
 #  first_response_time_target :integer
 #  folio                      :string
 #  impact                     :integer
+#  locked_at                  :datetime
 #  metadata                   :jsonb            not null
 #  origin                     :integer          default("whatsapp"), not null
 #  priority                   :integer          default("medium"), not null
@@ -41,6 +42,7 @@
 #  contact_tracking_id        :bigint
 #  conversation_id            :bigint
 #  kb_article_id              :bigint
+#  locked_by_id               :bigint
 #  requester_id               :bigint
 #  team_id                    :bigint
 #
@@ -55,11 +57,13 @@
 #  index_case_tickets_on_affected_service_id          (affected_service_id)
 #  index_case_tickets_on_category_id                  (category_id)
 #  index_case_tickets_on_kb_article_id                (kb_article_id)
+#  index_case_tickets_on_locked_by_id                 (locked_by_id)
 #  index_case_tickets_on_metadata                     (metadata) USING gin
 #  index_case_tickets_on_requester_id                 (requester_id)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (locked_by_id => users.id)
 #  fk_rails_...  (requester_id => users.id)
 #
 

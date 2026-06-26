@@ -52,6 +52,10 @@ class KnowledgeBaseResponseService
       perform_pgvector(question, 'article')
     when :knowledge_source
       perform_discourse(question, directive[:source_name])
+    when :google_doc
+      perform_google_doc(question, directive[:source_name])
+    when :google_sheet
+      perform_google_sheet(question, directive[:source_name])
     when :discourse_integration
       perform_discourse_integration(question)
     else
@@ -77,6 +81,10 @@ class KnowledgeBaseResponseService
       { mode: :article }
     elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
       { mode: :knowledge_source, source_name: match[1].strip }
+    elsif (match = cp.match(/\{\{doc:([^}]+)\}\}/i))
+      { mode: :google_doc, source_name: match[1].strip }
+    elsif (match = cp.match(/\{\{hoja:([^}]+)\}\}/i))
+      { mode: :google_sheet, source_name: match[1].strip }
     elsif cp.match?(/@discourse\b/i)
       { mode: :discourse_integration }
     end
@@ -115,6 +123,106 @@ class KnowledgeBaseResponseService
     source_tag = @account.knowledge_sources.find_by(source_type: source_type)&.name ||
                  I18n.t("knowledge_sources.names.#{source_type}", locale: @account.locale.presence || I18n.default_locale)
     send_reply("#{reply_text}\n\n_#{source_tag}_")
+    true
+  end
+
+  # ==============================================================================
+  # MODO Google Doc — pgvector local scoped a UNA fuente (por nombre único)
+  # Directiva {{doc:nombre}}. A diferencia de @buscar_predefinidas/@buscar_articulo
+  # (que filtran por source_type), aquí se filtra por knowledge_source_id porque
+  # puede haber varios Google Docs y el nombre direcciona a uno concreto.
+  # ==============================================================================
+
+  def perform_google_doc(question, source_name)
+    source = @account.knowledge_sources.active
+                     .where(source_type: 'google_doc')
+                     .where('LOWER(name) = LOWER(?)', source_name)
+                     .first
+    unless source
+      Rails.logger.warn "[KBase] ⚠️ Google Doc '#{source_name}' no encontrado o inactivo"
+      return false
+    end
+
+    embedding = generate_embedding_openai(question)
+    return false unless embedding
+
+    items = @account.knowledge_items
+                    .where(knowledge_source_id: source.id)
+                    .search_by_embedding(
+                      embedding,
+                      limit:     kbase_setting('max_results'),
+                      threshold: kbase_setting('similarity_threshold')
+                    )
+    if items.empty?
+      Rails.logger.info "[KBase] ⚠️ Sin resultados en Google Doc '#{source.name}'"
+      return false
+    end
+
+    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(1200)}" }
+                   .join("\n\n")
+                   .truncate(kbase_setting('max_context_chars'))
+
+    reply_text = generate_contextual_reply(question, context)
+    return false if reply_text.blank?
+
+    send_reply("#{reply_text}\n\n_#{source.name}_")
+    true
+  end
+
+  # ==============================================================================
+  # MODO Google Sheet — directiva {{hoja:nombre}}
+  #   modo FAQ  → pgvector scoped a la fuente (igual que Google Doc).
+  #   modo Datos→ SheetQueryService: LLM traduce la pregunta y Ruby calcula exacto.
+  # ==============================================================================
+
+  def perform_google_sheet(question, source_name)
+    source = @account.knowledge_sources.active
+                     .where(source_type: 'google_sheet')
+                     .where('LOWER(name) = LOWER(?)', source_name)
+                     .first
+    unless source
+      Rails.logger.warn "[KBase] ⚠️ Google Sheet '#{source_name}' no encontrado o inactivo"
+      return false
+    end
+
+    return perform_sheet_faq(question, source) unless source.config['sheet_mode'] == 'data'
+
+    perform_sheet_data(question, source)
+  end
+
+  def perform_sheet_data(question, source)
+    result = SheetQueryService.new(source, question, @account).perform
+    if result.blank?
+      Rails.logger.info "[KBase] ⚠️ Sin resultado en hoja de datos '#{source.name}'"
+      return false
+    end
+
+    # El número/resultado lo calcula Ruby (exacto); el LLM solo lo redacta natural.
+    reply_text = generate_contextual_reply(question, "Resultado exacto a comunicar: #{result}")
+    reply_text = result if reply_text.blank?
+    send_reply("#{reply_text}\n\n_#{source.name}_")
+    true
+  end
+
+  def perform_sheet_faq(question, source)
+    embedding = generate_embedding_openai(question)
+    return false unless embedding
+
+    items = @account.knowledge_items
+                    .where(knowledge_source_id: source.id)
+                    .search_by_embedding(embedding, limit: kbase_setting('max_results'), threshold: kbase_setting('similarity_threshold'))
+    if items.empty?
+      Rails.logger.info "[KBase] ⚠️ Sin resultados en hoja FAQ '#{source.name}'"
+      return false
+    end
+
+    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(1200)}" }
+                   .join("\n\n")
+                   .truncate(kbase_setting('max_context_chars'))
+    reply_text = generate_contextual_reply(question, context)
+    return false if reply_text.blank?
+
+    send_reply("#{reply_text}\n\n_#{source.name}_")
     true
   end
 

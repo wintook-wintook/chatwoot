@@ -54,10 +54,24 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
 
   # POST /api/v1/accounts/:account_id/knowledge_base/sources
   def create_source
-    source = current_account.knowledge_sources.new(source_params)
+    attrs = source_params.to_h
+    if attrs[:source_type] == 'google_doc'
+      error = google_doc_precheck(attrs[:config])
+      return render json: { errors: [error] }, status: :unprocessable_entity if error
+
+      attrs[:config] = build_google_doc_config(attrs[:config])
+    elsif attrs[:source_type] == 'google_sheet'
+      error = google_sheet_precheck(attrs[:config])
+      return render json: { errors: [error] }, status: :unprocessable_entity if error
+
+      attrs[:config] = build_google_sheet_config(attrs[:config])
+    end
+
+    source = current_account.knowledge_sources.new(attrs)
     if source.save
-      # Las fuentes Discourse se consultan en vivo (Discourse AI semantic-search),
-      # no se vectorizan localmente. No hay sync de ingesta.
+      # Discourse se consulta en vivo; Docs/Sheets se vectorizan o indexan: sync inicial.
+      enqueue_google_doc_sync(source) if source.source_type == 'google_doc'
+      enqueue_google_sheet_sync(source) if source.source_type == 'google_sheet'
       render json: source, status: :created
     else
       render json: { errors: source.errors.full_messages }, status: :unprocessable_entity
@@ -96,6 +110,18 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     when 'discourse'
       # Discourse se busca en vivo vía el plugin Discourse AI; no hay sync local.
       render json: { message: 'Las fuentes Discourse se consultan en vivo; no requieren sincronización.' }
+    when 'google_doc'
+      return render_openai_required unless openai_api_key.present?
+      return render_google_required unless google_integration.present?
+
+      enqueue_google_doc_sync(@source)
+      render json: { message: 'Sincronización iniciada' }
+    when 'google_sheet'
+      return render_openai_required unless openai_api_key.present?
+      return render_google_required unless google_integration.present?
+
+      enqueue_google_sheet_sync(@source)
+      render json: { message: 'Sincronización iniciada' }
     else
       render json: { message: 'Sincronización iniciada' }
     end
@@ -236,6 +262,78 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     render json: {
       error: 'Configura la integración de OpenAI en la cuenta para vectorizar esta fuente.'
     }, status: :unprocessable_entity
+  end
+
+  def render_google_required
+    render json: {
+      error: 'Conecta tu cuenta de Google (Calendario) para leer Google Docs.'
+    }, status: :unprocessable_entity
+  end
+
+  # Valida antes de crear una fuente Google Doc. Devuelve un mensaje de error o nil.
+  # Fase 1 solo soporta Google Docs (texto); las Hojas de cálculo son Fase 2.
+  def google_doc_precheck(config)
+    url = (config || {})['file_url'].to_s
+    return 'Conecta tu cuenta de Google (Calendario) para leer Google Docs.' unless google_integration
+
+    if url.include?('/spreadsheets/')
+      return 'Por ahora solo se soportan Google Docs (documentos de texto). Las Hojas de cálculo ' \
+             'estarán disponibles próximamente.'
+    end
+    return 'Configura la integración de OpenAI en la cuenta para vectorizar esta fuente.' unless openai_api_key.present?
+
+    nil
+  end
+
+  # Completa el config de una fuente Google Doc: extrae el file_id de la URL/ID que
+  # pegó el usuario y asocia la integración Google del usuario actual.
+  def build_google_doc_config(config)
+    config ||= {}
+    raw = config['file_url'].presence || config['file_id'].presence
+    {
+      'file_url'       => config['file_url'],
+      'file_id'        => GoogleDocsService.extract_file_id(raw),
+      'integration_id' => google_integration&.id
+    }
+  end
+
+  def enqueue_google_doc_sync(source)
+    GoogleDocSyncJob.perform_later(action: 'upsert', source_id: source.id, account_id: current_account.id)
+    source.update(sync_status: 'syncing')
+  end
+
+  # Valida antes de crear una fuente Google Sheet. Devuelve un mensaje de error o nil.
+  def google_sheet_precheck(config)
+    url = (config || {})['file_url'].to_s
+    return 'Conecta tu cuenta de Google (Calendario) para leer Google Sheets.' unless google_integration
+    return 'Pega la URL de una Hoja de cálculo de Google (/spreadsheets/...).' unless url.include?('/spreadsheets/')
+    return 'Configura la integración de OpenAI en la cuenta para usar esta fuente.' unless openai_api_key.present?
+
+    nil
+  end
+
+  # Completa el config de una Google Sheet: file_id, integración, modo y rango.
+  def build_google_sheet_config(config)
+    config ||= {}
+    raw = config['file_url'].presence || config['file_id'].presence
+    mode = config['sheet_mode'].to_s == 'data' ? 'data' : 'faq'
+    {
+      'file_url'        => config['file_url'],
+      'file_id'         => GoogleDocsService.extract_file_id(raw),
+      'integration_id'  => google_integration&.id,
+      'sheet_mode'      => mode,
+      'sheet_range'     => config['sheet_range'].presence
+    }
+  end
+
+  def enqueue_google_sheet_sync(source)
+    GoogleSheetSyncJob.perform_later(action: 'upsert', source_id: source.id, account_id: current_account.id)
+    source.update(sync_status: 'syncing')
+  end
+
+  def google_integration
+    @google_integration ||= UserCalendarIntegration.find_by(account_id: current_account.id, user_id: current_user.id) ||
+                            UserCalendarIntegration.find_by(account_id: current_account.id)
   end
 
   def sync_canned_responses

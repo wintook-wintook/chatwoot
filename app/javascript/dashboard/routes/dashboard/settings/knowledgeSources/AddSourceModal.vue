@@ -4,7 +4,7 @@
 export default {
   name: 'AddKnowledgeSourceModal',
   props: {
-    show:   { type: Boolean, default: false },
+    show: { type: Boolean, default: false },
     saving: { type: Boolean, default: false },
     source: { type: Object, default: null },
   },
@@ -16,8 +16,14 @@ export default {
       discourseUrl: '',
       discourseApiKey: '',
       discourseUsername: '',
+      docUrl: '',
+      sheetUrl: '',
+      sheetMode: 'faq',
+      sheetRange: '',
       sourceOptions: [
         { value: 'discourse', label: 'Discourse', icon: 'globe' },
+        { value: 'google_doc', label: 'Google Doc', icon: 'document' },
+        { value: 'google_sheet', label: 'Google Sheets', icon: 'document' },
       ],
     };
   },
@@ -26,11 +32,21 @@ export default {
       return !!this.source;
     },
     modalTitle() {
-      return this.isEdit ? 'Editar Fuente de Conocimiento' : 'Agregar Fuente de Conocimiento';
+      return this.isEdit
+        ? 'Editar Fuente de Conocimiento'
+        : 'Agregar Fuente de Conocimiento';
     },
     saveLabel() {
       if (this.saving) return 'Guardando...';
       return this.isEdit ? 'Guardar cambios' : 'Agregar fuente';
+    },
+    // Vista previa de la directiva del bot, p.ej. {{doc:manual_usuario}}.
+    // Se arma como string (no en el template) para no anidar mustaches de Vue.
+    docDirectiveHint() {
+      return `{{doc:${this.name.trim() || 'nombre'}}}`;
+    },
+    sheetDirectiveHint() {
+      return `{{hoja:${this.name.trim() || 'nombre'}}}`;
     },
     isValid() {
       if (!this.name.trim()) return false;
@@ -38,6 +54,9 @@ export default {
         if (!this.discourseUrl.trim()) return false;
         if (!this.discourseApiKey.trim()) return false;
       }
+      if (this.sourceType === 'google_doc' && !this.docUrl.trim()) return false;
+      if (this.sourceType === 'google_sheet' && !this.sheetUrl.trim())
+        return false;
       return true;
     },
   },
@@ -53,18 +72,26 @@ export default {
   methods: {
     populate() {
       if (!this.source) return;
-      this.sourceType     = this.source.source_type || 'discourse';
-      this.name           = this.source.name || '';
-      this.discourseUrl      = this.source.config?.url || '';
-      this.discourseApiKey   = this.source.config?.api_key || '';
+      this.sourceType = this.source.source_type || 'discourse';
+      this.name = this.source.name || '';
+      this.discourseUrl = this.source.config?.url || '';
+      this.discourseApiKey = this.source.config?.api_key || '';
       this.discourseUsername = this.source.config?.username || '';
+      this.docUrl = this.source.config?.file_url || '';
+      this.sheetUrl = this.source.config?.file_url || '';
+      this.sheetMode = this.source.config?.sheet_mode || 'faq';
+      this.sheetRange = this.source.config?.sheet_range || '';
     },
     reset() {
-      this.sourceType       = 'discourse';
-      this.name             = '';
-      this.discourseUrl      = '';
-      this.discourseApiKey   = '';
+      this.sourceType = 'discourse';
+      this.name = '';
+      this.discourseUrl = '';
+      this.discourseApiKey = '';
       this.discourseUsername = '';
+      this.docUrl = '';
+      this.sheetUrl = '';
+      this.sheetMode = 'faq';
+      this.sheetRange = '';
     },
     onClose() {
       this.reset();
@@ -72,18 +99,31 @@ export default {
     },
     onSave() {
       if (!this.isValid) return;
-      const payload = {
+      this.$emit('save', {
         source_type: this.sourceType,
         name: this.name.trim(),
-        config: this.sourceType === 'discourse'
-          ? {
-              url:      this.discourseUrl.trim(),
-              api_key:  this.discourseApiKey.trim(),
-              username: this.discourseUsername.trim() || 'system',
-            }
-          : {},
-      };
-      this.$emit('save', payload);
+        config: this.buildConfig(),
+      });
+    },
+    buildConfig() {
+      if (this.sourceType === 'discourse') {
+        return {
+          url: this.discourseUrl.trim(),
+          api_key: this.discourseApiKey.trim(),
+          username: this.discourseUsername.trim() || 'system',
+        };
+      }
+      if (this.sourceType === 'google_doc') {
+        return { file_url: this.docUrl.trim() };
+      }
+      if (this.sourceType === 'google_sheet') {
+        return {
+          file_url: this.sheetUrl.trim(),
+          sheet_mode: this.sheetMode,
+          sheet_range: this.sheetRange.trim() || null,
+        };
+      }
+      return {};
     },
   },
 };
@@ -98,6 +138,20 @@ export default {
       />
 
       <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-medium text-slate-700"
+            >Tipo de fuente</label
+          >
+          <select v-model="sourceType" :disabled="isEdit" class="input">
+            <option
+              v-for="opt in sourceOptions"
+              :key="opt.value"
+              :value="opt.value"
+            >
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
 
         <div class="flex flex-col gap-1">
           <label class="text-sm font-medium text-slate-700">Nombre</label>
@@ -105,45 +159,133 @@ export default {
             v-model="name"
             type="text"
             class="input"
-            placeholder="Ej: Foro de Soporte"
+            :placeholder="
+              sourceType === 'google_doc'
+                ? 'Ej: manual_usuario'
+                : 'Ej: Foro de Soporte'
+            "
           />
+          <p v-if="sourceType === 'google_doc'" class="text-xs text-slate-400">
+            Nombre único. Se usa en el bot como directiva:
+            <code>{{ docDirectiveHint }}</code>
+          </p>
         </div>
 
-        <div class="flex flex-col gap-1">
-          <label class="text-sm font-medium text-slate-700">URL del foro</label>
-          <input
-            v-model="discourseUrl"
-            type="url"
-            class="input"
-            placeholder="https://foro.ejemplo.com"
-          />
-        </div>
+        <!-- Campos Discourse -->
+        <template v-if="sourceType === 'discourse'">
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-slate-700"
+              >URL del foro</label
+            >
+            <input
+              v-model="discourseUrl"
+              type="url"
+              class="input"
+              placeholder="https://foro.ejemplo.com"
+            />
+          </div>
 
-        <div class="flex flex-col gap-1">
-          <label class="text-sm font-medium text-slate-700">API Key</label>
-          <input
-            v-model="discourseApiKey"
-            type="password"
-            class="input"
-            placeholder="API Key de Discourse"
-          />
-          <p class="text-xs text-slate-400">Admin → API → Keys en tu instancia de Discourse</p>
-        </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-slate-700">API Key</label>
+            <input
+              v-model="discourseApiKey"
+              type="password"
+              class="input"
+              placeholder="API Key de Discourse"
+            />
+            <p class="text-xs text-slate-400">
+              Admin → API → Keys en tu instancia de Discourse
+            </p>
+          </div>
 
-        <div class="flex flex-col gap-1">
-          <label class="text-sm font-medium text-slate-700">
-            Usuario API
-            <span class="text-slate-400 font-normal">(opcional)</span>
-          </label>
-          <input
-            v-model="discourseUsername"
-            type="text"
-            class="input"
-            placeholder="system"
-          />
-          <p class="text-xs text-slate-400">Usuario de Discourse para las peticiones. Por defecto: system</p>
-        </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-slate-700">
+              Usuario API
+              <span class="text-slate-400 font-normal">(opcional)</span>
+            </label>
+            <input
+              v-model="discourseUsername"
+              type="text"
+              class="input"
+              placeholder="system"
+            />
+            <p class="text-xs text-slate-400">
+              Usuario de Discourse para las peticiones. Por defecto: system
+            </p>
+          </div>
+        </template>
 
+        <!-- Campos Google Doc -->
+        <template v-if="sourceType === 'google_doc'">
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-slate-700"
+              >URL del documento</label
+            >
+            <input
+              v-model="docUrl"
+              type="url"
+              class="input"
+              placeholder="https://docs.google.com/document/d/.../edit"
+            />
+            <p class="text-xs text-slate-400">
+              Pega la URL del Google Doc. Requiere tener conectada tu cuenta de
+              Google (Calendario) y que el documento sea accesible por esa
+              cuenta.
+            </p>
+          </div>
+        </template>
+
+        <!-- Campos Google Sheets -->
+        <template v-if="sourceType === 'google_sheet'">
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-slate-700"
+              >URL de la hoja</label
+            >
+            <input
+              v-model="sheetUrl"
+              type="url"
+              class="input"
+              placeholder="https://docs.google.com/spreadsheets/d/.../edit"
+            />
+            <p class="text-xs text-slate-400">
+              Nombre único. Directiva del bot:
+              <code>{{ sheetDirectiveHint }}</code>
+            </p>
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-slate-700">Modo</label>
+            <select v-model="sheetMode" class="input">
+              <option value="faq">
+                FAQ (texto por fila, búsqueda semántica)
+              </option>
+              <option value="data">
+                Datos (consultas exactas: suma, conteo, filtros)
+              </option>
+            </select>
+            <p class="text-xs text-slate-400">
+              Usa «Datos» para sumas, conteos o filtrar por columna. Usa «FAQ»
+              si cada fila es texto a recuperar por significado.
+            </p>
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-slate-700">
+              Rango
+              <span class="text-slate-400 font-normal">(opcional)</span>
+            </label>
+            <input
+              v-model="sheetRange"
+              type="text"
+              class="input"
+              placeholder="A1:Z2000"
+            />
+            <p class="text-xs text-slate-400">
+              Rango a leer. La primera fila se toma como encabezados. Por
+              defecto: A1:Z2000.
+            </p>
+          </div>
+        </template>
       </div>
 
       <div class="flex justify-end gap-2 pt-2">
