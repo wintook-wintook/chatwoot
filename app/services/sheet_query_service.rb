@@ -116,8 +116,11 @@ class SheetQueryService
       filtra por esa columna con operator "=" y ese valor exacto.
       Para periodos relativos (mes pasado, este mes, próximo mes, esta semana, hoy, etc.) calculá el rango
       CONCRETO de fechas a partir de la "Fecha de hoy" y filtrá la columna de fecha adecuada con DOS condiciones:
-      operator ">=" (inicio) y "<=" (fin), valores en formato YYYY-MM-DD. Elegí la columna de fecha según la
-      acción: vencer/cobrar → fecha de vencimiento; emitir/facturar → fecha de emisión.
+      operator ">=" (inicio) y "<=" (fin), valores en formato YYYY-MM-DD. Elegí la columna de fecha cuyo NOMBRE
+      corresponda a la acción, usando SOLO columnas presentes en Encabezados:
+      pago realizado (se pagó / se cobró / pagos / cobranza) → la columna de pago (ej. fecha_pago) si existe;
+      vencimiento o cobro futuro (vence / se cobrará / por cobrar) → la columna de vencimiento;
+      emisión / facturación → la columna de emisión.
     SYS
     categories_block = categories.map { |col, vals| "#{col} = [#{vals.join(', ')}]" }.join('; ')
     user = <<~USR.strip
