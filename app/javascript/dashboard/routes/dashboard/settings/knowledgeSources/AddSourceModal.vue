@@ -261,68 +261,54 @@ export default {
             </p>
           </div>
 
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-medium text-slate-700">Modo</label>
-            <select v-model="sheetMode" class="input">
-              <option value="faq">
-                FAQ (texto por fila, búsqueda semántica)
-              </option>
-              <option value="data">
-                Datos (consultas exactas: suma, conteo, filtros)
-              </option>
-            </select>
-            <p class="text-xs text-slate-400">
-              Usa «Datos» para sumas, conteos o filtrar por columna. Usa «FAQ»
-              si cada fila es texto a recuperar por significado.
-            </p>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1">
+              <label class="text-sm font-medium text-slate-700">Modo</label>
+              <select v-model="sheetMode" class="input">
+                <option value="faq">FAQ (semántica)</option>
+                <option value="data">Datos (cálculos)</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-sm font-medium text-slate-700">
+                Rango
+                <span class="text-slate-400 font-normal">(opcional)</span>
+              </label>
+              <input
+                v-model="sheetRange"
+                type="text"
+                class="input"
+                placeholder="A1:Z2000"
+              />
+            </div>
           </div>
+          <p class="text-xs text-slate-400">
+            «Datos» = sumas, conteos y filtros exactos · «FAQ» = recuperar texto
+            por significado. Rango por defecto: A1:Z2000.
+          </p>
 
-          <div class="flex flex-col gap-1">
-            <label class="text-sm font-medium text-slate-700">
-              Rango
-              <span class="text-slate-400 font-normal">(opcional)</span>
-            </label>
-            <input
-              v-model="sheetRange"
-              type="text"
-              class="input"
-              placeholder="A1:Z2000"
-            />
-            <p class="text-xs text-slate-400">
-              Rango a leer. La primera fila se toma como encabezados. Por
-              defecto: A1:Z2000.
-            </p>
-          </div>
-
-          <div v-if="sheetMode === 'data'" class="flex flex-col gap-2">
+          <div v-if="sheetMode === 'data'" class="flex flex-col gap-1">
             <label
               class="flex items-center gap-2 text-sm font-medium text-slate-700"
             >
               <input v-model="sheetLive" type="checkbox" />
               Consultar en vivo
+              <template v-if="sheetLive">
+                <span class="font-normal text-slate-400">· cada</span>
+                <input
+                  v-model="sheetLiveTtl"
+                  type="number"
+                  min="10"
+                  class="input !w-20 !py-1"
+                  placeholder="60"
+                />
+                <span class="font-normal text-slate-400">seg</span>
+              </template>
             </label>
             <p class="text-xs text-slate-400">
               Mantiene los datos al día sin sincronizar a mano: si la hoja
-              cambió, refresca la copia local en la próxima consulta. Solo
-              disponible en modo «Datos».
+              cambió, refresca en la próxima consulta.
             </p>
-            <div v-if="sheetLive" class="flex flex-col gap-1">
-              <label class="text-sm font-medium text-slate-700">
-                Frecuencia de chequeo
-                <span class="text-slate-400 font-normal">(segundos)</span>
-              </label>
-              <input
-                v-model="sheetLiveTtl"
-                type="number"
-                min="10"
-                class="input"
-                placeholder="60"
-              />
-              <p class="text-xs text-slate-400">
-                Cada cuánto, como máximo, verifica si la hoja cambió. Por
-                defecto: 60 segundos.
-              </p>
-            </div>
           </div>
         </template>
       </div>
