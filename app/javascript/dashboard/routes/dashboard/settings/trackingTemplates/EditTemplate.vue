@@ -11,6 +11,7 @@
 
 <script>
 import { mapGetters } from 'vuex';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
@@ -101,6 +102,8 @@ export default {
       pickerScrollTop: 0,
       // fuentes Discourse de la cuenta (para la directiva @buscar_foro)
       discourseSources: [],
+      googleDocSources: [],
+      googleSheetSources: [],
     };
   },
   computed: {
@@ -108,18 +111,29 @@ export default {
       appIntegrations: 'integrations/getAppIntegrations',
       inboxes: 'inboxes/getInboxes',
       accountId: 'getCurrentAccountId',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
     }),
     isCreateMode() {
       return this.mode === 'create';
     },
+    // Google Doc/Sheet y @agendar_calendar dependen de la conexión de Google
+    // Calendar: sus directivas solo se ofrecen si la cuenta tiene esa feature.
+    googleEnabled() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.GOOGLE_CALENDAR
+      );
+    },
     // proyecto@bot_seguimiento_calendar: formatos de presentación de horarios (con mini-preview)
     slotsPresentationOptions() {
-      const t = key => this.$t(`TRACKING_TEMPLATES.CALENDARS.PRESENTATION.${key}`);
+      const t = key =>
+        this.$t(`TRACKING_TEMPLATES.CALENDARS.PRESENTATION.${key}`);
       return [
         {
           value: 'detailed',
           label: t('DETAILED'),
-          preview: '1️⃣ jue 25 jun · 09:00 – 10:00 hs (hora de Mexico City) — Admin',
+          preview:
+            '1️⃣ jue 25 jun · 09:00 – 10:00 hs (hora de Mexico City) — Admin',
         },
         {
           value: 'by_agent',
@@ -184,7 +198,9 @@ export default {
       return this.form.name.length >= 2 && this.form.name.length <= 100;
     },
     isObjectiveValid() {
-      return this.form.objective.length >= 5 && this.form.objective.length <= 500;
+      return (
+        this.form.objective.length >= 5 && this.form.objective.length <= 500
+      );
     },
     isAiContextValid() {
       return this.form.ai_context.trim().length >= 10;
@@ -200,7 +216,8 @@ export default {
       // Si el inbox no es WhatsApp, no se requieren plantillas
       if (!this.selectedInboxIsWhatsApp) return true;
       // Si está cargando o no hay plantillas disponibles, no se puede validar → no bloquear
-      if (this.isLoadingWATemplates || this.availableWATemplates.length === 0) return true;
+      if (this.isLoadingWATemplates || this.availableWATemplates.length === 0)
+        return true;
       // Todos los intentos deben tener plantilla asignada
       return this.form.whatsapp_templates
         .slice(0, this.maxAttempts)
@@ -288,7 +305,8 @@ export default {
       const items = [
         {
           token: '@buscar_predefinidas',
-          label: 'Responde con tus Respuestas predefinidas (búsqueda semántica).',
+          label:
+            'Responde con tus Respuestas predefinidas (búsqueda semántica).',
         },
         {
           token: '@buscar_articulo',
@@ -308,30 +326,54 @@ export default {
           label: 'Busca en una fuente Discourse. Reemplaza «nombre_fuente».',
         });
       }
-      items.push(
-        {
-          token: '@discourse',
-          label: 'Busca en el Discourse conectado al canal.',
-        },
-        {
+      // @knowledge_sources: directivas Google solo si la cuenta tiene la feature
+      // google_calendar (reutilizan su conexión OAuth).
+      if (this.googleEnabled) {
+        this.googleDocSources.forEach(source => {
+          items.push({
+            token: `{{doc:${source.name}}}`,
+            label: `Responde con el Google Doc «${source.name}».`,
+          });
+        });
+        this.googleSheetSources.forEach(source => {
+          items.push({
+            token: `{{hoja:${source.name}}}`,
+            label: `Consulta la Google Sheet «${source.name}».`,
+          });
+        });
+      }
+      items.push({
+        token: '@discourse',
+        label: 'Busca en el Discourse conectado al canal.',
+      });
+      if (this.googleEnabled) {
+        items.push({
           token: '@agendar_calendar',
           label: 'Permite agendar una cita en Google Calendar.',
-        },
-        {
-          token: '@crear_ticket',
-          label: 'Crea un ticket automáticamente.',
-        }
-      );
+        });
+      }
+      items.push({
+        token: '@crear_ticket',
+        label: 'Crea un ticket automáticamente.',
+      });
       return items;
     },
     validationErrors() {
       const errors = [];
-      if (!this.isNameValid) errors.push('Nombre del Agente IA es requerido (mínimo 2 caracteres).');
-      if (!this.isObjectiveValid) errors.push('Objetivo es requerido (mínimo 5 caracteres).');
-      if (!this.isAiContextValid) errors.push('Contexto IA es requerido (mínimo 10 caracteres).');
-      if (!this.isComplementaryPromptValid) errors.push('Entrenamiento es requerido (mínimo 10 caracteres).');
-      if (!this.isInboxValid) errors.push('Debes seleccionar un Canal (Inbox).');
-      if (!this.isWhatsappTemplatesValid) errors.push('Todos los intentos de WhatsApp deben tener una plantilla asignada.');
+      if (!this.isNameValid)
+        errors.push('Nombre del Agente IA es requerido (mínimo 2 caracteres).');
+      if (!this.isObjectiveValid)
+        errors.push('Objetivo es requerido (mínimo 5 caracteres).');
+      if (!this.isAiContextValid)
+        errors.push('Contexto IA es requerido (mínimo 10 caracteres).');
+      if (!this.isComplementaryPromptValid)
+        errors.push('Entrenamiento es requerido (mínimo 10 caracteres).');
+      if (!this.isInboxValid)
+        errors.push('Debes seleccionar un Canal (Inbox).');
+      if (!this.isWhatsappTemplatesValid)
+        errors.push(
+          'Todos los intentos de WhatsApp deben tener una plantilla asignada.'
+        );
       return errors;
     },
   },
@@ -355,11 +397,14 @@ export default {
             keyword_actions: Array.isArray(val.keyword_actions) // proyecto@contact_tracking
               ? val.keyword_actions.map(ka => ({ ...ka }))
               : [],
-            calendar_integration_ids: Array.isArray(val.calendar_integration_ids)
+            calendar_integration_ids: Array.isArray(
+              val.calendar_integration_ids
+            )
               ? [...val.calendar_integration_ids]
               : [],
             booking_calendar_ids:
-              val.booking_calendar_ids && typeof val.booking_calendar_ids === 'object'
+              val.booking_calendar_ids &&
+              typeof val.booking_calendar_ids === 'object'
                 ? { ...val.booking_calendar_ids }
                 : {},
             slots_presentation: val.slots_presentation || 'detailed',
@@ -456,8 +501,8 @@ export default {
             ? this.form.whatsapp_templates.slice(0, this.maxAttempts)
             : [],
           retry_interval_value: this.form.retry_interval_value, // proyecto@automatizacion_tracking
-          retry_interval_unit: this.form.retry_interval_unit,   // proyecto@automatizacion_tracking
-          keyword_actions: this.form.keyword_actions || [],      // proyecto@contact_tracking
+          retry_interval_unit: this.form.retry_interval_unit, // proyecto@automatizacion_tracking
+          keyword_actions: this.form.keyword_actions || [], // proyecto@contact_tracking
           calendar_integration_ids: this.form.calendar_integration_ids || [],
           booking_calendar_ids: this.bookingCalendarIdsPayload(),
           slots_presentation: this.form.slots_presentation || 'detailed',
@@ -481,7 +526,9 @@ export default {
 
       let text;
       if (isGeneratePrompt) {
-        text = (this.form.complementary_prompt || '').trim() || (this.form.ai_context || '').trim();
+        text =
+          (this.form.complementary_prompt || '').trim() ||
+          (this.form.ai_context || '').trim();
       } else {
         text = (this.form[field] || '').trim();
       }
@@ -501,13 +548,17 @@ export default {
           payload.context = (this.form.ai_context || '').trim();
           payload.objective = (this.form.objective || '').trim();
         }
-        const response = await this.$store.dispatch('contactTrackings/improveText', payload);
+        const response = await this.$store.dispatch(
+          'contactTrackings/improveText',
+          payload
+        );
         if (response?.improved_text) {
           this.form[field] = response.improved_text;
         }
       } catch (error) {
         if (field === 'ai_context') this.originalAiContext = null;
-        else if (field === 'complementary_prompt') this.originalComplementaryPrompt = null;
+        else if (field === 'complementary_prompt')
+          this.originalComplementaryPrompt = null;
       } finally {
         this.isImprovingAI = false;
       }
@@ -516,7 +567,10 @@ export default {
       if (field === 'ai_context' && this.originalAiContext) {
         this.form.ai_context = this.originalAiContext;
         this.originalAiContext = null;
-      } else if (field === 'complementary_prompt' && this.originalComplementaryPrompt) {
+      } else if (
+        field === 'complementary_prompt' &&
+        this.originalComplementaryPrompt
+      ) {
         this.form.complementary_prompt = this.originalComplementaryPrompt;
         this.originalComplementaryPrompt = null;
       }
@@ -528,9 +582,9 @@ export default {
         if (!this.inboxes || this.inboxes.length === 0) {
           await this.$store.dispatch('inboxes/get');
         }
-        const templates = this.$store.getters[
-          'inboxes/getWhatsAppTemplates'
-        ](Number(this.selectedInboxId));
+        const templates = this.$store.getters['inboxes/getWhatsAppTemplates'](
+          Number(this.selectedInboxId)
+        );
         if (templates && templates.length > 0) {
           this.availableWATemplates = templates.map(t => ({
             id: t.id || t.name,
@@ -589,12 +643,16 @@ export default {
     },
     // Por defecto (sin selección guardada) marcamos el calendario principal de la cuenta.
     defaultBookingCalendars(integration) {
-      const primary = this.bookableCalendarsFor(integration).find(c => c.primary);
+      const primary = this.bookableCalendarsFor(integration).find(
+        c => c.primary
+      );
       return primary ? [primary.id] : [];
     },
     selectedBookingCalendars(integration) {
       const stored = this.form.booking_calendar_ids[String(integration.id)];
-      return Array.isArray(stored) ? stored : this.defaultBookingCalendars(integration);
+      return Array.isArray(stored)
+        ? stored
+        : this.defaultBookingCalendars(integration);
     },
     integrationById(integrationId) {
       return this.calendarIntegrations.find(i => i.id === integrationId);
@@ -608,12 +666,15 @@ export default {
         id => id !== calId
       );
       if (current.length) {
-        this.$set(this.form.booking_calendar_ids, String(integrationId), current);
+        this.$set(
+          this.form.booking_calendar_ids,
+          String(integrationId),
+          current
+        );
       } else {
         this.$delete(this.form.booking_calendar_ids, String(integrationId));
-        this.form.calendar_integration_ids = this.form.calendar_integration_ids.filter(
-          id => id !== integrationId
-        );
+        this.form.calendar_integration_ids =
+          this.form.calendar_integration_ids.filter(id => id !== integrationId);
       }
     },
     // ── Modal de selección (árbol agrupado por cuenta) ───────────────────────────
@@ -621,7 +682,9 @@ export default {
       const selection = {};
       const linked = (this.form.calendar_integration_ids || []).map(String);
       this.calendarIntegrations.forEach(integration => {
-        selection[String(integration.id)] = linked.includes(String(integration.id))
+        selection[String(integration.id)] = linked.includes(
+          String(integration.id)
+        )
           ? [...this.selectedBookingCalendars(integration)]
           : [];
       });
@@ -633,7 +696,9 @@ export default {
       this.calendarModalSelection = {};
     },
     isModalCalendarChecked(integrationId, calId) {
-      return (this.calendarModalSelection[String(integrationId)] || []).includes(calId);
+      return (
+        this.calendarModalSelection[String(integrationId)] || []
+      ).includes(calId);
     },
     toggleModalCalendar(integrationId, calId) {
       const key = String(integrationId);
@@ -695,8 +760,16 @@ export default {
         this.discourseSources = (data || []).filter(
           s => s.source_type === 'discourse' && s.status === 'active'
         );
+        this.googleDocSources = (data || []).filter(
+          s => s.source_type === 'google_doc' && s.status === 'active'
+        );
+        this.googleSheetSources = (data || []).filter(
+          s => s.source_type === 'google_sheet' && s.status === 'active'
+        );
       } catch (e) {
         this.discourseSources = [];
+        this.googleDocSources = [];
+        this.googleSheetSources = [];
       }
     },
     onAttachmentFileChange(event) {
@@ -821,7 +894,8 @@ export default {
     // Inserta un token aislado por espacios en la posición recordada
     insertTokenAtPrompt(rawToken) {
       const text = this.form.complementary_prompt || '';
-      const pos = this.pickerInsertPos == null ? text.length : this.pickerInsertPos;
+      const pos =
+        this.pickerInsertPos == null ? text.length : this.pickerInsertPos;
       const before = text.slice(0, pos);
       const after = text.slice(pos);
       const needsSpaceBefore = before.length && !/\s$/.test(before);
@@ -887,7 +961,11 @@ export default {
             type="text"
             :placeholder="$t('TRACKING_TEMPLATES.FORM.NAME.PLACEHOLDER')"
             class="mt-1 w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-            :class="form.name && !isNameValid ? 'border-red-400' : 'border-slate-200 dark:border-slate-600'"
+            :class="
+              form.name && !isNameValid
+                ? 'border-red-400'
+                : 'border-slate-200 dark:border-slate-600'
+            "
           />
         </label>
 
@@ -901,7 +979,11 @@ export default {
             type="text"
             :placeholder="$t('TRACKING_TEMPLATES.FORM.OBJECTIVE.PLACEHOLDER')"
             class="mt-1 w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-            :class="form.objective && !isObjectiveValid ? 'border-red-400' : 'border-slate-200 dark:border-slate-600'"
+            :class="
+              form.objective && !isObjectiveValid
+                ? 'border-red-400'
+                : 'border-slate-200 dark:border-slate-600'
+            "
           />
         </label>
       </div>
@@ -909,7 +991,9 @@ export default {
       <!-- Intervalo entre intentos + Canal -->
       <div class="flex gap-3">
         <label class="flex-1">
-          <span class="text-xs font-medium text-slate-600 dark:text-slate-400">⏱️ Tiempo entre intentos</span>
+          <span class="text-xs font-medium text-slate-600 dark:text-slate-400"
+            >⏱️ Tiempo entre intentos</span
+          >
           <input
             v-model.number="form.retry_interval_value"
             type="number"
@@ -918,7 +1002,9 @@ export default {
           />
         </label>
         <label class="flex-1">
-          <span class="text-xs font-medium text-slate-600 dark:text-slate-400">Intervalo</span>
+          <span class="text-xs font-medium text-slate-600 dark:text-slate-400"
+            >Intervalo</span
+          >
           <select
             v-model="form.retry_interval_unit"
             class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
@@ -961,7 +1047,11 @@ export default {
           >
             <woot-tabs-item name="🧠  Contexto IA *" :show-badge="false" />
             <woot-tabs-item name="💡  Entrenamiento *" :show-badge="false" />
-            <woot-tabs-item v-if="selectedInboxIsWhatsApp" name="📱  Plantillas WhatsApp" :show-badge="false" />
+            <woot-tabs-item
+              v-if="selectedInboxIsWhatsApp"
+              name="📱  Plantillas WhatsApp"
+              :show-badge="false"
+            />
             <woot-tabs-item name="📋  Reglas" :show-badge="false" />
             <woot-tabs-item name="📅  Agendas" :show-badge="false" />
             <woot-tabs-item name="📎  Archivos" :show-badge="false" />
@@ -992,7 +1082,11 @@ export default {
               href="#"
               class="text-slate-400 hover:text-woot-500 dark:text-slate-500 dark:hover:text-woot-400"
               title="Expandir editor"
-              @click.prevent="activeContextTab === 0 ? showAiContextModal = true : showPromptModal = true"
+              @click.prevent="
+                activeContextTab === 0
+                  ? (showAiContextModal = true)
+                  : (showPromptModal = true)
+              "
             >
               <fluent-icon icon="arrow-expand" size="18" />
             </a>
@@ -1023,14 +1117,28 @@ export default {
               <a
                 href="#"
                 class="text-xs inline-flex items-center gap-1"
-                :class="form.ai_context && form.ai_context.trim() && !isImprovingAI
-                  ? 'text-woot-500 hover:text-woot-600 cursor-pointer'
-                  : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'"
-                @click.prevent="form.ai_context && form.ai_context.trim() && !isImprovingAI && improveWithAI('ai_context')"
+                :class="
+                  form.ai_context && form.ai_context.trim() && !isImprovingAI
+                    ? 'text-woot-500 hover:text-woot-600 cursor-pointer'
+                    : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                "
+                @click.prevent="
+                  form.ai_context &&
+                    form.ai_context.trim() &&
+                    !isImprovingAI &&
+                    improveWithAI('ai_context')
+                "
               >
-                <span v-if="isImprovingAI && activeContextTab === 0" class="inline-block w-4 h-4 border-2 border-woot-500 border-t-transparent rounded-full animate-spin" />
+                <span
+                  v-if="isImprovingAI && activeContextTab === 0"
+                  class="inline-block w-4 h-4 border-2 border-woot-500 border-t-transparent rounded-full animate-spin"
+                />
                 <span v-else>&#10024;</span>
-                {{ isImprovingAI && activeContextTab === 0 ? 'Procesando...' : 'Mejorar con IA' }}
+                {{
+                  isImprovingAI && activeContextTab === 0
+                    ? 'Procesando...'
+                    : 'Mejorar con IA'
+                }}
               </a>
             </div>
           </div>
@@ -1042,12 +1150,15 @@ export default {
             ref="complementaryTextarea"
             v-model="form.complementary_prompt"
             rows="10"
-            :placeholder="$t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')"
+            :placeholder="
+              $t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')
+            "
             class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
           />
           <div class="flex justify-between items-center mt-1">
             <span class="text-xs text-slate-500 dark:text-slate-400">
-              Este prompt se usa cuando el cliente hace preguntas relacionadas con el seguimiento
+              Este prompt se usa cuando el cliente hace preguntas relacionadas
+              con el seguimiento
             </span>
             <div class="flex gap-3">
               <a
@@ -1061,27 +1172,48 @@ export default {
               <a
                 href="#"
                 class="text-xs inline-flex items-center gap-1"
-                :class="canGeneratePrompt && !isImprovingAI
-                  ? 'text-woot-500 hover:text-woot-600 cursor-pointer'
-                  : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'"
-                @click.prevent="canGeneratePrompt && !isImprovingAI && improveWithAI('complementary_prompt')"
+                :class="
+                  canGeneratePrompt && !isImprovingAI
+                    ? 'text-woot-500 hover:text-woot-600 cursor-pointer'
+                    : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                "
+                @click.prevent="
+                  canGeneratePrompt &&
+                    !isImprovingAI &&
+                    improveWithAI('complementary_prompt')
+                "
               >
-                <span v-if="isImprovingAI && activeContextTab === 1" class="inline-block w-4 h-4 border-2 border-woot-500 border-t-transparent rounded-full animate-spin" />
+                <span
+                  v-if="isImprovingAI && activeContextTab === 1"
+                  class="inline-block w-4 h-4 border-2 border-woot-500 border-t-transparent rounded-full animate-spin"
+                />
                 <span v-else>&#10024;</span>
-                {{ isImprovingAI && activeContextTab === 1 ? 'Procesando...' : 'Generar Prompt con IA' }}
+                {{
+                  isImprovingAI && activeContextTab === 1
+                    ? 'Procesando...'
+                    : 'Generar Prompt con IA'
+                }}
               </a>
             </div>
           </div>
         </div>
 
         <!-- Tab 2: Plantillas WhatsApp (solo cuando canal es WhatsApp) -->
-        <div v-if="selectedInboxIsWhatsApp" v-show="activeContextTab === 2" class="mt-2">
+        <div
+          v-if="selectedInboxIsWhatsApp"
+          v-show="activeContextTab === 2"
+          class="mt-2"
+        >
           <!-- Selector WA por intento -->
           <div v-if="availableWATemplates.length > 0">
             <div class="flex items-center gap-6 mb-2 flex-wrap">
               <label class="w-28 shrink-0">
-                <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
-                  {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.MAX_ATTEMPTS') }}
+                <span
+                  class="text-xs font-medium text-slate-600 dark:text-slate-400"
+                >
+                  {{
+                    $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.MAX_ATTEMPTS')
+                  }}
                 </span>
                 <input
                   v-model.number="maxAttempts"
@@ -1092,22 +1224,26 @@ export default {
                 />
               </label>
               <div class="flex gap-2 flex-wrap mt-4">
-              <button
-                v-for="idx in attemptTabs"
-                :key="idx"
-                type="button"
-                class="px-4 py-2 text-sm rounded-md transition-colors"
-                :class="activeTemplateTab === idx
-                  ? 'bg-woot-500 text-white'
-                  : form.whatsapp_templates[idx]
-                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                    : 'bg-red-50 dark:bg-red-900/20 text-red-500 border border-red-300 dark:border-red-700 hover:bg-red-100'"
-                @click="activeTemplateTab = idx"
-              >
-                {{ getAttemptLabel(idx) }}
-                <span v-if="form.whatsapp_templates[idx]" class="ml-1">&#10003;</span>
-                <span v-else class="ml-1">!</span>
-              </button>
+                <button
+                  v-for="idx in attemptTabs"
+                  :key="idx"
+                  type="button"
+                  class="px-4 py-2 text-sm rounded-md transition-colors"
+                  :class="
+                    activeTemplateTab === idx
+                      ? 'bg-woot-500 text-white'
+                      : form.whatsapp_templates[idx]
+                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                      : 'bg-red-50 dark:bg-red-900/20 text-red-500 border border-red-300 dark:border-red-700 hover:bg-red-100'
+                  "
+                  @click="activeTemplateTab = idx"
+                >
+                  {{ getAttemptLabel(idx) }}
+                  <span v-if="form.whatsapp_templates[idx]" class="ml-1"
+                    >&#10003;</span
+                  >
+                  <span v-else class="ml-1">!</span>
+                </button>
               </div>
             </div>
             <div
@@ -1119,7 +1255,11 @@ export default {
               <select
                 v-model="form.whatsapp_templates[idx]"
                 class="w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-slate-800"
-                :class="!form.whatsapp_templates[idx] ? 'border-red-400' : 'border-slate-200 dark:border-slate-600'"
+                :class="
+                  !form.whatsapp_templates[idx]
+                    ? 'border-red-400'
+                    : 'border-slate-200 dark:border-slate-600'
+                "
               >
                 <option value="">-- Selecciona una plantilla --</option>
                 <option
@@ -1140,7 +1280,10 @@ export default {
           </div>
 
           <!-- Loading -->
-          <div v-else-if="isLoadingWATemplates" class="text-sm text-slate-500 py-2">
+          <div
+            v-else-if="isLoadingWATemplates"
+            class="text-sm text-slate-500 py-2"
+          >
             {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.LOADING') }}
           </div>
 
@@ -1166,18 +1309,26 @@ export default {
 
           <!-- Duración del evento -->
           <div class="mb-4">
-            <span class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2">
+            <span
+              class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2"
+            >
               {{ $t('TRACKING_TEMPLATES.CALENDARS.EVENT_DURATION') }}
             </span>
             <div class="flex gap-2">
               <button
-                v-for="option in [{value: 30, label: '30 min'}, {value: 60, label: '1 hora'}, {value: 120, label: '2 horas'}]"
+                v-for="option in [
+                  { value: 30, label: '30 min' },
+                  { value: 60, label: '1 hora' },
+                  { value: 120, label: '2 horas' },
+                ]"
                 :key="option.value"
                 type="button"
                 class="px-4 py-2 text-sm rounded-md border transition-colors"
-                :class="form.calendar_event_duration === option.value
-                  ? 'bg-woot-500 text-white border-woot-500'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'"
+                :class="
+                  form.calendar_event_duration === option.value
+                    ? 'bg-woot-500 text-white border-woot-500'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+                "
                 @click="form.calendar_event_duration = option.value"
               >
                 {{ option.label }}
@@ -1187,7 +1338,9 @@ export default {
 
           <!-- proyecto@bot_seguimiento_calendar: zona horaria del agente para agendar -->
           <div class="mb-4">
-            <span class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2">
+            <span
+              class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2"
+            >
               {{ $t('TRACKING_TEMPLATES.CALENDARS.TIMEZONE') }}
             </span>
             <select
@@ -1208,7 +1361,9 @@ export default {
 
           <!-- proyecto@bot_seguimiento_calendar: una sola lista de calendarios + modal árbol -->
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
+            <span
+              class="text-xs font-medium text-slate-600 dark:text-slate-400"
+            >
               {{ $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_LABEL') }}
             </span>
             <button
@@ -1224,11 +1379,17 @@ export default {
           <div v-if="isLoadingCalendars" class="text-sm text-slate-500 py-2">
             {{ $t('TRACKING_TEMPLATES.CALENDARS.LOADING') }}
           </div>
-          <div v-else-if="calendarIntegrations.length === 0" class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400">
+          <div
+            v-else-if="calendarIntegrations.length === 0"
+            class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400"
+          >
             {{ $t('TRACKING_TEMPLATES.CALENDARS.NONE_AVAILABLE') }}
           </div>
           <template v-else>
-            <div v-if="allSelectedCalendars.length" class="flex flex-wrap gap-1.5">
+            <div
+              v-if="allSelectedCalendars.length"
+              class="flex flex-wrap gap-1.5"
+            >
               <span
                 v-for="item in allSelectedCalendars"
                 :key="item.key"
@@ -1239,21 +1400,36 @@ export default {
                   class="inline-block w-2 h-2 rounded-sm flex-shrink-0"
                   :style="{ backgroundColor: item.background_color }"
                 />
-                <span class="text-slate-700 dark:text-slate-200">{{ item.summary }}</span>
-                <span v-if="item.primary" class="text-slate-400 dark:text-slate-500">
-                  · {{ $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_PRIMARY') }}
+                <span class="text-slate-700 dark:text-slate-200">{{
+                  item.summary
+                }}</span>
+                <span
+                  v-if="item.primary"
+                  class="text-slate-400 dark:text-slate-500"
+                >
+                  ·
+                  {{
+                    $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_PRIMARY')
+                  }}
                 </span>
                 <button
                   type="button"
                   class="text-slate-400 hover:text-red-500 leading-none ml-0.5"
-                  :aria-label="$t('TRACKING_TEMPLATES.CALENDARS.REMOVE_CALENDAR')"
-                  @click.prevent="removeSelectedCalendar(item.integrationId, item.id)"
+                  :aria-label="
+                    $t('TRACKING_TEMPLATES.CALENDARS.REMOVE_CALENDAR')
+                  "
+                  @click.prevent="
+                    removeSelectedCalendar(item.integrationId, item.id)
+                  "
                 >
                   ×
                 </button>
               </span>
             </div>
-            <div v-else class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400">
+            <div
+              v-else
+              class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400"
+            >
               {{ $t('TRACKING_TEMPLATES.CALENDARS.EMPTY_SELECTION') }}
             </div>
             <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">
@@ -1263,7 +1439,9 @@ export default {
 
           <!-- proyecto@bot_seguimiento_calendar: formato de presentación de horarios -->
           <div class="mt-5">
-            <span class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2">
+            <span
+              class="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-2"
+            >
               {{ $t('TRACKING_TEMPLATES.CALENDARS.PRESENTATION_LABEL') }}
             </span>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1271,9 +1449,11 @@ export default {
                 v-for="opt in slotsPresentationOptions"
                 :key="opt.value"
                 class="flex flex-col gap-1 p-3 rounded-md border cursor-pointer transition-colors"
-                :class="form.slots_presentation === opt.value
-                  ? 'border-woot-400 bg-woot-50 dark:bg-woot-900/20'
-                  : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'"
+                :class="
+                  form.slots_presentation === opt.value
+                    ? 'border-woot-400 bg-woot-50 dark:bg-woot-900/20'
+                    : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'
+                "
               >
                 <span class="flex items-center gap-2">
                   <input
@@ -1283,11 +1463,16 @@ export default {
                     :checked="form.slots_presentation === opt.value"
                     @change="form.slots_presentation = opt.value"
                   />
-                  <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  <span
+                    class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >
                     {{ opt.label }}
                   </span>
                 </span>
-                <pre class="text-[11px] leading-snug text-slate-500 dark:text-slate-400 whitespace-pre-wrap font-sans pl-6">{{ opt.preview }}</pre>
+                <pre
+                  class="text-[11px] leading-snug text-slate-500 dark:text-slate-400 whitespace-pre-wrap font-sans pl-6"
+                  >{{ opt.preview }}</pre
+                >
               </label>
             </div>
           </div>
@@ -1312,14 +1497,18 @@ export default {
           <template v-else>
             <!-- Subir archivo -->
             <div class="mb-3">
-              <span class="block text-xs font-medium text-slate-600 dark:text-slate-400">
+              <span
+                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
+              >
                 {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.NAME_LABEL') }}
               </span>
               <div class="flex items-center gap-2 mt-1">
                 <input
                   v-model="attachmentName"
                   type="text"
-                  :placeholder="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.NAME_PLACEHOLDER')"
+                  :placeholder="
+                    $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.NAME_PLACEHOLDER')
+                  "
                   class="flex-1 min-w-0 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
                 />
                 <!-- input nativo oculto: el filename largo no se muestra -->
@@ -1354,7 +1543,10 @@ export default {
             </p>
 
             <!-- Listado -->
-            <div v-if="isLoadingAttachments" class="text-sm text-slate-500 py-2">
+            <div
+              v-if="isLoadingAttachments"
+              class="text-sm text-slate-500 py-2"
+            >
               {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.LOADING') }}
             </div>
             <div
@@ -1369,7 +1561,11 @@ export default {
                 :key="att.id"
                 class="flex items-center gap-3 p-2.5 rounded-md border border-slate-200 dark:border-slate-600"
               >
-                <fluent-icon icon="document" size="18" class="text-slate-400 shrink-0" />
+                <fluent-icon
+                  icon="document"
+                  size="18"
+                  class="text-slate-400 shrink-0"
+                />
                 <!-- Modo renombrar -->
                 <template v-if="editingAttachmentId === att.id">
                   <div class="flex flex-col min-w-0 flex-1 gap-1">
@@ -1388,7 +1584,9 @@ export default {
                         braceParams.close
                       }}</span>
                     </div>
-                    <span v-if="renameError" class="text-xs text-red-500">{{ renameError }}</span>
+                    <span v-if="renameError" class="text-xs text-red-500">{{
+                      renameError
+                    }}</span>
                   </div>
                   <a
                     href="#"
@@ -1402,16 +1600,22 @@ export default {
                     class="text-xs text-slate-500 hover:text-slate-600"
                     @click.prevent="cancelRenameAttachment"
                   >
-                    {{ $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.RENAME_CANCEL') }}
+                    {{
+                      $t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.RENAME_CANCEL')
+                    }}
                   </a>
                 </template>
                 <!-- Modo normal -->
                 <template v-else>
                   <div class="flex flex-col min-w-0 flex-1">
-                    <code class="text-xs font-semibold text-woot-600 dark:text-woot-400">
+                    <code
+                      class="text-xs font-semibold text-woot-600 dark:text-woot-400"
+                    >
                       {{ attachmentToken(att.name) }}
                     </code>
-                    <span class="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    <span
+                      class="text-xs text-slate-500 dark:text-slate-400 truncate"
+                    >
                       {{ att.filename }}
                     </span>
                   </div>
@@ -1445,7 +1649,9 @@ export default {
       </div>
 
       <!-- Botones -->
-      <div class="flex items-center justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
+      <div
+        class="flex items-center justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700"
+      >
         <woot-button
           variant="clear"
           color-scheme="secondary"
@@ -1460,7 +1666,11 @@ export default {
     </form>
 
     <!-- proyecto@bot_seguimiento_calendar: modal árbol de calendarios agendables -->
-    <woot-modal :show="showCalendarModal" :on-close="closeCalendarModal" size="small">
+    <woot-modal
+      :show="showCalendarModal"
+      :on-close="closeCalendarModal"
+      size="small"
+    >
       <woot-modal-header
         :header-title="$t('TRACKING_TEMPLATES.CALENDARS.MODAL_TITLE')"
         :header-content="$t('TRACKING_TEMPLATES.CALENDARS.MODAL_SUBTITLE')"
@@ -1474,13 +1684,17 @@ export default {
         >
           <p class="text-xs font-medium text-slate-600 dark:text-slate-300">
             {{ integration.user_name }}
-            <span class="font-normal text-slate-400 dark:text-slate-500">· {{ integration.google_email }}</span>
+            <span class="font-normal text-slate-400 dark:text-slate-500"
+              >· {{ integration.google_email }}</span
+            >
           </p>
           <div
             v-if="bookableCalendarsFor(integration).length === 0"
             class="text-xs text-slate-400 dark:text-slate-500 italic py-1 pl-1"
           >
-            {{ $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_PRIMARY_FALLBACK') }}
+            {{
+              $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_PRIMARY_FALLBACK')
+            }}
           </div>
           <div v-else class="space-y-0.5">
             <label
@@ -1498,21 +1712,37 @@ export default {
                 class="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
                 :style="{ backgroundColor: cal.background_color }"
               />
-              <span class="text-slate-700 dark:text-slate-200">{{ cal.summary }}</span>
+              <span class="text-slate-700 dark:text-slate-200">{{
+                cal.summary
+              }}</span>
               <span
                 class="text-xs"
-                :class="cal.primary ? 'text-woot-500' : 'text-slate-400 dark:text-slate-500'"
+                :class="
+                  cal.primary
+                    ? 'text-woot-500'
+                    : 'text-slate-400 dark:text-slate-500'
+                "
               >
-                ({{ cal.primary
-                  ? $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_PRIMARY')
-                  : $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_SECONDARY') }})
+                ({{
+                  cal.primary
+                    ? $t('TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_PRIMARY')
+                    : $t(
+                        'TRACKING_TEMPLATES.CALENDARS.BOOKING_TARGET_SECONDARY'
+                      )
+                }})
               </span>
             </label>
           </div>
         </div>
 
-        <div class="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
-          <woot-button variant="clear" type="button" @click="closeCalendarModal">
+        <div
+          class="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700"
+        >
+          <woot-button
+            variant="clear"
+            type="button"
+            @click="closeCalendarModal"
+          >
             {{ $t('TRACKING_TEMPLATES.CALENDARS.MODAL_CANCEL') }}
           </woot-button>
           <woot-button type="button" @click="confirmCalendarModal">
@@ -1523,7 +1753,11 @@ export default {
     </woot-modal>
 
     <!-- Modal de validación -->
-    <woot-modal :show="showValidationModal" :on-close="() => showValidationModal = false" size="small">
+    <woot-modal
+      :show="showValidationModal"
+      :on-close="() => (showValidationModal = false)"
+      size="small"
+    >
       <woot-modal-header
         header-title="⚠️ Información incompleta"
         header-content="Corrige los siguientes errores antes de guardar el Agente IA."
@@ -1539,7 +1773,9 @@ export default {
             <span>{{ error }}</span>
           </li>
         </ul>
-        <div class="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-700">
+        <div
+          class="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-700"
+        >
           <woot-button type="button" @click="showValidationModal = false">
             Entendido
           </woot-button>
@@ -1548,7 +1784,11 @@ export default {
     </woot-modal>
 
     <!-- Modal expandido: Contexto IA -->
-    <woot-modal :show="showAiContextModal" :on-close="() => showAiContextModal = false" size="medium">
+    <woot-modal
+      :show="showAiContextModal"
+      :on-close="() => (showAiContextModal = false)"
+      size="medium"
+    >
       <woot-modal-header
         header-title="🧠 Contexto IA"
         header-content="Instrucciones para la IA al generar mensajes de seguimiento."
@@ -1560,7 +1800,9 @@ export default {
           :placeholder="$t('TRACKING_TEMPLATES.FORM.AI_CONTEXT.PLACEHOLDER')"
           class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
         />
-        <div class="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-700">
+        <div
+          class="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-700"
+        >
           <woot-button type="button" @click="showAiContextModal = false">
             Listo
           </woot-button>
@@ -1569,7 +1811,11 @@ export default {
     </woot-modal>
 
     <!-- Modal expandido: Entrenamiento -->
-    <woot-modal :show="showPromptModal" :on-close="() => showPromptModal = false" size="medium">
+    <woot-modal
+      :show="showPromptModal"
+      :on-close="() => (showPromptModal = false)"
+      size="medium"
+    >
       <woot-modal-header
         header-title="💡 Entrenamiento"
         header-content="Instrucciones adicionales para responder preguntas del cliente sobre este Agente IA."
@@ -1599,10 +1845,14 @@ export default {
           ref="complementaryModalTextarea"
           v-model="form.complementary_prompt"
           rows="12"
-          :placeholder="$t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')"
+          :placeholder="
+            $t('TRACKING_TEMPLATES.FORM.COMPLEMENTARY_PROMPT.PLACEHOLDER')
+          "
           class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
         />
-        <div class="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-700">
+        <div
+          class="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-700"
+        >
           <woot-button type="button" @click="showPromptModal = false">
             Listo
           </woot-button>
@@ -1611,7 +1861,11 @@ export default {
     </woot-modal>
 
     <!-- proyecto@ai_agent_attachments: selector de archivos para insertar {{nombre}} -->
-    <woot-modal :show="showAttachmentPicker" :on-close="closeAttachmentPicker" size="medium">
+    <woot-modal
+      :show="showAttachmentPicker"
+      :on-close="closeAttachmentPicker"
+      size="medium"
+    >
       <woot-modal-header
         :header-title="$t('TRACKING_TEMPLATES.FORM.ATTACHMENTS.PICKER_TITLE')"
         :header-content="
@@ -1627,14 +1881,22 @@ export default {
               @click="insertAttachmentDirective(att)"
             >
               <span class="min-w-0">
-                <span class="block text-sm font-medium text-woot-600 dark:text-woot-400 truncate">
+                <span
+                  class="block text-sm font-medium text-woot-600 dark:text-woot-400 truncate"
+                >
                   {{ attachmentToken(att.name) }}
                 </span>
-                <span class="block text-xs text-slate-500 dark:text-slate-400 truncate">
+                <span
+                  class="block text-xs text-slate-500 dark:text-slate-400 truncate"
+                >
                   {{ att.filename }}
                 </span>
               </span>
-              <fluent-icon icon="add" size="16" class="shrink-0 text-slate-400" />
+              <fluent-icon
+                icon="add"
+                size="16"
+                class="shrink-0 text-slate-400"
+              />
             </button>
           </li>
         </ul>
@@ -1642,7 +1904,11 @@ export default {
     </woot-modal>
 
     <!-- proyecto@contact_tracking: selector de directivas para el Entrenamiento -->
-    <woot-modal :show="showDirectivePicker" :on-close="closeDirectivePicker" size="medium">
+    <woot-modal
+      :show="showDirectivePicker"
+      :on-close="closeDirectivePicker"
+      size="medium"
+    >
       <woot-modal-header
         header-title="⚡ Insertar directiva"
         header-content="Haz clic en una directiva para insertarla en el Entrenamiento. El bot la ejecutará al responder."
@@ -1656,14 +1922,20 @@ export default {
               @click="insertDirective(dir)"
             >
               <span class="min-w-0">
-                <span class="block text-sm font-medium text-woot-600 dark:text-woot-400 truncate">
+                <span
+                  class="block text-sm font-medium text-woot-600 dark:text-woot-400 truncate"
+                >
                   {{ dir.token }}
                 </span>
                 <span class="block text-xs text-slate-500 dark:text-slate-400">
                   {{ dir.label }}
                 </span>
               </span>
-              <fluent-icon icon="add" size="16" class="shrink-0 text-slate-400" />
+              <fluent-icon
+                icon="add"
+                size="16"
+                class="shrink-0 text-slate-400"
+              />
             </button>
           </li>
         </ul>

@@ -12,7 +12,8 @@
 #
 # Indexes
 #
-#  unique_default_kanban_type_process_per_account  (account_id)
+#  index_kanban_type_processes_on_account_id       (account_id)
+#  unique_default_kanban_type_process_per_account  (account_id) UNIQUE WHERE ("default" = true)
 #
 # Foreign Keys
 #

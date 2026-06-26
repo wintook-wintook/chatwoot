@@ -4,6 +4,10 @@ class Api::V1::Accounts::GoogleCalendar::AuthorizationsController < Api::V1::Acc
   CALENDAR_SCOPES = [
     'https://www.googleapis.com/auth/calendar.readonly',
     'https://www.googleapis.com/auth/calendar.events',
+    # Base de Conocimiento — Google Docs/Sheets: la misma conexión Google habilita
+    # leer documentos y hojas de Drive como fuente de conocimiento (solo lectura).
+    'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/spreadsheets.readonly',
     'email',
     'profile'
   ].freeze

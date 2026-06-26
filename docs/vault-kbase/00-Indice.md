@@ -12,6 +12,7 @@ Mapa de contenido del módulo **Base de Conocimiento**. Notas atómicas conectad
 - [[Arquitectura]] — frontend `knowledgeSources/` + backend + pgvector, de un vistazo.
 - [[Flujo-de-vectorizacion]] — `after_commit` → Sidekiq → OpenAI embeddings → `knowledge_items`.
 - [[Sync-Discourse]] — webhook + jobs de sync bulk/individual, chunking, rate limiting.
+- [[Integracion-Google-Docs]] — plan: Google Docs/Sheets como fuente; polling por `modifiedTime`, re-chunk, Sheets FAQ+datos.
 - [[Busqueda-semantica]] — `KnowledgeItem.search_by_embedding`, umbrales, configuración.
 - [[RouterService-y-bot]] — `ContactTrackings::RouterService`, directivas, `BotSeller::Dispatcher`.
 

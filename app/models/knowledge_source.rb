@@ -28,9 +28,22 @@ class KnowledgeSource < ApplicationRecord
   belongs_to :account
   has_many :knowledge_items, dependent: :destroy
 
-  validates :source_type, presence: true, inclusion: { in: %w[canned_response discourse article] }
+  # Tipos cuyo nombre direcciona una directiva del bot: @buscar_foro(nombre) y
+  # {{doc:nombre}}. Para estos el nombre debe ser único por cuenta. Las fuentes
+  # nativas (canned_response/article) se autogestionan con nombre localizado fijo y
+  # quedan fuera (su recreación vía create_or_find_by no debe disparar RecordInvalid).
+  ADDRESSABLE_BY_NAME = %w[discourse google_doc google_sheet].freeze
+
+  has_many :google_sheet_rows, dependent: :destroy
+
+  validates :source_type, presence: true, inclusion: { in: %w[canned_response discourse article google_doc google_sheet] }
   validates :name, presence: true
+  validates :name, uniqueness: { scope: :account_id, case_sensitive: false }, if: :addressable_by_name?
 
   scope :active, -> { where(status: 'active') }
   scope :by_type, ->(type) { where(source_type: type) }
+
+  def addressable_by_name?
+    ADDRESSABLE_BY_NAME.include?(source_type)
+  end
 end

@@ -5,16 +5,10 @@
 #  id                    :bigint           not null, primary key
 #  additional_attributes :json
 #  content               :text             not null
-#  is_template           :boolean          default(FALSE)
 #  message_type          :string           default("outgoing")
 #  scheduled_at          :datetime         not null
 #  sent                  :boolean          default(FALSE)
 #  sent_at               :datetime
-#  template_category     :string
-#  template_language     :string
-#  template_name         :string
-#  template_namespace    :string
-#  template_params       :json
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  account_id            :bigint           not null
@@ -25,6 +19,8 @@
 #
 #  index_scheduled_messages_on_account_id       (account_id)
 #  index_scheduled_messages_on_conversation_id  (conversation_id)
+#  index_scheduled_messages_on_scheduled_at     (scheduled_at)
+#  index_scheduled_messages_on_sent             (sent)
 #  index_scheduled_messages_on_user_id          (user_id)
 #
 # Foreign Keys
