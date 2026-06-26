@@ -52,10 +52,13 @@ class SheetQueryService
     system = <<~SYS.strip
       Traduces preguntas en español sobre una tabla a una consulta JSON. Devuelve SOLO JSON válido,
       sin texto extra. Esquema:
-      { "op": "sum|avg|min|max|count|filter|list", "column": "<encabezado o null>",
-        "filters": [ { "column": "<encabezado>", "operator": "=|!=|>|<|>=|<=|contains", "value": "<texto>" } ] }
+      { "operations": [ { "op": "sum|avg|min|max|count|filter|list", "column": "<encabezado o null>" } ],
+        "filters": [ { "column": "<encabezado>", "operator": "=|!=|>|<|>=|<=|contains|in", "value": "<texto o lista>" } ] }
       Reglas: usa exactamente los encabezados dados. Para "cuántos" usa count. Para "cuáles/lista" usa list.
+      Para "X o Y" sobre el mismo campo (ej. "México y Argentina"), usá operator "in" con value como lista: ["México","Argentina"].
       Para sumar/promediar/máximo/mínimo usa la columna numérica correspondiente. Si no hay filtros, "filters": [].
+      Si la pregunta pide VARIAS cosas a la vez (ej. "cuántas y cuánto suman"), incluí UNA entrada por cada
+      cálculo en "operations". Los "filters" aplican a todas las operaciones de la pregunta.
       Si la pregunta menciona (aunque sea con otra forma gramatical) uno de los "Valores posibles" listados,
       filtra por esa columna con operator "=" y ese valor exacto, NO inventes condiciones de fecha ni rangos.
     SYS
@@ -71,39 +74,86 @@ class SheetQueryService
     return nil if raw.blank?
 
     spec = JSON.parse(raw)
-    return nil unless OPS.include?(spec['op'])
+    ops = operations_of(spec).map { |o| o['op'] }
+    return nil if ops.empty? || ops.any? { |o| !OPS.include?(o) }
 
     spec
   rescue JSON::ParserError
     nil
   end
 
+  # Normaliza el spec a una lista de operaciones. Acepta el esquema nuevo
+  # ("operations": [...]) y el viejo (op/column sueltos) por compatibilidad.
+  def operations_of(spec)
+    list = spec['operations']
+    return list if list.is_a?(Array) && list.any?
+
+    [{ 'op' => spec['op'], 'column' => spec['column'] }]
+  end
+
   # --- 2) Ruby: ejecuta la spec de forma determinista -------------------------
+  # Una o varias operaciones comparten los mismos filtros. Con una sola operación
+  # devuelve el valor pelado (compatibilidad); con varias, etiqueta cada resultado.
   def execute(spec, rows, headers)
     filtered = apply_filters(rows, spec['filters'], headers)
-    col = resolve_header(spec['column'], headers)
+    results = operations_of(spec).filter_map do |o|
+      col   = resolve_header(o['column'], headers)
+      value = run_op(o['op'], filtered, col)
+      next if value.nil?
 
-    case spec['op']
-    when 'count'
-      "#{filtered.size}"
-    when 'sum', 'avg', 'min', 'max'
-      aggregate(spec['op'], filtered, col)
-    when 'filter', 'list'
-      list_rows(filtered)
+      [op_label(o['op']), value]
+    end
+    return nil if results.empty?
+    return results.first.last if results.size == 1
+
+    results.map { |label, value| "#{label}: #{value}" }.join("\n")
+  end
+
+  def run_op(op, filtered, col)
+    case op
+    when 'count' then filtered.size.to_s
+    when 'sum', 'avg', 'min', 'max' then aggregate(op, filtered, col)
+    when 'filter', 'list' then list_rows(filtered)
     end
   end
 
+  def op_label(op)
+    { 'count' => 'Cantidad', 'sum' => 'Suma', 'avg' => 'Promedio',
+      'min' => 'Mínimo', 'max' => 'Máximo', 'filter' => 'Listado', 'list' => 'Listado' }[op] || op
+  end
+
+  # Semántica de filtros: sobre la MISMA columna, las igualdades se interpretan como
+  # alternativas (OR) — "México y Argentina" = México O Argentina. Entre columnas
+  # distintas es AND. Los operadores de rango (>, <, etc.) siempre son AND, para no
+  # romper consultas como "monto > 1000 y < 5000".
   def apply_filters(rows, filters, headers)
     return rows if filters.blank?
 
+    grouped = filters.group_by { |f| resolve_header(f['column'], headers) }
     rows.select do |row|
-      filters.all? do |f|
-        col = resolve_header(f['column'], headers)
+      grouped.all? do |col, col_filters|
         next true if col.nil?
 
-        compare(row[col].to_s, f['operator'], f['value'].to_s)
+        actual = row[col].to_s
+        eq, other = col_filters.partition { |f| equality_filter?(f) }
+        (eq.empty? || eq.any? { |f| match_filter(actual, f) }) &&
+          other.all? { |f| match_filter(actual, f) }
       end
     end
+  end
+
+  def equality_filter?(filter)
+    op = filter['operator'].to_s
+    op.empty? || op == '=' || op == 'in'
+  end
+
+  # Acepta value escalar o lista (operator "in" o varios valores) → OR de igualdades.
+  def match_filter(actual, filter)
+    op = filter['operator'].to_s
+    values = Array(filter['value'])
+    return values.any? { |v| compare(actual, '=', v.to_s) } if op == 'in' || values.size > 1
+
+    compare(actual, op.presence || '=', values.first.to_s)
   end
 
   def compare(actual, operator, expected)
