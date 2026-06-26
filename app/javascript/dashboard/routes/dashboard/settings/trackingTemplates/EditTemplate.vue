@@ -11,6 +11,7 @@
 
 <script>
 import { mapGetters } from 'vuex';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
@@ -110,9 +111,18 @@ export default {
       appIntegrations: 'integrations/getAppIntegrations',
       inboxes: 'inboxes/getInboxes',
       accountId: 'getCurrentAccountId',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
     }),
     isCreateMode() {
       return this.mode === 'create';
+    },
+    // Google Doc/Sheet y @agendar_calendar dependen de la conexión de Google
+    // Calendar: sus directivas solo se ofrecen si la cuenta tiene esa feature.
+    googleEnabled() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.GOOGLE_CALENDAR
+      );
     },
     // proyecto@bot_seguimiento_calendar: formatos de presentación de horarios (con mini-preview)
     slotsPresentationOptions() {
@@ -316,34 +326,36 @@ export default {
           label: 'Busca en una fuente Discourse. Reemplaza «nombre_fuente».',
         });
       }
-      // @knowledge_sources: una directiva {{doc:nombre}} por cada Google Doc activo.
-      this.googleDocSources.forEach(source => {
-        items.push({
-          token: `{{doc:${source.name}}}`,
-          label: `Responde con el Google Doc «${source.name}».`,
+      // @knowledge_sources: directivas Google solo si la cuenta tiene la feature
+      // google_calendar (reutilizan su conexión OAuth).
+      if (this.googleEnabled) {
+        this.googleDocSources.forEach(source => {
+          items.push({
+            token: `{{doc:${source.name}}}`,
+            label: `Responde con el Google Doc «${source.name}».`,
+          });
         });
-      });
-      // @knowledge_sources: una directiva {{hoja:nombre}} por cada Google Sheet activa.
-      this.googleSheetSources.forEach(source => {
-        items.push({
-          token: `{{hoja:${source.name}}}`,
-          label: `Consulta la Google Sheet «${source.name}».`,
+        this.googleSheetSources.forEach(source => {
+          items.push({
+            token: `{{hoja:${source.name}}}`,
+            label: `Consulta la Google Sheet «${source.name}».`,
+          });
         });
+      }
+      items.push({
+        token: '@discourse',
+        label: 'Busca en el Discourse conectado al canal.',
       });
-      items.push(
-        {
-          token: '@discourse',
-          label: 'Busca en el Discourse conectado al canal.',
-        },
-        {
+      if (this.googleEnabled) {
+        items.push({
           token: '@agendar_calendar',
           label: 'Permite agendar una cita en Google Calendar.',
-        },
-        {
-          token: '@crear_ticket',
-          label: 'Crea un ticket automáticamente.',
-        }
-      );
+        });
+      }
+      items.push({
+        token: '@crear_ticket',
+        label: 'Crea un ticket automáticamente.',
+      });
       return items;
     },
     validationErrors() {
