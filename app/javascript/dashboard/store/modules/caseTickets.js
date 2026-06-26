@@ -328,6 +328,17 @@ export const actions = {
     }
   },
 
+  // @tickets_cases P3 — acción en lote (assign/transition) sobre varios tickets.
+  async bulkAction({ commit }, params) {
+    commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
+    try {
+      const { data } = await caseTicketsAPI.bulk(params);
+      return data;
+    } finally {
+      commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
+    }
+  },
+
   // @tickets_cases 2D — escalamiento por niveles
   async escalateTicket(
     { commit },
@@ -380,6 +391,22 @@ export const actions = {
     });
     dispatch('mergeTicket', data.case_ticket);
     return data.case_ticket;
+  },
+
+  // @tickets_cases P1 — cambio de prioridad inline (acción rápida estilo osTicket).
+  async updatePriority({ commit, dispatch }, { ticketId, contactId, priority }) {
+    commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
+    try {
+      const { data } = await caseTicketsAPI.update(ticketId, {
+        case_ticket: { priority },
+      });
+      const ticket = data.case_ticket;
+      dispatch('mergeTicket', ticket);
+      if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
+      return ticket;
+    } finally {
+      commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
+    }
   },
 
   async changeApproval({ dispatch }, { ticketId, status, reason }) {

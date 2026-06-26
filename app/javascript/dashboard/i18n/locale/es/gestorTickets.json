@@ -147,6 +147,34 @@
     "LOCK": {
       "BANNER": "{name} está trabajando en este ticket ahora mismo."
     },
+    "CLAIM": {
+      "BUTTON": "Tomar"
+    },
+    "STATUS_QUICK": {
+      "LABEL": "Cambiar estado"
+    },
+    "PRIORITY_QUICK": {
+      "LABEL": "Prioridad",
+      "SUCCESS": "Prioridad actualizada",
+      "ERROR": "No se pudo cambiar la prioridad"
+    },
+    "TABLE": {
+      "FOLIO": "Folio",
+      "SUBJECT": "Asunto",
+      "ASSIGNEE": "Asignado",
+      "PRIORITY": "Prioridad",
+      "STATUS": "Estado",
+      "DUE": "Vence",
+      "CREATED": "Creado"
+    },
+    "BULK": {
+      "SELECTED": "{n} seleccionados",
+      "ASSIGN": "Asignar a",
+      "CLOSE": "Cerrar",
+      "CLEAR": "Limpiar selección",
+      "SUCCESS": "{n} tickets actualizados",
+      "ERROR": "No se pudo aplicar la acción"
+    },
     "TASKS": {
       "TITLE": "Tareas",
       "LOADING": "Cargando tareas...",
@@ -711,7 +739,8 @@
       "sla_at_risk": "SLA en riesgo",
       "sla_overdue": "SLA vencido",
       "error_detected": "Error detectado",
-      "internal_note": "Nota interna"
+      "internal_note": "Nota interna",
+      "priority_changed": "Prioridad cambiada"
     }
   }
 }

@@ -113,6 +113,7 @@ Rails.application.routes.draw do
             collection do
               get :metrics
               get :kb_portals
+              post :bulk # @tickets_cases P3 — acciones en lote desde la cola
             end
             member do
               patch :transition

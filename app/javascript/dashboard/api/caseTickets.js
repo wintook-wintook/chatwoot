@@ -42,6 +42,11 @@ class CaseTicketsAPI extends ApiClient {
     return axios.get(`${this.url}/metrics`, { params });
   }
 
+  // @tickets_cases P3 — acciones en lote desde la cola
+  bulk(params) {
+    return axios.post(`${this.url}/bulk`, params);
+  }
+
   // @tickets_cases 2F — aprobación/rechazo de un cambio
   changeApproval(ticketId, params) {
     return axios.patch(`${this.url}/${ticketId}/change_approval`, params);

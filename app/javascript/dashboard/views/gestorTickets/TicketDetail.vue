@@ -28,6 +28,7 @@ export default {
       activeDetailTab: localStorage.getItem(DETAIL_TAB_KEY) || 'detail',
       lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
       showTransitionMenu: false,
+      showPriorityMenu: false, // @tickets_cases P1 — prioridad inline
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
       // 2E — relaciones entre tickets
@@ -245,16 +246,11 @@ export default {
     },
     // @tickets_cases — pestañas del detalle (la de IA solo si hay acciones).
     detailTabs() {
+      // @tickets_cases P2 — la conversación ahora vive en el propio Resumen
+      // (columna izquierda), ya no como pestaña aparte.
       const tabs = [
         { key: 'detail', label: this.$t('CASE_TICKETS.DETAIL_TABS.SUMMARY') },
       ];
-      // @tickets_cases U1 — pestaña Conversación si el ticket tiene conversación.
-      if (this.ticket?.conversation_display_id) {
-        tabs.push({
-          key: 'conversation',
-          label: this.$t('CASE_TICKETS.DETAIL_TABS.CONVERSATION'),
-        });
-      }
       tabs.push({
         key: 'journey',
         label: this.$t('CASE_TICKETS.DETAIL_TABS.JOURNEY'),
@@ -320,6 +316,17 @@ export default {
       return (
         t.escalation_level < 2 && !['closed', 'cancelled'].includes(t.status)
       );
+    },
+    // @tickets_cases P1 — prioridades para el dropdown rápido.
+    priorityOptions() {
+      return ['low', 'medium', 'high', 'urgent'];
+    },
+    // @tickets_cases P1 — "Tomar": disponible si el ticket no es ya mío y está abierto.
+    canClaim() {
+      const t = this.ticket;
+      if (!t) return false;
+      if (['closed', 'cancelled'].includes(t.status)) return false;
+      return t.assignee_id !== this.currentUserID;
     },
     slaText() {
       const t = this.ticket;
@@ -485,13 +492,13 @@ export default {
         this.replyCopied = false;
       }
     },
-    // @tickets_cases U1 — lleva la sugerencia de la IA a la caja de respuesta de
-    // la conversación (cambia a la pestaña Conversación y precarga el texto).
+    // @tickets_cases P2 — lleva la sugerencia de la IA a la caja de respuesta del
+    // hilo (cambia al Resumen, donde ahora vive la conversación, y precarga el texto).
     useReplyInConversation() {
       const text = this.replySuggestion?.reply;
       if (!text) return;
-      this.activeDetailTab = 'conversation';
-      localStorage.setItem(DETAIL_TAB_KEY, 'conversation');
+      this.activeDetailTab = 'detail';
+      localStorage.setItem(DETAIL_TAB_KEY, 'detail');
       this.$nextTick(() => this.$refs.ticketConversation?.setReply(text));
     },
     // @tickets_cases 3E — generar resumen + causa raíz
@@ -770,6 +777,32 @@ export default {
         }[status] || 'bg-slate-100 text-slate-700'
       );
     },
+    // @tickets_cases P1 — cambio de prioridad inline (acción rápida estilo osTicket).
+    async setPriority(priority) {
+      this.showPriorityMenu = false;
+      if (priority === this.ticket?.priority) return;
+      try {
+        await this.$store.dispatch('caseTickets/updatePriority', {
+          ticketId: this.ticketId,
+          contactId: this.ticket?.contact_id,
+          priority,
+        });
+        this.refetch();
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.PRIORITY_QUICK.SUCCESS'),
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error ||
+            this.$t('CASE_TICKETS.PRIORITY_QUICK.ERROR'),
+        });
+      }
+    },
+    // @tickets_cases P1 — "Tomar": autoasignar el ticket al agente actual (1 clic).
+    claimTicket() {
+      this.assign({ assigneeId: this.currentUserID });
+    },
     // @tickets_cases Fase A — asignación manual (agente y equipo coexisten).
     onAssignAgent(event) {
       this.assign({ assigneeId: event.target.value || null });
@@ -926,6 +959,17 @@ export default {
         }[p] || 'bg-slate-100 text-slate-700'
       );
     },
+    // @tickets_cases P1 — punto de color por prioridad (para el dropdown rápido).
+    priorityDot(p) {
+      return (
+        {
+          low: 'bg-slate-400',
+          medium: 'bg-blue-500',
+          high: 'bg-yellow-500',
+          urgent: 'bg-red-500',
+        }[p] || 'bg-slate-400'
+      );
+    },
     slaBadge(sla) {
       return (
         {
@@ -1035,8 +1079,58 @@ export default {
           </p>
         </div>
 
-        <!-- Acciones -->
-        <div class="relative flex flex-shrink-0 gap-2">
+        <!-- Acciones (barra accionable inline — estilo osTicket) -->
+        <div class="relative flex flex-wrap items-center justify-end flex-shrink-0 gap-2">
+          <!-- Tomar (claim): autoasignar al agente actual en 1 clic -->
+          <woot-button
+            v-if="canClaim"
+            size="small"
+            variant="smooth"
+            color-scheme="secondary"
+            icon="person-add"
+            :is-loading="isTransitioning"
+            @click="claimTicket"
+          >
+            {{ $t('CASE_TICKETS.CLAIM.BUTTON') }}
+          </woot-button>
+
+          <!-- Prioridad: dropdown inline -->
+          <div class="relative">
+            <woot-button
+              size="small"
+              variant="smooth"
+              color-scheme="secondary"
+              icon="chevron-down"
+              @click="
+                showPriorityMenu = !showPriorityMenu;
+                showTransitionMenu = false;
+              "
+            >
+              {{ $t('CASE_TICKETS.PRIORITY_QUICK.LABEL') }}:
+              {{ priorityLabel(ticket.priority) }}
+            </woot-button>
+            <ul
+              v-if="showPriorityMenu"
+              class="absolute right-0 z-50 py-1 mt-1 list-none bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[160px]"
+            >
+              <li
+                v-for="p in priorityOptions"
+                :key="p"
+                class="flex items-center gap-2 px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                @click="setPriority(p)"
+              >
+                <span class="w-2 h-2 rounded-full" :class="priorityDot(p)" />
+                {{ priorityLabel(p) }}
+                <fluent-icon
+                  v-if="p === ticket.priority"
+                  icon="checkmark"
+                  size="14"
+                  class="ml-auto text-woot-500"
+                />
+              </li>
+            </ul>
+          </div>
+
           <woot-button
             v-if="canEscalate"
             size="small"
@@ -1051,9 +1145,12 @@ export default {
             size="small"
             color-scheme="primary"
             :is-loading="isTransitioning"
-            @click="showTransitionMenu = !showTransitionMenu"
+            @click="
+              showTransitionMenu = !showTransitionMenu;
+              showPriorityMenu = false;
+            "
           >
-            Cambiar estado ▾
+            {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }} ▾
           </woot-button>
           <ul
             v-if="showTransitionMenu"
@@ -1117,7 +1214,36 @@ export default {
       v-else-if="ticket"
       class="flex flex-col flex-1 gap-6 p-6 overflow-y-auto"
     >
-      <!-- Sugerencia de clasificación IA (3B, modo suggest) -->
+      <!-- ════ Pestaña Resumen (P2): conversación al frente + sidebar de datos ════ -->
+      <div
+        v-show="currentTabKey === 'detail'"
+        class="flex flex-col gap-6 xl:flex-row xl:items-start"
+      >
+        <!-- Hilo de conversación (protagonista, sticky en pantallas anchas) -->
+        <div
+          v-if="ticket.conversation_display_id"
+          class="xl:flex-1 xl:min-w-0 xl:sticky xl:top-0"
+        >
+          <div class="h-[60vh] xl:h-[calc(100vh-13rem)]">
+            <TicketConversation
+              ref="ticketConversation"
+              :key="ticket.conversation_display_id"
+              :conversation-id="ticket.conversation_display_id"
+              class="h-full"
+            />
+          </div>
+        </div>
+
+        <!-- Sidebar: datos del ticket (toma todo el ancho si no hay conversación) -->
+        <div
+          class="flex flex-col min-w-0 gap-6"
+          :class="
+            ticket.conversation_display_id
+              ? 'xl:w-[400px] xl:flex-shrink-0'
+              : 'flex-1'
+          "
+        >
+          <!-- Sugerencia de clasificación IA (3B, modo suggest) -->
       <div
         v-if="aiSuggestion"
         class="p-4 border rounded-lg bg-violet-50 border-violet-200 dark:bg-violet-900/20 dark:border-violet-800"
@@ -1651,7 +1777,12 @@ export default {
             />
           </li>
         </ul>
+        </div>
+        <!-- /tarjeta de tickets relacionados -->
+        </div>
+        <!-- /sidebar de datos -->
       </div>
+      <!-- /Resumen: dos columnas -->
 
       <!-- ════ Pestaña IA: Respuesta sugerida desde KB (3C) ════ -->
       <div
@@ -1984,16 +2115,6 @@ export default {
           </div>
         </template>
       </div>
-
-      <!-- ════ Pestaña Conversación (U1) — hilo + responder sin salir del ticket ════ -->
-      <TicketConversation
-        v-if="ticket.conversation_display_id"
-        v-show="currentTabKey === 'conversation'"
-        ref="ticketConversation"
-        :key="ticket.conversation_display_id"
-        :conversation-id="ticket.conversation_display_id"
-        class="flex-1 min-h-0"
-      />
 
       <!-- ════ Pestaña Avance del ticket (2L) — 3 vistas conmutables ════ -->
       <JourneyView

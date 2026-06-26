@@ -129,57 +129,244 @@
       <p>{{ $t('CASE_TICKETS.LIST.EMPTY') }}</p>
     </div>
 
-    <!-- Lista -->
-    <div v-else class="flex-1 px-6 py-2 overflow-y-auto">
+    <!-- Cola (tabla densa estilo osTicket) + acciones en lote -->
+    <div v-else class="flex flex-col flex-1 min-h-0">
+      <!-- Barra de acciones en lote (aparece al seleccionar) -->
       <div
-        v-for="ticket in tickets"
-        :key="ticket.id"
-        class="flex items-center gap-4 p-4 mb-2 transition-colors bg-white border rounded-lg cursor-pointer dark:bg-slate-800 border-slate-75 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50"
-        @click="openDetail(ticket)"
+        v-if="selected.length"
+        class="relative flex flex-wrap items-center gap-2 px-6 py-2 border-b bg-woot-25 dark:bg-woot-800/20 border-slate-100 dark:border-slate-700"
       >
-        <!-- SLA dot -->
-        <span class="flex-shrink-0 w-2 h-2 rounded-full" :class="slaDotColor(ticket.sla_status)" :title="ticket.sla_status" />
-
-        <!-- Badges -->
-        <div class="flex flex-shrink-0 gap-1">
-          <span
-            v-if="ticket.case_type"
-            class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded text-white"
-            :style="{ backgroundColor: ticket.case_type.color }"
-          >
-            {{ ticket.case_type.name }}
-          </span>
-          <span class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded" :class="priorityBadge(ticket.priority)">
-            {{ priorityLabel(ticket.priority) }}
-          </span>
-          <!-- @tickets_cases Fase C — distintivo de ticket interno -->
-          <span
-            v-if="ticket.is_internal"
-            class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-300"
-          >
-            {{ $t('CASE_TICKETS.INTERNAL.BADGE') }}
-          </span>
-        </div>
-
-        <!-- Título y status -->
-        <div class="flex-1 min-w-0">
-          <p class="m-0 overflow-hidden text-sm font-medium whitespace-nowrap text-ellipsis text-slate-800 dark:text-slate-100">
-            <span v-if="ticket.folio" class="mr-1 font-mono text-xs text-slate-400 dark:text-slate-500">{{ ticket.folio }}</span>
-            {{ ticket.title }}
-          </p>
-          <span class="text-xs text-slate-500 dark:text-slate-400">{{ statusLabel(displayStatus(ticket.status)) }}</span>
-        </div>
-
-        <!-- SLA tiempo restante -->
-        <span class="flex-shrink-0 text-xs font-medium" :class="slaTextColor(ticket.sla_status)">
-          {{ slaText(ticket) }}
+        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+          {{ $t('CASE_TICKETS.BULK.SELECTED', { n: selected.length }) }}
         </span>
+        <woot-button
+          size="tiny"
+          variant="smooth"
+          color-scheme="secondary"
+          icon="person-add"
+          :is-loading="uiFlags.isTransitioning"
+          @click="bulkClaim"
+        >
+          {{ $t('CASE_TICKETS.CLAIM.BUTTON') }}
+        </woot-button>
 
-        <!-- Fecha -->
-        <span class="flex-shrink-0 text-xs text-slate-400 dark:text-slate-500">{{ formatDate(ticket.created_at) }}</span>
+        <!-- Asignar a -->
+        <div class="relative">
+          <woot-button
+            size="tiny"
+            variant="smooth"
+            color-scheme="secondary"
+            icon="chevron-down"
+            @click="
+              showBulkAssign = !showBulkAssign;
+              showBulkStatus = false;
+            "
+          >
+            {{ $t('CASE_TICKETS.BULK.ASSIGN') }}
+          </woot-button>
+          <ul
+            v-if="showBulkAssign"
+            class="absolute left-0 z-50 py-1 mt-1 list-none overflow-y-auto bg-white border rounded-md shadow-md top-full dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[180px] max-h-64"
+          >
+            <li
+              class="px-4 py-2 text-sm cursor-pointer text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
+              @click="bulkUnassign"
+            >
+              {{ $t('CASE_TICKETS.ASSIGN.NONE') }}
+            </li>
+            <li
+              v-for="ag in assignableAgents"
+              :key="ag.id"
+              class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+              @click="bulkAssign(ag.id)"
+            >
+              {{ ag.name }}
+            </li>
+          </ul>
+        </div>
 
-        <!-- Chevron -->
-        <fluent-icon icon="chevron-right" size="16" class="flex-shrink-0 text-slate-300 dark:text-slate-600" />
+        <!-- Cambiar estado -->
+        <div class="relative">
+          <woot-button
+            size="tiny"
+            variant="smooth"
+            color-scheme="secondary"
+            icon="chevron-down"
+            @click="
+              showBulkStatus = !showBulkStatus;
+              showBulkAssign = false;
+            "
+          >
+            {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }}
+          </woot-button>
+          <ul
+            v-if="showBulkStatus"
+            class="absolute left-0 z-50 py-1 mt-1 list-none overflow-y-auto bg-white border rounded-md shadow-md top-full dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[180px] max-h-64"
+          >
+            <li
+              v-for="s in bulkStatusOptions"
+              :key="s"
+              class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+              @click="bulkStatus(s)"
+            >
+              {{ statusLabel(s) }}
+            </li>
+          </ul>
+        </div>
+
+        <woot-button
+          size="tiny"
+          variant="smooth"
+          color-scheme="alert"
+          icon="dismiss-circle"
+          @click="bulkClose"
+        >
+          {{ $t('CASE_TICKETS.BULK.CLOSE') }}
+        </woot-button>
+
+        <button
+          type="button"
+          class="ml-auto text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          @click="clearSelection"
+        >
+          ✕ {{ $t('CASE_TICKETS.BULK.CLEAR') }}
+        </button>
+      </div>
+
+      <!-- Tabla -->
+      <div class="flex-1 overflow-auto">
+        <table class="w-full text-sm border-collapse">
+          <thead
+            class="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800 text-left text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500"
+          >
+            <tr class="border-b border-slate-100 dark:border-slate-700">
+              <th class="w-10 px-4 py-2">
+                <input
+                  type="checkbox"
+                  class="!mb-0 align-middle"
+                  :checked="allSelected"
+                  :indeterminate.prop="someSelected"
+                  @change="toggleSelectAll"
+                />
+              </th>
+              <th class="px-3 py-2">{{ $t('CASE_TICKETS.TABLE.FOLIO') }}</th>
+              <th class="px-3 py-2">{{ $t('CASE_TICKETS.TABLE.SUBJECT') }}</th>
+              <th class="px-3 py-2">{{ $t('CASE_TICKETS.TABLE.ASSIGNEE') }}</th>
+              <th
+                class="px-3 py-2 cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300"
+                @click="sortByField('priority')"
+              >
+                {{ $t('CASE_TICKETS.TABLE.PRIORITY')
+                }}<span v-if="sortBy === 'priority'" class="ml-1">{{
+                  sortArrow
+                }}</span>
+              </th>
+              <th
+                class="px-3 py-2 cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300"
+                @click="sortByField('status')"
+              >
+                {{ $t('CASE_TICKETS.TABLE.STATUS')
+                }}<span v-if="sortBy === 'status'" class="ml-1">{{
+                  sortArrow
+                }}</span>
+              </th>
+              <th
+                class="px-3 py-2 cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300"
+                @click="sortByField('sla_status')"
+              >
+                {{ $t('CASE_TICKETS.TABLE.DUE')
+                }}<span v-if="sortBy === 'sla_status'" class="ml-1">{{
+                  sortArrow
+                }}</span>
+              </th>
+              <th
+                class="px-3 py-2 cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300"
+                @click="sortByField('created_at')"
+              >
+                {{ $t('CASE_TICKETS.TABLE.CREATED')
+                }}<span v-if="sortBy === 'created_at'" class="ml-1">{{
+                  sortArrow
+                }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="ticket in tickets"
+              :key="ticket.id"
+              class="border-b cursor-pointer border-slate-75 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+              :class="{
+                'bg-woot-25 dark:bg-woot-800/20': isSelected(ticket.id),
+              }"
+              @click="openDetail(ticket)"
+            >
+              <td class="px-4 py-2" @click.stop>
+                <input
+                  type="checkbox"
+                  class="!mb-0 align-middle"
+                  :checked="isSelected(ticket.id)"
+                  @change="toggleSelect(ticket.id)"
+                />
+              </td>
+              <td
+                class="px-3 py-2 font-mono text-xs whitespace-nowrap text-slate-500 dark:text-slate-400"
+              >
+                <span
+                  class="inline-block w-2 h-2 mr-2 align-middle rounded-full"
+                  :class="slaDotColor(ticket.sla_status)"
+                  :title="ticket.sla_status"
+                />
+                {{ ticket.folio || '—' }}
+              </td>
+              <td class="px-3 py-2 max-w-[360px]">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span
+                    v-if="ticket.case_type"
+                    class="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded text-white flex-shrink-0"
+                    :style="{ backgroundColor: ticket.case_type.color }"
+                    >{{ ticket.case_type.name }}</span
+                  >
+                  <span
+                    v-if="ticket.is_internal"
+                    class="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-300 flex-shrink-0"
+                    >{{ $t('CASE_TICKETS.INTERNAL.BADGE') }}</span
+                  >
+                  <span class="truncate text-slate-800 dark:text-slate-100">{{
+                    ticket.title
+                  }}</span>
+                </div>
+              </td>
+              <td
+                class="px-3 py-2 whitespace-nowrap text-slate-600 dark:text-slate-300"
+              >
+                {{ assigneeName(ticket) || '—' }}
+              </td>
+              <td class="px-3 py-2">
+                <span
+                  class="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded"
+                  :class="priorityBadge(ticket.priority)"
+                  >{{ priorityLabel(ticket.priority) }}</span
+                >
+              </td>
+              <td
+                class="px-3 py-2 whitespace-nowrap text-slate-600 dark:text-slate-300"
+              >
+                {{ statusLabel(displayStatus(ticket.status)) }}
+              </td>
+              <td
+                class="px-3 py-2 text-xs font-medium whitespace-nowrap"
+                :class="slaTextColor(ticket.sla_status)"
+              >
+                {{ slaText(ticket) }}
+              </td>
+              <td
+                class="px-3 py-2 text-xs whitespace-nowrap text-slate-400 dark:text-slate-500"
+              >
+                {{ formatDate(ticket.created_at) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -265,6 +452,9 @@ export default {
   data() {
     return {
       showInternalModal: false, // @tickets_cases Fase C
+      selected: [], // @tickets_cases P3 — ids seleccionados para acciones en lote
+      showBulkAssign: false,
+      showBulkStatus: false,
       search: '',
       searchDebounce: null,
       dateRange: [],        // [Date, Date]
@@ -287,8 +477,16 @@ export default {
       types:         'caseTickets/getTypes',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
       itilEnabled:   'caseTickets/getItilEnabled', // modo simple/ITIL
+      agents:        'agents/getAgents', // @tickets_cases P3 — nombre del asignado + lote
     }),
     isFetchingList()  { return this.uiFlags.isFetchingList; },
+    // @tickets_cases P3 — selección múltiple para acciones en lote
+    pageIds()         { return this.tickets.map(t => t.id); },
+    allSelected()     { return this.tickets.length > 0 && this.pageIds.every(id => this.selected.includes(id)); },
+    someSelected()    { return this.selected.length > 0 && !this.allSelected; },
+    assignableAgents() { return this.agents; },
+    bulkStatusOptions() { return this.statusOptions; },
+    sortArrow()       { return this.sortOrder === 'asc' ? '▲' : '▼'; },
     quickFilters()    { return QUICK_FILTERS; },
     activeQuickTabIndex() {
       const i = QUICK_FILTERS.findIndex(f => f.key === this.activeFilter);
@@ -335,6 +533,7 @@ export default {
   mounted() {
     this.$store.dispatch('caseTickets/fetchTypes');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
+    this.$store.dispatch('agents/get'); // @tickets_cases P3 — para asignar y mostrar nombre
     this.fetch();
   },
   methods: {
@@ -345,6 +544,7 @@ export default {
       this.fetch();
     },
     fetch() {
+      this.selected = []; // @tickets_cases P3 — la selección es por vista
       const filters = { page: this.currentPage, per_page: this.perPage };
       if (this.search.trim())      filters.q = this.search.trim();
       if (this.dateRange[0])       filters.date_from = this.formatDateParam(this.dateRange[0]);
@@ -414,6 +614,79 @@ export default {
     },
     openDetail(ticket) {
       this.$router.push({ name: 'gestorTickets_detail', params: { id: ticket.id } });
+    },
+    // @tickets_cases P3 — selección múltiple
+    isSelected(id) { return this.selected.includes(id); },
+    toggleSelect(id) {
+      const i = this.selected.indexOf(id);
+      if (i === -1) this.selected.push(id);
+      else this.selected.splice(i, 1);
+    },
+    toggleSelectAll() {
+      if (this.allSelected) {
+        this.selected = this.selected.filter(id => !this.pageIds.includes(id));
+      } else {
+        this.selected = [...new Set([...this.selected, ...this.pageIds])];
+      }
+    },
+    clearSelection() {
+      this.selected = [];
+      this.showBulkAssign = false;
+      this.showBulkStatus = false;
+    },
+    // @tickets_cases P3 — orden por columna (toggle si ya es la activa)
+    sortByField(field) {
+      if (this.sortBy === field) {
+        this.toggleSortOrder();
+      } else {
+        this.sortBy = field;
+        this.sortOrder = 'desc';
+        this.fetch();
+      }
+    },
+    assigneeName(ticket) {
+      if (!ticket.assignee_id) return null;
+      const a = this.agents.find(x => x.id === ticket.assignee_id);
+      return a ? a.name : `#${ticket.assignee_id}`;
+    },
+    // @tickets_cases P3 — acciones en lote
+    async runBulk(params) {
+      if (!this.selected.length) return;
+      try {
+        const res = await this.$store.dispatch('caseTickets/bulkAction', {
+          ids: this.selected,
+          ...params,
+        });
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.BULK.SUCCESS', {
+            n: res.updated || 0,
+          }),
+        });
+        this.clearSelection();
+        this.fetch();
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: e.response?.data?.error || this.$t('CASE_TICKETS.BULK.ERROR'),
+        });
+      }
+    },
+    bulkClaim() {
+      this.runBulk({ bulk_action: 'assign', assignee_id: 'me' });
+    },
+    bulkAssign(agentId) {
+      this.showBulkAssign = false;
+      this.runBulk({ bulk_action: 'assign', assignee_id: agentId });
+    },
+    bulkUnassign() {
+      this.showBulkAssign = false;
+      this.runBulk({ bulk_action: 'assign', assignee_id: '' });
+    },
+    bulkStatus(status) {
+      this.showBulkStatus = false;
+      this.runBulk({ bulk_action: 'transition', status });
+    },
+    bulkClose() {
+      this.runBulk({ bulk_action: 'transition', status: 'closed' });
     },
     formatDateParam(d) {
       const date = d instanceof Date ? d : new Date(d);

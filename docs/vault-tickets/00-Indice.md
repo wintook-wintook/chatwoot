@@ -52,6 +52,7 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 - [[Plan-asignacion-contacto-internos]] — plan: asignación manual · ticket desde contacto · tickets internos
 - [[Plan-User-Portal]] — 🌐 plan: superficie del cliente estilo osTicket (Open/Check/KB)
 - [[Plan-Modo-Simple]] — 🎚️ plan: modo simple (osTicket) por defecto, ITIL opcional vía toggle
+- [[Plan-Practicidad-osTicket]] — ⚡ plan: ficha accionable inline · conversación al frente · cola tabla (P1 hecho)
 - [[Historial-de-implementacion]] — changelog de todo lo resuelto
 
 ---

@@ -172,7 +172,25 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     if incoming.key?('requires_approval')
       incoming['requires_approval'] = ActiveModel::Type::Boolean.new.cast(incoming['requires_approval'])
     end
-    @ticket.update!(custom_attributes: @ticket.custom_attributes.merge(incoming))
+
+    # @tickets_cases P1 — cambio de prioridad inline (acción rápida estilo osTicket).
+    new_priority = params.dig(:case_ticket, :priority).presence
+    if new_priority && !CaseTicket.priorities.key?(new_priority.to_s)
+      return render json: { error: 'Prioridad inválida' }, status: :unprocessable_entity
+    end
+    old_priority = @ticket.priority
+    priority_changed = new_priority && new_priority.to_s != old_priority
+
+    @ticket.custom_attributes = @ticket.custom_attributes.merge(incoming) if incoming.any?
+    @ticket.priority = new_priority if priority_changed
+    @ticket.save!
+
+    if priority_changed
+      @ticket.case_events.create!(account: Current.account, event_type: :priority_changed,
+                                  origin: :agent, actor: current_user,
+                                  payload: { from: old_priority, to: @ticket.priority })
+    end
+
     render json: { case_ticket: ticket_json(@ticket.reload) }
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
@@ -230,6 +248,45 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     render json: { error: 'Agente o equipo no encontrado' }, status: :not_found
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
+  end
+
+  # POST /api/v1/accounts/:account_id/case_tickets/bulk
+  # @tickets_cases P3 — acciones en lote desde la cola.
+  #   ids: []              — tickets seleccionados
+  #   bulk_action: assign  — assignee_id ('me' = yo, ''/none = limpiar) y/o team_id
+  #   bulk_action: transition — status (solo a los que puedan transicionar)
+  def bulk
+    ids = Array(params[:ids]).map(&:to_i).uniq
+    return render json: { error: 'Sin tickets seleccionados' }, status: :unprocessable_entity if ids.empty?
+
+    # OJO: `action` es reservado por Rails (= nombre de la acción) → usamos `bulk_action`.
+    bulk_action = params[:bulk_action].to_s
+    updated = 0
+    skipped = 0
+
+    Current.account.case_tickets.where(id: ids).find_each do |ticket|
+      case bulk_action
+      when 'assign'
+        bulk_assign(ticket)
+        updated += 1
+      when 'transition'
+        status = params[:status].to_s
+        if ticket.can_transition_to?(status)
+          ticket.transition!(status, actor: current_user)
+          updated += 1
+        else
+          skipped += 1
+        end
+      else
+        return render json: { error: 'Acción no soportada' }, status: :unprocessable_entity
+      end
+    end
+
+    render json: { updated: updated, skipped: skipped }
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: 'Agente o equipo no encontrado' }, status: :not_found
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   # PATCH /api/v1/accounts/:account_id/case_tickets/:id/lock
@@ -625,6 +682,25 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       touched = true
     end
     touched
+  end
+
+  # @tickets_cases P3 — asignación en lote de un ticket (agente/equipo).
+  # Acepta el centinela 'me' (= agente actual) y limpia con ''/none.
+  def bulk_assign(ticket)
+    previous_assignee_id = ticket.assignee_id
+    if params.key?(:assignee_id)
+      raw = params[:assignee_id].to_s == 'me' ? current_user.id : params[:assignee_id]
+      ticket.assignee = blank_assignment?(raw) ? nil : Current.account.users.find(raw)
+    end
+    if params.key?(:team_id)
+      ticket.team = blank_assignment?(params[:team_id]) ? nil : Current.account.teams.find(params[:team_id])
+    end
+    ticket.assignee_type = if ticket.assignee_id then :agent elsif ticket.team_id then :team else :bot end
+    ticket.save!
+    ticket.case_events.create!(account: Current.account, event_type: :assigned, origin: :agent, actor: current_user,
+                               payload: { assignee_id: ticket.assignee_id, assignee_name: ticket.assignee&.name,
+                                          team_id: ticket.team_id, team_name: ticket.team&.name })
+    notify_assignee(ticket) if ticket.assignee_id != previous_assignee_id
   end
 
   # @tickets_cases Fase A — notifica al agente recién asignado (solo si cambió).
