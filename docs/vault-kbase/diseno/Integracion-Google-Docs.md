@@ -1,7 +1,9 @@
 # Integración Google Docs / Sheets en la Base de Conocimiento
 
-> **Estado:** plan de diseño (rama `feat/kbase_google_docs`). No implementado.
-> Documento de plan — solo diseño, sin código todavía.
+> **Estado:** ✅ **IMPLEMENTADO** y mergeado a `develop` (merge `f9e33faa`, 2026-06-26).
+> Este documento es el diseño original; el resultado final incorpora extras no previstos
+> aquí (consultas con fechas relativas/cobranza, grupos OR, multi-operación, modo "en vivo"
+> con toggle en la UI, y gating por la feature `google_calendar`). Ver [[Estado-actual]].
 
 Permitir que **Google Docs** (texto) y **Google Sheets** (tablas) sean fuentes de
 conocimiento consultables por el bot, igual que `canned_response` / `article`.

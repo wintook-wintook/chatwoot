@@ -3,8 +3,9 @@
 Mapa de contenido del módulo **Base de Conocimiento**. Notas atómicas conectadas por
 `[[wikilinks]]`; abre el grafo de Foam/Obsidian para ver las relaciones.
 
-> Estado: rama `feat/kbase_contact_tracking`. Módulo **implementado**; bóveda en
-> construcción (notas stub que se irán completando).
+> Estado: módulo **implementado**; integración **Google Docs/Sheets** terminada y
+> mergeada a `develop` (rama `feat/kbase_google_docs`, merge `f9e33faa`). Bóveda en
+> construcción (algunas notas de diseño siguen como stub). Ver [[Estado-actual]].
 
 ## Diseño
 
