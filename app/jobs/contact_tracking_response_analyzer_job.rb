@@ -863,6 +863,22 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     requested = parse_requested_datetime(tracking, message, timezone)
 
     if requested
+      # Bug #4 — si el cliente dio solo una hora ("a las 2pm"), parse_requested_datetime la
+      # ancla a hoy/mañana, ignorando que los slots activos (current_slots) son de otra fecha.
+      # Sin esto, slot_for podría confirmar la cita en el día equivocado. Anclamos la hora
+      # pedida a la fecha del primer slot ofrecido cuando lo calculado cae a ≤ 1 día de hoy.
+      if requested[:exact] && current_slots.any?
+        days_from_now = (requested[:at].in_time_zone(timezone).to_date - Time.current.in_time_zone(timezone).to_date).to_i
+        if days_from_now <= 1
+          first_slot_date = Time.parse(current_slots.first['slot']).in_time_zone(timezone)
+          requested = requested.merge(
+            at: requested[:at].in_time_zone(timezone).change(
+              year: first_slot_date.year, month: first_slot_date.month, day: first_slot_date.day
+            ).utc
+          )
+        end
+      end
+
       cal_ids  = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
       service  = slot_service_for(cal_ids, tracking, timezone, message: message)
 
@@ -880,8 +896,18 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       # Hora exacta ocupada, o solo dio el día: ofrecemos horarios cerca de lo pedido.
       alternatives = service.call(from: requested[:at].beginning_of_day)
       if alternatives.any?
-        intro = requested[:exact] ? 'Uy, ese horario no está disponible 😕. Estos son los más cercanos:'
-                                  : '¡Claro! Para ese día tengo estos horarios:'
+        # Bug #5 — si el día pedido no tiene disponibilidad, el servicio devuelve slots del
+        # siguiente día hábil. Avisamos explícitamente en vez de mostrarlos sin contexto.
+        requested_date     = requested[:at].in_time_zone(timezone).to_date
+        first_offered_date = alternatives.first[:slot].in_time_zone(timezone).to_date
+        intro = if first_offered_date != requested_date
+                  day_name = SLOT_DAY_NAMES[requested_date.wday]
+                  "No hay disponibilidad el #{day_name}. Los primeros horarios disponibles son:"
+                elsif requested[:exact]
+                  'Uy, ese horario no está disponible 😕. Estos son los más cercanos:'
+                else
+                  '¡Claro! Para ese día tengo estos horarios:'
+                end
         Rails.logger.info '[TrackingBot] 📅 Ofreciendo horarios cercanos a lo pedido'
         reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, slots_presentation_for(tracking))}\n\n¿Cuál te viene bien? Respondé con el número."
         offer_slots(tracking, message, alternatives, reply)
@@ -891,10 +917,17 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     # No pudimos interpretar la fecha/hora (o no hay alternativas): repreguntamos suave,
     # manteniendo el estado [PENDING_SLOT] para que pueda elegir o proponer de nuevo.
-    Rails.logger.info '[TrackingBot] 📅 Sin fecha interpretable → repreguntando'
+    # Bug #6 — re-mostramos los horarios vigentes para que el cliente tenga contexto en vez
+    # de pedir "un número" a ciegas. current_slots viene de JSON (claves string / horas ISO),
+    # así que lo normalizamos al shape que espera format_slots_lines (claves símbolo / Time).
+    Rails.logger.info '[TrackingBot] 📅 Sin fecha interpretable → repreguntando con los horarios'
+    display_slots = current_slots.map do |s|
+      { slot: Time.parse(s['slot']), end_time: Time.parse(s['end_time']), agent_name: s['agent_name'] }
+    end
+    slots_list = format_slots_lines(display_slots, timezone, slots_presentation_for(tracking))
     send_auto_reply(tracking, message,
-                    "Puedo agendarte en alguno de estos horarios 🙂. Respondé con el número " \
-                    "(1 al #{current_slots.size}), o decime qué día y a qué hora te acomoda.")
+                    "Puedo agendarte en alguno de estos horarios 🙂:\n\n#{slots_list}\n\n" \
+                    "Respondé con el número (1 al #{current_slots.size}), o decime qué día y a qué hora te acomoda.")
     true
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error en handle_slot_negotiation: #{e.message}"
@@ -1720,9 +1753,19 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     wday = weekday_iso.to_i
     return nil unless (1..7).cover?(wday)
 
-    today      = Time.current.in_time_zone(timezone).to_date
-    days_until = (wday - today.cwday) % 7
-    days_until = 7 if days_until.zero?
-    today + days_until.days + (weeks_ahead.to_i * 7).days
+    today = Time.current.in_time_zone(timezone).to_date
+
+    if weeks_ahead.to_i.positive?
+      # Con weeks_ahead anclamos al lunes de la semana N y sumamos el offset del día pedido.
+      # (El camino anterior forzaba days_until=7 cuando hoy era el día pedido y luego sumaba
+      #  weeks_ahead*7 encima → doble salto: 14 días en vez de 7.)
+      week_start = today.beginning_of_week(:monday) + (weeks_ahead.to_i * 7).days
+      day_offset = (wday - 1) % 7 # ISO: 1=lunes→0 ... 7=domingo→6
+      week_start + day_offset.days
+    else
+      days_until = (wday - today.cwday) % 7
+      days_until = 7 if days_until.zero?
+      today + days_until.days
+    end
   end
 end
