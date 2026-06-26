@@ -1,6 +1,9 @@
 <!-- @knowledge_sources -->
 <!-- Modal para agregar o editar una fuente de conocimiento. -->
 <script>
+import { mapGetters } from 'vuex';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+
 export default {
   name: 'AddKnowledgeSourceModal',
   props: {
@@ -22,14 +25,33 @@ export default {
       sheetRange: '',
       sheetLive: false,
       sheetLiveTtl: 60,
-      sourceOptions: [
-        { value: 'discourse', label: 'Discourse', icon: 'globe' },
-        { value: 'google_doc', label: 'Google Doc', icon: 'document' },
-        { value: 'google_sheet', label: 'Google Sheets', icon: 'document' },
-      ],
     };
   },
   computed: {
+    ...mapGetters({
+      currentUser: 'getCurrentUser',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
+    }),
+    // Las fuentes Google reutilizan la conexión de Google Calendar: solo se
+    // ofrecen si la cuenta tiene activada esa feature en el super admin.
+    googleEnabled() {
+      return this.isFeatureEnabledonAccount(
+        this.currentUser.account_id,
+        FEATURE_FLAGS.GOOGLE_CALENDAR
+      );
+    },
+    sourceOptions() {
+      const options = [
+        { value: 'discourse', label: 'Discourse', icon: 'globe' },
+      ];
+      if (this.googleEnabled) {
+        options.push(
+          { value: 'google_doc', label: 'Google Doc', icon: 'document' },
+          { value: 'google_sheet', label: 'Google Sheets', icon: 'document' }
+        );
+      }
+      return options;
+    },
     isEdit() {
       return !!this.source;
     },

@@ -55,6 +55,11 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
   # POST /api/v1/accounts/:account_id/knowledge_base/sources
   def create_source
     attrs = source_params.to_h
+    if %w[google_doc google_sheet].include?(attrs[:source_type]) && !current_account.feature_enabled?('google_calendar')
+      return render json: { errors: ['Activa la integración de Google (Calendario) para esta cuenta antes de usar fuentes de Google Doc o Sheets.'] },
+                    status: :unprocessable_entity
+    end
+
     if attrs[:source_type] == 'google_doc'
       error = google_doc_precheck(attrs[:config])
       return render json: { errors: [error] }, status: :unprocessable_entity if error
