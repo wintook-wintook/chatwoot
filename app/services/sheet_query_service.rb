@@ -16,6 +16,7 @@ class SheetQueryService
 
   # Devuelve un string con la respuesta, o nil si no se pudo resolver.
   def perform
+    refresh_if_live
     rows = @source.google_sheet_rows.order(:row_index).pluck(:data)
     return nil if rows.empty?
 
@@ -30,6 +31,52 @@ class SheetQueryService
   end
 
   private
+
+  DEFAULT_LIVE_TTL = 60 # segundos
+
+  # Modo "en vivo" (config['live']): mantiene la foto local fresca SIN re-leer la hoja
+  # en cada consulta. Solo cuando pasó el TTL pide el modifiedTime (dato liviano) y,
+  # si cambió, re-lee las filas una vez. Si Google falla, cae a la foto local.
+  def refresh_if_live
+    return unless @source.config['live']
+
+    ttl  = (@source.config['live_ttl'] || DEFAULT_LIVE_TTL).to_i
+    last = @source.config['live_checked_at']
+    return if last.present? && (Time.zone.parse(last) > ttl.seconds.ago)
+
+    integration = live_integration
+    return unless integration
+
+    svc      = GoogleSheetsService.new(integration)
+    file_id  = @source.config['file_id']
+    remote_m = svc.file_metadata(file_id)['modifiedTime']
+    updates  = { 'live_checked_at' => Time.current.iso8601 }
+
+    if remote_m != @source.config['modified_time']
+      replace_rows(svc.read_table(file_id, range: @source.config['sheet_range']))
+      updates['modified_time'] = remote_m
+      Rails.logger.info "[SheetQueryService] 🔄 hoja '#{@source.name}' cambió → foto refrescada en vivo"
+    end
+    @source.update(config: @source.config.merge(updates))
+  rescue StandardError => e
+    Rails.logger.warn "[SheetQueryService] refresco en vivo falló (#{e.message.to_s.truncate(120)}) → uso foto local"
+  end
+
+  def replace_rows(table)
+    @source.google_sheet_rows.delete_all
+    now = Time.current
+    records = table[:rows].each_with_index.map do |row, index|
+      { account_id: @account.id, knowledge_source_id: @source.id, row_index: index,
+        data: row, created_at: now, updated_at: now }
+    end
+    GoogleSheetRow.insert_all(records) if records.any?
+  end
+
+  def live_integration
+    scope = UserCalendarIntegration.where(account_id: @account.id)
+    id    = @source.config['integration_id']
+    (id.present? && scope.find_by(id: id)) || scope.first
+  end
 
   # Valores distintos de columnas categóricas (pocas opciones), para que el LLM
   # pueda mapear palabras sueltas ("vencidas", "de México") al filtro column=value
@@ -55,7 +102,12 @@ class SheetQueryService
       { "operations": [ { "op": "sum|avg|min|max|count|filter|list", "column": "<encabezado o null>" } ],
         "filters": [ { "column": "<encabezado>", "operator": "=|!=|>|<|>=|<=|contains|in", "value": "<texto o lista>" } ] }
       Reglas: usa exactamente los encabezados dados. Para "cuántos" usa count. Para "cuáles/lista" usa list.
+      Si la pregunta solo describe facturas con condiciones y NO dice qué calcular, usá op "count".
       Para "X o Y" sobre el mismo campo (ej. "México y Argentina"), usá operator "in" con value como lista: ["México","Argentina"].
+      Si la pregunta combina condiciones de DISTINTOS campos unidas por "o"/grupos separados
+      (ej. "pendientes en México y pagadas en Argentina" = un grupo {estado=Pendiente, pais=México}
+      O otro grupo {estado=Pagada, pais=Argentina}), usá "filter_groups": [ [cond, cond], [cond, cond] ]
+      en lugar de "filters". Cada grupo es un AND de condiciones y los grupos se unen con OR.
       Para sumar/promediar/máximo/mínimo usa la columna numérica correspondiente. Si no hay filtros, "filters": [].
       Si la pregunta pide VARIAS cosas a la vez (ej. "cuántas y cuánto suman"), incluí UNA entrada por cada
       cálculo en "operations". Los "filters" aplican a todas las operaciones de la pregunta.
@@ -95,7 +147,7 @@ class SheetQueryService
   # Una o varias operaciones comparten los mismos filtros. Con una sola operación
   # devuelve el valor pelado (compatibilidad); con varias, etiqueta cada resultado.
   def execute(spec, rows, headers)
-    filtered = apply_filters(rows, spec['filters'], headers)
+    filtered = filter_rows(rows, spec, headers)
     results = operations_of(spec).filter_map do |o|
       col   = resolve_header(o['column'], headers)
       value = run_op(o['op'], filtered, col)
@@ -122,23 +174,37 @@ class SheetQueryService
       'min' => 'Mínimo', 'max' => 'Máximo', 'filter' => 'Listado', 'list' => 'Listado' }[op] || op
   end
 
-  # Semántica de filtros: sobre la MISMA columna, las igualdades se interpretan como
+  # Grupos de filtros: una fila pasa si coincide con ALGÚN grupo (OR entre grupos),
+  # y dentro de un grupo deben cumplirse todas las condiciones (AND). Permite
+  # "pendientes en México y pagadas en Argentina" = {Pendiente,México} O {Pagada,Argentina}.
+  # Acepta el esquema nuevo ("filter_groups") y el plano ("filters") por compatibilidad.
+  def filter_rows(rows, spec, headers)
+    groups = filter_groups(spec)
+    return rows if groups.empty?
+
+    rows.select { |row| groups.any? { |group| group_matches?(row, group, headers) } }
+  end
+
+  def filter_groups(spec)
+    groups = spec['filter_groups']
+    return groups if groups.is_a?(Array) && groups.any?
+
+    flat = spec['filters']
+    flat.is_a?(Array) && flat.any? ? [flat] : []
+  end
+
+  # Dentro de un grupo: sobre la MISMA columna, las igualdades se interpretan como
   # alternativas (OR) — "México y Argentina" = México O Argentina. Entre columnas
   # distintas es AND. Los operadores de rango (>, <, etc.) siempre son AND, para no
   # romper consultas como "monto > 1000 y < 5000".
-  def apply_filters(rows, filters, headers)
-    return rows if filters.blank?
+  def group_matches?(row, filters, headers)
+    filters.group_by { |f| resolve_header(f['column'], headers) }.all? do |col, col_filters|
+      next true if col.nil?
 
-    grouped = filters.group_by { |f| resolve_header(f['column'], headers) }
-    rows.select do |row|
-      grouped.all? do |col, col_filters|
-        next true if col.nil?
-
-        actual = row[col].to_s
-        eq, other = col_filters.partition { |f| equality_filter?(f) }
-        (eq.empty? || eq.any? { |f| match_filter(actual, f) }) &&
-          other.all? { |f| match_filter(actual, f) }
-      end
+      actual = row[col].to_s
+      eq, other = col_filters.partition { |f| equality_filter?(f) }
+      (eq.empty? || eq.any? { |f| match_filter(actual, f) }) &&
+        other.all? { |f| match_filter(actual, f) }
     end
   end
 
