@@ -6,7 +6,6 @@
 #  additional_attributes  :jsonb
 #  agent_last_seen_at     :datetime
 #  assignee_last_seen_at  :datetime
-#  bot                    :boolean          default(FALSE), not null
 #  cached_label_list      :text
 #  contact_last_seen_at   :datetime
 #  custom_attributes      :jsonb
@@ -51,6 +50,7 @@
 #  index_conversations_on_status_and_priority         (status,priority)
 #  index_conversations_on_team_id                     (team_id)
 #  index_conversations_on_uuid                        (uuid) UNIQUE
+#  index_conversations_on_waiting_since               (waiting_since)
 #
 # Foreign Keys
 #

@@ -345,6 +345,16 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
       source_name = match[1].strip
       message.account.knowledge_sources.active.exists?(name: source_name)
+    elsif (match = cp.match(/\{\{doc:([^}]+)\}\}/i))
+      source_name = match[1].strip
+      message.account.feature_enabled?('google_calendar') &&
+        message.account.knowledge_sources.active
+               .exists?(['source_type = ? AND LOWER(name) = LOWER(?)', 'google_doc', source_name])
+    elsif (match = cp.match(/\{\{hoja:([^}]+)\}\}/i))
+      source_name = match[1].strip
+      message.account.feature_enabled?('google_calendar') &&
+        message.account.knowledge_sources.active
+               .exists?(['source_type = ? AND LOWER(name) = LOWER(?)', 'google_sheet', source_name])
     elsif cp.match?(/@discourse\b/i)
       message.account.hooks.exists?(app_id: 'discourse', inbox_id: message.inbox_id, status: 'enabled')
     else

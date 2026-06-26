@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_24_120200) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_26_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -915,6 +915,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_24_120200) do
     t.string "name"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+  end
+
+  create_table "google_sheet_rows", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "knowledge_source_id", null: false
+    t.integer "row_index", null: false
+    t.jsonb "data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_google_sheet_rows_on_account_id"
+    t.index ["knowledge_source_id", "row_index"], name: "idx_google_sheet_rows_unique", unique: true
   end
 
   create_table "inbox_members", id: :serial, force: :cascade do |t|

@@ -4,24 +4,16 @@
 #
 #  id                    :integer          not null, primary key
 #  auto_resolve_duration :integer
-#  bot                   :boolean          default(FALSE), not null
 #  custom_attributes     :jsonb
-#  date_alert            :date
-#  date_end              :date
-#  date_start            :date
 #  domain                :string(100)
 #  feature_flags         :bigint           default(0), not null
 #  limits                :jsonb
 #  locale                :integer          default("en")
 #  name                  :string           not null
-#  show_license          :boolean          default(FALSE), not null
 #  status                :integer          default("active")
 #  support_email         :string(100)
-#  system_settings       :jsonb
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
-#  license_period_id     :integer
-#  type_license_id       :integer          default(1), not null
 #
 # Indexes
 #

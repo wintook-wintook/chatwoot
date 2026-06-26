@@ -9,6 +9,7 @@
 #  name       :string           not null
 #  position   :integer          default(0), not null
 #  prefix     :string           default(""), not null
+#  public     :boolean          default(FALSE), not null
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
 #  account_id :bigint           not null
