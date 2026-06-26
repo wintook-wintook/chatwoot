@@ -20,6 +20,8 @@ export default {
       sheetUrl: '',
       sheetMode: 'faq',
       sheetRange: '',
+      sheetLive: false,
+      sheetLiveTtl: 60,
       sourceOptions: [
         { value: 'discourse', label: 'Discourse', icon: 'globe' },
         { value: 'google_doc', label: 'Google Doc', icon: 'document' },
@@ -81,6 +83,8 @@ export default {
       this.sheetUrl = this.source.config?.file_url || '';
       this.sheetMode = this.source.config?.sheet_mode || 'faq';
       this.sheetRange = this.source.config?.sheet_range || '';
+      this.sheetLive = this.source.config?.live || false;
+      this.sheetLiveTtl = this.source.config?.live_ttl || 60;
     },
     reset() {
       this.sourceType = 'discourse';
@@ -92,6 +96,8 @@ export default {
       this.sheetUrl = '';
       this.sheetMode = 'faq';
       this.sheetRange = '';
+      this.sheetLive = false;
+      this.sheetLiveTtl = 60;
     },
     onClose() {
       this.reset();
@@ -121,6 +127,8 @@ export default {
           file_url: this.sheetUrl.trim(),
           sheet_mode: this.sheetMode,
           sheet_range: this.sheetRange.trim() || null,
+          live: this.sheetMode === 'data' ? this.sheetLive : false,
+          live_ttl: Number(this.sheetLiveTtl) || 60,
         };
       }
       return {};
@@ -284,6 +292,37 @@ export default {
               Rango a leer. La primera fila se toma como encabezados. Por
               defecto: A1:Z2000.
             </p>
+          </div>
+
+          <div v-if="sheetMode === 'data'" class="flex flex-col gap-2">
+            <label
+              class="flex items-center gap-2 text-sm font-medium text-slate-700"
+            >
+              <input v-model="sheetLive" type="checkbox" />
+              Consultar en vivo
+            </label>
+            <p class="text-xs text-slate-400">
+              Mantiene los datos al día sin sincronizar a mano: si la hoja
+              cambió, refresca la copia local en la próxima consulta. Solo
+              disponible en modo «Datos».
+            </p>
+            <div v-if="sheetLive" class="flex flex-col gap-1">
+              <label class="text-sm font-medium text-slate-700">
+                Frecuencia de chequeo
+                <span class="text-slate-400 font-normal">(segundos)</span>
+              </label>
+              <input
+                v-model="sheetLiveTtl"
+                type="number"
+                min="10"
+                class="input"
+                placeholder="60"
+              />
+              <p class="text-xs text-slate-400">
+                Cada cuánto, como máximo, verifica si la hoja cambió. Por
+                defecto: 60 segundos.
+              </p>
+            </div>
           </div>
         </template>
       </div>

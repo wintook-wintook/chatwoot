@@ -80,7 +80,16 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
 
   # PATCH /api/v1/accounts/:account_id/knowledge_base/sources/:id
   def update
-    if @source.update(source_params)
+    attrs = source_params.to_h
+    # Para fuentes Google, reconstruir el config (file_id, integración, live...) y
+    # fusionarlo sobre el actual, para no perder claves internas (modified_time, etc.)
+    # ni el file_id al editar desde la UI.
+    if %w[google_doc google_sheet].include?(@source.source_type) && attrs[:config].present?
+      rebuilt = @source.source_type == 'google_doc' ? build_google_doc_config(attrs[:config]) : build_google_sheet_config(attrs[:config])
+      attrs[:config] = @source.config.merge(rebuilt)
+    end
+
+    if @source.update(attrs)
       render json: @source
     else
       render json: { errors: @source.errors.full_messages }, status: :unprocessable_entity
@@ -312,17 +321,21 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     nil
   end
 
-  # Completa el config de una Google Sheet: file_id, integración, modo y rango.
+  # Completa el config de una Google Sheet: file_id, integración, modo, rango y
+  # "consulta en vivo" (solo modo Datos): refresca la foto local por modifiedTime+TTL.
   def build_google_sheet_config(config)
     config ||= {}
     raw = config['file_url'].presence || config['file_id'].presence
     mode = config['sheet_mode'].to_s == 'data' ? 'data' : 'faq'
+    live = mode == 'data' && ActiveModel::Type::Boolean.new.cast(config['live'])
     {
       'file_url'        => config['file_url'],
       'file_id'         => GoogleDocsService.extract_file_id(raw),
       'integration_id'  => google_integration&.id,
       'sheet_mode'      => mode,
-      'sheet_range'     => config['sheet_range'].presence
+      'sheet_range'     => config['sheet_range'].presence,
+      'live'            => live || false,
+      'live_ttl'        => (config['live_ttl'].presence || 60).to_i
     }
   end
 
