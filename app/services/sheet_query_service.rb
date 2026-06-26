@@ -20,7 +20,7 @@ class SheetQueryService
     return nil if rows.empty?
 
     headers = rows.first.keys
-    spec = translate_to_spec(headers, rows.first(3))
+    spec = translate_to_spec(headers, rows.first(3), categorical_values(rows, headers))
     return nil unless spec
 
     execute(spec, rows, headers)
@@ -31,8 +31,24 @@ class SheetQueryService
 
   private
 
+  # Valores distintos de columnas categóricas (pocas opciones), para que el LLM
+  # pueda mapear palabras sueltas ("vencidas", "de México") al filtro column=value
+  # correcto en lugar de inventar condiciones (p. ej. una fecha).
+  MAX_DISTINCT = 15
+
+  def categorical_values(rows, headers)
+    headers.each_with_object({}) do |col, acc|
+      values = rows.filter_map { |r| r[col].to_s.strip.presence }.uniq
+      # Columnas con pocos valores distintos y no numéricas → son categóricas.
+      next if values.size > MAX_DISTINCT
+      next if values.all? { |v| Float(v.delete(','), exception: false) }
+
+      acc[col] = values
+    end
+  end
+
   # --- 1) LLM: pregunta → spec estructurada -----------------------------------
-  def translate_to_spec(headers, sample)
+  def translate_to_spec(headers, sample, categories = {})
     system = <<~SYS.strip
       Traduces preguntas en español sobre una tabla a una consulta JSON. Devuelve SOLO JSON válido,
       sin texto extra. Esquema:
@@ -40,9 +56,13 @@ class SheetQueryService
         "filters": [ { "column": "<encabezado>", "operator": "=|!=|>|<|>=|<=|contains", "value": "<texto>" } ] }
       Reglas: usa exactamente los encabezados dados. Para "cuántos" usa count. Para "cuáles/lista" usa list.
       Para sumar/promediar/máximo/mínimo usa la columna numérica correspondiente. Si no hay filtros, "filters": [].
+      Si la pregunta menciona (aunque sea con otra forma gramatical) uno de los "Valores posibles" listados,
+      filtra por esa columna con operator "=" y ese valor exacto, NO inventes condiciones de fecha ni rangos.
     SYS
+    categories_block = categories.map { |col, vals| "#{col} = [#{vals.join(', ')}]" }.join('; ')
     user = <<~USR.strip
       Encabezados: #{headers.join(', ')}
+      Valores posibles: #{categories_block.presence || '(ninguno categórico)'}
       Primeras filas: #{sample.to_json}
       Pregunta: "#{@question}"
     USR
@@ -110,7 +130,7 @@ class SheetQueryService
   def aggregate(op, rows, col)
     return 'No identifiqué la columna numérica.' if col.nil?
 
-    nums = rows.filter_map { |r| Float(r[col].to_s.gsub(',', ''), exception: false) }
+    nums = rows.filter_map { |r| Float(r[col].to_s.delete(','), exception: false) }
     return 'No hay valores numéricos en esa columna.' if nums.empty?
 
     result = case op
