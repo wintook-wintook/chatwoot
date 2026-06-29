@@ -142,6 +142,16 @@ export const actions = {
     }
   },
 
+  async askQuestion({ commit }, { connectionId, question }) {
+    commit('SET_UI_FLAG', { runningQuery: true });
+    try {
+      const { data } = await consoleAPI.ask({ connectionId, question });
+      return data;
+    } finally {
+      commit('SET_UI_FLAG', { runningQuery: false });
+    }
+  },
+
   async fetchBots({ commit }) {
     commit('SET_UI_FLAG', { fetchingBots: true });
     try {

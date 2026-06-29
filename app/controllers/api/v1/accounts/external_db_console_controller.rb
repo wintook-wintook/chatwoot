@@ -11,6 +11,22 @@ class Api::V1::Accounts::ExternalDbConsoleController < Api::V1::Accounts::BaseCo
     render json: connections.map { |conn| catalog_connection_json(conn) }
   end
 
+  # Modo B (preview): pregunta en lenguaje natural → la IA elige la consulta ai_enabled,
+  # la corre y redacta la respuesta. Mismo motor que usará el bot en el chat.
+  def ask
+    connection = Current.account.external_db_connections.active.find(params[:connection_id])
+    result = ExternalDb::AiQueryService.new(connection, params[:question].to_s).perform
+    render json: {
+      answer: result.answer,
+      query_name: result.query_name,
+      params: result.params,
+      rows: result.rows,
+      row_count: result.rows.size
+    }
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
   # Modo A de la consola: ejecutar una consulta predefinida (allowlist) con params.
   def run
     query = Current.account.external_db_queries.active.find(params[:query_id])

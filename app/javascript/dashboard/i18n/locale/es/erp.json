@@ -60,7 +60,12 @@
       "META": "{count} filas · {ms} ms",
       "EMPTY_RESULT": "Sin filas.",
       "ERROR": "Error: {error}",
-      "SQL_PREVIEW": "Consulta ejecutada (solo lectura)"
+      "SQL_PREVIEW": "Consulta ejecutada (solo lectura)",
+      "ASK_TITLE": "Preguntá en lenguaje natural (Modo B / IA)",
+      "ASK_PLACEHOLDER": "ej. ¿Cuál es el saldo del cliente RFC...?",
+      "ASK_BUTTON": "Preguntar",
+      "ASK_ANSWER": "Respuesta",
+      "ASK_QUERY_USED": "Consulta elegida: {name}"
     },
     "BOTS": {
       "TITLE": "Bots cobradores",

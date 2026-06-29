@@ -15,6 +15,13 @@ class ExternalDbConsoleAPI extends ApiClient {
   run({ queryId, params }) {
     return axios.post(`${this.url}/run`, { query_id: queryId, params });
   }
+
+  ask({ connectionId, question }) {
+    return axios.post(`${this.url}/ask`, {
+      connection_id: connectionId,
+      question,
+    });
+  }
 }
 
 export default new ExternalDbConsoleAPI();

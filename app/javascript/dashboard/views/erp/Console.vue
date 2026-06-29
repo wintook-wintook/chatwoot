@@ -14,6 +14,8 @@ export default {
       paramValues: {},
       result: null,
       error: null,
+      question: '',
+      aiAnswer: null,
     };
   },
   computed: {
@@ -74,6 +76,20 @@ export default {
         });
       } catch (e) {
         this.error = e.response?.data?.error || e.message;
+      }
+    },
+    async ask() {
+      this.aiAnswer = null;
+      try {
+        this.aiAnswer = await this.$store.dispatch('externalDb/askQuestion', {
+          connectionId: this.connectionId,
+          question: this.question,
+        });
+      } catch (e) {
+        this.aiAnswer = {
+          answer: e.response?.data?.error || e.message,
+          query_name: null,
+        };
       }
     },
   },
@@ -256,6 +272,54 @@ export default {
             >{{ result.query.sql_preview }}</pre
           >
         </details>
+      </div>
+
+      <!-- Modo B — pregunta en lenguaje natural (IA) -->
+      <div
+        class="max-w-3xl pt-5 mt-2 border-t border-slate-100 dark:border-slate-700"
+      >
+        <span
+          class="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"
+          >{{ $t('ERP.CONSOLE.ASK_TITLE') }}</span
+        >
+        <div class="flex gap-2 mt-2">
+          <input
+            v-model="question"
+            type="text"
+            class="flex-1"
+            :placeholder="$t('ERP.CONSOLE.ASK_PLACEHOLDER')"
+            @keyup.enter="ask"
+          />
+          <woot-button
+            :is-loading="isRunning"
+            :disabled="!question || !connectionId"
+            icon="chat-multiple"
+            @click="ask"
+          >
+            {{ $t('ERP.CONSOLE.ASK_BUTTON') }}
+          </woot-button>
+        </div>
+        <div
+          v-if="aiAnswer"
+          class="p-4 mt-3 text-sm border rounded-lg bg-woot-25 dark:bg-slate-800 border-woot-100 dark:border-slate-700"
+        >
+          <p
+            class="m-0 mb-1 text-xs font-semibold text-slate-500 dark:text-slate-400"
+          >
+            {{ $t('ERP.CONSOLE.ASK_ANSWER') }}
+          </p>
+          <p class="m-0 whitespace-pre-line text-slate-700 dark:text-slate-100">
+            {{ aiAnswer.answer }}
+          </p>
+          <p
+            v-if="aiAnswer.query_name"
+            class="m-0 mt-2 text-xs text-slate-400 dark:text-slate-500"
+          >
+            {{
+              $t('ERP.CONSOLE.ASK_QUERY_USED', { name: aiAnswer.query_name })
+            }}
+          </p>
+        </div>
       </div>
     </div>
   </div>

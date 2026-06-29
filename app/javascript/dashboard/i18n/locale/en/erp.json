@@ -60,7 +60,12 @@
       "META": "{count} rows · {ms} ms",
       "EMPTY_RESULT": "No rows.",
       "ERROR": "Error: {error}",
-      "SQL_PREVIEW": "Executed query (read-only)"
+      "SQL_PREVIEW": "Executed query (read-only)",
+      "ASK_TITLE": "Ask in natural language (Mode B / AI)",
+      "ASK_PLACEHOLDER": "e.g. What is the balance of customer RFC...?",
+      "ASK_BUTTON": "Ask",
+      "ASK_ANSWER": "Answer",
+      "ASK_QUERY_USED": "Query chosen: {name}"
     },
     "BOTS": {
       "TITLE": "Collection bots",
