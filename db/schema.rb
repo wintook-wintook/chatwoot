@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_29_120200) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_29_120300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -940,6 +940,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_29_120200) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "erp_type", default: 0, null: false
+    t.string "company_suffix"
     t.index ["account_id", "name"], name: "index_external_db_connections_on_account_id_and_name", unique: true
   end
 

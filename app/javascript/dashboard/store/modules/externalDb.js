@@ -84,6 +84,11 @@ export const actions = {
     }
   },
 
+  async seedQueries(_ctx, id) {
+    const { data } = await connectionsAPI.seedQueries(id);
+    return data;
+  },
+
   async fetchQueries({ commit }, connectionId) {
     commit('SET_UI_FLAG', { fetchingQueries: true });
     try {

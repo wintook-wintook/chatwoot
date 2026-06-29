@@ -9,20 +9,22 @@
 #
 # Table name: external_db_connections
 #
-#  id         :bigint           not null, primary key
-#  active     :boolean          default(TRUE), not null
-#  database   :string           not null
-#  engine     :integer          default("firebird"), not null
-#  host       :string           not null
-#  name       :string           not null
-#  options    :jsonb            not null
-#  password   :string
-#  port       :integer          not null
-#  read_only  :boolean          default(TRUE), not null
-#  username   :string
-#  created_at :datetime         not null
-#  updated_at :datetime         not null
-#  account_id :bigint           not null
+#  id             :bigint           not null, primary key
+#  active         :boolean          default(TRUE), not null
+#  company_suffix :string
+#  database       :string           not null
+#  engine         :integer          default("firebird"), not null
+#  erp_type       :integer          default("generic"), not null
+#  host           :string           not null
+#  name           :string           not null
+#  options        :jsonb            not null
+#  password       :string
+#  port           :integer          not null
+#  read_only      :boolean          default(TRUE), not null
+#  username       :string
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  account_id     :bigint           not null
 #
 # Indexes
 #
@@ -33,6 +35,8 @@ class ExternalDbConnection < ApplicationRecord
   has_many :external_db_queries, dependent: :destroy
 
   enum engine: { firebird: 0, mssql: 1 }
+  # Tipo de ERP → determina la librería de consultas a sembrar (F6).
+  enum erp_type: { generic: 0, sae: 1, microsip: 2, contpaq: 3 }, _prefix: :erp
 
   validates :name, presence: true, uniqueness: { scope: :account_id }
   validates :engine, presence: true

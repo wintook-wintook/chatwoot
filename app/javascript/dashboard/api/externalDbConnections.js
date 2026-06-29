@@ -11,6 +11,10 @@ class ExternalDbConnectionsAPI extends ApiClient {
   testConnection(id) {
     return axios.post(`${this.url}/${id}/test_connection`);
   }
+
+  seedQueries(id) {
+    return axios.post(`${this.url}/${id}/seed_queries`);
+  }
 }
 
 export default new ExternalDbConnectionsAPI();

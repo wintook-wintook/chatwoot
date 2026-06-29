@@ -87,7 +87,10 @@ Rails.application.routes.draw do
           end
           # @query_databases — conexiones a ERPs + consultas predefinidas + consola
           resources :external_db_connections, only: [:index, :show, :create, :update, :destroy] do
-            member { post :test_connection }
+            member do
+              post :test_connection
+              post :seed_queries
+            end
             resources :external_db_queries, only: [:index, :show, :create, :update, :destroy]
           end
           get  'external_db_console/catalog', to: 'external_db_console#catalog'

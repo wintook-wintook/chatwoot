@@ -10,6 +10,8 @@ import ErpQueriesPanel from './QueriesPanel.vue';
 const emptyForm = () => ({
   name: '',
   engine: 'firebird',
+  erp_type: 'generic',
+  company_suffix: '',
   host: '',
   port: null,
   database: '',
@@ -28,6 +30,8 @@ export default {
       form: emptyForm(),
       tdsVersion: '7.0',
       tdsPlaceholder: '7.0',
+      seedingId: null,
+      erpTypes: ['generic', 'sae', 'microsip', 'contpaq'],
     };
   },
   computed: {
@@ -56,6 +60,8 @@ export default {
       this.form = {
         name: conn.name,
         engine: conn.engine,
+        erp_type: conn.erp_type || 'generic',
+        company_suffix: conn.company_suffix || '',
         host: conn.host,
         port: conn.port,
         database: conn.database,
@@ -91,6 +97,26 @@ export default {
         useAlert(this.$t('ERP.CONNECTIONS.FORM.SAVE'));
       } catch (e) {
         useAlert(e.response?.data?.error || e.message);
+      }
+    },
+    async seed(conn) {
+      this.seedingId = conn.id;
+      try {
+        const res = await this.$store.dispatch(
+          'externalDb/seedQueries',
+          conn.id
+        );
+        useAlert(
+          res.count
+            ? this.$t('ERP.CONNECTIONS.SEED_OK', { count: res.count })
+            : this.$t('ERP.CONNECTIONS.SEED_NONE')
+        );
+        await this.$store.dispatch('externalDb/fetchConnections');
+        this.$store.dispatch('externalDb/fetchQueries', conn.id);
+      } catch (e) {
+        useAlert(e.response?.data?.error || e.message);
+      } finally {
+        this.seedingId = null;
       }
     },
     async test(conn) {
@@ -169,6 +195,26 @@ export default {
               <option value="firebird">{{ $t('ERP.ENGINE.FIREBIRD') }}</option>
               <option value="mssql">{{ $t('ERP.ENGINE.MSSQL') }}</option>
             </select>
+          </label>
+          <label class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ $t('ERP.CONNECTIONS.FORM.ERP_TYPE') }}</span
+            >
+            <select v-model="form.erp_type" class="w-full">
+              <option v-for="t in erpTypes" :key="t" :value="t">{{ t }}</option>
+            </select>
+          </label>
+          <label v-if="form.erp_type === 'sae'" class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ $t('ERP.CONNECTIONS.FORM.COMPANY_SUFFIX') }}</span
+            >
+            <input
+              v-model="form.company_suffix"
+              type="text"
+              class="w-full font-mono"
+            />
           </label>
           <label class="flex flex-col gap-1">
             <span
@@ -308,6 +354,16 @@ export default {
               @click="toggleQueries(conn)"
             >
               {{ $t('ERP.CONNECTIONS.QUERIES') }} ({{ conn.queries_count }})
+            </woot-button>
+            <woot-button
+              v-if="conn.erp_type && conn.erp_type !== 'generic'"
+              size="small"
+              variant="smooth"
+              icon="add"
+              :is-loading="seedingId === conn.id"
+              @click="seed(conn)"
+            >
+              {{ $t('ERP.CONNECTIONS.SEED') }}
             </woot-button>
             <woot-button
               size="small"

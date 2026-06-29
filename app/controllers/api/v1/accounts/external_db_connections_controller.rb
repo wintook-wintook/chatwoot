@@ -4,7 +4,7 @@
 # La contraseña se acepta al crear/editar pero NUNCA se devuelve en el JSON.
 class Api::V1::Accounts::ExternalDbConnectionsController < Api::V1::Accounts::BaseController
   before_action :check_admin_authorization?
-  before_action :fetch_connection, only: [:show, :update, :destroy, :test_connection]
+  before_action :fetch_connection, only: [:show, :update, :destroy, :test_connection, :seed_queries]
 
   def index
     @connections = Current.account.external_db_connections.order(:name)
@@ -34,6 +34,12 @@ class Api::V1::Accounts::ExternalDbConnectionsController < Api::V1::Accounts::Ba
     head :ok
   end
 
+  # Siembra la librería de consultas verificadas según el erp_type (F6).
+  def seed_queries
+    created = ExternalDb::QuerySeeder.new(@connection).seed!
+    render json: { created: created, count: created.size }
+  end
+
   # Ping read-only al ERP (no guarda nada). Errores del driver → JSON, no 500.
   def test_connection
     info = ExternalDb::AdapterFactory.build(@connection).ping
@@ -50,8 +56,8 @@ class Api::V1::Accounts::ExternalDbConnectionsController < Api::V1::Accounts::Ba
 
   def connection_params
     params.require(:external_db_connection)
-          .permit(:name, :engine, :host, :port, :database, :username, :password,
-                  :read_only, :active, options: {})
+          .permit(:name, :engine, :erp_type, :company_suffix, :host, :port, :database,
+                  :username, :password, :read_only, :active, options: {})
   end
 
   # Sin password. `has_password` indica si hay credencial guardada (para la UI).
@@ -60,6 +66,8 @@ class Api::V1::Accounts::ExternalDbConnectionsController < Api::V1::Accounts::Ba
       id: conn.id,
       name: conn.name,
       engine: conn.engine,
+      erp_type: conn.erp_type,
+      company_suffix: conn.company_suffix,
       host: conn.host,
       port: conn.port,
       database: conn.database,
