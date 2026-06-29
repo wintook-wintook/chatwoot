@@ -10,6 +10,7 @@ import kanban from './sidebarItems/kanban'; // Añade esta línea
 // KANBAN0725
 import gestorTickets from './sidebarItems/gestorTickets'; // @tickets_cases
 import contactTrackings from './sidebarItems/contactTrackings'; // proyecto@contact_tracking
+import erp from './sidebarItems/erp'; // @query_databases
 
 export const getSidebarItems = accountId => ({
   primaryMenu: primaryMenu(accountId),
@@ -25,5 +26,6 @@ export const getSidebarItems = accountId => ({
     // KANBAN0725
     gestorTickets(accountId), // @tickets_cases
     contactTrackings(accountId), // proyecto@contact_tracking
+    erp(accountId), // @query_databases
   ],
 });

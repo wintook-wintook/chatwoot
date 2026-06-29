@@ -90,7 +90,8 @@ Rails.application.routes.draw do
             member { post :test_connection }
             resources :external_db_queries, only: [:index, :show, :create, :update, :destroy]
           end
-          post 'external_db_console/run', to: 'external_db_console#run'
+          get  'external_db_console/catalog', to: 'external_db_console#catalog'
+          post 'external_db_console/run',     to: 'external_db_console#run'
           resources :contact_tracking_imports, only: [:create] # proyecto@import_seguimiento
           resources :contact_tracking_bulk_assigns, only: [:create] # proyecto@bulk_tracking_assign
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard

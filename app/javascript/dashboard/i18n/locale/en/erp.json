@@ -1,0 +1,70 @@
+{
+  "ERP": {
+    "CONNECTIONS": {
+      "TITLE": "ERP connections",
+      "SUBTITLE": "Read-only connections to your ERP databases (SAE, Microsip, Contpaq).",
+      "NEW": "New connection",
+      "EMPTY": "No connections yet. Create one to start querying your ERP.",
+      "TEST": "Test connection",
+      "TESTING": "Testing…",
+      "TEST_OK": "Connection OK: {info}",
+      "TEST_FAIL": "Connection failed: {error}",
+      "QUERIES": "Queries",
+      "EDIT": "Edit",
+      "DELETE": "Delete",
+      "DELETE_CONFIRM": "Delete connection \"{name}\" and its queries?",
+      "FORM": {
+        "NAME": "Name",
+        "ENGINE": "Engine",
+        "HOST": "Host",
+        "PORT": "Port",
+        "DATABASE": "Database / .fdb path",
+        "DATABASE_HINT": "Firebird: path to the .fdb file · SQL Server: database name",
+        "USERNAME": "Username",
+        "PASSWORD": "Password",
+        "PASSWORD_KEEP": "Leave blank to keep the current password",
+        "TDS_VERSION": "TDS version (SQL Server)",
+        "SAVE": "Save",
+        "CANCEL": "Cancel"
+      }
+    },
+    "QUERIES": {
+      "TITLE": "Queries for {name}",
+      "NEW": "New query",
+      "EMPTY": "No queries for this connection yet.",
+      "NAME": "Name",
+      "DESCRIPTION": "Description",
+      "SQL": "SQL (read-only SELECT, named params like :rfc)",
+      "PARAMS": "Parameters",
+      "PARAM_KEY": "key",
+      "PARAM_TYPE": "type",
+      "PARAM_REQUIRED": "required",
+      "ADD_PARAM": "Add parameter",
+      "ROW_LIMIT": "Row limit",
+      "AI_ENABLED": "Available to the AI bot (Mode B)",
+      "RESULT_FORMAT": "Result format",
+      "SAVE": "Save query",
+      "DELETE_CONFIRM": "Delete query \"{name}\"?"
+    },
+    "CONSOLE": {
+      "TITLE": "ERP console",
+      "SUBTITLE": "Query your ERP database in read-only mode.",
+      "CONNECTION": "Connection",
+      "QUERY": "Query",
+      "NO_CONNECTIONS": "No connections configured. Ask an admin to create one.",
+      "NO_QUERIES": "This connection has no queries yet.",
+      "RUN": "Run",
+      "RUNNING": "Running…",
+      "PARAMS": "Parameters",
+      "RESULT": "Result",
+      "META": "{count} rows · {ms} ms",
+      "EMPTY_RESULT": "No rows.",
+      "ERROR": "Error: {error}",
+      "SQL_PREVIEW": "Executed query (read-only)"
+    },
+    "ENGINE": {
+      "FIREBIRD": "Firebird (SAE / Microsip / Contpaq)",
+      "MSSQL": "SQL Server (Contpaq)"
+    }
+  }
+}

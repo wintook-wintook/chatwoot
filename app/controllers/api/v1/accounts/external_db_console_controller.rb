@@ -4,6 +4,13 @@
 # ejecuta una consulta predefinida con parámetros. La definición de consultas/conexiones
 # sigue siendo solo-admin (otros controllers); aquí solo se EJECUTA lo ya permitido.
 class Api::V1::Accounts::ExternalDbConsoleController < Api::V1::Accounts::BaseController
+  # Catálogo para la consola del agente: conexiones activas + sus consultas activas
+  # (metadatos, sin credenciales). Accesible al agente (no solo admin).
+  def catalog
+    connections = Current.account.external_db_connections.active.order(:name)
+    render json: connections.map { |conn| catalog_connection_json(conn) }
+  end
+
   # Modo A de la consola: ejecutar una consulta predefinida (allowlist) con params.
   def run
     query = Current.account.external_db_queries.active.find(params[:query_id])
@@ -17,6 +24,17 @@ class Api::V1::Accounts::ExternalDbConsoleController < Api::V1::Accounts::BaseCo
   end
 
   private
+
+  def catalog_connection_json(conn)
+    {
+      id: conn.id,
+      name: conn.name,
+      engine: conn.engine,
+      queries: conn.external_db_queries.active.order(:name).map do |q|
+        { id: q.id, name: q.name, description: q.description, params_schema: q.params_schema }
+      end
+    }
+  end
 
   def query_params
     params[:params]&.to_unsafe_h || {}

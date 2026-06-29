@@ -41,6 +41,7 @@ import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
 import contactTracking from './contactTracking.js'; // proyecto@contact_tracking
 import googleCalendar from './googleCalendar.js'; // proyecto@google_calendar
 import gestorTickets from './gestorTickets.json'; // @tickets_cases
+import erp from './erp.json'; // @query_databases
 import bulkTrackingAssign from './bulkTrackingAssign.json'; // proyecto@bulk_tracking_assign
 
 export default {
@@ -85,5 +86,6 @@ export default {
   ...contactTracking, // proyecto@contact_tracking
   ...googleCalendar, // proyecto@google_calendar
   ...gestorTickets, // @tickets_cases
+  ...erp, // @query_databases
   ...bulkTrackingAssign, // proyecto@bulk_tracking_assign
 };

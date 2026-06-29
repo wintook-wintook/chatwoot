@@ -17,17 +17,17 @@ const primaryMenuItems = accountId => [
     toState: frontendURL(`accounts/${accountId}/dashboard`),
     toStateName: 'home',
   },
-  //KANBAN0725
+  // KANBAN0725
   {
     icon: 'kanban', // Asegúrate que este icono existe en tu biblioteca
     key: 'kanban',
     label: 'KANBAN',
-    //featureFlag: FEATURE_FLAGS.KANBAN,
+    // featureFlag: FEATURE_FLAGS.KANBAN,
     toState: frontendURL(`accounts/${accountId}/kanban`),
     toStateName: 'kanban_dashboard',
-    //toStateName: 'kanban_wrapper',
+    // toStateName: 'kanban_wrapper',
   },
-  //KANBAN0725
+  // KANBAN0725
   {
     icon: 'captain',
     key: 'captain',
@@ -94,6 +94,14 @@ const primaryMenuItems = accountId => [
     label: 'TRACKING_DASHBOARD',
     toState: frontendURL(`accounts/${accountId}/tracking-dashboard`),
     toStateName: 'contact_trackings_dashboard',
+  },
+  // @query_databases — Cobranza / ERP
+  {
+    icon: 'cloud',
+    key: 'erp',
+    label: 'ERP',
+    toState: frontendURL(`accounts/${accountId}/erp/console`),
+    toStateName: 'erp_console',
   },
   {
     icon: 'settings',
