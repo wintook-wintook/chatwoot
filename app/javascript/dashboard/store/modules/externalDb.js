@@ -2,11 +2,13 @@
 import connectionsAPI from '../../api/externalDbConnections';
 import queriesAPI from '../../api/externalDbQueries';
 import consoleAPI from '../../api/externalDbConsole';
+import botsAPI from '../../api/erpCollectionBots';
 
 const state = {
   connections: [],
   catalog: [], // consola del agente: conexiones + consultas activas (sin credenciales)
   queriesByConnection: {}, // { [connectionId]: [queries] }
+  bots: [],
   uiFlags: {
     fetchingConnections: false,
     savingConnection: false,
@@ -14,6 +16,8 @@ const state = {
     fetchingQueries: false,
     savingQuery: false,
     runningQuery: false,
+    fetchingBots: false,
+    savingBot: false,
   },
 };
 
@@ -24,6 +28,7 @@ export const getters = {
     _state.connections.find(c => c.id === Number(id)),
   getQueries: _state => connectionId =>
     _state.queriesByConnection[connectionId] || [],
+  getBots: _state => _state.bots,
   getUIFlags: _state => _state.uiFlags,
 };
 
@@ -136,6 +141,50 @@ export const actions = {
       commit('SET_UI_FLAG', { runningQuery: false });
     }
   },
+
+  async fetchBots({ commit }) {
+    commit('SET_UI_FLAG', { fetchingBots: true });
+    try {
+      const { data } = await botsAPI.get();
+      commit('SET_BOTS', data);
+    } finally {
+      commit('SET_UI_FLAG', { fetchingBots: false });
+    }
+  },
+
+  async createBot({ commit }, payload) {
+    commit('SET_UI_FLAG', { savingBot: true });
+    try {
+      const { data } = await botsAPI.create({ erp_collection_bot: payload });
+      commit('UPSERT_BOT', data);
+      return data;
+    } finally {
+      commit('SET_UI_FLAG', { savingBot: false });
+    }
+  },
+
+  async updateBot({ commit }, { id, ...payload }) {
+    commit('SET_UI_FLAG', { savingBot: true });
+    try {
+      const { data } = await botsAPI.update(id, {
+        erp_collection_bot: payload,
+      });
+      commit('UPSERT_BOT', data);
+      return data;
+    } finally {
+      commit('SET_UI_FLAG', { savingBot: false });
+    }
+  },
+
+  async deleteBot({ commit }, id) {
+    await botsAPI.delete(id);
+    commit('REMOVE_BOT', id);
+  },
+
+  async previewBot(_ctx, id) {
+    const { data } = await botsAPI.preview(id);
+    return data;
+  },
 };
 
 export const mutations = {
@@ -179,6 +228,17 @@ export const mutations = {
         q => q.id !== Number(id)
       ),
     };
+  },
+  SET_BOTS(_state, bots) {
+    _state.bots = bots;
+  },
+  UPSERT_BOT(_state, bot) {
+    const idx = _state.bots.findIndex(b => b.id === bot.id);
+    if (idx === -1) _state.bots.push(bot);
+    else _state.bots.splice(idx, 1, bot);
+  },
+  REMOVE_BOT(_state, id) {
+    _state.bots = _state.bots.filter(b => b.id !== Number(id));
   },
 };
 

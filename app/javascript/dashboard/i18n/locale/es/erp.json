@@ -62,6 +62,26 @@
       "ERROR": "Error: {error}",
       "SQL_PREVIEW": "Consulta ejecutada (solo lectura)"
     },
+    "BOTS": {
+      "TITLE": "Bots cobradores",
+      "SUBTITLE": "Recordatorios proactivos (Modo A) y consulta por chat opcional (Modo B).",
+      "NEW": "Nuevo bot",
+      "EMPTY": "Aún no hay bots.",
+      "NAME": "Nombre",
+      "CONNECTION": "Conexión",
+      "QUERY": "Consulta de recordatorio (masiva: por vencer / vencidas con teléfono)",
+      "INBOX": "Inbox de entrega",
+      "TEMPLATE": "Plantilla del mensaje — usá {{COLUMNA}} del resultado de la consulta",
+      "PHONE_COLUMN": "Columna del teléfono en el resultado",
+      "RUN_HOUR": "Hora del envío diario (0-23)",
+      "MODE_B": "Modo B: permitir que el cliente consulte por chat (IA)",
+      "ACTIVE": "Activo",
+      "SAVE": "Guardar bot",
+      "PREVIEW": "Vista previa (dry-run)",
+      "PREVIEW_TITLE": "Vista previa — no se envía nada",
+      "DELETE_CONFIRM": "¿Eliminar el bot \"{name}\"?",
+      "NONE": "— ninguna —"
+    },
     "ENGINE": {
       "FIREBIRD": "Firebird (SAE / Microsip / Contpaq)",
       "MSSQL": "SQL Server (Contpaq)"

@@ -62,6 +62,26 @@
       "ERROR": "Error: {error}",
       "SQL_PREVIEW": "Executed query (read-only)"
     },
+    "BOTS": {
+      "TITLE": "Collection bots",
+      "SUBTITLE": "Proactive reminders (Mode A) and optional chat queries (Mode B).",
+      "NEW": "New bot",
+      "EMPTY": "No bots yet.",
+      "NAME": "Name",
+      "CONNECTION": "Connection",
+      "QUERY": "Reminder query (bulk: due / overdue with phone)",
+      "INBOX": "Delivery inbox",
+      "TEMPLATE": "Message template — use {{COLUMN}} from the query result",
+      "PHONE_COLUMN": "Phone column in the result",
+      "RUN_HOUR": "Daily run hour (0-23)",
+      "MODE_B": "Mode B: let customers query by chat (AI)",
+      "ACTIVE": "Active",
+      "SAVE": "Save bot",
+      "PREVIEW": "Preview (dry-run)",
+      "PREVIEW_TITLE": "Preview — no messages sent",
+      "DELETE_CONFIRM": "Delete bot \"{name}\"?",
+      "NONE": "— none —"
+    },
     "ENGINE": {
       "FIREBIRD": "Firebird (SAE / Microsip / Contpaq)",
       "MSSQL": "SQL Server (Contpaq)"

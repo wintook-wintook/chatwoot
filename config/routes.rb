@@ -92,6 +92,9 @@ Rails.application.routes.draw do
           end
           get  'external_db_console/catalog', to: 'external_db_console#catalog'
           post 'external_db_console/run',     to: 'external_db_console#run'
+          resources :erp_collection_bots, only: [:index, :show, :create, :update, :destroy] do
+            post :preview, on: :member
+          end
           resources :contact_tracking_imports, only: [:create] # proyecto@import_seguimiento
           resources :contact_tracking_bulk_assigns, only: [:create] # proyecto@bulk_tracking_assign
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard

@@ -9,6 +9,12 @@ export const routes = [
     component: () => import('../../../views/erp/Connections.vue'),
   },
   {
+    path: frontendURL('accounts/:accountId/erp/bots'),
+    name: 'erp_bots',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/erp/Bots.vue'),
+  },
+  {
     path: frontendURL('accounts/:accountId/erp/console'),
     name: 'erp_console',
     meta: { permissions: ['administrator', 'agent'] },

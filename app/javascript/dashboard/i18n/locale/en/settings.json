@@ -248,6 +248,7 @@
     "TRACKING_SUMMARY": "Summary",
     "ERP": "Collections / ERP",
     "ERP_CONSOLE": "Console",
+    "ERP_BOTS": "Bots",
     "ERP_CONNECTIONS": "Connections",
     "ALL_TICKETS": "All tickets",
     "TICKET_KANBAN": "Board",
