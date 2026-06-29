@@ -137,6 +137,9 @@ class Message < ApplicationRecord
   # Analiza respuestas de clientes y ajusta seguimientos automáticamente
   after_create_commit :analyze_for_active_trackings, if: :incoming?
 
+  # @query_databases — Modo B: si el inbox tiene un bot cobrador con consulta IA, responde.
+  after_create_commit :respond_via_erp_bot, if: :incoming?
+
   # proyecto@contact_tracking: evalúa keywords de acción en mensajes salientes
   after_create_commit :check_keyword_actions_for_outgoing, unless: :incoming?
 
@@ -259,8 +262,8 @@ class Message < ApplicationRecord
     true
   end
 
-   # Agrega esto al final del archivo, antes del último 'end'
-   # after_create_commit :trigger_auto_acknowledgment, if: :should_auto_acknowledge?
+  # Agrega esto al final del archivo, antes del último 'end'
+  # after_create_commit :trigger_auto_acknowledgment, if: :should_auto_acknowledge?
 
   private
 
@@ -447,7 +450,7 @@ class Message < ApplicationRecord
 
   # def should_auto_acknowledge?
   #   # Solo para mensajes entrantes de clientes
-  #   incoming? && 
+  #   incoming? &&
   #   conversation.present? &&
   # #  !private? &&
   #   message_type != 'activity'
@@ -473,6 +476,18 @@ class Message < ApplicationRecord
     Rails.logger.error "[Message] Error queueing sentiment analysis: #{e.message}"
   end
 
+  # @query_databases — encola la respuesta IA (Modo B) solo si el inbox tiene un bot
+  # cobrador con mode_b_enabled (chequeo barato para no encolar de más).
+  def respond_via_erp_bot
+    return if content.blank? || conversation&.inbox_id.blank?
+
+    has_bot = ErpCollectionBot.active.where(account_id: conversation.account_id, mode_b_enabled: true)
+                              .exists?(inbox_id: [conversation.inbox_id, nil])
+    ErpCollection::ChatResponseJob.perform_later(id) if has_bot
+  rescue StandardError => e
+    Rails.logger.error "[Message] Error encolando respuesta ERP Modo B: #{e.message}"
+  end
+
   # proyecto@contact_tracking: ¿alguna AutomationRule (conversation_created,
   # conversation_opened o message_created) con acción assign_tracking_template
   # va a crear un ContactTracking para esta conversación? Si el contacto ya
@@ -483,7 +498,7 @@ class Message < ApplicationRecord
   def will_trigger_tracking_automation?
     active_statuses = %w[pending scheduled active paused]
     # Acotado al inbox de la conversación: el seguimiento se crea por (contacto, inbox)
-    return false if ContactTracking.where(contact_id: conversation.contact_id, inbox_id: conversation.inbox_id, status: active_statuses).exists?
+    return false if ContactTracking.exists?(contact_id: conversation.contact_id, inbox_id: conversation.inbox_id, status: active_statuses)
 
     account.automation_rules.active.where(event_name: TRACKING_AUTOMATION_EVENTS).any? do |rule|
       rule.actions.any? { |action| action['action_name'] == 'assign_tracking_template' } &&
@@ -500,7 +515,6 @@ class Message < ApplicationRecord
   rescue StandardError => e
     Rails.logger.error "[Message] Error queueing keyword checker: #{e.message}"
   end
-
 end
 
 Message.prepend_mod_with('Message')
