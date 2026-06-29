@@ -1,0 +1,34 @@
+# frozen_string_literal: true
+
+# @query_databases — consola "conversar con la BD". Accesible al AGENTE (no solo admin):
+# ejecuta una consulta predefinida con parámetros. La definición de consultas/conexiones
+# sigue siendo solo-admin (otros controllers); aquí solo se EJECUTA lo ya permitido.
+class Api::V1::Accounts::ExternalDbConsoleController < Api::V1::Accounts::BaseController
+  # Modo A de la consola: ejecutar una consulta predefinida (allowlist) con params.
+  def run
+    query = Current.account.external_db_queries.active.find(params[:query_id])
+    result = ExternalDb::QueryRunner.new(query, query_params).perform
+    render json: result_json(query, result)
+  rescue ExternalDb::QueryRunner::ParamError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  rescue StandardError => e
+    Rails.logger.warn "[ExternalDbConsole] error ejecutando consulta: #{e.class}"
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  private
+
+  def query_params
+    params[:params]&.to_unsafe_h || {}
+  end
+
+  def result_json(query, result)
+    {
+      columns: result.columns,
+      rows: result.rows,
+      row_count: result.row_count,
+      duration_ms: result.duration_ms,
+      query: { id: query.id, name: query.name, sql_preview: query.sql_template }
+    }
+  end
+end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_26_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_29_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -907,6 +907,40 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_26_120000) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["name", "account_id"], name: "index_email_templates_on_name_and_account_id", unique: true
+  end
+
+  create_table "external_db_connections", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.integer "engine", default: 0, null: false
+    t.string "host", null: false
+    t.integer "port", null: false
+    t.string "database", null: false
+    t.string "username"
+    t.string "password"
+    t.jsonb "options", default: {}, null: false
+    t.boolean "read_only", default: true, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "name"], name: "index_external_db_connections_on_account_id_and_name", unique: true
+  end
+
+  create_table "external_db_queries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "external_db_connection_id", null: false
+    t.string "name", null: false
+    t.string "description"
+    t.text "sql_template", null: false
+    t.jsonb "params_schema", default: [], null: false
+    t.integer "row_limit", default: 200, null: false
+    t.boolean "ai_enabled", default: false, null: false
+    t.integer "result_format", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_external_db_queries_on_account_id"
+    t.index ["external_db_connection_id", "name"], name: "index_external_db_queries_on_connection_and_name", unique: true
   end
 
   create_table "folders", force: :cascade do |t|

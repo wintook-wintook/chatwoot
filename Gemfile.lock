@@ -259,6 +259,7 @@ GEM
       net-http-persistent (~> 4.0)
     faraday-retry (2.2.1)
       faraday (~> 2.0)
+    fb (0.10.0)
     fcm (1.0.8)
       faraday (>= 1.0.0, < 3.0)
       googleauth (~> 1)
@@ -779,6 +780,7 @@ GEM
       activesupport
       i18n
     timeout (0.4.1)
+    tiny_tds (2.1.7)
     trailblazer-option (0.1.2)
     twilio-ruby (5.77.0)
       faraday (>= 0.9, < 3.0)
@@ -880,6 +882,7 @@ DEPENDENCIES
   facebook-messenger
   factory_bot_rails (>= 6.4.3)
   faker
+  fb (~> 0.10)
   fcm
   flag_shih_tzu
   foreman
@@ -961,6 +964,7 @@ DEPENDENCIES
   telephone_number
   test-prof
   time_diff
+  tiny_tds (~> 2.1)
   twilio-ruby (~> 5.66)
   twitty (~> 0.1.5)
   tzinfo-data

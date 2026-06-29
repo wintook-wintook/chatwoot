@@ -30,15 +30,16 @@ class Account < ApplicationRecord
   include CacheKeys
 
   has_many :scheduled_messages, dependent: :destroy
-  
+
   # KANBAN0725
   has_many :kanban_type_processes, dependent: :destroy
   has_many :kanban_processes, dependent: :destroy
   # KANBAN0725
-  
 
   has_many :tracking_templates, dependent: :destroy # proyecto@tracking_templates
   has_many :case_tickets,       dependent: :destroy # @tickets_cases
+  has_many :external_db_connections, dependent: :destroy # @query_databases
+  has_many :external_db_queries,     dependent: :destroy # @query_databases
   has_many :case_rules,         dependent: :destroy # @tickets_cases
   has_many :case_types,         dependent: :destroy # @tickets_cases
   has_many :case_services,      dependent: :destroy # @tickets_cases 2B
