@@ -29,6 +29,7 @@ export default {
       lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
       showTransitionMenu: false,
       showPriorityMenu: false, // @tickets_cases P1 — prioridad inline
+      taskCount: 0, // @tickets_cases P4 — total de tareas (badge del tab)
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
       // 2E — relaciones entre tickets
@@ -251,6 +252,12 @@ export default {
       const tabs = [
         { key: 'detail', label: this.$t('CASE_TICKETS.DETAIL_TABS.SUMMARY') },
       ];
+      // @tickets_cases P4 — Tareas como pestaña propia, con contador.
+      tabs.push({
+        key: 'tasks',
+        label: this.$t('CASE_TICKETS.DETAIL_TABS.TASKS'),
+        count: this.taskCount,
+      });
       tabs.push({
         key: 'journey',
         label: this.$t('CASE_TICKETS.DETAIL_TABS.JOURNEY'),
@@ -1197,7 +1204,8 @@ export default {
           :key="t.key"
           :index="i"
           :name="t.label"
-          :show-badge="false"
+          :count="t.count || 0"
+          :show-badge="!!t.count"
         />
       </woot-tabs>
     </div>
@@ -1306,13 +1314,6 @@ export default {
           </woot-button>
         </div>
       </div>
-
-      <!-- ════ Pestaña Resumen: Tareas/subtareas (osTicket Tasks) ════ -->
-      <TicketTasks
-        v-show="currentTabKey === 'detail'"
-        :key="`tasks-${ticket.id}`"
-        :ticket-id="ticket.id"
-      />
 
       <!-- ════ Pestaña Resumen: Información ════ -->
       <div
@@ -2115,6 +2116,14 @@ export default {
           </div>
         </template>
       </div>
+
+      <!-- ════ Pestaña Tareas (P4) — checklist a ancho completo ════ -->
+      <TicketTasks
+        v-show="currentTabKey === 'tasks'"
+        :key="`tasks-${ticket.id}`"
+        :ticket-id="ticket.id"
+        @count="taskCount = $event"
+      />
 
       <!-- ════ Pestaña Avance del ticket (2L) — 3 vistas conmutables ════ -->
       <JourneyView

@@ -126,6 +126,7 @@
     "DETAIL_TABS": {
       "SUMMARY": "Resumen",
       "CONVERSATION": "Conversación",
+      "TASKS": "Tareas",
       "JOURNEY": "Avance",
       "AI": "Asistente IA"
     },
@@ -139,6 +140,7 @@
       "REPLY_PLACEHOLDER": "Escribe una respuesta al cliente...",
       "NOTE_PLACEHOLDER": "Escribe una nota interna (no la ve el cliente)...",
       "PRIVATE_TOGGLE": "Nota privada",
+      "CANNED": "Predefinidas",
       "SEND": "Responder",
       "ADD_NOTE": "Agregar nota",
       "LOAD_ERROR": "No se pudieron cargar los mensajes.",

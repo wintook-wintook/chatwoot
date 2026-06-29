@@ -29,6 +29,10 @@ export default {
     ticketId() {
       this.load();
     },
+    // @tickets_cases P4 — reporta el total al padre (badge del tab "Tareas").
+    tasks() {
+      this.$emit('count', this.tasks.length);
+    },
   },
   mounted() {
     this.$store.dispatch('agents/get');
