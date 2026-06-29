@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_29_120100) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_29_120200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -907,6 +907,23 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_29_120100) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["name", "account_id"], name: "index_email_templates_on_name_and_account_id", unique: true
+  end
+
+  create_table "erp_collection_bots", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "external_db_connection_id", null: false
+    t.bigint "external_db_query_id"
+    t.bigint "inbox_id"
+    t.string "name", null: false
+    t.text "message_template"
+    t.string "phone_column", default: "TELEFONO", null: false
+    t.integer "run_hour", default: 8, null: false
+    t.boolean "mode_b_enabled", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "last_run_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_erp_collection_bots_on_account_id"
   end
 
   create_table "external_db_connections", force: :cascade do |t|
