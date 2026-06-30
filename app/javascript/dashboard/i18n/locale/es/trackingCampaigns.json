@@ -2,9 +2,10 @@
   "TRACKING_CAMPAIGNS_VIEW": {
     "TITLE": "Campañas de seguimiento",
     "REFRESH": "Actualizar",
+    "NEW_CAMPAIGN": "Nueva campaña",
     "LOADING": "Cargando campañas…",
     "EMPTY_TITLE": "Todavía no hay campañas.",
-    "EMPTY_HINT": "Asigna un Agente IA de forma masiva desde Contactos para crear una.",
+    "EMPTY_HINT": "Crea una con el botón «Nueva campaña» o asigna un Agente IA de forma masiva desde Contactos.",
     "COL": {
       "NAME": "Campaña",
       "AGENT": "Agente IA",

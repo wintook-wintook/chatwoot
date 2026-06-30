@@ -5,6 +5,7 @@
 // agregadas. Patrón espejo de TrackingsTable.vue (mismo módulo).
 // ================================================================================
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
+import BulkAssignModal from 'dashboard/components/contacts/BulkTrackingAssign/BulkAssignModal.vue';
 
 const STATUS_COLOR = {
   draft: 'text-slate-500 bg-slate-100 dark:bg-slate-700',
@@ -14,10 +15,12 @@ const STATUS_COLOR = {
 };
 
 export default {
+  components: { BulkAssignModal },
   data() {
     return {
       campaigns: [],
       isLoading: false,
+      showCreateModal: false,
     };
   },
   computed: {
@@ -66,6 +69,10 @@ export default {
         params: { campaignId: campaign.id },
       });
     },
+    onCampaignCreated() {
+      this.showCreateModal = false;
+      this.fetchCampaigns();
+    },
   },
 };
 </script>
@@ -76,14 +83,19 @@ export default {
       <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">
         {{ $t('TRACKING_CAMPAIGNS_VIEW.TITLE') }}
       </h1>
-      <woot-button
-        variant="clear"
-        icon="arrow-clockwise"
-        :is-loading="isLoading"
-        @click="fetchCampaigns"
-      >
-        {{ $t('TRACKING_CAMPAIGNS_VIEW.REFRESH') }}
-      </woot-button>
+      <div class="flex items-center gap-2">
+        <woot-button
+          variant="clear"
+          icon="arrow-clockwise"
+          :is-loading="isLoading"
+          @click="fetchCampaigns"
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.REFRESH') }}
+        </woot-button>
+        <woot-button icon="add" @click="showCreateModal = true">
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.NEW_CAMPAIGN') }}
+        </woot-button>
+      </div>
     </div>
 
     <!-- Cargando -->
@@ -188,5 +200,12 @@ export default {
         </tr>
       </tbody>
     </table>
+
+    <BulkAssignModal
+      :show="showCreateModal"
+      allow-audience-selection
+      @close="showCreateModal = false"
+      @success="onCampaignCreated"
+    />
   </div>
 </template>

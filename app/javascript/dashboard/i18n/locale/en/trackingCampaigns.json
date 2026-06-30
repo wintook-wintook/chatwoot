@@ -2,9 +2,10 @@
   "TRACKING_CAMPAIGNS_VIEW": {
     "TITLE": "Tracking campaigns",
     "REFRESH": "Refresh",
+    "NEW_CAMPAIGN": "New campaign",
     "LOADING": "Loading campaigns…",
     "EMPTY_TITLE": "No campaigns yet.",
-    "EMPTY_HINT": "Bulk-assign an AI Agent from Contacts to create one.",
+    "EMPTY_HINT": "Create one with the “New campaign” button or bulk-assign an AI Agent from Contacts.",
     "COL": {
       "NAME": "Campaign",
       "AGENT": "AI Agent",
