@@ -17,14 +17,14 @@ import { useAlert } from 'dashboard/composables';
 import contactAPI from 'dashboard/api/contacts';
 import contactTrackingBulkAssignsAPI from 'dashboard/api/contactTrackingBulkAssigns';
 import { getMinDateTime } from '../../../helper/trackingHelpers';
-import ReviewContactsModal from './ReviewContactsModal.vue';
+import PreviewContactsModal from './PreviewContactsModal.vue';
 
 const MAX_BULK_ASSIGN = 100;
 // Tipo de filtro de "contactos" para customViews (segmentos), igual que ContactsView.
 const FILTER_TYPE_CONTACT = 1;
 
 export default {
-  components: { ReviewContactsModal },
+  components: { PreviewContactsModal },
   props: {
     show: { type: Boolean, default: false },
     filterPayload: { type: Array, default: () => [] },
@@ -41,6 +41,7 @@ export default {
       skipActive: true,
       excludedContactIds: [],
       totalCount: 0,
+      previewCounts: null,
       isLoadingCount: false,
       isSubmitting: false,
       showReviewModal: false,
@@ -92,19 +93,31 @@ export default {
         ? !!this.selectedSegmentId
         : !!this.selectedLabel;
     },
+    // Contactos que se procesarán (audiencia menos excluidos). Es lo que valida el
+    // límite del backend (resolve_contacts.count), incluyendo no-contactables.
     selectedCount() {
       return Math.max(this.totalCount - this.excludedContactIds.length, 0);
+    },
+    // Contactos que realmente recibirán el Agente (bucket "Listos"), del preview.
+    readyCount() {
+      return this.previewCounts ? this.previewCounts.ready : null;
+    },
+    // Número destacado: los "Listos" si hay preview; si no, los a procesar.
+    displayCount() {
+      return this.readyCount !== null ? this.readyCount : this.selectedCount;
     },
     exceedsLimit() {
       return this.selectedCount > MAX_BULK_ASSIGN;
     },
     canConfirm() {
+      const hasTargets =
+        this.readyCount !== null ? this.readyCount > 0 : this.selectedCount > 0;
       return (
         !!this.campaignName.trim() &&
         this.hasAudienceSelected &&
         !!this.selectedTemplateId &&
         !!this.scheduledFor &&
-        this.selectedCount > 0 &&
+        hasTargets &&
         !this.exceedsLimit &&
         !this.isLoadingCount &&
         !this.isSubmitting
@@ -130,6 +143,13 @@ export default {
     selectedLabel() {
       this.onAudienceChange();
     },
+    // La plantilla fija el canal y skipActive cambia la clasificación → recalcular.
+    selectedTemplateId() {
+      this.fetchCount();
+    },
+    skipActive() {
+      this.fetchCount();
+    },
   },
   methods: {
     resetState() {
@@ -139,6 +159,7 @@ export default {
       this.skipActive = true;
       this.excludedContactIds = [];
       this.totalCount = 0;
+      this.previewCounts = null;
       this.result = null;
       this.showReviewModal = false;
       this.audienceType = 'segment';
@@ -168,27 +189,55 @@ export default {
     },
     onAudienceChange() {
       this.excludedContactIds = [];
+      this.previewCounts = null;
       this.fetchCount();
     },
     async fetchCount() {
       if (!this.hasAudienceSelected) {
         this.totalCount = 0;
+        this.previewCounts = null;
         return;
       }
       this.isLoadingCount = true;
       try {
-        const { data } = await contactAPI.filter(1, 'name', {
-          payload: this.effectiveFilterPayload,
-        });
-        this.totalCount = data.meta.count;
+        if (this.selectedTemplateId) {
+          await this.fetchPreviewCounts();
+        } else {
+          await this.fetchAudienceCount();
+        }
       } catch (error) {
         this.totalCount = 0;
+        this.previewCounts = null;
       } finally {
         this.isLoadingCount = false;
       }
     },
+    // Sin plantilla aún: solo el tamaño bruto de la audiencia (no hay canal todavía).
+    async fetchAudienceCount() {
+      const { data } = await contactAPI.filter(1, 'name', {
+        payload: this.effectiveFilterPayload,
+      });
+      this.totalCount = data.meta.count;
+      this.previewCounts = null;
+    },
+    // Con plantilla: el preview da el desglose por bucket (Listos, etc.).
+    async fetchPreviewCounts() {
+      const { data } = await contactTrackingBulkAssignsAPI.preview({
+        payload: this.effectiveFilterPayload,
+        templateId: this.selectedTemplateId,
+        skipActive: this.skipActive,
+        excludedContactIds: this.excludedContactIds,
+      });
+      this.previewCounts = data.counts;
+      this.totalCount = data.counts.total;
+    },
     openReview() {
       this.showReviewModal = true;
+    },
+    onPreviewClose() {
+      this.showReviewModal = false;
+      // Las exclusiones pudieron cambiar dentro del preview → recalcular conteos.
+      this.fetchCount();
     },
     onUpdateExcluded(ids) {
       this.excludedContactIds = ids;
@@ -365,13 +414,15 @@ export default {
           {{ $t('BULK_TRACKING_ASSIGN.MODAL.CONTACTS_COUNT_PREFIX') }}
           <button
             type="button"
-            class="font-semibold text-woot-500 hover:text-woot-600 underline"
-            :disabled="isLoadingCount"
+            class="font-semibold text-woot-500 hover:text-woot-600 underline disabled:no-underline disabled:text-slate-400 disabled:cursor-not-allowed"
+            :disabled="isLoadingCount || !selectedTemplateId"
             @click="openReview"
           >
-            {{ selectedCount }}
+            {{ displayCount }}
           </button>
-          {{ $t('BULK_TRACKING_ASSIGN.MODAL.CONTACTS_COUNT_SUFFIX') }}
+          <template v-if="selectedTemplateId">
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.CONTACTS_COUNT_SUFFIX') }}
+          </template>
         </div>
 
         <!-- Aviso de límite -->
@@ -426,11 +477,13 @@ export default {
       </template>
     </div>
 
-    <ReviewContactsModal
+    <PreviewContactsModal
       :show="showReviewModal"
       :filter-payload="effectiveFilterPayload"
+      :template-id="selectedTemplateId"
+      :skip-active="skipActive"
       :excluded-contact-ids="excludedContactIds"
-      @close="showReviewModal = false"
+      @close="onPreviewClose"
       @update:excludedContactIds="onUpdateExcluded"
     />
   </woot-modal>

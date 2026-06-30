@@ -191,10 +191,24 @@ MOD    i18n es/en bulkTrackingAssign.json                       (tabs, motivos, 
 
 ```
 P1 ✅ Módulo Eligibility + BulkAssignPreviewService + endpoint /preview (con specs)
-P2    PreviewContactsModal con tabs (ready/in_tracking/unreachable/excluded)
-P3    Integrar en BulkAssignModal (conteo = listos, refresco por plantilla/skip_active)
-P4    Motivos i18n + edge case >100 + pulido
+P2 ✅ PreviewContactsModal con tabs (ready/in_tracking/unreachable/excluded)
+P3 ✅ Integrar en BulkAssignModal (conteo = listos, refresco por plantilla/skip_active)
+P4    Edge case >100 (counts-only) + pulido visual + decisiones abiertas §6
 ```
+
+### P2 — implementado
+- `PreviewContactsModal.vue`: tabs con badge, tabla paginada en cliente, columna
+  Motivo, excluir/deshacer (reclasifica en cliente), footer "Se crearán N".
+- Contrato del preview ajustado: bucket **natural** + flag `excluded` por contacto
+  (para reclasificar en cliente sin re-fetch). i18n es/en (tabs, motivos, footer).
+
+### P3 — implementado
+- `BulkAssignModal` usa `PreviewContactsModal` (reemplaza `ReviewContactsModal`, borrado).
+- El conteo del modal muestra los **Listos** (`displayCount` = ready del preview) cuando
+  hay plantilla; sin plantilla, el tamaño bruto de la audiencia.
+- `fetchCount` llama a `/preview` si hay plantilla; refresco al cambiar plantilla o
+  skipActive; `canConfirm` exige readyCount > 0. El límite sigue sobre los "a procesar"
+  (consistente con `BulkAssignService#call`).
 
 ### P1 — implementado
 
