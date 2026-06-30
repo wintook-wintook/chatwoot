@@ -125,7 +125,7 @@ export default {
 </script>
 
 <template>
-  <div class="p-4 overflow-auto">
+  <div class="flex flex-col flex-1 w-full h-full overflow-auto p-4">
     <!-- Volver -->
     <router-link
       :to="backRoute"

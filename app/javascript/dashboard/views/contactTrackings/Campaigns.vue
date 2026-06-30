@@ -78,7 +78,7 @@ export default {
 </script>
 
 <template>
-  <div class="p-4 overflow-auto">
+  <div class="flex flex-col flex-1 w-full h-full overflow-auto p-4">
     <div class="flex items-center justify-between mb-4">
       <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">
         {{ $t('TRACKING_CAMPAIGNS_VIEW.TITLE') }}
