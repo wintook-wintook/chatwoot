@@ -1,0 +1,56 @@
+{
+  "TRACKING_CAMPAIGNS_VIEW": {
+    "TITLE": "Tracking campaigns",
+    "REFRESH": "Refresh",
+    "LOADING": "Loading campaigns…",
+    "EMPTY_TITLE": "No campaigns yet.",
+    "EMPTY_HINT": "Bulk-assign an AI Agent from Contacts to create one.",
+    "COL": {
+      "NAME": "Campaign",
+      "AGENT": "AI Agent",
+      "CHANNEL": "Channel",
+      "START": "Start",
+      "STATUS": "Status",
+      "CONTACTS": "Contacts",
+      "PENDING": "Pending",
+      "ACTIVE": "Active",
+      "COMPLETED": "Completed",
+      "FAILED": "Failed",
+      "PROGRESS": "Progress"
+    },
+    "STATUS": {
+      "draft": "Draft",
+      "running": "Running",
+      "paused": "Paused",
+      "finished": "Finished"
+    }
+  },
+  "TRACKING_CAMPAIGN_DETAIL": {
+    "BACK": "Campaigns",
+    "LOADING": "Loading campaign…",
+    "AGENT": "AI Agent",
+    "CHANNEL": "Channel",
+    "START": "Start",
+    "OBJECTIVE": "Objective",
+    "KPI": {
+      "CONTACTS": "Contacts",
+      "PENDING": "Pending",
+      "ACTIVE": "Active",
+      "COMPLETED": "Completed",
+      "FAILED": "Failed",
+      "PROGRESS": "Progress"
+    },
+    "PROSPECTS": "Prospects",
+    "PROSPECTS_EMPTY": "This campaign has no prospects.",
+    "COL": {
+      "CONTACT": "Contact",
+      "STATUS": "Status",
+      "INTENT": "Last intent",
+      "OUTCOME": "Outcome",
+      "SCHEDULED": "Scheduled",
+      "ATTEMPTS": "Attempts",
+      "ACTION": "Action"
+    },
+    "OPEN_CONVERSATION": "Open conversation"
+  }
+}

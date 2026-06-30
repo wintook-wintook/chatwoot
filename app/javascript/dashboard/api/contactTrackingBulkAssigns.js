@@ -17,6 +17,7 @@ class ContactTrackingBulkAssignsAPI extends ApiClient {
 
   create({
     payload,
+    campaignName,
     templateId,
     scheduledFor,
     excludedContactIds = [],
@@ -24,6 +25,7 @@ class ContactTrackingBulkAssignsAPI extends ApiClient {
   }) {
     return axios.post(this.url, {
       payload,
+      campaign_name: campaignName,
       template_id: templateId,
       scheduled_for: scheduledFor,
       excluded_contact_ids: excludedContactIds,

@@ -16,10 +16,10 @@ se siente como un **gerente comercial** que responde 3 preguntas por día →
 >
 > **⭐ Se apoya en lo existente:** "Entrenamiento del Agente" = `tracking_template`
 > (ver `@contact_tracking`); "seleccionar prospectos" = **bulk assign**; "el Agente
-> conversa" = `ContactTrackingJob`. Lo **nuevo** es el agrupador `SalesCampaign` +
+> conversa" = `ContactTrackingJob`. Lo **nuevo** es el agrupador `TrackingCampaign` +
 > la capa comercial (score/interés/valor/prioridad/resultado/vendedor). Ver [[Reuso-y-arquitectura]].
 >
-> ⚠️ **No usar el `Campaign` nativo** de Chatwoot (es de envíos) → modelo nuevo `SalesCampaign`.
+> ⚠️ **No usar el `Campaign` nativo** de Chatwoot (es de envíos) → modelo nuevo `TrackingCampaign`.
 
 ---
 
@@ -27,7 +27,7 @@ se siente como un **gerente comercial** que responde 3 preguntas por día →
 
 1. [[Vision-y-convenciones]] — qué es, las 3 preguntas, el flujo de 7 pasos
 2. [[Reuso-y-arquitectura]] — qué se reusa vs qué es nuevo + diagrama
-3. [[Modelo-de-datos]] — `SalesCampaign` + `SalesCampaignProspect`
+3. [[Modelo-de-datos]] — `TrackingCampaign` + `TrackingCampaignProspect`
 4. [[Las-7-vistas]] — listado, dashboard ejecutivo, prospectos, cola vendedor, resultados, rendimiento, detalle
 5. [[KPIs]] — fórmulas (tasa de respuesta, conversión, autonomía, valor…)
 6. [[Bulk-assign-hallazgos]] — revisión del bulk actual (lo que hay que arreglar)

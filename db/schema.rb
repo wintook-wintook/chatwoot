@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_26_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_06_30_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -716,6 +716,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_26_120000) do
     t.string "appointment_event_id"
     t.bigint "appointment_calendar_id"
     t.string "appointment_calendar_gid"
+    t.bigint "tracking_campaign_id"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
     t.index ["appointment_at"], name: "index_contact_trackings_on_appointment_at"
@@ -728,6 +729,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_26_120000) do
     t.index ["scheduled_for"], name: "index_contact_trackings_on_scheduled_for"
     t.index ["status", "scheduled_for"], name: "index_contact_trackings_on_status_and_scheduled_for"
     t.index ["status"], name: "index_contact_trackings_on_status"
+    t.index ["tracking_campaign_id"], name: "index_contact_trackings_on_tracking_campaign_id"
   end
 
   create_table "contacts", id: :serial, force: :cascade do |t|
@@ -907,6 +909,59 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_26_120000) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["name", "account_id"], name: "index_email_templates_on_name_and_account_id", unique: true
+  end
+
+  create_table "erp_collection_bots", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "external_db_connection_id", null: false
+    t.bigint "external_db_query_id"
+    t.bigint "inbox_id"
+    t.string "name", null: false
+    t.text "message_template"
+    t.string "phone_column", default: "TELEFONO", null: false
+    t.integer "run_hour", default: 8, null: false
+    t.boolean "mode_b_enabled", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "last_run_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_erp_collection_bots_on_account_id"
+  end
+
+  create_table "external_db_connections", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.integer "engine", default: 0, null: false
+    t.string "host", null: false
+    t.integer "port", null: false
+    t.string "database", null: false
+    t.string "username"
+    t.string "password"
+    t.jsonb "options", default: {}, null: false
+    t.boolean "read_only", default: true, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "erp_type", default: 0, null: false
+    t.string "company_suffix"
+    t.index ["account_id", "name"], name: "index_external_db_connections_on_account_id_and_name", unique: true
+  end
+
+  create_table "external_db_queries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "external_db_connection_id", null: false
+    t.string "name", null: false
+    t.string "description"
+    t.text "sql_template", null: false
+    t.jsonb "params_schema", default: [], null: false
+    t.integer "row_limit", default: 200, null: false
+    t.boolean "ai_enabled", default: false, null: false
+    t.integer "result_format", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_external_db_queries_on_account_id"
+    t.index ["external_db_connection_id", "name"], name: "index_external_db_queries_on_connection_and_name", unique: true
   end
 
   create_table "folders", force: :cascade do |t|
@@ -1359,6 +1414,24 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_26_120000) do
     t.datetime "updated_at", precision: nil, null: false
   end
 
+  create_table "tracking_campaigns", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.bigint "tracking_template_id"
+    t.bigint "inbox_id"
+    t.bigint "user_id"
+    t.string "objective"
+    t.datetime "scheduled_for"
+    t.string "status", default: "running", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
+    t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"
+    t.index ["inbox_id"], name: "index_tracking_campaigns_on_inbox_id"
+    t.index ["tracking_template_id"], name: "index_tracking_campaigns_on_tracking_template_id"
+    t.index ["user_id"], name: "index_tracking_campaigns_on_user_id"
+  end
+
   create_table "tracking_templates", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -1488,6 +1561,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_26_120000) do
   add_foreign_key "contact_trackings", "contacts"
   add_foreign_key "contact_trackings", "conversations"
   add_foreign_key "contact_trackings", "inboxes"
+  add_foreign_key "contact_trackings", "tracking_campaigns"
   add_foreign_key "conversations", "kanban_processes"
   add_foreign_key "conversations", "kanban_type_processes"
   add_foreign_key "inboxes", "portals"
@@ -1500,6 +1574,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_26_120000) do
   add_foreign_key "scheduled_messages", "accounts"
   add_foreign_key "scheduled_messages", "conversations"
   add_foreign_key "scheduled_messages", "users"
+  add_foreign_key "tracking_campaigns", "accounts"
+  add_foreign_key "tracking_campaigns", "inboxes"
+  add_foreign_key "tracking_campaigns", "tracking_templates"
+  add_foreign_key "tracking_campaigns", "users"
   add_foreign_key "tracking_templates", "accounts"
   add_foreign_key "tracking_templates", "inboxes"
   add_foreign_key "tracking_templates", "users"

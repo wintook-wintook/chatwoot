@@ -20,7 +20,7 @@ tags: [campanas-vendedor, pendiente, todo]
 ## TODOs de implementación (cuando se apruebe)
 - [ ] Mover `BulkAssignService` a job en background ([[Bulk-assign-hallazgos]] #1).
 - [ ] Fijar inbox de la campaña en lugar de inferirlo ([[Bulk-assign-hallazgos]] #2).
-- [ ] Crear `SalesCampaign` + `SalesCampaignProspect` ([[Modelo-de-datos]]).
+- [ ] Crear `TrackingCampaign` + `TrackingCampaignProspect` ([[Modelo-de-datos]]).
 - [ ] Extender el analyzer para setear score/interés/resultado/valor ([[KPIs]]).
 - [ ] Las 7 vistas + i18n es/en ([[Las-7-vistas]]).
 

@@ -30,6 +30,7 @@ export default {
   emits: ['close', 'success'],
   data() {
     return {
+      campaignName: '',
       selectedTemplateId: '',
       scheduledFor: '',
       skipActive: true,
@@ -56,6 +57,7 @@ export default {
     },
     canConfirm() {
       return (
+        !!this.campaignName.trim() &&
         !!this.selectedTemplateId &&
         !!this.scheduledFor &&
         this.selectedCount > 0 &&
@@ -76,6 +78,7 @@ export default {
   },
   methods: {
     resetState() {
+      this.campaignName = '';
       this.selectedTemplateId = '';
       this.scheduledFor = '';
       this.skipActive = true;
@@ -116,6 +119,7 @@ export default {
       try {
         const { data } = await contactTrackingBulkAssignsAPI.create({
           payload: this.filterPayload,
+          campaignName: this.campaignName.trim(),
           templateId: this.selectedTemplateId,
           scheduledFor: new Date(this.scheduledFor).toISOString(),
           excludedContactIds: this.excludedContactIds,
@@ -153,6 +157,24 @@ export default {
       </p>
 
       <template v-if="!result">
+        <!-- Nombre de la campaña -->
+        <label class="block mb-4">
+          <span
+            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.CAMPAIGN_NAME_LABEL') }}
+          </span>
+          <input
+            v-model="campaignName"
+            type="text"
+            maxlength="120"
+            :placeholder="
+              $t('BULK_TRACKING_ASSIGN.MODAL.CAMPAIGN_NAME_PLACEHOLDER')
+            "
+            class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+          />
+        </label>
+
         <!-- Plantilla -->
         <label class="block mb-4">
           <span
@@ -215,7 +237,11 @@ export default {
           v-if="exceedsLimit"
           class="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md text-sm text-yellow-800 dark:text-yellow-200"
         >
-          {{ $t('BULK_TRACKING_ASSIGN.MODAL.LIMIT_EXCEEDED', { max: MAX_BULK_ASSIGN }) }}
+          {{
+            $t('BULK_TRACKING_ASSIGN.MODAL.LIMIT_EXCEEDED', {
+              max: MAX_BULK_ASSIGN,
+            })
+          }}
         </div>
 
         <div class="flex justify-end gap-2 mt-6">

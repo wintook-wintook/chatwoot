@@ -6,13 +6,13 @@ tags: [campanas-vendedor, modelo-datos]
 
 # Modelo de datos (nuevo)
 
-> ⚠️ Nombre **`SalesCampaign`** (NO el `Campaign` nativo de Chatwoot, que es de envíos
+> ⚠️ Nombre **`TrackingCampaign`** (NO el `Campaign` nativo de Chatwoot, que es de envíos
 > one_off/ongoing). Migraciones al final.
 
 ```
-sales_campaigns                         sales_campaign_prospects
+tracking_campaigns                         tracking_campaign_prospects
 ──────────────────────────────         ─────────────────────────────────────────
-account_id            FK                sales_campaign_id     FK
+account_id            FK                tracking_campaign_id     FK
 name                  "Reactivación Q3" contact_id            FK
 tracking_template_id  FK (entrenamiento)contact_tracking_id   FK (conversación IA)
 objective             enum             assignee_id           FK users (vendedor)
@@ -31,7 +31,7 @@ starts_at / ends_at   datetime          score                integer 0-100 (IA)
 ```
 
 ## Notas
-- **`SalesCampaignProspect`** = la fila de la Vista 3 ([[Las-7-vistas]]). Enlaza su
+- **`TrackingCampaignProspect`** = la fila de la Vista 3 ([[Las-7-vistas]]). Enlaza su
   `contact_tracking` (la conversación IA real) y, si aplica, su oportunidad en el Kanban.
 - **`score`/`interest`/`result`/`value_generated`/`next_action`** los alimenta la IA y los
   eventos de conversación (extiende el analyzer que ya ajusta seguimientos en `@contact_tracking`).

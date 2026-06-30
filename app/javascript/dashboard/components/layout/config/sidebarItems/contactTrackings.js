@@ -6,6 +6,8 @@ const contactTrackings = accountId => ({
   routes: [
     'contact_trackings_dashboard',
     'contact_trackings_agents',
+    'contact_trackings_campaigns',
+    'contact_trackings_campaign_detail',
     'contact_trackings_metrics',
   ],
   menuItems: [
@@ -22,6 +24,15 @@ const contactTrackings = accountId => ({
       hasSubMenu: false,
       toState: frontendURL(`accounts/${accountId}/tracking-dashboard/agents`),
       toStateName: 'contact_trackings_agents',
+    },
+    {
+      icon: 'megaphone',
+      label: 'TRACKING_CAMPAIGNS',
+      hasSubMenu: false,
+      toState: frontendURL(
+        `accounts/${accountId}/tracking-dashboard/campaigns`
+      ),
+      toStateName: 'contact_trackings_campaigns',
     },
     {
       icon: 'arrow-trending-lines',

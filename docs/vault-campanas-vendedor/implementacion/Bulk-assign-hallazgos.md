@@ -26,9 +26,9 @@ Servicio: `app/services/contact_trackings/bulk_assign_service.rb`
 3. 🟠 **Límite 100, sin cola/paginación** (el doc viejo decía 30; el código dice **100**).
 4. 🟡 **`insert!` saltea validaciones/callbacks** — encola el job a mano; el índice único se
    maneja por excepción (no upsert) → en concurrencia, error genérico.
-5. 🟡 **Sin agrupador** — cada bulk es un disparo suelto; falta `SalesCampaign` para medir.
+5. 🟡 **Sin agrupador** — cada bulk es un disparo suelto; falta `TrackingCampaign` para medir.
 6. 🟡 **Efecto colateral** — crea N conversaciones + notas privadas (dispara listeners/notifs).
 
 ## Conclusión
 Para el módulo de campañas, el bulk necesita: **(a) job en background, (b) inbox fijo de la
-campaña, (c) agrupar bajo `SalesCampaign`**. Cae en [[Fases]] F2/F3.
+campaña, (c) agrupar bajo `TrackingCampaign`**. Cae en [[Fases]] F2/F3.

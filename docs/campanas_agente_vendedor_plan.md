@@ -31,20 +31,20 @@ con un tablero que responde 3 preguntas todos los días:
 | "Oportunidad / cotización / demo" | **Kanban** (`kanban_process`) + `case_tickets` | ✅ enlazar |
 | Señales: intención, sentimiento, resultado | `last_intent`, `last_sentiment_analysis`, `outcome` | ✅ reusar |
 | **Score, Interés, Valor, Prioridad, Resultado, Vendedor, Siguiente acción** | — | 🆕 nuevo |
-| Agrupar todo en una "Campaña" medible | — | 🆕 nuevo (`SalesCampaign`) |
+| Agrupar todo en una "Campaña" medible | — | 🆕 nuevo (`TrackingCampaign`) |
 | Dashboard KPIs + embudo + listas | patrón `contactTrackings/Dashboard.vue` | ✅ extender |
 
 > ⚠️ **No reusar el `Campaign` nativo** de Chatwoot (es de envíos one_off/ongoing).
-> El módulo nuevo se llama **`SalesCampaign`** ("Campaña de Agente Vendedor") para no chocar.
+> El módulo nuevo se llama **`TrackingCampaign`** ("Campaña de Agente Vendedor") para no chocar.
 
 ---
 
 ## 2. Modelo de datos (nuevo)
 
 ```
-sales_campaigns                         sales_campaign_prospects
+tracking_campaigns                         tracking_campaign_prospects
 ──────────────────────────────         ─────────────────────────────────────────
-account_id            FK                sales_campaign_id     FK
+account_id            FK                tracking_campaign_id     FK
 name                  "Reactivación Q3" contact_id            FK
 tracking_template_id  FK (entrenamiento)contact_tracking_id   FK (la conversación IA)
 objective             enum (cotizar/    assignee_id           FK users (vendedor)
@@ -62,7 +62,7 @@ starts_at / ends_at   datetime          priority              enum (alta/media/b
                                          last_interaction_at   datetime
 ```
 
-- **`sales_campaign_prospects`** = la fila de la "Vista 3". Cada prospecto enlaza su
+- **`tracking_campaign_prospects`** = la fila de la "Vista 3". Cada prospecto enlaza su
   `contact_tracking` (la conversación IA real) y, si aplica, su oportunidad en el Kanban.
 - **`score`, `priority`, `next_action`, `result`** los calcula/actualiza la IA y los
   eventos de la conversación (extiende el analyzer que ya ajusta seguimientos).
@@ -159,11 +159,11 @@ Tiempo prom. de respuesta= 1er mensaje → 1ª respuesta
 
 ```
 ┌──────────────── Módulo Campañas (Agente Vendedor) — NUEVO ────────────────┐
-│  SalesCampaign ── tracking_template (Entrenamiento)                         │
+│  TrackingCampaign ── tracking_template (Entrenamiento)                         │
 │       │                                                                     │
 │       │ iniciar → bulk assign (reusa Contacts::FilterService)               │
 │       ▼                                                                     │
-│  SalesCampaignProspect ──▶ ContactTracking ──▶ ContactTrackingJob (IA)      │
+│  TrackingCampaignProspect ──▶ ContactTracking ──▶ ContactTrackingJob (IA)      │
 │       │  score/interés/resultado/valor          (RouterService, WhatsApp)   │
 │       │        ▲                                                            │
 │       │        └── analyzer de conversación (extiende el actual)            │
@@ -171,7 +171,7 @@ Tiempo prom. de respuesta= 1er mensaje → 1ª respuesta
 │  Dashboards (KPIs, embudo, cola vendedor)  ── enlaza ──▶ Kanban / Tickets   │
 └────────────────────────────────────────────────────────────────────────────┘
         reusa: tracking_template · bulk assign · ContactTrackingJob · dashboard pattern
-        nuevo:  SalesCampaign + Prospect + capa comercial (score/valor/prioridad) + 7 vistas
+        nuevo:  TrackingCampaign + Prospect + capa comercial (score/valor/prioridad) + 7 vistas
 ```
 
 ---
@@ -179,7 +179,7 @@ Tiempo prom. de respuesta= 1er mensaje → 1ª respuesta
 ## 7. Fases (MVP incremental)
 
 ```
-F1  Modelo: SalesCampaign + SalesCampaignProspect (+ migraciones, CRUD admin)
+F1  Modelo: TrackingCampaign + TrackingCampaignProspect (+ migraciones, CRUD admin)
 F2  Crear campaña: wizard (entrenamiento + objetivo + selección de contactos vía bulk)
 F3  Iniciar: genera ContactTrackings; el Agente ya conversa (reuso total)
 F4  Capa comercial: analyzer setea score/interés/resultado/valor por conversación

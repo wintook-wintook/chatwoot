@@ -38,6 +38,7 @@ class Account < ApplicationRecord
   
 
   has_many :tracking_templates, dependent: :destroy # proyecto@tracking_templates
+  has_many :tracking_campaigns,  dependent: :destroy # @campanas_vendedor
   has_many :case_tickets,       dependent: :destroy # @tickets_cases
   has_many :case_rules,         dependent: :destroy # @tickets_cases
   has_many :case_types,         dependent: :destroy # @tickets_cases

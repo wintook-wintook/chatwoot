@@ -17,16 +17,16 @@ tags: [campanas-vendedor, arquitectura, reuso]
 | "Oportunidad/cotización/demo" | **Kanban** (`kanban_process`) + `case_tickets` | ✅ enlazar |
 | Señales intención/sentimiento/resultado | `last_intent`, `last_sentiment_analysis`, `outcome` | ✅ reusar |
 | Score, Interés, Valor, Prioridad, Resultado, Vendedor, Siguiente acción | — | 🆕 nuevo |
-| Agrupar y medir como "Campaña" | — | 🆕 `SalesCampaign` |
+| Agrupar y medir como "Campaña" | — | 🆕 `TrackingCampaign` |
 | Dashboard KPIs+embudo | `contactTrackings/Dashboard.vue` | ✅ extender |
 
 ## Diagrama
 ```
 ┌──────────── Campañas (Agente Vendedor) — NUEVO ─────────────┐
-│ SalesCampaign ── tracking_template (Entrenamiento)           │
+│ TrackingCampaign ── tracking_template (Entrenamiento)           │
 │      │ iniciar → bulk assign (Contacts::FilterService)       │
 │      ▼                                                       │
-│ SalesCampaignProspect ─▶ ContactTracking ─▶ ContactTrackingJob (IA)
+│ TrackingCampaignProspect ─▶ ContactTracking ─▶ ContactTrackingJob (IA)
 │      │ score/interés/resultado/valor      (Router, WhatsApp) │
 │      │        ▲ analyzer de conversación (extiende el actual)│
 │      ▼                                                       │

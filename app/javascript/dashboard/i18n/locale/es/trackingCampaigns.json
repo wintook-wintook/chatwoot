@@ -1,0 +1,56 @@
+{
+  "TRACKING_CAMPAIGNS_VIEW": {
+    "TITLE": "Campañas de seguimiento",
+    "REFRESH": "Actualizar",
+    "LOADING": "Cargando campañas…",
+    "EMPTY_TITLE": "Todavía no hay campañas.",
+    "EMPTY_HINT": "Asigna un Agente IA de forma masiva desde Contactos para crear una.",
+    "COL": {
+      "NAME": "Campaña",
+      "AGENT": "Agente IA",
+      "CHANNEL": "Canal",
+      "START": "Inicio",
+      "STATUS": "Estado",
+      "CONTACTS": "Contactos",
+      "PENDING": "Pendientes",
+      "ACTIVE": "Activos",
+      "COMPLETED": "Completados",
+      "FAILED": "Fallidos",
+      "PROGRESS": "Avance"
+    },
+    "STATUS": {
+      "draft": "Borrador",
+      "running": "En curso",
+      "paused": "Pausada",
+      "finished": "Finalizada"
+    }
+  },
+  "TRACKING_CAMPAIGN_DETAIL": {
+    "BACK": "Campañas",
+    "LOADING": "Cargando campaña…",
+    "AGENT": "Agente IA",
+    "CHANNEL": "Canal",
+    "START": "Inicio",
+    "OBJECTIVE": "Objetivo",
+    "KPI": {
+      "CONTACTS": "Contactos",
+      "PENDING": "Pendientes",
+      "ACTIVE": "Activos",
+      "COMPLETED": "Completados",
+      "FAILED": "Fallidos",
+      "PROGRESS": "Avance"
+    },
+    "PROSPECTS": "Prospectos",
+    "PROSPECTS_EMPTY": "Esta campaña no tiene prospectos.",
+    "COL": {
+      "CONTACT": "Contacto",
+      "STATUS": "Estado",
+      "INTENT": "Último intento",
+      "OUTCOME": "Desenlace",
+      "SCHEDULED": "Programado",
+      "ATTEMPTS": "Intentos",
+      "ACTION": "Acción"
+    },
+    "OPEN_CONVERSATION": "Abrir conversación"
+  }
+}

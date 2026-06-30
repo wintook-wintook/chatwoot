@@ -6,6 +6,8 @@
     "MODAL": {
       "TITLE": "Bulk AI Agent assignment",
       "DESCRIPTION": "Apply an AI Agent to all contacts matching the current filter.",
+      "CAMPAIGN_NAME_LABEL": "Campaign name",
+      "CAMPAIGN_NAME_PLACEHOLDER": "e.g. June customer reactivation",
       "TEMPLATE_LABEL": "AI Agent",
       "TEMPLATE_PLACEHOLDER": "Select an AI Agent",
       "SCHEDULED_FOR_LABEL": "Start date and time",

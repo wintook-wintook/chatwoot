@@ -42,6 +42,7 @@ import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
 import googleCalendar from './googleCalendar.js'; // proyecto@google_calendar
 import gestorTickets from './gestorTickets.json'; // @tickets_cases
 import bulkTrackingAssign from './bulkTrackingAssign.json'; // proyecto@bulk_tracking_assign
+import trackingCampaigns from './trackingCampaigns.json'; // @campanas_vendedor
 
 export default {
   ...advancedFilters,
@@ -86,4 +87,5 @@ export default {
   ...googleCalendar, // proyecto@google_calendar
   ...gestorTickets, // @tickets_cases
   ...bulkTrackingAssign, // proyecto@bulk_tracking_assign
+  ...trackingCampaigns, // @campanas_vendedor
 };

@@ -57,6 +57,7 @@
 #  conversation_id            :bigint
 #  inbox_id                   :bigint           not null
 #  quote_id                   :integer
+#  tracking_campaign_id       :bigint
 #  tracking_template_id       :integer
 #
 # Indexes
@@ -72,6 +73,7 @@
 #  index_contact_trackings_on_sentiment                     (((last_sentiment_analysis ->> 'sentiment'::text)))
 #  index_contact_trackings_on_status                        (status)
 #  index_contact_trackings_on_status_and_scheduled_for      (status,scheduled_for)
+#  index_contact_trackings_on_tracking_campaign_id          (tracking_campaign_id)
 #  index_unique_active_tracking_per_contact_inbox           (contact_id,inbox_id,status) UNIQUE WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))
 #
 # Foreign Keys
@@ -80,6 +82,7 @@
 #  fk_rails_...  (contact_id => contacts.id)
 #  fk_rails_...  (conversation_id => conversations.id)
 #  fk_rails_...  (inbox_id => inboxes.id)
+#  fk_rails_...  (tracking_campaign_id => tracking_campaigns.id)
 #
 
 class ContactTracking < ApplicationRecord
@@ -91,6 +94,7 @@ class ContactTracking < ApplicationRecord
   belongs_to :inbox
   belongs_to :account
   belongs_to :tracking_template, optional: true
+  belongs_to :tracking_campaign, optional: true # @campanas_vendedor
 
   # ==============================================================================
   # Serializers - Para campos JSON

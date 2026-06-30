@@ -37,6 +37,7 @@ class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::B
 
   def filtered_scope
     rel = ContactTracking.where(account_id: Current.account.id)
+    rel = rel.where(tracking_campaign_id: params[:campaign_id]) if params[:campaign_id].present? # @campanas_vendedor
     rel = rel.where(status: params[:status]) if params[:status].present?
     rel = rel.where(inbox_id: params[:inbox_id]) if params[:inbox_id].present?
     rel = rel.where(tracking_template_id: params[:template_id]) if params[:template_id].present?

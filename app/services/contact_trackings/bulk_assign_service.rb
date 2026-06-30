@@ -20,12 +20,13 @@ class ContactTrackings::BulkAssignService
   MAX_BULK_ASSIGN      = 100 # Límite de seguridad por asignación masiva
 
   def initialize(account:, current_user:, filter_payload:, template_id:, scheduled_for:,
-                  excluded_contact_ids: [], skip_active: true)
+                 campaign_name:, excluded_contact_ids: [], skip_active: true)
     @account              = account
     @current_user         = current_user
     @filter_payload       = filter_payload
     @template_id          = template_id
     @scheduled_for        = scheduled_for
+    @campaign_name        = campaign_name.to_s.strip
     @excluded_contact_ids = Array(excluded_contact_ids).map(&:to_i)
     @skip_active          = skip_active
     @results              = { inserted: 0, skipped: 0, errors: [] }
@@ -34,6 +35,8 @@ class ContactTrackings::BulkAssignService
   def call
     template = @account.tracking_templates.find_by(id: @template_id)
     return error_result('Plantilla no encontrada') unless template
+
+    return error_result('El nombre de la campaña es obligatorio') if @campaign_name.blank?
 
     return error_result('La fecha debe ser futura') if @scheduled_for.blank? || @scheduled_for <= Time.current
 
@@ -47,12 +50,26 @@ class ContactTrackings::BulkAssignService
       )
     end
 
+    @campaign = build_campaign(template)
+
     contacts.find_each { |contact| process_contact(contact, template) }
 
-    @results
+    @results.merge(campaign_id: @campaign.id, campaign_name: @campaign.name)
   end
 
   private
+
+  def build_campaign(template)
+    @account.tracking_campaigns.create!(
+      name: @campaign_name,
+      tracking_template_id: template.id,
+      inbox_id: template.inbox_id,
+      user_id: @current_user&.id,
+      objective: template.objective,
+      scheduled_for: @scheduled_for,
+      status: 'running'
+    )
+  end
 
   def resolve_contacts
     result = ::Contacts::FilterService.new(@account, @current_user, { 'payload' => @filter_payload }.with_indifferent_access).perform
@@ -69,7 +86,7 @@ class ContactTrackings::BulkAssignService
     end
 
     # Omitir solo si ya hay un seguimiento activo EN ESTE CANAL (inbox)
-    if @skip_active && ContactTracking.where(contact_id: contact.id, inbox_id: inbox_id, status: ACTIVE_STATUSES).exists?
+    if @skip_active && ContactTracking.exists?(contact_id: contact.id, inbox_id: inbox_id, status: ACTIVE_STATUSES)
       @results[:skipped] += 1
       return
     end
@@ -87,27 +104,28 @@ class ContactTrackings::BulkAssignService
 
     result = ContactTracking.insert!(
       {
-        account_id:                 @account.id,
-        contact_id:                 contact.id,
-        inbox_id:                   inbox_id,
-        conversation_id:            conversation_id,
-        tracking_template_id:       template.id,
-        objective:                  template.objective,
-        scheduled_for:              @scheduled_for,
-        max_attempts:               DEFAULT_MAX_ATTEMPTS,
-        attempt_count:              0,
-        retry_interval_value:       template.retry_interval_value || 30,
-        retry_interval_unit:        template.retry_interval_unit || 'minutes',
-        ai_context:                 template.ai_context,
-        complementary_prompt:       template.complementary_prompt,
-        whatsapp_templates:         template.whatsapp_templates || [],
-        keyword_actions:            template.keyword_actions || [],
-        calendar_integration_ids:   template.calendar_integration_ids || [],
-        calendar_event_duration:    template.calendar_event_duration || 30,
+        account_id: @account.id,
+        contact_id: contact.id,
+        inbox_id: inbox_id,
+        conversation_id: conversation_id,
+        tracking_template_id: template.id,
+        tracking_campaign_id: @campaign&.id,
+        objective: template.objective,
+        scheduled_for: @scheduled_for,
+        max_attempts: DEFAULT_MAX_ATTEMPTS,
+        attempt_count: 0,
+        retry_interval_value: template.retry_interval_value || 30,
+        retry_interval_unit: template.retry_interval_unit || 'minutes',
+        ai_context: template.ai_context,
+        complementary_prompt: template.complementary_prompt,
+        whatsapp_templates: template.whatsapp_templates || [],
+        keyword_actions: template.keyword_actions || [],
+        calendar_integration_ids: template.calendar_integration_ids || [],
+        calendar_event_duration: template.calendar_event_duration || 30,
         response_adjustments_count: 0,
-        status:                     'pending',
-        created_at:                 now,
-        updated_at:                 now
+        status: 'pending',
+        created_at: now,
+        updated_at: now
       },
       returning: [:id]
     )
