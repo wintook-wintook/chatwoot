@@ -40,6 +40,22 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
     render json: result, status: :ok
   end
 
+  # Dry-run: clasifica la audiencia en buckets sin crear nada (@campanas_vendedor).
+  def preview
+    result = ContactTrackings::BulkAssignPreviewService.new(
+      account: Current.account,
+      current_user: current_user,
+      filter_payload: params.permit!['payload'] || [],
+      template_id: params[:template_id],
+      skip_active: ActiveModel::Type::Boolean.new.cast(params.fetch(:skip_active, true)),
+      excluded_contact_ids: params[:excluded_contact_ids] || []
+    ).call
+
+    return render json: result, status: :unprocessable_entity if result[:error].present?
+
+    render json: result, status: :ok
+  end
+
   private
 
   def parse_scheduled_for(value)

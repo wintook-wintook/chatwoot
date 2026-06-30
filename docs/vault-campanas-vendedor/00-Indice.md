@@ -31,8 +31,9 @@ se siente como un **gerente comercial** que responde 3 preguntas por día →
 4. [[Las-7-vistas]] — listado, dashboard ejecutivo, prospectos, cola vendedor, resultados, rendimiento, detalle
 5. [[KPIs]] — fórmulas (tasa de respuesta, conversión, autonomía, valor…)
 6. [[Bulk-assign-hallazgos]] — revisión del bulk actual (lo que hay que arreglar)
-7. [[Fases]] — F1–F8 del MVP
-8. [[Pendiente]] — decisiones abiertas y TODOs
+7. [[Preview-buckets-modal]] — plan: tabs por bucket (listos/en seguimiento/no contactables/excluidos)
+8. [[Fases]] — F1–F8 del MVP
+9. [[Pendiente]] — decisiones abiertas y TODOs
 
 ---
 

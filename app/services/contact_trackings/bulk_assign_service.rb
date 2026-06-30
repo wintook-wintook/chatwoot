@@ -21,7 +21,8 @@
 # ================================================================================
 
 class ContactTrackings::BulkAssignService
-  ACTIVE_STATUSES      = %w[pending scheduled active paused].freeze
+  include ContactTrackings::Eligibility # ACTIVE_STATUSES + reglas compartidas con el preview
+
   DEFAULT_MAX_ATTEMPTS = 3
   MAX_BULK_ASSIGN      = 100 # Límite de seguridad por asignación masiva
 

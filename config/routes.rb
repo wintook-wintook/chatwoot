@@ -87,7 +87,9 @@ Rails.application.routes.draw do
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
           end
           resources :contact_tracking_imports, only: [:create] # proyecto@import_seguimiento
-          resources :contact_tracking_bulk_assigns, only: [:create] # proyecto@bulk_tracking_assign
+          resources :contact_tracking_bulk_assigns, only: [:create] do # proyecto@bulk_tracking_assign
+            post :preview, on: :collection # @campanas_vendedor — dry-run de buckets
+          end
           resources :tracking_campaigns, only: [:index, :show] # @campanas_vendedor
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview
