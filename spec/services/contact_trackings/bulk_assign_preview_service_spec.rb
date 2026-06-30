@@ -67,14 +67,15 @@ RSpec.describe ContactTrackings::BulkAssignPreviewService do
       )
     end
 
-    it 'clasifica cada contacto en su bucket' do
+    it 'clasifica cada contacto en su bucket natural' do
       result = preview(excluded: [excluded_contact.id])
       buckets = result[:contacts].index_by { |c| c[:id] }
 
-      expect(buckets[ready_contact.id][:bucket]).to eq(:ready)
-      expect(buckets[in_tracking_contact.id][:bucket]).to eq(:in_tracking)
-      expect(buckets[unreachable_contact.id][:bucket]).to eq(:unreachable)
-      expect(buckets[excluded_contact.id][:bucket]).to eq(:excluded)
+      expect(buckets[ready_contact.id]).to include(bucket: :ready, excluded: false)
+      expect(buckets[in_tracking_contact.id]).to include(bucket: :in_tracking, excluded: false)
+      expect(buckets[unreachable_contact.id]).to include(bucket: :unreachable, excluded: false)
+      # El excluido conserva su bucket natural (:ready, tiene teléfono) + flag excluded.
+      expect(buckets[excluded_contact.id]).to include(bucket: :ready, excluded: true)
     end
 
     it 'marca el motivo NO_PHONE en los no contactables' do

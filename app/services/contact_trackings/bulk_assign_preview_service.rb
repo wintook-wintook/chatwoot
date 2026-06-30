@@ -8,17 +8,20 @@
 #              clasifica en buckets SIN crear nada, para que el modal muestre, en
 #              tabs, qué le pasará a cada contacto al lanzar la campaña.
 #
-# Buckets (precedencia: excluded → in_tracking → unreachable → ready):
-#   :excluded     — el usuario lo quitó a mano (excluded_contact_ids)
+# Bucket NATURAL de cada contacto (precedencia: in_tracking → unreachable → ready):
 #   :in_tracking  — ya tiene un seguimiento activo en el inbox (se omite si skip_active)
 #   :unreachable  — no se le puede enviar por ese canal (sin teléfono/correo/…)
 #   :ready        — recibirá el Agente IA
+# Aparte, cada contacto trae `excluded: Boolean` (estaba en excluded_contact_ids). El
+# front lo usa como tab propio y permite reclasificar al excluir/deshacer SIN re-pegarle
+# al backend (por eso se devuelve el bucket natural, no uno "excluded" terminal).
 #
 # Retorna:
 #   { channel: { inbox_id:, inbox_name:, channel_type: },
 #     counts:  { ready:, in_tracking:, unreachable:, excluded:, total: },
-#     contacts: [{ id:, name:, phone_number:, email:, bucket:, reason: }],
+#     contacts: [{ id:, name:, phone_number:, email:, bucket:, reason:, excluded: }],
 #     truncated: Boolean }
+# Donde ready/in_tracking/unreachable cuentan SOLO los no-excluidos.
 # ================================================================================
 
 class ContactTrackings::BulkAssignPreviewService
@@ -82,28 +85,32 @@ class ContactTrackings::BulkAssignPreviewService
   end
 
   def classify(contact, channel_type, active, with_convo)
-    bucket, reason = bucket_for(contact, channel_type, active, with_convo)
+    bucket, reason = natural_bucket(contact, channel_type, active, with_convo)
     {
       id: contact.id,
       name: contact.name,
       phone_number: contact.phone_number,
       email: contact.email,
       bucket: bucket,
-      reason: reason
+      reason: reason,
+      excluded: @excluded_contact_ids.include?(contact.id)
     }
   end
 
-  def bucket_for(contact, channel_type, active, with_convo)
-    return [:excluded, nil] if @excluded_contact_ids.include?(contact.id)
+  # Bucket natural, ignorando la exclusión (que el front maneja aparte).
+  def natural_bucket(contact, channel_type, active, with_convo)
     return [:in_tracking, nil] if @skip_active && active.include?(contact.id)
 
     contactable, reason = channel_contactability(contact, channel_type, reusable: with_convo.include?(contact.id))
     contactable ? [:ready, nil] : [:unreachable, reason]
   end
 
+  # ready/in_tracking/unreachable solo cuentan los NO excluidos; excluded los excluidos.
   def count_buckets(rows, total)
     counts = { ready: 0, in_tracking: 0, unreachable: 0, excluded: 0 }
-    rows.each { |row| counts[row[:bucket]] += 1 }
+    rows.each do |row|
+      row[:excluded] ? counts[:excluded] += 1 : counts[row[:bucket]] += 1
+    end
     counts.merge(total: total)
   end
 end

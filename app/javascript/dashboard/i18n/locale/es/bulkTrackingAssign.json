@@ -42,6 +42,34 @@
       "UNDO": "Deshacer",
       "EXCLUDE": "Excluir",
       "BACK": "Volver"
+    },
+    "PREVIEW": {
+      "TITLE": "Revisar audiencia",
+      "AUDIENCE": "Audiencia",
+      "CHANNEL": "Canal",
+      "LOADING": "Clasificando contactos…",
+      "EMPTY_TAB": "No hay contactos en este grupo.",
+      "TABS": {
+        "READY": "Listos para enviar",
+        "IN_TRACKING": "Ya en seguimiento",
+        "UNREACHABLE": "No contactables",
+        "EXCLUDED": "Excluidos"
+      },
+      "COL_NAME": "Nombre",
+      "COL_CONTACT": "Teléfono / Correo",
+      "COL_REASON": "Motivo",
+      "COL_ACTION": "Acción",
+      "EXCLUDE": "Excluir",
+      "UNDO": "Deshacer",
+      "REASON": {
+        "NO_PHONE": "El canal requiere teléfono y el contacto no tiene",
+        "NO_EMAIL": "El canal requiere correo y el contacto no tiene",
+        "UNSUPPORTED_CHANNEL": "El canal no permite iniciar la conversación",
+        "IN_TRACKING": "Ya tiene un seguimiento activo en este canal"
+      },
+      "WILL_CREATE": "Se crearán {count} seguimientos al confirmar.",
+      "TRUNCATED": "Mostrando los primeros {limit} de {total} contactos.",
+      "BACK": "Listo"
     }
   }
 }

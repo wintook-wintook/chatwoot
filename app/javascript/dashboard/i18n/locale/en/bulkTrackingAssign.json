@@ -42,6 +42,34 @@
       "UNDO": "Undo",
       "EXCLUDE": "Exclude",
       "BACK": "Back"
+    },
+    "PREVIEW": {
+      "TITLE": "Review audience",
+      "AUDIENCE": "Audience",
+      "CHANNEL": "Channel",
+      "LOADING": "Classifying contacts…",
+      "EMPTY_TAB": "No contacts in this group.",
+      "TABS": {
+        "READY": "Ready to send",
+        "IN_TRACKING": "Already in follow-up",
+        "UNREACHABLE": "Unreachable",
+        "EXCLUDED": "Excluded"
+      },
+      "COL_NAME": "Name",
+      "COL_CONTACT": "Phone / Email",
+      "COL_REASON": "Reason",
+      "COL_ACTION": "Action",
+      "EXCLUDE": "Exclude",
+      "UNDO": "Undo",
+      "REASON": {
+        "NO_PHONE": "Channel needs a phone number and the contact has none",
+        "NO_EMAIL": "Channel needs an email and the contact has none",
+        "UNSUPPORTED_CHANNEL": "This channel can't start the conversation",
+        "IN_TRACKING": "Already has an active follow-up on this channel"
+      },
+      "WILL_CREATE": "{count} follow-ups will be created on confirm.",
+      "TRUNCATED": "Showing the first {limit} of {total} contacts.",
+      "BACK": "Done"
     }
   }
 }
