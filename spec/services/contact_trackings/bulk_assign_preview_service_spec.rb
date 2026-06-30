@@ -91,7 +91,7 @@ RSpec.describe ContactTrackings::BulkAssignPreviewService do
       expect(result[:counts]).to eq(
         ready: 1, in_tracking: 1, unreachable: 1, excluded: 1, total: 4
       )
-      expect(result[:truncated]).to be(false)
+      expect(result[:counts_only]).to be(false)
     end
 
     it 'con skip_active=false, el contacto en seguimiento pasa a ready (fiel al create)' do
@@ -101,6 +101,22 @@ RSpec.describe ContactTrackings::BulkAssignPreviewService do
       expect(buckets[in_tracking_contact.id][:bucket]).to eq(:ready)
       expect(result[:counts][:in_tracking]).to eq(0)
       expect(result[:counts][:ready]).to eq(2)
+    end
+  end
+
+  describe '#call audiencia mayor a PREVIEW_LIMIT' do
+    before { stub_const("#{described_class}::PREVIEW_LIMIT", 1) }
+
+    it 'devuelve counts_only con solo el total, sin listar contactos' do
+      create_list(:contact, 2, :with_phone_number, account: account)
+
+      result = preview
+
+      expect(result[:counts_only]).to be(true)
+      expect(result[:contacts]).to be_empty
+      expect(result[:counts][:total]).to eq(2)
+      expect(result[:counts]).to include(ready: 0, in_tracking: 0, unreachable: 0, excluded: 0)
+      expect(result[:channel][:channel_type]).to eq('Channel::Sms')
     end
   end
 end

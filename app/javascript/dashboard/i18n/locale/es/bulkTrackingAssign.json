@@ -68,7 +68,8 @@
         "IN_TRACKING": "Ya tiene un seguimiento activo en este canal"
       },
       "WILL_CREATE": "Se crearán {count} seguimientos al confirmar.",
-      "TRUNCATED": "Mostrando los primeros {limit} de {total} contactos.",
+      "TOO_MANY_TITLE": "Audiencia demasiado grande",
+      "TOO_MANY_BODY": "La audiencia tiene {total} contactos y supera el máximo para previsualizar. Reduce el filtro para ver el desglose por grupo y poder lanzar la campaña.",
       "BACK": "Listo"
     }
   }

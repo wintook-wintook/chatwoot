@@ -18,6 +18,14 @@ import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 
 const PAGE_SIZE = 15;
 const NATURAL_TABS = ['ready', 'in_tracking', 'unreachable'];
+// Color del badge de conteo por bucket.
+const TAB_BADGE = {
+  ready: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  in_tracking:
+    'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  unreachable: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300',
+  excluded: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+};
 
 export default {
   components: { Thumbnail, TableFooter },
@@ -49,6 +57,10 @@ export default {
     total() {
       return this.preview?.counts?.total || 0;
     },
+    // Audiencia demasiado grande: el backend solo manda el total (sin clasificar).
+    countsOnly() {
+      return this.preview?.counts_only || false;
+    },
     // Bucket efectivo: si está excluido manualmente, va a "excluded";
     // si no, su bucket natural del preview.
     effectiveBucket() {
@@ -63,12 +75,18 @@ export default {
       return counts;
     },
     tabs() {
-      return [...NATURAL_TABS, 'excluded'].map(key => ({
+      // Con skip_active=false el bucket "Ya en seguimiento" siempre es 0 (esos
+      // contactos se crean igual) → se oculta ese tab.
+      const naturals = this.skipActive
+        ? NATURAL_TABS
+        : NATURAL_TABS.filter(k => k !== 'in_tracking');
+      return [...naturals, 'excluded'].map(key => ({
         key,
         label: this.$t(
           `BULK_TRACKING_ASSIGN.PREVIEW.TABS.${key.toUpperCase()}`
         ),
         count: this.countsByTab[key],
+        badgeClass: TAB_BADGE[key],
       }));
     },
     currentTabContacts() {
@@ -92,7 +110,10 @@ export default {
       if (this.show) this.fetchPreview();
     },
     skipActive() {
-      if (this.show) this.fetchPreview();
+      if (this.show) {
+        this.activeTab = 'ready';
+        this.fetchPreview();
+      }
     },
   },
   methods: {
@@ -180,6 +201,24 @@ export default {
         {{ $t('BULK_TRACKING_ASSIGN.PREVIEW.LOADING') }}
       </div>
 
+      <!-- Audiencia demasiado grande: solo total, sin clasificar -->
+      <div
+        v-else-if="countsOnly"
+        class="my-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md text-sm"
+      >
+        <p class="font-semibold text-yellow-800 dark:text-yellow-200">
+          {{ $t('BULK_TRACKING_ASSIGN.PREVIEW.TOO_MANY_TITLE') }}
+        </p>
+        <p class="text-yellow-700 dark:text-yellow-300 mt-1">
+          {{ $t('BULK_TRACKING_ASSIGN.PREVIEW.TOO_MANY_BODY', { total }) }}
+        </p>
+        <div class="flex justify-end mt-4">
+          <woot-button color-scheme="primary" @click="goBack">
+            {{ $t('BULK_TRACKING_ASSIGN.PREVIEW.BACK') }}
+          </woot-button>
+        </div>
+      </div>
+
       <template v-else>
         <!-- Tabs -->
         <div
@@ -199,7 +238,8 @@ export default {
           >
             {{ tab.label }}
             <span
-              class="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-slate-100 dark:bg-slate-700"
+              class="ml-1 px-1.5 py-0.5 rounded-full text-xs"
+              :class="tab.badgeClass"
             >
               {{ tab.count }}
             </span>
@@ -293,18 +333,6 @@ export default {
           :total-count="currentTabContacts.length"
           @page-change="onPageChange"
         />
-
-        <p
-          v-if="preview && preview.truncated"
-          class="text-xs text-yellow-700 dark:text-yellow-300 mt-2"
-        >
-          {{
-            $t('BULK_TRACKING_ASSIGN.PREVIEW.TRUNCATED', {
-              limit: contacts.length,
-              total,
-            })
-          }}
-        </p>
 
         <div class="flex items-center justify-between mt-4">
           <span class="text-sm text-slate-600 dark:text-slate-300">

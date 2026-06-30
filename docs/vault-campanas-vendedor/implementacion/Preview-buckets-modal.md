@@ -161,17 +161,17 @@ por contacto:
 
 `contactTrackingBulkAssigns.js` → método `preview({ payload, templateId, skipActive, excludedContactIds })`.
 
-## 6. Edge cases / decisiones
+## 6. Edge cases / decisiones — RESUELTAS
 
-- **Audiencia > 100 (límite):** el preview clasifica solo hasta un tope de seguridad
-  (p. ej. 500) o devuelve **solo conteos** vía COUNT en SQL + aviso de límite; las
-  listas por bucket se muestran una vez bajo el límite. *(Decidir: tope vs counts-only.)*
-- **Sin `template_id` aún:** el modal de preview no se puede abrir (no hay canal) →
-  deshabilitar el link "revisar" hasta elegir plantilla.
-- **`skip_active = false`:** el bucket "Ya en seguimiento" se vuelve **informativo**
-  (esos contactos pasan a Listos, porque el create igual los insertaría). Mostrar
-  badge pero contarlos dentro de Listos. *(Decidir copy.)*
-- **Coste:** 2-3 queries batch + clasificación en memoria de ≤100 → trivial.
+- **Audiencia > `PREVIEW_LIMIT` (200):** ✅ el servicio devuelve `counts_only: true`
+  (solo `total`, sin listas) y el modal muestra el banner "reduce el filtro". Se
+  descartó la opción de COUNT en SQL exacto: sobre el límite el usuario no puede
+  confirmar igual, así que el desglose preciso no aporta.
+- **Sin `template_id` aún:** ✅ el link "revisar" se deshabilita hasta elegir plantilla
+  (el preview necesita canal) — hecho en P3.
+- **`skip_active = false`:** ✅ el tab "Ya en seguimiento" se **oculta** (siempre 0,
+  porque esos contactos se crean igual); quedan en "Listos", fiel al create.
+- **Coste:** 2-3 queries batch + clasificación en memoria de ≤200 → trivial.
 
 ## 7. Archivos a tocar
 
@@ -193,8 +193,19 @@ MOD    i18n es/en bulkTrackingAssign.json                       (tabs, motivos, 
 P1 ✅ Módulo Eligibility + BulkAssignPreviewService + endpoint /preview (con specs)
 P2 ✅ PreviewContactsModal con tabs (ready/in_tracking/unreachable/excluded)
 P3 ✅ Integrar en BulkAssignModal (conteo = listos, refresco por plantilla/skip_active)
-P4    Edge case >100 (counts-only) + pulido visual + decisiones abiertas §6
+P4 ✅ Edge case >PREVIEW_LIMIT (counts_only) + pulido visual + decisiones §6
 ```
+
+### P4 — implementado
+- **counts_only:** si la audiencia supera `PREVIEW_LIMIT (200)`, el servicio devuelve
+  `counts_only: true` con `contacts: []` y solo `total` (evita conteos truncados
+  engañosos). El modal muestra un banner "Audiencia demasiado grande, reduce el filtro";
+  `BulkAssignModal` deja el desglose desconocido → el conteo cae a "a procesar" y salta
+  el aviso de límite. Spec nuevo con `stub_const` del límite.
+- **Decisión §6.2 (skip_active=false):** el tab "Ya en seguimiento" se **oculta** (siempre
+  sería 0, porque esos contactos se crean igual); quedan en "Listos", fiel al create.
+- **Pulido visual:** badges de los tabs con color por bucket (verde/ámbar/rojo/gris).
+- Reasons i18n ya estaban (P2): NO_PHONE / NO_EMAIL / UNSUPPORTED_CHANNEL / IN_TRACKING.
 
 ### P2 — implementado
 - `PreviewContactsModal.vue`: tabs con badge, tabla paginada en cliente, columna

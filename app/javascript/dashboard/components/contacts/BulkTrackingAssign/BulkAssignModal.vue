@@ -228,8 +228,10 @@ export default {
         skipActive: this.skipActive,
         excludedContactIds: this.excludedContactIds,
       });
-      this.previewCounts = data.counts;
       this.totalCount = data.counts.total;
+      // Si la audiencia es demasiado grande, el backend no clasifica (counts_only):
+      // dejamos el desglose desconocido → el conteo cae a "a procesar" y salta el límite.
+      this.previewCounts = data.counts_only ? null : data.counts;
     },
     openReview() {
       this.showReviewModal = true;

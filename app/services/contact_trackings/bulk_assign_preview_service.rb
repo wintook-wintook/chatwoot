@@ -20,8 +20,10 @@
 #   { channel: { inbox_id:, inbox_name:, channel_type: },
 #     counts:  { ready:, in_tracking:, unreachable:, excluded:, total: },
 #     contacts: [{ id:, name:, phone_number:, email:, bucket:, reason:, excluded: }],
-#     truncated: Boolean }
+#     counts_only: Boolean }
 # Donde ready/in_tracking/unreachable cuentan SOLO los no-excluidos.
+# Si la audiencia supera PREVIEW_LIMIT, devuelve counts_only: true con contacts: []
+# y solo `total` (los demás conteos en 0): el usuario debe reducir el filtro.
 # ================================================================================
 
 class ContactTrackings::BulkAssignPreviewService
@@ -48,13 +50,18 @@ class ContactTrackings::BulkAssignPreviewService
     inbox = template.inbox
     return { error: no_inbox_error(template) } unless inbox
 
-    classified, total = classify_audience(inbox)
+    total = resolved[:count]
+    # Audiencia demasiado grande para clasificar/listar → solo el total (counts_only).
+    # El usuario debe reducir el filtro (igual no puede confirmar sobre el límite).
+    return counts_only_result(inbox, total) if total > PREVIEW_LIMIT
+
+    classified = classify_audience(inbox)
 
     {
-      channel: { inbox_id: inbox.id, inbox_name: inbox.name, channel_type: inbox.channel_type },
+      channel: channel_info(inbox),
       counts: count_buckets(classified, total),
       contacts: classified,
-      truncated: total > PREVIEW_LIMIT
+      counts_only: false
     }
   end
 
@@ -65,21 +72,31 @@ class ContactTrackings::BulkAssignPreviewService
       'Asígnale un inbox antes de lanzar la campaña.'
   end
 
+  def channel_info(inbox)
+    { inbox_id: inbox.id, inbox_name: inbox.name, channel_type: inbox.channel_type }
+  end
+
+  def counts_only_result(inbox, total)
+    {
+      channel: channel_info(inbox),
+      counts: { ready: 0, in_tracking: 0, unreachable: 0, excluded: 0, total: total },
+      contacts: [],
+      counts_only: true
+    }
+  end
+
   def classify_audience(inbox)
-    resolved = resolve
-    total    = resolved[:count]
-    contacts = resolved[:contacts].limit(PREVIEW_LIMIT).to_a
+    contacts = resolved[:contacts].to_a
     ids      = contacts.map(&:id)
 
     active     = active_tracking_contact_ids(inbox.id, ids)
     with_convo = contacts_with_conversation_ids(inbox.id, ids)
 
-    classified = contacts.map { |c| classify(c, inbox.channel_type, active, with_convo) }
-    [classified, total]
+    contacts.map { |c| classify(c, inbox.channel_type, active, with_convo) }
   end
 
-  def resolve
-    ::Contacts::FilterService.new(
+  def resolved
+    @resolved ||= ::Contacts::FilterService.new(
       @account, @current_user, { 'payload' => @filter_payload }.with_indifferent_access
     ).perform
   end

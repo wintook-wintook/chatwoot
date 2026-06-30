@@ -68,7 +68,8 @@
         "IN_TRACKING": "Already has an active follow-up on this channel"
       },
       "WILL_CREATE": "{count} follow-ups will be created on confirm.",
-      "TRUNCATED": "Showing the first {limit} of {total} contacts.",
+      "TOO_MANY_TITLE": "Audience too large",
+      "TOO_MANY_BODY": "The audience has {total} contacts, over the preview maximum. Narrow the filter to see the per-group breakdown and launch the campaign.",
       "BACK": "Done"
     }
   }
