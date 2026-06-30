@@ -27,7 +27,10 @@
       "RESULT_INSERTED": "AI Agents assigned",
       "RESULT_SKIPPED": "Contacts skipped",
       "RESULT_ERRORS": "Errors",
-      "SUCCESS_SUMMARY": "AI Agents assigned: {inserted} | Skipped: {skipped} | Errors: {errors}"
+      "SUCCESS_SUMMARY": "AI Agents assigned: {inserted} | Skipped: {skipped} | Errors: {errors}",
+      "RESULT_QUEUED_TITLE": "Campaign queued",
+      "RESULT_QUEUED_BODY": "{count} contacts are being processed in the background. Progress will show up in the campaign detail.",
+      "VIEW_CAMPAIGN": "View campaign"
     },
     "REVIEW": {
       "TITLE": "Review selected contacts",

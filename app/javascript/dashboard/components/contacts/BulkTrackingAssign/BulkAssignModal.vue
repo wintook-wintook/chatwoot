@@ -221,6 +221,20 @@ export default {
       }
       this.$emit('close');
     },
+    goToCampaign() {
+      const campaignId = this.result?.campaign_id;
+      this.$emit('success', this.result);
+      this.$emit('close');
+      if (campaignId) {
+        this.$router.push({
+          name: 'contact_trackings_campaign_detail',
+          params: {
+            accountId: this.$route.params.accountId,
+            campaignId,
+          },
+        });
+      }
+    },
   },
 };
 </script>
@@ -386,33 +400,27 @@ export default {
         </div>
       </template>
 
-      <!-- Resultado -->
+      <!-- Resultado: la campaña se procesa en background -->
       <template v-else>
         <div class="space-y-2 text-sm text-slate-700 dark:text-slate-300">
-          <p>
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.RESULT_INSERTED') }}:
-            <strong>{{ result.inserted }}</strong>
+          <p class="font-semibold text-slate-800 dark:text-slate-100">
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.RESULT_QUEUED_TITLE') }}
           </p>
           <p>
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.RESULT_SKIPPED') }}:
-            <strong>{{ result.skipped }}</strong>
+            {{
+              $t('BULK_TRACKING_ASSIGN.MODAL.RESULT_QUEUED_BODY', {
+                count: result.queued,
+              })
+            }}
           </p>
-          <div v-if="result.errors && result.errors.length">
-            <p class="font-semibold text-red-500">
-              {{ $t('BULK_TRACKING_ASSIGN.MODAL.RESULT_ERRORS') }}:
-            </p>
-            <ul class="list-disc list-inside text-red-500">
-              <li v-for="(err, idx) in result.errors" :key="idx">
-                {{ err.contact_name || err.contact_id || '—' }}:
-                {{ err.message }}
-              </li>
-            </ul>
-          </div>
         </div>
 
-        <div class="flex justify-end mt-6">
-          <woot-button color-scheme="primary" @click="onClose">
+        <div class="flex justify-end gap-2 mt-6">
+          <woot-button variant="clear" @click="onClose">
             {{ $t('BULK_TRACKING_ASSIGN.MODAL.CLOSE') }}
+          </woot-button>
+          <woot-button color-scheme="primary" @click="goToCampaign">
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.VIEW_CAMPAIGN') }}
           </woot-button>
         </div>
       </template>

@@ -18,8 +18,8 @@ tags: [campanas-vendedor, pendiente, todo]
 - [ ] **Multicanal**: 1 tracking activo por (contacto, inbox) — la campaña fija su inbox.
 
 ## TODOs de implementación (cuando se apruebe)
-- [ ] Mover `BulkAssignService` a job en background ([[Bulk-assign-hallazgos]] #1).
-- [ ] Fijar inbox de la campaña en lugar de inferirlo ([[Bulk-assign-hallazgos]] #2).
+- [x] Mover `BulkAssignService` a job en background ([[Bulk-assign-hallazgos]] #1).
+- [x] Fijar inbox de la campaña en lugar de inferirlo ([[Bulk-assign-hallazgos]] #2).
 - [ ] Crear `TrackingCampaign` + `TrackingCampaignProspect` ([[Modelo-de-datos]]).
 - [ ] Extender el analyzer para setear score/interés/resultado/valor ([[KPIs]]).
 - [ ] Las 7 vistas + i18n es/en ([[Las-7-vistas]]).

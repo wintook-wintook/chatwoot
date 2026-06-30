@@ -27,7 +27,10 @@
       "RESULT_INSERTED": "Agentes IA asignados",
       "RESULT_SKIPPED": "Contactos omitidos",
       "RESULT_ERRORS": "Errores",
-      "SUCCESS_SUMMARY": "Agentes IA asignados: {inserted} | Omitidos: {skipped} | Errores: {errors}"
+      "SUCCESS_SUMMARY": "Agentes IA asignados: {inserted} | Omitidos: {skipped} | Errores: {errors}",
+      "RESULT_QUEUED_TITLE": "Campaña encolada",
+      "RESULT_QUEUED_BODY": "{count} contactos se están procesando en segundo plano. El progreso aparecerá en el detalle de la campaña.",
+      "VIEW_CAMPAIGN": "Ver campaña"
     },
     "REVIEW": {
       "TITLE": "Revisar contactos seleccionados",

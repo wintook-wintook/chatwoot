@@ -16,8 +16,10 @@
 #     - scheduled_for: fecha/hora ISO 8601 del primer intento
 #     - excluded_contact_ids (array, opcional): IDs a excluir de la selección
 #     - skip_active (boolean, opcional, default true): omitir contactos con tracking activo
-#   Respuesta:
-#     { inserted: N, skipped: N, errors: [{ contact_id:, contact_name:, message: }] }
+#   Respuesta (200): { queued: N, campaign_id:, campaign_name: }
+#     El procesamiento por contacto corre en background (ContactTrackings::BulkAssignJob);
+#     el progreso real se ve en el detalle de la campaña (stats por status).
+#   Respuesta (422): { error: "mensaje" } ante validación fallida.
 # ================================================================================
 
 class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Accounts::BaseController
@@ -32,6 +34,8 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
       excluded_contact_ids: params[:excluded_contact_ids] || [],
       skip_active: ActiveModel::Type::Boolean.new.cast(params.fetch(:skip_active, true))
     ).call
+
+    return render json: result, status: :unprocessable_entity if result[:error].present?
 
     render json: result, status: :ok
   end
