@@ -20,8 +20,10 @@ import { getMinDateTime } from '../../../helper/trackingHelpers';
 import PreviewContactsModal from './PreviewContactsModal.vue';
 
 const MAX_BULK_ASSIGN = 100;
-// Tipo de filtro de "contactos" para customViews (segmentos), igual que ContactsView.
-const FILTER_TYPE_CONTACT = 1;
+// Nombre del enum filter_type de customViews para "contactos". El backend serializa
+// el enum como string ("contact"), y el getter getCustomViewsByFilterType compara
+// por ese string — por eso NO es el entero 1 (ese era el bug del desplegable vacío).
+const FILTER_TYPE_CONTACT = 'contact';
 
 export default {
   components: { PreviewContactsModal },
