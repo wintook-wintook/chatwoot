@@ -94,6 +94,32 @@ export default {
         },
       ];
     },
+    funnel() {
+      return this.campaign?.funnel || {};
+    },
+    // Embudo de intención: se muestra solo si al menos un contacto respondió.
+    hasFunnel() {
+      return (this.funnel.replied || 0) > 0;
+    },
+    funnelKpis() {
+      return [
+        {
+          key: 'REPLIED',
+          value: this.funnel.replied || 0,
+          color: 'text-slate-800 dark:text-slate-100',
+        },
+        {
+          key: 'INTERESTED',
+          value: this.funnel.interested || 0,
+          color: 'text-green-600 dark:text-green-500',
+        },
+        {
+          key: 'APPOINTMENT',
+          value: this.funnel.appointment || 0,
+          color: 'text-woot-600 dark:text-woot-500',
+        },
+      ];
+    },
     backRoute() {
       return { name: 'contact_trackings_campaigns' };
     },
@@ -296,6 +322,33 @@ export default {
               class="m-0 text-sm font-medium text-slate-800 dark:text-slate-100"
             >
               {{ $t(`TRACKING_CAMPAIGN_DETAIL.DELIVERY.${kpi.key}`) }}
+            </h3>
+            <h4 class="mt-1 mb-0 text-3xl font-thin" :class="kpi.color">
+              {{ kpi.value }}
+            </h4>
+          </div>
+        </div>
+      </div>
+
+      <!-- Embudo de intención — qué contestó el cliente -->
+      <div v-if="hasFunnel" class="mb-5 shrink-0">
+        <p
+          class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400"
+        >
+          {{ $t('TRACKING_CAMPAIGN_DETAIL.FUNNEL.TITLE') }}
+        </p>
+        <div
+          class="flex flex-wrap items-stretch rounded-md border border-slate-75 dark:border-slate-700 bg-white dark:bg-slate-800 divide-x divide-slate-75 dark:divide-slate-700 shadow-sm"
+        >
+          <div
+            v-for="kpi in funnelKpis"
+            :key="kpi.key"
+            class="flex-1 min-w-[7rem] p-4"
+          >
+            <h3
+              class="m-0 text-sm font-medium text-slate-800 dark:text-slate-100"
+            >
+              {{ $t(`TRACKING_CAMPAIGN_DETAIL.FUNNEL.${kpi.key}`) }}
             </h3>
             <h4 class="mt-1 mb-0 text-3xl font-thin" :class="kpi.color">
               {{ kpi.value }}

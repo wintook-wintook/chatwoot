@@ -50,6 +50,12 @@
       "SENT": "Sin confirmar",
       "FAILED": "Error de entrega"
     },
+    "FUNNEL": {
+      "TITLE": "Embudo",
+      "REPLIED": "Respondieron",
+      "INTERESTED": "Interesados",
+      "APPOINTMENT": "Agendaron"
+    },
     "PROSPECTS": "Prospectos",
     "PROSPECTS_EMPTY": "Esta campaña no tiene prospectos.",
     "COL": {

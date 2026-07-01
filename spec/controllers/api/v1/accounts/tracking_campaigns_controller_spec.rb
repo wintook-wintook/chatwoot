@@ -10,13 +10,13 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
   let(:campaign) { create(:tracking_campaign, account: account, inbox: inbox) }
 
   # Crea un prospecto con conversación cuyo último mensaje saliente tiene el status dado.
-  def prospect_with_delivery(message_status)
+  def prospect_with_delivery(message_status, extra = {})
     contact = create(:contact, account: account)
     conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
     create(:message, account: account, inbox: inbox, conversation: conversation,
                      message_type: :outgoing, status: message_status)
-    create(:contact_tracking, account: account, contact: contact, inbox: inbox,
-                              tracking_campaign_id: campaign.id, conversation: conversation)
+    create(:contact_tracking, { account: account, contact: contact, inbox: inbox,
+                                tracking_campaign_id: campaign.id, conversation: conversation }.merge(extra))
   end
 
   describe 'GET /api/v1/accounts/{account.id}/tracking_campaigns/{id}' do
@@ -53,6 +53,26 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
             headers: admin.create_new_auth_token, as: :json
 
         expect(response.parsed_body['stats']['total']).to eq(5)
+      end
+    end
+
+    context 'when contacts have replied' do
+      before do
+        # respondió + interesado
+        prospect_with_delivery('delivered', last_intent: 'interested')
+        # respondió pero no interesado
+        prospect_with_delivery('delivered', last_intent: 'not_interested')
+        # respondió + agendó
+        prospect_with_delivery('read', last_intent: 'book_appointment', appointment_at: 1.day.from_now)
+        # no respondió (last_intent nil)
+        prospect_with_delivery('sent')
+      end
+
+      it 'expone el embudo: respondieron / interesados / agendaron' do
+        get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}",
+            headers: admin.create_new_auth_token, as: :json
+
+        expect(response.parsed_body['funnel']).to eq('replied' => 3, 'interested' => 2, 'appointment' => 1)
       end
     end
   end

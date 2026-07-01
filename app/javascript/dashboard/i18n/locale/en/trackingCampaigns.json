@@ -50,6 +50,12 @@
       "SENT": "Unconfirmed",
       "FAILED": "Delivery failed"
     },
+    "FUNNEL": {
+      "TITLE": "Funnel",
+      "REPLIED": "Replied",
+      "INTERESTED": "Interested",
+      "APPOINTMENT": "Booked"
+    },
     "PROSPECTS": "Prospects",
     "PROSPECTS_EMPTY": "This campaign has no prospects.",
     "COL": {
