@@ -17,14 +17,6 @@ import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 
 const PAGE_SIZE = 15;
 const NATURAL_TABS = ['ready', 'in_tracking', 'unreachable'];
-// Color del badge de conteo por bucket.
-const TAB_BADGE = {
-  ready: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
-  in_tracking:
-    'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-  unreachable: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300',
-  excluded: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
-};
 
 export default {
   components: { Thumbnail, TableFooter },
@@ -76,8 +68,12 @@ export default {
           `BULK_TRACKING_ASSIGN.PREVIEW.TABS.${key.toUpperCase()}`
         ),
         count: this.countsByTab[key],
-        badgeClass: TAB_BADGE[key],
       }));
+    },
+    // woot-tabs trabaja con índice; activeTab guarda la key del bucket.
+    activeTabIndex() {
+      const i = this.tabs.findIndex(t => t.key === this.activeTab);
+      return i === -1 ? 0 : i;
     },
     currentTabContacts() {
       return this.contacts.filter(
@@ -97,8 +93,10 @@ export default {
     },
   },
   methods: {
-    onTabChange(key) {
-      this.activeTab = key;
+    onTabChange(index) {
+      const tab = this.tabs[index];
+      if (!tab) return;
+      this.activeTab = tab.key;
       this.currentPage = 1;
     },
     onPageChange(page) {
@@ -151,31 +149,17 @@ export default {
     </div>
 
     <template v-else>
-      <!-- Tabs -->
-      <div
-        class="flex gap-1 border-b border-slate-100 dark:border-slate-700 mb-3"
-      >
-        <button
-          v-for="tab in tabs"
+      <!-- Tabs nativos -->
+      <woot-tabs :index="activeTabIndex" class="mb-3" @change="onTabChange">
+        <woot-tabs-item
+          v-for="(tab, i) in tabs"
           :key="tab.key"
-          type="button"
-          class="px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
-          :class="
-            activeTab === tab.key
-              ? 'border-woot-500 text-woot-600 dark:text-woot-400'
-              : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-          "
-          @click="onTabChange(tab.key)"
-        >
-          {{ tab.label }}
-          <span
-            class="ml-1 px-1.5 py-0.5 rounded-full text-xs"
-            :class="tab.badgeClass"
-          >
-            {{ tab.count }}
-          </span>
-        </button>
-      </div>
+          :index="i"
+          :name="tab.label"
+          :count="tab.count"
+          show-badge
+        />
+      </woot-tabs>
 
       <!-- Tabla del tab activo -->
       <div

@@ -30,6 +30,10 @@ export default {
     isEmpty() {
       return !this.isLoading && this.campaigns.length === 0;
     },
+    // woot-tabs usa índice: 0 = listado, 1 = nueva campaña.
+    activeTabIndex() {
+      return this.activeTab === 'new' ? 1 : 0;
+    },
   },
   mounted() {
     // Llegada desde Contactos: el filtro se pasa por sessionStorage (un solo uso).
@@ -65,6 +69,10 @@ export default {
     goToNew() {
       this.presetFilter = null;
       this.activeTab = 'new';
+    },
+    onPageTabChange(index) {
+      if (index === 1) this.goToNew();
+      else this.goToList();
     },
     statusLabel(status) {
       return this.$t(`TRACKING_CAMPAIGNS_VIEW.STATUS.${status}`);
@@ -128,35 +136,17 @@ export default {
       </woot-button>
     </div>
 
-    <!-- Tabs -->
-    <div
-      class="flex gap-1 border-b border-slate-100 dark:border-slate-700 mb-4"
-    >
-      <button
-        type="button"
-        class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
-        :class="
-          activeTab === 'list'
-            ? 'border-woot-500 text-woot-600 dark:text-woot-400'
-            : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-        "
-        @click="goToList"
-      >
-        {{ $t('TRACKING_CAMPAIGNS_VIEW.TAB_LIST') }}
-      </button>
-      <button
-        type="button"
-        class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
-        :class="
-          activeTab === 'new'
-            ? 'border-woot-500 text-woot-600 dark:text-woot-400'
-            : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-        "
-        @click="goToNew"
-      >
-        {{ $t('TRACKING_CAMPAIGNS_VIEW.TAB_NEW') }}
-      </button>
-    </div>
+    <!-- Tabs nativos -->
+    <woot-tabs :index="activeTabIndex" class="mb-4" @change="onPageTabChange">
+      <woot-tabs-item
+        :index="0"
+        :name="$t('TRACKING_CAMPAIGNS_VIEW.TAB_LIST')"
+      />
+      <woot-tabs-item
+        :index="1"
+        :name="$t('TRACKING_CAMPAIGNS_VIEW.TAB_NEW')"
+      />
+    </woot-tabs>
 
     <!-- Tab: Nueva campaña -->
     <CampaignForm

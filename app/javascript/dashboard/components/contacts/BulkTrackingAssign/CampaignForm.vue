@@ -267,105 +267,127 @@ export default {
     <div
       class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-md p-4"
     >
-      <label class="block mb-4">
-        <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">
-          {{ $t('BULK_TRACKING_ASSIGN.MODAL.CAMPAIGN_NAME_LABEL') }}
-        </span>
-        <input
-          v-model="campaignName"
-          type="text"
-          maxlength="120"
-          :placeholder="
-            $t('BULK_TRACKING_ASSIGN.MODAL.CAMPAIGN_NAME_PLACEHOLDER')
-          "
-          class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
-        />
-      </label>
-
-      <!-- Audiencia (solo si no viene un filtro preestablecido) -->
-      <div v-if="allowAudienceSelection" class="mb-4">
-        <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">
-          {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_LABEL') }}
-        </span>
-        <div class="flex gap-4 mt-1 mb-2">
-          <label
-            class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300"
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+        <!-- Nombre de la campaña -->
+        <label class="block">
+          <span
+            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
           >
-            <input v-model="audienceType" type="radio" value="segment" />
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_SEGMENT') }}
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.CAMPAIGN_NAME_LABEL') }}
+          </span>
+          <input
+            v-model="campaignName"
+            type="text"
+            maxlength="120"
+            :placeholder="
+              $t('BULK_TRACKING_ASSIGN.MODAL.CAMPAIGN_NAME_PLACEHOLDER')
+            "
+            class="w-full mt-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+          />
+        </label>
+
+        <!-- Agente IA -->
+        <label class="block">
+          <span
+            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.TEMPLATE_LABEL') }}
+          </span>
+          <select
+            v-model="selectedTemplateId"
+            class="w-full mt-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+          >
+            <option value="" disabled>
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.TEMPLATE_PLACEHOLDER') }}
+            </option>
+            <option v-for="t in templates" :key="t.id" :value="t.id">
+              {{ t.name }}
+            </option>
+          </select>
+        </label>
+
+        <!-- Audiencia -->
+        <div>
+          <span
+            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_LABEL') }}
+          </span>
+          <template v-if="allowAudienceSelection">
+            <div class="flex gap-4 mt-1 mb-2">
+              <label
+                class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300"
+              >
+                <input v-model="audienceType" type="radio" value="segment" />
+                {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_SEGMENT') }}
+              </label>
+              <label
+                class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300"
+              >
+                <input v-model="audienceType" type="radio" value="label" />
+                {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_LABEL_OPTION') }}
+              </label>
+            </div>
+            <select
+              v-if="audienceType === 'segment'"
+              v-model="selectedSegmentId"
+              class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+            >
+              <option value="" disabled>
+                {{
+                  $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_SEGMENT_PLACEHOLDER')
+                }}
+              </option>
+              <option v-for="s in segments" :key="s.id" :value="s.id">
+                {{ s.name }}
+              </option>
+            </select>
+            <select
+              v-else
+              v-model="selectedLabel"
+              class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+            >
+              <option value="" disabled>
+                {{
+                  $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_LABEL_PLACEHOLDER')
+                }}
+              </option>
+              <option v-for="l in labels" :key="l.id" :value="l.title">
+                {{ l.title }}
+              </option>
+            </select>
+          </template>
+          <p
+            v-else
+            class="mt-1 text-sm text-slate-500 dark:text-slate-400 italic"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_FROM_CONTACTS') }}
+          </p>
+        </div>
+
+        <!-- Fecha + Omitir activos -->
+        <div class="flex flex-col gap-3">
+          <label class="block">
+            <span
+              class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+            >
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.SCHEDULED_FOR_LABEL') }}
+            </span>
+            <input
+              v-model="scheduledFor"
+              type="datetime-local"
+              :min="minDateTime"
+              class="w-full mt-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+            />
           </label>
           <label
-            class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300"
+            class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"
           >
-            <input v-model="audienceType" type="radio" value="label" />
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_LABEL_OPTION') }}
+            <input v-model="skipActive" type="checkbox" />
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.SKIP_ACTIVE') }}
           </label>
         </div>
-        <select
-          v-if="audienceType === 'segment'"
-          v-model="selectedSegmentId"
-          class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
-        >
-          <option value="" disabled>
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_SEGMENT_PLACEHOLDER') }}
-          </option>
-          <option v-for="s in segments" :key="s.id" :value="s.id">
-            {{ s.name }}
-          </option>
-        </select>
-        <select
-          v-else
-          v-model="selectedLabel"
-          class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
-        >
-          <option value="" disabled>
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_LABEL_PLACEHOLDER') }}
-          </option>
-          <option v-for="l in labels" :key="l.id" :value="l.title">
-            {{ l.title }}
-          </option>
-        </select>
       </div>
-
-      <p v-else class="mb-4 text-sm text-slate-500 dark:text-slate-400 italic">
-        {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_FROM_CONTACTS') }}
-      </p>
-
-      <label class="block mb-4">
-        <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">
-          {{ $t('BULK_TRACKING_ASSIGN.MODAL.TEMPLATE_LABEL') }}
-        </span>
-        <select
-          v-model="selectedTemplateId"
-          class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
-        >
-          <option value="" disabled>
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.TEMPLATE_PLACEHOLDER') }}
-          </option>
-          <option v-for="t in templates" :key="t.id" :value="t.id">
-            {{ t.name }}
-          </option>
-        </select>
-      </label>
-
-      <label class="block mb-4">
-        <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">
-          {{ $t('BULK_TRACKING_ASSIGN.MODAL.SCHEDULED_FOR_LABEL') }}
-        </span>
-        <input
-          v-model="scheduledFor"
-          type="datetime-local"
-          :min="minDateTime"
-          class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
-        />
-      </label>
-
-      <label
-        class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"
-      >
-        <input v-model="skipActive" type="checkbox" />
-        {{ $t('BULK_TRACKING_ASSIGN.MODAL.SKIP_ACTIVE') }}
-      </label>
 
       <!-- Aviso de límite -->
       <div
