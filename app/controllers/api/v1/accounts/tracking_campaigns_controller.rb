@@ -17,16 +17,19 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     campaigns = Current.account.tracking_campaigns
                        .includes(:tracking_template, :inbox)
                        .order(created_at: :desc)
-    stats = stats_by_campaign(campaigns.map(&:id))
+    ids = campaigns.map(&:id)
+    stats = stats_by_campaign(ids)
+    delivery = delivery_by_campaign(ids)
 
-    render json: campaigns.map { |campaign| campaign_json(campaign, stats[campaign.id]) }
+    render json: campaigns.map { |campaign| campaign_json(campaign, stats[campaign.id], delivery[campaign.id]) }
   end
 
   def show
     campaign = Current.account.tracking_campaigns.find(params[:id])
     stats = stats_by_campaign([campaign.id])
+    delivery = delivery_by_campaign([campaign.id])
 
-    render json: campaign_json(campaign, stats[campaign.id])
+    render json: campaign_json(campaign, stats[campaign.id], delivery[campaign.id])
   end
 
   private
@@ -41,9 +44,47 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     end
   end
 
-  def campaign_json(campaign, status_counts)
-    status_counts ||= {}
+  # Eje de ENTREGA (WhatsApp), separado del de ejecución ([[Entrega-vs-ejecucion]]).
+  # Unidad = estado del ÚLTIMO mensaje saliente por conversación (1 por prospecto),
+  # NO mensajes crudos. Devuelve { campaign_id => { delivered:, sent:, failed: } }.
+  def delivery_by_campaign(ids)
+    return {} if ids.blank?
 
+    # conversation_id => campaign_id (solo prospectos que ya tienen conversación)
+    conv_to_campaign = ContactTracking.where(tracking_campaign_id: ids)
+                                      .where.not(conversation_id: nil)
+                                      .pluck(:conversation_id, :tracking_campaign_id)
+                                      .to_h
+    return {} if conv_to_campaign.empty?
+
+    last_outgoing_messages(conv_to_campaign.keys).each_with_object({}) do |message, acc|
+      campaign_id = conv_to_campaign[message.conversation_id]
+      bucket = delivery_bucket(message.status)
+      (acc[campaign_id] ||= Hash.new(0))[bucket] += 1
+    end
+  end
+
+  # Último mensaje saliente (outgoing/template) por conversación, en 2 queries (sin N+1).
+  def last_outgoing_messages(conversation_ids)
+    # reorder(nil): Message tiene default_scope con ORDER BY que rompe el GROUP BY.
+    last_ids = Message.where(conversation_id: conversation_ids, message_type: %i[outgoing template])
+                      .reorder(nil).group(:conversation_id).maximum(:id)
+    return [] if last_ids.empty?
+
+    Message.where(id: last_ids.values).select(:id, :conversation_id, :status)
+  end
+
+  # Message.status (string del enum) → bucket de entrega. read cuenta como entregado;
+  # sent/progress = enviado sin confirmar; failed = rechazado por el canal.
+  def delivery_bucket(status)
+    case status
+    when 'delivered', 'read' then :delivered
+    when 'failed'            then :failed
+    else                          :sent
+    end
+  end
+
+  def campaign_json(campaign, status_counts, delivery_counts)
     {
       id: campaign.id,
       name: campaign.name,
@@ -53,7 +94,8 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       created_at: campaign.created_at,
       template_name: campaign.tracking_template&.name,
       inbox_name: campaign.inbox&.name,
-      stats: aggregate_stats(status_counts)
+      stats: aggregate_stats(status_counts || {}),
+      delivery: aggregate_delivery(delivery_counts || {})
     }
   end
 
@@ -64,6 +106,14 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       active: status_counts['active'].to_i + status_counts['paused'].to_i,
       completed: status_counts['completed'].to_i,
       failed: status_counts['failed'].to_i + status_counts['cancelled'].to_i
+    }
+  end
+
+  def aggregate_delivery(delivery_counts)
+    {
+      delivered: delivery_counts[:delivered].to_i,
+      sent: delivery_counts[:sent].to_i,
+      failed: delivery_counts[:failed].to_i
     }
   end
 end

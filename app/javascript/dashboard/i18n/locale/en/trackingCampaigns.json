@@ -44,11 +44,18 @@
       "FAILED": "Failed",
       "PROGRESS": "Progress"
     },
+    "DELIVERY": {
+      "TITLE": "Delivery (WhatsApp)",
+      "DELIVERED": "Delivered",
+      "SENT": "Unconfirmed",
+      "FAILED": "Delivery failed"
+    },
     "PROSPECTS": "Prospects",
     "PROSPECTS_EMPTY": "This campaign has no prospects.",
     "COL": {
       "CONTACT": "Contact",
       "STATUS": "Status",
+      "DELIVERY": "Delivery",
       "INTENT": "Last intent",
       "OUTCOME": "Outcome",
       "SCHEDULED": "Scheduled",

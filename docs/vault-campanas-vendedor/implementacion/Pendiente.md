@@ -20,6 +20,7 @@ tags: [campanas-vendedor, pendiente, todo]
 ## TODOs de implementación (cuando se apruebe)
 - [x] Mover `BulkAssignService` a job en background ([[Bulk-assign-hallazgos]] #1).
 - [x] Fijar inbox de la campaña en lugar de inferirlo ([[Bulk-assign-hallazgos]] #2).
+- [x] Eje de **entrega** (WhatsApp) separado del de ejecución en el dashboard ([[Entrega-vs-ejecucion]]).
 - [ ] Crear `TrackingCampaign` + `TrackingCampaignProspect` ([[Modelo-de-datos]]).
 - [ ] Extender el analyzer para setear score/interés/resultado/valor ([[KPIs]]).
 - [ ] Las 7 vistas + i18n es/en ([[Las-7-vistas]]).

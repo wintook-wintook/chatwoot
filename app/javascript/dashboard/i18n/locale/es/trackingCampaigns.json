@@ -44,11 +44,18 @@
       "FAILED": "Fallidos",
       "PROGRESS": "Avance"
     },
+    "DELIVERY": {
+      "TITLE": "Entrega (WhatsApp)",
+      "DELIVERED": "Entregados",
+      "SENT": "Sin confirmar",
+      "FAILED": "Error de entrega"
+    },
     "PROSPECTS": "Prospectos",
     "PROSPECTS_EMPTY": "Esta campaña no tiene prospectos.",
     "COL": {
       "CONTACT": "Contacto",
       "STATUS": "Estado",
+      "DELIVERY": "Entrega",
       "INTENT": "Último intento",
       "OUTCOME": "Desenlace",
       "SCHEDULED": "Programado",

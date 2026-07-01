@@ -28,6 +28,23 @@ const TRACKING_STATUS_META = {
   failed: { label: 'Fallido', color: 'text-red-700' },
 };
 
+// Eje de ENTREGA (WhatsApp), separado del de ejecución ([[Entrega-vs-ejecucion]]).
+// Mapea Message.status del último mensaje saliente a uno de 3 buckets.
+const DELIVERY_META = {
+  delivered: { icon: '✅', key: 'DELIVERED', color: 'text-green-600' },
+  sent: { icon: '⏳', key: 'SENT', color: 'text-slate-400' },
+  failed: { icon: '⚠️', key: 'FAILED', color: 'text-red-600' },
+};
+
+function deliveryBucket(messageStatus) {
+  if (!messageStatus) return null;
+  if (messageStatus === 'delivered' || messageStatus === 'read') {
+    return 'delivered';
+  }
+  if (messageStatus === 'failed') return 'failed';
+  return 'sent';
+}
+
 export default {
   data() {
     return {
@@ -43,6 +60,33 @@ export default {
     },
     stats() {
       return this.campaign?.stats || {};
+    },
+    delivery() {
+      return this.campaign?.delivery || {};
+    },
+    // Eje de entrega: se muestra solo si hay algún mensaje ya enviado.
+    hasDelivery() {
+      const d = this.delivery;
+      return (d.delivered || 0) + (d.sent || 0) + (d.failed || 0) > 0;
+    },
+    deliveryKpis() {
+      return [
+        {
+          key: 'DELIVERED',
+          value: this.delivery.delivered || 0,
+          color: 'text-green-600',
+        },
+        {
+          key: 'SENT',
+          value: this.delivery.sent || 0,
+          color: 'text-slate-500',
+        },
+        {
+          key: 'FAILED',
+          value: this.delivery.failed || 0,
+          color: 'text-red-600',
+        },
+      ];
     },
     backRoute() {
       return { name: 'contact_trackings_campaigns' };
@@ -103,6 +147,15 @@ export default {
     },
     trackingStatusColor(status) {
       return TRACKING_STATUS_META[status]?.color || 'text-slate-500';
+    },
+    deliveryMeta(prospect) {
+      const bucket = deliveryBucket(prospect.last_message_status);
+      return bucket ? DELIVERY_META[bucket] : null;
+    },
+    deliveryLabel(prospect) {
+      const meta = this.deliveryMeta(prospect);
+      if (!meta) return '—';
+      return this.$t(`TRACKING_CAMPAIGN_DETAIL.DELIVERY.${meta.key}`);
     },
     formatDate(value) {
       if (!value) return '—';
@@ -196,6 +249,27 @@ export default {
         </div>
       </div>
 
+      <!-- Entrega (WhatsApp) — eje separado del de ejecución -->
+      <div v-if="hasDelivery" class="mb-6">
+        <p
+          class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2"
+        >
+          {{ $t('TRACKING_CAMPAIGN_DETAIL.DELIVERY.TITLE') }}
+        </p>
+        <div class="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div
+            v-for="kpi in deliveryKpis"
+            :key="kpi.key"
+            class="p-3 rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800"
+          >
+            <p class="text-xs text-slate-400">
+              {{ $t(`TRACKING_CAMPAIGN_DETAIL.DELIVERY.${kpi.key}`) }}
+            </p>
+            <p class="text-2xl font-bold" :class="kpi.color">{{ kpi.value }}</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Prospectos -->
       <h2
         class="text-base font-semibold text-slate-700 dark:text-slate-200 mb-2"
@@ -219,6 +293,9 @@ export default {
               {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.CONTACT') }}
             </th>
             <th class="p-3">{{ $t('TRACKING_CAMPAIGN_DETAIL.COL.STATUS') }}</th>
+            <th class="p-3">
+              {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.DELIVERY') }}
+            </th>
             <th class="p-3">{{ $t('TRACKING_CAMPAIGN_DETAIL.COL.INTENT') }}</th>
             <th class="p-3">
               {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.OUTCOME') }}
@@ -245,6 +322,17 @@ export default {
             </td>
             <td class="p-3 font-medium" :class="trackingStatusColor(p.status)">
               {{ trackingStatusLabel(p.status) }}
+            </td>
+            <td class="p-3">
+              <span
+                v-if="deliveryMeta(p)"
+                class="inline-flex items-center gap-1 font-medium"
+                :class="deliveryMeta(p).color"
+                :title="p.last_message_error || deliveryLabel(p)"
+              >
+                {{ deliveryMeta(p).icon }} {{ deliveryLabel(p) }}
+              </span>
+              <span v-else class="text-slate-300">—</span>
             </td>
             <td class="p-3 text-slate-500 dark:text-slate-400">
               {{ p.last_intent || '—' }}

@@ -22,6 +22,9 @@ class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::B
                    .offset((page - 1) * per_page)
                    .limit(per_page)
 
+    # Estado de entrega (WhatsApp) por conversación, en batch ([[Entrega-vs-ejecucion]]).
+    @last_messages = last_messages_by_conversation(records)
+
     render json: {
       trackings: records.map { |t| row(t) },
       meta: {
@@ -35,6 +38,25 @@ class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::B
 
   private
 
+  # { conversation_id => { status:, error: } } del último mensaje saliente de cada
+  # conversación de la página, en 2 queries (sin N+1 por fila).
+  def last_messages_by_conversation(records)
+    conversation_ids = records.filter_map(&:conversation_id).uniq
+    return {} if conversation_ids.empty?
+
+    # reorder(nil): Message tiene default_scope con ORDER BY que rompe el GROUP BY.
+    last_ids = Message.where(conversation_id: conversation_ids, message_type: %i[outgoing template])
+                      .reorder(nil).group(:conversation_id).maximum(:id)
+    return {} if last_ids.empty?
+
+    Message.where(id: last_ids.values).each_with_object({}) do |message, acc|
+      acc[message.conversation_id] = {
+        status: message.status,
+        error: message.content_attributes&.dig('external_error')
+      }
+    end
+  end
+
   def filtered_scope
     rel = ContactTracking.where(account_id: Current.account.id)
     rel = rel.where(tracking_campaign_id: params[:campaign_id]) if params[:campaign_id].present? # @campanas_vendedor
@@ -45,9 +67,7 @@ class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::B
     rel = rel.where(outcome: params[:outcome]) if params[:outcome].present?
     rel = rel.where('contact_trackings.created_at >= ?', params[:date_from]) if params[:date_from].present?
     rel = rel.where('contact_trackings.created_at <= ?', params[:date_to]) if params[:date_to].present?
-    if ActiveModel::Type::Boolean.new.cast(params[:overdue])
-      rel = rel.where(status: %w[pending scheduled]).where('scheduled_for < ?', Time.current)
-    end
+    rel = rel.where(status: %w[pending scheduled]).where('scheduled_for < ?', Time.current) if ActiveModel::Type::Boolean.new.cast(params[:overdue])
     if params[:q].present?
       q = "%#{params[:q].strip}%"
       rel = rel.left_joins(:contact).where('contact_trackings.objective ILIKE :q OR contacts.name ILIKE :q', q: q)
@@ -57,23 +77,32 @@ class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::B
 
   def row(tracking)
     {
-      id:                     tracking.id,
-      status:                 tracking.status,
-      objective:              tracking.objective,
-      scheduled_for:          tracking.scheduled_for,
-      appointment_at:         tracking.appointment_at,
-      last_intent:            tracking.last_intent,
-      outcome:                tracking.outcome,
-      attempt_count:          tracking.attempt_count,
-      max_attempts:           tracking.max_attempts,
-      inbox_id:               tracking.inbox_id,
-      inbox_name:             tracking.inbox&.name,
-      contact_id:             tracking.contact_id,
-      contact_name:           tracking.contact&.name,
-      tracking_template_id:   tracking.tracking_template_id,
-      template_name:          tracking.tracking_template&.name,
-      conversation_id:        tracking.conversation_id,
+      id: tracking.id,
+      status: tracking.status,
+      objective: tracking.objective,
+      scheduled_for: tracking.scheduled_for,
+      appointment_at: tracking.appointment_at,
+      last_intent: tracking.last_intent,
+      outcome: tracking.outcome,
+      attempt_count: tracking.attempt_count,
+      max_attempts: tracking.max_attempts,
+      inbox_id: tracking.inbox_id,
+      inbox_name: tracking.inbox&.name,
+      contact_id: tracking.contact_id,
+      contact_name: tracking.contact&.name,
+      tracking_template_id: tracking.tracking_template_id,
+      template_name: tracking.tracking_template&.name,
+      conversation_id: tracking.conversation_id,
       conversation_display_id: tracking.conversation&.display_id
+    }.merge(delivery_fields(tracking))
+  end
+
+  # Estado de entrega (WhatsApp) del último mensaje saliente ([[Entrega-vs-ejecucion]]).
+  def delivery_fields(tracking)
+    last_message = @last_messages[tracking.conversation_id] || {}
+    {
+      last_message_status: last_message[:status],
+      last_message_error: last_message[:error]
     }
   end
 
