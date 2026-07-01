@@ -66,6 +66,50 @@ export default {
     successPct() {
       return Math.round((this.summary.success_rate || 0) * 100);
     },
+
+    // ── Los 3 ejes del estatus, separados ──────────────────────────────
+    byStatus() {
+      return this.metrics?.by_status || {};
+    },
+    // 🎯 Intención — qué pasó con el cliente (IA + reglas)
+    intentionKpis() {
+      const s = this.summary;
+      const f = this.metrics?.funnel || {};
+      return [
+        { label: 'Interesados', value: f.interested || 0, color: 'text-violet-600' },
+        { label: 'Citas', value: s.appointments || 0, color: 'text-slate-800 dark:text-slate-100' },
+        { label: 'Objetivo cumplido', value: s.objectives_met || 0, color: 'text-emerald-600' },
+        { label: 'Rechazos', value: s.rejected || 0, color: 'text-red-500' },
+      ];
+    },
+    // ⚙️ Control — en qué punto del ciclo está el seguimiento (interno)
+    controlKpis() {
+      const b = this.byStatus;
+      const active = (b.pending || 0) + (b.scheduled || 0) + (b.active || 0);
+      return [
+        { label: 'Activos', value: active, color: 'text-slate-800 dark:text-slate-100' },
+        { label: 'Pausados', value: b.paused || 0, color: 'text-amber-500' },
+        { label: 'Vencidos', value: this.summary.overdue || 0, color: 'text-red-500' },
+        { label: 'Fallidos', value: b.failed || 0, color: 'text-red-700' },
+      ];
+    },
+    // 📬 Entrega — si el mensaje llegó a WhatsApp (canal)
+    delivery() {
+      return this.metrics?.delivery || {};
+    },
+    deliveryKpis() {
+      const d = this.delivery;
+      return [
+        { label: 'Entregados', value: d.delivered || 0, color: 'text-green-600' },
+        { label: 'Enviados', value: d.sent || 0, color: 'text-slate-800 dark:text-slate-100' },
+        { label: 'No entregados', value: d.failed || 0, color: 'text-red-500' },
+      ];
+    },
+    hasDeliveryData() {
+      const d = this.delivery;
+      return (d.delivered || 0) + (d.sent || 0) + (d.failed || 0) > 0;
+    },
+
     overdueList() {
       return this.metrics?.lists?.overdue || [];
     },
@@ -203,7 +247,7 @@ export default {
     // Fase 3 — serie temporal
     hasTimeseries() {
       return (this.metrics?.timeseries || []).some(
-        p => p.created > 0 || p.completed > 0
+        p => p.created > 0 || p.objectives_met > 0
       );
     },
     timeseriesChartData() {
@@ -218,9 +262,9 @@ export default {
             barPercentage: 0.7,
           },
           {
-            label: 'Completados',
-            data: ts.map(p => p.completed),
-            backgroundColor: '#16a34a',
+            label: 'Objetivos cumplidos',
+            data: ts.map(p => p.objectives_met),
+            backgroundColor: '#059669',
             barPercentage: 0.7,
           },
         ],
@@ -372,48 +416,86 @@ export default {
         </div>
       </div>
 
-      <!-- KPIs -->
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <!-- KPIs separados en los 3 ejes — 3 columnas compactas -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <!-- 🎯 Intención -->
         <div
           class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
         >
-          <p class="text-2xl font-semibold text-slate-800 dark:text-slate-100">
-            {{ summary.active || 0 }}
-          </p>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Activos</p>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+              🎯 Intención
+            </span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              éxito
+              <span class="font-semibold text-green-600">{{ successPct }}%</span>
+            </span>
+          </div>
+          <div class="divide-y divide-slate-100 dark:divide-slate-700/60">
+            <div
+              v-for="kpi in intentionKpis"
+              :key="kpi.label"
+              class="flex items-center justify-between py-1.5"
+            >
+              <span class="text-sm text-slate-500 dark:text-slate-400">
+                {{ kpi.label }}
+              </span>
+              <span class="text-base font-semibold" :class="kpi.color">
+                {{ kpi.value }}
+              </span>
+            </div>
+          </div>
         </div>
+
+        <!-- ⚙️ Control -->
         <div
           class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
         >
-          <p class="text-2xl font-semibold text-red-500">
-            {{ summary.overdue || 0 }}
-          </p>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Vencidos</p>
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+            ⚙️ Control
+          </span>
+          <div class="divide-y divide-slate-100 dark:divide-slate-700/60 mt-2">
+            <div
+              v-for="kpi in controlKpis"
+              :key="kpi.label"
+              class="flex items-center justify-between py-1.5"
+            >
+              <span class="text-sm text-slate-500 dark:text-slate-400">
+                {{ kpi.label }}
+              </span>
+              <span class="text-base font-semibold" :class="kpi.color">
+                {{ kpi.value }}
+              </span>
+            </div>
+          </div>
         </div>
+
+        <!-- 📬 Entrega -->
         <div
           class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
         >
-          <p class="text-2xl font-semibold text-green-600">{{ successPct }}%</p>
-          <p class="text-xs text-slate-500 dark:text-slate-400">
-            Tasa de éxito
-          </p>
-        </div>
-        <div
-          class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-        >
-          <p class="text-2xl font-semibold text-slate-800 dark:text-slate-100">
-            {{ summary.appointments || 0 }}
-          </p>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Citas</p>
-        </div>
-        <div
-          class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-        >
-          <p class="text-2xl font-semibold text-slate-800 dark:text-slate-100">
-            {{ summary.due_24h || 0 }}
-          </p>
-          <p class="text-xs text-slate-500 dark:text-slate-400">
-            Próximas 24 h
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+            📬 Entrega
+          </span>
+          <div
+            v-if="hasDeliveryData"
+            class="divide-y divide-slate-100 dark:divide-slate-700/60 mt-2"
+          >
+            <div
+              v-for="kpi in deliveryKpis"
+              :key="kpi.label"
+              class="flex items-center justify-between py-1.5"
+            >
+              <span class="text-sm text-slate-500 dark:text-slate-400">
+                {{ kpi.label }}
+              </span>
+              <span class="text-base font-semibold" :class="kpi.color">
+                {{ kpi.value }}
+              </span>
+            </div>
+          </div>
+          <p v-else class="text-xs text-slate-400 py-4 text-center">
+            Aún no se han enviado mensajes.
           </p>
         </div>
       </div>
@@ -628,7 +710,7 @@ export default {
         class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
       >
         <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">
-          Creados vs Completados (por día)
+          Creados vs Objetivos cumplidos (por día)
         </p>
         <div v-if="hasTimeseries" class="chart-box h-56">
           <BarChart :collection="timeseriesChartData" />

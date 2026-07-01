@@ -76,4 +76,15 @@ asumir que algo falta (el módulo avanza rápido). Ver también [[Estado-actual]
       Verificado: mismo contacto en 2 inboxes = permitido; 2 en el mismo inbox = bloqueado
       (modelo + BD). Ver [[Seguimiento-por-canal]].
 
+### 🧹 Deuda técnica
+
+- [ ] **i18n del dashboard de seguimientos** — todo el módulo del dashboard usa
+      strings en español hardcodeados en el template (ej. `Dashboard.vue`,
+      `TrackingsTable.vue`: "Embudo de intención", "Por canal", "Reglas de
+      seguimiento", labels de estado, etc.). El hook pre-commit (lint-staged →
+      `vue/no-bare-strings-in-template`) falla por esto, por lo que los commits
+      del módulo se hacen con `--no-verify`. Refactor: migrar todos los textos a
+      claves i18n (`CONTACT_TRACKING.*`) en es/en. Es amplio y va aparte de las
+      features; hacerlo de una para dejar de saltar el hook.
+
 > Cuando se cierre un punto, muévelo a [[Estado-actual]] como ✅.

@@ -118,6 +118,11 @@ export default {
           value: this.funnel.appointment || 0,
           color: 'text-woot-600 dark:text-woot-500',
         },
+        {
+          key: 'OBJECTIVE_MET',
+          value: this.funnel.objective_met || 0,
+          color: 'text-emerald-600 dark:text-emerald-500',
+        },
       ];
     },
     backRoute() {
@@ -287,73 +292,81 @@ export default {
         </span>
       </div>
 
-      <!-- KPIs de ejecución (estilo métricas de Chatwoot) -->
-      <div
-        class="flex flex-wrap items-stretch mb-3 shrink-0 rounded-md border border-slate-75 dark:border-slate-700 bg-white dark:bg-slate-800 divide-x divide-slate-75 dark:divide-slate-700 shadow-sm"
-      >
-        <div v-for="kpi in kpis" :key="kpi.key" class="flex-1 min-w-[7rem] p-4">
-          <h3
-            class="m-0 text-sm font-medium text-slate-800 dark:text-slate-100"
-          >
-            {{ $t(`TRACKING_CAMPAIGN_DETAIL.KPI.${kpi.key}`) }}
-          </h3>
-          <h4 class="mt-1 mb-0 text-3xl font-thin" :class="kpi.color">
-            {{ kpi.value }}
-          </h4>
-        </div>
-      </div>
-
-      <!-- Entrega (WhatsApp) — eje separado del de ejecución -->
-      <div v-if="hasDelivery" class="mb-5 shrink-0">
-        <p
-          class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400"
-        >
-          {{ $t('TRACKING_CAMPAIGN_DETAIL.DELIVERY.TITLE') }}
-        </p>
+      <!-- KPIs de la campaña — 3 ejes en columnas compactas (mismo layout que el Resumen) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5 shrink-0">
+        <!-- 🎯 Intención -->
         <div
-          class="flex flex-wrap items-stretch rounded-md border border-slate-75 dark:border-slate-700 bg-white dark:bg-slate-800 divide-x divide-slate-75 dark:divide-slate-700 shadow-sm"
+          class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
         >
-          <div
-            v-for="kpi in deliveryKpis"
-            :key="kpi.key"
-            class="flex-1 min-w-[7rem] p-4"
-          >
-            <h3
-              class="m-0 text-sm font-medium text-slate-800 dark:text-slate-100"
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+            🎯 {{ $t('TRACKING_CAMPAIGN_DETAIL.FUNNEL.TITLE') }}
+          </span>
+          <div class="grid grid-cols-2 gap-x-4 mt-2">
+            <div
+              v-for="kpi in funnelKpis"
+              :key="kpi.key"
+              class="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-slate-700/60"
             >
-              {{ $t(`TRACKING_CAMPAIGN_DETAIL.DELIVERY.${kpi.key}`) }}
-            </h3>
-            <h4 class="mt-1 mb-0 text-3xl font-thin" :class="kpi.color">
-              {{ kpi.value }}
-            </h4>
+              <span class="text-sm text-slate-500 dark:text-slate-400">
+                {{ $t(`TRACKING_CAMPAIGN_DETAIL.FUNNEL.${kpi.key}`) }}
+              </span>
+              <span class="text-base font-semibold" :class="kpi.color">
+                {{ kpi.value }}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Embudo de intención — qué contestó el cliente -->
-      <div v-if="hasFunnel" class="mb-5 shrink-0">
-        <p
-          class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400"
-        >
-          {{ $t('TRACKING_CAMPAIGN_DETAIL.FUNNEL.TITLE') }}
-        </p>
+        <!-- ⚙️ Control -->
         <div
-          class="flex flex-wrap items-stretch rounded-md border border-slate-75 dark:border-slate-700 bg-white dark:bg-slate-800 divide-x divide-slate-75 dark:divide-slate-700 shadow-sm"
+          class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
         >
-          <div
-            v-for="kpi in funnelKpis"
-            :key="kpi.key"
-            class="flex-1 min-w-[7rem] p-4"
-          >
-            <h3
-              class="m-0 text-sm font-medium text-slate-800 dark:text-slate-100"
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+            ⚙️ {{ $t('TRACKING_CAMPAIGN_DETAIL.KPI.TITLE') }}
+          </span>
+          <div class="grid grid-cols-2 gap-x-4 mt-2">
+            <div
+              v-for="kpi in kpis"
+              :key="kpi.key"
+              class="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-slate-700/60"
             >
-              {{ $t(`TRACKING_CAMPAIGN_DETAIL.FUNNEL.${kpi.key}`) }}
-            </h3>
-            <h4 class="mt-1 mb-0 text-3xl font-thin" :class="kpi.color">
-              {{ kpi.value }}
-            </h4>
+              <span class="text-sm text-slate-500 dark:text-slate-400">
+                {{ $t(`TRACKING_CAMPAIGN_DETAIL.KPI.${kpi.key}`) }}
+              </span>
+              <span class="text-base font-semibold" :class="kpi.color">
+                {{ kpi.value }}
+              </span>
+            </div>
           </div>
+        </div>
+
+        <!-- 📬 Entrega -->
+        <div
+          class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
+        >
+          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+            📬 {{ $t('TRACKING_CAMPAIGN_DETAIL.DELIVERY.TITLE') }}
+          </span>
+          <div
+            v-if="hasDelivery"
+            class="grid grid-cols-2 gap-x-4 mt-2"
+          >
+            <div
+              v-for="kpi in deliveryKpis"
+              :key="kpi.key"
+              class="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-slate-700/60"
+            >
+              <span class="text-sm text-slate-500 dark:text-slate-400">
+                {{ $t(`TRACKING_CAMPAIGN_DETAIL.DELIVERY.${kpi.key}`) }}
+              </span>
+              <span class="text-base font-semibold" :class="kpi.color">
+                {{ kpi.value }}
+              </span>
+            </div>
+          </div>
+          <p v-else class="text-xs text-slate-400 py-4 text-center">
+            {{ $t('TRACKING_CAMPAIGN_DETAIL.DELIVERY.EMPTY') }}
+          </p>
         </div>
       </div>
 

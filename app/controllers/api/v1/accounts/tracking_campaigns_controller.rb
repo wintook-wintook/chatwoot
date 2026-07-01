@@ -99,9 +99,15 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     replied = base.where.not(last_intent: nil).group(:tracking_campaign_id).count
     interested = base.where(last_intent: INTERESTED_INTENTS).group(:tracking_campaign_id).count
     appointment = base.where.not(appointment_at: nil).group(:tracking_campaign_id).count
+    objective_met = base.where(status: 'objective_met').group(:tracking_campaign_id).count
 
     ids.index_with do |id|
-      { replied: replied[id].to_i, interested: interested[id].to_i, appointment: appointment[id].to_i }
+      {
+        replied: replied[id].to_i,
+        interested: interested[id].to_i,
+        appointment: appointment[id].to_i,
+        objective_met: objective_met[id].to_i
+      }
     end
   end
 
@@ -117,7 +123,7 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       inbox_name: campaign.inbox&.name,
       stats: aggregate_stats(status_counts || {}),
       delivery: aggregate_delivery(delivery_counts || {}),
-      funnel: funnel_counts || { replied: 0, interested: 0, appointment: 0 }
+      funnel: funnel_counts || { replied: 0, interested: 0, appointment: 0, objective_met: 0 }
     }
   end
 

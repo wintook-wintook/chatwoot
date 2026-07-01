@@ -37,6 +37,7 @@
     "START": "Start",
     "OBJECTIVE": "Objective",
     "KPI": {
+      "TITLE": "Control (execution)",
       "CONTACTS": "Contacts",
       "PENDING": "Pending",
       "ACTIVE": "Active",
@@ -45,16 +46,18 @@
       "PROGRESS": "Progress"
     },
     "DELIVERY": {
-      "TITLE": "Delivery (WhatsApp)",
+      "TITLE": "Delivery",
       "DELIVERED": "Delivered",
       "SENT": "Unconfirmed",
-      "FAILED": "Delivery failed"
+      "FAILED": "Delivery failed",
+      "EMPTY": "No messages sent yet."
     },
     "FUNNEL": {
-      "TITLE": "Funnel",
+      "TITLE": "Intent",
       "REPLIED": "Replied",
       "INTERESTED": "Interested",
-      "APPOINTMENT": "Booked"
+      "APPOINTMENT": "Booked",
+      "OBJECTIVE_MET": "Objective met"
     },
     "PROSPECTS": "Prospects",
     "PROSPECTS_EMPTY": "This campaign has no prospects.",

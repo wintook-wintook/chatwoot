@@ -37,6 +37,7 @@
     "START": "Inicio",
     "OBJECTIVE": "Objetivo",
     "KPI": {
+      "TITLE": "Control (ejecución)",
       "CONTACTS": "Contactos",
       "PENDING": "Pendientes",
       "ACTIVE": "Activos",
@@ -45,16 +46,18 @@
       "PROGRESS": "Avance"
     },
     "DELIVERY": {
-      "TITLE": "Entrega (WhatsApp)",
+      "TITLE": "Entrega",
       "DELIVERED": "Entregados",
       "SENT": "Sin confirmar",
-      "FAILED": "Error de entrega"
+      "FAILED": "Error de entrega",
+      "EMPTY": "Aún no se han enviado mensajes."
     },
     "FUNNEL": {
-      "TITLE": "Embudo",
+      "TITLE": "Intención",
       "REPLIED": "Respondieron",
       "INTERESTED": "Interesados",
-      "APPOINTMENT": "Agendaron"
+      "APPOINTMENT": "Agendaron",
+      "OBJECTIVE_MET": "Objetivo cumplido"
     },
     "PROSPECTS": "Prospectos",
     "PROSPECTS_EMPTY": "Esta campaña no tiene prospectos.",

@@ -10,7 +10,8 @@
 # ================================================================================
 class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Accounts::BaseController
   ACTIVE_STATUSES = %w[pending scheduled active paused].freeze
-  CLOSED_STATUSES = %w[completed cancelled failed].freeze
+  # objective_met cuenta como cerrado; es además el único estado de éxito.
+  CLOSED_STATUSES = %w[objective_met completed cancelled failed].freeze
 
   def show
     scope = base_scope
@@ -20,6 +21,7 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
       by_inbox: by_inbox(scope),
       by_template: by_template(scope),
       funnel: funnel(scope),
+      delivery: delivery(scope),
       rules: rules(scope),
       timeseries: timeseries(scope),
       lists: { overdue: overdue_list(scope), appointments: appointments_list(scope) }
@@ -39,16 +41,19 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
   end
 
   def summary(scope)
-    completed = scope.where(status: 'completed').count
-    closed    = scope.where(status: CLOSED_STATUSES).count
+    # Éxito = objetivo cumplido. 'completed' (agotó intentos) ya no es éxito.
+    objectives_met = scope.where(status: 'objective_met').count
+    closed         = scope.where(status: CLOSED_STATUSES).count
     {
-      active:       scope.where(status: ACTIVE_STATUSES).count,
-      overdue:      overdue(scope).count,
-      due_24h:      scope.where(status: ACTIVE_STATUSES, scheduled_for: Time.current..24.hours.from_now).count,
-      appointments: scope.where.not(appointment_at: nil).count,
-      success_rate: closed.zero? ? 0 : (completed.to_f / closed).round(2),
-      avg_attempts: scope.where(status: CLOSED_STATUSES).average(:attempt_count)&.round(1) || 0,
-      total:        scope.count
+      active:         scope.where(status: ACTIVE_STATUSES).count,
+      overdue:        overdue(scope).count,
+      due_24h:        scope.where(status: ACTIVE_STATUSES, scheduled_for: Time.current..24.hours.from_now).count,
+      objectives_met: objectives_met,
+      rejected:       scope.where(outcome: 'rejected').count,
+      appointments:   scope.where.not(appointment_at: nil).count,
+      success_rate:   closed.zero? ? 0 : (objectives_met.to_f / closed).round(2),
+      avg_attempts:   scope.where(status: CLOSED_STATUSES).average(:attempt_count)&.round(1) || 0,
+      total:          scope.count
     }
   end
 
@@ -64,11 +69,11 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
     counts.map { |inbox_id, count| { inbox_id: inbox_id, name: names[inbox_id] || "Inbox #{inbox_id}", count: count } }
   end
 
-  # Fase 2 — por Agente IA (tracking_template), con total y éxito (completed)
+  # Fase 2 — por Agente IA (tracking_template), con total y éxito (objetivo cumplido)
   def by_template(scope)
     with_tpl = scope.where.not(tracking_template_id: nil)
     totals   = with_tpl.group(:tracking_template_id).count
-    success  = with_tpl.where(status: 'completed').group(:tracking_template_id).count
+    success  = with_tpl.where(status: 'objective_met').group(:tracking_template_id).count
     names    = Current.account.tracking_templates.where(id: totals.keys).pluck(:id, :name).to_h
     totals.map do |tpl_id, total|
       { template_id: tpl_id, name: names[tpl_id] || "Agente IA #{tpl_id}", total: total, success: success[tpl_id] || 0 }
@@ -123,11 +128,41 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
     }
   end
 
+  # Eje de ENTREGA (WhatsApp), separado del de control interno. Mismo criterio que
+  # el dashboard de campañas: unidad = estado del ÚLTIMO mensaje saliente por
+  # conversación (1 por seguimiento), no mensajes crudos. 2 queries (sin N+1).
+  def delivery(scope)
+    empty = { delivered: 0, sent: 0, failed: 0 }
+    conv_ids = scope.where.not(conversation_id: nil).distinct.pluck(:conversation_id)
+    return empty if conv_ids.empty?
+
+    # reorder(nil): Message tiene default_scope con ORDER BY que rompe el GROUP BY.
+    last_ids = Message.where(conversation_id: conv_ids, message_type: %i[outgoing template])
+                      .reorder(nil).group(:conversation_id).maximum(:id)
+    return empty if last_ids.empty?
+
+    counts = Hash.new(0)
+    Message.where(id: last_ids.values).select(:id, :status).each do |message|
+      counts[delivery_bucket(message.status)] += 1
+    end
+    { delivered: counts[:delivered], sent: counts[:sent], failed: counts[:failed] }
+  end
+
+  # Message.status → bucket. read cuenta como entregado; sent/progress = enviado sin
+  # confirmar; failed = rechazado por el canal (no entregado).
+  def delivery_bucket(status)
+    case status
+    when 'delivered', 'read' then :delivered
+    when 'failed'            then :failed
+    else                          :sent
+    end
+  end
+
   def overdue(scope)
     scope.where(status: %w[pending scheduled]).where('scheduled_for < ?', Time.current)
   end
 
-  # Fase 3 — serie temporal: creados vs completados por día (rango o últimos 30 días)
+  # Fase 3 — serie temporal: creados vs objetivos cumplidos por día (rango o últimos 30 días)
   def timeseries(scope)
     end_date   = parse_date(params[:date_to]) || Date.current
     start_date = parse_date(params[:date_from]) || (end_date - 29)
@@ -135,10 +170,10 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
     range      = start_date.beginning_of_day..end_date.end_of_day
 
     created   = scope.where(created_at: range).group(Arel.sql('DATE(created_at)')).count
-    completed = scope.where(status: 'completed').where(updated_at: range).group(Arel.sql('DATE(updated_at)')).count
+    succeeded = scope.where(status: 'objective_met').where(updated_at: range).group(Arel.sql('DATE(updated_at)')).count
 
     (start_date..end_date).map do |d|
-      { date: d.iso8601, created: created[d] || 0, completed: completed[d] || 0 }
+      { date: d.iso8601, created: created[d] || 0, objectives_met: succeeded[d] || 0 }
     end
   end
 
