@@ -48,6 +48,25 @@ function deliveryBucket(messageStatus) {
   return 'sent';
 }
 
+// Filtros client-side: cada KPI clicable mapea a un predicado sobre el prospecto.
+// 'clear' no está aquí (limpia el filtro); Avance/Progreso no es filtrable.
+const PROSPECT_FILTERS = {
+  intent_replied: p => !!p.last_intent,
+  intent_interested: p =>
+    ['interested', 'book_appointment', 'reschedule'].includes(p.last_intent),
+  intent_appointment: p => !!p.appointment_at,
+  intent_objective: p => p.status === 'objective_met',
+  ctrl_pending: p => p.status === 'pending' || p.status === 'scheduled',
+  ctrl_active: p => p.status === 'active',
+  ctrl_paused: p => p.status === 'paused',
+  ctrl_completed: p => p.status === 'completed',
+  ctrl_cancelled: p => p.status === 'cancelled',
+  ctrl_failed: p => p.status === 'failed',
+  del_delivered: p => deliveryBucket(p.last_message_status) === 'delivered',
+  del_sent: p => deliveryBucket(p.last_message_status) === 'sent',
+  del_failed: p => deliveryBucket(p.last_message_status) === 'failed',
+};
+
 export default {
   components: { TableFooter },
   data() {
@@ -57,6 +76,8 @@ export default {
       isLoading: false,
       currentPage: 1,
       pageSize: PAGE_SIZE,
+      activeFilter: null, // id del filtro por KPI (PROSPECT_FILTERS) o null
+      activeFilterLabel: '', // etiqueta traducida del KPI activo (para el chip)
     };
   },
   computed: {
@@ -81,16 +102,19 @@ export default {
           key: 'DELIVERED',
           value: this.delivery.delivered || 0,
           color: 'text-green-600 dark:text-green-500',
+          filter: 'del_delivered',
         },
         {
           key: 'SENT',
           value: this.delivery.sent || 0,
           color: 'text-slate-800 dark:text-slate-100',
+          filter: 'del_sent',
         },
         {
           key: 'FAILED',
           value: this.delivery.failed || 0,
           color: 'text-red-500 dark:text-red-400',
+          filter: 'del_failed',
         },
       ];
     },
@@ -107,21 +131,25 @@ export default {
           key: 'REPLIED',
           value: this.funnel.replied || 0,
           color: 'text-slate-800 dark:text-slate-100',
+          filter: 'intent_replied',
         },
         {
           key: 'INTERESTED',
           value: this.funnel.interested || 0,
           color: 'text-green-600 dark:text-green-500',
+          filter: 'intent_interested',
         },
         {
           key: 'APPOINTMENT',
           value: this.funnel.appointment || 0,
           color: 'text-woot-600 dark:text-woot-500',
+          filter: 'intent_appointment',
         },
         {
           key: 'OBJECTIVE_MET',
           value: this.funnel.objective_met || 0,
           color: 'text-emerald-600 dark:text-emerald-500',
+          filter: 'intent_objective',
         },
       ];
     },
@@ -134,31 +162,49 @@ export default {
           key: 'CONTACTS',
           value: this.stats.total || 0,
           color: 'text-slate-800 dark:text-slate-100',
+          filter: 'clear',
         },
         {
           key: 'PENDING',
           value: this.stats.pending || 0,
           color: 'text-slate-800 dark:text-slate-100',
+          filter: 'ctrl_pending',
         },
         {
           key: 'ACTIVE',
           value: this.stats.active || 0,
           color: 'text-green-600 dark:text-green-500',
+          filter: 'ctrl_active',
+        },
+        {
+          key: 'PAUSED',
+          value: this.stats.paused || 0,
+          color: 'text-amber-500 dark:text-amber-400',
+          filter: 'ctrl_paused',
         },
         {
           key: 'COMPLETED',
           value: this.stats.completed || 0,
           color: 'text-green-700 dark:text-green-500',
+          filter: 'ctrl_completed',
+        },
+        {
+          key: 'CANCELLED',
+          value: this.stats.cancelled || 0,
+          color: 'text-red-500 dark:text-red-400',
+          filter: 'ctrl_cancelled',
         },
         {
           key: 'FAILED',
           value: this.stats.failed || 0,
-          color: 'text-red-500 dark:text-red-400',
+          color: 'text-red-700 dark:text-red-500',
+          filter: 'ctrl_failed',
         },
         {
           key: 'PROGRESS',
           value: `${this.progressPct}%`,
           color: 'text-woot-600 dark:text-woot-500',
+          filter: null,
         },
       ];
     },
@@ -166,12 +212,17 @@ export default {
       if (!this.stats.total) return 0;
       return Math.round((this.stats.completed / this.stats.total) * 100);
     },
+    // Prospectos tras aplicar el filtro por KPI (client-side sobre lo cargado).
+    filteredProspects() {
+      const predicate = PROSPECT_FILTERS[this.activeFilter];
+      return predicate ? this.prospects.filter(predicate) : this.prospects;
+    },
     totalProspects() {
-      return this.prospects.length;
+      return this.filteredProspects.length;
     },
     paginatedProspects() {
       const start = (this.currentPage - 1) * this.pageSize;
-      return this.prospects.slice(start, start + this.pageSize);
+      return this.filteredProspects.slice(start, start + this.pageSize);
     },
   },
   mounted() {
@@ -200,6 +251,22 @@ export default {
     },
     onPageChange(page) {
       this.currentPage = page;
+    },
+    // Clic en un KPI: 'clear' o volver a clicar el activo limpia; si no, filtra.
+    applyFilter(filterId, label) {
+      if (!filterId) return; // KPI no filtrable (ej. Avance)
+      if (filterId === 'clear' || filterId === this.activeFilter) {
+        this.clearFilter();
+        return;
+      }
+      this.activeFilter = filterId;
+      this.activeFilterLabel = label || '';
+      this.currentPage = 1;
+    },
+    clearFilter() {
+      this.activeFilter = null;
+      this.activeFilterLabel = '';
+      this.currentPage = 1;
     },
     campaignStatusLabel(status) {
       return this.$t(`TRACKING_CAMPAIGNS_VIEW.STATUS.${status}`);
@@ -306,6 +373,20 @@ export default {
               v-for="kpi in funnelKpis"
               :key="kpi.key"
               class="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-slate-700/60"
+              :class="[
+                kpi.filter
+                  ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40'
+                  : '',
+                activeFilter === kpi.filter
+                  ? 'bg-woot-50 dark:bg-woot-800/30 rounded'
+                  : '',
+              ]"
+              @click="
+                applyFilter(
+                  kpi.filter,
+                  $t(`TRACKING_CAMPAIGN_DETAIL.FUNNEL.${kpi.key}`)
+                )
+              "
             >
               <span class="text-sm text-slate-500 dark:text-slate-400">
                 {{ $t(`TRACKING_CAMPAIGN_DETAIL.FUNNEL.${kpi.key}`) }}
@@ -329,6 +410,20 @@ export default {
               v-for="kpi in kpis"
               :key="kpi.key"
               class="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-slate-700/60"
+              :class="[
+                kpi.filter
+                  ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40'
+                  : '',
+                activeFilter === kpi.filter
+                  ? 'bg-woot-50 dark:bg-woot-800/30 rounded'
+                  : '',
+              ]"
+              @click="
+                applyFilter(
+                  kpi.filter,
+                  $t(`TRACKING_CAMPAIGN_DETAIL.KPI.${kpi.key}`)
+                )
+              "
             >
               <span class="text-sm text-slate-500 dark:text-slate-400">
                 {{ $t(`TRACKING_CAMPAIGN_DETAIL.KPI.${kpi.key}`) }}
@@ -347,14 +442,25 @@ export default {
           <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
             📬 {{ $t('TRACKING_CAMPAIGN_DETAIL.DELIVERY.TITLE') }}
           </span>
-          <div
-            v-if="hasDelivery"
-            class="grid grid-cols-2 gap-x-4 mt-2"
-          >
+          <div v-if="hasDelivery" class="grid grid-cols-2 gap-x-4 mt-2">
             <div
               v-for="kpi in deliveryKpis"
               :key="kpi.key"
               class="flex items-center justify-between py-1.5 border-b border-slate-100 dark:border-slate-700/60"
+              :class="[
+                kpi.filter
+                  ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40'
+                  : '',
+                activeFilter === kpi.filter
+                  ? 'bg-woot-50 dark:bg-woot-800/30 rounded'
+                  : '',
+              ]"
+              @click="
+                applyFilter(
+                  kpi.filter,
+                  $t(`TRACKING_CAMPAIGN_DETAIL.DELIVERY.${kpi.key}`)
+                )
+              "
             >
               <span class="text-sm text-slate-500 dark:text-slate-400">
                 {{ $t(`TRACKING_CAMPAIGN_DETAIL.DELIVERY.${kpi.key}`) }}
@@ -371,17 +477,36 @@ export default {
       </div>
 
       <!-- Prospectos -->
-      <h2
-        class="mb-2 text-base font-semibold text-slate-700 dark:text-slate-200 shrink-0"
-      >
-        {{ $t('TRACKING_CAMPAIGN_DETAIL.PROSPECTS') }} ({{ totalProspects }})
-      </h2>
+      <div class="mb-2 flex items-center gap-3 shrink-0">
+        <h2 class="text-base font-semibold text-slate-700 dark:text-slate-200">
+          {{ $t('TRACKING_CAMPAIGN_DETAIL.PROSPECTS') }} ({{ totalProspects }})
+        </h2>
+        <!-- Filtro activo desde un KPI -->
+        <span
+          v-if="activeFilter"
+          class="inline-flex items-center gap-2 text-xs rounded-full border border-woot-200 dark:border-woot-700 bg-woot-50 dark:bg-woot-800/30 text-woot-700 dark:text-woot-300 pl-2.5 pr-1.5 py-1"
+        >
+          {{ $t('TRACKING_CAMPAIGN_DETAIL.FILTERED_BY') }}:
+          {{ activeFilterLabel }}
+          <button
+            type="button"
+            class="hover:text-woot-900 dark:hover:text-woot-100 font-medium underline"
+            @click="clearFilter"
+          >
+            {{ $t('TRACKING_CAMPAIGN_DETAIL.SHOW_ALL') }}
+          </button>
+        </span>
+      </div>
 
       <div
         v-if="totalProspects === 0"
         class="py-10 text-center text-slate-400 shrink-0"
       >
-        {{ $t('TRACKING_CAMPAIGN_DETAIL.PROSPECTS_EMPTY') }}
+        {{
+          activeFilter
+            ? $t('TRACKING_CAMPAIGN_DETAIL.FILTER_EMPTY')
+            : $t('TRACKING_CAMPAIGN_DETAIL.PROSPECTS_EMPTY')
+        }}
       </div>
 
       <!-- Área de tabla: ocupa el alto restante y hace scroll interno -->

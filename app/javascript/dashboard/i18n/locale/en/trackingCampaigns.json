@@ -41,7 +41,9 @@
       "CONTACTS": "Contacts",
       "PENDING": "Pending",
       "ACTIVE": "Active",
+      "PAUSED": "Paused",
       "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
       "FAILED": "Failed",
       "PROGRESS": "Progress"
     },
@@ -61,6 +63,9 @@
     },
     "PROSPECTS": "Prospects",
     "PROSPECTS_EMPTY": "This campaign has no prospects.",
+    "FILTERED_BY": "Filtered by",
+    "SHOW_ALL": "Show all",
+    "FILTER_EMPTY": "No prospects match this filter.",
     "COL": {
       "CONTACT": "Contact",
       "STATUS": "Status",

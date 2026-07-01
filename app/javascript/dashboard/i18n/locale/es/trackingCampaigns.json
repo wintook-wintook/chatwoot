@@ -41,7 +41,9 @@
       "CONTACTS": "Contactos",
       "PENDING": "Pendientes",
       "ACTIVE": "Activos",
+      "PAUSED": "Pausados",
       "COMPLETED": "Completados",
+      "CANCELLED": "Cancelados",
       "FAILED": "Fallidos",
       "PROGRESS": "Avance"
     },
@@ -61,6 +63,9 @@
     },
     "PROSPECTS": "Prospectos",
     "PROSPECTS_EMPTY": "Esta campaña no tiene prospectos.",
+    "FILTERED_BY": "Filtrado por",
+    "SHOW_ALL": "Ver todos",
+    "FILTER_EMPTY": "Ningún prospecto coincide con este filtro.",
     "COL": {
       "CONTACT": "Contacto",
       "STATUS": "Estado",

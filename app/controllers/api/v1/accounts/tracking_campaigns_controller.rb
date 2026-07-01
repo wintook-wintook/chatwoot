@@ -131,9 +131,11 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     {
       total: status_counts.values.sum,
       pending: status_counts['pending'].to_i + status_counts['scheduled'].to_i,
-      active: status_counts['active'].to_i + status_counts['paused'].to_i,
+      active: status_counts['active'].to_i,
+      paused: status_counts['paused'].to_i,
       completed: status_counts['completed'].to_i,
-      failed: status_counts['failed'].to_i + status_counts['cancelled'].to_i
+      cancelled: status_counts['cancelled'].to_i,
+      failed: status_counts['failed'].to_i
     }
   end
 
