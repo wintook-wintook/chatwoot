@@ -8,6 +8,9 @@ import { mapGetters } from 'vuex';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import ContactTrackingsAPI from 'dashboard/api/contactTrackings';
+import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+
+const PAGE_SIZE = 25;
 
 // Colores del estado de la campaña (draft/running/paused/finished)
 const CAMPAIGN_STATUS_COLOR = {
@@ -46,11 +49,14 @@ function deliveryBucket(messageStatus) {
 }
 
 export default {
+  components: { TableFooter },
   data() {
     return {
       campaign: null,
       prospects: [],
       isLoading: false,
+      currentPage: 1,
+      pageSize: PAGE_SIZE,
     };
   },
   computed: {
@@ -74,17 +80,17 @@ export default {
         {
           key: 'DELIVERED',
           value: this.delivery.delivered || 0,
-          color: 'text-green-600',
+          color: 'text-green-600 dark:text-green-500',
         },
         {
           key: 'SENT',
           value: this.delivery.sent || 0,
-          color: 'text-slate-500',
+          color: 'text-slate-800 dark:text-slate-100',
         },
         {
           key: 'FAILED',
           value: this.delivery.failed || 0,
-          color: 'text-red-600',
+          color: 'text-red-500 dark:text-red-400',
         },
       ];
     },
@@ -95,22 +101,46 @@ export default {
       return [
         {
           key: 'CONTACTS',
-          value: this.stats.total,
-          color: 'text-slate-700 dark:text-slate-200',
+          value: this.stats.total || 0,
+          color: 'text-slate-800 dark:text-slate-100',
         },
-        { key: 'PENDING', value: this.stats.pending, color: 'text-slate-500' },
-        { key: 'ACTIVE', value: this.stats.active, color: 'text-green-600' },
+        {
+          key: 'PENDING',
+          value: this.stats.pending || 0,
+          color: 'text-slate-800 dark:text-slate-100',
+        },
+        {
+          key: 'ACTIVE',
+          value: this.stats.active || 0,
+          color: 'text-green-600 dark:text-green-500',
+        },
         {
           key: 'COMPLETED',
-          value: this.stats.completed,
-          color: 'text-green-700',
+          value: this.stats.completed || 0,
+          color: 'text-green-700 dark:text-green-500',
         },
-        { key: 'FAILED', value: this.stats.failed, color: 'text-red-500' },
+        {
+          key: 'FAILED',
+          value: this.stats.failed || 0,
+          color: 'text-red-500 dark:text-red-400',
+        },
+        {
+          key: 'PROGRESS',
+          value: `${this.progressPct}%`,
+          color: 'text-woot-600 dark:text-woot-500',
+        },
       ];
     },
     progressPct() {
       if (!this.stats.total) return 0;
       return Math.round((this.stats.completed / this.stats.total) * 100);
+    },
+    totalProspects() {
+      return this.prospects.length;
+    },
+    paginatedProspects() {
+      const start = (this.currentPage - 1) * this.pageSize;
+      return this.prospects.slice(start, start + this.pageSize);
     },
   },
   mounted() {
@@ -129,12 +159,16 @@ export default {
         ]);
         this.campaign = campaign;
         this.prospects = list.trackings || [];
+        this.currentPage = 1;
       } catch (error) {
         this.campaign = null;
         this.prospects = [];
       } finally {
         this.isLoading = false;
       }
+    },
+    onPageChange(page) {
+      this.currentPage = page;
     },
     campaignStatusLabel(status) {
       return this.$t(`TRACKING_CAMPAIGNS_VIEW.STATUS.${status}`);
@@ -178,7 +212,7 @@ export default {
 </script>
 
 <template>
-  <div class="flex flex-col flex-1 w-full h-full overflow-auto p-4">
+  <div class="flex flex-col flex-1 w-full h-full overflow-hidden p-4">
     <!-- Volver -->
     <router-link
       :to="backRoute"
@@ -195,7 +229,7 @@ export default {
 
     <template v-else-if="campaign">
       <!-- Cabecera -->
-      <div class="flex items-center gap-3 mb-1">
+      <div class="flex items-center gap-3 mb-1 shrink-0">
         <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">
           {{ campaign.name }}
         </h1>
@@ -207,7 +241,7 @@ export default {
         </span>
       </div>
       <div
-        class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500 dark:text-slate-400 mb-5"
+        class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500 dark:text-slate-400 mb-5 shrink-0"
       >
         <span>
           {{ $t('TRACKING_CAMPAIGN_DETAIL.AGENT') }}:
@@ -227,140 +261,162 @@ export default {
         </span>
       </div>
 
-      <!-- KPIs -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-        <div
-          v-for="kpi in kpis"
-          :key="kpi.key"
-          class="p-3 rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800"
-        >
-          <p class="text-xs text-slate-400">
+      <!-- KPIs de ejecución (estilo métricas de Chatwoot) -->
+      <div
+        class="flex flex-wrap items-stretch mb-3 shrink-0 rounded-md border border-slate-75 dark:border-slate-700 bg-white dark:bg-slate-800 divide-x divide-slate-75 dark:divide-slate-700 shadow-sm"
+      >
+        <div v-for="kpi in kpis" :key="kpi.key" class="flex-1 min-w-[7rem] p-4">
+          <h3
+            class="m-0 text-sm font-medium text-slate-800 dark:text-slate-100"
+          >
             {{ $t(`TRACKING_CAMPAIGN_DETAIL.KPI.${kpi.key}`) }}
-          </p>
-          <p class="text-2xl font-bold" :class="kpi.color">{{ kpi.value }}</p>
-        </div>
-        <div
-          class="p-3 rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800"
-        >
-          <p class="text-xs text-slate-400">
-            {{ $t('TRACKING_CAMPAIGN_DETAIL.KPI.PROGRESS') }}
-          </p>
-          <p class="text-2xl font-bold text-green-600">{{ progressPct }}%</p>
+          </h3>
+          <h4 class="mt-1 mb-0 text-3xl font-thin" :class="kpi.color">
+            {{ kpi.value }}
+          </h4>
         </div>
       </div>
 
       <!-- Entrega (WhatsApp) — eje separado del de ejecución -->
-      <div v-if="hasDelivery" class="mb-6">
+      <div v-if="hasDelivery" class="mb-5 shrink-0">
         <p
-          class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2"
+          class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400"
         >
           {{ $t('TRACKING_CAMPAIGN_DETAIL.DELIVERY.TITLE') }}
         </p>
-        <div class="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div
+          class="flex flex-wrap items-stretch rounded-md border border-slate-75 dark:border-slate-700 bg-white dark:bg-slate-800 divide-x divide-slate-75 dark:divide-slate-700 shadow-sm"
+        >
           <div
             v-for="kpi in deliveryKpis"
             :key="kpi.key"
-            class="p-3 rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800"
+            class="flex-1 min-w-[7rem] p-4"
           >
-            <p class="text-xs text-slate-400">
+            <h3
+              class="m-0 text-sm font-medium text-slate-800 dark:text-slate-100"
+            >
               {{ $t(`TRACKING_CAMPAIGN_DETAIL.DELIVERY.${kpi.key}`) }}
-            </p>
-            <p class="text-2xl font-bold" :class="kpi.color">{{ kpi.value }}</p>
+            </h3>
+            <h4 class="mt-1 mb-0 text-3xl font-thin" :class="kpi.color">
+              {{ kpi.value }}
+            </h4>
           </div>
         </div>
       </div>
 
       <!-- Prospectos -->
       <h2
-        class="text-base font-semibold text-slate-700 dark:text-slate-200 mb-2"
+        class="mb-2 text-base font-semibold text-slate-700 dark:text-slate-200 shrink-0"
       >
-        {{ $t('TRACKING_CAMPAIGN_DETAIL.PROSPECTS') }} ({{ prospects.length }})
+        {{ $t('TRACKING_CAMPAIGN_DETAIL.PROSPECTS') }} ({{ totalProspects }})
       </h2>
 
       <div
-        v-if="prospects.length === 0"
-        class="py-10 text-center text-slate-400"
+        v-if="totalProspects === 0"
+        class="py-10 text-center text-slate-400 shrink-0"
       >
         {{ $t('TRACKING_CAMPAIGN_DETAIL.PROSPECTS_EMPTY') }}
       </div>
 
-      <table v-else class="w-full text-sm border-collapse">
-        <thead>
-          <tr
-            class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700"
-          >
-            <th class="p-3">
-              {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.CONTACT') }}
-            </th>
-            <th class="p-3">{{ $t('TRACKING_CAMPAIGN_DETAIL.COL.STATUS') }}</th>
-            <th class="p-3">
-              {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.DELIVERY') }}
-            </th>
-            <th class="p-3">{{ $t('TRACKING_CAMPAIGN_DETAIL.COL.INTENT') }}</th>
-            <th class="p-3">
-              {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.OUTCOME') }}
-            </th>
-            <th class="p-3">
-              {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.SCHEDULED') }}
-            </th>
-            <th class="p-3 text-center">
-              {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.ATTEMPTS') }}
-            </th>
-            <th class="p-3 text-right">
-              {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.ACTION') }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="p in prospects"
-            :key="p.id"
-            class="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-25 dark:hover:bg-slate-800/40"
-          >
-            <td class="p-3 text-slate-700 dark:text-slate-200">
-              {{ p.contact_name || '—' }}
-            </td>
-            <td class="p-3 font-medium" :class="trackingStatusColor(p.status)">
-              {{ trackingStatusLabel(p.status) }}
-            </td>
-            <td class="p-3">
-              <span
-                v-if="deliveryMeta(p)"
-                class="inline-flex items-center gap-1 font-medium"
-                :class="deliveryMeta(p).color"
-                :title="p.last_message_error || deliveryLabel(p)"
-              >
-                {{ deliveryMeta(p).icon }} {{ deliveryLabel(p) }}
-              </span>
-              <span v-else class="text-slate-300">—</span>
-            </td>
-            <td class="p-3 text-slate-500 dark:text-slate-400">
-              {{ p.last_intent || '—' }}
-            </td>
-            <td class="p-3 text-slate-500 dark:text-slate-400">
-              {{ p.outcome || '—' }}
-            </td>
-            <td
-              class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap"
+      <!-- Área de tabla: ocupa el alto restante y hace scroll interno -->
+      <div v-else class="flex flex-col flex-1 min-h-0">
+        <div
+          class="flex-1 min-h-0 overflow-y-auto border border-slate-75 dark:border-slate-700 rounded-md"
+        >
+          <table class="w-full text-sm border-collapse">
+            <thead
+              class="sticky top-0 z-10 bg-white dark:bg-slate-800 shadow-sm"
             >
-              {{ formatDate(p.scheduled_for) }}
-            </td>
-            <td class="p-3 text-center text-slate-500">
-              {{ p.attempt_count }}/{{ p.max_attempts }}
-            </td>
-            <td class="p-3 text-right">
-              <router-link
-                v-if="conversationUrl(p)"
-                :to="conversationUrl(p)"
-                class="text-woot-600 hover:text-woot-700 text-xs font-medium"
+              <tr class="text-left text-slate-500 dark:text-slate-400">
+                <th class="p-3">
+                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.CONTACT') }}
+                </th>
+                <th class="p-3">
+                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.STATUS') }}
+                </th>
+                <th class="p-3">
+                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.DELIVERY') }}
+                </th>
+                <th class="p-3">
+                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.INTENT') }}
+                </th>
+                <th class="p-3">
+                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.OUTCOME') }}
+                </th>
+                <th class="p-3">
+                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.SCHEDULED') }}
+                </th>
+                <th class="p-3 text-center">
+                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.ATTEMPTS') }}
+                </th>
+                <th class="p-3 text-right">
+                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.ACTION') }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="p in paginatedProspects"
+                :key="p.id"
+                class="border-t border-slate-75 dark:border-slate-800 hover:bg-slate-25 dark:hover:bg-slate-800/40"
               >
-                {{ $t('TRACKING_CAMPAIGN_DETAIL.OPEN_CONVERSATION') }}
-              </router-link>
-              <span v-else class="text-slate-300">—</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                <td class="p-3 text-slate-700 dark:text-slate-200">
+                  {{ p.contact_name || '—' }}
+                </td>
+                <td
+                  class="p-3 font-medium"
+                  :class="trackingStatusColor(p.status)"
+                >
+                  {{ trackingStatusLabel(p.status) }}
+                </td>
+                <td class="p-3">
+                  <span
+                    v-if="deliveryMeta(p)"
+                    class="inline-flex items-center gap-1 font-medium"
+                    :class="deliveryMeta(p).color"
+                    :title="p.last_message_error || deliveryLabel(p)"
+                  >
+                    {{ deliveryMeta(p).icon }} {{ deliveryLabel(p) }}
+                  </span>
+                  <span v-else class="text-slate-300">—</span>
+                </td>
+                <td class="p-3 text-slate-500 dark:text-slate-400">
+                  {{ p.last_intent || '—' }}
+                </td>
+                <td class="p-3 text-slate-500 dark:text-slate-400">
+                  {{ p.outcome || '—' }}
+                </td>
+                <td
+                  class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap"
+                >
+                  {{ formatDate(p.scheduled_for) }}
+                </td>
+                <td class="p-3 text-center text-slate-500">
+                  {{ p.attempt_count }}/{{ p.max_attempts }}
+                </td>
+                <td class="p-3 text-right">
+                  <router-link
+                    v-if="conversationUrl(p)"
+                    :to="conversationUrl(p)"
+                    class="text-woot-600 hover:text-woot-700 text-xs font-medium"
+                  >
+                    {{ $t('TRACKING_CAMPAIGN_DETAIL.OPEN_CONVERSATION') }}
+                  </router-link>
+                  <span v-else class="text-slate-300">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <TableFooter
+          class="shrink-0"
+          :current-page="currentPage"
+          :page-size="pageSize"
+          :total-count="totalProspects"
+          @page-change="onPageChange"
+        />
+      </div>
     </template>
   </div>
 </template>
