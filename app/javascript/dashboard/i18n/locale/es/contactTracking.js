@@ -75,6 +75,7 @@ export default {
         ACTIVE: 'Activo',
         PAUSED: 'Pausado',
         COMPLETED: 'Completado',
+        OBJECTIVE_MET: 'Objetivo cumplido',
         CANCELLED: 'Cancelado',
         FAILED: 'Fallido',
       },
@@ -142,6 +143,7 @@ export default {
           LABEL: 'Acción',
           CANCEL: 'Cancelar seguimiento',
           PAUSE: 'Pausar seguimiento',
+          OBJECTIVE_MET: 'Objetivo cumplido',
         },
         DIRECTIONS: {
           LABEL: 'Dirección',

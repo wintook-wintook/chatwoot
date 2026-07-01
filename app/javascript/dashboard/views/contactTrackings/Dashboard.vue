@@ -15,6 +15,7 @@ const STATUS_META = {
   active: { label: 'Activo', color: '#22c55e' },
   paused: { label: 'Pausado', color: '#f59e0b' },
   completed: { label: 'Completado', color: '#16a34a' },
+  objective_met: { label: 'Objetivo cumplido', color: '#059669' },
   cancelled: { label: 'Cancelado', color: '#ef4444' },
   failed: { label: 'Fallido', color: '#b91c1c' },
 };
@@ -160,6 +161,41 @@ export default {
           value: f.appointment || 0,
           pct: pct(f.appointment),
           color: '#16a34a',
+        },
+      ];
+    },
+
+    // Reglas — KPIs de palabras clave de acción (junto al embudo)
+    rulesMetrics() {
+      return this.metrics?.rules || {};
+    },
+    hasRulesData() {
+      const r = this.rulesMetrics;
+      return (r.trackings_with_rules || 0) > 0 || (r.fired_total || 0) > 0;
+    },
+    ruleActionStages() {
+      const r = this.rulesMetrics;
+      const by = r.by_action || {};
+      const total = r.fired_total || 0;
+      const pct = v => (total ? Math.round((v / total) * 100) : 0);
+      return [
+        {
+          label: '🎯 Objetivo cumplido',
+          value: by.objective_met || 0,
+          pct: pct(by.objective_met || 0),
+          color: '#059669',
+        },
+        {
+          label: '⏸️ Pausados',
+          value: by.pause || 0,
+          pct: pct(by.pause || 0),
+          color: '#f59e0b',
+        },
+        {
+          label: '⌨️ Cancelados',
+          value: by.cancel || 0,
+          pct: pct(by.cancel || 0),
+          color: '#ef4444',
         },
       ];
     },
@@ -469,6 +505,122 @@ export default {
             </span>
           </div>
         </div>
+      </div>
+
+      <!-- Reglas de seguimiento (palabras clave de acción) -->
+      <div
+        class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+      >
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
+            Reglas de seguimiento
+          </p>
+          <span
+            v-if="hasRulesData"
+            class="text-xs text-slate-500 dark:text-slate-400"
+          >
+            Tasa de disparo:
+            <span class="font-semibold text-slate-700 dark:text-slate-200">
+              {{ Math.round((rulesMetrics.fire_rate || 0) * 100) }}%
+            </span>
+          </span>
+        </div>
+
+        <!-- Adopción: siempre visible -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="rounded-md bg-slate-50 dark:bg-slate-700/40 p-3">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Agentes IA con reglas
+            </p>
+            <p class="text-lg font-semibold text-slate-700 dark:text-slate-200">
+              {{ rulesMetrics.templates_with_rules || 0 }}
+              <span class="text-sm font-normal text-slate-400"
+                >/ {{ rulesMetrics.templates_total || 0 }}</span
+              >
+            </p>
+          </div>
+          <div class="rounded-md bg-slate-50 dark:bg-slate-700/40 p-3">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Seguimientos con reglas
+            </p>
+            <p class="text-lg font-semibold text-slate-700 dark:text-slate-200">
+              {{ rulesMetrics.trackings_with_rules || 0 }}
+              <span class="text-sm font-normal text-slate-400"
+                >/ {{ rulesMetrics.trackings_total || 0 }}</span
+              >
+            </p>
+          </div>
+        </div>
+
+        <!-- Efectividad: solo sobre el subconjunto con reglas -->
+        <template v-if="hasRulesData">
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">
+            Cerrados por una regla ({{ rulesMetrics.fired_total || 0 }} en total)
+          </p>
+          <div class="flex flex-col gap-2">
+            <div
+              v-for="stage in ruleActionStages"
+              :key="stage.label"
+              class="flex items-center gap-3"
+            >
+              <span
+                class="w-36 text-xs text-slate-500 dark:text-slate-400 shrink-0"
+                >{{ stage.label }}</span
+              >
+              <div
+                class="flex-1 h-5 rounded bg-slate-100 dark:bg-slate-700 overflow-hidden"
+              >
+                <div
+                  class="h-full rounded transition-all"
+                  :style="{
+                    width: stage.pct + '%',
+                    backgroundColor: stage.color,
+                  }"
+                />
+              </div>
+              <span
+                class="w-16 text-right text-xs text-slate-600 dark:text-slate-300 shrink-0"
+              >
+                {{ stage.value }} ({{ stage.pct }}%)
+              </span>
+            </div>
+          </div>
+
+          <!-- Top palabras clave -->
+          <div
+            v-if="(rulesMetrics.top_keywords || []).length"
+            class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700"
+          >
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">
+              Palabras clave más frecuentes
+            </p>
+            <div class="flex flex-wrap gap-1.5">
+              <span
+                v-for="kw in rulesMetrics.top_keywords"
+                :key="kw.keyword"
+                class="inline-flex items-center gap-1.5 text-xs rounded-full border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1"
+              >
+                <span class="text-slate-700 dark:text-slate-200">{{
+                  kw.keyword
+                }}</span>
+                <span
+                  class="text-slate-400 dark:text-slate-500 font-semibold"
+                  >{{ kw.count }}</span
+                >
+              </span>
+            </div>
+          </div>
+        </template>
+
+        <!-- Empty-state: sin reglas configuradas -->
+        <p
+          v-else
+          class="text-sm text-slate-400 py-6 text-center"
+        >
+          Aún no configuras reglas en tus Agentes IA. Agrégalas en la pestaña
+          «Reglas» del Agente para automatizar cancelaciones, pausas y objetivos
+          cumplidos.
+        </p>
       </div>
 
       <!-- Serie temporal -->

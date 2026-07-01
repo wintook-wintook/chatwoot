@@ -17,6 +17,7 @@ const STATUS_META = {
   active: { label: 'Activo', color: 'text-green-600' },
   paused: { label: 'Pausado', color: 'text-amber-500' },
   completed: { label: 'Completado', color: 'text-green-700' },
+  objective_met: { label: 'Objetivo cumplido', color: 'text-emerald-600' },
   cancelled: { label: 'Cancelado', color: 'text-red-500' },
   failed: { label: 'Fallido', color: 'text-red-700' },
 };
@@ -174,7 +175,7 @@ export default {
       return s === 'paused';
     },
     canCancel(s) {
-      return !['completed', 'cancelled', 'failed'].includes(s);
+      return !['completed', 'objective_met', 'cancelled', 'failed'].includes(s);
     },
     async lifecycle(row, action) {
       this.closeMenu();

@@ -32,6 +32,7 @@
 #  calendar_integration_ids   :jsonb            not null
 #  complementary_prompt       :text
 #  interval_days              :integer
+#  keyword_action_fired       :jsonb
 #  keyword_actions            :jsonb            not null
 #  last_attempt_at            :datetime
 #  last_error                 :string
@@ -111,7 +112,8 @@ class ContactTracking < ApplicationRecord
     scheduled: 'scheduled',   # Programado para próximo intento
     active: 'active',         # En proceso de ejecución
     paused: 'paused',         # Pausado manualmente
-    completed: 'completed',   # Completado exitosamente
+    completed: 'completed',   # Completado exitosamente (agotó intentos)
+    objective_met: 'objective_met', # Objetivo del seguimiento cumplido
     cancelled: 'cancelled',   # Cancelado manualmente
     failed: 'failed'          # Falló en ejecución
   }
@@ -181,7 +183,12 @@ class ContactTracking < ApplicationRecord
 
   # Verifica si el seguimiento puede cancelarse
   def can_cancel?
-    !completed? && !cancelled?
+    !completed? && !cancelled? && !objective_met?
+  end
+
+  # Verifica si el seguimiento puede marcarse como objetivo cumplido
+  def can_complete?
+    !completed? && !cancelled? && !objective_met?
   end
 
   # Calcula intentos restantes
@@ -435,6 +442,22 @@ class ContactTracking < ApplicationRecord
     return false unless can_cancel?
     cancel_existing_jobs
     update(status: 'cancelled')
+  end
+
+  # Marca el seguimiento como "objetivo cumplido" — el objetivo se alcanzó.
+  # Estado terminal distinto de 'completed' (que solo agota los intentos).
+  def mark_objective_met!
+    return false unless can_complete?
+
+    cancel_existing_jobs
+    context_entry = "\n\n🎯 OBJETIVO CUMPLIDO: #{Time.current.strftime('%d/%m/%Y %H:%M')}"
+    Rails.logger.info "[ContactTracking] 🎯 Tracking #{id} marcado como objetivo cumplido"
+
+    update(
+      status: 'objective_met',
+      outcome: 'objective_met',
+      ai_context: "#{ai_context}#{context_entry}"
+    )
   end
 
   private

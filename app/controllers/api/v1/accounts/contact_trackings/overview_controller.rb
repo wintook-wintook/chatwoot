@@ -20,6 +20,7 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
       by_inbox: by_inbox(scope),
       by_template: by_template(scope),
       funnel: funnel(scope),
+      rules: rules(scope),
       timeseries: timeseries(scope),
       lists: { overdue: overdue_list(scope), appointments: appointments_list(scope) }
     }
@@ -81,6 +82,44 @@ class Api::V1::Accounts::ContactTrackings::OverviewController < Api::V1::Account
       replied:     scope.where.not(last_intent: nil).count,
       interested:  scope.where(last_intent: %w[interested book_appointment reschedule]).count,
       appointment: scope.where.not(appointment_at: nil).count
+    }
+  end
+
+  # KPIs de reglas (palabras clave de acción).
+  # Dos familias: adopción (funciona aunque casi nadie use reglas) y
+  # efectividad (solo sobre el subconjunto de seguimientos CON reglas).
+  def rules(scope)
+    with_rules = scope.where("jsonb_typeof(keyword_actions) = 'array' AND jsonb_array_length(keyword_actions) > 0")
+    fired      = scope.where.not(keyword_action_fired: nil)
+    by_action  = fired.group(Arel.sql("keyword_action_fired->>'action'")).count
+
+    templates_total = Current.account.tracking_templates.count
+    templates_with_rules = Current.account.tracking_templates
+                                  .where("jsonb_typeof(keyword_actions) = 'array' AND jsonb_array_length(keyword_actions) > 0")
+                                  .count
+
+    top_keywords = fired.group(Arel.sql("keyword_action_fired->>'keyword'"))
+                        .count
+                        .sort_by { |_k, v| -v }
+                        .first(5)
+                        .map { |keyword, count| { keyword: keyword, count: count } }
+
+    trackings_with_rules = with_rules.count
+    fired_total = fired.count
+
+    {
+      templates_total:      templates_total,
+      templates_with_rules: templates_with_rules,
+      trackings_total:      scope.count,
+      trackings_with_rules: trackings_with_rules,
+      fired_total:          fired_total,
+      fire_rate:            trackings_with_rules.zero? ? 0 : (fired_total.to_f / trackings_with_rules).round(2),
+      by_action: {
+        cancel:        by_action['cancel'] || 0,
+        pause:         by_action['pause'] || 0,
+        objective_met: by_action['objective_met'] || 0
+      },
+      top_keywords: top_keywords
     }
   end
 
