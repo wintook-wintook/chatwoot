@@ -3,6 +3,8 @@
     "TITLE": "Campañas de seguimiento",
     "REFRESH": "Actualizar",
     "NEW_CAMPAIGN": "Nueva campaña",
+    "TAB_LIST": "Campañas",
+    "TAB_NEW": "Nueva campaña",
     "LOADING": "Cargando campañas…",
     "EMPTY_TITLE": "Todavía no hay campañas.",
     "EMPTY_HINT": "Crea una con el botón «Nueva campaña» o asigna un Agente IA de forma masiva desde Contactos.",

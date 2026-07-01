@@ -3,6 +3,8 @@
     "TITLE": "Tracking campaigns",
     "REFRESH": "Refresh",
     "NEW_CAMPAIGN": "New campaign",
+    "TAB_LIST": "Campaigns",
+    "TAB_NEW": "New campaign",
     "LOADING": "Loading campaigns…",
     "EMPTY_TITLE": "No campaigns yet.",
     "EMPTY_HINT": "Create one with the “New campaign” button or bulk-assign an AI Agent from Contacts.",
