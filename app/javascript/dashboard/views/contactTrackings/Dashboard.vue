@@ -23,7 +23,13 @@ export default {
   components: { DoughnutChart, BarChart, HorizontalBarChart, TrackingsTable },
   data() {
     return {
-      filters: { date_from: '', date_to: '', inbox_id: '', template_id: '', status: '' },
+      filters: {
+        date_from: '',
+        date_to: '',
+        inbox_id: '',
+        template_id: '',
+        status: '',
+      },
       statusOptions: Object.keys(STATUS_META),
       statusMeta: STATUS_META,
     };
@@ -37,7 +43,9 @@ export default {
     }),
     // La pestaña activa la determina la ruta (menú secundario)
     activeTab() {
-      return this.$route.name === 'contact_trackings_metrics' ? 'summary' : 'list';
+      return this.$route.name === 'contact_trackings_metrics'
+        ? 'summary'
+        : 'list';
     },
     // El HorizontalBarChart compartido no fija maintainAspectRatio, por eso no
     // llenaba el alto del contenedor y desalineaba las tarjetas. Lo forzamos y
@@ -72,7 +80,9 @@ export default {
         datasets: [
           {
             data: entries.map(([, v]) => v),
-            backgroundColor: entries.map(([k]) => STATUS_META[k]?.color || '#94a3b8'),
+            backgroundColor: entries.map(
+              ([k]) => STATUS_META[k]?.color || '#94a3b8'
+            ),
             borderWidth: 0,
           },
         ],
@@ -133,23 +143,50 @@ export default {
       const pct = v => (created ? Math.round((v / created) * 100) : 0);
       return [
         { label: 'Creados', value: f.created || 0, pct: 100, color: '#3b82f6' },
-        { label: 'Respondieron', value: f.replied || 0, pct: pct(f.replied), color: '#6366f1' },
-        { label: 'Interesados', value: f.interested || 0, pct: pct(f.interested), color: '#8b5cf6' },
-        { label: 'Citas', value: f.appointment || 0, pct: pct(f.appointment), color: '#16a34a' },
+        {
+          label: 'Respondieron',
+          value: f.replied || 0,
+          pct: pct(f.replied),
+          color: '#6366f1',
+        },
+        {
+          label: 'Interesados',
+          value: f.interested || 0,
+          pct: pct(f.interested),
+          color: '#8b5cf6',
+        },
+        {
+          label: 'Citas',
+          value: f.appointment || 0,
+          pct: pct(f.appointment),
+          color: '#16a34a',
+        },
       ];
     },
 
     // Fase 3 — serie temporal
     hasTimeseries() {
-      return (this.metrics?.timeseries || []).some(p => p.created > 0 || p.completed > 0);
+      return (this.metrics?.timeseries || []).some(
+        p => p.created > 0 || p.completed > 0
+      );
     },
     timeseriesChartData() {
       const ts = this.metrics?.timeseries || [];
       return {
         labels: ts.map(p => p.date.slice(5)),
         datasets: [
-          { label: 'Creados', data: ts.map(p => p.created), backgroundColor: '#3b82f6', barPercentage: 0.7 },
-          { label: 'Completados', data: ts.map(p => p.completed), backgroundColor: '#16a34a', barPercentage: 0.7 },
+          {
+            label: 'Creados',
+            data: ts.map(p => p.created),
+            backgroundColor: '#3b82f6',
+            barPercentage: 0.7,
+          },
+          {
+            label: 'Completados',
+            data: ts.map(p => p.completed),
+            backgroundColor: '#16a34a',
+            barPercentage: 0.7,
+          },
         ],
       };
     },
@@ -172,7 +209,13 @@ export default {
       this.$store.dispatch('contactTrackings/fetchMetrics', params);
     },
     resetFilters() {
-      this.filters = { date_from: '', date_to: '', inbox_id: '', template_id: '', status: '' };
+      this.filters = {
+        date_from: '',
+        date_to: '',
+        inbox_id: '',
+        template_id: '',
+        status: '',
+      };
       this.fetchMetrics();
     },
     formatDate(value) {
@@ -185,10 +228,21 @@ export default {
 
 <template>
   <div class="flex flex-col flex-1 w-full h-full overflow-auto p-4 gap-4">
-    <div class="flex items-center justify-between">
-      <h1 class="text-xl font-medium text-slate-800 dark:text-slate-100">
-        {{ activeTab === 'summary' ? 'Resumen de Seguimientos' : 'Seguimientos' }}
-      </h1>
+    <div class="flex items-start justify-between">
+      <div>
+        <h1 class="text-xl font-medium text-slate-800 dark:text-slate-100">
+          {{
+            activeTab === 'summary' ? 'Resumen de Seguimientos' : 'Seguimientos'
+          }}
+        </h1>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+          {{
+            activeTab === 'summary'
+              ? 'Métricas y KPIs de tus seguimientos con Agentes IA.'
+              : 'Todos los seguimientos con Agentes IA en curso y su estado.'
+          }}
+        </p>
+      </div>
       <woot-button
         v-if="activeTab === 'summary'"
         variant="smooth"
@@ -204,177 +258,321 @@ export default {
     <TrackingsTable v-if="activeTab === 'list'" />
 
     <div v-show="activeTab === 'summary'" class="flex flex-col gap-4">
-    <!-- Filtros -->
-    <div class="flex flex-col gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-      <div class="flex flex-wrap items-end gap-3">
-      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
-        Desde
-        <input v-model="filters.date_from" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2" />
-      </label>
-      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
-        Hasta
-        <input v-model="filters.date_to" type="date" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2" />
-      </label>
-      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
-        Canal
-        <select v-model="filters.inbox_id" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2">
-          <option value="">Todos</option>
-          <option v-for="ib in inboxes" :key="ib.id" :value="ib.id">{{ ib.name }}</option>
-        </select>
-      </label>
-      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
-        Agente IA
-        <select v-model="filters.template_id" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2">
-          <option value="">Todos</option>
-          <option v-for="tpl in templates" :key="tpl.id" :value="tpl.id">{{ tpl.name }}</option>
-        </select>
-      </label>
-      <label class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1">
-        Estado
-        <select v-model="filters.status" class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2">
-          <option value="">Todos</option>
-          <option v-for="s in statusOptions" :key="s" :value="s">{{ statusMeta[s].label }}</option>
-        </select>
-      </label>
-      </div>
-      <div class="flex items-center gap-2">
-        <woot-button variant="smooth" size="small" @click="fetchMetrics">Aplicar</woot-button>
-        <woot-button variant="clear" size="small" @click="resetFilters">Limpiar</woot-button>
-      </div>
-    </div>
-
-    <!-- KPIs -->
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-      <div class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-        <p class="text-2xl font-semibold text-slate-800 dark:text-slate-100">{{ summary.active || 0 }}</p>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Activos</p>
-      </div>
-      <div class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-        <p class="text-2xl font-semibold text-red-500">{{ summary.overdue || 0 }}</p>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Vencidos</p>
-      </div>
-      <div class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-        <p class="text-2xl font-semibold text-green-600">{{ successPct }}%</p>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Tasa de éxito</p>
-      </div>
-      <div class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-        <p class="text-2xl font-semibold text-slate-800 dark:text-slate-100">{{ summary.appointments || 0 }}</p>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Citas</p>
-      </div>
-      <div class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-        <p class="text-2xl font-semibold text-slate-800 dark:text-slate-100">{{ summary.due_24h || 0 }}</p>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Próximas 24 h</p>
-      </div>
-    </div>
-
-    <!-- Donut por estado -->
-    <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-      <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Seguimientos por estado</p>
-      <div v-if="hasStatusData" class="chart-box h-64">
-        <DoughnutChart :collection="statusChartData" />
-      </div>
-      <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos todavía.</p>
-    </div>
-
-    <!-- Canal + Agente IA -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-        <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Por canal</p>
-        <div v-if="hasInboxData" class="chart-box h-56">
-          <HorizontalBarChart :collection="inboxChartData" :chart-options="inboxChartOptions" />
+      <!-- Filtros -->
+      <div
+        class="flex flex-col gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+      >
+        <div class="flex flex-wrap items-end gap-3">
+          <label
+            class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1"
+          >
+            Desde
+            <input
+              v-model="filters.date_from"
+              type="date"
+              class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
+            />
+          </label>
+          <label
+            class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1"
+          >
+            Hasta
+            <input
+              v-model="filters.date_to"
+              type="date"
+              class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
+            />
+          </label>
+          <label
+            class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1"
+          >
+            Canal
+            <select
+              v-model="filters.inbox_id"
+              class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
+            >
+              <option value="">Todos</option>
+              <option v-for="ib in inboxes" :key="ib.id" :value="ib.id">
+                {{ ib.name }}
+              </option>
+            </select>
+          </label>
+          <label
+            class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1"
+          >
+            Agente IA
+            <select
+              v-model="filters.template_id"
+              class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
+            >
+              <option value="">Todos</option>
+              <option v-for="tpl in templates" :key="tpl.id" :value="tpl.id">
+                {{ tpl.name }}
+              </option>
+            </select>
+          </label>
+          <label
+            class="text-sm font-medium text-slate-600 dark:text-slate-300 flex flex-col gap-1"
+          >
+            Estado
+            <select
+              v-model="filters.status"
+              class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
+            >
+              <option value="">Todos</option>
+              <option v-for="s in statusOptions" :key="s" :value="s">
+                {{ statusMeta[s].label }}
+              </option>
+            </select>
+          </label>
         </div>
-        <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos.</p>
-      </div>
-      <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-        <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Por Agente IA (total vs éxito)</p>
-        <div v-if="hasTemplateData" class="chart-box h-56">
-          <BarChart :collection="templateChartData" />
+        <div class="flex items-center gap-2">
+          <woot-button variant="smooth" size="small" @click="fetchMetrics"
+            >Aplicar</woot-button
+          >
+          <woot-button variant="clear" size="small" @click="resetFilters"
+            >Limpiar</woot-button
+          >
         </div>
-        <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos.</p>
       </div>
-    </div>
 
-    <!-- Embudo de intención -->
-    <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-      <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Embudo de intención</p>
-      <div class="flex flex-col gap-2">
-        <div v-for="stage in funnelStages" :key="stage.label" class="flex items-center gap-3">
-          <span class="w-28 text-xs text-slate-500 dark:text-slate-400 shrink-0">{{ stage.label }}</span>
-          <div class="flex-1 h-5 rounded bg-slate-100 dark:bg-slate-700 overflow-hidden">
-            <div
-              class="h-full rounded transition-all"
-              :style="{ width: stage.pct + '%', backgroundColor: stage.color }"
+      <!-- KPIs -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div
+          class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+        >
+          <p class="text-2xl font-semibold text-slate-800 dark:text-slate-100">
+            {{ summary.active || 0 }}
+          </p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Activos</p>
+        </div>
+        <div
+          class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+        >
+          <p class="text-2xl font-semibold text-red-500">
+            {{ summary.overdue || 0 }}
+          </p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Vencidos</p>
+        </div>
+        <div
+          class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+        >
+          <p class="text-2xl font-semibold text-green-600">{{ successPct }}%</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Tasa de éxito
+          </p>
+        </div>
+        <div
+          class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+        >
+          <p class="text-2xl font-semibold text-slate-800 dark:text-slate-100">
+            {{ summary.appointments || 0 }}
+          </p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Citas</p>
+        </div>
+        <div
+          class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+        >
+          <p class="text-2xl font-semibold text-slate-800 dark:text-slate-100">
+            {{ summary.due_24h || 0 }}
+          </p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Próximas 24 h
+          </p>
+        </div>
+      </div>
+
+      <!-- Donut por estado -->
+      <div
+        class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+      >
+        <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">
+          Seguimientos por estado
+        </p>
+        <div v-if="hasStatusData" class="chart-box h-64">
+          <DoughnutChart :collection="statusChartData" />
+        </div>
+        <p v-else class="text-sm text-slate-400 py-8 text-center">
+          Sin datos todavía.
+        </p>
+      </div>
+
+      <!-- Canal + Agente IA -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+        >
+          <p
+            class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200"
+          >
+            Por canal
+          </p>
+          <div v-if="hasInboxData" class="chart-box h-56">
+            <HorizontalBarChart
+              :collection="inboxChartData"
+              :chart-options="inboxChartOptions"
             />
           </div>
-          <span class="w-16 text-right text-xs text-slate-600 dark:text-slate-300 shrink-0">
-            {{ stage.value }} ({{ stage.pct }}%)
-          </span>
+          <p v-else class="text-sm text-slate-400 py-8 text-center">
+            Sin datos.
+          </p>
+        </div>
+        <div
+          class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+        >
+          <p
+            class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200"
+          >
+            Por Agente IA (total vs éxito)
+          </p>
+          <div v-if="hasTemplateData" class="chart-box h-56">
+            <BarChart :collection="templateChartData" />
+          </div>
+          <p v-else class="text-sm text-slate-400 py-8 text-center">
+            Sin datos.
+          </p>
         </div>
       </div>
-    </div>
 
-    <!-- Serie temporal -->
-    <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-      <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">Creados vs Completados (por día)</p>
-      <div v-if="hasTimeseries" class="chart-box h-56">
-        <BarChart :collection="timeseriesChartData" />
-      </div>
-      <p v-else class="text-sm text-slate-400 py-8 text-center">Sin datos en el rango.</p>
-    </div>
-
-    <!-- Próximas citas -->
-    <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-      <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">
-        📅 Próximas citas ({{ appointmentsList.length }})
-      </p>
-      <table v-if="appointmentsList.length" class="w-full text-sm">
-        <thead>
-          <tr class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
-            <th class="py-2">Contacto</th>
-            <th class="py-2">Cuándo</th>
-            <th class="py-2">Objetivo</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="a in appointmentsList" :key="a.id" class="border-b border-slate-50 dark:border-slate-700/50">
-            <td class="py-2 text-slate-700 dark:text-slate-200">{{ a.contact_name || '—' }}</td>
-            <td class="py-2 text-slate-500 dark:text-slate-400">{{ formatDate(a.appointment_at) }}</td>
-            <td class="py-2 text-slate-600 dark:text-slate-300 truncate max-w-xs">{{ a.objective }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <p v-else class="text-sm text-slate-400 py-4 text-center">No hay citas próximas.</p>
-    </div>
-
-    <!-- Vencidos -->
-    <div class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-      <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">
-        ⚠️ Vencidos ({{ overdueList.length }})
-      </p>
-      <table v-if="overdueList.length" class="w-full text-sm">
-        <thead>
-          <tr class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
-            <th class="py-2">Contacto</th>
-            <th class="py-2">Objetivo</th>
-            <th class="py-2">Programado</th>
-            <th class="py-2">Intentos</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="t in overdueList"
-            :key="t.id"
-            class="border-b border-slate-50 dark:border-slate-700/50"
+      <!-- Embudo de intención -->
+      <div
+        class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+      >
+        <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">
+          Embudo de intención
+        </p>
+        <div class="flex flex-col gap-2">
+          <div
+            v-for="stage in funnelStages"
+            :key="stage.label"
+            class="flex items-center gap-3"
           >
-            <td class="py-2 text-slate-700 dark:text-slate-200">{{ t.contact_name || '—' }}</td>
-            <td class="py-2 text-slate-600 dark:text-slate-300 truncate max-w-xs">{{ t.objective }}</td>
-            <td class="py-2 text-slate-500 dark:text-slate-400">{{ formatDate(t.scheduled_for) }}</td>
-            <td class="py-2 text-slate-500 dark:text-slate-400">{{ t.attempt_count }}/{{ t.max_attempts }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <p v-else class="text-sm text-slate-400 py-4 text-center">No hay seguimientos vencidos. 🎉</p>
-    </div>
+            <span
+              class="w-28 text-xs text-slate-500 dark:text-slate-400 shrink-0"
+              >{{ stage.label }}</span
+            >
+            <div
+              class="flex-1 h-5 rounded bg-slate-100 dark:bg-slate-700 overflow-hidden"
+            >
+              <div
+                class="h-full rounded transition-all"
+                :style="{
+                  width: stage.pct + '%',
+                  backgroundColor: stage.color,
+                }"
+              />
+            </div>
+            <span
+              class="w-16 text-right text-xs text-slate-600 dark:text-slate-300 shrink-0"
+            >
+              {{ stage.value }} ({{ stage.pct }}%)
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Serie temporal -->
+      <div
+        class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+      >
+        <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">
+          Creados vs Completados (por día)
+        </p>
+        <div v-if="hasTimeseries" class="chart-box h-56">
+          <BarChart :collection="timeseriesChartData" />
+        </div>
+        <p v-else class="text-sm text-slate-400 py-8 text-center">
+          Sin datos en el rango.
+        </p>
+      </div>
+
+      <!-- Próximas citas -->
+      <div
+        class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+      >
+        <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">
+          📅 Próximas citas ({{ appointmentsList.length }})
+        </p>
+        <table v-if="appointmentsList.length" class="w-full text-sm">
+          <thead>
+            <tr
+              class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700"
+            >
+              <th class="py-2">Contacto</th>
+              <th class="py-2">Cuándo</th>
+              <th class="py-2">Objetivo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="a in appointmentsList"
+              :key="a.id"
+              class="border-b border-slate-50 dark:border-slate-700/50"
+            >
+              <td class="py-2 text-slate-700 dark:text-slate-200">
+                {{ a.contact_name || '—' }}
+              </td>
+              <td class="py-2 text-slate-500 dark:text-slate-400">
+                {{ formatDate(a.appointment_at) }}
+              </td>
+              <td
+                class="py-2 text-slate-600 dark:text-slate-300 truncate max-w-xs"
+              >
+                {{ a.objective }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else class="text-sm text-slate-400 py-4 text-center">
+          No hay citas próximas.
+        </p>
+      </div>
+
+      <!-- Vencidos -->
+      <div
+        class="p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+      >
+        <p class="text-sm font-medium mb-3 text-slate-700 dark:text-slate-200">
+          ⚠️ Vencidos ({{ overdueList.length }})
+        </p>
+        <table v-if="overdueList.length" class="w-full text-sm">
+          <thead>
+            <tr
+              class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700"
+            >
+              <th class="py-2">Contacto</th>
+              <th class="py-2">Objetivo</th>
+              <th class="py-2">Programado</th>
+              <th class="py-2">Intentos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="t in overdueList"
+              :key="t.id"
+              class="border-b border-slate-50 dark:border-slate-700/50"
+            >
+              <td class="py-2 text-slate-700 dark:text-slate-200">
+                {{ t.contact_name || '—' }}
+              </td>
+              <td
+                class="py-2 text-slate-600 dark:text-slate-300 truncate max-w-xs"
+              >
+                {{ t.objective }}
+              </td>
+              <td class="py-2 text-slate-500 dark:text-slate-400">
+                {{ formatDate(t.scheduled_for) }}
+              </td>
+              <td class="py-2 text-slate-500 dark:text-slate-400">
+                {{ t.attempt_count }}/{{ t.max_attempts }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else class="text-sm text-slate-400 py-4 text-center">
+          No hay seguimientos vencidos. 🎉
+        </p>
+      </div>
     </div>
   </div>
 </template>

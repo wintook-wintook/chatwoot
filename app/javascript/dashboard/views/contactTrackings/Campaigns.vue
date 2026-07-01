@@ -108,10 +108,15 @@ export default {
 
 <template>
   <div class="flex flex-col flex-1 w-full h-full overflow-auto p-4">
-    <div class="flex items-center justify-between mb-3">
-      <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">
-        {{ $t('TRACKING_CAMPAIGNS_VIEW.TITLE') }}
-      </h1>
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.TITLE') }}
+        </h1>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.DESCRIPTION') }}
+        </p>
+      </div>
       <woot-button
         v-if="activeTab === 'list'"
         variant="clear"

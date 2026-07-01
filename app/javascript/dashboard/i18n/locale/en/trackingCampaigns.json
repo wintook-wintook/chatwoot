@@ -1,6 +1,7 @@
 {
   "TRACKING_CAMPAIGNS_VIEW": {
     "TITLE": "Tracking campaigns",
+    "DESCRIPTION": "Launch an AI Agent over a group of contacts and track each campaign's progress.",
     "REFRESH": "Refresh",
     "NEW_CAMPAIGN": "New campaign",
     "TAB_LIST": "Campaigns",
