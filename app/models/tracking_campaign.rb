@@ -54,6 +54,10 @@ class TrackingCampaign < ApplicationRecord
 
   validates :name, presence: true, length: { minimum: 2, maximum: 120 }
   validates :status, inclusion: { in: STATUSES }
+  # El objective se copia de la plantilla (que permite hasta 500). Sin esta
+  # validación explícita, la de ApplicationRecord lo limitaría a 255 y el
+  # create! reventaría con RecordInvalid en plantillas de objective largo.
+  validates :objective, length: { maximum: 500 }, allow_nil: true
 
   scope :active, -> { where(status: %w[draft running paused]) }
 
