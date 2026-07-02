@@ -19,13 +19,6 @@ const contactTrackings = accountId => ({
       toStateName: 'contact_trackings_dashboard',
     },
     {
-      icon: 'bot',
-      label: 'TRACKING_AGENTS',
-      hasSubMenu: false,
-      toState: frontendURL(`accounts/${accountId}/tracking-dashboard/agents`),
-      toStateName: 'contact_trackings_agents',
-    },
-    {
       icon: 'megaphone',
       label: 'TRACKING_CAMPAIGNS',
       hasSubMenu: false,
@@ -40,6 +33,13 @@ const contactTrackings = accountId => ({
       hasSubMenu: false,
       toState: frontendURL(`accounts/${accountId}/tracking-dashboard/metrics`),
       toStateName: 'contact_trackings_metrics',
+    },
+    {
+      icon: 'bot',
+      label: 'TRACKING_AGENTS',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/tracking-dashboard/agents`),
+      toStateName: 'contact_trackings_agents',
     },
   ],
 });
