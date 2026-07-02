@@ -69,19 +69,19 @@
     "FILTER_EMPTY": "No prospects match this filter.",
     "FILTER_DESC": {
       "intent_replied": "Contacts who replied at least once since the follow-up was created (counts even if they replied before the first message).",
-      "intent_interested": "Replied showing interest or asking to book.",
-      "intent_appointment": "Contacts who booked an appointment.",
-      "intent_objective": "Contacts where the follow-up objective was met.",
+      "intent_interested": "The contact showed interest or asked to book; usually paused for an agent to take over.",
+      "intent_appointment": "The contact booked an appointment through the AI Agent (its date and time were recorded).",
+      "intent_objective": "The follow-up goal was achieved; marked as success and sending stops.",
       "ctrl_pending": "Queued or with a scheduled next message; not sent yet.",
-      "ctrl_active": "Follow-up in progress, engaging with the contact.",
+      "ctrl_active": "Follow-up running: sending messages and replying to the contact toward the objective.",
       "ctrl_paused": "Temporarily stopped (can resume). Usually by an AI Agent rule.",
       "ctrl_completed_replied": "Exhausted attempts and got a reply.",
       "ctrl_completed_no_reply": "Exhausted attempts with no reply.",
       "ctrl_cancelled": "Cancelled permanently (won't resume). Usually by an AI Agent rule.",
       "ctrl_failed": "The follow-up could not run. Hover the ℹ️ on the status to see the exact cause.",
       "del_delivered": "The channel confirmed the last message reached the contact (or was already read).",
-      "del_sent": "Sent but with no delivery confirmation.",
-      "del_failed": "The channel rejected the last message delivery."
+      "del_sent": "The message left the system, but the channel hasn't confirmed it reached the contact yet.",
+      "del_failed": "The channel couldn't deliver the last message (invalid number, block, or other rejection)."
     },
     "INTENT_VALUES": {
       "tracking": "Replied",
