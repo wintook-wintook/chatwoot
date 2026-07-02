@@ -78,7 +78,7 @@
       "ctrl_completed_replied": "Exhausted attempts and got a reply.",
       "ctrl_completed_no_reply": "Exhausted attempts with no reply.",
       "ctrl_cancelled": "Cancelled by a rule or manually.",
-      "ctrl_failed": "Failed to send the message.",
+      "ctrl_failed": "The follow-up could not run. Hover the ℹ️ on the status to see the exact cause.",
       "del_delivered": "Last message delivered (or read) on WhatsApp.",
       "del_sent": "Sent but with no delivery confirmation.",
       "del_failed": "The channel rejected the last message delivery."
@@ -99,6 +99,12 @@
       "rejected": "Rejected",
       "cancelled": "Cancelled appointment",
       "objective_met": "Objective met"
+    },
+    "FAILURE": {
+      "WINDOW_CLOSED": "WhatsApp 24h window closed and no template configured: could not send.",
+      "SEND_FAILED": "Could not send the message: the channel rejected the send or the conversation could not be created/found.",
+      "TEMPLATE_PARAMS": "The template requires parameters that could not be resolved.",
+      "UNKNOWN": "Execution error with no recorded detail."
     },
     "COL": {
       "CONTACT": "Contact",

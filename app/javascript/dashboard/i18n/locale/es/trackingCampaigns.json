@@ -78,7 +78,7 @@
       "ctrl_completed_replied": "Agotaron los intentos y sí hubo respuesta.",
       "ctrl_completed_no_reply": "Agotaron los intentos sin ninguna respuesta.",
       "ctrl_cancelled": "Cancelados por una regla o manualmente.",
-      "ctrl_failed": "Fallaron al enviar el mensaje.",
+      "ctrl_failed": "No se pudo ejecutar el seguimiento. Pasa el cursor por el ℹ️ del estado para ver la causa exacta.",
       "del_delivered": "Último mensaje entregado (o leído) en WhatsApp.",
       "del_sent": "Enviado pero sin confirmación de entrega.",
       "del_failed": "El canal rechazó la entrega del último mensaje."
@@ -99,6 +99,12 @@
       "rejected": "Rechazó",
       "cancelled": "Canceló cita",
       "objective_met": "Objetivo cumplido"
+    },
+    "FAILURE": {
+      "WINDOW_CLOSED": "Ventana de 24h de WhatsApp cerrada y sin plantilla configurada: no se pudo enviar.",
+      "SEND_FAILED": "No se pudo enviar el mensaje: el canal rechazó el envío o no se pudo crear/encontrar la conversación.",
+      "TEMPLATE_PARAMS": "La plantilla requiere parámetros que no se pudieron resolver.",
+      "UNKNOWN": "Error de ejecución sin detalle registrado."
     },
     "COL": {
       "CONTACT": "Contacto",

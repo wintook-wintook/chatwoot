@@ -84,6 +84,7 @@ class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::B
       appointment_at: tracking.appointment_at,
       last_intent: tracking.last_intent,
       outcome: tracking.outcome,
+      last_error: tracking.last_error,
       attempt_count: tracking.attempt_count,
       max_attempts: tracking.max_attempts,
       inbox_id: tracking.inbox_id,

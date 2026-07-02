@@ -302,6 +302,17 @@ export default {
       const label = this.$t(key);
       return label === key ? outcome : label;
     },
+    // Traduce el last_error técnico a una causa legible (tooltip de los Fallidos).
+    failureReason(p) {
+      if (p.status !== 'failed') return '';
+      const err = p.last_error || '';
+      const base = 'TRACKING_CAMPAIGN_DETAIL.FAILURE';
+      if (/window closed/i.test(err)) return this.$t(`${base}.WINDOW_CLOSED`);
+      if (/par[aá]metros|requiere par/i.test(err))
+        return this.$t(`${base}.TEMPLATE_PARAMS`);
+      if (/failed to send/i.test(err)) return this.$t(`${base}.SEND_FAILED`);
+      return err || this.$t(`${base}.UNKNOWN`);
+    },
     formatDate(value) {
       if (!value) return '—';
       return new Date(value).toLocaleString('es-MX', {
@@ -576,9 +587,14 @@ export default {
                 </td>
                 <td
                   class="p-3 font-medium"
-                  :class="trackingStatusColor(p.status)"
+                  :class="[
+                    trackingStatusColor(p.status),
+                    p.status === 'failed' ? 'cursor-help' : '',
+                  ]"
+                  :title="failureReason(p)"
                 >
-                  {{ trackingStatusLabel(p.status) }}
+                  {{ trackingStatusLabel(p.status)
+                  }}{{ p.status === 'failed' ? ' ℹ️' : '' }}
                 </td>
                 <td class="p-3">
                   <span
