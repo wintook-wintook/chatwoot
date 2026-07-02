@@ -313,7 +313,9 @@ export default {
       <div>
         <h1 class="text-xl font-medium text-slate-800 dark:text-slate-100">
           {{
-            activeTab === 'summary' ? 'Resumen de Seguimientos' : 'Seguimientos'
+            activeTab === 'summary'
+              ? 'Resumen de Seguimientos'
+              : 'Todos los Seguimientos'
           }}
         </h1>
         <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
