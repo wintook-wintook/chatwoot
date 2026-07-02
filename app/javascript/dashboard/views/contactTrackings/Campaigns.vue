@@ -187,21 +187,6 @@ export default {
             <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.CHANNEL') }}</th>
             <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.START') }}</th>
             <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.STATUS') }}</th>
-            <th class="p-3 text-center">
-              {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.CONTACTS') }}
-            </th>
-            <th class="p-3 text-center">
-              {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.PENDING') }}
-            </th>
-            <th class="p-3 text-center">
-              {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.ACTIVE') }}
-            </th>
-            <th class="p-3 text-center">
-              {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.COMPLETED') }}
-            </th>
-            <th class="p-3 text-center">
-              {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.FAILED') }}
-            </th>
             <th class="p-3 text-right">
               {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.PROGRESS') }}
             </th>
@@ -236,19 +221,6 @@ export default {
                 {{ statusLabel(c.status) }}
               </span>
             </td>
-            <td
-              class="p-3 text-center font-semibold text-slate-700 dark:text-slate-200"
-            >
-              {{ c.stats.total }}
-            </td>
-            <td class="p-3 text-center text-slate-500">
-              {{ c.stats.pending }}
-            </td>
-            <td class="p-3 text-center text-green-600">{{ c.stats.active }}</td>
-            <td class="p-3 text-center text-green-700">
-              {{ c.stats.completed }}
-            </td>
-            <td class="p-3 text-center text-red-500">{{ c.stats.failed }}</td>
             <td class="p-3 text-right whitespace-nowrap">
               <div class="flex items-center justify-end gap-2">
                 <div
