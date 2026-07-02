@@ -83,6 +83,23 @@
       "del_sent": "Sent but with no delivery confirmation.",
       "del_failed": "The channel rejected the last message delivery."
     },
+    "INTENT_VALUES": {
+      "tracking": "Replied",
+      "interested": "Interested",
+      "rejected": "Rejected",
+      "book_appointment": "Wants to book",
+      "reschedule": "Reschedule",
+      "cancel_appointment": "Cancel appointment",
+      "botseller": "Inquiry",
+      "kbase": "Inquiry"
+    },
+    "OUTCOME_VALUES": {
+      "appointment": "Booked appointment",
+      "interested": "Interested",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled appointment",
+      "objective_met": "Objective met"
+    },
     "COL": {
       "CONTACT": "Contact",
       "STATUS": "Status",

@@ -83,6 +83,23 @@
       "del_sent": "Enviado pero sin confirmación de entrega.",
       "del_failed": "El canal rechazó la entrega del último mensaje."
     },
+    "INTENT_VALUES": {
+      "tracking": "Respondió",
+      "interested": "Interesado",
+      "rejected": "Rechazó",
+      "book_appointment": "Quiere agendar",
+      "reschedule": "Reagendar",
+      "cancel_appointment": "Cancelar cita",
+      "botseller": "Consulta",
+      "kbase": "Consulta"
+    },
+    "OUTCOME_VALUES": {
+      "appointment": "Agendó cita",
+      "interested": "Interesado",
+      "rejected": "Rechazó",
+      "cancelled": "Canceló cita",
+      "objective_met": "Objetivo cumplido"
+    },
     "COL": {
       "CONTACT": "Contacto",
       "STATUS": "Estado",

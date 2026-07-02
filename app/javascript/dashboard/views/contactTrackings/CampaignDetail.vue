@@ -287,6 +287,21 @@ export default {
       if (!meta) return '—';
       return this.$t(`TRACKING_CAMPAIGN_DETAIL.DELIVERY.${meta.key}`);
     },
+    // last_intent guarda la ruta técnica del bot (tracking/interested/…). La
+    // traducimos a algo legible; 'tracking' = respondió sin intención especial.
+    intentLabel(intent) {
+      if (!intent) return '—';
+      const key = `TRACKING_CAMPAIGN_DETAIL.INTENT_VALUES.${intent}`;
+      const label = this.$t(key);
+      return label === key ? intent : label;
+    },
+    // outcome guarda el desenlace del seguimiento (rejected/interested/…) en crudo.
+    outcomeLabel(outcome) {
+      if (!outcome) return '—';
+      const key = `TRACKING_CAMPAIGN_DETAIL.OUTCOME_VALUES.${outcome}`;
+      const label = this.$t(key);
+      return label === key ? outcome : label;
+    },
     formatDate(value) {
       if (!value) return '—';
       return new Date(value).toLocaleString('es-MX', {
@@ -577,10 +592,10 @@ export default {
                   <span v-else class="text-slate-300">—</span>
                 </td>
                 <td class="p-3 text-slate-500 dark:text-slate-400">
-                  {{ p.last_intent || '—' }}
+                  {{ intentLabel(p.last_intent) }}
                 </td>
                 <td class="p-3 text-slate-500 dark:text-slate-400">
-                  {{ p.outcome || '—' }}
+                  {{ outcomeLabel(p.outcome) }}
                 </td>
                 <td
                   class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap"
