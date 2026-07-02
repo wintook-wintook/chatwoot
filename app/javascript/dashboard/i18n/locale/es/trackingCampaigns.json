@@ -42,7 +42,8 @@
       "PENDING": "Pendientes",
       "ACTIVE": "Activos",
       "PAUSED": "Pausados",
-      "COMPLETED": "Completados",
+      "COMPLETED_REPLIED": "Completados (con respuesta)",
+      "COMPLETED_NO_REPLY": "Completados (sin respuesta)",
       "CANCELLED": "Cancelados",
       "FAILED": "Fallidos",
       "PROGRESS": "Avance"
@@ -66,6 +67,22 @@
     "FILTERED_BY": "Filtrado por",
     "SHOW_ALL": "Ver todos",
     "FILTER_EMPTY": "Ningún prospecto coincide con este filtro.",
+    "FILTER_DESC": {
+      "intent_replied": "Contactos que respondieron al menos una vez desde que se creó el seguimiento (cuenta incluso si respondieron antes del primer mensaje).",
+      "intent_interested": "Respondieron mostrando interés o pidiendo agendar.",
+      "intent_appointment": "Contactos que agendaron una cita.",
+      "intent_objective": "Contactos donde se cumplió el objetivo del seguimiento.",
+      "ctrl_pending": "En cola o con próximo mensaje programado; aún no envían.",
+      "ctrl_active": "Seguimiento en curso, interactuando con el contacto.",
+      "ctrl_paused": "Pausados por una regla o manualmente.",
+      "ctrl_completed_replied": "Agotaron los intentos y sí hubo respuesta.",
+      "ctrl_completed_no_reply": "Agotaron los intentos sin ninguna respuesta.",
+      "ctrl_cancelled": "Cancelados por una regla o manualmente.",
+      "ctrl_failed": "Fallaron al enviar el mensaje.",
+      "del_delivered": "Último mensaje entregado (o leído) en WhatsApp.",
+      "del_sent": "Enviado pero sin confirmación de entrega.",
+      "del_failed": "El canal rechazó la entrega del último mensaje."
+    },
     "COL": {
       "CONTACT": "Contacto",
       "STATUS": "Estado",

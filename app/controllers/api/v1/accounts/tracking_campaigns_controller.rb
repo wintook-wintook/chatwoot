@@ -39,14 +39,24 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
 
   private
 
-  # { campaign_id => { 'pending' => N, 'active' => N, ... } } en una sola query
+  # { campaign_id => { 'pending' => N, 'active' => N, ... } } en una sola query.
+  # Además desglosa 'completed' según si hubo respuesta (last_intent) o no, con una
+  # clave sintética 'completed_replied' (el resto de completados = sin respuesta).
   def stats_by_campaign(ids)
     return {} if ids.blank?
 
     grouped = ContactTracking.where(tracking_campaign_id: ids).group(:tracking_campaign_id, :status).count
-    grouped.each_with_object({}) do |((campaign_id, status), count), acc|
-      (acc[campaign_id] ||= {})[status] = count
+    acc = grouped.each_with_object({}) do |((campaign_id, status), count), memo|
+      (memo[campaign_id] ||= {})[status] = count
     end
+
+    completed_replied = ContactTracking.where(tracking_campaign_id: ids, status: 'completed')
+                                       .where.not(last_intent: nil)
+                                       .group(:tracking_campaign_id).count
+    completed_replied.each do |campaign_id, count|
+      (acc[campaign_id] ||= {})['completed_replied'] = count
+    end
+    acc
   end
 
   # Eje de ENTREGA (WhatsApp), separado del de ejecución ([[Entrega-vs-ejecucion]]).
@@ -128,12 +138,16 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   end
 
   def aggregate_stats(status_counts)
+    completed = status_counts['completed'].to_i
+    completed_replied = status_counts['completed_replied'].to_i
     {
-      total: status_counts.values.sum,
+      total: status_counts.except('completed_replied').values.sum,
       pending: status_counts['pending'].to_i + status_counts['scheduled'].to_i,
       active: status_counts['active'].to_i,
       paused: status_counts['paused'].to_i,
-      completed: status_counts['completed'].to_i,
+      completed: completed,
+      completed_replied: completed_replied,
+      completed_no_reply: completed - completed_replied,
       cancelled: status_counts['cancelled'].to_i,
       failed: status_counts['failed'].to_i
     }

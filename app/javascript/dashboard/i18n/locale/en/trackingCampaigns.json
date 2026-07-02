@@ -42,7 +42,8 @@
       "PENDING": "Pending",
       "ACTIVE": "Active",
       "PAUSED": "Paused",
-      "COMPLETED": "Completed",
+      "COMPLETED_REPLIED": "Completed (replied)",
+      "COMPLETED_NO_REPLY": "Completed (no reply)",
       "CANCELLED": "Cancelled",
       "FAILED": "Failed",
       "PROGRESS": "Progress"
@@ -66,6 +67,22 @@
     "FILTERED_BY": "Filtered by",
     "SHOW_ALL": "Show all",
     "FILTER_EMPTY": "No prospects match this filter.",
+    "FILTER_DESC": {
+      "intent_replied": "Contacts who replied at least once since the follow-up was created (counts even if they replied before the first message).",
+      "intent_interested": "Replied showing interest or asking to book.",
+      "intent_appointment": "Contacts who booked an appointment.",
+      "intent_objective": "Contacts where the follow-up objective was met.",
+      "ctrl_pending": "Queued or with a scheduled next message; not sent yet.",
+      "ctrl_active": "Follow-up in progress, engaging with the contact.",
+      "ctrl_paused": "Paused by a rule or manually.",
+      "ctrl_completed_replied": "Exhausted attempts and got a reply.",
+      "ctrl_completed_no_reply": "Exhausted attempts with no reply.",
+      "ctrl_cancelled": "Cancelled by a rule or manually.",
+      "ctrl_failed": "Failed to send the message.",
+      "del_delivered": "Last message delivered (or read) on WhatsApp.",
+      "del_sent": "Sent but with no delivery confirmation.",
+      "del_failed": "The channel rejected the last message delivery."
+    },
     "COL": {
       "CONTACT": "Contact",
       "STATUS": "Status",

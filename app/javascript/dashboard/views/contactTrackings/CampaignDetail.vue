@@ -59,7 +59,8 @@ const PROSPECT_FILTERS = {
   ctrl_pending: p => p.status === 'pending' || p.status === 'scheduled',
   ctrl_active: p => p.status === 'active',
   ctrl_paused: p => p.status === 'paused',
-  ctrl_completed: p => p.status === 'completed',
+  ctrl_completed_replied: p => p.status === 'completed' && !!p.last_intent,
+  ctrl_completed_no_reply: p => p.status === 'completed' && !p.last_intent,
   ctrl_cancelled: p => p.status === 'cancelled',
   ctrl_failed: p => p.status === 'failed',
   del_delivered: p => deliveryBucket(p.last_message_status) === 'delivered',
@@ -159,12 +160,6 @@ export default {
     kpis() {
       return [
         {
-          key: 'CONTACTS',
-          value: this.stats.total || 0,
-          color: 'text-slate-800 dark:text-slate-100',
-          filter: 'clear',
-        },
-        {
           key: 'PENDING',
           value: this.stats.pending || 0,
           color: 'text-slate-800 dark:text-slate-100',
@@ -183,10 +178,16 @@ export default {
           filter: 'ctrl_paused',
         },
         {
-          key: 'COMPLETED',
-          value: this.stats.completed || 0,
+          key: 'COMPLETED_REPLIED',
+          value: this.stats.completed_replied || 0,
           color: 'text-green-700 dark:text-green-500',
-          filter: 'ctrl_completed',
+          filter: 'ctrl_completed_replied',
+        },
+        {
+          key: 'COMPLETED_NO_REPLY',
+          value: this.stats.completed_no_reply || 0,
+          color: 'text-slate-500 dark:text-slate-400',
+          filter: 'ctrl_completed_no_reply',
         },
         {
           key: 'CANCELLED',
@@ -200,17 +201,14 @@ export default {
           color: 'text-red-700 dark:text-red-500',
           filter: 'ctrl_failed',
         },
-        {
-          key: 'PROGRESS',
-          value: `${this.progressPct}%`,
-          color: 'text-woot-600 dark:text-woot-500',
-          filter: null,
-        },
       ];
     },
-    progressPct() {
-      if (!this.stats.total) return 0;
-      return Math.round((this.stats.completed / this.stats.total) * 100);
+    // Descripción del KPI filtrado (qué significa) — se muestra junto a "Prospectos".
+    activeFilterDesc() {
+      if (!this.activeFilter) return '';
+      return this.$t(
+        `TRACKING_CAMPAIGN_DETAIL.FILTER_DESC.${this.activeFilter}`
+      );
     },
     // Prospectos tras aplicar el filtro por KPI (client-side sobre lo cargado).
     filteredProspects() {
@@ -495,6 +493,13 @@ export default {
           >
             {{ $t('TRACKING_CAMPAIGN_DETAIL.SHOW_ALL') }}
           </button>
+        </span>
+        <!-- Descripción de qué mide el KPI filtrado -->
+        <span
+          v-if="activeFilterDesc"
+          class="inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-300"
+        >
+          ℹ️ {{ activeFilterDesc }}
         </span>
       </div>
 
