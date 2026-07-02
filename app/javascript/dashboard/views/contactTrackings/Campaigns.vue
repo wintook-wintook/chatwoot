@@ -22,6 +22,8 @@ export default {
       campaigns: [],
       isLoading: false,
       deletingId: null,
+      showDeleteModal: false,
+      campaignToDelete: null,
       activeTab: 'list',
       // Filtro preestablecido cuando se llega desde Contactos (history.state).
       presetFilter: null,
@@ -34,6 +36,9 @@ export default {
     // woot-tabs usa índice: 0 = listado, 1 = nueva campaña.
     activeTabIndex() {
       return this.activeTab === 'new' ? 1 : 0;
+    },
+    deleteMessageValue() {
+      return this.campaignToDelete ? ` «${this.campaignToDelete.name}»?` : '';
     },
   },
   mounted() {
@@ -101,15 +106,20 @@ export default {
         params: { campaignId: campaign.id },
       });
     },
+    openDelete(campaign) {
+      this.campaignToDelete = campaign;
+      this.showDeleteModal = true;
+    },
+    closeDelete() {
+      this.showDeleteModal = false;
+      this.campaignToDelete = null;
+    },
     // Borra la campaña; el backend cancela los seguimientos activos y desvincula
-    // los demás (quedan sueltos en "Todos"). Pide confirmación antes.
-    async deleteCampaign(campaign) {
-      const confirmed = window.confirm(
-        this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE_CONFIRM', {
-          name: campaign.name,
-        })
-      );
-      if (!confirmed) return;
+    // los demás (quedan sueltos en "Todos").
+    async confirmDelete() {
+      const campaign = this.campaignToDelete;
+      if (!campaign) return;
+      this.showDeleteModal = false;
       this.deletingId = campaign.id;
       try {
         await TrackingCampaignsAPI.delete(campaign.id);
@@ -119,6 +129,7 @@ export default {
         useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE_ERROR'));
       } finally {
         this.deletingId = null;
+        this.campaignToDelete = null;
       }
     },
     onCampaignCreated(result) {
@@ -266,12 +277,23 @@ export default {
                 icon="delete"
                 :is-loading="deletingId === c.id"
                 :title="$t('TRACKING_CAMPAIGNS_VIEW.DELETE')"
-                @click.stop="deleteCampaign(c)"
+                @click.stop="openDelete(c)"
               />
             </td>
           </tr>
         </tbody>
       </table>
     </template>
+
+    <woot-delete-modal
+      :show.sync="showDeleteModal"
+      :on-close="closeDelete"
+      :on-confirm="confirmDelete"
+      :title="$t('TRACKING_CAMPAIGNS_VIEW.DELETE')"
+      :message="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_CONFIRM')"
+      :message-value="deleteMessageValue"
+      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_YES')"
+      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    />
   </div>
 </template>
