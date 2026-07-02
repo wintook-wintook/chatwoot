@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 720" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <rect x="0" y="0" width="1120" height="720" fill="#f4f6f9"/>
+
+  <!-- Title -->
+  <text x="32" y="44" font-size="25" font-weight="800" fill="#151b28" letter-spacing="-0.4">Estados del Seguimiento — tabla de referencia</text>
+  <text x="32" y="66" font-size="13" fill="#5c6675">Agente de Seguimientos IA · qué le sucede al seguimiento en cada estado</text>
+
+  <!-- Table card -->
+  <rect x="24" y="84" width="1072" height="600" rx="14" fill="#ffffff" stroke="#dde3ea" stroke-width="1"/>
+
+  <!-- Column headers -->
+  <g font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10.5" letter-spacing="0.09em" fill="#8a94a3">
+    <text x="48" y="110">ESTADO</text>
+    <text x="230" y="110">QUÉ SUCEDE CON EL SEGUIMIENTO</text>
+    <text x="600" y="110">ENVÍOS</text>
+    <text x="712" y="110">REANUDABLE</text>
+    <text x="828" y="110">SE ORIGINA POR</text>
+  </g>
+  <line x1="24" y1="120" x2="1096" y2="120" stroke="#e9edf2" stroke-width="1"/>
+
+  <!-- ===== GROUP: EN CURSO ===== -->
+  <rect x="24" y="120" width="1072" height="24" fill="#f5f7fa"/>
+  <text x="48" y="136" font-size="11" font-weight="700" letter-spacing="0.08em" fill="#5c6675">EN CURSO — el seguimiento sigue vivo</text>
+
+  <!-- Row: Pendiente (y 144, h60) -->
+  <rect x="24" y="144" width="4" height="60" fill="#64748b"/>
+  <text x="48" y="170" font-size="14.5" font-weight="700" fill="#151b28">Pendiente</text>
+  <text x="48" y="188" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#64748b">pending</text>
+  <text x="230" y="170" font-size="12.5" fill="#5c6675">Recién creado. Ya tiene programado su primer</text>
+  <text x="230" y="187" font-size="12.5" fill="#5c6675">mensaje, pero todavía no sale.</text>
+  <rect x="596" y="164" width="80" height="20" rx="10" fill="#eef2ff" stroke="#d3ddfb"/>
+  <text x="636" y="178" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#1d4ed8" text-anchor="middle">Programado</text>
+  <text x="726" y="178" font-size="13" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#8a94a3" text-anchor="middle">—</text>
+  <text x="828" y="178" font-size="12.5" fill="#5c6675">Al crear o asignar el seguimiento.</text>
+  <line x1="24" y1="204" x2="1096" y2="204" stroke="#eef1f4" stroke-width="1"/>
+
+  <!-- Row: Programado (y 204, h60) -->
+  <rect x="24" y="204" width="4" height="60" fill="#2563eb"/>
+  <text x="48" y="230" font-size="14.5" font-weight="700" fill="#151b28">Programado</text>
+  <text x="48" y="248" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#2563eb">scheduled</text>
+  <text x="230" y="230" font-size="12.5" fill="#5c6675">Esperando la fecha/hora del próximo intento.</text>
+  <text x="230" y="247" font-size="12.5" fill="#5c6675">El mensaje sale solo cuando llega ese momento.</text>
+  <rect x="596" y="224" width="80" height="20" rx="10" fill="#eef2ff" stroke="#d3ddfb"/>
+  <text x="636" y="238" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#1d4ed8" text-anchor="middle">Programado</text>
+  <text x="726" y="238" font-size="13" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#8a94a3" text-anchor="middle">—</text>
+  <text x="828" y="230" font-size="12.5" fill="#5c6675">Tras enviar un intento (si quedan más)</text>
+  <text x="828" y="247" font-size="12.5" fill="#5c6675">o al reagendar.</text>
+  <line x1="24" y1="264" x2="1096" y2="264" stroke="#eef1f4" stroke-width="1"/>
+
+  <!-- Row: Activo (y 264, h60) -->
+  <rect x="24" y="264" width="4" height="60" fill="#059669"/>
+  <text x="48" y="290" font-size="14.5" font-weight="700" fill="#151b28">Activo</text>
+  <text x="48" y="308" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#059669">active</text>
+  <text x="230" y="290" font-size="12.5" fill="#5c6675">En plena ejecución: enviando el mensaje y</text>
+  <text x="230" y="307" font-size="12.5" fill="#5c6675">respondiendo al contacto según el objetivo.</text>
+  <rect x="596" y="284" width="66" height="20" rx="10" fill="#ecfdf3" stroke="#c6f0d8"/>
+  <text x="629" y="298" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#047857" text-anchor="middle">Enviando</text>
+  <text x="726" y="298" font-size="13" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#8a94a3" text-anchor="middle">—</text>
+  <text x="828" y="290" font-size="12.5" fill="#5c6675">Cuando llega el momento programado</text>
+  <text x="828" y="307" font-size="12.5" fill="#5c6675">y corre el envío.</text>
+  <line x1="24" y1="324" x2="1096" y2="324" stroke="#eef1f4" stroke-width="1"/>
+
+  <!-- Row: Pausado (y 324, h60) -->
+  <rect x="24" y="324" width="4" height="60" fill="#d97706"/>
+  <text x="48" y="350" font-size="14.5" font-weight="700" fill="#151b28">Pausado</text>
+  <text x="48" y="368" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#d97706">paused</text>
+  <text x="230" y="350" font-size="12.5" fill="#5c6675">Detenido temporalmente. Se cancelan los envíos</text>
+  <text x="230" y="367" font-size="12.5" fill="#5c6675">programados, pero puede reanudarse.</text>
+  <rect x="596" y="344" width="72" height="20" rx="10" fill="#f1f4f8" stroke="#e0e6ee"/>
+  <text x="632" y="358" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#64748b" text-anchor="middle">Detenidos</text>
+  <rect x="710" y="344" width="34" height="20" rx="10" fill="#ecfdf3" stroke="#c6f0d8"/>
+  <text x="727" y="358" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#047857" text-anchor="middle">Sí</text>
+  <text x="828" y="350" font-size="12.5" fill="#5c6675">Regla del Agente IA, interés/rechazo</text>
+  <text x="828" y="367" font-size="12.5" fill="#5c6675">del bot, o pausa manual.</text>
+
+  <!-- ===== GROUP: FINALES ===== -->
+  <rect x="24" y="384" width="1072" height="24" fill="#f5f7fa"/>
+  <text x="48" y="400" font-size="11" font-weight="700" letter-spacing="0.08em" fill="#5c6675">FINALES — no vuelve a enviar mensajes</text>
+
+  <!-- Row: Completado (y 408, h60) -->
+  <rect x="24" y="408" width="4" height="60" fill="#475569"/>
+  <text x="48" y="434" font-size="14.5" font-weight="700" fill="#151b28">Completado</text>
+  <text x="48" y="452" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#475569">completed</text>
+  <text x="230" y="434" font-size="12.5" fill="#5c6675">Agotó todos los intentos configurados. Se detiene</text>
+  <text x="230" y="451" font-size="12.5" fill="#5c6675">para siempre. Por sí solo no significa éxito.</text>
+  <rect x="596" y="428" width="72" height="20" rx="10" fill="#f1f4f8" stroke="#e0e6ee"/>
+  <text x="632" y="442" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#64748b" text-anchor="middle">Detenidos</text>
+  <text x="726" y="442" font-size="13" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#8a94a3" text-anchor="middle">—</text>
+  <text x="828" y="442" font-size="12.5" fill="#5c6675">Alcanzar el máximo de intentos.</text>
+  <line x1="24" y1="468" x2="1096" y2="468" stroke="#eef1f4" stroke-width="1"/>
+
+  <!-- Row: Objetivo cumplido (y 468, h60) -->
+  <rect x="24" y="468" width="4" height="60" fill="#7c3aed"/>
+  <text x="48" y="494" font-size="14.5" font-weight="700" fill="#151b28">Objetivo cumplido <tspan fill="#7c3aed">★</tspan></text>
+  <text x="48" y="512" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#7c3aed">objective_met</text>
+  <text x="230" y="494" font-size="12.5" fill="#5c6675">Se logró la meta del seguimiento. Único estado que</text>
+  <text x="230" y="511" font-size="12.5" fill="#5c6675">cuenta como <tspan font-weight="700" fill="#151b28">éxito</tspan>; cancela los envíos pendientes.</text>
+  <rect x="596" y="488" width="72" height="20" rx="10" fill="#f1f4f8" stroke="#e0e6ee"/>
+  <text x="632" y="502" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#64748b" text-anchor="middle">Detenidos</text>
+  <text x="726" y="502" font-size="13" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#8a94a3" text-anchor="middle">—</text>
+  <text x="828" y="494" font-size="12.5" fill="#5c6675">La regla «Objetivo cumplido» del Agente</text>
+  <text x="828" y="511" font-size="12.5" fill="#5c6675">IA, o marca manual.</text>
+  <line x1="24" y1="528" x2="1096" y2="528" stroke="#eef1f4" stroke-width="1"/>
+
+  <!-- Row: Cancelado (y 528, h60) -->
+  <rect x="24" y="528" width="4" height="60" fill="#be123c"/>
+  <text x="48" y="554" font-size="14.5" font-weight="700" fill="#151b28">Cancelado</text>
+  <text x="48" y="572" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#be123c">cancelled</text>
+  <text x="230" y="554" font-size="12.5" fill="#5c6675">Detenido de forma definitiva antes de terminar.</text>
+  <text x="230" y="571" font-size="12.5" fill="#5c6675">No se reanuda ni vuelve a enviar.</text>
+  <rect x="596" y="548" width="72" height="20" rx="10" fill="#f1f4f8" stroke="#e0e6ee"/>
+  <text x="632" y="562" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#64748b" text-anchor="middle">Detenidos</text>
+  <text x="726" y="562" font-size="13" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#8a94a3" text-anchor="middle">—</text>
+  <text x="828" y="562" font-size="12.5" fill="#5c6675">Una regla del Agente IA o cancelación manual.</text>
+  <line x1="24" y1="588" x2="1096" y2="588" stroke="#eef1f4" stroke-width="1"/>
+
+  <!-- Row: Fallido (y 588, h78) -->
+  <rect x="24" y="588" width="4" height="78" fill="#dc2626"/>
+  <text x="48" y="620" font-size="14.5" font-weight="700" fill="#151b28">Fallido</text>
+  <text x="48" y="638" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#dc2626">failed</text>
+  <text x="230" y="614" font-size="12.5" fill="#5c6675">No se pudo ejecutar: fallo de envío (canal rechazó</text>
+  <text x="230" y="631" font-size="12.5" fill="#5c6675">o sin conversación), ventana de 24 h cerrada sin</text>
+  <text x="230" y="648" font-size="12.5" fill="#5c6675">plantilla, o parámetros sin resolver.</text>
+  <rect x="596" y="617" width="72" height="20" rx="10" fill="#f1f4f8" stroke="#e0e6ee"/>
+  <text x="632" y="631" font-size="11" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#64748b" text-anchor="middle">Detenidos</text>
+  <text x="726" y="631" font-size="13" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#8a94a3" text-anchor="middle">—</text>
+  <text x="828" y="631" font-size="12.5" fill="#5c6675">Un error durante la ejecución del envío.</text>
+
+  <!-- Footer -->
+  <text x="32" y="706" font-size="11.5" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#8a94a3">Fuente: modelo ContactTracking · Agente de Seguimientos IA</text>
+</svg>
