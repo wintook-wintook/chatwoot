@@ -9,6 +9,10 @@
     "LOADING": "Cargando campañas…",
     "EMPTY_TITLE": "Todavía no hay campañas.",
     "EMPTY_HINT": "Crea una con el botón «Nueva campaña» o asigna un Agente IA de forma masiva desde Contactos.",
+    "DELETE": "Borrar campaña",
+    "DELETE_CONFIRM": "¿Borrar la campaña «{name}»? Se cancelarán sus seguimientos activos (dejan de enviar). Los seguimientos no se borran: quedan sueltos en «Todos».",
+    "DELETE_SUCCESS": "Campaña borrada.",
+    "DELETE_ERROR": "No se pudo borrar la campaña.",
     "COL": {
       "NAME": "Campaña",
       "AGENT": "Agente IA",

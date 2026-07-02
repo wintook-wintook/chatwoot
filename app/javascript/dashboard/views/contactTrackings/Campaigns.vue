@@ -21,6 +21,7 @@ export default {
     return {
       campaigns: [],
       isLoading: false,
+      deletingId: null,
       activeTab: 'list',
       // Filtro preestablecido cuando se llega desde Contactos (history.state).
       presetFilter: null,
@@ -99,6 +100,26 @@ export default {
         name: 'contact_trackings_campaign_detail',
         params: { campaignId: campaign.id },
       });
+    },
+    // Borra la campaña; el backend cancela los seguimientos activos y desvincula
+    // los demás (quedan sueltos en "Todos"). Pide confirmación antes.
+    async deleteCampaign(campaign) {
+      const confirmed = window.confirm(
+        this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE_CONFIRM', {
+          name: campaign.name,
+        })
+      );
+      if (!confirmed) return;
+      this.deletingId = campaign.id;
+      try {
+        await TrackingCampaignsAPI.delete(campaign.id);
+        this.campaigns = this.campaigns.filter(c => c.id !== campaign.id);
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE_SUCCESS'));
+      } catch (error) {
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE_ERROR'));
+      } finally {
+        this.deletingId = null;
+      }
     },
     onCampaignCreated(result) {
       useAlert(
@@ -190,6 +211,7 @@ export default {
             <th class="p-3 text-right">
               {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.PROGRESS') }}
             </th>
+            <th class="p-3 w-10" aria-label="acciones" />
           </tr>
         </thead>
         <tbody>
@@ -235,6 +257,17 @@ export default {
                   {{ progressPct(c.stats) }}%
                 </span>
               </div>
+            </td>
+            <td class="p-3 text-right">
+              <woot-button
+                variant="clear"
+                color-scheme="alert"
+                size="small"
+                icon="delete"
+                :is-loading="deletingId === c.id"
+                :title="$t('TRACKING_CAMPAIGNS_VIEW.DELETE')"
+                @click.stop="deleteCampaign(c)"
+              />
             </td>
           </tr>
         </tbody>

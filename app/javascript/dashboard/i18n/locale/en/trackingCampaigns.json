@@ -9,6 +9,10 @@
     "LOADING": "Loading campaigns…",
     "EMPTY_TITLE": "No campaigns yet.",
     "EMPTY_HINT": "Create one with the “New campaign” button or bulk-assign an AI Agent from Contacts.",
+    "DELETE": "Delete campaign",
+    "DELETE_CONFIRM": "Delete campaign “{name}”? Its active follow-ups will be cancelled (they stop sending). Follow-ups aren't deleted: they stay unlinked under “All”.",
+    "DELETE_SUCCESS": "Campaign deleted.",
+    "DELETE_ERROR": "Could not delete the campaign.",
     "COL": {
       "NAME": "Campaign",
       "AGENT": "AI Agent",

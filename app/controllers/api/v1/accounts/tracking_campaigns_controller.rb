@@ -37,7 +37,25 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     render json: campaign_json(campaign, stats[campaign.id], delivery[campaign.id], funnel[campaign.id])
   end
 
+  # Borra la campaña. Antes cancela los seguimientos aún vivos (detiene sus jobs)
+  # para que no sigan enviando mensajes sin campaña. Los seguimientos NO se borran:
+  # el modelo los desvincula (dependent: :nullify) y quedan sueltos en "Todos".
+  def destroy
+    campaign = Current.account.tracking_campaigns.find(params[:id])
+    cancel_active_trackings(campaign)
+    campaign.destroy!
+    head :no_content
+  end
+
   private
+
+  # Cancela los seguimientos no terminales de la campaña (pending/scheduled/active/paused).
+  # cancel! cancela los jobs programados y marca el estado como 'cancelled'.
+  def cancel_active_trackings(campaign)
+    campaign.contact_trackings
+            .where(status: %w[pending scheduled active paused])
+            .find_each(&:cancel!)
+  end
 
   # { campaign_id => { 'pending' => N, 'active' => N, ... } } en una sola query.
   # Además desglosa 'completed' según si hubo respuesta (last_intent) o no, con una
