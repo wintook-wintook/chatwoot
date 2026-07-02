@@ -478,7 +478,7 @@ export default {
           class="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
         >
           <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-            📬 Entrega
+            📬 Entrega de Mensajes
           </span>
           <div
             v-if="hasDeliveryData"
