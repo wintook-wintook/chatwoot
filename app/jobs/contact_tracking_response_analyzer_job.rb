@@ -1369,10 +1369,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # antes de escribir el nuevo, para no apilar bloques y elegir el slot equivocado.
     clear_pending_slot(tracking)
     clear_pending_email(tracking)
-    slots_json = slots.map do |s|
-      { slot: s[:slot].utc.iso8601, end_time: s[:end_time].utc.iso8601,
-        agent_name: s[:agent_name], cal_id: s[:calendar_integration_id] }
-    end
+    # slot_payload incluye `gcal` (el calendario de Google del slot). Es imprescindible:
+    # al elegir un número, confirm_and_create_appointment lee `gcal` para crear el evento
+    # en ESE calendario. Si se omite, cae a 'primary' y agenda en el calendario equivocado.
+    slots_json = slots.map { |s| slot_payload(s) }
     tracking.update!(
       ai_context: "#{tracking.ai_context}\n\n📅 [PENDING_SLOT] Esperando elección de horario.\nSlots ofrecidos: #{slots_json.to_json}"
     )
