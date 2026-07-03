@@ -56,6 +56,7 @@
         <CalendarView
           :events="events"
           :availability="availability"
+          :calendars="calendars"
           class="flex-1"
           @rangeChanged="fetchData"
           @eventDropped="onEventDropped"

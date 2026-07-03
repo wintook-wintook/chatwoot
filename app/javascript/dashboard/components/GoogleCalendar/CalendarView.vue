@@ -15,7 +15,8 @@ import esLocale from '@fullcalendar/core/locales/es';
 const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 const AGENT_COLORS = ['#f43f5e', '#fb923c', '#a3e635', '#22d3ee', '#818cf8', '#e879f9'];
 
-function eventColor(eventId) {
+// Color de respaldo cuando no conocemos el calendario del evento (hash del id).
+function fallbackColor(eventId) {
   return COLORS[(eventId?.charCodeAt(0) || 0) % COLORS.length];
 }
 
@@ -29,29 +30,44 @@ export default {
   props: {
     events: { type: Array, default: () => [] },
     availability: { type: Array, default: () => [] },
+    calendars: { type: Array, default: () => [] },
   },
   emits: ['rangeChanged', 'eventDropped', 'eventClicked', 'dateSelected'],
   watch: {
     events() { this.syncEvents(); },
     availability() { this.syncEvents(); },
+    calendars() { this.syncEvents(); },
   },
   methods: {
+    // Cada evento se pinta con el color de SU calendario (igual que Google y que el
+    // swatch de la barra lateral). El calendario principal puede venir con id real o
+    // con el alias 'primary', así que mapeamos ambos.
+    calendarColor(calendarId) {
+      const map = {};
+      this.calendars.forEach(c => {
+        map[c.id] = c.background_color;
+        if (c.primary) map.primary = c.background_color;
+      });
+      return map[calendarId];
+    },
     syncEvents() {
       const api = this.$refs.fullCalendar?.getApi();
       if (!api) return;
       api.removeAllEvents();
 
       this.events.forEach(e => {
+        const calId = e.calendarId || 'primary';
+        const color = this.calendarColor(calId) || fallbackColor(e.id);
         api.addEvent({
           id: e.id,
           title: e.summary || this.$t('GOOGLE_CALENDAR.EVENTS.ALL_DAY'),
           start: e.start?.dateTime || e.start?.date,
           end: e.end?.dateTime || e.end?.date,
           allDay: !e.start?.dateTime,
-          backgroundColor: eventColor(e.id),
-          borderColor: eventColor(e.id),
+          backgroundColor: color,
+          borderColor: color,
           extendedProps: {
-            calendarId: e.calendarId || 'primary',
+            calendarId: calId,
             description: e.description || '',
             location: e.location || '',
             attendees: e.attendees || [],
