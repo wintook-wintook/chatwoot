@@ -198,9 +198,14 @@ module ContactTrackings
     end
 
     def load_calendar_names(integration)
+      agent_name = integration.user&.name.presence || 'Agente'
       GoogleCalendarService.new(integration).list_calendars.each_with_object({}) do |c, acc|
-        acc[c[:id].to_s] = c[:summary]
-        acc['primary']   = c[:summary] if c[:primary] # el alias 'primary' apunta al principal
+        # El calendario principal en Google se llama como el email del usuario; para el
+        # cliente mostramos mejor el nombre del agente de Chatwoot. Los secundarios (Casa,
+        # Consultorio Centro, etc.) conservan su nombre real.
+        name           = c[:primary] ? agent_name : c[:summary]
+        acc[c[:id].to_s] = name
+        acc['primary']   = name if c[:primary] # el alias 'primary' apunta al principal
       end
     rescue StandardError => e
       Rails.logger.warn "[AvailabilitySlotService] ⚠️ no se pudieron leer nombres de calendarios de ##{integration.id}: #{e.message}"
