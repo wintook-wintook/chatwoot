@@ -42,9 +42,12 @@ export default {
     },
     CALENDARS: {
       TITLE: 'My calendars',
+      SUBSCRIBED: 'subscribed',
       SUBSCRIBE_BUTTON: 'Add another calendar',
       SUBSCRIBE_PLACEHOLDER: 'email@example.com or calendar ID',
       SUBSCRIBE_ADD: 'Add',
+      SUBSCRIBE_MODAL_TITLE: 'Add another calendar',
+      SUBSCRIBE_MODAL_SUBTITLE: 'Enter the email or ID of the Google calendar you want to see. It must be shared with your account.',
     },
     AVAILABILITY: {
       TITLE: 'Team Availability',

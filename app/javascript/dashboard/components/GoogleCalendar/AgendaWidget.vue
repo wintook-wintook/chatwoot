@@ -68,56 +68,69 @@
 
       <div
         v-if="openSection === 'calendars'"
-        class="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5"
+        class="flex-1 overflow-y-auto px-3 pb-4 space-y-1"
       >
-        <label
-          v-for="cal in calendars"
-          :key="cal.id"
-          class="flex items-center gap-2 cursor-pointer group/cal py-0.5"
-        >
-          <span
-            class="w-3 h-3 rounded-sm flex-shrink-0 border-2 transition-all"
-            :style="cal.enabled
-              ? { backgroundColor: cal.background_color, borderColor: cal.background_color }
-              : { borderColor: cal.background_color, backgroundColor: 'transparent' }"
-          />
-          <input
-            type="checkbox"
-            class="sr-only"
-            :checked="cal.enabled"
-            @change="$emit('toggleCalendar', cal.id)"
-          />
-          <span
-            class="text-xs text-slate-600 dark:text-slate-300 truncate"
-            :class="{ 'line-through opacity-50': !cal.enabled }"
-          >
-            {{ cal.summary }}
-          </span>
-        </label>
-
-        <!-- Suscribirse a calendario externo -->
-        <div v-if="showSubscribeInput" class="flex gap-1 mt-2">
-          <input
-            v-model="subscribeInput"
-            type="text"
-            class="flex-1 text-xs px-2 py-1 border border-slate-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:border-woot-400"
-            :placeholder="$t('GOOGLE_CALENDAR.CALENDARS.SUBSCRIBE_PLACEHOLDER')"
-            @keydown.enter="subscribe"
-            @keydown.esc="closeSubscribeInput"
-          />
+        <!-- Árbol por cuenta: el primario de cada cuenta con sus secundarios anidados -->
+        <div v-for="acct in calendarTree" :key="acct.key" class="select-none">
           <button
-            class="px-2 py-1 text-xs bg-woot-500 text-white rounded-md hover:bg-woot-600 disabled:opacity-50"
-            :disabled="subscribing || !subscribeInput.trim()"
-            @click="subscribe"
+            class="w-full flex items-center gap-1 px-1 py-1 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+            @click="toggleAccount(acct.key)"
           >
-            {{ subscribing ? '...' : $t('GOOGLE_CALENDAR.CALENDARS.SUBSCRIBE_ADD') }}
+            <fluent-icon
+              :icon="isAccountOpen(acct.key) ? 'chevron-down' : 'chevron-right'"
+              size="12"
+              class="text-slate-400 flex-shrink-0"
+            />
+            <fluent-icon icon="person" size="13" class="text-slate-400 flex-shrink-0" />
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
+              {{ acct.label }}
+            </span>
+            <span
+              v-if="acct.kind === 'external'"
+              class="text-[10px] text-slate-400 dark:text-slate-500 flex-shrink-0"
+            >
+              ({{ $t('GOOGLE_CALENDAR.CALENDARS.SUBSCRIBED') }})
+            </span>
           </button>
+
+          <div v-if="isAccountOpen(acct.key)" class="pl-5 mt-0.5 space-y-1">
+            <label
+              v-for="cal in acct.calendars"
+              :key="cal.id"
+              class="flex items-center gap-2 cursor-pointer py-0.5"
+            >
+              <span
+                class="w-3 h-3 rounded-sm flex-shrink-0 border-2 transition-all"
+                :style="cal.enabled
+                  ? { backgroundColor: cal.background_color, borderColor: cal.background_color }
+                  : { borderColor: cal.background_color, backgroundColor: 'transparent' }"
+              />
+              <input
+                type="checkbox"
+                class="sr-only"
+                :checked="cal.enabled"
+                @change="$emit('toggleCalendar', cal.id)"
+              />
+              <span
+                class="text-xs text-slate-600 dark:text-slate-300 truncate"
+                :class="{ 'line-through opacity-50': !cal.enabled }"
+              >
+                {{ cal.summary }}
+              </span>
+              <span
+                v-if="cal.primary"
+                class="text-[10px] text-woot-500 flex-shrink-0"
+              >
+                ({{ $t('GOOGLE_CALENDAR.CREATE_EVENT.FIELDS.CALENDAR_PRIMARY') }})
+              </span>
+            </label>
+          </div>
         </div>
 
+        <!-- Agregar otro calendario (abre modal) -->
         <button
-          v-else
-          class="flex items-center gap-1 text-xs text-slate-400 hover:text-woot-500 mt-1 transition-colors"
-          @click="showSubscribeInput = true"
+          class="flex items-center gap-1 text-xs text-slate-400 hover:text-woot-500 mt-2 pl-1 transition-colors"
+          @click="openSubscribeModal"
         >
           <fluent-icon icon="add" size="12" />
           {{ $t('GOOGLE_CALENDAR.CALENDARS.SUBSCRIBE_BUTTON') }}
@@ -186,6 +199,42 @@
         </div>
       </div>
     </section>
+
+    <!-- Modal: agregar / suscribir otro calendario -->
+    <woot-modal
+      :show="showSubscribeModal"
+      :on-close="closeSubscribeModal"
+      size="small"
+    >
+      <woot-modal-header
+        :header-title="$t('GOOGLE_CALENDAR.CALENDARS.SUBSCRIBE_MODAL_TITLE')"
+        :header-content="$t('GOOGLE_CALENDAR.CALENDARS.SUBSCRIBE_MODAL_SUBTITLE')"
+      />
+      <div class="px-8 pb-8 pt-2">
+        <input
+          ref="subscribeField"
+          v-model="subscribeInput"
+          type="text"
+          class="w-full text-sm px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:border-woot-400"
+          :placeholder="$t('GOOGLE_CALENDAR.CALENDARS.SUBSCRIBE_PLACEHOLDER')"
+          @keydown.enter="subscribe"
+          @keydown.esc="closeSubscribeModal"
+        />
+        <div class="flex justify-end gap-2 mt-4">
+          <woot-button variant="clear" size="small" @click="closeSubscribeModal">
+            {{ $t('GOOGLE_CALENDAR.CREATE_EVENT.CANCEL') }}
+          </woot-button>
+          <woot-button
+            size="small"
+            :is-loading="subscribing"
+            :disabled="subscribing || !subscribeInput.trim()"
+            @click="subscribe"
+          >
+            {{ $t('GOOGLE_CALENDAR.CALENDARS.SUBSCRIBE_ADD') }}
+          </woot-button>
+        </div>
+      </div>
+    </woot-modal>
   </div>
 </template>
 
@@ -205,12 +254,62 @@ export default {
     return {
       // Acordeón del panel lateral: 'upcoming' | 'calendars' | 'availability' | null.
       openSection: 'upcoming',
-      showSubscribeInput: false,
+      // Árbol 'Mis calendarios': { [accountKey]: false } para las cuentas colapsadas
+      // (por defecto todas abiertas).
+      expandedAccounts: {},
+      showSubscribeModal: false,
       subscribeInput: '',
       subscribing: false,
     };
   },
   computed: {
+    // Agrupa la lista plana de calendarios en un árbol por cuenta (Opción "Por cuenta").
+    // Raíz = cuenta conectada (su primario) con sus calendarios propios y suscripciones
+    // no-personales (feriados, etc.) anidados. Cada calendario personal ajeno (email
+    // distinto, compartido) forma su propia cuenta raíz. La conectada va siempre primero.
+    calendarTree() {
+      const connected = (this.calendars.find(c => c.primary) || {}).id || null;
+      const isPersonalEmail = id =>
+        typeof id === 'string' &&
+        /^[^@\s]+@[^@\s]+$/.test(id) &&
+        !id.includes('group.') &&
+        !id.includes('#');
+
+      const accounts = new Map();
+      const ensure = (key, label, kind) => {
+        if (!accounts.has(key)) accounts.set(key, { key, label, kind, calendars: [] });
+        return accounts.get(key);
+      };
+      if (connected) ensure(connected, connected, 'connected');
+
+      this.calendars.forEach(cal => {
+        const owned = cal.access_role === 'owner' || cal.primary;
+        let key;
+        if (owned || !isPersonalEmail(cal.id) || cal.id === connected) {
+          key = connected || 'me';
+        } else {
+          key = cal.id; // calendario personal ajeno (compartido) → su propia cuenta
+        }
+        const kind = key === connected ? 'connected' : 'external';
+        const label = key === connected ? connected || 'Mi cuenta' : key;
+        ensure(key, label, kind).calendars.push(cal);
+      });
+
+      const groups = [...accounts.values()].filter(a => a.calendars.length);
+      groups.sort((a, b) => {
+        if (a.kind !== b.kind) return a.kind === 'connected' ? -1 : 1;
+        return a.label.localeCompare(b.label);
+      });
+      // Dentro de cada cuenta: el primario primero, luego por nombre.
+      groups.forEach(a =>
+        a.calendars.sort(
+          (x, y) =>
+            (y.primary ? 1 : 0) - (x.primary ? 1 : 0) ||
+            (x.summary || '').localeCompare(y.summary || '')
+        )
+      );
+      return groups;
+    },
     upcomingEvents() {
       const now = new Date();
       return this.events
@@ -242,22 +341,37 @@ export default {
     toggleSection(name) {
       this.openSection = this.openSection === name ? null : name;
     },
+    // Árbol de cuentas: por defecto abiertas (solo guardamos las cerradas).
+    isAccountOpen(key) {
+      return this.expandedAccounts[key] !== false;
+    },
+    toggleAccount(key) {
+      // Reasignar el objeto para asegurar reactividad en Vue 2/3.
+      this.expandedAccounts = {
+        ...this.expandedAccounts,
+        [key]: !this.isAccountOpen(key),
+      };
+    },
+    openSubscribeModal() {
+      this.subscribeInput = '';
+      this.showSubscribeModal = true;
+    },
+    closeSubscribeModal() {
+      this.showSubscribeModal = false;
+      this.subscribeInput = '';
+    },
     async subscribe() {
       const id = this.subscribeInput.trim();
       if (!id) return;
       this.subscribing = true;
       try {
         await this.$store.dispatch('googleCalendar/subscribeCalendar', id);
-        this.closeSubscribeInput();
+        this.closeSubscribeModal();
       } catch {
         // error silently — backend sends 422 with message if calendar not found/accessible
       } finally {
         this.subscribing = false;
       }
-    },
-    closeSubscribeInput() {
-      this.showSubscribeInput = false;
-      this.subscribeInput = '';
     },
     calendarColor(calendarId) {
       return this.calendarColorMap[calendarId] || '#6366f1';
