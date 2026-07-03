@@ -623,7 +623,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     if alternatives.any?
       Rails.logger.info '[TrackingBot] 📅 Ofreciendo horarios para mover la cita'
       intro ||= 'Uy, ese horario no está disponible 😕. Para mover tu cita tengo estos horarios:'
-      reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, slots_presentation_for(tracking))}\n\n¿Cuál te viene bien? Respondé con el número."
+      presentation = slots_presentation_for(tracking)
+      alternatives = order_slots_for_presentation(alternatives, presentation)
+      reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número."
       offer_slots(tracking, message, alternatives, reply)
     else
       send_auto_reply(tracking, message,
@@ -655,8 +657,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
   def slot_payload(slot)
     { 'slot' => slot[:slot].utc.iso8601, 'end_time' => slot[:end_time].utc.iso8601,
-      'agent_name' => slot[:agent_name], 'cal_id' => slot[:calendar_integration_id],
-      'gcal' => slot[:google_calendar_id] }
+      'agent_name' => slot[:agent_name], 'calendar_name' => slot[:calendar_name],
+      'cal_id' => slot[:calendar_integration_id], 'gcal' => slot[:google_calendar_id] }
   end
 
   # Fecha/hora destino para mover la cita. Si el cliente dio una hora explícita, la usa;
@@ -743,6 +745,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     # Si pidió una hora exacta que estaba ocupada, lo avisamos antes de las alternativas.
     presentation = slots_presentation_for(tracking)
+    slots = order_slots_for_presentation(slots, presentation)
     reply = if requested&.dig(:exact)
               "Uy, ese horario no está disponible 😕. Estos son los más cercanos:\n\n" \
                 "#{format_slots_lines(slots, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número."
@@ -909,7 +912,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                   '¡Claro! Para ese día tengo estos horarios:'
                 end
         Rails.logger.info '[TrackingBot] 📅 Ofreciendo horarios cercanos a lo pedido'
-        reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, slots_presentation_for(tracking))}\n\n¿Cuál te viene bien? Respondé con el número."
+        presentation = slots_presentation_for(tracking)
+        alternatives = order_slots_for_presentation(alternatives, presentation)
+        reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número."
         offer_slots(tracking, message, alternatives, reply)
         return true
       end
@@ -922,7 +927,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # así que lo normalizamos al shape que espera format_slots_lines (claves símbolo / Time).
     Rails.logger.info '[TrackingBot] 📅 Sin fecha interpretable → repreguntando con los horarios'
     display_slots = current_slots.map do |s|
-      { slot: Time.parse(s['slot']), end_time: Time.parse(s['end_time']), agent_name: s['agent_name'] }
+      { slot: Time.parse(s['slot']), end_time: Time.parse(s['end_time']),
+        agent_name: s['agent_name'], calendar_name: s['calendar_name'] }
     end
     slots_list = format_slots_lines(display_slots, timezone, slots_presentation_for(tracking))
     send_auto_reply(tracking, message,
@@ -1281,7 +1287,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   SLOT_DAY_NAMES     = %w[domingo lunes martes miércoles jueves viernes sábado].freeze
   SLOT_MONTH_NAMES   = %w[ene feb mar abr may jun jul ago sep oct nov dic].freeze
   SLOT_NUMBERS       = %w[1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣].freeze
-  SLOTS_PRESENTATIONS = %w[detailed by_agent simple by_day].freeze
+  SLOTS_PRESENTATIONS = %w[detailed by_agent by_calendar simple by_day].freeze
 
   # proyecto@bot_seguimiento_calendar — formato configurable (en el Agente IA) con el que se
   # listan los horarios. La numeración 1-5 SIEMPRE refleja la posición en `slots`, para que la
@@ -1293,10 +1299,32 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
   def format_slots_lines(slots, timezone, presentation = 'detailed')
     case presentation
-    when 'by_agent' then format_slots_by_agent(slots, timezone)
-    when 'simple'   then format_slots_simple(slots, timezone)
-    when 'by_day'   then format_slots_by_day(slots, timezone)
+    when 'by_agent'    then format_slots_by_agent(slots, timezone)
+    when 'by_calendar' then format_slots_by_calendar(slots, timezone)
+    when 'simple'      then format_slots_simple(slots, timezone)
+    when 'by_day'      then format_slots_by_day(slots, timezone)
     else format_slots_detailed(slots, timezone)
+    end
+  end
+
+  # Etiqueta de calendario para mostrarle al cliente (p.ej. "Casa"). Si el slot no trae
+  # nombre de calendario (legado/None), cae al nombre del agente y por último a "Agenda".
+  def slot_calendar_label(slot)
+    slot[:calendar_name].presence || slot[:agent_name].presence || 'Agenda'
+  end
+
+  # Reordena los slots para que coincidan con el orden en que se MUESTRAN. En los formatos
+  # agrupados (por agente / por calendario) los slots de un mismo grupo van juntos; así la
+  # numeración se lee 1,2,3… de arriba hacia abajo en vez de saltar (1 y 4 en el mismo grupo).
+  # Es imprescindible reordenar el array ANTES de persistirlo: el número que elige el cliente
+  # es el índice en el array guardado, así que display y array deben ir en el mismo orden.
+  # `group_by` conserva el orden de aparición de las claves y el orden (por hora) dentro de
+  # cada grupo. Los formatos no agrupados quedan igual (orden por hora).
+  def order_slots_for_presentation(slots, presentation)
+    case presentation
+    when 'by_agent'    then slots.group_by { |s| s[:agent_name].presence || 'Agenda' }.values.flatten(1)
+    when 'by_calendar' then slots.group_by { |s| slot_calendar_label(s) }.values.flatten(1)
+    else slots
     end
   end
 
@@ -1332,6 +1360,17 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     grouped.map do |agent, items|
       lines = items.map { |s, i| "   #{SLOT_NUMBERS[i]} #{slot_date_range_text(s, timezone)}" }
       "👤 #{agent} (hora de #{tz_label})\n#{lines.join("\n")}"
+    end.join("\n\n")
+  end
+
+  # F) Agrupado por calendario: encabezado con el nombre del calendario (p.ej. "Casa") + zona,
+  # sus horarios debajo. Útil cuando el negocio organiza las citas por calendario/recurso.
+  def format_slots_by_calendar(slots, timezone)
+    tz_label = timezone_label(timezone)
+    grouped  = slots.each_with_index.group_by { |s, _i| slot_calendar_label(s) }
+    grouped.map do |cal, items|
+      lines = items.map { |s, i| "   #{SLOT_NUMBERS[i]} #{slot_date_range_text(s, timezone)}" }
+      "📅 #{cal} (hora de #{tz_label})\n#{lines.join("\n")}"
     end.join("\n\n")
   end
 

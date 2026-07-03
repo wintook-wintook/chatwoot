@@ -142,6 +142,12 @@ export default {
             '👤 Admin (hora de Mexico City)\n   1️⃣ jue 25 jun · 09:00 – 10:00 hs',
         },
         {
+          value: 'by_calendar',
+          label: t('BY_CALENDAR'),
+          preview:
+            '📅 Casa (hora de Mexico City)\n   1️⃣ jue 25 jun · 09:00 – 10:00 hs',
+        },
+        {
           value: 'simple',
           label: t('SIMPLE'),
           preview: '1️⃣ jue 25 jun · 09:00 – 10:00 hs',

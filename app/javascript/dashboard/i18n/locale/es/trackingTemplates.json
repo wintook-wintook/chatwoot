@@ -161,6 +161,7 @@
       "PRESENTATION": {
         "DETAILED": "Detallado",
         "BY_AGENT": "Agrupado por agenda",
+        "BY_CALENDAR": "Agrupado por calendario",
         "SIMPLE": "Simple",
         "BY_DAY": "Agrupado por día"
       },
