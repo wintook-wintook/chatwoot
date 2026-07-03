@@ -201,6 +201,15 @@ function toDateLocal(isoString) {
   }
 }
 
+// El input datetime-local entrega una hora de pared SIN zona ("2026-06-29T10:00").
+// La interpretamos en la zona del navegador (igual que el startStr del drag de
+// FullCalendar, que sí funciona) y la enviamos como instante absoluto ISO en UTC.
+function toIso(localDatetime) {
+  if (!localDatetime) return localDatetime;
+  const d = new Date(localDatetime);
+  return Number.isNaN(d.getTime()) ? localDatetime : d.toISOString();
+}
+
 export default {
   name: 'CreateEventModal',
   props: {
@@ -350,8 +359,8 @@ export default {
           }
         : {
             summary: this.form.summary,
-            start_time: this.form.start_time,
-            end_time: this.form.end_time,
+            start_time: toIso(this.form.start_time),
+            end_time: toIso(this.form.end_time),
             description: this.form.description,
             attendees: this.attendees,
           };
