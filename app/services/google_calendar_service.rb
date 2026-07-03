@@ -77,12 +77,48 @@ class GoogleCalendarService
       {
         id: cal['id'],
         summary: cal['summary'],
+        description: cal['description'],
+        time_zone: cal['timeZone'],
         background_color: cal['backgroundColor'] || '#6366f1',
         foreground_color: cal['foregroundColor'] || '#ffffff',
         primary: cal['primary'] || false,
         access_role: cal['accessRole']
       }
     end
+  end
+
+  # Crea un calendario secundario NUEVO (propio) en la cuenta, como "Crear calendario
+  # nuevo" de Google. Google lo agrega automáticamente a la calendarList del creador.
+  # Devuelve el calendario creado (incluye su id). El color NO es del calendario sino
+  # de la calendarList: se aplica aparte con set_calendar_color.
+  def create_calendar(summary, description: nil, time_zone: nil)
+    body = { summary: summary }
+    body[:description] = description if description.present?
+    body[:timeZone]    = time_zone  if time_zone.present?
+    post('/calendars', body)
+  end
+
+  # PATCH del recurso Calendars: nombre, descripción y zona horaria de un calendario propio.
+  # description = '' borra la descripción; timeZone solo se toca si viene con valor.
+  def update_calendar(calendar_id, summary: nil, description: nil, time_zone: nil)
+    body = {}
+    body[:summary]     = summary    unless summary.nil?
+    body[:description] = description unless description.nil?
+    body[:timeZone]    = time_zone  if time_zone.present?
+    return if body.empty?
+
+    patch("/calendars/#{CGI.escape(calendar_id)}", body)
+  end
+
+  # El color es una propiedad de la calendarList (por-usuario), no del calendario. Con
+  # colorRgbFormat=true aceptamos un hex arbitrario; el color de texto se calcula por
+  # contraste para que se lea bien.
+  def set_calendar_color(calendar_id, background_color)
+    patch(
+      "/users/me/calendarList/#{CGI.escape(calendar_id)}",
+      { backgroundColor: background_color, foregroundColor: contrast_color(background_color) },
+      query: { colorRgbFormat: 'true' }
+    )
   end
 
   def subscribe_calendar(calendar_id)
@@ -138,6 +174,16 @@ class GoogleCalendarService
   end
 
   private
+
+  # Negro o blanco según la luminancia del fondo, para que el color de texto se lea.
+  def contrast_color(hex)
+    h = hex.to_s.delete('#')
+    return '#1d1d1d' unless h.length == 6
+
+    r, g, b = [h[0..1], h[2..3], h[4..5]].map { |c| c.to_i(16) }
+    luminance = ((0.299 * r) + (0.587 * g) + (0.114 * b)) / 255.0
+    luminance > 0.6 ? '#1d1d1d' : '#ffffff'
+  end
 
   def get(path, params = {})
     response = HTTParty.get(

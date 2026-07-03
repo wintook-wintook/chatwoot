@@ -161,6 +161,7 @@
       "PRESENTATION": {
         "DETAILED": "Detailed",
         "BY_AGENT": "Grouped by calendar",
+        "BY_CALENDAR": "Grouped by calendar name",
         "SIMPLE": "Simple",
         "BY_DAY": "Grouped by day"
       },

@@ -32,6 +32,26 @@
       </div>
 
       <form class="space-y-4" @submit.prevent="submit">
+        <!-- Calendar selector (only if the user has more than one writable calendar) -->
+        <div v-if="writableCalendars.length > 1" class="space-y-1">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">
+            {{ $t('GOOGLE_CALENDAR.CREATE_EVENT.FIELDS.CALENDAR') }}
+          </label>
+          <select
+            v-model="form.calendar_id"
+            :disabled="isEditing"
+            class="w-full px-3 py-2 text-sm border rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <option
+              v-for="cal in writableCalendars"
+              :key="cal.id"
+              :value="cal.id"
+            >
+              {{ cal.primary ? $t('GOOGLE_CALENDAR.CREATE_EVENT.FIELDS.CALENDAR_PRIMARY') : cal.summary }}
+            </option>
+          </select>
+        </div>
+
         <!-- Title -->
         <woot-input
           v-model="form.summary"
@@ -181,6 +201,15 @@ function toDateLocal(isoString) {
   }
 }
 
+// El input datetime-local entrega una hora de pared SIN zona ("2026-06-29T10:00").
+// La interpretamos en la zona del navegador (igual que el startStr del drag de
+// FullCalendar, que sí funciona) y la enviamos como instante absoluto ISO en UTC.
+function toIso(localDatetime) {
+  if (!localDatetime) return localDatetime;
+  const d = new Date(localDatetime);
+  return Number.isNaN(d.getTime()) ? localDatetime : d.toISOString();
+}
+
 export default {
   name: 'CreateEventModal',
   props: {
@@ -188,6 +217,9 @@ export default {
     prefillEmail: { type: String, default: '' },
     editEvent: { type: Object, default: null },
     initialType: { type: String, default: 'event' },
+    initialStart: { type: String, default: '' },
+    initialEnd: { type: String, default: '' },
+    initialAllDay: { type: Boolean, default: false },
   },
   emits: ['close', 'created'],
   setup() {
@@ -199,6 +231,7 @@ export default {
       form: {
         type: 'event',
         summary: '',
+        calendar_id: 'primary',
         all_day: false,
         start_time: '',
         end_time: '',
@@ -213,7 +246,23 @@ export default {
     };
   },
   computed: {
-    ...mapGetters({ uiFlags: 'googleCalendar/getCalendarUIFlags' }),
+    ...mapGetters({
+      uiFlags: 'googleCalendar/getCalendarUIFlags',
+      calendars: 'googleCalendar/getCalendars',
+    }),
+    // Solo los calendarios donde el usuario puede escribir (crear/editar eventos),
+    // con el principal primero.
+    writableCalendars() {
+      return (this.calendars || [])
+        .filter(c => !c.access_role || ['owner', 'writer'].includes(c.access_role))
+        .slice()
+        .sort((a, b) => (b.primary ? 1 : 0) - (a.primary ? 1 : 0));
+    },
+    // El calendario principal se lista con id = email; normalizamos el alias 'primary' a ese id.
+    primaryCalendarId() {
+      const primary = this.writableCalendars.find(c => c.primary);
+      return primary ? primary.id : 'primary';
+    },
     isCreating() {
       return this.uiFlags.isCreating;
     },
@@ -255,6 +304,8 @@ export default {
       if (this.editEvent) {
         const isAllDay = this.editEvent.allDay;
         this.form.type = isAllDay ? 'task' : 'event';
+        const cid = this.editEvent.extendedProps?.calendarId;
+        this.form.calendar_id = !cid || cid === 'primary' ? this.primaryCalendarId : cid;
         this.form.summary = this.editEvent.title || '';
         this.form.start_time = toDatetimeLocal(this.editEvent.startStr);
         this.form.end_time = toDatetimeLocal(this.editEvent.endStr);
@@ -263,13 +314,16 @@ export default {
         this.form.location = this.editEvent.extendedProps?.location || '';
         this.attendees = (this.editEvent.extendedProps?.attendees || []).map(a => a.email);
       } else {
+        const timed = this.initialStart && !this.initialAllDay;
         this.form.summary = '';
+        this.form.calendar_id = this.primaryCalendarId;
         this.form.all_day = false;
-        this.form.start_time = '';
-        this.form.end_time = '';
+        this.form.start_time = timed ? toDatetimeLocal(this.initialStart) : '';
+        this.form.end_time = timed ? toDatetimeLocal(this.initialEnd) : '';
         this.form.start_date = '';
         this.form.end_date = '';
-        this.form.due_date = '';
+        this.form.due_date =
+          this.initialAllDay && this.initialStart ? toDateLocal(this.initialStart) : '';
         this.form.location = '';
         this.form.description = '';
         if (this.prefillEmail) this.attendees = [this.prefillEmail];
@@ -305,11 +359,12 @@ export default {
           }
         : {
             summary: this.form.summary,
-            start_time: this.form.start_time,
-            end_time: this.form.end_time,
+            start_time: toIso(this.form.start_time),
+            end_time: toIso(this.form.end_time),
             description: this.form.description,
             attendees: this.attendees,
           };
+      payload.calendar_id = this.form.calendar_id;
 
       try {
         if (this.isEditing) {
