@@ -60,6 +60,7 @@
           @rangeChanged="fetchData"
           @eventDropped="onEventDropped"
           @eventClicked="onEventClicked"
+          @dateSelected="onDateSelected"
         />
         <AgendaWidget
           :events="events"
@@ -75,6 +76,9 @@
       :show="showCreateModal"
       :edit-event="editingEvent"
       :initial-type="createType"
+      :initial-start="createStart"
+      :initial-end="createEnd"
+      :initial-all-day="createAllDay"
       @close="onModalClose"
       @created="fetchData"
     />
@@ -98,7 +102,7 @@ export default {
   name: 'GoogleCalendarView',
   components: { CalendarConnectModal, CalendarView, AgendaWidget, CreateEventModal, ShareAgendaModal },
   data() {
-    return { showCreateModal: false, showCreateDropdown: false, createType: 'event', editingEvent: null, showShareModal: false, pollInterval: null, currentRange: {} };
+    return { showCreateModal: false, showCreateDropdown: false, createType: 'event', editingEvent: null, createStart: '', createEnd: '', createAllDay: false, showShareModal: false, pollInterval: null, currentRange: {} };
   },
   computed: {
     ...mapGetters({
@@ -146,11 +150,22 @@ export default {
       this.createType = type;
       this.showCreateDropdown = false;
       this.editingEvent = null;
+      this.createStart = '';
+      this.createEnd = '';
+      this.createAllDay = false;
       this.showCreateModal = true;
     },
     onEventClicked(fcEvent) {
       this.editingEvent = fcEvent;
       this.createType = 'event';
+      this.showCreateModal = true;
+    },
+    onDateSelected({ start, end, allDay }) {
+      this.editingEvent = null;
+      this.createType = allDay ? 'task' : 'event';
+      this.createStart = start;
+      this.createEnd = end;
+      this.createAllDay = allDay;
       this.showCreateModal = true;
     },
     onModalClose() {

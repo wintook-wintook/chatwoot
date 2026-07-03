@@ -30,7 +30,7 @@ export default {
     events: { type: Array, default: () => [] },
     availability: { type: Array, default: () => [] },
   },
-  emits: ['rangeChanged', 'eventDropped', 'eventClicked'],
+  emits: ['rangeChanged', 'eventDropped', 'eventClicked', 'dateSelected'],
   watch: {
     events() { this.syncEvents(); },
     availability() { this.syncEvents(); },
@@ -95,6 +95,28 @@ export default {
         editable: true,
         droppable: false,
         eventDurationEditable: true,
+        selectable: true,
+        selectMirror: true,
+        // Arrastre en un hueco → rango prellenado.
+        select: info => {
+          this.$emit('dateSelected', {
+            start: info.startStr,
+            end: info.endStr,
+            allDay: info.allDay,
+          });
+          this.$refs.fullCalendar?.getApi().unselect();
+        },
+        // Clic simple en una hora → cita de 1h (o tarea si es todo el día) prellenada.
+        dateClick: info => {
+          const end = info.allDay
+            ? info.dateStr
+            : new Date(info.date.getTime() + 60 * 60 * 1000).toISOString();
+          this.$emit('dateSelected', {
+            start: info.dateStr,
+            end,
+            allDay: info.allDay,
+          });
+        },
         datesSet: info => {
           this.$emit('rangeChanged', {
             start: info.startStr,

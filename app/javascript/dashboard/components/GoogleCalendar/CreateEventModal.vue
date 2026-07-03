@@ -208,6 +208,9 @@ export default {
     prefillEmail: { type: String, default: '' },
     editEvent: { type: Object, default: null },
     initialType: { type: String, default: 'event' },
+    initialStart: { type: String, default: '' },
+    initialEnd: { type: String, default: '' },
+    initialAllDay: { type: Boolean, default: false },
   },
   emits: ['close', 'created'],
   setup() {
@@ -302,14 +305,16 @@ export default {
         this.form.location = this.editEvent.extendedProps?.location || '';
         this.attendees = (this.editEvent.extendedProps?.attendees || []).map(a => a.email);
       } else {
+        const timed = this.initialStart && !this.initialAllDay;
         this.form.summary = '';
         this.form.calendar_id = this.primaryCalendarId;
         this.form.all_day = false;
-        this.form.start_time = '';
-        this.form.end_time = '';
+        this.form.start_time = timed ? toDatetimeLocal(this.initialStart) : '';
+        this.form.end_time = timed ? toDatetimeLocal(this.initialEnd) : '';
         this.form.start_date = '';
         this.form.end_date = '';
-        this.form.due_date = '';
+        this.form.due_date =
+          this.initialAllDay && this.initialStart ? toDateLocal(this.initialStart) : '';
         this.form.location = '';
         this.form.description = '';
         if (this.prefillEmail) this.attendees = [this.prefillEmail];
