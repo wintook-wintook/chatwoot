@@ -121,7 +121,7 @@ export default {
       window.close();
       return;
     }
-    this.$store.dispatch('agents/fetch');
+    this.$store.dispatch('agents/get');
     this.fetchData();
     this.$store.dispatch('googleCalendar/fetchCalendars');
     this.pollInterval = setInterval(() => this.fetchData(this.currentRange), 30000);

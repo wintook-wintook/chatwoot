@@ -1,53 +1,75 @@
 <template>
   <div class="w-72 border-l border-slate-100 dark:border-slate-700 flex flex-col h-full overflow-hidden">
+    <!-- Acordeón: solo una sección abierta a la vez. Por defecto, 'Próximos eventos'. -->
+
     <!-- Próximos eventos -->
-    <div class="p-4 border-b border-slate-100 dark:border-slate-700">
-      <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-        {{ $t('GOOGLE_CALENDAR.AGENDA.TITLE') }}
-      </h3>
-    </div>
-
-    <div class="flex-1 overflow-y-auto p-3 space-y-2">
-      <template v-if="upcomingEvents.length">
-        <div
-          v-for="event in upcomingEvents"
-          :key="event.id"
-          class="rounded-lg bg-slate-50 dark:bg-slate-800 p-3 border-l-4"
-          :style="{ borderColor: calendarColor(event.calendarId) }"
-        >
-          <p class="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">
-            {{ event.summary || $t('GOOGLE_CALENDAR.EVENTS.ALL_DAY') }}
-          </p>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {{ formatEventTime(event) }}
-          </p>
-        </div>
-      </template>
-      <p v-else class="text-xs text-slate-400 text-center py-4">
-        {{ $t('GOOGLE_CALENDAR.AGENDA.EMPTY') }}
-      </p>
-    </div>
-
-    <!-- Mis calendarios -->
-    <div
-      v-if="calendars.length"
-      class="p-4 border-t border-slate-100 dark:border-slate-700"
+    <section
+      class="flex flex-col min-h-0 border-b border-slate-100 dark:border-slate-700"
+      :class="{ 'flex-1': openSection === 'upcoming' }"
     >
       <button
-        class="w-full flex items-center justify-between mb-3 group"
-        @click="calendarsExpanded = !calendarsExpanded"
+        class="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+        @click="toggleSection('upcoming')"
       >
         <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {{ $t('GOOGLE_CALENDAR.CALENDARS.TITLE') }}
+          {{ $t('GOOGLE_CALENDAR.AGENDA.TITLE') }}
         </h3>
         <fluent-icon
-          :icon="calendarsExpanded ? 'chevron-up' : 'chevron-down'"
+          :icon="openSection === 'upcoming' ? 'chevron-up' : 'chevron-down'"
           size="14"
           class="text-slate-400"
         />
       </button>
 
-      <div v-if="calendarsExpanded" class="space-y-1.5">
+      <div
+        v-if="openSection === 'upcoming'"
+        class="flex-1 overflow-y-auto px-3 pb-3 space-y-2"
+      >
+        <template v-if="upcomingEvents.length">
+          <div
+            v-for="event in upcomingEvents"
+            :key="event.id"
+            class="rounded-lg bg-slate-50 dark:bg-slate-800 p-3 border-l-4"
+            :style="{ borderColor: calendarColor(event.calendarId) }"
+          >
+            <p class="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">
+              {{ event.summary || $t('GOOGLE_CALENDAR.EVENTS.ALL_DAY') }}
+            </p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {{ formatEventTime(event) }}
+            </p>
+          </div>
+        </template>
+        <p v-else class="text-xs text-slate-400 text-center py-4">
+          {{ $t('GOOGLE_CALENDAR.AGENDA.EMPTY') }}
+        </p>
+      </div>
+    </section>
+
+    <!-- Mis calendarios -->
+    <section
+      v-if="calendars.length"
+      class="flex flex-col min-h-0 border-b border-slate-100 dark:border-slate-700"
+      :class="{ 'flex-1': openSection === 'calendars' }"
+    >
+      <button
+        class="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+        @click="toggleSection('calendars')"
+      >
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+          {{ $t('GOOGLE_CALENDAR.CALENDARS.TITLE') }}
+        </h3>
+        <fluent-icon
+          :icon="openSection === 'calendars' ? 'chevron-up' : 'chevron-down'"
+          size="14"
+          class="text-slate-400"
+        />
+      </button>
+
+      <div
+        v-if="openSection === 'calendars'"
+        class="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5"
+      >
         <label
           v-for="cal in calendars"
           :key="cal.id"
@@ -101,17 +123,32 @@
           {{ $t('GOOGLE_CALENDAR.CALENDARS.SUBSCRIBE_BUTTON') }}
         </button>
       </div>
-    </div>
+    </section>
 
     <!-- Disponibilidad del equipo -->
-    <div
+    <section
       v-if="agents.length"
-      class="p-4 border-t border-slate-100 dark:border-slate-700 overflow-y-auto"
+      class="flex flex-col min-h-0 border-b border-slate-100 dark:border-slate-700"
+      :class="{ 'flex-1': openSection === 'availability' }"
     >
-      <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
-        {{ $t('GOOGLE_CALENDAR.AVAILABILITY.TITLE') }}
-      </h3>
-      <div class="space-y-2">
+      <button
+        class="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+        @click="toggleSection('availability')"
+      >
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+          {{ $t('GOOGLE_CALENDAR.AVAILABILITY.TITLE') }}
+        </h3>
+        <fluent-icon
+          :icon="openSection === 'availability' ? 'chevron-up' : 'chevron-down'"
+          size="14"
+          class="text-slate-400"
+        />
+      </button>
+
+      <div
+        v-if="openSection === 'availability'"
+        class="flex-1 overflow-y-auto px-4 pb-4 space-y-2"
+      >
         <div
           v-for="agent in agentsWithStatus"
           :key="agent.id"
@@ -148,7 +185,7 @@
           </span>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -166,7 +203,8 @@ export default {
   emits: ['toggleCalendar'],
   data() {
     return {
-      calendarsExpanded: true,
+      // Acordeón del panel lateral: 'upcoming' | 'calendars' | 'availability' | null.
+      openSection: 'upcoming',
       showSubscribeInput: false,
       subscribeInput: '',
       subscribing: false,
@@ -200,6 +238,10 @@ export default {
     },
   },
   methods: {
+    // Abre la sección indicada y repliega las demás; si ya estaba abierta, la cierra.
+    toggleSection(name) {
+      this.openSection = this.openSection === name ? null : name;
+    },
     async subscribe() {
       const id = this.subscribeInput.trim();
       if (!id) return;
