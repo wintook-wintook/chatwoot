@@ -29,6 +29,17 @@
   - [ ] `clientes_con_saldo` — listado de clientes con saldo > 0 (top N).
   - [ ] (opcional) ajustar `saldo_cliente` para aceptar también código de cliente, no solo RFC.
 
+### Directiva `{{consulta:}}` desde el agente de seguimiento
+- [ ] **Implementar `{{consulta:nombre(param)}}`** en las plantillas de seguimiento
+      (puente tracking ↔ ERP). Plan detallado: `query_databases_directiva_tracking_plan.md`.
+  - [ ] F1 — `detect_directive` + parseo de args (posicional / nombrados).
+  - [ ] F2 — resolución de conexión **híbrida** (prefijo `sae/`… por erp_type/name; sin prefijo → bot del inbox).
+  - [ ] F3 — `perform_erp_query`: `QueryRunner` + render por `result_format` (summary/table/template).
+  - [ ] F4 — interpolación **in-place** de N directivas por mensaje + fail-soft.
+  - [ ] F5 — gating + scoping por `@account` + logging.
+  - [ ] Confirmar decisiones abiertas (§13 del plan): sintaxis del prefijo, dónde va la directiva, gating, Modo B en v1.
+  - [ ] (opcional F6) tool `consultar_erp` (function calling) para Modo B dentro del seguimiento.
+
 ### Otros (ops / despliegue)
 - [ ] **Firebird en imagen Alpine**: `fb` gem necesita libfbclient (no está en Alpine main) → resolver para producción.
 - [ ] **Usuario read-only** del lado de cada ERP (no usar `sysdba`/`sa` en producción).
