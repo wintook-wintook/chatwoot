@@ -12,6 +12,7 @@ export default {
         PERMISSIONS: [
           'Leer tus eventos de calendario',
           'Crear y editar eventos en tu nombre',
+          'Crear y gestionar tus calendarios',
           'Ver tu disponibilidad (libre/ocupado)',
         ],
         CONFIRM: 'Conectar con Google',
@@ -21,6 +22,9 @@ export default {
     DISCONNECT: {
       BUTTON: 'Desconectar',
       CONFIRM: '¿Estás seguro de que querés desconectar tu Google Calendar?',
+    },
+    RECONNECT: {
+      BUTTON: 'Reconectar',
     },
     CONNECTED_AS: 'Conectado como',
     EVENTS: {
@@ -48,6 +52,21 @@ export default {
       SUBSCRIBE_ADD: 'Agregar',
       SUBSCRIBE_MODAL_TITLE: 'Agregar otro calendario',
       SUBSCRIBE_MODAL_SUBTITLE: 'Ingresá el email o el ID del calendario de Google que querés ver. Debe estar compartido con tu cuenta.',
+      MODE_CREATE: 'Crear nuevo',
+      MODE_SUBSCRIBE: 'Suscribir existente',
+      CREATE_HINT: 'Crea un calendario secundario NUEVO en tu cuenta de Google (como "Crear calendario nuevo" de Google).',
+      CREATE_PLACEHOLDER: 'Nombre del calendario (p. ej. Consultorio Norte)',
+      CREATE_ADD: 'Crear',
+      ADD_ERROR: 'No se pudo agregar el calendario. Es posible que debas reconectar tu Google Calendar para habilitar esta función.',
+      FIELD_NAME: 'Nombre',
+      FIELD_DESCRIPTION: 'Descripción',
+      FIELD_DESCRIPTION_PLACEHOLDER: 'Descripción del calendario (opcional)',
+      FIELD_TIMEZONE: 'Zona horaria',
+      FIELD_TIMEZONE_DEFAULT: 'Predeterminada de la cuenta',
+      FIELD_COLOR: 'Color',
+      EDIT_MODAL_TITLE: 'Editar calendario',
+      EDIT_HINT: 'Modificá el nombre, la descripción, la zona horaria y el color del calendario.',
+      SAVE: 'Guardar',
     },
     AVAILABILITY: {
       TITLE: 'Disponibilidad del equipo',

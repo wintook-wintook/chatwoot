@@ -461,6 +461,8 @@ Rails.application.routes.draw do
             resource :calendars, only: [:show, :update], controller: 'calendars' do
               collection do
                 post :subscribe
+                post :create_calendar
+                post :update_calendar
               end
             end
             resource :availability, only: [:show], controller: 'availability'

@@ -46,6 +46,15 @@
             <fluent-icon icon="send" size="14" class="mr-1" />
             {{ $t('GOOGLE_CALENDAR.SHARE_AGENDA.TITLE') }}
           </woot-button>
+          <woot-button
+            size="small"
+            variant="smooth"
+            :is-loading="uiFlags.isConnecting"
+            @click="connectAccount"
+          >
+            <fluent-icon icon="arrow-clockwise" size="14" class="mr-1" />
+            {{ $t('GOOGLE_CALENDAR.RECONNECT.BUTTON') }}
+          </woot-button>
           <woot-button size="small" variant="smooth" color-scheme="alert" @click="disconnect">
             {{ $t('GOOGLE_CALENDAR.DISCONNECT.BUTTON') }}
           </woot-button>

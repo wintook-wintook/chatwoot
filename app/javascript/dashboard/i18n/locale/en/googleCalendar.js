@@ -12,6 +12,7 @@ export default {
         PERMISSIONS: [
           'Read your calendar events',
           'Create and edit events on your behalf',
+          'Create and manage your calendars',
           'View your availability (free/busy)',
         ],
         CONFIRM: 'Connect with Google',
@@ -21,6 +22,9 @@ export default {
     DISCONNECT: {
       BUTTON: 'Disconnect',
       CONFIRM: 'Are you sure you want to disconnect your Google Calendar?',
+    },
+    RECONNECT: {
+      BUTTON: 'Reconnect',
     },
     CONNECTED_AS: 'Connected as',
     EVENTS: {
@@ -48,6 +52,21 @@ export default {
       SUBSCRIBE_ADD: 'Add',
       SUBSCRIBE_MODAL_TITLE: 'Add another calendar',
       SUBSCRIBE_MODAL_SUBTITLE: 'Enter the email or ID of the Google calendar you want to see. It must be shared with your account.',
+      MODE_CREATE: 'Create new',
+      MODE_SUBSCRIBE: 'Subscribe existing',
+      CREATE_HINT: 'Create a NEW secondary calendar in your Google account (like Google’s "Create new calendar").',
+      CREATE_PLACEHOLDER: 'Calendar name (e.g. North Office)',
+      CREATE_ADD: 'Create',
+      ADD_ERROR: 'Could not add the calendar. You may need to reconnect your Google Calendar to enable this feature.',
+      FIELD_NAME: 'Name',
+      FIELD_DESCRIPTION: 'Description',
+      FIELD_DESCRIPTION_PLACEHOLDER: 'Calendar description (optional)',
+      FIELD_TIMEZONE: 'Time zone',
+      FIELD_TIMEZONE_DEFAULT: 'Account default',
+      FIELD_COLOR: 'Color',
+      EDIT_MODAL_TITLE: 'Edit calendar',
+      EDIT_HINT: 'Edit the name, description, time zone and color of the calendar.',
+      SAVE: 'Save',
     },
     AVAILABILITY: {
       TITLE: 'Team Availability',
