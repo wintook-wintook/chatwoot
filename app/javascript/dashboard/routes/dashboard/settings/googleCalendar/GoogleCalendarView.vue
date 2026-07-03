@@ -157,9 +157,9 @@ export default {
       this.showCreateModal = false;
       this.editingEvent = null;
     },
-    async onEventDropped({ eventId, start_time, end_time, revert }) {
+    async onEventDropped({ eventId, start_time, end_time, calendar_id, revert }) {
       try {
-        await this.$store.dispatch('googleCalendar/updateEvent', { eventId, start_time, end_time });
+        await this.$store.dispatch('googleCalendar/updateEvent', { eventId, start_time, end_time, calendar_id });
       } catch {
         revert();
       }

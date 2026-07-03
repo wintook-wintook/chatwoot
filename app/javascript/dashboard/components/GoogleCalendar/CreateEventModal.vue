@@ -32,6 +32,26 @@
       </div>
 
       <form class="space-y-4" @submit.prevent="submit">
+        <!-- Calendar selector (only if the user has more than one writable calendar) -->
+        <div v-if="writableCalendars.length > 1" class="space-y-1">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">
+            {{ $t('GOOGLE_CALENDAR.CREATE_EVENT.FIELDS.CALENDAR') }}
+          </label>
+          <select
+            v-model="form.calendar_id"
+            :disabled="isEditing"
+            class="w-full px-3 py-2 text-sm border rounded-md border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <option
+              v-for="cal in writableCalendars"
+              :key="cal.id"
+              :value="cal.id"
+            >
+              {{ cal.primary ? $t('GOOGLE_CALENDAR.CREATE_EVENT.FIELDS.CALENDAR_PRIMARY') : cal.summary }}
+            </option>
+          </select>
+        </div>
+
         <!-- Title -->
         <woot-input
           v-model="form.summary"
@@ -199,6 +219,7 @@ export default {
       form: {
         type: 'event',
         summary: '',
+        calendar_id: 'primary',
         all_day: false,
         start_time: '',
         end_time: '',
@@ -213,7 +234,23 @@ export default {
     };
   },
   computed: {
-    ...mapGetters({ uiFlags: 'googleCalendar/getCalendarUIFlags' }),
+    ...mapGetters({
+      uiFlags: 'googleCalendar/getCalendarUIFlags',
+      calendars: 'googleCalendar/getCalendars',
+    }),
+    // Solo los calendarios donde el usuario puede escribir (crear/editar eventos),
+    // con el principal primero.
+    writableCalendars() {
+      return (this.calendars || [])
+        .filter(c => !c.access_role || ['owner', 'writer'].includes(c.access_role))
+        .slice()
+        .sort((a, b) => (b.primary ? 1 : 0) - (a.primary ? 1 : 0));
+    },
+    // El calendario principal se lista con id = email; normalizamos el alias 'primary' a ese id.
+    primaryCalendarId() {
+      const primary = this.writableCalendars.find(c => c.primary);
+      return primary ? primary.id : 'primary';
+    },
     isCreating() {
       return this.uiFlags.isCreating;
     },
@@ -255,6 +292,8 @@ export default {
       if (this.editEvent) {
         const isAllDay = this.editEvent.allDay;
         this.form.type = isAllDay ? 'task' : 'event';
+        const cid = this.editEvent.extendedProps?.calendarId;
+        this.form.calendar_id = !cid || cid === 'primary' ? this.primaryCalendarId : cid;
         this.form.summary = this.editEvent.title || '';
         this.form.start_time = toDatetimeLocal(this.editEvent.startStr);
         this.form.end_time = toDatetimeLocal(this.editEvent.endStr);
@@ -264,6 +303,7 @@ export default {
         this.attendees = (this.editEvent.extendedProps?.attendees || []).map(a => a.email);
       } else {
         this.form.summary = '';
+        this.form.calendar_id = this.primaryCalendarId;
         this.form.all_day = false;
         this.form.start_time = '';
         this.form.end_time = '';
@@ -310,6 +350,7 @@ export default {
             description: this.form.description,
             attendees: this.attendees,
           };
+      payload.calendar_id = this.form.calendar_id;
 
       try {
         if (this.isEditing) {

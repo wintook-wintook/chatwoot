@@ -153,8 +153,8 @@ const actions = {
     }
   },
 
-  updateEvent: async (_, { eventId, start_time, end_time, summary, description, attendees }) => {
-    await GoogleCalendarAPI.updateEvent(eventId, { start_time, end_time, summary, description, attendees });
+  updateEvent: async (_, { eventId, start_time, end_time, summary, description, attendees, calendar_id }) => {
+    await GoogleCalendarAPI.updateEvent(eventId, { start_time, end_time, summary, description, attendees, calendar_id });
   },
 
   shareAgenda: async (_, payload) => {

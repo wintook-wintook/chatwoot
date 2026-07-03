@@ -59,6 +59,8 @@ export default {
         TASK: 'Task',
       },
       FIELDS: {
+        CALENDAR: 'Calendar',
+        CALENDAR_PRIMARY: 'Primary',
         SUMMARY: 'Title',
         SUMMARY_PLACEHOLDER: 'Event title',
         TASK_PLACEHOLDER: 'Task title',

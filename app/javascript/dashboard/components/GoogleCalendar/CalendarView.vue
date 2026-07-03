@@ -50,6 +50,12 @@ export default {
           allDay: !e.start?.dateTime,
           backgroundColor: eventColor(e.id),
           borderColor: eventColor(e.id),
+          extendedProps: {
+            calendarId: e.calendarId || 'primary',
+            description: e.description || '',
+            location: e.location || '',
+            attendees: e.attendees || [],
+          },
         });
       });
 
@@ -103,6 +109,7 @@ export default {
             eventId: info.event.id,
             start_time: info.event.startStr,
             end_time: info.event.endStr,
+            calendar_id: info.event.extendedProps?.calendarId || 'primary',
             revert: info.revert,
           });
         },
@@ -111,6 +118,7 @@ export default {
             eventId: info.event.id,
             start_time: info.event.startStr,
             end_time: info.event.endStr,
+            calendar_id: info.event.extendedProps?.calendarId || 'primary',
             revert: info.revert,
           });
         },

@@ -59,6 +59,8 @@ export default {
         TASK: 'Tarea',
       },
       FIELDS: {
+        CALENDAR: 'Calendario',
+        CALENDAR_PRIMARY: 'Principal',
         SUMMARY: 'Título',
         SUMMARY_PLACEHOLDER: 'Título del evento',
         TASK_PLACEHOLDER: 'Título de la tarea',
