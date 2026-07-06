@@ -40,4 +40,6 @@ export const FEATURE_FLAGS = {
   GOOGLE_CALENDAR: 'google_calendar',
   // @tickets_cases — Gestor de Tickets
   CASE_MANAGEMENT: 'case_management',
+  // @query_databases — Conexión ERP dentro de Base de Conocimiento
+  ERP_CONNECTION: 'erp_connection',
 };

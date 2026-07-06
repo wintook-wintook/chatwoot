@@ -95,14 +95,6 @@ const primaryMenuItems = accountId => [
     toState: frontendURL(`accounts/${accountId}/tracking-dashboard`),
     toStateName: 'contact_trackings_dashboard',
   },
-  // @query_databases — Cobranza / ERP
-  {
-    icon: 'cloud',
-    key: 'erp',
-    label: 'ERP',
-    toState: frontendURL(`accounts/${accountId}/erp/console`),
-    toStateName: 'erp_console',
-  },
   {
     icon: 'settings',
     key: 'settings',

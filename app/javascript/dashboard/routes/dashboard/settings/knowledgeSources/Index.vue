@@ -8,10 +8,21 @@ import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SourceCard from './SourceCard.vue';
 import AddSourceModal from './AddSourceModal.vue';
 import KnowledgeBaseAPI from './api';
+// @query_databases — el módulo ERP ahora vive como tabs dentro de Base de Conocimiento.
+import ErpConnections from 'dashboard/views/erp/Connections.vue';
+import ErpBots from 'dashboard/views/erp/Bots.vue';
+import ErpConsole from 'dashboard/views/erp/Console.vue';
 
 export default {
   name: 'KnowledgeSourcesIndex',
-  components: { BaseSettingsHeader, SourceCard, AddSourceModal },
+  components: {
+    BaseSettingsHeader,
+    SourceCard,
+    AddSourceModal,
+    ErpConnections,
+    ErpBots,
+    ErpConsole,
+  },
   data() {
     return {
       sources: [],
@@ -64,12 +75,27 @@ export default {
         FEATURE_FLAGS.GOOGLE_CALENDAR
       );
     },
+    // @query_databases — las tabs ERP solo aparecen si el super admin habilitó
+    // la feature `erp_connection` para esta cuenta.
+    erpEnabled() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.ERP_CONNECTION
+      );
+    },
     tabs() {
       return [
         { name: 'Contenido indexado' },
         { name: `Fuentes (${this.sources.length})` },
         { name: 'Prueba de búsqueda' },
         { name: 'Configuración' },
+        ...(this.erpEnabled
+          ? [
+              { name: 'Conexión ERP' },
+              { name: 'Bots Cobranza' },
+              { name: 'Consola ERP' },
+            ]
+          : []),
       ];
     },
     filteredItems() {
@@ -901,6 +927,21 @@ export default {
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Tab: Conexión ERP -->
+      <div v-if="erpEnabled && activeTab === 4" class="h-[70vh] -m-6">
+        <ErpConnections />
+      </div>
+
+      <!-- Tab: Bots Cobranza -->
+      <div v-if="erpEnabled && activeTab === 5" class="h-[70vh] -m-6">
+        <ErpBots />
+      </div>
+
+      <!-- Tab: Consola ERP -->
+      <div v-if="erpEnabled && activeTab === 6" class="h-[70vh] -m-6">
+        <ErpConsole />
       </div>
     </div>
 
