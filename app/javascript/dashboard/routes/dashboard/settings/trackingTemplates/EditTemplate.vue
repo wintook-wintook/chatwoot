@@ -27,7 +27,7 @@ const DIRECTIVE_GROUPS = [
   { key: 'kb', label: 'Conocimiento' },
   { key: 'discourse', label: 'Discourse' },
   { key: 'google', label: 'Google' },
-  { key: 'erp', label: 'ERP / Cobranza' },
+  { key: 'erp', label: 'Consulta ERP' },
   { key: 'actions', label: 'Acciones' },
 ];
 
@@ -2035,7 +2035,8 @@ export default {
             {{ g.label }}
           </button>
         </div>
-        <ul class="space-y-2 h-[360px] overflow-y-auto pr-1">
+        <!-- alto fijo calibrado para ~6 filas (cada fila a una línea via truncate) -->
+        <ul class="space-y-2 h-[364px] overflow-y-auto pr-1">
           <li v-for="dir in filteredDirectiveCatalog" :key="dir.token">
             <button
               type="button"
@@ -2048,7 +2049,9 @@ export default {
                 >
                   {{ dir.token }}
                 </span>
-                <span class="block text-xs text-slate-500 dark:text-slate-400">
+                <span
+                  class="block text-xs text-slate-500 dark:text-slate-400 truncate"
+                >
                   {{ dir.label }}
                 </span>
               </span>
