@@ -26,7 +26,9 @@ class ErpCollection::ChatResponseJob < ApplicationJob
   end
 
   def reply(conversation, bot, question)
-    answer = ExternalDb::AiQueryService.new(bot.external_db_connection, question).perform.answer
+    answer = ExternalDb::AiQueryService.new(
+      bot.external_db_connection, question, contact: conversation.contact
+    ).perform.answer
     return if answer.blank?
 
     Messages::MessageBuilder.new(

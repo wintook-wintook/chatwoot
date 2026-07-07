@@ -46,6 +46,8 @@ class KnowledgeBaseResponseService
     Rails.logger.info "[KBase] 🔍 Modo: #{directive[:mode]}#{" (#{directive[:source_name]})" if directive[:source_name]}"
 
     case directive[:mode]
+    when :erp_query
+      perform_erp_query
     when :canned_response
       perform_pgvector(question, 'canned_response')
     when :article
@@ -75,17 +77,25 @@ class KnowledgeBaseResponseService
 
   def detect_directive
     cp = @tracking&.complementary_prompt.to_s
-    if cp.match?(/@buscar_predefinidas\b/i)
+    # {{consulta:}} es interpolación determinista de datos del ERP; tiene prioridad y
+    # puede aparecer varias veces mezclada con texto en la misma plantilla.
+    return { mode: :erp_query } if ExternalDb::ConsultaDirectiveRenderer.contains?(cp)
+
+    detect_search_directive(cp)
+  end
+
+  def detect_search_directive(prompt)
+    if prompt.match?(/@buscar_predefinidas\b/i)
       { mode: :canned_response }
-    elsif cp.match?(/@buscar_art[ií]culo\b/i)
+    elsif prompt.match?(/@buscar_art[ií]culo\b/i)
       { mode: :article }
-    elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
+    elsif (match = prompt.match(/@buscar_foro\(([^)]+)\)/i))
       { mode: :knowledge_source, source_name: match[1].strip }
-    elsif (match = cp.match(/\{\{doc:([^}]+)\}\}/i))
+    elsif (match = prompt.match(/\{\{doc:([^}]+)\}\}/i))
       { mode: :google_doc, source_name: match[1].strip }
-    elsif (match = cp.match(/\{\{hoja:([^}]+)\}\}/i))
+    elsif (match = prompt.match(/\{\{hoja:([^}]+)\}\}/i))
       { mode: :google_sheet, source_name: match[1].strip }
-    elsif cp.match?(/@discourse\b/i)
+    elsif prompt.match?(/@discourse\b/i)
       { mode: :discourse_integration }
     end
   end
@@ -94,6 +104,26 @@ class KnowledgeBaseResponseService
   # si la cuenta no tiene esa feature, las directivas {{doc:}}/{{hoja:}} no operan.
   def google_feature_enabled?
     @account.feature_enabled?('google_calendar')
+  end
+
+  # ==============================================================================
+  # MODO {{consulta:}} — interpolación determinista de datos del ERP (Bot Cobrador).
+  # Reemplaza cada {{consulta:...}} de la plantilla por el resultado de la consulta
+  # predefinida y envía el texto ya interpolado. Sin IA, fail-soft, scoped a la cuenta.
+  # ==============================================================================
+  def perform_erp_query
+    template = @tracking&.complementary_prompt.to_s
+    rendered = ExternalDb::ConsultaDirectiveRenderer.new(
+      account: @account, contact: @conversation&.contact, inbox: @inbox
+    ).render(template).strip
+
+    if rendered.blank?
+      Rails.logger.info '[KBase] ⚠️ {{consulta:}} no produjo texto → sin respuesta'
+      return false
+    end
+
+    send_reply(rendered)
+    true
   end
 
   # ==============================================================================

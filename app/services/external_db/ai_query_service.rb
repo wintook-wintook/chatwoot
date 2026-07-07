@@ -10,10 +10,17 @@ class ExternalDb::AiQueryService
   OPENAI_URL = 'https://api.openai.com/v1/chat/completions'
   MODEL = 'gpt-4o-mini'
 
-  def initialize(connection, question)
+  # Parámetro que identifica al cliente y custom_attribute donde se guarda en el contacto.
+  RFC_PARAM = 'rfc'
+  CONTACT_RFC_ATTR = 'erp_rfc'
+  # RFC mexicano: 3-4 letras + 6 dígitos (fecha) + 2-3 alfanuméricos (homoclave).
+  RFC_REGEX = /\b([A-ZÑ&]{3,4}\d{6}[A-Z0-9]{2,3})\b/i
+
+  def initialize(connection, question, contact: nil)
     @connection = connection
     @account = connection.account
     @question = question.to_s
+    @contact = contact
   end
 
   def perform
@@ -23,10 +30,9 @@ class ExternalDb::AiQueryService
     api_key = openai_api_key
     return error_result('la cuenta no tiene integración OpenAI activa') if api_key.blank?
 
-    tool_call = pick_query(queries, api_key)
-    return error_result('no encontré una consulta que responda eso') if tool_call.nil?
-
-    run_and_answer(queries, tool_call, api_key)
+    # Si el mensaje trae un RFC, lo guardamos en el contacto para próximas consultas.
+    capture_rfc_from_message
+    answer_question(queries, api_key)
   rescue StandardError => e
     Rails.logger.error "[ExternalDb::AiQuery] #{e.class}: #{e.message}"
     error_result(e.message)
@@ -34,10 +40,19 @@ class ExternalDb::AiQueryService
 
   private
 
-  def run_and_answer(queries, tool_call, api_key)
+  def answer_question(queries, api_key)
+    tool_call = pick_query(queries, api_key)
+    return error_result('no encontré una consulta que responda eso') if tool_call.nil?
+
     query = queries.find { |q| q.name == tool_call[:name] }
     return error_result('la IA eligió una consulta inexistente') if query.nil?
 
+    # Cadena de resolución del RFC (opción 1+3): mensaje → contacto → pedirlo.
+    # resolve_rfc! devuelve una respuesta pidiendo el RFC, o nil si ya se resolvió.
+    resolve_rfc!(query, tool_call[:args]) || run_and_answer(query, tool_call, api_key)
+  end
+
+  def run_and_answer(query, tool_call, api_key)
     result = ExternalDb::QueryRunner.new(query, tool_call[:args]).perform
     Result.new(
       answer: phrase_answer(query, result, api_key),
@@ -45,6 +60,77 @@ class ExternalDb::AiQueryService
       params: tool_call[:args],
       rows: result.rows
     )
+  end
+
+  # Resuelve el parámetro :rfc cuando la consulta lo requiere:
+  # 1) si la IA lo extrajo del mensaje, se usa (y se guarda en el contacto);
+  # 2) si no, se toma del custom_attribute del contacto;
+  # 3) si tampoco hay, se pide por chat (no se corre la consulta).
+  def resolve_rfc!(query, args)
+    return nil unless query_needs_rfc?(query)
+
+    provided = args[RFC_PARAM].to_s.strip.upcase
+    if provided.present?
+      args[RFC_PARAM] = provided
+      persist_rfc(provided)
+      return nil
+    end
+
+    stored = contact_rfc
+    if stored.present?
+      args[RFC_PARAM] = stored
+      return nil
+    end
+
+    Result.new(answer: ask_for_rfc_message, query_name: nil, params: {}, rows: [])
+  end
+
+  def query_needs_rfc?(query)
+    Array(query.params_schema).any? { |p| (p['key'] || p[:key]).to_s == RFC_PARAM }
+  end
+
+  def contact_rfc
+    @contact&.custom_attributes&.dig(CONTACT_RFC_ATTR).to_s.strip.upcase.presence
+  end
+
+  def capture_rfc_from_message
+    return if @contact.nil?
+
+    match = @question.match(RFC_REGEX)
+    persist_rfc(match[1].upcase) if match
+  end
+
+  def persist_rfc(rfc)
+    return if @contact.nil? || rfc.blank? || contact_rfc == rfc
+
+    ensure_rfc_definition!
+    attrs = (@contact.custom_attributes || {}).merge(CONTACT_RFC_ATTR => rfc)
+    @contact.update(custom_attributes: attrs)
+  rescue StandardError => e
+    Rails.logger.warn "[ExternalDb::AiQuery] no se pudo guardar el RFC en el contacto: #{e.message}"
+  end
+
+  # Las definiciones de custom attribute son POR CUENTA (unique por
+  # account_id + attribute_model). Auto-provisionamos `erp_rfc` en la cuenta la
+  # primera vez que se guarda, para que aparezca con nombre "RFC" en el panel del
+  # contacto. No afecta a otras cuentas.
+  def ensure_rfc_definition!
+    return if @account.custom_attribute_definitions
+                      .exists?(attribute_key: CONTACT_RFC_ATTR, attribute_model: :contact_attribute)
+
+    @account.custom_attribute_definitions.create!(
+      attribute_key: CONTACT_RFC_ATTR,
+      attribute_display_name: 'RFC',
+      attribute_display_type: :text,
+      attribute_model: :contact_attribute,
+      attribute_description: 'RFC del cliente para consultas al ERP (bot cobrador).'
+    )
+  rescue ActiveRecord::RecordNotUnique
+    # Creada en paralelo por otro job/mensaje: la damos por buena.
+  end
+
+  def ask_for_rfc_message
+    'Para consultar tu información necesito tu RFC. ¿Me lo compartes, por favor?'
   end
 
   # 1ª llamada: la IA elige la función (consulta) y rellena parámetros.
