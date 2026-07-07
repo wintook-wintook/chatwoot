@@ -42,6 +42,7 @@ class Account < ApplicationRecord
   has_many :external_db_connections, dependent: :destroy # @query_databases
   has_many :external_db_queries,     dependent: :destroy # @query_databases
   has_many :erp_collection_bots,     dependent: :destroy # @query_databases
+  has_many :whatsapp_templates,      dependent: :destroy # @waba_templates
   has_many :case_rules,         dependent: :destroy # @tickets_cases
   has_many :case_types,         dependent: :destroy # @tickets_cases
   has_many :case_services,      dependent: :destroy # @tickets_cases 2B

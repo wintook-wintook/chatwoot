@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_01_214500) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_07_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1519,6 +1519,33 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_01_214500) do
     t.integer "webhook_type", default: 0
     t.jsonb "subscriptions", default: ["conversation_status_changed", "conversation_updated", "conversation_created", "contact_created", "contact_updated", "message_created", "message_updated", "webwidget_triggered"]
     t.index ["account_id", "url"], name: "index_webhooks_on_account_id_and_url", unique: true
+  end
+
+  create_table "whatsapp_templates", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "channel_whatsapp_id", null: false
+    t.string "name", null: false
+    t.string "category"
+    t.string "language", null: false
+    t.string "header_type"
+    t.text "header_content"
+    t.string "header_media_url"
+    t.string "header_handle"
+    t.text "body_text"
+    t.string "footer_text"
+    t.jsonb "buttons", default: [], null: false
+    t.jsonb "sample_values", default: {}, null: false
+    t.string "status", default: "DRAFT", null: false
+    t.string "meta_template_id"
+    t.string "rejection_reason"
+    t.string "quality_score"
+    t.text "submission_error"
+    t.datetime "last_submitted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_whatsapp_templates_on_account_id"
+    t.index ["channel_whatsapp_id", "name", "language"], name: "index_whatsapp_templates_on_channel_name_language", unique: true
+    t.index ["meta_template_id"], name: "index_whatsapp_templates_on_meta_template_id"
   end
 
   create_table "working_hours", force: :cascade do |t|

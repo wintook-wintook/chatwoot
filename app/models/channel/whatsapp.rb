@@ -24,6 +24,9 @@ class Channel::Whatsapp < ApplicationRecord
   self.table_name = 'channel_whatsapp'
   EDITABLE_ATTRS = [:phone_number, :provider, { provider_config: {} }].freeze
 
+  # @waba_templates — plantillas gestionadas desde Chatwoot (tabla propia, no el JSONB).
+  has_many :whatsapp_templates, dependent: :destroy
+
   # default at the moment is 360dialog lets change later.
   PROVIDERS = %w[default whatsapp_cloud unoapi].freeze
   before_validation :ensure_webhook_verify_token
