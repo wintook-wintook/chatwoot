@@ -22,6 +22,15 @@ import KnowledgeSourcesAPI from 'dashboard/routes/dashboard/settings/knowledgeSo
 // proyecto@bot_seguimiento_calendar: lista de zonas horarias (reutiliza Horario laboral)
 import { timeZoneOptions } from 'dashboard/routes/dashboard/settings/inbox/helpers/businessHour';
 
+// proyecto@contact_tracking: grupos del picker de directivas (orden + etiqueta del chip).
+const DIRECTIVE_GROUPS = [
+  { key: 'kb', label: 'Conocimiento' },
+  { key: 'discourse', label: 'Discourse' },
+  { key: 'google', label: 'Google' },
+  { key: 'erp', label: 'ERP / Cobranza' },
+  { key: 'actions', label: 'Acciones' },
+];
+
 export default {
   components: { KeywordActionsEditor },
 
@@ -94,6 +103,8 @@ export default {
       showAttachmentPicker: false,
       // selector de directivas para insertar @buscar_..., @discourse, etc.
       showDirectivePicker: false,
+      // chip de tipo activo en el picker de directivas ('all' = todas)
+      directiveFilter: 'all',
       // 'inline' | 'modal': textarea donde se insertará + posición del cursor
       pickerTarget: 'inline',
       pickerInsertPos: null,
@@ -315,11 +326,13 @@ export default {
     directiveCatalog() {
       const items = [
         {
+          group: 'kb',
           token: '@buscar_predefinidas',
           label:
             'Responde con tus Respuestas predefinidas (búsqueda semántica).',
         },
         {
+          group: 'kb',
           token: '@buscar_articulo',
           label: 'Responde con los artículos del Centro de Ayuda.',
         },
@@ -327,12 +340,14 @@ export default {
       if (this.discourseSources.length) {
         this.discourseSources.forEach(source => {
           items.push({
+            group: 'discourse',
             token: `@buscar_foro(${source.name})`,
             label: `Busca en la fuente Discourse «${source.name}».`,
           });
         });
       } else {
         items.push({
+          group: 'discourse',
           token: '@buscar_foro(nombre_fuente)',
           label: 'Busca en una fuente Discourse. Reemplaza «nombre_fuente».',
         });
@@ -342,12 +357,14 @@ export default {
       if (this.googleEnabled) {
         this.googleDocSources.forEach(source => {
           items.push({
+            group: 'google',
             token: `{{doc:${source.name}}}`,
             label: `Responde con el Google Doc «${source.name}».`,
           });
         });
         this.googleSheetSources.forEach(source => {
           items.push({
+            group: 'google',
             token: `{{hoja:${source.name}}}`,
             label: `Consulta la Google Sheet «${source.name}».`,
           });
@@ -360,11 +377,13 @@ export default {
           const prefix = this.erpConnPrefix(conn);
           if (!prefix) return;
           (conn.queries || []).forEach(q => {
-            const args = (q.params_schema || [])
+            const keys = (q.params_schema || [])
               .map(p => `${p.key}=`)
               .join(', ');
+            const args = keys ? `(${keys})` : '';
             items.push({
-              token: `{{consulta:${prefix}/${q.name}${args ? `(${args})` : ''}}}`,
+              group: 'erp',
+              token: `{{consulta:${prefix}/${q.name}${args}}}`,
               label: `Consulta «${q.name}» en «${conn.name}»${
                 q.description ? ` (${q.description})` : ''
               }.`,
@@ -373,20 +392,36 @@ export default {
         });
       }
       items.push({
+        group: 'discourse',
         token: '@discourse',
         label: 'Busca en el Discourse conectado al canal.',
       });
       if (this.googleEnabled) {
         items.push({
+          group: 'google',
           token: '@agendar_calendar',
           label: 'Permite agendar una cita en Google Calendar.',
         });
       }
       items.push({
+        group: 'actions',
         token: '@crear_ticket',
         label: 'Crea un ticket automáticamente.',
       });
       return items;
+    },
+    // proyecto@contact_tracking: grupos presentes en el catálogo (para los chips de
+    // filtro del modal). Se muestran en orden y solo si tienen al menos una directiva.
+    directiveGroups() {
+      const present = new Set(this.directiveCatalog.map(d => d.group));
+      return DIRECTIVE_GROUPS.filter(g => present.has(g.key));
+    },
+    // Catálogo filtrado por el chip activo ('all' = todas).
+    filteredDirectiveCatalog() {
+      if (this.directiveFilter === 'all') return this.directiveCatalog;
+      return this.directiveCatalog.filter(
+        d => d.group === this.directiveFilter
+      );
     },
     validationErrors() {
       const errors = [];
@@ -981,6 +1016,7 @@ export default {
     },
     openDirectivePicker(target = 'inline') {
       this.rememberInsertPos(target);
+      this.directiveFilter = 'all';
       this.showDirectivePicker = true;
     },
     closeDirectivePicker() {
@@ -1967,8 +2003,40 @@ export default {
         header-content="Haz clic en una directiva para insertarla en el Entrenamiento. El bot la ejecutará al responder."
       />
       <div class="px-8 pb-6">
+        <!-- filtro por tipo de directiva -->
+        <div
+          v-if="directiveGroups.length > 1"
+          class="flex flex-wrap gap-2 mb-4"
+        >
+          <button
+            type="button"
+            class="text-xs font-medium rounded-full px-3 py-1 border transition-colors"
+            :class="
+              directiveFilter === 'all'
+                ? 'bg-woot-500 text-white border-woot-500'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-woot-500'
+            "
+            @click="directiveFilter = 'all'"
+          >
+            Todas
+          </button>
+          <button
+            v-for="g in directiveGroups"
+            :key="g.key"
+            type="button"
+            class="text-xs font-medium rounded-full px-3 py-1 border transition-colors"
+            :class="
+              directiveFilter === g.key
+                ? 'bg-woot-500 text-white border-woot-500'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-woot-500'
+            "
+            @click="directiveFilter = g.key"
+          >
+            {{ g.label }}
+          </button>
+        </div>
         <ul class="space-y-2 max-h-[360px] overflow-y-auto pr-1">
-          <li v-for="dir in directiveCatalog" :key="dir.token">
+          <li v-for="dir in filteredDirectiveCatalog" :key="dir.token">
             <button
               type="button"
               class="w-full flex items-center justify-between gap-3 text-left rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 hover:border-woot-500 hover:bg-woot-25 dark:hover:bg-slate-800 transition-colors"
