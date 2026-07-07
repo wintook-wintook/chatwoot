@@ -58,6 +58,9 @@ export default {
       },
       kbaseSettingsSaving: false,
       kbaseSettingsLoading: false,
+      // La tab "Configuración" se mantiene en el código pero oculta (no se lista
+      // en tabs()); poner en true para volver a mostrarla.
+      showConfigTab: false,
     };
   },
   computed: {
@@ -84,11 +87,13 @@ export default {
       );
     },
     tabs() {
+      // La tab "Configuración" queda en el código (bloque showConfigTab) pero NO se
+      // muestra. woot-tabs indexa por posición de renderizado, así que al ocultarla
+      // los índices se recorren: Prueba=2, Conexión ERP=3, Bots=4, Consola=5.
       return [
         { name: 'Contenido indexado' },
         { name: `Fuentes (${this.sources.length})` },
         { name: 'Prueba de búsqueda' },
-        { name: 'Configuración' },
         ...(this.erpEnabled
           ? [
               { name: 'Conexión ERP' },
@@ -164,7 +169,9 @@ export default {
   watch: {
     activeTab(val) {
       if (val === 2) this.clearTest();
-      if (val === 3) this.fetchSearchSettings();
+      // La tab Configuración (fetchSearchSettings) está oculta; su carga se hace
+      // solo si se reactiva showConfigTab desde su propio bloque.
+      if (this.showConfigTab && val === 3) this.fetchSearchSettings();
     },
   },
   mounted() {
@@ -652,8 +659,8 @@ export default {
         </div>
       </div>
 
-      <!-- Tab: Configuración -->
-      <div v-if="activeTab === 3">
+      <!-- Tab: Configuración (oculta: showConfigTab=false, se conserva en código) -->
+      <div v-if="showConfigTab && activeTab === 3">
         <div v-if="kbaseSettingsLoading" class="flex justify-center py-12">
           <span class="text-slate-400 text-sm">Cargando configuración...</span>
         </div>
@@ -930,17 +937,17 @@ export default {
       </div>
 
       <!-- Tab: Conexión ERP -->
-      <div v-if="erpEnabled && activeTab === 4" class="h-[70vh] -m-6">
+      <div v-if="erpEnabled && activeTab === 3" class="h-[70vh] -m-6">
         <ErpConnections />
       </div>
 
       <!-- Tab: Bots Cobranza -->
-      <div v-if="erpEnabled && activeTab === 5" class="h-[70vh] -m-6">
+      <div v-if="erpEnabled && activeTab === 4" class="h-[70vh] -m-6">
         <ErpBots />
       </div>
 
       <!-- Tab: Consola ERP -->
-      <div v-if="erpEnabled && activeTab === 6" class="h-[70vh] -m-6">
+      <div v-if="erpEnabled && activeTab === 5" class="h-[70vh] -m-6">
         <ErpConsole />
       </div>
     </div>

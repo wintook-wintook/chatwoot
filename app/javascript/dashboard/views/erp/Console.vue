@@ -121,205 +121,234 @@ export default {
       <span>{{ $t('ERP.CONSOLE.NO_CONNECTIONS') }}</span>
     </div>
 
-    <div v-else class="flex flex-col flex-1 gap-5 p-6 overflow-y-auto">
-      <!-- Selección de conexión + consulta -->
-      <div class="grid max-w-3xl grid-cols-1 gap-4 md:grid-cols-2">
-        <label class="flex flex-col gap-1">
-          <span
-            class="text-sm font-medium text-slate-700 dark:text-slate-200"
-            >{{ $t('ERP.CONSOLE.CONNECTION') }}</span
-          >
-          <select
-            v-model="connectionId"
-            class="w-full"
-            @change="onConnectionChange"
-          >
-            <option v-for="c in catalog" :key="c.id" :value="c.id">
-              {{ c.name }}
-            </option>
-          </select>
-        </label>
-        <label class="flex flex-col gap-1">
-          <span
-            class="text-sm font-medium text-slate-700 dark:text-slate-200"
-            >{{ $t('ERP.CONSOLE.QUERY') }}</span
-          >
-          <select v-model="queryId" class="w-full" :disabled="!queries.length">
-            <option v-for="q in queries" :key="q.id" :value="q.id">
-              {{ q.name }}{{ q.description ? ` — ${q.description}` : '' }}
-            </option>
-          </select>
-        </label>
-      </div>
-
-      <p
-        v-if="selectedConnection && !queries.length"
-        class="text-sm text-slate-400 dark:text-slate-500"
-      >
-        {{ $t('ERP.CONSOLE.NO_QUERIES') }}
-      </p>
-
-      <!-- Parámetros dinámicos -->
-      <div v-if="paramsSchema.length" class="flex flex-col max-w-3xl gap-3">
-        <span
-          class="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"
-          >{{ $t('ERP.CONSOLE.PARAMS') }}</span
+    <div v-else class="flex-1 p-6 overflow-y-auto">
+      <div class="flex flex-col w-full max-w-3xl gap-6 mx-auto">
+        <!-- Modo A — consulta predefinida -->
+        <section
+          class="flex flex-col gap-4 p-5 bg-white border shadow-sm rounded-xl border-slate-100 dark:bg-slate-800 dark:border-slate-700"
         >
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <label
-            v-for="p in paramsSchema"
-            :key="p.key"
-            class="flex flex-col gap-1"
+          <h2
+            class="m-0 text-sm font-semibold text-slate-700 dark:text-slate-200"
           >
-            <span class="text-sm text-slate-600 dark:text-slate-300">
-              {{ p.label || p.key
-              }}<span v-if="p.required" class="text-red-500"> *</span>
-            </span>
-            <input
-              v-model="paramValues[p.key]"
-              :type="inputType(p.type)"
-              class="w-full"
-              :placeholder="p.key"
-            />
-          </label>
-        </div>
-      </div>
+            {{ $t('ERP.CONSOLE.QUERY_TITLE') }}
+          </h2>
 
-      <div>
-        <woot-button
-          :is-loading="isRunning"
-          :disabled="!queryId"
-          icon="arrow-right"
-          @click="run"
-        >
-          {{ isRunning ? $t('ERP.CONSOLE.RUNNING') : $t('ERP.CONSOLE.RUN') }}
-        </woot-button>
-      </div>
-
-      <!-- Error -->
-      <div
-        v-if="error"
-        class="max-w-3xl px-4 py-3 text-sm border rounded-lg text-red-700 bg-red-50 border-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300"
-      >
-        {{ $t('ERP.CONSOLE.ERROR', { error }) }}
-      </div>
-
-      <!-- Resultado -->
-      <div v-if="result" class="flex flex-col gap-2">
-        <div class="flex items-center gap-3">
-          <span
-            class="text-sm font-semibold text-slate-700 dark:text-slate-200"
-            >{{ $t('ERP.CONSOLE.RESULT') }}</span
-          >
-          <span class="text-xs text-slate-400 dark:text-slate-500">
-            {{
-              $t('ERP.CONSOLE.META', {
-                count: result.row_count,
-                ms: result.duration_ms,
-              })
-            }}
-          </span>
-        </div>
-
-        <div
-          v-if="!result.rows.length"
-          class="text-sm text-slate-400 dark:text-slate-500"
-        >
-          {{ $t('ERP.CONSOLE.EMPTY_RESULT') }}
-        </div>
-        <div
-          v-else
-          class="overflow-auto border rounded-lg border-slate-100 dark:border-slate-700"
-        >
-          <table class="min-w-full text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-800">
-              <tr>
-                <th
-                  v-for="col in result.columns"
-                  :key="col"
-                  class="px-3 py-2 font-semibold text-left text-slate-600 dark:text-slate-300 whitespace-nowrap"
-                >
-                  {{ col }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(row, i) in result.rows"
-                :key="i"
-                class="border-t border-slate-50 dark:border-slate-800"
+          <!-- Conexión + consulta -->
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-200"
               >
-                <td
-                  v-for="col in result.columns"
-                  :key="col"
-                  class="px-3 py-1.5 text-slate-700 dark:text-slate-200 whitespace-nowrap"
-                >
-                  {{ formatCell(row[col]) }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                {{ $t('ERP.CONSOLE.CONNECTION') }}
+              </span>
+              <select
+                v-model="connectionId"
+                class="w-full"
+                @change="onConnectionChange"
+              >
+                <option v-for="c in catalog" :key="c.id" :value="c.id">
+                  {{ c.name }}
+                </option>
+              </select>
+            </label>
+            <label class="flex flex-col gap-1">
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >
+                {{ $t('ERP.CONSOLE.QUERY') }}
+              </span>
+              <select
+                v-model="queryId"
+                class="w-full"
+                :disabled="!queries.length"
+              >
+                <option v-for="q in queries" :key="q.id" :value="q.id">
+                  {{ q.name }}{{ q.description ? ` — ${q.description}` : '' }}
+                </option>
+              </select>
+            </label>
+          </div>
 
-        <details class="max-w-3xl mt-1">
-          <summary
-            class="text-xs cursor-pointer text-slate-400 dark:text-slate-500"
+          <p
+            v-if="selectedConnection && !queries.length"
+            class="text-sm text-slate-400 dark:text-slate-500"
           >
-            {{ $t('ERP.CONSOLE.SQL_PREVIEW') }}
-          </summary>
-          <pre
-            class="p-3 mt-1 overflow-auto font-mono text-xs rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
-            >{{ result.query.sql_preview }}</pre
-          >
-        </details>
-      </div>
+            {{ $t('ERP.CONSOLE.NO_QUERIES') }}
+          </p>
 
-      <!-- Modo B — pregunta en lenguaje natural (IA) -->
-      <div
-        class="max-w-3xl pt-5 mt-2 border-t border-slate-100 dark:border-slate-700"
-      >
-        <span
-          class="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"
-          >{{ $t('ERP.CONSOLE.ASK_TITLE') }}</span
+          <!-- Parámetros dinámicos -->
+          <div v-if="paramsSchema.length" class="flex flex-col gap-3">
+            <span
+              class="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"
+            >
+              {{ $t('ERP.CONSOLE.PARAMS') }}
+            </span>
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <label
+                v-for="p in paramsSchema"
+                :key="p.key"
+                class="flex flex-col gap-1"
+              >
+                <span class="text-sm text-slate-600 dark:text-slate-300">
+                  {{ p.label || p.key
+                  }}<span v-if="p.required" class="text-red-500"> *</span>
+                </span>
+                <input
+                  v-model="paramValues[p.key]"
+                  :type="inputType(p.type)"
+                  class="w-full"
+                  :placeholder="p.key"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <woot-button
+              :is-loading="isRunning"
+              :disabled="!queryId"
+              icon="arrow-right"
+              @click="run"
+            >
+              {{
+                isRunning ? $t('ERP.CONSOLE.RUNNING') : $t('ERP.CONSOLE.RUN')
+              }}
+            </woot-button>
+          </div>
+
+          <!-- Error -->
+          <div
+            v-if="error"
+            class="px-4 py-3 text-sm border rounded-lg text-red-700 bg-red-50 border-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300"
+          >
+            {{ $t('ERP.CONSOLE.ERROR', { error }) }}
+          </div>
+
+          <!-- Resultado -->
+          <div
+            v-if="result"
+            class="flex flex-col gap-2 pt-4 border-t border-slate-100 dark:border-slate-700"
+          >
+            <div class="flex items-center gap-3">
+              <span
+                class="text-sm font-semibold text-slate-700 dark:text-slate-200"
+              >
+                {{ $t('ERP.CONSOLE.RESULT') }}
+              </span>
+              <span class="text-xs text-slate-400 dark:text-slate-500">
+                {{
+                  $t('ERP.CONSOLE.META', {
+                    count: result.row_count,
+                    ms: result.duration_ms,
+                  })
+                }}
+              </span>
+            </div>
+
+            <div
+              v-if="!result.rows.length"
+              class="text-sm text-slate-400 dark:text-slate-500"
+            >
+              {{ $t('ERP.CONSOLE.EMPTY_RESULT') }}
+            </div>
+            <div
+              v-else
+              class="overflow-auto border rounded-lg border-slate-100 dark:border-slate-700"
+            >
+              <table class="min-w-full text-sm">
+                <thead class="bg-slate-50 dark:bg-slate-800">
+                  <tr>
+                    <th
+                      v-for="col in result.columns"
+                      :key="col"
+                      class="px-3 py-2 font-semibold text-left text-slate-600 dark:text-slate-300 whitespace-nowrap"
+                    >
+                      {{ col }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(row, i) in result.rows"
+                    :key="i"
+                    class="border-t border-slate-50 dark:border-slate-800"
+                  >
+                    <td
+                      v-for="col in result.columns"
+                      :key="col"
+                      class="px-3 py-1.5 text-slate-700 dark:text-slate-200 whitespace-nowrap"
+                    >
+                      {{ formatCell(row[col]) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <details class="mt-1">
+              <summary
+                class="text-xs cursor-pointer text-slate-400 dark:text-slate-500"
+              >
+                {{ $t('ERP.CONSOLE.SQL_PREVIEW') }}
+              </summary>
+              <pre
+                class="p-3 mt-1 overflow-auto font-mono text-xs rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                >{{ result.query.sql_preview }}</pre
+              >
+            </details>
+          </div>
+        </section>
+
+        <!-- Modo B — pregunta en lenguaje natural (IA) -->
+        <section
+          class="flex flex-col gap-3 p-5 bg-white border shadow-sm rounded-xl border-slate-100 dark:bg-slate-800 dark:border-slate-700"
         >
-        <div class="flex gap-2 mt-2">
-          <input
-            v-model="question"
-            type="text"
-            class="flex-1"
-            :placeholder="$t('ERP.CONSOLE.ASK_PLACEHOLDER')"
-            @keyup.enter="ask"
-          />
-          <woot-button
-            :is-loading="isRunning"
-            :disabled="!question || !connectionId"
-            icon="chat-multiple"
-            @click="ask"
+          <h2
+            class="m-0 text-sm font-semibold text-slate-700 dark:text-slate-200"
           >
-            {{ $t('ERP.CONSOLE.ASK_BUTTON') }}
-          </woot-button>
-        </div>
-        <div
-          v-if="aiAnswer"
-          class="p-4 mt-3 text-sm border rounded-lg bg-woot-25 dark:bg-slate-800 border-woot-100 dark:border-slate-700"
-        >
-          <p
-            class="m-0 mb-1 text-xs font-semibold text-slate-500 dark:text-slate-400"
+            {{ $t('ERP.CONSOLE.ASK_TITLE') }}
+          </h2>
+          <div class="flex gap-2">
+            <input
+              v-model="question"
+              type="text"
+              class="flex-1"
+              :placeholder="$t('ERP.CONSOLE.ASK_PLACEHOLDER')"
+              @keyup.enter="ask"
+            />
+            <woot-button
+              :is-loading="isRunning"
+              :disabled="!question || !connectionId"
+              icon="chat-multiple"
+              @click="ask"
+            >
+              {{ $t('ERP.CONSOLE.ASK_BUTTON') }}
+            </woot-button>
+          </div>
+          <div
+            v-if="aiAnswer"
+            class="p-4 text-sm border rounded-lg bg-woot-25 dark:bg-slate-900/40 border-woot-100 dark:border-slate-700"
           >
-            {{ $t('ERP.CONSOLE.ASK_ANSWER') }}
-          </p>
-          <p class="m-0 whitespace-pre-line text-slate-700 dark:text-slate-100">
-            {{ aiAnswer.answer }}
-          </p>
-          <p
-            v-if="aiAnswer.query_name"
-            class="m-0 mt-2 text-xs text-slate-400 dark:text-slate-500"
-          >
-            {{
-              $t('ERP.CONSOLE.ASK_QUERY_USED', { name: aiAnswer.query_name })
-            }}
-          </p>
-        </div>
+            <p
+              class="m-0 mb-1 text-xs font-semibold text-slate-500 dark:text-slate-400"
+            >
+              {{ $t('ERP.CONSOLE.ASK_ANSWER') }}
+            </p>
+            <p
+              class="m-0 whitespace-pre-line text-slate-700 dark:text-slate-100"
+            >
+              {{ aiAnswer.answer }}
+            </p>
+            <p
+              v-if="aiAnswer.query_name"
+              class="m-0 mt-2 text-xs text-slate-400 dark:text-slate-500"
+            >
+              {{
+                $t('ERP.CONSOLE.ASK_QUERY_USED', { name: aiAnswer.query_name })
+              }}
+            </p>
+          </div>
+        </section>
       </div>
     </div>
   </div>

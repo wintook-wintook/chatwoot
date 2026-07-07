@@ -17,6 +17,8 @@
       "DELETE": "Eliminar",
       "DELETE_CONFIRM": "¿Eliminar la conexión \"{name}\" y sus consultas?",
       "FORM": {
+        "TITLE_NEW": "Nueva conexión",
+        "TITLE_EDIT": "Editar conexión",
         "NAME": "Nombre",
         "ENGINE": "Motor",
         "ERP_TYPE": "ERP (para la librería de consultas)",
@@ -30,8 +32,10 @@
         "PASSWORD_KEEP": "Dejá en blanco para conservar la contraseña actual",
         "TDS_VERSION": "Versión TDS (SQL Server)",
         "SAVE": "Guardar",
-        "CANCEL": "Cancelar"
-      }
+        "CANCEL": "Cancelar",
+        "MODAL_DESC": "Configura las credenciales de conexión a la base de datos del ERP."
+      },
+      "BACK": "Volver a conexiones"
     },
     "QUERIES": {
       "TITLE": "Consultas de {name}",
@@ -49,7 +53,12 @@
       "AI_ENABLED": "Disponible para el bot IA (Modo B)",
       "RESULT_FORMAT": "Formato de resultado",
       "SAVE": "Guardar consulta",
-      "DELETE_CONFIRM": "¿Eliminar la consulta \"{name}\"?"
+      "DELETE_CONFIRM": "¿Eliminar la consulta \"{name}\"?",
+      "EDIT_TITLE": "Editar consulta",
+      "ACTIONS": "Acciones",
+      "AI_COL": "IA",
+      "COUNT": "{n} consulta(s)",
+      "MODAL_DESC": "Define una consulta SQL de solo lectura (SELECT) que el bot podrá ejecutar sobre esta conexión."
     },
     "CONSOLE": {
       "TITLE": "Consola ERP",
@@ -70,7 +79,9 @@
       "ASK_PLACEHOLDER": "ej. ¿Cuál es el saldo del cliente RFC...?",
       "ASK_BUTTON": "Preguntar",
       "ASK_ANSWER": "Respuesta",
-      "ASK_QUERY_USED": "Consulta elegida: {name}"
+      "ASK_QUERY_USED": "Consulta elegida: {name}",
+      "RESULT_PLACEHOLDER": "Ejecuta una consulta o haz una pregunta para ver los resultados aquí.",
+      "QUERY_TITLE": "Consulta predefinida (Modo A)"
     },
     "BOTS": {
       "TITLE": "Bots cobradores",
@@ -90,7 +101,11 @@
       "PREVIEW": "Vista previa (dry-run)",
       "PREVIEW_TITLE": "Vista previa — no se envía nada",
       "DELETE_CONFIRM": "¿Eliminar el bot \"{name}\"?",
-      "NONE": "— ninguna —"
+      "NONE": "— ninguna —",
+      "EDIT_TITLE": "Editar bot",
+      "MODAL_DESC": "Configura un recordatorio de cobranza automático (Modo A) y, opcionalmente, respuestas por chat con IA (Modo B).",
+      "INACTIVE": "Inactivo",
+      "MODE_B_BADGE": "Modo B"
     },
     "ENGINE": {
       "FIREBIRD": "Firebird (SAE / Microsip / Contpaq)",

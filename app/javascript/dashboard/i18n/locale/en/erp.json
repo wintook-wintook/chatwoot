@@ -17,6 +17,8 @@
       "DELETE": "Delete",
       "DELETE_CONFIRM": "Delete connection \"{name}\" and its queries?",
       "FORM": {
+        "TITLE_NEW": "New connection",
+        "TITLE_EDIT": "Edit connection",
         "NAME": "Name",
         "ENGINE": "Engine",
         "ERP_TYPE": "ERP (for the query library)",
@@ -30,8 +32,10 @@
         "PASSWORD_KEEP": "Leave blank to keep the current password",
         "TDS_VERSION": "TDS version (SQL Server)",
         "SAVE": "Save",
-        "CANCEL": "Cancel"
-      }
+        "CANCEL": "Cancel",
+        "MODAL_DESC": "Set up the connection credentials to the ERP database."
+      },
+      "BACK": "Back to connections"
     },
     "QUERIES": {
       "TITLE": "Queries for {name}",
@@ -49,7 +53,12 @@
       "AI_ENABLED": "Available to the AI bot (Mode B)",
       "RESULT_FORMAT": "Result format",
       "SAVE": "Save query",
-      "DELETE_CONFIRM": "Delete query \"{name}\"?"
+      "DELETE_CONFIRM": "Delete query \"{name}\"?",
+      "EDIT_TITLE": "Edit query",
+      "ACTIONS": "Actions",
+      "AI_COL": "AI",
+      "COUNT": "{n} query(ies)",
+      "MODAL_DESC": "Define a read-only SQL query (SELECT) the bot can run against this connection."
     },
     "CONSOLE": {
       "TITLE": "ERP console",
@@ -70,7 +79,9 @@
       "ASK_PLACEHOLDER": "e.g. What is the balance of customer RFC...?",
       "ASK_BUTTON": "Ask",
       "ASK_ANSWER": "Answer",
-      "ASK_QUERY_USED": "Query chosen: {name}"
+      "ASK_QUERY_USED": "Query chosen: {name}",
+      "RESULT_PLACEHOLDER": "Run a query or ask a question to see the results here.",
+      "QUERY_TITLE": "Predefined query (Mode A)"
     },
     "BOTS": {
       "TITLE": "Collection bots",
@@ -90,7 +101,11 @@
       "PREVIEW": "Preview (dry-run)",
       "PREVIEW_TITLE": "Preview — no messages sent",
       "DELETE_CONFIRM": "Delete bot \"{name}\"?",
-      "NONE": "— none —"
+      "NONE": "— none —",
+      "EDIT_TITLE": "Edit bot",
+      "MODAL_DESC": "Set up an automatic collection reminder (Mode A) and, optionally, AI chat replies (Mode B).",
+      "INACTIVE": "Inactive",
+      "MODE_B_BADGE": "Mode B"
     },
     "ENGINE": {
       "FIREBIRD": "Firebird (SAE / Microsip / Contpaq)",

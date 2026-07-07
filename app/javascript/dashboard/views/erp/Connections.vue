@@ -6,6 +6,7 @@
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import ErpQueriesPanel from './QueriesPanel.vue';
+import ErpConnectionCard from './ConnectionCard.vue';
 
 const emptyForm = () => ({
   name: '',
@@ -20,7 +21,7 @@ const emptyForm = () => ({
 });
 
 export default {
-  components: { ErpQueriesPanel },
+  components: { ErpQueriesPanel, ErpConnectionCard },
   data() {
     return {
       showForm: false,
@@ -43,6 +44,14 @@ export default {
       return (
         this.form.name && this.form.host && this.form.port && this.form.database
       );
+    },
+    expandedConnection() {
+      return this.connections.find(c => c.id === this.expandedId) || null;
+    },
+    modalTitle() {
+      return this.editingId
+        ? this.$t('ERP.CONNECTIONS.FORM.TITLE_EDIT')
+        : this.$t('ERP.CONNECTIONS.FORM.TITLE_NEW');
     },
   },
   mounted() {
@@ -173,141 +182,150 @@ export default {
     </div>
 
     <div class="flex flex-col flex-1 gap-4 p-6 overflow-y-auto">
-      <!-- Form de conexión (alta/edición) -->
-      <div
-        v-if="showForm"
-        class="max-w-3xl p-5 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
-      >
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ $t('ERP.CONNECTIONS.FORM.NAME') }}</span
-            >
-            <input v-model="form.name" type="text" class="w-full" />
-          </label>
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ $t('ERP.CONNECTIONS.FORM.ENGINE') }}</span
-            >
-            <select v-model="form.engine" class="w-full">
-              <option value="firebird">{{ $t('ERP.ENGINE.FIREBIRD') }}</option>
-              <option value="mssql">{{ $t('ERP.ENGINE.MSSQL') }}</option>
-            </select>
-          </label>
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ $t('ERP.CONNECTIONS.FORM.ERP_TYPE') }}</span
-            >
-            <select v-model="form.erp_type" class="w-full">
-              <option v-for="t in erpTypes" :key="t" :value="t">{{ t }}</option>
-            </select>
-          </label>
-          <label v-if="form.erp_type === 'sae'" class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ $t('ERP.CONNECTIONS.FORM.COMPANY_SUFFIX') }}</span
-            >
-            <input
-              v-model="form.company_suffix"
-              type="text"
-              class="w-full font-mono"
-            />
-          </label>
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ $t('ERP.CONNECTIONS.FORM.HOST') }}</span
-            >
-            <input v-model="form.host" type="text" class="w-full" />
-          </label>
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ $t('ERP.CONNECTIONS.FORM.PORT') }}</span
-            >
-            <input
-              v-model.number="form.port"
-              type="number"
-              class="w-full"
-              :placeholder="form.engine === 'mssql' ? '6072' : '3050'"
-            />
-          </label>
-          <label class="flex flex-col gap-1 md:col-span-2">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ $t('ERP.CONNECTIONS.FORM.DATABASE') }}</span
-            >
-            <input
-              v-model="form.database"
-              type="text"
-              class="w-full font-mono"
-            />
-            <span class="text-xs text-slate-400 dark:text-slate-500">{{
-              $t('ERP.CONNECTIONS.FORM.DATABASE_HINT')
-            }}</span>
-          </label>
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ $t('ERP.CONNECTIONS.FORM.USERNAME') }}</span
-            >
-            <input
-              v-model="form.username"
-              type="text"
-              class="w-full"
-              autocomplete="off"
-            />
-          </label>
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ $t('ERP.CONNECTIONS.FORM.PASSWORD') }}</span
-            >
-            <input
-              v-model="form.password"
-              type="password"
-              class="w-full"
-              autocomplete="new-password"
-            />
-            <span
-              v-if="editingId"
-              class="text-xs text-slate-400 dark:text-slate-500"
-              >{{ $t('ERP.CONNECTIONS.FORM.PASSWORD_KEEP') }}</span
-            >
-          </label>
-          <label v-if="form.engine === 'mssql'" class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ $t('ERP.CONNECTIONS.FORM.TDS_VERSION') }}</span
-            >
-            <input
-              v-model="tdsVersion"
-              type="text"
-              class="w-full"
-              :placeholder="tdsPlaceholder"
-            />
-          </label>
+      <!-- Modal de conexión (alta/edición) -->
+      <woot-modal :show="showForm" :on-close="closeForm">
+        <div class="flex flex-col overflow-auto">
+          <woot-modal-header
+            :header-title="modalTitle"
+            :header-content="$t('ERP.CONNECTIONS.FORM.MODAL_DESC')"
+          />
+          <div class="flex flex-col gap-4 px-8 pt-4 pb-8">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{ $t('ERP.CONNECTIONS.FORM.NAME') }}</span
+                >
+                <input v-model="form.name" type="text" class="w-full" />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{ $t('ERP.CONNECTIONS.FORM.ENGINE') }}</span
+                >
+                <select v-model="form.engine" class="w-full">
+                  <option value="firebird">
+                    {{ $t('ERP.ENGINE.FIREBIRD') }}
+                  </option>
+                  <option value="mssql">{{ $t('ERP.ENGINE.MSSQL') }}</option>
+                </select>
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{ $t('ERP.CONNECTIONS.FORM.ERP_TYPE') }}</span
+                >
+                <select v-model="form.erp_type" class="w-full">
+                  <option v-for="t in erpTypes" :key="t" :value="t">
+                    {{ t }}
+                  </option>
+                </select>
+              </label>
+              <label v-if="form.erp_type === 'sae'" class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{ $t('ERP.CONNECTIONS.FORM.COMPANY_SUFFIX') }}</span
+                >
+                <input
+                  v-model="form.company_suffix"
+                  type="text"
+                  class="w-full font-mono"
+                />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{ $t('ERP.CONNECTIONS.FORM.HOST') }}</span
+                >
+                <input v-model="form.host" type="text" class="w-full" />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{ $t('ERP.CONNECTIONS.FORM.PORT') }}</span
+                >
+                <input
+                  v-model.number="form.port"
+                  type="number"
+                  class="w-full"
+                  :placeholder="form.engine === 'mssql' ? '6072' : '3050'"
+                />
+              </label>
+              <label class="flex flex-col gap-1 md:col-span-2">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{ $t('ERP.CONNECTIONS.FORM.DATABASE') }}</span
+                >
+                <input
+                  v-model="form.database"
+                  type="text"
+                  class="w-full font-mono"
+                />
+                <span class="text-xs text-slate-400 dark:text-slate-500">{{
+                  $t('ERP.CONNECTIONS.FORM.DATABASE_HINT')
+                }}</span>
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{ $t('ERP.CONNECTIONS.FORM.USERNAME') }}</span
+                >
+                <input
+                  v-model="form.username"
+                  type="text"
+                  class="w-full"
+                  autocomplete="off"
+                />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{ $t('ERP.CONNECTIONS.FORM.PASSWORD') }}</span
+                >
+                <input
+                  v-model="form.password"
+                  type="password"
+                  class="w-full"
+                  autocomplete="new-password"
+                />
+                <span
+                  v-if="editingId"
+                  class="text-xs text-slate-400 dark:text-slate-500"
+                  >{{ $t('ERP.CONNECTIONS.FORM.PASSWORD_KEEP') }}</span
+                >
+              </label>
+              <label v-if="form.engine === 'mssql'" class="flex flex-col gap-1">
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{ $t('ERP.CONNECTIONS.FORM.TDS_VERSION') }}</span
+                >
+                <input
+                  v-model="tdsVersion"
+                  type="text"
+                  class="w-full"
+                  :placeholder="tdsPlaceholder"
+                />
+              </label>
+            </div>
+            <div class="flex gap-2 mt-4">
+              <woot-button
+                :is-loading="uiFlags.savingConnection"
+                :disabled="!isFormValid"
+                @click="save"
+              >
+                {{ $t('ERP.CONNECTIONS.FORM.SAVE') }}
+              </woot-button>
+              <woot-button
+                variant="clear"
+                color-scheme="secondary"
+                @click="closeForm"
+              >
+                {{ $t('ERP.CONNECTIONS.FORM.CANCEL') }}
+              </woot-button>
+            </div>
+          </div>
         </div>
-        <div class="flex gap-2 mt-4">
-          <woot-button
-            :is-loading="uiFlags.savingConnection"
-            :disabled="!isFormValid"
-            @click="save"
-          >
-            {{ $t('ERP.CONNECTIONS.FORM.SAVE') }}
-          </woot-button>
-          <woot-button
-            variant="clear"
-            color-scheme="secondary"
-            @click="closeForm"
-          >
-            {{ $t('ERP.CONNECTIONS.FORM.CANCEL') }}
-          </woot-button>
-        </div>
-      </div>
+      </woot-modal>
 
       <!-- Listado -->
       <p
@@ -317,72 +335,48 @@ export default {
         {{ $t('ERP.CONNECTIONS.EMPTY') }}
       </p>
 
+      <!-- Grilla de tarjetas (mismo estilo que Fuentes) -->
       <div
-        v-for="conn in connections"
-        :key="conn.id"
-        class="max-w-3xl bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+        v-if="connections.length && !expandedConnection"
+        class="grid gap-4 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]"
       >
-        <div class="flex items-center justify-between gap-3 px-4 py-3">
-          <div class="flex flex-col">
-            <div class="flex items-center gap-2">
-              <span class="font-semibold text-slate-800 dark:text-slate-100">{{
-                conn.name
-              }}</span>
-              <span
-                class="px-1.5 py-0.5 text-xs rounded bg-woot-100 text-woot-700 dark:bg-woot-700 dark:text-woot-100"
-                >{{ conn.engine }}</span
-              >
-            </div>
-            <span class="font-mono text-xs text-slate-400 dark:text-slate-500"
-              >{{ conn.host }}:{{ conn.port }}</span
-            >
-          </div>
-          <div class="flex items-center gap-1">
-            <woot-button
-              size="small"
-              variant="smooth"
-              color-scheme="success"
-              :is-loading="testingId === conn.id"
-              @click="test(conn)"
-            >
-              {{ $t('ERP.CONNECTIONS.TEST') }}
-            </woot-button>
-            <woot-button
-              size="small"
-              variant="clear"
-              icon="code"
-              @click="toggleQueries(conn)"
-            >
-              {{ $t('ERP.CONNECTIONS.QUERIES') }} ({{ conn.queries_count }})
-            </woot-button>
-            <woot-button
-              v-if="conn.erp_type && conn.erp_type !== 'generic'"
-              size="small"
-              variant="smooth"
-              icon="add"
-              :is-loading="seedingId === conn.id"
-              @click="seed(conn)"
-            >
-              {{ $t('ERP.CONNECTIONS.SEED') }}
-            </woot-button>
-            <woot-button
-              size="small"
-              variant="clear"
-              icon="edit"
-              @click="openEdit(conn)"
-            />
-            <woot-button
-              size="small"
-              variant="clear"
-              color-scheme="alert"
-              icon="delete"
-              @click="remove(conn)"
-            />
-          </div>
-        </div>
+        <ErpConnectionCard
+          v-for="conn in connections"
+          :key="conn.id"
+          :connection="conn"
+          :testing="testingId === conn.id"
+          :seeding="seedingId === conn.id"
+          :active="expandedId === conn.id"
+          @test="test"
+          @queries="toggleQueries"
+          @seed="seed"
+          @edit="openEdit"
+          @delete="remove"
+        />
+      </div>
 
-        <!-- Panel de consultas -->
-        <ErpQueriesPanel v-if="expandedId === conn.id" :connection="conn" />
+      <!-- Panel de consultas de la conexión seleccionada (full-width) -->
+      <div
+        v-if="expandedConnection"
+        class="bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+      >
+        <div
+          class="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-700"
+        >
+          <woot-button
+            size="small"
+            variant="clear"
+            color-scheme="secondary"
+            icon="chevron-left"
+            @click="expandedId = null"
+          >
+            {{ $t('ERP.CONNECTIONS.BACK') }}
+          </woot-button>
+          <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            {{ $t('ERP.QUERIES.TITLE', { name: expandedConnection.name }) }}
+          </h3>
+        </div>
+        <ErpQueriesPanel :connection="expandedConnection" />
       </div>
     </div>
   </div>
