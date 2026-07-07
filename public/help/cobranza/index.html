@@ -142,15 +142,6 @@
         text-align: center;
       }
       figcaption.zoom::after { content: " · 🔍 clic para ampliar"; opacity: .7; }
-      figcaption.pend::before {
-        content: "📸 captura pendiente de re-toma · ";
-        color: #d97706;
-        font-weight: 600;
-      }
-      figure.pend-fig img {
-        outline: 2px dashed #d97706;
-        outline-offset: 3px;
-      }
       .lightbox {
         position: fixed;
         inset: 0;
@@ -352,24 +343,6 @@
         </p>
       </header>
 
-      <div class="recap">
-        📸 <b>Capturas pendientes de re-toma.</b> Todas las imágenes de este manual
-        se tomaron de la interfaz anterior (cuando Cobranza / ERP era un icono de la
-        barra lateral). Ahora el módulo vive en <b>tabs dentro de Base de
-        Conocimiento</b>, así que el encabezado, la barra de tabs y varios títulos
-        (p. ej. “Consola de Consulta (ERP)”) <b>ya no coinciden</b>. Hay que volver a
-        capturarlas en el navegador:
-        <ul style="margin:.5rem 0 0">
-          <li><code>acceso.png</code> — la barra de tabs de Base de Conocimiento con las tabs de ERP (antes: icono de sidebar).</li>
-          <li><code>conexiones.png</code>, <code>conexion-form.png</code>, <code>consultas.png</code> — tab <b>Conexión ERP</b>.</li>
-          <li><code>consola.png</code>, <code>consola-resultado.png</code>, <code>consola-ia.png</code> — tab <b>Consola de Consulta (ERP)</b> (título renombrado).</li>
-          <li><code>bots.png</code>, <code>bot-form.png</code>, <code>bot-preview.png</code> — tab <b>Bots Cobranza</b>.</li>
-          <li><code>directiva-picker.png</code> <em>(nueva)</em> — modal “Insertar directiva” filtrado por <b>Consulta ERP</b>.</li>
-        </ul>
-        Cada figura de abajo está marcada con borde punteado y el aviso “📸 captura
-        pendiente de re-toma” hasta que la reemplaces.
-      </div>
-
       <nav class="toc">
         <strong>Contenido</strong>
         <ol>
@@ -505,12 +478,10 @@
           <span class="tab erp">Consola de Consulta (ERP)</span>
         </div>
         <figcaption>Las tres tabs resaltadas (Conexión ERP, Bots Cobranza, Consola de Consulta) son las del módulo de cobranza.</figcaption>
-        <div class="recap">
-          📸 <b>Captura a re-tomar:</b> <code>img/acceso.png</code> — reemplázala por una
-          captura real de la barra de tabs de Base de Conocimiento con las tabs de ERP
-          visibles. La imagen anterior mostraba el módulo como icono de la barra
-          lateral, que ya no existe.
-        </div>
+        <figure>
+          <img loading="lazy" decoding="async" src="img/acceso.png" alt="Barra de tabs de Base de Conocimiento con las tabs de ERP" />
+          <figcaption class="zoom">La barra de tabs real dentro de Base de Conocimiento.</figcaption>
+        </figure>
         <div class="scroll-x">
           <table>
             <tr><th>Tab</th><th>Para qué sirve</th><th>Quién accede</th></tr>
@@ -549,16 +520,16 @@
           ERP (motor, host, puerto, base y credenciales). Es el primer paso y solo
           la crea un administrador, desde la tab <strong>Conexión ERP</strong>.
         </p>
-        <figure class="pend-fig">
+        <figure>
           <img loading="lazy" decoding="async" src="img/conexiones.png" alt="Listado de conexiones a ERP" />
-          <figcaption class="zoom pend">Listado de conexiones, con su motor, host:puerto y acciones.</figcaption>
+          <figcaption class="zoom">Listado de conexiones, con su motor, host:puerto y acciones.</figcaption>
         </figure>
 
         <h3>Crear una conexión</h3>
         <p>Pulsa <strong>“Nueva conexión”</strong> y completa el formulario:</p>
-        <figure class="pend-fig">
+        <figure>
           <img loading="lazy" decoding="async" src="img/conexion-form.png" alt="Formulario de nueva conexión a ERP" />
-          <figcaption class="zoom pend">Formulario de alta de conexión.</figcaption>
+          <figcaption class="zoom">Formulario de alta de conexión.</figcaption>
         </figure>
         <div class="scroll-x">
           <table>
@@ -608,9 +579,9 @@
           o editarlas, en el listado de conexiones pulsa
           <strong>“Consultas (N)”</strong>.
         </p>
-        <figure class="pend-fig">
+        <figure>
           <img loading="lazy" decoding="async" src="img/consultas.png" alt="Panel de consultas de una conexión" />
-          <figcaption class="zoom pend">Panel de consultas de una conexión. La etiqueta <span class="pill">IA</span> marca las disponibles para el Modo B.</figcaption>
+          <figcaption class="zoom">Panel de consultas de una conexión. La etiqueta <span class="pill">IA</span> marca las disponibles para el Modo B.</figcaption>
         </figure>
 
         <h3>Campos de una consulta</h3>
@@ -638,9 +609,9 @@
           el ERP a mano, en modo solo lectura. Es la forma de comprobar datos al
           vuelo mientras atiendes a un cliente.
         </p>
-        <figure class="pend-fig">
+        <figure>
           <img loading="lazy" decoding="async" src="img/consola.png" alt="Consola de Consulta (ERP): selección de conexión, consulta y parámetros" />
-          <figcaption class="zoom pend">Elige conexión y consulta, llena los parámetros y ejecuta.</figcaption>
+          <figcaption class="zoom">Elige conexión y consulta, llena los parámetros y ejecuta.</figcaption>
         </figure>
         <ol class="steps">
           <li>Elige la <strong>Conexión</strong> (tu ERP).</li>
@@ -653,9 +624,9 @@
           tardó. Puedes desplegar <em>“Consulta ejecutada (solo lectura)”</em> para
           ver el SQL exacto que se corrió.
         </p>
-        <figure class="pend-fig">
+        <figure>
           <img loading="lazy" decoding="async" src="img/consola-resultado.png" alt="Resultado de una consulta en la Consola de Consulta (ERP)" />
-          <figcaption class="zoom pend">Resultado en tabla, con conteo de filas y duración.</figcaption>
+          <figcaption class="zoom">Resultado en tabla, con conteo de filas y duración.</figcaption>
         </figure>
       </section>
 
@@ -668,9 +639,9 @@
           persona —p. ej. <em>“¿Cuál es el saldo del cliente con RFC DUVM720209EF7?”</em>—
           y la IA elige la consulta adecuada, la ejecuta y responde en español.
         </p>
-        <figure class="pend-fig">
+        <figure>
           <img loading="lazy" decoding="async" src="img/consola-ia.png" alt="Caja de preguntas en lenguaje natural con respuesta de la IA" />
-          <figcaption class="zoom pend">La IA responde en lenguaje natural e indica qué consulta usó.</figcaption>
+          <figcaption class="zoom">La IA responde en lenguaje natural e indica qué consulta usó.</figcaption>
         </figure>
         <p>
           La IA <strong>solo</strong> puede usar las consultas marcadas como
@@ -725,18 +696,10 @@
           por cada consulta</strong> de cada conexión, lista para insertar con los
           parámetros ya preparados.
         </p>
-        <div class="recap">
-          📸 <b>Captura sugerida (nueva):</b> <code>img/directiva-picker.png</code> — el
-          modal “Insertar directiva” con el chip <b>Consulta ERP</b> activo y la lista
-          de <code>{{consulta:...}}</code>. Súbela a <code>img/</code> y descomenta la
-          figura de abajo.
-        </div>
-        <!--
-        <figure class="pend-fig">
+        <figure>
           <img loading="lazy" decoding="async" src="img/directiva-picker.png" alt="Modal Insertar directiva filtrado por Consulta ERP" />
-          <figcaption class="zoom pend">Catálogo de directivas filtrado por “Consulta ERP”.</figcaption>
+          <figcaption class="zoom">Catálogo de directivas filtrado por “Consulta ERP”: una entrada por consulta.</figcaption>
         </figure>
-        -->
 
         <h3>Sintaxis</h3>
         <div class="scroll-x">
@@ -770,16 +733,16 @@
           Se administra desde la tab <strong>Bots Cobranza</strong>, solo un
           administrador.
         </p>
-        <figure class="pend-fig">
+        <figure>
           <img loading="lazy" decoding="async" src="img/bots.png" alt="Listado de bots cobradores" />
-          <figcaption class="zoom pend">Listado de bots. Las etiquetas indican si tienen <span class="pill">Modo B</span> y si están activos.</figcaption>
+          <figcaption class="zoom">Listado de bots. Las etiquetas indican si tienen <span class="pill">Modo B</span> y si están activos.</figcaption>
         </figure>
 
         <h3>Crear un bot</h3>
         <p>Pulsa <strong>“Nuevo bot”</strong> y completa:</p>
-        <figure class="pend-fig">
+        <figure>
           <img loading="lazy" decoding="async" src="img/bot-form.png" alt="Formulario de bot cobrador" />
-          <figcaption class="zoom pend">Formulario del bot cobrador.</figcaption>
+          <figcaption class="zoom">Formulario del bot cobrador.</figcaption>
         </figure>
         <div class="scroll-x">
           <table>
@@ -803,9 +766,9 @@
           de cada cliente ya sustituidos— <strong>sin enviar nada</strong>. Úsalo
           siempre antes de activarlo.
         </p>
-        <figure class="pend-fig">
+        <figure>
           <img loading="lazy" decoding="async" src="img/bot-preview.png" alt="Vista previa dry-run de los mensajes del bot" />
-          <figcaption class="zoom pend">Vista previa: los mensajes que se enviarían, sin mandar nada.</figcaption>
+          <figcaption class="zoom">Vista previa: los mensajes que se enviarían, sin mandar nada.</figcaption>
         </figure>
         <div class="warn">
           ⚠️ La vista previa <strong>no envía</strong> mensajes. El envío real ocurre

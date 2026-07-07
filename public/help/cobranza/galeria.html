@@ -27,7 +27,6 @@
     <header>
       <h1>Galería de capturas · Cobranza / ERP</h1>
       <p>Las capturas del <a href="/help/cobranza/">manual</a>, todas en una vista. Clic para ampliar.</p>
-      <p style="margin-top:.5rem;color:#d97706;font-weight:600">📸 Todas están pendientes de re-toma: se hicieron con la interfaz anterior (módulo en sidebar); ahora el módulo vive en tabs de Base de Conocimiento.</p>
     </header>
     <div class="grid" id="grid"></div>
     <script>
@@ -37,12 +36,13 @@
         ['conexion-form', 'Formulario de nueva conexión'],
         ['consultas', 'Consultas predefinidas de una conexión'],
         ['consola', 'Consola de Consulta (ERP) — consulta + parámetros'],
-        ['consola-resultado', 'Consola — resultado en tabla (Microsip)'],
+        ['consola-resultado', 'Consola — resultado en tabla (SAE)'],
         ['consola-ia', 'Modo B / IA — respuesta en lenguaje natural'],
+        ['directiva-picker', 'Directiva {{consulta:}} en el catálogo del Agente IA'],
         ['bots', 'Bots cobradores (listado)'],
         ['bot-form', 'Formulario de bot cobrador'],
         ['bot-preview', 'Vista previa (dry-run) de los mensajes']
-      ].map(function (s) { return [s[0], s[1] + ' · 📸 re-tomar']; });
+      ];
       var g = document.getElementById('grid');
       shots.forEach(function (s) {
         var fig = document.createElement('figure');
