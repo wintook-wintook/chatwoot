@@ -173,6 +173,8 @@ Rails.application.routes.draw do
           # proyecto@waba_chatwoot
           namespace :whatsapp do
             resource :authorization, only: [:create]
+            # @waba_templates — gestión de plantillas (crear/submit/editar/borrar en Meta).
+            resources :templates, only: [:index, :show, :create, :update, :destroy]
           end
 
           # KANBAN0725
