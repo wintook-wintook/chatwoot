@@ -352,6 +352,7 @@
           <li><a href="#conexiones">Conexiones a ERP</a></li>
           <li><a href="#consultas">Consultas predefinidas</a></li>
           <li><a href="#consola">Consola de Consulta (ERP)</a></li>
+          <li><a href="#ejemplos">Ejemplos de consultas</a></li>
           <li><a href="#modob">Preguntar en lenguaje natural (Modo B / IA)</a></li>
           <li><a href="#directiva">Consultas en las plantillas del Agente IA — <code>{{consulta:}}</code></a></li>
           <li><a href="#bots">Bots cobradores (recordatorios automáticos)</a></li>
@@ -584,6 +585,17 @@
           <figcaption class="zoom">Panel de consultas de una conexión. La etiqueta <span class="pill">IA</span> marca las disponibles para el Modo B.</figcaption>
         </figure>
 
+        <h3>Crear o editar una consulta</h3>
+        <p>
+          Con <strong>“Nueva consulta”</strong> (o el lápiz de una existente) se abre
+          el formulario donde defines el <code>SELECT</code>, sus parámetros y el
+          formato de resultado.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/consulta-form.png" alt="Formulario de nueva consulta" />
+          <figcaption class="zoom">Formulario de consulta: SQL de solo lectura, parámetros en JSON, límite y formato.</figcaption>
+        </figure>
+
         <h3>Campos de una consulta</h3>
         <ul>
           <li><strong>Nombre</strong> — identificador corto (p. ej. <code>saldo_cliente</code>).</li>
@@ -631,8 +643,46 @@
       </section>
 
       <!-- 7 -->
+      <section id="ejemplos">
+        <h2><span class="num">7</span> Ejemplos de consultas</h2>
+        <p>
+          Ejemplos reales ejecutados desde la Consola contra los tres ERPs (en modo
+          solo lectura). Muestran cómo cada consulta predefinida devuelve datos de
+          cartera con sus parámetros.
+        </p>
+
+        <h3>SAE — facturas vencidas de un cliente</h3>
+        <p><code>facturas_vencidas</code> con el <code>RFC</code> del cliente devuelve sus documentos vencidos (serie, folio, fechas e importe).</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/ej-sae-vencidas.png" alt="Ejemplo SAE: facturas vencidas" />
+          <figcaption class="zoom">SAE · <code>facturas_vencidas</code> → 2 facturas vencidas con su importe.</figcaption>
+        </figure>
+
+        <h3>CONTPAQi — saldo de un cliente</h3>
+        <p><code>saldo_cliente</code> con el <code>RFC</code> devuelve el saldo total que adeuda (un solo valor).</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/ej-contpaq-saldo.png" alt="Ejemplo Contpaq: saldo del cliente" />
+          <figcaption class="zoom">CONTPAQi · <code>saldo_cliente</code> → saldo de $10,218,040.30.</figcaption>
+        </figure>
+
+        <h3>Microsip — total cobrado en un período</h3>
+        <p><code>pagos_periodo</code> con un rango de fechas (<code>desde</code>/<code>hasta</code>) devuelve el total cobrado.</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/ej-microsip-pagos.png" alt="Ejemplo Microsip: total cobrado en un período" />
+          <figcaption class="zoom">Microsip · <code>pagos_periodo</code> → $903,139.90 cobrados en el rango.</figcaption>
+        </figure>
+
+        <div class="tip">
+          💡 Cada ERP trae su propia librería de consultas verificadas (saldos,
+          vencidas, pagos, límite de crédito y el recordatorio masivo). Se crean con
+          <strong>“Sembrar consultas”</strong> y se prueban aquí antes de usarlas en
+          un bot o en una directiva <code>{{consulta:}}</code>.
+        </div>
+      </section>
+
+      <!-- 8 -->
       <section id="modob">
-        <h2><span class="num">7</span> Preguntar en lenguaje natural (Modo B / IA)</h2>
+        <h2><span class="num">8</span> Preguntar en lenguaje natural (Modo B / IA)</h2>
         <p>
           Al final de la Consola hay una caja <strong>“Preguntá en lenguaje natural
           (Modo B / IA)”</strong>. Escribe una pregunta como si hablaras con una
@@ -665,9 +715,9 @@
         </div>
       </section>
 
-      <!-- 8 -->
+      <!-- 9 -->
       <section id="directiva">
-        <h2><span class="num">8</span> Consultas en las plantillas del Agente IA — <code>{{consulta:}}</code></h2>
+        <h2><span class="num">9</span> Consultas en las plantillas del Agente IA — <code>{{consulta:}}</code></h2>
         <p>
           La directiva <code>{{consulta:}}</code> es la tercera forma de usar el ERP:
           permite <strong>insertar el resultado de una consulta dentro del texto</strong>
@@ -723,9 +773,9 @@
         </div>
       </section>
 
-      <!-- 9 -->
+      <!-- 10 -->
       <section id="bots">
-        <h2><span class="num">9</span> Bots cobradores (recordatorios automáticos)</h2>
+        <h2><span class="num">10</span> Bots cobradores (recordatorios automáticos)</h2>
         <p>
           Un <strong>bot cobrador</strong> automatiza el <strong>Modo A</strong>:
           corre una consulta masiva de clientes con adeudo y envía a cada uno un
@@ -777,9 +827,9 @@
         </div>
       </section>
 
-      <!-- 10 -->
+      <!-- 11 -->
       <section id="modos">
-        <h2><span class="num">10</span> Los tres modos de uso</h2>
+        <h2><span class="num">11</span> Los tres modos de uso</h2>
         <div class="scroll-x">
           <table>
             <tr>
@@ -817,9 +867,9 @@
         <p>Un mismo bot puede usar Modo A y Modo B a la vez; la directiva es independiente y vive en las plantillas del Agente IA.</p>
       </section>
 
-      <!-- 11 -->
+      <!-- 12 -->
       <section id="erps">
-        <h2><span class="num">11</span> ERPs soportados</h2>
+        <h2><span class="num">12</span> ERPs soportados</h2>
         <div class="scroll-x">
           <table>
             <tr><th>ERP</th><th>Motor</th><th>Notas</th></tr>
@@ -835,9 +885,9 @@
         </p>
       </section>
 
-      <!-- 12 -->
+      <!-- 13 -->
       <section id="seguridad">
-        <h2><span class="num">12</span> Seguridad y buenas prácticas</h2>
+        <h2><span class="num">13</span> Seguridad y buenas prácticas</h2>
         <ul>
           <li><strong>Solo lectura.</strong> El módulo únicamente ejecuta <code>SELECT</code>. No hay forma de escribir en el ERP desde aquí.</li>
           <li><strong>Sin SQL libre en la operación.</strong> Agentes, la IA y las directivas solo ejecutan consultas predefinidas y parametrizadas; la IA nunca ve ni escribe SQL.</li>
@@ -848,9 +898,9 @@
         </ul>
       </section>
 
-      <!-- 13 -->
+      <!-- 14 -->
       <section id="faq">
-        <h2><span class="num">13</span> Preguntas frecuentes</h2>
+        <h2><span class="num">14</span> Preguntas frecuentes</h2>
         <h3>No veo las tabs de ERP en Base de Conocimiento</h3>
         <p>Las tabs (Conexión ERP, Bots Cobranza, Consola de Consulta) solo aparecen si un super administrador habilitó la función <code>erp_connection</code> para tu cuenta. Además, Conexiones y Bots son solo para administradores. Si no las ves, contacta al administrador.</p>
 
