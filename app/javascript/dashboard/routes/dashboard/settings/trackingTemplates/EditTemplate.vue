@@ -112,7 +112,18 @@ export default {
       inboxes: 'inboxes/getInboxes',
       accountId: 'getCurrentAccountId',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
+      // @query_databases — catálogo de conexiones ERP + consultas activas para la
+      // directiva {{consulta:}} (sin credenciales, mismo catálogo que la consola).
+      erpCatalog: 'externalDb/getCatalog',
     }),
+    // @query_databases — la directiva {{consulta:}} solo se ofrece si la cuenta
+    // tiene habilitada la feature erp_connection (igual que las tabs ERP).
+    erpEnabled() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.ERP_CONNECTION
+      );
+    },
     isCreateMode() {
       return this.mode === 'create';
     },
@@ -342,6 +353,25 @@ export default {
           });
         });
       }
+      // @query_databases — una entrada {{consulta:conexion/nombre(params)}} por cada
+      // consulta activa de cada conexión ERP (solo con la feature erp_connection).
+      if (this.erpEnabled) {
+        this.erpCatalog.forEach(conn => {
+          const prefix = this.erpConnPrefix(conn);
+          if (!prefix) return;
+          (conn.queries || []).forEach(q => {
+            const args = (q.params_schema || [])
+              .map(p => `${p.key}=`)
+              .join(', ');
+            items.push({
+              token: `{{consulta:${prefix}/${q.name}${args ? `(${args})` : ''}}}`,
+              label: `Consulta «${q.name}» en «${conn.name}»${
+                q.description ? ` (${q.description})` : ''
+              }.`,
+            });
+          });
+        });
+      }
       items.push({
         token: '@discourse',
         label: 'Busca en el Discourse conectado al canal.',
@@ -479,6 +509,7 @@ export default {
     }
     this.loadCalendarIntegrations();
     this.loadDiscourseSources();
+    this.loadErpCatalog();
   },
   methods: {
     onCancel() {
@@ -771,6 +802,28 @@ export default {
         this.googleDocSources = [];
         this.googleSheetSources = [];
       }
+    },
+    // @query_databases — carga el catálogo ERP para la directiva {{consulta:}}.
+    async loadErpCatalog() {
+      if (!this.erpEnabled) return;
+      try {
+        await this.$store.dispatch('externalDb/fetchCatalog');
+      } catch (e) {
+        // Fail-soft: sin catálogo no se ofrecen entradas {{consulta:}}.
+      }
+    },
+    // @query_databases — prefijo de la directiva: usa erp_type cuando es único y no
+    // genérico (limpio, p.ej. `sae/`); si no, cae al nombre normalizado (sin espacios).
+    // Devuelve null si el nombre tiene caracteres que la directiva no admite.
+    erpConnPrefix(conn) {
+      const type = conn.erp_type;
+      const typeIsUnique =
+        type &&
+        type !== 'generic' &&
+        this.erpCatalog.filter(c => c.erp_type === type).length === 1;
+      if (typeIsUnique) return type;
+      const byName = (conn.name || '').toLowerCase().replace(/\s+/g, '');
+      return /^[a-z0-9_]+$/.test(byName) ? byName : null;
     },
     onAttachmentFileChange(event) {
       const file = event.target.files && event.target.files[0];

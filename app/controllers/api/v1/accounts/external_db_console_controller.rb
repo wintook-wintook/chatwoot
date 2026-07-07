@@ -46,6 +46,7 @@ class Api::V1::Accounts::ExternalDbConsoleController < Api::V1::Accounts::BaseCo
       id: conn.id,
       name: conn.name,
       engine: conn.engine,
+      erp_type: conn.erp_type,
       queries: conn.external_db_queries.active.order(:name).map do |q|
         { id: q.id, name: q.name, description: q.description, params_schema: q.params_schema }
       end
