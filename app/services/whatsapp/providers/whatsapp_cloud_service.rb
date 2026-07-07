@@ -65,6 +65,11 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     whatsapp_channel.update(message_templates: templates, message_templates_last_updated: Time.now.utc) if templates.present?
   end
 
+  # @waba_templates — lista cruda de plantillas de Meta (para el upsert por fila del sync).
+  def templates_list
+    fetch_whatsapp_templates("#{business_account_path}/message_templates?access_token=#{whatsapp_channel.provider_config['api_key']}")
+  end
+
   def fetch_whatsapp_templates(url)
     response = HTTParty.get(url)
     return [] unless response.success?

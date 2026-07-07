@@ -4,7 +4,7 @@
 # Solo administradores. Alcance por cuenta + canal (inbox de WhatsApp).
 class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::BaseController
   before_action :check_admin_authorization?
-  before_action :fetch_channel, only: [:index, :create]
+  before_action :fetch_channel, only: [:index, :create, :sync]
   before_action :fetch_template, only: [:show, :update, :destroy]
 
   def index
@@ -31,6 +31,12 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
     return render json: { error: result.error }, status: :unprocessable_entity unless result.success?
 
     head :ok
+  end
+
+  # Reconcilia desde Meta (upsert por fila) — fallback si el webhook no está suscrito.
+  def sync
+    result = Whatsapp::TemplateSyncService.new(@channel).perform
+    render json: { synced: result.synced, created: result.created, updated: result.updated }
   end
 
   private

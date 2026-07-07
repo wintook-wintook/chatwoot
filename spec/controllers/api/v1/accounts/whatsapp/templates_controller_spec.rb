@@ -72,6 +72,19 @@ RSpec.describe 'WhatsApp Templates API', type: :request do
     end
   end
 
+  describe 'POST /api/v1/accounts/{id}/whatsapp/templates/sync' do
+    it 'reconcilia desde Meta y devuelve el conteo' do
+      allow_any_instance_of(Whatsapp::TemplateSyncService).to receive(:perform)
+        .and_return(Whatsapp::TemplateSyncService::Result.new(synced: 3, created: 2, updated: 1))
+
+      post "/api/v1/accounts/#{account.id}/whatsapp/templates/sync",
+           params: { inbox_id: inbox.id }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(JSON.parse(response.body)).to include('synced' => 3, 'created' => 2, 'updated' => 1)
+    end
+  end
+
   describe 'DELETE /api/v1/accounts/{id}/whatsapp/templates/{id}' do
     it 'borra una plantilla local-only' do
       template = create(:whatsapp_template, account: account, channel_whatsapp: channel, meta_template_id: nil)
