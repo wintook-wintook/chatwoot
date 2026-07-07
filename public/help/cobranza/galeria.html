@@ -47,7 +47,7 @@
       shots.forEach(function (s) {
         var fig = document.createElement('figure');
         var img = document.createElement('img');
-        img.src = 'img/' + s[0] + '.png'; img.alt = s[1]; img.loading = 'lazy';
+        img.src = '/help/cobranza/img/' + s[0] + '.png'; img.alt = s[1]; img.loading = 'lazy';
         img.addEventListener('click', function () {
           var box = document.createElement('div'); box.className = 'lightbox';
           var full = document.createElement('img'); full.src = img.src; box.appendChild(full);
