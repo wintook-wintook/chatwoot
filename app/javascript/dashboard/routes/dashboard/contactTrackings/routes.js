@@ -21,4 +21,21 @@ export const routes = [
     meta: { permissions: ['administrator', 'agent'] },
     component: () => import('../../../views/contactTrackings/Dashboard.vue'),
   },
+  {
+    // @campanas_vendedor — listado de campañas (corridas de asignación masiva)
+    path: frontendURL('accounts/:accountId/tracking-dashboard/campaigns'),
+    name: 'contact_trackings_campaigns',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/contactTrackings/Campaigns.vue'),
+  },
+  {
+    // @campanas_vendedor — detalle de una campaña (cola de prospectos + KPIs)
+    path: frontendURL(
+      'accounts/:accountId/tracking-dashboard/campaigns/:campaignId'
+    ),
+    name: 'contact_trackings_campaign_detail',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () =>
+      import('../../../views/contactTrackings/CampaignDetail.vue'),
+  },
 ];

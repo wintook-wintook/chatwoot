@@ -100,7 +100,10 @@ Rails.application.routes.draw do
             post :preview, on: :member
           end
           resources :contact_tracking_imports, only: [:create] # proyecto@import_seguimiento
-          resources :contact_tracking_bulk_assigns, only: [:create] # proyecto@bulk_tracking_assign
+          resources :contact_tracking_bulk_assigns, only: [:create] do # proyecto@bulk_tracking_assign
+            post :preview, on: :collection # @campanas_vendedor — dry-run de buckets
+          end
+          resources :tracking_campaigns, only: [:index, :show, :destroy] # @campanas_vendedor
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview
             get 'list', to: 'list#index' # listado filtrable a nivel cuenta
@@ -469,6 +472,8 @@ Rails.application.routes.draw do
             resource :calendars, only: [:show, :update], controller: 'calendars' do
               collection do
                 post :subscribe
+                post :create_calendar
+                post :update_calendar
               end
             end
             resource :availability, only: [:show], controller: 'availability'

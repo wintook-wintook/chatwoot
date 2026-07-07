@@ -16,6 +16,7 @@ class Api::V1::Accounts::GoogleCalendar::EventsController < Api::V1::Accounts::B
 
   def create
     event = calendar_service.create_event(
+      calendar_id: params[:calendar_id].presence || 'primary',
       summary:     params[:summary],
       description: params[:description],
       attendees:   Array(params[:attendees]),
@@ -33,6 +34,7 @@ class Api::V1::Accounts::GoogleCalendar::EventsController < Api::V1::Accounts::B
   def update
     event = calendar_service.update_event(
       params[:id],
+      calendar_id: params[:calendar_id].presence || 'primary',
       start_time:  Time.parse(params[:start_time]),
       end_time:    Time.parse(params[:end_time]),
       summary:     params[:summary],

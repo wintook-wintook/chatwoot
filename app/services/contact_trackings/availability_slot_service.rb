@@ -45,7 +45,12 @@ module ContactTrackings
       integrations.each do |integration|
         resources_for(integration).each do |res|
           busy = fetch_busy_periods(integration, res[:read], time_min, time_max)
-          key  = [integration.id, res[:gcal]]
+          # nil = no se pudo leer la disponibilidad (token revocado/expirado, API caída):
+          # NO ofrecemos horarios de esta agenda, porque tampoco podríamos crear la cita
+          # después (ofrecer un hueco que luego falla obliga a escalar a un humano).
+          next if busy.nil?
+
+          key = [integration.id, res[:gcal]]
           slots_by_resource[key] = free_slots_for(integration, res[:gcal], busy, time_min, time_max)
         rescue StandardError => e
           Rails.logger.warn "[AvailabilitySlotService] ⚠️ Error en agenda ##{integration.id}/#{res[:gcal]}: #{e.message}"
@@ -69,12 +74,17 @@ module ContactTrackings
       UserCalendarIntegration.where(id: @calendar_integration_ids).each do |integration|
         resources_for(integration).each do |res|
           busy = fetch_busy_periods(integration, res[:read], aligned - 1.hour, slot_end + 1.hour)
+          # nil = disponibilidad no legible (token muerto/API): no confirmamos aquí, para no
+          # prometer una cita que luego no podríamos crear.
+          next if busy.nil?
           next if overlaps_busy?(aligned, slot_end, busy)
 
+          agent_name = integration.user&.name || 'Agente'
           return {
             slot:                    aligned,
             end_time:                slot_end,
-            agent_name:              integration.user&.name || 'Agente',
+            agent_name:              agent_name,
+            calendar_name:           calendar_name_for(integration, res[:gcal]) || agent_name,
             calendar_integration_id: integration.id,
             google_calendar_id:      res[:gcal]
           }
@@ -126,25 +136,36 @@ module ContactTrackings
       [slot[:calendar_integration_id], slot[:google_calendar_id]]
     end
 
+    # Devuelve los periodos ocupados, o `nil` si NO se pudo leer la disponibilidad
+    # (token revocado/expirado, API caída, o Google reporta error por calendario).
+    # Distinguir `nil` (no legible) de `[]` (legible y sin ocupación) es clave: quien
+    # llama NO debe ofrecer horarios de una agenda cuya disponibilidad no pudo leerse,
+    # porque tampoco podría crear la cita después.
     def fetch_busy_periods(integration, calendar_ids, time_min, time_max)
       calendar_ids = Array(calendar_ids).presence || ['primary']
-      service  = GoogleCalendarService.new(integration)
-      response = service.free_busy(calendars: calendar_ids, time_min: time_min, time_max: time_max)
+      service   = GoogleCalendarService.new(integration)
+      response  = service.free_busy(calendars: calendar_ids, time_min: time_min, time_max: time_max)
+      calendars = response['calendars'] || {}
 
-      (response['calendars'] || {}).flat_map do |_cal_id, cal_data|
+      # Google devuelve `errors` por calendario (no encontrado, sin permiso, etc.);
+      # ante eso no podemos confiar en la disponibilidad → nil (no ofrecer).
+      return nil if calendars.values.any? { |c| c['errors'].present? }
+
+      calendars.flat_map do |_cal_id, cal_data|
         (cal_data['busy'] || []).map do |busy|
           { start: Time.parse(busy['start']), end: Time.parse(busy['end']) }
         end
       end
     rescue StandardError => e
       Rails.logger.warn "[AvailabilitySlotService] ⚠️ free_busy falló para integración ##{integration.id}: #{e.message}"
-      []
+      nil
     end
 
     def free_slots_for(integration, gcal, busy_periods, time_min, time_max)
-      agent_name = integration.user&.name || 'Agente'
-      slots      = []
-      current    = time_min
+      agent_name    = integration.user&.name || 'Agente'
+      calendar_name = calendar_name_for(integration, gcal) || agent_name
+      slots         = []
+      current       = time_min
 
       while current < time_max
         slot_end = current + @slot_duration.minutes
@@ -154,6 +175,7 @@ module ContactTrackings
             slot:                    current,
             end_time:                slot_end,
             agent_name:              agent_name,
+            calendar_name:           calendar_name,
             calendar_integration_id: integration.id,
             google_calendar_id:      gcal
           }
@@ -164,6 +186,30 @@ module ContactTrackings
       end
 
       slots
+    end
+
+    # Nombre amigable del calendario de Google (p.ej. "Casa") para mostrarle al cliente.
+    # Se resuelve desde calendarList y se memoiza por integración (1 llamada por agenda).
+    # nil si no se pudo resolver → quien llama cae al nombre del agente.
+    def calendar_name_for(integration, gcal)
+      names = (@calendar_names ||= {})
+      names[integration.id] ||= load_calendar_names(integration)
+      names[integration.id][gcal.to_s]
+    end
+
+    def load_calendar_names(integration)
+      agent_name = integration.user&.name.presence || 'Agente'
+      GoogleCalendarService.new(integration).list_calendars.each_with_object({}) do |c, acc|
+        # El calendario principal en Google se llama como el email del usuario; para el
+        # cliente mostramos mejor el nombre del agente de Chatwoot. Los secundarios (Casa,
+        # Consultorio Centro, etc.) conservan su nombre real.
+        name           = c[:primary] ? agent_name : c[:summary]
+        acc[c[:id].to_s] = name
+        acc['primary']   = name if c[:primary] # el alias 'primary' apunta al principal
+      end
+    rescue StandardError => e
+      Rails.logger.warn "[AvailabilitySlotService] ⚠️ no se pudieron leer nombres de calendarios de ##{integration.id}: #{e.message}"
+      {}
     end
 
     def within_work_hours?(slot_start, slot_end)

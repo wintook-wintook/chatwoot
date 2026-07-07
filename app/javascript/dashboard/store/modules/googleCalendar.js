@@ -97,6 +97,22 @@ const actions = {
     });
   },
 
+  createCalendar: async ({ commit }, payload) => {
+    const { data } = await GoogleCalendarAPI.createCalendar(payload);
+    commit('SET_CALENDARS', {
+      calendars: data.calendars || [],
+      enabledIds: data.enabled_ids || [],
+    });
+  },
+
+  updateCalendar: async ({ commit }, payload) => {
+    const { data } = await GoogleCalendarAPI.updateCalendar(payload);
+    commit('SET_CALENDARS', {
+      calendars: data.calendars || [],
+      enabledIds: data.enabled_ids || [],
+    });
+  },
+
   toggleCalendar: async ({ commit, state: s, dispatch }, calendarId) => {
     commit('TOGGLE_CALENDAR', calendarId);
     try {
@@ -153,8 +169,8 @@ const actions = {
     }
   },
 
-  updateEvent: async (_, { eventId, start_time, end_time, summary, description, attendees }) => {
-    await GoogleCalendarAPI.updateEvent(eventId, { start_time, end_time, summary, description, attendees });
+  updateEvent: async (_, { eventId, start_time, end_time, summary, description, attendees, calendar_id }) => {
+    await GoogleCalendarAPI.updateEvent(eventId, { start_time, end_time, summary, description, attendees, calendar_id });
   },
 
   shareAgenda: async (_, payload) => {

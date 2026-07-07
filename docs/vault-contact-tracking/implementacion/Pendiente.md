@@ -76,4 +76,50 @@ asumir que algo falta (el módulo avanza rápido). Ver también [[Estado-actual]
       Verificado: mismo contacto en 2 inboxes = permitido; 2 en el mismo inbox = bloqueado
       (modelo + BD). Ver [[Seguimiento-por-canal]].
 
+### 🚀 Acciones sobre campañas y prospectos (backlog)
+
+Ideas comentadas (sin implementar). Base actual: listar, ver detalle, crear por
+asignación masiva y **borrar** campañas (cancela los seguimientos activos). Las 3
+recomendadas reutilizan lógica del modelo (`pause!`, `resume!`, `cancel!`, bulk assign),
+así que son relativamente baratas.
+
+**A nivel de campaña**
+
+- [ ] **Pausar / Reanudar campaña** — pausa en bloque todos sus seguimientos activos y
+      los reanuda después (p. ej. "paren todo, hay un error en la plantilla"). Reutiliza
+      `pause!`/`resume!`. ⭐ Prioridad 1 (control operativo inmediato).
+- [ ] **Cancelar campaña (sin borrar)** — detiene todo pero conserva el registro y las
+      métricas; equivalente "suave" de borrar, para historial.
+- [ ] **Renombrar / editar objetivo** — corregir nombre u objetivo sin recrear.
+- [ ] **Duplicar / relanzar** — nueva campaña con misma plantilla + audiencia, o solo con
+      los que **no respondieron** / los **fallidos**. ⭐ Prioridad 3 (mayor valor comercial:
+      re-tocar a los que no contestaron; duplicar filtrado).
+- [ ] **Añadir contactos a una campaña existente** — sumar prospectos a una corrida ya lanzada.
+- [ ] **Exportar prospectos a CSV** — con estado, desenlace, entrega, etc.
+
+**A nivel de prospecto (tabla de detalle)**
+
+- [ ] **Pausar / Reanudar / Cancelar** un seguimiento individual desde la fila.
+- [ ] **Marcar "Objetivo cumplido"** manualmente (hoy solo lo hace la regla).
+- [ ] **Reagendar** el próximo intento a una fecha concreta.
+- [ ] **Reintentar un fallido** — re-encolar el envío tras corregir la causa (la que ya
+      mostramos en el tooltip ℹ️). ⭐ Prioridad 2 (recupera envíos perdidos, impacto directo).
+
+**Acciones masivas (sobre el filtro activo)** — aprovechando los KPIs clicables que ya filtran:
+
+- [ ] **Reintentar todos los "Fallidos"** de un clic.
+- [ ] **Cancelar todos los "Sin confirmar"** o los que sigan `pending`.
+- [ ] **Marcar objetivo cumplido** a los "Interesados"/"Agendaron" en lote.
+
+### 🧹 Deuda técnica
+
+- [ ] **i18n del dashboard de seguimientos** — todo el módulo del dashboard usa
+      strings en español hardcodeados en el template (ej. `Dashboard.vue`,
+      `TrackingsTable.vue`: "Embudo de intención", "Por canal", "Reglas de
+      seguimiento", labels de estado, etc.). El hook pre-commit (lint-staged →
+      `vue/no-bare-strings-in-template`) falla por esto, por lo que los commits
+      del módulo se hacen con `--no-verify`. Refactor: migrar todos los textos a
+      claves i18n (`CONTACT_TRACKING.*`) en es/en. Es amplio y va aparte de las
+      features; hacerlo de una para dejar de saltar el hook.
+
 > Cuando se cierre un punto, muévelo a [[Estado-actual]] como ✅.

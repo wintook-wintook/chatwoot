@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_29_120300) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_01_214500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -716,6 +716,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_29_120300) do
     t.string "appointment_event_id"
     t.bigint "appointment_calendar_id"
     t.string "appointment_calendar_gid"
+    t.bigint "tracking_campaign_id"
+    t.jsonb "keyword_action_fired"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
     t.index ["appointment_at"], name: "index_contact_trackings_on_appointment_at"
@@ -728,6 +730,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_29_120300) do
     t.index ["scheduled_for"], name: "index_contact_trackings_on_scheduled_for"
     t.index ["status", "scheduled_for"], name: "index_contact_trackings_on_status_and_scheduled_for"
     t.index ["status"], name: "index_contact_trackings_on_status"
+    t.index ["tracking_campaign_id"], name: "index_contact_trackings_on_tracking_campaign_id"
   end
 
   create_table "contacts", id: :serial, force: :cascade do |t|
@@ -1412,6 +1415,24 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_29_120300) do
     t.datetime "updated_at", precision: nil, null: false
   end
 
+  create_table "tracking_campaigns", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.bigint "tracking_template_id"
+    t.bigint "inbox_id"
+    t.bigint "user_id"
+    t.string "objective"
+    t.datetime "scheduled_for"
+    t.string "status", default: "running", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
+    t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"
+    t.index ["inbox_id"], name: "index_tracking_campaigns_on_inbox_id"
+    t.index ["tracking_template_id"], name: "index_tracking_campaigns_on_tracking_template_id"
+    t.index ["user_id"], name: "index_tracking_campaigns_on_user_id"
+  end
+
   create_table "tracking_templates", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -1541,6 +1562,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_29_120300) do
   add_foreign_key "contact_trackings", "contacts"
   add_foreign_key "contact_trackings", "conversations"
   add_foreign_key "contact_trackings", "inboxes"
+  add_foreign_key "contact_trackings", "tracking_campaigns"
   add_foreign_key "conversations", "kanban_processes"
   add_foreign_key "conversations", "kanban_type_processes"
   add_foreign_key "inboxes", "portals"
@@ -1553,6 +1575,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_29_120300) do
   add_foreign_key "scheduled_messages", "accounts"
   add_foreign_key "scheduled_messages", "conversations"
   add_foreign_key "scheduled_messages", "users"
+  add_foreign_key "tracking_campaigns", "accounts"
+  add_foreign_key "tracking_campaigns", "inboxes"
+  add_foreign_key "tracking_campaigns", "tracking_templates"
+  add_foreign_key "tracking_campaigns", "users"
   add_foreign_key "tracking_templates", "accounts"
   add_foreign_key "tracking_templates", "inboxes"
   add_foreign_key "tracking_templates", "users"

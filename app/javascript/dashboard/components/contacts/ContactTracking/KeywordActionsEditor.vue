@@ -68,6 +68,9 @@
           <option value="pause">
             {{ $t('CONTACT_TRACKING.KEYWORD_ACTIONS.ACTIONS.PAUSE') }}
           </option>
+          <option value="objective_met">
+            {{ $t('CONTACT_TRACKING.KEYWORD_ACTIONS.ACTIONS.OBJECTIVE_MET') }}
+          </option>
         </select>
 
         <!-- Dirección -->

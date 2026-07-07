@@ -67,6 +67,7 @@ export default {
       ACTIVE: 'Active',
       PAUSED: 'Paused',
       COMPLETED: 'Completed',
+      OBJECTIVE_MET: 'Objective met',
       CANCELLED: 'Cancelled',
       FAILED: 'Failed',
     },
@@ -134,6 +135,7 @@ export default {
         LABEL: 'Action',
         CANCEL: 'Cancel follow-up',
         PAUSE: 'Pause follow-up',
+        OBJECTIVE_MET: 'Objective met',
       },
       DIRECTIONS: {
         LABEL: 'Direction',

@@ -6,6 +6,13 @@
     "MODAL": {
       "TITLE": "Asignación masiva de Agentes IA",
       "DESCRIPTION": "Aplica un Agente IA a todos los contactos que coinciden con el filtro actual.",
+      "CAMPAIGN_NAME_LABEL": "Nombre de la campaña",
+      "CAMPAIGN_NAME_PLACEHOLDER": "Ej. Reactivación clientes junio",
+      "AUDIENCE_LABEL": "Audiencia",
+      "AUDIENCE_SEGMENT": "Segmento",
+      "AUDIENCE_LABEL_OPTION": "Etiqueta",
+      "AUDIENCE_SEGMENT_PLACEHOLDER": "Selecciona un segmento guardado",
+      "AUDIENCE_LABEL_PLACEHOLDER": "Selecciona una etiqueta",
       "TEMPLATE_LABEL": "Agente IA",
       "TEMPLATE_PLACEHOLDER": "Selecciona un Agente IA",
       "SCHEDULED_FOR_LABEL": "Fecha y hora de inicio",
@@ -15,12 +22,18 @@
       "LIMIT_EXCEEDED": "La selección supera el límite de {max} contactos. Ajusta el filtro o excluye contactos antes de confirmar.",
       "CANCEL": "Cancelar",
       "CONFIRM": "Confirmar",
+      "LAUNCH": "Lanzar campaña",
+      "PICK_AGENT_HINT": "Elige un Agente IA para ver el desglose de la audiencia.",
+      "AUDIENCE_FROM_CONTACTS": "Audiencia tomada del filtro de Contactos.",
       "CLOSE": "Cerrar",
       "ERROR_GENERIC": "Ocurrió un error al asignar el Agente IA.",
       "RESULT_INSERTED": "Agentes IA asignados",
       "RESULT_SKIPPED": "Contactos omitidos",
       "RESULT_ERRORS": "Errores",
-      "SUCCESS_SUMMARY": "Agentes IA asignados: {inserted} | Omitidos: {skipped} | Errores: {errors}"
+      "SUCCESS_SUMMARY": "Agentes IA asignados: {inserted} | Omitidos: {skipped} | Errores: {errors}",
+      "RESULT_QUEUED_TITLE": "Campaña encolada",
+      "RESULT_QUEUED_BODY": "{count} contactos se están procesando en segundo plano. El progreso aparecerá en el detalle de la campaña.",
+      "VIEW_CAMPAIGN": "Ver campaña"
     },
     "REVIEW": {
       "TITLE": "Revisar contactos seleccionados",
@@ -32,6 +45,35 @@
       "UNDO": "Deshacer",
       "EXCLUDE": "Excluir",
       "BACK": "Volver"
+    },
+    "PREVIEW": {
+      "TITLE": "Revisar audiencia",
+      "AUDIENCE": "Audiencia",
+      "CHANNEL": "Canal",
+      "LOADING": "Clasificando contactos…",
+      "EMPTY_TAB": "No hay contactos en este grupo.",
+      "TABS": {
+        "READY": "Listos para enviar",
+        "IN_TRACKING": "Ya en seguimiento",
+        "UNREACHABLE": "No contactables",
+        "EXCLUDED": "Excluidos"
+      },
+      "COL_NAME": "Nombre",
+      "COL_CONTACT": "Teléfono / Correo",
+      "COL_REASON": "Motivo",
+      "COL_ACTION": "Acción",
+      "EXCLUDE": "Excluir",
+      "UNDO": "Deshacer",
+      "REASON": {
+        "NO_PHONE": "El canal requiere teléfono y el contacto no tiene",
+        "NO_EMAIL": "El canal requiere correo y el contacto no tiene",
+        "UNSUPPORTED_CHANNEL": "El canal no permite iniciar la conversación",
+        "IN_TRACKING": "Ya tiene un seguimiento activo en este canal"
+      },
+      "WILL_CREATE": "Se crearán {count} seguimientos al confirmar.",
+      "TOO_MANY_TITLE": "Audiencia demasiado grande",
+      "TOO_MANY_BODY": "La audiencia tiene {total} contactos y supera el máximo para previsualizar. Reduce el filtro para ver el desglose por grupo y poder lanzar la campaña.",
+      "BACK": "Listo"
     }
   }
 }

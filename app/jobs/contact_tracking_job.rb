@@ -28,7 +28,7 @@ class ContactTrackingJob < ApplicationJob
         Rails.logger.info "[ContactTracking] ⏸️  Tracking #{tracking.id} está PAUSADO - Job ignorado"
         return
       end
-      return if tracking.cancelled? || tracking.completed?
+      return if tracking.cancelled? || tracking.completed? || tracking.objective_met?
       return if tracking.active?  # Ya se está ejecutando en otro job
 
       # ⭐ FIX: Protección contra jobs duplicados que esperaron el lock

@@ -43,6 +43,25 @@ class GoogleCalendarAPI extends ApiClient {
     return axios.post(`${this.url}/calendars/subscribe`, { calendar_id: calendarId });
   }
 
+  createCalendar({ summary, description, timeZone, backgroundColor }) {
+    return axios.post(`${this.url}/calendars/create_calendar`, {
+      summary,
+      description,
+      time_zone: timeZone,
+      background_color: backgroundColor,
+    });
+  }
+
+  updateCalendar({ calendarId, summary, description, timeZone, backgroundColor }) {
+    return axios.post(`${this.url}/calendars/update_calendar`, {
+      calendar_id: calendarId,
+      summary,
+      description,
+      time_zone: timeZone,
+      background_color: backgroundColor,
+    });
+  }
+
   shareAgenda(payload) {
     return axios.post(`${this.url}/sharing`, payload);
   }

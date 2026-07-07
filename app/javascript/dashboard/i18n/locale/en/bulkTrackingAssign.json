@@ -6,6 +6,13 @@
     "MODAL": {
       "TITLE": "Bulk AI Agent assignment",
       "DESCRIPTION": "Apply an AI Agent to all contacts matching the current filter.",
+      "CAMPAIGN_NAME_LABEL": "Campaign name",
+      "CAMPAIGN_NAME_PLACEHOLDER": "e.g. June customer reactivation",
+      "AUDIENCE_LABEL": "Audience",
+      "AUDIENCE_SEGMENT": "Segment",
+      "AUDIENCE_LABEL_OPTION": "Label",
+      "AUDIENCE_SEGMENT_PLACEHOLDER": "Select a saved segment",
+      "AUDIENCE_LABEL_PLACEHOLDER": "Select a label",
       "TEMPLATE_LABEL": "AI Agent",
       "TEMPLATE_PLACEHOLDER": "Select an AI Agent",
       "SCHEDULED_FOR_LABEL": "Start date and time",
@@ -15,12 +22,18 @@
       "LIMIT_EXCEEDED": "The selection exceeds the limit of {max} contacts. Adjust the filter or exclude contacts before confirming.",
       "CANCEL": "Cancel",
       "CONFIRM": "Confirm",
+      "LAUNCH": "Launch campaign",
+      "PICK_AGENT_HINT": "Pick an AI Agent to see the audience breakdown.",
+      "AUDIENCE_FROM_CONTACTS": "Audience taken from the Contacts filter.",
       "CLOSE": "Close",
       "ERROR_GENERIC": "An error occurred while assigning the AI Agent.",
       "RESULT_INSERTED": "AI Agents assigned",
       "RESULT_SKIPPED": "Contacts skipped",
       "RESULT_ERRORS": "Errors",
-      "SUCCESS_SUMMARY": "AI Agents assigned: {inserted} | Skipped: {skipped} | Errors: {errors}"
+      "SUCCESS_SUMMARY": "AI Agents assigned: {inserted} | Skipped: {skipped} | Errors: {errors}",
+      "RESULT_QUEUED_TITLE": "Campaign queued",
+      "RESULT_QUEUED_BODY": "{count} contacts are being processed in the background. Progress will show up in the campaign detail.",
+      "VIEW_CAMPAIGN": "View campaign"
     },
     "REVIEW": {
       "TITLE": "Review selected contacts",
@@ -32,6 +45,35 @@
       "UNDO": "Undo",
       "EXCLUDE": "Exclude",
       "BACK": "Back"
+    },
+    "PREVIEW": {
+      "TITLE": "Review audience",
+      "AUDIENCE": "Audience",
+      "CHANNEL": "Channel",
+      "LOADING": "Classifying contacts…",
+      "EMPTY_TAB": "No contacts in this group.",
+      "TABS": {
+        "READY": "Ready to send",
+        "IN_TRACKING": "Already in follow-up",
+        "UNREACHABLE": "Unreachable",
+        "EXCLUDED": "Excluded"
+      },
+      "COL_NAME": "Name",
+      "COL_CONTACT": "Phone / Email",
+      "COL_REASON": "Reason",
+      "COL_ACTION": "Action",
+      "EXCLUDE": "Exclude",
+      "UNDO": "Undo",
+      "REASON": {
+        "NO_PHONE": "Channel needs a phone number and the contact has none",
+        "NO_EMAIL": "Channel needs an email and the contact has none",
+        "UNSUPPORTED_CHANNEL": "This channel can't start the conversation",
+        "IN_TRACKING": "Already has an active follow-up on this channel"
+      },
+      "WILL_CREATE": "{count} follow-ups will be created on confirm.",
+      "TOO_MANY_TITLE": "Audience too large",
+      "TOO_MANY_BODY": "The audience has {total} contacts, over the preview maximum. Narrow the filter to see the per-group breakdown and launch the campaign.",
+      "BACK": "Done"
     }
   }
 }

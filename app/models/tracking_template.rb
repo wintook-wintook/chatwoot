@@ -87,8 +87,8 @@ class TrackingTemplate < ApplicationRecord
     keyword_actions.each do |ka|
       unless ka.is_a?(Hash) &&
              ka['keyword'].to_s.strip.present? &&
-             %w[cancel pause].include?(ka['action'].to_s) &&
-             %w[incoming outgoing both].include?(ka['direction'].to_s)
+             ContactTrackings::KeywordActionService::VALID_ACTIONS.include?(ka['action'].to_s) &&
+             ContactTrackings::KeywordActionService::VALID_DIRECTIONS.include?(ka['direction'].to_s)
         errors.add(:keyword_actions, 'contiene una entrada con formato inválido')
         break
       end

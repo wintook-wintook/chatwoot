@@ -59,7 +59,7 @@ export default {
     },
     onToggle: {
       type: Function,
-      default: () => { },
+      default: () => {},
     },
   },
   setup() {
@@ -94,8 +94,6 @@ export default {
       currentChat: 'getSelectedChat',
     }),
 
-
-
     hasTrackingBotIntegration() {
       const currentInboxId = this.currentChat?.inbox_id;
       if (!currentInboxId) return false;
@@ -106,9 +104,9 @@ export default {
       if (!trackingBotApp || !trackingBotApp.enabled) return false;
 
       const hooks = trackingBotApp.hooks || [];
-      return hooks.some(hook =>
-        hook.status === true &&
-        hook.inbox?.id === Number(currentInboxId)
+      return hooks.some(
+        hook =>
+          hook.status === true && hook.inbox?.id === Number(currentInboxId)
       );
     },
 
@@ -137,10 +135,6 @@ export default {
 
       return `Integraciones faltantes: ${missing.join(', ')}`;
     },
-
-
-
-
 
     conversationAdditionalAttributes() {
       return this.currentConversationMetaData.additional_attributes || {};
@@ -171,7 +165,9 @@ export default {
     // ============================================================
     activeTrackingsCount() {
       if (!this.contactId) return 0;
-      const trackings = this.$store.getters['contactTrackings/getTrackings'](this.contactId) || [];
+      const trackings =
+        this.$store.getters['contactTrackings/getTrackings'](this.contactId) ||
+        [];
       return trackings.filter(t =>
         ['pending', 'scheduled', 'active'].includes(t.status)
       ).length;
@@ -217,7 +213,6 @@ export default {
     // proyecto@CONTACT_PANEL - CORREGIDO: Validar integraciones
     // ============================================================
 
-
     // ============================================================
     // proyecto@CONTACT_PANEL - CORREGIDO: Validar integraciones
     // Estructura real: array de apps con hooks anidados
@@ -233,7 +228,8 @@ export default {
       if (!trackingBotApp || !trackingBotApp.enabled) return false;
 
       const hasActiveHookForInbox = (trackingBotApp.hooks || []).some(
-        hook => hook.status === true && hook.inbox?.id === Number(currentInboxId)
+        hook =>
+          hook.status === true && hook.inbox?.id === Number(currentInboxId)
       );
 
       const openAIApp = apps.find(app => app.id === 'openai');
@@ -248,7 +244,6 @@ export default {
     // ============================================================
     // proyecto@CONTACT_PANEL - CORREGIDO: Validar integraciones
     // ============================================================
-
 
     // ============================================================
     // proyecto@CONTACT_PANEL - NUEVO: Mostrar botón si hay contacto e integraciones
@@ -279,10 +274,6 @@ export default {
     this.$store.dispatch('attributes/get', 0);
     this.loadContactTrackings();
   },
-
-
-
-
 
   methods: {
     onPanelToggle() {
@@ -337,7 +328,11 @@ export default {
           conversationId: this.conversationId,
         });
       } catch (error) {
-        console.error('proyecto@CONTACT_PANEL - Error loading trackings:', error);
+        // eslint-disable-next-line no-console
+        console.error(
+          'proyecto@CONTACT_PANEL - Error loading trackings:',
+          error
+        );
       }
     },
 
@@ -361,7 +356,10 @@ export default {
 
       // Navegar a integraciones
       this.$router.push({
-        name: 'settings_integrations',
+        name: 'settings_applications',
+        params: {
+          accountId: this.$store.getters.getCurrentAccountId,
+        },
       });
     },
   },
@@ -370,23 +368,33 @@ export default {
 
 <template>
   <div
-    class="overflow-y-auto bg-white border-l dark:bg-slate-900 text-slate-900 dark:text-slate-300 border-slate-50 dark:border-slate-800/50 rtl:border-l-0 rtl:border-r contact--panel">
-    <ContactInfo :contact="contact" :conversation-id="conversationId" :channel-type="channelType"
-      @toggle-panel="onPanelToggle" />
+    class="overflow-y-auto bg-white border-l dark:bg-slate-900 text-slate-900 dark:text-slate-300 border-slate-50 dark:border-slate-800/50 rtl:border-l-0 rtl:border-r contact--panel"
+  >
+    <ContactInfo
+      :contact="contact"
+      :conversation-id="conversationId"
+      :channel-type="channelType"
+      @toggle-panel="onPanelToggle"
+    />
 
     <!-- ============================================================ -->
     <!-- proyecto@CONTACT_PANEL - NUEVO: Botón Programar Seguimiento -->
     <!-- Condición: Solo mostrar si hay contacto Y están habilitadas las integraciones tracking_bot y openai -->
     <!-- ============================================================ -->
-    <div v-if="this.contact.id" class="tracking-action-section">
-      <woot-button variant="smooth" size="small" :color-scheme="activeTrackingsCount > 0 ? 'success' : 'secondary'" icon="calendar-clock" class="tracking-button"
-        @click="handleTrackingClick">
+    <div v-if="contact.id" class="tracking-action-section">
+      <woot-button
+        variant="smooth"
+        size="small"
+        :color-scheme="activeTrackingsCount > 0 ? 'success' : 'secondary'"
+        icon="calendar-clock"
+        class="tracking-button"
+        @click="handleTrackingClick"
+      >
         {{ $t('CONTACT_PANEL.SCHEDULE_TRACKING') }}
         <span v-if="activeTrackingsCount > 0" class="tracking-badge">
           {{ activeTrackingsCount }}
         </span>
       </woot-button>
-
     </div>
     <!-- ============================================================ -->
     <!-- FIN: Botón Programar Seguimiento                             -->
@@ -402,65 +410,124 @@ export default {
     </woot-feature-toggle>
     <!-- FIN @tickets_cases -->
 
-
-    <Draggable :list="conversationSidebarItems" :disabled="!dragEnabled" animation="200" class="list-group"
-      ghost-class="ghost" handle=".drag-handle" @start="dragging = true" @end="onDragEnd">
+    <Draggable
+      :list="conversationSidebarItems"
+      :disabled="!dragEnabled"
+      animation="200"
+      class="list-group"
+      ghost-class="ghost"
+      handle=".drag-handle"
+      @start="dragging = true"
+      @end="onDragEnd"
+    >
       <transition-group>
-        <div v-for="element in conversationSidebarItems" :key="element.name" class="bg-white dark:bg-gray-800">
-          <div v-if="element.name === 'conversation_actions'" class="conversation--actions">
-            <AccordionItem :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_ACTIONS')"
-              :is-open="isContactSidebarItemOpen('is_conv_actions_open')" @click="
+        <div
+          v-for="element in conversationSidebarItems"
+          :key="element.name"
+          class="bg-white dark:bg-gray-800"
+        >
+          <div
+            v-if="element.name === 'conversation_actions'"
+            class="conversation--actions"
+          >
+            <AccordionItem
+              :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_ACTIONS')"
+              :is-open="isContactSidebarItemOpen('is_conv_actions_open')"
+              @click="
                 value => toggleSidebarUIState('is_conv_actions_open', value)
-              ">
-              <ConversationAction :conversation-id="conversationId" :inbox-id="inboxId" />
+              "
+            >
+              <ConversationAction
+                :conversation-id="conversationId"
+                :inbox-id="inboxId"
+              />
             </AccordionItem>
           </div>
 
-          <div v-else-if="element.name === 'conversation_participants'" class="conversation--actions">
-            <AccordionItem :title="$t('CONVERSATION_PARTICIPANTS.SIDEBAR_TITLE')"
-              :is-open="isContactSidebarItemOpen('is_conv_participants_open')" @click="
+          <div
+            v-else-if="element.name === 'conversation_participants'"
+            class="conversation--actions"
+          >
+            <AccordionItem
+              :title="$t('CONVERSATION_PARTICIPANTS.SIDEBAR_TITLE')"
+              :is-open="isContactSidebarItemOpen('is_conv_participants_open')"
+              @click="
                 value =>
                   toggleSidebarUIState('is_conv_participants_open', value)
-              ">
-              <ConversationParticipant :conversation-id="conversationId" :inbox-id="inboxId" />
+              "
+            >
+              <ConversationParticipant
+                :conversation-id="conversationId"
+                :inbox-id="inboxId"
+              />
             </AccordionItem>
           </div>
 
           <div v-else-if="element.name === 'conversation_info'">
-            <AccordionItem :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_INFO')"
-              :is-open="isContactSidebarItemOpen('is_conv_details_open')" compact @click="
+            <AccordionItem
+              :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONVERSATION_INFO')"
+              :is-open="isContactSidebarItemOpen('is_conv_details_open')"
+              compact
+              @click="
                 value => toggleSidebarUIState('is_conv_details_open', value)
-              ">
-              <ConversationInfo :conversation-attributes="conversationAdditionalAttributes"
-                :contact-attributes="contactAdditionalAttributes" />
+              "
+            >
+              <ConversationInfo
+                :conversation-attributes="conversationAdditionalAttributes"
+                :contact-attributes="contactAdditionalAttributes"
+              />
             </AccordionItem>
           </div>
 
           <div v-else-if="element.name === 'contact_attributes'">
-            <AccordionItem :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONTACT_ATTRIBUTES')"
-              :is-open="isContactSidebarItemOpen('is_contact_attributes_open')" compact @click="
+            <AccordionItem
+              :title="$t('CONVERSATION_SIDEBAR.ACCORDION.CONTACT_ATTRIBUTES')"
+              :is-open="isContactSidebarItemOpen('is_contact_attributes_open')"
+              compact
+              @click="
                 value =>
                   toggleSidebarUIState('is_contact_attributes_open', value)
-              ">
-              <CustomAttributes attribute-type="contact_attribute" attribute-from="conversation_contact_panel"
-                :contact-id="contact.id" :empty-state-message="$t('CONVERSATION_CUSTOM_ATTRIBUTES.NO_RECORDS_FOUND')
-                  " />
+              "
+            >
+              <CustomAttributes
+                attribute-type="contact_attribute"
+                attribute-from="conversation_contact_panel"
+                :contact-id="contact.id"
+                :empty-state-message="
+                  $t('CONVERSATION_CUSTOM_ATTRIBUTES.NO_RECORDS_FOUND')
+                "
+              />
             </AccordionItem>
           </div>
 
           <div v-else-if="element.name === 'previous_conversation'">
-            <AccordionItem v-if="contact.id" :title="$t('CONVERSATION_SIDEBAR.ACCORDION.PREVIOUS_CONVERSATION')
-              " :is-open="isContactSidebarItemOpen('is_previous_conv_open')" @click="
+            <AccordionItem
+              v-if="contact.id"
+              :title="
+                $t('CONVERSATION_SIDEBAR.ACCORDION.PREVIOUS_CONVERSATION')
+              "
+              :is-open="isContactSidebarItemOpen('is_previous_conv_open')"
+              @click="
                 value => toggleSidebarUIState('is_previous_conv_open', value)
-              ">
-              <ContactConversations :contact-id="contact.id" :conversation-id="conversationId" />
+              "
+            >
+              <ContactConversations
+                :contact-id="contact.id"
+                :conversation-id="conversationId"
+              />
             </AccordionItem>
           </div>
 
-          <woot-feature-toggle v-else-if="element.name === 'macros'" feature-key="macros">
-            <AccordionItem :title="$t('CONVERSATION_SIDEBAR.ACCORDION.MACROS')"
-              :is-open="isContactSidebarItemOpen('is_macro_open')" compact
-              @click="value => toggleSidebarUIState('is_macro_open', value)">
+          <woot-feature-toggle
+            v-else-if="element.name === 'macros'"
+            feature-key="macros"
+          >
+            <AccordionItem
+              :title="$t('CONVERSATION_SIDEBAR.ACCORDION.MACROS')"
+              :is-open="isContactSidebarItemOpen('is_macro_open')"
+              compact
+              @click="value => toggleSidebarUIState('is_macro_open', value)"
+            >
               <MacrosList :conversation-id="conversationId" />
             </AccordionItem>
           </woot-feature-toggle>
@@ -486,25 +553,34 @@ export default {
     />
 
     <!-- Modal de Advertencia de Integraciones -->
-    <Modal :show.sync="showIntegrationWarning" :on-close="closeIntegrationWarning">
+    <Modal
+      :show.sync="showIntegrationWarning"
+      :on-close="closeIntegrationWarning"
+    >
       <div class="flex flex-col h-auto overflow-auto">
-        <woot-modal-header :header-title="$t('CONTACT_PANEL.INTEGRATION_WARNING.TITLE')">
+        <woot-modal-header
+          :header-title="$t('CONTACT_PANEL.INTEGRATION_WARNING.TITLE')"
+        >
           <p>
             {{ $t('CONTACT_PANEL.INTEGRATION_WARNING.MESSAGE') }}
           </p>
 
           <!-- Lista de integraciones faltantes -->
           <div class="mt-4 space-y-2">
-            <div v-if="!hasTrackingBotIntegration"
-              class="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+            <div
+              v-if="!hasTrackingBotIntegration"
+              class="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800"
+            >
               <span class="text-red-600 dark:text-red-400">❌</span>
               <span class="font-medium text-red-800 dark:text-red-200">
                 {{ $t('CONTACT_PANEL.INTEGRATION_WARNING.TRACKING_BOT') }}
               </span>
             </div>
 
-            <div v-if="!hasOpenAIIntegration"
-              class="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+            <div
+              v-if="!hasOpenAIIntegration"
+              class="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800"
+            >
               <span class="text-red-600 dark:text-red-400">❌</span>
               <span class="font-medium text-red-800 dark:text-red-200">
                 {{ $t('CONTACT_PANEL.INTEGRATION_WARNING.OPENAI') }}
@@ -513,30 +589,124 @@ export default {
           </div>
 
           <!-- Instrucciones -->
-          <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 w-full">
-            <p class="font-medium text-blue-900 dark:text-blue-100 mb-2">
+          <div class="mt-4 w-full">
+            <p class="font-medium text-slate-800 dark:text-slate-100 mb-3">
               {{ $t('CONTACT_PANEL.INTEGRATION_WARNING.INSTRUCTIONS_TITLE') }}
             </p>
-            <ol class="list-decimal list-inside space-y-1 text-sm text-blue-800 dark:text-blue-200">
-              <li>{{ $t('CONTACT_PANEL.INTEGRATION_WARNING.STEP_1') }}</li>
-              <li>{{ $t('CONTACT_PANEL.INTEGRATION_WARNING.STEP_2') }}</li>
-              <li>{{ $t('CONTACT_PANEL.INTEGRATION_WARNING.STEP_3') }}</li>
-            </ol>
+            <div class="space-y-2">
+              <!-- Paso 1: navegación (neutro) -->
+              <div
+                class="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40"
+              >
+                <span
+                  class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                >
+                  <fluent-icon icon="settings" size="14" />
+                </span>
+                <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                  $t('CONTACT_PANEL.INTEGRATION_WARNING.STEP_1')
+                }}</span>
+              </div>
+
+              <!-- Paso 2: Bot de Seguimientos -->
+              <div
+                class="flex items-center gap-3 p-3 rounded-lg border"
+                :class="
+                  hasTrackingBotIntegration
+                    ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
+                    : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
+                "
+              >
+                <span
+                  class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full text-white"
+                  :class="
+                    hasTrackingBotIntegration ? 'bg-green-500' : 'bg-red-500'
+                  "
+                >
+                  <fluent-icon
+                    :icon="hasTrackingBotIntegration ? 'checkmark' : 'dismiss'"
+                    size="14"
+                  />
+                </span>
+                <span class="flex-1 text-sm text-slate-700 dark:text-slate-200">
+                  {{ $t('CONTACT_PANEL.INTEGRATION_WARNING.STEP_2') }}
+                </span>
+                <span
+                  class="shrink-0 px-2 py-0.5 rounded-full text-xs font-medium"
+                  :class="
+                    hasTrackingBotIntegration
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
+                      : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'
+                  "
+                >
+                  {{
+                    hasTrackingBotIntegration
+                      ? $t('CONTACT_PANEL.INTEGRATION_WARNING.ACTIVE')
+                      : $t('CONTACT_PANEL.INTEGRATION_WARNING.INACTIVE')
+                  }}
+                </span>
+              </div>
+
+              <!-- Paso 3: OpenAI -->
+              <div
+                class="flex items-center gap-3 p-3 rounded-lg border"
+                :class="
+                  hasOpenAIIntegration
+                    ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
+                    : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
+                "
+              >
+                <span
+                  class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full text-white"
+                  :class="hasOpenAIIntegration ? 'bg-green-500' : 'bg-red-500'"
+                >
+                  <fluent-icon
+                    :icon="hasOpenAIIntegration ? 'checkmark' : 'dismiss'"
+                    size="14"
+                  />
+                </span>
+                <span class="flex-1 text-sm text-slate-700 dark:text-slate-200">
+                  {{ $t('CONTACT_PANEL.INTEGRATION_WARNING.STEP_3') }}
+                </span>
+                <span
+                  class="shrink-0 px-2 py-0.5 rounded-full text-xs font-medium"
+                  :class="
+                    hasOpenAIIntegration
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
+                      : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'
+                  "
+                >
+                  {{
+                    hasOpenAIIntegration
+                      ? $t('CONTACT_PANEL.INTEGRATION_WARNING.ACTIVE')
+                      : $t('CONTACT_PANEL.INTEGRATION_WARNING.INACTIVE')
+                  }}
+                </span>
+              </div>
+            </div>
           </div>
         </woot-modal-header>
 
         <div class="flex flex-col p-8">
           <div class="flex flex-row justify-end w-full gap-2 px-0 py-2">
-            <div>
-              <woot-button color-scheme="primary" @click.prevent="closeIntegrationWarning">
-                {{ $t('CONTACT_PANEL.INTEGRATION_WARNING.ACCEPT') }}
-              </woot-button>
-            </div>
+            <woot-button
+              variant="clear"
+              color-scheme="secondary"
+              @click.prevent="closeIntegrationWarning"
+            >
+              {{ $t('CONTACT_PANEL.INTEGRATION_WARNING.ACCEPT') }}
+            </woot-button>
+            <woot-button
+              color-scheme="primary"
+              icon="settings"
+              @click.prevent="goToIntegrations"
+            >
+              {{ $t('CONTACT_PANEL.INTEGRATION_WARNING.GO_TO_INTEGRATIONS') }}
+            </woot-button>
           </div>
         </div>
       </div>
     </Modal>
-
   </div>
 </template>
 

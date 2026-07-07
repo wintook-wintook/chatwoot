@@ -17,6 +17,7 @@ class ContactTrackingBulkAssignsAPI extends ApiClient {
 
   create({
     payload,
+    campaignName,
     templateId,
     scheduledFor,
     excludedContactIds = [],
@@ -24,10 +25,21 @@ class ContactTrackingBulkAssignsAPI extends ApiClient {
   }) {
     return axios.post(this.url, {
       payload,
+      campaign_name: campaignName,
       template_id: templateId,
       scheduled_for: scheduledFor,
       excluded_contact_ids: excludedContactIds,
       skip_active: skipActive,
+    });
+  }
+
+  // @campanas_vendedor — dry-run: clasifica la audiencia en buckets (sin crear nada).
+  preview({ payload, templateId, skipActive = true, excludedContactIds = [] }) {
+    return axios.post(`${this.url}/preview`, {
+      payload,
+      template_id: templateId,
+      skip_active: skipActive,
+      excluded_contact_ids: excludedContactIds,
     });
   }
 }
