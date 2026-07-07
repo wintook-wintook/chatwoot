@@ -63,7 +63,7 @@
       "MODAL_DESC": "Define a read-only SQL query (SELECT) the bot can run against this connection."
     },
     "CONSOLE": {
-      "TITLE": "ERP console",
+      "TITLE": "Query Console (ERP)",
       "SUBTITLE": "Query your ERP database in read-only mode.",
       "CONNECTION": "Connection",
       "QUERY": "Query",

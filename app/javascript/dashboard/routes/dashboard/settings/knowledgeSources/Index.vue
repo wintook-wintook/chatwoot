@@ -93,12 +93,12 @@ export default {
       return [
         { name: 'Contenido indexado' },
         { name: `Fuentes (${this.sources.length})` },
-        { name: 'Prueba de búsqueda' },
+        { name: 'Consola de Búsqueda (Fuentes)' },
         ...(this.erpEnabled
           ? [
               { name: 'Conexión ERP' },
               { name: 'Bots Cobranza' },
-              { name: 'Consola ERP' },
+              { name: 'Consola de Consulta (ERP)' },
             ]
           : []),
       ];

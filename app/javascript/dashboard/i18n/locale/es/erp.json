@@ -63,7 +63,7 @@
       "MODAL_DESC": "Define una consulta SQL de solo lectura (SELECT) que el bot podrá ejecutar sobre esta conexión."
     },
     "CONSOLE": {
-      "TITLE": "Consola ERP",
+      "TITLE": "Consola de Consulta (ERP)",
       "SUBTITLE": "Consultá la base de tu ERP en modo solo lectura.",
       "CONNECTION": "Conexión",
       "QUERY": "Consulta",
