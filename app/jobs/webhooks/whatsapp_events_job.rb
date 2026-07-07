@@ -7,7 +7,11 @@ class Webhooks::WhatsappEventsJob < ApplicationJob
     return if channel_is_inactive?(channel)
   
     Rails.logger.info "Processing params: #{params.inspect}"
-  
+
+    # @waba_templates — ciclo de vida de plantilla (message_template_*) antes de los mensajes.
+    template_change = template_lifecycle_change(params)
+    return Whatsapp::TemplateWebhookService.new(channel, template_change).perform if template_change
+
     case channel.provider
     when 'whatsapp_cloud'
       Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: channel.inbox, params: params).perform
@@ -19,6 +23,16 @@ class Webhooks::WhatsappEventsJob < ApplicationJob
   end
 
   private
+
+  # Devuelve el `change` si es un webhook de ciclo de vida de plantilla, si no nil.
+  def template_lifecycle_change(params)
+    return if params[:entry].blank?
+
+    change = params[:entry].first[:changes]&.first
+    return unless change && change[:field].to_s.start_with?('message_template_')
+
+    change
+  end
 
   def channel_is_inactive?(channel)
     return true if channel.blank?

@@ -83,6 +83,32 @@ RSpec.describe Webhooks::WhatsappEventsJob do
     end
   end
 
+  context 'when it is a template lifecycle webhook' do
+    let(:template_params) do
+      {
+        object: 'whatsapp_business_account',
+        phone_number: channel.phone_number,
+        entry: [{
+          changes: [{
+            field: 'message_template_status_update',
+            value: {
+              message_template_id: 555, event: 'APPROVED',
+              metadata: { phone_number_id: channel.provider_config['phone_number_id'],
+                          display_phone_number: channel.phone_number.delete('+') }
+            }
+          }]
+        }]
+      }
+    end
+
+    it 'delega a TemplateWebhookService y no procesa mensajes' do
+      allow(Whatsapp::TemplateWebhookService).to receive(:new).and_return(process_service)
+      expect(Whatsapp::TemplateWebhookService).to receive(:new)
+      expect(Whatsapp::IncomingMessageWhatsappCloudService).not_to receive(:new)
+      job.perform_now(template_params)
+    end
+  end
+
   context 'when default provider' do
     it 'enqueue Whatsapp::IncomingMessageService' do
       stub_request(:post, 'https://waba.360dialog.io/v1/configs/webhook')
