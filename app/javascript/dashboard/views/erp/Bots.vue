@@ -27,6 +27,8 @@ export default {
       editingId: null,
       form: emptyForm(),
       previewMessages: [],
+      deletePopup: false,
+      deleteTarget: null,
     };
   },
   computed: {
@@ -120,13 +122,18 @@ export default {
         useAlert(e.response?.data?.error || e.message);
       }
     },
-    async remove(bot) {
-      // eslint-disable-next-line no-alert
-      if (
-        !window.confirm(this.$t('ERP.BOTS.DELETE_CONFIRM', { name: bot.name }))
-      )
-        return;
-      await this.$store.dispatch('externalDb/deleteBot', bot.id);
+    remove(bot) {
+      this.deleteTarget = bot;
+      this.deletePopup = true;
+    },
+    closeDeletePopup() {
+      this.deletePopup = false;
+      this.deleteTarget = null;
+    },
+    async confirmRemove() {
+      const id = this.deleteTarget?.id;
+      this.closeDeletePopup();
+      if (id) await this.$store.dispatch('externalDb/deleteBot', id);
     },
   },
 };
@@ -338,6 +345,20 @@ export default {
           @delete="remove"
         />
       </div>
+
+      <woot-delete-modal
+        :show.sync="deletePopup"
+        :on-close="closeDeletePopup"
+        :on-confirm="confirmRemove"
+        :title="$t('ERP.BOTS.DELETE_TITLE')"
+        :message="
+          $t('ERP.BOTS.DELETE_CONFIRM', {
+            name: deleteTarget && deleteTarget.name,
+          })
+        "
+        :confirm-text="$t('ERP.COMMON.DELETE')"
+        :reject-text="$t('ERP.COMMON.CANCEL')"
+      />
     </div>
   </div>
 </template>

@@ -30,6 +30,8 @@ export default {
       nameExample: 'facturas_vencidas',
       paramsExample:
         '[{"key":"rfc","label":"RFC","type":"string","required":true}]',
+      deletePopup: false,
+      deleteTarget: null,
     };
   },
   computed: {
@@ -103,16 +105,22 @@ export default {
         useAlert(e.response?.data?.error || e.message);
       }
     },
-    async remove(q) {
-      // eslint-disable-next-line no-alert
-      if (
-        !window.confirm(this.$t('ERP.QUERIES.DELETE_CONFIRM', { name: q.name }))
-      )
-        return;
-      await this.$store.dispatch('externalDb/deleteQuery', {
-        connectionId: this.connection.id,
-        id: q.id,
-      });
+    remove(q) {
+      this.deleteTarget = q;
+      this.deletePopup = true;
+    },
+    closeDeletePopup() {
+      this.deletePopup = false;
+      this.deleteTarget = null;
+    },
+    async confirmRemove() {
+      const id = this.deleteTarget?.id;
+      this.closeDeletePopup();
+      if (id)
+        await this.$store.dispatch('externalDb/deleteQuery', {
+          connectionId: this.connection.id,
+          id,
+        });
     },
   },
 };
@@ -350,5 +358,19 @@ export default {
         </div>
       </div>
     </woot-modal>
+
+    <woot-delete-modal
+      :show.sync="deletePopup"
+      :on-close="closeDeletePopup"
+      :on-confirm="confirmRemove"
+      :title="$t('ERP.QUERIES.DELETE_TITLE')"
+      :message="
+        $t('ERP.QUERIES.DELETE_CONFIRM', {
+          name: deleteTarget && deleteTarget.name,
+        })
+      "
+      :confirm-text="$t('ERP.COMMON.DELETE')"
+      :reject-text="$t('ERP.COMMON.CANCEL')"
+    />
   </div>
 </template>

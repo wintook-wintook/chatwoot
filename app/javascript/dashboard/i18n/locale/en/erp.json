@@ -15,6 +15,7 @@
       "SEED_NONE": "Already up to date (no new queries)",
       "EDIT": "Edit",
       "DELETE": "Delete",
+      "DELETE_TITLE": "Delete connection",
       "DELETE_CONFIRM": "Delete connection \"{name}\" and its queries?",
       "FORM": {
         "TITLE_NEW": "New connection",
@@ -53,6 +54,7 @@
       "AI_ENABLED": "Available to the AI bot (Mode B)",
       "RESULT_FORMAT": "Result format",
       "SAVE": "Save query",
+      "DELETE_TITLE": "Delete query",
       "DELETE_CONFIRM": "Delete query \"{name}\"?",
       "EDIT_TITLE": "Edit query",
       "ACTIONS": "Actions",
@@ -100,6 +102,7 @@
       "SAVE": "Save bot",
       "PREVIEW": "Preview (dry-run)",
       "PREVIEW_TITLE": "Preview — no messages sent",
+      "DELETE_TITLE": "Delete bot",
       "DELETE_CONFIRM": "Delete bot \"{name}\"?",
       "NONE": "— none —",
       "EDIT_TITLE": "Edit bot",
@@ -110,6 +113,10 @@
     "ENGINE": {
       "FIREBIRD": "Firebird (SAE / Microsip / Contpaq)",
       "MSSQL": "SQL Server (Contpaq)"
+    },
+    "COMMON": {
+      "DELETE": "Delete",
+      "CANCEL": "Cancel"
     }
   }
 }

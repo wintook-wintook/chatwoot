@@ -33,6 +33,8 @@ export default {
       tdsPlaceholder: '7.0',
       seedingId: null,
       erpTypes: ['generic', 'sae', 'microsip', 'contpaq'],
+      deletePopup: false,
+      deleteTarget: null,
     };
   },
   computed: {
@@ -146,15 +148,18 @@ export default {
     toggleQueries(conn) {
       this.expandedId = this.expandedId === conn.id ? null : conn.id;
     },
-    async remove(conn) {
-      // eslint-disable-next-line no-alert
-      if (
-        !window.confirm(
-          this.$t('ERP.CONNECTIONS.DELETE_CONFIRM', { name: conn.name })
-        )
-      )
-        return;
-      await this.$store.dispatch('externalDb/deleteConnection', conn.id);
+    remove(conn) {
+      this.deleteTarget = conn;
+      this.deletePopup = true;
+    },
+    closeDeletePopup() {
+      this.deletePopup = false;
+      this.deleteTarget = null;
+    },
+    async confirmRemove() {
+      const id = this.deleteTarget?.id;
+      this.closeDeletePopup();
+      if (id) await this.$store.dispatch('externalDb/deleteConnection', id);
     },
   },
 };
@@ -378,6 +383,20 @@ export default {
         </div>
         <ErpQueriesPanel :connection="expandedConnection" />
       </div>
+
+      <woot-delete-modal
+        :show.sync="deletePopup"
+        :on-close="closeDeletePopup"
+        :on-confirm="confirmRemove"
+        :title="$t('ERP.CONNECTIONS.DELETE_TITLE')"
+        :message="
+          $t('ERP.CONNECTIONS.DELETE_CONFIRM', {
+            name: deleteTarget && deleteTarget.name,
+          })
+        "
+        :confirm-text="$t('ERP.COMMON.DELETE')"
+        :reject-text="$t('ERP.COMMON.CANCEL')"
+      />
     </div>
   </div>
 </template>

@@ -15,6 +15,7 @@
       "SEED_NONE": "Ya estaba al día (sin consultas nuevas)",
       "EDIT": "Editar",
       "DELETE": "Eliminar",
+      "DELETE_TITLE": "Eliminar conexión",
       "DELETE_CONFIRM": "¿Eliminar la conexión \"{name}\" y sus consultas?",
       "FORM": {
         "TITLE_NEW": "Nueva conexión",
@@ -53,6 +54,7 @@
       "AI_ENABLED": "Disponible para el bot IA (Modo B)",
       "RESULT_FORMAT": "Formato de resultado",
       "SAVE": "Guardar consulta",
+      "DELETE_TITLE": "Eliminar consulta",
       "DELETE_CONFIRM": "¿Eliminar la consulta \"{name}\"?",
       "EDIT_TITLE": "Editar consulta",
       "ACTIONS": "Acciones",
@@ -100,6 +102,7 @@
       "SAVE": "Guardar bot",
       "PREVIEW": "Vista previa (dry-run)",
       "PREVIEW_TITLE": "Vista previa — no se envía nada",
+      "DELETE_TITLE": "Eliminar bot",
       "DELETE_CONFIRM": "¿Eliminar el bot \"{name}\"?",
       "NONE": "— ninguna —",
       "EDIT_TITLE": "Editar bot",
@@ -110,6 +113,10 @@
     "ENGINE": {
       "FIREBIRD": "Firebird (SAE / Microsip / Contpaq)",
       "MSSQL": "SQL Server (Contpaq)"
+    },
+    "COMMON": {
+      "DELETE": "Eliminar",
+      "CANCEL": "Cancelar"
     }
   }
 }
