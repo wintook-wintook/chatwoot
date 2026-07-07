@@ -2035,7 +2035,7 @@ export default {
             {{ g.label }}
           </button>
         </div>
-        <ul class="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+        <ul class="space-y-2 h-[360px] overflow-y-auto pr-1">
           <li v-for="dir in filteredDirectiveCatalog" :key="dir.token">
             <button
               type="button"
