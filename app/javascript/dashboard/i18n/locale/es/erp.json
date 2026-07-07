@@ -111,8 +111,8 @@
       "MODE_B_BADGE": "Modo B"
     },
     "ENGINE": {
-      "FIREBIRD": "Firebird (SAE / Microsip / Contpaq)",
-      "MSSQL": "SQL Server (Contpaq)"
+      "FIREBIRD": "Firebird (SAE / Microsip)",
+      "MSSQL": "SQL Server (Contpaq/SAE)"
     },
     "COMMON": {
       "DELETE": "Eliminar",
