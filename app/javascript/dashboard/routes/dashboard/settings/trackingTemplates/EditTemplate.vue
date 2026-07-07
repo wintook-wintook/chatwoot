@@ -2036,7 +2036,7 @@ export default {
           </button>
         </div>
         <!-- alto fijo calibrado para ~6 filas (cada fila a una línea via truncate) -->
-        <ul class="space-y-2 h-[364px] overflow-y-auto pr-1">
+        <ul class="space-y-2 h-[370px] overflow-y-auto pr-1">
           <li v-for="dir in filteredDirectiveCatalog" :key="dir.token">
             <button
               type="button"
