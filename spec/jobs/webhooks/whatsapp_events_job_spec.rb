@@ -126,10 +126,19 @@ RSpec.describe Webhooks::WhatsappEventsJob do
       }
     end
 
-    it 'delega a EchoMessageService y no procesa como entrante' do
+    it 'delega a EchoMessageService cuando la coexistencia está activa en la cuenta' do
+      channel.account.enable_features!('whatsapp_coexistence')
       allow(Whatsapp::EchoMessageService).to receive(:new).and_return(process_service)
       expect(Whatsapp::EchoMessageService).to receive(:new)
       expect(Whatsapp::IncomingMessageWhatsappCloudService).not_to receive(:new)
+      job.perform_now(echo_params)
+    end
+
+    it 'NO delega si la coexistencia está desactivada en la cuenta' do
+      channel.account.disable_features!('whatsapp_coexistence')
+      allow(Whatsapp::EchoMessageService).to receive(:new).and_return(process_service)
+      allow(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new).and_return(process_service)
+      expect(Whatsapp::EchoMessageService).not_to receive(:new)
       job.perform_now(echo_params)
     end
   end

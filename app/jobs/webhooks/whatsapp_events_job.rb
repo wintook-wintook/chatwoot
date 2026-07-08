@@ -13,7 +13,8 @@ class Webhooks::WhatsappEventsJob < ApplicationJob
     return Whatsapp::TemplateWebhookService.new(channel, template_change).perform if template_change
 
     # coexistencia — mensajes respondidos desde la Business App (móvil) → salientes en Chatwoot.
-    if coexistence_echo?(params) && channel.provider == 'whatsapp_cloud'
+    # Se activa por cuenta desde el super admin (feature whatsapp_coexistence).
+    if coexistence_echo?(params) && channel.provider == 'whatsapp_cloud' && coexistence_enabled?(channel)
       return Whatsapp::EchoMessageService.new(inbox: channel.inbox, params: params).perform
     end
 
@@ -45,6 +46,11 @@ class Webhooks::WhatsappEventsJob < ApplicationJob
 
     value = params[:entry].first[:changes]&.first&.dig(:value)
     value.present? && value[:message_echoes].present?
+  end
+
+  # La coexistencia se habilita por cuenta desde el super admin.
+  def coexistence_enabled?(channel)
+    channel.account.feature_enabled?('whatsapp_coexistence')
   end
 
   def channel_is_inactive?(channel)

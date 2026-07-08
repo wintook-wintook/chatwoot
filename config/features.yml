@@ -140,3 +140,8 @@
 # IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
 - name: whatsapp_templates
   enabled: false
+# @waba_templates / coexistencia — refleja en Chatwoot los mensajes respondidos desde la
+# WhatsApp Business App (móvil) como salientes. Off por defecto; se activa por cuenta desde
+# el super admin. IMPORTANTE: agregar SIEMPRE al final (la posición define el bit FlagShihTzu).
+- name: whatsapp_coexistence
+  enabled: false

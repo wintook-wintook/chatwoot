@@ -6,6 +6,7 @@
 <script>
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
+import ResizableTextArea from 'shared/components/ResizableTextArea.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import {
@@ -19,7 +20,7 @@ const emptyForm = () => ({
   name: '',
   language: 'es',
   category: 'UTILITY',
-  header_type: '',
+  header_type: 'text',
   header_content: '',
   header_media_url: '',
   body_text: '',
@@ -29,7 +30,7 @@ const emptyForm = () => ({
 });
 
 export default {
-  components: { SettingsLayout, BaseSettingsHeader },
+  components: { ResizableTextArea, SettingsLayout, BaseSettingsHeader },
   data() {
     return {
       channelFilter: '',
@@ -51,12 +52,13 @@ export default {
       formTabs: [
         { key: 'content', name: 'Contenido' },
         { key: 'buttons', name: 'Botones' },
+        { key: 'preview', name: 'Vista previa' },
       ],
       bodyHint: 'Cuerpo (usa {{1}}, {{2}}… para variables)',
       headerTextHint: 'Texto de cabecera (máx 60, opcional {{1}})',
       sampleLabel: n => `Valor de {{${n}}}`,
       nameHint:
-        'Solo minúsculas, números y guion bajo (_). Sin espacios ni acentos. No se puede cambiar después.',
+        'Se formatea automáticamente (minúsculas, sin espacios ni acentos). No se puede cambiar después.',
     };
   },
   computed: {
@@ -93,6 +95,18 @@ export default {
     },
     isFormValid() {
       return this.validationErrors.length === 0;
+    },
+    // El formulario ya se empezó a llenar (para no mostrar errores en un form recién abierto).
+    isDirty() {
+      const f = this.form;
+      return Boolean(
+        f.name ||
+          f.body_text ||
+          f.footer_text ||
+          f.header_content ||
+          f.header_media_url ||
+          (f.buttons && f.buttons.length)
+      );
     },
     modalTitle() {
       return this.editingId ? 'Editar plantilla' : 'Nueva plantilla';
@@ -136,10 +150,21 @@ export default {
         this.form.sample_values.body
       );
     },
+    footerCounter() {
+      return `${this.form.footer_text.length} / 60`;
+    },
+    headerTextCounter() {
+      return `${this.form.header_content.length} / 60`;
+    },
   },
   watch: {
     'form.body_text'() {
       this.syncBodySamples();
+    },
+    // Enforca la regla de Meta al escribir: solo [a-z0-9_], sin espacios ni acentos.
+    'form.name'(val) {
+      const clean = this.sanitizeName(val);
+      if (clean !== val) this.form.name = clean;
     },
   },
   mounted() {
@@ -204,6 +229,16 @@ export default {
     },
     onFormTabChange(index) {
       this.formTabIndex = index;
+    },
+    // Normaliza el nombre a la regla de Meta: minúsculas, espacios→_, sin acentos ni símbolos.
+    sanitizeName(val) {
+      return String(val || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // quita diacríticos (á→a, ñ→n)
+        .replace(/\s+/g, '_') // espacios → guion bajo
+        .replace(/[^a-z0-9_]/g, '') // descarta lo demás
+        .slice(0, 512);
     },
     openNew() {
       this.editingId = null;
@@ -450,9 +485,7 @@ export default {
         <h3 class="text-lg font-medium mb-1">{{ modalTitle }}</h3>
         <p class="text-sm text-slate-500 mb-4">{{ modalDescription }}</p>
 
-        <div class="flex gap-6">
-          <div class="flex-1 min-w-0">
-            <woot-tabs
+        <woot-tabs
               :index="formTabIndex"
               border
               @change="onFormTabChange"
@@ -466,10 +499,16 @@ export default {
               />
             </woot-tabs>
 
-            <div v-show="activeFormTab === 'content'" class="pt-4">
+            <!-- Las 3 pestañas se apilan en la MISMA celda del grid: el alto es el de la
+                 más alta (Contenido) y no cambia al cambiar de pestaña. -->
+            <div class="grid">
+            <div
+              class="col-start-1 row-start-1 pt-4"
+              :class="{ invisible: activeFormTab !== 'content' }"
+            >
         <label v-if="!editingId" class="block mb-2">
-          <span class="text-sm text-slate-600 dark:text-slate-300">Canal de WhatsApp</span>
-          <select v-model="form.inbox_id" class="w-full mt-1">
+          Canal de WhatsApp
+          <select v-model="form.inbox_id" class="w-full">
             <option :value="null" disabled>Selecciona un canal</option>
             <option v-for="i in whatsappInboxes" :key="i.id" :value="i.id">
               {{ i.name }}
@@ -478,22 +517,27 @@ export default {
         </label>
 
         <div class="grid grid-cols-2 gap-4">
-          <label class="block">
-            <span class="text-sm text-slate-600 dark:text-slate-300">Nombre</span>
-            <input
+          <div class="relative">
+            <woot-input
               v-model="form.name"
-              :disabled="!!editingId"
+              label="Nombre"
               placeholder="cobro_vencido"
-              class="w-full mt-1"
+              :readonly="!!editingId"
+              class="!mb-0"
             />
-            <span class="text-xs text-slate-400 mt-1 block">{{ nameHint }}</span>
-          </label>
+            <span
+              :title="nameHint"
+              class="absolute top-0 ltr:right-0 rtl:left-0 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            >
+              <fluent-icon icon="info" size="18" />
+            </span>
+          </div>
           <label class="block">
-            <span class="text-sm text-slate-600 dark:text-slate-300">Idioma</span>
+            Idioma
             <select
               v-model="form.language"
               :disabled="!!editingId"
-              class="w-full mt-1"
+              class="w-full"
             >
               <option v-for="l in languageOptions" :key="l" :value="l">
                 {{ l }}
@@ -504,46 +548,59 @@ export default {
 
         <div class="grid grid-cols-2 gap-4 mt-2">
           <label class="block">
-            <span class="text-sm text-slate-600 dark:text-slate-300">Categoría</span>
-            <select v-model="form.category" class="w-full mt-1">
+            Categoría
+            <select v-model="form.category" class="w-full">
               <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
             </select>
           </label>
           <label class="block">
-            <span class="text-sm text-slate-600 dark:text-slate-300">Cabecera</span>
-            <select v-model="form.header_type" class="w-full mt-1">
+            Cabecera
+            <select v-model="form.header_type" class="w-full">
               <option v-for="h in headerTypes" :key="h.value" :value="h.value">
                 {{ h.label }}
               </option>
             </select>
           </label>
         </div>
-        <input
-          v-if="form.header_type === 'text'"
-          v-model="form.header_content"
-          :placeholder="headerTextHint"
-          class="w-full mt-2 !mb-0"
-        />
+        <!-- Contenido de la cabecera: SIEMPRE visible (reserva el espacio). Cambia según el
+             tipo; cuando es "Ninguna" se muestra deshabilitado. -->
         <div
-          v-if="form.header_type === 'text'"
-          class="text-right text-xs mt-1"
-          :class="
-            form.header_content.length > 60 ? 'text-red-500' : 'text-slate-400'
-          "
+          v-if="form.header_type === 'text' || form.header_type === ''"
+          class="relative mt-2"
+          :class="{ 'opacity-60': form.header_type === '' }"
         >
-          {{ form.header_content.length }} / 60
+          <woot-input
+            v-model="form.header_content"
+            label="Texto de la cabecera"
+            :placeholder="
+              form.header_type === '' ? 'Sin cabecera' : headerTextHint
+            "
+            :readonly="form.header_type === ''"
+            class="!mb-0"
+          />
+          <span
+            v-if="form.header_type === 'text'"
+            class="absolute top-0 ltr:right-0 rtl:left-0 text-xs"
+            :class="
+              form.header_content.length > 60 ? 'text-red-500' : 'text-slate-400'
+            "
+          >
+            {{ headerTextCounter }}
+          </span>
         </div>
-        <input
-          v-if="['image', 'video', 'document'].includes(form.header_type)"
+        <woot-input
+          v-else
           v-model="form.header_media_url"
+          label="Archivo de la cabecera"
           placeholder="URL del archivo de cabecera"
-          class="w-full mt-2"
+          class="mt-2"
         />
-        <input
+        <woot-input
           v-if="headerHasVar"
           v-model="form.sample_values.header[0]"
+          label="Ejemplo de la variable de la cabecera"
           placeholder="Ejemplo para la variable de la cabecera"
-          class="w-full mt-2"
+          class="mt-2"
         />
 
         <label class="block mt-2">
@@ -560,43 +617,35 @@ export default {
               {{ form.body_text.length }} / 1024
             </span>
           </span>
-          <textarea v-model="form.body_text" rows="6" class="w-full mt-1" />
+          <ResizableTextArea
+            v-model="form.body_text"
+            :rows="6"
+            :min-height="6"
+            class="w-full mt-1"
+          />
         </label>
 
-        <div v-if="bodyVarCount" class="mt-2">
-          <span class="text-xs text-slate-500">
-            Ejemplos de las variables del cuerpo
-          </span>
-          <div class="grid grid-cols-2 gap-2 mt-1">
-            <input
-              v-for="i in bodyVarCount"
-              :key="i"
-              v-model="form.sample_values.body[i - 1]"
-              :placeholder="sampleLabel(i)"
-              class="w-full"
-            />
-          </div>
-        </div>
-
-        <label class="block mt-2">
+        <div class="relative mt-2">
+          <woot-input
+            v-model="form.footer_text"
+            label="Pie (opcional, sin variables)"
+            class="!mb-0"
+          />
           <span
-            class="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300"
+            class="absolute top-0 ltr:right-0 rtl:left-0 text-xs"
+            :class="
+              form.footer_text.length > 60 ? 'text-red-500' : 'text-slate-400'
+            "
           >
-            <span>Pie (opcional, máx 60, sin variables)</span>
-            <span
-              class="text-xs"
-              :class="
-                form.footer_text.length > 60 ? 'text-red-500' : 'text-slate-400'
-              "
-            >
-              {{ form.footer_text.length }} / 60
-            </span>
+            {{ footerCounter }}
           </span>
-          <input v-model="form.footer_text" class="w-full mt-1" />
-        </label>
+        </div>
             </div>
 
-            <div v-show="activeFormTab === 'buttons'" class="pt-4">
+            <div
+              class="col-start-1 row-start-1 pt-4"
+              :class="{ invisible: activeFormTab !== 'buttons' }"
+            >
         <div class="mt-1">
           <div class="flex items-center justify-between">
             <span class="text-sm text-slate-600 dark:text-slate-300">Botones</span>
@@ -607,6 +656,7 @@ export default {
           <p class="text-xs text-slate-400 mt-1 mb-2">
             Hasta 10 botones. Las respuestas rápidas van agrupadas al inicio; luego los de acción (URL, teléfono, código).
           </p>
+          <div class="max-h-72 overflow-y-auto pr-1">
           <div
             v-for="(btn, i) in form.buttons"
             :key="i"
@@ -617,23 +667,23 @@ export default {
                 {{ bt }}
               </option>
             </select>
-            <input
+            <woot-input
               v-if="btn.type !== 'COPY_CODE'"
               v-model="btn.text"
               placeholder="Texto (máx 25)"
-              class="flex-1"
+              class="flex-1 !mb-0"
             />
-            <input
+            <woot-input
               v-if="btn.type === 'URL'"
               v-model="btn.url"
               placeholder="https://…"
-              class="flex-1"
+              class="flex-1 !mb-0"
             />
-            <input
+            <woot-input
               v-if="btn.type === 'PHONE_NUMBER'"
               v-model="btn.phone_number"
               placeholder="+52…"
-              class="flex-1"
+              class="flex-1 !mb-0"
             />
             <woot-button
               variant="clear"
@@ -643,17 +693,37 @@ export default {
               @click="removeButton(i)"
             />
           </div>
+          </div>
         </div>
             </div>
-          </div>
 
-          <!-- Vista previa: fija, visible en cualquier pestaña -->
-          <div class="w-72 shrink-0">
-            <span class="text-sm text-slate-600 dark:text-slate-300">
-              Vista previa
-            </span>
+            <!-- Vista previa: cómo verá el cliente la plantilla en WhatsApp -->
             <div
-              class="sticky top-0 mt-2 rounded-lg p-3 text-sm shadow-sm bg-green-50 dark:bg-green-900/30 border border-green-100 dark:border-green-800 text-slate-800 dark:text-slate-100"
+              class="col-start-1 row-start-1 pt-4"
+              :class="{ invisible: activeFormTab !== 'preview' }"
+            >
+            <div v-if="bodyVarCount" class="max-w-sm mx-auto mb-4">
+              <span class="text-xs text-slate-500 dark:text-slate-300">
+                Ejemplos de las variables del cuerpo
+              </span>
+              <div class="grid grid-cols-2 gap-2 mt-1">
+                <woot-input
+                  v-for="i in bodyVarCount"
+                  :key="i"
+                  v-model="form.sample_values.body[i - 1]"
+                  :placeholder="sampleLabel(i)"
+                />
+              </div>
+              <p class="text-xs text-slate-400 mt-1">
+                Se usan en la vista previa y como example al enviarla a Meta.
+              </p>
+            </div>
+
+            <p class="text-sm text-slate-500 mb-3 text-center">
+              Así verá el cliente el mensaje en WhatsApp.
+            </p>
+            <div
+              class="mt-2 max-w-sm mx-auto rounded-lg p-3 text-sm shadow-sm bg-green-50 dark:bg-green-900/30 border border-green-100 dark:border-green-800 text-slate-800 dark:text-slate-100"
             >
             <div v-if="previewHeaderText" class="font-semibold mb-1">
               {{ previewHeaderText }}
@@ -684,10 +754,10 @@ export default {
             </div>
           </div>
           </div>
-        </div>
+          </div>
 
         <ul
-          v-if="validationErrors.length"
+          v-if="isDirty && validationErrors.length"
           class="mt-4 text-xs text-red-500 list-disc pl-5"
         >
           <li v-for="(err, i) in validationErrors" :key="i">{{ err }}</li>
@@ -719,9 +789,9 @@ export default {
 </template>
 
 <style lang="scss">
-// Ancho FIJO para el modal de plantillas (dos columnas): no crece ni se encoge con el
-// contenido; solo se limita en pantallas muy pequeñas con el tope de viewport.
+// Ancho FIJO para el modal de plantillas: no crece ni se encoge con el contenido;
+// solo se limita en pantallas muy pequeñas con el tope de viewport.
 .modal-container.waba-wide {
-  @apply w-[64rem] max-w-[92vw];
+  @apply w-[52rem] max-w-[92vw];
 }
 </style>
