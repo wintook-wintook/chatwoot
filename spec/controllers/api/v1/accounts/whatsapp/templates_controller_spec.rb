@@ -12,6 +12,8 @@ RSpec.describe 'WhatsApp Templates API', type: :request do
   end
   let(:inbox) { channel.inbox }
 
+  before { account.enable_features!('whatsapp_templates') }
+
   describe 'GET /api/v1/accounts/{id}/whatsapp/templates' do
     let!(:template) { create(:whatsapp_template, account: account, channel_whatsapp: channel, name: 'cobro') }
 
@@ -24,6 +26,13 @@ RSpec.describe 'WhatsApp Templates API', type: :request do
       get "/api/v1/accounts/#{account.id}/whatsapp/templates",
           params: { inbox_id: inbox.id }, headers: agent.create_new_auth_token, as: :json
       expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'rechaza si la feature está deshabilitada en la cuenta' do
+      account.disable_features!('whatsapp_templates')
+      get "/api/v1/accounts/#{account.id}/whatsapp/templates",
+          params: { inbox_id: inbox.id }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:forbidden)
     end
 
     it 'lista las plantillas del canal para admins' do

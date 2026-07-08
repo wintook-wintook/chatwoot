@@ -135,3 +135,8 @@
 # IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
 - name: erp_connection
   enabled: false
+# @waba_templates — Gestión de plantillas de WhatsApp (crear/submit/editar/borrar en Meta).
+# Off por defecto; se activa por cuenta desde el super admin.
+# IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
+- name: whatsapp_templates
+  enabled: false

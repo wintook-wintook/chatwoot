@@ -102,6 +102,7 @@ const settings = accountId => ({
         `accounts/${accountId}/settings/whatsapp-templates/list`
       ),
       toStateName: 'whatsapp_templates_index',
+      featureFlag: FEATURE_FLAGS.WHATSAPP_TEMPLATES,
     },
     {
       icon: 'tag',

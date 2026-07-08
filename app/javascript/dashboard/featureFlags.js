@@ -42,4 +42,6 @@ export const FEATURE_FLAGS = {
   CASE_MANAGEMENT: 'case_management',
   // @query_databases — Conexión ERP dentro de Base de Conocimiento
   ERP_CONNECTION: 'erp_connection',
+  // @waba_templates — Gestión de plantillas de WhatsApp desde Configuración
+  WHATSAPP_TEMPLATES: 'whatsapp_templates',
 };

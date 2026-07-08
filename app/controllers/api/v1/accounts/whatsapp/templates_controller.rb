@@ -4,6 +4,7 @@
 # Solo administradores. Alcance por cuenta + canal (inbox de WhatsApp).
 class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::BaseController
   before_action :check_admin_authorization?
+  before_action :check_feature_enabled
   before_action :fetch_channel, only: [:create, :sync]
   before_action :fetch_template, only: [:show, :update, :destroy]
 
@@ -43,6 +44,13 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
   end
 
   private
+
+  # @waba_templates — flag por cuenta, toggleable desde el super admin.
+  def check_feature_enabled
+    return if Current.account.feature_enabled?('whatsapp_templates')
+
+    render json: { error: 'La gestión de plantillas de WhatsApp no está habilitada en esta cuenta.' }, status: :forbidden
+  end
 
   def fetch_channel
     inbox = Current.account.inboxes.find(params[:inbox_id])
