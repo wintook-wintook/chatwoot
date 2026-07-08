@@ -26,6 +26,11 @@ class WhatsappTemplatesAPI extends ApiClient {
   sync(inboxId) {
     return axios.post(`${this.url}/sync`, { inbox_id: inboxId });
   }
+
+  // Importa al instante lo que los canales ya tienen en cache (sin llamar a Meta).
+  import() {
+    return axios.post(`${this.url}/import`);
+  }
 }
 
 export default new WhatsappTemplatesAPI();

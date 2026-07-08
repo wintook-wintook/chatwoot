@@ -74,4 +74,22 @@ RSpec.describe Whatsapp::TemplateSyncService do
 
     expect(draft.reload).to have_attributes(meta_template_id: '555', status: 'APPROVED')
   end
+
+  context 'con source: :cache (message_templates del canal, sin llamar a Meta)' do
+    it 'upsertea desde el cache local y NO llama al provider' do
+      channel.update_column(:message_templates, remote)
+      expect(provider).not_to receive(:templates_list)
+
+      result = described_class.new(channel).perform(source: :cache)
+
+      expect(result.created).to eq(1)
+      expect(channel.whatsapp_templates.find_by(name: 'cobro_vencido', language: 'es').status).to eq('APPROVED')
+    end
+
+    it 'no reescribe el JSONB message_templates en modo cache' do
+      channel.update_column(:message_templates, remote)
+      expect { described_class.new(channel).perform(source: :cache) }
+        .not_to(change { channel.reload.message_templates_last_updated })
+    end
+  end
 end

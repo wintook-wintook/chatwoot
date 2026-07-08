@@ -43,7 +43,24 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
     render json: { synced: result.synced, created: result.created, updated: result.updated }
   end
 
+  # Importa AL INSTANTE lo que cada canal ya tiene en cache (message_templates), sin llamar a
+  # Meta. Se dispara al abrir el dashboard para que veas las aprobadas/en revisión de una vez.
+  def import
+    totals = { synced: 0, created: 0, updated: 0 }
+    whatsapp_channels.each do |channel|
+      result = Whatsapp::TemplateSyncService.new(channel).perform(source: :cache)
+      totals[:synced] += result.synced
+      totals[:created] += result.created
+      totals[:updated] += result.updated
+    end
+    render json: totals
+  end
+
   private
+
+  def whatsapp_channels
+    Current.account.inboxes.map(&:channel).grep(Channel::Whatsapp)
+  end
 
   # @waba_templates — flag por cuenta, toggleable desde el super admin.
   def check_feature_enabled

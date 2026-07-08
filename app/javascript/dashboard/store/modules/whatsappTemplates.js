@@ -62,6 +62,11 @@ export const actions = {
       commit('SET_UI_FLAG', { syncing: false });
     }
   },
+
+  // Importa desde el cache local del canal (sin Meta). Se usa al abrir el dashboard.
+  async import() {
+    return templatesAPI.import();
+  },
 };
 
 export const mutations = {

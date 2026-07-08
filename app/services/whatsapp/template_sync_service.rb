@@ -13,8 +13,12 @@ class Whatsapp::TemplateSyncService
     @account = channel.account
   end
 
-  def perform
-    remote = Array(@channel.provider_service.templates_list)
+  # source:
+  #   :remote → jala fresco de Meta (llamada a la API) y actualiza el JSONB de compat.
+  #   :cache  → usa lo que el canal YA tiene en message_templates (Chatwoot lo sincroniza
+  #             solo); instantáneo y sin pegarle a Meta. Se usa al abrir el dashboard.
+  def perform(source: :remote)
+    remote = fetch_templates(source)
     created = 0
     updated = 0
 
@@ -32,13 +36,19 @@ class Whatsapp::TemplateSyncService
       Rails.logger.warn "[waba_templates] sync: no se pudo upsertar #{attrs[:name]}/#{attrs[:language]}: #{e.message}"
     end
 
-    # Compat: el picker de envío sigue leyendo el JSONB.
-    @channel.update(message_templates: remote, message_templates_last_updated: Time.now.utc) if remote.present?
+    # Solo al jalar fresco de Meta actualizamos el JSONB (en :cache ya es la fuente).
+    @channel.update(message_templates: remote, message_templates_last_updated: Time.now.utc) if source == :remote && remote.present?
 
     Result.new(synced: remote.size, created: created, updated: updated)
   end
 
   private
+
+  def fetch_templates(source)
+    return Array(@channel.message_templates) if source == :cache
+
+    Array(@channel.provider_service.templates_list)
+  end
 
   def parse(raw)
     r = raw.with_indifferent_access

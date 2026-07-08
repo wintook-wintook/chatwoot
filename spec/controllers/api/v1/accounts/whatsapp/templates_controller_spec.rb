@@ -94,6 +94,21 @@ RSpec.describe 'WhatsApp Templates API', type: :request do
     end
   end
 
+  describe 'POST /api/v1/accounts/{id}/whatsapp/templates/import' do
+    it 'importa desde el cache del canal (message_templates) sin llamar a Meta' do
+      channel.update_column(:message_templates, [
+                              { 'id' => '900', 'name' => 'aprobada_x', 'language' => 'es', 'category' => 'UTILITY',
+                                'status' => 'APPROVED', 'components' => [{ 'type' => 'BODY', 'text' => 'Hola' }] }
+                            ])
+
+      post "/api/v1/accounts/#{account.id}/whatsapp/templates/import",
+           headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(account.whatsapp_templates.find_by(name: 'aprobada_x')).to have_attributes(status: 'APPROVED')
+    end
+  end
+
   describe 'DELETE /api/v1/accounts/{id}/whatsapp/templates/{id}' do
     it 'borra una plantilla local-only' do
       template = create(:whatsapp_template, account: account, channel_whatsapp: channel, meta_template_id: nil)

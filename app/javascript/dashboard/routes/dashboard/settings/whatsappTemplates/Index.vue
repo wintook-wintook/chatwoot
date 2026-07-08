@@ -34,6 +34,9 @@ export default {
   data() {
     return {
       channelFilter: '',
+      statusFilter: '',
+      categoryFilter: '',
+      searchQuery: '',
       showForm: false,
       editingId: null,
       form: emptyForm(),
@@ -71,11 +74,36 @@ export default {
     whatsappInboxes() {
       return this.inboxes.filter(i => i.channel_type === 'Channel::Whatsapp');
     },
-    filteredTemplates() {
-      if (!this.channelFilter) return this.templates;
-      return this.templates.filter(
-        t => t.channel_whatsapp_id === Number(this.channelFilter)
+    // Estados realmente presentes en los datos (para no ofrecer filtros vacíos).
+    statusOptions() {
+      return [
+        ...new Set(this.templates.map(t => t.status).filter(Boolean)),
+      ].sort();
+    },
+    hasActiveFilters() {
+      return Boolean(
+        this.channelFilter ||
+          this.statusFilter ||
+          this.categoryFilter ||
+          this.searchQuery.trim()
       );
+    },
+    filteredTemplates() {
+      const q = this.searchQuery.trim().toLowerCase();
+      return this.templates.filter(t => {
+        if (
+          this.channelFilter &&
+          t.channel_whatsapp_id !== Number(this.channelFilter)
+        ) {
+          return false;
+        }
+        if (this.statusFilter && t.status !== this.statusFilter) return false;
+        if (this.categoryFilter && t.category !== this.categoryFilter) {
+          return false;
+        }
+        if (q && !(t.name || '').toLowerCase().includes(q)) return false;
+        return true;
+      });
     },
     bodyVarCount() {
       return new Set(templateVariables(this.form.body_text)).size;
@@ -173,13 +201,28 @@ export default {
       if (clean !== val) this.form.name = clean;
     },
   },
-  mounted() {
+  async mounted() {
     this.$store.dispatch('inboxes/get');
+    // Al abrir: importa lo que los canales YA tienen en cache (sin llamar a Meta) y luego lista.
+    await this.importFromCache();
     this.fetchAll();
   },
   methods: {
     fetchAll() {
       this.$store.dispatch('whatsappTemplates/fetch');
+    },
+    async importFromCache() {
+      try {
+        await this.$store.dispatch('whatsappTemplates/import');
+      } catch (e) {
+        // No bloquea: si falla el import local, igual mostramos lo que haya en la tabla.
+      }
+    },
+    clearFilters() {
+      this.channelFilter = '';
+      this.statusFilter = '';
+      this.categoryFilter = '';
+      this.searchQuery = '';
     },
     inboxNameForChannel(channelWhatsappId) {
       const inbox = this.whatsappInboxes.find(
@@ -386,25 +429,67 @@ export default {
     </template>
 
     <template #body>
-      <div class="flex items-center gap-3 mb-4">
-        <span class="text-sm text-slate-500">Filtrar por canal:</span>
-        <select v-model="channelFilter" class="!mb-0 !w-64">
-          <option value="">Todos los canales</option>
-          <option
-            v-for="i in whatsappInboxes"
-            :key="i.id"
-            :value="i.channel_id"
-          >
-            {{ i.name }}
-          </option>
-        </select>
+      <div class="flex flex-wrap items-end gap-3 mb-4">
+        <label class="block !mb-0">
+          <span class="text-xs text-slate-500 block mb-1">Buscar</span>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Nombre de la plantilla…"
+            class="!mb-0 w-56"
+          />
+        </label>
+        <label class="block !mb-0">
+          <span class="text-xs text-slate-500 block mb-1">Canal</span>
+          <select v-model="channelFilter" class="!mb-0 w-48">
+            <option value="">Todos</option>
+            <option
+              v-for="i in whatsappInboxes"
+              :key="i.id"
+              :value="i.channel_id"
+            >
+              {{ i.name }}
+            </option>
+          </select>
+        </label>
+        <label class="block !mb-0">
+          <span class="text-xs text-slate-500 block mb-1">Estado</span>
+          <select v-model="statusFilter" class="!mb-0 w-40">
+            <option value="">Todos</option>
+            <option v-for="s in statusOptions" :key="s" :value="s">{{ s }}</option>
+          </select>
+        </label>
+        <label class="block !mb-0">
+          <span class="text-xs text-slate-500 block mb-1">Categoría</span>
+          <select v-model="categoryFilter" class="!mb-0 w-40">
+            <option value="">Todas</option>
+            <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
+          </select>
+        </label>
+        <woot-button
+          v-if="hasActiveFilters"
+          variant="clear"
+          size="small"
+          icon="dismiss-circle"
+          @click="clearFilters"
+        >
+          Limpiar
+        </woot-button>
+        <span class="text-xs text-slate-400 ml-auto self-center">
+          {{ filteredTemplates.length }} de {{ templates.length }}
+        </span>
       </div>
 
       <div
         v-if="!filteredTemplates.length"
         class="text-center text-slate-400 py-16 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg"
       >
-        No hay plantillas para mostrar. Crea una o sincroniza desde Meta.
+        <template v-if="hasActiveFilters">
+          Ninguna plantilla coincide con los filtros.
+        </template>
+        <template v-else>
+          No hay plantillas para mostrar. Crea una o sincroniza desde Meta.
+        </template>
       </div>
 
       <table v-else class="w-full text-sm">

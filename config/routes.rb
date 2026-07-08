@@ -175,7 +175,10 @@ Rails.application.routes.draw do
             resource :authorization, only: [:create]
             # @waba_templates — gestión de plantillas (crear/submit/editar/borrar en Meta).
             resources :templates, only: [:index, :show, :create, :update, :destroy] do
-              collection { post :sync }
+              collection do
+                post :sync
+                post :import
+              end
             end
           end
 
