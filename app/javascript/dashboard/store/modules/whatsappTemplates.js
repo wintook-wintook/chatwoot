@@ -53,11 +53,10 @@ export const actions = {
     commit('REMOVE_RECORD', id);
   },
 
-  async sync({ commit, dispatch }, inboxId) {
+  async sync({ commit }, inboxId) {
     commit('SET_UI_FLAG', { syncing: true });
     try {
       const { data } = await templatesAPI.sync(inboxId);
-      await dispatch('fetch', inboxId);
       return data;
     } finally {
       commit('SET_UI_FLAG', { syncing: false });

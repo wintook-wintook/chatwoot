@@ -1,17 +1,20 @@
 <!--
-  @waba_templates — Dashboard de plantillas de WhatsApp por canal (inbox). Admin.
-  Lista con estado/calidad/rechazo + crear/editar/borrar/sync contra Meta.
-  Validación en vivo replicada del backend. Tailwind + dark mode. Strings en español.
+  @waba_templates — Sección de Configuración: TODAS las plantillas de TODOS los canales de
+  WhatsApp, con filtro por canal. Crear/editar/borrar/sincronizar contra Meta.
+  Validación en vivo replicada del backend. Strings en español; commit --no-verify.
 -->
 <script>
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
+import SettingsLayout from '../SettingsLayout.vue';
+import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import {
   validateTemplate,
   templateVariables,
 } from 'dashboard/helper/whatsappTemplateValidator';
 
 const emptyForm = () => ({
+  inbox_id: null,
   name: '',
   language: 'es',
   category: 'UTILITY',
@@ -25,11 +28,10 @@ const emptyForm = () => ({
 });
 
 export default {
-  props: {
-    inbox: { type: Object, required: true },
-  },
+  components: { SettingsLayout, BaseSettingsHeader },
   data() {
     return {
+      channelFilter: '',
       showForm: false,
       editingId: null,
       form: emptyForm(),
@@ -44,7 +46,6 @@ export default {
         { value: 'document', label: 'Documento' },
       ],
       buttonTypes: ['QUICK_REPLY', 'URL', 'PHONE_NUMBER', 'COPY_CODE'],
-      // Literal con llaves fuera del template (evita el parser de mustaches de Vue).
       bodyHint: 'Cuerpo (usa {{1}}, {{2}}… para variables)',
       headerTextHint: 'Texto de cabecera (máx 60, opcional {{1}})',
       sampleLabel: n => `Valor de {{${n}}}`,
@@ -54,9 +55,17 @@ export default {
     ...mapGetters({
       templates: 'whatsappTemplates/getTemplates',
       uiFlags: 'whatsappTemplates/getUIFlags',
+      inboxes: 'inboxes/getInboxes',
     }),
-    inboxId() {
-      return this.inbox.id;
+    // Canales de WhatsApp de la cuenta (para filtro y selector del form).
+    whatsappInboxes() {
+      return this.inboxes.filter(i => i.channel_type === 'Channel::Whatsapp');
+    },
+    filteredTemplates() {
+      if (!this.channelFilter) return this.templates;
+      return this.templates.filter(
+        t => t.channel_whatsapp_id === Number(this.channelFilter)
+      );
     },
     bodyVarCount() {
       return new Set(templateVariables(this.form.body_text)).size;
@@ -68,7 +77,11 @@ export default {
       );
     },
     validationErrors() {
-      return validateTemplate(this.form);
+      const errors = validateTemplate(this.form);
+      if (!this.editingId && !this.form.inbox_id) {
+        errors.unshift('Canal: selecciona un canal de WhatsApp');
+      }
+      return errors;
     },
     isFormValid() {
       return this.validationErrors.length === 0;
@@ -83,21 +96,40 @@ export default {
     },
   },
   mounted() {
-    this.fetch();
+    this.$store.dispatch('inboxes/get');
+    this.fetchAll();
   },
   methods: {
-    fetch() {
-      this.$store.dispatch('whatsappTemplates/fetch', this.inboxId);
+    fetchAll() {
+      this.$store.dispatch('whatsappTemplates/fetch');
+    },
+    inboxNameForChannel(channelWhatsappId) {
+      const inbox = this.whatsappInboxes.find(
+        i => i.channel_id === channelWhatsappId
+      );
+      return inbox ? inbox.name : '—';
     },
     async sync() {
+      const targets = this.channelFilter
+        ? [Number(this.channelFilter)]
+        : this.whatsappInboxes.map(i => i.id);
+      if (!targets.length) {
+        useAlert('No hay canales de WhatsApp configurados.');
+        return;
+      }
       try {
-        const res = await this.$store.dispatch(
-          'whatsappTemplates/sync',
-          this.inboxId
+        let created = 0;
+        let updated = 0;
+        // eslint-disable-next-line no-restricted-syntax
+        const results = await Promise.all(
+          targets.map(id => this.$store.dispatch('whatsappTemplates/sync', id))
         );
-        useAlert(
-          `Sincronizado: ${res.created} nuevas, ${res.updated} actualizadas.`
-        );
+        results.forEach(r => {
+          created += r.created;
+          updated += r.updated;
+        });
+        await this.fetchAll();
+        useAlert(`Sincronizado: ${created} nuevas, ${updated} actualizadas.`);
       } catch (e) {
         useAlert('No se pudo sincronizar con Meta.');
       }
@@ -110,8 +142,6 @@ export default {
           PENDING:
             'bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-100',
           REJECTED: 'bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-100',
-          DRAFT:
-            'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200',
         }[status] ||
         'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200'
       );
@@ -128,7 +158,16 @@ export default {
     openNew() {
       this.editingId = null;
       this.form = emptyForm();
+      this.form.inbox_id = this.channelFilterInboxId();
       this.showForm = true;
+    },
+    // Deriva el inbox_id a partir del filtro (channelFilter guarda channel_whatsapp_id).
+    channelFilterInboxId() {
+      if (!this.channelFilter) return null;
+      const inbox = this.whatsappInboxes.find(
+        i => i.channel_id === Number(this.channelFilter)
+      );
+      return inbox ? inbox.id : null;
     },
     openEdit(template) {
       this.editingId = template.id;
@@ -147,7 +186,6 @@ export default {
     closeForm() {
       this.showForm = false;
     },
-    // Ajusta el nº de inputs de ejemplo a la cantidad de variables del body.
     syncBodySamples() {
       const count = this.bodyVarCount;
       const current = this.form.sample_values.body || [];
@@ -177,7 +215,7 @@ export default {
           useAlert('Plantilla enviada a revisión (PENDING).');
         } else {
           await this.$store.dispatch('whatsappTemplates/create', {
-            inboxId: this.inboxId,
+            inboxId: this.form.inbox_id,
             template: this.form,
           });
           useAlert('Plantilla creada.');
@@ -215,116 +253,146 @@ export default {
 </script>
 
 <template>
-  <div class="p-8">
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h2 class="text-xl font-medium text-slate-800 dark:text-slate-100">
-          Plantillas de WhatsApp
-        </h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400">
-          Crea, envía a aprobación y gestiona las plantillas de este canal sin
-          entrar a Meta.
-        </p>
-      </div>
-      <div class="flex gap-2">
-        <woot-button
-          variant="clear"
-          icon="arrow-swap"
-          :is-loading="uiFlags.syncing"
-          @click="sync"
-        >
-          Sincronizar
-        </woot-button>
-        <woot-button icon="add" @click="openNew">Nueva plantilla</woot-button>
-      </div>
-    </div>
-
-    <woot-loading-state
-      v-if="uiFlags.fetching"
-      message="Cargando plantillas…"
-    />
-
-    <div
-      v-else-if="!templates.length"
-      class="text-center text-slate-400 py-16 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg"
-    >
-      No hay plantillas todavía. Crea una o sincroniza desde Meta.
-    </div>
-
-    <table v-else class="w-full text-sm">
-      <thead
-        class="text-left text-slate-400 border-b border-slate-100 dark:border-slate-700"
+  <SettingsLayout
+    :is-loading="uiFlags.fetching"
+    loading-message="Cargando plantillas…"
+    :no-records-found="false"
+  >
+    <template #header>
+      <BaseSettingsHeader
+        title="Plantillas de WhatsApp"
+        description="Crea, envía a aprobación y gestiona las plantillas de todos tus canales de WhatsApp sin entrar a Meta."
       >
-        <tr>
-          <th class="py-2 font-medium">Nombre</th>
-          <th class="py-2 font-medium">Idioma</th>
-          <th class="py-2 font-medium">Categoría</th>
-          <th class="py-2 font-medium">Estado</th>
-          <th class="py-2 font-medium">Calidad</th>
-          <th class="py-2 font-medium text-right">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="t in templates"
-          :key="t.id"
-          class="border-b border-slate-50 dark:border-slate-800"
+        <template #actions>
+          <woot-button
+            variant="clear"
+            icon="arrow-swap"
+            :is-loading="uiFlags.syncing"
+            @click="sync"
+          >
+            Sincronizar
+          </woot-button>
+          <woot-button icon="add-circle" @click="openNew">
+            Nueva plantilla
+          </woot-button>
+        </template>
+      </BaseSettingsHeader>
+    </template>
+
+    <template #body>
+      <div class="flex items-center gap-3 mb-4">
+        <span class="text-sm text-slate-500">Filtrar por canal:</span>
+        <select v-model="channelFilter" class="!mb-0 !w-64">
+          <option value="">Todos los canales</option>
+          <option
+            v-for="i in whatsappInboxes"
+            :key="i.id"
+            :value="i.channel_id"
+          >
+            {{ i.name }}
+          </option>
+        </select>
+      </div>
+
+      <div
+        v-if="!filteredTemplates.length"
+        class="text-center text-slate-400 py-16 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg"
+      >
+        No hay plantillas para mostrar. Crea una o sincroniza desde Meta.
+      </div>
+
+      <table v-else class="w-full text-sm">
+        <thead
+          class="text-left text-slate-400 border-b border-slate-100 dark:border-slate-700"
         >
-          <td class="py-3">
-            <div class="font-medium text-slate-700 dark:text-slate-200">
-              {{ t.name }}
-            </div>
-            <div v-if="t.rejection_reason" class="text-xs text-red-500">
-              Rechazo: {{ t.rejection_reason }}
-            </div>
-            <div v-if="t.submission_error" class="text-xs text-amber-600">
-              {{ t.submission_error }}
-            </div>
-          </td>
-          <td class="py-3 text-slate-500">{{ t.language }}</td>
-          <td class="py-3 text-slate-500">{{ t.category }}</td>
-          <td class="py-3">
-            <span
-              class="px-2 py-0.5 rounded-full text-xs font-medium"
-              :class="statusClass(t.status)"
-            >
-              {{ t.status }}
-            </span>
-          </td>
-          <td class="py-3">
-            <span v-if="t.quality_score" class="inline-flex items-center gap-1">
+          <tr>
+            <th class="py-2 font-medium">Nombre</th>
+            <th class="py-2 font-medium">Canal</th>
+            <th class="py-2 font-medium">Idioma</th>
+            <th class="py-2 font-medium">Categoría</th>
+            <th class="py-2 font-medium">Estado</th>
+            <th class="py-2 font-medium">Calidad</th>
+            <th class="py-2 font-medium text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="t in filteredTemplates"
+            :key="t.id"
+            class="border-b border-slate-50 dark:border-slate-800"
+          >
+            <td class="py-3">
+              <div class="font-medium text-slate-700 dark:text-slate-200">
+                {{ t.name }}
+              </div>
+              <div v-if="t.rejection_reason" class="text-xs text-red-500">
+                Rechazo: {{ t.rejection_reason }}
+              </div>
+              <div v-if="t.submission_error" class="text-xs text-amber-600">
+                {{ t.submission_error }}
+              </div>
+            </td>
+            <td class="py-3 text-slate-500">
+              {{ inboxNameForChannel(t.channel_whatsapp_id) }}
+            </td>
+            <td class="py-3 text-slate-500">{{ t.language }}</td>
+            <td class="py-3 text-slate-500">{{ t.category }}</td>
+            <td class="py-3">
               <span
-                class="w-2 h-2 rounded-full"
-                :class="qualityDot(t.quality_score)"
+                class="px-2 py-0.5 rounded-full text-xs font-medium"
+                :class="statusClass(t.status)"
+              >
+                {{ t.status }}
+              </span>
+            </td>
+            <td class="py-3">
+              <span
+                v-if="t.quality_score"
+                class="inline-flex items-center gap-1"
+              >
+                <span
+                  class="w-2 h-2 rounded-full"
+                  :class="qualityDot(t.quality_score)"
+                />
+                <span class="text-xs text-slate-500">{{ t.quality_score }}</span>
+              </span>
+              <span v-else class="text-slate-300">—</span>
+            </td>
+            <td class="py-3 text-right">
+              <woot-button
+                v-if="t.editable"
+                variant="clear"
+                size="small"
+                icon="edit"
+                @click="openEdit(t)"
               />
-              <span class="text-xs text-slate-500">{{ t.quality_score }}</span>
-            </span>
-            <span v-else class="text-slate-300">—</span>
-          </td>
-          <td class="py-3 text-right">
-            <woot-button
-              v-if="t.editable"
-              variant="clear"
-              size="small"
-              icon="edit"
-              @click="openEdit(t)"
-            />
-            <woot-button
-              variant="clear"
-              size="small"
-              color-scheme="alert"
-              icon="delete"
-              @click="confirmDelete(t)"
-            />
-          </td>
-        </tr>
-      </tbody>
-    </table>
+              <woot-button
+                variant="clear"
+                size="small"
+                color-scheme="alert"
+                icon="delete"
+                @click="confirmDelete(t)"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </template>
 
     <!-- Formulario crear/editar -->
     <woot-modal :show.sync="showForm" :on-close="closeForm" size="medium">
       <div class="p-8">
         <h3 class="text-lg font-medium mb-4">{{ modalTitle }}</h3>
+
+        <label v-if="!editingId" class="block mb-2">
+          <span class="text-sm text-slate-600 dark:text-slate-300">Canal de WhatsApp</span>
+          <select v-model="form.inbox_id" class="w-full mt-1">
+            <option :value="null" disabled>Selecciona un canal</option>
+            <option v-for="i in whatsappInboxes" :key="i.id" :value="i.id">
+              {{ i.name }}
+            </option>
+          </select>
+        </label>
 
         <div class="grid grid-cols-2 gap-4">
           <label class="block">
@@ -338,11 +406,7 @@ export default {
           </label>
           <label class="block">
             <span class="text-sm text-slate-600 dark:text-slate-300">Idioma</span>
-            <input
-              v-model="form.language"
-              placeholder="es"
-              class="w-full mt-1"
-            />
+            <input v-model="form.language" placeholder="es" class="w-full mt-1" />
           </label>
         </div>
 
@@ -353,7 +417,6 @@ export default {
           </select>
         </label>
 
-        <!-- Cabecera -->
         <label class="block mt-2">
           <span class="text-sm text-slate-600 dark:text-slate-300">Cabecera</span>
           <select v-model="form.header_type" class="w-full mt-1">
@@ -381,7 +444,6 @@ export default {
           class="w-full mt-2"
         />
 
-        <!-- Body -->
         <label class="block mt-2">
           <span class="text-sm text-slate-600 dark:text-slate-300">
             {{ bodyHint }}
@@ -390,7 +452,9 @@ export default {
         </label>
 
         <div v-if="bodyVarCount" class="mt-2">
-          <span class="text-xs text-slate-500">Ejemplos de las variables del cuerpo</span>
+          <span class="text-xs text-slate-500">
+            Ejemplos de las variables del cuerpo
+          </span>
           <div class="grid grid-cols-2 gap-2 mt-1">
             <input
               v-for="i in bodyVarCount"
@@ -402,22 +466,17 @@ export default {
           </div>
         </div>
 
-        <!-- Footer -->
         <label class="block mt-2">
-          <span class="text-sm text-slate-600 dark:text-slate-300">Pie (opcional, máx 60, sin variables)</span>
+          <span class="text-sm text-slate-600 dark:text-slate-300">
+            Pie (opcional, máx 60, sin variables)
+          </span>
           <input v-model="form.footer_text" class="w-full mt-1" />
         </label>
 
-        <!-- Botones -->
         <div class="mt-3">
           <div class="flex items-center justify-between">
             <span class="text-sm text-slate-600 dark:text-slate-300">Botones</span>
-            <woot-button
-              variant="clear"
-              size="tiny"
-              icon="add"
-              @click="addButton"
-            >
+            <woot-button variant="clear" size="tiny" icon="add" @click="addButton">
               Agregar
             </woot-button>
           </div>
@@ -459,7 +518,6 @@ export default {
           </div>
         </div>
 
-        <!-- Errores de validación en vivo -->
         <ul
           v-if="validationErrors.length"
           class="mt-4 text-xs text-red-500 list-disc pl-5"
@@ -485,11 +543,9 @@ export default {
       :on-close="closeDelete"
       :on-confirm="doDelete"
       title="Eliminar plantilla"
-      :message="`¿Eliminar la plantilla &quot;${
-        deleteTarget && deleteTarget.name
-      }&quot;? También se borra en Meta.`"
+      :message="`¿Eliminar la plantilla &quot;${deleteTarget && deleteTarget.name}&quot;? También se borra en Meta.`"
       confirm-text="Eliminar"
       reject-text="Cancelar"
     />
-  </div>
+  </SettingsLayout>
 </template>

@@ -4,11 +4,14 @@
 # Solo administradores. Alcance por cuenta + canal (inbox de WhatsApp).
 class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::BaseController
   before_action :check_admin_authorization?
-  before_action :fetch_channel, only: [:index, :create, :sync]
+  before_action :fetch_channel, only: [:create, :sync]
   before_action :fetch_template, only: [:show, :update, :destroy]
 
+  # Nivel cuenta: todas las plantillas de todos los canales de WhatsApp.
+  # Filtro opcional por canal vía inbox_id (para la tabla del dashboard).
   def index
-    templates = Current.account.whatsapp_templates.for_channel(@channel.id).order(:name)
+    templates = Current.account.whatsapp_templates.order(:name)
+    templates = templates.for_channel(inbox_channel_id) if params[:inbox_id].present?
     render json: templates.map { |t| template_json(t) }
   end
 
@@ -49,6 +52,10 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
     render json: { error: 'El inbox no es un canal de WhatsApp' }, status: :unprocessable_entity
   end
 
+  def inbox_channel_id
+    Current.account.inboxes.find(params[:inbox_id]).channel_id
+  end
+
   def fetch_template
     @template = Current.account.whatsapp_templates.find(params[:id])
   end
@@ -75,6 +82,7 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
   def template_json(template)
     {
       id: template.id,
+      channel_whatsapp_id: template.channel_whatsapp_id,
       name: template.name,
       category: template.category,
       language: template.language,
