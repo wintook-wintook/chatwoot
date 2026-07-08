@@ -11,6 +11,7 @@ import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import {
   validateTemplate,
   templateVariables,
+  substituteVariables,
 } from 'dashboard/helper/whatsappTemplateValidator';
 
 const emptyForm = () => ({
@@ -46,9 +47,16 @@ export default {
         { value: 'document', label: 'Documento' },
       ],
       buttonTypes: ['QUICK_REPLY', 'URL', 'PHONE_NUMBER', 'COPY_CODE'],
+      formTabIndex: 0,
+      formTabs: [
+        { key: 'content', name: 'Contenido' },
+        { key: 'buttons', name: 'Botones' },
+      ],
       bodyHint: 'Cuerpo (usa {{1}}, {{2}}… para variables)',
       headerTextHint: 'Texto de cabecera (máx 60, opcional {{1}})',
       sampleLabel: n => `Valor de {{${n}}}`,
+      nameHint:
+        'Solo minúsculas, números y guion bajo (_). Sin espacios ni acentos. No se puede cambiar después.',
     };
   },
   computed: {
@@ -88,6 +96,45 @@ export default {
     },
     modalTitle() {
       return this.editingId ? 'Editar plantilla' : 'Nueva plantilla';
+    },
+    activeFormTab() {
+      return this.formTabs[this.formTabIndex].key;
+    },
+    modalDescription() {
+      return this.editingId
+        ? 'Meta solo permite cambiar la categoría y el contenido; el nombre y el idioma quedan fijos. Al guardar, la plantilla vuelve a revisión (PENDING).'
+        : 'Define el contenido y envíala a Meta para su aprobación. Usa {{1}}, {{2}}… para las variables. La cabecera puede ser texto, imagen, video o documento.';
+    },
+    // Códigos de idioma de Meta; incluye el actual si es uno fuera de la lista (p. ej. al editar).
+    languageOptions() {
+      const base = ['es', 'es_MX', 'es_AR', 'es_ES', 'en', 'en_US', 'pt_BR'];
+      if (this.form.language && !base.includes(this.form.language)) {
+        return [this.form.language, ...base];
+      }
+      return base;
+    },
+    // ---- vista previa (cómo verá el cliente la plantilla) ----
+    previewHeaderText() {
+      if (this.form.header_type !== 'text') return '';
+      return substituteVariables(
+        this.form.header_content,
+        this.form.sample_values.header
+      );
+    },
+    headerMediaLabel() {
+      return (
+        {
+          image: '🖼️ Imagen',
+          video: '🎬 Video',
+          document: '📄 Documento',
+        }[this.form.header_type] || ''
+      );
+    },
+    previewBody() {
+      return substituteVariables(
+        this.form.body_text,
+        this.form.sample_values.body
+      );
     },
   },
   watch: {
@@ -155,8 +202,12 @@ export default {
         }[score] || 'bg-slate-300'
       );
     },
+    onFormTabChange(index) {
+      this.formTabIndex = index;
+    },
     openNew() {
       this.editingId = null;
+      this.formTabIndex = 0;
       this.form = emptyForm();
       this.form.inbox_id = this.channelFilterInboxId();
       this.showForm = true;
@@ -171,6 +222,7 @@ export default {
     },
     openEdit(template) {
       this.editingId = template.id;
+      this.formTabIndex = 0;
       this.form = {
         ...emptyForm(),
         ...template,
@@ -203,6 +255,19 @@ export default {
     },
     removeButton(index) {
       this.form.buttons.splice(index, 1);
+    },
+    // Etiqueta del botón en la vista previa (icono según tipo + texto).
+    buttonPreviewLabel(btn) {
+      const icon =
+        {
+          URL: '🔗',
+          PHONE_NUMBER: '📞',
+          COPY_CODE: '📋',
+          QUICK_REPLY: '↩️',
+        }[btn.type] || '';
+      const text =
+        btn.type === 'COPY_CODE' ? 'Copiar código' : btn.text || 'Botón';
+      return `${icon} ${text}`.trim();
     },
     async submit() {
       if (!this.isFormValid) return;
@@ -380,10 +445,28 @@ export default {
     </template>
 
     <!-- Formulario crear/editar -->
-    <woot-modal :show.sync="showForm" :on-close="closeForm" size="medium">
+    <woot-modal :show.sync="showForm" :on-close="closeForm" size="waba-wide">
       <div class="p-8">
-        <h3 class="text-lg font-medium mb-4">{{ modalTitle }}</h3>
+        <h3 class="text-lg font-medium mb-1">{{ modalTitle }}</h3>
+        <p class="text-sm text-slate-500 mb-4">{{ modalDescription }}</p>
 
+        <div class="flex gap-6">
+          <div class="flex-1 min-w-0">
+            <woot-tabs
+              :index="formTabIndex"
+              border
+              @change="onFormTabChange"
+            >
+              <woot-tabs-item
+                v-for="tab in formTabs"
+                :key="tab.key"
+                :name="tab.name"
+                :count="tab.key === 'buttons' ? form.buttons.length : 0"
+                :show-badge="tab.key === 'buttons' && form.buttons.length > 0"
+              />
+            </woot-tabs>
+
+            <div v-show="activeFormTab === 'content'" class="pt-4">
         <label v-if="!editingId" class="block mb-2">
           <span class="text-sm text-slate-600 dark:text-slate-300">Canal de WhatsApp</span>
           <select v-model="form.inbox_id" class="w-full mt-1">
@@ -403,34 +486,53 @@ export default {
               placeholder="cobro_vencido"
               class="w-full mt-1"
             />
+            <span class="text-xs text-slate-400 mt-1 block">{{ nameHint }}</span>
           </label>
           <label class="block">
             <span class="text-sm text-slate-600 dark:text-slate-300">Idioma</span>
-            <input v-model="form.language" placeholder="es" class="w-full mt-1" />
+            <select
+              v-model="form.language"
+              :disabled="!!editingId"
+              class="w-full mt-1"
+            >
+              <option v-for="l in languageOptions" :key="l" :value="l">
+                {{ l }}
+              </option>
+            </select>
           </label>
         </div>
 
-        <label class="block mt-2">
-          <span class="text-sm text-slate-600 dark:text-slate-300">Categoría</span>
-          <select v-model="form.category" class="w-full mt-1">
-            <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
-          </select>
-        </label>
-
-        <label class="block mt-2">
-          <span class="text-sm text-slate-600 dark:text-slate-300">Cabecera</span>
-          <select v-model="form.header_type" class="w-full mt-1">
-            <option v-for="h in headerTypes" :key="h.value" :value="h.value">
-              {{ h.label }}
-            </option>
-          </select>
-        </label>
+        <div class="grid grid-cols-2 gap-4 mt-2">
+          <label class="block">
+            <span class="text-sm text-slate-600 dark:text-slate-300">Categoría</span>
+            <select v-model="form.category" class="w-full mt-1">
+              <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="text-sm text-slate-600 dark:text-slate-300">Cabecera</span>
+            <select v-model="form.header_type" class="w-full mt-1">
+              <option v-for="h in headerTypes" :key="h.value" :value="h.value">
+                {{ h.label }}
+              </option>
+            </select>
+          </label>
+        </div>
         <input
           v-if="form.header_type === 'text'"
           v-model="form.header_content"
           :placeholder="headerTextHint"
-          class="w-full mt-2"
+          class="w-full mt-2 !mb-0"
         />
+        <div
+          v-if="form.header_type === 'text'"
+          class="text-right text-xs mt-1"
+          :class="
+            form.header_content.length > 60 ? 'text-red-500' : 'text-slate-400'
+          "
+        >
+          {{ form.header_content.length }} / 60
+        </div>
         <input
           v-if="['image', 'video', 'document'].includes(form.header_type)"
           v-model="form.header_media_url"
@@ -445,10 +547,20 @@ export default {
         />
 
         <label class="block mt-2">
-          <span class="text-sm text-slate-600 dark:text-slate-300">
-            {{ bodyHint }}
+          <span
+            class="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300"
+          >
+            <span>{{ bodyHint }}</span>
+            <span
+              class="text-xs"
+              :class="
+                form.body_text.length > 1024 ? 'text-red-500' : 'text-slate-400'
+              "
+            >
+              {{ form.body_text.length }} / 1024
+            </span>
           </span>
-          <textarea v-model="form.body_text" rows="4" class="w-full mt-1" />
+          <textarea v-model="form.body_text" rows="6" class="w-full mt-1" />
         </label>
 
         <div v-if="bodyVarCount" class="mt-2">
@@ -467,19 +579,34 @@ export default {
         </div>
 
         <label class="block mt-2">
-          <span class="text-sm text-slate-600 dark:text-slate-300">
-            Pie (opcional, máx 60, sin variables)
+          <span
+            class="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300"
+          >
+            <span>Pie (opcional, máx 60, sin variables)</span>
+            <span
+              class="text-xs"
+              :class="
+                form.footer_text.length > 60 ? 'text-red-500' : 'text-slate-400'
+              "
+            >
+              {{ form.footer_text.length }} / 60
+            </span>
           </span>
           <input v-model="form.footer_text" class="w-full mt-1" />
         </label>
+            </div>
 
-        <div class="mt-3">
+            <div v-show="activeFormTab === 'buttons'" class="pt-4">
+        <div class="mt-1">
           <div class="flex items-center justify-between">
             <span class="text-sm text-slate-600 dark:text-slate-300">Botones</span>
             <woot-button variant="clear" size="tiny" icon="add" @click="addButton">
               Agregar
             </woot-button>
           </div>
+          <p class="text-xs text-slate-400 mt-1 mb-2">
+            Hasta 10 botones. Las respuestas rápidas van agrupadas al inicio; luego los de acción (URL, teléfono, código).
+          </p>
           <div
             v-for="(btn, i) in form.buttons"
             :key="i"
@@ -517,6 +644,47 @@ export default {
             />
           </div>
         </div>
+            </div>
+          </div>
+
+          <!-- Vista previa: fija, visible en cualquier pestaña -->
+          <div class="w-72 shrink-0">
+            <span class="text-sm text-slate-600 dark:text-slate-300">
+              Vista previa
+            </span>
+            <div
+              class="sticky top-0 mt-2 rounded-lg p-3 text-sm shadow-sm bg-green-50 dark:bg-green-900/30 border border-green-100 dark:border-green-800 text-slate-800 dark:text-slate-100"
+            >
+            <div v-if="previewHeaderText" class="font-semibold mb-1">
+              {{ previewHeaderText }}
+            </div>
+            <div
+              v-else-if="headerMediaLabel"
+              class="mb-2 rounded px-3 py-6 text-center text-slate-400 bg-black/5 dark:bg-white/10"
+            >
+              {{ headerMediaLabel }}
+            </div>
+            <div class="whitespace-pre-wrap break-words">
+              {{ previewBody || 'El cuerpo aparecerá aquí…' }}
+            </div>
+            <div v-if="form.footer_text" class="text-xs text-slate-400 mt-1">
+              {{ form.footer_text }}
+            </div>
+            <div
+              v-if="form.buttons.length"
+              class="mt-2 -mx-3 px-3 pt-1 border-t border-green-200 dark:border-green-800"
+            >
+              <div
+                v-for="(btn, i) in form.buttons"
+                :key="i"
+                class="text-center py-1 text-sky-600 dark:text-sky-400"
+              >
+                {{ buttonPreviewLabel(btn) }}
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
 
         <ul
           v-if="validationErrors.length"
@@ -549,3 +717,11 @@ export default {
     />
   </SettingsLayout>
 </template>
+
+<style lang="scss">
+// Ancho FIJO para el modal de plantillas (dos columnas): no crece ni se encoge con el
+// contenido; solo se limita en pantallas muy pequeñas con el tope de viewport.
+.modal-container.waba-wide {
+  @apply w-[64rem] max-w-[92vw];
+}
+</style>

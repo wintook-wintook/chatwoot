@@ -9,6 +9,15 @@ export const templateVariables = text => {
   return matches.map(m => Number(m.replace(/[^0-9]/g, '')));
 };
 
+// Sustituye {{n}} por el ejemplo en la posición n-1; si no hay ejemplo, deja el {{n}}.
+// Se usa en la vista previa para mostrar la plantilla como la verá el cliente.
+export const substituteVariables = (text, samples = []) =>
+  String(text || '').replace(VAR_REGEX, match => {
+    const n = Number(match.replace(/[^0-9]/g, ''));
+    const value = samples[n - 1];
+    return value || match;
+  });
+
 const checkContiguous = (nums, field, errors) => {
   if (!nums.length) return;
   const sorted = [...new Set(nums)].sort((a, b) => a - b);
