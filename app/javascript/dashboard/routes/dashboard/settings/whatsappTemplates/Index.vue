@@ -54,7 +54,7 @@ export default {
         { key: 'buttons', name: 'Botones' },
         { key: 'preview', name: 'Vista previa' },
       ],
-      bodyHint: 'Cuerpo (usa {{1}}, {{2}}… para variables)',
+      bodyHint: 'Cuerpo (obligatorio) — usa {{1}}, {{2}}… para variables',
       headerTextHint: 'Texto de cabecera (máx 60, opcional {{1}})',
       sampleLabel: n => `Valor de {{${n}}}`,
       nameHint:
@@ -95,6 +95,12 @@ export default {
     },
     isFormValid() {
       return this.validationErrors.length === 0;
+    },
+    // Errores a MOSTRAR: se omiten los de "campo obligatorio" (ya marcados en la etiqueta);
+    // solo se listan los de reglas/formato. Los obligatorios siguen contando en isFormValid.
+    visibleErrors() {
+      const requiredRe = /obligatorio|falta el contenido|selecciona un canal/i;
+      return this.validationErrors.filter(e => !requiredRe.test(e));
     },
     // El formulario ya se empezó a llenar (para no mostrar errores en un form recién abierto).
     isDirty() {
@@ -507,7 +513,7 @@ export default {
               :class="{ invisible: activeFormTab !== 'content' }"
             >
         <label v-if="!editingId" class="block mb-2">
-          Canal de WhatsApp
+          Canal de WhatsApp (obligatorio)
           <select v-model="form.inbox_id" class="w-full">
             <option :value="null" disabled>Selecciona un canal</option>
             <option v-for="i in whatsappInboxes" :key="i.id" :value="i.id">
@@ -520,7 +526,7 @@ export default {
           <div class="relative">
             <woot-input
               v-model="form.name"
-              label="Nombre"
+              label="Nombre (obligatorio)"
               placeholder="cobro_vencido"
               :readonly="!!editingId"
               class="!mb-0"
@@ -604,12 +610,10 @@ export default {
         />
 
         <label class="block mt-2">
-          <span
-            class="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300"
-          >
+          <span class="flex items-center justify-between text-sm">
             <span>{{ bodyHint }}</span>
             <span
-              class="text-xs"
+              class="text-xs font-normal"
               :class="
                 form.body_text.length > 1024 ? 'text-red-500' : 'text-slate-400'
               "
@@ -619,9 +623,8 @@ export default {
           </span>
           <ResizableTextArea
             v-model="form.body_text"
-            :rows="6"
-            :min-height="6"
-            class="w-full mt-1"
+            :rows="4"
+            class="w-full mt-1 !h-28 overflow-y-auto"
           />
         </label>
 
@@ -757,10 +760,10 @@ export default {
           </div>
 
         <ul
-          v-if="isDirty && validationErrors.length"
+          v-if="isDirty && visibleErrors.length"
           class="mt-4 text-xs text-red-500 list-disc pl-5"
         >
-          <li v-for="(err, i) in validationErrors" :key="i">{{ err }}</li>
+          <li v-for="(err, i) in visibleErrors" :key="i">{{ err }}</li>
         </ul>
 
         <div class="flex justify-end gap-2 mt-6">
