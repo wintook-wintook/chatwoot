@@ -17,6 +17,7 @@ import MicrosoftReauthorize from './channels/microsoft/Reauthorize.vue';
 import WidgetBuilder from './WidgetBuilder.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
 import UnoapiConfiguration from './settingsPage/UnoapiConfiguration.vue';
+import WhatsappTemplatesPage from './settingsPage/WhatsappTemplatesPage.vue';
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import SenderNameExamplePreview from './components/SenderNameExamplePreview.vue';
 
@@ -36,6 +37,7 @@ export default {
     SenderNameExamplePreview,
     MicrosoftReauthorize,
     UnoapiConfiguration,
+    WhatsappTemplatesPage,
   },
   mixins: [inboxMixin],
   setup() {
@@ -153,12 +155,16 @@ export default {
         ];
       }
 
-      if ( this.isAWhatsAppChannel ) {
+      if (this.isAWhatsAppChannel) {
         visibleToAllChannelTabs = [
           ...visibleToAllChannelTabs,
           {
             key: 'questions',
             name: 'Preguntas de Calificación (Beta)',
+          },
+          {
+            key: 'whatsappTemplates',
+            name: 'Plantillas',
           },
         ];
       }
@@ -235,7 +241,10 @@ export default {
     },
 
     isWavoipFeatureEnabled() {
-      return this.isFeatureEnabledonAccount(this.accountId, FEATURE_FLAGS.WAVOIP);
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.WAVOIP
+      );
     },
   },
   watch: {
@@ -822,6 +831,9 @@ export default {
     <div v-if="selectedTabKey === 'questions'">
       <QuestionsPage :inbox="inbox" />
     </div>
+    <div v-if="selectedTabKey === 'whatsappTemplates'">
+      <WhatsappTemplatesPage :inbox="inbox" />
+    </div>
     <div v-if="selectedTabKey === 'preChatForm'">
       <PreChatFormSettings :inbox="inbox" />
     </div>
@@ -835,7 +847,7 @@ export default {
       <BotConfiguration :inbox="inbox" />
     </div>
     <div v-if="selectedTabKey === 'unoApiConfiguration'">
-      <unoapi-configuration :inbox="inbox" />
+      <UnoapiConfiguration :inbox="inbox" />
     </div>
   </div>
 </template>

@@ -66,6 +66,8 @@ import trackingTemplates from './modules/trackingTemplates';
 import caseTickets from './modules/caseTickets';
 // @query_databases
 import externalDb from './modules/externalDb';
+// @waba_templates
+import whatsappTemplates from './modules/whatsappTemplates';
 // proyecto@google_calendar
 import googleCalendar from './modules/googleCalendar';
 
@@ -131,6 +133,7 @@ export default new Vuex.Store({
     googleCalendar, // proyecto@google_calendar
     caseTickets, // @tickets_cases
     externalDb, // @query_databases
+    whatsappTemplates, // @waba_templates
   },
   plugins,
 });
