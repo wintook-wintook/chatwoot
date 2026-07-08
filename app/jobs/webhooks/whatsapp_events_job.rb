@@ -12,6 +12,11 @@ class Webhooks::WhatsappEventsJob < ApplicationJob
     template_change = template_lifecycle_change(params)
     return Whatsapp::TemplateWebhookService.new(channel, template_change).perform if template_change
 
+    # coexistencia — mensajes respondidos desde la Business App (móvil) → salientes en Chatwoot.
+    if coexistence_echo?(params) && channel.provider == 'whatsapp_cloud'
+      return Whatsapp::EchoMessageService.new(inbox: channel.inbox, params: params).perform
+    end
+
     case channel.provider
     when 'whatsapp_cloud'
       Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: channel.inbox, params: params).perform
@@ -32,6 +37,14 @@ class Webhooks::WhatsappEventsJob < ApplicationJob
     return unless change && change[:field].to_s.start_with?('message_template_')
 
     change
+  end
+
+  # ¿El webhook trae echoes de coexistencia (mensajes enviados desde el móvil)?
+  def coexistence_echo?(params)
+    return false if params[:entry].blank?
+
+    value = params[:entry].first[:changes]&.first&.dig(:value)
+    value.present? && value[:message_echoes].present?
   end
 
   def channel_is_inactive?(channel)
