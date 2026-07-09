@@ -530,9 +530,12 @@ export default {
     </template>
 
     <template #body>
+      <!-- Cuerpo a altura fija: solo la tabla scrollea por dentro y el paginado queda fijo
+           abajo (mismo comportamiento que el tracking-dashboard). -->
+      <div class="flex flex-col h-[calc(100vh-13rem)] min-h-[20rem]">
       <!-- Barra de filtros: búsqueda + botón modal + chips activos (patrón del tracking-dashboard) -->
       <div
-        class="flex flex-col gap-3 p-3 mb-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+        class="shrink-0 flex flex-col gap-3 p-3 mb-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
       >
         <div class="flex items-center gap-3">
           <div class="relative flex-1 min-w-[120px]">
@@ -658,6 +661,8 @@ export default {
         </div>
       </woot-modal>
 
+      <!-- Zona scrollable: SOLO la tabla scrollea; filtros y paginado quedan fijos. -->
+      <div class="flex-1 min-h-0 overflow-y-auto">
       <div
         v-if="!filteredTemplates.length"
         class="text-center text-slate-400 py-16 border border-dashed border-slate-200 dark:border-slate-700 rounded-lg"
@@ -672,7 +677,7 @@ export default {
 
       <table v-else class="w-full text-sm">
         <thead
-          class="text-left text-slate-400 border-b border-slate-100 dark:border-slate-700"
+          class="sticky top-0 z-10 text-left text-slate-400 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700"
         >
           <tr>
             <th class="py-2 font-medium">Nombre</th>
@@ -746,14 +751,16 @@ export default {
           </tr>
         </tbody>
       </table>
+      </div>
 
       <TableFooter
         :current-page="currentPage"
         :total-count="filteredTemplates.length"
         :page-size="perPage"
-        class="border-t border-slate-100 dark:border-slate-700"
+        class="shrink-0 border-t border-slate-100 dark:border-slate-700"
         @pageChange="onPageChange"
       />
+      </div>
     </template>
 
     <!-- Formulario crear/editar -->
