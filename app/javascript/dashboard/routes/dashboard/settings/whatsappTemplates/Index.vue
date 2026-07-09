@@ -311,6 +311,18 @@ export default {
     onPageChange(page) {
       this.currentPage = page;
     },
+    // Motivo por el que una plantilla no es editable (tooltip del icono deshabilitado).
+    editableHint(status) {
+      return (
+        {
+          PENDING: 'En revisión por Meta: no se puede editar hasta que resuelva.',
+          DRAFT: 'Borrador local (no enviada): bórrala y créala de nuevo.',
+          IN_APPEAL: 'En apelación ante Meta: no se puede editar.',
+          DISABLED: 'Deshabilitada por Meta: no se puede editar.',
+          PENDING_DELETION: 'En proceso de borrado: no se puede editar.',
+        }[status] || 'No editable en su estado actual.'
+      );
+    },
     inboxNameForChannel(channelWhatsappId) {
       const inbox = this.whatsappInboxes.find(
         i => i.channel_id === channelWhatsappId
@@ -733,13 +745,20 @@ export default {
               <span v-else class="text-slate-300">—</span>
             </td>
             <td class="py-3 text-right">
-              <woot-button
-                v-if="t.editable"
-                variant="clear"
-                size="small"
-                icon="edit"
-                @click="openEdit(t)"
-              />
+              <!-- El editar SIEMPRE se ve; si no aplica, va deshabilitado con el motivo
+                   en el tooltip (Meta solo permite editar APPROVED/REJECTED/PAUSED). -->
+              <span
+                :title="t.editable ? 'Editar' : editableHint(t.status)"
+                class="inline-block"
+              >
+                <woot-button
+                  variant="clear"
+                  size="small"
+                  icon="edit"
+                  :is-disabled="!t.editable"
+                  @click="openEdit(t)"
+                />
+              </span>
               <woot-button
                 variant="clear"
                 size="small"
