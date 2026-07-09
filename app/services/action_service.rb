@@ -94,6 +94,63 @@ class ActionService
     end
   end
 
+  # proyecto@automatizacion_tracking: crea un ContactTracking para el contacto de la conversación
+  # usando los datos de la plantilla seleccionada (objective, ai_context, complementary_prompt, whatsapp_templates).
+  # Usa el inbox_id de la plantilla si está definido, o el inbox de la conversación como fallback.
+  # scheduled_for se fija 5 minutos adelante para pasar la validación de "no en el pasado".
+  def assign_tracking_template(params)
+    template_id = params[0]
+    return if template_id.to_s == 'nil' || template_id.blank?
+
+    template = @account.tracking_templates.find_by(id: template_id)
+    return unless template.present?
+
+    inbox_id = template.inbox_id || @conversation.inbox_id
+
+    # No crear si el contacto ya tiene un seguimiento activo EN ESTE CANAL (inbox)
+    active_statuses = %w[pending scheduled active paused]
+    return if ContactTracking.where(contact_id: @conversation.contact_id, inbox_id: inbox_id, status: active_statuses).exists?
+
+    templates = template.whatsapp_templates.is_a?(Array) ? template.whatsapp_templates : []
+    max_att = templates.count { |t| t.present? }.clamp(1, 10)
+    max_att = 3 if max_att.zero?
+
+    # proyecto@automatizacion_tracking: calcular scheduled_for usando el intervalo de la plantilla
+    # para que el primer intento ocurra al mismo tiempo que los siguientes
+    interval_value = template.retry_interval_value.presence || 1
+    interval_unit  = template.retry_interval_unit.presence  || 'days'
+    interval_minutes = case interval_unit
+                       when 'minutes' then interval_value
+                       when 'hours'   then interval_value * 60
+                       when 'days'    then interval_value * 1440
+                       else interval_value * 1440
+                       end
+
+    ContactTracking.create!(
+      account: @account,
+      contact: @conversation.contact,
+      conversation: @conversation,
+      inbox_id: inbox_id,
+      objective: template.objective,
+      ai_context: template.ai_context.presence || template.objective,
+      complementary_prompt: template.complementary_prompt,
+      whatsapp_templates: templates,
+      keyword_actions: template.keyword_actions.is_a?(Array) ? template.keyword_actions : [],
+      calendar_integration_ids: template.calendar_integration_ids.is_a?(Array) ? template.calendar_integration_ids : [],
+      tracking_template_id: template.id,
+      max_attempts: max_att,
+      scheduled_for: Time.current + interval_minutes.minutes,
+      retry_interval_value: interval_value,
+      retry_interval_unit: interval_unit
+    )
+
+    # Note: no re-queuing here. The initial job in message.rb already runs with
+    # a 5-second delay so it sees the tracking. Re-queuing caused double replies
+    # because BotSeller responses lack the sentiment_auto_reply flag.
+  rescue StandardError => e
+    Rails.logger.error "[AutomationAction] assign_tracking_template error: #{e.message}"
+  end
+
   private
 
   def agent_belongs_to_inbox?(agent_ids)

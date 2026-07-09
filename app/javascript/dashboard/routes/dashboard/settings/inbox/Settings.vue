@@ -153,7 +153,7 @@ export default {
         ];
       }
 
-      if ( this.isAWhatsAppChannel ) {
+      if (this.isAWhatsAppChannel) {
         visibleToAllChannelTabs = [
           ...visibleToAllChannelTabs,
           {
@@ -235,7 +235,10 @@ export default {
     },
 
     isWavoipFeatureEnabled() {
-      return this.isFeatureEnabledonAccount(this.accountId, FEATURE_FLAGS.WAVOIP);
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.WAVOIP
+      );
     },
   },
   watch: {
@@ -835,7 +838,7 @@ export default {
       <BotConfiguration :inbox="inbox" />
     </div>
     <div v-if="selectedTabKey === 'unoApiConfiguration'">
-      <unoapi-configuration :inbox="inbox" />
+      <UnoapiConfiguration :inbox="inbox" />
     </div>
   </div>
 </template>

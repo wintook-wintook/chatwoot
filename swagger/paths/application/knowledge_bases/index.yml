@@ -1,0 +1,105 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - in: query
+    name: status
+    type: string
+    required: false
+    enum: [pending, processing, processed, failed, archived]
+    description: Filtrar por estado del artículo
+  - in: query
+    name: source_type
+    type: string
+    required: false
+    enum: [url, text, file, internal]
+    description: Filtrar por tipo de fuente
+  - in: query
+    name: language
+    type: string
+    required: false
+    description: Filtrar por idioma (ej. "es", "en")
+  - in: query
+    name: q
+    type: string
+    required: false
+    description: Búsqueda de texto en título y contenido
+  - $ref: '#/parameters/page'
+  - in: query
+    name: per_page
+    type: integer
+    required: false
+    description: Artículos por página (default 20)
+get:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesIndex
+  summary: Listar artículos de la base de conocimiento
+  description: >
+    Retorna todos los artículos de la base de conocimiento de la cuenta con soporte
+    de filtros por estado, tipo de fuente, idioma y búsqueda de texto. Los artículos
+    almacenan contenido vectorizado para búsqueda semántica con IA.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista paginada de artículos
+      schema:
+        type: object
+        properties:
+          articles:
+            type: array
+            items:
+              $ref: '#/definitions/knowledge_base_article'
+          meta:
+            $ref: '#/definitions/pagination_meta'
+post:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBasesCreate
+  summary: Crear artículo en la base de conocimiento
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        required:
+          - knowledge_base
+        properties:
+          knowledge_base:
+            type: object
+            required:
+              - title
+            properties:
+              title:
+                type: string
+                description: Título del artículo
+              content:
+                type: string
+                description: Contenido en texto plano o markdown
+              source_url:
+                type: string
+                description: URL de origen (si es artículo de tipo url)
+              source_type:
+                type: string
+                enum: [url, text, file, internal]
+              language:
+                type: string
+                default: es
+          auto_process:
+            type: boolean
+            description: Si true, inicia el procesamiento/vectorización inmediatamente
+            default: false
+  responses:
+    '201':
+      description: Artículo creado
+      schema:
+        type: object
+        properties:
+          article:
+            $ref: '#/definitions/knowledge_base_article'
+          message:
+            type: string
+    '422':
+      description: Parámetros inválidos

@@ -29,6 +29,9 @@ import kanban from './kanban/kanban.routes'; // ← AGREGAR ESTA LÍNEA
 // KANBAN0725
 
 import trackingTemplates from './trackingTemplates/trackingTemplates.routes'; // proyecto@tracking_templates
+import knowledgeSources from './knowledgeSources/knowledgeSources.routes'; // @knowledge_sources
+import whatsappTemplates from './whatsappTemplates/whatsappTemplates.routes'; // @waba_templates
+import googleCalendar from './googleCalendar/googleCalendar.routes'; // proyecto@google_calendar
 
 export default {
   routes: [
@@ -71,5 +74,8 @@ export default {
     ...kanban.routes, // ← AGREGAR ESTA LÍNEA
     // KANBAN0725
     ...trackingTemplates.routes, // proyecto@tracking_templates
+    ...knowledgeSources.routes, // @knowledge_sources
+    ...whatsappTemplates.routes, // @waba_templates
+    ...googleCalendar.routes, // proyecto@google_calendar
   ],
 };

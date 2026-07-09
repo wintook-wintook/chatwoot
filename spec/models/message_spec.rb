@@ -475,4 +475,113 @@ RSpec.describe Message do
       end
     end
   end
+
+  # proyecto@contact_tracking
+  describe '#will_trigger_tracking_automation?' do
+    let(:account) { create(:account) }
+    let(:inbox) { create(:inbox, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+    let(:message) { create(:message, account: account, inbox: inbox, conversation: conversation, message_type: 'incoming') }
+
+    def create_tracking_rule(event_name:, target_inbox:, active: true)
+      create(:automation_rule, account: account, event_name: event_name, active: active,
+                                conditions: [{ 'values' => [target_inbox.id], 'attribute_key' => 'inbox_id',
+                                               'query_operator' => nil, 'filter_operator' => 'equal_to', 'custom_attribute_type' => '' }],
+                                actions: [{ 'action_name' => 'assign_tracking_template', 'action_params' => [1] }])
+    end
+
+    context 'when there are no automation rules' do
+      it 'returns false' do
+        expect(message.send(:will_trigger_tracking_automation?)).to be false
+      end
+    end
+
+    context 'when a conversation_created rule with assign_tracking_template targets this inbox' do
+      before { create_tracking_rule(event_name: 'conversation_created', target_inbox: inbox) }
+
+      it 'returns true' do
+        expect(message.send(:will_trigger_tracking_automation?)).to be true
+      end
+    end
+
+    context 'when a conversation_opened rule with assign_tracking_template targets this inbox' do
+      before { create_tracking_rule(event_name: 'conversation_opened', target_inbox: inbox) }
+
+      it 'returns true' do
+        expect(message.send(:will_trigger_tracking_automation?)).to be true
+      end
+    end
+
+    context 'when the matching rule targets a different inbox' do
+      before { create_tracking_rule(event_name: 'conversation_created', target_inbox: create(:inbox, account: account)) }
+
+      it 'returns false' do
+        expect(message.send(:will_trigger_tracking_automation?)).to be false
+      end
+    end
+
+    context 'when the matching rule is inactive' do
+      before { create_tracking_rule(event_name: 'conversation_created', target_inbox: inbox, active: false) }
+
+      it 'returns false' do
+        expect(message.send(:will_trigger_tracking_automation?)).to be false
+      end
+    end
+
+    context "when the matching rule's action is not assign_tracking_template" do
+      before do
+        create(:automation_rule, account: account, event_name: 'conversation_created',
+                                  conditions: [{ 'values' => [inbox.id], 'attribute_key' => 'inbox_id',
+                                                 'query_operator' => nil, 'filter_operator' => 'equal_to', 'custom_attribute_type' => '' }],
+                                  actions: [{ 'action_name' => 'assign_team', 'action_params' => [1] }])
+      end
+
+      it 'returns false' do
+        expect(message.send(:will_trigger_tracking_automation?)).to be false
+      end
+    end
+
+    context 'when the contact already has an active tracking' do
+      before do
+        create_tracking_rule(event_name: 'conversation_created', target_inbox: inbox)
+        ContactTracking.create!(
+          account: account, contact: conversation.contact, conversation: conversation, inbox: inbox,
+          objective: 'Existing tracking in progress', scheduled_for: 1.day.from_now, status: 'paused'
+        )
+      end
+
+      it 'returns false even though a matching rule exists' do
+        expect(message.send(:will_trigger_tracking_automation?)).to be false
+      end
+    end
+  end
+
+  describe '#analyze_for_active_trackings' do
+    let(:account) { create(:account) }
+    let(:inbox) { create(:inbox, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+
+    context 'when an automation rule will create a tracking' do
+      before do
+        create(:automation_rule, account: account, event_name: 'conversation_created',
+                                  conditions: [{ 'values' => [inbox.id], 'attribute_key' => 'inbox_id',
+                                                 'query_operator' => nil, 'filter_operator' => 'equal_to', 'custom_attribute_type' => '' }],
+                                  actions: [{ 'action_name' => 'assign_tracking_template', 'action_params' => [1] }])
+      end
+
+      it 'enqueues the analyzer job with a 5 second wait' do
+        expect(ContactTrackingResponseAnalyzerJob).to receive(:set).with(wait: 5.seconds).and_call_original
+
+        create(:message, account: account, inbox: inbox, conversation: conversation, message_type: 'incoming')
+      end
+    end
+
+    context 'when no automation rule will create a tracking' do
+      it 'enqueues the analyzer job without delay' do
+        expect(ContactTrackingResponseAnalyzerJob).to receive(:set).with(wait: 0.seconds).and_call_original
+
+        create(:message, account: account, inbox: inbox, conversation: conversation, message_type: 'incoming')
+      end
+    end
+  end
 end

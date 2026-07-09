@@ -1,15 +1,15 @@
 {
   "TRACKING_TEMPLATES": {
-    "HEADER": "Tracking Templates",
-    "HEADER_BTN_TXT": "New Template",
-    "DESCRIPTION": "Tracking templates allow you to save frequent configurations to reuse when creating new trackings.",
-    "LOADING": "Loading templates...",
+    "HEADER": "AI Agents",
+    "HEADER_BTN_TXT": "New AI Agent",
+    "DESCRIPTION": "AI Agents allow you to save frequent configurations to reuse when creating new trackings.",
+    "LOADING": "Loading AI agents...",
     "SEARCH_PLACEHOLDER": "Search by name...",
     "FILTER_BY_TAG": "Filter by tag",
     "ALL_TAGS": "All tags",
     "ALL_CHANNELS": "All channels",
-    "NO_TEMPLATES": "No tracking templates found. Click \"New Template\" to create the first one.",
-    "NO_RESULTS": "No templates found with the applied filters.",
+    "NO_TEMPLATES": "No AI agents found. Click \"New AI Agent\" to create the first one.",
+    "NO_RESULTS": "No AI agents found with the applied filters.",
     "BACK_TO_LIST": "Back to list",
     "TABLE": {
       "NAME": "Name",
@@ -22,7 +22,7 @@
     },
     "FORM": {
       "NAME": {
-        "LABEL": "Template name",
+        "LABEL": "AI Agent name",
         "PLACEHOLDER": "E.g.: Post-demo follow-up",
         "ERROR": "Name is required (2-100 characters)"
       },
@@ -36,17 +36,48 @@
         "PLACEHOLDER": "Instructions for AI when generating follow-up messages..."
       },
       "COMPLEMENTARY_PROMPT": {
-        "LABEL": "Complementary Prompt",
+        "LABEL": "Entrenamiento",
         "PLACEHOLDER": "Additional instructions for Q&A..."
+      },
+      "ATTACHMENTS": {
+        "DESCRIPTION": "Upload files and reference them in Training with {open}name{close} so the AI Agent sends them in the conversation.",
+        "SAVE_FIRST": "Save the AI Agent first to be able to attach files.",
+        "NAME_LABEL": "Name (key)",
+        "NAME_PLACEHOLDER": "e.g. catalogo_2026",
+        "SELECT_FILE": "Select file",
+        "UPLOAD": "Upload file",
+        "LOADING": "Loading files...",
+        "EMPTY": "No files yet. Upload one to use it with {open}name{close}.",
+        "INSERT_BTN": "Insert file",
+        "PICKER_TITLE": "📎 Insert file",
+        "PICKER_HELP": "Click a file to insert {open}name{close} into the Training.",
+        "COPY": "Copy",
+        "RENAME": "Rename",
+        "RENAME_SAVE": "Save",
+        "RENAME_CANCEL": "Cancel",
+        "RENAME_ERROR": "Could not rename (duplicate or invalid name?).",
+        "DELETE": "Delete",
+        "INVALID_NAME": "The name only allows letters, numbers, hyphen and underscore (no spaces).",
+        "NO_FILE": "Select a file to upload.",
+        "UPLOAD_ERROR": "Could not upload the file."
       },
       "TAGS": {
         "LABEL": "Tags",
         "PLACEHOLDER": "Type and press Enter to add...",
-        "HELP": "Add tags to organize your templates"
+        "HELP": "Add tags to organize your AI agents"
       },
       "WHATSAPP_TEMPLATES": {
         "LABEL": "WhatsApp Templates",
         "HELP": "WhatsApp template names associated with each attempt"
+      },
+      "RETRY_INTERVAL": {
+        "TITLE": "Time between attempts",
+        "VALUE_LABEL": "Value",
+        "UNIT_LABEL": "Unit",
+        "MINUTES": "Minutes",
+        "HOURS": "Hours",
+        "DAYS": "Days",
+        "HELP": "This interval is used to schedule each tracking attempt, including the first one."
       },
       "WHATSAPP_SECTION": {
         "TITLE": "WhatsApp Templates by Attempt",
@@ -60,51 +91,83 @@
       }
     },
     "CREATE": {
-      "TITLE": "New Template",
-      "BTN_TEXT": "Create Template",
+      "TITLE": "New AI Agent",
+      "BTN_TEXT": "Create AI Agent",
       "API": {
-        "SUCCESS_MESSAGE": "Template created successfully",
-        "ERROR_MESSAGE": "Could not create the template"
+        "SUCCESS_MESSAGE": "AI Agent created successfully",
+        "ERROR_MESSAGE": "Could not create the AI agent"
       }
     },
     "EDIT": {
-      "TITLE": "Edit Template",
+      "TITLE": "Edit AI Agent",
       "BTN_TEXT": "Save Changes",
       "CANCEL": "Cancel",
       "API": {
-        "SUCCESS_MESSAGE": "Template updated successfully",
-        "ERROR_MESSAGE": "Could not update the template"
+        "SUCCESS_MESSAGE": "AI Agent updated successfully",
+        "ERROR_MESSAGE": "Could not update the AI agent"
       }
     },
     "DELETE": {
-      "TITLE": "Delete Template",
-      "CONFIRM_MESSAGE": "Are you sure you want to delete the template \"%{name}\"? This action cannot be undone.",
+      "TITLE": "Delete AI Agent",
+      "CONFIRM_MESSAGE": "Are you sure you want to delete the AI agent \"%{name}\"? This action cannot be undone.",
       "CONFIRM_YES": "Yes, delete",
       "CONFIRM_NO": "Cancel",
       "API": {
-        "SUCCESS_MESSAGE": "Template deleted successfully",
-        "ERROR_MESSAGE": "Could not delete the template"
+        "SUCCESS_MESSAGE": "AI Agent deleted successfully",
+        "ERROR_MESSAGE": "Could not delete the AI agent"
       }
     },
     "SAVE_AS_TEMPLATE": {
-      "TITLE": "Save as Template",
-      "BTN_TEXT": "Save as Template",
-      "NAME_LABEL": "Template name",
+      "TITLE": "Save as AI Agent",
+      "BTN_TEXT": "Save as AI Agent",
+      "NAME_LABEL": "AI Agent name",
       "NAME_PLACEHOLDER": "E.g.: Post-quote follow-up",
       "TAGS_LABEL": "Tags (optional)",
       "TAGS_PLACEHOLDER": "Type and press Enter...",
-      "SAVE_BTN": "Save Template",
+      "SAVE_BTN": "Save AI Agent",
       "CANCEL_BTN": "Cancel",
       "API": {
-        "SUCCESS_MESSAGE": "Template saved successfully",
-        "ERROR_MESSAGE": "Could not save the template"
+        "SUCCESS_MESSAGE": "AI Agent saved successfully",
+        "ERROR_MESSAGE": "Could not save the AI agent"
       }
     },
     "SELECTOR": {
-      "LABEL": "Load from template",
-      "PLACEHOLDER": "Select a template...",
-      "NONE": "No template",
-      "APPLIED_MESSAGE": "Template \"%{name}\" applied. Fields are editable."
+      "LABEL": "Load from AI agent",
+      "PLACEHOLDER": "Select an AI agent...",
+      "NONE": "No AI agent",
+      "APPLIED_MESSAGE": "AI Agent \"%{name}\" applied. Fields are editable."
+    },
+    "CALENDARS": {
+      "TAB_TITLE": "Agendas",
+      "TITLE": "Linked agendas",
+      "DESCRIPTION": "Select the agents whose Google Calendar agenda will be linked to this AI agent.",
+      "LOADING": "Loading agendas...",
+      "NONE_AVAILABLE": "No agents with Google Calendar connected. Agents must connect their calendar from Settings.",
+      "SELECTED_COUNT": "%{count} agenda(s) selected",
+      "EVENT_DURATION": "Event duration",
+      "BOOKING_TARGET_LABEL": "Calendars it can book into",
+      "BOOKING_TARGET_PRIMARY": "primary",
+      "BOOKING_TARGET_SECONDARY": "secondary",
+      "BOOKING_TARGET_PRIMARY_FALLBACK": "The account's primary calendar will be used.",
+      "EMPTY_SELECTION": "No calendar selected. The bot won't be able to book appointments.",
+      "BOOKING_TARGET_HINT": "Check one or more. The bot checks availability across all of them and creates the appointment in whichever is free.",
+      "SELECT_CALENDARS": "Select",
+      "REMOVE_CALENDAR": "Remove calendar",
+      "MODAL_TITLE": "📅 Calendars it can book into",
+      "MODAL_SUBTITLE": "Check the calendars of this account where the bot can create appointments.",
+      "MODAL_CANCEL": "Cancel",
+      "MODAL_DONE": "Done",
+      "PRESENTATION_LABEL": "How time slots are shown to the client",
+      "PRESENTATION": {
+        "DETAILED": "Detailed",
+        "BY_AGENT": "Grouped by calendar",
+        "BY_CALENDAR": "Grouped by calendar name",
+        "SIMPLE": "Simple",
+        "BY_DAY": "Grouped by day"
+      },
+      "TIMEZONE": "Time zone",
+      "TIMEZONE_INHERIT": "Use the channel's (inbox)",
+      "TIMEZONE_HELP": "Time zone used to offer slots, show the time to the customer and create the event. If left empty, the channel's is used."
     }
   }
 }

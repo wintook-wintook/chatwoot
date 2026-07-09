@@ -12,10 +12,12 @@
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import TemplateForm from './EditTemplate.vue';
+import ImportModal from './ImportModal.vue'; // proyecto@import_seguimiento
 
 export default {
   components: {
     TemplateForm,
+    ImportModal,
   },
   data() {
     return {
@@ -26,6 +28,7 @@ export default {
       selectedInboxFilter: '',
       showDeleteConfirmation: false,
       templateToDelete: null,
+      showImportModal: false, // proyecto@import_seguimiento
     };
   },
   computed: {
@@ -172,14 +175,25 @@ export default {
           {{ $t('TRACKING_TEMPLATES.DESCRIPTION') }}
         </p>
       </div>
-      <woot-button
-        v-if="isListView"
-        icon="add"
-        color-scheme="success"
-        @click="goToCreateForm"
-      >
-        {{ $t('TRACKING_TEMPLATES.HEADER_BTN_TXT') }}
-      </woot-button>
+      <div v-if="isListView" class="flex items-center gap-2">
+        <!-- proyecto@import_seguimiento -->
+        <woot-button
+          variant="smooth"
+          color-scheme="secondary"
+          icon="arrow-upload"
+          @click="showImportModal = true"
+        >
+          {{ $t('TRACKING_IMPORT.BTN_OPEN') }}
+        </woot-button>
+        <woot-button
+          v-if="isListView"
+          icon="add"
+          color-scheme="success"
+          @click="goToCreateForm"
+        >
+          {{ $t('TRACKING_TEMPLATES.HEADER_BTN_TXT') }}
+        </woot-button>
+      </div>
       <woot-button
         v-else
         variant="smooth"
@@ -349,6 +363,12 @@ export default {
           </tbody>
         </table>
       </div>
+
+      <!-- Import Modal - proyecto@import_seguimiento -->
+      <ImportModal
+        :show="showImportModal"
+        @close="showImportModal = false"
+      />
 
       <!-- Delete Confirmation -->
       <woot-delete-modal

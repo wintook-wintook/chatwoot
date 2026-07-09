@@ -4,24 +4,16 @@
 #
 #  id                    :integer          not null, primary key
 #  auto_resolve_duration :integer
-#  bot                   :boolean          default(FALSE), not null
 #  custom_attributes     :jsonb
-#  date_alert            :date
-#  date_end              :date
-#  date_start            :date
 #  domain                :string(100)
 #  feature_flags         :bigint           default(0), not null
 #  limits                :jsonb
 #  locale                :integer          default("en")
 #  name                  :string           not null
-#  show_license          :boolean          default(FALSE), not null
 #  status                :integer          default("active")
 #  support_email         :string(100)
-#  system_settings       :jsonb
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
-#  license_period_id     :integer
-#  type_license_id       :integer          default(1), not null
 #
 # Indexes
 #
@@ -38,14 +30,27 @@ class Account < ApplicationRecord
   include CacheKeys
 
   has_many :scheduled_messages, dependent: :destroy
-  
+
   # KANBAN0725
   has_many :kanban_type_processes, dependent: :destroy
   has_many :kanban_processes, dependent: :destroy
   # KANBAN0725
-  
 
   has_many :tracking_templates, dependent: :destroy # proyecto@tracking_templates
+  has_many :tracking_campaigns,  dependent: :destroy # @campanas_vendedor
+  has_many :case_tickets,       dependent: :destroy # @tickets_cases
+  has_many :external_db_connections, dependent: :destroy # @query_databases
+  has_many :external_db_queries,     dependent: :destroy # @query_databases
+  has_many :erp_collection_bots,     dependent: :destroy # @query_databases
+  has_many :whatsapp_templates,      dependent: :destroy # @waba_templates
+  has_many :case_rules,         dependent: :destroy # @tickets_cases
+  has_many :case_types,         dependent: :destroy # @tickets_cases
+  has_many :case_services,      dependent: :destroy # @tickets_cases 2B
+  has_many :case_categories,    dependent: :destroy # @tickets_cases 2B
+  has_many :case_sla_policies,  dependent: :destroy # @tickets_cases 2I
+  has_many :case_folio_counters, dependent: :destroy # @tickets_cases
+  has_one  :case_folio_config,  dependent: :destroy # @tickets_cases
+  has_one  :case_ai_config,     dependent: :destroy # @tickets_cases 3A
   DEFAULT_QUERY_SETTING = {
     flag_query_mode: :bit_operator,
     check_for_column: false
@@ -63,6 +68,8 @@ class Account < ApplicationRecord
   has_many :macros, dependent: :destroy_async
   has_many :campaigns, dependent: :destroy_async
   has_many :canned_responses, dependent: :destroy_async
+  has_many :knowledge_sources, dependent: :destroy # @knowledge_sources
+  has_many :knowledge_items, dependent: :destroy   # @knowledge_sources
   has_many :categories, dependent: :destroy_async, class_name: '::Category'
   has_many :contacts, dependent: :destroy_async
   has_many :conversations, dependent: :destroy_async

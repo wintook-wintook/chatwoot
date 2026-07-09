@@ -1,0 +1,53 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - name: contact_id
+    in: path
+    type: integer
+    required: true
+    description: ID del contacto
+get:
+  tags:
+    - Contact Notes
+  operationId: contactNotesIndex
+  summary: Listar notas de un contacto
+  description: Retorna todas las notas del contacto ordenadas por fecha de creación descendente.
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Lista de notas
+      schema:
+        type: array
+        items:
+          $ref: '#/definitions/contact_note'
+post:
+  tags:
+    - Contact Notes
+  operationId: contactNotesCreate
+  summary: Crear nota para un contacto
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        required:
+          - note
+        properties:
+          note:
+            type: object
+            required:
+              - content
+            properties:
+              content:
+                type: string
+                description: Contenido de la nota
+  responses:
+    '201':
+      description: Nota creada
+      schema:
+        $ref: '#/definitions/contact_note'
+    '422':
+      description: Contenido requerido

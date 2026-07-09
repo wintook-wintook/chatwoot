@@ -37,7 +37,13 @@ import datePicker from './datePicker.json';
 import kanban from './kanban.json';
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
-import contactTracking from './contactTracking.js'; // proyecto@contact_tracking 
+import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
+import contactTracking from './contactTracking.js'; // proyecto@contact_tracking
+import googleCalendar from './googleCalendar.js'; // proyecto@google_calendar
+import gestorTickets from './gestorTickets.json'; // @tickets_cases
+import erp from './erp.json'; // @query_databases
+import bulkTrackingAssign from './bulkTrackingAssign.json'; // proyecto@bulk_tracking_assign
+import trackingCampaigns from './trackingCampaigns.json'; // @campanas_vendedor
 
 export default {
   ...advancedFilters,
@@ -77,5 +83,11 @@ export default {
   ...datePicker,
   ...kanban,
   ...trackingTemplates, // proyecto@tracking_templates
-  ...contactTracking, // proyecto@contact_tracking 
+  ...knowledgeSources, // @knowledge_sources
+  ...contactTracking, // proyecto@contact_tracking
+  ...googleCalendar, // proyecto@google_calendar
+  ...gestorTickets, // @tickets_cases
+  ...erp, // @query_databases
+  ...bulkTrackingAssign, // proyecto@bulk_tracking_assign
+  ...trackingCampaigns, // @campanas_vendedor
 };

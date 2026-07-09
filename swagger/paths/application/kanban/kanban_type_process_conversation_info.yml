@@ -1,0 +1,29 @@
+tags:
+  - Kanban
+operationId: kanbanConversationInfo
+summary: Info Kanban de una conversación
+description: >
+  Retorna el estado Kanban de una conversación específica: a qué tipo de proceso
+  y proceso/etapa está asignada actualmente.
+security:
+  - userApiKey: []
+responses:
+  '200':
+    description: Info Kanban de la conversación
+    schema:
+      type: object
+      properties:
+        id:
+          type: integer
+        display_id:
+          type: integer
+        kanban_type_process_id:
+          type: integer
+        kanban_process_id:
+          type: integer
+        hasKanbanTypeProcess:
+          type: boolean
+        hasKanbanProcess:
+          type: boolean
+  '404':
+    description: Conversación no encontrada

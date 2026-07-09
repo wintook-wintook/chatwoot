@@ -29,6 +29,8 @@ export function useTrackingForm(props, emit) {
     use_ai: true,  // ⭐ Siempre habilitado - IA obligatoria para generar mensajes
     ai_context: '',
     complementary_prompt: '',  // ⭐ NUEVO: Instrucciones adicionales para responder preguntas
+    keyword_actions: [],             // proyecto@contact_tracking
+    calendar_integration_ids: [],    // proyecto@bot_seguimiento_calendar
   });
 
   const errors = ref({
@@ -146,6 +148,9 @@ export function useTrackingForm(props, emit) {
       use_ai: true,  // ⭐ Siempre habilitado - IA obligatoria
       ai_context: tracking.ai_context || '',
       complementary_prompt: tracking.complementary_prompt || '',  // ⭐ NUEVO: Instrucciones adicionales
+      keyword_actions: Array.isArray(tracking.keyword_actions)   // proyecto@contact_tracking
+        ? tracking.keyword_actions.map(ka => ({ ...ka }))
+        : [],
     };
   };
 
@@ -160,6 +165,9 @@ export function useTrackingForm(props, emit) {
       use_ai: true,
       ai_context: tracking.ai_context || '',
       complementary_prompt: tracking.complementary_prompt || '',
+      keyword_actions: Array.isArray(tracking.keyword_actions) // proyecto@contact_tracking
+        ? tracking.keyword_actions.map(ka => ({ ...ka }))
+        : [],
     };
 
     errors.value = {
@@ -181,6 +189,7 @@ export function useTrackingForm(props, emit) {
       use_ai: true,  // ⭐ Siempre habilitado - IA obligatoria
       ai_context: '',
       complementary_prompt: '',  // ⭐ NUEVO: Instrucciones adicionales
+      keyword_actions: [],       // proyecto@contact_tracking
     };
 
     errors.value = {
@@ -209,6 +218,8 @@ export function useTrackingForm(props, emit) {
         conversation_id: props.conversationId,
         ai_context: formData.value.ai_context || '',  // ⭐ Siempre enviar contexto (IA obligatoria)
         complementary_prompt: formData.value.complementary_prompt || '',  // ⭐ NUEVO: Instrucciones adicionales
+        keyword_actions: formData.value.keyword_actions || [],             // proyecto@contact_tracking
+        calendar_integration_ids: formData.value.calendar_integration_ids || [],  // proyecto@bot_seguimiento_calendar
       };
 
       // ⭐ SOLO emitir, NO resetear aquí

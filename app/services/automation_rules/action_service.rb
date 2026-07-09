@@ -61,4 +61,32 @@ class AutomationRules::ActionService < ActionService
       TeamNotifications::AutomationNotificationMailer.conversation_creation(@conversation, team, params[0][:message])&.deliver_now
     end
   end
+
+  # proyecto@automatizacion_tracking: pausa el seguimiento activo del contacto en el inbox indicado
+  # en las condiciones de la regla. Si no hay condición inbox_id, pausa todos los activos.
+  def pause_active_tracking(_params)
+    active_statuses = %w[pending scheduled active]
+
+    inbox_condition = @rule.conditions.find { |c| c['attribute_key'] == 'inbox_id' }
+    trackings = ContactTracking.where(contact_id: @conversation.contact_id, status: active_statuses)
+    trackings = trackings.where(inbox_id: inbox_condition['values']) if inbox_condition.present?
+
+    trackings.each(&:pause!)
+  rescue StandardError => e
+    Rails.logger.error "[AutomationAction] pause_active_tracking error: #{e.message}"
+  end
+
+  # proyecto@automatizacion_tracking: cancela el seguimiento activo del contacto en el inbox indicado
+  # en las condiciones de la regla. Si no hay condición inbox_id, cancela todos los activos.
+  def cancel_active_tracking(_params)
+    active_statuses = %w[pending scheduled active paused]
+
+    inbox_condition = @rule.conditions.find { |c| c['attribute_key'] == 'inbox_id' }
+    trackings = ContactTracking.where(contact_id: @conversation.contact_id, status: active_statuses)
+    trackings = trackings.where(inbox_id: inbox_condition['values']) if inbox_condition.present?
+
+    trackings.each(&:cancel!)
+  rescue StandardError => e
+    Rails.logger.error "[AutomationAction] cancel_active_tracking error: #{e.message}"
+  end
 end

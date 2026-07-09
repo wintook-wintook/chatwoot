@@ -8,6 +8,12 @@ internal_check_new_versions_job:
   class: 'Internal::CheckNewVersionsJob'
   queue: scheduled_jobs
 
+# @query_databases — bots cobradores: cada hora procesa los que tocan a esa hora.
+erp_collection_reminder_dispatch_job:
+  cron: '0 * * * *'
+  class: 'ErpCollection::ReminderDispatchJob'
+  queue: scheduled_jobs
+
 # executed At every 5th minute..
 trigger_scheduled_items_job:
   cron: '*/5 * * * *'
@@ -124,3 +130,36 @@ expire_command_sessions:
   class: "CommandSessionExpirationJob"
   queue: scheduled_jobs
   description: "Expire abandoned command sessions after 30 minutes of inactivity"
+# ==============================================================================
+# proyecto@google_calendar
+# ================================================================================
+# Job: Alertas de eventos de Google Calendar
+# Descripcion: Envía notificaciones a agentes con eventos próximos
+# Frecuencia: Cada 5 minutos
+# ================================================================================
+calendar_alert_job:
+  cron: "*/5 * * * *"
+  class: "CalendarAlertJob"
+  queue: scheduled_jobs
+  description: "Send Google Calendar event reminders to agents"
+
+# ================================================================================
+# @tickets_cases
+# ================================================================================
+# Job: Monitor de SLA del Gestor de Tickets
+# Descripción: Actualiza sla_status (on_time/at_risk/overdue) y cierra tickets
+#              resueltos sin actividad por más de 72h
+# Frecuencia: Cada 15 minutos
+# ================================================================================
+case_sla_monitor_job:
+  cron: "*/15 * * * *"
+  class: "CaseSlaMonitorJob"
+  queue: scheduled_jobs
+  description: "Monitor SLA status of CaseTickets and auto-close stale resolved tickets"
+
+# @tickets_cases 3F — redacta seguimientos para tickets en espera estancados
+case_ai_follow_up_scan_job:
+  cron: "0 * * * *"
+  class: "Cases::Ai::FollowUpScanJob"
+  queue: scheduled_jobs
+  description: "Draft AI follow-up messages for stale waiting CaseTickets"

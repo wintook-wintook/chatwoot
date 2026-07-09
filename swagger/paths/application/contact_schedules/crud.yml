@@ -1,0 +1,110 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - name: id
+    in: path
+    type: integer
+    required: true
+    description: ID del seguimiento v2
+get:
+  tags:
+    - Contact Schedules
+  operationId: contactSchedulesShow
+  summary: Ver seguimiento v2
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Detalle del seguimiento v2
+      schema:
+        $ref: '#/definitions/contact_schedule'
+    '404':
+      description: No encontrado
+patch:
+  tags:
+    - Contact Schedules
+  operationId: contactSchedulesUpdate
+  summary: Actualizar seguimiento v2
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        properties:
+          contact_schedule:
+            type: object
+            properties:
+              scheduled_at:
+                type: string
+                format: date-time
+              notes:
+                type: string
+              inbox_id:
+                type: integer
+  responses:
+    '200':
+      description: Seguimiento v2 actualizado
+      schema:
+        $ref: '#/definitions/contact_schedule'
+    '422':
+      description: Parámetros inválidos
+delete:
+  tags:
+    - Contact Schedules
+  operationId: contactSchedulesDestroy
+  summary: Eliminar seguimiento v2
+  security:
+    - userApiKey: []
+  responses:
+    '204':
+      description: Eliminado
+
+pause:
+  tags:
+    - Contact Schedules
+  operationId: contactSchedulesPause
+  summary: Pausar seguimiento v2
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Seguimiento pausado
+    '422':
+      description: No se puede pausar en el estado actual
+
+resume:
+  tags:
+    - Contact Schedules
+  operationId: contactSchedulesResume
+  summary: Reanudar seguimiento v2
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Seguimiento reanudado
+    '422':
+      description: No se puede reanudar en el estado actual
+
+cancel:
+  tags:
+    - Contact Schedules
+  operationId: contactSchedulesCancel
+  summary: Cancelar seguimiento v2 con razón
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      schema:
+        type: object
+        properties:
+          reason:
+            type: string
+            description: Razón de cancelación
+  responses:
+    '200':
+      description: Seguimiento cancelado
+    '422':
+      description: No se puede cancelar en el estado actual

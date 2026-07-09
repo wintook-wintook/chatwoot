@@ -56,6 +56,11 @@ gem 'image_processing'
 ##-- gems for database --#
 gem 'groupdate'
 gem 'pg'
+# @query_databases — drivers read-only para ERPs externos (Firebird: SAE/Microsip/Contpaq;
+# SQL Server: Contpaq). tiny_tds fijado a ~> 2.1: las 3.x rechazan TDS < 7.3 y los SQL
+# Server de Contpaq (2008 R2) solo aceptan TDS 7.0. Requieren freetds-dev y firebird-dev.
+gem 'fb', '~> 0.10'
+gem 'tiny_tds', '~> 2.1'
 gem 'redis'
 gem 'redis-namespace'
 # super fast record imports in bulk

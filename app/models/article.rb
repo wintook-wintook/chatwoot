@@ -5,6 +5,7 @@
 #  id                    :bigint           not null, primary key
 #  content               :text
 #  description           :text
+#  locale                :string           default("en"), not null
 #  meta                  :jsonb
 #  position              :integer
 #  slug                  :string           not null

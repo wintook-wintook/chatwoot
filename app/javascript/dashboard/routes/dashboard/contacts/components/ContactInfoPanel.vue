@@ -4,6 +4,7 @@ import ContactConversations from 'dashboard/routes/dashboard/conversation/Contac
 import ContactInfo from 'dashboard/routes/dashboard/conversation/contact/ContactInfo.vue';
 import ContactLabel from 'dashboard/routes/dashboard/contacts/components/ContactLabels.vue';
 import CustomAttributes from 'dashboard/routes/dashboard/conversation/customAttributes/CustomAttributes.vue';
+import CaseTicketPanel from 'dashboard/components/contacts/CaseTicket/CaseTicketPanel.vue'; // @tickets_cases
 import draggable from 'vuedraggable';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 
@@ -14,6 +15,7 @@ export default {
     ContactInfo,
     ContactLabel,
     CustomAttributes,
+    CaseTicketPanel, // @tickets_cases
     Draggable: draggable,
   },
   props: {
@@ -89,6 +91,11 @@ export default {
       @panelClose="onClose"
       @togglePanel="onClose"
     />
+    <!-- @tickets_cases: Ticket asociado desde la ficha de contacto (sin conversación) -->
+    <woot-feature-toggle feature-key="case_management">
+      <CaseTicketPanel v-if="contact.id" :contact-id="contact.id" />
+    </woot-feature-toggle>
+    <!-- FIN @tickets_cases -->
     <Draggable
       :list="contactSidebarItems"
       :disabled="!dragEnabled"

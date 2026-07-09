@@ -1,0 +1,18 @@
+type: object
+description: Metadatos de paginación (Kaminari)
+properties:
+  current_page:
+    type: integer
+    description: Página actual
+  next_page:
+    type: integer
+    description: Página siguiente (null si no hay)
+  prev_page:
+    type: integer
+    description: Página anterior (null si no hay)
+  total_pages:
+    type: integer
+    description: Total de páginas
+  total_count:
+    type: integer
+    description: Total de registros

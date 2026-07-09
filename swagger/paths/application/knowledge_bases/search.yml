@@ -1,0 +1,144 @@
+# Namespace knowledge_bases/search
+
+search:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBaseSearch
+  summary: Búsqueda semántica (namespace search)
+  description: >
+    Endpoint principal de búsqueda semántica en la base de conocimiento.
+    Usa embeddings vectoriales para encontrar fragmentos relevantes a la consulta.
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        required:
+          - query
+        properties:
+          query:
+            type: string
+            description: Texto de búsqueda en lenguaje natural
+          limit:
+            type: integer
+            default: 10
+            description: Número máximo de resultados (máx. 50)
+          min_similarity:
+            type: number
+            format: float
+            default: 0.3
+            description: Similitud mínima (0.0 - 1.0)
+          search_type:
+            type: string
+            enum: [semantic, keyword, hybrid]
+            default: semantic
+          article_ids:
+            type: array
+            items:
+              type: integer
+            description: Limitar búsqueda a artículos específicos
+          conversation_id:
+            type: integer
+            description: ID de conversación (para logging)
+  responses:
+    '200':
+      description: Resultados de búsqueda
+      schema:
+        type: object
+        properties:
+          query:
+            type: string
+          results:
+            type: array
+            items:
+              $ref: '#/definitions/knowledge_base_search_result'
+          total:
+            type: integer
+          response_time_ms:
+            type: integer
+    '422':
+      description: Query requerida o limit > 50
+
+suggestions:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBaseSearchSuggestions
+  summary: Sugerencias de búsqueda
+  security:
+    - userApiKey: []
+  parameters:
+    - in: query
+      name: q
+      type: string
+      required: false
+      description: Texto parcial para sugerir completados
+    - in: query
+      name: limit
+      type: integer
+      required: false
+      default: 5
+  responses:
+    '200':
+      description: Lista de sugerencias
+      schema:
+        type: object
+        properties:
+          query:
+            type: string
+          suggestions:
+            type: array
+            items:
+              type: string
+
+popular:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBaseSearchPopular
+  summary: Consultas más populares
+  security:
+    - userApiKey: []
+  parameters:
+    - in: query
+      name: timeframe
+      type: string
+      default: 30d
+      description: Período (ej. 7d, 30d, 3m)
+    - in: query
+      name: limit
+      type: integer
+      default: 10
+  responses:
+    '200':
+      description: Lista de consultas más frecuentes
+      schema:
+        type: object
+        properties:
+          popular_queries:
+            type: array
+            items:
+              type: object
+              properties:
+                query:
+                  type: string
+                count:
+                  type: integer
+
+analytics:
+  tags:
+    - Knowledge Base
+  operationId: knowledgeBaseSearchAnalytics
+  summary: Analíticas de búsqueda
+  description: "Estadísticas de uso de la búsqueda: consultas por día, usuarios activos, calidad de resultados."
+  security:
+    - userApiKey: []
+  parameters:
+    - in: query
+      name: timeframe
+      type: string
+      default: 30d
+  responses:
+    '200':
+      description: Datos analíticos de búsqueda

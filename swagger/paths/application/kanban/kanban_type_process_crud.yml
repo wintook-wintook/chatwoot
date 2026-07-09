@@ -1,0 +1,65 @@
+parameters:
+  - $ref: '#/parameters/account_id'
+  - name: id
+    in: path
+    type: integer
+    required: true
+    description: ID del tipo de proceso Kanban
+get:
+  tags:
+    - Kanban
+  operationId: kanbanTypeProcessShow
+  summary: Ver tipo de proceso Kanban
+  security:
+    - userApiKey: []
+  responses:
+    '200':
+      description: Detalle del tipo de proceso con sus etapas
+      schema:
+        $ref: '#/definitions/kanban_type_process'
+    '404':
+      description: No encontrado
+patch:
+  tags:
+    - Kanban
+  operationId: kanbanTypeProcessUpdate
+  summary: Actualizar tipo de proceso Kanban
+  security:
+    - userApiKey: []
+  parameters:
+    - in: body
+      name: data
+      required: true
+      schema:
+        type: object
+        properties:
+          kanban_type_process:
+            type: object
+            properties:
+              process_name:
+                type: string
+              default:
+                type: boolean
+              is_system:
+                type: boolean
+  responses:
+    '200':
+      description: Tipo de proceso actualizado
+      schema:
+        $ref: '#/definitions/kanban_type_process'
+    '422':
+      description: Parámetros inválidos
+delete:
+  tags:
+    - Kanban
+  operationId: kanbanTypeProcessDestroy
+  summary: Eliminar tipo de proceso Kanban
+  description: >
+    No se puede eliminar si existen conversaciones asociadas al tipo de proceso.
+  security:
+    - userApiKey: []
+  responses:
+    '204':
+      description: Eliminado correctamente
+    '422':
+      description: No se puede eliminar porque tiene conversaciones asociadas

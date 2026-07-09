@@ -26,7 +26,9 @@
 #
 #  index_messages_on_account_created_type               (account_id,created_at,message_type)
 #  index_messages_on_account_id                         (account_id)
+#  index_messages_on_account_id_and_inbox_id            (account_id,inbox_id)
 #  index_messages_on_additional_attributes_campaign_id  (((additional_attributes -> 'campaign_id'::text))) USING gin
+#  index_messages_on_content                            (content) USING gin
 #  index_messages_on_conversation_account_type_created  (conversation_id,account_id,message_type,created_at)
 #  index_messages_on_conversation_id                    (conversation_id)
 #  index_messages_on_created_at                         (created_at)
@@ -135,6 +137,11 @@ class Message < ApplicationRecord
   # Analiza respuestas de clientes y ajusta seguimientos automáticamente
   after_create_commit :analyze_for_active_trackings, if: :incoming?
 
+  # @query_databases — Modo B: si el inbox tiene un bot cobrador con consulta IA, responde.
+  after_create_commit :respond_via_erp_bot, if: :incoming?
+
+  # proyecto@contact_tracking: evalúa keywords de acción en mensajes salientes
+  after_create_commit :check_keyword_actions_for_outgoing, unless: :incoming?
 
   after_update_commit :dispatch_update_event
 
@@ -254,6 +261,9 @@ class Message < ApplicationRecord
 
     true
   end
+
+  # Agrega esto al final del archivo, antes del último 'end'
+  # after_create_commit :trigger_auto_acknowledgment, if: :should_auto_acknowledge?
 
   private
 
@@ -438,10 +448,9 @@ class Message < ApplicationRecord
     # rubocop:enable Rails/SkipsModelValidations
   end
 
-
   # def should_auto_acknowledge?
   #   # Solo para mensajes entrantes de clientes
-  #   incoming? && 
+  #   incoming? &&
   #   conversation.present? &&
   # #  !private? &&
   #   message_type != 'activity'
@@ -455,13 +464,57 @@ class Message < ApplicationRecord
   # Analiza respuestas del cliente y ajusta seguimientos activos según sentimiento
   # Para revertir: Eliminar este método completo
   def analyze_for_active_trackings
-    # Queue job de análisis (asíncrono, no bloquea creación del mensaje)
-    ContactTrackingResponseAnalyzerJob.perform_later(id)
+    # Solo esperamos si una automatización (EventDispatcherJob, queue :critical)
+    # va a crear un ContactTracking nuevo para esta conversación — le damos
+    # tiempo a que se ejecute antes del analyzer, evitando el race condition
+    # donde Job#1 ve "sin tracking" y despacha a BotSeller, y luego el tracking
+    # recién creado provoca una segunda respuesta. Si no aplica ninguna
+    # automatización, procesamos el mensaje sin demora.
+    wait = will_trigger_tracking_automation? ? 5.seconds : 0.seconds
+    ContactTrackingResponseAnalyzerJob.set(wait: wait).perform_later(id)
   rescue StandardError => e
-    # No fallar la creación del mensaje si el análisis falla
     Rails.logger.error "[Message] Error queueing sentiment analysis: #{e.message}"
   end
 
+  # @query_databases — encola la respuesta IA (Modo B) solo si el inbox tiene un bot
+  # cobrador con mode_b_enabled (chequeo barato para no encolar de más).
+  def respond_via_erp_bot
+    return if content.blank? || conversation&.inbox_id.blank?
+
+    has_bot = ErpCollectionBot.active.where(account_id: conversation.account_id, mode_b_enabled: true)
+                              .exists?(inbox_id: [conversation.inbox_id, nil])
+    ErpCollection::ChatResponseJob.perform_later(id) if has_bot
+  rescue StandardError => e
+    Rails.logger.error "[Message] Error encolando respuesta ERP Modo B: #{e.message}"
+  end
+
+  # proyecto@contact_tracking: ¿alguna AutomationRule (conversation_created,
+  # conversation_opened o message_created) con acción assign_tracking_template
+  # va a crear un ContactTracking para esta conversación? Si el contacto ya
+  # tiene uno activo, la acción no crea uno nuevo (ver action_service.rb) y
+  # el analyzer ya lo verá sin esperar.
+  TRACKING_AUTOMATION_EVENTS = %w[conversation_created conversation_opened message_created].freeze
+
+  def will_trigger_tracking_automation?
+    active_statuses = %w[pending scheduled active paused]
+    # Acotado al inbox de la conversación: el seguimiento se crea por (contacto, inbox)
+    return false if ContactTracking.exists?(contact_id: conversation.contact_id, inbox_id: conversation.inbox_id, status: active_statuses)
+
+    account.automation_rules.active.where(event_name: TRACKING_AUTOMATION_EVENTS).any? do |rule|
+      rule.actions.any? { |action| action['action_name'] == 'assign_tracking_template' } &&
+        AutomationRules::ConditionsFilterService.new(rule, conversation, message: self).perform
+    end
+  rescue StandardError => e
+    Rails.logger.error "[Message] Error checking tracking automation: #{e.message}"
+    true
+  end
+
+  # proyecto@contact_tracking: evalúa keywords de acción en mensajes salientes
+  def check_keyword_actions_for_outgoing
+    ContactTrackings::KeywordCheckerJob.perform_later(id)
+  rescue StandardError => e
+    Rails.logger.error "[Message] Error queueing keyword checker: #{e.message}"
+  end
 end
 
 Message.prepend_mod_with('Message')

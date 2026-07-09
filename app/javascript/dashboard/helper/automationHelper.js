@@ -110,6 +110,7 @@ export const getActionOptions = ({
   labels,
   slaPolicies,
   kanbanTypeProcesses, // proyecto@automatizaciones: tipos de oportunidad del Kanban para el dropdown de la acción
+  trackingTemplates, // proyecto@automatizacion_tracking: plantillas filtradas por inbox de las condiciones
   type,
 }) => {
   const actionsMap = {
@@ -121,6 +122,7 @@ export const getActionOptions = ({
     change_priority: PRIORITY_CONDITION_VALUES,
     add_sla: slaPolicies,
     assign_kanban_type_process: addNoneToList(kanbanTypeProcesses), // proyecto@automatizaciones
+    assign_tracking_template: trackingTemplates || [], // proyecto@automatizacion_tracking
   };
   return actionsMap[type];
 };

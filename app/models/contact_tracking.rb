@@ -25,15 +25,23 @@
 #
 #  id                         :bigint           not null, primary key
 #  ai_context                 :text
+#  appointment_at             :datetime
+#  appointment_calendar_gid   :string
 #  attempt_count              :integer          default(0), not null
+#  calendar_event_duration    :integer          default(30)
+#  calendar_integration_ids   :jsonb            not null
 #  complementary_prompt       :text
 #  interval_days              :integer
+#  keyword_action_fired       :jsonb
+#  keyword_actions            :jsonb            not null
 #  last_attempt_at            :datetime
 #  last_error                 :string
+#  last_intent                :string
 #  last_message_sent          :text
 #  last_sentiment_analysis    :jsonb
 #  max_attempts               :integer          default(3), not null
 #  objective                  :string           not null
+#  outcome                    :string
 #  paused_at                  :datetime
 #  response_adjustments_count :integer          default(0), not null
 #  retry_interval_unit        :string           default("minutes")
@@ -44,23 +52,30 @@
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  account_id                 :bigint           not null
+#  appointment_calendar_id    :bigint
+#  appointment_event_id       :string
 #  contact_id                 :bigint           not null
 #  conversation_id            :bigint
 #  inbox_id                   :bigint           not null
 #  quote_id                   :integer
+#  tracking_campaign_id       :bigint
+#  tracking_template_id       :integer
 #
 # Indexes
 #
 #  index_contact_trackings_on_account_id                    (account_id)
+#  index_contact_trackings_on_appointment_at                (appointment_at)
 #  index_contact_trackings_on_contact_id                    (contact_id)
 #  index_contact_trackings_on_conversation_id               (conversation_id)
 #  index_contact_trackings_on_conversation_id_and_inbox_id  (conversation_id,inbox_id)
 #  index_contact_trackings_on_inbox_id                      (inbox_id)
+#  index_contact_trackings_on_last_intent                   (last_intent)
 #  index_contact_trackings_on_scheduled_for                 (scheduled_for)
 #  index_contact_trackings_on_sentiment                     (((last_sentiment_analysis ->> 'sentiment'::text)))
 #  index_contact_trackings_on_status                        (status)
 #  index_contact_trackings_on_status_and_scheduled_for      (status,scheduled_for)
-#  index_unique_active_tracking_per_contact                 (contact_id,status) UNIQUE WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))
+#  index_contact_trackings_on_tracking_campaign_id          (tracking_campaign_id)
+#  index_unique_active_tracking_per_contact_inbox           (contact_id,inbox_id,status) UNIQUE WHERE ((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))
 #
 # Foreign Keys
 #
@@ -68,6 +83,7 @@
 #  fk_rails_...  (contact_id => contacts.id)
 #  fk_rails_...  (conversation_id => conversations.id)
 #  fk_rails_...  (inbox_id => inboxes.id)
+#  fk_rails_...  (tracking_campaign_id => tracking_campaigns.id)
 #
 
 class ContactTracking < ApplicationRecord
@@ -78,6 +94,8 @@ class ContactTracking < ApplicationRecord
   belongs_to :conversation, optional: true
   belongs_to :inbox
   belongs_to :account
+  belongs_to :tracking_template, optional: true
+  belongs_to :tracking_campaign, optional: true # @campanas_vendedor
 
   # ==============================================================================
   # Serializers - Para campos JSON
@@ -94,7 +112,8 @@ class ContactTracking < ApplicationRecord
     scheduled: 'scheduled',   # Programado para próximo intento
     active: 'active',         # En proceso de ejecución
     paused: 'paused',         # Pausado manualmente
-    completed: 'completed',   # Completado exitosamente
+    completed: 'completed',   # Completado exitosamente (agotó intentos)
+    objective_met: 'objective_met', # Objetivo del seguimiento cumplido
     cancelled: 'cancelled',   # Cancelado manualmente
     failed: 'failed'          # Falló en ejecución
   }
@@ -122,7 +141,7 @@ class ContactTracking < ApplicationRecord
   
   validate :scheduled_for_cannot_be_in_past, on: :create
   validate :conversation_belongs_to_inbox, if: :conversation_id?
-  validate :only_one_active_tracking_per_contact, on: :create
+  validate :only_one_active_tracking_per_contact_and_inbox, on: :create
   validate :all_templates_must_be_present, if: :using_templates?
 
   # ==============================================================================
@@ -154,7 +173,7 @@ class ContactTracking < ApplicationRecord
 
   # Verifica si el seguimiento puede pausarse
   def can_pause?
-    active? || scheduled?
+    pending? || active? || scheduled?
   end
 
   # Verifica si el seguimiento puede reanudarse
@@ -164,7 +183,12 @@ class ContactTracking < ApplicationRecord
 
   # Verifica si el seguimiento puede cancelarse
   def can_cancel?
-    !completed? && !cancelled?
+    !completed? && !cancelled? && !objective_met?
+  end
+
+  # Verifica si el seguimiento puede marcarse como objetivo cumplido
+  def can_complete?
+    !completed? && !cancelled? && !objective_met?
   end
 
   # Calcula intentos restantes
@@ -416,7 +440,24 @@ class ContactTracking < ApplicationRecord
   # Cancela el seguimiento
   def cancel!
     return false unless can_cancel?
+    cancel_existing_jobs
     update(status: 'cancelled')
+  end
+
+  # Marca el seguimiento como "objetivo cumplido" — el objetivo se alcanzó.
+  # Estado terminal distinto de 'completed' (que solo agota los intentos).
+  def mark_objective_met!
+    return false unless can_complete?
+
+    cancel_existing_jobs
+    context_entry = "\n\n🎯 OBJETIVO CUMPLIDO: #{Time.current.strftime('%d/%m/%Y %H:%M')}"
+    Rails.logger.info "[ContactTracking] 🎯 Tracking #{id} marcado como objetivo cumplido"
+
+    update(
+      status: 'objective_met',
+      outcome: 'objective_met',
+      ai_context: "#{ai_context}#{context_entry}"
+    )
   end
 
   private
@@ -438,18 +479,20 @@ class ContactTracking < ApplicationRecord
   end
 
   # Verifica que solo exista un tracking activo por contacto
-  def only_one_active_tracking_per_contact
+  # proyecto@contact_tracking: 1 seguimiento activo por (contacto, inbox).
+  # Permite seguimientos en paralelo en canales (inboxes) distintos.
+  def only_one_active_tracking_per_contact_and_inbox
     active_statuses = %w[pending scheduled active paused]
 
     existing = ContactTracking
-      .where(contact_id: contact_id)
+      .where(contact_id: contact_id, inbox_id: inbox_id)
       .where(status: active_statuses)
       .where.not(id: id)
       .exists?
 
     if existing
       errors.add(:base,
-        'Ya existe un seguimiento activo para este contacto. ' \
+        'Ya existe un seguimiento activo para este contacto en este canal. ' \
         'Completa o cancela el actual antes de crear uno nuevo.')
     end
   end
@@ -501,6 +544,8 @@ class ContactTracking < ApplicationRecord
   def ensure_whatsapp_templates_array
     self.whatsapp_templates = [] if whatsapp_templates.nil?
     self.whatsapp_templates = [] unless whatsapp_templates.is_a?(Array)
+    # proyecto@contact_tracking: keyword_actions
+    self.keyword_actions = [] unless keyword_actions.is_a?(Array)
   end
 
   def schedule_job

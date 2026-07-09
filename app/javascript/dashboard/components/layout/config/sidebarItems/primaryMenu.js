@@ -17,17 +17,17 @@ const primaryMenuItems = accountId => [
     toState: frontendURL(`accounts/${accountId}/dashboard`),
     toStateName: 'home',
   },
-  //KANBAN0725
+  // KANBAN0725
   {
     icon: 'kanban', // Asegúrate que este icono existe en tu biblioteca
     key: 'kanban',
     label: 'KANBAN',
-    //featureFlag: FEATURE_FLAGS.KANBAN,
+    // featureFlag: FEATURE_FLAGS.KANBAN,
     toState: frontendURL(`accounts/${accountId}/kanban`),
     toStateName: 'kanban_dashboard',
-    //toStateName: 'kanban_wrapper',
+    // toStateName: 'kanban_wrapper',
   },
-  //KANBAN0725
+  // KANBAN0725
   {
     icon: 'captain',
     key: 'captain',
@@ -68,6 +68,32 @@ const primaryMenuItems = accountId => [
     alwaysVisibleOnChatwootInstances: true,
     toState: frontendURL(`accounts/${accountId}/portals`),
     toStateName: 'default_portal_articles',
+  },
+  {
+    icon: 'calendar',
+    key: 'google_calendar',
+    label: 'GOOGLE_CALENDAR',
+    featureFlag: FEATURE_FLAGS.GOOGLE_CALENDAR,
+    toState: frontendURL(`accounts/${accountId}/google-calendar`),
+    toStateName: 'google_calendar',
+    roles: ['administrator', 'agent'],
+  },
+  // @tickets_cases
+  {
+    icon: 'clipboard',
+    key: 'gestorTickets',
+    label: 'TICKETS',
+    featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+    toState: frontendURL(`accounts/${accountId}/tickets`),
+    toStateName: 'gestorTickets_index',
+  },
+  // proyecto@contact_tracking — Dashboard de Seguimientos
+  {
+    icon: 'tracking-dashboard',
+    key: 'contactTrackingsDashboard',
+    label: 'TRACKING_DASHBOARD',
+    toState: frontendURL(`accounts/${accountId}/tracking-dashboard`),
+    toStateName: 'contact_trackings_dashboard',
   },
   {
     icon: 'settings',

@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestor de Tickets — Plan v1.0 | Kontrolya/Wintook</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#3b82f6',
+      lineColor: '#64748b',
+      secondaryColor: '#f0fdf4',
+      tertiaryColor: '#faf5ff',
+      fontSize: '14px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { actorMargin: 60, messageMargin: 30 },
+    er: { diagramPadding: 20 }
+  });
+</script>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --surface2: #eef1f6;
+    --border: #d0d7e3;
+    --accent: #2563eb;
+    --accent2: #7c3aed;
+    --green: #16a34a;
+    --yellow: #b45309;
+    --red: #dc2626;
+    --orange: #c2410c;
+    --text: #1e293b;
+    --muted: #374151;
+    --code-bg: #f0f2f7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; }
+
+  #main { margin: 0 auto; padding: 48px 60px; max-width: 1020px; }
+
+  /* HEADER */
+  .page-header {
+    background: linear-gradient(135deg, #eff6ff 0%, #faf5ff 100%);
+    border-radius: 12px; padding: 32px 36px; margin-bottom: 52px;
+    border: 1px solid #c7d7f8;
+  }
+  .version-badge {
+    display: inline-block; background: var(--accent2); color: #fff;
+    font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px;
+    margin-bottom: 14px;
+  }
+  .page-header h1 { font-size: 34px; font-weight: 800; color: #1e293b; margin-bottom: 8px; }
+  .page-header .subtitle { color: #475569; font-size: 16px; }
+  .page-header .meta { margin-top: 18px; display: flex; gap: 28px; flex-wrap: wrap; }
+  .page-header .meta span { font-size: 13px; color: #475569; }
+  .page-header .meta strong { color: #1e293b; }
+
+  /* SECTIONS */
+  section { margin-bottom: 68px; scroll-margin-top: 30px; }
+  h2 { font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 20px; padding-bottom: 12px;
+       border-bottom: 2px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  h3 { font-size: 17px; font-weight: 600; color: #1d4ed8; margin: 30px 0 12px; }
+  h4 { font-size: 15px; font-weight: 600; color: #6d28d9; margin: 22px 0 8px; }
+  p { color: var(--muted); margin-bottom: 14px; line-height: 1.8; font-size: 15px; }
+
+  /* TABLES */
+  .table-wrap { overflow-x: auto; margin: 18px 0; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { background: #eef1f6; color: #1e293b; font-weight: 700; padding: 12px 16px;
+       text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
+  td { padding: 11px 16px; border-bottom: 1px solid #e8ecf3; color: #374151; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafd; }
+  td code { background: #e8edf8; padding: 2px 7px; border-radius: 4px; color: #1d4ed8; font-size: 13px; font-weight: 600; }
+  td strong { color: #1e293b; }
+
+  /* CODE BLOCKS */
+  pre {
+    background: #f0f2f7; border: 1px solid #d0d7e3; border-radius: 10px;
+    padding: 20px 22px; overflow-x: auto; margin: 18px 0; font-size: 13.5px;
+    line-height: 1.7; color: #1e293b;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+  code { font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; }
+
+  /* BADGES */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 20px;
+           font-size: 12px; font-weight: 700; }
+  .badge-blue   { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+  .badge-green  { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+  .badge-yellow { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+  .badge-red    { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+  .badge-orange { background: #ffedd5; color: #c2410c; border: 1px solid #fdba74; }
+  .badge-purple { background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; }
+
+  /* INFO BOXES */
+  .info-box { border-radius: 10px; padding: 16px 20px; margin: 18px 0; border-left: 4px solid; font-size: 14.5px; line-height: 1.7; }
+  .info-box.blue   { background: #eff6ff; border-color: #2563eb; color: #1e3a8a; }
+  .info-box.green  { background: #f0fdf4; border-color: #16a34a; color: #14532d; }
+  .info-box.yellow { background: #fffbeb; border-color: #d97706; color: #78350f; }
+  .info-box.red    { background: #fef2f2; border-color: #dc2626; color: #7f1d1d; }
+  .info-box strong { color: #0f172a; }
+
+  /* CARDS */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 18px 0; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 22px; transition: border-color .2s, box-shadow .2s; }
+  .card:hover { border-color: #93c5fd; box-shadow: 0 2px 12px rgba(37,99,235,.08); }
+  .card h4 { margin-top: 0; }
+  .card p { font-size: 14px; margin-bottom: 0; }
+
+  /* DIAGRAMS */
+  .diagram-container {
+    background: #ffffff; border: 1px solid var(--border); border-radius: 12px;
+    padding: 28px 20px; margin: 22px 0; overflow-x: auto;
+    box-shadow: 0 1px 6px rgba(0,0,0,.06);
+  }
+  .diagram-container .mermaid { display: flex; justify-content: center; }
+  .diagram-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px;
+    color: #64748b; margin-bottom: 16px; text-align: center;
+  }
+
+  /* PHASE TIMELINE */
+  .phase-list { display: flex; flex-direction: column; gap: 12px; margin: 18px 0; }
+  .phase-item {
+    display: flex; gap: 16px; align-items: flex-start;
+    background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .phase-num {
+    min-width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-weight: 800; font-size: 16px; flex-shrink: 0;
+  }
+  .phase-num.p0 { background: #dbeafe; color: #1d4ed8; border: 2px solid #3b82f6; }
+  .phase-num.p1 { background: #ede9fe; color: #6d28d9; border: 2px solid #8b5cf6; }
+  .phase-num.p2 { background: #dcfce7; color: #15803d; border: 2px solid #22c55e; }
+  .phase-num.p3 { background: #fef3c7; color: #92400e; border: 2px solid #f59e0b; }
+  .phase-num.p4 { background: #ffedd5; color: #c2410c; border: 2px solid #f97316; }
+  .phase-num.p5 { background: #fee2e2; color: #b91c1c; border: 2px solid #ef4444; }
+  .phase-content h4 { margin: 0 0 4px; font-size: 15px; color: #1e293b; }
+  .phase-content p  { font-size: 13.5px; margin: 0; color: #475569; }
+  .phase-days { margin-left: auto; flex-shrink: 0; }
+
+  /* FLOW STEPS */
+  .flow-steps { display: flex; flex-direction: column; margin: 18px 0; }
+  .flow-step  { display: flex; gap: 14px; align-items: flex-start; }
+  .flow-step-line { display: flex; flex-direction: column; align-items: center; }
+  .flow-step-dot { width: 30px; height: 30px; border-radius: 50%; background: #2563eb; color: #fff;
+                   display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .flow-step-connector { width: 2px; flex: 1; min-height: 24px; background: #d0d7e3; margin: 2px auto; }
+  .flow-step-body { padding: 4px 0 22px; flex: 1; }
+  .flow-step-body strong { color: #1e293b; font-size: 14.5px; display: block; margin-bottom: 4px; }
+  .flow-step-body p { font-size: 13.5px; margin: 0; color: #475569; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #f0f2f7; }
+  ::-webkit-scrollbar-thumb { background: #c0c8d8; border-radius: 3px; }
+
+  ul li { color: #374151; font-size: 14.5px; line-height: 2; }
+
+  @media print { #main { margin: 0; padding: 20px; } }
+</style>
+</head>
+<body>
+<div id="main">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="version-badge">v1.0</div>
+    <h1>Gestor de Tickets</h1>
+    <div class="subtitle">Motor de Gestión de Casos Inteligente (MGCI) — Kontrolya / Wintook</div>
+    <div class="meta">
+      <span><strong>Fecha:</strong> 2026-05-28</span>
+      <span><strong>Rama base:</strong> feat/kbase_contact_tracking</span>
+      <span><strong>Estado:</strong> Diseño completo — pendiente implementación</span>
+      <span><strong>Proyecto:</strong> Wintook (fork de Chatwoot)</span>
+    </div>
+  </div>
+
+  <!-- ═══ VISIÓN GENERAL ═══ -->
+  <section id="overview">
+    <h2>🎯 Visión general</h2>
+    <p>El <strong>Gestor de Tickets</strong> es un módulo nuevo que separa claramente tres conceptos que hoy están mezclados en Wintook. El objetivo es establecer una distinción formal entre el canal de comunicación, el problema del cliente, y las acciones automáticas que operan sobre ese problema.</p>
+
+    <div class="info-box blue">
+      <strong>Regla de oro:</strong> Un cliente puede tener 1 conversación activa · múltiples tickets · múltiples seguimientos por ticket.
+    </div>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4>Conversación</h4>
+        <p>Canal de comunicación (WhatsApp, web, email). Modelo <code>Conversation</code> existente — sin cambios.</p>
+      </div>
+      <div class="card">
+        <h4>CaseTicket <span class="badge badge-blue">NUEVO</span></h4>
+        <p>El problema o necesidad concreta del cliente. Tiene tipo, prioridad, estado y SLA propios.</p>
+      </div>
+      <div class="card">
+        <h4>ContactTracking</h4>
+        <p>Acción automática <strong>sobre</strong> el ticket — la secuencia de seguimiento programada. No es el ticket.</p>
+      </div>
+      <div class="card">
+        <h4>CaseEvent <span class="badge badge-blue">NUEVO</span></h4>
+        <p>Historial auditable e inmutable de todo lo que ocurre en un ticket.</p>
+      </div>
+      <div class="card">
+        <h4>CaseRule <span class="badge badge-blue">NUEVO</span></h4>
+        <p>Reglas configurables por cuenta que automatizan asignaciones, escalados y cambios de estado en cascada.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ ARQUITECTURA EN CAPAS ═══ -->
+  <section id="capas">
+    <h2>🏗️ Arquitectura en capas</h2>
+
+    <div class="diagram-container">
+      <div class="diagram-title">Capas del sistema</div>
+      <div class="mermaid">
+flowchart TD
+    C1["🗨️ CAPA 1 — COMUNICACIÓN\nConversation · WhatsApp · Web · Email\n Sin cambios"]
+    C2["🎫 CAPA 2 — TICKET\nCaseTicket · tipo · prioridad · status · SLA\n NUEVO"]
+    C3["⚙️ CAPA 3 — AUTOMATIZACIÓN\nContactTracking · RouterService · CaseRule · @crear_ticket\n Extendido / Nuevo"]
+    C4["📋 CAPA 4 — AUDITORÍA\nCaseEvent inmutable · 17 tipos de evento · actor + payload\n NUEVO"]
+    C1 --> C2 --> C3 --> C4
+    style C1 fill:#dbeafe,stroke:#3b82f6,color:#1e293b
+    style C2 fill:#ede9fe,stroke:#8b5cf6,color:#1e293b
+    style C3 fill:#dcfce7,stroke:#22c55e,color:#1e293b
+    style C4 fill:#fef3c7,stroke:#f59e0b,color:#1e293b
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Capa</th><th>Responsabilidad</th><th>Modelo / Servicio</th><th>Estado</th></tr>
+        <tr><td><strong>Comunicación</strong></td><td>Canal con el cliente</td><td><code>Conversation</code></td><td><span class="badge badge-green">Sin cambios</span></td></tr>
+        <tr><td><strong>Ticket</strong></td><td>Problema o necesidad concreta</td><td><code>CaseTicket</code></td><td><span class="badge badge-blue">Nuevo</span></td></tr>
+        <tr><td><strong>Seguimiento</strong></td><td>Acción automática sobre el ticket</td><td><code>ContactTracking</code></td><td><span class="badge badge-yellow">Extendido</span></td></tr>
+        <tr><td><strong>Eventos</strong></td><td>Historial auditable</td><td><code>CaseEvent</code></td><td><span class="badge badge-blue">Nuevo</span></td></tr>
+        <tr><td><strong>Reglas</strong></td><td>Automatización configurable</td><td><code>CaseRule</code></td><td><span class="badge badge-blue">Nuevo</span></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══ CÓDIGO EXISTENTE ═══ -->
+  <section id="existente">
+    <h2>🔒 Código no modificado</h2>
+    <div class="info-box green">
+      <strong>Principio de integración no destructiva:</strong> El único punto de contacto con código existente es un bloque nuevo al inicio de <code>process_message_for_tracking</code>, protegido con <code>rescue</code>. Si el Gestor de Tickets falla, el bot sigue funcionando exactamente igual.
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Componente</th><th>Estado</th><th>Notas</th></tr>
+        <tr><td><code>ContactTracking</code> (modelo)</td><td><span class="badge badge-green">Sin cambios</span></td><td>Solo se lee, no se modifica</td></tr>
+        <tr><td><code>RouterService</code></td><td><span class="badge badge-green">Sin cambios</span></td><td>Sus 6 rutas permanecen intactas</td></tr>
+        <tr><td><code>KnowledgeBaseResponseService</code></td><td><span class="badge badge-green">Sin cambios</span></td><td>Solo se llama, no se modifica</td></tr>
+        <tr><td><code>BotSeller::Dispatcher</code></td><td><span class="badge badge-green">Sin cambios</span></td><td></td></tr>
+        <tr><td><code>Conversation</code> (Chatwoot)</td><td><span class="badge badge-green">Sin cambios</span></td><td></td></tr>
+        <tr><td><code>ContactTrackingResponseAnalyzerJob</code></td><td><span class="badge badge-yellow">+hook inicio</span></td><td>Solo se agrega bloque rescue al inicio del método principal</td></tr>
+        <tr><td>Todas las migraciones existentes</td><td><span class="badge badge-green">Sin cambios</span></td><td></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══ ENTIDADES — ERD ═══ -->
+  <section id="erd">
+    <h2>🗂️ Modelo de datos — Entidades</h2>
+
+    <div class="diagram-container">
+      <div class="diagram-title">Diagrama de entidades (ER)</div>
+      <div class="mermaid">
+erDiagram
+    ACCOUNT ||--o{ CASE_TICKET : "tiene"
+    CONTACT ||--o{ CASE_TICKET : "genera"
+    CONVERSATION ||--o| CASE_TICKET : "origina"
+    CONTACT_TRACKING ||--o| CASE_TICKET : "asociado a"
+    USER ||--o{ CASE_TICKET : "asignado a"
+    TEAM ||--o{ CASE_TICKET : "asignado a"
+    CASE_TICKET ||--o{ CASE_EVENT : "genera"
+    USER ||--o{ CASE_EVENT : "actúa en"
+    ACCOUNT ||--o{ CASE_RULE : "configura"
+
+    CASE_TICKET {
+        bigint id
+        int case_type
+        int origin
+        int priority
+        int status
+        int sla_status
+        int assignee_type
+        string title
+        text description
+        int first_response_time_target
+        int resolution_time_target
+        datetime first_response_at
+        datetime resolved_at
+        jsonb metadata
+    }
+    CASE_EVENT {
+        bigint id
+        int event_type
+        int origin
+        jsonb payload
+        datetime created_at
+    }
+    CASE_RULE {
+        bigint id
+        string name
+        boolean active
+        int position
+        jsonb conditions
+        jsonb actions
+    }
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CASE TICKET ═══ -->
+  <section id="case-ticket">
+    <h2>🎫 Entidad: CaseTicket</h2>
+    <p>Tabla <code>case_tickets</code> — entidad central del MGCI. Representa un problema o necesidad concreta de un contacto.</p>
+
+    <h3>Enums (valores en inglés — convención Chatwoot)</h3>
+    <pre><code>case_type:     { support: 0, commercial: 1, implementation: 2, internal_tracking: 3, system_incident: 4 }
+origin:        { whatsapp: 0, web: 1, email: 2, bot: 3, manual: 4 }
+priority:      { low: 0, medium: 1, high: 2, urgent: 3 }
+status:        { open: 0, classified: 1, in_progress: 2, waiting_on_customer: 3,
+                 waiting_on_internal: 4, escalated: 5, resolved: 6, closed: 7, cancelled: 8 }
+assignee_type: { bot: 0, agent: 1, team: 2, system: 3 }
+sla_status:    { on_time: 0, at_risk: 1, overdue: 2 }</code></pre>
+
+    <h3>Columnas</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Columna</th><th>Tipo</th><th>Notas</th></tr>
+        <tr><td><code>account_id</code></td><td>bigint NOT NULL</td><td>FK → accounts</td></tr>
+        <tr><td><code>contact_id</code></td><td>bigint NOT NULL</td><td>FK → contacts</td></tr>
+        <tr><td><code>conversation_id</code></td><td>bigint nullable</td><td>FK → conversations</td></tr>
+        <tr><td><code>contact_tracking_id</code></td><td>bigint nullable</td><td>FK → contact_trackings</td></tr>
+        <tr><td><code>assignee_id</code></td><td>bigint nullable</td><td>FK → users</td></tr>
+        <tr><td><code>team_id</code></td><td>bigint nullable</td><td>FK → teams</td></tr>
+        <tr><td><code>case_type</code></td><td>integer NOT NULL</td><td>enum, default: 0 (support)</td></tr>
+        <tr><td><code>origin</code></td><td>integer NOT NULL</td><td>enum, default: 0 (whatsapp)</td></tr>
+        <tr><td><code>priority</code></td><td>integer NOT NULL</td><td>enum, default: 1 (medium)</td></tr>
+        <tr><td><code>status</code></td><td>integer NOT NULL</td><td>enum, default: 0 (open)</td></tr>
+        <tr><td><code>assignee_type</code></td><td>integer NOT NULL</td><td>enum, default: 0 (bot)</td></tr>
+        <tr><td><code>sla_status</code></td><td>integer NOT NULL</td><td>enum, default: 0 (on_time)</td></tr>
+        <tr><td><code>title</code></td><td>string NOT NULL</td><td>max 255 chars</td></tr>
+        <tr><td><code>description</code></td><td>text nullable</td><td></td></tr>
+        <tr><td><code>first_response_time_target</code></td><td>integer nullable</td><td>minutos — asignado por priority al crear</td></tr>
+        <tr><td><code>resolution_time_target</code></td><td>integer nullable</td><td>minutos — asignado por priority al crear</td></tr>
+        <tr><td><code>first_response_at</code></td><td>datetime nullable</td><td></td></tr>
+        <tr><td><code>resolved_at</code></td><td>datetime nullable</td><td></td></tr>
+        <tr><td><code>closed_at</code></td><td>datetime nullable</td><td></td></tr>
+        <tr><td><code>metadata</code></td><td>jsonb default: {}</td><td>datos adicionales libres — índice GIN</td></tr>
+        <tr><td><code>custom_attributes</code></td><td>jsonb default: {}</td><td>atributos personalizados por cuenta</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══ MÁQUINA DE ESTADOS ═══ -->
+  <section id="state-machine">
+    <h2>🔄 Máquina de estados — status</h2>
+
+    <div class="diagram-container">
+      <div class="diagram-title">Diagrama de estados UML — CaseTicket.status</div>
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> open : ticket creado
+
+    open --> classified : classify
+    open --> cancelled
+
+    classified --> in_progress : start
+    classified --> cancelled
+
+    in_progress --> waiting_on_customer : esperar cliente
+    in_progress --> waiting_on_internal : esperar equipo interno
+    in_progress --> escalated : escalar
+    in_progress --> resolved : resolver
+    in_progress --> cancelled
+
+    waiting_on_customer --> in_progress : cliente responde
+    waiting_on_customer --> cancelled
+
+    waiting_on_internal --> in_progress : equipo responde
+    waiting_on_internal --> cancelled
+
+    escalated --> in_progress : retomar
+    escalated --> cancelled
+
+    resolved --> closed : auto 72h sin actividad
+    resolved --> in_progress : reabrir
+
+    closed --> [*]
+    cancelled --> [*]
+
+    state "waiting_on_customer" as waiting_on_customer
+    state "waiting_on_internal" as waiting_on_internal
+      </div>
+    </div>
+
+    <h3>SLA por prioridad</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>priority</th><th>1ra respuesta</th><th>Resolución</th><th>sla_status</th></tr>
+        <tr><td><code>low</code></td><td>2880 min (48h)</td><td>7200 min (5 días)</td><td><span class="badge badge-green">on_time</span></td></tr>
+        <tr><td><code>medium</code></td><td>480 min (8h)</td><td>2880 min (48h)</td><td><span class="badge badge-green">on_time</span></td></tr>
+        <tr><td><code>high</code></td><td>120 min (2h)</td><td>480 min (8h)</td><td><span class="badge badge-yellow">at_risk</span></td></tr>
+        <tr><td><code>urgent</code></td><td>30 min</td><td>120 min (2h)</td><td><span class="badge badge-red">overdue</span></td></tr>
+      </table>
+    </div>
+    <p><strong>CaseSlaMonitorJob</strong> corre cada 15 minutos. Detecta tickets donde el tiempo supera el 80% del target (<code>at_risk</code>) o el 100% (<code>overdue</code>). Auto-cierra tickets en <code>resolved</code> sin actividad por 72 horas.</p>
+  </section>
+
+  <!-- ═══ CASE EVENT ═══ -->
+  <section id="case-event">
+    <h2>📋 Entidad: CaseEvent</h2>
+    <p>Tabla <code>case_events</code> — registro auditable e inmutable. Los eventos <strong>nunca se editan ni eliminan</strong>.</p>
+
+    <h3>Enum event_type (17 valores)</h3>
+    <pre><code>ticket_created: 0   ticket_classified: 1   status_changed: 2
+assigned: 3         reassigned: 4          escalated: 5
+message_received: 6 message_sent: 7        tracking_triggered: 8
+tracking_paused: 9  resolved: 10           reopened: 11
+closed: 12          sla_at_risk: 13        sla_overdue: 14
+error_detected: 15  internal_note: 16
+
+origin: { bot: 0, agent: 1, system: 2 }</code></pre>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Columna</th><th>Tipo</th><th>Notas</th></tr>
+        <tr><td><code>case_ticket_id</code></td><td>bigint NOT NULL</td><td>FK → case_tickets</td></tr>
+        <tr><td><code>account_id</code></td><td>bigint NOT NULL</td><td></td></tr>
+        <tr><td><code>actor_id</code></td><td>bigint nullable</td><td>FK → users (nil = bot/sistema)</td></tr>
+        <tr><td><code>event_type</code></td><td>integer NOT NULL</td><td>enum (17 tipos)</td></tr>
+        <tr><td><code>origin</code></td><td>integer NOT NULL</td><td>bot / agent / system</td></tr>
+        <tr><td><code>payload</code></td><td>jsonb default: {}</td><td>datos del evento — índice GIN</td></tr>
+        <tr><td><code>created_at</code></td><td>datetime</td><td>solo inserción — inmutable</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══ CASE RULE ═══ -->
+  <section id="case-rule">
+    <h2>⚙️ Entidad: CaseRule</h2>
+    <p>Tabla <code>case_rules</code> — reglas de automatización configurables por cuenta. Se evalúan en cascada ordenadas por <code>position</code>. Si <code>continue_on_match: false</code> (default), se detiene en el primer match.</p>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Columna</th><th>Tipo</th><th>Notas</th></tr>
+        <tr><td><code>name</code></td><td>string NOT NULL</td><td>nombre descriptivo</td></tr>
+        <tr><td><code>active</code></td><td>boolean default: true</td><td></td></tr>
+        <tr><td><code>continue_on_match</code></td><td>boolean default: false</td><td>si true, evalúa siguientes reglas tras match</td></tr>
+        <tr><td><code>position</code></td><td>integer default: 0</td><td>menor = evalúa primero</td></tr>
+        <tr><td><code>conditions</code></td><td>jsonb default: []</td><td>array de condiciones</td></tr>
+        <tr><td><code>actions</code></td><td>jsonb default: []</td><td>array de acciones</td></tr>
+      </table>
+    </div>
+
+    <h3>Operadores y campos evaluables</h3>
+    <p><strong>Operadores:</strong> <code>eq</code> · <code>neq</code> · <code>contains</code> · <code>gte</code> · <code>lte</code> · <code>in</code> · <code>not_in</code></p>
+    <p><strong>Fields:</strong> <code>case_type</code> · <code>origin</code> · <code>priority</code> · <code>status</code> · <code>sla_status</code> · <code>message_content</code> · <code>time_without_response_min</code></p>
+    <p><strong>Acciones:</strong> <code>assign_agent</code> · <code>assign_team</code> · <code>change_priority</code> · <code>change_status</code> · <code>escalate</code> · <code>notify_agent</code> · <code>trigger_tracking</code> · <code>add_label</code> · <code>close_ticket</code></p>
+
+    <h3>Reglas pre-cargadas por defecto</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Pos</th><th>Condición</th><th>Acción</th></tr>
+        <tr><td>1</td><td><code>case_type = support</code></td><td><code>assign_team "Soporte Técnico"</code></td></tr>
+        <tr><td>2</td><td><code>case_type = commercial</code></td><td><code>assign_team "Comercial"</code></td></tr>
+        <tr><td>3</td><td><code>case_type = implementation</code></td><td><code>assign_agent José Luis</code></td></tr>
+        <tr><td>4</td><td><code>message_content CONTAINS "urgente"</code></td><td><code>change_priority urgent + notify_agent admin</code></td></tr>
+        <tr><td>5</td><td><code>sla_status = overdue AND case_type = support</code></td><td><code>escalate + assign_team "Soporte Senior"</code></td></tr>
+        <tr><td>6</td><td><code>status = waiting_on_customer + message_received</code></td><td><code>change_status in_progress</code></td></tr>
+        <tr><td>7</td><td><code>status = resolved AND time_without_activity ≥ 72h</code></td><td><code>close_ticket</code></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══ DIRECTIVA @crear_ticket ═══ -->
+  <section id="directiva">
+    <h2>📡 Directiva @crear_ticket</h2>
+
+    <div class="info-box blue">
+      <strong>Cuándo se dispara:</strong> Cuando <code>KnowledgeBaseResponseService</code> no pudo resolver la consulta, el job verifica si existe <code>@crear_ticket</code> en el <code>complementary_prompt</code> y delega a <code>Cases::TicketCreatorService</code>.
+    </div>
+
+    <h3>Tabla completa de directivas del sistema</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Directiva</th><th>Quién la lee</th><th>Servicio</th><th>Qué hace</th></tr>
+        <tr><td><code>@buscar_predefinidas</code></td><td>Código (regex)</td><td><code>KnowledgeBaseResponseService</code></td><td>Busca en pgvector</td></tr>
+        <tr><td><code>@buscar_foro(nombre)</code></td><td>Código (regex)</td><td><code>KnowledgeBaseResponseService</code></td><td>Busca en Discourse API</td></tr>
+        <tr><td><code>@crear_ticket</code></td><td>Código (regex)</td><td><code>Cases::TicketCreatorService</code></td><td>Crea CaseTicket si KBase no resolvió</td></tr>
+        <tr><td>Texto libre</td><td>IA (GPT)</td><td>—</td><td>Contexto, tono, instrucciones de comportamiento</td></tr>
+      </table>
+    </div>
+
+    <h4>Ejemplo de complementary_prompt completo</h4>
+    <pre><code>Eres un asistente de soporte técnico de Kontrolya.
+Primero busca la solución en la base de conocimiento: @buscar_foro(soporte-tecnico).
+Si no encuentras una respuesta específica al problema, no improvises.
+Usa @crear_ticket para registrar el caso y avisa al cliente que un asesor lo atenderá.</code></pre>
+
+    <h3>Orden de ejecución en el job</h3>
+    <div class="diagram-container">
+      <div class="diagram-title">Flujo de decisión — pipeline de directivas</div>
+      <div class="mermaid">
+flowchart LR
+    MSG([📨 Mensaje recibido]) --> KB
+
+    KB{{"[1] KnowledgeBase\n@buscar_predefinidas\n@buscar_foro(nombre)"}}
+    KB -- ✅ Resuelve --> R1([Responde al cliente\nFIN])
+    KB -- ❌ No resuelve --> TC
+
+    TC{{"[2] TicketCreator\n¿@crear_ticket en prompt?"}}
+    TC -- ✅ Directiva presente --> R2([Crea CaseTicket\nFIN])
+    TC -- ❌ Sin directiva --> GPT
+
+    GPT([💬 Respuesta conversacional\nGPT · fallback])
+
+    style MSG fill:#dbeafe,stroke:#3b82f6,color:#1e293b
+    style KB  fill:#faf5ff,stroke:#8b5cf6,color:#1e293b
+    style TC  fill:#faf5ff,stroke:#8b5cf6,color:#1e293b
+    style R1  fill:#dcfce7,stroke:#22c55e,color:#1e293b
+    style R2  fill:#dcfce7,stroke:#22c55e,color:#1e293b
+    style GPT fill:#f1f5f9,stroke:#94a3b8,color:#1e293b
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ INTEGRACIÓN BOT ═══ -->
+  <section id="integracion">
+    <h2>🔗 Integración con el bot — hook</h2>
+
+    <div class="diagram-container">
+      <div class="diagram-title">Diagrama de secuencia — hook en ContactTrackingResponseAnalyzerJob</div>
+      <div class="mermaid">
+sequenceDiagram
+    participant Job as ContactTracking\nResponseAnalyzerJob
+    participant Orch as Cases::\nOrchestratorService
+    participant Engine as Cases::\nRuleEngineService
+    participant DB as CaseEvent
+
+    Note over Job: process_message_for_tracking()
+    Job->>Orch: find_active_ticket(account, contact, conversation)
+    alt Ticket encontrado
+        Orch-->>Job: ticket
+        Job->>DB: create(event_type: message_received, origin: bot)
+        Job->>Engine: evaluate!(ticket, trigger_message)
+        Engine-->>Job: acciones ejecutadas
+    else Sin ticket activo
+        Orch-->>Job: nil
+    end
+    Note over Job: continúa flujo existente sin cambios
+
+    rect rgb(240, 253, 244)
+        Note over Job,DB: Todo este bloque está envuelto en rescue —\nun fallo nunca rompe el bot
+    end
+      </div>
+    </div>
+
+    <pre><code># [Gestor de Tickets] hook — falla silenciosamente para no romper el bot
+begin
+  ticket = Cases::OrchestratorService.new(
+    account:      message.account,
+    contact:      message.conversation.contact,
+    conversation: message.conversation
+  ).find_active_ticket
+
+  if ticket
+    ticket.update_columns(first_response_at: Time.current) if ticket.first_response_at.nil?
+    ticket.case_events.create!(
+      account:    message.account,
+      event_type: :message_received,
+      origin:     :bot,
+      payload:    { message_id: message.id }
+    )
+    Cases::RuleEngineService.new(ticket, trigger_message: message).evaluate!
+  end
+rescue => e
+  Rails.logger.error("[GestorTickets] hook error: #{e.message}")
+end</code></pre>
+
+    <h3>Mapeo RouterService → CaseTicket</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Ruta del RouterService</th><th>event_type registrado</th><th>Cambio de status</th></tr>
+        <tr><td><code>:rejected</code></td><td><code>status_changed</code></td><td>→ <code>cancelled</code></td></tr>
+        <tr><td><code>:interested</code></td><td><code>escalated</code></td><td>→ <code>escalated</code></td></tr>
+        <tr><td><code>:reschedule</code></td><td><code>tracking_triggered</code></td><td>→ <code>waiting_on_customer</code></td></tr>
+        <tr><td><code>:kbase · :tracking · :botseller</code></td><td><code>message_sent</code></td><td>sin cambio</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══ UI / DASHBOARD ═══ -->
+  <section id="ui">
+    <h2>🖥️ Integración en el Dashboard</h2>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Punto de entrada</th><th>Qué muestra</th><th>Para quién</th></tr>
+        <tr><td><strong>Panel derecho de conversación</strong></td><td>Ticket vinculado — crear / ver / cambiar status</td><td>Agente atendiendo</td></tr>
+        <tr><td><strong>Vista "Gestor de Tickets"</strong> (sidebar)</td><td>Todos los tickets con filtros y SLA</td><td>Supervisores, equipo</td></tr>
+        <tr><td><strong>Panel de contacto</strong></td><td>Tickets históricos del contacto</td><td>Agente revisando historial</td></tr>
+      </table>
+    </div>
+
+    <h3>Flujo de creación de ticket — dos formas</h3>
+    <div class="diagram-container">
+      <div class="diagram-title">Actividad — cómo se crea un CaseTicket</div>
+      <div class="mermaid">
+flowchart TD
+    A([Inicio]) --> B{¿Origen?}
+    B -- Automático / Bot --> C[Mensaje llega en ContactTracking activo]
+    B -- Manual / Agente --> D[Agente abre conversación\nContactPanel → + Crear ticket]
+    C --> E[OrchestratorService.find_or_create\ninfiere case_type · priority · origin]
+    D --> F[Modal: case_type · title · priority\norigin = manual]
+    E --> G[CaseTicket creado]
+    F --> G
+    G --> H[RuleEngineService.evaluate!\nreglas en cascada por position]
+    H --> I[CaseEvent: ticket_created]
+    I --> J[SLA asignado automáticamente\npor priority]
+    J --> K([Ticket activo y visible\nen panel + vista Gestor])
+    style A fill:#dbeafe,stroke:#3b82f6,color:#1e293b
+    style K fill:#dcfce7,stroke:#22c55e,color:#1e293b
+    style G fill:#ede9fe,stroke:#8b5cf6,color:#1e293b
+      </div>
+    </div>
+
+    <h3>Badge visual por sla_status</h3>
+    <p><span class="badge badge-green">on_time</span> → verde &nbsp; <span class="badge badge-yellow">at_risk</span> → amarillo &nbsp; <span class="badge badge-red">overdue</span> → rojo</p>
+  </section>
+
+  <!-- ═══ API ═══ -->
+  <section id="api">
+    <h2>🌐 API Endpoints</h2>
+
+    <h3>CaseTickets</h3>
+    <pre><code>GET    /api/v1/accounts/:id/case_tickets                     # lista con filtros
+POST   /api/v1/accounts/:id/case_tickets                     # crear manual
+GET    /api/v1/accounts/:id/case_tickets/:id                 # detalle
+PATCH  /api/v1/accounts/:id/case_tickets/:id/transition      # cambiar status
+PATCH  /api/v1/accounts/:id/case_tickets/:id/assign          # asignar agente/equipo
+GET    /api/v1/accounts/:id/case_tickets/:id/case_events     # timeline del ticket</code></pre>
+
+    <h3>CaseRules</h3>
+    <pre><code>GET    /api/v1/accounts/:id/case_rules
+POST   /api/v1/accounts/:id/case_rules
+PATCH  /api/v1/accounts/:id/case_rules/:id
+DELETE /api/v1/accounts/:id/case_rules/:id</code></pre>
+
+    <h3>Filtros para GET /case_tickets</h3>
+    <pre><code>?status=open|classified|in_progress|...
+?case_type=support|commercial|...
+?priority=low|medium|high|urgent
+?sla_status=on_time|at_risk|overdue
+?assignee_id=&lt;user_id&gt;
+?contact_id=&lt;contact_id&gt;
+?page=1&amp;per_page=25</code></pre>
+  </section>
+
+  <!-- ═══ ARCHIVOS ═══ -->
+  <section id="archivos">
+    <h2>📁 Archivos a crear / modificar</h2>
+
+    <h3>Backend — nuevos</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Archivo</th><th>Función</th></tr>
+        <tr><td><code>db/migrate/..._create_case_tickets.rb</code></td><td>Tabla <code>case_tickets</code></td></tr>
+        <tr><td><code>db/migrate/..._create_case_events.rb</code></td><td>Tabla <code>case_events</code></td></tr>
+        <tr><td><code>db/migrate/..._create_case_rules.rb</code></td><td>Tabla <code>case_rules</code></td></tr>
+        <tr><td><code>app/models/case_ticket.rb</code></td><td>Modelo con enums, validaciones, transiciones, SLA</td></tr>
+        <tr><td><code>app/models/case_event.rb</code></td><td>Modelo de evento (inmutable)</td></tr>
+        <tr><td><code>app/models/case_rule.rb</code></td><td>Modelo de regla</td></tr>
+        <tr><td><code>app/services/cases/orchestrator_service.rb</code></td><td>find_or_create ticket</td></tr>
+        <tr><td><code>app/services/cases/rule_engine_service.rb</code></td><td>Motor de reglas en cascada</td></tr>
+        <tr><td><code>app/services/cases/ticket_creator_service.rb</code></td><td>Detecta @crear_ticket y crea el ticket</td></tr>
+        <tr><td><code>app/jobs/case_sla_monitor_job.rb</code></td><td>Monitor SLA (cron cada 15min)</td></tr>
+        <tr><td><code>app/controllers/api/v1/accounts/case_tickets_controller.rb</code></td><td>CRUD + transition + assign</td></tr>
+        <tr><td><code>app/controllers/api/v1/accounts/case_events_controller.rb</code></td><td>Index (timeline)</td></tr>
+        <tr><td><code>app/controllers/api/v1/accounts/case_rules_controller.rb</code></td><td>CRUD</td></tr>
+      </table>
+    </div>
+
+    <h3>Backend — modificados</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Archivo</th><th>Qué se agrega</th></tr>
+        <tr><td><code>app/jobs/contact_tracking_response_analyzer_job.rb</code></td><td>Hook con rescue al inicio de <code>process_message_for_tracking</code></td></tr>
+        <tr><td><code>config/routes.rb</code></td><td>Rutas de <code>case_tickets</code>, <code>case_events</code>, <code>case_rules</code></td></tr>
+        <tr><td><code>config/sidekiq.yml</code></td><td>Cron <code>CaseSlaMonitorJob</code> cada 15 minutos</td></tr>
+      </table>
+    </div>
+
+    <h3>Frontend — Fase 3 (panel derecho)</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Archivo</th><th>Función</th></tr>
+        <tr><td><code>conversation/CaseTicketPanel.vue</code></td><td>Sección del ContactPanel — badge + botones</td></tr>
+        <tr><td><code>conversation/CaseTicketModal.vue</code></td><td>Modal de creación de ticket</td></tr>
+        <tr><td><code>conversation/CaseTimeline.vue</code></td><td>Timeline de events del ticket</td></tr>
+      </table>
+    </div>
+
+    <h3>Frontend — Fase 4 (vista dedicada)</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Archivo</th><th>Función</th></tr>
+        <tr><td><code>gestorTickets/gestorTickets.routes.js</code></td><td>Ruta <code>/tickets/list</code></td></tr>
+        <tr><td><code>gestorTickets/Index.vue</code></td><td>Vista principal — lista con filtros y badges SLA</td></tr>
+        <tr><td><code>gestorTickets/TicketDetail.vue</code></td><td>Detalle + timeline</td></tr>
+        <tr><td><code>gestorTickets/TicketRules.vue</code></td><td>Gestión de reglas</td></tr>
+        <tr><td><code>gestorTickets/api.js</code></td><td>Llamadas al backend</td></tr>
+        <tr><td><code>i18n/locale/es/gestorTickets.js</code></td><td>Traducciones ES</td></tr>
+        <tr><td><code>i18n/locale/en/gestorTickets.js</code></td><td>Traducciones EN</td></tr>
+      </table>
+    </div>
+
+    <div class="info-box blue">
+      <strong>Convención de identificación:</strong> Archivos nuevos llevan encabezado <code>// ==== @tickets_cases</code>. Líneas en archivos existentes llevan comentario inline <code>// @tickets_cases</code>.
+    </div>
+  </section>
+
+  <!-- ═══ FASES ═══ -->
+  <section id="fases">
+    <h2>📅 Fases de implementación</h2>
+
+    <div class="phase-list">
+      <div class="phase-item">
+        <div class="phase-num p0">0</div>
+        <div class="phase-content">
+          <h4>Migraciones y Modelos</h4>
+          <p>3 migraciones (case_tickets, case_events, case_rules) + 3 modelos con enums, validaciones, transiciones y SLA.</p>
+        </div>
+        <div class="phase-days"><span class="badge badge-blue">1-2 días</span></div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-num p1">1</div>
+        <div class="phase-content">
+          <h4>Servicios + Jobs + Hook bot</h4>
+          <p>OrchestratorService · RuleEngineService · TicketCreatorService · CaseSlaMonitorJob · Hook en ContactTrackingResponseAnalyzerJob</p>
+        </div>
+        <div class="phase-days"><span class="badge badge-purple">2-3 días</span></div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-num p2">2</div>
+        <div class="phase-content">
+          <h4>API REST</h4>
+          <p>3 controladores (case_tickets, case_events, case_rules) + rutas en config/routes.rb</p>
+        </div>
+        <div class="phase-days"><span class="badge badge-green">2 días</span></div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-num p3">3</div>
+        <div class="phase-content">
+          <h4>Panel derecho de conversación</h4>
+          <p>CaseTicketPanel.vue · CaseTicketModal.vue · CaseTimeline.vue — integración en ContactPanel</p>
+        </div>
+        <div class="phase-days"><span class="badge badge-yellow">2-3 días</span></div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-num p4">4</div>
+        <div class="phase-content">
+          <h4>Vista "Gestor de Tickets" en sidebar</h4>
+          <p>Index.vue · TicketDetail.vue · TicketRules.vue · api.js · traducciones ES/EN</p>
+        </div>
+        <div class="phase-days"><span class="badge badge-orange">3-4 días</span></div>
+      </div>
+      <div class="phase-item">
+        <div class="phase-num p5">5</div>
+        <div class="phase-content">
+          <h4>Métricas y Reportes</h4>
+          <p>Dashboards de SLA, tiempos de respuesta, volumen por tipo, performance del equipo</p>
+        </div>
+        <div class="phase-days"><span class="badge badge-red">2-3 días</span></div>
+      </div>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-title">Dependencias entre fases</div>
+      <div class="mermaid">
+flowchart LR
+    F0["FASE 0\n📦 Modelos"] --> F1["FASE 1\n⚙️ Servicios"]
+    F0 --> F2["FASE 2\n🌐 API"]
+    F1 --> F3["FASE 3\n🖥️ Panel conv."]
+    F2 --> F4["FASE 4\n📋 Vista sidebar"]
+    F3 --> F5["FASE 5\n📊 Métricas"]
+    F4 --> F5
+    style F0 fill:#dbeafe,stroke:#3b82f6,color:#1e293b
+    style F1 fill:#ede9fe,stroke:#8b5cf6,color:#1e293b
+    style F2 fill:#dcfce7,stroke:#22c55e,color:#1e293b
+    style F3 fill:#fef3c7,stroke:#f59e0b,color:#1e293b
+    style F4 fill:#ffedd5,stroke:#f97316,color:#1e293b
+    style F5 fill:#fee2e2,stroke:#ef4444,color:#1e293b
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ FASE 0 DETALLE ═══ -->
+  <section id="fase0">
+    <h2>🔨 FASE 0 — Detalle: Migraciones y Modelos</h2>
+
+    <div class="info-box green">
+      <strong>Criterio de aceptación:</strong> Las 3 migraciones corren sin error con <code>rails db:migrate</code>. Los modelos responden en <code>rails console</code> con validaciones y transiciones correctas.
+    </div>
+
+    <h3>Migraciones</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Migración</th><th>Tabla</th><th>Índices clave</th></tr>
+        <tr><td><code>create_case_tickets</code></td><td><code>case_tickets</code></td><td><code>(account_id, status)</code> · <code>(account_id, contact_id)</code> · <code>(account_id, sla_status)</code> · GIN metadata</td></tr>
+        <tr><td><code>create_case_events</code></td><td><code>case_events</code></td><td><code>(case_ticket_id, event_type)</code> · <code>(account_id, created_at)</code> · GIN payload</td></tr>
+        <tr><td><code>create_case_rules</code></td><td><code>case_rules</code></td><td><code>(account_id, active, position)</code></td></tr>
+      </table>
+    </div>
+
+    <h3>Comportamientos clave del modelo CaseTicket</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Elemento</th><th>Descripción</th></tr>
+        <tr><td><code>VALID_TRANSITIONS</code></td><td>Hash que mapea cada status a sus destinos permitidos</td></tr>
+        <tr><td><code>SLA_BY_PRIORITY</code></td><td>Hash con minutos de first_response y resolution por priority</td></tr>
+        <tr><td><code>can_transition_to?(new_status)</code></td><td>Valida antes de cambiar estado</td></tr>
+        <tr><td><code>transition!(new_status, actor:, reason:)</code></td><td>Cambia status y registra CaseEvent automáticamente</td></tr>
+        <tr><td><code>calculate_sla_status</code></td><td>Retorna <code>on_time</code>, <code>at_risk</code> o <code>overdue</code></td></tr>
+        <tr><td><code>after_create</code></td><td>Asigna SLA según priority + registra event <code>ticket_created</code></td></tr>
+      </table>
+    </div>
+
+    <h3>Pruebas en rails console</h3>
+    <pre><code># Crear ticket urgent → SLA asignado automáticamente
+ticket = CaseTicket.create!(account: a, contact: c, priority: :urgent,
+                             title: "Test", case_type: :support, origin: :bot)
+ticket.first_response_time_target  # → 30
+ticket.resolution_time_target      # → 120
+
+# Transición inválida → debe lanzar error
+ticket.transition!(to: :closed)    # → ActiveRecord::RecordInvalid
+
+# Transición válida → crea CaseEvent automáticamente
+ticket.transition!(to: :classified, actor: nil, reason: "auto")
+ticket.case_events.last.event_type  # → "status_changed"</code></pre>
+  </section>
+
+  <!-- ═══ FLUJOS ═══ -->
+  <section id="flujo-a">
+    <h2>💬 Flujo A — Soporte técnico por WhatsApp</h2>
+    <div class="diagram-container">
+      <div class="mermaid">
+flowchart TD
+    A([📱 Mensaje WhatsApp]) --> B[ContactTrackingResponseAnalyzerJob]
+    B --> C{Hook: ¿ticket activo?}
+    C -- ❌ No existe --> D["Crea CaseTicket\ncase_type: support\npriority: high\norigin: whatsapp"]
+    C -- ✅ Existe --> E[Actualiza first_response_at\nRegistra message_received]
+    D --> F[RuleEngine evalúa\nassign_team 'Soporte Técnico']
+    E --> F
+    F --> G[RouterService clasifica → :tracking]
+    G --> H[KBase busca solución\ny responde al cliente]
+    H --> I["CaseEvents registrados\nmessage_received · message_sent"]
+    I --> J([SLA activo: 30 min\nurgent first response])
+    style A fill:#dbeafe,stroke:#3b82f6,color:#1e293b
+    style J fill:#dcfce7,stroke:#22c55e,color:#1e293b
+    style D fill:#ede9fe,stroke:#8b5cf6,color:#1e293b
+      </div>
+    </div>
+  </section>
+
+  <section id="flujo-b">
+    <h2>💰 Flujo B — Seguimiento comercial</h2>
+    <div class="diagram-container">
+      <div class="mermaid">
+flowchart TD
+    A([Agente envía cotización]) --> B["CaseTicket commercial\nstatus: waiting_on_customer"]
+    B --> C["OrchestratorService\ncrea ContactTracking D+1 · D+3 · D+5"]
+    C --> D([Cliente responde: 'me interesa'])
+    D --> E[RouterService: :interested]
+    E --> F["CaseTicket: status → escalated\nRuleEngine: assign_team 'Comercial'"]
+    F --> G["CaseEvents: escalated · assigned\nNotificación al asesor comercial"]
+    style A fill:#dbeafe,stroke:#3b82f6,color:#1e293b
+    style G fill:#dcfce7,stroke:#22c55e,color:#1e293b
+    style B fill:#ede9fe,stroke:#8b5cf6,color:#1e293b
+      </div>
+    </div>
+  </section>
+
+  <section id="flujo-c">
+    <h2>🚨 Flujo C — SLA vencido → escalado automático</h2>
+    <div class="diagram-container">
+      <div class="mermaid">
+flowchart TD
+    A(["⏱️ CaseSlaMonitorJob\ncada 15 minutos"]) --> B{"Ticket urgent\n> 30 min sin first_response?"}
+    B -- ❌ No --> Z([Continúa monitoreo])
+    B -- ✅ Sí --> C["CaseEvent: sla_overdue\nsla_status → overdue"]
+    C --> D["RuleEngine: Regla 5\nescalate · assign_team 'Soporte Senior'\nnotify_agent supervisor"]
+    D --> E["CaseTicket actualizado\nstatus: escalated\nsla_status: overdue"]
+    E --> F([Badge rojo visible\nen panel y vista Gestor de Tickets])
+    style A fill:#fef3c7,stroke:#f59e0b,color:#1e293b
+    style F fill:#fee2e2,stroke:#ef4444,color:#1e293b
+    style B fill:#fff,stroke:#d0d7e3,color:#1e293b
+      </div>
+    </div>
+  </section>
+
+  <section id="flujo-d">
+    <h2>👤 Flujo D — Ticket manual desde conversación</h2>
+    <div class="diagram-container">
+      <div class="mermaid">
+flowchart TD
+    A([Agente abre conversación]) --> B["ContactPanel\nSección: Ticket asociado\n→ sin ticket activo"]
+    B --> C[Clic: + Crear ticket]
+    C --> D["Modal:\ncase_type = support\ntitle = 'Error al guardar'\npriority = high"]
+    D --> E["OrchestratorService.create\norigin: manual"]
+    E --> F[RuleEngineService evalúa reglas]
+    F --> G["Panel muestra badge\nSUPPORT · IN_PROGRESS · High · SLA: 1h 55min"]
+    G --> H[Agente resuelve el caso]
+    H --> I["ticket.transition!(:resolved)"]
+    I --> J(["CaseSlaMonitorJob (72h)\nclosed automático"])
+    style A fill:#dbeafe,stroke:#3b82f6,color:#1e293b
+    style J fill:#f1f5f9,stroke:#94a3b8,color:#1e293b
+    style E fill:#ede9fe,stroke:#8b5cf6,color:#1e293b
+      </div>
+    </div>
+  </section>
+
+  <section id="flujo-e">
+    <h2>🤖 Flujo E — KBase no resuelve → @crear_ticket</h2>
+    <div class="diagram-container">
+      <div class="mermaid">
+flowchart TD
+    A([Mensaje llega]) --> B[RouterService → :kbase / :tracking]
+    B --> C["KnowledgeBaseResponseService\nbusca en pgvector / Discourse"]
+    C -- ✅ Resuelve --> R([Responde al cliente · FIN])
+    C -- ❌ Sin resultados --> D["Cases::TicketCreatorService\ndetecta @crear_ticket\nen complementary_prompt"]
+    D -- Sin directiva --> GPT([Respuesta conversacional])
+    D -- Directiva presente --> E["Crea CaseTicket\ncase_type: support\norigin: bot"]
+    E --> F[RuleEngine evalúa → asignación automática]
+    F --> G["Responde al cliente:\n'Tu caso fue registrado,\nun asesor te contactará'"]
+    G --> H([CaseEvent: ticket_created\norigin: bot])
+    style A fill:#dbeafe,stroke:#3b82f6,color:#1e293b
+    style R fill:#dcfce7,stroke:#22c55e,color:#1e293b
+    style H fill:#dcfce7,stroke:#22c55e,color:#1e293b
+    style E fill:#ede9fe,stroke:#8b5cf6,color:#1e293b
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ NOTAS ═══ -->
+  <section id="notas">
+    <h2>📝 Notas importantes</h2>
+
+    <div class="info-box blue">
+      <strong>Convención:</strong> Tablas, columnas y enums siempre en <strong>inglés</strong> — igual que Chatwoot. Las etiquetas de UI se muestran en español.
+    </div>
+    <div class="info-box yellow">
+      <strong>ContactTracking ≠ CaseTicket:</strong> El <code>ContactTracking</code> es una <strong>acción automatizada sobre el ticket</strong>, no el ticket mismo. Un ticket puede tener múltiples ContactTrackings asociados.
+    </div>
+    <div class="info-box green">
+      <strong>Seguridad del hook:</strong> Todo el código del Gestor de Tickets va en <code>rescue</code>. Un fallo nunca rompe el flujo de atención existente.
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Concepto</th><th>Es el contenedor de</th></tr>
+        <tr><td><code>Conversation</code></td><td>Mensajes (el canal de comunicación)</td></tr>
+        <tr><td><code>CaseTicket</code></td><td>El problema o necesidad concreta del cliente</td></tr>
+        <tr><td><code>ContactTracking</code></td><td>Acciones automáticas programadas sobre el ticket</td></tr>
+        <tr><td><code>CaseEvent</code></td><td>Historial inmutable de todo lo ocurrido</td></tr>
+        <tr><td><code>CaseRule</code></td><td>Automatización configurable por cuenta</td></tr>
+      </table>
+    </div>
+
+    <ul style="padding-left: 24px; margin-top: 16px;">
+      <li><code>CaseRuleEngine</code> evalúa en cascada por <code>position</code>. Si <code>continue_on_match: false</code>, para en el primer match.</li>
+      <li>Auto-cierre: 72h después de status <code>resolved</code> sin actividad → <code>closed</code>.</li>
+      <li><code>@crear_ticket</code> no tiene parámetros — exclusivo de Wintook, sin integración a sistemas externos.</li>
+      <li>Los <code>CaseEvent</code> son solo de inserción — nunca se editan ni eliminan.</li>
+    </ul>
+
+    <div style="margin-top: 52px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center;">
+      <p style="color: #94a3b8; font-size: 13px;">Gestor de Tickets — Plan v1.0 · Kontrolya/Wintook · 2026-05-28</p>
+      <p style="color: #94a3b8; font-size: 12px;">Rama base: feat/kbase_contact_tracking · Próxima revisión: v1.1 (post FASE 0)</p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

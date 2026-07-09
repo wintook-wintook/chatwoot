@@ -8,7 +8,6 @@
 #  allow_agent_to_delete_message :boolean          default(TRUE), not null
 #  allow_messages_after_resolved :boolean          default(TRUE)
 #  auto_assignment_config        :jsonb
-#  bot                           :boolean          default(FALSE), not null
 #  business_name                 :string
 #  channel_type                  :string
 #  csat_response_visible         :boolean          default(FALSE), not null
@@ -23,7 +22,6 @@
 #  name                          :string           not null
 #  out_of_office_message         :string
 #  sender_name_type              :integer          default("friendly"), not null
-#  set_questions                 :boolean          default(FALSE)
 #  timezone                      :string           default("UTC")
 #  working_hours_enabled         :boolean          default(FALSE)
 #  created_at                    :datetime         not null
@@ -77,6 +75,9 @@ class Inbox < ApplicationRecord
   has_one :agent_bot, through: :agent_bot_inbox
   has_many :webhooks, dependent: :destroy_async
   has_many :hooks, dependent: :destroy_async, class_name: 'Integrations::Hook'
+  has_many :contact_trackings, dependent: :destroy
+  has_many :command_sessions, dependent: :destroy
+  has_many :tracking_templates, dependent: :destroy
 
   enum sender_name_type: { friendly: 0, professional: 1 }
 

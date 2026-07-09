@@ -99,6 +99,16 @@
 - name: FB_APP_ID
   display_title: 'Facebook App ID'
   locked: false
+# @waba_templates — App ID de Meta para el Resumable Upload (si difiere de FB_APP_ID).
+- name: META_APP_ID
+  display_title: 'Meta App ID (WhatsApp templates)'
+  description: 'App ID para subir imágenes de cabecera de plantillas. Si está vacío, usa FB_APP_ID.'
+  locked: false
+# @waba_templates — crea plantillas en estado PENDING sin llamar a Meta (pruebas).
+- name: WHATSAPP_TEMPLATES_DRY_RUN
+  display_title: 'WhatsApp templates DRY RUN'
+  value: false
+  locked: false
 - name: FB_VERIFY_TOKEN
   display_title: 'Facebook Verify Token'
   description: 'The verify token used for Facebook Messenger Webhook'

@@ -11,6 +11,7 @@ const settings = accountId => ({
     'auditlogs_list',
     'billing_settings_index',
     'canned_list',
+    'knowledge_sources_list', // @knowledge_sources
     'chatgpt_list',
     'general_settings_index',
     'general_settings',
@@ -27,6 +28,8 @@ const settings = accountId => ({
     'settings_inbox_show',
     'settings_inboxes_add_agents',
     'settings_inboxes_page_channel',
+    'whatsapp_templates_index', // @waba_templates
+    'whatsapp_templates_wrapper', // @waba_templates
     'settings_integrations_dashboard_apps',
     'settings_integrations_integration',
     'settings_integrations_slack',
@@ -87,6 +90,19 @@ const settings = accountId => ({
       toState: frontendURL(`accounts/${accountId}/settings/inboxes/list`),
       toStateName: 'settings_inbox_list',
       featureFlag: FEATURE_FLAGS.INBOX_MANAGEMENT,
+    },
+    { // @waba_templates
+      icon: 'chat-multiple',
+      label: 'WHATSAPP_TEMPLATES',
+      hasSubMenu: false,
+      meta: {
+        permissions: ['administrator'],
+      },
+      toState: frontendURL(
+        `accounts/${accountId}/settings/whatsapp-templates/list`
+      ),
+      toStateName: 'whatsapp_templates_index',
+      featureFlag: FEATURE_FLAGS.WHATSAPP_TEMPLATES,
     },
     {
       icon: 'tag',
@@ -159,6 +175,18 @@ const settings = accountId => ({
       toStateName: 'canned_list',
       featureFlag: FEATURE_FLAGS.CANNED_RESPONSES,
     },
+    { // @knowledge_sources
+      icon: 'library',
+      label: 'KNOWLEDGE_SOURCES',
+      hasSubMenu: false,
+      meta: {
+        permissions: ['administrator', 'agent', 'custom_role'],
+      },
+      toState: frontendURL(
+        `accounts/${accountId}/settings/knowledge-sources/list`
+      ),
+      toStateName: 'knowledge_sources_list',
+    },
     {
       icon: 'bot',
       label: 'CHATGPT',
@@ -171,7 +199,7 @@ const settings = accountId => ({
       featureFlag: FEATURE_FLAGS.CANNED_RESPONSES,
     },
     { // proyecto@tracking_templates
-      icon: 'document-outline',
+      icon: 'document-list-clock',
       label: 'TRACKING_TEMPLATES',
       hasSubMenu: false,
       meta: {

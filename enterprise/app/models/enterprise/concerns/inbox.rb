@@ -9,6 +9,7 @@ module Enterprise::Concerns::Inbox
       has_many :responses, through: :response_sources
     end
 
-    add_response_related_associations if Features::ResponseBotService.new.vector_extension_enabled?
+    add_response_related_associations if Features::ResponseBotService.new.vector_extension_enabled? &&
+                                         ActiveRecord::Base.connection.table_exists?(:inbox_response_sources)
   end
 end
