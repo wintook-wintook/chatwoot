@@ -37,6 +37,24 @@ describe Whatsapp::Providers::WhatsappCloudService do
     end
   end
 
+  describe '#templates_list' do
+    it 'devuelve la data cruda de Meta' do
+      stub_request(:get, "#{base}/message_templates")
+        .with(query: hash_including({}))
+        .to_return(status: 200, body: { data: [{ 'id' => '1', 'name' => 'a' }] }.to_json, headers: json)
+
+      expect(service.templates_list).to eq([{ 'id' => '1', 'name' => 'a' }])
+    end
+
+    it 'lanza el error real de Meta cuando la respuesta no es exitosa' do
+      stub_request(:get, "#{base}/message_templates")
+        .with(query: hash_including({}))
+        .to_return(status: 401, body: { error: { message: 'Session has expired' } }.to_json, headers: json)
+
+      expect { service.templates_list }.to raise_error(/401.*Session has expired/)
+    end
+  end
+
   describe '#edit_template' do
     it 'hace POST al nodo de la plantilla' do
       stub = stub_request(:post, "#{base.sub('/123456789', '')}/999")

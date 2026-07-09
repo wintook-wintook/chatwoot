@@ -41,6 +41,9 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
   def sync
     result = Whatsapp::TemplateSyncService.new(@channel).perform
     render json: { synced: result.synced, created: result.created, updated: result.updated }
+  rescue StandardError => e
+    Rails.logger.error "[waba_templates] sync falló para canal ##{@channel&.id}: #{e.message}"
+    render json: { error: "No se pudo sincronizar con Meta: #{e.message}" }, status: :unprocessable_entity
   end
 
   # Importa AL INSTANTE lo que cada canal ya tiene en cache (message_templates), sin llamar a

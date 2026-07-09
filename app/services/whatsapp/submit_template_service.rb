@@ -22,8 +22,14 @@ class Whatsapp::SubmitTemplateService
   end
 
   # --- crear -----------------------------------------------------------------
+  # Idempotente: si ya existe una fila con ese name+language (un DRAFT de un intento
+  # previo, o una fila importada/sincronizada) la REUTILIZA en vez de crear una nueva.
+  # Así el save! post-Meta no choca con el índice único (channel,name,language) y se
+  # evita el DRIFT "Meta creó la plantilla pero falló el guardado local".
   def create
-    template = @channel.whatsapp_templates.new(@params.merge(account: @account))
+    template = @channel.whatsapp_templates
+                       .find_or_initialize_by(name: @params[:name], language: @params[:language])
+    template.assign_attributes(@params.merge(account: @account))
     validation = Whatsapp::TemplateValidator.call(template)
     return invalid(validation) unless validation.valid?
 

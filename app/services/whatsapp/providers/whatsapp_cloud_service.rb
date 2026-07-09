@@ -66,8 +66,24 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   # @waba_templates — lista cruda de plantillas de Meta (para el upsert por fila del sync).
+  # A diferencia de fetch_whatsapp_templates (que devuelve [] en silencio si Meta falla y se
+  # usa en el sync automático), aquí LANZAMOS el error real de Meta para que el dashboard
+  # muestre el motivo (token vencido, config incompleta, etc.) en vez de un genérico.
   def templates_list
-    fetch_whatsapp_templates("#{business_account_path}/message_templates?access_token=#{whatsapp_channel.provider_config['api_key']}")
+    fetch_templates_or_raise("#{business_account_path}/message_templates?access_token=#{whatsapp_channel.provider_config['api_key']}")
+  end
+
+  def fetch_templates_or_raise(url)
+    response = HTTParty.get(url)
+    unless response.success?
+      meta_message = response.parsed_response.is_a?(Hash) ? response.parsed_response.dig('error', 'message') : nil
+      raise "Meta respondió #{response.code}: #{meta_message || 'error desconocido'}"
+    end
+
+    next_page = next_url(response)
+    return response['data'] + fetch_templates_or_raise(next_page) if next_page.present?
+
+    response['data']
   end
 
   def fetch_whatsapp_templates(url)

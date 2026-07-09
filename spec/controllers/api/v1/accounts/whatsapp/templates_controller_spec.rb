@@ -92,6 +92,17 @@ RSpec.describe 'WhatsApp Templates API', type: :request do
       expect(response).to have_http_status(:success)
       expect(JSON.parse(response.body)).to include('synced' => 3, 'created' => 2, 'updated' => 1)
     end
+
+    it 'devuelve 422 con el motivo real cuando Meta falla' do
+      allow_any_instance_of(Whatsapp::TemplateSyncService).to receive(:perform)
+        .and_raise('Meta respondió 401: Session has expired')
+
+      post "/api/v1/accounts/#{account.id}/whatsapp/templates/sync",
+           params: { inbox_id: inbox.id }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(JSON.parse(response.body)['error']).to match(/Session has expired/)
+    end
   end
 
   describe 'POST /api/v1/accounts/{id}/whatsapp/templates/import' do

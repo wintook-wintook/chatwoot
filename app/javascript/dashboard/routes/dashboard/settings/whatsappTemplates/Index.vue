@@ -7,6 +7,7 @@
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import ResizableTextArea from 'shared/components/ResizableTextArea.vue';
+import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import {
@@ -30,13 +31,22 @@ const emptyForm = () => ({
 });
 
 export default {
-  components: { ResizableTextArea, SettingsLayout, BaseSettingsHeader },
+  components: {
+    ResizableTextArea,
+    TableFooter,
+    SettingsLayout,
+    BaseSettingsHeader,
+  },
   data() {
     return {
       channelFilter: '',
       statusFilter: '',
       categoryFilter: '',
       searchQuery: '',
+      currentPage: 1,
+      perPage: 10,
+      showFiltersModal: false,
+      draftFilters: { channel: '', status: '', category: '' },
       showForm: false,
       editingId: null,
       form: emptyForm(),
@@ -88,6 +98,32 @@ export default {
           this.searchQuery.trim()
       );
     },
+    // Chips de los filtros activos (sin la búsqueda, que tiene su propio input).
+    activeFilterChips() {
+      const chips = [];
+      if (this.channelFilter) {
+        const ib = this.whatsappInboxes.find(
+          i => i.channel_id === Number(this.channelFilter)
+        );
+        chips.push({
+          key: 'channel',
+          label: `Canal: ${ib ? ib.name : this.channelFilter}`,
+        });
+      }
+      if (this.statusFilter) {
+        chips.push({ key: 'status', label: `Estado: ${this.statusFilter}` });
+      }
+      if (this.categoryFilter) {
+        chips.push({
+          key: 'category',
+          label: `Categoría: ${this.categoryFilter}`,
+        });
+      }
+      return chips;
+    },
+    activeFilterCount() {
+      return this.activeFilterChips.length;
+    },
     filteredTemplates() {
       const q = this.searchQuery.trim().toLowerCase();
       return this.templates.filter(t => {
@@ -105,14 +141,18 @@ export default {
         return true;
       });
     },
+    // Recorte de la página actual (paginación en cliente sobre lo ya filtrado).
+    pagedTemplates() {
+      const start = (this.currentPage - 1) * this.perPage;
+      return this.filteredTemplates.slice(start, start + this.perPage);
+    },
     bodyVarCount() {
       return new Set(templateVariables(this.form.body_text)).size;
     },
-    headerHasVar() {
-      return (
-        this.form.header_type === 'text' &&
-        templateVariables(this.form.header_content).length > 0
-      );
+    // N.º de variables distintas en la cabecera de texto (Meta permite {{1}}).
+    headerVarCount() {
+      if (this.form.header_type !== 'text') return 0;
+      return new Set(templateVariables(this.form.header_content)).size;
     },
     validationErrors() {
       const errors = validateTemplate(this.form);
@@ -195,6 +235,25 @@ export default {
     'form.body_text'() {
       this.syncBodySamples();
     },
+    'form.header_content'() {
+      this.syncHeaderSamples();
+    },
+    'form.header_type'() {
+      this.syncHeaderSamples();
+    },
+    // Al cambiar cualquier filtro o la búsqueda, volvemos a la primera página.
+    searchQuery() {
+      this.currentPage = 1;
+    },
+    channelFilter() {
+      this.currentPage = 1;
+    },
+    statusFilter() {
+      this.currentPage = 1;
+    },
+    categoryFilter() {
+      this.currentPage = 1;
+    },
     // Enforca la regla de Meta al escribir: solo [a-z0-9_], sin espacios ni acentos.
     'form.name'(val) {
       const clean = this.sanitizeName(val);
@@ -224,6 +283,34 @@ export default {
       this.categoryFilter = '';
       this.searchQuery = '';
     },
+    openFiltersModal() {
+      this.draftFilters = {
+        channel: this.channelFilter,
+        status: this.statusFilter,
+        category: this.categoryFilter,
+      };
+      this.showFiltersModal = true;
+    },
+    closeFiltersModal() {
+      this.showFiltersModal = false;
+    },
+    clearDraftFilters() {
+      this.draftFilters = { channel: '', status: '', category: '' };
+    },
+    applyFiltersFromModal() {
+      this.channelFilter = this.draftFilters.channel;
+      this.statusFilter = this.draftFilters.status;
+      this.categoryFilter = this.draftFilters.category;
+      this.showFiltersModal = false;
+    },
+    removeFilter(key) {
+      if (key === 'channel') this.channelFilter = '';
+      if (key === 'status') this.statusFilter = '';
+      if (key === 'category') this.categoryFilter = '';
+    },
+    onPageChange(page) {
+      this.currentPage = page;
+    },
     inboxNameForChannel(channelWhatsappId) {
       const inbox = this.whatsappInboxes.find(
         i => i.channel_id === channelWhatsappId
@@ -238,22 +325,30 @@ export default {
         useAlert('No hay canales de WhatsApp configurados.');
         return;
       }
-      try {
-        let created = 0;
-        let updated = 0;
-        // eslint-disable-next-line no-restricted-syntax
-        const results = await Promise.all(
-          targets.map(id => this.$store.dispatch('whatsappTemplates/sync', id))
-        );
-        results.forEach(r => {
-          created += r.created;
-          updated += r.updated;
-        });
-        await this.fetchAll();
-        useAlert(`Sincronizado: ${created} nuevas, ${updated} actualizadas.`);
-      } catch (e) {
-        useAlert('No se pudo sincronizar con Meta.');
+      let created = 0;
+      let updated = 0;
+      // allSettled: un canal con token vencido no debe tumbar la sync de los demás.
+      const results = await Promise.allSettled(
+        targets.map(id => this.$store.dispatch('whatsappTemplates/sync', id))
+      );
+      results.forEach(r => {
+        if (r.status === 'fulfilled') {
+          created += r.value.created;
+          updated += r.value.updated;
+        }
+      });
+      await this.fetchAll();
+
+      const failed = results.filter(r => r.status === 'rejected');
+      if (failed.length) {
+        // Mostramos el motivo real que devuelve Meta (token vencido, config, etc.).
+        const reason =
+          failed[0].reason?.response?.data?.error ||
+          'No se pudo sincronizar con Meta.';
+        useAlert(reason);
+        return;
       }
+      useAlert(`Sincronizado: ${created} nuevas, ${updated} actualizadas.`);
     },
     statusClass(status) {
       return (
@@ -327,6 +422,12 @@ export default {
       const current = this.form.sample_values.body || [];
       const next = Array.from({ length: count }, (_, i) => current[i] || '');
       this.form.sample_values = { ...this.form.sample_values, body: next };
+    },
+    syncHeaderSamples() {
+      const count = this.headerVarCount;
+      const current = this.form.sample_values.header || [];
+      const next = Array.from({ length: count }, (_, i) => current[i] || '');
+      this.form.sample_values = { ...this.form.sample_values, header: next };
     },
     addButton() {
       this.form.buttons.push({
@@ -429,56 +530,133 @@ export default {
     </template>
 
     <template #body>
-      <div class="flex flex-wrap items-end gap-3 mb-4">
-        <label class="block !mb-0">
-          <span class="text-xs text-slate-500 block mb-1">Buscar</span>
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Nombre de la plantilla…"
-            class="!mb-0 w-56"
-          />
-        </label>
-        <label class="block !mb-0">
-          <span class="text-xs text-slate-500 block mb-1">Canal</span>
-          <select v-model="channelFilter" class="!mb-0 w-48">
-            <option value="">Todos</option>
-            <option
-              v-for="i in whatsappInboxes"
-              :key="i.id"
-              :value="i.channel_id"
+      <!-- Barra de filtros: búsqueda + botón modal + chips activos (patrón del tracking-dashboard) -->
+      <div
+        class="flex flex-col gap-3 p-3 mb-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+      >
+        <div class="flex items-center gap-3">
+          <div class="relative flex-1 min-w-[120px]">
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Nombre de la plantilla…"
+              class="reset-base box-border w-full h-9 m-0 text-sm rounded-md border border-solid border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 pl-8 pr-2 outline-none focus:border-woot-500 dark:focus:border-woot-600"
+            />
+            <fluent-icon
+              icon="search"
+              size="16"
+              class="absolute -translate-y-1/2 left-2 top-1/2 text-slate-400"
+            />
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <woot-button
+              variant="smooth"
+              size="small"
+              class="!h-9"
+              icon="filter"
+              @click="openFiltersModal"
             >
-              {{ i.name }}
-            </option>
-          </select>
-        </label>
-        <label class="block !mb-0">
-          <span class="text-xs text-slate-500 block mb-1">Estado</span>
-          <select v-model="statusFilter" class="!mb-0 w-40">
-            <option value="">Todos</option>
-            <option v-for="s in statusOptions" :key="s" :value="s">{{ s }}</option>
-          </select>
-        </label>
-        <label class="block !mb-0">
-          <span class="text-xs text-slate-500 block mb-1">Categoría</span>
-          <select v-model="categoryFilter" class="!mb-0 w-40">
-            <option value="">Todas</option>
-            <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
-          </select>
-        </label>
-        <woot-button
-          v-if="hasActiveFilters"
-          variant="clear"
-          size="small"
-          icon="dismiss-circle"
-          @click="clearFilters"
+              Filtros<span v-if="activeFilterCount"> ({{ activeFilterCount }})</span>
+            </woot-button>
+            <woot-button
+              v-if="hasActiveFilters"
+              variant="clear"
+              size="small"
+              class="!h-9"
+              @click="clearFilters"
+            >
+              Limpiar
+            </woot-button>
+          </div>
+        </div>
+
+        <!-- Chips de filtros activos -->
+        <div
+          v-if="activeFilterChips.length"
+          class="flex flex-wrap items-center gap-2"
         >
-          Limpiar
-        </woot-button>
-        <span class="text-xs text-slate-400 ml-auto self-center">
-          {{ filteredTemplates.length }} de {{ templates.length }}
-        </span>
+          <span
+            v-for="chip in activeFilterChips"
+            :key="chip.key"
+            class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200"
+          >
+            {{ chip.label }}
+            <button
+              class="flex items-center text-slate-400 hover:text-red-500"
+              title="Quitar filtro"
+              @click="removeFilter(chip.key)"
+            >
+              <fluent-icon icon="dismiss" size="12" />
+            </button>
+          </span>
+        </div>
       </div>
+
+      <!-- Modal de filtros -->
+      <woot-modal
+        :show.sync="showFiltersModal"
+        :on-close="closeFiltersModal"
+      >
+        <div class="flex flex-col h-auto overflow-auto">
+          <woot-modal-header header-title="Filtrar plantillas" />
+          <div class="flex flex-col gap-4 p-8">
+            <label
+              class="flex flex-col gap-1 text-sm font-medium text-slate-600 dark:text-slate-300"
+            >
+              Canal
+              <select
+                v-model="draftFilters.channel"
+                class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
+              >
+                <option value="">Todos</option>
+                <option
+                  v-for="i in whatsappInboxes"
+                  :key="i.id"
+                  :value="i.channel_id"
+                >
+                  {{ i.name }}
+                </option>
+              </select>
+            </label>
+            <label
+              class="flex flex-col gap-1 text-sm font-medium text-slate-600 dark:text-slate-300"
+            >
+              Estado
+              <select
+                v-model="draftFilters.status"
+                class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
+              >
+                <option value="">Todos</option>
+                <option v-for="s in statusOptions" :key="s" :value="s">
+                  {{ s }}
+                </option>
+              </select>
+            </label>
+            <label
+              class="flex flex-col gap-1 text-sm font-medium text-slate-600 dark:text-slate-300"
+            >
+              Categoría
+              <select
+                v-model="draftFilters.category"
+                class="text-sm rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 h-9 px-2"
+              >
+                <option value="">Todas</option>
+                <option v-for="c in categories" :key="c" :value="c">
+                  {{ c }}
+                </option>
+              </select>
+            </label>
+            <div class="flex items-center justify-end gap-2 mt-2">
+              <woot-button variant="clear" @click="clearDraftFilters">
+                Limpiar
+              </woot-button>
+              <woot-button @click="applyFiltersFromModal">
+                Aplicar filtros
+              </woot-button>
+            </div>
+          </div>
+        </div>
+      </woot-modal>
 
       <div
         v-if="!filteredTemplates.length"
@@ -508,7 +686,7 @@ export default {
         </thead>
         <tbody>
           <tr
-            v-for="t in filteredTemplates"
+            v-for="t in pagedTemplates"
             :key="t.id"
             class="border-b border-slate-50 dark:border-slate-800"
           >
@@ -568,6 +746,14 @@ export default {
           </tr>
         </tbody>
       </table>
+
+      <TableFooter
+        :current-page="currentPage"
+        :total-count="filteredTemplates.length"
+        :page-size="perPage"
+        class="border-t border-slate-100 dark:border-slate-700"
+        @pageChange="onPageChange"
+      />
     </template>
 
     <!-- Formulario crear/editar -->
@@ -686,13 +872,6 @@ export default {
           placeholder="URL del archivo de cabecera"
           class="mt-2"
         />
-        <woot-input
-          v-if="headerHasVar"
-          v-model="form.sample_values.header[0]"
-          label="Ejemplo de la variable de la cabecera"
-          placeholder="Ejemplo para la variable de la cabecera"
-          class="mt-2"
-        />
 
         <label class="block mt-2">
           <span class="flex items-center justify-between text-sm">
@@ -790,6 +969,20 @@ export default {
               class="col-start-1 row-start-1 pt-4"
               :class="{ invisible: activeFormTab !== 'preview' }"
             >
+            <div v-if="headerVarCount" class="max-w-sm mx-auto mb-4">
+              <span class="text-xs text-slate-500 dark:text-slate-300">
+                Ejemplos de las variables de la cabecera
+              </span>
+              <div class="grid grid-cols-2 gap-2 mt-1">
+                <woot-input
+                  v-for="i in headerVarCount"
+                  :key="`h-${i}`"
+                  v-model="form.sample_values.header[i - 1]"
+                  :placeholder="sampleLabel(i)"
+                />
+              </div>
+            </div>
+
             <div v-if="bodyVarCount" class="max-w-sm mx-auto mb-4">
               <span class="text-xs text-slate-500 dark:text-slate-300">
                 Ejemplos de las variables del cuerpo

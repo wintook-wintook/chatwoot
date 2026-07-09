@@ -75,6 +75,21 @@ RSpec.describe Whatsapp::SubmitTemplateService do
         expect(result.drift).to be(true)
         expect(result.error).to include('222')
       end
+
+      # Idempotencia: si ya hay una fila con ese name+language (un DRAFT previo), la reutiliza
+      # en vez de crear otra → el save! post-Meta no choca con el índice único (evita el DRIFT).
+      it 'reutiliza la fila existente con el mismo name+language sin duplicar' do
+        existing = create(:whatsapp_template, account: channel.account, channel_whatsapp: channel,
+                                              name: 'cobro_vencido', language: 'es', status: 'DRAFT', meta_template_id: nil)
+        allow(provider).to receive(:create_template).and_return(result_ok(meta_id: '333'))
+
+        result = described_class.new(channel: channel, params: valid_params).create
+
+        expect(result).to be_success
+        expect(result.template.id).to eq(existing.id)
+        expect(result.template.meta_template_id).to eq('333')
+        expect(channel.whatsapp_templates.where(name: 'cobro_vencido', language: 'es').count).to eq(1)
+      end
     end
   end
 
