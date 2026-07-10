@@ -86,7 +86,7 @@
       "QUERY_TITLE": "Consulta predefinida (Modo A)"
     },
     "BOTS": {
-      "TITLE": "Bots cobradores",
+      "TITLE": "Agente Cobrador",
       "SUBTITLE": "Recordatorios proactivos (Modo A) y consulta por chat opcional (Modo B).",
       "NEW": "Nuevo bot",
       "EMPTY": "Aún no hay bots.",
