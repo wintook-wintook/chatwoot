@@ -201,8 +201,8 @@ es:
       name: "Discourse"
       description: "Conecta tu foro de Discourse para usarlo como base de conocimiento. Wintook indexará tus topics y usará búsqueda semántica para responder preguntas de clientes automáticamente."
     bots_inboxes:
-      name: "Activación de Bot"
-      description: "Dashboard Apps allow you to create and embed applications that display user information, orders, or payment history, providing more context to your customer support agents."
+      name: "Activación Bot EVA"
+      description: "Activa el asistente EVA en tus bandejas de entrada para que atienda automáticamente a tus clientes, responda sus consultas y derive la conversación a un agente cuando sea necesario."
     dashboard_apps:
       name: "Panel de aplicaciones"
       description: "Las aplicaciones de panel te permiten crear e incrustar aplicaciones que muestran información de usuario, pedidos o historial de pagos, proporcionando más contexto a tus agentes de soporte al cliente."
@@ -231,7 +231,7 @@ es:
       description: "Integración de Kontrolya para la sincronización de contactos."
     # DEV0002
     tracking_bot:
-      name: "Bot de Seguimientos"
+      name: "Activación agente seguimiento"
       description: "Automatiza cualquier tipo de seguimiento: ventas, cobranza, recordatorios y más, mantiene activos los procesos sin depender de que el usuario recuerde hacerlo."
     linear:
       name: "Lineal"
@@ -245,7 +245,7 @@ es:
       name: "Capitán"
       description: "Captain es un asistente nativo de inteligencia artificial diseñado para tu producto y entrenado en la base de conocimientos de tu empresa. Responde como un humano y resuelve eficazmente las consultas de los clientes. Configúralo fácilmente para tus buzones de entrada."
     daiko:
-      name: "Bot Vendedor"
+      name: "Activación agente vendedor"
       description: "Tu vendedor automatizado 24/7 que responde a tus clientes en segundo, consulta precios, productos y existencias y genera cotizaciones y pedidos."
      
   public_portal:

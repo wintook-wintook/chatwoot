@@ -91,14 +91,18 @@ export default {
       // muestra. woot-tabs indexa por posición de renderizado, así que al ocultarla
       // los índices se recorren: Prueba=2, Conexión ERP=3, Bots=4, Consola=5.
       return [
-        { name: 'Contenido indexado' },
-        { name: `Fuentes (${this.sources.length})` },
-        { name: 'Consola de Búsqueda (Fuentes)' },
+        { name: this.$t('KNOWLEDGE_SOURCES.TABS.INDEXED_CONTENT') },
+        {
+          name: this.$t('KNOWLEDGE_SOURCES.TABS.SOURCES', {
+            count: this.sources.length,
+          }),
+        },
+        { name: this.$t('KNOWLEDGE_SOURCES.TABS.SEARCH_CONSOLE') },
         ...(this.erpEnabled
           ? [
-              { name: 'Conexión ERP' },
-              { name: 'Bots Cobranza' },
-              { name: 'Consola de Consulta (ERP)' },
+              { name: this.$t('KNOWLEDGE_SOURCES.TABS.ERP_CONNECTION') },
+              { name: this.$t('KNOWLEDGE_SOURCES.TABS.COLLECTION_AGENT') },
+              { name: this.$t('KNOWLEDGE_SOURCES.TABS.QUERY_CONSOLE') },
             ]
           : []),
       ];

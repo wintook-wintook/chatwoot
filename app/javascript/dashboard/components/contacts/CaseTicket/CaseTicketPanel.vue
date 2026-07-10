@@ -15,6 +15,9 @@ export default {
     contactId: { type: [Number, String], required: true },
     // Opcional: la ficha de contacto (sin conversación) lo monta sin este prop.
     conversationId: { type: [Number, String], default: null },
+    // Modo inline: sin el wrapper con padding/borde, para colocarlo en una fila
+    // junto a otro botón (p. ej. al lado del de seguimientos).
+    bare: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -61,7 +64,7 @@ export default {
 </script>
 
 <template>
-  <div class="p-4 border-b border-slate-50 dark:border-slate-800/50">
+  <div :class="bare ? 'w-full' : 'p-4 border-b border-slate-50 dark:border-slate-800/50'">
     <woot-button
       size="small"
       variant="smooth"

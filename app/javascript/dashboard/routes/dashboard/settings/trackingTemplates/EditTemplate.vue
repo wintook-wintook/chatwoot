@@ -1140,16 +1140,16 @@ export default {
             :index="activeContextTab"
             @change="onContextTabChange"
           >
-            <woot-tabs-item name="🧠  Contexto IA *" :show-badge="false" />
-            <woot-tabs-item name="💡  Entrenamiento *" :show-badge="false" />
+            <woot-tabs-item name="Contexto IA *" :show-badge="false" />
+            <woot-tabs-item name="Entrenamiento *" :show-badge="false" />
             <woot-tabs-item
               v-if="selectedInboxIsWhatsApp"
-              name="📱  Plantillas WhatsApp"
+              name="Plantillas WhatsApp"
               :show-badge="false"
             />
-            <woot-tabs-item name="📋  Reglas" :show-badge="false" />
-            <woot-tabs-item name="📅  Agendas" :show-badge="false" />
-            <woot-tabs-item name="📎  Archivos" :show-badge="false" />
+            <woot-tabs-item name="Reglas" :show-badge="false" />
+            <woot-tabs-item name="Agendas" :show-badge="false" />
+            <woot-tabs-item name="Archivos" :show-badge="false" />
           </woot-tabs>
           <div class="flex items-center gap-2 pb-2 pl-2 shrink-0">
             <!-- proyecto@contact_tracking: insertar directiva (@buscar_..., @discourse, etc.) -->
