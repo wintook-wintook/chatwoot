@@ -244,7 +244,7 @@ en:
       name: "OpenAI"
       description: "Leverage the power of large language models from OpenAI with the features such as reply suggestions, summarization, message rephrasing, spell-checking, and label classification."
     crmzeus:
-      name: "Kontrolya"
+      name: "Kontrolya CRM Administrativo"
       description: "Kontrolya Integration for Contact Synchronization."
     # DEV0002      
     linear:

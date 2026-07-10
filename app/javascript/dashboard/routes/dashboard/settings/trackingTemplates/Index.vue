@@ -210,8 +210,10 @@ export default {
         </div>
       </div>
       <div v-if="isListView" class="flex items-center gap-2">
-        <!-- proyecto@import_seguimiento -->
+        <!-- proyecto@import_seguimiento: botón "Importar desde Excel" oculto
+             (v-if="false"). Se conserva el código para reactivarlo si hace falta. -->
         <woot-button
+          v-if="false"
           variant="smooth"
           color-scheme="secondary"
           icon="arrow-upload"

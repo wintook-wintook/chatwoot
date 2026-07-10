@@ -227,7 +227,7 @@ es:
       description: "Aprovecha el poder de los grandes modelos de lenguaje de OpenAI con funciones como sugerencias de respuestas, resúmenes, reformulación de mensajes, corrección ortográfica y clasificación de etiquetas."
     # DEV0002
     crmzeus:
-      name: "Kontrolya"
+      name: "Kontrolya CRM Administrativo"
       description: "Integración de Kontrolya para la sincronización de contactos."
     # DEV0002
     tracking_bot:

@@ -88,7 +88,7 @@
     "BOTS": {
       "TITLE": "Agente Cobrador",
       "SUBTITLE": "Recordatorios proactivos (Modo A) y consulta por chat opcional (Modo B).",
-      "NEW": "Nuevo bot",
+      "NEW": "Nuevo Agente Cobrador",
       "EMPTY": "Aún no hay bots.",
       "NAME": "Nombre",
       "CONNECTION": "Conexión",
