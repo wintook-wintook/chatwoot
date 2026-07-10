@@ -113,12 +113,12 @@
       }
     },
     "ONE_OFF": {
-      "HEADER": "Campañas únicas",
+      "HEADER": "Campañas SMS",
       "404": "No hay campañas únicas creadas",
       "INBOXES_NOT_FOUND": "Por favor cree una bandeja de entrada de SMS y comience a agregar campañas"
     },
     "ONGOING": {
-      "HEADER": "Campañas continuas",
+      "HEADER": "Campañas Webpage",
       "404": "No hay campañas continuas creadas",
       "INBOXES_NOT_FOUND": "Por favor cree una bandeja de entrada de sitio web y comience a agregar campañas"
     }
