@@ -205,13 +205,16 @@ export default {
 <template>
   <div class="flex flex-col flex-1 w-full h-full min-h-0 overflow-hidden p-4">
     <div class="flex items-start justify-between mb-3 shrink-0">
-      <div>
-        <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">
-          {{ $t('TRACKING_CAMPAIGNS_VIEW.TITLE') }}
-        </h1>
-        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
-          {{ $t('TRACKING_CAMPAIGNS_VIEW.DESCRIPTION') }}
-        </p>
+      <div class="flex items-start gap-2">
+        <woot-sidemenu-icon />
+        <div>
+          <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">
+            {{ $t('TRACKING_CAMPAIGNS_VIEW.TITLE') }}
+          </h1>
+          <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            {{ $t('TRACKING_CAMPAIGNS_VIEW.DESCRIPTION') }}
+          </p>
+        </div>
       </div>
       <woot-button
         v-if="activeTab === 'list'"
@@ -273,26 +276,26 @@ export default {
       </div>
 
       <template v-else>
-        <!-- Barra de filtro: búsqueda + estado (siempre en una sola línea) -->
-        <div class="flex items-center gap-3 mb-3 shrink-0">
-          <div class="relative flex-1 min-w-0">
+        <!-- Barra de filtros (estilo unificado con el listado de Seguimientos) -->
+        <div
+          class="flex items-center gap-3 mb-3 shrink-0 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+        >
+          <div class="relative flex-1 min-w-[120px]">
             <fluent-icon
               icon="search"
               size="16"
-              class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              class="absolute -translate-y-1/2 left-2 top-1/2 text-slate-400"
             />
             <input
               v-model="searchQuery"
               type="text"
-              :placeholder="
-                $t('TRACKING_CAMPAIGNS_VIEW.SEARCH_PLACEHOLDER')
-              "
-              class="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+              :placeholder="$t('TRACKING_CAMPAIGNS_VIEW.SEARCH_PLACEHOLDER')"
+              class="box-border w-full h-9 m-0 text-sm rounded-md border border-solid border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 pl-8 pr-2 outline-none focus:border-woot-500 dark:focus:border-woot-600"
             />
           </div>
           <select
             v-model="statusFilter"
-            class="shrink-0 w-44 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+            class="box-border shrink-0 w-44 h-9 text-sm rounded-md border border-solid border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-2 outline-none focus:border-woot-500 dark:focus:border-woot-600"
           >
             <option value="all">
               {{ $t('TRACKING_CAMPAIGNS_VIEW.FILTER_STATUS_ALL') }}
@@ -310,9 +313,12 @@ export default {
           {{ $t('TRACKING_CAMPAIGNS_VIEW.NO_RESULTS') }}
         </div>
 
-        <div v-else class="flex-1 min-h-0 overflow-y-auto">
-          <table class="w-full text-sm border-collapse">
-        <thead class="sticky top-0 z-10 bg-white dark:bg-slate-900">
+        <div
+          v-else
+          class="flex-1 min-h-0 overflow-auto rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+        >
+          <table class="w-full text-sm">
+        <thead class="sticky top-0 z-10 bg-white dark:bg-slate-800">
           <tr
             class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700"
           >
@@ -331,7 +337,7 @@ export default {
           <tr
             v-for="c in pagedCampaigns"
             :key="c.id"
-            class="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-25 dark:hover:bg-slate-800/40 cursor-pointer"
+            class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer"
             @click="openCampaign(c)"
           >
             <td class="p-3 font-medium text-woot-600 dark:text-woot-400">

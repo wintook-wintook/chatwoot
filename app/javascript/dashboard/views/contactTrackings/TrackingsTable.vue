@@ -291,7 +291,7 @@ export default {
     <!-- Tabla: ocupa el alto disponible y scrollea; el footer queda al fondo del panel -->
     <div class="flex-1 min-h-0 overflow-auto rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
       <table class="w-full text-sm">
-        <thead>
+        <thead class="sticky top-0 z-10 bg-white dark:bg-slate-800">
           <tr class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
             <th class="p-3">Contacto</th>
             <th class="p-3">Estado</th>

@@ -13,11 +13,13 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import TemplateForm from './EditTemplate.vue';
 import ImportModal from './ImportModal.vue'; // proyecto@import_seguimiento
+import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 
 export default {
   components: {
     TemplateForm,
     ImportModal,
+    TableFooter,
   },
   data() {
     return {
@@ -29,6 +31,8 @@ export default {
       showDeleteConfirmation: false,
       templateToDelete: null,
       showImportModal: false, // proyecto@import_seguimiento
+      currentPage: 1,
+      perPage: 10,
     };
   },
   computed: {
@@ -67,11 +71,35 @@ export default {
       }
       return result;
     },
+    // Página actual de la lista filtrada (paginado en cliente).
+    pagedTemplates() {
+      const start = (this.currentPage - 1) * this.perPage;
+      return this.filteredTemplates.slice(start, start + this.perPage);
+    },
+    totalPages() {
+      return Math.max(
+        1,
+        Math.ceil(this.filteredTemplates.length / this.perPage)
+      );
+    },
     hasTemplates() {
       return this.templates.length > 0;
     },
     hasResults() {
       return this.filteredTemplates.length > 0;
+    },
+  },
+  watch: {
+    // Volver a la primera página al cambiar el filtro.
+    searchQuery() {
+      this.currentPage = 1;
+    },
+    selectedInboxFilter() {
+      this.currentPage = 1;
+    },
+    // Si la lista se encoge (borrado/refetch), no quedar en página vacía.
+    totalPages(pages) {
+      if (this.currentPage > pages) this.currentPage = pages;
     },
   },
   mounted() {
@@ -81,6 +109,9 @@ export default {
     }
   },
   methods: {
+    onPageChange(page) {
+      this.currentPage = page;
+    },
     goToCreateForm() {
       this.formMode = 'create';
       this.selectedTemplate = null;
@@ -163,17 +194,20 @@ export default {
 </script>
 
 <template>
-  <div class="flex-1 overflow-auto p-4">
+  <div class="flex flex-col flex-1 min-h-0 overflow-hidden p-4">
 
     <!-- Header (siempre visible) -->
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">
-          {{ $t('TRACKING_TEMPLATES.HEADER') }}
-        </h1>
-        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
-          {{ $t('TRACKING_TEMPLATES.DESCRIPTION') }}
-        </p>
+    <div class="flex items-center justify-between mb-4 shrink-0">
+      <div class="flex items-center gap-2">
+        <woot-sidemenu-icon />
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">
+            {{ $t('TRACKING_TEMPLATES.HEADER') }}
+          </h1>
+          <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            {{ $t('TRACKING_TEMPLATES.DESCRIPTION') }}
+          </p>
+        </div>
       </div>
       <div v-if="isListView" class="flex items-center gap-2">
         <!-- proyecto@import_seguimiento -->
@@ -206,7 +240,7 @@ export default {
     </div>
 
     <!-- VISTA: FORMULARIO -->
-    <div v-if="isFormView">
+    <div v-if="isFormView" class="flex-1 min-h-0 overflow-auto">
       <TemplateForm
         :mode="formMode"
         :template-data="selectedTemplate || {}"
@@ -216,38 +250,41 @@ export default {
     </div>
 
     <!-- VISTA: LISTA -->
-    <div v-else>
+    <div v-else class="flex flex-col flex-1 min-h-0">
 
-      <!-- Filters -->
+      <!-- Filtros (estilo unificado con el listado de Seguimientos) -->
       <div
         v-if="hasTemplates"
-        class="flex flex-wrap items-center gap-3 mb-4"
+        class="flex items-center gap-3 mb-4 shrink-0 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
       >
-        <div class="flex-1 min-w-[200px] max-w-sm">
+        <div class="relative flex-1 min-w-[120px]">
+          <fluent-icon
+            icon="search"
+            size="16"
+            class="absolute -translate-y-1/2 left-2 top-1/2 text-slate-400"
+          />
           <input
             type="text"
             :value="searchQuery"
             :placeholder="$t('TRACKING_TEMPLATES.SEARCH_PLACEHOLDER')"
-            class="w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:border-woot-500 focus:outline-none"
+            class="box-border w-full h-9 m-0 text-sm rounded-md border border-solid border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 pl-8 pr-2 outline-none focus:border-woot-500 dark:focus:border-woot-600"
             @input="searchQuery = $event.target.value"
           />
         </div>
-        <div class="min-w-[200px]">
-          <select
-            :value="selectedInboxFilter"
-            class="w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:border-woot-500 focus:outline-none"
-            @change="selectedInboxFilter = $event.target.value"
+        <select
+          :value="selectedInboxFilter"
+          class="box-border shrink-0 w-44 h-9 text-sm rounded-md border border-solid border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-2 outline-none focus:border-woot-500 dark:focus:border-woot-600"
+          @change="selectedInboxFilter = $event.target.value"
+        >
+          <option value="">{{ $t('TRACKING_TEMPLATES.ALL_CHANNELS') }}</option>
+          <option
+            v-for="inbox in usedInboxes"
+            :key="inbox.id"
+            :value="inbox.id"
           >
-            <option value="">{{ $t('TRACKING_TEMPLATES.ALL_CHANNELS') }}</option>
-            <option
-              v-for="inbox in usedInboxes"
-              :key="inbox.id"
-              :value="inbox.id"
-            >
-              {{ inbox.name }}
-            </option>
-          </select>
-        </div>
+            {{ inbox.name }}
+          </option>
+        </select>
       </div>
 
       <!-- Loading -->
@@ -281,48 +318,48 @@ export default {
       <!-- Table -->
       <div
         v-else
-        class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"
+        class="flex-1 min-h-0 overflow-auto rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
       >
-        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-          <thead class="bg-slate-50 dark:bg-slate-800">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+        <table class="w-full text-sm">
+          <thead class="sticky top-0 z-10 bg-white dark:bg-slate-800">
+            <tr class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
+              <th class="p-3">
                 {{ $t('TRACKING_TEMPLATES.TABLE.NAME') }}
               </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+              <th class="p-3">
                 {{ $t('TRACKING_TEMPLATES.TABLE.OBJECTIVE') }}
               </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+              <th class="p-3">
                 {{ $t('TRACKING_TEMPLATES.TABLE.CHANNEL') }}
               </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+              <th class="p-3">
                 {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_BY') }}
               </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">
+              <th class="p-3 whitespace-nowrap">
                 {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_AT') }}
               </th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">
+              <th class="p-3 text-right whitespace-nowrap">
                 {{ $t('TRACKING_TEMPLATES.TABLE.ACTIONS') }}
               </th>
             </tr>
           </thead>
-          <tbody class="bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody>
             <tr
-              v-for="template in filteredTemplates"
+              v-for="template in pagedTemplates"
               :key="template.id"
-              class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
             >
-              <td class="px-4 py-3">
+              <td class="p-3">
                 <span class="text-sm font-medium text-slate-800 dark:text-slate-200">
                   {{ template.name }}
                 </span>
               </td>
-              <td class="px-4 py-3">
+              <td class="p-3">
                 <span class="text-sm text-slate-600 dark:text-slate-400">
                   {{ truncateText(template.objective) }}
                 </span>
               </td>
-              <td class="px-4 py-3">
+              <td class="p-3">
                 <span
                   v-if="template.inbox_id"
                   class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-woot-50 text-woot-700 dark:bg-woot-800/30 dark:text-woot-300"
@@ -331,17 +368,17 @@ export default {
                 </span>
                 <span v-else class="text-xs text-slate-400">-</span>
               </td>
-              <td class="px-4 py-3">
+              <td class="p-3">
                 <span class="text-xs text-slate-600 dark:text-slate-400">
                   {{ getCreatorName(template) }}
                 </span>
               </td>
-              <td class="px-4 py-3 whitespace-nowrap">
+              <td class="p-3 whitespace-nowrap">
                 <span class="text-xs text-slate-500 dark:text-slate-400">
                   {{ formatDate(template.created_at) }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-right">
+              <td class="p-3 text-right">
                 <div class="flex items-center justify-end gap-2">
                   <woot-button
                     variant="smooth"
@@ -363,6 +400,16 @@ export default {
           </tbody>
         </table>
       </div>
+
+      <!-- Paginado nativo (uniforme con Campañas y el listado de Seguimientos) -->
+      <TableFooter
+        v-if="hasResults"
+        class="mt-3 shrink-0 border-t border-slate-75 dark:border-slate-700/50"
+        :current-page="currentPage"
+        :total-count="filteredTemplates.length"
+        :page-size="perPage"
+        @pageChange="onPageChange"
+      />
 
       <!-- Import Modal - proyecto@import_seguimiento -->
       <ImportModal
