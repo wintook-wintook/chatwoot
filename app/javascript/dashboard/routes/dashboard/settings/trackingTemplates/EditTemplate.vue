@@ -69,6 +69,7 @@ export default {
         timezone: '', // proyecto@bot_seguimiento_calendar: hereda del inbox si queda vacío
       },
       // Tabs Contexto IA / Entrenamiento
+      topTab: 0, // 0 = Agente IA, 1 = Agente seguimiento
       activeContextTab: 0,
       calendarIntegrations: [],
       isLoadingCalendars: false,
@@ -314,7 +315,10 @@ export default {
       return Array.from({ length: this.maxAttempts }, (_, i) => i);
     },
     reglasTabIndex() {
-      return this.selectedInboxIsWhatsApp ? 3 : 2;
+      // WhatsApp ya no es una pestaña interna (vive en "Agente seguimiento"),
+      // por eso los índices internos son fijos: Contexto=0, Entrenamiento=1,
+      // Reglas=2, Agendas=3, Archivos=4.
+      return 2;
     },
     agendasTabIndex() {
       return this.reglasTabIndex + 1;
@@ -513,20 +517,6 @@ export default {
         this.availableWATemplates = [];
       }
     },
-    selectedInboxIsWhatsApp(isWA) {
-      if (!isWA) {
-        if (this.activeContextTab === 2) {
-          // Estaba en Plantillas WhatsApp → resetear
-          this.activeContextTab = 0;
-        } else if (this.activeContextTab === 3) {
-          // Estaba en Reglas (índice 3 con WA) → pasa a índice 2 sin WA
-          this.activeContextTab = 2;
-        }
-      } else if (this.activeContextTab === 2) {
-        // Estaba en Reglas (índice 2 sin WA) → pasa a índice 3 con WA
-        this.activeContextTab = 3;
-      }
-    },
     maxAttempts(newVal) {
       this.adjustTemplatesArray(newVal);
     },
@@ -589,6 +579,9 @@ export default {
     },
     onContextTabChange(index) {
       this.activeContextTab = index;
+    },
+    onTopTabChange(index) {
+      this.topTab = index;
     },
     async improveWithAI(field) {
       if (this.isImprovingAI) return;
@@ -1083,6 +1076,18 @@ export default {
         </label>
       </div>
 
+      <!-- Tabs de nivel superior: Agente IA / Agente seguimiento -->
+      <woot-tabs
+        class="[&_.tabs]:p-0 [&_.tabs]:mb-0"
+        :index="topTab"
+        @change="onTopTabChange"
+      >
+        <woot-tabs-item name="Agente IA" :show-badge="false" />
+        <woot-tabs-item name="Agente seguimiento" :show-badge="false" />
+      </woot-tabs>
+
+      <!-- ===== Agente seguimiento: intervalo + canal + plantillas WhatsApp ===== -->
+      <div v-show="topTab === 1" class="space-y-4">
       <!-- Intervalo entre intentos + Canal -->
       <div class="flex gap-3">
         <label class="flex-1">
@@ -1111,6 +1116,18 @@ export default {
         </label>
         <label class="flex-1">
           <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
+            {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.MAX_ATTEMPTS') }}
+          </span>
+          <input
+            v-model.number="maxAttempts"
+            type="number"
+            min="1"
+            max="6"
+            class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+          />
+        </label>
+        <label class="flex-1">
+          <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
             {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.INBOX_LABEL') }}
             <span class="text-red-500">*</span>
           </span>
@@ -1132,8 +1149,89 @@ export default {
         </label>
       </div>
 
-      <!-- Contexto IA y Prompt Complementario (en tabs) -->
-      <div class="flex-1 flex flex-col">
+      <!-- Plantillas WhatsApp por intento (solo cuando el canal es WhatsApp) -->
+      <div v-if="selectedInboxIsWhatsApp" class="mt-2">
+        <!-- Selector WA por intento (el Núm. intentos vive arriba, en la fila
+             de intervalo/canal) -->
+        <div v-if="availableWATemplates.length > 0">
+          <div class="flex items-center gap-6 mb-2 flex-wrap">
+            <div class="flex gap-2 flex-wrap">
+              <button
+                v-for="idx in attemptTabs"
+                :key="idx"
+                type="button"
+                class="px-4 py-2 text-sm rounded-md transition-colors"
+                :class="
+                  activeTemplateTab === idx
+                    ? 'bg-woot-500 text-white'
+                    : form.whatsapp_templates[idx]
+                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                    : 'bg-red-50 dark:bg-red-900/20 text-red-500 border border-red-300 dark:border-red-700 hover:bg-red-100'
+                "
+                @click="activeTemplateTab = idx"
+              >
+                {{ getAttemptLabel(idx) }}
+                <span v-if="form.whatsapp_templates[idx]" class="ml-1"
+                  >&#10003;</span
+                >
+                <span v-else class="ml-1">!</span>
+              </button>
+            </div>
+          </div>
+          <div
+            v-for="idx in attemptTabs"
+            v-show="activeTemplateTab === idx"
+            :key="'tpl-' + idx"
+            class="space-y-2"
+          >
+            <select
+              v-model="form.whatsapp_templates[idx]"
+              class="w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-slate-800"
+              :class="
+                !form.whatsapp_templates[idx]
+                  ? 'border-red-400'
+                  : 'border-slate-200 dark:border-slate-600'
+              "
+            >
+              <option value="">-- Selecciona una plantilla --</option>
+              <option
+                v-for="tpl in availableWATemplates"
+                :key="tpl.id"
+                :value="tpl.name"
+              >
+                {{ tpl.name }} ({{ tpl.language }})
+              </option>
+            </select>
+            <div
+              v-if="form.whatsapp_templates[idx]"
+              class="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 p-2 rounded border border-slate-100 dark:border-slate-700"
+            >
+              {{ getTemplateBody(form.whatsapp_templates[idx]) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div
+          v-else-if="isLoadingWATemplates"
+          class="text-sm text-slate-500 py-2"
+        >
+          {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.LOADING') }}
+        </div>
+
+        <!-- Sin plantillas WA -->
+        <div
+          v-else-if="!isLoadingWATemplates"
+          class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400"
+        >
+          {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.NO_TEMPLATES') }}
+        </div>
+      </div>
+      </div>
+      <!-- ===== fin Agente seguimiento ===== -->
+
+      <!-- ===== Agente IA: Contexto IA, Entrenamiento, Reglas, Agendas, Archivos ===== -->
+      <div v-show="topTab === 0" class="flex-1 flex flex-col">
         <div class="flex items-end justify-between">
           <woot-tabs
             class="context-tabs [&_.tabs]:p-0 [&_.tabs]:mb-0 flex-1"
@@ -1142,11 +1240,6 @@ export default {
           >
             <woot-tabs-item name="Contexto IA *" :show-badge="false" />
             <woot-tabs-item name="Entrenamiento *" :show-badge="false" />
-            <woot-tabs-item
-              v-if="selectedInboxIsWhatsApp"
-              name="Plantillas WhatsApp"
-              :show-badge="false"
-            />
             <woot-tabs-item name="Reglas" :show-badge="false" />
             <woot-tabs-item name="Agendas" :show-badge="false" />
             <woot-tabs-item name="Archivos" :show-badge="false" />
@@ -1293,105 +1386,7 @@ export default {
           </div>
         </div>
 
-        <!-- Tab 2: Plantillas WhatsApp (solo cuando canal es WhatsApp) -->
-        <div
-          v-if="selectedInboxIsWhatsApp"
-          v-show="activeContextTab === 2"
-          class="mt-2"
-        >
-          <!-- Selector WA por intento -->
-          <div v-if="availableWATemplates.length > 0">
-            <div class="flex items-center gap-6 mb-2 flex-wrap">
-              <label class="w-28 shrink-0">
-                <span
-                  class="text-xs font-medium text-slate-600 dark:text-slate-400"
-                >
-                  {{
-                    $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.MAX_ATTEMPTS')
-                  }}
-                </span>
-                <input
-                  v-model.number="maxAttempts"
-                  type="number"
-                  min="1"
-                  max="6"
-                  class="mt-1 w-full rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-                />
-              </label>
-              <div class="flex gap-2 flex-wrap mt-4">
-                <button
-                  v-for="idx in attemptTabs"
-                  :key="idx"
-                  type="button"
-                  class="px-4 py-2 text-sm rounded-md transition-colors"
-                  :class="
-                    activeTemplateTab === idx
-                      ? 'bg-woot-500 text-white'
-                      : form.whatsapp_templates[idx]
-                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                      : 'bg-red-50 dark:bg-red-900/20 text-red-500 border border-red-300 dark:border-red-700 hover:bg-red-100'
-                  "
-                  @click="activeTemplateTab = idx"
-                >
-                  {{ getAttemptLabel(idx) }}
-                  <span v-if="form.whatsapp_templates[idx]" class="ml-1"
-                    >&#10003;</span
-                  >
-                  <span v-else class="ml-1">!</span>
-                </button>
-              </div>
-            </div>
-            <div
-              v-for="idx in attemptTabs"
-              v-show="activeTemplateTab === idx"
-              :key="'tpl-' + idx"
-              class="space-y-2"
-            >
-              <select
-                v-model="form.whatsapp_templates[idx]"
-                class="w-full rounded-md border px-3 py-2 text-sm bg-white dark:bg-slate-800"
-                :class="
-                  !form.whatsapp_templates[idx]
-                    ? 'border-red-400'
-                    : 'border-slate-200 dark:border-slate-600'
-                "
-              >
-                <option value="">-- Selecciona una plantilla --</option>
-                <option
-                  v-for="tpl in availableWATemplates"
-                  :key="tpl.id"
-                  :value="tpl.name"
-                >
-                  {{ tpl.name }} ({{ tpl.language }})
-                </option>
-              </select>
-              <div
-                v-if="form.whatsapp_templates[idx]"
-                class="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 p-2 rounded border border-slate-100 dark:border-slate-700"
-              >
-                {{ getTemplateBody(form.whatsapp_templates[idx]) }}
-              </div>
-            </div>
-          </div>
-
-          <!-- Loading -->
-          <div
-            v-else-if="isLoadingWATemplates"
-            class="text-sm text-slate-500 py-2"
-          >
-            {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.LOADING') }}
-          </div>
-
-          <!-- Sin plantillas WA -->
-          <div
-            v-else-if="!isLoadingWATemplates"
-            class="p-3 rounded-md bg-slate-50 dark:bg-slate-800 text-sm text-slate-500 dark:text-slate-400"
-          >
-            {{ $t('TRACKING_TEMPLATES.FORM.WHATSAPP_SECTION.NO_TEMPLATES') }}
-          </div>
-        </div>
-
-        <!-- Tab Reglas (índice 3 con WA, 2 sin WA) -->
+        <!-- Tab Reglas (índice 2) -->
         <div v-show="activeContextTab === reglasTabIndex" class="mt-2">
           <keyword-actions-editor v-model="form.keyword_actions" />
         </div>
