@@ -280,6 +280,7 @@
     "MESSAGE_ERROR": "Unable to send this message, please try again later",
     "SENT_BY": "Sent by:",
     "BOT": "Bot",
+    "SENT_FROM_WHATSAPP_MOBILE": "WhatsApp Business App",
     "SEND_FAILED": "Couldn't send message! Try again",
     "TRY_AGAIN": "retry",
     "ASSIGNMENT": {

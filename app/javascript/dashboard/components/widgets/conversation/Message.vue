@@ -195,6 +195,11 @@ export default {
     sender() {
       return this.data.sender || {};
     },
+    // proyecto@whatsapp_mobile_echo: mensajes reflejados de la WhatsApp Business App (móvil),
+    // sin agente asociado en Chatwoot — ver Whatsapp::EchoMessageService
+    isSentFromWhatsappMobile() {
+      return this.contentAttributes.external_created_via === 'whatsapp_mobile';
+    },
     status() {
       return this.data.status;
     },
@@ -336,6 +341,9 @@ export default {
     },
     senderNameForAvatar() {
       if (this.isOutgoing || this.isTemplate) {
+        if (this.isSentFromWhatsappMobile) {
+          return this.$t('CONVERSATION.SENT_FROM_WHATSAPP_MOBILE');
+        }
         const { name = this.$t('CONVERSATION.BOT') } = this.sender || {};
         return name;
       }
@@ -453,7 +461,9 @@ export default {
   >
     <div :class="wrapClass">
       <div
-        v-if="isFailed && !data.source_id && !hasOneDayPassed && !isAnEmailInbox"
+        v-if="
+          isFailed && !data.source_id && !hasOneDayPassed && !isAnEmailInbox
+        "
         class="message-failed--alert"
       >
         <woot-button
@@ -555,13 +565,19 @@ export default {
       <div
         v-if="showAvatar"
         v-tooltip.left="tooltipForSender"
-        class="sender--info"
+        class="sender--info relative"
       >
         <woot-thumbnail
           :src="sender.thumbnail"
           :username="senderNameForAvatar"
           size="30px"
         />
+        <div
+          v-if="isSentFromWhatsappMobile"
+          class="absolute bottom-0 right-0 flex items-center justify-center bg-green-500 rounded-full w-3.5 h-3.5 ring-1 ring-white dark:ring-slate-900"
+        >
+          <fluent-icon icon="whatsapp" size="10" class="text-white" />
+        </div>
         <a
           v-if="isATweet && isIncoming"
           class="sender--available-name"

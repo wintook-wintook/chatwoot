@@ -318,6 +318,7 @@
     "MESSAGE_ERROR": "No se pudo enviar este mensaje, por favor intenta de nuevo más tarde",
     "SENT_BY": "Enviado por:",
     "BOT": "Bot",
+    "SENT_FROM_WHATSAPP_MOBILE": "WhatsApp Business App",
     "SEND_FAILED": "No se pudo enviar el mensaje. ¡Inténtalo de nuevo!",
     "TRY_AGAIN": "intentar de nuevo",
     "ASSIGNMENT": {
