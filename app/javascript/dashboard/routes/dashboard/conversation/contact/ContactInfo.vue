@@ -506,7 +506,7 @@ export default {
         <woot-button
           v-tooltip="$t('NOTES.HEADER.TITLE')"
           :title="$t('NOTES.HEADER.TITLE')"
-          icon="note"
+          icon="document"
           variant="smooth"
           size="small"
           color-scheme="secondary"
@@ -520,11 +520,6 @@ export default {
         <!-- proyecto@conversation_private - botón solo en conversaciones (con conversationId): seleccionar contacto nuevo -->
         <woot-button v-if="conversationId" v-tooltip="$t('NEW_CONVERSATION.FROM_CONTACTS.BUTTON')" :title="$t('NEW_CONVERSATION.FROM_CONTACTS.BUTTON')"
           icon="chat" size="small" color-scheme="warning" @click="showNewConversationFromContacts = true" />
-       
-       
-          <woot-button v-if="isAdmin" v-tooltip="$t('DELETE_CONTACT.BUTTON_LABEL')"
-          :title="$t('DELETE_CONTACT.BUTTON_LABEL')" icon="delete" variant="smooth" size="small" color-scheme="alert"
-          :disabled="uiFlags.isDeleting" @click="toggleDeleteModal" />
 
         <!-- google_calendar - crear evento desde conversación -->
         <woot-button
@@ -535,6 +530,10 @@ export default {
           size="small"
           @click="showCreateEventModal = true"
         />
+
+        <woot-button v-if="isAdmin" v-tooltip="$t('DELETE_CONTACT.BUTTON_LABEL')"
+          :title="$t('DELETE_CONTACT.BUTTON_LABEL')" icon="delete" variant="smooth" size="small" color-scheme="alert"
+          :disabled="uiFlags.isDeleting" @click="toggleDeleteModal" />
 
       </div>
       <EditContact v-if="showEditModal" :show="showEditModal" :contact="contact" :crm-contact="crmContact"

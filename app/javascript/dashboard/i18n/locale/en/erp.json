@@ -86,9 +86,9 @@
       "QUERY_TITLE": "Predefined query (Mode A)"
     },
     "BOTS": {
-      "TITLE": "Collection bots",
+      "TITLE": "Collection Agent",
       "SUBTITLE": "Proactive reminders (Mode A) and optional chat queries (Mode B).",
-      "NEW": "New bot",
+      "NEW": "New Collection Agent",
       "EMPTY": "No bots yet.",
       "NAME": "Name",
       "CONNECTION": "Connection",

@@ -57,8 +57,10 @@ const primaryMenuItems = accountId => [
     key: 'campaigns',
     label: 'CAMPAIGNS',
     featureFlag: FEATURE_FLAGS.CAMPAIGNS,
-    toState: frontendURL(`accounts/${accountId}/campaigns`),
-    toStateName: 'ongoing_campaigns',
+    // Al abrir la sección cae primero en el listado de seguimientos
+    // (/tracking-dashboard), primer ítem del submenú.
+    toState: frontendURL(`accounts/${accountId}/tracking-dashboard`),
+    toStateName: 'contact_trackings_dashboard',
   },
   {
     icon: 'library',
@@ -87,14 +89,9 @@ const primaryMenuItems = accountId => [
     toState: frontendURL(`accounts/${accountId}/tickets`),
     toStateName: 'gestorTickets_index',
   },
-  // proyecto@contact_tracking — Dashboard de Seguimientos
-  {
-    icon: 'tracking-dashboard',
-    key: 'contactTrackingsDashboard',
-    label: 'TRACKING_DASHBOARD',
-    toState: frontendURL(`accounts/${accountId}/tracking-dashboard`),
-    toStateName: 'contact_trackings_dashboard',
-  },
+  // proyecto@contact_tracking — Dashboard de Seguimientos fusionado dentro de
+  // la sección Campañas (ver sidebarItems/campaigns.js). Se elimina el ícono
+  // top-level propio para evitar duplicar la navegación.
   {
     icon: 'settings',
     key: 'settings',

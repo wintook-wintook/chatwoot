@@ -382,33 +382,35 @@ export default {
     <!-- Condición: Solo mostrar si hay contacto Y están habilitadas las integraciones tracking_bot y openai -->
     <!-- ============================================================ -->
     <div v-if="contact.id" class="tracking-action-section">
-      <woot-button
-        variant="smooth"
-        size="small"
-        :color-scheme="activeTrackingsCount > 0 ? 'success' : 'secondary'"
-        icon="calendar-clock"
-        class="tracking-button"
-        @click="handleTrackingClick"
-      >
-        {{ $t('CONTACT_PANEL.SCHEDULE_TRACKING') }}
-        <span v-if="activeTrackingsCount > 0" class="tracking-badge">
-          {{ activeTrackingsCount }}
-        </span>
-      </woot-button>
+      <div class="contact-actions-row">
+        <woot-button
+          variant="smooth"
+          size="small"
+          :color-scheme="activeTrackingsCount > 0 ? 'success' : 'secondary'"
+          icon="calendar-clock"
+          class="tracking-button"
+          @click="handleTrackingClick"
+        >
+          {{ $t('CONTACT_PANEL.SCHEDULE_TRACKING') }}
+          <span v-if="activeTrackingsCount > 0" class="tracking-badge">
+            {{ activeTrackingsCount }}
+          </span>
+        </woot-button>
+
+        <!-- @tickets_cases: botón de ticket, en línea junto al de seguimientos -->
+        <woot-feature-toggle feature-key="case_management" class="ticket-inline">
+          <CaseTicketPanel
+            bare
+            :contact-id="contact.id"
+            :conversation-id="conversationId"
+          />
+        </woot-feature-toggle>
+        <!-- FIN @tickets_cases -->
+      </div>
     </div>
     <!-- ============================================================ -->
-    <!-- FIN: Botón Programar Seguimiento                             -->
+    <!-- FIN: Botón Programar Seguimiento + Ticket                    -->
     <!-- ============================================================ -->
-
-    <!-- @tickets_cases: Sección Ticket asociado (solo si la feature case_management está activa) -->
-    <woot-feature-toggle feature-key="case_management">
-      <CaseTicketPanel
-        v-if="contact.id"
-        :contact-id="contact.id"
-        :conversation-id="conversationId"
-      />
-    </woot-feature-toggle>
-    <!-- FIN @tickets_cases -->
 
     <Draggable
       :list="conversationSidebarItems"
@@ -738,7 +740,19 @@ export default {
   border-bottom: 1px solid var(--color-border);
 }
 
+.contact-actions-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-small);
+
+  .ticket-inline {
+    flex: 1 1 0;
+    display: flex;
+  }
+}
+
 .tracking-button {
+  flex: 1 1 0;
   width: 100%;
   position: relative;
 

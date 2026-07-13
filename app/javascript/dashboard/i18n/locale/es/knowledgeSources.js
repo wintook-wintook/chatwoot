@@ -8,6 +8,15 @@ export default {
     TITLE: 'Base de Conocimiento',
     DESCRIPTION: 'Administra las fuentes de información que alimentan la búsqueda semántica. Conecta foros Discourse o usa las Respuestas Predefinidas para que el asistente encuentre contenido relevante en cada conversación.',
 
+    TABS: {
+      INDEXED_CONTENT: 'Contenido indexado',
+      SOURCES: 'Fuentes (%{count})',
+      SEARCH_CONSOLE: 'Consola de Búsqueda (Fuentes)',
+      ERP_CONNECTION: 'Conexión ERP',
+      COLLECTION_AGENT: 'Agente Cobrador',
+      QUERY_CONSOLE: 'Consola de Consulta (ERP)',
+    },
+
     ACTIONS: {
       ADD: 'Agregar Fuente',
     },

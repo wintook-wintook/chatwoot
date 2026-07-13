@@ -143,9 +143,6 @@ export default {
     selectedTemplateId() {
       this.fetchPreview();
     },
-    skipActive() {
-      this.fetchPreview();
-    },
   },
   mounted() {
     this.loadTemplates();
@@ -306,25 +303,32 @@ export default {
           </select>
         </label>
 
-        <!-- Audiencia -->
+        <!-- Audiencia: los radios ("Audiencia por Segmento/Etiqueta") hacen de
+             encabezado del campo, por eso no hay un título "Audiencia" aparte
+             (así la celda queda alineada con la de Fecha en el grid). -->
         <div>
-          <span
-            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
-          >
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_LABEL') }}
-          </span>
           <template v-if="allowAudienceSelection">
-            <div class="flex gap-4 mt-1 mb-2">
+            <div class="flex items-center gap-4 h-5 mb-1">
               <label
-                class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300"
+                class="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300"
               >
-                <input v-model="audienceType" type="radio" value="segment" />
+                <input
+                  v-model="audienceType"
+                  type="radio"
+                  value="segment"
+                  class="m-0"
+                />
                 {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_SEGMENT') }}
               </label>
               <label
-                class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300"
+                class="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300"
               >
-                <input v-model="audienceType" type="radio" value="label" />
+                <input
+                  v-model="audienceType"
+                  type="radio"
+                  value="label"
+                  class="m-0"
+                />
                 {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_LABEL_OPTION') }}
               </label>
             </div>
@@ -357,19 +361,24 @@ export default {
               </option>
             </select>
           </template>
-          <p
-            v-else
-            class="mt-1 text-sm text-slate-500 dark:text-slate-400 italic"
-          >
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_FROM_CONTACTS') }}
-          </p>
+          <template v-else>
+            <span
+              class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+            >
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_LABEL') }}
+            </span>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400 italic">
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_FROM_CONTACTS') }}
+            </p>
+          </template>
         </div>
 
-        <!-- Fecha + Omitir activos -->
+        <!-- Fecha programada. "Omitir contactos con Agente IA activo" se aplica
+             siempre (skipActive fijo en true), por eso ya no se muestra opción. -->
         <div class="flex flex-col gap-3">
           <label class="block">
             <span
-              class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+              class="flex items-center h-5 text-sm font-semibold text-slate-700 dark:text-slate-300"
             >
               {{ $t('BULK_TRACKING_ASSIGN.MODAL.SCHEDULED_FOR_LABEL') }}
             </span>
@@ -379,12 +388,6 @@ export default {
               :min="minDateTime"
               class="w-full mt-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
             />
-          </label>
-          <label
-            class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"
-          >
-            <input v-model="skipActive" type="checkbox" />
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.SKIP_ACTIVE') }}
           </label>
         </div>
       </div>

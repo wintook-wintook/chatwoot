@@ -310,7 +310,9 @@ export default {
 <template>
   <div class="flex flex-col flex-1 w-full h-full overflow-auto p-4 gap-4">
     <div class="flex items-start justify-between">
-      <div>
+      <div class="flex items-start gap-2">
+        <woot-sidemenu-icon />
+        <div>
         <h1 class="text-xl font-medium text-slate-800 dark:text-slate-100">
           {{
             activeTab === 'summary'
@@ -325,6 +327,7 @@ export default {
               : 'Todos los seguimientos con Agentes IA en curso y su estado.'
           }}
         </p>
+        </div>
       </div>
       <woot-button
         v-if="activeTab === 'summary'"

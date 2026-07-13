@@ -377,7 +377,7 @@ export default {
               <tr v-if="!uiFlags.isFetching && !filteredNotes.length">
                 <td colspan="4" class="py-10 text-center">
                   <div class="flex flex-col items-center gap-2 text-slate-400 dark:text-slate-500">
-                    <fluent-icon icon="note" size="32" />
+                    <fluent-icon icon="document" size="32" />
                     <span class="text-sm">
                       {{ filterText ? $t('NOTES.CRUD_MODAL.NO_RESULTS') : $t('NOTES.NOT_AVAILABLE') }}
                     </span>
