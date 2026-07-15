@@ -47,7 +47,10 @@ tags: [tickets, pendiente, todo]
 - **P2 menor (futuro)**: Tareas/Relacionados como acordeón colapsable en la sidebar; ajustar altura del hilo en pantallas medianas; adjuntos en la caja del hilo.
 - ~~**P3 — cola tipo tabla**~~ ✅ **hecho** (tabla densa + cabeceras ordenables + selección múltiple + barra de lote Tomar/Asignar/Estado/Cerrar vía endpoint `bulk`; colas = pestañas `QUICK_FILTERS`).
 - **P3 menor (futuro)**: export CSV (osTicket "Data Extraction"); persistir orden/columnas por usuario; acción de lote "asignar a equipo"; cerrar dropdowns de lote con click-afuera; quitar el dropdown "Ordenar por" del toolbar (ahora redundante con las cabeceras).
-- **P4 — extras de practicidad** (parcial): ~~respuestas predefinidas en la caja~~ ✅ **hecho** (commit `754c77b4`, menú de canned responses en el hilo del ticket). **Pendiente**: 📅 vencimiento (columna "Vence" + edición inline, rojo si vencido; `due_at`/`resolution_time_target` ya en BD) · 👥 colaboradores/CC (modelo nuevo, esfuerzo BAJO) · 🖨️ imprimir (vista imprimible ficha+hilo, BAJO).
+- **P4 — extras de practicidad** (parcial):
+  - ~~💬 respuestas predefinidas en la caja~~ ✅ **hecho** (commit `754c77b4`, menú de canned responses en el hilo del ticket).
+  - ~~📅 vencimiento (columna "Vence" + edición inline, rojo si vencido)~~ ✅ **hecho** (commit `c11450b4`, estilo osTicket "Due Date"). Se añadió la columna `due_at` (manual pisa al estimado por SLA; editarlo NO recalcula el reloj SLA); orden por vencimiento efectivo; evento `due_date_changed`. Verificado en BD; **falta verificación visual en el navegador**.
+  - **Pendiente**: 👥 colaboradores/CC (modelo nuevo, esfuerzo BAJO) · 🖨️ imprimir (vista imprimible ficha+hilo, BAJO).
 
 ### Email-to-ticket — PENDIENTE (no implementado)
 - Crear ticket automáticamente desde un correo entrante (inbox Email) — estilo osTicket "Email Piping". Decidir mapeo (asunto→título, remitente→contacto, tipo por defecto) y reusar `PortalTicketService`/`PortalThreadSeeder`.
