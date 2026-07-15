@@ -47,7 +47,7 @@ tags: [tickets, pendiente, todo]
 - **P2 menor (futuro)**: Tareas/Relacionados como acordeón colapsable en la sidebar; ajustar altura del hilo en pantallas medianas; adjuntos en la caja del hilo.
 - ~~**P3 — cola tipo tabla**~~ ✅ **hecho** (tabla densa + cabeceras ordenables + selección múltiple + barra de lote Tomar/Asignar/Estado/Cerrar vía endpoint `bulk`; colas = pestañas `QUICK_FILTERS`).
 - **P3 menor (futuro)**: export CSV (osTicket "Data Extraction"); persistir orden/columnas por usuario; acción de lote "asignar a equipo"; cerrar dropdowns de lote con click-afuera; quitar el dropdown "Ordenar por" del toolbar (ahora redundante con las cabeceras).
-- **P4 — extras (siguiente recomendado)**: vencimiento visible/editable con rojo; respuestas predefinidas en la caja; colaboradores/CC; imprimir.
+- **P4 — extras de practicidad** (parcial): ~~respuestas predefinidas en la caja~~ ✅ **hecho** (commit `754c77b4`, menú de canned responses en el hilo del ticket). **Pendiente**: 📅 vencimiento (columna "Vence" + edición inline, rojo si vencido; `due_at`/`resolution_time_target` ya en BD) · 👥 colaboradores/CC (modelo nuevo, esfuerzo BAJO) · 🖨️ imprimir (vista imprimible ficha+hilo, BAJO).
 
 ### Email-to-ticket — PENDIENTE (no implementado)
 - Crear ticket automáticamente desde un correo entrante (inbox Email) — estilo osTicket "Email Piping". Decidir mapeo (asunto→título, remitente→contacto, tipo por defecto) y reusar `PortalTicketService`/`PortalThreadSeeder`.
@@ -55,7 +55,11 @@ tags: [tickets, pendiente, todo]
 ### General
 - **Panel de contacto** (3er punto de entrada del diseño) — mostrar tickets históricos del contacto en su perfil. NO se hizo.
 - **Reglas pre-cargadas por defecto** (las 7 del diseño) — el seed automático no se implementó; las reglas se crean manualmente desde la UI.
-- **⚠️ Borrado de conversación/contacto deja tickets huérfanos (ANALIZAR)** — `case_tickets` NO tiene `dependent:` en `Conversation`/`Contact` ni foreign key en BD para `conversation_id`/`contact_id`. Hoy: al borrar una conversación, el ticket queda con `conversation_id` colgante (benigno, `optional: true` → resuelve a `nil`); al borrar un contacto, queda con `contact_id` colgante siendo **`not null`** → ticket inconsistente (`ticket.contact` = `nil`, vistas que hagan `ticket.contact.name` pueden romper). **Decidir política** (conservar histórico vs cascada) e implementar `dependent: :nullify`/`:restrict_with_error` + FK con `on_delete`. Considerar que Chatwoot borra contactos/conversaciones vía jobs.
+- ~~**⚠️ Borrado de conversación/contacto deja tickets huérfanos**~~ ✅ **hecho** (2026-07-15, commit `48bbc316`). Política elegida: **conservar el ticket como histórico**.
+  - FKs en BD para `contact_id` / `conversation_id` / `contact_tracking_id` con **`on_delete: :nullify`** + índices de columna única (migración `20260608000007`, `validate: false` para no fallar con huérfanos previos).
+  - `has_many :case_tickets, dependent: :nullify` en `Contact`, `Conversation` y `ContactTracking`.
+  - `validate :contact_or_requester_present, on: :create` — así el ticket huérfano (contacto borrado → `contact_id` NULL) **sigue siendo editable/cerrable**.
+  - Nota corregida: `contact_id` ya era **nullable** desde Fase C (`20260607000003`), no `not null`. Verificado en BD: borrar cada padre deja el ticket vivo con la referencia en NULL; el huérfano se edita y se cierra; crear sin contacto ni solicitante sigue bloqueado.
 
 
 
