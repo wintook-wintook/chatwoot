@@ -272,10 +272,10 @@
               </th>
               <th
                 class="px-3 py-2 cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300"
-                @click="sortByField('sla_status')"
+                @click="sortByField('due_at')"
               >
                 {{ $t('CASE_TICKETS.TABLE.DUE')
-                }}<span v-if="sortBy === 'sla_status'" class="ml-1">{{
+                }}<span v-if="sortBy === 'due_at'" class="ml-1">{{
                   sortArrow
                 }}</span>
               </th>
@@ -355,9 +355,13 @@
               </td>
               <td
                 class="px-3 py-2 text-xs font-medium whitespace-nowrap"
-                :class="slaTextColor(ticket.sla_status)"
+                :class="
+                  ticket.due_overdue
+                    ? 'text-red-600 dark:text-red-400 font-bold'
+                    : 'text-slate-600 dark:text-slate-300'
+                "
               >
-                {{ slaText(ticket) }}
+                {{ formatDue(ticket) }}
               </td>
               <td
                 class="px-3 py-2 text-xs whitespace-nowrap text-slate-400 dark:text-slate-500"
@@ -702,13 +706,6 @@ export default {
         overdue: 'bg-red-500',
       }[sla] || 'bg-green-500';
     },
-    slaTextColor(sla) {
-      return {
-        on_time: 'text-green-600 dark:text-green-400',
-        at_risk: 'text-yellow-600 dark:text-yellow-400',
-        overdue: 'text-red-600 dark:text-red-400 font-bold',
-      }[sla] || 'text-green-600 dark:text-green-400';
-    },
     priorityBadge(p) {
       return {
         low:    'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
@@ -729,17 +726,15 @@ export default {
         day: '2-digit', month: '2-digit', year: 'numeric',
       });
     },
-    slaText(ticket) {
-      if (ticket.sla_status === 'overdue') return this.$t('CASE_TICKETS.SLA_OVERDUE');
-      const target = ticket.first_response_at
-        ? ticket.resolution_time_target
-        : ticket.first_response_time_target;
-      if (!target) return '';
-      const elapsed  = (Date.now() - new Date(ticket.created_at).getTime()) / 60000;
-      const remaining = Math.max(0, target - elapsed);
-      const h = Math.floor(remaining / 60);
-      const m = Math.floor(remaining % 60);
-      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    // @tickets_cases P4 — vencimiento (osTicket "Due Date"): fecha efectiva corta.
+    formatDue(ticket) {
+      if (!ticket.effective_due_at) return '—';
+      return new Date(ticket.effective_due_at).toLocaleString(undefined, {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     },
   },
 };

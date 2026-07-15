@@ -409,6 +409,17 @@ export const actions = {
     }
   },
 
+  // @tickets_cases P4 — vencimiento inline (osTicket "Due Date"). dueAt ISO o null (limpiar).
+  async updateDueAt({ commit, dispatch }, { ticketId, contactId, dueAt }) {
+    const { data } = await caseTicketsAPI.update(ticketId, {
+      case_ticket: { due_at: dueAt },
+    });
+    const ticket = data.case_ticket;
+    dispatch('mergeTicket', ticket);
+    if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
+    return ticket;
+  },
+
   async changeApproval({ dispatch }, { ticketId, status, reason }) {
     const { data } = await caseTicketsAPI.changeApproval(ticketId, {
       status,

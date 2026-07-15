@@ -181,14 +181,31 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     old_priority = @ticket.priority
     priority_changed = new_priority && new_priority.to_s != old_priority
 
+    # @tickets_cases P4 — vencimiento inline (osTicket "Due Date"): fija/limpia due_at.
+    old_due = @ticket.due_at
+    due_present = params[:case_ticket].respond_to?(:key?) && params[:case_ticket].key?(:due_at)
+    if due_present
+      raw_due = params.dig(:case_ticket, :due_at)
+      new_due = parse_due_at(raw_due)
+      return render json: { error: 'Fecha de vencimiento inválida' }, status: :unprocessable_entity if new_due == :invalid
+    end
+    due_changed = due_present && new_due != old_due
+
     @ticket.custom_attributes = @ticket.custom_attributes.merge(incoming) if incoming.any?
     @ticket.priority = new_priority if priority_changed
+    @ticket.due_at = new_due if due_changed
     @ticket.save!
 
     if priority_changed
       @ticket.case_events.create!(account: Current.account, event_type: :priority_changed,
                                   origin: :agent, actor: current_user,
                                   payload: { from: old_priority, to: @ticket.priority })
+    end
+
+    if due_changed
+      @ticket.case_events.create!(account: Current.account, event_type: :due_date_changed,
+                                  origin: :agent, actor: current_user,
+                                  payload: { from: old_due, to: @ticket.due_at })
     end
 
     render json: { case_ticket: ticket_json(@ticket.reload) }
@@ -503,6 +520,16 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     end
   end
 
+  # @tickets_cases P4 — parsea la fecha de vencimiento entrante.
+  # nil/'' → nil (limpia); fecha válida → Time; inválida → :invalid.
+  def parse_due_at(raw)
+    return nil if raw.blank?
+
+    Time.zone.parse(raw.to_s) || :invalid
+  rescue ArgumentError
+    :invalid
+  end
+
   # @tickets_cases 2G — datos de cierre documentado (nil si no vienen en el request).
   def closure_params
     return nil if params[:closure].blank?
@@ -550,6 +577,9 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       first_response_time_target: ticket.first_response_time_target,
       resolution_time_target:     ticket.resolution_time_target,
       first_response_at:          ticket.first_response_at,
+      due_at:                     ticket.due_at,               # @tickets_cases P4 — fecha manual (nil si no se fijó)
+      effective_due_at:           ticket.effective_due_at,     # @tickets_cases P4 — manual o estimado por SLA
+      due_overdue:                ticket.due_overdue?,         # @tickets_cases P4 — para el rojo de la UI
       resolved_at:                ticket.resolved_at,
       closed_at:                  ticket.closed_at,
       closure_type:               ticket.closure_type,
@@ -815,8 +845,17 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
   # Orden configurable con whitelist (anti SQL-injection). Default created_at desc.
   def apply_sort(tickets)
-    col = SORTABLE_COLUMNS.include?(params[:sort_by]) ? params[:sort_by] : 'created_at'
     dir = params[:sort_order] == 'asc' ? 'ASC' : 'DESC'
+
+    # @tickets_cases P4 — orden por vencimiento EFECTIVO: due_at manual o, si no,
+    # el estimado por SLA (created_at + objetivo de resolución). NULLS al final.
+    if params[:sort_by] == 'due_at'
+      expr = "COALESCE(case_tickets.due_at, " \
+             "case_tickets.created_at + (case_tickets.resolution_time_target * interval '1 minute'))"
+      return tickets.reorder(Arel.sql("#{expr} #{dir} NULLS LAST"))
+    end
+
+    col = SORTABLE_COLUMNS.include?(params[:sort_by]) ? params[:sort_by] : 'created_at'
     # col y dir provienen de whitelists → seguro interpolar.
     tickets.reorder(Arel.sql("case_tickets.#{col} #{dir}"))
   end

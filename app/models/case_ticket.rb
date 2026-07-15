@@ -13,6 +13,7 @@
 #  custom_attributes          :jsonb            not null
 #  customer_confirmed         :boolean          default(FALSE), not null
 #  description                :text
+#  due_at                     :datetime
 #  escalation_level           :integer          default(0), not null
 #  first_response_at          :datetime
 #  first_response_time_target :integer
@@ -51,6 +52,7 @@
 #  index_case_tickets_on_account_and_folio            (account_id,folio) UNIQUE WHERE (folio IS NOT NULL)
 #  index_case_tickets_on_account_id_and_case_type_id  (account_id,case_type_id)
 #  index_case_tickets_on_account_id_and_contact_id    (account_id,contact_id)
+#  index_case_tickets_on_account_id_and_due_at        (account_id,due_at)
 #  index_case_tickets_on_account_id_and_sla_status    (account_id,sla_status)
 #  index_case_tickets_on_account_id_and_status        (account_id,status)
 #  index_case_tickets_on_account_id_and_ticket_kind   (account_id,ticket_kind)
@@ -340,6 +342,22 @@ class CaseTicket < ApplicationRecord
     return @sla_policy if defined?(@sla_policy)
 
     @sla_policy = CaseSlaPolicy.resolve_for(self)
+  end
+
+  # @tickets_cases P4 — vencimiento estilo osTicket. `due_at` manual pisa al
+  # estimado por el SLA (created_at + objetivo de resolución + pausas acumuladas).
+  # Devuelve nil si no hay fecha manual ni objetivo de resolución.
+  def effective_due_at
+    return due_at if due_at.present?
+    return nil if resolution_time_target.nil? || created_at.nil?
+
+    created_at + (resolution_time_target + sla_paused_minutes).minutes
+  end
+
+  # ¿Vencido por su fecha límite y todavía abierto? (para el rojo de la UI)
+  def due_overdue?
+    date = effective_due_at
+    date.present? && date.past? && !resolved? && !closed? && !cancelled?
   end
 
   def calculate_sla_status

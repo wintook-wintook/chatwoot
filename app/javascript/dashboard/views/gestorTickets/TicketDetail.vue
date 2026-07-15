@@ -29,6 +29,8 @@ export default {
       lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
       showTransitionMenu: false,
       showPriorityMenu: false, // @tickets_cases P1 — prioridad inline
+      showDueMenu: false, // @tickets_cases P4 — vencimiento inline
+      dueDraft: '', // valor del input datetime-local
       taskCount: 0, // @tickets_cases P4 — total de tareas (badge del tab)
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
@@ -327,6 +329,17 @@ export default {
     // @tickets_cases P1 — prioridades para el dropdown rápido.
     priorityOptions() {
       return ['low', 'medium', 'high', 'urgent'];
+    },
+    // @tickets_cases P4 — etiqueta corta del vencimiento efectivo para el botón inline.
+    dueLabel() {
+      const iso = this.ticket?.effective_due_at;
+      if (!iso) return this.$t('CASE_TICKETS.DUE_QUICK.NONE');
+      return new Date(iso).toLocaleString(undefined, {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     },
     // @tickets_cases P1 — "Tomar": disponible si el ticket no es ya mío y está abierto.
     canClaim() {
@@ -806,6 +819,52 @@ export default {
         });
       }
     },
+    // @tickets_cases P4 — vencimiento inline (osTicket "Due Date").
+    openDueMenu() {
+      this.showPriorityMenu = false;
+      this.showTransitionMenu = false;
+      // Precarga el input con la fecha efectiva (manual o estimada por SLA), en hora local.
+      this.dueDraft = this.toDatetimeLocal(this.ticket?.effective_due_at);
+      this.showDueMenu = !this.showDueMenu;
+    },
+    async saveDueAt() {
+      // El input datetime-local da hora local → la mandamos en ISO (UTC) al backend.
+      const dueAt = this.dueDraft
+        ? new Date(this.dueDraft).toISOString()
+        : null;
+      await this.persistDueAt(dueAt);
+    },
+    async clearDueAt() {
+      await this.persistDueAt(null);
+    },
+    async persistDueAt(dueAt) {
+      this.showDueMenu = false;
+      try {
+        await this.$store.dispatch('caseTickets/updateDueAt', {
+          ticketId: this.ticketId,
+          contactId: this.ticket?.contact_id,
+          dueAt,
+        });
+        this.refetch();
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.DUE_QUICK.SUCCESS'),
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error || this.$t('CASE_TICKETS.DUE_QUICK.ERROR'),
+        });
+      }
+    },
+    // Convierte un ISO a valor de input datetime-local (YYYY-MM-DDTHH:mm) en hora local.
+    toDatetimeLocal(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+        d.getDate()
+      )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    },
     // @tickets_cases P1 — "Tomar": autoasignar el ticket al agente actual (1 clic).
     claimTicket() {
       this.assign({ assigneeId: this.currentUserID });
@@ -1136,6 +1195,49 @@ export default {
                 />
               </li>
             </ul>
+          </div>
+
+          <!-- @tickets_cases P4 — Vencimiento inline (osTicket "Due Date") -->
+          <div class="relative">
+            <woot-button
+              size="small"
+              variant="smooth"
+              :color-scheme="ticket.due_overdue ? 'alert' : 'secondary'"
+              icon="calendar-clock"
+              @click="openDueMenu"
+            >
+              {{ $t('CASE_TICKETS.DUE_QUICK.LABEL') }}: {{ dueLabel }}
+            </woot-button>
+            <div
+              v-if="showDueMenu"
+              class="absolute right-0 z-50 p-3 mt-1 bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[240px]"
+            >
+              <input
+                v-model="dueDraft"
+                type="datetime-local"
+                class="w-full mb-2 text-sm"
+              />
+              <div class="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  class="text-xs text-red-600 hover:underline dark:text-red-400 disabled:opacity-40"
+                  :disabled="!ticket.due_at"
+                  @click="clearDueAt"
+                >
+                  {{ $t('CASE_TICKETS.DUE_QUICK.CLEAR') }}
+                </button>
+                <woot-button
+                  size="tiny"
+                  color-scheme="primary"
+                  @click="saveDueAt"
+                >
+                  {{ $t('CASE_TICKETS.DUE_QUICK.SAVE') }}
+                </woot-button>
+              </div>
+              <p class="mt-2 mb-0 text-[11px] text-slate-400 dark:text-slate-500">
+                {{ $t('CASE_TICKETS.DUE_QUICK.HINT') }}
+              </p>
+            </div>
           </div>
 
           <woot-button

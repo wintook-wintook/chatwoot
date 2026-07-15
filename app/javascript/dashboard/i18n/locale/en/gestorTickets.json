@@ -160,6 +160,15 @@
       "SUCCESS": "Priority updated",
       "ERROR": "Could not change priority"
     },
+    "DUE_QUICK": {
+      "LABEL": "Due",
+      "NONE": "No date",
+      "SAVE": "Save",
+      "CLEAR": "Clear date",
+      "HINT": "If you don't set a date, the SLA estimate is used.",
+      "SUCCESS": "Due date updated",
+      "ERROR": "Could not change due date"
+    },
     "TABLE": {
       "FOLIO": "Ref",
       "SUBJECT": "Subject",
@@ -742,7 +751,8 @@
       "sla_overdue": "SLA overdue",
       "error_detected": "Error detected",
       "internal_note": "Internal note",
-      "priority_changed": "Priority changed"
+      "priority_changed": "Priority changed",
+      "due_date_changed": "Due date changed"
     }
   }
 }

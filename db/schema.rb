@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_07_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_15_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -439,8 +439,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_07_120000) do
     t.bigint "requester_id"
     t.bigint "locked_by_id"
     t.datetime "locked_at"
+    t.datetime "due_at"
     t.index ["account_id", "case_type_id"], name: "index_case_tickets_on_account_id_and_case_type_id"
     t.index ["account_id", "contact_id"], name: "index_case_tickets_on_account_id_and_contact_id"
+    t.index ["account_id", "due_at"], name: "index_case_tickets_on_account_id_and_due_at"
     t.index ["account_id", "folio"], name: "index_case_tickets_on_account_and_folio", unique: true, where: "(folio IS NOT NULL)"
     t.index ["account_id", "sla_status"], name: "index_case_tickets_on_account_id_and_sla_status"
     t.index ["account_id", "status"], name: "index_case_tickets_on_account_id_and_status"

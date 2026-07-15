@@ -160,6 +160,15 @@
       "SUCCESS": "Prioridad actualizada",
       "ERROR": "No se pudo cambiar la prioridad"
     },
+    "DUE_QUICK": {
+      "LABEL": "Vence",
+      "NONE": "Sin fecha",
+      "SAVE": "Guardar",
+      "CLEAR": "Quitar fecha",
+      "HINT": "Si no fijas una fecha, se usa la estimada por el SLA.",
+      "SUCCESS": "Vencimiento actualizado",
+      "ERROR": "No se pudo cambiar el vencimiento"
+    },
     "TABLE": {
       "FOLIO": "Folio",
       "SUBJECT": "Asunto",
@@ -742,7 +751,8 @@
       "sla_overdue": "SLA vencido",
       "error_detected": "Error detectado",
       "internal_note": "Nota interna",
-      "priority_changed": "Prioridad cambiada"
+      "priority_changed": "Prioridad cambiada",
+      "due_date_changed": "Vencimiento cambiado"
     }
   }
 }
