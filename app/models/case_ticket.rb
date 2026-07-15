@@ -56,6 +56,9 @@
 #  index_case_tickets_on_account_id_and_ticket_kind   (account_id,ticket_kind)
 #  index_case_tickets_on_affected_service_id          (affected_service_id)
 #  index_case_tickets_on_category_id                  (category_id)
+#  index_case_tickets_on_contact_id                   (contact_id)
+#  index_case_tickets_on_contact_tracking_id          (contact_tracking_id)
+#  index_case_tickets_on_conversation_id              (conversation_id)
 #  index_case_tickets_on_kb_article_id                (kb_article_id)
 #  index_case_tickets_on_locked_by_id                 (locked_by_id)
 #  index_case_tickets_on_metadata                     (metadata) USING gin
@@ -63,6 +66,9 @@
 #
 # Foreign Keys
 #
+#  fk_rails_...  (contact_id => contacts.id) ON DELETE => nullify
+#  fk_rails_...  (contact_tracking_id => contact_trackings.id) ON DELETE => nullify
+#  fk_rails_...  (conversation_id => conversations.id) ON DELETE => nullify
 #  fk_rails_...  (locked_by_id => users.id)
 #  fk_rails_...  (requester_id => users.id)
 #
@@ -160,7 +166,9 @@ class CaseTicket < ApplicationRecord
   validates :assignee_type, presence: true
   validates :sla_status,    presence: true
   # @tickets_cases Fase C — externo lleva contacto; interno lleva solicitante.
-  validate :contact_or_requester_present
+  # Solo en creación: si más tarde se borra el contacto (contact_id → NULL por
+  # dependent: :nullify), el ticket histórico debe seguir siendo editable/cerrable.
+  validate :contact_or_requester_present, on: :create
 
   # @tickets_cases Fase C — tickets internos (origin: internal, sin contacto).
   scope :internal, -> { where(origin: :internal) }

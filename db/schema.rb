@@ -447,6 +447,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_07_120000) do
     t.index ["account_id", "ticket_kind"], name: "index_case_tickets_on_account_id_and_ticket_kind"
     t.index ["affected_service_id"], name: "index_case_tickets_on_affected_service_id"
     t.index ["category_id"], name: "index_case_tickets_on_category_id"
+    t.index ["contact_id"], name: "index_case_tickets_on_contact_id"
+    t.index ["contact_tracking_id"], name: "index_case_tickets_on_contact_tracking_id"
+    t.index ["conversation_id"], name: "index_case_tickets_on_conversation_id"
     t.index ["kb_article_id"], name: "index_case_tickets_on_kb_article_id"
     t.index ["locked_by_id"], name: "index_case_tickets_on_locked_by_id"
     t.index ["metadata"], name: "index_case_tickets_on_metadata", using: :gin
@@ -1576,6 +1579,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_07_120000) do
   add_foreign_key "case_tasks", "accounts"
   add_foreign_key "case_tasks", "case_tickets"
   add_foreign_key "case_tasks", "users", column: "assignee_id"
+  add_foreign_key "case_tickets", "contact_trackings", on_delete: :nullify
+  add_foreign_key "case_tickets", "contacts", on_delete: :nullify
+  add_foreign_key "case_tickets", "conversations", on_delete: :nullify
   add_foreign_key "case_tickets", "users", column: "locked_by_id"
   add_foreign_key "case_tickets", "users", column: "requester_id"
   add_foreign_key "case_type_fields", "accounts"
