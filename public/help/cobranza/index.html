@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Manual de uso · Cobranza / ERP (Bot Cobrador)</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --fg: #1e293b;
+        --muted: #64748b;
+        --border: #e2e8f0;
+        --accent: #4f46e5;
+        --soft: #eef2ff;
+        --ok: #16a34a;
+        --okbg: #dcfce7;
+        --a: #4f46e5;
+        --b: #0891b2;
+        --c: #d97706;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f172a;
+          --card: #1e293b;
+          --fg: #e2e8f0;
+          --muted: #94a3b8;
+          --border: #334155;
+          --accent: #818cf8;
+          --soft: #1e1b4b;
+          --ok: #4ade80;
+          --okbg: #14532d;
+          --a: #818cf8;
+          --b: #22d3ee;
+          --c: #fbbf24;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+        line-height: 1.65;
+        padding: 2rem 1rem 4rem;
+      }
+      main { width: 80%; max-width: 80%; margin: 0 auto; }
+      @media (max-width: 900px) { main { width: 100%; max-width: 100%; } }
+      header.hero {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2.5rem;
+        margin-bottom: 1.5rem;
+      }
+      header.hero h1 { margin: 0 0 .25rem; font-size: 1.9rem; }
+      header.hero p { color: var(--muted); margin: 0; }
+
+      nav.toc {
+        background: var(--soft);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 2rem;
+      }
+      nav.toc strong { display: block; margin-bottom: .5rem; font-size: .9rem; }
+      nav.toc ol { margin: 0; padding-left: 1.25rem; }
+      nav.toc a { color: var(--accent); text-decoration: none; }
+      nav.toc a:hover { text-decoration: underline; }
+
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2rem 2.25rem;
+        margin-bottom: 1.5rem;
+      }
+      section h2 {
+        margin: 0 0 .75rem;
+        font-size: 1.3rem;
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        cursor: pointer;
+        user-select: none;
+      }
+      section h2::after {
+        content: "▾";
+        margin-left: auto;
+        font-size: 1rem;
+        color: var(--muted);
+        transition: transform .15s ease;
+      }
+      section.collapsed h2 { margin-bottom: 0; }
+      section.collapsed h2::after { transform: rotate(-90deg); }
+      section.collapsed > *:not(h2) { display: none; }
+      section h2 .num {
+        background: var(--accent);
+        color: #fff;
+        width: 1.8rem;
+        height: 1.8rem;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .95rem;
+        flex-shrink: 0;
+      }
+      h3 { font-size: 1.05rem; margin: 1.5rem 0 .4rem; }
+      p { margin: .6rem 0; }
+      ul, ol.steps { padding-left: 1.25rem; margin: .5rem 0; }
+      li { margin: .35rem 0; }
+      code {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: .1rem .4rem;
+        font-size: .85em;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      figure { margin: 1.25rem 0 .5rem; }
+      figure img {
+        max-width: 100%;
+        max-height: 300px;
+        width: auto;
+        height: auto;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        display: block;
+        margin: 0 auto;
+        cursor: zoom-in;
+        transition: box-shadow .15s ease;
+      }
+      figure img:hover { box-shadow: 0 4px 16px rgba(0,0,0,.18); }
+      figcaption {
+        color: var(--muted);
+        font-size: .82rem;
+        margin-top: .5rem;
+        text-align: center;
+      }
+      figcaption.zoom::after { content: " · 🔍 clic para ampliar"; opacity: .7; }
+      .lightbox {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        z-index: 1000;
+        cursor: zoom-out;
+      }
+      .lightbox img {
+        max-width: 95%;
+        max-height: 95%;
+        border-radius: 8px;
+        box-shadow: 0 8px 40px rgba(0,0,0,.5);
+      }
+      .tip {
+        background: var(--soft);
+        border-left: 3px solid var(--accent);
+        border-radius: 0 8px 8px 0;
+        padding: .75rem 1rem;
+        margin: 1rem 0;
+        font-size: .92rem;
+      }
+      .warn {
+        background: #fef3c7;
+        border-left: 3px solid #d97706;
+        color: #78350f;
+        border-radius: 0 8px 8px 0;
+        padding: .75rem 1rem;
+        margin: 1rem 0;
+        font-size: .92rem;
+      }
+      @media (prefers-color-scheme: dark) {
+        .warn { background: #422006; color: #fde68a; }
+      }
+      .recap {
+        background: repeating-linear-gradient(
+          -45deg, transparent, transparent 10px,
+          rgba(148,163,184,.08) 10px, rgba(148,163,184,.08) 20px);
+        border: 1px dashed var(--muted);
+        border-radius: 10px;
+        padding: .85rem 1rem;
+        margin: 1rem 0;
+        font-size: .88rem;
+      }
+      .recap b { color: var(--fg); }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        font-size: .92rem;
+      }
+      .scroll-x { overflow-x: auto; }
+      th, td {
+        border: 1px solid var(--border);
+        padding: .5rem .75rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      th { background: var(--bg); }
+      .badge {
+        display: inline-block;
+        padding: .05rem .45rem;
+        border-radius: 6px;
+        font-size: .75rem;
+        font-weight: 600;
+        background: var(--okbg);
+        color: var(--ok);
+      }
+      .pill {
+        display: inline-block;
+        padding: .05rem .45rem;
+        border-radius: 6px;
+        font-size: .75rem;
+        font-weight: 600;
+        background: var(--soft);
+        color: var(--accent);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: .85rem;
+        margin-top: 2rem;
+      }
+      footer a { color: var(--accent); }
+
+      /* ---- Mock del tab-strip (nueva ubicación dentro de Base de Conocimiento) ---- */
+      .tabstrip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .35rem;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: .6rem;
+        margin: 1.25rem 0 .5rem;
+      }
+      .tabstrip .tab {
+        font-size: .82rem;
+        padding: .4rem .7rem;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .tabstrip .tab.kb { background: var(--bg); }
+      .tabstrip .tab.erp {
+        background: var(--soft);
+        color: var(--accent);
+        border-color: var(--accent);
+        font-weight: 600;
+      }
+
+      /* ---- Diagrama "cómo funciona" ---- */
+      .diagram {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        background: var(--bg);
+      }
+      .tier { margin: 0 0 .5rem; }
+      .tier-label {
+        font-size: .72rem;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0 0 .5rem;
+        font-weight: 700;
+      }
+      .nodes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        justify-content: center;
+      }
+      .node {
+        flex: 1 1 180px;
+        min-width: 160px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: .75rem .9rem;
+        text-align: center;
+      }
+      .node .t { font-weight: 700; font-size: .92rem; }
+      .node .s { font-size: .78rem; color: var(--muted); margin-top: .15rem; }
+      .node.wide { flex-basis: 320px; }
+      .flow {
+        text-align: center;
+        color: var(--muted);
+        font-size: .78rem;
+        margin: .55rem 0;
+      }
+      .flow::before { content: "▼ "; }
+      .modes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+      }
+      .mode {
+        flex: 1 1 220px;
+        min-width: 200px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-top: 3px solid var(--accent);
+        border-radius: 10px;
+        padding: .85rem 1rem;
+      }
+      .mode.a { border-top-color: var(--a); }
+      .mode.b { border-top-color: var(--b); }
+      .mode.c { border-top-color: var(--c); }
+      .mode .tag {
+        font-size: .72rem;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+      }
+      .mode.a .tag { color: var(--a); }
+      .mode.b .tag { color: var(--b); }
+      .mode.c .tag { color: var(--c); }
+      .mode .h { font-weight: 700; margin: .1rem 0 .35rem; }
+      .mode .d { font-size: .84rem; color: var(--muted); }
+      .mode .d code { font-size: .78em; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <h1>Manual de uso · Cobranza / ERP</h1>
+        <p>
+          El <strong>Bot Cobrador</strong> de Wintook — consulta las bases de tus
+          ERPs (SAE, Microsip, Contpaq) en modo solo lectura y automatiza la
+          cobranza. Ahora integrado dentro de la <strong>Base de Conocimiento</strong>.
+          Guía paso a paso.
+        </p>
+      </header>
+
+      <nav class="toc">
+        <strong>Contenido</strong>
+        <ol>
+          <li><a href="#intro">Qué es Cobranza / ERP</a></li>
+          <li><a href="#comofunciona">Cómo funciona (diagrama)</a></li>
+          <li><a href="#acceso">Cómo acceder — las tabs en Base de Conocimiento</a></li>
+          <li><a href="#conexiones">Conexiones a ERP</a></li>
+          <li><a href="#consultas">Consultas predefinidas</a></li>
+          <li><a href="#consola">Consola de Consulta (ERP)</a></li>
+          <li><a href="#ejemplos">Ejemplos de consultas</a></li>
+          <li><a href="#modob">Preguntar en lenguaje natural (Modo B / IA)</a></li>
+          <li><a href="#directiva">Consultas en las plantillas del Agente IA — <code>{{consulta:}}</code></a></li>
+          <li><a href="#bots">Bots cobradores (recordatorios automáticos)</a></li>
+          <li><a href="#modos">Los tres modos de uso</a></li>
+          <li><a href="#erps">ERPs soportados</a></li>
+          <li><a href="#seguridad">Seguridad y buenas prácticas</a></li>
+          <li><a href="#faq">Preguntas frecuentes</a></li>
+        </ol>
+      </nav>
+
+      <!-- 1 -->
+      <section id="intro">
+        <h2><span class="num">1</span> Qué es Cobranza / ERP</h2>
+        <p>
+          El módulo <strong>Cobranza / ERP</strong> conecta Chatwoot con la base de
+          datos del ERP de tu empresa (Aspel <strong>SAE</strong>,
+          <strong>Microsip</strong> o <strong>CONTPAQi</strong>) para consultar
+          información de cartera —saldos, facturas vencidas, pagos, límite de
+          crédito— y usarla en la operación diaria de cobranza.
+        </p>
+        <p>Ofrece <strong>tres</strong> formas de trabajo:</p>
+        <ul>
+          <li>
+            <strong>Modo A — recordatorio proactivo:</strong> un bot corre una
+            consulta todos los días a una hora fija y envía recordatorios de pago a
+            cada cliente con adeudo, por el inbox que elijas.
+          </li>
+          <li>
+            <strong>Modo B — consulta por chat (IA):</strong> el cliente (o el
+            agente) pregunta en lenguaje natural —"¿cuál es mi saldo?"— y la IA
+            responde consultando el ERP, sin ver nunca el SQL.
+          </li>
+          <li>
+            <strong>Directiva <code>{{consulta:}}</code> — dato dentro de una
+            plantilla:</strong> el Agente IA de seguimiento inserta el resultado de
+            una consulta directamente en el texto de su mensaje, de forma exacta y
+            determinista.
+          </li>
+        </ul>
+        <div class="tip">
+          🔒 Todas las conexiones son de <strong>solo lectura</strong>: el módulo
+          únicamente ejecuta consultas <code>SELECT</code> predefinidas. Nunca
+          escribe ni modifica datos en tu ERP.
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="comofunciona">
+        <h2><span class="num">2</span> Cómo funciona (diagrama)</h2>
+        <p>
+          El flujo es siempre el mismo: la <strong>conexión</strong> (solo lectura)
+          llega a la base del ERP, sobre ella se definen <strong>consultas
+          predefinidas</strong> (una lista blanca de <code>SELECT</code> con
+          parámetros), y esas consultas se consumen de tres maneras.
+        </p>
+        <div class="diagram">
+          <div class="tier">
+            <p class="tier-label">Origen · tu ERP</p>
+            <div class="nodes">
+              <div class="node"><div class="t">Aspel SAE</div><div class="s">Firebird / SQL Server</div></div>
+              <div class="node"><div class="t">Microsip</div><div class="s">Firebird</div></div>
+              <div class="node"><div class="t">CONTPAQi</div><div class="s">SQL Server / Firebird</div></div>
+            </div>
+          </div>
+          <p class="flow">conexión de solo lectura</p>
+          <div class="tier">
+            <p class="tier-label">Núcleo en Chatwoot</p>
+            <div class="nodes">
+              <div class="node wide">
+                <div class="t">Conexión (solo lectura)</div>
+                <div class="s">host, base, credenciales · nunca escribe</div>
+              </div>
+              <div class="node wide">
+                <div class="t">Consultas predefinidas</div>
+                <div class="s">allowlist de SELECT · parámetros tipados (p. ej. :rfc)</div>
+              </div>
+            </div>
+          </div>
+          <p class="flow">se consumen de tres maneras</p>
+          <div class="tier">
+            <p class="tier-label">Cómo se usa</p>
+            <div class="modes">
+              <div class="mode a">
+                <div class="tag">Modo A</div>
+                <div class="h">Recordatorio proactivo</div>
+                <div class="d">⏰ A una hora fija, corre la consulta masiva de vencidas y envía un recordatorio con plantilla por el inbox. <strong>Sin IA.</strong></div>
+              </div>
+              <div class="mode b">
+                <div class="tag">Modo B</div>
+                <div class="h">Consulta por chat (IA)</div>
+                <div class="d">💬 El cliente pregunta en lenguaje natural; la IA <strong>elige</strong> la consulta, la corre y responde. Nunca ve el SQL.</div>
+              </div>
+              <div class="mode c">
+                <div class="tag">Directiva</div>
+                <div class="h"><code>{{consulta:}}</code></div>
+                <div class="d">🧩 En la plantilla del Agente IA de seguimiento, interpola el resultado <strong>exacto</strong> de una consulta dentro del texto.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tip">
+          🔒 En los tres modos el motor es el mismo: <strong>solo consultas
+          predefinidas, solo <code>SELECT</code>, con parámetros tipados</strong>.
+          Ni el cliente ni la IA escriben SQL en ningún caso.
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section id="acceso">
+        <h2><span class="num">3</span> Cómo acceder — las tabs en Base de Conocimiento</h2>
+        <p>
+          Cobranza / ERP <strong>ya no es un módulo aparte en la barra lateral</strong>:
+          ahora vive como un grupo de <strong>tabs dentro de la Base de
+          Conocimiento</strong> (<em>Configuración → Base de Conocimiento</em>). Las
+          tabs de ERP solo aparecen si un super administrador habilitó la función
+          <code>erp_connection</code> para tu cuenta.
+        </p>
+        <div class="tabstrip" aria-hidden="true">
+          <span class="tab kb">Contenido indexado</span>
+          <span class="tab kb">Fuentes (N)</span>
+          <span class="tab kb">Consola de Búsqueda (Fuentes)</span>
+          <span class="tab erp">Conexión ERP</span>
+          <span class="tab erp">Bots Cobranza</span>
+          <span class="tab erp">Consola de Consulta (ERP)</span>
+        </div>
+        <figcaption>Las tres tabs resaltadas (Conexión ERP, Bots Cobranza, Consola de Consulta) son las del módulo de cobranza.</figcaption>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/acceso.png" alt="Barra de tabs de Base de Conocimiento con las tabs de ERP" />
+          <figcaption class="zoom">La barra de tabs real dentro de Base de Conocimiento.</figcaption>
+        </figure>
+        <div class="scroll-x">
+          <table>
+            <tr><th>Tab</th><th>Para qué sirve</th><th>Quién accede</th></tr>
+            <tr>
+              <td><strong>Conexión ERP</strong> 🔗</td>
+              <td>Crear y probar las conexiones a las bases de tus ERPs, y administrar sus consultas.</td>
+              <td>Solo administrador</td>
+            </tr>
+            <tr>
+              <td><strong>Bots Cobranza</strong> 🤖</td>
+              <td>Configurar los recordatorios automáticos (Modo A) y activar el Modo B por bot.</td>
+              <td>Solo administrador</td>
+            </tr>
+            <tr>
+              <td><strong>Consola de Consulta (ERP)</strong> 🔍</td>
+              <td>Consultar el ERP a mano (elegir consulta, llenar datos, ver el resultado) y preguntar en lenguaje natural.</td>
+              <td>Agente y administrador</td>
+            </tr>
+          </table>
+        </div>
+        <div class="tip">
+          💡 El orden natural para poner todo en marcha: primero
+          <a href="#conexiones">Conexión ERP</a>, luego siembras/ajustas las
+          <a href="#consultas">Consultas</a>, pruebas en la
+          <a href="#consola">Consola de Consulta</a> y por último creas los
+          <a href="#bots">Bots</a> — o usas la directiva
+          <a href="#directiva"><code>{{consulta:}}</code></a> en tus plantillas.
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="conexiones">
+        <h2><span class="num">4</span> Conexiones a ERP</h2>
+        <p>
+          Una <strong>conexión</strong> guarda los datos para llegar a la base de tu
+          ERP (motor, host, puerto, base y credenciales). Es el primer paso y solo
+          la crea un administrador, desde la tab <strong>Conexión ERP</strong>.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/conexiones.png" alt="Listado de conexiones a ERP" />
+          <figcaption class="zoom">Listado de conexiones, con su motor, host:puerto y acciones.</figcaption>
+        </figure>
+
+        <h3>Crear una conexión</h3>
+        <p>Pulsa <strong>“Nueva conexión”</strong> y completa el formulario:</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/conexion-form.png" alt="Formulario de nueva conexión a ERP" />
+          <figcaption class="zoom">Formulario de alta de conexión.</figcaption>
+        </figure>
+        <div class="scroll-x">
+          <table>
+            <tr><th>Campo</th><th>Qué poner</th></tr>
+            <tr><td><strong>Nombre</strong></td><td>Un nombre descriptivo (p. ej. “SAE Servicios”).</td></tr>
+            <tr><td><strong>Motor</strong></td><td><strong>Firebird</strong> (SAE, Microsip) o <strong>SQL Server</strong> (Contpaq y SAE sobre SQL Server).</td></tr>
+            <tr><td><strong>ERP</strong></td><td>El sistema (<code>sae</code>, <code>microsip</code>, <code>contpaq</code> o <code>generic</code>). Determina qué consultas se pueden sembrar automáticamente.</td></tr>
+            <tr><td><strong>Sufijo de empresa</strong></td><td>Solo para SAE: el número de empresa (p. ej. <code>01</code>), porque SAE nombra sus tablas con ese sufijo (<code>CLIE01</code>, <code>FACTF01</code>…).</td></tr>
+            <tr><td><strong>Host</strong> / <strong>Puerto</strong></td><td>Dirección del servidor de BD. Puerto típico: <code>3050</code> (Firebird) o <code>6072</code> (SQL Server, según tu instalación).</td></tr>
+            <tr><td><strong>Base / ruta .fdb</strong></td><td>Firebird: la ruta completa al archivo <code>.fdb</code> (p. ej. <code>C:\Microsip datos\SERVICIOS.FDB</code>). SQL Server: el nombre de la base.</td></tr>
+            <tr><td><strong>Usuario</strong> / <strong>Contraseña</strong></td><td>Credenciales de la BD. Recomendado: un usuario <strong>de solo lectura</strong> (ver <a href="#seguridad">Seguridad</a>).</td></tr>
+            <tr><td><strong>Versión TDS</strong></td><td>Solo SQL Server. Para instalaciones antiguas (SQL Server 2008 R2 de Contpaq) usa <code>7.0</code>.</td></tr>
+          </table>
+        </div>
+
+        <h3>Probar la conexión</h3>
+        <p>
+          En cada conexión del listado, el botón <span class="badge">Probar conexión</span>
+          verifica en el momento que Chatwoot llega a la base. Si todo va bien
+          muestra <em>“Conexión OK”</em>; si no, el error devuelto por la BD.
+        </p>
+
+        <h3>Sembrar consultas</h3>
+        <p>
+          Si la conexión tiene un ERP definido (SAE, Microsip o Contpaq), el botón
+          <span class="badge">Sembrar consultas</span> crea de golpe la librería de
+          consultas verificadas para ese ERP (saldo, vencidas, pagos, límite de
+          crédito y el recordatorio masivo con teléfono). Es idempotente: si vuelves
+          a pulsarlo, no duplica nada.
+        </p>
+
+        <h3>Eliminar una conexión</h3>
+        <p>
+          El botón de borrar abre una <strong>ventana de confirmación</strong> (la
+          misma que el resto de Chatwoot) antes de eliminar. Al borrar una conexión
+          se borran también sus consultas asociadas.
+        </p>
+      </section>
+
+      <!-- 5 -->
+      <section id="consultas">
+        <h2><span class="num">5</span> Consultas predefinidas</h2>
+        <p>
+          Cada conexión tiene una lista de <strong>consultas</strong>. Nunca se
+          escribe SQL libre desde la operación: solo se ejecutan estas consultas
+          predefinidas, cada una con sus parámetros (por ejemplo un RFC). Para verlas
+          o editarlas, en el listado de conexiones pulsa
+          <strong>“Consultas (N)”</strong>.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/consultas.png" alt="Panel de consultas de una conexión" />
+          <figcaption class="zoom">Panel de consultas de una conexión. La etiqueta <span class="pill">IA</span> marca las disponibles para el Modo B.</figcaption>
+        </figure>
+
+        <h3>Crear o editar una consulta</h3>
+        <p>
+          Con <strong>“Nueva consulta”</strong> (o el lápiz de una existente) se abre
+          el formulario donde defines el <code>SELECT</code>, sus parámetros y el
+          formato de resultado.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/consulta-form.png" alt="Formulario de nueva consulta" />
+          <figcaption class="zoom">Formulario de consulta: SQL de solo lectura, parámetros en JSON, límite y formato.</figcaption>
+        </figure>
+
+        <h3>Campos de una consulta</h3>
+        <ul>
+          <li><strong>Nombre</strong> — identificador corto (p. ej. <code>saldo_cliente</code>).</li>
+          <li><strong>Descripción</strong> — texto que ayuda a la IA y al agente a elegirla.</li>
+          <li><strong>SQL</strong> — un <code>SELECT</code> de solo lectura, con parámetros nombrados como <code>:rfc</code>.</li>
+          <li><strong>Parámetros</strong> — se definen como JSON: clave, etiqueta, tipo y si es obligatorio.</li>
+          <li><strong>Límite de filas</strong> — tope de resultados que devuelve.</li>
+          <li><strong>Formato de resultado</strong> — <code>table</code>, <code>summary</code> o <code>template</code>.</li>
+          <li><strong>Disponible para el bot IA (Modo B)</strong> — si se marca, la IA puede elegir esta consulta al responder por chat.</li>
+        </ul>
+        <div class="tip">
+          💡 Lo normal es no crear consultas a mano: usa <strong>“Sembrar
+          consultas”</strong> en la conexión y quedan listas las verificadas para tu
+          ERP. Edítalas solo si necesitas ajustar algo puntual.
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="consola">
+        <h2><span class="num">6</span> Consola de Consulta (ERP)</h2>
+        <p>
+          La <strong>Consola de Consulta (ERP)</strong> es donde un agente consulta
+          el ERP a mano, en modo solo lectura. Es la forma de comprobar datos al
+          vuelo mientras atiendes a un cliente.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/consola.png" alt="Consola de Consulta (ERP): selección de conexión, consulta y parámetros" />
+          <figcaption class="zoom">Elige conexión y consulta, llena los parámetros y ejecuta.</figcaption>
+        </figure>
+        <ol class="steps">
+          <li>Elige la <strong>Conexión</strong> (tu ERP).</li>
+          <li>Elige la <strong>Consulta</strong> (p. ej. <code>saldo_cliente</code>).</li>
+          <li>Llena los <strong>Parámetros</strong> que pida (los obligatorios llevan <span style="color:#ef4444">*</span>).</li>
+          <li>Pulsa <strong>“Ejecutar”</strong>.</li>
+        </ol>
+        <p>
+          El resultado aparece como tabla, con el conteo de filas y el tiempo que
+          tardó. Puedes desplegar <em>“Consulta ejecutada (solo lectura)”</em> para
+          ver el SQL exacto que se corrió.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/consola-resultado.png" alt="Resultado de una consulta en la Consola de Consulta (ERP)" />
+          <figcaption class="zoom">Resultado en tabla, con conteo de filas y duración.</figcaption>
+        </figure>
+      </section>
+
+      <!-- 7 -->
+      <section id="ejemplos">
+        <h2><span class="num">7</span> Ejemplos de consultas</h2>
+        <p>
+          Ejemplos reales ejecutados desde la Consola contra los tres ERPs (en modo
+          solo lectura). Muestran cómo cada consulta predefinida devuelve datos de
+          cartera con sus parámetros.
+        </p>
+
+        <h3>SAE — facturas vencidas de un cliente</h3>
+        <p><code>facturas_vencidas</code> con el <code>RFC</code> del cliente devuelve sus documentos vencidos (serie, folio, fechas e importe).</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/ej-sae-vencidas.png" alt="Ejemplo SAE: facturas vencidas" />
+          <figcaption class="zoom">SAE · <code>facturas_vencidas</code> → 2 facturas vencidas con su importe.</figcaption>
+        </figure>
+
+        <h3>CONTPAQi — saldo de un cliente</h3>
+        <p><code>saldo_cliente</code> con el <code>RFC</code> devuelve el saldo total que adeuda (un solo valor).</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/ej-contpaq-saldo.png" alt="Ejemplo Contpaq: saldo del cliente" />
+          <figcaption class="zoom">CONTPAQi · <code>saldo_cliente</code> → saldo de $10,218,040.30.</figcaption>
+        </figure>
+
+        <h3>Microsip — total cobrado en un período</h3>
+        <p><code>pagos_periodo</code> con un rango de fechas (<code>desde</code>/<code>hasta</code>) devuelve el total cobrado.</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/ej-microsip-pagos.png" alt="Ejemplo Microsip: total cobrado en un período" />
+          <figcaption class="zoom">Microsip · <code>pagos_periodo</code> → $903,139.90 cobrados en el rango.</figcaption>
+        </figure>
+
+        <div class="tip">
+          💡 Cada ERP trae su propia librería de consultas verificadas (saldos,
+          vencidas, pagos, límite de crédito y el recordatorio masivo). Se crean con
+          <strong>“Sembrar consultas”</strong> y se prueban aquí antes de usarlas en
+          un bot o en una directiva <code>{{consulta:}}</code>.
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section id="modob">
+        <h2><span class="num">8</span> Preguntar en lenguaje natural (Modo B / IA)</h2>
+        <p>
+          Al final de la Consola hay una caja <strong>“Preguntá en lenguaje natural
+          (Modo B / IA)”</strong>. Escribe una pregunta como si hablaras con una
+          persona —p. ej. <em>“¿Cuál es el saldo del cliente con RFC DUVM720209EF7?”</em>—
+          y la IA elige la consulta adecuada, la ejecuta y responde en español.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/consola-ia.png" alt="Caja de preguntas en lenguaje natural con respuesta de la IA" />
+          <figcaption class="zoom">La IA responde en lenguaje natural e indica qué consulta usó.</figcaption>
+        </figure>
+        <p>
+          La IA <strong>solo</strong> puede usar las consultas marcadas como
+          disponibles para el bot IA; nunca inventa SQL ni accede a datos fuera de
+          esas consultas. Debajo de la respuesta se indica qué consulta eligió.
+        </p>
+
+        <h3>Identificación del cliente por RFC (automática)</h3>
+        <p>
+          Cuando la consulta necesita un <strong>RFC</strong>, el Modo B lo resuelve
+          en cadena, sin fricción:
+        </p>
+        <ol class="steps">
+          <li><strong>Del mensaje:</strong> si el cliente escribe su RFC en el chat, el bot lo detecta y lo <strong>guarda en el contacto</strong> (atributo <code>RFC</code>) para próximas veces.</li>
+          <li><strong>Del contacto:</strong> si ya está guardado, lo usa directamente y no lo vuelve a pedir.</li>
+          <li><strong>Lo pide:</strong> si no hay RFC por ningún lado, el bot lo solicita amablemente por chat en lugar de fallar.</li>
+        </ol>
+        <div class="tip">
+          🧠 El Modo B usa la integración de OpenAI de tu cuenta. Si no responde,
+          revisa que la cuenta tenga la integración de IA activa.
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section id="directiva">
+        <h2><span class="num">9</span> Consultas en las plantillas del Agente IA — <code>{{consulta:}}</code></h2>
+        <p>
+          La directiva <code>{{consulta:}}</code> es la tercera forma de usar el ERP:
+          permite <strong>insertar el resultado de una consulta dentro del texto</strong>
+          que redacta el Agente IA de seguimiento, igual que se usan
+          <code>{{doc:}}</code> o <code>@buscar_foro</code>. Es
+          <strong>determinista</strong> (sin IA de por medio) y trae el dato exacto.
+        </p>
+
+        <h3>Cómo se ve</h3>
+        <p>En el <strong>Entrenamiento</strong> (prompt complementario) del Agente IA:</p>
+        <p>
+          <code>Hola {{contact.name}}, tu saldo pendiente es {{consulta:sae/saldo_cliente(rfc=)}}.</code>
+        </p>
+        <p>
+          Al responder, el Agente reemplaza la directiva por el resultado real
+          (p. ej. <em>“…tu saldo pendiente es Alberto Cota Barbosa · 348.30.”</em>).
+          El resto del texto queda intacto y puedes poner <strong>varias</strong>
+          directivas en un mismo mensaje.
+        </p>
+
+        <h3>Insertarla desde el catálogo</h3>
+        <p>
+          No hace falta escribirla a mano: en el editor del Agente IA, el botón
+          <strong>“Insertar directiva”</strong> abre un catálogo con filtro por tipo.
+          Elige el chip <strong>“Consulta ERP”</strong> y verás <strong>una entrada
+          por cada consulta</strong> de cada conexión, lista para insertar con los
+          parámetros ya preparados.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/directiva-picker.png" alt="Modal Insertar directiva filtrado por Consulta ERP" />
+          <figcaption class="zoom">Catálogo de directivas filtrado por “Consulta ERP”: una entrada por consulta.</figcaption>
+        </figure>
+
+        <h3>Sintaxis</h3>
+        <div class="scroll-x">
+          <table>
+            <tr><th>Forma</th><th>Qué hace</th></tr>
+            <tr><td><code>{{consulta:nombre}}</code></td><td>Consulta sin parámetros.</td></tr>
+            <tr><td><code>{{consulta:nombre(rfc=XXX)}}</code></td><td>Parámetro nombrado.</td></tr>
+            <tr><td><code>{{consulta:nombre(rfc=XXX, dias=30)}}</code></td><td>Varios parámetros.</td></tr>
+            <tr><td><code>{{consulta:sae/nombre(rfc=XXX)}}</code></td><td>Con prefijo de conexión (por ERP o por nombre), útil si tienes varios ERPs.</td></tr>
+          </table>
+        </div>
+        <ul>
+          <li><strong>Prefijo:</strong> con <code>sae/</code>, <code>microsip/</code>, <code>contpaq/</code> eliges la conexión explícita; <strong>sin prefijo</strong>, usa la conexión del bot cobrador del inbox.</li>
+          <li><strong>RFC vacío:</strong> si dejas <code>rfc=</code> en blanco y el contacto tiene su RFC guardado, se completa solo.</li>
+          <li><strong>A prueba de fallos:</strong> si la consulta no existe, no aplica o falta un dato, la directiva se omite en silencio y el resto del mensaje se envía igual (nunca “revienta” la respuesta).</li>
+        </ul>
+        <div class="tip">
+          🔒 Las directivas <code>{{consulta:}}</code> solo aparecen y operan si tu
+          cuenta tiene la función <code>erp_connection</code>, y siempre quedan
+          <strong>acotadas a tu cuenta</strong> y a consultas activas.
+        </div>
+      </section>
+
+      <!-- 10 -->
+      <section id="bots">
+        <h2><span class="num">10</span> Bots cobradores (recordatorios automáticos)</h2>
+        <p>
+          Un <strong>bot cobrador</strong> automatiza el <strong>Modo A</strong>:
+          corre una consulta masiva de clientes con adeudo y envía a cada uno un
+          recordatorio por el inbox elegido, todos los días a la hora configurada.
+          Se administra desde la tab <strong>Bots Cobranza</strong>, solo un
+          administrador.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/bots.png" alt="Listado de bots cobradores" />
+          <figcaption class="zoom">Listado de bots. Las etiquetas indican si tienen <span class="pill">Modo B</span> y si están activos.</figcaption>
+        </figure>
+
+        <h3>Crear un bot</h3>
+        <p>Pulsa <strong>“Nuevo bot”</strong> y completa:</p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/bot-form.png" alt="Formulario de bot cobrador" />
+          <figcaption class="zoom">Formulario del bot cobrador.</figcaption>
+        </figure>
+        <div class="scroll-x">
+          <table>
+            <tr><th>Campo</th><th>Qué poner</th></tr>
+            <tr><td><strong>Nombre</strong></td><td>Nombre del bot.</td></tr>
+            <tr><td><strong>Conexión</strong></td><td>La conexión al ERP que usará.</td></tr>
+            <tr><td><strong>Consulta de recordatorio</strong></td><td>La consulta masiva de vencidas/por vencer (la que incluye el teléfono de cada cliente).</td></tr>
+            <tr><td><strong>Inbox de entrega</strong></td><td>El canal por el que se enviarán los recordatorios (WhatsApp, Telegram, etc.).</td></tr>
+            <tr><td><strong>Columna del teléfono</strong></td><td>El nombre de la columna del resultado que trae el teléfono (p. ej. <code>TELEFONO</code>, <code>TELEFONO1</code>).</td></tr>
+            <tr><td><strong>Hora del envío diario</strong></td><td>Hora (0–23) a la que corre el recordatorio cada día.</td></tr>
+            <tr><td><strong>Plantilla del mensaje</strong></td><td>El texto del recordatorio. Usa <code>{{COLUMNA}}</code> para insertar valores del resultado (nombre, saldo, folio, fecha de vencimiento…).</td></tr>
+            <tr><td><strong>Modo B</strong></td><td>Casilla para permitir que el cliente consulte por chat con IA a través de este bot.</td></tr>
+            <tr><td><strong>Activo</strong></td><td>Enciende o apaga el bot sin borrarlo.</td></tr>
+          </table>
+        </div>
+
+        <h3>Vista previa antes de enviar</h3>
+        <p>
+          Con el bot guardado, el botón <span class="badge">Vista previa
+          (dry-run)</span> muestra cómo quedarían los mensajes reales —con los datos
+          de cada cliente ya sustituidos— <strong>sin enviar nada</strong>. Úsalo
+          siempre antes de activarlo.
+        </p>
+        <figure>
+          <img loading="lazy" decoding="async" src="/help/cobranza/img/bot-preview.png" alt="Vista previa dry-run de los mensajes del bot" />
+          <figcaption class="zoom">Vista previa: los mensajes que se enviarían, sin mandar nada.</figcaption>
+        </figure>
+        <div class="warn">
+          ⚠️ La vista previa <strong>no envía</strong> mensajes. El envío real ocurre
+          solo cuando el bot está <strong>Activo</strong>, a la hora configurada.
+          Verifica bien la plantilla y la columna del teléfono antes de activarlo.
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="modos">
+        <h2><span class="num">11</span> Los tres modos de uso</h2>
+        <div class="scroll-x">
+          <table>
+            <tr>
+              <th></th>
+              <th>Modo A — Recordatorio proactivo</th>
+              <th>Modo B — Consulta por chat (IA)</th>
+              <th>Directiva <code>{{consulta:}}</code></th>
+            </tr>
+            <tr>
+              <td><strong>Quién inicia</strong></td>
+              <td>El sistema, a una hora fija.</td>
+              <td>El cliente, escribiendo por chat.</td>
+              <td>El Agente IA, al redactar su mensaje de seguimiento.</td>
+            </tr>
+            <tr>
+              <td><strong>Usa IA</strong></td>
+              <td>No. Consulta fija + plantilla.</td>
+              <td>Sí. La IA elige la consulta.</td>
+              <td>No. Tú indicas la consulta exacta; el dato se interpola.</td>
+            </tr>
+            <tr>
+              <td><strong>Para qué</strong></td>
+              <td>Enviar recordatorios de pago masivos.</td>
+              <td>Responder “¿cuál es mi saldo?” al instante.</td>
+              <td>Poner un dato exacto (saldo, folio…) dentro de una plantilla.</td>
+            </tr>
+            <tr>
+              <td><strong>Se configura en</strong></td>
+              <td>Bot cobrador (consulta, inbox, hora, plantilla).</td>
+              <td>Casilla “Modo B” del bot (por defecto apagada).</td>
+              <td>Entrenamiento del Agente IA (directiva en el prompt).</td>
+            </tr>
+          </table>
+        </div>
+        <p>Un mismo bot puede usar Modo A y Modo B a la vez; la directiva es independiente y vive en las plantillas del Agente IA.</p>
+      </section>
+
+      <!-- 12 -->
+      <section id="erps">
+        <h2><span class="num">12</span> ERPs soportados</h2>
+        <div class="scroll-x">
+          <table>
+            <tr><th>ERP</th><th>Motor</th><th>Notas</th></tr>
+            <tr><td><strong>Aspel SAE</strong></td><td>Firebird / SQL Server</td><td>Tablas con sufijo de empresa (<code>CLIE01</code>, <code>FACTF01</code>). Requiere indicar el sufijo en la conexión. Teléfono en <code>TELEFONO</code>.</td></tr>
+            <tr><td><strong>Microsip</strong></td><td>Firebird</td><td>El más normalizado; saldos por <code>SALDOS_CC</code>. Teléfono en <code>TELEFONO1</code>.</td></tr>
+            <tr><td><strong>CONTPAQi</strong></td><td>SQL Server / Firebird</td><td>Sobre SQL Server 2008 R2 usa TDS <code>7.0</code>. Teléfono en <code>CCON1TEL</code>.</td></tr>
+          </table>
+        </div>
+        <p>
+          Cada ERP trae su librería de consultas verificadas (saldos, vencidas,
+          antigüedad, pagos, límite de crédito y el recordatorio masivo), que se
+          crean con <strong>“Sembrar consultas”</strong>.
+        </p>
+      </section>
+
+      <!-- 13 -->
+      <section id="seguridad">
+        <h2><span class="num">13</span> Seguridad y buenas prácticas</h2>
+        <ul>
+          <li><strong>Solo lectura.</strong> El módulo únicamente ejecuta <code>SELECT</code>. No hay forma de escribir en el ERP desde aquí.</li>
+          <li><strong>Sin SQL libre en la operación.</strong> Agentes, la IA y las directivas solo ejecutan consultas predefinidas y parametrizadas; la IA nunca ve ni escribe SQL.</li>
+          <li><strong>Todo acotado a tu cuenta.</strong> Las conexiones, consultas y directivas siempre operan dentro de tu cuenta; no alcanzan datos de otras.</li>
+          <li><strong>Usa un usuario de BD de solo lectura</strong> en cada ERP. No uses <code>sysdba</code> (Firebird) ni <code>sa</code> (SQL Server) en producción.</li>
+          <li><strong>Prueba con “Vista previa”</strong> antes de activar cualquier bot de recordatorios, para no enviar mensajes por error.</li>
+          <li>Las conexiones y bots solo los administra un <strong>administrador</strong>; la Consola de Consulta la puede usar cualquier <strong>agente</strong>.</li>
+        </ul>
+      </section>
+
+      <!-- 14 -->
+      <section id="faq">
+        <h2><span class="num">14</span> Preguntas frecuentes</h2>
+        <h3>No veo las tabs de ERP en Base de Conocimiento</h3>
+        <p>Las tabs (Conexión ERP, Bots Cobranza, Consola de Consulta) solo aparecen si un super administrador habilitó la función <code>erp_connection</code> para tu cuenta. Además, Conexiones y Bots son solo para administradores. Si no las ves, contacta al administrador.</p>
+
+        <h3>“Probar conexión” falla</h3>
+        <p>Revisa host, puerto, ruta de la base y credenciales. En Contpaq/SQL Server 2008 R2, asegúrate de poner la versión TDS <code>7.0</code>. Verifica también que el servidor de BD permita conexiones desde el servidor de Chatwoot.</p>
+
+        <h3>La consulta no devuelve filas</h3>
+        <p>Comprueba los parámetros (por ejemplo, que el RFC exista tal cual en el ERP). Recuerda que en SAE los indicadores son <code>'S'</code>/<code>'N'</code>, no 0/1.</p>
+
+        <h3>El Modo B no responde por chat</h3>
+        <p>Confirma que el bot tenga la casilla <strong>Modo B</strong> activada, que la cuenta tenga la integración de IA (OpenAI) configurada, y que existan consultas marcadas como disponibles para el bot IA.</p>
+
+        <h3>La directiva <code>{{consulta:}}</code> no aparece o no se reemplaza</h3>
+        <p>Para que salga en el catálogo “Insertar directiva” (chip <strong>Consulta ERP</strong>) la cuenta necesita la función <code>erp_connection</code> y al menos una conexión con consultas activas. Si aparece pero no se reemplaza en el mensaje, revisa que el nombre/consulta exista, que esté activa y que el parámetro (p. ej. el RFC) esté presente o guardado en el contacto.</p>
+
+        <h3>El recordatorio (Modo A) no se envía</h3>
+        <p>El bot debe estar <strong>Activo</strong>, con un inbox de entrega, una consulta de recordatorio con teléfono y la <strong>columna del teléfono</strong> correcta. Usa la vista previa para confirmar que se generan mensajes.</p>
+      </section>
+
+      <footer>
+        Manual de uso · Cobranza / ERP (Bot Cobrador) — Wintook ·
+        <a href="/help/tickets">Ver manual de Tickets</a>
+      </footer>
+    </main>
+
+    <script>
+      (function () {
+        var sections = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+
+        // --- Acordeón: todas las secciones abiertas por defecto;
+        //     clic en el título colapsa/expande la sección ---
+        sections.forEach(function (sec) {
+          var h2 = sec.querySelector('h2');
+          if (h2) {
+            h2.addEventListener('click', function () {
+              sec.classList.toggle('collapsed');
+            });
+          }
+        });
+
+        function openSection(id) {
+          var sec = document.getElementById(id);
+          if (sec && sec.tagName === 'SECTION') {
+            sec.classList.remove('collapsed');
+            sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+
+        // --- Enlaces internos (#id) abren la sección destino ---
+        document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+          a.addEventListener('click', function (e) {
+            var id = a.getAttribute('href').slice(1);
+            if (document.getElementById(id)) {
+              e.preventDefault();
+              openSection(id);
+              if (history.replaceState) history.replaceState(null, '', '#' + id);
+            }
+          });
+        });
+
+        if (location.hash.length > 1) openSection(location.hash.slice(1));
+
+        // --- Lightbox de imágenes ---
+        document.querySelectorAll('figure img').forEach(function (img) {
+          img.addEventListener('click', function () {
+            var box = document.createElement('div');
+            box.className = 'lightbox';
+            var full = document.createElement('img');
+            full.src = img.src;
+            box.appendChild(full);
+            box.addEventListener('click', function () { box.remove(); });
+            document.body.appendChild(box);
+          });
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') {
+            var lb = document.querySelector('.lightbox');
+            if (lb) lb.remove();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

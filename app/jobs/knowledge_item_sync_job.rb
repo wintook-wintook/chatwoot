@@ -52,17 +52,17 @@ class KnowledgeItemSyncJob < ApplicationJob
     account.knowledge_sources.active.find_by(source_type: source_type) ||
       account.knowledge_sources.create!(
         source_type: source_type,
-        name: knowledge_source_name(source_type),
+        name: knowledge_source_name(source_type, account),
         status: 'active'
       )
   end
 
-  def knowledge_source_name(source_type)
-    case source_type
-    when 'canned_response' then 'Respuestas Predefinidas'
-    when 'article'         then 'Base de Conocimiento' # @tickets_cases 2H
-    else source_type.humanize
-    end
+  # Nombre localizado según el idioma de la cuenta. 'article' es el Centro de Ayuda
+  # nativo de Chatwoot (Help Center). Ver config/locales/*.yml → knowledge_sources.names
+  def knowledge_source_name(source_type, account)
+    I18n.t("knowledge_sources.names.#{source_type}",
+           locale: account.locale.presence || I18n.default_locale,
+           default: source_type.humanize)
   end
 
   def find_record(account, source_type, source_id)
@@ -133,10 +133,9 @@ class KnowledgeItemSyncJob < ApplicationJob
     nil
   end
 
+  # Cada cuenta usa su propia integración OpenAI (sin fallback a ENV global, multi-tenant).
   def openai_api_key(account)
     hook = account.hooks.find_by(app_id: 'openai', status: 'enabled')
-    return hook.settings['api_key'] if hook&.settings&.dig('api_key').present?
-
-    ENV['OPENAI_API_KEY']
+    hook&.settings&.dig('api_key').presence
   end
 end

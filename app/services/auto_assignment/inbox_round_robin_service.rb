@@ -18,7 +18,12 @@ class AutoAssignment::InboxRoundRobinService
 
   def reset_queue
     clear_queue
-    add_agent_to_queue(inbox.inbox_members.map(&:user_id))
+    # Leemos los miembros con una consulta fresca (no `inbox.inbox_members`, que cargaría
+    # y contaminaría el caché del association del objeto inbox que disparó el reset).
+    # Apilamos los ids uno por uno (mismo orden final que un lpush variádico:
+    # LPUSH key a b c ≡ lpush a; lpush b; lpush c → [c, b, a]). Evita además depender del
+    # lpush con múltiples valores, que MockRedis no soporta en los tests.
+    InboxMember.where(inbox_id: inbox.id).order(:id).pluck(:user_id).each { |user_id| add_agent_to_queue(user_id) }
   end
 
   # end of queue management functions

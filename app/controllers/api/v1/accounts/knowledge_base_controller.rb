@@ -39,18 +39,44 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
 
   # GET /api/v1/accounts/:account_id/knowledge_base/sources
   def sources
-    current_account.knowledge_sources.find_or_create_by(source_type: 'canned_response') do |s|
-      s.name = 'Respuestas Predefinidas'
-      s.status = 'active'
+    ensure_default_sources
+    # Orden: Respuestas predefinidas → Centro de Ayuda → resto (Discourse, etc.)
+    order = Arel.sql(
+      "CASE source_type WHEN 'canned_response' THEN 0 WHEN 'article' THEN 1 ELSE 2 END, created_at"
+    )
+    # openai_configured: el front avisa/deshabilita el sync si la cuenta no tiene integración OpenAI.
+    configured = openai_api_key.present?
+    list = current_account.knowledge_sources.order(order).map do |source|
+      source.as_json.merge(openai_configured: configured)
     end
-    render json: current_account.knowledge_sources.order(:created_at)
+    render json: list
   end
 
   # POST /api/v1/accounts/:account_id/knowledge_base/sources
   def create_source
-    source = current_account.knowledge_sources.new(source_params)
+    attrs = source_params.to_h
+    if %w[google_doc google_sheet].include?(attrs[:source_type]) && !current_account.feature_enabled?('google_calendar')
+      return render json: { errors: ['Activa la integración de Google (Calendario) para esta cuenta antes de usar fuentes de Google Doc o Sheets.'] },
+                    status: :unprocessable_entity
+    end
+
+    if attrs[:source_type] == 'google_doc'
+      error = google_doc_precheck(attrs[:config])
+      return render json: { errors: [error] }, status: :unprocessable_entity if error
+
+      attrs[:config] = build_google_doc_config(attrs[:config])
+    elsif attrs[:source_type] == 'google_sheet'
+      error = google_sheet_precheck(attrs[:config])
+      return render json: { errors: [error] }, status: :unprocessable_entity if error
+
+      attrs[:config] = build_google_sheet_config(attrs[:config])
+    end
+
+    source = current_account.knowledge_sources.new(attrs)
     if source.save
-      DiscourseKnowledgeSyncJob.perform_later(source_id: source.id) if source.source_type == 'discourse'
+      # Discourse se consulta en vivo; Docs/Sheets se vectorizan o indexan: sync inicial.
+      enqueue_google_doc_sync(source) if source.source_type == 'google_doc'
+      enqueue_google_sheet_sync(source) if source.source_type == 'google_sheet'
       render json: source, status: :created
     else
       render json: { errors: source.errors.full_messages }, status: :unprocessable_entity
@@ -59,7 +85,16 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
 
   # PATCH /api/v1/accounts/:account_id/knowledge_base/sources/:id
   def update
-    if @source.update(source_params)
+    attrs = source_params.to_h
+    # Para fuentes Google, reconstruir el config (file_id, integración, live...) y
+    # fusionarlo sobre el actual, para no perder claves internas (modified_time, etc.)
+    # ni el file_id al editar desde la UI.
+    if %w[google_doc google_sheet].include?(@source.source_type) && attrs[:config].present?
+      rebuilt = @source.source_type == 'google_doc' ? build_google_doc_config(attrs[:config]) : build_google_sheet_config(attrs[:config])
+      attrs[:config] = @source.config.merge(rebuilt)
+    end
+
+    if @source.update(attrs)
       render json: @source
     else
       render json: { errors: @source.errors.full_messages }, status: :unprocessable_entity
@@ -76,11 +111,34 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
   def sync
     case @source.source_type
     when 'canned_response'
+      return render_openai_required unless openai_api_key.present?
+
       sync_canned_responses
+      render json: { message: 'Sincronización iniciada' }
+    when 'article'
+      return render_openai_required unless openai_api_key.present?
+
+      # Re-vectoriza todos los artículos del Centro de Ayuda (incluye los aún sin vectorizar).
+      sync_articles
+      render json: { message: 'Sincronización iniciada' }
     when 'discourse'
-      DiscourseKnowledgeSyncJob.perform_later(source_id: @source.id)
+      # Discourse se busca en vivo vía el plugin Discourse AI; no hay sync local.
+      render json: { message: 'Las fuentes Discourse se consultan en vivo; no requieren sincronización.' }
+    when 'google_doc'
+      return render_openai_required unless openai_api_key.present?
+      return render_google_required unless google_integration.present?
+
+      enqueue_google_doc_sync(@source)
+      render json: { message: 'Sincronización iniciada' }
+    when 'google_sheet'
+      return render_openai_required unless openai_api_key.present?
+      return render_google_required unless google_integration.present?
+
+      enqueue_google_sheet_sync(@source)
+      render json: { message: 'Sincronización iniciada' }
+    else
+      render json: { message: 'Sincronización iniciada' }
     end
-    render json: { message: 'Sincronización iniciada' }
   end
 
   # POST /api/v1/accounts/:account_id/knowledge_base/discourse_categories
@@ -177,6 +235,21 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
 
   private
 
+  # Fuentes nativas de Chatwoot que no se configuran (a diferencia de Discourse):
+  # 'canned_response' (Respuestas predefinidas) y 'article' (Centro de Ayuda).
+  # Siempre deben aparecer por defecto en la lista, con nombre localizado.
+  def ensure_default_sources
+    locale = current_account.locale.presence || I18n.default_locale
+    %w[canned_response article].each do |type|
+      # create_or_find_by se apoya en el índice único parcial para resolver la race
+      # de dos requests concurrentes sin crear fuentes duplicadas.
+      current_account.knowledge_sources.create_or_find_by(source_type: type) do |s|
+        s.name   = I18n.t("knowledge_sources.names.#{type}", locale: locale)
+        s.status = 'active'
+      end
+    end
+  end
+
   def item_json(item)
     {
       id: item.id,
@@ -199,12 +272,106 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     params.require(:knowledge_source).permit(:name, :source_type, :status, config: {})
   end
 
+  def render_openai_required
+    render json: {
+      error: 'Configura la integración de OpenAI en la cuenta para vectorizar esta fuente.'
+    }, status: :unprocessable_entity
+  end
+
+  def render_google_required
+    render json: {
+      error: 'Conecta tu cuenta de Google (Calendario) para leer Google Docs.'
+    }, status: :unprocessable_entity
+  end
+
+  # Valida antes de crear una fuente Google Doc. Devuelve un mensaje de error o nil.
+  # Fase 1 solo soporta Google Docs (texto); las Hojas de cálculo son Fase 2.
+  def google_doc_precheck(config)
+    url = (config || {})['file_url'].to_s
+    return 'Conecta tu cuenta de Google (Calendario) para leer Google Docs.' unless google_integration
+
+    if url.include?('/spreadsheets/')
+      return 'Por ahora solo se soportan Google Docs (documentos de texto). Las Hojas de cálculo ' \
+             'estarán disponibles próximamente.'
+    end
+    return 'Configura la integración de OpenAI en la cuenta para vectorizar esta fuente.' unless openai_api_key.present?
+
+    nil
+  end
+
+  # Completa el config de una fuente Google Doc: extrae el file_id de la URL/ID que
+  # pegó el usuario y asocia la integración Google del usuario actual.
+  def build_google_doc_config(config)
+    config ||= {}
+    raw = config['file_url'].presence || config['file_id'].presence
+    {
+      'file_url'       => config['file_url'],
+      'file_id'        => GoogleDocsService.extract_file_id(raw),
+      'integration_id' => google_integration&.id
+    }
+  end
+
+  def enqueue_google_doc_sync(source)
+    GoogleDocSyncJob.perform_later(action: 'upsert', source_id: source.id, account_id: current_account.id)
+    source.update(sync_status: 'syncing')
+  end
+
+  # Valida antes de crear una fuente Google Sheet. Devuelve un mensaje de error o nil.
+  def google_sheet_precheck(config)
+    url = (config || {})['file_url'].to_s
+    return 'Conecta tu cuenta de Google (Calendario) para leer Google Sheets.' unless google_integration
+    return 'Pega la URL de una Hoja de cálculo de Google (/spreadsheets/...).' unless url.include?('/spreadsheets/')
+    return 'Configura la integración de OpenAI en la cuenta para usar esta fuente.' unless openai_api_key.present?
+
+    nil
+  end
+
+  # Completa el config de una Google Sheet: file_id, integración, modo, rango y
+  # "consulta en vivo" (solo modo Datos): refresca la foto local por modifiedTime+TTL.
+  def build_google_sheet_config(config)
+    config ||= {}
+    raw = config['file_url'].presence || config['file_id'].presence
+    mode = config['sheet_mode'].to_s == 'data' ? 'data' : 'faq'
+    live = mode == 'data' && ActiveModel::Type::Boolean.new.cast(config['live'])
+    {
+      'file_url'        => config['file_url'],
+      'file_id'         => GoogleDocsService.extract_file_id(raw),
+      'integration_id'  => google_integration&.id,
+      'sheet_mode'      => mode,
+      'sheet_range'     => config['sheet_range'].presence,
+      'live'            => live || false,
+      'live_ttl'        => (config['live_ttl'].presence || 60).to_i
+    }
+  end
+
+  def enqueue_google_sheet_sync(source)
+    GoogleSheetSyncJob.perform_later(action: 'upsert', source_id: source.id, account_id: current_account.id)
+    source.update(sync_status: 'syncing')
+  end
+
+  def google_integration
+    @google_integration ||= UserCalendarIntegration.find_by(account_id: current_account.id, user_id: current_user.id) ||
+                            UserCalendarIntegration.find_by(account_id: current_account.id)
+  end
+
   def sync_canned_responses
     current_account.canned_responses.find_each do |cr|
       KnowledgeItemSyncJob.perform_later(
         action: 'upsert',
         source_type: 'canned_response',
         source_id: cr.id,
+        account_id: current_account.id
+      )
+    end
+    @source.update(last_synced_at: Time.current)
+  end
+
+  def sync_articles
+    current_account.articles.find_each do |article|
+      KnowledgeItemSyncJob.perform_later(
+        action: 'upsert',
+        source_type: 'article',
+        source_id: article.id,
         account_id: current_account.id
       )
     end
@@ -233,10 +400,9 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     nil
   end
 
+  # Cada cuenta usa su propia integración OpenAI (sin fallback a ENV global, multi-tenant).
   def openai_api_key
     hook = current_account.hooks.find_by(app_id: 'openai', status: 'enabled')
-    return hook.settings['api_key'] if hook&.settings&.dig('api_key').present?
-
-    ENV['OPENAI_API_KEY']
+    hook&.settings&.dig('api_key').presence
   end
 end

@@ -1,0 +1,130 @@
+{
+  "TRACKING_CAMPAIGNS_VIEW": {
+    "TITLE": "Campañas Agentes IA",
+    "DESCRIPTION": "Lanza un Agente IA sobre un grupo de contactos y sigue el avance de cada campaña.",
+    "REFRESH": "Actualizar",
+    "NEW_CAMPAIGN": "Nueva campaña",
+    "TAB_LIST": "Campañas",
+    "TAB_NEW": "Nueva campaña",
+    "LOADING": "Cargando campañas…",
+    "EMPTY_TITLE": "Todavía no hay campañas.",
+    "EMPTY_HINT": "Crea una con el botón «Nueva campaña» o asigna un Agente IA de forma masiva desde Contactos.",
+    "SEARCH_PLACEHOLDER": "Buscar por nombre, Agente IA o canal…",
+    "FILTER_STATUS_ALL": "Todos los estados",
+    "NO_RESULTS": "No hay campañas que coincidan con el filtro.",
+    "DELETE": "Borrar campaña",
+    "DELETE_CONFIRM": "Se cancelarán sus seguimientos activos (dejan de enviar) y los demás quedarán sueltos en «Todos». ¿Borrar la campaña",
+    "DELETE_YES": "Sí, borrar",
+    "DELETE_NO": "Cancelar",
+    "DELETE_SUCCESS": "Campaña borrada.",
+    "DELETE_ERROR": "No se pudo borrar la campaña.",
+    "COL": {
+      "NAME": "Campaña",
+      "AGENT": "Agente IA",
+      "CHANNEL": "Canal",
+      "START": "Inicio",
+      "STATUS": "Estado",
+      "CONTACTS": "Contactos",
+      "PENDING": "Pendientes",
+      "ACTIVE": "Activos",
+      "COMPLETED": "Completados",
+      "FAILED": "Fallidos",
+      "PROGRESS": "Avance"
+    },
+    "STATUS": {
+      "draft": "Borrador",
+      "running": "En curso",
+      "paused": "Pausada",
+      "finished": "Finalizada"
+    }
+  },
+  "TRACKING_CAMPAIGN_DETAIL": {
+    "BACK": "Campañas",
+    "LOADING": "Cargando campaña…",
+    "AGENT": "Agente IA",
+    "CHANNEL": "Canal",
+    "START": "Inicio",
+    "OBJECTIVE": "Objetivo",
+    "KPI": {
+      "TITLE": "Control (ejecución)",
+      "CONTACTS": "Contactos",
+      "PENDING": "Pendientes",
+      "ACTIVE": "Activos",
+      "PAUSED": "Pausados (Regla)",
+      "COMPLETED_REPLIED": "Completados (con respuesta)",
+      "COMPLETED_NO_REPLY": "Completados (sin respuesta)",
+      "CANCELLED": "Cancelados (Regla)",
+      "FAILED": "Fallidos",
+      "PROGRESS": "Avance"
+    },
+    "DELIVERY": {
+      "TITLE": "Entrega de Mensajes",
+      "DELIVERED": "Entregados",
+      "SENT": "Sin confirmar",
+      "FAILED": "Error de entrega",
+      "EMPTY": "Aún no se han enviado mensajes."
+    },
+    "FUNNEL": {
+      "TITLE": "Intención",
+      "REPLIED": "Respondieron",
+      "INTERESTED": "Interesados",
+      "APPOINTMENT": "Agendaron",
+      "OBJECTIVE_MET": "Objetivo cumplido"
+    },
+    "PROSPECTS": "Prospectos",
+    "PROSPECTS_EMPTY": "Esta campaña no tiene prospectos.",
+    "FILTERED_BY": "Filtrado por",
+    "SHOW_ALL": "Ver todos",
+    "FILTER_EMPTY": "Ningún prospecto coincide con este filtro.",
+    "FILTER_DESC": {
+      "intent_replied": "Contactos que respondieron al menos una vez desde que se creó el seguimiento (cuenta incluso si respondieron antes del primer mensaje).",
+      "intent_interested": "El contacto mostró interés o pidió agendar; suele pausarse para que lo atienda un asesor.",
+      "intent_appointment": "El contacto agendó una cita a través del Agente IA (quedó registrada su fecha y hora).",
+      "intent_objective": "Se logró la meta del seguimiento; se marca como éxito y se detienen los envíos.",
+      "ctrl_pending": "En cola o con próximo mensaje programado; aún no envían.",
+      "ctrl_active": "Seguimiento en marcha: enviando mensajes y respondiendo al contacto según el objetivo.",
+      "ctrl_paused": "Detenidos temporalmente (pueden reanudarse). Normalmente por una regla del Agente IA.",
+      "ctrl_completed_replied": "Agotaron los intentos y sí hubo respuesta.",
+      "ctrl_completed_no_reply": "Agotaron los intentos sin ninguna respuesta.",
+      "ctrl_cancelled": "Cancelados de forma definitiva (no se reanudan). Normalmente por una regla del Agente IA.",
+      "ctrl_failed": "No se pudo ejecutar el seguimiento. Pasa el cursor por el ℹ️ del estado para ver la causa exacta.",
+      "del_delivered": "El canal confirmó que el último mensaje llegó al contacto (o que ya lo leyó).",
+      "del_sent": "El mensaje salió del sistema, pero el canal aún no confirma que haya llegado al contacto.",
+      "del_failed": "El canal no pudo entregar el último mensaje (número inválido, bloqueo u otro rechazo)."
+    },
+    "INTENT_VALUES": {
+      "tracking": "Respondió",
+      "interested": "Interesado",
+      "rejected": "Rechazó",
+      "book_appointment": "Quiere agendar",
+      "reschedule": "Reagendar",
+      "cancel_appointment": "Cancelar cita",
+      "botseller": "Consulta",
+      "kbase": "Consulta"
+    },
+    "OUTCOME_VALUES": {
+      "appointment": "Agendó cita",
+      "interested": "Interesado",
+      "rejected": "Rechazó",
+      "cancelled": "Canceló cita",
+      "objective_met": "Objetivo cumplido"
+    },
+    "FAILURE": {
+      "WINDOW_CLOSED": "Ventana de 24h de WhatsApp cerrada y sin plantilla configurada: no se pudo enviar.",
+      "SEND_FAILED": "No se pudo enviar el mensaje: el canal rechazó el envío o no se pudo crear/encontrar la conversación.",
+      "TEMPLATE_PARAMS": "La plantilla requiere parámetros que no se pudieron resolver.",
+      "UNKNOWN": "Error de ejecución sin detalle registrado."
+    },
+    "COL": {
+      "CONTACT": "Contacto",
+      "STATUS": "Estado",
+      "DELIVERY": "Entrega",
+      "INTENT": "Último intento",
+      "OUTCOME": "Desenlace",
+      "SCHEDULED": "Programado",
+      "ATTEMPTS": "Intentos",
+      "ACTION": "Acción"
+    },
+    "OPEN_CONVERSATION": "Abrir conversación"
+  }
+}

@@ -25,11 +25,16 @@ RUN apk update && apk add --no-cache \
   tzdata \
   postgresql-dev \
   postgresql-client \
+  freetds-dev \
   nodejs=20.15.1-r0 \
   yarn \
   git \
   && mkdir -p /var/app \
   && gem install bundler
+# @query_databases: freetds-dev → compila el gem `tiny_tds` (SQL Server de Contpaq).
+# El gem `fb` (Firebird: SAE/Microsip) necesita libfbclient + headers, que NO están
+# empaquetados en Alpine main → pendiente de ops: base Debian para el connector, o
+# prebuild de libfbclient, o correr la consulta Firebird en un microservicio aparte.
 
 WORKDIR /app
 
@@ -104,10 +109,12 @@ RUN apk update && apk add --no-cache \
   openssl \
   tzdata \
   postgresql-client \
+  freetds \
   imagemagick \
   git \
   vips \
   && gem install bundler
+# @query_databases: freetds (runtime) para tiny_tds. Firebird (gem `fb`) pendiente (ver builder).
 
 RUN if [ "$RAILS_ENV" != "production" ]; then \
   apk add --no-cache nodejs-current yarn; \

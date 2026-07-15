@@ -52,7 +52,7 @@
       "PREVIOUS_CONVERSATIONS": "Conversaciones anteriores",
       "NO_RECORDS_FOUND": "No se encontraron atributos"
     },
-    "SCHEDULE_TRACKING": "BotSeguimientos Automatizados",
+    "SCHEDULE_TRACKING": "Agente seguimientos",
     "ACTIVE_TRACKINGS": "Seguimientos Activos",
     "ADD_NOTE": "Agregar nota",
     "EDIT_NOTE": "Editar última nota",
@@ -62,6 +62,8 @@
       "TRACKING_BOT": "Bot de Seguimientos",
       "OPENAI": "OpenAI",
       "NOT_ACTIVE": "No activa",
+      "ACTIVE": "Activo",
+      "INACTIVE": "No activo",
       "INSTRUCTIONS_TITLE": "¿Cómo activarlas?",
       "STEP_1": "Ve a Configuración → Integraciones",
       "STEP_2": "Activa 'Bot de Seguimientos' para este inbox",

@@ -16,6 +16,10 @@ export default {
       type: [String, Number],
       default: 0,
     },
+    label: {
+      type: String,
+      default: '',
+    },
   },
   setup() {
     const { isAdmin } = useAdmin();
@@ -68,6 +72,10 @@ export default {
     },
     toggleImport() {
       this.$emit('onToggleImport');
+    },
+    // proyecto@bulk_tracking_assign
+    toggleBulkAssign() {
+      this.$emit('onToggleBulkAssign');
     },
     async submitExport() {
       const ok =
@@ -175,6 +183,18 @@ export default {
             @click="onToggleSegmentsModal"
           >
             {{ $t('CONTACTS_PAGE.FILTER_CONTACTS_SAVE') }}
+          </woot-button>
+
+          <!-- proyecto@bulk_tracking_assign -->
+          <woot-button
+            v-if="hasAppliedFilters || label"
+            class="clear [&>span]:hidden xs:[&>span]:block"
+            color-scheme="success"
+            variant="clear"
+            icon="send"
+            @click="toggleBulkAssign"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.HEADER.BUTTON_LABEL') }}
           </woot-button>
           <woot-button
             class="clear [&>span]:hidden xs:[&>span]:block"

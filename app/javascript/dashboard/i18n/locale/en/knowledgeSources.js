@@ -8,6 +8,15 @@ export default {
     TITLE: 'Knowledge Base',
     DESCRIPTION: 'Manage the information sources that power semantic search. Connect Discourse forums or use Canned Responses so the assistant finds relevant content in every conversation.',
 
+    TABS: {
+      INDEXED_CONTENT: 'Indexed content',
+      SOURCES: 'Sources (%{count})',
+      SEARCH_CONSOLE: 'Search Console (Sources)',
+      ERP_CONNECTION: 'ERP Connection',
+      COLLECTION_AGENT: 'Collection Agent',
+      QUERY_CONSOLE: 'Query Console (ERP)',
+    },
+
     ACTIONS: {
       ADD: 'Add Source',
     },

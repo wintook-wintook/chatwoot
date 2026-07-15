@@ -49,22 +49,25 @@ import SLAReports from './modules/SLAReports';
 import webphone from './modules/webphone';
 
 import scheduledMessages from './modules/scheduledMessages';
-//KANBAN0725
+// KANBAN0725
 import kanbanTypeProcesses from './modules/kanbanTypeProcesses';
 import kanbanProcesses from './modules/kanbanProcesses';
 import kanbanConversations from './modules/kanbanConversations';
-//KANBAN0725
+// KANBAN0725
 // ============================================================
 // proyecto@contact_tracking
 // /home/chatwoot/chatwoot/app/javascript/dashboard/store/index.js
 import contactTrackings from './modules/contactTrackings';
 // ===========================================================
 
-
 // proyecto@tracking_templates
 import trackingTemplates from './modules/trackingTemplates';
 // @tickets_cases
 import caseTickets from './modules/caseTickets';
+// @query_databases
+import externalDb from './modules/externalDb';
+// @waba_templates
+import whatsappTemplates from './modules/whatsappTemplates';
 // proyecto@google_calendar
 import googleCalendar from './modules/googleCalendar';
 
@@ -120,15 +123,17 @@ export default new Vuex.Store({
     slaReports: SLAReports,
     webphone,
     scheduledMessages,
-    //KANBAN0725
+    // KANBAN0725
     kanbanTypeProcesses,
     kanbanProcesses,
     kanbanConversations,
-    //KANBAN0725
-    contactTrackings,// proyecto@contact_tracking    
+    // KANBAN0725
+    contactTrackings, // proyecto@contact_tracking
     trackingTemplates, // proyecto@tracking_templates
     googleCalendar, // proyecto@google_calendar
     caseTickets, // @tickets_cases
+    externalDb, // @query_databases
+    whatsappTemplates, // @waba_templates
   },
   plugins,
 });

@@ -207,10 +207,20 @@ en:
   contacts:
     online:
       delete: "%{contact_name} is Online, please try again later"
+  knowledge_sources:
+    names:
+      canned_response: "Canned Responses"
+      article: "Help Center"
   integration_apps:
     discourse:
       name: "Discourse"
       description: "Connect your Discourse forum to use it as a knowledge base. Wintook will index your topics and use semantic search to automatically answer customer questions."
+    bots_inboxes:
+      name: "EVA Bot Activation"
+      description: "Activate the EVA assistant on your inboxes so it can automatically attend to your customers, answer their questions, and hand off the conversation to an agent when needed."
+    tracking_bot:
+      name: "Follow-up Agent Activation"
+      description: "Automate any kind of follow-up: sales, collections, reminders and more. It keeps your processes active without relying on the user to remember to do it."
     dashboard_apps:
       name: "Dashboard Apps"
       description: "Dashboard Apps allow you to create and embed applications that display user information, orders, or payment history, providing more context to your customer support agents."
@@ -234,7 +244,7 @@ en:
       name: "OpenAI"
       description: "Leverage the power of large language models from OpenAI with the features such as reply suggestions, summarization, message rephrasing, spell-checking, and label classification."
     crmzeus:
-      name: "Kontrolya"
+      name: "Kontrolya CRM Administrativo"
       description: "Kontrolya Integration for Contact Synchronization."
     # DEV0002      
     linear:
@@ -249,7 +259,7 @@ en:
       name: "Captain"
       description: "Captain is a native AI assistant built for your product and trained on your company's knowledge base. It responds like a human and resolves customer queries effectively. Configure it to your inboxes easily."
     daiko:
-      name: "Seller Bot"
+      name: "Sales Agent Activation"
       description: "Your automated 24/7 seller that responds to your customers in seconds, checks prices, products and stock, and generates quotes and orders."
   public_portal:
     search:

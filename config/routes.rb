@@ -41,7 +41,6 @@ Rails.application.routes.draw do
         end
 
         scope module: :accounts do
-          
           # KANBAN0725
           resources :kanban_type_processes do
             get :conversation_kanban_info, on: :collection, path: 'conversation/:conversation_id/kanban_info'
@@ -83,11 +82,35 @@ Rails.application.routes.draw do
             collection do
               get :calendar_integrations
             end
+            # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
+            resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
+          end
+          # @query_databases — conexiones a ERPs + consultas predefinidas + consola
+          resources :external_db_connections, only: [:index, :show, :create, :update, :destroy] do
+            member do
+              post :test_connection
+              post :seed_queries
+            end
+            resources :external_db_queries, only: [:index, :show, :create, :update, :destroy]
+          end
+          get  'external_db_console/catalog', to: 'external_db_console#catalog'
+          post 'external_db_console/run',     to: 'external_db_console#run'
+          post 'external_db_console/ask',     to: 'external_db_console#ask'
+          resources :erp_collection_bots, only: [:index, :show, :create, :update, :destroy] do
+            post :preview, on: :member
           end
           resources :contact_tracking_imports, only: [:create] # proyecto@import_seguimiento
+          resources :contact_tracking_bulk_assigns, only: [:create] do # proyecto@bulk_tracking_assign
+            post :preview, on: :collection # @campanas_vendedor — dry-run de buckets
+          end
+          resources :tracking_campaigns, only: [:index, :show, :destroy] # @campanas_vendedor
+          namespace :contact_trackings do # proyecto@contact_tracking — dashboard
+            resource :overview, only: [:show], controller: :overview
+            get 'list', to: 'list#index' # listado filtrable a nivel cuenta
+          end
 
           # @knowledge_sources
-          get    'knowledge_base/items',            to: 'knowledge_base#items'
+          get    'knowledge_base/items', to: 'knowledge_base#items'
           get    'knowledge_base/item_categories', to: 'knowledge_base#item_categories'
           get    'knowledge_base/sources',          to: 'knowledge_base#sources'
           post   'knowledge_base/sources',          to: 'knowledge_base#create_source'
@@ -157,6 +180,13 @@ Rails.application.routes.draw do
           # proyecto@waba_chatwoot
           namespace :whatsapp do
             resource :authorization, only: [:create]
+            # @waba_templates — gestión de plantillas (crear/submit/editar/borrar en Meta).
+            resources :templates, only: [:index, :show, :create, :update, :destroy] do
+              collection do
+                post :sync
+                post :import
+              end
+            end
           end
 
           # KANBAN0725
@@ -176,9 +206,9 @@ Rails.application.routes.draw do
               get :meta
               get :search
               post :filter
-              post :search_by_contacts  # proyecto@search_by_contacts - Search conversations by phone numbers and/or emails
+              post :search_by_contacts # proyecto@search_by_contacts - Search conversations by phone numbers and/or emails
               # KANBAN0725
-              get :available_kanban_types 
+              get :available_kanban_types
               # KANBAN0725
             end
             scope module: :conversations do
@@ -207,9 +237,9 @@ Rails.application.routes.draw do
               post :custom_attributes
               get :attachments
               # KANBAN0725
-              patch :assign_kanban_type    
+              patch :assign_kanban_type
               patch :update_kanban_process
-              patch :update_kanban_process_only     
+              patch :update_kanban_process_only
               patch :bulk_update_kanban
               # KANBAN0725
             end
@@ -242,7 +272,7 @@ Rails.application.routes.draw do
               resources :labels, only: [:create, :index]
               resources :notes
             end
-              
+
             # =========================================================================
             # 🤖 SEGUIMIENTOS AUTOMÁTICOS CON IA - Contact Trackings
             # proyecto@contact_tracking v2.0
@@ -253,7 +283,7 @@ Rails.application.routes.draw do
             # - Múltiples intentos automáticos con intervalos configurables
             # - Análisis de intención para reprogramación inteligente
             # - Estados del ciclo de vida completo del seguimiento
-            # 
+            #
             # Estados disponibles:
             # - pending: Creado, esperando ejecución
             # - scheduled: Programado en cola de Sidekiq
@@ -262,61 +292,61 @@ Rails.application.routes.draw do
             # - completed: Finalizado exitosamente
             # - cancelled: Cancelado por el agente
             # - failed: Falló en la ejecución
-            # 
+            #
             # Endpoints disponibles:
             # -------------------------------------------------------------------------
             # GET    /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings
             #        Lista todos los seguimientos del contacto
             #        Params opcionales: ?conversation_id=X&status=pending&inbox_id=Y
-            # 
+            #
             # POST   /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings
             #        Crea un nuevo seguimiento
             #        Body: { contact_tracking: { objective, scheduled_for, ... } }
-            # 
+            #
             # PATCH  /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings/:id
             #        Actualiza un seguimiento existente
-            # 
+            #
             # DELETE /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings/:id
             #        Elimina permanentemente un seguimiento
-            # 
+            #
             # POST   /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings/:id/pause
             #        Pausa temporalmente la ejecución
             #        Útil cuando el cliente solicita espera o no está disponible
-            # 
+            #
             # POST   /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings/:id/resume
             #        Reanuda un seguimiento pausado
             #        Continúa con los intentos restantes
-            # 
+            #
             # POST   /api/v1/accounts/:account_id/contacts/:contact_id/contact_trackings/:id/cancel
             #        Cancela definitivamente el seguimiento
             #        Acción irreversible, usar cuando el seguimiento ya no aplica
-            # 
+            #
             # Integración con servicios:
             # -------------------------------------------------------------------------
             # - OpenAI API: Generación de mensajes personalizados (AiFollowupService)
             # - WhatsApp Cloud API: Envío de mensajes y plantillas (WhatsappCloudService)
             # - Sidekiq: Ejecución programada de seguimientos (ContactTrackingJob)
             # - Sidekiq Cron: Jobs periódicos (ExecutePendingJob, CleanupJob)
-            # 
+            #
             # Componentes frontend:
             # -------------------------------------------------------------------------
             # - ContactTrackingModal.vue: Modal de gestión en panel de contacto
             # - Store Vuex: contactTrackings (state management)
             # - API Client: contactTrackings.js (comunicación con backend)
             # - Filtrado automático por conversación e inbox actual
-            # 
+            #
             # Jobs automáticos (Sidekiq):
             # -------------------------------------------------------------------------
             # - ContactTrackingJob: Ejecuta seguimientos individuales
             # - ExecutePendingJob: Busca y programa seguimientos pendientes (cada 5 min)
             # - CleanupJob: Limpia seguimientos completados antiguos (diario a las 3 AM)
-            # 
+            #
             # Ejemplo de uso (crear seguimiento):
             # -------------------------------------------------------------------------
             # POST /api/v1/accounts/1/contacts/123/contact_trackings
             # Authorization: Bearer YOUR_ACCESS_TOKEN
             # Content-Type: application/json
-            # 
+            #
             # {
             #   "contact_tracking": {
             #     "objective": "Seguimiento cotización plan premium",
@@ -328,7 +358,7 @@ Rails.application.routes.draw do
             #     "ai_context": "Cliente interesado en plan premium, presupuesto $5K, evaluando opciones"
             #   }
             # }
-            # 
+            #
             # Respuesta exitosa:
             # {
             #   "id": 1,
@@ -347,7 +377,7 @@ Rails.application.routes.draw do
             #   "created_at": "2025-01-07T10:00:00Z",
             #   "updated_at": "2025-01-07T10:00:00Z"
             # }
-            # 
+            #
             # Documentación completa:
             # -------------------------------------------------------------------------
             # Backend: outputs/README.md
@@ -357,7 +387,7 @@ Rails.application.routes.draw do
             # =========================================================================
             resources :contact_trackings, only: [:index, :show, :create, :update, :destroy] do
               collection do
-                post :improve_text        # Mejorar texto con IA
+                post :improve_text # Mejorar texto con IA
               end
               member do
                 post :pause   # Pausar temporalmente el seguimiento
@@ -372,8 +402,6 @@ Rails.application.routes.draw do
             # 📅 SEGUIMIENTOS AUTOMÁTICOS V2.00 - Contact Schedules
             # #SEGUIMIENTOS_V2.00
             # =========================================================================
-
-            
           end
           resources :csat_survey_responses, only: [:index] do
             collection do
@@ -458,6 +486,8 @@ Rails.application.routes.draw do
             resource :calendars, only: [:show, :update], controller: 'calendars' do
               collection do
                 post :subscribe
+                post :create_calendar
+                post :update_calendar
               end
             end
             resource :availability, only: [:show], controller: 'availability'
@@ -501,7 +531,7 @@ Rails.application.routes.draw do
             end
           end
 
-          #KANBAN0725
+          # KANBAN0725
           resources :kanban_type_processes, path: 'kanban_processes' do
             resources :kanban_processes, path: 'kanban_type_processes' do
               collection do
@@ -509,7 +539,7 @@ Rails.application.routes.draw do
               end
             end
           end
-          #KANBAN0725
+          # KANBAN0725
 
           resources :working_hours, only: [:update]
 
@@ -794,8 +824,6 @@ Rails.application.routes.draw do
   # Routes for testing
   resources :widget_tests, only: [:index] unless Rails.env.production?
 
-
-
   # Proyecto: DEV0001
   namespace :api do
     namespace :v1 do
@@ -803,12 +831,12 @@ Rails.application.routes.draw do
         scope module: :accounts do
           # Ruta para todos los mensajes programados de una cuenta
           resources :scheduled_messages, only: [:index]
-          
+
           # Rutas para mensajes programados dentro de una conversación
           resources :conversations do
             resources :scheduled_messages, only: [:index, :create]
           end
-          
+
           # Rutas para operaciones individuales de mensajes programados (show, update, destroy)
           # Estas rutas son "shallow" para no necesitar el conversation_id en estas operaciones
           resources :scheduled_messages, only: [:show, :update, :destroy]
@@ -817,7 +845,7 @@ Rails.application.routes.draw do
     end
   end
 
-  #KANBAN0725
+  # KANBAN0725
   namespace :conversations do
     resources :kanban, only: [:index] do
       collection do
@@ -827,6 +855,5 @@ Rails.application.routes.draw do
       end
     end
   end
-  #KANBAN0725
-
+  # KANBAN0725
 end

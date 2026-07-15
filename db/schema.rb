@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_07_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -117,6 +117,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.integer "bot_type", default: 0
     t.jsonb "bot_config", default: {}
     t.index ["account_id"], name: "index_agent_bots_on_account_id"
+  end
+
+  create_table "ai_agent_attachments", force: :cascade do |t|
+    t.bigint "tracking_template_id", null: false
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_ai_agent_attachments_on_account_id"
+    t.index ["tracking_template_id", "name"], name: "index_ai_agent_attachments_on_template_and_name", unique: true
+    t.index ["tracking_template_id"], name: "index_ai_agent_attachments_on_tracking_template_id"
   end
 
   create_table "applied_slas", force: :cascade do |t|
@@ -699,16 +710,27 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.jsonb "calendar_integration_ids", default: [], null: false
     t.integer "calendar_event_duration", default: 30
     t.integer "tracking_template_id"
+    t.datetime "appointment_at"
+    t.string "last_intent"
+    t.string "outcome"
+    t.string "appointment_event_id"
+    t.bigint "appointment_calendar_id"
+    t.string "appointment_calendar_gid"
+    t.bigint "tracking_campaign_id"
+    t.jsonb "keyword_action_fired"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
-    t.index ["contact_id", "status"], name: "index_unique_active_tracking_per_contact", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))"
+    t.index ["appointment_at"], name: "index_contact_trackings_on_appointment_at"
+    t.index ["contact_id", "inbox_id", "status"], name: "index_unique_active_tracking_per_contact_inbox", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))"
     t.index ["contact_id"], name: "index_contact_trackings_on_contact_id"
     t.index ["conversation_id", "inbox_id"], name: "index_contact_trackings_on_conversation_id_and_inbox_id"
     t.index ["conversation_id"], name: "index_contact_trackings_on_conversation_id"
     t.index ["inbox_id"], name: "index_contact_trackings_on_inbox_id"
+    t.index ["last_intent"], name: "index_contact_trackings_on_last_intent"
     t.index ["scheduled_for"], name: "index_contact_trackings_on_scheduled_for"
     t.index ["status", "scheduled_for"], name: "index_contact_trackings_on_status_and_scheduled_for"
     t.index ["status"], name: "index_contact_trackings_on_status"
+    t.index ["tracking_campaign_id"], name: "index_contact_trackings_on_tracking_campaign_id"
   end
 
   create_table "contacts", id: :serial, force: :cascade do |t|
@@ -778,6 +800,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.bigint "sla_policy_id"
     t.datetime "waiting_since"
     t.text "cached_label_list"
+    t.bigint "kanban_type_process_id"
+    t.bigint "kanban_process_id"
     t.index ["account_id", "display_id"], name: "index_conversations_on_account_id_and_display_id", unique: true
     t.index ["account_id", "id"], name: "index_conversations_on_id_and_account_id"
     t.index ["account_id", "inbox_id", "status", "assignee_id"], name: "conv_acid_inbid_stat_asgnid_idx"
@@ -788,6 +812,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.index ["contact_inbox_id"], name: "index_conversations_on_contact_inbox_id"
     t.index ["first_reply_created_at"], name: "index_conversations_on_first_reply_created_at"
     t.index ["inbox_id"], name: "index_conversations_on_inbox_id"
+    t.index ["kanban_process_id"], name: "index_conversations_on_kanban_process_id"
+    t.index ["kanban_type_process_id"], name: "index_conversations_on_kanban_type_process_id"
     t.index ["priority"], name: "index_conversations_on_priority"
     t.index ["status", "account_id"], name: "index_conversations_on_status_and_account_id"
     t.index ["status", "priority"], name: "index_conversations_on_status_and_priority"
@@ -886,12 +912,76 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.index ["name", "account_id"], name: "index_email_templates_on_name_and_account_id", unique: true
   end
 
+  create_table "erp_collection_bots", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "external_db_connection_id", null: false
+    t.bigint "external_db_query_id"
+    t.bigint "inbox_id"
+    t.string "name", null: false
+    t.text "message_template"
+    t.string "phone_column", default: "TELEFONO", null: false
+    t.integer "run_hour", default: 8, null: false
+    t.boolean "mode_b_enabled", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "last_run_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_erp_collection_bots_on_account_id"
+  end
+
+  create_table "external_db_connections", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.integer "engine", default: 0, null: false
+    t.string "host", null: false
+    t.integer "port", null: false
+    t.string "database", null: false
+    t.string "username"
+    t.string "password"
+    t.jsonb "options", default: {}, null: false
+    t.boolean "read_only", default: true, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "erp_type", default: 0, null: false
+    t.string "company_suffix"
+    t.index ["account_id", "name"], name: "index_external_db_connections_on_account_id_and_name", unique: true
+  end
+
+  create_table "external_db_queries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "external_db_connection_id", null: false
+    t.string "name", null: false
+    t.string "description"
+    t.text "sql_template", null: false
+    t.jsonb "params_schema", default: [], null: false
+    t.integer "row_limit", default: 200, null: false
+    t.boolean "ai_enabled", default: false, null: false
+    t.integer "result_format", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_external_db_queries_on_account_id"
+    t.index ["external_db_connection_id", "name"], name: "index_external_db_queries_on_connection_and_name", unique: true
+  end
+
   create_table "folders", force: :cascade do |t|
     t.integer "account_id", null: false
     t.integer "category_id", null: false
     t.string "name"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+  end
+
+  create_table "google_sheet_rows", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "knowledge_source_id", null: false
+    t.integer "row_index", null: false
+    t.jsonb "data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_google_sheet_rows_on_account_id"
+    t.index ["knowledge_source_id", "row_index"], name: "idx_google_sheet_rows_unique", unique: true
   end
 
   create_table "inbox_members", id: :serial, force: :cascade do |t|
@@ -1325,6 +1415,24 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.datetime "updated_at", precision: nil, null: false
   end
 
+  create_table "tracking_campaigns", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.bigint "tracking_template_id"
+    t.bigint "inbox_id"
+    t.bigint "user_id"
+    t.string "objective"
+    t.datetime "scheduled_for"
+    t.string "status", default: "running", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
+    t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"
+    t.index ["inbox_id"], name: "index_tracking_campaigns_on_inbox_id"
+    t.index ["tracking_template_id"], name: "index_tracking_campaigns_on_tracking_template_id"
+    t.index ["user_id"], name: "index_tracking_campaigns_on_user_id"
+  end
+
   create_table "tracking_templates", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -1343,6 +1451,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.integer "kbase_hook_id"
     t.jsonb "calendar_integration_ids", default: [], null: false
     t.integer "calendar_event_duration", default: 30
+    t.string "timezone"
+    t.jsonb "booking_calendar_ids", default: {}, null: false
+    t.string "slots_presentation", default: "detailed", null: false
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
@@ -1410,6 +1521,33 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
     t.index ["account_id", "url"], name: "index_webhooks_on_account_id_and_url", unique: true
   end
 
+  create_table "whatsapp_templates", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "channel_whatsapp_id", null: false
+    t.string "name", null: false
+    t.string "category"
+    t.string "language", null: false
+    t.string "header_type"
+    t.text "header_content"
+    t.string "header_media_url"
+    t.string "header_handle"
+    t.text "body_text"
+    t.string "footer_text"
+    t.jsonb "buttons", default: [], null: false
+    t.jsonb "sample_values", default: {}, null: false
+    t.string "status", default: "DRAFT", null: false
+    t.string "meta_template_id"
+    t.string "rejection_reason"
+    t.string "quality_score"
+    t.text "submission_error"
+    t.datetime "last_submitted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_whatsapp_templates_on_account_id"
+    t.index ["channel_whatsapp_id", "name", "language"], name: "index_whatsapp_templates_on_channel_name_language", unique: true
+    t.index ["meta_template_id"], name: "index_whatsapp_templates_on_meta_template_id"
+  end
+
   create_table "working_hours", force: :cascade do |t|
     t.bigint "inbox_id"
     t.bigint "account_id"
@@ -1429,6 +1567,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
   add_foreign_key "account_users", "contacts", column: "agent_contact_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "ai_agent_attachments", "accounts"
+  add_foreign_key "ai_agent_attachments", "tracking_templates"
   add_foreign_key "case_ai_configs", "accounts"
   add_foreign_key "case_portals", "accounts"
   add_foreign_key "case_portals", "inboxes"
@@ -1449,6 +1589,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
   add_foreign_key "contact_trackings", "contacts"
   add_foreign_key "contact_trackings", "conversations"
   add_foreign_key "contact_trackings", "inboxes"
+  add_foreign_key "contact_trackings", "tracking_campaigns"
+  add_foreign_key "conversations", "kanban_processes"
+  add_foreign_key "conversations", "kanban_type_processes"
   add_foreign_key "inboxes", "portals"
   add_foreign_key "kanban_processes", "accounts"
   add_foreign_key "kanban_processes", "kanban_type_processes"
@@ -1459,6 +1602,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_06_09_000004) do
   add_foreign_key "scheduled_messages", "accounts"
   add_foreign_key "scheduled_messages", "conversations"
   add_foreign_key "scheduled_messages", "users"
+  add_foreign_key "tracking_campaigns", "accounts"
+  add_foreign_key "tracking_campaigns", "inboxes"
+  add_foreign_key "tracking_campaigns", "tracking_templates"
+  add_foreign_key "tracking_campaigns", "users"
   add_foreign_key "tracking_templates", "accounts"
   add_foreign_key "tracking_templates", "inboxes"
   add_foreign_key "tracking_templates", "users"

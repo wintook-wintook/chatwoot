@@ -3,14 +3,26 @@
 <script>
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SourceCard from './SourceCard.vue';
 import AddSourceModal from './AddSourceModal.vue';
 import KnowledgeBaseAPI from './api';
+// @query_databases — el módulo ERP ahora vive como tabs dentro de Base de Conocimiento.
+import ErpConnections from 'dashboard/views/erp/Connections.vue';
+import ErpBots from 'dashboard/views/erp/Bots.vue';
+import ErpConsole from 'dashboard/views/erp/Console.vue';
 
 export default {
   name: 'KnowledgeSourcesIndex',
-  components: { BaseSettingsHeader, SourceCard, AddSourceModal },
+  components: {
+    BaseSettingsHeader,
+    SourceCard,
+    AddSourceModal,
+    ErpConnections,
+    ErpBots,
+    ErpConsole,
+  },
   data() {
     return {
       sources: [],
@@ -40,25 +52,59 @@ export default {
       testSearched: false,
       viewingResult: null,
       kbaseSettings: {
-        similarity_threshold: 0.60,
+        similarity_threshold: 0.6,
         max_results: 5,
         max_context_chars: 2000,
       },
       kbaseSettingsSaving: false,
       kbaseSettingsLoading: false,
+      // La tab "Configuración" se mantiene en el código pero oculta (no se lista
+      // en tabs()); poner en true para volver a mostrarla.
+      showConfigTab: false,
     };
   },
   computed: {
-    ...mapGetters({ currentUser: 'getCurrentUser' }),
+    ...mapGetters({
+      currentUser: 'getCurrentUser',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
+    }),
     accountId() {
       return this.currentUser.account_id;
     },
+    // Las fuentes Google reutilizan la conexión de Google Calendar.
+    googleEnabled() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.GOOGLE_CALENDAR
+      );
+    },
+    // @query_databases — las tabs ERP solo aparecen si el super admin habilitó
+    // la feature `erp_connection` para esta cuenta.
+    erpEnabled() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.ERP_CONNECTION
+      );
+    },
     tabs() {
+      // La tab "Configuración" queda en el código (bloque showConfigTab) pero NO se
+      // muestra. woot-tabs indexa por posición de renderizado, así que al ocultarla
+      // los índices se recorren: Prueba=2, Conexión ERP=3, Bots=4, Consola=5.
       return [
-        { name: 'Contenido indexado' },
-        { name: `Fuentes (${this.sources.length})` },
-        { name: 'Prueba de búsqueda' },
-        { name: 'Configuración' },
+        { name: this.$t('KNOWLEDGE_SOURCES.TABS.INDEXED_CONTENT') },
+        {
+          name: this.$t('KNOWLEDGE_SOURCES.TABS.SOURCES', {
+            count: this.sources.length,
+          }),
+        },
+        { name: this.$t('KNOWLEDGE_SOURCES.TABS.SEARCH_CONSOLE') },
+        ...(this.erpEnabled
+          ? [
+              { name: this.$t('KNOWLEDGE_SOURCES.TABS.ERP_CONNECTION') },
+              { name: this.$t('KNOWLEDGE_SOURCES.TABS.COLLECTION_AGENT') },
+              { name: this.$t('KNOWLEDGE_SOURCES.TABS.QUERY_CONSOLE') },
+            ]
+          : []),
       ];
     },
     filteredItems() {
@@ -68,13 +114,30 @@ export default {
       return Math.max(1, Math.ceil(this.totalItems / this.itemsPerPage));
     },
     paginationFrom() {
-      return this.totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+      return this.totalItems === 0
+        ? 0
+        : (this.currentPage - 1) * this.itemsPerPage + 1;
     },
     paginationTo() {
       return Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
     },
     sourceTypeLabel() {
-      return type => (type === 'canned_response' ? 'Respuesta Predefinida' : 'Discourse');
+      return type =>
+        ({
+          canned_response: 'Respuesta predefinida',
+          article: 'Centro de Ayuda',
+          google_doc: 'Google Doc',
+          google_sheet: 'Google Sheets',
+        })[type] || 'Discourse';
+    },
+    sourceTypeIcon() {
+      return type =>
+        ({
+          canned_response: 'chat-multiple',
+          article: 'library',
+          google_doc: 'document',
+          google_sheet: 'document',
+        })[type] || 'globe';
     },
     sourceById() {
       return Object.fromEntries(this.sources.map(s => [s.id, s]));
@@ -88,8 +151,11 @@ export default {
       return iso => {
         if (!iso) return '—';
         return new Date(iso).toLocaleString('es-MX', {
-          day: '2-digit', month: '2-digit', year: '2-digit',
-          hour: '2-digit', minute: '2-digit',
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
         });
       };
     },
@@ -107,7 +173,9 @@ export default {
   watch: {
     activeTab(val) {
       if (val === 2) this.clearTest();
-      if (val === 3) this.fetchSearchSettings();
+      // La tab Configuración (fetchSearchSettings) está oculta; su carga se hace
+      // solo si se reactiva showConfigTab desde su propio bloque.
+      if (this.showConfigTab && val === 3) this.fetchSearchSettings();
     },
   },
   mounted() {
@@ -172,19 +240,38 @@ export default {
       this.saving = true;
       try {
         if (this.editingSource) {
-          const { data } = await KnowledgeBaseAPI.updateSource(this.accountId, this.editingSource.id, payload);
-          const idx = this.sources.findIndex(s => s.id === this.editingSource.id);
+          const { data } = await KnowledgeBaseAPI.updateSource(
+            this.accountId,
+            this.editingSource.id,
+            payload
+          );
+          const idx = this.sources.findIndex(
+            s => s.id === this.editingSource.id
+          );
           if (idx !== -1) this.sources.splice(idx, 1, data);
           useAlert('Fuente actualizada correctamente');
         } else {
-          const { data } = await KnowledgeBaseAPI.createSource(this.accountId, payload);
+          const { data } = await KnowledgeBaseAPI.createSource(
+            this.accountId,
+            payload
+          );
           this.sources.push(data);
           useAlert('Fuente agregada correctamente');
+          // Una fuente recién creada puede estar sincronizando (Google Doc):
+          // arrancamos el polling para que la tarjeta se actualice sola.
+          this.manageSyncPolling();
         }
         this.showAddModal = false;
         this.editingSource = null;
-      } catch {
-        useAlert(this.editingSource ? 'Error al actualizar la fuente' : 'Error al agregar la fuente');
+      } catch (error) {
+        const serverError =
+          error?.response?.data?.errors?.[0] || error?.response?.data?.error;
+        useAlert(
+          serverError ||
+            (this.editingSource
+              ? 'Error al actualizar la fuente'
+              : 'Error al agregar la fuente')
+        );
       } finally {
         this.saving = false;
       }
@@ -193,15 +280,26 @@ export default {
       this.editingSource = source;
       this.showAddModal = true;
     },
+    // Una fuente Google queda inoperante si la cuenta no tiene la feature.
+    isGoogleSourceDisabled(source) {
+      return (
+        ['google_doc', 'google_sheet'].includes(source.source_type) &&
+        !this.googleEnabled
+      );
+    },
     async onSync(source) {
       this.syncingId = source.id;
       try {
         await KnowledgeBaseAPI.syncSource(this.accountId, source.id);
-        useAlert('Sincronizacion iniciada — los items apareceran en unos momentos');
+        useAlert(
+          'Sincronizacion iniciada — los items apareceran en unos momentos'
+        );
         await this.fetchSources();
         setTimeout(() => this.fetchItems(), 3000);
-      } catch {
-        useAlert('Error al sincronizar la fuente');
+      } catch (error) {
+        useAlert(
+          error?.response?.data?.error || 'Error al sincronizar la fuente'
+        );
       } finally {
         this.syncingId = null;
       }
@@ -217,8 +315,13 @@ export default {
     async confirmDelete() {
       if (!this.deletingSource) return;
       try {
-        await KnowledgeBaseAPI.deleteSource(this.accountId, this.deletingSource.id);
-        this.sources = this.sources.filter(s => s.id !== this.deletingSource.id);
+        await KnowledgeBaseAPI.deleteSource(
+          this.accountId,
+          this.deletingSource.id
+        );
+        this.sources = this.sources.filter(
+          s => s.id !== this.deletingSource.id
+        );
         await this.fetchItems();
         useAlert('Fuente eliminada correctamente');
       } catch {
@@ -237,7 +340,10 @@ export default {
       this.currentPage = 1;
       this.fetchItems();
       if (this.filterSourceId) {
-        const { data } = await KnowledgeBaseAPI.getItemCategories(this.accountId, this.filterSourceId);
+        const { data } = await KnowledgeBaseAPI.getItemCategories(
+          this.accountId,
+          this.filterSourceId
+        );
         this.filterCategories = data.categories || [];
       }
     },
@@ -255,7 +361,10 @@ export default {
       const current = this.currentPage;
       const max = 5;
       const count = Math.min(max, total);
-      const start = Math.max(1, Math.min(current - Math.floor(max / 2), total - count + 1));
+      const start = Math.max(
+        1,
+        Math.min(current - Math.floor(max / 2), total - count + 1)
+      );
       return Array.from({ length: count }, (_, i) => start + i);
     },
     async runTestSearch() {
@@ -284,7 +393,9 @@ export default {
     async fetchSearchSettings() {
       this.kbaseSettingsLoading = true;
       try {
-        const { data } = await KnowledgeBaseAPI.getSearchSettings(this.accountId);
+        const { data } = await KnowledgeBaseAPI.getSearchSettings(
+          this.accountId
+        );
         this.kbaseSettings = { ...data };
       } catch {
         useAlert('Error al cargar la configuración');
@@ -295,7 +406,10 @@ export default {
     async saveSearchSettings() {
       this.kbaseSettingsSaving = true;
       try {
-        await KnowledgeBaseAPI.updateSearchSettings(this.accountId, this.kbaseSettings);
+        await KnowledgeBaseAPI.updateSearchSettings(
+          this.accountId,
+          this.kbaseSettings
+        );
         useAlert('Configuración guardada correctamente');
       } catch {
         useAlert('Error al guardar la configuración');
@@ -322,7 +436,6 @@ export default {
     </BaseSettingsHeader>
 
     <div class="p-6 flex flex-col gap-6">
-
       <!-- Tabs -->
       <woot-tabs :index="activeTab" @change="activeTab = $event">
         <woot-tabs-item
@@ -353,7 +466,11 @@ export default {
             @change="onFilterCategory"
           >
             <option value="">Todas las categorías</option>
-            <option v-for="cat in filterCategories" :key="cat.id" :value="cat.id">
+            <option
+              v-for="cat in filterCategories"
+              :key="cat.id"
+              :value="cat.id"
+            >
               {{ cat.name }}
             </option>
           </select>
@@ -364,9 +481,7 @@ export default {
             placeholder="Buscar en el contenido indexado..."
             @keydown.enter="onSearch"
           />
-          <woot-button icon="search" @click="onSearch">
-            Buscar
-          </woot-button>
+          <woot-button icon="search" @click="onSearch"> Buscar </woot-button>
         </div>
 
         <!-- Loading -->
@@ -381,7 +496,9 @@ export default {
         >
           <fluent-icon icon="library" size="40" class="text-slate-300" />
           <p class="text-slate-500 text-sm">No hay contenido indexado aun</p>
-          <p class="text-slate-400 text-xs">Agrega una fuente y sincroniza, o crea una Respuesta Predefinida</p>
+          <p class="text-slate-400 text-xs">
+            Agrega una fuente y sincroniza, o crea una Respuesta Predefinida
+          </p>
         </div>
 
         <!-- Tabla -->
@@ -390,13 +507,39 @@ export default {
             <table class="w-full min-w-[860px]">
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200">
-                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-8"></th>
-                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500">Título</th>
-                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500">Contenido</th>
-                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-24">Categoría</th>
-                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-36">Tipo</th>
-                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-32">Creado</th>
-                  <th class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-32">Actualizado</th>
+                  <th
+                    class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-8"
+                  ></th>
+                  <th
+                    class="text-left px-3 py-3 text-sm font-semibold text-slate-500"
+                  >
+                    Título
+                  </th>
+                  <th
+                    class="text-left px-3 py-3 text-sm font-semibold text-slate-500"
+                  >
+                    Contenido
+                  </th>
+                  <th
+                    class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-24"
+                  >
+                    Categoría
+                  </th>
+                  <th
+                    class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-36"
+                  >
+                    Tipo
+                  </th>
+                  <th
+                    class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-32"
+                  >
+                    Creado
+                  </th>
+                  <th
+                    class="text-left px-3 py-3 text-sm font-semibold text-slate-500 w-32"
+                  >
+                    Actualizado
+                  </th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -408,16 +551,20 @@ export default {
                 >
                   <td class="px-3 py-3">
                     <fluent-icon
-                      :icon="item.source_type === 'canned_response' ? 'chat-multiple' : 'globe'"
+                      :icon="sourceTypeIcon(item.source_type)"
                       size="16"
                       class="text-slate-400"
                     />
                   </td>
-                  <td class="px-3 py-3 font-medium text-slate-700 text-sm max-w-[180px] truncate">
+                  <td
+                    class="px-3 py-3 font-medium text-slate-700 text-sm max-w-[180px] truncate"
+                  >
                     {{ item.title || '—' }}
                   </td>
                   <td class="px-3 py-3 text-slate-500 text-sm max-w-[260px]">
-                    <span class="line-clamp-2 leading-relaxed">{{ item.content }}</span>
+                    <span class="line-clamp-2 leading-relaxed">{{
+                      item.content
+                    }}</span>
                   </td>
                   <td class="px-3 py-3">
                     <span
@@ -425,12 +572,16 @@ export default {
                       class="inline-flex items-center gap-1 text-sm text-slate-500"
                     >
                       <fluent-icon icon="folder" size="12" />
-                      {{ item.metadata.category_name || item.metadata.category }}
+                      {{
+                        item.metadata.category_name || item.metadata.category
+                      }}
                     </span>
                     <span v-else class="text-sm text-slate-300">—</span>
                   </td>
                   <td class="px-3 py-3">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-sm font-medium bg-slate-100 text-slate-600">
+                    <span
+                      class="inline-flex items-center px-2 py-0.5 rounded text-sm font-medium bg-slate-100 text-slate-600"
+                    >
                       {{ sourceTypeLabel(item.source_type) }}
                     </span>
                   </td>
@@ -448,7 +599,8 @@ export default {
           <!-- Paginación -->
           <div class="flex items-center justify-between mt-4 px-1">
             <p class="text-sm text-slate-400">
-              {{ paginationFrom }}–{{ paginationTo }} de {{ totalItems }} registros
+              {{ paginationFrom }}–{{ paginationTo }} de
+              {{ totalItems }} registros
             </p>
             <div class="flex items-center gap-2">
               <button
@@ -484,16 +636,26 @@ export default {
           class="flex flex-col items-center justify-center py-16 gap-3"
         >
           <fluent-icon icon="library" size="40" class="text-slate-300" />
-          <p class="text-slate-500 text-sm">No hay fuentes configuradas manualmente</p>
-          <p class="text-slate-400 text-xs">Las fuentes de Respuestas Predefinidas se crean automaticamente al sincronizar</p>
+          <p class="text-slate-500 text-sm">
+            No hay fuentes configuradas manualmente
+          </p>
+          <p class="text-slate-400 text-xs">
+            Las fuentes de Respuestas Predefinidas se crean automaticamente al
+            sincronizar
+          </p>
         </div>
 
-        <div v-else class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))">
+        <div
+          v-else
+          class="grid gap-4"
+          style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))"
+        >
           <SourceCard
             v-for="source in sources"
             :key="source.id"
             :source="source"
             :syncing="syncingId === source.id"
+            :google-disabled="isGoogleSourceDisabled(source)"
             @sync="onSync"
             @edit="onEditSource"
             @delete="onDelete"
@@ -501,23 +663,30 @@ export default {
         </div>
       </div>
 
-      <!-- Tab: Configuración -->
-      <div v-if="activeTab === 3">
+      <!-- Tab: Configuración (oculta: showConfigTab=false, se conserva en código) -->
+      <div v-if="showConfigTab && activeTab === 3">
         <div v-if="kbaseSettingsLoading" class="flex justify-center py-12">
           <span class="text-slate-400 text-sm">Cargando configuración...</span>
         </div>
 
         <div v-else class="max-w-lg flex flex-col gap-6">
           <p class="text-sm text-slate-500">
-            Estos valores se aplican a todas las búsquedas semánticas de esta cuenta al responder mensajes automáticamente.
+            Estos valores se aplican a todas las búsquedas semánticas de esta
+            cuenta al responder mensajes automáticamente.
           </p>
 
           <!-- Umbral de similitud -->
-          <div class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3">
+          <div
+            class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3"
+          >
             <div>
-              <h3 class="text-sm font-semibold text-slate-700">Umbral de similitud</h3>
+              <h3 class="text-sm font-semibold text-slate-700">
+                Umbral de similitud
+              </h3>
               <p class="text-xs text-slate-400 mt-0.5">
-                Similitud mínima para que un resultado se considere relevante. Valores bajos incluyen más resultados; valores altos solo los más exactos.
+                Similitud mínima para que un resultado se considere relevante.
+                Valores bajos incluyen más resultados; valores altos solo los
+                más exactos.
               </p>
             </div>
             <div class="flex items-center gap-4">
@@ -529,7 +698,9 @@ export default {
                 step="0.01"
                 class="flex-1"
               />
-              <span class="text-sm font-mono font-semibold text-woot-600 w-10 text-right">
+              <span
+                class="text-sm font-mono font-semibold text-woot-600 w-10 text-right"
+              >
                 {{ kbaseSettings.similarity_threshold }}
               </span>
             </div>
@@ -540,11 +711,16 @@ export default {
           </div>
 
           <!-- Resultados máximos -->
-          <div class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3">
+          <div
+            class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3"
+          >
             <div>
-              <h3 class="text-sm font-semibold text-slate-700">Resultados máximos</h3>
+              <h3 class="text-sm font-semibold text-slate-700">
+                Resultados máximos
+              </h3>
               <p class="text-xs text-slate-400 mt-0.5">
-                Cantidad máxima de fragmentos relevantes que se envían al modelo para generar la respuesta.
+                Cantidad máxima de fragmentos relevantes que se envían al modelo
+                para generar la respuesta.
               </p>
             </div>
             <input
@@ -557,11 +733,17 @@ export default {
           </div>
 
           <!-- Caracteres de contexto -->
-          <div class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3">
+          <div
+            class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3"
+          >
             <div>
-              <h3 class="text-sm font-semibold text-slate-700">Caracteres de contexto</h3>
+              <h3 class="text-sm font-semibold text-slate-700">
+                Caracteres de contexto
+              </h3>
               <p class="text-xs text-slate-400 mt-0.5">
-                Límite de caracteres del contexto combinado que se entrega al modelo. Valores más altos permiten respuestas más ricas pero consumen más tokens.
+                Límite de caracteres del contexto combinado que se entrega al
+                modelo. Valores más altos permiten respuestas más ricas pero
+                consumen más tokens.
               </p>
             </div>
             <input
@@ -586,11 +768,14 @@ export default {
       <!-- Tab: Prueba de búsqueda -->
       <div v-if="activeTab === 2">
         <div>
-
           <!-- Formulario -->
-          <div class="bg-white border border-slate-200 rounded-xl px-4 py-3 flex flex-col gap-2">
+          <div
+            class="bg-white border border-slate-200 rounded-xl px-4 py-3 flex flex-col gap-2"
+          >
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Consulta</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1"
+                >Consulta</label
+              >
               <div class="flex gap-2">
                 <input
                   v-model="testQuery"
@@ -620,7 +805,9 @@ export default {
 
             <div class="flex gap-4">
               <div class="flex-1">
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Resultados máximos</label>
+                <label class="block text-xs font-semibold text-slate-600 mb-1"
+                  >Resultados máximos</label
+                >
                 <input
                   v-model.number="testLimit"
                   type="number"
@@ -651,7 +838,9 @@ export default {
 
           <!-- Estado: buscando -->
           <div v-if="testSearching" class="flex justify-center py-12">
-            <span class="text-slate-400 text-sm">Generando embedding y buscando...</span>
+            <span class="text-slate-400 text-sm"
+              >Generando embedding y buscando...</span
+            >
           </div>
 
           <!-- Sin resultados -->
@@ -661,77 +850,120 @@ export default {
           >
             <fluent-icon icon="search" size="32" class="text-slate-300" />
             <p class="text-slate-500 text-sm">Sin resultados para ese umbral</p>
-            <p class="text-slate-400 text-xs">Prueba bajando el umbral de similitud</p>
+            <p class="text-slate-400 text-xs">
+              Prueba bajando el umbral de similitud
+            </p>
           </div>
 
           <!-- Resultados -->
-          <div v-else-if="testResults.length > 0" class="mt-4 flex flex-col gap-3">
+          <div
+            v-else-if="testResults.length > 0"
+            class="mt-4 flex flex-col gap-3"
+          >
             <p class="text-xs text-slate-400">
-              {{ testResults.length }} resultado(s) para "<strong>{{ testQuery }}</strong>"
+              {{ testResults.length }} resultado(s) para "<strong>{{
+                testQuery
+              }}</strong
+              >"
             </p>
-            <div class="overflow-y-auto flex flex-col gap-3 pr-1" style="max-height: 380px">
             <div
-              v-for="(result, idx) in testResults"
-              :key="result.id"
-              class="bg-white border border-slate-200 rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:border-woot-300 hover:shadow-sm transition-all"
-              @click="viewingResult = result"
+              class="overflow-y-auto flex flex-col gap-3 pr-1"
+              style="max-height: 380px"
             >
-              <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="text-xs font-bold text-slate-400">#{{ idx + 1 }}</span>
-                  <span class="text-sm font-semibold text-slate-700">{{ result.title || '—' }}</span>
-                  <span class="text-xs text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">
-                    {{ sourceTypeLabel(result.source_type) }}
-                  </span>
+              <div
+                v-for="(result, idx) in testResults"
+                :key="result.id"
+                class="bg-white border border-slate-200 rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:border-woot-300 hover:shadow-sm transition-all"
+                @click="viewingResult = result"
+              >
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-bold text-slate-400"
+                      >#{{ idx + 1 }}</span
+                    >
+                    <span class="text-sm font-semibold text-slate-700">{{
+                      result.title || '—'
+                    }}</span>
+                    <span
+                      class="text-xs text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded"
+                    >
+                      {{ sourceTypeLabel(result.source_type) }}
+                    </span>
+                    <span
+                      v-if="result.metadata && result.metadata.chunk_total > 1"
+                      class="text-xs text-woot-600 bg-woot-50 px-1.5 py-0.5 rounded font-medium"
+                    >
+                      chunk {{ result.metadata.chunk_index + 1 }}/{{
+                        result.metadata.chunk_total
+                      }}
+                    </span>
+                  </div>
                   <span
-                    v-if="result.metadata && result.metadata.chunk_total > 1"
-                    class="text-xs text-woot-600 bg-woot-50 px-1.5 py-0.5 rounded font-medium"
+                    class="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                    :class="similarityColor(result.similarity)"
                   >
-                    chunk {{ result.metadata.chunk_index + 1 }}/{{ result.metadata.chunk_total }}
+                    {{ (result.similarity * 100).toFixed(1) }}%
                   </span>
                 </div>
-                <span
-                  class="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0"
-                  :class="similarityColor(result.similarity)"
+
+                <!-- Barra de similitud -->
+                <div class="w-full bg-slate-100 rounded-full h-1.5">
+                  <div
+                    class="h-1.5 rounded-full transition-all"
+                    :class="
+                      result.similarity >= 0.6
+                        ? 'bg-green-500'
+                        : result.similarity >= 0.4
+                        ? 'bg-yellow-400'
+                        : 'bg-slate-300'
+                    "
+                    :style="{ width: similarityBar(result.similarity) + '%' }"
+                  />
+                </div>
+
+                <p class="text-xs text-slate-500 line-clamp-3">
+                  {{ result.content }}
+                </p>
+
+                <a
+                  v-if="result.metadata && result.metadata.url"
+                  :href="result.metadata.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-xs text-woot-500 hover:underline truncate"
                 >
-                  {{ (result.similarity * 100).toFixed(1) }}%
-                </span>
+                  {{ result.metadata.url }}
+                </a>
               </div>
-
-              <!-- Barra de similitud -->
-              <div class="w-full bg-slate-100 rounded-full h-1.5">
-                <div
-                  class="h-1.5 rounded-full transition-all"
-                  :class="result.similarity >= 0.6 ? 'bg-green-500' : result.similarity >= 0.4 ? 'bg-yellow-400' : 'bg-slate-300'"
-                  :style="{ width: similarityBar(result.similarity) + '%' }"
-                />
-              </div>
-
-              <p class="text-xs text-slate-500 line-clamp-3">{{ result.content }}</p>
-
-              <a
-                v-if="result.metadata && result.metadata.url"
-                :href="result.metadata.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-xs text-woot-500 hover:underline truncate"
-              >
-                {{ result.metadata.url }}
-              </a>
-            </div>
             </div>
           </div>
-
         </div>
       </div>
 
+      <!-- Tab: Conexión ERP -->
+      <div v-if="erpEnabled && activeTab === 3" class="h-[70vh] -m-6">
+        <ErpConnections />
+      </div>
+
+      <!-- Tab: Bots Cobranza -->
+      <div v-if="erpEnabled && activeTab === 4" class="h-[70vh] -m-6">
+        <ErpBots />
+      </div>
+
+      <!-- Tab: Consola ERP -->
+      <div v-if="erpEnabled && activeTab === 5" class="h-[70vh] -m-6">
+        <ErpConsole />
+      </div>
     </div>
 
     <AddSourceModal
       :show="showAddModal"
       :saving="saving"
       :source="editingSource"
-      @close="showAddModal = false; editingSource = null"
+      @close="
+        showAddModal = false;
+        editingSource = null;
+      "
       @save="onSaveSource"
     />
 
@@ -739,7 +971,7 @@ export default {
     <woot-modal
       v-if="viewingResult"
       :show="!!viewingResult"
-      :on-close="() => viewingResult = null"
+      :on-close="() => (viewingResult = null)"
     >
       <div class="flex flex-col gap-4 p-6 w-full max-w-2xl">
         <div class="flex items-start justify-between gap-3">
@@ -748,14 +980,21 @@ export default {
               {{ viewingResult.title }}
             </h3>
             <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">
+              <span
+                class="text-xs text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded"
+              >
                 {{ sourceTypeLabel(viewingResult.source_type) }}
               </span>
               <span
-                v-if="viewingResult.metadata && viewingResult.metadata.chunk_total > 1"
+                v-if="
+                  viewingResult.metadata &&
+                  viewingResult.metadata.chunk_total > 1
+                "
                 class="text-xs text-woot-600 bg-woot-50 px-1.5 py-0.5 rounded font-medium"
               >
-                chunk {{ viewingResult.metadata.chunk_index + 1 }}/{{ viewingResult.metadata.chunk_total }}
+                chunk {{ viewingResult.metadata.chunk_index + 1 }}/{{
+                  viewingResult.metadata.chunk_total
+                }}
               </span>
               <span
                 v-if="viewingResult.similarity != null"
@@ -769,7 +1008,9 @@ export default {
         </div>
 
         <div class="bg-slate-50 rounded-lg p-4 max-h-[60vh] overflow-y-auto">
-          <p class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{{ viewingResult.content }}</p>
+          <p class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+            {{ viewingResult.content }}
+          </p>
         </div>
 
         <a

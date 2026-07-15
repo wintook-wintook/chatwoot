@@ -3,9 +3,10 @@
 # ================================================================================
 # proyecto@contact_tracking - BASE DE CONOCIMIENTO
 # ================================================================================
-# Tres modos según la directiva en complementary_prompt:
+# Cuatro modos según la directiva en complementary_prompt:
 #
-#   @buscar_predeterminadas       → pgvector sobre knowledge_items (canned_responses)
+#   @buscar_predefinidas          → pgvector sobre knowledge_items (Respuestas predefinidas)
+#   @buscar_articulo              → pgvector sobre knowledge_items (artículos del Centro de Ayuda)
 #   @buscar_foro(nombre_fuente)   → Discourse AI semantic search via KnowledgeSource
 #   @discourse                    → Discourse AI semantic search via integración del inbox
 #
@@ -45,10 +46,18 @@ class KnowledgeBaseResponseService
     Rails.logger.info "[KBase] 🔍 Modo: #{directive[:mode]}#{" (#{directive[:source_name]})" if directive[:source_name]}"
 
     case directive[:mode]
+    when :erp_query
+      perform_erp_query
     when :canned_response
-      perform_pgvector(question)
+      perform_pgvector(question, 'canned_response')
+    when :article
+      perform_pgvector(question, 'article')
     when :knowledge_source
       perform_discourse(question, directive[:source_name])
+    when :google_doc
+      perform_google_doc(question, directive[:source_name])
+    when :google_sheet
+      perform_google_sheet(question, directive[:source_name])
     when :discourse_integration
       perform_discourse_integration(question)
     else
@@ -68,25 +77,65 @@ class KnowledgeBaseResponseService
 
   def detect_directive
     cp = @tracking&.complementary_prompt.to_s
-    if cp.include?('@buscar_predeterminadas')
+    # {{consulta:}} es interpolación determinista de datos del ERP; tiene prioridad y
+    # puede aparecer varias veces mezclada con texto en la misma plantilla.
+    return { mode: :erp_query } if ExternalDb::ConsultaDirectiveRenderer.contains?(cp)
+
+    detect_search_directive(cp)
+  end
+
+  def detect_search_directive(prompt)
+    if prompt.match?(/@buscar_predefinidas\b/i)
       { mode: :canned_response }
-    elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
+    elsif prompt.match?(/@buscar_art[ií]culo\b/i)
+      { mode: :article }
+    elsif (match = prompt.match(/@buscar_foro\(([^)]+)\)/i))
       { mode: :knowledge_source, source_name: match[1].strip }
-    elsif cp.match?(/@discourse\b/i)
+    elsif (match = prompt.match(/\{\{doc:([^}]+)\}\}/i))
+      { mode: :google_doc, source_name: match[1].strip }
+    elsif (match = prompt.match(/\{\{hoja:([^}]+)\}\}/i))
+      { mode: :google_sheet, source_name: match[1].strip }
+    elsif prompt.match?(/@discourse\b/i)
       { mode: :discourse_integration }
     end
   end
 
+  # Las fuentes Google (Doc/Sheet) reutilizan la conexión de Google Calendar:
+  # si la cuenta no tiene esa feature, las directivas {{doc:}}/{{hoja:}} no operan.
+  def google_feature_enabled?
+    @account.feature_enabled?('google_calendar')
+  end
+
   # ==============================================================================
-  # MODO 1 — Canned responses (pgvector)
+  # MODO {{consulta:}} — interpolación determinista de datos del ERP (Bot Cobrador).
+  # Reemplaza cada {{consulta:...}} de la plantilla por el resultado de la consulta
+  # predefinida y envía el texto ya interpolado. Sin IA, fail-soft, scoped a la cuenta.
+  # ==============================================================================
+  def perform_erp_query
+    template = @tracking&.complementary_prompt.to_s
+    rendered = ExternalDb::ConsultaDirectiveRenderer.new(
+      account: @account, contact: @conversation&.contact, inbox: @inbox
+    ).render(template).strip
+
+    if rendered.blank?
+      Rails.logger.info '[KBase] ⚠️ {{consulta:}} no produjo texto → sin respuesta'
+      return false
+    end
+
+    send_reply(rendered)
+    true
+  end
+
+  # ==============================================================================
+  # MODO 1 — pgvector local (Respuestas predefinidas / artículos del Centro de Ayuda)
   # ==============================================================================
 
-  def perform_pgvector(question)
+  def perform_pgvector(question, source_type)
     embedding = generate_embedding_openai(question)
     return false unless embedding
 
     items = @account.knowledge_items
-                    .where(source_type: 'canned_response')
+                    .where(source_type: source_type)
                     .search_by_embedding(
                       embedding,
                       limit:     kbase_setting('max_results'),
@@ -94,25 +143,130 @@ class KnowledgeBaseResponseService
                     )
 
     if items.empty?
-      Rails.logger.info '[KBase] ⚠️ Sin resultados en canned responses'
+      Rails.logger.info "[KBase] ⚠️ Sin resultados en #{source_type}"
       return false
     end
 
-    Rails.logger.info "[KBase] ✅ #{items.size} resultado(s) en canned responses"
+    Rails.logger.info "[KBase] ✅ #{items.size} resultado(s) en #{source_type}"
 
     context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(1200)}" }
                    .join("\n\n")
                    .truncate(kbase_setting('max_context_chars'))
 
-    reply_text = generate_reply_canned(question, context)
+    reply_text = generate_contextual_reply(question, context)
     return false if reply_text.blank?
 
-    source_tag = @account.knowledge_sources.find_by(source_type: 'canned_response')&.name || 'Respuestas Predefinidas'
+    source_tag = @account.knowledge_sources.find_by(source_type: source_type)&.name ||
+                 I18n.t("knowledge_sources.names.#{source_type}", locale: @account.locale.presence || I18n.default_locale)
     send_reply("#{reply_text}\n\n_#{source_tag}_")
     true
   end
 
-  def generate_reply_canned(question, context)
+  # ==============================================================================
+  # MODO Google Doc — pgvector local scoped a UNA fuente (por nombre único)
+  # Directiva {{doc:nombre}}. A diferencia de @buscar_predefinidas/@buscar_articulo
+  # (que filtran por source_type), aquí se filtra por knowledge_source_id porque
+  # puede haber varios Google Docs y el nombre direcciona a uno concreto.
+  # ==============================================================================
+
+  def perform_google_doc(question, source_name)
+    return false unless google_feature_enabled?
+
+    source = @account.knowledge_sources.active
+                     .where(source_type: 'google_doc')
+                     .where('LOWER(name) = LOWER(?)', source_name)
+                     .first
+    unless source
+      Rails.logger.warn "[KBase] ⚠️ Google Doc '#{source_name}' no encontrado o inactivo"
+      return false
+    end
+
+    embedding = generate_embedding_openai(question)
+    return false unless embedding
+
+    items = @account.knowledge_items
+                    .where(knowledge_source_id: source.id)
+                    .search_by_embedding(
+                      embedding,
+                      limit:     kbase_setting('max_results'),
+                      threshold: kbase_setting('similarity_threshold')
+                    )
+    if items.empty?
+      Rails.logger.info "[KBase] ⚠️ Sin resultados en Google Doc '#{source.name}'"
+      return false
+    end
+
+    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(1200)}" }
+                   .join("\n\n")
+                   .truncate(kbase_setting('max_context_chars'))
+
+    reply_text = generate_contextual_reply(question, context)
+    return false if reply_text.blank?
+
+    send_reply("#{reply_text}\n\n_#{source.name}_")
+    true
+  end
+
+  # ==============================================================================
+  # MODO Google Sheet — directiva {{hoja:nombre}}
+  #   modo FAQ  → pgvector scoped a la fuente (igual que Google Doc).
+  #   modo Datos→ SheetQueryService: LLM traduce la pregunta y Ruby calcula exacto.
+  # ==============================================================================
+
+  def perform_google_sheet(question, source_name)
+    return false unless google_feature_enabled?
+
+    source = @account.knowledge_sources.active
+                     .where(source_type: 'google_sheet')
+                     .where('LOWER(name) = LOWER(?)', source_name)
+                     .first
+    unless source
+      Rails.logger.warn "[KBase] ⚠️ Google Sheet '#{source_name}' no encontrado o inactivo"
+      return false
+    end
+
+    return perform_sheet_faq(question, source) unless source.config['sheet_mode'] == 'data'
+
+    perform_sheet_data(question, source)
+  end
+
+  def perform_sheet_data(question, source)
+    result = SheetQueryService.new(source, question, @account).perform
+    if result.blank?
+      Rails.logger.info "[KBase] ⚠️ Sin resultado en hoja de datos '#{source.name}'"
+      return false
+    end
+
+    # El número/resultado lo calcula Ruby (exacto); el LLM solo lo redacta natural.
+    reply_text = generate_contextual_reply(question, "Resultado exacto a comunicar: #{result}")
+    reply_text = result if reply_text.blank?
+    send_reply("#{reply_text}\n\n_#{source.name}_")
+    true
+  end
+
+  def perform_sheet_faq(question, source)
+    embedding = generate_embedding_openai(question)
+    return false unless embedding
+
+    items = @account.knowledge_items
+                    .where(knowledge_source_id: source.id)
+                    .search_by_embedding(embedding, limit: kbase_setting('max_results'), threshold: kbase_setting('similarity_threshold'))
+    if items.empty?
+      Rails.logger.info "[KBase] ⚠️ Sin resultados en hoja FAQ '#{source.name}'"
+      return false
+    end
+
+    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(1200)}" }
+                   .join("\n\n")
+                   .truncate(kbase_setting('max_context_chars'))
+    reply_text = generate_contextual_reply(question, context)
+    return false if reply_text.blank?
+
+    send_reply("#{reply_text}\n\n_#{source.name}_")
+    true
+  end
+
+  def generate_contextual_reply(question, context)
     api_key = openai_api_key
     return nil unless api_key
 
@@ -439,11 +593,10 @@ class KnowledgeBaseResponseService
       User.first
   end
 
+  # Cada cuenta usa su propia integración OpenAI (sin fallback a ENV global, multi-tenant).
   def openai_api_key
     hook = @account.hooks.find_by(app_id: 'openai', status: 'enabled')
-    return hook.settings['api_key'] if hook&.settings&.dig('api_key').present?
-
-    ENV['OPENAI_API_KEY']
+    hook&.settings&.dig('api_key').presence
   end
 
   def kbase_setting(key)

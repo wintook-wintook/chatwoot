@@ -12,6 +12,7 @@
 #
 #  id                       :bigint           not null, primary key
 #  ai_context               :text
+#  booking_calendar_ids     :jsonb            not null
 #  calendar_event_duration  :integer          default(30)
 #  calendar_integration_ids :jsonb            not null
 #  complementary_prompt     :text
@@ -20,7 +21,9 @@
 #  objective                :string           not null
 #  retry_interval_unit      :string           default("days")
 #  retry_interval_value     :integer          default(1)
+#  slots_presentation       :string           default("detailed"), not null
 #  tags                     :json
+#  timezone                 :string
 #  whatsapp_templates       :json
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
@@ -49,12 +52,17 @@ class TrackingTemplate < ApplicationRecord
   belongs_to :inbox, optional: true
   belongs_to :user, optional: true
 
+  # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
+  has_many :ai_agent_attachments, dependent: :destroy
+
   validates :name, presence: true, length: { minimum: 2, maximum: 100 },
                    uniqueness: { scope: :account_id, case_sensitive: false }
   validates :objective, presence: true, length: { minimum: 5, maximum: 500 }
   # proyecto@automatizacion_tracking: intervalo entre intentos (opcional, mismo comportamiento que ContactTracking)
   validates :retry_interval_value, numericality: { greater_than: 0 }, allow_nil: true
   validates :retry_interval_unit, inclusion: { in: %w[minutes hours days] }, allow_nil: true
+  # proyecto@bot_seguimiento_calendar: zona horaria para agendar (slots, hora mostrada, evento)
+  validates :timezone, inclusion: { in: TZInfo::Timezone.all_identifiers }, allow_blank: true
   # proyecto@contact_tracking: palabras clave de acción
   validate :keyword_actions_valid_structure
 
@@ -79,8 +87,8 @@ class TrackingTemplate < ApplicationRecord
     keyword_actions.each do |ka|
       unless ka.is_a?(Hash) &&
              ka['keyword'].to_s.strip.present? &&
-             %w[cancel pause].include?(ka['action'].to_s) &&
-             %w[incoming outgoing both].include?(ka['direction'].to_s)
+             ContactTrackings::KeywordActionService::VALID_ACTIONS.include?(ka['action'].to_s) &&
+             ContactTrackings::KeywordActionService::VALID_DIRECTIONS.include?(ka['direction'].to_s)
         errors.add(:keyword_actions, 'contiene una entrada con formato inválido')
         break
       end

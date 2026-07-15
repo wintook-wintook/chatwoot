@@ -28,6 +28,8 @@ const settings = accountId => ({
     'settings_inbox_show',
     'settings_inboxes_add_agents',
     'settings_inboxes_page_channel',
+    'whatsapp_templates_index', // @waba_templates
+    'whatsapp_templates_wrapper', // @waba_templates
     'settings_integrations_dashboard_apps',
     'settings_integrations_integration',
     'settings_integrations_slack',
@@ -88,6 +90,19 @@ const settings = accountId => ({
       toState: frontendURL(`accounts/${accountId}/settings/inboxes/list`),
       toStateName: 'settings_inbox_list',
       featureFlag: FEATURE_FLAGS.INBOX_MANAGEMENT,
+    },
+    { // @waba_templates
+      icon: 'chat-multiple',
+      label: 'WHATSAPP_TEMPLATES',
+      hasSubMenu: false,
+      meta: {
+        permissions: ['administrator'],
+      },
+      toState: frontendURL(
+        `accounts/${accountId}/settings/whatsapp-templates/list`
+      ),
+      toStateName: 'whatsapp_templates_index',
+      featureFlag: FEATURE_FLAGS.WHATSAPP_TEMPLATES,
     },
     {
       icon: 'tag',

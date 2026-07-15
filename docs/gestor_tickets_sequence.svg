@@ -86,7 +86,7 @@
   <!-- 6a. AnalyzerJob → KBaseSvc y=264 -->
   <line x1="228" y1="264" x2="660" y2="264" stroke="#6d28d9" stroke-width="1.5"/>
   <polygon points="652,260 660,264 652,268" fill="#6d28d9"/>
-  <text x="444" y="259" text-anchor="middle" font-size="10" fill="#1e293b" font-family="Segoe UI, system-ui, sans-serif">search(@buscar_foro / @buscar_predeterminadas)</text>
+  <text x="444" y="259" text-anchor="middle" font-size="10" fill="#1e293b" font-family="Segoe UI, system-ui, sans-serif">search(@buscar_foro / @buscar_predefinidas)</text>
   <rect x="657" y="264" width="6" height="30" rx="1" fill="#ddd6fe" stroke="#7c3aed" stroke-width="0.8"/>
 
   <!-- 7a. KBaseSvc → AnalyzerJob return y=294 -->

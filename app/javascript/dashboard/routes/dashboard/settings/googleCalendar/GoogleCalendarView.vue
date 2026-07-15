@@ -46,6 +46,15 @@
             <fluent-icon icon="send" size="14" class="mr-1" />
             {{ $t('GOOGLE_CALENDAR.SHARE_AGENDA.TITLE') }}
           </woot-button>
+          <woot-button
+            size="small"
+            variant="smooth"
+            :is-loading="uiFlags.isConnecting"
+            @click="connectAccount"
+          >
+            <fluent-icon icon="arrow-clockwise" size="14" class="mr-1" />
+            {{ $t('GOOGLE_CALENDAR.RECONNECT.BUTTON') }}
+          </woot-button>
           <woot-button size="small" variant="smooth" color-scheme="alert" @click="disconnect">
             {{ $t('GOOGLE_CALENDAR.DISCONNECT.BUTTON') }}
           </woot-button>
@@ -56,10 +65,12 @@
         <CalendarView
           :events="events"
           :availability="availability"
+          :calendars="calendars"
           class="flex-1"
           @rangeChanged="fetchData"
           @eventDropped="onEventDropped"
           @eventClicked="onEventClicked"
+          @dateSelected="onDateSelected"
         />
         <AgendaWidget
           :events="events"
@@ -75,6 +86,9 @@
       :show="showCreateModal"
       :edit-event="editingEvent"
       :initial-type="createType"
+      :initial-start="createStart"
+      :initial-end="createEnd"
+      :initial-all-day="createAllDay"
       @close="onModalClose"
       @created="fetchData"
     />
@@ -98,7 +112,7 @@ export default {
   name: 'GoogleCalendarView',
   components: { CalendarConnectModal, CalendarView, AgendaWidget, CreateEventModal, ShareAgendaModal },
   data() {
-    return { showCreateModal: false, showCreateDropdown: false, createType: 'event', editingEvent: null, showShareModal: false, pollInterval: null, currentRange: {} };
+    return { showCreateModal: false, showCreateDropdown: false, createType: 'event', editingEvent: null, createStart: '', createEnd: '', createAllDay: false, showShareModal: false, pollInterval: null, currentRange: {} };
   },
   computed: {
     ...mapGetters({
@@ -116,7 +130,7 @@ export default {
       window.close();
       return;
     }
-    this.$store.dispatch('agents/fetch');
+    this.$store.dispatch('agents/get');
     this.fetchData();
     this.$store.dispatch('googleCalendar/fetchCalendars');
     this.pollInterval = setInterval(() => this.fetchData(this.currentRange), 30000);
@@ -146,6 +160,9 @@ export default {
       this.createType = type;
       this.showCreateDropdown = false;
       this.editingEvent = null;
+      this.createStart = '';
+      this.createEnd = '';
+      this.createAllDay = false;
       this.showCreateModal = true;
     },
     onEventClicked(fcEvent) {
@@ -153,13 +170,21 @@ export default {
       this.createType = 'event';
       this.showCreateModal = true;
     },
+    onDateSelected({ start, end, allDay }) {
+      this.editingEvent = null;
+      this.createType = allDay ? 'task' : 'event';
+      this.createStart = start;
+      this.createEnd = end;
+      this.createAllDay = allDay;
+      this.showCreateModal = true;
+    },
     onModalClose() {
       this.showCreateModal = false;
       this.editingEvent = null;
     },
-    async onEventDropped({ eventId, start_time, end_time, revert }) {
+    async onEventDropped({ eventId, start_time, end_time, calendar_id, revert }) {
       try {
-        await this.$store.dispatch('googleCalendar/updateEvent', { eventId, start_time, end_time });
+        await this.$store.dispatch('googleCalendar/updateEvent', { eventId, start_time, end_time, calendar_id });
       } catch {
         revert();
       }

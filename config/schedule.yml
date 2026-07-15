@@ -8,6 +8,12 @@ internal_check_new_versions_job:
   class: 'Internal::CheckNewVersionsJob'
   queue: scheduled_jobs
 
+# @query_databases — bots cobradores: cada hora procesa los que tocan a esa hora.
+erp_collection_reminder_dispatch_job:
+  cron: '0 * * * *'
+  class: 'ErpCollection::ReminderDispatchJob'
+  queue: scheduled_jobs
+
 # executed At every 5th minute..
 trigger_scheduled_items_job:
   cron: '*/5 * * * *'

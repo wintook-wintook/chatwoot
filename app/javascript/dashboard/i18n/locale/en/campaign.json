@@ -113,12 +113,12 @@
       }
     },
     "ONE_OFF": {
-      "HEADER": "One off campaigns",
+      "HEADER": "SMS campaigns",
       "404": "There are no one off campaigns created",
       "INBOXES_NOT_FOUND": "Please create an sms inbox and start adding campaigns"
     },
     "ONGOING": {
-      "HEADER": "Ongoing campaigns",
+      "HEADER": "Webpage campaigns",
       "404": "There are no ongoing campaigns created",
       "INBOXES_NOT_FOUND": "Please create an website inbox and start adding campaigns"
     }

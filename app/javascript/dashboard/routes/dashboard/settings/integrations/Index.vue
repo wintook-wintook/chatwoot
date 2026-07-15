@@ -10,8 +10,34 @@ const getters = useStoreGetters();
 
 const uiFlags = getters['integrations/getUIFlags'];
 
-const integrationList = computed(
-  () => getters['integrations/getAppIntegrations'].value
+// proyecto@commands_agents: Bot Comando no se muestra en la lista de integraciones.
+const HIDDEN_INTEGRATIONS = ['command_bot'];
+
+// Orden fijo de las integraciones en la lista. Las que no estén aquí se
+// muestran al final, conservando el orden que devuelve el backend.
+const INTEGRATION_ORDER = [
+  'bots_inboxes',
+  'tracking_bot',
+  'daiko',
+  'crmzeus',
+  'discourse',
+  'webhook',
+  'openai',
+  'dashboard_apps',
+  'dialogflow',
+  'google_translate',
+];
+
+const orderIndex = id => {
+  const index = INTEGRATION_ORDER.indexOf(id);
+  return index === -1 ? INTEGRATION_ORDER.length : index;
+};
+
+const integrationList = computed(() =>
+  getters['integrations/getAppIntegrations'].value
+    .filter(item => !HIDDEN_INTEGRATIONS.includes(item.id))
+    .slice()
+    .sort((a, b) => orderIndex(a.id) - orderIndex(b.id))
 );
 
 onMounted(() => {

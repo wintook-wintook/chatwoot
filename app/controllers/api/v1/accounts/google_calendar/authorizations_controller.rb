@@ -2,8 +2,14 @@ class Api::V1::Accounts::GoogleCalendar::AuthorizationsController < Api::V1::Acc
   include GoogleConcern
 
   CALENDAR_SCOPES = [
-    'https://www.googleapis.com/auth/calendar.readonly',
-    'https://www.googleapis.com/auth/calendar.events',
+    # calendar (completo): leer/escribir eventos, suscribir calendarios (calendarList.insert)
+    # y CREAR calendarios secundarios nuevos (Calendars.insert). Reemplaza a
+    # calendar.readonly + calendar.events, que NO permiten crear ni suscribir calendarios.
+    'https://www.googleapis.com/auth/calendar',
+    # Base de Conocimiento — Google Docs/Sheets: la misma conexión Google habilita
+    # leer documentos y hojas de Drive como fuente de conocimiento (solo lectura).
+    'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/spreadsheets.readonly',
     'email',
     'profile'
   ].freeze

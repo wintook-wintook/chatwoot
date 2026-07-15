@@ -105,11 +105,12 @@ class ActionService
     template = @account.tracking_templates.find_by(id: template_id)
     return unless template.present?
 
-    # No crear si el contacto ya tiene un seguimiento activo
-    active_statuses = %w[pending scheduled active paused]
-    return if ContactTracking.where(contact_id: @conversation.contact_id, status: active_statuses).exists?
-
     inbox_id = template.inbox_id || @conversation.inbox_id
+
+    # No crear si el contacto ya tiene un seguimiento activo EN ESTE CANAL (inbox)
+    active_statuses = %w[pending scheduled active paused]
+    return if ContactTracking.where(contact_id: @conversation.contact_id, inbox_id: inbox_id, status: active_statuses).exists?
+
     templates = template.whatsapp_templates.is_a?(Array) ? template.whatsapp_templates : []
     max_att = templates.count { |t| t.present? }.clamp(1, 10)
     max_att = 3 if max_att.zero?

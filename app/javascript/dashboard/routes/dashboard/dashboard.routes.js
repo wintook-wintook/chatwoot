@@ -12,6 +12,8 @@ import { routes as kanbanRoutes } from './kanban/routes'; // Añade esta línea
 // KANBAN0725
 // @tickets_cases
 import { routes as gestorTicketsRoutes } from './gestorTickets/routes';
+// proyecto@contact_tracking — Dashboard de Seguimientos
+import { routes as contactTrackingsRoutes } from './contactTrackings/routes';
 
 const AppContainer = () => import('./Dashboard.vue');
 const Captain = () => import('./Captain.vue');
@@ -42,7 +44,9 @@ export default {
         ...kanbanRoutes,
         // KANBAN0725
         // @tickets_cases
-        ...gestorTicketsRoutes
+        ...gestorTicketsRoutes,
+        // proyecto@contact_tracking — Dashboard de Seguimientos
+        ...contactTrackingsRoutes,
       ],
     },
     {

@@ -17,17 +17,24 @@
 #   :interested       → El cliente muestra interés claro en avanzar
 #   :reschedule       → El cliente solicita cambiar la fecha/hora de contacto
 #   :book_appointment → El cliente pide explícitamente agendar una cita, reunión o llamada
+#   :cancel_appointment → El cliente pide cancelar (anular) una cita ya agendada
 #   :kbase            → El cliente tiene una duda que requiere búsqueda en base de conocimiento
 #   :botseller        → El mensaje es un comando o consulta para el bot de ventas
 #   :tracking         → Conversación normal, sin acción especial (default)
 #
 # RETORNO:
 #   {
-#     route:          Symbol,  # una de las rutas anteriores
-#     confidence:     Float,   # 0.0 - 1.0
-#     method:         String,  # 'ai' | 'error' | 'no_key'
-#     reschedule_data: Hash    # solo cuando route == :reschedule
+#     route:               Symbol,  # una de las rutas anteriores
+#     confidence:          Float,   # 0.0 - 1.0
+#     method:              String,  # 'ai' | 'error' | 'no_key'
+#     appointment_action:  Symbol,  # :query | :book_new | :move | :cancel | nil (sobre la cita)
+#     reschedule_data:     Hash     # cuando hay fecha/hora (reschedule o move)
 #   }
+#
+# APPOINTMENT-AWARE (proyecto@bot_seguimiento_calendar):
+#   El clasificador recibe el ESTADO DE LA CITA del contacto (si ya tiene una y cuándo) y
+#   decide una `appointment_action` concreta. Esto evita parchar con guards y permite
+#   distinguir "consultar / mover / cancelar la mía" de "agendar una nueva".
 #
 # ACTIVACIÓN:
 #   Solo se usa cuando TRACKING_DETECT_INTENT=true en variables de entorno.
@@ -35,21 +42,26 @@
 
 module ContactTrackings
   class RouterService
-    VALID_ROUTES = %w[rejected interested reschedule book_appointment kbase botseller tracking].freeze
+    VALID_ROUTES = %w[rejected interested reschedule book_appointment cancel_appointment kbase botseller tracking].freeze
+    VALID_APPOINTMENT_ACTIONS = %w[query book_new move cancel].freeze
 
     CLASSIFICATION_PROMPT = <<~PROMPT.strip
       Eres un clasificador de intenciones. Analiza el mensaje del cliente y responde
       ÚNICAMENTE con un JSON con la siguiente estructura, sin explicación adicional:
 
       {
-        "intent": "<una de: rejected | interested | reschedule | book_appointment | kbase | tracking>",
+        "intent": "<una de: rejected | interested | reschedule | book_appointment | cancel_appointment | kbase | tracking>",
         "confidence": <número entre 0.0 y 1.0>,
+        "appointment_action": "<null | query | book_new | move | cancel>",
         "reschedule_data": {
           "relative_minutes": <null o número>,
           "relative_hours":   <null o número>,
           "relative_days":    <null o número>,
           "specific_date":    <null o "YYYY-MM-DD">,
+          "weekday":          <null o 1..7 — 1=lunes(Mon) ... 7=domingo(Sun)>,
+          "weeks_ahead":      <null o número>,
           "specific_time":    <null o "HH:MM">,
+          "time_of_day":      <null | "morning" | "afternoon" | "evening">,
           "natural":          <null o descripción natural como "mañana a las 3pm">
         }
       }
@@ -61,16 +73,43 @@ module ContactTrackings
       - "book_appointment":  el cliente pide explícitamente agendar una cita, reunión, llamada o quiere saber
                              cuándo hay disponibilidad de horarios. Ejemplos: "quiero agendar una cita",
                              "podemos hacer una llamada?", "cuándo tienen disponibilidad", "me gustaría reunirme".
+      - "cancel_appointment": el cliente pide CANCELAR una cita YA agendada (no reagendar a otra hora, sino
+                             anularla). Ejemplos: "quiero cancelar mi cita", "ya no voy a poder asistir",
+                             "cancela la reunión", "anula la cita".
       - "kbase":             el cliente tiene una duda técnica, funcional, de proceso o pide ayuda/soporte que
                              requiere consultar una base de conocimiento. Incluye preguntas sobre cómo hacer algo,
                              errores, configuraciones, procesos, etc.
       - "tracking":          cualquier otro mensaje conversacional que no encaje en las categorías anteriores.
 
+      "appointment_action" — SOLO sobre una CITA/reunión/llamada de calendario (NO el recordatorio
+      del seguimiento). Decide mirando el ESTADO DE LA CITA de más abajo:
+      - "query":    el cliente pregunta por su cita YA agendada (cuándo es, a qué hora, confirmar o
+                    ver detalles). Solo válido si el contacto YA tiene una cita.
+      - "book_new": el cliente quiere agendar una cita/reunión/llamada NUEVA.
+      - "move":     el cliente quiere cambiar la fecha/hora de su cita YA agendada. Llena
+                    "reschedule_data" con la nueva fecha/hora si la menciona.
+      - "cancel":   el cliente quiere anular/cancelar su cita YA agendada.
+      - null:       el mensaje NO trata sobre una cita de calendario.
+      Si "appointment_action" no es null, prioriza esa acción para temas de cita.
+
       IMPORTANTE: Si el mensaje del cliente es una confirmación breve ("es correcto", "sí", "correcto",
       "así es", "exacto", etc.) y el historial reciente muestra que el bot acaba de pedir confirmación
       sobre una consulta técnica, clasifica como "kbase" para continuar respondiendo esa consulta.
 
-      Si el intent NO es "reschedule", el campo "reschedule_data" debe ser null.
+      Llena "reschedule_data" cuando el cliente mencione una fecha/hora (para "reschedule" o para
+      "appointment_action": "move"); si no menciona ninguna, déjalo en null.
+
+      %{today}
+      Reglas para "reschedule_data" (NO calcules fechas a mano; el sistema las resuelve):
+      - Día de la semana en CUALQUIER idioma ("el martes", "next Tuesday", "terça"): poné "weekday"
+        (1=lunes/Mon ... 7=domingo/Sun) y dejá "specific_date" en null. "weeks_ahead" SOLO si lo
+        dice explícito ("en dos semanas"=2, "la semana que viene"=1); si no, dejalo null/0.
+      - Fecha de calendario explícita ("el 30 de junio", "5/7"): poné "specific_date" (YYYY-MM-DD).
+      - "ese mismo día" / "la misma fecha": usá la fecha de la cita actual de ESTADO DE LA CITA.
+      - Hora concreta: "specific_time" (HH:MM 24h). Franja sin hora ("por la mañana/tarde/noche"):
+        "time_of_day" (morning/afternoon/evening) y "specific_time" en null.
+
+      ESTADO DE LA CITA: %{appointment_state}
 
       Historial reciente de la conversación:
       %{recent_context}
@@ -79,13 +118,16 @@ module ContactTrackings
       Mensaje del cliente: "%{message}"
     PROMPT
 
-    def initialize(tracking, message, api_key, kbase_available: false, botseller_available: false, recent_messages: '')
+    def initialize(tracking, message, api_key, kbase_available: false, botseller_available: false, recent_messages: '',
+                   appointment_state: nil, current_date: nil)
       @tracking            = tracking
       @message             = message
       @api_key             = api_key
       @kbase_available     = kbase_available
       @botseller_available = botseller_available
       @recent_messages     = recent_messages
+      @appointment_state   = appointment_state
+      @current_date        = current_date
     end
 
     def classify
@@ -113,14 +155,16 @@ module ContactTrackings
 
       confidence = parsed['confidence'].to_f.clamp(0.0, 1.0)
       result = {
-        route:      intent.to_sym,
-        confidence: confidence,
-        method:     'ai'
+        route:              intent.to_sym,
+        confidence:         confidence,
+        method:             'ai',
+        appointment_action: parse_appointment_action(parsed['appointment_action'])
       }
 
-      result[:reschedule_data] = parse_reschedule_data(parsed['reschedule_data']) if intent == 'reschedule'
+      result[:reschedule_data] = parse_reschedule_data(parsed['reschedule_data']) if parsed['reschedule_data'].present?
 
-      Rails.logger.info "[RouterService] 🧭 Ruta: :#{intent} (confianza: #{confidence.round(2)})"
+      Rails.logger.info "[RouterService] 🧭 Ruta: :#{intent} (conf: #{confidence.round(2)})" \
+                        "#{result[:appointment_action] ? " · cita: #{result[:appointment_action]}" : ''}"
       result
 
     rescue JSON::ParserError => e
@@ -138,9 +182,11 @@ module ContactTrackings
       require 'json'
 
       prompt = CLASSIFICATION_PROMPT % {
-        objective:      @tracking.objective.truncate(200),
-        message:        @message.content.truncate(400),
-        recent_context: @recent_messages.presence || '(sin historial previo)'
+        objective:         @tracking.objective.truncate(200),
+        message:           @message.content.truncate(400),
+        recent_context:    @recent_messages.presence || '(sin historial previo)',
+        appointment_state: @appointment_state.presence || 'El contacto no tiene ninguna cita agendada.',
+        today:             @current_date.presence || Time.current.strftime('%Y-%m-%d (%A)')
       }
 
       uri               = URI('https://api.openai.com/v1/chat/completions')
@@ -163,24 +209,54 @@ module ContactTrackings
       JSON.parse(response.body).dig('choices', 0, 'message', 'content')
     end
 
+    def parse_appointment_action(value)
+      action = value.to_s.strip.downcase
+      VALID_APPOINTMENT_ACTIONS.include?(action) ? action.to_sym : nil
+    end
+
     def parse_reschedule_data(data)
       return {} if data.nil? || !data.is_a?(Hash)
 
-      {
+      parsed = {
         relative_minutes: data['relative_minutes']&.to_i,
         relative_hours:   data['relative_hours']&.to_i,
         relative_days:    data['relative_days']&.to_i,
         specific_date:    data['specific_date'].presence,
+        weekday:          parse_weekday(data['weekday']),
+        weeks_ahead:      parse_weeks_ahead(data['weeks_ahead']),
         specific_time:    data['specific_time'].presence,
+        time_of_day:      parse_time_of_day(data['time_of_day']),
         natural:          data['natural'].presence
       }.compact
+
+      # `natural` (descripción legible), `time_of_day` (franja) y `weeks_ahead` (offset sin día)
+      # no son, por sí solos, una fecha accionable: sin un día/hora REAL no hay reagendado pedido,
+      # así que devolvemos vacío para que el handler pregunte cuándo en vez de mover a ciegas.
+      parsed.except(:natural, :time_of_day, :weeks_ahead).empty? ? {} : parsed
+    end
+
+    def parse_time_of_day(value)
+      tod = value.to_s.strip.downcase
+      %w[morning afternoon evening].include?(tod) ? tod : nil
+    end
+
+    # Día de la semana en ISO (1=lunes ... 7=domingo). Idioma-neutro: el LLM ya lo mapeó a número.
+    def parse_weekday(value)
+      n = value.to_i
+      (1..7).cover?(n) ? n : nil
+    end
+
+    def parse_weeks_ahead(value)
+      n = value.to_i
+      n.positive? ? n : nil
     end
 
     def fallback(reason)
       {
-        route:      :tracking,
-        confidence: 1.0,
-        method:     reason
+        route:              :tracking,
+        confidence:         1.0,
+        method:             reason,
+        appointment_action: nil
       }
     end
   end
