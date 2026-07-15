@@ -30,14 +30,14 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
     message.update!(source_id: message_id) if message_id.present?
   end
 
-  # rubocop:disable Metrics/CyclomaticComplexity
   def processable_channel_message_template
     if template_params.present?
       return [
         template_params['name'],
         template_params['namespace'],
         template_params['language'],
-        template_params['processed_params']&.map { |_, value| { type: 'text', text: value } }
+        # template_params['processed_params']&.map { |_, value| { type: 'text', text: value } }
+        build_processed_parameters(template_params['name'], template_params['processed_params'])
       ]
     end
 
@@ -58,7 +58,21 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
     end
     [nil, nil, nil, nil]
   end
-  # rubocop:enable Metrics/CyclomaticComplexity
+
+  def build_processed_parameters(template_name, processed_params)
+    return if processed_params.blank?
+
+    if named_parameter_template?(template_name)
+      processed_params.map { |key, value| { type: 'text', parameter_name: key, text: value } }
+    else
+      processed_params.map { |_, value| { type: 'text', text: value } }
+    end
+  end
+
+  def named_parameter_template?(template_name)
+    matching_template = channel.message_templates&.find { |template| template['name'] == template_name }
+    matching_template&.dig('parameter_format') == 'NAMED'
+  end
 
   def template_match_object(template)
     body_object = validated_body_object(template)
