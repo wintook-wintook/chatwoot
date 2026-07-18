@@ -145,3 +145,8 @@
 # el super admin. IMPORTANTE: agregar SIEMPRE al final (la posición define el bit FlagShihTzu).
 - name: whatsapp_coexistence
   enabled: false
+# @knowledge_sources — Tab de Configuración (umbrales de búsqueda semántica) dentro de Base de
+# Conocimiento. Off por defecto; se activa por cuenta desde el super admin.
+# IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
+- name: knowledge_base_config
+  enabled: false

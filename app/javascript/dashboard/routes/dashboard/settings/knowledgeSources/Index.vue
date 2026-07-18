@@ -58,9 +58,6 @@ export default {
       },
       kbaseSettingsSaving: false,
       kbaseSettingsLoading: false,
-      // La tab "Configuración" se mantiene en el código pero oculta (no se lista
-      // en tabs()); poner en true para volver a mostrarla.
-      showConfigTab: false,
     };
   },
   computed: {
@@ -86,10 +83,29 @@ export default {
         FEATURE_FLAGS.ERP_CONNECTION
       );
     },
+    // La tab "Configuración" solo aparece si el super admin habilitó la
+    // feature `knowledge_base_config` para esta cuenta. Off por defecto.
+    configTabEnabled() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.KNOWLEDGE_BASE_CONFIG
+      );
+    },
+    // woot-tabs indexa por posición de renderizado, así que los índices de las
+    // tabs siguientes dependen de si Configuración está habilitada o no.
+    configTabIndex() {
+      return this.configTabEnabled ? 3 : -1;
+    },
+    erpConnTabIndex() {
+      return this.configTabEnabled ? 4 : 3;
+    },
+    botsTabIndex() {
+      return this.configTabEnabled ? 5 : 4;
+    },
+    consoleTabIndex() {
+      return this.configTabEnabled ? 6 : 5;
+    },
     tabs() {
-      // La tab "Configuración" queda en el código (bloque showConfigTab) pero NO se
-      // muestra. woot-tabs indexa por posición de renderizado, así que al ocultarla
-      // los índices se recorren: Prueba=2, Conexión ERP=3, Bots=4, Consola=5.
       return [
         { name: this.$t('KNOWLEDGE_SOURCES.TABS.INDEXED_CONTENT') },
         {
@@ -98,6 +114,9 @@ export default {
           }),
         },
         { name: this.$t('KNOWLEDGE_SOURCES.TABS.SEARCH_CONSOLE') },
+        ...(this.configTabEnabled
+          ? [{ name: this.$t('KNOWLEDGE_SOURCES.TABS.CONFIG') }]
+          : []),
         ...(this.erpEnabled
           ? [
               { name: this.$t('KNOWLEDGE_SOURCES.TABS.ERP_CONNECTION') },
@@ -173,9 +192,9 @@ export default {
   watch: {
     activeTab(val) {
       if (val === 2) this.clearTest();
-      // La tab Configuración (fetchSearchSettings) está oculta; su carga se hace
-      // solo si se reactiva showConfigTab desde su propio bloque.
-      if (this.showConfigTab && val === 3) this.fetchSearchSettings();
+      if (this.configTabEnabled && val === this.configTabIndex) {
+        this.fetchSearchSettings();
+      }
     },
   },
   mounted() {
@@ -663,8 +682,8 @@ export default {
         </div>
       </div>
 
-      <!-- Tab: Configuración (oculta: showConfigTab=false, se conserva en código) -->
-      <div v-if="showConfigTab && activeTab === 3">
+      <!-- Tab: Configuración (visible solo si la feature knowledge_base_config está activa) -->
+      <div v-if="configTabEnabled && activeTab === configTabIndex">
         <div v-if="kbaseSettingsLoading" class="flex justify-center py-12">
           <span class="text-slate-400 text-sm">Cargando configuración...</span>
         </div>
@@ -941,17 +960,26 @@ export default {
       </div>
 
       <!-- Tab: Conexión ERP -->
-      <div v-if="erpEnabled && activeTab === 3" class="h-[70vh] -m-6">
+      <div
+        v-if="erpEnabled && activeTab === erpConnTabIndex"
+        class="h-[70vh] -m-6"
+      >
         <ErpConnections />
       </div>
 
       <!-- Tab: Bots Cobranza -->
-      <div v-if="erpEnabled && activeTab === 4" class="h-[70vh] -m-6">
+      <div
+        v-if="erpEnabled && activeTab === botsTabIndex"
+        class="h-[70vh] -m-6"
+      >
         <ErpBots />
       </div>
 
       <!-- Tab: Consola ERP -->
-      <div v-if="erpEnabled && activeTab === 5" class="h-[70vh] -m-6">
+      <div
+        v-if="erpEnabled && activeTab === consoleTabIndex"
+        class="h-[70vh] -m-6"
+      >
         <ErpConsole />
       </div>
     </div>
