@@ -235,9 +235,6 @@ export default {
         ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
         : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
     },
-    quotedReason(reason) {
-      return `«${reason}»`;
-    },
     statusDot(state) {
       return STATUS_DOT[state] || 'bg-slate-300 dark:bg-slate-600';
     },
@@ -282,10 +279,12 @@ export default {
 
 <template>
   <div
-    class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+    class="flex flex-col p-4 bg-white border rounded-lg max-h-full dark:bg-slate-800 border-slate-75 dark:border-slate-700"
   >
-    <!-- Cabecera: título + selector de vista -->
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+    <!-- Cabecera: título + selector de vista (fija; no scrollea) -->
+    <div
+      class="flex flex-wrap items-center justify-between flex-shrink-0 gap-2 mb-4"
+    >
       <h3 class="text-base font-semibold text-slate-800 dark:text-slate-100">
         {{ $t('CASE_TICKETS.JOURNEY.TITLE') }}
       </h3>
@@ -310,203 +309,231 @@ export default {
       </div>
     </div>
 
-    <!-- Estados de carga / vacío -->
-    <div v-if="isFetching" class="text-sm text-slate-400 dark:text-slate-500">
-      {{ $t('CASE_TICKETS.JOURNEY.LOADING') }}
-    </div>
-    <div
-      v-else-if="!hasJourney"
-      class="text-sm text-slate-400 dark:text-slate-500"
-    >
-      {{ $t('CASE_TICKETS.TIMELINE.EMPTY') }}
-    </div>
-
-    <template v-else>
-      <!-- ── Vista 1: Recorrido por fases (espina + desvíos) ─────── -->
-      <div v-if="view === 'diagram'" class="relative">
-        <!-- Espina vertical continua (detrás de los nodos) -->
-        <span
-          class="absolute left-[9px] top-2.5 bottom-3 w-0.5 bg-slate-200 dark:bg-slate-600"
-        />
-        <div
-          v-for="(ph, idx) in phaseJourney"
-          :key="ph.key"
-          class="relative flex gap-4"
-          :class="idx < phaseJourney.length - 1 ? 'pb-5' : ''"
-        >
-          <!-- Nodo de fase (punto con halo que enmascara la espina) -->
-          <span
-            class="z-10 flex-shrink-0 w-[18px] h-[18px] mt-1 rounded-full ring-4 ring-white dark:ring-slate-800"
-            :class="[
-              ph.reached ? ph.dot : 'bg-slate-200 dark:bg-slate-600',
-              ph.current ? '!ring-woot-100 dark:!ring-woot-900' : '',
-            ]"
-          >
-            <span
-              v-if="ph.current"
-              class="block w-full h-full rounded-full animate-ping opacity-50"
-              :class="ph.dot"
-            />
-          </span>
-          <!-- Contenido de la fase -->
-          <div class="flex-1 min-w-0" :class="ph.reached ? '' : 'opacity-40'">
-            <div class="flex flex-wrap items-center gap-2">
-              <span
-                class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-                >{{ phaseLabel(ph.key) }}</span
-              >
-              <span
-                v-if="ph.reached && ph.subState"
-                class="text-xs text-slate-500 dark:text-slate-400"
-                >→ {{ statusLabel(ph.subState) }}</span
-              >
-              <span
-                v-if="ph.current"
-                class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-woot-100 text-woot-700 dark:bg-woot-800 dark:text-woot-100"
-                >{{ $t('CASE_TICKETS.JOURNEY.CURRENT') }}</span
-              >
-            </div>
-            <p
-              v-if="ph.meta && ph.meta.reason"
-              class="m-0 mt-1 text-sm italic text-slate-500 dark:text-slate-400"
-            >
-              {{ quotedReason(ph.meta.reason) }}
-            </p>
-            <p
-              v-if="ph.reached"
-              class="m-0 mt-1 text-xs text-slate-400 dark:text-slate-500"
-            >
-              <template v-if="ph.meta && ph.meta.isStart">
-                {{ $t('CASE_TICKETS.JOURNEY.CREATED') }}
-              </template>
-              <template v-else> {{ ph.meta && ph.meta.actor }} </template>
-              · {{ formatDate(ph.meta && ph.meta.at) }}
-            </p>
-            <!-- Desvíos (espera / escalado) bajo la fase -->
-            <div
-              v-for="(d, di) in ph.detoursAfter"
-              :key="`detour-${idx}-${di}`"
-              class="flex flex-wrap items-center gap-2 mt-1.5 text-xs"
-            >
-              <span class="text-slate-400 dark:text-slate-500">↳</span>
-              <span
-                class="px-1.5 py-0.5 rounded font-medium"
-                :class="detourBadge(d.kind)"
-              >
-                {{ d.kind === 'escalated' ? '⚠' : '⏸' }}
-                {{ statusLabel(d.state)
-                }}<template v-if="d.level != null">
-                  · N{{ d.level + 1 }}</template>
-              </span>
-              <span class="text-slate-400 dark:text-slate-500">
-                {{
-                  d.current
-                    ? $t('CASE_TICKETS.JOURNEY.CURRENTLY')
-                    : $t('CASE_TICKETS.JOURNEY.RETURNED')
-                }}
-                · {{ formatDate(d.at) }}
-              </span>
-            </div>
-          </div>
-        </div>
+    <!-- Zona de contenido: scroll interno (el título de arriba queda fijo) -->
+    <div class="flex-1 min-h-0 overflow-y-auto -mr-1.5 pr-1.5">
+      <!-- Estados de carga / vacío -->
+      <div v-if="isFetching" class="text-sm text-slate-400 dark:text-slate-500">
+        {{ $t('CASE_TICKETS.JOURNEY.LOADING') }}
+      </div>
+      <div
+        v-else-if="!hasJourney"
+        class="text-sm text-slate-400 dark:text-slate-500"
+      >
+        {{ $t('CASE_TICKETS.TIMELINE.EMPTY') }}
       </div>
 
-      <!-- ── Vista 2: Historial cronológico ─────────────────────── -->
-      <ul
-        v-else-if="view === 'timeline'"
-        class="flex flex-col gap-4 p-0 m-0 list-none"
-      >
-        <li
-          v-for="event in events"
-          :key="event.id"
-          class="flex items-start gap-4"
-        >
+      <template v-else>
+        <!-- ── Vista 1: Recorrido por fases (espina + desvíos) ─────── -->
+        <!-- @tickets_cases — reacomodo visual: jerarquía fase › sub-estado › meta,
+           fila actual anclada, fases pendientes con nodo hueco, motivo etiquetado.
+           Misma data (phaseJourney), sin backend nuevo. -->
+        <div v-if="view === 'diagram'" class="flex flex-col">
           <div
-            class="flex-shrink-0 w-2.5 h-2.5 mt-1 rounded-full"
-            :class="
-              statusDot(
-                event.payload && event.payload.to
-                  ? event.payload.to
-                  : event.event_type
-              )
-            "
-          />
-          <div class="flex-1 min-w-0">
-            <p
-              class="m-0 text-sm font-medium text-slate-700 dark:text-slate-200"
-            >
-              {{ eventLabel(event) }}
-            </p>
-            <p
-              v-if="payloadSummary(event)"
-              class="mt-0.5 m-0 text-sm text-slate-500 dark:text-slate-400"
-            >
-              {{ payloadSummary(event) }}
-            </p>
-            <p class="mt-0.5 m-0 text-xs text-slate-400 dark:text-slate-500">
-              {{ actorName(event) }} · {{ formatDate(event.created_at) }}
-            </p>
-          </div>
-        </li>
-      </ul>
-
-      <!-- ── Vista 3: Stepper de ciclo de vida ──────────────────── -->
-      <div v-else class="flex flex-col gap-3">
-        <div class="flex items-start">
-          <template v-for="(step, idx) in lifecycleSteps">
-            <div
-              :key="`step-${step.state}`"
-              class="flex flex-col items-center flex-1 min-w-0"
-              :title="stepTooltip(step)"
-            >
+            v-for="(ph, idx) in phaseJourney"
+            :key="ph.key"
+            class="grid grid-cols-[26px_1fr] gap-3"
+          >
+            <!-- Riel: espina + nodo (hueco si no se alcanzó, pulso si es el actual) -->
+            <div class="relative flex justify-center">
               <span
-                class="flex items-center justify-center flex-shrink-0 w-4 h-4 rounded-full ring-2 ring-white dark:ring-slate-800"
+                class="absolute w-0.5 bg-slate-200 dark:bg-slate-600"
                 :class="[
-                  step.visited
-                    ? statusDot(step.state)
-                    : 'bg-slate-200 dark:bg-slate-600',
-                  step.current
-                    ? 'ring-woot-400 dark:ring-woot-500 scale-125'
-                    : '',
+                  idx === 0 ? 'top-3.5' : 'top-0',
+                  idx === phaseJourney.length - 1 ? 'bottom-1/2' : 'bottom-0',
                 ]"
               />
               <span
-                class="mt-1.5 text-[10px] leading-tight text-center"
-                :class="
-                  step.visited
-                    ? 'text-slate-600 dark:text-slate-300 font-medium'
-                    : 'text-slate-400 dark:text-slate-500'
-                "
-                >{{ statusLabel(step.state) }}</span
+                class="relative z-10 flex-shrink-0 w-3.5 h-3.5 mt-2 rounded-full ring-4 ring-white dark:ring-slate-800"
+                :class="[
+                  ph.reached
+                    ? ph.dot
+                    : 'bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600',
+                  ph.current ? '!ring-woot-100 dark:!ring-woot-900/60' : '',
+                ]"
               >
+                <span
+                  v-if="ph.current"
+                  class="block w-full h-full rounded-full animate-ping opacity-50"
+                  :class="ph.dot"
+                />
+              </span>
             </div>
-            <span
-              v-if="idx < lifecycleSteps.length - 1"
-              :key="`conn-${step.state}`"
-              class="flex-shrink-0 h-px mt-2 w-3 sm:w-6"
+            <!-- Tarjeta de fase (banda con su propio aire; actual = fondo suave) -->
+            <div
+              class="px-3 pt-1.5 pb-3 mb-1.5 rounded-lg border border-transparent"
+              :class="[
+                ph.current
+                  ? 'bg-woot-25 dark:bg-woot-900/20 border-woot-100 dark:border-woot-800/60'
+                  : '',
+                ph.reached ? '' : 'opacity-50',
+              ]"
+            >
+              <!-- Nivel 1: fase (protagonista) + sub-estado (chip) + badge Actual -->
+              <div class="flex flex-wrap items-center gap-2">
+                <span
+                  class="text-sm font-bold text-slate-800 dark:text-slate-100"
+                  >{{ phaseLabel(ph.key) }}</span
+                >
+                <span
+                  v-if="ph.reached && ph.subState"
+                  class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                  >{{ statusLabel(ph.subState) }}</span
+                >
+                <span
+                  v-if="ph.current"
+                  class="ml-auto px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase rounded-full bg-woot-500 text-white"
+                  >{{ $t('CASE_TICKETS.JOURNEY.CURRENT') }}</span
+                >
+              </div>
+              <!-- Nivel 3: actor + fecha (pie mudo) -->
+              <p
+                v-if="ph.reached"
+                class="m-0 mt-1 text-xs text-slate-400 dark:text-slate-500 tabular-nums"
+              >
+                <span class="font-semibold text-slate-500 dark:text-slate-400">
+                  <template v-if="ph.meta && ph.meta.isStart">{{
+                    $t('CASE_TICKETS.JOURNEY.CREATED')
+                  }}</template>
+                  <template v-else>{{ ph.meta && ph.meta.actor }}</template>
+                </span>
+                · {{ formatDate(ph.meta && ph.meta.at) }}
+              </p>
+              <!-- Motivo etiquetado (ya no una cita italic flotante) -->
+              <div
+                v-if="ph.meta && ph.meta.reason"
+                class="flex gap-2 px-2.5 py-1.5 mt-2 text-xs rounded-md bg-slate-50 dark:bg-slate-700/40 border-l-2 border-woot-400 dark:border-woot-500 text-slate-600 dark:text-slate-300"
+              >
+                <span class="font-semibold text-woot-600 dark:text-woot-300">{{
+                  $t('CASE_TICKETS.JOURNEY.REASON')
+                }}</span>
+                <span class="min-w-0">{{ ph.meta.reason }}</span>
+              </div>
+              <!-- Desvíos (espera / escalado) dentro de la banda de la fase -->
+              <div
+                v-for="(d, di) in ph.detoursAfter"
+                :key="`detour-${idx}-${di}`"
+                class="flex flex-wrap items-center gap-2 mt-2 text-xs"
+              >
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded font-semibold"
+                  :class="detourBadge(d.kind)"
+                >
+                  {{ d.kind === 'escalated' ? '⚠' : '⏸' }}
+                  {{ statusLabel(d.state)
+                  }}<template v-if="d.level != null">
+                    · N{{ d.level + 1 }}</template
+                  >
+                </span>
+                <span class="text-slate-400 dark:text-slate-500 tabular-nums">
+                  {{
+                    d.current
+                      ? $t('CASE_TICKETS.JOURNEY.CURRENTLY')
+                      : $t('CASE_TICKETS.JOURNEY.RETURNED')
+                  }}
+                  · {{ formatDate(d.at) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Vista 2: Historial cronológico ─────────────────────── -->
+        <ul
+          v-else-if="view === 'timeline'"
+          class="flex flex-col gap-4 p-0 m-0 list-none"
+        >
+          <li
+            v-for="event in events"
+            :key="event.id"
+            class="flex items-start gap-4"
+          >
+            <div
+              class="flex-shrink-0 w-2.5 h-2.5 mt-1 rounded-full"
               :class="
-                lifecycleSteps[idx + 1].visited
-                  ? 'bg-slate-300 dark:bg-slate-500'
-                  : 'bg-slate-200 dark:bg-slate-700'
+                statusDot(
+                  event.payload && event.payload.to
+                    ? event.payload.to
+                    : event.event_type
+                )
               "
             />
-          </template>
+            <div class="flex-1 min-w-0">
+              <p
+                class="m-0 text-sm font-medium text-slate-700 dark:text-slate-200"
+              >
+                {{ eventLabel(event) }}
+              </p>
+              <p
+                v-if="payloadSummary(event)"
+                class="mt-0.5 m-0 text-sm text-slate-500 dark:text-slate-400"
+              >
+                {{ payloadSummary(event) }}
+              </p>
+              <p class="mt-0.5 m-0 text-xs text-slate-400 dark:text-slate-500">
+                {{ actorName(event) }} · {{ formatDate(event.created_at) }}
+              </p>
+            </div>
+          </li>
+        </ul>
+
+        <!-- ── Vista 3: Stepper de ciclo de vida ──────────────────── -->
+        <div v-else class="flex flex-col gap-3">
+          <div class="flex items-start">
+            <template v-for="(step, idx) in lifecycleSteps">
+              <div
+                :key="`step-${step.state}`"
+                class="flex flex-col items-center flex-1 min-w-0"
+                :title="stepTooltip(step)"
+              >
+                <span
+                  class="flex items-center justify-center flex-shrink-0 w-4 h-4 rounded-full ring-2 ring-white dark:ring-slate-800"
+                  :class="[
+                    step.visited
+                      ? statusDot(step.state)
+                      : 'bg-slate-200 dark:bg-slate-600',
+                    step.current
+                      ? 'ring-woot-400 dark:ring-woot-500 scale-125'
+                      : '',
+                  ]"
+                />
+                <span
+                  class="mt-1.5 text-[10px] leading-tight text-center"
+                  :class="
+                    step.visited
+                      ? 'text-slate-600 dark:text-slate-300 font-medium'
+                      : 'text-slate-400 dark:text-slate-500'
+                  "
+                  >{{ statusLabel(step.state) }}</span
+                >
+              </div>
+              <span
+                v-if="idx < lifecycleSteps.length - 1"
+                :key="`conn-${step.state}`"
+                class="flex-shrink-0 h-px mt-2 w-3 sm:w-6"
+                :class="
+                  lifecycleSteps[idx + 1].visited
+                    ? 'bg-slate-300 dark:bg-slate-500'
+                    : 'bg-slate-200 dark:bg-slate-700'
+                "
+              />
+            </template>
+          </div>
+          <!-- Estado actual fuera del ciclo de vida (espera / escalado) -->
+          <div
+            v-if="offLifecycleStatus"
+            class="flex items-center gap-2 p-2 mt-1 rounded-lg bg-amber-50 dark:bg-amber-900/20"
+          >
+            <span
+              class="flex-shrink-0 w-2.5 h-2.5 rounded-full"
+              :class="statusDot(offLifecycleStatus)"
+            />
+            <span class="text-xs text-amber-700 dark:text-amber-300">
+              {{ $t('CASE_TICKETS.JOURNEY.CURRENTLY') }}:
+              {{ statusLabel(offLifecycleStatus) }}
+            </span>
+          </div>
         </div>
-        <!-- Estado actual fuera del ciclo de vida (espera / escalado) -->
-        <div
-          v-if="offLifecycleStatus"
-          class="flex items-center gap-2 p-2 mt-1 rounded-lg bg-amber-50 dark:bg-amber-900/20"
-        >
-          <span
-            class="flex-shrink-0 w-2.5 h-2.5 rounded-full"
-            :class="statusDot(offLifecycleStatus)"
-          />
-          <span class="text-xs text-amber-700 dark:text-amber-300">
-            {{ $t('CASE_TICKETS.JOURNEY.CURRENTLY') }}:
-            {{ statusLabel(offLifecycleStatus) }}
-          </span>
-        </div>
-      </div>
-    </template>
+      </template>
+    </div>
   </div>
 </template>
