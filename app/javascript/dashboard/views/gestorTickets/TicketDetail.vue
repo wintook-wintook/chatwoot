@@ -1028,6 +1028,17 @@ export default {
         }[p] || 'bg-slate-100 text-slate-700'
       );
     },
+    // @tickets_cases — esquema de color del botón "Prioridad" según la prioridad.
+    priorityScheme(p) {
+      return (
+        {
+          low: 'secondary',
+          medium: 'primary',
+          high: 'warning',
+          urgent: 'alert',
+        }[p] || 'secondary'
+      );
+    },
     // @tickets_cases P1 — punto de color por prioridad (para el dropdown rápido).
     priorityDot(p) {
       return (
@@ -1109,12 +1120,19 @@ export default {
 
       <div v-if="ticket" class="flex items-start justify-between gap-4">
         <div class="flex flex-col gap-1 min-w-0">
-          <!-- @tickets_cases — folio primero y prominente: es la identidad del ticket -->
-          <span
-            v-if="ticket.folio"
-            class="font-mono text-lg font-bold leading-none tracking-wider text-woot-600 dark:text-woot-300"
-            >#{{ ticket.folio }}</span
-          >
+          <!-- @tickets_cases — folio primero y prominente + contacto a su derecha -->
+          <div class="flex items-baseline gap-2 min-w-0">
+            <span
+              v-if="ticket.folio"
+              class="font-mono text-lg font-bold leading-none tracking-wider text-woot-600 dark:text-woot-300 flex-shrink-0"
+              >#{{ ticket.folio }}</span
+            >
+            <span
+              v-if="ticket.contact_name"
+              class="text-base font-medium truncate text-slate-600 dark:text-slate-300"
+              >· {{ ticket.contact_name }}</span
+            >
+          </div>
           <!-- @tickets_cases — cada badge lleva su etiqueta (Tipo/Estado/Prioridad/
                SLA/Nivel) para que se entienda qué representa cada valor. -->
           <div class="flex flex-wrap gap-1 mt-1">
@@ -1183,7 +1201,7 @@ export default {
               <woot-button
                 size="small"
                 variant="smooth"
-                color-scheme="secondary"
+                :color-scheme="priorityScheme(ticket.priority)"
                 icon="chevron-down"
                 @click="
                   showPriorityMenu = !showPriorityMenu;
@@ -1316,39 +1334,6 @@ export default {
                ticket (no dependen de la pestaña). 'Vence' no va aquí: ya está en
                el botón de vencimiento. -->
           <div class="flex flex-col items-end gap-3">
-            <!-- Fechas en horizontal -->
-            <div class="flex flex-wrap justify-end gap-x-8 gap-y-2 text-right">
-              <div class="flex flex-col gap-0.5">
-                <span
-                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-                  >Creado</span
-                >
-                <span
-                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                  >{{ formatDate(ticket.created_at) }}</span
-                >
-              </div>
-              <div class="flex flex-col gap-0.5">
-                <span
-                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-                  >Actualizado</span
-                >
-                <span
-                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                  >{{ formatDate(ticket.updated_at) }}</span
-                >
-              </div>
-              <div v-if="ticket.resolved_at" class="flex flex-col gap-0.5">
-                <span
-                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-                  >Resuelto</span
-                >
-                <span
-                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                  >{{ formatDate(ticket.resolved_at) }}</span
-                >
-              </div>
-            </div>
             <!-- Asignación (editable inline) -->
             <div class="grid w-[22rem] max-w-full grid-cols-2 gap-x-4 gap-y-1">
               <div class="flex flex-col gap-1 text-left">
@@ -1815,8 +1800,10 @@ export default {
             </div>
           </div>
 
-          <!-- Tickets relacionados (2E) -->
+          <!-- Tickets relacionados (2E) — solo si hay vínculos; vincular se hace
+               desde el botón de la barra de acciones. -->
           <div
+            v-if="relations.length"
             v-show="currentTabKey === 'detail'"
             class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
           >
@@ -1828,13 +1815,7 @@ export default {
               </h3>
             </div>
 
-            <div
-              v-if="!relations.length"
-              class="text-sm text-slate-400 dark:text-slate-500"
-            >
-              {{ $t('CASE_TICKETS.RELATIONS.EMPTY') }}
-            </div>
-            <ul v-else class="flex flex-col gap-2 p-0 m-0 list-none">
+            <ul class="flex flex-col gap-2 p-0 m-0 list-none">
               <li
                 v-for="rel in relations"
                 :key="rel.id"

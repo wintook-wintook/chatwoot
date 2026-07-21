@@ -385,10 +385,10 @@ export default {
                   >{{ $t('CASE_TICKETS.JOURNEY.CURRENT') }}</span
                 >
               </div>
-              <!-- Nivel 3: actor + fecha (pie mudo) -->
-              <p
+              <!-- Nivel 3: actor + fecha (la fecha va como pill) -->
+              <div
                 v-if="ph.reached"
-                class="m-0 mt-1 text-xs text-slate-400 dark:text-slate-500 tabular-nums"
+                class="flex flex-wrap items-center gap-2 mt-1 text-xs"
               >
                 <span class="font-semibold text-slate-500 dark:text-slate-400">
                   <template v-if="ph.meta && ph.meta.isStart">{{
@@ -396,8 +396,11 @@ export default {
                   }}</template>
                   <template v-else>{{ ph.meta && ph.meta.actor }}</template>
                 </span>
-                · {{ formatDate(ph.meta && ph.meta.at) }}
-              </p>
+                <span
+                  class="px-1.5 py-0.5 text-[11px] font-medium rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 tabular-nums"
+                  >{{ formatDate(ph.meta && ph.meta.at) }}</span
+                >
+              </div>
               <!-- Motivo etiquetado (ya no una cita italic flotante) -->
               <div
                 v-if="ph.meta && ph.meta.reason"

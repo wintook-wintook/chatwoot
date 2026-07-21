@@ -596,6 +596,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       created_at:                 ticket.created_at,
       updated_at:                 ticket.updated_at,
       contact_id:                 ticket.contact_id,
+      contact_name:               ticket.contact&.name, # @tickets_cases — nombre del contacto para la ficha
       conversation_id:            ticket.conversation_id,
       conversation_display_id:    ticket.conversation&.display_id, # @tickets_cases U1
 
