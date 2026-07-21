@@ -51,7 +51,7 @@ tags: [tickets, pendiente, todo]
   - ~~💬 respuestas predefinidas en la caja~~ ✅ **hecho** (commit `754c77b4`, menú de canned responses en el hilo del ticket).
   - ~~📅 vencimiento (columna "Vence" + edición inline, rojo si vencido)~~ ✅ **hecho** (commit `c11450b4`, estilo osTicket "Due Date"). Se añadió la columna `due_at` (manual pisa al estimado por SLA; editarlo NO recalcula el reloj SLA); orden por vencimiento efectivo; evento `due_date_changed`. Verificado en BD; **falta verificación visual en el navegador**.
   - **Pendiente**: 👥 colaboradores/CC (modelo nuevo, esfuerzo BAJO — hay backend a medias **sin commitear** en `feat/tickets`) · 🖨️ imprimir (vista imprimible ficha+hilo, BAJO).
-  - ~~📄 **notas internas (bitácora)**~~ ✅ **hecho** (ver [[Plan-Notas-Internas]] y el changelog). **Pendiente de esa función**: Fase 2 — nota opcional al **Cambiar estado** (cero backend: `transition!` ya acepta `reason:`); editar/borrar notas; adjuntos y menciones en la nota.
+  - ~~📄 **notas internas (bitácora)**~~ ✅ **hecho** (ver [[Plan-Notas-Internas]] y el changelog). Incluye la **Fase 2** (motivo opcional al Cambiar estado). **Pendiente de esa función**: editar/borrar notas; adjuntos y menciones en la nota; motivo también en los modales de Cerrar y de Resolver-problema (hoy solo en el camino simple).
 
 ### Widget embebible — PENDIENTE (ver [[Plan-Widget-Embebible]])
 - Launcher JS + iframe para capturar tickets desde la web del cliente, reusando el User Portal.

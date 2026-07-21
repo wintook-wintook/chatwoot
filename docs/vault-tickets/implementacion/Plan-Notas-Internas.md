@@ -1,7 +1,7 @@
 # Plan — Notas internas (bitácora del ticket)
 
-> Estado: ✅ **P1 implementado y verificado en navegador** (2026-07-21). Falta la
-> **Fase 2** (nota al cambiar estado, §5). Changelog en [[Historial-de-implementacion]].
+> Estado: ✅ **P1 + Fase 2 implementados y verificados en navegador** (2026-07-21).
+> Changelog en [[Historial-de-implementacion]].
 > ⚠️ Trampa encontrada al implementar: `add_note` debe ir en el `only:` del
 > `before_action :set_ticket`; si no, `@ticket` es `nil` y el `rescue` del
 > controlador disfraza el `NoMethodError` de 422.
@@ -183,7 +183,7 @@ ANTES (se ve como cualquier evento)      DESPUÉS (destacada, tipo osTicket)
 `ADD`, `TITLE`, `PLACEHOLDER`, `HINT` ("Solo visible para agentes"), `SAVE`,
 `CANCEL`, `EMPTY_ERROR`, `SUCCESS`. Las claves `EVENT_TYPES.internal_note` ya existen.
 
-## 5. Fase 2 — nota al cambiar estado
+## 5. Fase 2 — nota al cambiar estado ✅ hecho
 
 osTicket permite adjuntar una nota junto al cambio de estado. En MGCI el camino ya
 está medio hecho: **`transition!` acepta `reason:`** y lo guarda en

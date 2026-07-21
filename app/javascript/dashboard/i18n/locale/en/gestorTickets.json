@@ -153,7 +153,12 @@
       "BUTTON": "Claim"
     },
     "STATUS_QUICK": {
-      "LABEL": "Change status"
+      "LABEL": "Change status",
+      "REASON_TITLE": "Change to “{status}”",
+      "REASON_LABEL": "Reason (optional)",
+      "REASON_PLACEHOLDER": "Why is the status changing? It shows in the Journey.",
+      "REASON_CONFIRM": "Change status",
+      "REASON_CANCEL": "Cancel"
     },
     "PRIORITY_QUICK": {
       "LABEL": "Priority",

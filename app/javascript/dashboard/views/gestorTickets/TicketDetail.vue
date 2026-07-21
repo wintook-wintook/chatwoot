@@ -44,6 +44,10 @@ export default {
       showNoteModal: false,
       noteContent: '',
       isSavingNote: false,
+      // @tickets_cases — motivo opcional al cambiar de estado (osTicket)
+      showReasonModal: false,
+      pendingStatus: null,
+      transitionReason: '',
       // 2E — relaciones entre tickets
       showRelationModal: false,
       showDeleteRelation: false,
@@ -474,7 +478,23 @@ export default {
         this.showResolveProblemModal = true;
         return;
       }
-      await this.runTransition(status);
+      // @tickets_cases — bitácora Fase 2: popup de motivo opcional al cambiar
+      // estado (osTicket). El motivo ya viaja hasta transition! y se muestra
+      // como "Motivo" en el Recorrido; aquí solo se captura.
+      this.pendingStatus = status;
+      this.transitionReason = '';
+      this.showReasonModal = true;
+      this.$nextTick(() => this.$refs.reasonInput?.focus());
+    },
+    // @tickets_cases — confirma el cambio de estado con el motivo opcional.
+    async confirmTransition() {
+      const status = this.pendingStatus;
+      if (!status) return;
+      const reason = this.transitionReason.trim();
+      this.showReasonModal = false;
+      await this.runTransition(status, reason ? { reason } : {});
+      this.pendingStatus = null;
+      this.transitionReason = '';
     },
     // @tickets_cases 2G — confirmar cierre documentado
     async confirmClose() {
@@ -2340,6 +2360,61 @@ export default {
               :is-loading="isTransitioning"
             >
               {{ $t('CASE_TICKETS.ESCALATION.CONFIRM') }}
+            </woot-button>
+          </div>
+        </form>
+      </div>
+    </woot-modal>
+
+    <!-- @tickets_cases — Motivo opcional al cambiar de estado (osTicket) -->
+    <woot-modal
+      v-if="showReasonModal"
+      :show="showReasonModal"
+      :on-close="() => (showReasonModal = false)"
+      size="small"
+    >
+      <div class="flex flex-col h-auto overflow-auto">
+        <woot-modal-header
+          :header-title="
+            $t('CASE_TICKETS.STATUS_QUICK.REASON_TITLE', {
+              status: statusLabel(pendingStatus),
+            })
+          "
+        />
+        <form
+          class="flex flex-col self-stretch w-full gap-4 pb-8"
+          @submit.prevent="confirmTransition"
+        >
+          <label class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              {{ $t('CASE_TICKETS.STATUS_QUICK.REASON_LABEL') }}
+            </span>
+            <textarea
+              ref="reasonInput"
+              v-model="transitionReason"
+              rows="3"
+              class="input"
+              :placeholder="$t('CASE_TICKETS.STATUS_QUICK.REASON_PLACEHOLDER')"
+            />
+          </label>
+
+          <div class="flex justify-end gap-2 mt-2">
+            <woot-button
+              variant="clear"
+              color-scheme="secondary"
+              type="button"
+              @click="showReasonModal = false"
+            >
+              {{ $t('CASE_TICKETS.STATUS_QUICK.REASON_CANCEL') }}
+            </woot-button>
+            <woot-button
+              type="submit"
+              color-scheme="primary"
+              :is-loading="isTransitioning"
+            >
+              {{ $t('CASE_TICKETS.STATUS_QUICK.REASON_CONFIRM') }}
             </woot-button>
           </div>
         </form>

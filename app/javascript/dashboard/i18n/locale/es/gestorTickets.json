@@ -153,7 +153,12 @@
       "BUTTON": "Tomar"
     },
     "STATUS_QUICK": {
-      "LABEL": "Cambiar estado"
+      "LABEL": "Cambiar estado",
+      "REASON_TITLE": "Cambiar a «{status}»",
+      "REASON_LABEL": "Motivo (opcional)",
+      "REASON_PLACEHOLDER": "¿Por qué cambia de estado? Queda en el Recorrido.",
+      "REASON_CONFIRM": "Cambiar estado",
+      "REASON_CANCEL": "Cancelar"
     },
     "PRIORITY_QUICK": {
       "LABEL": "Prioridad",
