@@ -42,7 +42,7 @@ tags: [tickets, pendiente, todo]
 
 ### Practicidad osTicket (ver [[Plan-Practicidad-osTicket]])
 - ~~**P1 — ficha accionable inline**~~ ✅ **hecho** (barra de acciones: Tomar/Prioridad/Estado, sin modal).
-- **P1 menor (futuro)**: estado/prioridad editables también desde la tarjeta "Información"; cerrar menús con click-afuera.
+- **P1 menor (futuro)**: estado/prioridad editables también desde la tarjeta "Información". ~~cerrar menús con click-afuera~~ ✅ **hecho** (commit `442c1775`, `v-on-clickaway` en la fila de acciones de `TicketDetail.vue`: Prioridad, Vence y Cambiar estado).
 - ~~**P2 — conversación al frente**~~ ✅ **hecho** (Resumen a dos columnas: hilo sticky + sidebar de datos; pestaña Conversación eliminada).
 - **P2 menor (futuro)**: Tareas/Relacionados como acordeón colapsable en la sidebar; ajustar altura del hilo en pantallas medianas; adjuntos en la caja del hilo.
 - ~~**P3 — cola tipo tabla**~~ ✅ **hecho** (tabla densa + cabeceras ordenables + selección múltiple + barra de lote Tomar/Asignar/Estado/Cerrar vía endpoint `bulk`; colas = pestañas `QUICK_FILTERS`).
@@ -50,7 +50,12 @@ tags: [tickets, pendiente, todo]
 - **P4 — extras de practicidad** (parcial):
   - ~~💬 respuestas predefinidas en la caja~~ ✅ **hecho** (commit `754c77b4`, menú de canned responses en el hilo del ticket).
   - ~~📅 vencimiento (columna "Vence" + edición inline, rojo si vencido)~~ ✅ **hecho** (commit `c11450b4`, estilo osTicket "Due Date"). Se añadió la columna `due_at` (manual pisa al estimado por SLA; editarlo NO recalcula el reloj SLA); orden por vencimiento efectivo; evento `due_date_changed`. Verificado en BD; **falta verificación visual en el navegador**.
-  - **Pendiente**: 👥 colaboradores/CC (modelo nuevo, esfuerzo BAJO) · 🖨️ imprimir (vista imprimible ficha+hilo, BAJO).
+  - **Pendiente**: 👥 colaboradores/CC (modelo nuevo, esfuerzo BAJO — hay backend a medias **sin commitear** en `feat/tickets`) · 🖨️ imprimir (vista imprimible ficha+hilo, BAJO).
+  - ~~📄 **notas internas (bitácora)**~~ ✅ **hecho** (ver [[Plan-Notas-Internas]] y el changelog). **Pendiente de esa función**: Fase 2 — nota opcional al **Cambiar estado** (cero backend: `transition!` ya acepta `reason:`); editar/borrar notas; adjuntos y menciones en la nota.
+
+### Widget embebible — PENDIENTE (ver [[Plan-Widget-Embebible]])
+- Launcher JS + iframe para capturar tickets desde la web del cliente, reusando el User Portal.
+- Incluye una corrección de seguridad: `X-Frame-Options: ALLOWALL` global (`config/application.rb:58`, heredado del fork en `fd22446c`) → `frame-ancestors` por portal.
 
 ### Email-to-ticket — PENDIENTE (no implementado)
 - Crear ticket automáticamente desde un correo entrante (inbox Email) — estilo osTicket "Email Piping". Decidir mapeo (asunto→título, remitente→contacto, tipo por defecto) y reusar `PortalTicketService`/`PortalThreadSeeder`.

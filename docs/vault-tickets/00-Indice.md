@@ -53,6 +53,8 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 - [[Plan-User-Portal]] — 🌐 plan: superficie del cliente estilo osTicket (Open/Check/KB)
 - [[Plan-Modo-Simple]] — 🎚️ plan: modo simple (osTicket) por defecto, ITIL opcional vía toggle
 - [[Plan-Practicidad-osTicket]] — ⚡ plan: ficha accionable inline · conversación al frente · cola tabla (P1 hecho)
+- [[Plan-Notas-Internas]] — 📄 plan: bitácora de notas internas en el ticket (enum ya existe, falta UI/endpoint)
+- [[Plan-Widget-Embebible]] — 🔌 plan: launcher + iframe para capturar tickets desde la web del cliente
 - [[Historial-de-implementacion]] — changelog de todo lo resuelto
 
 ---

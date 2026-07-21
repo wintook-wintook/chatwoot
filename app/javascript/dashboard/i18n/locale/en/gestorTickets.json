@@ -372,6 +372,17 @@
         "rejected": "Rejected"
       }
     },
+    "NOTES": {
+      "ADD": "Note",
+      "MODAL_TITLE": "New internal note",
+      "CONTENT_LABEL": "Note",
+      "PLACEHOLDER": "What did you do, or what is missing? E.g. called the customer, no answer…",
+      "HINT": "Visible to agents only. The customer will not see it.",
+      "SAVE": "Save note",
+      "CANCEL": "Cancel",
+      "SUCCESS": "Note added",
+      "ERROR": "Could not add the note"
+    },
     "RELATIONS": {
       "TITLE": "Related tickets",
       "ADD": "+ Link ticket",

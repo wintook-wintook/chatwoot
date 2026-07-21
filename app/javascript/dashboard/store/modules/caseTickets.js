@@ -359,6 +359,15 @@ export const actions = {
     }
   },
 
+  // @tickets_cases — bitácora: añade una nota interna y refresca el timeline.
+  async addNote({ commit, dispatch }, { ticketId, contactId, content }) {
+    const { data } = await caseTicketsAPI.addNote(ticketId, content);
+    const ticket = data.case_ticket;
+    if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
+    await dispatch('fetchEvents', { ticketId });
+    return ticket;
+  },
+
   // @tickets_cases Fase A — asignación manual a agente y/o equipo (coexisten).
   // Envía solo las claves presentes en el payload; '' / null limpia ese campo.
   async assignTicket({ commit }, { ticketId, contactId, assigneeId, teamId }) {
@@ -394,7 +403,10 @@ export const actions = {
   },
 
   // @tickets_cases P1 — cambio de prioridad inline (acción rápida estilo osTicket).
-  async updatePriority({ commit, dispatch }, { ticketId, contactId, priority }) {
+  async updatePriority(
+    { commit, dispatch },
+    { ticketId, contactId, priority }
+  ) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {
       const { data } = await caseTicketsAPI.update(ticketId, {
@@ -619,7 +631,9 @@ export const actions = {
   async updatePortal({ commit, state: s }, { id, ...payload }) {
     commit(SET_CASE_PORTALS_UI_FLAG, { isSaving: true });
     try {
-      const { data } = await casePortalsAPI.update(id, { case_portal: payload });
+      const { data } = await casePortalsAPI.update(id, {
+        case_portal: payload,
+      });
       commit(
         SET_CASE_PORTALS,
         s.portals.map(p => (p.id === id ? data.case_portal : p))

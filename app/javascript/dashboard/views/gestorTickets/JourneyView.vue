@@ -251,6 +251,12 @@ export default {
         ? this.$t('CASE_TICKETS.TIMELINE.ACTOR_BOT')
         : this.$t('CASE_TICKETS.TIMELINE.ACTOR_SYSTEM');
     },
+    // @tickets_cases — bitácora: nota interna con contenido (se pinta destacada).
+    isNote(event) {
+      return (
+        event.event_type === 'internal_note' && !!(event.payload || {}).content
+      );
+    },
     eventLabel(event) {
       const k = `CASE_TICKETS.EVENT_TYPES.${event.event_type}`;
       return this.$te(k) ? this.$t(k) : event.event_type;
@@ -474,14 +480,45 @@ export default {
             <div
               class="flex-shrink-0 w-2.5 h-2.5 mt-1 rounded-full"
               :class="
-                statusDot(
-                  event.payload && event.payload.to
-                    ? event.payload.to
-                    : event.event_type
-                )
+                isNote(event)
+                  ? 'bg-amber-400'
+                  : statusDot(
+                      event.payload && event.payload.to
+                        ? event.payload.to
+                        : event.event_type
+                    )
               "
             />
-            <div class="flex-1 min-w-0">
+            <!-- @tickets_cases — bitácora: la nota interna se destaca en ámbar
+                 (equivale al banner amarillo del thread de osTicket) -->
+            <div
+              v-if="isNote(event)"
+              class="flex-1 min-w-0 py-2 pl-3 pr-2 border-l-2 rounded-r bg-amber-50 border-amber-400 dark:bg-amber-900/20 dark:border-amber-500"
+            >
+              <p
+                class="m-0 text-sm font-medium text-amber-800 dark:text-amber-200"
+              >
+                {{ eventLabel(event) }}
+              </p>
+              <p
+                class="mt-0.5 m-0 text-sm whitespace-pre-line text-slate-700 dark:text-slate-200"
+              >
+                {{ event.payload.content }}
+              </p>
+              <div
+                class="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-400 dark:text-slate-500"
+              >
+                <span
+                  class="font-semibold text-slate-500 dark:text-slate-400"
+                  >{{ actorName(event) }}</span
+                >
+                <span
+                  class="px-1.5 py-0.5 text-[11px] font-medium rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 tabular-nums"
+                  >{{ formatDate(event.created_at) }}</span
+                >
+              </div>
+            </div>
+            <div v-else class="flex-1 min-w-0">
               <p
                 class="m-0 text-sm font-medium text-slate-700 dark:text-slate-200"
               >

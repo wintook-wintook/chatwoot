@@ -152,12 +152,15 @@ Rails.application.routes.draw do
               post :follow_up # @tickets_cases 3F
               patch :lock   # @tickets_cases — bloqueo de ticket
               patch :unlock # @tickets_cases — bloqueo de ticket
+              post :note, action: :add_note # @tickets_cases — bitácora de notas internas
             end
             resources :case_events, only: [:index]
             # @tickets_cases 2E — relaciones entre tickets
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
             # @tickets_cases — tareas/subtareas del ticket
             resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks'
+            # @tickets_cases P4 — colaboradores/CC del ticket
+            resources :case_collaborators, only: [:index, :create, :destroy], path: 'collaborators'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
           resources :case_types, only: [:index, :create, :update, :destroy] do

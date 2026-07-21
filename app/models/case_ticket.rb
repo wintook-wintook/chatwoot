@@ -140,6 +140,7 @@ class CaseTicket < ApplicationRecord
   belongs_to :kb_article,        class_name: 'Article', optional: true # @tickets_cases 2H
   has_many   :case_events,       dependent: :destroy
   has_many   :case_tasks,        dependent: :destroy # @tickets_cases — tareas/subtareas
+  has_many   :case_collaborators, dependent: :destroy # @tickets_cases P4 — colaboradores/CC
   # @tickets_cases 2E — relaciones dirigidas (este ticket como origen y como destino).
   has_many   :ticket_relations,        class_name: 'CaseTicketRelation', foreign_key: :ticket_id,         dependent: :destroy, inverse_of: :ticket
   has_many   :inverse_ticket_relations, class_name: 'CaseTicketRelation', foreign_key: :related_ticket_id, dependent: :destroy, inverse_of: :related_ticket
@@ -304,6 +305,22 @@ class CaseTicket < ApplicationRecord
       payload:    { reason: reason }.compact
     )
     self
+  end
+
+  # @tickets_cases — bitácora: nota interna del agente en el timeline.
+  # NUNCA sale al cliente (vive en case_events, que el User Portal no expone).
+  # La clave `content` del payload es la que ya esperan Cases::Ai::Summarizer y
+  # payloadSummary() en JourneyView.vue — no renombrarla.
+  def add_internal_note!(content:, actor: nil)
+    raise 'La nota no puede estar vacía' if content.blank?
+
+    case_events.create!(
+      account:    account,
+      event_type: :internal_note,
+      origin:     actor ? :agent : :system,
+      actor:      actor,
+      payload:    { content: content.to_s.strip }
+    )
   end
 
   # Incidentes vinculados a este problema (relación incident_problem: incidente → problema).

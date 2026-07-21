@@ -372,6 +372,17 @@
         "rejected": "Rechazado"
       }
     },
+    "NOTES": {
+      "ADD": "Nota",
+      "MODAL_TITLE": "Nueva nota interna",
+      "CONTENT_LABEL": "Nota",
+      "PLACEHOLDER": "¿Qué hiciste o qué falta? Ej: llamé al cliente, sin respuesta…",
+      "HINT": "Solo visible para agentes. El cliente no la verá.",
+      "SAVE": "Guardar nota",
+      "CANCEL": "Cancelar",
+      "SUCCESS": "Nota agregada",
+      "ERROR": "No se pudo agregar la nota"
+    },
     "RELATIONS": {
       "TITLE": "Tickets relacionados",
       "ADD": "+ Vincular ticket",

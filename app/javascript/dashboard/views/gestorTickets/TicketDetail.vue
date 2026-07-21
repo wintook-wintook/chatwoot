@@ -40,6 +40,10 @@ export default {
       taskCount: 0, // @tickets_cases P4 — total de tareas (badge del tab)
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
+      // @tickets_cases — bitácora de notas internas
+      showNoteModal: false,
+      noteContent: '',
+      isSavingNote: false,
       // 2E — relaciones entre tickets
       showRelationModal: false,
       showDeleteRelation: false,
@@ -962,6 +966,36 @@ export default {
         });
       }
     },
+    // @tickets_cases — bitácora: nota interna
+    openNoteModal() {
+      this.noteContent = '';
+      this.showNoteModal = true;
+      this.$nextTick(() => this.$refs.noteInput?.focus());
+    },
+    async confirmNote() {
+      const content = this.noteContent.trim();
+      if (!content) return;
+      this.isSavingNote = true;
+      try {
+        await this.$store.dispatch('caseTickets/addNote', {
+          ticketId: this.ticketId,
+          contactId: this.ticket?.contact_id,
+          content,
+        });
+        this.showNoteModal = false;
+        this.noteContent = '';
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.NOTES.SUCCESS'),
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error || this.$t('CASE_TICKETS.NOTES.ERROR'),
+        });
+      } finally {
+        this.isSavingNote = false;
+      }
+    },
     // @tickets_cases 2E — relaciones entre tickets
     openRelationModal() {
       this.relationForm = { relation_type: 'duplicate' };
@@ -1318,6 +1352,17 @@ export default {
               @click="openRelationModal"
             >
               {{ $t('CASE_TICKETS.RELATIONS.ADD') }}
+            </woot-button>
+
+            <!-- @tickets_cases — bitácora: nota interna (no visible al cliente) -->
+            <woot-button
+              size="small"
+              variant="smooth"
+              color-scheme="secondary"
+              icon="comment-add"
+              @click="openNoteModal"
+            >
+              {{ $t('CASE_TICKETS.NOTES.ADD') }}
             </woot-button>
 
             <woot-button
@@ -2295,6 +2340,65 @@ export default {
               :is-loading="isTransitioning"
             >
               {{ $t('CASE_TICKETS.ESCALATION.CONFIRM') }}
+            </woot-button>
+          </div>
+        </form>
+      </div>
+    </woot-modal>
+
+    <!-- @tickets_cases — Modal de nota interna (bitácora) -->
+    <woot-modal
+      v-if="showNoteModal"
+      :show="showNoteModal"
+      :on-close="() => (showNoteModal = false)"
+      size="small"
+    >
+      <div class="flex flex-col h-auto overflow-auto">
+        <woot-modal-header
+          :header-title="$t('CASE_TICKETS.NOTES.MODAL_TITLE')"
+        />
+        <form
+          class="flex flex-col self-stretch w-full gap-4 pb-8"
+          @submit.prevent="confirmNote"
+        >
+          <label class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              {{ $t('CASE_TICKETS.NOTES.CONTENT_LABEL') }}
+            </span>
+            <textarea
+              ref="noteInput"
+              v-model="noteContent"
+              rows="5"
+              class="input"
+              :placeholder="$t('CASE_TICKETS.NOTES.PLACEHOLDER')"
+            />
+          </label>
+
+          <p
+            class="flex items-center gap-1.5 m-0 px-3 py-2 text-xs rounded-md bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+          >
+            <fluent-icon icon="info" size="14" />
+            {{ $t('CASE_TICKETS.NOTES.HINT') }}
+          </p>
+
+          <div class="flex justify-end gap-2 mt-2">
+            <woot-button
+              variant="clear"
+              color-scheme="secondary"
+              type="button"
+              @click="showNoteModal = false"
+            >
+              {{ $t('CASE_TICKETS.NOTES.CANCEL') }}
+            </woot-button>
+            <woot-button
+              type="submit"
+              color-scheme="primary"
+              :disabled="!noteContent.trim()"
+              :is-loading="isSavingNote"
+            >
+              {{ $t('CASE_TICKETS.NOTES.SAVE') }}
             </woot-button>
           </div>
         </form>

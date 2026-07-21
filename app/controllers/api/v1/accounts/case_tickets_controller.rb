@@ -22,7 +22,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   before_action :set_ticket,
                 only: %i[show update transition assign escalate change_approval generate_article
                          apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize
-                         detect_duplicates follow_up lock unlock]
+                         detect_duplicates follow_up lock unlock add_note]
 
   # GET /api/v1/accounts/:account_id/case_tickets/metrics
   def metrics
@@ -331,6 +331,15 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     assignee = params[:assignee_id].present? ? Current.account.users.find_by(id: params[:assignee_id]) : nil
 
     @ticket.escalate!(actor: current_user, reason: params[:reason], team: team, assignee: assignee)
+    render json: { case_ticket: ticket_json(@ticket.reload) }
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # POST /api/v1/accounts/:account_id/case_tickets/:id/note
+  # @tickets_cases — bitácora: nota interna en el timeline (nunca visible al cliente).
+  def add_note
+    @ticket.add_internal_note!(content: params[:content], actor: current_user)
     render json: { case_ticket: ticket_json(@ticket.reload) }
   rescue StandardError => e
     render json: { error: e.message }, status: :unprocessable_entity
