@@ -224,7 +224,14 @@ export default {
       localStorage.setItem(STORAGE_KEY, v);
     },
     statusLabel(key) {
-      return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key;
+      // $t devuelve la ruta cruda si falta la traducción; con $te caemos al valor.
+      const k = `CASE_TICKETS.STATUSES.${key}`;
+      return this.$te(k) ? this.$t(k) : key;
+    },
+    // @tickets_cases — etiqueta de prioridad (para eventos priority_changed).
+    priorityLabel(key) {
+      const k = `CASE_TICKETS.PRIORITIES.${key}`;
+      return this.$te(k) ? this.$t(k) : key;
     },
     // @tickets_cases — etiqueta de fase reutilizando las columnas del Tablero
     phaseLabel(key) {
@@ -245,15 +252,24 @@ export default {
         : this.$t('CASE_TICKETS.TIMELINE.ACTOR_SYSTEM');
     },
     eventLabel(event) {
-      return (
-        this.$t(`CASE_TICKETS.EVENT_TYPES.${event.event_type}`) ||
-        event.event_type
-      );
+      const k = `CASE_TICKETS.EVENT_TYPES.${event.event_type}`;
+      return this.$te(k) ? this.$t(k) : event.event_type;
     },
     payloadSummary(event) {
       const p = event.payload || {};
+      // Vencimiento: from/to son fechas.
+      if (event.event_type === 'due_date_changed') {
+        return `${p.from ? this.formatDate(p.from) : '—'} → ${
+          p.to ? this.formatDate(p.to) : '—'
+        }`;
+      }
       if (p.from && p.to) {
-        return `${this.statusLabel(p.from)} → ${this.statusLabel(p.to)}`;
+        // Prioridad usa etiquetas de prioridad; el resto, de estado.
+        const label =
+          event.event_type === 'priority_changed'
+            ? this.priorityLabel
+            : this.statusLabel;
+        return `${label(p.from)} → ${label(p.to)}`;
       }
       if (p.content) return p.content.slice(0, 80);
       return null;
@@ -311,8 +327,13 @@ export default {
 
     <!-- Zona de contenido: scroll interno (el título de arriba queda fijo) -->
     <div class="flex-1 min-h-0 overflow-y-auto -mr-1.5 pr-1.5">
-      <!-- Estados de carga / vacío -->
-      <div v-if="isFetching" class="text-sm text-slate-400 dark:text-slate-500">
+      <!-- Estados de carga / vacío. El "Cargando" solo aparece en la carga inicial
+           (sin datos); al recargar tras un cambio, se mantiene el timeline visible
+           y se actualiza sin parpadeo. -->
+      <div
+        v-if="isFetching && !hasJourney"
+        class="text-sm text-slate-400 dark:text-slate-500"
+      >
         {{ $t('CASE_TICKETS.JOURNEY.LOADING') }}
       </div>
       <div
@@ -343,7 +364,7 @@ export default {
                 ]"
               />
               <span
-                class="relative z-10 flex-shrink-0 w-3.5 h-3.5 mt-2 rounded-full ring-4 ring-white dark:ring-slate-800"
+                class="relative z-10 flex-shrink-0 w-4 h-4 mt-2 rounded-full ring-4 ring-white dark:ring-slate-800"
                 :class="[
                   ph.reached
                     ? ph.dot
@@ -371,24 +392,24 @@ export default {
               <!-- Nivel 1: fase (protagonista) + sub-estado (chip) + badge Actual -->
               <div class="flex flex-wrap items-center gap-2">
                 <span
-                  class="text-sm font-bold text-slate-800 dark:text-slate-100"
+                  class="text-base font-bold text-slate-800 dark:text-slate-100"
                   >{{ phaseLabel(ph.key) }}</span
                 >
                 <span
                   v-if="ph.reached && ph.subState"
-                  class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                  class="px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
                   >{{ statusLabel(ph.subState) }}</span
                 >
                 <span
                   v-if="ph.current"
-                  class="ml-auto px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase rounded-full bg-woot-500 text-white"
+                  class="ml-auto px-2 py-0.5 text-[11px] font-bold tracking-wide uppercase rounded-full bg-woot-500 text-white"
                   >{{ $t('CASE_TICKETS.JOURNEY.CURRENT') }}</span
                 >
               </div>
               <!-- Nivel 3: actor + fecha (la fecha va como pill) -->
               <div
                 v-if="ph.reached"
-                class="flex flex-wrap items-center gap-2 mt-1 text-xs"
+                class="flex flex-wrap items-center gap-2 mt-1 text-sm"
               >
                 <span class="font-semibold text-slate-500 dark:text-slate-400">
                   <template v-if="ph.meta && ph.meta.isStart">{{
@@ -397,14 +418,14 @@ export default {
                   <template v-else>{{ ph.meta && ph.meta.actor }}</template>
                 </span>
                 <span
-                  class="px-1.5 py-0.5 text-[11px] font-medium rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 tabular-nums"
+                  class="px-1.5 py-0.5 text-xs font-medium rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 tabular-nums"
                   >{{ formatDate(ph.meta && ph.meta.at) }}</span
                 >
               </div>
               <!-- Motivo etiquetado (ya no una cita italic flotante) -->
               <div
                 v-if="ph.meta && ph.meta.reason"
-                class="flex gap-2 px-2.5 py-1.5 mt-2 text-xs rounded-md bg-slate-50 dark:bg-slate-700/40 border-l-2 border-woot-400 dark:border-woot-500 text-slate-600 dark:text-slate-300"
+                class="flex gap-2 px-2.5 py-1.5 mt-2 text-sm rounded-md bg-slate-50 dark:bg-slate-700/40 border-l-2 border-woot-400 dark:border-woot-500 text-slate-600 dark:text-slate-300"
               >
                 <span class="font-semibold text-woot-600 dark:text-woot-300">{{
                   $t('CASE_TICKETS.JOURNEY.REASON')
@@ -415,7 +436,7 @@ export default {
               <div
                 v-for="(d, di) in ph.detoursAfter"
                 :key="`detour-${idx}-${di}`"
-                class="flex flex-wrap items-center gap-2 mt-2 text-xs"
+                class="flex flex-wrap items-center gap-2 mt-2 text-sm"
               >
                 <span
                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded font-semibold"
@@ -472,9 +493,18 @@ export default {
               >
                 {{ payloadSummary(event) }}
               </p>
-              <p class="mt-0.5 m-0 text-xs text-slate-400 dark:text-slate-500">
-                {{ actorName(event) }} · {{ formatDate(event.created_at) }}
-              </p>
+              <div
+                class="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-400 dark:text-slate-500"
+              >
+                <span
+                  class="font-semibold text-slate-500 dark:text-slate-400"
+                  >{{ actorName(event) }}</span
+                >
+                <span
+                  class="px-1.5 py-0.5 text-[11px] font-medium rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 tabular-nums"
+                  >{{ formatDate(event.created_at) }}</span
+                >
+              </div>
             </div>
           </li>
         </ul>

@@ -7,6 +7,7 @@ import { mapGetters } from 'vuex';
 import JourneyView from './JourneyView.vue';
 import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
 import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
+import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
 import CaseTicketsAPI from 'dashboard/api/caseTickets';
 import {
   SIMPLE_TRANSITION_TARGETS,
@@ -18,7 +19,12 @@ const DETAIL_TAB_KEY = 'gestorTickets.detailTab';
 
 export default {
   name: 'TicketDetail',
-  components: { JourneyView, TicketConversation, TicketTasks },
+  components: {
+    JourneyView,
+    TicketConversation,
+    TicketTasks,
+    MultiselectDropdown,
+  },
   props: {
     ticketId: { type: Number, required: true },
   },
@@ -333,6 +339,25 @@ export default {
     priorityOptions() {
       return ['low', 'medium', 'high', 'urgent'];
     },
+    // @tickets_cases — asignación con el dropdown nativo de Chatwoot (avatar + buscador).
+    agentsList() {
+      return [
+        { id: 0, name: this.$t('CASE_TICKETS.ASSIGN.NONE') },
+        ...this.agents,
+      ];
+    },
+    teamsList() {
+      return [
+        { id: 0, name: this.$t('CASE_TICKETS.ASSIGN.NONE') },
+        ...this.teams,
+      ];
+    },
+    assignedAgentItem() {
+      return this.agents.find(a => a.id === this.ticket?.assignee_id) || {};
+    },
+    assignedTeamItem() {
+      return this.teams.find(t => t.id === this.ticket?.team_id) || {};
+    },
     // @tickets_cases P4 — etiqueta corta del vencimiento efectivo para el botón inline.
     dueLabel() {
       const iso = this.ticket?.effective_due_at;
@@ -414,6 +439,13 @@ export default {
         ticketId: this.ticketId,
       });
       this.$store.dispatch('caseTickets/fetchRelations', this.ticketId);
+    },
+    // @tickets_cases — cierra los menús inline (Prioridad/Vence/Estado) al hacer
+    // clic fuera de la barra de acciones (v-on-clickaway).
+    closeActionMenus() {
+      this.showPriorityMenu = false;
+      this.showDueMenu = false;
+      this.showTransitionMenu = false;
     },
     async transitionTo(status) {
       this.showTransitionMenu = false;
@@ -873,11 +905,12 @@ export default {
       this.assign({ assigneeId: this.currentUserID });
     },
     // @tickets_cases Fase A — asignación manual (agente y equipo coexisten).
-    onAssignAgent(event) {
-      this.assign({ assigneeId: event.target.value || null });
+    // @tickets_cases — selección desde el MultiselectDropdown (id 0 = Ninguno).
+    onSelectAgent(item) {
+      this.assign({ assigneeId: item && item.id ? item.id : null });
     },
-    onAssignTeam(event) {
-      this.assign({ teamId: event.target.value || null });
+    onSelectTeam(item) {
+      this.assign({ teamId: item && item.id ? item.id : null });
     },
     async assign(payload) {
       try {
@@ -1148,12 +1181,7 @@ export default {
               ><span class="font-normal opacity-75">Estado:</span>
               {{ statusLabel(displayStatus(ticket.status)) }}</span
             >
-            <span
-              class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
-              :class="priorityBadge(ticket.priority)"
-              ><span class="font-normal opacity-75">Prioridad:</span>
-              {{ priorityLabel(ticket.priority) }}</span
-            >
+            <!-- Prioridad no va aquí: ya se ve (con color) en el botón "Prioridad". -->
             <span
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
               :class="slaBadge(ticket.sla_status)"
@@ -1182,7 +1210,10 @@ export default {
         <!-- @tickets_cases — columna derecha: acciones arriba + fechas debajo -->
         <div class="flex flex-col items-end flex-shrink-0 gap-3">
           <!-- Acciones (barra accionable inline — estilo osTicket) -->
-          <div class="relative flex flex-wrap items-center justify-end gap-2">
+          <div
+            v-on-clickaway="closeActionMenus"
+            class="relative flex flex-wrap items-center justify-end gap-2"
+          >
             <!-- Tomar (claim): autoasignar al agente actual en 1 clic -->
             <woot-button
               v-if="canClaim"
@@ -1334,45 +1365,46 @@ export default {
                ticket (no dependen de la pestaña). 'Vence' no va aquí: ya está en
                el botón de vencimiento. -->
           <div class="flex flex-col items-end gap-3">
-            <!-- Asignación (editable inline) -->
-            <div class="grid w-[22rem] max-w-full grid-cols-2 gap-x-4 gap-y-1">
+            <!-- Asignación con el dropdown nativo de Chatwoot (avatar + buscador) -->
+            <div class="grid w-[28rem] max-w-full grid-cols-2 gap-x-4 gap-y-1">
               <div class="flex flex-col gap-1 text-left">
                 <label
                   class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
                   >{{ $t('CASE_TICKETS.ASSIGN.TEAM_LABEL') }}</label
                 >
-                <select
-                  class="input"
-                  :value="ticket.team_id || ''"
-                  :disabled="uiFlags.isTransitioning"
-                  @change="onAssignTeam"
-                >
-                  <option value="">
-                    {{ $t('CASE_TICKETS.ASSIGN.NONE') }}
-                  </option>
-                  <option v-for="tm in teams" :key="tm.id" :value="tm.id">
-                    {{ tm.name }}
-                  </option>
-                </select>
+                <MultiselectDropdown
+                  :options="teamsList"
+                  :selected-item="assignedTeamItem"
+                  :has-thumbnail="false"
+                  :multiselector-title="$t('CASE_TICKETS.ASSIGN.TEAM_LABEL')"
+                  :multiselector-placeholder="$t('CASE_TICKETS.ASSIGN.NONE')"
+                  :no-search-result="
+                    $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.NO_RESULTS.TEAM')
+                  "
+                  :input-placeholder="
+                    $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.PLACEHOLDER.INPUT')
+                  "
+                  @click="onSelectTeam"
+                />
               </div>
               <div class="flex flex-col gap-1 text-left">
                 <label
                   class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
                   >{{ $t('CASE_TICKETS.ASSIGN.AGENT_LABEL') }}</label
                 >
-                <select
-                  class="input"
-                  :value="ticket.assignee_id || ''"
-                  :disabled="uiFlags.isTransitioning"
-                  @change="onAssignAgent"
-                >
-                  <option value="">
-                    {{ $t('CASE_TICKETS.ASSIGN.NONE') }}
-                  </option>
-                  <option v-for="ag in agents" :key="ag.id" :value="ag.id">
-                    {{ ag.name }}
-                  </option>
-                </select>
+                <MultiselectDropdown
+                  :options="agentsList"
+                  :selected-item="assignedAgentItem"
+                  :multiselector-title="$t('CASE_TICKETS.ASSIGN.AGENT_LABEL')"
+                  :multiselector-placeholder="$t('CASE_TICKETS.ASSIGN.NONE')"
+                  :no-search-result="
+                    $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.NO_RESULTS.AGENT')
+                  "
+                  :input-placeholder="
+                    $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.PLACEHOLDER.AGENT')
+                  "
+                  @click="onSelectAgent"
+                />
               </div>
             </div>
             <!-- Solicitante (tickets internos) -->
