@@ -620,7 +620,18 @@
       "MODE_ITIL_DESC": "Enables full ITIL statuses, Impact×Urgency matrix, ticket nature, problem/change and approvals.",
       "NOTE_DATA": "No data is deleted or changed: the mode only affects what is shown.",
       "NOTE_REVERSIBLE": "You can switch modes anytime.",
-      "SAVED": "Settings saved",
+            "REOPEN": {
+        "SECTION": "Reopening closed tickets",
+        "WINDOW_TITLE": "Reopen window",
+        "WINDOW_DESC": "Days after closing during which the assigned agent can reopen. After that, only an administrator. Use 0 for no limit.",
+        "DAYS": "days",
+        "SAVE": "Save",
+        "ON_REPLY_TITLE": "Reopen on customer reply",
+        "ON_REPLY_DESC": "If the customer writes on their channel about a closed ticket, it reopens automatically (or a follow-up ticket is created if the window expired).",
+        "NOTE_WINDOW": "An administrator can always reopen, even after the window expired.",
+        "NOTE_SLA": "On reopening, the SLA clock restarts from zero."
+      },
+"SAVED": "Settings saved",
       "SAVE_ERROR": "Could not save settings."
     },
     "PORTALS": {

@@ -6,9 +6,16 @@ import { mapGetters } from 'vuex';
 
 export default {
   name: 'TicketSettings',
+  data() {
+    return {
+      // Borrador local de la ventana; se guarda al confirmar (no en cada tecla).
+      reopenWindowDraft: 30,
+    };
+  },
   computed: {
     ...mapGetters({
       itilEnabled: 'caseTickets/getItilEnabled',
+      settings: 'caseTickets/getCaseSettings',
       uiFlags: 'caseTickets/getSettingsUIFlags',
     }),
     isFetching() {
@@ -17,24 +24,53 @@ export default {
     isSaving() {
       return this.uiFlags.isSaving;
     },
+    reopenOnCustomerReply() {
+      return this.settings.reopen_on_customer_reply;
+    },
+    windowDirty() {
+      return (
+        Number(this.reopenWindowDraft) !== this.settings.reopen_window_days
+      );
+    },
+  },
+  watch: {
+    // Sincroniza el borrador cuando llegan los ajustes del servidor.
+    'settings.reopen_window_days': {
+      immediate: true,
+      handler(value) {
+        this.reopenWindowDraft = value;
+      },
+    },
   },
   mounted() {
     this.$store.dispatch('caseTickets/fetchSettings');
   },
   methods: {
-    async toggleItil() {
+    async save(payload, { revertKey } = {}) {
       try {
-        await this.$store.dispatch('caseTickets/updateSettings', {
-          itil_enabled: !this.itilEnabled,
-        });
+        await this.$store.dispatch('caseTickets/updateSettings', payload);
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.SETTINGS.SAVED'),
         });
       } catch (_e) {
+        if (revertKey === 'window') {
+          this.reopenWindowDraft = this.settings.reopen_window_days;
+        }
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.SETTINGS.SAVE_ERROR'),
         });
       }
+    },
+    toggleItil() {
+      this.save({ itil_enabled: !this.itilEnabled });
+    },
+    toggleReopenReply() {
+      this.save({ reopen_on_customer_reply: !this.reopenOnCustomerReply });
+    },
+    saveWindow() {
+      const days = Math.max(0, parseInt(this.reopenWindowDraft, 10) || 0);
+      this.reopenWindowDraft = days;
+      this.save({ reopen_window_days: days }, { revertKey: 'window' });
     },
   },
 };
@@ -111,6 +147,73 @@ export default {
       >
         <li>{{ $t('CASE_TICKETS.SETTINGS.NOTE_DATA') }}</li>
         <li>{{ $t('CASE_TICKETS.SETTINGS.NOTE_REVERSIBLE') }}</li>
+      </ul>
+
+      <!-- @tickets_cases paso 7 — reglas de reapertura de tickets cerrados -->
+      <h2
+        class="m-0 mt-6 mb-1 text-sm font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"
+      >
+        {{ $t('CASE_TICKETS.SETTINGS.REOPEN.SECTION') }}
+      </h2>
+
+      <div
+        class="flex items-start gap-4 p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+      >
+        <div class="flex-1">
+          <span
+            class="text-base font-semibold text-slate-800 dark:text-slate-100"
+          >
+            {{ $t('CASE_TICKETS.SETTINGS.REOPEN.WINDOW_TITLE') }}
+          </span>
+          <p class="mt-1 mb-0 text-sm text-slate-500 dark:text-slate-400">
+            {{ $t('CASE_TICKETS.SETTINGS.REOPEN.WINDOW_DESC') }}
+          </p>
+        </div>
+        <div class="flex items-center flex-shrink-0 gap-2">
+          <input
+            v-model.number="reopenWindowDraft"
+            type="number"
+            min="0"
+            class="w-20 h-9 !mb-0 text-sm text-center"
+          />
+          <span class="text-sm text-slate-500 dark:text-slate-400">{{
+            $t('CASE_TICKETS.SETTINGS.REOPEN.DAYS')
+          }}</span>
+          <woot-button
+            size="small"
+            :is-loading="isSaving"
+            :disabled="!windowDirty"
+            @click="saveWindow"
+          >
+            {{ $t('CASE_TICKETS.SETTINGS.REOPEN.SAVE') }}
+          </woot-button>
+        </div>
+      </div>
+
+      <div
+        class="flex items-start gap-4 p-4 mt-2 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+      >
+        <div class="flex-1">
+          <span
+            class="text-base font-semibold text-slate-800 dark:text-slate-100"
+          >
+            {{ $t('CASE_TICKETS.SETTINGS.REOPEN.ON_REPLY_TITLE') }}
+          </span>
+          <p class="mt-1 mb-0 text-sm text-slate-500 dark:text-slate-400">
+            {{ $t('CASE_TICKETS.SETTINGS.REOPEN.ON_REPLY_DESC') }}
+          </p>
+        </div>
+        <woot-switch
+          :value="reopenOnCustomerReply"
+          @input="toggleReopenReply"
+        />
+      </div>
+
+      <ul
+        class="mt-2 ml-1 text-xs list-disc list-inside text-slate-400 dark:text-slate-500"
+      >
+        <li>{{ $t('CASE_TICKETS.SETTINGS.REOPEN.NOTE_WINDOW') }}</li>
+        <li>{{ $t('CASE_TICKETS.SETTINGS.REOPEN.NOTE_SLA') }}</li>
       </ul>
     </div>
   </div>

@@ -95,9 +95,11 @@ const state = {
     isSaving: false,
     isDeleting: false,
   },
-  // Modo simple (osTicket) vs ITIL — ajustes del módulo
+  // Modo simple (osTicket) vs ITIL + reglas de reapertura — ajustes del módulo
   settings: {
     itil_enabled: false,
+    reopen_window_days: 30,
+    reopen_on_customer_reply: true,
   },
   settingsUiFlags: {
     isFetching: false,
@@ -196,9 +198,12 @@ export const getters = {
   getPortalsUIFlags(_state) {
     return _state.portalsUiFlags;
   },
-  // Modo simple/ITIL
+  // Modo simple/ITIL + reapertura
   getItilEnabled(_state) {
     return _state.settings.itil_enabled;
+  },
+  getCaseSettings(_state) {
+    return _state.settings;
   },
   getSettingsUIFlags(_state) {
     return _state.settingsUiFlags;

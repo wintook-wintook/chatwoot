@@ -58,12 +58,14 @@ tags: [tickets, pendiente, todo]
   el asignado dentro de la ventana de `reopen_window_days`, default 30), campos
   congelados **validados en el backend** (prioridad/vence/tipo/asignación y las
   tareas, salvo completar), notas internas permitidas siempre, SLA con reloj nuevo.
-- **Paso 5 — PENDIENTE**: el cliente responde por su canal → reabrir. Requiere
-  `CaseTicketListener` nuevo + registro en `async_dispatcher.rb`. Filtrar
-  `incoming` o el ticket reabrirá al escribir la respuesta del agente.
-- **Paso 6 — PENDIENTE**: marcar visualmente las notas posteriores al cierre.
-- **Paso 7 — PENDIENTE**: UI de ajustes por cuenta (`reopen_window_days`,
-  `reopen_on_customer_reply` ya existen en BD; hoy solo por consola).
+- ~~**Paso 5**~~ ✅ **hecho** — `CaseTicketListener` reabre por respuesta entrante
+  del cliente (dentro de ventana) o crea ticket de seguimiento (fuera); filtra
+  `incoming?`; envuelto en rescue para no tumbar la entrega del mensaje.
+- ~~**Paso 6**~~ ✅ **hecho** — badge "post-cierre" en la tabla de Notas y en el
+  Historial del Avance; `post_closure` se mide contra el PRIMER `closed` del
+  timeline (sobrevive a reaperturas).
+- ~~**Paso 7**~~ ✅ **hecho** — sección "Reapertura de tickets cerrados" en Ajustes
+  del módulo: ventana (0 = sin límite) + toggle de reapertura por respuesta.
 - **Decidido y no reabierto**: `custom_attributes` NO se congela (la guarda mira
   campo por campo) para no romper integraciones que solo escriben metadata.
 

@@ -620,7 +620,18 @@
       "MODE_ITIL_DESC": "Activa estados ITIL completos, matriz Impacto×Urgencia, naturaleza del ticket, problema/cambio y aprobaciones.",
       "NOTE_DATA": "No se borra ni modifica ningún dato: el modo solo cambia lo que se muestra.",
       "NOTE_REVERSIBLE": "Puedes cambiar de modo cuando quieras.",
-      "SAVED": "Ajustes guardados",
+            "REOPEN": {
+        "SECTION": "Reapertura de tickets cerrados",
+        "WINDOW_TITLE": "Ventana de reapertura",
+        "WINDOW_DESC": "Días desde el cierre en los que el agente asignado puede reabrir. Pasado ese plazo, solo un administrador. Usa 0 para no poner límite.",
+        "DAYS": "días",
+        "SAVE": "Guardar",
+        "ON_REPLY_TITLE": "Reabrir si el cliente responde",
+        "ON_REPLY_DESC": "Si el cliente escribe por su canal sobre un ticket cerrado, se reabre solo (o se crea uno de seguimiento si venció la ventana).",
+        "NOTE_WINDOW": "El administrador puede reabrir siempre, aunque haya vencido la ventana.",
+        "NOTE_SLA": "Al reabrir, el SLA vuelve a contar desde cero."
+      },
+"SAVED": "Ajustes guardados",
       "SAVE_ERROR": "No se pudieron guardar los ajustes."
     },
     "PORTALS": {

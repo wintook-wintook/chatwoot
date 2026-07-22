@@ -27,10 +27,17 @@ class Api::V1::Accounts::CaseSettingsController < Api::V1::Accounts::BaseControl
   end
 
   def setting_params
-    params.require(:case_setting).permit(:itil_enabled)
+    permitted = params.require(:case_setting).permit(:itil_enabled, :reopen_window_days, :reopen_on_customer_reply)
+    # La ventana no puede ser negativa; 0 = sin límite.
+    permitted[:reopen_window_days] = [permitted[:reopen_window_days].to_i, 0].max if permitted.key?(:reopen_window_days)
+    permitted
   end
 
   def setting_json
-    { itil_enabled: @setting.itil_enabled }
+    {
+      itil_enabled:             @setting.itil_enabled,
+      reopen_window_days:       @setting.reopen_window_days,
+      reopen_on_customer_reply: @setting.reopen_on_customer_reply
+    }
   end
 end

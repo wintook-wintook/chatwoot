@@ -1,9 +1,8 @@
 # Plan — Reglas del ticket cerrado
 
-> Estado: ✅ **Pasos 1–4 implementados y verificados** (2026-07-22).
-> Pendientes los pasos 5 (listener de respuesta del cliente), 6 (marca de notas
-> post-cierre) y 7 (ajustes de cuenta en la UI: las columnas existen, hoy solo
-> se cambian por consola).
+> Estado: ✅ **Pasos 1–7 completos (todo el plan) y verificados** (2026-07-22).
+> Paso 6: `post_closure` se mide contra el PRIMER evento `closed` del timeline
+> (no contra `closed_at`, que se borra al reabrir), así sobrevive a los ciclos.
 > ⚠️ Trampa: el icono `arrow-counterclockwise` NO existe en el set de Fluent;
 > el nombre real es `arrow-rotate-counter-clockwise`.
 > ⚠️ Trampa: tras `reopenTicket` hay que llamar a `refetch()` en la vista, como
