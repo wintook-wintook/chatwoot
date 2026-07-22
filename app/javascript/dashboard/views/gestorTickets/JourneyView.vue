@@ -223,6 +223,14 @@ export default {
     hasJourney() {
       return this.journeyNodes.length > 0;
     },
+    // @tickets_cases paso 6 — timestamp del primer cierre (ms), para marcar las
+    // notas posteriores. null si el ticket nunca se cerró.
+    firstClosedAt() {
+      const times = this.events
+        .filter(e => e.event_type === 'closed')
+        .map(e => new Date(e.created_at).getTime());
+      return times.length ? Math.min(...times) : null;
+    },
   },
   watch: {
     // Abrir otro ticket vuelve a Recorrido: el componente se reutiliza sin
@@ -267,6 +275,16 @@ export default {
     isNote(event) {
       return (
         event.event_type === 'internal_note' && !!(event.payload || {}).content
+      );
+    },
+    // @tickets_cases paso 6 — nota escrita después de que el ticket se cerró
+    // alguna vez (sobrevive a los ciclos de reapertura: se mide contra el
+    // PRIMER cierre).
+    isPostClosureNote(event) {
+      return (
+        this.isNote(event) &&
+        this.firstClosedAt &&
+        new Date(event.created_at).getTime() > this.firstClosedAt
       );
     },
     eventLabel(event) {
@@ -511,6 +529,12 @@ export default {
                 class="m-0 text-sm font-medium text-amber-800 dark:text-amber-200"
               >
                 {{ eventLabel(event) }}
+                <span
+                  v-if="isPostClosureNote(event)"
+                  class="ml-1 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded bg-amber-200 text-amber-900 dark:bg-amber-800/60 dark:text-amber-200"
+                  :title="$t('CASE_TICKETS.NOTES.POST_CLOSURE_HINT')"
+                  >{{ $t('CASE_TICKETS.NOTES.POST_CLOSURE') }}</span
+                >
               </p>
               <p
                 class="mt-0.5 m-0 text-sm whitespace-pre-line text-slate-700 dark:text-slate-200"

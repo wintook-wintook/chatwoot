@@ -430,6 +430,8 @@
       "MODAL_EDIT_TITLE": "Editar nota interna",
       "MODAL_VIEW_TITLE": "Ver nota interna",
       "VIEW": "Ver nota",
+      "POST_CLOSURE": "post-cierre",
+      "POST_CLOSURE_HINT": "Escrita después de que el ticket se cerró.",
       "CLOSE": "Cerrar",
       "EDIT": "Editar",
       "DELETE": "Eliminar",

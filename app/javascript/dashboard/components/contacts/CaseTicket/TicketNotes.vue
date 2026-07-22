@@ -59,6 +59,14 @@ export default {
                 class="m-0 text-sm truncate text-slate-800 dark:text-slate-100"
                 title={row.content}
               >
+                {row.post_closure ? (
+                  <span
+                    class="inline-block mr-2 px-1.5 py-0.5 align-middle text-[10px] font-medium uppercase tracking-wide rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                    title={this.$t('CASE_TICKETS.NOTES.POST_CLOSURE_HINT')}
+                  >
+                    {this.$t('CASE_TICKETS.NOTES.POST_CLOSURE')}
+                  </span>
+                ) : null}
                 {row.content}
               </p>
               {row.edited_at ? (

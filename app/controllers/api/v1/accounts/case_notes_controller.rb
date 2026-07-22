@@ -86,13 +86,25 @@ class Api::V1::Accounts::CaseNotesController < Api::V1::Accounts::BaseController
   def note_json(note)
     payload = note.payload || {}
     {
-      id:         note.id,
-      content:    payload['content'],
-      actor:      ref_user(note.actor),
-      created_at: note.created_at,
-      edited_at:  payload['edited_at'],
-      edited_by:  payload['edited_by']
+      id:           note.id,
+      content:      payload['content'],
+      actor:        ref_user(note.actor),
+      created_at:   note.created_at,
+      edited_at:    payload['edited_at'],
+      edited_by:    payload['edited_by'],
+      # @tickets_cases — nota escrita después de que el ticket se cerró alguna
+      # vez (paso 6): distingue lo que se supo durante la atención de lo que
+      # llegó después. Se compara contra el PRIMER cierre para que sobreviva a
+      # los ciclos de reapertura.
+      post_closure: first_closed_at.present? && note.created_at > first_closed_at
     }
+  end
+
+  # Memoizado: una sola consulta para todas las notas del listado.
+  def first_closed_at
+    return @first_closed_at if defined?(@first_closed_at)
+
+    @first_closed_at = @ticket.case_events.where(event_type: :closed).minimum(:created_at)
   end
 
   def ref_user(user)
