@@ -1413,8 +1413,10 @@ export default {
               {{ $t('CASE_TICKETS.RELATIONS.ADD') }}
             </woot-button>
 
-            <!-- @tickets_cases — bitácora: nota interna (no visible al cliente) -->
+            <!-- @tickets_cases — bitácora: nota interna (no visible al cliente).
+                 En un ticket cerrado no se ofrece: cerrado = solo lectura. -->
             <woot-button
+              v-if="!isFrozen"
               size="small"
               variant="smooth"
               color-scheme="secondary"
@@ -2339,6 +2341,7 @@ export default {
         v-show="currentTabKey === 'notes'"
         :key="`notes-${ticket.id}`"
         :ticket-id="ticket.id"
+        :is-frozen="isFrozen"
         class="flex-1 min-h-0"
         @count="noteCount = $event"
         @changed="reloadEvents"
@@ -2349,6 +2352,7 @@ export default {
         v-show="currentTabKey === 'tasks'"
         :key="`tasks-${ticket.id}`"
         :ticket-id="ticket.id"
+        :is-frozen="isFrozen"
         class="flex-1 min-h-0"
         @count="taskCount = $event"
       />

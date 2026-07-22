@@ -15,6 +15,9 @@ export default {
   components: { VeTable, TableFooter },
   props: {
     ticketId: { type: [Number, String], required: true },
+    // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
+    // ofrecer botones que el backend va a rechazar con 422.
+    isFrozen: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -94,26 +97,28 @@ export default {
           title: '',
           width: 90,
           align: 'left',
-          renderBodyCell: ({ row }) => (
-            <div class="button-wrapper">
-              <woot-button
-                size="tiny"
-                variant="clear"
-                color-scheme="secondary"
-                icon="edit"
-                title={this.$t('CASE_TICKETS.NOTES.EDIT')}
-                onClick={() => this.openEdit(row)}
-              />
-              <woot-button
-                size="tiny"
-                variant="clear"
-                color-scheme="alert"
-                icon="delete"
-                title={this.$t('CASE_TICKETS.NOTES.DELETE')}
-                onClick={() => this.remove(row)}
-              />
-            </div>
-          ),
+          // Cerrado = solo lectura: sin editar ni borrar.
+          renderBodyCell: ({ row }) =>
+            this.isFrozen ? null : (
+              <div class="button-wrapper">
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="edit"
+                  title={this.$t('CASE_TICKETS.NOTES.EDIT')}
+                  onClick={() => this.openEdit(row)}
+                />
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="alert"
+                  icon="delete"
+                  title={this.$t('CASE_TICKETS.NOTES.DELETE')}
+                  onClick={() => this.remove(row)}
+                />
+              </div>
+            ),
         },
       ];
     },
@@ -228,7 +233,7 @@ export default {
           >{{ notes.length }}</span
         >
       </h3>
-      <woot-button size="small" icon="add" @click="openCreate">
+      <woot-button v-if="!isFrozen" size="small" icon="add" @click="openCreate">
         {{ $t('CASE_TICKETS.NOTES.ADD_NEW') }}
       </woot-button>
     </div>

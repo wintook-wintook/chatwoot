@@ -15,7 +15,11 @@
 # ================================================================================
 
 class Api::V1::Accounts::CaseNotesController < Api::V1::Accounts::BaseController
+  FROZEN_MSG = 'Ticket cerrado: no se pueden agregar ni editar notas. Reábrelo si necesitas registrar algo.'
+
   before_action :set_ticket
+  # Cerrado = solo lectura. `index` queda fuera: consultar siempre se puede.
+  before_action :block_if_frozen, only: %i[create update destroy]
   before_action :set_note, only: %i[update destroy]
 
   def index
@@ -49,6 +53,12 @@ class Api::V1::Accounts::CaseNotesController < Api::V1::Accounts::BaseController
   end
 
   private
+
+  def block_if_frozen
+    return unless @ticket&.frozen_for_edit?
+
+    render json: { error: FROZEN_MSG }, status: :unprocessable_entity
+  end
 
   def set_ticket
     @ticket = Current.account.case_tickets.find(params[:case_ticket_id])
