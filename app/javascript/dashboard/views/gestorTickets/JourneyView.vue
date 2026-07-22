@@ -10,6 +10,10 @@
 <script>
 const STORAGE_KEY = 'gestorTickets.journeyView';
 
+// Vistas con botón en la cabecera. 'stepper' (Ciclo de vida) sigue existiendo en
+// el template pero ya no se ofrece: el Recorrido cubre lo mismo.
+const VISIBLE_VIEWS = ['diagram', 'timeline'];
+
 // Estados del ciclo de vida principal, en orden (espina del recorrido / stepper).
 const LIFECYCLE = [
   'open',
@@ -71,8 +75,13 @@ export default {
   },
   data() {
     return {
-      view: localStorage.getItem(STORAGE_KEY) || 'diagram',
-      views: ['diagram', 'timeline', 'stepper'],
+      // @tickets_cases — 'stepper' (Ciclo de vida) queda oculto: el Recorrido ya
+      // cuenta lo mismo con más detalle. Si quedó guardado en localStorage de
+      // antes, se cae a 'diagram' para no dejar al usuario en una vista sin botón.
+      view: VISIBLE_VIEWS.includes(localStorage.getItem(STORAGE_KEY))
+        ? localStorage.getItem(STORAGE_KEY)
+        : 'diagram',
+      views: VISIBLE_VIEWS,
       viewIcons: {
         diagram: 'navigation',
         timeline: 'document-list-clock',
