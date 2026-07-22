@@ -201,6 +201,7 @@
       "ADD": "Nueva tarea",
       "EDIT": "Editar",
       "DELETE": "Eliminar",
+      "VIEW": "Ver tarea",
       "TOGGLE": "Marcar como completada",
       "TABLE": {
         "TASK": "Tarea",
@@ -211,13 +212,15 @@
       "MODAL": {
         "NEW_TITLE": "Nueva tarea",
         "EDIT_TITLE": "Editar tarea",
+        "VIEW_TITLE": "Ver tarea",
         "TITLE_LABEL": "Título",
         "DESCRIPTION_LABEL": "Descripción (opcional)",
         "DESCRIPTION_PLACEHOLDER": "Detalle de lo que hay que hacer...",
         "ASSIGNEE_LABEL": "Responsable",
         "DUE_LABEL": "Vence",
         "SAVE": "Guardar",
-        "CANCEL": "Cancelar"
+        "CANCEL": "Cancelar",
+        "CLOSE": "Cerrar"
       }
     },
     "MODAL": {
@@ -425,6 +428,9 @@
       "LOADING": "Cargando notas...",
       "EMPTY": "Sin notas. Deja constancia de lo que vas haciendo en el ticket.",
       "MODAL_EDIT_TITLE": "Editar nota interna",
+      "MODAL_VIEW_TITLE": "Ver nota interna",
+      "VIEW": "Ver nota",
+      "CLOSE": "Cerrar",
       "EDIT": "Editar",
       "DELETE": "Eliminar",
       "EDITED": "Editada el {date} por {name}",

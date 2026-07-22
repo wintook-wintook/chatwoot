@@ -28,6 +28,7 @@ export default {
       perPage: PER_PAGE,
       showModal: false,
       editingId: null,
+      viewing: false, // modal en modo lectura (ticket cerrado)
       form: { content: '' },
     };
   },
@@ -97,9 +98,21 @@ export default {
           title: '',
           width: 90,
           align: 'left',
-          // Cerrado = solo lectura: sin editar ni borrar.
+          // Cerrado: solo se puede ABRIR la nota para ver el detalle completo
+          // (la tabla la recorta), pero no editarla ni borrarla.
           renderBodyCell: ({ row }) =>
-            this.isFrozen ? null : (
+            this.isFrozen ? (
+              <div class="button-wrapper">
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="eye-show"
+                  title={this.$t('CASE_TICKETS.NOTES.VIEW')}
+                  onClick={() => this.openView(row)}
+                />
+              </div>
+            ) : (
               <div class="button-wrapper">
                 <woot-button
                   size="tiny"
@@ -151,15 +164,24 @@ export default {
     },
     openCreate() {
       this.editingId = null;
+      this.viewing = false;
       this.form = { content: '' };
       this.showModal = true;
       this.$nextTick(() => this.$refs.contentInput?.focus());
     },
     openEdit(note) {
       this.editingId = note.id;
+      this.viewing = false;
       this.form = { content: note.content || '' };
       this.showModal = true;
       this.$nextTick(() => this.$refs.contentInput?.focus());
+    },
+    // Ticket cerrado: abre la nota en modo lectura (ver el detalle, no cambiarlo).
+    openView(note) {
+      this.editingId = note.id;
+      this.viewing = true;
+      this.form = { content: note.content || '' };
+      this.showModal = true;
     },
     async submitForm() {
       const content = this.form.content.trim();
@@ -277,7 +299,9 @@ export default {
       <div class="flex flex-col h-auto overflow-auto">
         <woot-modal-header
           :header-title="
-            isEditing
+            viewing
+              ? $t('CASE_TICKETS.NOTES.MODAL_VIEW_TITLE')
+              : isEditing
               ? $t('CASE_TICKETS.NOTES.MODAL_EDIT_TITLE')
               : $t('CASE_TICKETS.NOTES.MODAL_TITLE')
           "
@@ -295,12 +319,14 @@ export default {
               ref="contentInput"
               v-model="form.content"
               rows="12"
-              class="min-h-[16rem] resize-y"
+              class="min-h-[16rem] resize-y read-only:opacity-70 read-only:cursor-default"
+              :readonly="viewing"
               :placeholder="$t('CASE_TICKETS.NOTES.PLACEHOLDER')"
             />
           </label>
 
           <p
+            v-if="!viewing"
             class="flex items-center gap-1 m-0 text-xs text-amber-700 dark:text-amber-300"
           >
             <fluent-icon icon="info" size="14" />
@@ -313,9 +339,14 @@ export default {
               type="button"
               @click="showModal = false"
             >
-              {{ $t('CASE_TICKETS.NOTES.CANCEL') }}
+              {{
+                viewing
+                  ? $t('CASE_TICKETS.NOTES.CLOSE')
+                  : $t('CASE_TICKETS.NOTES.CANCEL')
+              }}
             </woot-button>
             <woot-button
+              v-if="!viewing"
               :is-loading="isSaving"
               :disabled="!form.content.trim()"
               type="submit"

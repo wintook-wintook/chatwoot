@@ -33,6 +33,7 @@ export default {
       // Modal de alta/edición
       showModal: false,
       editingId: null,
+      viewing: false, // modal en modo lectura (ticket cerrado)
       form: { title: '', description: '', assignee_id: '', due_at: '' },
     };
   },
@@ -158,9 +159,21 @@ export default {
           title: '',
           width: 90,
           align: 'left',
-          // Cerrado = solo lectura: sin editar ni borrar.
+          // Cerrado: solo se puede ABRIR la tarea para ver su detalle, no
+          // editarla ni borrarla.
           renderBodyCell: ({ row }) =>
-            this.isFrozen ? null : (
+            this.isFrozen ? (
+              <div class="button-wrapper">
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="eye-show"
+                  title={this.$t('CASE_TICKETS.TASKS.VIEW')}
+                  onClick={() => this.openView(row)}
+                />
+              </div>
+            ) : (
               <div class="button-wrapper">
                 <woot-button
                   size="tiny"
@@ -214,20 +227,32 @@ export default {
     },
     openCreate() {
       this.editingId = null;
+      this.viewing = false;
       this.form = { title: '', description: '', assignee_id: '', due_at: '' };
       this.showModal = true;
       this.$nextTick(() => this.$refs.titleInput?.focus());
     },
     openEdit(task) {
       this.editingId = task.id;
+      this.viewing = false;
+      this.loadForm(task);
+      this.showModal = true;
+      this.$nextTick(() => this.$refs.titleInput?.focus());
+    },
+    // Ticket cerrado: abre la tarea en modo lectura (ver el detalle, no cambiarlo).
+    openView(task) {
+      this.editingId = task.id;
+      this.viewing = true;
+      this.loadForm(task);
+      this.showModal = true;
+    },
+    loadForm(task) {
       this.form = {
         title: task.title || '',
         description: task.description || '',
         assignee_id: task.assignee_id || '',
         due_at: this.toInputDate(task.due_at),
       };
-      this.showModal = true;
-      this.$nextTick(() => this.$refs.titleInput?.focus());
     },
     async submitForm() {
       const title = this.form.title.trim();
@@ -374,7 +399,9 @@ export default {
       <div class="flex flex-col h-auto overflow-auto">
         <woot-modal-header
           :header-title="
-            isEditing
+            viewing
+              ? $t('CASE_TICKETS.TASKS.MODAL.VIEW_TITLE')
+              : isEditing
               ? $t('CASE_TICKETS.TASKS.MODAL.EDIT_TITLE')
               : $t('CASE_TICKETS.TASKS.MODAL.NEW_TITLE')
           "
@@ -393,6 +420,8 @@ export default {
               v-model="form.title"
               type="text"
               maxlength="255"
+              :readonly="viewing"
+              class="read-only:opacity-70 read-only:cursor-default"
               :placeholder="$t('CASE_TICKETS.TASKS.ADD_PLACEHOLDER')"
             />
           </label>
@@ -404,6 +433,8 @@ export default {
             <textarea
               v-model="form.description"
               rows="3"
+              :readonly="viewing"
+              class="read-only:opacity-70 read-only:cursor-default"
               :placeholder="
                 $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_PLACEHOLDER')
               "
@@ -415,7 +446,7 @@ export default {
               <span class="text-sm text-slate-700 dark:text-slate-200">{{
                 $t('CASE_TICKETS.TASKS.MODAL.ASSIGNEE_LABEL')
               }}</span>
-              <select v-model="form.assignee_id">
+              <select v-model="form.assignee_id" :disabled="viewing">
                 <option value="">
                   {{ $t('CASE_TICKETS.TASKS.UNASSIGNED') }}
                 </option>
@@ -432,6 +463,7 @@ export default {
               <input
                 v-model="form.due_at"
                 type="datetime-local"
+                :readonly="viewing"
                 class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
               />
             </label>
@@ -443,9 +475,14 @@ export default {
               type="button"
               @click="showModal = false"
             >
-              {{ $t('CASE_TICKETS.TASKS.MODAL.CANCEL') }}
+              {{
+                viewing
+                  ? $t('CASE_TICKETS.TASKS.MODAL.CLOSE')
+                  : $t('CASE_TICKETS.TASKS.MODAL.CANCEL')
+              }}
             </woot-button>
             <woot-button
+              v-if="!viewing"
               :is-loading="isSaving"
               :disabled="!form.title.trim()"
               type="submit"

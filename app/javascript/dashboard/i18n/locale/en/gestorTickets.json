@@ -201,6 +201,7 @@
       "ADD": "New task",
       "EDIT": "Edit",
       "DELETE": "Delete",
+      "VIEW": "View task",
       "TOGGLE": "Mark as completed",
       "TABLE": {
         "TASK": "Task",
@@ -211,13 +212,15 @@
       "MODAL": {
         "NEW_TITLE": "New task",
         "EDIT_TITLE": "Edit task",
+        "VIEW_TITLE": "View task",
         "TITLE_LABEL": "Title",
         "DESCRIPTION_LABEL": "Description (optional)",
         "DESCRIPTION_PLACEHOLDER": "Details of what needs to be done...",
         "ASSIGNEE_LABEL": "Assignee",
         "DUE_LABEL": "Due",
         "SAVE": "Save",
-        "CANCEL": "Cancel"
+        "CANCEL": "Cancel",
+        "CLOSE": "Close"
       }
     },
     "MODAL": {
@@ -425,6 +428,9 @@
       "LOADING": "Loading notes...",
       "EMPTY": "No notes yet. Keep a record of what you do on this ticket.",
       "MODAL_EDIT_TITLE": "Edit internal note",
+      "MODAL_VIEW_TITLE": "View internal note",
+      "VIEW": "View note",
+      "CLOSE": "Close",
       "EDIT": "Edit",
       "DELETE": "Delete",
       "EDITED": "Edited on {date} by {name}",
