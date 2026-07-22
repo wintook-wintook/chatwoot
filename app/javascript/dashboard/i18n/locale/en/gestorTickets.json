@@ -197,7 +197,27 @@
       "EMPTY": "No tasks yet. Add steps to resolve this ticket.",
       "UNASSIGNED": "Unassigned",
       "ADD_PLACEHOLDER": "New task...",
-      "ADD": "Add"
+      "ADD": "New task",
+      "EDIT": "Edit",
+      "DELETE": "Delete",
+      "TOGGLE": "Mark as completed",
+      "TABLE": {
+        "TASK": "Task",
+        "ASSIGNEE": "Assignee",
+        "DUE": "Due",
+        "COMPLETED": "Completed"
+      },
+      "MODAL": {
+        "NEW_TITLE": "New task",
+        "EDIT_TITLE": "Edit task",
+        "TITLE_LABEL": "Title",
+        "DESCRIPTION_LABEL": "Description (optional)",
+        "DESCRIPTION_PLACEHOLDER": "Details of what needs to be done...",
+        "ASSIGNEE_LABEL": "Assignee",
+        "DUE_LABEL": "Due",
+        "SAVE": "Save",
+        "CANCEL": "Cancel"
+      }
     },
     "MODAL": {
       "TITLE_CREATE": "Create ticket",

@@ -2287,6 +2287,7 @@ export default {
         v-show="currentTabKey === 'tasks'"
         :key="`tasks-${ticket.id}`"
         :ticket-id="ticket.id"
+        class="flex-1 min-h-0"
         @count="taskCount = $event"
       />
 

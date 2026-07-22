@@ -197,7 +197,27 @@
       "EMPTY": "Sin tareas. Agrega pasos para resolver este ticket.",
       "UNASSIGNED": "Sin asignar",
       "ADD_PLACEHOLDER": "Nueva tarea...",
-      "ADD": "Agregar"
+      "ADD": "Nueva tarea",
+      "EDIT": "Editar",
+      "DELETE": "Eliminar",
+      "TOGGLE": "Marcar como completada",
+      "TABLE": {
+        "TASK": "Tarea",
+        "ASSIGNEE": "Responsable",
+        "DUE": "Vence",
+        "COMPLETED": "Completada"
+      },
+      "MODAL": {
+        "NEW_TITLE": "Nueva tarea",
+        "EDIT_TITLE": "Editar tarea",
+        "TITLE_LABEL": "Título",
+        "DESCRIPTION_LABEL": "Descripción (opcional)",
+        "DESCRIPTION_PLACEHOLDER": "Detalle de lo que hay que hacer...",
+        "ASSIGNEE_LABEL": "Responsable",
+        "DUE_LABEL": "Vence",
+        "SAVE": "Guardar",
+        "CANCEL": "Cancelar"
+      }
     },
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",

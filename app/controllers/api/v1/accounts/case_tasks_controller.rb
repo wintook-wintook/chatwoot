@@ -56,7 +56,7 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   end
 
   def task_params
-    permitted = params.require(:case_task).permit(:title, :status, :assignee_id, :due_at, :position)
+    permitted = params.require(:case_task).permit(:title, :description, :status, :assignee_id, :due_at, :position)
     # El asignado debe ser un usuario de la cuenta (si no, queda sin asignar).
     if permitted.key?(:assignee_id)
       permitted[:assignee_id] = Current.account.users.where(id: permitted[:assignee_id]).pick(:id)
@@ -66,14 +66,18 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
 
   def task_json(task)
     {
-      id:          task.id,
-      title:       task.title,
-      status:      task.status,
-      assignee_id: task.assignee_id,
-      assignee:    ref_user(task.assignee),
-      due_at:      task.due_at,
-      position:    task.position,
-      created_at:  task.created_at
+      id:           task.id,
+      title:        task.title,
+      description:  task.description,
+      status:       task.status,
+      assignee_id:  task.assignee_id,
+      assignee:     ref_user(task.assignee),
+      due_at:       task.due_at,
+      position:     task.position,
+      created_at:   task.created_at,
+      # @tickets_cases P4 — firma de completado (quién y cuándo).
+      completed_at: task.completed_at,
+      completed_by: ref_user(task.completed_by)
     }
   end
 
