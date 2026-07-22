@@ -15,9 +15,6 @@ import {
   toSimpleStatus,
 } from '../../helper/caseSimpleStatus';
 
-// @tickets_cases — pestaña activa del detalle, recordada por usuario.
-const DETAIL_TAB_KEY = 'gestorTickets.detailTab';
-
 export default {
   name: 'TicketDetail',
   components: {
@@ -33,7 +30,10 @@ export default {
   data() {
     return {
       // @tickets_cases — pestaña activa del detalle (Resumen / Avance / IA).
-      activeDetailTab: localStorage.getItem(DETAIL_TAB_KEY) || 'journey',
+      // @tickets_cases — al abrir un ticket SIEMPRE se arranca en Avance.
+      // Antes se recordaba la última pestaña en localStorage y podías caer en
+      // Tareas o Notas de otro ticket sin haber visto el estado del actual.
+      activeDetailTab: 'journey',
       lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
       showTransitionMenu: false,
       showPriorityMenu: false, // @tickets_cases P1 — prioridad inline
@@ -408,6 +408,8 @@ export default {
   },
   watch: {
     ticketId() {
+      // Cambiar de ticket es abrir un ticket: vuelve a Avance.
+      this.activeDetailTab = 'journey';
       this.loadTicket();
     },
   },
@@ -443,7 +445,6 @@ export default {
       const tab = this.detailTabs[index];
       if (!tab) return;
       this.activeDetailTab = tab.key;
-      localStorage.setItem(DETAIL_TAB_KEY, tab.key);
     },
     loadTicket() {
       if (!this.ticket) {
@@ -590,7 +591,6 @@ export default {
       const text = this.replySuggestion?.reply;
       if (!text) return;
       this.activeDetailTab = 'detail';
-      localStorage.setItem(DETAIL_TAB_KEY, 'detail');
       this.$nextTick(() => this.$refs.ticketConversation?.setReply(text));
     },
     // @tickets_cases 3E — generar resumen + causa raíz
@@ -1004,7 +1004,6 @@ export default {
     // creada desde aquí no refrescaba la tabla de Notas.
     openNoteModal() {
       this.activeDetailTab = 'notes';
-      localStorage.setItem(DETAIL_TAB_KEY, 'notes');
       this.$nextTick(() => this.$refs.ticketNotes?.openCreate());
     },
     // @tickets_cases 2E — relaciones entre tickets
