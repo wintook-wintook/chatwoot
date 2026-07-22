@@ -1,15 +1,13 @@
 <!--
   @tickets_cases 2L
-  Visualización del avance del ticket con 3 vistas conmutables (preferencia por
-  usuario en localStorage). Las tres leen los mismos case_events (from/to del
+  Visualización del avance del ticket con vistas conmutables. Siempre arranca en
+  Recorrido. Las dos leen los mismos case_events (from/to del
   payload, actor, reason, timestamp) → sin backend nuevo.
     - diagram  → Diagrama de recorrido (default): espina vertical del camino real.
     - timeline → Historial cronológico clásico.
     - stepper  → Ciclo de vida horizontal compacto.
 -->
 <script>
-const STORAGE_KEY = 'gestorTickets.journeyView';
-
 // Vistas con botón en la cabecera. 'stepper' (Ciclo de vida) sigue existiendo en
 // el template pero ya no se ofrece: el Recorrido cubre lo mismo.
 const VISIBLE_VIEWS = ['diagram', 'timeline'];
@@ -75,12 +73,11 @@ export default {
   },
   data() {
     return {
-      // @tickets_cases — 'stepper' (Ciclo de vida) queda oculto: el Recorrido ya
-      // cuenta lo mismo con más detalle. Si quedó guardado en localStorage de
-      // antes, se cae a 'diagram' para no dejar al usuario en una vista sin botón.
-      view: VISIBLE_VIEWS.includes(localStorage.getItem(STORAGE_KEY))
-        ? localStorage.getItem(STORAGE_KEY)
-        : 'diagram',
+      // @tickets_cases — siempre se arranca en Recorrido. Antes se recordaba la
+      // última vista en localStorage y podías abrir un ticket directamente en
+      // Historial. 'stepper' (Ciclo de vida) sigue en el template pero no se
+      // ofrece: el Recorrido cuenta lo mismo con más detalle.
+      view: 'diagram',
       views: VISIBLE_VIEWS,
       viewIcons: {
         diagram: 'navigation',
@@ -227,10 +224,16 @@ export default {
       return this.journeyNodes.length > 0;
     },
   },
+  watch: {
+    // Abrir otro ticket vuelve a Recorrido: el componente se reutiliza sin
+    // remontarse, así que el valor inicial no se reevalúa solo.
+    'ticket.id'() {
+      this.view = 'diagram';
+    },
+  },
   methods: {
     setView(v) {
       this.view = v;
-      localStorage.setItem(STORAGE_KEY, v);
     },
     statusLabel(key) {
       // $t devuelve la ruta cruda si falta la traducción; con $te caemos al valor.
