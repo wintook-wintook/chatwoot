@@ -152,6 +152,7 @@ Rails.application.routes.draw do
               post :follow_up # @tickets_cases 3F
               patch :lock   # @tickets_cases — bloqueo de ticket
               patch :unlock # @tickets_cases — bloqueo de ticket
+              patch :reopen # @tickets_cases — reapertura de ticket cerrado
             end
             resources :case_events, only: [:index]
             # @tickets_cases 2E — relaciones entre tickets

@@ -53,6 +53,20 @@ tags: [tickets, pendiente, todo]
   - **Pendiente**: 👥 colaboradores/CC (modelo nuevo, esfuerzo BAJO — hay backend a medias **sin commitear** en `feat/tickets`) · 🖨️ imprimir (vista imprimible ficha+hilo, BAJO).
   - ~~📄 **notas internas (bitácora)**~~ ✅ **hecho** (ver [[Plan-Notas-Internas]] y el changelog). Incluye la **Fase 2** (motivo opcional al Cambiar estado). **Pendiente de esa función**: editar/borrar notas; adjuntos y menciones en la nota; motivo también en los modales de Cerrar y de Resolver-problema (hoy solo en el camino simple).
 
+### Ticket cerrado (ver [[Plan-Ticket-Cerrado]])
+- ~~**Pasos 1–4**~~ ✅ **hecho** — reapertura con motivo obligatorio (admin siempre;
+  el asignado dentro de la ventana de `reopen_window_days`, default 30), campos
+  congelados **validados en el backend** (prioridad/vence/tipo/asignación y las
+  tareas, salvo completar), notas internas permitidas siempre, SLA con reloj nuevo.
+- **Paso 5 — PENDIENTE**: el cliente responde por su canal → reabrir. Requiere
+  `CaseTicketListener` nuevo + registro en `async_dispatcher.rb`. Filtrar
+  `incoming` o el ticket reabrirá al escribir la respuesta del agente.
+- **Paso 6 — PENDIENTE**: marcar visualmente las notas posteriores al cierre.
+- **Paso 7 — PENDIENTE**: UI de ajustes por cuenta (`reopen_window_days`,
+  `reopen_on_customer_reply` ya existen en BD; hoy solo por consola).
+- **Decidido y no reabierto**: `custom_attributes` NO se congela (la guarda mira
+  campo por campo) para no romper integraciones que solo escriben metadata.
+
 ### Widget embebible — PENDIENTE (ver [[Plan-Widget-Embebible]])
 - Launcher JS + iframe para capturar tickets desde la web del cliente, reusando el User Portal.
 - Incluye una corrección de seguridad: `X-Frame-Options: ALLOWALL` global (`config/application.rb:58`, heredado del fork en `fd22446c`) → `frame-ancestors` por portal.

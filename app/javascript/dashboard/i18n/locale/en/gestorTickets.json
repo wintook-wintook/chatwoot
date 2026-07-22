@@ -398,6 +398,18 @@
         "rejected": "Rejected"
       }
     },
+    "REOPEN": {
+      "BUTTON": "Reopen",
+      "MODAL_TITLE": "Reopen ticket",
+      "REASON_LABEL": "Reason for reopening",
+      "REASON_PLACEHOLDER": "Why is it being reopened? E.g. the customer reports it failed again.",
+      "HINT": "Recorded in the Journey. The SLA clock restarts from zero.",
+      "CONFIRM": "Reopen ticket",
+      "CANCEL": "Cancel",
+      "SUCCESS": "Ticket reopened",
+      "ERROR": "Could not reopen the ticket",
+      "FROZEN_HINT": "Ticket closed: reopen it to edit."
+    },
     "NOTES": {
       "ADD": "Note",
       "MODAL_TITLE": "New internal note",

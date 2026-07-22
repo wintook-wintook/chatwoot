@@ -10,6 +10,8 @@
 # ================================================================================
 
 class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
+  FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las tareas.'
+
   before_action :set_ticket
   before_action :set_task, only: %i[update destroy]
 
@@ -18,6 +20,8 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   end
 
   def create
+    return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if @ticket.frozen_for_edit?
+
     task = @ticket.case_tasks.build(task_params)
     task.account = Current.account
     task.position ||= @ticket.case_tasks.count
@@ -29,6 +33,13 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   end
 
   def update
+    # En un ticket cerrado solo se permite marcar/desmarcar el estado de una
+    # tarea que quedó abierta: cerrar el ticket no debe obligar a mentir sobre
+    # lo que sí se hizo. Editar título, responsable o fecha ya no.
+    if @ticket.frozen_for_edit? && (task_params.keys - ['status']).any?
+      return render json: { error: FROZEN_MSG }, status: :unprocessable_entity
+    end
+
     if @task.update(task_params)
       render json: { case_task: task_json(@task) }
     else
@@ -37,6 +48,8 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   end
 
   def destroy
+    return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if @ticket.frozen_for_edit?
+
     @task.destroy
     head :no_content
   end

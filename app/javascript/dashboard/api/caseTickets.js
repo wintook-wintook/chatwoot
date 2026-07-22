@@ -38,6 +38,11 @@ class CaseTicketsAPI extends ApiClient {
     return axios.patch(`${this.url}/${ticketId}/escalate`, params);
   }
 
+  // @tickets_cases — reapertura de un ticket cerrado (motivo obligatorio)
+  reopen(ticketId, reason) {
+    return axios.patch(`${this.url}/${ticketId}/reopen`, { reason });
+  }
+
   getMetrics(params = {}) {
     return axios.get(`${this.url}/metrics`, { params });
   }

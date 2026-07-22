@@ -4,11 +4,13 @@
 #
 # Table name: case_settings
 #
-#  id           :bigint           not null, primary key
-#  itil_enabled :boolean          default(FALSE), not null
-#  created_at   :datetime         not null
-#  updated_at   :datetime         not null
-#  account_id   :bigint           not null
+#  id                       :bigint           not null, primary key
+#  itil_enabled             :boolean          default(FALSE), not null
+#  reopen_on_customer_reply :boolean          default(TRUE), not null
+#  reopen_window_days       :integer          default(30), not null
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  account_id               :bigint           not null
 #
 # Indexes
 #

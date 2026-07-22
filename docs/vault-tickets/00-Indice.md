@@ -55,6 +55,7 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 - [[Plan-Practicidad-osTicket]] — ⚡ plan: ficha accionable inline · conversación al frente · cola tabla (P1 hecho)
 - [[Plan-Notas-Internas]] — 📄 plan: bitácora de notas internas en el ticket (enum ya existe, falta UI/endpoint)
 - [[Plan-Widget-Embebible]] — 🔌 plan: launcher + iframe para capturar tickets desde la web del cliente
+- [[Plan-Ticket-Cerrado]] — 🔒 plan: reglas del ticket cerrado (reabrir con motivo, congelar edición, reapertura por respuesta del cliente)
 - [[Historial-de-implementacion]] — changelog de todo lo resuelto
 
 ---

@@ -361,6 +361,15 @@ export const actions = {
 
   // @tickets_cases Fase A — asignación manual a agente y/o equipo (coexisten).
   // Envía solo las claves presentes en el payload; '' / null limpia ese campo.
+  // @tickets_cases — reabre un ticket cerrado y refresca ficha + timeline.
+  async reopenTicket({ commit }, { ticketId, contactId, reason }) {
+    const { data } = await caseTicketsAPI.reopen(ticketId, reason);
+    const ticket = data.case_ticket;
+    if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
+    commit(SET_CASE_TICKETS_LIST, null); // forzar refetch de la cola
+    return ticket;
+  },
+
   async assignTicket({ commit }, { ticketId, contactId, assigneeId, teamId }) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {

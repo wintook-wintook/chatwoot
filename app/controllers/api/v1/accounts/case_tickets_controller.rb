@@ -19,10 +19,14 @@
 # ================================================================================
 
 class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseController
+  # @tickets_cases — campos que se congelan al cerrar/cancelar un ticket.
+  FROZEN_FIELDS = %w[priority due_at case_type_id assignee_id team_id].freeze
+  FROZEN_MSG    = 'Ticket cerrado: no se puede editar. Reábrelo si necesitas cambiarlo.'
+
   before_action :set_ticket,
                 only: %i[show update transition assign escalate change_approval generate_article
                          apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize
-                         detect_duplicates follow_up lock unlock]
+                         detect_duplicates follow_up lock unlock reopen]
 
   # GET /api/v1/accounts/:account_id/case_tickets/metrics
   def metrics
@@ -168,6 +172,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # PATCH /api/v1/accounts/:account_id/case_tickets/:id
   # @tickets_cases 2F — edita los campos ITIL de Problema/Cambio (custom_attributes).
   def update
+    return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if frozen_edit_attempt?
+
     incoming = update_params[:custom_attributes]&.to_h || {}
     if incoming.key?('requires_approval')
       incoming['requires_approval'] = ActiveModel::Type::Boolean.new.cast(incoming['requires_approval'])
@@ -251,6 +257,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # lo limpia. `assignee_type` se DERIVA (agente → equipo → bot), nunca se setea
   # a mano. Acepta `assignee_id` y/o `team_id`.
   def assign
+    return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if @ticket.frozen_for_edit?
+
     previous_assignee_id = @ticket.assignee_id
     return render json: { error: 'Se requiere assignee_id o team_id' }, status: :unprocessable_entity unless apply_assignment_params
 
@@ -322,6 +330,20 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   def unlock
     @ticket.update_columns(locked_by_id: nil, locked_at: nil) if @ticket.locked_by_id == current_user&.id
     head :no_content
+  end
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/reopen
+  # @tickets_cases — reabre un ticket cerrado. El permiso se comprueba aquí y no
+  # solo en la UI: ocultar un botón no es una regla.
+  def reopen
+    unless @ticket.reopenable_by?(current_user)
+      return render json: { error: reopen_denied_message }, status: :forbidden
+    end
+
+    @ticket.reopen!(actor: current_user, reason: params[:reason])
+    render json: { case_ticket: ticket_json(@ticket.reload) }
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   # PATCH /api/v1/accounts/:account_id/case_tickets/:id/escalate
@@ -551,6 +573,29 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     Current.account.conversations.find_by(id: ticket_params[:conversation_id])
   end
 
+  # @tickets_cases — ¿el request intenta tocar un campo congelado de un ticket
+  # cerrado/cancelado? Se mira campo por campo: editar `custom_attributes` de un
+  # ticket cerrado tampoco tiene sentido, pero el bloqueo se limita a lo que la
+  # ficha ofrece para no romper integraciones que solo escriben metadata.
+  def frozen_edit_attempt?
+    return false unless @ticket.frozen_for_edit?
+
+    payload = params[:case_ticket]
+    return false unless payload.respond_to?(:key?)
+
+    FROZEN_FIELDS.any? { |field| payload.key?(field) }
+  end
+
+  def reopen_denied_message
+    return 'Solo se puede reabrir un ticket cerrado' unless @ticket.closed?
+
+    if @ticket.within_reopen_window?
+      'No tienes permiso para reabrir este ticket'
+    else
+      'Venció el plazo para reabrir este ticket; pídeselo a un administrador'
+    end
+  end
+
   def ticket_json(ticket)
     {
       id:                         ticket.id,
@@ -586,6 +631,12 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       closure_cause:              ticket.closure_cause,
       closure_solution:           ticket.closure_solution,
       customer_confirmed:         ticket.customer_confirmed,
+      # @tickets_cases — la regla de reapertura la calcula el backend; el front
+      # NO la reimplementa (si se duplica, se desincronizan).
+      reopen_count:               ticket.reopen_count,
+      reopened_at:                ticket.reopened_at,
+      can_reopen:                 ticket.reopenable_by?(current_user),
+      is_frozen:                  ticket.frozen_for_edit?,
       kb_article_id:              ticket.kb_article_id,
       kb_article:                 kb_article_json(ticket.kb_article),
       metadata:                   ticket.metadata,

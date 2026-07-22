@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_22_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_22_140100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -352,6 +352,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_22_120000) do
     t.boolean "itil_enabled", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "reopen_window_days", default: 30, null: false
+    t.boolean "reopen_on_customer_reply", default: true, null: false
     t.index ["account_id"], name: "index_case_settings_on_account_id", unique: true
   end
 
@@ -444,6 +446,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_22_120000) do
     t.bigint "locked_by_id"
     t.datetime "locked_at"
     t.datetime "due_at"
+    t.integer "reopen_count", default: 0, null: false
+    t.datetime "reopened_at"
     t.index ["account_id", "case_type_id"], name: "index_case_tickets_on_account_id_and_case_type_id"
     t.index ["account_id", "contact_id"], name: "index_case_tickets_on_account_id_and_contact_id"
     t.index ["account_id", "due_at"], name: "index_case_tickets_on_account_id_and_due_at"

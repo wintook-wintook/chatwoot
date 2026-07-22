@@ -398,6 +398,18 @@
         "rejected": "Rechazado"
       }
     },
+    "REOPEN": {
+      "BUTTON": "Reabrir",
+      "MODAL_TITLE": "Reabrir ticket",
+      "REASON_LABEL": "Motivo de la reapertura",
+      "REASON_PLACEHOLDER": "¿Por qué se reabre? Ej: el cliente reporta que volvió a fallar.",
+      "HINT": "Queda registrado en el Recorrido. El SLA vuelve a contar desde cero.",
+      "CONFIRM": "Reabrir ticket",
+      "CANCEL": "Cancelar",
+      "SUCCESS": "Ticket reabierto",
+      "ERROR": "No se pudo reabrir el ticket",
+      "FROZEN_HINT": "Ticket cerrado: reábrelo para poder editarlo."
+    },
     "NOTES": {
       "ADD": "Nota",
       "MODAL_TITLE": "Nueva nota interna",

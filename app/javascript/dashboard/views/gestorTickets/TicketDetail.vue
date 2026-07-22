@@ -44,6 +44,10 @@ export default {
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
       // @tickets_cases — bitácora de notas internas
+      // @tickets_cases — reapertura de ticket cerrado (motivo obligatorio)
+      showReopenModal: false,
+      reopenReason: '',
+      isReopening: false,
       // @tickets_cases — motivo opcional al cambiar de estado (osTicket)
       showReasonModal: false,
       pendingStatus: null,
@@ -305,6 +309,14 @@ export default {
     // @tickets_cases 2G
     isClosed() {
       return this.ticket?.status === 'closed';
+    },
+    // @tickets_cases — congelado y permiso de reapertura los CALCULA el backend
+    // (rol + ventana). Aquí no se reimplementa la regla, solo se lee.
+    isFrozen() {
+      return !!this.ticket?.is_frozen;
+    },
+    canReopen() {
+      return !!this.ticket?.can_reopen;
     },
     closureTypeOptions() {
       return ['resolved', 'duplicate', 'not_applicable', 'cancelled'];
@@ -999,6 +1011,39 @@ export default {
         });
       }
     },
+    // @tickets_cases — reapertura: el motivo es obligatorio, así que el modal
+    // no deja guardar vacío y el backend vuelve a validarlo.
+    openReopenModal() {
+      this.reopenReason = '';
+      this.showReopenModal = true;
+      this.$nextTick(() => this.$refs.reopenInput?.focus());
+    },
+    async confirmReopen() {
+      const reason = this.reopenReason.trim();
+      if (!reason) return;
+      this.isReopening = true;
+      try {
+        await this.$store.dispatch('caseTickets/reopenTicket', {
+          ticketId: this.ticketId,
+          contactId: this.ticket?.contact_id,
+          reason,
+        });
+        this.showReopenModal = false;
+        this.reopenReason = '';
+        // Igual que runTransition: la ficha se repinta desde el servidor.
+        this.refetch();
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.REOPEN.SUCCESS'),
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error || this.$t('CASE_TICKETS.REOPEN.ERROR'),
+        });
+      } finally {
+        this.isReopening = false;
+      }
+    },
     // @tickets_cases — el botón del encabezado abre EL MISMO modal que la
     // pestaña Notas. Antes tenía modal y endpoint propios, así que una nota
     // creada desde aquí no refrescaba la tabla de Notas.
@@ -1278,6 +1323,8 @@ export default {
                 variant="smooth"
                 :color-scheme="priorityScheme(ticket.priority)"
                 icon="chevron-down"
+                :disabled="isFrozen"
+                :title="isFrozen ? $t('CASE_TICKETS.REOPEN.FROZEN_HINT') : ''"
                 @click="
                   showPriorityMenu = !showPriorityMenu;
                   showTransitionMenu = false;
@@ -1315,6 +1362,8 @@ export default {
                 variant="smooth"
                 :color-scheme="ticket.due_overdue ? 'alert' : 'secondary'"
                 icon="calendar-clock"
+                :disabled="isFrozen"
+                :title="isFrozen ? $t('CASE_TICKETS.REOPEN.FROZEN_HINT') : ''"
                 @click="openDueMenu"
               >
                 {{ $t('CASE_TICKETS.DUE_QUICK.LABEL') }}: {{ dueLabel }}
@@ -1373,6 +1422,18 @@ export default {
               @click="openNoteModal"
             >
               {{ $t('CASE_TICKETS.NOTES.ADD') }}
+            </woot-button>
+
+            <!-- @tickets_cases — Reabrir: solo si el backend lo autoriza -->
+            <woot-button
+              v-if="canReopen"
+              size="small"
+              variant="smooth"
+              color-scheme="alert"
+              icon="arrow-rotate-counter-clockwise"
+              @click="openReopenModal"
+            >
+              {{ $t('CASE_TICKETS.REOPEN.BUTTON') }}
             </woot-button>
 
             <woot-button
@@ -2362,6 +2423,65 @@ export default {
               :is-loading="isTransitioning"
             >
               {{ $t('CASE_TICKETS.ESCALATION.CONFIRM') }}
+            </woot-button>
+          </div>
+        </form>
+      </div>
+    </woot-modal>
+
+    <!-- @tickets_cases — Reapertura de ticket cerrado (motivo OBLIGATORIO) -->
+    <woot-modal
+      v-if="showReopenModal"
+      :show="showReopenModal"
+      :on-close="() => (showReopenModal = false)"
+      size="small"
+    >
+      <div class="flex flex-col h-auto overflow-auto">
+        <woot-modal-header
+          :header-title="$t('CASE_TICKETS.REOPEN.MODAL_TITLE')"
+        />
+        <form
+          class="flex flex-col self-stretch w-full gap-4 pb-8"
+          @submit.prevent="confirmReopen"
+        >
+          <label class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              {{ $t('CASE_TICKETS.REOPEN.REASON_LABEL') }}
+            </span>
+            <textarea
+              ref="reopenInput"
+              v-model="reopenReason"
+              rows="4"
+              class="input"
+              :placeholder="$t('CASE_TICKETS.REOPEN.REASON_PLACEHOLDER')"
+            />
+          </label>
+
+          <p
+            class="flex items-center gap-1.5 m-0 px-3 py-2 text-xs rounded-md bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+          >
+            <fluent-icon icon="info" size="14" />
+            {{ $t('CASE_TICKETS.REOPEN.HINT') }}
+          </p>
+
+          <div class="flex justify-end gap-2">
+            <woot-button
+              variant="clear"
+              color-scheme="secondary"
+              type="button"
+              @click="showReopenModal = false"
+            >
+              {{ $t('CASE_TICKETS.REOPEN.CANCEL') }}
+            </woot-button>
+            <woot-button
+              type="submit"
+              color-scheme="alert"
+              :disabled="!reopenReason.trim()"
+              :is-loading="isReopening"
+            >
+              {{ $t('CASE_TICKETS.REOPEN.CONFIRM') }}
             </woot-button>
           </div>
         </form>

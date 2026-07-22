@@ -23,6 +23,8 @@
 #  metadata                   :jsonb            not null
 #  origin                     :integer          default("whatsapp"), not null
 #  priority                   :integer          default("medium"), not null
+#  reopen_count               :integer          default(0), not null
+#  reopened_at                :datetime
 #  resolution_time_target     :integer
 #  resolved_at                :datetime
 #  sla_paused_minutes         :integer          default(0), not null
@@ -90,7 +92,9 @@ class CaseTicket < ApplicationRecord
     'escalated'              => %w[in_progress in_diagnosis cancelled],
     'resolved'               => %w[validating closed in_progress],
     'validating'             => %w[closed in_progress cancelled],
-    'closed'                 => [],
+    # @tickets_cases — cerrado solo puede REABRIRSE (a in_progress). No se salta
+    # a resolved ni a ningún otro estado: reabrir es volver a trabajarlo.
+    'closed'                 => %w[in_progress],
     'cancelled'              => []
   }.freeze
 
@@ -232,6 +236,61 @@ class CaseTicket < ApplicationRecord
       actor:      actor,
       payload:    payload.compact
     )
+  end
+
+  # @tickets_cases — Reapertura de un ticket cerrado (osTicket "Reopen").
+  # El motivo es OBLIGATORIO: reabrir es revertir una decisión y tiene que
+  # quedar por qué. `transition!` ya guarda el motivo en payload[:reason] y el
+  # Recorrido lo pinta como "Motivo", así que aquí solo se valida y se limpian
+  # los rastros del cierre.
+  #
+  # El SLA arranca de cero: reanudar el reloj viejo haría nacer el ticket
+  # vencido y ensuciaría el cumplimiento del período.
+  def reopen!(actor: nil, reason: nil)
+    raise 'Solo se puede reabrir un ticket cerrado' unless closed?
+    raise 'El motivo de reapertura es obligatorio' if reason.blank?
+
+    update!(
+      closed_at:          nil,
+      closure_type:       nil,
+      closure_cause:      nil,
+      closure_solution:   nil,
+      customer_confirmed: false,
+      resolved_at:        nil,
+      reopened_at:        Time.current,
+      reopen_count:       reopen_count + 1,
+      sla_status:         :on_time,
+      sla_paused_minutes: 0,
+      sla_paused_since:   nil,
+      first_response_at:  nil
+    )
+
+    # Deja el evento `reopened` (el enum ya lo reservaba desde el diseño).
+    transition!('in_progress', actor: actor, reason: reason)
+  end
+
+  # @tickets_cases — Un ticket cerrado o cancelado se congela: no se le cambian
+  # prioridad, vencimiento, tipo ni asignación. Las notas internas SÍ se
+  # permiten siempre (son bitácora, no edición) y por eso no pasan por aquí.
+  def frozen_for_edit?
+    closed? || cancelled?
+  end
+
+  # Puede reabrir el admin siempre; el asignado solo dentro de la ventana.
+  def reopenable_by?(user)
+    return false unless closed?
+    return false if user.blank?
+    return true if user.administrator?
+
+    assignee_id == user.id && within_reopen_window?
+  end
+
+  def within_reopen_window?
+    days = CaseSetting.for_account(account).reopen_window_days.to_i
+    return true if days.zero? # 0 = sin límite
+    return true if closed_at.blank?
+
+    closed_at >= days.days.ago
   end
 
   # @tickets_cases 2D — Escalamiento funcional: sube el nivel (N1→N2→N3), reasigna a
@@ -487,7 +546,7 @@ class CaseTicket < ApplicationRecord
     when 'resolved'     then :resolved
     when 'validating'   then :validating
     when 'closed'       then :closed
-    when 'in_progress'  then %w[resolved validating].include?(old_status.to_s) ? :reopened : :status_changed
+    when 'in_progress'  then %w[resolved validating closed].include?(old_status.to_s) ? :reopened : :status_changed
     else :status_changed
     end
   end
