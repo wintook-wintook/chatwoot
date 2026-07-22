@@ -717,10 +717,15 @@ export default {
         </ContactDetailsItem>
 
         <!-- Campo de compañía -->
-        <woot-input v-model.trim="companyName" class="columns-ajuste"
-          :placeholder="$t('CONTACT_FORM.FORM.COMPANY_NAME.PLACEHOLDER')"
+        <!--
+          proyecto@organization_field: :readonly y :is-disabled comentados a propósito
+          para que el campo companyName sea siempre editable.
+          Original:
           :readonly="isEditContact || isFoundInCRMZeus || readonlyOrganization || isSynchronized"
-          :is-disabled="isSynchronized" />
+          :is-disabled="isSynchronized"
+        -->
+        <woot-input v-model.trim="companyName" class="columns-ajuste"
+          :placeholder="$t('CONTACT_FORM.FORM.COMPANY_NAME.PLACEHOLDER')" />
         <div v-if="isIntegrationEnabled"
           class="relative mx-0 mt-0 mb-2.5 p-2 rounded-md text-sm border border-solid border-blue-500 text-blue-700 dark:border-blue-700 bg-blue-200/60 dark:bg-blue-200/20 dark:text-blue-400">
           💡 Nueva organización: <kbd class="px-1 py-0.5 text-xs bg-blue-300/50 rounded">Agregar</kbd>. Organización existente: <kbd class="px-1 py-0.5 text-xs bg-blue-300/50 rounded">Buscar</kbd>.
