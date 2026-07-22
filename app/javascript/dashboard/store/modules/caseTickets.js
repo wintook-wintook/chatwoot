@@ -359,15 +359,6 @@ export const actions = {
     }
   },
 
-  // @tickets_cases — bitácora: añade una nota interna y refresca el timeline.
-  async addNote({ commit, dispatch }, { ticketId, contactId, content }) {
-    const { data } = await caseTicketsAPI.addNote(ticketId, content);
-    const ticket = data.case_ticket;
-    if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
-    await dispatch('fetchEvents', { ticketId });
-    return ticket;
-  },
-
   // @tickets_cases Fase A — asignación manual a agente y/o equipo (coexisten).
   // Envía solo las claves presentes en el payload; '' / null limpia ese campo.
   async assignTicket({ commit }, { ticketId, contactId, assigneeId, teamId }) {

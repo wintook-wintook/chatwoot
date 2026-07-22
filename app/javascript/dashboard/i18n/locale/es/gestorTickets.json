@@ -126,6 +126,7 @@
     "DETAIL_TABS": {
       "SUMMARY": "Resumen",
       "CONVERSATION": "Conversación",
+      "NOTES": "Notas",
       "TASKS": "Tareas",
       "JOURNEY": "Avance",
       "AI": "Asistente IA"
@@ -406,7 +407,20 @@
       "SAVE": "Guardar nota",
       "CANCEL": "Cancelar",
       "SUCCESS": "Nota agregada",
-      "ERROR": "No se pudo agregar la nota"
+      "ERROR": "No se pudo agregar la nota",
+      "ADD_NEW": "Nueva nota",
+      "TITLE": "Notas internas",
+      "LOADING": "Cargando notas...",
+      "EMPTY": "Sin notas. Deja constancia de lo que vas haciendo en el ticket.",
+      "MODAL_EDIT_TITLE": "Editar nota interna",
+      "EDIT": "Editar",
+      "DELETE": "Eliminar",
+      "EDITED": "Editada el {date} por {name}",
+      "TABLE": {
+        "NOTE": "Nota",
+        "AUTHOR": "Autor",
+        "DATE": "Fecha"
+      }
     },
     "RELATIONS": {
       "TITLE": "Tickets relacionados",

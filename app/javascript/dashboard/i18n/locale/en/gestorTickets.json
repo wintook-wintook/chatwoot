@@ -126,6 +126,7 @@
     "DETAIL_TABS": {
       "SUMMARY": "Summary",
       "CONVERSATION": "Conversation",
+      "NOTES": "Notes",
       "TASKS": "Tasks",
       "JOURNEY": "Progress",
       "AI": "AI assistant"
@@ -406,7 +407,20 @@
       "SAVE": "Save note",
       "CANCEL": "Cancel",
       "SUCCESS": "Note added",
-      "ERROR": "Could not add the note"
+      "ERROR": "Could not add the note",
+      "ADD_NEW": "New note",
+      "TITLE": "Internal notes",
+      "LOADING": "Loading notes...",
+      "EMPTY": "No notes yet. Keep a record of what you do on this ticket.",
+      "MODAL_EDIT_TITLE": "Edit internal note",
+      "EDIT": "Edit",
+      "DELETE": "Delete",
+      "EDITED": "Edited on {date} by {name}",
+      "TABLE": {
+        "NOTE": "Note",
+        "AUTHOR": "Author",
+        "DATE": "Date"
+      }
     },
     "RELATIONS": {
       "TITLE": "Related tickets",

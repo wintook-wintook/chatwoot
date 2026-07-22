@@ -7,6 +7,7 @@ import { mapGetters } from 'vuex';
 import JourneyView from './JourneyView.vue';
 import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
 import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
+import TicketNotes from '../../components/contacts/CaseTicket/TicketNotes.vue';
 import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
 import CaseTicketsAPI from 'dashboard/api/caseTickets';
 import {
@@ -23,6 +24,7 @@ export default {
     JourneyView,
     TicketConversation,
     TicketTasks,
+    TicketNotes,
     MultiselectDropdown,
   },
   props: {
@@ -38,12 +40,10 @@ export default {
       showDueMenu: false, // @tickets_cases P4 — vencimiento inline
       dueDraft: '', // valor del input datetime-local
       taskCount: 0, // @tickets_cases P4 — total de tareas (badge del tab)
+      noteCount: 0, // @tickets_cases — total de notas internas (badge del tab)
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
       // @tickets_cases — bitácora de notas internas
-      showNoteModal: false,
-      noteContent: '',
-      isSavingNote: false,
       // @tickets_cases — motivo opcional al cambiar de estado (osTicket)
       showReasonModal: false,
       pendingStatus: null,
@@ -269,6 +269,12 @@ export default {
       const tabs = [
         { key: 'journey', label: this.$t('CASE_TICKETS.DETAIL_TABS.JOURNEY') },
       ];
+      // @tickets_cases — Notas internas como pestaña propia, entre Avance y Tareas.
+      tabs.push({
+        key: 'notes',
+        label: this.$t('CASE_TICKETS.DETAIL_TABS.NOTES'),
+        count: this.noteCount,
+      });
       // @tickets_cases P4 — Tareas como pestaña propia, con contador.
       tabs.push({
         key: 'tasks',
@@ -447,6 +453,13 @@ export default {
         ticketId: this.ticketId,
       });
       this.$store.dispatch('caseTickets/fetchRelations', this.ticketId);
+    },
+    // @tickets_cases — el Avance lee los mismos case_events que las notas, así
+    // que al crear/editar/borrar una nota hay que repintarlo.
+    reloadEvents() {
+      this.$store.dispatch('caseTickets/fetchEvents', {
+        ticketId: this.ticketId,
+      });
     },
     // @tickets_cases — cierra los menús inline (Prioridad/Vence/Estado) al hacer
     // clic fuera de la barra de acciones (v-on-clickaway).
@@ -986,35 +999,13 @@ export default {
         });
       }
     },
-    // @tickets_cases — bitácora: nota interna
+    // @tickets_cases — el botón del encabezado abre EL MISMO modal que la
+    // pestaña Notas. Antes tenía modal y endpoint propios, así que una nota
+    // creada desde aquí no refrescaba la tabla de Notas.
     openNoteModal() {
-      this.noteContent = '';
-      this.showNoteModal = true;
-      this.$nextTick(() => this.$refs.noteInput?.focus());
-    },
-    async confirmNote() {
-      const content = this.noteContent.trim();
-      if (!content) return;
-      this.isSavingNote = true;
-      try {
-        await this.$store.dispatch('caseTickets/addNote', {
-          ticketId: this.ticketId,
-          contactId: this.ticket?.contact_id,
-          content,
-        });
-        this.showNoteModal = false;
-        this.noteContent = '';
-        this.$emitter.emit('newToastMessage', {
-          message: this.$t('CASE_TICKETS.NOTES.SUCCESS'),
-        });
-      } catch (e) {
-        this.$emitter.emit('newToastMessage', {
-          message:
-            e.response?.data?.error || this.$t('CASE_TICKETS.NOTES.ERROR'),
-        });
-      } finally {
-        this.isSavingNote = false;
-      }
+      this.activeDetailTab = 'notes';
+      localStorage.setItem(DETAIL_TAB_KEY, 'notes');
+      this.$nextTick(() => this.$refs.ticketNotes?.openCreate());
     },
     // @tickets_cases 2E — relaciones entre tickets
     openRelationModal() {
@@ -2282,6 +2273,17 @@ export default {
         </template>
       </div>
 
+      <!-- ════ Pestaña Notas internas — tabla + modal, como Tareas ════ -->
+      <TicketNotes
+        ref="ticketNotes"
+        v-show="currentTabKey === 'notes'"
+        :key="`notes-${ticket.id}`"
+        :ticket-id="ticket.id"
+        class="flex-1 min-h-0"
+        @count="noteCount = $event"
+        @changed="reloadEvents"
+      />
+
       <!-- ════ Pestaña Tareas (P4) — checklist a ancho completo ════ -->
       <TicketTasks
         v-show="currentTabKey === 'tasks'"
@@ -2416,65 +2418,6 @@ export default {
               :is-loading="isTransitioning"
             >
               {{ $t('CASE_TICKETS.STATUS_QUICK.REASON_CONFIRM') }}
-            </woot-button>
-          </div>
-        </form>
-      </div>
-    </woot-modal>
-
-    <!-- @tickets_cases — Modal de nota interna (bitácora) -->
-    <woot-modal
-      v-if="showNoteModal"
-      :show="showNoteModal"
-      :on-close="() => (showNoteModal = false)"
-      size="small"
-    >
-      <div class="flex flex-col h-auto overflow-auto">
-        <woot-modal-header
-          :header-title="$t('CASE_TICKETS.NOTES.MODAL_TITLE')"
-        />
-        <form
-          class="flex flex-col self-stretch w-full gap-4 pb-8"
-          @submit.prevent="confirmNote"
-        >
-          <label class="flex flex-col gap-1">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-            >
-              {{ $t('CASE_TICKETS.NOTES.CONTENT_LABEL') }}
-            </span>
-            <textarea
-              ref="noteInput"
-              v-model="noteContent"
-              rows="5"
-              class="input"
-              :placeholder="$t('CASE_TICKETS.NOTES.PLACEHOLDER')"
-            />
-          </label>
-
-          <p
-            class="flex items-center gap-1.5 m-0 px-3 py-2 text-xs rounded-md bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
-          >
-            <fluent-icon icon="info" size="14" />
-            {{ $t('CASE_TICKETS.NOTES.HINT') }}
-          </p>
-
-          <div class="flex justify-end gap-2 mt-2">
-            <woot-button
-              variant="clear"
-              color-scheme="secondary"
-              type="button"
-              @click="showNoteModal = false"
-            >
-              {{ $t('CASE_TICKETS.NOTES.CANCEL') }}
-            </woot-button>
-            <woot-button
-              type="submit"
-              color-scheme="primary"
-              :disabled="!noteContent.trim()"
-              :is-loading="isSavingNote"
-            >
-              {{ $t('CASE_TICKETS.NOTES.SAVE') }}
             </woot-button>
           </div>
         </form>

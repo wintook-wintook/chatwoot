@@ -38,11 +38,6 @@ class CaseTicketsAPI extends ApiClient {
     return axios.patch(`${this.url}/${ticketId}/escalate`, params);
   }
 
-  // @tickets_cases — bitácora: nota interna del agente
-  addNote(ticketId, content) {
-    return axios.post(`${this.url}/${ticketId}/note`, { content });
-  }
-
   getMetrics(params = {}) {
     return axios.get(`${this.url}/metrics`, { params });
   }
