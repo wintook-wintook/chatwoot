@@ -197,12 +197,18 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     end
     due_changed = due_present && new_due != old_due
 
+    # @tickets_cases — edición completa desde el modal (título, descripción,
+    # clasificación). Puede raise ArgumentError si un enum llega inválido.
+    apply_core_edits
+
     @ticket.custom_attributes = @ticket.custom_attributes.merge(incoming) if incoming.any?
     @ticket.priority = new_priority if priority_changed
     @ticket.due_at = new_due if due_changed
     @ticket.save!
 
-    if priority_changed
+    # La prioridad puede cambiar por matriz (impacto×urgencia) sin venir en el
+    # request; se compara el valor real tras guardar, no solo el parámetro.
+    if @ticket.priority != old_priority
       @ticket.case_events.create!(account: Current.account, event_type: :priority_changed,
                                   origin: :agent, actor: current_user,
                                   payload: { from: old_priority, to: @ticket.priority })
@@ -215,6 +221,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     end
 
     render json: { case_ticket: ticket_json(@ticket.reload) }
+  rescue ArgumentError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
   end
@@ -565,6 +573,36 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     params.require(:case_ticket).permit(
       custom_attributes: (CaseTicket::PROBLEM_FIELDS + CaseTicket::CHANGE_FIELDS)
     )
+  end
+
+  # @tickets_cases — campos núcleo editables desde el modal de edición. Cada uno
+  # se aplica solo si viene en el request (edición parcial), así el modal puede
+  # convivir con las ediciones inline sin pisarlas.
+  def core_edit_params
+    params.require(:case_ticket).permit(
+      :title, :description, :case_type_id, :ticket_kind,
+      :affected_service_id, :category_id, :impact, :urgency
+    )
+  end
+
+  def apply_core_edits
+    cp = core_edit_params
+    @ticket.title = cp[:title].to_s.strip if cp.key?(:title)
+    @ticket.description = cp[:description].to_s.strip if cp.key?(:description)
+    @ticket.case_type_id = cp[:case_type_id].presence if cp.key?(:case_type_id)
+    @ticket.affected_service_id = cp[:affected_service_id].presence if cp.key?(:affected_service_id)
+    @ticket.category_id = cp[:category_id].presence if cp.key?(:category_id)
+    # impact/urgency alimentan la matriz de prioridad; se pueden limpiar (nil).
+    assign_enum(:ticket_kind, cp[:ticket_kind]) if cp.key?(:ticket_kind)
+    assign_enum(:impact, cp[:impact]) if cp.key?(:impact)
+    assign_enum(:urgency, cp[:urgency]) if cp.key?(:urgency)
+  end
+
+  # Vacío = limpiar; valor inválido → ArgumentError (lo captura #update como 422).
+  def assign_enum(attr, value)
+    return @ticket[attr] = nil if value.blank?
+
+    @ticket.public_send("#{attr}=", value)
   end
 
   def resolve_conversation

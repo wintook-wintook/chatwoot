@@ -65,6 +65,7 @@ const state = {
   uiFlags: {
     isFetching: false,
     isCreating: false,
+    isSaving: false, // @tickets_cases — edición del ticket desde el modal
     isTransitioning: false,
     isFetchingEvents: false,
     isFetchingList: false,
@@ -405,6 +406,23 @@ export const actions = {
     });
     dispatch('mergeTicket', data.case_ticket);
     return data.case_ticket;
+  },
+
+  // @tickets_cases — edición completa del ticket desde el modal (título,
+  // descripción, clasificación). Manda solo los campos que envía el modal.
+  async editTicket({ commit, dispatch }, { ticketId, contactId, fields }) {
+    commit(SET_CASE_TICKET_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await caseTicketsAPI.update(ticketId, {
+        case_ticket: fields,
+      });
+      const ticket = data.case_ticket;
+      dispatch('mergeTicket', ticket);
+      if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
+      return ticket;
+    } finally {
+      commit(SET_CASE_TICKET_UI_FLAG, { isSaving: false });
+    }
   },
 
   // @tickets_cases P1 — cambio de prioridad inline (acción rápida estilo osTicket).

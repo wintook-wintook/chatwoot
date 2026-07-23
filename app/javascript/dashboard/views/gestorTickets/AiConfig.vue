@@ -94,7 +94,7 @@ export default {
           size="small"
           variant="clear"
           color-scheme="secondary"
-          icon="arrow-left"
+          icon="chevron-left"
           @click="$router.push({ name: 'gestorTickets_index' })"
         >
           {{ $t('CASE_TICKETS.AI.BACK') }}

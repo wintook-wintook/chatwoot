@@ -5,6 +5,7 @@
 <script>
 import { mapGetters } from 'vuex';
 import JourneyView from './JourneyView.vue';
+import CaseTicketInternalModal from './CaseTicketInternalModal.vue';
 import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
 import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
 import TicketNotes from '../../components/contacts/CaseTicket/TicketNotes.vue';
@@ -19,6 +20,7 @@ export default {
   name: 'TicketDetail',
   components: {
     JourneyView,
+    CaseTicketInternalModal,
     TicketConversation,
     TicketTasks,
     TicketNotes,
@@ -46,6 +48,7 @@ export default {
       // @tickets_cases — bitácora de notas internas
       // @tickets_cases — reapertura de ticket cerrado (motivo obligatorio)
       showReopenModal: false,
+      showEditModal: false, // @tickets_cases — modal de edición del ticket
       reopenReason: '',
       isReopening: false,
       // @tickets_cases — motivo opcional al cambiar de estado (osTicket)
@@ -1013,6 +1016,12 @@ export default {
     },
     // @tickets_cases — reapertura: el motivo es obligatorio, así que el modal
     // no deja guardar vacío y el backend vuelve a validarlo.
+    // @tickets_cases — tras editar, refrescar la ficha y el timeline (el cambio
+    // de prioridad/tipo puede haber emitido eventos).
+    onTicketEdited() {
+      this.showEditModal = false;
+      this.refetch();
+    },
     openReopenModal() {
       this.reopenReason = '';
       this.showReopenModal = true;
@@ -1233,7 +1242,7 @@ export default {
         size="small"
         variant="clear"
         color-scheme="secondary"
-        icon="arrow-left"
+        icon="chevron-left"
         class="self-start"
         @click="$router.push({ name: 'gestorTickets_index' })"
       >
@@ -1257,7 +1266,19 @@ export default {
           </div>
           <!-- @tickets_cases — cada badge lleva su etiqueta (Tipo/Estado/Prioridad/
                SLA/Nivel) para que se entienda qué representa cada valor. -->
-          <div class="flex flex-wrap gap-1 mt-1">
+          <div class="flex flex-wrap items-center gap-1 mt-1">
+            <!-- @tickets_cases — Editar ticket: a la izquierda de la pill Tipo.
+                 Oculto en cerrado (cerrado = solo lectura). -->
+            <woot-button
+              v-if="!isFrozen"
+              size="tiny"
+              variant="smooth"
+              color-scheme="secondary"
+              icon="edit"
+              class="!mr-0.5"
+              :title="$t('CASE_TICKETS.EDIT.BUTTON')"
+              @click="showEditModal = true"
+            />
             <span
               v-if="ticket.case_type"
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded text-white"
@@ -2432,6 +2453,15 @@ export default {
         </form>
       </div>
     </woot-modal>
+
+    <!-- @tickets_cases — Edición del ticket (mismo modal que el alta) -->
+    <CaseTicketInternalModal
+      v-if="showEditModal && ticket"
+      :show="showEditModal"
+      :ticket="ticket"
+      @updated="onTicketEdited"
+      @close="showEditModal = false"
+    />
 
     <!-- @tickets_cases — Reapertura de ticket cerrado (motivo OBLIGATORIO) -->
     <woot-modal

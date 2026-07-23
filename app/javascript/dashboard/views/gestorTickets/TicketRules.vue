@@ -11,7 +11,7 @@
           size="small"
           variant="clear"
           color-scheme="secondary"
-          icon="arrow-left"
+          icon="chevron-left"
           @click="$router.push({ name: 'gestorTickets_index' })"
         >
           Volver
