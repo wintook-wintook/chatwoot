@@ -177,6 +177,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → intentando @crear_ticket'
     end
 
+    # @tickets_cases: @estado_ticket — el cliente pregunta por su caso ("¿cuál es
+    # mi ticket?"). Va ANTES de @crear_ticket: consultar un caso no abre uno nuevo.
+    if Cases::TicketStatusService.new(message, tracking: tracking).answer_if_status_query
+      Rails.logger.info '[TrackingBot] 🔎 Estado de ticket respondido via @estado_ticket'
+      return true
+    end
+
     # @tickets_cases: si la directiva @crear_ticket está en el prompt, crea ticket y confirma
     if Cases::TicketCreatorService.new(message, tracking: tracking).create_if_needed
       Rails.logger.info '[TrackingBot] 🎫 Ticket creado via @crear_ticket'
