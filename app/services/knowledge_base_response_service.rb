@@ -17,8 +17,8 @@ class KnowledgeBaseResponseService
   # Configuración para modo pgvector (canned responses)
   DEFAULTS = {
     'similarity_threshold' => 0.20,
-    'max_results'          => 3,
-    'max_context_chars'    => 6000
+    'max_results' => 3,
+    'max_context_chars' => 6000
   }.freeze
 
   # Configuración para modo Discourse
@@ -138,7 +138,7 @@ class KnowledgeBaseResponseService
                     .where(source_type: source_type)
                     .search_by_embedding(
                       embedding,
-                      limit:     kbase_setting('max_results'),
+                      limit: kbase_setting('max_results'),
                       threshold: kbase_setting('similarity_threshold')
                     )
 
@@ -188,7 +188,7 @@ class KnowledgeBaseResponseService
                     .where(knowledge_source_id: source.id)
                     .search_by_embedding(
                       embedding,
-                      limit:     kbase_setting('max_results'),
+                      limit: kbase_setting('max_results'),
                       threshold: kbase_setting('similarity_threshold')
                     )
     if items.empty?
@@ -275,7 +275,7 @@ class KnowledgeBaseResponseService
     system_prompt = <<~SYSTEM.strip
       Eres un asesor de #{@account.name}. Responde como un humano amable y conocedor.
       NUNCA menciones que eres un bot ni que consultaste una base de datos.
-      #{objective.present? ? "Objetivo de la conversación: #{objective}" : ""}
+      #{objective.present? ? "Objetivo de la conversación: #{objective}" : ''}
     SYSTEM
 
     user_prompt = <<~USER.strip
@@ -289,9 +289,9 @@ class KnowledgeBaseResponseService
     USER
 
     call_openai_simple([
-      { role: 'system', content: system_prompt },
-      { role: 'user',   content: user_prompt }
-    ], max_tokens: 800)
+                         { role: 'system', content: system_prompt },
+                         { role: 'user', content: user_prompt }
+                       ], max_tokens: 800)
       &.gsub(/\A[A-Za-záéíóúñÁÉÍÓÚÑ\s]{2,20}:\s*\n?/, '')
       &.strip
   end
@@ -315,15 +315,15 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    history    = load_history
-    answer     = ask_openai_with_history(question, result[:context], history)
-    return false unless answer.present?
+    history = load_history
+    answer  = ask_openai_with_history(question, result[:context], history)
+    return false if answer.blank?
+
+    answer = strip_echoed_sources(answer)
+    save_history(history, question, answer)
 
     footer = build_sources_footer(result[:sources], question)
-    answer += footer if footer.present?
-
-    save_history(history, question, answer)
-    send_reply(answer)
+    send_reply(footer.present? ? "#{answer}#{footer}" : answer)
     true
   end
 
@@ -346,13 +346,13 @@ class KnowledgeBaseResponseService
 
     history = load_history
     answer  = ask_openai_with_history(question, result[:context], history)
-    return false unless answer.present?
+    return false if answer.blank?
+
+    answer = strip_echoed_sources(answer)
+    save_history(history, question, answer)
 
     footer = build_sources_footer(result[:sources], question)
-    answer += footer if footer.present?
-
-    save_history(history, question, answer)
-    send_reply(answer)
+    send_reply(footer.present? ? "#{answer}#{footer}" : answer)
     true
   end
 
@@ -384,7 +384,7 @@ class KnowledgeBaseResponseService
 
     sources = []
     context = posts.first(MAX_RESULTS).each_with_index.filter_map do |post, idx|
-      sleep(1.5) if idx.positive?  # evitar rate limit entre fetches consecutivos
+      sleep(1.5) if idx.positive? # evitar rate limit entre fetches consecutivos
 
       topic = topic_map[post['topic_id']]
       next unless topic
@@ -411,7 +411,7 @@ class KnowledgeBaseResponseService
 
   # GET /posts/:id.json → campo `raw` (Markdown original)
   def fetch_post_content(post_id, url, api_key, username)
-    return '' unless post_id.present?
+    return '' if post_id.blank?
 
     uri               = URI("#{url}/posts/#{post_id}.json")
     http              = Net::HTTP.new(uri.host, uri.port)
@@ -496,20 +496,37 @@ class KnowledgeBaseResponseService
   # Footer de fuentes
   # ==============================================================================
 
+  # GPT tiende a imitar el footer de fuentes cuando lo ve en turnos previos del
+  # historial (kb_history guardaba la respuesta ya con el footer horneado adentro),
+  # generando su propio link — a veces el equivocado — antes de que agreguemos el
+  # nuestro. Lo quitamos del texto del modelo para mostrar un solo link, siempre
+  # el elegido por build_sources_footer.
+  def strip_echoed_sources(text)
+    text.split("\n").reject do |line|
+      line.match?(/^\s*📚/) ||
+        line.match?(/^\s*fuentes relacionadas:?\s*$/i) ||
+        line.match?(%r{^\s*[-*]?\s*https?://\S+\s*$}i)
+    end.join("\n").gsub(/\n{3,}/, "\n\n").strip
+  end
+
   def build_sources_footer(sources, question = nil)
     return '' if sources.empty?
 
-    top = sources.first
-    return "\n\n📚 Más información: #{top[:url]}" unless question.present?
+    return "\n\n📚 Más información: #{sources.first[:url]}" if question.blank?
 
+    # El ranking de Discourse no siempre coincide con la fuente que GPT usó para
+    # redactar la respuesta (preguntas parafraseadas rankean peor que las que
+    # calcan el título). Elegimos entre las fuentes devueltas la de mayor overlap
+    # de palabras con la pregunta, en vez de asumir que sources.first es la correcta.
     question_words = question.downcase.scan(/[a-záéíóúñü]{4,}/).to_set
-    title_words    = top[:title].downcase.scan(/[a-záéíóúñü]{4,}/).to_set
-    overlap        = (question_words & title_words).size
 
-    Rails.logger.info "[KBase] 🔗 Overlap fuente '#{top[:title].truncate(40)}': #{overlap} palabras"
+    best = sources.max_by { |source| (question_words & source[:title].downcase.scan(/[a-záéíóúñü]{4,}/).to_set).size }
+    overlap = (question_words & best[:title].downcase.scan(/[a-záéíóúñü]{4,}/).to_set).size
+
+    Rails.logger.info "[KBase] 🔗 Mejor fuente '#{best[:title].truncate(40)}': #{overlap} palabras overlap"
     return '' if overlap.zero?
 
-    "\n\n📚 Más información: #{top[:url]}"
+    "\n\n📚 Más información: #{best[:url]}"
   end
 
   # ==============================================================================
@@ -551,9 +568,9 @@ class KnowledgeBaseResponseService
     request['Authorization'] = "Bearer #{api_key}"
     request['Content-Type']  = 'application/json'
     request.body = {
-      model:       ENV.fetch('OPENAI_GPT_MODEL', 'gpt-4o-mini'),
-      messages:    messages,
-      max_tokens:  max_tokens,
+      model: ENV.fetch('OPENAI_GPT_MODEL', 'gpt-4o-mini'),
+      messages: messages,
+      max_tokens: max_tokens,
       temperature: 0.5
     }.to_json
 
