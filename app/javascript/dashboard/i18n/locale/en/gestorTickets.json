@@ -178,6 +178,7 @@
     "TABLE": {
       "FOLIO": "Ref",
       "SUBJECT": "Subject",
+      "CONTACT_SUBJECT": "Contact / Subject",
       "ASSIGNEE": "Assignee",
       "PRIORITY": "Priority",
       "STATUS": "Status",
@@ -262,6 +263,13 @@
       "SUCCESS": "Assignment updated",
       "ERROR": "Could not update the assignment"
     },
+    "EDIT": {
+      "BUTTON": "Edit",
+      "TITLE": "Edit ticket",
+      "SUBMIT": "Save changes",
+      "SUCCESS": "Ticket updated",
+      "ERROR": "Could not update the ticket"
+    },
     "INTERNAL": {
       "TITLE": "Create internal ticket",
       "NEW_BUTTON": "Internal ticket",
@@ -272,6 +280,7 @@
       "SUCCESS": "Internal ticket created",
       "ERROR": "Could not create the internal ticket",
       "BADGE": "Internal",
+      "NO_CONTACT": "No contact",
       "REQUESTER_LABEL": "Requester",
       "CUSTOM_FIELDS": "Custom fields"
     },

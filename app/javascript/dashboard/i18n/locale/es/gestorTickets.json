@@ -178,6 +178,7 @@
     "TABLE": {
       "FOLIO": "Folio",
       "SUBJECT": "Asunto",
+      "CONTACT_SUBJECT": "Contacto / Asunto",
       "ASSIGNEE": "Asignado",
       "PRIORITY": "Prioridad",
       "STATUS": "Estado",
@@ -262,6 +263,13 @@
       "SUCCESS": "Asignación actualizada",
       "ERROR": "No se pudo actualizar la asignación"
     },
+    "EDIT": {
+      "BUTTON": "Editar",
+      "TITLE": "Editar ticket",
+      "SUBMIT": "Guardar cambios",
+      "SUCCESS": "Ticket actualizado",
+      "ERROR": "No se pudo actualizar el ticket"
+    },
     "INTERNAL": {
       "TITLE": "Crear ticket interno",
       "NEW_BUTTON": "Ticket interno",
@@ -272,6 +280,7 @@
       "SUCCESS": "Ticket interno creado",
       "ERROR": "No se pudo crear el ticket interno",
       "BADGE": "Interno",
+      "NO_CONTACT": "Sin contacto",
       "REQUESTER_LABEL": "Solicitante",
       "CUSTOM_FIELDS": "Campos personalizados"
     },
