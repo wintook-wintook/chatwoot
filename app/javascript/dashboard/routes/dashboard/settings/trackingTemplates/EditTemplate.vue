@@ -416,7 +416,14 @@ export default {
       items.push({
         group: 'actions',
         token: '@crear_ticket',
-        label: 'Crea un ticket automáticamente.',
+        label: 'Crea un ticket con IA desde la conversación (redacta y clasifica).',
+        hint: 'Opcional con parámetros: @crear_ticket(prioridad=alta, tipo=Soporte). Las reglas que escribas en el prompt (título, tipo, cuándo priorizar, qué datos pedir) guían cómo se arma el ticket. Prioridades: baja / media / alta / urgente.',
+      });
+      items.push({
+        group: 'actions',
+        token: '@estado_ticket',
+        label: 'Responde el estado del caso del cliente por el mismo canal.',
+        hint: 'Cuando el cliente pregunta "¿cuál es mi ticket?" o "¿cómo va mi caso?", el bot busca sus casos y responde con el folio y el estado, sin que teclee el folio.',
       });
       return items;
     },
@@ -2055,11 +2062,19 @@ export default {
                 >
                   {{ dir.label }}
                 </span>
+                <!-- Ayuda de uso extendida (parámetros/ejemplos): se muestra
+                     completa, con salto de línea, sin truncar. -->
+                <span
+                  v-if="dir.hint"
+                  class="block mt-1 text-xs leading-snug text-slate-400 dark:text-slate-500 whitespace-normal"
+                >
+                  {{ dir.hint }}
+                </span>
               </span>
               <fluent-icon
                 icon="add"
                 size="16"
-                class="shrink-0 text-slate-400"
+                class="shrink-0 self-start mt-0.5 text-slate-400"
               />
             </button>
           </li>

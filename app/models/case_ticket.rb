@@ -180,6 +180,11 @@ class CaseTicket < ApplicationRecord
   # @tickets_cases Fase C — tickets internos (origin: internal, sin contacto).
   scope :internal, -> { where(origin: :internal) }
 
+  # @tickets_cases — cuando una prioridad viene FORZADA (directiva @crear_ticket
+  # o ajuste por riesgo del intake IA), no dejar que la matriz ITIL la pise
+  # aunque haya impacto+urgencia. No persiste; es una bandera del alta.
+  attr_accessor :skip_priority_derivation
+
   before_validation :derive_priority_from_matrix # @tickets_cases 2B
   before_create :assign_sla_targets
   before_create :assign_folio # @tickets_cases
@@ -491,6 +496,8 @@ class CaseTicket < ApplicationRecord
   # @tickets_cases 2B — si hay impacto y urgencia, la prioridad se deriva de la matriz ITIL.
   # Si no, se respeta la prioridad fijada manualmente (comportamiento original).
   def derive_priority_from_matrix
+    return if skip_priority_derivation
+
     derived = Cases::PriorityMatrix.derive(impact, urgency)
     self.priority = derived if derived.present?
   end

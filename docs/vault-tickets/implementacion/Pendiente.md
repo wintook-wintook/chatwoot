@@ -76,6 +76,17 @@ tags: [tickets, pendiente, todo]
 ### Email-to-ticket — PENDIENTE (no implementado)
 - Crear ticket automáticamente desde un correo entrante (inbox Email) — estilo osTicket "Email Piping". Decidir mapeo (asunto→título, remitente→contacto, tipo por defecto) y reusar `PortalTicketService`/`PortalThreadSeeder`.
 
+### `@crear_ticket` inteligente — ✅ HECHO (Fase 1+2, ver [[Plan-Crear-Ticket-IA]])
+Antes la directiva era un flag: título recortado, prioridad `medium` fija, descripción vacía, clasificador a ciegas. Ahora es un intake IA que arma el ticket bien formado. Verificado en la cuenta 2 (intake real + anti-dup + prioridad forzada vs matriz).
+- ~~**Fase 1 — Intake IA** (`Cases::Ai::Intake`)~~ ✅ lee la conversación → título redactado + descripción-resumen + kind/impacto/urgencia/tipo/servicio/categoría (saneados contra las listas reales).
+- ~~**Fase 1 — Directiva parametrizable** `@crear_ticket(prioridad=alta, tipo=Soporte)`~~ ✅ (regex `DIRECTIVE_RE`); precedencia directiva > riesgo > matriz > default (`skip_priority_derivation`).
+- ~~**Fase 1 — `Orchestrator.create_from_ai`** + confirmación con **folio** + degradación~~ ✅ (si la IA está off/falla, cae al alta básica de antes).
+- ~~**Fase 1 — #2 Anti-duplicado** (§11.2)~~ ✅ vía `find_active_ticket`: si el contacto tiene un caso abierto, lo reusa y avisa "#folio en curso".
+- ~~**Fase 1 — #3 Score de riesgo** (§11.3)~~ ✅ `churn_risk` (lo detecta el intake) + reincidencia (14 días) suben la prioridad y marcan `custom_attributes['churn_risk']`.
+- ~~**Fase 2 — `missing_info`**~~ ✅ repregunta de un turno (Redis `case_intake_pending::<conv>`, TTL 1h).
+- **#1 Deflexión** (§11.1): ya la da el ORDEN del job (KBase corre antes que el ticket); el gate con umbral de confianza explícito queda como mejora futura (KBase hoy devuelve boolean, no score).
+- Fuera de Fase 1/2 (plan aparte si se retoma): intake multimodal (voz/imagen), confirmación interactiva con botones, auto-cierre + CSAT, SLA proactivo.
+
 ### General
 - **Panel de contacto** (3er punto de entrada del diseño) — mostrar tickets históricos del contacto en su perfil. NO se hizo.
 - **Reglas pre-cargadas por defecto** (las 7 del diseño) — el seed automático no se implementó; las reglas se crean manualmente desde la UI.
