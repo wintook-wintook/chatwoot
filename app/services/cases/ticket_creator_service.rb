@@ -56,6 +56,14 @@ class Cases::TicketCreatorService
 
     fields = intake_fields # nil = IA no disponible → degradar
 
+    # Gate: si la conversación no amerita un ticket (saludo, charla, tema ya
+    # resuelto), NO creamos nada y dejamos que el bot responda normal (el job
+    # sigue a generate_and_send_conversational_reply). Evita tickets espurios.
+    if fields && fields['ticket_worthy'] == false
+      Redis::Alfred.delete(pending_key)
+      return false
+    end
+
     # Fase 2 (§6): faltan datos y aún no preguntamos → pedir UNA vez y esperar.
     # Devolvemos true: el turno YA se atendió (no debe seguir el fallback del job).
     if fields && ask_for_missing_info?(fields['missing_info'])

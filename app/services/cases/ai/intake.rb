@@ -48,8 +48,12 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
   def system_prompt(policy)
     base = <<~PROMPT.strip
       Eres un agente de soporte que registra tickets siguiendo ITIL 4. A partir de
-      una conversación con un cliente, redacta y clasifica un ticket. Responde
-      EXCLUSIVAMENTE con un objeto JSON con estas claves:
+      una conversación con un cliente, decides si amerita un ticket y, de ser así,
+      lo redactas y clasificas. Responde EXCLUSIVAMENTE con un objeto JSON con estas claves:
+        - "ticket_worthy": true SOLO si la conversación contiene una solicitud, un problema,
+          una queja o una intención concreta que amerite abrir un ticket para una persona.
+          false para saludos, charla trivial, agradecimientos, o temas ya resueltos/atendidos
+          (por ejemplo, una cita que ya se agendó). Ante la duda, false.
         - "title": título claro y breve del problema (NO copies el mensaje literal).
         - "description": resumen de 2 a 4 líneas: qué pasa, desde cuándo y qué intentó el cliente.
         - "ticket_kind": uno de [#{KINDS.join(', ')}].
@@ -99,6 +103,7 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
     category_ids = categories.map(&:first)
 
     {
+      'ticket_worthy'       => ActiveModel::Type::Boolean.new.cast(raw.fetch('ticket_worthy', true)),
       'title'               => raw['title'].to_s.strip.presence,
       'description'         => raw['description'].to_s.strip.presence,
       'ticket_kind'         => KINDS.include?(raw['ticket_kind']) ? raw['ticket_kind'] : nil,
