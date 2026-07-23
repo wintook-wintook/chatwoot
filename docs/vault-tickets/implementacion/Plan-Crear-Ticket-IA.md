@@ -1,10 +1,15 @@
 # Plan — `@crear_ticket` inteligente (intake IA en seguimientos)
 
-> Estado: 📝 **Propuesta / solo diseño** (2026-07-23). No implementado.
-> Objetivo: que la directiva `@crear_ticket` deje de crear tickets "en blanco"
-> y arme un ticket **bien formado** (título claro, descripción/resumen real,
-> tipo/prioridad/clasificación derivados de la conversación), guiado por el
-> prompt complementario del Agente IA.
+> Estado: ✅ **Fase 1 + Fase 2 implementadas y verificadas** (2026-07-23).
+> El intake IA (`Cases::Ai::Intake`) redacta y clasifica desde la conversación;
+> la directiva parametrizable (`@crear_ticket(prioridad=…, tipo=…)`), el
+> anti-duplicado, el score de riesgo (churn/reincidencia) y la repregunta de
+> Fase 2 (`missing_info`) están en `Cases::TicketCreatorService`.
+> ⚠️ Trampa: `case_types` NO tiene columna `active` (usa `position`/`public`);
+> plucar `where(active: true)` sobre tipos revienta — solo `case_services` y
+> `case_categories` la tienen.
+> ⚠️ Trampa: `derive_priority_from_matrix` corre en `before_validation` y pisa la
+> prioridad; una prioridad forzada necesita `ticket.skip_priority_derivation = true`.
 > Relacionado: [[Plan-Ticket-Cerrado]] · [[Plan-Practicidad-osTicket]] · [[Pendiente]] · [[Historial-de-implementacion]]
 
 ---

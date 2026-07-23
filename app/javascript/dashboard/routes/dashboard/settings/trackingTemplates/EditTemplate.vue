@@ -416,7 +416,8 @@ export default {
       items.push({
         group: 'actions',
         token: '@crear_ticket',
-        label: 'Crea un ticket automáticamente.',
+        label:
+          'Crea un ticket con IA (redacta y clasifica desde la conversación). Opcional: @crear_ticket(prioridad=alta, tipo=Soporte). Las reglas que escribas en el prompt guían cómo se arma.',
       });
       return items;
     },
