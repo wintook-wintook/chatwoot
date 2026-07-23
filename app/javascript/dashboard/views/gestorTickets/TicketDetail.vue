@@ -5,23 +5,56 @@
 <script>
 import { mapGetters } from 'vuex';
 import JourneyView from './JourneyView.vue';
-
-// @tickets_cases — pestaña activa del detalle, recordada por usuario.
-const DETAIL_TAB_KEY = 'gestorTickets.detailTab';
+import CaseTicketInternalModal from './CaseTicketInternalModal.vue';
+import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
+import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
+import TicketNotes from '../../components/contacts/CaseTicket/TicketNotes.vue';
+import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
+import CaseTicketsAPI from 'dashboard/api/caseTickets';
+import {
+  SIMPLE_TRANSITION_TARGETS,
+  toSimpleStatus,
+} from '../../helper/caseSimpleStatus';
 
 export default {
   name: 'TicketDetail',
-  components: { JourneyView },
+  components: {
+    JourneyView,
+    CaseTicketInternalModal,
+    TicketConversation,
+    TicketTasks,
+    TicketNotes,
+    MultiselectDropdown,
+  },
   props: {
     ticketId: { type: Number, required: true },
   },
   data() {
     return {
       // @tickets_cases — pestaña activa del detalle (Resumen / Avance / IA).
-      activeDetailTab: localStorage.getItem(DETAIL_TAB_KEY) || 'detail',
+      // @tickets_cases — al abrir un ticket SIEMPRE se arranca en Avance.
+      // Antes se recordaba la última pestaña en localStorage y podías caer en
+      // Tareas o Notas de otro ticket sin haber visto el estado del actual.
+      activeDetailTab: 'journey',
+      lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
       showTransitionMenu: false,
+      showPriorityMenu: false, // @tickets_cases P1 — prioridad inline
+      showDueMenu: false, // @tickets_cases P4 — vencimiento inline
+      dueDraft: '', // valor del input datetime-local
+      taskCount: 0, // @tickets_cases P4 — total de tareas (badge del tab)
+      noteCount: 0, // @tickets_cases — total de notas internas (badge del tab)
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
+      // @tickets_cases — bitácora de notas internas
+      // @tickets_cases — reapertura de ticket cerrado (motivo obligatorio)
+      showReopenModal: false,
+      showEditModal: false, // @tickets_cases — modal de edición del ticket
+      reopenReason: '',
+      isReopening: false,
+      // @tickets_cases — motivo opcional al cambiar de estado (osTicket)
+      showReasonModal: false,
+      pendingStatus: null,
+      transitionReason: '',
       // 2E — relaciones entre tickets
       showRelationModal: false,
       showDeleteRelation: false,
@@ -85,7 +118,14 @@ export default {
       uiFlags: 'caseTickets/getUIFlags',
       teams: 'teams/getTeams',
       agents: 'agents/getAgents',
+      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
+      currentUserID: 'getCurrentUserID', // @tickets_cases — bloqueo de ticket
     }),
+    // ¿Otro agente tiene bloqueado este ticket?
+    lockedByOther() {
+      const lb = this.ticket?.locked_by;
+      return !!lb && lb.id !== this.currentUserID;
+    },
     ticket() {
       return this.getTicketById(this.ticketId);
     },
@@ -230,10 +270,30 @@ export default {
     },
     // @tickets_cases — pestañas del detalle (la de IA solo si hay acciones).
     detailTabs() {
+      // @tickets_cases P2 — la conversación ahora vive en el propio Resumen
+      // (columna izquierda), ya no como pestaña aparte.
+      // @tickets_cases — Avance (Recorrido) es la pestaña principal y va primero.
       const tabs = [
-        { key: 'detail', label: this.$t('CASE_TICKETS.DETAIL_TABS.SUMMARY') },
         { key: 'journey', label: this.$t('CASE_TICKETS.DETAIL_TABS.JOURNEY') },
       ];
+      // @tickets_cases — Notas internas como pestaña propia, entre Avance y Tareas.
+      tabs.push({
+        key: 'notes',
+        label: this.$t('CASE_TICKETS.DETAIL_TABS.NOTES'),
+        count: this.noteCount,
+      });
+      // @tickets_cases P4 — Tareas como pestaña propia, con contador.
+      tabs.push({
+        key: 'tasks',
+        label: this.$t('CASE_TICKETS.DETAIL_TABS.TASKS'),
+        count: this.taskCount,
+      });
+      // @tickets_cases — el Resumen ya no muestra info (vive en el header); su
+      // contenido real es la conversación, así que la pestaña se llama así.
+      tabs.push({
+        key: 'detail',
+        label: this.$t('CASE_TICKETS.DETAIL_TABS.CONVERSATION'),
+      });
       if (this.hasAiCards) {
         tabs.push({ key: 'ai', label: this.$t('CASE_TICKETS.DETAIL_TABS.AI') });
       }
@@ -252,6 +312,14 @@ export default {
     // @tickets_cases 2G
     isClosed() {
       return this.ticket?.status === 'closed';
+    },
+    // @tickets_cases — congelado y permiso de reapertura los CALCULA el backend
+    // (rol + ventana). Aquí no se reimplementa la regla, solo se lee.
+    isFrozen() {
+      return !!this.ticket?.is_frozen;
+    },
+    canReopen() {
+      return !!this.ticket?.can_reopen;
     },
     closureTypeOptions() {
       return ['resolved', 'duplicate', 'not_applicable', 'cancelled'];
@@ -279,7 +347,10 @@ export default {
       return this.uiFlags.isTransitioning;
     },
     validTransitions() {
-      return this.ticket?.can_transition_to || [];
+      const all = this.ticket?.can_transition_to || [];
+      // Modo simple (osTicket): solo se ofrecen los estados destino simples.
+      if (this.itilEnabled) return all;
+      return all.filter(s => SIMPLE_TRANSITION_TARGETS.includes(s));
     },
     // @tickets_cases 2D — nivel y disponibilidad de escalamiento.
     escalationLabel() {
@@ -292,6 +363,47 @@ export default {
       return (
         t.escalation_level < 2 && !['closed', 'cancelled'].includes(t.status)
       );
+    },
+    // @tickets_cases P1 — prioridades para el dropdown rápido.
+    priorityOptions() {
+      return ['low', 'medium', 'high', 'urgent'];
+    },
+    // @tickets_cases — asignación con el dropdown nativo de Chatwoot (avatar + buscador).
+    agentsList() {
+      return [
+        { id: 0, name: this.$t('CASE_TICKETS.ASSIGN.NONE') },
+        ...this.agents,
+      ];
+    },
+    teamsList() {
+      return [
+        { id: 0, name: this.$t('CASE_TICKETS.ASSIGN.NONE') },
+        ...this.teams,
+      ];
+    },
+    assignedAgentItem() {
+      return this.agents.find(a => a.id === this.ticket?.assignee_id) || {};
+    },
+    assignedTeamItem() {
+      return this.teams.find(t => t.id === this.ticket?.team_id) || {};
+    },
+    // @tickets_cases P4 — etiqueta corta del vencimiento efectivo para el botón inline.
+    dueLabel() {
+      const iso = this.ticket?.effective_due_at;
+      if (!iso) return this.$t('CASE_TICKETS.DUE_QUICK.NONE');
+      return new Date(iso).toLocaleString(undefined, {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    },
+    // @tickets_cases P1 — "Tomar": disponible si el ticket no es ya mío y está abierto.
+    canClaim() {
+      const t = this.ticket;
+      if (!t) return false;
+      if (['closed', 'cancelled'].includes(t.status)) return false;
+      return t.assignee_id !== this.currentUserID;
     },
     slaText() {
       const t = this.ticket;
@@ -311,6 +423,8 @@ export default {
   },
   watch: {
     ticketId() {
+      // Cambiar de ticket es abrir un ticket: vuelve a Avance.
+      this.activeDetailTab = 'journey';
       this.loadTicket();
     },
   },
@@ -318,13 +432,34 @@ export default {
     this.loadTicket();
     this.$store.dispatch('teams/get');
     this.$store.dispatch('agents/get');
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
+    this.acquireLock();
+  },
+  beforeDestroy() {
+    this.releaseLock();
   },
   methods: {
+    // @tickets_cases — toma el bloqueo del ticket al abrir; si lo tiene otro, no
+    // lo toma (el banner avisará). Refresca el ticket para reflejar el estado.
+    async acquireLock() {
+      try {
+        await CaseTicketsAPI.lock(this.ticketId);
+        this.lockedAcquired = true;
+      } catch (e) {
+        this.lockedAcquired = false; // 409: lo tiene otro agente
+      } finally {
+        this.$store.dispatch('caseTickets/fetchTicket', this.ticketId);
+      }
+    },
+    releaseLock() {
+      if (!this.lockedAcquired) return;
+      this.lockedAcquired = false;
+      CaseTicketsAPI.unlock(this.ticketId).catch(() => {});
+    },
     onDetailTabChange(index) {
       const tab = this.detailTabs[index];
       if (!tab) return;
       this.activeDetailTab = tab.key;
-      localStorage.setItem(DETAIL_TAB_KEY, tab.key);
     },
     loadTicket() {
       if (!this.ticket) {
@@ -334,6 +469,20 @@ export default {
         ticketId: this.ticketId,
       });
       this.$store.dispatch('caseTickets/fetchRelations', this.ticketId);
+    },
+    // @tickets_cases — el Avance lee los mismos case_events que las notas, así
+    // que al crear/editar/borrar una nota hay que repintarlo.
+    reloadEvents() {
+      this.$store.dispatch('caseTickets/fetchEvents', {
+        ticketId: this.ticketId,
+      });
+    },
+    // @tickets_cases — cierra los menús inline (Prioridad/Vence/Estado) al hacer
+    // clic fuera de la barra de acciones (v-on-clickaway).
+    closeActionMenus() {
+      this.showPriorityMenu = false;
+      this.showDueMenu = false;
+      this.showTransitionMenu = false;
     },
     async transitionTo(status) {
       this.showTransitionMenu = false;
@@ -358,7 +507,23 @@ export default {
         this.showResolveProblemModal = true;
         return;
       }
-      await this.runTransition(status);
+      // @tickets_cases — bitácora Fase 2: popup de motivo opcional al cambiar
+      // estado (osTicket). El motivo ya viaja hasta transition! y se muestra
+      // como "Motivo" en el Recorrido; aquí solo se captura.
+      this.pendingStatus = status;
+      this.transitionReason = '';
+      this.showReasonModal = true;
+      this.$nextTick(() => this.$refs.reasonInput?.focus());
+    },
+    // @tickets_cases — confirma el cambio de estado con el motivo opcional.
+    async confirmTransition() {
+      const status = this.pendingStatus;
+      if (!status) return;
+      const reason = this.transitionReason.trim();
+      this.showReasonModal = false;
+      await this.runTransition(status, reason ? { reason } : {});
+      this.pendingStatus = null;
+      this.transitionReason = '';
     },
     // @tickets_cases 2G — confirmar cierre documentado
     async confirmClose() {
@@ -434,6 +599,14 @@ export default {
       } catch (e) {
         this.replyCopied = false;
       }
+    },
+    // @tickets_cases P2 — lleva la sugerencia de la IA a la caja de respuesta del
+    // hilo (cambia al Resumen, donde ahora vive la conversación, y precarga el texto).
+    useReplyInConversation() {
+      const text = this.replySuggestion?.reply;
+      if (!text) return;
+      this.activeDetailTab = 'detail';
+      this.$nextTick(() => this.$refs.ticketConversation?.setReply(text));
     },
     // @tickets_cases 3E — generar resumen + causa raíz
     async generateSummary() {
@@ -711,12 +884,85 @@ export default {
         }[status] || 'bg-slate-100 text-slate-700'
       );
     },
-    // @tickets_cases Fase A — asignación manual (agente y equipo coexisten).
-    onAssignAgent(event) {
-      this.assign({ assigneeId: event.target.value || null });
+    // @tickets_cases P1 — cambio de prioridad inline (acción rápida estilo osTicket).
+    async setPriority(priority) {
+      this.showPriorityMenu = false;
+      if (priority === this.ticket?.priority) return;
+      try {
+        await this.$store.dispatch('caseTickets/updatePriority', {
+          ticketId: this.ticketId,
+          contactId: this.ticket?.contact_id,
+          priority,
+        });
+        this.refetch();
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.PRIORITY_QUICK.SUCCESS'),
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error ||
+            this.$t('CASE_TICKETS.PRIORITY_QUICK.ERROR'),
+        });
+      }
     },
-    onAssignTeam(event) {
-      this.assign({ teamId: event.target.value || null });
+    // @tickets_cases P4 — vencimiento inline (osTicket "Due Date").
+    openDueMenu() {
+      this.showPriorityMenu = false;
+      this.showTransitionMenu = false;
+      // Precarga el input con la fecha efectiva (manual o estimada por SLA), en hora local.
+      this.dueDraft = this.toDatetimeLocal(this.ticket?.effective_due_at);
+      this.showDueMenu = !this.showDueMenu;
+    },
+    async saveDueAt() {
+      // El input datetime-local da hora local → la mandamos en ISO (UTC) al backend.
+      const dueAt = this.dueDraft
+        ? new Date(this.dueDraft).toISOString()
+        : null;
+      await this.persistDueAt(dueAt);
+    },
+    async clearDueAt() {
+      await this.persistDueAt(null);
+    },
+    async persistDueAt(dueAt) {
+      this.showDueMenu = false;
+      try {
+        await this.$store.dispatch('caseTickets/updateDueAt', {
+          ticketId: this.ticketId,
+          contactId: this.ticket?.contact_id,
+          dueAt,
+        });
+        this.refetch();
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.DUE_QUICK.SUCCESS'),
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error || this.$t('CASE_TICKETS.DUE_QUICK.ERROR'),
+        });
+      }
+    },
+    // Convierte un ISO a valor de input datetime-local (YYYY-MM-DDTHH:mm) en hora local.
+    toDatetimeLocal(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+        d.getDate()
+      )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    },
+    // @tickets_cases P1 — "Tomar": autoasignar el ticket al agente actual (1 clic).
+    claimTicket() {
+      this.assign({ assigneeId: this.currentUserID });
+    },
+    // @tickets_cases Fase A — asignación manual (agente y equipo coexisten).
+    // @tickets_cases — selección desde el MultiselectDropdown (id 0 = Ninguno).
+    onSelectAgent(item) {
+      this.assign({ assigneeId: item && item.id ? item.id : null });
+    },
+    onSelectTeam(item) {
+      this.assign({ teamId: item && item.id ? item.id : null });
     },
     async assign(payload) {
       try {
@@ -767,6 +1013,52 @@ export default {
             e.response?.data?.error || this.$t('CASE_TICKETS.ESCALATION.ERROR'),
         });
       }
+    },
+    // @tickets_cases — reapertura: el motivo es obligatorio, así que el modal
+    // no deja guardar vacío y el backend vuelve a validarlo.
+    // @tickets_cases — tras editar, refrescar la ficha y el timeline (el cambio
+    // de prioridad/tipo puede haber emitido eventos).
+    onTicketEdited() {
+      this.showEditModal = false;
+      this.refetch();
+    },
+    openReopenModal() {
+      this.reopenReason = '';
+      this.showReopenModal = true;
+      this.$nextTick(() => this.$refs.reopenInput?.focus());
+    },
+    async confirmReopen() {
+      const reason = this.reopenReason.trim();
+      if (!reason) return;
+      this.isReopening = true;
+      try {
+        await this.$store.dispatch('caseTickets/reopenTicket', {
+          ticketId: this.ticketId,
+          contactId: this.ticket?.contact_id,
+          reason,
+        });
+        this.showReopenModal = false;
+        this.reopenReason = '';
+        // Igual que runTransition: la ficha se repinta desde el servidor.
+        this.refetch();
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.REOPEN.SUCCESS'),
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error || this.$t('CASE_TICKETS.REOPEN.ERROR'),
+        });
+      } finally {
+        this.isReopening = false;
+      }
+    },
+    // @tickets_cases — el botón del encabezado abre EL MISMO modal que la
+    // pestaña Notas. Antes tenía modal y endpoint propios, así que una nota
+    // creada desde aquí no refrescaba la tabla de Notas.
+    openNoteModal() {
+      this.activeDetailTab = 'notes';
+      this.$nextTick(() => this.$refs.ticketNotes?.openCreate());
     },
     // @tickets_cases 2E — relaciones entre tickets
     openRelationModal() {
@@ -867,6 +1159,28 @@ export default {
         }[p] || 'bg-slate-100 text-slate-700'
       );
     },
+    // @tickets_cases — esquema de color del botón "Prioridad" según la prioridad.
+    priorityScheme(p) {
+      return (
+        {
+          low: 'secondary',
+          medium: 'primary',
+          high: 'warning',
+          urgent: 'alert',
+        }[p] || 'secondary'
+      );
+    },
+    // @tickets_cases P1 — punto de color por prioridad (para el dropdown rápido).
+    priorityDot(p) {
+      return (
+        {
+          low: 'bg-slate-400',
+          medium: 'bg-blue-500',
+          high: 'bg-yellow-500',
+          urgent: 'bg-red-500',
+        }[p] || 'bg-slate-400'
+      );
+    },
     slaBadge(sla) {
       return (
         {
@@ -891,8 +1205,16 @@ export default {
     statusLabel(key) {
       return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key;
     },
+    // Modo simple: colapsa el estado ITIL a su etiqueta simple para mostrar.
+    displayStatus(status) {
+      return this.itilEnabled ? status : toSimpleStatus(status);
+    },
     priorityLabel(key) {
       return this.$t(`CASE_TICKETS.PRIORITIES.${key}`) || key;
+    },
+    // @tickets_cases — etiqueta del canal/origen del ticket
+    originLabel(key) {
+      return this.$t(`CASE_TICKETS.ORIGINS.${key}`) || key || '—';
     },
     formatDate(d) {
       if (!d) return '';
@@ -920,7 +1242,7 @@ export default {
         size="small"
         variant="clear"
         color-scheme="secondary"
-        icon="arrow-left"
+        icon="chevron-left"
         class="self-start"
         @click="$router.push({ name: 'gestorTickets_index' })"
       >
@@ -929,38 +1251,61 @@ export default {
 
       <div v-if="ticket" class="flex items-start justify-between gap-4">
         <div class="flex flex-col gap-1 min-w-0">
-          <div class="flex flex-wrap gap-1">
+          <!-- @tickets_cases — folio primero y prominente + contacto a su derecha -->
+          <div class="flex items-baseline gap-2 min-w-0">
+            <span
+              v-if="ticket.folio"
+              class="font-mono text-lg font-bold leading-none tracking-wider text-woot-600 dark:text-woot-300 flex-shrink-0"
+              >#{{ ticket.folio }}</span
+            >
+            <span
+              v-if="ticket.contact_name"
+              class="text-base font-medium truncate text-slate-600 dark:text-slate-300"
+              >· {{ ticket.contact_name }}</span
+            >
+          </div>
+          <!-- @tickets_cases — cada badge lleva su etiqueta (Tipo/Estado/Prioridad/
+               SLA/Nivel) para que se entienda qué representa cada valor. -->
+          <div class="flex flex-wrap items-center gap-1 mt-1">
+            <!-- @tickets_cases — Editar ticket: a la izquierda de la pill Tipo.
+                 Oculto en cerrado (cerrado = solo lectura). -->
+            <woot-button
+              v-if="!isFrozen"
+              size="tiny"
+              variant="smooth"
+              color-scheme="secondary"
+              icon="edit"
+              class="!mr-0.5"
+              :title="$t('CASE_TICKETS.EDIT.BUTTON')"
+              @click="showEditModal = true"
+            />
             <span
               v-if="ticket.case_type"
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded text-white"
               :style="{ backgroundColor: ticket.case_type.color }"
-              >{{ ticket.case_type.name }}</span
+              ><span class="font-normal opacity-75">Tipo:</span>
+              {{ ticket.case_type.name }}</span
             >
             <span
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
-              >{{ statusLabel(ticket.status) }}</span
+              ><span class="font-normal opacity-75">Estado:</span>
+              {{ statusLabel(displayStatus(ticket.status)) }}</span
             >
-            <span
-              class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
-              :class="priorityBadge(ticket.priority)"
-              >{{ priorityLabel(ticket.priority) }}</span
-            >
+            <!-- Prioridad no va aquí: ya se ve (con color) en el botón "Prioridad". -->
             <span
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
               :class="slaBadge(ticket.sla_status)"
-              >SLA: {{ slaText }}</span
+              >{{
+                ticket.sla_status === 'overdue' ? slaText : 'SLA: ' + slaText
+              }}</span
             >
             <span
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
               :title="$t('CASE_TICKETS.ESCALATION.LEVEL_TITLE')"
-              >{{ escalationLabel }}</span
+              ><span class="font-normal opacity-75">Nivel:</span>
+              {{ escalationLabel }}</span
             >
           </div>
-          <span
-            v-if="ticket.folio"
-            class="font-mono text-xs text-slate-400 dark:text-slate-500"
-            >{{ ticket.folio }}</span
-          >
           <h2 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
             {{ ticket.title }}
           </h2>
@@ -972,50 +1317,266 @@ export default {
           </p>
         </div>
 
-        <!-- Acciones -->
-        <div class="relative flex flex-shrink-0 gap-2">
-          <woot-button
-            v-if="canEscalate"
-            size="small"
-            variant="smooth"
-            color-scheme="warning"
-            icon="arrow-trending-lines"
-            @click="openEscalate"
+        <!-- @tickets_cases — columna derecha: acciones arriba + fechas debajo -->
+        <div class="flex flex-col items-end flex-shrink-0 gap-3">
+          <!-- Acciones (barra accionable inline — estilo osTicket) -->
+          <div
+            v-on-clickaway="closeActionMenus"
+            class="relative flex flex-wrap items-center justify-end gap-2"
           >
-            {{ $t('CASE_TICKETS.ESCALATION.BUTTON') }}
-          </woot-button>
-          <woot-button
-            size="small"
-            color-scheme="primary"
-            :is-loading="isTransitioning"
-            @click="showTransitionMenu = !showTransitionMenu"
-          >
-            Cambiar estado ▾
-          </woot-button>
-          <ul
-            v-if="showTransitionMenu"
-            class="absolute right-0 z-50 py-1 mt-1 list-none bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[180px]"
-          >
-            <li
-              v-for="s in validTransitions"
-              :key="s"
-              class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-              @click="transitionTo(s)"
+            <!-- Tomar (claim): autoasignar al agente actual en 1 clic -->
+            <woot-button
+              v-if="canClaim"
+              size="small"
+              variant="smooth"
+              color-scheme="secondary"
+              icon="person-add"
+              :is-loading="isTransitioning"
+              @click="claimTicket"
             >
-              {{ statusLabel(s) }}
-            </li>
-            <li
-              v-if="!validTransitions.length"
-              class="px-4 py-2 text-sm text-slate-400 dark:text-slate-500"
+              {{ $t('CASE_TICKETS.CLAIM.BUTTON') }}
+            </woot-button>
+
+            <!-- Prioridad: dropdown inline -->
+            <div class="relative">
+              <woot-button
+                size="small"
+                variant="smooth"
+                :color-scheme="priorityScheme(ticket.priority)"
+                icon="chevron-down"
+                :disabled="isFrozen"
+                :title="isFrozen ? $t('CASE_TICKETS.REOPEN.FROZEN_HINT') : ''"
+                @click="
+                  showPriorityMenu = !showPriorityMenu;
+                  showTransitionMenu = false;
+                "
+              >
+                {{ $t('CASE_TICKETS.PRIORITY_QUICK.LABEL') }}:
+                {{ priorityLabel(ticket.priority) }}
+              </woot-button>
+              <ul
+                v-if="showPriorityMenu"
+                class="absolute right-0 z-50 py-1 mt-1 list-none bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[160px]"
+              >
+                <li
+                  v-for="p in priorityOptions"
+                  :key="p"
+                  class="flex items-center gap-2 px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                  @click="setPriority(p)"
+                >
+                  <span class="w-2 h-2 rounded-full" :class="priorityDot(p)" />
+                  {{ priorityLabel(p) }}
+                  <fluent-icon
+                    v-if="p === ticket.priority"
+                    icon="checkmark"
+                    size="14"
+                    class="ml-auto text-woot-500"
+                  />
+                </li>
+              </ul>
+            </div>
+
+            <!-- @tickets_cases P4 — Vencimiento inline (osTicket "Due Date") -->
+            <div class="relative">
+              <woot-button
+                size="small"
+                variant="smooth"
+                :color-scheme="ticket.due_overdue ? 'alert' : 'secondary'"
+                icon="calendar-clock"
+                :disabled="isFrozen"
+                :title="isFrozen ? $t('CASE_TICKETS.REOPEN.FROZEN_HINT') : ''"
+                @click="openDueMenu"
+              >
+                {{ $t('CASE_TICKETS.DUE_QUICK.LABEL') }}: {{ dueLabel }}
+              </woot-button>
+              <div
+                v-if="showDueMenu"
+                class="absolute right-0 z-50 p-3 mt-1 bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[240px]"
+              >
+                <input
+                  v-model="dueDraft"
+                  type="datetime-local"
+                  class="w-full mb-2 text-sm"
+                />
+                <div class="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    class="text-xs text-red-600 hover:underline dark:text-red-400 disabled:opacity-40"
+                    :disabled="!ticket.due_at"
+                    @click="clearDueAt"
+                  >
+                    {{ $t('CASE_TICKETS.DUE_QUICK.CLEAR') }}
+                  </button>
+                  <woot-button
+                    size="tiny"
+                    color-scheme="primary"
+                    @click="saveDueAt"
+                  >
+                    {{ $t('CASE_TICKETS.DUE_QUICK.SAVE') }}
+                  </woot-button>
+                </div>
+                <p
+                  class="mt-2 mb-0 text-[11px] text-slate-400 dark:text-slate-500"
+                >
+                  {{ $t('CASE_TICKETS.DUE_QUICK.HINT') }}
+                </p>
+              </div>
+            </div>
+
+            <!-- @tickets_cases — Vincular ticket, entre Vence y Escalar -->
+            <woot-button
+              size="small"
+              variant="smooth"
+              color-scheme="secondary"
+              icon="link"
+              @click="openRelationModal"
             >
-              Sin transiciones disponibles
-            </li>
-          </ul>
+              {{ $t('CASE_TICKETS.RELATIONS.ADD') }}
+            </woot-button>
+
+            <!-- @tickets_cases — bitácora: nota interna (no visible al cliente).
+                 En un ticket cerrado no se ofrece: cerrado = solo lectura. -->
+            <woot-button
+              v-if="!isFrozen"
+              size="small"
+              variant="smooth"
+              color-scheme="secondary"
+              icon="comment-add"
+              @click="openNoteModal"
+            >
+              {{ $t('CASE_TICKETS.NOTES.ADD') }}
+            </woot-button>
+
+            <!-- @tickets_cases — Reabrir: solo si el backend lo autoriza -->
+            <woot-button
+              v-if="canReopen"
+              size="small"
+              variant="smooth"
+              color-scheme="alert"
+              icon="arrow-rotate-counter-clockwise"
+              @click="openReopenModal"
+            >
+              {{ $t('CASE_TICKETS.REOPEN.BUTTON') }}
+            </woot-button>
+
+            <woot-button
+              v-if="canEscalate"
+              size="small"
+              variant="smooth"
+              color-scheme="warning"
+              icon="arrow-trending-lines"
+              @click="openEscalate"
+            >
+              {{ $t('CASE_TICKETS.ESCALATION.BUTTON') }}
+            </woot-button>
+            <woot-button
+              size="small"
+              color-scheme="primary"
+              :is-loading="isTransitioning"
+              @click="
+                showTransitionMenu = !showTransitionMenu;
+                showPriorityMenu = false;
+              "
+            >
+              {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }} ▾
+            </woot-button>
+            <ul
+              v-if="showTransitionMenu"
+              class="absolute right-0 z-50 py-1 mt-1 list-none bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[180px]"
+            >
+              <li
+                v-for="s in validTransitions"
+                :key="s"
+                class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                @click="transitionTo(s)"
+              >
+                {{ statusLabel(s) }}
+              </li>
+              <li
+                v-if="!validTransitions.length"
+                class="px-4 py-2 text-sm text-slate-400 dark:text-slate-500"
+              >
+                Sin transiciones disponibles
+              </li>
+            </ul>
+          </div>
+          <!-- Fechas + asignación: siempre visibles, son parte de la ficha del
+               ticket (no dependen de la pestaña). 'Vence' no va aquí: ya está en
+               el botón de vencimiento. -->
+          <div class="flex flex-col items-end gap-3">
+            <!-- Asignación con el dropdown nativo de Chatwoot (avatar + buscador) -->
+            <div class="grid w-[28rem] max-w-full grid-cols-2 gap-x-4 gap-y-1">
+              <div class="flex flex-col gap-1 text-left">
+                <label
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.ASSIGN.TEAM_LABEL') }}</label
+                >
+                <MultiselectDropdown
+                  :options="teamsList"
+                  :selected-item="assignedTeamItem"
+                  :has-thumbnail="false"
+                  :multiselector-title="$t('CASE_TICKETS.ASSIGN.TEAM_LABEL')"
+                  :multiselector-placeholder="$t('CASE_TICKETS.ASSIGN.NONE')"
+                  :no-search-result="
+                    $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.NO_RESULTS.TEAM')
+                  "
+                  :input-placeholder="
+                    $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.PLACEHOLDER.INPUT')
+                  "
+                  @click="onSelectTeam"
+                />
+              </div>
+              <div class="flex flex-col gap-1 text-left">
+                <label
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.ASSIGN.AGENT_LABEL') }}</label
+                >
+                <MultiselectDropdown
+                  :options="agentsList"
+                  :selected-item="assignedAgentItem"
+                  :multiselector-title="$t('CASE_TICKETS.ASSIGN.AGENT_LABEL')"
+                  :multiselector-placeholder="$t('CASE_TICKETS.ASSIGN.NONE')"
+                  :no-search-result="
+                    $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.NO_RESULTS.AGENT')
+                  "
+                  :input-placeholder="
+                    $t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.PLACEHOLDER.AGENT')
+                  "
+                  @click="onSelectAgent"
+                />
+              </div>
+            </div>
+            <!-- Solicitante (tickets internos) -->
+            <div
+              v-if="ticket.is_internal && ticket.requester"
+              class="flex flex-col gap-0.5 text-right"
+            >
+              <span
+                class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                >{{ $t('CASE_TICKETS.INTERNAL.REQUESTER_LABEL') }}</span
+              >
+              <span
+                class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                >{{ ticket.requester.name }}</span
+              >
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Pestañas del detalle (pinneadas, no scrollean) -->
+    <!-- @tickets_cases — bloqueo: aviso si otro agente está trabajando el ticket -->
+    <div
+      v-if="ticket && lockedByOther"
+      class="flex items-center gap-2 px-6 py-2 text-sm flex-shrink-0 bg-amber-50 text-amber-800 border-b border-amber-100 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-900/50"
+    >
+      <fluent-icon icon="lock-closed" size="16" />
+      <span>{{
+        $t('CASE_TICKETS.LOCK.BANNER', { name: ticket.locked_by.name })
+      }}</span>
+    </div>
+
     <div
       v-if="ticket"
       class="flex-shrink-0 px-6 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
@@ -1026,7 +1587,8 @@ export default {
           :key="t.key"
           :index="i"
           :name="t.label"
-          :show-badge="false"
+          :count="t.count || 0"
+          :show-badge="!!t.count"
         />
       </woot-tabs>
     </div>
@@ -1043,534 +1605,424 @@ export default {
       v-else-if="ticket"
       class="flex flex-col flex-1 gap-6 p-6 overflow-y-auto"
     >
-      <!-- Sugerencia de clasificación IA (3B, modo suggest) -->
+      <!-- ════ Pestaña Resumen (P2): conversación al frente + sidebar de datos ════ -->
       <div
-        v-if="aiSuggestion"
-        class="p-4 border rounded-lg bg-violet-50 border-violet-200 dark:bg-violet-900/20 dark:border-violet-800"
+        v-show="currentTabKey === 'detail'"
+        class="flex flex-col gap-6 xl:flex-row xl:items-start"
       >
-        <div class="flex items-start justify-between gap-3 mb-3">
-          <div class="flex items-center gap-2">
-            <fluent-icon
-              icon="wand"
-              size="18"
-              class="text-violet-600 dark:text-violet-300"
+        <!-- Hilo de conversación (protagonista, sticky en pantallas anchas) -->
+        <div
+          v-if="ticket.conversation_display_id"
+          class="xl:flex-1 xl:min-w-0 xl:sticky xl:top-0"
+        >
+          <div class="h-[60vh] xl:h-[calc(100vh-21rem)]">
+            <TicketConversation
+              ref="ticketConversation"
+              :key="ticket.conversation_display_id"
+              :conversation-id="ticket.conversation_display_id"
+              class="h-full"
             />
-            <span
-              class="text-sm font-semibold text-violet-800 dark:text-violet-200"
-              >{{ $t('CASE_TICKETS.AI.SUGGESTION.TITLE') }}</span
-            >
-            <span
-              v-if="aiConfidencePct !== null"
-              class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-violet-100 text-violet-700 dark:bg-violet-800 dark:text-violet-100"
-              >{{
-                $t('CASE_TICKETS.AI.SUGGESTION.CONFIDENCE', {
-                  pct: aiConfidencePct,
-                })
-              }}</span
-            >
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-x-4 gap-y-2 mb-3">
-          <div
-            v-for="row in aiSuggestionRows"
-            :key="row.label"
-            class="flex flex-col gap-0.5"
-          >
-            <span
-              class="text-xs tracking-wide uppercase text-violet-400 dark:text-violet-500"
-              >{{ row.label }}</span
-            >
-            <span
-              class="text-sm font-medium text-violet-800 dark:text-violet-100"
-              >{{ row.value }}</span
-            >
-          </div>
-        </div>
-        <p
-          v-if="aiSuggestion.reasoning"
-          class="m-0 mb-3 text-xs italic text-violet-600 dark:text-violet-300"
-        >
-          {{ aiSuggestion.reasoning }}
-        </p>
-        <div class="flex justify-end gap-2">
-          <woot-button
-            size="small"
-            variant="clear"
-            color-scheme="secondary"
-            @click="dismissAiSuggestion"
-          >
-            {{ $t('CASE_TICKETS.AI.SUGGESTION.DISMISS') }}
-          </woot-button>
-          <woot-button size="small" icon="checkmark" @click="applyAiSuggestion">
-            {{ $t('CASE_TICKETS.AI.SUGGESTION.APPLY') }}
-          </woot-button>
-        </div>
-      </div>
-
-      <!-- ════ Pestaña Resumen: Información ════ -->
-      <div
-        v-show="currentTabKey === 'detail'"
-        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-      >
-        <h3
-          class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
-        >
-          Información
-        </h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >Tipo</span
-            >
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ ticket.case_type ? ticket.case_type.name : '—' }}</span
-            >
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >Prioridad</span
-            >
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ priorityLabel(ticket.priority) }}</span
-            >
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >Estado</span
-            >
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ statusLabel(ticket.status) }}</span
-            >
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >SLA</span
-            >
-            <span
-              class="text-sm font-medium"
-              :class="slaInfoColor(ticket.sla_status)"
-              >{{ slaText }}</span
-            >
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >Creado</span
-            >
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ formatDate(ticket.created_at) }}</span
-            >
-          </div>
-          <div v-if="ticket.resolved_at" class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >Resuelto</span
-            >
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ formatDate(ticket.resolved_at) }}</span
-            >
-          </div>
-          <!-- @tickets_cases Fase C — solicitante en tickets internos -->
-          <div
-            v-if="ticket.is_internal && ticket.requester"
-            class="flex flex-col gap-0.5"
-          >
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.INTERNAL.REQUESTER_LABEL') }}</span
-            >
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ ticket.requester.name }}</span
-            >
-          </div>
-        </div>
-      </div>
-
-      <!-- ════ Pestaña Resumen: Asignación (Fase A) ════ -->
-      <div
-        v-show="currentTabKey === 'detail'"
-        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-      >
-        <h3
-          class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
-        >
-          {{ $t('CASE_TICKETS.ASSIGN.TITLE') }}
-        </h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1">
-            <label
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.ASSIGN.TEAM_LABEL') }}</label
-            >
-            <select
-              class="input"
-              :value="ticket.team_id || ''"
-              :disabled="uiFlags.isTransitioning"
-              @change="onAssignTeam"
-            >
-              <option value="">{{ $t('CASE_TICKETS.ASSIGN.NONE') }}</option>
-              <option v-for="tm in teams" :key="tm.id" :value="tm.id">
-                {{ tm.name }}
-              </option>
-            </select>
-          </div>
-          <div class="flex flex-col gap-1">
-            <label
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.ASSIGN.AGENT_LABEL') }}</label
-            >
-            <select
-              class="input"
-              :value="ticket.assignee_id || ''"
-              :disabled="uiFlags.isTransitioning"
-              @change="onAssignAgent"
-            >
-              <option value="">{{ $t('CASE_TICKETS.ASSIGN.NONE') }}</option>
-              <option v-for="ag in agents" :key="ag.id" :value="ag.id">
-                {{ ag.name }}
-              </option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Campos personalizados (2K) -->
-      <div
-        v-if="customFieldRows.length"
-        v-show="currentTabKey === 'detail'"
-        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-      >
-        <h3
-          class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
-        >
-          {{ $t('CASE_TICKETS.CUSTOM_FIELDS.DETAIL_TITLE') }}
-        </h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div
-            v-for="row in customFieldRows"
-            :key="row.key"
-            class="flex flex-col gap-0.5"
-          >
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ row.label }}</span
-            >
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{ row.value }}</span
-            >
-          </div>
-        </div>
-      </div>
-
-      <!-- Cierre documentado (2G) -->
-      <div
-        v-if="isClosed"
-        v-show="currentTabKey === 'detail'"
-        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-      >
-        <h3
-          class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
-        >
-          {{ $t('CASE_TICKETS.CLOSURE.TITLE') }}
-        </h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.CLOSURE.TYPE') }}</span
-            >
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{
-                ticket.closure_type
-                  ? closureTypeLabel(ticket.closure_type)
-                  : '—'
-              }}</span
-            >
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.CLOSURE.CUSTOMER_CONFIRMED') }}</span
-            >
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{
-                ticket.customer_confirmed
-                  ? $t('CASE_TICKETS.CLOSURE.YES')
-                  : $t('CASE_TICKETS.CLOSURE.NO')
-              }}</span
-            >
-          </div>
-          <div class="flex flex-col col-span-2 gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.CLOSURE.CAUSE') }}</span
-            >
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              ticket.closure_cause || '—'
-            }}</span>
-          </div>
-          <div class="flex flex-col col-span-2 gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.CLOSURE.SOLUTION') }}</span
-            >
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              ticket.closure_solution || '—'
-            }}</span>
           </div>
         </div>
 
-        <!-- 2H — artículo de base de conocimiento -->
+        <!-- Sidebar: datos del ticket (toma todo el ancho si no hay conversación) -->
         <div
-          class="flex items-center justify-between pt-4 mt-4 border-t border-slate-75 dark:border-slate-700"
+          class="flex flex-col min-w-0 gap-6"
+          :class="
+            ticket.conversation_display_id
+              ? 'xl:w-[400px] xl:flex-shrink-0'
+              : 'flex-1'
+          "
         >
+          <!-- Sugerencia de clasificación IA (3B, modo suggest) -->
           <div
-            v-if="ticket.kb_article"
-            class="flex items-center min-w-0 gap-2 text-sm"
+            v-if="aiSuggestion"
+            class="p-4 border rounded-lg bg-violet-50 border-violet-200 dark:bg-violet-900/20 dark:border-violet-800"
           >
-            <fluent-icon icon="book" size="16" class="text-woot-500" />
-            <span
-              class="font-medium text-slate-700 dark:text-slate-200 truncate"
-              >{{ ticket.kb_article.title }}</span
-            >
-            <span
-              class="px-1.5 py-0.5 text-[11px] uppercase rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-              >{{ articleStatusLabel(ticket.kb_article.status) }}</span
-            >
-          </div>
-          <span v-else class="text-sm text-slate-400 dark:text-slate-500">{{
-            $t('CASE_TICKETS.KB.NONE')
-          }}</span>
-          <woot-button
-            v-if="!ticket.kb_article"
-            size="tiny"
-            variant="smooth"
-            color-scheme="secondary"
-            icon="book"
-            @click="openArticleModal"
-          >
-            {{ $t('CASE_TICKETS.KB.GENERATE') }}
-          </woot-button>
-        </div>
-      </div>
-
-      <!-- Detalles de Problema (2F) -->
-      <div
-        v-if="isProblem"
-        v-show="currentTabKey === 'detail'"
-        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-      >
-        <div class="flex items-center justify-between mb-4">
-          <h3
-            class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
-          >
-            {{ $t('CASE_TICKETS.PROBLEM.TITLE') }}
-          </h3>
-          <woot-button
-            size="tiny"
-            variant="smooth"
-            color-scheme="secondary"
-            icon="edit"
-            @click="openDetailsModal"
-          >
-            {{ $t('CASE_TICKETS.PROBLEM.EDIT') }}
-          </woot-button>
-        </div>
-        <div class="grid grid-cols-1 gap-4">
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.PROBLEM.ROOT_CAUSE') }}</span
-            >
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              changeAttrs.root_cause || '—'
-            }}</span>
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.PROBLEM.WORKAROUND') }}</span
-            >
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              changeAttrs.workaround || '—'
-            }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Detalles de Cambio (2F) -->
-      <div
-        v-if="isChange"
-        v-show="currentTabKey === 'detail'"
-        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-      >
-        <div class="flex items-center justify-between mb-4">
-          <h3
-            class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
-          >
-            {{ $t('CASE_TICKETS.CHANGE.TITLE') }}
-          </h3>
-          <div class="flex gap-2">
-            <woot-button
-              v-if="changeApprovalStatus !== 'approved'"
-              size="tiny"
-              variant="smooth"
-              color-scheme="success"
-              icon="checkmark"
-              @click="approveChange"
-            >
-              {{ $t('CASE_TICKETS.CHANGE.APPROVE') }}
-            </woot-button>
-            <woot-button
-              v-if="changeApprovalStatus !== 'rejected'"
-              size="tiny"
-              variant="smooth"
-              color-scheme="alert"
-              icon="dismiss"
-              @click="openRejectModal"
-            >
-              {{ $t('CASE_TICKETS.CHANGE.REJECT') }}
-            </woot-button>
-            <woot-button
-              size="tiny"
-              variant="smooth"
-              color-scheme="secondary"
-              icon="edit"
-              @click="openDetailsModal"
-            >
-              {{ $t('CASE_TICKETS.CHANGE.EDIT') }}
-            </woot-button>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.CHANGE.APPROVAL_STATUS') }}</span
-            >
-            <span
-              class="self-start px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
-              :class="approvalBadge(changeApprovalStatus)"
-              >{{ approvalLabel(changeApprovalStatus) }}</span
-            >
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.CHANGE.RISK_LEVEL') }}</span
-            >
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-              >{{
-                changeAttrs.risk_level ? riskLabel(changeAttrs.risk_level) : '—'
-              }}</span
-            >
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.CHANGE.SCHEDULED_WINDOW') }}</span
-            >
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              changeAttrs.scheduled_window || '—'
-            }}</span>
-          </div>
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.CHANGE.REQUIRES_APPROVAL') }}</span
-            >
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              changeAttrs.requires_approval
-                ? $t('CASE_TICKETS.CHANGE.YES')
-                : $t('CASE_TICKETS.CHANGE.NO')
-            }}</span>
-          </div>
-          <div class="flex flex-col col-span-2 gap-0.5">
-            <span
-              class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
-              >{{ $t('CASE_TICKETS.CHANGE.ROLLBACK_PLAN') }}</span
-            >
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              changeAttrs.rollback_plan || '—'
-            }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tickets relacionados (2E) -->
-      <div
-        v-show="currentTabKey === 'detail'"
-        class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-      >
-        <div class="flex items-center justify-between mb-4">
-          <h3
-            class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
-          >
-            {{ $t('CASE_TICKETS.RELATIONS.TITLE') }}
-          </h3>
-          <woot-button
-            size="tiny"
-            variant="smooth"
-            color-scheme="secondary"
-            icon="link"
-            @click="openRelationModal"
-          >
-            {{ $t('CASE_TICKETS.RELATIONS.ADD') }}
-          </woot-button>
-        </div>
-
-        <div
-          v-if="!relations.length"
-          class="text-sm text-slate-400 dark:text-slate-500"
-        >
-          {{ $t('CASE_TICKETS.RELATIONS.EMPTY') }}
-        </div>
-        <ul v-else class="flex flex-col gap-2 p-0 m-0 list-none">
-          <li
-            v-for="rel in relations"
-            :key="rel.id"
-            class="flex items-center justify-between gap-3 px-3 py-2 border rounded-md border-slate-75 dark:border-slate-700"
-          >
-            <div class="flex items-center min-w-0 gap-2">
-              <span
-                class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300 flex-shrink-0"
-                >{{ relationLabel(rel) }}</span
-              >
-              <button
-                class="font-mono text-xs text-woot-500 hover:underline flex-shrink-0"
-                @click="openRelatedTicket(rel.ticket.id)"
-              >
-                {{ rel.ticket.folio || `#${rel.ticket.id}` }}
-              </button>
-              <span
-                class="text-sm truncate text-slate-600 dark:text-slate-300"
-                >{{ rel.ticket.title }}</span
-              >
+            <div class="flex items-start justify-between gap-3 mb-3">
+              <div class="flex items-center gap-2">
+                <fluent-icon
+                  icon="wand"
+                  size="18"
+                  class="text-violet-600 dark:text-violet-300"
+                />
+                <span
+                  class="text-sm font-semibold text-violet-800 dark:text-violet-200"
+                  >{{ $t('CASE_TICKETS.AI.SUGGESTION.TITLE') }}</span
+                >
+                <span
+                  v-if="aiConfidencePct !== null"
+                  class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-violet-100 text-violet-700 dark:bg-violet-800 dark:text-violet-100"
+                  >{{
+                    $t('CASE_TICKETS.AI.SUGGESTION.CONFIDENCE', {
+                      pct: aiConfidencePct,
+                    })
+                  }}</span
+                >
+              </div>
             </div>
-            <woot-button
-              size="tiny"
-              variant="clear"
-              color-scheme="secondary"
-              icon="dismiss"
-              @click="openDeleteRelation(rel)"
-            />
-          </li>
-        </ul>
+            <div class="grid grid-cols-2 gap-x-4 gap-y-2 mb-3">
+              <div
+                v-for="row in aiSuggestionRows"
+                :key="row.label"
+                class="flex flex-col gap-0.5"
+              >
+                <span
+                  class="text-xs tracking-wide uppercase text-violet-400 dark:text-violet-500"
+                  >{{ row.label }}</span
+                >
+                <span
+                  class="text-sm font-medium text-violet-800 dark:text-violet-100"
+                  >{{ row.value }}</span
+                >
+              </div>
+            </div>
+            <p
+              v-if="aiSuggestion.reasoning"
+              class="m-0 mb-3 text-xs italic text-violet-600 dark:text-violet-300"
+            >
+              {{ aiSuggestion.reasoning }}
+            </p>
+            <div class="flex justify-end gap-2">
+              <woot-button
+                size="small"
+                variant="clear"
+                color-scheme="secondary"
+                @click="dismissAiSuggestion"
+              >
+                {{ $t('CASE_TICKETS.AI.SUGGESTION.DISMISS') }}
+              </woot-button>
+              <woot-button
+                size="small"
+                icon="checkmark"
+                @click="applyAiSuggestion"
+              >
+                {{ $t('CASE_TICKETS.AI.SUGGESTION.APPLY') }}
+              </woot-button>
+            </div>
+          </div>
+
+          <!-- Campos personalizados (2K) -->
+          <div
+            v-if="customFieldRows.length"
+            v-show="currentTabKey === 'detail'"
+            class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          >
+            <h3
+              class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
+            >
+              {{ $t('CASE_TICKETS.CUSTOM_FIELDS.DETAIL_TITLE') }}
+            </h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div
+                v-for="row in customFieldRows"
+                :key="row.key"
+                class="flex flex-col gap-0.5"
+              >
+                <span
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ row.label }}</span
+                >
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{ row.value }}</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Cierre documentado (2G) -->
+          <div
+            v-if="isClosed"
+            v-show="currentTabKey === 'detail'"
+            class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          >
+            <h3
+              class="mb-4 text-base font-semibold text-slate-800 dark:text-slate-100"
+            >
+              {{ $t('CASE_TICKETS.CLOSURE.TITLE') }}
+            </h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="flex flex-col gap-0.5">
+                <span
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.CLOSURE.TYPE') }}</span
+                >
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{
+                    ticket.closure_type
+                      ? closureTypeLabel(ticket.closure_type)
+                      : '—'
+                  }}</span
+                >
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <span
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.CLOSURE.CUSTOMER_CONFIRMED') }}</span
+                >
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{
+                    ticket.customer_confirmed
+                      ? $t('CASE_TICKETS.CLOSURE.YES')
+                      : $t('CASE_TICKETS.CLOSURE.NO')
+                  }}</span
+                >
+              </div>
+              <div class="flex flex-col col-span-2 gap-0.5">
+                <span
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.CLOSURE.CAUSE') }}</span
+                >
+                <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                  ticket.closure_cause || '—'
+                }}</span>
+              </div>
+              <div class="flex flex-col col-span-2 gap-0.5">
+                <span
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.CLOSURE.SOLUTION') }}</span
+                >
+                <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                  ticket.closure_solution || '—'
+                }}</span>
+              </div>
+            </div>
+
+            <!-- 2H — artículo de base de conocimiento -->
+            <div
+              class="flex items-center justify-between pt-4 mt-4 border-t border-slate-75 dark:border-slate-700"
+            >
+              <div
+                v-if="ticket.kb_article"
+                class="flex items-center min-w-0 gap-2 text-sm"
+              >
+                <fluent-icon icon="book" size="16" class="text-woot-500" />
+                <span
+                  class="font-medium text-slate-700 dark:text-slate-200 truncate"
+                  >{{ ticket.kb_article.title }}</span
+                >
+                <span
+                  class="px-1.5 py-0.5 text-[11px] uppercase rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                  >{{ articleStatusLabel(ticket.kb_article.status) }}</span
+                >
+              </div>
+              <span v-else class="text-sm text-slate-400 dark:text-slate-500">{{
+                $t('CASE_TICKETS.KB.NONE')
+              }}</span>
+              <woot-button
+                v-if="!ticket.kb_article"
+                size="tiny"
+                variant="smooth"
+                color-scheme="secondary"
+                icon="book"
+                @click="openArticleModal"
+              >
+                {{ $t('CASE_TICKETS.KB.GENERATE') }}
+              </woot-button>
+            </div>
+          </div>
+
+          <!-- Detalles de Problema (2F) -->
+          <div
+            v-if="isProblem"
+            v-show="currentTabKey === 'detail'"
+            class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          >
+            <div class="flex items-center justify-between mb-4">
+              <h3
+                class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
+              >
+                {{ $t('CASE_TICKETS.PROBLEM.TITLE') }}
+              </h3>
+              <woot-button
+                size="tiny"
+                variant="smooth"
+                color-scheme="secondary"
+                icon="edit"
+                @click="openDetailsModal"
+              >
+                {{ $t('CASE_TICKETS.PROBLEM.EDIT') }}
+              </woot-button>
+            </div>
+            <div class="grid grid-cols-1 gap-4">
+              <div class="flex flex-col gap-0.5">
+                <span
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.PROBLEM.ROOT_CAUSE') }}</span
+                >
+                <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                  changeAttrs.root_cause || '—'
+                }}</span>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <span
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.PROBLEM.WORKAROUND') }}</span
+                >
+                <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                  changeAttrs.workaround || '—'
+                }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detalles de Cambio (2F) -->
+          <div
+            v-if="isChange"
+            v-show="currentTabKey === 'detail'"
+            class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          >
+            <div class="flex items-center justify-between mb-4">
+              <h3
+                class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
+              >
+                {{ $t('CASE_TICKETS.CHANGE.TITLE') }}
+              </h3>
+              <div class="flex gap-2">
+                <woot-button
+                  v-if="changeApprovalStatus !== 'approved'"
+                  size="tiny"
+                  variant="smooth"
+                  color-scheme="success"
+                  icon="checkmark"
+                  @click="approveChange"
+                >
+                  {{ $t('CASE_TICKETS.CHANGE.APPROVE') }}
+                </woot-button>
+                <woot-button
+                  v-if="changeApprovalStatus !== 'rejected'"
+                  size="tiny"
+                  variant="smooth"
+                  color-scheme="alert"
+                  icon="dismiss"
+                  @click="openRejectModal"
+                >
+                  {{ $t('CASE_TICKETS.CHANGE.REJECT') }}
+                </woot-button>
+                <woot-button
+                  size="tiny"
+                  variant="smooth"
+                  color-scheme="secondary"
+                  icon="edit"
+                  @click="openDetailsModal"
+                >
+                  {{ $t('CASE_TICKETS.CHANGE.EDIT') }}
+                </woot-button>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="flex flex-col gap-0.5">
+                <span
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.CHANGE.APPROVAL_STATUS') }}</span
+                >
+                <span
+                  class="self-start px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
+                  :class="approvalBadge(changeApprovalStatus)"
+                  >{{ approvalLabel(changeApprovalStatus) }}</span
+                >
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <span
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.CHANGE.RISK_LEVEL') }}</span
+                >
+                <span
+                  class="text-sm font-medium text-slate-700 dark:text-slate-200"
+                  >{{
+                    changeAttrs.risk_level
+                      ? riskLabel(changeAttrs.risk_level)
+                      : '—'
+                  }}</span
+                >
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <span
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.CHANGE.SCHEDULED_WINDOW') }}</span
+                >
+                <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                  changeAttrs.scheduled_window || '—'
+                }}</span>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <span
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.CHANGE.REQUIRES_APPROVAL') }}</span
+                >
+                <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                  changeAttrs.requires_approval
+                    ? $t('CASE_TICKETS.CHANGE.YES')
+                    : $t('CASE_TICKETS.CHANGE.NO')
+                }}</span>
+              </div>
+              <div class="flex flex-col col-span-2 gap-0.5">
+                <span
+                  class="text-xs tracking-wide uppercase text-slate-400 dark:text-slate-500"
+                  >{{ $t('CASE_TICKETS.CHANGE.ROLLBACK_PLAN') }}</span
+                >
+                <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                  changeAttrs.rollback_plan || '—'
+                }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tickets relacionados (2E) — solo si hay vínculos; vincular se hace
+               desde el botón de la barra de acciones. -->
+          <div
+            v-if="relations.length"
+            v-show="currentTabKey === 'detail'"
+            class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          >
+            <div class="mb-4">
+              <h3
+                class="m-0 text-base font-semibold text-slate-800 dark:text-slate-100"
+              >
+                {{ $t('CASE_TICKETS.RELATIONS.TITLE') }}
+              </h3>
+            </div>
+
+            <ul class="flex flex-col gap-2 p-0 m-0 list-none">
+              <li
+                v-for="rel in relations"
+                :key="rel.id"
+                class="flex items-center justify-between gap-3 px-3 py-2 border rounded-md border-slate-75 dark:border-slate-700"
+              >
+                <div class="flex items-center min-w-0 gap-2">
+                  <span
+                    class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300 flex-shrink-0"
+                    >{{ relationLabel(rel) }}</span
+                  >
+                  <button
+                    class="font-mono text-xs text-woot-500 hover:underline flex-shrink-0"
+                    @click="openRelatedTicket(rel.ticket.id)"
+                  >
+                    {{ rel.ticket.folio || `#${rel.ticket.id}` }}
+                  </button>
+                  <span
+                    class="text-sm truncate text-slate-600 dark:text-slate-300"
+                    >{{ rel.ticket.title }}</span
+                  >
+                </div>
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="dismiss"
+                  @click="openDeleteRelation(rel)"
+                />
+              </li>
+            </ul>
+          </div>
+          <!-- /tarjeta de tickets relacionados -->
+        </div>
+        <!-- /sidebar de datos -->
       </div>
+      <!-- /Resumen: dos columnas -->
 
       <!-- ════ Pestaña IA: Respuesta sugerida desde KB (3C) ════ -->
       <div
@@ -1640,7 +2092,16 @@ export default {
                 >{{ src.title }}</span
               >
             </div>
-            <div class="flex justify-end mt-3">
+            <div class="flex justify-end gap-2 mt-3">
+              <woot-button
+                v-if="ticket.conversation_display_id"
+                size="small"
+                variant="smooth"
+                icon="arrow-reply"
+                @click="useReplyInConversation"
+              >
+                {{ $t('CASE_TICKETS.AI.REPLY.USE_IN_CONVERSATION') }}
+              </woot-button>
               <woot-button
                 size="small"
                 variant="clear"
@@ -1895,6 +2356,28 @@ export default {
         </template>
       </div>
 
+      <!-- ════ Pestaña Notas internas — tabla + modal, como Tareas ════ -->
+      <TicketNotes
+        ref="ticketNotes"
+        v-show="currentTabKey === 'notes'"
+        :key="`notes-${ticket.id}`"
+        :ticket-id="ticket.id"
+        :is-frozen="isFrozen"
+        class="flex-1 min-h-0"
+        @count="noteCount = $event"
+        @changed="reloadEvents"
+      />
+
+      <!-- ════ Pestaña Tareas (P4) — checklist a ancho completo ════ -->
+      <TicketTasks
+        v-show="currentTabKey === 'tasks'"
+        :key="`tasks-${ticket.id}`"
+        :ticket-id="ticket.id"
+        :is-frozen="isFrozen"
+        class="flex-1 min-h-0"
+        @count="taskCount = $event"
+      />
+
       <!-- ════ Pestaña Avance del ticket (2L) — 3 vistas conmutables ════ -->
       <JourneyView
         v-show="currentTabKey === 'journey'"
@@ -1965,6 +2448,129 @@ export default {
               :is-loading="isTransitioning"
             >
               {{ $t('CASE_TICKETS.ESCALATION.CONFIRM') }}
+            </woot-button>
+          </div>
+        </form>
+      </div>
+    </woot-modal>
+
+    <!-- @tickets_cases — Edición del ticket (mismo modal que el alta) -->
+    <CaseTicketInternalModal
+      v-if="showEditModal && ticket"
+      :show="showEditModal"
+      :ticket="ticket"
+      @updated="onTicketEdited"
+      @close="showEditModal = false"
+    />
+
+    <!-- @tickets_cases — Reapertura de ticket cerrado (motivo OBLIGATORIO) -->
+    <woot-modal
+      v-if="showReopenModal"
+      :show="showReopenModal"
+      :on-close="() => (showReopenModal = false)"
+      size="small"
+    >
+      <div class="flex flex-col h-auto overflow-auto">
+        <woot-modal-header
+          :header-title="$t('CASE_TICKETS.REOPEN.MODAL_TITLE')"
+        />
+        <form
+          class="flex flex-col self-stretch w-full gap-4 pb-8"
+          @submit.prevent="confirmReopen"
+        >
+          <label class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              {{ $t('CASE_TICKETS.REOPEN.REASON_LABEL') }}
+            </span>
+            <textarea
+              ref="reopenInput"
+              v-model="reopenReason"
+              rows="4"
+              class="input"
+              :placeholder="$t('CASE_TICKETS.REOPEN.REASON_PLACEHOLDER')"
+            />
+          </label>
+
+          <p
+            class="flex items-center gap-1.5 m-0 px-3 py-2 text-xs rounded-md bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+          >
+            <fluent-icon icon="info" size="14" />
+            {{ $t('CASE_TICKETS.REOPEN.HINT') }}
+          </p>
+
+          <div class="flex justify-end gap-2">
+            <woot-button
+              variant="clear"
+              color-scheme="secondary"
+              type="button"
+              @click="showReopenModal = false"
+            >
+              {{ $t('CASE_TICKETS.REOPEN.CANCEL') }}
+            </woot-button>
+            <woot-button
+              type="submit"
+              color-scheme="alert"
+              :disabled="!reopenReason.trim()"
+              :is-loading="isReopening"
+            >
+              {{ $t('CASE_TICKETS.REOPEN.CONFIRM') }}
+            </woot-button>
+          </div>
+        </form>
+      </div>
+    </woot-modal>
+
+    <!-- @tickets_cases — Motivo opcional al cambiar de estado (osTicket) -->
+    <woot-modal
+      v-if="showReasonModal"
+      :show="showReasonModal"
+      :on-close="() => (showReasonModal = false)"
+      size="small"
+    >
+      <div class="flex flex-col h-auto overflow-auto">
+        <woot-modal-header
+          :header-title="
+            $t('CASE_TICKETS.STATUS_QUICK.REASON_TITLE', {
+              status: statusLabel(pendingStatus),
+            })
+          "
+        />
+        <form
+          class="flex flex-col self-stretch w-full gap-4 pb-8"
+          @submit.prevent="confirmTransition"
+        >
+          <label class="flex flex-col gap-1">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              {{ $t('CASE_TICKETS.STATUS_QUICK.REASON_LABEL') }}
+            </span>
+            <textarea
+              ref="reasonInput"
+              v-model="transitionReason"
+              rows="3"
+              class="input"
+              :placeholder="$t('CASE_TICKETS.STATUS_QUICK.REASON_PLACEHOLDER')"
+            />
+          </label>
+
+          <div class="flex justify-end gap-2 mt-2">
+            <woot-button
+              variant="clear"
+              color-scheme="secondary"
+              type="button"
+              @click="showReasonModal = false"
+            >
+              {{ $t('CASE_TICKETS.STATUS_QUICK.REASON_CANCEL') }}
+            </woot-button>
+            <woot-button
+              type="submit"
+              color-scheme="primary"
+              :is-loading="isTransitioning"
+            >
+              {{ $t('CASE_TICKETS.STATUS_QUICK.REASON_CONFIRM') }}
             </woot-button>
           </div>
         </form>

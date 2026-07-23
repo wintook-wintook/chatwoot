@@ -87,6 +87,29 @@ class Cases::OrchestratorService
     ticket
   end
 
+  # @tickets_cases — User Portal (P1): ticket abierto por el cliente desde el portal.
+  # origin: web. La asignación la deciden las reglas (rutea por tipo). El folio se
+  # genera en before_create del modelo. La conversación ya viene resuelta por el caller.
+  def create_from_portal(title:, case_type_id: nil, description: nil, priority: nil, custom_attributes: {})
+    attrs = {
+      account:       @account,
+      contact:       @contact,
+      conversation:  @conversation,
+      case_type:     resolve_case_type(case_type_id),
+      origin:        :web,
+      assignee_type: :bot,
+      title:         title,
+      description:   description,
+      custom_attributes: custom_attributes || {}
+    }
+    attrs[:priority] = priority if priority.present?
+
+    ticket = CaseTicket.create!(attrs)
+    Cases::RuleEngineService.new(ticket).evaluate!
+    enqueue_ai_classification(ticket) # @tickets_cases 3B
+    ticket
+  end
+
   # @tickets_cases Fase C — ticket interno (agente→agente, sin contacto).
   # requester = agente solicitante; assignee = agente que lo atenderá (opcional).
   # No encola clasificación IA (no hay mensaje de cliente que clasificar).

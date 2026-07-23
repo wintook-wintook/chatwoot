@@ -60,6 +60,7 @@ export default {
       getContactTickets: 'caseTickets/getContactTickets',
       agents: 'agents/getAgents', // @tickets_cases — asignación manual
       teams: 'teams/getTeams',
+      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
     }),
     tickets() {
       return this.getContactTickets(this.contactId);
@@ -168,6 +169,7 @@ export default {
     });
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('caseTickets/fetchCategories');
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     // @tickets_cases — agentes y equipos para la asignación manual.
     this.$store.dispatch('agents/get');
     this.$store.dispatch('teams/get');
@@ -518,8 +520,8 @@ export default {
               </select>
             </label>
 
-            <!-- Tipo ITIL -->
-            <label class="flex flex-col gap-1">
+            <!-- Tipo ITIL (oculto en modo simple) -->
+            <label v-if="itilEnabled" class="flex flex-col gap-1">
               <span
                 class="text-sm font-medium text-slate-700 dark:text-slate-300"
               >
@@ -601,10 +603,13 @@ export default {
               </select>
             </label>
 
-            <!-- Impacto · Urgencia · Prioridad en una sola línea -->
-            <div class="grid grid-cols-3 col-span-2 gap-3">
+            <!-- Impacto · Urgencia · Prioridad (impacto/urgencia ocultos en modo simple) -->
+            <div
+              class="col-span-2 gap-3"
+              :class="itilEnabled ? 'grid grid-cols-3' : ''"
+            >
               <!-- Impacto -->
-              <label class="flex flex-col gap-1">
+              <label v-if="itilEnabled" class="flex flex-col gap-1">
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
@@ -625,7 +630,7 @@ export default {
               </label>
 
               <!-- Urgencia -->
-              <label class="flex flex-col gap-1">
+              <label v-if="itilEnabled" class="flex flex-col gap-1">
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >

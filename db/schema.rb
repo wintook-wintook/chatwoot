@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_07_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_07_22_140100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -352,6 +352,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_07_120000) do
     t.boolean "itil_enabled", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "reopen_window_days", default: 30, null: false
+    t.boolean "reopen_on_customer_reply", default: true, null: false
     t.index ["account_id"], name: "index_case_settings_on_account_id", unique: true
   end
 
@@ -380,10 +382,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_07_120000) do
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "description"
+    t.datetime "completed_at"
+    t.bigint "completed_by_id"
     t.index ["account_id"], name: "index_case_tasks_on_account_id"
     t.index ["assignee_id"], name: "index_case_tasks_on_assignee_id"
     t.index ["case_ticket_id", "position"], name: "index_case_tasks_on_case_ticket_id_and_position"
     t.index ["case_ticket_id"], name: "index_case_tasks_on_case_ticket_id"
+    t.index ["completed_by_id"], name: "index_case_tasks_on_completed_by_id"
   end
 
   create_table "case_ticket_relations", force: :cascade do |t|
@@ -439,14 +445,21 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_07_120000) do
     t.bigint "requester_id"
     t.bigint "locked_by_id"
     t.datetime "locked_at"
+    t.datetime "due_at"
+    t.integer "reopen_count", default: 0, null: false
+    t.datetime "reopened_at"
     t.index ["account_id", "case_type_id"], name: "index_case_tickets_on_account_id_and_case_type_id"
     t.index ["account_id", "contact_id"], name: "index_case_tickets_on_account_id_and_contact_id"
+    t.index ["account_id", "due_at"], name: "index_case_tickets_on_account_id_and_due_at"
     t.index ["account_id", "folio"], name: "index_case_tickets_on_account_and_folio", unique: true, where: "(folio IS NOT NULL)"
     t.index ["account_id", "sla_status"], name: "index_case_tickets_on_account_id_and_sla_status"
     t.index ["account_id", "status"], name: "index_case_tickets_on_account_id_and_status"
     t.index ["account_id", "ticket_kind"], name: "index_case_tickets_on_account_id_and_ticket_kind"
     t.index ["affected_service_id"], name: "index_case_tickets_on_affected_service_id"
     t.index ["category_id"], name: "index_case_tickets_on_category_id"
+    t.index ["contact_id"], name: "index_case_tickets_on_contact_id"
+    t.index ["contact_tracking_id"], name: "index_case_tickets_on_contact_tracking_id"
+    t.index ["conversation_id"], name: "index_case_tickets_on_conversation_id"
     t.index ["kb_article_id"], name: "index_case_tickets_on_kb_article_id"
     t.index ["locked_by_id"], name: "index_case_tickets_on_locked_by_id"
     t.index ["metadata"], name: "index_case_tickets_on_metadata", using: :gin
@@ -1576,6 +1589,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_07_120000) do
   add_foreign_key "case_tasks", "accounts"
   add_foreign_key "case_tasks", "case_tickets"
   add_foreign_key "case_tasks", "users", column: "assignee_id"
+  add_foreign_key "case_tasks", "users", column: "completed_by_id", on_delete: :nullify
+  add_foreign_key "case_tickets", "contact_trackings", on_delete: :nullify
+  add_foreign_key "case_tickets", "contacts", on_delete: :nullify
+  add_foreign_key "case_tickets", "conversations", on_delete: :nullify
   add_foreign_key "case_tickets", "users", column: "locked_by_id"
   add_foreign_key "case_tickets", "users", column: "requester_id"
   add_foreign_key "case_type_fields", "accounts"

@@ -28,6 +28,8 @@ class CaseType < ApplicationRecord
   validates :color, presence: true
 
   scope :ordered, -> { order(:position, :id) }
+  # @tickets_cases — User Portal: tipos visibles en el formulario público del cliente.
+  scope :public_only, -> { where(public: true) }
 
   before_validation :ensure_prefix, on: :create
 

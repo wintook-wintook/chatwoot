@@ -38,8 +38,18 @@ class CaseTicketsAPI extends ApiClient {
     return axios.patch(`${this.url}/${ticketId}/escalate`, params);
   }
 
+  // @tickets_cases — reapertura de un ticket cerrado (motivo obligatorio)
+  reopen(ticketId, reason) {
+    return axios.patch(`${this.url}/${ticketId}/reopen`, { reason });
+  }
+
   getMetrics(params = {}) {
     return axios.get(`${this.url}/metrics`, { params });
+  }
+
+  // @tickets_cases P3 — acciones en lote desde la cola
+  bulk(params) {
+    return axios.post(`${this.url}/bulk`, params);
   }
 
   // @tickets_cases 2F — aprobación/rechazo de un cambio
@@ -98,6 +108,15 @@ class CaseTicketsAPI extends ApiClient {
   // @tickets_cases 3F — seguimiento sugerido al cliente
   followUp(ticketId) {
     return axios.post(`${this.url}/${ticketId}/follow_up`);
+  }
+
+  // @tickets_cases — bloqueo de ticket (evitar choque de agentes)
+  lock(ticketId) {
+    return axios.patch(`${this.url}/${ticketId}/lock`);
+  }
+
+  unlock(ticketId) {
+    return axios.patch(`${this.url}/${ticketId}/unlock`);
   }
 }
 
