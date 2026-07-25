@@ -35,6 +35,8 @@ class Cases::TicketCreatorService
   REINCIDENCE_DAYS = 14
   REINCIDENCE_THRESHOLD = 2
   PENDING_TTL = 1.hour
+  # Máximo de turnos en que el bot insiste por datos faltantes antes de crear igual.
+  MAX_FIELD_ASKS = 2
 
   def initialize(message, tracking:)
     @message      = message
@@ -46,37 +48,22 @@ class Cases::TicketCreatorService
 
   def create_if_needed
     return false unless directive_present?
-
-    # §11.2 Anti-duplicado: si ya hay un caso abierto del contacto, se reusa.
-    existing = orchestrator.find_active_ticket
-    if existing
-      link_and_confirm_existing(existing)
-      return true
-    end
+    return true  if reuse_existing_ticket # §11.2 Anti-duplicado: reusa caso abierto
 
     fields = intake_fields # nil = IA no disponible → degradar
 
-    # Gate: si la conversación no amerita un ticket (saludo, charla, tema ya
-    # resuelto), NO creamos nada y dejamos que el bot responda normal (el job
-    # sigue a generate_and_send_conversational_reply). Evita tickets espurios.
-    if fields && fields['ticket_worthy'] == false
-      Redis::Alfred.delete(pending_key)
-      return false
+    if fields
+      # Gate: si la conversación no amerita un ticket (saludo, charla, tema resuelto),
+      # NO creamos nada y dejamos que el bot responda normal. Evita tickets espurios.
+      return false if not_ticket_worthy?(fields)
+
+      # Campos particulares del tipo + Fase 2 (§6): extrae los case_type_fields de la
+      # conversación y, si faltan OBLIGATORIOS (o missing_info cuando el tipo no define
+      # campos), los pide y espera. true = el turno YA se atendió.
+      return true if request_missing_fields(fields)
     end
 
-    # Fase 2 (§6): faltan datos y aún no preguntamos → pedir UNA vez y esperar.
-    # Devolvemos true: el turno YA se atendió (no debe seguir el fallback del job).
-    if fields && ask_for_missing_info?(fields['missing_info'])
-      request_missing_info(fields['missing_info'])
-      return true
-    end
-
-    ticket = build_ticket(directive_overrides, fields)
-    return false unless ticket
-
-    Cases::RuleEngineService.new(ticket, trigger_message: @message).evaluate!
-    send_confirmation(ticket)
-    true
+    create_and_confirm(fields)
   rescue StandardError => e
     Rails.logger.error "[TicketCreator] Error creando ticket: #{e.message}"
     false
@@ -84,8 +71,35 @@ class Cases::TicketCreatorService
 
   private
 
+  # §11.2 Anti-duplicado: si ya hay un caso abierto del contacto, lo reusa y avisa.
+  def reuse_existing_ticket
+    existing = orchestrator.find_active_ticket
+    return false unless existing
+
+    link_and_confirm_existing(existing)
+    true
+  end
+
+  # Construye el ticket (con campos capturados), aplica reglas y confirma al cliente.
+  def create_and_confirm(fields)
+    ticket = build_ticket(directive_overrides, fields)
+    return false unless ticket
+
+    Cases::RuleEngineService.new(ticket, trigger_message: @message).evaluate!
+    send_confirmation(ticket)
+    true
+  end
+
   def directive_present?
     @tracking&.complementary_prompt.to_s.match?(DIRECTIVE_RE)
+  end
+
+  # true si la conversación NO amerita ticket (cierra el ciclo de Fase 2 si lo hubo).
+  def not_ticket_worthy?(fields)
+    return false unless fields['ticket_worthy'] == false
+
+    Redis::Alfred.delete(pending_key)
+    true
   end
 
   def orchestrator
@@ -105,19 +119,19 @@ class Cases::TicketCreatorService
     forced_priority = resolve_forced_priority(overrides, fields)
 
     orchestrator.create_from_ai(
-      message:             @message,
-      tracking:            @tracking,
-      title:               fields['title'],
-      description:         fields['description'],
-      priority:           forced_priority,
-      case_type_id:        resolve_case_type_id(overrides, fields),
-      ticket_kind:         fields['ticket_kind'],
-      impact:              fields['impact'],
-      urgency:             fields['urgency'],
+      message: @message,
+      tracking: @tracking,
+      title: fields['title'],
+      description: fields['description'],
+      priority: forced_priority,
+      case_type_id: resolve_case_type_id(overrides, fields),
+      ticket_kind: fields['ticket_kind'],
+      impact: fields['impact'],
+      urgency: fields['urgency'],
       affected_service_id: fields['affected_service_id'],
-      category_id:         fields['category_id'],
-      custom_attributes:   intake_custom_attributes(fields),
-      force_priority:      forced_priority.present?
+      category_id: fields['category_id'],
+      custom_attributes: intake_custom_attributes(fields),
+      force_priority: forced_priority.present?
     )
   end
 
@@ -205,32 +219,101 @@ class Cases::TicketCreatorService
     fields['case_type_id']
   end
 
-  # Deja rastro del intake en el ticket (para el asesor y auditoría).
+  # Deja rastro del intake en el ticket (para el asesor y auditoría) y guarda los
+  # valores capturados de los campos particulares del tipo, cada uno bajo su `key`.
   def intake_custom_attributes(fields)
     attrs = {}
     attrs['churn_risk'] = true if fields['churn_risk']
+    attrs.merge!(@field_values) if @field_values.present?
     attrs['ai_intake'] = {
-      'confidence'   => fields['confidence'],
-      'reasoning'    => fields['reasoning'],
+      'confidence' => fields['confidence'],
+      'reasoning' => fields['reasoning'],
       'missing_info' => fields['missing_info']
     }.compact
     attrs
   end
 
   # ---------------------------------------------------------------------------
-  # Fase 2 (§6): pedir el dato faltante UNA sola vez (estado en Redis, 1 turno).
+  # Campos particulares del tipo de caso (case_type_fields)
   # ---------------------------------------------------------------------------
-  def ask_for_missing_info?(missing)
-    return false if missing.blank?
-    return false if Redis::Alfred.get(pending_key).present? # ya preguntamos → crear igual
+  # Tras conocer el tipo, extrae de la conversación los valores de sus campos y
+  # detecta los OBLIGATORIOS faltantes. Deja @field_values, @missing_required y
+  # @type_has_fields para el resto del flujo.
+  def resolve_type_and_fields(fields)
+    @field_values     = {}
+    @missing_required = []
+    case_type         = case_type_with_fields(fields)
+    @type_has_fields  = case_type.present?
+    return unless @type_has_fields && field_extractor.available?
 
+    result            = field_extractor.extract(conversation_text: conversation_text, case_type: case_type)
+    @field_values     = result['values'] || {}
+    @missing_required = result['missing_required'] || []
+  rescue StandardError => e
+    Rails.logger.error("[TicketCreator] Error extrayendo campos del tipo: #{e.message}")
+  end
+
+  # El tipo de caso resuelto SOLO si tiene campos particulares definidos; si no, nil.
+  def case_type_with_fields(fields)
+    type_id = resolve_case_type_id(directive_overrides, fields || {})
+    return if type_id.blank?
+
+    case_type = @account.case_types.includes(:case_type_fields).find_by(id: type_id)
+    return if case_type.nil? || case_type.case_type_fields.empty?
+
+    case_type
+  end
+
+  # Extrae los campos del tipo y, si faltan datos que pedir, los solicita. Devuelve
+  # true si preguntó (turno atendido), false si no hay nada pendiente. En ambos casos
+  # deja @field_values listo para build_ticket.
+  def request_missing_fields(fields)
+    resolve_type_and_fields(fields)
+    missing = missing_info_to_ask(fields)
+    return false unless missing.present? && ask_for_missing_info?(missing)
+
+    request_missing_info(missing)
     true
   end
 
+  # Qué datos pedir: si el tipo define campos, SOLO los obligatorios faltantes
+  # (etiquetados y con opciones para las listas); si no, el missing_info del intake.
+  def missing_info_to_ask(fields)
+    if @type_has_fields
+      Array(@missing_required).map { |field| field_ask_label(field) }
+    else
+      Array(fields['missing_info'])
+    end
+  end
+
+  def field_ask_label(field)
+    return field.label unless field.field_list?
+
+    opts = Array(field.options).join(', ')
+    opts.present? ? "#{field.label} (opciones: #{opts})" : field.label
+  end
+
+  def field_extractor
+    @field_extractor ||= Cases::Ai::FieldExtractor.new(account: @account)
+  end
+
+  # ---------------------------------------------------------------------------
+  # Fase 2 (§6): pedir los datos faltantes (obligatorios del tipo o missing_info).
+  # Se permite un número acotado de vueltas (MAX_FIELD_ASKS) para dar de alta el
+  # caso aunque el cliente no complete todo, sin quedar en bucle. Estado en Redis.
+  # ---------------------------------------------------------------------------
+  def ask_for_missing_info?(missing)
+    return false if missing.blank?
+
+    Redis::Alfred.get(pending_key).to_i < MAX_FIELD_ASKS
+  end
+
   def request_missing_info(missing)
-    Redis::Alfred.setex(pending_key, '1', PENDING_TTL)
-    text = "Para poder levantar tu caso necesito un dato: #{missing.to_sentence}. " \
-           '¿Me lo compartes, por favor?'
+    asks = Redis::Alfred.get(pending_key).to_i + 1
+    Redis::Alfred.setex(pending_key, asks.to_s, PENDING_TTL)
+    intro = missing.size == 1 ? 'necesito un dato' : 'necesito unos datos'
+    text  = "Para poder levantar tu caso #{intro}: #{missing.to_sentence}. " \
+            '¿Me lo compartes, por favor?'
     deliver(text)
   end
 
@@ -261,10 +344,10 @@ class Cases::TicketCreatorService
     deliver(text)
 
     ticket.case_events.create!(
-      account:    @account,
+      account: @account,
       event_type: :message_sent,
-      origin:     :bot,
-      payload:    { content: text, ticket_id: ticket.id }
+      origin: :bot,
+      payload: { content: text, ticket_id: ticket.id }
     )
   rescue StandardError => e
     Rails.logger.error "[TicketCreator] Error enviando confirmación: #{e.message}"
@@ -286,6 +369,10 @@ class Cases::TicketCreatorService
   # Transcripción reciente de la conversación (Cliente/Bot: …) para que el intake
   # tenga contexto, no solo el último mensaje.
   def conversation_text
+    @conversation_text ||= build_conversation_text
+  end
+
+  def build_conversation_text
     msgs = Message.where(conversation_id: @conversation.id)
                   .where(message_type: [0, 1])
                   .order(created_at: :desc)
