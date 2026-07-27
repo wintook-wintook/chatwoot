@@ -27,34 +27,85 @@ Lo que sí necesita:
 
 ---
 
-## 1. App de Meta
+## 1. App de Meta — paso a paso
 
 Se decidió usar **una app separada de la de Messenger**, para que una revisión de
 Instagram no pueda afectar al canal que ya está en producción.
 
-En developers.meta.com, en la app de Instagram:
+### 1.1 Crear la app
 
-| Dónde | Qué poner |
+1. Entra en <https://developers.facebook.com/apps> → **Crear aplicación**
+2. En el asistente, elige el caso de uso **«Gestionar mensajería y contenido en Instagram»**
+   (*Manage messaging & content on Instagram*). Es el que habilita *API setup with
+   Instagram Login* y el permiso `instagram_business_basic`
+3. Completa nombre, correo de contacto y crea la app
+
+### 1.2 Permisos
+
+En el menú lateral: **Instagram → API setup with Instagram Login**
+
+Pulsa **«Add required messaging permissions»** — no «Add all required permissions», que es
+para publicación de contenido. Deben quedar:
+
+- `instagram_business_basic`
+- `instagram_business_manage_messages`
+
+### 1.3 Credenciales
+
+En esa misma pantalla, apartado **3. Set up Instagram business login → Business login
+settings**, están el **Instagram App ID** y el **Instagram App Secret**. Son los que van a
+Chatwoot (paso 2 de esta guía).
+
+> No los confundas con el *Facebook App ID* / *App Secret* de la app: son valores
+> distintos aunque estén en la misma aplicación.
+
+### 1.4 URI de redirección OAuth
+
+En **Business login settings**, campo *OAuth redirect URIs*:
+
+```
+https://aux.wintook.com/instagram/callback
+```
+
+⚠️ Tiene que coincidir **carácter por carácter** con la que genera Chatwoot. La propia doc
+de Meta avisa de que el panel a veces **añade una barra final** al guardar; si la añade,
+bórrala o la autorización fallará. `rake instagram:doctor` te muestra la URI exacta.
+
+Si el panel te pide *Deauthorize callback URL* y *Data deletion request URL*, Chatwoot no
+expone endpoints propios para eso: apunta a tu página de privacidad.
+
+### 1.5 Webhooks
+
+En **Instagram → Webhooks**:
+
+| Campo | Valor |
 |---|---|
-| Instagram → API con Instagram Login → URI de redirección OAuth | `https://aux.wintook.com/instagram/callback` |
-| Instagram → Webhooks → URL de devolución de llamada | `https://aux.wintook.com/webhooks/instagram` |
-| Instagram → Webhooks → Token de verificación | El mismo valor que pongas en `IG_VERIFY_TOKEN` |
-| Instagram → Webhooks → Campos suscritos | `messages` (imprescindible) + el de acuses de lectura si el panel lo ofrece |
-| Permisos | `instagram_business_basic`, `instagram_business_manage_messages` |
+| URL de devolución de llamada | `https://aux.wintook.com/webhooks/instagram` |
+| Token de verificación | El mismo string que pongas en `IG_VERIFY_TOKEN` |
 
-> Permisos y endpoint **verificados** contra la documentación de Meta (julio 2026):
-> `instagram_business_basic` + `instagram_business_manage_messages`, envío por
-> `graph.instagram.com/<IG_ID>/messages`. La versión por defecto es `v25.0`, la que usan
-> hoy los ejemplos de Meta; se cambia en Super Admin sin tocar código.
->
-> Lo único sin confirmar es el nombre exacto del campo de webhook para los acuses de
-> lectura. Meta documenta `messages`, `messaging_optins`, `messaging_postbacks` y
-> `messaging_reactions`; el panel te mostrará la lista real al suscribir. Suscribe
-> `messages` (imprescindible) y, si aparece uno de "seen"/"reads", súscríbelo también:
-> el código ya procesa esos eventos.
+Pulsa **Verificar y guardar**. La verificación tiene que salir bien antes de poder
+suscribir campos — ese handshake ya está probado y funcionando en esta instalación.
 
-La URI de redirección tiene que coincidir **carácter por carácter** con la que genera
-Chatwoot. `rake instagram:doctor` te la muestra.
+Luego suscribe **`messages`** (imprescindible). Meta documenta además `messaging_optins`,
+`messaging_postbacks` y `messaging_reactions`; si aparece alguno de acuses de lectura,
+suscríbelo también, porque el código ya procesa esos eventos.
+
+### 1.6 Cuenta de prueba (para probar sin App Review)
+
+La app nace en **modo desarrollo**: solo funciona con cuentas dadas de alta como
+administrador, desarrollador o tester. Eso basta para probarlo todo sin pasar revisión.
+
+1. **Roles → Instagram Testers** → añade el usuario de Instagram con el que vas a probar
+2. Desde esa cuenta, en Instagram web: **Configuración → Aplicaciones y sitios web** →
+   aceptar la invitación pendiente
+
+Sin ese paso, la autorización falla aunque todo lo demás esté bien.
+
+### 1.7 App Review (solo para producción)
+
+Para usarlo con cuentas que no sean testers hay que solicitar acceso avanzado a
+`instagram_business_basic` e `instagram_business_manage_messages`. Se puede dejar para
+después de validar el funcionamiento con la cuenta de prueba.
 
 ---
 
