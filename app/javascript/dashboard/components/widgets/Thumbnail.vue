@@ -71,6 +71,7 @@ export default {
     badgeSrc() {
       return {
         instagram_direct_message: 'instagram-dm',
+        'Channel::Instagram': 'instagram-dm',
         facebook: 'messenger',
         'twitter-tweet': 'twitter-tweet',
         'twitter-dm': 'twitter-dm',

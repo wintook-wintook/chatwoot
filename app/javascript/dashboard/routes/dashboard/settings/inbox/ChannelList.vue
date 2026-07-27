@@ -30,6 +30,7 @@ export default {
       return [
         { key: 'website', name: 'Website' },
         { key: 'facebook', name: 'Messenger' },
+        { key: 'instagram', name: 'Instagram' },
         { key: 'whatsapp', name: 'WhatsApp' },
         { key: 'sms', name: 'SMS' },
         { key: 'email', name: 'Email' },

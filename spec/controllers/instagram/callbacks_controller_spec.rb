@@ -52,6 +52,32 @@ RSpec.describe 'Instagram::CallbacksController', type: :request do
       expect(Redis::Alfred.get(cache_key)).to be_nil
     end
 
+    # Reautorizar es rehacer este mismo OAuth. Sin esto chocaría con el índice único de
+    # instagram_id y el canal caducado no habría forma de recuperarlo desde la interfaz.
+    it 'refreshes the existing channel instead of creating a duplicate' do
+      existing = create(:channel_instagram, account: account, instagram_id: '17841400',
+                                            access_token: 'stale-token', expires_at: 1.day.ago)
+      existing.prompt_reauthorization!
+
+      expect { get instagram_callback_url, params: { code: 'the-code', state: state } }
+        .not_to change(Channel::Instagram, :count)
+
+      existing.reload
+      expect(existing.access_token).to eq('long-token')
+      expect(existing.reauthorization_required?).to be false
+      expect(response).to redirect_to app_instagram_inbox_agents_url(account_id: account.id, inbox_id: existing.inbox.id)
+    end
+
+    it 'refuses to take over an account already connected elsewhere' do
+      other_account = create(:account)
+      create(:channel_instagram, account: other_account, instagram_id: '17841400')
+
+      get instagram_callback_url, params: { code: 'the-code', state: state }
+
+      expect(account.instagram_channels.count).to be 0
+      expect(response).to redirect_to "#{app_new_instagram_inbox_url(account_id: account.id)}?error=already_connected"
+    end
+
     it 'redirects home and creates nothing when the state is unknown' do
       get instagram_callback_url, params: { code: 'the-code', state: 'not-a-known-state' }
 

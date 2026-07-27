@@ -48,7 +48,7 @@ export default {
       type: Boolean,
       default: false,
     },
-    isAFacebookInbox: {
+    isAMetaInbox: {
       type: Boolean,
       default: false,
     },
@@ -491,10 +491,10 @@ export default {
           :parent-has-attachments="hasAttachments"
         />
         <div v-if="isUnsupported">
-          <template v-if="isAFacebookInbox && isInstagram">
+          <template v-if="isAMetaInbox && isInstagram">
             {{ $t('CONVERSATION.UNSUPPORTED_MESSAGE_INSTAGRAM') }}
           </template>
-          <template v-else-if="isAFacebookInbox">
+          <template v-else-if="isAMetaInbox">
             {{ $t('CONVERSATION.UNSUPPORTED_MESSAGE_FACEBOOK') }}
           </template>
           <template v-else>

@@ -232,7 +232,7 @@ export default {
       if (this.isPrivate) {
         return MESSAGE_MAX_LENGTH.GENERAL;
       }
-      if (this.isAFacebookInbox) {
+      if (this.isAMetaInbox) {
         return MESSAGE_MAX_LENGTH.FACEBOOK;
       }
       if (this.isAWhatsAppChannel) {
@@ -249,7 +249,7 @@ export default {
     showFileUpload() {
       return (
         this.isAWebWidgetInbox ||
-        this.isAFacebookInbox ||
+        this.isAMetaInbox ||
         this.isAWhatsAppChannel ||
         this.isAPIInbox ||
         this.isAnEmailChannel ||

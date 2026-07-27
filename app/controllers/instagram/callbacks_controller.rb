@@ -3,6 +3,9 @@
 # Meta redirige aquí sin sesión de usuario, así que la cuenta se recupera del `state`
 # que guardamos en Redis al iniciar la autorización.
 class Instagram::CallbacksController < ApplicationController
+  # La cuenta de Instagram ya está conectada en otra cuenta de Chatwoot
+  class ForeignChannelError < StandardError; end
+
   def show
     return redirect_to_error('denied') if permitted_params[:error].present?
     return redirect_to_error('invalid_state') if account.blank?
@@ -12,6 +15,8 @@ class Instagram::CallbacksController < ApplicationController
     ::Redis::Alfred.delete(cache_key)
 
     redirect_to app_instagram_inbox_agents_url(account_id: account.id, inbox_id: inbox.id)
+  rescue ForeignChannelError
+    redirect_to_error('already_connected')
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: account).capture_exception
     redirect_to_error('failed')
@@ -21,7 +26,28 @@ class Instagram::CallbacksController < ApplicationController
 
   def create_channel_with_inbox
     profile = fetch_authorized_profile
+    existing = Channel::Instagram.find_by(instagram_id: profile[:instagram_id])
 
+    # El mismo IGSID conectado en otra cuenta: no se le roba el canal a nadie.
+    raise ForeignChannelError if existing.present? && existing.account_id != account.id
+
+    existing.present? ? reauthorize_channel(existing, profile) : create_channel(profile)
+  end
+
+  # Volver a autorizar es rehacer este mismo OAuth: reconocemos la cuenta por su IGSID y
+  # refrescamos credenciales en vez de crear un canal duplicado, que además chocaría con
+  # el índice único.
+  def reauthorize_channel(channel, profile)
+    channel.update!(
+      access_token: profile[:access_token],
+      expires_at: profile[:expires_at],
+      provider_config: profile[:provider_config]
+    )
+    channel.reauthorized!
+    channel.inbox
+  end
+
+  def create_channel(profile)
     ActiveRecord::Base.transaction do
       channel = account.instagram_channels.create!(
         instagram_id: profile[:instagram_id],
