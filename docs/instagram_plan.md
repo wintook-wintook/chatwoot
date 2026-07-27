@@ -735,7 +735,7 @@ nada; conviene limpiarlos en algún momento, fuera de esta rama.
 - [x] F4 — Envío por `graph.instagram.com` + `SendReplyJob`
       (la ruta legacy se queda en Graph v11.0 a propósito; subirla es decisión aparte)
 - [x] F5 — Job de refresh de token + schedule
-- [ ] F6 — Frontend: canal propio, i18n, settings
-- [ ] F7 — Rake task de migración (dry-run)
+- [x] F6 — Frontend: canal propio, i18n, settings
+- [x] F7 — Rake task de migración (dry-run)
 - [ ] F8 — Integración con agentes IA / seguimientos / campañas
 - [ ] F9 — Specs + rollout con cuenta piloto
