@@ -12,7 +12,8 @@ RSpec.describe Instagram::ReadinessService do
   end
 
   around do |example|
-    originals = %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET IG_VERIFY_TOKEN].index_with { |name| ENV.fetch(name, nil) }
+    originals = %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET INSTAGRAM_VERIFY_TOKEN IG_VERIFY_TOKEN]
+                .index_with { |name| ENV.fetch(name, nil) }
     example.run
     originals.each do |name, value|
       InstallationConfig.find_by(name: name)&.update!(value: nil)
@@ -28,13 +29,23 @@ RSpec.describe Instagram::ReadinessService do
       service = described_class.new
 
       expect(service).not_to be_ready
-      expect(service.checks.reject(&:ok).map(&:name)).to include('INSTAGRAM_APP_ID', 'INSTAGRAM_APP_SECRET', 'IG_VERIFY_TOKEN')
+      expect(service.checks.reject(&:ok).map(&:name))
+        .to include('INSTAGRAM_APP_ID', 'INSTAGRAM_APP_SECRET', 'Verify token del webhook')
     end
 
     it 'is ready once everything is configured' do
       set_config('INSTAGRAM_APP_ID', 'ig-app-id')
       set_config('INSTAGRAM_APP_SECRET', 'ig-app-secret')
       set_config('IG_VERIFY_TOKEN', 'verify-token')
+
+      expect(described_class.new).to be_ready
+    end
+
+    # El webhook acepta cualquiera de los dos nombres, así que uno solo basta
+    it 'is ready with only the upstream verify token name' do
+      set_config('INSTAGRAM_APP_ID', 'ig-app-id')
+      set_config('INSTAGRAM_APP_SECRET', 'ig-app-secret')
+      set_config('INSTAGRAM_VERIFY_TOKEN', 'verify-token')
 
       expect(described_class.new).to be_ready
     end

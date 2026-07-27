@@ -30,7 +30,8 @@ class Instagram::ReadinessService
   # Trampa silenciosa: si .env declara la variable vacía (`INSTAGRAM_APP_ID=`), ENV gana sobre la
   # base de datos y GlobalConfigService devuelve nil. El valor se guarda en Super Admin, se
   # ve guardado, y no surte efecto. Merece un aviso explícito.
-  SHADOWABLE_KEYS = %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET IG_VERIFY_TOKEN INSTAGRAM_API_VERSION].freeze
+  SHADOWABLE_KEYS = %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET INSTAGRAM_VERIFY_TOKEN IG_VERIFY_TOKEN
+                       INSTAGRAM_API_VERSION].freeze
 
   def shadowed_by_env_checks
     SHADOWABLE_KEYS.filter_map do |key|
@@ -103,9 +104,20 @@ class Instagram::ReadinessService
               fix: 'Super Admin → Instagram → Instagram App Secret')
   end
 
+  # El webhook admite cualquiera de los dos nombres: INSTAGRAM_VERIFY_TOKEN (upstream) o
+  # IG_VERIFY_TOKEN (el que ya usaba la ruta legacy de esta instalación).
   def verify_token_check
-    value = GlobalConfigService.load('IG_VERIFY_TOKEN', '')
-    Check.new(name: 'IG_VERIFY_TOKEN', ok: value.present?, detail: value.present? ? '(configurado)' : '(vacío)',
+    upstream = GlobalConfigService.load('INSTAGRAM_VERIFY_TOKEN', '')
+    legacy = GlobalConfigService.load('IG_VERIFY_TOKEN', '')
+    configured = [upstream, legacy].compact_blank
+
+    detail = if configured.empty?
+               '(vacío)'
+             else
+               "(configurado en #{upstream.present? ? 'INSTAGRAM_VERIFY_TOKEN' : 'IG_VERIFY_TOKEN'})"
+             end
+
+    Check.new(name: 'Verify token del webhook', ok: configured.any?, detail: detail,
               fix: 'Super Admin → Instagram → Instagram Verify Token, y el mismo valor en el webhook de la app de Meta')
   end
 

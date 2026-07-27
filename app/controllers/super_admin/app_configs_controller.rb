@@ -40,7 +40,8 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
                        # grupos a propósito: son la misma fila de InstallationConfig y gobiernan
                        # las dos rutas, así que no pueden desincronizarse.
                        when 'instagram'
-                         %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET IG_VERIFY_TOKEN INSTAGRAM_API_VERSION ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT]
+                         %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET INSTAGRAM_VERIFY_TOKEN IG_VERIFY_TOKEN INSTAGRAM_API_VERSION
+                            ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT]
                        when 'microsoft'
                          %w[AZURE_APP_ID AZURE_APP_SECRET]
                        when 'email'

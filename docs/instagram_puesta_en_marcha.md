@@ -40,6 +40,11 @@ Instagram no pueda afectar al canal que ya está en producción.
    Instagram Login* y el permiso `instagram_business_basic`
 3. Completa nombre, correo de contacto y crea la app
 
+> La documentación de Chatwoot describe este paso como «tipo de app *Business* + añadir el
+> producto Instagram». Meta ha cambiado el panel desde entonces y ahora se hace eligiendo
+> el caso de uso. Si ves el flujo antiguo, el resultado buscado es el mismo: una app con el
+> producto Instagram y *API setup with Instagram Login* disponible.
+
 ### 1.2 Permisos
 
 En el menú lateral: **Instagram → API setup with Instagram Login**
@@ -81,14 +86,27 @@ En **Instagram → Webhooks**:
 | Campo | Valor |
 |---|---|
 | URL de devolución de llamada | `https://aux.wintook.com/webhooks/instagram` |
-| Token de verificación | El mismo string que pongas en `IG_VERIFY_TOKEN` |
+| Token de verificación | El mismo string que pongas en `INSTAGRAM_VERIFY_TOKEN` |
 
 Pulsa **Verificar y guardar**. La verificación tiene que salir bien antes de poder
 suscribir campos — ese handshake ya está probado y funcionando en esta instalación.
 
-Luego suscribe **`messages`** (imprescindible). Meta documenta además `messaging_optins`,
-`messaging_postbacks` y `messaging_reactions`; si aparece alguno de acuses de lectura,
-suscríbelo también, porque el código ya procesa esos eventos.
+Campos a suscribir (según la documentación de Chatwoot para este canal):
+
+- **`messages`** — imprescindible, es por donde llegan los DMs
+- **`messaging_seen`** — acuses de lectura
+- **`message_reactions`** — reacciones (el código todavía no las procesa; suscribirlo
+  ahora no molesta y evita volver a tocar la configuración cuando se implementen)
+
+### 1.5b ⚠️ La app tiene que estar en modo **Live**
+
+Aquí está el detalle que más tiempo puede hacerte perder: **en modo desarrollo Meta no
+entrega webhooks**. La autorización funcionará, el inbox se creará, y no llegará ni un
+mensaje, sin ningún error.
+
+Cambia la app a **Live** con el interruptor de la cabecera del panel. Con la app en Live y
+la cuenta dada de alta como tester (paso siguiente) se puede probar el ciclo completo sin
+haber pasado App Review.
 
 ### 1.6 Cuenta de prueba (para probar sin App Review)
 
@@ -117,7 +135,7 @@ después de validar el funcionamiento con la cuenta de prueba.
 |---|---|
 | `INSTAGRAM_APP_ID` | App de Meta → Instagram → **Instagram App ID** (no el Facebook App ID) |
 | `INSTAGRAM_APP_SECRET` | App de Meta → Instagram → **Instagram App Secret** |
-| `IG_VERIFY_TOKEN` | Lo inventas tú; el mismo string va en el webhook de Meta |
+| `INSTAGRAM_VERIFY_TOKEN` | Lo inventas tú; el mismo string va en el webhook de Meta. El webhook también acepta el `IG_VERIFY_TOKEN` que ya usaba la ruta legacy, así que basta con tener uno de los dos |
 | `INSTAGRAM_API_VERSION` | Déjalo en `v25.0` salvo que Meta indique otra |
 
 > El grupo `config=facebook` no se toca. Messenger sigue configurándose exactamente igual.
@@ -239,7 +257,8 @@ conversaciones, y suelta el `instagram_id` para que el router deje de resolverlo
   amplía a 7 días (`ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT` en Super Admin).
 - **Los seguimientos IA respetan esa ventana**: si está cerrada, el seguimiento se marca
   como fallido en vez de gastar un intento en un mensaje que Meta rechazaría.
-- **Eventos no soportados todavía**: reacciones, borrado de mensajes (`message_unsend`) e
-  icebreakers. Están contemplados en el plan como fase posterior.
+- **Eventos no soportados todavía**: reacciones (`message_reactions`), borrado de mensajes
+  (`message_unsend`) e icebreakers. Están contemplados en el plan como fase posterior;
+  suscribir el campo en Meta desde ya no causa ningún problema.
 - **El webhook no valida la firma de Meta** (`X-Hub-Signature-256`). Es deuda anterior a
   este trabajo; con `INSTAGRAM_APP_SECRET` ya configurado, cerrarlo es sencillo.

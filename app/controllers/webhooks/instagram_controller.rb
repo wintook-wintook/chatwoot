@@ -14,7 +14,16 @@ class Webhooks::InstagramController < ActionController::API
 
   private
 
+  # El endpoint es el mismo para el canal nativo y para la ruta legacy, así que se admiten
+  # los dos nombres: INSTAGRAM_VERIFY_TOKEN es el que documenta upstream para el canal
+  # nativo, IG_VERIFY_TOKEN el que esta instalación ya usaba para la ruta por Página.
+  # Basta con tener configurado uno de los dos.
   def valid_token?(token)
-    token == GlobalConfigService.load('IG_VERIFY_TOKEN', '')
+    return false if token.blank?
+
+    [
+      GlobalConfigService.load('INSTAGRAM_VERIFY_TOKEN', ''),
+      GlobalConfigService.load('IG_VERIFY_TOKEN', '')
+    ].compact_blank.include?(token)
   end
 end

@@ -136,6 +136,10 @@
   display_title: 'Instagram App Secret'
   description: 'Se usa para el intercambio del código OAuth y para firmar las llamadas del canal nativo.'
   locked: false
+- name: INSTAGRAM_VERIFY_TOKEN
+  display_title: 'Instagram Verify Token'
+  description: 'Token de verificación del webhook del canal nativo. Es el nombre que usa upstream; si ya tienes IG_VERIFY_TOKEN configurado, cualquiera de los dos vale.'
+  locked: false
 - name: INSTAGRAM_API_VERSION
   display_title: 'Instagram API Version'
   description: 'Versión de graph.instagram.com para el canal nativo. Prefijada con `v`.'
