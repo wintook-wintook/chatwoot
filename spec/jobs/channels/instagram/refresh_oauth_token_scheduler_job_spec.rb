@@ -12,9 +12,10 @@ RSpec.describe Channels::Instagram::RefreshOauthTokenSchedulerJob do
   end
 
   it 'leaves healthy tokens alone' do
-    create(:channel_instagram, account: account, expires_at: 59.days.from_now)
+    healthy = create(:channel_instagram, account: account, expires_at: 59.days.from_now)
 
-    expect { job.perform_now }.not_to have_enqueued_job(Channels::Instagram::RefreshOauthTokenJob)
+    # La aserción nombra el canal: así no depende de que no exista ninguna otra fila
+    expect { job.perform_now }.not_to have_enqueued_job(Channels::Instagram::RefreshOauthTokenJob).with(healthy)
   end
 
   it 'still picks up tokens that already expired, so the admin gets told' do
@@ -30,8 +31,8 @@ RSpec.describe Channels::Instagram::RefreshOauthTokenSchedulerJob do
   end
 
   it 'does not touch legacy instagram channels, which have no token of their own' do
-    create(:channel_instagram_fb_page, account: account, instagram_id: 'legacy-ig')
+    legacy = create(:channel_instagram_fb_page, account: account, instagram_id: 'legacy-ig')
 
-    expect { job.perform_now }.not_to have_enqueued_job(Channels::Instagram::RefreshOauthTokenJob)
+    expect { job.perform_now }.not_to have_enqueued_job(Channels::Instagram::RefreshOauthTokenJob).with(legacy)
   end
 end

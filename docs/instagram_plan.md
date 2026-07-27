@@ -737,5 +737,5 @@ nada; conviene limpiarlos en algún momento, fuera de esta rama.
 - [x] F5 — Job de refresh de token + schedule
 - [x] F6 — Frontend: canal propio, i18n, settings
 - [x] F7 — Rake task de migración (dry-run)
-- [ ] F8 — Integración con agentes IA / seguimientos / campañas
+- [x] F8 — Integración con agentes IA / seguimientos / campañas
 - [ ] F9 — Specs + rollout con cuenta piloto
