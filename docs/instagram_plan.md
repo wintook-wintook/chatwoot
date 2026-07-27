@@ -728,8 +728,8 @@ nada; conviene limpiarlos en algún momento, fuera de esta rama.
 ## 10. Pendiente
 
 - [ ] F0 — App de Meta, permisos, webhook y redirect URI
-- [ ] F1 — Modelo `Channel::Instagram` + migración + feature flag
-- [ ] F1b — Super Admin: grupo `instagram`, claves nuevas, tarjeta y `icon-instagram-line` (§6.bis)
+- [x] F1 — Modelo `Channel::Instagram` + migración + feature flag
+- [x] F1b — Super Admin: grupo `instagram`, claves nuevas, tarjeta y `icon-instagram-line` (§6.bis)
 - [ ] F2 — OAuth Instagram Login + alta de inbox
 - [ ] F3 — Router dual de webhooks + **dedupe por `mid`** (§5.1) + builder
 - [ ] F4 — Envío por `graph.instagram.com` + `SendReplyJob`

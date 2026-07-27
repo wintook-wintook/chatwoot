@@ -35,6 +35,12 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
     @allowed_configs = case @config
                        when 'facebook'
                          %w[FB_APP_ID FB_VERIFY_TOKEN FB_APP_SECRET IG_VERIFY_TOKEN FACEBOOK_API_VERSION ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT]
+                       # Canal nativo de Instagram. Grupo aparte para no tocar el de facebook.
+                       # IG_VERIFY_TOKEN y ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT aparecen en ambos
+                       # grupos a propósito: son la misma fila de InstallationConfig y gobiernan
+                       # las dos rutas, así que no pueden desincronizarse.
+                       when 'instagram'
+                         %w[IG_APP_ID IG_APP_SECRET IG_VERIFY_TOKEN INSTAGRAM_API_VERSION ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT]
                        when 'microsoft'
                          %w[AZURE_APP_ID AZURE_APP_SECRET]
                        when 'email'
