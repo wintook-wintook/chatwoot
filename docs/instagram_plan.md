@@ -734,7 +734,7 @@ nada; conviene limpiarlos en algún momento, fuera de esta rama.
 - [x] F3 — Router dual de webhooks + **dedupe por `mid`** (§5.1) + builder
 - [x] F4 — Envío por `graph.instagram.com` + `SendReplyJob`
       (la ruta legacy se queda en Graph v11.0 a propósito; subirla es decisión aparte)
-- [ ] F5 — Job de refresh de token + schedule
+- [x] F5 — Job de refresh de token + schedule
 - [ ] F6 — Frontend: canal propio, i18n, settings
 - [ ] F7 — Rake task de migración (dry-run)
 - [ ] F8 — Integración con agentes IA / seguimientos / campañas

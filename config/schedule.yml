@@ -157,6 +157,20 @@ case_sla_monitor_job:
   queue: scheduled_jobs
   description: "Monitor SLA status of CaseTickets and auto-close stale resolved tickets"
 
+# ================================================================================
+# Canal nativo de Instagram
+# ================================================================================
+# Job: Renovación del token de larga duración (60 días)
+# Descripción: Renueva los tokens que caducan dentro del margen de seguridad. Si Meta
+#              rechaza la renovación, marca el canal para reautorizar y avisa al admin.
+# Frecuencia: Diario a las 03:00 UTC (franja de bajo tráfico)
+# ================================================================================
+instagram_refresh_oauth_token_job:
+  cron: "0 3 * * *"
+  class: "Channels::Instagram::RefreshOauthTokenSchedulerJob"
+  queue: scheduled_jobs
+  description: "Refresh Instagram long lived tokens before they expire"
+
 # @tickets_cases 3F — redacta seguimientos para tickets en espera estancados
 case_ai_follow_up_scan_job:
   cron: "0 * * * *"
