@@ -308,11 +308,44 @@ job; este cambio los cubre también.
 - `app/models/inbox.rb` → `instagram?` pasa a ser
   `channel_type == 'Channel::Instagram' || (facebook? && channel.instagram_id.present?)`
   y se añade `instagram_direct?` para distinguir el canal nativo.
-- `enterprise/app/helpers/super_admin/features.yml` → feature `channel_instagram`
+- `config/features.yml` → feature `channel_instagram` — **añadir AL FINAL del archivo**,
+  ver §8.bis-1
 - `config/installation_config.yml` + `.env.example` → `IG_APP_ID`, `IG_APP_SECRET`
 
-**Riesgo:** `inbox.instagram?` se usa en `attachment.rb`, `message_filter_helpers.rb`,
-`conversation.rb`. Cambiarlo mal rompe adjuntos y ventana de respuesta. Tests primero.
+**Tres decisiones de F1 que no son cosméticas:**
+
+**a) La columna se llama `instagram_id`, no `ig_id`.** `message.rb:252` (`save_story_info`)
+hace `inbox.channel.instagram_id`, y esa ruta **está viva**: la invoca el builder de
+Instagram en `save_story_id` (`message_builder.rb:123`). Con otro nombre de columna, las
+story replies del canal nativo revientan con `NoMethodError`.
+
+**b) Las conversaciones nativas siguen marcándose con
+`additional_attributes['type'] = 'instagram_direct_message'`.** `conversation.rb:148` no
+mira `inbox.instagram?` — se bifurca por ese atributo. Si el canal nativo deja de
+ponerlo, `can_reply?` cae en la rama genérica y **se pierde la lógica de 7 días con
+`HUMAN_AGENT`** de `can_reply_on_instagram?` (`conversation.rb:170`). Manteniéndolo, el
+diff en la ventana de respuesta es cero.
+
+**c) No hace falta reimplementar `fetch_instagram_story_link`.** `validate_instagram_story`
+(`message.rb:185`) e `instagram_story_mention?` (`message_filter_helpers.rb:28`) son
+**código muerto en este fork** — nadie los llama (el único otro hit es el archivo de
+respaldo `message090226.rb090226`). En upstream sí se invocan desde el controlador de
+mensajes. Como ese método es justo el que depende de Koala y del token de Página,
+`Channel::Instagram` se ahorra la parte más fea. Las stories se siguen renderizando
+porque `InstagramStory.vue` trabaja sobre `content_attributes`, no sobre esos helpers.
+
+**Compatibilidad de `inbox.instagram?`** — con la redefinición propuesta, los llamadores
+existentes se comportan igual:
+
+| Llamador | Con canal nativo |
+|---|---|
+| `attachment.rb:84` (`data_url = external_url` en entrantes) | Correcto, IG sirve URLs de CDN |
+| `message_filter_helpers.rb:29,33` | Correcto (código muerto, pero coherente) |
+| `conversation.rb:148` | No usa `instagram?` — ver (b) |
+
+**Criterio de aceptación:** `Channel::Instagram.create!` + `Inbox.create!` por consola
+funciona, `inbox.instagram?` da `true`, y un inbox legacy Messenger+IG sigue dando `true`
+con sus specs en verde. No hay UI ni tráfico todavía.
 
 ### F2 — OAuth y alta de inbox
 - `app/controllers/instagram/callbacks_controller.rb` (patrón de `google/callbacks`)
@@ -356,6 +389,14 @@ Meta). Hacen falta tres cosas, ninguna opcional:
 3. **`public/assets/images/dashboard/channels/instagram.png`** — el thumbnail se resuelve
    por convención (`` `/assets/images/dashboard/channels/${key}.png` ``) y ese archivo
    **no existe**; sin él la tarjeta sale con la imagen rota
+
+Y además, lo que la revisión destapó (§8.bis-2 y §8.bis-3) y que es el grueso de F6:
+
+4. `INBOX_TYPES.INSTAGRAM` + `isAnInstagramInbox` / `isAMetaInbox` en `inboxMixin.js`, y
+   sustituirlos en los ~19 puntos que hoy usan `isAFacebookInbox` con intención de "Meta"
+5. Badge de conversación: entrada `'Channel::Instagram'` en `Thumbnail.vue` (el PNG
+   `instagram-dm.png` ya existe)
+6. Pantalla de reautorización propia (`Settings.vue:234` hoy la condiciona a Facebook)
 
 - `app/javascript/dashboard/routes/dashboard/settings/inbox/channels/Instagram.vue`
   → botón que abre la URL de autorización (sin FB SDK)
@@ -539,12 +580,22 @@ MODIFICADOS
   app/views/layouts/vueapp.html.erb                      (+instagramEnabled)
   public/assets/images/dashboard/channels/instagram.png  (NUEVO — no existe)
 
+MODIFICADOS — front, acoplamiento con Facebook (§8.bis-2 y -3)
+  app/javascript/shared/mixins/inboxMixin.js         (INBOX_TYPES.INSTAGRAM,
+                                                      isAnInstagramInbox / isAMetaInbox,
+                                                      INBOX_FEATURE_MAP, inboxBadge)
+  app/javascript/dashboard/helper/inbox.js           (icono, nombre, warning)
+  app/javascript/.../widgets/Thumbnail.vue           (badge Channel::Instagram)
+  app/javascript/.../conversation/{Message,MessagesView,ReplyBox}.vue
+  app/javascript/.../conversation/bubble/Actions.vue
+  app/javascript/.../settings/inbox/Settings.vue     (+ reautorización)
+
 MODIFICADOS — Super Admin (§6.bis)
+  config/features.yml                                (channel_instagram AL FINAL — §8.bis-1)
   config/installation_config.yml                     (IG_APP_ID, IG_APP_SECRET,
                                                       INSTAGRAM_API_VERSION)
   app/controllers/super_admin/app_configs_controller.rb  (when 'instagram')
-  enterprise/app/helpers/super_admin/features.yml    (tarjeta instagram + config_key,
-                                                      feature channel_instagram)
+  enterprise/app/helpers/super_admin/features.yml    (tarjeta instagram + config_key)
   app/views/super_admin/application/_icons.html.erb  (symbol icon-instagram-line)
 ```
 
@@ -561,6 +612,97 @@ MODIFICADOS — Super Admin (§6.bis)
 | 5 | `HUMAN_AGENT` tag no aprobado → no se puede responder fuera de 24 h | Documentarlo; los seguimientos IA deben respetar la ventana |
 | 6 | Divergencia con upstream si algún día se hace rebase a 4.x | Nombrar tablas/clases **igual que upstream** (`channel_instagram`, `Channel::Instagram`) |
 | 7 | Adjuntos: IG exige URL pública accesible | Verificar `attachment.download_url` en la instancia (ActiveStorage host público) |
+
+---
+
+## 8.bis Inconvenientes detectados en la revisión del código
+
+Hallazgos de una pasada específica buscando qué puede estorbar. Ordenados por gravedad.
+
+### 1. 🔴 CRÍTICO — el orden de `config/features.yml` no es libre
+
+El flag de cuenta **no** vive en `enterprise/app/helpers/super_admin/features.yml` (ese
+archivo solo dibuja la tarjeta del panel). Vive en `config/features.yml`, y
+`Featurable` asigna el bit **por posición en el array**:
+
+```ruby
+# app/models/concerns/featurable.rb
+FEATURES = FEATURE_LIST.each_with_object({}) do |feature, result|
+  result[result.keys.size + 1] = "feature_#{feature['name']}".to_sym
+end
+```
+
+FlagShihTzu guarda eso en `accounts.feature_flags` (`bigint`, `schema.rb:56`). Es decir:
+
+> **`channel_instagram` debe añadirse AL FINAL de `config/features.yml`.**
+> Insertarlo en medio desplaza un bit todas las features posteriores y **revuelve los
+> flags de todas las cuentas existentes** — WhatsApp, tickets, ERP, todo.
+
+Nota de capacidad: hay 57 features hoy y un `bigint` da 63 bits utilizables. Quedan ~6
+huecos. No es un problema para este trabajo, pero conviene tenerlo en el radar.
+
+### 2. 🟠 ALTO — el front asume `isAFacebookInbox` para todo lo de Instagram
+
+Este es el que más subestimaba F6. Hoy Instagram *es* un inbox de Facebook, así que
+**~19 puntos del front** condicionan el comportamiento de Instagram a
+`isAFacebookInbox` (`inboxMixin.js:60`, que compara con `Channel::FacebookPage`). Con el
+canal nativo ese booleano pasa a `false` y se pierden **en silencio**:
+
+| Qué se pierde | Dónde |
+|---|---|
+| Render de story mentions / replies | `Message.vue:494` (`isAFacebookInbox && isInstagram`) |
+| Comportamiento del compositor | `ReplyBox.vue:235,252` |
+| Acciones de la burbuja de mensaje | `Actions.vue:128,149,170` |
+| Citar mensaje (`REPLY_TO`) | `inboxMixin.js:23` — `INBOX_FEATURE_MAP` |
+| Banner de reautorización | `Settings.vue:234` |
+| Secciones de ajustes del inbox | `Settings.vue:206,225`, `WeeklyAvailability.vue:63` |
+| Icono de aviso del inbox | `inbox.js:90` (`allowedInboxTypes`) |
+| Icono y nombre legible del inbox | `inbox.js:24,58` |
+
+**Propuesta:** añadir `INBOX_TYPES.INSTAGRAM` y dos computed en `inboxMixin` —
+`isAnInstagramInbox` y `isAMetaInbox = isAFacebookInbox || isAnInstagramInbox` — y
+sustituir en los puntos cuyo *intent* es "canal de Meta" (la mayoría), dejando
+`isAFacebookInbox` solo donde de verdad se quiera decir Messenger. Es trabajo mecánico
+pero hay que hacerlo entero: cada punto omitido es una regresión silenciosa para el
+usuario que migre.
+
+### 3. 🟡 MEDIO — el badge de la conversación saldría vacío
+
+`inboxMixin#inboxBadge` cae a `this.channelType` cuando el inbox no es FB/Twitter/
+Twilio/WhatsApp → devolvería `'Channel::Instagram'`. Y `Thumbnail.vue:73` mapea por
+clave exacta:
+
+```js
+badgeSrc() {
+  return {
+    instagram_direct_message: 'instagram-dm',
+    facebook: 'messenger',
+    ...
+  }[this.badge];   // 'Channel::Instagram' → undefined → sin badge
+}
+```
+
+Arreglo trivial: entrada `'Channel::Instagram': 'instagram-dm'`, o que `inboxBadge`
+devuelva `instagram_direct_message` para el canal nativo. **El asset ya existe**
+(`public/integrations/channels/badges/instagram-dm.png`), se reutiliza tal cual.
+
+### 4. 🟡 MEDIO — el webhook no verifica la firma de Meta
+
+`Webhooks::InstagramController#events` acepta cualquier POST con `object == 'instagram'`;
+no valida `X-Hub-Signature-256`. Hoy el daño está acotado porque el evento debe casar con
+un `instagram_id` conocido, pero permite inyectar mensajes falsos en conversaciones
+existentes a quien conozca el IGSID (que es semipúblico).
+
+No es un bloqueante y **es deuda preexistente, no la introduce este trabajo** — pero F1b
+mete `IG_APP_SECRET` en la instalación, que es justo lo que hace falta para verificar.
+Buen momento para cerrarlo.
+
+### 5. ⚪ BAJO — archivos basura que ensucian la búsqueda
+
+`config/routes.rb310725`, `config/routes_new.rb`, `app/models/message090226.rb090226`,
+`app/models/conversation_old.txt`. Aparecen en los greps y confunden al rastrear qué
+código está vivo (de hecho el hallazgo F1-c salió de descartar uno de ellos). No bloquean
+nada; conviene limpiarlos en algún momento, fuera de esta rama.
 
 ---
 
