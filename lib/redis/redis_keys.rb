@@ -35,6 +35,10 @@ module Redis::RedisKeys
   MESSAGE_SOURCE_KEY = 'MESSAGE_SOURCE_KEY::%<id>s'.freeze
   OPENAI_CONVERSATION_KEY = 'OPEN_AI_CONVERSATION_KEY::V1::%<event_name>s::%<conversation_id>d::%<updated_at>d'.freeze
 
+  # Guarda la cuenta mientras el administrador autoriza en Instagram. El callback de Meta
+  # llega sin sesión, así que el `state` del OAuth es lo único que las relaciona.
+  IG_OAUTH_STATE = 'IG_OAUTH_STATE::%<state>s'.freeze
+
   ## Sempahores / Locks
   # We don't want to process messages from the same sender concurrently to prevent creating double conversations
   FACEBOOK_MESSAGE_MUTEX = 'FB_MESSAGE_CREATE_LOCK::%<sender_id>s::%<recipient_id>s'.freeze
