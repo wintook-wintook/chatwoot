@@ -40,24 +40,41 @@ class Instagram::MessageText < Instagram::WebhooksBaseService
     end
   end
 
-  # rubocop:disable Metrics/AbcSize
   def ensure_contact(ig_scope_id)
-    begin
-      k = Koala::Facebook::API.new(@inbox.channel.page_access_token) if @inbox.facebook?
-      result = k.get_object(ig_scope_id) || {}
-    rescue Koala::Facebook::AuthenticationError => e
-      @inbox.channel.authorization_error!
-      Rails.logger.warn("Authorization error for account #{@inbox.account_id} for inbox #{@inbox.id}")
-      ChatwootExceptionTracker.new(e, account: @inbox.account).capture_exception
-    rescue StandardError, Koala::Facebook::ClientError => e
-      Rails.logger.warn("[FacebookUserFetchClientError]: account_id #{@inbox.account_id} inbox_id #{@inbox.id}")
-      Rails.logger.warn("[FacebookUserFetchClientError]: #{e.message}")
-      ChatwootExceptionTracker.new(e, account: @inbox.account).capture_exception
-    end
+    result = fetch_contact_profile(ig_scope_id)
 
-    find_or_create_contact(result) if defined?(result) && result.present?
+    find_or_create_contact(result) if result.present?
   end
-  # rubocop:enable Metrics/AbcSize
+
+  # El canal nativo consulta graph.instagram.com con su propio token; el legacy sigue
+  # usando Koala con el token de la Página.
+  def fetch_contact_profile(ig_scope_id)
+    profile = if @inbox.native_instagram?
+                @inbox.channel.fetch_contact_profile(ig_scope_id)
+              elsif @inbox.facebook?
+                Koala::Facebook::API.new(@inbox.channel.page_access_token).get_object(ig_scope_id)
+              end
+
+    profile || {}
+  rescue Koala::Facebook::AuthenticationError, ::Instagram::OauthService::OauthError => e
+    handle_profile_auth_error(e)
+  rescue StandardError, Koala::Facebook::ClientError => e
+    handle_profile_error(e)
+  end
+
+  def handle_profile_auth_error(error)
+    @inbox.channel.authorization_error!
+    Rails.logger.warn("Authorization error for account #{@inbox.account_id} for inbox #{@inbox.id}")
+    ChatwootExceptionTracker.new(error, account: @inbox.account).capture_exception
+    {}
+  end
+
+  def handle_profile_error(error)
+    Rails.logger.warn("[InstagramUserFetchClientError]: account_id #{@inbox.account_id} inbox_id #{@inbox.id}")
+    Rails.logger.warn("[InstagramUserFetchClientError]: #{error.message}")
+    ChatwootExceptionTracker.new(error, account: @inbox.account).capture_exception
+    {}
+  end
 
   def agent_message_via_echo?
     @messaging[:message][:is_echo].present?

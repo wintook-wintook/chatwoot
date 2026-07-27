@@ -25,6 +25,7 @@
 class Channel::Instagram < ApplicationRecord
   include Channelable
   include Reauthorizable
+  include HTTParty
 
   self.table_name = 'channel_instagram'
   EDITABLE_ATTRS = [:instagram_id, :access_token, :expires_at, { provider_config: {} }].freeze
@@ -57,6 +58,21 @@ class Channel::Instagram < ApplicationRecord
                                                           }).perform
   end
 
+  # Perfil de un contacto (no de la cuenta propia). La ruta legacy hace lo mismo con Koala
+  # y el token de la Página; aquí basta el token del canal.
+  # Devuelve las mismas claves que Koala (id/name/username/profile_pic) para que
+  # WebhooksBaseService#find_or_create_contact valga igual para ambos canales.
+  def fetch_contact_profile(ig_scoped_id)
+    response = HTTParty.get(
+      "#{Instagram::OauthService::GRAPH_HOST}/#{api_version}/#{ig_scoped_id}",
+      query: { fields: 'name,username,profile_pic', access_token: access_token }
+    )
+
+    raise Instagram::OauthService::OauthError, profile_error(response) unless response.success?
+
+    (response.parsed_response || {}).merge('id' => ig_scoped_id.to_s)
+  end
+
   def token_expired?
     expires_at.present? && expires_at < Time.current
   end
@@ -67,5 +83,18 @@ class Channel::Instagram < ApplicationRecord
 
   def username
     provider_config['username']
+  end
+
+  private
+
+  def api_version
+    GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v22.0')
+  end
+
+  def profile_error(response)
+    body = response.parsed_response
+    body = {} unless body.is_a?(Hash)
+
+    body.dig('error', 'message') || "HTTP #{response.code}"
   end
 end

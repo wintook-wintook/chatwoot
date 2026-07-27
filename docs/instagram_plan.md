@@ -731,7 +731,7 @@ nada; conviene limpiarlos en algún momento, fuera de esta rama.
 - [x] F1 — Modelo `Channel::Instagram` + migración + feature flag
 - [x] F1b — Super Admin: grupo `instagram`, claves nuevas, tarjeta y `icon-instagram-line` (§6.bis)
 - [x] F2 — OAuth Instagram Login + alta de inbox (falta el botón que lo dispara: F6)
-- [ ] F3 — Router dual de webhooks + **dedupe por `mid`** (§5.1) + builder
+- [x] F3 — Router dual de webhooks + **dedupe por `mid`** (§5.1) + builder
 - [ ] F4 — Envío por `graph.instagram.com` + `SendReplyJob`
 - [ ] F5 — Job de refresh de token + schedule
 - [ ] F6 — Frontend: canal propio, i18n, settings

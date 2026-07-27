@@ -65,6 +65,30 @@ RSpec.describe Channel::Instagram do
     end
   end
 
+  describe '#fetch_contact_profile' do
+    it 'returns the profile with the same keys Koala returns, so the legacy path keeps working' do
+      stub_request(:get, %r{graph\.instagram\.com/.*/ig-scoped-id})
+        .to_return(status: 200,
+                   body: { name: 'Jane', username: 'jane_ig', profile_pic: 'https://cdn/jane.jpg' }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+
+      profile = channel.fetch_contact_profile('ig-scoped-id')
+
+      expect(profile['id']).to eq('ig-scoped-id')
+      expect(profile['name']).to eq('Jane')
+      expect(profile['username']).to eq('jane_ig')
+    end
+
+    it 'raises OauthError when the token is no longer valid' do
+      stub_request(:get, %r{graph\.instagram\.com/.*/ig-scoped-id})
+        .to_return(status: 401, body: { error: { message: 'Invalid OAuth access token' } }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+
+      expect { channel.fetch_contact_profile('ig-scoped-id') }
+        .to raise_error(Instagram::OauthService::OauthError, /Invalid OAuth access token/)
+    end
+  end
+
   describe '#create_contact_inbox' do
     it 'creates the contact inbox with the IGSID as source_id' do
       contact_inbox = channel.create_contact_inbox('ig-scoped-id', 'Jane')

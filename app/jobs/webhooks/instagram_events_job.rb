@@ -2,10 +2,6 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   queue_as :default
   retry_on LockAcquisitionError, wait: 1.second, attempts: 8
 
-  include HTTParty
-
-  base_uri 'https://graph.facebook.com/v11.0/me'
-
   # @return [Array] We will support further events like reaction or seen in future
   SUPPORTED_EVENTS = [:message, :read].freeze
 

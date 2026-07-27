@@ -1,9 +1,24 @@
 class Instagram::WebhooksBaseService
   private
 
+  # Router dual: el mismo endpoint /webhooks/instagram sirve al canal nativo y a la ruta
+  # legacy (Instagram dentro de un Channel::FacebookPage). El canal nativo tiene
+  # prioridad, de modo que en cuanto una cuenta se migra el tráfico salta solo, aunque la
+  # app antigua siga entregando durante el solapamiento. Ver docs/instagram_plan.md §5
   def inbox_channel(instagram_id)
+    @inbox = find_native_inbox(instagram_id) || find_legacy_inbox(instagram_id)
+  end
+
+  def find_native_inbox(instagram_id)
+    channel = Channel::Instagram.find_by(instagram_id: instagram_id)
+    return if channel.blank?
+
+    ::Inbox.find_by(channel: channel)
+  end
+
+  def find_legacy_inbox(instagram_id)
     messenger_channel = Channel::FacebookPage.where(instagram_id: instagram_id)
-    @inbox = ::Inbox.find_by(channel: messenger_channel)
+    ::Inbox.find_by(channel: messenger_channel)
   end
 
   def find_or_create_contact(user)
