@@ -30,6 +30,20 @@ class Instagram::MigrationService
     end
   end
 
+  # Informe legible del listado anterior, para la tarea rake
+  def self.pending_report
+    rows = pending
+    return 'No queda ningún inbox con Instagram dentro de un Channel::FacebookPage.' if rows.empty?
+
+    header = format('%-8<a>s %-9<b>s %-26<c>s %-30<d>s %<e>s', a: 'INBOX', b: 'CUENTA', c: 'IGSID', d: 'NOMBRE', e: 'CANAL NATIVO')
+    lines = rows.map do |row|
+      target = row[:native_inbox_id] ? "inbox #{row[:native_inbox_id]}" : "SIN CONECTAR (#{row[:instagram_conversations]} conv. de IG)"
+      format('%-8<a>s %-9<b>s %-26<c>s %-30<d>s %<e>s',
+             a: row[:inbox_id], b: row[:account_id], c: row[:instagram_id], d: row[:name].to_s.truncate(28), e: target)
+    end
+    [header, *lines].join("\n")
+  end
+
   def initialize(legacy_inbox:, native_inbox:, apply: false)
     @legacy_inbox = legacy_inbox
     @native_inbox = native_inbox

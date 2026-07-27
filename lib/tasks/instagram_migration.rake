@@ -16,19 +16,14 @@
 namespace :instagram do
   desc 'Lista los inboxes que todavía sirven Instagram a través de un Channel::FacebookPage'
   task pending: :environment do
-    rows = Instagram::MigrationService.pending
+    puts Instagram::MigrationService.pending_report
+  end
 
-    if rows.empty?
-      puts 'No queda ningún inbox con Instagram dentro de un Channel::FacebookPage.'
-      next
-    end
-
-    puts format('%-8<a>s %-9<b>s %-26<c>s %-30<d>s %<e>s', a: 'INBOX', b: 'CUENTA', c: 'IGSID', d: 'NOMBRE', e: 'CANAL NATIVO')
-    rows.each do |row|
-      target = row[:native_inbox_id] ? "inbox #{row[:native_inbox_id]}" : "SIN CONECTAR (#{row[:instagram_conversations]} conv. de IG)"
-      puts format('%-8<a>s %-9<b>s %-26<c>s %-30<d>s %<e>s',
-                  a: row[:inbox_id], b: row[:account_id], c: row[:instagram_id], d: row[:name].to_s.truncate(28), e: target)
-    end
+  desc 'Comprueba si la instalación está lista para conectar Instagram. ACCOUNT_ID=n para revisar también el flag'
+  task doctor: :environment do
+    account = ENV['ACCOUNT_ID'].present? ? Account.find(ENV.fetch('ACCOUNT_ID')) : nil
+    puts Instagram::ReadinessService.new(account: account).report
+    puts ''
   end
 
   desc 'Mueve las conversaciones de Instagram del inbox legacy al nativo. Simula salvo que APPLY=true'
