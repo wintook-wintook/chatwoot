@@ -110,15 +110,15 @@ class Instagram::OauthService
   end
 
   def app_id
-    GlobalConfigService.load('IG_APP_ID', '')
+    GlobalConfigService.load('INSTAGRAM_APP_ID', '')
   end
 
   def app_secret
-    GlobalConfigService.load('IG_APP_SECRET', '')
+    GlobalConfigService.load('INSTAGRAM_APP_SECRET', '')
   end
 
   def api_version
-    GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v22.0')
+    GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v25.0')
   end
 
   def base_url

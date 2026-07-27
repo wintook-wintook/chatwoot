@@ -27,10 +27,10 @@ class Instagram::ReadinessService
     ].compact
   end
 
-  # Trampa silenciosa: si .env declara la variable vacía (`IG_APP_ID=`), ENV gana sobre la
+  # Trampa silenciosa: si .env declara la variable vacía (`INSTAGRAM_APP_ID=`), ENV gana sobre la
   # base de datos y GlobalConfigService devuelve nil. El valor se guarda en Super Admin, se
   # ve guardado, y no surte efecto. Merece un aviso explícito.
-  SHADOWABLE_KEYS = %w[IG_APP_ID IG_APP_SECRET IG_VERIFY_TOKEN INSTAGRAM_API_VERSION].freeze
+  SHADOWABLE_KEYS = %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET IG_VERIFY_TOKEN INSTAGRAM_API_VERSION].freeze
 
   def shadowed_by_env_checks
     SHADOWABLE_KEYS.filter_map do |key|
@@ -92,14 +92,14 @@ class Instagram::ReadinessService
   end
 
   def app_id_check
-    value = GlobalConfigService.load('IG_APP_ID', '')
-    Check.new(name: 'IG_APP_ID', ok: value.present?, detail: value.presence || '(vacío)',
+    value = GlobalConfigService.load('INSTAGRAM_APP_ID', '')
+    Check.new(name: 'INSTAGRAM_APP_ID', ok: value.present?, detail: value.presence || '(vacío)',
               fix: 'Super Admin → Instagram → Instagram App ID')
   end
 
   def app_secret_check
-    value = GlobalConfigService.load('IG_APP_SECRET', '')
-    Check.new(name: 'IG_APP_SECRET', ok: value.present?, detail: value.present? ? '(configurado)' : '(vacío)',
+    value = GlobalConfigService.load('INSTAGRAM_APP_SECRET', '')
+    Check.new(name: 'INSTAGRAM_APP_SECRET', ok: value.present?, detail: value.present? ? '(configurado)' : '(vacío)',
               fix: 'Super Admin → Instagram → Instagram App Secret')
   end
 
@@ -110,7 +110,7 @@ class Instagram::ReadinessService
   end
 
   def api_version_check
-    value = GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v22.0')
+    value = GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v25.0')
     Check.new(name: 'INSTAGRAM_API_VERSION', ok: value.present?, detail: value, fix: 'Super Admin → Instagram')
   end
 

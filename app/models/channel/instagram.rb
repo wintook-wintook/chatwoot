@@ -88,7 +88,7 @@ class Channel::Instagram < ApplicationRecord
   private
 
   def api_version
-    GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v22.0')
+    GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v25.0')
   end
 
   def profile_error(response)

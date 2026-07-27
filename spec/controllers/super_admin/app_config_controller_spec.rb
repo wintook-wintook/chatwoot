@@ -45,11 +45,12 @@ RSpec.describe 'Super Admin Application Config API', type: :request do
 
       it 'saves the instagram credentials from its own group' do
         sign_in(super_admin, scope: :super_admin)
-        post '/super_admin/app_config?config=instagram', params: { app_config: { IG_APP_ID: 'IG_APP_ID', IG_APP_SECRET: 'IG_SECRET' } }
+        post '/super_admin/app_config?config=instagram',
+             params: { app_config: { INSTAGRAM_APP_ID: 'INSTAGRAM_APP_ID', INSTAGRAM_APP_SECRET: 'IG_SECRET' } }
 
         expect(response).to redirect_to(super_admin_settings_path)
-        expect(GlobalConfig.get('IG_APP_ID')['IG_APP_ID']).to eq('IG_APP_ID')
-        expect(GlobalConfig.get('IG_APP_SECRET')['IG_APP_SECRET']).to eq('IG_SECRET')
+        expect(GlobalConfig.get('INSTAGRAM_APP_ID')['INSTAGRAM_APP_ID']).to eq('INSTAGRAM_APP_ID')
+        expect(GlobalConfig.get('INSTAGRAM_APP_SECRET')['INSTAGRAM_APP_SECRET']).to eq('IG_SECRET')
       end
 
       it 'refuses to write facebook credentials through the instagram group' do

@@ -5,7 +5,7 @@ RSpec.describe Instagram::OauthService do
 
   before do
     # upsert: ConfigLoader ya siembra estas claves, crearlas de nuevo choca con el índice único
-    { 'IG_APP_ID' => 'ig-app-id', 'IG_APP_SECRET' => 'ig-app-secret' }.each do |name, value|
+    { 'INSTAGRAM_APP_ID' => 'ig-app-id', 'INSTAGRAM_APP_SECRET' => 'ig-app-secret' }.each do |name, value|
       InstallationConfig.find_or_initialize_by(name: name).update!(value: value)
     end
     GlobalConfig.clear_cache

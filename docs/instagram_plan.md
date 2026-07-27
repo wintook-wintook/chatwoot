@@ -298,7 +298,7 @@ job; este cambio los cubre también.
 - [ ] URI de redirección: `https://<host>/instagram/callback`.
 - [ ] Webhook `instagram` suscrito a `messages`, `messaging_seen`, `message_reactions`,
       `messaging_postbacks` con el `IG_VERIFY_TOKEN` existente.
-- [ ] Decidir si se reutiliza `FB_APP_ID/SECRET` o se crean `IG_APP_ID/IG_APP_SECRET`
+- [ ] Decidir si se reutiliza `FB_APP_ID/SECRET` o se crean `INSTAGRAM_APP_ID/INSTAGRAM_APP_SECRET`
       (recomendado: **claves propias**, para poder desacoplar de Facebook).
 
 ### F1 — Modelo y esquema
@@ -310,7 +310,7 @@ job; este cambio los cubre también.
   y se añade `instagram_direct?` para distinguir el canal nativo.
 - `config/features.yml` → feature `channel_instagram` — **añadir AL FINAL del archivo**,
   ver §8.bis-1
-- `config/installation_config.yml` + `.env.example` → `IG_APP_ID`, `IG_APP_SECRET`
+- `config/installation_config.yml` + `.env.example` → `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`
 
 **Tres decisiones de F1 que no son cosméticas:**
 
@@ -495,8 +495,8 @@ siguiendo el mismo patrón que ya usa `whatsapp_embedded` en este fork
   │ Instagram          │                 │ (Messenger)        │  │ directas           │
   └────────────────────┘                 └────────────────────┘  └────────────────────┘
    config=facebook                        config=facebook         config=instagram
-   ├ FB_APP_ID                            ├ FB_APP_ID   (igual)   ├ IG_APP_ID      ★
-   ├ FB_VERIFY_TOKEN                      ├ FB_VERIFY_TOKEN       ├ IG_APP_SECRET  ★
+   ├ FB_APP_ID                            ├ FB_APP_ID   (igual)   ├ INSTAGRAM_APP_ID      ★
+   ├ FB_VERIFY_TOKEN                      ├ FB_VERIFY_TOKEN       ├ INSTAGRAM_APP_SECRET  ★
    ├ FB_APP_SECRET                        ├ FB_APP_SECRET         ├ IG_VERIFY_TOKEN ↔
    ├ IG_VERIFY_TOKEN  ←mezclado           ├ IG_VERIFY_TOKEN ↔     ├ INSTAGRAM_API_VERSION ★
    ├ FACEBOOK_API_VERSION                 ├ FACEBOOK_API_VERSION  └ ENABLE_MESSENGER_
@@ -509,8 +509,8 @@ siguiendo el mismo patrón que ya usa `whatsapp_embedded` en este fork
 
 | Clave | display_title | Notas |
 |---|---|---|
-| `IG_APP_ID` | Instagram App ID | Del producto Instagram. **Distinto del Facebook App ID**, incluso dentro de la misma app de Meta |
-| `IG_APP_SECRET` | Instagram App Secret | Usado para el intercambio de código y el `appsecret_proof` del canal nativo |
+| `INSTAGRAM_APP_ID` | Instagram App ID | Del producto Instagram. **Distinto del Facebook App ID**, incluso dentro de la misma app de Meta |
+| `INSTAGRAM_APP_SECRET` | Instagram App Secret | Usado para el intercambio de código y el `appsecret_proof` del canal nativo |
 | `INSTAGRAM_API_VERSION` | Instagram API Version | Default `v22.0`. Evita repetir el hardcode de v11.0 |
 
 **Claves compartidas a propósito** (aparecen en los dos grupos):
@@ -538,7 +538,7 @@ tarjeta se renderiza con un hueco vacío.
 | Garantía | Motivo |
 |---|---|
 | La lista `when 'facebook'` no cambia | Los 6 campos actuales siguen exactamente donde están |
-| `FB_APP_ID` / `FB_APP_SECRET` intactos | El envío legacy sigue firmando con `FB_APP_SECRET`; el nativo usa `IG_APP_SECRET`, elegido por clase de canal |
+| `FB_APP_ID` / `FB_APP_SECRET` intactos | El envío legacy sigue firmando con `FB_APP_SECRET`; el nativo usa `INSTAGRAM_APP_SECRET`, elegido por clase de canal |
 | `IG_VERIFY_TOKEN` no cambia de valor | Las apps ya dadas de alta en Meta siguen superando el handshake `hub.challenge` |
 | `set_instagram_id` sigue igual | Un inbox de Messenger recién creado sigue capturando Instagram como hoy |
 | Router con prioridad | Si no existe `Channel::Instagram` para ese IGSID, cae al `Channel::FacebookPage` — comportamiento idéntico al actual |
@@ -592,7 +592,7 @@ MODIFICADOS — front, acoplamiento con Facebook (§8.bis-2 y -3)
 
 MODIFICADOS — Super Admin (§6.bis)
   config/features.yml                                (channel_instagram AL FINAL — §8.bis-1)
-  config/installation_config.yml                     (IG_APP_ID, IG_APP_SECRET,
+  config/installation_config.yml                     (INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET,
                                                       INSTAGRAM_API_VERSION)
   app/controllers/super_admin/app_configs_controller.rb  (when 'instagram')
   enterprise/app/helpers/super_admin/features.yml    (tarjeta instagram + config_key)
@@ -694,7 +694,7 @@ un `instagram_id` conocido, pero permite inyectar mensajes falsos en conversacio
 existentes a quien conozca el IGSID (que es semipúblico).
 
 No es un bloqueante y **es deuda preexistente, no la introduce este trabajo** — pero F1b
-mete `IG_APP_SECRET` en la instalación, que es justo lo que hace falta para verificar.
+mete `INSTAGRAM_APP_SECRET` en la instalación, que es justo lo que hace falta para verificar.
 Buen momento para cerrarlo.
 
 ### 5. ⚪ BAJO — archivos basura que ensucian la búsqueda
@@ -711,7 +711,7 @@ nada; conviene limpiarlos en algún momento, fuera de esta rama.
 1. **¿App de Meta nueva o la existente?** Recomendación: **dos apps** — Messenger está en
    producción y un App Review de Instagram no debería poder tocar la app que ya funciona.
    *No bloquea el desarrollo:* la pantalla de Super Admin (§6.bis) es idéntica en los dos
-   escenarios. Con una sola app, `IG_APP_ID`/`IG_APP_SECRET` son los del producto Instagram
+   escenarios. Con una sola app, `INSTAGRAM_APP_ID`/`INSTAGRAM_APP_SECRET` son los del producto Instagram
    (que ya de por sí difieren del Facebook App ID); con dos apps, los de la app nueva. En
    ambos casos `IG_VERIFY_TOKEN` puede ser el mismo valor, dado de alta en cada app.
 2. **¿Migrar inboxes existentes o dejarlos convivir?** Recomendación: opción A (voluntaria,

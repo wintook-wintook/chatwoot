@@ -129,7 +129,7 @@ class Instagram::SendOnInstagramService < Base::SendOnChannelService
   end
 
   def instagram_api_version
-    GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v22.0')
+    GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v25.0')
   end
 
   # Recibe el cuerpo ya normalizado por normalized_body

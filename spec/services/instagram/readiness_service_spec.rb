@@ -12,7 +12,7 @@ RSpec.describe Instagram::ReadinessService do
   end
 
   around do |example|
-    originals = %w[IG_APP_ID IG_APP_SECRET IG_VERIFY_TOKEN].index_with { |name| ENV.fetch(name, nil) }
+    originals = %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET IG_VERIFY_TOKEN].index_with { |name| ENV.fetch(name, nil) }
     example.run
     originals.each do |name, value|
       InstallationConfig.find_by(name: name)&.update!(value: nil)
@@ -23,24 +23,24 @@ RSpec.describe Instagram::ReadinessService do
 
   describe '#ready?' do
     it 'is not ready while the credentials are missing' do
-      %w[IG_APP_ID IG_APP_SECRET IG_VERIFY_TOKEN].each { |name| set_config(name, nil) }
+      %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET IG_VERIFY_TOKEN].each { |name| set_config(name, nil) }
 
       service = described_class.new
 
       expect(service).not_to be_ready
-      expect(service.checks.reject(&:ok).map(&:name)).to include('IG_APP_ID', 'IG_APP_SECRET', 'IG_VERIFY_TOKEN')
+      expect(service.checks.reject(&:ok).map(&:name)).to include('INSTAGRAM_APP_ID', 'INSTAGRAM_APP_SECRET', 'IG_VERIFY_TOKEN')
     end
 
     it 'is ready once everything is configured' do
-      set_config('IG_APP_ID', 'ig-app-id')
-      set_config('IG_APP_SECRET', 'ig-app-secret')
+      set_config('INSTAGRAM_APP_ID', 'ig-app-id')
+      set_config('INSTAGRAM_APP_SECRET', 'ig-app-secret')
       set_config('IG_VERIFY_TOKEN', 'verify-token')
 
       expect(described_class.new).to be_ready
     end
 
     it 'never exposes the app secret, only whether it is set' do
-      set_config('IG_APP_SECRET', 'super-secret-value')
+      set_config('INSTAGRAM_APP_SECRET', 'super-secret-value')
 
       details = described_class.new.checks.map(&:detail).join(' ')
 
@@ -50,8 +50,8 @@ RSpec.describe Instagram::ReadinessService do
 
   describe 'account flag' do
     before do
-      set_config('IG_APP_ID', 'ig-app-id')
-      set_config('IG_APP_SECRET', 'ig-app-secret')
+      set_config('INSTAGRAM_APP_ID', 'ig-app-id')
+      set_config('INSTAGRAM_APP_SECRET', 'ig-app-secret')
       set_config('IG_VERIFY_TOKEN', 'verify-token')
     end
 
@@ -71,14 +71,14 @@ RSpec.describe Instagram::ReadinessService do
 
   describe 'config shadowed by an empty .env entry' do
     it 'warns when Super Admin has a value but .env declares the key empty' do
-      InstallationConfig.find_or_initialize_by(name: 'IG_APP_ID').update!(value: 'set-in-super-admin')
-      ENV['IG_APP_ID'] = ''
+      InstallationConfig.find_or_initialize_by(name: 'INSTAGRAM_APP_ID').update!(value: 'set-in-super-admin')
+      ENV['INSTAGRAM_APP_ID'] = ''
       GlobalConfig.clear_cache
 
       shadowed = described_class.new.checks.find { |c| c.name.include?('anulado por .env') }
 
       expect(shadowed).to be_present
-      expect(shadowed.name).to include('IG_APP_ID')
+      expect(shadowed.name).to include('INSTAGRAM_APP_ID')
     end
   end
 

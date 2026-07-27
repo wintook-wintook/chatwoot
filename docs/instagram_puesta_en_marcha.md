@@ -39,13 +39,19 @@ En developers.meta.com, en la app de Instagram:
 | Instagram → API con Instagram Login → URI de redirección OAuth | `https://aux.wintook.com/instagram/callback` |
 | Instagram → Webhooks → URL de devolución de llamada | `https://aux.wintook.com/webhooks/instagram` |
 | Instagram → Webhooks → Token de verificación | El mismo valor que pongas en `IG_VERIFY_TOKEN` |
-| Instagram → Webhooks → Campos suscritos | `messages`, `messaging_seen` |
+| Instagram → Webhooks → Campos suscritos | `messages` (imprescindible) + el de acuses de lectura si el panel lo ofrece |
 | Permisos | `instagram_business_basic`, `instagram_business_manage_messages` |
 
-> ⚠️ Los nombres de permisos y la versión de API (`v22.0`) se escribieron sin consultar la
-> documentación de Meta en vivo. **Contrástalos con la doc vigente antes de configurar.**
-> Si cambian, la versión se ajusta en Super Admin y los permisos en
-> `app/services/instagram/oauth_service.rb` (constante `SCOPE`).
+> Permisos y endpoint **verificados** contra la documentación de Meta (julio 2026):
+> `instagram_business_basic` + `instagram_business_manage_messages`, envío por
+> `graph.instagram.com/<IG_ID>/messages`. La versión por defecto es `v25.0`, la que usan
+> hoy los ejemplos de Meta; se cambia en Super Admin sin tocar código.
+>
+> Lo único sin confirmar es el nombre exacto del campo de webhook para los acuses de
+> lectura. Meta documenta `messages`, `messaging_optins`, `messaging_postbacks` y
+> `messaging_reactions`; el panel te mostrará la lista real al suscribir. Suscribe
+> `messages` (imprescindible) y, si aparece uno de "seen"/"reads", súscríbelo también:
+> el código ya procesa esos eventos.
 
 La URI de redirección tiene que coincidir **carácter por carácter** con la que genera
 Chatwoot. `rake instagram:doctor` te la muestra.
@@ -58,10 +64,10 @@ Chatwoot. `rake instagram:doctor` te la muestra.
 
 | Campo | De dónde sale |
 |---|---|
-| `IG_APP_ID` | App de Meta → Instagram → **Instagram App ID** (no el Facebook App ID) |
-| `IG_APP_SECRET` | App de Meta → Instagram → **Instagram App Secret** |
+| `INSTAGRAM_APP_ID` | App de Meta → Instagram → **Instagram App ID** (no el Facebook App ID) |
+| `INSTAGRAM_APP_SECRET` | App de Meta → Instagram → **Instagram App Secret** |
 | `IG_VERIFY_TOKEN` | Lo inventas tú; el mismo string va en el webhook de Meta |
-| `INSTAGRAM_API_VERSION` | Déjalo en `v22.0` salvo que Meta indique otra |
+| `INSTAGRAM_API_VERSION` | Déjalo en `v25.0` salvo que Meta indique otra |
 
 > El grupo `config=facebook` no se toca. Messenger sigue configurándose exactamente igual.
 > `IG_VERIFY_TOKEN` aparece en ambas pantallas a propósito: es la misma fila, no puede
@@ -73,18 +79,12 @@ Si `.env` declara la variable **vacía**, ENV tiene prioridad sobre la base de d
 valor que guardes en Super Admin **no surte efecto**, aunque la pantalla lo muestre
 guardado. Es silencioso: el webhook rechazará a Meta y no habrá ningún error visible.
 
-El `.env` de esta instalación tiene hoy:
+✅ **Ya resuelto en esta instalación**: esas líneas (`IG_VERIFY_TOKEN`, `FB_VERIFY_TOKEN`,
+`FB_APP_SECRET`, `FB_APP_ID`) están comentadas en `.env` con una nota, y el servicio se
+reinició. El handshake del webhook quedó verificado por HTTP contra el dominio público.
 
-```
-IG_VERIFY_TOKEN=
-FB_VERIFY_TOKEN=
-FB_APP_SECRET=
-FB_APP_ID=
-```
-
-Todas vacías. Antes de configurar nada en Super Admin, **borra esas líneas de `.env`**
-(o dales valor ahí directamente) y reinicia la aplicación. `rake instagram:doctor` avisa
-explícitamente cuando detecta este caso.
+Si despliegas en otra máquina, repítelo allí: `.env` está en `.gitignore`.
+`rake instagram:doctor` avisa explícitamente cuando detecta este caso.
 
 Ojo, esto afecta también a Messenger: con `FB_APP_SECRET` vacío, el envío por la ruta
 legacy de Instagram falla en silencio, porque el cálculo de la firma revienta y la
@@ -98,7 +98,7 @@ Super Admin → Cuentas → editar la cuenta → marcar **`channel_instagram`**.
 
 Nace apagado a propósito: así se puede empezar por una sola cuenta piloto.
 
-Hasta que el flag esté activo **y** `IG_APP_ID` tenga valor, la tarjeta de Instagram
+Hasta que el flag esté activo **y** `INSTAGRAM_APP_ID` tenga valor, la tarjeta de Instagram
 aparece atenuada en *Añadir bandeja*. Si no la ves, ese es el motivo.
 
 ---
@@ -191,4 +191,4 @@ conversaciones, y suelta el `instagram_id` para que el router deje de resolverlo
 - **Eventos no soportados todavía**: reacciones, borrado de mensajes (`message_unsend`) e
   icebreakers. Están contemplados en el plan como fase posterior.
 - **El webhook no valida la firma de Meta** (`X-Hub-Signature-256`). Es deuda anterior a
-  este trabajo; con `IG_APP_SECRET` ya configurado, cerrarlo es sencillo.
+  este trabajo; con `INSTAGRAM_APP_SECRET` ya configurado, cerrarlo es sencillo.
