@@ -346,8 +346,17 @@ job; este cambio los cubre también.
 - `authorization_error!` cuando falle → banner de reautorizar en el dashboard
 
 ### F6 — Frontend
-- Nueva tarjeta "Instagram" en `ChannelList`/`ChannelSelector` (hoy solo aparece dentro de
-  Messenger), con icono propio (`i-ri-instagram-line`) y gating por feature flag
+Nueva tarjeta "Instagram" en la pantalla *Añadir inbox*. Hoy esa lista está **hardcodeada**
+en `ChannelList.vue:28-44` (8 entradas; `{ key: 'facebook', name: 'Messenger' }` es la de
+Meta). Hacen falta tres cosas, ninguna opcional:
+
+1. `+ { key: 'instagram', name: 'Instagram' }` en `channelList`
+2. Rama `if (key === 'instagram')` en `ChannelItem.vue#isActive` → `channel_instagram`
+   (+ que la app de IG esté configurada, igual que `hasFbConfigured` para Messenger)
+3. **`public/assets/images/dashboard/channels/instagram.png`** — el thumbnail se resuelve
+   por convención (`` `/assets/images/dashboard/channels/${key}.png` ``) y ese archivo
+   **no existe**; sin él la tarjeta sale con la imagen rota
+
 - `app/javascript/dashboard/routes/dashboard/settings/inbox/channels/Instagram.vue`
   → botón que abre la URL de autorización (sin FB SDK)
 - i18n `en` / `es` / `pt_BR`
@@ -492,7 +501,7 @@ tarjeta se renderiza con un hueco vacío.
 | `IG_VERIFY_TOKEN` no cambia de valor | Las apps ya dadas de alta en Meta siguen superando el handshake `hub.challenge` |
 | `set_instagram_id` sigue igual | Un inbox de Messenger recién creado sigue capturando Instagram como hoy |
 | Router con prioridad | Si no existe `Channel::Instagram` para ese IGSID, cae al `Channel::FacebookPage` — comportamiento idéntico al actual |
-| `vueapp.html.erb` no se toca | La URL de autorización de Instagram se construye en backend; no hace falta exponer `igAppId` en `window.chatwootConfig` |
+| `vueapp.html.erb`: `fbAppId` intacto | La URL de autorización de Instagram se construye en backend, así que el OAuth no necesita `igAppId` en el front. Único añadido: un booleano `instagramEnabled` para atenuar la tarjeta cuando IG no está configurado — no altera `fbAppId` ni el `FB.init` de Messenger |
 
 ---
 
@@ -525,7 +534,10 @@ MODIFICADOS
   config/schedule.yml                        (refresh diario)
   .env.example
   config/locales/{en,es,pt_BR}.yml
-  app/javascript/.../ChannelList + i18n
+  app/javascript/.../settings/inbox/ChannelList.vue      (+entrada instagram)
+  app/javascript/.../widgets/ChannelItem.vue             (+isActive instagram)
+  app/views/layouts/vueapp.html.erb                      (+instagramEnabled)
+  public/assets/images/dashboard/channels/instagram.png  (NUEVO — no existe)
 
 MODIFICADOS — Super Admin (§6.bis)
   config/installation_config.yml                     (IG_APP_ID, IG_APP_SECRET,
