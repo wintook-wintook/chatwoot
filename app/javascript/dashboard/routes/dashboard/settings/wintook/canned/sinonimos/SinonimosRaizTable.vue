@@ -64,6 +64,19 @@
                           </div>
                         )
                     },{
+                        field: 'sinonimo_semantico_nombre',
+                        key: 'sinonimo_semantico_nombre',
+                        title: 'Categoría',
+                        align: 'left',
+                        width: 60,
+                        renderBodyCell: ({ row }) => (
+                          row.sinonimo_semantico_nombre
+                            ? <span class="inline-block px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">
+                                {row.sinonimo_semantico_nombre}
+                              </span>
+                            : <span class="text-slate-300">—</span>
+                        )
+                    },{
                         field: 'palabra_id',
                         key: 'palabra_id',
                         title: '',
@@ -71,7 +84,7 @@
                         align: 'left',
                         renderBodyCell: ({ row }) => (
                           <div class="button-wrapper">
-                            <woot-button variant="link" color-scheme="secondary" 
+                            <woot-button variant="link" color-scheme="secondary"
                               class-names="grey-btn" icon="edit"
                               onClick={() => this.onToggleEdit(row)}>
                             </woot-button>

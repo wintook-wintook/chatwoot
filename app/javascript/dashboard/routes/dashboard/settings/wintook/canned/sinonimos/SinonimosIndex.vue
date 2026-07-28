@@ -53,7 +53,7 @@
                         Palabra Raíz de Sínonimo
                         <select v-model="dataSinonimo.palabra_sinonimo_id">
                             <option :value="0">{{ 'Seleccione Palabra Raíz' }}</option>
-                            <option v-for="d in this.dataPalabrasRaizSelect" 
+                            <option v-for="d in dataPalabrasRaizSelect"
                                 :key="d.palabra_id" :value="d.palabra_id">
                                 {{ d.palabra }}
                             </option>
@@ -82,10 +82,17 @@
                         <input type="text" v-model="dataSinonimoRaiz.palabra"/>
                     </label>
                     <label>
-                        <input type="hidden" v-model="dataSinonimoRaiz.palabra_id"/>
+                        Categoría semántica <span class="text-slate-400">(opcional)</span>
+                        <select v-model="dataSinonimoRaiz.sinonimo_semantico_id">
+                            <option :value="null">{{ 'Sin categoría' }}</option>
+                            <option v-for="c in sinonimoSemanticos"
+                                :key="c.id" :value="c.id">
+                                {{ c.nombre }}
+                            </option>
+                        </select>
                     </label>
                     <label>
-                        <input type="hidden" v-model="dataSinonimoRaiz.palabra_sinonimo_id"/>
+                        <input type="hidden" v-model="dataSinonimoRaiz.palabra_id"/>
                     </label>
                     <div>
                         <woot-button type="submit"
@@ -99,63 +106,60 @@
         <woot-delete-modal :show.sync="showDeleteConfirmationPalabraRaiz"
             :on-close="closeDeletePopupPalabraRaiz" :on-confirm="confirmDeletionPalabraRaiz"
             :title="'Confirmar eliminación'"
-            :message="deleteMessagePalabraRaiz" 
+            :message="deleteMessagePalabraRaiz"
             :confirm-text="deleteConfirmTextPalabraRaiz"
             :reject-text="deleteRejectTextPalabraRaiz"/>
         <woot-delete-modal :show.sync="showDeleteConfirmationSinonimo"
             :on-close="closeDeletePopupSinonimo" :on-confirm="confirmDeletionSinonimo"
             :title="'Confirmar eliminación'"
-            :message="deleteMessageSinonimo" 
+            :message="deleteMessageSinonimo"
             :confirm-text="deleteConfirmTextSinonimo"
             :reject-text="deleteRejectTextSinonimo"/>
     </div>
 </template>
-    
+
     <script>
-    import axios from "axios";
     import { mapGetters } from 'vuex';
     import { useAlert } from 'dashboard/composables';
-    // import Integration from '../Integration';
-    
+
     import SinonimosRaizTable from './SinonimosRaizTable';
     import SinonimosRaizHeader from './SinonimosRaizHeader';
     import SinonimosTable from './SinonimosTable';
     import SinonimosHeader from './SinonimosHeader';
     import TableFooter from 'dashboard/components/widgets/TableFooter';
-    // import TableFooter from '../../../components/widgets/TableFooter';
+
+    import PalabrasSinonimosAPI from 'dashboard/api/palabrasSinonimos';
+    import SinonimosSemanticosAPI from 'dashboard/api/sinonimosSemanticos';
+
     const DEFAULT_PAGE = 1;
-    
+
     export default {
         data() {
             return {
                 searchQuerySinonimo: '',
                 searchQueryRaiz: '',
 
-                dataSinonimosRaiz: {},
-                dataSinonimoRaiz: { 
-                    palabra_id: 0, 
+                dataSinonimosRaiz: [],
+                dataSinonimoRaiz: {
+                    palabra_id: 0,
                     palabra: '',
-                    palabra_sinonimo_id: 0
+                    palabra_sinonimo_id: 0,
+                    sinonimo_semantico_id: null,
                 },
-                dataSinonimos: {},
-                dataSinonimo: { 
-                    palabra_id: 0, 
+                dataSinonimos: [],
+                dataSinonimo: {
+                    palabra_id: 0,
                     palabra: '',
-                    palabra_sinonimo_id: 0
+                    palabra_sinonimo_id: 0,
                 },
-                dataPalabraClave: {},
                 metaSininimos: {},
                 metaSininimosRaiz: {},
 
-                dataPalabrasRaizSelect: {},
+                dataPalabrasRaizSelect: [],
+                sinonimoSemanticos: [],
 
                 showSinonimo: false,
                 showSinonimoRaiz: false,
-    
-                palabraClaveId: 0,
-                palabra_raiz_id: 0,
-    
-                showDeleteConfirmationPopup: false,
 
                 showDeleteConfirmationPalabraRaiz: false,
                 showDeleteConfirmationSinonimo: false,
@@ -164,7 +168,6 @@
             }
         },
         components: {
-            // Integration,
             SinonimosRaizTable,
             SinonimosRaizHeader,
             SinonimosTable,
@@ -175,22 +178,6 @@
             ...mapGetters({
                 currentUser: 'getCurrentUser',
             }),
-            deleteConfirmTextPalabraClave() {
-                return `${this.$t('LABEL_MGMT.DELETE.CONFIRM.YES')} ${
-                    this.dataPalabraClave.palabra_clave
-                }`;
-            },
-            deleteRejectTextPalabraClave() {
-                return `${this.$t('LABEL_MGMT.DELETE.CONFIRM.NO')} ${
-                    this.dataPalabraClave.palabra_clave
-                }`;
-            },
-            deleteMessagePalabraClave() {
-                return `${this.$t('LABEL_MGMT.DELETE.CONFIRM.MESSAGE')} ${
-                    this.dataPalabraClave.palabra_clave
-                } ?`;
-            },
-
             deleteConfirmTextPalabraRaiz() {
                 return `${this.$t('LABEL_MGMT.DELETE.CONFIRM.YES')} ${
                     this.dataSinonimoRaiz.palabra
@@ -206,8 +193,6 @@
                     this.dataSinonimoRaiz.palabra
                 } ?`;
             },
-
-
             deleteConfirmTextSinonimo() {
                 return `${this.$t('LABEL_MGMT.DELETE.CONFIRM.YES')} ${
                     this.dataSinonimo.palabra
@@ -225,150 +210,112 @@
             },
         },
         mounted() {
+            this.getSemanticos();
             this.getSinonimosRaiz(DEFAULT_PAGE);
             this.getSinonimos(DEFAULT_PAGE);
         },
         methods: {
-            wordCounterRaiz(){
-                const count = this.dataSinonimoRaiz.palabra.split(" ").length;
-                if (count>1) {
-                    return true;
-                }
-                return false;
+            wordCounterRaiz() {
+                return this.dataSinonimoRaiz.palabra.trim().split(/\s+/).length > 1;
+            },
+            wordCounterSinonimo() {
+                return this.dataSinonimo.palabra.trim().split(/\s+/).length > 1;
             },
 
-            wordCounterSinonimo(){
-                const count = this.dataSinonimo.palabra.split(" ").length;
-                if (count>1) {
-                   return true;
+            // -------- Catálogo semántico (fijo) --------
+            async getSemanticos() {
+                try {
+                    const { data } = await SinonimosSemanticosAPI.get();
+                    this.sinonimoSemanticos = data;
+                } catch (error) {
+                    this.sinonimoSemanticos = [];
                 }
-                return false;
             },
-            async getSinonimosRaiz(page){
-                let account_id  = this.currentUser.account_id;
-                let searchQuery = this.searchQueryRaiz;
-                let result = await axios.get(process.env.WINTOOK_BOT+'/api/getSinonimosRaiz', {
-                    params: {
-                    account_id     : account_id, 
-                    current_page   : page,
-                    searchQuery    : searchQuery,
-                    }
-                })
-                .then(function (resp) { return resp.data; })
-                .catch(function (error) { return error; });
-                if (result.status == 200) {
-                    this.metaSininimosRaiz = result.meta;
-                    this.dataSinonimosRaiz = result.data;
+
+            // -------- Palabras raíz --------
+            async getSinonimosRaiz(page) {
+                try {
+                    const { data } = await PalabrasSinonimosAPI.raices({
+                        search: this.searchQueryRaiz,
+                        page,
+                    });
+                    this.metaSininimosRaiz = data.meta;
+                    this.dataSinonimosRaiz = data.data;
+                } catch (error) {
+                    this.metaSininimosRaiz = {};
+                    this.dataSinonimosRaiz = [];
                 }
             },
 
             async setSinonimoRaiz() {
-
-                let palabra             = this.dataSinonimoRaiz.palabra;
-                let access_token        = this.currentUser.access_token;
-                let account_id          = this.currentUser.account_id;
-                let palabra_id          = this.dataSinonimoRaiz.palabra_id;
-            
-                let result =  await axios.post(process.env.WINTOOK_BOT+'/api/setSinonimoRaiz', {
-                    params: { 
-                        access_token, account_id, palabra_id, palabra,
+                try {
+                    const { palabra_id, palabra, sinonimo_semantico_id } = this.dataSinonimoRaiz;
+                    if (palabra_id) {
+                        await PalabrasSinonimosAPI.actualizar(palabra_id, {
+                            palabra,
+                            sinonimo_semantico_id: sinonimo_semantico_id || null,
+                        });
+                    } else {
+                        await PalabrasSinonimosAPI.crearRaiz({
+                            palabra,
+                            sinonimoSemanticoId: sinonimo_semantico_id || null,
+                        });
                     }
-                })
-                .then(function (resp) { return resp.data; })
-                .catch(function (error) { return error; });
-                if (result.status === 200) {
-                    useAlert(result.msg);
+                    useAlert('Palabra raíz guardada.');
                     this.showSinonimoRaiz = false;
                     this.getSinonimosRaiz(DEFAULT_PAGE);
-                } 
-                if (result.status === 350) {
-                    useAlert(result.msg);
-                } 
+                } catch (error) {
+                    useAlert('No se pudo guardar la palabra raíz.');
+                }
             },
 
-
-            async getSinonimos(page){
-                let account_id  = this.currentUser.account_id;
-                let searchQuery = this.searchQuerySinonimo;
-                let palabra_sinonimo_filter_id = this.palabra_sinonimo_filter_id;
-
-                let result = await axios.get(process.env.WINTOOK_BOT+'/api/getSinonimos', {
-                    params: {
-                        account_id     : account_id, 
-                        current_page   : page,
-                        searchQuery    : searchQuery,
-                        palabra_sinonimo_filter_id: palabra_sinonimo_filter_id,
-                    }
-                })
-                .then(function (resp) { return resp.data; })
-                .catch(function (error) { return error; });
-                if (result.status === 200) {
-                    this.metaSininimos = result.meta;
-                    this.dataSinonimos = result.data.map(item => {
-                        return {
-                        ...item,
-                        };
+            // -------- Sinónimos --------
+            async getSinonimos(page) {
+                try {
+                    const { data } = await PalabrasSinonimosAPI.sinonimos({
+                        raizId: this.palabra_sinonimo_filter_id,
+                        search: this.searchQuerySinonimo,
+                        page,
                     });
-                }
-                if (result.status === 400) {
+                    this.metaSininimos = data.meta;
+                    this.dataSinonimos = data.data;
+                } catch (error) {
                     this.metaSininimos = {};
                     this.dataSinonimos = [];
                 }
             },
 
             async setSinonimo() {
-
-                let access_token        = this.currentUser.access_token;
-                let account_id          = this.currentUser.account_id;
-                let palabra_id          = this.dataSinonimo.palabra_id;
-                let palabra             = this.dataSinonimo.palabra;
-                let palabra_sinonimo_id = this.dataSinonimo.palabra_sinonimo_id;
-
-                let result =  await axios.post(process.env.WINTOOK_BOT+'/api/setSinonimo', {
-                    params: { 
-                        access_token, account_id, palabra_id, palabra, palabra_sinonimo_id,
+                try {
+                    const { palabra_id, palabra, palabra_sinonimo_id } = this.dataSinonimo;
+                    if (palabra_id) {
+                        await PalabrasSinonimosAPI.actualizar(palabra_id, { palabra });
+                    } else {
+                        await PalabrasSinonimosAPI.crearSinonimo({
+                            palabra,
+                            palabraSinonimoId: palabra_sinonimo_id,
+                        });
                     }
-                })
-                .then(function (resp) { return resp.data; })
-                .catch(function (error) { return error; });
-                if (result.status === 200) {
-                    useAlert(result.msg);
+                    useAlert('Sinónimo guardado.');
                     this.showSinonimo = false;
                     this.getSinonimos(DEFAULT_PAGE);
-                } 
-                if (result.status === 350) {
-                    useAlert(result.msg);
-                } 
-            },
-
-
-            async getPalabrasRaizSelect(){
-                let account_id  = this.currentUser.account_id;
-                let result = await axios.get(process.env.WINTOOK_BOT+'/api/getPalabrasRaizSelect', {
-                    params: {
-                        account_id     : account_id
-                    }
-                })
-                .then(function (resp) { return resp.data; })
-                .catch(function (error) { return error; });
-                if (result.status == 200) {
-                    this.dataPalabrasRaizSelect = result.data;
-                    console.log(this.dataPalabrasRaizSelect);
+                } catch (error) {
+                    useAlert('No se pudo guardar el sinónimo.');
                 }
             },
 
-            
-    
-            deleteVocabulario(data) {
-                this.dataPalabraClave = data;
-                console.log(this.dataPalabraClave.palabra_clave);
-                this.showDeleteConfirmationPopupPalabraClave = true;
+            async getPalabrasRaizSelect() {
+                try {
+                    const { data } = await PalabrasSinonimosAPI.raicesSelect();
+                    this.dataPalabrasRaizSelect = data.data;
+                } catch (error) {
+                    this.dataPalabrasRaizSelect = [];
+                }
             },
-    
+
+            // -------- Búsqueda --------
             onSearchSubmitRaiz() {
-                if (this.searchQueryRaiz) {
-                    this.getSinonimosRaiz(DEFAULT_PAGE);
-                }
+                this.getSinonimosRaiz(DEFAULT_PAGE);
             },
             onInputSearchRaiz(event) {
                 const newQuery = event.target.value;
@@ -378,13 +325,8 @@
                     this.getSinonimosRaiz(DEFAULT_PAGE);
                 }
             },
-
-
             onSearchSubmitSinonimo() {
-                if (this.searchQuerySinonimo) {
-                    this.palabra_sinonimo_filter_id = 0;
-                    this.getSinonimos(DEFAULT_PAGE);
-                }
+                this.getSinonimos(DEFAULT_PAGE);
             },
             onInputSearchSinonimo(event) {
                 const newQuery = event.target.value;
@@ -395,11 +337,7 @@
                 }
             },
 
-
-            onPageChange(page) {
-                //this.selectedContactId = '';
-                this.getSinonimosRaiz(page);
-            },
+            // -------- Modales / acciones --------
             hideSinonimo() {
                 this.showSinonimo = false;
             },
@@ -407,63 +345,43 @@
                 this.showSinonimoRaiz = false;
             },
             onToggleCreateSinonimo() {
-                let palabra_sinonimo_filter_id = this.palabra_sinonimo_filter_id
-                this.dataSinonimo = { 
-                    palabra_id: 0, 
+                this.dataSinonimo = {
+                    palabra_id: 0,
                     palabra: '',
-                    palabra_sinonimo_id: palabra_sinonimo_filter_id
+                    palabra_sinonimo_id: this.palabra_sinonimo_filter_id,
                 };
                 this.getPalabrasRaizSelect();
                 this.showSinonimo = true;
             },
-
             onToggleCreateSinonimoRaiz() {
-                this.dataSinonimoRaiz = { 
-                    palabra_id: 0, 
+                this.dataSinonimoRaiz = {
+                    palabra_id: 0,
                     palabra: '',
-                    palabra_sinonimo_id: 0
+                    palabra_sinonimo_id: 0,
+                    sinonimo_semantico_id: null,
                 };
                 this.showSinonimoRaiz = true;
             },
-
             onToggleEditSinonimo(data) {
                 this.getPalabrasRaizSelect();
-                this.dataSinonimo = data;
+                this.dataSinonimo = { ...data };
                 this.showSinonimo = true;
             },
-
             onToggleEditSinonimoRaiz(data) {
-                this.dataSinonimoRaiz = data;
+                this.dataSinonimoRaiz = {
+                    ...data,
+                    sinonimo_semantico_id: data.sinonimo_semantico_id || null,
+                };
                 this.showSinonimoRaiz = true;
             },
-            
-            closeDeletePopupPalabraClave() {
-                this.showDeleteConfirmationPopupPalabraClave = false;
+            onToggleUpdateSinonimo() {
+                this.searchQuerySinonimo = '';
+                this.palabra_sinonimo_filter_id = 0;
+                this.getSinonimos(DEFAULT_PAGE);
             },
-    
-            confirmDeletionPalabraClave() {
-                this.closeDeletePopupPalabraClave();
-                this.deletePalabraClave();
-            },
-    
-
-            async deletePalabraClave() {
-                let token             = this.currentUser.access_token;
-                let palabra_clave_id  = this.dataPalabraClave.palabra_clave_id;
-                let account_id        = this.currentUser.account_id;
-                let response = await axios.get(process.env.WINTOOK_BOT+'/api/deleteVocabulario', {
-                    params: { 
-                    token             : token, 
-                    account_id        : account_id, 
-                    palabra_clave_id  : palabra_clave_id,
-                    }
-                })
-                .then(function (resp)   { return resp.data; })
-                .catch(function (error) { return error;     });
-                if (response.status === 200) {
-                    useAlert('Se ha eliminado palabra del vocabulario...');
-                    this.getSinonimosRaiz();
-                }
+            onToggleFilterClick(row) {
+                this.palabra_sinonimo_filter_id = row.palabra_id;
+                this.getSinonimos(DEFAULT_PAGE);
             },
             onPageChangeSinonimos(page) {
                 this.getSinonimos(page);
@@ -471,75 +389,57 @@
             onPageChangeSinonimosRaiz(page) {
                 this.getSinonimosRaiz(page);
             },
-            
-            confirmDeletionPalabraRaiz() {
-                this.closeDeletePopupPalabraRaiz();
-                this.deleteSinonimoRaiz();
-            },
-            closeDeletePopupPalabraRaiz() {
-                this.showDeleteConfirmationPalabraRaiz = false;
-            },
+
+            // -------- Borrado raíz --------
             onToggleDeletePalabraRaiz(data) {
                 this.dataSinonimoRaiz = data;
                 this.showDeleteConfirmationPalabraRaiz = true;
             },
+            closeDeletePopupPalabraRaiz() {
+                this.showDeleteConfirmationPalabraRaiz = false;
+            },
+            confirmDeletionPalabraRaiz() {
+                this.closeDeletePopupPalabraRaiz();
+                this.deleteSinonimoRaiz();
+            },
             async deleteSinonimoRaiz() {
-                let { access_token, account_id }                  = this.currentUser;
-                let { palabra_id, palabra, palabra_sinonimo_id }  = this.dataSinonimoRaiz;
-                let response = await axios.post(process.env.WINTOOK_BOT+'/api/deleteSinonimoRaiz', {
-                    data: {  access_token, account_id, palabra_id, palabra, palabra_sinonimo_id }
-                })
-                .then(function (resp)   { return resp.data; })
-                .catch(function (error) { return error;     });
-                if (response.status === 200) {
-                    useAlert(response.msg);
+                try {
+                    await PalabrasSinonimosAPI.eliminar(this.dataSinonimoRaiz.palabra_id);
+                    useAlert('Palabra raíz eliminada.');
+                    this.palabra_sinonimo_filter_id = 0;
                     this.getSinonimosRaiz(DEFAULT_PAGE);
                     this.getSinonimos(DEFAULT_PAGE);
+                } catch (error) {
+                    useAlert('No se pudo eliminar la palabra raíz.');
                 }
             },
 
-
-            
-            onToggleUpdateSinonimo() {
-                this.searchQuerySinonimo = "";
-                this.palabra_sinonimo_filter_id = 0;
-                this.getSinonimos(DEFAULT_PAGE);
-            },
-
-            confirmDeletionSinonimo() {
-                this.closeDeletePopupSinonimo();
-                this.deleteSinonimo();
-            },
-            closeDeletePopupSinonimo() {
-                this.showDeleteConfirmationSinonimo = false;
-            },
+            // -------- Borrado sinónimo --------
             onToggleDeleteSinonimo(data) {
                 this.dataSinonimo = data;
                 this.showDeleteConfirmationSinonimo = true;
             },
-            async deleteSinonimo() {
-                let { access_token, account_id }                  = this.currentUser;
-                let { palabra_id, palabra, palabra_sinonimo_id }  = this.dataSinonimo;
-                let response = await axios.post(process.env.WINTOOK_BOT+'/api/deleteSinonimo', {
-                    data: {  access_token, account_id, palabra_id, palabra, palabra_sinonimo_id }
-                })
-                .then(function (resp)   { return resp.data; })
-                .catch(function (error) { return error;     });
-                if (response.status === 200) {
-                    useAlert(response.msg);
-                    this.getSinonimos(DEFAULT_PAGE);
-                }
+            closeDeletePopupSinonimo() {
+                this.showDeleteConfirmationSinonimo = false;
             },
-            onToggleFilterClick(data) {
-                let { palabra_sinonimo_id }  = data;
-                this.palabra_sinonimo_filter_id = palabra_sinonimo_id;
-                this.getSinonimos(DEFAULT_PAGE);
+            confirmDeletionSinonimo() {
+                this.closeDeletePopupSinonimo();
+                this.deleteSinonimo();
+            },
+            async deleteSinonimo() {
+                try {
+                    await PalabrasSinonimosAPI.eliminar(this.dataSinonimo.palabra_id);
+                    useAlert('Sinónimo eliminado.');
+                    this.getSinonimos(DEFAULT_PAGE);
+                } catch (error) {
+                    useAlert('No se pudo eliminar el sinónimo.');
+                }
             },
         }
     }
-    
+
     </script>
-    
+
     <style scoped lang="scss">
         @import '~dashboard/assets/scss/variables';
     </style>
