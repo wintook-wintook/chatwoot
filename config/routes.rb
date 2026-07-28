@@ -161,8 +161,6 @@ Rails.application.routes.draw do
             resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks'
             # @tickets_cases — notas internas (viven en case_events, no en tabla propia)
             resources :case_notes, only: [:index, :create, :update, :destroy], path: 'notes'
-            # @tickets_cases P4 — colaboradores/CC del ticket
-            resources :case_collaborators, only: [:index, :create, :destroy], path: 'collaborators'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
           resources :case_types, only: [:index, :create, :update, :destroy] do

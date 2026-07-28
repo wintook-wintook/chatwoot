@@ -144,7 +144,6 @@ class CaseTicket < ApplicationRecord
   belongs_to :kb_article,        class_name: 'Article', optional: true # @tickets_cases 2H
   has_many   :case_events,       dependent: :destroy
   has_many   :case_tasks,        dependent: :destroy # @tickets_cases — tareas/subtareas
-  has_many   :case_collaborators, dependent: :destroy # @tickets_cases P4 — colaboradores/CC
   # @tickets_cases 2E — relaciones dirigidas (este ticket como origen y como destino).
   has_many   :ticket_relations,        class_name: 'CaseTicketRelation', foreign_key: :ticket_id,         dependent: :destroy, inverse_of: :ticket
   has_many   :inverse_ticket_relations, class_name: 'CaseTicketRelation', foreign_key: :related_ticket_id, dependent: :destroy, inverse_of: :related_ticket

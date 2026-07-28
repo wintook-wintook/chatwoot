@@ -50,7 +50,8 @@ tags: [tickets, pendiente, todo]
 - **P4 — extras de practicidad** (parcial):
   - ~~💬 respuestas predefinidas en la caja~~ ✅ **hecho** (commit `754c77b4`, menú de canned responses en el hilo del ticket).
   - ~~📅 vencimiento (columna "Vence" + edición inline, rojo si vencido)~~ ✅ **hecho** (commit `c11450b4`, estilo osTicket "Due Date"). Se añadió la columna `due_at` (manual pisa al estimado por SLA; editarlo NO recalcula el reloj SLA); orden por vencimiento efectivo; evento `due_date_changed`. Verificado en BD; **falta verificación visual en el navegador**.
-  - **Pendiente**: 👥 colaboradores/CC (modelo nuevo, esfuerzo BAJO — hay backend a medias **sin commitear** en `feat/tickets`) · 🖨️ imprimir (vista imprimible ficha+hilo, BAJO).
+  - **Pendiente**: 🖨️ imprimir (vista imprimible ficha+hilo, BAJO).
+  - ❌ **Descartado (2026-07-28)**: 👥 colaboradores/CC — **fuera del plan por ahora**, no se va a desarrollar. El backend a medias que había sin commitear (modelo, controlador, job, mailer, migración) se **eliminó**, junto con la ruta y el `has_many` que sí estaban commiteados; la tabla se revirtió en la BD local. Si se retoma, se rehace desde cero (ver §4.5 de [[Conciliacion-osTicket-MGCI]]).
   - ~~📄 **notas internas (bitácora)**~~ ✅ **hecho** (ver [[Plan-Notas-Internas]] y el changelog). Incluye la **Fase 2** (motivo opcional al Cambiar estado). **Pendiente de esa función**: editar/borrar notas; adjuntos y menciones en la nota; motivo también en los modales de Cerrar y de Resolver-problema (hoy solo en el camino simple).
 
 ### Ticket cerrado (ver [[Plan-Ticket-Cerrado]])
