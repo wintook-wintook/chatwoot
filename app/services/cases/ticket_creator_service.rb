@@ -38,6 +38,22 @@ class Cases::TicketCreatorService
   # Máximo de turnos en que el bot insiste por datos faltantes antes de crear igual.
   MAX_FIELD_ASKS = 2
 
+  # Llave de la recolección de campos en curso (Fase 2). Pública porque el job
+  # la consulta para no dejar que la KBase se coma la respuesta del cliente.
+  def self.pending_key(conversation_id)
+    "case_intake_pending::#{conversation_id}"
+  end
+
+  # true mientras el bot está esperando los datos obligatorios que pidió.
+  def self.intake_pending?(conversation_id)
+    return false if conversation_id.blank?
+
+    Redis::Alfred.get(pending_key(conversation_id)).present?
+  rescue StandardError => e
+    Rails.logger.warn "[TicketCreator] No se pudo leer #{pending_key(conversation_id)}: #{e.message}"
+    false
+  end
+
   def initialize(message, tracking:)
     @message      = message
     @tracking     = tracking
@@ -312,13 +328,19 @@ class Cases::TicketCreatorService
     asks = Redis::Alfred.get(pending_key).to_i + 1
     Redis::Alfred.setex(pending_key, asks.to_s, PENDING_TTL)
     intro = missing.size == 1 ? 'necesito un dato' : 'necesito unos datos'
-    text  = "Para poder levantar tu caso #{intro}: #{missing.to_sentence}. " \
+    text  = "Para poder levantar tu caso #{intro}: #{to_sentence_es(missing)}. " \
             '¿Me lo compartes, por favor?'
     deliver(text)
   end
 
   def pending_key
-    "case_intake_pending::#{@conversation.id}"
+    self.class.pending_key(@conversation.id)
+  end
+
+  # to_sentence usa conectores en inglés ("and") salvo que el locale los defina, y
+  # aquí no están (no hay rails-i18n ni support.array en es.yml). Se pasan a mano.
+  def to_sentence_es(list)
+    list.to_sentence(words_connector: ', ', two_words_connector: ' y ', last_word_connector: ' y ')
   end
 
   # ---------------------------------------------------------------------------
