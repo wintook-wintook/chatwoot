@@ -32,11 +32,13 @@ tags: [tickets, pendiente, todo]
 
 ### Kanban — mejoras (tras notificar-al-mover)
 - ~~**Notificar al cliente al mover**~~ ✅ **hecho** (checkbox + plantilla por estado + envío por el canal).
+- **Columnas configurables por Tipo de Caso** 📋 **plan listo (Opción A+)** — ver [[Plan-Columnas-Por-Tipo]]. Hoy las columnas son constantes JS hardcodeadas (`Kanban.vue:22` y `:41`); cada tipo tendría las suyas, en cantidad y orden propios. La columna se **guarda en el ticket** (`case_tickets.case_type_column_id`), así varias columnas pueden compartir el mismo `status` — necesario para flujos comerciales o de implementación, cuyas etapas son todas `in_progress`. No toca la máquina de estados: `status` sigue siendo el canónico para SLA, reglas, reportes y portal.
 - **Futuro Kanban**: plantillas de aviso configurables por cuenta; acciones rápidas en la tarjeta (asignar/prioridad/abrir); SLA en cuenta regresiva con color; avatar del asignado; mover instantáneo con "Deshacer"; swimlanes.
 
 ### Tareas + Bloqueo de ticket — hecho, mejoras futuras
 - ~~**Tareas/subtareas (checklist) en el ticket**~~ ✅ **hecho** (`case_tasks`, checklist con responsable/borrar/agregar, "Tareas {done}/{total}").
 - ~~**Bloqueo de ticket (lock con TTL 3 min)**~~ ✅ **hecho** (banner "X está trabajando en este ticket ahora mismo"; toma en mounted, libera en beforeDestroy; API 409 si lo tiene otro).
+- **Bandeja de tareas ("¿qué tengo asignado?")** 📋 **plan listo** — ver [[Plan-Bandeja-Tareas]]. Hoy las tareas solo se ven ticket por ticket (el endpoint está anidado bajo un ticket); si te asignan una tarea en un ticket ajeno, no te enteras. Endpoint a nivel cuenta + vista "Tareas" + notificación `case_task_assignment`.
 - **Futuro Tareas**: fecha límite (`due_at` ya existe en BD, falta UI); reordenar (drag); plantillas de checklist por tipo de caso; "convertir tarea en ticket".
 - **Futuro Lock**: aviso en tiempo real (hoy solo al abrir/refrescar); "tomar el control" forzado por admin; heartbeat para renovar el lock mientras se escribe.
 
