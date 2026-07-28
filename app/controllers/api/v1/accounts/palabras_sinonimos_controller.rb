@@ -119,7 +119,8 @@ class Api::V1::Accounts::PalabrasSinonimosController < Api::V1::Accounts::BaseCo
       palabra: raiz.palabra,
       palabra_sinonimo_id: raiz.palabra_sinonimo_id,
       sinonimo_semantico_id: raiz.sinonimo_semantico_id,
-      sinonimo_semantico_nombre: catalogo[raiz.sinonimo_semantico_id]
+      sinonimo_semantico_nombre: catalogo[raiz.sinonimo_semantico_id],
+      sinonimos_count: conteos[raiz.palabra_id] || 0
     }
   end
 
@@ -134,6 +135,11 @@ class Api::V1::Accounts::PalabrasSinonimosController < Api::V1::Accounts::BaseCo
 
   def catalogo
     @catalogo ||= SinonimoSemantico.pluck(:id, :nombre).to_h
+  end
+
+  # Nº de sinónimos por raíz (para el aviso de borrado en cascada).
+  def conteos
+    @conteos ||= cuenta_scope.sinonimos.group(:palabra_sinonimo_id).count
   end
 
   def raices_words

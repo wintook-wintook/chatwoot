@@ -3,6 +3,8 @@
         <div class="mt-2 flex-1">
         <div class="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-2 gap-4">
             <div class="w-full">
+                            <h5 class="mb-0 text-slate-800 dark:text-slate-100">Palabras raíz</h5>
+                            <p class="mt-0 mb-0 text-xs text-slate-400">Da click en una raíz para ver sus sinónimos.</p>
                             <sinonimos-raiz-header
                                 :search-query="searchQueryRaiz"
                                 :on-input-search="onInputSearchRaiz"
@@ -11,6 +13,7 @@
                             />
                             <sinonimos-raiz-table
                                 :data-sinonimos-raiz="dataSinonimosRaiz"
+                                :selected-id="palabra_sinonimo_filter_id"
                                 :on-toggle-edit="onToggleEditSinonimoRaiz"
                                 :on-toggle-delete="onToggleDeletePalabraRaiz"
                                 :on-toggle-filter-click="onToggleFilterClick"
@@ -23,6 +26,17 @@
                             />
             </div>
             <div class="w-full">
+                            <h5 class="mb-0 text-slate-800 dark:text-slate-100">
+                                Sinónimos
+                                <span v-if="raizSeleccionadaNombre"
+                                    class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 align-middle text-xs font-normal rounded bg-woot-50 dark:bg-woot-800/40 text-woot-600 dark:text-woot-200">
+                                    de: {{ raizSeleccionadaNombre }}
+                                    <button type="button" class="font-semibold leading-none" title="Ver todos" @click="onToggleUpdateSinonimo">✕</button>
+                                </span>
+                            </h5>
+                            <p class="mt-0 mb-0 text-xs text-slate-400">
+                                {{ raizSeleccionadaNombre ? 'Sinónimos de esta raíz.' : 'Mostrando todos los sinónimos.' }}
+                            </p>
                             <sinonimos-header
                                 :search-query="searchQuerySinonimo"
                                 :on-input-search="onInputSearchSinonimo"
@@ -165,6 +179,7 @@
                 showDeleteConfirmationSinonimo: false,
 
                 palabra_sinonimo_filter_id: 0,
+                raizSeleccionadaNombre: '',
             }
         },
         components: {
@@ -189,9 +204,14 @@
                 }`;
             },
             deleteMessagePalabraRaiz() {
-                return `${this.$t('LABEL_MGMT.DELETE.CONFIRM.MESSAGE')} ${
+                const base = `${this.$t('LABEL_MGMT.DELETE.CONFIRM.MESSAGE')} ${
                     this.dataSinonimoRaiz.palabra
                 } ?`;
+                const n = this.dataSinonimoRaiz.sinonimos_count || 0;
+                if (n > 0) {
+                    return `${base} Se eliminarán también sus ${n} sinónimo${n === 1 ? '' : 's'}.`;
+                }
+                return base;
             },
             deleteConfirmTextSinonimo() {
                 return `${this.$t('LABEL_MGMT.DELETE.CONFIRM.YES')} ${
@@ -377,10 +397,12 @@
             onToggleUpdateSinonimo() {
                 this.searchQuerySinonimo = '';
                 this.palabra_sinonimo_filter_id = 0;
+                this.raizSeleccionadaNombre = '';
                 this.getSinonimos(DEFAULT_PAGE);
             },
             onToggleFilterClick(row) {
                 this.palabra_sinonimo_filter_id = row.palabra_id;
+                this.raizSeleccionadaNombre = row.palabra;
                 this.getSinonimos(DEFAULT_PAGE);
             },
             onPageChangeSinonimos(page) {

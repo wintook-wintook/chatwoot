@@ -1,10 +1,11 @@
 <template>
-    <div class="mt-6 flex-1">
+    <div class="mt-6 flex-1 sinonimos-raiz-table-wrap">
         <ve-table
           :fixed-header="true"
           max-height="calc(100vh - 34.2rem)"
           :columns="columns"
           :table-data="dataSinonimosRaiz"
+          :cell-style-option="cellStyleOption"
           :border-around="false"
         />
     </div>
@@ -39,6 +40,10 @@
               type: Function,
               default: (data) => {},
             },
+            selectedId: {
+              type: Number,
+              default: 0,
+            },
         },
         data() {
             return {
@@ -46,6 +51,12 @@
             };
         },
         computed: {
+            cellStyleOption() {
+                return {
+                    bodyCellClass: ({ row }) =>
+                        row.palabra_id === this.selectedId ? 'row--selected' : '',
+                };
+            },
             columns() {
                 return [{
                         field: 'palabra',
@@ -57,9 +68,12 @@
                         sortBy: this.sortConfig.palabra_clave || '',
                         renderBodyCell: ({ row }) => (
                           <div class="button-wrapper">
-                            <woot-button variant="link" color-scheme="secondary" 
+                            <woot-button variant="link"
+                              color-scheme={row.palabra_id === this.selectedId ? 'primary' : 'secondary'}
                               onClick={() => this.onToggleFilterClick(row)}>
-                                {`${row.palabra}`}
+                                <span class={row.palabra_id === this.selectedId ? 'font-semibold' : ''}>
+                                    {`${row.palabra}`}
+                                </span>
                             </woot-button>
                           </div>
                         )
@@ -111,6 +125,12 @@
       overflow: hidden;
     }
     
+    .sinonimos-raiz-table-wrap::v-deep {
+      .ve-table-body-td.row--selected {
+        background-color: var(--w-50);
+      }
+    }
+
     .vocabulario-table-wrap::v-deep {
       .ve-table {
         padding-bottom: var(--space-large);
