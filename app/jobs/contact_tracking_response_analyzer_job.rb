@@ -130,13 +130,17 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     route_result = classify_route(tracking, message)
     route        = route_result[:route]
 
+    # proyecto@bot_seguimiento_calendar — :rejected/:interested quedaron a cargo de las
+    # reglas de automatización (Cases::RuleEngineService), no de este job. Comentados
+    # (no borrados) para no pausar el seguimiento ni notificar dos veces sobre la misma
+    # decisión; si el Router los clasifica igual, caen al `else` como :tracking.
     replied = case route
-              when :rejected
-                handle_rejected(tracking, message, route_result[:confidence])
-                true
-              when :interested
-                handle_interested(tracking, message, route_result[:confidence])
-                true
+              # when :rejected
+              #   handle_rejected(tracking, message, route_result[:confidence])
+              #   true
+              # when :interested
+              #   handle_interested(tracking, message, route_result[:confidence])
+              #   true
               when :book_appointment
                 handle_book_appointment(tracking, message, route_result)
                 true
