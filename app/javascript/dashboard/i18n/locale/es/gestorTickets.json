@@ -42,6 +42,9 @@
       "PERIOD_FROM": "Período:",
       "PERIOD_TO": "al"
     },
+    "NOTIFICATIONS": {
+      "TOAST_TICKET_ASSIGNED": "Ticket asignado: {folio} · {task}"
+    },
     "KANBAN": {
       "TITLE": "Tablero de tickets",
       "SEARCH_PLACEHOLDER": "Buscar folio, título o contacto…",

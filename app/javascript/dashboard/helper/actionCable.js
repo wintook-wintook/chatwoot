@@ -187,6 +187,8 @@ class ActionCableConnector extends BaseActionCableConnector {
   // no "todas": convertir cada notificación en toast cambiaría el producto entero.
   maybeToastTaskNotification = data => {
     const TOAST_KEYS = {
+      case_ticket_assignment:
+        'CASE_TICKETS.NOTIFICATIONS.TOAST_TICKET_ASSIGNED',
       case_task_assignment: 'CASE_TICKETS.TASKS.INBOX.TOAST_ASSIGNED',
       case_task_completed: 'CASE_TICKETS.TASKS.INBOX.TOAST_COMPLETED',
     };
