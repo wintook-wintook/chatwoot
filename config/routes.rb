@@ -163,6 +163,8 @@ Rails.application.routes.draw do
             resources :case_notes, only: [:index, :create, :update, :destroy], path: 'notes'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
+          # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
+          resources :case_tasks, only: [:index], controller: 'case_tasks_index'
           resources :case_types, only: [:index, :create, :update, :destroy] do
             resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K
           end
