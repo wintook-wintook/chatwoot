@@ -7,6 +7,10 @@ tags: [tickets, case_tasks, agentes, bandeja]
 # Plan — Bandeja de tareas
 
 > Estado: ✅ **implementado F1–F4** (2026-07-29). Verificado en navegador (cuenta 2).
+> Ajustes de producto sobre el plan original (2026-07-29): (1) el **toast también
+> salta al ASIGNAR** una tarea, no solo al completar (§5.4); (2) **sí se notifican
+> las auto-asignaciones** — asignarte una tarea a ti mismo da campanita + toast
+> (contradice el §3.2, que copiaba el criterio de tickets).
 > Único pendiente menor: badge de vencidas en el item de sidebar (§4.2) — diferido
 > para no tocar el layout compartido; el conteo ya se ve en la pestaña "Vencidas (n)".
 > Relacionado: [[Conciliacion-osTicket-MGCI]] (§4.4 Tareas/subtareas) ·
