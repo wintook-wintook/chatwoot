@@ -204,6 +204,36 @@
       "DELETE": "Eliminar",
       "VIEW": "Ver tarea",
       "TOGGLE": "Marcar como completada",
+      "INBOX": {
+        "TITLE": "Tareas",
+        "SEARCH_PLACEHOLDER": "Buscar en el título o la descripción…",
+        "EMPTY": "No hay tareas que coincidan con los filtros.",
+        "BY_TAB": "Por pestaña",
+        "ALL_TYPES": "Todos los tipos",
+        "COMPLETED": "Completada",
+        "UNASSIGNED": "Sin asignar",
+        "DUE_PREFIX": "Vence:",
+        "DUE_TODAY": "hoy",
+        "SAVE_ERROR": "No se pudo actualizar la tarea.",
+        "FROZEN_HINT": "El ticket está cerrado: reábrelo para modificar sus tareas.",
+        "TABS": {
+          "mine": "Mis tareas",
+          "unassigned": "Sin asignar",
+          "all": "Todas",
+          "overdue": "Vencidas"
+        },
+        "STATUS": {
+          "PENDING": "Pendientes",
+          "DONE": "Completadas",
+          "ALL": "Todas"
+        },
+        "DUE": {
+          "ANY": "Cualquier fecha",
+          "OVERDUE": "Vencidas",
+          "TODAY": "Vencen hoy",
+          "WEEK": "Esta semana"
+        }
+      },
       "TABLE": {
         "TASK": "Tarea",
         "ASSIGNEE": "Responsable",

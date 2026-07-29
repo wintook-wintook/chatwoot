@@ -6,6 +6,7 @@ const gestorTickets = accountId => ({
   routes: [
     'gestorTickets_index',
     'gestorTickets_kanban',
+    'gestorTickets_tasks',
     'gestorTickets_detail',
     'gestorTickets_rules',
     'gestorTickets_metrics',
@@ -31,6 +32,13 @@ const gestorTickets = accountId => ({
       hasSubMenu: false,
       toState: frontendURL(`accounts/${accountId}/tickets/kanban`),
       toStateName: 'gestorTickets_kanban',
+    },
+    {
+      icon: 'checkmark-circle',
+      label: 'TICKET_TASKS',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/tickets/tasks`),
+      toStateName: 'gestorTickets_tasks',
     },
     {
       icon: 'document',

@@ -21,6 +21,7 @@ import caseTypeFieldsAPI from '../../api/caseTypeFields';
 import caseAiConfigAPI from '../../api/caseAiConfig';
 import casePortalsAPI from '../../api/casePortals';
 import caseSettingsAPI from '../../api/caseSettings';
+import caseTasksAPI from '../../api/caseTasks';
 import {
   SET_CASE_TICKET_UI_FLAG,
   SET_ACTIVE_CASE_TICKET,
@@ -52,6 +53,8 @@ import {
   SET_CASE_PORTALS_UI_FLAG,
   SET_CASE_SETTINGS,
   SET_CASE_SETTINGS_UI_FLAG,
+  SET_CASE_MY_TASKS,
+  SET_CASE_MY_TASKS_UI_FLAG,
 } from '../mutation-types';
 
 const CLOSED_STATUSES = ['closed', 'cancelled'];
@@ -155,6 +158,12 @@ const state = {
     isFetching: false,
     isSaving: false,
   },
+  // Bandeja de tareas — índice a nivel cuenta ("¿qué tengo asignado?")
+  myTasks: [],
+  myTasksMeta: {},
+  myTasksUiFlags: {
+    isFetching: false,
+  },
 };
 
 export const getters = {
@@ -254,6 +263,15 @@ export const getters = {
   },
   getSlaPoliciesUIFlags(_state) {
     return _state.slaPoliciesUiFlags;
+  },
+  getMyTasks(_state) {
+    return _state.myTasks;
+  },
+  getMyTasksMeta(_state) {
+    return _state.myTasksMeta;
+  },
+  getMyTasksUIFlags(_state) {
+    return _state.myTasksUiFlags;
   },
 };
 
@@ -948,6 +966,20 @@ export const actions = {
     }
   },
 
+  // ── Bandeja de tareas ("¿qué tengo asignado?") ──────────────
+  async fetchMyTasks({ commit }, filters = {}) {
+    commit(SET_CASE_MY_TASKS_UI_FLAG, { isFetching: true });
+    try {
+      const { data } = await caseTasksAPI.getMine(filters);
+      commit(SET_CASE_MY_TASKS, {
+        tasks: data.case_tasks || [],
+        meta: data.meta || {},
+      });
+    } finally {
+      commit(SET_CASE_MY_TASKS_UI_FLAG, { isFetching: false });
+    }
+  },
+
   // ── 2E — Relaciones entre tickets ───────────────────────────
   async fetchRelations({ commit }, ticketId) {
     commit(SET_CASE_RELATIONS_UI_FLAG, { isFetching: true });
@@ -1154,6 +1186,13 @@ export const mutations = {
   },
   [SET_CASE_SLA_POLICIES_UI_FLAG](_state, flags) {
     _state.slaPoliciesUiFlags = { ..._state.slaPoliciesUiFlags, ...flags };
+  },
+  [SET_CASE_MY_TASKS](_state, { tasks, meta }) {
+    _state.myTasks = tasks;
+    _state.myTasksMeta = meta;
+  },
+  [SET_CASE_MY_TASKS_UI_FLAG](_state, flags) {
+    _state.myTasksUiFlags = { ..._state.myTasksUiFlags, ...flags };
   },
 };
 

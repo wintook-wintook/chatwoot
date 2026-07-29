@@ -47,10 +47,12 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
     filter_search(scope)
   end
 
-  # assignee_id: ausente → mis tareas · 'unassigned' → huérfanas · id → ese agente.
+  # assignee_id: ausente → mis tareas · 'all' → todos los agentes (sin filtro) ·
+  # 'unassigned' → huérfanas · id → ese agente.
   def filter_assignee(scope)
     raw = params[:assignee_id].presence
 
+    return scope if raw == 'all'
     return scope.where(assignee_id: nil) if raw == 'unassigned'
     return scope.where(assignee_id: current_user.id) if raw.nil?
 

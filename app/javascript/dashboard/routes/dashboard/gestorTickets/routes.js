@@ -15,6 +15,12 @@ export const routes = [
     component: () => import('../../../views/gestorTickets/Kanban.vue'),
   },
   {
+    path: frontendURL('accounts/:accountId/tickets/tasks'),
+    name: 'gestorTickets_tasks',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/gestorTickets/Tasks.vue'),
+  },
+  {
     path: frontendURL('accounts/:accountId/tickets/rules'),
     name: 'gestorTickets_rules',
     meta: { permissions: ['administrator'] },

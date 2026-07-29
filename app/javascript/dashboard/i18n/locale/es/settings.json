@@ -253,6 +253,7 @@
     "ERP_CONNECTIONS": "Conexiones",
     "ALL_TICKETS": "Todos los tickets",
     "TICKET_KANBAN": "Tablero",
+    "TICKET_TASKS": "Tareas",
     "TICKET_METRICS": "Métricas",
     "TICKET_RULES": "Reglas de automatización",
     "TICKET_TYPES": "Tipos de caso",
