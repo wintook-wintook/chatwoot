@@ -128,6 +128,8 @@ es:
       sla_missed_resolution: "Falta la siguiente respuesta del SLA para la conversación (#%{display_id})"
       calendar_event_reminder: "Recordatorio de calendario"
       case_ticket_assignment: "El ticket %{folio} te ha sido asignado"
+      case_task_assignment: "Se te asignó una tarea en el ticket %{folio}"
+      case_task_completed: "Se completó una tarea en el ticket %{folio}"
     calendar_event_reminder:
       body: "\"%{title}\" comienza en %{minutes} minutos"
       no_title: "Evento sin título"

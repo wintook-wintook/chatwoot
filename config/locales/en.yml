@@ -143,6 +143,8 @@ en:
       sla_missed_resolution: "SLA target resolution missed for conversation (#%{display_id})"
       calendar_event_reminder: "Calendar reminder"
       case_ticket_assignment: "Ticket %{folio} has been assigned to you"
+      case_task_assignment: "A task was assigned to you in ticket %{folio}"
+      case_task_completed: "A task was completed in ticket %{folio}"
     calendar_event_reminder:
       body: "\"%{title}\" starts in %{minutes} minutes"
       no_title: "Untitled event"

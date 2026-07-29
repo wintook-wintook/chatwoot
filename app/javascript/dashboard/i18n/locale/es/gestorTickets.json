@@ -216,6 +216,7 @@
         "DUE_TODAY": "hoy",
         "SAVE_ERROR": "No se pudo actualizar la tarea.",
         "FROZEN_HINT": "El ticket está cerrado: reábrelo para modificar sus tareas.",
+        "TOAST_COMPLETED": "Tarea completada: {task} · caso {folio}",
         "TABS": {
           "mine": "Mis tareas",
           "unassigned": "Sin asignar",
