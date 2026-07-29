@@ -302,6 +302,7 @@ export default {
       v-if="showModal"
       :show="showModal"
       :on-close="() => (showModal = false)"
+      :close-on-backdrop-click="false"
       size="medium"
     >
       <div class="flex flex-col h-auto overflow-auto">
