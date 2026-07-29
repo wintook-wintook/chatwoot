@@ -41,6 +41,7 @@ tags: [tickets, pendiente, todo]
 - **Bandeja de tareas ("¿qué tengo asignado?")** 📋 **plan listo** — ver [[Plan-Bandeja-Tareas]]. Hoy las tareas solo se ven ticket por ticket (el endpoint está anidado bajo un ticket); si te asignan una tarea en un ticket ajeno, no te enteras. Endpoint a nivel cuenta + vista "Tareas" + notificación `case_task_assignment`.
 - **Futuro Tareas**: fecha límite (`due_at` ya existe en BD, falta UI); reordenar (drag); plantillas de checklist por tipo de caso; "convertir tarea en ticket".
 - **Futuro Lock**: aviso en tiempo real (hoy solo al abrir/refrescar); "tomar el control" forzado por admin; heartbeat para renovar el lock mientras se escribe.
+- **⚠️ Concurrencia — lost update** 📋 **análisis listo** — ver [[Analisis-Concurrencia-Edicion]]. Hoy el `update` **no valida el lock** (es cosmético) y **no hay bloqueo optimista** (`lock_version`) en ticket/tarea/nota → si dos actores (o la IA/jobs, que no toman el lock) guardan a la vez, el segundo pisa al primero **en silencio**. Recomendado: **A** (que `update` respete el lock, 423) **+ B** (bloqueo optimista → 409 "recarga"). Fase 2: **C** (la IA cede ante el humano). No reproducido, es preventivo.
 
 ### Practicidad osTicket (ver [[Plan-Practicidad-osTicket]])
 - ~~**P1 — ficha accionable inline**~~ ✅ **hecho** (barra de acciones: Tomar/Prioridad/Estado, sin modal).
