@@ -6,7 +6,9 @@ tags: [tickets, case_tasks, agentes, bandeja]
 
 # Plan — Bandeja de tareas
 
-> Estado: 📋 **solo plan** (2026-07-28). Nada implementado.
+> Estado: ✅ **implementado F1–F4** (2026-07-29). Verificado en navegador (cuenta 2).
+> Único pendiente menor: badge de vencidas en el item de sidebar (§4.2) — diferido
+> para no tocar el layout compartido; el conteo ya se ve en la pestaña "Vencidas (n)".
 > Relacionado: [[Conciliacion-osTicket-MGCI]] (§4.4 Tareas/subtareas) ·
 > [[Comparativa-Agent-Panel-osTicket]] · [[Pendiente]]
 
