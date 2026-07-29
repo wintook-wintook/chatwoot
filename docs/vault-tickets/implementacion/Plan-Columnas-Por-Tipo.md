@@ -128,6 +128,11 @@ no un ciclo de vida de soporte; sus etapas intermedias son todas `in_progress`:
                              └── in_progress las tres        ✖ A no da
 ```
 
+Ejemplos de flujos reales por tipo, con el estado real (de los 13) al que mapea
+cada etapa. El corchete marca las columnas que caen sobre el mismo `in_progress`:
+
+![Columnas del Kanban por Tipo de Caso — ejemplos](assets/kanban_tipos.png)
+
 Construir A y migrar a A+ después cuesta más que hacer A+ de entrada: A+ **añade
 una columna a `case_tickets`** y un hook de resincronización, y a cambio elimina
 la validación de solape de A. No es una opción "más grande", es una opción
