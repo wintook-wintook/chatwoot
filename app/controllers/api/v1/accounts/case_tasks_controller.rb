@@ -107,10 +107,11 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   # primary_actor = el TICKET (reusa el ruteo de case_ticket_assignment); el
   # nombre de la tarea viaja en meta. Fallan en silencio: nunca rompen el flujo.
 
-  # F3 — asignación: avisa al responsable recién asignado, salvo auto-asignación.
+  # F3 — asignación: avisa al responsable recién asignado. Por decisión del
+  # producto (2026-07-29) SÍ notifica auto-asignaciones (a diferencia de tickets).
   def notify_task_assignment(task)
     assignee = task.assignee
-    return if assignee.nil? || assignee.id == current_user&.id
+    return if assignee.nil?
 
     build_task_notification('case_task_assignment', assignee, task)
   rescue StandardError => e

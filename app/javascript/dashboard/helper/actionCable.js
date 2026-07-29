@@ -182,21 +182,22 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.maybeToastTaskNotification(data);
   };
 
-  // @tickets_cases F4 — además de la campanita, saca un toast para tipos en lista
-  // blanca (aviso en tiempo real al completar una tarea). Lista blanca, no "todas":
-  // convertir cada notificación en toast cambiaría el comportamiento del producto.
+  // @tickets_cases F3/F4 — además de la campanita, saca un toast en tiempo real
+  // para tipos de tarea en lista blanca (asignación y completado). Lista blanca,
+  // no "todas": convertir cada notificación en toast cambiaría el producto entero.
   maybeToastTaskNotification = data => {
-    const TOAST_TYPES = ['case_task_completed'];
+    const TOAST_KEYS = {
+      case_task_assignment: 'CASE_TICKETS.TASKS.INBOX.TOAST_ASSIGNED',
+      case_task_completed: 'CASE_TICKETS.TASKS.INBOX.TOAST_COMPLETED',
+    };
     const n = data && data.notification;
-    if (!n || !TOAST_TYPES.includes(n.notification_type)) return;
+    const key = n && TOAST_KEYS[n.notification_type];
+    if (!key) return;
 
     const task = n.push_message_title || '';
     const folio = (n.primary_actor && n.primary_actor.folio) || '';
     emitter.emit(BUS_EVENTS.SHOW_TOAST, {
-      message: this.app.$t('CASE_TICKETS.TASKS.INBOX.TOAST_COMPLETED', {
-        task,
-        folio,
-      }),
+      message: this.app.$t(key, { task, folio }),
     });
   };
 
