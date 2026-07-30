@@ -78,6 +78,9 @@ Rails.application.routes.draw do
             end
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
+          # Sinónimos nativos (esquema legacy wintook; reemplaza al servicio WINTOOK_BOT)
+          resources :palabras_sinonimos, only: [:index, :create, :update, :destroy]
+          resources :sinonimos_semanticos, only: [:index]
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
