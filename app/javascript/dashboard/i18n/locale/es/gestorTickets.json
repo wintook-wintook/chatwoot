@@ -249,9 +249,14 @@
       "TABLE": {
         "NUM": "N.º",
         "TASK": "Tarea",
+        "STATUS": "Estado",
         "ASSIGNEE": "Responsable",
         "DUE": "Vence",
         "COMPLETED": "Completada"
+      },
+      "STATUS": {
+        "PENDING": "Pendiente",
+        "DONE": "Concluida"
       },
       "MODAL": {
         "NEW_TITLE": "Nueva tarea",
@@ -262,6 +267,7 @@
         "DESCRIPTION_PLACEHOLDER": "Detalle de lo que hay que hacer...",
         "ASSIGNEE_LABEL": "Responsable",
         "DUE_LABEL": "Vence",
+        "STATUS_LABEL": "Estado",
         "SAVE": "Guardar",
         "CANCEL": "Cancelar",
         "CLOSE": "Cerrar"

@@ -36,7 +36,13 @@ export default {
       showModal: false,
       editingId: null,
       viewing: false, // modal en modo lectura (ticket cerrado)
-      form: { title: '', description: '', assignee_id: '', due_at: '' },
+      form: {
+        title: '',
+        description: '',
+        assignee_id: '',
+        due_at: '',
+        status: 'pending',
+      },
       // Modal de confirmación de borrado
       showDeleteConfirm: false,
       pendingDelete: null,
@@ -75,23 +81,6 @@ export default {
     columns() {
       return [
         {
-          field: 'status',
-          key: 'select',
-          title: '',
-          width: 44,
-          align: 'left',
-          renderBodyCell: ({ row }) => (
-            <input
-              type="checkbox"
-              class="!mb-0 align-middle"
-              title={this.$t('CASE_TICKETS.TASKS.TOGGLE')}
-              domPropsChecked={row.status === 'done'}
-              domPropsDisabled={this.isFrozen}
-              onChange={() => this.toggle(row)}
-            />
-          ),
-        },
-        {
           // Consecutivo estable por ticket (T001, T002…), estilo osTicket.
           field: 'sequence',
           key: 'sequence',
@@ -112,24 +101,42 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.TASK'),
           align: 'left',
           width: 340,
+          // Título + descripción recortados a una línea al ancho de la columna
+          // (como las notas). El contenido completo con formato va en el modal.
           renderBodyCell: ({ row }) => (
-            <div>
+            <div class="overflow-hidden">
               <p
                 class={
                   row.status === 'done'
-                    ? 'm-0 text-sm line-through text-slate-400 dark:text-slate-500'
-                    : 'm-0 text-sm text-slate-800 dark:text-slate-100'
+                    ? 'm-0 text-sm truncate line-through text-slate-400 dark:text-slate-500'
+                    : 'm-0 text-sm truncate text-slate-800 dark:text-slate-100'
                 }
+                title={row.title}
               >
                 {row.title}
               </p>
               {row.description ? (
-                <div
-                  class="prose-note m-0 mt-0.5 text-xs text-slate-500 dark:text-slate-400"
-                  domPropsInnerHTML={this.formatMarkdown(row.description)}
-                />
+                <p
+                  class="m-0 mt-0.5 text-xs truncate text-slate-500 dark:text-slate-400"
+                  title={this.plainPreview(row.description)}
+                >
+                  {this.plainPreview(row.description)}
+                </p>
               ) : null}
             </div>
+          ),
+        },
+        {
+          field: 'status',
+          key: 'status',
+          title: this.$t('CASE_TICKETS.TASKS.TABLE.STATUS'),
+          align: 'left',
+          width: 120,
+          // Estado como etiqueta de texto, igual que en la tabla de tickets.
+          renderBodyCell: ({ row }) => (
+            <span class="text-sm whitespace-nowrap text-slate-600 dark:text-slate-300">
+              {this.statusLabel(row.status)}
+            </span>
           ),
         },
         {
@@ -243,7 +250,13 @@ export default {
     openCreate() {
       this.editingId = null;
       this.viewing = false;
-      this.form = { title: '', description: '', assignee_id: '', due_at: '' };
+      this.form = {
+        title: '',
+        description: '',
+        assignee_id: '',
+        due_at: '',
+        status: 'pending',
+      };
       this.showModal = true;
       this.$nextTick(() => this.$refs.titleInput?.focus());
     },
@@ -267,6 +280,7 @@ export default {
         description: task.description || '',
         assignee_id: task.assignee_id || '',
         due_at: this.toInputDate(task.due_at),
+        status: task.status || 'pending',
       };
     },
     async submitForm() {
@@ -277,6 +291,7 @@ export default {
         description: this.form.description.trim(),
         assignee_id: this.form.assignee_id || '',
         due_at: this.form.due_at || null,
+        status: this.form.status || 'pending',
       };
       this.isSaving = true;
       try {
@@ -301,12 +316,19 @@ export default {
         this.isSaving = false;
       }
     },
-    async toggle(task) {
-      const status = task.status === 'done' ? 'pending' : 'done';
-      const { data } = await CaseTasksAPI.updateTask(this.ticketId, task.id, {
-        status,
-      });
-      this.replace(data.case_task);
+    // Etiqueta del estado (como la tabla de tickets muestra el estado del ticket).
+    statusLabel(status) {
+      return status === 'done'
+        ? this.$t('CASE_TICKETS.TASKS.STATUS.DONE')
+        : this.$t('CASE_TICKETS.TASKS.STATUS.PENDING');
+    },
+    // Preview en texto plano para la tabla: renderiza el markdown y le quita las
+    // etiquetas, así la fila no muestra `**` ni HTML.
+    plainPreview(text) {
+      if (!text) return '';
+      const tmp = document.createElement('div');
+      tmp.innerHTML = this.formatMarkdown(text);
+      return (tmp.textContent || '').replace(/\s+/g, ' ').trim();
     },
     // Pide confirmación antes de borrar (modal estándar de Chatwoot).
     remove(task) {
@@ -533,6 +555,21 @@ export default {
               />
             </label>
           </div>
+
+          <!-- El estado se cambia aquí (desde la fila), ya no con un check. -->
+          <label class="block">
+            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+              $t('CASE_TICKETS.TASKS.MODAL.STATUS_LABEL')
+            }}</span>
+            <select v-model="form.status" :disabled="viewing">
+              <option value="pending">
+                {{ $t('CASE_TICKETS.TASKS.STATUS.PENDING') }}
+              </option>
+              <option value="done">
+                {{ $t('CASE_TICKETS.TASKS.STATUS.DONE') }}
+              </option>
+            </select>
+          </label>
 
           <div class="flex items-center justify-end gap-2 mt-4">
             <woot-button
