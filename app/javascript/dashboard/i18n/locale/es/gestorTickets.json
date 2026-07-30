@@ -560,6 +560,10 @@
       }
     },
     "AI": {
+      "FIX": "Corregir ortografía",
+      "IMPROVE": "Mejorar escritura",
+      "REVERT": "Volver al original",
+      "ERROR": "No se pudo procesar el texto con IA. Inténtalo de nuevo.",
       "TITLE": "Inteligencia Artificial",
       "BACK": "Volver",
       "SAVE": "Guardar",

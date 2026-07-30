@@ -11,12 +11,14 @@ import CaseTasksAPI from 'dashboard/api/caseTasks';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
+import caseAiWriter from 'dashboard/mixins/caseAiWriter';
 
 const PER_PAGE = 10;
 
 export default {
   name: 'TicketTasks',
   components: { VeTable, TableFooter, WootMessageEditor },
+  mixins: [caseAiWriter],
   props: {
     ticketId: { type: [Number, String], required: true },
     // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
@@ -50,6 +52,10 @@ export default {
   },
   computed: {
     ...mapGetters({ agents: 'agents/getAgents' }),
+    // Campo de `form` sobre el que actúa la IA (mixin caseAiWriter).
+    aiFieldName() {
+      return 'description';
+    },
     doneCount() {
       return this.tasks.filter(t => t.status === 'done').length;
     },
@@ -261,6 +267,7 @@ export default {
         due_at: '',
         status: 'pending',
       };
+      this.resetAi();
       this.showModal = true;
       this.$nextTick(() => this.$refs.titleInput?.focus());
     },
@@ -268,6 +275,7 @@ export default {
       this.editingId = task.id;
       this.viewing = false;
       this.loadForm(task);
+      this.resetAi();
       this.showModal = true;
       this.$nextTick(() => this.$refs.titleInput?.focus());
     },
@@ -276,6 +284,7 @@ export default {
       this.editingId = task.id;
       this.viewing = true;
       this.loadForm(task);
+      this.resetAi();
       this.showModal = true;
     },
     loadForm(task) {
@@ -512,24 +521,68 @@ export default {
             <span class="text-sm text-slate-700 dark:text-slate-200">{{
               $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_LABEL')
             }}</span>
-            <!-- Editor enriquecido (markdown), el mismo de las notas de contacto. -->
-            <WootMessageEditor
-              v-if="!viewing"
-              v-model="form.description"
-              class="input--rich"
-              :enable-suggestions="false"
-              :enable-canned-responses="false"
-              :focus-on-mount="false"
-              :placeholder="
-                $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_PLACEHOLDER')
-              "
-            />
+            <!-- Editor enriquecido, montado igual que en Respuestas predefinidas. -->
+            <div v-if="!viewing" class="editor-wrap">
+              <WootMessageEditor
+                v-model="form.description"
+                class="message-editor [&>div]:px-1"
+                :enable-suggestions="false"
+                :enable-canned-responses="false"
+                :focus-on-mount="false"
+                :placeholder="
+                  $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_PLACEHOLDER')
+                "
+              />
+            </div>
             <!-- Ticket cerrado: solo lectura, se muestra el formato ya renderizado. -->
             <div
               v-else
               class="prose-note p-2 text-sm border rounded-md border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-100"
               v-html="formatMarkdown(form.description) || '—'"
             />
+
+            <!-- Escritura asistida por IA (mixin caseAiWriter). -->
+            <div
+              v-if="!viewing && aiEnabled"
+              class="flex flex-wrap items-center gap-2 mt-2"
+            >
+              <woot-button
+                type="button"
+                size="tiny"
+                variant="smooth"
+                color-scheme="secondary"
+                icon="wand"
+                :is-loading="aiLoading === 'fix_spelling_grammar'"
+                :disabled="!form.description.trim() || !!aiLoading"
+                @click="aiImprove('fix_spelling_grammar')"
+              >
+                {{ $t('CASE_TICKETS.AI.FIX') }}
+              </woot-button>
+              <woot-button
+                type="button"
+                size="tiny"
+                variant="smooth"
+                color-scheme="secondary"
+                icon="wand"
+                :is-loading="aiLoading === 'rephrase'"
+                :disabled="!form.description.trim() || !!aiLoading"
+                @click="aiImprove('rephrase')"
+              >
+                {{ $t('CASE_TICKETS.AI.IMPROVE') }}
+              </woot-button>
+              <woot-button
+                v-if="canRevertAi"
+                type="button"
+                size="tiny"
+                variant="clear"
+                color-scheme="secondary"
+                icon="arrow-undo"
+                :disabled="!!aiLoading"
+                @click="aiRevert"
+              >
+                {{ $t('CASE_TICKETS.AI.REVERT') }}
+              </woot-button>
+            </div>
           </label>
 
           <div class="flex gap-3">
@@ -646,17 +699,19 @@ export default {
   }
 }
 
-// Editor enriquecido dentro del modal: mismo ajuste de menubar que las notas
-// de contacto y una altura contenida.
-.input--rich {
-  @apply border border-slate-200 dark:border-slate-600 rounded-md px-2;
+// Editor enriquecido dentro del modal, montado igual que en Respuestas
+// predefinidas: caja con borde y una altura contenida.
+.editor-wrap {
+  @apply border border-slate-200 dark:border-slate-600 rounded-md px-2 bg-white dark:bg-slate-900;
+}
 
-  ::v-deep .ProseMirror-menubar {
+.message-editor::v-deep {
+  .ProseMirror-menubar {
     padding: 0;
     margin-top: var(--space-minus-small);
   }
 
-  ::v-deep .ProseMirror-woot-style {
+  .ProseMirror-woot-style {
     min-height: 6rem;
     max-height: 18rem;
   }
