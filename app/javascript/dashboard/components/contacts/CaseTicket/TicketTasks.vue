@@ -517,7 +517,10 @@ export default {
             />
           </label>
 
-          <label class="block mb-3">
+          <!-- OJO: contenedor <div>, NO <label>. El editor incluye un
+               <input type=file> oculto; si estuviera dentro de un <label>,
+               cualquier click reenviaría al input y abriría "adjuntar archivo". -->
+          <div class="block mb-3">
             <span class="text-sm text-slate-700 dark:text-slate-200">{{
               $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_LABEL')
             }}</span>
@@ -583,7 +586,7 @@ export default {
                 {{ $t('CASE_TICKETS.AI.REVERT') }}
               </woot-button>
             </div>
-          </label>
+          </div>
 
           <div class="flex gap-3">
             <label class="flex-1">
