@@ -247,7 +247,7 @@
         }
       },
       "TABLE": {
-        "NUM": "N.º",
+        "NUM": "Folio",
         "TASK": "Tarea",
         "STATUS": "Estado",
         "ASSIGNEE": "Responsable",
@@ -502,7 +502,7 @@
       },
       "EDITED": "Editada el {date} por {name}",
       "TABLE": {
-        "NUM": "N.º",
+        "NUM": "Folio",
         "NOTE": "Nota",
         "AUTHOR": "Autor",
         "DATE": "Fecha"

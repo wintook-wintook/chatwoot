@@ -71,7 +71,7 @@ export default {
           align: 'left',
           width: 64,
           renderBodyCell: ({ row }) => (
-            <span class="font-mono text-xs text-slate-300 dark:text-slate-500">
+            <span class="font-mono text-sm font-semibold whitespace-nowrap text-slate-300 dark:text-slate-500">
               {this.seqLabel(row.sequence)}
             </span>
           ),

@@ -90,7 +90,11 @@ export default {
           // Color del folio según estado: verde concluida, rojo atrasada, azul
           // en tiempo. Tonos claros (shade 300/400) para que no pesen.
           renderBodyCell: ({ row }) => (
-            <span class={`font-mono text-xs ${this.seqClass(row)}`}>
+            <span
+              class={`font-mono text-sm font-semibold whitespace-nowrap ${this.seqClass(
+                row
+              )}`}
+            >
               {this.seqLabel(row.sequence)}
             </span>
           ),
