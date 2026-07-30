@@ -9,6 +9,7 @@
 #  description     :text
 #  due_at          :datetime
 #  position        :integer          default(0), not null
+#  sequence        :integer
 #  status          :integer          default("pending"), not null
 #  title           :string           not null
 #  created_at      :datetime         not null
@@ -24,6 +25,7 @@
 #  index_case_tasks_on_assignee_id                  (assignee_id)
 #  index_case_tasks_on_case_ticket_id               (case_ticket_id)
 #  index_case_tasks_on_case_ticket_id_and_position  (case_ticket_id,position)
+#  index_case_tasks_on_case_ticket_id_and_sequence  (case_ticket_id,sequence)
 #  index_case_tasks_on_completed_by_id              (completed_by_id)
 #
 # Foreign Keys
@@ -48,11 +50,19 @@ class CaseTask < ApplicationRecord
 
   scope :ordered, -> { order(:position, :id) }
 
+  # @tickets_cases — consecutivo estable por ticket (T001, T002…): se asigna al
+  # crear y no se recicla al borrar. No lo acepta del cliente.
+  before_create :assign_sequence
+
   # @tickets_cases P4 — el "quién/cuándo" se deriva del cambio de estado, no se
   # acepta del cliente: así no hay forma de falsear la firma desde la API.
   before_save :track_completion, if: :will_save_change_to_status?
 
   private
+
+  def assign_sequence
+    self.sequence = (case_ticket.case_tasks.maximum(:sequence) || 0) + 1
+  end
 
   def track_completion
     if done?

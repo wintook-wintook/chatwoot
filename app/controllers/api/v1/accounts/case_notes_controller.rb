@@ -87,6 +87,7 @@ class Api::V1::Accounts::CaseNotesController < Api::V1::Accounts::BaseController
     payload = note.payload || {}
     {
       id:           note.id,
+      sequence:     payload['sequence'],
       content:      payload['content'],
       actor:        ref_user(note.actor),
       created_at:   note.created_at,

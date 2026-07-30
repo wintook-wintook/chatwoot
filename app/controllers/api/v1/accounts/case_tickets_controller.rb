@@ -830,11 +830,12 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     notify_assignee(@ticket)
   end
 
-  # @tickets_cases Fase A — notificación nativa (bell) al agente asignado de un ticket.
-  # No notifica auto-asignaciones. Falla en silencio para no romper el flujo principal.
+  # @tickets_cases Fase A — notificación nativa (bell + toast) al agente asignado de
+  # un ticket. Por decisión de producto (2026-07-29) SÍ notifica auto-asignaciones
+  # (tomar un ticket también avisa). Falla en silencio para no romper el flujo.
   def notify_assignee(ticket)
     assignee = ticket.assignee
-    return if assignee.nil? || assignee.id == current_user&.id
+    return if assignee.nil?
 
     NotificationBuilder.new(
       notification_type: 'case_ticket_assignment',

@@ -42,6 +42,9 @@
       "PERIOD_FROM": "Período:",
       "PERIOD_TO": "al"
     },
+    "NOTIFICATIONS": {
+      "TOAST_TICKET_ASSIGNED": "Ticket asignado: {folio} · {task}"
+    },
     "KANBAN": {
       "TITLE": "Tablero de tickets",
       "SEARCH_PLACEHOLDER": "Buscar folio, título o contacto…",
@@ -204,11 +207,56 @@
       "DELETE": "Eliminar",
       "VIEW": "Ver tarea",
       "TOGGLE": "Marcar como completada",
+      "TOAST_DELETED": "Tarea eliminada: {task}",
+      "DELETE_CONFIRM": {
+        "TITLE": "Eliminar tarea",
+        "MESSAGE": "¿Seguro que quieres eliminar esta tarea? Esta acción no se puede deshacer.",
+        "CONFIRM": "Eliminar",
+        "CANCEL": "Cancelar"
+      },
+      "INBOX": {
+        "TITLE": "Tareas",
+        "SEARCH_PLACEHOLDER": "Buscar en el título o la descripción…",
+        "EMPTY": "No hay tareas que coincidan con los filtros.",
+        "BY_TAB": "Por pestaña",
+        "ALL_TYPES": "Todos los tipos",
+        "COMPLETED": "Completada",
+        "UNASSIGNED": "Sin asignar",
+        "DUE_PREFIX": "Vence:",
+        "DUE_TODAY": "hoy",
+        "SAVE_ERROR": "No se pudo actualizar la tarea.",
+        "FROZEN_HINT": "El ticket está cerrado: reábrelo para modificar sus tareas.",
+        "TOAST_ASSIGNED": "Nueva tarea asignada: {task} · caso {folio}",
+        "TOAST_COMPLETED": "Tarea completada: {task} · caso {folio}",
+        "TABS": {
+          "mine": "Mis tareas",
+          "unassigned": "Sin asignar",
+          "all": "Todas",
+          "overdue": "Vencidas"
+        },
+        "STATUS": {
+          "PENDING": "Pendientes",
+          "DONE": "Completadas",
+          "ALL": "Todas"
+        },
+        "DUE": {
+          "ANY": "Cualquier fecha",
+          "OVERDUE": "Vencidas",
+          "TODAY": "Vencen hoy",
+          "WEEK": "Esta semana"
+        }
+      },
       "TABLE": {
+        "NUM": "Folio",
         "TASK": "Tarea",
+        "STATUS": "Estado",
         "ASSIGNEE": "Responsable",
         "DUE": "Vence",
         "COMPLETED": "Completada"
+      },
+      "STATUS": {
+        "PENDING": "Pendiente",
+        "DONE": "Concluida"
       },
       "MODAL": {
         "NEW_TITLE": "Nueva tarea",
@@ -219,6 +267,7 @@
         "DESCRIPTION_PLACEHOLDER": "Detalle de lo que hay que hacer...",
         "ASSIGNEE_LABEL": "Responsable",
         "DUE_LABEL": "Vence",
+        "STATUS_LABEL": "Estado",
         "SAVE": "Guardar",
         "CANCEL": "Cancelar",
         "CLOSE": "Cerrar"
@@ -444,8 +493,16 @@
       "CLOSE": "Cerrar",
       "EDIT": "Editar",
       "DELETE": "Eliminar",
+      "TOAST_DELETED": "Nota eliminada",
+      "DELETE_CONFIRM": {
+        "TITLE": "Eliminar nota",
+        "MESSAGE": "¿Seguro que quieres eliminar esta nota interna? Esta acción no se puede deshacer.",
+        "CONFIRM": "Eliminar",
+        "CANCEL": "Cancelar"
+      },
       "EDITED": "Editada el {date} por {name}",
       "TABLE": {
+        "NUM": "Folio",
         "NOTE": "Nota",
         "AUTHOR": "Autor",
         "DATE": "Fecha"
@@ -503,6 +560,10 @@
       }
     },
     "AI": {
+      "FIX": "Corregir ortografía",
+      "IMPROVE": "Mejorar escritura",
+      "REVERT": "Volver al original",
+      "ERROR": "No se pudo procesar el texto con IA. Inténtalo de nuevo.",
       "TITLE": "Inteligencia Artificial",
       "BACK": "Volver",
       "SAVE": "Guardar",

@@ -144,7 +144,6 @@ class CaseTicket < ApplicationRecord
   belongs_to :kb_article,        class_name: 'Article', optional: true # @tickets_cases 2H
   has_many   :case_events,       dependent: :destroy
   has_many   :case_tasks,        dependent: :destroy # @tickets_cases — tareas/subtareas
-  has_many   :case_collaborators, dependent: :destroy # @tickets_cases P4 — colaboradores/CC
   # @tickets_cases 2E — relaciones dirigidas (este ticket como origen y como destino).
   has_many   :ticket_relations,        class_name: 'CaseTicketRelation', foreign_key: :ticket_id,         dependent: :destroy, inverse_of: :ticket
   has_many   :inverse_ticket_relations, class_name: 'CaseTicketRelation', foreign_key: :related_ticket_id, dependent: :destroy, inverse_of: :related_ticket
@@ -383,8 +382,16 @@ class CaseTicket < ApplicationRecord
       event_type: :internal_note,
       origin:     actor ? :agent : :system,
       actor:      actor,
-      payload:    { content: content.to_s.strip }
+      # @tickets_cases — consecutivo estable por ticket (N001, N002…): se guarda
+      # en el payload al crear y no se recicla al borrar.
+      payload:    { content: content.to_s.strip, sequence: next_note_sequence }
     )
+  end
+
+  # Siguiente consecutivo de nota interna para este ticket.
+  def next_note_sequence
+    case_events.where(event_type: :internal_note)
+               .maximum(Arel.sql("(payload->>'sequence')::int")).to_i + 1
   end
 
   # Incidentes vinculados a este problema (relación incident_problem: incidente → problema).

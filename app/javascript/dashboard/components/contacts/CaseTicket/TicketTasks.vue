@@ -9,12 +9,16 @@ import { mapGetters } from 'vuex';
 import { VeTable } from 'vue-easytable';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
+import MessageFormatter from 'shared/helpers/MessageFormatter';
+import caseAiWriter from 'dashboard/mixins/caseAiWriter';
 
 const PER_PAGE = 10;
 
 export default {
   name: 'TicketTasks',
-  components: { VeTable, TableFooter },
+  components: { VeTable, TableFooter, WootMessageEditor },
+  mixins: [caseAiWriter],
   props: {
     ticketId: { type: [Number, String], required: true },
     // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
@@ -34,11 +38,24 @@ export default {
       showModal: false,
       editingId: null,
       viewing: false, // modal en modo lectura (ticket cerrado)
-      form: { title: '', description: '', assignee_id: '', due_at: '' },
+      form: {
+        title: '',
+        description: '',
+        assignee_id: '',
+        due_at: '',
+        status: 'pending',
+      },
+      // Modal de confirmación de borrado
+      showDeleteConfirm: false,
+      pendingDelete: null,
     };
   },
   computed: {
     ...mapGetters({ agents: 'agents/getAgents' }),
+    // Campo de `form` sobre el que actúa la IA (mixin caseAiWriter).
+    aiFieldName() {
+      return 'description';
+    },
     doneCount() {
       return this.tasks.filter(t => t.status === 'done').length;
     },
@@ -52,25 +69,40 @@ export default {
     isEditing() {
       return !!this.editingId;
     },
+    // Click en la fila abre editar (o ver, si el ticket está cerrado). Se ignora
+    // si el click fue sobre el checkbox o un botón de acción de la fila.
+    eventCustomOption() {
+      return {
+        bodyRowEvents: ({ row }) => ({
+          click: event => {
+            if (event.target.closest('button, input, a')) return;
+            if (this.isFrozen) this.openView(row);
+            else this.openEdit(row);
+          },
+        }),
+      };
+    },
     // Columnas de VeTable. Las celdas se pintan con renderBodyCell (JSX), que es
     // como lo hace Chatwoot en ContactsTable.
     columns() {
       return [
         {
-          field: 'status',
-          key: 'select',
-          title: '',
-          width: 44,
+          // Consecutivo estable por ticket (T001, T002…), estilo osTicket.
+          field: 'sequence',
+          key: 'sequence',
+          title: this.$t('CASE_TICKETS.TASKS.TABLE.NUM'),
           align: 'left',
+          width: 64,
+          // Color del folio según estado: verde concluida, rojo atrasada, azul
+          // en tiempo. Tonos claros (shade 300/400) para que no pesen.
           renderBodyCell: ({ row }) => (
-            <input
-              type="checkbox"
-              class="!mb-0 align-middle"
-              title={this.$t('CASE_TICKETS.TASKS.TOGGLE')}
-              domPropsChecked={row.status === 'done'}
-              domPropsDisabled={this.isFrozen}
-              onChange={() => this.toggle(row)}
-            />
+            <span
+              class={`font-mono text-sm font-semibold whitespace-nowrap ${this.seqClass(
+                row
+              )}`}
+            >
+              {this.seqLabel(row.sequence)}
+            </span>
           ),
         },
         {
@@ -79,23 +111,42 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.TASK'),
           align: 'left',
           width: 340,
+          // Título + descripción recortados a una línea al ancho de la columna
+          // (como las notas). El contenido completo con formato va en el modal.
           renderBodyCell: ({ row }) => (
-            <div>
+            <div class="overflow-hidden">
               <p
                 class={
                   row.status === 'done'
-                    ? 'm-0 text-sm line-through text-slate-400 dark:text-slate-500'
-                    : 'm-0 text-sm text-slate-800 dark:text-slate-100'
+                    ? 'm-0 text-sm truncate line-through text-slate-400 dark:text-slate-500'
+                    : 'm-0 text-sm truncate text-slate-800 dark:text-slate-100'
                 }
+                title={row.title}
               >
                 {row.title}
               </p>
               {row.description ? (
-                <p class="m-0 mt-0.5 text-xs whitespace-pre-line text-slate-500 dark:text-slate-400">
-                  {row.description}
+                <p
+                  class="m-0 mt-0.5 text-xs truncate text-slate-500 dark:text-slate-400"
+                  title={this.plainPreview(row.description)}
+                >
+                  {this.plainPreview(row.description)}
                 </p>
               ) : null}
             </div>
+          ),
+        },
+        {
+          field: 'status',
+          key: 'status',
+          title: this.$t('CASE_TICKETS.TASKS.TABLE.STATUS'),
+          align: 'left',
+          width: 120,
+          // Estado como etiqueta de texto, igual que en la tabla de tickets.
+          renderBodyCell: ({ row }) => (
+            <span class="text-sm whitespace-nowrap text-slate-600 dark:text-slate-300">
+              {this.statusLabel(row.status)}
+            </span>
           ),
         },
         {
@@ -141,7 +192,7 @@ export default {
             }
             return (
               <div>
-                <span class="text-xs text-emerald-600 dark:text-emerald-400">
+                <span class="text-xs text-green-600 dark:text-green-400">
                   {this.formatDate(row.completed_at)}
                 </span>
                 {row.completed_by ? (
@@ -159,30 +210,11 @@ export default {
           title: '',
           width: 90,
           align: 'left',
-          // Cerrado: solo se puede ABRIR la tarea para ver su detalle, no
-          // editarla ni borrarla.
+          // Editar/ver es por click en la fila. Aquí solo queda borrar (con
+          // confirmación). Cerrado: solo lectura, sin borrar.
           renderBodyCell: ({ row }) =>
-            this.isFrozen ? (
+            this.isFrozen ? null : (
               <div class="button-wrapper">
-                <woot-button
-                  size="tiny"
-                  variant="clear"
-                  color-scheme="secondary"
-                  icon="eye-show"
-                  title={this.$t('CASE_TICKETS.TASKS.VIEW')}
-                  onClick={() => this.openView(row)}
-                />
-              </div>
-            ) : (
-              <div class="button-wrapper">
-                <woot-button
-                  size="tiny"
-                  variant="clear"
-                  color-scheme="secondary"
-                  icon="edit"
-                  title={this.$t('CASE_TICKETS.TASKS.EDIT')}
-                  onClick={() => this.openEdit(row)}
-                />
                 <woot-button
                   size="tiny"
                   variant="clear"
@@ -228,7 +260,14 @@ export default {
     openCreate() {
       this.editingId = null;
       this.viewing = false;
-      this.form = { title: '', description: '', assignee_id: '', due_at: '' };
+      this.form = {
+        title: '',
+        description: '',
+        assignee_id: '',
+        due_at: '',
+        status: 'pending',
+      };
+      this.resetAi();
       this.showModal = true;
       this.$nextTick(() => this.$refs.titleInput?.focus());
     },
@@ -236,6 +275,7 @@ export default {
       this.editingId = task.id;
       this.viewing = false;
       this.loadForm(task);
+      this.resetAi();
       this.showModal = true;
       this.$nextTick(() => this.$refs.titleInput?.focus());
     },
@@ -244,6 +284,7 @@ export default {
       this.editingId = task.id;
       this.viewing = true;
       this.loadForm(task);
+      this.resetAi();
       this.showModal = true;
     },
     loadForm(task) {
@@ -252,6 +293,7 @@ export default {
         description: task.description || '',
         assignee_id: task.assignee_id || '',
         due_at: this.toInputDate(task.due_at),
+        status: task.status || 'pending',
       };
     },
     async submitForm() {
@@ -262,6 +304,7 @@ export default {
         description: this.form.description.trim(),
         assignee_id: this.form.assignee_id || '',
         due_at: this.form.due_at || null,
+        status: this.form.status || 'pending',
       };
       this.isSaving = true;
       try {
@@ -286,16 +329,44 @@ export default {
         this.isSaving = false;
       }
     },
-    async toggle(task) {
-      const status = task.status === 'done' ? 'pending' : 'done';
-      const { data } = await CaseTasksAPI.updateTask(this.ticketId, task.id, {
-        status,
-      });
-      this.replace(data.case_task);
+    // Etiqueta del estado (como la tabla de tickets muestra el estado del ticket).
+    statusLabel(status) {
+      return status === 'done'
+        ? this.$t('CASE_TICKETS.TASKS.STATUS.DONE')
+        : this.$t('CASE_TICKETS.TASKS.STATUS.PENDING');
     },
-    async remove(task) {
+    // Preview en texto plano para la tabla: renderiza el markdown y le quita las
+    // etiquetas, así la fila no muestra `**` ni HTML.
+    plainPreview(text) {
+      if (!text) return '';
+      const tmp = document.createElement('div');
+      tmp.innerHTML = this.formatMarkdown(text);
+      return (tmp.textContent || '').replace(/\s+/g, ' ').trim();
+    },
+    // Pide confirmación antes de borrar (modal estándar de Chatwoot).
+    remove(task) {
+      this.pendingDelete = task;
+      this.showDeleteConfirm = true;
+    },
+    closeDeleteConfirm() {
+      this.showDeleteConfirm = false;
+      this.pendingDelete = null;
+    },
+    async confirmRemove() {
+      const task = this.pendingDelete;
+      if (!task) return;
+      this.showDeleteConfirm = false;
       await CaseTasksAPI.deleteTask(this.ticketId, task.id);
       this.tasks = this.tasks.filter(t => t.id !== task.id);
+      this.pendingDelete = null;
+      // Aviso en rojo (mismo toast que asignar/completar, variante danger).
+      this.$emitter.emit('caseToastMessage', {
+        message: this.$t('CASE_TICKETS.TASKS.TOAST_DELETED', {
+          task: task.title,
+        }),
+        icon: 'delete',
+        variant: 'danger',
+      });
     },
     replace(updated) {
       this.tasks = this.tasks.map(t => (t.id === updated.id ? updated : t));
@@ -305,6 +376,24 @@ export default {
     },
     assigneeName(task) {
       return task.assignee ? task.assignee.name : '';
+    },
+    // Etiqueta del consecutivo: T001, T012… (relleno a 3 dígitos).
+    seqLabel(n) {
+      if (!n) return '';
+      return `T${String(n).padStart(3, '0')}`;
+    },
+    // Color del folio por estado (tonos claros): verde concluida, rojo atrasada,
+    // azul en tiempo.
+    seqClass(task) {
+      if (task.status === 'done') return 'text-green-400 dark:text-green-300';
+      if (this.isOverdue(task)) return 'text-red-400 dark:text-red-300';
+      return 'text-woot-400 dark:text-woot-300';
+    },
+    // Renderiza el markdown de la descripción a HTML seguro (mismo formateador
+    // que usan las notas de contacto).
+    formatMarkdown(text) {
+      if (!text) return '';
+      return new MessageFormatter(text).formattedMessage;
     },
     formatDate(d) {
       if (!d) return '';
@@ -375,6 +464,7 @@ export default {
         row-key-field-name="id"
         :columns="columns"
         :table-data="paginatedTasks"
+        :event-custom-option="eventCustomOption"
         :border-around="false"
       />
     </div>
@@ -394,7 +484,8 @@ export default {
       v-if="showModal"
       :show="showModal"
       :on-close="() => (showModal = false)"
-      size="small"
+      :close-on-backdrop-click="false"
+      size="medium"
     >
       <div class="flex flex-col h-auto overflow-auto">
         <woot-modal-header
@@ -426,20 +517,76 @@ export default {
             />
           </label>
 
-          <label class="block mb-3">
+          <!-- OJO: contenedor <div>, NO <label>. El editor incluye un
+               <input type=file> oculto; si estuviera dentro de un <label>,
+               cualquier click reenviaría al input y abriría "adjuntar archivo". -->
+          <div class="block mb-3">
             <span class="text-sm text-slate-700 dark:text-slate-200">{{
               $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_LABEL')
             }}</span>
-            <textarea
-              v-model="form.description"
-              rows="3"
-              :readonly="viewing"
-              class="read-only:opacity-70 read-only:cursor-default"
-              :placeholder="
-                $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_PLACEHOLDER')
-              "
+            <!-- Editor enriquecido, montado igual que en Respuestas predefinidas. -->
+            <div v-if="!viewing" class="editor-wrap">
+              <WootMessageEditor
+                v-model="form.description"
+                class="message-editor [&>div]:px-1"
+                :enable-suggestions="false"
+                :enable-canned-responses="false"
+                :focus-on-mount="false"
+                :placeholder="
+                  $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_PLACEHOLDER')
+                "
+              />
+            </div>
+            <!-- Ticket cerrado: solo lectura, se muestra el formato ya renderizado. -->
+            <div
+              v-else
+              class="prose-note p-2 text-sm border rounded-md border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-100"
+              v-html="formatMarkdown(form.description) || '—'"
             />
-          </label>
+
+            <!-- Escritura asistida por IA (mixin caseAiWriter). -->
+            <div
+              v-if="!viewing && aiEnabled"
+              class="flex flex-wrap items-center gap-2 mt-2"
+            >
+              <woot-button
+                type="button"
+                size="tiny"
+                variant="smooth"
+                color-scheme="secondary"
+                icon="wand"
+                :is-loading="aiLoading === 'fix_spelling_grammar'"
+                :disabled="!form.description.trim() || !!aiLoading"
+                @click="aiImprove('fix_spelling_grammar')"
+              >
+                {{ $t('CASE_TICKETS.AI.FIX') }}
+              </woot-button>
+              <woot-button
+                type="button"
+                size="tiny"
+                variant="smooth"
+                color-scheme="secondary"
+                icon="wand"
+                :is-loading="aiLoading === 'rephrase'"
+                :disabled="!form.description.trim() || !!aiLoading"
+                @click="aiImprove('rephrase')"
+              >
+                {{ $t('CASE_TICKETS.AI.IMPROVE') }}
+              </woot-button>
+              <woot-button
+                v-if="canRevertAi"
+                type="button"
+                size="tiny"
+                variant="clear"
+                color-scheme="secondary"
+                icon="arrow-undo"
+                :disabled="!!aiLoading"
+                @click="aiRevert"
+              >
+                {{ $t('CASE_TICKETS.AI.REVERT') }}
+              </woot-button>
+            </div>
+          </div>
 
           <div class="flex gap-3">
             <label class="flex-1">
@@ -469,6 +616,21 @@ export default {
             </label>
           </div>
 
+          <!-- El estado se cambia aquí (desde la fila), ya no con un check. -->
+          <label class="block">
+            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+              $t('CASE_TICKETS.TASKS.MODAL.STATUS_LABEL')
+            }}</span>
+            <select v-model="form.status" :disabled="viewing">
+              <option value="pending">
+                {{ $t('CASE_TICKETS.TASKS.STATUS.PENDING') }}
+              </option>
+              <option value="done">
+                {{ $t('CASE_TICKETS.TASKS.STATUS.DONE') }}
+              </option>
+            </select>
+          </label>
+
           <div class="flex items-center justify-end gap-2 mt-4">
             <woot-button
               variant="clear"
@@ -493,6 +655,18 @@ export default {
         </form>
       </div>
     </woot-modal>
+
+    <!-- Confirmación de borrado (modal estándar de Chatwoot) -->
+    <woot-delete-modal
+      :show="showDeleteConfirm"
+      :on-close="closeDeleteConfirm"
+      :on-confirm="confirmRemove"
+      :title="$t('CASE_TICKETS.TASKS.DELETE_CONFIRM.TITLE')"
+      :message="$t('CASE_TICKETS.TASKS.DELETE_CONFIRM.MESSAGE')"
+      :message-value="pendingDelete ? `“${pendingDelete.title}”` : ''"
+      :confirm-text="$t('CASE_TICKETS.TASKS.DELETE_CONFIRM.CONFIRM')"
+      :reject-text="$t('CASE_TICKETS.TASKS.DELETE_CONFIRM.CANCEL')"
+    />
   </div>
 </template>
 
@@ -525,6 +699,44 @@ export default {
 
   .button-wrapper {
     @apply flex flex-row gap-1;
+  }
+}
+
+// Editor enriquecido dentro del modal, montado igual que en Respuestas
+// predefinidas: caja con borde y una altura contenida.
+.editor-wrap {
+  @apply border border-slate-200 dark:border-slate-600 rounded-md px-2 bg-white dark:bg-slate-900;
+}
+
+.message-editor::v-deep {
+  .ProseMirror-menubar {
+    padding: 0;
+    margin-top: var(--space-minus-small);
+  }
+
+  .ProseMirror-woot-style {
+    min-height: 6rem;
+    max-height: 18rem;
+  }
+}
+
+// Markdown renderizado (celda de la tabla y modo lectura): recupera viñetas y
+// márgenes que el reset de Tailwind quita.
+.prose-note::v-deep {
+  ul {
+    @apply list-disc ml-4;
+  }
+  ol {
+    @apply list-decimal ml-4;
+  }
+  p {
+    @apply m-0;
+  }
+  a {
+    @apply underline text-woot-500;
+  }
+  code {
+    @apply px-1 rounded bg-slate-100 dark:bg-slate-700;
   }
 }
 </style>

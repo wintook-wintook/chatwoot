@@ -26,6 +26,7 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
     task.account = Current.account
     task.position ||= @ticket.case_tasks.count
     if task.save
+      notify_task_assignment(task) # F3 — avisa al recién asignado (si no soy yo)
       render json: { case_task: task_json(task) }, status: :created
     else
       render json: { error: task.errors.full_messages }, status: :unprocessable_entity
@@ -37,7 +38,14 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
     # completadas. Si hay que tocar algo, se reabre el ticket.
     return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if @ticket.frozen_for_edit?
 
+    prev_assignee_id = @task.assignee_id
+    was_done = @task.done?
+
     if @task.update(task_params)
+      # F3 — si cambió el asignado a alguien que no soy yo.
+      notify_task_assignment(@task) if @task.assignee_id != prev_assignee_id
+      # F4 — si la tarea pasó a completada (avisa a ticket.assignee + task.assignee).
+      notify_task_completed(@task) if @task.done? && !was_done
       render json: { case_task: task_json(@task) }
     else
       render json: { error: @task.errors.full_messages }, status: :unprocessable_entity
@@ -68,23 +76,22 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   def task_params
     permitted = params.require(:case_task).permit(:title, :description, :status, :assignee_id, :due_at, :position)
     # El asignado debe ser un usuario de la cuenta (si no, queda sin asignar).
-    if permitted.key?(:assignee_id)
-      permitted[:assignee_id] = Current.account.users.where(id: permitted[:assignee_id]).pick(:id)
-    end
+    permitted[:assignee_id] = Current.account.users.where(id: permitted[:assignee_id]).pick(:id) if permitted.key?(:assignee_id)
     permitted
   end
 
   def task_json(task)
     {
-      id:           task.id,
-      title:        task.title,
-      description:  task.description,
-      status:       task.status,
-      assignee_id:  task.assignee_id,
-      assignee:     ref_user(task.assignee),
-      due_at:       task.due_at,
-      position:     task.position,
-      created_at:   task.created_at,
+      id: task.id,
+      sequence: task.sequence,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      assignee_id: task.assignee_id,
+      assignee: ref_user(task.assignee),
+      due_at: task.due_at,
+      position: task.position,
+      created_at: task.created_at,
       # @tickets_cases P4 — firma de completado (quién y cuándo).
       completed_at: task.completed_at,
       completed_by: ref_user(task.completed_by)
@@ -95,5 +102,43 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
     return nil unless user
 
     { id: user.id, name: user.name }
+  end
+
+  # ── Notificaciones de tarea (F3/F4) ─────────────────────────────────────
+  # primary_actor = el TICKET (reusa el ruteo de case_ticket_assignment); el
+  # nombre de la tarea viaja en meta. Fallan en silencio: nunca rompen el flujo.
+
+  # F3 — asignación: avisa al responsable recién asignado. Por decisión del
+  # producto (2026-07-29) SÍ notifica auto-asignaciones (a diferencia de tickets).
+  def notify_task_assignment(task)
+    assignee = task.assignee
+    return if assignee.nil?
+
+    build_task_notification('case_task_assignment', assignee, task)
+  rescue StandardError => e
+    Rails.logger.error("[GestorTickets] notificación de asignación de tarea: #{e.message}")
+  end
+
+  # F4 — completado: avisa al asignado del ticket y al de la tarea, menos a quien
+  # marcó, deduplicando cuando coinciden y saltando los nil.
+  def notify_task_completed(task)
+    recipients = [task.case_ticket&.assignee_id, task.assignee_id]
+                 .compact.uniq - [current_user&.id]
+    return if recipients.empty?
+
+    users = Current.account.users.where(id: recipients)
+    users.each { |u| build_task_notification('case_task_completed', u, task) }
+  rescue StandardError => e
+    Rails.logger.error("[GestorTickets] notificación de tarea completada: #{e.message}")
+  end
+
+  def build_task_notification(type, user, task)
+    NotificationBuilder.new(
+      notification_type: type,
+      user: user,
+      account: Current.account,
+      primary_actor: task.case_ticket,
+      meta: { task_title: task.title }
+    ).perform
   end
 end

@@ -32,13 +32,17 @@ tags: [tickets, pendiente, todo]
 
 ### Kanban — mejoras (tras notificar-al-mover)
 - ~~**Notificar al cliente al mover**~~ ✅ **hecho** (checkbox + plantilla por estado + envío por el canal).
+- **Columnas configurables por Tipo de Caso** 📋 **plan listo (Opción A+)** — ver [[Plan-Columnas-Por-Tipo]]. Hoy las columnas son constantes JS hardcodeadas (`Kanban.vue:22` y `:41`); cada tipo tendría las suyas, en cantidad y orden propios. La columna se **guarda en el ticket** (`case_tickets.case_type_column_id`), así varias columnas pueden compartir el mismo `status` — necesario para flujos comerciales o de implementación, cuyas etapas son todas `in_progress`. No toca la máquina de estados: `status` sigue siendo el canónico para SLA, reglas, reportes y portal.
 - **Futuro Kanban**: plantillas de aviso configurables por cuenta; acciones rápidas en la tarjeta (asignar/prioridad/abrir); SLA en cuenta regresiva con color; avatar del asignado; mover instantáneo con "Deshacer"; swimlanes.
 
 ### Tareas + Bloqueo de ticket — hecho, mejoras futuras
 - ~~**Tareas/subtareas (checklist) en el ticket**~~ ✅ **hecho** (`case_tasks`, checklist con responsable/borrar/agregar, "Tareas {done}/{total}").
 - ~~**Bloqueo de ticket (lock con TTL 3 min)**~~ ✅ **hecho** (banner "X está trabajando en este ticket ahora mismo"; toma en mounted, libera en beforeDestroy; API 409 si lo tiene otro).
+- ~~**Bandeja de tareas ("¿qué tengo asignado?")**~~ ✅ **hecho (F1–F4)** — ver [[Plan-Bandeja-Tareas]]. Endpoint `GET /case_tasks` a nivel cuenta con filtros + contexto del ticket (F1); vista "Tareas" con pestañas Mis/Sin asignar/Todas/Vencidas, filtros y marcar completada inline (F2); notificación `case_task_assignment` al asignar (F3); `case_task_completed` con toast en vivo a ticket.assignee + task.assignee (F4). `primary_actor` = ticket (reusa ruteo); tipos nacen sin email/push. Verificado en navegador (cuenta 2).
+  - **Pendiente menor (F3 parte b)**: badge de vencidas **en el item de sidebar** "Tareas". El conteo ya se ve en la pestaña "Vencidas (n)" de la vista; el badge en el sidebar exige tocar `Secondary.vue` (layout compartido) + valor de store refrescable → diferido para no desestabilizar el layout global.
 - **Futuro Tareas**: fecha límite (`due_at` ya existe en BD, falta UI); reordenar (drag); plantillas de checklist por tipo de caso; "convertir tarea en ticket".
 - **Futuro Lock**: aviso en tiempo real (hoy solo al abrir/refrescar); "tomar el control" forzado por admin; heartbeat para renovar el lock mientras se escribe.
+- **⚠️ Concurrencia — lost update** 📋 **análisis listo** — ver [[Analisis-Concurrencia-Edicion]]. Hoy el `update` **no valida el lock** (es cosmético) y **no hay bloqueo optimista** (`lock_version`) en ticket/tarea/nota → si dos actores (o la IA/jobs, que no toman el lock) guardan a la vez, el segundo pisa al primero **en silencio**. Recomendado: **A** (que `update` respete el lock, 423) **+ B** (bloqueo optimista → 409 "recarga"). Fase 2: **C** (la IA cede ante el humano). No reproducido, es preventivo.
 
 ### Practicidad osTicket (ver [[Plan-Practicidad-osTicket]])
 - ~~**P1 — ficha accionable inline**~~ ✅ **hecho** (barra de acciones: Tomar/Prioridad/Estado, sin modal).
@@ -50,7 +54,8 @@ tags: [tickets, pendiente, todo]
 - **P4 — extras de practicidad** (parcial):
   - ~~💬 respuestas predefinidas en la caja~~ ✅ **hecho** (commit `754c77b4`, menú de canned responses en el hilo del ticket).
   - ~~📅 vencimiento (columna "Vence" + edición inline, rojo si vencido)~~ ✅ **hecho** (commit `c11450b4`, estilo osTicket "Due Date"). Se añadió la columna `due_at` (manual pisa al estimado por SLA; editarlo NO recalcula el reloj SLA); orden por vencimiento efectivo; evento `due_date_changed`. Verificado en BD; **falta verificación visual en el navegador**.
-  - **Pendiente**: 👥 colaboradores/CC (modelo nuevo, esfuerzo BAJO — hay backend a medias **sin commitear** en `feat/tickets`) · 🖨️ imprimir (vista imprimible ficha+hilo, BAJO).
+  - **Pendiente**: 🖨️ imprimir (vista imprimible ficha+hilo, BAJO).
+  - ❌ **Descartado (2026-07-28)**: 👥 colaboradores/CC — **fuera del plan por ahora**, no se va a desarrollar. El backend a medias que había sin commitear (modelo, controlador, job, mailer, migración) se **eliminó**, junto con la ruta y el `has_many` que sí estaban commiteados; la tabla se revirtió en la BD local. Si se retoma, se rehace desde cero (ver §4.5 de [[Conciliacion-osTicket-MGCI]]).
   - ~~📄 **notas internas (bitácora)**~~ ✅ **hecho** (ver [[Plan-Notas-Internas]] y el changelog). Incluye la **Fase 2** (motivo opcional al Cambiar estado). **Pendiente de esa función**: editar/borrar notas; adjuntos y menciones en la nota; motivo también en los modales de Cerrar y de Resolver-problema (hoy solo en el camino simple).
 
 ### Ticket cerrado (ver [[Plan-Ticket-Cerrado]])

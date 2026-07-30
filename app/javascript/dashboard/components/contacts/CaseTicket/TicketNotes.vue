@@ -7,12 +7,16 @@
 import { VeTable } from 'vue-easytable';
 import CaseNotesAPI from 'dashboard/api/caseNotes';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
+import MessageFormatter from 'shared/helpers/MessageFormatter';
+import caseAiWriter from 'dashboard/mixins/caseAiWriter';
 
 const PER_PAGE = 10;
 
 export default {
   name: 'TicketNotes',
-  components: { VeTable, TableFooter },
+  components: { VeTable, TableFooter, WootMessageEditor },
+  mixins: [caseAiWriter],
   props: {
     ticketId: { type: [Number, String], required: true },
     // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
@@ -30,9 +34,16 @@ export default {
       editingId: null,
       viewing: false, // modal en modo lectura (ticket cerrado)
       form: { content: '' },
+      // Modal de confirmación de borrado
+      showDeleteConfirm: false,
+      pendingDelete: null,
     };
   },
   computed: {
+    // Campo de `form` sobre el que actúa la IA (mixin caseAiWriter).
+    aiFieldName() {
+      return 'content';
+    },
     totalPages() {
       return Math.max(1, Math.ceil(this.notes.length / this.perPage));
     },
@@ -43,8 +54,34 @@ export default {
     isEditing() {
       return !!this.editingId;
     },
+    // Click en la fila abre editar (o ver, si el ticket está cerrado). Se ignora
+    // si el click fue sobre un botón de acción de la fila.
+    eventCustomOption() {
+      return {
+        bodyRowEvents: ({ row }) => ({
+          click: event => {
+            if (event.target.closest('button, input, a')) return;
+            if (this.isFrozen) this.openView(row);
+            else this.openEdit(row);
+          },
+        }),
+      };
+    },
     columns() {
       return [
+        {
+          // Consecutivo estable por ticket (N001, N002…), estilo osTicket.
+          field: 'sequence',
+          key: 'sequence',
+          title: this.$t('CASE_TICKETS.NOTES.TABLE.NUM'),
+          align: 'left',
+          width: 64,
+          renderBodyCell: ({ row }) => (
+            <span class="font-mono text-sm font-semibold whitespace-nowrap text-slate-300 dark:text-slate-500">
+              {this.seqLabel(row.sequence)}
+            </span>
+          ),
+        },
         {
           field: 'content',
           key: 'content',
@@ -52,12 +89,13 @@ export default {
           align: 'left',
           width: 460,
           // La nota se recorta a una línea con "…" para que la fila no crezca;
-          // el texto completo va en el `title` (hover) y en el modal de edición.
+          // el texto completo (con formato) va en el modal. En la tabla se muestra
+          // un preview en texto plano (sin marcas de markdown).
           renderBodyCell: ({ row }) => (
             <div class="overflow-hidden">
               <p
                 class="m-0 text-sm truncate text-slate-800 dark:text-slate-100"
-                title={row.content}
+                title={this.plainPreview(row.content)}
               >
                 {row.post_closure ? (
                   <span
@@ -67,7 +105,7 @@ export default {
                     {this.$t('CASE_TICKETS.NOTES.POST_CLOSURE')}
                   </span>
                 ) : null}
-                {row.content}
+                {this.plainPreview(row.content)}
               </p>
               {row.edited_at ? (
                 <p class="m-0 mt-0.5 text-xs italic truncate text-slate-400 dark:text-slate-500">
@@ -108,28 +146,11 @@ export default {
           align: 'left',
           // Cerrado: solo se puede ABRIR la nota para ver el detalle completo
           // (la tabla la recorta), pero no editarla ni borrarla.
+          // Editar/ver es por click en la fila. Aquí solo queda borrar (con
+          // confirmación). Cerrado: solo lectura, sin borrar.
           renderBodyCell: ({ row }) =>
-            this.isFrozen ? (
+            this.isFrozen ? null : (
               <div class="button-wrapper">
-                <woot-button
-                  size="tiny"
-                  variant="clear"
-                  color-scheme="secondary"
-                  icon="eye-show"
-                  title={this.$t('CASE_TICKETS.NOTES.VIEW')}
-                  onClick={() => this.openView(row)}
-                />
-              </div>
-            ) : (
-              <div class="button-wrapper">
-                <woot-button
-                  size="tiny"
-                  variant="clear"
-                  color-scheme="secondary"
-                  icon="edit"
-                  title={this.$t('CASE_TICKETS.NOTES.EDIT')}
-                  onClick={() => this.openEdit(row)}
-                />
                 <woot-button
                   size="tiny"
                   variant="clear"
@@ -174,6 +195,7 @@ export default {
       this.editingId = null;
       this.viewing = false;
       this.form = { content: '' };
+      this.resetAi();
       this.showModal = true;
       this.$nextTick(() => this.$refs.contentInput?.focus());
     },
@@ -181,6 +203,7 @@ export default {
       this.editingId = note.id;
       this.viewing = false;
       this.form = { content: note.content || '' };
+      this.resetAi();
       this.showModal = true;
       this.$nextTick(() => this.$refs.contentInput?.focus());
     },
@@ -189,6 +212,7 @@ export default {
       this.editingId = note.id;
       this.viewing = true;
       this.form = { content: note.content || '' };
+      this.resetAi();
       this.showModal = true;
     },
     async submitForm() {
@@ -226,13 +250,50 @@ export default {
         this.isSaving = false;
       }
     },
-    async remove(note) {
+    // Pide confirmación antes de borrar (modal estándar de Chatwoot).
+    remove(note) {
+      this.pendingDelete = note;
+      this.showDeleteConfirm = true;
+    },
+    closeDeleteConfirm() {
+      this.showDeleteConfirm = false;
+      this.pendingDelete = null;
+    },
+    async confirmRemove() {
+      const note = this.pendingDelete;
+      if (!note) return;
+      this.showDeleteConfirm = false;
       await CaseNotesAPI.deleteNote(this.ticketId, note.id);
       this.notes = this.notes.filter(n => n.id !== note.id);
+      this.pendingDelete = null;
       this.$emit('changed');
+      // Aviso en rojo (mismo toast que asignar/completar, variante danger).
+      this.$emitter.emit('caseToastMessage', {
+        message: this.$t('CASE_TICKETS.NOTES.TOAST_DELETED'),
+        icon: 'delete',
+        variant: 'danger',
+      });
     },
     changePage(page) {
       this.currentPage = Math.min(Math.max(1, page), this.totalPages);
+    },
+    // Etiqueta del consecutivo: N001, N012… (relleno a 3 dígitos).
+    seqLabel(n) {
+      if (!n) return '';
+      return `N${String(n).padStart(3, '0')}`;
+    },
+    // Markdown → HTML seguro (mismo formateador que las notas de contacto).
+    formatMarkdown(text) {
+      if (!text) return '';
+      return new MessageFormatter(text).formattedMessage;
+    },
+    // Preview en texto plano para la tabla: renderiza el markdown y le quita las
+    // etiquetas, así la fila no muestra `**` ni `#` ni HTML.
+    plainPreview(text) {
+      if (!text) return '';
+      const tmp = document.createElement('div');
+      tmp.innerHTML = this.formatMarkdown(text);
+      return (tmp.textContent || '').replace(/\s+/g, ' ').trim();
     },
     formatDate(d) {
       if (!d) return '';
@@ -285,6 +346,7 @@ export default {
         row-key-field-name="id"
         :columns="columns"
         :table-data="paginatedNotes"
+        :event-custom-option="eventCustomOption"
         :border-around="false"
       />
     </div>
@@ -302,6 +364,7 @@ export default {
       v-if="showModal"
       :show="showModal"
       :on-close="() => (showModal = false)"
+      :close-on-backdrop-click="false"
       size="medium"
     >
       <div class="flex flex-col h-auto overflow-auto">
@@ -319,19 +382,74 @@ export default {
           class="flex flex-col self-stretch w-full gap-3 pb-8"
           @submit.prevent="submitForm"
         >
-          <label class="block">
+          <!-- OJO: contenedor <div>, NO <label>. El editor incluye un
+               <input type=file> oculto; si estuviera dentro de un <label>,
+               cualquier click reenviaría al input y abriría "adjuntar archivo". -->
+          <div class="block">
             <span class="text-sm text-slate-700 dark:text-slate-200">{{
               $t('CASE_TICKETS.NOTES.CONTENT_LABEL')
             }}</span>
-            <textarea
-              ref="contentInput"
-              v-model="form.content"
-              rows="12"
-              class="min-h-[16rem] resize-y read-only:opacity-70 read-only:cursor-default"
-              :readonly="viewing"
-              :placeholder="$t('CASE_TICKETS.NOTES.PLACEHOLDER')"
+            <!-- Editor enriquecido, montado igual que en Respuestas predefinidas. -->
+            <div v-if="!viewing" class="editor-wrap">
+              <WootMessageEditor
+                v-model="form.content"
+                class="message-editor [&>div]:px-1"
+                :enable-suggestions="false"
+                :enable-canned-responses="false"
+                focus-on-mount
+                :placeholder="$t('CASE_TICKETS.NOTES.PLACEHOLDER')"
+              />
+            </div>
+            <!-- Ticket cerrado: solo lectura, con el formato ya renderizado. -->
+            <div
+              v-else
+              class="prose-note min-h-[16rem] p-2 text-sm border rounded-md border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-100"
+              v-html="formatMarkdown(form.content) || '—'"
             />
-          </label>
+
+            <!-- Escritura asistida por IA (mixin caseAiWriter). -->
+            <div
+              v-if="!viewing && aiEnabled"
+              class="flex flex-wrap items-center gap-2 mt-2"
+            >
+              <woot-button
+                type="button"
+                size="tiny"
+                variant="smooth"
+                color-scheme="secondary"
+                icon="wand"
+                :is-loading="aiLoading === 'fix_spelling_grammar'"
+                :disabled="!form.content.trim() || !!aiLoading"
+                @click="aiImprove('fix_spelling_grammar')"
+              >
+                {{ $t('CASE_TICKETS.AI.FIX') }}
+              </woot-button>
+              <woot-button
+                type="button"
+                size="tiny"
+                variant="smooth"
+                color-scheme="secondary"
+                icon="wand"
+                :is-loading="aiLoading === 'rephrase'"
+                :disabled="!form.content.trim() || !!aiLoading"
+                @click="aiImprove('rephrase')"
+              >
+                {{ $t('CASE_TICKETS.AI.IMPROVE') }}
+              </woot-button>
+              <woot-button
+                v-if="canRevertAi"
+                type="button"
+                size="tiny"
+                variant="clear"
+                color-scheme="secondary"
+                icon="arrow-undo"
+                :disabled="!!aiLoading"
+                @click="aiRevert"
+              >
+                {{ $t('CASE_TICKETS.AI.REVERT') }}
+              </woot-button>
+            </div>
+          </div>
 
           <p
             v-if="!viewing"
@@ -365,6 +483,17 @@ export default {
         </form>
       </div>
     </woot-modal>
+
+    <!-- Confirmación de borrado (modal estándar de Chatwoot) -->
+    <woot-delete-modal
+      :show="showDeleteConfirm"
+      :on-close="closeDeleteConfirm"
+      :on-confirm="confirmRemove"
+      :title="$t('CASE_TICKETS.NOTES.DELETE_CONFIRM.TITLE')"
+      :message="$t('CASE_TICKETS.NOTES.DELETE_CONFIRM.MESSAGE')"
+      :confirm-text="$t('CASE_TICKETS.NOTES.DELETE_CONFIRM.CONFIRM')"
+      :reject-text="$t('CASE_TICKETS.NOTES.DELETE_CONFIRM.CANCEL')"
+    />
   </div>
 </template>
 
@@ -393,6 +522,44 @@ export default {
 
   .button-wrapper {
     @apply flex flex-row gap-1;
+  }
+}
+
+// Editor enriquecido dentro del modal, montado igual que en Respuestas
+// predefinidas: caja con borde y una altura contenida.
+.editor-wrap {
+  @apply border border-slate-200 dark:border-slate-600 rounded-md px-2 bg-white dark:bg-slate-900;
+}
+
+.message-editor::v-deep {
+  .ProseMirror-menubar {
+    padding: 0;
+    margin-top: var(--space-minus-small);
+  }
+
+  .ProseMirror-woot-style {
+    min-height: 16rem;
+    max-height: 24rem;
+  }
+}
+
+// Markdown renderizado (modo lectura): recupera viñetas y márgenes que el reset
+// de Tailwind quita.
+.prose-note::v-deep {
+  ul {
+    @apply list-disc ml-4;
+  }
+  ol {
+    @apply list-decimal ml-4;
+  }
+  p {
+    @apply m-0;
+  }
+  a {
+    @apply underline text-woot-500;
+  }
+  code {
+    @apply px-1 rounded bg-slate-100 dark:bg-slate-700;
   }
 }
 </style>
