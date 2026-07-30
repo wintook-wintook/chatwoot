@@ -39,6 +39,7 @@
 #  account_id                 :bigint           not null
 #  affected_service_id        :bigint
 #  assignee_id                :bigint
+#  case_type_column_id        :bigint
 #  case_type_id               :bigint
 #  category_id                :bigint
 #  contact_id                 :bigint
@@ -59,6 +60,7 @@
 #  index_case_tickets_on_account_id_and_status        (account_id,status)
 #  index_case_tickets_on_account_id_and_ticket_kind   (account_id,ticket_kind)
 #  index_case_tickets_on_affected_service_id          (affected_service_id)
+#  index_case_tickets_on_case_type_column_id          (case_type_column_id)
 #  index_case_tickets_on_category_id                  (category_id)
 #  index_case_tickets_on_contact_id                   (contact_id)
 #  index_case_tickets_on_contact_tracking_id          (contact_tracking_id)
@@ -70,6 +72,7 @@
 #
 # Foreign Keys
 #
+#  fk_rails_...  (case_type_column_id => case_type_columns.id) ON DELETE => nullify
 #  fk_rails_...  (contact_id => contacts.id) ON DELETE => nullify
 #  fk_rails_...  (contact_tracking_id => contact_trackings.id) ON DELETE => nullify
 #  fk_rails_...  (conversation_id => conversations.id) ON DELETE => nullify
@@ -139,6 +142,7 @@ class CaseTicket < ApplicationRecord
   belongs_to :locked_by,         class_name: 'User', optional: true # @tickets_cases — bloqueo de ticket
   belongs_to :team,              optional: true
   belongs_to :case_type,         optional: true # @tickets_cases: tipo configurable por cuenta
+  belongs_to :case_type_column,  optional: true # @tickets_cases — sub-estado (columna del Kanban por tipo)
   belongs_to :affected_service,  class_name: 'CaseService',  optional: true # @tickets_cases 2B
   belongs_to :category,          class_name: 'CaseCategory', optional: true # @tickets_cases 2B
   belongs_to :kb_article,        class_name: 'Article', optional: true # @tickets_cases 2H
@@ -185,6 +189,11 @@ class CaseTicket < ApplicationRecord
   attr_accessor :skip_priority_derivation
 
   before_validation :derive_priority_from_matrix # @tickets_cases 2B
+  # @tickets_cases — mantiene el invariante columna⊆estado: si el status o el tipo
+  # cambian por FUERA del tablero (detalle, reglas, SLA, API, IA, portal), el
+  # puntero de columna se limpia y el ticket cae al fallback por status. Un solo
+  # hook en el modelo cubre las seis vías; ver §7 del Plan-Columnas-Por-Tipo.
+  before_save :resync_type_column, if: -> { will_save_change_to_status? || will_save_change_to_case_type_id? }
   before_create :assign_sla_targets
   before_create :assign_folio # @tickets_cases
   after_create  :create_ticket_created_event
@@ -203,6 +212,9 @@ class CaseTicket < ApplicationRecord
       folio:  folio,
       title:  title,
       status: status,
+      # @tickets_cases — sin esto un ticket movido por otro agente llega por
+      # websocket sin puntero y salta a la columna equivocada hasta el refresh.
+      case_type_column_id: case_type_column_id,
       meta:   { assignee: assignee&.push_event_data }
     }
   end
@@ -465,6 +477,20 @@ class CaseTicket < ApplicationRecord
   end
 
   private
+
+  # @tickets_cases — Regla 2 (invariante) del Plan-Columnas-Por-Tipo: la columna
+  # NUNCA contradice al estado. Si el puntero deja de cumplir columna.statuses ∋
+  # status (o pertenece a otro tipo), se pone en NULL → el tablero lo pinta por el
+  # fallback de status. Dejarlo en NULL (en vez de reasignar) es deliberado: NULL
+  # significa "nadie ha decidido el sub-estado", que es la verdad en ese momento.
+  def resync_type_column
+    return if case_type_column_id.nil?
+
+    col = CaseTypeColumn.find_by(id: case_type_column_id)
+    return if col && col.case_type_id == case_type_id && col.statuses.include?(status)
+
+    self.case_type_column_id = nil
+  end
 
   # @tickets_cases 2I — gestiona la pausa del SLA al entrar/salir de estados de espera.
   def sla_pause_attrs(old_status, new_status)

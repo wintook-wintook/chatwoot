@@ -143,6 +143,7 @@ Rails.application.routes.draw do
             end
             member do
               patch :transition
+              patch :move # @tickets_cases — mover de columna en el Kanban por tipo
               patch :assign
               patch :escalate
               patch :change_approval
@@ -170,6 +171,10 @@ Rails.application.routes.draw do
           resources :case_tasks, only: [:index], controller: 'case_tasks_index'
           resources :case_types, only: [:index, :create, :update, :destroy] do
             resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K
+            # @tickets_cases — columnas del Kanban por tipo (Opción A+)
+            resources :case_type_columns, only: [:index, :create, :update, :destroy], path: 'columns' do
+              put :replace, on: :collection
+            end
           end
           resources :case_services, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_categories, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
