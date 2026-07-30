@@ -18,8 +18,10 @@ export default {
   name: 'CaseTicketInternalModal',
   props: {
     show: { type: Boolean, default: false },
+    // @tickets_cases — si viene un ticket, el modal es de EDICIÓN.
+    ticket: { type: Object, default: null },
   },
-  emits: ['close', 'created'],
+  emits: ['close', 'created', 'updated'],
   data() {
     return {
       activeTab: 'ticket', // 'ticket' | 'assign' | 'custom'
@@ -48,13 +50,28 @@ export default {
       teams: 'teams/getTeams',
       services: 'caseTickets/getServices',
       categories: 'caseTickets/getCategories',
+      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
     }),
+    isEdit() {
+      return !!this.ticket;
+    },
     tabs() {
-      return [
+      const base = [
         { key: 'ticket', label: this.$t('CASE_TICKETS.MODAL.TAB_TICKET') },
-        { key: 'assign', label: this.$t('CASE_TICKETS.MODAL.TAB_ASSIGN') },
-        { key: 'custom', label: this.$t('CASE_TICKETS.MODAL.TAB_CUSTOM') },
       ];
+      // En edición no se ofrece "Asignar": responsable/equipo se cambian inline
+      // en la ficha y el endpoint de edición no toca la asignación.
+      if (!this.isEdit) {
+        base.push({
+          key: 'assign',
+          label: this.$t('CASE_TICKETS.MODAL.TAB_ASSIGN'),
+        });
+      }
+      base.push({
+        key: 'custom',
+        label: this.$t('CASE_TICKETS.MODAL.TAB_CUSTOM'),
+      });
+      return base;
     },
     activeTabIndex() {
       const idx = this.tabs.findIndex(t => t.key === this.activeTab);
@@ -126,8 +143,10 @@ export default {
     },
   },
   mounted() {
+    // @tickets_cases — en edición, precargar el formulario desde el ticket.
+    if (this.isEdit) this.prefillFromTicket();
     this.$store.dispatch('caseTickets/fetchTypes').then(() => {
-      if (!this.form.case_type_id && this.types.length) {
+      if (!this.isEdit && !this.form.case_type_id && this.types.length) {
         this.form.case_type_id = this.types[0].id;
       }
     });
@@ -135,13 +154,35 @@ export default {
     this.$store.dispatch('teams/get');
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('caseTickets/fetchCategories');
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
   },
   methods: {
     onTabChange(index) {
       const tab = this.tabs[index];
       if (tab) this.activeTab = tab.key;
     },
+    // @tickets_cases — vuelca el ticket al formulario para editarlo.
+    prefillFromTicket() {
+      const t = this.ticket;
+      this.form = {
+        ...this.form,
+        case_type_id: t.case_type_id ?? null,
+        ticket_kind: t.ticket_kind ?? 'service_request',
+        affected_service_id: t.affected_service_id ?? null,
+        category_id: t.category_id ?? null,
+        title: t.title ?? '',
+        impact: t.impact ?? null,
+        urgency: t.urgency ?? null,
+        priority: t.priority ?? 'medium',
+        description: t.description ?? '',
+      };
+      this.customValues = { ...(t.custom_attributes ?? {}) };
+    },
     async onSubmit() {
+      if (this.isEdit) {
+        await this.submitEdit();
+        return;
+      }
       try {
         const ticket = await this.$store.dispatch('caseTickets/createTicket', {
           internal: true,
@@ -173,6 +214,41 @@ export default {
         });
       }
     },
+    // @tickets_cases — guardar la edición: solo los campos núcleo + custom.
+    async submitEdit() {
+      const fields = {
+        title: this.form.title.trim(),
+        description: this.form.description.trim(),
+        case_type_id: this.form.case_type_id,
+        ticket_kind: this.form.ticket_kind,
+        affected_service_id: this.form.affected_service_id,
+        category_id: this.form.category_id,
+        impact: this.form.impact,
+        urgency: this.form.urgency,
+      };
+      // Solo se manda la prioridad manual cuando la matriz NO la deriva.
+      if (!this.derivedPriority) fields.priority = this.form.priority;
+      if (this.selectedTypeFields.length) {
+        fields.custom_attributes = this.customValues;
+      }
+      try {
+        const ticket = await this.$store.dispatch('caseTickets/editTicket', {
+          ticketId: this.ticket.id,
+          contactId: this.ticket.contact_id,
+          fields,
+        });
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.EDIT.SUCCESS'),
+        });
+        this.$emit('updated', ticket);
+        this.$emit('close');
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error || this.$t('CASE_TICKETS.EDIT.ERROR'),
+        });
+      }
+    },
   },
 };
 </script>
@@ -180,7 +256,13 @@ export default {
 <template>
   <woot-modal :show="show" :on-close="() => $emit('close')" size="medium">
     <div class="flex flex-col h-auto overflow-auto">
-      <woot-modal-header :header-title="$t('CASE_TICKETS.INTERNAL.TITLE')" />
+      <woot-modal-header
+        :header-title="
+          isEdit
+            ? $t('CASE_TICKETS.EDIT.TITLE')
+            : $t('CASE_TICKETS.INTERNAL.TITLE')
+        "
+      />
       <form
         class="flex flex-col self-stretch w-full gap-3 p-8 pt-4"
         @submit.prevent="onSubmit"
@@ -219,8 +301,8 @@ export default {
               </select>
             </label>
 
-            <!-- Naturaleza ITIL -->
-            <label class="flex flex-col gap-1">
+            <!-- Naturaleza ITIL (oculto en modo simple) -->
+            <label v-if="itilEnabled" class="flex flex-col gap-1">
               <span
                 class="text-sm font-medium text-slate-700 dark:text-slate-300"
               >
@@ -301,10 +383,13 @@ export default {
               </select>
             </label>
 
-            <!-- Impacto · Urgencia · Prioridad en una sola línea -->
-            <div class="grid grid-cols-3 col-span-2 gap-3">
+            <!-- Impacto · Urgencia · Prioridad (impacto/urgencia ocultos en modo simple) -->
+            <div
+              class="col-span-2 gap-3"
+              :class="itilEnabled ? 'grid grid-cols-3' : ''"
+            >
               <!-- Impacto -->
-              <label class="flex flex-col gap-1">
+              <label v-if="itilEnabled" class="flex flex-col gap-1">
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
@@ -325,7 +410,7 @@ export default {
               </label>
 
               <!-- Urgencia -->
-              <label class="flex flex-col gap-1">
+              <label v-if="itilEnabled" class="flex flex-col gap-1">
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
@@ -503,10 +588,14 @@ export default {
           </woot-button>
           <woot-button
             type="submit"
-            :is-loading="uiFlags.isCreating"
+            :is-loading="isEdit ? uiFlags.isSaving : uiFlags.isCreating"
             :disabled="!isValid"
           >
-            {{ $t('CASE_TICKETS.INTERNAL.SUBMIT') }}
+            {{
+              isEdit
+                ? $t('CASE_TICKETS.EDIT.SUBMIT')
+                : $t('CASE_TICKETS.INTERNAL.SUBMIT')
+            }}
           </woot-button>
         </div>
       </form>

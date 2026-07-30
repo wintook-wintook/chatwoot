@@ -16,6 +16,7 @@
       "GROUP_SLA": "SLA",
       "GROUP_TIMES": "Tiempos de atención",
       "GROUP_ITIL": "ITIL y calidad",
+      "GROUP_QUALITY": "Calidad",
       "TOTAL_PERIOD": "Tickets en el período",
       "TOTAL_OPEN": "Tickets activos",
       "SLA_OVERDUE": "SLA vencidos",
@@ -41,6 +42,9 @@
       "PERIOD_FROM": "Período:",
       "PERIOD_TO": "al"
     },
+    "NOTIFICATIONS": {
+      "TOAST_TICKET_ASSIGNED": "Ticket asignado: {folio} · {task}"
+    },
     "KANBAN": {
       "TITLE": "Tablero de tickets",
       "SEARCH_PLACEHOLDER": "Buscar folio, título o contacto…",
@@ -55,6 +59,18 @@
       "MOVE_TO": "Mover a:",
       "MOVE_NOTE": "Nota (qué hiciste)",
       "MOVE_NOTE_PLACEHOLDER": "Opcional: describe la acción realizada",
+      "NOTIFY_LABEL": "Avisar al cliente por su canal",
+      "NOTIFY_PLACEHOLDER": "Mensaje que recibirá el cliente",
+      "NOTIFY_HELP": "Se enviará por el canal del ticket (WhatsApp, email, etc.) al mover.",
+      "NOTIFY_SENT": "Aviso enviado al cliente",
+      "NOTIFY_ERROR": "El ticket se movió, pero no se pudo enviar el aviso.",
+      "NOTIFY_TEMPLATES": {
+        "in_progress": "Hola, tu solicitud {folio} ya está siendo atendida. Te mantendremos al tanto.",
+        "waiting_on_customer": "Hola, sobre tu solicitud {folio} necesitamos un dato adicional para continuar. ¿Nos ayudas?",
+        "resolved": "¡Buenas noticias! Tu solicitud {folio} fue resuelta. Si necesitas algo más, responde por aquí.",
+        "closed": "Tu solicitud {folio} fue cerrada. Gracias por contactarnos.",
+        "cancelled": "Tu solicitud {folio} fue cancelada. Si fue un error, responde por aquí."
+      },
       "CANCEL": "Cancelar",
       "CONFIRM": "Mover",
       "COLUMNS": {
@@ -112,8 +128,150 @@
     "SLA_OVERDUE": "SLA vencido",
     "DETAIL_TABS": {
       "SUMMARY": "Resumen",
+      "CONVERSATION": "Conversación",
+      "NOTES": "Notas",
+      "TASKS": "Tareas",
       "JOURNEY": "Avance",
       "AI": "Asistente IA"
+    },
+    "CONVERSATION": {
+      "SUBTITLE": "Hilo con el cliente",
+      "OPEN_FULL": "Ir a la conversación",
+      "LOADING": "Cargando mensajes...",
+      "EMPTY": "Aún no hay mensajes en esta conversación.",
+      "PRIVATE": "Nota interna",
+      "SYSTEM": "Sistema",
+      "REPLY_PLACEHOLDER": "Escribe una respuesta al cliente...",
+      "NOTE_PLACEHOLDER": "Escribe una nota interna (no la ve el cliente)...",
+      "PRIVATE_TOGGLE": "Nota privada",
+      "CANNED": "Predefinidas",
+      "SEND": "Responder",
+      "ADD_NOTE": "Agregar nota",
+      "LOAD_ERROR": "No se pudieron cargar los mensajes.",
+      "SEND_ERROR": "No se pudo enviar el mensaje."
+    },
+    "LOCK": {
+      "BANNER": "{name} está trabajando en este ticket ahora mismo."
+    },
+    "CLAIM": {
+      "BUTTON": "Tomar"
+    },
+    "STATUS_QUICK": {
+      "LABEL": "Cambiar estado",
+      "REASON_TITLE": "Cambiar a «{status}»",
+      "REASON_LABEL": "Motivo (opcional)",
+      "REASON_PLACEHOLDER": "¿Por qué cambia de estado? Queda en el Recorrido.",
+      "REASON_CONFIRM": "Cambiar estado",
+      "REASON_CANCEL": "Cancelar"
+    },
+    "PRIORITY_QUICK": {
+      "LABEL": "Prioridad",
+      "SUCCESS": "Prioridad actualizada",
+      "ERROR": "No se pudo cambiar la prioridad"
+    },
+    "DUE_QUICK": {
+      "LABEL": "Vence",
+      "NONE": "Sin fecha",
+      "SAVE": "Guardar",
+      "CLEAR": "Quitar fecha",
+      "HINT": "Si no fijas una fecha, se usa la estimada por el SLA.",
+      "SUCCESS": "Vencimiento actualizado",
+      "ERROR": "No se pudo cambiar el vencimiento"
+    },
+    "TABLE": {
+      "FOLIO": "Folio",
+      "SUBJECT": "Asunto",
+      "CONTACT_SUBJECT": "Contacto / Asunto",
+      "ASSIGNEE": "Asignado",
+      "PRIORITY": "Prioridad",
+      "STATUS": "Estado",
+      "DUE": "Vence",
+      "CREATED": "Creado"
+    },
+    "BULK": {
+      "SELECTED": "{n} seleccionados",
+      "ASSIGN": "Asignar a",
+      "CLOSE": "Cerrar",
+      "CLEAR": "Limpiar selección",
+      "SUCCESS": "{n} tickets actualizados",
+      "ERROR": "No se pudo aplicar la acción"
+    },
+    "TASKS": {
+      "TITLE": "Tareas",
+      "LOADING": "Cargando tareas...",
+      "EMPTY": "Sin tareas. Agrega pasos para resolver este ticket.",
+      "UNASSIGNED": "Sin asignar",
+      "ADD_PLACEHOLDER": "Nueva tarea...",
+      "ADD": "Nueva tarea",
+      "EDIT": "Editar",
+      "DELETE": "Eliminar",
+      "VIEW": "Ver tarea",
+      "TOGGLE": "Marcar como completada",
+      "TOAST_DELETED": "Tarea eliminada: {task}",
+      "DELETE_CONFIRM": {
+        "TITLE": "Eliminar tarea",
+        "MESSAGE": "¿Seguro que quieres eliminar esta tarea? Esta acción no se puede deshacer.",
+        "CONFIRM": "Eliminar",
+        "CANCEL": "Cancelar"
+      },
+      "INBOX": {
+        "TITLE": "Tareas",
+        "SEARCH_PLACEHOLDER": "Buscar en el título o la descripción…",
+        "EMPTY": "No hay tareas que coincidan con los filtros.",
+        "BY_TAB": "Por pestaña",
+        "ALL_TYPES": "Todos los tipos",
+        "COMPLETED": "Completada",
+        "UNASSIGNED": "Sin asignar",
+        "DUE_PREFIX": "Vence:",
+        "DUE_TODAY": "hoy",
+        "SAVE_ERROR": "No se pudo actualizar la tarea.",
+        "FROZEN_HINT": "El ticket está cerrado: reábrelo para modificar sus tareas.",
+        "TOAST_ASSIGNED": "Nueva tarea asignada: {task} · caso {folio}",
+        "TOAST_COMPLETED": "Tarea completada: {task} · caso {folio}",
+        "TABS": {
+          "mine": "Mis tareas",
+          "unassigned": "Sin asignar",
+          "all": "Todas",
+          "overdue": "Vencidas"
+        },
+        "STATUS": {
+          "PENDING": "Pendientes",
+          "DONE": "Completadas",
+          "ALL": "Todas"
+        },
+        "DUE": {
+          "ANY": "Cualquier fecha",
+          "OVERDUE": "Vencidas",
+          "TODAY": "Vencen hoy",
+          "WEEK": "Esta semana"
+        }
+      },
+      "TABLE": {
+        "NUM": "Folio",
+        "TASK": "Tarea",
+        "STATUS": "Estado",
+        "ASSIGNEE": "Responsable",
+        "DUE": "Vence",
+        "COMPLETED": "Completada"
+      },
+      "STATUS": {
+        "PENDING": "Pendiente",
+        "DONE": "Concluida"
+      },
+      "MODAL": {
+        "NEW_TITLE": "Nueva tarea",
+        "EDIT_TITLE": "Editar tarea",
+        "VIEW_TITLE": "Ver tarea",
+        "TITLE_LABEL": "Título",
+        "DESCRIPTION_LABEL": "Descripción (opcional)",
+        "DESCRIPTION_PLACEHOLDER": "Detalle de lo que hay que hacer...",
+        "ASSIGNEE_LABEL": "Responsable",
+        "DUE_LABEL": "Vence",
+        "STATUS_LABEL": "Estado",
+        "SAVE": "Guardar",
+        "CANCEL": "Cancelar",
+        "CLOSE": "Cerrar"
+      }
     },
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",
@@ -154,6 +312,13 @@
       "SUCCESS": "Asignación actualizada",
       "ERROR": "No se pudo actualizar la asignación"
     },
+    "EDIT": {
+      "BUTTON": "Editar",
+      "TITLE": "Editar ticket",
+      "SUBMIT": "Guardar cambios",
+      "SUCCESS": "Ticket actualizado",
+      "ERROR": "No se pudo actualizar el ticket"
+    },
     "INTERNAL": {
       "TITLE": "Crear ticket interno",
       "NEW_BUTTON": "Ticket interno",
@@ -164,6 +329,7 @@
       "SUCCESS": "Ticket interno creado",
       "ERROR": "No se pudo crear el ticket interno",
       "BADGE": "Interno",
+      "NO_CONTACT": "Sin contacto",
       "REQUESTER_LABEL": "Solicitante",
       "CUSTOM_FIELDS": "Campos personalizados"
     },
@@ -293,6 +459,55 @@
         "rejected": "Rechazado"
       }
     },
+    "REOPEN": {
+      "BUTTON": "Reabrir",
+      "MODAL_TITLE": "Reabrir ticket",
+      "REASON_LABEL": "Motivo de la reapertura",
+      "REASON_PLACEHOLDER": "¿Por qué se reabre? Ej: el cliente reporta que volvió a fallar.",
+      "HINT": "Queda registrado en el Recorrido. El SLA vuelve a contar desde cero.",
+      "CONFIRM": "Reabrir ticket",
+      "CANCEL": "Cancelar",
+      "SUCCESS": "Ticket reabierto",
+      "ERROR": "No se pudo reabrir el ticket",
+      "FROZEN_HINT": "Ticket cerrado: reábrelo para poder editarlo."
+    },
+    "NOTES": {
+      "ADD": "Nota",
+      "MODAL_TITLE": "Nueva nota interna",
+      "CONTENT_LABEL": "Nota",
+      "PLACEHOLDER": "¿Qué hiciste o qué falta? Ej: llamé al cliente, sin respuesta…",
+      "HINT": "Solo visible para agentes. El cliente no la verá.",
+      "SAVE": "Guardar nota",
+      "CANCEL": "Cancelar",
+      "SUCCESS": "Nota agregada",
+      "ERROR": "No se pudo agregar la nota",
+      "ADD_NEW": "Nueva nota",
+      "TITLE": "Notas internas",
+      "LOADING": "Cargando notas...",
+      "EMPTY": "Sin notas. Deja constancia de lo que vas haciendo en el ticket.",
+      "MODAL_EDIT_TITLE": "Editar nota interna",
+      "MODAL_VIEW_TITLE": "Ver nota interna",
+      "VIEW": "Ver nota",
+      "POST_CLOSURE": "post-cierre",
+      "POST_CLOSURE_HINT": "Escrita después de que el ticket se cerró.",
+      "CLOSE": "Cerrar",
+      "EDIT": "Editar",
+      "DELETE": "Eliminar",
+      "TOAST_DELETED": "Nota eliminada",
+      "DELETE_CONFIRM": {
+        "TITLE": "Eliminar nota",
+        "MESSAGE": "¿Seguro que quieres eliminar esta nota interna? Esta acción no se puede deshacer.",
+        "CONFIRM": "Eliminar",
+        "CANCEL": "Cancelar"
+      },
+      "EDITED": "Editada el {date} por {name}",
+      "TABLE": {
+        "NUM": "Folio",
+        "NOTE": "Nota",
+        "AUTHOR": "Autor",
+        "DATE": "Fecha"
+      }
+    },
     "RELATIONS": {
       "TITLE": "Tickets relacionados",
       "ADD": "+ Vincular ticket",
@@ -336,6 +551,8 @@
       "CURRENT": "Actual",
       "CREATED": "Creado",
       "CURRENTLY": "Actualmente",
+      "RETURNED": "Volvió",
+      "REASON": "Motivo",
       "VIEWS": {
         "diagram": "Recorrido",
         "timeline": "Historial",
@@ -343,6 +560,10 @@
       }
     },
     "AI": {
+      "FIX": "Corregir ortografía",
+      "IMPROVE": "Mejorar escritura",
+      "REVERT": "Volver al original",
+      "ERROR": "No se pudo procesar el texto con IA. Inténtalo de nuevo.",
       "TITLE": "Inteligencia Artificial",
       "BACK": "Volver",
       "SAVE": "Guardar",
@@ -400,6 +621,7 @@
         "COPY_BTN": "Copiar",
         "COPIED_BTN": "Copiado",
         "COPIED": "Respuesta copiada al portapapeles",
+        "USE_IN_CONVERSATION": "Usar en la conversación",
         "ERROR": "No se pudo generar la respuesta"
       },
       "SUMMARY": {
@@ -446,9 +668,82 @@
       "COLOR_LABEL": "Color",
       "PREFIX_LABEL": "Prefijo del folio",
       "PREFIX_HELP": "Se usa en el folio con el token {PREFIX}. Si lo dejas vacío se genera automáticamente.",
+      "PUBLIC_LABEL": "Visible en el portal del cliente",
+      "PUBLIC_HELP": "Si se activa, este tipo aparece como opción en el formulario público del portal.",
+      "PUBLIC_ON": "Público",
+      "PUBLIC_OFF": "Privado",
       "DELETE": {
         "TITLE": "Eliminar tipo de caso",
         "MESSAGE": "Los tickets con este tipo quedarán sin tipo asignado. ¿Eliminar",
+        "YES": "Eliminar",
+        "NO": "Cancelar"
+      }
+    },
+    "SETTINGS": {
+      "TITLE": "Ajustes del módulo",
+      "BACK": "Volver",
+      "LOADING": "Cargando ajustes...",
+      "HELP": "Elige cómo se comporta el gestor de tickets. El modo simple se parece a osTicket; el modo ITIL activa la gestión avanzada.",
+      "MODE_SIMPLE": "Modo simple (osTicket)",
+      "MODE_SIMPLE_DESC": "Experiencia sencilla: estados básicos y prioridad directa. Oculta los campos ITIL avanzados.",
+      "MODE_ITIL": "Modo ITIL (avanzado)",
+      "MODE_ITIL_DESC": "Activa estados ITIL completos, matriz Impacto×Urgencia, naturaleza del ticket, problema/cambio y aprobaciones.",
+      "NOTE_DATA": "No se borra ni modifica ningún dato: el modo solo cambia lo que se muestra.",
+      "NOTE_REVERSIBLE": "Puedes cambiar de modo cuando quieras.",
+            "REOPEN": {
+        "SECTION": "Reapertura de tickets cerrados",
+        "WINDOW_TITLE": "Ventana de reapertura",
+        "WINDOW_DESC": "Días desde el cierre en los que el agente asignado puede reabrir. Pasado ese plazo, solo un administrador. Usa 0 para no poner límite.",
+        "DAYS": "días",
+        "SAVE": "Guardar",
+        "ON_REPLY_TITLE": "Reabrir si el cliente responde",
+        "ON_REPLY_DESC": "Si el cliente escribe por su canal sobre un ticket cerrado, se reabre solo (o se crea uno de seguimiento si venció la ventana).",
+        "NOTE_WINDOW": "El administrador puede reabrir siempre, aunque haya vencido la ventana.",
+        "NOTE_SLA": "Al reabrir, el SLA vuelve a contar desde cero."
+      },
+"SAVED": "Ajustes guardados",
+      "SAVE_ERROR": "No se pudieron guardar los ajustes."
+    },
+    "PORTALS": {
+      "TITLE": "Portales del cliente",
+      "HELP": "Crea portales públicos (estilo osTicket) donde tus clientes abren y consultan tickets sin iniciar sesión.",
+      "BACK": "Volver",
+      "LOADING": "Cargando portales...",
+      "EMPTY": "Aún no hay portales. Crea el primero para dar a tus clientes una página de soporte.",
+      "CREATE_BUTTON": "+ Nuevo portal",
+      "CREATE_TITLE": "Crear portal",
+      "EDIT_TITLE": "Editar portal",
+      "NAME_LABEL": "Nombre",
+      "NAME_PLACEHOLDER": "Ej: Soporte Kontrolya",
+      "SLUG_LABEL": "Slug (URL)",
+      "SLUG_PLACEHOLDER": "kontrolya",
+      "SLUG_HELP": "Define la URL: /portal/<slug>. Si lo dejas vacío se genera del nombre.",
+      "LOCALE_LABEL": "Idioma",
+      "INBOX_LABEL": "Canal destino",
+      "INBOX_DEFAULT": "Predeterminado (API · creado automáticamente)",
+      "INBOX_HELP": "Dónde nacen las conversaciones y por dónde sale el acuse del folio. Solo canales que permiten iniciar conversación: API, Email o WhatsApp (con plantilla).",
+      "DESTINATION": "Destino",
+      "WA_TEMPLATE_TITLE": "Plantilla de acuse (WhatsApp)",
+      "WA_TEMPLATE_NAME": "Nombre de la plantilla aprobada",
+      "WA_TEMPLATE_PLACEHOLDER": "ej. ticket_creado",
+      "WA_TEMPLATE_LANG": "Idioma de la plantilla",
+      "WA_TEMPLATE_HELP": "WhatsApp exige una plantilla aprobada en Meta para el acuse (regla de 24h). El folio se envía como parámetro {{1}}.",
+      "INTRO_LABEL": "Texto de bienvenida",
+      "INTRO_PLACEHOLDER": "Mensaje opcional bajo el título del portal.",
+      "ENABLED_LABEL": "Portal activo",
+      "DISABLED": "Inactivo",
+      "TYPES_COUNT": "{count} tipo(s) público(s)",
+      "NO_PUBLIC_TYPES": "Ningún tipo de caso está marcado como público: el formulario del portal saldrá vacío.",
+      "GO_TO_TYPES": "Configurar tipos",
+      "COPY": "Copiar",
+      "COPIED": "Enlace copiado al portapapeles",
+      "SAVE": "Guardar",
+      "CREATE": "Crear",
+      "CANCEL": "Cancelar",
+      "SAVE_ERROR": "No se pudo guardar el portal.",
+      "DELETE": {
+        "TITLE": "Eliminar portal",
+        "MESSAGE": "Los clientes ya no podrán acceder a esta página. ¿Eliminar",
         "YES": "Eliminar",
         "NO": "Cancelar"
       }
@@ -607,7 +902,9 @@
       "sla_at_risk": "SLA en riesgo",
       "sla_overdue": "SLA vencido",
       "error_detected": "Error detectado",
-      "internal_note": "Nota interna"
+      "internal_note": "Nota interna",
+      "priority_changed": "Prioridad cambiada",
+      "due_date_changed": "Vencimiento cambiado"
     }
   }
 }

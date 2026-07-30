@@ -52,7 +52,9 @@ class CaseEvent < ApplicationRecord
     article_generated:  23,
     ai_classified:      24,
     ai_suggested:       25,
-    ai_followup:        26
+    ai_followup:        26,
+    priority_changed:   27,
+    due_date_changed:   28
   }
 
   enum origin: { bot: 0, agent: 1, system: 2 }

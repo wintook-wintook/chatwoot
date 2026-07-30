@@ -1,0 +1,73 @@
+<% badge = case @ticket&.status
+   when 'resolved', 'closed', 'validating' then 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+   when 'cancelled' then 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+   when 'waiting_on_customer', 'waiting_on_third_party', 'waiting_on_internal' then 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+   when 'escalated' then 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300'
+   else 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
+   end %>
+
+<section class="max-w-3xl mx-auto px-4 py-8">
+  <nav class="text-sm text-slate-400 mb-4">
+    <a href="<%= case_portal_path(@portal.slug) %>" class="hover:text-indigo-500">Inicio</a> › Consultar estado
+  </nav>
+  <h1 class="text-2xl font-bold mb-1">Consultar el estado de tu ticket</h1>
+  <p class="text-slate-500 dark:text-slate-400 mb-6">Ingresa tu correo o WhatsApp y el folio que recibiste.</p>
+
+  <%= form_with url: case_portal_status_path(@portal.slug), method: :get, local: true, html: { class: 'rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 grid sm:grid-cols-2 gap-4 mb-8' } do %>
+    <div>
+      <label class="block text-sm font-medium mb-1">Correo o WhatsApp <span class="text-rose-500">*</span></label>
+      <input name="identifier" required value="<%= @identifier %>" class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="maria@empresa.com" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Folio <span class="text-rose-500">*</span></label>
+      <input name="folio" required value="<%= @folio %>" class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="SOP-00123" />
+    </div>
+    <div class="sm:col-span-2 flex justify-end">
+      <button type="submit" class="px-6 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium">Consultar</button>
+    </div>
+  <% end %>
+
+  <% if @not_found %>
+    <div class="rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 px-4 py-3 text-sm">
+      No encontramos un ticket con esos datos. Verifica el folio y el correo/WhatsApp con el que abriste la solicitud.
+    </div>
+  <% elsif @ticket %>
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
+      <div class="p-6 border-b border-slate-200 dark:border-slate-700">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <div class="font-mono text-sm text-slate-400"><%= @ticket.folio.presence || "##{@ticket.id}" %></div>
+            <h2 class="text-lg font-semibold"><%= @ticket.title %></h2>
+          </div>
+          <span class="px-3 py-1 rounded-full text-sm font-medium <%= badge %>"><%= status_label(@ticket.status) %></span>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-4 mt-5 text-sm">
+          <div><div class="text-slate-400">Tipo</div><div class="font-medium"><%= @ticket.case_type&.name || '—' %></div></div>
+          <div><div class="text-slate-400">Prioridad</div><div class="font-medium"><%= { 'low' => 'Baja', 'medium' => 'Media', 'high' => 'Alta', 'urgent' => 'Urgente' }[@ticket.priority] || @ticket.priority %></div></div>
+          <div><div class="text-slate-400">Creado</div><div class="font-medium"><%= @ticket.created_at.strftime('%d/%m/%Y %H:%M') %></div></div>
+        </div>
+      </div>
+
+      <div class="p-6">
+        <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-4">Avance del ticket</h3>
+        <% if @timeline.present? %>
+          <ol class="relative border-l-2 border-slate-200 dark:border-slate-700 ml-2 space-y-6">
+            <% @timeline.each do |ev| %>
+              <li class="ml-6">
+                <span class="absolute -left-[9px] w-4 h-4 rounded-full bg-emerald-500"></span>
+                <div class="text-sm font-medium"><%= ev[:label] %></div>
+                <div class="text-xs text-slate-400"><%= ev[:at].strftime('%d/%m/%Y %H:%M') %></div>
+              </li>
+            <% end %>
+          </ol>
+        <% else %>
+          <p class="text-sm text-slate-400">Aún no hay actualizaciones.</p>
+        <% end %>
+      </div>
+
+      <div class="px-6 pb-6">
+        <p class="text-xs text-slate-400">Esta vista es solo de consulta. Para responder, usa el mismo canal por el que abriste el ticket.</p>
+      </div>
+    </div>
+  <% end %>
+</section>

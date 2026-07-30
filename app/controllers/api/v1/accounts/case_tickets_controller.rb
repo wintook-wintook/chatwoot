@@ -19,10 +19,14 @@
 # ================================================================================
 
 class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseController
+  # @tickets_cases — campos que se congelan al cerrar/cancelar un ticket.
+  FROZEN_FIELDS = %w[priority due_at case_type_id assignee_id team_id].freeze
+  FROZEN_MSG    = 'Ticket cerrado: no se puede editar. Reábrelo si necesitas cambiarlo.'
+
   before_action :set_ticket,
                 only: %i[show update transition assign escalate change_approval generate_article
                          apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize
-                         detect_duplicates follow_up]
+                         detect_duplicates follow_up lock unlock reopen]
 
   # GET /api/v1/accounts/:account_id/case_tickets/metrics
   def metrics
@@ -168,12 +172,57 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # PATCH /api/v1/accounts/:account_id/case_tickets/:id
   # @tickets_cases 2F — edita los campos ITIL de Problema/Cambio (custom_attributes).
   def update
+    return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if frozen_edit_attempt?
+
     incoming = update_params[:custom_attributes]&.to_h || {}
     if incoming.key?('requires_approval')
       incoming['requires_approval'] = ActiveModel::Type::Boolean.new.cast(incoming['requires_approval'])
     end
-    @ticket.update!(custom_attributes: @ticket.custom_attributes.merge(incoming))
+
+    # @tickets_cases P1 — cambio de prioridad inline (acción rápida estilo osTicket).
+    new_priority = params.dig(:case_ticket, :priority).presence
+    if new_priority && !CaseTicket.priorities.key?(new_priority.to_s)
+      return render json: { error: 'Prioridad inválida' }, status: :unprocessable_entity
+    end
+    old_priority = @ticket.priority
+    priority_changed = new_priority && new_priority.to_s != old_priority
+
+    # @tickets_cases P4 — vencimiento inline (osTicket "Due Date"): fija/limpia due_at.
+    old_due = @ticket.due_at
+    due_present = params[:case_ticket].respond_to?(:key?) && params[:case_ticket].key?(:due_at)
+    if due_present
+      raw_due = params.dig(:case_ticket, :due_at)
+      new_due = parse_due_at(raw_due)
+      return render json: { error: 'Fecha de vencimiento inválida' }, status: :unprocessable_entity if new_due == :invalid
+    end
+    due_changed = due_present && new_due != old_due
+
+    # @tickets_cases — edición completa desde el modal (título, descripción,
+    # clasificación). Puede raise ArgumentError si un enum llega inválido.
+    apply_core_edits
+
+    @ticket.custom_attributes = @ticket.custom_attributes.merge(incoming) if incoming.any?
+    @ticket.priority = new_priority if priority_changed
+    @ticket.due_at = new_due if due_changed
+    @ticket.save!
+
+    # La prioridad puede cambiar por matriz (impacto×urgencia) sin venir en el
+    # request; se compara el valor real tras guardar, no solo el parámetro.
+    if @ticket.priority != old_priority
+      @ticket.case_events.create!(account: Current.account, event_type: :priority_changed,
+                                  origin: :agent, actor: current_user,
+                                  payload: { from: old_priority, to: @ticket.priority })
+    end
+
+    if due_changed
+      @ticket.case_events.create!(account: Current.account, event_type: :due_date_changed,
+                                  origin: :agent, actor: current_user,
+                                  payload: { from: old_due, to: @ticket.due_at })
+    end
+
     render json: { case_ticket: ticket_json(@ticket.reload) }
+  rescue ArgumentError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
   end
@@ -216,6 +265,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # lo limpia. `assignee_type` se DERIVA (agente → equipo → bot), nunca se setea
   # a mano. Acepta `assignee_id` y/o `team_id`.
   def assign
+    return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if @ticket.frozen_for_edit?
+
     previous_assignee_id = @ticket.assignee_id
     return render json: { error: 'Se requiere assignee_id o team_id' }, status: :unprocessable_entity unless apply_assignment_params
 
@@ -230,6 +281,77 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     render json: { error: 'Agente o equipo no encontrado' }, status: :not_found
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
+  end
+
+  # POST /api/v1/accounts/:account_id/case_tickets/bulk
+  # @tickets_cases P3 — acciones en lote desde la cola.
+  #   ids: []              — tickets seleccionados
+  #   bulk_action: assign  — assignee_id ('me' = yo, ''/none = limpiar) y/o team_id
+  #   bulk_action: transition — status (solo a los que puedan transicionar)
+  def bulk
+    ids = Array(params[:ids]).map(&:to_i).uniq
+    return render json: { error: 'Sin tickets seleccionados' }, status: :unprocessable_entity if ids.empty?
+
+    # OJO: `action` es reservado por Rails (= nombre de la acción) → usamos `bulk_action`.
+    bulk_action = params[:bulk_action].to_s
+    updated = 0
+    skipped = 0
+
+    Current.account.case_tickets.where(id: ids).find_each do |ticket|
+      case bulk_action
+      when 'assign'
+        bulk_assign(ticket)
+        updated += 1
+      when 'transition'
+        status = params[:status].to_s
+        if ticket.can_transition_to?(status)
+          ticket.transition!(status, actor: current_user)
+          updated += 1
+        else
+          skipped += 1
+        end
+      else
+        return render json: { error: 'Acción no soportada' }, status: :unprocessable_entity
+      end
+    end
+
+    render json: { updated: updated, skipped: skipped }
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: 'Agente o equipo no encontrado' }, status: :not_found
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/lock
+  # @tickets_cases — bloqueo de ticket: lo toma el agente actual si no lo tiene otro.
+  def lock
+    if @ticket.locked_by_other?(current_user)
+      render json: { error: 'locked', locked_by: ref_user_json(@ticket.locked_by), locked_at: @ticket.locked_at },
+             status: :conflict
+    else
+      @ticket.update_columns(locked_by_id: current_user.id, locked_at: Time.current)
+      render json: { case_ticket: ticket_json(@ticket) }
+    end
+  end
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/unlock
+  def unlock
+    @ticket.update_columns(locked_by_id: nil, locked_at: nil) if @ticket.locked_by_id == current_user&.id
+    head :no_content
+  end
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/reopen
+  # @tickets_cases — reabre un ticket cerrado. El permiso se comprueba aquí y no
+  # solo en la UI: ocultar un botón no es una regla.
+  def reopen
+    unless @ticket.reopenable_by?(current_user)
+      return render json: { error: reopen_denied_message }, status: :forbidden
+    end
+
+    @ticket.reopen!(actor: current_user, reason: params[:reason])
+    render json: { case_ticket: ticket_json(@ticket.reload) }
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   # PATCH /api/v1/accounts/:account_id/case_tickets/:id/escalate
@@ -428,6 +550,16 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     end
   end
 
+  # @tickets_cases P4 — parsea la fecha de vencimiento entrante.
+  # nil/'' → nil (limpia); fecha válida → Time; inválida → :invalid.
+  def parse_due_at(raw)
+    return nil if raw.blank?
+
+    Time.zone.parse(raw.to_s) || :invalid
+  rescue ArgumentError
+    :invalid
+  end
+
   # @tickets_cases 2G — datos de cierre documentado (nil si no vienen en el request).
   def closure_params
     return nil if params[:closure].blank?
@@ -443,10 +575,63 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     )
   end
 
+  # @tickets_cases — campos núcleo editables desde el modal de edición. Cada uno
+  # se aplica solo si viene en el request (edición parcial), así el modal puede
+  # convivir con las ediciones inline sin pisarlas.
+  def core_edit_params
+    params.require(:case_ticket).permit(
+      :title, :description, :case_type_id, :ticket_kind,
+      :affected_service_id, :category_id, :impact, :urgency
+    )
+  end
+
+  def apply_core_edits
+    cp = core_edit_params
+    @ticket.title = cp[:title].to_s.strip if cp.key?(:title)
+    @ticket.description = cp[:description].to_s.strip if cp.key?(:description)
+    @ticket.case_type_id = cp[:case_type_id].presence if cp.key?(:case_type_id)
+    @ticket.affected_service_id = cp[:affected_service_id].presence if cp.key?(:affected_service_id)
+    @ticket.category_id = cp[:category_id].presence if cp.key?(:category_id)
+    # impact/urgency alimentan la matriz de prioridad; se pueden limpiar (nil).
+    assign_enum(:ticket_kind, cp[:ticket_kind]) if cp.key?(:ticket_kind)
+    assign_enum(:impact, cp[:impact]) if cp.key?(:impact)
+    assign_enum(:urgency, cp[:urgency]) if cp.key?(:urgency)
+  end
+
+  # Vacío = limpiar; valor inválido → ArgumentError (lo captura #update como 422).
+  def assign_enum(attr, value)
+    return @ticket[attr] = nil if value.blank?
+
+    @ticket.public_send("#{attr}=", value)
+  end
+
   def resolve_conversation
     return nil unless ticket_params[:conversation_id].present?
 
     Current.account.conversations.find_by(id: ticket_params[:conversation_id])
+  end
+
+  # @tickets_cases — ¿el request intenta tocar un campo congelado de un ticket
+  # cerrado/cancelado? Se mira campo por campo: editar `custom_attributes` de un
+  # ticket cerrado tampoco tiene sentido, pero el bloqueo se limita a lo que la
+  # ficha ofrece para no romper integraciones que solo escriben metadata.
+  def frozen_edit_attempt?
+    return false unless @ticket.frozen_for_edit?
+
+    payload = params[:case_ticket]
+    return false unless payload.respond_to?(:key?)
+
+    FROZEN_FIELDS.any? { |field| payload.key?(field) }
+  end
+
+  def reopen_denied_message
+    return 'Solo se puede reabrir un ticket cerrado' unless @ticket.closed?
+
+    if @ticket.within_reopen_window?
+      'No tienes permiso para reabrir este ticket'
+    else
+      'Venció el plazo para reabrir este ticket; pídeselo a un administrador'
+    end
   end
 
   def ticket_json(ticket)
@@ -475,12 +660,21 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       first_response_time_target: ticket.first_response_time_target,
       resolution_time_target:     ticket.resolution_time_target,
       first_response_at:          ticket.first_response_at,
+      due_at:                     ticket.due_at,               # @tickets_cases P4 — fecha manual (nil si no se fijó)
+      effective_due_at:           ticket.effective_due_at,     # @tickets_cases P4 — manual o estimado por SLA
+      due_overdue:                ticket.due_overdue?,         # @tickets_cases P4 — para el rojo de la UI
       resolved_at:                ticket.resolved_at,
       closed_at:                  ticket.closed_at,
       closure_type:               ticket.closure_type,
       closure_cause:              ticket.closure_cause,
       closure_solution:           ticket.closure_solution,
       customer_confirmed:         ticket.customer_confirmed,
+      # @tickets_cases — la regla de reapertura la calcula el backend; el front
+      # NO la reimplementa (si se duplica, se desincronizan).
+      reopen_count:               ticket.reopen_count,
+      reopened_at:                ticket.reopened_at,
+      can_reopen:                 ticket.reopenable_by?(current_user),
+      is_frozen:                  ticket.frozen_for_edit?,
       kb_article_id:              ticket.kb_article_id,
       kb_article:                 kb_article_json(ticket.kb_article),
       metadata:                   ticket.metadata,
@@ -491,12 +685,17 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       created_at:                 ticket.created_at,
       updated_at:                 ticket.updated_at,
       contact_id:                 ticket.contact_id,
+      contact_name:               ticket.contact&.name, # @tickets_cases — nombre del contacto para la ficha
       conversation_id:            ticket.conversation_id,
+      conversation_display_id:    ticket.conversation&.display_id, # @tickets_cases U1
+
       contact_tracking_id:        ticket.contact_tracking_id,
       assignee_id:                ticket.assignee_id,
       team_id:                    ticket.team_id,
       requester_id:               ticket.requester_id,                # @tickets_cases Fase C
       requester:                  ref_user_json(ticket.requester),    # @tickets_cases Fase C
+      locked_by:                  (ref_user_json(ticket.locked_by) if ticket.lock_active?), # @tickets_cases — bloqueo
+      locked_at:                  (ticket.locked_at if ticket.lock_active?),
       is_internal:                ticket.internal?,                   # @tickets_cases Fase C
       can_transition_to:          valid_transitions_for(ticket)
     }
@@ -605,6 +804,25 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     touched
   end
 
+  # @tickets_cases P3 — asignación en lote de un ticket (agente/equipo).
+  # Acepta el centinela 'me' (= agente actual) y limpia con ''/none.
+  def bulk_assign(ticket)
+    previous_assignee_id = ticket.assignee_id
+    if params.key?(:assignee_id)
+      raw = params[:assignee_id].to_s == 'me' ? current_user.id : params[:assignee_id]
+      ticket.assignee = blank_assignment?(raw) ? nil : Current.account.users.find(raw)
+    end
+    if params.key?(:team_id)
+      ticket.team = blank_assignment?(params[:team_id]) ? nil : Current.account.teams.find(params[:team_id])
+    end
+    ticket.assignee_type = if ticket.assignee_id then :agent elsif ticket.team_id then :team else :bot end
+    ticket.save!
+    ticket.case_events.create!(account: Current.account, event_type: :assigned, origin: :agent, actor: current_user,
+                               payload: { assignee_id: ticket.assignee_id, assignee_name: ticket.assignee&.name,
+                                          team_id: ticket.team_id, team_name: ticket.team&.name })
+    notify_assignee(ticket) if ticket.assignee_id != previous_assignee_id
+  end
+
   # @tickets_cases Fase A — notifica al agente recién asignado (solo si cambió).
   def notify_new_assignee(previous_assignee_id)
     return if @ticket.assignee_id == previous_assignee_id
@@ -612,11 +830,12 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     notify_assignee(@ticket)
   end
 
-  # @tickets_cases Fase A — notificación nativa (bell) al agente asignado de un ticket.
-  # No notifica auto-asignaciones. Falla en silencio para no romper el flujo principal.
+  # @tickets_cases Fase A — notificación nativa (bell + toast) al agente asignado de
+  # un ticket. Por decisión de producto (2026-07-29) SÍ notifica auto-asignaciones
+  # (tomar un ticket también avisa). Falla en silencio para no romper el flujo.
   def notify_assignee(ticket)
     assignee = ticket.assignee
-    return if assignee.nil? || assignee.id == current_user&.id
+    return if assignee.nil?
 
     NotificationBuilder.new(
       notification_type: 'case_ticket_assignment',
@@ -717,8 +936,17 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
   # Orden configurable con whitelist (anti SQL-injection). Default created_at desc.
   def apply_sort(tickets)
-    col = SORTABLE_COLUMNS.include?(params[:sort_by]) ? params[:sort_by] : 'created_at'
     dir = params[:sort_order] == 'asc' ? 'ASC' : 'DESC'
+
+    # @tickets_cases P4 — orden por vencimiento EFECTIVO: due_at manual o, si no,
+    # el estimado por SLA (created_at + objetivo de resolución). NULLS al final.
+    if params[:sort_by] == 'due_at'
+      expr = "COALESCE(case_tickets.due_at, " \
+             "case_tickets.created_at + (case_tickets.resolution_time_target * interval '1 minute'))"
+      return tickets.reorder(Arel.sql("#{expr} #{dir} NULLS LAST"))
+    end
+
+    col = SORTABLE_COLUMNS.include?(params[:sort_by]) ? params[:sort_by] : 'created_at'
     # col y dir provienen de whitelists → seguro interpolar.
     tickets.reorder(Arel.sql("case_tickets.#{col} #{dir}"))
   end

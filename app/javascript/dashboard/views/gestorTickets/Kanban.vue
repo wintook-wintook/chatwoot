@@ -7,6 +7,8 @@
 <script>
 import { mapGetters } from 'vuex';
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
+import MessageApi from 'dashboard/api/inbox/message'; // @tickets_cases — notificar al mover
+import { toSimpleStatus } from 'dashboard/helper/caseSimpleStatus';
 
 // Filtros rápidos (pestañas) — mismo set que el listado (Index.vue).
 const QUICK_FILTERS = [
@@ -21,6 +23,27 @@ const COLUMNS = [
   { key: 'new', statuses: ['open', 'classified'] },
   { key: 'assigned', statuses: ['assigned', 'in_diagnosis'] },
   { key: 'progress', statuses: ['in_progress', 'escalated'] },
+  {
+    key: 'waiting',
+    statuses: [
+      'waiting_on_customer',
+      'waiting_on_third_party',
+      'waiting_on_internal',
+    ],
+  },
+  { key: 'resolved', statuses: ['resolved', 'validating'] },
+  { key: 'closed', statuses: ['closed', 'cancelled'] },
+];
+
+// Modo simple (osTicket): 5 columnas. "En proceso" agrupa classified/assigned/
+// in_diagnosis/in_progress/escalated (igual que SIMPLE_STATUS_MAP) → así arrastrar
+// "Nuevo" (open) a "En proceso" es válido (open → classified) y fluye el tablero.
+const SIMPLE_COLUMNS = [
+  { key: 'new', statuses: ['open'] },
+  {
+    key: 'progress',
+    statuses: ['classified', 'assigned', 'in_diagnosis', 'in_progress', 'escalated'],
+  },
   {
     key: 'waiting',
     statuses: [
@@ -53,7 +76,6 @@ export default {
   components: { CaseTicketInternalModal }, // @tickets_cases Fase C
   data() {
     return {
-      columns: COLUMNS,
       quickFilters: QUICK_FILTERS,
       quickFilter: 'mine',
       showInternalModal: false, // @tickets_cases Fase C
@@ -73,6 +95,9 @@ export default {
       moveCandidates: [],
       moveTarget: null,
       moveReason: '',
+      // notificar al cliente al mover (reusa el envío de mensajes del inbox)
+      notifyContact: false,
+      notifyMessage: '',
     };
   },
   computed: {
@@ -83,9 +108,14 @@ export default {
       services: 'caseTickets/getServices',
       agents: 'agents/getAgents',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
+      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
     }),
     isFetching() {
       return this.boardUiFlags.isFetching;
+    },
+    // Columnas del tablero: simples (5) por defecto, completas (6) en modo ITIL.
+    columns() {
+      return this.itilEnabled ? COLUMNS : SIMPLE_COLUMNS;
     },
     activeQuickTabIndex() {
       const i = QUICK_FILTERS.findIndex(f => f.key === this.quickFilter);
@@ -119,6 +149,7 @@ export default {
     this.fetch();
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('agents/get');
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
   },
   methods: {
     // @tickets_cases Fase C — tras crear un ticket interno, refresca el tablero.
@@ -222,7 +253,20 @@ export default {
       this.moveCandidates = candidates;
       this.moveTarget = candidates[0];
       this.moveReason = '';
+      // Notificar al cliente: por defecto activo si el ticket tiene conversación.
+      this.notifyContact = !!ticket.conversation_display_id;
+      this.notifyMessage = this.defaultNotifyMessage(this.moveTarget);
       this.showMoveModal = true;
+    },
+    // Plantilla de aviso por estado destino (colapsado a estado simple), con folio.
+    defaultNotifyMessage(status) {
+      const key = toSimpleStatus(status);
+      const folio = this.moveTicket?.folio || `#${this.moveTicket?.id}`;
+      const msg = this.$t(`CASE_TICKETS.KANBAN.NOTIFY_TEMPLATES.${key}`, { folio });
+      return msg.includes('NOTIFY_TEMPLATES') ? '' : msg;
+    },
+    onMoveTargetChange() {
+      this.notifyMessage = this.defaultNotifyMessage(this.moveTarget);
     },
     closeMove() {
       this.showMoveModal = false;
@@ -230,11 +274,17 @@ export default {
       this.moveCandidates = [];
       this.moveTarget = null;
       this.moveReason = '';
+      this.notifyContact = false;
+      this.notifyMessage = '';
     },
     async confirmMove() {
       const ticket = this.moveTicket;
       const status = this.moveTarget;
       const reason = this.moveReason.trim() || undefined;
+      // capturar aviso antes de cerrar (closeMove resetea el estado)
+      const notify = this.notifyContact;
+      const notifyMessage = this.notifyMessage.trim();
+      const conversationId = ticket?.conversation_display_id;
       this.showMoveModal = false;
       try {
         await this.$store.dispatch('caseTickets/transitionTicket', {
@@ -243,6 +293,9 @@ export default {
           status,
           reason,
         });
+        if (notify && notifyMessage && conversationId) {
+          await this.notifyOnMove(conversationId, notifyMessage);
+        }
         this.fetch();
       } catch (e) {
         this.$emitter.emit('newToastMessage', {
@@ -251,6 +304,20 @@ export default {
         });
       } finally {
         this.closeMove();
+      }
+    },
+    // Envía el aviso al cliente por su canal (reusa la API de mensajes del inbox).
+    async notifyOnMove(conversationId, message) {
+      try {
+        await MessageApi.create({ conversationId, message, private: false });
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.KANBAN.NOTIFY_SENT'),
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.KANBAN.NOTIFY_ERROR'),
+          type: 'error',
+        });
       }
     },
   },
@@ -469,7 +536,11 @@ export default {
             >
               {{ $t('CASE_TICKETS.KANBAN.MOVE_TARGET') }}
             </span>
-            <select v-model="moveTarget" class="input">
+            <select
+              v-model="moveTarget"
+              class="input"
+              @change="onMoveTargetChange"
+            >
               <option v-for="s in moveCandidates" :key="s" :value="s">
                 {{ statusLabel(s) }}
               </option>
@@ -493,6 +564,32 @@ export default {
               :placeholder="$t('CASE_TICKETS.KANBAN.MOVE_NOTE_PLACEHOLDER')"
             />
           </label>
+
+          <!-- @tickets_cases — avisar al cliente al mover (solo si hay conversación) -->
+          <div
+            v-if="moveTicket && moveTicket.conversation_display_id"
+            class="flex flex-col gap-2 p-3 border border-dashed rounded-lg border-slate-300 dark:border-slate-600 bg-slate-25 dark:bg-slate-800/40"
+          >
+            <label
+              class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              <input v-model="notifyContact" type="checkbox" />
+              {{ $t('CASE_TICKETS.KANBAN.NOTIFY_LABEL') }}
+            </label>
+            <textarea
+              v-if="notifyContact"
+              v-model="notifyMessage"
+              class="input !mb-0"
+              rows="3"
+              :placeholder="$t('CASE_TICKETS.KANBAN.NOTIFY_PLACEHOLDER')"
+            />
+            <span
+              v-if="notifyContact"
+              class="text-xs text-slate-400 dark:text-slate-500"
+            >
+              {{ $t('CASE_TICKETS.KANBAN.NOTIFY_HELP') }}
+            </span>
+          </div>
 
           <div class="flex justify-end gap-2 mt-2">
             <woot-button

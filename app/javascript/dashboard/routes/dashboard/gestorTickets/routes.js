@@ -15,6 +15,12 @@ export const routes = [
     component: () => import('../../../views/gestorTickets/Kanban.vue'),
   },
   {
+    path: frontendURL('accounts/:accountId/tickets/tasks'),
+    name: 'gestorTickets_tasks',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/gestorTickets/Tasks.vue'),
+  },
+  {
     path: frontendURL('accounts/:accountId/tickets/rules'),
     name: 'gestorTickets_rules',
     meta: { permissions: ['administrator'] },
@@ -55,6 +61,18 @@ export const routes = [
     name: 'gestorTickets_ai',
     meta: { permissions: ['administrator'] },
     component: () => import('../../../views/gestorTickets/AiConfig.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/tickets/portals'),
+    name: 'gestorTickets_portals',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/gestorTickets/Portals.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/tickets/settings'),
+    name: 'gestorTickets_settings',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/gestorTickets/Settings.vue'),
   },
   {
     path: frontendURL('accounts/:accountId/tickets/:id'),

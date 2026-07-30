@@ -78,6 +78,9 @@ Rails.application.routes.draw do
             end
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
+          # Sinónimos nativos (esquema legacy wintook; reemplaza al servicio WINTOOK_BOT)
+          resources :palabras_sinonimos, only: [:index, :create, :update, :destroy]
+          resources :sinonimos_semanticos, only: [:index]
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
@@ -136,6 +139,7 @@ Rails.application.routes.draw do
             collection do
               get :metrics
               get :kb_portals
+              post :bulk # @tickets_cases P3 — acciones en lote desde la cola
             end
             member do
               patch :transition
@@ -149,18 +153,29 @@ Rails.application.routes.draw do
               post :summarize # @tickets_cases 3E
               post :detect_duplicates # @tickets_cases 3D
               post :follow_up # @tickets_cases 3F
+              patch :lock   # @tickets_cases — bloqueo de ticket
+              patch :unlock # @tickets_cases — bloqueo de ticket
+              patch :reopen # @tickets_cases — reapertura de ticket cerrado
             end
             resources :case_events, only: [:index]
             # @tickets_cases 2E — relaciones entre tickets
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
+            # @tickets_cases — tareas/subtareas del ticket
+            resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks'
+            # @tickets_cases — notas internas (viven en case_events, no en tabla propia)
+            resources :case_notes, only: [:index, :create, :update, :destroy], path: 'notes'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
+          # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
+          resources :case_tasks, only: [:index], controller: 'case_tasks_index'
           resources :case_types, only: [:index, :create, :update, :destroy] do
             resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K
           end
           resources :case_services, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_categories, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_sla_policies, only: [:index, :create, :update, :destroy] # @tickets_cases 2I
+          resources :case_portals, only: [:index, :create, :update, :destroy] # @tickets_cases — User Portal
+          resource  :case_setting, only: [:show, :update] # @tickets_cases — modo simple/ITIL
           resource  :case_folio_config, only: [:show, :update], controller: 'case_folio_configs'
           resource  :case_ai_config, only: [:show, :update], controller: 'case_ai_configs' # @tickets_cases 3A
           # =========================================================================
@@ -707,6 +722,14 @@ Rails.application.routes.draw do
   get 'hc/:slug/:locale/categories/:category_slug', to: 'public/api/v1/portals/categories#show'
   get 'hc/:slug/:locale/categories/:category_slug/articles', to: 'public/api/v1/portals/articles#index'
   get 'hc/:slug/articles/:article_slug', to: 'public/api/v1/portals/articles#show'
+
+  # ----------------------------------------------------------------------
+  # @tickets_cases — User Portal (P1): superficie pública del cliente (estilo osTicket).
+  # Se resuelve por slug (/portal/:slug). HTML server-rendered.
+  get  'portal/:slug',         to: 'public/case_portal#show',   as: :case_portal
+  get  'portal/:slug/new',     to: 'public/case_portal#new',    as: :new_case_portal_ticket
+  post 'portal/:slug/tickets', to: 'public/case_portal#create', as: :case_portal_tickets
+  get  'portal/:slug/status',  to: 'public/case_portal#status', as: :case_portal_status
 
   # ----------------------------------------------------------------------
   # Used in mailer templates

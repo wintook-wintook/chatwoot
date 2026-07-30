@@ -87,6 +87,29 @@ class Cases::OrchestratorService
     ticket
   end
 
+  # @tickets_cases — User Portal (P1): ticket abierto por el cliente desde el portal.
+  # origin: web. La asignación la deciden las reglas (rutea por tipo). El folio se
+  # genera en before_create del modelo. La conversación ya viene resuelta por el caller.
+  def create_from_portal(title:, case_type_id: nil, description: nil, priority: nil, custom_attributes: {})
+    attrs = {
+      account:       @account,
+      contact:       @contact,
+      conversation:  @conversation,
+      case_type:     resolve_case_type(case_type_id),
+      origin:        :web,
+      assignee_type: :bot,
+      title:         title,
+      description:   description,
+      custom_attributes: custom_attributes || {}
+    }
+    attrs[:priority] = priority if priority.present?
+
+    ticket = CaseTicket.create!(attrs)
+    Cases::RuleEngineService.new(ticket).evaluate!
+    enqueue_ai_classification(ticket) # @tickets_cases 3B
+    ticket
+  end
+
   # @tickets_cases Fase C — ticket interno (agente→agente, sin contacto).
   # requester = agente solicitante; assignee = agente que lo atenderá (opcional).
   # No encola clasificación IA (no hay mensaje de cliente que clasificar).
@@ -119,6 +142,41 @@ class Cases::OrchestratorService
     ticket = CaseTicket.create!(attrs)
     # Asignación manual presente (agente/equipo) → las reglas no reasignan.
     Cases::RuleEngineService.new(ticket, skip_assignment: assignee.present? || team.present?).evaluate!
+    ticket
+  end
+
+  # @tickets_cases — alta desde el intake IA (directiva @crear_ticket inteligente).
+  # El ticket llega YA poblado (título/descripción/clasificación) por Cases::Ai::Intake,
+  # así que NO se encola la clasificación async (evita una llamada extra y no pisa
+  # lo que el intake ya decidió). `force_priority` hace que la prioridad dada gane
+  # sobre la matriz ITIL (directiva o ajuste por riesgo). El ruteo por reglas lo
+  # dispara el caller (TicketCreatorService), igual que en el flujo automático.
+  def create_from_ai(message:, tracking: nil, title:, description: nil, priority: nil,
+                     case_type_id: nil, ticket_kind: nil, impact: nil, urgency: nil,
+                     affected_service_id: nil, category_id: nil,
+                     custom_attributes: {}, force_priority: false)
+    attrs = {
+      account:           @account,
+      contact:           @contact,
+      conversation:      @conversation,
+      contact_tracking:  tracking,
+      case_type:         resolve_case_type(case_type_id),
+      origin:            infer_origin(message),
+      assignee_type:     :bot,
+      title:             title.to_s.strip.presence || title_from_message(message),
+      description:       description,
+      custom_attributes: custom_attributes || {}
+    }
+    attrs[:priority]    = priority    if priority.present?
+    attrs[:ticket_kind] = ticket_kind if ticket_kind.present?
+    attrs[:impact]      = impact      if impact.present?
+    attrs[:urgency]     = urgency     if urgency.present?
+    attrs[:affected_service_id] = @account.case_services.where(id: affected_service_id).pick(:id) if affected_service_id.present?
+    attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id)        if category_id.present?
+
+    ticket = CaseTicket.new(attrs)
+    ticket.skip_priority_derivation = true if force_priority && priority.present?
+    ticket.save!
     ticket
   end
 

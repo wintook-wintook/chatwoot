@@ -167,7 +167,17 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def try_kbase_then_conversational(tracking, message, route_result = nil)
-    if kbase_available?(message, tracking)
+    # proyecto@bot_seguimiento_calendar — si el clasificador YA resolvió una acción de
+    # cita, el calendario gana sobre la KBase: "¿hay disponibilidad para mañana?" no es
+    # una consulta técnica. Sin llamada extra al LLM: se reusa el route_result.
+    if route_result&.dig(:appointment_action).present? && appointment_dispatchable?(tracking)
+      Rails.logger.info "[TrackingBot] 📅 Acción de cita ya clasificada (#{route_result[:appointment_action]}) → " \
+                        'calendario antes que KBase'
+      dispatch_appointment_action(tracking, message, route_result)
+      return true
+    end
+
+    if kbase_available?(message, tracking) && !case_intake_pending?(message)
       Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
       kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
       if kbase_replied
@@ -175,6 +185,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         return true
       end
       Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → intentando @crear_ticket'
+    end
+
+    # @tickets_cases: @estado_ticket — el cliente pregunta por su caso ("¿cuál es
+    # mi ticket?"). Va ANTES de @crear_ticket: consultar un caso no abre uno nuevo.
+    if Cases::TicketStatusService.new(message, tracking: tracking).answer_if_status_query
+      Rails.logger.info '[TrackingBot] 🔎 Estado de ticket respondido via @estado_ticket'
+      return true
     end
 
     # @tickets_cases: si la directiva @crear_ticket está en el prompt, crea ticket y confirma
@@ -186,7 +203,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # proyecto@bot_seguimiento_calendar — @agendar_calendar (appointment-aware): el clasificador
     # ve el ESTADO DE LA CITA y decide la acción concreta (consultar/agendar/mover/cancelar). No
     # es "eager": appointment_action es null salvo que el cliente realmente hable de una cita.
-    if agendar_calendar_directive?(tracking) && calendar_configured?(tracking)
+    if appointment_dispatchable?(tracking)
       appt = classify_appointment(tracking, message, route_result)
       if appt && appt[:appointment_action]
         Rails.logger.info "[TrackingBot] 📅 @agendar_calendar → acción de cita: #{appt[:appointment_action]}"
@@ -196,6 +213,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     generate_and_send_conversational_reply(tracking, message)
+  end
+
+  def appointment_dispatchable?(tracking)
+    agendar_calendar_directive?(tracking) && calendar_configured?(tracking)
+  end
+
+  # @tickets_cases — mientras @crear_ticket está pidiendo los campos obligatorios, el
+  # mensaje del cliente ES el dato pedido ("de Guadalajara a Vallarta"), no una consulta.
+  # Sin este guard la KBase hace match con ese vocabulario y se come la respuesta, y la
+  # recolección nunca termina.
+  def case_intake_pending?(message)
+    pending = Cases::TicketCreatorService.intake_pending?(message.conversation_id)
+    Rails.logger.info '[TrackingBot] ⏸️ Recolección de campos en curso → KBase omitida' if pending
+    pending
   end
 
   # proyecto@bot_seguimiento_calendar — clasificación appointment-aware. Si DETECT_INTENT está

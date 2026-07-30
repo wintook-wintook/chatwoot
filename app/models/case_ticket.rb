@@ -13,6 +13,7 @@
 #  custom_attributes          :jsonb            not null
 #  customer_confirmed         :boolean          default(FALSE), not null
 #  description                :text
+#  due_at                     :datetime
 #  escalation_level           :integer          default(0), not null
 #  first_response_at          :datetime
 #  first_response_time_target :integer
@@ -22,6 +23,8 @@
 #  metadata                   :jsonb            not null
 #  origin                     :integer          default("whatsapp"), not null
 #  priority                   :integer          default("medium"), not null
+#  reopen_count               :integer          default(0), not null
+#  reopened_at                :datetime
 #  resolution_time_target     :integer
 #  resolved_at                :datetime
 #  sla_paused_minutes         :integer          default(0), not null
@@ -51,11 +54,15 @@
 #  index_case_tickets_on_account_and_folio            (account_id,folio) UNIQUE WHERE (folio IS NOT NULL)
 #  index_case_tickets_on_account_id_and_case_type_id  (account_id,case_type_id)
 #  index_case_tickets_on_account_id_and_contact_id    (account_id,contact_id)
+#  index_case_tickets_on_account_id_and_due_at        (account_id,due_at)
 #  index_case_tickets_on_account_id_and_sla_status    (account_id,sla_status)
 #  index_case_tickets_on_account_id_and_status        (account_id,status)
 #  index_case_tickets_on_account_id_and_ticket_kind   (account_id,ticket_kind)
 #  index_case_tickets_on_affected_service_id          (affected_service_id)
 #  index_case_tickets_on_category_id                  (category_id)
+#  index_case_tickets_on_contact_id                   (contact_id)
+#  index_case_tickets_on_contact_tracking_id          (contact_tracking_id)
+#  index_case_tickets_on_conversation_id              (conversation_id)
 #  index_case_tickets_on_kb_article_id                (kb_article_id)
 #  index_case_tickets_on_locked_by_id                 (locked_by_id)
 #  index_case_tickets_on_metadata                     (metadata) USING gin
@@ -63,6 +70,9 @@
 #
 # Foreign Keys
 #
+#  fk_rails_...  (contact_id => contacts.id) ON DELETE => nullify
+#  fk_rails_...  (contact_tracking_id => contact_trackings.id) ON DELETE => nullify
+#  fk_rails_...  (conversation_id => conversations.id) ON DELETE => nullify
 #  fk_rails_...  (locked_by_id => users.id)
 #  fk_rails_...  (requester_id => users.id)
 #
@@ -82,7 +92,9 @@ class CaseTicket < ApplicationRecord
     'escalated'              => %w[in_progress in_diagnosis cancelled],
     'resolved'               => %w[validating closed in_progress],
     'validating'             => %w[closed in_progress cancelled],
-    'closed'                 => [],
+    # @tickets_cases — cerrado solo puede REABRIRSE (a in_progress). No se salta
+    # a resolved ni a ningún otro estado: reabrir es volver a trabajarlo.
+    'closed'                 => %w[in_progress],
     'cancelled'              => []
   }.freeze
 
@@ -95,6 +107,19 @@ class CaseTicket < ApplicationRecord
 
   # @tickets_cases 2D — escalation_level: 0 = N1, 1 = N2, 2 = N3.
   MAX_ESCALATION_LEVEL = 2
+
+  # @tickets_cases — el bloqueo de ticket expira solo tras este tiempo de inactividad.
+  LOCK_TTL = 3.minutes
+
+  # ¿Hay un bloqueo vigente (no expirado)?
+  def lock_active?
+    locked_by_id.present? && locked_at.present? && locked_at > LOCK_TTL.ago
+  end
+
+  # ¿Lo tiene bloqueado OTRO agente (no este)?
+  def locked_by_other?(user)
+    lock_active? && locked_by_id != user&.id
+  end
 
   # @tickets_cases 2I — estados en los que el reloj de SLA se pausa.
   WAITING_STATUSES = %w[waiting_on_customer waiting_on_third_party waiting_on_internal].freeze
@@ -111,12 +136,14 @@ class CaseTicket < ApplicationRecord
   belongs_to :conversation,      optional: true
   belongs_to :contact_tracking,  optional: true
   belongs_to :assignee,          class_name: 'User', optional: true
+  belongs_to :locked_by,         class_name: 'User', optional: true # @tickets_cases — bloqueo de ticket
   belongs_to :team,              optional: true
   belongs_to :case_type,         optional: true # @tickets_cases: tipo configurable por cuenta
   belongs_to :affected_service,  class_name: 'CaseService',  optional: true # @tickets_cases 2B
   belongs_to :category,          class_name: 'CaseCategory', optional: true # @tickets_cases 2B
   belongs_to :kb_article,        class_name: 'Article', optional: true # @tickets_cases 2H
   has_many   :case_events,       dependent: :destroy
+  has_many   :case_tasks,        dependent: :destroy # @tickets_cases — tareas/subtareas
   # @tickets_cases 2E — relaciones dirigidas (este ticket como origen y como destino).
   has_many   :ticket_relations,        class_name: 'CaseTicketRelation', foreign_key: :ticket_id,         dependent: :destroy, inverse_of: :ticket
   has_many   :inverse_ticket_relations, class_name: 'CaseTicketRelation', foreign_key: :related_ticket_id, dependent: :destroy, inverse_of: :related_ticket
@@ -145,10 +172,17 @@ class CaseTicket < ApplicationRecord
   validates :assignee_type, presence: true
   validates :sla_status,    presence: true
   # @tickets_cases Fase C — externo lleva contacto; interno lleva solicitante.
-  validate :contact_or_requester_present
+  # Solo en creación: si más tarde se borra el contacto (contact_id → NULL por
+  # dependent: :nullify), el ticket histórico debe seguir siendo editable/cerrable.
+  validate :contact_or_requester_present, on: :create
 
   # @tickets_cases Fase C — tickets internos (origin: internal, sin contacto).
   scope :internal, -> { where(origin: :internal) }
+
+  # @tickets_cases — cuando una prioridad viene FORZADA (directiva @crear_ticket
+  # o ajuste por riesgo del intake IA), no dejar que la matriz ITIL la pise
+  # aunque haya impacto+urgencia. No persiste; es una bandera del alta.
+  attr_accessor :skip_priority_derivation
 
   before_validation :derive_priority_from_matrix # @tickets_cases 2B
   before_create :assign_sla_targets
@@ -206,6 +240,61 @@ class CaseTicket < ApplicationRecord
       actor:      actor,
       payload:    payload.compact
     )
+  end
+
+  # @tickets_cases — Reapertura de un ticket cerrado (osTicket "Reopen").
+  # El motivo es OBLIGATORIO: reabrir es revertir una decisión y tiene que
+  # quedar por qué. `transition!` ya guarda el motivo en payload[:reason] y el
+  # Recorrido lo pinta como "Motivo", así que aquí solo se valida y se limpian
+  # los rastros del cierre.
+  #
+  # El SLA arranca de cero: reanudar el reloj viejo haría nacer el ticket
+  # vencido y ensuciaría el cumplimiento del período.
+  def reopen!(actor: nil, reason: nil)
+    raise 'Solo se puede reabrir un ticket cerrado' unless closed?
+    raise 'El motivo de reapertura es obligatorio' if reason.blank?
+
+    update!(
+      closed_at:          nil,
+      closure_type:       nil,
+      closure_cause:      nil,
+      closure_solution:   nil,
+      customer_confirmed: false,
+      resolved_at:        nil,
+      reopened_at:        Time.current,
+      reopen_count:       reopen_count + 1,
+      sla_status:         :on_time,
+      sla_paused_minutes: 0,
+      sla_paused_since:   nil,
+      first_response_at:  nil
+    )
+
+    # Deja el evento `reopened` (el enum ya lo reservaba desde el diseño).
+    transition!('in_progress', actor: actor, reason: reason)
+  end
+
+  # @tickets_cases — Un ticket cerrado o cancelado se congela: no se le cambian
+  # prioridad, vencimiento, tipo ni asignación. Las notas internas SÍ se
+  # permiten siempre (son bitácora, no edición) y por eso no pasan por aquí.
+  def frozen_for_edit?
+    closed? || cancelled?
+  end
+
+  # Puede reabrir el admin siempre; el asignado solo dentro de la ventana.
+  def reopenable_by?(user)
+    return false unless closed?
+    return false if user.blank?
+    return true if user.administrator?
+
+    assignee_id == user.id && within_reopen_window?
+  end
+
+  def within_reopen_window?
+    days = CaseSetting.for_account(account).reopen_window_days.to_i
+    return true if days.zero? # 0 = sin límite
+    return true if closed_at.blank?
+
+    closed_at >= days.days.ago
   end
 
   # @tickets_cases 2D — Escalamiento funcional: sube el nivel (N1→N2→N3), reasigna a
@@ -281,6 +370,30 @@ class CaseTicket < ApplicationRecord
     self
   end
 
+  # @tickets_cases — bitácora: nota interna del agente en el timeline.
+  # NUNCA sale al cliente (vive en case_events, que el User Portal no expone).
+  # La clave `content` del payload es la que ya esperan Cases::Ai::Summarizer y
+  # payloadSummary() en JourneyView.vue — no renombrarla.
+  def add_internal_note!(content:, actor: nil)
+    raise 'La nota no puede estar vacía' if content.blank?
+
+    case_events.create!(
+      account:    account,
+      event_type: :internal_note,
+      origin:     actor ? :agent : :system,
+      actor:      actor,
+      # @tickets_cases — consecutivo estable por ticket (N001, N002…): se guarda
+      # en el payload al crear y no se recicla al borrar.
+      payload:    { content: content.to_s.strip, sequence: next_note_sequence }
+    )
+  end
+
+  # Siguiente consecutivo de nota interna para este ticket.
+  def next_note_sequence
+    case_events.where(event_type: :internal_note)
+               .maximum(Arel.sql("(payload->>'sequence')::int")).to_i + 1
+  end
+
   # Incidentes vinculados a este problema (relación incident_problem: incidente → problema).
   def related_incidents
     incident_ids = CaseTicketRelation
@@ -317,6 +430,22 @@ class CaseTicket < ApplicationRecord
     return @sla_policy if defined?(@sla_policy)
 
     @sla_policy = CaseSlaPolicy.resolve_for(self)
+  end
+
+  # @tickets_cases P4 — vencimiento estilo osTicket. `due_at` manual pisa al
+  # estimado por el SLA (created_at + objetivo de resolución + pausas acumuladas).
+  # Devuelve nil si no hay fecha manual ni objetivo de resolución.
+  def effective_due_at
+    return due_at if due_at.present?
+    return nil if resolution_time_target.nil? || created_at.nil?
+
+    created_at + (resolution_time_target + sla_paused_minutes).minutes
+  end
+
+  # ¿Vencido por su fecha límite y todavía abierto? (para el rojo de la UI)
+  def due_overdue?
+    date = effective_due_at
+    date.present? && date.past? && !resolved? && !closed? && !cancelled?
   end
 
   def calculate_sla_status
@@ -374,6 +503,8 @@ class CaseTicket < ApplicationRecord
   # @tickets_cases 2B — si hay impacto y urgencia, la prioridad se deriva de la matriz ITIL.
   # Si no, se respeta la prioridad fijada manualmente (comportamiento original).
   def derive_priority_from_matrix
+    return if skip_priority_derivation
+
     derived = Cases::PriorityMatrix.derive(impact, urgency)
     self.priority = derived if derived.present?
   end
@@ -429,7 +560,7 @@ class CaseTicket < ApplicationRecord
     when 'resolved'     then :resolved
     when 'validating'   then :validating
     when 'closed'       then :closed
-    when 'in_progress'  then %w[resolved validating].include?(old_status.to_s) ? :reopened : :status_changed
+    when 'in_progress'  then %w[resolved validating closed].include?(old_status.to_s) ? :reopened : :status_changed
     else :status_changed
     end
   end

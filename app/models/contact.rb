@@ -56,6 +56,8 @@ class Contact < ApplicationRecord
   # proyecto@contact_tracking
   # ================================================================================
   has_many :contact_trackings, dependent: :destroy
+  # @tickets_cases — al borrar el contacto, conserva el ticket como histórico (contact_id → NULL).
+  has_many :case_tickets, dependent: :nullify
   # ================================================================================
   # ================================================================================
   # proyecto@commands_agents

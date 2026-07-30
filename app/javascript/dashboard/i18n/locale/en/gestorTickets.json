@@ -16,6 +16,7 @@
       "GROUP_SLA": "SLA",
       "GROUP_TIMES": "Handling times",
       "GROUP_ITIL": "ITIL & quality",
+      "GROUP_QUALITY": "Quality",
       "TOTAL_PERIOD": "Tickets in period",
       "TOTAL_OPEN": "Active tickets",
       "SLA_OVERDUE": "SLA overdue",
@@ -55,6 +56,18 @@
       "MOVE_TO": "Move to:",
       "MOVE_NOTE": "Note (what you did)",
       "MOVE_NOTE_PLACEHOLDER": "Optional: describe the action taken",
+      "NOTIFY_LABEL": "Notify the customer on their channel",
+      "NOTIFY_PLACEHOLDER": "Message the customer will receive",
+      "NOTIFY_HELP": "Sent through the ticket's channel (WhatsApp, email, etc.) when moving.",
+      "NOTIFY_SENT": "Notification sent to the customer",
+      "NOTIFY_ERROR": "The ticket was moved, but the notification could not be sent.",
+      "NOTIFY_TEMPLATES": {
+        "in_progress": "Hi, your request {folio} is now being handled. We'll keep you posted.",
+        "waiting_on_customer": "Hi, regarding your request {folio} we need some extra info to continue. Can you help?",
+        "resolved": "Good news! Your request {folio} has been resolved. If you need anything else, reply here.",
+        "closed": "Your request {folio} has been closed. Thanks for reaching out.",
+        "cancelled": "Your request {folio} has been cancelled. If this was a mistake, reply here."
+      },
       "CANCEL": "Cancel",
       "CONFIRM": "Move",
       "COLUMNS": {
@@ -112,8 +125,104 @@
     "SLA_OVERDUE": "SLA overdue",
     "DETAIL_TABS": {
       "SUMMARY": "Summary",
+      "CONVERSATION": "Conversation",
+      "NOTES": "Notes",
+      "TASKS": "Tasks",
       "JOURNEY": "Progress",
       "AI": "AI assistant"
+    },
+    "CONVERSATION": {
+      "SUBTITLE": "Thread with the customer",
+      "OPEN_FULL": "Go to conversation",
+      "LOADING": "Loading messages...",
+      "EMPTY": "No messages in this conversation yet.",
+      "PRIVATE": "Internal note",
+      "SYSTEM": "System",
+      "REPLY_PLACEHOLDER": "Write a reply to the customer...",
+      "NOTE_PLACEHOLDER": "Write an internal note (not visible to the customer)...",
+      "PRIVATE_TOGGLE": "Private note",
+      "CANNED": "Canned",
+      "SEND": "Reply",
+      "ADD_NOTE": "Add note",
+      "LOAD_ERROR": "Could not load messages.",
+      "SEND_ERROR": "Could not send the message."
+    },
+    "LOCK": {
+      "BANNER": "{name} is currently working on this ticket."
+    },
+    "CLAIM": {
+      "BUTTON": "Claim"
+    },
+    "STATUS_QUICK": {
+      "LABEL": "Change status",
+      "REASON_TITLE": "Change to “{status}”",
+      "REASON_LABEL": "Reason (optional)",
+      "REASON_PLACEHOLDER": "Why is the status changing? It shows in the Journey.",
+      "REASON_CONFIRM": "Change status",
+      "REASON_CANCEL": "Cancel"
+    },
+    "PRIORITY_QUICK": {
+      "LABEL": "Priority",
+      "SUCCESS": "Priority updated",
+      "ERROR": "Could not change priority"
+    },
+    "DUE_QUICK": {
+      "LABEL": "Due",
+      "NONE": "No date",
+      "SAVE": "Save",
+      "CLEAR": "Clear date",
+      "HINT": "If you don't set a date, the SLA estimate is used.",
+      "SUCCESS": "Due date updated",
+      "ERROR": "Could not change due date"
+    },
+    "TABLE": {
+      "FOLIO": "Ref",
+      "SUBJECT": "Subject",
+      "CONTACT_SUBJECT": "Contact / Subject",
+      "ASSIGNEE": "Assignee",
+      "PRIORITY": "Priority",
+      "STATUS": "Status",
+      "DUE": "Due",
+      "CREATED": "Created"
+    },
+    "BULK": {
+      "SELECTED": "{n} selected",
+      "ASSIGN": "Assign to",
+      "CLOSE": "Close",
+      "CLEAR": "Clear selection",
+      "SUCCESS": "{n} tickets updated",
+      "ERROR": "Could not apply the action"
+    },
+    "TASKS": {
+      "TITLE": "Tasks",
+      "LOADING": "Loading tasks...",
+      "EMPTY": "No tasks yet. Add steps to resolve this ticket.",
+      "UNASSIGNED": "Unassigned",
+      "ADD_PLACEHOLDER": "New task...",
+      "ADD": "New task",
+      "EDIT": "Edit",
+      "DELETE": "Delete",
+      "VIEW": "View task",
+      "TOGGLE": "Mark as completed",
+      "TABLE": {
+        "TASK": "Task",
+        "ASSIGNEE": "Assignee",
+        "DUE": "Due",
+        "COMPLETED": "Completed"
+      },
+      "MODAL": {
+        "NEW_TITLE": "New task",
+        "EDIT_TITLE": "Edit task",
+        "VIEW_TITLE": "View task",
+        "TITLE_LABEL": "Title",
+        "DESCRIPTION_LABEL": "Description (optional)",
+        "DESCRIPTION_PLACEHOLDER": "Details of what needs to be done...",
+        "ASSIGNEE_LABEL": "Assignee",
+        "DUE_LABEL": "Due",
+        "SAVE": "Save",
+        "CANCEL": "Cancel",
+        "CLOSE": "Close"
+      }
     },
     "MODAL": {
       "TITLE_CREATE": "Create ticket",
@@ -154,6 +263,13 @@
       "SUCCESS": "Assignment updated",
       "ERROR": "Could not update the assignment"
     },
+    "EDIT": {
+      "BUTTON": "Edit",
+      "TITLE": "Edit ticket",
+      "SUBMIT": "Save changes",
+      "SUCCESS": "Ticket updated",
+      "ERROR": "Could not update the ticket"
+    },
     "INTERNAL": {
       "TITLE": "Create internal ticket",
       "NEW_BUTTON": "Internal ticket",
@@ -164,6 +280,7 @@
       "SUCCESS": "Internal ticket created",
       "ERROR": "Could not create the internal ticket",
       "BADGE": "Internal",
+      "NO_CONTACT": "No contact",
       "REQUESTER_LABEL": "Requester",
       "CUSTOM_FIELDS": "Custom fields"
     },
@@ -293,6 +410,47 @@
         "rejected": "Rejected"
       }
     },
+    "REOPEN": {
+      "BUTTON": "Reopen",
+      "MODAL_TITLE": "Reopen ticket",
+      "REASON_LABEL": "Reason for reopening",
+      "REASON_PLACEHOLDER": "Why is it being reopened? E.g. the customer reports it failed again.",
+      "HINT": "Recorded in the Journey. The SLA clock restarts from zero.",
+      "CONFIRM": "Reopen ticket",
+      "CANCEL": "Cancel",
+      "SUCCESS": "Ticket reopened",
+      "ERROR": "Could not reopen the ticket",
+      "FROZEN_HINT": "Ticket closed: reopen it to edit."
+    },
+    "NOTES": {
+      "ADD": "Note",
+      "MODAL_TITLE": "New internal note",
+      "CONTENT_LABEL": "Note",
+      "PLACEHOLDER": "What did you do, or what is missing? E.g. called the customer, no answer…",
+      "HINT": "Visible to agents only. The customer will not see it.",
+      "SAVE": "Save note",
+      "CANCEL": "Cancel",
+      "SUCCESS": "Note added",
+      "ERROR": "Could not add the note",
+      "ADD_NEW": "New note",
+      "TITLE": "Internal notes",
+      "LOADING": "Loading notes...",
+      "EMPTY": "No notes yet. Keep a record of what you do on this ticket.",
+      "MODAL_EDIT_TITLE": "Edit internal note",
+      "MODAL_VIEW_TITLE": "View internal note",
+      "VIEW": "View note",
+      "POST_CLOSURE": "post-close",
+      "POST_CLOSURE_HINT": "Written after the ticket was closed.",
+      "CLOSE": "Close",
+      "EDIT": "Edit",
+      "DELETE": "Delete",
+      "EDITED": "Edited on {date} by {name}",
+      "TABLE": {
+        "NOTE": "Note",
+        "AUTHOR": "Author",
+        "DATE": "Date"
+      }
+    },
     "RELATIONS": {
       "TITLE": "Related tickets",
       "ADD": "+ Link ticket",
@@ -336,6 +494,8 @@
       "CURRENT": "Current",
       "CREATED": "Created",
       "CURRENTLY": "Currently",
+      "RETURNED": "Returned",
+      "REASON": "Reason",
       "VIEWS": {
         "diagram": "Journey",
         "timeline": "History",
@@ -400,6 +560,7 @@
         "COPY_BTN": "Copy",
         "COPIED_BTN": "Copied",
         "COPIED": "Reply copied to clipboard",
+        "USE_IN_CONVERSATION": "Use in conversation",
         "ERROR": "Could not generate the reply"
       },
       "SUMMARY": {
@@ -446,9 +607,82 @@
       "COLOR_LABEL": "Color",
       "PREFIX_LABEL": "Folio prefix",
       "PREFIX_HELP": "Used in the folio via the {PREFIX} token. Leave empty to auto-generate.",
+      "PUBLIC_LABEL": "Visible on the customer portal",
+      "PUBLIC_HELP": "If enabled, this type appears as an option in the public portal form.",
+      "PUBLIC_ON": "Public",
+      "PUBLIC_OFF": "Private",
       "DELETE": {
         "TITLE": "Delete case type",
         "MESSAGE": "Tickets with this type will be left untyped. Delete",
+        "YES": "Delete",
+        "NO": "Cancel"
+      }
+    },
+    "SETTINGS": {
+      "TITLE": "Module settings",
+      "BACK": "Back",
+      "LOADING": "Loading settings...",
+      "HELP": "Choose how the ticket manager behaves. Simple mode resembles osTicket; ITIL mode enables advanced management.",
+      "MODE_SIMPLE": "Simple mode (osTicket)",
+      "MODE_SIMPLE_DESC": "Streamlined experience: basic statuses and direct priority. Hides advanced ITIL fields.",
+      "MODE_ITIL": "ITIL mode (advanced)",
+      "MODE_ITIL_DESC": "Enables full ITIL statuses, Impact×Urgency matrix, ticket nature, problem/change and approvals.",
+      "NOTE_DATA": "No data is deleted or changed: the mode only affects what is shown.",
+      "NOTE_REVERSIBLE": "You can switch modes anytime.",
+            "REOPEN": {
+        "SECTION": "Reopening closed tickets",
+        "WINDOW_TITLE": "Reopen window",
+        "WINDOW_DESC": "Days after closing during which the assigned agent can reopen. After that, only an administrator. Use 0 for no limit.",
+        "DAYS": "days",
+        "SAVE": "Save",
+        "ON_REPLY_TITLE": "Reopen on customer reply",
+        "ON_REPLY_DESC": "If the customer writes on their channel about a closed ticket, it reopens automatically (or a follow-up ticket is created if the window expired).",
+        "NOTE_WINDOW": "An administrator can always reopen, even after the window expired.",
+        "NOTE_SLA": "On reopening, the SLA clock restarts from zero."
+      },
+"SAVED": "Settings saved",
+      "SAVE_ERROR": "Could not save settings."
+    },
+    "PORTALS": {
+      "TITLE": "Customer portals",
+      "HELP": "Create public portals (osTicket-style) where your customers open and track tickets without signing in.",
+      "BACK": "Back",
+      "LOADING": "Loading portals...",
+      "EMPTY": "No portals yet. Create the first one to give your customers a support page.",
+      "CREATE_BUTTON": "+ New portal",
+      "CREATE_TITLE": "Create portal",
+      "EDIT_TITLE": "Edit portal",
+      "NAME_LABEL": "Name",
+      "NAME_PLACEHOLDER": "e.g. Kontrolya Support",
+      "SLUG_LABEL": "Slug (URL)",
+      "SLUG_PLACEHOLDER": "kontrolya",
+      "SLUG_HELP": "Defines the URL: /portal/<slug>. Leave empty to generate from the name.",
+      "LOCALE_LABEL": "Language",
+      "INBOX_LABEL": "Destination channel",
+      "INBOX_DEFAULT": "Default (API · created automatically)",
+      "INBOX_HELP": "Where conversations are created and where the folio acknowledgment is sent. Only channels that can start a conversation: API, Email or WhatsApp (with template).",
+      "DESTINATION": "Destination",
+      "WA_TEMPLATE_TITLE": "Acknowledgment template (WhatsApp)",
+      "WA_TEMPLATE_NAME": "Approved template name",
+      "WA_TEMPLATE_PLACEHOLDER": "e.g. ticket_created",
+      "WA_TEMPLATE_LANG": "Template language",
+      "WA_TEMPLATE_HELP": "WhatsApp requires a Meta-approved template for the acknowledgment (24h rule). The folio is sent as parameter {{1}}.",
+      "INTRO_LABEL": "Welcome text",
+      "INTRO_PLACEHOLDER": "Optional message below the portal title.",
+      "ENABLED_LABEL": "Portal active",
+      "DISABLED": "Inactive",
+      "TYPES_COUNT": "{count} public type(s)",
+      "NO_PUBLIC_TYPES": "No case type is marked public: the portal form will be empty.",
+      "GO_TO_TYPES": "Configure types",
+      "COPY": "Copy",
+      "COPIED": "Link copied to clipboard",
+      "SAVE": "Save",
+      "CREATE": "Create",
+      "CANCEL": "Cancel",
+      "SAVE_ERROR": "Could not save the portal.",
+      "DELETE": {
+        "TITLE": "Delete portal",
+        "MESSAGE": "Customers will no longer be able to access this page. Delete",
         "YES": "Delete",
         "NO": "Cancel"
       }
@@ -607,7 +841,9 @@
       "sla_at_risk": "SLA at risk",
       "sla_overdue": "SLA overdue",
       "error_detected": "Error detected",
-      "internal_note": "Internal note"
+      "internal_note": "Internal note",
+      "priority_changed": "Priority changed",
+      "due_date_changed": "Due date changed"
     }
   }
 }

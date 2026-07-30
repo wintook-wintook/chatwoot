@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es" class="">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Abrir solicitud — Soporte Kontrolya</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+    function toggleDark() { document.documentElement.classList.toggle('dark'); }
+    // Campos personalizados (2K) por tipo (help topic)
+    const CUSTOM = {
+      support:        ['custom-equipo', 'custom-modulo'],
+      implementation: ['custom-fecha'],
+      commercial:     []
+    };
+    function onTypeChange(v) {
+      document.querySelectorAll('[data-custom]').forEach(el => el.classList.add('hidden'));
+      (CUSTOM[v] || []).forEach(id => document.getElementById(id)?.classList.remove('hidden'));
+      document.getElementById('custom-wrap').classList.toggle('hidden', !(CUSTOM[v]||[]).length);
+    }
+    function submitForm(e) {
+      e.preventDefault();
+      document.getElementById('success').classList.remove('hidden');
+    }
+  </script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col">
+
+  <div class="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 text-xs text-center py-1">
+    BOCETO · Abrir solicitud · datos de ejemplo
+  </div>
+
+  <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+    <div class="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">K</div>
+        <div class="font-semibold">Soporte Kontrolya</div>
+      </a>
+      <div class="flex items-center gap-2 text-sm">
+        <a href="status.html" class="px-3 py-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700">Consultar estado</a>
+        <button onclick="toggleDark()" class="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700">🌓</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1">
+    <div class="max-w-3xl mx-auto px-4 py-8">
+      <nav class="text-sm text-slate-400 mb-4"><a href="index.html" class="hover:text-indigo-500">Inicio</a> › Abrir solicitud</nav>
+      <h1 class="text-2xl font-bold mb-1">Abrir una solicitud</h1>
+      <p class="text-slate-500 dark:text-slate-400 mb-6">Cuéntanos qué necesitas. Te daremos un número de folio para dar seguimiento.</p>
+
+      <form onsubmit="submitForm(event)" class="space-y-6">
+
+        <!-- Datos de contacto -->
+        <fieldset class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
+          <legend class="px-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Tus datos</legend>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-1">Nombre <span class="text-rose-500">*</span></label>
+              <input required class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="María Gómez" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Correo electrónico</label>
+              <input type="email" class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="maria@empresa.com" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium mb-1">WhatsApp / teléfono</label>
+              <input class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="+57 300 123 4567" />
+              <p class="text-xs text-slate-400 mt-1">Indica al menos un correo o un WhatsApp para poder avisarte.</p>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Detalle de la solicitud -->
+        <fieldset class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
+          <legend class="px-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Tu solicitud</legend>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-1">Tipo de solicitud <span class="text-rose-500">*</span></label>
+              <select required onchange="onTypeChange(this.value)" class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="" disabled selected>Selecciona un tipo…</option>
+                <option value="support">Soporte técnico</option>
+                <option value="commercial">Consulta comercial</option>
+                <option value="implementation">Implementación</option>
+              </select>
+              <p class="text-xs text-slate-400 mt-1">Solo se muestran los tipos públicos configurados por la cuenta.</p>
+            </div>
+
+            <!-- Campos personalizados (2K) según el tipo -->
+            <div id="custom-wrap" class="hidden rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-dashed border-slate-300 dark:border-slate-600 p-4 space-y-4">
+              <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Información adicional del tipo</p>
+              <div id="custom-equipo" data-custom class="hidden">
+                <label class="block text-sm font-medium mb-1">Equipo / dispositivo</label>
+                <input class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Laptop Dell, Servidor, etc." />
+              </div>
+              <div id="custom-modulo" data-custom class="hidden">
+                <label class="block text-sm font-medium mb-1">Módulo afectado</label>
+                <select class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option>Facturación</option><option>Inventario</option><option>Reportes</option>
+                </select>
+              </div>
+              <div id="custom-fecha" data-custom class="hidden">
+                <label class="block text-sm font-medium mb-1">Fecha deseada de implementación</label>
+                <input type="date" class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-1">Asunto <span class="text-rose-500">*</span></label>
+              <input required class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Resumen breve del problema" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Mensaje <span class="text-rose-500">*</span></label>
+              <textarea required rows="5" class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Describe con detalle lo que ocurre…"></textarea>
+            </div>
+
+            <!-- Adjuntos -->
+            <div>
+              <label class="block text-sm font-medium mb-1">Adjuntos</label>
+              <div class="rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 px-4 py-6 text-center text-sm text-slate-400">
+                📎 Arrastra archivos o <span class="text-indigo-500 underline cursor-pointer">selecciona</span>
+                <div class="text-xs mt-1">Máx. 10 MB · jpg, png, pdf, docx</div>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="flex items-center justify-between">
+          <a href="index.html" class="text-sm text-slate-500 hover:text-indigo-500">← Cancelar</a>
+          <button type="submit" class="px-6 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium">Enviar solicitud</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <!-- Confirmación con folio (acuse) -->
+  <div id="success" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-8 text-center">
+      <div class="w-14 h-14 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 flex items-center justify-center text-3xl mb-4">✓</div>
+      <h2 class="text-xl font-bold mb-2">¡Solicitud registrada!</h2>
+      <p class="text-slate-500 dark:text-slate-400 mb-4">Tu ticket quedó registrado con el folio:</p>
+      <div class="text-2xl font-mono font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg py-3 mb-4">SOP-00123</div>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Te avisaremos por tu canal (correo / WhatsApp). Guarda el folio para consultar el estado cuando quieras.</p>
+      <div class="flex gap-3">
+        <a href="status.html" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">Ver estado</a>
+        <a href="index.html" class="flex-1 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">Listo</a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="border-t border-slate-200 dark:border-slate-700 py-6 text-center text-xs text-slate-400">
+    Kontrolya · Portal de soporte
+  </footer>
+</body>
+</html>

@@ -1,14 +1,16 @@
 <!--
   @tickets_cases 2L
-  Visualización del avance del ticket con 3 vistas conmutables (preferencia por
-  usuario en localStorage). Las tres leen los mismos case_events (from/to del
+  Visualización del avance del ticket con vistas conmutables. Siempre arranca en
+  Recorrido. Las dos leen los mismos case_events (from/to del
   payload, actor, reason, timestamp) → sin backend nuevo.
     - diagram  → Diagrama de recorrido (default): espina vertical del camino real.
     - timeline → Historial cronológico clásico.
     - stepper  → Ciclo de vida horizontal compacto.
 -->
 <script>
-const STORAGE_KEY = 'gestorTickets.journeyView';
+// Vistas con botón en la cabecera. 'stepper' (Ciclo de vida) sigue existiendo en
+// el template pero ya no se ofrece: el Recorrido cubre lo mismo.
+const VISIBLE_VIEWS = ['diagram', 'timeline'];
 
 // Estados del ciclo de vida principal, en orden (espina del recorrido / stepper).
 const LIFECYCLE = [
@@ -45,6 +47,23 @@ const STATUS_DOT = {
   cancelled: 'bg-slate-400',
 };
 
+// @tickets_cases — Recorrido "Fases + desvíos": espina obligatoria de 5 fases
+// (cada una agrupa sus sub-estados); 'En espera' y 'Escalado' NO son fases de la
+// espina sino desvíos que se dibujan sangrados bajo la fase donde ocurrieron.
+const SPINE = [
+  { key: 'new', dot: 'bg-blue-500', states: ['open', 'classified'] },
+  { key: 'assigned', dot: 'bg-cyan-500', states: ['assigned', 'in_diagnosis'] },
+  { key: 'progress', dot: 'bg-sky-500', states: ['in_progress'] },
+  { key: 'resolved', dot: 'bg-green-500', states: ['resolved', 'validating'] },
+  { key: 'closed', dot: 'bg-slate-500', states: ['closed', 'cancelled'] },
+];
+const DETOUR_KIND = {
+  waiting_on_customer: 'waiting',
+  waiting_on_third_party: 'waiting',
+  waiting_on_internal: 'waiting',
+  escalated: 'escalated',
+};
+
 export default {
   name: 'JourneyView',
   props: {
@@ -54,8 +73,12 @@ export default {
   },
   data() {
     return {
-      view: localStorage.getItem(STORAGE_KEY) || 'diagram',
-      views: ['diagram', 'timeline', 'stepper'],
+      // @tickets_cases — siempre se arranca en Recorrido. Antes se recordaba la
+      // última vista en localStorage y podías abrir un ticket directamente en
+      // Historial. 'stepper' (Ciclo de vida) sigue en el template pero no se
+      // ofrece: el Recorrido cuenta lo mismo con más detalle.
+      view: 'diagram',
+      views: VISIBLE_VIEWS,
       viewIcons: {
         diagram: 'navigation',
         timeline: 'document-list-clock',
@@ -84,7 +107,67 @@ export default {
           actor: this.actorName(e),
           at: e.created_at,
           eventType: e.event_type,
+          toLevel: e.payload.to_level, // @tickets_cases 2D — nivel de escalado (N1/N2/N3)
         }));
+    },
+    // @tickets_cases — Recorrido "Fases + desvíos": espina de 5 fases con el
+    // sub-estado realmente alcanzado, y los desvíos (espera/escalado) sangrados
+    // bajo la fase en la que ocurrieron. No se inventan pasos no recorridos.
+    phaseJourney() {
+      if (!this.ticket) return [];
+      const phases = SPINE.map(p => ({
+        key: p.key,
+        dot: p.dot,
+        reached: false,
+        subState: null,
+        meta: null,
+        current: false,
+        detoursAfter: [],
+      }));
+      const steps = [
+        {
+          to: 'open',
+          at: this.ticket.created_at,
+          actor: '',
+          reason: '',
+          isStart: true,
+        },
+        ...this.transitions,
+      ];
+      let curIdx = 0;
+      steps.forEach(s => {
+        const idx = SPINE.findIndex(p => p.states.includes(s.to));
+        if (idx >= 0) {
+          const ph = phases[idx];
+          ph.reached = true;
+          ph.subState = s.to;
+          ph.meta = {
+            at: s.at,
+            actor: s.actor,
+            reason: s.reason,
+            isStart: !!s.isStart,
+          };
+          curIdx = idx;
+        } else if (DETOUR_KIND[s.to]) {
+          phases[curIdx].detoursAfter.push({
+            kind: DETOUR_KIND[s.to],
+            state: s.to,
+            at: s.at,
+            actor: s.actor,
+            reason: s.reason,
+            level: s.toLevel,
+          });
+        }
+      });
+      const cur = this.ticket.status;
+      const curSpine = SPINE.findIndex(p => p.states.includes(cur));
+      if (curSpine >= 0) phases[curSpine].current = true;
+      phases.forEach(ph =>
+        ph.detoursAfter.forEach(d => {
+          d.current = d.state === cur;
+        })
+      );
+      return phases;
     },
     // Nodos del recorrido: creación (open) + cada destino de transición.
     journeyNodes() {
@@ -140,17 +223,44 @@ export default {
     hasJourney() {
       return this.journeyNodes.length > 0;
     },
+    // @tickets_cases paso 6 — timestamp del primer cierre (ms), para marcar las
+    // notas posteriores. null si el ticket nunca se cerró.
+    firstClosedAt() {
+      const times = this.events
+        .filter(e => e.event_type === 'closed')
+        .map(e => new Date(e.created_at).getTime());
+      return times.length ? Math.min(...times) : null;
+    },
+  },
+  watch: {
+    // Abrir otro ticket vuelve a Recorrido: el componente se reutiliza sin
+    // remontarse, así que el valor inicial no se reevalúa solo.
+    'ticket.id'() {
+      this.view = 'diagram';
+    },
   },
   methods: {
     setView(v) {
       this.view = v;
-      localStorage.setItem(STORAGE_KEY, v);
     },
     statusLabel(key) {
-      return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key;
+      // $t devuelve la ruta cruda si falta la traducción; con $te caemos al valor.
+      const k = `CASE_TICKETS.STATUSES.${key}`;
+      return this.$te(k) ? this.$t(k) : key;
     },
-    quotedReason(reason) {
-      return `«${reason}»`;
+    // @tickets_cases — etiqueta de prioridad (para eventos priority_changed).
+    priorityLabel(key) {
+      const k = `CASE_TICKETS.PRIORITIES.${key}`;
+      return this.$te(k) ? this.$t(k) : key;
+    },
+    // @tickets_cases — etiqueta de fase reutilizando las columnas del Tablero
+    phaseLabel(key) {
+      return this.$t(`CASE_TICKETS.KANBAN.COLUMNS.${key}`) || key;
+    },
+    detourBadge(kind) {
+      return kind === 'escalated'
+        ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
     },
     statusDot(state) {
       return STATUS_DOT[state] || 'bg-slate-300 dark:bg-slate-600';
@@ -161,16 +271,41 @@ export default {
         ? this.$t('CASE_TICKETS.TIMELINE.ACTOR_BOT')
         : this.$t('CASE_TICKETS.TIMELINE.ACTOR_SYSTEM');
     },
-    eventLabel(event) {
+    // @tickets_cases — bitácora: nota interna con contenido (se pinta destacada).
+    isNote(event) {
       return (
-        this.$t(`CASE_TICKETS.EVENT_TYPES.${event.event_type}`) ||
-        event.event_type
+        event.event_type === 'internal_note' && !!(event.payload || {}).content
       );
+    },
+    // @tickets_cases paso 6 — nota escrita después de que el ticket se cerró
+    // alguna vez (sobrevive a los ciclos de reapertura: se mide contra el
+    // PRIMER cierre).
+    isPostClosureNote(event) {
+      return (
+        this.isNote(event) &&
+        this.firstClosedAt &&
+        new Date(event.created_at).getTime() > this.firstClosedAt
+      );
+    },
+    eventLabel(event) {
+      const k = `CASE_TICKETS.EVENT_TYPES.${event.event_type}`;
+      return this.$te(k) ? this.$t(k) : event.event_type;
     },
     payloadSummary(event) {
       const p = event.payload || {};
+      // Vencimiento: from/to son fechas.
+      if (event.event_type === 'due_date_changed') {
+        return `${p.from ? this.formatDate(p.from) : '—'} → ${
+          p.to ? this.formatDate(p.to) : '—'
+        }`;
+      }
       if (p.from && p.to) {
-        return `${this.statusLabel(p.from)} → ${this.statusLabel(p.to)}`;
+        // Prioridad usa etiquetas de prioridad; el resto, de estado.
+        const label =
+          event.event_type === 'priority_changed'
+            ? this.priorityLabel
+            : this.statusLabel;
+        return `${label(p.from)} → ${label(p.to)}`;
       }
       if (p.content) return p.content.slice(0, 80);
       return null;
@@ -196,10 +331,12 @@ export default {
 
 <template>
   <div
-    class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+    class="flex flex-col p-4 bg-white border rounded-lg max-h-full dark:bg-slate-800 border-slate-75 dark:border-slate-700"
   >
-    <!-- Cabecera: título + selector de vista -->
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+    <!-- Cabecera: título + selector de vista (fija; no scrollea) -->
+    <div
+      class="flex flex-wrap items-center justify-between flex-shrink-0 gap-2 mb-4"
+    >
       <h3 class="text-base font-semibold text-slate-800 dark:text-slate-100">
         {{ $t('CASE_TICKETS.JOURNEY.TITLE') }}
       </h3>
@@ -224,171 +361,285 @@ export default {
       </div>
     </div>
 
-    <!-- Estados de carga / vacío -->
-    <div v-if="isFetching" class="text-sm text-slate-400 dark:text-slate-500">
-      {{ $t('CASE_TICKETS.JOURNEY.LOADING') }}
-    </div>
-    <div
-      v-else-if="!hasJourney"
-      class="text-sm text-slate-400 dark:text-slate-500"
-    >
-      {{ $t('CASE_TICKETS.TIMELINE.EMPTY') }}
-    </div>
-
-    <template v-else>
-      <!-- ── Vista 1: Diagrama de recorrido ─────────────────────── -->
-      <div v-if="view === 'diagram'" class="relative">
-        <!-- Espina vertical continua (detrás de los nodos) -->
-        <span
-          v-if="journeyNodes.length > 1"
-          class="absolute left-[9px] top-2.5 bottom-3 w-0.5 bg-slate-200 dark:bg-slate-600"
-        />
-        <div
-          v-for="(node, idx) in journeyNodes"
-          :key="idx"
-          class="relative flex gap-4"
-          :class="idx < journeyNodes.length - 1 ? 'pb-5' : ''"
-        >
-          <!-- Nodo (punto con halo que enmascara la espina) -->
-          <span
-            class="z-10 flex-shrink-0 w-[18px] h-[18px] mt-1 rounded-full ring-4 ring-white dark:ring-slate-800"
-            :class="[
-              statusDot(node.state),
-              node.current ? '!ring-woot-100 dark:!ring-woot-900' : '',
-            ]"
-          >
-            <span
-              v-if="node.current"
-              class="block w-full h-full rounded-full animate-ping opacity-50"
-              :class="statusDot(node.state)"
-            />
-          </span>
-          <!-- Contenido del nodo -->
-          <div class="flex-1 min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-              <span
-                class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-                >{{ statusLabel(node.state) }}</span
-              >
-              <span
-                v-if="node.current"
-                class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-woot-100 text-woot-700 dark:bg-woot-800 dark:text-woot-100"
-                >{{ $t('CASE_TICKETS.JOURNEY.CURRENT') }}</span
-              >
-            </div>
-            <p
-              v-if="node.reason"
-              class="m-0 mt-1 text-sm italic text-slate-500 dark:text-slate-400"
-            >
-              {{ quotedReason(node.reason) }}
-            </p>
-            <p class="m-0 mt-1 text-xs text-slate-400 dark:text-slate-500">
-              <template v-if="node.isStart">
-                {{ $t('CASE_TICKETS.JOURNEY.CREATED') }}
-              </template>
-              <template v-else> {{ node.actor }} </template>
-              · {{ formatDate(node.at) }}
-            </p>
-          </div>
-        </div>
+    <!-- Zona de contenido: scroll interno (el título de arriba queda fijo) -->
+    <div class="flex-1 min-h-0 overflow-y-auto -mr-1.5 pr-1.5">
+      <!-- Estados de carga / vacío. El "Cargando" solo aparece en la carga inicial
+           (sin datos); al recargar tras un cambio, se mantiene el timeline visible
+           y se actualiza sin parpadeo. -->
+      <div
+        v-if="isFetching && !hasJourney"
+        class="text-sm text-slate-400 dark:text-slate-500"
+      >
+        {{ $t('CASE_TICKETS.JOURNEY.LOADING') }}
+      </div>
+      <div
+        v-else-if="!hasJourney"
+        class="text-sm text-slate-400 dark:text-slate-500"
+      >
+        {{ $t('CASE_TICKETS.TIMELINE.EMPTY') }}
       </div>
 
-      <!-- ── Vista 2: Historial cronológico ─────────────────────── -->
-      <ul
-        v-else-if="view === 'timeline'"
-        class="flex flex-col gap-4 p-0 m-0 list-none"
-      >
-        <li
-          v-for="event in events"
-          :key="event.id"
-          class="flex items-start gap-4"
-        >
+      <template v-else>
+        <!-- ── Vista 1: Recorrido por fases (espina + desvíos) ─────── -->
+        <!-- @tickets_cases — reacomodo visual: jerarquía fase › sub-estado › meta,
+           fila actual anclada, fases pendientes con nodo hueco, motivo etiquetado.
+           Misma data (phaseJourney), sin backend nuevo. -->
+        <div v-if="view === 'diagram'" class="flex flex-col">
           <div
-            class="flex-shrink-0 w-2.5 h-2.5 mt-1 rounded-full"
-            :class="
-              statusDot(
-                event.payload && event.payload.to
-                  ? event.payload.to
-                  : event.event_type
-              )
-            "
-          />
-          <div class="flex-1 min-w-0">
-            <p
-              class="m-0 text-sm font-medium text-slate-700 dark:text-slate-200"
-            >
-              {{ eventLabel(event) }}
-            </p>
-            <p
-              v-if="payloadSummary(event)"
-              class="mt-0.5 m-0 text-sm text-slate-500 dark:text-slate-400"
-            >
-              {{ payloadSummary(event) }}
-            </p>
-            <p class="mt-0.5 m-0 text-xs text-slate-400 dark:text-slate-500">
-              {{ actorName(event) }} · {{ formatDate(event.created_at) }}
-            </p>
-          </div>
-        </li>
-      </ul>
-
-      <!-- ── Vista 3: Stepper de ciclo de vida ──────────────────── -->
-      <div v-else class="flex flex-col gap-3">
-        <div class="flex items-start">
-          <template v-for="(step, idx) in lifecycleSteps">
-            <div
-              :key="`step-${step.state}`"
-              class="flex flex-col items-center flex-1 min-w-0"
-              :title="stepTooltip(step)"
-            >
+            v-for="(ph, idx) in phaseJourney"
+            :key="ph.key"
+            class="grid grid-cols-[26px_1fr] gap-3"
+          >
+            <!-- Riel: espina + nodo (hueco si no se alcanzó, pulso si es el actual) -->
+            <div class="relative flex justify-center">
               <span
-                class="flex items-center justify-center flex-shrink-0 w-4 h-4 rounded-full ring-2 ring-white dark:ring-slate-800"
+                class="absolute w-0.5 bg-slate-200 dark:bg-slate-600"
                 :class="[
-                  step.visited
-                    ? statusDot(step.state)
-                    : 'bg-slate-200 dark:bg-slate-600',
-                  step.current
-                    ? 'ring-woot-400 dark:ring-woot-500 scale-125'
-                    : '',
+                  idx === 0 ? 'top-3.5' : 'top-0',
+                  idx === phaseJourney.length - 1 ? 'bottom-1/2' : 'bottom-0',
                 ]"
               />
               <span
-                class="mt-1.5 text-[10px] leading-tight text-center"
-                :class="
-                  step.visited
-                    ? 'text-slate-600 dark:text-slate-300 font-medium'
-                    : 'text-slate-400 dark:text-slate-500'
-                "
-                >{{ statusLabel(step.state) }}</span
+                class="relative z-10 flex-shrink-0 w-4 h-4 mt-2 rounded-full ring-4 ring-white dark:ring-slate-800"
+                :class="[
+                  ph.reached
+                    ? ph.dot
+                    : 'bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600',
+                  ph.current ? '!ring-woot-100 dark:!ring-woot-900/60' : '',
+                ]"
               >
+                <span
+                  v-if="ph.current"
+                  class="block w-full h-full rounded-full animate-ping opacity-50"
+                  :class="ph.dot"
+                />
+              </span>
             </div>
-            <span
-              v-if="idx < lifecycleSteps.length - 1"
-              :key="`conn-${step.state}`"
-              class="flex-shrink-0 h-px mt-2 w-3 sm:w-6"
+            <!-- Tarjeta de fase (banda con su propio aire; actual = fondo suave) -->
+            <div
+              class="px-3 pt-1.5 pb-3 mb-1.5 rounded-lg border border-transparent"
+              :class="[
+                ph.current
+                  ? 'bg-woot-25 dark:bg-woot-900/20 border-woot-100 dark:border-woot-800/60'
+                  : '',
+                ph.reached ? '' : 'opacity-50',
+              ]"
+            >
+              <!-- Nivel 1: fase (protagonista) + sub-estado (chip) + badge Actual -->
+              <div class="flex flex-wrap items-center gap-2">
+                <span
+                  class="text-base font-bold text-slate-800 dark:text-slate-100"
+                  >{{ phaseLabel(ph.key) }}</span
+                >
+                <span
+                  v-if="ph.reached && ph.subState"
+                  class="px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                  >{{ statusLabel(ph.subState) }}</span
+                >
+                <span
+                  v-if="ph.current"
+                  class="ml-auto px-2 py-0.5 text-[11px] font-bold tracking-wide uppercase rounded-full bg-woot-500 text-white"
+                  >{{ $t('CASE_TICKETS.JOURNEY.CURRENT') }}</span
+                >
+              </div>
+              <!-- Nivel 3: actor + fecha (la fecha va como pill) -->
+              <div
+                v-if="ph.reached"
+                class="flex flex-wrap items-center gap-2 mt-1 text-sm"
+              >
+                <span class="font-semibold text-slate-500 dark:text-slate-400">
+                  <template v-if="ph.meta && ph.meta.isStart">{{
+                    $t('CASE_TICKETS.JOURNEY.CREATED')
+                  }}</template>
+                  <template v-else>{{ ph.meta && ph.meta.actor }}</template>
+                </span>
+                <span
+                  class="px-1.5 py-0.5 text-xs font-medium rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 tabular-nums"
+                  >{{ formatDate(ph.meta && ph.meta.at) }}</span
+                >
+              </div>
+              <!-- Motivo etiquetado (ya no una cita italic flotante) -->
+              <div
+                v-if="ph.meta && ph.meta.reason"
+                class="flex gap-2 px-2.5 py-1.5 mt-2 text-sm rounded-md bg-slate-50 dark:bg-slate-700/40 border-l-2 border-woot-400 dark:border-woot-500 text-slate-600 dark:text-slate-300"
+              >
+                <span class="font-semibold text-woot-600 dark:text-woot-300">{{
+                  $t('CASE_TICKETS.JOURNEY.REASON')
+                }}</span>
+                <span class="min-w-0">{{ ph.meta.reason }}</span>
+              </div>
+              <!-- Desvíos (espera / escalado) dentro de la banda de la fase -->
+              <div
+                v-for="(d, di) in ph.detoursAfter"
+                :key="`detour-${idx}-${di}`"
+                class="flex flex-wrap items-center gap-2 mt-2 text-sm"
+              >
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded font-semibold"
+                  :class="detourBadge(d.kind)"
+                >
+                  {{ d.kind === 'escalated' ? '⚠' : '⏸' }}
+                  {{ statusLabel(d.state)
+                  }}<template v-if="d.level != null">
+                    · N{{ d.level + 1 }}</template
+                  >
+                </span>
+                <span class="text-slate-400 dark:text-slate-500 tabular-nums">
+                  {{
+                    d.current
+                      ? $t('CASE_TICKETS.JOURNEY.CURRENTLY')
+                      : $t('CASE_TICKETS.JOURNEY.RETURNED')
+                  }}
+                  · {{ formatDate(d.at) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Vista 2: Historial cronológico ─────────────────────── -->
+        <ul
+          v-else-if="view === 'timeline'"
+          class="flex flex-col gap-4 p-0 m-0 list-none"
+        >
+          <li
+            v-for="event in events"
+            :key="event.id"
+            class="flex items-start gap-4"
+          >
+            <div
+              class="flex-shrink-0 w-2.5 h-2.5 mt-1 rounded-full"
               :class="
-                lifecycleSteps[idx + 1].visited
-                  ? 'bg-slate-300 dark:bg-slate-500'
-                  : 'bg-slate-200 dark:bg-slate-700'
+                isNote(event)
+                  ? 'bg-amber-400'
+                  : statusDot(
+                      event.payload && event.payload.to
+                        ? event.payload.to
+                        : event.event_type
+                    )
               "
             />
-          </template>
+            <!-- @tickets_cases — bitácora: la nota interna se destaca en ámbar
+                 (equivale al banner amarillo del thread de osTicket) -->
+            <div
+              v-if="isNote(event)"
+              class="flex-1 min-w-0 py-2 pl-3 pr-2 border-l-2 rounded-r bg-amber-50 border-amber-400 dark:bg-amber-900/20 dark:border-amber-500"
+            >
+              <p
+                class="m-0 text-sm font-medium text-amber-800 dark:text-amber-200"
+              >
+                {{ eventLabel(event) }}
+                <span
+                  v-if="isPostClosureNote(event)"
+                  class="ml-1 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded bg-amber-200 text-amber-900 dark:bg-amber-800/60 dark:text-amber-200"
+                  :title="$t('CASE_TICKETS.NOTES.POST_CLOSURE_HINT')"
+                  >{{ $t('CASE_TICKETS.NOTES.POST_CLOSURE') }}</span
+                >
+              </p>
+              <p
+                class="mt-0.5 m-0 text-sm whitespace-pre-line text-slate-700 dark:text-slate-200"
+              >
+                {{ event.payload.content }}
+              </p>
+              <div
+                class="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-400 dark:text-slate-500"
+              >
+                <span
+                  class="font-semibold text-slate-500 dark:text-slate-400"
+                  >{{ actorName(event) }}</span
+                >
+                <span
+                  class="px-1.5 py-0.5 text-[11px] font-medium rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 tabular-nums"
+                  >{{ formatDate(event.created_at) }}</span
+                >
+              </div>
+            </div>
+            <div v-else class="flex-1 min-w-0">
+              <p
+                class="m-0 text-sm font-medium text-slate-700 dark:text-slate-200"
+              >
+                {{ eventLabel(event) }}
+              </p>
+              <p
+                v-if="payloadSummary(event)"
+                class="mt-0.5 m-0 text-sm text-slate-500 dark:text-slate-400"
+              >
+                {{ payloadSummary(event) }}
+              </p>
+              <div
+                class="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-400 dark:text-slate-500"
+              >
+                <span
+                  class="font-semibold text-slate-500 dark:text-slate-400"
+                  >{{ actorName(event) }}</span
+                >
+                <span
+                  class="px-1.5 py-0.5 text-[11px] font-medium rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 tabular-nums"
+                  >{{ formatDate(event.created_at) }}</span
+                >
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <!-- ── Vista 3: Stepper de ciclo de vida ──────────────────── -->
+        <div v-else class="flex flex-col gap-3">
+          <div class="flex items-start">
+            <template v-for="(step, idx) in lifecycleSteps">
+              <div
+                :key="`step-${step.state}`"
+                class="flex flex-col items-center flex-1 min-w-0"
+                :title="stepTooltip(step)"
+              >
+                <span
+                  class="flex items-center justify-center flex-shrink-0 w-4 h-4 rounded-full ring-2 ring-white dark:ring-slate-800"
+                  :class="[
+                    step.visited
+                      ? statusDot(step.state)
+                      : 'bg-slate-200 dark:bg-slate-600',
+                    step.current
+                      ? 'ring-woot-400 dark:ring-woot-500 scale-125'
+                      : '',
+                  ]"
+                />
+                <span
+                  class="mt-1.5 text-[10px] leading-tight text-center"
+                  :class="
+                    step.visited
+                      ? 'text-slate-600 dark:text-slate-300 font-medium'
+                      : 'text-slate-400 dark:text-slate-500'
+                  "
+                  >{{ statusLabel(step.state) }}</span
+                >
+              </div>
+              <span
+                v-if="idx < lifecycleSteps.length - 1"
+                :key="`conn-${step.state}`"
+                class="flex-shrink-0 h-px mt-2 w-3 sm:w-6"
+                :class="
+                  lifecycleSteps[idx + 1].visited
+                    ? 'bg-slate-300 dark:bg-slate-500'
+                    : 'bg-slate-200 dark:bg-slate-700'
+                "
+              />
+            </template>
+          </div>
+          <!-- Estado actual fuera del ciclo de vida (espera / escalado) -->
+          <div
+            v-if="offLifecycleStatus"
+            class="flex items-center gap-2 p-2 mt-1 rounded-lg bg-amber-50 dark:bg-amber-900/20"
+          >
+            <span
+              class="flex-shrink-0 w-2.5 h-2.5 rounded-full"
+              :class="statusDot(offLifecycleStatus)"
+            />
+            <span class="text-xs text-amber-700 dark:text-amber-300">
+              {{ $t('CASE_TICKETS.JOURNEY.CURRENTLY') }}:
+              {{ statusLabel(offLifecycleStatus) }}
+            </span>
+          </div>
         </div>
-        <!-- Estado actual fuera del ciclo de vida (espera / escalado) -->
-        <div
-          v-if="offLifecycleStatus"
-          class="flex items-center gap-2 p-2 mt-1 rounded-lg bg-amber-50 dark:bg-amber-900/20"
-        >
-          <span
-            class="flex-shrink-0 w-2.5 h-2.5 rounded-full"
-            :class="statusDot(offLifecycleStatus)"
-          />
-          <span class="text-xs text-amber-700 dark:text-amber-300">
-            {{ $t('CASE_TICKETS.JOURNEY.CURRENTLY') }}:
-            {{ statusLabel(offLifecycleStatus) }}
-          </span>
-        </div>
-      </div>
-    </template>
+      </template>
+    </div>
   </div>
 </template>
