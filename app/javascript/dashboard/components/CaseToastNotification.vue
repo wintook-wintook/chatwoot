@@ -18,13 +18,23 @@ export default {
     this.$emitter.off('caseToastMessage', this.onToast);
   },
   methods: {
-    onToast({ message, icon }) {
+    onToast({ message, icon, variant }) {
       const key = `${Date.now()}-${Math.random()}`;
-      this.toasts.push({ key, message, icon: icon || 'checkmark-circle' });
+      this.toasts.push({
+        key,
+        message,
+        icon: icon || 'checkmark-circle',
+        variant: variant === 'danger' ? 'danger' : 'success',
+      });
       window.setTimeout(() => this.dismiss(key), this.duration);
     },
     dismiss(key) {
       this.toasts = this.toasts.filter(t => t.key !== key);
+    },
+    toastClass(variant) {
+      return variant === 'danger'
+        ? 'bg-red-600 dark:bg-red-700'
+        : 'bg-green-600 dark:bg-green-700';
     },
   },
 };
@@ -39,7 +49,8 @@ export default {
     <div
       v-for="toast in toasts"
       :key="toast.key"
-      class="flex items-center gap-2 px-4 py-3 text-sm font-medium text-white rounded-lg shadow-lg max-w-[24rem] bg-green-600 dark:bg-green-700"
+      class="flex items-center gap-2 px-4 py-3 text-sm font-medium text-white rounded-lg shadow-lg max-w-[24rem]"
+      :class="toastClass(toast.variant)"
     >
       <fluent-icon :icon="toast.icon" size="18" class="flex-shrink-0" />
       <span class="flex-1">{{ toast.message }}</span>

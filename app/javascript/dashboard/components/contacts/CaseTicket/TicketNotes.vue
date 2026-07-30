@@ -30,6 +30,9 @@ export default {
       editingId: null,
       viewing: false, // modal en modo lectura (ticket cerrado)
       form: { content: '' },
+      // Modal de confirmación de borrado
+      showDeleteConfirm: false,
+      pendingDelete: null,
     };
   },
   computed: {
@@ -42,6 +45,19 @@ export default {
     },
     isEditing() {
       return !!this.editingId;
+    },
+    // Click en la fila abre editar (o ver, si el ticket está cerrado). Se ignora
+    // si el click fue sobre un botón de acción de la fila.
+    eventCustomOption() {
+      return {
+        bodyRowEvents: ({ row }) => ({
+          click: event => {
+            if (event.target.closest('button, input, a')) return;
+            if (this.isFrozen) this.openView(row);
+            else this.openEdit(row);
+          },
+        }),
+      };
     },
     columns() {
       return [
@@ -108,28 +124,11 @@ export default {
           align: 'left',
           // Cerrado: solo se puede ABRIR la nota para ver el detalle completo
           // (la tabla la recorta), pero no editarla ni borrarla.
+          // Editar/ver es por click en la fila. Aquí solo queda borrar (con
+          // confirmación). Cerrado: solo lectura, sin borrar.
           renderBodyCell: ({ row }) =>
-            this.isFrozen ? (
+            this.isFrozen ? null : (
               <div class="button-wrapper">
-                <woot-button
-                  size="tiny"
-                  variant="clear"
-                  color-scheme="secondary"
-                  icon="eye-show"
-                  title={this.$t('CASE_TICKETS.NOTES.VIEW')}
-                  onClick={() => this.openView(row)}
-                />
-              </div>
-            ) : (
-              <div class="button-wrapper">
-                <woot-button
-                  size="tiny"
-                  variant="clear"
-                  color-scheme="secondary"
-                  icon="edit"
-                  title={this.$t('CASE_TICKETS.NOTES.EDIT')}
-                  onClick={() => this.openEdit(row)}
-                />
                 <woot-button
                   size="tiny"
                   variant="clear"
@@ -226,10 +225,29 @@ export default {
         this.isSaving = false;
       }
     },
-    async remove(note) {
+    // Pide confirmación antes de borrar (modal estándar de Chatwoot).
+    remove(note) {
+      this.pendingDelete = note;
+      this.showDeleteConfirm = true;
+    },
+    closeDeleteConfirm() {
+      this.showDeleteConfirm = false;
+      this.pendingDelete = null;
+    },
+    async confirmRemove() {
+      const note = this.pendingDelete;
+      if (!note) return;
+      this.showDeleteConfirm = false;
       await CaseNotesAPI.deleteNote(this.ticketId, note.id);
       this.notes = this.notes.filter(n => n.id !== note.id);
+      this.pendingDelete = null;
       this.$emit('changed');
+      // Aviso en rojo (mismo toast que asignar/completar, variante danger).
+      this.$emitter.emit('caseToastMessage', {
+        message: this.$t('CASE_TICKETS.NOTES.TOAST_DELETED'),
+        icon: 'delete',
+        variant: 'danger',
+      });
     },
     changePage(page) {
       this.currentPage = Math.min(Math.max(1, page), this.totalPages);
@@ -285,6 +303,7 @@ export default {
         row-key-field-name="id"
         :columns="columns"
         :table-data="paginatedNotes"
+        :event-custom-option="eventCustomOption"
         :border-around="false"
       />
     </div>
@@ -366,6 +385,17 @@ export default {
         </form>
       </div>
     </woot-modal>
+
+    <!-- Confirmación de borrado (modal estándar de Chatwoot) -->
+    <woot-delete-modal
+      :show="showDeleteConfirm"
+      :on-close="closeDeleteConfirm"
+      :on-confirm="confirmRemove"
+      :title="$t('CASE_TICKETS.NOTES.DELETE_CONFIRM.TITLE')"
+      :message="$t('CASE_TICKETS.NOTES.DELETE_CONFIRM.MESSAGE')"
+      :confirm-text="$t('CASE_TICKETS.NOTES.DELETE_CONFIRM.CONFIRM')"
+      :reject-text="$t('CASE_TICKETS.NOTES.DELETE_CONFIRM.CANCEL')"
+    />
   </div>
 </template>
 

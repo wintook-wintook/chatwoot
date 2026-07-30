@@ -35,6 +35,9 @@ export default {
       editingId: null,
       viewing: false, // modal en modo lectura (ticket cerrado)
       form: { title: '', description: '', assignee_id: '', due_at: '' },
+      // Modal de confirmación de borrado
+      showDeleteConfirm: false,
+      pendingDelete: null,
     };
   },
   computed: {
@@ -51,6 +54,19 @@ export default {
     },
     isEditing() {
       return !!this.editingId;
+    },
+    // Click en la fila abre editar (o ver, si el ticket está cerrado). Se ignora
+    // si el click fue sobre el checkbox o un botón de acción de la fila.
+    eventCustomOption() {
+      return {
+        bodyRowEvents: ({ row }) => ({
+          click: event => {
+            if (event.target.closest('button, input, a')) return;
+            if (this.isFrozen) this.openView(row);
+            else this.openEdit(row);
+          },
+        }),
+      };
     },
     // Columnas de VeTable. Las celdas se pintan con renderBodyCell (JSX), que es
     // como lo hace Chatwoot en ContactsTable.
@@ -159,30 +175,11 @@ export default {
           title: '',
           width: 90,
           align: 'left',
-          // Cerrado: solo se puede ABRIR la tarea para ver su detalle, no
-          // editarla ni borrarla.
+          // Editar/ver es por click en la fila. Aquí solo queda borrar (con
+          // confirmación). Cerrado: solo lectura, sin borrar.
           renderBodyCell: ({ row }) =>
-            this.isFrozen ? (
+            this.isFrozen ? null : (
               <div class="button-wrapper">
-                <woot-button
-                  size="tiny"
-                  variant="clear"
-                  color-scheme="secondary"
-                  icon="eye-show"
-                  title={this.$t('CASE_TICKETS.TASKS.VIEW')}
-                  onClick={() => this.openView(row)}
-                />
-              </div>
-            ) : (
-              <div class="button-wrapper">
-                <woot-button
-                  size="tiny"
-                  variant="clear"
-                  color-scheme="secondary"
-                  icon="edit"
-                  title={this.$t('CASE_TICKETS.TASKS.EDIT')}
-                  onClick={() => this.openEdit(row)}
-                />
                 <woot-button
                   size="tiny"
                   variant="clear"
@@ -293,9 +290,30 @@ export default {
       });
       this.replace(data.case_task);
     },
-    async remove(task) {
+    // Pide confirmación antes de borrar (modal estándar de Chatwoot).
+    remove(task) {
+      this.pendingDelete = task;
+      this.showDeleteConfirm = true;
+    },
+    closeDeleteConfirm() {
+      this.showDeleteConfirm = false;
+      this.pendingDelete = null;
+    },
+    async confirmRemove() {
+      const task = this.pendingDelete;
+      if (!task) return;
+      this.showDeleteConfirm = false;
       await CaseTasksAPI.deleteTask(this.ticketId, task.id);
       this.tasks = this.tasks.filter(t => t.id !== task.id);
+      this.pendingDelete = null;
+      // Aviso en rojo (mismo toast que asignar/completar, variante danger).
+      this.$emitter.emit('caseToastMessage', {
+        message: this.$t('CASE_TICKETS.TASKS.TOAST_DELETED', {
+          task: task.title,
+        }),
+        icon: 'delete',
+        variant: 'danger',
+      });
     },
     replace(updated) {
       this.tasks = this.tasks.map(t => (t.id === updated.id ? updated : t));
@@ -375,6 +393,7 @@ export default {
         row-key-field-name="id"
         :columns="columns"
         :table-data="paginatedTasks"
+        :event-custom-option="eventCustomOption"
         :border-around="false"
       />
     </div>
@@ -494,6 +513,18 @@ export default {
         </form>
       </div>
     </woot-modal>
+
+    <!-- Confirmación de borrado (modal estándar de Chatwoot) -->
+    <woot-delete-modal
+      :show="showDeleteConfirm"
+      :on-close="closeDeleteConfirm"
+      :on-confirm="confirmRemove"
+      :title="$t('CASE_TICKETS.TASKS.DELETE_CONFIRM.TITLE')"
+      :message="$t('CASE_TICKETS.TASKS.DELETE_CONFIRM.MESSAGE')"
+      :message-value="pendingDelete ? `“${pendingDelete.title}”` : ''"
+      :confirm-text="$t('CASE_TICKETS.TASKS.DELETE_CONFIRM.CONFIRM')"
+      :reject-text="$t('CASE_TICKETS.TASKS.DELETE_CONFIRM.CANCEL')"
+    />
   </div>
 </template>
 

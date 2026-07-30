@@ -207,6 +207,13 @@
       "DELETE": "Eliminar",
       "VIEW": "Ver tarea",
       "TOGGLE": "Marcar como completada",
+      "TOAST_DELETED": "Tarea eliminada: {task}",
+      "DELETE_CONFIRM": {
+        "TITLE": "Eliminar tarea",
+        "MESSAGE": "¿Seguro que quieres eliminar esta tarea? Esta acción no se puede deshacer.",
+        "CONFIRM": "Eliminar",
+        "CANCEL": "Cancelar"
+      },
       "INBOX": {
         "TITLE": "Tareas",
         "SEARCH_PLACEHOLDER": "Buscar en el título o la descripción…",
@@ -479,6 +486,13 @@
       "CLOSE": "Cerrar",
       "EDIT": "Editar",
       "DELETE": "Eliminar",
+      "TOAST_DELETED": "Nota eliminada",
+      "DELETE_CONFIRM": {
+        "TITLE": "Eliminar nota",
+        "MESSAGE": "¿Seguro que quieres eliminar esta nota interna? Esta acción no se puede deshacer.",
+        "CONFIRM": "Eliminar",
+        "CANCEL": "Cancelar"
+      },
       "EDITED": "Editada el {date} por {name}",
       "TABLE": {
         "NOTE": "Nota",
