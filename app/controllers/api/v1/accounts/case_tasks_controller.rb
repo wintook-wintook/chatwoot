@@ -83,6 +83,7 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   def task_json(task)
     {
       id: task.id,
+      sequence: task.sequence,
       title: task.title,
       description: task.description,
       status: task.status,

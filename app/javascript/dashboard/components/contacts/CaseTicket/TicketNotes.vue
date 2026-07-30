@@ -7,12 +7,14 @@
 import { VeTable } from 'vue-easytable';
 import CaseNotesAPI from 'dashboard/api/caseNotes';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
+import MessageFormatter from 'shared/helpers/MessageFormatter';
 
 const PER_PAGE = 10;
 
 export default {
   name: 'TicketNotes',
-  components: { VeTable, TableFooter },
+  components: { VeTable, TableFooter, WootMessageEditor },
   props: {
     ticketId: { type: [Number, String], required: true },
     // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
@@ -62,18 +64,32 @@ export default {
     columns() {
       return [
         {
+          // Consecutivo estable por ticket (N001, N002…), estilo osTicket.
+          field: 'sequence',
+          key: 'sequence',
+          title: this.$t('CASE_TICKETS.NOTES.TABLE.NUM'),
+          align: 'left',
+          width: 64,
+          renderBodyCell: ({ row }) => (
+            <span class="font-mono text-xs text-slate-300 dark:text-slate-500">
+              {this.seqLabel(row.sequence)}
+            </span>
+          ),
+        },
+        {
           field: 'content',
           key: 'content',
           title: this.$t('CASE_TICKETS.NOTES.TABLE.NOTE'),
           align: 'left',
           width: 460,
           // La nota se recorta a una línea con "…" para que la fila no crezca;
-          // el texto completo va en el `title` (hover) y en el modal de edición.
+          // el texto completo (con formato) va en el modal. En la tabla se muestra
+          // un preview en texto plano (sin marcas de markdown).
           renderBodyCell: ({ row }) => (
             <div class="overflow-hidden">
               <p
                 class="m-0 text-sm truncate text-slate-800 dark:text-slate-100"
-                title={row.content}
+                title={this.plainPreview(row.content)}
               >
                 {row.post_closure ? (
                   <span
@@ -83,7 +99,7 @@ export default {
                     {this.$t('CASE_TICKETS.NOTES.POST_CLOSURE')}
                   </span>
                 ) : null}
-                {row.content}
+                {this.plainPreview(row.content)}
               </p>
               {row.edited_at ? (
                 <p class="m-0 mt-0.5 text-xs italic truncate text-slate-400 dark:text-slate-500">
@@ -252,6 +268,24 @@ export default {
     changePage(page) {
       this.currentPage = Math.min(Math.max(1, page), this.totalPages);
     },
+    // Etiqueta del consecutivo: N001, N012… (relleno a 3 dígitos).
+    seqLabel(n) {
+      if (!n) return '';
+      return `N${String(n).padStart(3, '0')}`;
+    },
+    // Markdown → HTML seguro (mismo formateador que las notas de contacto).
+    formatMarkdown(text) {
+      if (!text) return '';
+      return new MessageFormatter(text).formattedMessage;
+    },
+    // Preview en texto plano para la tabla: renderiza el markdown y le quita las
+    // etiquetas, así la fila no muestra `**` ni `#` ni HTML.
+    plainPreview(text) {
+      if (!text) return '';
+      const tmp = document.createElement('div');
+      tmp.innerHTML = this.formatMarkdown(text);
+      return (tmp.textContent || '').replace(/\s+/g, ' ').trim();
+    },
     formatDate(d) {
       if (!d) return '';
       return new Date(d).toLocaleString(undefined, {
@@ -343,13 +377,21 @@ export default {
             <span class="text-sm text-slate-700 dark:text-slate-200">{{
               $t('CASE_TICKETS.NOTES.CONTENT_LABEL')
             }}</span>
-            <textarea
-              ref="contentInput"
+            <!-- Editor enriquecido (markdown), el mismo de las notas de contacto. -->
+            <WootMessageEditor
+              v-if="!viewing"
               v-model="form.content"
-              rows="12"
-              class="min-h-[16rem] resize-y read-only:opacity-70 read-only:cursor-default"
-              :readonly="viewing"
+              class="input--rich"
+              :enable-suggestions="false"
+              :enable-canned-responses="false"
+              focus-on-mount
               :placeholder="$t('CASE_TICKETS.NOTES.PLACEHOLDER')"
+            />
+            <!-- Ticket cerrado: solo lectura, con el formato ya renderizado. -->
+            <div
+              v-else
+              class="prose-note min-h-[16rem] p-2 text-sm border rounded-md border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-100"
+              v-html="formatMarkdown(form.content) || '—'"
             />
           </label>
 
@@ -424,6 +466,42 @@ export default {
 
   .button-wrapper {
     @apply flex flex-row gap-1;
+  }
+}
+
+// Editor enriquecido dentro del modal: mismo ajuste de menubar que las notas
+// de contacto y una altura contenida.
+.input--rich {
+  @apply border border-slate-200 dark:border-slate-600 rounded-md px-2;
+
+  ::v-deep .ProseMirror-menubar {
+    padding: 0;
+    margin-top: var(--space-minus-small);
+  }
+
+  ::v-deep .ProseMirror-woot-style {
+    min-height: 16rem;
+    max-height: 24rem;
+  }
+}
+
+// Markdown renderizado (modo lectura): recupera viñetas y márgenes que el reset
+// de Tailwind quita.
+.prose-note::v-deep {
+  ul {
+    @apply list-disc ml-4;
+  }
+  ol {
+    @apply list-decimal ml-4;
+  }
+  p {
+    @apply m-0;
+  }
+  a {
+    @apply underline text-woot-500;
+  }
+  code {
+    @apply px-1 rounded bg-slate-100 dark:bg-slate-700;
   }
 }
 </style>

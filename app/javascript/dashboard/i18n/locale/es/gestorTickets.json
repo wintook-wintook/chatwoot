@@ -247,6 +247,7 @@
         }
       },
       "TABLE": {
+        "NUM": "N.º",
         "TASK": "Tarea",
         "ASSIGNEE": "Responsable",
         "DUE": "Vence",
@@ -495,6 +496,7 @@
       },
       "EDITED": "Editada el {date} por {name}",
       "TABLE": {
+        "NUM": "N.º",
         "NOTE": "Nota",
         "AUTHOR": "Autor",
         "DATE": "Fecha"

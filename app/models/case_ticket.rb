@@ -382,8 +382,16 @@ class CaseTicket < ApplicationRecord
       event_type: :internal_note,
       origin:     actor ? :agent : :system,
       actor:      actor,
-      payload:    { content: content.to_s.strip }
+      # @tickets_cases — consecutivo estable por ticket (N001, N002…): se guarda
+      # en el payload al crear y no se recicla al borrar.
+      payload:    { content: content.to_s.strip, sequence: next_note_sequence }
     )
+  end
+
+  # Siguiente consecutivo de nota interna para este ticket.
+  def next_note_sequence
+    case_events.where(event_type: :internal_note)
+               .maximum(Arel.sql("(payload->>'sequence')::int")).to_i + 1
   end
 
   # Incidentes vinculados a este problema (relación incident_problem: incidente → problema).

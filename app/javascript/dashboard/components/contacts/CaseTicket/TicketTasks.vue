@@ -9,12 +9,14 @@ import { mapGetters } from 'vuex';
 import { VeTable } from 'vue-easytable';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
+import MessageFormatter from 'shared/helpers/MessageFormatter';
 
 const PER_PAGE = 10;
 
 export default {
   name: 'TicketTasks',
-  components: { VeTable, TableFooter },
+  components: { VeTable, TableFooter, WootMessageEditor },
   props: {
     ticketId: { type: [Number, String], required: true },
     // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
@@ -90,6 +92,21 @@ export default {
           ),
         },
         {
+          // Consecutivo estable por ticket (T001, T002…), estilo osTicket.
+          field: 'sequence',
+          key: 'sequence',
+          title: this.$t('CASE_TICKETS.TASKS.TABLE.NUM'),
+          align: 'left',
+          width: 64,
+          // Color del folio según estado: verde concluida, rojo atrasada, azul
+          // en tiempo. Tonos claros (shade 300/400) para que no pesen.
+          renderBodyCell: ({ row }) => (
+            <span class={`font-mono text-xs ${this.seqClass(row)}`}>
+              {this.seqLabel(row.sequence)}
+            </span>
+          ),
+        },
+        {
           field: 'title',
           key: 'title',
           title: this.$t('CASE_TICKETS.TASKS.TABLE.TASK'),
@@ -107,9 +124,10 @@ export default {
                 {row.title}
               </p>
               {row.description ? (
-                <p class="m-0 mt-0.5 text-xs whitespace-pre-line text-slate-500 dark:text-slate-400">
-                  {row.description}
-                </p>
+                <div
+                  class="prose-note m-0 mt-0.5 text-xs text-slate-500 dark:text-slate-400"
+                  domPropsInnerHTML={this.formatMarkdown(row.description)}
+                />
               ) : null}
             </div>
           ),
@@ -157,7 +175,7 @@ export default {
             }
             return (
               <div>
-                <span class="text-xs text-emerald-600 dark:text-emerald-400">
+                <span class="text-xs text-green-600 dark:text-green-400">
                   {this.formatDate(row.completed_at)}
                 </span>
                 {row.completed_by ? (
@@ -324,6 +342,24 @@ export default {
     assigneeName(task) {
       return task.assignee ? task.assignee.name : '';
     },
+    // Etiqueta del consecutivo: T001, T012… (relleno a 3 dígitos).
+    seqLabel(n) {
+      if (!n) return '';
+      return `T${String(n).padStart(3, '0')}`;
+    },
+    // Color del folio por estado (tonos claros): verde concluida, rojo atrasada,
+    // azul en tiempo.
+    seqClass(task) {
+      if (task.status === 'done') return 'text-green-400 dark:text-green-300';
+      if (this.isOverdue(task)) return 'text-red-400 dark:text-red-300';
+      return 'text-woot-400 dark:text-woot-300';
+    },
+    // Renderiza el markdown de la descripción a HTML seguro (mismo formateador
+    // que usan las notas de contacto).
+    formatMarkdown(text) {
+      if (!text) return '';
+      return new MessageFormatter(text).formattedMessage;
+    },
     formatDate(d) {
       if (!d) return '';
       return new Date(d).toLocaleString(undefined, {
@@ -414,7 +450,7 @@ export default {
       :show="showModal"
       :on-close="() => (showModal = false)"
       :close-on-backdrop-click="false"
-      size="small"
+      size="medium"
     >
       <div class="flex flex-col h-auto overflow-auto">
         <woot-modal-header
@@ -450,14 +486,23 @@ export default {
             <span class="text-sm text-slate-700 dark:text-slate-200">{{
               $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_LABEL')
             }}</span>
-            <textarea
+            <!-- Editor enriquecido (markdown), el mismo de las notas de contacto. -->
+            <WootMessageEditor
+              v-if="!viewing"
               v-model="form.description"
-              rows="3"
-              :readonly="viewing"
-              class="read-only:opacity-70 read-only:cursor-default"
+              class="input--rich"
+              :enable-suggestions="false"
+              :enable-canned-responses="false"
+              :focus-on-mount="false"
               :placeholder="
                 $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_PLACEHOLDER')
               "
+            />
+            <!-- Ticket cerrado: solo lectura, se muestra el formato ya renderizado. -->
+            <div
+              v-else
+              class="prose-note p-2 text-sm border rounded-md border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-100"
+              v-html="formatMarkdown(form.description) || '—'"
             />
           </label>
 
@@ -557,6 +602,42 @@ export default {
 
   .button-wrapper {
     @apply flex flex-row gap-1;
+  }
+}
+
+// Editor enriquecido dentro del modal: mismo ajuste de menubar que las notas
+// de contacto y una altura contenida.
+.input--rich {
+  @apply border border-slate-200 dark:border-slate-600 rounded-md px-2;
+
+  ::v-deep .ProseMirror-menubar {
+    padding: 0;
+    margin-top: var(--space-minus-small);
+  }
+
+  ::v-deep .ProseMirror-woot-style {
+    min-height: 6rem;
+    max-height: 18rem;
+  }
+}
+
+// Markdown renderizado (celda de la tabla y modo lectura): recupera viñetas y
+// márgenes que el reset de Tailwind quita.
+.prose-note::v-deep {
+  ul {
+    @apply list-disc ml-4;
+  }
+  ol {
+    @apply list-decimal ml-4;
+  }
+  p {
+    @apply m-0;
+  }
+  a {
+    @apply underline text-woot-500;
+  }
+  code {
+    @apply px-1 rounded bg-slate-100 dark:bg-slate-700;
   }
 }
 </style>
