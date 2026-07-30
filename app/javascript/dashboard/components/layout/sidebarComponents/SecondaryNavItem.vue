@@ -246,7 +246,7 @@ export default {
         v-for="child in menuItem.children"
         :key="child.id"
         :to="child.toState"
-        :label="child.label"
+        :label="child.translate ? $t(`SIDEBAR.${child.label}`) : child.label"
         :label-color="child.color"
         :should-truncate="child.truncateLabel"
         :icon="computedInboxClass(child)"
