@@ -44,6 +44,45 @@ class CaseTypeColumn < ApplicationRecord
 
   before_validation :normalize_statuses
 
+  # @tickets_cases — plantillas de columnas por defecto, espejo del tablero fijo.
+  # Al crear un Tipo de Caso se siembran estas (según el modo de la cuenta) como
+  # punto de partida editable. Cubren los 13 estados. Etiquetas alineadas con
+  # CASE_TICKETS.KANBAN.COLUMNS del front.
+  SIMPLE_TEMPLATE = [
+    { label: 'Nuevo', color: '#3b82f6', statuses: %w[open] },
+    { label: 'En proceso', color: '#f59e0b',
+      statuses: %w[classified assigned in_diagnosis in_progress escalated] },
+    { label: 'En espera', color: '#f97316',
+      statuses: %w[waiting_on_customer waiting_on_third_party waiting_on_internal] },
+    { label: 'Resuelto',  color: '#10b981', statuses: %w[resolved validating] },
+    { label: 'Cerrado',   color: '#64748b', statuses: %w[closed cancelled] }
+  ].freeze
+
+  ITIL_TEMPLATE = [
+    { label: 'Nuevo',     color: '#3b82f6', statuses: %w[open classified] },
+    { label: 'Asignado / Diagnóstico', color: '#8b5cf6', statuses: %w[assigned in_diagnosis] },
+    { label: 'En proceso', color: '#f59e0b', statuses: %w[in_progress escalated] },
+    { label: 'En espera', color: '#f97316',
+      statuses: %w[waiting_on_customer waiting_on_third_party waiting_on_internal] },
+    { label: 'Resuelto',  color: '#10b981', statuses: %w[resolved validating] },
+    { label: 'Cerrado',   color: '#64748b', statuses: %w[closed cancelled] }
+  ].freeze
+
+  # Siembra las columnas por defecto de un tipo recién creado, espejo del tablero
+  # fijo (simple 5 / ITIL 6) según el modo de la cuenta. No pisa columnas ya
+  # existentes: solo actúa si el tipo aún no tiene ninguna.
+  def self.seed_defaults_for(case_type, itil:)
+    return if case_type.case_type_columns.exists?
+
+    template = itil ? ITIL_TEMPLATE : SIMPLE_TEMPLATE
+    template.each_with_index do |col, position|
+      case_type.case_type_columns.create!(
+        account: case_type.account, label: col[:label], color: col[:color],
+        position: position, statuses: col[:statuses]
+      )
+    end
+  end
+
   private
 
   # `statuses` siempre array de strings únicos y no vacíos.

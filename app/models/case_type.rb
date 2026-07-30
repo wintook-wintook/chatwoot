@@ -33,6 +33,10 @@ class CaseType < ApplicationRecord
   scope :public_only, -> { where(public: true) }
 
   before_validation :ensure_prefix, on: :create
+  # @tickets_cases — al crear un tipo se siembran columnas por defecto (espejo del
+  # tablero fijo: simple 5 / ITIL 6, según el modo de la cuenta) como punto de
+  # partida editable. El admin puede editarlas o borrarlas desde el panel.
+  after_create :seed_default_columns
 
   # Tipos por defecto que se crean cuando una cuenta abre el módulo sin tipos.
   DEFAULTS = [
@@ -61,5 +65,11 @@ class CaseType < ApplicationRecord
     return if prefix.present?
 
     self.prefix = name.to_s.gsub(/[^a-zA-Z]/, '').upcase[0, 3]
+  end
+
+  # Columnas por defecto según el modo (simple/ITIL) de la cuenta al momento de crear.
+  def seed_default_columns
+    itil = CaseSetting.for_account(account).itil_enabled
+    CaseTypeColumn.seed_defaults_for(self, itil: itil)
   end
 end
