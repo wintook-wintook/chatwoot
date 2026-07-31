@@ -177,18 +177,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return true
     end
 
-    if kbase_available?(message, tracking) && !case_intake_pending?(message)
-      Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
-      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
-      if kbase_replied
-        Rails.logger.info '[TrackingBot] ✅ KBase respondió'
-        return true
-      end
-      Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → intentando @crear_ticket'
-    end
-
     # @tickets_cases: @estado_ticket — el cliente pregunta por su caso ("¿cuál es
     # mi ticket?"). Va ANTES de @crear_ticket: consultar un caso no abre uno nuevo.
+    # También va ANTES de la KBase: agenda y tickets siempre ganan sobre la hoja.
     if Cases::TicketStatusService.new(message, tracking: tracking).answer_if_status_query
       Rails.logger.info '[TrackingBot] 🔎 Estado de ticket respondido via @estado_ticket'
       return true
@@ -212,21 +203,24 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       end
     end
 
+    # KBase (hoja/foro/doc) va AL FINAL, como último recurso: si el cliente ya tiene
+    # un ticket/cita en curso, esas rutas resuelven el turno antes de llegar aquí y
+    # la hoja nunca se come la recolección de datos ni la confirmación de agenda.
+    if kbase_available?(message, tracking)
+      Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
+      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
+      if kbase_replied
+        Rails.logger.info '[TrackingBot] ✅ KBase respondió'
+        return true
+      end
+      Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → conversacional'
+    end
+
     generate_and_send_conversational_reply(tracking, message)
   end
 
   def appointment_dispatchable?(tracking)
     agendar_calendar_directive?(tracking) && calendar_configured?(tracking)
-  end
-
-  # @tickets_cases — mientras @crear_ticket está pidiendo los campos obligatorios, el
-  # mensaje del cliente ES el dato pedido ("de Guadalajara a Vallarta"), no una consulta.
-  # Sin este guard la KBase hace match con ese vocabulario y se come la respuesta, y la
-  # recolección nunca termina.
-  def case_intake_pending?(message)
-    pending = Cases::TicketCreatorService.intake_pending?(message.conversation_id)
-    Rails.logger.info '[TrackingBot] ⏸️ Recolección de campos en curso → KBase omitida' if pending
-    pending
   end
 
   # proyecto@bot_seguimiento_calendar — clasificación appointment-aware. Si DETECT_INTENT está

@@ -17,9 +17,11 @@
 # Ver: docs/vault-tickets/implementacion/Plan-Crear-Ticket-IA.md
 #
 # Posición en el flujo del job (try_kbase_then_conversational):
-#   [1] KnowledgeBaseResponseService  → deflexión (§11.1): si resuelve, no llega aquí
+#   [1] @estado_ticket                → Cases::TicketStatusService
 #   [2] Cases::TicketCreatorService   → este servicio
-#   [3] generate_and_send_conversational_reply (fallback)
+#   [3] @agendar_calendar
+#   [4] KnowledgeBaseResponseService  → último recurso (§11.1): si resuelve, no llega a [5]
+#   [5] generate_and_send_conversational_reply (fallback)
 # ================================================================================
 
 class Cases::TicketCreatorService
@@ -38,20 +40,9 @@ class Cases::TicketCreatorService
   # Máximo de turnos en que el bot insiste por datos faltantes antes de crear igual.
   MAX_FIELD_ASKS = 2
 
-  # Llave de la recolección de campos en curso (Fase 2). Pública porque el job
-  # la consulta para no dejar que la KBase se coma la respuesta del cliente.
+  # Llave de la recolección de campos en curso (Fase 2).
   def self.pending_key(conversation_id)
     "case_intake_pending::#{conversation_id}"
-  end
-
-  # true mientras el bot está esperando los datos obligatorios que pidió.
-  def self.intake_pending?(conversation_id)
-    return false if conversation_id.blank?
-
-    Redis::Alfred.get(pending_key(conversation_id)).present?
-  rescue StandardError => e
-    Rails.logger.warn "[TicketCreator] No se pudo leer #{pending_key(conversation_id)}: #{e.message}"
-    false
   end
 
   def initialize(message, tracking:)
