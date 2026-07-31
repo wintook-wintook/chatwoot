@@ -17,6 +17,46 @@ const PALETTE = [
 ];
 const FIELD_TYPE_KEYS = ['text', 'number', 'date', 'list', 'checkbox'];
 
+// Los 13 estados del ciclo de vida (mismo orden del enum) — para el multiselect
+// de estados por columna. Las etiquetas salen de CASE_TICKETS.STATUSES.<key>.
+const STATUS_KEYS = [
+  'open',
+  'classified',
+  'assigned',
+  'in_diagnosis',
+  'in_progress',
+  'waiting_on_customer',
+  'waiting_on_third_party',
+  'waiting_on_internal',
+  'escalated',
+  'resolved',
+  'validating',
+  'closed',
+  'cancelled',
+];
+
+// Paleta por defecto para columnas nuevas (se recicla por posición).
+const COLUMN_PALETTE = [
+  '#3b82f6',
+  '#8b5cf6',
+  '#f59e0b',
+  '#f97316',
+  '#10b981',
+  '#64748b',
+];
+
+let columnKeySeq = 0;
+const newColumnDraft = position => {
+  columnKeySeq += 1;
+  return {
+    _key: `new-${columnKeySeq}`,
+    id: null,
+    label: '',
+    color: COLUMN_PALETTE[position % COLUMN_PALETTE.length],
+    statuses: [],
+  };
+};
+
 const emptyFieldForm = () => ({
   key: '',
   label: '',
@@ -43,6 +83,11 @@ export default {
       editingField: null,
       fieldForm: emptyFieldForm(),
       deletingFieldId: null,
+      // Columnas del Kanban por tipo (A+)
+      statusKeys: STATUS_KEYS,
+      showColumnsModal: false,
+      columnsType: null,
+      columnDraft: [],
     };
   },
   computed: {
@@ -51,6 +96,7 @@ export default {
       typesUiFlags: 'caseTickets/getTypesUIFlags',
       getTypeFields: 'caseTickets/getTypeFields',
       typeFieldsUiFlags: 'caseTickets/getTypeFieldsUIFlags',
+      typeColumnsUiFlags: 'caseTickets/getTypeColumnsUIFlags',
     }),
     isFetching() {
       return this.typesUiFlags.isFetching;
@@ -87,6 +133,40 @@ export default {
         .split(',')
         .map(o => o.trim())
         .filter(Boolean);
+    },
+    // ── Columnas del Kanban por tipo (A+) ──────────────────────────
+    columnsSaving() {
+      return this.typeColumnsUiFlags.isSaving;
+    },
+    // Estados cubiertos por el borrador (unión de todas las columnas).
+    coveredStatuses() {
+      const set = new Set();
+      this.columnDraft.forEach(c =>
+        (c.statuses || []).forEach(s => set.add(s))
+      );
+      return set;
+    },
+    // Estados de los 13 que ninguna columna cubre aún.
+    missingStatuses() {
+      return this.statusKeys.filter(s => !this.coveredStatuses.has(s));
+    },
+    // Estados cubiertos por MÁS de una columna (para el aviso informativo).
+    overlapStatuses() {
+      const count = {};
+      this.columnDraft.forEach(c =>
+        (c.statuses || []).forEach(s => {
+          count[s] = (count[s] || 0) + 1;
+        })
+      );
+      return this.statusKeys.filter(s => count[s] > 1);
+    },
+    columnsValid() {
+      if (!this.columnDraft.length) return false;
+      const allLabeled = this.columnDraft.every(c => c.label.trim());
+      const allHaveStates = this.columnDraft.every(
+        c => (c.statuses || []).length
+      );
+      return allLabeled && allHaveStates && !this.missingStatuses.length;
     },
   },
   mounted() {
@@ -228,6 +308,95 @@ export default {
         this.deletingFieldId = null;
       }
     },
+
+    // ── Columnas del Kanban por tipo (A+) ──────────────────────────
+    statusLabel(key) {
+      return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key;
+    },
+    async openColumns(type) {
+      this.columnsType = type;
+      this.columnDraft = [];
+      this.showColumnsModal = true;
+      try {
+        await this.$store.dispatch('caseTickets/fetchTypeColumns', type.id);
+      } catch (_e) {
+        /* el borrador queda vacío; se puede empezar de cero */
+      }
+      // El getter ya tiene las columnas; construimos el borrador editable.
+      const columns = this.$store.getters['caseTickets/getTypeColumns'](
+        type.id
+      );
+      this.columnDraft = (columns || []).map((c, i) => ({
+        _key: `db-${c.id}`,
+        id: c.id,
+        label: c.label,
+        color: c.color || COLUMN_PALETTE[i % COLUMN_PALETTE.length],
+        statuses: [...(c.statuses || [])],
+      }));
+    },
+    closeColumns() {
+      this.showColumnsModal = false;
+      this.columnsType = null;
+      this.columnDraft = [];
+      // refresca el contador en la lista de tipos
+      this.$store.dispatch('caseTickets/fetchTypes');
+    },
+    addColumn() {
+      this.columnDraft.push(newColumnDraft(this.columnDraft.length));
+    },
+    removeColumn(index) {
+      this.columnDraft.splice(index, 1);
+    },
+    moveColumn(index, delta) {
+      const target = index + delta;
+      if (target < 0 || target >= this.columnDraft.length) return;
+      const arr = this.columnDraft;
+      [arr[index], arr[target]] = [arr[target], arr[index]];
+    },
+    toggleStatus(column, statusKey) {
+      const i = column.statuses.indexOf(statusKey);
+      if (i === -1) column.statuses.push(statusKey);
+      else column.statuses.splice(i, 1);
+    },
+    assignRemainingToLast() {
+      if (!this.columnDraft.length || !this.missingStatuses.length) return;
+      const last = this.columnDraft[this.columnDraft.length - 1];
+      last.statuses = [...last.statuses, ...this.missingStatuses];
+    },
+    async saveColumns() {
+      if (!this.columnsValid) {
+        let msg = this.$t('CASE_TICKETS.COLUMNS_CFG.NEED_LABEL');
+        if (this.columnDraft.some(c => !(c.statuses || []).length)) {
+          msg = this.$t('CASE_TICKETS.COLUMNS_CFG.NEED_STATES');
+        } else if (this.missingStatuses.length) {
+          msg = this.$t('CASE_TICKETS.COLUMNS_CFG.NEED_COVERAGE');
+        }
+        this.$emitter.emit('newToastMessage', { message: msg });
+        return;
+      }
+      const columns = this.columnDraft.map((c, i) => ({
+        id: c.id || undefined,
+        label: c.label.trim(),
+        color: c.color,
+        position: i,
+        statuses: c.statuses,
+      }));
+      try {
+        await this.$store.dispatch('caseTickets/replaceTypeColumns', {
+          caseTypeId: this.columnsType.id,
+          columns,
+        });
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.COLUMNS_CFG.SAVED'),
+        });
+        this.closeColumns();
+      } catch (e) {
+        const msg =
+          e?.response?.data?.error?.[0] ||
+          this.$t('CASE_TICKETS.COLUMNS_CFG.SAVE_ERROR');
+        this.$emitter.emit('newToastMessage', { message: msg });
+      }
+    },
   },
 };
 </script>
@@ -315,6 +484,20 @@ export default {
             v-if="(type.custom_fields || []).length"
             class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-woot-100 text-woot-700 dark:bg-woot-800 dark:text-woot-100"
             >{{ type.custom_fields.length }}</span
+          >
+        </woot-button>
+        <woot-button
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          icon="kanban"
+          @click="openColumns(type)"
+        >
+          {{ $t('CASE_TICKETS.COLUMNS_CFG.MANAGE_BUTTON') }}
+          <span
+            v-if="(type.columns || []).length"
+            class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-woot-100 text-woot-700 dark:bg-woot-800 dark:text-woot-100"
+            >{{ type.columns.length }}</span
           >
         </woot-button>
         <woot-button
@@ -655,6 +838,193 @@ export default {
               @click="closeFields"
             >
               {{ $t('CASE_TICKETS.CUSTOM_FIELDS.CLOSE') }}
+            </woot-button>
+          </div>
+        </div>
+      </div>
+    </woot-modal>
+
+    <!-- Modal: columnas del Kanban por tipo (A+) -->
+    <woot-modal
+      v-if="showColumnsModal"
+      :show="showColumnsModal"
+      :on-close="closeColumns"
+      size="medium"
+    >
+      <div class="flex flex-col overflow-hidden max-h-[90vh]">
+        <woot-modal-header
+          :header-title="$t('CASE_TICKETS.COLUMNS_CFG.MODAL_TITLE')"
+          :header-content="columnsType ? columnsType.name : ''"
+        />
+
+        <div
+          class="flex flex-col self-stretch w-full gap-4 px-8 pb-8 overflow-y-auto"
+        >
+          <p class="m-0 text-sm text-slate-500 dark:text-slate-400">
+            {{ $t('CASE_TICKETS.COLUMNS_CFG.MODAL_SUBTITLE') }}
+          </p>
+
+          <!-- Vacío -->
+          <div
+            v-if="!columnDraft.length"
+            class="py-6 text-sm text-center text-slate-400 dark:text-slate-500"
+          >
+            {{ $t('CASE_TICKETS.COLUMNS_CFG.EMPTY') }}
+          </div>
+
+          <!-- Lista de columnas del borrador -->
+          <div
+            v-for="(col, index) in columnDraft"
+            :key="col._key"
+            class="flex flex-col w-full gap-3 p-4 border rounded-lg bg-slate-25 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700"
+          >
+            <div class="flex flex-wrap items-end gap-3">
+              <span
+                class="flex items-center justify-center w-6 h-6 mb-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                >{{ index + 1 }}</span
+              >
+              <label class="flex flex-col flex-1 min-w-[160px] gap-1">
+                <span
+                  class="text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >{{ $t('CASE_TICKETS.COLUMNS_CFG.LABEL_LABEL') }} *</span
+                >
+                <input
+                  v-model="col.label"
+                  type="text"
+                  class="w-full !mb-0"
+                  maxlength="60"
+                  :placeholder="
+                    $t('CASE_TICKETS.COLUMNS_CFG.LABEL_PLACEHOLDER')
+                  "
+                />
+              </label>
+              <label class="flex flex-col gap-1">
+                <span
+                  class="text-xs font-medium text-slate-600 dark:text-slate-300"
+                  >{{ $t('CASE_TICKETS.COLUMNS_CFG.COLOR_LABEL') }}</span
+                >
+                <input
+                  v-model="col.color"
+                  type="color"
+                  class="w-10 h-9 p-0 border-0 rounded cursor-pointer bg-transparent"
+                />
+              </label>
+              <div class="flex items-center gap-1 pb-1">
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="chevron-up"
+                  :disabled="index === 0"
+                  :title="$t('CASE_TICKETS.COLUMNS_CFG.MOVE_UP')"
+                  @click="moveColumn(index, -1)"
+                />
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="chevron-down"
+                  :disabled="index === columnDraft.length - 1"
+                  :title="$t('CASE_TICKETS.COLUMNS_CFG.MOVE_DOWN')"
+                  @click="moveColumn(index, 1)"
+                />
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="alert"
+                  icon="delete"
+                  :title="$t('CASE_TICKETS.COLUMNS_CFG.REMOVE')"
+                  @click="removeColumn(index)"
+                />
+              </div>
+            </div>
+            <!-- Multiselect de estados (chips) -->
+            <div class="flex flex-col gap-1.5">
+              <span
+                class="text-xs font-medium text-slate-600 dark:text-slate-300"
+                >{{ $t('CASE_TICKETS.COLUMNS_CFG.STATES_LABEL') }} *</span
+              >
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="s in statusKeys"
+                  :key="s"
+                  type="button"
+                  class="px-2 py-1 text-xs rounded-full border transition-colors"
+                  :class="
+                    col.statuses.includes(s)
+                      ? 'bg-woot-500 border-woot-500 text-white'
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-woot-400'
+                  "
+                  @click="toggleStatus(col, s)"
+                >
+                  {{ statusLabel(s) }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <woot-button
+            size="small"
+            variant="clear"
+            color-scheme="secondary"
+            icon="add-circle"
+            @click="addColumn"
+          >
+            {{ $t('CASE_TICKETS.COLUMNS_CFG.ADD_COLUMN') }}
+          </woot-button>
+
+          <!-- Aviso informativo de solape -->
+          <div
+            v-if="overlapStatuses.length"
+            class="flex items-start gap-2 p-3 text-xs rounded-lg bg-woot-50 dark:bg-woot-800/30 text-woot-800 dark:text-woot-100"
+          >
+            <fluent-icon icon="info" size="14" class="mt-0.5 flex-shrink-0" />
+            <span>{{ $t('CASE_TICKETS.COLUMNS_CFG.OVERLAP_INFO') }}</span>
+          </div>
+
+          <!-- Cobertura -->
+          <div
+            v-if="columnDraft.length && missingStatuses.length"
+            class="flex flex-col gap-2 p-3 text-xs rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200"
+          >
+            <span>
+              <strong>{{
+                $t('CASE_TICKETS.COLUMNS_CFG.MISSING_COVERAGE')
+              }}</strong>
+              {{ missingStatuses.map(statusLabel).join(', ') }}
+            </span>
+            <woot-button
+              size="tiny"
+              variant="smooth"
+              color-scheme="warning"
+              @click="assignRemainingToLast"
+            >
+              {{ $t('CASE_TICKETS.COLUMNS_CFG.ASSIGN_REMAINING') }}
+            </woot-button>
+          </div>
+          <p
+            v-else-if="columnDraft.length"
+            class="m-0 text-xs text-green-600 dark:text-green-400"
+          >
+            {{ $t('CASE_TICKETS.COLUMNS_CFG.COVERAGE_OK') }}
+          </p>
+
+          <div
+            class="flex justify-end flex-shrink-0 gap-2 pt-4 border-t border-slate-100 dark:border-slate-700"
+          >
+            <woot-button
+              variant="clear"
+              color-scheme="secondary"
+              @click="closeColumns"
+            >
+              {{ $t('CASE_TICKETS.COLUMNS_CFG.CLOSE') }}
+            </woot-button>
+            <woot-button
+              :is-loading="columnsSaving"
+              :disabled="!columnsValid"
+              @click="saveColumns"
+            >
+              {{ $t('CASE_TICKETS.COLUMNS_CFG.SAVE') }}
             </woot-button>
           </div>
         </div>

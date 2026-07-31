@@ -54,7 +54,8 @@ class CaseEvent < ApplicationRecord
     ai_suggested:       25,
     ai_followup:        26,
     priority_changed:   27,
-    due_date_changed:   28
+    due_date_changed:   28,
+    column_changed:     29 # @tickets_cases — movió de columna del Kanban (mismo estado)
   }
 
   enum origin: { bot: 0, agent: 1, system: 2 }

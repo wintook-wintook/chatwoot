@@ -66,6 +66,9 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
       public:     type[:public],
       # @tickets_cases 2K — campos personalizados para render dinámico en alta/detalle.
       custom_fields: type.case_type_fields.ordered.map { |f| field_json(f) },
+      # @tickets_cases — columnas del Kanban propias del tipo (Opción A+). Viajan
+      # aquí para que el tablero no haga un round-trip extra al cargar los tipos.
+      columns: type.case_type_columns.ordered.map { |c| column_json(c) },
       created_at: type.created_at,
       updated_at: type.updated_at
     }
@@ -80,6 +83,16 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
       options:    field.options,
       required:   field.required,
       position:   field.position
+    }
+  end
+
+  def column_json(column)
+    {
+      id:       column.id,
+      label:    column.label,
+      color:    column.color,
+      position: column.position,
+      statuses: column.statuses
     }
   end
 end

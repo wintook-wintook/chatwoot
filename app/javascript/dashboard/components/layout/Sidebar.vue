@@ -77,8 +77,6 @@ export default {
   data() {
     return {
       showOptionsMenu: false,
-      // NUEVO: Estado para controlar el colapso del sidebar secundario
-      isSecondarySidebarCollapsed: false,
       // NUEVO: Estado para controlar el modal de kanban type
       showAddKanbanTypeModal: false,
     };
@@ -264,12 +262,6 @@ export default {
     this.fetchCustomViews();
     // NUEVO: Cargar kanban types
     this.loadKanbanTypes();
-    
-    // NUEVO: Restaurar estado del sidebar desde localStorage
-    const savedState = localStorage.getItem('secondarySidebarCollapsed');
-    if (savedState !== null) {
-      this.isSecondarySidebarCollapsed = JSON.parse(savedState);
-    }
 
     // DEBUG: Verificar configuración del sidebar
     console.log('🔍 Debug Sidebar mounted:');
@@ -283,13 +275,6 @@ export default {
       if (this.isConversationOrContactActive) {
         this.$store.dispatch('customViews/get', this.activeCustomView);
       }
-    },
-
-    // NUEVO: Método para alternar el colapso del sidebar secundario
-    toggleSecondarySidebar() {
-      this.isSecondarySidebarCollapsed = !this.isSecondarySidebarCollapsed;
-      // Opcional: Guardar el estado en localStorage
-      localStorage.setItem('secondarySidebarCollapsed', this.isSecondarySidebarCollapsed);
     },
 
     // NUEVO: Método para cargar kanban types
@@ -349,13 +334,7 @@ export default {
     />
     <SecondarySidebar
       v-if="shouldShowSecondarySidebar"
-      :class="[
-        sidebarClassName,
-        {
-          'w-12 overflow-hidden': isSecondarySidebarCollapsed,
-          'w-48': !isSecondarySidebarCollapsed
-        }
-      ]"
+      :class="sidebarClassName"
       :account-id="accountId"
       :inboxes="inboxes"
       :labels="labels"
@@ -365,11 +344,9 @@ export default {
       :menu-config="activeSecondaryMenu"
       :current-user="currentUser"
       :is-on-chatwoot-cloud="isOnChatwootCloud"
-      :is-collapsed="isSecondarySidebarCollapsed"
       @addLabel="showAddLabelPopup"
       @addKanbanType="showAddKanbanTypePopup"
       @toggleAccounts="toggleAccountModal"
-      @toggleSidebar="toggleSecondarySidebar"
     />
 
     <!-- Modal para crear nuevo tipo de proceso -->
