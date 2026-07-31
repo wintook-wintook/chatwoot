@@ -62,13 +62,13 @@ const gestorTickets = accountId => {
         label: 'TICKET_GROUP_DEFINITIONS',
         hasSubMenu: true,
         collapsible: true,
-        defaultCollapsed: true,
         toState: 'gestorTickets_group_definitions',
         toStateName: 'gestorTickets_types',
         children: [
           {
             id: 'ticket-types',
             label: 'TICKET_TYPES',
+            icon: 'tag',
             translate: true,
             toState: url('types'),
             toStateName: 'gestorTickets_types',
@@ -76,6 +76,7 @@ const gestorTickets = accountId => {
           {
             id: 'ticket-classification',
             label: 'TICKET_CLASSIFICATION',
+            icon: 'list',
             translate: true,
             toState: url('classification'),
             toStateName: 'gestorTickets_classification',
@@ -83,6 +84,7 @@ const gestorTickets = accountId => {
           {
             id: 'ticket-sla',
             label: 'TICKET_SLA',
+            icon: 'clock',
             translate: true,
             toState: url('sla'),
             toStateName: 'gestorTickets_sla',
@@ -90,6 +92,7 @@ const gestorTickets = accountId => {
           {
             id: 'ticket-portals',
             label: 'TICKET_PORTALS',
+            icon: 'globe',
             translate: true,
             toState: url('portals'),
             toStateName: 'gestorTickets_portals',
@@ -102,13 +105,13 @@ const gestorTickets = accountId => {
         label: 'TICKET_GROUP_AUTOMATION',
         hasSubMenu: true,
         collapsible: true,
-        defaultCollapsed: true,
         toState: 'gestorTickets_group_automation',
         toStateName: 'gestorTickets_rules',
         children: [
           {
             id: 'ticket-rules',
             label: 'TICKET_RULES',
+            icon: 'automation',
             translate: true,
             toState: url('rules'),
             toStateName: 'gestorTickets_rules',
@@ -116,6 +119,7 @@ const gestorTickets = accountId => {
           {
             id: 'ticket-ai',
             label: 'TICKET_AI',
+            icon: 'bot',
             translate: true,
             toState: url('ai'),
             toStateName: 'gestorTickets_ai',
@@ -128,13 +132,13 @@ const gestorTickets = accountId => {
         label: 'TICKET_GROUP_SETTINGS',
         hasSubMenu: true,
         collapsible: true,
-        defaultCollapsed: true,
         toState: 'gestorTickets_group_settings',
         toStateName: 'gestorTickets_settings',
         children: [
           {
             id: 'ticket-settings',
             label: 'TICKET_SETTINGS',
+            icon: 'settings',
             translate: true,
             toState: url('settings'),
             toStateName: 'gestorTickets_settings',
@@ -142,6 +146,7 @@ const gestorTickets = accountId => {
           {
             id: 'ticket-config',
             label: 'TICKET_CONFIG',
+            icon: 'number-symbol',
             translate: true,
             toState: url('config'),
             toStateName: 'gestorTickets_config',
