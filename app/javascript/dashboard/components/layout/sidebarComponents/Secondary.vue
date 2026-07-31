@@ -434,7 +434,7 @@ export default {
         :title="isCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'"
       >
         <fluent-icon
-          :icon="isCollapsed ? 'panel-right-expand' : 'panel-left-contract'"
+          :icon="isCollapsed ? 'panel-sidebar' : 'panel-contract'"
           size="16"
           class="text-slate-600 dark:text-slate-400"
         />
