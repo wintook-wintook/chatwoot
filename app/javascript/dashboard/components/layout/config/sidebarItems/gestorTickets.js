@@ -61,6 +61,8 @@ const gestorTickets = accountId => {
         icon: 'folder',
         label: 'TICKET_GROUP_DEFINITIONS',
         hasSubMenu: true,
+        collapsible: true,
+        defaultCollapsed: true,
         toState: 'gestorTickets_group_definitions',
         toStateName: 'gestorTickets_types',
         children: [
@@ -99,6 +101,8 @@ const gestorTickets = accountId => {
         icon: 'wand',
         label: 'TICKET_GROUP_AUTOMATION',
         hasSubMenu: true,
+        collapsible: true,
+        defaultCollapsed: true,
         toState: 'gestorTickets_group_automation',
         toStateName: 'gestorTickets_rules',
         children: [
@@ -123,6 +127,8 @@ const gestorTickets = accountId => {
         icon: 'settings',
         label: 'TICKET_GROUP_SETTINGS',
         hasSubMenu: true,
+        collapsible: true,
+        defaultCollapsed: true,
         toState: 'gestorTickets_group_settings',
         toStateName: 'gestorTickets_settings',
         children: [

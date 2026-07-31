@@ -30,6 +30,13 @@ export default {
       isEnterprise,
     };
   },
+  data() {
+    // Grupos colapsables (flag `collapsible` en el menuItem): arrancan según
+    // `defaultCollapsed`. Las secciones nativas no llevan el flag → sin cambios.
+    return {
+      isExpanded: !this.menuItem.defaultCollapsed,
+    };
+  },
   computed: {
     ...mapGetters({
       activeInbox: 'getSelectedInbox',
@@ -45,6 +52,12 @@ export default {
     },
     hasSubMenu() {
       return !!this.menuItem.children;
+    },
+    isCollapsibleGroup() {
+      return this.hasSubMenu && !!this.menuItem.collapsible;
+    },
+    areChildrenVisible() {
+      return !this.isCollapsibleGroup || this.isExpanded;
     },
     isMenuItemVisible() {
       if (this.menuItem.globalConfigFlag) {
@@ -180,6 +193,11 @@ export default {
     onClickOpen() {
       this.$emit('open');
     },
+    toggleGroup() {
+      if (this.isCollapsibleGroup) {
+        this.isExpanded = !this.isExpanded;
+      }
+    },
     showChildCount(count) {
       return Number.isInteger(count);
     },
@@ -190,7 +208,21 @@ export default {
 <template>
   <li v-show="isMenuItemVisible" class="mt-1">
     <div v-if="hasSubMenu" class="flex justify-between">
+      <button
+        v-if="isCollapsibleGroup"
+        type="button"
+        class="flex items-center flex-grow gap-1 px-2 pt-1 my-2 text-sm font-semibold text-left bg-transparent border-0 cursor-pointer text-slate-700 dark:text-slate-200"
+        @click="toggleGroup"
+      >
+        <fluent-icon
+          :icon="isExpanded ? 'chevron-down' : 'chevron-right'"
+          size="12"
+          class="text-slate-400 dark:text-slate-500"
+        />
+        {{ $t(`SIDEBAR.${menuItem.label}`) }}
+      </button>
       <span
+        v-else
         class="px-2 pt-1 my-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
       >
         {{ $t(`SIDEBAR.${menuItem.label}`) }}
@@ -241,7 +273,7 @@ export default {
       </span>
     </router-link>
 
-    <ul v-if="hasSubMenu" class="mb-0 ml-0 list-none">
+    <ul v-if="hasSubMenu && areChildrenVisible" class="mb-0 ml-0 list-none">
       <SecondaryChildNavItem
         v-for="child in menuItem.children"
         :key="child.id"
