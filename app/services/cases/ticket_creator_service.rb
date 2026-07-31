@@ -45,38 +45,54 @@ class Cases::TicketCreatorService
     "case_intake_pending::#{conversation_id}"
   end
 
+  # Qué hizo el último create_if_needed: :no_directive, :linked_existing,
+  # :not_worthy, :asked_missing_fields, :created o :error. Permite a callers como
+  # el gate de @agendar_calendar distinguir "acabo de pedir un dato, no agendes
+  # todavía" de "ya hay ticket / no aplica, seguí con el flujo normal".
+  attr_reader :outcome
+
   def initialize(message, tracking:)
     @message      = message
     @tracking     = tracking
     @account      = message.account
     @conversation = message.conversation
     @contact      = message.conversation.contact
+    @outcome      = :no_directive
   end
 
   def create_if_needed
     return false unless directive_present?
-    return true  if reuse_existing_ticket # §11.2 Anti-duplicado: reusa caso abierto
+    # §11.2 Anti-duplicado: reusa caso abierto
+    return finish(:linked_existing, true) if reuse_existing_ticket
 
     fields = intake_fields # nil = IA no disponible → degradar
 
     if fields
       # Gate: si la conversación no amerita un ticket (saludo, charla, tema resuelto),
       # NO creamos nada y dejamos que el bot responda normal. Evita tickets espurios.
-      return false if not_ticket_worthy?(fields)
+      return finish(:not_worthy, false) if not_ticket_worthy?(fields)
 
       # Campos particulares del tipo + Fase 2 (§6): extrae los case_type_fields de la
       # conversación y, si faltan OBLIGATORIOS (o missing_info cuando el tipo no define
       # campos), los pide y espera. true = el turno YA se atendió.
-      return true if request_missing_fields(fields)
+      return finish(:asked_missing_fields, true) if request_missing_fields(fields)
     end
 
-    create_and_confirm(fields)
+    created = create_and_confirm(fields)
+    finish(created ? :created : :error, created)
   rescue StandardError => e
     Rails.logger.error "[TicketCreator] Error creando ticket: #{e.message}"
-    false
+    finish(:error, false)
   end
 
   private
+
+  # Registra el outcome de create_if_needed y devuelve `result` (azúcar para poder
+  # usarlo en un `return` de una sola línea).
+  def finish(outcome, result)
+    @outcome = outcome
+    result
+  end
 
   # §11.2 Anti-duplicado: si ya hay un caso abierto del contacto, lo reusa y avisa.
   def reuse_existing_ticket

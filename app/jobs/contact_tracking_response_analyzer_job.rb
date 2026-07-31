@@ -138,7 +138,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                 handle_interested(tracking, message, route_result[:confidence])
                 true
               when :book_appointment
-                handle_book_appointment(tracking, message, route_result)
+                dispatch_book_appointment(tracking, message, route_result)
                 true
               when :reschedule
                 handle_reschedule(tracking, message, route_result)
@@ -718,6 +718,25 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                         'vinculados. Coordinar la cita manualmente. Requiere atención humana.')
   end
 
+  # proyecto@bot_seguimiento_calendar — el Router puede clasificar intención de
+  # agendar ANTES de conocer el objeto del servicio (material, ubicaciones, peso).
+  # Si la cuenta usa @crear_ticket, los campos obligatorios del caso son la fuente
+  # de verdad de "qué necesita el cliente": los pedimos primero y solo ofrecemos
+  # horarios cuando ya están completos (o cuando el caso no aplica/ya existe).
+  def dispatch_book_appointment(tracking, message, route_result)
+    return handle_book_appointment(tracking, message, route_result) unless ticket_directive_present?(tracking)
+
+    creator = Cases::TicketCreatorService.new(message, tracking: tracking)
+    creator.create_if_needed
+    return if creator.outcome == :asked_missing_fields
+
+    handle_book_appointment(tracking, message, route_result)
+  end
+
+  def ticket_directive_present?(tracking)
+    Cases::TicketCreatorService::DIRECTIVE_RE.match?(tracking&.complementary_prompt.to_s)
+  end
+
   # ==============================================================================
   # proyecto@bot_seguimiento_calendar
   # Handler: Agendar cita via Google Calendar
@@ -857,8 +876,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     choice = parse_slot_choice(text, slots.size)
 
     # Un dígito 1-5 dentro de una frase con fecha/hora ("a las 5 de la tarde", "el jueves
-    # a las 3") NO es una elección de slot: es una propuesta → negociamos.
-    if choice.nil? || looks_like_datetime_proposal?(text)
+    # a las 3") o con una cantidad ("3 toneladas de arena") NO es una elección de slot:
+    # es una propuesta u otro dato → negociamos en vez de confirmar a ciegas.
+    if choice.nil? || looks_like_datetime_proposal?(text) || looks_like_quantity?(text)
       Rails.logger.info '[TrackingBot] 📅 No es elección de número → intentando negociar fecha/hora'
       return handle_slot_negotiation(tracking, message, slots)
     end
@@ -886,6 +906,14 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar — negociación multi-turno: el cliente, en vez de
   # elegir un número, propone otra fecha/hora. Intentamos interpretarla, verificar
   # disponibilidad y: confirmarla si está libre, ofrecer cercanas si no, o repreguntar.
+  def try_kbase_during_negotiation(tracking, message)
+    return false unless kbase_available?(message, tracking)
+    return false unless KnowledgeBaseResponseService.new(message, tracking: tracking).perform
+
+    Rails.logger.info '[TrackingBot] 📚 KBase respondió durante la negociación de horario'
+    true
+  end
+
   def handle_slot_negotiation(tracking, message, current_slots)
     timezone  = appointment_timezone(tracking, message)
     requested = parse_requested_datetime(tracking, message, timezone)
@@ -944,6 +972,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         return true
       end
     end
+
+    # Antes de repreguntar a ciegas: si no es fecha ni elección, puede ser una pregunta
+    # real sobre lo ofrecido ("¿qué transporte es TP-113?", "¿qué unidad tienen?"). Dejamos
+    # que la KBase (hoja/foro) responda sin perder el estado [PENDING_SLOT] — el cliente
+    # sigue pudiendo elegir horario después.
+    return true if try_kbase_during_negotiation(tracking, message)
 
     # No pudimos interpretar la fecha/hora (o no hay alternativas): repreguntamos suave,
     # manteniendo el estado [PENDING_SLOT] para que pueda elegir o proponer de nuevo.
@@ -1040,6 +1074,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
   def looks_like_datetime_proposal?(text)
     text.to_s.match?(DATETIME_PROPOSAL_HINT)
+  end
+
+  # Pistas de que un dígito del mensaje es una CANTIDAD (peso, unidades, viajes...) y
+  # no la elección de un horario numerado. Sin este guard, "3 toneladas de arena"
+  # confirmaba por error el horario #3 (parse_slot_choice solo mira dígitos sueltos).
+  QUANTITY_HINT = /
+    \d+\s*
+    (ton(elad[ao]s?)?|kgs?|kilos?|litros?|cajas?|pallets?|paquetes?|
+     piezas?|personas?|unidad(es)?|cami[oó]n(es)?|viaje[s]?|horas?|
+     d[ií]as?|metros?|m3|m²|m2)\b
+  /ix
+
+  def looks_like_quantity?(text)
+    text.to_s.match?(QUANTITY_HINT)
   end
 
   def parse_slot_choice(text, max)
