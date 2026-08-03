@@ -49,6 +49,7 @@ export default {
       },
       searchDebounce: null,
       overdueCount: 0,
+      savingId: null,
       currentPage: 1,
       perPage: PER_PAGE,
       // Modal de edición / lectura (no hay alta: una tarea nace dentro de un ticket).
@@ -112,6 +113,30 @@ export default {
     },
     columns() {
       return [
+        {
+          // Check rápido: marca completada/pendiente sin abrir el modal.
+          field: 'check',
+          key: 'check',
+          title: '',
+          align: 'center',
+          width: 44,
+          renderBodyCell: ({ row }) => (
+            <div onClick={e => e.stopPropagation()}>
+              <input
+                type="checkbox"
+                class="!mb-0 align-middle cursor-pointer"
+                domPropsChecked={row.status === 'done'}
+                disabled={this.ticketFrozen(row) || this.savingId === row.id}
+                title={
+                  this.ticketFrozen(row)
+                    ? this.$t('CASE_TICKETS.TASKS.INBOX.FROZEN_HINT')
+                    : this.$t('CASE_TICKETS.TASKS.TOGGLE')
+                }
+                onChange={() => this.toggleDone(row)}
+              />
+            </div>
+          ),
+        },
         {
           field: 'ticket',
           key: 'ticket',
@@ -403,6 +428,26 @@ export default {
           overdue: 'text-red-600 dark:text-red-400',
         }[sla] || 'text-woot-600 dark:text-woot-400'
       );
+    },
+    // Check rápido de la fila: alterna completada/pendiente reusando el PATCH
+    // anidado. Coexiste con el modal (el estado también se cambia allí).
+    async toggleDone(task) {
+      if (this.ticketFrozen(task) || this.savingId || !task.case_ticket) return;
+      const next = task.status === 'done' ? 'pending' : 'done';
+      this.savingId = task.id;
+      try {
+        await CaseTasksAPI.updateTask(task.case_ticket.id, task.id, {
+          status: next,
+        });
+        this.fetch();
+        this.refreshOverdueCount();
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.TASKS.INBOX.SAVE_ERROR'),
+        });
+      } finally {
+        this.savingId = null;
+      }
     },
     // ── Modal de edición ───────────────────────────────────────────
     openEdit(task) {
