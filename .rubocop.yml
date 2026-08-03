@@ -15,19 +15,23 @@ Metrics/ClassLength:
     - 'app/models/conversation.rb'
     - 'app/services/knowledge_base_response_service.rb'
     - 'app/jobs/contact_tracking_response_analyzer_job.rb'
+    - 'app/services/contact_trackings/router_service.rb'
 Metrics/MethodLength:
   Max: 19
   Exclude:
     - 'app/services/knowledge_base_response_service.rb'
     - 'app/jobs/contact_tracking_response_analyzer_job.rb'
+    - 'app/services/contact_trackings/router_service.rb'
 Metrics/CyclomaticComplexity:
   Exclude:
     - 'app/services/knowledge_base_response_service.rb'
     - 'app/jobs/contact_tracking_response_analyzer_job.rb'
+    - 'app/services/contact_trackings/router_service.rb'
 Metrics/PerceivedComplexity:
   Exclude:
     - 'app/services/knowledge_base_response_service.rb'
     - 'app/jobs/contact_tracking_response_analyzer_job.rb'
+    - 'app/services/contact_trackings/router_service.rb'
 Rails/SkipsModelValidations:
   Exclude:
     - 'app/services/knowledge_base_response_service.rb'
@@ -135,6 +139,7 @@ Metrics/AbcSize:
     - 'app/controllers/concerns/auth_helper.rb'
     - 'app/services/knowledge_base_response_service.rb'
     - 'app/jobs/contact_tracking_response_analyzer_job.rb'
+    - 'app/services/contact_trackings/router_service.rb'
 Rails/UniqueValidationWithoutIndex:
   Exclude:
     - 'app/models/channel/twitter_profile.rb'
