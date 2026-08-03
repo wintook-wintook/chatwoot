@@ -156,6 +156,7 @@ export default {
           :index="i"
           :name="t.label"
           :count="t.count"
+          :show-badge="t.count > 0"
         />
       </woot-tabs>
     </div>
