@@ -49,7 +49,6 @@ export default {
       },
       searchDebounce: null,
       overdueCount: 0,
-      savingId: null,
       currentPage: 1,
       perPage: PER_PAGE,
       // Modal de edición / lectura (no hay alta: una tarea nace dentro de un ticket).
@@ -114,27 +113,21 @@ export default {
     columns() {
       return [
         {
-          // Check rápido: marca completada/pendiente sin abrir el modal.
-          field: 'check',
-          key: 'check',
-          title: '',
-          align: 'center',
-          width: 44,
+          // Folio consecutivo de la tarea (T001…), coloreado por estado igual
+          // que dentro del ticket: verde concluida, rojo atrasada, azul en tiempo.
+          field: 'sequence',
+          key: 'sequence',
+          title: this.$t('CASE_TICKETS.TASKS.TABLE.NUM'),
+          align: 'left',
+          width: 72,
           renderBodyCell: ({ row }) => (
-            <div onClick={e => e.stopPropagation()}>
-              <input
-                type="checkbox"
-                class="!mb-0 align-middle cursor-pointer"
-                domPropsChecked={row.status === 'done'}
-                disabled={this.ticketFrozen(row) || this.savingId === row.id}
-                title={
-                  this.ticketFrozen(row)
-                    ? this.$t('CASE_TICKETS.TASKS.INBOX.FROZEN_HINT')
-                    : this.$t('CASE_TICKETS.TASKS.TOGGLE')
-                }
-                onChange={() => this.toggleDone(row)}
-              />
-            </div>
+            <span
+              class={`font-mono text-sm font-semibold whitespace-nowrap ${this.seqClass(
+                row
+              )}`}
+            >
+              {this.seqLabel(row.sequence)}
+            </span>
           ),
         },
         {
@@ -429,25 +422,17 @@ export default {
         }[sla] || 'text-woot-600 dark:text-woot-400'
       );
     },
-    // Check rápido de la fila: alterna completada/pendiente reusando el PATCH
-    // anidado. Coexiste con el modal (el estado también se cambia allí).
-    async toggleDone(task) {
-      if (this.ticketFrozen(task) || this.savingId || !task.case_ticket) return;
-      const next = task.status === 'done' ? 'pending' : 'done';
-      this.savingId = task.id;
-      try {
-        await CaseTasksAPI.updateTask(task.case_ticket.id, task.id, {
-          status: next,
-        });
-        this.fetch();
-        this.refreshOverdueCount();
-      } catch (e) {
-        this.$emitter.emit('newToastMessage', {
-          message: this.$t('CASE_TICKETS.TASKS.INBOX.SAVE_ERROR'),
-        });
-      } finally {
-        this.savingId = null;
-      }
+    // Folio de la tarea: T001, T012… (relleno a 3 dígitos), como dentro del ticket.
+    seqLabel(n) {
+      if (!n) return '';
+      return `T${String(n).padStart(3, '0')}`;
+    },
+    // Color del folio por estado (tonos claros): verde concluida, rojo atrasada,
+    // azul en tiempo.
+    seqClass(task) {
+      if (task.status === 'done') return 'text-green-400 dark:text-green-300';
+      if (this.isOverdue(task)) return 'text-red-400 dark:text-red-300';
+      return 'text-woot-400 dark:text-woot-300';
     },
     // ── Modal de edición ───────────────────────────────────────────
     openEdit(task) {

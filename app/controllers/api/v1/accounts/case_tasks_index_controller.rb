@@ -102,6 +102,9 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
   def task_json(task)
     {
       id: task.id,
+      # Folio consecutivo de la tarea dentro de su ticket (T001, T002…), igual
+      # que en la vista de tareas dentro del ticket.
+      sequence: task.sequence,
       title: task.title,
       description: task.description,
       status: task.status,
