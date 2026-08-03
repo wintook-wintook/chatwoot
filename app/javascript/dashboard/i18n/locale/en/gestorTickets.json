@@ -330,7 +330,9 @@
         "MESSAGE": "Tickets will fall back to the default SLA. Delete policy",
         "YES": "Delete",
         "NO": "Cancel"
-      }
+      },
+      "PER_PAGE": "Per page",
+      "MINUTES_SUFFIX": "(min)"
     },
     "KB": {
       "NONE": "No linked article",

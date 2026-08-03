@@ -378,7 +378,9 @@
         "MESSAGE": "Los tickets usarán el SLA por defecto. Eliminar política",
         "YES": "Eliminar",
         "NO": "Cancelar"
-      }
+      },
+      "PER_PAGE": "Por página",
+      "MINUTES_SUFFIX": "(min)"
     },
     "KB": {
       "NONE": "Sin artículo vinculado",
