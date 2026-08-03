@@ -194,8 +194,17 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     # @tickets_cases: si la directiva @crear_ticket está en el prompt, crea ticket y confirma
-    if Cases::TicketCreatorService.new(message, tracking: tracking).create_if_needed
-      Rails.logger.info '[TrackingBot] 🎫 Ticket creado via @crear_ticket'
+    creator = Cases::TicketCreatorService.new(message, tracking: tracking)
+    if creator.create_if_needed
+      Rails.logger.info "[TrackingBot] 🎫 Ticket creado via @crear_ticket (outcome: #{creator.outcome})"
+      # proyecto@bot_seguimiento_calendar — si el ticket quedó completo (recién creado o ya
+      # existía) y hay calendario configurado, seguimos directo a ofrecer disponibilidad en
+      # el mismo turno (ETAPA 3), en vez de esperar a que el cliente lo pida en otro mensaje.
+      # Mismo comportamiento que ya tenía dispatch_book_appointment cuando el Router detecta
+      # appointment_action explícito.
+      if %i[created linked_existing].include?(creator.outcome) && appointment_dispatchable?(tracking)
+        handle_book_appointment(tracking, message, route_result)
+      end
       return true
     end
 
