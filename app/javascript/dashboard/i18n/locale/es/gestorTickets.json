@@ -245,7 +245,10 @@
           "OVERDUE": "Vencidas",
           "TODAY": "Vencen hoy",
           "WEEK": "Esta semana"
-        }
+        },
+        "TICKET_COL": "Ticket",
+        "OPEN_TICKET": "Abrir ticket",
+        "DELETE_ERROR": "No se pudo eliminar la tarea."
       },
       "TABLE": {
         "NUM": "Folio",

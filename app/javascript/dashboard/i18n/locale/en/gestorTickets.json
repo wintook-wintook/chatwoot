@@ -222,6 +222,11 @@
         "SAVE": "Save",
         "CANCEL": "Cancel",
         "CLOSE": "Close"
+      },
+      "INBOX": {
+        "TICKET_COL": "Ticket",
+        "OPEN_TICKET": "Open ticket",
+        "DELETE_ERROR": "Could not delete the task."
       }
     },
     "MODAL": {
