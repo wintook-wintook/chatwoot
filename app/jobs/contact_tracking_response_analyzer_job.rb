@@ -135,8 +135,16 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                 handle_rejected(tracking, message, route_result[:confidence])
                 true
               when :interested
-                handle_interested(tracking, message, route_result[:confidence])
-                true
+                # proyecto@tickets_cases — en trackings de intake de datos (@crear_ticket),
+                # "interested" no es una señal accionable: el cliente pidiendo o dando datos
+                # del servicio ES el flujo normal, no algo que amerite pausar y derivar a un
+                # humano. El sistema de tickets ya decide cuándo escalar.
+                if ticket_directive_present?(tracking)
+                  try_kbase_then_conversational(tracking, message, route_result)
+                else
+                  handle_interested(tracking, message, route_result[:confidence])
+                  true
+                end
               when :book_appointment
                 dispatch_book_appointment(tracking, message, route_result)
                 true
@@ -1747,7 +1755,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     messages = Message.where(conversation_id: message.conversation_id)
                       .where(message_type: [0, 1])
                       .where.not(id: message.id)
-                      .order(created_at: :desc)
+                      .reorder(created_at: :desc)
                       .limit(limit)
                       .reverse
 
