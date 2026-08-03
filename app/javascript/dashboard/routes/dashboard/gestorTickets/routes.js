@@ -33,6 +33,16 @@ export const routes = [
     component: () => import('../../../views/gestorTickets/TicketTypes.vue'),
   },
   {
+    // Detalle de un tipo de caso: tabs de campos personalizados y columnas.
+    // 3 segmentos → no choca con el catch-all `tickets/:id` (2 segmentos).
+    path: frontendURL('accounts/:accountId/tickets/types/:typeId'),
+    name: 'gestorTickets_type_detail',
+    meta: { permissions: ['administrator'] },
+    component: () =>
+      import('../../../views/gestorTickets/TicketTypeDetail.vue'),
+    props: route => ({ typeId: Number(route.params.typeId) }),
+  },
+  {
     path: frontendURL('accounts/:accountId/tickets/classification'),
     name: 'gestorTickets_classification',
     meta: { permissions: ['administrator'] },

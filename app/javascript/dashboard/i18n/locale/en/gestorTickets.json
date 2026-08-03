@@ -403,7 +403,11 @@
       "APPROVED_TOAST": "Change approved",
       "REJECTED_TOAST": "Change rejected",
       "ERROR": "Could not update the change",
-      "RISK": { "low": "Low", "medium": "Medium", "high": "High" },
+      "RISK": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
+      },
       "APPROVAL": {
         "pending": "Pending",
         "approved": "Approved",
@@ -475,11 +479,26 @@
       }
     },
     "RELATION_TYPES": {
-      "duplicate": { "outgoing": "Duplicate of", "incoming": "Has duplicate" },
-      "parent_child": { "outgoing": "Parent of", "incoming": "Child of" },
-      "incident_problem": { "outgoing": "Belongs to problem", "incoming": "Related incident" },
-      "incident_change": { "outgoing": "Linked to change", "incoming": "Related incident" },
-      "change_problem": { "outgoing": "Resolves problem", "incoming": "Resolved by change" }
+      "duplicate": {
+        "outgoing": "Duplicate of",
+        "incoming": "Has duplicate"
+      },
+      "parent_child": {
+        "outgoing": "Parent of",
+        "incoming": "Child of"
+      },
+      "incident_problem": {
+        "outgoing": "Belongs to problem",
+        "incoming": "Related incident"
+      },
+      "incident_change": {
+        "outgoing": "Linked to change",
+        "incoming": "Related incident"
+      },
+      "change_problem": {
+        "outgoing": "Resolves problem",
+        "incoming": "Resolved by change"
+      }
     },
     "TIMELINE": {
       "TITLE": "Ticket history",
@@ -616,7 +635,27 @@
         "MESSAGE": "Tickets with this type will be left untyped. Delete",
         "YES": "Delete",
         "NO": "Cancel"
-      }
+      },
+      "TABLE": {
+        "NAME": "Name",
+        "PREFIX": "Prefix",
+        "FIELDS": "Fields",
+        "COLUMNS": "Columns",
+        "VISIBILITY": "Portal",
+        "ACTIONS": ""
+      },
+      "EMPTY": "No case types yet. Create the first one with “+ New type”.",
+      "PER_PAGE": "Per page",
+      "OPEN": "Open",
+      "DETAIL": {
+        "BACK": "Case types",
+        "FIELDS_TAB": "Fields",
+        "COLUMNS_TAB": "Columns",
+        "NOT_FOUND": "Case type not found.",
+        "LOADING": "Loading…"
+      },
+      "NAME_PLACEHOLDER": "e.g. After-sales",
+      "PREFIX_PLACEHOLDER": "SOP"
     },
     "SETTINGS": {
       "TITLE": "Module settings",
@@ -629,7 +668,7 @@
       "MODE_ITIL_DESC": "Enables full ITIL statuses, Impact×Urgency matrix, ticket nature, problem/change and approvals.",
       "NOTE_DATA": "No data is deleted or changed: the mode only affects what is shown.",
       "NOTE_REVERSIBLE": "You can switch modes anytime.",
-            "REOPEN": {
+      "REOPEN": {
         "SECTION": "Reopening closed tickets",
         "WINDOW_TITLE": "Reopen window",
         "WINDOW_DESC": "Days after closing during which the assigned agent can reopen. After that, only an administrator. Use 0 for no limit.",
@@ -640,7 +679,7 @@
         "NOTE_WINDOW": "An administrator can always reopen, even after the window expired.",
         "NOTE_SLA": "On reopening, the SLA clock restarts from zero."
       },
-"SAVED": "Settings saved",
+      "SAVED": "Settings saved",
       "SAVE_ERROR": "Could not save settings."
     },
     "PORTALS": {
@@ -717,6 +756,15 @@
         "date": "Date",
         "list": "List",
         "checkbox": "Checkbox"
+      },
+      "ADD_BUTTON": "Add field",
+      "SUBTITLE": "These fields are requested when creating or editing a ticket of this type.",
+      "OPTIONS_HEADER": "Options",
+      "DELETE": {
+        "TITLE": "Delete field",
+        "MESSAGE": "This field will be removed from tickets of this type. Delete",
+        "YES": "Delete",
+        "NO": "Cancel"
       }
     },
     "CLASSIFICATION": {
@@ -844,6 +892,16 @@
       "internal_note": "Internal note",
       "priority_changed": "Priority changed",
       "due_date_changed": "Due date changed"
+    },
+    "COLUMNS_CFG": {
+      "ADD_BUTTON": "Add column",
+      "SUBTITLE": "Each board column groups one or more statuses. Cover all 13 statuses to save.",
+      "POSITION": "#",
+      "STATES_SUMMARY": "Statuses",
+      "NEW_TITLE": "New column",
+      "EDIT_TITLE": "Edit column",
+      "UNSAVED": "You have unsaved changes.",
+      "REORDER": "Reorder"
     }
   }
 }

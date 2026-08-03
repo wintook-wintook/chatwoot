@@ -19,6 +19,7 @@ const gestorTickets = accountId => {
       'gestorTickets_rules',
       'gestorTickets_metrics',
       'gestorTickets_types',
+      'gestorTickets_type_detail',
       'gestorTickets_classification',
       'gestorTickets_sla',
       'gestorTickets_ai',

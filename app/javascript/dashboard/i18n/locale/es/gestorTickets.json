@@ -453,7 +453,11 @@
       "APPROVED_TOAST": "Cambio aprobado",
       "REJECTED_TOAST": "Cambio rechazado",
       "ERROR": "No se pudo actualizar el cambio",
-      "RISK": { "low": "Bajo", "medium": "Medio", "high": "Alto" },
+      "RISK": {
+        "low": "Bajo",
+        "medium": "Medio",
+        "high": "Alto"
+      },
       "APPROVAL": {
         "pending": "Pendiente",
         "approved": "Aprobado",
@@ -533,11 +537,26 @@
       }
     },
     "RELATION_TYPES": {
-      "duplicate": { "outgoing": "Duplicado de", "incoming": "Tiene duplicado" },
-      "parent_child": { "outgoing": "Padre de", "incoming": "Hijo de" },
-      "incident_problem": { "outgoing": "Pertenece al problema", "incoming": "Incidente relacionado" },
-      "incident_change": { "outgoing": "Asociado al cambio", "incoming": "Incidente relacionado" },
-      "change_problem": { "outgoing": "Resuelve el problema", "incoming": "Resuelto por el cambio" }
+      "duplicate": {
+        "outgoing": "Duplicado de",
+        "incoming": "Tiene duplicado"
+      },
+      "parent_child": {
+        "outgoing": "Padre de",
+        "incoming": "Hijo de"
+      },
+      "incident_problem": {
+        "outgoing": "Pertenece al problema",
+        "incoming": "Incidente relacionado"
+      },
+      "incident_change": {
+        "outgoing": "Asociado al cambio",
+        "incoming": "Incidente relacionado"
+      },
+      "change_problem": {
+        "outgoing": "Resuelve el problema",
+        "incoming": "Resuelto por el cambio"
+      }
     },
     "TIMELINE": {
       "TITLE": "Historial del ticket",
@@ -678,7 +697,27 @@
         "MESSAGE": "Los tickets con este tipo quedarán sin tipo asignado. ¿Eliminar",
         "YES": "Eliminar",
         "NO": "Cancelar"
-      }
+      },
+      "TABLE": {
+        "NAME": "Nombre",
+        "PREFIX": "Prefijo",
+        "FIELDS": "Campos",
+        "COLUMNS": "Columnas",
+        "VISIBILITY": "Portal",
+        "ACTIONS": ""
+      },
+      "EMPTY": "Aún no hay tipos de caso. Crea el primero con «+ Nuevo tipo».",
+      "PER_PAGE": "Por página",
+      "OPEN": "Abrir",
+      "DETAIL": {
+        "BACK": "Tipos de caso",
+        "FIELDS_TAB": "Campos",
+        "COLUMNS_TAB": "Columnas",
+        "NOT_FOUND": "No se encontró el tipo de caso.",
+        "LOADING": "Cargando…"
+      },
+      "NAME_PLACEHOLDER": "Ej: Postventa",
+      "PREFIX_PLACEHOLDER": "SOP"
     },
     "SETTINGS": {
       "TITLE": "Ajustes del módulo",
@@ -691,7 +730,7 @@
       "MODE_ITIL_DESC": "Activa estados ITIL completos, matriz Impacto×Urgencia, naturaleza del ticket, problema/cambio y aprobaciones.",
       "NOTE_DATA": "No se borra ni modifica ningún dato: el modo solo cambia lo que se muestra.",
       "NOTE_REVERSIBLE": "Puedes cambiar de modo cuando quieras.",
-            "REOPEN": {
+      "REOPEN": {
         "SECTION": "Reapertura de tickets cerrados",
         "WINDOW_TITLE": "Ventana de reapertura",
         "WINDOW_DESC": "Días desde el cierre en los que el agente asignado puede reabrir. Pasado ese plazo, solo un administrador. Usa 0 para no poner límite.",
@@ -702,7 +741,7 @@
         "NOTE_WINDOW": "El administrador puede reabrir siempre, aunque haya vencido la ventana.",
         "NOTE_SLA": "Al reabrir, el SLA vuelve a contar desde cero."
       },
-"SAVED": "Ajustes guardados",
+      "SAVED": "Ajustes guardados",
       "SAVE_ERROR": "No se pudieron guardar los ajustes."
     },
     "PORTALS": {
@@ -775,7 +814,15 @@
       "NEED_LABEL": "Cada columna necesita un nombre.",
       "NEED_STATES": "Cada columna debe cubrir al menos un estado.",
       "NEED_COVERAGE": "Faltan estados por cubrir antes de guardar.",
-      "LOADING": "Cargando columnas..."
+      "LOADING": "Cargando columnas...",
+      "ADD_BUTTON": "Agregar columna",
+      "SUBTITLE": "Cada columna del tablero agrupa uno o más estados. Cubre los 13 estados para poder guardar.",
+      "POSITION": "#",
+      "STATES_SUMMARY": "Estados",
+      "NEW_TITLE": "Nueva columna",
+      "EDIT_TITLE": "Editar columna",
+      "UNSAVED": "Tienes cambios sin guardar.",
+      "REORDER": "Ordenar"
     },
     "CUSTOM_FIELDS": {
       "MANAGE_BUTTON": "Campos",
@@ -807,6 +854,15 @@
         "date": "Fecha",
         "list": "Lista",
         "checkbox": "Casilla"
+      },
+      "ADD_BUTTON": "Agregar campo",
+      "SUBTITLE": "Estos campos se piden al crear o editar un ticket de este tipo.",
+      "OPTIONS_HEADER": "Opciones",
+      "DELETE": {
+        "TITLE": "Eliminar campo",
+        "MESSAGE": "Se quitará este campo de los tickets de este tipo. ¿Eliminar",
+        "YES": "Eliminar",
+        "NO": "Cancelar"
       }
     },
     "CLASSIFICATION": {
