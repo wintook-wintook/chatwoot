@@ -1009,16 +1009,19 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return nil if key.blank?
 
     text  = message_text_for_ai(message).to_s.truncate(200)
-    today = Time.current.in_time_zone(timezone).strftime('%Y-%m-%d (%A)')
+    now   = Time.current.in_time_zone(timezone)
+    today = "#{now.strftime('%Y-%m-%d')} (#{SLOT_DAY_NAMES[now.wday]})"
     data  = extract_datetime_json(key, today, text)
     return nil unless data.is_a?(Hash)
 
     rd = {
       specific_date: data['specific_date'].presence,
+      weekday:       data['weekday'].presence,
+      weeks_ahead:   data['weeks_ahead'].presence&.to_i,
       specific_time: data['specific_time'].presence,
       relative_days: data['relative_days'].presence&.to_i
     }.compact
-    return nil if rd.empty?
+    return nil if rd.except(:weeks_ahead).empty?
 
     at = calculate_reschedule_datetime(rd, timezone)
     return nil unless at
@@ -1035,8 +1038,15 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     prompt = <<~PROMPT
       Hoy es #{today}. El cliente quiere agendar y puede proponer una fecha/hora en su mensaje.
-      Devuelve SOLO un JSON: {"specific_date": "YYYY-MM-DD" o null, "specific_time": "HH:MM" (24h) o null, "relative_days": número o null}.
+      Devuelve SOLO un JSON:
+      {"specific_date": "YYYY-MM-DD" o null, "weekday": 1..7 o null (1=lunes...7=domingo),
+       "weeks_ahead": número o null, "specific_time": "HH:MM" (24h) o null, "relative_days": número o null}.
       Si no propone ninguna fecha/hora concreta, deja todo en null.
+      Reglas (NO calcules fechas de calendario a mano; el sistema las resuelve):
+      - Día de la semana nombrado ("el martes", "para el jueves"): poné "weekday" (1=lunes...7=domingo)
+        y dejá "specific_date" en null. "weeks_ahead" SOLO si lo dice explícito ("en dos semanas"=2);
+        si no, dejalo null.
+      - Fecha de calendario explícita ("el 30 de junio", "5/7"): poné "specific_date" (YYYY-MM-DD).
       Mensaje del cliente: "#{text}"
     PROMPT
 
