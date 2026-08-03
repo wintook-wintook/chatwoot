@@ -825,7 +825,8 @@
       "NEW_TITLE": "Nueva columna",
       "EDIT_TITLE": "Editar columna",
       "UNSAVED": "Tienes cambios sin guardar.",
-      "REORDER": "Ordenar"
+      "REORDER": "Ordenar",
+      "DRAG_HINT": "Arrastra las filas para reordenar las columnas del tablero."
     },
     "CUSTOM_FIELDS": {
       "MANAGE_BUTTON": "Campos",

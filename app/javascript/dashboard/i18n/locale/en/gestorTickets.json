@@ -906,7 +906,8 @@
       "NEW_TITLE": "New column",
       "EDIT_TITLE": "Edit column",
       "UNSAVED": "You have unsaved changes.",
-      "REORDER": "Reorder"
+      "REORDER": "Reorder",
+      "DRAG_HINT": "Drag the rows to reorder the board columns."
     }
   }
 }
