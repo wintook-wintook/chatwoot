@@ -791,7 +791,14 @@
         "MESSAGE": "Los clientes ya no podrán acceder a esta página. ¿Eliminar",
         "YES": "Eliminar",
         "NO": "Cancelar"
-      }
+      },
+      "TABLE_NAME": "Portal",
+      "TABLE_URL": "URL",
+      "TABLE_TYPES": "Tipos",
+      "TABLE_STATUS": "Estado",
+      "ENABLED_BADGE": "Activo",
+      "PER_PAGE": "Por página",
+      "WA_LANG_PLACEHOLDER": "es"
     },
     "COLUMNS_CFG": {
       "MANAGE_BUTTON": "Columnas",

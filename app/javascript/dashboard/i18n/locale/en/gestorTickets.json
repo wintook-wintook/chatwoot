@@ -731,7 +731,14 @@
         "MESSAGE": "Customers will no longer be able to access this page. Delete",
         "YES": "Delete",
         "NO": "Cancel"
-      }
+      },
+      "TABLE_NAME": "Portal",
+      "TABLE_URL": "URL",
+      "TABLE_TYPES": "Types",
+      "TABLE_STATUS": "Status",
+      "ENABLED_BADGE": "Active",
+      "PER_PAGE": "Per page",
+      "WA_LANG_PLACEHOLDER": "es"
     },
     "CUSTOM_FIELDS": {
       "MANAGE_BUTTON": "Fields",
