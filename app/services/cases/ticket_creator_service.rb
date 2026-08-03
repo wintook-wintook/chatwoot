@@ -404,7 +404,7 @@ class Cases::TicketCreatorService
   def build_conversation_text
     msgs = Message.where(conversation_id: @conversation.id)
                   .where(message_type: [0, 1])
-                  .order(created_at: :desc)
+                  .reorder(created_at: :desc)
                   .limit(8)
                   .reverse
     msgs.map do |m|
