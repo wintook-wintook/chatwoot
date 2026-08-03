@@ -796,7 +796,17 @@
         "MESSAGE": "Associated tickets will lose this value. Delete",
         "YES": "Delete",
         "NO": "Cancel"
-      }
+      },
+      "TABLE_NAME": "Name",
+      "TABLE_STATUS": "Status",
+      "TABLE_KIND": "Type",
+      "KIND_CATEGORY": "Category",
+      "KIND_SUBCATEGORY": "Subcategory",
+      "ACTIVE_BADGE": "Active",
+      "ADD_SUB": "Add subcategory",
+      "PER_PAGE": "Per page",
+      "EMPTY_SERVICES": "No services yet. Create the first one.",
+      "EMPTY_CATEGORIES": "No categories yet. Create the first one."
     },
     "FOLIO": {
       "TITLE": "Folio settings",

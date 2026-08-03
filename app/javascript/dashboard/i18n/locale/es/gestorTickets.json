@@ -893,7 +893,17 @@
         "MESSAGE": "Los tickets asociados quedarán sin este valor. ¿Eliminar",
         "YES": "Eliminar",
         "NO": "Cancelar"
-      }
+      },
+      "TABLE_NAME": "Nombre",
+      "TABLE_STATUS": "Estado",
+      "TABLE_KIND": "Tipo",
+      "KIND_CATEGORY": "Categoría",
+      "KIND_SUBCATEGORY": "Subcategoría",
+      "ACTIVE_BADGE": "Activo",
+      "ADD_SUB": "Añadir subcategoría",
+      "PER_PAGE": "Por página",
+      "EMPTY_SERVICES": "Aún no hay servicios. Crea el primero.",
+      "EMPTY_CATEGORIES": "Aún no hay categorías. Crea la primera."
     },
     "FOLIO": {
       "TITLE": "Configuración de folio",

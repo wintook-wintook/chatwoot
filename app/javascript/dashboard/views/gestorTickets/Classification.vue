@@ -1,10 +1,14 @@
 <!--
   @tickets_cases 2B
-  Gestión de la clasificación ITIL: servicios afectados y categorías/subcategorías.
-  Tailwind + dark mode, mismo estilo que TicketTypes.vue.
+  Clasificación ITIL: servicios afectados y categorías/subcategorías. Ahora con
+  tablas nativas (vue-easytable) + paginado inferior y pestañas nativas, en lugar
+  de las listas de tarjetas. Las categorías se aplanan (padre + subcategorías) en
+  una sola tabla con sangría, para conservar el look de tabla sobre un árbol.
 -->
 <script>
 import { mapGetters } from 'vuex';
+import { VeTable } from 'vue-easytable';
+import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 
 const PALETTE = [
   '#3b82f6',
@@ -16,13 +20,20 @@ const PALETTE = [
   '#ec4899',
   '#64748b',
 ];
+const PER_PAGE_OPTIONS = [25, 50, 100];
 
 export default {
   name: 'TicketClassification',
+  components: { VeTable, TableFooter },
   data() {
     return {
-      activeTab: 'services',
+      activeTabIndex: 0,
       palette: PALETTE,
+      perPageOptions: PER_PAGE_OPTIONS,
+      servicesPage: 1,
+      servicesPerPage: 25,
+      categoriesPage: 1,
+      categoriesPerPage: 25,
       // servicios
       showServiceModal: false,
       serviceEditing: null,
@@ -50,12 +61,39 @@ export default {
         {
           key: 'services',
           label: this.$t('CASE_TICKETS.CLASSIFICATION.TAB_SERVICES'),
+          count: this.services.length,
         },
         {
           key: 'categories',
           label: this.$t('CASE_TICKETS.CLASSIFICATION.TAB_CATEGORIES'),
+          count: this.categories.length,
         },
       ];
+    },
+    activeTab() {
+      return this.tabs[this.activeTabIndex].key;
+    },
+    // Aplana categorías → [padre, sus subcategorías, …] con nivel para la sangría.
+    flattenedCategories() {
+      const rows = [];
+      (this.categories || []).forEach(cat => {
+        rows.push({ ...cat, level: 0, isSub: false });
+        (cat.subcategories || []).forEach(sub => {
+          rows.push({ ...sub, level: 1, isSub: true, parentName: cat.name });
+        });
+      });
+      return rows;
+    },
+    pagedServices() {
+      const start = (this.servicesPage - 1) * this.servicesPerPage;
+      return this.services.slice(start, start + this.servicesPerPage);
+    },
+    pagedCategories() {
+      const start = (this.categoriesPage - 1) * this.categoriesPerPage;
+      return this.flattenedCategories.slice(
+        start,
+        start + this.categoriesPerPage
+      );
     },
     categoryModalTitle() {
       if (this.categoryEditing)
@@ -67,12 +105,183 @@ export default {
     deleteMessageValue() {
       return this.toDelete ? ` "${this.toDelete.name}"?` : '';
     },
+    serviceColumns() {
+      return [
+        {
+          field: 'name',
+          key: 'name',
+          title: this.$t('CASE_TICKETS.CLASSIFICATION.TABLE_NAME'),
+          align: 'left',
+          renderBodyCell: ({ row }) => (
+            <div class="flex items-center gap-3 min-w-0">
+              <span
+                class="flex-shrink-0 w-3 h-3 rounded-full"
+                style={{ backgroundColor: row.color }}
+              />
+              <span class="text-sm font-medium truncate text-slate-800 dark:text-slate-100">
+                {row.name}
+              </span>
+            </div>
+          ),
+        },
+        {
+          field: 'status',
+          key: 'status',
+          title: this.$t('CASE_TICKETS.CLASSIFICATION.TABLE_STATUS'),
+          align: 'left',
+          width: 140,
+          renderBodyCell: ({ row }) => this.statusToggle(row, 'service'),
+        },
+        {
+          field: 'actions',
+          key: 'actions',
+          title: '',
+          align: 'right',
+          width: 110,
+          renderBodyCell: ({ row }) => (
+            <div class="flex items-center justify-end gap-1">
+              <woot-button
+                size="tiny"
+                variant="clear"
+                color-scheme="secondary"
+                icon="edit"
+                onClick={() => this.openServiceEdit(row)}
+              />
+              <woot-button
+                size="tiny"
+                variant="clear"
+                color-scheme="alert"
+                icon="delete"
+                onClick={() => this.askDelete('service', row)}
+              />
+            </div>
+          ),
+        },
+      ];
+    },
+    categoryColumns() {
+      return [
+        {
+          field: 'name',
+          key: 'name',
+          title: this.$t('CASE_TICKETS.CLASSIFICATION.TABLE_NAME'),
+          align: 'left',
+          renderBodyCell: ({ row }) => (
+            <div
+              class="flex items-center gap-2 min-w-0"
+              style={{ paddingLeft: row.isSub ? '1.5rem' : '0' }}
+            >
+              {row.isSub ? (
+                <span class="text-slate-300 dark:text-slate-600">—</span>
+              ) : null}
+              <span
+                class={
+                  row.isSub
+                    ? 'text-sm truncate text-slate-700 dark:text-slate-200'
+                    : 'text-sm font-medium truncate text-slate-800 dark:text-slate-100'
+                }
+              >
+                {row.name}
+              </span>
+            </div>
+          ),
+        },
+        {
+          field: 'kind',
+          key: 'kind',
+          title: this.$t('CASE_TICKETS.CLASSIFICATION.TABLE_KIND'),
+          align: 'left',
+          width: 150,
+          renderBodyCell: ({ row }) => (
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              {row.isSub
+                ? this.$t('CASE_TICKETS.CLASSIFICATION.KIND_SUBCATEGORY')
+                : this.$t('CASE_TICKETS.CLASSIFICATION.KIND_CATEGORY')}
+            </span>
+          ),
+        },
+        {
+          field: 'status',
+          key: 'status',
+          title: this.$t('CASE_TICKETS.CLASSIFICATION.TABLE_STATUS'),
+          align: 'left',
+          width: 140,
+          renderBodyCell: ({ row }) => this.statusToggle(row, 'category'),
+        },
+        {
+          field: 'actions',
+          key: 'actions',
+          title: '',
+          align: 'right',
+          width: 150,
+          renderBodyCell: ({ row }) => (
+            <div class="flex items-center justify-end gap-1">
+              {row.isSub ? null : (
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="add"
+                  title={this.$t('CASE_TICKETS.CLASSIFICATION.ADD_SUB')}
+                  onClick={() => this.openCategoryCreate(row)}
+                />
+              )}
+              <woot-button
+                size="tiny"
+                variant="clear"
+                color-scheme="secondary"
+                icon="edit"
+                onClick={() => this.openCategoryEdit(row)}
+              />
+              <woot-button
+                size="tiny"
+                variant="clear"
+                color-scheme="alert"
+                icon="delete"
+                onClick={() => this.askDelete('category', row)}
+              />
+            </div>
+          ),
+        },
+      ];
+    },
   },
   mounted() {
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('caseTickets/fetchCategories');
   },
   methods: {
+    onTabChange(index) {
+      this.activeTabIndex = index;
+    },
+    // Badge de estado que también es toggle (clic alterna activo/inactivo).
+    statusToggle(row, kind) {
+      const active = !!row.active;
+      return (
+        <woot-button
+          size="tiny"
+          variant={active ? 'smooth' : 'clear'}
+          color-scheme={active ? 'success' : 'secondary'}
+          icon={active ? 'checkmark-circle' : 'dismiss-circle'}
+          onClick={() => this.toggleActive(row, kind)}
+        >
+          {active
+            ? this.$t('CASE_TICKETS.CLASSIFICATION.ACTIVE_BADGE')
+            : this.$t('CASE_TICKETS.CLASSIFICATION.INACTIVE')}
+        </woot-button>
+      );
+    },
+    async toggleActive(row, kind) {
+      const action =
+        kind === 'service'
+          ? 'caseTickets/updateService'
+          : 'caseTickets/updateCategory';
+      try {
+        await this.$store.dispatch(action, { id: row.id, active: !row.active });
+      } catch (_e) {
+        /* silent */
+      }
+    },
     // ── servicios ──
     openServiceCreate() {
       this.serviceEditing = null;
@@ -166,6 +375,18 @@ export default {
         this.deleteKind = null;
       }
     },
+    changeServicesPage(page) {
+      this.servicesPage = page;
+    },
+    changeServicesPerPage() {
+      this.servicesPage = 1;
+    },
+    changeCategoriesPage(page) {
+      this.categoriesPage = page;
+    },
+    changeCategoriesPerPage() {
+      this.categoriesPage = 1;
+    },
   },
 };
 </script>
@@ -174,11 +395,11 @@ export default {
   <div
     class="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900"
   >
-    <!-- Header -->
+    <!-- Header + tabs -->
     <div
-      class="flex items-center justify-between flex-shrink-0 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
+      class="flex-shrink-0 px-6 pt-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-4 mb-1">
         <woot-button
           size="small"
           variant="clear"
@@ -192,153 +413,141 @@ export default {
           {{ $t('CASE_TICKETS.CLASSIFICATION.TITLE') }}
         </h1>
       </div>
+      <woot-tabs :index="activeTabIndex" class="-mb-px" @change="onTabChange">
+        <woot-tabs-item
+          v-for="(t, i) in tabs"
+          :key="t.key"
+          :index="i"
+          :name="t.label"
+          :count="t.count"
+          :show-badge="t.count > 0"
+        />
+      </woot-tabs>
     </div>
 
-    <!-- Tabs -->
-    <div class="flex gap-1 px-6 pt-4">
-      <button
-        v-for="tab in tabs"
-        :key="tab.key"
-        class="px-3 py-1.5 text-sm font-medium rounded-t-lg"
-        :class="
-          activeTab === tab.key
-            ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
-        "
-        @click="activeTab = tab.key"
+    <!-- ── Servicios ─────────────────────────────────────── -->
+    <template v-if="activeTab === 'services'">
+      <div class="flex items-center justify-between flex-shrink-0 px-6 py-3">
+        <p class="m-0 mr-4 text-sm text-slate-500 dark:text-slate-400">
+          {{ $t('CASE_TICKETS.CLASSIFICATION.SERVICES_HELP') }}
+        </p>
+        <woot-button
+          size="small"
+          icon="add-circle"
+          class="flex-shrink-0"
+          @click="openServiceCreate"
+        >
+          {{ $t('CASE_TICKETS.CLASSIFICATION.NEW_SERVICE') }}
+        </woot-button>
+      </div>
+
+      <div
+        v-if="!services.length"
+        class="flex flex-col items-center justify-center flex-1 gap-3 text-slate-400 dark:text-slate-500"
       >
-        {{ tab.label }}
-      </button>
-    </div>
+        <fluent-icon icon="folder" size="36" />
+        <p>{{ $t('CASE_TICKETS.CLASSIFICATION.EMPTY_SERVICES') }}</p>
+      </div>
 
-    <div class="flex flex-col flex-1 gap-2 px-6 py-4 overflow-y-auto">
-      <!-- ── Servicios ─────────────────────────────────────── -->
-      <template v-if="activeTab === 'services'">
-        <div class="flex items-center justify-between mb-2">
-          <p class="m-0 text-sm text-slate-500 dark:text-slate-400">
-            {{ $t('CASE_TICKETS.CLASSIFICATION.SERVICES_HELP') }}
-          </p>
-          <woot-button
-            size="small"
-            icon="add-circle"
-            @click="openServiceCreate"
-          >
-            {{ $t('CASE_TICKETS.CLASSIFICATION.NEW_SERVICE') }}
-          </woot-button>
-        </div>
-        <div
-          v-for="s in services"
-          :key="s.id"
-          class="flex items-center gap-3 p-3 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-        >
-          <span
-            class="flex-shrink-0 w-4 h-4 rounded-full"
-            :style="{ backgroundColor: s.color }"
-          />
-          <span
-            class="flex-1 text-sm font-medium text-slate-800 dark:text-slate-100"
-            >{{ s.name }}</span
-          >
-          <span
-            v-if="!s.active"
-            class="px-1.5 py-0.5 text-xs rounded bg-slate-100 text-slate-500 dark:bg-slate-700"
-            >{{ $t('CASE_TICKETS.CLASSIFICATION.INACTIVE') }}</span
-          >
-          <woot-button
-            size="tiny"
-            variant="clear"
-            color-scheme="secondary"
-            icon="edit"
-            @click="openServiceEdit(s)"
-          />
-          <woot-button
-            size="tiny"
-            variant="clear"
-            color-scheme="alert"
-            icon="delete"
-            @click="askDelete('service', s)"
-          />
-        </div>
-      </template>
-
-      <!-- ── Categorías ────────────────────────────────────── -->
       <template v-else>
-        <div class="flex items-center justify-between mb-2">
-          <p class="m-0 text-sm text-slate-500 dark:text-slate-400">
-            {{ $t('CASE_TICKETS.CLASSIFICATION.CATEGORIES_HELP') }}
-          </p>
-          <woot-button
-            size="small"
-            icon="add-circle"
-            @click="openCategoryCreate(null)"
-          >
-            {{ $t('CASE_TICKETS.CLASSIFICATION.NEW_CATEGORY') }}
-          </woot-button>
+        <div class="flex-1 min-h-0 px-6 pb-2 classif-table-wrap">
+          <VeTable
+            fixed-header
+            max-height="100%"
+            row-key-field-name="id"
+            :columns="serviceColumns"
+            :table-data="pagedServices"
+            :border-around="false"
+          />
         </div>
         <div
-          v-for="c in categories"
-          :key="c.id"
-          class="bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+          class="flex items-center justify-between flex-shrink-0 border-t border-slate-50 dark:border-slate-800/50"
         >
-          <div class="flex items-center gap-3 p-3">
-            <span
-              class="flex-1 text-sm font-medium text-slate-800 dark:text-slate-100"
-              >{{ c.name }}</span
-            >
-            <span
-              v-if="!c.active"
-              class="px-1.5 py-0.5 text-xs rounded bg-slate-100 text-slate-500 dark:bg-slate-700"
-              >{{ $t('CASE_TICKETS.CLASSIFICATION.INACTIVE') }}</span
-            >
-            <woot-button
-              size="tiny"
-              variant="clear"
-              color-scheme="secondary"
-              icon="add"
-              @click="openCategoryCreate(c)"
-            />
-            <woot-button
-              size="tiny"
-              variant="clear"
-              color-scheme="secondary"
-              icon="edit"
-              @click="openCategoryEdit(c)"
-            />
-            <woot-button
-              size="tiny"
-              variant="clear"
-              color-scheme="alert"
-              icon="delete"
-              @click="askDelete('category', c)"
-            />
-          </div>
-          <div
-            v-for="sub in c.subcategories"
-            :key="sub.id"
-            class="flex items-center gap-3 px-3 py-2 ml-6 border-t border-slate-50 dark:border-slate-700/50"
+          <label
+            class="flex items-center gap-1 pl-6 text-xs text-slate-500 dark:text-slate-400"
           >
-            <span class="text-slate-400">—</span>
-            <span class="flex-1 text-sm text-slate-700 dark:text-slate-200">{{
-              sub.name
-            }}</span>
-            <woot-button
-              size="tiny"
-              variant="clear"
-              color-scheme="secondary"
-              icon="edit"
-              @click="openCategoryEdit(sub)"
-            />
-            <woot-button
-              size="tiny"
-              variant="clear"
-              color-scheme="alert"
-              icon="delete"
-              @click="askDelete('category', sub)"
-            />
-          </div>
+            {{ $t('CASE_TICKETS.CLASSIFICATION.PER_PAGE') }}
+            <select
+              v-model.number="servicesPerPage"
+              class="!mb-0 w-20 text-sm"
+              @change="changeServicesPerPage"
+            >
+              <option v-for="n in perPageOptions" :key="n" :value="n">
+                {{ n }}
+              </option>
+            </select>
+          </label>
+          <TableFooter
+            :current-page="servicesPage"
+            :total-count="services.length"
+            :page-size="servicesPerPage"
+            @pageChange="changeServicesPage"
+          />
         </div>
       </template>
-    </div>
+    </template>
+
+    <!-- ── Categorías ────────────────────────────────────── -->
+    <template v-else>
+      <div class="flex items-center justify-between flex-shrink-0 px-6 py-3">
+        <p class="m-0 mr-4 text-sm text-slate-500 dark:text-slate-400">
+          {{ $t('CASE_TICKETS.CLASSIFICATION.CATEGORIES_HELP') }}
+        </p>
+        <woot-button
+          size="small"
+          icon="add-circle"
+          class="flex-shrink-0"
+          @click="openCategoryCreate(null)"
+        >
+          {{ $t('CASE_TICKETS.CLASSIFICATION.NEW_CATEGORY') }}
+        </woot-button>
+      </div>
+
+      <div
+        v-if="!flattenedCategories.length"
+        class="flex flex-col items-center justify-center flex-1 gap-3 text-slate-400 dark:text-slate-500"
+      >
+        <fluent-icon icon="list" size="36" />
+        <p>{{ $t('CASE_TICKETS.CLASSIFICATION.EMPTY_CATEGORIES') }}</p>
+      </div>
+
+      <template v-else>
+        <div class="flex-1 min-h-0 px-6 pb-2 classif-table-wrap">
+          <VeTable
+            fixed-header
+            max-height="100%"
+            row-key-field-name="id"
+            :columns="categoryColumns"
+            :table-data="pagedCategories"
+            :border-around="false"
+          />
+        </div>
+        <div
+          class="flex items-center justify-between flex-shrink-0 border-t border-slate-50 dark:border-slate-800/50"
+        >
+          <label
+            class="flex items-center gap-1 pl-6 text-xs text-slate-500 dark:text-slate-400"
+          >
+            {{ $t('CASE_TICKETS.CLASSIFICATION.PER_PAGE') }}
+            <select
+              v-model.number="categoriesPerPage"
+              class="!mb-0 w-20 text-sm"
+              @change="changeCategoriesPerPage"
+            >
+              <option v-for="n in perPageOptions" :key="n" :value="n">
+                {{ n }}
+              </option>
+            </select>
+          </label>
+          <TableFooter
+            :current-page="categoriesPage"
+            :total-count="flattenedCategories.length"
+            :page-size="categoriesPerPage"
+            @pageChange="changeCategoriesPage"
+          />
+        </div>
+      </template>
+    </template>
 
     <!-- Modal servicio -->
     <woot-modal
@@ -381,7 +590,7 @@ export default {
                 v-for="col in palette"
                 :key="col"
                 type="button"
-                class="rounded-full border-2 w-7 h-7"
+                class="border-2 rounded-full w-7 h-7"
                 :class="
                   serviceForm.color === col
                     ? 'border-slate-800 dark:border-white scale-110'
@@ -499,3 +708,23 @@ export default {
     />
   </div>
 </template>
+
+<style lang="scss" scoped>
+.classif-table-wrap {
+  overflow: hidden;
+}
+
+.classif-table-wrap::v-deep {
+  .ve-table {
+    height: 100%;
+  }
+  .ve-table-header-th {
+    padding: var(--space-small) var(--space-one) !important;
+    font-size: var(--font-size-mini) !important;
+  }
+  .ve-table-body-td {
+    padding: var(--space-small) var(--space-one) !important;
+    vertical-align: middle;
+  }
+}
+</style>
