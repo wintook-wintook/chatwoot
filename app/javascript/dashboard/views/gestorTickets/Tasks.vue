@@ -277,16 +277,54 @@ export default {
           },
         },
         {
+          // @tickets_cases — nº de notas de la tarea; click abre el ticket en la
+          // pestaña Notas filtrada por esa tarea.
+          field: 'notes_count',
+          key: 'notes_count',
+          title: this.$t('CASE_TICKETS.TASKS.TABLE.NOTES'),
+          align: 'right',
+          width: 80,
+          renderBodyCell: ({ row }) => {
+            const count = row.notes_count || 0;
+            return (
+              <button
+                class={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold transition-colors ${
+                  count
+                    ? 'text-woot-600 dark:text-woot-300 hover:bg-woot-50 dark:hover:bg-woot-800/40'
+                    : 'text-slate-300 dark:text-slate-600 hover:text-slate-500'
+                }`}
+                title={
+                  count
+                    ? this.$t('CASE_TICKETS.TASKS.NOTES_COUNT_TITLE', { count })
+                    : this.$t('CASE_TICKETS.TASKS.NOTES_NONE')
+                }
+                onClick={() => this.openTaskNotes(row)}
+              >
+                <fluent-icon icon="clipboard" size="14" />
+                {count}
+              </button>
+            );
+          },
+        },
+        {
           field: 'id',
           key: 'actions',
           title: '',
           align: 'left',
-          width: 70,
+          width: 110,
           renderBodyCell: ({ row }) =>
             this.ticketFrozen(row) ? null : (
               <div class="button-wrapper">
                 <woot-button
-                  size="tiny"
+                  size="large"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="comment-add"
+                  title={this.$t('CASE_TICKETS.TASKS.ADD_NOTE')}
+                  onClick={() => this.addNoteForTask(row)}
+                />
+                <woot-button
+                  size="large"
                   variant="clear"
                   color-scheme="alert"
                   icon="delete"
@@ -384,6 +422,39 @@ export default {
       this.$router.push({
         name: 'gestorTickets_detail',
         params: { id: task.case_ticket.id },
+      });
+    },
+    // @tickets_cases — abre el ticket en la pestaña Notas filtrada por la tarea.
+    // Con 0 notas no navega: solo avisa (no hay nada que ver todavía).
+    openTaskNotes(task) {
+      if (!(task.notes_count > 0)) {
+        this.$emitter.emit('caseToastMessage', {
+          message: this.$t('CASE_TICKETS.TASKS.NOTES_NONE_TOAST', {
+            folio: this.seqLabel(task.sequence),
+          }),
+          icon: 'clipboard',
+        });
+        return;
+      }
+      if (!task.case_ticket) return;
+      this.$router.push({
+        name: 'gestorTickets_detail',
+        params: { id: task.case_ticket.id },
+        query: { tab: 'notes', task: task.sequence },
+      });
+    },
+    // @tickets_cases — abre el ticket y el modal de alta de nota atado a la tarea.
+    addNoteForTask(task) {
+      if (!task.case_ticket) return;
+      this.$router.push({
+        name: 'gestorTickets_detail',
+        params: { id: task.case_ticket.id },
+        query: {
+          tab: 'notes',
+          task: task.sequence,
+          taskId: task.id,
+          compose: '1',
+        },
       });
     },
     priorityDot(priority) {

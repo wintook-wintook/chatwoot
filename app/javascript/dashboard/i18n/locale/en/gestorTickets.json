@@ -241,7 +241,8 @@
         "TASK": "Task",
         "ASSIGNEE": "Assignee",
         "DUE": "Due",
-        "COMPLETED": "Completed"
+        "COMPLETED": "Completed",
+        "NOTES": "Notes"
       },
       "MODAL": {
         "NEW_TITLE": "New task",
@@ -254,13 +255,23 @@
         "DUE_LABEL": "Due",
         "SAVE": "Save",
         "CANCEL": "Cancel",
-        "CLOSE": "Close"
+        "CLOSE": "Close",
+        "NEW_DESC": "Create a ticket task or subtask, with an assignee and due date.",
+        "EDIT_DESC": "Update the task details or change its status.",
+        "VIEW_DESC": "Task detail."
       },
       "INBOX": {
         "TICKET_COL": "Ticket",
         "OPEN_TICKET": "Open ticket",
         "DELETE_ERROR": "Could not delete the task."
-      }
+      },
+      "ADD_NOTE": "Add note",
+      "REFRESH": "Refresh",
+      "FILTER_PLACEHOLDER": "Search tasks (title, assignee)…",
+      "NO_MATCHES": "No matches for the filter.",
+      "NOTES_NONE": "No notes",
+      "NOTES_COUNT_TITLE": "{count} note(s) — view",
+      "NOTES_NONE_TOAST": "Task {folio} has no notes yet."
     },
     "MODAL": {
       "TITLE_CREATE": "Create ticket",
@@ -492,8 +503,17 @@
       "TABLE": {
         "NOTE": "Note",
         "AUTHOR": "Author",
-        "DATE": "Date"
-      }
+        "DATE": "Date",
+        "TASK": "Task"
+      },
+      "MODAL_TASK_SCOPE": "Note for task",
+      "REFRESH": "Refresh",
+      "FILTER_PLACEHOLDER": "Search notes (text, author, ref)…",
+      "NO_MATCHES": "No matches for the filter.",
+      "CREATED": "Created on {date}",
+      "MODAL_DESC": "Log what you did or what is pending in the ticket. Visible to agents only; the customer will not see it.",
+      "MODAL_EDIT_DESC": "Update the content. It will be logged that the note was edited and by whom.",
+      "MODAL_VIEW_DESC": "Full detail of the internal note."
     },
     "RELATIONS": {
       "TITLE": "Related tickets",

@@ -36,6 +36,10 @@ export default {
       // Antes se recordaba la última pestaña en localStorage y podías caer en
       // Tareas o Notas de otro ticket sin haber visto el estado del actual.
       activeDetailTab: 'journey',
+      // @tickets_cases — al llegar desde la bandeja de tareas con ?tab=notes… se
+      // abre la pestaña Notas (filtrada por la tarea, o el modal de alta si
+      // compose=1) en cuanto el ticket termina de cargar. { seq, taskId, compose }.
+      entryNote: null,
       lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
       showTransitionMenu: false,
       showPriorityMenu: false, // @tickets_cases P1 — prioridad inline
@@ -427,6 +431,15 @@ export default {
       this.activeDetailTab = 'journey';
       this.loadTicket();
     },
+    // @tickets_cases — cuando el ticket termina de cargar, si venimos de la
+    // bandeja aplicamos la acción de notas pendiente (filtrar o componer).
+    ticket(val) {
+      if (val && this.entryNote) {
+        const payload = this.entryNote;
+        this.entryNote = null;
+        this.$nextTick(() => this.applyEntryNote(payload));
+      }
+    },
   },
   mounted() {
     this.loadTicket();
@@ -434,6 +447,7 @@ export default {
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     this.acquireLock();
+    this.applyEntryQuery();
   },
   beforeDestroy() {
     this.releaseLock();
@@ -1060,6 +1074,45 @@ export default {
       this.activeDetailTab = 'notes';
       this.$nextTick(() => this.$refs.ticketNotes?.openCreate());
     },
+    // @tickets_cases — "agregar nota" desde una fila de la tabla de tareas: salta
+    // a la pestaña Notas y abre el modal ya atado a esa tarea (folio T00N).
+    openNoteForTask(task) {
+      this.activeDetailTab = 'notes';
+      this.$nextTick(() => this.$refs.ticketNotes?.openCreate(task));
+    },
+    // @tickets_cases — "ver notas" desde la columna de conteo de una tarea: salta
+    // a la pestaña Notas ya filtrada por el folio de esa tarea.
+    openNotesForTask(task) {
+      this.activeDetailTab = 'notes';
+      this.$nextTick(() => this.$refs.ticketNotes?.showTaskNotes(task));
+    },
+    // @tickets_cases — al entrar con ?tab=notes&task=N (desde la bandeja de
+    // tareas): abre Notas; compose=1 abre el modal de alta atado a la tarea, si
+    // no filtra por su folio. Si el ticket ya está cargado actúa ya; si no, deja
+    // la acción pendiente para el watcher `ticket`.
+    applyEntryQuery() {
+      const q = this.$route.query || {};
+      if (q.tab !== 'notes') return;
+      this.activeDetailTab = 'notes';
+      const seq = Number(q.task);
+      if (!seq) return;
+      const payload = {
+        seq,
+        taskId: Number(q.taskId) || null,
+        compose: q.compose === '1',
+      };
+      if (this.ticket) this.$nextTick(() => this.applyEntryNote(payload));
+      else this.entryNote = payload;
+    },
+    applyEntryNote({ seq, taskId, compose }) {
+      const notes = this.$refs.ticketNotes;
+      if (!notes) return;
+      if (compose && taskId) {
+        notes.openCreate({ id: taskId, sequence: seq, title: '' });
+      } else {
+        notes.showTaskNotes({ sequence: seq });
+      }
+    },
     // @tickets_cases 2E — relaciones entre tickets
     openRelationModal() {
       this.relationForm = { relation_type: 'duplicate' };
@@ -1309,9 +1362,13 @@ export default {
           <h2 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
             {{ ticket.title }}
           </h2>
+          <!-- @tickets_cases — descripción a UNA sola línea con "…": si es larga
+               se recorta; para leerla completa se abre "Editar ticket". El
+               title nativo la muestra al pasar el cursor. -->
           <p
             v-if="ticket.description"
-            class="m-0 text-sm text-slate-600 dark:text-slate-300"
+            class="m-0 text-sm truncate text-slate-600 dark:text-slate-300"
+            :title="ticket.description"
           >
             {{ ticket.description }}
           </p>
@@ -2376,6 +2433,8 @@ export default {
         :is-frozen="isFrozen"
         class="flex-1 min-h-0"
         @count="taskCount = $event"
+        @addNote="openNoteForTask"
+        @viewNotes="openNotesForTask"
       />
 
       <!-- ════ Pestaña Avance del ticket (2L) — 3 vistas conmutables ════ -->

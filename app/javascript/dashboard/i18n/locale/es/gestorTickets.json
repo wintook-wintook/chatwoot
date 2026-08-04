@@ -289,7 +289,8 @@
         "STATUS": "Estado",
         "ASSIGNEE": "Responsable",
         "DUE": "Vence",
-        "COMPLETED": "Completada"
+        "COMPLETED": "Completada",
+        "NOTES": "Notas"
       },
       "STATUS": {
         "PENDING": "Pendiente",
@@ -307,8 +308,18 @@
         "STATUS_LABEL": "Estado",
         "SAVE": "Guardar",
         "CANCEL": "Cancelar",
-        "CLOSE": "Cerrar"
-      }
+        "CLOSE": "Cerrar",
+        "NEW_DESC": "Crea una tarea o subtarea del ticket, con responsable y fecha de vencimiento.",
+        "EDIT_DESC": "Actualiza los datos de la tarea o cambia su estado.",
+        "VIEW_DESC": "Detalle de la tarea."
+      },
+      "ADD_NOTE": "Agregar nota",
+      "REFRESH": "Actualizar",
+      "FILTER_PLACEHOLDER": "Buscar en tareas (título, responsable)…",
+      "NO_MATCHES": "Sin coincidencias con el filtro.",
+      "NOTES_NONE": "Sin notas",
+      "NOTES_COUNT_TITLE": "{count} nota(s) — ver",
+      "NOTES_NONE_TOAST": "La tarea {folio} aún no tiene notas."
     },
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",
@@ -548,8 +559,17 @@
         "NUM": "Folio",
         "NOTE": "Nota",
         "AUTHOR": "Autor",
-        "DATE": "Fecha"
-      }
+        "DATE": "Fecha",
+        "TASK": "Tarea"
+      },
+      "MODAL_TASK_SCOPE": "Nota de la tarea",
+      "REFRESH": "Actualizar",
+      "FILTER_PLACEHOLDER": "Buscar en notas (texto, autor, folio)…",
+      "NO_MATCHES": "Sin coincidencias con el filtro.",
+      "CREATED": "Creada el {date}",
+      "MODAL_DESC": "Registra en la bitácora del ticket lo que hiciste o lo que falta. Solo la ven los agentes; el cliente no la verá.",
+      "MODAL_EDIT_DESC": "Actualiza el contenido. Quedará registrado que la nota fue editada y por quién.",
+      "MODAL_VIEW_DESC": "Detalle completo de la nota interna."
     },
     "RELATIONS": {
       "TITLE": "Tickets relacionados",

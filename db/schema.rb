@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_07_30_160000) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_03_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -278,7 +278,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_30_160000) do
     t.integer "origin", null: false
     t.jsonb "payload", default: {}, null: false
     t.datetime "created_at", null: false
+    t.bigint "case_task_id"
     t.index ["account_id", "created_at"], name: "index_case_events_on_account_id_and_created_at"
+    t.index ["case_task_id"], name: "index_case_events_on_case_task_id"
     t.index ["case_ticket_id", "event_type"], name: "index_case_events_on_case_ticket_id_and_event_type"
     t.index ["payload"], name: "index_case_events_on_payload", using: :gin
   end
@@ -583,6 +585,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_30_160000) do
     t.string "instagram_id"
     t.index ["page_id", "account_id"], name: "index_channel_facebook_pages_on_page_id_and_account_id", unique: true
     t.index ["page_id"], name: "index_channel_facebook_pages_on_page_id"
+  end
+
+  create_table "channel_instagram", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.string "access_token", null: false
+    t.string "instagram_id", null: false
+    t.datetime "expires_at"
+    t.jsonb "provider_config", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "instagram_id"], name: "index_channel_instagram_on_account_id_and_instagram_id", unique: true
+    t.index ["instagram_id"], name: "index_channel_instagram_on_instagram_id", unique: true
   end
 
   create_table "channel_line", force: :cascade do |t|
@@ -1600,6 +1614,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_07_30_160000) do
   add_foreign_key "ai_agent_attachments", "accounts"
   add_foreign_key "ai_agent_attachments", "tracking_templates"
   add_foreign_key "case_ai_configs", "accounts"
+  add_foreign_key "case_events", "case_tasks", on_delete: :nullify
   add_foreign_key "case_portals", "accounts"
   add_foreign_key "case_portals", "inboxes"
   add_foreign_key "case_settings", "accounts"
