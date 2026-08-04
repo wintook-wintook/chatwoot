@@ -11,19 +11,28 @@
 #  created_at     :datetime         not null
 #  account_id     :bigint           not null
 #  actor_id       :bigint
+#  case_task_id   :bigint
 #  case_ticket_id :bigint           not null
 #
 # Indexes
 #
 #  index_case_events_on_account_id_and_created_at      (account_id,created_at)
+#  index_case_events_on_case_task_id                   (case_task_id)
 #  index_case_events_on_case_ticket_id_and_event_type  (case_ticket_id,event_type)
 #  index_case_events_on_payload                        (payload) USING gin
+#
+# Foreign Keys
+#
+#  fk_rails_...  (case_task_id => case_tasks.id) ON DELETE => nullify
 #
 
 class CaseEvent < ApplicationRecord
   belongs_to :case_ticket
   belongs_to :account
   belongs_to :actor, class_name: 'User', optional: true
+  # @tickets_cases — una nota interna puede colgar de una tarea del ticket.
+  # NULL = nota del ticket mismo (comportamiento por defecto).
+  belongs_to :case_task, optional: true
 
   enum event_type: {
     ticket_created:     0,
@@ -54,7 +63,8 @@ class CaseEvent < ApplicationRecord
     ai_suggested:       25,
     ai_followup:        26,
     priority_changed:   27,
-    due_date_changed:   28
+    due_date_changed:   28,
+    column_changed:     29 # @tickets_cases — movió de columna del Kanban (mismo estado)
   }
 
   enum origin: { bot: 0, agent: 1, system: 2 }

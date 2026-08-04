@@ -49,6 +49,7 @@
       "TITLE": "Tablero de tickets",
       "SEARCH_PLACEHOLDER": "Buscar folio, título o contacto…",
       "ALL_KINDS": "Todos los tipos",
+      "ALL_TYPES": "Todos los tipos de caso",
       "ALL_SERVICES": "Todos los servicios",
       "ALL_AGENTS": "Todos los responsables",
       "UNASSIGNED": "Sin asignar",
@@ -118,7 +119,40 @@
         "MESSAGE": "Esta acción no se puede deshacer. ¿Eliminar la regla",
         "YES": "Eliminar",
         "NO": "Cancelar"
-      }
+      },
+      "BACK": "Volver",
+      "LOADING": "Cargando reglas…",
+      "PER_PAGE": "Por página",
+      "TABLE_POSITION": "#",
+      "TABLE_NAME": "Regla",
+      "TABLE_IF": "Si",
+      "TABLE_THEN": "Entonces",
+      "TABLE_STATUS": "Estado",
+      "NO_CONDITIONS": "Sin condiciones (siempre aplica)",
+      "NO_ACTIONS": "Sin acciones",
+      "ACTIVE_BADGE": "Activa",
+      "INACTIVE_BADGE": "Inactiva",
+      "IF_BADGE": "SI",
+      "THEN_BADGE": "ENTONCES",
+      "IF_SECTION_TITLE": "Se cumplen estas condiciones",
+      "THEN_SECTION_TITLE": "Ejecutar estas acciones",
+      "ADD_CONDITION": "Agregar condición",
+      "ADD_ACTION": "Agregar acción",
+      "NO_CONDITIONS_HINT": "Sin condiciones — la regla se aplica a todos los tickets",
+      "NEED_ACTION": "Agrega al menos una acción",
+      "NAME_LABEL": "Nombre",
+      "NAME_PLACEHOLDER": "Ej: Soporte urgente → escalar",
+      "POSITION_LABEL": "Posición",
+      "DESCRIPTION_LABEL": "Descripción",
+      "DESCRIPTION_PLACEHOLDER": "Opcional",
+      "ACTIVE_LABEL": "Activa",
+      "CONTINUE_LABEL": "Continuar si coincide",
+      "NO_PARAM": "Sin parámetro adicional",
+      "VALUE_PLACEHOLDER": "valor…",
+      "MINUTES_PLACEHOLDER": "minutos",
+      "CANCEL": "Cancelar",
+      "SAVE_EDIT": "Guardar cambios",
+      "CREATE": "Crear regla"
     },
     "CREATE_BUTTON": "+ Crear ticket",
     "PANEL_BUTTON": "Tickets ({count})",
@@ -244,7 +278,10 @@
           "OVERDUE": "Vencidas",
           "TODAY": "Vencen hoy",
           "WEEK": "Esta semana"
-        }
+        },
+        "TICKET_COL": "Ticket",
+        "OPEN_TICKET": "Abrir ticket",
+        "DELETE_ERROR": "No se pudo eliminar la tarea."
       },
       "TABLE": {
         "NUM": "Folio",
@@ -252,7 +289,8 @@
         "STATUS": "Estado",
         "ASSIGNEE": "Responsable",
         "DUE": "Vence",
-        "COMPLETED": "Completada"
+        "COMPLETED": "Completada",
+        "NOTES": "Notas"
       },
       "STATUS": {
         "PENDING": "Pendiente",
@@ -270,8 +308,18 @@
         "STATUS_LABEL": "Estado",
         "SAVE": "Guardar",
         "CANCEL": "Cancelar",
-        "CLOSE": "Cerrar"
-      }
+        "CLOSE": "Cerrar",
+        "NEW_DESC": "Crea una tarea o subtarea del ticket, con responsable y fecha de vencimiento.",
+        "EDIT_DESC": "Actualiza los datos de la tarea o cambia su estado.",
+        "VIEW_DESC": "Detalle de la tarea."
+      },
+      "ADD_NOTE": "Agregar nota",
+      "REFRESH": "Actualizar",
+      "FILTER_PLACEHOLDER": "Buscar en tareas (título, responsable)…",
+      "NO_MATCHES": "Sin coincidencias con el filtro.",
+      "NOTES_NONE": "Sin notas",
+      "NOTES_COUNT_TITLE": "{count} nota(s) — ver",
+      "NOTES_NONE_TOAST": "La tarea {folio} aún no tiene notas."
     },
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",
@@ -374,7 +422,9 @@
         "MESSAGE": "Los tickets usarán el SLA por defecto. Eliminar política",
         "YES": "Eliminar",
         "NO": "Cancelar"
-      }
+      },
+      "PER_PAGE": "Por página",
+      "MINUTES_SUFFIX": "(min)"
     },
     "KB": {
       "NONE": "Sin artículo vinculado",
@@ -452,7 +502,11 @@
       "APPROVED_TOAST": "Cambio aprobado",
       "REJECTED_TOAST": "Cambio rechazado",
       "ERROR": "No se pudo actualizar el cambio",
-      "RISK": { "low": "Bajo", "medium": "Medio", "high": "Alto" },
+      "RISK": {
+        "low": "Bajo",
+        "medium": "Medio",
+        "high": "Alto"
+      },
       "APPROVAL": {
         "pending": "Pendiente",
         "approved": "Aprobado",
@@ -505,8 +559,17 @@
         "NUM": "Folio",
         "NOTE": "Nota",
         "AUTHOR": "Autor",
-        "DATE": "Fecha"
-      }
+        "DATE": "Fecha",
+        "TASK": "Tarea"
+      },
+      "MODAL_TASK_SCOPE": "Nota de la tarea",
+      "REFRESH": "Actualizar",
+      "FILTER_PLACEHOLDER": "Buscar en notas (texto, autor, folio)…",
+      "NO_MATCHES": "Sin coincidencias con el filtro.",
+      "CREATED": "Creada el {date}",
+      "MODAL_DESC": "Registra en la bitácora del ticket lo que hiciste o lo que falta. Solo la ven los agentes; el cliente no la verá.",
+      "MODAL_EDIT_DESC": "Actualiza el contenido. Quedará registrado que la nota fue editada y por quién.",
+      "MODAL_VIEW_DESC": "Detalle completo de la nota interna."
     },
     "RELATIONS": {
       "TITLE": "Tickets relacionados",
@@ -532,11 +595,26 @@
       }
     },
     "RELATION_TYPES": {
-      "duplicate": { "outgoing": "Duplicado de", "incoming": "Tiene duplicado" },
-      "parent_child": { "outgoing": "Padre de", "incoming": "Hijo de" },
-      "incident_problem": { "outgoing": "Pertenece al problema", "incoming": "Incidente relacionado" },
-      "incident_change": { "outgoing": "Asociado al cambio", "incoming": "Incidente relacionado" },
-      "change_problem": { "outgoing": "Resuelve el problema", "incoming": "Resuelto por el cambio" }
+      "duplicate": {
+        "outgoing": "Duplicado de",
+        "incoming": "Tiene duplicado"
+      },
+      "parent_child": {
+        "outgoing": "Padre de",
+        "incoming": "Hijo de"
+      },
+      "incident_problem": {
+        "outgoing": "Pertenece al problema",
+        "incoming": "Incidente relacionado"
+      },
+      "incident_change": {
+        "outgoing": "Asociado al cambio",
+        "incoming": "Incidente relacionado"
+      },
+      "change_problem": {
+        "outgoing": "Resuelve el problema",
+        "incoming": "Resuelto por el cambio"
+      }
     },
     "TIMELINE": {
       "TITLE": "Historial del ticket",
@@ -677,7 +755,27 @@
         "MESSAGE": "Los tickets con este tipo quedarán sin tipo asignado. ¿Eliminar",
         "YES": "Eliminar",
         "NO": "Cancelar"
-      }
+      },
+      "TABLE": {
+        "NAME": "Nombre",
+        "PREFIX": "Prefijo",
+        "FIELDS": "Campos",
+        "COLUMNS": "Columnas",
+        "VISIBILITY": "Portal",
+        "ACTIONS": ""
+      },
+      "EMPTY": "Aún no hay tipos de caso. Crea el primero con «+ Nuevo tipo».",
+      "PER_PAGE": "Por página",
+      "OPEN": "Abrir",
+      "DETAIL": {
+        "BACK": "Tipos de caso",
+        "FIELDS_TAB": "Campos",
+        "COLUMNS_TAB": "Columnas",
+        "NOT_FOUND": "No se encontró el tipo de caso.",
+        "LOADING": "Cargando…"
+      },
+      "NAME_PLACEHOLDER": "Ej: Postventa",
+      "PREFIX_PLACEHOLDER": "SOP"
     },
     "SETTINGS": {
       "TITLE": "Ajustes del módulo",
@@ -690,7 +788,7 @@
       "MODE_ITIL_DESC": "Activa estados ITIL completos, matriz Impacto×Urgencia, naturaleza del ticket, problema/cambio y aprobaciones.",
       "NOTE_DATA": "No se borra ni modifica ningún dato: el modo solo cambia lo que se muestra.",
       "NOTE_REVERSIBLE": "Puedes cambiar de modo cuando quieras.",
-            "REOPEN": {
+      "REOPEN": {
         "SECTION": "Reapertura de tickets cerrados",
         "WINDOW_TITLE": "Ventana de reapertura",
         "WINDOW_DESC": "Días desde el cierre en los que el agente asignado puede reabrir. Pasado ese plazo, solo un administrador. Usa 0 para no poner límite.",
@@ -701,7 +799,7 @@
         "NOTE_WINDOW": "El administrador puede reabrir siempre, aunque haya vencido la ventana.",
         "NOTE_SLA": "Al reabrir, el SLA vuelve a contar desde cero."
       },
-"SAVED": "Ajustes guardados",
+      "SAVED": "Ajustes guardados",
       "SAVE_ERROR": "No se pudieron guardar los ajustes."
     },
     "PORTALS": {
@@ -746,7 +844,51 @@
         "MESSAGE": "Los clientes ya no podrán acceder a esta página. ¿Eliminar",
         "YES": "Eliminar",
         "NO": "Cancelar"
-      }
+      },
+      "TABLE_NAME": "Portal",
+      "TABLE_URL": "URL",
+      "TABLE_TYPES": "Tipos",
+      "TABLE_STATUS": "Estado",
+      "ENABLED_BADGE": "Activo",
+      "PER_PAGE": "Por página",
+      "WA_LANG_PLACEHOLDER": "es"
+    },
+    "COLUMNS_CFG": {
+      "MANAGE_BUTTON": "Columnas",
+      "MODAL_TITLE": "Columnas del tablero",
+      "MODAL_SUBTITLE": "Define las etapas del tablero para este tipo de caso. Cada columna cubre uno o más estados; varias columnas pueden compartir el mismo estado.",
+      "COLUMN": "Columna",
+      "LABEL_LABEL": "Nombre",
+      "LABEL_PLACEHOLDER": "Ej: Cotizado",
+      "COLOR_LABEL": "Color",
+      "STATES_LABEL": "Estados que agrupa",
+      "ADD_COLUMN": "Añadir columna",
+      "EMPTY": "Este tipo aún no tiene columnas propias. Usa el tablero estándar.",
+      "MOVE_UP": "Subir",
+      "MOVE_DOWN": "Bajar",
+      "REMOVE": "Quitar columna",
+      "OVERLAP_INFO": "Estas columnas comparten un mismo estado. Mover un ticket entre ellas no cambia su estado: es correcto y esperado.",
+      "MISSING_COVERAGE": "Estados sin cubrir:",
+      "ASSIGN_REMAINING": "Asignar a la última columna",
+      "COVERAGE_OK": "Todos los estados están cubiertos.",
+      "SAVE": "Guardar columnas",
+      "CANCEL": "Cancelar",
+      "CLOSE": "Cerrar",
+      "SAVED": "Columnas guardadas.",
+      "SAVE_ERROR": "No se pudieron guardar las columnas.",
+      "NEED_LABEL": "Cada columna necesita un nombre.",
+      "NEED_STATES": "Cada columna debe cubrir al menos un estado.",
+      "NEED_COVERAGE": "Faltan estados por cubrir antes de guardar.",
+      "LOADING": "Cargando columnas...",
+      "ADD_BUTTON": "Agregar columna",
+      "SUBTITLE": "Cada columna del tablero agrupa uno o más estados. Cubre los 13 estados para poder guardar.",
+      "POSITION": "#",
+      "STATES_SUMMARY": "Estados",
+      "NEW_TITLE": "Nueva columna",
+      "EDIT_TITLE": "Editar columna",
+      "UNSAVED": "Tienes cambios sin guardar.",
+      "REORDER": "Ordenar",
+      "DRAG_HINT": "Arrastra las filas para reordenar las columnas del tablero."
     },
     "CUSTOM_FIELDS": {
       "MANAGE_BUTTON": "Campos",
@@ -778,6 +920,15 @@
         "date": "Fecha",
         "list": "Lista",
         "checkbox": "Casilla"
+      },
+      "ADD_BUTTON": "Agregar campo",
+      "SUBTITLE": "Estos campos se piden al crear o editar un ticket de este tipo.",
+      "OPTIONS_HEADER": "Opciones",
+      "DELETE": {
+        "TITLE": "Eliminar campo",
+        "MESSAGE": "Se quitará este campo de los tickets de este tipo. ¿Eliminar",
+        "YES": "Eliminar",
+        "NO": "Cancelar"
       }
     },
     "CLASSIFICATION": {
@@ -804,7 +955,17 @@
         "MESSAGE": "Los tickets asociados quedarán sin este valor. ¿Eliminar",
         "YES": "Eliminar",
         "NO": "Cancelar"
-      }
+      },
+      "TABLE_NAME": "Nombre",
+      "TABLE_STATUS": "Estado",
+      "TABLE_KIND": "Tipo",
+      "KIND_CATEGORY": "Categoría",
+      "KIND_SUBCATEGORY": "Subcategoría",
+      "ACTIVE_BADGE": "Activo",
+      "ADD_SUB": "Añadir subcategoría",
+      "PER_PAGE": "Por página",
+      "EMPTY_SERVICES": "Aún no hay servicios. Crea el primero.",
+      "EMPTY_CATEGORIES": "Aún no hay categorías. Crea la primera."
     },
     "FOLIO": {
       "TITLE": "Configuración de folio",
@@ -905,6 +1066,14 @@
       "internal_note": "Nota interna",
       "priority_changed": "Prioridad cambiada",
       "due_date_changed": "Vencimiento cambiado"
+    },
+    "DETAIL": {
+      "BACK": "Volver",
+      "TYPE_LABEL": "Tipo:",
+      "STATUS_LABEL": "Estado:",
+      "LEVEL_LABEL": "Nivel:",
+      "NO_TRANSITIONS": "Sin transiciones disponibles",
+      "LOADING": "Cargando ticket…"
     }
   }
 }

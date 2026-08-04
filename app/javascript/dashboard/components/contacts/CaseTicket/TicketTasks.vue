@@ -34,6 +34,14 @@ export default {
       // traerlas todas evita un contrato de `meta` en el endpoint.
       currentPage: 1,
       perPage: PER_PAGE,
+      // Filtro de texto (título / descripción / responsable).
+      filterText: '',
+      // Orden por click en encabezado. Por defecto la más reciente primero.
+      sortConfig: { sequence: 'desc' },
+      sortOption: {
+        sortAlways: true,
+        sortChange: params => this.onSortChange(params),
+      },
       // Modal de alta/edición
       showModal: false,
       editingId: null,
@@ -59,15 +67,40 @@ export default {
     doneCount() {
       return this.tasks.filter(t => t.status === 'done').length;
     },
+    // Filtro de texto: título, descripción y responsable.
+    filteredTasks() {
+      const q = this.filterText.trim().toLowerCase();
+      if (!q) return this.tasks;
+      return this.tasks.filter(
+        t =>
+          (t.title || '').toLowerCase().includes(q) ||
+          this.plainPreview(t.description).toLowerCase().includes(q) ||
+          (this.assigneeName(t) || '').toLowerCase().includes(q)
+      );
+    },
+    // Orden por la columna activa (una sola a la vez).
+    sortedTasks() {
+      const [field, dir] = Object.entries(this.sortConfig)[0] || [];
+      const rows = [...this.filteredTasks];
+      if (!field || !dir) return rows;
+      const factor = dir === 'asc' ? 1 : -1;
+      return rows.sort((a, b) => this.compareBy(a, b, field) * factor);
+    },
     totalPages() {
-      return Math.max(1, Math.ceil(this.tasks.length / this.perPage));
+      return Math.max(1, Math.ceil(this.sortedTasks.length / this.perPage));
     },
     paginatedTasks() {
       const start = (this.currentPage - 1) * this.perPage;
-      return this.tasks.slice(start, start + this.perPage);
+      return this.sortedTasks.slice(start, start + this.perPage);
     },
     isEditing() {
       return !!this.editingId;
+    },
+    // Subtítulo del modal según el modo (crear / editar / ver).
+    modalDescription() {
+      if (this.viewing) return this.$t('CASE_TICKETS.TASKS.MODAL.VIEW_DESC');
+      if (this.isEditing) return this.$t('CASE_TICKETS.TASKS.MODAL.EDIT_DESC');
+      return this.$t('CASE_TICKETS.TASKS.MODAL.NEW_DESC');
     },
     // Click en la fila abre editar (o ver, si el ticket está cerrado). Se ignora
     // si el click fue sobre el checkbox o un botón de acción de la fila.
@@ -93,6 +126,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.NUM'),
           align: 'left',
           width: 64,
+          sortBy: this.sortConfig.sequence || '',
           // Color del folio según estado: verde concluida, rojo atrasada, azul
           // en tiempo. Tonos claros (shade 300/400) para que no pesen.
           renderBodyCell: ({ row }) => (
@@ -111,6 +145,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.TASK'),
           align: 'left',
           width: 340,
+          sortBy: this.sortConfig.title || '',
           // Título + descripción recortados a una línea al ancho de la columna
           // (como las notas). El contenido completo con formato va en el modal.
           renderBodyCell: ({ row }) => (
@@ -142,6 +177,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.STATUS'),
           align: 'left',
           width: 120,
+          sortBy: this.sortConfig.status || '',
           // Estado como etiqueta de texto, igual que en la tabla de tickets.
           renderBodyCell: ({ row }) => (
             <span class="text-sm whitespace-nowrap text-slate-600 dark:text-slate-300">
@@ -155,6 +191,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.ASSIGNEE'),
           align: 'left',
           width: 150,
+          sortBy: this.sortConfig.assignee || '',
           renderBodyCell: ({ row }) => this.assigneeName(row) || '—',
         },
         {
@@ -163,6 +200,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.DUE'),
           align: 'left',
           width: 160,
+          sortBy: this.sortConfig.due_at || '',
           renderBodyCell: ({ row }) => (
             <span
               class={
@@ -182,6 +220,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.COMPLETED'),
           align: 'left',
           width: 180,
+          sortBy: this.sortConfig.completed_at || '',
           renderBodyCell: ({ row }) => {
             if (!row.completed_at) {
               return (
@@ -205,18 +244,58 @@ export default {
           },
         },
         {
+          // @tickets_cases — cuántas notas cuelgan de la tarea. Click = ver esas
+          // notas (abre la pestaña Notas filtrada por su folio).
+          field: 'notes_count',
+          key: 'notes_count',
+          title: this.$t('CASE_TICKETS.TASKS.TABLE.NOTES'),
+          align: 'right',
+          width: 90,
+          sortBy: this.sortConfig.notes_count || '',
+          renderBodyCell: ({ row }) => {
+            const count = row.notes_count || 0;
+            return (
+              <button
+                class={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold transition-colors ${
+                  count
+                    ? 'text-woot-600 dark:text-woot-300 hover:bg-woot-50 dark:hover:bg-woot-800/40'
+                    : 'text-slate-300 dark:text-slate-600'
+                }`}
+                title={
+                  count
+                    ? this.$t('CASE_TICKETS.TASKS.NOTES_COUNT_TITLE', { count })
+                    : this.$t('CASE_TICKETS.TASKS.NOTES_NONE')
+                }
+                onClick={() => this.onNotesClick(row)}
+              >
+                <fluent-icon icon="clipboard" size="14" />
+                {count}
+              </button>
+            );
+          },
+        },
+        {
           field: 'id',
           key: 'actions',
           title: '',
-          width: 90,
+          width: 120,
           align: 'left',
-          // Editar/ver es por click en la fila. Aquí solo queda borrar (con
-          // confirmación). Cerrado: solo lectura, sin borrar.
+          // Editar/ver es por click en la fila. Aquí quedan "agregar nota" (crea
+          // una nota atada a esta tarea) y borrar (con confirmación).
+          // Cerrado: solo lectura, sin acciones.
           renderBodyCell: ({ row }) =>
             this.isFrozen ? null : (
               <div class="button-wrapper">
                 <woot-button
-                  size="tiny"
+                  size="large"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="comment-add"
+                  title={this.$t('CASE_TICKETS.TASKS.ADD_NOTE')}
+                  onClick={() => this.$emit('addNote', row)}
+                />
+                <woot-button
+                  size="large"
                   variant="clear"
                   color-scheme="alert"
                   icon="delete"
@@ -241,12 +320,59 @@ export default {
       if (this.currentPage > this.totalPages)
         this.currentPage = this.totalPages;
     },
+    // Al filtrar, vuelve a la primera página para no quedar en una vacía.
+    filterText() {
+      this.currentPage = 1;
+    },
   },
   mounted() {
     this.$store.dispatch('agents/get');
     this.load();
   },
   methods: {
+    // Recarga la tabla desde el servidor (botón "Actualizar").
+    refresh() {
+      this.load();
+    },
+    // Click en el contador de notas: si hay notas las muestra; si no, solo avisa
+    // (no tiene sentido ir a Notas para no encontrar nada).
+    onNotesClick(task) {
+      if (task.notes_count > 0) {
+        this.$emit('viewNotes', task);
+      } else {
+        this.$emitter.emit('caseToastMessage', {
+          message: this.$t('CASE_TICKETS.TASKS.NOTES_NONE_TOAST', {
+            folio: this.seqLabel(task.sequence),
+          }),
+          icon: 'clipboard',
+        });
+      }
+    },
+    // VeTable emite { field: 'asc'|'desc'|'' }. Solo una columna activa a la vez.
+    onSortChange(params) {
+      const field = Object.keys(params).find(k => params[k]);
+      this.sortConfig = field ? { [field]: params[field] } : {};
+      this.currentPage = 1;
+    },
+    // Comparador por campo para el orden en cliente.
+    compareBy(a, b, field) {
+      if (field === 'sequence') return (a.sequence || 0) - (b.sequence || 0);
+      if (field === 'notes_count')
+        return (a.notes_count || 0) - (b.notes_count || 0);
+      if (field === 'title')
+        return (a.title || '').localeCompare(b.title || '');
+      if (field === 'status')
+        return (a.status || '').localeCompare(b.status || '');
+      if (field === 'assignee')
+        return (this.assigneeName(a) || '').localeCompare(
+          this.assigneeName(b) || ''
+        );
+      if (field === 'due_at')
+        return new Date(a.due_at || 0) - new Date(b.due_at || 0);
+      if (field === 'completed_at')
+        return new Date(a.completed_at || 0) - new Date(b.completed_at || 0);
+      return 0;
+    },
     async load() {
       if (!this.ticketId) return;
       this.isLoading = true;
@@ -321,8 +447,9 @@ export default {
             payload
           );
           this.tasks = [...this.tasks, data.case_task];
-          // Saltar a la última página para que la tarea recién creada se vea.
-          this.currentPage = this.totalPages;
+          // Por defecto la más reciente va primero: saltamos a la página 1 para
+          // ver la tarea recién creada arriba.
+          this.currentPage = 1;
         }
         this.showModal = false;
       } finally {
@@ -440,12 +567,52 @@ export default {
           >{{ doneCount }}/{{ tasks.length }}</span
         >
       </h3>
-      <woot-button v-if="!isFrozen" size="small" icon="add" @click="openCreate">
-        {{ $t('CASE_TICKETS.TASKS.ADD') }}
-      </woot-button>
+      <div class="flex items-center gap-2">
+        <woot-button
+          v-tooltip.top="$t('CASE_TICKETS.TASKS.REFRESH')"
+          size="small"
+          variant="clear"
+          color-scheme="secondary"
+          icon="arrow-clockwise"
+          :is-loading="isLoading"
+          @click="refresh"
+        />
+        <woot-button
+          v-if="!isFrozen"
+          size="small"
+          icon="add"
+          @click="openCreate"
+        >
+          {{ $t('CASE_TICKETS.TASKS.ADD') }}
+        </woot-button>
+      </div>
     </div>
 
-    <div v-if="isLoading" class="py-2 text-sm text-slate-400">
+    <!-- Filtro rápido de la tabla -->
+    <div v-if="tasks.length" class="flex-shrink-0 mb-3">
+      <div class="relative w-full max-w-xs">
+        <fluent-icon
+          icon="search"
+          size="16"
+          class="absolute pointer-events-none text-slate-400 dark:text-slate-500 left-2.5 top-1/2 -translate-y-1/2"
+        />
+        <input
+          v-model="filterText"
+          type="text"
+          :placeholder="$t('CASE_TICKETS.TASKS.FILTER_PLACEHOLDER')"
+          class="filter-search"
+        />
+        <button
+          v-if="filterText"
+          class="absolute -translate-y-1/2 right-2 top-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+          @click="filterText = ''"
+        >
+          <fluent-icon icon="dismiss" size="14" />
+        </button>
+      </div>
+    </div>
+
+    <div v-if="isLoading && !tasks.length" class="py-2 text-sm text-slate-400">
       {{ $t('CASE_TICKETS.TASKS.LOADING') }}
     </div>
     <div
@@ -453,6 +620,12 @@ export default {
       class="py-2 text-sm text-slate-400 dark:text-slate-500"
     >
       {{ $t('CASE_TICKETS.TASKS.EMPTY') }}
+    </div>
+    <div
+      v-else-if="!sortedTasks.length"
+      class="py-2 text-sm text-slate-400 dark:text-slate-500"
+    >
+      {{ $t('CASE_TICKETS.TASKS.NO_MATCHES') }}
     </div>
 
     <!-- Tabla nativa de Chatwoot (vue-easytable). `fixed-header` + `max-height`
@@ -465,6 +638,7 @@ export default {
         :columns="columns"
         :table-data="paginatedTasks"
         :event-custom-option="eventCustomOption"
+        :sort-option="sortOption"
         :border-around="false"
       />
     </div>
@@ -472,8 +646,9 @@ export default {
     <!-- Paginación: componente estándar de Chatwoot, igual que en Seguimientos.
          Se queda abajo aunque haya una sola tarea (solo desaparece con cero). -->
     <TableFooter
+      v-if="sortedTasks.length"
       :current-page="currentPage"
-      :total-count="tasks.length"
+      :total-count="sortedTasks.length"
       :page-size="perPage"
       class="flex-shrink-0 !px-0 border-t border-slate-75 dark:border-slate-700"
       @pageChange="changePage"
@@ -496,6 +671,7 @@ export default {
               ? $t('CASE_TICKETS.TASKS.MODAL.EDIT_TITLE')
               : $t('CASE_TICKETS.TASKS.MODAL.NEW_TITLE')
           "
+          :header-content="modalDescription"
         />
 
         <form
@@ -528,7 +704,7 @@ export default {
             <div v-if="!viewing" class="editor-wrap">
               <WootMessageEditor
                 v-model="form.description"
-                class="message-editor [&>div]:px-1"
+                class="message-editor"
                 :enable-suggestions="false"
                 :enable-canned-responses="false"
                 :focus-on-mount="false"
@@ -702,21 +878,40 @@ export default {
   }
 }
 
-// Editor enriquecido dentro del modal, montado igual que en Respuestas
-// predefinidas: caja con borde y una altura contenida.
+// Buscador de la tabla: input con lupa a la izquierda, estilo Chatwoot.
+.filter-search {
+  @apply w-full py-1.5 pl-8 pr-7 text-sm bg-white border rounded-md outline-none
+    border-slate-100 dark:border-slate-600 dark:bg-slate-900
+    text-slate-700 dark:text-slate-100;
+
+  &::placeholder {
+    @apply text-slate-400 dark:text-slate-500;
+  }
+
+  &:focus {
+    @apply border-woot-500;
+  }
+}
+
+// Editor enriquecido dentro del modal: caja con borde, barra de formato pegada
+// arriba con separador (SIN margen negativo, que era lo que la hacía sobresalir
+// por encima del borde) y contenido con su propio padding.
 .editor-wrap {
-  @apply border border-slate-200 dark:border-slate-600 rounded-md px-2 bg-white dark:bg-slate-900;
+  @apply overflow-hidden bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900;
 }
 
 .message-editor::v-deep {
   .ProseMirror-menubar {
-    padding: 0;
-    margin-top: var(--space-minus-small);
+    @apply px-2 py-1 m-0 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60;
+    min-height: unset;
+    border-top-left-radius: 0.375rem;
+    border-top-right-radius: 0.375rem;
   }
 
   .ProseMirror-woot-style {
-    min-height: 6rem;
-    max-height: 18rem;
+    @apply px-3 py-2;
+    min-height: 9rem;
+    max-height: 20rem;
   }
 }
 

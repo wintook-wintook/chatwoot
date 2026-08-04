@@ -135,10 +135,18 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                 handle_rejected(tracking, message, route_result[:confidence])
                 true
               when :interested
-                handle_interested(tracking, message, route_result[:confidence])
-                true
+                # proyecto@tickets_cases — en trackings de intake de datos (@crear_ticket),
+                # "interested" no es una señal accionable: el cliente pidiendo o dando datos
+                # del servicio ES el flujo normal, no algo que amerite pausar y derivar a un
+                # humano. El sistema de tickets ya decide cuándo escalar.
+                if ticket_directive_present?(tracking)
+                  try_kbase_then_conversational(tracking, message, route_result)
+                else
+                  handle_interested(tracking, message, route_result[:confidence])
+                  true
+                end
               when :book_appointment
-                handle_book_appointment(tracking, message, route_result)
+                dispatch_book_appointment(tracking, message, route_result)
                 true
               when :reschedule
                 handle_reschedule(tracking, message, route_result)
@@ -177,26 +185,26 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return true
     end
 
-    if kbase_available?(message, tracking) && !case_intake_pending?(message)
-      Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
-      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
-      if kbase_replied
-        Rails.logger.info '[TrackingBot] ✅ KBase respondió'
-        return true
-      end
-      Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → intentando @crear_ticket'
-    end
-
     # @tickets_cases: @estado_ticket — el cliente pregunta por su caso ("¿cuál es
     # mi ticket?"). Va ANTES de @crear_ticket: consultar un caso no abre uno nuevo.
+    # También va ANTES de la KBase: agenda y tickets siempre ganan sobre la hoja.
     if Cases::TicketStatusService.new(message, tracking: tracking).answer_if_status_query
       Rails.logger.info '[TrackingBot] 🔎 Estado de ticket respondido via @estado_ticket'
       return true
     end
 
     # @tickets_cases: si la directiva @crear_ticket está en el prompt, crea ticket y confirma
-    if Cases::TicketCreatorService.new(message, tracking: tracking).create_if_needed
-      Rails.logger.info '[TrackingBot] 🎫 Ticket creado via @crear_ticket'
+    creator = Cases::TicketCreatorService.new(message, tracking: tracking)
+    if creator.create_if_needed
+      Rails.logger.info "[TrackingBot] 🎫 Ticket creado via @crear_ticket (outcome: #{creator.outcome})"
+      # proyecto@bot_seguimiento_calendar — si el ticket quedó completo (recién creado o ya
+      # existía) y hay calendario configurado, seguimos directo a ofrecer disponibilidad en
+      # el mismo turno (ETAPA 3), en vez de esperar a que el cliente lo pida en otro mensaje.
+      # Mismo comportamiento que ya tenía dispatch_book_appointment cuando el Router detecta
+      # appointment_action explícito.
+      if %i[created linked_existing].include?(creator.outcome) && appointment_dispatchable?(tracking)
+        handle_book_appointment(tracking, message, route_result)
+      end
       return true
     end
 
@@ -212,21 +220,24 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       end
     end
 
+    # KBase (hoja/foro/doc) va AL FINAL, como último recurso: si el cliente ya tiene
+    # un ticket/cita en curso, esas rutas resuelven el turno antes de llegar aquí y
+    # la hoja nunca se come la recolección de datos ni la confirmación de agenda.
+    if kbase_available?(message, tracking)
+      Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
+      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
+      if kbase_replied
+        Rails.logger.info '[TrackingBot] ✅ KBase respondió'
+        return true
+      end
+      Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → conversacional'
+    end
+
     generate_and_send_conversational_reply(tracking, message)
   end
 
   def appointment_dispatchable?(tracking)
     agendar_calendar_directive?(tracking) && calendar_configured?(tracking)
-  end
-
-  # @tickets_cases — mientras @crear_ticket está pidiendo los campos obligatorios, el
-  # mensaje del cliente ES el dato pedido ("de Guadalajara a Vallarta"), no una consulta.
-  # Sin este guard la KBase hace match con ese vocabulario y se come la respuesta, y la
-  # recolección nunca termina.
-  def case_intake_pending?(message)
-    pending = Cases::TicketCreatorService.intake_pending?(message.conversation_id)
-    Rails.logger.info '[TrackingBot] ⏸️ Recolección de campos en curso → KBase omitida' if pending
-    pending
   end
 
   # proyecto@bot_seguimiento_calendar — clasificación appointment-aware. Si DETECT_INTENT está
@@ -724,6 +735,25 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                         'vinculados. Coordinar la cita manualmente. Requiere atención humana.')
   end
 
+  # proyecto@bot_seguimiento_calendar — el Router puede clasificar intención de
+  # agendar ANTES de conocer el objeto del servicio (material, ubicaciones, peso).
+  # Si la cuenta usa @crear_ticket, los campos obligatorios del caso son la fuente
+  # de verdad de "qué necesita el cliente": los pedimos primero y solo ofrecemos
+  # horarios cuando ya están completos (o cuando el caso no aplica/ya existe).
+  def dispatch_book_appointment(tracking, message, route_result)
+    return handle_book_appointment(tracking, message, route_result) unless ticket_directive_present?(tracking)
+
+    creator = Cases::TicketCreatorService.new(message, tracking: tracking)
+    creator.create_if_needed
+    return if creator.outcome == :asked_missing_fields
+
+    handle_book_appointment(tracking, message, route_result)
+  end
+
+  def ticket_directive_present?(tracking)
+    Cases::TicketCreatorService::DIRECTIVE_RE.match?(tracking&.complementary_prompt.to_s)
+  end
+
   # ==============================================================================
   # proyecto@bot_seguimiento_calendar
   # Handler: Agendar cita via Google Calendar
@@ -863,8 +893,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     choice = parse_slot_choice(text, slots.size)
 
     # Un dígito 1-5 dentro de una frase con fecha/hora ("a las 5 de la tarde", "el jueves
-    # a las 3") NO es una elección de slot: es una propuesta → negociamos.
-    if choice.nil? || looks_like_datetime_proposal?(text)
+    # a las 3") o con una cantidad ("3 toneladas de arena") NO es una elección de slot:
+    # es una propuesta u otro dato → negociamos en vez de confirmar a ciegas.
+    if choice.nil? || looks_like_datetime_proposal?(text) || looks_like_quantity?(text)
       Rails.logger.info '[TrackingBot] 📅 No es elección de número → intentando negociar fecha/hora'
       return handle_slot_negotiation(tracking, message, slots)
     end
@@ -892,6 +923,14 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar — negociación multi-turno: el cliente, en vez de
   # elegir un número, propone otra fecha/hora. Intentamos interpretarla, verificar
   # disponibilidad y: confirmarla si está libre, ofrecer cercanas si no, o repreguntar.
+  def try_kbase_during_negotiation(tracking, message)
+    return false unless kbase_available?(message, tracking)
+    return false unless KnowledgeBaseResponseService.new(message, tracking: tracking).perform
+
+    Rails.logger.info '[TrackingBot] 📚 KBase respondió durante la negociación de horario'
+    true
+  end
+
   def handle_slot_negotiation(tracking, message, current_slots)
     timezone  = appointment_timezone(tracking, message)
     requested = parse_requested_datetime(tracking, message, timezone)
@@ -951,6 +990,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       end
     end
 
+    # Antes de repreguntar a ciegas: si no es fecha ni elección, puede ser una pregunta
+    # real sobre lo ofrecido ("¿qué transporte es TP-113?", "¿qué unidad tienen?"). Dejamos
+    # que la KBase (hoja/foro) responda sin perder el estado [PENDING_SLOT] — el cliente
+    # sigue pudiendo elegir horario después.
+    return true if try_kbase_during_negotiation(tracking, message)
+
     # No pudimos interpretar la fecha/hora (o no hay alternativas): repreguntamos suave,
     # manteniendo el estado [PENDING_SLOT] para que pueda elegir o proponer de nuevo.
     # Bug #6 — re-mostramos los horarios vigentes para que el cliente tenga contexto en vez
@@ -981,16 +1026,19 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return nil if key.blank?
 
     text  = message_text_for_ai(message).to_s.truncate(200)
-    today = Time.current.in_time_zone(timezone).strftime('%Y-%m-%d (%A)')
+    now   = Time.current.in_time_zone(timezone)
+    today = "#{now.strftime('%Y-%m-%d')} (#{SLOT_DAY_NAMES[now.wday]})"
     data  = extract_datetime_json(key, today, text)
     return nil unless data.is_a?(Hash)
 
     rd = {
       specific_date: data['specific_date'].presence,
+      weekday:       data['weekday'].presence,
+      weeks_ahead:   data['weeks_ahead'].presence&.to_i,
       specific_time: data['specific_time'].presence,
       relative_days: data['relative_days'].presence&.to_i
     }.compact
-    return nil if rd.empty?
+    return nil if rd.except(:weeks_ahead).empty?
 
     at = calculate_reschedule_datetime(rd, timezone)
     return nil unless at
@@ -1007,8 +1055,15 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     prompt = <<~PROMPT
       Hoy es #{today}. El cliente quiere agendar y puede proponer una fecha/hora en su mensaje.
-      Devuelve SOLO un JSON: {"specific_date": "YYYY-MM-DD" o null, "specific_time": "HH:MM" (24h) o null, "relative_days": número o null}.
+      Devuelve SOLO un JSON:
+      {"specific_date": "YYYY-MM-DD" o null, "weekday": 1..7 o null (1=lunes...7=domingo),
+       "weeks_ahead": número o null, "specific_time": "HH:MM" (24h) o null, "relative_days": número o null}.
       Si no propone ninguna fecha/hora concreta, deja todo en null.
+      Reglas (NO calcules fechas de calendario a mano; el sistema las resuelve):
+      - Día de la semana nombrado ("el martes", "para el jueves"): poné "weekday" (1=lunes...7=domingo)
+        y dejá "specific_date" en null. "weeks_ahead" SOLO si lo dice explícito ("en dos semanas"=2);
+        si no, dejalo null.
+      - Fecha de calendario explícita ("el 30 de junio", "5/7"): poné "specific_date" (YYYY-MM-DD).
       Mensaje del cliente: "#{text}"
     PROMPT
 
@@ -1046,6 +1101,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
   def looks_like_datetime_proposal?(text)
     text.to_s.match?(DATETIME_PROPOSAL_HINT)
+  end
+
+  # Pistas de que un dígito del mensaje es una CANTIDAD (peso, unidades, viajes...) y
+  # no la elección de un horario numerado. Sin este guard, "3 toneladas de arena"
+  # confirmaba por error el horario #3 (parse_slot_choice solo mira dígitos sueltos).
+  QUANTITY_HINT = /
+    \d+\s*
+    (ton(elad[ao]s?)?|kgs?|kilos?|litros?|cajas?|pallets?|paquetes?|
+     piezas?|personas?|unidad(es)?|cami[oó]n(es)?|viaje[s]?|horas?|
+     d[ií]as?|metros?|m3|m²|m2)\b
+  /ix
+
+  def looks_like_quantity?(text)
+    text.to_s.match?(QUANTITY_HINT)
   end
 
   def parse_slot_choice(text, max)
@@ -1695,7 +1764,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     messages = Message.where(conversation_id: message.conversation_id)
                       .where(message_type: [0, 1])
                       .where.not(id: message.id)
-                      .order(created_at: :desc)
+                      .reorder(created_at: :desc)
                       .limit(limit)
                       .reverse
 

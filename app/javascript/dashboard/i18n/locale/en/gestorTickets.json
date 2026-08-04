@@ -115,7 +115,40 @@
         "MESSAGE": "This action cannot be undone. Delete rule",
         "YES": "Delete",
         "NO": "Cancel"
-      }
+      },
+      "BACK": "Back",
+      "LOADING": "Loading rules…",
+      "PER_PAGE": "Per page",
+      "TABLE_POSITION": "#",
+      "TABLE_NAME": "Rule",
+      "TABLE_IF": "If",
+      "TABLE_THEN": "Then",
+      "TABLE_STATUS": "Status",
+      "NO_CONDITIONS": "No conditions (always applies)",
+      "NO_ACTIONS": "No actions",
+      "ACTIVE_BADGE": "Active",
+      "INACTIVE_BADGE": "Inactive",
+      "IF_BADGE": "IF",
+      "THEN_BADGE": "THEN",
+      "IF_SECTION_TITLE": "These conditions are met",
+      "THEN_SECTION_TITLE": "Run these actions",
+      "ADD_CONDITION": "Add condition",
+      "ADD_ACTION": "Add action",
+      "NO_CONDITIONS_HINT": "No conditions — the rule applies to all tickets",
+      "NEED_ACTION": "Add at least one action",
+      "NAME_LABEL": "Name",
+      "NAME_PLACEHOLDER": "e.g. Urgent support → escalate",
+      "POSITION_LABEL": "Position",
+      "DESCRIPTION_LABEL": "Description",
+      "DESCRIPTION_PLACEHOLDER": "Optional",
+      "ACTIVE_LABEL": "Active",
+      "CONTINUE_LABEL": "Continue on match",
+      "NO_PARAM": "No extra parameter",
+      "VALUE_PLACEHOLDER": "value…",
+      "MINUTES_PLACEHOLDER": "minutes",
+      "CANCEL": "Cancel",
+      "SAVE_EDIT": "Save changes",
+      "CREATE": "Create rule"
     },
     "CREATE_BUTTON": "+ Create ticket",
     "PANEL_BUTTON": "Tickets ({count})",
@@ -208,7 +241,8 @@
         "TASK": "Task",
         "ASSIGNEE": "Assignee",
         "DUE": "Due",
-        "COMPLETED": "Completed"
+        "COMPLETED": "Completed",
+        "NOTES": "Notes"
       },
       "MODAL": {
         "NEW_TITLE": "New task",
@@ -221,8 +255,23 @@
         "DUE_LABEL": "Due",
         "SAVE": "Save",
         "CANCEL": "Cancel",
-        "CLOSE": "Close"
-      }
+        "CLOSE": "Close",
+        "NEW_DESC": "Create a ticket task or subtask, with an assignee and due date.",
+        "EDIT_DESC": "Update the task details or change its status.",
+        "VIEW_DESC": "Task detail."
+      },
+      "INBOX": {
+        "TICKET_COL": "Ticket",
+        "OPEN_TICKET": "Open ticket",
+        "DELETE_ERROR": "Could not delete the task."
+      },
+      "ADD_NOTE": "Add note",
+      "REFRESH": "Refresh",
+      "FILTER_PLACEHOLDER": "Search tasks (title, assignee)…",
+      "NO_MATCHES": "No matches for the filter.",
+      "NOTES_NONE": "No notes",
+      "NOTES_COUNT_TITLE": "{count} note(s) — view",
+      "NOTES_NONE_TOAST": "Task {folio} has no notes yet."
     },
     "MODAL": {
       "TITLE_CREATE": "Create ticket",
@@ -325,7 +374,9 @@
         "MESSAGE": "Tickets will fall back to the default SLA. Delete policy",
         "YES": "Delete",
         "NO": "Cancel"
-      }
+      },
+      "PER_PAGE": "Per page",
+      "MINUTES_SUFFIX": "(min)"
     },
     "KB": {
       "NONE": "No linked article",
@@ -403,7 +454,11 @@
       "APPROVED_TOAST": "Change approved",
       "REJECTED_TOAST": "Change rejected",
       "ERROR": "Could not update the change",
-      "RISK": { "low": "Low", "medium": "Medium", "high": "High" },
+      "RISK": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
+      },
       "APPROVAL": {
         "pending": "Pending",
         "approved": "Approved",
@@ -448,8 +503,17 @@
       "TABLE": {
         "NOTE": "Note",
         "AUTHOR": "Author",
-        "DATE": "Date"
-      }
+        "DATE": "Date",
+        "TASK": "Task"
+      },
+      "MODAL_TASK_SCOPE": "Note for task",
+      "REFRESH": "Refresh",
+      "FILTER_PLACEHOLDER": "Search notes (text, author, ref)…",
+      "NO_MATCHES": "No matches for the filter.",
+      "CREATED": "Created on {date}",
+      "MODAL_DESC": "Log what you did or what is pending in the ticket. Visible to agents only; the customer will not see it.",
+      "MODAL_EDIT_DESC": "Update the content. It will be logged that the note was edited and by whom.",
+      "MODAL_VIEW_DESC": "Full detail of the internal note."
     },
     "RELATIONS": {
       "TITLE": "Related tickets",
@@ -475,11 +539,26 @@
       }
     },
     "RELATION_TYPES": {
-      "duplicate": { "outgoing": "Duplicate of", "incoming": "Has duplicate" },
-      "parent_child": { "outgoing": "Parent of", "incoming": "Child of" },
-      "incident_problem": { "outgoing": "Belongs to problem", "incoming": "Related incident" },
-      "incident_change": { "outgoing": "Linked to change", "incoming": "Related incident" },
-      "change_problem": { "outgoing": "Resolves problem", "incoming": "Resolved by change" }
+      "duplicate": {
+        "outgoing": "Duplicate of",
+        "incoming": "Has duplicate"
+      },
+      "parent_child": {
+        "outgoing": "Parent of",
+        "incoming": "Child of"
+      },
+      "incident_problem": {
+        "outgoing": "Belongs to problem",
+        "incoming": "Related incident"
+      },
+      "incident_change": {
+        "outgoing": "Linked to change",
+        "incoming": "Related incident"
+      },
+      "change_problem": {
+        "outgoing": "Resolves problem",
+        "incoming": "Resolved by change"
+      }
     },
     "TIMELINE": {
       "TITLE": "Ticket history",
@@ -616,7 +695,27 @@
         "MESSAGE": "Tickets with this type will be left untyped. Delete",
         "YES": "Delete",
         "NO": "Cancel"
-      }
+      },
+      "TABLE": {
+        "NAME": "Name",
+        "PREFIX": "Prefix",
+        "FIELDS": "Fields",
+        "COLUMNS": "Columns",
+        "VISIBILITY": "Portal",
+        "ACTIONS": ""
+      },
+      "EMPTY": "No case types yet. Create the first one with “+ New type”.",
+      "PER_PAGE": "Per page",
+      "OPEN": "Open",
+      "DETAIL": {
+        "BACK": "Case types",
+        "FIELDS_TAB": "Fields",
+        "COLUMNS_TAB": "Columns",
+        "NOT_FOUND": "Case type not found.",
+        "LOADING": "Loading…"
+      },
+      "NAME_PLACEHOLDER": "e.g. After-sales",
+      "PREFIX_PLACEHOLDER": "SOP"
     },
     "SETTINGS": {
       "TITLE": "Module settings",
@@ -629,7 +728,7 @@
       "MODE_ITIL_DESC": "Enables full ITIL statuses, Impact×Urgency matrix, ticket nature, problem/change and approvals.",
       "NOTE_DATA": "No data is deleted or changed: the mode only affects what is shown.",
       "NOTE_REVERSIBLE": "You can switch modes anytime.",
-            "REOPEN": {
+      "REOPEN": {
         "SECTION": "Reopening closed tickets",
         "WINDOW_TITLE": "Reopen window",
         "WINDOW_DESC": "Days after closing during which the assigned agent can reopen. After that, only an administrator. Use 0 for no limit.",
@@ -640,7 +739,7 @@
         "NOTE_WINDOW": "An administrator can always reopen, even after the window expired.",
         "NOTE_SLA": "On reopening, the SLA clock restarts from zero."
       },
-"SAVED": "Settings saved",
+      "SAVED": "Settings saved",
       "SAVE_ERROR": "Could not save settings."
     },
     "PORTALS": {
@@ -685,7 +784,14 @@
         "MESSAGE": "Customers will no longer be able to access this page. Delete",
         "YES": "Delete",
         "NO": "Cancel"
-      }
+      },
+      "TABLE_NAME": "Portal",
+      "TABLE_URL": "URL",
+      "TABLE_TYPES": "Types",
+      "TABLE_STATUS": "Status",
+      "ENABLED_BADGE": "Active",
+      "PER_PAGE": "Per page",
+      "WA_LANG_PLACEHOLDER": "es"
     },
     "CUSTOM_FIELDS": {
       "MANAGE_BUTTON": "Fields",
@@ -717,6 +823,15 @@
         "date": "Date",
         "list": "List",
         "checkbox": "Checkbox"
+      },
+      "ADD_BUTTON": "Add field",
+      "SUBTITLE": "These fields are requested when creating or editing a ticket of this type.",
+      "OPTIONS_HEADER": "Options",
+      "DELETE": {
+        "TITLE": "Delete field",
+        "MESSAGE": "This field will be removed from tickets of this type. Delete",
+        "YES": "Delete",
+        "NO": "Cancel"
       }
     },
     "CLASSIFICATION": {
@@ -743,7 +858,17 @@
         "MESSAGE": "Associated tickets will lose this value. Delete",
         "YES": "Delete",
         "NO": "Cancel"
-      }
+      },
+      "TABLE_NAME": "Name",
+      "TABLE_STATUS": "Status",
+      "TABLE_KIND": "Type",
+      "KIND_CATEGORY": "Category",
+      "KIND_SUBCATEGORY": "Subcategory",
+      "ACTIVE_BADGE": "Active",
+      "ADD_SUB": "Add subcategory",
+      "PER_PAGE": "Per page",
+      "EMPTY_SERVICES": "No services yet. Create the first one.",
+      "EMPTY_CATEGORIES": "No categories yet. Create the first one."
     },
     "FOLIO": {
       "TITLE": "Folio settings",
@@ -844,6 +969,25 @@
       "internal_note": "Internal note",
       "priority_changed": "Priority changed",
       "due_date_changed": "Due date changed"
+    },
+    "COLUMNS_CFG": {
+      "ADD_BUTTON": "Add column",
+      "SUBTITLE": "Each board column groups one or more statuses. Cover all 13 statuses to save.",
+      "POSITION": "#",
+      "STATES_SUMMARY": "Statuses",
+      "NEW_TITLE": "New column",
+      "EDIT_TITLE": "Edit column",
+      "UNSAVED": "You have unsaved changes.",
+      "REORDER": "Reorder",
+      "DRAG_HINT": "Drag the rows to reorder the board columns."
+    },
+    "DETAIL": {
+      "BACK": "Back",
+      "TYPE_LABEL": "Type:",
+      "STATUS_LABEL": "Status:",
+      "LEVEL_LABEL": "Level:",
+      "NO_TRANSITIONS": "No transitions available",
+      "LOADING": "Loading ticket…"
     }
   }
 }
