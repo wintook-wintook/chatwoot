@@ -1299,7 +1299,7 @@ export default {
         class="self-start"
         @click="$router.push({ name: 'gestorTickets_index' })"
       >
-        Volver
+        {{ $t('CASE_TICKETS.DETAIL.BACK') }}
       </woot-button>
 
       <div v-if="ticket" class="flex items-start justify-between gap-4">
@@ -1336,12 +1336,16 @@ export default {
               v-if="ticket.case_type"
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded text-white"
               :style="{ backgroundColor: ticket.case_type.color }"
-              ><span class="font-normal opacity-75">Tipo:</span>
+              ><span class="font-normal opacity-75">{{
+                $t('CASE_TICKETS.DETAIL.TYPE_LABEL')
+              }}</span>
               {{ ticket.case_type.name }}</span
             >
             <span
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
-              ><span class="font-normal opacity-75">Estado:</span>
+              ><span class="font-normal opacity-75">{{
+                $t('CASE_TICKETS.DETAIL.STATUS_LABEL')
+              }}</span>
               {{ statusLabel(displayStatus(ticket.status)) }}</span
             >
             <!-- Prioridad no va aquí: ya se ve (con color) en el botón "Prioridad". -->
@@ -1355,7 +1359,9 @@ export default {
             <span
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
               :title="$t('CASE_TICKETS.ESCALATION.LEVEL_TITLE')"
-              ><span class="font-normal opacity-75">Nivel:</span>
+              ><span class="font-normal opacity-75">{{
+                $t('CASE_TICKETS.DETAIL.LEVEL_LABEL')
+              }}</span>
               {{ escalationLabel }}</span
             >
           </div>
@@ -1535,7 +1541,8 @@ export default {
                 showPriorityMenu = false;
               "
             >
-              {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }} ▾
+              {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }}
+              <fluent-icon icon="chevron-down" size="12" class="ml-1" />
             </woot-button>
             <ul
               v-if="showTransitionMenu"
@@ -1553,7 +1560,7 @@ export default {
                 v-if="!validTransitions.length"
                 class="px-4 py-2 text-sm text-slate-400 dark:text-slate-500"
               >
-                Sin transiciones disponibles
+                {{ $t('CASE_TICKETS.DETAIL.NO_TRANSITIONS') }}
               </li>
             </ul>
           </div>
@@ -1655,7 +1662,7 @@ export default {
       v-if="!ticket && isFetchingList"
       class="flex items-center justify-center flex-1 text-slate-400 dark:text-slate-500"
     >
-      <span>Cargando ticket...</span>
+      <span>{{ $t('CASE_TICKETS.DETAIL.LOADING') }}</span>
     </div>
 
     <div
@@ -2415,8 +2422,8 @@ export default {
 
       <!-- ════ Pestaña Notas internas — tabla + modal, como Tareas ════ -->
       <TicketNotes
-        ref="ticketNotes"
         v-show="currentTabKey === 'notes'"
+        ref="ticketNotes"
         :key="`notes-${ticket.id}`"
         :ticket-id="ticket.id"
         :is-frozen="isFrozen"

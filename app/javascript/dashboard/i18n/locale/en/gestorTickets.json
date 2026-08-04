@@ -980,6 +980,14 @@
       "UNSAVED": "You have unsaved changes.",
       "REORDER": "Reorder",
       "DRAG_HINT": "Drag the rows to reorder the board columns."
+    },
+    "DETAIL": {
+      "BACK": "Back",
+      "TYPE_LABEL": "Type:",
+      "STATUS_LABEL": "Status:",
+      "LEVEL_LABEL": "Level:",
+      "NO_TRANSITIONS": "No transitions available",
+      "LOADING": "Loading ticket…"
     }
   }
 }

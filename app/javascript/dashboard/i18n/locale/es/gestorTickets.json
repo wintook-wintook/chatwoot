@@ -1066,6 +1066,14 @@
       "internal_note": "Nota interna",
       "priority_changed": "Prioridad cambiada",
       "due_date_changed": "Vencimiento cambiado"
+    },
+    "DETAIL": {
+      "BACK": "Volver",
+      "TYPE_LABEL": "Tipo:",
+      "STATUS_LABEL": "Estado:",
+      "LEVEL_LABEL": "Nivel:",
+      "NO_TRANSITIONS": "Sin transiciones disponibles",
+      "LOADING": "Cargando ticket…"
     }
   }
 }
