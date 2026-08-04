@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_03_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_04_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -388,6 +388,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_03_120000) do
     t.datetime "completed_at"
     t.bigint "completed_by_id"
     t.integer "sequence"
+    t.integer "priority", default: 1, null: false
+    t.index ["account_id", "priority"], name: "index_case_tasks_on_account_id_and_priority"
     t.index ["account_id"], name: "index_case_tasks_on_account_id"
     t.index ["assignee_id"], name: "index_case_tasks_on_assignee_id"
     t.index ["case_ticket_id", "position"], name: "index_case_tasks_on_case_ticket_id_and_position"

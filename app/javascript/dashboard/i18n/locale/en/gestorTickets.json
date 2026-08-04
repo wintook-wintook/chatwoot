@@ -46,6 +46,7 @@
       "TITLE": "Ticket board",
       "SEARCH_PLACEHOLDER": "Search folio, title or contact…",
       "ALL_KINDS": "All types",
+      "ALL_TYPES": "All case types",
       "ALL_SERVICES": "All services",
       "ALL_AGENTS": "All assignees",
       "UNASSIGNED": "Unassigned",
@@ -238,11 +239,17 @@
       "VIEW": "View task",
       "TOGGLE": "Mark as completed",
       "TABLE": {
+        "NUM": "Ref.",
         "TASK": "Task",
+        "STATUS": "Status",
+        "PRIORITY": "Priority",
         "ASSIGNEE": "Assignee",
         "DUE": "Due",
-        "COMPLETED": "Completed",
         "NOTES": "Notes"
+      },
+      "STATUS": {
+        "PENDING": "Pending",
+        "DONE": "Completed"
       },
       "MODAL": {
         "NEW_TITLE": "New task",
@@ -253,17 +260,49 @@
         "DESCRIPTION_PLACEHOLDER": "Details of what needs to be done...",
         "ASSIGNEE_LABEL": "Assignee",
         "DUE_LABEL": "Due",
+        "STATUS_LABEL": "Status",
+        "PRIORITY_LABEL": "Priority",
         "SAVE": "Save",
         "CANCEL": "Cancel",
         "CLOSE": "Close",
-        "NEW_DESC": "Create a ticket task or subtask, with an assignee and due date.",
+        "NEW_DESC": "Create a ticket task or subtask, with an assignee, priority and due date.",
         "EDIT_DESC": "Update the task details or change its status.",
         "VIEW_DESC": "Task detail."
       },
       "INBOX": {
+        "TITLE": "Tasks",
         "TICKET_COL": "Ticket",
         "OPEN_TICKET": "Open ticket",
-        "DELETE_ERROR": "Could not delete the task."
+        "SEARCH_PLACEHOLDER": "Search in the title or description…",
+        "EMPTY": "No tasks match the current filters.",
+        "BY_TAB": "By tab",
+        "ALL_TYPES": "All types",
+        "COMPLETED": "Completed",
+        "UNASSIGNED": "Unassigned",
+        "DUE_PREFIX": "Due:",
+        "DUE_TODAY": "today",
+        "SAVE_ERROR": "Could not update the task.",
+        "DELETE_ERROR": "Could not delete the task.",
+        "FROZEN_HINT": "The ticket is closed: reopen it to modify its tasks.",
+        "TOAST_ASSIGNED": "New task assigned: {task} · case {folio}",
+        "TOAST_COMPLETED": "Task completed: {task} · case {folio}",
+        "TABS": {
+          "mine": "My tasks",
+          "unassigned": "Unassigned",
+          "all": "All",
+          "overdue": "Overdue"
+        },
+        "STATUS": {
+          "PENDING": "Pending",
+          "DONE": "Completed",
+          "ALL": "All"
+        },
+        "DUE": {
+          "ANY": "Any date",
+          "OVERDUE": "Overdue",
+          "TODAY": "Due today",
+          "WEEK": "This week"
+        }
       },
       "ADD_NOTE": "Add note",
       "REFRESH": "Refresh",
@@ -271,7 +310,18 @@
       "NO_MATCHES": "No matches for the filter.",
       "NOTES_NONE": "No notes",
       "NOTES_COUNT_TITLE": "{count} note(s) — view",
-      "NOTES_NONE_TOAST": "Task {folio} has no notes yet."
+      "NOTES_NONE_TOAST": "Task {folio} has no notes yet.",
+      "COMPLETE": "Complete",
+      "COMPLETE_TITLE": "Mark the task as completed",
+      "COMPLETE_ERROR": "Could not complete the task.",
+      "TOAST_COMPLETED": "Task completed: {task}",
+      "TOAST_DELETED": "Task deleted: {task}",
+      "DELETE_CONFIRM": {
+        "TITLE": "Delete task",
+        "MESSAGE": "Are you sure you want to delete this task? This cannot be undone.",
+        "CONFIRM": "Delete",
+        "CANCEL": "Cancel"
+      }
     },
     "MODAL": {
       "TITLE_CREATE": "Create ticket",
@@ -501,10 +551,18 @@
       "DELETE": "Delete",
       "EDITED": "Edited on {date} by {name}",
       "TABLE": {
+        "NUM": "Ref.",
         "NOTE": "Note",
         "AUTHOR": "Author",
         "DATE": "Date",
         "TASK": "Task"
+      },
+      "TOAST_DELETED": "Note deleted",
+      "DELETE_CONFIRM": {
+        "TITLE": "Delete note",
+        "MESSAGE": "Are you sure you want to delete this internal note? This cannot be undone.",
+        "CONFIRM": "Delete",
+        "CANCEL": "Cancel"
       },
       "MODAL_TASK_SCOPE": "Note for task",
       "REFRESH": "Refresh",
@@ -582,6 +640,10 @@
       }
     },
     "AI": {
+      "FIX": "Fix spelling",
+      "IMPROVE": "Improve writing",
+      "REVERT": "Back to original",
+      "ERROR": "Could not process the text with AI. Please try again.",
       "TITLE": "Artificial Intelligence",
       "BACK": "Back",
       "SAVE": "Save",
@@ -979,13 +1041,32 @@
       "EDIT_TITLE": "Edit column",
       "UNSAVED": "You have unsaved changes.",
       "REORDER": "Reorder",
-      "DRAG_HINT": "Drag the rows to reorder the board columns."
+      "DRAG_HINT": "Drag the rows to reorder the board columns.",
+      "LABEL_LABEL": "Name",
+      "LABEL_PLACEHOLDER": "e.g. Quoted",
+      "COLOR_LABEL": "Color",
+      "STATES_LABEL": "Statuses it groups",
+      "EMPTY": "This type has no columns of its own yet. It uses the standard board.",
+      "REMOVE": "Remove column",
+      "OVERLAP_INFO": "These columns share a status. Moving a ticket between them does not change its status: that is correct and expected.",
+      "MISSING_COVERAGE": "Uncovered statuses:",
+      "ASSIGN_REMAINING": "Assign to the last column",
+      "COVERAGE_OK": "All statuses are covered.",
+      "SAVE": "Save columns",
+      "CANCEL": "Cancel",
+      "SAVED": "Columns saved.",
+      "SAVE_ERROR": "Could not save the columns.",
+      "NEED_LABEL": "Every column needs a name.",
+      "NEED_STATES": "Every column must cover at least one status.",
+      "NEED_COVERAGE": "Some statuses are still uncovered; cover them before saving.",
+      "LOADING": "Loading columns..."
     },
     "DETAIL": {
       "BACK": "Back",
       "TYPE_LABEL": "Type:",
       "STATUS_LABEL": "Status:",
       "LEVEL_LABEL": "Level:",
+      "VIEW_FULL": "View",
       "NO_TRANSITIONS": "No transitions available",
       "LOADING": "Loading ticket…"
     }

@@ -287,9 +287,9 @@
         "NUM": "Folio",
         "TASK": "Tarea",
         "STATUS": "Estado",
+        "PRIORITY": "Prioridad",
         "ASSIGNEE": "Responsable",
         "DUE": "Vence",
-        "COMPLETED": "Completada",
         "NOTES": "Notas"
       },
       "STATUS": {
@@ -306,10 +306,11 @@
         "ASSIGNEE_LABEL": "Responsable",
         "DUE_LABEL": "Vence",
         "STATUS_LABEL": "Estado",
+        "PRIORITY_LABEL": "Prioridad",
         "SAVE": "Guardar",
         "CANCEL": "Cancelar",
         "CLOSE": "Cerrar",
-        "NEW_DESC": "Crea una tarea o subtarea del ticket, con responsable y fecha de vencimiento.",
+        "NEW_DESC": "Crea una tarea o subtarea del ticket, con responsable, prioridad y fecha de vencimiento.",
         "EDIT_DESC": "Actualiza los datos de la tarea o cambia su estado.",
         "VIEW_DESC": "Detalle de la tarea."
       },
@@ -319,7 +320,11 @@
       "NO_MATCHES": "Sin coincidencias con el filtro.",
       "NOTES_NONE": "Sin notas",
       "NOTES_COUNT_TITLE": "{count} nota(s) — ver",
-      "NOTES_NONE_TOAST": "La tarea {folio} aún no tiene notas."
+      "NOTES_NONE_TOAST": "La tarea {folio} aún no tiene notas.",
+      "COMPLETE": "Completar",
+      "COMPLETE_TITLE": "Marcar la tarea como concluida",
+      "COMPLETE_ERROR": "No se pudo completar la tarea.",
+      "TOAST_COMPLETED": "Tarea completada: {task}"
     },
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",
@@ -1072,6 +1077,7 @@
       "TYPE_LABEL": "Tipo:",
       "STATUS_LABEL": "Estado:",
       "LEVEL_LABEL": "Nivel:",
+      "VIEW_FULL": "Ver",
       "NO_TRANSITIONS": "Sin transiciones disponibles",
       "LOADING": "Cargando ticket…"
     }
