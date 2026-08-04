@@ -891,7 +891,7 @@ export default {
             <div v-if="!viewing" class="editor-wrap">
               <WootMessageEditor
                 v-model="form.description"
-                class="message-editor [&>div]:px-1"
+                class="message-editor"
                 :enable-suggestions="false"
                 :enable-canned-responses="false"
                 :focus-on-mount="false"
@@ -1078,18 +1078,26 @@ export default {
   }
 }
 
+// Editor enriquecido dentro del modal: caja con borde, barra de formato pegada
+// arriba con separador (SIN margen negativo, que era lo que la hacía sobresalir
+// por encima del borde) y contenido con su propio padding. Mismos valores que
+// el modal de tareas dentro del ticket: es el mismo formulario en otro sitio.
 .editor-wrap {
-  @apply border border-slate-200 dark:border-slate-600 rounded-md px-2 bg-white dark:bg-slate-900;
+  @apply overflow-hidden bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900;
 }
 
 .message-editor::v-deep {
   .ProseMirror-menubar {
-    padding: 0;
-    margin-top: var(--space-minus-small);
+    @apply px-2 py-1 m-0 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60;
+    min-height: unset;
+    border-top-left-radius: 0.375rem;
+    border-top-right-radius: 0.375rem;
   }
+
   .ProseMirror-woot-style {
-    min-height: 6rem;
-    max-height: 18rem;
+    @apply px-3 py-2;
+    min-height: 9rem;
+    max-height: 20rem;
   }
 }
 
