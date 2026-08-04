@@ -111,6 +111,9 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
       title: task.title,
       description: task.description,
       status: task.status,
+      # @tickets_cases — prioridad de la TAREA. Ojo al leer el JSON: la del
+      # ticket viaja aparte, dentro de `case_ticket`.
+      priority: task.priority,
       assignee_id: task.assignee_id,
       assignee: ref_user(task.assignee),
       due_at: task.due_at,

@@ -62,7 +62,10 @@ export default {
         assignee_id: '',
         due_at: '',
         status: 'pending',
+        priority: 'medium',
       },
+      // Tarea que se está completando desde la fila (para el spinner del botón).
+      completingId: null,
       // Confirmación de borrado
       showDeleteConfirm: false,
       pendingDelete: null,
@@ -206,14 +209,23 @@ export default {
           ),
         },
         {
-          field: 'status',
-          key: 'status',
-          title: this.$t('CASE_TICKETS.TASKS.TABLE.STATUS'),
+          // Prioridad de la TAREA. No confundir con el punto de color de la
+          // columna "Ticket", que es la prioridad del ticket padre.
+          field: 'priority',
+          key: 'priority',
+          title: this.$t('CASE_TICKETS.TASKS.TABLE.PRIORITY'),
           align: 'left',
-          width: 110,
+          width: 115,
           renderBodyCell: ({ row }) => (
-            <span class="text-sm whitespace-nowrap text-slate-600 dark:text-slate-300">
-              {this.statusLabel(row.status)}
+            <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+              <span
+                class={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${this.priorityDot(
+                  row.priority
+                )}`}
+              />
+              <span class="text-sm text-slate-600 dark:text-slate-300">
+                {this.priorityLabel(row.priority)}
+              </span>
             </span>
           ),
         },
@@ -249,16 +261,48 @@ export default {
           ),
         },
         {
-          field: 'completed_at',
-          key: 'completed_at',
-          title: this.$t('CASE_TICKETS.TASKS.TABLE.COMPLETED'),
+          // @tickets_cases — Estado y firma de completado en UNA columna: tener
+          // "Estado: Concluida" al lado de la fecha decía dos veces lo mismo.
+          //   pendiente → botón rojo "Completar" (el propio botón es el estado)
+          //   concluida → "03/08/2026, 11:24" y debajo quién la cerró
+          field: 'status',
+          key: 'status',
+          title: this.$t('CASE_TICKETS.TASKS.TABLE.STATUS'),
           align: 'left',
           width: 170,
           renderBodyCell: ({ row }) => {
+            if (row.status !== 'done') {
+              // Ticket cerrado: no hay acción posible, pero el estado se sigue
+              // leyendo (antes esta celda quedaba en blanco).
+              if (this.ticketFrozen(row)) {
+                return (
+                  <span class="text-sm text-slate-600 dark:text-slate-300">
+                    {this.statusLabel(row.status)}
+                  </span>
+                );
+              }
+              return (
+                <woot-button
+                  size="small"
+                  class-names="!px-3.5"
+                  variant="smooth"
+                  color-scheme="alert"
+                  icon="checkmark"
+                  is-loading={this.completingId === row.id}
+                  disabled={!!this.completingId}
+                  title={this.$t('CASE_TICKETS.TASKS.COMPLETE_TITLE')}
+                  onClick={() => this.complete(row)}
+                >
+                  {this.$t('CASE_TICKETS.TASKS.COMPLETE')}
+                </woot-button>
+              );
+            }
+            // Concluida sin firma (tareas anteriores a completed_at): no se
+            // inventa fecha ni autor, pero sí se dice que está concluida.
             if (!row.completed_at) {
               return (
-                <span class="text-xs text-slate-400 dark:text-slate-500">
-                  —
+                <span class="text-sm text-green-600 dark:text-green-400">
+                  {this.statusLabel(row.status)}
                 </span>
               );
             }
@@ -528,7 +572,33 @@ export default {
         assignee_id: task.assignee_id || '',
         due_at: this.toInputDate(task.due_at),
         status: task.status || 'pending',
+        priority: task.priority || 'medium',
       };
+    },
+    // Completa la tarea desde la fila, sin abrir el modal. La firma (fecha +
+    // quién) la deriva el backend del cambio de estado.
+    async complete(task) {
+      if (this.completingId || !task.case_ticket) return;
+      this.completingId = task.id;
+      try {
+        await CaseTasksAPI.updateTask(task.case_ticket.id, task.id, {
+          status: 'done',
+        });
+        this.$emitter.emit('caseToastMessage', {
+          message: this.$t('CASE_TICKETS.TASKS.TOAST_COMPLETED', {
+            task: task.title,
+          }),
+          icon: 'checkmark',
+        });
+        this.fetch();
+        this.refreshOverdueCount();
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.TASKS.COMPLETE_ERROR'),
+        });
+      } finally {
+        this.completingId = null;
+      }
     },
     async submitForm() {
       const title = this.form.title.trim();
@@ -539,6 +609,7 @@ export default {
         assignee_id: this.form.assignee_id || '',
         due_at: this.form.due_at || null,
         status: this.form.status || 'pending',
+        priority: this.form.priority || 'medium',
       };
       this.isSaving = true;
       try {
@@ -820,7 +891,7 @@ export default {
             <div v-if="!viewing" class="editor-wrap">
               <WootMessageEditor
                 v-model="form.description"
-                class="message-editor [&>div]:px-1"
+                class="message-editor"
                 :enable-suggestions="false"
                 :enable-canned-responses="false"
                 :focus-on-mount="false"
@@ -907,19 +978,39 @@ export default {
             </label>
           </div>
 
-          <label class="block">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CASE_TICKETS.TASKS.MODAL.STATUS_LABEL')
-            }}</span>
-            <select v-model="form.status" :disabled="viewing">
-              <option value="pending">
-                {{ $t('CASE_TICKETS.TASKS.STATUS.PENDING') }}
-              </option>
-              <option value="done">
-                {{ $t('CASE_TICKETS.TASKS.STATUS.DONE') }}
-              </option>
-            </select>
-          </label>
+          <!-- Estado y prioridad. El estado también se cambia desde la fila con
+               el botón "Completar"; aquí además se puede reabrir la tarea. -->
+          <div class="flex gap-3">
+            <label class="flex-1">
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CASE_TICKETS.TASKS.MODAL.STATUS_LABEL')
+              }}</span>
+              <select v-model="form.status" :disabled="viewing">
+                <option value="pending">
+                  {{ $t('CASE_TICKETS.TASKS.STATUS.PENDING') }}
+                </option>
+                <option value="done">
+                  {{ $t('CASE_TICKETS.TASKS.STATUS.DONE') }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Prioridad propia de la tarea: no se hereda del ticket. -->
+            <label class="flex-1">
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CASE_TICKETS.TASKS.MODAL.PRIORITY_LABEL')
+              }}</span>
+              <select v-model="form.priority" :disabled="viewing">
+                <option
+                  v-for="(label, key) in priorityOptions"
+                  :key="key"
+                  :value="key"
+                >
+                  {{ label }}
+                </option>
+              </select>
+            </label>
+          </div>
 
           <div class="flex items-center justify-end gap-2 mt-4">
             <woot-button
@@ -974,9 +1065,12 @@ export default {
     padding: var(--space-small) var(--space-one) !important;
     font-size: var(--font-size-mini) !important;
   }
+  // Centrado vertical: las filas tienen alturas distintas (la tarea puede traer
+  // descripción, el ticket folio + tipo + título). Con `top` los textos de una
+  // sola línea quedaban pegados arriba y la fila se leía desalineada.
   .ve-table-body-td {
     padding: var(--space-small) var(--space-one) !important;
-    vertical-align: top;
+    vertical-align: middle;
     cursor: pointer;
   }
   .button-wrapper {
@@ -984,18 +1078,26 @@ export default {
   }
 }
 
+// Editor enriquecido dentro del modal: caja con borde, barra de formato pegada
+// arriba con separador (SIN margen negativo, que era lo que la hacía sobresalir
+// por encima del borde) y contenido con su propio padding. Mismos valores que
+// el modal de tareas dentro del ticket: es el mismo formulario en otro sitio.
 .editor-wrap {
-  @apply border border-slate-200 dark:border-slate-600 rounded-md px-2 bg-white dark:bg-slate-900;
+  @apply overflow-hidden bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900;
 }
 
 .message-editor::v-deep {
   .ProseMirror-menubar {
-    padding: 0;
-    margin-top: var(--space-minus-small);
+    @apply px-2 py-1 m-0 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60;
+    min-height: unset;
+    border-top-left-radius: 0.375rem;
+    border-top-right-radius: 0.375rem;
   }
+
   .ProseMirror-woot-style {
-    min-height: 6rem;
-    max-height: 18rem;
+    @apply px-3 py-2;
+    min-height: 9rem;
+    max-height: 20rem;
   }
 }
 

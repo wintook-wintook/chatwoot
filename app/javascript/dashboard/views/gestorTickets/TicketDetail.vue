@@ -1365,19 +1365,37 @@ export default {
               {{ escalationLabel }}</span
             >
           </div>
-          <h2 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
+          <!-- @tickets_cases — título a UNA sola línea con "…": envolver a dos
+               líneas empujaba las pestañas y descuadraba la cabecera. Completo
+               en el tooltip y al abrir "Editar ticket". -->
+          <h2
+            class="m-0 mt-0.5 text-xl font-bold truncate text-slate-800 dark:text-slate-100"
+            :title="ticket.title"
+          >
             {{ ticket.title }}
           </h2>
-          <!-- @tickets_cases — descripción a UNA sola línea con "…": si es larga
-               se recorta; para leerla completa se abre "Editar ticket". El
-               title nativo la muestra al pasar el cursor. -->
-          <p
-            v-if="ticket.description"
-            class="m-0 text-sm truncate text-slate-600 dark:text-slate-300"
-            :title="ticket.description"
-          >
-            {{ ticket.description }}
-          </p>
+          <!-- @tickets_cases — descripción a UNA sola línea con "…". El enlace
+               "Ver" abre el modal del ticket, que es donde se leen título y
+               descripción completos: el tooltip nativo no se descubre solo y en
+               táctil no existe. Se oculta en cerrado, igual que el lápiz de
+               editar, para no ofrecer algo que el backend rechazaría. -->
+          <div class="flex items-baseline gap-1.5 min-w-0">
+            <p
+              v-if="ticket.description"
+              class="m-0 text-sm truncate text-slate-600 dark:text-slate-300"
+              :title="ticket.description"
+            >
+              {{ ticket.description }}
+            </p>
+            <button
+              v-if="!isFrozen"
+              type="button"
+              class="flex-shrink-0 text-xs font-medium text-woot-600 dark:text-woot-300 hover:underline"
+              @click="showEditModal = true"
+            >
+              {{ $t('CASE_TICKETS.DETAIL.VIEW_FULL') }}
+            </button>
+          </div>
         </div>
 
         <!-- @tickets_cases — columna derecha: acciones arriba + fechas debajo -->

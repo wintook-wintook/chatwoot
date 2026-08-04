@@ -15,6 +15,18 @@ import caseAiWriter from 'dashboard/mixins/caseAiWriter';
 
 const PER_PAGE = 10;
 
+// Prioridad PROPIA de la tarea (no la del ticket). Mismos colores que usa la
+// bandeja de tareas para que un punto rojo signifique lo mismo en las dos.
+const PRIORITY_DOT = {
+  urgent: 'bg-red-500',
+  high: 'bg-orange-500',
+  medium: 'bg-blue-500',
+  low: 'bg-slate-400',
+};
+
+// Para ordenar por importancia real, no alfabéticamente ("alta" < "baja").
+const PRIORITY_RANK = { low: 0, medium: 1, high: 2, urgent: 3 };
+
 export default {
   name: 'TicketTasks',
   components: { VeTable, TableFooter, WootMessageEditor },
@@ -52,7 +64,10 @@ export default {
         assignee_id: '',
         due_at: '',
         status: 'pending',
+        priority: 'medium',
       },
+      // Tarea que se está completando desde la fila (para el spinner del botón).
+      completingId: null,
       // Modal de confirmación de borrado
       showDeleteConfirm: false,
       pendingDelete: null,
@@ -66,6 +81,10 @@ export default {
     },
     doneCount() {
       return this.tasks.filter(t => t.status === 'done').length;
+    },
+    // Etiquetas de prioridad: las mismas que usa el ticket, para no traducir dos veces.
+    priorityOptions() {
+      return this.$t('CASE_TICKETS.PRIORITIES');
     },
     // Filtro de texto: título, descripción y responsable.
     filteredTasks() {
@@ -172,16 +191,23 @@ export default {
           ),
         },
         {
-          field: 'status',
-          key: 'status',
-          title: this.$t('CASE_TICKETS.TASKS.TABLE.STATUS'),
+          // Prioridad de la TAREA, independiente de la del ticket.
+          field: 'priority',
+          key: 'priority',
+          title: this.$t('CASE_TICKETS.TASKS.TABLE.PRIORITY'),
           align: 'left',
           width: 120,
-          sortBy: this.sortConfig.status || '',
-          // Estado como etiqueta de texto, igual que en la tabla de tickets.
+          sortBy: this.sortConfig.priority || '',
           renderBodyCell: ({ row }) => (
-            <span class="text-sm whitespace-nowrap text-slate-600 dark:text-slate-300">
-              {this.statusLabel(row.status)}
+            <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+              <span
+                class={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${this.priorityDot(
+                  row.priority
+                )}`}
+              />
+              <span class="text-sm text-slate-600 dark:text-slate-300">
+                {this.priorityLabel(row.priority)}
+              </span>
             </span>
           ),
         },
@@ -214,18 +240,49 @@ export default {
           ),
         },
         {
-          // @tickets_cases P4 — firma de completado: cuándo y quién.
-          field: 'completed_at',
-          key: 'completed_at',
-          title: this.$t('CASE_TICKETS.TASKS.TABLE.COMPLETED'),
+          // @tickets_cases — Estado y firma de completado en UNA columna: tener
+          // "Estado: Concluida" al lado de la fecha decía dos veces lo mismo.
+          //   pendiente → botón rojo "Completar" (el propio botón es el estado)
+          //   concluida → "03/08/2026, 11:24" y debajo quién la cerró
+          field: 'status',
+          key: 'status',
+          title: this.$t('CASE_TICKETS.TASKS.TABLE.STATUS'),
           align: 'left',
           width: 180,
-          sortBy: this.sortConfig.completed_at || '',
+          sortBy: this.sortConfig.status || '',
           renderBodyCell: ({ row }) => {
+            if (row.status !== 'done') {
+              // Ticket cerrado: no hay acción posible, pero el estado se sigue
+              // leyendo (antes esta celda quedaba en blanco).
+              if (this.isFrozen) {
+                return (
+                  <span class="text-sm text-slate-600 dark:text-slate-300">
+                    {this.statusLabel(row.status)}
+                  </span>
+                );
+              }
+              return (
+                <woot-button
+                  size="small"
+                  class-names="!px-3.5"
+                  variant="smooth"
+                  color-scheme="alert"
+                  icon="checkmark"
+                  is-loading={this.completingId === row.id}
+                  disabled={!!this.completingId}
+                  title={this.$t('CASE_TICKETS.TASKS.COMPLETE_TITLE')}
+                  onClick={() => this.complete(row)}
+                >
+                  {this.$t('CASE_TICKETS.TASKS.COMPLETE')}
+                </woot-button>
+              );
+            }
+            // Concluida sin firma (tareas anteriores a completed_at): no se
+            // inventa fecha ni autor, pero sí se dice que está concluida.
             if (!row.completed_at) {
               return (
-                <span class="text-xs text-slate-400 dark:text-slate-500">
-                  —
+                <span class="text-sm text-green-600 dark:text-green-400">
+                  {this.statusLabel(row.status)}
                 </span>
               );
             }
@@ -361,16 +418,26 @@ export default {
         return (a.notes_count || 0) - (b.notes_count || 0);
       if (field === 'title')
         return (a.title || '').localeCompare(b.title || '');
-      if (field === 'status')
-        return (a.status || '').localeCompare(b.status || '');
+      // Columna Estado: primero las pendientes, y entre las concluidas por
+      // fecha de completado (la firma es lo que se ve en la celda).
+      if (field === 'status') {
+        const rank = t => (t.status === 'done' ? 1 : 0);
+        return (
+          rank(a) - rank(b) ||
+          new Date(a.completed_at || 0) - new Date(b.completed_at || 0)
+        );
+      }
+      // Por importancia, no por nombre: "Alta" iría antes que "Baja" alfabéticamente.
+      if (field === 'priority')
+        return (
+          (PRIORITY_RANK[a.priority] ?? 1) - (PRIORITY_RANK[b.priority] ?? 1)
+        );
       if (field === 'assignee')
         return (this.assigneeName(a) || '').localeCompare(
           this.assigneeName(b) || ''
         );
       if (field === 'due_at')
         return new Date(a.due_at || 0) - new Date(b.due_at || 0);
-      if (field === 'completed_at')
-        return new Date(a.completed_at || 0) - new Date(b.completed_at || 0);
       return 0;
     },
     async load() {
@@ -383,6 +450,36 @@ export default {
         this.isLoading = false;
       }
     },
+    // Completa la tarea desde la fila, sin abrir el modal. El backend deriva la
+    // firma (fecha + quién) del cambio de estado, así que basta con el status.
+    async complete(task) {
+      if (this.completingId) return;
+      this.completingId = task.id;
+      try {
+        const { data } = await CaseTasksAPI.updateTask(this.ticketId, task.id, {
+          status: 'done',
+        });
+        this.replace(data.case_task);
+        this.$emitter.emit('caseToastMessage', {
+          message: this.$t('CASE_TICKETS.TASKS.TOAST_COMPLETED', {
+            task: task.title,
+          }),
+          icon: 'checkmark',
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.TASKS.COMPLETE_ERROR'),
+        });
+      } finally {
+        this.completingId = null;
+      }
+    },
+    priorityDot(priority) {
+      return PRIORITY_DOT[priority] || PRIORITY_DOT.medium;
+    },
+    priorityLabel(key) {
+      return this.priorityOptions[key] || key;
+    },
     openCreate() {
       this.editingId = null;
       this.viewing = false;
@@ -392,6 +489,7 @@ export default {
         assignee_id: '',
         due_at: '',
         status: 'pending',
+        priority: 'medium',
       };
       this.resetAi();
       this.showModal = true;
@@ -420,6 +518,7 @@ export default {
         assignee_id: task.assignee_id || '',
         due_at: this.toInputDate(task.due_at),
         status: task.status || 'pending',
+        priority: task.priority || 'medium',
       };
     },
     async submitForm() {
@@ -431,6 +530,7 @@ export default {
         assignee_id: this.form.assignee_id || '',
         due_at: this.form.due_at || null,
         status: this.form.status || 'pending',
+        priority: this.form.priority || 'medium',
       };
       this.isSaving = true;
       try {
@@ -792,20 +892,39 @@ export default {
             </label>
           </div>
 
-          <!-- El estado se cambia aquí (desde la fila), ya no con un check. -->
-          <label class="block">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CASE_TICKETS.TASKS.MODAL.STATUS_LABEL')
-            }}</span>
-            <select v-model="form.status" :disabled="viewing">
-              <option value="pending">
-                {{ $t('CASE_TICKETS.TASKS.STATUS.PENDING') }}
-              </option>
-              <option value="done">
-                {{ $t('CASE_TICKETS.TASKS.STATUS.DONE') }}
-              </option>
-            </select>
-          </label>
+          <!-- Estado y prioridad. El estado también se cambia desde la fila con
+               el botón "Completar"; aquí además se puede reabrir la tarea. -->
+          <div class="flex gap-3">
+            <label class="flex-1">
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CASE_TICKETS.TASKS.MODAL.STATUS_LABEL')
+              }}</span>
+              <select v-model="form.status" :disabled="viewing">
+                <option value="pending">
+                  {{ $t('CASE_TICKETS.TASKS.STATUS.PENDING') }}
+                </option>
+                <option value="done">
+                  {{ $t('CASE_TICKETS.TASKS.STATUS.DONE') }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Prioridad propia de la tarea: no se hereda del ticket. -->
+            <label class="flex-1">
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CASE_TICKETS.TASKS.MODAL.PRIORITY_LABEL')
+              }}</span>
+              <select v-model="form.priority" :disabled="viewing">
+                <option
+                  v-for="(label, key) in priorityOptions"
+                  :key="key"
+                  :value="key"
+                >
+                  {{ label }}
+                </option>
+              </select>
+            </label>
+          </div>
 
           <div class="flex items-center justify-end gap-2 mt-4">
             <woot-button
@@ -868,9 +987,12 @@ export default {
     font-size: var(--font-size-mini) !important;
   }
 
+  // Centrado vertical: las filas tienen alturas distintas (la tarea puede traer
+  // descripción, el estado fecha + autor). Con `top` los textos de una sola
+  // línea quedaban pegados arriba y la fila se leía desalineada.
   .ve-table-body-td {
     padding: var(--space-small) var(--space-one) !important;
-    vertical-align: top;
+    vertical-align: middle;
   }
 
   .button-wrapper {

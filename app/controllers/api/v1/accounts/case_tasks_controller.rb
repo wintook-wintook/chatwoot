@@ -74,7 +74,7 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   end
 
   def task_params
-    permitted = params.require(:case_task).permit(:title, :description, :status, :assignee_id, :due_at, :position)
+    permitted = params.require(:case_task).permit(:title, :description, :status, :priority, :assignee_id, :due_at, :position)
     # El asignado debe ser un usuario de la cuenta (si no, queda sin asignar).
     permitted[:assignee_id] = Current.account.users.where(id: permitted[:assignee_id]).pick(:id) if permitted.key?(:assignee_id)
     permitted
@@ -87,6 +87,8 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
       title: task.title,
       description: task.description,
       status: task.status,
+      # @tickets_cases — prioridad de la TAREA, independiente de la del ticket.
+      priority: task.priority,
       assignee_id: task.assignee_id,
       assignee: ref_user(task.assignee),
       due_at: task.due_at,
