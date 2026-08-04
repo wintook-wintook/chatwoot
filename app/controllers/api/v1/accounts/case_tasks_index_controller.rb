@@ -25,6 +25,9 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
                  .includes(:assignee, case_ticket: :case_type)
                  .limit(PER_PAGE)
                  .offset((page - 1) * PER_PAGE)
+                 .to_a
+
+    @notes_count_map = notes_count_map_for(rows)
 
     render json: {
       case_tasks: rows.map { |t| task_json(t) },
@@ -102,6 +105,9 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
   def task_json(task)
     {
       id: task.id,
+      # Folio consecutivo de la tarea dentro de su ticket (T001, T002…), igual
+      # que en la vista de tareas dentro del ticket.
+      sequence: task.sequence,
       title: task.title,
       description: task.description,
       status: task.status,
@@ -111,8 +117,20 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
       position: task.position,
       completed_at: task.completed_at,
       completed_by: ref_user(task.completed_by),
+      # @tickets_cases — nº de notas internas atadas a la tarea (columna "Notas").
+      notes_count: (@notes_count_map || {})[task.id] || 0,
       case_ticket: ticket_context(task.case_ticket)
     }
+  end
+
+  # id de tarea → nº de notas internas, para las tareas de la página actual.
+  def notes_count_map_for(rows)
+    ids = rows.map(&:id)
+    return {} if ids.empty?
+
+    CaseEvent.where(account_id: Current.account.id, event_type: :internal_note)
+             .where(case_task_id: ids)
+             .group(:case_task_id).count
   end
 
   def ticket_context(ticket)

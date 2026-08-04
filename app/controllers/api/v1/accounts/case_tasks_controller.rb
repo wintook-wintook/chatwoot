@@ -94,8 +94,19 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
       created_at: task.created_at,
       # @tickets_cases P4 — firma de completado (quién y cuándo).
       completed_at: task.completed_at,
-      completed_by: ref_user(task.completed_by)
+      completed_by: ref_user(task.completed_by),
+      # @tickets_cases — cuántas notas internas cuelgan de esta tarea (columna
+      # "Notas" en la tabla). Mapa agrupado para no consultar por fila.
+      notes_count: notes_count_map[task.id] || 0
     }
+  end
+
+  # id de tarea → nº de notas internas (una sola consulta agrupada por request).
+  def notes_count_map
+    @notes_count_map ||= @ticket.case_events
+                                .where(event_type: :internal_note)
+                                .where.not(case_task_id: nil)
+                                .group(:case_task_id).count
   end
 
   def ref_user(user)

@@ -386,7 +386,9 @@ class CaseTicket < ApplicationRecord
   # NUNCA sale al cliente (vive en case_events, que el User Portal no expone).
   # La clave `content` del payload es la que ya esperan Cases::Ai::Summarizer y
   # payloadSummary() en JourneyView.vue — no renombrarla.
-  def add_internal_note!(content:, actor: nil)
+  # @tickets_cases — `case_task` opcional: si viene, la nota pertenece a esa
+  # tarea del ticket (folio T00N en la tabla); si es nil, es nota del ticket.
+  def add_internal_note!(content:, actor: nil, case_task: nil)
     raise 'La nota no puede estar vacía' if content.blank?
 
     case_events.create!(
@@ -394,6 +396,7 @@ class CaseTicket < ApplicationRecord
       event_type: :internal_note,
       origin:     actor ? :agent : :system,
       actor:      actor,
+      case_task:  case_task,
       # @tickets_cases — consecutivo estable por ticket (N001, N002…): se guarda
       # en el payload al crear y no se recicla al borrar.
       payload:    { content: content.to_s.strip, sequence: next_note_sequence }
