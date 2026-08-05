@@ -22,7 +22,7 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
     total = scope.count
     page  = [params[:page].to_i, 1].max
     rows  = scope.ordered
-                 .includes(:assignee, case_ticket: :case_type)
+                 .includes(:assignee, :requester, case_ticket: :case_type)
                  .limit(PER_PAGE)
                  .offset((page - 1) * PER_PAGE)
                  .to_a
@@ -116,6 +116,8 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
       priority: task.priority,
       assignee_id: task.assignee_id,
       assignee: ref_user(task.assignee),
+      # @tickets_cases — solicitante (quién abrió la tarea), solo lectura.
+      requester: ref_user(task.requester),
       due_at: task.due_at,
       position: task.position,
       completed_at: task.completed_at,

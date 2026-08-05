@@ -290,7 +290,8 @@
         "PRIORITY": "Prioridad",
         "ASSIGNEE": "Responsable",
         "DUE": "Vence",
-        "NOTES": "Notas"
+        "NOTES": "Notas",
+        "REQUESTER": "Solicitante"
       },
       "STATUS": {
         "PENDING": "Pendiente",
@@ -312,7 +313,8 @@
         "CLOSE": "Cerrar",
         "NEW_DESC": "Crea una tarea o subtarea del ticket, con responsable, prioridad y fecha de vencimiento.",
         "EDIT_DESC": "Actualiza los datos de la tarea o cambia su estado.",
-        "VIEW_DESC": "Detalle de la tarea."
+        "VIEW_DESC": "Detalle de la tarea.",
+        "REQUESTER_LABEL": "Solicitante"
       },
       "ADD_NOTE": "Agregar nota",
       "REFRESH": "Actualizar",
@@ -324,7 +326,11 @@
       "COMPLETE": "Completar",
       "COMPLETE_TITLE": "Marcar la tarea como concluida",
       "COMPLETE_ERROR": "No se pudo completar la tarea.",
-      "TOAST_COMPLETED": "Tarea completada: {task}"
+      "TOAST_COMPLETED": "Tarea completada: {task}",
+      "ACTIONS": "Acciones",
+      "MENU": {
+        "NOTES": "Notas de la tarea ({count})"
+      }
     },
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",

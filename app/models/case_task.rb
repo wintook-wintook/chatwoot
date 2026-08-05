@@ -19,6 +19,7 @@
 #  assignee_id     :bigint
 #  case_ticket_id  :bigint           not null
 #  completed_by_id :bigint
+#  requester_id    :bigint
 #
 # Indexes
 #
@@ -29,6 +30,7 @@
 #  index_case_tasks_on_case_ticket_id_and_position  (case_ticket_id,position)
 #  index_case_tasks_on_case_ticket_id_and_sequence  (case_ticket_id,sequence)
 #  index_case_tasks_on_completed_by_id              (completed_by_id)
+#  index_case_tasks_on_requester_id                 (requester_id)
 #
 # Foreign Keys
 #
@@ -36,6 +38,7 @@
 #  fk_rails_...  (assignee_id => users.id)
 #  fk_rails_...  (case_ticket_id => case_tickets.id)
 #  fk_rails_...  (completed_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (requester_id => users.id) ON DELETE => nullify
 #
 
 # @tickets_cases — Tarea/subtarea de un ticket (osTicket "Tasks").
@@ -43,6 +46,9 @@ class CaseTask < ApplicationRecord
   belongs_to :account
   belongs_to :case_ticket
   belongs_to :assignee, class_name: 'User', optional: true
+  # @tickets_cases — solicitante: quién dio de alta la tarea. Se fija al crear con
+  # el agente actual y no se edita desde la UI (a diferencia del responsable).
+  belongs_to :requester, class_name: 'User', optional: true
   # @tickets_cases P4 — quién marcó la tarea como completada (osTicket lo audita).
   belongs_to :completed_by, class_name: 'User', optional: true
 
