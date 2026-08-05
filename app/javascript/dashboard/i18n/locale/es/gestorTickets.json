@@ -388,7 +388,7 @@
       "SUCCESS": "Ticket interno creado",
       "ERROR": "No se pudo crear el ticket interno",
       "BADGE": "Interno",
-      "NO_CONTACT": "Sin contacto",
+      "NO_ASSIGNEE": "Sin asignar",
       "REQUESTER_LABEL": "Solicitante",
       "CUSTOM_FIELDS": "Campos personalizados"
     },
