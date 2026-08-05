@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_04_200000) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_05_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -389,6 +389,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_04_200000) do
     t.bigint "completed_by_id"
     t.integer "sequence"
     t.integer "priority", default: 1, null: false
+    t.bigint "requester_id"
     t.index ["account_id", "priority"], name: "index_case_tasks_on_account_id_and_priority"
     t.index ["account_id"], name: "index_case_tasks_on_account_id"
     t.index ["assignee_id"], name: "index_case_tasks_on_assignee_id"
@@ -396,6 +397,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_04_200000) do
     t.index ["case_ticket_id", "sequence"], name: "index_case_tasks_on_case_ticket_id_and_sequence"
     t.index ["case_ticket_id"], name: "index_case_tasks_on_case_ticket_id"
     t.index ["completed_by_id"], name: "index_case_tasks_on_completed_by_id"
+    t.index ["requester_id"], name: "index_case_tasks_on_requester_id"
   end
 
   create_table "case_ticket_relations", force: :cascade do |t|
@@ -1624,6 +1626,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_04_200000) do
   add_foreign_key "case_tasks", "case_tickets"
   add_foreign_key "case_tasks", "users", column: "assignee_id"
   add_foreign_key "case_tasks", "users", column: "completed_by_id", on_delete: :nullify
+  add_foreign_key "case_tasks", "users", column: "requester_id", on_delete: :nullify
   add_foreign_key "case_tickets", "case_type_columns", on_delete: :nullify
   add_foreign_key "case_tickets", "contact_trackings", on_delete: :nullify
   add_foreign_key "case_tickets", "contacts", on_delete: :nullify

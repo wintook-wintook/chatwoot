@@ -245,7 +245,8 @@
         "PRIORITY": "Priority",
         "ASSIGNEE": "Assignee",
         "DUE": "Due",
-        "NOTES": "Notes"
+        "NOTES": "Notes",
+        "REQUESTER": "Requester"
       },
       "STATUS": {
         "PENDING": "Pending",
@@ -267,7 +268,8 @@
         "CLOSE": "Close",
         "NEW_DESC": "Create a ticket task or subtask, with an assignee, priority and due date.",
         "EDIT_DESC": "Update the task details or change its status.",
-        "VIEW_DESC": "Task detail."
+        "VIEW_DESC": "Task detail.",
+        "REQUESTER_LABEL": "Requester"
       },
       "INBOX": {
         "TITLE": "Tasks",
@@ -321,6 +323,10 @@
         "MESSAGE": "Are you sure you want to delete this task? This cannot be undone.",
         "CONFIRM": "Delete",
         "CANCEL": "Cancel"
+      },
+      "ACTIONS": "Actions",
+      "MENU": {
+        "NOTES": "Task notes ({count})"
       }
     },
     "MODAL": {

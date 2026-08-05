@@ -24,6 +24,8 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
 
     task = @ticket.case_tasks.build(task_params)
     task.account = Current.account
+    # @tickets_cases — solicitante = agente actual, fijado al crear (no editable).
+    task.requester = current_user
     task.position ||= @ticket.case_tasks.count
     if task.save
       notify_task_assignment(task) # F3 — avisa al recién asignado (si no soy yo)
@@ -40,6 +42,10 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
 
     prev_assignee_id = @task.assignee_id
     was_done = @task.done?
+
+    # @tickets_cases — solicitante: solo se puede fijar si aún NO tiene (tareas
+    # antiguas). Una vez puesto es firma inmutable, no se reasigna.
+    assign_requester_if_absent
 
     if @task.update(task_params)
       # F3 — si cambió el asignado a alguien que no soy yo.
@@ -80,6 +86,17 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
     permitted
   end
 
+  # Fija el solicitante desde la UI SOLO si la tarea aún no tiene (tareas creadas
+  # antes de la función). Ya con solicitante, se ignora: es una firma inmutable.
+  def assign_requester_if_absent
+    return if @task.requester_id.present?
+
+    rid = params.dig(:case_task, :requester_id).presence
+    return if rid.nil?
+
+    @task.requester_id = Current.account.users.where(id: rid).pick(:id)
+  end
+
   def task_json(task)
     {
       id: task.id,
@@ -91,6 +108,8 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
       priority: task.priority,
       assignee_id: task.assignee_id,
       assignee: ref_user(task.assignee),
+      # @tickets_cases — solicitante (quién abrió la tarea), solo lectura.
+      requester: ref_user(task.requester),
       due_at: task.due_at,
       position: task.position,
       created_at: task.created_at,
