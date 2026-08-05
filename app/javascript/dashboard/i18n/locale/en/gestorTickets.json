@@ -277,8 +277,10 @@
         "OPEN_TICKET": "Open ticket",
         "SEARCH_PLACEHOLDER": "Search in the title or description…",
         "EMPTY": "No tasks match the current filters.",
-        "BY_TAB": "By tab",
+        "ALL_ASSIGNEES": "Assignee: all",
+        "ALL_REQUESTERS": "Requester: all",
         "ALL_TYPES": "All types",
+        "REFRESH": "Refresh",
         "COMPLETED": "Completed",
         "UNASSIGNED": "Unassigned",
         "DUE_PREFIX": "Due:",
@@ -297,7 +299,7 @@
         "STATUS": {
           "PENDING": "Pending",
           "DONE": "Completed",
-          "ALL": "All"
+          "ALL": "All statuses"
         },
         "DUE": {
           "ANY": "Any date",
