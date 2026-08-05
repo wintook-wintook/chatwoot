@@ -647,7 +647,7 @@ export default {
         title,
         description: this.form.description.trim(),
         assignee_id: this.form.assignee_id || '',
-        due_at: this.form.due_at || null,
+        due_at: this.toIsoUtc(this.form.due_at),
         status: this.form.status || 'pending',
         priority: this.form.priority || 'medium',
       };
@@ -733,6 +733,13 @@ export default {
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
         d.getDate()
       )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    },
+    // Inversa de toInputDate: el input datetime-local da hora LOCAL sin zona; si
+    // se manda tal cual, Rails la castea como UTC y el vencimiento se corre.
+    toIsoUtc(local) {
+      if (!local) return null;
+      const d = new Date(local);
+      return Number.isNaN(d.getTime()) ? null : d.toISOString();
     },
     quickTabLabel(key) {
       return this.$t(`CASE_TICKETS.TASKS.INBOX.TABS.${key}`);
