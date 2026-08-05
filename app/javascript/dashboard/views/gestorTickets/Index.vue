@@ -602,7 +602,7 @@ export default {
           renderBodyCell: ({ row }) => (
             <div class="min-w-0">
               <p class="m-0 text-base font-semibold truncate text-slate-700 dark:text-slate-200">
-                {row.contact_name || this.$t('CASE_TICKETS.INTERNAL.NO_CONTACT')}
+                {row.contact_name || this.noContactName(row)}
               </p>
               <div class="flex items-center gap-2 mt-1.5 min-w-0">
                 {row.case_type ? (
@@ -852,6 +852,16 @@ export default {
       if (!ticket.assignee_id) return null;
       const a = this.agents.find(x => x.id === ticket.assignee_id);
       return a ? a.name : `#${ticket.assignee_id}`;
+    },
+    // @tickets_cases Fase C — sin contacto la primera línea muestra al agente
+    // asignado. Cae aquí el ticket interno (origin: internal, nunca tuvo
+    // contacto) y también el externo cuyo contacto se borró después
+    // (contact_id → NULL por la FK nullify), que no es interno.
+    noContactName(ticket) {
+      return (
+        this.assigneeName(ticket) ||
+        this.$t('CASE_TICKETS.INTERNAL.NO_ASSIGNEE')
+      );
     },
     // @tickets_cases P3 — acciones en lote
     async runBulk(params) {

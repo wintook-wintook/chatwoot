@@ -385,7 +385,7 @@
       "SUCCESS": "Internal ticket created",
       "ERROR": "Could not create the internal ticket",
       "BADGE": "Internal",
-      "NO_CONTACT": "No contact",
+      "NO_ASSIGNEE": "Unassigned",
       "REQUESTER_LABEL": "Requester",
       "CUSTOM_FIELDS": "Custom fields"
     },
