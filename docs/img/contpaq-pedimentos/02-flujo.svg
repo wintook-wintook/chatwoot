@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 620" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="arw2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="940" height="620" fill="#f4f6f9"/>
+
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28" letter-spacing="-0.4">El pedimento se captura una vez y viaja con la mercancía</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Estructura verificada en el esquema · el recorrido completo NO es reproducible en adPanchitos_Corp (sin datos)</text>
+
+  <!-- FASE 1 -->
+  <text x="40" y="112" font-size="12" font-weight="800" fill="#0284c7" letter-spacing="0.6">1 · ENTRADA — COMPRA DE IMPORTACIÓN</text>
+  <rect x="40" y="124" width="240" height="70" rx="10" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+  <text x="58" y="150" font-size="14" font-weight="700" fill="#151b28">admDocumentos</text>
+  <text x="58" y="170" font-size="11.5" fill="#5c6675">compra · CIDDOCUMENTODE</text>
+  <text x="58" y="186" font-size="11.5" fill="#5c6675">450 documentos</text>
+
+  <path d="M280,159 L342,159" stroke="#94a3b8" stroke-width="1.6" fill="none" marker-end="url(#arw2)"/>
+
+  <rect x="342" y="124" width="240" height="70" rx="10" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+  <text x="360" y="150" font-size="14" font-weight="700" fill="#151b28">admMovimientos</text>
+  <text x="360" y="170" font-size="11.5" fill="#5c6675">renglón de entrada</text>
+  <text x="360" y="186" font-size="11.5" fill="#5c6675">1 053 movimientos</text>
+
+  <text x="612" y="152" font-size="11" fill="#dc2626" font-weight="700">sin campo de</text>
+  <text x="612" y="168" font-size="11" fill="#dc2626" font-weight="700">pedimento aquí</text>
+
+  <path d="M462,194 L462,226" stroke="#94a3b8" stroke-width="1.6" fill="none"/>
+  <path d="M220,226 L700,226" stroke="#94a3b8" stroke-width="1.6" fill="none"/>
+  <path d="M220,226 L220,258" stroke="#94a3b8" stroke-width="1.6" fill="none" marker-end="url(#arw2)"/>
+  <path d="M700,226 L700,258" stroke="#94a3b8" stroke-width="1.6" fill="none" marker-end="url(#arw2)"/>
+  <text x="462" y="246" font-size="11" fill="#5c6675" font-style="italic" text-anchor="middle">el usuario captura el bloque aduanal en</text>
+
+  <rect x="70" y="264" width="300" height="84" rx="10" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
+  <text x="88" y="290" font-size="13.5" font-weight="700" fill="#151b28">admCapasProducto</text>
+  <text x="88" y="310" font-size="11.5" fill="#5c6675">si el producto cuesta por capas</text>
+  <text x="88" y="328" font-size="11.5" font-weight="700" fill="#075985">CPEDIMENTO + CADUANA + CCOSTO</text>
+  <text x="88" y="343" font-size="11" fill="#5c6675">+ CTIPOCAMBIO (la compra viene en divisa)</text>
+
+  <rect x="550" y="264" width="300" height="84" rx="10" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
+  <text x="568" y="290" font-size="13.5" font-weight="700" fill="#151b28">admNumerosSerie</text>
+  <text x="568" y="310" font-size="11.5" fill="#5c6675">si el producto controla series/lotes</text>
+  <text x="568" y="328" font-size="11.5" font-weight="700" fill="#075985">CPEDIMENTO + CADUANA + CCOSTO</text>
+  <text x="568" y="343" font-size="11" fill="#5c6675">1 fila por pieza o por lote</text>
+
+  <!-- FASE 2 -->
+  <text x="40" y="392" font-size="12" font-weight="800" fill="#7c3aed" letter-spacing="0.6">2 · SALIDA — VENTA</text>
+
+  <path d="M220,348 L220,420" stroke="#94a3b8" stroke-width="1.6" fill="none" marker-end="url(#arw2)"/>
+  <path d="M700,348 L700,420" stroke="#94a3b8" stroke-width="1.6" fill="none" marker-end="url(#arw2)"/>
+
+  <rect x="70" y="426" width="300" height="76" rx="10" fill="#ffffff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="88" y="452" font-size="13.5" font-weight="700" fill="#151b28">admMovimientosCapas</text>
+  <text x="88" y="472" font-size="11.5" fill="#5c6675">PK (CIDMOVIMIENTO, CIDCAPA)</text>
+  <text x="88" y="490" font-size="11.5" fill="#5c6675">+ CUNIDADES, CTIPOCAPA, CIDUNIDAD</text>
+
+  <rect x="550" y="426" width="300" height="76" rx="10" fill="#ffffff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="568" y="452" font-size="13.5" font-weight="700" fill="#151b28">admMovimientosSerie</text>
+  <text x="568" y="472" font-size="11.5" fill="#5c6675">PK (CIDMOVIMIENTO, CIDSERIE)</text>
+  <text x="568" y="490" font-size="11.5" fill="#5c6675">4 columnas · 6 filas</text>
+
+  <text x="460" y="468" font-size="11.5" font-weight="700" fill="#5b21b6" text-anchor="middle">los dos únicos</text>
+  <text x="460" y="484" font-size="11.5" font-weight="700" fill="#5b21b6" text-anchor="middle">puentes</text>
+
+  <!-- FASE 3 -->
+  <text x="40" y="546" font-size="12" font-weight="800" fill="#0f766e" letter-spacing="0.6">3 · COMPROBANTE</text>
+  <path d="M460,502 L460,560" stroke="#94a3b8" stroke-width="1.6" fill="none" marker-end="url(#arw2)"/>
+  <rect x="300" y="566" width="340" height="40" rx="8" fill="#ecfdf5" stroke="#0f766e" stroke-width="1.6"/>
+  <text x="470" y="591" font-size="12.5" font-weight="700" fill="#0f5132" text-anchor="middle">CFDI · nodo InformaciónAduanera</text>
+</svg>
