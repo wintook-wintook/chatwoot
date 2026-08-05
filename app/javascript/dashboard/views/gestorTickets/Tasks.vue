@@ -15,6 +15,7 @@ import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import caseAiWriter from 'dashboard/mixins/caseAiWriter';
+import { LocalStorage } from 'shared/helpers/localStorage';
 
 // Filtros rápidos por ámbito de asignación (mismo patrón que el Kanban).
 const QUICK_FILTERS = [
@@ -34,6 +35,41 @@ const PRIORITY_DOT = {
 // El backend pagina de 25 en 25 (CaseTasksIndexController::PER_PAGE).
 const PER_PAGE = 25;
 
+// Preferencias de filtros por CUENTA + AGENTE: cada quien recupera la bandeja
+// como la dejó. No se guarda ni la búsqueda ni la página (son de momento).
+const FILTER_PREFS_KEY = 'case_tickets::tasks_filters';
+const PERSISTED_FILTERS = [
+  'status',
+  'due',
+  'case_type_id',
+  'assignee_id',
+  'requester_id',
+];
+
+// Cada pestaña tiene SU juego de filtros: filtrar "Completadas" en Mis tareas no
+// debe arrastrarse a Sin asignar. `q` va aquí también (por pestaña) pero no se
+// guarda en disco: la búsqueda es de momento.
+const defaultTabFilters = () => ({
+  status: 'pending',
+  due: '',
+  assignee_id: '',
+  case_type_id: '',
+  requester_id: '',
+  q: '',
+});
+
+// Columnas ordenables; mismo whitelist que CaseTasksIndexController::SORTABLE_COLUMNS.
+const SORTABLE_FIELDS = [
+  'sequence',
+  'ticket',
+  'title',
+  'priority',
+  'requester',
+  'assignee',
+  'due_at',
+  'status',
+];
+
 export default {
   name: 'TicketTasksInbox',
   components: {
@@ -48,17 +84,24 @@ export default {
     return {
       quickFilters: QUICK_FILTERS,
       quickFilter: 'mine',
-      filters: {
-        status: 'pending',
-        due: '',
-        assignee_id: '',
-        case_type_id: '',
-        q: '',
-      },
+      // Un juego de filtros por pestaña (ver `filters`, que apunta al de la activa).
+      tabFilters: QUICK_FILTERS.reduce(
+        (acc, f) => ({ ...acc, [f.key]: defaultTabFilters() }),
+        {}
+      ),
       searchDebounce: null,
       overdueCount: 0,
       currentPage: 1,
       perPage: PER_PAGE,
+      // Orden en SERVIDOR desde el encabezado de la tabla (igual que el listado
+      // de tickets): con paginación de 25 no sirve ordenar solo la página.
+      sortBy: '',
+      sortOrder: '',
+      sortConfig: {},
+      sortOption: {
+        sortAlways: true,
+        sortChange: params => this.onSortChange(params),
+      },
       // Modal de edición / lectura (no hay alta: una tarea nace dentro de un ticket).
       showModal: false,
       editingTask: null,
@@ -114,6 +157,15 @@ export default {
       const i = QUICK_FILTERS.findIndex(f => f.key === this.quickFilter);
       return i < 0 ? 0 : i;
     },
+    // Filtros de la pestaña activa (el resto de pestañas conserva los suyos).
+    filters() {
+      return this.tabFilters[this.quickFilter] || this.tabFilters.mine;
+    },
+    // El dropdown de responsable solo tiene sentido en Todas / Vencidas: en "Mis
+    // tareas" el responsable ya soy yo y en "Sin asignar" no hay responsable.
+    showAssigneeFilter() {
+      return ['all', 'overdue'].includes(this.quickFilter);
+    },
     priorityOptions() {
       return this.$t('CASE_TICKETS.PRIORITIES');
     },
@@ -144,6 +196,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.NUM'),
           align: 'left',
           width: 112,
+          sortBy: this.sortConfig.sequence || '',
           renderBodyCell: ({ row }) => (
             <div class="flex items-center gap-2">
               {this.ticketFrozen(row) ? null : (
@@ -172,6 +225,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.INBOX.TICKET_COL'),
           align: 'left',
           width: 260,
+          sortBy: this.sortConfig.ticket || '',
           renderBodyCell: ({ row }) => {
             const t = row.case_ticket;
             if (!t) {
@@ -218,6 +272,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.TASK'),
           align: 'left',
           width: 320,
+          sortBy: this.sortConfig.title || '',
           renderBodyCell: ({ row }) => (
             <div class="overflow-hidden">
               <p
@@ -249,6 +304,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.PRIORITY'),
           align: 'left',
           width: 115,
+          sortBy: this.sortConfig.priority || '',
           renderBodyCell: ({ row }) => (
             <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
               <span
@@ -269,6 +325,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.REQUESTER'),
           align: 'left',
           width: 140,
+          sortBy: this.sortConfig.requester || '',
           renderBodyCell: ({ row }) =>
             this.requesterName(row) || (
               <span class="text-slate-300 dark:text-slate-600">—</span>
@@ -280,6 +337,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.ASSIGNEE'),
           align: 'left',
           width: 140,
+          sortBy: this.sortConfig.assignee || '',
           renderBodyCell: ({ row }) =>
             this.assigneeName(row) || (
               <span class="text-slate-300 dark:text-slate-600">
@@ -293,6 +351,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.DUE'),
           align: 'left',
           width: 150,
+          sortBy: this.sortConfig.due_at || '',
           renderBodyCell: ({ row }) => (
             <span
               class={
@@ -315,6 +374,7 @@ export default {
           title: this.$t('CASE_TICKETS.TASKS.TABLE.STATUS'),
           align: 'left',
           width: 170,
+          sortBy: this.sortConfig.status || '',
           renderBodyCell: ({ row }) => {
             if (row.status !== 'done') {
               // Ticket cerrado: no hay acción posible, pero el estado se sigue
@@ -368,6 +428,32 @@ export default {
       ];
     },
   },
+  watch: {
+    // Si un agente guardado en las preferencias ya no existe (lo dieron de baja),
+    // el select quedaría en blanco filtrando por un id fantasma: se limpia en
+    // todas las pestañas.
+    agents(list) {
+      if (!list.length) return;
+      const known = id =>
+        id === '' || list.some(a => String(a.id) === String(id));
+      let changed = false;
+      QUICK_FILTERS.forEach(({ key: tab }) => {
+        ['assignee_id', 'requester_id'].forEach(key => {
+          if (known(this.tabFilters[tab][key])) return;
+          this.tabFilters[tab][key] = '';
+          changed = true;
+        });
+      });
+      if (!changed) return;
+      this.persistFilters();
+      this.fetch();
+    },
+  },
+  created() {
+    // Antes del primer fetch, para que la bandeja abra ya con los filtros
+    // que este agente dejó puestos la última vez.
+    this.restoreFilters();
+  },
   mounted() {
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchTypes');
@@ -375,6 +461,54 @@ export default {
     this.refreshOverdueCount();
   },
   methods: {
+    // ── Preferencias de filtros (por cuenta y agente) ──────────────
+    prefsKey() {
+      return `${FILTER_PREFS_KEY}::${this.$route.params.accountId}::${this.currentUserID}`;
+    },
+    restoreFilters() {
+      const saved = LocalStorage.get(this.prefsKey());
+      if (!saved || typeof saved !== 'object') return;
+      if (QUICK_FILTERS.some(f => f.key === saved.quickFilter)) {
+        this.quickFilter = saved.quickFilter;
+      }
+      // Cada pestaña recupera SUS filtros (`tabs`), no un juego compartido.
+      const tabs = saved.tabs || {};
+      QUICK_FILTERS.forEach(({ key: tab }) => {
+        const savedTab = tabs[tab];
+        if (!savedTab || typeof savedTab !== 'object') return;
+        PERSISTED_FILTERS.forEach(key => {
+          if (savedTab[key] !== undefined && savedTab[key] !== null) {
+            this.tabFilters[tab][key] = savedTab[key];
+          }
+        });
+      });
+      // Mis tareas / Sin asignar no tienen filtro por responsable: el ámbito de
+      // la pestaña ya lo fija.
+      this.tabFilters.mine.assignee_id = '';
+      this.tabFilters.unassigned.assignee_id = '';
+      // Orden de la tabla: se recuerda igual que los filtros (es común a todas
+      // las pestañas, porque describe la tabla y no el ámbito).
+      if (SORTABLE_FIELDS.includes(saved.sortBy)) {
+        this.sortBy = saved.sortBy;
+        this.sortOrder = saved.sortOrder === 'desc' ? 'desc' : 'asc';
+        this.sortConfig = { [this.sortBy]: this.sortOrder };
+      }
+    },
+    persistFilters() {
+      const tabs = {};
+      QUICK_FILTERS.forEach(({ key: tab }) => {
+        tabs[tab] = {};
+        PERSISTED_FILTERS.forEach(key => {
+          tabs[tab][key] = this.tabFilters[tab][key];
+        });
+      });
+      LocalStorage.set(this.prefsKey(), {
+        quickFilter: this.quickFilter,
+        sortBy: this.sortBy,
+        sortOrder: this.sortOrder,
+        tabs,
+      });
+    },
     // Traduce ámbito (pestaña + dropdown de agente) a `assignee_id` del endpoint.
     resolveAssignee() {
       if (this.filters.assignee_id !== '') return this.filters.assignee_id;
@@ -386,9 +520,14 @@ export default {
       const p = { assignee_id: this.resolveAssignee(), page: this.currentPage };
       if (this.filters.status) p.status = this.filters.status;
       if (this.filters.case_type_id) p.case_type_id = this.filters.case_type_id;
+      if (this.filters.requester_id) p.requester_id = this.filters.requester_id;
       if (this.filters.q) p.q = this.filters.q;
       const due = this.quickFilter === 'overdue' ? 'overdue' : this.filters.due;
       if (due) p.due = due;
+      if (this.sortBy) {
+        p.sort_by = this.sortBy;
+        p.sort_order = this.sortOrder || 'asc';
+      }
       return p;
     },
     async fetch() {
@@ -419,12 +558,27 @@ export default {
       }
     },
     onQuickTabChange(index) {
+      // Cambiar de pestaña cambia el juego de filtros activo (`filters` apunta
+      // al de la pestaña): cada una conserva lo suyo.
       this.quickFilter = QUICK_FILTERS[index].key;
       this.currentPage = 1;
+      this.persistFilters();
       this.fetch();
     },
     onFilterChange() {
       this.currentPage = 1;
+      this.persistFilters();
+      this.fetch();
+    },
+    // Clic en el encabezado de una columna: VeTable manda { campo: 'asc'|'desc' }.
+    onSortChange(params) {
+      const field = Object.keys(params).find(k => params[k]);
+      if (!field) return;
+      this.sortBy = field;
+      this.sortOrder = params[field];
+      this.sortConfig = { [field]: params[field] };
+      this.currentPage = 1;
+      this.persistFilters();
       this.fetch();
     },
     onSearchInput() {
@@ -438,6 +592,11 @@ export default {
       this.filters.q = '';
       this.currentPage = 1;
       this.fetch();
+    },
+    // Actualiza la tabla (y el contador de vencidas) conservando filtros y página.
+    refresh() {
+      this.fetch();
+      this.refreshOverdueCount();
     },
     changePage(page) {
       this.currentPage = page;
@@ -771,8 +930,95 @@ export default {
         />
       </woot-tabs>
 
-      <div class="flex flex-wrap items-center gap-2">
-        <div class="relative flex-1 min-w-[220px]">
+      <!-- Dos columnas 70/30: izquierda "Actualizar" + desplegables, derecha búsqueda. -->
+      <div class="grid items-start grid-cols-1 gap-2 lg:grid-cols-[7fr_3fr]">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Recarga la página actual sin tocar los filtros (tareas que otro
+             agente creó o completó mientras tenías la bandeja abierta). -->
+          <woot-button
+            size="small"
+            color-scheme="primary"
+            icon="arrow-clockwise"
+            :is-loading="isFetching"
+            :title="$t('CASE_TICKETS.TASKS.INBOX.REFRESH')"
+            @click="refresh"
+          >
+            {{ $t('CASE_TICKETS.TASKS.INBOX.REFRESH') }}
+          </woot-button>
+          <select
+            v-model="filters.status"
+            class="!mb-0 text-sm w-36"
+            @change="onFilterChange"
+          >
+            <option value="pending">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.STATUS.PENDING') }}
+            </option>
+            <option value="done">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.STATUS.DONE') }}
+            </option>
+            <option value="all">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.STATUS.ALL') }}
+            </option>
+          </select>
+          <select
+            v-model="filters.case_type_id"
+            class="!mb-0 text-sm w-40"
+            @change="onFilterChange"
+          >
+            <option value="">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.ALL_TYPES') }}
+            </option>
+            <option v-for="t in types" :key="t.id" :value="t.id">
+              {{ t.name }}
+            </option>
+          </select>
+          <select
+            v-model="filters.due"
+            class="!mb-0 text-sm w-36"
+            :disabled="quickFilter === 'overdue'"
+            @change="onFilterChange"
+          >
+            <option value="">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.DUE.ANY') }}
+            </option>
+            <option value="overdue">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.DUE.OVERDUE') }}
+            </option>
+            <option value="today">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.DUE.TODAY') }}
+            </option>
+            <option value="week">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.DUE.WEEK') }}
+            </option>
+          </select>
+          <select
+            v-model="filters.requester_id"
+            class="!mb-0 text-sm w-40"
+            @change="onFilterChange"
+          >
+            <option value="">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.ALL_REQUESTERS') }}
+            </option>
+            <option v-for="a in agents" :key="a.id" :value="a.id">
+              {{ a.name }}
+            </option>
+          </select>
+          <select
+            v-if="showAssigneeFilter"
+            v-model="filters.assignee_id"
+            class="!mb-0 text-sm w-40"
+            @change="onFilterChange"
+          >
+            <option value="">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.ALL_ASSIGNEES') }}
+            </option>
+            <option v-for="a in agents" :key="a.id" :value="a.id">
+              {{ a.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="relative">
           <fluent-icon
             icon="search"
             size="16"
@@ -794,60 +1040,6 @@ export default {
             <fluent-icon icon="dismiss" size="14" />
           </button>
         </div>
-        <select
-          v-model="filters.assignee_id"
-          class="!mb-0 text-sm w-40"
-          @change="onFilterChange"
-        >
-          <option value="">{{ $t('CASE_TICKETS.TASKS.INBOX.BY_TAB') }}</option>
-          <option v-for="a in agents" :key="a.id" :value="a.id">
-            {{ a.name }}
-          </option>
-        </select>
-        <select
-          v-model="filters.status"
-          class="!mb-0 text-sm w-36"
-          @change="onFilterChange"
-        >
-          <option value="pending">
-            {{ $t('CASE_TICKETS.TASKS.INBOX.STATUS.PENDING') }}
-          </option>
-          <option value="done">
-            {{ $t('CASE_TICKETS.TASKS.INBOX.STATUS.DONE') }}
-          </option>
-          <option value="all">
-            {{ $t('CASE_TICKETS.TASKS.INBOX.STATUS.ALL') }}
-          </option>
-        </select>
-        <select
-          v-model="filters.due"
-          class="!mb-0 text-sm w-36"
-          :disabled="quickFilter === 'overdue'"
-          @change="onFilterChange"
-        >
-          <option value="">{{ $t('CASE_TICKETS.TASKS.INBOX.DUE.ANY') }}</option>
-          <option value="overdue">
-            {{ $t('CASE_TICKETS.TASKS.INBOX.DUE.OVERDUE') }}
-          </option>
-          <option value="today">
-            {{ $t('CASE_TICKETS.TASKS.INBOX.DUE.TODAY') }}
-          </option>
-          <option value="week">
-            {{ $t('CASE_TICKETS.TASKS.INBOX.DUE.WEEK') }}
-          </option>
-        </select>
-        <select
-          v-model="filters.case_type_id"
-          class="!mb-0 text-sm w-40"
-          @change="onFilterChange"
-        >
-          <option value="">
-            {{ $t('CASE_TICKETS.TASKS.INBOX.ALL_TYPES') }}
-          </option>
-          <option v-for="t in types" :key="t.id" :value="t.id">
-            {{ t.name }}
-          </option>
-        </select>
       </div>
     </div>
 
@@ -877,6 +1069,7 @@ export default {
           :columns="columns"
           :table-data="tasks"
           :border-around="false"
+          :sort-option="sortOption"
           :event-custom-option="eventCustomOption"
         />
       </div>

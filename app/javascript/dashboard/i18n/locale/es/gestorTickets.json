@@ -252,8 +252,10 @@
         "TITLE": "Tareas",
         "SEARCH_PLACEHOLDER": "Buscar en el título o la descripción…",
         "EMPTY": "No hay tareas que coincidan con los filtros.",
-        "BY_TAB": "Por pestaña",
+        "ALL_ASSIGNEES": "Responsable: todos",
+        "ALL_REQUESTERS": "Solicitante: todos",
         "ALL_TYPES": "Todos los tipos",
+        "REFRESH": "Actualizar",
         "COMPLETED": "Completada",
         "UNASSIGNED": "Sin asignar",
         "DUE_PREFIX": "Vence:",
@@ -271,7 +273,7 @@
         "STATUS": {
           "PENDING": "Pendientes",
           "DONE": "Completadas",
-          "ALL": "Todas"
+          "ALL": "Todos los estados"
         },
         "DUE": {
           "ANY": "Cualquier fecha",
