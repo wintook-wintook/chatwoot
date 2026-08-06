@@ -41,6 +41,12 @@ messenger:
   enabled: true
   icon: 'icon-messenger-line'
   config_key: 'facebook'
+tiktok:
+  name: 'TikTok'
+  description: 'Atiende los mensajes directos de tu cuenta de empresa de TikTok.'
+  enabled: true
+  icon: 'icon-tiktok-line'
+  config_key: 'tiktok'
 whatsapp:
   name: 'WhatsApp'
   description: 'Manage your WhatsApp business interactions from Chatwoot.'

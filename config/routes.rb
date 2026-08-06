@@ -18,6 +18,9 @@ Rails.application.routes.draw do
     get '/app/*params', to: 'dashboard#index'
     get '/app/accounts/:account_id/settings/inboxes/new/twitter', to: 'dashboard#index', as: 'app_new_twitter_inbox'
     get '/app/accounts/:account_id/settings/inboxes/new/microsoft', to: 'dashboard#index', as: 'app_new_microsoft_inbox'
+    get '/app/accounts/:account_id/settings/inboxes/new/tiktok', to: 'dashboard#index', as: 'app_new_tiktok_inbox'
+    get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_tiktok_inbox_agents'
+    get '/app/accounts/:account_id/settings/inboxes/:inbox_id', to: 'dashboard#index', as: 'app_tiktok_inbox_settings'
     get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_twitter_inbox_agents'
     get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_email_inbox_agents'
     get '/app/accounts/:account_id/settings/inboxes/:inbox_id', to: 'dashboard#index', as: 'app_email_inbox_settings'
@@ -481,6 +484,10 @@ Rails.application.routes.draw do
             resource :authorization, only: [:create]
           end
 
+          namespace :tiktok do
+            resource :authorization, only: [:create]
+          end
+
           namespace :microsoft do
             resource :authorization, only: [:create]
           end
@@ -756,6 +763,9 @@ Rails.application.routes.draw do
   post 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#process_payload'
   get 'webhooks/instagram', to: 'webhooks/instagram#verify'
   post 'webhooks/instagram', to: 'webhooks/instagram#events'
+  # TikTok no hace handshake de verificación: firma cada petición, así que solo hay POST.
+  post 'webhooks/tiktok', to: 'webhooks/tiktok#events'
+  get 'tiktok/callback', to: 'tiktok/callbacks#show'
   namespace :twitter do
     resource :callback, only: [:show]
   end

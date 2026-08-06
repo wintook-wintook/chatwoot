@@ -150,3 +150,10 @@
 # IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
 - name: knowledge_base_config
   enabled: false
+# Canal de mensajes directos de TikTok (TikTok Business API). Off por defecto: nace
+# apagado y se activa por cuenta desde el super admin cuando el canal esté completo.
+# IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags /
+# FlagShihTzu). Nunca insertar antes de un flag ya activo: se correrían los bits de todas
+# las cuentas.
+- name: channel_tiktok
+  enabled: false

@@ -35,6 +35,10 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
     @allowed_configs = case @config
                        when 'facebook'
                          %w[FB_APP_ID FB_VERIFY_TOKEN FB_APP_SECRET IG_VERIFY_TOKEN FACEBOOK_API_VERSION ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT]
+                       # Canal de TikTok. Grupo aparte: sus credenciales no tienen nada
+                       # que ver con las de Meta.
+                       when 'tiktok'
+                         %w[TIKTOK_APP_ID TIKTOK_APP_SECRET TIKTOK_API_VERSION]
                        when 'microsoft'
                          %w[AZURE_APP_ID AZURE_APP_SECRET]
                        when 'email'
