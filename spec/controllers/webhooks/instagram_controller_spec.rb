@@ -66,5 +66,25 @@ RSpec.describe 'Webhooks::InstagramController', type: :request do
       post '/webhooks/instagram', params: instagram_params
       expect(response).to have_http_status(:success)
     end
+
+    # El eco puede llegar antes de que termine la llamada que envió el mensaje: entonces
+    # el source_id aún no está guardado, el dedupe por mid no lo reconoce y el mensaje
+    # sale duplicado en la conversación.
+    it 'delays echo events so the outgoing message is persisted first' do
+      echo_params = dm_params.deep_dup
+      echo_params[:entry][0][:messaging][0][:message][:is_echo] = true
+
+      post '/webhooks/instagram', params: echo_params.merge(object: 'instagram')
+
+      expect(response).to have_http_status(:success)
+      expect(Webhooks::InstagramEventsJob)
+        .to have_been_enqueued.at(a_value_within(1.second).of(2.seconds.from_now))
+    end
+
+    it 'processes a normal message without waiting' do
+      post '/webhooks/instagram', params: dm_params.merge(object: 'instagram')
+
+      expect(Webhooks::InstagramEventsJob).to have_been_enqueued.at(:no_wait)
+    end
   end
 end

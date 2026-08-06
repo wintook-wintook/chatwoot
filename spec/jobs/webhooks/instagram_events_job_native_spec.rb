@@ -115,6 +115,55 @@ describe Webhooks::InstagramEventsJob do
     end
   end
 
+  # No todo fallo al leer el perfil es una avería del canal: tratarlos igual marcaba la
+  # autorización como rota por errores normales y tiraba mensajes que sí se podían guardar.
+  describe 'error codes from Meta while fetching the contact profile' do
+    let!(:native_channel) { create(:channel_instagram, account: account, instagram_id: ig_account_id) }
+
+    def fail_profile_with(code, message = 'boom')
+      allow_any_instance_of(Channel::Instagram).to receive(:fetch_contact_profile) # rubocop:disable RSpec/AnyInstance
+        .and_raise(Instagram::OauthService::OauthError.new(message, code))
+    end
+
+    it 'marks the channel for reauthorization on 190 (token expired)' do
+      fail_profile_with(190, 'Invalid OAuth access token')
+
+      instagram_webhook.perform_now(dm_params[:entry])
+
+      expect(native_channel.reload.authorization_error_count).to be_positive
+    end
+
+    # El usuario nunca escribió primero: Meta no da su perfil y es lo esperado
+    it 'does not touch the authorization on 230 (consent required)' do
+      fail_profile_with(230, 'User consent is required')
+
+      instagram_webhook.perform_now(dm_params[:entry])
+
+      expect(native_channel.reload.authorization_error_count).to be 0
+    end
+
+    # Es el bot con el que Meta valida la app en App Review: si no se crea contacto, la
+    # revisión no ve ningún mensaje y rechaza la integración.
+    it 'creates a generic contact on 9010 so App Review sees the message arrive' do
+      fail_profile_with(9010, 'No matching Instagram user')
+
+      instagram_webhook.perform_now(dm_params[:entry])
+
+      inbox = native_channel.inbox.reload
+      expect(inbox.messages.count).to be 1
+      expect(inbox.contacts.last.name).to include('Instagram')
+      expect(native_channel.reload.authorization_error_count).to be 0
+    end
+
+    it 'reports an unexpected code without marking the channel' do
+      fail_profile_with(1, 'Unknown error')
+
+      instagram_webhook.perform_now(dm_params[:entry])
+
+      expect(native_channel.reload.authorization_error_count).to be 0
+    end
+  end
+
   describe 'read status' do
     let(:messaging_seen_event) { build(:messaging_seen_event).with_indifferent_access }
 

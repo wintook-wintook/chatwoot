@@ -78,7 +78,7 @@ class Channel::Instagram < ApplicationRecord
       query: { fields: 'name,username,profile_pic', access_token: access_token }
     )
 
-    raise Instagram::OauthService::OauthError, profile_error(response) unless response.success?
+    raise profile_error(response) unless response.success?
 
     (response.parsed_response || {}).merge('id' => ig_scoped_id.to_s)
   end
@@ -191,10 +191,15 @@ class Channel::Instagram < ApplicationRecord
     GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v25.0')
   end
 
+  # El código de Meta viaja dentro del error: quien lo captura decide si es token muerto,
+  # falta de consentimiento o el bot revisor. Ver Instagram::MessageText.
   def profile_error(response)
     body = response.parsed_response
     body = {} unless body.is_a?(Hash)
 
-    body.dig('error', 'message') || "HTTP #{response.code}"
+    Instagram::OauthService::OauthError.new(
+      body.dig('error', 'message') || "HTTP #{response.code}",
+      body.dig('error', 'code')
+    )
   end
 end

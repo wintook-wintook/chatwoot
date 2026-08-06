@@ -47,6 +47,33 @@ describe Instagram::SendOnInstagramService do
       expect(message.external_error).to eq('10 - Message failed to send')
     end
 
+    # Sin esto el canal se queda enviando a la nada: los mensajes fallan uno a uno y el
+    # administrador no ve el aviso de reautorizar en ningún sitio.
+    it 'marks the channel for reauthorization when the token died (190)' do
+      message = create(:message, message_type: 'outgoing', content: 'hola', inbox: inbox, account: account, conversation: conversation)
+
+      stub_request(:post, %r{graph\.instagram\.com/.*/messages})
+        .to_return(status: 400, body: { error: { message: 'Invalid OAuth access token', code: 190 } }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+
+      described_class.new(message: message).perform
+
+      expect(message.reload.status).to eq('failed')
+      expect(channel.reload.authorization_error_count).to be_positive
+    end
+
+    it 'leaves the authorization alone for an ordinary send failure' do
+      message = create(:message, message_type: 'outgoing', content: 'hola', inbox: inbox, account: account, conversation: conversation)
+
+      stub_request(:post, %r{graph\.instagram\.com/.*/messages})
+        .to_return(status: 400, body: { error: { message: 'Message failed to send', code: 10 } }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+
+      described_class.new(message: message).perform
+
+      expect(channel.reload.authorization_error_count).to be 0
+    end
+
     it 'sends attachments through the native host too' do
       message = build(:message, content: nil, message_type: 'outgoing', inbox: inbox, account: account, conversation: conversation)
       attachment = message.attachments.new(account_id: message.account_id, file_type: :image)

@@ -1,9 +1,11 @@
 class Instagram::MessageText < Instagram::WebhooksBaseService
-  include HTTParty
-
   attr_reader :messaging
 
-  base_uri 'https://graph.facebook.com/v11.0/'
+  # Códigos de Meta que hay que distinguir al leer el perfil de un contacto.
+  # @see https://developers.facebook.com/docs/messenger-platform/error-codes
+  TOKEN_EXPIRED    = 190  # el token dejó de valer: toca reautorizar
+  CONSENT_REQUIRED = 230  # el usuario nunca escribió primero; sin consentimiento no hay perfil
+  UNKNOWN_IG_USER  = 9010 # el remitente no es un usuario real (el bot revisor de Meta)
 
   def initialize(messaging)
     super()
@@ -11,7 +13,6 @@ class Instagram::MessageText < Instagram::WebhooksBaseService
   end
 
   def perform
-    create_test_text
     instagram_id, contact_id = instagram_and_contact_ids
     inbox_channel(instagram_id)
     # person can connect the channel and then delete the inbox
@@ -56,10 +57,30 @@ class Instagram::MessageText < Instagram::WebhooksBaseService
               end
 
     profile || {}
-  rescue Koala::Facebook::AuthenticationError, ::Instagram::OauthService::OauthError => e
-    handle_profile_auth_error(e)
-  rescue StandardError, Koala::Facebook::ClientError => e
-    handle_profile_error(e)
+  rescue Koala::Facebook::ClientError, ::Instagram::OauthService::OauthError => e
+    handle_profile_error(e, ig_scope_id)
+  rescue StandardError => e
+    report_profile_error(e)
+  end
+
+  # No todo fallo al leer el perfil es una avería del canal. Tratarlos todos igual hacía
+  # dos daños: marcaba la autorización como rota por errores normales, y tiraba mensajes
+  # que sí se podían guardar.
+  # @see https://developers.facebook.com/docs/messenger-platform/error-codes
+  def handle_profile_error(error, ig_scope_id)
+    case profile_error_code(error)
+    when TOKEN_EXPIRED    then handle_profile_auth_error(error)
+    when CONSENT_REQUIRED then skip_profile
+    when UNKNOWN_IG_USER  then unknown_user(ig_scope_id)
+    else report_profile_error(error)
+    end
+  end
+
+  def profile_error_code(error)
+    # Koala clasifica el token caducado por tipo de excepción, no siempre por código.
+    return TOKEN_EXPIRED if error.is_a?(Koala::Facebook::AuthenticationError)
+
+    (error.try(:code) || error.try(:fb_error_code)).to_i
   end
 
   def handle_profile_auth_error(error)
@@ -69,7 +90,23 @@ class Instagram::MessageText < Instagram::WebhooksBaseService
     {}
   end
 
-  def handle_profile_error(error)
+  # 230: el usuario nunca escribió primero, así que Meta no da acceso a su perfil. Es lo
+  # esperado en una conversación que abrimos nosotros, no una avería: ni marca el canal ni
+  # merece llegar a Sentry.
+  def skip_profile
+    Rails.logger.info("[Instagram] perfil no accesible sin consentimiento del usuario, inbox #{@inbox.id}")
+    {}
+  end
+
+  # 9010: el remitente no es un usuario real de Instagram. Le pasa al bot con el que Meta
+  # valida la app durante App Review; si no se crea contacto, la prueba de Meta no ve
+  # ningún mensaje y la revisión se rechaza por "la integración no funciona".
+  def unknown_user(ig_scope_id)
+    Rails.logger.info("[Instagram] remitente sin perfil (9010), se crea contacto genérico: #{ig_scope_id}")
+    { 'id' => ig_scope_id.to_s, 'name' => "Instagram #{ig_scope_id}" }
+  end
+
+  def report_profile_error(error)
     Rails.logger.warn("[InstagramUserFetchClientError]: account_id #{@inbox.account_id} inbox_id #{@inbox.id}")
     Rails.logger.warn("[InstagramUserFetchClientError]: #{error.message}")
     ChatwootExceptionTracker.new(error, account: @inbox.account).capture_exception
@@ -90,10 +127,6 @@ class Instagram::MessageText < Instagram::WebhooksBaseService
     @contact_inbox.blank? && @inbox.channel.instagram_id.present?
   end
 
-  def sent_via_test_webhook?
-    @messaging[:sender][:id] == '12334' && @messaging[:recipient][:id] == '23245'
-  end
-
   def unsend_message
     message_to_delete = @inbox.messages.find_by(
       source_id: @messaging[:message][:mid]
@@ -108,66 +141,5 @@ class Instagram::MessageText < Instagram::WebhooksBaseService
     return unless @contact_inbox
 
     Messages::Instagram::MessageBuilder.new(@messaging, @inbox, outgoing_echo: agent_message_via_echo?).perform
-  end
-
-  def create_test_text
-    return unless sent_via_test_webhook?
-
-    Rails.logger.info('Probably Test data.')
-
-    messenger_channel = Channel::FacebookPage.last
-    @inbox = ::Inbox.find_by(channel: messenger_channel)
-    return unless @inbox
-
-    @contact = create_test_contact
-
-    @conversation ||= create_test_conversation(conversation_params)
-
-    @message = @conversation.messages.create!(test_message_params)
-  end
-
-  def create_test_contact
-    @contact_inbox = @inbox.contact_inboxes.where(source_id: @messaging[:sender][:id]).first
-    unless @contact_inbox
-      @contact_inbox ||= @inbox.channel.create_contact_inbox(
-        'sender_username', 'sender_username'
-      )
-    end
-
-    @contact_inbox.contact
-  end
-
-  def create_test_conversation(conversation_params)
-    Conversation.find_by(conversation_params) || build_conversation(conversation_params)
-  end
-
-  def test_message_params
-    {
-      account_id: @conversation.account_id,
-      inbox_id: @conversation.inbox_id,
-      message_type: 'incoming',
-      source_id: @messaging[:message][:mid],
-      content: @messaging[:message][:text],
-      sender: @contact
-    }
-  end
-
-  def build_conversation(conversation_params)
-    Conversation.create!(
-      conversation_params.merge(
-        contact_inbox_id: @contact_inbox.id
-      )
-    )
-  end
-
-  def conversation_params
-    {
-      account_id: @inbox.account_id,
-      inbox_id: @inbox.id,
-      contact_id: @contact.id,
-      additional_attributes: {
-        type: 'instagram_direct_message'
-      }
-    }
   end
 end

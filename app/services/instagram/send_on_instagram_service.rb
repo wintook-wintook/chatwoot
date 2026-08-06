@@ -14,6 +14,9 @@ class Instagram::SendOnInstagramService < Base::SendOnChannelService
   # aparte; este trabajo no lo toca.
   LEGACY_API_VERSION = 'v11.0'.freeze
 
+  # El token dejó de valer. Mismo código que al leer el perfil (Instagram::MessageText).
+  TOKEN_EXPIRED = 190
+
   private
 
   delegate :additional_attributes, to: :contact
@@ -137,6 +140,11 @@ class Instagram::SendOnInstagramService < Base::SendOnChannelService
     # https://developers.facebook.com/docs/instagram-api/reference/error-codes/
     error_message = body[:error][:message]
     error_code = body[:error][:code]
+
+    # 190: el token dejó de valer (cambio de contraseña, app revocada desde Instagram…).
+    # Sin marcarlo, el canal se queda enviando a la nada: los mensajes fallan uno a uno y
+    # el administrador no ve el aviso de reautorizar en ningún sitio.
+    channel.authorization_error! if error_code.to_i == TOKEN_EXPIRED
 
     "#{error_code} - #{error_message}"
   end

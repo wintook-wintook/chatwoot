@@ -136,6 +136,12 @@ Para usarlo con cuentas que no sean testers hay que solicitar acceso avanzado a
 `instagram_business_basic` e `instagram_business_manage_messages`. Se puede dejar para
 después de validar el funcionamiento con la cuenta de prueba.
 
+Durante la revisión, Meta prueba la integración con un **bot que no es un usuario real de
+Instagram**: al pedir su perfil, la API responde `9010 No matching Instagram user`. El
+código lo contempla y crea un contacto genérico para que el mensaje aparezca igualmente —
+si no, el revisor no ve entrar nada y rechaza la app por "la integración no funciona".
+También hay que tener la app en **Live** (§1.5b) o el revisor no recibirá webhooks.
+
 ---
 
 ## 2. Credenciales en Chatwoot

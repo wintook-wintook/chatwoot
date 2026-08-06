@@ -17,7 +17,18 @@ class Instagram::OauthService
   SCOPE = 'instagram_business_basic,instagram_business_manage_messages'.freeze
   PROFILE_FIELDS = 'user_id,username,name,profile_picture_url'.freeze
 
-  class OauthError < StandardError; end
+  # El código de Meta importa tanto como el mensaje: 190 es token muerto, 230 es falta de
+  # consentimiento (normal, no es avería) y 9010 es el bot revisor de Meta. Quien captura
+  # el error decide según el código, así que viaja con él.
+  # @see https://developers.facebook.com/docs/messenger-platform/error-codes
+  class OauthError < StandardError
+    attr_reader :code
+
+    def initialize(message, code = nil)
+      @code = code
+      super(message)
+    end
+  end
 
   # URL a la que se manda al administrador para que autorice la cuenta.
   # `state` viaja de ida y vuelta: es la clave con la que recuperamos la cuenta en el callback.
@@ -106,7 +117,7 @@ class Instagram::OauthService
     body = response.parsed_response
     body = {} unless body.is_a?(Hash)
 
-    raise OauthError, "#{step}: #{error_message(body, response)}" unless response.success?
+    raise OauthError.new("#{step}: #{error_message(body, response)}", body.dig('error', 'code')) unless response.success?
 
     body.with_indifferent_access
   end
