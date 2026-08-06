@@ -24,7 +24,7 @@ RSpec.describe Instagram::ReadinessService do
 
   describe '#ready?' do
     it 'is not ready while the credentials are missing' do
-      %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET IG_VERIFY_TOKEN].each { |name| set_config(name, nil) }
+      %w[INSTAGRAM_APP_ID INSTAGRAM_APP_SECRET IG_VERIFY_TOKEN INSTAGRAM_VERIFY_TOKEN].each { |name| set_config(name, nil) }
 
       service = described_class.new
 
@@ -94,6 +94,13 @@ RSpec.describe Instagram::ReadinessService do
   end
 
   describe '#channels' do
+    # El informe pregunta a Meta si la suscripción sigue viva, así que hay que fijarlo.
+    before do
+      stub_request(:get, %r{graph\.instagram\.com/.*/subscribed_apps})
+        .to_return(status: 200, body: { data: [{ id: 'app' }] }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+    end
+
     it 'reports how many days each token has left' do
       create(:channel_instagram, account: account, expires_at: 30.days.from_now)
 
@@ -108,6 +115,18 @@ RSpec.describe Instagram::ReadinessService do
       channel.prompt_reauthorization!
 
       expect(described_class.new.channels.last[:reauthorization_required]).to be true
+    end
+
+    # El caso que deja el canal mudo: token perfecto y ni un mensaje entregado
+    it 'flags channels that Meta is not delivering to' do
+      stub_request(:get, %r{graph\.instagram\.com/.*/subscribed_apps})
+        .to_return(status: 200, body: { data: [] }.to_json, headers: { 'Content-Type' => 'application/json' })
+      create(:channel_instagram, account: account)
+
+      service = described_class.new
+
+      expect(service.channels.last[:webhook_subscribed]).to be false
+      expect(service.report).to include('webhook FALTA', 'rake instagram:subscribe')
     end
   end
 end

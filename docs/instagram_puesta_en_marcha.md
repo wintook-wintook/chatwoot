@@ -98,6 +98,17 @@ Campos a suscribir (según la documentación de Chatwoot para este canal):
 - **`message_reactions`** — reacciones (el código todavía no las procesa; suscribirlo
   ahora no molesta y evita volver a tocar la configuración cuando se implementen)
 
+> **Ojo: son dos suscripciones distintas.** Lo que se configura aquí es a qué campos
+> escucha *la app*. Además hay que suscribir la app a *cada cuenta de Instagram*, una por
+> una (`POST /{ig-id}/subscribed_apps`). Eso lo hace Chatwoot solo al conectar el canal,
+> así que no tienes que tocar nada — pero es el paso que, si falla, deja el canal mudo con
+> el token perfectamente válido. Para comprobarlo o repararlo:
+>
+> ```bash
+> bundle exec rake instagram:doctor      # dice, por canal, si Meta tiene la suscripción
+> bundle exec rake instagram:subscribe   # la vuelve a pedir (INBOX_ID=n para uno solo)
+> ```
+
 ### 1.5b ⚠️ La app tiene que estar en modo **Live**
 
 Aquí está el detalle que más tiempo puede hacerte perder: **en modo desarrollo Meta no
@@ -194,8 +205,8 @@ En este orden, porque cada paso depende del anterior:
 
 1. **Recepción** — escribe un DM a la cuenta desde otro Instagram.
    Debe aparecer una conversación nueva, con el nombre y la foto del contacto.
-   Si no llega: el webhook no está entregando. Revisa el token de verificación y que
-   Meta muestre la suscripción como activa.
+   Si no llega, en este orden: `rake instagram:doctor` (¿dice `webhook FALTA`? →
+   `rake instagram:subscribe`), la app en modo **Live**, y el token de verificación.
 
 2. **Envío** — responde desde Chatwoot. Debe llegar al Instagram del cliente.
    Si el mensaje queda en **fallido**, el motivo aparece en el propio mensaje: ahora los

@@ -14,6 +14,24 @@ class Instagram::ReadinessService
     @account = account
   end
 
+  # Re-suscribe al webhook los canales ya conectados. Los que se dieron de alta antes de
+  # que el alta suscribiera sola quedaron mudos: token válido, cero entregas.
+  def self.subscribe_report(inbox_id: nil)
+    channels = inbox_id.present? ? [Inbox.find(inbox_id).channel] : Channel::Instagram.includes(:inbox).to_a
+    return '  (no hay canales nativos de Instagram conectados)' if channels.empty?
+
+    channels.map { |channel| subscribe_line(channel) }.join("\n")
+  end
+
+  def self.subscribe_line(channel)
+    ok = channel.subscribe
+    detail = ok ? "suscrito a #{Channel::Instagram::SUBSCRIBED_FIELDS.join(', ')}" : channel.webhook_subscription_error
+
+    format('  [%-5<estado>s] inbox %-6<inbox>s @%-22<user>s %<detalle>s',
+           estado: ok ? 'OK' : 'FALLA', inbox: channel.inbox&.id, user: channel.username || '?', detalle: detail)
+  end
+  private_class_method :subscribe_line
+
   def checks
     [
       app_id_check,
@@ -54,8 +72,9 @@ class Instagram::ReadinessService
   end
 
   # Estado de los canales ya conectados, para vigilar la caducidad del token
+  # Memoizado: cada entrada consulta a Meta y el informe recorre la lista más de una vez.
   def channels
-    Channel::Instagram.includes(:inbox).map do |channel|
+    @channels ||= Channel::Instagram.includes(:inbox).map do |channel|
       {
         inbox_id: channel.inbox&.id,
         account_id: channel.account_id,
@@ -63,7 +82,11 @@ class Instagram::ReadinessService
         instagram_id: channel.instagram_id,
         expires_at: channel.expires_at,
         days_left: channel.expires_at ? ((channel.expires_at - Time.current) / 1.day).round : nil,
-        reauthorization_required: channel.reauthorization_required?
+        reauthorization_required: channel.reauthorization_required?,
+        # Se pregunta a Meta en vivo: la suscripción vive allí, y alguien puede haberla
+        # quitado desde el panel de la app sin que aquí cambie nada.
+        webhook_subscribed: channel.webhook_subscribed?,
+        webhook_error: channel.webhook_subscription_error
       }
     end
   end
@@ -80,11 +103,23 @@ class Instagram::ReadinessService
   def channels_report
     return ['  (ninguno todavía)'] if channels.empty?
 
-    channels.map do |c|
-      estado = c[:reauthorization_required] ? 'REAUTORIZAR' : "caduca en #{c[:days_left] || '?'} días"
-      format('  inbox %-6<inbox>s cuenta %-6<account>s @%-22<user>s %<estado>s',
-             inbox: c[:inbox_id], account: c[:account_id], user: c[:username] || '?', estado: estado)
-    end
+    channels.flat_map { |c| channel_lines(c) }
+  end
+
+  # Sin suscripción al webhook el canal no recibe nada, aunque el token esté perfecto:
+  # por eso va primero en la línea y con su propia pista de arreglo.
+  def channel_lines(channel)
+    estado = channel[:reauthorization_required] ? 'REAUTORIZAR' : "caduca en #{channel[:days_left] || '?'} días"
+    webhook = channel[:webhook_subscribed] ? 'webhook OK   ' : 'webhook FALTA'
+    line = format('  inbox %-6<inbox>s cuenta %-6<account>s @%-22<user>s %<webhook>s %<estado>s',
+                  inbox: channel[:inbox_id], account: channel[:account_id], user: channel[:username] || '?',
+                  webhook: webhook, estado: estado)
+
+    return [line] if channel[:webhook_subscribed]
+
+    [line,
+     format('           ↳ %<detail>s', detail: channel[:webhook_error].presence || 'la app no está suscrita a esta cuenta de Instagram'),
+     format('           ↳ Arréglalo con: bundle exec rake instagram:subscribe INBOX_ID=%<inbox>s', inbox: channel[:inbox_id])]
   end
 
   def summary

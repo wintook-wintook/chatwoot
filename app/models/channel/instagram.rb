@@ -33,8 +33,18 @@ class Channel::Instagram < ApplicationRecord
   # El token de larga duración caduca a los 60 días y se renueva con un job diario.
   TOKEN_REFRESH_THRESHOLD = 10.days
 
+  # Campos del webhook a los que se suscribe la app para esta cuenta de Instagram.
+  # @see https://developers.facebook.com/docs/instagram-platform/webhooks#enable-subscriptions
+  SUBSCRIBED_FIELDS = %w[messages message_reactions messaging_seen].freeze
+
   validates :access_token, presence: true
   validates :instagram_id, presence: true, uniqueness: true
+
+  # Verificar el webhook en la app de Meta NO basta: hay que suscribir la app a cada
+  # cuenta de Instagram, una por una. Sin esta llamada el OAuth sale bien, el inbox se
+  # crea y no llega ni un mensaje, sin ningún error a la vista.
+  after_create_commit :subscribe_later
+  before_destroy :unsubscribe
 
   def name
     'Instagram'
@@ -85,7 +95,97 @@ class Channel::Instagram < ApplicationRecord
     provider_config['username']
   end
 
+  # En segundo plano para no hacer esperar al administrador a una ida y vuelta contra Meta
+  # en mitad del alta, y para poder reintentar si Meta contesta mal en ese momento.
+  def subscribe_later
+    Channels::Instagram::SubscribeJob.perform_later(self)
+  end
+
+  # Pide la suscripción a Meta. Es idempotente: repetirla sobre una cuenta ya suscrita no
+  # rompe nada, así que puede relanzarse desde `rake instagram:subscribe` sin miedo.
+  #
+  # Nunca lanza: un fallo aquí no debe tumbar el alta del inbox (el token es válido y la
+  # cuenta ya está conectada), pero se deja registrado en provider_config para que
+  # `rake instagram:doctor` lo enseñe en vez de dejar el canal mudo sin explicación.
+  def subscribe
+    response = HTTParty.post(
+      subscribed_apps_url,
+      # Meta espera una lista separada por comas, no un array repetido en la query.
+      query: { subscribed_fields: SUBSCRIBED_FIELDS.join(','), access_token: access_token }
+    )
+
+    record_subscription_result(response)
+  rescue StandardError => e
+    record_subscription_result(nil, e.message)
+  end
+
+  def unsubscribe
+    HTTParty.delete(subscribed_apps_url, query: { access_token: access_token })
+    true
+  rescue StandardError => e
+    Rails.logger.warn("[Instagram] unsubscribe failed for channel #{id}: #{e.message}")
+    true
+  end
+
+  # ¿Meta tiene realmente la suscripción activa? Se pregunta en vivo porque la suscripción
+  # vive en Meta, no aquí: alguien puede haberla quitado desde el panel de la app.
+  def webhook_subscribed?
+    response = HTTParty.get(subscribed_apps_url, query: { access_token: access_token })
+    return false unless response.success?
+
+    Array(response.parsed_response.try(:[], 'data')).any?
+  rescue StandardError => e
+    Rails.logger.warn("[Instagram] subscription check failed for channel #{id}: #{e.message}")
+    false
+  end
+
+  def webhook_subscribed_at
+    provider_config['webhook_subscribed_at']
+  end
+
+  def webhook_subscription_error
+    provider_config['webhook_subscription_error']
+  end
+
   private
+
+  def subscribed_apps_url
+    "#{Instagram::OauthService::GRAPH_HOST}/#{api_version}/#{instagram_id}/subscribed_apps"
+  end
+
+  # Meta responde {"success": true}; un 200 con success=false también es un fallo.
+  def record_subscription_result(response, error = nil)
+    error ||= subscription_error(response)
+
+    if error.present?
+      Rails.logger.warn("[Instagram] webhook subscription failed for channel #{id}: #{error}")
+    else
+      Rails.logger.info("[Instagram] webhook subscribed for channel #{id} (#{SUBSCRIBED_FIELDS.join(', ')})")
+    end
+
+    if persisted?
+      update_columns( # rubocop:disable Rails/SkipsModelValidations
+        provider_config: provider_config.merge(
+          'webhook_subscribed_at' => error.present? ? nil : Time.current.iso8601,
+          'webhook_subscription_error' => error
+        )
+      )
+    end
+
+    error.blank?
+  end
+
+  def subscription_error(response)
+    return 'sin respuesta de Meta' if response.blank?
+
+    body = response.parsed_response
+    body = {} unless body.is_a?(Hash)
+
+    return body.dig('error', 'message') || "HTTP #{response.code}" unless response.success?
+    return 'Meta respondió success=false' if body.key?('success') && !body['success']
+
+    nil
+  end
 
   def api_version
     GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v25.0')

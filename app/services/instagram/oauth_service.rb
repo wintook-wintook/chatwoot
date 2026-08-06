@@ -27,6 +27,13 @@ class Instagram::OauthService
       redirect_uri: redirect_uri,
       response_type: 'code',
       scope: SCOPE,
+      # Sin esto Meta puede resolver la autorización por la vía de Facebook Login y
+      # devolver un token de Página, que no sirve contra graph.instagram.com: el alta
+      # parece correcta y luego no se puede ni leer el perfil ni enviar.
+      enable_fb_login: '0',
+      # Obliga a elegir cuenta en vez de reutilizar la sesión abierta en el navegador.
+      # Evita conectar por error la cuenta personal del administrador.
+      force_authentication: '1',
       state: state
     }.to_query
 

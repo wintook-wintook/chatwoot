@@ -98,4 +98,59 @@ RSpec.describe Channel::Instagram do
       expect(contact_inbox.inbox).to eq(channel.inbox)
     end
   end
+
+  # Sin suscripción Meta no entrega nada, aunque el webhook esté verificado y el token
+  # sea válido: es el paso que deja el canal mudo cuando falta.
+  describe 'webhook subscription' do
+    let(:subscribe_url) { %r{graph\.instagram\.com/.*/subscribed_apps} }
+
+    it 'subscribes the app as soon as the channel is connected' do
+      expect { create(:channel_instagram) }
+        .to have_enqueued_job(Channels::Instagram::SubscribeJob)
+    end
+
+    it 'asks Meta for the three messaging fields, comma separated' do
+      stub_request(:post, subscribe_url).to_return(status: 200, body: { success: true }.to_json,
+                                                   headers: { 'Content-Type' => 'application/json' })
+
+      expect(channel.subscribe).to be(true)
+      expect(WebMock).to have_requested(:post, subscribe_url)
+        .with(query: hash_including('subscribed_fields' => 'messages,message_reactions,messaging_seen'))
+      expect(channel.reload.webhook_subscribed_at).to be_present
+      expect(channel.webhook_subscription_error).to be_nil
+    end
+
+    it 'records why it failed instead of raising, so the alta does not break' do
+      stub_request(:post, subscribe_url)
+        .to_return(status: 400, body: { error: { message: 'Insufficient permissions' } }.to_json,
+                   headers: { 'Content-Type' => 'application/json' })
+
+      expect(channel.subscribe).to be(false)
+      expect(channel.reload.webhook_subscription_error).to eq('Insufficient permissions')
+      expect(channel.webhook_subscribed_at).to be_nil
+    end
+
+    # Meta puede responder 200 y no haber suscrito nada
+    it 'treats success=false as a failure' do
+      stub_request(:post, subscribe_url).to_return(status: 200, body: { success: false }.to_json,
+                                                   headers: { 'Content-Type' => 'application/json' })
+
+      expect(channel.subscribe).to be(false)
+      expect(channel.reload.webhook_subscription_error).to be_present
+    end
+
+    it 'reports whether Meta really has the subscription' do
+      stub_request(:get, subscribe_url).to_return(status: 200, body: { data: [{ id: 'app' }] }.to_json,
+                                                  headers: { 'Content-Type' => 'application/json' })
+
+      expect(channel.webhook_subscribed?).to be(true)
+    end
+
+    it 'reports an empty subscription list as not subscribed' do
+      stub_request(:get, subscribe_url).to_return(status: 200, body: { data: [] }.to_json,
+                                                  headers: { 'Content-Type' => 'application/json' })
+
+      expect(channel.webhook_subscribed?).to be(false)
+    end
+  end
 end

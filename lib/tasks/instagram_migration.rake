@@ -26,6 +26,13 @@ namespace :instagram do
     puts ''
   end
 
+  # Los canales conectados antes de que el alta suscribiera sola quedaron mudos: el token
+  # es válido pero Meta no entrega eventos. Esto los repara sin tener que reautorizar.
+  desc 'Re-suscribe al webhook los canales nativos de Instagram. INBOX_ID=n para uno solo'
+  task subscribe: :environment do
+    puts Instagram::ReadinessService.subscribe_report(inbox_id: ENV.fetch('INBOX_ID', nil))
+  end
+
   desc 'Mueve las conversaciones de Instagram del inbox legacy al nativo. Simula salvo que APPLY=true'
   task migrate: :environment do
     apply = ActiveModel::Type::Boolean.new.cast(ENV.fetch('APPLY', false))

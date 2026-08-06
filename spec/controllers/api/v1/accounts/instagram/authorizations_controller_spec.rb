@@ -48,6 +48,19 @@ RSpec.describe 'Instagram Authorization API', type: :request do
         expect(Redis::Alfred.get(format(Redis::Alfred::IG_OAUTH_STATE, state: state))).to eq(account.id.to_s)
       end
 
+      # Sin enable_fb_login=0 Meta puede resolver por Facebook Login y devolver un token
+      # de Página, que no sirve contra graph.instagram.com.
+      it 'forces the instagram login path and a fresh account choice' do
+        post "/api/v1/accounts/#{account.id}/instagram/authorization",
+             headers: administrator.create_new_auth_token, as: :json
+
+        query = CGI.parse(URI.parse(response.parsed_body['url']).query)
+
+        expect(query['enable_fb_login'].first).to eq('0')
+        expect(query['force_authentication'].first).to eq('1')
+        expect(query['scope'].first).to eq('instagram_business_basic,instagram_business_manage_messages')
+      end
+
       it 'does not reuse the same state across requests' do
         states = Array.new(2) do
           post "/api/v1/accounts/#{account.id}/instagram/authorization",

@@ -35,6 +35,21 @@ RSpec.describe 'Inboxes API', type: :request do
         expect(JSON.parse(response.body, symbolize_names: true)[:payload].size).to eq(2)
       end
 
+      # Sin esta bandera el panel nunca puede enseñar el aviso de reautorizar en un inbox
+      # nativo de Instagram: no es facebook?, así que se quedaba fuera del payload.
+      it 'exposes reauthorization_required for a native instagram inbox' do
+        instagram_channel = create(:channel_instagram, account: account)
+        instagram_channel.prompt_reauthorization!
+
+        get "/api/v1/accounts/#{account.id}/inboxes",
+            headers: admin.create_new_auth_token,
+            as: :json
+
+        payload = response.parsed_body['payload'].find { |i| i['channel_type'] == 'Channel::Instagram' }
+        expect(payload['reauthorization_required']).to be(true)
+        expect(payload['instagram_id']).to eq(instagram_channel.instagram_id)
+      end
+
       it 'returns only assigned inboxes of current_account as agent' do
         get "/api/v1/accounts/#{account.id}/inboxes",
             headers: agent.create_new_auth_token,
