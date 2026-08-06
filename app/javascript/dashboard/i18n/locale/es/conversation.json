@@ -123,6 +123,7 @@
     "LOADING_CONVERSATIONS": "Cargando conversaciones",
     "CANNOT_REPLY": "No puedes responder debido a",
     "24_HOURS_WINDOW": "restricción de ventana de 24 horas",
+    "48_HOURS_WINDOW": "restricción de ventana de 48 horas",
     "NOT_ASSIGNED_TO_YOU": "Esta conversación no está asignada a ti. ¿Te gustaría asignarte esta conversación?",
     "ASSIGN_TO_ME": "Asignar a mí",
     "TWILIO_WHATSAPP_CAN_REPLY": "Solo puedes responder a esta conversación usando un mensaje de plantilla debido a",

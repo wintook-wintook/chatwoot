@@ -14,6 +14,7 @@ import ConfigurationPage from './settingsPage/ConfigurationPage.vue';
 import QuestionsPage from './settingsPage/QuestionsPage.vue';
 import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
 import MicrosoftReauthorize from './channels/microsoft/Reauthorize.vue';
+import TiktokReauthorize from './channels/tiktok/Reauthorize.vue';
 import WidgetBuilder from './WidgetBuilder.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
 import UnoapiConfiguration from './settingsPage/UnoapiConfiguration.vue';
@@ -35,6 +36,7 @@ export default {
     WidgetBuilder,
     SenderNameExamplePreview,
     MicrosoftReauthorize,
+    TiktokReauthorize,
     UnoapiConfiguration,
   },
   mixins: [inboxMixin],
@@ -203,7 +205,10 @@ export default {
     },
     canLocktoSingleConversation() {
       return (
-        this.isASmsInbox || this.isAWhatsAppChannel || this.isAFacebookInbox
+        this.isASmsInbox ||
+        this.isAWhatsAppChannel ||
+        this.isAFacebookInbox ||
+        this.isATiktokChannel
       );
     },
     inboxNameLabel() {
@@ -232,6 +237,9 @@ export default {
     },
     facebookUnauthorized() {
       return this.isAFacebookInbox && this.inbox.reauthorization_required;
+    },
+    tiktokUnauthorized() {
+      return this.isATiktokChannel && this.inbox.reauthorization_required;
     },
 
     isWavoipFeatureEnabled() {
@@ -413,6 +421,7 @@ export default {
 
     <MicrosoftReauthorize v-if="microsoftUnauthorized" :inbox="inbox" />
     <FacebookReauthorize v-if="facebookUnauthorized" :inbox="inbox" />
+    <TiktokReauthorize v-if="tiktokUnauthorized" />
 
     <div v-if="selectedTabKey === 'inbox_settings'" class="mx-8">
       <SettingsSection

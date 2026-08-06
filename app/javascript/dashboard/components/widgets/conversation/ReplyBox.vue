@@ -244,9 +244,18 @@ export default {
       if (this.isAnEmailChannel) {
         return MESSAGE_MAX_LENGTH.EMAIL;
       }
+      if (this.isATiktokChannel) {
+        return MESSAGE_MAX_LENGTH.TIKTOK;
+      }
       return MESSAGE_MAX_LENGTH.GENERAL;
     },
     showFileUpload() {
+      // TikTok decide por conversación si admite imágenes; si no lo sabemos, se deja
+      // intentar en vez de esconder el botón.
+      const { image_send: imageSend } =
+        this.currentChat?.additional_attributes?.tiktok_capabilities ?? {};
+      const tiktokAttachmentSupported = imageSend ?? true;
+
       return (
         this.isAWebWidgetInbox ||
         this.isAFacebookInbox ||
@@ -255,7 +264,8 @@ export default {
         this.isAnEmailChannel ||
         this.isASmsInbox ||
         this.isATelegramChannel ||
-        this.isALineChannel
+        this.isALineChannel ||
+        (this.isATiktokChannel && tiktokAttachmentSupported)
       );
     },
     replyButtonLabel() {
@@ -668,7 +678,9 @@ export default {
           this.isATwilioWhatsAppChannel ||
           this.isAWhatsAppCloudChannel ||
           this.is360DialogWhatsAppChannel;
-        if (isOnWhatsApp && !this.isPrivate) {
+        // TikTok rechaza el mensaje si mezcla texto y adjunto, así que el texto y cada
+        // fichero salen como mensajes independientes.
+        if ((isOnWhatsApp || this.isATiktokChannel) && !this.isPrivate) {
           this.sendMessageAsMultipleMessages(this.message);
         } else {
           const messagePayload = this.getMessagePayload(this.message);
@@ -685,7 +697,7 @@ export default {
       }
     },
     sendMessageAsMultipleMessages(message) {
-      const messages = this.getMessagePayloadForWhatsapp(message);
+      const messages = this.getMultipleMessagesPayload(message);
       messages.forEach(messagePayload => {
         this.sendMessage(messagePayload);
       });
@@ -926,11 +938,13 @@ export default {
 
       return payload;
     },
-    getMessagePayloadForWhatsapp(message) {
+    // Usado por los canales que no admiten texto y adjunto en el mismo mensaje.
+    // WhatsApp sí acepta pie de foto en el primer adjunto; TikTok no acepta ninguno.
+    getMultipleMessagesPayload(message) {
       const multipleMessagePayload = [];
 
       if (this.attachedFiles && this.attachedFiles.length) {
-        let caption = message;
+        let caption = this.isATiktokChannel ? '' : message;
         this.attachedFiles.forEach(attachment => {
           const attachedFile = this.globalConfig.directUploadsEnabled
             ? attachment.blobSignedId
@@ -947,7 +961,16 @@ export default {
           multipleMessagePayload.push(attachmentPayload);
           caption = '';
         });
-      } else {
+      }
+
+      const hasNoAttachments =
+        !this.attachedFiles || !this.attachedFiles.length;
+      // En TikTok el texto siempre viaja en su propio mensaje, haya adjuntos o no.
+      // En WhatsApp solo hace falta cuando no hay adjuntos, porque va como pie de foto.
+      if (
+        (this.isATiktokChannel && message) ||
+        (!this.isATiktokChannel && hasNoAttachments)
+      ) {
         let messagePayload = {
           conversationId: this.currentChat.id,
           message,

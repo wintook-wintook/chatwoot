@@ -16,6 +16,9 @@ export default {
     hasFbConfigured() {
       return window.chatwootConfig?.fbAppId;
     },
+    hasTiktokConfigured() {
+      return window.chatwootConfig?.tiktokAppId;
+    },
     isActive() {
       const { key } = this.channel;
       if (Object.keys(this.enabledFeatures).length === 0) {
@@ -45,6 +48,9 @@ export default {
       if (key === 'api') {
         return this.enabledFeatures.channel_api;
       }
+      if (key === 'tiktok') {
+        return this.enabledFeatures.channel_tiktok && this.hasTiktokConfigured;
+      }
 
       return [
         'website',
@@ -54,6 +60,7 @@ export default {
         'sms',
         'telegram',
         'line',
+        'tiktok',
       ].includes(key);
     },
   },

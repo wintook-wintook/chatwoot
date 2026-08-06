@@ -211,6 +211,9 @@ export default {
       if (this.isAWhatsAppChannel) {
         return REPLY_POLICY.FACEBOOK;
       }
+      if (this.isATiktokChannel) {
+        return REPLY_POLICY.TIKTOK;
+      }
       if (!this.isAPIInbox) {
         return REPLY_POLICY.TWILIO_WHATSAPP;
       }
@@ -219,6 +222,9 @@ export default {
     replyWindowLinkText() {
       if (this.isAWhatsAppChannel) {
         return this.$t('CONVERSATION.24_HOURS_WINDOW');
+      }
+      if (this.isATiktokChannel) {
+        return this.$t('CONVERSATION.48_HOURS_WINDOW');
       }
       if (!this.isAPIInbox) {
         return this.$t('CONVERSATION.TWILIO_WHATSAPP_24_HOURS_WINDOW');

@@ -45,6 +45,9 @@ export const getReadableInboxByType = (type, phoneNumber) => {
     case INBOX_TYPES.LINE:
       return 'line';
 
+    case INBOX_TYPES.TIKTOK:
+      return 'tiktok';
+
     default:
       return 'chat';
   }
@@ -81,13 +84,20 @@ export const getInboxClassByType = (type, phoneNumber) => {
     case INBOX_TYPES.LINE:
       return 'brand-line';
 
+    case INBOX_TYPES.TIKTOK:
+      return 'brand-tiktok';
+
     default:
       return 'chat';
   }
 };
 
 export const getInboxWarningIconClass = (type, reauthorizationRequired) => {
-  const allowedInboxTypes = [INBOX_TYPES.FB, INBOX_TYPES.EMAIL];
+  const allowedInboxTypes = [
+    INBOX_TYPES.FB,
+    INBOX_TYPES.EMAIL,
+    INBOX_TYPES.TIKTOK,
+  ];
   if (allowedInboxTypes.includes(type) && reauthorizationRequired) {
     return 'warning';
   }

@@ -16,6 +16,7 @@ export default {
         { key: 'instagram', icon: 'brand-instagram', link: 'https://instagram.com/' },
         { key: 'line', icon: 'brand-line', link: 'https://line.me/R/ti/p/~' },
         { key: 'telegram', icon: 'brand-telegram', link: 'https://t.me/' },
+        { key: 'tiktok', icon: 'brand-tiktok', link: 'https://tiktok.com/@' },
         { key: 'phone', icon: 'brand-whatsapp', link: 'https://wa.me/' },
         { key: 'website', icon: 'globe', link: 'https://' },
       ],

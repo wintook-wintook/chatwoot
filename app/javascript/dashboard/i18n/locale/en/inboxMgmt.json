@@ -36,6 +36,18 @@
       }
     ],
     "ADD": {
+      "TIKTOK": {
+        "CONTINUE_WITH_TIKTOK": "Continue with TikTok",
+        "HELP": "To add your TikTok profile as a channel, you need to authorize it by clicking on 'Continue with TikTok'. TikTok only delivers incoming messages from users outside the EEA, Switzerland and the UK.",
+        "ERROR": {
+          "DENIED": "You cancelled the TikTok authorization.",
+          "INVALID_STATE": "The authorization link expired. Please start again.",
+          "MISSING_CODE": "TikTok did not return an authorization code. Please try again.",
+          "UNGRANTED_SCOPES": "You need to grant every requested permission: without them the channel cannot read or send messages.",
+          "ALREADY_CONNECTED": "That TikTok account is already connected to another Chatwoot account.",
+          "FAILED": "There was an error connecting to TikTok, please try again."
+        }
+      },
       "CHANNEL_NAME": {
         "LABEL": "Inbox Name",
         "PLACEHOLDER": "Enter your inbox name (eg: Acme Inc)",
@@ -888,6 +900,7 @@
       "OTHER_PROVIDERS": "Other Providers"
     },
     "CHANNELS": {
+      "TIKTOK": "TikTok",
       "MESSENGER": "Messenger",
       "WEB_WIDGET": "Website",
       "TWITTER_PROFILE": "Twitter",

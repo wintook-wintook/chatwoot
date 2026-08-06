@@ -36,6 +36,18 @@
       }
     ],
     "ADD": {
+      "TIKTOK": {
+        "CONTINUE_WITH_TIKTOK": "Continuar con TikTok",
+        "HELP": "Para añadir tu perfil de TikTok como canal, autorízalo pulsando en 'Continuar con TikTok'. TikTok solo entrega los mensajes entrantes de usuarios fuera del EEE, Suiza y Reino Unido.",
+        "ERROR": {
+          "DENIED": "Cancelaste la autorización de TikTok.",
+          "INVALID_STATE": "El enlace de autorización caducó. Vuelve a empezar.",
+          "MISSING_CODE": "TikTok no devolvió el código de autorización. Inténtalo de nuevo.",
+          "UNGRANTED_SCOPES": "Debes conceder todos los permisos solicitados: sin ellos el canal no puede leer ni enviar mensajes.",
+          "ALREADY_CONNECTED": "Esa cuenta de TikTok ya está conectada en otra cuenta de Chatwoot.",
+          "FAILED": "Hubo un error al conectar con TikTok, inténtalo de nuevo."
+        }
+      },
       "CHANNEL_NAME": {
         "LABEL": "Inbox Name",
         "PLACEHOLDER": "Enter your inbox name (eg: Acme Inc)",
@@ -888,6 +900,7 @@
       "OTHER_PROVIDERS": "Other Providers"
     },
     "CHANNELS": {
+      "TIKTOK": "TikTok",
       "MESSENGER": "Messenger",
       "WEB_WIDGET": "Website",
       "TWITTER_PROFILE": "Twitter",
