@@ -15,7 +15,9 @@ class Conversations::UpdateMessageStatusJob < ApplicationJob
     conversation.messages.where(status: %w[sent delivered])
                 .where.not(message_type: 'incoming')
                 .where('messages.created_at <= ?', timestamp).find_each do |message|
-      message.update!(status: status)
+      # Vía Messages::StatusUpdateService para que un acuse tardío no haga retroceder el
+      # estado: los canales entregan los acuses por su cuenta y sin orden garantizado.
+      Messages::StatusUpdateService.new(message, status).perform
     end
   end
 end

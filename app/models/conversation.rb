@@ -70,6 +70,9 @@ class Conversation < ApplicationRecord
   include PushDataHelper
   include ConversationMuteHelpers
 
+  # TikTok da 48 h para responder, el doble que la ventana estándar de Meta.
+  TIKTOK_MESSAGING_WINDOW_HOURS = 48
+
   has_many :scheduled_messages, dependent: :destroy
 
   validates :account_id, presence: true
@@ -82,7 +85,7 @@ class Conversation < ApplicationRecord
   validate :validate_referer_url
 
   # KANBAN0725
-   validate :kanban_processes_belong_to_account
+  validate :kanban_processes_belong_to_account
   # KANBAN0725
 
   enum status: { open: 0, resolved: 1, pending: 2, snoozed: 3 }
@@ -149,8 +152,15 @@ class Conversation < ApplicationRecord
 
     return true unless channel&.messaging_window_enabled?
 
-    messaging_window = inbox.api? ? channel.additional_attributes['agent_reply_time_window'].to_i : 24
-    last_message_in_messaging_window?(messaging_window)
+    last_message_in_messaging_window?(messaging_window_in_hours(channel))
+  end
+
+  # Cada canal impone su propia ventana para contestar a un usuario.
+  def messaging_window_in_hours(channel)
+    return channel.additional_attributes['agent_reply_time_window'].to_i if inbox.api?
+    return TIKTOK_MESSAGING_WINDOW_HOURS if inbox.tiktok?
+
+    24
   end
 
   def last_activity_at
@@ -236,19 +246,18 @@ class Conversation < ApplicationRecord
 
   # KANBAN0725
   def kanban_processes_belong_to_account
-    if kanban_type_process && kanban_type_process.account_id != account_id
-      errors.add(:kanban_type_process, 'must belong to the same account')
-    end
-    
-    if kanban_process && kanban_process.account_id != account_id
-      errors.add(:kanban_process, 'must belong to the same account')
-    end
-    
-    # Validar que kanban_process pertenezca al kanban_type_process
-    if kanban_process && kanban_type_process && 
-       kanban_process.kanban_type_process_id != kanban_type_process.id
-      errors.add(:kanban_process, 'must belong to the selected kanban type process')
-    end
+    errors.add(:kanban_type_process, 'must belong to the same account') if kanban_type_process && kanban_type_process.account_id != account_id
+    errors.add(:kanban_process, 'must belong to the same account') if kanban_process && kanban_process.account_id != account_id
+
+    validate_kanban_process_matches_type
+  end
+
+  # Validar que kanban_process pertenezca al kanban_type_process
+  def validate_kanban_process_matches_type
+    return if kanban_process.blank? || kanban_type_process.blank?
+    return if kanban_process.kanban_type_process_id == kanban_type_process.id
+
+    errors.add(:kanban_process, 'must belong to the selected kanban type process')
   end
   # KANBAN0725
 
