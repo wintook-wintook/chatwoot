@@ -38,14 +38,18 @@ class Attachment < ApplicationRecord
   has_one_attached :file
   validate :acceptable_file
   validates :external_url, length: { maximum: Limits::URL_LENGTH_LIMIT }
+  # @tiktok — `embed` es contenido alojado fuera (un vídeo de TikTok compartido en el DM):
+  # no hay fichero que guardar, solo la URL. AÑADIR SIEMPRE AL FINAL: el número es lo que
+  # se guarda en la base, cambiarlo reinterpretaría los adjuntos existentes.
   enum file_type: { :image => 0, :audio => 1, :video => 2, :file => 3, :location => 4, :fallback => 5, :share => 6, :story_mention => 7,
-                    :contact => 8, :ig_reel => 9 }
+                    :contact => 8, :ig_reel => 9, :embed => 10 }
 
   def push_event_data
     return unless file_type
     return base_data.merge(location_metadata) if file_type.to_sym == :location
     return base_data.merge(fallback_data) if file_type.to_sym == :fallback
     return base_data.merge(contact_metadata) if file_type.to_sym == :contact
+    return base_data.merge(embed_data) if file_type.to_sym == :embed
 
     base_data.merge(file_metadata)
   end
@@ -99,6 +103,11 @@ class Attachment < ApplicationRecord
       fallback_title: fallback_title,
       data_url: external_url
     }
+  end
+
+  # @tiktok — sin fichero adjunto: el front lo pinta como enlace al contenido original.
+  def embed_data
+    { data_url: external_url }
   end
 
   def base_data
