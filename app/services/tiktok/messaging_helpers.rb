@@ -33,10 +33,13 @@ module Tiktok::MessagingHelpers
     contact_inbox = channel.inbox.contact_inboxes.find_by(source_id: tt_conversation_id)
     return if contact_inbox.blank?
 
-    last_open_conversation(channel, contact_inbox) || contact_inbox.conversations.order(created_at: :desc).first
+    reusable_conversation(channel, contact_inbox)
   end
 
-  def last_open_conversation(channel, contact_inbox)
+  # Sin resultado se abre una conversación nueva. OJO: no puede haber un `||` de respaldo a
+  # la última conversación, porque anularía el modo sin bloqueo — tras resolver un hilo,
+  # el siguiente mensaje volvería a caer en el ya resuelto.
+  def reusable_conversation(channel, contact_inbox)
     return contact_inbox.conversations.order(created_at: :desc).first if channel.inbox.lock_to_single_conversation
 
     contact_inbox.conversations.where.not(status: :resolved).order(created_at: :desc).first

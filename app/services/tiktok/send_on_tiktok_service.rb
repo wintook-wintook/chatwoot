@@ -23,20 +23,26 @@ class Tiktok::SendOnTiktokService < Base::SendOnChannelService
     Messages::StatusUpdateService.new(message, 'failed', e.message).perform
   end
 
+  # El motivo acaba en `external_error`, que ve el agente en el dashboard: por eso va por
+  # I18n y no como texto fijo.
   def validate_message_support!
     return if message.attachments.empty?
 
-    raise 'TikTok no admite enviar texto y adjunto en el mismo mensaje.' if message.content.present?
-    raise 'TikTok no admite enviar varios adjuntos en un mismo mensaje.' unless message.attachments.one?
+    reject!('text_with_attachment') if message.content.present?
+    reject!('multiple_attachments') unless message.attachments.one?
 
     validate_attachment_support!(message.attachments.first)
   end
 
   def validate_attachment_support!(attachment)
-    raise 'Esta conversación de TikTok no admite el envío de imágenes.' unless image_send_capable?
-    raise 'TikTok solo admite imágenes como adjunto.' unless attachment.image?
-    raise 'TikTok solo admite imágenes JPG y PNG.' unless SUPPORTED_IMAGE_CONTENT_TYPES.include?(attachment.file.content_type)
-    raise 'Las imágenes de TikTok deben pesar menos de 3 MB.' if attachment.file.byte_size > MAX_IMAGE_SIZE
+    reject!('image_not_supported') unless image_send_capable?
+    reject!('attachment_not_an_image') unless attachment.image?
+    reject!('unsupported_image_format') unless SUPPORTED_IMAGE_CONTENT_TYPES.include?(attachment.file.content_type)
+    reject!('image_too_large') if attachment.file.byte_size > MAX_IMAGE_SIZE
+  end
+
+  def reject!(reason)
+    raise I18n.t("errors.tiktok.#{reason}")
   end
 
   # La capacidad se consultó al crear la conversación. Si no se pudo averiguar se deja

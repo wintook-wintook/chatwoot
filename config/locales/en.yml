@@ -37,6 +37,13 @@ en:
     inbox_deletetion_response: Your inbox deletion request will be processed in some time.
 
   errors:
+    tiktok:
+      text_with_attachment: TikTok does not support sending text and an attachment in the same message.
+      multiple_attachments: TikTok does not support sending several attachments in one message.
+      image_not_supported: This TikTok conversation does not support sending images.
+      attachment_not_an_image: TikTok only supports images as attachments.
+      unsupported_image_format: TikTok only supports JPG and PNG images.
+      image_too_large: TikTok images must be smaller than 3 MB.
     validations:
       presence: must not be blank
     webhook:

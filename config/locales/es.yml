@@ -23,6 +23,13 @@ es:
     reset_password_failure: '¡Uh ho! No hemos podido encontrar ningún usuario con el correo electrónico especificado.'
     inbox_deletetion_response: Su solicitud de eliminación de la bandeja de entrada será procesada en algún tiempo.
   errors:
+    tiktok:
+      text_with_attachment: TikTok no admite enviar texto y adjunto en el mismo mensaje.
+      multiple_attachments: TikTok no admite enviar varios adjuntos en un mismo mensaje.
+      image_not_supported: Esta conversación de TikTok no admite el envío de imágenes.
+      attachment_not_an_image: TikTok solo admite imágenes como adjunto.
+      unsupported_image_format: TikTok solo admite imágenes JPG y PNG.
+      image_too_large: Las imágenes de TikTok deben pesar menos de 3 MB.
     validations:
       presence: no debe estar en blanco
     webhook:
