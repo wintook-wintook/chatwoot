@@ -23,6 +23,7 @@ import LintBadges from 'dashboard/components/contactTrackings/assistant/LintBadg
 import SandboxDrawer from 'dashboard/components/contactTrackings/assistant/SandboxDrawer.vue';
 import VersionsDrawer from 'dashboard/components/contactTrackings/assistant/VersionsDrawer.vue';
 import AssistantPanel from 'dashboard/components/contactTrackings/assistant/AssistantPanel.vue';
+import PatternLibraryDrawer from 'dashboard/components/contactTrackings/assistant/PatternLibraryDrawer.vue';
 // proyecto@ai_agent_attachments
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 // @knowledge_sources: fuentes Discourse para la directiva @buscar_foro
@@ -46,6 +47,7 @@ export default {
     SandboxDrawer,
     VersionsDrawer,
     AssistantPanel,
+    PatternLibraryDrawer,
   },
 
   props: {
@@ -68,6 +70,7 @@ export default {
       showSandbox: false,
       showVersions: false, // F4: historial en sitio
       showAssistant: false, // F5: el chat, aquí en modo auditar
+      showPatterns: false, // F6: biblioteca de bloques
       versionNote: '',
       form: {
         id: null,
@@ -650,6 +653,13 @@ export default {
       // al agente. Solo en el guardado: el linter y el probador no la necesitan.
       payload.tracking_template.version_note = this.versionNote;
       this.$emit('save', payload);
+    },
+    // F6: los bloques se añaden al final del prompt, nunca lo reemplazan. El hueco
+    // <así> es deliberado: hay que rellenarlo con el negocio antes de guardar.
+    onPatternInsert(body) {
+      const current = (this.form.complementary_prompt || '').trimEnd();
+      this.form.complementary_prompt = current ? `${current}\n\n${body}` : body;
+      this.scheduleLint();
     },
     // F5: el asistente devuelve un borrador; el formulario lo absorbe campo por
     // campo y el usuario sigue decidiendo si guarda. El asistente nunca escribe.
@@ -1857,6 +1867,13 @@ export default {
         </woot-button>
         <woot-button
           variant="clear"
+          icon="book-clock"
+          @click.prevent="showPatterns = true"
+        >
+          {{ $t('AI_AGENT_ASSISTANT.PATTERNS.OPEN') }}
+        </woot-button>
+        <woot-button
+          variant="clear"
           icon="wand"
           @click.prevent="showAssistant = true"
         >
@@ -1896,6 +1913,17 @@ export default {
 
       <!-- proyecto@ai_agent_assistant (F4): historial en sitio. Iterar sobre el MISMO
            agente en vez de duplicarlo en «… V2 / V3 / V4». -->
+      <!-- proyecto@ai_agent_assistant (F6): bloques insertables. Sabe callarse
+           cuando el prompt en curso los volvería letra muerta. -->
+      <PatternLibraryDrawer
+        :show="showPatterns"
+        :prompt="form.complementary_prompt"
+        :inbox-id="selectedInboxId"
+        :tracking-template-id="form.id"
+        @close="showPatterns = false"
+        @insert="onPatternInsert"
+      />
+
       <!-- proyecto@ai_agent_assistant (F5): el chat, aquí en modo auditar sobre el
            borrador que ya está en el formulario. Devuelve borrador, no guarda. -->
       <woot-modal

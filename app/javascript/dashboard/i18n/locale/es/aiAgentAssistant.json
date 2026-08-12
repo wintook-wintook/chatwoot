@@ -256,6 +256,55 @@
       "ERROR_MODEL_UNAVAILABLE": "El modelo no devolvió una respuesta utilizable. Vuelve a intentarlo.",
       "ERROR_SESSION_FAILED": "No se pudo abrir la conversación.",
       "ERROR_TURN_FAILED": "No se pudo enviar el mensaje."
+    },
+    "PATTERNS": {
+      "TITLE": "Biblioteca de patrones",
+      "DESCRIPTION": "Bloques sacados de los agentes que ya funcionan. Cada uno resuelve una cosa y deja huecos <así> para tu negocio: no hay nada que clonar.",
+      "OPEN": "Patrones",
+      "CLOSE": "Cerrar",
+      "LOADING": "Cargando la biblioteca…",
+      "DISCARDED_WARNING": "Este agente usa una directiva de búsqueda, así que el motor descarta el prompt complementario entero. Cualquier bloque de texto que insertes aquí serían caracteres regalados: las reglas tienen que mudarse al objetivo.",
+      "RULES_TITLE": "Cómo se ve un agente bien formado",
+      "SHOW": "Ver",
+      "HIDE": "Ocultar",
+      "SKELETON": "Estructura del prompt",
+      "USE_SKELETON": "Insertar la estructura",
+      "INSERT": "Insertar",
+      "CHARS": "{chars} car.",
+      "SECTION": {
+        "rol": "Rol y límites",
+        "fuente": "Fuente",
+        "banderas": "Banderas",
+        "flujo": "Flujo",
+        "cierre": "Cierre",
+        "prohibido": "Prohibido",
+        "config": "Fuera del prompt"
+      },
+      "STATUS": {
+        "READY": "listo",
+        "UNAVAILABLE": "no disponible en esta cuenta",
+        "DEAD_LETTER": "letra muerta aquí",
+        "SOURCE_TAKEN": "ya hay otra fuente"
+      },
+      "BLOCK": {
+        "role_identity": "Identidad y trato",
+        "channel_awareness": "El canal correcto",
+        "admits_ignorance": "Qué hacer cuando no sabe",
+        "sheet_source": "Hoja de cálculo como fuente",
+        "doc_source": "Documento como fuente",
+        "erp_query": "Dato exacto del ERP",
+        "schedule_flag": "Agendar",
+        "ticket_flag": "Crear ticket",
+        "ticket_status_flag": "Estado del ticket",
+        "state_machine": "Arquitectura de etapas",
+        "engine_slot_filling": "Acompañar al motor, no reemplazarlo",
+        "intent_router": "Router de intención",
+        "single_close_node": "Nodo de cierre único",
+        "no_questions_after_close": "Sin preguntas después del cierre",
+        "forbidden_commitments": "Lo que no debe hacer nunca",
+        "keyword_actions_pair": "Palabras clave de corte",
+        "whatsapp_templates_per_attempt": "Una plantilla por intento"
+      }
     }
   }
 }

@@ -27,6 +27,18 @@ class AiAgentAssistantAPI extends ApiClient {
     return axios.post(`${this.url}/preview_prompt`, payload);
   }
 
+  // F6: la biblioteca de bloques, resuelta contra la cuenta Y contra el prompt en
+  // curso — de ahí que el prompt viaje en la petición.
+  patterns({ complementaryPrompt, inboxId, trackingTemplateId } = {}) {
+    return axios.get(`${this.url}/patterns`, {
+      params: {
+        complementary_prompt: complementaryPrompt || undefined,
+        inbox_id: inboxId || undefined,
+        tracking_template_id: trackingTemplateId || undefined,
+      },
+    });
+  }
+
   getCapabilities({ inboxId, trackingTemplateId } = {}) {
     return axios.get(`${this.url}/capabilities`, {
       params: {

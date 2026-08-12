@@ -256,6 +256,55 @@
       "ERROR_MODEL_UNAVAILABLE": "The model did not return a usable answer. Try again.",
       "ERROR_SESSION_FAILED": "The conversation could not be opened.",
       "ERROR_TURN_FAILED": "The message could not be sent."
+    },
+    "PATTERNS": {
+      "TITLE": "Pattern library",
+      "DESCRIPTION": "Blocks taken from the agents that already work. Each solves one thing and leaves <gaps> for your business: there is nothing to clone.",
+      "OPEN": "Patterns",
+      "CLOSE": "Close",
+      "LOADING": "Loading the library…",
+      "DISCARDED_WARNING": "This agent uses a search directive, so the engine discards the whole complementary prompt. Any text block you insert here would be wasted characters: the rules have to move to the objective.",
+      "RULES_TITLE": "What a well-formed agent looks like",
+      "SHOW": "Show",
+      "HIDE": "Hide",
+      "SKELETON": "Prompt structure",
+      "USE_SKELETON": "Insert the structure",
+      "INSERT": "Insert",
+      "CHARS": "{chars} chars",
+      "SECTION": {
+        "rol": "Role and limits",
+        "fuente": "Source",
+        "banderas": "Flags",
+        "flujo": "Flow",
+        "cierre": "Closing",
+        "prohibido": "Forbidden",
+        "config": "Outside the prompt"
+      },
+      "STATUS": {
+        "READY": "ready",
+        "UNAVAILABLE": "not available in this account",
+        "DEAD_LETTER": "dead letter here",
+        "SOURCE_TAKEN": "another source is already set"
+      },
+      "BLOCK": {
+        "role_identity": "Identity and register",
+        "channel_awareness": "The right channel",
+        "admits_ignorance": "What to do when it doesn't know",
+        "sheet_source": "Spreadsheet as source",
+        "doc_source": "Document as source",
+        "erp_query": "Exact data from the ERP",
+        "schedule_flag": "Book a slot",
+        "ticket_flag": "Create a ticket",
+        "ticket_status_flag": "Ticket status",
+        "state_machine": "Stage architecture",
+        "engine_slot_filling": "Accompany the engine, don't replace it",
+        "intent_router": "Intent router",
+        "single_close_node": "Single closing node",
+        "no_questions_after_close": "No questions after closing",
+        "forbidden_commitments": "What it must never do",
+        "keyword_actions_pair": "Cut-off keywords",
+        "whatsapp_templates_per_attempt": "One template per attempt"
+      }
     }
   }
 }
