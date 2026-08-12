@@ -282,7 +282,14 @@
         "flujo": "Flow",
         "cierre": "Closing",
         "prohibido": "Forbidden",
-        "config": "Outside the prompt"
+        "config": "Outside the prompt",
+        "arquitectura": "Architecture",
+        "apertura": "Opening",
+        "slots": "Data to collect",
+        "interrupciones": "Interruptions",
+        "postcierre": "After closing",
+        "nodos": "Literal messages",
+        "kb": "Knowledge base"
       },
       "STATUS": {
         "READY": "ready",
@@ -307,7 +314,17 @@
         "no_questions_after_close": "No questions after closing",
         "forbidden_commitments": "What it must never do",
         "keyword_actions_pair": "Cut-off keywords",
-        "whatsapp_templates_per_attempt": "One template per attempt"
+        "whatsapp_templates_per_attempt": "One template per attempt",
+        "state_architecture": "State architecture",
+        "opening_template": "First-message template",
+        "slot_core": "Data to collect (slots)",
+        "slot_questions": "Literal question per field",
+        "dry_transition": "Dry reply, no filler",
+        "interruption_control": "Interruptions mid-qualification",
+        "post_close_lock": "Silence after closing",
+        "literal_nodes": "Literal messages",
+        "inline_kb": "Facts it may assert",
+        "blacklist": "Blacklist"
       }
     },
     "EVAL": {

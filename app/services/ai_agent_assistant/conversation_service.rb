@@ -101,10 +101,23 @@ class AiAgentAssistant::ConversationService < Cases::Ai::BaseService
     field = item['field'].to_s
     return nil unless AiAgentAssistantSession::DRAFT_FIELDS.include?(field)
 
+    return nil if pointless?(field, current)
+
     value = coerce(field, item['value'])
     return nil if value.nil? || value == current[field]
 
     { 'field' => field, 'value' => value, 'rationale' => item['rationale'].to_s.strip.presence }
+  end
+
+  # `slots_presentation` es cómo se muestran los HORARIOS de calendario. El modelo lo
+  # confunde con «los datos que el agente tiene que reunir» en cuanto el usuario dice
+  # «slots», y proponía cambiarlo en agentes que ni agendan. Sin @agendar_calendar el
+  # campo no aplica a nada, así que la propuesta se descarta.
+  def pointless?(field, current)
+    return false unless %w[slots_presentation calendar_event_duration].include?(field)
+
+    AiAgentAssistant::Capabilities.detect(current['complementary_prompt'].to_s)
+                                  .none? { |capability| capability[:key] == :agendar_calendar }
   end
 
   def coerce(field, value)

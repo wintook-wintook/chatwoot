@@ -39,7 +39,8 @@ class AiAgentAssistant::SystemPrompt # rubocop:disable Metrics/ClassLength
 
   def call
     [mission, invariants, engine_limits, channel_catalog, capability_catalog, form_guide,
-     mode_instructions, interview_guide, current_draft, output_contract].compact.join("\n\n")
+     section_guide, mode_instructions, interview_guide, current_draft,
+     output_contract].compact.join("\n\n")
   end
 
   private
@@ -189,9 +190,51 @@ class AiAgentAssistant::SystemPrompt # rubocop:disable Metrics/ClassLength
 
       #{reglas.join("\n")}
 
-      Estructura del prompt complementario:
+      Estructura MÍNIMA del prompt complementario (el suelo, no el techo):
       #{AiAgentAssistant::PatternLibrary::SKELETON}
+      Hay más secciones disponibles, listadas abajo. Un agente que solo recuerda algo se
+      queda en este mínimo; uno que califica, agenda o cierra necesita más.
     TEXT
+  end
+
+  # El asistente puede PROPONER secciones. Los prompts de producción buenos tienen
+  # una arquitectura mucho más rica que el esqueleto de cinco, y el usuario no tiene
+  # por qué saber que existe: ofrecérsela es media pieza del asistente.
+  def section_guide
+    presentes = AiAgentAssistant::PatternLibrary.sections_in(
+      session.merged_draft['complementary_prompt']
+    )
+    catalogo = AiAgentAssistant::PatternLibrary::SECTION_PURPOSE
+               .except('config')
+               .map { |key, purpose| "- [#{key.upcase}] #{purpose}" }
+
+    <<~TEXT.strip
+      SECCIONES QUE PUEDES PROPONER
+
+      #{catalogo.join("\n")}
+
+      #{presentes_text(presentes)}
+
+      Cómo se ofrecen:
+      - Ofrece, no impongas, y pregunta antes de escribirla: «¿le agregamos una sección de
+        post-cierre? sin ella el agente vuelve a preguntar después de despedirse».
+      - Propón solo lo que el caso que te contó el usuario justifica. Un agente que solo
+        recuerda un pago no necesita arquitectura de estados ni nodos literales.
+      - Los diez agentes más sanos de la base instalada NO tienen ninguna sección: son
+        prompts de 500 a 760 caracteres. Más secciones no es mejor agente.
+      - Si el usuario describe que hay que reunir datos antes de dar algo (una liga, una
+        cita, un precio), ESCRIBE [SLOTS] con la pregunta literal de cada dato, [CIERRE] y
+        [POSTCIERRE]. Es la combinación que resuelve ese caso en producción, y meterla
+        resumida en [ROL Y LÍMITES] no la resuelve: el agente vuelve a preguntar.
+      - Si te dice «que no vuelva a preguntar después de X», eso es [POSTCIERRE] y va como
+        sección propia, no como una frase suelta.
+    TEXT
+  end
+
+  def presentes_text(presentes)
+    return 'El prompt actual no tiene ninguna sección todavía.' if presentes.empty?
+
+    "El prompt actual ya trae estas secciones, no las propongas otra vez: #{presentes.join(' · ')}."
   end
 
   def mode_instructions
@@ -218,6 +261,7 @@ class AiAgentAssistant::SystemPrompt # rubocop:disable Metrics/ClassLength
 
     step = AiAgentAssistant::Interview.step(session.step) || AiAgentAssistant::Interview.steps.first
     tree = knowledge_tree_text if step[:key] == 'knowledge'
+    tree = architecture_tree_text if step[:key] == 'purpose'
 
     <<~TEXT.strip
       PASO ACTUAL DE LA ENTREVISTA: #{step[:key]} (#{position_of(step)} de #{AiAgentAssistant::Interview.steps.size})
@@ -229,6 +273,27 @@ class AiAgentAssistant::SystemPrompt # rubocop:disable Metrics/ClassLength
 
   def position_of(step)
     AiAgentAssistant::Interview.steps.index { |s| s[:key] == step[:key] }.to_i + 1
+  end
+
+  # El árbol de FORMA. Es la indagación del propósito: de aquí sale qué secciones
+  # necesita el prompt, y sobre todo cuáles NO.
+  def architecture_tree_text
+    tree = AiAgentAssistant::Interview.architecture_tree
+    lines = tree[:options].map do |option|
+      secciones = option[:sections].map { |key| "[#{key.upcase}]" }.join(' ')
+      "  · #{option[:label]}\n      → secciones: #{secciones}\n      #{option[:note]}"
+    end
+
+    <<~TEXT.strip
+
+      INDAGACIÓN DEL PROPÓSITO — #{tree[:question]}
+      #{lines.join("\n")}
+
+      Pregunta por el negocio hasta encajarlo en una de las cuatro formas, y DILE cuál es y
+      qué secciones trae. Si es la primera, dilo también: sobrarían secciones.
+      Cuando la forma esté clara, escribe el prompt con ESAS secciones y sus encabezados
+      entre corchetes, dejando <huecos> donde falte información del negocio.
+    TEXT
   end
 
   # El árbol de §13.6, ya podado: el modelo solo ve ramas que esta cuenta puede usar.
@@ -276,7 +341,9 @@ class AiAgentAssistant::SystemPrompt # rubocop:disable Metrics/ClassLength
         "done": false
       }
 
-      `proposals` va vacío si en este turno no propones cambiar ningún campo. Los campos
+      Si anuncias un cambio, va en `proposals` en ESE MISMO turno. Decir «voy a proponer
+      los campos» y mandar `proposals` vacío es un error: el usuario no ve nada.
+      `proposals` va vacío solo si en este turno de verdad no cambias ningún campo. Los campos
       válidos son: #{AiAgentAssistantSession::DRAFT_FIELDS.join(', ')}.
       `keyword_actions` es una lista de objetos {keyword, action, direction}, donde
       `action` es una de #{ContactTrackings::KeywordActionService::VALID_ACTIONS.join(' | ')} y
@@ -285,6 +352,8 @@ class AiAgentAssistant::SystemPrompt # rubocop:disable Metrics/ClassLength
       (en inglés, aunque hables en español) y `slots_presentation` solo
       #{AiAgentAssistant::ConversationService::ENUM_FIELDS['slots_presentation'].join(' | ')}.
       `timezone` es un identificador IANA, por ejemplo America/Mexico_City.
+      Ojo: `slots_presentation` es cómo se le muestran los HORARIOS de calendario al cliente.
+      No tiene nada que ver con los datos que el agente deba reunir; esos van en el prompt.
       `inbox_id` es el número de uno de los canales listados arriba.
       Las claves de paso válidas para `next_step` son:
       #{AiAgentAssistant::Interview.steps.pluck(:key).join(' → ')}.

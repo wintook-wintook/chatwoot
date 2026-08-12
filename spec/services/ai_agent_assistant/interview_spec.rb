@@ -20,12 +20,43 @@ RSpec.describe AiAgentAssistant::Interview do
         paso = described_class.next_step(paso)
       end
 
-      expect(recorrido).to eq(%w[objective audience channel knowledge actions limits keywords])
+      expect(recorrido).to eq(%w[objective purpose audience channel knowledge actions limits keywords])
     end
 
     it 'cada paso explica por qué importa, no solo qué pregunta' do
       expect(described_class.steps).to all(include(:question, :why))
       expect(described_class.steps.pluck(:why)).to all(be_present)
+    end
+  end
+
+  # La indagación del propósito: antes de escribir nada hay que saber QUÉ FORMA tiene
+  # el agente, porque de ahí salen las secciones que necesita — y las que no.
+  describe '.architecture_tree' do
+    it 'pregunta por la forma justo después del objetivo' do
+      expect(described_class.next_step('objective')).to eq('purpose')
+    end
+
+    it 'cada forma dice qué secciones trae, y todas existen en la biblioteca' do
+      opciones = described_class::ARCHITECTURE_TREE[:options]
+      todas = opciones.flat_map { |o| o[:sections] }.uniq
+
+      expect(opciones.pluck(:sections)).to all(be_present)
+      expect(todas - AiAgentAssistant::PatternLibrary::SECTIONS).to be_empty
+    end
+
+    it 'la forma más simple casi no lleva secciones: es la familia más sana' do
+      expect(described_class.sections_for('notify')).to eq(%w[rol cierre])
+    end
+
+    # Es la forma del agente vendedor de producción: calificar antes de entregar la liga.
+    it 'calificar antes de entregar algo trae datos, cierre y post-cierre' do
+      secciones = described_class.sections_for('qualify')
+
+      expect(secciones).to include('slots', 'cierre', 'postcierre', 'nodos')
+    end
+
+    it 'una forma que no existe no inventa secciones' do
+      expect(described_class.sections_for('telepatía')).to be_empty
     end
   end
 

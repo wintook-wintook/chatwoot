@@ -27,6 +27,12 @@ class AiAgentAssistant::Interview
       question: '¿Qué tiene que haber pasado para que des este seguimiento por cumplido?',
       why: 'De esto depende cuándo el agente deja de insistir. Es además el único campo que ' \
            'llega íntegro al modelo en las dos rutas, pase lo que pase con el prompt.' },
+    { key: 'purpose', field: nil,
+      question: '¿Tu agente solo avisa de algo, o tiene que conseguir algo del cliente antes ' \
+                'de darle lo que pide?',
+      why: 'Es la pregunta que decide la FORMA del prompt. Un agente que solo recuerda un ' \
+           'pago cabe en cinco líneas; uno que califica antes de entregar una liga necesita ' \
+           'secciones de datos, cierre y post-cierre, o vuelve a preguntar después de cerrar.' },
     { key: 'audience', field: nil,
       question: '¿A quién le escribe? ¿Qué trato usa: de tú o de usted?',
       why: 'Fija la voz del agente. Va a la sección [ROL Y LÍMITES].' },
@@ -72,6 +78,39 @@ class AiAgentAssistant::Interview
         note: 'Las cuatro búsquedas descartan el prompt entero: las reglas se mudan al objetivo.' }
     ]
   }.freeze
+
+  # El árbol de FORMA. Cada respuesta dice qué secciones necesita el prompt — y, casi
+  # siempre, que no necesita ninguna. Los diez agentes más sanos de la base instalada
+  # son de la primera rama: 500 a 760 caracteres y ni una sección.
+  ARCHITECTURE_TREE = {
+    question: '¿Qué tiene que hacer el agente, en una frase?',
+    options: [
+      { key: 'notify', label: 'Solo avisar o recordar algo, y registrar la respuesta',
+        sections: %w[rol cierre],
+        note: 'Es la familia más sana de la instalación. No le pongas más de lo que necesita.' },
+      { key: 'answer', label: 'Responder dudas con información que ya existe',
+        sections: %w[rol fuente prohibido],
+        note: 'Aquí lo que decide es de dónde sale la información, no la arquitectura.' },
+      { key: 'qualify', label: 'Reunir varios datos antes de entregar algo (una liga, una cita, un precio)',
+        sections: %w[rol arquitectura apertura slots interrupciones cierre postcierre nodos prohibido],
+        note: 'La forma más exigente, y la que más se rompe. Sin post-cierre el agente ' \
+              'vuelve a preguntar después de despedirse; sin nodos literales, la liga sale ' \
+              'distinta cada vez.' },
+      { key: 'execute', label: 'Ejecutar algo cuando el cliente acepta: agendar o levantar un ticket',
+        sections: %w[rol banderas flujo cierre],
+        note: 'El motor ya pide los datos obligatorios uno por uno: el prompt acompaña, no ' \
+              'reemplaza.' }
+    ]
+  }.freeze
+
+  def self.architecture_tree
+    ARCHITECTURE_TREE
+  end
+
+  # Las secciones que corresponden a una forma. Vacío si la forma no se reconoce.
+  def self.sections_for(shape)
+    ARCHITECTURE_TREE[:options].find { |option| option[:key] == shape.to_s }&.fetch(:sections) || []
+  end
 
   SEARCH_BRANCH = {
     question: '¿Dónde vive ese acervo?',

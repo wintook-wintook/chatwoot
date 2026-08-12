@@ -282,7 +282,14 @@
         "flujo": "Flujo",
         "cierre": "Cierre",
         "prohibido": "Prohibido",
-        "config": "Fuera del prompt"
+        "config": "Fuera del prompt",
+        "arquitectura": "Arquitectura",
+        "apertura": "Apertura",
+        "slots": "Datos a reunir",
+        "interrupciones": "Interrupciones",
+        "postcierre": "Post-cierre",
+        "nodos": "Mensajes literales",
+        "kb": "Base de conocimiento"
       },
       "STATUS": {
         "READY": "listo",
@@ -307,7 +314,17 @@
         "no_questions_after_close": "Sin preguntas después del cierre",
         "forbidden_commitments": "Lo que no debe hacer nunca",
         "keyword_actions_pair": "Palabras clave de corte",
-        "whatsapp_templates_per_attempt": "Una plantilla por intento"
+        "whatsapp_templates_per_attempt": "Una plantilla por intento",
+        "state_architecture": "Arquitectura de estados",
+        "opening_template": "Plantilla del primer mensaje",
+        "slot_core": "Datos a reunir (slots)",
+        "slot_questions": "Preguntas literales por dato",
+        "dry_transition": "Salida seca, sin relleno",
+        "interruption_control": "Interrupciones a media calificación",
+        "post_close_lock": "Silencio después del cierre",
+        "literal_nodes": "Mensajes literales",
+        "inline_kb": "Hechos que sí puede afirmar",
+        "blacklist": "Lista negra"
       }
     },
     "EVAL": {

@@ -22,7 +22,34 @@
 
 # Catálogo declarativo, como Capabilities y Linter: la longitud es de los datos.
 class AiAgentAssistant::PatternLibrary # rubocop:disable Metrics/ClassLength
-  SECTIONS = %w[rol fuente banderas flujo cierre prohibido config].freeze
+  # En el orden en que se leen dentro de un prompt. Las de arquitectura salieron de
+  # mirar prompts de producción de verdad: el esqueleto de cinco secciones se queda
+  # corto en cuanto el agente tiene que calificar antes de cerrar.
+  SECTIONS = %w[
+    rol arquitectura apertura fuente slots banderas flujo
+    interrupciones cierre postcierre nodos kb prohibido config
+  ].freeze
+
+  # Para qué sirve cada sección, en una línea. Es lo que el asistente usa para
+  # ofrecerla: «¿le agregamos [POST-CIERRE]? sin ella vuelve a preguntar después
+  # de cerrar». Ofrecer, nunca imponer: los diez agentes más sanos de la base
+  # instalada no tienen ninguna sección.
+  SECTION_PURPOSE = {
+    'rol' => 'quién es, a quién escribe, con qué trato y qué no hace nunca',
+    'arquitectura' => 'en qué orden evalúa cada turno, para que no mezcle etapas',
+    'apertura' => 'la forma exacta del primer mensaje, y no saludar dos veces',
+    'fuente' => 'de dónde saca lo que no sabe ({{doc:}}, {{hoja:}}, {{consulta:}})',
+    'slots' => 'qué datos tiene que reunir, con la pregunta literal de cada uno',
+    'banderas' => 'agendar, crear ticket, consultar su estado',
+    'flujo' => 'las etapas del negocio, solo lo que el motor no hace ya',
+    'interrupciones' => 'qué hacer si a media conversación pide precio o demo',
+    'cierre' => 'qué cuenta como logrado y cómo se despide, una sola vez',
+    'postcierre' => 'el silencio de después: ni preguntas, ni repetir el enlace',
+    'nodos' => 'los mensajes que se imprimen tal cual, sin reescribir',
+    'kb' => 'los pocos hechos que puede afirmar; si son muchos, van en una fuente',
+    'prohibido' => 'la lista corta de lo que nunca, repetida al final',
+    'config' => 'lo determinista, que va FUERA del prompt'
+  }.freeze
 
   # `kind`: :prompt = texto que va dentro del prompt complementario.
   #         :config = NO va en el prompt; es configuración del agente (regla 5:
@@ -160,6 +187,113 @@ class AiAgentAssistant::PatternLibrary # rubocop:disable Metrics/ClassLength
               'que improvisan.'
     },
     {
+      key: 'state_architecture', section: 'arquitectura', kind: :prompt, requires: nil,
+      body: <<~TEXT.strip,
+        Evalúa cada turno en este orden y para en el primero que aplique:
+        1. <¿ya cerraste? → bloque de post-cierre y nada más>
+        2. <¿es el primer turno? → apertura>
+        3. <¿falta algún dato? → pregunta el siguiente>
+        4. <si no falta nada → cierre>
+      TEXT
+      source: 'El agente vendedor DCI de producción abre con esta jerarquía. Sin ella el ' \
+              'modelo mezcla etapas: cierra y vuelve a preguntar en el mismo mensaje.'
+    },
+    {
+      key: 'opening_template', section: 'apertura', kind: :prompt, requires: nil,
+      body: <<~TEXT.strip,
+        Solo en el primer mensaje, exactamente esta forma:
+        Saludo con el nombre si lo tienes · una frase que responda a lo que pidió ·
+        avisar de que vienen unas preguntas rápidas · la primera pregunta.
+        Nunca saludes dos veces en la misma conversación.
+      TEXT
+      source: 'El DCI fija la plantilla del turno 1 párrafo a párrafo, con variante con y sin ' \
+              'nombre. Es lo que evita el «Hola,, buen día» del agente 43 de la 568.'
+    },
+    {
+      key: 'slot_core', section: 'slots', kind: :prompt, requires: nil,
+      body: <<~TEXT.strip,
+        Lleva estos datos, en silencio, y no los vuelvas a pedir una vez los tengas:
+        <DATO_1> = VACIO | valor
+        <DATO_2> = VACIO | valor
+        Con cualquier respuesta que sirva, el dato queda COMPLETO. Prohibido pedir detalle
+        de más o preguntar «cómo».
+      TEXT
+      source: 'El núcleo del DCI. La regla de «queda completo de inmediato» es la que impide ' \
+              'que el agente se quede indagando en vez de avanzar.'
+    },
+    {
+      key: 'slot_questions', section: 'slots', kind: :prompt, requires: nil,
+      body: <<~TEXT.strip,
+        Pregunta literalmente así, según lo que falte:
+        Si falta <DATO_1> → «<pregunta exacta>»
+        Si falta <DATO_2> → «<pregunta exacta>»
+      TEXT
+      source: 'Escribir la pregunta literal y no «pregunta por X» es lo que hace que el ' \
+              'agente suene igual en todas las conversaciones.'
+    },
+    {
+      key: 'dry_transition', section: 'slots', kind: :prompt, requires: nil,
+      body: <<~TEXT.strip,
+        Si el cliente solo entrega el dato que le pediste, responde ÚNICAMENTE con la
+        siguiente pregunta. Nada de «Perfecto», «Entiendo», «Genial» ni preguntas abiertas.
+      TEXT
+      source: 'El DCI lo llama «salida seca». Sin esta regla cada turno gasta media respuesta ' \
+              'en relleno, y la respuesta son cuatro líneas contadas.'
+    },
+    {
+      key: 'interruption_control', section: 'interrupciones', kind: :prompt, requires: nil,
+      body: <<~TEXT.strip,
+        Si a media calificación vuelve a pedir <precio | demo | información>:
+        contéstale en una frase que eso se ve a fondo en la sesión, y en el MISMO mensaje
+        vuelve a la pregunta que faltaba.
+      TEXT
+      source: 'Del DCI. Resuelve el caso que más descarrila estos agentes: el cliente que ' \
+              'insiste con el precio y el agente abandona la calificación.'
+    },
+    {
+      key: 'post_close_lock', section: 'postcierre', kind: :prompt, requires: nil,
+      body: <<~TEXT.strip,
+        Una vez enviado el cierre: no preguntes nada más, no uses signos de interrogación,
+        no repitas el enlace y no vuelvas a ofrecer agendar.
+        Si escribe «<palabra de confirmación>», responde <mensaje de agradecimiento> y termina.
+      TEXT
+      source: 'El bloque más elaborado del DCI, y con razón: es donde el agente que ya cerró ' \
+              'sigue insistiendo. Es el mismo defecto de la 778 con reintento cada 3 días.'
+    },
+    {
+      key: 'literal_nodes', section: 'nodos', kind: :prompt, requires: nil,
+      body: <<~TEXT.strip,
+        Mensajes que se imprimen TAL CUAL, sin reescribir:
+        CIERRE: <texto exacto, con el enlace si lo hay>
+        CONFIRMADO: <texto exacto>
+      TEXT
+      source: 'El DCI aparta sus textos críticos como nodos literales. Es la única forma de ' \
+              'que un enlace o una condición legal salga siempre igual.'
+    },
+    {
+      key: 'inline_kb', section: 'kb', kind: :prompt, requires: nil,
+      body: <<~TEXT.strip,
+        Lo único que puedes afirmar sobre <tema>:
+        - <hecho 1>
+        - <hecho 2>
+        Fuera de esta lista, di que se revisa en la sesión. No inventes cifras ni plazos.
+      TEXT
+      source: 'Para lo que cabe en cinco líneas y no cambia. Si el acervo es mayor o cambia ' \
+              'solo, va en {{doc:}} o {{hoja:}}, no dentro del prompt.'
+    },
+    {
+      key: 'blacklist', section: 'prohibido', kind: :prompt, requires: nil,
+      body: <<~TEXT.strip,
+        Nunca, en ningún caso:
+        ✖ <adelantar el cierre sin tener los datos>
+        ✖ <hacer preguntas de plática>
+        ✖ <saludar dos veces>
+        ✖ <frases de relleno: «Entiendo», «Perfecto», «Genial»>
+      TEXT
+      source: 'La «lista negra» del DCI. Repetir la prohibición al final, en una lista corta, ' \
+              'pesa más que enterrarla en el párrafo donde se explicó.'
+    },
+    {
       key: 'keyword_actions_pair', section: 'config', kind: :config, requires: nil,
       body: <<~TEXT.strip,
         En «Palabras clave de acción», no en el prompt:
@@ -228,6 +362,14 @@ class AiAgentAssistant::PatternLibrary # rubocop:disable Metrics/ClassLength
     <qué cuenta como logrado>
   TEXT
 
+  # Los encabezados [ASÍ] que el prompt ya trae. Sirve para que el asistente ofrezca
+  # lo que falta en vez de proponer otra vez lo que ya está escrito.
+  SECTION_HEADER = /^[ \t]*\[([^\]\n]{2,60})\]/
+
+  def self.sections_in(prompt)
+    prompt.to_s.scan(SECTION_HEADER).flatten.map(&:strip).uniq
+  end
+
   def self.for(account:, inbox: nil, template: nil, prompt: nil)
     new(account: account, inbox: inbox, template: template, prompt: prompt).call
   end
@@ -242,6 +384,7 @@ class AiAgentAssistant::PatternLibrary # rubocop:disable Metrics/ClassLength
   def call
     { blocks: BLOCKS.map { |block| resolve(block) },
       sections: SECTIONS,
+      sections_present: self.class.sections_in(prompt),
       rules: FORM_RULES,
       skeleton: SKELETON,
       prompt_is_discarded: prompt_discarded? }

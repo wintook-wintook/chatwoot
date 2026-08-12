@@ -97,6 +97,58 @@ RSpec.describe AiAgentAssistant::SystemPrompt do
     end
   end
 
+  describe 'indagación del propósito' do
+    it 'el árbol de forma sale en su paso, no antes' do
+      expect(described_class.for(session_for(step: 'purpose'))).to include('INDAGACIÓN DEL PROPÓSITO')
+      expect(described_class.for(session_for(step: 'objective'))).not_to include('INDAGACIÓN DEL PROPÓSITO')
+    end
+
+    it 'cada forma llega con las secciones que le tocan' do
+      texto = described_class.for(session_for(step: 'purpose'))
+
+      expect(texto).to include('[SLOTS]', '[POSTCIERRE]', '[NODOS]')
+    end
+
+    it 'manda escribir las secciones, no solo nombrarlas' do
+      texto = described_class.for(session_for(step: 'purpose')).squish
+
+      expect(texto).to include('escribe el prompt con ESAS secciones')
+    end
+  end
+
+  describe 'secciones que puede proponer' do
+    it 'lleva el catálogo con el para qué de cada una' do
+      texto = described_class.for(session_for)
+
+      expect(texto).to include('SECCIONES QUE PUEDES PROPONER', '[POSTCIERRE]', '[SLOTS]')
+    end
+
+    # Media pieza del asistente es ofrecer arquitectura que el usuario no sabe que existe;
+    # la otra media es no imponérsela a quien no la necesita.
+    it 'insiste en ofrecer y no imponer' do
+      texto = described_class.for(session_for).squish
+
+      expect(texto).to include('Ofrece, no impongas')
+      expect(texto).to include('Más secciones no es mejor agente')
+    end
+
+    it 'dice que el prompt vacío no tiene ninguna' do
+      expect(described_class.for(session_for)).to include('no tiene ninguna sección todavía')
+    end
+
+    it 'no vuelve a proponer las que el prompt ya trae' do
+      texto = described_class.for(session_for(draft: { 'complementary_prompt' => "[CIERRE]\nAdiós." }))
+
+      expect(texto).to include('ya trae estas secciones, no las propongas otra vez: CIERRE')
+    end
+
+    it 'deja fuera la de configuración: esa no va dentro del prompt' do
+      texto = described_class.for(session_for)[/SECCIONES QUE PUEDES PROPONER.*?Cómo se ofrecen/m]
+
+      expect(texto).not_to include('[CONFIG]')
+    end
+  end
+
   describe 'contrato de salida' do
     it 'exige JSON y enumera los campos válidos' do
       texto = described_class.for(session_for)

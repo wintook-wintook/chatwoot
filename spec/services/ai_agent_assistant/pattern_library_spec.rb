@@ -94,6 +94,44 @@ RSpec.describe AiAgentAssistant::PatternLibrary do
     end
   end
 
+  describe 'secciones' do
+    it 'cada sección declara para qué sirve: es lo que el asistente usa para ofrecerla' do
+      expect(described_class::SECTIONS - described_class::SECTION_PURPOSE.keys).to be_empty
+      expect(described_class::SECTION_PURPOSE.values).to all(be_present)
+    end
+
+    it 'cubre la arquitectura de los prompts de producción, no solo el esqueleto de cinco' do
+      expect(described_class::SECTIONS)
+        .to include('arquitectura', 'apertura', 'slots', 'interrupciones', 'postcierre', 'nodos')
+    end
+
+    it 'hay al menos un bloque por sección que va dentro del prompt' do
+      de_prompt = described_class::SECTIONS - ['config']
+      cubiertas = described_class::BLOCKS.select { |b| b[:kind] == :prompt }.pluck(:section).uniq
+
+      expect(de_prompt - cubiertas).to be_empty
+    end
+  end
+
+  describe '.sections_in' do
+    it 'reconoce los encabezados que el prompt ya trae' do
+      prompt = "[ROL Y LÍMITES]\nEres cobranza.\n\n[8. NODOS LITERALES]\nHola.\n"
+
+      expect(described_class.sections_in(prompt)).to eq(['ROL Y LÍMITES', '8. NODOS LITERALES'])
+    end
+
+    it 'no confunde una directiva ni un corchete a media línea con una sección' do
+      expect(described_class.sections_in('mira el [manual] antes')).to be_empty
+      expect(described_class.sections_in('{{hoja:Precios}}')).to be_empty
+    end
+
+    it 'viaja con la biblioteca para no proponer lo que ya está escrito' do
+      resultado = library(prompt: "[CIERRE]\nHasta luego.")
+
+      expect(resultado[:sections_present]).to eq(['CIERRE'])
+    end
+  end
+
   describe 'guía de forma y esqueleto' do
     it 'las siete reglas van en orden de impacto y abren por la decisión de familia' do
       expect(described_class::FORM_RULES.size).to eq(7)
