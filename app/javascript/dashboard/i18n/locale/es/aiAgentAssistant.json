@@ -1,0 +1,132 @@
+{
+  "AI_AGENT_ASSISTANT": {
+    "TITLE": "Asistente de Agentes IA",
+    "DESCRIPTION": "Qué sabe hacer un Agente IA en esta cuenta, y qué necesita cada cosa.",
+    "REFRESH": "Actualizar",
+    "LOADING": "Cargando capacidades…",
+    "LOAD_ERROR": "No se pudieron cargar las capacidades.",
+    "INBOX_FILTER": "Resolver para el canal",
+    "INBOX_ALL": "Sin canal (solo cuenta)",
+    "ENGINE": {
+      "TITLE": "Motor",
+      "MODEL": "Modelo en este canal",
+      "MODEL_HINT": "Sale del selector «Modelo de IA» de la integración tracking_bot del canal.",
+      "DEFAULT_HINT": "Sin canal seleccionado se muestra el modelo por defecto.",
+      "BUDGET": "Presupuesto de salida",
+      "BUDGET_HINT": "Tokens máximos de cada tipo de mensaje. El mensaje programado es el más ajustado.",
+      "PURPOSE": {
+        "scheduled": "Mensaje programado",
+        "conversational": "Respuesta al cliente",
+        "router": "Clasificador de intención",
+        "datetime": "Lectura de fecha y hora",
+        "authoring": "Redacción de prompt"
+      }
+    },
+    "TABLE": {
+      "CAPABILITY": "Capacidad",
+      "KIND": "Tipo",
+      "EFFECT": "Efecto sobre tu prompt",
+      "STATUS": "En esta cuenta"
+    },
+    "KIND": {
+      "search": "Búsqueda",
+      "source": "Fuente",
+      "template": "Plantilla",
+      "flag": "Bandera",
+      "attachment": "Archivo"
+    },
+    "EFFECT": {
+      "SWALLOWS": "Descarta tu prompt",
+      "SWALLOWS_HINT": "Con esta directiva el motor ignora por completo el prompt complementario: el agente pierde su voz propia y no puede enviar archivos.",
+      "RENDERS": "Tu prompt se envía literal",
+      "RENDERS_HINT": "El prompt deja de ser instrucciones: se interpola y se manda tal cual al cliente, sin pasar por la IA.",
+      "KEEPS": "Conserva tu prompt",
+      "KEEPS_HINT": "Convive con tus instrucciones. Es la vía para tener voz propia y conocimiento a la vez.",
+      "NEUTRAL": "No lo afecta",
+      "NEUTRAL_HINT": "El motor la lee y la retira del texto antes de llamar al modelo."
+    },
+    "STATUS": {
+      "AVAILABLE": "Disponible",
+      "UNAVAILABLE": "No disponible",
+      "COUNT_ITEMS": "{count} elementos",
+      "NO_ITEMS": "Sin contenido cargado",
+      "NEEDS_TEMPLATE": "Se resuelve al abrir un Agente IA"
+    },
+    "EXCLUSIVE_NOTE": {
+      "TITLE": "Solo una fuente resuelve cada turno",
+      "BODY": "Las capacidades de búsqueda, fuente y plantilla son excluyentes entre sí: si pones dos, gana la de menor número de orden y la otra queda como texto muerto dentro del prompt. Las banderas y los archivos sí se suman sin coste."
+    },
+    "ORDER": "Orden",
+    "SYNTAX": "Sintaxis",
+    "EXAMPLE": "Ejemplo",
+    "REQUIREMENT": "Requisito",
+    "CAPABILITIES": {
+      "consulta": {
+        "LABEL": "Consulta a un ERP",
+        "WHAT": "Sustituye la directiva por el dato exacto de tu sistema (Contpaq, SAE, Microsip). Es determinista: no pasa por la IA.",
+        "WHEN": "Cuando necesitas una cifra exacta, como un saldo o un vencimiento.",
+        "REQUIREMENT": "Conexión a ERP habilitada en la cuenta"
+      },
+      "buscar_predefinidas": {
+        "LABEL": "Respuestas predefinidas",
+        "WHAT": "Busca por similitud en las respuestas predefinidas de la cuenta y responde con la más parecida.",
+        "WHEN": "Preguntas frecuentes, cortas y controladas por tu equipo.",
+        "REQUIREMENT": "Respuestas predefinidas cargadas"
+      },
+      "buscar_articulo": {
+        "LABEL": "Artículos del Centro de Ayuda",
+        "WHAT": "Busca por similitud en los artículos del Centro de Ayuda.",
+        "WHEN": "Explicaciones largas que ya tienes documentadas.",
+        "REQUIREMENT": "Artículos cargados"
+      },
+      "buscar_foro": {
+        "LABEL": "Foro, por fuente",
+        "WHAT": "Busca en vivo en una fuente concreta del foro Discourse.",
+        "WHEN": "Quieres acotar la búsqueda a un manual o categoría concreta.",
+        "REQUIREMENT": "Una fuente de conocimiento activa"
+      },
+      "doc": {
+        "LABEL": "Documento de Google",
+        "WHAT": "Lee el documento en vivo. Si alguien lo edita, el agente responde con la versión nueva sin tocar nada.",
+        "WHEN": "Políticas, condiciones o manuales que cambian con el tiempo.",
+        "REQUIREMENT": "Google habilitado en la cuenta"
+      },
+      "hoja": {
+        "LABEL": "Hoja de cálculo de Google",
+        "WHAT": "Lee la hoja en vivo, con cálculos exactos.",
+        "WHEN": "Precios, inventarios o listas que cambian seguido.",
+        "REQUIREMENT": "Google habilitado en la cuenta"
+      },
+      "discourse": {
+        "LABEL": "Foro completo",
+        "WHAT": "Busca en todo el foro Discourse configurado en el canal.",
+        "WHEN": "No quieres acotar a una fuente concreta.",
+        "REQUIREMENT": "Integración de Discourse en el canal"
+      },
+      "agendar_calendar": {
+        "LABEL": "Agendar en calendario",
+        "WHAT": "Habilita que el agente consulte huecos reales y agende. El motor se encarga del flujo completo.",
+        "WHEN": "Citas, visitas técnicas o demostraciones.",
+        "REQUIREMENT": "Calendarios conectados"
+      },
+      "crear_ticket": {
+        "LABEL": "Crear ticket",
+        "WHAT": "Levanta un ticket con los datos que el agente haya recabado. Acepta prioridad y tipo.",
+        "WHEN": "Soporte, garantías o cualquier caso que deba quedar registrado.",
+        "REQUIREMENT": "Tipos de caso creados"
+      },
+      "estado_ticket": {
+        "LABEL": "Estado del ticket",
+        "WHAT": "Responde en qué va su ticket cuando el cliente pregunta.",
+        "WHEN": "Junto con la anterior, para cerrar el ciclo.",
+        "REQUIREMENT": "Tipos de caso creados"
+      },
+      "adjunto": {
+        "LABEL": "Enviar un archivo",
+        "WHAT": "Envía un archivo del Agente IA nombrándolo entre llaves.",
+        "WHEN": "Catálogos, fichas técnicas o formatos.",
+        "REQUIREMENT": "Archivos cargados en el Agente IA"
+      }
+    }
+  }
+}

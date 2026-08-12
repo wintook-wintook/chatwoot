@@ -1,0 +1,132 @@
+{
+  "AI_AGENT_ASSISTANT": {
+    "TITLE": "AI Agent Assistant",
+    "DESCRIPTION": "What an AI Agent can do in this account, and what each capability needs.",
+    "REFRESH": "Refresh",
+    "LOADING": "Loading capabilities…",
+    "LOAD_ERROR": "Could not load capabilities.",
+    "INBOX_FILTER": "Resolve for channel",
+    "INBOX_ALL": "No channel (account only)",
+    "ENGINE": {
+      "TITLE": "Engine",
+      "MODEL": "Model on this channel",
+      "MODEL_HINT": "Comes from the “AI Model” selector of the channel's tracking_bot integration.",
+      "DEFAULT_HINT": "With no channel selected, the default model is shown.",
+      "BUDGET": "Output budget",
+      "BUDGET_HINT": "Maximum tokens per message type. The scheduled message is the tightest one.",
+      "PURPOSE": {
+        "scheduled": "Scheduled message",
+        "conversational": "Reply to customer",
+        "router": "Intent classifier",
+        "datetime": "Date and time parsing",
+        "authoring": "Prompt drafting"
+      }
+    },
+    "TABLE": {
+      "CAPABILITY": "Capability",
+      "KIND": "Kind",
+      "EFFECT": "Effect on your prompt",
+      "STATUS": "In this account"
+    },
+    "KIND": {
+      "search": "Search",
+      "source": "Source",
+      "template": "Template",
+      "flag": "Flag",
+      "attachment": "File"
+    },
+    "EFFECT": {
+      "SWALLOWS": "Discards your prompt",
+      "SWALLOWS_HINT": "With this directive the engine ignores the complementary prompt entirely: the agent loses its own voice and cannot send files.",
+      "RENDERS": "Your prompt is sent verbatim",
+      "RENDERS_HINT": "The prompt stops being instructions: it is interpolated and sent to the customer as-is, without going through the AI.",
+      "KEEPS": "Keeps your prompt",
+      "KEEPS_HINT": "Coexists with your instructions. This is the way to have both your own voice and knowledge.",
+      "NEUTRAL": "Does not affect it",
+      "NEUTRAL_HINT": "The engine reads it and strips it from the text before calling the model."
+    },
+    "STATUS": {
+      "AVAILABLE": "Available",
+      "UNAVAILABLE": "Not available",
+      "COUNT_ITEMS": "{count} items",
+      "NO_ITEMS": "No content loaded",
+      "NEEDS_TEMPLATE": "Resolved when opening an AI Agent"
+    },
+    "EXCLUSIVE_NOTE": {
+      "TITLE": "Only one source resolves each turn",
+      "BODY": "Search, source and template capabilities are mutually exclusive: if you use two, the lower order number wins and the other becomes dead text inside the prompt. Flags and files do add up at no cost."
+    },
+    "ORDER": "Order",
+    "SYNTAX": "Syntax",
+    "EXAMPLE": "Example",
+    "REQUIREMENT": "Requirement",
+    "CAPABILITIES": {
+      "consulta": {
+        "LABEL": "ERP query",
+        "WHAT": "Replaces the directive with the exact value from your system (Contpaq, SAE, Microsip). Deterministic: it does not go through the AI.",
+        "WHEN": "When you need an exact figure, such as a balance or a due date.",
+        "REQUIREMENT": "ERP connection enabled on the account"
+      },
+      "buscar_predefinidas": {
+        "LABEL": "Canned responses",
+        "WHAT": "Searches by similarity across the account's canned responses and replies with the closest one.",
+        "WHEN": "Short, frequent questions curated by your team.",
+        "REQUIREMENT": "Canned responses loaded"
+      },
+      "buscar_articulo": {
+        "LABEL": "Help Center articles",
+        "WHAT": "Searches by similarity across Help Center articles.",
+        "WHEN": "Long explanations you have already documented.",
+        "REQUIREMENT": "Articles loaded"
+      },
+      "buscar_foro": {
+        "LABEL": "Forum, by source",
+        "WHAT": "Searches live in a specific source of the Discourse forum.",
+        "WHEN": "You want to narrow the search to one manual or category.",
+        "REQUIREMENT": "An active knowledge source"
+      },
+      "doc": {
+        "LABEL": "Google document",
+        "WHAT": "Reads the document live. If someone edits it, the agent answers with the new version without touching anything.",
+        "WHEN": "Policies, terms or manuals that change over time.",
+        "REQUIREMENT": "Google enabled on the account"
+      },
+      "hoja": {
+        "LABEL": "Google spreadsheet",
+        "WHAT": "Reads the sheet live, with exact calculations.",
+        "WHEN": "Prices, stock or lists that change often.",
+        "REQUIREMENT": "Google enabled on the account"
+      },
+      "discourse": {
+        "LABEL": "Whole forum",
+        "WHAT": "Searches the entire Discourse forum configured on the channel.",
+        "WHEN": "You do not want to narrow it to a single source.",
+        "REQUIREMENT": "Discourse integration on the channel"
+      },
+      "agendar_calendar": {
+        "LABEL": "Book on calendar",
+        "WHAT": "Lets the agent check real availability and book. The engine handles the whole flow.",
+        "WHEN": "Appointments, site visits or demos.",
+        "REQUIREMENT": "Connected calendars"
+      },
+      "crear_ticket": {
+        "LABEL": "Create ticket",
+        "WHAT": "Opens a ticket with the data the agent collected. Accepts priority and type.",
+        "WHEN": "Support, warranties or any case that must be recorded.",
+        "REQUIREMENT": "Case types created"
+      },
+      "estado_ticket": {
+        "LABEL": "Ticket status",
+        "WHAT": "Tells the customer how their ticket is going when they ask.",
+        "WHEN": "Together with the previous one, to close the loop.",
+        "REQUIREMENT": "Case types created"
+      },
+      "adjunto": {
+        "LABEL": "Send a file",
+        "WHAT": "Sends a file from the AI Agent by naming it between braces.",
+        "WHEN": "Catalogs, spec sheets or forms.",
+        "REQUIREMENT": "Files uploaded to the AI Agent"
+      }
+    }
+  }
+}
