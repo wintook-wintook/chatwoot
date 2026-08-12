@@ -22,6 +22,11 @@ class AiAgentAssistantAPI extends ApiClient {
     return axios.post(`${this.url}/lint`, payload);
   }
 
+  // «Ver prompt»: ensambla lo que recibiría el modelo en las dos rutas.
+  previewPrompt(payload) {
+    return axios.post(`${this.url}/preview_prompt`, payload);
+  }
+
   getCapabilities({ inboxId, trackingTemplateId } = {}) {
     return axios.get(`${this.url}/capabilities`, {
       params: {

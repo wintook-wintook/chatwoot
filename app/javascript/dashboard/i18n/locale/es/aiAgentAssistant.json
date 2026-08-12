@@ -157,6 +157,24 @@
       "timezone_missing": "Sin zona horaria, se usará la del calendario de Google o la del canal. Fijarla evita sorpresas.",
       "objective_is_a_title": "El objetivo tiene {length} caracteres y admite hasta {max}. Es el único campo que siempre llega íntegro al modelo: aprovéchalo para las reglas que no deben perderse.",
       "sibling_versions": "Hay otros agentes que parecen versiones del mismo ({others}). Conviene iterar sobre uno solo en vez de acumular copias."
+    },
+    "SANDBOX": {
+      "OPEN": "Ver prompt",
+      "TITLE": "Lo que recibe el modelo",
+      "DESCRIPTION": "El prompt ensamblado tal y como lo recibiría el modelo. No se envía nada ni se crea ningún seguimiento.",
+      "ROUTE_SCHEDULED": "Mensaje programado",
+      "ROUTE_CONVERSATIONAL": "Respuesta al cliente",
+      "ATTEMPT": "Intento",
+      "LOADING": "Armando el prompt…",
+      "MODEL": "Modelo:",
+      "SIZE": "{chars} caracteres · ~{tokens} tokens de entrada",
+      "BUDGET": "Salida máxima: {tokens} tokens",
+      "SYSTEM": "SYSTEM — contexto permanente",
+      "USER": "USER — la petición concreta",
+      "CLOSE": "Cerrar",
+      "NOTE_PROMPT_DISCARDED": "Tu prompt complementario NO aparece aquí. Con una directiva de búsqueda el motor lo descarta entero: en esta ruta el agente no tiene tus instrucciones.",
+      "NOTE_CONTEXT_TRUNCATED": "El contexto está truncado a 800 caracteres: lo que sobra no llega al modelo.",
+      "NOTE_USES_WHATSAPP_TEMPLATE": "Este intento parte de una plantilla de WhatsApp; la IA solo la personaliza."
     }
   }
 }

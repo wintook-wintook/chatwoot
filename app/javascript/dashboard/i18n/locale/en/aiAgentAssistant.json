@@ -157,6 +157,24 @@
       "timezone_missing": "Without a timezone, the Google calendar's or the channel's will be used. Setting it avoids surprises.",
       "objective_is_a_title": "The objective has {length} characters and allows up to {max}. It is the only field that always reaches the model intact: use it for the rules that must not be lost.",
       "sibling_versions": "There are other agents that look like versions of this one ({others}). Better to iterate on a single one than to pile up copies."
+    },
+    "SANDBOX": {
+      "OPEN": "View prompt",
+      "TITLE": "What the model receives",
+      "DESCRIPTION": "The assembled prompt exactly as the model would receive it. Nothing is sent and no tracking is created.",
+      "ROUTE_SCHEDULED": "Scheduled message",
+      "ROUTE_CONVERSATIONAL": "Reply to customer",
+      "ATTEMPT": "Attempt",
+      "LOADING": "Assembling the prompt…",
+      "MODEL": "Model:",
+      "SIZE": "{chars} characters · ~{tokens} input tokens",
+      "BUDGET": "Max output: {tokens} tokens",
+      "SYSTEM": "SYSTEM — permanent context",
+      "USER": "USER — the concrete request",
+      "CLOSE": "Close",
+      "NOTE_PROMPT_DISCARDED": "Your complementary prompt is NOT here. With a search directive the engine discards it entirely: on this route the agent does not have your instructions.",
+      "NOTE_CONTEXT_TRUNCATED": "The context is truncated to 800 characters: the rest never reaches the model.",
+      "NOTE_USES_WHATSAPP_TEMPLATE": "This attempt starts from a WhatsApp template; the AI only personalises it."
     }
   }
 }

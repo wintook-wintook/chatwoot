@@ -20,6 +20,7 @@ import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 // proyecto@ai_agent_assistant: semáforo del linter
 import AiAgentAssistantAPI from 'dashboard/api/aiAgentAssistant';
 import LintBadges from 'dashboard/components/contactTrackings/assistant/LintBadges.vue';
+import SandboxDrawer from 'dashboard/components/contactTrackings/assistant/SandboxDrawer.vue';
 // proyecto@ai_agent_attachments
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 // @knowledge_sources: fuentes Discourse para la directiva @buscar_foro
@@ -37,7 +38,7 @@ const DIRECTIVE_GROUPS = [
 ];
 
 export default {
-  components: { KeywordActionsEditor, LintBadges },
+  components: { KeywordActionsEditor, LintBadges, SandboxDrawer },
 
   props: {
     templateData: {
@@ -56,6 +57,7 @@ export default {
       // proyecto@ai_agent_assistant
       lintFindings: [],
       isLinting: false,
+      showSandbox: false,
       form: {
         id: null,
         name: '',
@@ -1812,6 +1814,13 @@ export default {
           {{ $t('TRACKING_TEMPLATES.EDIT.CANCEL') }}
         </woot-button>
         <woot-button
+          variant="clear"
+          icon="code"
+          @click.prevent="showSandbox = true"
+        >
+          {{ $t('AI_AGENT_ASSISTANT.SANDBOX.OPEN') }}
+        </woot-button>
+        <woot-button
           :disabled="hasLintErrors"
           :title="hasLintErrors ? $t('AI_AGENT_ASSISTANT.LINT_BLOCKED') : ''"
           @click.prevent="onSubmit"
@@ -1819,6 +1828,14 @@ export default {
           {{ submitText }}
         </woot-button>
       </div>
+
+      <!-- proyecto@ai_agent_assistant: probador. Previsualiza el BORRADOR actual,
+           no lo último guardado, por eso recibe buildPayload(). -->
+      <SandboxDrawer
+        :show="showSandbox"
+        :payload="showSandbox ? buildPayload() : {}"
+        @close="showSandbox = false"
+      />
     </form>
 
     <!-- proyecto@bot_seguimiento_calendar: modal árbol de calendarios agendables -->
