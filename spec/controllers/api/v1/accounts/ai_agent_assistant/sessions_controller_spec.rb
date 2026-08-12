@@ -143,6 +143,75 @@ RSpec.describe 'AI Agent Assistant Sessions API', type: :request do
     end
   end
 
+  describe 'PATCH update — cambiar de modo' do
+    let(:session) do
+      account.ai_agent_assistant_sessions.create!(
+        user: agent, mode: 'interview', step: 'channel',
+        draft: { 'objective' => 'Confirmar el pago de la factura vencida.' },
+        messages: [{ 'role' => 'user', 'content' => 'quiero cobrar' },
+                   { 'role' => 'assistant', 'content' => '¿por qué canal?' }]
+      )
+    end
+
+    # El defecto que motivó esto: cambiar de pestaña tiraba la entrevista a la basura.
+    it 'conserva la conversación y el borrador' do
+      patch "#{base_url}/#{session.id}", params: { mode: 'audit' },
+                                         headers: agent.create_new_auth_token, as: :json
+
+      body = response.parsed_body
+      expect(body['mode']).to eq('audit')
+      expect(body['draft']['objective']).to eq('Confirmar el pago de la factura vencida.')
+      expect(body['messages'].pluck('content')).to include('quiero cobrar', '¿por qué canal?')
+    end
+
+    it 'deja una marca del cambio en el hilo, sin llamar al modelo' do
+      patch "#{base_url}/#{session.id}", params: { mode: 'tweak' },
+                                         headers: agent.create_new_auth_token, as: :json
+
+      marca = response.parsed_body['messages'].last
+      expect(marca['role']).to eq('system')
+      expect(marca['mode']).to eq('tweak')
+      expect(WebMock).not_to have_requested(:post, 'https://api.openai.com/v1/chat/completions')
+    end
+
+    it 'no pierde el paso de la entrevista al ir y volver' do
+      patch "#{base_url}/#{session.id}", params: { mode: 'audit' },
+                                         headers: agent.create_new_auth_token, as: :json
+      patch "#{base_url}/#{session.id}", params: { mode: 'interview' },
+                                         headers: agent.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['step']).to eq('channel')
+    end
+
+    it 'ignora un modo inventado' do
+      patch "#{base_url}/#{session.id}", params: { mode: 'telepatía' },
+                                         headers: agent.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['mode']).to eq('interview')
+    end
+
+    it 'no deja cambiar el modo de la sesión de otro agente' do
+      ajena = account.ai_agent_assistant_sessions.create!(user: otro, mode: 'interview')
+
+      patch "#{base_url}/#{ajena.id}", params: { mode: 'audit' },
+                                       headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  describe 'las marcas de modo no viajan al modelo' do
+    it 'el historial que recibe OpenAI solo lleva turnos de la conversación' do
+      session = account.ai_agent_assistant_sessions.create!(user: agent, mode: 'interview')
+      session.append_message('user', 'hola')
+      session.append_message('system', '', mode: 'audit')
+      session.append_message('assistant', 'dime')
+      session.save!
+
+      expect(session.history_for_model.pluck(:role)).to eq(%w[user assistant])
+    end
+  end
+
   describe 'GET index y DELETE' do
     it 'lista solo las sesiones del agente que pregunta' do
       mia = account.ai_agent_assistant_sessions.create!(user: agent, mode: 'interview')
@@ -151,6 +220,22 @@ RSpec.describe 'AI Agent Assistant Sessions API', type: :request do
       get base_url, headers: agent.create_new_auth_token, as: :json
 
       expect(response.parsed_body['sessions'].pluck('id')).to eq([mia.id])
+    end
+
+    # Es lo que permite retomar: el asistente del editor trabaja sobre un Agente IA
+    # concreto y el de la página sobre ninguno; no deben cruzarse.
+    it 'separa las sesiones por el Agente IA sobre el que trabajan' do
+      template = create(:tracking_template, account: account, name: 'Cobranza', objective: 'x' * 80)
+      del_editor = account.ai_agent_assistant_sessions.create!(user: agent, mode: 'audit',
+                                                               tracking_template: template)
+      suelta = account.ai_agent_assistant_sessions.create!(user: agent, mode: 'interview')
+
+      get base_url, params: { tracking_template_id: template.id },
+                    headers: agent.create_new_auth_token, as: :json
+      expect(response.parsed_body['sessions'].pluck('id')).to eq([del_editor.id])
+
+      get base_url, headers: agent.create_new_auth_token, as: :json
+      expect(response.parsed_body['sessions'].pluck('id')).to eq([suelta.id])
     end
 
     it 'descarta una sesión' do

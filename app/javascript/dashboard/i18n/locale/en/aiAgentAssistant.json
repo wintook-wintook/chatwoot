@@ -257,7 +257,9 @@
       "ERROR_OPENAI_NOT_CONFIGURED": "This account has no OpenAI integration configured, so the assistant cannot answer. The linter and “View prompt” work without it.",
       "ERROR_MODEL_UNAVAILABLE": "The model did not return a usable answer. Try again.",
       "ERROR_SESSION_FAILED": "The conversation could not be opened.",
-      "ERROR_TURN_FAILED": "The message could not be sent."
+      "ERROR_TURN_FAILED": "The message could not be sent.",
+      "NEW": "New",
+      "MODE_SWITCHED": "— switched to {mode}; the draft and everything said are still here —"
     },
     "PATTERNS": {
       "TITLE": "Pattern library",

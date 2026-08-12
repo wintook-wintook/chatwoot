@@ -25,6 +25,23 @@ class AiAgentAssistantSessionsAPI extends ApiClient {
     });
   }
 
+  // Retomar en vez de empezar de cero: el borrador es el producto y perderlo al
+  // cerrar el cajón o al cambiar de pestaña era el defecto.
+  list(trackingTemplateId) {
+    return axios.get(this.url, {
+      params: { tracking_template_id: trackingTemplateId || undefined },
+    });
+  }
+
+  get(id) {
+    return axios.get(`${this.url}/${id}`);
+  }
+
+  // Cambia el encuadre SIN tocar la conversación ni el borrador.
+  setMode(id, mode) {
+    return axios.patch(`${this.url}/${id}`, { mode });
+  }
+
   send(id, message) {
     return axios.post(`${this.url}/${id}/messages`, { message });
   }

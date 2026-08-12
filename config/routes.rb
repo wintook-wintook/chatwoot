@@ -113,7 +113,7 @@ Rails.application.routes.draw do
             post :compare, to: '/api/v1/accounts/ai_agent_assistant#compare'
             post :preview_prompt, to: '/api/v1/accounts/ai_agent_assistant#preview_prompt'
             # F5: el chat. Una sesión = una conversación con su borrador.
-            resources :sessions, only: [:index, :show, :create, :destroy] do
+            resources :sessions, only: [:index, :show, :create, :update, :destroy] do
               member do
                 post :messages
                 post :apply

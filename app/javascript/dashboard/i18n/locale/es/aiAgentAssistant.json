@@ -257,7 +257,9 @@
       "ERROR_OPENAI_NOT_CONFIGURED": "Esta cuenta no tiene configurada la integración de OpenAI, así que el asistente no puede responder. El linter y «Ver prompt» sí funcionan sin ella.",
       "ERROR_MODEL_UNAVAILABLE": "El modelo no devolvió una respuesta utilizable. Vuelve a intentarlo.",
       "ERROR_SESSION_FAILED": "No se pudo abrir la conversación.",
-      "ERROR_TURN_FAILED": "No se pudo enviar el mensaje."
+      "ERROR_TURN_FAILED": "No se pudo enviar el mensaje.",
+      "NEW": "Nueva",
+      "MODE_SWITCHED": "— cambiaste a {mode}; el borrador y lo hablado siguen aquí —"
     },
     "PATTERNS": {
       "TITLE": "Biblioteca de patrones",

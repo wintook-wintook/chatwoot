@@ -44,6 +44,12 @@ export default {
     modes() {
       return ['prompt', 'live'];
     },
+    modeIndex() {
+      return Math.max(this.modes.indexOf(this.mode), 0);
+    },
+    routeIndex() {
+      return Math.max(this.routes.indexOf(this.activeRoute), 0);
+    },
     routes() {
       return ['scheduled', 'conversational'];
     },
@@ -74,6 +80,12 @@ export default {
     },
   },
   methods: {
+    onModeChange(index) {
+      this.mode = this.modes[index] || 'prompt';
+    },
+    onRouteChange(index) {
+      this.activeRoute = this.routes[index] || 'scheduled';
+    },
     async fetchPreview() {
       this.isLoading = true;
       try {
@@ -108,17 +120,18 @@ export default {
       </div>
 
       <!-- Ver prompt (F3) · Probar (F7) -->
-      <div class="flex items-center gap-2 px-8 mt-4">
-        <woot-button
+      <woot-tabs
+        class="px-8 mt-4 [&_.tabs]:p-0 [&_.tabs]:mb-0"
+        :index="modeIndex"
+        @change="onModeChange"
+      >
+        <woot-tabs-item
           v-for="option in modes"
           :key="option"
-          size="small"
-          :variant="mode === option ? 'smooth' : 'clear'"
-          @click.prevent="mode = option"
-        >
-          {{ $t(`AI_AGENT_ASSISTANT.SANDBOX.MODE_${option.toUpperCase()}`) }}
-        </woot-button>
-      </div>
+          :name="$t(`AI_AGENT_ASSISTANT.SANDBOX.MODE_${option.toUpperCase()}`)"
+          :show-badge="false"
+        />
+      </woot-tabs>
 
       <EvaluationPanel
         v-if="mode === 'live'"
@@ -129,15 +142,20 @@ export default {
 
       <template v-else>
         <div class="flex items-center gap-2 px-8 mt-4">
-          <woot-button
-            v-for="route in routes"
-            :key="route"
-            size="small"
-            :variant="activeRoute === route ? 'smooth' : 'clear'"
-            @click.prevent="activeRoute = route"
+          <woot-tabs
+            class="flex-1 [&_.tabs]:p-0 [&_.tabs]:mb-0"
+            :index="routeIndex"
+            @change="onRouteChange"
           >
-            {{ $t(`AI_AGENT_ASSISTANT.SANDBOX.ROUTE_${route.toUpperCase()}`) }}
-          </woot-button>
+            <woot-tabs-item
+              v-for="route in routes"
+              :key="route"
+              :name="
+                $t(`AI_AGENT_ASSISTANT.SANDBOX.ROUTE_${route.toUpperCase()}`)
+              "
+              :show-badge="false"
+            />
+          </woot-tabs>
           <div
             v-if="activeRoute === 'scheduled'"
             class="flex items-center gap-1 ml-auto"

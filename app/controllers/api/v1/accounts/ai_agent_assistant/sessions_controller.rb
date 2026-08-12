@@ -3,7 +3,8 @@
 # ================================================================================
 # Controlador: AiAgentAssistant::SessionsController
 # Descripción: El chat asistente. Una sesión es una conversación con su borrador.
-# Acciones: index, show, create (abre y da el primer turno), messages (un turno),
+# Acciones: index, show, create (abre y da el primer turno), update (cambia de modo
+#           SIN perder la conversación ni el borrador), messages (un turno),
 #           apply (mueve al borrador SOLO los campos aceptados), destroy
 #
 # El asistente nunca escribe en el Agente IA: el borrador vive en la sesión y el
@@ -11,11 +12,14 @@
 # ================================================================================
 
 class Api::V1::Accounts::AiAgentAssistant::SessionsController < Api::V1::Accounts::BaseController
-  before_action :fetch_session, only: [:show, :messages, :apply, :destroy]
+  before_action :fetch_session, only: [:show, :update, :messages, :apply, :destroy]
 
   def index
-    sessions = Current.account.ai_agent_assistant_sessions.where(user: Current.user).recent.limit(20)
-    render json: { sessions: sessions.map { |s| summary_json(s) } }
+    sessions = Current.account.ai_agent_assistant_sessions.where(user: Current.user).recent
+    # El asistente del editor trabaja sobre un Agente IA concreto; el de la página, sobre
+    # ninguno. Filtrar por eso es lo que permite retomar la conversación correcta.
+    sessions = sessions.where(tracking_template_id: params[:tracking_template_id].presence)
+    render json: { sessions: sessions.limit(20).map { |s| summary_json(s) } }
   end
 
   def show
@@ -35,6 +39,18 @@ class Api::V1::Accounts::AiAgentAssistant::SessionsController < Api::V1::Account
     @session.save!
 
     render json: session_json(@session, run_turn), status: :created
+  end
+
+  # Cambiar de modo NO abre otra conversación: el borrador es el mismo agente y el
+  # hilo anterior es contexto útil —auditar lo que acabas de armar en la entrevista
+  # es justo el caso de uso—. Solo cambia el encuadre del siguiente turno.
+  def update
+    @session.mode = requested_mode
+    # Marca estructurada, no texto: la etiqueta la pone el frontend desde su i18n.
+    @session.append_message('system', '', mode: @session.mode)
+    @session.save!
+
+    render json: session_json(@session)
   end
 
   def messages

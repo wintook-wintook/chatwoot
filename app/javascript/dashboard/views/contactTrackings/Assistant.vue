@@ -30,6 +30,9 @@ export default {
     tabs() {
       return ['chat', 'catalog'];
     },
+    tabIndex() {
+      return Math.max(this.tabs.indexOf(this.activeTab), 0);
+    },
     inboxes() {
       return this.$store.getters['inboxes/getInboxes'] || [];
     },
@@ -156,6 +159,9 @@ export default {
     this.fetchCapabilities();
   },
   methods: {
+    onTabChange(index) {
+      this.activeTab = this.tabs[index] || 'chat';
+    },
     // El chat deja el Agente IA creado; el sitio donde se sigue trabajando es su
     // formulario de siempre.
     onAgentCreated() {
@@ -272,17 +278,18 @@ export default {
     </div>
 
     <!-- Pestañas: el asistente (chat) y el catálogo de referencia -->
-    <div class="flex items-center gap-2 mb-4 shrink-0">
-      <woot-button
+    <woot-tabs
+      class="mb-4 shrink-0 [&_.tabs]:p-0 [&_.tabs]:mb-0"
+      :index="tabIndex"
+      @change="onTabChange"
+    >
+      <woot-tabs-item
         v-for="tab in tabs"
         :key="tab"
-        size="small"
-        :variant="activeTab === tab ? 'smooth' : 'clear'"
-        @click.prevent="activeTab = tab"
-      >
-        {{ $t(`AI_AGENT_ASSISTANT.TAB_${tab.toUpperCase()}`) }}
-      </woot-button>
-    </div>
+        :name="$t(`AI_AGENT_ASSISTANT.TAB_${tab.toUpperCase()}`)"
+        :show-badge="false"
+      />
+    </woot-tabs>
 
     <AssistantPanel
       v-if="activeTab === 'chat'"

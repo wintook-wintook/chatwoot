@@ -62,6 +62,9 @@ export default {
     modes() {
       return ['interview', 'audit', 'tweak'];
     },
+    modeIndex() {
+      return Math.max(this.modes.indexOf(this.mode), 0);
+    },
     stepIndex() {
       return this.steps.findIndex(s => s.key === this.step);
     },
@@ -79,9 +82,30 @@ export default {
     },
   },
   mounted() {
-    this.openSession();
+    this.resumeOrOpen();
   },
   methods: {
+    // Cerrar el cajón ya no tira el trabajo: si hay una conversación de este mismo
+    // Agente IA, se retoma con su borrador intacto.
+    async resumeOrOpen() {
+      try {
+        const { data } = await AiAgentAssistantSessionsAPI.list(
+          this.trackingTemplateId
+        );
+        const last = (data.sessions || [])[0];
+        if (last) {
+          const { data: session } = await AiAgentAssistantSessionsAPI.get(
+            last.id
+          );
+          this.absorb(session);
+          this.mode = session.mode;
+          return;
+        }
+      } catch (e) {
+        // Sin historial que retomar se abre una nueva, que es el caso normal.
+      }
+      await this.openSession();
+    },
     async openSession() {
       this.isSending = true;
       this.error = null;
@@ -127,12 +151,32 @@ export default {
         useAlert(this.$t('AI_AGENT_ASSISTANT.CHAT.APPLY_ERROR'));
       }
     },
-    // Cambiar de modo abre una conversación nueva: el guion y el encuadre son otros.
-    async onModeChange(mode) {
-      if (mode === this.mode) return;
+    // Cambiar de modo NO abre otra conversación. El borrador es el mismo agente y el
+    // hilo anterior es contexto: auditar lo que acabas de armar en la entrevista es
+    // justo el caso de uso. Solo cambia el encuadre del siguiente turno.
+    async onModeChange(index) {
+      const mode = this.modes[index];
+      if (!mode || mode === this.mode) return;
       this.mode = mode;
+      if (!this.sessionId) return;
+      try {
+        const { data } = await AiAgentAssistantSessionsAPI.setMode(
+          this.sessionId,
+          mode
+        );
+        this.absorb(data);
+      } catch (e) {
+        this.error = 'turn_failed';
+      }
+    },
+    // Empezar de cero, cuando de verdad se quiere: es explícito, no un efecto
+    // secundario de tocar una pestaña.
+    async onNewConversation() {
+      this.sessionId = null;
       this.messages = [];
       this.proposals = [];
+      this.draft = {};
+      this.findings = [];
       await this.openSession();
     },
     absorb(data) {
@@ -189,26 +233,34 @@ export default {
     fieldLabel(field) {
       return this.$t(`AI_AGENT_ASSISTANT.VERSIONS.FIELD.${field}`);
     },
+    modeLabel(mode) {
+      return this.$t(
+        `AI_AGENT_ASSISTANT.CHAT.MODE_${(mode || '').toUpperCase()}`
+      );
+    },
   },
 };
 </script>
 
 <template>
   <div class="flex flex-col flex-1 min-h-0">
-    <!-- Modos -->
+    <!-- Modos. Cambiar de pestaña conserva la conversación y el borrador. -->
     <div class="flex items-center gap-2 pb-3">
-      <woot-button
-        v-for="option in modes"
-        :key="option"
-        size="small"
-        :variant="mode === option ? 'smooth' : 'clear'"
-        @click.prevent="onModeChange(option)"
+      <woot-tabs
+        class="flex-1 [&_.tabs]:p-0 [&_.tabs]:mb-0"
+        :index="modeIndex"
+        @change="onModeChange"
       >
-        {{ $t(`AI_AGENT_ASSISTANT.CHAT.MODE_${option.toUpperCase()}`) }}
-      </woot-button>
+        <woot-tabs-item
+          v-for="option in modes"
+          :key="option"
+          :name="$t(`AI_AGENT_ASSISTANT.CHAT.MODE_${option.toUpperCase()}`)"
+          :show-badge="false"
+        />
+      </woot-tabs>
       <span
         v-if="showsProgress"
-        class="ml-auto text-xs text-slate-500 dark:text-slate-400"
+        class="text-xs whitespace-nowrap text-slate-500 dark:text-slate-400"
       >
         {{
           $t('AI_AGENT_ASSISTANT.CHAT.PROGRESS', {
@@ -217,28 +269,48 @@ export default {
           })
         }}
       </span>
+      <woot-button
+        size="tiny"
+        variant="clear"
+        icon="add"
+        @click.prevent="onNewConversation"
+      >
+        {{ $t('AI_AGENT_ASSISTANT.CHAT.NEW') }}
+      </woot-button>
     </div>
 
     <div class="flex flex-1 min-h-0 gap-4">
       <!-- Conversación -->
       <div class="flex flex-col flex-1 min-w-0">
         <div class="flex-1 min-h-0 pr-2 overflow-y-auto">
-          <div
-            v-for="(message, index) in messages"
-            :key="index"
-            class="mb-3"
-            :class="message.role === 'user' ? 'text-right' : 'text-left'"
-          >
+          <div v-for="(message, index) in messages" :key="index">
+            <!-- Marca de cambio de encuadre: el hilo sigue, no se corta -->
             <p
-              class="inline-block max-w-[85%] px-3 py-2 m-0 text-sm text-left whitespace-pre-wrap rounded-lg"
-              :class="
-                message.role === 'user'
-                  ? 'bg-woot-50 text-slate-800 dark:bg-woot-800/40 dark:text-slate-100'
-                  : 'bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
-              "
+              v-if="message.role === 'system'"
+              class="my-3 text-xs text-center text-slate-400 dark:text-slate-500"
             >
-              {{ message.content }}
+              {{
+                $t('AI_AGENT_ASSISTANT.CHAT.MODE_SWITCHED', {
+                  mode: modeLabel(message.mode),
+                })
+              }}
             </p>
+            <div
+              v-else
+              class="mb-3"
+              :class="message.role === 'user' ? 'text-right' : 'text-left'"
+            >
+              <p
+                class="inline-block max-w-[85%] px-3 py-2 m-0 text-sm text-left whitespace-pre-wrap rounded-lg"
+                :class="
+                  message.role === 'user'
+                    ? 'bg-woot-50 text-slate-800 dark:bg-woot-800/40 dark:text-slate-100'
+                    : 'bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                "
+              >
+                {{ message.content }}
+              </p>
+            </div>
           </div>
 
           <p

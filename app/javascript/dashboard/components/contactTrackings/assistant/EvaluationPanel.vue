@@ -49,6 +49,9 @@ export default {
     tabs() {
       return ['live', 'auto', 'replay', 'ab'];
     },
+    tabIndex() {
+      return Math.max(this.tabs.indexOf(this.tab), 0);
+    },
     personas() {
       return ['interested', 'skeptical', 'annoyed', 'confused'];
     },
@@ -60,6 +63,10 @@ export default {
     },
   },
   methods: {
+    // Cambiar de pestaña no borra lo ya corrido: cada prueba costó tokens.
+    onTabChange(index) {
+      this.tab = this.tabs[index] || 'live';
+    },
     body(extra = {}) {
       return { ...this.payload, ...extra };
     },
@@ -137,15 +144,18 @@ export default {
 <template>
   <div class="flex flex-col flex-1 min-h-0">
     <div class="flex items-center gap-2 pb-3">
-      <woot-button
-        v-for="option in tabs"
-        :key="option"
-        size="small"
-        :variant="tab === option ? 'smooth' : 'clear'"
-        @click.prevent="tab = option"
+      <woot-tabs
+        class="flex-1 [&_.tabs]:p-0 [&_.tabs]:mb-0"
+        :index="tabIndex"
+        @change="onTabChange"
       >
-        {{ $t(`AI_AGENT_ASSISTANT.EVAL.TAB_${option.toUpperCase()}`) }}
-      </woot-button>
+        <woot-tabs-item
+          v-for="option in tabs"
+          :key="option"
+          :name="$t(`AI_AGENT_ASSISTANT.EVAL.TAB_${option.toUpperCase()}`)"
+          :show-badge="false"
+        />
+      </woot-tabs>
       <woot-button
         size="tiny"
         variant="clear"

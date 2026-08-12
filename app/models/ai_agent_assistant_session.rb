@@ -59,9 +59,13 @@ class AiAgentAssistantSession < ApplicationRecord
                                   'at' => Time.current.iso8601 }.merge(extra.stringify_keys)]
   end
 
-  # Los últimos turnos, en el formato que espera la API de chat.
+  # Los últimos turnos, en el formato que espera la API de chat. Las marcas de cambio
+  # de modo se quedan fuera: son para la persona, y el encuadre nuevo ya viaja en el
+  # system prompt, que se arma de cero en cada turno.
   def history_for_model
-    messages.last(HISTORY_LIMIT).map { |m| { role: m['role'], content: m['content'] } }
+    messages.reject { |m| m['role'] == 'system' }
+            .last(HISTORY_LIMIT)
+            .map { |m| { role: m['role'], content: m['content'] } }
   end
 
   # Mueve al borrador solo los campos que el usuario aceptó. Devuelve los aplicados.
