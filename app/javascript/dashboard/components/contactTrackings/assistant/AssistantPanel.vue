@@ -396,6 +396,16 @@ export default {
         </option>
       </select>
 
+      <!-- El nombre es el otro requisito para crear, y hasta ahora solo podía
+           llegar si el asistente lo proponía en su paso: no había dónde escribirlo. -->
+      <input
+        v-model="draftName"
+        type="text"
+        class="h-8 py-0 mb-0 text-sm w-44"
+        :placeholder="$t('AI_AGENT_ASSISTANT.CHAT.NAME_PLACEHOLDER')"
+        @change="onNameChange"
+      />
+
       <span
         v-if="saveBlockedReason"
         class="text-xs text-amber-700 dark:text-amber-300"
