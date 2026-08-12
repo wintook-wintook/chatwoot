@@ -84,6 +84,9 @@ export default {
       showVersions: false, // F4: historial en sitio
       showAssistant: false, // F5: el chat, aquí en modo auditar
       showPatterns: false, // F6: biblioteca de bloques
+      showDuplicate: false, // ramificar: otro canal o un caso vecino
+      duplicateName: '',
+      isDuplicating: false,
       versionNote: '',
       form: {
         id: null,
@@ -592,6 +595,32 @@ export default {
         }
       });
       this.runLint();
+    },
+    openDuplicate() {
+      this.duplicateName = `${this.form.name} (copia)`;
+      this.showDuplicate = true;
+    },
+    // Ramificar copia lo GUARDADO, no lo que hay en pantalla: si hubiera cambios
+    // sin guardar, una copia silenciosa de un borrador a medias sería peor que no
+    // ofrecerlo. Por eso el aviso, y por eso no se guarda nada del original aquí.
+    async onDuplicate() {
+      this.isDuplicating = true;
+      try {
+        const { data } = await TrackingTemplatesAPI.duplicate(
+          this.form.id,
+          this.duplicateName.trim()
+        );
+        this.showDuplicate = false;
+        useAlert(this.$t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATED'));
+        this.$router.push({
+          name: 'tracking_templates_list',
+          query: { agent: data.id },
+        });
+      } catch (error) {
+        useAlert(this.$t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE_ERROR'));
+      } finally {
+        this.isDuplicating = false;
+      }
     },
     // F4: tras restaurar, lo guardado ya no es lo que muestra el formulario.
     onVersionRestored() {
@@ -1803,6 +1832,15 @@ export default {
         >
           {{ $t('AI_AGENT_ASSISTANT.VERSIONS.OPEN') }}
         </woot-button>
+        <!-- Ramificar, no versionar: para mejorar ESTE agente está el historial. -->
+        <woot-button
+          v-if="!isCreateMode"
+          variant="clear"
+          icon="copy"
+          @click.prevent="openDuplicate"
+        >
+          {{ $t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE') }}
+        </woot-button>
         <woot-button
           variant="clear"
           icon="code"
@@ -1862,6 +1900,44 @@ export default {
             :initial-prompt="form.complementary_prompt"
             @applyDraft="onAssistantDraft"
           />
+        </div>
+      </woot-modal>
+
+      <!-- Ramificar. El nombre se pide aquí porque es único por cuenta y porque es
+           la única forma de que la copia se distinga del original en la lista. -->
+      <woot-modal
+        :show="showDuplicate"
+        :on-close="() => (showDuplicate = false)"
+        size="small"
+      >
+        <woot-modal-header
+          :header-title="$t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE_TITLE')"
+          :header-content="$t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE_HINT')"
+        />
+        <div class="flex flex-col gap-4 px-8 pb-6">
+          <label class="mb-0">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              {{ $t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE_NAME') }}
+            </span>
+            <input v-model="duplicateName" type="text" class="mt-1 mb-0" />
+          </label>
+          <p class="m-0 text-xs text-slate-500 dark:text-slate-400">
+            {{ $t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE_SAVED_ONLY') }}
+          </p>
+          <div class="flex items-center gap-2">
+            <woot-button
+              :is-loading="isDuplicating"
+              :is-disabled="!duplicateName.trim()"
+              @click.prevent="onDuplicate"
+            >
+              {{ $t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE_CONFIRM') }}
+            </woot-button>
+            <woot-button variant="clear" @click.prevent="showDuplicate = false">
+              {{ $t('TRACKING_TEMPLATES.EDIT.CANCEL') }}
+            </woot-button>
+          </div>
         </div>
       </woot-modal>
 
