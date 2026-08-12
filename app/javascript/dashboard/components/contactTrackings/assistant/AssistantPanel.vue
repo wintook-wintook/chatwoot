@@ -43,8 +43,14 @@ export default {
       type: Boolean,
       default: false,
     },
+    // Se acaba de soltar un agente: abrir conversación nueva en vez de retomar la
+    // última aparcada, que es lo contrario de lo que se pidió al pulsar «nuevo».
+    startFresh: {
+      type: Boolean,
+      default: false,
+    },
   },
-  emits: ['applyDraft', 'created'],
+  emits: ['applyDraft', 'created', 'newAgent'],
   data() {
     return {
       mode: this.initialMode,
@@ -214,6 +220,10 @@ export default {
     // este mismo Agente IA, con su borrador intacto.
     async resumeOrOpen() {
       await this.loadSessions();
+      if (this.startFresh) {
+        await this.openSession();
+        return;
+      }
       const last = this.sessions[0];
       if (last) {
         this.sessionId = last.id;
@@ -321,6 +331,14 @@ export default {
     // Empezar de cero, cuando de verdad se quiere: es explícito, no un efecto
     // secundario de tocar una pestaña.
     async onNewConversation() {
+      // Con un agente detrás, «nuevo» significa soltarlo: si no, la conversación
+      // nueva seguiría guardando VERSIONES de ese agente en vez de crear otro.
+      // Lo suelta quien es dueño de la ruta; al hacerlo este panel se rehace
+      // entero, así que aquí no hay nada más que hacer.
+      if (this.trackingTemplateId) {
+        this.$emit('newAgent');
+        return;
+      }
       this.sessionId = null;
       this.messages = [];
       this.proposals = [];

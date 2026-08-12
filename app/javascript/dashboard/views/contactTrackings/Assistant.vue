@@ -25,6 +25,9 @@ export default {
       engine: null,
       isLoading: false,
       selectedInboxId: '',
+      // Soltar el agente es empezar de cero: sin esto el panel, al rehacerse,
+      // retomaría el último borrador aparcado, que es lo contrario de «nuevo».
+      forceNewSession: false,
     };
   },
   computed: {
@@ -178,6 +181,13 @@ export default {
       ];
     },
   },
+  watch: {
+    // Volver a entrar a un agente sí debe retomar SU conversación: la marca de
+    // «empezar de cero» es de un solo uso, la de haber soltado el anterior.
+    editedTemplateId(id) {
+      if (id) this.forceNewSession = false;
+    },
+  },
   mounted() {
     this.$store.dispatch('inboxes/get');
     // Para poder decir el NOMBRE del agente sobre el que se trabaja, no su id.
@@ -197,8 +207,10 @@ export default {
       });
     },
     // Soltar el agente sin salir de la página: el asistente vuelve a ser el de armar
-    // uno de cero.
+    // uno de cero, con conversación nueva. Quitar el `?agent=` cambia la `key` del
+    // panel, que se rehace entero: es lo que le hace olvidar el agente.
     onLeaveTemplate() {
+      this.forceNewSession = true;
       this.$router.replace({ query: {} }).catch(() => {});
     },
     async fetchCapabilities() {
@@ -410,7 +422,9 @@ export default {
       class="flex-1 min-h-0"
       :tracking-template-id="editedTemplateId"
       :initial-mode="editedTemplateId ? 'audit' : 'interview'"
+      :start-fresh="forceNewSession"
       @created="onAgentCreated"
+      @newAgent="onLeaveTemplate"
     />
 
     <!-- Patrones, en modo consulta: aquí no hay prompt donde insertar, se viene a
