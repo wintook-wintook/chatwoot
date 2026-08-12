@@ -409,7 +409,7 @@ export default {
           </div>
         </div>
 
-        <div class="pt-3">
+        <div class="relative pt-3">
           <!-- El estado desde el que hablas. Cambiarlo no corta la conversación. -->
           <div class="flex flex-wrap items-center gap-2 mb-2">
             <label
