@@ -27,6 +27,30 @@ class AiAgentAssistantAPI extends ApiClient {
     return axios.post(`${this.url}/preview_prompt`, payload);
   }
 
+  // ── F7 · Evaluación ──────────────────────────────────────────────────────────
+  // Todas ejecutan los motores reales con el envío desconectado: nada se persiste.
+
+  // Un turno en vivo. Con `message`, la respuesta del agente y la ruta del router;
+  // sin él, el mensaje inicial del intento.
+  simulate(payload) {
+    return axios.post(`${this.url}/simulate`, payload);
+  }
+
+  // Un segundo modelo hace de cliente y conversa solo. Detecta bucles.
+  autoConversation(payload) {
+    return axios.post(`${this.url}/auto_conversation`, payload);
+  }
+
+  // Contra mensajes reales de conversaciones cerradas, con la respuesta humana al lado.
+  replay(payload) {
+    return axios.post(`${this.url}/replay`, payload);
+  }
+
+  // A/B: el mismo mensaje contra dos versiones del agente.
+  compare(payload) {
+    return axios.post(`${this.url}/compare`, payload);
+  }
+
   // F6: la biblioteca de bloques, resuelta contra la cuenta Y contra el prompt en
   // curso — de ahí que el prompt viaje en la petición.
   patterns({ complementaryPrompt, inboxId, trackingTemplateId } = {}) {

@@ -3,16 +3,21 @@
 // proyecto@ai_agent_assistant - F3
 // ================================================================================
 // Componente: SandboxDrawer
-// Descripción: El probador. En F3 muestra «Ver prompt»: el system prompt EXACTO
-//              que recibiría el modelo en las dos rutas, con su modelo, su tope de
-//              tokens y los avisos que solo se entienden viendo el texto armado.
+// Descripción: El probador, con dos mitades.
+//   · «Ver prompt» (F3) — el system prompt EXACTO que recibiría el modelo en las
+//     dos rutas, con su modelo, su tope y los avisos que solo se entienden viendo
+//     el texto armado. No llama a nadie: lo ensambla el mismo PromptBuilder que
+//     usa el motor.
+//   · «Probar» (F7) — los motores de verdad con el envío desconectado: turno en
+//     vivo, auto-conversación, replay sobre conversaciones reales y A/B.
 //
-// No envía nada ni crea seguimientos: el backend ensambla con el mismo
-// PromptBuilder que usa el motor y devuelve el texto.
+// Nada de esto crea seguimientos, mensajes, citas ni tickets.
 // ================================================================================
 import AiAgentAssistantAPI from 'dashboard/api/aiAgentAssistant';
+import EvaluationPanel from './EvaluationPanel.vue';
 
 export default {
+  components: { EvaluationPanel },
   props: {
     show: {
       type: Boolean,
@@ -32,9 +37,13 @@ export default {
       isLoading: false,
       attempt: 1,
       activeRoute: 'scheduled',
+      mode: 'prompt', // prompt | live
     };
   },
   computed: {
+    modes() {
+      return ['prompt', 'live'];
+    },
     routes() {
       return ['scheduled', 'conversational'];
     },
@@ -54,10 +63,14 @@ export default {
   },
   watch: {
     show(value) {
-      if (value) this.fetchPreview();
+      if (value && this.mode === 'prompt') this.fetchPreview();
+    },
+    // «Probar» gasta tokens de verdad: no se dispara al abrir, solo al pulsar.
+    mode(value) {
+      if (value === 'prompt') this.fetchPreview();
     },
     attempt() {
-      this.fetchPreview();
+      if (this.mode === 'prompt') this.fetchPreview();
     },
   },
   methods: {
@@ -94,103 +107,125 @@ export default {
         </p>
       </div>
 
+      <!-- Ver prompt (F3) · Probar (F7) -->
       <div class="flex items-center gap-2 px-8 mt-4">
         <woot-button
-          v-for="route in routes"
-          :key="route"
+          v-for="option in modes"
+          :key="option"
           size="small"
-          :variant="activeRoute === route ? 'smooth' : 'clear'"
-          @click.prevent="activeRoute = route"
+          :variant="mode === option ? 'smooth' : 'clear'"
+          @click.prevent="mode = option"
         >
-          {{ $t(`AI_AGENT_ASSISTANT.SANDBOX.ROUTE_${route.toUpperCase()}`) }}
+          {{ $t(`AI_AGENT_ASSISTANT.SANDBOX.MODE_${option.toUpperCase()}`) }}
         </woot-button>
-        <div
-          v-if="activeRoute === 'scheduled'"
-          class="flex items-center gap-1 ml-auto"
-        >
-          <label class="mb-0 text-xs text-slate-500 dark:text-slate-400">
-            {{ $t('AI_AGENT_ASSISTANT.SANDBOX.ATTEMPT') }}
-          </label>
-          <select v-model.number="attempt" class="h-8 py-0 mb-0 text-sm w-16">
-            <option v-for="n in 3" :key="n" :value="n">{{ n }}</option>
-          </select>
+      </div>
+
+      <EvaluationPanel
+        v-if="mode === 'live'"
+        :key="show"
+        class="px-8 pb-4 mt-4"
+        :payload="payload"
+      />
+
+      <template v-else>
+        <div class="flex items-center gap-2 px-8 mt-4">
+          <woot-button
+            v-for="route in routes"
+            :key="route"
+            size="small"
+            :variant="activeRoute === route ? 'smooth' : 'clear'"
+            @click.prevent="activeRoute = route"
+          >
+            {{ $t(`AI_AGENT_ASSISTANT.SANDBOX.ROUTE_${route.toUpperCase()}`) }}
+          </woot-button>
+          <div
+            v-if="activeRoute === 'scheduled'"
+            class="flex items-center gap-1 ml-auto"
+          >
+            <label class="mb-0 text-xs text-slate-500 dark:text-slate-400">
+              {{ $t('AI_AGENT_ASSISTANT.SANDBOX.ATTEMPT') }}
+            </label>
+            <select v-model.number="attempt" class="h-8 py-0 mb-0 text-sm w-16">
+              <option v-for="n in 3" :key="n" :value="n">{{ n }}</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-      <div v-if="isLoading" class="px-8 py-8 text-sm text-slate-500">
-        {{ $t('AI_AGENT_ASSISTANT.SANDBOX.LOADING') }}
-      </div>
+        <div v-if="isLoading" class="px-8 py-8 text-sm text-slate-500">
+          {{ $t('AI_AGENT_ASSISTANT.SANDBOX.LOADING') }}
+        </div>
 
-      <div
-        v-else-if="section"
-        class="flex-1 min-h-0 px-8 pb-6 mt-4 overflow-y-auto"
-      >
-        <!-- Presupuesto: el desajuste entre lo que escribes y lo que cabe -->
         <div
-          class="flex flex-wrap items-center gap-4 px-4 py-3 mb-4 text-xs border rounded-lg"
-          :class="
-            isOverBudget
-              ? 'bg-red-50 border-red-200 dark:bg-red-800/20 dark:border-red-800'
-              : 'bg-slate-25 border-slate-75 dark:bg-slate-800 dark:border-slate-700'
-          "
+          v-else-if="section"
+          class="flex-1 min-h-0 px-8 pb-6 mt-4 overflow-y-auto"
         >
-          <span class="text-slate-600 dark:text-slate-300">
-            {{ $t('AI_AGENT_ASSISTANT.SANDBOX.MODEL') }}
-            <code class="font-bold">{{ section.model }}</code>
-          </span>
-          <span class="text-slate-600 dark:text-slate-300">
-            {{
-              $t('AI_AGENT_ASSISTANT.SANDBOX.SIZE', {
-                chars: section.system_chars,
-                tokens: estimatedTokens,
-              })
-            }}
-          </span>
-          <span
-            class="font-semibold"
+          <!-- Presupuesto: el desajuste entre lo que escribes y lo que cabe -->
+          <div
+            class="flex flex-wrap items-center gap-4 px-4 py-3 mb-4 text-xs border rounded-lg"
             :class="
               isOverBudget
-                ? 'text-red-700 dark:text-red-300'
-                : 'text-slate-600 dark:text-slate-300'
+                ? 'bg-red-50 border-red-200 dark:bg-red-800/20 dark:border-red-800'
+                : 'bg-slate-25 border-slate-75 dark:bg-slate-800 dark:border-slate-700'
             "
           >
-            {{
-              $t('AI_AGENT_ASSISTANT.SANDBOX.BUDGET', {
-                tokens: section.max_tokens,
-              })
-            }}
-          </span>
+            <span class="text-slate-600 dark:text-slate-300">
+              {{ $t('AI_AGENT_ASSISTANT.SANDBOX.MODEL') }}
+              <code class="font-bold">{{ section.model }}</code>
+            </span>
+            <span class="text-slate-600 dark:text-slate-300">
+              {{
+                $t('AI_AGENT_ASSISTANT.SANDBOX.SIZE', {
+                  chars: section.system_chars,
+                  tokens: estimatedTokens,
+                })
+              }}
+            </span>
+            <span
+              class="font-semibold"
+              :class="
+                isOverBudget
+                  ? 'text-red-700 dark:text-red-300'
+                  : 'text-slate-600 dark:text-slate-300'
+              "
+            >
+              {{
+                $t('AI_AGENT_ASSISTANT.SANDBOX.BUDGET', {
+                  tokens: section.max_tokens,
+                })
+              }}
+            </span>
+          </div>
+
+          <!-- Avisos que solo se ven con el prompt armado -->
+          <div
+            v-for="note in section.notes"
+            :key="note"
+            class="px-4 py-3 mb-3 text-xs border rounded-lg bg-amber-50 border-amber-200 dark:bg-amber-800/20 dark:border-amber-800 text-amber-800 dark:text-amber-200"
+          >
+            {{ $t(`AI_AGENT_ASSISTANT.SANDBOX.NOTE_${note.toUpperCase()}`) }}
+          </div>
+
+          <p
+            class="mt-4 mb-1 text-xs font-semibold text-slate-500 dark:text-slate-400"
+          >
+            {{ $t('AI_AGENT_ASSISTANT.SANDBOX.SYSTEM') }}
+          </p>
+          <pre
+            class="p-4 overflow-x-auto text-xs whitespace-pre-wrap rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+            >{{ section.system }}</pre
+          >
+
+          <p
+            class="mt-4 mb-1 text-xs font-semibold text-slate-500 dark:text-slate-400"
+          >
+            {{ $t('AI_AGENT_ASSISTANT.SANDBOX.USER') }}
+          </p>
+          <pre
+            class="p-4 overflow-x-auto text-xs whitespace-pre-wrap rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+            >{{ section.user }}</pre
+          >
         </div>
-
-        <!-- Avisos que solo se ven con el prompt armado -->
-        <div
-          v-for="note in section.notes"
-          :key="note"
-          class="px-4 py-3 mb-3 text-xs border rounded-lg bg-amber-50 border-amber-200 dark:bg-amber-800/20 dark:border-amber-800 text-amber-800 dark:text-amber-200"
-        >
-          {{ $t(`AI_AGENT_ASSISTANT.SANDBOX.NOTE_${note.toUpperCase()}`) }}
-        </div>
-
-        <p
-          class="mt-4 mb-1 text-xs font-semibold text-slate-500 dark:text-slate-400"
-        >
-          {{ $t('AI_AGENT_ASSISTANT.SANDBOX.SYSTEM') }}
-        </p>
-        <pre
-          class="p-4 overflow-x-auto text-xs whitespace-pre-wrap rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
-          >{{ section.system }}</pre
-        >
-
-        <p
-          class="mt-4 mb-1 text-xs font-semibold text-slate-500 dark:text-slate-400"
-        >
-          {{ $t('AI_AGENT_ASSISTANT.SANDBOX.USER') }}
-        </p>
-        <pre
-          class="p-4 overflow-x-auto text-xs whitespace-pre-wrap rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
-          >{{ section.user }}</pre
-        >
-      </div>
+      </template>
 
       <div class="px-8 py-4 border-t border-slate-200 dark:border-slate-700">
         <woot-button variant="clear" @click.prevent="onClose">

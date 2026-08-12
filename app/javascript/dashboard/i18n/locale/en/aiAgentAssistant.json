@@ -174,7 +174,9 @@
       "CLOSE": "Close",
       "NOTE_PROMPT_DISCARDED": "Your complementary prompt is NOT here. With a search directive the engine discards it entirely: on this route the agent does not have your instructions.",
       "NOTE_CONTEXT_TRUNCATED": "The context is truncated to 800 characters: the rest never reaches the model.",
-      "NOTE_USES_WHATSAPP_TEMPLATE": "This attempt starts from a WhatsApp template; the AI only personalises it."
+      "NOTE_USES_WHATSAPP_TEMPLATE": "This attempt starts from a WhatsApp template; the AI only personalises it.",
+      "MODE_PROMPT": "View prompt",
+      "MODE_LIVE": "Test"
     },
     "VERSIONS": {
       "TITLE": "Agent history",
@@ -305,6 +307,58 @@
         "keyword_actions_pair": "Cut-off keywords",
         "whatsapp_templates_per_attempt": "One template per attempt"
       }
+    },
+    "EVAL": {
+      "TAB_LIVE": "Live",
+      "TAB_AUTO": "Auto-conversation",
+      "TAB_REPLAY": "Replay",
+      "TAB_AB": "A/B",
+      "RESET": "Reset",
+      "COST_NOTE": "Everything here calls the real model and spends your account's tokens. Nothing is sent to the customer or saved.",
+      "ATTEMPT": "Attempt",
+      "RUN_OPENING": "See the opening message",
+      "PLACEHOLDER": "Type as if you were the customer…",
+      "SEND": "Send",
+      "ROUTE": "detected route: {route} ({confidence})",
+      "TOKENS": "tokens: {used} / {max}",
+      "TRUNCATED": "the cap cut the answer off",
+      "KEYWORD": "keyword “{keyword}” → {action} (detected, not executed)",
+      "WOULD_HAVE": "this would have happened:",
+      "EFFECT": {
+        "send_message": "send the message",
+        "consume_attempt": "spend one attempt",
+        "search_knowledge": "search the knowledge base",
+        "book_appointment": "book a slot",
+        "create_ticket": "create the ticket",
+        "send_attachment": "send the file",
+        "keyword_cancel": "cancel the follow-up",
+        "keyword_pause": "pause the follow-up",
+        "keyword_objective_met": "mark the objective as met"
+      },
+      "PERSONA": {
+        "interested": "Interested customer",
+        "skeptical": "Skeptical customer",
+        "annoyed": "Annoyed customer",
+        "confused": "Confused customer"
+      },
+      "RUN_AUTO": "Run the conversation",
+      "AUTO_TOKENS": "{tokens} tokens spent on this run",
+      "LOOP_DETECTED": "The agent started repeating itself: it said the same thing twice in a row in different words. The conversation was cut there.",
+      "REPLAY_LIMIT": "Conversations",
+      "RUN_REPLAY": "Run against real conversations",
+      "CUSTOMER_SAID": "What the customer wrote",
+      "HUMAN_SAID": "What the person answered",
+      "AGENT_WOULD_SAY": "What the agent would say",
+      "AB_HINT": "Paste the other version of the complementary prompt here. The same message runs against both.",
+      "VARIANT_PLACEHOLDER": "Complementary prompt for variant B…",
+      "RUN_COMPARE": "Compare",
+      "SIDE_A": "A · what you have now",
+      "SIDE_B": "B · the variant",
+      "ERROR_OPENAI_NOT_CONFIGURED": "This account has no OpenAI integration configured, so the sandbox cannot run. “View prompt” and the linter work without it.",
+      "ERROR_MODEL_UNAVAILABLE": "The model did not answer. Try again.",
+      "ERROR_NO_INBOX": "This agent has no channel assigned, so there are no conversations to replay against.",
+      "ERROR_NO_CONVERSATIONS": "This channel has no closed conversations with a human reply to compare against.",
+      "ERROR_REQUEST_FAILED": "The request could not be completed."
     }
   }
 }

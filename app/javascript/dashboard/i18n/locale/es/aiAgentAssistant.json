@@ -174,7 +174,9 @@
       "CLOSE": "Cerrar",
       "NOTE_PROMPT_DISCARDED": "Tu prompt complementario NO aparece aquí. Con una directiva de búsqueda el motor lo descarta entero: en esta ruta el agente no tiene tus instrucciones.",
       "NOTE_CONTEXT_TRUNCATED": "El contexto está truncado a 800 caracteres: lo que sobra no llega al modelo.",
-      "NOTE_USES_WHATSAPP_TEMPLATE": "Este intento parte de una plantilla de WhatsApp; la IA solo la personaliza."
+      "NOTE_USES_WHATSAPP_TEMPLATE": "Este intento parte de una plantilla de WhatsApp; la IA solo la personaliza.",
+      "MODE_PROMPT": "Ver prompt",
+      "MODE_LIVE": "Probar"
     },
     "VERSIONS": {
       "TITLE": "Historial del agente",
@@ -305,6 +307,58 @@
         "keyword_actions_pair": "Palabras clave de corte",
         "whatsapp_templates_per_attempt": "Una plantilla por intento"
       }
+    },
+    "EVAL": {
+      "TAB_LIVE": "En vivo",
+      "TAB_AUTO": "Auto-conversación",
+      "TAB_REPLAY": "Replay",
+      "TAB_AB": "A/B",
+      "RESET": "Reiniciar",
+      "COST_NOTE": "Todo lo de aquí llama al modelo de verdad y gasta tokens de tu cuenta. Nada se envía al cliente ni se guarda.",
+      "ATTEMPT": "Intento",
+      "RUN_OPENING": "Ver el mensaje inicial",
+      "PLACEHOLDER": "Escribe como si fueras el cliente…",
+      "SEND": "Enviar",
+      "ROUTE": "ruta detectada: {route} ({confidence})",
+      "TOKENS": "tokens: {used} / {max}",
+      "TRUNCATED": "el tope cortó la respuesta",
+      "KEYWORD": "palabra clave «{keyword}» → {action} (detectada, no ejecutada)",
+      "WOULD_HAVE": "esto habría pasado:",
+      "EFFECT": {
+        "send_message": "enviar el mensaje",
+        "consume_attempt": "gastar un intento",
+        "search_knowledge": "buscar en la base de conocimiento",
+        "book_appointment": "agendar",
+        "create_ticket": "crear el ticket",
+        "send_attachment": "enviar el archivo",
+        "keyword_cancel": "cancelar el seguimiento",
+        "keyword_pause": "pausar el seguimiento",
+        "keyword_objective_met": "dar el objetivo por cumplido"
+      },
+      "PERSONA": {
+        "interested": "Cliente interesado",
+        "skeptical": "Cliente desconfiado",
+        "annoyed": "Cliente molesto",
+        "confused": "Cliente confundido"
+      },
+      "RUN_AUTO": "Correr la conversación",
+      "AUTO_TOKENS": "{tokens} tokens gastados en esta prueba",
+      "LOOP_DETECTED": "El agente empezó a repetirse: dijo lo mismo dos veces seguidas con otras palabras. La conversación se cortó ahí.",
+      "REPLAY_LIMIT": "Conversaciones",
+      "RUN_REPLAY": "Correr sobre conversaciones reales",
+      "CUSTOMER_SAID": "Lo que escribió el cliente",
+      "HUMAN_SAID": "Lo que contestó la persona",
+      "AGENT_WOULD_SAY": "Lo que diría el agente",
+      "AB_HINT": "Pega aquí la otra versión del prompt complementario. El mismo mensaje se corre contra las dos.",
+      "VARIANT_PLACEHOLDER": "Prompt complementario de la variante B…",
+      "RUN_COMPARE": "Comparar",
+      "SIDE_A": "A · lo que tienes ahora",
+      "SIDE_B": "B · la variante",
+      "ERROR_OPENAI_NOT_CONFIGURED": "Esta cuenta no tiene configurada la integración de OpenAI, así que el probador no puede correr. «Ver prompt» y el linter sí funcionan sin ella.",
+      "ERROR_MODEL_UNAVAILABLE": "El modelo no respondió. Vuelve a intentarlo.",
+      "ERROR_NO_INBOX": "Este agente no tiene canal asignado, así que no hay conversaciones sobre las que correr el replay.",
+      "ERROR_NO_CONVERSATIONS": "Este canal no tiene conversaciones cerradas con respuesta humana con las que comparar.",
+      "ERROR_REQUEST_FAILED": "No se pudo completar la petición."
     }
   }
 }
