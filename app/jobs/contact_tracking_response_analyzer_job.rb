@@ -457,37 +457,22 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       inbox_timezone = appointment_timezone(tracking, message)
       next_contact = tracking.scheduled_for.in_time_zone(inbox_timezone).strftime('%d/%m/%Y a las %H:%M')
 
-      # Si el prompt contiene directivas kbase, no pasarlo al LLM conversacional:
-      # el prompt está diseñado para operar con la kbase y GPT lo simula literalmente
-      # generando output tipo "CONSULTA GENERADA / DEBUG / RESULTADO RECIBIDO".
-      cp_raw = tracking.complementary_prompt.to_s
-      has_kbase_directive = cp_raw.match?(/@buscar_predefinidas\b/i) ||
-                            cp_raw.match?(/@buscar_art[ií]culo\b/i) ||
-                            cp_raw.match?(/@buscar_foro\([^)]*\)/i) ||
-                            cp_raw.match?(/@discourse\b/i)
-      # proyecto@bot_seguimiento_calendar — @agendar_calendar no debe filtrarse al LLM conversacional
-      clean_cp = has_kbase_directive ? '' : cp_raw.gsub(/@agendar_calendar\b/i, '').strip
+      # proyecto@ai_agent_assistant: el ensamblado vive en PromptBuilder para que el
+      # probador muestre este mismo texto. Ahí también vive la regla cara: con una
+      # directiva de búsqueda, clean_cp queda vacío y el prompt del agente no llega.
+      clean_cp = AiAgentAssistant::PromptBuilder.clean_complementary_prompt(tracking.complementary_prompt)
 
-      system_prompt = <<~SYSTEM.strip
-        Eres un asesor de ventas para #{tracking.account.name}.
-        Responde como un humano amable y conocedor del tema. NUNCA menciones que eres un bot o sistema automático.
+      system_prompt = AiAgentAssistant::PromptBuilder.conversational_system(
+        tracking,
+        appointment_state: appointment_state_summary(tracking, message),
+        next_contact: next_contact,
+        contact_profile: contact_profile,
+        attachment_directive: clean_cp.match?(ATTACHMENT_DIRECTIVE)
+      )
 
-        #{contact_profile}
-        OBJETIVO DE LA CONVERSACIÓN: #{tracking.objective}
-        ESTADO DE LA CITA: #{appointment_state_summary(tracking, message)} (si el cliente pregunta por su cita, respóndele con esta fecha/hora exacta; no inventes ni ofrezcas horarios nuevos)
-        PRÓXIMO CONTACTO PROGRAMADO: #{next_contact} (si el cliente pide reagendar, infórmale amablemente que su próximo contacto ya está programado para esa fecha y que si necesita cambiarlo debe comunicarse con un asesor)
-        #{tracking.ai_context.present? ? "BASE DE CONOCIMIENTO:\n#{tracking.ai_context.truncate(800)}\n" : ""}
-        #{clean_cp.present? ? "INSTRUCCIONES ADICIONALES:\n#{clean_cp}" : ""}
-        #{clean_cp.match?(ATTACHMENT_DIRECTIVE) ? "ENVÍO DE ARCHIVOS: Para enviar un archivo al cliente, escribe la directiva EXACTA (por ejemplo {{nombre}}) dentro de tu respuesta, tal cual y sin comillas; el sistema la sustituirá por el archivo adjunto. No la describas ni la traduzcas." : ""}
-      SYSTEM
-
-      user_prompt = <<~USER.strip
-        #{message_history.present? ? "#{message_history}\n\n" : ""}Responde al siguiente mensaje de #{first_name}:
-        "#{message_text_for_ai(message).truncate(300)}"
-
-        Máximo 4 líneas. Tono natural y conversacional.
-        No uses prefijos como "Asesor:" o "Bot:". No incluyas comillas al inicio ni al final.
-      USER
+      user_prompt = AiAgentAssistant::PromptBuilder.conversational_user(
+        first_name, message_text_for_ai(message).truncate(300), message_history: message_history
+      )
 
       reply = call_openai_for_reply(api_key_data[:key], [
         { role: 'system', content: system_prompt },

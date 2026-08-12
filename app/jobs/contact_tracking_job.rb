@@ -213,55 +213,22 @@ class ContactTrackingJob < ApplicationJob
       require 'json'
 
       api_key = hook.settings['api_key']
-      contact_name = tracking.contact.name || 'Hola'
-
-      complementary_instructions = tracking.complementary_prompt.present? ?
-        "\n\nINSTRUCCIONES ADICIONALES DEL AGENTE:\n#{tracking.complementary_prompt}" : ''
 
       # proyecto@contacts_notes - incluir nota especial para IA del contacto si existe
       ia_note = tracking.contact.notes.for_ia.first
-      contact_profile = ia_note.present? ?
-        "\n\nPERFIL DEL CONTACTO:\n#{ActionController::Base.helpers.strip_tags(ia_note.content)}" : ''
+      contact_profile = ia_note.present? ? ActionController::Base.helpers.strip_tags(ia_note.content) : nil
 
       # ⭐ PASO 1 — System prompt: contexto permanente del seguimiento (GPT-style)
-      system_prompt = <<~SYSTEM.strip
-        Eres un asistente de seguimiento al cliente para #{tracking.account.name}.
-
-        INFORMACIÓN DEL CLIENTE:
-        - Nombre: #{contact_name}#{contact_profile}
-
-        CONTEXTO INTERNO (no mencionar al cliente):
-        - Objetivo: #{tracking.objective}
-        - Contexto: #{tracking.ai_context}
-        - Este es el intento número #{tracking.attempt_count + 1} de #{tracking.max_attempts}#{complementary_instructions}
-
-        REGLAS GENERALES:
-        - Nunca menciones "intentos", "seguimiento automático" ni detalles técnicos
-        - Mantén un tono cordial y profesional, como si lo escribiera un agente humano
-        - Máximo 2 oraciones
-        - En español
-        - NO incluyas comillas al inicio ni al final del mensaje
-      SYSTEM
+      # proyecto@ai_agent_assistant: se ensambla en PromptBuilder para que el probador
+      # muestre EXACTAMENTE este texto y no una copia que derive.
+      system_prompt = AiAgentAssistant::PromptBuilder.scheduled_system(
+        tracking, contact_profile: contact_profile
+      )
 
       # ⭐ PASO 1 — Tarea final: el pedido concreto de generar el mensaje
-      task_prompt = if template_content.present?
-        <<~TASK.strip
-          PLANTILLA BASE (intento #{tracking.attempt_count + 1}):
-          "#{template_content}"
-
-          Usa la plantilla como estructura principal y PERSONALÍZALA con los datos del contexto.
-          REGLAS: Mantén estructura y propósito. Reemplaza placeholders con info real del contexto.
-          NO expandas con información adicional. NO agregues precios ni condiciones fuera de la plantilla.
-          Genera solo el mensaje final, sin comillas, sin explicaciones.
-        TASK
-      else
-        <<~TASK.strip
-          Genera un mensaje corto y natural para retomar contacto con el cliente.
-          Dirígete al cliente por su nombre. Céntrate en el OBJETIVO.
-          No des información extra ni repitas lo mismo que en mensajes anteriores.
-          Genera solo el mensaje, sin explicaciones adicionales.
-        TASK
-      end
+      task_prompt = AiAgentAssistant::PromptBuilder.scheduled_task(
+        tracking, template_content: template_content
+      )
 
       # ⭐ PASO 2 — Construir array de mensajes con o sin historial
       messages = [{ role: 'system', content: system_prompt }]

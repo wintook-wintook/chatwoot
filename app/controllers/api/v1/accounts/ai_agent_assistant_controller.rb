@@ -34,6 +34,17 @@ class Api::V1::Accounts::AiAgentAssistantController < Api::V1::Accounts::BaseCon
     }
   end
 
+  # El «Ver prompt» del probador: ensambla lo que recibiría el modelo en las dos
+  # rutas, para el intento indicado. No llama a OpenAI ni persiste nada.
+  def preview_prompt
+    render json: AiAgentAssistant::PromptPreview.new(
+      draft,
+      attempt: params[:attempt],
+      contact_name: params[:contact_name],
+      message: params[:message]
+    ).call
+  end
+
   private
 
   def draft

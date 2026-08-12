@@ -135,4 +135,49 @@ RSpec.describe 'AI Agent Assistant API', type: :request do
       expect(TrackingTemplate.find(ajeno.id).complementary_prompt).to be_blank
     end
   end
+
+  describe 'POST /api/v1/accounts/{account.id}/ai_agent_assistant/preview_prompt' do
+    let(:url) { "/api/v1/accounts/#{account.id}/ai_agent_assistant/preview_prompt" }
+
+    it 'returns unauthorized for an unauthenticated user' do
+      post url
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'devuelve el prompt ensamblado de las dos rutas sin persistir nada' do
+      expect do
+        post url,
+             params: { tracking_template: { name: 'Borrador', objective: 'Confirmar el pago de la factura.',
+                                            complementary_prompt: 'Eres del área de cobranza.' } },
+             headers: agent.create_new_auth_token, as: :json
+      end.not_to change(ContactTracking, :count)
+
+      body = response.parsed_body
+      expect(body['scheduled']['system']).to include('Eres un asistente de seguimiento al cliente')
+      expect(body['scheduled']['system']).to include('INSTRUCCIONES ADICIONALES DEL AGENTE')
+      expect(body['conversational']['system']).to include('Eres un asesor de ventas para')
+      expect(body['scheduled']['max_tokens']).to eq(150)
+      expect(body['conversational']['max_tokens']).to eq(250)
+    end
+
+    it 'avisa cuando el prompt no llega al modelo por una directiva de búsqueda' do
+      post url,
+           params: { tracking_template: { name: 'Borrador', objective: 'Resolver dudas.',
+                                          complementary_prompt: "@discourse\nInstrucciones largas del agente." } },
+           headers: agent.create_new_auth_token, as: :json
+
+      body = response.parsed_body
+      expect(body['conversational']['notes']).to include('prompt_discarded')
+      expect(body['conversational']['system']).not_to include('Instrucciones largas')
+    end
+
+    it 'refleja el número de intento pedido' do
+      post url,
+           params: { attempt: 3,
+                     tracking_template: { name: 'Borrador', objective: 'Confirmar el pago.' } },
+           headers: agent.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['scheduled']['system']).to include('intento número 3 de 3')
+    end
+  end
 end

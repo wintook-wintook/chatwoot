@@ -35,20 +35,19 @@ RSpec.describe AiAgentAssistant::Capabilities do
       end
     end
 
-    # Si alguien mete una quinta directiva en has_kbase_directive (o saca una), los
-    # dos conjuntos dejan de coincidir y esto falla. Es el guardarraíl de la
-    # distinción más cara del módulo: qué descarta el prompt y qué no.
-    it 'marca como swallows_prompt exactamente las que el analyzer descarta' do
-      source = Rails.root.join('app/jobs/contact_tracking_response_analyzer_job.rb').read
-      body   = source[/has_kbase_directive =.*?\n\n/m].to_s
+    # Guardarraíl de la distinción más cara del módulo: qué descarta el prompt y qué
+    # no. Se comprueba contra el COMPORTAMIENTO real del motor (PromptBuilder), no
+    # leyendo el código fuente: si alguien agrega o quita una directiva de la lista,
+    # el ejemplo de esa capacidad deja de coincidir con su bandera y esto falla.
+    it 'swallows_prompt coincide con lo que el motor descarta de verdad' do
+      described_class.all.each do |capability|
+        prompt = "#{capability[:example]}\nTEXTO DISTINTIVO DEL AGENTE"
+        limpio = AiAgentAssistant::PromptBuilder.clean_complementary_prompt(prompt)
 
-      del_motor = body.scan(/@buscar_[a-z_\[\]ií]+|@discourse/i)
-                      .map { |d| d.downcase.gsub(/\[ií\]/, 'i') }
-                      .uniq
-      del_catalogo = described_class.prompt_swallowing
-                                    .map { |c| c[:syntax][/@[a-z_]+/i].downcase }
-
-      expect(del_motor).to match_array(del_catalogo)
+        expect(limpio.blank?).to eq(capability[:swallows_prompt]),
+                                 "#{capability[:key]}: swallows_prompt=#{capability[:swallows_prompt]} " \
+                                 "pero el motor #{limpio.blank? ? 'SÍ' : 'NO'} descarta el prompt"
+      end
     end
   end
 
