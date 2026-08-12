@@ -105,6 +105,13 @@ Rails.application.routes.draw do
             get :capabilities, to: '/api/v1/accounts/ai_agent_assistant#capabilities'
             post :lint, to: '/api/v1/accounts/ai_agent_assistant#lint'
             post :preview_prompt, to: '/api/v1/accounts/ai_agent_assistant#preview_prompt'
+            # F5: el chat. Una sesión = una conversación con su borrador.
+            resources :sessions, only: [:index, :show, :create, :destroy] do
+              member do
+                post :messages
+                post :apply
+              end
+            end
           end
           # @query_databases — conexiones a ERPs + consultas predefinidas + consola
           resources :external_db_connections, only: [:index, :show, :create, :update, :destroy] do

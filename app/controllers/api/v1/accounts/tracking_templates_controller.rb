@@ -103,7 +103,9 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
       :name, :objective, :ai_context, :complementary_prompt, :inbox_id,
       :retry_interval_value, :retry_interval_unit, :calendar_event_duration, # proyecto@automatizacion_tracking
       :timezone, :slots_presentation, # proyecto@bot_seguimiento_calendar
-      :version_note, # proyecto@ai_agent_assistant (F4): nota del guardado, viaja al snapshot
+      # proyecto@ai_agent_assistant: nota y procedencia del guardado — viajan al snapshot
+      # del historial (F4), no a la plantilla. `version_source` distingue lo que salió del chat.
+      :version_note, :version_source,
       whatsapp_templates: [],
       tags: [],
       keyword_actions: [:keyword, :action, :direction], # proyecto@contact_tracking
