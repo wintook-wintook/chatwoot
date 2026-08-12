@@ -131,8 +131,9 @@ export default {
     // Sustituye el «/loquesea» a medio escribir por la directiva elegida. Queda en
     // TU mensaje: es una referencia para el asistente, no una inserción en el agente.
     onDirectiveSelect(token) {
-      this.input = this.input.replace(/(?:^|\s)\/[^\s/]*$/, match =>
-        `${match.startsWith(' ') ? ' ' : ''}${token} `
+      this.input = this.input.replace(
+        /(?:^|\s)\/[^\s/]*$/,
+        match => `${match.startsWith(' ') ? ' ' : ''}${token} `
       );
       this.$refs.composer?.focus();
     },
@@ -174,6 +175,10 @@ export default {
       }
     },
     async onSend() {
+      // Con la lista de directivas abierta, Enter la usa MentionBox para elegir.
+      // Sin esto se enviaba el mensaje a medio escribir Y se insertaba la directiva.
+      if (this.directiveQuery !== null) return;
+
       const message = this.input.trim();
       if (!message || this.isSending) return;
       this.input = '';
@@ -427,8 +432,17 @@ export default {
               {{ modeHint }}
             </span>
           </div>
+          <!-- Escribe «/» y sale el catálogo de la cuenta, con su efecto. Reutiliza
+               el MentionBox de las respuestas predefinidas: flechas y Enter gratis. -->
+          <DirectiveMention
+            v-if="directiveQuery !== null"
+            :capabilities="capabilities"
+            :search-key="directiveQuery"
+            @select="onDirectiveSelect"
+          />
           <div class="flex items-end gap-2">
             <textarea
+              ref="composer"
               v-model="input"
               rows="2"
               class="mb-0 text-sm"

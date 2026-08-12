@@ -38,7 +38,10 @@ export default {
           (capability.tokens || []).map(entry => ({
             key: entry.token,
             label: entry.token,
-            description: this.describe(capability, entry),
+            // MentionBox pinta `description` como línea principal en su slot por
+            // defecto; aquí se usa el slot propio, así que se guardan por separado.
+            description: this.detailOf(capability, entry),
+            effect: this.effectOf(capability),
             swallows: capability.swallows_prompt,
           }))
         )
@@ -47,19 +50,22 @@ export default {
     },
   },
   methods: {
-    // El efecto va primero: es lo que decide si esa directiva te sirve o te borra
-    // el prompt, y es lo que nadie recuerda.
-    describe(capability, entry) {
-      const effect = capability.swallows_prompt
-        ? this.$t('AI_AGENT_ASSISTANT.PICKER.EFFECT_SWALLOWS')
-        : capability.renders_prompt
-          ? this.$t('AI_AGENT_ASSISTANT.PICKER.EFFECT_RENDERS')
-          : this.$t('AI_AGENT_ASSISTANT.PICKER.EFFECT_KEEPS');
-      const detail =
+    detailOf(capability, entry) {
+      return (
         entry.label ||
-        this.$t(`AI_AGENT_ASSISTANT.CAPABILITIES.${capability.key}.LABEL`);
-
-      return `${effect} · ${detail}`;
+        this.$t(`AI_AGENT_ASSISTANT.CAPABILITIES.${capability.key}.LABEL`)
+      );
+    },
+    // Lo que decide si esa directiva te sirve o te borra el prompt, y es lo que
+    // nadie recuerda. Por eso va en la lista y con color.
+    effectOf(capability) {
+      if (capability.swallows_prompt) return 'swallows';
+      return capability.renders_prompt ? 'renders' : 'keeps';
+    },
+    effectClasses(effect) {
+      if (effect === 'swallows') return 'text-red-600 dark:text-red-400';
+      if (effect === 'renders') return 'text-amber-600 dark:text-amber-400';
+      return 'text-green-600 dark:text-green-400';
     },
     onSelect(item = {}) {
       this.$emit('select', item.key);
@@ -70,5 +76,25 @@ export default {
 
 <!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
-  <MentionBox v-if="items.length" :items="items" @mention-select="onSelect" />
+  <MentionBox v-if="items.length" :items="items" @mentionSelect="onSelect">
+    <!-- Slot propio: el de por defecto antepone «/» a la etiqueta y saldría
+         «/@buscar_articulo». Aquí manda el token tal cual se va a insertar. -->
+    <template #default="{ item }">
+      <p
+        class="max-w-full min-w-0 mb-0 overflow-hidden font-mono text-sm font-medium truncate text-slate-900 dark:text-slate-100"
+      >
+        {{ item.label }}
+      </p>
+      <p class="max-w-full min-w-0 mb-0 overflow-hidden text-xs truncate">
+        <span :class="effectClasses(item.effect)">
+          {{
+            $t(`AI_AGENT_ASSISTANT.PICKER.EFFECT_${item.effect.toUpperCase()}`)
+          }}
+        </span>
+        <span class="text-slate-500 dark:text-slate-300">
+          · {{ item.description }}
+        </span>
+      </p>
+    </template>
+  </MentionBox>
 </template>
