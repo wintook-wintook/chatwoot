@@ -25,7 +25,37 @@ class Api::V1::Accounts::AiAgentAssistantController < Api::V1::Accounts::BaseCon
     }
   end
 
+  # Valida un BORRADOR: no persiste nada. Si viene `id`, se parte del Agente IA
+  # guardado y se le aplican encima los campos editados, para poder resolver cosas
+  # que dependen del registro (sus archivos adjuntos, sus hermanos de versión).
+  def lint
+    render json: {
+      findings: AiAgentAssistant::Linter.new(draft, account: Current.account).call
+    }
+  end
+
   private
+
+  def draft
+    base = if params[:id].present?
+             Current.account.tracking_templates.find_by(id: params[:id]) || Current.account.tracking_templates.new
+           else
+             Current.account.tracking_templates.new
+           end
+
+    base.assign_attributes(draft_params)
+    base
+  end
+
+  def draft_params
+    params.fetch(:tracking_template, {}).permit(
+      :name, :objective, :ai_context, :complementary_prompt, :inbox_id, :timezone,
+      :slots_presentation, :retry_interval_value, :retry_interval_unit,
+      keyword_actions: [:keyword, :action, :direction],
+      whatsapp_templates: {},
+      calendar_integration_ids: []
+    )
+  end
 
   # El inbox acota lo que de verdad está disponible: el modelo de IA y la
   # integración de Discourse se configuran por inbox, no por cuenta.

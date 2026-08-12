@@ -66,7 +66,7 @@ RSpec.describe 'AI Agent Assistant API', type: :request do
           .to eq(AiAgentAssistant::EngineConfig::DEFAULT_MODEL)
       end
 
-      it 'ignora un inbox de otra cuenta' do
+      it 'ignora un inbox de otra cuenta y no filtra datos ajenos' do
         ajeno = create(:inbox, account: create(:account))
 
         get "/api/v1/accounts/#{account.id}/ai_agent_assistant/capabilities",
@@ -76,6 +76,63 @@ RSpec.describe 'AI Agent Assistant API', type: :request do
         expect(response.parsed_body['engine']['model'])
           .to eq(AiAgentAssistant::EngineConfig::DEFAULT_MODEL)
       end
+    end
+  end
+
+  describe 'POST /api/v1/accounts/{account.id}/ai_agent_assistant/lint' do
+    let(:url) { "/api/v1/accounts/#{account.id}/ai_agent_assistant/lint" }
+
+    it 'returns unauthorized for an unauthenticated user' do
+      post url
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'valida un borrador sin guardar nada' do
+      expect do
+        post url,
+             params: { tracking_template: { name: 'Borrador', objective: 'x' * 80,
+                                            complementary_prompt: "@discourse\n#{'y' * 400}" } },
+             headers: agent.create_new_auth_token, as: :json
+      end.not_to change(TrackingTemplate, :count)
+
+      reglas = response.parsed_body['findings'].pluck('rule')
+      expect(reglas).to include('search_swallows_prompt')
+    end
+
+    it 'no devuelve nada para un borrador bien formado' do
+      post url,
+           params: { tracking_template: { name: 'Borrador', inbox_id: inbox.id,
+                                          objective: 'Confirmar el pago de la factura vencida u obtener fecha compromiso.',
+                                          complementary_prompt: 'Eres del área de cobranza. Trato de usted.' } },
+           headers: agent.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['findings']).to be_empty
+    end
+
+    # Al editar un Agente IA existente hay que partir del registro guardado: sus
+    # archivos adjuntos y sus hermanos de versión no viajan en el formulario.
+    it 'parte del Agente IA guardado cuando se pasa el id' do
+      template = create(:tracking_template, account: account, inbox: inbox, name: 'Con archivo',
+                                            objective: 'x' * 80)
+      create(:ai_agent_attachment, tracking_template: template, name: 'catalogo')
+
+      post url,
+           params: { id: template.id,
+                     tracking_template: { complementary_prompt: 'Te comparto el {{catalogo}}' } },
+           headers: agent.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['findings'].pluck('rule')).not_to include('attachment_missing')
+    end
+
+    it 'no permite validar un Agente IA de otra cuenta' do
+      ajeno = create(:tracking_template, account: create(:account), name: 'Ajeno', objective: 'x' * 80)
+
+      post url,
+           params: { id: ajeno.id, tracking_template: { complementary_prompt: 'Hola' } },
+           headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(TrackingTemplate.find(ajeno.id).complementary_prompt).to be_blank
     end
   end
 end

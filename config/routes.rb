@@ -91,6 +91,7 @@ Rails.application.routes.draw do
           # proyecto@ai_agent_assistant: catálogo de capacidades resuelto por cuenta/inbox
           namespace :ai_agent_assistant do
             get :capabilities, to: '/api/v1/accounts/ai_agent_assistant#capabilities'
+            post :lint, to: '/api/v1/accounts/ai_agent_assistant#lint'
           end
           # @query_databases — conexiones a ERPs + consultas predefinidas + consola
           resources :external_db_connections, only: [:index, :show, :create, :update, :destroy] do
