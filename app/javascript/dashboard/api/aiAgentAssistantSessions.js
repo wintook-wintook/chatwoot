@@ -48,6 +48,15 @@ class AiAgentAssistantSessionsAPI extends ApiClient {
     return axios.patch(`${this.url}/${id}`, { draft });
   }
 
+  // Ata la conversación al Agente IA que acaba de salir de ella: es lo que hace que
+  // se pueda leer desde el agente, y que no reaparezca en la página del asistente
+  // como si aún lo estuvieras armando.
+  linkTemplate(id, trackingTemplateId) {
+    return axios.patch(`${this.url}/${id}`, {
+      tracking_template_id: trackingTemplateId,
+    });
+  }
+
   send(id, message) {
     return axios.post(`${this.url}/${id}/messages`, { message });
   }

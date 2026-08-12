@@ -349,6 +349,14 @@ export default {
             tracking_template: { ...this.draft, version_source: 'assistant' },
           }
         );
+        // La conversación pasa a ser historia de ESE agente. Que falle atar no
+        // puede tumbar un guardado que ya ocurrió: el agente existe.
+        if (template?.id) {
+          await AiAgentAssistantSessionsAPI.linkTemplate(
+            this.sessionId,
+            template.id
+          ).catch(() => {});
+        }
         useAlert(this.$t('AI_AGENT_ASSISTANT.CHAT.SAVED'));
         this.$emit('created', template);
       } catch (e) {

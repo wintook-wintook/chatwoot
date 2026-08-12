@@ -49,6 +49,10 @@ class Api::V1::Accounts::AiAgentAssistant::SessionsController < Api::V1::Account
     # El borrador también se edita a mano: hay campos —el nombre— que uno sabe y no
     # tiene sentido esperar a que el asistente los proponga.
     @session.draft = @session.draft.merge(editable_draft) if editable_draft.present?
+    # La conversación que ACABA de crear un Agente IA se ata a él. Si no, queda
+    # suelta: no se ve desde el agente —que es donde tiene sentido leerla— y vuelve
+    # a salir en la página del asistente como si siguieras armándolo.
+    @session.tracking_template_id = fetch_template&.id if params[:tracking_template_id].present?
     @session.save!
 
     render json: session_json(@session)
