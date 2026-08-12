@@ -18,10 +18,11 @@ import AiAgentAssistantSessionsAPI from 'dashboard/api/aiAgentAssistantSessions'
 import { useAlert } from 'dashboard/composables';
 import LintBadges from './LintBadges.vue';
 import DirectiveMention from './DirectiveMention.vue';
+import PatternMention from './PatternMention.vue';
 import AiAgentAssistantAPI from 'dashboard/api/aiAgentAssistant';
 
 export default {
-  components: { LintBadges, DirectiveMention },
+  components: { LintBadges, DirectiveMention, PatternMention },
   props: {
     // interview | audit | tweak
     initialMode: {
@@ -60,6 +61,7 @@ export default {
       error: null,
       draftName: '',
       capabilities: [], // para la lista que sale al escribir «/»
+      patterns: [], // para la lista que sale al escribir «$»
       draftInbox: '',
     };
   },
@@ -94,6 +96,15 @@ export default {
       const match = /(?:^|\s)\/([^\s/]*)$/.exec(this.input);
       return match ? match[1] : null;
     },
+    // Lo mismo con «$», para señalar un patrón de la biblioteca como ejemplo.
+    patternQuery() {
+      const match = /(?:^|\s)\$([^\s$]*)$/.exec(this.input);
+      return match ? match[1] : null;
+    },
+    // Con cualquiera de las dos listas abierta, Enter es «elegir», no «enviar».
+    isMentioning() {
+      return this.directiveQuery !== null || this.patternQuery !== null;
+    },
     canSave() {
       return Boolean(
         this.draftName.trim() && this.draft.objective && this.draft.inbox_id
@@ -119,9 +130,33 @@ export default {
   mounted() {
     this.resumeOrOpen();
     this.loadCapabilities();
+    this.loadPatterns();
     if (!this.inboxes.length) this.$store.dispatch('inboxes/get');
   },
   methods: {
+    // Los bloques se resuelven contra el prompt EN CURSO, no solo contra la cuenta:
+    // es lo que permite marcar los que aquí serían letra muerta.
+    async loadPatterns() {
+      try {
+        const { data } = await AiAgentAssistantAPI.patterns({
+          complementaryPrompt: this.draft.complementary_prompt,
+          inboxId: this.draft.inbox_id,
+          trackingTemplateId: this.trackingTemplateId,
+        });
+        this.patterns = data.blocks;
+      } catch (e) {
+        this.patterns = [];
+      }
+    },
+    // Sustituye el «$loquesea» a medio escribir por la referencia elegida. El
+    // asistente recibirá el texto del bloque y lo adaptará; no se pega aquí.
+    onPatternSelect(token) {
+      this.input = this.input.replace(
+        /(?:^|\s)\$[^\s$]*$/,
+        match => `${match.startsWith(' ') ? ' ' : ''}${token} `
+      );
+      this.$refs.composer?.focus();
+    },
     async loadCapabilities() {
       try {
         const { data } = await AiAgentAssistantAPI.getCapabilities({
@@ -180,9 +215,9 @@ export default {
       }
     },
     async onSend() {
-      // Con la lista de directivas abierta, Enter la usa MentionBox para elegir.
-      // Sin esto se enviaba el mensaje a medio escribir Y se insertaba la directiva.
-      if (this.directiveQuery !== null) return;
+      // Con una lista abierta, Enter la usa MentionBox para elegir. Sin esto se
+      // enviaba el mensaje a medio escribir Y se insertaba la referencia.
+      if (this.isMentioning) return;
 
       const message = this.input.trim();
       if (!message || this.isSending) return;
@@ -273,11 +308,18 @@ export default {
       this.sessionId = data.id;
       this.messages = data.messages || [];
       const inboxBefore = this.draft.inbox_id;
+      const promptBefore = this.draft.complementary_prompt;
       this.draft = data.draft || {};
       if (this.draft.name) this.draftName = this.draft.name;
       this.draftInbox = this.draft.inbox_id || '';
       // @discourse se configura POR INBOX: al fijar el canal cambia lo disponible.
-      if (this.draft.inbox_id !== inboxBefore) this.loadCapabilities();
+      const inboxChanged = this.draft.inbox_id !== inboxBefore;
+      if (inboxChanged) this.loadCapabilities();
+      // Los patrones dependen ADEMÁS del prompt: en cuanto entra una directiva de
+      // búsqueda, todo bloque de texto pasa a ser letra muerta y hay que decirlo.
+      if (inboxChanged || this.draft.complementary_prompt !== promptBefore) {
+        this.loadPatterns();
+      }
       this.proposals = data.proposals || [];
       this.steps = data.steps || this.steps;
       this.step = data.step;
@@ -512,6 +554,14 @@ export default {
             :capabilities="capabilities"
             :search-key="directiveQuery"
             @select="onDirectiveSelect"
+          />
+          <!-- Y «$» saca la biblioteca de patrones. No pega el bloque: se lo señala
+               al asistente, que lo adapta a tu negocio en vez de dejarte los <huecos>. -->
+          <PatternMention
+            v-if="patternQuery !== null"
+            :blocks="patterns"
+            :search-key="patternQuery"
+            @select="onPatternSelect"
           />
           <div class="flex items-end gap-2">
             <textarea

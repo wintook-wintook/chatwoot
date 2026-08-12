@@ -392,6 +392,19 @@ class AiAgentAssistant::PatternLibrary # rubocop:disable Metrics/ClassLength
     text.match?(/[[:alpha:]]{2}/) && !text.match?(/[[:lower:]]/)
   end
 
+  # Referencias del chat: «$role_identity». El usuario elige un bloque de la lista
+  # que sale al escribir «$» y su texto entra en el turno como EJEMPLO —no como
+  # inserción—: quien rellena los <huecos> con los datos del negocio es el
+  # asistente, que para eso lleva media conversación preguntándolos.
+  REFERENCE = /(?:\A|\s)\$([a-z0-9_]+)/
+  # Techo por turno. Referenciar la biblioteca entera sería pagar 28 bloques para
+  # no usar ninguno, que es justo lo que esta pieza existe para evitar.
+  MAX_REFERENCES = 5
+
+  def self.references_in(text)
+    text.to_s.scan(REFERENCE).flatten.uniq & BLOCKS.pluck(:key)
+  end
+
   def self.for(account:, inbox: nil, template: nil, prompt: nil)
     new(account: account, inbox: inbox, template: template, prompt: prompt).call
   end

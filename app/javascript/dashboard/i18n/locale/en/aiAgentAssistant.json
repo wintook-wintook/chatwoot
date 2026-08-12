@@ -242,7 +242,7 @@
       "MODE_TWEAK": "Tweak",
       "PROGRESS": "Step {current} of {total}",
       "THINKING": "Thinking…",
-      "PLACEHOLDER": "Type your answer…",
+      "PLACEHOLDER": "Type your answer…  «/» directives · «$» patterns",
       "SEND": "Send",
       "PROPOSALS": "Proposals from this turn",
       "APPLY": "Apply",

@@ -242,7 +242,7 @@
       "MODE_TWEAK": "Ajustar",
       "PROGRESS": "Paso {current} de {total}",
       "THINKING": "Pensando…",
-      "PLACEHOLDER": "Escribe tu respuesta…",
+      "PLACEHOLDER": "Escribe tu respuesta…  «/» directivas · «$» patrones",
       "SEND": "Enviar",
       "PROPOSALS": "Propuestas de este turno",
       "APPLY": "Aplicar",

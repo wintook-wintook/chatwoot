@@ -39,7 +39,7 @@ class AiAgentAssistant::SystemPrompt # rubocop:disable Metrics/ClassLength
 
   def call
     [mission, invariants, engine_limits, channel_catalog, capability_catalog, form_guide,
-     section_guide, mode_instructions, interview_guide, current_draft,
+     section_guide, referenced_patterns, mode_instructions, interview_guide, current_draft,
      output_contract].compact.join("\n\n")
   end
 
@@ -235,6 +235,67 @@ class AiAgentAssistant::SystemPrompt # rubocop:disable Metrics/ClassLength
     return 'El prompt actual no tiene ninguna sección todavía.' if presentes.empty?
 
     "El prompt actual ya trae estas secciones, no las propongas otra vez: #{presentes.join(' · ')}."
+  end
+
+  # F6 en el chat: los bloques que el usuario referenció escribiendo «$» en su
+  # mensaje. Entran solo cuando se piden —meter los 28 en cada turno sería pagar el
+  # catálogo entero para no usar ninguno— y entran con su evidencia, porque lo que
+  # convence al usuario de aceptar un bloque no es el bloque: es de dónde salió.
+  def referenced_patterns
+    blocks = resolved_references
+    return nil if blocks.empty?
+
+    <<~TEXT.strip
+      PATRONES QUE EL USUARIO TE SEÑALÓ CON «$»
+
+      Son EJEMPLOS sacados de agentes de producción, no texto para pegar. Cada uno trae
+      <huecos>: rellénalos con lo que este usuario ya te contó de su negocio, y lo que no
+      te haya contado, pregúntaselo. Nunca propongas un prompt con un <hueco> sin rellenar.
+      Adapta la redacción a su caso; lo que se copia es la idea, no las palabras.
+
+      #{blocks.map { |block| reference_text(block) }.join("\n\n")}
+    TEXT
+  end
+
+  def resolved_references
+    keys = AiAgentAssistant::PatternLibrary.references_in(referenced_text)
+    return [] if keys.empty?
+
+    library = AiAgentAssistant::PatternLibrary.for(
+      account: account, inbox: inbox, template: session.tracking_template,
+      prompt: session.merged_draft['complementary_prompt']
+    )
+    library[:blocks].select { |block| keys.include?(block[:key]) }
+                    .first(AiAgentAssistant::PatternLibrary::MAX_REFERENCES)
+  end
+
+  # Todo lo que ha escrito el usuario, no solo el último mensaje: si referenció un
+  # bloque y dos turnos después dice «ese, pero más corto», el texto sigue haciendo falta.
+  def referenced_text
+    session.messages.select { |message| message['role'] == 'user' }.pluck('content').join("\n")
+  end
+
+  def reference_text(block)
+    [
+      "$#{block[:key]} — sección [#{block[:section].upcase}]#{reference_status(block)}",
+      block[:body],
+      "Por qué existe: #{block[:source]}"
+    ].join("\n")
+  end
+
+  # Un bloque puede estar bien escrito y no servir AQUÍ. Si el asistente no lo sabe,
+  # lo propone igual y el motor lo descarta sin que nadie se entere.
+  def reference_status(block)
+    case block[:status]
+    when 'dead_letter'
+      ' — OJO: en este agente el motor descarta el prompt entero. Dilo y no lo propongas.'
+    when 'unavailable'
+      ' — OJO: la capacidad que necesita no está encendida en esta cuenta. Dilo y no lo propongas.'
+    when 'source_taken'
+      ' — OJO: este agente ya tiene una fuente y solo una resuelve el turno. Dilo antes de proponerlo.'
+    else
+      ''
+    end
   end
 
   def mode_instructions
