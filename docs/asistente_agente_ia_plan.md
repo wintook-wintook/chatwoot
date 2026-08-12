@@ -1,8 +1,11 @@
 # Asistente de Agente IA — Plan
 
 **Rama:** `feat/asistente_agente_ia` (derivada de `develop`)
-**Fecha:** 2026-08-11
-**Estado:** solo plan — sin código
+**Fecha:** 2026-08-11 · **última actualización:** 2026-08-12
+**Estado:** **implementado, F0 a F7** — 22 commits en la rama, sin mergear a `develop`.
+Probado contra OpenAI real; §13.8 se midió sobre los 33 agentes de las cuentas 568 y 778.
+Lo que sigue sin verificarse: el comportamiento conversacional con usuarios reales, y
+`replay` de F7, que necesita conversaciones cerradas del inbox del agente.
 **Módulo afectado:** Seguimientos IA / Agentes IA (`TrackingTemplate`)
 **Marcador de código propuesto:** `# proyecto@ai_agent_assistant`
 
