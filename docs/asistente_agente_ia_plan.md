@@ -34,14 +34,18 @@ Si solo se leen doce líneas de este documento, que sean estas.
    biblioteca de patrones (diagrama 04).
 8. **El asistente nunca escribe en la base.** Siempre deja borrador; el humano aplica campo por
    campo y guarda. Cero riesgo de pisar un agente en producción.
-9. **La mayor parte del valor no necesita IA generativa.** F0 a F4 son código determinista:
+9. **Seccionar el prompt es lo que separa a los buenos.** Solo **3 de 33** agentes medidos
+   están seccionados, y son los tres bien hechos; los cuatro prompts de más de 8 000
+   caracteres no tienen ni una sección (§13.8). Hay además **dos arquitecturas distintas**
+   en producción —jerarquía de estados y grafo de nodos—, no una.
+10. **La mayor parte del valor no necesita IA generativa.** F0 a F4 son código determinista:
    cablear el modelo, catalogar, validar, simular y versionar. El chat es F5.
-10. **El bucle de iteración pasa de días a segundos** (diagrama 06): hoy hay que publicar el
+11. **El bucle de iteración pasa de días a segundos** (diagrama 06): hoy hay que publicar el
     agente y esperar a que un cliente real conteste para saber si funciona.
-11. **El `objective` es el campo más desaprovechado del sistema.** Es el único que llega íntegro
+12. **El `objective` es el campo más desaprovechado del sistema.** Es el único que llega íntegro
     a las dos rutas pase lo que pase, y admite 500 caracteres. Hoy 16 de 27 agentes lo usan como
     un título en mayúsculas (§13.2).
-12. **El problema de fondo es de selección, no de redacción.** La cuenta 568 tiene las cuatro
+13. **El problema de fondo es de selección, no de redacción.** La cuenta 568 tiene las cuatro
     features de conocimiento activas y usa **una sola directiva**: `@discourse`, justo en los
     tres agentes con 11 052 caracteres de prompt que esa directiva destruye. Las dos que lo
     habrían conservado están sin estrenar. Diagnóstico completo, las 7 reglas de forma, los
@@ -217,7 +221,7 @@ al *escribir en ChatGPT → pegar → publicar → esperar el cron → adivinar*
 
 ```
 ┌─ Campañas ──┬──────────── Asistente de Agentes IA ─────────────────────────┐
-│ Seguimientos│  ● Entrevista   ○ Auditar   ○ Ajustar                        │
+│ Seguimientos│  Paso 2 de 8 ●●○○○○○○                      [+ Nueva]        │
 │ Campañas    ├──────────────────────────────┬──────────────────────────────┤
 │ Agentes IA  │  CONVERSACIÓN                │  BORRADOR EN VIVO            │
 │▸Asistente ⭐│                              │                              │
@@ -233,9 +237,10 @@ al *escribir en ChatGPT → pegar → publicar → esperar el cron → adivinar*
 │             │  🤖 Perfecto. ¿Por qué canal │  │ [CONTEXTO]              │ │
 │             │     y con qué contacto?      │  │ {{consulta:contpaq/     │ │
 │             │                              │  │   saldo_cliente}}       │ │
-│             │  [ escribe...        ] [↵]   │  └─────────────────────────┘ │
+│             │  Modo [Entrevista ▾]         │  └─────────────────────────┘ │
+│             │  [ escribe...        ] [↵]   │                              │
 │             │                              │                              │
-│             │  Paso 1 de 7  ●○○○○○○        │  ⛔0  ⚠2  ℹ1                │
+│             │                              │  ⛔0  ⚠2  ℹ1                │
 │             │                              │  [Probar ▷] [Guardar agente] │
 └─────────────┴──────────────────────────────┴──────────────────────────────┘
 ```
@@ -247,17 +252,19 @@ plantilla ya cargada y arrancando en modo *Auditar* o *Ajustar*.
 vez (no un formulario):
 
 1. ¿Qué tiene que pasar para que consideres el seguimiento **cumplido**? → `objective`
-2. ¿A quién le escribe? (rol, trato, tuteo/usted) → tono
-3. ¿Por qué canal y con qué ventana? (WhatsApp 24 h cambia todo) → `inbox_id`, `whatsapp_templates`
-4. ¿Qué información necesita **consultar** para responder bien? → elige capacidad kbase/ERP
-5. ¿Qué debe hacer cuando el cliente dice que sí? (agendar / crear ticket / pasar a humano)
-6. ¿Qué **no** debe hacer nunca? (precios, promesas, diagnósticos) → sección de límites
-7. ¿Qué palabras deben cortar el seguimiento? → `keyword_actions`
+2. ¿Solo avisa, o tiene que conseguir algo del cliente antes de darle lo que pide? →
+   decide la **forma** del prompt y qué secciones lleva (§13.8)
+3. ¿A quién le escribe? (rol, trato, tuteo/usted) → tono
+4. ¿Por qué canal y con qué ventana? (WhatsApp 24 h cambia todo) → `inbox_id`, `whatsapp_templates`
+5. ¿Qué información necesita **consultar** para responder bien? → elige capacidad kbase/ERP
+6. ¿Qué debe hacer cuando el cliente dice que sí? (agendar / crear ticket / pasar a humano)
+7. ¿Qué **no** debe hacer nunca? (precios, promesas, diagnósticos) → sección de límites
+8. ¿Qué palabras deben cortar el seguimiento? → `keyword_actions`
 
-Cada respuesta escribe en un **borrador estructurado por secciones**, no en un blob:
-`[ROL Y LÍMITES] · [CONTEXTO] · [FLUJO] · [CIERRE] · [PROHIBIDO]`. Es la estructura que ya
-usan los agentes buenos de producción (DCI, Partner, Postventa) — se formaliza en vez de
-depender de que el humano se acuerde.
+Cada respuesta escribe en un **borrador estructurado por secciones**, no en un blob. El
+juego de secciones no es fijo: lo elige el paso 2 entre las cinco formas medidas en §13.8,
+desde `[ROL] · [CIERRE]` para un recordatorio hasta las nueve del calificador. Ser
+eficiente aquí es dar **el tamaño correcto**, no el mínimo ni el máximo.
 
 **Modo B — Auditar (ya tengo un prompt).** Pegas el prompt de ChatGPT y el asistente lo
 disecciona: qué sobra por T1, qué se anula por T2, qué directivas chocan por T3, qué asume
@@ -599,7 +606,10 @@ F5  Chat asistente                                ── el asistente propiament
      · aplicación por campo con diff · siempre borrador
 
 F6  Biblioteca de patrones                        ── acelera el arranque
-     · bloques extraídos de los agentes de producción (§13)
+     · 28 bloques extraídos de los agentes de producción, cada uno con su evidencia
+     · 14 secciones y las cinco formas de prompt (§13.8), no un molde único
+     · un bloque sabe callarse: sale como letra muerta si el prompt en curso
+       lleva una búsqueda que lo descartaría
      · guía de forma §13.2 como material del chat
 
 F7  Evaluación (replay + A/B + auto-conversación) ── medir, no adivinar
@@ -994,6 +1004,9 @@ directiva. Ninguno de los 27 agentes se hizo esa pregunta.
 
 ### 13.7 · Plantilla de agente bien formado
 
+Lo que sigue es el **mínimo**, no el molde: la forma del prompt la decide §13.8 según lo que
+el agente tenga que hacer. Los campos de arriba, en cambio, aplican siempre.
+
 ```
 name                  <canal> · <caso>            ← sin duplicar por canal si el texto es igual
 objective             instrucción de 200-500 car. ← SIEMPRE llega íntegro. Úsalo.
@@ -1012,6 +1025,81 @@ keyword_actions       al menos un cancel y un objective_met
 whatsapp_templates    una por intento, si el canal es WhatsApp
 retry_interval        coherente con el ciclo real del negocio
 ```
+
+---
+
+### 13.8 · La arquitectura de secciones: medida sobre los 33 agentes
+
+Los prompts buenos de la instalación **se estructuran en secciones con encabezado entre
+corchetes**. Los malos no. Esta subsección es el conteo, no la impresión.
+
+| Agente | Caracteres | Secciones |
+|---|---:|---:|
+| 48 · CONVOCATORIO PARTNER | 17 940 | **0** |
+| 36 / 35 / 34 · POSTVENTA | 11 052 | **0** |
+| 39 · VENDEDOR AIRES | 10 523 | **0** |
+| 43 · MANTENIMIENTO AIRES | 8 282 | **0** |
+| **25 / 32 · PRIMER CONTACTO** | 8 686 | **9** |
+| **288 · DCI ATENCIÓN PROSPECTOS** | 8 058 | **13** |
+| 42 · CAMIONES GRÚA | 7 644 | **0** |
+| 287 · TICKETS UNIDADES V4 | 4 031 | 0 |
+| SEG01–SEG10, licencias, vencimientos | 505–760 | 0 |
+
+**3 de 33 agentes están seccionados.** Y los que no lo están son justamente los más
+grandes: los cuatro prompts por encima de 8 000 caracteres sin una sola sección son
+precisamente los que §13.1 ya señalaba como rotos. Seccionar no es lo que hace la
+instalación: es lo que separa a los tres que están bien hechos del resto.
+
+> **Matiz que importa para el asistente.** Los agentes sin secciones *funcionan* —los diez
+> de la serie SEG son los mejor formados de la cuenta y no tienen ninguna—. Pero el
+> objetivo del módulo no es replicar lo que hay: es que el asistente sepa de prompts más
+> que quien los escribe hoy. Eficiente aquí significa **del tamaño correcto**, no mínimo ni
+> máximo: un recordatorio de pago en cinco líneas y un calificador con nueve secciones son
+> los dos la respuesta correcta a su caso.
+
+#### Las dos arquitecturas que existen, y son distintas
+
+**A · Jerarquía de estados** (agente 288, DCI). Trece secciones. Un orden de evaluación
+explícito al principio —«evalúa cada turno bajo esta jerarquía estricta»— y luego módulos
+que se encienden y apagan entre sí: el bloque de post-cierre apaga el de interrupciones y
+el núcleo de calificación. El modelo redacta dentro de cada módulo.
+
+**B · Grafo de nodos y rutas** (agentes 25 y 32). Nueve secciones:
+
+```
+[NODO: INICIO]
+      │
+      ├─ [RUTA PROBLEMA]      ┐
+      ├─ [RUTA VENTAS]        │
+      ├─ [RUTA AUTOMATIZACIÓN]├─► [NODO: CONVERGENCIA] ──► [NODO: CIERRE]
+      ├─ [RUTA COSTO]         │                                  │
+      └─ [RUTA INFORMACIÓN]   ┘                          [DISPARADOR AGENDADO]
+```
+
+Cada nodo abre con **«Responder EXACTAMENTE»**: el modelo elige el camino pero no redacta.
+Es la filosofía opuesta a la A y resuelve otro problema —varias intenciones que deben
+converger en un solo cierre—, no es una versión peor de la misma idea.
+
+#### Las cinco formas, y las secciones que le tocan a cada una
+
+De aquí sale el paso `purpose` de la entrevista (§4): no se pregunta «¿qué secciones
+quieres?» —nadie sabe contestar eso— sino qué tiene que hacer el agente.
+
+| Forma | Secciones | Caso real |
+|---|---|---|
+| **Solo avisar o recordar** | `[ROL]` `[CIERRE]` | SEG01–SEG10, licencias |
+| **Responder dudas** | `[ROL]` `[FUENTE]` `[PROHIBIDO]` | postventa 34/35/36 (hoy sin ninguna) |
+| **Reunir datos antes de entregar algo** | nueve, incluidas `[SLOTS]` `[POSTCIERRE]` `[NODOS]` | 288 · DCI |
+| **Varias intenciones que convergen** | `[ROL]` `[ARQUITECTURA]` `[NODOS]` `[CIERRE]` | 25 / 32 |
+| **Ejecutar al aceptar** | `[ROL]` `[BANDERAS]` `[FLUJO]` `[CIERRE]` | 287 · TICKETS UNIDADES V4 |
+
+#### Cómo se detecta una sección, y por qué costó dos intentos
+
+El primer detector daba **5 agentes seccionados**. Eran 3. El agente 39 escribe
+`[fecha y hora confirmada por @agendar_calendar]` y el 42 `[horarios disponibles]`: ocupan
+su línea entera igual que un encabezado, pero son **huecos a rellenar**. La regla que sí
+discrimina, verificada contra los 33: el encabezado ocupa la línea completa **y va en
+mayúsculas**. Los tres agentes seccionados lo hacen así sin una sola excepción.
 
 ---
 

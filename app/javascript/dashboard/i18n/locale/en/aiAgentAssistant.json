@@ -261,9 +261,9 @@
       "NEW": "New",
       "MODE_SWITCHED": "Switched to {mode} · the draft and everything said are still here",
       "MODE_LABEL": "Mode",
-      "MODE_HINT_INTERVIEW": "I ask, and we build the agent from scratch",
-      "MODE_HINT_AUDIT": "I review what you have and tell you what breaks",
-      "MODE_HINT_TWEAK": "one precise change, nothing else touched"
+      "MODE_HINT_INTERVIEW": "build the agent from scratch",
+      "MODE_HINT_AUDIT": "review what you have",
+      "MODE_HINT_TWEAK": "one precise change"
     },
     "PATTERNS": {
       "TITLE": "Pattern library",

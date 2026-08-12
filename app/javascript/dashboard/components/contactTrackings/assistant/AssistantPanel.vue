@@ -339,7 +339,9 @@ export default {
         <div class="pt-3">
           <!-- El estado desde el que hablas. Cambiarlo no corta la conversación. -->
           <div class="flex flex-wrap items-center gap-2 mb-2">
-            <label class="mb-0 text-xs text-slate-500 dark:text-slate-400">
+            <label
+              class="mb-0 text-xs font-semibold text-slate-700 dark:text-slate-200"
+            >
               {{ $t('AI_AGENT_ASSISTANT.CHAT.MODE_LABEL') }}
             </label>
             <select
@@ -351,7 +353,9 @@ export default {
                 {{ modeLabel(option) }}
               </option>
             </select>
-            <span class="text-xs text-slate-400 dark:text-slate-500">
+            <span
+              class="text-xs truncate whitespace-nowrap text-slate-400 dark:text-slate-500"
+            >
               {{ modeHint }}
             </span>
           </div>
