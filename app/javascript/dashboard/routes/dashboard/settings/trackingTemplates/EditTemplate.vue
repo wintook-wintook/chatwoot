@@ -22,6 +22,7 @@ import AiAgentAssistantAPI from 'dashboard/api/aiAgentAssistant';
 import LintBadges from 'dashboard/components/contactTrackings/assistant/LintBadges.vue';
 import SandboxDrawer from 'dashboard/components/contactTrackings/assistant/SandboxDrawer.vue';
 import VersionsDrawer from 'dashboard/components/contactTrackings/assistant/VersionsDrawer.vue';
+import AssistantPanel from 'dashboard/components/contactTrackings/assistant/AssistantPanel.vue';
 // proyecto@ai_agent_attachments
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 // @knowledge_sources: fuentes Discourse para la directiva @buscar_foro
@@ -44,6 +45,7 @@ export default {
     LintBadges,
     SandboxDrawer,
     VersionsDrawer,
+    AssistantPanel,
   },
 
   props: {
@@ -65,6 +67,7 @@ export default {
       isLinting: false,
       showSandbox: false,
       showVersions: false, // F4: historial en sitio
+      showAssistant: false, // F5: el chat, aquí en modo auditar
       versionNote: '',
       form: {
         id: null,
@@ -647,6 +650,19 @@ export default {
       // al agente. Solo en el guardado: el linter y el probador no la necesitan.
       payload.tracking_template.version_note = this.versionNote;
       this.$emit('save', payload);
+    },
+    // F5: el asistente devuelve un borrador; el formulario lo absorbe campo por
+    // campo y el usuario sigue decidiendo si guarda. El asistente nunca escribe.
+    onAssistantDraft(draft) {
+      Object.entries(draft || {}).forEach(([field, value]) => {
+        if (value === null || value === undefined || value === '') return;
+        if (field === 'inbox_id') {
+          this.selectedInboxId = value;
+        } else if (field in this.form) {
+          this.form[field] = value;
+        }
+      });
+      this.runLint();
     },
     // F4: tras restaurar, lo guardado ya no es lo que muestra el formulario.
     onVersionRestored() {
@@ -1840,6 +1856,13 @@ export default {
           {{ $t('TRACKING_TEMPLATES.EDIT.CANCEL') }}
         </woot-button>
         <woot-button
+          variant="clear"
+          icon="wand"
+          @click.prevent="showAssistant = true"
+        >
+          {{ $t('AI_AGENT_ASSISTANT.CHAT.OPEN') }}
+        </woot-button>
+        <woot-button
           v-if="!isCreateMode"
           variant="clear"
           icon="arrow-rotate-counter-clockwise"
@@ -1873,6 +1896,31 @@ export default {
 
       <!-- proyecto@ai_agent_assistant (F4): historial en sitio. Iterar sobre el MISMO
            agente en vez de duplicarlo en «… V2 / V3 / V4». -->
+      <!-- proyecto@ai_agent_assistant (F5): el chat, aquí en modo auditar sobre el
+           borrador que ya está en el formulario. Devuelve borrador, no guarda. -->
+      <woot-modal
+        :show="showAssistant"
+        :on-close="() => (showAssistant = false)"
+        size="medium"
+      >
+        <div class="flex flex-col px-8 py-6 h-[75vh]">
+          <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">
+            {{ $t('AI_AGENT_ASSISTANT.CHAT.TITLE') }}
+          </h2>
+          <p class="mt-1 mb-4 text-sm text-slate-600 dark:text-slate-400">
+            {{ $t('AI_AGENT_ASSISTANT.CHAT.DESCRIPTION') }}
+          </p>
+          <AssistantPanel
+            v-if="showAssistant"
+            embedded
+            initial-mode="audit"
+            :tracking-template-id="form.id"
+            :initial-prompt="form.complementary_prompt"
+            @applyDraft="onAssistantDraft"
+          />
+        </div>
+      </woot-modal>
+
       <VersionsDrawer
         v-if="!isCreateMode"
         :show="showVersions"

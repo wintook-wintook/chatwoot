@@ -6,16 +6,20 @@
 // Descripción: Página del Asistente de Agentes IA. En F1 es el catálogo navegable
 //              de capacidades, resuelto contra el estado real de la cuenta y del
 //              canal: qué directiva está disponible, qué le hace a tu prompt y qué
-//              modelo usaría el motor. El chat y el probador llegan en F3/F5.
+//              modelo usaría el motor. Desde F5 comparte página con el chat: la
+//              pestaña «Chat» es el asistente propiamente dicho y el catálogo queda
+//              como referencia de lo que esa cuenta puede usar.
 // ================================================================================
 import { VeTable } from 'vue-easytable';
 import { useAlert } from 'dashboard/composables';
 import AiAgentAssistantAPI from '../../api/aiAgentAssistant';
+import AssistantPanel from '../../components/contactTrackings/assistant/AssistantPanel.vue';
 
 export default {
-  components: { VeTable },
+  components: { VeTable, AssistantPanel },
   data() {
     return {
+      activeTab: 'chat', // F5: el asistente abre en el chat, no en el catálogo
       capabilities: [],
       engine: null,
       isLoading: false,
@@ -23,6 +27,9 @@ export default {
     };
   },
   computed: {
+    tabs() {
+      return ['chat', 'catalog'];
+    },
     inboxes() {
       return this.$store.getters['inboxes/getInboxes'] || [];
     },
@@ -149,6 +156,11 @@ export default {
     this.fetchCapabilities();
   },
   methods: {
+    // El chat deja el Agente IA creado; el sitio donde se sigue trabajando es su
+    // formulario de siempre.
+    onAgentCreated() {
+      this.$router.push({ name: 'tracking_templates_list' });
+    },
     async fetchCapabilities() {
       this.isLoading = true;
       try {
@@ -259,67 +271,90 @@ export default {
       </div>
     </div>
 
-    <!-- Motor: modelo resuelto y presupuesto de salida -->
-    <div
-      v-if="engine"
-      class="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 mb-4 border rounded-lg shrink-0 bg-slate-25 dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-    >
-      <div>
-        <p class="m-0 text-xs font-semibold text-slate-500 dark:text-slate-400">
-          {{ $t('AI_AGENT_ASSISTANT.ENGINE.MODEL') }}
-        </p>
-        <code class="text-sm font-bold text-slate-800 dark:text-slate-100">
-          {{ engine.model }}
-        </code>
-      </div>
-      <p class="m-0 max-w-md text-xs text-slate-500 dark:text-slate-400">
-        {{
-          selectedInboxId
-            ? $t('AI_AGENT_ASSISTANT.ENGINE.MODEL_HINT')
-            : $t('AI_AGENT_ASSISTANT.ENGINE.DEFAULT_HINT')
-        }}
-      </p>
-      <div class="flex flex-wrap items-center gap-3">
-        <div v-for="item in engineBudget" :key="item.purpose">
+    <!-- Pestañas: el asistente (chat) y el catálogo de referencia -->
+    <div class="flex items-center gap-2 mb-4 shrink-0">
+      <woot-button
+        v-for="tab in tabs"
+        :key="tab"
+        size="small"
+        :variant="activeTab === tab ? 'smooth' : 'clear'"
+        @click.prevent="activeTab = tab"
+      >
+        {{ $t(`AI_AGENT_ASSISTANT.TAB_${tab.toUpperCase()}`) }}
+      </woot-button>
+    </div>
+
+    <AssistantPanel
+      v-if="activeTab === 'chat'"
+      class="flex-1 min-h-0"
+      @created="onAgentCreated"
+    />
+
+    <template v-else>
+      <!-- Motor: modelo resuelto y presupuesto de salida -->
+      <div
+        v-if="engine"
+        class="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 mb-4 border rounded-lg shrink-0 bg-slate-25 dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+      >
+        <div>
           <p
-            class="m-0 text-xs text-slate-500 dark:text-slate-400"
-            :title="$t('AI_AGENT_ASSISTANT.ENGINE.BUDGET_HINT')"
+            class="m-0 text-xs font-semibold text-slate-500 dark:text-slate-400"
           >
-            {{ $t(`AI_AGENT_ASSISTANT.ENGINE.PURPOSE.${item.purpose}`) }}
-            <span
-              class="font-mono font-bold text-slate-700 dark:text-slate-200"
-            >
-              {{ item.tokens }}
-            </span>
+            {{ $t('AI_AGENT_ASSISTANT.ENGINE.MODEL') }}
           </p>
+          <code class="text-sm font-bold text-slate-800 dark:text-slate-100">
+            {{ engine.model }}
+          </code>
+        </div>
+        <p class="m-0 max-w-md text-xs text-slate-500 dark:text-slate-400">
+          {{
+            selectedInboxId
+              ? $t('AI_AGENT_ASSISTANT.ENGINE.MODEL_HINT')
+              : $t('AI_AGENT_ASSISTANT.ENGINE.DEFAULT_HINT')
+          }}
+        </p>
+        <div class="flex flex-wrap items-center gap-3">
+          <div v-for="item in engineBudget" :key="item.purpose">
+            <p
+              class="m-0 text-xs text-slate-500 dark:text-slate-400"
+              :title="$t('AI_AGENT_ASSISTANT.ENGINE.BUDGET_HINT')"
+            >
+              {{ $t(`AI_AGENT_ASSISTANT.ENGINE.PURPOSE.${item.purpose}`) }}
+              <span
+                class="font-mono font-bold text-slate-700 dark:text-slate-200"
+              >
+                {{ item.tokens }}
+              </span>
+            </p>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Aviso de exclusividad: es la decisión que hay que tomar antes de elegir -->
-    <div
-      class="px-4 py-3 mb-4 border rounded-lg shrink-0 bg-amber-50 dark:bg-amber-800/20 border-amber-200 dark:border-amber-800"
-    >
-      <p class="m-0 text-sm font-semibold text-amber-800 dark:text-amber-200">
-        {{ $t('AI_AGENT_ASSISTANT.EXCLUSIVE_NOTE.TITLE') }}
-      </p>
-      <p
-        class="m-0 mt-1 text-xs leading-snug text-amber-700 dark:text-amber-300"
+      <!-- Aviso de exclusividad: es la decisión que hay que tomar antes de elegir -->
+      <div
+        class="px-4 py-3 mb-4 border rounded-lg shrink-0 bg-amber-50 dark:bg-amber-800/20 border-amber-200 dark:border-amber-800"
       >
-        {{ $t('AI_AGENT_ASSISTANT.EXCLUSIVE_NOTE.BODY') }}
-      </p>
-    </div>
+        <p class="m-0 text-sm font-semibold text-amber-800 dark:text-amber-200">
+          {{ $t('AI_AGENT_ASSISTANT.EXCLUSIVE_NOTE.TITLE') }}
+        </p>
+        <p
+          class="m-0 mt-1 text-xs leading-snug text-amber-700 dark:text-amber-300"
+        >
+          {{ $t('AI_AGENT_ASSISTANT.EXCLUSIVE_NOTE.BODY') }}
+        </p>
+      </div>
 
-    <div class="flex-1 min-h-0 assistant-table-wrap">
-      <VeTable
-        fixed-header
-        max-height="100%"
-        row-key-field-name="key"
-        :columns="columns"
-        :table-data="capabilities"
-        :border-around="false"
-      />
-    </div>
+      <div class="flex-1 min-h-0 assistant-table-wrap">
+        <VeTable
+          fixed-header
+          max-height="100%"
+          row-key-field-name="key"
+          :columns="columns"
+          :table-data="capabilities"
+          :border-around="false"
+        />
+      </div>
+    </template>
   </div>
 </template>
 

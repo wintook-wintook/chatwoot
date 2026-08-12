@@ -227,6 +227,35 @@
         "calendar_event_duration": "Duración del evento",
         "timezone": "Zona horaria"
       }
+    },
+    "TAB_CHAT": "Chat",
+    "TAB_CATALOG": "Catálogo",
+    "CHAT": {
+      "TITLE": "Asistente",
+      "DESCRIPTION": "Te hace las preguntas correctas y propone campo por campo. No guarda nada: lo que sale de aquí es un borrador.",
+      "OPEN": "Asistente",
+      "MODE_INTERVIEW": "Entrevista",
+      "MODE_AUDIT": "Auditar",
+      "MODE_TWEAK": "Ajustar",
+      "PROGRESS": "Paso {current} de {total}",
+      "THINKING": "Pensando…",
+      "PLACEHOLDER": "Escribe tu respuesta…",
+      "SEND": "Enviar",
+      "PROPOSALS": "Propuestas de este turno",
+      "APPLY": "Aplicar",
+      "APPLY_ALL": "Aplicar todas",
+      "APPLY_ERROR": "No se pudo aplicar la propuesta.",
+      "DRAFT": "Borrador",
+      "DRAFT_EMPTY": "Todavía no hay nada. Se irá llenando con lo que aceptes.",
+      "TO_FORM": "Pasar al formulario",
+      "SAVE": "Crear el Agente IA",
+      "SAVE_BLOCKED": "Faltan el nombre y el objetivo.",
+      "SAVED": "Agente IA creado. Revísalo y pruébalo antes de asignarlo.",
+      "SAVE_ERROR": "No se pudo crear el Agente IA.",
+      "ERROR_OPENAI_NOT_CONFIGURED": "Esta cuenta no tiene configurada la integración de OpenAI, así que el asistente no puede responder. El linter y «Ver prompt» sí funcionan sin ella.",
+      "ERROR_MODEL_UNAVAILABLE": "El modelo no devolvió una respuesta utilizable. Vuelve a intentarlo.",
+      "ERROR_SESSION_FAILED": "No se pudo abrir la conversación.",
+      "ERROR_TURN_FAILED": "No se pudo enviar el mensaje."
     }
   }
 }

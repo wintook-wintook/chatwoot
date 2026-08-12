@@ -227,6 +227,35 @@
         "calendar_event_duration": "Event duration",
         "timezone": "Time zone"
       }
+    },
+    "TAB_CHAT": "Chat",
+    "TAB_CATALOG": "Catalog",
+    "CHAT": {
+      "TITLE": "Assistant",
+      "DESCRIPTION": "It asks the right questions and proposes field by field. It saves nothing: what comes out of here is a draft.",
+      "OPEN": "Assistant",
+      "MODE_INTERVIEW": "Interview",
+      "MODE_AUDIT": "Audit",
+      "MODE_TWEAK": "Tweak",
+      "PROGRESS": "Step {current} of {total}",
+      "THINKING": "Thinking…",
+      "PLACEHOLDER": "Type your answer…",
+      "SEND": "Send",
+      "PROPOSALS": "Proposals from this turn",
+      "APPLY": "Apply",
+      "APPLY_ALL": "Apply all",
+      "APPLY_ERROR": "The proposal could not be applied.",
+      "DRAFT": "Draft",
+      "DRAFT_EMPTY": "Nothing yet. It fills up with whatever you accept.",
+      "TO_FORM": "Send to the form",
+      "SAVE": "Create the AI Agent",
+      "SAVE_BLOCKED": "Name and objective are missing.",
+      "SAVED": "AI Agent created. Review and test it before assigning it.",
+      "SAVE_ERROR": "The AI Agent could not be created.",
+      "ERROR_OPENAI_NOT_CONFIGURED": "This account has no OpenAI integration configured, so the assistant cannot answer. The linter and “View prompt” work without it.",
+      "ERROR_MODEL_UNAVAILABLE": "The model did not return a usable answer. Try again.",
+      "ERROR_SESSION_FAILED": "The conversation could not be opened.",
+      "ERROR_TURN_FAILED": "The message could not be sent."
     }
   }
 }
