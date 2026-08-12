@@ -13,16 +13,22 @@ const BLOQUES = [
     key: 'role_identity',
     section: 'rol',
     status: 'ready',
+    body: 'Eres <rol> de <empresa>.',
+    source: 'El mejor agente de la instalación cambia de trato seis veces.',
   },
   {
     key: 'sheet_source',
     section: 'fuente',
     status: 'dead_letter',
+    body: '{{hoja:<NOMBRE EXACTO>}}',
+    source: 'El agente 42 escribe dos nombres distintos de la misma hoja.',
   },
   {
     key: 'closing_once',
     section: 'cierre',
     status: 'ready',
+    body: 'Cuando <condición>, despídete UNA vez.',
+    source: 'Tres agentes se despiden y vuelven a preguntar.',
   },
 ];
 
@@ -70,6 +76,36 @@ describe('PatternMention.vue', () => {
     );
 
     expect(items).toHaveLength(1);
+  });
+
+  // El detalle va DENTRO de la fila marcada, no en un modal: la fila entera ya es el
+  // botón que inserta, y un modal encima del chat robaría el foco del composer.
+  it('enseña el texto del bloque y su evidencia en la fila marcada', () => {
+    const marcada = montar().findAll('.mention--box button').at(0);
+
+    expect(marcada.text()).toContain('Eres <rol> de <empresa>.');
+    expect(marcada.text()).toContain('cambia de trato seis veces');
+  });
+
+  it('no despliega el detalle de las filas donde no estás', () => {
+    const otra = montar().findAll('.mention--box button').at(1);
+
+    expect(otra.text()).not.toContain('Cuando <condición>');
+    expect(otra.text()).not.toContain('vuelven a preguntar');
+  });
+
+  // Con el detalle desplegado la fila crece; moverse con el ratón tiene que traerlo
+  // consigo, o el detalle se queda mostrando el bloque equivocado.
+  it('mueve el detalle al pasar el ratón por otra fila', async () => {
+    const wrapper = montar();
+    // `woot-dropdown-item` no está registrado en el entorno de pruebas, así que
+    // queda como elemento desconocido; el listener nativo sigue ahí, que es lo
+    // que aquí se ejercita.
+    await wrapper.findAll('woot-dropdown-item').at(1).trigger('mouseover');
+
+    const filas = wrapper.findAll('.mention--box button');
+    expect(filas.at(1).text()).toContain('Cuando <condición>');
+    expect(filas.at(0).text()).not.toContain('Eres <rol>');
   });
 
   it('no se pinta si no hay nada que ofrecer', () => {

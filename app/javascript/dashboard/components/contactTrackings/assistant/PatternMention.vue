@@ -43,6 +43,10 @@ export default {
           description: this.blockLabel(block),
           section: this.sectionLabel(block),
           status: block.status,
+          // El detalle solo se pinta en la fila marcada, así que viaja con el item
+          // en vez de pedirse aparte al abrirlo.
+          body: block.body,
+          source: block.source,
         }))
         .filter(
           item =>
@@ -80,10 +84,17 @@ export default {
 
 <!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
-  <MentionBox v-if="items.length" :items="items" @mentionSelect="onSelect">
+  <!-- Más alta que la lista de directivas: aquí la fila marcada se despliega con el
+       texto del bloque, y en 9.75rem no cabría. -->
+  <MentionBox
+    v-if="items.length"
+    class="!max-h-[24rem]"
+    :items="items"
+    @mentionSelect="onSelect"
+  >
     <!-- Slot propio: el de por defecto antepone «/» a la etiqueta y aquí el
          prefijo ya viene en el token. -->
-    <template #default="{ item }">
+    <template #default="{ item, selected }">
       <p
         class="max-w-full min-w-0 mb-0 overflow-hidden font-mono text-sm font-medium truncate text-slate-900 dark:text-slate-100"
       >
@@ -103,6 +114,24 @@ export default {
           · {{ item.description }} · {{ item.section }}
         </span>
       </p>
+
+      <!-- El detalle, en la fila donde estás parado. Un botón aparte no cabía: la
+           fila entera YA es el botón que inserta, y un modal encima del chat te
+           robaría el foco y se llevaría por delante lo que llevas escrito. -->
+      <template v-if="selected">
+        <p
+          class="w-full p-2 mt-1 mb-0 font-mono text-xs leading-snug text-left whitespace-pre-wrap rounded bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200"
+        >
+          {{ item.body }}
+        </p>
+        <!-- La evidencia: un bloque sin ella sería solo una opinión. Misma frase que
+             en el cajón, para que el mismo patrón se lea igual en los dos sitios. -->
+        <p
+          class="w-full mt-1 mb-0 text-xs italic leading-snug text-left text-slate-500 dark:text-slate-400"
+        >
+          {{ item.source }}
+        </p>
+      </template>
     </template>
   </MentionBox>
 </template>
