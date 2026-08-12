@@ -616,6 +616,13 @@ F6  Biblioteca de patrones                        ── acelera el arranque
      · guía de forma §13.2 como material del chat
 
 F7  Evaluación (replay + A/B + auto-conversación) ── medir, no adivinar
+
+F8  Patrones como base de conocimiento            ── que la biblioteca deje de ser una foto
+     · catálogo global (sin account_id) sembrado desde los 28 bloques de F6
+     · tabla por cuenta que guarda solo la DIVERGENCIA: adoptado, reescrito,
+       apagado, o nacido ahí
+     · métrica de resultado acumulándose desde el día uno (§14.4)
+     · promoción cuenta → catálogo MANUAL mientras no haya muestra (§14.5)
 ```
 
 **Nota sobre F4.** Subió de sitio. En el plan original el versionado era un extra dentro del
@@ -1103,6 +1110,143 @@ El primer detector daba **5 agentes seccionados**. Eran 3. El agente 39 escribe
 su línea entera igual que un encabezado, pero son **huecos a rellenar**. La regla que sí
 discrimina, verificada contra los 33: el encabezado ocupa la línea completa **y va en
 mayúsculas**. Los tres agentes seccionados lo hacen así sin una sola excepción.
+
+---
+
+## 14. F8 — Los patrones como base de conocimiento
+
+### 14.1 · El problema que resuelve
+
+Los 28 bloques de F6 son una **constante de Ruby congelada**
+(`ai_agent_assistant/pattern_library.rb`, `BLOCKS = [...].freeze`). No hay tabla, no hay
+migración: se despliegan con el código.
+
+Salieron de leer 33 agentes de producción **una vez**, en agosto de 2026. Es una foto. Envejece
+sola, no aprende de lo que pasa después, y cada corrección exige un deploy.
+
+F8 la convierte en algo vivo sin perder lo que la hace útil hoy: que **cada bloque trae su
+evidencia**. Los bloques de F6 no dicen «esto funciona»; dicen qué se rompió —*«el agente 42
+escribe dos nombres distintos de la misma hoja»*—. Esa diferencia es la que hay que conservar
+al pasarlos a base de datos, porque es la que impide que la biblioteca degenere en una galería
+de plantillas para clonar (§13.4: seis copias del mismo agente en la 778).
+
+### 14.2 · Las dos tablas
+
+```
+   ai_agent_pattern_templates              ai_agent_patterns
+   ── catálogo de instalación ──           ── por cuenta ──
+   SIN account_id                          account_id NOT NULL
+  ┌──────────────────────────┐            ┌────────────────────────────┐
+  │ key       role_identity  │◄───────────┤ template_id  (nullable)    │
+  │ section   rol            │ template_id│ account_id   568           │
+  │ kind      prompt│config  │            │ body      (∅ = sin cambios)│
+  │ body      «Eres <rol>…»  │            │ state     adoptado│apagado │
+  │ source    «el mejor…»    │            │ origin    catalogo│propio  │
+  │ requires  hoja │ ∅       │            │ uses / wins  (§14.4)       │
+  │ promoted_from_account_id │            └────────────────────────────┘
+  └──────────────────────────┘
+     28 filas semilla                       VACÍA al crear la cuenta
+     (desde BLOCKS, con `db:seed`)          se llena solo al divergir
+```
+
+**Precedente en el repo:** `tags` es una tabla de instalación y `taggings` dice qué cuenta usa
+cuál. 20 de las 103 tablas no tienen `account_id`, así que una tabla global no es una rareza.
+
+### 14.3 · La cuenta arranca vacía, pero no a oscuras
+
+Esto es la decisión que más cambia el resultado, y conviene tomarla a propósito:
+
+> *«la cuenta inicia sin patrones»* y *«el `$` sale vacío el primer día»* son la misma frase.
+
+Con la tabla por cuenta vacía, el asistente pierde su guía de forma **justo en la cuenta nueva**,
+que es donde más falta hace.
+
+```
+   lo que ve la cuenta  =  catálogo global  −  lo que apagó  +  lo suyo
+                           ───────────────     ─────────────    ───────
+                           28 desde el día 1   su decisión      lo que
+                                                                adaptó
+```
+
+La tabla por cuenta guarda **solo la divergencia**. Nadie «carga» los patrones: existen, igual
+que las etiquetas. La fila por cuenta aparece cuando esa cuenta adopta, reescribe, apaga o
+inventa uno. Así se obtienen las dos cosas: **nada que importar a mano** y **evolución propia**.
+
+La alternativa —arranque en vacío con pantalla de importación— también sale, pero exige que
+alguien se acuerde de usarla, y deja la cuenta nueva peor que hoy.
+
+### 14.4 · La métrica, que empieza a correr antes de servir para nada
+
+La señal de resultado **ya existe y ya se llena sola**: `contact_trackings.outcome`, con valores
+`objective_met`, `appointment`, `interested`, `rejected`, `cancelled`, escritos por el analizador
+en producción. No hay que instrumentar nada nuevo.
+
+```
+   patrón ──► agentes que lo llevan ──► seguimientos ──► outcome
+                                                          │
+                                            objective_met │ appointment
+                                                          ▼
+                                                    uses+1 / wins+1
+```
+
+Se mide sobre `contact_trackings.complementary_prompt` —la copia que el seguimiento se llevó al
+arrancar— y **no** sobre el prompt actual de la plantilla: si alguien editó la plantilla en
+marzo, los seguimientos de enero no se ejecutaron con ese texto.
+
+### 14.5 · La promoción es manual, y hay una razón medida
+
+La flecha que convierte esto en base de conocimiento es la de **subida**: un patrón nacido en una
+cuenta se gana su sitio en el catálogo global porque los agentes que lo llevan cumplen más.
+
+```
+   ↓  catálogo → cuenta     adoptar y adaptar        (contenido)
+   ↑  cuenta → catálogo     ganárselo por resultado  (aprendizaje)
+```
+
+**Pero la muestra no da todavía.** Medido sobre los 27 agentes de la 568 (agosto 2026):
+
+| | |
+|---|---|
+| con al menos una sección | **3 de 27** |
+| sin ninguna | 24 |
+| con `[POSTCIERRE]` | **1** |
+
+Con `[POSTCIERRE]` en un solo agente no hay dos grupos que comparar: la pregunta «¿los que tienen
+post-cierre cumplen más?» **no se puede responder en esta cuenta**. La mitad de resultado de la
+medición quedó sin correr (la base de la 568 no está accesible), y el script de solo lectura que
+la resuelve está escrito y probado, esperando muestra.
+
+**Consecuencia de diseño, no excusa:** F8 se construye igual, pero la promoción la **aprueba una
+persona**, con la métrica a la vista como argumento y no como juez. Si se dejara decidir al
+número desde el día uno, con n=1 promovería ruido. Cuando haya muestra, el mismo botón puede
+pasar a sugerir; el esquema no cambia.
+
+### 14.6 · Qué toca en el código (poco, y esa es la gracia)
+
+La costura ya está puesta: `PatternLibrary.for(account:)` **ya recibe la cuenta**, y todo lo de
+abajo —el `$` del chat, la pestaña Patrones, el cajón del editor, el system prompt— trabaja
+sobre los mismos hashes.
+
+```
+   hoy    BLOCKS.map { resolve(...) }          ← constante
+   F8     patterns_for(account).map { ... }    ← consulta, mismo hash
+```
+
+- `BLOCKS` deja de ser la fuente en runtime y pasa a ser la **semilla** (`db/seeds`).
+- `FORM_RULES`, `SKELETON` y `SECTION_PURPOSE` **se quedan como constantes**: son la guía de
+  forma, no patrones, y no dependen de la cuenta.
+- `references_in` pasa a resolver contra el conjunto de la cuenta.
+- Frontend: sin cambios estructurales. Se añade editar/apagar/crear en la pestaña Patrones.
+
+### 14.7 · Riesgo principal
+
+Que el bucle aprenda de lo que **existe** en vez de lo que **funciona**. Lo que hay en la 568 son
+seis copias del mismo agente y tres prompts de 11 000 caracteres con `@discourse` —justo la
+directiva que los destruye—. Un catálogo alimentado por frecuencia de uso aprendería a producir
+eso, y sería **peor que la foto de agosto**.
+
+Por eso la métrica es de resultado (`outcome`), no de uso, y por eso `uses` y `wins` van
+separados: un patrón muy usado y poco ganador es exactamente lo que hay que poder ver.
 
 ---
 
