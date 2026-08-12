@@ -266,7 +266,8 @@
       "MODE_HINT_TWEAK": "one precise change, nothing else",
       "NEEDS_NAME": "give it a name to create it",
       "NEEDS_OBJECTIVE": "the objective is missing",
-      "NAME_PLACEHOLDER": "WhatsApp · Collections"
+      "NAME_PLACEHOLDER": "WhatsApp · Collections",
+      "NEEDS_INBOX": "pick the channel before creating it"
     },
     "PATTERNS": {
       "TITLE": "Pattern library",

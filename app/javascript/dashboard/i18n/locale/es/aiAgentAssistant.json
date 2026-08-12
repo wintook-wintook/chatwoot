@@ -266,7 +266,8 @@
       "MODE_HINT_TWEAK": "un cambio puntual, sin tocar el resto",
       "NEEDS_NAME": "ponle un nombre para poder crearlo",
       "NEEDS_OBJECTIVE": "falta el objetivo",
-      "NAME_PLACEHOLDER": "WhatsApp · Cobranza"
+      "NAME_PLACEHOLDER": "WhatsApp · Cobranza",
+      "NEEDS_INBOX": "elige el canal antes de crearlo"
     },
     "PATTERNS": {
       "TITLE": "Biblioteca de patrones",

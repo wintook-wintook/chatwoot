@@ -17,9 +17,11 @@
 import AiAgentAssistantSessionsAPI from 'dashboard/api/aiAgentAssistantSessions';
 import { useAlert } from 'dashboard/composables';
 import LintBadges from './LintBadges.vue';
+import DirectiveMention from './DirectiveMention.vue';
+import AiAgentAssistantAPI from 'dashboard/api/aiAgentAssistant';
 
 export default {
-  components: { LintBadges },
+  components: { LintBadges, DirectiveMention },
   props: {
     // interview | audit | tweak
     initialMode: {
@@ -57,6 +59,7 @@ export default {
       isSaving: false,
       error: null,
       draftName: '',
+      capabilities: [], // para la lista que sale al escribir «/»
     };
   },
   computed: {
@@ -81,8 +84,16 @@ export default {
         .filter(([, value]) => this.isFilled(value))
         .map(([field, value]) => ({ field, value: this.readable(value) }));
     },
+    // Lo que hay escrito tras un «/» al principio de palabra. null = no estamos
+    // referenciando ninguna directiva.
+    directiveQuery() {
+      const match = /(?:^|\s)\/([^\s/]*)$/.exec(this.input);
+      return match ? match[1] : null;
+    },
     canSave() {
-      return Boolean(this.draftName.trim() && this.draft.objective);
+      return Boolean(
+        this.draftName.trim() && this.draft.objective && this.draft.inbox_id
+      );
     },
     // Qué falta exactamente para poder guardar. Antes solo se veía en un tooltip
     // sobre un botón deshabilitado, o sea: no se veía.
@@ -93,13 +104,38 @@ export default {
       if (!this.draft.objective) {
         return this.$t('AI_AGENT_ASSISTANT.CHAT.NEEDS_OBJECTIVE');
       }
+      // Un agente sin canal no puede enviar nada: es el agente huérfano número 7 de
+      // la cuenta 568. Mejor no dejar crearlo que crearlo muerto.
+      if (!this.draft.inbox_id) {
+        return this.$t('AI_AGENT_ASSISTANT.CHAT.NEEDS_INBOX');
+      }
       return '';
     },
   },
   mounted() {
     this.resumeOrOpen();
+    this.loadCapabilities();
   },
   methods: {
+    async loadCapabilities() {
+      try {
+        const { data } = await AiAgentAssistantAPI.getCapabilities({
+          inboxId: this.draft.inbox_id,
+          trackingTemplateId: this.trackingTemplateId,
+        });
+        this.capabilities = data.capabilities;
+      } catch (e) {
+        this.capabilities = [];
+      }
+    },
+    // Sustituye el «/loquesea» a medio escribir por la directiva elegida. Queda en
+    // TU mensaje: es una referencia para el asistente, no una inserción en el agente.
+    onDirectiveSelect(token) {
+      this.input = this.input.replace(/(?:^|\s)\/[^\s/]*$/, match =>
+        `${match.startsWith(' ') ? ' ' : ''}${token} `
+      );
+      this.$refs.composer?.focus();
+    },
     // Cerrar el cajón ya no tira el trabajo: si hay una conversación de este mismo
     // Agente IA, se retoma con su borrador intacto.
     async resumeOrOpen() {
@@ -211,8 +247,11 @@ export default {
     absorb(data) {
       this.sessionId = data.id;
       this.messages = data.messages || [];
+      const inboxBefore = this.draft.inbox_id;
       this.draft = data.draft || {};
       if (this.draft.name) this.draftName = this.draft.name;
+      // @discourse se configura POR INBOX: al fijar el canal cambia lo disponible.
+      if (this.draft.inbox_id !== inboxBefore) this.loadCapabilities();
       this.proposals = data.proposals || [];
       this.steps = data.steps || this.steps;
       this.step = data.step;
