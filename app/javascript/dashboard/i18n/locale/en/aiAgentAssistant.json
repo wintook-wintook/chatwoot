@@ -282,7 +282,11 @@
       "CHANNEL": "Channel",
       "CHANNEL_NONE": "— pick a channel —",
       "SESSIONS": "Saved conversations",
-      "SESSION_UNNAMED": "not named yet"
+      "SESSION_UNNAMED": "not named yet",
+      "SAVE_VERSION": "Save as a new version",
+      "SAVED_VERSION": "Saved as a new version of this agent",
+      "EDITING_HINT": "you work on a copy; saving makes it a new version of this agent and moves the previous one to the history",
+      "EDITING_LEAVE": "Leave this agent"
     },
     "PATTERNS": {
       "TITLE": "Pattern library",

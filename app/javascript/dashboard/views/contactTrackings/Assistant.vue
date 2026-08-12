@@ -40,6 +40,18 @@ export default {
     inboxes() {
       return this.$store.getters['inboxes/getInboxes'] || [];
     },
+    // Se llega aquí desde un Agente IA ya guardado: se trabaja sobre él y lo que se
+    // guarde será una versión suya, no otro agente.
+    editedTemplateId() {
+      const id = Number(this.$route.query.agent);
+      return Number.isInteger(id) && id > 0 ? id : null;
+    },
+    editedTemplate() {
+      if (!this.editedTemplateId) return null;
+      return this.$store.getters['trackingTemplates/getTemplateById'](
+        this.editedTemplateId
+      );
+    },
     engineBudget() {
       if (!this.engine) return [];
       return Object.entries(this.engine.max_tokens).map(
@@ -168,16 +180,26 @@ export default {
   },
   mounted() {
     this.$store.dispatch('inboxes/get');
+    // Para poder decir el NOMBRE del agente sobre el que se trabaja, no su id.
+    if (this.editedTemplateId) this.$store.dispatch('trackingTemplates/get');
     this.fetchCapabilities();
   },
   methods: {
     onTabChange(index) {
       this.activeTab = this.tabs[index] || 'chat';
     },
-    // El chat deja el Agente IA creado; el sitio donde se sigue trabajando es su
-    // formulario de siempre.
-    onAgentCreated() {
-      this.$router.push({ name: 'tracking_templates_list' });
+    // El chat deja el Agente IA creado —o versionado, si se venía de uno—; el sitio
+    // donde se sigue trabajando es su formulario de siempre.
+    onAgentCreated(template) {
+      this.$router.push({
+        name: 'tracking_templates_list',
+        query: template && template.id ? { agent: template.id } : {},
+      });
+    },
+    // Soltar el agente sin salir de la página: el asistente vuelve a ser el de armar
+    // uno de cero.
+    onLeaveTemplate() {
+      this.$router.replace({ query: {} }).catch(() => {});
     },
     async fetchCapabilities() {
       this.isLoading = true;
@@ -360,9 +382,34 @@ export default {
       />
     </woot-tabs>
 
+    <!-- Trabajar sobre un agente existente no se puede adivinar del chat: se dice,
+         y se dice también que el original no se toca hasta guardar. -->
+    <div
+      v-if="editedTemplateId && activeTab === 'chat'"
+      class="flex flex-wrap items-center gap-2 px-4 py-2 mb-3 text-xs border rounded-lg shrink-0 bg-woot-25 border-woot-200 dark:bg-woot-800/20 dark:border-woot-700"
+    >
+      <span class="font-semibold text-slate-700 dark:text-slate-200">
+        {{ editedTemplate ? editedTemplate.name : `#${editedTemplateId}` }}
+      </span>
+      <span class="text-slate-600 dark:text-slate-300">
+        {{ $t('AI_AGENT_ASSISTANT.CHAT.EDITING_HINT') }}
+      </span>
+      <woot-button
+        size="tiny"
+        variant="clear"
+        class="ml-auto"
+        @click.prevent="onLeaveTemplate"
+      >
+        {{ $t('AI_AGENT_ASSISTANT.CHAT.EDITING_LEAVE') }}
+      </woot-button>
+    </div>
+
     <AssistantPanel
       v-if="activeTab === 'chat'"
+      :key="editedTemplateId || 'new'"
       class="flex-1 min-h-0"
+      :tracking-template-id="editedTemplateId"
+      :initial-mode="editedTemplateId ? 'audit' : 'interview'"
       @created="onAgentCreated"
     />
 

@@ -364,15 +364,32 @@ export default {
     },
     // El guardado lo hace el usuario, no el asistente: esto solo manda el borrador
     // por la vía de siempre, marcándolo como venido del chat para el historial.
+    //
+    // Con un agente detrás NO se crea otro: se guarda encima y el modelo archiva
+    // la versión anterior. Es la diferencia entre mejorar un agente y acabar con
+    // seis que en realidad son uno (§13.4 del plan).
     async onSave() {
       this.isSaving = true;
       try {
         // La acción del store devuelve el registro, no la respuesta de axios.
         const template = await this.$store.dispatch(
-          'trackingTemplates/create',
-          {
-            tracking_template: { ...this.draft, version_source: 'assistant' },
-          }
+          this.trackingTemplateId
+            ? 'trackingTemplates/update'
+            : 'trackingTemplates/create',
+          this.trackingTemplateId
+            ? {
+                id: this.trackingTemplateId,
+                tracking_template: {
+                  ...this.draft,
+                  version_source: 'assistant',
+                },
+              }
+            : {
+                tracking_template: {
+                  ...this.draft,
+                  version_source: 'assistant',
+                },
+              }
         );
         // La conversación pasa a ser historia de ESE agente. Que falle atar no
         // puede tumbar un guardado que ya ocurrió: el agente existe.
@@ -382,7 +399,13 @@ export default {
             template.id
           ).catch(() => {});
         }
-        useAlert(this.$t('AI_AGENT_ASSISTANT.CHAT.SAVED'));
+        useAlert(
+          this.$t(
+            this.trackingTemplateId
+              ? 'AI_AGENT_ASSISTANT.CHAT.SAVED_VERSION'
+              : 'AI_AGENT_ASSISTANT.CHAT.SAVED'
+          )
+        );
         this.$emit('created', template);
       } catch (e) {
         useAlert(this.$t('AI_AGENT_ASSISTANT.CHAT.SAVE_ERROR'));
@@ -467,7 +490,11 @@ export default {
         :is-disabled="!canSave"
         @click.prevent="onSave"
       >
-        {{ $t('AI_AGENT_ASSISTANT.CHAT.SAVE') }}
+        {{
+          trackingTemplateId
+            ? $t('AI_AGENT_ASSISTANT.CHAT.SAVE_VERSION')
+            : $t('AI_AGENT_ASSISTANT.CHAT.SAVE')
+        }}
       </woot-button>
 
       <label

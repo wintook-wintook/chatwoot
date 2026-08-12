@@ -282,7 +282,11 @@
       "CHANNEL": "Canal",
       "CHANNEL_NONE": "— elegir canal —",
       "SESSIONS": "Conversaciones guardadas",
-      "SESSION_UNNAMED": "sin nombre todavía"
+      "SESSION_UNNAMED": "sin nombre todavía",
+      "SAVE_VERSION": "Guardar como nueva versión",
+      "SAVED_VERSION": "Guardado como versión nueva de este agente",
+      "EDITING_HINT": "trabajas sobre una copia; al guardar queda como versión nueva de este agente y la anterior pasa al historial",
+      "EDITING_LEAVE": "Soltar este agente"
     },
     "PATTERNS": {
       "TITLE": "Biblioteca de patrones",

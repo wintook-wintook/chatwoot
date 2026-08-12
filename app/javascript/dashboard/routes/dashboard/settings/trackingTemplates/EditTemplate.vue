@@ -21,7 +21,6 @@ import AiAgentAssistantAPI from 'dashboard/api/aiAgentAssistant';
 import LintBadges from 'dashboard/components/contactTrackings/assistant/LintBadges.vue';
 import SandboxDrawer from 'dashboard/components/contactTrackings/assistant/SandboxDrawer.vue';
 import VersionsDrawer from 'dashboard/components/contactTrackings/assistant/VersionsDrawer.vue';
-import AssistantPanel from 'dashboard/components/contactTrackings/assistant/AssistantPanel.vue';
 import PatternLibraryDrawer from 'dashboard/components/contactTrackings/assistant/PatternLibraryDrawer.vue';
 // proyecto@ai_agent_attachments
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
@@ -59,7 +58,6 @@ export default {
     LintBadges,
     SandboxDrawer,
     VersionsDrawer,
-    AssistantPanel,
     PatternLibraryDrawer,
   },
 
@@ -82,7 +80,6 @@ export default {
       isLinting: false,
       showSandbox: false,
       showVersions: false, // F4: historial en sitio
-      showAssistant: false, // F5: el chat, aquí en modo auditar
       showPatterns: false, // F6: biblioteca de bloques
       showDuplicate: false, // ramificar: otro canal o un caso vecino
       duplicateName: '',
@@ -582,24 +579,6 @@ export default {
       const current = (this.form.complementary_prompt || '').trimEnd();
       this.form.complementary_prompt = current ? `${current}\n\n${body}` : body;
       this.scheduleLint();
-    },
-    // F5: el asistente devuelve un borrador; el formulario lo absorbe campo por
-    // campo y el usuario sigue decidiendo si guarda. El asistente nunca escribe.
-    onAssistantDraft(draft) {
-      Object.entries(draft || {}).forEach(([field, value]) => {
-        if (value === null || value === undefined || value === '') return;
-        if (field === 'inbox_id') {
-          this.selectedInboxId = value;
-        } else if (field in this.form) {
-          this.form[field] = value;
-        }
-      });
-      this.runLint();
-    },
-    // La abre la cabecera de la página, que es donde vive el botón. Público a
-    // propósito: el estado del cajón sigue siendo de este formulario.
-    openAssistant() {
-      this.showAssistant = true;
     },
     openDuplicate() {
       this.duplicateName = `${this.form.name} (copia)`;
@@ -1876,30 +1855,10 @@ export default {
         @insert="onPatternInsert"
       />
 
-      <!-- proyecto@ai_agent_assistant (F5): el chat, aquí en modo auditar sobre el
-           borrador que ya está en el formulario. Devuelve borrador, no guarda. -->
-      <woot-modal
-        :show="showAssistant"
-        :on-close="() => (showAssistant = false)"
-        size="medium"
-      >
-        <div class="flex flex-col px-8 py-6 h-[75vh]">
-          <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">
-            {{ $t('AI_AGENT_ASSISTANT.CHAT.TITLE') }}
-          </h2>
-          <p class="mt-1 mb-4 text-sm text-slate-600 dark:text-slate-400">
-            {{ $t('AI_AGENT_ASSISTANT.CHAT.DESCRIPTION') }}
-          </p>
-          <AssistantPanel
-            v-if="showAssistant"
-            embedded
-            initial-mode="audit"
-            :tracking-template-id="form.id"
-            :initial-prompt="form.complementary_prompt"
-            @applyDraft="onAssistantDraft"
-          />
-        </div>
-      </woot-modal>
+      <!-- proyecto@ai_agent_assistant: el asistente ya no vive aquí en un cajón. Es
+           una página propia, y se llega desde la cabecera: allí el agente se trabaja
+           sobre una copia y al guardar queda como versión nueva de este mismo agente.
+           Un chat de nueve pasos dentro de un modal de 75vh era el sitio equivocado. -->
 
       <!-- Ramificar. El nombre se pide aquí porque es único por cuenta y porque es
            la única forma de que la copia se distinga del original en la lista. -->
