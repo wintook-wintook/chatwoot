@@ -127,6 +127,36 @@
         "WHEN": "Catalogs, spec sheets or forms.",
         "REQUIREMENT": "Files uploaded to the AI Agent"
       }
+    },
+    "LINT_CHECKING": "Checking…",
+    "LINT_ERRORS": "⛔ {count}",
+    "LINT_WARNINGS": "⚠ {count}",
+    "LINT_INFOS": "ℹ {count}",
+    "LINT_CLEAN": "No issues",
+    "LINT_BLOCKED": "Cannot save while there are errors. Fix the items marked ⛔.",
+    "LINT": {
+      "two_sources": "You have more than one knowledge source. Only {winner} will apply; {ignored} will be dead text inside the prompt.",
+      "search_swallows_prompt": "With {directive} the engine discards the whole prompt: {discarded_chars} characters of instructions never reach the model. Either the agent searches, or the agent speaks.",
+      "search_kills_attachments": "With {directive} files stop being sent: the engine no longer tells the model they exist.",
+      "inconsistent_source_names": "There are two different source names. Only the first one is used ({used}); {ignored} is never queried.",
+      "google_feature_missing": "Google is not enabled on this account, so this directive will do nothing.",
+      "erp_feature_missing": "ERP connection is not enabled on this account, so the query will not resolve.",
+      "case_type_missing": "There is no case type “{requested}”; the ticket would use the default type. Available: {available}.",
+      "attachment_missing": "There is no file named {missing} in this AI Agent; the engine will strip that text from the message.",
+      "calendar_missing": "@agendar_calendar needs at least one connected calendar to work.",
+      "invalid_keyword_action": "The action “{actions}” does not exist. Only these are allowed: {valid}.",
+      "whatsapp_without_templates": "This is a WhatsApp channel with no templates and a retry every {hours} h. Past 24 h the window closes, so every retry will fail.",
+      "prompt_too_long": "The prompt has {length} characters, while the message is generated with {max_tokens} tokens and a two-sentence limit. Above {budget} the text dilutes instead of adding.",
+      "ai_context_too_long": "The context has {length} characters and the engine truncates it to {budget}: {lost} are lost.",
+      "channel_mismatch": "The prompt talks about {mentioned}, but this agent runs on {actual}.",
+      "slots_without_calendars": "It is set to group slots by calendar, but there are no connected calendars.",
+      "inbox_missing": "Without an assigned channel the agent cannot be used.",
+      "placeholder_looks_like_variable": "{{{{{names}}}}} will be read as a file, not a variable, and will be stripped from the message.",
+      "visible_keyword_marker": "The engine does not strip “{markers}” from the message: the customer will see it.",
+      "duplicate_prompt": "This prompt is identical to {others}. One fix will be several fixes.",
+      "timezone_missing": "Without a timezone, the Google calendar's or the channel's will be used. Setting it avoids surprises.",
+      "objective_is_a_title": "The objective has {length} characters and allows up to {max}. It is the only field that always reaches the model intact: use it for the rules that must not be lost.",
+      "sibling_versions": "There are other agents that look like versions of this one ({others}). Better to iterate on a single one than to pile up copies."
     }
   }
 }

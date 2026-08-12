@@ -127,6 +127,36 @@
         "WHEN": "Catálogos, fichas técnicas o formatos.",
         "REQUIREMENT": "Archivos cargados en el Agente IA"
       }
+    },
+    "LINT_CHECKING": "Revisando…",
+    "LINT_ERRORS": "⛔ {count}",
+    "LINT_WARNINGS": "⚠ {count}",
+    "LINT_INFOS": "ℹ {count}",
+    "LINT_CLEAN": "Sin problemas",
+    "LINT_BLOCKED": "No se puede guardar mientras haya errores. Corrige lo marcado con ⛔.",
+    "LINT": {
+      "two_sources": "Tienes más de una fuente de conocimiento. Solo se aplicará {winner}; {ignored} quedará como texto muerto dentro del prompt.",
+      "search_swallows_prompt": "Con {directive} el motor descarta el prompt completo: {discarded_chars} caracteres de instrucciones nunca llegan al modelo. O el agente busca, o el agente habla.",
+      "search_kills_attachments": "Con {directive} los archivos dejan de enviarse: el motor ya no le explica al modelo que existen.",
+      "inconsistent_source_names": "Hay dos nombres de fuente distintos. Solo se usa el primero ({used}); {ignored} nunca se consulta.",
+      "google_feature_missing": "La cuenta no tiene Google habilitado, así que esta directiva no hará nada.",
+      "erp_feature_missing": "La cuenta no tiene conexión a ERP habilitada, así que la consulta no se resolverá.",
+      "case_type_missing": "No existe el tipo de caso «{requested}»; el ticket saldría con el tipo por defecto. Disponibles: {available}.",
+      "attachment_missing": "No hay ningún archivo llamado {missing} en este Agente IA; el motor borrará ese texto del mensaje.",
+      "calendar_missing": "@agendar_calendar necesita al menos un calendario conectado para operar.",
+      "invalid_keyword_action": "La acción «{actions}» no existe. Solo se admiten: {valid}.",
+      "whatsapp_without_templates": "Es un canal de WhatsApp sin plantillas y el reintento es cada {hours} h. Pasadas las 24 h la ventana se cierra, así que todos los reintentos fallarán.",
+      "prompt_too_long": "El prompt tiene {length} caracteres y el mensaje se genera con {max_tokens} tokens y un máximo de dos oraciones. Por encima de {budget} el texto diluye en vez de sumar.",
+      "ai_context_too_long": "El contexto tiene {length} caracteres y el motor lo trunca a {budget}: se pierden {lost}.",
+      "channel_mismatch": "El prompt habla de {mentioned}, pero este agente corre en {actual}.",
+      "slots_without_calendars": "Está configurado para mostrar horarios agrupados por calendario, pero no hay calendarios conectados.",
+      "inbox_missing": "Sin canal asignado el agente no se puede usar.",
+      "placeholder_looks_like_variable": "{{{{{names}}}}} se interpretará como un archivo, no como una variable, y se borrará del mensaje.",
+      "visible_keyword_marker": "El motor no limpia «{markers}» del mensaje: el cliente lo verá escrito.",
+      "duplicate_prompt": "Este prompt es idéntico al de {others}. Una corrección serán varias correcciones.",
+      "timezone_missing": "Sin zona horaria, se usará la del calendario de Google o la del canal. Fijarla evita sorpresas.",
+      "objective_is_a_title": "El objetivo tiene {length} caracteres y admite hasta {max}. Es el único campo que siempre llega íntegro al modelo: aprovéchalo para las reglas que no deben perderse.",
+      "sibling_versions": "Hay otros agentes que parecen versiones del mismo ({others}). Conviene iterar sobre uno solo en vez de acumular copias."
     }
   }
 }

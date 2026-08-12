@@ -14,7 +14,12 @@ import { mapGetters } from 'vuex';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
+import { debounce } from '@chatwoot/utils';
+import { useAlert } from 'dashboard/composables';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
+// proyecto@ai_agent_assistant: semáforo del linter
+import AiAgentAssistantAPI from 'dashboard/api/aiAgentAssistant';
+import LintBadges from 'dashboard/components/contactTrackings/assistant/LintBadges.vue';
 // proyecto@ai_agent_attachments
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 // @knowledge_sources: fuentes Discourse para la directiva @buscar_foro
@@ -32,7 +37,7 @@ const DIRECTIVE_GROUPS = [
 ];
 
 export default {
-  components: { KeywordActionsEditor },
+  components: { KeywordActionsEditor, LintBadges },
 
   props: {
     templateData: {
@@ -48,6 +53,9 @@ export default {
   emits: ['save', 'cancel'],
   data() {
     return {
+      // proyecto@ai_agent_assistant
+      lintFindings: [],
+      isLinting: false,
       form: {
         id: null,
         name: '',
@@ -119,6 +127,10 @@ export default {
     };
   },
   computed: {
+    // proyecto@ai_agent_assistant
+    hasLintErrors() {
+      return this.lintFindings.some(f => f.level === 'error');
+    },
     ...mapGetters({
       appIntegrations: 'integrations/getAppIntegrations',
       inboxes: 'inboxes/getInboxes',
@@ -460,6 +472,12 @@ export default {
     },
   },
   watch: {
+    // proyecto@ai_agent_assistant: revalida al cambiar lo que el linter mira.
+    // Es estático y local, así que se puede correr mientras se escribe.
+    'form.complementary_prompt': 'scheduleLint',
+    'form.objective': 'scheduleLint',
+    'form.ai_context': 'scheduleLint',
+    'form.keyword_actions': { handler: 'scheduleLint', deep: true },
     templateData: {
       immediate: true,
       handler(val) {
@@ -523,6 +541,9 @@ export default {
       } else {
         this.availableWATemplates = [];
       }
+      // proyecto@ai_agent_assistant: el canal cambia lo que el linter puede validar
+      // (modelo, ventana de WhatsApp, integración de Discourse).
+      this.scheduleLint();
     },
     maxAttempts(newVal) {
       this.adjustTemplatesArray(newVal);
@@ -553,11 +574,9 @@ export default {
     onCancel() {
       this.$emit('cancel');
     },
-    onSubmit() {
-      if (!this.isFormValid) {
-        this.showValidationModal = true;
-        return;
-      }
+    // proyecto@ai_agent_assistant: el mismo cuerpo alimenta el guardado y el linter,
+    // para que lo que se valida sea exactamente lo que se guardaría.
+    buildPayload() {
       const payload = {
         tracking_template: {
           name: this.form.name,
@@ -582,7 +601,38 @@ export default {
       if (!this.isCreateMode) {
         payload.id = this.form.id;
       }
-      this.$emit('save', payload);
+      return payload;
+    },
+    // proyecto@ai_agent_assistant: valida el borrador contra el motor. No persiste nada.
+    scheduleLint: debounce(
+      function scheduleLint() {
+        this.runLint();
+      },
+      500,
+      false
+    ),
+    async runLint() {
+      this.isLinting = true;
+      try {
+        const { data } = await AiAgentAssistantAPI.lint(this.buildPayload());
+        this.lintFindings = data.findings;
+      } catch (error) {
+        this.lintFindings = [];
+      } finally {
+        this.isLinting = false;
+      }
+    },
+    onSubmit() {
+      if (!this.isFormValid) {
+        this.showValidationModal = true;
+        return;
+      }
+      // Los ⛔ bloquean: son fallos verificables que romperían el agente en producción.
+      if (this.hasLintErrors) {
+        useAlert(this.$t('AI_AGENT_ASSISTANT.LINT_BLOCKED'));
+        return;
+      }
+      this.$emit('save', this.buildPayload());
     },
     onContextTabChange(index) {
       this.activeContextTab = index;
@@ -1745,10 +1795,15 @@ export default {
         </div>
       </div>
 
+      <!-- proyecto@ai_agent_assistant: semáforo del linter -->
+      <LintBadges
+        class="pt-4 border-t border-slate-200 dark:border-slate-700"
+        :findings="lintFindings"
+        :is-loading="isLinting"
+      />
+
       <!-- Botones -->
-      <div
-        class="flex items-center justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700"
-      >
+      <div class="flex items-center justify-end gap-2 pt-4">
         <woot-button
           variant="clear"
           color-scheme="secondary"
@@ -1756,7 +1811,11 @@ export default {
         >
           {{ $t('TRACKING_TEMPLATES.EDIT.CANCEL') }}
         </woot-button>
-        <woot-button @click.prevent="onSubmit">
+        <woot-button
+          :disabled="hasLintErrors"
+          :title="hasLintErrors ? $t('AI_AGENT_ASSISTANT.LINT_BLOCKED') : ''"
+          @click.prevent="onSubmit"
+        >
           {{ submitText }}
         </woot-button>
       </div>

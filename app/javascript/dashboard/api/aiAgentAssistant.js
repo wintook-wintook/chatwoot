@@ -16,6 +16,12 @@ class AiAgentAssistantAPI extends ApiClient {
     super('ai_agent_assistant', { accountScoped: true });
   }
 
+  // Valida un borrador. No persiste nada: si se pasa `id`, el backend parte del
+  // Agente IA guardado y le aplica encima los campos editados.
+  lint(payload) {
+    return axios.post(`${this.url}/lint`, payload);
+  }
+
   getCapabilities({ inboxId, trackingTemplateId } = {}) {
     return axios.get(`${this.url}/capabilities`, {
       params: {
