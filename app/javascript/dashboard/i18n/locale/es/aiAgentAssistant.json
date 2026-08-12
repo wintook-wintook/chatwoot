@@ -259,7 +259,7 @@
       "ERROR_MODEL_UNAVAILABLE": "El modelo no devolvió una respuesta utilizable. Vuelve a intentarlo.",
       "ERROR_SESSION_FAILED": "No se pudo abrir la conversación.",
       "ERROR_TURN_FAILED": "No se pudo enviar el mensaje.",
-      "NEW": "Nueva",
+      "NEW": "Nuevo Agente IA",
       "MODE_SWITCHED": "Cambiaste a {mode} · el borrador y lo hablado siguen aquí",
       "MODE_LABEL": "Modo",
       "MODE_HINT_INTERVIEW": "te pregunto y lo armamos de cero",
@@ -268,7 +268,9 @@
       "NEEDS_NAME": "ponle un nombre para poder crearlo",
       "NEEDS_OBJECTIVE": "falta el objetivo",
       "NAME_PLACEHOLDER": "WhatsApp · Cobranza",
-      "NEEDS_INBOX": "elige el canal antes de crearlo"
+      "NEEDS_INBOX": "elige el canal antes de crearlo",
+      "CHANNEL": "Canal",
+      "CHANNEL_NONE": "— elegir canal —"
     },
     "PATTERNS": {
       "TITLE": "Biblioteca de patrones",

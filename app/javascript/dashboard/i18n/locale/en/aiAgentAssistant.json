@@ -259,7 +259,7 @@
       "ERROR_MODEL_UNAVAILABLE": "The model did not return a usable answer. Try again.",
       "ERROR_SESSION_FAILED": "The conversation could not be opened.",
       "ERROR_TURN_FAILED": "The message could not be sent.",
-      "NEW": "New",
+      "NEW": "New AI Agent",
       "MODE_SWITCHED": "Switched to {mode} · the draft and everything said are still here",
       "MODE_LABEL": "Mode",
       "MODE_HINT_INTERVIEW": "I ask, and we build it from scratch",
@@ -268,7 +268,9 @@
       "NEEDS_NAME": "give it a name to create it",
       "NEEDS_OBJECTIVE": "the objective is missing",
       "NAME_PLACEHOLDER": "WhatsApp · Collections",
-      "NEEDS_INBOX": "pick the channel before creating it"
+      "NEEDS_INBOX": "pick the channel before creating it",
+      "CHANNEL": "Channel",
+      "CHANNEL_NONE": "— pick a channel —"
     },
     "PATTERNS": {
       "TITLE": "Pattern library",

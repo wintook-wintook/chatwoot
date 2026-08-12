@@ -60,9 +60,13 @@ export default {
       error: null,
       draftName: '',
       capabilities: [], // para la lista que sale al escribir «/»
+      draftInbox: '',
     };
   },
   computed: {
+    inboxes() {
+      return this.$store.getters['inboxes/getInboxes'] || [];
+    },
     modes() {
       return ['interview', 'audit', 'tweak'];
     },
@@ -115,6 +119,7 @@ export default {
   mounted() {
     this.resumeOrOpen();
     this.loadCapabilities();
+    if (!this.inboxes.length) this.$store.dispatch('inboxes/get');
   },
   methods: {
     async loadCapabilities() {
@@ -227,6 +232,21 @@ export default {
         // Sin sesión abierta el nombre se queda en el formulario y se manda al crear.
       }
     },
+    // El canal es obligatorio para crear el agente y el asistente no siempre lo
+    // propone. Se elige aquí y se guarda en la sesión, o el siguiente turno lo
+    // borraría al refrescar el borrador desde el servidor.
+    async onInboxChange() {
+      if (!this.sessionId) return;
+      try {
+        const { data } = await AiAgentAssistantSessionsAPI.setDraft(
+          this.sessionId,
+          { inbox_id: this.draftInbox || null }
+        );
+        this.absorb(data);
+      } catch (e) {
+        this.error = 'turn_failed';
+      }
+    },
     async onModeSelect() {
       if (!this.sessionId) return;
       try {
@@ -255,6 +275,7 @@ export default {
       const inboxBefore = this.draft.inbox_id;
       this.draft = data.draft || {};
       if (this.draft.name) this.draftName = this.draft.name;
+      this.draftInbox = this.draft.inbox_id || '';
       // @discourse se configura POR INBOX: al fijar el canal cambia lo disponible.
       if (this.draft.inbox_id !== inboxBefore) this.loadCapabilities();
       this.proposals = data.proposals || [];
@@ -327,12 +348,63 @@ export default {
 
 <template>
   <div class="flex flex-col flex-1 min-h-0">
-    <!-- El modo no es un destino al que navegas: es el estado desde el que escribes,
-         así que vive junto al mensaje, abajo. Aquí arriba solo el progreso. -->
-    <div class="flex items-center gap-2 pb-3">
+    <!-- Todo lo que se DECIDE sobre el agente, arriba y en una línea: empezar de
+         cero, crearlo, y el canal por el que hablará. El progreso a la derecha. -->
+    <div class="flex flex-wrap items-center gap-2 pb-3">
+      <woot-button
+        size="small"
+        variant="clear"
+        icon="add"
+        @click.prevent="onNewConversation"
+      >
+        {{ $t('AI_AGENT_ASSISTANT.CHAT.NEW') }}
+      </woot-button>
+      <woot-button
+        v-if="embedded"
+        size="small"
+        variant="smooth"
+        :is-disabled="!draftEntries.length"
+        @click.prevent="$emit('applyDraft', draft)"
+      >
+        {{ $t('AI_AGENT_ASSISTANT.CHAT.TO_FORM') }}
+      </woot-button>
+      <woot-button
+        v-else
+        size="small"
+        :is-loading="isSaving"
+        :is-disabled="!canSave"
+        @click.prevent="onSave"
+      >
+        {{ $t('AI_AGENT_ASSISTANT.CHAT.SAVE') }}
+      </woot-button>
+
+      <label
+        class="mb-0 text-xs font-semibold text-slate-700 dark:text-slate-200"
+      >
+        {{ $t('AI_AGENT_ASSISTANT.CHAT.CHANNEL') }}
+      </label>
+      <select
+        v-model="draftInbox"
+        class="h-8 py-0 mb-0 text-sm w-44"
+        @change="onInboxChange"
+      >
+        <option value="">
+          {{ $t('AI_AGENT_ASSISTANT.CHAT.CHANNEL_NONE') }}
+        </option>
+        <option v-for="inbox in inboxes" :key="inbox.id" :value="inbox.id">
+          {{ inbox.name }}
+        </option>
+      </select>
+
+      <span
+        v-if="saveBlockedReason"
+        class="text-xs text-amber-700 dark:text-amber-300"
+      >
+        {{ saveBlockedReason }}
+      </span>
       <span
         v-if="showsProgress"
-        class="text-xs whitespace-nowrap text-slate-500 dark:text-slate-400"
+        class="ml-auto text-xs whitespace-nowrap text-slate-500 dark:text-slate-400"
       >
         {{
           $t('AI_AGENT_ASSISTANT.CHAT.PROGRESS', {
@@ -341,15 +413,6 @@ export default {
           })
         }}
       </span>
-      <woot-button
-        size="tiny"
-        variant="clear"
-        icon="add"
-        class="ml-auto"
-        @click.prevent="onNewConversation"
-      >
-        {{ $t('AI_AGENT_ASSISTANT.CHAT.NEW') }}
-      </woot-button>
     </div>
 
     <div class="flex flex-1 min-h-0 gap-4">
@@ -539,34 +602,6 @@ export default {
           class="pt-3 mt-3 border-t border-slate-200 dark:border-slate-700"
           :findings="findings"
         />
-
-        <div class="flex items-center gap-2 pt-3">
-          <woot-button
-            v-if="embedded"
-            variant="smooth"
-            size="small"
-            :is-disabled="!draftEntries.length"
-            @click.prevent="$emit('applyDraft', draft)"
-          >
-            {{ $t('AI_AGENT_ASSISTANT.CHAT.TO_FORM') }}
-          </woot-button>
-          <template v-else>
-            <woot-button
-              size="small"
-              :is-loading="isSaving"
-              :is-disabled="!canSave"
-              @click.prevent="onSave"
-            >
-              {{ $t('AI_AGENT_ASSISTANT.CHAT.SAVE') }}
-            </woot-button>
-            <span
-              v-if="saveBlockedReason"
-              class="text-xs text-amber-700 dark:text-amber-300"
-            >
-              {{ saveBlockedReason }}
-            </span>
-          </template>
-        </div>
       </div>
     </div>
   </div>
