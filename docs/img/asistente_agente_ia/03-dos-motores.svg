@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 726" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1040" height="726" fill="#f4f6f9"/>
+
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28" letter-spacing="-0.4">Los dos motores: dónde cae realmente tu prompt</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Un Agente IA no tiene un prompt, tiene dos contextos distintos. Escribir para uno y esperar el otro es la causa raíz de T1.</text>
+
+  <!-- ============ LEFT: RUTA A ============ -->
+  <rect x="40" y="92" width="470" height="34" rx="8" fill="#eef1f5"/>
+  <text x="60" y="114" font-size="12" font-weight="700" fill="#475569">DISPARO  ·  cron */5 → ExecutePendingJob</text>
+
+  <text x="40" y="152" font-size="15" font-weight="800" fill="#151b28">RUTA A · Mensaje programado</text>
+  <text x="40" y="170" font-size="11.5" fill="#94a3b8" font-family="ui-monospace, Menlo, Consolas, monospace">app/jobs/contact_tracking_job.rb</text>
+
+  <rect x="40" y="184" width="470" height="38" rx="7" fill="#ffffff" stroke="#d7dce4"/>
+  <text x="58" y="208" font-size="12" fill="#334155">Eres un asistente de seguimiento para {cuenta}</text>
+
+  <rect x="40" y="228" width="470" height="38" rx="7" fill="#ffffff" stroke="#d7dce4"/>
+  <text x="58" y="252" font-size="12" fill="#334155">INFORMACIÓN DEL CLIENTE · nombre + nota IA del contacto</text>
+
+  <rect x="40" y="272" width="470" height="38" rx="7" fill="#ffffff" stroke="#d7dce4"/>
+  <text x="58" y="296" font-size="12" fill="#334155">CONTEXTO INTERNO · Objetivo · Contexto (ai_context)</text>
+
+  <rect x="40" y="316" width="470" height="38" rx="7" fill="#ffffff" stroke="#d7dce4"/>
+  <text x="58" y="340" font-size="12" fill="#334155">Este es el intento n de max</text>
+
+  <rect x="40" y="360" width="470" height="38" rx="7" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="58" y="384" font-size="12" font-weight="700" fill="#6d28d9">INSTRUCCIONES ADICIONALES  ←  tu complementary_prompt</text>
+
+  <rect x="40" y="404" width="470" height="52" rx="7" fill="#fef2f2" stroke="#fecaca" stroke-width="2"/>
+  <text x="58" y="424" font-size="12" font-weight="700" fill="#b91c1c">REGLAS GENERALES</text>
+  <text x="58" y="443" font-size="11.5" fill="#7f1d1d">«Máximo 2 oraciones» · sin tecnicismos · en español</text>
+
+  <rect x="40" y="466" width="470" height="42" rx="7" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="58" y="483" font-size="11" font-weight="700" fill="#64748b">USER</text>
+  <text x="58" y="500" font-size="11.5" fill="#475569">generar el mensaje · o personalizar la plantilla de WhatsApp</text>
+
+  <path d="M275,512 L275,538" stroke="#94a3b8" stroke-width="2" marker-end="url(#a3)" fill="none"/>
+
+  <rect x="40" y="546" width="470" height="56" rx="8" fill="#1e293b"/>
+  <text x="58" y="570" font-size="12.5" font-weight="700" fill="#ffffff" font-family="ui-monospace, Menlo, Consolas, monospace">gpt-4o-mini</text>
+  <text x="58" y="590" font-size="11.5" fill="#94a3b8" font-family="ui-monospace, Menlo, Consolas, monospace">max_tokens: 150  ·  temperature: 0.7</text>
+  <rect x="376" y="562" width="118" height="26" rx="13" fill="#dc2626"/>
+  <text x="435" y="579" text-anchor="middle" font-size="11.5" font-weight="800" fill="#ffffff">≈ 110 palabras</text>
+
+  <!-- ============ RIGHT: RUTA B ============ -->
+  <rect x="530" y="92" width="470" height="34" rx="8" fill="#eef1f5"/>
+  <text x="550" y="114" font-size="12" font-weight="700" fill="#475569">DISPARO  ·  el cliente responde</text>
+
+  <text x="530" y="152" font-size="15" font-weight="800" fill="#151b28">RUTA B · Respuesta conversacional</text>
+  <text x="530" y="170" font-size="11.5" fill="#94a3b8" font-family="ui-monospace, Menlo, Consolas, monospace">app/jobs/contact_tracking_response_analyzer_job.rb</text>
+
+  <rect x="530" y="184" width="470" height="38" rx="7" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2"/>
+  <text x="548" y="202" font-size="11.5" font-weight="700" fill="#1d4ed8">Antes que nada: RouterService clasifica la intención</text>
+  <text x="548" y="217" font-size="10.5" fill="#3b82f6">8 rutas · solo si TRACKING_DETECT_INTENT=true (T7)</text>
+
+  <rect x="530" y="228" width="470" height="38" rx="7" fill="#ffffff" stroke="#d7dce4"/>
+  <text x="548" y="252" font-size="12" fill="#334155">Eres un asesor de ventas para {cuenta}</text>
+
+  <rect x="530" y="272" width="470" height="38" rx="7" fill="#ffffff" stroke="#d7dce4"/>
+  <text x="548" y="290" font-size="12" fill="#334155">OBJETIVO · ESTADO DE LA CITA · PRÓXIMO CONTACTO</text>
+  <text x="548" y="305" font-size="10.5" fill="#94a3b8">appointment-aware: fecha exacta, no inventa horarios</text>
+
+  <rect x="530" y="316" width="470" height="38" rx="7" fill="#fffbeb" stroke="#fde68a" stroke-width="2"/>
+  <text x="548" y="334" font-size="12" font-weight="700" fill="#92400e">BASE DE CONOCIMIENTO  ←  ai_context</text>
+  <text x="548" y="349" font-size="10.5" fill="#b45309">truncado a 800 caracteres · el sistema le escribe encima (T6)</text>
+
+  <rect x="530" y="360" width="470" height="38" rx="7" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="548" y="384" font-size="12" font-weight="700" fill="#6d28d9">INSTRUCCIONES ADICIONALES  ←  tu complementary_prompt</text>
+
+  <rect x="530" y="404" width="470" height="52" rx="7" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+  <text x="548" y="424" font-size="12" font-weight="800" fill="#b91c1c">✕  clean_cp = ''  con @buscar_* o @discourse (T2)</text>
+  <text x="548" y="443" font-size="11.5" fill="#7f1d1d">y se borra @agendar_calendar del texto (T4) · «Máximo 4 líneas»</text>
+
+  <rect x="530" y="466" width="470" height="42" rx="7" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="548" y="483" font-size="11" font-weight="700" fill="#64748b">USER</text>
+  <text x="548" y="500" font-size="11.5" fill="#475569">historial de la conversación + mensaje del cliente</text>
+
+  <path d="M765,512 L765,538" stroke="#94a3b8" stroke-width="2" marker-end="url(#a3)" fill="none"/>
+
+  <rect x="530" y="546" width="470" height="56" rx="8" fill="#1e293b"/>
+  <text x="548" y="570" font-size="12.5" font-weight="700" fill="#ffffff" font-family="ui-monospace, Menlo, Consolas, monospace">gpt-4o-mini</text>
+  <text x="548" y="590" font-size="11.5" fill="#94a3b8" font-family="ui-monospace, Menlo, Consolas, monospace">hardcodeado en 5 puntos de llamada</text>
+  <rect x="838" y="562" width="150" height="26" rx="13" fill="#dc2626"/>
+  <text x="913" y="579" text-anchor="middle" font-size="11.5" font-weight="800" fill="#ffffff">T8 · ignora model_ia</text>
+
+  <!-- ============ BOTTOM NOTE ============ -->
+  <rect x="40" y="626" width="960" height="76" rx="10" fill="#ffffff" stroke="#d7dce4"/>
+  <text x="64" y="652" font-size="13" font-weight="800" fill="#151b28">La consecuencia práctica</text>
+  <text x="64" y="674" font-size="12" fill="#5c6675">Un prompt de 8 000–18 000 caracteres con arquitectura de estados, slots y nodo de cierre entra en una caja con tope de 150 tokens</text>
+  <text x="64" y="692" font-size="12" fill="#5c6675">y la orden literal de responder en 2 oraciones. No es que el modelo lo entienda mal: es que no tiene dónde ponerlo.</text>
+</svg>
