@@ -63,6 +63,7 @@ export default {
       capabilities: [], // para la lista que sale al escribir «/»
       patterns: [], // para la lista que sale al escribir «$»
       draftInbox: '',
+      sessions: [], // las conversaciones aparcadas, para poder volver a cualquiera
     };
   },
   computed: {
@@ -177,24 +178,47 @@ export default {
       );
       this.$refs.composer?.focus();
     },
-    // Cerrar el cajón ya no tira el trabajo: si hay una conversación de este mismo
-    // Agente IA, se retoma con su borrador intacto.
-    async resumeOrOpen() {
+    // El listado de conversaciones aparcadas. Sin esto solo se alcanzaba la última:
+    // empezar un agente y dejarlo a medias para armar otro enterraba el primero.
+    async loadSessions() {
       try {
         const { data } = await AiAgentAssistantSessionsAPI.list(
           this.trackingTemplateId
         );
-        const last = (data.sessions || [])[0];
-        if (last) {
-          const { data: session } = await AiAgentAssistantSessionsAPI.get(
-            last.id
-          );
-          this.absorb(session);
-          this.mode = session.mode;
-          return;
-        }
+        this.sessions = data.sessions || [];
       } catch (e) {
-        // Sin historial que retomar se abre una nueva, que es el caso normal.
+        this.sessions = [];
+      }
+    },
+    // Volver a una conversación aparcada: se recupera con su borrador y su hilo.
+    async onSessionSelect() {
+      if (!this.sessionId) return;
+      try {
+        const { data } = await AiAgentAssistantSessionsAPI.get(this.sessionId);
+        this.absorb(data);
+        this.mode = data.mode;
+      } catch (e) {
+        // La conversación ya no está: mejor quedarse sin ninguna que fingir que
+        // sigue abierta, porque el siguiente turno se perdería en el vacío.
+        this.sessionId = null;
+        this.error = 'turn_failed';
+      }
+    },
+    sessionLabel(session) {
+      const fecha = new Date(session.updated_at).toLocaleDateString();
+      const nombre =
+        session.name || this.$t('AI_AGENT_ASSISTANT.CHAT.SESSION_UNNAMED');
+      return `${nombre} · ${fecha}`;
+    },
+    // Cerrar el cajón ya no tira el trabajo: se retoma la última conversación de
+    // este mismo Agente IA, con su borrador intacto.
+    async resumeOrOpen() {
+      await this.loadSessions();
+      const last = this.sessions[0];
+      if (last) {
+        this.sessionId = last.id;
+        await this.onSessionSelect();
+        if (this.sessionId) return;
       }
       await this.openSession();
     },
@@ -303,6 +327,7 @@ export default {
       this.draft = {};
       this.findings = [];
       await this.openSession();
+      this.loadSessions();
     },
     absorb(data) {
       this.sessionId = data.id;
@@ -409,6 +434,23 @@ export default {
       >
         {{ $t('AI_AGENT_ASSISTANT.CHAT.NEW') }}
       </woot-button>
+      <!-- Aparcar y volver: puedes dejar un agente a medias para armar otro y
+           recuperar el primero con su borrador y su hilo intactos. -->
+      <select
+        v-if="sessions.length > 1"
+        v-model="sessionId"
+        class="h-8 py-0 mb-0 text-sm w-52"
+        :title="$t('AI_AGENT_ASSISTANT.CHAT.SESSIONS')"
+        @change="onSessionSelect"
+      >
+        <option
+          v-for="session in sessions"
+          :key="session.id"
+          :value="session.id"
+        >
+          {{ sessionLabel(session) }}
+        </option>
+      </select>
       <woot-button
         v-if="embedded"
         size="small"

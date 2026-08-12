@@ -211,7 +211,8 @@
         "assistant": "assistant",
         "restore": "restored",
         "baseline": "previous state",
-        "import": "import"
+        "import": "import",
+        "fork": "copy of another agent"
       },
       "FIELD": {
         "name": "Name",
@@ -229,7 +230,15 @@
         "slots_presentation": "Slot presentation",
         "calendar_event_duration": "Event duration",
         "timezone": "Time zone"
-      }
+      },
+      "DUPLICATE": "Save as a new agent",
+      "DUPLICATE_TITLE": "Save as a new agent",
+      "DUPLICATE_HINT": "Creates a separate agent with this same content. The original is untouched. To improve this agent use the history, not a copy.",
+      "DUPLICATE_NAME": "Name of the new agent",
+      "DUPLICATE_CONFIRM": "Create the agent",
+      "DUPLICATE_ERROR": "The copy could not be created",
+      "DUPLICATED": "New agent created from this one",
+      "DUPLICATE_SAVED_ONLY": "It copies what is saved. Unsaved changes in the form do not make it into the copy."
     },
     "TAB_CHAT": "Chat",
     "TAB_PATTERNS": "Patterns",
@@ -271,7 +280,9 @@
       "NAME_PLACEHOLDER": "WhatsApp · Collections",
       "NEEDS_INBOX": "pick the channel before creating it",
       "CHANNEL": "Channel",
-      "CHANNEL_NONE": "— pick a channel —"
+      "CHANNEL_NONE": "— pick a channel —",
+      "SESSIONS": "Saved conversations",
+      "SESSION_UNNAMED": "not named yet"
     },
     "PATTERNS": {
       "TITLE": "Pattern library",

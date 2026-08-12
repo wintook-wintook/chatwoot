@@ -211,7 +211,8 @@
         "assistant": "asistente",
         "restore": "restauración",
         "baseline": "estado anterior",
-        "import": "importación"
+        "import": "importación",
+        "fork": "copia de otro agente"
       },
       "FIELD": {
         "name": "Nombre",
@@ -229,7 +230,15 @@
         "slots_presentation": "Presentación de horarios",
         "calendar_event_duration": "Duración del evento",
         "timezone": "Zona horaria"
-      }
+      },
+      "DUPLICATE": "Guardar como agente nuevo",
+      "DUPLICATE_TITLE": "Guardar como agente nuevo",
+      "DUPLICATE_HINT": "Crea un agente aparte con este mismo contenido. El original no se toca. Para mejorar este agente usa el historial, no una copia.",
+      "DUPLICATE_NAME": "Nombre del agente nuevo",
+      "DUPLICATE_CONFIRM": "Crear el agente",
+      "DUPLICATE_ERROR": "No se pudo crear la copia",
+      "DUPLICATED": "Agente nuevo creado a partir de este",
+      "DUPLICATE_SAVED_ONLY": "Se copia lo guardado. Si tienes cambios sin guardar en el formulario, no entran en la copia."
     },
     "TAB_CHAT": "Chat",
     "TAB_PATTERNS": "Patrones",
@@ -271,7 +280,9 @@
       "NAME_PLACEHOLDER": "WhatsApp · Cobranza",
       "NEEDS_INBOX": "elige el canal antes de crearlo",
       "CHANNEL": "Canal",
-      "CHANNEL_NONE": "— elegir canal —"
+      "CHANNEL_NONE": "— elegir canal —",
+      "SESSIONS": "Conversaciones guardadas",
+      "SESSION_UNNAMED": "sin nombre todavía"
     },
     "PATTERNS": {
       "TITLE": "Biblioteca de patrones",

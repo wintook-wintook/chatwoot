@@ -138,11 +138,17 @@ class TrackingTemplate < ApplicationRecord
     versions.maximum(:version).to_i + 1
   end
 
-  def resolved_version_source
-    return 'create' if previously_new_record?
+  # Al nacer, el origen es `create` salvo que quien lo creó diga de dónde salió.
+  # Sin esto todas las v1 se ven iguales, y la de una copia no lo es: tiene un
+  # original al que compararse, y quien la abra dentro de un mes necesita saberlo.
+  BIRTH_SOURCES = %w[fork assistant import].freeze
 
+  def resolved_version_source
     source = version_source.to_s
-    TrackingTemplateVersion::SOURCES.include?(source) ? source : 'manual'
+    known = TrackingTemplateVersion::SOURCES.include?(source)
+    return source if known && (!previously_new_record? || BIRTH_SOURCES.include?(source))
+
+    previously_new_record? ? 'create' : 'manual'
   end
 
   def ensure_arrays

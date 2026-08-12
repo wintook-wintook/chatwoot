@@ -47,7 +47,9 @@ class TrackingTemplateVersion < ApplicationRecord
 
   # De dónde vino el guardado. `baseline` es el estado anterior reconstruido para los
   # agentes que ya existían antes de F4; sin él, el primer diff no tendría contra qué comparar.
-  SOURCES = %w[create manual assistant restore baseline import].freeze
+  # `fork` = el agente nació como copia de otro. Se distingue de `create` porque su
+  # v1 no es un punto de partida en blanco: tiene un original al que compararse.
+  SOURCES = %w[create manual assistant restore baseline import fork].freeze
 
   belongs_to :account
   belongs_to :tracking_template

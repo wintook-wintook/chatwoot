@@ -90,6 +90,9 @@ Rails.application.routes.draw do
               get :siblings
               post :archive
               post :unarchive
+              # Ramificar: otro canal o un caso vecino. Mejorar el mismo agente es
+              # el historial, no una copia.
+              post :duplicate
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
