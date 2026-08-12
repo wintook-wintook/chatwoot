@@ -19,6 +19,7 @@ RSpec.describe AiAgentAssistant::SystemPrompt do
     it 'separa lo disponible de lo que no lo está' do
       account.enable_features!('google_calendar')
       account.disable_features!('erp_connection')
+      account.knowledge_sources.create!(source_type: 'google_doc', name: 'Manual')
 
       texto = described_class.for(session_for)
       disponibles, no_disponibles = texto.split('NO DISPONIBLES')

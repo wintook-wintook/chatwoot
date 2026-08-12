@@ -107,10 +107,14 @@ RSpec.describe AiAgentAssistant::Interview do
     # Si {{doc:}} no está pero {{hoja:}} sí, la rama «voz propia» sigue viva con la que sí está.
     it 'promueve la alternativa cuando la vía principal no está disponible' do
       account.enable_features!('google_calendar')
+      account.knowledge_sources.create!(source_type: 'google_sheet', name: 'Precios')
       arbol = described_class.knowledge_tree(account: account, inbox: inbox)
       rama  = arbol[:options].find { |o| o[:key] == 'own_voice' }
 
-      expect([rama[:capability], *rama[:alternatives]]).to include(:doc, :hoja)
+      # Solo hay hoja de cálculo dada de alta: la rama sobrevive con {{hoja:}} promovida
+      # a vía principal, y {{doc:}} no se ofrece porque no hay ningún documento.
+      expect(rama[:capability]).to eq(:hoja)
+      expect(rama[:alternatives]).to be_empty
     end
 
     it 'la rama de búsqueda solo lista los acervos que ya están vectorizados' do

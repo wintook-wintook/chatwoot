@@ -386,6 +386,13 @@
       "ERROR_NO_INBOX": "Este agente no tiene canal asignado, así que no hay conversaciones sobre las que correr el replay.",
       "ERROR_NO_CONVERSATIONS": "Este canal no tiene conversaciones cerradas con respuesta humana con las que comparar.",
       "ERROR_REQUEST_FAILED": "No se pudo completar la petición."
+    },
+    "PICKER": {
+      "EFFECT_SWALLOWS": "descarta tu prompt",
+      "EFFECT_RENDERS": "se envía literal",
+      "EFFECT_KEEPS": "conserva tu prompt",
+      "LOADING": "Cargando el catálogo de la cuenta…",
+      "UNAVAILABLE": "No disponibles en esta cuenta"
     }
   }
 }

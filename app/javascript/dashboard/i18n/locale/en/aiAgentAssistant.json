@@ -386,6 +386,13 @@
       "ERROR_NO_INBOX": "This agent has no channel assigned, so there are no conversations to replay against.",
       "ERROR_NO_CONVERSATIONS": "This channel has no closed conversations with a human reply to compare against.",
       "ERROR_REQUEST_FAILED": "The request could not be completed."
+    },
+    "PICKER": {
+      "EFFECT_SWALLOWS": "discards your prompt",
+      "EFFECT_RENDERS": "sent literally",
+      "EFFECT_KEEPS": "keeps your prompt",
+      "LOADING": "Loading the account catalog…",
+      "UNAVAILABLE": "Not available in this account"
     }
   }
 }

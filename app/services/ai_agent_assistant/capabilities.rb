@@ -90,7 +90,7 @@ class AiAgentAssistant::Capabilities # rubocop:disable Metrics/ClassLength
       matcher: /\{\{doc:([^}]+)\}\}/i,
       kind: :source,
       precedence: 5,
-      requirement: :feature_google_calendar,
+      requirement: :google_docs,
       swallows_prompt: false,
       renders_prompt: false,
       example: '{{doc:Políticas de garantía}}'
@@ -101,7 +101,7 @@ class AiAgentAssistant::Capabilities # rubocop:disable Metrics/ClassLength
       matcher: /\{\{hoja:([^}]+)\}\}/i,
       kind: :source,
       precedence: 6,
-      requirement: :feature_google_calendar,
+      requirement: :google_sheets,
       swallows_prompt: false,
       renders_prompt: false,
       example: '{{hoja:Precios 2026}}'
@@ -204,9 +204,24 @@ class AiAgentAssistant::Capabilities # rubocop:disable Metrics/ClassLength
         capability.except(:matcher).merge(
           i18n_key: "capabilities.#{capability[:key]}",
           available: available,
-          detail: detail
+          detail: detail,
+          tokens: tokens_for(capability, detail)
         )
       end
+    end
+
+    # El texto EXACTO que hay que escribir en el prompt, ya con los valores de esta
+    # cuenta. Es lo único que necesita quien inserta una directiva, y vivía duplicado
+    # en JavaScript dentro de EditTemplate.vue.
+    # Un token solo vale para la capacidad que de verdad lo reconoce. `@estado_ticket`
+    # comparte requisito con `@crear_ticket` y heredaba sus tokens; contrastarlos con
+    # el propio matcher lo resuelve y además valida cualquier caso futuro.
+    def tokens_for(capability, detail)
+      listados = detail.is_a?(Hash) ? Array(detail[:tokens]) : []
+      propios = listados.select { |entry| entry[:token].to_s.match?(capability[:matcher]) }
+      return propios if propios.any?
+
+      [{ token: capability[:syntax], label: nil }]
     end
 
     private
@@ -215,7 +230,8 @@ class AiAgentAssistant::Capabilities # rubocop:disable Metrics/ClassLength
     # `detalle` da contexto útil a la UI (nombres de fuentes, cuántos artículos hay…).
     RESOLVERS = {
       feature_erp_connection: :resolve_erp_connection,
-      feature_google_calendar: :resolve_google_calendar,
+      google_docs: :resolve_google_docs,
+      google_sheets: :resolve_google_sheets,
       knowledge_items_canned_response: :resolve_canned_responses,
       knowledge_items_article: :resolve_articles,
       knowledge_sources_discourse: :resolve_knowledge_sources,
@@ -241,14 +257,55 @@ class AiAgentAssistant::Capabilities # rubocop:disable Metrics/ClassLength
     def resolve_erp_connection(account, _inbox, _template)
       return [false, nil] unless account.feature_enabled?('erp_connection')
 
-      names = account.external_db_queries.where(active: true).includes(:external_db_connection)
-                     .filter_map { |query| "#{query.external_db_connection&.name}/#{query.name}" }
-                     .uniq
-      [names.any?, { names: names }]
+      conexiones = account.external_db_connections.to_a
+      consultas = account.external_db_queries.where(active: true).includes(:external_db_connection)
+                         .select { |query| query.external_db_connection.present? }
+      tokens = consultas.filter_map { |query| erp_token(query, conexiones) }
+      [tokens.any?, { names: tokens.pluck(:name), tokens: tokens }]
     end
 
-    def resolve_google_calendar(account, _inbox, _template)
-      [account.feature_enabled?('google_calendar'), nil]
+    # {{consulta:prefijo/nombre(rfc=)}} — los parámetros salen del `params_schema`.
+    def erp_token(query, conexiones)
+      conexion = query.external_db_connection
+      prefijo = erp_prefix(conexion, conexiones)
+      return nil if prefijo.blank?
+
+      claves = Array(query.params_schema).filter_map { |p| "#{p['key']}=" if p['key'].present? }
+      args = claves.any? ? "(#{claves.join(', ')})" : ''
+      { name: "#{prefijo}/#{query.name}",
+        token: "{{consulta:#{prefijo}/#{query.name}#{args}}}",
+        label: "«#{query.name}» en «#{conexion.name}»" }
+    end
+
+    # El motor solo acepta [a-z0-9_]+ como prefijo y resuelve por `erp_type` o por
+    # nombre. «Contpaq adPanchitos» no es un prefijo válido: hay que usar `contpaq`,
+    # y solo si esa conexión es la única de su tipo. Si ninguna de las dos vías da un
+    # prefijo utilizable, no se ofrece token: sería una directiva inerte.
+    def erp_prefix(conexion, conexiones)
+      tipo = conexion.erp_type.to_s
+      return tipo if tipo.present? && tipo != 'generic' &&
+                     conexiones.count { |c| c.erp_type.to_s == tipo } == 1
+
+      por_nombre = conexion.name.to_s.downcase.gsub(/\s+/, '')
+      por_nombre.match?(/\A[a-z0-9_]+\z/) ? por_nombre : nil
+    end
+
+    # {{doc:}} y {{hoja:}} necesitan la feature encendida Y un documento detrás: la
+    # directiva con un nombre inventado no resuelve a nada, igual que pasa con el ERP.
+    def resolve_google_docs(account, inbox, template)
+      resolve_google_source(account, 'google_doc', 'doc', inbox, template)
+    end
+
+    def resolve_google_sheets(account, inbox, template)
+      resolve_google_source(account, 'google_sheet', 'hoja', inbox, template)
+    end
+
+    def resolve_google_source(account, source_type, keyword, _inbox, _template)
+      return [false, nil] unless account.feature_enabled?('google_calendar')
+
+      names = account.knowledge_sources.where(source_type: source_type).pluck(:name)
+      tokens = names.map { |name| { name: name, token: "{{#{keyword}:#{name}}}", label: "«#{name}»" } }
+      [names.any?, { names: names, tokens: tokens }]
     end
 
     def resolve_canned_responses(account, _inbox, _template)
@@ -263,7 +320,8 @@ class AiAgentAssistant::Capabilities # rubocop:disable Metrics/ClassLength
 
     def resolve_knowledge_sources(account, _inbox, _template)
       names = account.knowledge_sources.active.where(source_type: 'discourse').pluck(:name)
-      [names.any?, { names: names }]
+      tokens = names.map { |name| { name: name, token: "@buscar_foro(#{name})", label: "fuente «#{name}»" } }
+      [names.any?, { names: names, tokens: tokens }]
     end
 
     def resolve_discourse_hook(account, inbox, _template)
@@ -277,14 +335,20 @@ class AiAgentAssistant::Capabilities # rubocop:disable Metrics/ClassLength
       [count.positive?, { count: count }]
     end
 
+    # Solo `@crear_ticket` lleva el tipo dentro; `@estado_ticket` comparte requisito
+    # pero no se parametriza, y su token por defecto es su propia sintaxis.
     def resolve_case_types(account, _inbox, _template)
       names = account.case_types.pluck(:name)
-      [names.any?, { names: names }]
+      tokens = names.map do |name|
+        { name: name, token: "@crear_ticket(prioridad=alta, tipo=#{name})", label: "tipo «#{name}»" }
+      end
+      [names.any?, { names: names, tokens: tokens }]
     end
 
     def resolve_attachments(_account, _inbox, template)
       names = template.present? ? template.ai_agent_attachments.pluck(:name) : []
-      [names.any?, { names: names }]
+      tokens = names.map { |name| { name: name, token: "{{#{name}}}", label: "archivo «#{name}»" } }
+      [names.any?, { names: names, tokens: tokens }]
     end
   end
 end

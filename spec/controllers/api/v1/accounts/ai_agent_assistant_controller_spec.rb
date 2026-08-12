@@ -36,9 +36,25 @@ RSpec.describe 'AI Agent Assistant API', type: :request do
         expect(claves).to include('i18n_key', 'available', 'swallows_prompt')
       end
 
+      # Es lo que consume el picker del editor desde que dejó de tener su propio
+      # catálogo en JavaScript: el token exacto a insertar y qué le hace al prompt.
+      it 'entrega el token insertable y el efecto de cada directiva' do
+        account.case_types.create!(name: 'Soporte')
+
+        get "/api/v1/accounts/#{account.id}/ai_agent_assistant/capabilities",
+            headers: agent.create_new_auth_token, as: :json
+
+        capabilities = response.parsed_body['capabilities'].index_by { |c| c['key'] }
+        expect(capabilities['crear_ticket']['tokens'].first['token'])
+          .to eq('@crear_ticket(prioridad=alta, tipo=Soporte)')
+        expect(capabilities['buscar_articulo']['swallows_prompt']).to be(true)
+        expect(capabilities['hoja']['swallows_prompt']).to be(false)
+      end
+
       it 'resuelve la disponibilidad contra las features de la cuenta' do
         account.enable_features!('google_calendar')
         account.disable_features!('erp_connection')
+        account.knowledge_sources.create!(source_type: 'google_sheet', name: 'Precios')
 
         get "/api/v1/accounts/#{account.id}/ai_agent_assistant/capabilities",
             headers: agent.create_new_auth_token, as: :json
@@ -157,6 +173,7 @@ RSpec.describe 'AI Agent Assistant API', type: :request do
     # Lo que hace útil a la biblioteca: no ofrecer lo que en este prompt no serviría.
     it 'marca como letra muerta los bloques de prompt cuando hay una búsqueda activa' do
       account.enable_features!('google_calendar')
+      account.knowledge_sources.create!(source_type: 'google_doc', name: 'Manual')
 
       get url, params: { complementary_prompt: '@discourse' },
                headers: agent.create_new_auth_token, as: :json

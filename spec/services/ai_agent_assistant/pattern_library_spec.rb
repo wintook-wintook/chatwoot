@@ -49,6 +49,7 @@ RSpec.describe AiAgentAssistant::PatternLibrary do
 
     it 'marca listo el bloque cuya directiva sí está encendida' do
       account.enable_features!('google_calendar')
+      account.knowledge_sources.create!(source_type: 'google_doc', name: 'Manual')
 
       expect(block('doc_source')[:status]).to eq('ready')
     end
@@ -80,6 +81,8 @@ RSpec.describe AiAgentAssistant::PatternLibrary do
 
     it '{{hoja:}} y {{doc:}} no vuelven letra muerta a nadie: conservan el prompt' do
       account.enable_features!('google_calendar')
+      account.knowledge_sources.create!(source_type: 'google_doc', name: 'Manual')
+      account.knowledge_sources.create!(source_type: 'google_sheet', name: 'Precios')
       resultado = library(prompt: '{{hoja:Precios}}')
 
       expect(resultado[:prompt_is_discarded]).to be(false)
@@ -88,6 +91,8 @@ RSpec.describe AiAgentAssistant::PatternLibrary do
 
     it 'con una fuente ya puesta, la segunda fuente se marca como ocupada' do
       account.enable_features!('google_calendar')
+      account.knowledge_sources.create!(source_type: 'google_doc', name: 'Manual')
+      account.knowledge_sources.create!(source_type: 'google_sheet', name: 'Precios')
 
       expect(block('doc_source', prompt: '{{hoja:Precios}}')[:status]).to eq('source_taken')
       expect(block('sheet_source', prompt: '{{hoja:Precios}}')[:status]).to eq('ready')

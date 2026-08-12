@@ -51,6 +51,71 @@ RSpec.describe AiAgentAssistant::Capabilities do
     end
   end
 
+  # ==========================================================================
+  # GUARDARRAÍL: un token que se ofrece para insertar TIENE que resolver.
+  # Encontró un defecto real: se ofrecía «{{consulta:Contpaq adPanchitos/...}}»
+  # y el motor solo acepta [a-z0-9_]+ como prefijo, así que era letra muerta.
+  # ==========================================================================
+  describe 'tokens insertables' do
+    let(:account) { create(:account) }
+
+    it 'todo token que se ofrece lo reconoce el matcher de su capacidad' do
+      described_class.resolve_for(account: account).each do |capability|
+        matcher = described_class.find(capability[:key])[:matcher]
+
+        capability[:tokens].each do |entry|
+          expect(entry[:token]).to match(matcher),
+                                   "#{capability[:key]}: «#{entry[:token]}» no lo reconoce el motor"
+        end
+      end
+    end
+
+    it 'siempre hay al menos un token, aunque la cuenta no tenga nada dado de alta' do
+      tokens = described_class.resolve_for(account: account).pluck(:tokens)
+
+      expect(tokens).to all(be_present)
+    end
+
+    it 'usa el prefijo que el motor entiende, no el nombre de la conexión' do
+      account.enable_features!('erp_connection')
+      conexion = account.external_db_connections.create!(
+        name: 'Contpaq adPanchitos', erp_type: 'contpaq', engine: 'mssql',
+        host: 'localhost', port: 1433, database: 'erp'
+      )
+      account.external_db_queries.create!(external_db_connection: conexion, name: 'saldo_cliente',
+                                          sql_template: 'SELECT 1', active: true,
+                                          params_schema: [{ 'key' => 'rfc' }])
+
+      token = described_class.resolve_for(account: account)
+                             .find { |c| c[:key] == :consulta }[:tokens].first[:token]
+
+      expect(token).to eq('{{consulta:contpaq/saldo_cliente(rfc=)}}')
+    end
+
+    # Sin `erp_type` utilizable se cae al nombre, ya normalizado a lo que el motor lee.
+    it 'cae al nombre normalizado cuando el tipo no sirve de prefijo' do
+      account.enable_features!('erp_connection')
+      conexion = account.external_db_connections.create!(
+        name: 'Mi ERP', engine: 'mssql', host: 'localhost', port: 1433, database: 'erp'
+      )
+      account.external_db_queries.create!(external_db_connection: conexion, name: 'saldo',
+                                          sql_template: 'SELECT 1', active: true)
+
+      token = described_class.resolve_for(account: account)
+                             .find { |c| c[:key] == :consulta }[:tokens].first[:token]
+
+      expect(token).to eq('{{consulta:mierp/saldo}}')
+    end
+
+    it '@estado_ticket no hereda los tokens de @crear_ticket pese a compartir requisito' do
+      account.case_types.create!(name: 'Soporte')
+
+      resuelto = described_class.resolve_for(account: account).index_by { |c| c[:key] }
+      expect(resuelto[:estado_ticket][:tokens].pluck(:token)).to eq(['@estado_ticket'])
+      expect(resuelto[:crear_ticket][:tokens].first[:token]).to include('tipo=Soporte')
+    end
+  end
+
   describe '.detect' do
     it 'reconoce una directiva simple' do
       found = described_class.detect('@buscar_predefinidas')
@@ -103,11 +168,23 @@ RSpec.describe AiAgentAssistant::Capabilities do
       expect(resolved.find { |c| c[:key] == :hoja }[:available]).to be(false)
     end
 
-    it 'marca disponible lo que sí está habilitado' do
+    it 'marca disponible lo que sí está habilitado y tiene contenido detrás' do
       account.enable_features!('google_calendar')
+      account.knowledge_sources.create!(source_type: 'google_doc', name: 'Políticas')
       resolved = described_class.resolve_for(account: account, inbox: inbox)
 
-      expect(resolved.find { |c| c[:key] == :doc }[:available]).to be(true)
+      doc = resolved.find { |c| c[:key] == :doc }
+      expect(doc[:available]).to be(true)
+      expect(doc[:tokens].first[:token]).to eq('{{doc:Políticas}}')
+    end
+
+    # La feature encendida no basta: {{doc:}} con un nombre inventado no resuelve a nada,
+    # igual que pasa con las consultas del ERP.
+    it 'no marca disponible una fuente Google sin ningún documento detrás' do
+      account.enable_features!('google_calendar')
+
+      expect(described_class.resolve_for(account: account, inbox: inbox)
+                            .find { |c| c[:key] == :doc }[:available]).to be(false)
     end
 
     it 'no expone la regex al cliente, pero sí la clave de traducción' do
