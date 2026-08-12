@@ -596,6 +596,11 @@ export default {
       });
       this.runLint();
     },
+    // La abre la cabecera de la página, que es donde vive el botón. Público a
+    // propósito: el estado del cajón sigue siendo de este formulario.
+    openAssistant() {
+      this.showAssistant = true;
+    },
     openDuplicate() {
       this.duplicateName = `${this.form.name} (copia)`;
       this.showDuplicate = true;
@@ -1816,13 +1821,6 @@ export default {
           @click.prevent="showPatterns = true"
         >
           {{ $t('AI_AGENT_ASSISTANT.PATTERNS.OPEN') }}
-        </woot-button>
-        <woot-button
-          variant="clear"
-          icon="wand"
-          @click.prevent="showAssistant = true"
-        >
-          {{ $t('AI_AGENT_ASSISTANT.CHAT.OPEN') }}
         </woot-button>
         <woot-button
           v-if="!isCreateMode"

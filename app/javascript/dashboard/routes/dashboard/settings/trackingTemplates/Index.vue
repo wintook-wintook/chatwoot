@@ -253,20 +253,34 @@ export default {
           {{ $t('TRACKING_TEMPLATES.HEADER_BTN_TXT') }}
         </woot-button>
       </div>
-      <woot-button
-        v-else
-        variant="smooth"
-        color-scheme="secondary"
-        icon="chevron-left"
-        @click="goBackToList"
-      >
-        {{ $t('TRACKING_TEMPLATES.BACK_TO_LIST') }}
-      </woot-button>
+      <!-- proyecto@ai_agent_assistant: el asistente sube a la cabecera. Abajo era
+           uno más de siete botones, al lado de «Cancelar»; es la puerta de entrada
+           al módulo, no una herramienta del pie del formulario. -->
+      <!-- `isFormView` y no `v-else`: el botón llama al formulario por `ref`, así que
+           solo puede existir donde el formulario existe. -->
+      <div v-if="isFormView" class="flex items-center gap-2">
+        <woot-button
+          variant="smooth"
+          icon="wand"
+          @click="$refs.form.openAssistant()"
+        >
+          {{ $t('AI_AGENT_ASSISTANT.CHAT.OPEN') }}
+        </woot-button>
+        <woot-button
+          variant="smooth"
+          color-scheme="secondary"
+          icon="chevron-left"
+          @click="goBackToList"
+        >
+          {{ $t('TRACKING_TEMPLATES.BACK_TO_LIST') }}
+        </woot-button>
+      </div>
     </div>
 
     <!-- VISTA: FORMULARIO -->
     <div v-if="isFormView" class="flex-1 min-h-0 overflow-auto">
       <TemplateForm
+        ref="form"
         :mode="formMode"
         :template-data="selectedTemplate || {}"
         @save="onFormSave"
