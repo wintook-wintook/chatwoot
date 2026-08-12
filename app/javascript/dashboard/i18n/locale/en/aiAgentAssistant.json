@@ -261,9 +261,12 @@
       "NEW": "New",
       "MODE_SWITCHED": "Switched to {mode} · the draft and everything said are still here",
       "MODE_LABEL": "Mode",
-      "MODE_HINT_INTERVIEW": "build the agent from scratch",
-      "MODE_HINT_AUDIT": "review what you have",
-      "MODE_HINT_TWEAK": "one precise change"
+      "MODE_HINT_INTERVIEW": "I ask, and we build it from scratch",
+      "MODE_HINT_AUDIT": "I review your prompt and flag what breaks",
+      "MODE_HINT_TWEAK": "one precise change, nothing else",
+      "NEEDS_NAME": "give it a name to create it",
+      "NEEDS_OBJECTIVE": "the objective is missing",
+      "NAME_PLACEHOLDER": "WhatsApp · Collections"
     },
     "PATTERNS": {
       "TITLE": "Pattern library",

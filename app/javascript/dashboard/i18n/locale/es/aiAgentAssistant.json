@@ -261,9 +261,12 @@
       "NEW": "Nueva",
       "MODE_SWITCHED": "Cambiaste a {mode} · el borrador y lo hablado siguen aquí",
       "MODE_LABEL": "Modo",
-      "MODE_HINT_INTERVIEW": "armamos el agente de cero",
-      "MODE_HINT_AUDIT": "reviso lo que ya tienes",
-      "MODE_HINT_TWEAK": "un cambio puntual"
+      "MODE_HINT_INTERVIEW": "te pregunto y lo armamos de cero",
+      "MODE_HINT_AUDIT": "reviso tu prompt y te digo qué falla",
+      "MODE_HINT_TWEAK": "un cambio puntual, sin tocar el resto",
+      "NEEDS_NAME": "ponle un nombre para poder crearlo",
+      "NEEDS_OBJECTIVE": "falta el objetivo",
+      "NAME_PLACEHOLDER": "WhatsApp · Cobranza"
     },
     "PATTERNS": {
       "TITLE": "Biblioteca de patrones",

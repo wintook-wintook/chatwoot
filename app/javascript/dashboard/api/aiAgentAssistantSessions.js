@@ -42,6 +42,12 @@ class AiAgentAssistantSessionsAPI extends ApiClient {
     return axios.patch(`${this.url}/${id}`, { mode });
   }
 
+  // Edita el borrador a mano. Hay campos —el nombre— que uno ya sabe y no tiene
+  // sentido esperar a que el asistente los proponga.
+  setDraft(id, draft) {
+    return axios.patch(`${this.url}/${id}`, { draft });
+  }
+
   send(id, message) {
     return axios.post(`${this.url}/${id}/messages`, { message });
   }

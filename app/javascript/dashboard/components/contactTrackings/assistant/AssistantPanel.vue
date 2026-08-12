@@ -56,6 +56,7 @@ export default {
       isSending: false,
       isSaving: false,
       error: null,
+      draftName: '',
     };
   },
   computed: {
@@ -81,7 +82,18 @@ export default {
         .map(([field, value]) => ({ field, value: this.readable(value) }));
     },
     canSave() {
-      return Boolean(this.draft.name && this.draft.objective);
+      return Boolean(this.draftName.trim() && this.draft.objective);
+    },
+    // Qué falta exactamente para poder guardar. Antes solo se veía en un tooltip
+    // sobre un botón deshabilitado, o sea: no se veía.
+    saveBlockedReason() {
+      if (!this.draftName.trim()) {
+        return this.$t('AI_AGENT_ASSISTANT.CHAT.NEEDS_NAME');
+      }
+      if (!this.draft.objective) {
+        return this.$t('AI_AGENT_ASSISTANT.CHAT.NEEDS_OBJECTIVE');
+      }
+      return '';
     },
   },
   mounted() {
@@ -158,6 +170,22 @@ export default {
     // Cambiar de modo NO abre otra conversación. El borrador es el mismo agente y el
     // hilo anterior es contexto: auditar lo que acabas de armar en la entrevista es
     // justo el caso de uso. Solo cambia el encuadre del siguiente turno.
+    // El nombre viaja a la sesión: si no, el siguiente turno lo borraría al refrescar
+    // el borrador desde el servidor.
+    async onNameChange() {
+      if (!this.sessionId) return;
+      try {
+        const { data } = await AiAgentAssistantSessionsAPI.setDraft(
+          this.sessionId,
+          {
+            name: this.draftName.trim(),
+          }
+        );
+        this.absorb(data);
+      } catch (e) {
+        // Sin sesión abierta el nombre se queda en el formulario y se manda al crear.
+      }
+    },
     async onModeSelect() {
       if (!this.sessionId) return;
       try {
@@ -184,6 +212,7 @@ export default {
       this.sessionId = data.id;
       this.messages = data.messages || [];
       this.draft = data.draft || {};
+      if (this.draft.name) this.draftName = this.draft.name;
       this.proposals = data.proposals || [];
       this.steps = data.steps || this.steps;
       this.step = data.step;
@@ -354,7 +383,7 @@ export default {
               </option>
             </select>
             <span
-              class="text-xs truncate whitespace-nowrap text-slate-400 dark:text-slate-500"
+              class="text-xs truncate whitespace-nowrap text-slate-600 dark:text-slate-300"
             >
               {{ modeHint }}
             </span>
@@ -468,16 +497,22 @@ export default {
           >
             {{ $t('AI_AGENT_ASSISTANT.CHAT.TO_FORM') }}
           </woot-button>
-          <woot-button
-            v-else
-            size="small"
-            :is-loading="isSaving"
-            :is-disabled="!canSave"
-            :title="canSave ? '' : $t('AI_AGENT_ASSISTANT.CHAT.SAVE_BLOCKED')"
-            @click.prevent="onSave"
-          >
-            {{ $t('AI_AGENT_ASSISTANT.CHAT.SAVE') }}
-          </woot-button>
+          <template v-else>
+            <woot-button
+              size="small"
+              :is-loading="isSaving"
+              :is-disabled="!canSave"
+              @click.prevent="onSave"
+            >
+              {{ $t('AI_AGENT_ASSISTANT.CHAT.SAVE') }}
+            </woot-button>
+            <span
+              v-if="saveBlockedReason"
+              class="text-xs text-amber-700 dark:text-amber-300"
+            >
+              {{ saveBlockedReason }}
+            </span>
+          </template>
         </div>
       </div>
     </div>

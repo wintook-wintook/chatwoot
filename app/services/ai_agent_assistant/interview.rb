@@ -51,6 +51,10 @@ class AiAgentAssistant::Interview
     { key: 'limits', field: nil,
       question: '¿Qué no debe hacer nunca? (dar precios, prometer plazos, diagnosticar)',
       why: 'Es la sección [PROHIBIDO]. Los agentes de producción que funcionan la tienen.' },
+    { key: 'name', field: 'name',
+      question: '¿Cómo quieres que se llame este agente en la lista?',
+      why: 'Es obligatorio para guardar, y es lo que verás al asignarlo. Conviene ' \
+           '«<canal> · <caso>», sin duplicar por canal si el texto va a ser el mismo.' },
     { key: 'keywords', field: 'keyword_actions',
       question: '¿Qué palabras del cliente deberían cortar el seguimiento en seco?',
       why: 'Es el mecanismo determinista de cierre: no depende de que el modelo lo interprete.' }

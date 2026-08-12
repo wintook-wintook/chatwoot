@@ -20,7 +20,16 @@ RSpec.describe AiAgentAssistant::Interview do
         paso = described_class.next_step(paso)
       end
 
-      expect(recorrido).to eq(%w[objective purpose audience channel knowledge actions limits keywords])
+      expect(recorrido)
+        .to eq(%w[objective purpose audience channel knowledge actions limits name keywords])
+    end
+
+    # El botón de crear exige nombre: si el guion no lo pregunta, el usuario clica y no
+    # pasa nada. Pasó de verdad.
+    it 'cubre todos los campos obligatorios para poder guardar' do
+      campos = described_class.steps.filter_map { |s| s[:field] }
+
+      expect(campos).to include('name', 'objective')
     end
 
     it 'cada paso explica por qué importa, no solo qué pregunta' do

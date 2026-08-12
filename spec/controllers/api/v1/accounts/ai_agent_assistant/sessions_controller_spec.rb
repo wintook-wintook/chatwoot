@@ -200,6 +200,45 @@ RSpec.describe 'AI Agent Assistant Sessions API', type: :request do
     end
   end
 
+  # El botón «Crear el Agente IA» exige nombre, y la entrevista puede no haber llegado
+  # a preguntarlo: hay que poder escribirlo a mano y que sobreviva al siguiente turno.
+  describe 'PATCH update — editar el borrador a mano' do
+    let(:session) do
+      account.ai_agent_assistant_sessions.create!(user: agent, mode: 'interview',
+                                                  draft: { 'objective' => 'Confirmar el pago.' })
+    end
+
+    it 'guarda el campo escrito sin tocar lo demás' do
+      patch "#{base_url}/#{session.id}", params: { draft: { name: 'WhatsApp · Cobranza' } },
+                                         headers: agent.create_new_auth_token, as: :json
+
+      body = response.parsed_body['draft']
+      expect(body['name']).to eq('WhatsApp · Cobranza')
+      expect(body['objective']).to eq('Confirmar el pago.')
+    end
+
+    it 'ignora lo que no es un campo del Agente IA' do
+      patch "#{base_url}/#{session.id}", params: { draft: { superpoder: 'volar' } },
+                                         headers: agent.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['draft']).not_to have_key('superpoder')
+    end
+
+    it 'cambiar el modo y editar el borrador son independientes' do
+      patch "#{base_url}/#{session.id}", params: { draft: { name: 'Cobranza' } },
+                                         headers: agent.create_new_auth_token, as: :json
+      expect(response.parsed_body['mode']).to eq('interview')
+      expect(response.parsed_body['messages']).to be_empty
+    end
+
+    it 'sigue sin escribir en ningún Agente IA' do
+      expect do
+        patch "#{base_url}/#{session.id}", params: { draft: { name: 'Cobranza' } },
+                                           headers: agent.create_new_auth_token, as: :json
+      end.not_to change(TrackingTemplate, :count)
+    end
+  end
+
   describe 'las marcas de modo no viajan al modelo' do
     it 'el historial que recibe OpenAI solo lleva turnos de la conversación' do
       session = account.ai_agent_assistant_sessions.create!(user: agent, mode: 'interview')

@@ -45,9 +45,10 @@ class Api::V1::Accounts::AiAgentAssistant::SessionsController < Api::V1::Account
   # hilo anterior es contexto útil —auditar lo que acabas de armar en la entrevista
   # es justo el caso de uso—. Solo cambia el encuadre del siguiente turno.
   def update
-    @session.mode = requested_mode
-    # Marca estructurada, no texto: la etiqueta la pone el frontend desde su i18n.
-    @session.append_message('system', '', mode: @session.mode)
+    apply_mode_change if params[:mode].present?
+    # El borrador también se edita a mano: hay campos —el nombre— que uno sabe y no
+    # tiene sentido esperar a que el asistente los proponga.
+    @session.draft = @session.draft.merge(editable_draft) if editable_draft.present?
     @session.save!
 
     render json: session_json(@session)
@@ -75,6 +76,20 @@ class Api::V1::Accounts::AiAgentAssistant::SessionsController < Api::V1::Account
   end
 
   private
+
+  def apply_mode_change
+    @session.mode = requested_mode
+    # Marca estructurada, no texto: la etiqueta la pone el frontend desde su i18n.
+    @session.append_message('system', '', mode: @session.mode)
+  end
+
+  def editable_draft
+    return @editable_draft if defined?(@editable_draft)
+
+    raw = params[:draft]
+    raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+    @editable_draft = raw.is_a?(Hash) ? raw.stringify_keys.slice(*AiAgentAssistantSession::DRAFT_FIELDS) : {}
+  end
 
   def fetch_session
     @session = Current.account.ai_agent_assistant_sessions.where(user: Current.user).find(params[:id])
