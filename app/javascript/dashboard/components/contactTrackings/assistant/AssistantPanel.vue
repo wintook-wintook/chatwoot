@@ -62,8 +62,11 @@ export default {
     modes() {
       return ['interview', 'audit', 'tweak'];
     },
-    modeIndex() {
-      return Math.max(this.modes.indexOf(this.mode), 0);
+    // Qué significa el estado en el que estás, dicho al lado del selector.
+    modeHint() {
+      return this.$t(
+        `AI_AGENT_ASSISTANT.CHAT.MODE_HINT_${this.mode.toUpperCase()}`
+      );
     },
     stepIndex() {
       return this.steps.findIndex(s => s.key === this.step);
@@ -127,6 +130,7 @@ export default {
       if (!message || this.isSending) return;
       this.input = '';
       this.isSending = true;
+      this.scrollToBottom();
       try {
         const { data } = await AiAgentAssistantSessionsAPI.send(
           this.sessionId,
@@ -154,15 +158,12 @@ export default {
     // Cambiar de modo NO abre otra conversación. El borrador es el mismo agente y el
     // hilo anterior es contexto: auditar lo que acabas de armar en la entrevista es
     // justo el caso de uso. Solo cambia el encuadre del siguiente turno.
-    async onModeChange(index) {
-      const mode = this.modes[index];
-      if (!mode || mode === this.mode) return;
-      this.mode = mode;
+    async onModeSelect() {
       if (!this.sessionId) return;
       try {
         const { data } = await AiAgentAssistantSessionsAPI.setMode(
           this.sessionId,
-          mode
+          this.mode
         );
         this.absorb(data);
       } catch (e) {
@@ -190,6 +191,15 @@ export default {
         this.findings = data.turn.findings || [];
         this.error = data.turn.error || null;
       }
+      this.scrollToBottom();
+    },
+    // El hilo crece hacia abajo: sin esto la respuesta nueva queda fuera de vista y
+    // parece que el asistente no contestó.
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const thread = this.$refs.thread;
+        if (thread) thread.scrollTop = thread.scrollHeight;
+      });
     },
     // El guardado lo hace el usuario, no el asistente: esto solo manda el borrador
     // por la vía de siempre, marcándolo como venido del chat para el historial.
@@ -244,20 +254,9 @@ export default {
 
 <template>
   <div class="flex flex-col flex-1 min-h-0">
-    <!-- Modos. Cambiar de pestaña conserva la conversación y el borrador. -->
+    <!-- El modo no es un destino al que navegas: es el estado desde el que escribes,
+         así que vive junto al mensaje, abajo. Aquí arriba solo el progreso. -->
     <div class="flex items-center gap-2 pb-3">
-      <woot-tabs
-        class="flex-1 [&_.tabs]:p-0 [&_.tabs]:mb-0"
-        :index="modeIndex"
-        @change="onModeChange"
-      >
-        <woot-tabs-item
-          v-for="option in modes"
-          :key="option"
-          :name="$t(`AI_AGENT_ASSISTANT.CHAT.MODE_${option.toUpperCase()}`)"
-          :show-badge="false"
-        />
-      </woot-tabs>
       <span
         v-if="showsProgress"
         class="text-xs whitespace-nowrap text-slate-500 dark:text-slate-400"
@@ -273,6 +272,7 @@ export default {
         size="tiny"
         variant="clear"
         icon="add"
+        class="ml-auto"
         @click.prevent="onNewConversation"
       >
         {{ $t('AI_AGENT_ASSISTANT.CHAT.NEW') }}
@@ -282,19 +282,25 @@ export default {
     <div class="flex flex-1 min-h-0 gap-4">
       <!-- Conversación -->
       <div class="flex flex-col flex-1 min-w-0">
-        <div class="flex-1 min-h-0 pr-2 overflow-y-auto">
+        <div ref="thread" class="flex-1 min-h-0 pr-2 overflow-y-auto">
           <div v-for="(message, index) in messages" :key="index">
             <!-- Marca de cambio de encuadre: el hilo sigue, no se corta -->
-            <p
+            <div
               v-if="message.role === 'system'"
-              class="my-3 text-xs text-center text-slate-400 dark:text-slate-500"
+              class="flex items-center gap-2 my-4"
             >
-              {{
-                $t('AI_AGENT_ASSISTANT.CHAT.MODE_SWITCHED', {
-                  mode: modeLabel(message.mode),
-                })
-              }}
-            </p>
+              <span class="flex-1 h-px bg-woot-200 dark:bg-woot-700" />
+              <span
+                class="px-3 py-1 text-xs font-semibold text-center rounded-full bg-woot-50 text-woot-700 dark:bg-woot-800/40 dark:text-woot-200"
+              >
+                {{
+                  $t('AI_AGENT_ASSISTANT.CHAT.MODE_SWITCHED', {
+                    mode: modeLabel(message.mode),
+                  })
+                }}
+              </span>
+              <span class="flex-1 h-px bg-woot-200 dark:bg-woot-700" />
+            </div>
             <div
               v-else
               class="mb-3"
@@ -330,21 +336,41 @@ export default {
           </div>
         </div>
 
-        <div class="flex items-end gap-2 pt-3">
-          <textarea
-            v-model="input"
-            rows="2"
-            class="mb-0 text-sm"
-            :placeholder="$t('AI_AGENT_ASSISTANT.CHAT.PLACEHOLDER')"
-            @keydown.enter.exact.prevent="onSend"
-          />
-          <woot-button
-            :is-loading="isSending"
-            :is-disabled="!input.trim()"
-            @click.prevent="onSend"
-          >
-            {{ $t('AI_AGENT_ASSISTANT.CHAT.SEND') }}
-          </woot-button>
+        <div class="pt-3">
+          <!-- El estado desde el que hablas. Cambiarlo no corta la conversación. -->
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <label class="mb-0 text-xs text-slate-500 dark:text-slate-400">
+              {{ $t('AI_AGENT_ASSISTANT.CHAT.MODE_LABEL') }}
+            </label>
+            <select
+              v-model="mode"
+              class="h-8 py-0 mb-0 text-sm w-36"
+              @change="onModeSelect"
+            >
+              <option v-for="option in modes" :key="option" :value="option">
+                {{ modeLabel(option) }}
+              </option>
+            </select>
+            <span class="text-xs text-slate-400 dark:text-slate-500">
+              {{ modeHint }}
+            </span>
+          </div>
+          <div class="flex items-end gap-2">
+            <textarea
+              v-model="input"
+              rows="2"
+              class="mb-0 text-sm"
+              :placeholder="$t('AI_AGENT_ASSISTANT.CHAT.PLACEHOLDER')"
+              @keydown.enter.exact.prevent="onSend"
+            />
+            <woot-button
+              :is-loading="isSending"
+              :is-disabled="!input.trim()"
+              @click.prevent="onSend"
+            >
+              {{ $t('AI_AGENT_ASSISTANT.CHAT.SEND') }}
+            </woot-button>
+          </div>
         </div>
       </div>
 

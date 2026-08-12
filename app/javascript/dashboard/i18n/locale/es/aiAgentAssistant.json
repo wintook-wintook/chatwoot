@@ -259,7 +259,11 @@
       "ERROR_SESSION_FAILED": "No se pudo abrir la conversación.",
       "ERROR_TURN_FAILED": "No se pudo enviar el mensaje.",
       "NEW": "Nueva",
-      "MODE_SWITCHED": "— cambiaste a {mode}; el borrador y lo hablado siguen aquí —"
+      "MODE_SWITCHED": "Cambiaste a {mode} · el borrador y lo hablado siguen aquí",
+      "MODE_LABEL": "Modo",
+      "MODE_HINT_INTERVIEW": "te pregunto y armamos el agente de cero",
+      "MODE_HINT_AUDIT": "reviso lo que ya tienes y te digo qué falla",
+      "MODE_HINT_TWEAK": "cambio puntual, sin tocar lo demás"
     },
     "PATTERNS": {
       "TITLE": "Biblioteca de patrones",

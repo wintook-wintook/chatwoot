@@ -259,7 +259,11 @@
       "ERROR_SESSION_FAILED": "The conversation could not be opened.",
       "ERROR_TURN_FAILED": "The message could not be sent.",
       "NEW": "New",
-      "MODE_SWITCHED": "— switched to {mode}; the draft and everything said are still here —"
+      "MODE_SWITCHED": "Switched to {mode} · the draft and everything said are still here",
+      "MODE_LABEL": "Mode",
+      "MODE_HINT_INTERVIEW": "I ask, and we build the agent from scratch",
+      "MODE_HINT_AUDIT": "I review what you have and tell you what breaks",
+      "MODE_HINT_TWEAK": "one precise change, nothing else touched"
     },
     "PATTERNS": {
       "TITLE": "Pattern library",
