@@ -14,9 +14,10 @@ import { VeTable } from 'vue-easytable';
 import { useAlert } from 'dashboard/composables';
 import AiAgentAssistantAPI from '../../api/aiAgentAssistant';
 import AssistantPanel from '../../components/contactTrackings/assistant/AssistantPanel.vue';
+import PatternLibraryList from '../../components/contactTrackings/assistant/PatternLibraryList.vue';
 
 export default {
-  components: { VeTable, AssistantPanel },
+  components: { VeTable, AssistantPanel, PatternLibraryList },
   data() {
     return {
       activeTab: 'chat', // F5: el asistente abre en el chat, no en el catálogo
@@ -27,8 +28,11 @@ export default {
     };
   },
   computed: {
+    // El orden es el del recorrido: se arma el agente en el chat, se consultan los
+    // patrones cuando no sabes qué forma darle, y el catálogo es la referencia de
+    // lo que esta cuenta puede usar.
     tabs() {
-      return ['chat', 'catalog'];
+      return ['chat', 'patterns', 'catalog'];
     },
     tabIndex() {
       return Math.max(this.tabs.indexOf(this.activeTab), 0);
@@ -361,6 +365,19 @@ export default {
       class="flex-1 min-h-0"
       @created="onAgentCreated"
     />
+
+    <!-- Patrones, en modo consulta: aquí no hay prompt donde insertar, se viene a
+         entender por qué existe cada bloque. Se referencian desde el chat con «$». -->
+    <div
+      v-else-if="activeTab === 'patterns'"
+      class="flex-1 min-h-0 pr-2 overflow-y-auto"
+    >
+      <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+        {{ $t('AI_AGENT_ASSISTANT.PATTERNS.DESCRIPTION') }}
+        {{ $t('AI_AGENT_ASSISTANT.PATTERNS.REFERENCE_HINT') }}
+      </p>
+      <PatternLibraryList :inbox-id="selectedInboxId" />
+    </div>
 
     <template v-else>
       <!-- Motor: modelo resuelto y presupuesto de salida -->

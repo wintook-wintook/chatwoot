@@ -232,6 +232,7 @@
       }
     },
     "TAB_CHAT": "Chat",
+    "TAB_PATTERNS": "Patrones",
     "TAB_CATALOG": "Catálogo",
     "CHAT": {
       "TITLE": "Asistente",
@@ -337,7 +338,8 @@
         "inline_kb": "Hechos que sí puede afirmar",
         "blacklist": "Lista negra",
         "route_nodes": "Grafo de nodos y rutas"
-      }
+      },
+      "REFERENCE_HINT": "En el chat se referencian escribiendo «$» seguido de su clave."
     },
     "EVAL": {
       "TAB_LIVE": "En vivo",

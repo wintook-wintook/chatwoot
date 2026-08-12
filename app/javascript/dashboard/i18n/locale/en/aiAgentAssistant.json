@@ -232,6 +232,7 @@
       }
     },
     "TAB_CHAT": "Chat",
+    "TAB_PATTERNS": "Patterns",
     "TAB_CATALOG": "Catalog",
     "CHAT": {
       "TITLE": "Assistant",
@@ -337,7 +338,8 @@
         "inline_kb": "Facts it may assert",
         "blacklist": "Blacklist",
         "route_nodes": "Node-and-route graph"
-      }
+      },
+      "REFERENCE_HINT": "In the chat you reference them by typing «$» followed by their key."
     },
     "EVAL": {
       "TAB_LIVE": "Live",
