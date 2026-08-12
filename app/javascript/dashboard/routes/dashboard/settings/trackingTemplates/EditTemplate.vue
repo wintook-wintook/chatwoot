@@ -21,6 +21,7 @@ import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import AiAgentAssistantAPI from 'dashboard/api/aiAgentAssistant';
 import LintBadges from 'dashboard/components/contactTrackings/assistant/LintBadges.vue';
 import SandboxDrawer from 'dashboard/components/contactTrackings/assistant/SandboxDrawer.vue';
+import VersionsDrawer from 'dashboard/components/contactTrackings/assistant/VersionsDrawer.vue';
 // proyecto@ai_agent_attachments
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 // @knowledge_sources: fuentes Discourse para la directiva @buscar_foro
@@ -38,7 +39,12 @@ const DIRECTIVE_GROUPS = [
 ];
 
 export default {
-  components: { KeywordActionsEditor, LintBadges, SandboxDrawer },
+  components: {
+    KeywordActionsEditor,
+    LintBadges,
+    SandboxDrawer,
+    VersionsDrawer,
+  },
 
   props: {
     templateData: {
@@ -51,13 +57,15 @@ export default {
       validator: val => ['create', 'edit'].includes(val),
     },
   },
-  emits: ['save', 'cancel'],
+  emits: ['save', 'cancel', 'restored'],
   data() {
     return {
       // proyecto@ai_agent_assistant
       lintFindings: [],
       isLinting: false,
       showSandbox: false,
+      showVersions: false, // F4: historial en sitio
+      versionNote: '',
       form: {
         id: null,
         name: '',
@@ -634,7 +642,15 @@ export default {
         useAlert(this.$t('AI_AGENT_ASSISTANT.LINT_BLOCKED'));
         return;
       }
-      this.$emit('save', this.buildPayload());
+      const payload = this.buildPayload();
+      // proyecto@ai_agent_assistant (F4): la nota del guardado viaja al snapshot, no
+      // al agente. Solo en el guardado: el linter y el probador no la necesitan.
+      payload.tracking_template.version_note = this.versionNote;
+      this.$emit('save', payload);
+    },
+    // F4: tras restaurar, lo guardado ya no es lo que muestra el formulario.
+    onVersionRestored() {
+      this.$emit('restored', this.form.id);
     },
     onContextTabChange(index) {
       this.activeContextTab = index;
@@ -1805,13 +1821,31 @@ export default {
       />
 
       <!-- Botones -->
-      <div class="flex items-center justify-end gap-2 pt-4">
+      <div class="flex flex-wrap items-center justify-end gap-2 pt-4">
+        <!-- proyecto@ai_agent_assistant (F4): qué cambiaste. Va al historial, no al
+             agente: es lo que hace legible un diff dentro de tres meses. -->
+        <input
+          v-if="!isCreateMode"
+          v-model="versionNote"
+          type="text"
+          maxlength="255"
+          class="h-8 py-0 mb-0 mr-auto text-sm w-72"
+          :placeholder="$t('AI_AGENT_ASSISTANT.VERSIONS.NOTE_PLACEHOLDER')"
+        />
         <woot-button
           variant="clear"
           color-scheme="secondary"
           @click.prevent="onCancel"
         >
           {{ $t('TRACKING_TEMPLATES.EDIT.CANCEL') }}
+        </woot-button>
+        <woot-button
+          v-if="!isCreateMode"
+          variant="clear"
+          icon="arrow-rotate-counter-clockwise"
+          @click.prevent="showVersions = true"
+        >
+          {{ $t('AI_AGENT_ASSISTANT.VERSIONS.OPEN') }}
         </woot-button>
         <woot-button
           variant="clear"
@@ -1835,6 +1869,16 @@ export default {
         :show="showSandbox"
         :payload="showSandbox ? buildPayload() : {}"
         @close="showSandbox = false"
+      />
+
+      <!-- proyecto@ai_agent_assistant (F4): historial en sitio. Iterar sobre el MISMO
+           agente en vez de duplicarlo en «… V2 / V3 / V4». -->
+      <VersionsDrawer
+        v-if="!isCreateMode"
+        :show="showVersions"
+        :template-id="form.id"
+        @close="showVersions = false"
+        @restored="onVersionRestored"
       />
     </form>
 

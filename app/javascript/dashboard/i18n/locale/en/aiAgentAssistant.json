@@ -175,6 +175,58 @@
       "NOTE_PROMPT_DISCARDED": "Your complementary prompt is NOT here. With a search directive the engine discards it entirely: on this route the agent does not have your instructions.",
       "NOTE_CONTEXT_TRUNCATED": "The context is truncated to 800 characters: the rest never reaches the model.",
       "NOTE_USES_WHATSAPP_TEMPLATE": "This attempt starts from a WhatsApp template; the AI only personalises it."
+    },
+    "VERSIONS": {
+      "TITLE": "Agent history",
+      "DESCRIPTION": "Every save leaves a version. Compare, see what changed, and roll back without duplicating the agent.",
+      "OPEN": "History",
+      "CLOSE": "Close",
+      "LOADING": "Loading history…",
+      "LOAD_ERROR": "The history could not be loaded.",
+      "EMPTY": "No versions yet. The first one is created on save.",
+      "LABEL": "v{version}",
+      "NOTE_PLACEHOLDER": "What did you change? (kept in the history)",
+      "COMPARE_WITH": "Compare with",
+      "COMPARE_PREVIOUS": "the previous version",
+      "NO_CHANGES": "There are no differences between these two versions.",
+      "RESTORE": "Restore this version",
+      "RESTORE_CONFIRM": "Confirm restore",
+      "RESTORED": "Version restored. Nothing was removed from the history.",
+      "RESTORE_ERROR": "The version could not be restored.",
+      "SIBLINGS_TITLE": "There are {count} copies of this agent",
+      "SIBLINGS_HINT": "With in-place history you no longer need to duplicate: you iterate on the same agent. Archiving a copy deletes nothing and does not break running follow-ups — each one carries its own text from the day it started.",
+      "SIBLINGS_DONE": "No active copies left to archive.",
+      "SIBLING_CURRENT": "· the one you are editing",
+      "SIBLING_ARCHIVED_TAG": "· archived",
+      "SIBLING_TRACKINGS": "· {count} follow-ups",
+      "ARCHIVE": "Archive",
+      "SIBLING_ARCHIVED": "“{name}” was archived.",
+      "ARCHIVE_ERROR": "The copy could not be archived.",
+      "SOURCE": {
+        "create": "created",
+        "manual": "edited by hand",
+        "assistant": "assistant",
+        "restore": "restored",
+        "baseline": "previous state",
+        "import": "import"
+      },
+      "FIELD": {
+        "name": "Name",
+        "objective": "Objective",
+        "ai_context": "AI context",
+        "complementary_prompt": "Complementary prompt",
+        "inbox_id": "Inbox",
+        "tags": "Tags",
+        "whatsapp_templates": "WhatsApp templates",
+        "keyword_actions": "Keyword actions",
+        "retry_interval_value": "Retry interval",
+        "retry_interval_unit": "Retry interval unit",
+        "calendar_integration_ids": "Connected calendars",
+        "booking_calendar_ids": "Booking calendars",
+        "slots_presentation": "Slot presentation",
+        "calendar_event_duration": "Event duration",
+        "timezone": "Time zone"
+      }
     }
   }
 }

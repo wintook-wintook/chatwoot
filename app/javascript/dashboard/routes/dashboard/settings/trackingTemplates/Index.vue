@@ -122,6 +122,13 @@ export default {
       this.selectedTemplate = { ...template };
       this.currentView = 'form';
     },
+    // proyecto@ai_agent_assistant (F4): restaurar cambió el agente en la base; lo que
+    // muestra el formulario ya no es lo guardado. Se recarga y se reabre en el mismo sitio.
+    async onFormRestored(templateId) {
+      await this.$store.dispatch('trackingTemplates/get');
+      const fresh = this.templates.find(t => t.id === templateId);
+      if (fresh) this.selectedTemplate = { ...fresh };
+    },
     goBackToList() {
       this.currentView = 'list';
       this.selectedTemplate = null;
@@ -248,6 +255,7 @@ export default {
         :template-data="selectedTemplate || {}"
         @save="onFormSave"
         @cancel="goBackToList"
+        @restored="onFormRestored"
       />
     </div>
 

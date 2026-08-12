@@ -175,6 +175,58 @@
       "NOTE_PROMPT_DISCARDED": "Tu prompt complementario NO aparece aquí. Con una directiva de búsqueda el motor lo descarta entero: en esta ruta el agente no tiene tus instrucciones.",
       "NOTE_CONTEXT_TRUNCATED": "El contexto está truncado a 800 caracteres: lo que sobra no llega al modelo.",
       "NOTE_USES_WHATSAPP_TEMPLATE": "Este intento parte de una plantilla de WhatsApp; la IA solo la personaliza."
+    },
+    "VERSIONS": {
+      "TITLE": "Historial del agente",
+      "DESCRIPTION": "Cada guardado deja una versión. Compara, entiende qué cambió y vuelve atrás sin duplicar el agente.",
+      "OPEN": "Historial",
+      "CLOSE": "Cerrar",
+      "LOADING": "Cargando el historial…",
+      "LOAD_ERROR": "No se pudo cargar el historial.",
+      "EMPTY": "Todavía no hay versiones. La primera se creará al guardar.",
+      "LABEL": "v{version}",
+      "NOTE_PLACEHOLDER": "¿Qué cambiaste? (queda en el historial)",
+      "COMPARE_WITH": "Comparar con",
+      "COMPARE_PREVIOUS": "la versión anterior",
+      "NO_CHANGES": "No hay diferencias entre estas dos versiones.",
+      "RESTORE": "Restaurar esta versión",
+      "RESTORE_CONFIRM": "Confirmar restauración",
+      "RESTORED": "Versión restaurada. El historial conserva todo.",
+      "RESTORE_ERROR": "No se pudo restaurar la versión.",
+      "SIBLINGS_TITLE": "Hay {count} copias de este agente",
+      "SIBLINGS_HINT": "Con historial en sitio ya no hace falta duplicar: se itera sobre el mismo agente. Archivar una copia no borra nada ni corta los seguimientos en curso — cada seguimiento tiene su propio texto desde el día que arrancó.",
+      "SIBLINGS_DONE": "Ya no queda ninguna copia activa por archivar.",
+      "SIBLING_CURRENT": "· el que estás editando",
+      "SIBLING_ARCHIVED_TAG": "· archivado",
+      "SIBLING_TRACKINGS": "· {count} seguimientos",
+      "ARCHIVE": "Archivar",
+      "SIBLING_ARCHIVED": "«{name}» quedó archivado.",
+      "ARCHIVE_ERROR": "No se pudo archivar la copia.",
+      "SOURCE": {
+        "create": "creación",
+        "manual": "editado a mano",
+        "assistant": "asistente",
+        "restore": "restauración",
+        "baseline": "estado anterior",
+        "import": "importación"
+      },
+      "FIELD": {
+        "name": "Nombre",
+        "objective": "Objetivo",
+        "ai_context": "Contexto IA",
+        "complementary_prompt": "Prompt complementario",
+        "inbox_id": "Bandeja",
+        "tags": "Etiquetas",
+        "whatsapp_templates": "Plantillas de WhatsApp",
+        "keyword_actions": "Palabras clave de acción",
+        "retry_interval_value": "Intervalo entre intentos",
+        "retry_interval_unit": "Unidad del intervalo",
+        "calendar_integration_ids": "Agendas conectadas",
+        "booking_calendar_ids": "Calendarios donde agenda",
+        "slots_presentation": "Presentación de horarios",
+        "calendar_event_duration": "Duración del evento",
+        "timezone": "Zona horaria"
+      }
     }
   }
 }
