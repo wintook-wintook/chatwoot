@@ -125,6 +125,18 @@ RSpec.describe AiAgentAssistant::PatternLibrary do
       expect(described_class.sections_in('{{hoja:Precios}}')).to be_empty
     end
 
+    # Falsos positivos reales: el agente 39 escribe «[medida original] = [resultado] m²»
+    # y el 42 «[horarios disponibles]». Ocupan su línea, pero son huecos, no secciones.
+    it 'un hueco a rellenar no es una sección, aunque esté solo en su línea' do
+      expect(described_class.sections_in("[horarios disponibles]\n9:00, 10:00")).to be_empty
+      expect(described_class.sections_in('[medida original] = [resultado] m²')).to be_empty
+    end
+
+    it 'reconoce los encabezados en mayúsculas de los agentes que sí están seccionados' do
+      expect(described_class.sections_in("[NODO: INICIO]\nHola.")).to eq(['NODO: INICIO'])
+      expect(described_class.sections_in("[8. NODOS LITERALES]\nx")).to eq(['8. NODOS LITERALES'])
+    end
+
     it 'viaja con la biblioteca para no proponer lo que ya está escrito' do
       resultado = library(prompt: "[CIERRE]\nHasta luego.")
 

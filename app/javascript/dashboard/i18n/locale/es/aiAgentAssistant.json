@@ -328,7 +328,8 @@
         "post_close_lock": "Silencio después del cierre",
         "literal_nodes": "Mensajes literales",
         "inline_kb": "Hechos que sí puede afirmar",
-        "blacklist": "Lista negra"
+        "blacklist": "Lista negra",
+        "route_nodes": "Grafo de nodos y rutas"
       }
     },
     "EVAL": {

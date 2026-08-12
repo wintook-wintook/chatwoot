@@ -96,6 +96,11 @@ class AiAgentAssistant::Interview
         note: 'La forma más exigente, y la que más se rompe. Sin post-cierre el agente ' \
               'vuelve a preguntar después de despedirse; sin nodos literales, la liga sale ' \
               'distinta cada vez.' },
+      { key: 'route', label: 'Atender varias intenciones distintas y hacerlas converger en un cierre',
+        sections: %w[rol arquitectura nodos cierre],
+        note: 'Un nodo por intención, con la respuesta escrita palabra por palabra, y todas ' \
+              'desembocando en el mismo cierre. Es la forma de los agentes 25 y 32 de la 568: ' \
+              'el modelo elige el camino, no redacta.' },
       { key: 'execute', label: 'Ejecutar algo cuando el cliente acepta: agendar o levantar un ticket',
         sections: %w[rol banderas flujo cierre],
         note: 'El motor ya pide los datos obligatorios uno por uno: el prompt acompaña, no ' \

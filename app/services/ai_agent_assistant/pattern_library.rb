@@ -199,6 +199,19 @@ class AiAgentAssistant::PatternLibrary # rubocop:disable Metrics/ClassLength
               'modelo mezcla etapas: cierra y vuelve a preguntar en el mismo mensaje.'
     },
     {
+      key: 'route_nodes', section: 'arquitectura', kind: :prompt, requires: nil,
+      body: <<~TEXT.strip,
+        [NODO: INICIO] responder exactamente: <texto>
+        [RUTA <INTENCIÓN A>] responder exactamente: <texto>
+        [RUTA <INTENCIÓN B>] responder exactamente: <texto>
+        [NODO: CONVERGENCIA] responder exactamente: <texto>
+        [NODO: CIERRE] responder exactamente: <texto>
+      TEXT
+      source: 'Arquitectura de los agentes 25 y 32 de la 568: un nodo de entrada, una ruta por ' \
+              'intención y todas convergiendo en un solo cierre. Cada nodo dice «responder ' \
+              'EXACTAMENTE», así que el modelo elige el camino pero no redacta.'
+    },
+    {
       key: 'opening_template', section: 'apertura', kind: :prompt, requires: nil,
       body: <<~TEXT.strip,
         Solo en el primer mensaje, exactamente esta forma:
@@ -364,10 +377,19 @@ class AiAgentAssistant::PatternLibrary # rubocop:disable Metrics/ClassLength
 
   # Los encabezados [ASÍ] que el prompt ya trae. Sirve para que el asistente ofrezca
   # lo que falta en vez de proponer otra vez lo que ya está escrito.
-  SECTION_HEADER = /^[ \t]*\[([^\]\n]{2,60})\]/
+  # El encabezado ocupa su línea ENTERA. Sin esa exigencia, marcadores como
+  # «[medida original] = [resultado] m²» del agente 39 contaban como sección.
+  SECTION_HEADER = /^[ \t]*\[([^\]\n]{2,60})\][ \t]*$/
 
   def self.sections_in(prompt)
-    prompt.to_s.scan(SECTION_HEADER).flatten.map(&:strip).uniq
+    prompt.to_s.scan(SECTION_HEADER).flatten.map(&:strip).select { |h| header?(h) }.uniq
+  end
+
+  # Los tres agentes de la instalación que de verdad están seccionados escriben sus
+  # encabezados en MAYÚSCULAS, sin excepción. Es lo que separa [NODO: INICIO] de
+  # «[horarios disponibles]», que ocupa su línea igual pero es un hueco a rellenar.
+  def self.header?(text)
+    text.match?(/[[:alpha:]]{2}/) && !text.match?(/[[:lower:]]/)
   end
 
   def self.for(account:, inbox: nil, template: nil, prompt: nil)

@@ -328,7 +328,8 @@
         "post_close_lock": "Silence after closing",
         "literal_nodes": "Literal messages",
         "inline_kb": "Facts it may assert",
-        "blacklist": "Blacklist"
+        "blacklist": "Blacklist",
+        "route_nodes": "Node-and-route graph"
       }
     },
     "EVAL": {
