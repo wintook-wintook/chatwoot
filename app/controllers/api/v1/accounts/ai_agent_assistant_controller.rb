@@ -4,7 +4,8 @@
 # Controlador: AiAgentAssistantController
 # Descripción: Superficie del Asistente de Agentes IA (account-scoped).
 # Acciones: capabilities (catálogo resuelto contra el estado real de la cuenta),
-#           lint, preview_prompt, patterns (biblioteca de bloques, F6).
+#           lint, preview_prompt, patterns (biblioteca de bloques, F6),
+#           simulate, auto_conversation, replay, compare (evaluación, F7).
 #
 # Devuelve estructura + `i18n_key`; los textos los pone el frontend desde
 # aiAgentAssistant.json (código en inglés, UI en español con `en` completo).
@@ -59,21 +60,60 @@ class Api::V1::Accounts::AiAgentAssistantController < Api::V1::Accounts::BaseCon
     ).call
   end
 
+  # F7 — El turno EN VIVO. Con `message` es la respuesta del agente a ese mensaje
+  # (con la ruta real del router); sin él, el mensaje inicial del intento pedido.
+  # Ejecuta los motores de verdad con el envío desconectado: nada se persiste.
+  def simulate
+    sandbox = AiAgentAssistant::SandboxService.new(
+      draft, contact_name: params[:contact_name], attempt: params[:attempt]
+    )
+
+    render json: params[:message].present? ? sandbox.reply(params[:message], history: params[:history].to_s) : sandbox.opening
+  end
+
+  # F7 — Un segundo modelo hace de cliente y conversa solo. Detecta bucles.
+  def auto_conversation
+    render json: AiAgentAssistant::AutoConversation.new(
+      draft, persona: params[:persona], turns: params[:turns]
+    ).call
+  end
+
+  # F7 — Contra mensajes reales de conversaciones cerradas de ese inbox, con la
+  # respuesta humana al lado. La evaluación honesta.
+  def replay
+    render json: AiAgentAssistant::Replay.new(draft, limit: params[:limit]).call
+  end
+
+  # F7 — A/B: el mismo mensaje contra dos versiones del agente, lado a lado.
+  def compare
+    message = params[:message].presence
+    render json: {
+      message: message,
+      a: run_variant(draft, message),
+      b: run_variant(draft(:variant), message)
+    }
+  end
+
   private
 
-  def draft
+  def run_variant(template, message)
+    sandbox = AiAgentAssistant::SandboxService.new(template, attempt: params[:attempt])
+    message ? sandbox.reply(message) : sandbox.opening
+  end
+
+  def draft(key = :tracking_template)
     base = if params[:id].present?
              Current.account.tracking_templates.find_by(id: params[:id]) || Current.account.tracking_templates.new
            else
              Current.account.tracking_templates.new
            end
 
-    base.assign_attributes(draft_params)
+    base.assign_attributes(draft_params(key))
     base
   end
 
-  def draft_params
-    params.fetch(:tracking_template, {}).permit(
+  def draft_params(key = :tracking_template)
+    params.fetch(key, {}).permit(
       :name, :objective, :ai_context, :complementary_prompt, :inbox_id, :timezone,
       :slots_presentation, :retry_interval_value, :retry_interval_unit,
       keyword_actions: [:keyword, :action, :direction],

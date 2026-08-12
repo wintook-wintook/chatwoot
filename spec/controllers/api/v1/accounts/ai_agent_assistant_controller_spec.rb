@@ -220,4 +220,115 @@ RSpec.describe 'AI Agent Assistant API', type: :request do
       expect(response.parsed_body['scheduled']['system']).to include('intento número 3 de 3')
     end
   end
+
+  describe 'F7 — evaluación' do
+    let(:draft) do
+      { name: 'Cobranza', inbox_id: inbox.id, objective: 'Confirmar el pago de la factura vencida.',
+        complementary_prompt: 'Eres del área de cobranza.' }
+    end
+
+    before do
+      create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled',
+                                 settings: { 'api_key' => 'sk-de-prueba' })
+    end
+
+    def stub_completion(text, tokens: 30)
+      stub_request(:post, 'https://api.openai.com/v1/chat/completions')
+        .to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
+                   body: { choices: [{ message: { content: text }, finish_reason: 'stop' }],
+                           usage: { completion_tokens: tokens } }.to_json)
+    end
+
+    describe 'POST simulate' do
+      let(:url) { "/api/v1/accounts/#{account.id}/ai_agent_assistant/simulate" }
+
+      it 'returns unauthorized for an unauthenticated user' do
+        post url
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it 'sin mensaje devuelve el mensaje inicial del intento' do
+        stub_completion('Hola Juan, te escribo por la factura pendiente.')
+
+        post url, params: { tracking_template: draft, attempt: 2 },
+                  headers: agent.create_new_auth_token, as: :json
+
+        body = response.parsed_body
+        expect(body['text']).to include('factura')
+        expect(body['max_tokens']).to eq(150)
+        expect(body['would_have']).to include('consume_attempt')
+      end
+
+      it 'con mensaje contesta y clasifica, sin persistir nada' do
+        stub_completion('Perfecto, lo confirmo.')
+
+        expect do
+          post url, params: { tracking_template: draft, message: 'ya la pagué' },
+                    headers: agent.create_new_auth_token, as: :json
+        end.to not_change(Message, :count).and not_change(ContactTracking, :count)
+
+        expect(response.parsed_body['max_tokens']).to eq(250)
+      end
+    end
+
+    describe 'POST auto_conversation' do
+      let(:url) { "/api/v1/accounts/#{account.id}/ai_agent_assistant/auto_conversation" }
+
+      it 'returns unauthorized for an unauthenticated user' do
+        post url
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it 'corre los turnos pedidos con la personalidad elegida' do
+        stub_completion('Un texto cualquiera.')
+
+        post url, params: { tracking_template: draft, persona: 'annoyed', turns: 1 },
+                  headers: agent.create_new_auth_token, as: :json
+
+        body = response.parsed_body
+        expect(body['persona']).to eq('annoyed')
+        expect(body['turns']).to be_present
+      end
+    end
+
+    describe 'POST replay' do
+      let(:url) { "/api/v1/accounts/#{account.id}/ai_agent_assistant/replay" }
+
+      it 'returns unauthorized for an unauthenticated user' do
+        post url
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it 'avisa cuando el inbox no tiene conversaciones cerradas con las que comparar' do
+        post url, params: { tracking_template: draft },
+                  headers: agent.create_new_auth_token, as: :json
+
+        expect(response.parsed_body['error']).to eq('no_conversations')
+      end
+    end
+
+    describe 'POST compare' do
+      let(:url) { "/api/v1/accounts/#{account.id}/ai_agent_assistant/compare" }
+
+      it 'returns unauthorized for an unauthenticated user' do
+        post url
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it 'corre el mismo mensaje contra las dos versiones' do
+        stub_completion('Respuesta.')
+
+        post url,
+             params: { tracking_template: draft,
+                       variant: draft.merge(complementary_prompt: 'Eres del área de cobranza. Sé breve.'),
+                       message: 'ya la pagué' },
+             headers: agent.create_new_auth_token, as: :json
+
+        body = response.parsed_body
+        expect(body['message']).to eq('ya la pagué')
+        expect(body['a']['text']).to be_present
+        expect(body['b']['text']).to be_present
+      end
+    end
+  end
 end

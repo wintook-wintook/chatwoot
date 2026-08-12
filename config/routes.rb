@@ -106,6 +106,11 @@ Rails.application.routes.draw do
             post :lint, to: '/api/v1/accounts/ai_agent_assistant#lint'
             # F6: biblioteca de bloques, resuelta contra la cuenta y contra el prompt en curso
             get :patterns, to: '/api/v1/accounts/ai_agent_assistant#patterns'
+            # F7: evaluación — turno en vivo, auto-conversación, replay y A/B
+            post :simulate, to: '/api/v1/accounts/ai_agent_assistant#simulate'
+            post :auto_conversation, to: '/api/v1/accounts/ai_agent_assistant#auto_conversation'
+            post :replay, to: '/api/v1/accounts/ai_agent_assistant#replay'
+            post :compare, to: '/api/v1/accounts/ai_agent_assistant#compare'
             post :preview_prompt, to: '/api/v1/accounts/ai_agent_assistant#preview_prompt'
             # F5: el chat. Una sesión = una conversación con su borrador.
             resources :sessions, only: [:index, :show, :create, :destroy] do
