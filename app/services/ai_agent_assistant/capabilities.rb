@@ -197,16 +197,36 @@ class AiAgentAssistant::Capabilities # rubocop:disable Metrics/ClassLength
 
     # Catálogo resuelto contra el estado REAL de la cuenta: qué está disponible,
     # qué no, y por qué. Es lo que consume la UI y, más adelante, el linter.
-    def resolve_for(account:, inbox: nil, template: nil)
+    def resolve_for(account:, inbox: nil, template: nil, with_usage: false)
+      # El uso recorre TODOS los agentes de la cuenta; solo lo pide el catálogo, no
+      # el picker ni el chat, que resuelven capacidades en cada turno.
+      usage = with_usage ? usage_for(account) : nil
+
       ALL.map do |capability|
         available, detail = availability(capability[:requirement], account, inbox, template)
 
-        capability.except(:matcher).merge(
+        resolved = capability.except(:matcher).merge(
           i18n_key: "capabilities.#{capability[:key]}",
           available: available,
           detail: detail,
           tokens: tokens_for(capability, detail)
         )
+        usage ? resolved.merge(usage: usage.fetch(capability[:key], [])) : resolved
+      end
+    end
+
+    # Qué agentes de la cuenta usan cada directiva. `resolves_turn` es lo que hace
+    # útil esta vista: una directiva puede estar escrita y ser texto muerto porque
+    # otra le gana por precedencia, y así se ve de un vistazo cuántas lo son.
+    def usage_for(account)
+      agentes = account.tracking_templates.active.pluck(:id, :name, :complementary_prompt)
+
+      agentes.each_with_object({}) do |(id, name, prompt), acc|
+        detect(prompt).each do |capability|
+          (acc[capability[:key]] ||= []) << {
+            id: id, name: name, resolves_turn: capability[:resolves_turn]
+          }
+        end
       end
     end
 

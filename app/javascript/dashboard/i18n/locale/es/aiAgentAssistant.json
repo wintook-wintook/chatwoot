@@ -26,7 +26,8 @@
       "CAPABILITY": "Capacidad",
       "KIND": "Tipo",
       "EFFECT": "Efecto sobre tu prompt",
-      "STATUS": "En esta cuenta"
+      "STATUS": "En esta cuenta",
+      "USAGE": "Se usa en"
     },
     "KIND": {
       "search": "Búsqueda",
@@ -394,6 +395,11 @@
       "EFFECT_KEEPS": "conserva tu prompt",
       "LOADING": "Cargando el catálogo de la cuenta…",
       "UNAVAILABLE": "No disponibles en esta cuenta"
+    },
+    "USAGE": {
+      "NONE": "sin usar",
+      "COUNT": "{count} agente(s)",
+      "DEAD": "{count} sin efecto"
     }
   }
 }

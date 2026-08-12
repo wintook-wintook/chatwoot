@@ -127,6 +127,14 @@ export default {
           ),
         },
         {
+          field: 'usage',
+          key: 'usage',
+          title: this.$t('AI_AGENT_ASSISTANT.TABLE.USAGE'),
+          align: 'left',
+          width: 210,
+          renderBodyCell: ({ row }) => this.renderUsage(row),
+        },
+        {
           field: 'available',
           key: 'available',
           title: this.$t('AI_AGENT_ASSISTANT.TABLE.STATUS'),
@@ -172,6 +180,7 @@ export default {
       try {
         const { data } = await AiAgentAssistantAPI.getCapabilities({
           inboxId: this.selectedInboxId,
+          withUsage: true,
         });
         this.capabilities = data.capabilities;
         this.engine = data.engine;
@@ -180,6 +189,37 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+    // Quién usa esta directiva hoy. Lo que importa no es el número: es cuántos de
+    // esos la tienen escrita y sin efecto porque otra le gana por precedencia.
+    renderUsage(row) {
+      const usage = row.usage || [];
+      if (!usage.length) {
+        return (
+          <span class="text-xs text-slate-400 dark:text-slate-500">
+            {this.$t('AI_AGENT_ASSISTANT.USAGE.NONE')}
+          </span>
+        );
+      }
+      const dead = usage.filter(u => !u.resolves_turn);
+      return (
+        <div class="min-w-0">
+          <p class="m-0 text-xs font-semibold text-slate-700 dark:text-slate-200">
+            {this.$t('AI_AGENT_ASSISTANT.USAGE.COUNT', { count: usage.length })}
+          </p>
+          {dead.length > 0 && (
+            <p class="m-0 text-xs font-semibold text-red-600 dark:text-red-400">
+              {this.$t('AI_AGENT_ASSISTANT.USAGE.DEAD', { count: dead.length })}
+            </p>
+          )}
+          <p
+            class="m-0 mt-0.5 text-xs truncate text-slate-500 dark:text-slate-400"
+            title={usage.map(u => u.name).join('\n')}
+          >
+            {usage.map(u => u.name).join(' · ')}
+          </p>
+        </div>
+      );
     },
     label(row) {
       return this.text(row, 'LABEL');

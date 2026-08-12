@@ -17,7 +17,9 @@ class Api::V1::Accounts::AiAgentAssistantController < Api::V1::Accounts::BaseCon
       capabilities: AiAgentAssistant::Capabilities.resolve_for(
         account: Current.account,
         inbox: fetch_inbox,
-        template: fetch_template
+        template: fetch_template,
+        # Solo el catálogo lo pide: recorre todos los agentes de la cuenta.
+        with_usage: params[:with_usage].present?
       ),
       engine: {
         model: AiAgentAssistant::EngineConfig.model_for(fetch_inbox),

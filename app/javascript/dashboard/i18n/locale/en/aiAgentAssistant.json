@@ -26,7 +26,8 @@
       "CAPABILITY": "Capability",
       "KIND": "Kind",
       "EFFECT": "Effect on your prompt",
-      "STATUS": "In this account"
+      "STATUS": "In this account",
+      "USAGE": "Used by"
     },
     "KIND": {
       "search": "Search",
@@ -394,6 +395,11 @@
       "EFFECT_KEEPS": "keeps your prompt",
       "LOADING": "Loading the account catalog…",
       "UNAVAILABLE": "Not available in this account"
+    },
+    "USAGE": {
+      "NONE": "not used",
+      "COUNT": "{count} agent(s)",
+      "DEAD": "{count} with no effect"
     }
   }
 }

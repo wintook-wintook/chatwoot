@@ -63,11 +63,14 @@ class AiAgentAssistantAPI extends ApiClient {
     });
   }
 
-  getCapabilities({ inboxId, trackingTemplateId } = {}) {
+  // `withUsage` recorre todos los Agentes IA de la cuenta para saber quién usa cada
+  // directiva. Solo lo pide el catálogo: el picker y el chat resuelven en cada turno.
+  getCapabilities({ inboxId, trackingTemplateId, withUsage } = {}) {
     return axios.get(`${this.url}/capabilities`, {
       params: {
         inbox_id: inboxId || undefined,
         tracking_template_id: trackingTemplateId || undefined,
+        with_usage: withUsage ? 1 : undefined,
       },
     });
   }

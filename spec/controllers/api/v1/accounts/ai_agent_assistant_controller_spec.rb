@@ -74,6 +74,47 @@ RSpec.describe 'AI Agent Assistant API', type: :request do
         expect(response.parsed_body['engine']['model']).to eq('gpt-4o')
       end
 
+      # El catálogo deja de ser solo informativo: dice qué agentes usan cada directiva
+      # y —lo que importa— en cuántos está escrita sin efecto.
+      it 'informa en qué agentes se usa cada directiva cuando se pide' do
+        create(:tracking_template, account: account, name: 'Con foro', objective: 'x' * 80,
+                                   complementary_prompt: '@discourse')
+        # Dos fuentes: gana la de mayor precedencia y la otra queda como texto muerto.
+        create(:tracking_template, account: account, name: 'Con dos', objective: 'x' * 80,
+                                   complementary_prompt: "@buscar_articulo\n@discourse")
+
+        get "/api/v1/accounts/#{account.id}/ai_agent_assistant/capabilities",
+            params: { with_usage: 1 }, headers: agent.create_new_auth_token, as: :json
+
+        capabilities = response.parsed_body['capabilities'].index_by { |c| c['key'] }
+        discourse = capabilities['discourse']['usage']
+        expect(discourse.pluck('name')).to contain_exactly('Con foro', 'Con dos')
+        expect(discourse.find { |u| u['name'] == 'Con dos' }['resolves_turn']).to be(false)
+        expect(capabilities['buscar_articulo']['usage'].pluck('name')).to eq(['Con dos'])
+      end
+
+      it 'no calcula el uso si no se pide: recorre todos los agentes de la cuenta' do
+        create(:tracking_template, account: account, name: 'Con foro', objective: 'x' * 80,
+                                   complementary_prompt: '@discourse')
+
+        get "/api/v1/accounts/#{account.id}/ai_agent_assistant/capabilities",
+            headers: agent.create_new_auth_token, as: :json
+
+        expect(response.parsed_body['capabilities'].first).not_to have_key('usage')
+      end
+
+      it 'no cuenta los agentes archivados' do
+        plantilla = create(:tracking_template, account: account, name: 'Archivado', objective: 'x' * 80,
+                                               complementary_prompt: '@discourse')
+        plantilla.archive!
+
+        get "/api/v1/accounts/#{account.id}/ai_agent_assistant/capabilities",
+            params: { with_usage: 1 }, headers: agent.create_new_auth_token, as: :json
+
+        capabilities = response.parsed_body['capabilities'].index_by { |c| c['key'] }
+        expect(capabilities['discourse']['usage']).to be_empty
+      end
+
       it 'cae al modelo por defecto cuando no se pasa inbox' do
         get "/api/v1/accounts/#{account.id}/ai_agent_assistant/capabilities",
             headers: agent.create_new_auth_token, as: :json
