@@ -24,58 +24,56 @@
 #   constante propia: si no, la simulación deja de reproducir lo que ocurre de verdad.
 # ================================================================================
 
-module AiAgentAssistant
-  class EngineConfig
-    DEFAULT_MODEL = 'gpt-4o-mini'
+class AiAgentAssistant::EngineConfig
+  DEFAULT_MODEL = 'gpt-4o-mini'
 
-    # Espejo del enum de `model_ia` en config/integration/apps.yml. Si allí se agrega
-    # un modelo, hay que agregarlo aquí (spec/services/ai_agent_assistant/engine_config_spec.rb
-    # lo verifica leyendo el YAML, para que no se desincronicen en silencio).
-    ALLOWED_MODELS = %w[gpt-4o-mini gpt-4o gpt-4-turbo gpt-3.5-turbo].freeze
+  # Espejo del enum de `model_ia` en config/integration/apps.yml. Si allí se agrega
+  # un modelo, hay que agregarlo aquí (spec/services/ai_agent_assistant/engine_config_spec.rb
+  # lo verifica leyendo el YAML, para que no se desincronicen en silencio).
+  ALLOWED_MODELS = %w[gpt-4o-mini gpt-4o gpt-4-turbo gpt-3.5-turbo].freeze
 
-    # Topes actuales de cada punto de llamada. Centralizarlos no cambia el
-    # comportamiento — son los mismos valores que estaban en línea — pero deja el
-    # presupuesto en un solo sitio para que el linter y el probador puedan citarlo.
-    MAX_TOKENS = {
-      scheduled: 150,       # ContactTrackingJob — mensaje programado de cada intento
-      conversational: 250,  # respuesta al cliente
-      router: 300,          # clasificador de intención (JSON)
-      datetime: 120,        # extracción de fecha/hora (JSON)
-      authoring: 250        # redacción de complementary_prompt desde /sigue
-    }.freeze
+  # Topes actuales de cada punto de llamada. Centralizarlos no cambia el
+  # comportamiento — son los mismos valores que estaban en línea — pero deja el
+  # presupuesto en un solo sitio para que el linter y el probador puedan citarlo.
+  MAX_TOKENS = {
+    scheduled: 150,       # ContactTrackingJob — mensaje programado de cada intento
+    conversational: 250,  # respuesta al cliente
+    router: 300,          # clasificador de intención (JSON)
+    datetime: 120,        # extracción de fecha/hora (JSON)
+    authoring: 250        # redacción de complementary_prompt desde /sigue
+  }.freeze
 
-    class << self
-      # `purpose` no diferencia el modelo hoy: el selector es uno por inbox y aplica a
-      # todo el bot. Se recibe igualmente para que una política futura (por ejemplo,
-      # forzar un modelo barato en el router) tenga dónde vivir sin tocar los llamadores.
-      def model_for(inbox, _purpose = :conversational)
-        configured = configured_model(inbox)
-        ALLOWED_MODELS.include?(configured) ? configured : DEFAULT_MODEL
-      end
+  class << self
+    # `purpose` no diferencia el modelo hoy: el selector es uno por inbox y aplica a
+    # todo el bot. Se recibe igualmente para que una política futura (por ejemplo,
+    # forzar un modelo barato en el router) tenga dónde vivir sin tocar los llamadores.
+    def model_for(inbox, _purpose = :conversational)
+      configured = configured_model(inbox)
+      ALLOWED_MODELS.include?(configured) ? configured : DEFAULT_MODEL
+    end
 
-      # Atajo para los llamadores que tienen el ContactTracking a mano.
-      def model_for_tracking(tracking, purpose = :conversational)
-        model_for(tracking&.inbox, purpose)
-      end
+    # Atajo para los llamadores que tienen el ContactTracking a mano.
+    def model_for_tracking(tracking, purpose = :conversational)
+      model_for(tracking&.inbox, purpose)
+    end
 
-      def max_tokens_for(purpose)
-        MAX_TOKENS.fetch(purpose.to_sym, MAX_TOKENS[:conversational])
-      end
+    def max_tokens_for(purpose)
+      MAX_TOKENS.fetch(purpose.to_sym, MAX_TOKENS[:conversational])
+    end
 
-      private
+    private
 
-      def configured_model(inbox)
-        return nil if inbox.blank?
+    def configured_model(inbox)
+      return nil if inbox.blank?
 
-        inbox.account
-             &.hooks
-             &.find_by(app_id: 'tracking_bot', inbox_id: inbox.id, status: 'enabled')
-             &.settings&.dig('model_ia').presence
-      rescue StandardError => e
-        # Fail-soft: que un problema leyendo la configuración nunca tumbe un envío.
-        Rails.logger.warn "[EngineConfig] No se pudo resolver model_ia: #{e.message}"
-        nil
-      end
+      inbox.account
+           &.hooks
+           &.find_by(app_id: 'tracking_bot', inbox_id: inbox.id, status: 'enabled')
+           &.settings&.dig('model_ia').presence
+    rescue StandardError => e
+      # Fail-soft: que un problema leyendo la configuración nunca tumbe un envío.
+      Rails.logger.warn "[EngineConfig] No se pudo resolver model_ia: #{e.message}"
+      nil
     end
   end
 end

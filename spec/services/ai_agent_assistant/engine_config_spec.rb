@@ -37,7 +37,8 @@ RSpec.describe AiAgentAssistant::EngineConfig do
     # heredadas o editadas a mano en la BD, que sí saltarían esa validación.
     it 'ignora un valor que no esté en la lista permitida' do
       hook = enable_tracking_bot(inbox, 'gpt-4o')
-      hook.update_column(:settings, { 'model_ia' => 'modelo-inventado' })
+      # Saltarse la validación es EL PUNTO de este test: simula una fila heredada.
+      hook.update_column(:settings, { 'model_ia' => 'modelo-inventado' }) # rubocop:disable Rails/SkipsModelValidations
 
       expect(described_class.model_for(inbox)).to eq(described_class::DEFAULT_MODEL)
     end

@@ -88,6 +88,10 @@ Rails.application.routes.draw do
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
           end
+          # proyecto@ai_agent_assistant: catálogo de capacidades resuelto por cuenta/inbox
+          namespace :ai_agent_assistant do
+            get :capabilities, to: '/api/v1/accounts/ai_agent_assistant#capabilities'
+          end
           # @query_databases — conexiones a ERPs + consultas predefinidas + consola
           resources :external_db_connections, only: [:index, :show, :create, :update, :destroy] do
             member do
