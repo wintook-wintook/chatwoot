@@ -85,8 +85,20 @@ Rails.application.routes.draw do
             collection do
               get :calendar_integrations
             end
+            # proyecto@ai_agent_assistant (F4): iterar en sitio en vez de duplicar
+            member do
+              get :siblings
+              post :archive
+              post :unarchive
+            end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
+            # proyecto@ai_agent_assistant (F4): historial, diff y restauración
+            resources :versions, only: [:index, :show], module: :tracking_templates do
+              member do
+                post :restore
+              end
+            end
           end
           # proyecto@ai_agent_assistant: catálogo de capacidades resuelto por cuenta/inbox
           namespace :ai_agent_assistant do

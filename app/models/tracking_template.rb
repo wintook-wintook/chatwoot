@@ -12,6 +12,7 @@
 #
 #  id                       :bigint           not null, primary key
 #  ai_context               :text
+#  archived_at              :datetime
 #  booking_calendar_ids     :jsonb            not null
 #  calendar_event_duration  :integer          default(30)
 #  calendar_integration_ids :jsonb            not null
@@ -36,6 +37,7 @@
 #
 #  index_tracking_templates_on_account_id           (account_id)
 #  index_tracking_templates_on_account_id_and_name  (account_id,name) UNIQUE
+#  index_tracking_templates_on_archived_at          (archived_at)
 #  index_tracking_templates_on_inbox_id             (inbox_id)
 #  index_tracking_templates_on_kbase_hook_id        (kbase_hook_id)
 #  index_tracking_templates_on_user_id              (user_id)
@@ -55,6 +57,14 @@ class TrackingTemplate < ApplicationRecord
   # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
   has_many :ai_agent_attachments, dependent: :destroy
 
+  # proyecto@ai_agent_assistant (F4): historial en sitio. Se itera sobre el MISMO agente
+  # en vez de duplicarlo; cada guardado deja un snapshot con autor y nota.
+  has_many :versions, class_name: 'TrackingTemplateVersion', dependent: :delete_all
+
+  # Nota y origen del guardado en curso. Los pone el controlador; no se persisten en la
+  # plantilla, viajan al snapshot.
+  attr_accessor :version_note, :version_source
+
   validates :name, presence: true, length: { minimum: 2, maximum: 100 },
                    uniqueness: { scope: :account_id, case_sensitive: false }
   validates :objective, presence: true, length: { minimum: 5, maximum: 500 }
@@ -70,10 +80,70 @@ class TrackingTemplate < ApplicationRecord
   scope :by_inbox, ->(inbox_id) { where(inbox_id: inbox_id) }
   scope :search_by_name, ->(query) { where('name ILIKE ?', "%#{query}%") }
   scope :ordered, -> { order(updated_at: :desc) }
+  # proyecto@ai_agent_assistant (F4): archivar saca de las listas sin borrar nada —
+  # conserva historial y seguimientos en curso.
+  scope :active, -> { where(archived_at: nil) }
+  scope :archived, -> { where.not(archived_at: nil) }
 
   before_save :ensure_arrays
+  after_save :record_version
+
+  def archived?
+    archived_at.present?
+  end
+
+  # Sin snapshot: archivar no cambia el comportamiento del agente, solo lo saca de las listas.
+  def archive!
+    update_columns(archived_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  def unarchive!
+    update_columns(archived_at: nil) # rubocop:disable Rails/SkipsModelValidations
+  end
 
   private
+
+  # ==========================================================================
+  # F4 · un snapshot por guardado que cambie el comportamiento del agente.
+  # ==========================================================================
+  def record_version
+    return unless versioned_fields_changed?
+
+    ensure_baseline_version! unless previously_new_record?
+
+    versions.create!(
+      account: account,
+      user: Current.user,
+      version: next_version_number,
+      source: resolved_version_source,
+      note: version_note.to_s.strip.presence&.truncate(255),
+      snapshot: TrackingTemplateVersion.snapshot_of(self)
+    )
+  end
+
+  def versioned_fields_changed?
+    TrackingTemplateVersion::VERSIONED_FIELDS.any? { |field| saved_change_to_attribute?(field) }
+  end
+
+  # Los agentes creados antes de F4 no tienen historial: su primer diff no tendría contra
+  # qué compararse. Al primer guardado se reconstruye el estado anterior como versión 1.
+  def ensure_baseline_version!
+    return if versions.exists?
+
+    versions.create!(account: account, version: 1, source: 'baseline',
+                     snapshot: TrackingTemplateVersion.previous_snapshot_of(self))
+  end
+
+  def next_version_number
+    versions.maximum(:version).to_i + 1
+  end
+
+  def resolved_version_source
+    return 'create' if previously_new_record?
+
+    source = version_source.to_s
+    TrackingTemplateVersion::SOURCES.include?(source) ? source : 'manual'
+  end
 
   def ensure_arrays
     self.whatsapp_templates = [] unless whatsapp_templates.is_a?(Array)

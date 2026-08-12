@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_05_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_12_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1481,6 +1481,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_05_120000) do
     t.index ["user_id"], name: "index_tracking_campaigns_on_user_id"
   end
 
+  create_table "tracking_template_versions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_template_id", null: false
+    t.bigint "user_id"
+    t.integer "version", default: 1, null: false
+    t.string "source", default: "manual", null: false
+    t.string "note"
+    t.jsonb "snapshot", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_tracking_template_versions_on_account_id"
+    t.index ["tracking_template_id", "version"], name: "index_tracking_template_versions_on_template_and_version", unique: true
+  end
+
   create_table "tracking_templates", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -1502,8 +1515,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_05_120000) do
     t.string "timezone"
     t.jsonb "booking_calendar_ids", default: {}, null: false
     t.string "slots_presentation", default: "detailed", null: false
+    t.datetime "archived_at"
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
+    t.index ["archived_at"], name: "index_tracking_templates_on_archived_at"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
     t.index ["kbase_hook_id"], name: "index_tracking_templates_on_kbase_hook_id"
     t.index ["user_id"], name: "index_tracking_templates_on_user_id"
@@ -1663,6 +1678,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_05_120000) do
   add_foreign_key "tracking_campaigns", "inboxes"
   add_foreign_key "tracking_campaigns", "tracking_templates"
   add_foreign_key "tracking_campaigns", "users"
+  add_foreign_key "tracking_template_versions", "accounts"
+  add_foreign_key "tracking_template_versions", "tracking_templates", on_delete: :cascade
+  add_foreign_key "tracking_template_versions", "users", on_delete: :nullify
   add_foreign_key "tracking_templates", "accounts"
   add_foreign_key "tracking_templates", "inboxes"
   add_foreign_key "tracking_templates", "users"
