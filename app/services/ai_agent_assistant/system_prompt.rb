@@ -14,7 +14,19 @@
 # la especificación de comportamiento del chat.
 # ================================================================================
 
-class AiAgentAssistant::SystemPrompt
+# La longitud es del texto del prompt, no de la lógica: mismo criterio que en
+# Capabilities, Linter y PatternLibrary.
+class AiAgentAssistant::SystemPrompt # rubocop:disable Metrics/ClassLength
+  # Cómo se escribe la directiva con un valor REAL de esta cuenta. Sin esto, el
+  # modelo mezcla la plantilla de sintaxis con la lista de valores y produce cosas
+  # como {{consulta:conexion/nombre(Contpaq/saldo_cliente)}}, que no resuelve a nada.
+  USAGE = {
+    consulta: ->(name) { "{{consulta:#{name}}}" },
+    buscar_foro: ->(name) { "@buscar_foro(#{name})" },
+    crear_ticket: ->(name) { "@crear_ticket(prioridad=alta, tipo=#{name})" },
+    adjunto: ->(name) { "{{#{name}}}" }
+  }.freeze
+
   def self.for(session)
     new(session).call
   end
@@ -26,7 +38,7 @@ class AiAgentAssistant::SystemPrompt
   end
 
   def call
-    [mission, invariants, engine_limits, capability_catalog, form_guide,
+    [mission, invariants, engine_limits, channel_catalog, capability_catalog, form_guide,
      mode_instructions, interview_guide, current_draft, output_contract].compact.join("\n\n")
   end
 
@@ -89,6 +101,25 @@ class AiAgentAssistant::SystemPrompt
     TEXT
   end
 
+  # Sin esta lista el asistente no puede proponer `inbox_id`: no sabe qué canales
+  # existen. Y la regla «el prompt debe nombrar ESE canal» necesita el tipo real.
+  def channel_catalog
+    canales = account.inboxes.map { |box| "- #{box.id} · #{box.name} (#{channel_label(box)})" }
+    return 'CANALES DE ESTA CUENTA: ninguno dado de alta todavía.' if canales.empty?
+
+    "CANALES DE ESTA CUENTA (usa el número como `inbox_id`)\n#{canales.join("\n")}"
+  end
+
+  def channel_label(inbox)
+    case inbox.channel_type
+    when 'Channel::Whatsapp' then 'WhatsApp — ojo con la ventana de 24 h'
+    when 'Channel::Telegram' then 'Telegram'
+    when 'Channel::WebWidget' then 'página web'
+    when 'Channel::Email' then 'correo'
+    else inbox.channel_type.to_s.demodulize
+    end
+  end
+
   def capability_catalog
     resolved = AiAgentAssistant::Capabilities.resolve_for(
       account: account, inbox: inbox, template: session.tracking_template
@@ -102,7 +133,7 @@ class AiAgentAssistant::SystemPrompt
       #{available.map { |c| capability_line(c) }.join("\n")}
 
       NO DISPONIBLES (si hacen falta, dilo; no las propongas):
-      #{unavailable.map { |c| "- #{c[:syntax]} — #{c[:detail]}" }.join("\n").presence || '- ninguna'}
+      #{unavailable.map { |c| "- #{c[:syntax]}#{detail_text(c)}" }.join("\n").presence || '- ninguna'}
 
       LA REGLA MÁS CARA DEL MÓDULO: las cuatro directivas de búsqueda
       (@buscar_predefinidas, @buscar_articulo, @buscar_foro(...), @discourse) DESCARTAN el
@@ -122,7 +153,29 @@ class AiAgentAssistant::SystemPrompt
              else
                'conserva el prompt'
              end
-    "- #{capability[:syntax]} — #{effect}. #{capability[:detail]}"
+    "- #{capability[:syntax]} — #{effect}.#{detail_text(capability)}#{usage_text(capability)}"
+  end
+
+  # Un ejemplo escrito con un valor real vale más que la plantilla de sintaxis.
+  def usage_text(capability)
+    builder = USAGE[capability[:key]]
+    name = capability.dig(:detail, :names)&.first
+    return '' if builder.nil? || name.blank?
+
+    " Se escribe así: #{builder.call(name)}"
+  end
+
+  # El `detail` del Registry es un Hash pensado para la UI. Volcarlo tal cual metía
+  # «{:count=>16}» en el prompt: ruido que el modelo tiene que descifrar.
+  def detail_text(capability)
+    detail = capability[:detail]
+    return '' if detail.blank?
+
+    names = detail[:names]
+    return " Disponibles: #{names.join(', ')}." if names.present?
+    return ' No hay ninguna dada de alta.' if names.is_a?(Array)
+
+    detail[:count].present? ? " Hay #{detail[:count]} en la cuenta." : ''
   end
 
   # F6: la guía de forma y el esqueleto son material del chat, no adorno de la UI.
@@ -194,6 +247,11 @@ class AiAgentAssistant::SystemPrompt
       #{lines.join("\n")}
       Se pueden sumar a cualquier rama, sin coste: #{tree[:addons].join(', ').presence || 'ninguna'}.
       No preguntes «¿qué directiva quieres?». Pregunta por el negocio y elige tú.
+
+      IMPORTANTE: tú no ejecutas nada. La directiva es TEXTO que va dentro de
+      `complementary_prompt`, y es el motor quien la resuelve en cada conversación real,
+      con los datos de ese contacto. Así que no pidas al usuario el nombre de un cliente
+      ni ningún dato concreto: propón la directiva escrita, tal cual, en el campo.
     TEXT
   end
 
@@ -214,13 +272,24 @@ class AiAgentAssistant::SystemPrompt
         "proposals": [
           {"field": "objective", "value": "texto propuesto", "rationale": "por qué, en una línea"}
         ],
-        "next_step": "clave del siguiente paso, o null si sigues en el mismo",
+        "next_step": "clave del paso siguiente, o null para que avance solo",
         "done": false
       }
 
       `proposals` va vacío si en este turno no propones cambiar ningún campo. Los campos
       válidos son: #{AiAgentAssistantSession::DRAFT_FIELDS.join(', ')}.
-      `keyword_actions` es una lista de objetos {keyword, action, direction}.
+      `keyword_actions` es una lista de objetos {keyword, action, direction}, donde
+      `action` es una de #{ContactTrackings::KeywordActionService::VALID_ACTIONS.join(' | ')} y
+      `direction` una de #{ContactTrackings::KeywordActionService::VALID_DIRECTIONS.join(' | ')}.
+      `retry_interval_unit` solo admite #{AiAgentAssistant::ConversationService::ENUM_FIELDS['retry_interval_unit'].join(' | ')}
+      (en inglés, aunque hables en español) y `slots_presentation` solo
+      #{AiAgentAssistant::ConversationService::ENUM_FIELDS['slots_presentation'].join(' | ')}.
+      `timezone` es un identificador IANA, por ejemplo America/Mexico_City.
+      `inbox_id` es el número de uno de los canales listados arriba.
+      Las claves de paso válidas para `next_step` son:
+      #{AiAgentAssistant::Interview.steps.pluck(:key).join(' → ')}.
+      Déjalo en null y el guion avanzará solo cuando el paso quede cubierto; repite la clave
+      actual solo si necesitas insistir en la misma pregunta.
       `done` es true solo cuando el borrador está completo y ya no tienes más que preguntar.
     TEXT
   end

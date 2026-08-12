@@ -26,6 +26,13 @@ class AiAgentAssistant::ConversationService < Cases::Ai::BaseService
   LIST_FIELDS = %w[tags whatsapp_templates calendar_integration_ids keyword_actions].freeze
   INTEGER_FIELDS = %w[inbox_id retry_interval_value calendar_event_duration].freeze
 
+  # Campos con valores cerrados. El modelo tiende a contestarlos en español («días»)
+  # y eso tumbaría el guardado por la validación del modelo, así que se descartan.
+  ENUM_FIELDS = {
+    'retry_interval_unit' => %w[minutes hours days],
+    'slots_presentation' => %w[detailed by_calendar]
+  }.freeze
+
   def initialize(session)
     super(account: session.account)
     @session = session
@@ -104,8 +111,18 @@ class AiAgentAssistant::ConversationService < Cases::Ai::BaseService
     return nil if value.nil?
     return coerce_list(field, value) if LIST_FIELDS.include?(field)
     return coerce_integer(field, value) if INTEGER_FIELDS.include?(field)
+    return coerce_enum(field, value) if ENUM_FIELDS.key?(field)
+    return coerce_timezone(value) if field == 'timezone'
 
     value.to_s
+  end
+
+  def coerce_enum(field, value)
+    ENUM_FIELDS[field].include?(value.to_s) ? value.to_s : nil
+  end
+
+  def coerce_timezone(value)
+    TZInfo::Timezone.all_identifiers.include?(value.to_s) ? value.to_s : nil
   end
 
   def coerce_list(field, value)
@@ -147,10 +164,40 @@ class AiAgentAssistant::ConversationService < Cases::Ai::BaseService
   def record(turn)
     session.append_message('assistant', turn['reply'])
     session.proposals = turn['proposals']
-    session.step = turn['next_step'] if turn['next_step'].present?
+    session.step = resolved_next_step(turn)
     session.save!
 
     turn.merge('findings' => lint_proposal(turn['proposals']), 'step' => session.step)
+  end
+
+  # El guion decide, no el modelo. Si el modelo pide un paso concreto se respeta
+  # (puede repetir el actual para quedarse), pero cuando calla, avanza solo: un paso
+  # con campo se da por cubierto en cuanto llega una propuesta para ese campo, y uno
+  # sin campo —tono, límites— con un intercambio. Dejarlo en manos del modelo dejaba
+  # la entrevista clavada en la primera pregunta.
+  def resolved_next_step(turn)
+    requested = turn['next_step']
+    return requested if requested.present? && !backwards?(requested)
+    return session.step unless step_covered?(turn)
+
+    AiAgentAssistant::Interview.next_step(session.step) || session.step
+  end
+
+  # Un paso con campo se da por cubierto en cuanto llega una propuesta para ese
+  # campo; uno sin campo —tono, límites— con un solo intercambio.
+  def step_covered?(turn)
+    step = AiAgentAssistant::Interview.step(session.step)
+    return false if step.nil?
+    return true if step[:field].blank?
+
+    turn['proposals'].any? { |p| p['field'] == step[:field] }
+  end
+
+  # El guion es una secuencia, no un menú: volver a un paso ya cubierto es siempre
+  # un descuido del modelo, y deja la entrevista dando vueltas.
+  def backwards?(requested)
+    keys = AiAgentAssistant::Interview.steps.pluck(:key)
+    keys.index(requested).to_i < keys.index(session.step).to_i
   end
 
   # Invariante 7: el asistente valida su propia propuesta antes de enseñarla. Si lo

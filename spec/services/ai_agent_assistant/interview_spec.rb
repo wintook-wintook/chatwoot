@@ -38,14 +38,30 @@ RSpec.describe AiAgentAssistant::Interview do
       expect(arbol[:options].pluck(:key)).not_to include('exact_data', 'own_voice')
     end
 
-    it 'ofrece {{consulta:}} cuando el ERP está disponible' do
+    it 'ofrece {{consulta:}} cuando hay consultas ERP dadas de alta' do
       account.enable_features!('erp_connection')
+      conexion = account.external_db_connections.create!(
+        name: 'Contpaq', engine: 'mssql', host: 'localhost', port: 1433, database: 'erp'
+      )
+      account.external_db_queries.create!(external_db_connection: conexion, name: 'saldo_cliente',
+                                          sql_template: 'SELECT 1', active: true)
 
-      arbol = described_class.knowledge_tree(account: account, inbox: inbox)
-      rama  = arbol[:options].find { |o| o[:key] == 'exact_data' }
+      rama = described_class.knowledge_tree(account: account, inbox: inbox)
+                            .fetch(:options).find { |o| o[:key] == 'exact_data' }
 
       expect(rama[:capability]).to eq(:consulta)
       expect(rama[:note]).to include('mensaje literal')
+    end
+
+    # La feature encendida no basta: la directiva se escribe {{consulta:conexion/consulta}}
+    # y sin consultas reales no hay ninguna que resuelva.
+    it 'no ofrece {{consulta:}} con la feature encendida pero sin ninguna consulta' do
+      account.enable_features!('erp_connection')
+
+      rama = described_class.knowledge_tree(account: account, inbox: inbox)
+                            .fetch(:options).find { |o| o[:key] == 'exact_data' }
+
+      expect(rama).to be_nil
     end
 
     # Si {{doc:}} no está pero {{hoja:}} sí, la rama «voz propia» sigue viva con la que sí está.

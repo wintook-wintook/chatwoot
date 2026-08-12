@@ -235,8 +235,16 @@ class AiAgentAssistant::Capabilities # rubocop:disable Metrics/ClassLength
       [false, nil]
     end
 
+    # No basta con que la feature esté encendida: la directiva se escribe
+    # {{consulta:conexion/consulta}} y sin los nombres reales nadie —ni el asistente—
+    # puede componer una que resuelva.
     def resolve_erp_connection(account, _inbox, _template)
-      [account.feature_enabled?('erp_connection'), nil]
+      return [false, nil] unless account.feature_enabled?('erp_connection')
+
+      names = account.external_db_queries.where(active: true).includes(:external_db_connection)
+                     .filter_map { |query| "#{query.external_db_connection&.name}/#{query.name}" }
+                     .uniq
+      [names.any?, { names: names }]
     end
 
     def resolve_google_calendar(account, _inbox, _template)
