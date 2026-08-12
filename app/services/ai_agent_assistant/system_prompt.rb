@@ -26,7 +26,7 @@ class AiAgentAssistant::SystemPrompt
   end
 
   def call
-    [mission, invariants, engine_limits, capability_catalog,
+    [mission, invariants, engine_limits, capability_catalog, form_guide,
      mode_instructions, interview_guide, current_draft, output_contract].compact.join("\n\n")
   end
 
@@ -123,6 +123,22 @@ class AiAgentAssistant::SystemPrompt
                'conserva el prompt'
              end
     "- #{capability[:syntax]} — #{effect}. #{capability[:detail]}"
+  end
+
+  # F6: la guía de forma y el esqueleto son material del chat, no adorno de la UI.
+  # Son las siete reglas extraídas de mirar los 27 agentes de producción.
+  def form_guide
+    reglas = AiAgentAssistant::PatternLibrary::FORM_RULES
+             .each_with_index.map { |item, index| "#{index + 1}. #{item[:rule]}" }
+
+    <<~TEXT.strip
+      CÓMO SE VE UN AGENTE BIEN FORMADO (en orden de impacto)
+
+      #{reglas.join("\n")}
+
+      Estructura del prompt complementario:
+      #{AiAgentAssistant::PatternLibrary::SKELETON}
+    TEXT
   end
 
   def mode_instructions

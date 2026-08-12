@@ -3,7 +3,8 @@
 # ================================================================================
 # Controlador: AiAgentAssistantController
 # Descripción: Superficie del Asistente de Agentes IA (account-scoped).
-# Acciones: capabilities — catálogo resuelto contra el estado real de la cuenta.
+# Acciones: capabilities (catálogo resuelto contra el estado real de la cuenta),
+#           lint, preview_prompt, patterns (biblioteca de bloques, F6).
 #
 # Devuelve estructura + `i18n_key`; los textos los pone el frontend desde
 # aiAgentAssistant.json (código en inglés, UI en español con `en` completo).
@@ -23,6 +24,19 @@ class Api::V1::Accounts::AiAgentAssistantController < Api::V1::Accounts::BaseCon
         max_tokens: AiAgentAssistant::EngineConfig::MAX_TOKENS
       }
     }
+  end
+
+  # F6 — Biblioteca de patrones: bloques insertables sacados de los agentes de
+  # producción que sí funcionan. Se resuelven contra la cuenta Y contra el prompt
+  # que se está escribiendo: un bloque de voz propia en un agente con `@discourse`
+  # sale marcado como letra muerta en vez de ofrecerse.
+  def patterns
+    render json: AiAgentAssistant::PatternLibrary.for(
+      account: Current.account,
+      inbox: fetch_inbox,
+      template: fetch_template,
+      prompt: params[:complementary_prompt]
+    )
   end
 
   # Valida un BORRADOR: no persiste nada. Si viene `id`, se parte del Agente IA

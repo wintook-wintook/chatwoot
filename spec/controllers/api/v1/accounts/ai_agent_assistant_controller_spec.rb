@@ -136,6 +136,46 @@ RSpec.describe 'AI Agent Assistant API', type: :request do
     end
   end
 
+  describe 'GET /api/v1/accounts/{account.id}/ai_agent_assistant/patterns' do
+    let(:url) { "/api/v1/accounts/#{account.id}/ai_agent_assistant/patterns" }
+
+    it 'returns unauthorized for an unauthenticated user' do
+      get url
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'devuelve los bloques con su evidencia, las reglas de forma y el esqueleto' do
+      get url, headers: agent.create_new_auth_token, as: :json
+
+      body = response.parsed_body
+      expect(body['blocks'].size).to eq(AiAgentAssistant::PatternLibrary::BLOCKS.size)
+      expect(body['blocks'].pluck('source')).to all(be_present)
+      expect(body['rules'].size).to eq(7)
+      expect(body['skeleton']).to include('[ROL Y LÍMITES]')
+    end
+
+    # Lo que hace útil a la biblioteca: no ofrecer lo que en este prompt no serviría.
+    it 'marca como letra muerta los bloques de prompt cuando hay una búsqueda activa' do
+      account.enable_features!('google_calendar')
+
+      get url, params: { complementary_prompt: '@discourse' },
+               headers: agent.create_new_auth_token, as: :json
+
+      body = response.parsed_body
+      expect(body['prompt_is_discarded']).to be(true)
+      expect(body['blocks'].find { |b| b['key'] == 'doc_source' }['status']).to eq('dead_letter')
+      expect(body['blocks'].find { |b| b['key'] == 'keyword_actions_pair' }['status']).to eq('ready')
+    end
+
+    it 'resuelve la disponibilidad contra las features de la cuenta' do
+      account.disable_features!('erp_connection')
+
+      get url, headers: agent.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['blocks'].find { |b| b['key'] == 'erp_query' }['available']).to be(false)
+    end
+  end
+
   describe 'POST /api/v1/accounts/{account.id}/ai_agent_assistant/preview_prompt' do
     let(:url) { "/api/v1/accounts/#{account.id}/ai_agent_assistant/preview_prompt" }
 

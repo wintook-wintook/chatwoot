@@ -104,6 +104,8 @@ Rails.application.routes.draw do
           namespace :ai_agent_assistant do
             get :capabilities, to: '/api/v1/accounts/ai_agent_assistant#capabilities'
             post :lint, to: '/api/v1/accounts/ai_agent_assistant#lint'
+            # F6: biblioteca de bloques, resuelta contra la cuenta y contra el prompt en curso
+            get :patterns, to: '/api/v1/accounts/ai_agent_assistant#patterns'
             post :preview_prompt, to: '/api/v1/accounts/ai_agent_assistant#preview_prompt'
             # F5: el chat. Una sesión = una conversación con su borrador.
             resources :sessions, only: [:index, :show, :create, :destroy] do
