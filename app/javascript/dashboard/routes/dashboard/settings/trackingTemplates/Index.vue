@@ -102,13 +102,24 @@ export default {
       if (this.currentPage > pages) this.currentPage = pages;
     },
   },
-  mounted() {
-    this.$store.dispatch('trackingTemplates/get');
+  async mounted() {
+    await this.$store.dispatch('trackingTemplates/get');
     if (!this.inboxes || this.inboxes.length === 0) {
       this.$store.dispatch('inboxes/get');
     }
+    this.openAgentFromQuery();
   },
   methods: {
+    // proyecto@ai_agent_assistant: el catálogo enlaza a un agente concreto con
+    // ?agent=<id>. Se abre su formulario directamente en vez de dejar al usuario
+    // buscándolo en la lista.
+    openAgentFromQuery() {
+      const id = Number(this.$route.query.agent);
+      if (!id) return;
+
+      const template = this.templates.find(t => t.id === id);
+      if (template) this.goToEditForm(template);
+    },
     onPageChange(page) {
       this.currentPage = page;
     },
@@ -130,6 +141,11 @@ export default {
       if (fresh) this.selectedTemplate = { ...fresh };
     },
     goBackToList() {
+      // Si se llegó desde el catálogo, se limpia el enlace: volver a la lista no
+      // debería reabrir el mismo agente al recargar.
+      if (this.$route.query.agent) {
+        this.$router.replace({ query: {} }).catch(() => {});
+      }
       this.currentView = 'list';
       this.selectedTemplate = null;
       this.formMode = 'create';

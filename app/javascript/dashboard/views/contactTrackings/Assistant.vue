@@ -212,14 +212,39 @@ export default {
               {this.$t('AI_AGENT_ASSISTANT.USAGE.DEAD', { count: dead.length })}
             </p>
           )}
-          <p
-            class="m-0 mt-0.5 text-xs truncate text-slate-500 dark:text-slate-400"
-            title={usage.map(u => u.name).join('\n')}
-          >
-            {usage.map(u => u.name).join(' · ')}
+          <p class="m-0 mt-0.5 text-xs leading-snug">
+            {usage.map((u, index) => (
+              <span key={u.id}>
+                {index > 0 && (
+                  <span class="text-slate-300 dark:text-slate-600"> · </span>
+                )}
+                <button
+                  type="button"
+                  title={this.$t('AI_AGENT_ASSISTANT.USAGE.OPEN', {
+                    name: u.name,
+                  })}
+                  class={`underline underline-offset-2 hover:text-woot-600 dark:hover:text-woot-400 ${
+                    u.resolves_turn
+                      ? 'text-slate-500 dark:text-slate-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                  onClick={() => this.openAgent(u.id)}
+                >
+                  {u.name}
+                </button>
+              </span>
+            ))}
           </p>
         </div>
       );
+    },
+    // No hay ruta por agente: la lista abre su formulario desde la propia página,
+    // así que se le pasa cuál por query en vez de inventar una ruta nueva.
+    openAgent(id) {
+      this.$router.push({
+        name: 'tracking_templates_list',
+        query: { agent: id },
+      });
     },
     label(row) {
       return this.text(row, 'LABEL');

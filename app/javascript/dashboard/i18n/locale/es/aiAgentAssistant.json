@@ -399,7 +399,8 @@
     "USAGE": {
       "NONE": "sin usar",
       "COUNT": "{count} agente(s)",
-      "DEAD": "{count} sin efecto"
+      "DEAD": "{count} sin efecto",
+      "OPEN": "Abrir «{name}»"
     }
   }
 }
