@@ -240,7 +240,7 @@
       "DUPLICATED": "New agent created from this one",
       "DUPLICATE_SAVED_ONLY": "It copies what is saved. Unsaved changes in the form do not make it into the copy."
     },
-    "TAB_CHAT": "Chat",
+    "TAB_CHAT": "AI Agent Assistant",
     "TAB_PATTERNS": "Patterns",
     "TAB_CATALOG": "Catalog",
     "CHAT": {

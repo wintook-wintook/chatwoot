@@ -240,7 +240,7 @@
       "DUPLICATED": "Agente nuevo creado a partir de este",
       "DUPLICATE_SAVED_ONLY": "Se copia lo guardado. Si tienes cambios sin guardar en el formulario, no entran en la copia."
     },
-    "TAB_CHAT": "Chat",
+    "TAB_CHAT": "Asistente de Agentes IA",
     "TAB_PATTERNS": "Patrones",
     "TAB_CATALOG": "Catálogo",
     "CHAT": {
