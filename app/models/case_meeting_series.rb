@@ -45,6 +45,7 @@
 #  fk_rails_...  (case_ticket_id => case_tickets.id)
 #  fk_rails_...  (organizer_id => users.id) ON DELETE => nullify
 #
+
 # @tickets_cases F0 — Serie de reuniones de un ticket (ver §3.2 del plan).
 #
 # La serie NO es una reunión: es la regla de repetición + el id del evento

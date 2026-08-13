@@ -36,6 +36,11 @@ class Cases::Meetings::GoogleMirrorService
       with_meet: true,
       send_updates: 'all'
     )
+    # @tickets_cases F7 — alta PEREZOSA del canal de push: la primera vez que
+    # esta integración espeja una reunión. Así no se abren canales para agentes
+    # que nunca usan el módulo. Si falla, no pasa nada: el push es aditivo y la
+    # reconciliación perezosa sigue siendo la red de seguridad.
+    Cases::Meetings::PushChannelService.new(integration).ensure_channel!
     mark_synced(event)
   rescue StandardError => e
     mark_failed(e)

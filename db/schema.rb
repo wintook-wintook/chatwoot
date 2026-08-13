@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_13_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_13_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1629,7 +1629,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_13_120000) do
     t.integer "alert_minutes_before", default: 15
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "push_channel_id"
+    t.string "push_resource_id"
+    t.string "push_channel_token"
+    t.datetime "push_expires_at"
+    t.string "sync_token"
     t.index ["account_id"], name: "index_user_calendar_integrations_on_account_id"
+    t.index ["push_channel_id"], name: "index_user_calendar_integrations_on_push_channel_id", unique: true
+    t.index ["push_expires_at"], name: "index_user_calendar_integrations_on_push_expires_at"
     t.index ["user_id", "account_id"], name: "index_user_calendar_integrations_on_user_id_and_account_id", unique: true
     t.index ["user_id"], name: "index_user_calendar_integrations_on_user_id"
   end

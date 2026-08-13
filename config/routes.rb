@@ -823,6 +823,9 @@ Rails.application.routes.draw do
   get 'microsoft/callback', to: 'microsoft/callbacks#show'
   get 'google/callback', to: 'google/callbacks#show'
   get 'google_calendar/callback', to: 'google_calendar_callback#show'
+  # @tickets_cases F7 — receptor del push de Google Calendar. Público a propósito
+  # (Google no manda credenciales): el ping se autentica con X-Goog-Channel-Token.
+  post 'google_calendar/notifications', to: 'google_calendar_notifications#create'
 
   # ----------------------------------------------------------------------
   # Routes for external service verifications

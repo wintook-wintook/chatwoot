@@ -124,6 +124,64 @@ class GoogleCalendarService
     }
   end
 
+  # ── @tickets_cases F7 · Push en tiempo real (plan §12) ────────────────────
+  # Registra un canal de notificaciones para el calendario. UNO por integración,
+  # nunca uno por reunión (eso agota la cuota). Google avisa "algo cambió"; el
+  # ping NO dice qué, por eso después hay que preguntar con el syncToken.
+  def watch_events(channel_id:, callback_url:, token:, calendar_id: 'primary', ttl: 7.days)
+    post(
+      "/calendars/#{CGI.escape(calendar_id)}/events/watch",
+      {
+        id: channel_id,
+        type: 'web_hook',
+        address: callback_url,
+        token: token,
+        params: { ttl: ttl.to_i.to_s }
+      }
+    )
+  end
+
+  # Cierra el canal. Si no se llama al desconectar la integración, Google sigue
+  # mandando pings a un endpoint que ya no tiene tokens para atenderlos.
+  def stop_channel(channel_id:, resource_id:)
+    response = HTTParty.post(
+      "#{CALENDAR_API}/channels/stop",
+      headers: auth_headers,
+      body: { id: channel_id, resourceId: resource_id }.to_json
+    )
+    return true if [200, 204, 404].include?(response.code)
+
+    handle_response(response)
+    true
+  end
+
+  # Lectura INCREMENTAL: solo lo que cambió desde el `sync_token`. Devuelve
+  # `[items, next_sync_token]`; `:gone` si Google invalidó el token (410), que no
+  # es un error fatal sino "haz un resync completo".
+  def list_events_incremental(sync_token:, calendar_id: 'primary')
+    response = HTTParty.get(
+      "#{CALENDAR_API}/calendars/#{CGI.escape(calendar_id)}/events",
+      headers: auth_headers,
+      query: { syncToken: sync_token, singleEvents: true, showDeleted: true, maxResults: 250 }
+    )
+    return :gone if response.code == 410
+
+    parsed = handle_response(response)
+    [parsed['items'] || [], parsed['nextSyncToken']]
+  end
+
+  # Primer `syncToken` de la ventana futura, para arrancar el incremental.
+  def initial_sync_token(calendar_id: 'primary', time_min: Time.current, days: 180)
+    response = get(
+      "/calendars/#{CGI.escape(calendar_id)}/events",
+      timeMin: time_min.utc.iso8601,
+      timeMax: (time_min + days.days).utc.iso8601,
+      singleEvents: true,
+      maxResults: 250
+    )
+    response['nextSyncToken']
+  end
+
   # Liga de Meet de un evento: sale de conferenceData.entryPoints (tipo video) y,
   # de respaldo, del hangoutLink.
   def self.meet_url_from(event)

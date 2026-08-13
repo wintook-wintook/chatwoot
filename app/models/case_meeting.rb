@@ -52,6 +52,7 @@
 #  fk_rails_...  (held_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (organizer_id => users.id) ON DELETE => nullify
 #
+
 # @tickets_cases F0 — Reunión de un ticket (ver §3.1 del plan).
 #
 # Puede ser suelta (`case_meeting_series_id` NULL) o una ocurrencia de una serie.

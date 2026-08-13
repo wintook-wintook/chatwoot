@@ -7,15 +7,22 @@
 #  alert_minutes_before :integer          default(15)
 #  enabled_calendar_ids :jsonb
 #  google_email         :string
+#  push_channel_token   :string
+#  push_expires_at      :datetime
+#  sync_token           :string
 #  tokens               :jsonb
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  account_id           :bigint           not null
+#  push_channel_id      :string
+#  push_resource_id     :string
 #  user_id              :bigint           not null
 #
 # Indexes
 #
 #  index_user_calendar_integrations_on_account_id              (account_id)
+#  index_user_calendar_integrations_on_push_channel_id         (push_channel_id) UNIQUE
+#  index_user_calendar_integrations_on_push_expires_at         (push_expires_at)
 #  index_user_calendar_integrations_on_user_id                 (user_id)
 #  index_user_calendar_integrations_on_user_id_and_account_id  (user_id,account_id) UNIQUE
 #
