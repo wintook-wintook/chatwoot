@@ -82,7 +82,10 @@ class ContactTrackingJob < ApplicationJob
           status: 'failed',
           last_error: 'WhatsApp 24h window closed and no template configured'
         )
-        return
+        # `next` y no `return`: en Rails 7.0 salir con return de un bloque with_lock
+        # revierte la transacción, así que este estado 'failed' se descartaba y el
+        # seguimiento se quedaba en 'scheduled', reintentándose indefinidamente.
+        next
       elsif is_whatsapp && !window_open && has_template
         # CASO 2: WhatsApp ventana CERRADA con plantilla - SOLO PLANTILLA
         Rails.logger.info "[ContactTracking] 📱 ✅ VENTANA CERRADA → Enviando solo PLANTILLA"
@@ -99,6 +102,18 @@ class ContactTrackingJob < ApplicationJob
         else
           Rails.logger.error "[ContactTracking] ❌ Error al enviar mensaje personalizado"
         end
+      elsif instagram_native_channel?(tracking) && !instagram_window_open?(tracking)
+        # CASO 3b: Instagram fuera de ventana. A diferencia de WhatsApp no hay plantillas
+        # a las que recurrir, así que Meta rechazaría el envío. Se falla aquí en vez de
+        # gastar un intento y dar por bueno un mensaje que nunca se entrega.
+        Rails.logger.error '[ContactTracking] ❌ IMPOSIBLE ENVIAR POR INSTAGRAM:'
+        Rails.logger.error '[ContactTracking]    - Ventana de mensajería cerrada'
+        Rails.logger.error '[ContactTracking]    - Instagram no admite plantillas fuera de ventana'
+        tracking.update!(
+          status: 'failed',
+          last_error: 'Instagram messaging window closed and the channel has no templates'
+        )
+        next # ver la nota del caso de WhatsApp: con `return` la transacción se revierte
       else
         # CASO 4: Otro canal (no WhatsApp)
         Rails.logger.info "[ContactTracking] 💬 USANDO MENSAJE NORMAL (canal: #{tracking.inbox.channel_type})"
@@ -334,6 +349,29 @@ class ContactTrackingJob < ApplicationJob
     ]
     
     whatsapp_types.any? { |type| channel_type.include?(type) }
+  end
+
+  # Solo el canal nativo. En un inbox legacy conviven Messenger e Instagram y desde el
+  # inbox no se puede distinguir a cuál pertenece el seguimiento, así que ese caso se
+  # deja exactamente como estaba.
+  def instagram_native_channel?(tracking)
+    tracking.inbox.native_instagram?
+  end
+
+  # Misma regla que Conversation#can_reply_on_instagram?: 24 h desde el último mensaje del
+  # cliente, ampliables a 7 días si la instalación tiene aprobado el tag HUMAN_AGENT.
+  def instagram_window_open?(tracking)
+    conversation_ids = Conversation.where(contact_id: tracking.contact_id, inbox_id: tracking.inbox_id).pluck(:id)
+    return false if conversation_ids.empty?
+
+    last_customer_message = Message.where(conversation_id: conversation_ids, message_type: :incoming).order(created_at: :asc).last
+    return false if last_customer_message.blank?
+
+    window = GlobalConfig.get('ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT')['ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT'] ? 7.days : 24.hours
+    open = Time.current < last_customer_message.created_at + window
+
+    Rails.logger.info "[ContactTracking] 🪟 Ventana Instagram (#{window.inspect}): #{open ? 'ABIERTA ✅' : 'CERRADA ❌'}"
+    open
   end
 
   def whatsapp_window_open?(tracking)

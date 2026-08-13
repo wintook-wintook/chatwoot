@@ -30,7 +30,31 @@ class Api::V1::Accounts::CallbacksController < Api::V1::Accounts::BaseController
   end
 
   def facebook_pages
-    @page_details = mark_already_existing_facebook_pages(fb_object.get_connections('me', 'accounts'))
+    @page_details = mark_already_existing_facebook_pages(all_facebook_pages)
+  end
+
+  # Meta pagina el listado de páginas. Con una sola llamada, un administrador que gestione
+  # muchas páginas solo veía las primeras y el resto sencillamente no aparecía para
+  # conectar, sin ningún aviso. El tope es una red de seguridad: si Koala devolviera
+  # páginas siguientes indefinidamente, esto no se puede quedar girando.
+  MAX_FACEBOOK_PAGE_REQUESTS = 20
+
+  def all_facebook_pages
+    pages = fb_object.get_connections('me', 'accounts')
+    # Array vacío propio: `pages.to_a` devuelve el mismo objeto que Koala, y acumular
+    # sobre él haría que la lista se concatenase consigo misma en cada vuelta.
+    collected = []
+
+    MAX_FACEBOOK_PAGE_REQUESTS.times do
+      break if pages.blank?
+
+      collected.concat(pages.to_a)
+      break unless pages.respond_to?(:next_page)
+
+      pages = pages.next_page
+    end
+
+    collected
   end
 
   def set_instagram_id(page_access_token, facebook_channel)
