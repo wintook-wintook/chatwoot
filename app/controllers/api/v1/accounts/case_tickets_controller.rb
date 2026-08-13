@@ -238,6 +238,10 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
     @ticket.transition!(new_status, actor: current_user, reason: params[:reason], closure: closure_params)
 
+    # @tickets_cases F5 (§11.2) — reuniones huérfanas. NUNCA se cancelan solas: el
+    # front muestra la lista y manda `cancel_meetings` solo si el agente lo aceptó.
+    cancelled_meetings = cancel_orphan_meetings
+
     # @tickets_cases 2F — propagación opcional de la resolución de un problema a sus incidentes.
     propagated = []
     if @ticket.kind_problem? && new_status == 'resolved' &&
@@ -245,7 +249,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       propagated = @ticket.propagate_resolution_to_incidents!(actor: current_user)
     end
 
-    render json: { case_ticket: ticket_json(@ticket.reload), propagated_incidents: propagated }
+    render json: { case_ticket: ticket_json(@ticket.reload), propagated_incidents: propagated,
+                   cancelled_meetings: cancelled_meetings }
   rescue StandardError => e
     render json: { error: e.message }, status: :unprocessable_entity
   end
@@ -323,6 +328,11 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     updated = 0
     skipped = 0
 
+    # @tickets_cases F5 (§11.2) — el cierre en lote NO toca reuniones: cancelarlas
+    # aquí dispararía correos a N clientes distintos sin que nadie los vea. Solo se
+    # reporta cuántos tickets quedaron con citas vivas para revisarlos uno por uno.
+    with_meetings = tickets_with_upcoming_meetings(ids, bulk_action)
+
     Current.account.case_tickets.where(id: ids).find_each do |ticket|
       case bulk_action
       when 'assign'
@@ -341,7 +351,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       end
     end
 
-    render json: { updated: updated, skipped: skipped }
+    render json: { updated: updated, skipped: skipped,
+                   tickets_with_meetings: with_meetings }
   rescue ActiveRecord::RecordNotFound
     render json: { error: 'Agente o equipo no encontrado' }, status: :not_found
   rescue StandardError => e
@@ -713,6 +724,10 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       updated_at:                 ticket.updated_at,
       contact_id:                 ticket.contact_id,
       contact_name:               ticket.contact&.name, # @tickets_cases — nombre del contacto para la ficha
+      # @tickets_cases F2 — correo del contacto: el formulario de reunión ofrece
+      # "invitar al cliente" solo si existe (ticket interno o contacto sin correo
+      # → la casilla se deshabilita con la razón a la vista, no se bloquea el alta).
+      contact_email:              ticket.contact&.email,
       conversation_id:            ticket.conversation_id,
       conversation_display_id:    ticket.conversation&.display_id, # @tickets_cases U1
 
@@ -863,6 +878,25 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
   # @tickets_cases P3 — asignación en lote de un ticket (agente/equipo).
   # Acepta el centinela 'me' (= agente actual) y limpia con ''/none.
+  # @tickets_cases F5 — cancela las reuniones futuras del ticket si el agente
+  # marcó la casilla del diálogo de transición. Devuelve cuántas se cancelaron.
+  def cancel_orphan_meetings
+    return 0 unless ActiveModel::Type::Boolean.new.cast(params[:cancel_meetings])
+
+    service = Cases::Meetings::LifecycleService.new(@ticket, actor: current_user)
+    service.cancel!(service.pending.to_a)
+  end
+
+  # Una sola consulta para todo el lote (no N): qué tickets quedan con citas vivas.
+  def tickets_with_upcoming_meetings(ids, bulk_action)
+    return [] unless bulk_action == 'transition'
+
+    CaseMeeting.active
+               .where(case_ticket_id: ids, starts_at: Time.current..)
+               .distinct
+               .pluck(:case_ticket_id)
+  end
+
   def bulk_assign(ticket)
     previous_assignee_id = ticket.assignee_id
     if params.key?(:assignee_id)

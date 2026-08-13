@@ -202,6 +202,19 @@ Rails.application.routes.draw do
             resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks'
             # @tickets_cases — notas internas (viven en case_events, no en tabla propia)
             resources :case_notes, only: [:index, :create, :update, :destroy], path: 'notes'
+            # @tickets_cases F1 — reuniones del ticket y sus series (plan §4.5)
+            resources :case_meetings, only: [:index, :create, :update, :destroy], path: 'meetings' do
+              collection do
+                get :upcoming # @tickets_cases F5 — reuniones futuras que quedarían huérfanas
+              end
+              member do
+                patch :hold   # marcar realizada / no asistió
+                patch :cancel # scope: 'one' | 'all'
+                post  :resync # reintentar el espejo con Google (F3)
+                patch :align_task_due # @tickets_cases F6 — mover el vencimiento de la tarea
+              end
+            end
+            resources :case_meeting_series, only: [:create, :update, :destroy], path: 'meeting-series'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
           # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
@@ -810,6 +823,9 @@ Rails.application.routes.draw do
   get 'microsoft/callback', to: 'microsoft/callbacks#show'
   get 'google/callback', to: 'google/callbacks#show'
   get 'google_calendar/callback', to: 'google_calendar_callback#show'
+  # @tickets_cases F7 — receptor del push de Google Calendar. Público a propósito
+  # (Google no manda credenciales): el ping se autentica con X-Goog-Channel-Token.
+  post 'google_calendar/notifications', to: 'google_calendar_notifications#create'
 
   # ----------------------------------------------------------------------
   # Routes for external service verifications

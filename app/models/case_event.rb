@@ -64,7 +64,12 @@ class CaseEvent < ApplicationRecord
     ai_followup:        26,
     priority_changed:   27,
     due_date_changed:   28,
-    column_changed:     29 # @tickets_cases — movió de columna del Kanban (mismo estado)
+    column_changed:     29, # @tickets_cases — movió de columna del Kanban (mismo estado)
+    # @tickets_cases F0 — Reuniones. Al FINAL del enum, sin reordenar nada de arriba.
+    meeting_scheduled:  30, # se agendó reunión o serie
+    meeting_updated:    31, # se movió de fecha/hora
+    meeting_cancelled:  32, # se canceló (una o toda la serie)
+    meeting_held:       33  # se marcó realizada / no asistió
   }
 
   enum origin: { bot: 0, agent: 1, system: 2 }

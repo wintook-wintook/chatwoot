@@ -166,7 +166,8 @@
       "NOTES": "Notas",
       "TASKS": "Tareas",
       "JOURNEY": "Avance",
-      "AI": "Asistente IA"
+      "AI": "Asistente IA",
+      "MEETINGS": "Reuniones"
     },
     "CONVERSATION": {
       "SUBTITLE": "Hilo con el cliente",
@@ -196,7 +197,10 @@
       "REASON_LABEL": "Motivo (opcional)",
       "REASON_PLACEHOLDER": "¿Por qué cambia de estado? Queda en el Recorrido.",
       "REASON_CONFIRM": "Cambiar estado",
-      "REASON_CANCEL": "Cancelar"
+      "REASON_CANCEL": "Cancelar",
+      "MEETINGS_TITLE": "Este ticket tiene {count} reunión(es) futura(s)",
+      "MEETINGS_CANCEL": "Cancelarlas y avisar al cliente",
+      "MEETINGS_IRREVERSIBLE": "Cancelar no se puede deshacer: el cliente recibe el aviso y las reuniones no vuelven aunque se reabra el ticket."
     },
     "PRIORITY_QUICK": {
       "LABEL": "Prioridad",
@@ -228,7 +232,8 @@
       "CLOSE": "Cerrar",
       "CLEAR": "Limpiar selección",
       "SUCCESS": "{n} tickets actualizados",
-      "ERROR": "No se pudo aplicar la acción"
+      "ERROR": "No se pudo aplicar la acción",
+      "MEETINGS_PENDING": "{n} de los tickets cerrados tienen reuniones futuras: revísalos uno por uno para cancelarlas."
     },
     "TASKS": {
       "TITLE": "Tareas",
@@ -331,8 +336,20 @@
       "TOAST_COMPLETED": "Tarea completada: {task}",
       "ACTIONS": "Acciones",
       "MENU": {
-        "NOTES": "Notas de la tarea ({count})"
-      }
+        "NOTES": "Notas de la tarea ({count})",
+        "ADD_MEETING": "Agendar reunión",
+        "VIEW_MEETINGS": "Ver reuniones"
+      },
+      "ORPHAN_MEETINGS": {
+        "TITLE": "Esta tarea tiene reuniones futuras",
+        "DESC": "La tarea «{task}» deja {count} reunión(es) agendada(s) con el cliente.",
+        "CANCEL_LABEL": "Cancelarlas y avisar al cliente",
+        "IRREVERSIBLE": "Cancelar no se puede deshacer: el cliente recibe el aviso y las reuniones no vuelven aunque se reabra la tarea.",
+        "CANCEL": "Volver",
+        "CONFIRM": "Completar tarea"
+      },
+      "TOAST_COMPLETED_MEETINGS": "Tarea «{task}» completada · {count} reunión(es) cancelada(s)",
+      "MEETINGS_BEYOND_DUE": "{count} reunión(es) agendada(s) después del vencimiento"
     },
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",
@@ -641,6 +658,7 @@
       "LOADING": "Cargando avance...",
       "CURRENT": "Actual",
       "CREATED": "Creado",
+      "MEETING_SCOPE_ALL": "Toda la serie",
       "CURRENTLY": "Actualmente",
       "RETURNED": "Volvió",
       "REASON": "Motivo",
@@ -1078,7 +1096,12 @@
       "error_detected": "Error detectado",
       "internal_note": "Nota interna",
       "priority_changed": "Prioridad cambiada",
-      "due_date_changed": "Vencimiento cambiado"
+      "due_date_changed": "Vencimiento cambiado",
+      "column_changed": "Columna cambiada",
+      "meeting_scheduled": "Reunión agendada",
+      "meeting_updated": "Reunión reprogramada",
+      "meeting_cancelled": "Reunión cancelada",
+      "meeting_held": "Reunión realizada"
     },
     "DETAIL": {
       "BACK": "Volver",
@@ -1088,6 +1111,121 @@
       "VIEW_FULL": "Ver",
       "NO_TRANSITIONS": "Sin transiciones disponibles",
       "LOADING": "Cargando ticket…"
+    },
+    "MEETINGS": {
+      "TITLE": "Reuniones",
+      "ADD_NEW": "Agendar reunión",
+      "REFRESH": "Actualizar",
+      "LOADING": "Cargando reuniones...",
+      "EMPTY": "Sin reuniones agendadas para este ticket.",
+      "NO_MATCHES": "Ninguna reunión coincide con el filtro",
+      "FILTER_PLACEHOLDER": "Buscar folio, título, tarea o lugar…",
+      "ACTIONS": "Acciones",
+      "ERROR": "No se pudo guardar la reunión.",
+      "TOAST_DELETED": "Reunión eliminada",
+      "PAST_DUE_HINT": "La reunión queda después del vencimiento de su tarea.",
+      "TABLE": {
+        "NUM": "#",
+        "TASK": "Tarea",
+        "MEETING": "Reunión",
+        "WHEN": "Fecha",
+        "STATUS": "Estado",
+        "ORGANIZER": "Organizador"
+      },
+      "STATUS": {
+        "SCHEDULED": "Agendada",
+        "HELD": "Realizada",
+        "NO_SHOW": "No asistió",
+        "CANCELLED": "Cancelada",
+        "RESCHEDULED": "Reprogramada"
+      },
+      "MENU": {
+        "EDIT": "Editar",
+        "HELD": "Marcar realizada",
+        "NO_SHOW": "Marcar no asistió",
+        "CANCEL_ONE": "Cancelar esta reunión",
+        "CANCEL_ALL": "Cancelar toda la serie",
+        "DELETE": "Eliminar",
+        "RESYNC": "Reintentar sincronización",
+        "ALIGN_TASK_DUE": "Mover el vencimiento de la tarea"
+      },
+      "MODAL": {
+        "TITLE": "Nueva reunión",
+        "EDIT_TITLE": "Editar reunión",
+        "DESC": "Queda registrada en el avance del ticket.",
+        "TITLE_LABEL": "Título",
+        "TITLE_PLACEHOLDER": "Ej: Revisión de avance",
+        "STARTS_LABEL": "Inicia",
+        "ENDS_LABEL": "Termina",
+        "DATE_ERROR": "La hora de fin debe ser posterior a la de inicio.",
+        "TASK_LABEL": "Tarea",
+        "TASK_NONE": "— Del ticket (sin tarea) —",
+        "ORGANIZER_LABEL": "Organizador",
+        "ORGANIZER_ME": "— Yo —",
+        "LOCATION_LABEL": "Lugar",
+        "LOCATION_PLACEHOLDER": "Ej: Oficina, videollamada, teléfono…",
+        "DESCRIPTION_LABEL": "Descripción",
+        "DESCRIPTION_PLACEHOLDER": "Agenda de la reunión (opcional)",
+        "INVITE_CLIENT": "Invitar al cliente",
+        "NO_CLIENT_EMAIL": "El ticket no tiene un contacto con correo",
+        "GUESTS_LABEL": "Otros invitados",
+        "GUESTS_PLACEHOLDER": "correos separados por coma",
+        "LOCAL_ONLY_HINT": "Ningún agente tiene Google Calendar conectado: la reunión se guarda solo en el sistema y no se enviará invitación por correo.",
+        "CANCEL": "Cancelar",
+        "CREATE": "Agendar",
+        "SAVE": "Guardar cambios",
+        "MODE_SINGLE": "Reunión única",
+        "MODE_SERIES": "Serie",
+        "REPEAT_EVERY": "Repetir cada",
+        "DAYS_LABEL": "Días",
+        "END_AFTER": "Termina después de",
+        "END_ON": "Termina el",
+        "PREVIEW": "Se crearán {count} reuniones: {dates}",
+        "FREQ": {
+          "DAILY": "días",
+          "WEEKLY": "semanas",
+          "MONTHLY": "meses"
+        },
+        "DAYS": {
+          "MO": "L",
+          "TU": "M",
+          "WE": "X",
+          "TH": "J",
+          "FR": "V",
+          "SA": "S",
+          "SU": "D"
+        }
+      },
+      "MINUTES": {
+        "TITLE": "¿Capturar la minuta?",
+        "DESC": "Se guarda como nota interna del ticket, ligada a la misma tarea de la reunión.",
+        "LABEL": "Minuta",
+        "PLACEHOLDER": "Acuerdos, pendientes y próximos pasos…",
+        "SKIP": "Ahora no",
+        "SAVE": "Guardar minuta",
+        "SAVED": "Minuta guardada como nota"
+      },
+      "DELETE_CONFIRM": {
+        "TITLE": "Eliminar reunión",
+        "MESSAGE": "Esta acción no se puede deshacer. ¿Eliminar la reunión",
+        "CONFIRM": "Eliminar",
+        "CANCEL": "Cancelar"
+      },
+      "MEET_LINK": "Meet",
+      "SYNC": {
+        "PENDING": "Sincronizando…",
+        "PENDING_HINT": "Se está copiando la cita al calendario de Google.",
+        "SYNCED": "En Google",
+        "SYNCED_HINT": "La cita está en el calendario del organizador.",
+        "FAILED": "Falló la sincronización",
+        "FAILED_HINT": "No se pudo copiar la cita a Google.",
+        "LOCAL_ONLY": "Solo en el sistema",
+        "LOCAL_ONLY_HINT": "El organizador no tiene Google Calendar conectado: la cita vive solo aquí.",
+        "RETRYING": "Reintentando la sincronización…"
+      },
+      "SERIES_CREATED": "Serie {folio} creada con {count} reuniones",
+      "BEYOND_TICKET_HINT": "La reunión se pasa del vencimiento comprometido con el cliente. No se mueve desde aquí: si el caso lo necesita, escala el ticket.",
+      "TOAST_DUE_ALIGNED": "Vencimiento de la tarea movido al {date}"
     }
   }
 }

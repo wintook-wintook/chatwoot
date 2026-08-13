@@ -40,6 +40,9 @@ class Api::V1::Accounts::GoogleCalendar::AuthorizationsController < Api::V1::Acc
     return render json: { success: false }, status: :not_found unless integration
 
     revoke_google_token(integration.access_token)
+    # @tickets_cases F7 — cerrar el canal de push ANTES de borrar la integración:
+    # si no, Google sigue mandando avisos a un endpoint que ya no tiene tokens.
+    Cases::Meetings::PushChannelService.new(integration).stop_channel!
     integration.destroy!
     render json: { success: true }
   end

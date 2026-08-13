@@ -51,6 +51,10 @@ class CaseTask < ApplicationRecord
   belongs_to :requester, class_name: 'User', optional: true
   # @tickets_cases P4 — quién marcó la tarea como completada (osTicket lo audita).
   belongs_to :completed_by, class_name: 'User', optional: true
+  # @tickets_cases F0 — reuniones agendadas para esta tarea. Borrar la tarea NO
+  # borra la reunión: vuelve a ser del ticket (:nullify, igual que las notas).
+  has_many :case_meetings, dependent: :nullify
+  has_many :case_meeting_series, class_name: 'CaseMeetingSeries', dependent: :nullify, inverse_of: :case_task
 
   enum status: { pending: 0, done: 1 }
   # @tickets_cases — prioridad propia de la tarea: NO se hereda del ticket ni se

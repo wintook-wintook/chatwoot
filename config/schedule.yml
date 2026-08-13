@@ -157,6 +157,15 @@ case_sla_monitor_job:
   queue: scheduled_jobs
   description: "Monitor SLA status of CaseTickets and auto-close stale resolved tickets"
 
+# @tickets_cases F7 — los canales de push de Google Calendar caducan (~7 días) y
+# Google no los extiende: hay que abrir uno nuevo. Diario, renueva lo que venza
+# en menos de 48 h. Si un canal muere, la reconciliación perezosa lo cubre.
+cases_renew_calendar_channels_job:
+  cron: "20 4 * * *"
+  class: "Cases::RenewCalendarChannelsJob"
+  queue: scheduled_jobs
+  description: "Renew Google Calendar push channels for ticket meetings (@tickets_cases F7)"
+
 # ================================================================================
 # Canal nativo de Instagram
 # ================================================================================

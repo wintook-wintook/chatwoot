@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_12_140000) do
+ActiveRecord::Schema[7.0].define(version: 2026_08_13_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -318,6 +318,73 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_12_140000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "counter_key"], name: "index_case_folio_counters_on_account_id_and_counter_key", unique: true
+  end
+
+  create_table "case_meeting_series", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_ticket_id", null: false
+    t.bigint "case_task_id"
+    t.bigint "organizer_id"
+    t.bigint "cancelled_by_id"
+    t.integer "sequence"
+    t.string "title", null: false
+    t.text "description"
+    t.text "sync_error"
+    t.string "recurrence_rule"
+    t.string "time_zone"
+    t.string "google_event_id"
+    t.string "google_calendar_id"
+    t.integer "freq", default: 1, null: false
+    t.integer "interval", default: 1, null: false
+    t.jsonb "by_day", default: [], null: false
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at", null: false
+    t.datetime "until_at"
+    t.datetime "cancelled_at"
+    t.integer "count"
+    t.integer "sync_status", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_meeting_series_on_account_id"
+    t.index ["case_task_id"], name: "index_case_meeting_series_on_case_task_id"
+    t.index ["case_ticket_id", "sequence"], name: "index_case_meeting_series_on_ticket_and_sequence"
+    t.index ["google_event_id"], name: "index_case_meeting_series_on_google_event_id"
+  end
+
+  create_table "case_meetings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_ticket_id", null: false
+    t.bigint "case_task_id"
+    t.bigint "case_meeting_series_id"
+    t.bigint "organizer_id"
+    t.bigint "cancelled_by_id"
+    t.bigint "held_by_id"
+    t.integer "sequence"
+    t.string "title", null: false
+    t.text "description"
+    t.text "sync_error"
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at", null: false
+    t.string "time_zone"
+    t.string "location"
+    t.string "meeting_url"
+    t.string "google_event_id"
+    t.string "google_calendar_id"
+    t.integer "status", default: 0, null: false
+    t.integer "sync_status", default: 0, null: false
+    t.jsonb "attendee_emails", default: [], null: false
+    t.boolean "notify_client", default: true, null: false
+    t.datetime "reconciled_at"
+    t.datetime "cancelled_at"
+    t.datetime "held_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "starts_at"], name: "index_case_meetings_on_account_id_and_starts_at"
+    t.index ["case_meeting_series_id"], name: "index_case_meetings_on_series_id"
+    t.index ["case_task_id"], name: "index_case_meetings_on_case_task_id"
+    t.index ["case_ticket_id", "sequence"], name: "index_case_meetings_on_case_ticket_id_and_sequence"
+    t.index ["case_ticket_id", "starts_at"], name: "index_case_meetings_on_case_ticket_id_and_starts_at"
+    t.index ["google_event_id"], name: "index_case_meetings_on_google_event_id"
   end
 
   create_table "case_portals", force: :cascade do |t|
@@ -645,6 +712,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_12_140000) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["bot_token"], name: "index_channel_telegram_on_bot_token", unique: true
+  end
+
+  create_table "channel_tiktok", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.string "business_id", null: false
+    t.string "access_token", null: false
+    t.datetime "expires_at", null: false
+    t.string "refresh_token", null: false
+    t.datetime "refresh_token_expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "business_id"], name: "index_channel_tiktok_on_account_id_and_business_id", unique: true
+    t.index ["business_id"], name: "index_channel_tiktok_on_business_id", unique: true
   end
 
   create_table "channel_twilio_sms", force: :cascade do |t|
@@ -1549,7 +1629,14 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_12_140000) do
     t.integer "alert_minutes_before", default: 15
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "push_channel_id"
+    t.string "push_resource_id"
+    t.string "push_channel_token"
+    t.datetime "push_expires_at"
+    t.string "sync_token"
     t.index ["account_id"], name: "index_user_calendar_integrations_on_account_id"
+    t.index ["push_channel_id"], name: "index_user_calendar_integrations_on_push_channel_id", unique: true
+    t.index ["push_expires_at"], name: "index_user_calendar_integrations_on_push_expires_at"
     t.index ["user_id", "account_id"], name: "index_user_calendar_integrations_on_user_id_and_account_id", unique: true
     t.index ["user_id"], name: "index_user_calendar_integrations_on_user_id"
   end
@@ -1652,6 +1739,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_12_140000) do
   add_foreign_key "ai_agent_attachments", "tracking_templates"
   add_foreign_key "case_ai_configs", "accounts"
   add_foreign_key "case_events", "case_tasks", on_delete: :nullify
+  add_foreign_key "case_meeting_series", "accounts"
+  add_foreign_key "case_meeting_series", "case_tasks", on_delete: :nullify
+  add_foreign_key "case_meeting_series", "case_tickets"
+  add_foreign_key "case_meeting_series", "users", column: "cancelled_by_id", on_delete: :nullify
+  add_foreign_key "case_meeting_series", "users", column: "organizer_id", on_delete: :nullify
+  add_foreign_key "case_meetings", "accounts"
+  add_foreign_key "case_meetings", "case_meeting_series", on_delete: :cascade
+  add_foreign_key "case_meetings", "case_tasks", on_delete: :nullify
+  add_foreign_key "case_meetings", "case_tickets"
+  add_foreign_key "case_meetings", "users", column: "cancelled_by_id", on_delete: :nullify
+  add_foreign_key "case_meetings", "users", column: "held_by_id", on_delete: :nullify
+  add_foreign_key "case_meetings", "users", column: "organizer_id", on_delete: :nullify
   add_foreign_key "case_portals", "accounts"
   add_foreign_key "case_portals", "inboxes"
   add_foreign_key "case_settings", "accounts"

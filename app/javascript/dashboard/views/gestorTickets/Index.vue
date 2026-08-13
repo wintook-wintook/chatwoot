@@ -876,6 +876,17 @@ export default {
             n: res.updated || 0,
           }),
         });
+        // @tickets_cases F5 (§11.2) — el lote NUNCA cancela reuniones: cancelar
+        // en masa mandaría correos a N clientes sin que nadie los vea. Solo se
+        // avisa cuáles quedaron con citas vivas para revisarlos uno por uno.
+        const pending = (res.tickets_with_meetings || []).length;
+        if (pending) {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.BULK.MEETINGS_PENDING', {
+              n: pending,
+            }),
+          });
+        }
         this.clearSelection();
         this.fetch();
       } catch (e) {
