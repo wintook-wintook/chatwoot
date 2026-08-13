@@ -194,7 +194,12 @@ class Cases::Meetings::ReconcileService
       case_task: meeting.case_task,
       payload: {
         meeting_id: meeting.id, folio: meeting.folio, title: meeting.title,
-        source: 'google', from: from, to: to, scope: 'one'
+        source: 'google', from: from, to: to, scope: 'one',
+        # @tickets_cases F6 (§11.4) — se REGISTRA que la fecha nueva se salió del
+        # plazo. Registrar y señalar es gratis; mover un vencimiento no: eso pide
+        # un humano delante, así que la reconciliación jamás lo hace.
+        beyond_task_due: meeting.beyond_task_due?,
+        beyond_ticket_due: meeting.beyond_ticket_due?
       }
     )
   end

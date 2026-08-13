@@ -187,14 +187,15 @@ export default {
               <span class="text-sm tabular-nums text-slate-600 dark:text-slate-300">
                 {this.formatDate(row.starts_at)}
               </span>
-              {/* La reunión se pasa del vencimiento de su tarea: se marca, no se
-                  corrige sola (las acciones son F6). */}
-              {this.isPastTaskDue(row) ? (
+              {/* F6 (§11.4) — dos niveles: pasarse del vencimiento de la TAREA
+                  es ámbar y tiene acción; pasarse del compromiso con el CLIENTE
+                  es rojo y NO se ofrece mover nada (el camino es escalar). */}
+              {this.dueWarning(row) ? (
                 <fluent-icon
                   icon="warning"
                   size="14"
-                  class="text-amber-500"
-                  title={this.$t('CASE_TICKETS.MEETINGS.PAST_DUE_HINT')}
+                  class={this.dueWarning(row).klass}
+                  title={this.dueWarning(row).title}
                 />
               ) : null}
             </div>
@@ -400,6 +401,30 @@ export default {
       this.closeRowMenu();
       if (row) this.cancel(row, scope);
     },
+    // F6 — mover el vencimiento de la tarea para que cubra esta reunión.
+    menuAlignTaskDue() {
+      const row = this.rowMenu?.row;
+      this.closeRowMenu();
+      if (row) this.alignTaskDue(row);
+    },
+    async alignTaskDue(meeting) {
+      try {
+        const { data } = await CaseMeetingsAPI.alignTaskDue(
+          this.ticketId,
+          meeting.id
+        );
+        this.replace(data.case_meeting);
+        this.$emit('changed');
+        this.$emitter.emit('caseToastMessage', {
+          message: this.$t('CASE_TICKETS.MEETINGS.TOAST_DUE_ALIGNED', {
+            date: this.formatDate(data.case_task.due_at),
+          }),
+          icon: 'calendar-clock',
+        });
+      } catch (e) {
+        this.toastError(e);
+      }
+    },
     // F3 — reintentar el espejo con Google tras un fallo.
     menuResync() {
       const row = this.rowMenu?.row;
@@ -585,6 +610,24 @@ export default {
       return this.$t(
         `CASE_TICKETS.MEETINGS.SYNC.${meeting.sync_status.toUpperCase()}_HINT`
       );
+    },
+    // F6 (§11.4) — nivel de la señal, o null si está en plazo. Cruzar el
+    // compromiso con el CLIENTE es rojo y sin acción; cruzar el vencimiento de la
+    // TAREA es ámbar y sí tiene acción en el menú.
+    dueWarning(meeting) {
+      if (meeting.beyond_ticket_due) {
+        return {
+          klass: 'text-red-500',
+          title: this.$t('CASE_TICKETS.MEETINGS.BEYOND_TICKET_HINT'),
+        };
+      }
+      if (meeting.beyond_task_due) {
+        return {
+          klass: 'text-amber-500',
+          title: this.$t('CASE_TICKETS.MEETINGS.PAST_DUE_HINT'),
+        };
+      }
+      return null;
     },
     // ¿La reunión cae después del vencimiento de la tarea a la que cuelga?
     isPastTaskDue(meeting) {
@@ -807,6 +850,21 @@ export default {
             @click="menuEdit"
           >
             {{ $t('CASE_TICKETS.MEETINGS.MENU.EDIT') }}
+          </woot-button>
+        </WootDropdownItem>
+        <!-- F6 — solo cuando se pasó del vencimiento de la TAREA y NO del
+             compromiso con el cliente. -->
+        <WootDropdownItem
+          v-if="rowMenu.row.beyond_task_due && !rowMenu.row.beyond_ticket_due"
+        >
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="calendar-clock"
+            @click="menuAlignTaskDue"
+          >
+            {{ $t('CASE_TICKETS.MEETINGS.MENU.ALIGN_TASK_DUE') }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem v-if="rowMenu.row.sync_status === 'failed'">

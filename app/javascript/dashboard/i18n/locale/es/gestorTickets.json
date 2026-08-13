@@ -197,7 +197,10 @@
       "REASON_LABEL": "Motivo (opcional)",
       "REASON_PLACEHOLDER": "¿Por qué cambia de estado? Queda en el Recorrido.",
       "REASON_CONFIRM": "Cambiar estado",
-      "REASON_CANCEL": "Cancelar"
+      "REASON_CANCEL": "Cancelar",
+      "MEETINGS_TITLE": "Este ticket tiene {count} reunión(es) futura(s)",
+      "MEETINGS_CANCEL": "Cancelarlas y avisar al cliente",
+      "MEETINGS_IRREVERSIBLE": "Cancelar no se puede deshacer: el cliente recibe el aviso y las reuniones no vuelven aunque se reabra el ticket."
     },
     "PRIORITY_QUICK": {
       "LABEL": "Prioridad",
@@ -229,7 +232,8 @@
       "CLOSE": "Cerrar",
       "CLEAR": "Limpiar selección",
       "SUCCESS": "{n} tickets actualizados",
-      "ERROR": "No se pudo aplicar la acción"
+      "ERROR": "No se pudo aplicar la acción",
+      "MEETINGS_PENDING": "{n} de los tickets cerrados tienen reuniones futuras: revísalos uno por uno para cancelarlas."
     },
     "TASKS": {
       "TITLE": "Tareas",
@@ -335,7 +339,17 @@
         "NOTES": "Notas de la tarea ({count})",
         "ADD_MEETING": "Agendar reunión",
         "VIEW_MEETINGS": "Ver reuniones"
-      }
+      },
+      "ORPHAN_MEETINGS": {
+        "TITLE": "Esta tarea tiene reuniones futuras",
+        "DESC": "La tarea «{task}» deja {count} reunión(es) agendada(s) con el cliente.",
+        "CANCEL_LABEL": "Cancelarlas y avisar al cliente",
+        "IRREVERSIBLE": "Cancelar no se puede deshacer: el cliente recibe el aviso y las reuniones no vuelven aunque se reabra la tarea.",
+        "CANCEL": "Volver",
+        "CONFIRM": "Completar tarea"
+      },
+      "TOAST_COMPLETED_MEETINGS": "Tarea «{task}» completada · {count} reunión(es) cancelada(s)",
+      "MEETINGS_BEYOND_DUE": "{count} reunión(es) agendada(s) después del vencimiento"
     },
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",
@@ -1132,7 +1146,8 @@
         "CANCEL_ONE": "Cancelar esta reunión",
         "CANCEL_ALL": "Cancelar toda la serie",
         "DELETE": "Eliminar",
-        "RESYNC": "Reintentar sincronización"
+        "RESYNC": "Reintentar sincronización",
+        "ALIGN_TASK_DUE": "Mover el vencimiento de la tarea"
       },
       "MODAL": {
         "TITLE": "Nueva reunión",
@@ -1208,7 +1223,9 @@
         "LOCAL_ONLY_HINT": "El organizador no tiene Google Calendar conectado: la cita vive solo aquí.",
         "RETRYING": "Reintentando la sincronización…"
       },
-      "SERIES_CREATED": "Serie {folio} creada con {count} reuniones"
+      "SERIES_CREATED": "Serie {folio} creada con {count} reuniones",
+      "BEYOND_TICKET_HINT": "La reunión se pasa del vencimiento comprometido con el cliente. No se mueve desde aquí: si el caso lo necesita, escala el ticket.",
+      "TOAST_DUE_ALIGNED": "Vencimiento de la tarea movido al {date}"
     }
   }
 }

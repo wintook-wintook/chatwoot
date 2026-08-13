@@ -8,6 +8,7 @@
 import { mapGetters } from 'vuex';
 import { VeTable } from 'vue-easytable';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
+import CaseMeetingsAPI from 'dashboard/api/caseMeetings';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
@@ -84,6 +85,13 @@ export default {
       rowMenu: null,
       // Tarea que se está completando desde la fila (para el spinner del botón).
       completingId: null,
+      // @tickets_cases F5 (§11.2) — al completar una tarea con reuniones futuras
+      // se muestran ANTES de tocar nada, con la casilla marcada por defecto (el
+      // trabajo de esa tarea terminó) y el aviso de que cancelar no se deshace.
+      orphanFor: null,
+      orphanMeetings: [],
+      cancelOrphans: true,
+      isCompletingWithMeetings: false,
       // Modal de confirmación de borrado
       showDeleteConfirm: false,
       pendingDelete: null,
@@ -275,15 +283,30 @@ export default {
           width: 160,
           sortBy: this.sortConfig.due_at || '',
           renderBodyCell: ({ row }) => (
-            <span
-              class={
-                this.isOverdue(row)
-                  ? 'text-xs font-bold text-red-600 dark:text-red-400'
-                  : 'text-xs text-slate-600 dark:text-slate-300'
-              }
-            >
-              {this.formatDate(row.due_at) || '—'}
-            </span>
+            <div class="flex items-center gap-1">
+              <span
+                class={
+                  this.isOverdue(row)
+                    ? 'text-xs font-bold text-red-600 dark:text-red-400'
+                    : 'text-xs text-slate-600 dark:text-slate-300'
+                }
+              >
+                {this.formatDate(row.due_at) || '—'}
+              </span>
+              {/* @tickets_cases F6 (§11.4) — la tarea tiene reuniones agendadas
+                  DESPUÉS de su vencimiento. Es el marcador hermano del de tarea
+                  vencida: señala, no corrige. */}
+              {row.meetings_beyond_due ? (
+                <fluent-icon
+                  icon="warning"
+                  size="14"
+                  class="text-amber-500"
+                  title={this.$t('CASE_TICKETS.TASKS.MEETINGS_BEYOND_DUE', {
+                    count: row.meetings_beyond_due,
+                  })}
+                />
+              ) : null}
+            </div>
           ),
         },
         {
@@ -500,18 +523,64 @@ export default {
     // firma (fecha + quién) del cambio de estado, así que basta con el status.
     async complete(task) {
       if (this.completingId) return;
+      // F5 — ¿esta tarea deja reuniones futuras huérfanas? Si sí, se pregunta.
+      const orphans = await this.fetchOrphans(task);
+      if (orphans.length) {
+        this.orphanFor = task;
+        this.orphanMeetings = orphans;
+        this.cancelOrphans = true;
+        return;
+      }
+      await this.completeTask(task);
+    },
+    async fetchOrphans(task) {
+      try {
+        const { data } = await CaseMeetingsAPI.upcoming(this.ticketId, {
+          case_task_id: task.id,
+        });
+        return data.case_meetings || [];
+      } catch (e) {
+        return [];
+      }
+    },
+    closeOrphanDialog() {
+      this.orphanFor = null;
+      this.orphanMeetings = [];
+    },
+    async confirmComplete() {
+      const task = this.orphanFor;
+      const cancelMeetings = this.cancelOrphans;
+      this.isCompletingWithMeetings = true;
+      try {
+        await this.completeTask(task, cancelMeetings);
+        this.closeOrphanDialog();
+      } finally {
+        this.isCompletingWithMeetings = false;
+      }
+    },
+    async completeTask(task, cancelMeetings = false) {
       this.completingId = task.id;
       try {
-        const { data } = await CaseTasksAPI.updateTask(this.ticketId, task.id, {
-          status: 'done',
-        });
+        const { data } = await CaseTasksAPI.updateTask(
+          this.ticketId,
+          task.id,
+          { status: 'done' },
+          { cancel_meetings: cancelMeetings }
+        );
         this.replace(data.case_task);
         this.$emitter.emit('caseToastMessage', {
-          message: this.$t('CASE_TICKETS.TASKS.TOAST_COMPLETED', {
-            task: task.title,
-          }),
+          message: data.cancelled_meetings
+            ? this.$t('CASE_TICKETS.TASKS.TOAST_COMPLETED_MEETINGS', {
+                task: task.title,
+                count: data.cancelled_meetings,
+              })
+            : this.$t('CASE_TICKETS.TASKS.TOAST_COMPLETED', {
+                task: task.title,
+              }),
           icon: 'checkmark',
         });
+        // Las reuniones canceladas cambian el Avance y la pestaña Reuniones.
+        if (data.cancelled_meetings) this.$emit('changed');
       } catch (e) {
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.COMPLETE_ERROR'),
@@ -1042,6 +1111,78 @@ export default {
             </woot-button>
           </div>
         </form>
+      </div>
+    </woot-modal>
+
+    <!-- @tickets_cases F5 (§11.2) — reuniones huérfanas al completar la tarea.
+         Se muestran SIEMPRE antes de tocar nada, y el aviso de que cancelar no
+         se deshace va explícito, no implícito. -->
+    <woot-modal
+      v-if="orphanFor"
+      :show="!!orphanFor"
+      :on-close="closeOrphanDialog"
+      size="medium"
+    >
+      <div class="flex flex-col h-auto overflow-auto">
+        <woot-modal-header
+          :header-title="$t('CASE_TICKETS.TASKS.ORPHAN_MEETINGS.TITLE')"
+          :header-content="
+            $t('CASE_TICKETS.TASKS.ORPHAN_MEETINGS.DESC', {
+              count: orphanMeetings.length,
+              task: orphanFor.title,
+            })
+          "
+        />
+        <div class="flex flex-col self-stretch w-full gap-3 pb-8">
+          <ul class="m-0 list-none">
+            <li
+              v-for="m in orphanMeetings"
+              :key="m.id"
+              class="flex items-center gap-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            >
+              <span
+                class="font-mono text-xs font-semibold text-slate-400 dark:text-slate-500"
+                >{{ m.folio }}</span
+              >
+              <span class="truncate">{{ m.title }}</span>
+              <span class="text-xs text-slate-500 dark:text-slate-400">{{
+                formatDate(m.starts_at)
+              }}</span>
+            </li>
+          </ul>
+
+          <label class="flex items-center gap-2 m-0">
+            <input v-model="cancelOrphans" type="checkbox" class="m-0" />
+            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+              $t('CASE_TICKETS.TASKS.ORPHAN_MEETINGS.CANCEL_LABEL')
+            }}</span>
+          </label>
+
+          <p
+            v-if="cancelOrphans"
+            class="flex items-center gap-1 m-0 text-xs text-amber-700 dark:text-amber-300"
+          >
+            <fluent-icon icon="info" size="14" />
+            {{ $t('CASE_TICKETS.TASKS.ORPHAN_MEETINGS.IRREVERSIBLE') }}
+          </p>
+
+          <div class="flex items-center justify-end gap-2">
+            <woot-button
+              variant="clear"
+              type="button"
+              @click="closeOrphanDialog"
+            >
+              {{ $t('CASE_TICKETS.TASKS.ORPHAN_MEETINGS.CANCEL') }}
+            </woot-button>
+            <woot-button
+              :is-loading="isCompletingWithMeetings"
+              type="button"
+              @click="confirmComplete"
+            >
+              {{ $t('CASE_TICKETS.TASKS.ORPHAN_MEETINGS.CONFIRM') }}
+            </woot-button>
+          </div>
+        </div>
       </div>
     </woot-modal>
 

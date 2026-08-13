@@ -20,7 +20,12 @@ module CaseMeetingSerializer
       time_zone: meeting.time_zone,
       location: meeting.location,
       status: meeting.status,
-      created_at: meeting.created_at
+      created_at: meeting.created_at,
+      # @tickets_cases F6 (§11.4) — señales de fuera de plazo. Son comparaciones
+      # de fechas que ya tenemos; la reconciliación NUNCA mueve un vencimiento.
+      beyond_task_due: meeting.beyond_task_due?,
+      beyond_ticket_due: meeting.beyond_ticket_due?,
+      suggested_task_due_at: meeting.suggested_task_due_at
     }.merge(meeting_sync_json(meeting)).merge(meeting_links_json(meeting))
   end
 

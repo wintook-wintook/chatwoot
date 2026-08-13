@@ -28,6 +28,19 @@ class Cases::Meetings::SeriesService
     event ? persist_from_google(event) : persist_locally
   end
 
+  # @tickets_cases F5 (§11.1) — la serie se extendió (el vencimiento de la tarea
+  # se movió): se recalcula el RRULE y se crean SOLO las ocurrencias que faltan,
+  # sin tocar las que ya existen. Cada ocurrencia nueva le escribe al cliente, por
+  # eso nunca se dispara sola.
+  def regenerate_missing!
+    @series.update!(recurrence_rule: builder.rule)
+    existentes = @series.case_meetings.pluck(:starts_at).map(&:to_i)
+    duration = builder.duration
+    nuevas = builder.expand.reject { |start| existentes.include?(start.to_i) }
+    push_recurrence if mirror.mirrorable? && @series.google_event_id.present?
+    nuevas.map { |start| build_meeting(start, start + duration) }
+  end
+
   # Trunca la serie para conservar hasta `last_kept` y borrar el resto (§11.2).
   # Un solo PATCH sobre el maestro = UN solo aviso al cliente, en vez de N
   # cancelaciones. Si la serie no tiene ninguna realizada, el llamador debería
@@ -135,6 +148,21 @@ class Cases::Meetings::SeriesService
   def series_attendees
     contact_email = @ticket.contact&.email
     contact_email.present? ? [contact_email] : []
+  end
+
+  # Empuja el RRULE nuevo al maestro (extensión de la serie). Un solo PATCH.
+  def push_recurrence
+    calendar.update_event(
+      @series.google_event_id,
+      calendar_id: @series.google_calendar_id.presence || 'primary',
+      start_time: @series.starts_at,
+      end_time: @series.ends_at,
+      recurrence: [@series.recurrence_rule],
+      send_updates: 'all'
+    )
+  rescue StandardError => e
+    Rails.logger.error("[GestorTickets] extender la serie #{@series.id}: #{e.message}")
+    @series.update!(sync_status: :failed, sync_error: e.message.to_s.truncate(500))
   end
 
   def push_truncation(rule)

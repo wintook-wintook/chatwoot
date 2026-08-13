@@ -22,9 +22,12 @@ class CaseTasksAPI extends ApiClient {
     return axios.post(`${this.url}/${ticketId}/tasks`, { case_task: data });
   }
 
-  updateTask(ticketId, id, data) {
+  // `flags` viaja FUERA de `case_task`: son acciones del momento (cancelar las
+  // reuniones huérfanas, extender la serie), no atributos de la tarea.
+  updateTask(ticketId, id, data, flags = {}) {
     return axios.patch(`${this.url}/${ticketId}/tasks/${id}`, {
       case_task: data,
+      ...flags,
     });
   }
 

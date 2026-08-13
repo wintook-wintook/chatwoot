@@ -23,10 +23,13 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
 
   FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las reuniones. Reábrelo si necesitas cambiarlas.'
   NO_MIRROR_MSG = 'Esta reunión vive solo en el sistema: el organizador no tiene Google Calendar conectado.'
+  NO_TASK_MSG = 'La reunión no cuelga de ninguna tarea, así que no hay vencimiento que mover.'
+  SLA_MSG = 'La reunión se pasa del vencimiento comprometido con el cliente: eso no se mueve desde aquí. ' \
+            'Si el caso lo necesita, escala el ticket.'
 
   before_action :set_ticket
-  before_action :set_meeting, only: %i[update destroy hold cancel resync]
-  before_action :block_if_frozen, only: %i[create update destroy hold cancel resync]
+  before_action :set_meeting, only: %i[update destroy hold cancel resync align_task_due]
+  before_action :block_if_frozen, only: %i[create update destroy hold cancel resync align_task_due]
 
   def index
     # @tickets_cases F3 — reconciliación perezosa (§5): antes de responder se
@@ -39,6 +42,19 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
       case_meetings: meetings.map { |m| meeting_json(m) },
       # La UI necesita saber si puede ofrecer el espejo: agentes con Calendar conectado.
       available_organizers: available_organizers
+    }
+  end
+
+  # @tickets_cases F5 (§11.2) — qué reuniones quedarían huérfanas al completar una
+  # tarea (`case_task_id`) o al cerrar el ticket (sin parámetro). La UI las MUESTRA
+  # antes de tocar nada: nunca se cancela sin enseñarlas. `cancel_default` viene del
+  # estado destino: `resolved`/`validating` no son terminales, así que va desmarcada.
+  def upcoming
+    task = params[:case_task_id].present? ? @ticket.case_tasks.find_by(id: params[:case_task_id]) : nil
+    meetings = Cases::Meetings::LifecycleService.new(@ticket).pending(case_task: task)
+    render json: {
+      case_meetings: meetings.map { |m| meeting_json(m) },
+      cancel_default: Cases::Meetings::LifecycleService.cancel_default_for(params[:target_status])
     }
   end
 
@@ -128,7 +144,39 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
     render json: { case_meeting: meeting_json(@meeting.reload) }
   end
 
+  # @tickets_cases F6 (§11.4) — mover el VENCIMIENTO DE LA TAREA para que cubra
+  # esta reunión. Es una escritura de negocio, así que solo ocurre cuando un
+  # humano la pide desde la fila; la reconciliación jamás la hace.
+  #
+  # Si la reunión también cruzó el vencimiento efectivo del TICKET (compromiso con
+  # el cliente / SLA), NO se ofrece mover nada: eso tiene peso de política y su
+  # camino es `escalate`, que ya existe.
+  def align_task_due
+    task = @meeting.case_task
+    return render json: { error: NO_TASK_MSG }, status: :unprocessable_entity if task.nil?
+    return render json: { error: SLA_MSG }, status: :unprocessable_entity if @meeting.beyond_ticket_due?
+
+    previous = task.due_at
+    task.update!(due_at: @meeting.suggested_task_due_at)
+    log_due_change(task, previous)
+    render json: { case_task: { id: task.id, sequence: task.sequence, due_at: task.due_at },
+                   case_meeting: meeting_json(@meeting.reload) }
+  end
+
   private
+
+  # Reusa el evento `due_date_changed` (28) que ya existe para el vencimiento.
+  def log_due_change(task, previous)
+    @ticket.case_events.create!(
+      account: Current.account,
+      event_type: :due_date_changed,
+      origin: :agent,
+      actor: current_user,
+      case_task: task,
+      payload: { from: previous, to: task.due_at, source: 'meeting',
+                 meeting_id: @meeting.id, folio: @meeting.folio }
+    )
+  end
 
   def set_ticket
     @ticket = Current.account.case_tickets.find(params[:case_ticket_id])

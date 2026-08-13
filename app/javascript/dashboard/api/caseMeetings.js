@@ -11,6 +11,11 @@ class CaseMeetingsAPI extends ApiClient {
     return axios.get(`${this.url}/${ticketId}/meetings`);
   }
 
+  // F5 — reuniones futuras que quedarían huérfanas (de una tarea o del ticket).
+  upcoming(ticketId, params = {}) {
+    return axios.get(`${this.url}/${ticketId}/meetings/upcoming`, { params });
+  }
+
   createMeeting(ticketId, data) {
     return axios.post(`${this.url}/${ticketId}/meetings`, {
       case_meeting: data,
@@ -46,6 +51,11 @@ class CaseMeetingsAPI extends ApiClient {
     return axios.patch(`${this.url}/${ticketId}/meeting-series/${id}`, {
       truncate_at: truncateAt,
     });
+  }
+
+  // F6 — mover el vencimiento de la TAREA para que cubra esta reunión.
+  alignTaskDue(ticketId, id) {
+    return axios.patch(`${this.url}/${ticketId}/meetings/${id}/align_task_due`);
   }
 
   // Reintentar el espejo con Google tras un fallo (o tras conectar Calendar).

@@ -54,6 +54,12 @@ tags: [tickets, trampas, gotchas, critico]
    redefiniendo `GoogleMirrorService#service` y `ReconcileService#service_for`
    (ver `f3_test.rb` en el scratchpad).
 
+16. **Puppeteer: el label de la pestaña incluye el badge** — con contador, el texto
+   del tab es `"Tareas\n    \n        1"`, así que comparar `=== 'Tareas'` falla en
+   cuanto el ticket tiene datos (y el test pasa a clicar el ítem **del sidebar** que
+   se llama igual, aterrizando en la bandeja de tareas). Comparar siempre la
+   **primera línea** del `textContent` y restringir el selector a `li.tabs-title a`.
+
 
 ## 🔗 Relacionado
 - [[Pruebas-en-browser]] · [[Feature-flag-case_management]] · [[Historial-de-implementacion]]

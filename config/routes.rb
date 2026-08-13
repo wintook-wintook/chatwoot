@@ -204,10 +204,14 @@ Rails.application.routes.draw do
             resources :case_notes, only: [:index, :create, :update, :destroy], path: 'notes'
             # @tickets_cases F1 — reuniones del ticket y sus series (plan §4.5)
             resources :case_meetings, only: [:index, :create, :update, :destroy], path: 'meetings' do
+              collection do
+                get :upcoming # @tickets_cases F5 — reuniones futuras que quedarían huérfanas
+              end
               member do
                 patch :hold   # marcar realizada / no asistió
                 patch :cancel # scope: 'one' | 'all'
                 post  :resync # reintentar el espejo con Google (F3)
+                patch :align_task_due # @tickets_cases F6 — mover el vencimiento de la tarea
               end
             end
             resources :case_meeting_series, only: [:create, :update, :destroy], path: 'meeting-series'

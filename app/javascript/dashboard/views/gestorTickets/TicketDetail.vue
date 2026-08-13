@@ -12,6 +12,7 @@ import TicketNotes from '../../components/contacts/CaseTicket/TicketNotes.vue';
 import TicketMeetings from '../../components/contacts/CaseTicket/TicketMeetings.vue';
 import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
 import CaseTicketsAPI from 'dashboard/api/caseTickets';
+import CaseMeetingsAPI from 'dashboard/api/caseMeetings';
 import {
   SIMPLE_TRANSITION_TARGETS,
   toSimpleStatus,
@@ -63,6 +64,12 @@ export default {
       // @tickets_cases — motivo opcional al cambiar de estado (osTicket)
       showReasonModal: false,
       pendingStatus: null,
+      // @tickets_cases F5 (§11.2) — reuniones futuras del ticket al cambiar de
+      // estado. El default de la casilla lo dicta el estado destino: `resolved` y
+      // `validating` NO son terminales (la cita puede ser justo la de validación),
+      // así que se ofrece desmarcada; `closed`/`cancelled` van marcadas.
+      orphanMeetings: [],
+      cancelOrphanMeetings: false,
       transitionReason: '',
       // 2E — relaciones entre tickets
       showRelationModal: false,
@@ -543,6 +550,7 @@ export default {
       // como "Motivo" en el Recorrido; aquí solo se captura.
       this.pendingStatus = status;
       this.transitionReason = '';
+      await this.loadOrphanMeetings(status);
       this.showReasonModal = true;
       this.$nextTick(() => this.$refs.reasonInput?.focus());
     },
@@ -552,9 +560,30 @@ export default {
       if (!status) return;
       const reason = this.transitionReason.trim();
       this.showReasonModal = false;
-      await this.runTransition(status, reason ? { reason } : {});
+      const extra = reason ? { reason } : {};
+      // F5 — solo se cancela si el agente lo aceptó, con las citas a la vista.
+      if (this.orphanMeetings.length && this.cancelOrphanMeetings) {
+        extra.cancel_meetings = true;
+      }
+      await this.runTransition(status, extra);
       this.pendingStatus = null;
       this.transitionReason = '';
+      this.orphanMeetings = [];
+    },
+    // F5 — reuniones futuras que quedarían huérfanas con este cambio de estado.
+    // El backend devuelve también el default de la casilla para ese destino.
+    async loadOrphanMeetings(status) {
+      this.orphanMeetings = [];
+      this.cancelOrphanMeetings = false;
+      try {
+        const { data } = await CaseMeetingsAPI.upcoming(this.ticketId, {
+          target_status: status,
+        });
+        this.orphanMeetings = data.case_meetings || [];
+        this.cancelOrphanMeetings = !!data.cancel_default;
+      } catch (e) {
+        this.orphanMeetings = [];
+      }
     },
     // @tickets_cases 2G — confirmar cierre documentado
     async confirmClose() {
@@ -2710,6 +2739,53 @@ export default {
               :placeholder="$t('CASE_TICKETS.STATUS_QUICK.REASON_PLACEHOLDER')"
             />
           </label>
+
+          <!-- @tickets_cases F5 (§11.2) — reuniones futuras del ticket. Se
+               muestran SIEMPRE; la casilla viene marcada solo si el estado
+               destino es terminal. Cancelar no se deshace, y se dice. -->
+          <div
+            v-if="orphanMeetings.length"
+            class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-600"
+          >
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              {{
+                $t('CASE_TICKETS.STATUS_QUICK.MEETINGS_TITLE', {
+                  count: orphanMeetings.length,
+                })
+              }}
+            </span>
+            <ul class="m-0 list-none">
+              <li
+                v-for="m in orphanMeetings"
+                :key="m.id"
+                class="flex items-center gap-2 py-0.5 text-sm text-slate-600 dark:text-slate-300"
+              >
+                <span class="font-mono text-xs">{{ m.folio }}</span>
+                <span class="truncate">{{ m.title }}</span>
+                <span class="text-xs text-slate-400">{{
+                  formatDate(m.starts_at)
+                }}</span>
+              </li>
+            </ul>
+            <label class="flex items-center gap-2 m-0">
+              <input
+                v-model="cancelOrphanMeetings"
+                type="checkbox"
+                class="m-0"
+              />
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CASE_TICKETS.STATUS_QUICK.MEETINGS_CANCEL')
+              }}</span>
+            </label>
+            <p
+              v-if="cancelOrphanMeetings"
+              class="m-0 text-xs text-amber-700 dark:text-amber-300"
+            >
+              {{ $t('CASE_TICKETS.STATUS_QUICK.MEETINGS_IRREVERSIBLE') }}
+            </p>
+          </div>
 
           <div class="flex justify-end gap-2 mt-2">
             <woot-button

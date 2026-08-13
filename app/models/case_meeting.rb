@@ -89,9 +89,24 @@ class CaseMeeting < ApplicationRecord
     format('R%03d', sequence.to_i)
   end
 
-  # ¿Se pasó del vencimiento de su tarea? (F6 lo señaliza; aquí solo el dato.)
+  # ¿Se pasó del vencimiento de su TAREA? (F6 §11.4)
   def past_task_due?
     case_task&.due_at.present? && starts_at.present? && starts_at > case_task.due_at
+  end
+  alias beyond_task_due? past_task_due?
+
+  # ¿Y del compromiso con el CLIENTE (vencimiento efectivo del ticket)? Este es
+  # el caso grave: ahí NO se ofrece mover nada, solo se señala — mover ese
+  # vencimiento es una decisión con peso de política, y su camino es `escalate`.
+  def beyond_ticket_due?
+    due = case_ticket&.effective_due_at
+    due.present? && starts_at.present? && starts_at > due
+  end
+
+  # Vencimiento que cubriría esta reunión, para la acción "mover el vencimiento
+  # de la tarea": el fin de la reunión, no su inicio.
+  def suggested_task_due_at
+    ends_at || starts_at
   end
 
   # Igual que CaseTask#track_completion: el quién/cuándo de `held` y `cancelled`

@@ -194,7 +194,10 @@
       "REASON_LABEL": "Reason (optional)",
       "REASON_PLACEHOLDER": "Why is the status changing? It shows in the Journey.",
       "REASON_CONFIRM": "Change status",
-      "REASON_CANCEL": "Cancel"
+      "REASON_CANCEL": "Cancel",
+      "MEETINGS_TITLE": "This ticket has {count} upcoming meeting(s)",
+      "MEETINGS_CANCEL": "Cancel them and notify the customer",
+      "MEETINGS_IRREVERSIBLE": "Cancelling cannot be undone: the customer gets the notice and the meetings do not come back, even if the ticket is reopened."
     },
     "PRIORITY_QUICK": {
       "LABEL": "Priority",
@@ -226,7 +229,8 @@
       "CLOSE": "Close",
       "CLEAR": "Clear selection",
       "SUCCESS": "{n} tickets updated",
-      "ERROR": "Could not apply the action"
+      "ERROR": "Could not apply the action",
+      "MEETINGS_PENDING": "{n} of the closed tickets have upcoming meetings: review them one by one to cancel."
     },
     "TASKS": {
       "TITLE": "Tasks",
@@ -332,7 +336,17 @@
         "NOTES": "Task notes ({count})",
         "ADD_MEETING": "Schedule meeting",
         "VIEW_MEETINGS": "View meetings"
-      }
+      },
+      "ORPHAN_MEETINGS": {
+        "TITLE": "This task has upcoming meetings",
+        "DESC": "Task \"{task}\" leaves {count} meeting(s) scheduled with the customer.",
+        "CANCEL_LABEL": "Cancel them and notify the customer",
+        "IRREVERSIBLE": "Cancelling cannot be undone: the customer gets the notice and the meetings do not come back, even if the task is reopened.",
+        "CANCEL": "Back",
+        "CONFIRM": "Complete task"
+      },
+      "TOAST_COMPLETED_MEETINGS": "Task \"{task}\" completed · {count} meeting(s) cancelled",
+      "MEETINGS_BEYOND_DUE": "{count} meeting(s) scheduled after the due date"
     },
     "MODAL": {
       "TITLE_CREATE": "Create ticket",
@@ -1121,7 +1135,8 @@
         "CANCEL_ONE": "Cancel this meeting",
         "CANCEL_ALL": "Cancel the whole series",
         "DELETE": "Delete",
-        "RESYNC": "Retry sync"
+        "RESYNC": "Retry sync",
+        "ALIGN_TASK_DUE": "Move the task due date"
       },
       "MODAL": {
         "TITLE": "New meeting",
@@ -1197,7 +1212,9 @@
         "LOCAL_ONLY_HINT": "The organizer has no Google Calendar connected: the event lives here only.",
         "RETRYING": "Retrying the sync…"
       },
-      "SERIES_CREATED": "Series {folio} created with {count} meetings"
+      "SERIES_CREATED": "Series {folio} created with {count} meetings",
+      "BEYOND_TICKET_HINT": "The meeting falls beyond the due date committed to the customer. It is not moved from here: escalate the ticket if the case needs it.",
+      "TOAST_DUE_ALIGNED": "Task due date moved to {date}"
     }
   }
 }
