@@ -24,7 +24,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   FROZEN_MSG    = 'Ticket cerrado: no se puede editar. Reábrelo si necesitas cambiarlo.'
 
   before_action :set_ticket,
-                only: %i[show update transition assign escalate change_approval generate_article
+                only: %i[show update transition move assign escalate change_approval generate_article
                          apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize
                          detect_duplicates follow_up lock unlock reopen]
 
@@ -246,6 +246,32 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     end
 
     render json: { case_ticket: ticket_json(@ticket.reload), propagated_incidents: propagated }
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/move
+  # @tickets_cases — mueve un ticket a otra columna del Kanban (Opción A+).
+  #   Rama A (mismo estado): la columna destino ya cubre el status actual →
+  #     solo cambia el puntero, `status` intacto, siempre legal.
+  #   Rama B (otro estado): elige el primer status de la columna destino que sea
+  #     alcanzable por VALID_TRANSITIONS → cambia status Y puntero juntos.
+  def move
+    column = CaseTypeColumn.find_by!(id: params[:case_type_column_id], account_id: Current.account.id)
+
+    if column.case_type_id != @ticket.case_type_id
+      return render json: { error: 'La columna no pertenece al tipo del ticket' }, status: :unprocessable_entity
+    end
+
+    if column.statuses.include?(@ticket.status)
+      move_within_state(column)
+    else
+      move_across_state(column)
+    end
+
+    render json: { case_ticket: ticket_json(@ticket.reload) }
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: 'Columna no encontrada' }, status: :not_found
   rescue StandardError => e
     render json: { error: e.message }, status: :unprocessable_entity
   end
@@ -642,6 +668,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       description:                ticket.description,
       case_type_id:               ticket.case_type_id,
       case_type:                  case_type_json(ticket.case_type),
+      case_type_column_id:        ticket.case_type_column_id, # @tickets_cases — sub-estado (columna del Kanban por tipo)
       ticket_kind:                ticket.ticket_kind,
       impact:                     ticket.impact,
       urgency:                    ticket.urgency,
@@ -705,6 +732,32 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     CaseTicket::VALID_TRANSITIONS[ticket.status] || []
   end
 
+  # @tickets_cases — Rama A: la columna destino cubre el estado actual. Movimiento
+  # libre: solo cambia el puntero, sin tocar la máquina de estados. Se registra en
+  # case_events para habilitar reportes por etapa más adelante (§10 del plan).
+  def move_within_state(column)
+    old_column_id = @ticket.case_type_column_id
+    @ticket.update!(case_type_column_id: column.id)
+    @ticket.case_events.create!(
+      account: Current.account, event_type: :column_changed, origin: :agent,
+      actor: current_user, payload: { from: old_column_id, to: column.id, status: @ticket.status }
+    )
+  end
+
+  # @tickets_cases — Rama B: la columna destino es de otro estado. Se elige el
+  # primer status de la columna alcanzable por VALID_TRANSITIONS y se cambian
+  # status y puntero juntos. Si ninguno es alcanzable → se rechaza (como hoy).
+  def move_across_state(column)
+    target = column.statuses.find { |s| @ticket.can_transition_to?(s) }
+    raise "Transición inválida: #{@ticket.status} → columna «#{column.label}»" if target.nil?
+
+    ActiveRecord::Base.transaction do
+      @ticket.transition!(target, actor: current_user)
+      # transition! disparó el resync (puntero → NULL); lo fijamos a la columna destino.
+      @ticket.update!(case_type_column_id: column.id)
+    end
+  end
+
   # @tickets_cases 3A — config de IA de la cuenta (memoizada para no consultar
   # por cada ticket al serializar la lista).
   def ai_config
@@ -751,6 +804,10 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       # @tickets_cases 2K — definiciones para mostrar los campos personalizados con etiqueta.
       custom_fields: type.case_type_fields.ordered.map do |f|
         { key: f.key, label: f.label, field_type: f.field_type, options: f.options, required: f.required }
+      end,
+      # @tickets_cases — columnas del Kanban propias del tipo (Opción A+).
+      columns: type.case_type_columns.ordered.map do |c|
+        { id: c.id, label: c.label, color: c.color, position: c.position, statuses: c.statuses }
       end
     }
   end
@@ -830,11 +887,12 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     notify_assignee(@ticket)
   end
 
-  # @tickets_cases Fase A — notificación nativa (bell) al agente asignado de un ticket.
-  # No notifica auto-asignaciones. Falla en silencio para no romper el flujo principal.
+  # @tickets_cases Fase A — notificación nativa (bell + toast) al agente asignado de
+  # un ticket. Por decisión de producto (2026-07-29) SÍ notifica auto-asignaciones
+  # (tomar un ticket también avisa). Falla en silencio para no romper el flujo.
   def notify_assignee(ticket)
     assignee = ticket.assignee
-    return if assignee.nil? || assignee.id == current_user&.id
+    return if assignee.nil?
 
     NotificationBuilder.new(
       notification_type: 'case_ticket_assignment',

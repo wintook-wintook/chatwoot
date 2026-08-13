@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1254" height="780" viewBox="0 0 1254 780" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+<rect width="1254" height="780" fill="#ffffff"/>
+<style>.title{fill:#0f172a;font-size:24px;font-weight:700}.subtitle{fill:#64748b;font-size:14px}.tname{fill:#0f172a;font-size:16px;font-weight:700}.chip{font-size:13.5px;font-weight:600}.key{fill:#64748b;font-size:10.5px;font-family:Consolas,monospace}.note{fill:#7c3aed;font-size:11px;font-weight:600}.leg{fill:#475569;font-size:12.5px}</style>
+<text x="32" y="44" class="title">Columnas del Kanban por Tipo de Caso — ejemplos</text>
+<text x="32" y="68" class="subtitle">Cada tipo define sus etapas; el color indica a cuál de los 13 estados reales mapea. Varias columnas pueden caer en el mismo estado (in_progress).</text>
+<text x="32" y="148" class="tname">Soporte</text>
+<rect x="210" y="120" width="150" height="46" rx="9" fill="#e0e9fc" stroke="#2563eb" stroke-width="1.5"/>
+<text x="285" y="141" text-anchor="middle" class="chip" fill="#2563eb">Nuevo</text>
+<text x="285" y="157" text-anchor="middle" class="key">open</text>
+<line x1="363" y1="143" x2="375" y2="143" stroke="#94a3b8" stroke-width="2"/>
+<path d="M375,139 L381,143 L375,147 Z" fill="#94a3b8"/>
+<rect x="384" y="120" width="150" height="46" rx="9" fill="#ece3fc" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="459" y="141" text-anchor="middle" class="chip" fill="#7c3aed">Diagnóstico</text>
+<text x="459" y="157" text-anchor="middle" class="key">in_diagnosis</text>
+<line x1="537" y1="143" x2="549" y2="143" stroke="#94a3b8" stroke-width="2"/>
+<path d="M549,139 L555,143 L549,147 Z" fill="#94a3b8"/>
+<rect x="558" y="120" width="150" height="46" rx="9" fill="#ece3fc" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="633" y="141" text-anchor="middle" class="chip" fill="#7c3aed">En proceso</text>
+<text x="633" y="157" text-anchor="middle" class="key">in_progress</text>
+<line x1="711" y1="143" x2="723" y2="143" stroke="#94a3b8" stroke-width="2"/>
+<path d="M723,139 L729,143 L723,147 Z" fill="#94a3b8"/>
+<rect x="732" y="120" width="150" height="46" rx="9" fill="#f9ebdc" stroke="#d97706" stroke-width="1.5"/>
+<text x="807" y="141" text-anchor="middle" class="chip" fill="#d97706">Esperando</text>
+<text x="807" y="157" text-anchor="middle" class="key">waiting_on_customer</text>
+<line x1="885" y1="143" x2="897" y2="143" stroke="#94a3b8" stroke-width="2"/>
+<path d="M897,139 L903,143 L897,147 Z" fill="#94a3b8"/>
+<rect x="906" y="120" width="150" height="46" rx="9" fill="#def2e5" stroke="#16a34a" stroke-width="1.5"/>
+<text x="981" y="141" text-anchor="middle" class="chip" fill="#16a34a">Resuelto</text>
+<text x="981" y="157" text-anchor="middle" class="key">resolved</text>
+<line x1="1059" y1="143" x2="1071" y2="143" stroke="#94a3b8" stroke-width="2"/>
+<path d="M1071,139 L1077,143 L1071,147 Z" fill="#94a3b8"/>
+<rect x="1080" y="120" width="150" height="46" rx="9" fill="#e5e7ea" stroke="#475569" stroke-width="1.5"/>
+<text x="1155" y="141" text-anchor="middle" class="chip" fill="#475569">Cerrado</text>
+<text x="1155" y="157" text-anchor="middle" class="key">closed</text>
+<path d="M384,176 L384,182 L708,182 L708,176" fill="none" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="546" y="198" text-anchor="middle" class="note">2 columnas = 1 estado real (in_progress) · mover entre ellas es libre</text>
+<text x="32" y="298" class="tname">Comercial</text>
+<rect x="210" y="270" width="150" height="46" rx="9" fill="#e0e9fc" stroke="#2563eb" stroke-width="1.5"/>
+<text x="285" y="291" text-anchor="middle" class="chip" fill="#2563eb">Nuevo</text>
+<text x="285" y="307" text-anchor="middle" class="key">open</text>
+<line x1="363" y1="293" x2="375" y2="293" stroke="#94a3b8" stroke-width="2"/>
+<path d="M375,289 L381,293 L375,297 Z" fill="#94a3b8"/>
+<rect x="384" y="270" width="150" height="46" rx="9" fill="#ece3fc" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="459" y="291" text-anchor="middle" class="chip" fill="#7c3aed">Contactado</text>
+<text x="459" y="307" text-anchor="middle" class="key">in_progress</text>
+<line x1="537" y1="293" x2="549" y2="293" stroke="#94a3b8" stroke-width="2"/>
+<path d="M549,289 L555,293 L549,297 Z" fill="#94a3b8"/>
+<rect x="558" y="270" width="150" height="46" rx="9" fill="#ece3fc" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="633" y="291" text-anchor="middle" class="chip" fill="#7c3aed">Cotizado</text>
+<text x="633" y="307" text-anchor="middle" class="key">in_progress</text>
+<line x1="711" y1="293" x2="723" y2="293" stroke="#94a3b8" stroke-width="2"/>
+<path d="M723,289 L729,293 L723,297 Z" fill="#94a3b8"/>
+<rect x="732" y="270" width="150" height="46" rx="9" fill="#ece3fc" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="807" y="291" text-anchor="middle" class="chip" fill="#7c3aed">Negociación</text>
+<text x="807" y="307" text-anchor="middle" class="key">in_progress</text>
+<line x1="885" y1="293" x2="897" y2="293" stroke="#94a3b8" stroke-width="2"/>
+<path d="M897,289 L903,293 L897,297 Z" fill="#94a3b8"/>
+<rect x="906" y="270" width="150" height="46" rx="9" fill="#def2e5" stroke="#16a34a" stroke-width="1.5"/>
+<text x="981" y="291" text-anchor="middle" class="chip" fill="#16a34a">Ganado</text>
+<text x="981" y="307" text-anchor="middle" class="key">resolved</text>
+<line x1="1059" y1="293" x2="1071" y2="293" stroke="#94a3b8" stroke-width="2"/>
+<path d="M1071,289 L1077,293 L1071,297 Z" fill="#94a3b8"/>
+<rect x="1080" y="270" width="150" height="46" rx="9" fill="#e5e7ea" stroke="#475569" stroke-width="1.5"/>
+<text x="1155" y="291" text-anchor="middle" class="chip" fill="#475569">Perdido</text>
+<text x="1155" y="307" text-anchor="middle" class="key">cancelled</text>
+<path d="M384,326 L384,332 L882,332 L882,326" fill="none" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="633" y="348" text-anchor="middle" class="note">3 columnas = 1 estado real (in_progress) · mover entre ellas es libre</text>
+<text x="32" y="448" class="tname">Implementación</text>
+<rect x="210" y="420" width="150" height="46" rx="9" fill="#e0e9fc" stroke="#2563eb" stroke-width="1.5"/>
+<text x="285" y="441" text-anchor="middle" class="chip" fill="#2563eb">Nuevo</text>
+<text x="285" y="457" text-anchor="middle" class="key">open</text>
+<line x1="363" y1="443" x2="375" y2="443" stroke="#94a3b8" stroke-width="2"/>
+<path d="M375,439 L381,443 L375,447 Z" fill="#94a3b8"/>
+<rect x="384" y="420" width="150" height="46" rx="9" fill="#ece3fc" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="459" y="441" text-anchor="middle" class="chip" fill="#7c3aed">Levantamiento</text>
+<text x="459" y="457" text-anchor="middle" class="key">in_progress</text>
+<line x1="537" y1="443" x2="549" y2="443" stroke="#94a3b8" stroke-width="2"/>
+<path d="M549,439 L555,443 L549,447 Z" fill="#94a3b8"/>
+<rect x="558" y="420" width="150" height="46" rx="9" fill="#ece3fc" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="633" y="441" text-anchor="middle" class="chip" fill="#7c3aed">Configuración</text>
+<text x="633" y="457" text-anchor="middle" class="key">in_progress</text>
+<line x1="711" y1="443" x2="723" y2="443" stroke="#94a3b8" stroke-width="2"/>
+<path d="M723,439 L729,443 L723,447 Z" fill="#94a3b8"/>
+<rect x="732" y="420" width="150" height="46" rx="9" fill="#ece3fc" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="807" y="441" text-anchor="middle" class="chip" fill="#7c3aed">Capacitación</text>
+<text x="807" y="457" text-anchor="middle" class="key">in_progress</text>
+<line x1="885" y1="443" x2="897" y2="443" stroke="#94a3b8" stroke-width="2"/>
+<path d="M897,439 L903,443 L897,447 Z" fill="#94a3b8"/>
+<rect x="906" y="420" width="150" height="46" rx="9" fill="#def2e5" stroke="#16a34a" stroke-width="1.5"/>
+<text x="981" y="441" text-anchor="middle" class="chip" fill="#16a34a">Go-live</text>
+<text x="981" y="457" text-anchor="middle" class="key">resolved</text>
+<line x1="1059" y1="443" x2="1071" y2="443" stroke="#94a3b8" stroke-width="2"/>
+<path d="M1071,439 L1077,443 L1071,447 Z" fill="#94a3b8"/>
+<rect x="1080" y="420" width="150" height="46" rx="9" fill="#e5e7ea" stroke="#475569" stroke-width="1.5"/>
+<text x="1155" y="441" text-anchor="middle" class="chip" fill="#475569">Cerrado</text>
+<text x="1155" y="457" text-anchor="middle" class="key">closed</text>
+<path d="M384,476 L384,482 L882,482 L882,476" fill="none" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="633" y="498" text-anchor="middle" class="note">3 columnas = 1 estado real (in_progress) · mover entre ellas es libre</text>
+<text x="32" y="598" class="tname">Cobranza</text>
+<rect x="210" y="570" width="150" height="46" rx="9" fill="#e0e9fc" stroke="#2563eb" stroke-width="1.5"/>
+<text x="285" y="591" text-anchor="middle" class="chip" fill="#2563eb">Nuevo</text>
+<text x="285" y="607" text-anchor="middle" class="key">open</text>
+<line x1="363" y1="593" x2="375" y2="593" stroke="#94a3b8" stroke-width="2"/>
+<path d="M375,589 L381,593 L375,597 Z" fill="#94a3b8"/>
+<rect x="384" y="570" width="150" height="46" rx="9" fill="#ece3fc" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="459" y="591" text-anchor="middle" class="chip" fill="#7c3aed">Recordatorio</text>
+<text x="459" y="607" text-anchor="middle" class="key">in_progress</text>
+<line x1="537" y1="593" x2="549" y2="593" stroke="#94a3b8" stroke-width="2"/>
+<path d="M549,589 L555,593 L549,597 Z" fill="#94a3b8"/>
+<rect x="558" y="570" width="150" height="46" rx="9" fill="#f9ebdc" stroke="#d97706" stroke-width="1.5"/>
+<text x="633" y="591" text-anchor="middle" class="chip" fill="#d97706">Promesa de pago</text>
+<text x="633" y="607" text-anchor="middle" class="key">waiting_on_customer</text>
+<line x1="711" y1="593" x2="723" y2="593" stroke="#94a3b8" stroke-width="2"/>
+<path d="M723,589 L729,593 L723,597 Z" fill="#94a3b8"/>
+<rect x="732" y="570" width="150" height="46" rx="9" fill="#ece3fc" stroke="#7c3aed" stroke-width="1.5"/>
+<text x="807" y="591" text-anchor="middle" class="chip" fill="#7c3aed">Gestión</text>
+<text x="807" y="607" text-anchor="middle" class="key">in_progress</text>
+<line x1="885" y1="593" x2="897" y2="593" stroke="#94a3b8" stroke-width="2"/>
+<path d="M897,589 L903,593 L897,597 Z" fill="#94a3b8"/>
+<rect x="906" y="570" width="150" height="46" rx="9" fill="#def2e5" stroke="#16a34a" stroke-width="1.5"/>
+<text x="981" y="591" text-anchor="middle" class="chip" fill="#16a34a">Pagado</text>
+<text x="981" y="607" text-anchor="middle" class="key">resolved</text>
+<line x1="1059" y1="593" x2="1071" y2="593" stroke="#94a3b8" stroke-width="2"/>
+<path d="M1071,589 L1077,593 L1071,597 Z" fill="#94a3b8"/>
+<rect x="1080" y="570" width="150" height="46" rx="9" fill="#e5e7ea" stroke="#475569" stroke-width="1.5"/>
+<text x="1155" y="591" text-anchor="middle" class="chip" fill="#475569">Incobrable</text>
+<text x="1155" y="607" text-anchor="middle" class="key">cancelled</text>
+<text x="32" y="764" class="leg">Estado real:</text>
+<rect x="127" y="752" width="16" height="16" rx="4" fill="#2563eb"/>
+<text x="149" y="764" class="leg">Nuevo</text>
+<rect x="203.0" y="752" width="16" height="16" rx="4" fill="#7c3aed"/>
+<text x="225.0" y="764" class="leg">En proceso</text>
+<rect x="315.0" y="752" width="16" height="16" rx="4" fill="#d97706"/>
+<text x="337.0" y="764" class="leg">En espera</text>
+<rect x="419.8" y="752" width="16" height="16" rx="4" fill="#16a34a"/>
+<text x="441.8" y="764" class="leg">Resuelto</text>
+<rect x="517.4" y="752" width="16" height="16" rx="4" fill="#475569"/>
+<text x="539.4" y="764" class="leg">Cerrado/Cancelado</text>
+</svg>

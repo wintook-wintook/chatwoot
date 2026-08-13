@@ -30,6 +30,13 @@ class CaseTicketsAPI extends ApiClient {
     });
   }
 
+  // @tickets_cases — mueve el ticket a una columna del Kanban por tipo (A+).
+  move(ticketId, caseTypeColumnId) {
+    return axios.patch(`${this.url}/${ticketId}/move`, {
+      case_type_column_id: caseTypeColumnId,
+    });
+  }
+
   assign(ticketId, params) {
     return axios.patch(`${this.url}/${ticketId}/assign`, params);
   }

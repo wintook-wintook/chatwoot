@@ -65,6 +65,13 @@ class Cases::Ai::FieldExtractor < Cases::Ai::BaseService
         - Para campos tipo "list", el valor debe ser EXACTAMENTE una de las opciones dadas.
         - Para "date" usa formato YYYY-MM-DD. Para "number" solo el número. Para "checkbox" true/false.
         - Para "text" un texto breve.
+        - Un mismo dato (medida, cantidad, unidad) pertenece a UN SOLO campo: si ya forma parte de
+          la descripción de otro campo (ej. "500 hojas de 10mm" — el 10mm es el espesor del
+          material, no un dato aparte), NO lo repitas como valor de un campo distinto salvo que el
+          cliente lo haya dado explícitamente PARA ese otro campo.
+        - Si el cliente da dos datos de ubicación en la misma frase con un patrón tipo "de A para B"
+          o "de A a B", asigná A al campo de origen/recogida y B al campo de destino según la
+          etiqueta de cada uno — no los dejes en null ni los mezclés.
       La clave ("clave") de cada valor es el "key" del campo.
     PROMPT
   end

@@ -24,8 +24,11 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
 
     task = @ticket.case_tasks.build(task_params)
     task.account = Current.account
+    # @tickets_cases — solicitante = agente actual, fijado al crear (no editable).
+    task.requester = current_user
     task.position ||= @ticket.case_tasks.count
     if task.save
+      notify_task_assignment(task) # F3 — avisa al recién asignado (si no soy yo)
       render json: { case_task: task_json(task) }, status: :created
     else
       render json: { error: task.errors.full_messages }, status: :unprocessable_entity
@@ -37,7 +40,18 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
     # completadas. Si hay que tocar algo, se reabre el ticket.
     return render json: { error: FROZEN_MSG }, status: :unprocessable_entity if @ticket.frozen_for_edit?
 
+    prev_assignee_id = @task.assignee_id
+    was_done = @task.done?
+
+    # @tickets_cases — solicitante: solo se puede fijar si aún NO tiene (tareas
+    # antiguas). Una vez puesto es firma inmutable, no se reasigna.
+    assign_requester_if_absent
+
     if @task.update(task_params)
+      # F3 — si cambió el asignado a alguien que no soy yo.
+      notify_task_assignment(@task) if @task.assignee_id != prev_assignee_id
+      # F4 — si la tarea pasó a completada (avisa a ticket.assignee + task.assignee).
+      notify_task_completed(@task) if @task.done? && !was_done
       render json: { case_task: task_json(@task) }
     else
       render json: { error: @task.errors.full_messages }, status: :unprocessable_entity
@@ -66,34 +80,97 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   end
 
   def task_params
-    permitted = params.require(:case_task).permit(:title, :description, :status, :assignee_id, :due_at, :position)
+    permitted = params.require(:case_task).permit(:title, :description, :status, :priority, :assignee_id, :due_at, :position)
     # El asignado debe ser un usuario de la cuenta (si no, queda sin asignar).
-    if permitted.key?(:assignee_id)
-      permitted[:assignee_id] = Current.account.users.where(id: permitted[:assignee_id]).pick(:id)
-    end
+    permitted[:assignee_id] = Current.account.users.where(id: permitted[:assignee_id]).pick(:id) if permitted.key?(:assignee_id)
     permitted
+  end
+
+  # Fija el solicitante desde la UI SOLO si la tarea aún no tiene (tareas creadas
+  # antes de la función). Ya con solicitante, se ignora: es una firma inmutable.
+  def assign_requester_if_absent
+    return if @task.requester_id.present?
+
+    rid = params.dig(:case_task, :requester_id).presence
+    return if rid.nil?
+
+    @task.requester_id = Current.account.users.where(id: rid).pick(:id)
   end
 
   def task_json(task)
     {
-      id:           task.id,
-      title:        task.title,
-      description:  task.description,
-      status:       task.status,
-      assignee_id:  task.assignee_id,
-      assignee:     ref_user(task.assignee),
-      due_at:       task.due_at,
-      position:     task.position,
-      created_at:   task.created_at,
+      id: task.id,
+      sequence: task.sequence,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      # @tickets_cases — prioridad de la TAREA, independiente de la del ticket.
+      priority: task.priority,
+      assignee_id: task.assignee_id,
+      assignee: ref_user(task.assignee),
+      # @tickets_cases — solicitante (quién abrió la tarea), solo lectura.
+      requester: ref_user(task.requester),
+      due_at: task.due_at,
+      position: task.position,
+      created_at: task.created_at,
       # @tickets_cases P4 — firma de completado (quién y cuándo).
       completed_at: task.completed_at,
-      completed_by: ref_user(task.completed_by)
+      completed_by: ref_user(task.completed_by),
+      # @tickets_cases — cuántas notas internas cuelgan de esta tarea (columna
+      # "Notas" en la tabla). Mapa agrupado para no consultar por fila.
+      notes_count: notes_count_map[task.id] || 0
     }
+  end
+
+  # id de tarea → nº de notas internas (una sola consulta agrupada por request).
+  def notes_count_map
+    @notes_count_map ||= @ticket.case_events
+                                .where(event_type: :internal_note)
+                                .where.not(case_task_id: nil)
+                                .group(:case_task_id).count
   end
 
   def ref_user(user)
     return nil unless user
 
     { id: user.id, name: user.name }
+  end
+
+  # ── Notificaciones de tarea (F3/F4) ─────────────────────────────────────
+  # primary_actor = el TICKET (reusa el ruteo de case_ticket_assignment); el
+  # nombre de la tarea viaja en meta. Fallan en silencio: nunca rompen el flujo.
+
+  # F3 — asignación: avisa al responsable recién asignado. Por decisión del
+  # producto (2026-07-29) SÍ notifica auto-asignaciones (a diferencia de tickets).
+  def notify_task_assignment(task)
+    assignee = task.assignee
+    return if assignee.nil?
+
+    build_task_notification('case_task_assignment', assignee, task)
+  rescue StandardError => e
+    Rails.logger.error("[GestorTickets] notificación de asignación de tarea: #{e.message}")
+  end
+
+  # F4 — completado: avisa al asignado del ticket y al de la tarea, menos a quien
+  # marcó, deduplicando cuando coinciden y saltando los nil.
+  def notify_task_completed(task)
+    recipients = [task.case_ticket&.assignee_id, task.assignee_id]
+                 .compact.uniq - [current_user&.id]
+    return if recipients.empty?
+
+    users = Current.account.users.where(id: recipients)
+    users.each { |u| build_task_notification('case_task_completed', u, task) }
+  rescue StandardError => e
+    Rails.logger.error("[GestorTickets] notificación de tarea completada: #{e.message}")
+  end
+
+  def build_task_notification(type, user, task)
+    NotificationBuilder.new(
+      notification_type: type,
+      user: user,
+      account: Current.account,
+      primary_actor: task.case_ticket,
+      meta: { task_title: task.title }
+    ).perform
   end
 end

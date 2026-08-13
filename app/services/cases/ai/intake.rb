@@ -54,6 +54,11 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
           una queja o una intención concreta que amerite abrir un ticket para una persona.
           false para saludos, charla trivial, agradecimientos, o temas ya resueltos/atendidos
           (por ejemplo, una cita que ya se agendó). Ante la duda, false.
+          IMPORTANTE: evaluá la CONVERSACIÓN COMPLETA, no solo el último mensaje. Si en algún punto
+          anterior el cliente ya planteó una solicitud concreta y los mensajes siguientes son él
+          dando más datos, confirmando algo, o preguntando por el estado — es la MISMA solicitud
+          en curso: seguí devolviendo true, no la reevalúes como si el último mensaje fuera
+          charla trivial aislada.
         - "title": título claro y breve del problema (NO copies el mensaje literal).
         - "description": resumen de 2 a 4 líneas: qué pasa, desde cuándo y qué intentó el cliente.
         - "ticket_kind": uno de [#{KINDS.join(', ')}].
