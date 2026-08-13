@@ -252,8 +252,10 @@
         "TITLE": "Tareas",
         "SEARCH_PLACEHOLDER": "Buscar en el título o la descripción…",
         "EMPTY": "No hay tareas que coincidan con los filtros.",
-        "BY_TAB": "Por pestaña",
+        "ALL_ASSIGNEES": "Responsable: todos",
+        "ALL_REQUESTERS": "Solicitante: todos",
         "ALL_TYPES": "Todos los tipos",
+        "REFRESH": "Actualizar",
         "COMPLETED": "Completada",
         "UNASSIGNED": "Sin asignar",
         "DUE_PREFIX": "Vence:",
@@ -271,7 +273,7 @@
         "STATUS": {
           "PENDING": "Pendientes",
           "DONE": "Completadas",
-          "ALL": "Todas"
+          "ALL": "Todos los estados"
         },
         "DUE": {
           "ANY": "Cualquier fecha",
@@ -287,10 +289,11 @@
         "NUM": "Folio",
         "TASK": "Tarea",
         "STATUS": "Estado",
+        "PRIORITY": "Prioridad",
         "ASSIGNEE": "Responsable",
         "DUE": "Vence",
-        "COMPLETED": "Completada",
-        "NOTES": "Notas"
+        "NOTES": "Notas",
+        "REQUESTER": "Solicitante"
       },
       "STATUS": {
         "PENDING": "Pendiente",
@@ -306,12 +309,14 @@
         "ASSIGNEE_LABEL": "Responsable",
         "DUE_LABEL": "Vence",
         "STATUS_LABEL": "Estado",
+        "PRIORITY_LABEL": "Prioridad",
         "SAVE": "Guardar",
         "CANCEL": "Cancelar",
         "CLOSE": "Cerrar",
-        "NEW_DESC": "Crea una tarea o subtarea del ticket, con responsable y fecha de vencimiento.",
+        "NEW_DESC": "Crea una tarea o subtarea del ticket, con responsable, prioridad y fecha de vencimiento.",
         "EDIT_DESC": "Actualiza los datos de la tarea o cambia su estado.",
-        "VIEW_DESC": "Detalle de la tarea."
+        "VIEW_DESC": "Detalle de la tarea.",
+        "REQUESTER_LABEL": "Solicitante"
       },
       "ADD_NOTE": "Agregar nota",
       "REFRESH": "Actualizar",
@@ -319,7 +324,15 @@
       "NO_MATCHES": "Sin coincidencias con el filtro.",
       "NOTES_NONE": "Sin notas",
       "NOTES_COUNT_TITLE": "{count} nota(s) — ver",
-      "NOTES_NONE_TOAST": "La tarea {folio} aún no tiene notas."
+      "NOTES_NONE_TOAST": "La tarea {folio} aún no tiene notas.",
+      "COMPLETE": "Completar",
+      "COMPLETE_TITLE": "Marcar la tarea como concluida",
+      "COMPLETE_ERROR": "No se pudo completar la tarea.",
+      "TOAST_COMPLETED": "Tarea completada: {task}",
+      "ACTIONS": "Acciones",
+      "MENU": {
+        "NOTES": "Notas de la tarea ({count})"
+      }
     },
     "MODAL": {
       "TITLE_CREATE": "Crear ticket",
@@ -377,7 +390,7 @@
       "SUCCESS": "Ticket interno creado",
       "ERROR": "No se pudo crear el ticket interno",
       "BADGE": "Interno",
-      "NO_CONTACT": "Sin contacto",
+      "NO_ASSIGNEE": "Sin asignar",
       "REQUESTER_LABEL": "Solicitante",
       "CUSTOM_FIELDS": "Campos personalizados"
     },
@@ -1072,6 +1085,7 @@
       "TYPE_LABEL": "Tipo:",
       "STATUS_LABEL": "Estado:",
       "LEVEL_LABEL": "Nivel:",
+      "VIEW_FULL": "Ver",
       "NO_TRANSITIONS": "Sin transiciones disponibles",
       "LOADING": "Cargando ticket…"
     }

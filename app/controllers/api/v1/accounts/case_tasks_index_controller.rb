@@ -17,15 +17,30 @@
 class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseController
   PER_PAGE = 25
 
+  # Orden por columna (clic en el encabezado de la tabla). Whitelist: la clave es
+  # el `field` de la columna en el front y el valor la expresión SQL, así que es
+  # seguro interpolarla. Sin `sort_by` válido se mantiene el orden natural
+  # (`ordered` = posición dentro del ticket).
+  SORTABLE_COLUMNS = {
+    'sequence' => 'case_tasks.sequence',
+    'title' => 'case_tasks.title',
+    'priority' => 'case_tasks.priority',
+    'status' => 'case_tasks.status',
+    'due_at' => 'case_tasks.due_at',
+    'ticket' => 'case_tickets.folio',
+    'assignee' => 'assignee_users.name',
+    'requester' => 'requester_users.name'
+  }.freeze
+
   def index
     scope = filtered_scope
     total = scope.count
     page  = [params[:page].to_i, 1].max
-    rows  = scope.ordered
-                 .includes(:assignee, case_ticket: :case_type)
-                 .limit(PER_PAGE)
-                 .offset((page - 1) * PER_PAGE)
-                 .to_a
+    rows  = apply_sort(scope)
+            .includes(:assignee, :requester, case_ticket: :case_type)
+            .limit(PER_PAGE)
+            .offset((page - 1) * PER_PAGE)
+            .to_a
 
     @notes_count_map = notes_count_map_for(rows)
 
@@ -44,10 +59,21 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
   # Aplica los filtros de la bandeja (todos opcionales salvo el default de asignado).
   def filtered_scope
     scope = filter_assignee(base_scope)
+    scope = filter_requester(scope)
     scope = filter_status(scope)
     scope = filter_due(scope)
     scope = filter_case_type(scope)
     filter_search(scope)
+  end
+
+  # requester_id: quién dio de alta la tarea. Ausente → sin filtro.
+  def filter_requester(scope)
+    raw = params[:requester_id].presence
+
+    return scope if raw.nil?
+    return scope.where(requester_id: nil) if raw == 'unassigned'
+
+    scope.where(requester_id: raw)
   end
 
   # assignee_id: ausente → mis tareas · 'all' → todos los agentes (sin filtro) ·
@@ -92,6 +118,33 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
     scope.joins(:case_ticket).where(case_tickets: { case_type_id: params[:case_type_id] })
   end
 
+  # Orden pedido por el front (sort_by = field de la columna, sort_order asc/desc).
+  # Las tareas sin dato (vencimiento vacío, sin responsable…) siempre al final.
+  def apply_sort(scope)
+    key = params[:sort_by].to_s
+    return scope.ordered unless SORTABLE_COLUMNS.key?(key)
+
+    dir = params[:sort_order] == 'desc' ? 'DESC' : 'ASC'
+    sort_joins(scope, key).reorder(
+      Arel.sql("#{SORTABLE_COLUMNS[key]} #{dir} NULLS LAST, case_tasks.id ASC")
+    )
+  end
+
+  # Las columnas que viven en otra tabla necesitan su join (alias propio para no
+  # chocar con el join de `filter_case_type`).
+  def sort_joins(scope, key)
+    case key
+    when 'ticket'
+      scope.joins(:case_ticket)
+    when 'assignee'
+      scope.joins('LEFT JOIN users AS assignee_users ON assignee_users.id = case_tasks.assignee_id')
+    when 'requester'
+      scope.joins('LEFT JOIN users AS requester_users ON requester_users.id = case_tasks.requester_id')
+    else
+      scope
+    end
+  end
+
   def filter_search(scope)
     return scope if params[:q].blank?
 
@@ -111,8 +164,13 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
       title: task.title,
       description: task.description,
       status: task.status,
+      # @tickets_cases — prioridad de la TAREA. Ojo al leer el JSON: la del
+      # ticket viaja aparte, dentro de `case_ticket`.
+      priority: task.priority,
       assignee_id: task.assignee_id,
       assignee: ref_user(task.assignee),
+      # @tickets_cases — solicitante (quién abrió la tarea), solo lectura.
+      requester: ref_user(task.requester),
       due_at: task.due_at,
       position: task.position,
       completed_at: task.completed_at,

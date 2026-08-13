@@ -57,6 +57,12 @@ if resource.facebook?
   json.reauthorization_required resource.channel.try(:reauthorization_required?)
 end
 
+## Instagram Attributes (canal nativo; el legacy va dentro del bloque de Facebook)
+if resource.native_instagram?
+  json.instagram_id resource.channel.try(:instagram_id)
+  json.reauthorization_required resource.channel.try(:reauthorization_required?)
+end
+
 ## Twilio Attributes
 json.messaging_service_sid resource.channel.try(:messaging_service_sid)
 json.phone_number resource.channel.try(:phone_number)

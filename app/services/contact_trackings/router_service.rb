@@ -81,6 +81,13 @@ module ContactTrackings
                              errores, configuraciones, procesos, etc.
       - "tracking":          cualquier otro mensaje conversacional que no encaje en las categorías anteriores.
 
+      IMPORTANTE sobre "interested" — comparalo siempre contra el Objetivo del seguimiento (más abajo):
+      si el objetivo es recolectar datos concretos (ej. datos de un servicio, cotización, ticket) y el
+      mensaje del cliente solo está respondiendo o aportando esos datos porque el bot se los pidió,
+      clasificá "tracking", NO "interested" — eso es avance normal del flujo, no una señal especial.
+      Reservá "interested" para cuando el cliente pide avanzar MÁS ALLÁ de lo que el flujo ya le está
+      pidiendo (ej. "quiero comprar ya", "cuándo puedo pagar", "mandame el link de pago").
+
       "appointment_action" — SOLO sobre una CITA/reunión/llamada de calendario (NO el recordatorio
       del seguimiento). Decide mirando el ESTADO DE LA CITA de más abajo:
       - "query":    el cliente pregunta por su cita YA agendada (cuándo es, a qué hora, confirmar o
@@ -197,10 +204,11 @@ module ContactTrackings
       request                  = Net::HTTP::Post.new(uri)
       request['Authorization'] = "Bearer #{@api_key}"
       request['Content-Type']  = 'application/json'
+      # proyecto@ai_agent_assistant: modelo y tope desde la config del inbox.
       request.body = {
-        model:           'gpt-4o-mini',
+        model:           AiAgentAssistant::EngineConfig.model_for_tracking(@tracking, :router),
         messages:        [{ role: 'user', content: prompt }],
-        max_tokens:      300,
+        max_tokens:      AiAgentAssistant::EngineConfig.max_tokens_for(:router),
         temperature:     0.1,
         response_format: { type: 'json_object' }
       }.to_json

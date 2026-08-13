@@ -37,6 +37,7 @@ import datePicker from './datePicker.json';
 import kanban from './kanban.json';
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
+import aiAgentAssistant from './aiAgentAssistant.json'; // proyecto@ai_agent_assistant
 import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
 import contactTracking from './contactTracking.js'; // proyecto@contact_tracking
 import googleCalendar from './googleCalendar.js'; // proyecto@google_calendar
@@ -83,6 +84,7 @@ export default {
   ...datePicker,
   ...kanban,
   ...trackingTemplates, // proyecto@tracking_templates
+  ...aiAgentAssistant, // proyecto@ai_agent_assistant
   ...knowledgeSources, // @knowledge_sources
   ...contactTracking, // proyecto@contact_tracking
   ...googleCalendar, // proyecto@google_calendar

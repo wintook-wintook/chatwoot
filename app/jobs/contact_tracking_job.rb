@@ -82,7 +82,10 @@ class ContactTrackingJob < ApplicationJob
           status: 'failed',
           last_error: 'WhatsApp 24h window closed and no template configured'
         )
-        return
+        # `next` y no `return`: en Rails 7.0 salir con return de un bloque with_lock
+        # revierte la transacción, así que este estado 'failed' se descartaba y el
+        # seguimiento se quedaba en 'scheduled', reintentándose indefinidamente.
+        next
       elsif is_whatsapp && !window_open && has_template
         # CASO 2: WhatsApp ventana CERRADA con plantilla - SOLO PLANTILLA
         Rails.logger.info "[ContactTracking] 📱 ✅ VENTANA CERRADA → Enviando solo PLANTILLA"
@@ -99,6 +102,18 @@ class ContactTrackingJob < ApplicationJob
         else
           Rails.logger.error "[ContactTracking] ❌ Error al enviar mensaje personalizado"
         end
+      elsif instagram_native_channel?(tracking) && !instagram_window_open?(tracking)
+        # CASO 3b: Instagram fuera de ventana. A diferencia de WhatsApp no hay plantillas
+        # a las que recurrir, así que Meta rechazaría el envío. Se falla aquí en vez de
+        # gastar un intento y dar por bueno un mensaje que nunca se entrega.
+        Rails.logger.error '[ContactTracking] ❌ IMPOSIBLE ENVIAR POR INSTAGRAM:'
+        Rails.logger.error '[ContactTracking]    - Ventana de mensajería cerrada'
+        Rails.logger.error '[ContactTracking]    - Instagram no admite plantillas fuera de ventana'
+        tracking.update!(
+          status: 'failed',
+          last_error: 'Instagram messaging window closed and the channel has no templates'
+        )
+        next # ver la nota del caso de WhatsApp: con `return` la transacción se revierte
       else
         # CASO 4: Otro canal (no WhatsApp)
         Rails.logger.info "[ContactTracking] 💬 USANDO MENSAJE NORMAL (canal: #{tracking.inbox.channel_type})"
@@ -213,55 +228,22 @@ class ContactTrackingJob < ApplicationJob
       require 'json'
 
       api_key = hook.settings['api_key']
-      contact_name = tracking.contact.name || 'Hola'
-
-      complementary_instructions = tracking.complementary_prompt.present? ?
-        "\n\nINSTRUCCIONES ADICIONALES DEL AGENTE:\n#{tracking.complementary_prompt}" : ''
 
       # proyecto@contacts_notes - incluir nota especial para IA del contacto si existe
       ia_note = tracking.contact.notes.for_ia.first
-      contact_profile = ia_note.present? ?
-        "\n\nPERFIL DEL CONTACTO:\n#{ActionController::Base.helpers.strip_tags(ia_note.content)}" : ''
+      contact_profile = ia_note.present? ? ActionController::Base.helpers.strip_tags(ia_note.content) : nil
 
       # ⭐ PASO 1 — System prompt: contexto permanente del seguimiento (GPT-style)
-      system_prompt = <<~SYSTEM.strip
-        Eres un asistente de seguimiento al cliente para #{tracking.account.name}.
-
-        INFORMACIÓN DEL CLIENTE:
-        - Nombre: #{contact_name}#{contact_profile}
-
-        CONTEXTO INTERNO (no mencionar al cliente):
-        - Objetivo: #{tracking.objective}
-        - Contexto: #{tracking.ai_context}
-        - Este es el intento número #{tracking.attempt_count + 1} de #{tracking.max_attempts}#{complementary_instructions}
-
-        REGLAS GENERALES:
-        - Nunca menciones "intentos", "seguimiento automático" ni detalles técnicos
-        - Mantén un tono cordial y profesional, como si lo escribiera un agente humano
-        - Máximo 2 oraciones
-        - En español
-        - NO incluyas comillas al inicio ni al final del mensaje
-      SYSTEM
+      # proyecto@ai_agent_assistant: se ensambla en PromptBuilder para que el probador
+      # muestre EXACTAMENTE este texto y no una copia que derive.
+      system_prompt = AiAgentAssistant::PromptBuilder.scheduled_system(
+        tracking, contact_profile: contact_profile
+      )
 
       # ⭐ PASO 1 — Tarea final: el pedido concreto de generar el mensaje
-      task_prompt = if template_content.present?
-        <<~TASK.strip
-          PLANTILLA BASE (intento #{tracking.attempt_count + 1}):
-          "#{template_content}"
-
-          Usa la plantilla como estructura principal y PERSONALÍZALA con los datos del contexto.
-          REGLAS: Mantén estructura y propósito. Reemplaza placeholders con info real del contexto.
-          NO expandas con información adicional. NO agregues precios ni condiciones fuera de la plantilla.
-          Genera solo el mensaje final, sin comillas, sin explicaciones.
-        TASK
-      else
-        <<~TASK.strip
-          Genera un mensaje corto y natural para retomar contacto con el cliente.
-          Dirígete al cliente por su nombre. Céntrate en el OBJETIVO.
-          No des información extra ni repitas lo mismo que en mensajes anteriores.
-          Genera solo el mensaje, sin explicaciones adicionales.
-        TASK
-      end
+      task_prompt = AiAgentAssistant::PromptBuilder.scheduled_task(
+        tracking, template_content: template_content
+      )
 
       # ⭐ PASO 2 — Construir array de mensajes con o sin historial
       messages = [{ role: 'system', content: system_prompt }]
@@ -282,10 +264,12 @@ class ContactTrackingJob < ApplicationJob
       request['Authorization'] = "Bearer #{api_key}"
       request['Content-Type'] = 'application/json'
 
+      # proyecto@ai_agent_assistant: el modelo sale del selector "Modelo de IA" de la
+      # integración tracking_bot del inbox, no de una constante.
       request.body = {
-        model: 'gpt-4o-mini',
+        model: AiAgentAssistant::EngineConfig.model_for_tracking(tracking, :scheduled),
         messages: messages,
-        max_tokens: 150,
+        max_tokens: AiAgentAssistant::EngineConfig.max_tokens_for(:scheduled),
         temperature: 0.7
       }.to_json
 
@@ -365,6 +349,29 @@ class ContactTrackingJob < ApplicationJob
     ]
     
     whatsapp_types.any? { |type| channel_type.include?(type) }
+  end
+
+  # Solo el canal nativo. En un inbox legacy conviven Messenger e Instagram y desde el
+  # inbox no se puede distinguir a cuál pertenece el seguimiento, así que ese caso se
+  # deja exactamente como estaba.
+  def instagram_native_channel?(tracking)
+    tracking.inbox.native_instagram?
+  end
+
+  # Misma regla que Conversation#can_reply_on_instagram?: 24 h desde el último mensaje del
+  # cliente, ampliables a 7 días si la instalación tiene aprobado el tag HUMAN_AGENT.
+  def instagram_window_open?(tracking)
+    conversation_ids = Conversation.where(contact_id: tracking.contact_id, inbox_id: tracking.inbox_id).pluck(:id)
+    return false if conversation_ids.empty?
+
+    last_customer_message = Message.where(conversation_id: conversation_ids, message_type: :incoming).order(created_at: :asc).last
+    return false if last_customer_message.blank?
+
+    window = GlobalConfig.get('ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT')['ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT'] ? 7.days : 24.hours
+    open = Time.current < last_customer_message.created_at + window
+
+    Rails.logger.info "[ContactTracking] 🪟 Ventana Instagram (#{window.inspect}): #{open ? 'ABIERTA ✅' : 'CERRADA ❌'}"
+    open
   end
 
   def whatsapp_window_open?(tracking)

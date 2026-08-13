@@ -102,8 +102,16 @@ class Inbox < ApplicationRecord
     channel_type == 'Channel::FacebookPage'
   end
 
+  # Canal nativo de Instagram (Instagram Login), sin Página de Facebook de por medio.
+  def native_instagram?
+    channel_type == 'Channel::Instagram'
+  end
+
+  # Cualquier ruta de Instagram: el canal nativo o la legacy, en la que Instagram viaja
+  # dentro de un Channel::FacebookPage con instagram_id. Los consumidores de este método
+  # (adjuntos, helpers de mensaje) valen igual para ambas.
   def instagram?
-    facebook? && channel.instagram_id.present?
+    native_instagram? || (facebook? && channel.instagram_id.present?)
   end
 
   def web_widget?

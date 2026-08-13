@@ -5,22 +5,43 @@ class Instagram::SendOnInstagramService < Base::SendOnChannelService
 
   base_uri 'https://graph.facebook.com/v11.0/me'
 
+  # Este servicio sirve a las dos rutas: el canal nativo y el legacy (Instagram dentro de
+  # un Channel::FacebookPage). Cambia el host y la credencial, no el cuerpo del mensaje.
+  SUPPORTED_CHANNELS = ['Channel::Instagram', 'Channel::FacebookPage'].freeze
+
+  # La ruta legacy se queda en la versión con la que lleva funcionando. Subirla es un
+  # cambio con impacto sobre el envío de Messenger/Instagram en producción y se decide
+  # aparte; este trabajo no lo toca.
+  LEGACY_API_VERSION = 'v11.0'.freeze
+
+  # El token dejó de valer. Mismo código que al leer el perfil (Instagram::MessageText).
+  TOKEN_EXPIRED = 190
+
   private
 
   delegate :additional_attributes, to: :contact
 
   def channel_class
-    Channel::FacebookPage
+    channel.class
+  end
+
+  # La clase base compara contra un único channel_class; aquí hay dos válidos.
+  def validate_target_channel
+    raise 'Invalid channel service was called' unless SUPPORTED_CHANNELS.include?(channel.class.to_s)
+  end
+
+  def native?
+    inbox.native_instagram?
   end
 
   def perform_reply
     if message.attachments.present?
       message.attachments.each do |attachment|
-        send_to_facebook_page attachment_message_params(attachment)
+        send_message attachment_message_params(attachment)
       end
     end
 
-    send_to_facebook_page message_params if message.content.present?
+    send_message message_params if message.content.present?
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: message.account, user: message.sender).capture_exception
     # TODO : handle specific errors or else page will get disconnected
@@ -54,7 +75,23 @@ class Instagram::SendOnInstagramService < Base::SendOnChannelService
     merge_human_agent_tag(params)
   end
 
-  # Deliver a message with the given payload.
+  def send_message(message_content)
+    response = native? ? send_to_instagram(message_content) : send_to_facebook_page(message_content)
+
+    process_response(response, message_content)
+  end
+
+  # Canal nativo: graph.instagram.com con el token del propio canal, sin Página de por medio.
+  # @see https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login
+  def send_to_instagram(message_content)
+    HTTParty.post(
+      "#{::Instagram::OauthService::GRAPH_HOST}/#{instagram_api_version}/#{channel.instagram_id}/messages",
+      body: message_content,
+      query: { access_token: channel.access_token }
+    )
+  end
+
+  # Ruta legacy, sin cambios: token de la Página y appsecret_proof con el secreto de la app de Facebook.
   # @see https://developers.facebook.com/docs/messenger-platform/instagram/features/send-message
   def send_to_facebook_page(message_content)
     access_token = channel.page_access_token
@@ -62,30 +99,52 @@ class Instagram::SendOnInstagramService < Base::SendOnChannelService
     query = { access_token: access_token }
     query[:appsecret_proof] = app_secret_proof if app_secret_proof
 
-    # url = "https://graph.facebook.com/v11.0/me/messages?access_token=#{access_token}"
-
-    response = HTTParty.post(
-      'https://graph.facebook.com/v11.0/me/messages',
+    HTTParty.post(
+      "https://graph.facebook.com/#{LEGACY_API_VERSION}/me/messages",
       body: message_content,
       query: query
     )
+  end
 
-    if response[:error].present?
-      Rails.logger.error("Instagram response: #{response['error']} : #{message_content}")
+  def process_response(response, message_content)
+    body = normalized_body(response)
+
+    if body[:error].present?
+      Rails.logger.error("Instagram response: #{body[:error]} : #{message_content}")
       message.status = :failed
-      message.external_error = external_error(response)
+      message.external_error = external_error(body)
     end
 
-    message.source_id = response['message_id'] if response['message_id'].present?
+    message.source_id = body[:message_id] if body[:message_id].present?
     message.save!
 
     response
   end
 
-  def external_error(response)
+  # HTTParty parsea el JSON con claves string, así que `response[:error]` (símbolo) era
+  # siempre nil sobre una respuesta real: los mensajes rechazados por Meta nunca se
+  # marcaban como fallidos. Normalizamos una vez y accedemos de forma indiferente.
+  def normalized_body(response)
+    body = response.respond_to?(:parsed_response) ? response.parsed_response : response
+    return {}.with_indifferent_access unless body.is_a?(Hash)
+
+    body.with_indifferent_access
+  end
+
+  def instagram_api_version
+    GlobalConfigService.load('INSTAGRAM_API_VERSION', 'v25.0')
+  end
+
+  # Recibe el cuerpo ya normalizado por normalized_body
+  def external_error(body)
     # https://developers.facebook.com/docs/instagram-api/reference/error-codes/
-    error_message = response[:error][:message]
-    error_code = response[:error][:code]
+    error_message = body[:error][:message]
+    error_code = body[:error][:code]
+
+    # 190: el token dejó de valer (cambio de contraseña, app revocada desde Instagram…).
+    # Sin marcarlo, el canal se queda enviando a la nada: los mensajes fallan uno a uno y
+    # el administrador no ve el aviso de reautorizar en ningún sitio.
+    channel.authorization_error! if error_code.to_i == TOKEN_EXPIRED
 
     "#{error_code} - #{error_message}"
   end

@@ -261,7 +261,7 @@ en:
       name: "Captain"
       description: "Captain is a native AI assistant built for your product and trained on your company's knowledge base. It responds like a human and resolves customer queries effectively. Configure it to your inboxes easily."
     daiko:
-      name: "Sales Agent Activation"
+      name: "Transactional Sales Agent Activation"
       description: "Your automated 24/7 seller that responds to your customers in seconds, checks prices, products and stock, and generates quotes and orders."
   public_portal:
     search:

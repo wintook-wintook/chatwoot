@@ -469,6 +469,18 @@
         "EMAIL_PLACEHOLDER": "Insira o endereço de email",
         "HELP": "Para adicionar sua conta Google como um canal, você precisa autenticar sua conta Google clicando em 'Entrar com Google' ",
         "ERROR_MESSAGE": "Houve um erro ao conectar-se ao Google, por favor, tente novamente"
+      },
+      "INSTAGRAM": {
+        "SIGN_IN": "Entrar com o Instagram",
+        "HELP": "Para conectar uma conta do Instagram Business, entre com o Instagram. Não é necessária uma Página do Facebook.",
+        "ERROR_MESSAGE": "Ocorreu um erro ao conectar com o Instagram, tente novamente",
+        "ERROR": {
+          "DENIED": "Você cancelou a autorização do Instagram",
+          "INVALID_STATE": "A autorização expirou, tente novamente",
+          "MISSING_CODE": "O Instagram não retornou o código de autorização, tente novamente",
+          "ALREADY_CONNECTED": "Essa conta do Instagram já está conectada a outra conta",
+          "FAILED": "O Instagram rejeitou a autorização, tente novamente"
+        }
       }
     },
     "DETAILS": {
@@ -865,7 +877,8 @@
       "EMAIL": "Email",
       "TELEGRAM": "Telegram",
       "LINE": "Line",
-      "API": "Canal API"
+      "API": "Canal API",
+      "INSTAGRAM": "Instagram"
     }
   }
 }
