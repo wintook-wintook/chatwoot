@@ -51,7 +51,7 @@ hacer inline lo que hoy vive en modales y pestañas. Compatible con [[Plan-Modo-
  Tomar (claim)   1 clic autoasignar               ✅ P1: botón "Tomar"     HECHO
  Vencimiento     visible en cola, rojo si vence   solo SLA dot             MEDIO
  Predefinidas    canned en la caja de respuesta   caja simple              MEDIO
- Colaboradores   CC en el ticket                  no existe                BAJO
+ Colaboradores   CC en el ticket                  no existe                DESCARTADO
  Imprimir        botón imprimir ficha             no existe                BAJO
 ```
 
@@ -151,9 +151,12 @@ guardadas = presets de `QUICK_FILTERS`. Responsive: móvil → tarjetas.
  ✋ Tomar (claim)      ✅ HECHO en P1 (falta en la fila de la cola → P3)
  📅 Vencimiento        columna "Vence" + edición inline; rojo si vencido
  💬 Predefinidas       dropdown de canned responses en la caja del hilo
- 👥 Colaboradores/CC   añadir otros agentes/correos al ticket (modelo nuevo, BAJO)
  🖨️ Imprimir           vista imprimible de la ficha + hilo (BAJO)
 ```
+
+> ❌ **Colaboradores/CC — descartado (2026-07-28).** Sale del alcance de P4; por
+> ahora no se desarrolla. El backend a medias se eliminó del repo (ver
+> [[Pendiente]]). Si vuelve, se replantea desde cero.
 
 ---
 
@@ -163,7 +166,7 @@ guardadas = presets de `QUICK_FILTERS`. Responsive: móvil → tarjetas.
  1) P1  Ficha accionable inline   ⭐ ✅ HECHO
  2) P2  Conversación al frente        ✅ HECHO
  3) P3  Cola tipo tabla + lote        ✅ HECHO
- 4) P4  Extras (Vence/Predefinidas/CC/Imprimir)  ← siguiente recomendado
+ 4) P4  Extras (Vence/Predefinidas/Imprimir)  ← siguiente recomendado
 ```
 
 **Fuera de alcance / se quedan como están:** las Tareas (auxiliar menor; en P2

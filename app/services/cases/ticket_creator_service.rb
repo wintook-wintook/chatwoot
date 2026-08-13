@@ -17,9 +17,11 @@
 # Ver: docs/vault-tickets/implementacion/Plan-Crear-Ticket-IA.md
 #
 # Posición en el flujo del job (try_kbase_then_conversational):
-#   [1] KnowledgeBaseResponseService  → deflexión (§11.1): si resuelve, no llega aquí
+#   [1] @estado_ticket                → Cases::TicketStatusService
 #   [2] Cases::TicketCreatorService   → este servicio
-#   [3] generate_and_send_conversational_reply (fallback)
+#   [3] @agendar_calendar
+#   [4] KnowledgeBaseResponseService  → último recurso (§11.1): si resuelve, no llega a [5]
+#   [5] generate_and_send_conversational_reply (fallback)
 # ================================================================================
 
 class Cases::TicketCreatorService
@@ -38,38 +40,59 @@ class Cases::TicketCreatorService
   # Máximo de turnos en que el bot insiste por datos faltantes antes de crear igual.
   MAX_FIELD_ASKS = 2
 
+  # Llave de la recolección de campos en curso (Fase 2).
+  def self.pending_key(conversation_id)
+    "case_intake_pending::#{conversation_id}"
+  end
+
+  # Qué hizo el último create_if_needed: :no_directive, :linked_existing,
+  # :not_worthy, :asked_missing_fields, :created o :error. Permite a callers como
+  # el gate de @agendar_calendar distinguir "acabo de pedir un dato, no agendes
+  # todavía" de "ya hay ticket / no aplica, seguí con el flujo normal".
+  attr_reader :outcome
+
   def initialize(message, tracking:)
     @message      = message
     @tracking     = tracking
     @account      = message.account
     @conversation = message.conversation
     @contact      = message.conversation.contact
+    @outcome      = :no_directive
   end
 
   def create_if_needed
     return false unless directive_present?
-    return true  if reuse_existing_ticket # §11.2 Anti-duplicado: reusa caso abierto
+    # §11.2 Anti-duplicado: reusa caso abierto
+    return finish(:linked_existing, true) if reuse_existing_ticket
 
     fields = intake_fields # nil = IA no disponible → degradar
 
     if fields
       # Gate: si la conversación no amerita un ticket (saludo, charla, tema resuelto),
       # NO creamos nada y dejamos que el bot responda normal. Evita tickets espurios.
-      return false if not_ticket_worthy?(fields)
+      return finish(:not_worthy, false) if not_ticket_worthy?(fields)
 
       # Campos particulares del tipo + Fase 2 (§6): extrae los case_type_fields de la
       # conversación y, si faltan OBLIGATORIOS (o missing_info cuando el tipo no define
       # campos), los pide y espera. true = el turno YA se atendió.
-      return true if request_missing_fields(fields)
+      return finish(:asked_missing_fields, true) if request_missing_fields(fields)
     end
 
-    create_and_confirm(fields)
+    created = create_and_confirm(fields)
+    finish(created ? :created : :error, created)
   rescue StandardError => e
     Rails.logger.error "[TicketCreator] Error creando ticket: #{e.message}"
-    false
+    finish(:error, false)
   end
 
   private
+
+  # Registra el outcome de create_if_needed y devuelve `result` (azúcar para poder
+  # usarlo en un `return` de una sola línea).
+  def finish(outcome, result)
+    @outcome = outcome
+    result
+  end
 
   # §11.2 Anti-duplicado: si ya hay un caso abierto del contacto, lo reusa y avisa.
   def reuse_existing_ticket
@@ -312,13 +335,19 @@ class Cases::TicketCreatorService
     asks = Redis::Alfred.get(pending_key).to_i + 1
     Redis::Alfred.setex(pending_key, asks.to_s, PENDING_TTL)
     intro = missing.size == 1 ? 'necesito un dato' : 'necesito unos datos'
-    text  = "Para poder levantar tu caso #{intro}: #{missing.to_sentence}. " \
+    text  = "Para poder levantar tu caso #{intro}: #{to_sentence_es(missing)}. " \
             '¿Me lo compartes, por favor?'
     deliver(text)
   end
 
   def pending_key
-    "case_intake_pending::#{@conversation.id}"
+    self.class.pending_key(@conversation.id)
+  end
+
+  # to_sentence usa conectores en inglés ("and") salvo que el locale los defina, y
+  # aquí no están (no hay rails-i18n ni support.array en es.yml). Se pasan a mano.
+  def to_sentence_es(list)
+    list.to_sentence(words_connector: ', ', two_words_connector: ' y ', last_word_connector: ' y ')
   end
 
   # ---------------------------------------------------------------------------
@@ -375,7 +404,7 @@ class Cases::TicketCreatorService
   def build_conversation_text
     msgs = Message.where(conversation_id: @conversation.id)
                   .where(message_type: [0, 1])
-                  .order(created_at: :desc)
+                  .reorder(created_at: :desc)
                   .limit(8)
                   .reverse
     msgs.map do |m|

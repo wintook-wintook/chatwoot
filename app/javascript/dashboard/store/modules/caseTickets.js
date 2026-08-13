@@ -18,9 +18,11 @@ import caseCategoriesAPI from '../../api/caseCategories';
 import caseFolioConfigAPI from '../../api/caseFolioConfig';
 import caseSlaPoliciesAPI from '../../api/caseSlaPolicies';
 import caseTypeFieldsAPI from '../../api/caseTypeFields';
+import caseTypeColumnsAPI from '../../api/caseTypeColumns';
 import caseAiConfigAPI from '../../api/caseAiConfig';
 import casePortalsAPI from '../../api/casePortals';
 import caseSettingsAPI from '../../api/caseSettings';
+import caseTasksAPI from '../../api/caseTasks';
 import {
   SET_CASE_TICKET_UI_FLAG,
   SET_ACTIVE_CASE_TICKET,
@@ -46,12 +48,16 @@ import {
   SET_CASE_SLA_POLICIES_UI_FLAG,
   SET_CASE_TYPE_FIELDS,
   SET_CASE_TYPE_FIELDS_UI_FLAG,
+  SET_CASE_TYPE_COLUMNS,
+  SET_CASE_TYPE_COLUMNS_UI_FLAG,
   SET_CASE_AI_CONFIG,
   SET_CASE_AI_CONFIG_UI_FLAG,
   SET_CASE_PORTALS,
   SET_CASE_PORTALS_UI_FLAG,
   SET_CASE_SETTINGS,
   SET_CASE_SETTINGS_UI_FLAG,
+  SET_CASE_MY_TASKS,
+  SET_CASE_MY_TASKS_UI_FLAG,
 } from '../mutation-types';
 
 const CLOSED_STATUSES = ['closed', 'cancelled'];
@@ -149,11 +155,23 @@ const state = {
     isSaving: false,
     isDeleting: false,
   },
+  // Columnas del Kanban por tipo de caso (Opción A+), indexadas por caseTypeId
+  typeColumns: {},
+  typeColumnsUiFlags: {
+    isFetching: false,
+    isSaving: false,
+  },
   // 3A — Configuración de IA por cuenta
   aiConfig: null,
   aiConfigUiFlags: {
     isFetching: false,
     isSaving: false,
+  },
+  // Bandeja de tareas — índice a nivel cuenta ("¿qué tengo asignado?")
+  myTasks: [],
+  myTasksMeta: {},
+  myTasksUiFlags: {
+    isFetching: false,
   },
 };
 
@@ -214,6 +232,11 @@ export const getters = {
   getTypeFieldsUIFlags(_state) {
     return _state.typeFieldsUiFlags;
   },
+  // Columnas del Kanban de un tipo de caso (Opción A+)
+  getTypeColumns: _state => caseTypeId => _state.typeColumns[caseTypeId] || [],
+  getTypeColumnsUIFlags(_state) {
+    return _state.typeColumnsUiFlags;
+  },
   // 3A — configuración de IA
   getAiConfig(_state) {
     return _state.aiConfig;
@@ -254,6 +277,15 @@ export const getters = {
   },
   getSlaPoliciesUIFlags(_state) {
     return _state.slaPoliciesUiFlags;
+  },
+  getMyTasks(_state) {
+    return _state.myTasks;
+  },
+  getMyTasksMeta(_state) {
+    return _state.myTasksMeta;
+  },
+  getMyTasksUIFlags(_state) {
+    return _state.myTasksUiFlags;
   },
 };
 
@@ -328,6 +360,17 @@ export const actions = {
       if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
       // Actualizar en la lista si está cargada
       commit(SET_CASE_TICKETS_LIST, null); // forzar refetch en el próximo acceso
+      return data;
+    } finally {
+      commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
+    }
+  },
+
+  // @tickets_cases — mueve un ticket a otra columna del Kanban por tipo (A+).
+  async moveTicketColumn({ commit }, { ticketId, caseTypeColumnId }) {
+    commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
+    try {
+      const { data } = await caseTicketsAPI.move(ticketId, caseTypeColumnId);
       return data;
     } finally {
       commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
@@ -763,6 +806,38 @@ export const actions = {
     }
   },
 
+  // ── Columnas del Kanban por tipo (Opción A+) ─────────────────
+  async fetchTypeColumns({ commit }, caseTypeId) {
+    commit(SET_CASE_TYPE_COLUMNS_UI_FLAG, { isFetching: true });
+    try {
+      const { data } = await caseTypeColumnsAPI.getAll(caseTypeId);
+      commit(SET_CASE_TYPE_COLUMNS, {
+        caseTypeId,
+        columns: data.case_type_columns || [],
+      });
+    } finally {
+      commit(SET_CASE_TYPE_COLUMNS_UI_FLAG, { isFetching: false });
+    }
+  },
+
+  // Guarda el set completo del tipo (crea/actualiza/borra en una transacción).
+  async replaceTypeColumns({ commit }, { caseTypeId, columns }) {
+    commit(SET_CASE_TYPE_COLUMNS_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await caseTypeColumnsAPI.replaceColumns(
+        caseTypeId,
+        columns
+      );
+      commit(SET_CASE_TYPE_COLUMNS, {
+        caseTypeId,
+        columns: data.case_type_columns || [],
+      });
+      return data.case_type_columns;
+    } finally {
+      commit(SET_CASE_TYPE_COLUMNS_UI_FLAG, { isSaving: false });
+    }
+  },
+
   // ── 3A — Configuración de IA ────────────────────────────────
   async fetchAiConfig({ commit }) {
     commit(SET_CASE_AI_CONFIG_UI_FLAG, { isFetching: true });
@@ -945,6 +1020,20 @@ export const actions = {
       });
     } finally {
       commit(SET_CASE_BOARD_UI_FLAG, { isFetching: false });
+    }
+  },
+
+  // ── Bandeja de tareas ("¿qué tengo asignado?") ──────────────
+  async fetchMyTasks({ commit }, filters = {}) {
+    commit(SET_CASE_MY_TASKS_UI_FLAG, { isFetching: true });
+    try {
+      const { data } = await caseTasksAPI.getMine(filters);
+      commit(SET_CASE_MY_TASKS, {
+        tasks: data.case_tasks || [],
+        meta: data.meta || {},
+      });
+    } finally {
+      commit(SET_CASE_MY_TASKS_UI_FLAG, { isFetching: false });
     }
   },
 
@@ -1143,6 +1232,12 @@ export const mutations = {
   [SET_CASE_TYPE_FIELDS_UI_FLAG](_state, flags) {
     _state.typeFieldsUiFlags = { ..._state.typeFieldsUiFlags, ...flags };
   },
+  [SET_CASE_TYPE_COLUMNS](_state, { caseTypeId, columns }) {
+    _state.typeColumns = { ..._state.typeColumns, [caseTypeId]: columns };
+  },
+  [SET_CASE_TYPE_COLUMNS_UI_FLAG](_state, flags) {
+    _state.typeColumnsUiFlags = { ..._state.typeColumnsUiFlags, ...flags };
+  },
   [SET_CASE_AI_CONFIG](_state, config) {
     _state.aiConfig = config;
   },
@@ -1154,6 +1249,13 @@ export const mutations = {
   },
   [SET_CASE_SLA_POLICIES_UI_FLAG](_state, flags) {
     _state.slaPoliciesUiFlags = { ..._state.slaPoliciesUiFlags, ...flags };
+  },
+  [SET_CASE_MY_TASKS](_state, { tasks, meta }) {
+    _state.myTasks = tasks;
+    _state.myTasksMeta = meta;
+  },
+  [SET_CASE_MY_TASKS_UI_FLAG](_state, flags) {
+    _state.myTasksUiFlags = { ..._state.myTasksUiFlags, ...flags };
   },
 };
 

@@ -1,10 +1,11 @@
 <template>
-    <div class="mt-6 flex-1">
+    <div class="mt-6 flex-1 sinonimos-raiz-table-wrap">
         <ve-table
           :fixed-header="true"
           max-height="calc(100vh - 34.2rem)"
           :columns="columns"
           :table-data="dataSinonimosRaiz"
+          :cell-style-option="cellStyleOption"
           :border-around="false"
         />
     </div>
@@ -39,6 +40,10 @@
               type: Function,
               default: (data) => {},
             },
+            selectedId: {
+              type: Number,
+              default: 0,
+            },
         },
         data() {
             return {
@@ -46,6 +51,12 @@
             };
         },
         computed: {
+            cellStyleOption() {
+                return {
+                    bodyCellClass: ({ row }) =>
+                        row.palabra_id === this.selectedId ? 'row--selected' : '',
+                };
+            },
             columns() {
                 return [{
                         field: 'palabra',
@@ -57,11 +68,27 @@
                         sortBy: this.sortConfig.palabra_clave || '',
                         renderBodyCell: ({ row }) => (
                           <div class="button-wrapper">
-                            <woot-button variant="link" color-scheme="secondary" 
+                            <woot-button variant="link"
+                              color-scheme={row.palabra_id === this.selectedId ? 'primary' : 'secondary'}
                               onClick={() => this.onToggleFilterClick(row)}>
-                                {`${row.palabra}`}
+                                <span class={row.palabra_id === this.selectedId ? 'font-semibold' : ''}>
+                                    {`${row.palabra}`}
+                                </span>
                             </woot-button>
                           </div>
+                        )
+                    },{
+                        field: 'sinonimo_semantico_nombre',
+                        key: 'sinonimo_semantico_nombre',
+                        title: 'Categoría',
+                        align: 'left',
+                        width: 60,
+                        renderBodyCell: ({ row }) => (
+                          row.sinonimo_semantico_nombre
+                            ? <span class="inline-block px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">
+                                {row.sinonimo_semantico_nombre}
+                              </span>
+                            : <span class="text-slate-300">—</span>
                         )
                     },{
                         field: 'palabra_id',
@@ -71,7 +98,7 @@
                         align: 'left',
                         renderBodyCell: ({ row }) => (
                           <div class="button-wrapper">
-                            <woot-button variant="link" color-scheme="secondary" 
+                            <woot-button variant="link" color-scheme="secondary"
                               class-names="grey-btn" icon="edit"
                               onClick={() => this.onToggleEdit(row)}>
                             </woot-button>
@@ -98,6 +125,12 @@
       overflow: hidden;
     }
     
+    .sinonimos-raiz-table-wrap::v-deep {
+      .ve-table-body-td.row--selected {
+        background-color: var(--w-50);
+      }
+    }
+
     .vocabulario-table-wrap::v-deep {
       .ve-table {
         padding-bottom: var(--space-large);

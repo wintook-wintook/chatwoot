@@ -36,6 +36,10 @@ export default {
       // Antes se recordaba la última pestaña en localStorage y podías caer en
       // Tareas o Notas de otro ticket sin haber visto el estado del actual.
       activeDetailTab: 'journey',
+      // @tickets_cases — al llegar desde la bandeja de tareas con ?tab=notes… se
+      // abre la pestaña Notas (filtrada por la tarea, o el modal de alta si
+      // compose=1) en cuanto el ticket termina de cargar. { seq, taskId, compose }.
+      entryNote: null,
       lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
       showTransitionMenu: false,
       showPriorityMenu: false, // @tickets_cases P1 — prioridad inline
@@ -427,6 +431,15 @@ export default {
       this.activeDetailTab = 'journey';
       this.loadTicket();
     },
+    // @tickets_cases — cuando el ticket termina de cargar, si venimos de la
+    // bandeja aplicamos la acción de notas pendiente (filtrar o componer).
+    ticket(val) {
+      if (val && this.entryNote) {
+        const payload = this.entryNote;
+        this.entryNote = null;
+        this.$nextTick(() => this.applyEntryNote(payload));
+      }
+    },
   },
   mounted() {
     this.loadTicket();
@@ -434,6 +447,7 @@ export default {
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     this.acquireLock();
+    this.applyEntryQuery();
   },
   beforeDestroy() {
     this.releaseLock();
@@ -1060,6 +1074,45 @@ export default {
       this.activeDetailTab = 'notes';
       this.$nextTick(() => this.$refs.ticketNotes?.openCreate());
     },
+    // @tickets_cases — "agregar nota" desde una fila de la tabla de tareas: salta
+    // a la pestaña Notas y abre el modal ya atado a esa tarea (folio T00N).
+    openNoteForTask(task) {
+      this.activeDetailTab = 'notes';
+      this.$nextTick(() => this.$refs.ticketNotes?.openCreate(task));
+    },
+    // @tickets_cases — "ver notas" desde la columna de conteo de una tarea: salta
+    // a la pestaña Notas ya filtrada por el folio de esa tarea.
+    openNotesForTask(task) {
+      this.activeDetailTab = 'notes';
+      this.$nextTick(() => this.$refs.ticketNotes?.showTaskNotes(task));
+    },
+    // @tickets_cases — al entrar con ?tab=notes&task=N (desde la bandeja de
+    // tareas): abre Notas; compose=1 abre el modal de alta atado a la tarea, si
+    // no filtra por su folio. Si el ticket ya está cargado actúa ya; si no, deja
+    // la acción pendiente para el watcher `ticket`.
+    applyEntryQuery() {
+      const q = this.$route.query || {};
+      if (q.tab !== 'notes') return;
+      this.activeDetailTab = 'notes';
+      const seq = Number(q.task);
+      if (!seq) return;
+      const payload = {
+        seq,
+        taskId: Number(q.taskId) || null,
+        compose: q.compose === '1',
+      };
+      if (this.ticket) this.$nextTick(() => this.applyEntryNote(payload));
+      else this.entryNote = payload;
+    },
+    applyEntryNote({ seq, taskId, compose }) {
+      const notes = this.$refs.ticketNotes;
+      if (!notes) return;
+      if (compose && taskId) {
+        notes.openCreate({ id: taskId, sequence: seq, title: '' });
+      } else {
+        notes.showTaskNotes({ sequence: seq });
+      }
+    },
     // @tickets_cases 2E — relaciones entre tickets
     openRelationModal() {
       this.relationForm = { relation_type: 'duplicate' };
@@ -1246,7 +1299,7 @@ export default {
         class="self-start"
         @click="$router.push({ name: 'gestorTickets_index' })"
       >
-        Volver
+        {{ $t('CASE_TICKETS.DETAIL.BACK') }}
       </woot-button>
 
       <div v-if="ticket" class="flex items-start justify-between gap-4">
@@ -1283,12 +1336,16 @@ export default {
               v-if="ticket.case_type"
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded text-white"
               :style="{ backgroundColor: ticket.case_type.color }"
-              ><span class="font-normal opacity-75">Tipo:</span>
+              ><span class="font-normal opacity-75">{{
+                $t('CASE_TICKETS.DETAIL.TYPE_LABEL')
+              }}</span>
               {{ ticket.case_type.name }}</span
             >
             <span
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
-              ><span class="font-normal opacity-75">Estado:</span>
+              ><span class="font-normal opacity-75">{{
+                $t('CASE_TICKETS.DETAIL.STATUS_LABEL')
+              }}</span>
               {{ statusLabel(displayStatus(ticket.status)) }}</span
             >
             <!-- Prioridad no va aquí: ya se ve (con color) en el botón "Prioridad". -->
@@ -1302,19 +1359,43 @@ export default {
             <span
               class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
               :title="$t('CASE_TICKETS.ESCALATION.LEVEL_TITLE')"
-              ><span class="font-normal opacity-75">Nivel:</span>
+              ><span class="font-normal opacity-75">{{
+                $t('CASE_TICKETS.DETAIL.LEVEL_LABEL')
+              }}</span>
               {{ escalationLabel }}</span
             >
           </div>
-          <h2 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
+          <!-- @tickets_cases — título a UNA sola línea con "…": envolver a dos
+               líneas empujaba las pestañas y descuadraba la cabecera. Completo
+               en el tooltip y al abrir "Editar ticket". -->
+          <h2
+            class="m-0 mt-0.5 text-xl font-bold truncate text-slate-800 dark:text-slate-100"
+            :title="ticket.title"
+          >
             {{ ticket.title }}
           </h2>
-          <p
-            v-if="ticket.description"
-            class="m-0 text-sm text-slate-600 dark:text-slate-300"
-          >
-            {{ ticket.description }}
-          </p>
+          <!-- @tickets_cases — descripción a UNA sola línea con "…". El enlace
+               "Ver" abre el modal del ticket, que es donde se leen título y
+               descripción completos: el tooltip nativo no se descubre solo y en
+               táctil no existe. Se oculta en cerrado, igual que el lápiz de
+               editar, para no ofrecer algo que el backend rechazaría. -->
+          <div class="flex items-baseline gap-1.5 min-w-0">
+            <p
+              v-if="ticket.description"
+              class="m-0 text-sm truncate text-slate-600 dark:text-slate-300"
+              :title="ticket.description"
+            >
+              {{ ticket.description }}
+            </p>
+            <button
+              v-if="!isFrozen"
+              type="button"
+              class="flex-shrink-0 text-xs font-medium text-woot-600 dark:text-woot-300 hover:underline"
+              @click="showEditModal = true"
+            >
+              {{ $t('CASE_TICKETS.DETAIL.VIEW_FULL') }}
+            </button>
+          </div>
         </div>
 
         <!-- @tickets_cases — columna derecha: acciones arriba + fechas debajo -->
@@ -1478,7 +1559,8 @@ export default {
                 showPriorityMenu = false;
               "
             >
-              {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }} ▾
+              {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }}
+              <fluent-icon icon="chevron-down" size="12" class="ml-1" />
             </woot-button>
             <ul
               v-if="showTransitionMenu"
@@ -1496,7 +1578,7 @@ export default {
                 v-if="!validTransitions.length"
                 class="px-4 py-2 text-sm text-slate-400 dark:text-slate-500"
               >
-                Sin transiciones disponibles
+                {{ $t('CASE_TICKETS.DETAIL.NO_TRANSITIONS') }}
               </li>
             </ul>
           </div>
@@ -1598,7 +1680,7 @@ export default {
       v-if="!ticket && isFetchingList"
       class="flex items-center justify-center flex-1 text-slate-400 dark:text-slate-500"
     >
-      <span>Cargando ticket...</span>
+      <span>{{ $t('CASE_TICKETS.DETAIL.LOADING') }}</span>
     </div>
 
     <div
@@ -2358,8 +2440,8 @@ export default {
 
       <!-- ════ Pestaña Notas internas — tabla + modal, como Tareas ════ -->
       <TicketNotes
-        ref="ticketNotes"
         v-show="currentTabKey === 'notes'"
+        ref="ticketNotes"
         :key="`notes-${ticket.id}`"
         :ticket-id="ticket.id"
         :is-frozen="isFrozen"
@@ -2376,6 +2458,8 @@ export default {
         :is-frozen="isFrozen"
         class="flex-1 min-h-0"
         @count="taskCount = $event"
+        @addNote="openNoteForTask"
+        @viewNotes="openNotesForTask"
       />
 
       <!-- ════ Pestaña Avance del ticket (2L) — 3 vistas conmutables ════ -->

@@ -143,6 +143,8 @@ en:
       sla_missed_resolution: "SLA target resolution missed for conversation (#%{display_id})"
       calendar_event_reminder: "Calendar reminder"
       case_ticket_assignment: "Ticket %{folio} has been assigned to you"
+      case_task_assignment: "A task was assigned to you in ticket %{folio}"
+      case_task_completed: "A task was completed in ticket %{folio}"
     calendar_event_reminder:
       body: "\"%{title}\" starts in %{minutes} minutes"
       no_title: "Untitled event"
@@ -259,7 +261,7 @@ en:
       name: "Captain"
       description: "Captain is a native AI assistant built for your product and trained on your company's knowledge base. It responds like a human and resolves customer queries effectively. Configure it to your inboxes easily."
     daiko:
-      name: "Sales Agent Activation"
+      name: "Transactional Sales Agent Activation"
       description: "Your automated 24/7 seller that responds to your customers in seconds, checks prices, products and stock, and generates quotes and orders."
   public_portal:
     search:

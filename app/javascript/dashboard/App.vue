@@ -4,6 +4,7 @@ import router from '../dashboard/routes';
 import AddAccountModal from '../dashboard/components/layout/sidebarComponents/AddAccountModal.vue';
 import LoadingState from './components/widgets/LoadingState.vue';
 import NetworkNotification from './components/NetworkNotification.vue';
+import CaseToastNotification from './components/CaseToastNotification.vue';
 import UpdateBanner from './components/app/UpdateBanner.vue';
 import UpgradeBanner from './components/app/UpgradeBanner.vue';
 import PaymentPendingBanner from './components/app/PaymentPendingBanner.vue';
@@ -26,6 +27,7 @@ export default {
     AddAccountModal,
     LoadingState,
     NetworkNotification,
+    CaseToastNotification,
     UpdateBanner,
     PaymentPendingBanner,
     WootSnackbarBox,
@@ -139,6 +141,7 @@ export default {
     <AddAccountModal :show="showAddAccountModal" :has-accounts="hasAccounts" />
     <WootSnackbarBox />
     <NetworkNotification />
+    <CaseToastNotification />
   </div>
   <LoadingState v-else />
 </template>

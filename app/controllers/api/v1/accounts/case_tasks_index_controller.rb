@@ -1,0 +1,219 @@
+# frozen_string_literal: true
+
+# ================================================================================
+# @tickets_cases — Bandeja de tareas (F1): índice de tareas a nivel CUENTA.
+# ================================================================================
+# GET /api/v1/accounts/:account_id/case_tasks
+#
+# Responde "¿qué tareas tengo asignadas?" sin entrar ticket por ticket. A
+# diferencia de CaseTasksController (anidado bajo un ticket), aquí NO hay
+# before_action :set_ticket: el scope es la cuenta y cada tarea viaja con el
+# contexto de su ticket padre (folio, estado, prioridad, SLA, tipo).
+#
+# Visibilidad DECIDIDA (plan §3.1): por cuenta, sin guard de rol. Cualquier
+# agente puede filtrar por cualquier otro (default = mis tareas, por comodidad).
+# Ver: docs/vault-tickets/implementacion/Plan-Bandeja-Tareas.md
+# ================================================================================
+class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseController
+  PER_PAGE = 25
+
+  # Orden por columna (clic en el encabezado de la tabla). Whitelist: la clave es
+  # el `field` de la columna en el front y el valor la expresión SQL, así que es
+  # seguro interpolarla. Sin `sort_by` válido se mantiene el orden natural
+  # (`ordered` = posición dentro del ticket).
+  SORTABLE_COLUMNS = {
+    'sequence' => 'case_tasks.sequence',
+    'title' => 'case_tasks.title',
+    'priority' => 'case_tasks.priority',
+    'status' => 'case_tasks.status',
+    'due_at' => 'case_tasks.due_at',
+    'ticket' => 'case_tickets.folio',
+    'assignee' => 'assignee_users.name',
+    'requester' => 'requester_users.name'
+  }.freeze
+
+  def index
+    scope = filtered_scope
+    total = scope.count
+    page  = [params[:page].to_i, 1].max
+    rows  = apply_sort(scope)
+            .includes(:assignee, :requester, case_ticket: :case_type)
+            .limit(PER_PAGE)
+            .offset((page - 1) * PER_PAGE)
+            .to_a
+
+    @notes_count_map = notes_count_map_for(rows)
+
+    render json: {
+      case_tasks: rows.map { |t| task_json(t) },
+      meta: { current_page: page, page_size: PER_PAGE, count: total }
+    }
+  end
+
+  private
+
+  def base_scope
+    CaseTask.where(account_id: Current.account.id)
+  end
+
+  # Aplica los filtros de la bandeja (todos opcionales salvo el default de asignado).
+  def filtered_scope
+    scope = filter_assignee(base_scope)
+    scope = filter_requester(scope)
+    scope = filter_status(scope)
+    scope = filter_due(scope)
+    scope = filter_case_type(scope)
+    filter_search(scope)
+  end
+
+  # requester_id: quién dio de alta la tarea. Ausente → sin filtro.
+  def filter_requester(scope)
+    raw = params[:requester_id].presence
+
+    return scope if raw.nil?
+    return scope.where(requester_id: nil) if raw == 'unassigned'
+
+    scope.where(requester_id: raw)
+  end
+
+  # assignee_id: ausente → mis tareas · 'all' → todos los agentes (sin filtro) ·
+  # 'unassigned' → huérfanas · id → ese agente.
+  def filter_assignee(scope)
+    raw = params[:assignee_id].presence
+
+    return scope if raw == 'all'
+    return scope.where(assignee_id: nil) if raw == 'unassigned'
+    return scope.where(assignee_id: current_user.id) if raw.nil?
+
+    scope.where(assignee_id: raw)
+  end
+
+  # status: ausente → pending · 'done' → completadas · 'all'/'' → todas.
+  def filter_status(scope)
+    raw = params[:status]
+
+    return scope if ['all', ''].include?(raw)
+    return scope.where(status: CaseTask.statuses[raw]) if CaseTask.statuses.key?(raw)
+
+    scope.pending
+  end
+
+  # due: overdue (vencidas y aún pendientes) · today · week (próximos 7 días).
+  def filter_due(scope)
+    case params[:due]
+    when 'overdue'
+      scope.pending.where('case_tasks.due_at < ?', Time.current)
+    when 'today'
+      scope.where(due_at: Time.zone.today.all_day)
+    when 'week'
+      scope.where(due_at: Time.zone.today.beginning_of_day..6.days.from_now.end_of_day)
+    else
+      scope
+    end
+  end
+
+  def filter_case_type(scope)
+    return scope if params[:case_type_id].blank?
+
+    scope.joins(:case_ticket).where(case_tickets: { case_type_id: params[:case_type_id] })
+  end
+
+  # Orden pedido por el front (sort_by = field de la columna, sort_order asc/desc).
+  # Las tareas sin dato (vencimiento vacío, sin responsable…) siempre al final.
+  def apply_sort(scope)
+    key = params[:sort_by].to_s
+    return scope.ordered unless SORTABLE_COLUMNS.key?(key)
+
+    dir = params[:sort_order] == 'desc' ? 'DESC' : 'ASC'
+    sort_joins(scope, key).reorder(
+      Arel.sql("#{SORTABLE_COLUMNS[key]} #{dir} NULLS LAST, case_tasks.id ASC")
+    )
+  end
+
+  # Las columnas que viven en otra tabla necesitan su join (alias propio para no
+  # chocar con el join de `filter_case_type`).
+  def sort_joins(scope, key)
+    case key
+    when 'ticket'
+      scope.joins(:case_ticket)
+    when 'assignee'
+      scope.joins('LEFT JOIN users AS assignee_users ON assignee_users.id = case_tasks.assignee_id')
+    when 'requester'
+      scope.joins('LEFT JOIN users AS requester_users ON requester_users.id = case_tasks.requester_id')
+    else
+      scope
+    end
+  end
+
+  def filter_search(scope)
+    return scope if params[:q].blank?
+
+    like = "%#{params[:q].to_s.strip}%"
+    scope.where('case_tasks.title ILIKE :q OR case_tasks.description ILIKE :q', q: like)
+  end
+
+  # --- serialización --------------------------------------------------------
+  # La tarea MÁS el contexto de su ticket: sin esto la bandeja no ahorra el
+  # "entrar ticket por ticket" que motiva el plan.
+  def task_json(task)
+    {
+      id: task.id,
+      # Folio consecutivo de la tarea dentro de su ticket (T001, T002…), igual
+      # que en la vista de tareas dentro del ticket.
+      sequence: task.sequence,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      # @tickets_cases — prioridad de la TAREA. Ojo al leer el JSON: la del
+      # ticket viaja aparte, dentro de `case_ticket`.
+      priority: task.priority,
+      assignee_id: task.assignee_id,
+      assignee: ref_user(task.assignee),
+      # @tickets_cases — solicitante (quién abrió la tarea), solo lectura.
+      requester: ref_user(task.requester),
+      due_at: task.due_at,
+      position: task.position,
+      completed_at: task.completed_at,
+      completed_by: ref_user(task.completed_by),
+      # @tickets_cases — nº de notas internas atadas a la tarea (columna "Notas").
+      notes_count: (@notes_count_map || {})[task.id] || 0,
+      case_ticket: ticket_context(task.case_ticket)
+    }
+  end
+
+  # id de tarea → nº de notas internas, para las tareas de la página actual.
+  def notes_count_map_for(rows)
+    ids = rows.map(&:id)
+    return {} if ids.empty?
+
+    CaseEvent.where(account_id: Current.account.id, event_type: :internal_note)
+             .where(case_task_id: ids)
+             .group(:case_task_id).count
+  end
+
+  def ticket_context(ticket)
+    return nil unless ticket
+
+    {
+      id: ticket.id,
+      folio: ticket.folio,
+      title: ticket.title,
+      status: ticket.status,
+      priority: ticket.priority,
+      sla_status: ticket.sla_status,
+      case_type: ticket_type(ticket.case_type)
+    }
+  end
+
+  def ticket_type(type)
+    return nil unless type
+
+    { id: type.id, name: type.name, color: type.color }
+  end
+
+  def ref_user(user)
+    return nil unless user
+
+    { id: user.id, name: user.name, thumbnail: user.avatar_url }
+  end
+end

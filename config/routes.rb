@@ -80,6 +80,9 @@ Rails.application.routes.draw do
             end
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
+          # Sinónimos nativos (esquema legacy wintook; reemplaza al servicio WINTOOK_BOT)
+          resources :palabras_sinonimos, only: [:index, :create, :update, :destroy]
+          resources :sinonimos_semanticos, only: [:index]
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
@@ -142,6 +145,7 @@ Rails.application.routes.draw do
             end
             member do
               patch :transition
+              patch :move # @tickets_cases — mover de columna en el Kanban por tipo
               patch :assign
               patch :escalate
               patch :change_approval
@@ -163,12 +167,16 @@ Rails.application.routes.draw do
             resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks'
             # @tickets_cases — notas internas (viven en case_events, no en tabla propia)
             resources :case_notes, only: [:index, :create, :update, :destroy], path: 'notes'
-            # @tickets_cases P4 — colaboradores/CC del ticket
-            resources :case_collaborators, only: [:index, :create, :destroy], path: 'collaborators'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
+          # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
+          resources :case_tasks, only: [:index], controller: 'case_tasks_index'
           resources :case_types, only: [:index, :create, :update, :destroy] do
             resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K
+            # @tickets_cases — columnas del Kanban por tipo (Opción A+)
+            resources :case_type_columns, only: [:index, :create, :update, :destroy], path: 'columns' do
+              put :replace, on: :collection
+            end
           end
           resources :case_services, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_categories, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
