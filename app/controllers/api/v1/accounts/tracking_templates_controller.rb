@@ -4,16 +4,18 @@
 # Controlador: TrackingTemplatesController
 # Descripción: CRUD de plantillas de seguimiento (account-scoped)
 # Acciones: index (filtros search/tag/inbox_id), show, create, update, destroy
+#           siblings, archive, unarchive (proyecto@ai_agent_assistant F4)
 # ================================================================================
 
 class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseController
   # proyecto@bot_seguimiento_calendar: roles de Google Calendar que permiten crear eventos.
   WRITABLE_CALENDAR_ROLES = %w[owner writer].freeze
 
-  before_action :fetch_tracking_template, only: [:show, :update, :destroy]
+  before_action :fetch_tracking_template,
+                only: [:show, :update, :destroy, :siblings, :archive, :unarchive, :duplicate]
 
   def index
-    @tracking_templates = Current.account.tracking_templates.includes(:user, :inbox).ordered
+    @tracking_templates = listable_templates
     @tracking_templates = @tracking_templates.search_by_name(params[:search]) if params[:search].present?
     @tracking_templates = @tracking_templates.by_tag(params[:tag]) if params[:tag].present?
     @tracking_templates = @tracking_templates.by_inbox(params[:inbox_id]) if params[:inbox_id].present?
@@ -39,6 +41,45 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
   def destroy
     @tracking_template.destroy!
     head :ok
+  end
+
+  # proyecto@ai_agent_assistant — RAMIFICAR, que no es versionar.
+  #
+  # Sirve para el mismo texto en otro canal o para un caso vecino que arranca de
+  # aquí. Para mejorar ESTE agente está el historial: §13.4 del plan documenta la
+  # cuenta 778, con seis agentes que en realidad son uno y un error que sobrevivió
+  # tres de ellos. Por eso la copia nace con la nota de dónde salió.
+  def duplicate
+    copy = @tracking_template.dup
+    copy.assign_attributes(
+      name: available_name(params[:name].presence || "#{@tracking_template.name} (copia)"),
+      archived_at: nil,
+      user: Current.user,
+      version_source: 'fork',
+      version_note: "Copia de «#{@tracking_template.name}» (id #{@tracking_template.id})"
+    )
+    copy.save!
+    copy_attachments_to(copy)
+
+    render json: template_json(copy), status: :created
+  end
+
+  # proyecto@ai_agent_assistant (F4) — «… V2 / V3 / V4»: las copias del mismo caso de uso.
+  # Con versionado en sitio ya no hacen falta; esto las encuentra para poder archivarlas.
+  def siblings
+    render json: { siblings: AiAgentAssistant::SiblingDetector.for(@tracking_template) }
+  end
+
+  # Archivar no borra: conserva historial y no toca los seguimientos en curso (cada uno
+  # tiene su propia copia del prompt). Solo lo saca de las listas.
+  def archive
+    @tracking_template.archive!
+    render json: template_json(@tracking_template)
+  end
+
+  def unarchive
+    @tracking_template.unarchive!
+    render json: template_json(@tracking_template)
   end
 
   def calendar_integrations
@@ -68,8 +109,36 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
     []
   end
 
+  # proyecto@ai_agent_assistant (F4): los archivados salen de las listas por defecto
+  # —incluida la de asignación— pero se pueden pedir explícitamente.
+  def listable_templates
+    scope = Current.account.tracking_templates.includes(:user, :inbox).ordered
+    params[:archived].present? ? scope.archived : scope.active
+  end
+
   def fetch_tracking_template
     @tracking_template = Current.account.tracking_templates.find(params[:id])
+  end
+
+  # El nombre es único por cuenta: sin esto, duplicar dos veces revienta con un
+  # error de base de datos en vez de dar el segundo agente.
+  def available_name(wanted)
+    scope = Current.account.tracking_templates
+    return wanted unless scope.exists?(name: wanted)
+
+    suffix = 2
+    suffix += 1 while scope.exists?(name: "#{wanted} #{suffix}")
+    "#{wanted} #{suffix}"
+  end
+
+  # Los adjuntos son parte del agente: una directiva {{nombre}} sin su archivo deja
+  # la copia rota y en silencio. Se comparte el blob, no se resube.
+  def copy_attachments_to(copy)
+    @tracking_template.ai_agent_attachments.each do |attachment|
+      duplicated = copy.ai_agent_attachments.new(account: copy.account, name: attachment.name)
+      duplicated.file.attach(attachment.file.blob) if attachment.file.attached?
+      duplicated.save!
+    end
   end
 
   def tracking_template_params
@@ -77,6 +146,9 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
       :name, :objective, :ai_context, :complementary_prompt, :inbox_id,
       :retry_interval_value, :retry_interval_unit, :calendar_event_duration, # proyecto@automatizacion_tracking
       :timezone, :slots_presentation, # proyecto@bot_seguimiento_calendar
+      # proyecto@ai_agent_assistant: nota y procedencia del guardado — viajan al snapshot
+      # del historial (F4), no a la plantilla. `version_source` distingue lo que salió del chat.
+      :version_note, :version_source,
       whatsapp_templates: [],
       tags: [],
       keyword_actions: [:keyword, :action, :direction], # proyecto@contact_tracking

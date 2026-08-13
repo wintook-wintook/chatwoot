@@ -38,6 +38,7 @@ import kanban from './kanban.json';
 import contactTracking from './contactTracking.js';
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
+import aiAgentAssistant from './aiAgentAssistant.json'; // proyecto@ai_agent_assistant
 import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
 import googleCalendar from './googleCalendar.js'; // proyecto@google_calendar
 import gestorTickets from './gestorTickets.json'; // @tickets_cases
@@ -84,6 +85,7 @@ export default {
   ...kanban,
   ...contactTracking,
   ...trackingTemplates, // proyecto@tracking_templates
+  ...aiAgentAssistant, // proyecto@ai_agent_assistant
   ...knowledgeSources, // @knowledge_sources
   ...googleCalendar, // proyecto@google_calendar
   ...gestorTickets, // @tickets_cases

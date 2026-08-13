@@ -37,8 +37,10 @@ class Account < ApplicationRecord
   # KANBAN0725
 
   has_many :tracking_templates, dependent: :destroy # proyecto@tracking_templates
-  has_many :tracking_campaigns, dependent: :destroy # @campanas_vendedor
-  has_many :case_tickets, dependent: :destroy # @tickets_cases
+  # proyecto@ai_agent_assistant: conversaciones del asistente (borradores, nunca agentes)
+  has_many :ai_agent_assistant_sessions, dependent: :destroy
+  has_many :tracking_campaigns,  dependent: :destroy # @campanas_vendedor
+  has_many :case_tickets,       dependent: :destroy # @tickets_cases
   has_many :external_db_connections, dependent: :destroy # @query_databases
   has_many :external_db_queries,     dependent: :destroy # @query_databases
   has_many :erp_collection_bots,     dependent: :destroy # @query_databases
