@@ -163,7 +163,8 @@
       "NOTES": "Notes",
       "TASKS": "Tasks",
       "JOURNEY": "Progress",
-      "AI": "AI assistant"
+      "AI": "AI assistant",
+      "MEETINGS": "Meetings"
     },
     "CONVERSATION": {
       "SUBTITLE": "Thread with the customer",
@@ -328,7 +329,9 @@
       },
       "ACTIONS": "Actions",
       "MENU": {
-        "NOTES": "Task notes ({count})"
+        "NOTES": "Task notes ({count})",
+        "ADD_MEETING": "Schedule meeting",
+        "VIEW_MEETINGS": "View meetings"
       }
     },
     "MODAL": {
@@ -638,6 +641,7 @@
       "LOADING": "Loading progress...",
       "CURRENT": "Current",
       "CREATED": "Created",
+      "MEETING_SCOPE_ALL": "Whole series",
       "CURRENTLY": "Currently",
       "RETURNED": "Returned",
       "REASON": "Reason",
@@ -1038,7 +1042,12 @@
       "error_detected": "Error detected",
       "internal_note": "Internal note",
       "priority_changed": "Priority changed",
-      "due_date_changed": "Due date changed"
+      "due_date_changed": "Due date changed",
+      "column_changed": "Column changed",
+      "meeting_scheduled": "Meeting scheduled",
+      "meeting_updated": "Meeting rescheduled",
+      "meeting_cancelled": "Meeting cancelled",
+      "meeting_held": "Meeting held"
     },
     "COLUMNS_CFG": {
       "ADD_BUTTON": "Add column",
@@ -1077,6 +1086,118 @@
       "VIEW_FULL": "View",
       "NO_TRANSITIONS": "No transitions available",
       "LOADING": "Loading ticket…"
+    },
+    "MEETINGS": {
+      "TITLE": "Meetings",
+      "ADD_NEW": "Schedule meeting",
+      "REFRESH": "Refresh",
+      "LOADING": "Loading meetings...",
+      "EMPTY": "No meetings scheduled for this ticket.",
+      "NO_MATCHES": "No meeting matches the filter",
+      "FILTER_PLACEHOLDER": "Search folio, title, task or location…",
+      "ACTIONS": "Actions",
+      "ERROR": "The meeting could not be saved.",
+      "TOAST_DELETED": "Meeting deleted",
+      "PAST_DUE_HINT": "The meeting falls after its task's due date.",
+      "TABLE": {
+        "NUM": "#",
+        "TASK": "Task",
+        "MEETING": "Meeting",
+        "WHEN": "Date",
+        "STATUS": "Status",
+        "ORGANIZER": "Organizer"
+      },
+      "STATUS": {
+        "SCHEDULED": "Scheduled",
+        "HELD": "Held",
+        "NO_SHOW": "No show",
+        "CANCELLED": "Cancelled",
+        "RESCHEDULED": "Rescheduled"
+      },
+      "MENU": {
+        "EDIT": "Edit",
+        "HELD": "Mark as held",
+        "NO_SHOW": "Mark as no show",
+        "CANCEL_ONE": "Cancel this meeting",
+        "CANCEL_ALL": "Cancel the whole series",
+        "DELETE": "Delete",
+        "RESYNC": "Retry sync"
+      },
+      "MODAL": {
+        "TITLE": "New meeting",
+        "EDIT_TITLE": "Edit meeting",
+        "DESC": "It is recorded in the ticket's progress.",
+        "TITLE_LABEL": "Title",
+        "TITLE_PLACEHOLDER": "e.g. Progress review",
+        "STARTS_LABEL": "Starts",
+        "ENDS_LABEL": "Ends",
+        "DATE_ERROR": "The end time must be after the start time.",
+        "TASK_LABEL": "Task",
+        "TASK_NONE": "— Ticket (no task) —",
+        "ORGANIZER_LABEL": "Organizer",
+        "ORGANIZER_ME": "— Me —",
+        "LOCATION_LABEL": "Location",
+        "LOCATION_PLACEHOLDER": "e.g. Office, video call, phone…",
+        "DESCRIPTION_LABEL": "Description",
+        "DESCRIPTION_PLACEHOLDER": "Meeting agenda (optional)",
+        "INVITE_CLIENT": "Invite the customer",
+        "NO_CLIENT_EMAIL": "This ticket has no contact with an email address",
+        "GUESTS_LABEL": "Other guests",
+        "GUESTS_PLACEHOLDER": "comma-separated emails",
+        "LOCAL_ONLY_HINT": "No agent has Google Calendar connected: the meeting is stored in the system only and no email invitation will be sent.",
+        "CANCEL": "Cancel",
+        "CREATE": "Schedule",
+        "SAVE": "Save changes",
+        "MODE_SINGLE": "Single meeting",
+        "MODE_SERIES": "Series",
+        "REPEAT_EVERY": "Repeat every",
+        "DAYS_LABEL": "Days",
+        "END_AFTER": "Ends after",
+        "END_ON": "Ends on",
+        "PREVIEW": "{count} meetings will be created: {dates}",
+        "FREQ": {
+          "DAILY": "days",
+          "WEEKLY": "weeks",
+          "MONTHLY": "months"
+        },
+        "DAYS": {
+          "MO": "M",
+          "TU": "T",
+          "WE": "W",
+          "TH": "T",
+          "FR": "F",
+          "SA": "S",
+          "SU": "S"
+        }
+      },
+      "MINUTES": {
+        "TITLE": "Capture the minutes?",
+        "DESC": "Saved as an internal note on the ticket, linked to the meeting's task.",
+        "LABEL": "Minutes",
+        "PLACEHOLDER": "Agreements, pending items and next steps…",
+        "SKIP": "Not now",
+        "SAVE": "Save minutes",
+        "SAVED": "Minutes saved as a note"
+      },
+      "DELETE_CONFIRM": {
+        "TITLE": "Delete meeting",
+        "MESSAGE": "This action cannot be undone. Delete the meeting",
+        "CONFIRM": "Delete",
+        "CANCEL": "Cancel"
+      },
+      "MEET_LINK": "Meet",
+      "SYNC": {
+        "PENDING": "Syncing…",
+        "PENDING_HINT": "The event is being copied to Google Calendar.",
+        "SYNCED": "In Google",
+        "SYNCED_HINT": "The event is in the organizer's calendar.",
+        "FAILED": "Sync failed",
+        "FAILED_HINT": "The event could not be copied to Google.",
+        "LOCAL_ONLY": "System only",
+        "LOCAL_ONLY_HINT": "The organizer has no Google Calendar connected: the event lives here only.",
+        "RETRYING": "Retrying the sync…"
+      },
+      "SERIES_CREATED": "Series {folio} created with {count} meetings"
     }
   }
 }

@@ -18,44 +18,131 @@ class GoogleCalendarService
     response['items'] || []
   end
 
-  def create_event(calendar_id: 'primary', summary:, start_time: nil, end_time: nil, due_date: nil, end_date: nil, all_day: false, description: nil, attendees: [])
-    body = { summary: summary, description: description }
+  # @tickets_cases F3 — `recurrence`, `with_meet`, `location` y `send_updates` son
+  # kwargs NUEVOS y opcionales: los llamadores existentes (events_controller y el
+  # job de seguimientos) siguen funcionando igual.
+  def create_event(calendar_id: 'primary', summary:, start_time: nil, end_time: nil, due_date: nil, end_date: nil,
+                   all_day: false, description: nil, attendees: [], recurrence: nil, with_meet: false,
+                   location: nil, send_updates: 'all')
+    body = { summary: summary, description: description, location: location }
 
     if all_day
-      date = due_date.presence || start_time&.to_date&.iso8601 || Date.today.iso8601
-      parsed_end = end_date.presence ? Date.parse(end_date) : nil
-      parsed_start = Date.parse(date)
-      end_date_val = (parsed_end && parsed_end > parsed_start ? parsed_end : parsed_start + 1).iso8601
-      body[:start] = { date: date }
-      body[:end]   = { date: end_date_val }
+      body.merge!(all_day_window(due_date, start_time, end_date))
     else
       body[:start] = { dateTime: start_time.utc.iso8601, timeZone: 'UTC' }
       body[:end]   = { dateTime: end_time.utc.iso8601,   timeZone: 'UTC' }
       body[:attendees] = attendees.map { |email| { email: email } } if attendees.any?
     end
 
+    # @tickets_cases F3 — RRULE del evento maestro de una serie: ["RRULE:FREQ=WEEKLY;…"].
+    body[:recurrence] = Array(recurrence) if recurrence.present?
+    # @tickets_cases F3 — liga de Meet. OJO: sin `conferenceDataVersion: 1` en el
+    # query, Google acepta el body y devuelve el evento SIN liga, en silencio.
+    body[:conferenceData] = meet_request if with_meet
+
     # sendUpdates=all: Google envía el correo de invitación (.ics) a TODOS los invitados,
     # de cualquier dominio (no solo gmail). Sin esto, los invitados no-Google no se enteran.
-    post("/calendars/#{CGI.escape(calendar_id)}/events", body.compact, query: { sendUpdates: 'all' })
+    post(
+      "/calendars/#{CGI.escape(calendar_id)}/events",
+      body.compact,
+      query: { sendUpdates: send_updates, conferenceDataVersion: with_meet ? 1 : 0 }
+    )
   end
 
-  def update_event(event_id, calendar_id: 'primary', start_time:, end_time:, summary: nil, description: nil, attendees: nil)
+  # @tickets_cases F3 — `location`, `recurrence` y `send_updates` son opcionales y
+  # nuevos. `send_updates` lo decide el DIFF de la reunión (plan §10.2b): corregir
+  # un typo del título no debe volver a escribirle al cliente.
+  def update_event(event_id, calendar_id: 'primary', start_time:, end_time:, summary: nil, description: nil, attendees: nil,
+                   location: nil, recurrence: nil, send_updates: 'all')
     body = {
       start: { dateTime: start_time.utc.iso8601, timeZone: 'UTC' },
       end:   { dateTime: end_time.utc.iso8601,   timeZone: 'UTC' }
     }
     body[:summary]     = summary     if summary
     body[:description] = description if description
+    body[:location]    = location    unless location.nil?
     body[:attendees]   = attendees.map { |e| { email: e } } if attendees
-    # sendUpdates=all: notifica por correo a los invitados (de cualquier dominio) al mover la cita.
-    patch("/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}", body, query: { sendUpdates: 'all' })
+    body[:recurrence]  = Array(recurrence) if recurrence.present?
+    # sendUpdates: 'all' notifica por correo a los invitados; 'none' guarda en silencio.
+    patch("/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}", body, query: { sendUpdates: send_updates })
+  end
+
+  # @tickets_cases F3 — un evento suelto por id. Devuelve :already_gone si Google
+  # responde 404/410, para no confundir "borrado" con "falló la API".
+  def get_event(event_id, calendar_id: 'primary')
+    response = HTTParty.get(
+      "#{CALENDAR_API}/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}",
+      headers: auth_headers
+    )
+    return :already_gone if [404, 410].include?(response.code)
+
+    handle_response(response)
+  end
+
+  # @tickets_cases F3 — ocurrencias REALES de un evento recurrente: las materializa
+  # Google, nosotros no reimplementamos el calendario. `list_events` NO sirve para
+  # esto (usa singleEvents y nunca devuelve el maestro).
+  def list_instances(event_id, calendar_id: 'primary', max_results: 250)
+    response = HTTParty.get(
+      "#{CALENDAR_API}/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}/instances",
+      headers: auth_headers,
+      query: { maxResults: max_results, showDeleted: true }
+    )
+    return :already_gone if [404, 410].include?(response.code)
+
+    (handle_response(response)['items'] || [])
+  end
+
+  # @tickets_cases F3 — cancelar UNA ocurrencia de una serie NO es un DELETE sobre
+  # el id de instancia (eso puede tumbar comportamiento inesperado en la serie):
+  # es un PATCH con status=cancelled.
+  def cancel_instance(instance_id, calendar_id: 'primary', send_updates: 'all')
+    patch(
+      "/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(instance_id)}",
+      { status: 'cancelled' },
+      query: { sendUpdates: send_updates }
+    )
+  end
+
+  # Ventana de un evento de día completo (Google pide `date`, no `dateTime`, y el
+  # fin es exclusivo: un día suelto termina al día siguiente).
+  def all_day_window(due_date, start_time, end_date)
+    date = due_date.presence || start_time&.to_date&.iso8601 || Time.zone.today.iso8601
+    parsed_start = Date.parse(date)
+    parsed_end = end_date.presence ? Date.parse(end_date) : nil
+    final = (parsed_end && parsed_end > parsed_start ? parsed_end : parsed_start + 1)
+    { start: { date: date }, end: { date: final.iso8601 } }
+  end
+
+  # Petición de Meet que Google resuelve al crear el evento.
+  def meet_request
+    {
+      createRequest: {
+        requestId: SecureRandom.uuid,
+        conferenceSolutionKey: { type: 'hangoutsMeet' }
+      }
+    }
+  end
+
+  # Liga de Meet de un evento: sale de conferenceData.entryPoints (tipo video) y,
+  # de respaldo, del hangoutLink.
+  def self.meet_url_from(event)
+    return nil unless event.is_a?(Hash)
+
+    entry = (event.dig('conferenceData', 'entryPoints') || [])
+            .find { |e| e['entryPointType'] == 'video' }
+    entry&.dig('uri').presence || event['hangoutLink'].presence
   end
 
   # Borra un evento. `delete` lanza ante un error real de la API; si Google responde
   # 404/410 (el evento ya no existe) lo tratamos como éxito idempotente. Por eso, si
   # no se levantó excepción, el evento ya no está en el calendario → devolvemos true.
-  def delete_event(event_id, calendar_id: 'primary')
-    delete("/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}")
+  # @tickets_cases F3 — `send_updates` opcional: al cancelar la serie completa se
+  # borra el MAESTRO con sendUpdates=all, y Google emite UN solo aviso por toda la
+  # serie (nunca uno por ocurrencia).
+  def delete_event(event_id, calendar_id: 'primary', send_updates: nil)
+    query = send_updates ? { sendUpdates: send_updates } : {}
+    delete("/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}", query: query)
     true
   end
 
@@ -214,8 +301,8 @@ class GoogleCalendarService
     handle_response(response)
   end
 
-  def delete(path)
-    response = HTTParty.delete("#{CALENDAR_API}#{path}", headers: auth_headers)
+  def delete(path, query: {})
+    response = HTTParty.delete("#{CALENDAR_API}#{path}", headers: auth_headers, query: query)
     # Un evento que ya no existe (404/410) es un borrado idempotente, no un error.
     return :already_gone if [404, 410].include?(response.code)
 

@@ -713,6 +713,10 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       updated_at:                 ticket.updated_at,
       contact_id:                 ticket.contact_id,
       contact_name:               ticket.contact&.name, # @tickets_cases — nombre del contacto para la ficha
+      # @tickets_cases F2 — correo del contacto: el formulario de reunión ofrece
+      # "invitar al cliente" solo si existe (ticket interno o contacto sin correo
+      # → la casilla se deshabilita con la razón a la vista, no se bloquea el alta).
+      contact_email:              ticket.contact&.email,
       conversation_id:            ticket.conversation_id,
       conversation_display_id:    ticket.conversation&.display_id, # @tickets_cases U1
 

@@ -9,6 +9,7 @@ import CaseTicketInternalModal from './CaseTicketInternalModal.vue';
 import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
 import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
 import TicketNotes from '../../components/contacts/CaseTicket/TicketNotes.vue';
+import TicketMeetings from '../../components/contacts/CaseTicket/TicketMeetings.vue';
 import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
 import CaseTicketsAPI from 'dashboard/api/caseTickets';
 import {
@@ -24,6 +25,7 @@ export default {
     TicketConversation,
     TicketTasks,
     TicketNotes,
+    TicketMeetings,
     MultiselectDropdown,
   },
   props: {
@@ -40,6 +42,8 @@ export default {
       // abre la pestaña Notas (filtrada por la tarea, o el modal de alta si
       // compose=1) en cuanto el ticket termina de cargar. { seq, taskId, compose }.
       entryNote: null,
+      // @tickets_cases F2 — igual que entryNote, para ?tab=meetings.
+      entryMeeting: null,
       lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
       showTransitionMenu: false,
       showPriorityMenu: false, // @tickets_cases P1 — prioridad inline
@@ -47,6 +51,7 @@ export default {
       dueDraft: '', // valor del input datetime-local
       taskCount: 0, // @tickets_cases P4 — total de tareas (badge del tab)
       noteCount: 0, // @tickets_cases — total de notas internas (badge del tab)
+      meetingCount: 0, // @tickets_cases F2 — total de reuniones (badge del tab)
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
       // @tickets_cases — bitácora de notas internas
@@ -292,6 +297,12 @@ export default {
         label: this.$t('CASE_TICKETS.DETAIL_TABS.TASKS'),
         count: this.taskCount,
       });
+      // @tickets_cases F2 — Reuniones, después de Tareas (plan §6.1).
+      tabs.push({
+        key: 'meetings',
+        label: this.$t('CASE_TICKETS.DETAIL_TABS.MEETINGS'),
+        count: this.meetingCount,
+      });
       // @tickets_cases — el Resumen ya no muestra info (vive en el header); su
       // contenido real es la conversación, así que la pestaña se llama así.
       tabs.push({
@@ -438,6 +449,12 @@ export default {
         const payload = this.entryNote;
         this.entryNote = null;
         this.$nextTick(() => this.applyEntryNote(payload));
+      }
+      // @tickets_cases F2 — lo mismo para la entrada a Reuniones.
+      if (val && this.entryMeeting) {
+        const payload = this.entryMeeting;
+        this.entryMeeting = null;
+        this.$nextTick(() => this.applyEntryMeeting(payload));
       }
     },
   },
@@ -1086,12 +1103,29 @@ export default {
       this.activeDetailTab = 'notes';
       this.$nextTick(() => this.$refs.ticketNotes?.showTaskNotes(task));
     },
+    // @tickets_cases F2 — "agregar reunión" desde una fila de la tabla de tareas:
+    // salta a la pestaña Reuniones y abre el modal ya atado a esa tarea.
+    openMeetingForTask(task) {
+      this.activeDetailTab = 'meetings';
+      this.$nextTick(() => this.$refs.ticketMeetings?.openCreate(task));
+    },
+    // @tickets_cases F2 — "ver reuniones" de una tarea: salta a la pestaña ya
+    // filtrada por el folio de esa tarea.
+    openMeetingsForTask(task) {
+      this.activeDetailTab = 'meetings';
+      this.$nextTick(() => this.$refs.ticketMeetings?.showTaskMeetings(task));
+    },
     // @tickets_cases — al entrar con ?tab=notes&task=N (desde la bandeja de
     // tareas): abre Notas; compose=1 abre el modal de alta atado a la tarea, si
     // no filtra por su folio. Si el ticket ya está cargado actúa ya; si no, deja
     // la acción pendiente para el watcher `ticket`.
     applyEntryQuery() {
       const q = this.$route.query || {};
+      // @tickets_cases F2 — mismo contrato que Notas, pero para Reuniones.
+      if (q.tab === 'meetings') {
+        this.applyEntryMeetings(q);
+        return;
+      }
       if (q.tab !== 'notes') return;
       this.activeDetailTab = 'notes';
       const seq = Number(q.task);
@@ -1103,6 +1137,28 @@ export default {
       };
       if (this.ticket) this.$nextTick(() => this.applyEntryNote(payload));
       else this.entryNote = payload;
+    },
+    // @tickets_cases F2 — ?tab=meetings&task=N[&taskId=&compose=1]
+    applyEntryMeetings(q) {
+      this.activeDetailTab = 'meetings';
+      const seq = Number(q.task);
+      if (!seq) return;
+      const payload = {
+        seq,
+        taskId: Number(q.taskId) || null,
+        compose: q.compose === '1',
+      };
+      if (this.ticket) this.$nextTick(() => this.applyEntryMeeting(payload));
+      else this.entryMeeting = payload;
+    },
+    applyEntryMeeting({ seq, taskId, compose }) {
+      const meetings = this.$refs.ticketMeetings;
+      if (!meetings) return;
+      if (compose && taskId) {
+        meetings.openCreate({ id: taskId, sequence: seq, title: '' });
+      } else {
+        meetings.showTaskMeetings({ sequence: seq });
+      }
     },
     applyEntryNote({ seq, taskId, compose }) {
       const notes = this.$refs.ticketNotes;
@@ -2460,6 +2516,21 @@ export default {
         @count="taskCount = $event"
         @addNote="openNoteForTask"
         @viewNotes="openNotesForTask"
+        @addMeeting="openMeetingForTask"
+        @viewMeetings="openMeetingsForTask"
+      />
+
+      <!-- ════ Pestaña Reuniones (F2) — tabla + modal, como Notas ════ -->
+      <TicketMeetings
+        v-show="currentTabKey === 'meetings'"
+        ref="ticketMeetings"
+        :key="`meetings-${ticket.id}`"
+        :ticket-id="ticket.id"
+        :is-frozen="isFrozen"
+        :contact-email="ticket.contact_email || ''"
+        class="flex-1 min-h-0"
+        @count="meetingCount = $event"
+        @changed="reloadEvents"
       />
 
       <!-- ════ Pestaña Avance del ticket (2L) — 3 vistas conmutables ════ -->

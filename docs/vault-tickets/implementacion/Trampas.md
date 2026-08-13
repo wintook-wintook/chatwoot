@@ -35,6 +35,24 @@ tags: [tickets, trampas, gotchas, critico]
 
 12. **`FEATURE_LIST` es constante congelada al boot** — tras editar `config/features.yml`, el server Puma en ejecución NO conoce la feature nueva hasta reiniciar (la constante se evalúa una vez al cargar el concern). Reinicio limpio: `touch tmp/restart.txt` (puma tiene `plugin :tmp_restart` en `config/puma.rb`). Un `rails runner` arranca proceso nuevo y SÍ la ve de inmediato (útil para seedear/togglear sin tocar el server).
 
+13. **⚠️ `rails db:migrate` dispara `annotate` y se come comentarios ajenos** — el hook post-migrate re-anota TODOS los modelos, y al reescribir el bloque `== Schema Information` **borra los comentarios propios que estén pegados justo debajo** (sin línea en blanco de por medio). Al correr la migración de F0 borró la documentación de `palabra_sinonimo.rb`, `sinonimo_semantico.rb` y `ai_agent_assistant_session.rb`, que no tenían nada que ver con el cambio. **Siempre revisar `git status` después de migrar** y revertir los modelos ajenos (`git checkout -- <archivo>`); si el comentario es tuyo y quieres conservarlo, déjalo separado del bloque de anotación.
+
+14. **Puppeteer: `el.click()` sintético NO cambia las pestañas del detalle** — los
+   `woot-tabs-item` son `<li class="tabs-title"><a>` **sin href**, y el handler lo pone
+   Vue: un `element.click()` desde `page.evaluate` devuelve OK y no pasa nada (se pierde
+   una vuelta creyendo que la pestaña no existe). Hay que clicar con el **mouse real**
+   sobre sus coordenadas: `getBoundingClientRect()` → `page.mouse.click(x, y)`. Mismo
+   patrón que la trampa #15 con los `<form @submit.prevent>`.
+
+15. **⚠️ Probar el módulo de Reuniones contra el servidor local ESCRIBE en el Google
+   Calendar real** — desde F3, dar de alta una reunión encola el espejo y Sidekiq crea
+   el evento de verdad, con invitación por correo a quien esté en `attendee_emails`.
+   Correr la regresión de la API de F1 tal cual dejó 4 eventos reales en el calendario
+   del usuario (dos con un "cliente" inventado). **Antes de tocar la API de reuniones
+   contra el server local: preguntar, usar un correo propio de prueba y borrar el
+   evento al terminar.** Para probar la lógica sin tocar Google, inyectar un doble
+   redefiniendo `GoogleMirrorService#service` y `ReconcileService#service_for`
+   (ver `f3_test.rb` en el scratchpad).
 
 
 ## 🔗 Relacionado

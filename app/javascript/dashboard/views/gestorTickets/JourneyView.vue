@@ -291,8 +291,21 @@ export default {
       const k = `CASE_TICKETS.EVENT_TYPES.${event.event_type}`;
       return this.$te(k) ? this.$t(k) : event.event_type;
     },
+    // @tickets_cases F1 — eventos de reunión: folio · título · fecha de la cita
+    // (y el alcance cuando la acción fue sobre la serie completa).
+    meetingSummary(p) {
+      const parts = [p.folio, p.title].filter(Boolean);
+      if (p.starts_at) parts.push(this.formatDate(p.starts_at));
+      if (p.scope === 'all') {
+        parts.push(this.$t('CASE_TICKETS.JOURNEY.MEETING_SCOPE_ALL'));
+      }
+      return parts.length ? parts.join(' · ') : null;
+    },
     payloadSummary(event) {
       const p = event.payload || {};
+      if (event.event_type.startsWith('meeting_')) {
+        return this.meetingSummary(p);
+      }
       // Vencimiento: from/to son fechas.
       if (event.event_type === 'due_date_changed') {
         return `${p.from ? this.formatDate(p.from) : '—'} → ${

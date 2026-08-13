@@ -422,6 +422,17 @@ export default {
       this.closeRowMenu();
       if (task) this.remove(task);
     },
+    // @tickets_cases F2 — reuniones de la tarea (mismo patrón que las notas).
+    menuAddMeeting() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.$emit('addMeeting', task);
+    },
+    menuViewMeetings() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.$emit('viewMeetings', task);
+    },
     // Click en el contador de notas: si hay notas las muestra; si no, solo avisa
     // (no tiene sentido ir a Notas para no encontrar nada).
     onNotesClick(task) {
@@ -1079,6 +1090,28 @@ export default {
             @click="menuAddNote"
           >
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownItem>
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="calendar"
+            @click="menuAddMeeting"
+          >
+            {{ $t('CASE_TICKETS.TASKS.MENU.ADD_MEETING') }}
+          </woot-button>
+        </WootDropdownItem>
+        <WootDropdownItem>
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="calendar-clock"
+            @click="menuViewMeetings"
+          >
+            {{ $t('CASE_TICKETS.TASKS.MENU.VIEW_MEETINGS') }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem>
