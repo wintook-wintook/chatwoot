@@ -82,10 +82,15 @@ class Instagram::SendOnInstagramService < Base::SendOnChannelService
   end
 
   # Canal nativo: graph.instagram.com con el token del propio canal, sin Página de por medio.
+  # `channel.instagram_id` es el IGSID con el que llegan los webhooks, pero no coincide con
+  # el ID que graph.instagram.com asocia al token (Instagram API with Instagram Login usa un
+  # espacio de IDs distinto). Pedirle a Meta actuar como `channel.instagram_id` devuelve
+  # "The action is invalid since it's not the thread owner." Usamos `me`, igual que la ruta
+  # legacy, para que Meta resuelva la identidad a partir del propio token.
   # @see https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login
   def send_to_instagram(message_content)
     HTTParty.post(
-      "#{::Instagram::OauthService::GRAPH_HOST}/#{instagram_api_version}/#{channel.instagram_id}/messages",
+      "#{::Instagram::OauthService::GRAPH_HOST}/#{instagram_api_version}/me/messages",
       body: message_content,
       query: { access_token: channel.access_token }
     )
