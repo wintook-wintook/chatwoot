@@ -1233,12 +1233,22 @@ export default {
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
           </woot-button>
         </WootDropdownItem>
-        <WootDropdownItem>
+        <!-- Una tarea concluida ya no se agenda: la opción queda visible pero
+             inhabilitada, con el motivo en el tooltip. -->
+        <WootDropdownItem
+          :disabled="rowMenu.row.status === 'done'"
+          :title="
+            rowMenu.row.status === 'done'
+              ? $t('CASE_TICKETS.TASKS.MENU.ADD_MEETING_DONE_HINT')
+              : ''
+          "
+        >
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
             icon="calendar"
+            :is-disabled="rowMenu.row.status === 'done'"
             @click="menuAddMeeting"
           >
             {{ $t('CASE_TICKETS.TASKS.MENU.ADD_MEETING') }}
