@@ -21,10 +21,10 @@
 class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseController
   include CaseMeetingSerializer
 
-  FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las reuniones. Reábrelo si necesitas cambiarlas.'
-  NO_MIRROR_MSG = 'Esta reunión vive solo en el sistema: el organizador no tiene Google Calendar conectado.'
-  NO_TASK_MSG = 'La reunión no cuelga de ninguna tarea, así que no hay vencimiento que mover.'
-  SLA_MSG = 'La reunión se pasa del vencimiento comprometido con el cliente: eso no se mueve desde aquí. ' \
+  FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las tareas agendadas. Reábrelo si necesitas cambiarlas.'
+  NO_MIRROR_MSG = 'Esta tarea agendada vive solo en el sistema: el organizador no tiene Google Calendar conectado.'
+  NO_TASK_MSG = 'No cuelga de ninguna tarea, así que no hay vencimiento que mover.'
+  SLA_MSG = 'Se pasa del vencimiento comprometido con el cliente: eso no se mueve desde aquí. ' \
             'Si el caso lo necesita, escala el ticket.'
 
   before_action :set_ticket
@@ -120,7 +120,7 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
     return render json: { error: 'Alcance inválido' }, status: :unprocessable_entity unless %w[one all].include?(scope)
 
     if scope == 'all' && @meeting.case_meeting_series_id.blank?
-      return render json: { error: 'La reunión no pertenece a una serie' }, status: :unprocessable_entity
+      return render json: { error: 'No pertenece a una serie' }, status: :unprocessable_entity
     end
 
     if scope == 'all'
@@ -187,7 +187,7 @@ class Api::V1::Accounts::CaseMeetingsController < Api::V1::Accounts::BaseControl
   def set_meeting
     @meeting = @ticket.case_meetings.find(params[:id])
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'Reunión no encontrada' }, status: :not_found
+    render json: { error: 'Tarea agendada no encontrada' }, status: :not_found
   end
 
   def mirrorable?

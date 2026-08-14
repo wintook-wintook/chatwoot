@@ -164,7 +164,7 @@
       "TASKS": "Tasks",
       "JOURNEY": "Progress",
       "AI": "AI assistant",
-      "MEETINGS": "Meetings"
+      "MEETINGS": "Scheduled tasks"
     },
     "CONVERSATION": {
       "SUBTITLE": "Thread with the customer",
@@ -195,9 +195,9 @@
       "REASON_PLACEHOLDER": "Why is the status changing? It shows in the Journey.",
       "REASON_CONFIRM": "Change status",
       "REASON_CANCEL": "Cancel",
-      "MEETINGS_TITLE": "This ticket has {count} upcoming meeting(s)",
+      "MEETINGS_TITLE": "This ticket has {count} upcoming scheduled task(s)",
       "MEETINGS_CANCEL": "Cancel them and notify the customer",
-      "MEETINGS_IRREVERSIBLE": "Cancelling cannot be undone: the customer gets the notice and the meetings do not come back, even if the ticket is reopened."
+      "MEETINGS_IRREVERSIBLE": "Cancelling cannot be undone: the customer gets the notice and the scheduled tasks do not come back, even if the ticket is reopened."
     },
     "PRIORITY_QUICK": {
       "LABEL": "Priority",
@@ -230,7 +230,7 @@
       "CLEAR": "Clear selection",
       "SUCCESS": "{n} tickets updated",
       "ERROR": "Could not apply the action",
-      "MEETINGS_PENDING": "{n} of the closed tickets have upcoming meetings: review them one by one to cancel."
+      "MEETINGS_PENDING": "{n} of the closed tickets have upcoming scheduled tasks: review them one by one to cancel."
     },
     "TASKS": {
       "TITLE": "Tasks",
@@ -334,19 +334,20 @@
       "ACTIONS": "Actions",
       "MENU": {
         "NOTES": "Task notes ({count})",
-        "ADD_MEETING": "Schedule meeting",
-        "VIEW_MEETINGS": "View meetings"
+        "ADD_MEETING": "Schedule task",
+        "ADD_MEETING_DONE_HINT": "The task is already completed",
+        "VIEW_MEETINGS": "View scheduled tasks"
       },
       "ORPHAN_MEETINGS": {
-        "TITLE": "This task has upcoming meetings",
-        "DESC": "Task \"{task}\" leaves {count} meeting(s) scheduled with the customer.",
+        "TITLE": "Upcoming scheduled tasks remain",
+        "DESC": "Task \"{task}\" leaves {count} scheduled task(s) with the customer.",
         "CANCEL_LABEL": "Cancel them and notify the customer",
-        "IRREVERSIBLE": "Cancelling cannot be undone: the customer gets the notice and the meetings do not come back, even if the task is reopened.",
+        "IRREVERSIBLE": "Cancelling cannot be undone: the customer gets the notice and the scheduled tasks do not come back, even if the task is reopened.",
         "CANCEL": "Back",
         "CONFIRM": "Complete task"
       },
-      "TOAST_COMPLETED_MEETINGS": "Task \"{task}\" completed · {count} meeting(s) cancelled",
-      "MEETINGS_BEYOND_DUE": "{count} meeting(s) scheduled after the due date"
+      "TOAST_COMPLETED_MEETINGS": "Task \"{task}\" completed · {count} scheduled task(s) cancelled",
+      "MEETINGS_BEYOND_DUE": "{count} scheduled task(s) after the due date"
     },
     "MODAL": {
       "TITLE_CREATE": "Create ticket",
@@ -1058,10 +1059,10 @@
       "priority_changed": "Priority changed",
       "due_date_changed": "Due date changed",
       "column_changed": "Column changed",
-      "meeting_scheduled": "Meeting scheduled",
-      "meeting_updated": "Meeting rescheduled",
-      "meeting_cancelled": "Meeting cancelled",
-      "meeting_held": "Meeting held"
+      "meeting_scheduled": "Task scheduled",
+      "meeting_updated": "Scheduled task rescheduled",
+      "meeting_cancelled": "Scheduled task cancelled",
+      "meeting_held": "Scheduled task held"
     },
     "COLUMNS_CFG": {
       "ADD_BUTTON": "Add column",
@@ -1102,21 +1103,21 @@
       "LOADING": "Loading ticket…"
     },
     "MEETINGS": {
-      "TITLE": "Meetings",
-      "ADD_NEW": "Schedule meeting",
+      "TITLE": "Scheduled tasks",
+      "ADD_NEW": "Schedule task",
       "REFRESH": "Refresh",
-      "LOADING": "Loading meetings...",
-      "EMPTY": "No meetings scheduled for this ticket.",
-      "NO_MATCHES": "No meeting matches the filter",
+      "LOADING": "Loading scheduled tasks...",
+      "EMPTY": "No scheduled tasks for this ticket.",
+      "NO_MATCHES": "No scheduled task matches the filter",
       "FILTER_PLACEHOLDER": "Search folio, title, task or location…",
       "ACTIONS": "Actions",
-      "ERROR": "The meeting could not be saved.",
-      "TOAST_DELETED": "Meeting deleted",
-      "PAST_DUE_HINT": "The meeting falls after its task's due date.",
+      "ERROR": "The scheduled task could not be saved.",
+      "TOAST_DELETED": "Scheduled task deleted",
+      "PAST_DUE_HINT": "It falls after its task's due date.",
       "TABLE": {
         "NUM": "#",
         "TASK": "Task",
-        "MEETING": "Meeting",
+        "MEETING": "Title",
         "WHEN": "Date",
         "STATUS": "Status",
         "ORGANIZER": "Organizer"
@@ -1132,15 +1133,15 @@
         "EDIT": "Edit",
         "HELD": "Mark as held",
         "NO_SHOW": "Mark as no show",
-        "CANCEL_ONE": "Cancel this meeting",
+        "CANCEL_ONE": "Cancel just this one",
         "CANCEL_ALL": "Cancel the whole series",
         "DELETE": "Delete",
         "RESYNC": "Retry sync",
         "ALIGN_TASK_DUE": "Move the task due date"
       },
       "MODAL": {
-        "TITLE": "New meeting",
-        "EDIT_TITLE": "Edit meeting",
+        "TITLE": "Schedule task",
+        "EDIT_TITLE": "Edit scheduled task",
         "DESC": "It is recorded in the ticket's progress.",
         "TITLE_LABEL": "Title",
         "TITLE_PLACEHOLDER": "e.g. Progress review",
@@ -1154,22 +1155,22 @@
         "LOCATION_LABEL": "Location",
         "LOCATION_PLACEHOLDER": "e.g. Office, video call, phone…",
         "DESCRIPTION_LABEL": "Description",
-        "DESCRIPTION_PLACEHOLDER": "Meeting agenda (optional)",
+        "DESCRIPTION_PLACEHOLDER": "Agenda or talking points (optional)",
         "INVITE_CLIENT": "Invite the customer",
         "NO_CLIENT_EMAIL": "This ticket has no contact with an email address",
         "GUESTS_LABEL": "Other guests",
         "GUESTS_PLACEHOLDER": "comma-separated emails",
-        "LOCAL_ONLY_HINT": "No agent has Google Calendar connected: the meeting is stored in the system only and no email invitation will be sent.",
+        "LOCAL_ONLY_HINT": "No agent has Google Calendar connected: the scheduled task is stored in the system only and no email invitation will be sent.",
         "CANCEL": "Cancel",
         "CREATE": "Schedule",
         "SAVE": "Save changes",
-        "MODE_SINGLE": "Single meeting",
+        "MODE_SINGLE": "One time",
         "MODE_SERIES": "Series",
         "REPEAT_EVERY": "Repeat every",
         "DAYS_LABEL": "Days",
         "END_AFTER": "Ends after",
         "END_ON": "Ends on",
-        "PREVIEW": "{count} meetings will be created: {dates}",
+        "PREVIEW": "{count} scheduled tasks will be created: {dates}",
         "FREQ": {
           "DAILY": "days",
           "WEEKLY": "weeks",
@@ -1187,7 +1188,7 @@
       },
       "MINUTES": {
         "TITLE": "Capture the minutes?",
-        "DESC": "Saved as an internal note on the ticket, linked to the meeting's task.",
+        "DESC": "Saved as an internal note on the ticket, linked to the same task.",
         "LABEL": "Minutes",
         "PLACEHOLDER": "Agreements, pending items and next steps…",
         "SKIP": "Not now",
@@ -1195,8 +1196,8 @@
         "SAVED": "Minutes saved as a note"
       },
       "DELETE_CONFIRM": {
-        "TITLE": "Delete meeting",
-        "MESSAGE": "This action cannot be undone. Delete the meeting",
+        "TITLE": "Delete scheduled task",
+        "MESSAGE": "This action cannot be undone. Delete the scheduled task",
         "CONFIRM": "Delete",
         "CANCEL": "Cancel"
       },
@@ -1212,8 +1213,8 @@
         "LOCAL_ONLY_HINT": "The organizer has no Google Calendar connected: the event lives here only.",
         "RETRYING": "Retrying the sync…"
       },
-      "SERIES_CREATED": "Series {folio} created with {count} meetings",
-      "BEYOND_TICKET_HINT": "The meeting falls beyond the due date committed to the customer. It is not moved from here: escalate the ticket if the case needs it.",
+      "SERIES_CREATED": "Series {folio} created with {count} scheduled tasks",
+      "BEYOND_TICKET_HINT": "It falls beyond the due date committed to the customer. It is not moved from here: escalate the ticket if the case needs it.",
       "TOAST_DUE_ALIGNED": "Task due date moved to {date}"
     }
   }

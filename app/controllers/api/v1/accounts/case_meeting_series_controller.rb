@@ -20,7 +20,7 @@
 # ================================================================================
 
 class Api::V1::Accounts::CaseMeetingSeriesController < Api::V1::Accounts::BaseController
-  FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las series de reuniones. Reábrelo si necesitas cambiarlas.'
+  FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las series. Reábrelo si necesitas cambiarlas.'
 
   before_action :set_ticket
   before_action :set_series, only: %i[update destroy]
