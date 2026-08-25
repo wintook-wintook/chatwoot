@@ -297,10 +297,12 @@ class ContactTrackingJob < ApplicationJob
       request['Authorization'] = "Bearer #{api_key}"
       request['Content-Type'] = 'application/json'
 
+      # proyecto@contact_tracking: el modelo sale del selector "Modelo de IA" de la
+      # integración tracking_bot del inbox, no de una constante.
       request.body = {
-        model: 'gpt-4o-mini',
+        model: ContactTrackings::EngineConfig.model_for_tracking(tracking, :scheduled),
         messages: messages,
-        max_tokens: 150,
+        max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:scheduled),
         temperature: 0.7
       }.to_json
 
