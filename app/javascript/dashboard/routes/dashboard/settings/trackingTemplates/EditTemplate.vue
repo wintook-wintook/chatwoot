@@ -11,39 +11,18 @@
 
 <script>
 import { mapGetters } from 'vuex';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
-import { debounce } from '@chatwoot/utils';
-import { useAlert } from 'dashboard/composables';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
-// proyecto@ai_agent_assistant: semáforo del linter
-import AiAgentAssistantAPI from 'dashboard/api/aiAgentAssistant';
-import LintBadges from 'dashboard/components/contactTrackings/assistant/LintBadges.vue';
-import SandboxDrawer from 'dashboard/components/contactTrackings/assistant/SandboxDrawer.vue';
-import VersionsDrawer from 'dashboard/components/contactTrackings/assistant/VersionsDrawer.vue';
-import PatternLibraryDrawer from 'dashboard/components/contactTrackings/assistant/PatternLibraryDrawer.vue';
 // proyecto@ai_agent_attachments
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
 // @knowledge_sources: fuentes Discourse para la directiva @buscar_foro
+import KnowledgeSourcesAPI from 'dashboard/routes/dashboard/settings/knowledgeSources/api';
 // proyecto@bot_seguimiento_calendar: lista de zonas horarias (reutiliza Horario laboral)
 import { timeZoneOptions } from 'dashboard/routes/dashboard/settings/inbox/helpers/businessHour';
 
 // proyecto@contact_tracking: grupos del picker de directivas (orden + etiqueta del chip).
-// A qué chip del filtro pertenece cada capacidad del Registry.
-const DIRECTIVE_GROUP_BY_KEY = {
-  buscar_predefinidas: 'kb',
-  buscar_articulo: 'kb',
-  buscar_foro: 'discourse',
-  discourse: 'discourse',
-  doc: 'google',
-  hoja: 'google',
-  consulta: 'erp',
-  agendar_calendar: 'actions',
-  crear_ticket: 'actions',
-  estado_ticket: 'actions',
-  adjunto: 'actions',
-};
-
 const DIRECTIVE_GROUPS = [
   { key: 'kb', label: 'Conocimiento' },
   { key: 'discourse', label: 'Discourse' },
@@ -53,13 +32,7 @@ const DIRECTIVE_GROUPS = [
 ];
 
 export default {
-  components: {
-    KeywordActionsEditor,
-    LintBadges,
-    SandboxDrawer,
-    VersionsDrawer,
-    PatternLibraryDrawer,
-  },
+  components: { KeywordActionsEditor },
 
   props: {
     templateData: {
@@ -72,19 +45,9 @@ export default {
       validator: val => ['create', 'edit'].includes(val),
     },
   },
-  emits: ['save', 'cancel', 'restored'],
+  emits: ['save', 'cancel'],
   data() {
     return {
-      // proyecto@ai_agent_assistant
-      lintFindings: [],
-      isLinting: false,
-      showSandbox: false,
-      showVersions: false, // F4: historial en sitio
-      showPatterns: false, // F6: biblioteca de bloques
-      showDuplicate: false, // ramificar: otro canal o un caso vecino
-      duplicateName: '',
-      isDuplicating: false,
-      versionNote: '',
       form: {
         id: null,
         name: '',
@@ -141,9 +104,6 @@ export default {
       showAttachmentPicker: false,
       // selector de directivas para insertar @buscar_..., @discourse, etc.
       showDirectivePicker: false,
-      // proyecto@ai_agent_assistant: Registry resuelto por cuenta e inbox
-      capabilities: [],
-      isLoadingCapabilities: false,
       // chip de tipo activo en el picker de directivas ('all' = todas)
       directiveFilter: 'all',
       // 'inline' | 'modal': textarea donde se insertará + posición del cursor
@@ -153,24 +113,40 @@ export default {
       // vista no salte al final (focus + setSelectionRange fuerza scroll al cursor).
       pickerScrollTop: 0,
       // fuentes Discourse de la cuenta (para la directiva @buscar_foro)
+      discourseSources: [],
+      googleDocSources: [],
+      googleSheetSources: [],
     };
   },
   computed: {
-    // proyecto@ai_agent_assistant
-    hasLintErrors() {
-      return this.lintFindings.some(f => f.level === 'error');
-    },
     ...mapGetters({
       appIntegrations: 'integrations/getAppIntegrations',
       inboxes: 'inboxes/getInboxes',
+      accountId: 'getCurrentAccountId',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
       // @query_databases — catálogo de conexiones ERP + consultas activas para la
       // directiva {{consulta:}} (sin credenciales, mismo catálogo que la consola).
+      erpCatalog: 'externalDb/getCatalog',
     }),
     // @query_databases — la directiva {{consulta:}} solo se ofrece si la cuenta
+    // tiene habilitada la feature erp_connection (igual que las tabs ERP).
+    erpEnabled() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.ERP_CONNECTION
+      );
+    },
     isCreateMode() {
       return this.mode === 'create';
     },
     // Google Doc/Sheet y @agendar_calendar dependen de la conexión de Google
+    // Calendar: sus directivas solo se ofrecen si la cuenta tiene esa feature.
+    googleEnabled() {
+      return this.isFeatureEnabledonAccount(
+        this.accountId,
+        FEATURE_FLAGS.GOOGLE_CALENDAR
+      );
+    },
     // proyecto@bot_seguimiento_calendar: formatos de presentación de horarios (con mini-preview)
     slotsPresentationOptions() {
       const t = key =>
@@ -355,26 +331,101 @@ export default {
     timeZones() {
       return timeZoneOptions();
     },
-    // proyecto@ai_agent_assistant: el catálogo sale del Registry del servidor, no de
-    // una copia en JavaScript. El Registry ya sabe qué hay dado de alta en la cuenta,
-    // cómo se escribe cada directiva con esos valores y —lo que aquí faltaba— qué le
-    // hace cada una a tu prompt.
+    // proyecto@contact_tracking: catálogo de directivas del Entrenamiento.
+    // @buscar_foro se expande en una opción por cada fuente Discourse existente.
     directiveCatalog() {
-      return this.capabilities
-        .filter(c => c.available)
-        .flatMap(capability =>
-          (capability.tokens || []).map(entry => ({
-            group: DIRECTIVE_GROUP_BY_KEY[capability.key] || 'actions',
-            token: entry.token,
-            label: entry.label || this.capabilityLabel(capability),
-            effect: this.capabilityEffect(capability),
-          }))
-        );
-    },
-    // Las que esta cuenta no puede usar. Antes no aparecían y no había forma de saber
-    // por qué faltaban.
-    unavailableCapabilities() {
-      return this.capabilities.filter(c => !c.available);
+      const items = [
+        {
+          group: 'kb',
+          token: '@buscar_predefinidas',
+          label:
+            'Responde con tus Respuestas predefinidas (búsqueda semántica).',
+        },
+        {
+          group: 'kb',
+          token: '@buscar_articulo',
+          label: 'Responde con los artículos del Centro de Ayuda.',
+        },
+      ];
+      if (this.discourseSources.length) {
+        this.discourseSources.forEach(source => {
+          items.push({
+            group: 'discourse',
+            token: `@buscar_foro(${source.name})`,
+            label: `Busca en la fuente Discourse «${source.name}».`,
+          });
+        });
+      } else {
+        items.push({
+          group: 'discourse',
+          token: '@buscar_foro(nombre_fuente)',
+          label: 'Busca en una fuente Discourse. Reemplaza «nombre_fuente».',
+        });
+      }
+      // @knowledge_sources: directivas Google solo si la cuenta tiene la feature
+      // google_calendar (reutilizan su conexión OAuth).
+      if (this.googleEnabled) {
+        this.googleDocSources.forEach(source => {
+          items.push({
+            group: 'google',
+            token: `{{doc:${source.name}}}`,
+            label: `Responde con el Google Doc «${source.name}».`,
+          });
+        });
+        this.googleSheetSources.forEach(source => {
+          items.push({
+            group: 'google',
+            token: `{{hoja:${source.name}}}`,
+            label: `Consulta la Google Sheet «${source.name}».`,
+          });
+        });
+      }
+      // @query_databases — una entrada {{consulta:conexion/nombre(params)}} por cada
+      // consulta activa de cada conexión ERP (solo con la feature erp_connection).
+      if (this.erpEnabled) {
+        this.erpCatalog.forEach(conn => {
+          const prefix = this.erpConnPrefix(conn);
+          if (!prefix) return;
+          (conn.queries || []).forEach(q => {
+            const keys = (q.params_schema || [])
+              .map(p => `${p.key}=`)
+              .join(', ');
+            const args = keys ? `(${keys})` : '';
+            items.push({
+              group: 'erp',
+              token: `{{consulta:${prefix}/${q.name}${args}}}`,
+              label: `Consulta «${q.name}» en «${conn.name}»${
+                q.description ? ` (${q.description})` : ''
+              }.`,
+            });
+          });
+        });
+      }
+      items.push({
+        group: 'discourse',
+        token: '@discourse',
+        label: 'Busca en el Discourse conectado al canal.',
+      });
+      if (this.googleEnabled) {
+        items.push({
+          group: 'google',
+          token: '@agendar_calendar',
+          label: 'Permite agendar una cita en Google Calendar.',
+        });
+      }
+      items.push({
+        group: 'actions',
+        token: '@crear_ticket',
+        label: 'Crea un ticket con IA desde la conversación (redacta y clasifica).',
+        hint: 'Opcional con parámetros: @crear_ticket(prioridad=alta, tipo=Soporte). Las reglas que escribas en el prompt (título, tipo, cuándo priorizar, qué datos pedir) guían cómo se arma el ticket. Prioridades: baja / media / alta / urgente.',
+      });
+      items.push({
+        group: 'actions',
+        token: '@estado_ticket',
+        label: 'Responde el estado del caso del cliente por el mismo canal.',
+        hint: 'Cuando el cliente pregunta "¿cuál es mi ticket?" o "¿cómo va mi caso?", el bot busca sus casos y responde con el folio y el estado, sin que teclee el folio.',
+      });
+      return items;
     },
     // proyecto@contact_tracking: grupos presentes en el catálogo (para los chips de
     // filtro del modal). Se muestran en orden y solo si tienen al menos una directiva.
@@ -409,12 +460,6 @@ export default {
     },
   },
   watch: {
-    // proyecto@ai_agent_assistant: revalida al cambiar lo que el linter mira.
-    // Es estático y local, así que se puede correr mientras se escribe.
-    'form.complementary_prompt': 'scheduleLint',
-    'form.objective': 'scheduleLint',
-    'form.ai_context': 'scheduleLint',
-    'form.keyword_actions': { handler: 'scheduleLint', deep: true },
     templateData: {
       immediate: true,
       handler(val) {
@@ -478,9 +523,6 @@ export default {
       } else {
         this.availableWATemplates = [];
       }
-      // proyecto@ai_agent_assistant: el canal cambia lo que el linter puede validar
-      // (modelo, ventana de WhatsApp, integración de Discourse).
-      this.scheduleLint();
     },
     maxAttempts(newVal) {
       this.adjustTemplatesArray(newVal);
@@ -504,14 +546,18 @@ export default {
       this.loadWATemplates();
     }
     this.loadCalendarIntegrations();
+    this.loadDiscourseSources();
+    this.loadErpCatalog();
   },
   methods: {
     onCancel() {
       this.$emit('cancel');
     },
-    // proyecto@ai_agent_assistant: el mismo cuerpo alimenta el guardado y el linter,
-    // para que lo que se valida sea exactamente lo que se guardaría.
-    buildPayload() {
+    onSubmit() {
+      if (!this.isFormValid) {
+        this.showValidationModal = true;
+        return;
+      }
       const payload = {
         tracking_template: {
           name: this.form.name,
@@ -536,79 +582,7 @@ export default {
       if (!this.isCreateMode) {
         payload.id = this.form.id;
       }
-      return payload;
-    },
-    // proyecto@ai_agent_assistant: valida el borrador contra el motor. No persiste nada.
-    scheduleLint: debounce(
-      function scheduleLint() {
-        this.runLint();
-      },
-      500,
-      false
-    ),
-    async runLint() {
-      this.isLinting = true;
-      try {
-        const { data } = await AiAgentAssistantAPI.lint(this.buildPayload());
-        this.lintFindings = data.findings;
-      } catch (error) {
-        this.lintFindings = [];
-      } finally {
-        this.isLinting = false;
-      }
-    },
-    onSubmit() {
-      if (!this.isFormValid) {
-        this.showValidationModal = true;
-        return;
-      }
-      // Los ⛔ bloquean: son fallos verificables que romperían el agente en producción.
-      if (this.hasLintErrors) {
-        useAlert(this.$t('AI_AGENT_ASSISTANT.LINT_BLOCKED'));
-        return;
-      }
-      const payload = this.buildPayload();
-      // proyecto@ai_agent_assistant (F4): la nota del guardado viaja al snapshot, no
-      // al agente. Solo en el guardado: el linter y el probador no la necesitan.
-      payload.tracking_template.version_note = this.versionNote;
       this.$emit('save', payload);
-    },
-    // F6: los bloques se añaden al final del prompt, nunca lo reemplazan. El hueco
-    // <así> es deliberado: hay que rellenarlo con el negocio antes de guardar.
-    onPatternInsert(body) {
-      const current = (this.form.complementary_prompt || '').trimEnd();
-      this.form.complementary_prompt = current ? `${current}\n\n${body}` : body;
-      this.scheduleLint();
-    },
-    openDuplicate() {
-      this.duplicateName = `${this.form.name} (copia)`;
-      this.showDuplicate = true;
-    },
-    // Ramificar copia lo GUARDADO, no lo que hay en pantalla: si hubiera cambios
-    // sin guardar, una copia silenciosa de un borrador a medias sería peor que no
-    // ofrecerlo. Por eso el aviso, y por eso no se guarda nada del original aquí.
-    async onDuplicate() {
-      this.isDuplicating = true;
-      try {
-        const { data } = await TrackingTemplatesAPI.duplicate(
-          this.form.id,
-          this.duplicateName.trim()
-        );
-        this.showDuplicate = false;
-        useAlert(this.$t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATED'));
-        this.$router.push({
-          name: 'tracking_templates_list',
-          query: { agent: data.id },
-        });
-      } catch (error) {
-        useAlert(this.$t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE_ERROR'));
-      } finally {
-        this.isDuplicating = false;
-      }
-    },
-    // F4: tras restaurar, lo guardado ya no es lo que muestra el formulario.
-    onVersionRestored() {
-      this.$emit('restored', this.form.id);
     },
     onContextTabChange(index) {
       this.activeContextTab = index;
@@ -851,9 +825,47 @@ export default {
       }
     },
     // @knowledge_sources: fuentes Discourse activas para @buscar_foro(nombre)
+    async loadDiscourseSources() {
+      if (!this.accountId) return;
+      try {
+        const { data } = await KnowledgeSourcesAPI.getSources(this.accountId);
+        this.discourseSources = (data || []).filter(
+          s => s.source_type === 'discourse' && s.status === 'active'
+        );
+        this.googleDocSources = (data || []).filter(
+          s => s.source_type === 'google_doc' && s.status === 'active'
+        );
+        this.googleSheetSources = (data || []).filter(
+          s => s.source_type === 'google_sheet' && s.status === 'active'
+        );
+      } catch (e) {
+        this.discourseSources = [];
+        this.googleDocSources = [];
+        this.googleSheetSources = [];
+      }
+    },
+    // @query_databases — carga el catálogo ERP para la directiva {{consulta:}}.
+    async loadErpCatalog() {
+      if (!this.erpEnabled) return;
+      try {
+        await this.$store.dispatch('externalDb/fetchCatalog');
+      } catch (e) {
+        // Fail-soft: sin catálogo no se ofrecen entradas {{consulta:}}.
+      }
+    },
     // @query_databases — prefijo de la directiva: usa erp_type cuando es único y no
     // genérico (limpio, p.ej. `sae/`); si no, cae al nombre normalizado (sin espacios).
     // Devuelve null si el nombre tiene caracteres que la directiva no admite.
+    erpConnPrefix(conn) {
+      const type = conn.erp_type;
+      const typeIsUnique =
+        type &&
+        type !== 'generic' &&
+        this.erpCatalog.filter(c => c.erp_type === type).length === 1;
+      if (typeIsUnique) return type;
+      const byName = (conn.name || '').toLowerCase().replace(/\s+/g, '');
+      return /^[a-z0-9_]+$/.test(byName) ? byName : null;
+    },
     onAttachmentFileChange(event) {
       const file = event.target.files && event.target.files[0];
       this.attachmentFile = file || null;
@@ -1012,41 +1024,6 @@ export default {
       this.rememberInsertPos(target);
       this.directiveFilter = 'all';
       this.showDirectivePicker = true;
-      this.loadCapabilities();
-    },
-    // Se pide al abrir el modal, no al cargar el formulario: depende del inbox
-    // elegido y el modal no se abre en cada edición.
-    async loadCapabilities() {
-      this.isLoadingCapabilities = true;
-      try {
-        const { data } = await AiAgentAssistantAPI.getCapabilities({
-          inboxId: this.selectedInboxId,
-          trackingTemplateId: this.form.id,
-        });
-        this.capabilities = data.capabilities;
-      } catch (error) {
-        this.capabilities = [];
-      } finally {
-        this.isLoadingCapabilities = false;
-      }
-    },
-    capabilityLabel(capability) {
-      return this.$t(`AI_AGENT_ASSISTANT.CAPABILITIES.${capability.key}.LABEL`);
-    },
-    // La regla más cara del módulo, dicha justo donde se inserta la directiva.
-    capabilityEffect(capability) {
-      if (capability.swallows_prompt) return 'swallows';
-      if (capability.renders_prompt) return 'renders';
-      return 'keeps';
-    },
-    effectClasses(effect) {
-      if (effect === 'swallows') {
-        return 'text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-800/20';
-      }
-      if (effect === 'renders') {
-        return 'text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-800/20';
-      }
-      return 'text-green-700 bg-green-50 dark:text-green-300 dark:bg-green-800/20';
     },
     closeDirectivePicker() {
       this.showDirectivePicker = false;
@@ -1768,25 +1745,10 @@ export default {
         </div>
       </div>
 
-      <!-- proyecto@ai_agent_assistant: semáforo del linter -->
-      <LintBadges
-        class="pt-4 border-t border-slate-200 dark:border-slate-700"
-        :findings="lintFindings"
-        :is-loading="isLinting"
-      />
-
       <!-- Botones -->
-      <div class="flex flex-wrap items-center justify-end gap-2 pt-4">
-        <!-- proyecto@ai_agent_assistant (F4): qué cambiaste. Va al historial, no al
-             agente: es lo que hace legible un diff dentro de tres meses. -->
-        <input
-          v-if="!isCreateMode"
-          v-model="versionNote"
-          type="text"
-          maxlength="255"
-          class="h-8 py-0 mb-0 mr-auto text-sm w-72"
-          :placeholder="$t('AI_AGENT_ASSISTANT.VERSIONS.NOTE_PLACEHOLDER')"
-        />
+      <div
+        class="flex items-center justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700"
+      >
         <woot-button
           variant="clear"
           color-scheme="secondary"
@@ -1794,117 +1756,10 @@ export default {
         >
           {{ $t('TRACKING_TEMPLATES.EDIT.CANCEL') }}
         </woot-button>
-        <woot-button
-          variant="clear"
-          icon="book-clock"
-          @click.prevent="showPatterns = true"
-        >
-          {{ $t('AI_AGENT_ASSISTANT.PATTERNS.OPEN') }}
-        </woot-button>
-        <woot-button
-          v-if="!isCreateMode"
-          variant="clear"
-          icon="arrow-rotate-counter-clockwise"
-          @click.prevent="showVersions = true"
-        >
-          {{ $t('AI_AGENT_ASSISTANT.VERSIONS.OPEN') }}
-        </woot-button>
-        <!-- Ramificar, no versionar: para mejorar ESTE agente está el historial. -->
-        <woot-button
-          v-if="!isCreateMode"
-          variant="clear"
-          icon="copy"
-          @click.prevent="openDuplicate"
-        >
-          {{ $t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE') }}
-        </woot-button>
-        <woot-button
-          variant="clear"
-          icon="code"
-          @click.prevent="showSandbox = true"
-        >
-          {{ $t('AI_AGENT_ASSISTANT.SANDBOX.OPEN') }}
-        </woot-button>
-        <woot-button
-          :disabled="hasLintErrors"
-          :title="hasLintErrors ? $t('AI_AGENT_ASSISTANT.LINT_BLOCKED') : ''"
-          @click.prevent="onSubmit"
-        >
+        <woot-button @click.prevent="onSubmit">
           {{ submitText }}
         </woot-button>
       </div>
-
-      <!-- proyecto@ai_agent_assistant: probador. Previsualiza el BORRADOR actual,
-           no lo último guardado, por eso recibe buildPayload(). -->
-      <SandboxDrawer
-        :show="showSandbox"
-        :payload="showSandbox ? buildPayload() : {}"
-        @close="showSandbox = false"
-      />
-
-      <!-- proyecto@ai_agent_assistant (F4): historial en sitio. Iterar sobre el MISMO
-           agente en vez de duplicarlo en «… V2 / V3 / V4». -->
-      <!-- proyecto@ai_agent_assistant (F6): bloques insertables. Sabe callarse
-           cuando el prompt en curso los volvería letra muerta. -->
-      <PatternLibraryDrawer
-        :show="showPatterns"
-        :prompt="form.complementary_prompt"
-        :inbox-id="selectedInboxId"
-        :tracking-template-id="form.id"
-        @close="showPatterns = false"
-        @insert="onPatternInsert"
-      />
-
-      <!-- proyecto@ai_agent_assistant: el asistente ya no vive aquí en un cajón. Es
-           una página propia, y se llega desde la cabecera: allí el agente se trabaja
-           sobre una copia y al guardar queda como versión nueva de este mismo agente.
-           Un chat de nueve pasos dentro de un modal de 75vh era el sitio equivocado. -->
-
-      <!-- Ramificar. El nombre se pide aquí porque es único por cuenta y porque es
-           la única forma de que la copia se distinga del original en la lista. -->
-      <woot-modal
-        :show="showDuplicate"
-        :on-close="() => (showDuplicate = false)"
-        size="small"
-      >
-        <woot-modal-header
-          :header-title="$t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE_TITLE')"
-          :header-content="$t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE_HINT')"
-        />
-        <div class="flex flex-col gap-4 px-8 pb-6">
-          <label class="mb-0">
-            <span
-              class="text-sm font-medium text-slate-700 dark:text-slate-200"
-            >
-              {{ $t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE_NAME') }}
-            </span>
-            <input v-model="duplicateName" type="text" class="mt-1 mb-0" />
-          </label>
-          <p class="m-0 text-xs text-slate-500 dark:text-slate-400">
-            {{ $t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE_SAVED_ONLY') }}
-          </p>
-          <div class="flex items-center gap-2">
-            <woot-button
-              :is-loading="isDuplicating"
-              :is-disabled="!duplicateName.trim()"
-              @click.prevent="onDuplicate"
-            >
-              {{ $t('AI_AGENT_ASSISTANT.VERSIONS.DUPLICATE_CONFIRM') }}
-            </woot-button>
-            <woot-button variant="clear" @click.prevent="showDuplicate = false">
-              {{ $t('TRACKING_TEMPLATES.EDIT.CANCEL') }}
-            </woot-button>
-          </div>
-        </div>
-      </woot-modal>
-
-      <VersionsDrawer
-        v-if="!isCreateMode"
-        :show="showVersions"
-        :template-id="form.id"
-        @close="showVersions = false"
-        @restored="onVersionRestored"
-      />
     </form>
 
     <!-- proyecto@bot_seguimiento_calendar: modal árbol de calendarios agendables -->
@@ -2141,23 +1996,6 @@ export default {
               />
             </button>
           </li>
-          <!-- Lo que esta cuenta no puede usar. Antes no aparecía y no había forma
-               de saber por qué faltaba. -->
-          <li v-if="unavailableCapabilities.length" class="pt-2">
-            <p
-              class="mb-1 text-xs font-semibold text-slate-500 dark:text-slate-400"
-            >
-              {{ $t('AI_AGENT_ASSISTANT.PICKER.UNAVAILABLE') }}
-            </p>
-            <p
-              v-for="capability in unavailableCapabilities"
-              :key="capability.key"
-              class="m-0 text-xs text-slate-400 dark:text-slate-500"
-            >
-              <code>{{ capability.syntax }}</code>
-              {{ `— ${capabilityLabel(capability)}` }}
-            </p>
-          </li>
         </ul>
       </div>
     </woot-modal>
@@ -2205,12 +2043,6 @@ export default {
             {{ g.label }}
           </button>
         </div>
-        <p
-          v-if="isLoadingCapabilities"
-          class="mb-2 text-xs text-slate-500 dark:text-slate-400"
-        >
-          {{ $t('AI_AGENT_ASSISTANT.PICKER.LOADING') }}
-        </p>
         <!-- alto fijo calibrado para ~6 filas (cada fila a una línea via truncate) -->
         <ul class="space-y-2 h-[370px] overflow-y-auto pr-1">
           <li v-for="dir in filteredDirectiveCatalog" :key="dir.token">
@@ -2220,25 +2052,10 @@ export default {
               @click="insertDirective(dir)"
             >
               <span class="min-w-0">
-                <span class="flex items-center gap-2">
-                  <span
-                    class="text-sm font-medium truncate text-woot-600 dark:text-woot-400"
-                  >
-                    {{ dir.token }}
-                  </span>
-                  <!-- proyecto@ai_agent_assistant: qué le hace a tu prompt, ANTES de
-                       insertarla. Es la regla que dejó a tres agentes con 11 052
-                       caracteres que el motor descarta. -->
-                  <span
-                    class="shrink-0 px-2 py-0.5 text-xs rounded"
-                    :class="effectClasses(dir.effect)"
-                  >
-                    {{
-                      $t(
-                        `AI_AGENT_ASSISTANT.PICKER.EFFECT_${dir.effect.toUpperCase()}`
-                      )
-                    }}
-                  </span>
+                <span
+                  class="block text-sm font-medium text-woot-600 dark:text-woot-400 truncate"
+                >
+                  {{ dir.token }}
                 </span>
                 <span
                   class="block text-xs text-slate-500 dark:text-slate-400 truncate"

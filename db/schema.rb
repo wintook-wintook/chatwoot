@@ -119,21 +119,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_13_180000) do
     t.index ["account_id"], name: "index_agent_bots_on_account_id"
   end
 
-  create_table "ai_agent_assistant_sessions", force: :cascade do |t|
-    t.bigint "account_id", null: false
-    t.bigint "user_id", null: false
-    t.bigint "tracking_template_id"
-    t.string "mode", default: "interview", null: false
-    t.string "step"
-    t.jsonb "messages", default: [], null: false
-    t.jsonb "draft", default: {}, null: false
-    t.jsonb "proposals", default: [], null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id", "user_id"], name: "index_ai_agent_assistant_sessions_on_account_id_and_user_id"
-    t.index ["tracking_template_id"], name: "index_ai_agent_assistant_sessions_on_tracking_template_id"
-  end
-
   create_table "ai_agent_attachments", force: :cascade do |t|
     t.bigint "tracking_template_id", null: false
     t.bigint "account_id", null: false
@@ -1576,19 +1561,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_13_180000) do
     t.index ["user_id"], name: "index_tracking_campaigns_on_user_id"
   end
 
-  create_table "tracking_template_versions", force: :cascade do |t|
-    t.bigint "account_id", null: false
-    t.bigint "tracking_template_id", null: false
-    t.bigint "user_id"
-    t.integer "version", default: 1, null: false
-    t.string "source", default: "manual", null: false
-    t.string "note"
-    t.jsonb "snapshot", default: {}, null: false
-    t.datetime "created_at", null: false
-    t.index ["account_id"], name: "index_tracking_template_versions_on_account_id"
-    t.index ["tracking_template_id", "version"], name: "index_tracking_template_versions_on_template_and_version", unique: true
-  end
-
   create_table "tracking_templates", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -1610,10 +1582,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_13_180000) do
     t.string "timezone"
     t.jsonb "booking_calendar_ids", default: {}, null: false
     t.string "slots_presentation", default: "detailed", null: false
-    t.datetime "archived_at"
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
-    t.index ["archived_at"], name: "index_tracking_templates_on_archived_at"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
     t.index ["kbase_hook_id"], name: "index_tracking_templates_on_kbase_hook_id"
     t.index ["user_id"], name: "index_tracking_templates_on_user_id"
@@ -1732,9 +1702,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_13_180000) do
   add_foreign_key "account_users", "contacts", column: "agent_contact_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
-  add_foreign_key "ai_agent_assistant_sessions", "accounts"
-  add_foreign_key "ai_agent_assistant_sessions", "tracking_templates", on_delete: :nullify
-  add_foreign_key "ai_agent_assistant_sessions", "users", on_delete: :cascade
   add_foreign_key "ai_agent_attachments", "accounts"
   add_foreign_key "ai_agent_attachments", "tracking_templates"
   add_foreign_key "case_ai_configs", "accounts"
@@ -1795,9 +1762,6 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_13_180000) do
   add_foreign_key "tracking_campaigns", "inboxes"
   add_foreign_key "tracking_campaigns", "tracking_templates"
   add_foreign_key "tracking_campaigns", "users"
-  add_foreign_key "tracking_template_versions", "accounts"
-  add_foreign_key "tracking_template_versions", "tracking_templates", on_delete: :cascade
-  add_foreign_key "tracking_template_versions", "users", on_delete: :nullify
   add_foreign_key "tracking_templates", "accounts"
   add_foreign_key "tracking_templates", "inboxes"
   add_foreign_key "tracking_templates", "users"
