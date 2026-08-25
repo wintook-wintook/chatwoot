@@ -492,7 +492,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       reply = call_openai_for_reply(api_key_data[:key], [
         { role: 'system', content: system_prompt },
         { role: 'user', content: user_prompt }
-      ])
+      ], tracking)
       return reply if reply.present?
     rescue StandardError => e
       Rails.logger.warn "[TrackingBot] ⚠️ Error en respuesta conversacional: #{e.message}"
@@ -1028,7 +1028,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     text  = message_text_for_ai(message).to_s.truncate(200)
     now   = Time.current.in_time_zone(timezone)
     today = "#{now.strftime('%Y-%m-%d')} (#{SLOT_DAY_NAMES[now.wday]})"
-    data  = extract_datetime_json(key, today, text)
+    data  = extract_datetime_json(key, today, text, tracking)
     return nil unless data.is_a?(Hash)
 
     rd = {
@@ -1049,7 +1049,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     nil
   end
 
-  def extract_datetime_json(api_key, today, text)
+  def extract_datetime_json(api_key, today, text, tracking = nil)
     require 'net/http'
     require 'json'
 
@@ -1075,10 +1075,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     request                  = Net::HTTP::Post.new(uri)
     request['Authorization'] = "Bearer #{api_key}"
     request['Content-Type']  = 'application/json'
+    # proyecto@contact_tracking: modelo y tope desde la config del inbox.
     request.body = {
-      model:           'gpt-4o-mini',
+      model:           ContactTrackings::EngineConfig.model_for_tracking(tracking, :datetime),
       messages:        [{ role: 'user', content: prompt }],
-      max_tokens:      120,
+      max_tokens:      ContactTrackings::EngineConfig.max_tokens_for(:datetime),
       temperature:     0,
       response_format: { type: 'json_object' }
     }.to_json
@@ -1537,7 +1538,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                    'NUNCA incluyas prefijos de nombre (ej: "Bot:", "Asesor:") ni explicaciones adicionales.'
         },
         { role: 'user', content: prompt }
-      ])
+      ], tracking)
       return reply if reply.present?
     rescue StandardError => e
       Rails.logger.warn "[TrackingBot] ⚠️ Error generando respuesta de acción: #{e.message}"
@@ -1589,7 +1590,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # ==============================================================================
   # OpenAI - Llamada unificada
   # ==============================================================================
-  def call_openai_for_reply(api_key, messages)
+  def call_openai_for_reply(api_key, messages, tracking = nil)
     require 'net/http'
     require 'json'
 
@@ -1601,10 +1602,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     request = Net::HTTP::Post.new(uri)
     request['Authorization'] = "Bearer #{api_key}"
     request['Content-Type'] = 'application/json'
+    # proyecto@contact_tracking: modelo y tope desde la config del inbox.
     request.body = {
-      model: 'gpt-4o-mini',
+      model: ContactTrackings::EngineConfig.model_for_tracking(tracking, :conversational),
       messages: messages,
-      max_tokens: 250,
+      max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:conversational),
       temperature: 0.7
     }.to_json
 
