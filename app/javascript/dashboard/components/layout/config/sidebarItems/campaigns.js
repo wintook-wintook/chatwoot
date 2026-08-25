@@ -8,7 +8,6 @@ const campaigns = accountId => ({
     // proyecto@contact_tracking — Dashboard de Seguimientos fusionado en Campañas
     'contact_trackings_dashboard',
     'contact_trackings_agents',
-    'contact_trackings_assistant',
     'contact_trackings_campaigns',
     'contact_trackings_campaign_detail',
     'contact_trackings_metrics',
@@ -37,16 +36,6 @@ const campaigns = accountId => ({
       hasSubMenu: false,
       toState: frontendURL(`accounts/${accountId}/tracking-dashboard/agents`),
       toStateName: 'contact_trackings_agents',
-    },
-    {
-      // proyecto@ai_agent_assistant — va pegado a Agentes IA, porque les sirve a ellos
-      icon: 'wand',
-      label: 'TRACKING_ASSISTANT',
-      hasSubMenu: false,
-      toState: frontendURL(
-        `accounts/${accountId}/tracking-dashboard/assistant`
-      ),
-      toStateName: 'contact_trackings_assistant',
     },
     {
       icon: 'arrow-swap',

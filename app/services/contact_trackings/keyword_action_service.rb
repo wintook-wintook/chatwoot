@@ -28,39 +28,31 @@ module ContactTrackings
     end
 
     def call
-      matched = match
+      return false unless @tracking.keyword_actions.is_a?(Array)
+      return false if @tracking.keyword_actions.empty?
+
+      matched = @tracking.keyword_actions.find do |ka|
+        next false unless ka.is_a?(Hash)
+
+        keyword   = ka['keyword'].to_s.strip
+        action    = ka['action'].to_s
+        direction = ka['direction'].to_s
+
+        next false if keyword.blank?
+        next false unless VALID_ACTIONS.include?(action)
+        next false unless VALID_DIRECTIONS.include?(direction)
+        next false unless direction_matches?(direction)
+
+        keyword_present?(keyword)
+      end
+
       return false unless matched
 
       execute_action(matched['action'], matched['keyword'])
       true
     end
 
-    # Qué palabra clave dispararía, SIN ejecutar nada. Lo usa el probador
-    # (proyecto@ai_agent_assistant): necesita saber qué habría pasado sin que pase.
-    # Vive aquí para que la regla de coincidencia tenga un solo dueño.
-    def match
-      return nil unless @tracking.keyword_actions.is_a?(Array)
-      return nil if @tracking.keyword_actions.empty?
-
-      @tracking.keyword_actions.find { |ka| entry_matches?(ka) }
-    end
-
     private
-
-    def entry_matches?(entry)
-      return false unless entry.is_a?(Hash)
-
-      keyword   = entry['keyword'].to_s.strip
-      action    = entry['action'].to_s
-      direction = entry['direction'].to_s
-
-      return false if keyword.blank?
-      return false unless VALID_ACTIONS.include?(action)
-      return false unless VALID_DIRECTIONS.include?(direction)
-      return false unless direction_matches?(direction)
-
-      keyword_present?(keyword)
-    end
 
     def direction_matches?(configured_direction)
       configured_direction == 'both' || configured_direction == @direction
