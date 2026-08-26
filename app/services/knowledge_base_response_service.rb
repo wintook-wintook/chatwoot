@@ -26,7 +26,10 @@ class KnowledgeBaseResponseService
   MAX_HISTORY    = 6
   MAX_POST_CHARS = 2000
 
-  def initialize(message, tracking: nil)
+  # `branch:` — rama ya decidida por el job (@ruta). Se recibe para no clasificar dos
+  # veces y pagar dos llamadas al LLM en el mismo turno. `:auto` = clasificar aquí.
+  def initialize(message, tracking: nil, branch: :auto)
+    @branch       = branch
     @message      = message
     @tracking     = tracking
     @account      = message.account
@@ -75,29 +78,42 @@ class KnowledgeBaseResponseService
   # Detección de directiva
   # ==============================================================================
 
+  # @ruta — si el agente declara rutas por rama, la fuente la elige la rama del turno y
+  # no la precedencia del catálogo. Sin rutas declaradas, el comportamiento de siempre.
   def detect_directive
     cp = @tracking&.complementary_prompt.to_s
-    # {{consulta:}} es interpolación determinista de datos del ERP; tiene prioridad y
-    # puede aparecer varias veces mezclada con texto en la misma plantilla.
-    return { mode: :erp_query } if ExternalDb::ConsultaDirectiveRenderer.contains?(cp)
+    route_map = ContactTrackings::RouteMap.parse(cp)
+    return directive_for_branch(route_map) if route_map.present?
 
-    detect_search_directive(cp)
+    KnowledgeBase::Directives.detect(cp)
   end
 
-  def detect_search_directive(prompt)
-    if prompt.match?(/@buscar_predefinidas\b/i)
-      { mode: :canned_response }
-    elsif prompt.match?(/@buscar_art[ií]culo\b/i)
-      { mode: :article }
-    elsif (match = prompt.match(/@buscar_foro\(([^)]+)\)/i))
-      { mode: :knowledge_source, source_name: match[1].strip }
-    elsif (match = prompt.match(/\{\{doc:([^}]+)\}\}/i))
-      { mode: :google_doc, source_name: match[1].strip }
-    elsif (match = prompt.match(/\{\{hoja:([^}]+)\}\}/i))
-      { mode: :google_sheet, source_name: match[1].strip }
-    elsif prompt.match?(/@discourse\b/i)
-      { mode: :discourse_integration }
-    end
+  # Clasifica el turno en una de las ramas declaradas y devuelve SOLO la directiva de
+  # esa rama. Una rama sin fuente (guion) devuelve nil: el turno sigue al conversacional.
+  def directive_for_branch(route_map)
+    route = if @branch == :auto
+              ContactTrackings::BranchClassifierService.new(
+                @tracking, @message, route_map, recent_context: recent_context_for_branch
+              ).classify
+            else
+              @branch
+            end
+    return nil if route.nil? || !route.source?
+
+    directive = KnowledgeBase::Directives.detect(route.directive)
+    Rails.logger.info "[KBase] 🧭 Rama '#{route.name}' → #{directive.inspect}"
+    directive
+  end
+
+  def recent_context_for_branch
+    return '' if @conversation.blank?
+
+    @conversation.messages.where(message_type: %i[incoming outgoing])
+                 .where('id < ?', @message.id).order(id: :desc).limit(4)
+                 .reverse.map { |m| "#{m.incoming? ? 'Cliente' : 'Asesor'}: #{m.content.to_s.truncate(120)}" }
+                 .join("\n")
+  rescue StandardError
+    ''
   end
 
   # Las fuentes Google (Doc/Sheet) reutilizan la conexión de Google Calendar:
@@ -466,10 +482,13 @@ class KnowledgeBaseResponseService
   def build_messages(question, context, history)
     # Usa complementary_prompt si existe, limpiando la directiva @buscar_foro
     system_content = if @tracking&.complementary_prompt.present?
-                       @tracking.complementary_prompt
-                                .gsub(/@buscar_foro\([^)]+\)/i, '')
-                                .gsub(/@discourse\b/i, '')
-                                .strip
+                       # @ruta — las líneas de configuración se quitan ANTES que nada: en un
+                       # agente con rutas viven ahí las directivas de TODAS las ramas, y no
+                       # deben llegar al modelo (ni de rebote al cliente).
+                       ContactTrackings::RouteMap.strip(@tracking.complementary_prompt)
+                                                 .gsub(/@buscar_foro\([^)]+\)/i, '')
+                                                 .gsub(/@discourse\b/i, '')
+                                                 .strip
                      else
                        <<~PROMPT.strip
                          Eres un agente de soporte de #{@account.name}. Respondé preguntas

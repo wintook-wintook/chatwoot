@@ -193,20 +193,22 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return true
     end
 
-    # @tickets_cases: si la directiva @crear_ticket está en el prompt, crea ticket y confirma
-    creator = Cases::TicketCreatorService.new(message, tracking: tracking)
-    if creator.create_if_needed
-      Rails.logger.info "[TrackingBot] 🎫 Ticket creado via @crear_ticket (outcome: #{creator.outcome})"
-      # proyecto@bot_seguimiento_calendar — si el ticket quedó completo (recién creado o ya
-      # existía) y hay calendario configurado, seguimos directo a ofrecer disponibilidad en
-      # el mismo turno (ETAPA 3), en vez de esperar a que el cliente lo pida en otro mensaje.
-      # Mismo comportamiento que ya tenía dispatch_book_appointment cuando el Router detecta
-      # appointment_action explícito.
-      if %i[created linked_existing].include?(creator.outcome) && appointment_dispatchable?(tracking)
-        handle_book_appointment(tracking, message, route_result)
-      end
-      return true
+    # @tickets_cases: si la directiva @crear_ticket está en el prompt, crea ticket y confirma.
+    # Con @crear_ticket(fallback=true) el alta se pospone hasta después de la KBase: el foro
+    # o la hoja contestan si pueden, y el ticket queda como último recurso.
+    # @ruta — la rama del turno se decide UNA vez y se reutiliza para la fuente y para el
+    # escalamiento, así el turno paga una sola llamada de clasificación.
+    branch = branch_for(tracking, message)
+    # Si alguna rama declara su propio escalamiento, manda lo declarado por rama: una
+    # rama sin flecha no abre ticket. Si ninguna lo declara, rige la directiva global.
+    if branch_escalations?(tracking)
+      ticket_directive   = branch&.escalation
+      ticket_as_fallback = ticket_directive.present?
+    else
+      ticket_directive   = nil
+      ticket_as_fallback = Cases::TicketCreatorService.fallback?(tracking)
     end
+    return true if !ticket_as_fallback && try_create_ticket(tracking, message, route_result, directive: ticket_directive)
 
     # proyecto@bot_seguimiento_calendar — @agendar_calendar (appointment-aware): el clasificador
     # ve el ESTADO DE LA CITA y decide la acción concreta (consultar/agendar/mover/cancelar). No
@@ -225,7 +227,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # la hoja nunca se come la recolección de datos ni la confirmación de agenda.
     if kbase_available?(message, tracking)
       Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
-      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
+      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking, branch: branch).perform
       if kbase_replied
         Rails.logger.info '[TrackingBot] ✅ KBase respondió'
         return true
@@ -233,7 +235,56 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → conversacional'
     end
 
+    # @tickets_cases: @crear_ticket(fallback=true) — la KBase no resolvió el turno, así que
+    # ahora sí se ofrece/levanta el caso.
+    if ticket_as_fallback && try_create_ticket(tracking, message, route_result, directive: ticket_directive)
+      Rails.logger.info '[TrackingBot] 🎫 Ticket como último recurso' \
+                        "#{branch ? " (rama #{branch.name})" : ' (fallback=true)'}"
+      return true
+    end
+
     generate_and_send_conversational_reply(tracking, message)
+  end
+
+  # @tickets_cases — alta de ticket vía @crear_ticket. Devuelve true si el turno quedó
+  # atendido: ticket creado, caso abierto reusado o dato faltante solicitado.
+  def try_create_ticket(tracking, message, route_result, directive: nil)
+    creator = Cases::TicketCreatorService.new(message, tracking: tracking, directive: directive)
+    return false unless creator.create_if_needed
+
+    Rails.logger.info "[TrackingBot] 🎫 Ticket via @crear_ticket (outcome: #{creator.outcome})"
+    # proyecto@bot_seguimiento_calendar — si el ticket quedó completo (recién creado o ya
+    # existía) y hay calendario configurado, seguimos directo a ofrecer disponibilidad en
+    # el mismo turno (ETAPA 3), en vez de esperar a que el cliente lo pida en otro mensaje.
+    # Mismo comportamiento que ya tenía dispatch_book_appointment cuando el Router detecta
+    # appointment_action explícito.
+    if %i[created linked_existing].include?(creator.outcome) && appointment_dispatchable?(tracking)
+      handle_book_appointment(tracking, message, route_result)
+    end
+    true
+  end
+
+  # @ruta — rama del turno, memorizada por (tracking, message) para no clasificar dos veces.
+  def branch_for(tracking, message)
+    @branch_cache ||= {}
+    key = [tracking.id, message.id]
+    return @branch_cache[key] if @branch_cache.key?(key)
+
+    map = ContactTrackings::RouteMap.parse(tracking.complementary_prompt)
+    @branch_cache[key] = if map.present?
+                           ContactTrackings::BranchClassifierService.new(
+                             tracking, message, map, recent_context: get_recent_context(message, 4)
+                           ).classify
+                         end
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ Clasificación de rama falló: #{e.message}"
+    nil
+  end
+
+  def branch_escalations?(tracking)
+    ContactTrackings::RouteMap.parse(tracking.complementary_prompt).escalations?
+  rescue StandardError
+    false
   end
 
   def appointment_dispatchable?(tracking)
@@ -375,33 +426,23 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     { route: :tracking, confidence: 1.0, method: 'error' }
   end
 
+  # @ruta — con rutas declaradas basta con que ALGUNA rama tenga su fuente operativa;
+  # cuál se usa lo decide el clasificador dentro del servicio. Sin rutas, la de siempre.
   def kbase_available?(message, tracking = nil)
     return false unless tracking.present?
 
-    cp = tracking.complementary_prompt.to_s
+    cp        = tracking.complementary_prompt.to_s
+    route_map = ContactTrackings::RouteMap.parse(cp)
 
-    if cp.match?(/@buscar_predefinidas\b/i)
-      message.account.knowledge_items.where(source_type: 'canned_response').exists?
-    elsif cp.match?(/@buscar_art[ií]culo\b/i)
-      message.account.knowledge_items.where(source_type: 'article').exists?
-    elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
-      source_name = match[1].strip
-      message.account.knowledge_sources.active.exists?(name: source_name)
-    elsif (match = cp.match(/\{\{doc:([^}]+)\}\}/i))
-      source_name = match[1].strip
-      message.account.feature_enabled?('google_calendar') &&
-        message.account.knowledge_sources.active
-               .exists?(['source_type = ? AND LOWER(name) = LOWER(?)', 'google_doc', source_name])
-    elsif (match = cp.match(/\{\{hoja:([^}]+)\}\}/i))
-      source_name = match[1].strip
-      message.account.feature_enabled?('google_calendar') &&
-        message.account.knowledge_sources.active
-               .exists?(['source_type = ? AND LOWER(name) = LOWER(?)', 'google_sheet', source_name])
-    elsif cp.match?(/@discourse\b/i)
-      message.account.hooks.exists?(app_id: 'discourse', inbox_id: message.inbox_id, status: 'enabled')
-    else
-      false
+    if route_map.present?
+      return route_map.routes.any? do |route|
+        route.source? && KnowledgeBase::Directives.available?(
+          route.directive, account: message.account, inbox_id: message.inbox_id
+        )
+      end
     end
+
+    KnowledgeBase::Directives.available?(cp, account: message.account, inbox_id: message.inbox_id)
   rescue StandardError
     false
   end
@@ -460,7 +501,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       # Si el prompt contiene directivas kbase, no pasarlo al LLM conversacional:
       # el prompt está diseñado para operar con la kbase y GPT lo simula literalmente
       # generando output tipo "CONSULTA GENERADA / DEBUG / RESULTADO RECIBIDO".
-      cp_raw = tracking.complementary_prompt.to_s
+      # @ruta — las líneas de configuración se quitan SIEMPRE (nunca deben llegar al
+      # modelo ni al cliente). Al evaluarse el blanqueo sobre el texto ya limpio, un
+      # agente con rutas conserva su prosa: sus directivas viven dentro de esas líneas.
+      cp_raw = ContactTrackings::RouteMap.strip(tracking.complementary_prompt.to_s)
       has_kbase_directive = cp_raw.match?(/@buscar_predefinidas\b/i) ||
                             cp_raw.match?(/@buscar_art[ií]culo\b/i) ||
                             cp_raw.match?(/@buscar_foro\([^)]*\)/i) ||
