@@ -286,13 +286,13 @@ class KnowledgeBaseResponseService
     api_key = openai_api_key
     return nil unless api_key
 
-    first_name    = @message.sender&.name&.split&.first || 'cliente'
-    objective     = @tracking&.objective.to_s
-    system_prompt = <<~SYSTEM.strip
+    first_name = @message.sender&.name&.split&.first || 'cliente'
+    header     = agent_system_prompt || <<~SYSTEM.strip
       Eres un asesor de #{@account.name}. Responde como un humano amable y conocedor.
       NUNCA menciones que eres un bot ni que consultaste una base de datos.
-      #{objective.present? ? "Objetivo de la conversación: #{objective}" : ''}
     SYSTEM
+    objective     = @tracking&.objective.to_s
+    system_prompt = objective.present? ? "#{header}\n\nObjetivo de la conversación: #{objective}" : header
 
     user_prompt = <<~USER.strip
       El cliente #{first_name} preguntó: "#{question.truncate(300)}"
@@ -304,12 +304,22 @@ class KnowledgeBaseResponseService
       No uses prefijos como "Asesor:" ni comillas al inicio o final.
     USER
 
-    call_openai_simple([
-                         { role: 'system', content: system_prompt },
-                         { role: 'user', content: user_prompt }
-                       ], max_tokens: 800)
-      &.gsub(/\A[A-Za-záéíóúñÁÉÍÓÚÑ\s]{2,20}:\s*\n?/, '')
-      &.strip
+    history  = load_history
+    messages = [{ role: 'system', content: system_prompt }]
+    history.each do |h|
+      messages << { role: 'user',      content: h['q'] }
+      messages << { role: 'assistant', content: h['a'] }
+    end
+    messages << { role: 'user', content: user_prompt }
+
+    reply = call_openai_simple(messages, max_tokens: 800)
+            &.gsub(/\A[A-Za-záéíóúñÁÉÍÓÚÑ\s]{2,20}:\s*\n?/, '')
+            &.strip
+    return nil if reply.blank?
+
+    reply = strip_echoed_sources(reply)
+    save_history(history, question, reply)
+    reply
   end
 
   # ==============================================================================
@@ -479,26 +489,37 @@ class KnowledgeBaseResponseService
     call_openai_simple(build_messages(question, context, history), max_tokens: 600)
   end
 
+  # El prompt del agente (complementary_prompt) es donde viven sus reglas: tono,
+  # regla de evidencia, prohibición de diagnosticar, nombres exactos, etiquetas.
+  # Antes solo lo recibía la rama de Discourse; la rama pgvector se quedaba con el
+  # objetivo y respondía sin ninguna de esas reglas. Ahora ambas parten del mismo
+  # texto, para que el agente se comporte igual sin importar de dónde salió la
+  # información.
+  def agent_system_prompt
+    return nil if @tracking&.complementary_prompt.blank?
+
+    # @ruta — las líneas de configuración se quitan ANTES que nada: en un agente
+    # con rutas viven ahí las directivas de TODAS las ramas, y no deben llegar al
+    # modelo (ni de rebote al cliente). Las directivas sueltas se quitan también:
+    # son configuración, no instrucciones para el modelo.
+    ContactTrackings::RouteMap.strip(@tracking.complementary_prompt)
+                              .gsub(/@buscar_foro\([^)]+\)/i, '')
+                              .gsub(/@buscar_predefinidas\b/i, '')
+                              .gsub(/@buscar_art[ií]culo\b/i, '')
+                              .gsub(/@discourse\b/i, '')
+                              .strip
+                              .presence
+  end
+
   def build_messages(question, context, history)
-    # Usa complementary_prompt si existe, limpiando la directiva @buscar_foro
-    system_content = if @tracking&.complementary_prompt.present?
-                       # @ruta — las líneas de configuración se quitan ANTES que nada: en un
-                       # agente con rutas viven ahí las directivas de TODAS las ramas, y no
-                       # deben llegar al modelo (ni de rebote al cliente).
-                       ContactTrackings::RouteMap.strip(@tracking.complementary_prompt)
-                                                 .gsub(/@buscar_foro\([^)]+\)/i, '')
-                                                 .gsub(/@discourse\b/i, '')
-                                                 .strip
-                     else
-                       <<~PROMPT.strip
-                         Eres un agente de soporte de #{@account.name}. Respondé preguntas
-                         de forma conversacional y concisa, como lo haría un experto de soporte.
-                         - Usá el contenido del foro como referencia, respondé con tus propias palabras.
-                         - Si necesitás más información, hacé UNA pregunta de seguimiento.
-                         - Respondé en el mismo idioma que el cliente.
-                         - No menciones que consultaste un foro o base de conocimiento.
-                       PROMPT
-                     end
+    system_content = agent_system_prompt || <<~PROMPT.strip
+      Eres un agente de soporte de #{@account.name}. Respondé preguntas
+      de forma conversacional y concisa, como lo haría un experto de soporte.
+      - Usá el contenido del foro como referencia, respondé con tus propias palabras.
+      - Si necesitás más información, hacé UNA pregunta de seguimiento.
+      - Respondé en el mismo idioma que el cliente.
+      - No menciones que consultaste un foro o base de conocimiento.
+    PROMPT
 
     system_content += "\n\nContenido relevante del foro:\n#{context}" if context.present?
 
