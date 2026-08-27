@@ -24,6 +24,8 @@ class KnowledgeBaseResponseService
   # Configuración para modo Discourse
   MAX_RESULTS    = 3
   MAX_HISTORY    = 6
+  # Por item recuperado. 3 items x 2000 = el tope de max_context_chars (6000).
+  MAX_ITEM_CHARS = 2000
   MAX_POST_CHARS = 2000
 
   # `branch:` — rama ya decidida por el job (@ruta). Se recibe para no clasificar dos
@@ -45,7 +47,8 @@ class KnowledgeBaseResponseService
     end
     return false if @message.content.blank?
 
-    question = @message.content.strip
+    question     = @message.content.strip
+    @search_text = search_query(question)
     Rails.logger.info "[KBase] 🔍 Modo: #{directive[:mode]}#{" (#{directive[:source_name]})" if directive[:source_name]}"
 
     case directive[:mode]
@@ -73,6 +76,46 @@ class KnowledgeBaseResponseService
   end
 
   private
+
+  # Un turno de seguimiento ("y para 20?", "y eso cuánto sale?") no tiene contenido
+  # semántico propio: buscar solo con él devuelve resultados al azar — para "y para
+  # 20?" la búsqueda traía SALUDOS DE CORTESIA en vez de la tabla de precios — y el
+  # modelo acaba respondiendo de memoria e inventando la cifra. En ese caso la
+  # consulta hereda el tema de los mensajes anteriores del cliente; la pregunta
+  # original no se toca, esto solo alimenta la búsqueda.
+  #
+  # Se detecta por conector inicial, demostrativo sin antecedente, o una o dos
+  # palabras. Contar palabras a secas no sirve: "trabajan los domingos?" es igual de
+  # corta pero sí trae tema propio, y enriquecerla solo le mete ruido.
+  CONTINUATION_RE    = /\A\s*(?:¿\s*)?(?:y|e|o|pero|entonces|tambi[eé]n)\b/i
+  ANAPHORA_RE        = /\b(?:eso|esa|ese|esos|esas|aquello|lo mismo)\b/i
+  MAX_FOLLOWUP_WORDS = 8
+
+  def follow_up?(question)
+    words = question.to_s.split.size
+    return false if words.zero? || words > MAX_FOLLOWUP_WORDS
+    return true if words <= 2
+
+    question.match?(CONTINUATION_RE) || question.match?(ANAPHORA_RE)
+  end
+
+  def search_query(question)
+    return question unless follow_up?(question)
+    return question if @conversation.blank?
+
+    # reorder, no order: la asociación messages ya trae su propio ORDER BY y un
+    # order() encadenado se suma detrás en vez de reemplazarlo — devolvía siempre
+    # los dos mensajes más viejos de la conversación en vez de los dos anteriores.
+    previous = @conversation.messages.incoming
+                            .where('id < ?', @message.id)
+                            .reorder(id: :desc).limit(2)
+                            .pluck(:content).compact_blank
+    return question if previous.empty?
+
+    enriched = "#{previous.reverse.join(' ')} #{question}".truncate(500)
+    Rails.logger.info "[KBase] 🧵 Turno corto → búsqueda con contexto: #{enriched.truncate(120)}"
+    enriched
+  end
 
   # ==============================================================================
   # Detección de directiva
@@ -147,7 +190,7 @@ class KnowledgeBaseResponseService
   # ==============================================================================
 
   def perform_pgvector(question, source_type)
-    embedding = generate_embedding_openai(question)
+    embedding = generate_embedding_openai(@search_text || question)
     return false unless embedding
 
     items = @account.knowledge_items
@@ -165,7 +208,7 @@ class KnowledgeBaseResponseService
 
     Rails.logger.info "[KBase] ✅ #{items.size} resultado(s) en #{source_type}"
 
-    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(1200)}" }
+    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
                    .join("\n\n")
                    .truncate(kbase_setting('max_context_chars'))
 
@@ -197,7 +240,7 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    embedding = generate_embedding_openai(question)
+    embedding = generate_embedding_openai(@search_text || question)
     return false unless embedding
 
     items = @account.knowledge_items
@@ -212,7 +255,7 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(1200)}" }
+    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
                    .join("\n\n")
                    .truncate(kbase_setting('max_context_chars'))
 
@@ -261,7 +304,7 @@ class KnowledgeBaseResponseService
   end
 
   def perform_sheet_faq(question, source)
-    embedding = generate_embedding_openai(question)
+    embedding = generate_embedding_openai(@search_text || question)
     return false unless embedding
 
     items = @account.knowledge_items
@@ -272,7 +315,7 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(1200)}" }
+    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
                    .join("\n\n")
                    .truncate(kbase_setting('max_context_chars'))
     reply_text = generate_contextual_reply(question, context)
@@ -335,7 +378,7 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    result = search_discourse(question, source.config)
+    result = search_discourse(@search_text || question, source.config)
     if result[:context].blank?
       Rails.logger.info '[KBase] ⚠️ Sin resultados en Discourse → sin respuesta'
       return false
@@ -348,7 +391,7 @@ class KnowledgeBaseResponseService
     answer = strip_echoed_sources(answer)
     save_history(history, question, answer)
 
-    footer = build_sources_footer(result[:sources], question)
+    footer = build_sources_footer(result[:sources], question, answer)
     send_reply(footer.present? ? "#{answer}#{footer}" : answer)
     true
   end
@@ -364,7 +407,7 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    result = search_discourse(question, hook.settings)
+    result = search_discourse(@search_text || question, hook.settings)
     if result[:context].blank?
       Rails.logger.info '[KBase] ⚠️ @discourse: sin resultados → sin respuesta'
       return false
@@ -377,7 +420,7 @@ class KnowledgeBaseResponseService
     answer = strip_echoed_sources(answer)
     save_history(history, question, answer)
 
-    footer = build_sources_footer(result[:sources], question)
+    footer = build_sources_footer(result[:sources], question, answer)
     send_reply(footer.present? ? "#{answer}#{footer}" : answer)
     true
   end
@@ -549,22 +592,46 @@ class KnowledgeBaseResponseService
     end.join("\n").gsub(/\n{3,}/, "\n\n").strip
   end
 
-  def build_sources_footer(sources, question = nil)
+  # Un solo término compartido no acredita que la fuente venga al caso: para "tengo un
+  # error al facturar" el foro devolvía "Contpaq Comercial Premium no respeta los
+  # descuentos de Kontrolya al facturar" y ganaba con la palabra "facturar" suelta.
+  MIN_SOURCE_OVERLAP = 2
+
+  # Relleno conversacional que aparece por igual en cualquier respuesta y en cualquier
+  # título; contarlo infla el parecido sin decir nada del tema.
+  STOPWORDS = %w[
+    para como esta este esto pero mas muy todo toda cuando donde desde sobre
+    tiene tienes puede puedes hacer favor gracias hola necesito necesitas
+    informacion información problema deseas quieres
+    que los las con por del una uno sus sin son esa ese hay ver dos the and
+  ].to_set.freeze
+
+  # Se cuentan tokens de 3+ con dígitos incluidos: los códigos de error ("Z07", "Z08")
+  # y las siglas ("SAE", "PDF") son justo lo que distingue un hilo del de al lado, y
+  # con un filtro de solo-letras-de-4+ quedaban invisibles — "Error Z07 licencia de uso
+  # no autorizada" y "Error Z08 licencia de uso no autorizada" empataban y ganaba el
+  # primero de la lista.
+  def significant_words(text)
+    text.to_s.downcase.scan(/[a-záéíóúñü0-9]{3,}/).to_set - STOPWORDS
+  end
+
+  def build_sources_footer(sources, question = nil, answer = nil)
     return '' if sources.empty?
 
     return "\n\n📚 Más información: #{sources.first[:url]}" if question.blank?
 
     # El ranking de Discourse no siempre coincide con la fuente que GPT usó para
-    # redactar la respuesta (preguntas parafraseadas rankean peor que las que
-    # calcan el título). Elegimos entre las fuentes devueltas la de mayor overlap
-    # de palabras con la pregunta, en vez de asumir que sources.first es la correcta.
-    question_words = question.downcase.scan(/[a-záéíóúñü]{4,}/).to_set
+    # redactar (preguntas parafraseadas rankean peor que las que calcan el título),
+    # así que elegimos por overlap de palabras. Se puntúa contra la pregunta Y contra
+    # la respuesta: si el modelo se limitó a pedir una aclaración no usó ninguna
+    # fuente, y citar una es peor que no citar nada.
+    words = significant_words("#{question} #{answer}")
 
-    best = sources.max_by { |source| (question_words & source[:title].downcase.scan(/[a-záéíóúñü]{4,}/).to_set).size }
-    overlap = (question_words & best[:title].downcase.scan(/[a-záéíóúñü]{4,}/).to_set).size
+    best    = sources.max_by { |source| (words & significant_words(source[:title])).size }
+    overlap = (words & significant_words(best[:title])).size
 
     Rails.logger.info "[KBase] 🔗 Mejor fuente '#{best[:title].truncate(40)}': #{overlap} palabras overlap"
-    return '' if overlap.zero?
+    return '' if overlap < MIN_SOURCE_OVERLAP
 
     "\n\n📚 Más información: #{best[:url]}"
   end
