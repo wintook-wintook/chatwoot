@@ -5,9 +5,9 @@
 # ================================================================================
 # Job: BotSeller::OutgoingDispatchJob
 # Descripción: Notifica a INTERNAL_WEBHOOK_URL (BotSeller::Dispatcher) también
-#              para mensajes SALIENTES (respuestas de agente/bot), no solo
-#              entrantes. Para entrantes, el dispatch ocurre dentro de
-#              ContactTrackingResponseAnalyzerJob.
+#              para mensajes SALIENTES (respuestas de agente/bot) y notas
+#              privadas de salida. Para entrantes, el dispatch ocurre dentro
+#              de ContactTrackingResponseAnalyzerJob.
 #
 # Se dispara desde: Message.after_create_commit :dispatch_botseller_for_outgoing
 # ================================================================================
@@ -18,7 +18,7 @@ class BotSeller::OutgoingDispatchJob < ApplicationJob
   def perform(message_id)
     message = Message.find_by(id: message_id)
     return unless message&.outgoing?
-    return if message.private? || message.content.blank?
+    return if message.content.blank?
     return unless BotSeller::Dispatcher.configured?
 
     Rails.logger.info "[BotSeller] 📤 Notificando mensaje saliente ##{message_id}"
