@@ -285,6 +285,21 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     false
   end
 
+  # Gemelo de KnowledgeBaseResponseService#with_branch_tag, para las ramas que se contestan
+  # por aqui. La etiqueta final es lo que dispara las automatizaciones, asi que si falta, la
+  # automatizacion no corre y nadie se entera. Solo se AGREGA cuando falta: la que puso el
+  # modelo se respeta siempre.
+  ANY_TAG_RE = /#[a-z0-9_]{3,}/i
+
+  def with_branch_tag(text, tracking, message)
+    route = branch_for(tracking, message)
+    tag   = route&.hashtag
+    return text if tag.blank? || text.blank? || text.match?(ANY_TAG_RE)
+
+    Rails.logger.info "[TrackingBot] 🏷️ Sin etiqueta → se repone la de la rama '#{route.name}': #{tag}"
+    "#{text.rstrip}\n\n#{tag}"
+  end
+
   # Gemelo de KnowledgeBaseResponseService#branch_scope_rule, para las ramas SIN fuente
   # (las declaradas con guion), que no pasan por la kbase y se contestan aquí. El prompt
   # del agente trae las instrucciones de todas sus ramas; sin esta línea el modelo las ve
@@ -486,6 +501,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     reply_text = generate_conversational_reply(tracking, message)
     return false if reply_text.blank?
 
+    reply_text = with_branch_tag(reply_text, tracking, message)
     reply_text = "#{reply_text}\n\n-TB"
     send_auto_reply(tracking, message, reply_text)
     Rails.logger.info '[TrackingBot] ✅ Respuesta enviada → respondió TrackingBot'

@@ -26,6 +26,16 @@ class KnowledgeBaseResponseService
   MAX_HISTORY    = 6
   # Por item recuperado. 3 items x 2000 = el tope de max_context_chars (6000).
   MAX_ITEM_CHARS = 2000
+  # Umbral para @buscar_predefinidas(GRUPO). El general (0.20) es deliberadamente
+  # permisivo: sobre el corpus completo, traer algo flojo es mejor que no traer nada.
+  # En un grupo pasa lo contrario. Un grupo es un corpus estrecho y hecho a proposito
+  # -- las instrucciones de gestion, por ejemplo -- y ahi lo mas cercano SIEMPRE existe:
+  # con una sola instruccion cargada, "necesito actualizar mis datos fiscales" recuperaba
+  # el contrato de la cotizacion y el agente pedia licencias, correo y razon social para
+  # una gestion que no tiene nada que ver. Medido sobre ese corpus: la gestion correcta da
+  # similitud 0.650 y las ajenas 0.333, 0.287 y 0.081, asi que 0.45 las separa con margen.
+  # Aqui no encontrar nada es un resultado util: significa "no hay instruccion para esto".
+  GROUP_SIMILARITY_THRESHOLD = 0.45
   MAX_POST_CHARS = 2000
 
   # `branch:` — rama ya decidida por el job (@ruta). Se recibe para no clasificar dos
@@ -135,16 +145,13 @@ class KnowledgeBaseResponseService
 
   # Recupera con TODAS las consultas del turno sobre el mismo scope, entrelaza y deduplica.
   # nil = ninguna consulta pudo embeberse (fallo de API); [] = se buscó y no hubo nada.
-  def search_items(scope)
+  def search_items(scope, threshold: nil)
+    threshold ||= kbase_setting('similarity_threshold')
     lists = Array(@search_texts).filter_map do |query|
       embedding = generate_embedding_openai(query)
       next if embedding.blank?
 
-      scope.search_by_embedding(
-        embedding,
-        limit: kbase_setting('max_results'),
-        threshold: kbase_setting('similarity_threshold')
-      ).to_a
+      scope.search_by_embedding(embedding, limit: kbase_setting('max_results'), threshold: threshold).to_a
     end
     return nil if lists.empty?
 
@@ -250,8 +257,16 @@ class KnowledgeBaseResponseService
     negated ? scope.where('title IS NULL OR title NOT ILIKE ?', pattern) : scope.where('title ILIKE ?', pattern)
   end
 
+  # Solo el grupo positivo sube el liston. El negado (!GESTION) sigue siendo el corpus
+  # general con un recorte, no un corpus estrecho, asi que conserva el umbral de siempre.
+  def group_threshold(group)
+    return nil if group.blank? || group.start_with?('!')
+
+    GROUP_SIMILARITY_THRESHOLD
+  end
+
   def perform_pgvector(question, source_type, group = nil)
-    items = search_items(grouped_items(source_type, group))
+    items = search_items(grouped_items(source_type, group), threshold: group_threshold(group))
     return false if items.nil?
 
     if items.empty?
@@ -270,7 +285,7 @@ class KnowledgeBaseResponseService
 
     source_tag = @account.knowledge_sources.find_by(source_type: source_type)&.name ||
                  I18n.t("knowledge_sources.names.#{source_type}", locale: @account.locale.presence || I18n.default_locale)
-    send_reply("#{reply_text}\n\n_#{source_tag}_")
+    send_reply("#{with_branch_tag(reply_text)}\n\n_#{source_tag}_")
     true
   end
 
@@ -308,7 +323,7 @@ class KnowledgeBaseResponseService
     reply_text = generate_contextual_reply(question, context)
     return false if reply_text.blank?
 
-    send_reply("#{reply_text}\n\n_#{source.name}_")
+    send_reply("#{with_branch_tag(reply_text)}\n\n_#{source.name}_")
     true
   end
 
@@ -345,7 +360,7 @@ class KnowledgeBaseResponseService
     # El número/resultado lo calcula Ruby (exacto); el LLM solo lo redacta natural.
     reply_text = generate_contextual_reply(question, "Resultado exacto a comunicar: #{result}")
     reply_text = result if reply_text.blank?
-    send_reply("#{reply_text}\n\n_#{source.name}_")
+    send_reply("#{with_branch_tag(reply_text)}\n\n_#{source.name}_")
     true
   end
 
@@ -364,7 +379,7 @@ class KnowledgeBaseResponseService
     reply_text = generate_contextual_reply(question, context)
     return false if reply_text.blank?
 
-    send_reply("#{reply_text}\n\n_#{source.name}_")
+    send_reply("#{with_branch_tag(reply_text)}\n\n_#{source.name}_")
     true
   end
 
@@ -453,6 +468,7 @@ class KnowledgeBaseResponseService
     return false if answer.blank?
 
     save_history(history, question, answer)
+    answer = with_branch_tag(answer)
     send_reply(footer.present? ? "#{answer}#{footer}" : answer)
     true
   end
@@ -483,6 +499,7 @@ class KnowledgeBaseResponseService
     return false if answer.blank?
 
     save_history(history, question, answer)
+    answer = with_branch_tag(answer)
     send_reply(footer.present? ? "#{answer}#{footer}" : answer)
     true
   end
@@ -723,7 +740,7 @@ class KnowledgeBaseResponseService
   # historial (kb_history guardaba la respuesta ya con el footer horneado adentro),
   # generando su propio link — a veces el equivocado — antes de que agreguemos el
   # nuestro. Lo quitamos del texto del modelo para mostrar un solo link, siempre
-  # el elegido por build_sources_footer.
+  # el que resuelve split_declared_source.
   def strip_echoed_sources(text)
     text.split("\n").reject do |line|
       line.match?(/^\s*📚/) ||
@@ -731,11 +748,6 @@ class KnowledgeBaseResponseService
         line.match?(%r{^\s*[-*]?\s*https?://\S+\s*$}i)
     end.join("\n").gsub(/\n{3,}/, "\n\n").strip
   end
-
-  # Un solo término compartido no acredita que la fuente venga al caso: para "tengo un
-  # error al facturar" el foro devolvía "Contpaq Comercial Premium no respeta los
-  # descuentos de Kontrolya al facturar" y ganaba con la palabra "facturar" suelta.
-  MIN_SOURCE_OVERLAP = 2
 
   # Relleno conversacional que aparece por igual en cualquier respuesta y en cualquier
   # título; contarlo infla el parecido sin decir nada del tema.
@@ -764,16 +776,21 @@ class KnowledgeBaseResponseService
   # siempre en vez de quedarnos sin fuente.
   def split_declared_source(answer, sources, question)
     match = answer.to_s.match(USED_SOURCE_RE)
-    return [answer, build_sources_footer(sources, question, answer)] if match.nil?
+    clean = match ? answer.sub(USED_SOURCE_RE, '').strip : answer.to_s.strip
 
-    clean = answer.sub(USED_SOURCE_RE, '').strip
-    idx   = match[1].to_i
+    # Sin marcador no sabemos en que se baso: se trata igual que un FUENTE_USADA: 0. Antes
+    # se adivinaba por overlap y se publicaba como "Mas informacion", que afirma una
+    # procedencia que no consta -- asi acabo citando "Error manejador de licencias offline"
+    # en una respuesta sobre facturacion, por dos palabras en comun. El modelo omite el
+    # marcador en cerca de la mitad de los turnos, asi que esta rama no es un caso raro.
+    idx = match ? match[1].to_i : 0
 
     # FUENTE_USADA: 0 — el modelo dice que ninguna fuente responde la pregunta. El link
     # se ofrece igual, pero con otra etiqueta: "Más información" promete la respuesta y
     # aquí no la hay, así que el hilo más cercano se cita como material relacionado.
     if idx.zero? || idx > sources.size
-      Rails.logger.info "[KBase] 🔗 FUENTE_USADA: #{idx} → ninguna fuente cubre la pregunta, se cita la más cercana como relacionada"
+      Rails.logger.info "[KBase] 🔗 #{match ? "FUENTE_USADA: #{idx}" : 'sin marcador'} → " \
+                        'no consta que se haya usado una fuente, se cita la más cercana como relacionada'
       return [clean, ''] if sources.empty?
 
       related = closest_source(sources, question, clean)
@@ -787,9 +804,9 @@ class KnowledgeBaseResponseService
     [clean, "\n\n📚 Más información: #{source[:url]}"]
   end
 
-  # La más parecida por overlap, sin exigir MIN_SOURCE_OVERLAP: ese umbral existe para
-  # no citar una fuente como si respondiera, y aquí ya la estamos etiquetando como
-  # "relacionada". Sin ningún overlap no se cita nada igual.
+  # La más parecida por overlap. No se le exige un mínimo alto: aquí ya la estamos
+  # etiquetando como "relacionada", no como la fuente de la respuesta. Sin ningún término
+  # en común no se cita nada.
   def closest_source(sources, question, answer)
     words = significant_words("#{question} #{answer}")
     best  = sources.max_by { |source| (words & significant_words(source[:title])).size }
@@ -798,30 +815,38 @@ class KnowledgeBaseResponseService
     best
   end
 
-  def build_sources_footer(sources, question = nil, answer = nil)
-    return '' if sources.empty?
-
-    return "\n\n📚 Más información: #{sources.first[:url]}" if question.blank?
-
-    # El ranking de Discourse no siempre coincide con la fuente que GPT usó para
-    # redactar (preguntas parafraseadas rankean peor que las que calcan el título),
-    # así que elegimos por overlap de palabras. Se puntúa contra la pregunta Y contra
-    # la respuesta: si el modelo se limitó a pedir una aclaración no usó ninguna
-    # fuente, y citar una es peor que no citar nada.
-    words = significant_words("#{question} #{answer}")
-
-    best    = sources.max_by { |source| (words & significant_words(source[:title])).size }
-    overlap = (words & significant_words(best[:title])).size
-
-    Rails.logger.info "[KBase] 🔗 Mejor fuente '#{best[:title].truncate(40)}': #{overlap} palabras overlap"
-    return '' if overlap < MIN_SOURCE_OVERLAP
-
-    "\n\n📚 Más información: #{best[:url]}"
-  end
-
   # ==============================================================================
   # Envío de respuesta
   # ==============================================================================
+
+  # La etiqueta final (#gestion, #soporte2...) no es adorno: es lo que dispara las
+  # automatizaciones, que filtran por el contenido del mensaje. Si falta, la automatizacion
+  # simplemente no corre, y en silencio.
+  #
+  # Medido sobre 20 turnos: el modelo la omitia en las respuestas que no resuelven nada
+  # -- pedir una aclaracion, ir reuniendo datos --, 4 de cada 5 de esos casos. Reforzar la
+  # regla en [ETIQUETAS] corrigio eso en la corrida de verificacion (6 de 6, y el modelo
+  # eligiendo el grado de soporte por su cuenta), asi que esto NO sustituye al prompt: es
+  # la red para cuando se le vuelva a pasar.
+  #
+  # Solo se AGREGA cuando falta. La que puso el modelo se respeta siempre, porque el la
+  # eligio viendo el mensaje y el motor solo conoce la rama -- por eso en soporte conviene
+  # declarar el grado mas conservador en la linea @ruta.
+  ANY_TAG_RE = /#[a-z0-9_]{3,}/i
+
+  def with_branch_tag(text)
+    tag = @route&.hashtag
+    return text if tag.blank? || text.blank?
+
+    found = text.scan(ANY_TAG_RE)
+    if found.any?
+      Rails.logger.info "[KBase] 🏷️ #{found.size} etiqueta(s) del modelo: #{found.join(' ')}" if found.size > 1
+      return text
+    end
+
+    Rails.logger.info "[KBase] 🏷️ Sin etiqueta → se repone la de la rama '#{@route.name}': #{tag}"
+    "#{text.rstrip}\n\n#{tag}"
+  end
 
   def send_reply(text)
     reply_message = Messages::MessageBuilder.new(

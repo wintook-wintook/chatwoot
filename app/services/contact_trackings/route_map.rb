@@ -21,20 +21,31 @@
 
 module ContactTrackings
   class RouteMap
-    LINE_RE    = /^[ \t]*@ruta\([ \t]*([a-z0-9_-]+)[ \t]*(?::[ \t]*([^)]*))?\)[ \t]*:[ \t]*(.*)$/i
+    # El #etiqueta tras el nombre es opcional y declara con que se cierra un turno de esa
+    # rama. Existe porque el motor no puede saberlo solo: los nombres de rama los elige
+    # quien configura el agente, asi que la correspondencia rama->etiqueta la declara el.
+    #   @ruta(comercial_gestion #gestion: quiere que hagamos algo): @buscar_predefinidas(GESTION)
+    LINE_RE    = /^[ \t]*@ruta\([ \t]*([a-z0-9_-]+)[ \t]*(?:\#([a-z0-9_]+))?[ \t]*(?::[ \t]*([^)]*))?\)[ \t]*:[ \t]*(.*)$/i
     DEFAULT_RE = /^[ \t]*@ruta_por_defecto[ \t]*:[ \t]*([a-z0-9_-]+)[ \t]*$/i
     # Marcas que declaran explícitamente "sin fuente": guion corto, medio o largo.
     NO_SOURCE  = ['-', '–', '—'].freeze
     # Separa la fuente del escalamiento: "fuente -> qué hacer si no resuelve".
     ARROW_RE   = /\s*(?:->|=>|→)\s*/
 
-    Route = Struct.new(:name, :description, :directive, :escalation, keyword_init: true) do
+    Route = Struct.new(:name, :description, :directive, :escalation, :tag, keyword_init: true) do
       def source?
         directive.present?
       end
 
       def escalates?
         escalation.present?
+      end
+
+      # La etiqueta con el # delante, tal como debe salir en el mensaje.
+      def hashtag
+        return nil if tag.blank?
+
+        "##{tag}"
       end
     end
 
@@ -89,13 +100,14 @@ module ContactTrackings
     private
 
     def build_routes
-      @text.scan(LINE_RE).filter_map do |name, description, body|
+      @text.scan(LINE_RE).filter_map do |name, tag, description, body|
         source, escalation = body.to_s.strip.split(ARROW_RE, 2).map { |part| part.to_s.strip }
         Route.new(
           name: name.to_s.strip.downcase,
           description: description.to_s.strip.presence,
           directive: NO_SOURCE.include?(source) ? nil : source.presence,
-          escalation: escalation.presence
+          escalation: escalation.presence,
+          tag: tag.to_s.strip.downcase.presence
         )
       end.uniq(&:name)
     end
