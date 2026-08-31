@@ -32,6 +32,7 @@ class KnowledgeBaseResponseService
   # veces y pagar dos llamadas al LLM en el mismo turno. `:auto` = clasificar aquí.
   def initialize(message, tracking: nil, branch: :auto)
     @branch       = branch
+    @route        = nil
     @message      = message
     @tracking     = tracking
     @account      = message.account
@@ -47,8 +48,8 @@ class KnowledgeBaseResponseService
     end
     return false if @message.content.blank?
 
-    question     = @message.content.strip
-    @search_text = search_query(question)
+    question      = @message.content.strip
+    @search_texts = search_queries(question)
     Rails.logger.info "[KBase] 🔍 Modo: #{directive[:mode]}#{" (#{directive[:source_name]})" if directive[:source_name]}"
 
     case directive[:mode]
@@ -77,31 +78,37 @@ class KnowledgeBaseResponseService
 
   private
 
-  # Un turno de seguimiento ("y para 20?", "y eso cuánto sale?") no tiene contenido
-  # semántico propio: buscar solo con él devuelve resultados al azar — para "y para
-  # 20?" la búsqueda traía SALUDOS DE CORTESIA en vez de la tabla de precios — y el
-  # modelo acaba respondiendo de memoria e inventando la cifra. En ese caso la
-  # consulta hereda el tema de los mensajes anteriores del cliente; la pregunta
-  # original no se toca, esto solo alimenta la búsqueda.
+  # Un turno corto suele continuar el tema anterior sin nombrarlo, y buscar solo con él
+  # trae documentación de otro asunto: "y para 20?" devolvía SALUDOS DE CORTESIA en vez
+  # de la tabla de precios, y "no manda error solo no llega" hilos de entrega de correo
+  # en vez del hilo de pedidos que se venía tratando.
   #
-  # Se detecta por conector inicial, demostrativo sin antecedente, o una o dos
-  # palabras. Contar palabras a secas no sirve: "trabajan los domingos?" es igual de
-  # corta pero sí trae tema propio, y enriquecerla solo le mete ruido.
+  # No se intenta adivinar cuál de las dos consultas es la buena: se buscan LAS DOS —la
+  # pregunta tal cual y la pregunta con el tema heredado— y se entrelazan los resultados.
+  # Antes era una sola consulta elegida por heurística, y la heurística fallaba en ambos
+  # sentidos: enriquecer "trabajan los domingos?" le metía ruido, y no enriquecer "no
+  # manda error solo no llega" le quitaba el sujeto. Buscando las dos, ninguno de los dos
+  # errores puede ocurrir; el precio es una recuperación extra en los turnos cortos.
   CONTINUATION_RE    = /\A\s*(?:¿\s*)?(?:y|e|o|pero|entonces|tambi[eé]n)\b/i
   ANAPHORA_RE        = /\b(?:eso|esa|ese|esos|esas|aquello|lo mismo)\b/i
   MAX_FOLLOWUP_WORDS = 8
 
-  def follow_up?(question)
+  # ¿Vale la pena la segunda recuperación? En los turnos cortos y en los que arrancan con
+  # conector o llevan un demostrativo sin antecedente.
+  def worth_inheriting_topic?(question)
     words = question.to_s.split.size
-    return false if words.zero? || words > MAX_FOLLOWUP_WORDS
-    return true if words <= 2
+    return false if words.zero?
+    return true if words <= MAX_FOLLOWUP_WORDS
 
     question.match?(CONTINUATION_RE) || question.match?(ANAPHORA_RE)
   end
 
-  def search_query(question)
-    return question unless follow_up?(question)
-    return question if @conversation.blank?
+  # La pregunta tal cual y, cuando aplica, la misma precedida del tema de los mensajes
+  # anteriores del cliente. La pregunta original nunca se toca: esto solo alimenta la
+  # búsqueda.
+  def search_queries(question)
+    return [question] unless worth_inheriting_topic?(question)
+    return [question] if @conversation.blank?
 
     # reorder, no order: la asociación messages ya trae su propio ORDER BY y un
     # order() encadenado se suma detrás en vez de reemplazarlo — devolvía siempre
@@ -110,11 +117,38 @@ class KnowledgeBaseResponseService
                             .where('id < ?', @message.id)
                             .reorder(id: :desc).limit(2)
                             .pluck(:content).compact_blank
-    return question if previous.empty?
+    return [question] if previous.empty?
 
     enriched = "#{previous.reverse.join(' ')} #{question}".truncate(500)
-    Rails.logger.info "[KBase] 🧵 Turno corto → búsqueda con contexto: #{enriched.truncate(120)}"
-    enriched
+    Rails.logger.info "[KBase] 🧵 Turno corto → segunda búsqueda con contexto: #{enriched.truncate(120)}"
+    [question, enriched]
+  end
+
+  # Entrelaza en vez de concatenar: concatenadas, las MAX_RESULTS primeras salen todas de
+  # la primera consulta y la segunda no aporta nada. Alternando, ambas quedan representadas
+  # dentro del tope.
+  def interleave(lists)
+    return [] if lists.empty?
+
+    Array.new(lists.map(&:size).max.to_i) { |i| lists.pluck(i) }.flatten.compact
+  end
+
+  # Recupera con TODAS las consultas del turno sobre el mismo scope, entrelaza y deduplica.
+  # nil = ninguna consulta pudo embeberse (fallo de API); [] = se buscó y no hubo nada.
+  def search_items(scope)
+    lists = Array(@search_texts).filter_map do |query|
+      embedding = generate_embedding_openai(query)
+      next if embedding.blank?
+
+      scope.search_by_embedding(
+        embedding,
+        limit: kbase_setting('max_results'),
+        threshold: kbase_setting('similarity_threshold')
+      ).to_a
+    end
+    return nil if lists.empty?
+
+    interleave(lists).uniq(&:id).first(kbase_setting('max_results'))
   end
 
   # ==============================================================================
@@ -141,6 +175,9 @@ class KnowledgeBaseResponseService
             else
               @branch
             end
+    # Se guarda aunque la rama no tenga fuente: branch_scope_rule la necesita para
+    # decirle al modelo qué se decidió (ver agent_system_prompt).
+    @route = route
     return nil if route.nil? || !route.source?
 
     directive = KnowledgeBase::Directives.detect(route.directive)
@@ -190,16 +227,8 @@ class KnowledgeBaseResponseService
   # ==============================================================================
 
   def perform_pgvector(question, source_type)
-    embedding = generate_embedding_openai(@search_text || question)
-    return false unless embedding
-
-    items = @account.knowledge_items
-                    .where(source_type: source_type)
-                    .search_by_embedding(
-                      embedding,
-                      limit: kbase_setting('max_results'),
-                      threshold: kbase_setting('similarity_threshold')
-                    )
+    items = search_items(@account.knowledge_items.where(source_type: source_type))
+    return false if items.nil?
 
     if items.empty?
       Rails.logger.info "[KBase] ⚠️ Sin resultados en #{source_type}"
@@ -240,16 +269,9 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    embedding = generate_embedding_openai(@search_text || question)
-    return false unless embedding
+    items = search_items(@account.knowledge_items.where(knowledge_source_id: source.id))
+    return false if items.nil?
 
-    items = @account.knowledge_items
-                    .where(knowledge_source_id: source.id)
-                    .search_by_embedding(
-                      embedding,
-                      limit: kbase_setting('max_results'),
-                      threshold: kbase_setting('similarity_threshold')
-                    )
     if items.empty?
       Rails.logger.info "[KBase] ⚠️ Sin resultados en Google Doc '#{source.name}'"
       return false
@@ -304,12 +326,9 @@ class KnowledgeBaseResponseService
   end
 
   def perform_sheet_faq(question, source)
-    embedding = generate_embedding_openai(@search_text || question)
-    return false unless embedding
+    items = search_items(@account.knowledge_items.where(knowledge_source_id: source.id))
+    return false if items.nil?
 
-    items = @account.knowledge_items
-                    .where(knowledge_source_id: source.id)
-                    .search_by_embedding(embedding, limit: kbase_setting('max_results'), threshold: kbase_setting('similarity_threshold'))
     if items.empty?
       Rails.logger.info "[KBase] ⚠️ Sin resultados en hoja FAQ '#{source.name}'"
       return false
@@ -335,7 +354,11 @@ class KnowledgeBaseResponseService
       NUNCA menciones que eres un bot ni que consultaste una base de datos.
     SYSTEM
     objective     = @tracking&.objective.to_s
-    system_prompt = objective.present? ? "#{header}\n\nObjetivo de la conversación: #{objective}" : header
+    system_prompt = [
+      header,
+      ("Objetivo de la conversación: #{objective}" if objective.present?),
+      branch_scope_rule.presence
+    ].compact_blank.join("\n\n")
 
     user_prompt = <<~USER.strip
       El cliente #{first_name} preguntó: "#{question.truncate(300)}"
@@ -345,6 +368,19 @@ class KnowledgeBaseResponseService
 
       Respondé usando esa información de forma completa y útil. Tono natural y conversacional.
       No uses prefijos como "Asesor:" ni comillas al inicio o final.
+
+      FIDELIDAD A LA FUENTE (regla dura): la información de arriba se recuperó por
+      parecido semántico, así que puede tratar de un tema vecino pero distinto al que
+      preguntó el cliente. Nunca la adaptes para que encaje: no sustituyas el sujeto de
+      un procedimiento por el de la pregunta (si la fuente explica cómo cambiar el
+      vendedor y preguntaron por el precio, NO escribas "para cambiar el precio" sobre
+      los pasos del vendedor). Los nombres de permisos, parámetros, campos y menús se
+      citan textualmente como aparecen en la fuente.
+
+      Si la fuente no cubre exactamente lo que preguntaron, decilo de frente: explicá
+      brevemente qué sí cubre la documentación, aclará que no tenés el procedimiento
+      exacto para su caso y ofrecé pasarlo con un asesor. Una respuesta honesta que no
+      resuelve es mejor que una inventada que parece resolver.
     USER
 
     history  = load_history
@@ -378,7 +414,7 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    result = search_discourse(@search_text || question, source.config)
+    result = search_discourse(@search_texts, source.config)
     if result[:context].blank?
       Rails.logger.info '[KBase] ⚠️ Sin resultados en Discourse → sin respuesta'
       return false
@@ -388,10 +424,11 @@ class KnowledgeBaseResponseService
     answer  = ask_openai_with_history(question, result[:context], history)
     return false if answer.blank?
 
-    answer = strip_echoed_sources(answer)
-    save_history(history, question, answer)
+    answer         = strip_echoed_sources(answer)
+    answer, footer = split_declared_source(answer, result[:sources], question)
+    return false if answer.blank?
 
-    footer = build_sources_footer(result[:sources], question, answer)
+    save_history(history, question, answer)
     send_reply(footer.present? ? "#{answer}#{footer}" : answer)
     true
   end
@@ -407,7 +444,7 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    result = search_discourse(@search_text || question, hook.settings)
+    result = search_discourse(@search_texts, hook.settings)
     if result[:context].blank?
       Rails.logger.info '[KBase] ⚠️ @discourse: sin resultados → sin respuesta'
       return false
@@ -417,16 +454,20 @@ class KnowledgeBaseResponseService
     answer  = ask_openai_with_history(question, result[:context], history)
     return false if answer.blank?
 
-    answer = strip_echoed_sources(answer)
-    save_history(history, question, answer)
+    answer         = strip_echoed_sources(answer)
+    answer, footer = split_declared_source(answer, result[:sources], question)
+    return false if answer.blank?
 
-    footer = build_sources_footer(result[:sources], question, answer)
+    save_history(history, question, answer)
     send_reply(footer.present? ? "#{answer}#{footer}" : answer)
     true
   end
 
   # Llama al endpoint de Discourse AI semantic search y obtiene el contenido completo
-  def search_discourse(query, config)
+  # Metadatos de los posts que devuelve UNA consulta, sin bajar el contenido: así los
+  # resultados de varias consultas se fusionan primero y el fetch —con su rate limit de
+  # 1.5s entre llamadas— se paga una sola vez, sobre la lista ya deduplicada y recortada.
+  def discourse_hits(query, config)
     url      = config['url'].to_s.chomp('/')
     api_key  = config['api_key'].to_s
     username = config['username'].presence || 'system'
@@ -443,38 +484,57 @@ class KnowledgeBaseResponseService
     request['Api-Username'] = username
     request['Content-Type'] = 'application/json'
 
-    response  = http.request(request)
-    data      = JSON.parse(response.body)
-    posts     = data['posts']  || []
-    topics    = data['topics'] || []
-    topic_map = topics.index_by { |t| t['id'] }
+    data      = JSON.parse(http.request(request).body)
+    posts     = data['posts'] || []
+    topic_map = (data['topics'] || []).index_by { |t| t['id'] }
 
     Rails.logger.info "[KBase] 📚 #{posts.size} resultado(s) en Discourse semantic-search"
 
-    sources = []
-    context = posts.first(MAX_RESULTS).each_with_index.filter_map do |post, idx|
-      sleep(1.5) if idx.positive? # evitar rate limit entre fetches consecutivos
-
+    posts.filter_map do |post|
       topic = topic_map[post['topic_id']]
       next unless topic
 
-      post_id  = post['id']
-      title    = topic['title'].to_s.strip
-      post_url = "#{url}/t/#{topic['slug']}/#{topic['id']}"
+      {
+        post_id: post['id'],
+        title: topic['title'].to_s.strip,
+        url: "#{url}/t/#{topic['slug']}/#{topic['id']}",
+        blurb: post['blurb'].to_s.strip
+      }
+    end
+  rescue StandardError => e
+    Rails.logger.error "[KBase] ❌ Error en Discourse search: #{e.message}"
+    []
+  end
 
-      full_content = fetch_post_content(post_id, url, api_key, username)
-      content      = full_content.presence || post['blurb'].to_s.strip
+  # Recibe TODAS las consultas del turno (ver search_queries) y devuelve un solo contexto
+  # con los resultados de todas ellas, entrelazados y sin repetidos.
+  def search_discourse(queries, config)
+    url      = config['url'].to_s.chomp('/')
+    api_key  = config['api_key'].to_s
+    username = config['username'].presence || 'system'
+
+    hits = interleave(Array(queries).map { |query| discourse_hits(query, config) })
+           .uniq { |hit| hit[:post_id] }
+
+    sources = []
+    context = hits.first(MAX_RESULTS).each_with_index.filter_map do |hit, idx|
+      sleep(1.5) if idx.positive? # evitar rate limit entre fetches consecutivos
+
+      content = fetch_post_content(hit[:post_id], url, api_key, username).presence || hit[:blurb]
       next if content.blank?
 
-      Rails.logger.info "[KBase]   📄 post##{post_id} — #{title.truncate(50)} (#{content.length} chars)"
+      Rails.logger.info "[KBase]   📄 post##{hit[:post_id]} — #{hit[:title].truncate(50)} (#{content.length} chars)"
 
-      sources << { title: title, url: post_url }
-      "## #{title}\n#{content}\nFuente: #{post_url}"
+      # El índice se numera sobre `sources`, no sobre la posición del hit: los posts sin
+      # contenido se descartan, así que las dos se desincronizan y el marcador [FUENTE n]
+      # apuntaría al vecino.
+      sources << { title: hit[:title], url: hit[:url] }
+      "[FUENTE #{sources.size}] #{hit[:title]}\n#{content}"
     end.join("\n\n")
 
     { context: context, sources: sources }
   rescue StandardError => e
-    Rails.logger.error "[KBase] ❌ Error en Discourse search: #{e.message}"
+    Rails.logger.error "[KBase] ❌ Error armando contexto de Discourse: #{e.message}"
     { context: '', sources: [] }
   end
 
@@ -529,7 +589,11 @@ class KnowledgeBaseResponseService
     api_key = openai_api_key
     return nil unless api_key
 
-    call_openai_simple(build_messages(question, context, history), max_tokens: 600)
+    # temperature 0: con 0.5 el modelo ignoraba la regla de fidelidad en ~1 de cada 3
+    # respuestas y volvía a servir el procedimiento de una fuente vecina como si fuera
+    # el que le preguntaron. Aquí no queremos redacción creativa, queremos que se
+    # ciña a la fuente.
+    call_openai_simple(build_messages(question, context, history), max_tokens: 600, temperature: 0.0)
   end
 
   # El prompt del agente (complementary_prompt) es donde viven sus reglas: tono,
@@ -554,6 +618,57 @@ class KnowledgeBaseResponseService
                               .presence
   end
 
+  # El clasificador (@ruta) ya decidió de qué trata el turno, y con esa decisión se eligió
+  # la fuente. Pero el prompt del agente lleva las instrucciones de TODAS sus ramas, así que
+  # el modelo las ve todas y vuelve a decidir por su cuenta — a veces contradiciendo al
+  # router. Medido: con la rama comercial_info ya resuelta y la tabla de precios delante,
+  # "quiero cotizar 20 licencias" se contestaba con el guion de la rama de gestión (pedir
+  # correo y razón social) en vez de dar la cifra que tenía enfrente.
+  #
+  # Se le nombra la rama con la descripción que escribió el autor en su propia línea @ruta:
+  # el motor no sabe cómo se llaman las secciones del prompt, pero el autor sí las describió
+  # ahí, y esas palabras son las que le permiten al modelo emparejarlas.
+  #
+  # Va SIEMPRE al final del system prompt, después del objetivo. Medido: colgada del prompt
+  # y con el objetivo detrás, el modelo daba ya la cifra correcta pero seguía pidiendo datos
+  # y cerrando con la etiqueta de gestión, porque el objetivo termina diciéndole que él
+  # distinga si es información o gestión — justo lo que esta regla le prohíbe volver a hacer.
+  def branch_scope_rule
+    return '' if @route.blank?
+
+    label = [@route.name, @route.description].compact_blank.join(' — ')
+    <<~RULE.chomp
+      RAMA YA DECIDIDA PARA ESTE TURNO: #{label}
+      El sistema clasificó el mensaje en esa rama y la información que recibes es la de esa
+      rama. De las instrucciones de arriba aplica únicamente las que correspondan a esa rama
+      e ignora las de las otras. No vuelvas a clasificar el mensaje ni cambies de rama por tu
+      cuenta.
+    RULE
+  end
+
+  # FUENTE_USADA acopla el texto al link: antes el footer adivinaba a posteriori, por
+  # overlap de palabras, cuál de las fuentes había usado el modelo. Ahora lo declara él.
+  #
+  # La regla de fidelidad se queda corta a propósito. Un agente con complementary_prompt
+  # ya suele traer la suya (regla de evidencia, no diagnosticar, nombres exactos) mucho
+  # más detallada, y apilar texto sobre un prompt ya largo no hace que se cumpla: medido
+  # sobre el mismo caso, gpt-4o-mini ignoraba ambas versiones por igual y gpt-4o las
+  # cumplía sin ayuda. Esto es el mínimo que el mecanismo necesita, no un intento de
+  # corregir al modelo a fuerza de instrucciones.
+  SOURCE_FIDELITY_RULE = <<~RULE
+
+    SOBRE ESAS FUENTES:
+    - Llegan por parecido semántico, así que la mejor puede tratar de un tema vecino
+      pero distinto al que preguntaron. No adaptes una fuente para que encaje: no
+      sustituyas el sujeto de un procedimiento por el de la pregunta.
+    - Empezá SIEMPRE tu respuesta con una línea "FUENTE_USADA: n", donde n es el número
+      de la [FUENTE n] en la que te basaste. Si no te basaste en ninguna, escribí
+      "FUENTE_USADA: 0". Esa línea se elimina antes de mostrarla al cliente.
+  RULE
+
+  # "FUENTE_USADA: 2" — la línea que el modelo antepone para declarar en qué fuente se basó.
+  USED_SOURCE_RE = /\A\s*FUENTE_USADA:\s*(\d+)\s*\n?/i
+
   def build_messages(question, context, history)
     system_content = agent_system_prompt || <<~PROMPT.strip
       Eres un agente de soporte de #{@account.name}. Respondé preguntas
@@ -564,7 +679,8 @@ class KnowledgeBaseResponseService
       - No menciones que consultaste un foro o base de conocimiento.
     PROMPT
 
-    system_content += "\n\nContenido relevante del foro:\n#{context}" if context.present?
+    system_content += "\n\nContenido relevante del foro:\n#{context}#{SOURCE_FIDELITY_RULE}" if context.present?
+    system_content += "\n\n#{branch_scope_rule}" if branch_scope_rule.present?
 
     messages = [{ role: 'system', content: system_content }]
     history.each do |h|
@@ -615,6 +731,49 @@ class KnowledgeBaseResponseService
     text.to_s.downcase.scan(/[a-záéíóúñü0-9]{3,}/).to_set - STOPWORDS
   end
 
+  # Separa la declaración "FUENTE_USADA: n" del texto para el cliente y devuelve el
+  # footer de esa misma fuente — la que el modelo dice haber usado, no la que se parezca
+  # más. Si declaró 0, el link se ofrece igual pero como "tema relacionado": citarlo bajo
+  # "Más información" prometería una respuesta que el texto no da.
+  #
+  # Si el modelo no puso el marcador (se lo saltó), caemos al overlap de palabras de
+  # siempre en vez de quedarnos sin fuente.
+  def split_declared_source(answer, sources, question)
+    match = answer.to_s.match(USED_SOURCE_RE)
+    return [answer, build_sources_footer(sources, question, answer)] if match.nil?
+
+    clean = answer.sub(USED_SOURCE_RE, '').strip
+    idx   = match[1].to_i
+
+    # FUENTE_USADA: 0 — el modelo dice que ninguna fuente responde la pregunta. El link
+    # se ofrece igual, pero con otra etiqueta: "Más información" promete la respuesta y
+    # aquí no la hay, así que el hilo más cercano se cita como material relacionado.
+    if idx.zero? || idx > sources.size
+      Rails.logger.info "[KBase] 🔗 FUENTE_USADA: #{idx} → ninguna fuente cubre la pregunta, se cita la más cercana como relacionada"
+      return [clean, ''] if sources.empty?
+
+      related = closest_source(sources, question, clean)
+      return [clean, ''] if related.blank?
+
+      return [clean, "\n\n🔎 Tema relacionado que quizá te sirva: #{related[:url]}"]
+    end
+
+    source = sources[idx - 1]
+    Rails.logger.info "[KBase] 🔗 Fuente declarada por el modelo: [#{idx}] '#{source[:title].truncate(40)}'"
+    [clean, "\n\n📚 Más información: #{source[:url]}"]
+  end
+
+  # La más parecida por overlap, sin exigir MIN_SOURCE_OVERLAP: ese umbral existe para
+  # no citar una fuente como si respondiera, y aquí ya la estamos etiquetando como
+  # "relacionada". Sin ningún overlap no se cita nada igual.
+  def closest_source(sources, question, answer)
+    words = significant_words("#{question} #{answer}")
+    best  = sources.max_by { |source| (words & significant_words(source[:title])).size }
+    return nil unless words.intersect?(significant_words(best[:title]))
+
+    best
+  end
+
   def build_sources_footer(sources, question = nil, answer = nil)
     return '' if sources.empty?
 
@@ -659,7 +818,19 @@ class KnowledgeBaseResponseService
   # Utilidades
   # ==============================================================================
 
-  def call_openai_simple(messages, max_tokens: 600)
+  # El selector "Modelo de IA" del hook tracking_bot es por inbox y EngineConfig es su
+  # única fuente — su cabecera avisa que todo punto que llame a OpenAI desde el motor de
+  # Seguimientos debe resolver el modelo por ahí. Este archivo no lo hacía: mandaba
+  # gpt-4o-mini por ENV, así que elegir GPT-4o en la pantalla de integraciones no tenía
+  # ningún efecto sobre las respuestas de la base de conocimiento. Configuración fantasma,
+  # la misma que EngineConfig vino a eliminar.
+  def resolved_model
+    return ContactTrackings::EngineConfig.model_for(@inbox) if @inbox.present?
+
+    ENV.fetch('OPENAI_GPT_MODEL', ContactTrackings::EngineConfig::DEFAULT_MODEL)
+  end
+
+  def call_openai_simple(messages, max_tokens: 600, temperature: 0.5)
     api_key = openai_api_key
     return nil unless api_key
 
@@ -675,10 +846,10 @@ class KnowledgeBaseResponseService
     request['Authorization'] = "Bearer #{api_key}"
     request['Content-Type']  = 'application/json'
     request.body = {
-      model: ENV.fetch('OPENAI_GPT_MODEL', 'gpt-4o-mini'),
+      model: resolved_model,
       messages: messages,
       max_tokens: max_tokens,
-      temperature: 0.5
+      temperature: temperature
     }.to_json
 
     response = http.request(request)
