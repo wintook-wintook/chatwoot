@@ -521,7 +521,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       # modelo ni al cliente). Al evaluarse el blanqueo sobre el texto ya limpio, un
       # agente con rutas conserva su prosa: sus directivas viven dentro de esas líneas.
       cp_raw = ContactTrackings::RouteMap.strip(tracking.complementary_prompt.to_s)
-      has_kbase_directive = cp_raw.match?(/@buscar_predefinidas\b/i) ||
+      has_kbase_directive = cp_raw.match?(KnowledgeBase::Directives::CANNED_RE) ||
                             cp_raw.match?(/@buscar_art[ií]culo\b/i) ||
                             cp_raw.match?(/@buscar_foro\([^)]*\)/i) ||
                             cp_raw.match?(/@discourse\b/i)

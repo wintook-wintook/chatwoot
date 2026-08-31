@@ -56,7 +56,7 @@ class KnowledgeBaseResponseService
     when :erp_query
       perform_erp_query
     when :canned_response
-      perform_pgvector(question, 'canned_response')
+      perform_pgvector(question, 'canned_response', directive[:group])
     when :article
       perform_pgvector(question, 'article')
     when :knowledge_source
@@ -226,8 +226,32 @@ class KnowledgeBaseResponseService
   # MODO 1 — pgvector local (Respuestas predefinidas / artículos del Centro de Ayuda)
   # ==============================================================================
 
-  def perform_pgvector(question, source_type)
-    items = search_items(@account.knowledge_items.where(source_type: source_type))
+  # Reparte el corpus de respuestas predefinidas entre ramas: @buscar_predefinidas(GESTION)
+  # trae solo las que se llaman asi, y (!GESTION) todas las demas. Se filtra en SQL, antes
+  # de la busqueda vectorial, asi que no cuesta una consulta extra: entra como WHERE en la
+  # misma query.
+  #
+  # El grupo es un PREFIJO del nombre de la respuesta predefinida (su short_code, que es
+  # lo que se vectoriza como titulo). Se eligio una convencion de nombre y no una columna
+  # nueva para no pedir migracion ni cambios de pantalla: renombrar la respuesta basta.
+  def grouped_items(source_type, group)
+    scope = @account.knowledge_items.where(source_type: source_type)
+    return scope if group.blank?
+
+    negated = group.start_with?('!')
+    name    = group.delete_prefix('!').strip
+    return scope if name.blank?
+
+    pattern = "#{ActiveRecord::Base.sanitize_sql_like(name)}%"
+    Rails.logger.info "[KBase] \u{1F5C2}\uFE0F Grupo #{negated ? 'excluido' : 'exigido'}: #{name}"
+
+    # title IS NULL en la rama negada: un NOT ILIKE contra NULL da NULL y descartaria el
+    # item en silencio.
+    negated ? scope.where('title IS NULL OR title NOT ILIKE ?', pattern) : scope.where('title ILIKE ?', pattern)
+  end
+
+  def perform_pgvector(question, source_type, group = nil)
+    items = search_items(grouped_items(source_type, group))
     return false if items.nil?
 
     if items.empty?
@@ -611,7 +635,7 @@ class KnowledgeBaseResponseService
     # son configuración, no instrucciones para el modelo.
     ContactTrackings::RouteMap.strip(@tracking.complementary_prompt)
                               .gsub(/@buscar_foro\([^)]+\)/i, '')
-                              .gsub(/@buscar_predefinidas\b/i, '')
+                              .gsub(KnowledgeBase::Directives::CANNED_RE, '')
                               .gsub(/@buscar_art[ií]culo\b/i, '')
                               .gsub(/@discourse\b/i, '')
                               .strip

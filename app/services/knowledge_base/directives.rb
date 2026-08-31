@@ -17,6 +17,17 @@ module KnowledgeBase
   module Directives
     module_function
 
+    # @buscar_predefinidas(GRUPO)  -> solo las respuestas cuyo nombre empieza con GRUPO
+    # @buscar_predefinidas(!GRUPO) -> todas MENOS esas
+    # @buscar_predefinidas         -> todas (comportamiento historico)
+    #
+    # Existe para que dos ramas de un mismo agente puedan repartirse el corpus: la cuenta
+    # tiene UNA sola fuente de respuestas predefinidas (indice unico
+    # idx_unique_native_knowledge_sources), asi que separarlas en dos fuentes no es posible
+    # y el reparto tiene que hacerse dentro. El grupo se compara contra el nombre de la
+    # respuesta, que es lo que se vectoriza como titulo del knowledge_item.
+    CANNED_RE = /@buscar_predefinidas\b(?:\s*\(([^)]*)\))?/i
+
     # Primera directiva de fuente presente en el texto → { mode:, source_name: } o nil.
     # El orden es precedencia: gana la primera que coincida.
     def detect(text)
@@ -29,9 +40,10 @@ module KnowledgeBase
     # Igual que `detect` pero sin {{consulta:}} — solo las fuentes de búsqueda.
     def detect_search(text)
       prompt = text.to_s
-      if prompt.match?(/@buscar_predefinidas\b/i)
-        { mode: :canned_response }
-      elsif prompt.match?(/@buscar_art[ií]culo\b/i)
+      canned = canned_directive(prompt)
+      return canned if canned
+
+      if prompt.match?(/@buscar_art[ií]culo\b/i)
         { mode: :article }
       elsif (match = prompt.match(/@buscar_foro\(([^)]+)\)/i))
         { mode: :knowledge_source, source_name: match[1].strip }
@@ -42,6 +54,15 @@ module KnowledgeBase
       elsif prompt.match?(/@discourse\b/i)
         { mode: :discourse_integration }
       end
+    end
+
+    # El grupo es opcional: @buscar_predefinidas sin paréntesis sigue trayendo TODO, que es
+    # lo que hacen los agentes que ya existen.
+    def canned_directive(prompt)
+      match = prompt.match(CANNED_RE)
+      return nil if match.nil?
+
+      { mode: :canned_response, group: match[1]&.strip.presence }
     end
 
     # ¿El texto pide una fuente que además existe y está operativa?
