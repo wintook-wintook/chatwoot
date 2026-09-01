@@ -1,15 +1,15 @@
 {
   "CASE_TICKETS": {
-    "SECTION_TITLE": "Ticket",
+    "SECTION_TITLE": "Caso",
     "SIDEBAR": {
-      "PRIMARY_LABEL": "Tickets",
-      "TITLE": "Gestor de Tickets",
-      "ALL_TICKETS": "Todos los tickets",
+      "PRIMARY_LABEL": "Casos",
+      "TITLE": "Gestor de Casos",
+      "ALL_TICKETS": "Todos los casos",
       "METRICS": "Métricas",
       "RULES": "Reglas de automatización"
     },
     "METRICS": {
-      "TITLE": "Métricas de Tickets",
+      "TITLE": "Métricas de Casos",
       "LOADING": "Cargando métricas...",
       "EMPTY": "Sin datos para el período seleccionado",
       "GROUP_VOLUME": "Volumen",
@@ -17,8 +17,8 @@
       "GROUP_TIMES": "Tiempos de atención",
       "GROUP_ITIL": "ITIL y calidad",
       "GROUP_QUALITY": "Calidad",
-      "TOTAL_PERIOD": "Tickets en el período",
-      "TOTAL_OPEN": "Tickets activos",
+      "TOTAL_PERIOD": "Casos en el período",
+      "TOTAL_OPEN": "Casos activos",
       "SLA_OVERDUE": "SLA vencidos",
       "SLA_AT_RISK": "SLA en riesgo",
       "SLA_COMPLIANCE": "Cumplimiento SLA",
@@ -43,18 +43,18 @@
       "PERIOD_TO": "al"
     },
     "NOTIFICATIONS": {
-      "TOAST_TICKET_ASSIGNED": "Ticket asignado: {folio} · {task}"
+      "TOAST_TICKET_ASSIGNED": "Caso asignado: {folio} · {task}"
     },
     "KANBAN": {
-      "TITLE": "Tablero de tickets",
+      "TITLE": "Tablero de casos",
       "SEARCH_PLACEHOLDER": "Buscar folio, título o contacto…",
       "ALL_KINDS": "Todos los tipos",
       "ALL_TYPES": "Todos los tipos de caso",
       "ALL_SERVICES": "Todos los servicios",
       "ALL_AGENTS": "Todos los responsables",
       "UNASSIGNED": "Sin asignar",
-      "INVALID_MOVE": "Ese movimiento no es una transición válida para este ticket.",
-      "MOVE_ERROR": "No se pudo mover el ticket.",
+      "INVALID_MOVE": "Ese movimiento no es una transición válida para este caso.",
+      "MOVE_ERROR": "No se pudo mover el caso.",
       "MOVE_TITLE": "Mover {folio}",
       "MOVE_TARGET": "Nuevo estado",
       "MOVE_TO": "Mover a:",
@@ -62,9 +62,9 @@
       "MOVE_NOTE_PLACEHOLDER": "Opcional: describe la acción realizada",
       "NOTIFY_LABEL": "Avisar al cliente por su canal",
       "NOTIFY_PLACEHOLDER": "Mensaje que recibirá el cliente",
-      "NOTIFY_HELP": "Se enviará por el canal del ticket (WhatsApp, email, etc.) al mover.",
+      "NOTIFY_HELP": "Se enviará por el canal del caso (WhatsApp, email, etc.) al mover.",
       "NOTIFY_SENT": "Aviso enviado al cliente",
-      "NOTIFY_ERROR": "El ticket se movió, pero no se pudo enviar el aviso.",
+      "NOTIFY_ERROR": "El caso se movió, pero no se pudo enviar el aviso.",
       "NOTIFY_TEMPLATES": {
         "in_progress": "Hola, tu solicitud {folio} ya está siendo atendida. Te mantendremos al tanto.",
         "waiting_on_customer": "Hola, sobre tu solicitud {folio} necesitamos un dato adicional para continuar. ¿Nos ayudas?",
@@ -84,8 +84,8 @@
       }
     },
     "LIST": {
-      "LOADING": "Cargando tickets...",
-      "EMPTY": "No hay tickets que coincidan con los filtros",
+      "LOADING": "Cargando casos...",
+      "EMPTY": "No hay casos que coincidan con los filtros",
       "SEARCH_PLACEHOLDER": "Buscar por folio, título o contacto…",
       "DATE_RANGE": "Rango de fechas",
       "APPLY": "Aplicar",
@@ -138,7 +138,7 @@
       "THEN_SECTION_TITLE": "Ejecutar estas acciones",
       "ADD_CONDITION": "Agregar condición",
       "ADD_ACTION": "Agregar acción",
-      "NO_CONDITIONS_HINT": "Sin condiciones — la regla se aplica a todos los tickets",
+      "NO_CONDITIONS_HINT": "Sin condiciones — la regla se aplica a todos los casos",
       "NEED_ACTION": "Agrega al menos una acción",
       "NAME_LABEL": "Nombre",
       "NAME_PLACEHOLDER": "Ej: Soporte urgente → escalar",
@@ -154,9 +154,9 @@
       "SAVE_EDIT": "Guardar cambios",
       "CREATE": "Crear regla"
     },
-    "CREATE_BUTTON": "+ Crear ticket",
-    "PANEL_BUTTON": "Tickets ({count})",
-    "NO_TICKET": "Sin ticket activo",
+    "CREATE_BUTTON": "+ Crear caso",
+    "PANEL_BUTTON": "Casos ({count})",
+    "NO_TICKET": "Sin caso activo",
     "VIEW_TIMELINE": "Ver historial",
     "CHANGE_STATUS": "Cambiar estado",
     "SLA_OVERDUE": "SLA vencido",
@@ -186,7 +186,7 @@
       "SEND_ERROR": "No se pudo enviar el mensaje."
     },
     "LOCK": {
-      "BANNER": "{name} está trabajando en este ticket ahora mismo."
+      "BANNER": "{name} está trabajando en este caso ahora mismo."
     },
     "CLAIM": {
       "BUTTON": "Tomar"
@@ -198,9 +198,9 @@
       "REASON_PLACEHOLDER": "¿Por qué cambia de estado? Queda en el Recorrido.",
       "REASON_CONFIRM": "Cambiar estado",
       "REASON_CANCEL": "Cancelar",
-      "MEETINGS_TITLE": "Este ticket tiene {count} tarea(s) agendada(s) a futuro",
+      "MEETINGS_TITLE": "Este caso tiene {count} tarea(s) agendada(s) a futuro",
       "MEETINGS_CANCEL": "Cancelarlas y avisar al cliente",
-      "MEETINGS_IRREVERSIBLE": "Cancelar no se puede deshacer: el cliente recibe el aviso y las tareas agendadas no vuelven aunque se reabra el ticket."
+      "MEETINGS_IRREVERSIBLE": "Cancelar no se puede deshacer: el cliente recibe el aviso y las tareas agendadas no vuelven aunque se reabra el caso."
     },
     "PRIORITY_QUICK": {
       "LABEL": "Prioridad",
@@ -231,14 +231,14 @@
       "ASSIGN": "Asignar a",
       "CLOSE": "Cerrar",
       "CLEAR": "Limpiar selección",
-      "SUCCESS": "{n} tickets actualizados",
+      "SUCCESS": "{n} casos actualizados",
       "ERROR": "No se pudo aplicar la acción",
-      "MEETINGS_PENDING": "{n} de los tickets cerrados tienen tareas agendadas a futuro: revísalos uno por uno para cancelarlas."
+      "MEETINGS_PENDING": "{n} de los casos cerrados tienen tareas agendadas a futuro: revísalos uno por uno para cancelarlas."
     },
     "TASKS": {
       "TITLE": "Tareas",
       "LOADING": "Cargando tareas...",
-      "EMPTY": "Sin tareas. Agrega pasos para resolver este ticket.",
+      "EMPTY": "Sin tareas. Agrega pasos para resolver este caso.",
       "UNASSIGNED": "Sin asignar",
       "ADD_PLACEHOLDER": "Nueva tarea...",
       "ADD": "Nueva tarea",
@@ -266,7 +266,7 @@
         "DUE_PREFIX": "Vence:",
         "DUE_TODAY": "hoy",
         "SAVE_ERROR": "No se pudo actualizar la tarea.",
-        "FROZEN_HINT": "El ticket está cerrado: reábrelo para modificar sus tareas.",
+        "FROZEN_HINT": "El caso está cerrado: reábrelo para modificar sus tareas.",
         "TOAST_ASSIGNED": "Nueva tarea asignada: {task} · caso {folio}",
         "TOAST_COMPLETED": "Tarea completada: {task} · caso {folio}",
         "TABS": {
@@ -286,8 +286,8 @@
           "TODAY": "Vencen hoy",
           "WEEK": "Esta semana"
         },
-        "TICKET_COL": "Ticket",
-        "OPEN_TICKET": "Abrir ticket",
+        "TICKET_COL": "Caso",
+        "OPEN_TICKET": "Abrir caso",
         "DELETE_ERROR": "No se pudo eliminar la tarea."
       },
       "TABLE": {
@@ -318,7 +318,7 @@
         "SAVE": "Guardar",
         "CANCEL": "Cancelar",
         "CLOSE": "Cerrar",
-        "NEW_DESC": "Crea una tarea o subtarea del ticket, con responsable, prioridad y fecha de vencimiento.",
+        "NEW_DESC": "Crea una tarea o subtarea del caso, con responsable, prioridad y fecha de vencimiento.",
         "EDIT_DESC": "Actualiza los datos de la tarea o cambia su estado.",
         "VIEW_DESC": "Detalle de la tarea.",
         "REQUESTER_LABEL": "Solicitante"
@@ -353,7 +353,7 @@
       "MEETINGS_BEYOND_DUE": "{count} tarea(s) agendada(s) después del vencimiento"
     },
     "MODAL": {
-      "TITLE_CREATE": "Crear ticket",
+      "TITLE_CREATE": "Crear caso",
       "CASE_TYPE_LABEL": "Tipo de caso",
       "TICKET_KIND_LABEL": "Naturaleza del caso (ITIL)",
       "AFFECTED_SERVICE_LABEL": "Servicio afectado",
@@ -368,15 +368,15 @@
       "DESCRIPTION_LABEL": "Descripción",
       "DESCRIPTION_PLACEHOLDER": "Detalle adicional (opcional)",
       "CANCEL": "Cancelar",
-      "SUBMIT": "Crear ticket",
-      "SUCCESS": "Ticket creado correctamente",
-      "ERROR": "Error al crear el ticket",
-      "TITLE_LIST": "Tickets del contacto",
-      "EMPTY_LIST": "Sin tickets en proceso",
-      "NEW_TICKET": "Crear ticket",
+      "SUBMIT": "Crear caso",
+      "SUCCESS": "Caso creado correctamente",
+      "ERROR": "Error al crear el caso",
+      "TITLE_LIST": "Casos del contacto",
+      "EMPTY_LIST": "Sin casos en proceso",
+      "NEW_TICKET": "Crear caso",
       "OPEN_DETAIL": "Abrir",
       "BACK": "Volver",
-      "TAB_TICKET": "Datos del ticket",
+      "TAB_TICKET": "Datos del caso",
       "TAB_ASSIGN": "Asignación manual",
       "TAB_CUSTOM": "Campos personalizados",
       "ASSIGN_AUTO": "— Automático (reglas) —",
@@ -393,20 +393,20 @@
     },
     "EDIT": {
       "BUTTON": "Editar",
-      "TITLE": "Editar ticket",
+      "TITLE": "Editar caso",
       "SUBMIT": "Guardar cambios",
-      "SUCCESS": "Ticket actualizado",
-      "ERROR": "No se pudo actualizar el ticket"
+      "SUCCESS": "Caso actualizado",
+      "ERROR": "No se pudo actualizar el caso"
     },
     "INTERNAL": {
-      "TITLE": "Crear ticket interno",
-      "NEW_BUTTON": "Ticket interno",
+      "TITLE": "Crear caso interno",
+      "NEW_BUTTON": "Caso interno",
       "ASSIGNEE_LABEL": "Asignar a (agente)",
       "ASSIGNEE_NONE": "— Sin asignar —",
       "TITLE_PLACEHOLDER": "Describe brevemente la solicitud",
-      "SUBMIT": "Crear ticket interno",
-      "SUCCESS": "Ticket interno creado",
-      "ERROR": "No se pudo crear el ticket interno",
+      "SUBMIT": "Crear caso interno",
+      "SUCCESS": "Caso interno creado",
+      "ERROR": "No se pudo crear el caso interno",
       "BADGE": "Interno",
       "NO_ASSIGNEE": "Sin asignar",
       "REQUESTER_LABEL": "Solicitante",
@@ -415,16 +415,16 @@
     "ESCALATION": {
       "BUTTON": "Escalar",
       "LEVEL_TITLE": "Nivel de escalamiento",
-      "TITLE": "Escalar ticket (actual: {level})",
-      "HELP": "Sube el ticket al siguiente nivel de soporte (N1→N2→N3) y, opcionalmente, reasígnalo a un equipo.",
+      "TITLE": "Escalar caso (actual: {level})",
+      "HELP": "Sube el caso al siguiente nivel de soporte (N1→N2→N3) y, opcionalmente, reasígnalo a un equipo.",
       "TEAM_LABEL": "Reasignar a equipo",
       "NO_TEAM": "Mantener asignación actual",
       "REASON_LABEL": "Motivo del escalamiento",
       "REASON_PLACEHOLDER": "Por qué se escala y qué se intentó",
       "CANCEL": "Cancelar",
       "CONFIRM": "Escalar",
-      "SUCCESS": "Ticket escalado",
-      "ERROR": "No se pudo escalar el ticket"
+      "SUCCESS": "Caso escalado",
+      "ERROR": "No se pudo escalar el caso"
     },
     "SLA": {
       "TITLE": "Políticas SLA",
@@ -450,7 +450,7 @@
       "ERROR": "No se pudo guardar la política",
       "DELETE": {
         "TITLE": "Eliminar política",
-        "MESSAGE": "Los tickets usarán el SLA por defecto. Eliminar política",
+        "MESSAGE": "Los casos usarán el SLA por defecto. Eliminar política",
         "YES": "Eliminar",
         "NO": "Cancelar"
       },
@@ -481,7 +481,7 @@
     "CLOSURE": {
       "TITLE": "Cierre",
       "MODAL_TITLE": "Documentar cierre",
-      "HELP": "Documenta cómo se cerró este ticket. La causa y la solución son obligatorias.",
+      "HELP": "Documenta cómo se cerró este caso. La causa y la solución son obligatorias.",
       "TYPE": "Tipo de cierre",
       "CAUSE": "Causa",
       "CAUSE_PLACEHOLDER": "Qué originó el problema",
@@ -491,7 +491,7 @@
       "YES": "Sí",
       "NO": "No",
       "CANCEL": "Cancelar",
-      "CONFIRM": "Cerrar ticket",
+      "CONFIRM": "Cerrar caso",
       "TYPES": {
         "resolved": "Resuelto",
         "duplicate": "Duplicado",
@@ -546,15 +546,15 @@
     },
     "REOPEN": {
       "BUTTON": "Reabrir",
-      "MODAL_TITLE": "Reabrir ticket",
+      "MODAL_TITLE": "Reabrir caso",
       "REASON_LABEL": "Motivo de la reapertura",
       "REASON_PLACEHOLDER": "¿Por qué se reabre? Ej: el cliente reporta que volvió a fallar.",
       "HINT": "Queda registrado en el Recorrido. El SLA vuelve a contar desde cero.",
-      "CONFIRM": "Reabrir ticket",
+      "CONFIRM": "Reabrir caso",
       "CANCEL": "Cancelar",
-      "SUCCESS": "Ticket reabierto",
-      "ERROR": "No se pudo reabrir el ticket",
-      "FROZEN_HINT": "Ticket cerrado: reábrelo para poder editarlo."
+      "SUCCESS": "Caso reabierto",
+      "ERROR": "No se pudo reabrir el caso",
+      "FROZEN_HINT": "Caso cerrado: reábrelo para poder editarlo."
     },
     "NOTES": {
       "ADD": "Nota",
@@ -569,12 +569,12 @@
       "ADD_NEW": "Nueva nota",
       "TITLE": "Notas internas",
       "LOADING": "Cargando notas...",
-      "EMPTY": "Sin notas. Deja constancia de lo que vas haciendo en el ticket.",
+      "EMPTY": "Sin notas. Deja constancia de lo que vas haciendo en el caso.",
       "MODAL_EDIT_TITLE": "Editar nota interna",
       "MODAL_VIEW_TITLE": "Ver nota interna",
       "VIEW": "Ver nota",
       "POST_CLOSURE": "post-cierre",
-      "POST_CLOSURE_HINT": "Escrita después de que el ticket se cerró.",
+      "POST_CLOSURE_HINT": "Escrita después de que el caso se cerró.",
       "CLOSE": "Cerrar",
       "EDIT": "Editar",
       "DELETE": "Eliminar",
@@ -598,29 +598,29 @@
       "FILTER_PLACEHOLDER": "Buscar en notas (texto, autor, folio)…",
       "NO_MATCHES": "Sin coincidencias con el filtro.",
       "CREATED": "Creada el {date}",
-      "MODAL_DESC": "Registra en la bitácora del ticket lo que hiciste o lo que falta. Solo la ven los agentes; el cliente no la verá.",
+      "MODAL_DESC": "Registra en la bitácora del caso lo que hiciste o lo que falta. Solo la ven los agentes; el cliente no la verá.",
       "MODAL_EDIT_DESC": "Actualiza el contenido. Quedará registrado que la nota fue editada y por quién.",
       "MODAL_VIEW_DESC": "Detalle completo de la nota interna."
     },
     "RELATIONS": {
-      "TITLE": "Tickets relacionados",
-      "ADD": "+ Vincular ticket",
-      "EMPTY": "Sin tickets relacionados",
-      "MODAL_TITLE": "Vincular ticket relacionado",
-      "SEARCH_LABEL": "Buscar ticket",
+      "TITLE": "Casos relacionados",
+      "ADD": "+ Vincular caso",
+      "EMPTY": "Sin casos relacionados",
+      "MODAL_TITLE": "Vincular caso relacionado",
+      "SEARCH_LABEL": "Buscar caso",
       "SEARCH_PLACEHOLDER": "Folio o título…",
       "SEARCHING": "Buscando…",
-      "NO_RESULTS": "No se encontraron tickets",
+      "NO_RESULTS": "No se encontraron casos",
       "SELECTED": "Seleccionado:",
       "TYPE_LABEL": "Tipo de relación",
       "CANCEL": "Cancelar",
       "CONFIRM": "Vincular",
-      "SUCCESS": "Ticket vinculado",
-      "ERROR": "No se pudo vincular el ticket",
+      "SUCCESS": "Caso vinculado",
+      "ERROR": "No se pudo vincular el caso",
       "REMOVE_SUCCESS": "Relación eliminada",
       "DELETE": {
         "TITLE": "Eliminar relación",
-        "MESSAGE": "Se desvincularán los tickets. Eliminar relación",
+        "MESSAGE": "Se desvincularán los casos. Eliminar relación",
         "YES": "Eliminar",
         "NO": "Cancelar"
       }
@@ -648,14 +648,14 @@
       }
     },
     "TIMELINE": {
-      "TITLE": "Historial del ticket",
+      "TITLE": "Historial del caso",
       "EMPTY": "Sin eventos registrados",
       "CLOSE": "Cerrar",
       "ACTOR_SYSTEM": "Sistema",
       "ACTOR_BOT": "Bot"
     },
     "JOURNEY": {
-      "TITLE": "Avance del ticket",
+      "TITLE": "Avance del caso",
       "LOADING": "Cargando avance...",
       "CURRENT": "Actual",
       "CREATED": "Creado",
@@ -680,9 +680,9 @@
       "SAVED": "Configuración de IA guardada",
       "SAVE_ERROR": "No se pudo guardar la configuración",
       "LOADING": "Cargando configuración...",
-      "HELP": "Configura cómo la IA asiste en la gestión de tickets. Por cada acción eliges el modo: desactivado, sugerir al agente, o aplicar automáticamente.",
+      "HELP": "Configura cómo la IA asiste en la gestión de casos. Por cada acción eliges el modo: desactivado, sugerir al agente, o aplicar automáticamente.",
       "NO_KEY": "No hay una integración de OpenAI activa en esta cuenta. La IA no funcionará hasta configurarla en Integraciones.",
-      "ENABLED_LABEL": "Activar IA en el Gestor de Tickets",
+      "ENABLED_LABEL": "Activar IA en el Gestor de Casos",
       "ENABLED_HELP": "Interruptor general. Si está apagado, ninguna acción de IA se ejecuta.",
       "SOON": "Próximamente",
       "MODES": {
@@ -693,7 +693,7 @@
       "ACTIONS": {
         "classify": {
           "LABEL": "Clasificación automática",
-          "HELP": "Al crear un ticket, deduce tipo, servicio, categoría, impacto y urgencia."
+          "HELP": "Al crear un caso, deduce tipo, servicio, categoría, impacto y urgencia."
         },
         "reply": {
           "LABEL": "Respuesta sugerida",
@@ -709,7 +709,7 @@
         },
         "follow_up": {
           "LABEL": "Seguimiento automático",
-          "HELP": "Redacta seguimientos al cliente según el estado del ticket."
+          "HELP": "Redacta seguimientos al cliente según el estado del caso."
         }
       },
       "SUGGESTION": {
@@ -753,7 +753,7 @@
         "NONE": "No se encontraron incidentes similares.",
         "SUGGEST_PROBLEM": "Hay varios incidentes similares. Considera crear un Problema y vincularlos.",
         "LINK": "Vincular",
-        "LINKED": "Ticket vinculado como duplicado",
+        "LINKED": "Caso vinculado como duplicado",
         "ERROR": "No se pudo analizar duplicados"
       },
       "FOLLOWUP": {
@@ -761,7 +761,7 @@
         "GENERATE": "Generar",
         "REGENERATE": "Regenerar",
         "AUTO_BADGE": "Generado automáticamente",
-        "HINT": "Redacta un mensaje de seguimiento para el cliente según el estado del ticket.",
+        "HINT": "Redacta un mensaje de seguimiento para el cliente según el estado del caso.",
         "COPY": "Copiar",
         "COPIED_BTN": "Copiado",
         "COPIED": "Seguimiento copiado al portapapeles",
@@ -770,7 +770,7 @@
     },
     "TYPES": {
       "TITLE": "Tipos de caso",
-      "HELP": "Define los tipos de caso de tu cuenta. Cada ticket se clasifica con uno de estos tipos.",
+      "HELP": "Define los tipos de caso de tu cuenta. Cada caso se clasifica con uno de estos tipos.",
       "CREATE_BUTTON": "+ Nuevo tipo",
       "CREATE_TITLE": "Crear tipo de caso",
       "EDIT_TITLE": "Editar tipo de caso",
@@ -784,7 +784,7 @@
       "PUBLIC_OFF": "Privado",
       "DELETE": {
         "TITLE": "Eliminar tipo de caso",
-        "MESSAGE": "Los tickets con este tipo quedarán sin tipo asignado. ¿Eliminar",
+        "MESSAGE": "Los casos con este tipo quedarán sin tipo asignado. ¿Eliminar",
         "YES": "Eliminar",
         "NO": "Cancelar"
       },
@@ -813,21 +813,21 @@
       "TITLE": "Ajustes del módulo",
       "BACK": "Volver",
       "LOADING": "Cargando ajustes...",
-      "HELP": "Elige cómo se comporta el gestor de tickets. El modo simple se parece a osTicket; el modo ITIL activa la gestión avanzada.",
+      "HELP": "Elige cómo se comporta el gestor de casos. El modo simple se parece a osTicket; el modo ITIL activa la gestión avanzada.",
       "MODE_SIMPLE": "Modo simple (osTicket)",
       "MODE_SIMPLE_DESC": "Experiencia sencilla: estados básicos y prioridad directa. Oculta los campos ITIL avanzados.",
       "MODE_ITIL": "Modo ITIL (avanzado)",
-      "MODE_ITIL_DESC": "Activa estados ITIL completos, matriz Impacto×Urgencia, naturaleza del ticket, problema/cambio y aprobaciones.",
+      "MODE_ITIL_DESC": "Activa estados ITIL completos, matriz Impacto×Urgencia, naturaleza del caso, problema/cambio y aprobaciones.",
       "NOTE_DATA": "No se borra ni modifica ningún dato: el modo solo cambia lo que se muestra.",
       "NOTE_REVERSIBLE": "Puedes cambiar de modo cuando quieras.",
       "REOPEN": {
-        "SECTION": "Reapertura de tickets cerrados",
+        "SECTION": "Reapertura de casos cerrados",
         "WINDOW_TITLE": "Ventana de reapertura",
         "WINDOW_DESC": "Días desde el cierre en los que el agente asignado puede reabrir. Pasado ese plazo, solo un administrador. Usa 0 para no poner límite.",
         "DAYS": "días",
         "SAVE": "Guardar",
         "ON_REPLY_TITLE": "Reabrir si el cliente responde",
-        "ON_REPLY_DESC": "Si el cliente escribe por su canal sobre un ticket cerrado, se reabre solo (o se crea uno de seguimiento si venció la ventana).",
+        "ON_REPLY_DESC": "Si el cliente escribe por su canal sobre un caso cerrado, se reabre solo (o se crea uno de seguimiento si venció la ventana).",
         "NOTE_WINDOW": "El administrador puede reabrir siempre, aunque haya vencido la ventana.",
         "NOTE_SLA": "Al reabrir, el SLA vuelve a contar desde cero."
       },
@@ -836,7 +836,7 @@
     },
     "PORTALS": {
       "TITLE": "Portales del cliente",
-      "HELP": "Crea portales públicos (estilo osTicket) donde tus clientes abren y consultan tickets sin iniciar sesión.",
+      "HELP": "Crea portales públicos (estilo osTicket) donde tus clientes abren y consultan casos sin iniciar sesión.",
       "BACK": "Volver",
       "LOADING": "Cargando portales...",
       "EMPTY": "Aún no hay portales. Crea el primero para dar a tus clientes una página de soporte.",
@@ -899,7 +899,7 @@
       "MOVE_UP": "Subir",
       "MOVE_DOWN": "Bajar",
       "REMOVE": "Quitar columna",
-      "OVERLAP_INFO": "Estas columnas comparten un mismo estado. Mover un ticket entre ellas no cambia su estado: es correcto y esperado.",
+      "OVERLAP_INFO": "Estas columnas comparten un mismo estado. Mover un caso entre ellas no cambia su estado: es correcto y esperado.",
       "MISSING_COVERAGE": "Estados sin cubrir:",
       "ASSIGN_REMAINING": "Asignar a la última columna",
       "COVERAGE_OK": "Todos los estados están cubiertos.",
@@ -954,11 +954,11 @@
         "checkbox": "Casilla"
       },
       "ADD_BUTTON": "Agregar campo",
-      "SUBTITLE": "Estos campos se piden al crear o editar un ticket de este tipo.",
+      "SUBTITLE": "Estos campos se piden al crear o editar un caso de este tipo.",
       "OPTIONS_HEADER": "Opciones",
       "DELETE": {
         "TITLE": "Eliminar campo",
-        "MESSAGE": "Se quitará este campo de los tickets de este tipo. ¿Eliminar",
+        "MESSAGE": "Se quitará este campo de los casos de este tipo. ¿Eliminar",
         "YES": "Eliminar",
         "NO": "Cancelar"
       }
@@ -968,8 +968,8 @@
       "BACK": "Volver",
       "TAB_SERVICES": "Servicios afectados",
       "TAB_CATEGORIES": "Categorías",
-      "SERVICES_HELP": "Servicios o sistemas que pueden verse afectados por un ticket (CRM, Microsip, Servidor, etc.).",
-      "CATEGORIES_HELP": "Categorías y subcategorías para clasificar los tickets. Usa + para añadir una subcategoría.",
+      "SERVICES_HELP": "Servicios o sistemas que pueden verse afectados por un caso (CRM, Microsip, Servidor, etc.).",
+      "CATEGORIES_HELP": "Categorías y subcategorías para clasificar los casos. Usa + para añadir una subcategoría.",
       "NEW_SERVICE": "+ Nuevo servicio",
       "EDIT_SERVICE": "Editar servicio",
       "NEW_CATEGORY": "+ Nueva categoría",
@@ -984,7 +984,7 @@
       "CANCEL": "Cancelar",
       "DELETE": {
         "TITLE": "Eliminar",
-        "MESSAGE": "Los tickets asociados quedarán sin este valor. ¿Eliminar",
+        "MESSAGE": "Los casos asociados quedarán sin este valor. ¿Eliminar",
         "YES": "Eliminar",
         "NO": "Cancelar"
       },
@@ -1002,7 +1002,7 @@
     "FOLIO": {
       "TITLE": "Configuración de folio",
       "SAVE": "Guardar",
-      "ENABLED": "Generar folio automático para nuevos tickets",
+      "ENABLED": "Generar folio automático para nuevos casos",
       "TEMPLATE_LABEL": "Plantilla del folio",
       "PREVIEW": "Vista previa",
       "TOKENS_TITLE": "Tokens disponibles",
@@ -1015,7 +1015,7 @@
         "monthly": "Mensual",
         "yearly": "Anual"
       },
-      "NOTE": "Los cambios solo afectan a los tickets creados a partir de ahora. Los folios existentes no se modifican.",
+      "NOTE": "Los cambios solo afectan a los casos creados a partir de ahora. Los folios existentes no se modifican.",
       "SAVED": "Configuración de folio guardada",
       "SAVE_ERROR": "Error al guardar la configuración"
     },
@@ -1069,13 +1069,13 @@
       "high": "Alta"
     },
     "EVENT_TYPES": {
-      "ticket_created": "Ticket creado",
-      "ticket_classified": "Ticket clasificado",
+      "ticket_created": "Caso creado",
+      "ticket_classified": "Caso clasificado",
       "status_changed": "Estado cambiado",
       "assigned": "Asignado",
       "in_diagnosis": "En diagnóstico",
       "validating": "Validando con cliente",
-      "related": "Ticket relacionado",
+      "related": "Caso relacionado",
       "change_approved": "Cambio aprobado",
       "change_rejected": "Cambio rechazado",
       "problem_propagated": "Resolución propagada a incidentes",
@@ -1111,14 +1111,14 @@
       "LEVEL_LABEL": "Nivel:",
       "VIEW_FULL": "Ver",
       "NO_TRANSITIONS": "Sin transiciones disponibles",
-      "LOADING": "Cargando ticket…"
+      "LOADING": "Cargando caso…"
     },
     "MEETINGS": {
       "TITLE": "Tareas agendadas",
       "ADD_NEW": "Agendar tarea",
       "REFRESH": "Actualizar",
       "LOADING": "Cargando tareas agendadas...",
-      "EMPTY": "Sin tareas agendadas para este ticket.",
+      "EMPTY": "Sin tareas agendadas para este caso.",
       "NO_MATCHES": "Ninguna tarea agendada coincide con el filtro",
       "FILTER_PLACEHOLDER": "Buscar folio, título, tarea o lugar…",
       "ACTIONS": "Acciones",
@@ -1153,14 +1153,14 @@
       "MODAL": {
         "TITLE": "Agendar tarea",
         "EDIT_TITLE": "Editar tarea agendada",
-        "DESC": "Queda registrada en el avance del ticket.",
+        "DESC": "Queda registrada en el avance del caso.",
         "TITLE_LABEL": "Título",
         "TITLE_PLACEHOLDER": "Ej: Revisión de avance",
         "STARTS_LABEL": "Inicia",
         "ENDS_LABEL": "Termina",
         "DATE_ERROR": "La hora de fin debe ser posterior a la de inicio.",
         "TASK_LABEL": "Tarea",
-        "TASK_NONE": "— Del ticket (sin tarea) —",
+        "TASK_NONE": "— Del caso (sin tarea) —",
         "ORGANIZER_LABEL": "Organizador",
         "ORGANIZER_ME": "— Yo —",
         "LOCATION_LABEL": "Lugar",
@@ -1168,7 +1168,7 @@
         "DESCRIPTION_LABEL": "Descripción",
         "DESCRIPTION_PLACEHOLDER": "Agenda o puntos a tratar (opcional)",
         "INVITE_CLIENT": "Invitar al cliente",
-        "NO_CLIENT_EMAIL": "El ticket no tiene un contacto con correo",
+        "NO_CLIENT_EMAIL": "El caso no tiene un contacto con correo",
         "GUESTS_LABEL": "Otros invitados",
         "GUESTS_PLACEHOLDER": "correos separados por coma",
         "LOCAL_ONLY_HINT": "Ningún agente tiene Google Calendar conectado: la tarea agendada se guarda solo en el sistema y no se enviará invitación por correo.",
@@ -1199,7 +1199,7 @@
       },
       "MINUTES": {
         "TITLE": "¿Capturar la minuta?",
-        "DESC": "Se guarda como nota interna del ticket, ligada a la misma tarea.",
+        "DESC": "Se guarda como nota interna del caso, ligada a la misma tarea.",
         "LABEL": "Minuta",
         "PLACEHOLDER": "Acuerdos, pendientes y próximos pasos…",
         "SKIP": "Ahora no",
@@ -1225,7 +1225,7 @@
         "RETRYING": "Reintentando la sincronización…"
       },
       "SERIES_CREATED": "Serie {folio} creada con {count} tareas agendadas",
-      "BEYOND_TICKET_HINT": "Se pasa del vencimiento comprometido con el cliente. No se mueve desde aquí: si el caso lo necesita, escala el ticket.",
+      "BEYOND_TICKET_HINT": "Se pasa del vencimiento comprometido con el cliente. No se mueve desde aquí: si el caso lo necesita, escala el caso.",
       "TOAST_DUE_ALIGNED": "Vencimiento de la tarea movido al {date}"
     }
   }
