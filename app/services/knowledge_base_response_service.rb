@@ -569,7 +569,7 @@ class KnowledgeBaseResponseService
       # El índice se numera sobre `sources`, no sobre la posición del hit: los posts sin
       # contenido se descartan, así que las dos se desincronizan y el marcador [FUENTE n]
       # apuntaría al vecino.
-      sources << { title: hit[:title], url: hit[:url] }
+      sources << { title: hit[:title], url: hit[:url], content: content }
       "[FUENTE #{sources.size}] #{hit[:title]}\n#{content}"
     end.join("\n\n")
 
@@ -767,41 +767,80 @@ class KnowledgeBaseResponseService
     text.to_s.downcase.scan(/[a-záéíóúñü0-9]{3,}/).to_set - STOPWORDS
   end
 
+  # Fraccion de las palabras significativas de la respuesta que aparecen en la fuente.
+  # Por encima de este valor damos por hecho que la respuesta se escribio desde ahi.
+  #
+  # Medido sobre "como puedo actualizar a la ultima version", cuya respuesta salio del hilo
+  # de instalacion/actualizacion: 0.70 para esa fuente contra 0.15 y 0.05 para las otras dos
+  # del mismo contexto.
+  USED_SOURCE_COVERAGE = 0.45
+
+  # ...pero la fraccion sola se dispara con respuestas de pocas palabras: "¿Podrias darme mas
+  # detalles sobre el tipo de error?" no sale de ningun hilo y aun asi quedo cubierta al 36%
+  # por "Solucion al Error ELOGIN", porque con 10 palabras significativas bastan 4 casuales.
+  # Una respuesta escrita desde una fuente comparte con ella bastante mas que un puñado de
+  # terminos: en el turno bueno fueron 42.
+  MIN_COVERED_WORDS = 12
+
   # Separa la declaración "FUENTE_USADA: n" del texto para el cliente y devuelve el
   # footer de esa misma fuente — la que el modelo dice haber usado, no la que se parezca
   # más. Si declaró 0, el link se ofrece igual pero como "tema relacionado": citarlo bajo
   # "Más información" prometería una respuesta que el texto no da.
-  #
-  # Si el modelo no puso el marcador (se lo saltó), caemos al overlap de palabras de
-  # siempre en vez de quedarnos sin fuente.
   def split_declared_source(answer, sources, question)
     match = answer.to_s.match(USED_SOURCE_RE)
     clean = match ? answer.sub(USED_SOURCE_RE, '').strip : answer.to_s.strip
+    return [clean, ''] if sources.empty?
 
-    # Sin marcador no sabemos en que se baso: se trata igual que un FUENTE_USADA: 0. Antes
-    # se adivinaba por overlap y se publicaba como "Mas informacion", que afirma una
-    # procedencia que no consta -- asi acabo citando "Error manejador de licencias offline"
-    # en una respuesta sobre facturacion, por dos palabras en comun. El modelo omite el
-    # marcador en cerca de la mitad de los turnos, asi que esta rama no es un caso raro.
     idx = match ? match[1].to_i : 0
+    return declared_footer(clean, sources, idx) if idx.positive? && idx <= sources.size
 
-    # FUENTE_USADA: 0 — el modelo dice que ninguna fuente responde la pregunta. El link
-    # se ofrece igual, pero con otra etiqueta: "Más información" promete la respuesta y
-    # aquí no la hay, así que el hilo más cercano se cita como material relacionado.
-    if idx.zero? || idx > sources.size
-      Rails.logger.info "[KBase] 🔗 #{match ? "FUENTE_USADA: #{idx}" : 'sin marcador'} → " \
-                        'no consta que se haya usado una fuente, se cita la más cercana como relacionada'
-      return [clean, ''] if sources.empty?
+    undeclared_footer(clean, sources, question, match.present?)
+  end
 
-      related = closest_source(sources, question, clean)
-      return [clean, ''] if related.blank?
-
-      return [clean, "\n\n🔎 Tema relacionado que quizá te sirva: #{related[:url]}"]
-    end
-
+  def declared_footer(clean, sources, idx)
     source = sources[idx - 1]
     Rails.logger.info "[KBase] 🔗 Fuente declarada por el modelo: [#{idx}] '#{source[:title].truncate(40)}'"
     [clean, "\n\n📚 Más información: #{source[:url]}"]
+  end
+
+  # Sin marcador utilizable hay que deducir la procedencia. El modelo lo omite en 4 de cada
+  # 10 turnos y no es descuido suyo: el prompt del agente le exige abrir con una linea que
+  # reconozca lo que dijo el cliente, y el marcador pide esa misma primera linea.
+  #
+  # La deduccion se hace contra el CUERPO de la fuente, no contra su titulo: el titulo se
+  # parece a la pregunta —- lo trajo la busqueda semantica por eso mismo -— y por lo tanto
+  # se parece a cualquier respuesta sobre el tema, venga del hilo que venga.
+  def undeclared_footer(clean, sources, question, declared_zero)
+    best, covered, coverage = best_covering_source(sources, clean)
+
+    if best.present? && coverage >= USED_SOURCE_COVERAGE && covered >= MIN_COVERED_WORDS
+      Rails.logger.info "[KBase] 🔗 #{declared_zero ? 'FUENTE_USADA: 0' : 'Sin marcador'} → la respuesta está " \
+                        "cubierta al #{(coverage * 100).round}% (#{covered} palabras) por " \
+                        "'#{best[:title].truncate(40)}'"
+      return [clean, "\n\n📚 Más información: #{best[:url]}"]
+    end
+
+    Rails.logger.info "[KBase] 🔗 Ninguna fuente explica la respuesta (máx #{(coverage * 100).round}%, " \
+                      "#{covered} palabras) → se cita la más cercana como relacionada"
+    related = closest_source(sources, question, clean)
+    return [clean, ''] if related.blank?
+
+    [clean, "\n\n🔎 Tema relacionado que quizá te sirva: #{related[:url]}"]
+  end
+
+  # La fuente que más palabras de la respuesta explica: la fuente, cuántas palabras explica
+  # y qué fracción del total son.
+  def best_covering_source(sources, answer)
+    words = significant_words(answer)
+    return [nil, 0, 0.0] if words.empty?
+
+    sources.map { |source| [source, (words & source_words(source)).size] }
+           .max_by(&:last)
+           .then { |source, covered| [source, covered, covered.fdiv(words.size)] }
+  end
+
+  def source_words(source)
+    significant_words("#{source[:title]} #{source[:content]}")
   end
 
   # La más parecida por overlap. No se le exige un mínimo alto: aquí ya la estamos
