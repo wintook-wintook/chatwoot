@@ -88,10 +88,10 @@
     "NO_INBOX_AGENT": "Uh Oh! Looks like you are not part of any inbox. Please contact your administrator",
     "SEARCH_MESSAGES": "Search for messages in conversations",
     "KANBAN": {
-      "TITLE": "Assigned Opportunities Types",
-      "SELECTOR": "Select Opportunities Type",
-      "NOT_FOUND": "No Opportunities types found",
-      "SEARCH": "Search Opportunities type..."
+      "TITLE": "Assigned Conversations Types",
+      "SELECTOR": "Select Conversations Type",
+      "NOT_FOUND": "No Conversations types found",
+      "SEARCH": "Search Conversations type..."
     },
     "EMPTY_STATE": {
       "CMD_BAR": "to open command menu",
@@ -241,7 +241,7 @@
       "TIP_AUDIORECORDER_PERMISSION": "Allow access to audio",
       "TIP_AUDIORECORDER_ERROR": "Could not open the audio",
       "DRAG_DROP": "Drag and drop here to attach",
-      "BOARD_KANBAN": "Opportunities Board",
+      "BOARD_KANBAN": "Conversations Board",
       "START_AUDIO_RECORDING": "Start audio recording",
       "STOP_AUDIO_RECORDING": "Stop audio recording",
       "": "",
