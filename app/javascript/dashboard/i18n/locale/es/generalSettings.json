@@ -39,7 +39,7 @@
         "ERROR": ""
       },
       "AUTO_RESOLVE_DURATION": {
-        "LABEL": "Número de días después de los cuales un ticket debe resolverse automáticamente si no hay actividad",
+        "LABEL": "Número de días después de los cuales un caso debe resolverse automáticamente si no hay actividad",
         "PLACEHOLDER": "30",
         "ERROR": "Por favor, introduce una duración válida para la resolución automática (mínimo 1 día y máximo 999 días)"
       },
@@ -91,7 +91,7 @@
       "sla_missed_first_response": "SLA no cumplido",
       "sla_missed_next_response": "SLA no cumplido",
       "sla_missed_resolution": "SLA no cumplido",
-      "case_ticket_assignment": "Ticket asignado"
+      "case_ticket_assignment": "Caso asignado"
     }
   },
   "NETWORK": {
