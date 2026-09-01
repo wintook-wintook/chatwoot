@@ -99,10 +99,10 @@
     "NO_INBOX_AGENT": "¡Oh no! Parece que no eres parte de ninguna bandeja de entrada. Por favor contacta a tu administrador",
     "SEARCH_MESSAGES": "Buscar mensajes en conversaciones",
     "KANBAN": {
-      "TITLE": "Tipo de oportunidad asignado",
-      "SELECTOR": "Seleccionar tipo de oportunidad",
-      "NOT_FOUND": "No se encontraron tipos de oportunidad",
-      "SEARCH": "Buscar tipo de oportunidad..."
+      "TITLE": "Tipo de conversación asignado",
+      "SELECTOR": "Seleccionar tipo de conversación",
+      "NOT_FOUND": "No se encontraron tipos de conversación",
+      "SEARCH": "Buscar tipo de conversación..."
 
     },
     "EMPTY_STATE": {
@@ -280,7 +280,7 @@
       "TIP_AUDIORECORDER_PERMISSION": "Permitir acceso al audio",
       "TIP_AUDIORECORDER_ERROR": "No se pudo abrir el audio",
       "DRAG_DROP": "Arrastra y suelta aquí para adjuntar",
-      "BOARD_KANBAN": "Tablero oportunidades",
+      "BOARD_KANBAN": "Tablero conversaciones",
       "START_AUDIO_RECORDING": "Iniciar grabación de audio",
       "STOP_AUDIO_RECORDING": "Detener grabación de audio",
       "EMAIL_HEAD": {
