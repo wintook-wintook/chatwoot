@@ -27,6 +27,16 @@ module Redis::RedisKeys
   AUTHORIZATION_ERROR_COUNT = 'AUTHORIZATION_ERROR_COUNT:%<obj_type>s:%<obj_id>d'.freeze
   REAUTHORIZATION_REQUIRED =  'REAUTHORIZATION_REQUIRED:%<obj_type>s:%<obj_id>d'.freeze
 
+  ## CONTPAQi — Agente de Servicio (kbase remota)
+  # Token de aplicacion. Se comparte entre procesos a proposito: dura una hora, el
+  # servicio NO emite refresh token y cada pedido gasta cuota, asi que un token por
+  # worker seria desperdicio.
+  CONTPAQ_ACCESS_TOKEN = 'CONTPAQ::SOURCE::%<source_id>d::ACCESS_TOKEN'.freeze
+  # Contador de llamadas del minuto en curso. El limite es POR INTEGRADOR y compartido
+  # entre todos los procesos que usan las mismas credenciales, asi que contar en memoria
+  # no sirve: cada worker creeria tener los 60 para el solo.
+  CONTPAQ_RATE_BUCKET = 'CONTPAQ::SOURCE::%<source_id>d::RATE::%<minute>s'.freeze
+
   ## Internal Installation related keys
   CHATWOOT_INSTALLATION_ONBOARDING = 'CHATWOOT_INSTALLATION_ONBOARDING'.freeze
   CHATWOOT_INSTALLATION_CONFIG_RESET_WARNING = 'CHATWOOT_CONFIG_RESET_WARNING'.freeze
