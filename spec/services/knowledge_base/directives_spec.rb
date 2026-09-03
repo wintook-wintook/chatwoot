@@ -31,6 +31,20 @@ RSpec.describe KnowledgeBase::Directives do
         .to eq({ mode: :google_doc, source_name: 'Manual' })
     end
 
+    it 'reconoce @soporte_contpaq con el nombre de la fuente' do
+      expect(described_class.detect('@soporte_contpaq(Agente de Servicio CONTPAQi)'))
+        .to eq({ mode: :contpaq_support, source_name: 'Agente de Servicio CONTPAQi' })
+    end
+
+    it 'no le da a @soporte_contpaq precedencia sobre las directivas ya existentes' do
+      # Va ultima en la cadena a proposito: adelantarla cambiaria la fuente de los
+      # agentes que ya estan configurados.
+      expect(described_class.detect("@soporte_contpaq(X)\n@discourse"))
+        .to eq({ mode: :discourse_integration })
+      expect(described_class.detect("@soporte_contpaq(X)\n@buscar_predefinidas"))
+        .to eq({ mode: :canned_response, group: nil })
+    end
+
     it 'devuelve nil cuando no hay ninguna directiva' do
       expect(described_class.detect('texto sin directivas')).to be_nil
     end
@@ -61,6 +75,21 @@ RSpec.describe KnowledgeBase::Directives do
       create(:integrations_hook, account: account, inbox: inbox, app_id: 'discourse', status: 'enabled',
                                  settings: { 'url' => 'https://foro.example.com', 'api_key' => 'k' })
       expect(described_class.ready?(directive, account: account, inbox_id: inbox.id)).to be(true)
+    end
+
+    it 'exige una fuente contpaq_support activa con ese nombre' do
+      directive = { mode: :contpaq_support, source_name: 'Agente CONTPAQi' }
+      expect(described_class.ready?(directive, account: account, inbox_id: inbox.id)).to be(false)
+
+      account.knowledge_sources.create!(name: 'Agente CONTPAQi', source_type: 'contpaq_support',
+                                        config: { 'base_url' => 'https://example.test/v1' })
+      expect(described_class.ready?(directive, account: account, inbox_id: inbox.id)).to be(true)
+    end
+
+    it 'no confunde una fuente de otro tipo que se llame igual' do
+      account.knowledge_sources.create!(name: 'Foro Kontrolya', source_type: 'discourse', config: {})
+      directive = { mode: :contpaq_support, source_name: 'Foro Kontrolya' }
+      expect(described_class.ready?(directive, account: account, inbox_id: inbox.id)).to be(false)
     end
 
     it 'no considera disponible una hoja si la cuenta no tiene la feature de Google' do

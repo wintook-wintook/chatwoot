@@ -28,8 +28,25 @@ module KnowledgeBase
     # respuesta, que es lo que se vectoriza como titulo del knowledge_item.
     CANNED_RE = /@buscar_predefinidas\b(?:\s*\(([^)]*)\))?/i
 
+    # Fuentes de busqueda, EN ORDEN DE PRECEDENCIA: gana la primera que coincida.
+    #
+    # El orden de esta tabla ES la precedencia, y una fuente nueva se agrega AL FINAL:
+    # adelantarla cambiaria la fuente de los agentes que ya estan configurados. Era una
+    # cadena de if/elsif; como tabla, el orden queda a la vista en lugar de repartido
+    # entre ramas, y agregar una fuente deja de tocar la logica.
+    #
+    # El tercer elemento dice si la directiva nombra su fuente: @buscar_foro(Foro X)
+    # la nombra, @discourse no.
+    SEARCH_DIRECTIVES = [
+      [/@buscar_art[ií]culo\b/i,       :article,               false],
+      [/@buscar_foro\(([^)]+)\)/i,     :knowledge_source,      true],
+      [/\{\{doc:([^}]+)\}\}/i,          :google_doc,            true],
+      [/\{\{hoja:([^}]+)\}\}/i,         :google_sheet,          true],
+      [/@discourse\b/i,                :discourse_integration, false],
+      [/@soporte_contpaq\(([^)]+)\)/i, :contpaq_support,       true]
+    ].freeze
+
     # Primera directiva de fuente presente en el texto → { mode:, source_name: } o nil.
-    # El orden es precedencia: gana la primera que coincida.
     def detect(text)
       prompt = text.to_s
       return { mode: :erp_query } if ExternalDb::ConsultaDirectiveRenderer.contains?(prompt)
@@ -43,17 +60,14 @@ module KnowledgeBase
       canned = canned_directive(prompt)
       return canned if canned
 
-      if prompt.match?(/@buscar_art[ií]culo\b/i)
-        { mode: :article }
-      elsif (match = prompt.match(/@buscar_foro\(([^)]+)\)/i))
-        { mode: :knowledge_source, source_name: match[1].strip }
-      elsif (match = prompt.match(/\{\{doc:([^}]+)\}\}/i))
-        { mode: :google_doc, source_name: match[1].strip }
-      elsif (match = prompt.match(/\{\{hoja:([^}]+)\}\}/i))
-        { mode: :google_sheet, source_name: match[1].strip }
-      elsif prompt.match?(/@discourse\b/i)
-        { mode: :discourse_integration }
+      SEARCH_DIRECTIVES.each do |pattern, mode, named|
+        match = prompt.match(pattern)
+        next if match.nil?
+
+        return named ? { mode: mode, source_name: match[1].strip } : { mode: mode }
       end
+
+      nil
     end
 
     # El grupo es opcional: @buscar_predefinidas sin paréntesis sigue trayendo TODO, que es
@@ -81,6 +95,7 @@ module KnowledgeBase
       when :google_doc            then google_source?(account, 'google_doc', directive[:source_name])
       when :google_sheet          then google_source?(account, 'google_sheet', directive[:source_name])
       when :discourse_integration then discourse_hook?(account, inbox_id)
+      when :contpaq_support       then contpaq_source?(account, directive[:source_name])
       else false
       end
     rescue StandardError
@@ -97,6 +112,16 @@ module KnowledgeBase
       account.feature_enabled?('google_calendar') &&
         account.knowledge_sources.active
                .exists?(['source_type = ? AND LOWER(name) = LOWER(?)', source_type, name.to_s])
+    end
+
+    # Se compara tambien el source_type: la unicidad de ADDRESSABLE_BY_NAME impide dos
+    # fuentes con el mismo nombre, pero sin el tipo un @soporte_contpaq(Foro Kontrolya)
+    # daria por disponible la fuente de discourse que se llama asi.
+    def contpaq_source?(account, name)
+      return false if name.blank?
+
+      account.knowledge_sources.active
+             .exists?(['source_type = ? AND LOWER(name) = LOWER(?)', 'contpaq_support', name.to_s])
     end
 
     def discourse_hook?(account, inbox_id)
