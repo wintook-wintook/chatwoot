@@ -143,6 +143,9 @@ class Message < ApplicationRecord
   # proyecto@contact_tracking: evalúa keywords de acción en mensajes salientes
   after_create_commit :check_keyword_actions_for_outgoing, unless: :incoming?
 
+  # proyecto@botseller_webhook_saliente: notifica a INTERNAL_WEBHOOK_URL también en salientes
+  after_create_commit :dispatch_botseller_for_outgoing, if: :outgoing?
+
   after_update_commit :dispatch_update_event
 
   def content_attributes_for(user)
@@ -514,6 +517,13 @@ class Message < ApplicationRecord
     ContactTrackings::KeywordCheckerJob.perform_later(id)
   rescue StandardError => e
     Rails.logger.error "[Message] Error queueing keyword checker: #{e.message}"
+  end
+
+  # proyecto@botseller_webhook_saliente
+  def dispatch_botseller_for_outgoing
+    BotSeller::OutgoingDispatchJob.perform_later(id)
+  rescue StandardError => e
+    Rails.logger.error "[Message] Error queueing botseller outgoing dispatch: #{e.message}"
   end
 end
 

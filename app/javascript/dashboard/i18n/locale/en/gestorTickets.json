@@ -1,15 +1,15 @@
 {
   "CASE_TICKETS": {
-    "SECTION_TITLE": "Ticket",
+    "SECTION_TITLE": "Case",
     "SIDEBAR": {
-      "PRIMARY_LABEL": "Tickets",
-      "TITLE": "Ticket Manager",
-      "ALL_TICKETS": "All tickets",
+      "PRIMARY_LABEL": "Cases",
+      "TITLE": "Case Manager",
+      "ALL_TICKETS": "All cases",
       "METRICS": "Metrics",
       "RULES": "Automation rules"
     },
     "METRICS": {
-      "TITLE": "Ticket Metrics",
+      "TITLE": "Case Metrics",
       "LOADING": "Loading metrics...",
       "EMPTY": "No data for the selected period",
       "GROUP_VOLUME": "Volume",
@@ -17,8 +17,8 @@
       "GROUP_TIMES": "Handling times",
       "GROUP_ITIL": "ITIL & quality",
       "GROUP_QUALITY": "Quality",
-      "TOTAL_PERIOD": "Tickets in period",
-      "TOTAL_OPEN": "Active tickets",
+      "TOTAL_PERIOD": "Cases in period",
+      "TOTAL_OPEN": "Active cases",
       "SLA_OVERDUE": "SLA overdue",
       "SLA_AT_RISK": "SLA at risk",
       "SLA_COMPLIANCE": "SLA compliance",
@@ -43,15 +43,15 @@
       "PERIOD_TO": "to"
     },
     "KANBAN": {
-      "TITLE": "Ticket board",
+      "TITLE": "Case board",
       "SEARCH_PLACEHOLDER": "Search folio, title or contact…",
       "ALL_KINDS": "All types",
       "ALL_TYPES": "All case types",
       "ALL_SERVICES": "All services",
       "ALL_AGENTS": "All assignees",
       "UNASSIGNED": "Unassigned",
-      "INVALID_MOVE": "That move is not a valid transition for this ticket.",
-      "MOVE_ERROR": "Could not move the ticket.",
+      "INVALID_MOVE": "That move is not a valid transition for this case.",
+      "MOVE_ERROR": "Could not move the case.",
       "MOVE_TITLE": "Move {folio}",
       "MOVE_TARGET": "New status",
       "MOVE_TO": "Move to:",
@@ -59,9 +59,9 @@
       "MOVE_NOTE_PLACEHOLDER": "Optional: describe the action taken",
       "NOTIFY_LABEL": "Notify the customer on their channel",
       "NOTIFY_PLACEHOLDER": "Message the customer will receive",
-      "NOTIFY_HELP": "Sent through the ticket's channel (WhatsApp, email, etc.) when moving.",
+      "NOTIFY_HELP": "Sent through the case's channel (WhatsApp, email, etc.) when moving.",
       "NOTIFY_SENT": "Notification sent to the customer",
-      "NOTIFY_ERROR": "The ticket was moved, but the notification could not be sent.",
+      "NOTIFY_ERROR": "The case was moved, but the notification could not be sent.",
       "NOTIFY_TEMPLATES": {
         "in_progress": "Hi, your request {folio} is now being handled. We'll keep you posted.",
         "waiting_on_customer": "Hi, regarding your request {folio} we need some extra info to continue. Can you help?",
@@ -81,8 +81,8 @@
       }
     },
     "LIST": {
-      "LOADING": "Loading tickets...",
-      "EMPTY": "No tickets match the current filters",
+      "LOADING": "Loading cases...",
+      "EMPTY": "No cases match the current filters",
       "SEARCH_PLACEHOLDER": "Search by folio, title or contact…",
       "DATE_RANGE": "Date range",
       "APPLY": "Apply",
@@ -135,7 +135,7 @@
       "THEN_SECTION_TITLE": "Run these actions",
       "ADD_CONDITION": "Add condition",
       "ADD_ACTION": "Add action",
-      "NO_CONDITIONS_HINT": "No conditions — the rule applies to all tickets",
+      "NO_CONDITIONS_HINT": "No conditions — the rule applies to all cases",
       "NEED_ACTION": "Add at least one action",
       "NAME_LABEL": "Name",
       "NAME_PLACEHOLDER": "e.g. Urgent support → escalate",
@@ -151,9 +151,9 @@
       "SAVE_EDIT": "Save changes",
       "CREATE": "Create rule"
     },
-    "CREATE_BUTTON": "+ Create ticket",
-    "PANEL_BUTTON": "Tickets ({count})",
-    "NO_TICKET": "No active ticket",
+    "CREATE_BUTTON": "+ Create case",
+    "PANEL_BUTTON": "Cases ({count})",
+    "NO_TICKET": "No active case",
     "VIEW_TIMELINE": "View history",
     "CHANGE_STATUS": "Change status",
     "SLA_OVERDUE": "SLA overdue",
@@ -183,7 +183,7 @@
       "SEND_ERROR": "Could not send the message."
     },
     "LOCK": {
-      "BANNER": "{name} is currently working on this ticket."
+      "BANNER": "{name} is currently working on this case."
     },
     "CLAIM": {
       "BUTTON": "Claim"
@@ -195,9 +195,9 @@
       "REASON_PLACEHOLDER": "Why is the status changing? It shows in the Journey.",
       "REASON_CONFIRM": "Change status",
       "REASON_CANCEL": "Cancel",
-      "MEETINGS_TITLE": "This ticket has {count} upcoming scheduled task(s)",
+      "MEETINGS_TITLE": "This case has {count} upcoming scheduled task(s)",
       "MEETINGS_CANCEL": "Cancel them and notify the customer",
-      "MEETINGS_IRREVERSIBLE": "Cancelling cannot be undone: the customer gets the notice and the scheduled tasks do not come back, even if the ticket is reopened."
+      "MEETINGS_IRREVERSIBLE": "Cancelling cannot be undone: the customer gets the notice and the scheduled tasks do not come back, even if the case is reopened."
     },
     "PRIORITY_QUICK": {
       "LABEL": "Priority",
@@ -228,14 +228,14 @@
       "ASSIGN": "Assign to",
       "CLOSE": "Close",
       "CLEAR": "Clear selection",
-      "SUCCESS": "{n} tickets updated",
+      "SUCCESS": "{n} cases updated",
       "ERROR": "Could not apply the action",
-      "MEETINGS_PENDING": "{n} of the closed tickets have upcoming scheduled tasks: review them one by one to cancel."
+      "MEETINGS_PENDING": "{n} of the closed cases have upcoming scheduled tasks: review them one by one to cancel."
     },
     "TASKS": {
       "TITLE": "Tasks",
       "LOADING": "Loading tasks...",
-      "EMPTY": "No tasks yet. Add steps to resolve this ticket.",
+      "EMPTY": "No tasks yet. Add steps to resolve this case.",
       "UNASSIGNED": "Unassigned",
       "ADD_PLACEHOLDER": "New task...",
       "ADD": "New task",
@@ -271,15 +271,15 @@
         "SAVE": "Save",
         "CANCEL": "Cancel",
         "CLOSE": "Close",
-        "NEW_DESC": "Create a ticket task or subtask, with an assignee, priority and due date.",
+        "NEW_DESC": "Create a case task or subtask, with an assignee, priority and due date.",
         "EDIT_DESC": "Update the task details or change its status.",
         "VIEW_DESC": "Task detail.",
         "REQUESTER_LABEL": "Requester"
       },
       "INBOX": {
         "TITLE": "Tasks",
-        "TICKET_COL": "Ticket",
-        "OPEN_TICKET": "Open ticket",
+        "TICKET_COL": "Case",
+        "OPEN_TICKET": "Open case",
         "SEARCH_PLACEHOLDER": "Search in the title or description…",
         "EMPTY": "No tasks match the current filters.",
         "ALL_ASSIGNEES": "Assignee: all",
@@ -292,7 +292,7 @@
         "DUE_TODAY": "today",
         "SAVE_ERROR": "Could not update the task.",
         "DELETE_ERROR": "Could not delete the task.",
-        "FROZEN_HINT": "The ticket is closed: reopen it to modify its tasks.",
+        "FROZEN_HINT": "The case is closed: reopen it to modify its tasks.",
         "TOAST_ASSIGNED": "New task assigned: {task} · case {folio}",
         "TOAST_COMPLETED": "Task completed: {task} · case {folio}",
         "TABS": {
@@ -350,7 +350,7 @@
       "MEETINGS_BEYOND_DUE": "{count} scheduled task(s) after the due date"
     },
     "MODAL": {
-      "TITLE_CREATE": "Create ticket",
+      "TITLE_CREATE": "Create case",
       "CASE_TYPE_LABEL": "Case type",
       "TICKET_KIND_LABEL": "Case nature (ITIL)",
       "AFFECTED_SERVICE_LABEL": "Affected service",
@@ -365,15 +365,15 @@
       "DESCRIPTION_LABEL": "Description",
       "DESCRIPTION_PLACEHOLDER": "Additional detail (optional)",
       "CANCEL": "Cancel",
-      "SUBMIT": "Create ticket",
-      "SUCCESS": "Ticket created successfully",
-      "ERROR": "Error creating ticket",
-      "TITLE_LIST": "Contact tickets",
-      "EMPTY_LIST": "No tickets in progress",
-      "NEW_TICKET": "Create ticket",
+      "SUBMIT": "Create case",
+      "SUCCESS": "Case created successfully",
+      "ERROR": "Error creating case",
+      "TITLE_LIST": "Contact cases",
+      "EMPTY_LIST": "No cases in progress",
+      "NEW_TICKET": "Create case",
       "OPEN_DETAIL": "Open",
       "BACK": "Back",
-      "TAB_TICKET": "Ticket details",
+      "TAB_TICKET": "Case details",
       "TAB_ASSIGN": "Manual assignment",
       "TAB_CUSTOM": "Custom fields",
       "ASSIGN_AUTO": "— Automatic (rules) —",
@@ -390,20 +390,20 @@
     },
     "EDIT": {
       "BUTTON": "Edit",
-      "TITLE": "Edit ticket",
+      "TITLE": "Edit case",
       "SUBMIT": "Save changes",
-      "SUCCESS": "Ticket updated",
-      "ERROR": "Could not update the ticket"
+      "SUCCESS": "Case updated",
+      "ERROR": "Could not update the case"
     },
     "INTERNAL": {
-      "TITLE": "Create internal ticket",
-      "NEW_BUTTON": "Internal ticket",
+      "TITLE": "Create internal case",
+      "NEW_BUTTON": "Internal case",
       "ASSIGNEE_LABEL": "Assign to (agent)",
       "ASSIGNEE_NONE": "— Unassigned —",
       "TITLE_PLACEHOLDER": "Briefly describe the request",
-      "SUBMIT": "Create internal ticket",
-      "SUCCESS": "Internal ticket created",
-      "ERROR": "Could not create the internal ticket",
+      "SUBMIT": "Create internal case",
+      "SUCCESS": "Internal case created",
+      "ERROR": "Could not create the internal case",
       "BADGE": "Internal",
       "NO_ASSIGNEE": "Unassigned",
       "REQUESTER_LABEL": "Requester",
@@ -412,16 +412,16 @@
     "ESCALATION": {
       "BUTTON": "Escalate",
       "LEVEL_TITLE": "Escalation level",
-      "TITLE": "Escalate ticket (current: {level})",
-      "HELP": "Move the ticket to the next support tier (N1→N2→N3) and optionally reassign it to a team.",
+      "TITLE": "Escalate case (current: {level})",
+      "HELP": "Move the case to the next support tier (N1→N2→N3) and optionally reassign it to a team.",
       "TEAM_LABEL": "Reassign to team",
       "NO_TEAM": "Keep current assignment",
       "REASON_LABEL": "Escalation reason",
       "REASON_PLACEHOLDER": "Why it is escalated and what was tried",
       "CANCEL": "Cancel",
       "CONFIRM": "Escalate",
-      "SUCCESS": "Ticket escalated",
-      "ERROR": "Could not escalate the ticket"
+      "SUCCESS": "Case escalated",
+      "ERROR": "Could not escalate the case"
     },
     "SLA": {
       "TITLE": "SLA policies",
@@ -447,7 +447,7 @@
       "ERROR": "Could not save the policy",
       "DELETE": {
         "TITLE": "Delete policy",
-        "MESSAGE": "Tickets will fall back to the default SLA. Delete policy",
+        "MESSAGE": "Cases will fall back to the default SLA. Delete policy",
         "YES": "Delete",
         "NO": "Cancel"
       },
@@ -478,7 +478,7 @@
     "CLOSURE": {
       "TITLE": "Closure",
       "MODAL_TITLE": "Document closure",
-      "HELP": "Document how this ticket was closed. Cause and solution are required.",
+      "HELP": "Document how this case was closed. Cause and solution are required.",
       "TYPE": "Closure type",
       "CAUSE": "Cause",
       "CAUSE_PLACEHOLDER": "What caused the issue",
@@ -488,7 +488,7 @@
       "YES": "Yes",
       "NO": "No",
       "CANCEL": "Cancel",
-      "CONFIRM": "Close ticket",
+      "CONFIRM": "Close case",
       "TYPES": {
         "resolved": "Resolved",
         "duplicate": "Duplicate",
@@ -543,15 +543,15 @@
     },
     "REOPEN": {
       "BUTTON": "Reopen",
-      "MODAL_TITLE": "Reopen ticket",
+      "MODAL_TITLE": "Reopen case",
       "REASON_LABEL": "Reason for reopening",
       "REASON_PLACEHOLDER": "Why is it being reopened? E.g. the customer reports it failed again.",
       "HINT": "Recorded in the Journey. The SLA clock restarts from zero.",
-      "CONFIRM": "Reopen ticket",
+      "CONFIRM": "Reopen case",
       "CANCEL": "Cancel",
-      "SUCCESS": "Ticket reopened",
-      "ERROR": "Could not reopen the ticket",
-      "FROZEN_HINT": "Ticket closed: reopen it to edit."
+      "SUCCESS": "Case reopened",
+      "ERROR": "Could not reopen the case",
+      "FROZEN_HINT": "Case closed: reopen it to edit."
     },
     "NOTES": {
       "ADD": "Note",
@@ -566,12 +566,12 @@
       "ADD_NEW": "New note",
       "TITLE": "Internal notes",
       "LOADING": "Loading notes...",
-      "EMPTY": "No notes yet. Keep a record of what you do on this ticket.",
+      "EMPTY": "No notes yet. Keep a record of what you do on this case.",
       "MODAL_EDIT_TITLE": "Edit internal note",
       "MODAL_VIEW_TITLE": "View internal note",
       "VIEW": "View note",
       "POST_CLOSURE": "post-close",
-      "POST_CLOSURE_HINT": "Written after the ticket was closed.",
+      "POST_CLOSURE_HINT": "Written after the case was closed.",
       "CLOSE": "Close",
       "EDIT": "Edit",
       "DELETE": "Delete",
@@ -595,29 +595,29 @@
       "FILTER_PLACEHOLDER": "Search notes (text, author, ref)…",
       "NO_MATCHES": "No matches for the filter.",
       "CREATED": "Created on {date}",
-      "MODAL_DESC": "Log what you did or what is pending in the ticket. Visible to agents only; the customer will not see it.",
+      "MODAL_DESC": "Log what you did or what is pending in the case. Visible to agents only; the customer will not see it.",
       "MODAL_EDIT_DESC": "Update the content. It will be logged that the note was edited and by whom.",
       "MODAL_VIEW_DESC": "Full detail of the internal note."
     },
     "RELATIONS": {
-      "TITLE": "Related tickets",
-      "ADD": "+ Link ticket",
-      "EMPTY": "No related tickets",
-      "MODAL_TITLE": "Link related ticket",
-      "SEARCH_LABEL": "Search ticket",
+      "TITLE": "Related cases",
+      "ADD": "+ Link case",
+      "EMPTY": "No related cases",
+      "MODAL_TITLE": "Link related case",
+      "SEARCH_LABEL": "Search case",
       "SEARCH_PLACEHOLDER": "Folio or title…",
       "SEARCHING": "Searching…",
-      "NO_RESULTS": "No tickets found",
+      "NO_RESULTS": "No cases found",
       "SELECTED": "Selected:",
       "TYPE_LABEL": "Relation type",
       "CANCEL": "Cancel",
       "CONFIRM": "Link",
-      "SUCCESS": "Ticket linked",
-      "ERROR": "Could not link the ticket",
+      "SUCCESS": "Case linked",
+      "ERROR": "Could not link the case",
       "REMOVE_SUCCESS": "Relation removed",
       "DELETE": {
         "TITLE": "Remove relation",
-        "MESSAGE": "This will unlink the tickets. Remove relation",
+        "MESSAGE": "This will unlink the cases. Remove relation",
         "YES": "Remove",
         "NO": "Cancel"
       }
@@ -645,14 +645,14 @@
       }
     },
     "TIMELINE": {
-      "TITLE": "Ticket history",
+      "TITLE": "Case history",
       "EMPTY": "No events recorded",
       "CLOSE": "Close",
       "ACTOR_SYSTEM": "System",
       "ACTOR_BOT": "Bot"
     },
     "JOURNEY": {
-      "TITLE": "Ticket progress",
+      "TITLE": "Case progress",
       "LOADING": "Loading progress...",
       "CURRENT": "Current",
       "CREATED": "Created",
@@ -677,9 +677,9 @@
       "SAVED": "AI settings saved",
       "SAVE_ERROR": "Could not save settings",
       "LOADING": "Loading settings...",
-      "HELP": "Configure how AI assists ticket management. For each action choose the mode: off, suggest to the agent, or apply automatically.",
+      "HELP": "Configure how AI assists case management. For each action choose the mode: off, suggest to the agent, or apply automatically.",
       "NO_KEY": "No active OpenAI integration on this account. AI won't work until you set it up in Integrations.",
-      "ENABLED_LABEL": "Enable AI in the Ticket Manager",
+      "ENABLED_LABEL": "Enable AI in the Case Manager",
       "ENABLED_HELP": "Master switch. If off, no AI action runs.",
       "SOON": "Coming soon",
       "MODES": {
@@ -690,7 +690,7 @@
       "ACTIONS": {
         "classify": {
           "LABEL": "Automatic classification",
-          "HELP": "On ticket creation, infers kind, service, category, impact and urgency."
+          "HELP": "On case creation, infers kind, service, category, impact and urgency."
         },
         "reply": {
           "LABEL": "Suggested reply",
@@ -706,7 +706,7 @@
         },
         "follow_up": {
           "LABEL": "Automatic follow-up",
-          "HELP": "Drafts customer follow-ups based on the ticket status."
+          "HELP": "Drafts customer follow-ups based on the case status."
         }
       },
       "SUGGESTION": {
@@ -750,7 +750,7 @@
         "NONE": "No similar incidents found.",
         "SUGGEST_PROBLEM": "There are several similar incidents. Consider creating a Problem and linking them.",
         "LINK": "Link",
-        "LINKED": "Ticket linked as duplicate",
+        "LINKED": "Case linked as duplicate",
         "ERROR": "Could not analyze duplicates"
       },
       "FOLLOWUP": {
@@ -758,7 +758,7 @@
         "GENERATE": "Generate",
         "REGENERATE": "Regenerate",
         "AUTO_BADGE": "Auto-generated",
-        "HINT": "Draft a follow-up message for the customer based on the ticket status.",
+        "HINT": "Draft a follow-up message for the customer based on the case status.",
         "COPY": "Copy",
         "COPIED_BTN": "Copied",
         "COPIED": "Follow-up copied to clipboard",
@@ -767,7 +767,7 @@
     },
     "TYPES": {
       "TITLE": "Case types",
-      "HELP": "Define your account's case types. Each ticket is classified with one of these types.",
+      "HELP": "Define your account's case types. Each case is classified with one of these types.",
       "CREATE_BUTTON": "+ New type",
       "CREATE_TITLE": "Create case type",
       "EDIT_TITLE": "Edit case type",
@@ -781,7 +781,7 @@
       "PUBLIC_OFF": "Private",
       "DELETE": {
         "TITLE": "Delete case type",
-        "MESSAGE": "Tickets with this type will be left untyped. Delete",
+        "MESSAGE": "Cases with this type will be left untyped. Delete",
         "YES": "Delete",
         "NO": "Cancel"
       },
@@ -810,21 +810,21 @@
       "TITLE": "Module settings",
       "BACK": "Back",
       "LOADING": "Loading settings...",
-      "HELP": "Choose how the ticket manager behaves. Simple mode resembles osTicket; ITIL mode enables advanced management.",
+      "HELP": "Choose how the case manager behaves. Simple mode resembles osTicket; ITIL mode enables advanced management.",
       "MODE_SIMPLE": "Simple mode (osTicket)",
       "MODE_SIMPLE_DESC": "Streamlined experience: basic statuses and direct priority. Hides advanced ITIL fields.",
       "MODE_ITIL": "ITIL mode (advanced)",
-      "MODE_ITIL_DESC": "Enables full ITIL statuses, Impact×Urgency matrix, ticket nature, problem/change and approvals.",
+      "MODE_ITIL_DESC": "Enables full ITIL statuses, Impact×Urgency matrix, case nature, problem/change and approvals.",
       "NOTE_DATA": "No data is deleted or changed: the mode only affects what is shown.",
       "NOTE_REVERSIBLE": "You can switch modes anytime.",
       "REOPEN": {
-        "SECTION": "Reopening closed tickets",
+        "SECTION": "Reopening closed cases",
         "WINDOW_TITLE": "Reopen window",
         "WINDOW_DESC": "Days after closing during which the assigned agent can reopen. After that, only an administrator. Use 0 for no limit.",
         "DAYS": "days",
         "SAVE": "Save",
         "ON_REPLY_TITLE": "Reopen on customer reply",
-        "ON_REPLY_DESC": "If the customer writes on their channel about a closed ticket, it reopens automatically (or a follow-up ticket is created if the window expired).",
+        "ON_REPLY_DESC": "If the customer writes on their channel about a closed case, it reopens automatically (or a follow-up case is created if the window expired).",
         "NOTE_WINDOW": "An administrator can always reopen, even after the window expired.",
         "NOTE_SLA": "On reopening, the SLA clock restarts from zero."
       },
@@ -833,7 +833,7 @@
     },
     "PORTALS": {
       "TITLE": "Customer portals",
-      "HELP": "Create public portals (osTicket-style) where your customers open and track tickets without signing in.",
+      "HELP": "Create public portals (osTicket-style) where your customers open and track cases without signing in.",
       "BACK": "Back",
       "LOADING": "Loading portals...",
       "EMPTY": "No portals yet. Create the first one to give your customers a support page.",
@@ -914,11 +914,11 @@
         "checkbox": "Checkbox"
       },
       "ADD_BUTTON": "Add field",
-      "SUBTITLE": "These fields are requested when creating or editing a ticket of this type.",
+      "SUBTITLE": "These fields are requested when creating or editing a case of this type.",
       "OPTIONS_HEADER": "Options",
       "DELETE": {
         "TITLE": "Delete field",
-        "MESSAGE": "This field will be removed from tickets of this type. Delete",
+        "MESSAGE": "This field will be removed from cases of this type. Delete",
         "YES": "Delete",
         "NO": "Cancel"
       }
@@ -928,8 +928,8 @@
       "BACK": "Back",
       "TAB_SERVICES": "Affected services",
       "TAB_CATEGORIES": "Categories",
-      "SERVICES_HELP": "Services or systems that a ticket may affect (CRM, Microsip, Server, etc.).",
-      "CATEGORIES_HELP": "Categories and subcategories to classify tickets. Use + to add a subcategory.",
+      "SERVICES_HELP": "Services or systems that a case may affect (CRM, Microsip, Server, etc.).",
+      "CATEGORIES_HELP": "Categories and subcategories to classify cases. Use + to add a subcategory.",
       "NEW_SERVICE": "+ New service",
       "EDIT_SERVICE": "Edit service",
       "NEW_CATEGORY": "+ New category",
@@ -944,7 +944,7 @@
       "CANCEL": "Cancel",
       "DELETE": {
         "TITLE": "Delete",
-        "MESSAGE": "Associated tickets will lose this value. Delete",
+        "MESSAGE": "Associated cases will lose this value. Delete",
         "YES": "Delete",
         "NO": "Cancel"
       },
@@ -962,7 +962,7 @@
     "FOLIO": {
       "TITLE": "Folio settings",
       "SAVE": "Save",
-      "ENABLED": "Auto-generate folio for new tickets",
+      "ENABLED": "Auto-generate folio for new cases",
       "TEMPLATE_LABEL": "Folio template",
       "PREVIEW": "Preview",
       "TOKENS_TITLE": "Available tokens",
@@ -975,7 +975,7 @@
         "monthly": "Monthly",
         "yearly": "Yearly"
       },
-      "NOTE": "Changes only affect tickets created from now on. Existing folios are not modified.",
+      "NOTE": "Changes only affect cases created from now on. Existing folios are not modified.",
       "SAVED": "Folio settings saved",
       "SAVE_ERROR": "Error saving settings"
     },
@@ -1029,13 +1029,13 @@
       "high": "High"
     },
     "EVENT_TYPES": {
-      "ticket_created": "Ticket created",
-      "ticket_classified": "Ticket classified",
+      "ticket_created": "Case created",
+      "ticket_classified": "Case classified",
       "status_changed": "Status changed",
       "assigned": "Assigned",
       "in_diagnosis": "In diagnosis",
       "validating": "Validating with customer",
-      "related": "Ticket linked",
+      "related": "Case linked",
       "change_approved": "Change approved",
       "change_rejected": "Change rejected",
       "problem_propagated": "Resolution propagated to incidents",
@@ -1080,7 +1080,7 @@
       "STATES_LABEL": "Statuses it groups",
       "EMPTY": "This type has no columns of its own yet. It uses the standard board.",
       "REMOVE": "Remove column",
-      "OVERLAP_INFO": "These columns share a status. Moving a ticket between them does not change its status: that is correct and expected.",
+      "OVERLAP_INFO": "These columns share a status. Moving a case between them does not change its status: that is correct and expected.",
       "MISSING_COVERAGE": "Uncovered statuses:",
       "ASSIGN_REMAINING": "Assign to the last column",
       "COVERAGE_OK": "All statuses are covered.",
@@ -1100,14 +1100,14 @@
       "LEVEL_LABEL": "Level:",
       "VIEW_FULL": "View",
       "NO_TRANSITIONS": "No transitions available",
-      "LOADING": "Loading ticket…"
+      "LOADING": "Loading case…"
     },
     "MEETINGS": {
       "TITLE": "Scheduled tasks",
       "ADD_NEW": "Schedule task",
       "REFRESH": "Refresh",
       "LOADING": "Loading scheduled tasks...",
-      "EMPTY": "No scheduled tasks for this ticket.",
+      "EMPTY": "No scheduled tasks for this case.",
       "NO_MATCHES": "No scheduled task matches the filter",
       "FILTER_PLACEHOLDER": "Search folio, title, task or location…",
       "ACTIONS": "Actions",
@@ -1142,14 +1142,14 @@
       "MODAL": {
         "TITLE": "Schedule task",
         "EDIT_TITLE": "Edit scheduled task",
-        "DESC": "It is recorded in the ticket's progress.",
+        "DESC": "It is recorded in the case's progress.",
         "TITLE_LABEL": "Title",
         "TITLE_PLACEHOLDER": "e.g. Progress review",
         "STARTS_LABEL": "Starts",
         "ENDS_LABEL": "Ends",
         "DATE_ERROR": "The end time must be after the start time.",
         "TASK_LABEL": "Task",
-        "TASK_NONE": "— Ticket (no task) —",
+        "TASK_NONE": "— Case (no task) —",
         "ORGANIZER_LABEL": "Organizer",
         "ORGANIZER_ME": "— Me —",
         "LOCATION_LABEL": "Location",
@@ -1157,7 +1157,7 @@
         "DESCRIPTION_LABEL": "Description",
         "DESCRIPTION_PLACEHOLDER": "Agenda or talking points (optional)",
         "INVITE_CLIENT": "Invite the customer",
-        "NO_CLIENT_EMAIL": "This ticket has no contact with an email address",
+        "NO_CLIENT_EMAIL": "This case has no contact with an email address",
         "GUESTS_LABEL": "Other guests",
         "GUESTS_PLACEHOLDER": "comma-separated emails",
         "LOCAL_ONLY_HINT": "No agent has Google Calendar connected: the scheduled task is stored in the system only and no email invitation will be sent.",
@@ -1188,7 +1188,7 @@
       },
       "MINUTES": {
         "TITLE": "Capture the minutes?",
-        "DESC": "Saved as an internal note on the ticket, linked to the same task.",
+        "DESC": "Saved as an internal note on the case, linked to the same task.",
         "LABEL": "Minutes",
         "PLACEHOLDER": "Agreements, pending items and next steps…",
         "SKIP": "Not now",
@@ -1214,7 +1214,7 @@
         "RETRYING": "Retrying the sync…"
       },
       "SERIES_CREATED": "Series {folio} created with {count} scheduled tasks",
-      "BEYOND_TICKET_HINT": "It falls beyond the due date committed to the customer. It is not moved from here: escalate the ticket if the case needs it.",
+      "BEYOND_TICKET_HINT": "It falls beyond the due date committed to the customer. It is not moved from here: escalate the case if the case needs it.",
       "TOAST_DUE_ALIGNED": "Task due date moved to {date}"
     }
   }

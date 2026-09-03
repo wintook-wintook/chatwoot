@@ -1,13 +1,13 @@
 {
   "KANBAN": {
-    "HEADER": "Tablero oportunidad",
+    "HEADER": "Tablero conversación",
     "DESCRIPTION": "Gestiona tus flujos de trabajo con un sistema tablero visual",
     "LEARN_MORE": "Aprende más",
     "HEADER_BTN_TXT": "Agregar Etapa",
     
     "BOARD": {
-      "TITLE": "Tablero oportunidad",
-      "SELECT_PROCESS": "Seleccionar tipo de oportunidad",
+      "TITLE": "Tablero conversación",
+      "SELECT_PROCESS": "Seleccionar tipo de conversación",
       "NO_PROCESSES": "No hay etapas disponibles",
       "NO_TYPE_PROCESSES": "No hay columnas disponibles",
       "CREATE_FIRST_PROCESS": "Crear Primer etapa",
@@ -22,23 +22,23 @@
         },
 
     "TYPE_PROCESSES": {
-      "TITLE": "Tipos de oportunidad",
-      "DESCRIPTION": "Gestiona los diferentes tipos de oportunidad para tu organización",
-      "HEADER": "Tipos de oportunidad",
-      "ADD_NEW": "Agregar nuevo tipo de oportunidad",
-      "CREATE_FIRST": "Crear primer tipo de oportunidad",
-      "NO_RECORDS": "No se encontraron tipos de oportunidad",
+      "TITLE": "Tipos de conversación",
+      "DESCRIPTION": "Gestiona los diferentes tipos de conversación para tu organización",
+      "HEADER": "Tipos de conversación",
+      "ADD_NEW": "Agregar nuevo tipo de conversación",
+      "CREATE_FIRST": "Crear primer tipo de conversación",
+      "NO_RECORDS": "No se encontraron tipos de conversación",
       "EDIT": "Editar",
       "DELETE": "Eliminar",
       "DEFAULT": "Por defecto",
       "SYSTEM": "Sistema",
-      "CONFIRM_DELETE": "¿Estás seguro de que deseas eliminar este tipo de oportunidad?",
+      "CONFIRM_DELETE": "¿Estás seguro de que deseas eliminar este tipo de conversación?",
       "FORM": {
         "PROCESS_NAME": {
           "LABEL": "Nombre del etapa",
           "PLACEHOLDER": "Ingresa el nombre del etapa",
-          "TYPE": "Nombre del tipo de oportunidad",
-          "TYPEP": "Ingresa el nombre del tipo de oportunidad"
+          "TYPE": "Nombre del tipo de conversación",
+          "TYPEP": "Ingresa el nombre del tipo de conversación"
         },
         "DESCRIPTION": {
           "LABEL": "Descripción",
@@ -47,52 +47,52 @@
         "COLOR": {
           "LABEL": "Color"
         },
-        "DEFAULT_PROCESS": "Establecer como tipo de oportunidad por defecto",
-        "SYSTEM_PROCESS": "tipo de oportunidad del sistema",
-        "CREATE": "Crear tipo de oportunidad",
-        "UPDATE": "Actualizar tipo de oportunidad",
+        "DEFAULT_PROCESS": "Establecer como tipo de conversación por defecto",
+        "SYSTEM_PROCESS": "tipo de conversación del sistema",
+        "CREATE": "Crear tipo de conversación",
+        "UPDATE": "Actualizar tipo de conversación",
         "CANCEL": "Cancelar"
       },
       "ADD": {
-        "TITLE": "Agregar tipo de oportunidad",
-        "DESC": "Crea un nuevo tipo de oportunidad para organizar tus flujos de trabajo"
+        "TITLE": "Agregar tipo de conversación",
+        "DESC": "Crea un nuevo tipo de conversación para organizar tus flujos de trabajo"
       },
         "EDITETAPA": {
-        "TITLE": "Editar tipo de oportunidad",
-        "DESC": "Editar un nuevo tipo de oportunidad"
+        "TITLE": "Editar tipo de conversación",
+        "DESC": "Editar un nuevo tipo de conversación"
       },
      
       "SUCCESS": {
-        "CREATED": "tipo de oportunidad creado exitosamente",
-        "UPDATED": "tipo de oportunidad actualizado exitosamente",
-        "DELETED": "tipo de oportunidad eliminado exitosamente"
+        "CREATED": "tipo de conversación creado exitosamente",
+        "UPDATED": "tipo de conversación actualizado exitosamente",
+        "DELETED": "tipo de conversación eliminado exitosamente"
       },
       "ERROR": {
-        "CREATING": "Error al crear el tipo de oportunidad",
-        "UPDATING": "Error al actuaºlizar el tipo de oportunidad",
-        "DELETING": "Error al eliminar el tipo de oportunidad",
-        "LOADING": "Error al cargar tipos de oportunidad"
+        "CREATING": "Error al crear el tipo de conversación",
+        "UPDATING": "Error al actuaºlizar el tipo de conversación",
+        "DELETING": "Error al eliminar el tipo de conversación",
+        "LOADING": "Error al cargar tipos de conversación"
       }
       
     },
 
     "PROCESSES": {
-      "TITLE": "Etapas de la oportunidad",
-      "DESCRIPTION": "Gestiona las etapas específicas dentro de cada tipo de oportunidad",
-      "HEADER": "Etapas de la oportunidad",
+      "TITLE": "Etapas de la conversación",
+      "DESCRIPTION": "Gestiona las etapas específicas dentro de cada tipo de conversación",
+      "HEADER": "Etapas de la conversación",
       "ADD_NEW": "Agregar nueva etapa",
       "NO_RECORDS": "No se encontraron etapas",
       "CREATE_FIRST": "Crear Primer etapa",
-      "SELECT_TYPE_FIRST": "Por favor selecciona un tipo de oportunidad primero",
+      "SELECT_TYPE_FIRST": "Por favor selecciona un tipo de conversación primero",
       "EDIT": "Editar",
       "DELETE": "Eliminar",
       "DEFAULT": "Por Defecto",
       "SYSTEM": "Sistema",
       "CONFIRM_DELETE": "¿Estás seguro de que quieres eliminar esta etapa?",
-      "SELECT_TYPE": "Seleccionar tipo de oportunidad",
-      "CHOOSE_TYPE": "Elige un tipo de oportunidad",
-      "SELECT_MESSAGE": "Selecciona un tipo de oportunidad",
-      "SELECT_DESCRIPTION": "Elige un tipo de oportunidad para ver y gestionar sus etapas",
+      "SELECT_TYPE": "Seleccionar tipo de conversación",
+      "CHOOSE_TYPE": "Elige un tipo de conversación",
+      "SELECT_MESSAGE": "Selecciona un tipo de conversación",
+      "SELECT_DESCRIPTION": "Elige un tipo de conversación para ver y gestionar sus etapas",
       "CREATE_MODAL_TITLE": "Crear Nuevo etapa",
       "EDIT_MODAL_TITLE": "Editar etapa",
       "FORM": {
@@ -121,10 +121,10 @@
         "UPDATE": "Actualizar"
       },
       "ADD": {
-        "TITLE": "Agregar etapa de las oportunidades",
-        "DESC": "Crea una nueva etapa dentro del tipo de oportunidad seleccionado",
-        "TITLE2": "Agregar tipo de oportunidad",
-        "DESC2": "Crea un nuevo tipo de oportunidad"
+        "TITLE": "Agregar etapa de las conversaciones",
+        "DESC": "Crea una nueva etapa dentro del tipo de conversación seleccionado",
+        "TITLE2": "Agregar tipo de conversación",
+        "DESC2": "Crea un nuevo tipo de conversación"
       },
       "EDITETAPA": {
         "TITLE": "Editar etapa"
@@ -140,17 +140,17 @@
       },
       "ERROR": {
         "LOADING": "Error al cargar etapas",
-        "CREATING": "Error al crear el etapa de las oportunidades",
-        "UPDATING": "Error al actualizar el etapa de las oportunidades",
-        "DELETING": "Error al eliminar el etapa de las oportunidades",
+        "CREATING": "Error al crear el etapa de las conversaciones",
+        "UPDATING": "Error al actualizar el etapa de las conversaciones",
+        "DELETING": "Error al eliminar el etapa de las conversaciones",
         "SAVING": "Error al guardar etapa",
         "REORDERING": "Error al reordenar etapas"
       }
     },
 
     "TYPE_PROCESSES": {
-      "TITLE": "Tipos de oportunidad",
-      "DESCRIPTION": "Gestiona los diferentes tipos de oportunidad para tu organización",
+      "TITLE": "Tipos de conversación",
+      "DESCRIPTION": "Gestiona los diferentes tipos de conversación para tu organización",
       "ADD_NEW": "Agregar",
       "NO_RECORDS": "No se encontraron columnas",
       "EDIT": "Editar",
@@ -162,7 +162,7 @@
       "CREATE_MODAL_TITLE": "Crear Nueva Columna",
       "EDIT_MODAL_TITLE": "Editar Columna",
        "EDITKANBAN": {
-        "TITLE": "Editar tipo de oportunidad"
+        "TITLE": "Editar tipo de conversación"
       },
       "FORM": {
         "TYPE_PROCESS_NAME": "Nombre de la Columna",
@@ -173,8 +173,8 @@
         "CREATE": "Crear",
         "UPDATE": "Actualizar",
         "PROCESS_NAME": {
-          "LABEL": "Nombre del tipo de oportunidad",
-          "PLACEHOLDER": "Ingresa el nombre del tipo de oportunidad"
+          "LABEL": "Nombre del tipo de conversación",
+          "PLACEHOLDER": "Ingresa el nombre del tipo de conversación"
         },
         "DESCRIPTION": {
           "LABEL": "Descripción",
@@ -183,8 +183,8 @@
         "COLOR": {
           "LABEL": "Color"
         },
-        "DEFAULT": "Establecer como tipo de oportunidad por defecto",
-        "DEFAULT_PROCESS": "Establecer como tipo de oportunidad por defecto",
+        "DEFAULT": "Establecer como tipo de conversación por defecto",
+        "DEFAULT_PROCESS": "Establecer como tipo de conversación por defecto",
         "SYSTEM_PROCESS": "etapa del sistema",
         "CANCEL": "Cancelar",
         "CREATE": "Crear",
@@ -195,12 +195,12 @@
         "POSITION_REQUIRED": "La posición debe ser un número positivo"
       },
        "ADD": {
-        "TITLE2": "Agregar tipo de oportunidad",
-        "DESC2": "Crea un nuevo tipo de oportunidad"
+        "TITLE2": "Agregar tipo de conversación",
+        "DESC2": "Crea un nuevo tipo de conversación"
       },
        "EDITETAPA": {
-        "TITLE": "Editar tipo de oportunidad",
-        "DESC": "Editar un nuevo tipo de oportunidad"
+        "TITLE": "Editar tipo de conversación",
+        "DESC": "Editar un nuevo tipo de conversación"
       },
       "SUCCESS": {
         "CREATED": "Columna creada exitosamente",
@@ -218,13 +218,13 @@
 
     "KANBAN_TYPE_MGMT": {
       "HEADER": {
-        "TITLE": "Tipos de oportunidad",
-        "DESCRIPTION": "Gestiona los tipos de oportunidad para organizar tu flujo de trabajo",
-        "ADD_BUTTON": "Agregar tipo de oportunidad"
+        "TITLE": "Tipos de conversación",
+        "DESCRIPTION": "Gestiona los tipos de conversación para organizar tu flujo de trabajo",
+        "ADD_BUTTON": "Agregar tipo de conversación"
       },
       "EMPTY_STATE": {
-        "MESSAGE": "No se encontraron tipos de oportunidad",
-        "NEW_BUTTON": "Crear Primer tipo de oportunidad"
+        "MESSAGE": "No se encontraron tipos de conversación",
+        "NEW_BUTTON": "Crear Primer tipo de conversación"
       },
       "BADGES": {
         "DEFAULT": "Por Defecto",
@@ -237,46 +237,46 @@
       },
       "DELETE": {
         "CONFIRM_MESSAGE": "¿Estás seguro de que quieres eliminar \"{name}\"?",
-        "SUCCESS_MESSAGE": "tipo de oportunidad eliminado exitosamente",
-        "ERROR_MESSAGE": "Error al eliminar tipo de oportunidad"
+        "SUCCESS_MESSAGE": "tipo de conversación eliminado exitosamente",
+        "ERROR_MESSAGE": "Error al eliminar tipo de conversación"
       },
       "ADD": {
-        "TITLE": "Agregar tipo de oportunidad",
-        "DESC": "Crear un nuevo tipo de oportunidad para organizar tu tablero de oportunidades",
+        "TITLE": "Agregar tipo de conversación",
+        "DESC": "Crear un nuevo tipo de conversación para organizar tu tablero de conversaciones",
         "API": {
-          "SUCCESS_MESSAGE": "tipo de oportunidad creado exitosamente",
-          "ERROR_MESSAGE": "Error al crear tipo de oportunidad",
+          "SUCCESS_MESSAGE": "tipo de conversación creado exitosamente",
+          "ERROR_MESSAGE": "Error al crear tipo de conversación",
           "ERROR_MESSAGE": {
-            "NAME_REQUIRED": "El nombre del tipo de oportunidad es requerido",
+            "NAME_REQUIRED": "El nombre del tipo de conversación es requerido",
             "NAME_MINIMUM_LENGTH": "El nombre debe tener al menos 2 caracteres"
           }
         }
       },
       "EDIT": {
-        "TITLE": "Editar tipo de oportunidad",
-        "DESC": "Actualizar la información del tipo de oportunidad",
+        "TITLE": "Editar tipo de conversación",
+        "DESC": "Actualizar la información del tipo de conversación",
         "API": {
-          "SUCCESS_MESSAGE": "tipo de oportunidad actualizado exitosamente",
-          "ERROR_MESSAGE": "Error al actualizar tipo de oportunidad"
+          "SUCCESS_MESSAGE": "tipo de conversación actualizado exitosamente",
+          "ERROR_MESSAGE": "Error al actualizar tipo de conversación"
         }
       },
       "FORM": {
         "NAME": {
-          "LABEL": "Nombre del tipo de oportunidad",
+          "LABEL": "Nombre del tipo de conversación",
           "PLACEHOLDER": "ej: Ventas, Soporte, Desarrollo"
         },
         "DESCRIPTION": {
           "LABEL": "Descripción",
-          "PLACEHOLDER": "Describe el propósito de este tipo de oportunidad"
+          "PLACEHOLDER": "Describe el propósito de este tipo de conversación"
         },
         "COLOR": {
           "LABEL": "Color"
         },
         "IS_DEFAULT": {
-          "LABEL": "Establecer como tipo de oportunidad por defecto"
+          "LABEL": "Establecer como tipo de conversación por defecto"
         },
-        "CREATE": "Crear tipo de oportunidad",
-        "UPDATE": "Actualizar tipo de oportunidad",
+        "CREATE": "Crear tipo de conversación",
+        "UPDATE": "Actualizar tipo de conversación",
         "CANCEL": "Cancelar"
       }
     },
@@ -289,8 +289,8 @@
 
     "COMMON": {
       "LOADING": "Cargando...",
-      "FETCHING_TYPE_PROCESSES": "Obteniendo tipos de oportunidad",
-      "FETCHING_PROCESSES": "Obteniendo Etapas de las oportunidades",
+      "FETCHING_TYPE_PROCESSES": "Obteniendo tipos de conversación",
+      "FETCHING_PROCESSES": "Obteniendo Etapas de las conversaciones",
       "NAME": "Nombre",
       "DESCRIPTION": "Descripción", 
       "COLOR": "Color",
