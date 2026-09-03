@@ -6,9 +6,16 @@ require 'rails_helper'
 RSpec.describe KnowledgeBase::Directives do
   describe '.detect' do
     it 'reconoce cada directiva del catálogo' do
-      expect(described_class.detect('@buscar_predefinidas')).to eq({ mode: :canned_response })
+      expect(described_class.detect('@buscar_predefinidas')).to eq({ mode: :canned_response, group: nil })
       expect(described_class.detect('@buscar_articulo')).to eq({ mode: :article })
       expect(described_class.detect('@discourse')).to eq({ mode: :discourse_integration })
+    end
+
+    it 'extrae el grupo de @buscar_predefinidas(GRUPO), incluido el negado' do
+      expect(described_class.detect('@buscar_predefinidas(COMERCIAL)'))
+        .to eq({ mode: :canned_response, group: 'COMERCIAL' })
+      expect(described_class.detect('@buscar_predefinidas(!COMERCIAL)'))
+        .to eq({ mode: :canned_response, group: '!COMERCIAL' })
     end
 
     it 'acepta @buscar_articulo con y sin tilde' do
@@ -29,7 +36,7 @@ RSpec.describe KnowledgeBase::Directives do
     end
 
     it 'respeta la precedencia: gana la primera de la cadena' do
-      expect(described_class.detect("@discourse\n@buscar_predefinidas")).to eq({ mode: :canned_response })
+      expect(described_class.detect("@discourse\n@buscar_predefinidas")).to eq({ mode: :canned_response, group: nil })
       expect(described_class.detect("@discourse\n{{hoja:X}}")).to eq({ mode: :google_sheet, source_name: 'X' })
     end
   end
