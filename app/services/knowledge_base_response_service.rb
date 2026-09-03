@@ -263,19 +263,20 @@ class KnowledgeBaseResponseService
     )
     return false unless result.ok?
 
-    deliver_contpaq(result)
+    deliver_contpaq(result, source)
     true
   end
 
   # Los tres casos que contestan 200 sin ser respuesta (falta especificar el producto,
   # pregunta fuera de alcance, saludo) llegan con `sources` vacio: se entregan igual,
   # pero sin footer. Citar una fuente ahi prometeria algo que el texto no da.
-  def deliver_contpaq(result)
+  def deliver_contpaq(result, source)
     answer = with_branch_tag(result.answer)
     footer = contpaq_footer(result.sources)
     Rails.logger.info "[KBase] 🇲🇽 CONTPAQi respondio (#{result.sources.size} fuente(s), msg #{result.message_id})"
 
-    send_reply(footer.present? ? "#{answer}#{footer}" : answer)
+    reply = send_reply(footer.present? ? "#{answer}#{footer}" : answer)
+    Contpaq::FeedbackService.remember(reply, source: source, message_id: result.message_id)
   end
 
   # `source_url` viene como cadena vacia —nunca null— cuando el documento no tiene URL
@@ -975,8 +976,11 @@ class KnowledgeBaseResponseService
       reply_message.content_attributes[:sentiment_auto_reply] = true
       reply_message.save!
     end
+
+    reply_message
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error enviando respuesta: #{e.message}"
+    nil
   end
 
   # ==============================================================================

@@ -20,6 +20,14 @@ class Contpaq::ServiceAgent
   MAX_QUESTION = 8000
   MAX_CONVERSATION_ID = 128
   MAX_USER_ID = 256
+  MAX_COMMENTS = 4000
+
+  # El servicio solo admite 1 (me sirvio) y -1 (no me sirvio). Cualquier otro valor,
+  # incluido 0, responde 422: la tabla del otro lado restringe la columna a ese par.
+  VALID_RATINGS = [1, -1].freeze
+
+  # Unico valor de exito de /feedback/message. Si no dice `recorded`, no se guardo.
+  FEEDBACK_RECORDED = 'recorded'
 
   # El juego que admite conversation_id. La documentacion marca salirse de aca como la
   # causa mas frecuente de un 422 inesperado, asi que se sanea siempre.
@@ -67,7 +75,36 @@ class Contpaq::ServiceAgent
     parse_answer(response)
   end
 
+  # Califica una respuesta. El cuerpo es deliberadamente minimo: no lleva la conversacion
+  # ni el par pregunta/respuesta, porque todo eso lo resuelve el servidor a partir del
+  # message_id. Por eso ese identificador es el unico dato que hay que conservar.
+  #
+  # Calificar dos veces el mismo message_id SOBRESCRIBE la calificacion anterior de ese
+  # usuario en vez de duplicarla, asi que reintentar es seguro y cambiar de opinion no
+  # ensucia los reportes.
+  def feedback(message_id:, rating:, user_id:, comments: nil)
+    unless VALID_RATINGS.include?(rating.to_i) && message_id.present? && user_id.present?
+      Rails.logger.warn "[CONTPAQi] \u26a0\ufe0f Calificacion invalida (rating #{rating.inspect}) \u2192 no se envia"
+      return false
+    end
+
+    payload = { message_id: message_id.to_s, rating: rating.to_i, user_id: user_id.to_s.first(MAX_USER_ID) }
+    payload[:comments] = comments.to_s.first(MAX_COMMENTS) if comments.present?
+
+    recorded?(call_with_retries('/feedback/message', payload))
+  end
+
   private
+
+  # A diferencia de otros endpoints, aqui un fallo de escritura NUNCA se reporta como
+  # exito: si el cuerpo no dice `recorded`, la calificacion no quedo guardada.
+  def recorded?(response)
+    return false if response.nil?
+
+    JSON.parse(response.body)['feedback_action'] == FEEDBACK_RECORDED
+  rescue JSON::ParserError
+    false
+  end
 
   def build_answer_payload(question, user_id, conversation_id, images)
     text = question.to_s.strip
