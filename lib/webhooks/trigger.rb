@@ -13,6 +13,16 @@ class Webhooks::Trigger
     new(url, payload, webhook_type, method, headers).execute
   end
 
+  # La URL publica de esta instancia: lo que viaja en los payloads como instance_url.
+  # Mismo orden de resolucion que el resto del repo (ENV y, si no, la config global).
+  #
+  # Es publica y de clase porque BotSeller::Dispatcher manda su webhook con Net::HTTP
+  # propio, sin pasar por aqui, y tiene que poner EL MISMO valor. Una segunda lectura
+  # de FRONTEND_URL alli seria una copia que puede divergir.
+  def self.instance_url
+    ENV.fetch('FRONTEND_URL', nil).presence || GlobalConfigService.load('FRONTEND_URL', nil)
+  end
+
   def execute
     perform_request
   rescue StandardError => e
@@ -53,11 +63,10 @@ class Webhooks::Trigger
     @payload.merge(instance_url: base_url)
   end
 
-  # Mismo orden de resolucion que el resto del repo (ENV y, si no, la config global).
   def base_url
     return @base_url if defined?(@base_url)
 
-    @base_url = ENV.fetch('FRONTEND_URL', nil).presence || GlobalConfigService.load('FRONTEND_URL', nil)
+    @base_url = self.class.instance_url
   end
 
   def handle_error(error)
