@@ -642,10 +642,15 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     @ticket.public_send("#{attr}=", value)
   end
 
+  # @tickets_cases — el ticket abierto desde una conversacion guarda el hilo.
+  # Ojo con el id: la API de Chatwoot publica `display_id` bajo el nombre `id`
+  # (`_conversation.json.jbuilder`), asi que el dashboard manda el display_id.
+  # Buscar por llave primaria devolvia nil y el ticket nacia sin conversacion,
+  # en silencio. Se busca por display_id, como el resto de los controladores.
   def resolve_conversation
     return nil unless ticket_params[:conversation_id].present?
 
-    Current.account.conversations.find_by(id: ticket_params[:conversation_id])
+    Current.account.conversations.find_by(display_id: ticket_params[:conversation_id])
   end
 
   # @tickets_cases — ¿el request intenta tocar un campo congelado de un ticket
