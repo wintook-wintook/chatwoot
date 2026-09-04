@@ -33,8 +33,69 @@
         />
       </woot-tabs>
 
-      <!-- Toolbar compacto: búsqueda + dropdowns + fecha + orden -->
+      <!-- Toolbar compacto: vistas + búsqueda + dropdowns + fecha + orden -->
       <div class="flex flex-wrap items-center gap-2 py-3">
+        <!-- @tickets_cases F3 — vistas guardadas -->
+        <div class="flex items-center gap-1">
+          <select
+            v-model="activeViewId"
+            class="!mb-0 w-48 text-sm"
+            @change="onViewChange"
+          >
+            <option value="">{{ $t('CASE_TICKETS.VIEWS.PLACEHOLDER') }}</option>
+            <optgroup
+              v-if="myViews.length"
+              :label="$t('CASE_TICKETS.VIEWS.MINE')"
+            >
+              <option v-for="v in myViews" :key="v.id" :value="v.id">
+                {{ v.name }}
+              </option>
+            </optgroup>
+            <optgroup
+              v-if="sharedViews.length"
+              :label="$t('CASE_TICKETS.VIEWS.SHARED')"
+            >
+              <option v-for="v in sharedViews" :key="v.id" :value="v.id">
+                {{ v.name }} · {{ v.owner_name }}
+              </option>
+            </optgroup>
+          </select>
+          <span
+            v-if="isViewDirty"
+            class="flex gap-1 items-center text-xs whitespace-nowrap text-amber-600 dark:text-amber-400"
+            :title="$t('CASE_TICKETS.VIEWS.DIRTY_HINT')"
+          >
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
+            {{ $t('CASE_TICKETS.VIEWS.DIRTY') }}
+          </span>
+          <woot-button
+            v-if="isViewDirty && canOverwriteView"
+            size="small"
+            variant="clear"
+            icon="save"
+            :title="$t('CASE_TICKETS.VIEWS.SAVE')"
+            @click="overwriteView"
+          >
+            {{ $t('CASE_TICKETS.VIEWS.SAVE') }}
+          </woot-button>
+          <woot-button
+            size="small"
+            variant="clear"
+            icon="copy"
+            :title="$t('CASE_TICKETS.VIEWS.SAVE_AS')"
+            @click="showSaveViewModal = true"
+          >
+            {{ $t('CASE_TICKETS.VIEWS.SAVE_AS') }}
+          </woot-button>
+          <woot-button
+            size="small"
+            variant="clear"
+            icon="settings"
+            :title="$t('CASE_TICKETS.VIEWS.MANAGE.TITLE')"
+            @click="showManageViewsModal = true"
+          />
+        </div>
+
         <!-- Búsqueda -->
         <div class="relative flex-1 min-w-[220px]">
           <fluent-icon
@@ -334,6 +395,24 @@
       @close="showInternalModal = false"
     />
 
+    <!-- @tickets_cases F3 — guardar los filtros actuales como vista -->
+    <AddCustomViews
+      v-if="showSaveViewModal"
+      :filter-type="viewFilterType"
+      :custom-views-query="viewQuery"
+      allow-shared
+      :success-message="$t('CASE_TICKETS.VIEWS.SAVED')"
+      :open-last-saved-item="onViewSaved"
+      @close="showSaveViewModal = false"
+    />
+
+    <!-- @tickets_cases F5 — gestionar las vistas guardadas -->
+    <SavedViewsModal
+      v-if="showManageViewsModal"
+      @changed="onViewsChanged"
+      @close="showManageViewsModal = false"
+    />
+
     <!-- @tickets_cases — edición desde la cola (mismo modal, modo edición) -->
     <CaseTicketInternalModal
       v-if="editingTicket"
@@ -348,9 +427,12 @@
 <script>
 import { mapGetters } from 'vuex';
 import { VeTable } from 'vue-easytable';
+import { useAlert } from 'dashboard/composables';
 import WootDateRangePicker from 'dashboard/components/ui/DateRangePicker.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue'; // @tickets_cases — paginado estándar
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
+import AddCustomViews from 'dashboard/routes/dashboard/customviews/AddCustomViews.vue'; // @tickets_cases F3 — vistas guardadas
+import SavedViewsModal from './SavedViewsModal.vue'; // @tickets_cases F5 — gestion de vistas
 import {
   SIMPLE_FILTER_STATUSES,
   toSimpleStatus,
@@ -391,11 +473,25 @@ const ORIGIN_OPTIONS = [
   'internal',
 ];
 const SORT_FIELDS = ['created_at', 'priority', 'status', 'sla_status'];
+// @tickets_cases F3 — las vistas guardadas se direccionan por nombre de tipo,
+// igual que el Sidebar y el store de customViews.
+const VIEW_FILTER_TYPE = 'case_ticket';
+// Version de la forma del `query` guardado. Hoy no se ramifica sobre ella, pero
+// cuando entren filtros nuevos es lo que distingue "no lo guardo" de "lo guardo
+// vacio" en una vista vieja.
+const VIEW_QUERY_VERSION = 1;
 const PER_PAGE_OPTIONS = [25, 50, 100];
 
 export default {
   name: 'GestorTicketsIndex',
-  components: { VeTable, TableFooter, WootDateRangePicker, CaseTicketInternalModal },
+  components: {
+    VeTable,
+    TableFooter,
+    WootDateRangePicker,
+    CaseTicketInternalModal,
+    AddCustomViews,
+    SavedViewsModal,
+  },
   data() {
     return {
       showInternalModal: false, // @tickets_cases Fase C
@@ -443,6 +539,10 @@ export default {
       sortOrder: 'desc',
       currentPage: 1,
       perPage: 25,
+      // @tickets_cases F3 — vistas guardadas
+      activeViewId: '',
+      showSaveViewModal: false,
+      showManageViewsModal: false,
     };
   },
   computed: {
@@ -452,6 +552,7 @@ export default {
       uiFlags: 'caseTickets/getUIFlags',
       types: 'caseTickets/getTypes',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
+      currentRole: 'getCurrentRole', // @tickets_cases F4 — quien puede sobreescribir una vista
       itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
       agents: 'agents/getAgents', // @tickets_cases P3 — nombre del asignado + lote
     }),
@@ -507,6 +608,59 @@ export default {
     },
     typeFilters() {
       return [{ id: '', name: 'Todos los tipos' }, ...this.types];
+    },
+    // @tickets_cases F3 — vistas guardadas de tickets, separadas en dos grupos:
+    // las mias y las que alguien de la cuenta compartio.
+    viewFilterType() {
+      return VIEW_FILTER_TYPE;
+    },
+    savedViews() {
+      return this.$store.getters['customViews/getCustomViewsByFilterType'](
+        VIEW_FILTER_TYPE
+      );
+    },
+    myViews() {
+      return this.savedViews.filter(v => v.user_id === this.currentUserID);
+    },
+    sharedViews() {
+      return this.savedViews.filter(v => v.user_id !== this.currentUserID);
+    },
+    activeView() {
+      return this.savedViews.find(v => v.id === this.activeViewId) || null;
+    },
+    // @tickets_cases F4 — ¿lo que se ve en pantalla sigue siendo la vista
+    // cargada? Sin esta senal nadie sabe si esta viendo la vista o algo que
+    // toco encima, que es la queja clasica de este tipo de barra.
+    isViewDirty() {
+      if (!this.activeView) return false;
+      return (
+        this.canonicalQuery(this.viewQuery) !==
+        this.canonicalQuery(this.activeView.query)
+      );
+    },
+    // Sobreescribe su dueno; un administrador tambien, pero solo sobre las
+    // compartidas. Es la misma regla que aplica el backend, repetida aqui solo
+    // para no ofrecer un boton que va a devolver 401.
+    canOverwriteView() {
+      if (!this.activeView) return false;
+      if (this.activeView.user_id === this.currentUserID) return true;
+      return this.currentRole === 'administrator' && this.activeView.shared;
+    },
+    // Lo que se guarda al pulsar "Guardar como": el estado de filtros, sin
+    // pagina ni tamano de pagina, que son navegacion y no criterio.
+    viewQuery() {
+      return {
+        v: VIEW_QUERY_VERSION,
+        search: this.search,
+        date_range: this.dateRange.map(d => this.formatDateParam(d)),
+        status: this.statusFilter,
+        priority: this.priorityFilter,
+        origin: this.originFilter,
+        quick: this.activeFilter,
+        case_type_id: this.activeType,
+        sort_by: this.sortBy,
+        sort_order: this.sortOrder,
+      };
     },
     hasActiveFilters() {
       return (
@@ -717,6 +871,7 @@ export default {
     this.$store.dispatch('caseTickets/fetchTypes');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     this.$store.dispatch('agents/get'); // @tickets_cases P3 — para asignar y mostrar nombre
+    this.$store.dispatch('customViews/get', VIEW_FILTER_TYPE); // @tickets_cases F3
     this.fetch();
   },
   methods: {
@@ -788,7 +943,91 @@ export default {
     onQuickTabChange(index) {
       this.applyFilter(QUICK_FILTERS[index].key);
     },
+    // @tickets_cases F3 — vistas guardadas ------------------------------------
+    onViewChange() {
+      const view = this.savedViews.find(v => v.id === this.activeViewId);
+      if (view) this.applyView(view);
+      else this.clearFilters();
+    },
+    // Tolerante a proposito: una clave ausente deja su default en pie y una
+    // desconocida se ignora. Una vista vieja tiene que seguir abriendo cuando
+    // agreguemos filtros nuevos.
+    applyView(view) {
+      const q = view.query || {};
+
+      this.search = q.search || '';
+      this.dateRange = Array.isArray(q.date_range)
+        ? q.date_range.map(d => new Date(`${d}T00:00:00`))
+        : [];
+      this.statusFilter = q.status || '';
+      this.priorityFilter = q.priority || '';
+      this.originFilter = q.origin || '';
+      this.activeFilter = QUICK_FILTERS.some(f => f.key === q.quick)
+        ? q.quick
+        : 'mine';
+      this.activeType = this.resolveSavedType(q.case_type_id, view.name);
+      this.sortBy = SORT_FIELDS.includes(q.sort_by) ? q.sort_by : 'created_at';
+      this.sortOrder = q.sort_order === 'asc' ? 'asc' : 'desc';
+
+      this.currentPage = 1;
+      this.setSortConfig();
+      this.fetch();
+    },
+    // Los tipos de caso son una tabla configurable por cuenta: alguien pudo
+    // borrar el tipo al que apunta una vista guardada. Eso no debe romperla.
+    resolveSavedType(id, viewName) {
+      if (!id) return '';
+      if (this.types.some(t => t.id === id)) return id;
+
+      useAlert(this.$t('CASE_TICKETS.VIEWS.MISSING_TYPE', { name: viewName }));
+      return '';
+    },
+    // Compara dos `query` sin depender del orden de las claves ni de la
+    // diferencia entre "ausente" y "vacio": el jsonb vuelve del servidor con
+    // las claves en cualquier orden.
+    canonicalQuery(q) {
+      const src = q || {};
+      const norm = {
+        search: src.search || '',
+        date_range: Array.isArray(src.date_range) ? src.date_range : [],
+        status: src.status || '',
+        priority: src.priority || '',
+        origin: src.origin || '',
+        quick: src.quick || 'mine',
+        case_type_id: src.case_type_id || '',
+        sort_by: src.sort_by || 'created_at',
+        sort_order: src.sort_order || 'desc',
+      };
+      return JSON.stringify(
+        Object.keys(norm)
+          .sort()
+          .map(k => [k, norm[k]])
+      );
+    },
+    async overwriteView() {
+      if (!this.canOverwriteView) return;
+      try {
+        await this.$store.dispatch('customViews/update', {
+          id: this.activeView.id,
+          query: this.viewQuery,
+        });
+        useAlert(this.$t('CASE_TICKETS.VIEWS.UPDATED'));
+      } catch (error) {
+        useAlert(this.$t('CASE_TICKETS.VIEWS.UPDATE_ERROR'));
+      }
+    },
+    // Si la vista que estaba cargada se borro, hay que soltarla: dejarla
+    // seleccionada mostraria un nombre que ya no existe.
+    onViewsChanged(deletedId) {
+      if (deletedId && deletedId === this.activeViewId) this.activeViewId = '';
+      this.$store.dispatch('customViews/get', VIEW_FILTER_TYPE);
+    },
+    onViewSaved() {
+      this.showSaveViewModal = false;
+      this.$store.dispatch('customViews/get', VIEW_FILTER_TYPE);
+    },
     clearFilters() {
+      this.activeViewId = '';
       this.search = '';
       this.dateRange = [];
       this.statusFilter = '';
