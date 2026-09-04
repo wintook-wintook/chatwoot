@@ -113,7 +113,12 @@
       "SAVE_AS": "Save as",
       "SAVED": "View saved",
       "SHARE_LABEL": "Share with the account",
-      "MISSING_TYPE": "The view \"{name}\" pointed to a case type that no longer exists. Showing all types."
+      "MISSING_TYPE": "The view \"{name}\" pointed to a case type that no longer exists. Showing all types.",
+      "SAVE": "Save",
+      "UPDATED": "View updated",
+      "UPDATE_ERROR": "The view could not be updated",
+      "DIRTY": "modified",
+      "DIRTY_HINT": "The current filters no longer match the saved view"
     },
     "RULES": {
       "CREATE_BUTTON": "+ New rule",

@@ -116,7 +116,12 @@
       "SAVE_AS": "Guardar como",
       "SAVED": "Vista guardada",
       "SHARE_LABEL": "Compartir con la cuenta",
-      "MISSING_TYPE": "La vista «{name}» apuntaba a un tipo de caso que ya no existe. Se muestran todos los tipos."
+      "MISSING_TYPE": "La vista «{name}» apuntaba a un tipo de caso que ya no existe. Se muestran todos los tipos.",
+      "SAVE": "Guardar",
+      "UPDATED": "Vista actualizada",
+      "UPDATE_ERROR": "No se pudo actualizar la vista",
+      "DIRTY": "modificada",
+      "DIRTY_HINT": "Los filtros actuales ya no coinciden con la vista guardada"
     },
     "RULES": {
       "CREATE_BUTTON": "+ Nueva regla",

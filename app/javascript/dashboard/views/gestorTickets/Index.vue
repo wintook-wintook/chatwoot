@@ -60,10 +60,28 @@
               </option>
             </optgroup>
           </select>
+          <span
+            v-if="isViewDirty"
+            class="flex gap-1 items-center text-xs whitespace-nowrap text-amber-600 dark:text-amber-400"
+            :title="$t('CASE_TICKETS.VIEWS.DIRTY_HINT')"
+          >
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
+            {{ $t('CASE_TICKETS.VIEWS.DIRTY') }}
+          </span>
           <woot-button
+            v-if="isViewDirty && canOverwriteView"
             size="small"
             variant="clear"
             icon="save"
+            :title="$t('CASE_TICKETS.VIEWS.SAVE')"
+            @click="overwriteView"
+          >
+            {{ $t('CASE_TICKETS.VIEWS.SAVE') }}
+          </woot-button>
+          <woot-button
+            size="small"
+            variant="clear"
+            icon="copy"
             :title="$t('CASE_TICKETS.VIEWS.SAVE_AS')"
             @click="showSaveViewModal = true"
           >
@@ -517,6 +535,7 @@ export default {
       uiFlags: 'caseTickets/getUIFlags',
       types: 'caseTickets/getTypes',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
+      currentRole: 'getCurrentRole', // @tickets_cases F4 — quien puede sobreescribir una vista
       itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
       agents: 'agents/getAgents', // @tickets_cases P3 — nombre del asignado + lote
     }),
@@ -588,6 +607,27 @@ export default {
     },
     sharedViews() {
       return this.savedViews.filter(v => v.user_id !== this.currentUserID);
+    },
+    activeView() {
+      return this.savedViews.find(v => v.id === this.activeViewId) || null;
+    },
+    // @tickets_cases F4 — ¿lo que se ve en pantalla sigue siendo la vista
+    // cargada? Sin esta senal nadie sabe si esta viendo la vista o algo que
+    // toco encima, que es la queja clasica de este tipo de barra.
+    isViewDirty() {
+      if (!this.activeView) return false;
+      return (
+        this.canonicalQuery(this.viewQuery) !==
+        this.canonicalQuery(this.activeView.query)
+      );
+    },
+    // Sobreescribe su dueno; un administrador tambien, pero solo sobre las
+    // compartidas. Es la misma regla que aplica el backend, repetida aqui solo
+    // para no ofrecer un boton que va a devolver 401.
+    canOverwriteView() {
+      if (!this.activeView) return false;
+      if (this.activeView.user_id === this.currentUserID) return true;
+      return this.currentRole === 'administrator' && this.activeView.shared;
     },
     // Lo que se guarda al pulsar "Guardar como": el estado de filtros, sin
     // pagina ni tamano de pagina, que son navegacion y no criterio.
@@ -924,6 +964,40 @@ export default {
 
       useAlert(this.$t('CASE_TICKETS.VIEWS.MISSING_TYPE', { name: viewName }));
       return '';
+    },
+    // Compara dos `query` sin depender del orden de las claves ni de la
+    // diferencia entre "ausente" y "vacio": el jsonb vuelve del servidor con
+    // las claves en cualquier orden.
+    canonicalQuery(q) {
+      const src = q || {};
+      const norm = {
+        search: src.search || '',
+        date_range: Array.isArray(src.date_range) ? src.date_range : [],
+        status: src.status || '',
+        priority: src.priority || '',
+        origin: src.origin || '',
+        quick: src.quick || 'mine',
+        case_type_id: src.case_type_id || '',
+        sort_by: src.sort_by || 'created_at',
+        sort_order: src.sort_order || 'desc',
+      };
+      return JSON.stringify(
+        Object.keys(norm)
+          .sort()
+          .map(k => [k, norm[k]])
+      );
+    },
+    async overwriteView() {
+      if (!this.canOverwriteView) return;
+      try {
+        await this.$store.dispatch('customViews/update', {
+          id: this.activeView.id,
+          query: this.viewQuery,
+        });
+        useAlert(this.$t('CASE_TICKETS.VIEWS.UPDATED'));
+      } catch (error) {
+        useAlert(this.$t('CASE_TICKETS.VIEWS.UPDATE_ERROR'));
+      }
     },
     onViewSaved() {
       this.showSaveViewModal = false;
