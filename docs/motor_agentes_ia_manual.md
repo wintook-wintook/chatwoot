@@ -338,6 +338,31 @@ Cada ficha lista lo que hace falta para que la directiva **exista** en tiempo de
 | **Requiere** | hook `discourse` habilitado para ese inbox |
 | **Cuándo** | cuando el foro se configura por bandeja y no por fuente nombrada |
 
+#### `@soporte_contpaq(nombre)` — Agente de Servicio CONTPAQi (API remota)
+
+| | |
+|---|---|
+| **Forma** | `@soporte_contpaq(Agente de Servicio CONTPAQi)` — **los paréntesis son obligatorios** |
+| **Qué hace** | manda la pregunta a la API de CONTPAQi, que busca en la documentación oficial del fabricante **y redacta la respuesta** |
+| **Requiere** | `KnowledgeSource` activa con ese nombre exacto (`source_type: contpaq_support`) y `base_url` + `token_url` + `client_id` + `client_secret` + `scope` en su config |
+| **Firma** | agrega `📚 Más información: <url>` con la primera fuente que traiga URL pública |
+| **Ojo** | **es la única fuente que no pasa por nuestro modelo.** El `complementary_prompt` del agente —tono, regla de evidencia, no diagnosticar— **no se aplica** en esta rama |
+
+Es la diferencia estructural del catálogo. Todas las demás devuelven *contexto* y el
+modelo redacta con las reglas del agente; esta devuelve la **respuesta ya escrita**.
+Pasarla por el modelo sería pedirle que reescriba algo ya fiel a la documentación del
+fabricante, así que no se hace.
+
+Tres consecuencias de autoría:
+
+- **El tono no se controla desde el Entrenamiento.** Si la respuesta tiene que sonar como
+  el resto del agente, esta fuente no es la indicada.
+- **No hace falta darle historial.** La memoria del hilo la lleva CONTPAQi: basta con que
+  el turno tenga conversación, y el seguimiento («¿y cómo lo cancelo?») lo resuelve solo.
+- **Hay tres respuestas que llegan sin fuente y no son error:** cuando pide que se
+  especifique de qué producto CONTPAQi se habla, cuando la pregunta está fuera de su
+  alcance, y cuando es un saludo. En las tres se entrega el texto sin el enlace.
+
 #### `{{doc:nombre}}` — Google Doc (pgvector)
 
 | | |
@@ -498,6 +523,8 @@ Cada ficha lista lo que hace falta para que la directiva **exista** en tiempo de
 | `@estado_ticket` + `@crear_ticket` | ✓ recomendado | consultar va antes que crear |
 | `@agendar_calendar` + fuente | ✓ | la agenda corre antes que la búsqueda |
 | `@agendar_calendar` + `@crear_ticket` | ✓ | al completarse el ticket ofrece horarios en el mismo turno |
+| `@soporte_contpaq` + regla de tono en la prosa | ⚠ la regla no se aplica en esa rama | la redacción es de CONTPAQi, no nuestra |
+| `@soporte_contpaq` en la misma rama que otra fuente | ✗ gana la otra | va **última** en el catálogo, para no alterar agentes ya configurados |
 | `{{nombre}}` + rama con fuente | ✗ sale como texto literal | KBase no resuelve adjuntos |
 | `{{nombre}}` + rama sin fuente | ✓ | el conversacional sí los resuelve |
 | directiva de búsqueda suelta en la prosa | ✗✗ blanquea el prompt entero | `job:545` |
@@ -622,6 +649,7 @@ es un resultado correcto.
 | Artículo | título del artículo | cuerpo troceado |
 | Google Doc / Sheet FAQ | encabezado o fila | contenido troceado |
 | Discourse | título del hilo | `raw` del post (bajado en vivo) |
+| CONTPAQi | — | **no se indexa**: la búsqueda y la redacción ocurren del otro lado |
 
 Por eso el grupo de `@buscar_predefinidas(GESTION)` se cumple **renombrando** las
 respuestas: `GESTION - alta de usuario`, `GESTION - datos fiscales`. No hay columna nueva
@@ -635,6 +663,7 @@ ni pantalla nueva; el prefijo del nombre **es** el grupo.
 | Dos ramas que comparten el corpus | `(GRUPO)` en una y `(!GRUPO)` en la otra |
 | Instrucciones de trámite que no deben mezclarse con precios | grupo positivo (umbral 0.45) |
 | Documentación técnica extensa y viva | `@discourse` o `@buscar_foro(...)` |
+| Dudas de productos CONTPAQi (Nóminas, Bancos, Comercial) | `@soporte_contpaq(...)` — documentación del fabricante, mantenida por él |
 | Tablas con números que deben cuadrar | `{{hoja:}}` en modo Datos |
 | Datos del cliente en el ERP | `{{consulta:}}` (determinista, sin IA) |
 
@@ -673,6 +702,7 @@ Consecuencias para quien escribe el prompt:
 | B2 | Ninguna directiva de búsqueda fuera de una línea `@ruta` | el conversacional descarta el Entrenamiento completo |
 | B3 | `@buscar_foro` siempre con paréntesis y nombre exacto | la directiva es texto muerto |
 | B4 | Solo directivas del catálogo (§4) | lo inventado no ejecuta nada, en silencio |
+| B3b | `@soporte_contpaq` siempre con paréntesis y nombre exacto | la directiva es texto muerto |
 | B5 | Una sola fuente por rama | gana la primera del catálogo, no la que quisiste |
 | B6 | La fuente existe, está activa y tiene contenido | la rama nunca responde con fuente |
 | B7 | `@ruta_por_defecto` apunta a una rama declarada | los turnos ambiguos se quedan sin ruteo |
@@ -685,6 +715,7 @@ Consecuencias para quien escribe el prompt:
 | D2 | Las secciones de la prosa usan las palabras de las descripciones | el modelo aplica la sección de otra rama |
 | D3 | `#etiqueta` declarada en cada `@ruta` | turnos sin etiqueta → automatizaciones que no corren |
 | D4 | Regla de fidelidad a la fuente escrita explícitamente | respuestas adaptadas que suenan bien y no son |
+| D4b | No prometer un tono propio en una rama `@soporte_contpaq` | la respuesta llega con la voz de CONTPAQi y desentona con el resto |
 | D5 | Escalamiento por rama en vez de `@crear_ticket` global | tickets abiertos donde no correspondía |
 | D6 | `fallback=true` cuando hay fuente y ticket global | el ticket se lleva el turno antes de buscar |
 | D7 | Pedir respuestas de 2 párrafos como máximo | respuestas cortadas por el tope de tokens |

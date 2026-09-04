@@ -308,6 +308,7 @@ Todavía le faltan las fuentes: eso es el Paso 3. Tal como está, ninguna rama b
 | `@buscar_articulo` | que haya artículos publicados en el Centro de Ayuda |
 | `@buscar_foro(Nombre)` | que la fuente exista en Base de Conocimiento, activa, y que el **nombre sea idéntico** (incluidos espacios) |
 | `@discourse` | que la integración de Discourse esté activa **en esa bandeja** |
+| `@soporte_contpaq(Nombre)` | que la fuente exista en Base de Conocimiento con sus datos de acceso, activa, y que el **nombre sea idéntico**. Ojo: en esta rama **el tono y las reglas de tu Entrenamiento no se aplican**, porque quien redacta es CONTPAQi |
 | `{{doc:Nombre}}` | que el documento esté conectado y sincronizado |
 | `{{hoja:Nombre}}` | ídem; y decidir si va en modo FAQ (texto) o Datos (cálculos) |
 | `-` | nada: es la rama que no consulta |

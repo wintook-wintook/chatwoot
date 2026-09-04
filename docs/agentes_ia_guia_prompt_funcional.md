@@ -120,6 +120,7 @@ Solo esto se ejecuta. El patrón es literal: se respetan paréntesis, dos puntos
 | `{{doc:nombre}}` | `/\{\{doc:([^}]+)\}\}/i` | Google Doc (exige feature `google_calendar`) | 5º |
 | `{{hoja:nombre}}` | `/\{\{hoja:([^}]+)\}\}/i` | Google Sheet — FAQ o modo Datos | 6º |
 | `@discourse` | `/@discourse\b/i` | Discourse AI del hook del inbox | 7º |
+| `@soporte_contpaq(nombre)` | `/@soporte_contpaq\(([^)]+)\)/i` — **los paréntesis son obligatorios** | API del Agente de Servicio CONTPAQi. **Única fuente que devuelve la respuesta ya redactada**: no pasa por nuestro modelo, así que el `complementary_prompt` no se aplica | 8º |
 | `@crear_ticket(...)` | `Cases::TicketCreatorService::DIRECTIVE_RE` | alta de ticket con IA de intake | fuera del catálogo de fuentes |
 | `@estado_ticket` | comparación literal de cadena | consulta del caso del contacto | antes que todo lo anterior |
 | `@agendar_calendar` | `/@agendar_calendar\b/i` | agenda de citas de Google Calendar | tras los tickets |
@@ -306,6 +307,7 @@ ocurre en tres momentos distintos:
 |---|---|---|
 | 7 | **Una fuente por rama.** Sin `@ruta`, solo una directiva del prompt entero se ejecuta | `detect` es una cadena `if/elsif` — gana la primera del catálogo, y `@buscar_predefinidas` está casi al principio |
 | 8 | `@buscar_foro` **siempre con paréntesis** y con el nombre exacto del KnowledgeSource | sin paréntesis el patrón no coincide y la directiva es prosa inerte |
+| 8b | `@soporte_contpaq` **siempre con paréntesis** y con el nombre exacto de la fuente | mismo motivo: sin paréntesis el patrón no coincide |
 | 9 | Usá `@buscar_predefinidas(GRUPO)` cuando dos ramas comparten el corpus | el grupo es un **prefijo del nombre** de la respuesta predefinida, y sube el umbral de 0.20 a 0.45 |
 | 10 | El grupo negado `(!GRUPO)` conserva el umbral 0.20 | es el corpus general con un recorte, no un corpus estrecho |
 | 11 | Rama sin fuente: guion (`-`, `–`, `—`) | así el turno cae al conversacional a propósito, en vez de buscar donde no debe |

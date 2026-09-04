@@ -6,13 +6,16 @@ import re, sys
 RUTA_OK   = re.compile(r'^[ \t]*@ruta\([ \t]*([a-z0-9_-]+)[ \t]*(?:#([a-z0-9_]+))?[ \t]*(?::[ \t]*([^)]*))?\)[ \t]*:[ \t]*(.*)$', re.I)
 RUTA_ANY  = re.compile(r'@ruta\s*\(', re.I)
 DEFAULT   = re.compile(r'^[ \t]*@ruta_por_defecto[ \t]*:[ \t]*([a-z0-9_-]+)[ \t]*$', re.I)
-BUSQUEDA  = re.compile(r'@buscar_predefinidas\b|@buscar_art[ií]culo\b|@buscar_foro\b|@discourse\b|\{\{doc:|\{\{hoja:', re.I)
+BUSQUEDA  = re.compile(r'@buscar_predefinidas\b|@buscar_art[ií]culo\b|@buscar_foro\b|@discourse\b|@soporte_contpaq\b|\{\{doc:|\{\{hoja:', re.I)
 FUENTES   = [re.compile(p, re.I) for p in (
     r'@buscar_predefinidas\b(?:\s*\([^)]*\))?', r'@buscar_art[ií]culo\b',
-    r'@buscar_foro\([^)]+\)', r'@discourse\b', r'\{\{doc:[^}]+\}\}', r'\{\{hoja:[^}]+\}\}')]
+    r'@buscar_foro\([^)]+\)', r'@discourse\b', r'\{\{doc:[^}]+\}\}', r'\{\{hoja:[^}]+\}\}',
+    r'@soporte_contpaq\([^)]+\)')]
 FORO_MAL  = re.compile(r'@buscar_foro(?!\s*\()', re.I)
+# Igual que @buscar_foro: sin parentesis con el nombre exacto, la directiva es texto muerto.
+CONTPAQ_MAL = re.compile(r'@soporte_contpaq(?!\s*\()', re.I)
 CONSULTA  = re.compile(r'\{\{consulta:', re.I)
-CONOCIDAS = re.compile(r'@(?:ruta|ruta_por_defecto|buscar_predefinidas|buscar_art[ií]culo|buscar_foro|discourse|crear_ticket|estado_ticket|agendar_calendar)\b', re.I)
+CONOCIDAS = re.compile(r'@(?:ruta|ruta_por_defecto|buscar_predefinidas|buscar_art[ií]culo|buscar_foro|discourse|soporte_contpaq|crear_ticket|estado_ticket|agendar_calendar)\b', re.I)
 CUALQUIER = re.compile(r'@[a-záéíóúñ_][a-z0-9áéíóúñ_]*', re.I)
 SIN_FUENTE = {'-', '–', '—', ''}
 
@@ -50,8 +53,13 @@ def validar(texto):
             errores.append((n, f'Rama "{nombre}": "{fuente}" no es una fuente del catálogo (usá "-" si no consulta nada)'))
         if FORO_MAL.search(fuente):
             errores.append((n, f'Rama "{nombre}": @buscar_foro necesita paréntesis con el nombre exacto'))
+        if CONTPAQ_MAL.search(fuente):
+            errores.append((n, f'Rama "{nombre}": @soporte_contpaq necesita paréntesis con el nombre exacto de la fuente'))
         if escal and not re.search(r'@crear_ticket\b', escal, re.I):
             errores.append((n, f'Rama "{nombre}": después de la flecha solo se admite @crear_ticket(...)'))
+        if re.search(r'@soporte_contpaq\b', fuente, re.I):
+            avisos.append((n, f'Rama "{nombre}": la respuesta la redacta CONTPAQi, asi que el tono y las '
+                              'reglas del Entrenamiento NO se aplican en esta rama'))
         if not tag:
             avisos.append((n, f'Rama "{nombre}" sin #etiqueta: si el agente la olvida, no se dispara la automatización'))
         if not desc or not desc.strip():
