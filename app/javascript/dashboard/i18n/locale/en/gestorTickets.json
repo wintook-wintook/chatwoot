@@ -118,7 +118,31 @@
       "UPDATED": "View updated",
       "UPDATE_ERROR": "The view could not be updated",
       "DIRTY": "modified",
-      "DIRTY_HINT": "The current filters no longer match the saved view"
+      "DIRTY_HINT": "The current filters no longer match the saved view",
+      "SHARED_BY_OTHERS": "Shared by others",
+      "MANAGE": {
+        "TITLE": "Manage views",
+        "SUBTITLE": "Rename, share or delete the saved views of the case manager.",
+        "EMPTY": "No saved views yet.",
+        "BADGE_SHARED": "shared",
+        "RENAME": "Rename",
+        "CONFIRM": "Save",
+        "CANCEL": "Cancel",
+        "SHARE": "Share with the account",
+        "UNSHARE": "Stop sharing",
+        "DELETE": "Delete",
+        "RENAMED": "View renamed",
+        "SHARED_OK": "The view is now visible to the whole account",
+        "UNSHARED": "The view is personal again",
+        "DELETED": "View deleted",
+        "DELETE_ERROR": "The view could not be deleted",
+        "DELETE_TITLE": "Delete view",
+        "DELETE_MESSAGE": "Are you sure you want to delete the view ",
+        "DELETE_MESSAGE_SHARED": "This view is shared: everyone in the account will lose it. Delete ",
+        "DELETE_YES": "Yes, delete",
+        "DELETE_NO": "No, keep it",
+        "QUOTA": "{count} case views. The limit is {max} per user, shared with Conversation folders and Contact segments."
+      }
     },
     "RULES": {
       "CREATE_BUTTON": "+ New rule",

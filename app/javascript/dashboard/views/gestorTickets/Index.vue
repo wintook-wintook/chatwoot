@@ -87,6 +87,13 @@
           >
             {{ $t('CASE_TICKETS.VIEWS.SAVE_AS') }}
           </woot-button>
+          <woot-button
+            size="small"
+            variant="clear"
+            icon="settings"
+            :title="$t('CASE_TICKETS.VIEWS.MANAGE.TITLE')"
+            @click="showManageViewsModal = true"
+          />
         </div>
 
         <!-- Búsqueda -->
@@ -399,6 +406,13 @@
       @close="showSaveViewModal = false"
     />
 
+    <!-- @tickets_cases F5 — gestionar las vistas guardadas -->
+    <SavedViewsModal
+      v-if="showManageViewsModal"
+      @changed="onViewsChanged"
+      @close="showManageViewsModal = false"
+    />
+
     <!-- @tickets_cases — edición desde la cola (mismo modal, modo edición) -->
     <CaseTicketInternalModal
       v-if="editingTicket"
@@ -418,6 +432,7 @@ import WootDateRangePicker from 'dashboard/components/ui/DateRangePicker.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue'; // @tickets_cases — paginado estándar
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
 import AddCustomViews from 'dashboard/routes/dashboard/customviews/AddCustomViews.vue'; // @tickets_cases F3 — vistas guardadas
+import SavedViewsModal from './SavedViewsModal.vue'; // @tickets_cases F5 — gestion de vistas
 import {
   SIMPLE_FILTER_STATUSES,
   toSimpleStatus,
@@ -475,6 +490,7 @@ export default {
     WootDateRangePicker,
     CaseTicketInternalModal,
     AddCustomViews,
+    SavedViewsModal,
   },
   data() {
     return {
@@ -526,6 +542,7 @@ export default {
       // @tickets_cases F3 — vistas guardadas
       activeViewId: '',
       showSaveViewModal: false,
+      showManageViewsModal: false,
     };
   },
   computed: {
@@ -998,6 +1015,12 @@ export default {
       } catch (error) {
         useAlert(this.$t('CASE_TICKETS.VIEWS.UPDATE_ERROR'));
       }
+    },
+    // Si la vista que estaba cargada se borro, hay que soltarla: dejarla
+    // seleccionada mostraria un nombre que ya no existe.
+    onViewsChanged(deletedId) {
+      if (deletedId && deletedId === this.activeViewId) this.activeViewId = '';
+      this.$store.dispatch('customViews/get', VIEW_FILTER_TYPE);
     },
     onViewSaved() {
       this.showSaveViewModal = false;
