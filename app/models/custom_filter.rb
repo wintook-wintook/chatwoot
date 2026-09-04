@@ -30,6 +30,25 @@ class CustomFilter < ApplicationRecord
   enum filter_type: { conversation: 0, contact: 1, report: 2, case_ticket: 3 }
   validate :validate_number_of_filters
 
+  # @tickets_cases F2 — las vistas que un usuario puede ver de un tipo: las suyas
+  # mas las que alguien de la cuenta compartio. Es el mismo criterio que
+  # Macro.with_visibility, con `shared` haciendo el papel de `global`.
+  #
+  # Para conversation/contact/report no cambia nada: ninguna fila nace compartida
+  # (la columna es default false), asi que la union devuelve solo las propias.
+  # `filter_type` nil = de todos los tipos. Las acciones que buscan por id no lo
+  # reciben —viaja dentro de `custom_filter`, no en la query string— y acotarlas
+  # por tipo las hacia responder 404 sobre registros que el usuario si puede ver.
+  def self.visible_for(user, account:, filter_type: nil)
+    records = account.custom_filters
+    records = records.where(filter_type: filter_type) if filter_type.present?
+    records.where(shared: true).or(records.where(user_id: user.id)).includes(:user).order(:id)
+  end
+
+  def owned_by?(user)
+    user.present? && user_id == user.id
+  end
+
   def validate_number_of_filters
     return true if account.custom_filters.where(user_id: user_id).size < MAX_FILTER_PER_USER
 
