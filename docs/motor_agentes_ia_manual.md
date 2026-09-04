@@ -345,7 +345,7 @@ Cada ficha lista lo que hace falta para que la directiva **exista** en tiempo de
 | **Forma** | `@soporte_contpaq(Agente de Servicio CONTPAQi)` — **los paréntesis son obligatorios** |
 | **Qué hace** | manda la pregunta a la API de CONTPAQi, que busca en la documentación oficial del fabricante **y redacta la respuesta** |
 | **Requiere** | `KnowledgeSource` activa con ese nombre exacto (`source_type: contpaq_support`) y `base_url` + `token_url` + `client_id` + `client_secret` + `scope` en su config |
-| **Firma** | agrega `📚 Más información: <url>` con la primera fuente que traiga URL pública |
+| **Firma** | agrega `📚 Documentación relacionada: <url>` con la primera fuente que traiga URL pública. Dice *relacionada* y no *más información* porque las fuentes son las del **hilo**, no siempre las de esa respuesta |
 | **Ojo** | **es la única fuente que no pasa por nuestro modelo.** El `complementary_prompt` del agente —tono, regla de evidencia, no diagnosticar— **no se aplica** en esta rama |
 
 Es la diferencia estructural del catálogo. Todas las demás devuelven *contexto* y el
@@ -359,9 +359,12 @@ Tres consecuencias de autoría:
   el resto del agente, esta fuente no es la indicada.
 - **No hace falta darle historial.** La memoria del hilo la lleva CONTPAQi: basta con que
   el turno tenga conversación, y el seguimiento («¿y cómo lo cancelo?») lo resuelve solo.
-- **Hay tres respuestas que llegan sin fuente y no son error:** cuando pide que se
-  especifique de qué producto CONTPAQi se habla, cuando la pregunta está fuera de su
-  alcance, y cuando es un saludo. En las tres se entrega el texto sin el enlace.
+- **Hay tres respuestas que no son error:** cuando pide que se especifique de qué
+  producto CONTPAQi se habla, cuando la pregunta está fuera de su alcance, y cuando es
+  un saludo. En un hilo nuevo llegan sin fuente y por lo tanto sin enlace. **En un hilo
+  con historial NO**: medido contra el servicio real, un «¿de qué producto hablas?» que
+  llega después de un turno resuelto trae las fuentes del turno **anterior**, y el
+  enlace apunta a ese otro tema. Por eso la firma dice *documentación relacionada*.
 
 #### `{{doc:nombre}}` — Google Doc (pgvector)
 

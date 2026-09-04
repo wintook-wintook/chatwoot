@@ -268,8 +268,11 @@ class KnowledgeBaseResponseService
   end
 
   # Los tres casos que contestan 200 sin ser respuesta (falta especificar el producto,
-  # pregunta fuera de alcance, saludo) llegan con `sources` vacio: se entregan igual,
-  # pero sin footer. Citar una fuente ahi prometeria algo que el texto no da.
+  # pregunta fuera de alcance, saludo) se entregan igual. El plan daba por hecho que
+  # llegaban con `sources` vacio y que por eso no llevarian footer; medido contra el
+  # servicio real, eso SOLO se cumple en un hilo nuevo. Con historial, CONTPAQi
+  # responde "¿de que producto hablas?" y adjunta las 5 fuentes del turno anterior.
+  # Ver contpaq_footer.
   def deliver_contpaq(result, source)
     answer = with_branch_tag(result.answer)
     footer = contpaq_footer(result.sources)
@@ -281,11 +284,18 @@ class KnowledgeBaseResponseService
 
   # `source_url` viene como cadena vacia —nunca null— cuando el documento no tiene URL
   # publica: esa fuente no debe producir un enlace roto, asi que se descarta del footer.
+  #
+  # El texto dice "Documentacion relacionada" y no "Mas informacion" a proposito. Las
+  # fuentes son las del HILO, no necesariamente las de esta respuesta: medido contra el
+  # servicio real, un "¿de que producto de CONTPAQi hablas?" en un hilo con historial
+  # llega con las 5 fuentes del turno anterior. "Mas informacion" prometia la respuesta
+  # a lo que se acababa de preguntar y llevaba a otro tema; "documentacion relacionada"
+  # es cierto en los dos casos.
   def contpaq_footer(sources)
     url = Array(sources).find { |s| s[:url].present? }&.dig(:url)
     return '' if url.blank?
 
-    "\n\n📚 Más información: #{url}"
+    "\n\n📚 Documentación relacionada: #{url}"
   end
 
   # Su presencia es lo que activa la memoria del lado de CONTPAQi. Se usa display_id y no

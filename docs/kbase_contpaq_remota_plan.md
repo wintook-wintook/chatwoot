@@ -132,7 +132,7 @@ que es lo que hay que citar al reportar un problema.
 
 ## 5. Los tres 200 que no son respuesta
 
-Llegan con **HTTP 200** y `sources` vacío. Tratarlos como error sería un bug:
+Llegan con **HTTP 200**. Tratarlos como error sería un bug:
 
 | Situación | Qué hacer |
 |---|---|
@@ -140,8 +140,26 @@ Llegan con **HTTP 200** y `sources` vacío. Tratarlos como error sería un bug:
 | **Fuera de alcance** o intento de desviar al asistente | Mostrar el rechazo tal cual. |
 | **Saludo / conversación social** | Mostrar el saludo breve. |
 
-En los tres, `sources` vacío ⇒ **sin footer**. El footer solo se arma cuando hay fuentes,
-mismo criterio que ya rige en `build_sources_footer`.
+> ⚠️ **Corrección posterior a la implementación (2026-09-04).** Este plan daba por hecho
+> que los tres llegaban con `sources` **vacío** y que por eso nunca llevarían footer.
+> Medido contra el servicio real, **eso solo se cumple en un hilo nuevo**:
+>
+> ```
+> A) hilo nuevo,  "¿Cómo genero una póliza?"          → sources = 0   ✔ como se creía
+> B) mismo hilo:  1º "¿Cómo timbro la nómina…?"       → sources = 5
+>                 2º "¿Cómo genero una póliza?"       → sources = 5   ✘
+> ```
+>
+> En B2 la respuesta es literalmente «¿De qué producto de CONTPAQi® hablas?» y venía con
+> las 5 fuentes del turno **anterior**. Con la regla original le colgábamos un
+> `📚 Más información:` que apuntaba a otro tema — justo lo que se quería evitar.
+>
+> **Resuelto cambiando el texto de la firma a `📚 Documentación relacionada:`**, que es
+> cierto en los dos casos: las fuentes son las del hilo, no las de esa respuesta. Sigue
+> sin haber footer cuando `sources` viene vacío.
+
+El footer solo se arma cuando hay fuentes, mismo criterio que ya rige en
+`build_sources_footer`.
 
 `source_url` viene como **cadena vacía, nunca `null`**, cuando el documento no tiene URL
 pública: una fuente con `source_url` vacío se cita por título o no se cita, pero no

@@ -42,7 +42,21 @@ RSpec.describe KnowledgeBaseResponseService do
                 sources: [{ title: 'Timbrado', source_url: 'https://contpaqi.test/t' }], message_id: 'm1')
 
     expect(described_class.new(message, tracking: tracking).perform).to be(true)
-    expect(sent_replies.last).to eq("Entra a Procesos > Timbrado.\n\n📚 Más información: https://contpaqi.test/t")
+    expect(sent_replies.last).to eq("Entra a Procesos > Timbrado.\n\n📚 Documentación relacionada: https://contpaqi.test/t")
+  end
+
+  # Medido contra el servicio real: en un hilo con historial, un "¿de que producto
+  # hablas?" llega con las fuentes del turno ANTERIOR. El enlace se entrega igual —no
+  # hay forma de saber cuales corresponden a esta respuesta— pero el texto de la firma
+  # no puede prometer que ahi esta la respuesta a lo que se acaba de preguntar.
+  it 'la firma dice "documentacion relacionada", no "mas informacion"' do
+    stub_answer(answer: '¿De que producto de CONTPAQi hablas?',
+                sources: [{ title: 'Timbrado', source_url: 'https://contpaqi.test/otro-tema' }], message_id: 'm9')
+
+    described_class.new(message, tracking: tracking).perform
+
+    expect(sent_replies.last).to include('📚 Documentación relacionada: https://contpaqi.test/otro-tema')
+    expect(sent_replies.last).not_to include('Más información')
   end
 
   it 'NO pasa la respuesta por OpenAI: la redaccion es del fabricante' do
