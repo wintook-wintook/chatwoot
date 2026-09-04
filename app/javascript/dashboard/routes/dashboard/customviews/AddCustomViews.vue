@@ -6,9 +6,22 @@ import { CONTACTS_EVENTS } from '../../../helper/AnalyticsHelper/events';
 
 export default {
   props: {
+    // @tickets_cases F2/F3 — String tambien: las carpetas y los segmentos lo
+    // pasan como numero, pero el resto del dashboard direcciona los tipos por
+    // nombre ('case_ticket'), igual que el Sidebar y el store.
     filterType: {
-      type: Number,
+      type: [Number, String],
       default: 0,
+    },
+    // @tickets_cases F3 — casilla "compartir con la cuenta". Los dos usos
+    // previos (carpetas y segmentos) no la piden y siguen guardando personales.
+    allowShared: {
+      type: Boolean,
+      default: false,
+    },
+    successMessage: {
+      type: String,
+      default: '',
     },
     customViewsQuery: {
       type: Object,
@@ -26,12 +39,19 @@ export default {
     return {
       show: true,
       name: '',
+      shared: false,
     };
   },
 
   computed: {
     isButtonDisabled() {
       return this.v$.name.$invalid;
+    },
+    savedMessage() {
+      if (this.successMessage) return this.successMessage;
+      return this.filterType === 0
+        ? this.$t('FILTER.CUSTOM_VIEWS.ADD.API_FOLDERS.SUCCESS_MESSAGE')
+        : this.$t('FILTER.CUSTOM_VIEWS.ADD.API_SEGMENTS.SUCCESS_MESSAGE');
     },
   },
 
@@ -55,12 +75,10 @@ export default {
         await this.$store.dispatch('customViews/create', {
           name: this.name,
           filter_type: this.filterType,
+          shared: this.shared,
           query: this.customViewsQuery,
         });
-        this.alertMessage =
-          this.filterType === 0
-            ? this.$t('FILTER.CUSTOM_VIEWS.ADD.API_FOLDERS.SUCCESS_MESSAGE')
-            : this.$t('FILTER.CUSTOM_VIEWS.ADD.API_SEGMENTS.SUCCESS_MESSAGE');
+        this.alertMessage = this.savedMessage;
         this.onClose();
 
         this.$track(CONTACTS_EVENTS.SAVE_FILTER, {
@@ -97,6 +115,11 @@ export default {
           :placeholder="$t('FILTER.CUSTOM_VIEWS.ADD.PLACEHOLDER')"
           @blur="v$.name.$touch"
         />
+
+        <label v-if="allowShared" class="flex gap-2 items-center mb-2 text-sm">
+          <input v-model="shared" type="checkbox" class="!mb-0" />
+          {{ $t('CASE_TICKETS.VIEWS.SHARE_LABEL') }}
+        </label>
 
         <div class="flex flex-row justify-end gap-2 py-2 px-0 w-full">
           <woot-button :disabled="isButtonDisabled">

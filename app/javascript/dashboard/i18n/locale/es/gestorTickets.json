@@ -109,6 +109,15 @@
       "NEXT": "Siguiente",
       "LAST": "Última"
     },
+    "VIEWS": {
+      "PLACEHOLDER": "Vistas guardadas",
+      "MINE": "Mis vistas",
+      "SHARED": "Compartidas",
+      "SAVE_AS": "Guardar como",
+      "SAVED": "Vista guardada",
+      "SHARE_LABEL": "Compartir con la cuenta",
+      "MISSING_TYPE": "La vista «{name}» apuntaba a un tipo de caso que ya no existe. Se muestran todos los tipos."
+    },
     "RULES": {
       "CREATE_BUTTON": "+ Nueva regla",
       "CREATE_TITLE": "Crear regla",
