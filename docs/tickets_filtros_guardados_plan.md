@@ -1,7 +1,8 @@
 # Filtros guardados para Tickets — vistas por cuenta
 
 > Rama `feat/tickets_filtros`, derivada de `develop`.
-> Estado: **plan**. Nada implementado todavía.
+> Estado: **implementado (F1–F6)**, verificado en navegador el 2026-09-04.
+> El detalle de lo construido vive en `docs/vault-tickets/implementacion/Vistas-guardadas.md`.
 >
 > Objetivo: que un usuario arme un juego de filtros en el Gestor de Tickets, lo
 > guarde con nombre, lo aplique desde una lista, y pueda editarlo o borrarlo.
@@ -266,22 +267,27 @@ ignoran.
 ## 7. Fases
 
 ```
-   F1  Enum + migración + modelo            back    case_ticket: 3, shared
-       └── sin efecto visible; los otros tres tipos siguen igual
-
-   F2  Scope, permisos y payload           back    mías + compartidas
-       └── verificable con specs y curl, todavía sin UI
-
-   F3  Guardar y aplicar desde Index.vue   front   selector + Guardar como
-       └── aquí ya sirve de punta a punta
-
-   F4  Indicador de "modificada" + Guardar front   el punto ●
-       └── sobreescribe la vista cargada
-
-   F5  Pantalla de gestión                 front   renombrar, compartir, borrar
-
-   F6  Documentación                       docs    bóveda + Trampas + skill
+   F1 ✅  Enum + migración + modelo            back    case_ticket: 3, shared
+   F2 ✅  Scope, permisos y payload            back    mías + compartidas
+   F3 ✅  Guardar y aplicar desde Index.vue    front   selector + Guardar como
+   F4 ✅  Indicador de "modificada" + Guardar  front   el punto ●
+   F5 ✅  Pantalla de gestión                  front   renombrar, compartir, borrar
+   F6 ✅  Documentación                        docs    bóveda + Trampas
 ```
+
+**Lo que salió distinto de lo planeado:**
+
+- En F2 apareció un **404 del controlador nativo** que el plan no preveía:
+  `show`/`update`/`destroy` buscaban el registro dentro del scope acotado por
+  `filter_type`, pero en esas acciones el tipo viaja en el cuerpo y no en la
+  query string. Corregido ahí mismo; sin eso, el "renombrar" de F5 habría
+  reventado. Queda como trampa 18 de la bóveda.
+- En F5 el contador del pie muestra **solo las vistas de casos**, no el consumo
+  total contra el tope. Contar los otros tres tipos exigiría tres peticiones que
+  además pisarían el store, así que la etiqueta lo dice explícitamente en vez de
+  mostrar un número que parezca lo que no es.
+- El tope **sigue en 50** y sigue siendo por usuario y compartido entre tipos:
+  la decisión de volverlo por tipo no se tomó.
 
 F1 y F2 son las que pueden romper algo ajeno (Conversaciones, Contactos,
 Informes) y por eso van primero y con specs propias. De F3 en adelante el

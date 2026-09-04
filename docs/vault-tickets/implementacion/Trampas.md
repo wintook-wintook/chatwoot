@@ -10,7 +10,7 @@ tags: [tickets, trampas, gotchas, critico]
 
 2. **`default-sidebar.js` vs `default-sidebar.jsx`** — EXISTEN AMBOS. Webpack resuelve `.js` primero al importar sin extensión. Editar SIEMPRE el `.js`. Editar solo el `.jsx` no tiene efecto (perdimos tiempo con esto).
 
-3. **Iconos Fluent limitados** — solo existen ~205 iconos en `app/javascript/shared/components/FluentIcon/dashboard-icons.json`. Iconos válidos usados: `clipboard`, `list`, `document`, `settings`. NO existen: `task-list-square-ltr`, `list-bar`, `data-bar-vertical`, `ticket-diagonal`, `arrow-sort-up`, `arrow-sort-down` (solo existe `arrow-sort`; para asc/desc usar `chevron-up`/`chevron-down`). Sí existen: `search`, `dismiss`, `chevron-up`, `chevron-down`, `number-symbol`. Verificar SIEMPRE contra ese JSON antes de usar un icono.
+3. **Iconos Fluent limitados** — solo existen ~205 iconos en `app/javascript/shared/components/FluentIcon/dashboard-icons.json`. Iconos válidos usados: `clipboard`, `list`, `document`, `settings`. NO existen: `task-list-square-ltr`, `list-bar`, `data-bar-vertical`, `ticket-diagonal`, `arrow-sort-up`, `arrow-sort-down` (solo existe `arrow-sort`; para asc/desc usar `chevron-up`/`chevron-down`). Sí existen: `search`, `dismiss`, `chevron-up`, `chevron-down`, `number-symbol`. Verificar SIEMPRE contra ese JSON antes de usar un icono. **Cómo se resuelve el nombre:** `Icon.vue` busca la clave `${icon}-${type}` con `type` = `outline` por defecto, y si no la encuentra **lanza excepción** — no cae en un icono vacío, revienta el render del componente que lo contiene. Ejemplo real: `icon="save-copy"` no existe (sí `save` y `copy`) y habría tirado la barra de filtros entera.
 
 4. **Labels del sidebar van en `settings.json` bajo `SIDEBAR.*`** — el componente prepend `SIDEBAR.` al label. Por eso las claves son simples (`TICKETS`, `ALL_TICKETS`) en `settings.json`, NO rutas largas tipo `CASE_TICKETS.SIDEBAR.X`.
 
@@ -60,6 +60,35 @@ tags: [tickets, trampas, gotchas, critico]
    se llama igual, aterrizando en la bandeja de tareas). Comparar siempre la
    **primera línea** del `textContent` y restringir el selector a `li.tabs-title a`.
 
+17. **El enum `filter_type` de `CustomFilter` va POR POSICIÓN** — se guarda el entero, no
+   el nombre. Un tipo nuevo se agrega **SIEMPRE AL FINAL** (`conversation: 0, contact: 1,
+   report: 2, case_ticket: 3`). Insertarlo en medio le cambia el tipo a **todos los filtros
+   guardados que ya existen, en todas las cuentas**, sin error ni aviso: los que valían 1
+   pasan a leerse como el tipo insertado. Misma familia que el bitfield de `features.yml`.
+   `spec/models/custom_filter_spec.rb` fija los cuatro valores para que romperlo falle ahí.
+
+18. **`custom_filters` show/update/destroy no reciben `filter_type`** — el controlador
+   nativo buscaba el registro dentro del scope acotado por `params[:filter_type]`, pero en
+   esas acciones el tipo viaja **dentro del cuerpo** (`custom_filter[filter_type]`), no en
+   la query string. Caía al default `'conversation'` y devolvía **404 sobre vistas que el
+   usuario sí puede ver** — incluso siendo su dueño. No se notaba porque el frontend nativo
+   nunca edita filtros y al borrar manda `?filter_type=` a mano. Corregido: la búsqueda por
+   id se acota por cuenta y visibilidad, no por tipo.
+
+19. **El entorno `test` apunta a la MISMA base que development** — `config/database.yml`
+   pediría `chatwoot_test`, pero `POSTGRES_DATABASE=chatwoot_dev` está en el entorno y el
+   modo test también se lo come. De ahí el `ActiveRecord::EnvironmentMismatchError` en cada
+   corrida de RSpec. Los specs pasan porque hay transacciones con rollback, pero cualquier
+   spec que haga `commit`, corra en otro proceso o toque algo fuera de la transacción
+   **escribe en la base de desarrollo**. Verificar con
+   `rails runner -e test "puts ActiveRecord::Base.connection.current_database"`.
+
+20. **`db:migrate` regenera `schema.rb` con tablas de OTRAS ramas** — la base de dev es
+   compartida, así que el schema dumpeado trae tablas que no existen en la rama actual
+   (p. ej. `ai_agent_assistant_sessions`, `tracking_template_versions`). Commitearlo mete en
+   `develop` un schema que declara tablas de ramas sin mergear. Tras cada migración: revisar
+   `git diff db/schema.rb` y **dejar solo lo propio**, editando a mano si hace falta.
+
 
 ## 🔗 Relacionado
-- [[Pruebas-en-browser]] · [[Feature-flag-case_management]] · [[Historial-de-implementacion]]
+- [[Pruebas-en-browser]] · [[Feature-flag-case_management]] · [[Historial-de-implementacion]] · [[Vistas-guardadas]]
