@@ -77,6 +77,8 @@ class KnowledgeBaseResponseService
       perform_google_sheet(question, directive[:source_name])
     when :discourse_integration
       perform_discourse_integration(question)
+    when :contpaq_support
+      perform_contpaq(question, directive[:source_name])
     else
       false
     end
@@ -227,6 +229,92 @@ class KnowledgeBaseResponseService
 
     send_reply(rendered)
     true
+  end
+
+  # ==============================================================================
+  # MODO CONTPAQi — Agente de Servicio (API remota)
+  # ==============================================================================
+  # A diferencia de las demas fuentes, esta NO devuelve contexto para que lo redacte
+  # OpenAI: devuelve la respuesta ya escrita y las fuentes que la respaldan. Pasarla por
+  # el modelo seria pedirle que reescriba una respuesta ya fiel a la documentacion del
+  # fabricante, justo lo contrario de la regla de fidelidad del resto del motor.
+  #
+  # Por lo mismo NO se guarda kb_history: la memoria del hilo la lleva CONTPAQi, y se
+  # activa con solo mandarle el conversation_id.
+  #
+  # Consecuencia asumida: el complementary_prompt del agente (tono, regla de evidencia,
+  # no diagnosticar) no aplica aqui, porque quien redacta es CONTPAQi.
+  def perform_contpaq(question, source_name)
+    source = @account.knowledge_sources.active
+                     .find_by(['source_type = ? AND LOWER(name) = LOWER(?)', 'contpaq_support', source_name.to_s])
+    if source.blank?
+      Rails.logger.info "[KBase] ⚠️ Fuente CONTPAQi '#{source_name}' no encontrada → sin respuesta"
+      return false
+    end
+
+    user_id = Contpaq::UserIdBuilder.new(@conversation&.contact, @account).build
+    if user_id.blank?
+      Rails.logger.info '[KBase] ⚠️ Sin con que identificar al contacto → no se consulta a CONTPAQi'
+      return false
+    end
+
+    result = Contpaq::ServiceAgent.new(source).answer(
+      question: question, user_id: user_id, conversation_id: contpaq_conversation_id, images: contpaq_images
+    )
+    return false unless result.ok?
+
+    deliver_contpaq(result, source)
+    true
+  end
+
+  # Los tres casos que contestan 200 sin ser respuesta (falta especificar el producto,
+  # pregunta fuera de alcance, saludo) se entregan igual. El plan daba por hecho que
+  # llegaban con `sources` vacio y que por eso no llevarian footer; medido contra el
+  # servicio real, eso SOLO se cumple en un hilo nuevo. Con historial, CONTPAQi
+  # responde "¿de que producto hablas?" y adjunta las 5 fuentes del turno anterior.
+  # Ver contpaq_footer.
+  def deliver_contpaq(result, source)
+    answer = with_branch_tag(result.answer)
+    footer = contpaq_footer(result.sources)
+    Rails.logger.info "[KBase] 🇲🇽 CONTPAQi respondio (#{result.sources.size} fuente(s), msg #{result.message_id})"
+
+    reply = send_reply(footer.present? ? "#{answer}#{footer}" : answer)
+    Contpaq::FeedbackService.remember(reply, source: source, message_id: result.message_id)
+  end
+
+  # `source_url` viene como cadena vacia —nunca null— cuando el documento no tiene URL
+  # publica: esa fuente no debe producir un enlace roto, asi que se descarta del footer.
+  #
+  # El texto dice "Documentacion relacionada" y no "Mas informacion" a proposito. Las
+  # fuentes son las del HILO, no necesariamente las de esta respuesta: medido contra el
+  # servicio real, un "¿de que producto de CONTPAQi hablas?" en un hilo con historial
+  # llega con las 5 fuentes del turno anterior. "Mas informacion" prometia la respuesta
+  # a lo que se acababa de preguntar y llevaba a otro tema; "documentacion relacionada"
+  # es cierto en los dos casos.
+  def contpaq_footer(sources)
+    url = Array(sources).find { |s| s[:url].present? }&.dig(:url)
+    return '' if url.blank?
+
+    "\n\n📚 Documentación relacionada: #{url}"
+  end
+
+  # Su presencia es lo que activa la memoria del lado de CONTPAQi. Se usa display_id y no
+  # id: es el numero que ve el agente, y es lo que hay que citar al reportar un problema.
+  # El saneado contra el charset permitido lo hace ServiceAgent.
+  def contpaq_conversation_id
+    return nil if @conversation.blank?
+
+    "acct-#{@account.id}-conv-#{@conversation.display_id}"
+  end
+
+  # Capturas del mensaje del cliente: CONTPAQi las acepta como URL http(s).
+  def contpaq_images
+    urls = @message.attachments.to_a.filter_map do |attachment|
+      attachment.file_url if attachment.file_type == 'image'
+    end
+    urls.presence
+  rescue StandardError
+    nil
   end
 
   # ==============================================================================
@@ -898,8 +986,11 @@ class KnowledgeBaseResponseService
       reply_message.content_attributes[:sentiment_auto_reply] = true
       reply_message.save!
     end
+
+    reply_message
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error enviando respuesta: #{e.message}"
+    nil
   end
 
   # ==============================================================================

@@ -147,6 +147,7 @@ export default {
           article: 'Centro de Ayuda',
           google_doc: 'Google Doc',
           google_sheet: 'Google Sheets',
+          contpaq_support: 'Agente de Servicio CONTPAQi',
         })[type] || 'Discourse';
     },
     sourceTypeIcon() {
@@ -156,6 +157,7 @@ export default {
           article: 'library',
           google_doc: 'document',
           google_sheet: 'document',
+          contpaq_support: 'cloud',
         })[type] || 'globe';
     },
     sourceById() {

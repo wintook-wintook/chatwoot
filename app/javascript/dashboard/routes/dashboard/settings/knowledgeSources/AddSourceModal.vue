@@ -25,6 +25,11 @@ export default {
       sheetRange: '',
       sheetLive: false,
       sheetLiveTtl: 60,
+      contpaqBaseUrl: '',
+      contpaqTokenUrl: '',
+      contpaqClientId: '',
+      contpaqClientSecret: '',
+      contpaqScope: '',
     };
   },
   computed: {
@@ -43,6 +48,11 @@ export default {
     sourceOptions() {
       const options = [
         { value: 'discourse', label: 'Discourse', icon: 'globe' },
+        {
+          value: 'contpaq_support',
+          label: 'Agente de Servicio CONTPAQi',
+          icon: 'globe',
+        },
       ];
       if (this.googleEnabled) {
         options.push(
@@ -72,6 +82,9 @@ export default {
     sheetDirectiveHint() {
       return `{{hoja:${this.name.trim() || 'nombre'}}}`;
     },
+    contpaqDirectiveHint() {
+      return `@soporte_contpaq(${this.name.trim() || 'nombre'})`;
+    },
     isValid() {
       if (!this.name.trim()) return false;
       if (this.sourceType === 'discourse') {
@@ -81,6 +94,15 @@ export default {
       if (this.sourceType === 'google_doc' && !this.docUrl.trim()) return false;
       if (this.sourceType === 'google_sheet' && !this.sheetUrl.trim())
         return false;
+      if (this.sourceType === 'contpaq_support') {
+        // Las cinco hacen falta para pedir el token: sin una sola, la fuente queda
+        // dada de alta pero no contesta, y el fallo recién se ve en la conversación.
+        if (!this.contpaqBaseUrl.trim()) return false;
+        if (!this.contpaqTokenUrl.trim()) return false;
+        if (!this.contpaqClientId.trim()) return false;
+        if (!this.contpaqClientSecret.trim()) return false;
+        if (!this.contpaqScope.trim()) return false;
+      }
       return true;
     },
   },
@@ -107,6 +129,11 @@ export default {
       this.sheetRange = this.source.config?.sheet_range || '';
       this.sheetLive = this.source.config?.live || false;
       this.sheetLiveTtl = this.source.config?.live_ttl || 60;
+      this.contpaqBaseUrl = this.source.config?.base_url || '';
+      this.contpaqTokenUrl = this.source.config?.token_url || '';
+      this.contpaqClientId = this.source.config?.client_id || '';
+      this.contpaqClientSecret = this.source.config?.client_secret || '';
+      this.contpaqScope = this.source.config?.scope || '';
     },
     reset() {
       this.sourceType = 'discourse';
@@ -120,6 +147,11 @@ export default {
       this.sheetRange = '';
       this.sheetLive = false;
       this.sheetLiveTtl = 60;
+      this.contpaqBaseUrl = '';
+      this.contpaqTokenUrl = '';
+      this.contpaqClientId = '';
+      this.contpaqClientSecret = '';
+      this.contpaqScope = '';
     },
     onClose() {
       this.reset();
@@ -151,6 +183,15 @@ export default {
           sheet_range: this.sheetRange.trim() || null,
           live: this.sheetMode === 'data' ? this.sheetLive : false,
           live_ttl: Number(this.sheetLiveTtl) || 60,
+        };
+      }
+      if (this.sourceType === 'contpaq_support') {
+        return {
+          base_url: this.contpaqBaseUrl.trim(),
+          token_url: this.contpaqTokenUrl.trim(),
+          client_id: this.contpaqClientId.trim(),
+          client_secret: this.contpaqClientSecret.trim(),
+          scope: this.contpaqScope.trim(),
         };
       }
       return {};
@@ -198,6 +239,13 @@ export default {
           <p v-if="sourceType === 'google_doc'" class="text-xs text-slate-400">
             Nombre único. Se usa en el bot como directiva:
             <code>{{ docDirectiveHint }}</code>
+          </p>
+          <p
+            v-if="sourceType === 'contpaq_support'"
+            class="text-xs text-slate-400"
+          >
+            Nombre único. Se usa en el Entrenamiento del agente como directiva:
+            <code>{{ contpaqDirectiveHint }}</code>
           </p>
         </div>
 
@@ -330,6 +378,74 @@ export default {
             <p class="text-xs text-slate-400">
               Mantiene los datos al día sin sincronizar a mano: si la hoja
               cambió, refresca en la próxima consulta.
+            </p>
+          </div>
+        </template>
+
+        <!-- Campos Agente de Servicio CONTPAQi -->
+        <template v-if="sourceType === 'contpaq_support'">
+          <div
+            class="px-3 py-2 text-xs rounded-lg text-slate-500 bg-slate-50 border border-slate-100"
+          >
+            CONTPAQi redacta la respuesta y nosotros la entregamos tal cual, con
+            el enlace a su documentación. Por eso, en esta fuente el tono y las
+            reglas que tenga el agente en su Entrenamiento no se aplican.
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-slate-700">
+              URL del servicio
+            </label>
+            <input
+              v-model="contpaqBaseUrl"
+              type="url"
+              class="input"
+              placeholder="https://…/agente-servicio/v1"
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-slate-700">
+              URL del token
+            </label>
+            <input
+              v-model="contpaqTokenUrl"
+              type="url"
+              class="input"
+              placeholder="https://…/oauth2/v2.0/token"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1">
+              <label class="text-sm font-medium text-slate-700">
+                Client ID
+              </label>
+              <input v-model="contpaqClientId" type="text" class="input" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-sm font-medium text-slate-700">
+                Client Secret
+              </label>
+              <input
+                v-model="contpaqClientSecret"
+                type="password"
+                class="input"
+              />
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-medium text-slate-700">Scope</label>
+            <input
+              v-model="contpaqScope"
+              type="text"
+              class="input"
+              placeholder="api://…/.default"
+            />
+            <p class="text-xs text-slate-400">
+              Tiene que terminar en <code>/.default</code>. Sin ese sufijo, el
+              servicio rechaza las credenciales.
             </p>
           </div>
         </template>

@@ -196,6 +196,9 @@ CATÁLOGO DE FUENTES — una por rama, nada fuera de esta lista:
   @buscar_articulo                Centro de Ayuda
   @buscar_foro(<nombre exacto>)   foro Discourse — los paréntesis son OBLIGATORIOS
   @discourse                      foro configurado en la bandeja
+  @soporte_contpaq(<nombre exacto>)  documentación oficial de CONTPAQi — paréntesis OBLIGATORIOS.
+                                  OJO: esta fuente redacta ella misma la respuesta, así que el tono
+                                  y las reglas del Entrenamiento NO se aplican en esa rama.
   {{doc:<nombre exacto>}}         un Google Doc
   {{hoja:<nombre exacto>}}        una hoja de cálculo
   -                               la rama no consulta nada
@@ -208,7 +211,7 @@ ACCIONES:
 
 PROHIBIDO ABSOLUTO:
   1. Inventar directivas que no estén en el catálogo.
-  2. Escribir @buscar_* o @discourse fuera de una línea @ruta: eso hace que el motor descarte
+  2. Escribir @buscar_*, @discourse o @soporte_contpaq fuera de una línea @ruta: eso hace que el motor descarte
      TODO el Entrenamiento.
   3. Poner dos fuentes en la misma rama.
   4. Inventar nombres de fuentes, tipos de ticket o etiquetas. Si no los sabés, escribí
@@ -274,7 +277,7 @@ PASO 5. Verificá tu salida contra el checklist y corregí antes de entregar.
 
 ═══ CHECKLIST OBLIGATORIO ═══
 [ ] Cada línea @ruta empieza en la columna 1 y cierra todos sus paréntesis.
-[ ] Ninguna @buscar_* ni @discourse aparece fuera de una línea @ruta.
+[ ] Ninguna @buscar_*, @discourse ni @soporte_contpaq aparece fuera de una línea @ruta.
 [ ] Cada rama tiene como máximo UNA fuente.
 [ ] @buscar_foro lleva paréntesis.
 [ ] @ruta_por_defecto nombra una rama declarada.
