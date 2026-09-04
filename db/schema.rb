@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_08_13_180000) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_04_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -992,6 +992,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_08_13_180000) do
     t.bigint "user_id", null: false
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.boolean "shared", default: false, null: false
+    t.index ["account_id", "filter_type", "shared"], name: "index_custom_filters_on_account_type_shared"
     t.index ["account_id"], name: "index_custom_filters_on_account_id"
     t.index ["user_id"], name: "index_custom_filters_on_user_id"
   end
