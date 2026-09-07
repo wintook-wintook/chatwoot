@@ -51,9 +51,18 @@ export default {
       services: 'caseTickets/getServices',
       categories: 'caseTickets/getCategories',
       itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
+      currentUser: 'getCurrentUser',
     }),
     isEdit() {
       return !!this.ticket;
+    },
+    // @tickets_cases — al crear, el responsable arranca en el agente firmado.
+    // Solo si ese usuario figura entre los agentes de la cuenta (un superadmin
+    // que no es agente no aparece en el select y dejarlo daría un valor muerto).
+    defaultAssigneeId() {
+      const id = this.currentUser?.id;
+      if (!id) return '';
+      return this.agents.some(ag => ag.id === id) ? id : '';
     },
     tabs() {
       const base = [
@@ -150,7 +159,12 @@ export default {
         this.form.case_type_id = this.types[0].id;
       }
     });
-    this.$store.dispatch('agents/get');
+    this.$store.dispatch('agents/get').then(() => {
+      // Precarga el responsable solo en alta; en edición no se toca la asignación.
+      if (!this.isEdit && !this.form.assignee_id) {
+        this.form.assignee_id = this.defaultAssigneeId;
+      }
+    });
     this.$store.dispatch('teams/get');
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('caseTickets/fetchCategories');

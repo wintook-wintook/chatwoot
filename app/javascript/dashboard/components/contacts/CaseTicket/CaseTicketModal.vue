@@ -61,7 +61,16 @@ export default {
       agents: 'agents/getAgents', // @tickets_cases — asignación manual
       teams: 'teams/getTeams',
       itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
+      currentUser: 'getCurrentUser',
     }),
+    // @tickets_cases — al crear, el responsable arranca en el agente firmado.
+    // Solo si ese usuario figura entre los agentes de la cuenta (un superadmin
+    // que no es agente no aparece en el select y dejarlo daría un valor muerto).
+    defaultAssigneeId() {
+      const id = this.currentUser?.id;
+      if (!id) return '';
+      return this.agents.some(ag => ag.id === id) ? id : '';
+    },
     tickets() {
       return this.getContactTickets(this.contactId);
     },
@@ -171,7 +180,10 @@ export default {
     this.$store.dispatch('caseTickets/fetchCategories');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     // @tickets_cases — agentes y equipos para la asignación manual.
-    this.$store.dispatch('agents/get');
+    this.$store.dispatch('agents/get').then(() => {
+      if (!this.form.assignee_id)
+        this.form.assignee_id = this.defaultAssigneeId;
+    });
     this.$store.dispatch('teams/get');
   },
   methods: {
@@ -272,7 +284,8 @@ export default {
         urgency: null,
         priority: 'medium',
         description: '',
-        assignee_id: '',
+        // Tras crear un caso el formulario vuelve al agente firmado, no a vacío.
+        assignee_id: this.defaultAssigneeId,
         team_id: '',
       };
     },
