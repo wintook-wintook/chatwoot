@@ -25,19 +25,19 @@ class Cases::TicketStatusService
 
   # Etiquetas de estado amigables para el cliente (no la jerga ITIL interna).
   FRIENDLY_STATUS = {
-    'open'                   => 'Recibido, en revisión',
-    'classified'             => 'Recibido, en revisión',
-    'assigned'               => 'Asignado a un asesor',
-    'in_diagnosis'           => 'En diagnóstico',
-    'in_progress'            => 'En proceso',
-    'waiting_on_customer'    => 'En espera de tu respuesta',
+    'open' => 'Recibido, en revisión',
+    'classified' => 'Recibido, en revisión',
+    'assigned' => 'Asignado a un asesor',
+    'in_diagnosis' => 'En diagnóstico',
+    'in_progress' => 'En proceso',
+    'waiting_on_customer' => 'En espera de tu respuesta',
     'waiting_on_third_party' => 'En espera de un tercero',
-    'waiting_on_internal'    => 'En proceso (revisión interna)',
-    'escalated'              => 'Escalado a un especialista',
-    'resolved'              => 'Resuelto',
-    'validating'             => 'En validación',
-    'closed'                 => 'Cerrado',
-    'cancelled'              => 'Cancelado'
+    'waiting_on_internal' => 'En proceso (revisión interna)',
+    'escalated' => 'Escalado a un especialista',
+    'resolved' => 'Resuelto',
+    'validating' => 'En validación',
+    'closed' => 'Cerrado',
+    'cancelled' => 'Cancelado'
   }.freeze
 
   MAX_LISTED = 3
@@ -90,11 +90,21 @@ class Cases::TicketStatusService
     found = tickets
     return no_tickets_reply if found.empty?
 
-    if found.one?
-      one_ticket_reply(found.first)
-    else
-      many_tickets_reply(found)
-    end
+    specific = found_by_folio(found)
+    return one_ticket_reply(specific) if specific
+
+    found.one? ? one_ticket_reply(found.first) : many_tickets_reply(found)
+  end
+
+  # @crear_ticket_multiple (2026-09-04) — con varios casos activos, si el cliente nombra el
+  # folio de uno (ej. "cómo va el RU-00052") le damos el detalle de ESE, no la lista breve.
+  FOLIO_RE = /\b([A-Z]{2,6}-\d{3,})\b/i
+
+  def found_by_folio(list)
+    m = @message.content.to_s.match(FOLIO_RE)
+    return nil unless m
+
+    list.find { |t| t.folio.to_s.casecmp?(m[1]) }
   end
 
   def one_ticket_reply(ticket)

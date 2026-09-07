@@ -9,7 +9,11 @@ class Api::V1::Accounts::GoogleCalendar::AuthorizationsController < Api::V1::Acc
     # Base de Conocimiento — Google Docs/Sheets: la misma conexión Google habilita
     # leer documentos y hojas de Drive como fuente de conocimiento (solo lectura).
     'https://www.googleapis.com/auth/drive.readonly',
-    'https://www.googleapis.com/auth/spreadsheets.readonly',
+    # Lectura+escritura: además de leer el catálogo, permite que el sistema complete datos
+    # que él mismo resuelve de vuelta en la hoja (ej. CALENDAR_ID por recurso, 2a/2b en
+    # docs/vault-tickets Pendiente.md) — antes era spreadsheets.readonly (sin esto,
+    # GoogleSheetsService#update_cells falla con 403 aunque el código esté bien).
+    'https://www.googleapis.com/auth/spreadsheets',
     'email',
     'profile'
   ].freeze

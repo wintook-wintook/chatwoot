@@ -59,6 +59,25 @@ asumir que algo falta (el módulo avanza rápido). Ver también [[Estado-actual]
       `handle_no_calendar_configured` con mensaje específico (`:book_appointment_no_calendar`:
       "no puedo confirmar el horario de forma automática, un asesor te contactará") en vez del
       genérico de interés; escala a humano (nota + aviso admin), pausa y `outcome=interested`.
+- [ ] **Una sola cita por `ContactTracking` bloquea solicitudes multi-servicio — resuelto en
+      diseño vía `ID_RECURSO` del catálogo, falta implementar** —
+      descubierto probando `AGENTE GRUAS V6/V7` (conv. display #39): el cliente pidió 2 unidades
+      de grúa para el mismo trabajo, cada una potencialmente agendable por separado. Las columnas
+      de cita (`appointment_at`, `appointment_event_id`, `appointment_calendar_gid`) son
+      **singulares** en `contact_trackings` y `dispatch_appointment_action` solo maneja un estado
+      binario "tiene cita / no tiene cita" — no existe el concepto de una segunda cita
+      independiente dentro del mismo seguimiento.
+      **No hace falta un `has_many` de citas**: en `ContactTrackings::AvailabilitySlotService` cada
+      calendario de `booking_calendar_ids` ya es tratado como un recurso independiente, y el
+      catálogo `CATALOGO GRUAS VIKA NVO` ya tiene una columna `ID_RECURSO` que identifica cada
+      unidad física de forma aislada (hoy poblada solo para remolques, no para grúas — ver detalle
+      y las 3 piezas del arreglo en [[../../vault-tickets/implementacion/Pendiente|vault-tickets/Pendiente]]).
+      La solución es crear **un `ContactTracking` por unidad/recurso resuelto** desde el intake:
+      cada tracking agenda con `booking_calendars:` acotado a solo el calendario de SU recurso —
+      con eso "una cita por tracking" deja de ser una limitación y pasa a ser exactamente el
+      modelo correcto (una unidad = un tracking = un ticket = una cita, cada uno en su propio
+      calendario real). Ver el pendiente de tickets para el detalle completo y la señal
+      `needs_escalation` relacionada.
 - [ ] **Sentimiento end-to-end** — revisar `ResponseAnalyzerJob` y si hay dashboard
       que consuma `last_sentiment_analysis` (índice ya existe).
 - [ ] **KBase real en el router** — la ruta `:kbase` y `kbase_hook_id` existen;

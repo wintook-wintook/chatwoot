@@ -34,8 +34,8 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
 
     raw = chat(
       system: system_prompt(policy),
-      user:   user_prompt(conversation_text, types, services, categories),
-      json:   true,
+      user: user_prompt(conversation_text, types, services, categories),
+      json: true,
       max_tokens: 600
     )
     return nil if raw.blank?
@@ -59,6 +59,43 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
           dando más datos, confirmando algo, o preguntando por el estado — es la MISMA solicitud
           en curso: seguí devolviendo true, no la reevalúes como si el último mensaje fuera
           charla trivial aislada.
+        - "multiple_requests": true SOLO si el cliente describe DOS O MÁS servicios/solicitudes
+          CLARAMENTE INDEPENDIENTES entre sí (distintos trabajos, cada uno con su propio
+          origen/destino/fecha/alcance, que no tiene sentido resolver como un solo ticket). false
+          en cualquier otro caso — incluido un solo trabajo que necesita varios recursos/unidades
+          a la vez (eso SIGUE siendo una sola solicitud). Ante la duda, false.
+        - "requests_summary": SOLO si "multiple_requests" es true, un arreglo con un resumen breve
+          (una línea cada uno) de CADA solicitud detectada, en el orden en que aparecen, sin omitir
+          ninguna — esto es lo único que va a leer la persona que las separe, así que no puede
+          faltar información de ninguna solicitud. Vacío si "multiple_requests" es false.
+        - "resources_requested": SOLO si "multiple_requests" es false y el cliente nombra UNO O
+          MÁS recursos/unidades CONCRETOS que hacen falta para EL MISMO trabajo — cada uno
+          identificable por su propio nombre, modelo, código o característica que lo distingue de
+          un recurso genérico (no importa el rubro: puede ser una unidad de un vehículo, un equipo,
+          una persona con un rol específico, etc.). Aplica también con UN SOLO recurso, siempre que
+          sea concreto (ej. "HIAB con capacidad de 12 toneladas" cuenta; "una grúa" o "un camión"
+          sola, sin más detalle, no). Un arreglo con la descripción tal cual la dio el cliente de
+          CADA recurso, uno por elemento, en el orden en que aparecen.
+          NO lo llenes solo por una cantidad genérica ("2 unidades", "3 personas", "una grúa") si el
+          cliente no distinguió cuál es cuál/qué tipo — en ese caso el pedido sigue siendo UNA sola
+          solicitud normal, dejá el arreglo vacío. Vacío también si "multiple_requests" es true.
+        - "needs_escalation": true SOLO si, según las REGLAS DEL NEGOCIO de más abajo (cuando las
+          haya), esta solicitud NO se debe resolver de forma automática y tiene que pasar
+          directamente a un asesor humano — por ejemplo, pide algo que esas reglas marcan como
+          fuera de alcance de esta versión, o falta información técnica crítica que esas reglas
+          dicen que no se puede completar sola. Es independiente de "ticket_worthy": puede ser
+          true aunque el caso sí amerite ticket (el ticket se crea igual, pero se avisa que un
+          humano debe tomarlo desde ya). Si no hay reglas de negocio que apliquen, o ninguna dice
+          que esto deba escalar, false. Ante la duda, false — no escales por cualquier cosa.
+        - "escalation_reason": SOLO si "needs_escalation" es true, una frase breve en español
+          explicando por qué (para que el asesor entienda sin releer todo). Vacío si no aplica.
+        - "pending_technical_question": true SOLO si, junto con la solicitud, el cliente hizo
+          una pregunta técnica concreta (sobre el servicio, una unidad, un requisito, un precio,
+          etc.) que TODAVÍA no fue respondida en ningún mensaje posterior del bot en esta misma
+          conversación. false si no hizo ninguna pregunta, o si ya fue respondida. Ante la duda,
+          false — no marques como pendiente algo que ya se contestó.
+        - "technical_question": SOLO si "pending_technical_question" es true, el texto de la
+          pregunta tal cual la hizo el cliente. Vacío si no aplica.
         - "title": título claro y breve del problema (NO copies el mensaje literal).
         - "description": resumen de 2 a 4 líneas: qué pasa, desde cuándo y qué intentó el cliente.
         - "ticket_kind": uno de [#{KINDS.join(', ')}].
@@ -108,19 +145,26 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
     category_ids = categories.map(&:first)
 
     {
-      'ticket_worthy'       => ActiveModel::Type::Boolean.new.cast(raw.fetch('ticket_worthy', true)),
-      'title'               => raw['title'].to_s.strip.presence,
-      'description'         => raw['description'].to_s.strip.presence,
-      'ticket_kind'         => KINDS.include?(raw['ticket_kind']) ? raw['ticket_kind'] : nil,
-      'impact'              => IMPACTS.include?(raw['impact']) ? raw['impact'] : nil,
-      'urgency'             => URGENCIES.include?(raw['urgency']) ? raw['urgency'] : nil,
-      'case_type_id'        => type_ids.include?(raw['case_type_id']) ? raw['case_type_id'] : nil,
+      'ticket_worthy' => ActiveModel::Type::Boolean.new.cast(raw.fetch('ticket_worthy', true)),
+      'multiple_requests' => ActiveModel::Type::Boolean.new.cast(raw['multiple_requests']) || false,
+      'requests_summary' => Array(raw['requests_summary']).map { |s| s.to_s.strip }.reject(&:blank?).first(10),
+      'resources_requested' => Array(raw['resources_requested']).map { |s| s.to_s.strip }.reject(&:blank?).first(10),
+      'needs_escalation' => ActiveModel::Type::Boolean.new.cast(raw['needs_escalation']) || false,
+      'escalation_reason' => raw['escalation_reason'].to_s.strip[0, 280].presence,
+      'pending_technical_question' => ActiveModel::Type::Boolean.new.cast(raw['pending_technical_question']) || false,
+      'technical_question' => raw['technical_question'].to_s.strip[0, 280].presence,
+      'title' => raw['title'].to_s.strip.presence,
+      'description' => raw['description'].to_s.strip.presence,
+      'ticket_kind' => KINDS.include?(raw['ticket_kind']) ? raw['ticket_kind'] : nil,
+      'impact' => IMPACTS.include?(raw['impact']) ? raw['impact'] : nil,
+      'urgency' => URGENCIES.include?(raw['urgency']) ? raw['urgency'] : nil,
+      'case_type_id' => type_ids.include?(raw['case_type_id']) ? raw['case_type_id'] : nil,
       'affected_service_id' => service_ids.include?(raw['affected_service_id']) ? raw['affected_service_id'] : nil,
-      'category_id'         => category_ids.include?(raw['category_id']) ? raw['category_id'] : nil,
-      'churn_risk'          => ActiveModel::Type::Boolean.new.cast(raw['churn_risk']) || false,
-      'missing_info'        => Array(raw['missing_info']).map { |s| s.to_s.strip }.reject(&:blank?).first(5),
-      'confidence'          => raw['confidence'].to_f.clamp(0.0, 1.0),
-      'reasoning'           => raw['reasoning'].to_s[0, 280]
+      'category_id' => category_ids.include?(raw['category_id']) ? raw['category_id'] : nil,
+      'churn_risk' => ActiveModel::Type::Boolean.new.cast(raw['churn_risk']) || false,
+      'missing_info' => Array(raw['missing_info']).map { |s| s.to_s.strip }.reject(&:blank?).first(5),
+      'confidence' => raw['confidence'].to_f.clamp(0.0, 1.0),
+      'reasoning' => raw['reasoning'].to_s[0, 280]
     }
   end
 end

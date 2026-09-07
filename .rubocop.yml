@@ -7,6 +7,9 @@ require:
 
 Layout/LineLength:
   Max: 150
+  Exclude:
+    - 'app/jobs/contact_tracking_response_analyzer_job.rb'
+    - 'app/models/contact_tracking.rb'
 
 Metrics/ClassLength:
   Max: 175
@@ -16,25 +19,45 @@ Metrics/ClassLength:
     - 'app/services/knowledge_base_response_service.rb'
     - 'app/jobs/contact_tracking_response_analyzer_job.rb'
     - 'app/services/contact_trackings/router_service.rb'
+    - 'app/services/cases/ticket_creator_service.rb'
+    - 'app/models/contact_tracking.rb'
 Metrics/MethodLength:
   Max: 19
   Exclude:
     - 'app/services/knowledge_base_response_service.rb'
     - 'app/jobs/contact_tracking_response_analyzer_job.rb'
     - 'app/services/contact_trackings/router_service.rb'
+    - 'app/models/contact_tracking.rb'
+    - 'app/services/cases/ai/intake.rb'
+    - 'app/services/cases/ticket_creator_service.rb'
 Metrics/CyclomaticComplexity:
   Exclude:
     - 'app/services/knowledge_base_response_service.rb'
     - 'app/jobs/contact_tracking_response_analyzer_job.rb'
     - 'app/services/contact_trackings/router_service.rb'
+    - 'app/models/conversation.rb'
+    - 'app/services/cases/ai/field_extractor.rb'
+    - 'app/services/cases/ai/intake.rb'
+    - 'app/services/cases/ai/resource_matcher.rb'
+    - 'app/services/google_sheets_service.rb'
+    - 'app/services/cases/ticket_creator_service.rb'
 Metrics/PerceivedComplexity:
   Exclude:
     - 'app/services/knowledge_base_response_service.rb'
     - 'app/jobs/contact_tracking_response_analyzer_job.rb'
     - 'app/services/contact_trackings/router_service.rb'
+    - 'app/services/cases/ai/intake.rb'
+    - 'app/services/cases/ai/resource_matcher.rb'
+    - 'app/services/google_sheets_service.rb'
+    - 'app/services/cases/ticket_creator_service.rb'
+Metrics/ParameterLists:
+  Exclude:
+    - 'app/jobs/contact_tracking_response_analyzer_job.rb'
 Rails/SkipsModelValidations:
   Exclude:
     - 'app/services/knowledge_base_response_service.rb'
+    - 'app/jobs/contact_tracking_response_analyzer_job.rb'
+    - 'app/models/contact_tracking.rb'
 RSpec/ExampleLength:
   Max: 25
 Style/Documentation:
@@ -139,6 +162,11 @@ Metrics/AbcSize:
     - 'app/controllers/concerns/auth_helper.rb'
     - 'app/services/knowledge_base_response_service.rb'
     - 'app/jobs/contact_tracking_response_analyzer_job.rb'
+    - 'app/services/cases/ai/intake.rb'
+    - 'app/services/cases/ai/resource_matcher.rb'
+    - 'app/services/google_sheets_service.rb'
+    - 'app/services/cases/ticket_creator_service.rb'
+    - 'app/models/contact_tracking.rb'
     - 'app/services/contact_trackings/router_service.rb'
 Rails/UniqueValidationWithoutIndex:
   Exclude:

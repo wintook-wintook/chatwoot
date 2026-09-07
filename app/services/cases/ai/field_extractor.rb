@@ -19,6 +19,12 @@
 # ================================================================================
 
 class Cases::Ai::FieldExtractor < Cases::Ai::BaseService
+  # Texto que persiste cuando el campo NO APLICA a esta solicitud (distinto de "no lo
+  # sabemos todavía"): p.ej. "Ubicación Destino" en un servicio que ocurre en un solo
+  # sitio. Cuenta como valor presente (no dispara la repregunta de campo obligatorio).
+  NOT_APPLICABLE_LABEL = 'No aplica'
+  NOT_APPLICABLE_MARKERS = ['n/a', 'na', 'no aplica'].freeze
+
   def extract(conversation_text:, case_type:)
     fields = ordered_fields(case_type)
     return empty if fields.blank?
@@ -60,7 +66,19 @@ class Cases::Ai::FieldExtractor < Cases::Ai::BaseService
       Extraes de una conversación los valores de los campos de un formulario de soporte.
       Responde EXCLUSIVAMENTE con un objeto JSON: { "values": { "clave": valor } }.
       Reglas:
-        - Usa SOLO información presente en la conversación. Si un dato NO aparece, usa null.
+        - Usa SOLO información presente en la conversación. Si un dato NO aparece TODAVÍA
+          pero podría llegar a darse, usa null.
+        - Si el campo NO APLICA a esta solicitud según lo que el cliente ya describió — no
+          porque falte preguntarlo, sino porque la naturaleza del pedido lo hace innecesario
+          (ej. un campo que pregunta por un segundo punto/participante/etapa cuando el propio
+          pedido deja claro que solo hay uno) — usa el string "N/A" en vez de null. "N/A"
+          significa "no aplica", distinto de "no lo sabemos todavía": no lo uses solo porque el
+          dato no se mencionó, úsalo cuando el propio pedido deja claro que ese campo no
+          corresponde.
+          NUNCA uses "N/A" si el cliente mencionó CUALQUIER valor para ese campo, aunque no
+          estés seguro de haberlo identificado bien — en ese caso extraé el valor tal cual lo
+          dio, nunca lo reemplaces por "N/A". "N/A" es solo para cuando el campo genuinamente no
+          corresponde al pedido, nunca para un dato que sí fue mencionado.
         - No inventes ni supongas valores.
         - Para campos tipo "list", el valor debe ser EXACTAMENTE una de las opciones dadas.
         - Para "date" usa formato YYYY-MM-DD. Para "number" solo el número. Para "checkbox" true/false.
@@ -101,6 +119,7 @@ class Cases::Ai::FieldExtractor < Cases::Ai::BaseService
 
   def cast_value(field, value)
     return nil if value.nil? || value.to_s.strip.empty?
+    return NOT_APPLICABLE_LABEL if not_applicable?(value)
 
     case field.field_type.to_sym
     when :number   then numeric(value)
@@ -131,6 +150,10 @@ class Cases::Ai::FieldExtractor < Cases::Ai::BaseService
   def option_match(field, value)
     needle = value.to_s.strip
     Array(field.options).find { |opt| opt.to_s.casecmp?(needle) }
+  end
+
+  def not_applicable?(value)
+    NOT_APPLICABLE_MARKERS.include?(value.to_s.strip.downcase)
   end
 
   # Un booleano (true/false) SIEMPRE cuenta como valor presente; el resto usa blank?.

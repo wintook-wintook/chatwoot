@@ -40,6 +40,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # Directiva de adjunto: {{nombre}} (admite espacios internos: {{ catalogo }}). El nombre
   # referencia un archivo del Agente IA (ai_agent_attachments) por su `name`.
   ATTACHMENT_DIRECTIVE = /\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/
+  # @tickets_cases (plan @disponibilidad_calendar, docs/vault-tickets Pendiente.md,
+  # 2026-09-04) — disponibilidad ACOTADA por recurso nombrado o por requisitos técnicos,
+  # independiente de @agendar_calendar (que ofrece el pool completo). Opt-in por prompt,
+  # como cualquier otra directiva: si no está presente, no cambia nada para nadie más.
+  DISPONIBILIDAD_CALENDAR_RE = /@disponibilidad_calendar\b/i
 
   # ==============================================================================
   # Método Principal
@@ -191,6 +196,19 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return true
     end
 
+    # @tickets_cases (plan @disponibilidad_calendar + @crear_ticket_multiple, 2026-09-05) — con
+    # un ticket YA activo, @crear_ticket_multiple debe decidir primero qué es este mensaje
+    # (mismo caso/pregunta técnica/nuevo) ANTES de que @disponibilidad_calendar ofrezca agenda a
+    # ciegas (conv. #137/#139: generaron una cita y hasta un caso huérfanos, sin ticket). Sin
+    # ticket activo todavía, sigue el orden de siempre: disponibilidad decide primero.
+    # Excepción (conv. #148): mientras se recolectan los datos de una solicitud nueva YA
+    # confirmada (puede tomar varios turnos), se restaura el orden normal — ya se sabe que es
+    # nueva, no hay que volver a preguntar, y disponibilidad necesita ir primero como si no
+    # hubiera ningún caso activo de por medio.
+    active_ticket_gate = disponibilidad_calendar_directive?(tracking) && active_ticket_for(message) &&
+                         !new_request_in_progress?(tracking)
+    return true if !active_ticket_gate && try_resource_availability(tracking, message)
+
     # @tickets_cases: si la directiva @crear_ticket está en el prompt, crea ticket y confirma.
     # Con @crear_ticket(fallback=true) el alta se pospone hasta después de la KBase: el foro
     # o la hoja contestan si pueden, y el ticket queda como último recurso.
@@ -207,6 +225,15 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       ticket_as_fallback = Cases::TicketCreatorService.fallback?(tracking)
     end
     return true if !ticket_as_fallback && try_create_ticket(tracking, message, route_result, directive: ticket_directive)
+
+    # @tickets_cases (plan @disponibilidad_calendar + @crear_ticket_multiple) — llegamos acá
+    # solo si HABÍA un ticket activo y @crear_ticket_multiple no cerró el turno (outcome
+    # :technical_question sigue a la KBase más abajo; :confirmed_new_request con
+    # @disponibilidad_calendar presente significa "el cliente confirmó que es un caso nuevo" —
+    # ahora sí dejamos que disponibilidad arme la agenda scoped, usando el contexto reciente
+    # para encontrar el recurso/requisitos de esa solicitud nueva. El ticket se crea después de
+    # confirmar la cita (`maybe_create_ticket_after_appointment`), igual que la primera vez.
+    return true if active_ticket_gate && @last_ticket_creator&.outcome == :confirmed_new_request && try_resource_availability(tracking, message)
 
     # proyecto@bot_seguimiento_calendar — @agendar_calendar (appointment-aware): el clasificador
     # ve el ESTADO DE LA CITA y decide la acción concreta (consultar/agendar/mover/cancelar). No
@@ -248,6 +275,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # atendido: ticket creado, caso abierto reusado o dato faltante solicitado.
   def try_create_ticket(tracking, message, route_result, directive: nil)
     creator = Cases::TicketCreatorService.new(message, tracking: tracking, directive: directive)
+    # @tickets_cases (plan @disponibilidad_calendar + @crear_ticket_multiple) — se guarda ANTES
+    # del `return false` para que el caller pueda leer `@last_ticket_creator.outcome` incluso
+    # cuando create_if_needed no "cerró" el turno (ej. :technical_question, :confirmed_new_request).
+    @last_ticket_creator = creator
     return false unless creator.create_if_needed
 
     Rails.logger.info "[TrackingBot] 🎫 Ticket via @crear_ticket (outcome: #{creator.outcome})"
@@ -255,11 +286,54 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # existía) y hay calendario configurado, seguimos directo a ofrecer disponibilidad en
     # el mismo turno (ETAPA 3), en vez de esperar a que el cliente lo pida en otro mensaje.
     # Mismo comportamiento que ya tenía dispatch_book_appointment cuando el Router detecta
-    # appointment_action explícito.
-    if %i[created linked_existing].include?(creator.outcome) && appointment_dispatchable?(tracking)
-      handle_book_appointment(tracking, message, route_result)
+    # appointment_action explícito. Salvo que quede una pregunta técnica sin responder (conv.
+    # #55) — ahí se resuelve esa pregunta primero y NO se ofrece agenda este turno. Tampoco si
+    # el caso reusado (:linked_existing) quedó marcado como `multiple_requests` (conv. #113):
+    # ya se escaló para que un asesor separe los servicios, no tiene sentido seguir ofreciendo
+    # agenda automática en los turnos siguientes como si nada.
+    if %i[created linked_existing].include?(creator.outcome) && appointment_dispatchable?(tracking) &&
+       !creator.linked_ticket&.custom_attributes&.[]('multiple_requests')
+      offer_appointment_or_resolve_question(tracking, message, route_result, creator)
+    end
+
+    # @tickets_cases (recursos por ID_RECURSO) — se resolvieron N recursos distintos del
+    # catálogo, cada uno con su propio ContactTracking/ticket ya creados. Ofrecemos la
+    # disponibilidad de CADA UNO en el mismo turno, acotada a su propio calendario.
+    if creator.outcome == :split_by_resource
+      creator.spawned_trackings.each do |spawned|
+        next unless appointment_dispatchable?(spawned)
+
+        offer_appointment_or_resolve_question(spawned, message, nil, creator)
+      end
     end
     true
+  end
+
+  # Punto 1/3a (docs/vault-tickets Pendiente.md) — si el intake detectó una pregunta técnica
+  # del cliente sin responder en el turno (ej. conv. #55: "qué camión me puede ayudar" junto
+  # con el pedido), resolverla por KBase ANTES de ofrecer agenda automática — si KBase la
+  # contesta, listo, no se ofrece agenda este turno (el cliente sigue la conversación
+  # normalmente y la agenda se ofrece en un turno posterior, cuando ya no quede pendiente). Si
+  # no hay directiva de KBase o no encontró nada, cae al comportamiento de siempre (ofrecer
+  # agenda) — no se deja al cliente sin ninguna respuesta.
+  def offer_appointment_or_resolve_question(tracking, message, route_result, creator)
+    return if creator.pending_technical_question && resolve_pending_technical_question(tracking, message, creator)
+
+    handle_book_appointment(tracking, message, route_result)
+  end
+
+  # Aislado en su propio rescue para que un fallo acá (KBase, clasificación de rama) nunca
+  # bloquee ni duplique el booking normal — ante cualquier error, se trata como "no
+  # respondida" y offer_appointment_or_resolve_question sigue con la oferta de siempre.
+  def resolve_pending_technical_question(tracking, message, creator)
+    branch = branch_for(tracking, message)
+    answered = KnowledgeBaseResponseService.new(message, tracking: tracking, branch: branch).perform
+    Rails.logger.info "[TrackingBot] ❓ Pregunta técnica pendiente (\"#{creator.technical_question}\") → " \
+                      "KBase #{answered ? 'respondió, no ofrezco agenda este turno' : 'sin resultados, sigo con la oferta normal'}"
+    answered
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ resolve_pending_technical_question falló: #{e.message}"
+    false
   end
 
   # @ruta — rama del turno, memorizada por (tracking, message) para no clasificar dos veces.
@@ -381,6 +455,159 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     tracking&.complementary_prompt.to_s.match?(/@agendar_calendar\b/i)
   end
 
+  # @tickets_cases (plan @disponibilidad_calendar) — opt-in por prompt.
+  def disponibilidad_calendar_directive?(tracking)
+    tracking&.complementary_prompt.to_s.match?(DISPONIBILIDAD_CALENDAR_RE)
+  end
+
+  # @tickets_cases (conv. #148, 2026-09-05) — true mientras se recolectan los datos de una
+  # solicitud nueva YA confirmada vía @crear_ticket_multiple (ver
+  # TicketCreatorService#new_request_in_progress_key). Evita repreguntar "¿es lo mismo o es
+  # nuevo?" en cada turno de esa recolección.
+  def new_request_in_progress?(tracking)
+    Redis::Alfred.get(Cases::TicketCreatorService.new_request_in_progress_key(tracking.conversation_id)).present?
+  end
+
+  # @tickets_cases (plan @disponibilidad_calendar + @crear_ticket_multiple) — ticket activo del
+  # contacto, si lo hay. Consulta liviana, solo se usa cuando la cuenta tiene
+  # @disponibilidad_calendar configurado (ver gate en try_kbase_then_conversational).
+  def active_ticket_for(message)
+    Cases::OrchestratorService.new(
+      account: message.account, contact: message.conversation.contact, conversation: message.conversation
+    ).find_active_ticket
+  end
+
+  # @tickets_cases (plan @disponibilidad_calendar, Fase 2, 2026-09-04) — disponibilidad
+  # acotada por recurso nombrado o por requisitos técnicos, SIN requerir ticket previo
+  # (a diferencia de @agendar_calendar). Devuelve true si tomó el turno.
+  def try_resource_availability(tracking, message)
+    return false unless disponibilidad_calendar_directive?(tracking)
+    return false unless calendar_configured?(tracking)
+
+    matcher = Cases::Ai::ResourceMatcher.new(account: message.account, tracking: tracking)
+    resolution = matcher.resolve_for_availability(message_text_for_ai(message), recent_context: get_recent_context(message, 4))
+    return false unless resolution[:applicable]
+
+    resources = Array(resolution[:resources]).compact
+    if resources.blank?
+      Rails.logger.info '[TrackingBot] 📅 @disponibilidad_calendar → sin coincidencias en catálogo'
+      send_resource_availability_no_match(tracking, message, resolution)
+    else
+      Rails.logger.info "[TrackingBot] 📅 @disponibilidad_calendar → #{resources.size} calendario(s) (#{resolution[:resolved_by]})"
+      offer_resource_availability(tracking, message, resources)
+    end
+    true
+  rescue StandardError => e
+    Rails.logger.error "[TrackingBot] ❌ @disponibilidad_calendar falló: #{e.message}"
+    false
+  end
+
+  # @tickets_cases (plan @disponibilidad_calendar, Fase 3, 2026-09-04) — para cuentas que
+  # resuelven el recurso/calendario ANTES del ticket, crea el ticket recién cuando la cita
+  # ya quedó confirmada, con el recurso ligado (`custom_attributes['id_recurso']`). No
+  # aplica si la cuenta no usa `@disponibilidad_calendar`, no tiene `@crear_ticket`, o el
+  # contacto ya tiene un ticket activo (evita duplicar si se creó por otro camino).
+  def maybe_create_ticket_after_appointment(tracking, message, gcal)
+    return unless disponibilidad_calendar_directive?(tracking) && ticket_directive_present?(tracking)
+
+    # 2026-09-05 (conv. #139): ANTES este método se abstenía si el contacto ya tenía un ticket
+    # activo — pensado para no duplicar en la primera solicitud. Pero con @crear_ticket_multiple,
+    # el gate de más arriba (try_kbase_then_conversational) solo deja llegar hasta acá cuando NO
+    # había ticket activo, o cuando SÍ lo había y el cliente confirmó que es una solicitud nueva
+    # y aparte — en ese caso SÍ hay que crear el segundo ticket, así que ya no corresponde
+    # abstenerse solo por encontrar un ticket activo (eso dejaba la cita agendada sin ticket).
+    resource = Cases::Ai::ResourceMatcher.new(account: message.account, tracking: tracking).find_by(calendar_id: gcal)
+    creator  = Cases::TicketCreatorService.new(message, tracking: tracking)
+    created  = creator.create_after_appointment(id_recurso: resource&.dig(:id_recurso), calendar_id: gcal)
+    # 2026-09-05 (conv. #148) — libera la marca de "solicitud nueva en curso" apenas el ticket
+    # queda creado, sea o no la fuente de esta cita una solicitud nueva confirmada (no-op si no
+    # estaba puesta).
+    Cases::TicketCreatorService.clear_new_request_in_progress(tracking.conversation_id) if created
+    Rails.logger.info "[TrackingBot] 🎫 Ticket post-agenda (@disponibilidad_calendar): #{created ? 'creado' : 'no se pudo crear'}"
+  rescue StandardError => e
+    Rails.logger.error "[TrackingBot] ❌ maybe_create_ticket_after_appointment falló: #{e.message}"
+  end
+
+  # Mejora menor (2026-09-05, docs/vault-tickets Pendiente.md, conv. #134) — sin esto, el mensaje
+  # de "no encontré" se repite idéntico indefinidamente; tras MAX intentos sin poder resolver,
+  # escala solo en vez de esperar a que el cliente lo pida explícitamente (mismo patrón que
+  # MAX_LINKED_REPEATS en TicketCreatorService).
+  DISPONIBILIDAD_NO_MATCH_MAX_REPEATS = 2
+
+  def disponibilidad_no_match_repeat_key(tracking)
+    "disponibilidad_no_match_repeat::#{tracking.conversation_id}"
+  end
+
+  def send_resource_availability_no_match(tracking, message, resolution)
+    key   = disponibilidad_no_match_repeat_key(tracking)
+    count = Redis::Alfred.get(key).to_i + 1
+
+    if count > DISPONIBILIDAD_NO_MATCH_MAX_REPEATS
+      escalate_disponibilidad_no_match(tracking, message, resolution)
+      return
+    end
+
+    Redis::Alfred.setex(key, count.to_s, 1.hour)
+    text = if resolution[:requested_name].present?
+             "No encontré \"#{resolution[:requested_name]}\" en el catálogo, y con los datos que me diste " \
+               'no encontré otra unidad que califique — ¿me compartes peso, medidas o si necesita izar para ' \
+               'buscar una alternativa?'
+           else
+             'No encontré ninguna unidad del catálogo que cumpla con lo que me diste — ¿me confirmas peso, ' \
+               'medidas o si necesita izar? Si ninguna aplica, un asesor puede ayudarte directamente.'
+           end
+    send_auto_reply(tracking, message, text)
+  end
+
+  def escalate_disponibilidad_no_match(tracking, message, resolution)
+    Redis::Alfred.delete(disponibilidad_no_match_repeat_key(tracking))
+    send_auto_reply(tracking, message,
+                    'Esto lo tiene que atender un asesor directamente — no encontré ninguna unidad que cumpla ' \
+                    'con lo que necesitas. Te contactarán en breve.')
+    tracking.disable_auto_retry_mode!
+    tracking.update!(
+      ai_context: "#{tracking.ai_context}\n\n⚠️ [DISPONIBILIDAD SIN MATCH] El cliente pidió disponibilidad " \
+                  "(#{resolution[:requested_name] || 'por requisitos'}) y tras varios intentos no se encontró " \
+                  'ninguna unidad que califique. Requiere atención humana.'
+    )
+    tracking.pause!
+    create_private_note(tracking, message,
+                        '⚠️ El cliente pidió disponibilidad de una unidad y no se encontró ninguna que califique ' \
+                        'tras varios intentos. Confirmar manualmente si existe una opción real. Requiere atención humana.')
+    notify_admin_interested(tracking, message)
+  end
+
+  def offer_resource_availability(tracking, message, resources)
+    Redis::Alfred.delete(disponibilidad_no_match_repeat_key(tracking))
+    timezone       = appointment_timezone(tracking, message)
+    integration_id = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids)&.first
+    return send_auto_reply(tracking, message, 'No tengo un calendario configurado para consultar disponibilidad.') if integration_id.blank?
+
+    booking_calendars = { integration_id.to_s => resources.filter_map { |r| r[:calendar_id] }.uniq }
+    # Persistir el acotado en el tracking: si el cliente después pide otra fecha/hora
+    # ("para el jueves no tienes?"), `handle_slot_negotiation`/`slot_service_for` leen
+    # `booking_calendars_for(tracking)` de nuevo desde la BD — sin esto, la negociación
+    # posterior vuelve a caer en el pool completo del agente (bug encontrado en conv. #130).
+    tracking.update!(booking_calendar_ids: booking_calendars)
+    service = ContactTrackings::AvailabilitySlotService.new(
+      calendar_integration_ids: [integration_id], timezone: timezone,
+      slot_duration: tracking.tracking_template&.calendar_event_duration || 30,
+      working_hours: working_hours_for(tracking, message),
+      booking_calendars: booking_calendars
+    )
+    slots = service.call
+    if slots.blank?
+      return send_auto_reply(tracking, message,
+                             'No encontré horarios próximos disponibles para esa unidad. Un asesor puede confirmarte directamente.')
+    end
+
+    presentation = slots_presentation_for(tracking)
+    slots        = order_slots_for_presentation(slots, presentation)
+    reply = "¡Con gusto! 📅 Tenemos los siguientes horarios disponibles:\n\n" \
+            "#{format_slots_lines(slots, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número de tu preferencia."
+    offer_slots(tracking, message, slots, reply)
+  end
+
   # proyecto@bot_seguimiento_calendar
   def calendar_configured?(tracking)
     (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).present?
@@ -434,7 +661,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     api_key_data = get_api_key(message.account)
-    unless api_key_data&.dig(:key).present?
+    if api_key_data&.dig(:key).blank?
       Rails.logger.info '[TrackingBot] ⚠️  Sin API key → :tracking'
       return { route: :tracking, confidence: 1.0, method: 'no_key' }
     end
@@ -457,7 +684,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # @ruta — con rutas declaradas basta con que ALGUNA rama tenga su fuente operativa;
   # cuál se usa lo decide el clasificador dentro del servicio. Sin rutas, la de siempre.
   def kbase_available?(message, tracking = nil)
-    return false unless tracking.present?
+    return false if tracking.blank?
 
     cp        = tracking.complementary_prompt.to_s
     route_map = ContactTrackings::RouteMap.parse(cp)
@@ -512,7 +739,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return nil unless AI_GENERATED_REPLIES
 
     api_key_data = get_api_key(tracking.account)
-    return nil unless api_key_data&.dig(:key).present?
+    return nil if api_key_data&.dig(:key).blank?
 
     begin
       contact_name    = message.sender&.name || 'cliente'
@@ -763,8 +990,15 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       calendar_integration_ids: cal_ids, timezone: timezone,
       slot_duration: tracking.tracking_template&.calendar_event_duration || 30,
       working_hours: working_hours_for(tracking, message),
-      booking_calendars: tracking.tracking_template&.booking_calendar_ids || {}
+      booking_calendars: booking_calendars_for(tracking)
     )
+  end
+
+  # @tickets_cases (recursos por ID_RECURSO) — un ContactTracking creado para UN recurso
+  # concreto del catálogo trae su propio booking_calendar_ids (una sola agenda: la de ESE
+  # recurso), y gana sobre el pool completo del Agente IA. Vacío → comportamiento de siempre.
+  def booking_calendars_for(tracking)
+    tracking.booking_calendar_ids.presence || tracking.tracking_template&.booking_calendar_ids || {}
   end
 
   # proyecto@bot_seguimiento_calendar — horarios del inbox (Opción A). Solo si el inbox los
@@ -826,7 +1060,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     creator.create_if_needed
     return if creator.outcome == :asked_missing_fields
 
-    handle_book_appointment(tracking, message, route_result)
+    offer_appointment_or_resolve_question(tracking, message, route_result, creator)
   end
 
   def ticket_directive_present?(tracking)
@@ -846,7 +1080,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     cal_ids = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
 
-    unless cal_ids.present?
+    if cal_ids.blank?
       handle_no_calendar_configured(tracking, message)
       return
     end
@@ -936,7 +1170,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # El contacto pregunta/insiste por una cita pero ya tiene una agendada: en lugar de
   # volver a ofrecer horarios, le recordamos la cita existente y le ofrecemos mover o
   # cancelar (esas rutas las resuelven :reschedule y :cancel_appointment).
+  #
+  # Guard anti-loop (Redis, mismo patrón que Cases::TicketCreatorService::MAX_LINKED_REPEATS):
+  # si a pesar de repetírselo el contacto sigue sin pedir *mover* ni *cancelar* — sigue
+  # preguntando otra cosa que este mensaje fijo no contesta —, escala a un humano en vez
+  # de insistir con el mismo texto para siempre.
+  MAX_APPOINTMENT_QUERY_REPEATS = 2
+
   def inform_existing_appointment(tracking, message)
+    if appointment_query_repeat_limit_reached?(tracking)
+      escalate_appointment_query(tracking, message)
+      return
+    end
+
+    register_appointment_query_repeat(tracking)
     timezone  = appointment_timezone(tracking, message)
     formatted = format_appointment_datetime(tracking.appointment_at, timezone)
     Rails.logger.info "[TrackingBot] 📅 El contacto ya tiene una cita (#{formatted}) → recordando en vez de re-ofrecer"
@@ -944,6 +1191,43 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       tracking, message,
       "Ya tenés una cita agendada para el #{formatted}. 📅 Si querés, puedo *moverla* a otro horario o *cancelarla*. ¿Qué preferís?"
     )
+  end
+
+  def appointment_query_repeat_key(tracking_id)
+    "appointment_query_repeat::#{tracking_id}"
+  end
+
+  def appointment_query_repeat_limit_reached?(tracking)
+    Redis::Alfred.get(appointment_query_repeat_key(tracking.id)).to_i >= MAX_APPOINTMENT_QUERY_REPEATS
+  end
+
+  def register_appointment_query_repeat(tracking)
+    count = Redis::Alfred.get(appointment_query_repeat_key(tracking.id)).to_i + 1
+    Redis::Alfred.setex(appointment_query_repeat_key(tracking.id), count.to_s, 1.hour)
+  end
+
+  # Mismo patrón de handoff que handle_no_calendar_configured: aviso fijo al contacto +
+  # nota privada + asignación a un admin, para que un humano tome la conversación en vez
+  # de que el bot le siga repitiendo "moverla o cancelarla" a algo que no es eso.
+  def escalate_appointment_query(tracking, message)
+    Redis::Alfred.delete(appointment_query_repeat_key(tracking.id))
+    timezone  = appointment_timezone(tracking, message)
+    formatted = format_appointment_datetime(tracking.appointment_at, timezone)
+    Rails.logger.info '[TrackingBot] 📅 Contacto insiste sobre la cita sin pedir mover/cancelar → escalando'
+    send_auto_reply(
+      tracking, message,
+      'Esto lo tiene que atender un asesor directamente. Ya tenés una cita agendada para el ' \
+      "#{formatted}; te contactarán en breve para lo que necesites."
+    )
+    tracking.disable_auto_retry_mode!
+    tracking.update!(
+      ai_context: "#{tracking.ai_context}\n\n📅 [BA] Contacto insistió sobre la cita sin pedir mover/cancelar. Requiere atención humana."
+    )
+    tracking.pause!
+    notify_admin_interested(tracking, message)
+    create_private_note(tracking, message,
+                        '📅 El contacto siguió preguntando sobre su cita sin pedir moverla ni cancelarla — ' \
+                        'el bot no pudo entender qué necesita. Requiere atención humana.')
   end
 
   def format_appointment_datetime(at, timezone)
@@ -1081,7 +1365,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # así que lo normalizamos al shape que espera format_slots_lines (claves símbolo / Time).
     Rails.logger.info '[TrackingBot] 📅 Sin fecha interpretable → repreguntando con los horarios'
     display_slots = current_slots.map do |s|
-      { slot: Time.parse(s['slot']), end_time: Time.parse(s['end_time']),
+      { slot: Time.zone.parse(s['slot']), end_time: Time.zone.parse(s['end_time']),
         agent_name: s['agent_name'], calendar_name: s['calendar_name'] }
     end
     slots_list = format_slots_lines(display_slots, timezone, slots_presentation_for(tracking))
@@ -1297,8 +1581,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
   def confirm_and_create_appointment(tracking, message, selected_slot)
     timezone    = appointment_timezone(tracking, message)
-    slot_start  = Time.parse(selected_slot['slot'])
-    slot_end    = Time.parse(selected_slot['end_time'])
+    slot_start  = Time.zone.parse(selected_slot['slot'])
+    slot_end    = Time.zone.parse(selected_slot['end_time'])
     agent_name  = selected_slot['agent_name']
     cal_id      = selected_slot['cal_id']
     gcal        = selected_slot['gcal'].presence || 'primary'
@@ -1353,6 +1637,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     nota = "📅 Cita agendada con #{contact_name}\n• Fecha: #{fecha_texto} de #{local_start.year}\n• Hora: #{hora_texto}\n• Agente: #{agent_name}\n• Evento en Calendar: ✅ creado"
     create_private_note(tracking, message, nota)
     notify_admin_interested(tracking, message)
+
+    # @tickets_cases (plan @disponibilidad_calendar, Fase 3) — cuentas que resuelven el
+    # recurso/calendario ANTES de la agenda crean el ticket recién ahora, ya con el
+    # recurso ligado (orden invertido respecto a @crear_ticket normal).
+    maybe_create_ticket_after_appointment(tracking, message, gcal)
 
     Rails.logger.info '[TrackingBot] ✅ Cita confirmada y seguimiento pausado'
   rescue StandardError => e
@@ -1604,11 +1893,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return default_reply(reply_type, extra_data) unless AI_GENERATED_REPLIES
 
     api_key_data = get_api_key(tracking.account)
-    return default_reply(reply_type, extra_data) unless api_key_data&.dig(:key).present?
+    return default_reply(reply_type, extra_data) if api_key_data&.dig(:key).blank?
 
     begin
       prompt = build_action_prompt(tracking, message, reply_type, extra_data)
-      return default_reply(reply_type, extra_data) unless prompt.present?
+      return default_reply(reply_type, extra_data) if prompt.blank?
 
       reply = call_openai_for_reply(api_key_data[:key], [
                                       {
@@ -1789,11 +2078,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return unless message&.conversation
 
     Messages::MessageBuilder.new(
-      user: bot_user(tracking.account),
-      conversation: message.conversation,
-      message_type: :activity,
-      content: note_content,
-      private: true
+      bot_user(tracking.account),
+      message.conversation,
+      { message_type: :activity, content: note_content, private: true }
     ).perform
 
     Rails.logger.info '[TrackingBot] 📝 Nota privada creada'
@@ -1806,7 +2093,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     conversation = message.conversation
     account = conversation.account
-    assignee = account.users.where(role: :administrator).first || account.users.first
+    assignee = account.administrators.first || account.users.first
 
     if assignee
       conversation.update(assignee_id: assignee.id)
@@ -1840,7 +2127,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def get_recent_context(message, limit = 4)
-    return '' unless message.conversation_id.present?
+    return '' if message.conversation_id.blank?
 
     messages = Message.where(conversation_id: message.conversation_id)
                       .where(message_type: [0, 1])
@@ -1860,7 +2147,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def get_tracking_message_history(tracking)
-    return '' unless tracking.conversation_id.present?
+    return '' if tracking.conversation_id.blank?
 
     messages = Message.where(conversation_id: tracking.conversation_id)
                       .where('created_at > ?', tracking.created_at)
