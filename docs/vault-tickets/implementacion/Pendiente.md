@@ -6,6 +6,30 @@ tags: [tickets, pendiente, todo]
 
 ## Pendiente / no implementado
 
+### Reuniones — módulo COMPLETO (F0–F7), pendientes menores
+Ver [[Historial-de-implementacion]] y `docs/tickets_reuniones_plan.md`. Las 7 fases
+están implementadas, probadas y pusheadas a `origin/feat/tickets`.
+- **⏸️ Verificar el dominio en Google Cloud (§12.2)** — **aplazado por decisión del usuario (2026-08-13)**.
+  Es lo único que falta para que el push en tiempo real (F7) se encienda. Dos pasos:
+  (1) Search Console: verificar `wintook.com` como propiedad de tipo **Dominio** (TXT en DNS,
+  cubre todos los subdominios) **con la cuenta dueña del proyecto de Cloud**;
+  (2) Cloud Console → APIs y servicios → **Verificación de dominios** → agregar
+  `develop.wintook.com` (y `app.wintook.com` / `chatzeus.com` para producción).
+  **NO se toca la pantalla de Credenciales**: la URL del webhook no se registra ahí, la manda
+  el código en `events.watch`. Mientras no se haga, `events.watch` falla en silencio y el
+  módulo funciona igual con la reconciliación perezosa (§12.5).
+- **Prueba de punta a punta del push** — pendiente de lo anterior: agendar una reunión, moverla
+  desde Google Calendar y comprobar que el ticket se actualiza SIN abrirlo.
+- **Verificar en la bandeja cuántos correos manda Google** al cancelar/truncar una serie: MGCI
+  pide **un** aviso por operación (medido), pero cuántos correos emite Google por cada aviso solo
+  se ve en el buzón del invitado. Si resultara uno por ocurrencia, el plan B es cancelar el
+  maestro con `sendUpdates: 'none'` y avisar por el canal del ticket (§10.2c).
+- **Decir en la pantalla de conexión de Google Calendar** que MGCI solo lee y conserva las
+  reuniones creadas desde el sistema (§12.4): `events.watch` es por calendario, así que llegan
+  avisos de los eventos personales del agente (se descartan en memoria, pero conviene decirlo).
+- **F8 (diferido por el plan)**: recordatorios internos, bandeja de reuniones a nivel cuenta,
+  `scope: 'following'` al editar/cancelar una ocurrencia de serie.
+
 ### User Portal — pendientes tras la Fase P1 (ver [[Plan-User-Portal]])
 - **i18n `en` del portal** — la copy de las vistas ERB está hoy en español; `<html lang>` ya sale de `portal.locale`. Falta extraer textos a locales es/en.
 - **Tailwind por CDN** — las vistas del portal cargan Tailwind vía CDN (rápido para el MVP); migrar al build de assets para producción.
@@ -51,6 +75,11 @@ tags: [tickets, pendiente, todo]
   - **Tareas (tabla del ticket)**: botón por fila **"Agregar nota"** (crea nota atada a la tarea) + columna **"Notas"** (📋 N, click → Notas filtradas por la tarea; con 0 solo avisa, no navega); buscador/orden/actualizar/subtítulo igual que notas; iconos de acción a `large`.
   - **Bandeja de tareas** (`/tickets/tasks`): mismas columnas **Notas** y acción **Agregar nota** (navegan al ticket vía `?tab=notes&task=&taskId=&compose=1`; `TicketDetail` abre la pestaña y filtra/compone al cargar).
   - **Pendiente menor**: al **agregar nota** desde la bandeja el banner del modal muestra el folio pero **no el título** de la tarea (no viaja en el query); traer el título si molesta. La bandeja **toca backend** → producción necesita reinicio de Rails.
+- ~~**Solicitante de tarea + menú de acciones + refactor del modal**~~ ✅ **hecho** (2026-08-05, commit `1e0bb753`, **mergeado a `develop`** `867185ac`). En ambas tablas (dentro del ticket y bandeja de cuenta) y su modal compartido.
+  - **Backend**: `case_tasks` gana `requester_id` (solicitante, FK `users` `on_delete: :nullify`). Migración `20260805120000`. Se **fija al agente actual al crear** y es **firma inmutable**; `case_tasks_controller#update` solo lo acepta (`assign_requester_if_absent`) **si la tarea aún no lo tiene** (tareas antiguas). `requester` expuesto en los dos serializadores (con `includes(:requester)`).
+  - **Modal**: entre título y descripción, dos columnas **Solicitante** (textbox fijo con el agente; o **lista editable** si la tarea no tiene solicitante) + **Responsable** (lista); debajo de la descripción, **Vencimiento · Prioridad · Estado**. El modal **ya no scrollea**: el editor de la descripción tiene **alto fijo** con su propio scroll.
+  - **Tablas**: nueva columna **Solicitante**; se quitó la columna suelta "Notas" y los botones sueltos de acción → todo en **un solo menú desplegable** (botón de menú a la **izquierda del folio**, abre a la derecha) con **Notas de la tarea (total)** (0 → solo avisa), **Agregar nota** y **Borrar tarea**. Menú con posición fija (no lo recorta el overflow de la tabla) que cierra con click-afuera/scroll.
+  - **Pendiente menor**: nueva columna `requester_id` → al desplegar `develop` **correr migración + reiniciar Rails**.
 - **Futuro Tareas**: reordenar (drag); plantillas de checklist por tipo de caso; "convertir tarea en ticket". (~~fecha límite `due_at` UI~~ ✅ ya en el modal de tarea).
 - **Futuro Lock**: aviso en tiempo real (hoy solo al abrir/refrescar); "tomar el control" forzado por admin; heartbeat para renovar el lock mientras se escribe.
 - **⚠️ Concurrencia — lost update** 📋 **análisis listo** — ver [[Analisis-Concurrencia-Edicion]]. Hoy el `update` **no valida el lock** (es cosmético) y **no hay bloqueo optimista** (`lock_version`) en ticket/tarea/nota → si dos actores (o la IA/jobs, que no toman el lock) guardan a la vez, el segundo pisa al primero **en silencio**. Recomendado: **A** (que `update` respete el lock, 423) **+ B** (bloqueo optimista → 409 "recarga"). Fase 2: **C** (la IA cede ante el humano). No reproducido, es preventivo.

@@ -45,13 +45,31 @@ class Cases::TicketCreatorService
     "case_intake_pending::#{conversation_id}"
   end
 
+  # @crear_ticket(fallback=true): invierte la posición del alta de ticket dentro del
+  # turno. Por defecto el ticket se evalúa ANTES que la KBase (§11.1); con el flag pasa
+  # a ser el ÚLTIMO recurso: primero contesta la base de conocimiento y el caso solo se
+  # levanta si la búsqueda no resolvió el turno. Sin el flag, el orden de siempre.
+  def self.fallback?(tracking)
+    m = tracking&.complementary_prompt.to_s.match(DIRECTIVE_RE)
+    return false unless m && m[1].present?
+
+    m[1].split(',').any? do |pair|
+      k, v = pair.split('=', 2).map { |x| x.to_s.strip.downcase }
+      k == 'fallback' && %w[true si sí 1].include?(v)
+    end
+  end
+
   # Qué hizo el último create_if_needed: :no_directive, :linked_existing,
   # :not_worthy, :asked_missing_fields, :created o :error. Permite a callers como
   # el gate de @agendar_calendar distinguir "acabo de pedir un dato, no agendes
   # todavía" de "ya hay ticket / no aplica, seguí con el flujo normal".
   attr_reader :outcome
 
-  def initialize(message, tracking:)
+  # `directive:` permite pasar la directiva de UNA rama concreta (@ruta) en lugar de
+  # dejar que el servicio la busque en el prompt entero. Así cada rama puede escalar a
+  # su propio tipo y prioridad de ticket.
+  def initialize(message, tracking:, directive: nil)
+    @directive_text = directive
     @message      = message
     @tracking     = tracking
     @account      = message.account
@@ -113,8 +131,13 @@ class Cases::TicketCreatorService
     true
   end
 
+  # Texto sobre el que se lee la directiva: la de la rama si se pasó, o el prompt entero.
+  def directive_source
+    @directive_text.presence || @tracking&.complementary_prompt.to_s
+  end
+
   def directive_present?
-    @tracking&.complementary_prompt.to_s.match?(DIRECTIVE_RE)
+    directive_source.match?(DIRECTIVE_RE)
   end
 
   # true si la conversación NO amerita ticket (cierra el ciclo de Fase 2 si lo hubo).
@@ -178,7 +201,7 @@ class Cases::TicketCreatorService
   # Directiva parametrizable: @crear_ticket(prioridad=alta, tipo=Soporte)
   # ---------------------------------------------------------------------------
   def directive_overrides
-    m = @tracking.complementary_prompt.to_s.match(DIRECTIVE_RE)
+    m = directive_source.match(DIRECTIVE_RE)
     return {} unless m && m[1].present?
 
     m[1].split(',').each_with_object({}) do |pair, h|

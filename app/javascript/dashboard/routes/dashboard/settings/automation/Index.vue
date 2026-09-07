@@ -48,6 +48,13 @@ onMounted(() => {
   store.dispatch('teams/get');
   store.dispatch('labels/get');
   store.dispatch('campaigns/get');
+  // proyecto@automatizacion_tracking: la acción "Asignar Agente IA" saca sus opciones
+  // del store de plantillas. Sin este fetch el desplegable sale vacío al entrar directo
+  // a Automatizaciones, y solo se llenaba si antes habías pasado por Agentes IA.
+  store.dispatch('trackingTemplates/get');
+  // proyecto@automatizaciones: la acción "Asignar Caso" saca sus opciones del store
+  // de tipos de caso; mismo motivo que el fetch de plantillas de arriba.
+  store.dispatch('caseTickets/fetchTypes');
   store.dispatch('automations/get');
   if (isSLAEnabled.value) {
     store.dispatch('sla/get');

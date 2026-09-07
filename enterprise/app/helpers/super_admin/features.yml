@@ -41,6 +41,12 @@ messenger:
   enabled: true
   icon: 'icon-messenger-line'
   config_key: 'facebook'
+instagram:
+  name: 'Instagram'
+  description: 'Conecta cuentas de Instagram Business directamente, sin Página de Facebook.'
+  enabled: true
+  icon: 'icon-instagram-line'
+  config_key: 'instagram'
 whatsapp:
   name: 'WhatsApp'
   description: 'Manage your WhatsApp business interactions from Chatwoot.'

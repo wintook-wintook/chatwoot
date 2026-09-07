@@ -37,8 +37,8 @@ class Account < ApplicationRecord
   # KANBAN0725
 
   has_many :tracking_templates, dependent: :destroy # proyecto@tracking_templates
-  has_many :tracking_campaigns,  dependent: :destroy # @campanas_vendedor
-  has_many :case_tickets,       dependent: :destroy # @tickets_cases
+  has_many :tracking_campaigns, dependent: :destroy # @campanas_vendedor
+  has_many :case_tickets, dependent: :destroy # @tickets_cases
   has_many :external_db_connections, dependent: :destroy # @query_databases
   has_many :external_db_queries,     dependent: :destroy # @query_databases
   has_many :erp_collection_bots,     dependent: :destroy # @query_databases
@@ -84,6 +84,7 @@ class Account < ApplicationRecord
   has_many :facebook_pages, dependent: :destroy_async, class_name: '::Channel::FacebookPage'
   has_many :hooks, dependent: :destroy_async, class_name: 'Integrations::Hook'
   has_many :inboxes, dependent: :destroy_async
+  has_many :instagram_channels, dependent: :destroy_async, class_name: '::Channel::Instagram'
   has_many :labels, dependent: :destroy_async
   has_many :line_channels, dependent: :destroy_async, class_name: '::Channel::Line'
   has_many :mentions, dependent: :destroy_async

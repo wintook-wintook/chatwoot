@@ -501,6 +501,18 @@
         "PROCESSING": "Creating your inbox, please wait...",
         "APP_ID_MISSING": "WhatsApp Embedded Signup is not configured. Contact your administrator.",
         "SDK_NOT_LOADED": "Facebook SDK is not loaded yet. Please try again."
+      },
+      "INSTAGRAM": {
+        "SIGN_IN": "Sign in with Instagram",
+        "HELP": "To connect an Instagram Business account, sign in with Instagram. No Facebook Page is required.",
+        "ERROR_MESSAGE": "There was an error connecting to Instagram, please try again",
+        "ERROR": {
+          "DENIED": "You cancelled the Instagram authorization",
+          "INVALID_STATE": "The authorization expired, please try again",
+          "MISSING_CODE": "Instagram did not return an authorization code, please try again",
+          "ALREADY_CONNECTED": "That Instagram account is already connected to another account",
+          "FAILED": "Instagram rejected the authorization, please try again"
+        }
       }
     },
     "DETAILS": {
@@ -897,7 +909,8 @@
       "EMAIL": "Email",
       "TELEGRAM": "Telegram",
       "LINE": "Line",
-      "API": "API Channel"
+      "API": "API Channel",
+      "INSTAGRAM": "Instagram"
     }
   }
 }

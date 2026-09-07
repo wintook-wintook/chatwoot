@@ -117,5 +117,87 @@ describe Facebook::SendOnFacebookService do
         expect(message.reload.status).to eq('failed')
       end
     end
+
+    # Una pregunta con opciones viajaba como texto plano: la pregunta llegaba y las
+    # opciones no. WhatsApp y Telegram ya las pintaban.
+    context 'with quick replies' do
+      def outgoing_select(items)
+        create(:message, message_type: 'outgoing', content: '¿Qué necesitas?', content_type: 'input_select',
+                         content_attributes: { items: items }, inbox: facebook_inbox, account: account, conversation: conversation)
+      end
+
+      it 'sends the options as quick replies' do
+        message = outgoing_select([{ 'title' => 'Ventas', 'value' => 'sales' }, { 'title' => 'Soporte', 'value' => 'support' }])
+
+        described_class.new(message: message).perform
+
+        expect(bot).to have_received(:deliver).with(hash_including(
+                                                      message: {
+                                                        text: '¿Qué necesitas?',
+                                                        quick_replies: [
+                                                          { content_type: 'text', payload: 'sales', title: 'Ventas' },
+                                                          { content_type: 'text', payload: 'support', title: 'Soporte' }
+                                                        ]
+                                                      }
+                                                    ), { page_id: facebook_channel.page_id })
+      end
+
+      it 'falls back to the title when the item carries no value' do
+        message = outgoing_select([{ 'title' => 'Ventas' }])
+
+        described_class.new(message: message).perform
+
+        expect(bot).to have_received(:deliver).with(
+          hash_including(message: hash_including(quick_replies: [{ content_type: 'text', payload: 'Ventas', title: 'Ventas' }])),
+          { page_id: facebook_channel.page_id }
+        )
+      end
+
+      # Pasarse de los límites de Meta no degrada el mensaje: lo rechaza entero, así que
+      # el cliente no recibiría ni el texto
+      it 'trims to the limits Meta accepts' do
+        items = Array.new(20) { |i| { 'title' => "Opción larguísima número #{i}", 'value' => "v#{i}" } }
+        message = outgoing_select(items)
+
+        described_class.new(message: message).perform
+
+        sent = nil
+        expect(bot).to have_received(:deliver) { |params, _| sent = params[:message][:quick_replies] }
+        expect(sent.size).to eq(13)
+        expect(sent.map { |qr| qr[:title].length }.max).to be <= 20
+      end
+
+      it 'leaves a plain text message untouched' do
+        message = create(:message, message_type: 'outgoing', content: 'hola', inbox: facebook_inbox, account: account, conversation: conversation)
+
+        described_class.new(message: message).perform
+
+        expect(bot).to have_received(:deliver).with(hash_including(message: { text: 'hola' }), { page_id: facebook_channel.page_id })
+      end
+    end
+
+    # Estas dos no eran un Facebook::Messenger::FacebookError, así que escapaban del
+    # rescue: el mensaje se quedaba como enviado y Sidekiq reintentaba el job a ciegas.
+    context 'when Meta answers something unexpected' do
+      it 'marks the message as failed if the response is not JSON' do
+        message = create(:message, message_type: 'outgoing', inbox: facebook_inbox, account: account, conversation: conversation)
+        allow(bot).to receive(:deliver).and_return('<html>502 Bad Gateway</html>')
+
+        expect { described_class.new(message: message).perform }.not_to raise_error
+
+        expect(message.reload.status).to eq('failed')
+        expect(message.external_error).to eq('Facebook was unable to process this request')
+      end
+
+      it 'marks the message as failed if the request times out' do
+        message = create(:message, message_type: 'outgoing', inbox: facebook_inbox, account: account, conversation: conversation)
+        allow(bot).to receive(:deliver).and_raise(Net::OpenTimeout)
+
+        expect { described_class.new(message: message).perform }.not_to raise_error
+
+        expect(message.reload.status).to eq('failed')
+        expect(message.external_error).to eq('Request timed out, please try again later')
+      end
+    end
   end
 end

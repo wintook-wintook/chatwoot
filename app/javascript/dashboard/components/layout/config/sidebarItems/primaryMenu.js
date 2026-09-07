@@ -44,13 +44,23 @@ const primaryMenuItems = accountId => [
     toState: frontendURL(`accounts/${accountId}/contacts`),
     toStateName: 'contacts_dashboard',
   },
+  // @tickets_cases
   {
-    icon: 'arrow-trending-lines',
-    key: 'reports',
-    label: 'REPORTS',
-    featureFlag: FEATURE_FLAGS.REPORTS,
-    toState: frontendURL(`accounts/${accountId}/reports`),
-    toStateName: 'account_overview_reports',
+    icon: 'clipboard',
+    key: 'gestorTickets',
+    label: 'TICKETS',
+    featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+    toState: frontendURL(`accounts/${accountId}/tickets`),
+    toStateName: 'gestorTickets_index',
+  },
+  {
+    icon: 'calendar',
+    key: 'google_calendar',
+    label: 'GOOGLE_CALENDAR',
+    featureFlag: FEATURE_FLAGS.GOOGLE_CALENDAR,
+    toState: frontendURL(`accounts/${accountId}/google-calendar`),
+    toStateName: 'google_calendar',
+    roles: ['administrator', 'agent'],
   },
   {
     icon: 'megaphone',
@@ -72,26 +82,13 @@ const primaryMenuItems = accountId => [
     toStateName: 'default_portal_articles',
   },
   {
-    icon: 'calendar',
-    key: 'google_calendar',
-    label: 'GOOGLE_CALENDAR',
-    featureFlag: FEATURE_FLAGS.GOOGLE_CALENDAR,
-    toState: frontendURL(`accounts/${accountId}/google-calendar`),
-    toStateName: 'google_calendar',
-    roles: ['administrator', 'agent'],
+    icon: 'arrow-trending-lines',
+    key: 'reports',
+    label: 'REPORTS',
+    featureFlag: FEATURE_FLAGS.REPORTS,
+    toState: frontendURL(`accounts/${accountId}/reports`),
+    toStateName: 'account_overview_reports',
   },
-  // @tickets_cases
-  {
-    icon: 'clipboard',
-    key: 'gestorTickets',
-    label: 'TICKETS',
-    featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
-    toState: frontendURL(`accounts/${accountId}/tickets`),
-    toStateName: 'gestorTickets_index',
-  },
-  // proyecto@contact_tracking — Dashboard de Seguimientos fusionado dentro de
-  // la sección Campañas (ver sidebarItems/campaigns.js). Se elimina el ícono
-  // top-level propio para evitar duplicar la navegación.
   {
     icon: 'settings',
     key: 'settings',

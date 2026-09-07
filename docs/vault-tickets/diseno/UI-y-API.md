@@ -69,6 +69,10 @@ DELETE /api/v1/accounts/:id/case_rules/:id                   # eliminar regla
 
 **Filtros para `GET /case_tickets`:** `?q=` (folio/título/descripción/**nombre de contacto** vía `left_joins(:contact)` + ILIKE), `?status=`, `?case_type_id=`, `?priority=`, `?sla_status=`, `?assignee_id=` (acepta `null`/`none`/`unassigned`/`0` → `IS NULL`), `?contact_id=`, `?date_from=` / `?date_to=` (rango sobre `created_at`, formato `YYYY-MM-DD`), `?sort_by=` (whitelist `created_at|priority|sla_status|status`), `?sort_order=` (`asc|desc`, default desc), `?page=`, `?per_page=` (default 25, máx 100).
 
+> **Vistas guardadas** (`feat/tickets_filtros`): ese mismo juego de filtros se puede
+> guardar con nombre y compartir con la cuenta, reusando `custom_filters` con
+> `filter_type: case_ticket`. Ver [[Vistas-guardadas]].
+
 > Implementado en métodos privados del controller: `apply_search`, `apply_assignee`, `apply_date_range`, `apply_sort` (constante `SORTABLE_COLUMNS`). El orden interpola columna/dirección desde whitelists → seguro con `Arel.sql`. El JOIN a `contacts` es 1:1 (`belongs_to`) → no duplica filas, sin `distinct`.
 
 ---

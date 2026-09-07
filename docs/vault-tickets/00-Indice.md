@@ -44,8 +44,9 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 
 - [[case_type-tabla-configurable]] — ⭐ `case_type` es tabla, NO enum
 - [[Archivos-reales]] — rutas exactas backend + frontend construidas
+- [[Vistas-guardadas]] — 🔖 filtros de la cola guardados con nombre, personales o compartidos
 - [[Rutas-Metricas-Builder]] — rutas frontend, endpoint de métricas, builder de reglas
-- [[Trampas]] — ⚠️ decisiones técnicas y gotchas (numeradas 1–25)
+- [[Trampas]] — ⚠️ decisiones técnicas y gotchas (numeradas 1–20)
 - [[Feature-flag-case_management]] — activar el módulo por cuenta
 - [[Pruebas-en-browser]] — credenciales, Chrome, Puppeteer
 - [[Pendiente]] — lo que falta

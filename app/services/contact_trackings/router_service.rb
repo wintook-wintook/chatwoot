@@ -204,10 +204,11 @@ module ContactTrackings
       request                  = Net::HTTP::Post.new(uri)
       request['Authorization'] = "Bearer #{@api_key}"
       request['Content-Type']  = 'application/json'
+      # proyecto@contact_tracking: modelo y tope desde la config del inbox.
       request.body = {
-        model:           'gpt-4o-mini',
+        model:           ContactTrackings::EngineConfig.model_for_tracking(@tracking, :router),
         messages:        [{ role: 'user', content: prompt }],
-        max_tokens:      300,
+        max_tokens:      ContactTrackings::EngineConfig.max_tokens_for(:router),
         temperature:     0.1,
         response_format: { type: 'json_object' }
       }.to_json

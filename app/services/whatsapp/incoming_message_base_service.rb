@@ -28,11 +28,14 @@ class Whatsapp::IncomingMessageBaseService
     return if unprocessable_message_type?(message_type)
 
     # Multiple webhook event can be received against the same message due to misconfigurations in the Meta
-    # business manager account. While we have not found the core reason yet, the following line ensure that
+    # business manager account. While we have not found the core reason yet, the following lines ensure that
     # there are no duplicate messages created.
-    return if find_message_by_source_id(@processed_params[:messages].first[:id]) || message_under_process?
-
-    cache_message_source_id_in_redis
+    #
+    # The lock must be acquired atomically (Redis SET NX) rather than via a separate get-then-set: concurrent
+    # webhook deliveries for the same message id can otherwise both pass the check before either writes the
+    # key, each creating its own message (and, if no conversation exists yet, its own duplicate conversation).
+    return if find_message_by_source_id(@processed_params[:messages].first[:id])
+    return unless lock_message_source_id
 
     begin
       set_message_type

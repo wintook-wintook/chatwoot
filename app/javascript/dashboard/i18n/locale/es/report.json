@@ -560,5 +560,75 @@
       },
       "VIEW_DETAILS": "Ver detalles"
     }
+  },
+  "OPPORTUNITY_REPORTS": {
+    "HEADER": "Informes de Oportunidades",
+    "FILTERS": {
+      "ALL_CASE_TYPES": "Todos los tipos de caso",
+      "ALL_ASSIGNEES": "Todos los vendedores",
+      "ALL_TEAMS": "Todos los equipos",
+      "DATE_RANGE": "Rango de fechas"
+    },
+    "FUNNEL": {
+      "TITLE": "Embudo de oportunidades",
+      "LOADING": "Cargando embudo...",
+      "EMPTY": "No hay oportunidades en este período.",
+      "UNASSIGNED_COLUMN": "Sin columna",
+      "STATUS_FALLBACK_NOTICE": "Elegí un tipo de caso para ver el embudo por columna del Kanban. Sin esa selección se agrupa por estado general."
+    },
+    "OUTCOME": {
+      "TITLE": "Ganados / perdidos",
+      "LOADING": "Cargando resultados...",
+      "EMPTY": "No hay oportunidades cerradas en este período.",
+      "CONVERSION_RATE": "Tasa de conversión",
+      "OPEN": "Abiertas",
+      "WON": "Ganadas",
+      "LOST": "Perdidas",
+      "OTHER_CLOSED": "Otro cierre"
+    },
+    "TIMESERIES": {
+      "TITLE": "Nuevas vs. cerradas",
+      "LOADING": "Cargando serie temporal...",
+      "EMPTY": "No hay datos en este período.",
+      "CREATED": "Creadas",
+      "CLOSED": "Cerradas",
+      "GROUP_BY": {
+        "DAY": "Día",
+        "WEEK": "Semana",
+        "MONTH": "Mes"
+      }
+    },
+    "ASSIGNEES": {
+      "TITLE": "Ranking de vendedores",
+      "LOADING": "Cargando ranking...",
+      "EMPTY": "No hay oportunidades en este período.",
+      "UNASSIGNED": "Sin asignar",
+      "HEADER": {
+        "ASSIGNEE": "Vendedor",
+        "OPEN": "Abiertas",
+        "WON": "Ganadas",
+        "LOST": "Perdidas",
+        "CONVERSION_RATE": "Conversión",
+        "AVG_CLOSE_DAYS": "Días prom. cierre"
+      }
+    },
+    "VELOCITY": {
+      "TITLE": "Velocidad por etapa",
+      "LOADING": "Cargando velocidad...",
+      "EMPTY": "Todavía no hay transiciones completas en este período."
+    },
+    "STALLED": {
+      "TITLE": "Oportunidades estancadas",
+      "LOADING": "Cargando estancadas...",
+      "EMPTY": "No hay oportunidades estancadas con este umbral.",
+      "THRESHOLD_OPTION": "Más de {days} días",
+      "HEADER": {
+        "FOLIO": "Folio",
+        "TITLE": "Título",
+        "STATUS": "Estado",
+        "ASSIGNEE": "Vendedor",
+        "STALLED_DAYS": "Días estancado"
+      }
+    }
   }
 }

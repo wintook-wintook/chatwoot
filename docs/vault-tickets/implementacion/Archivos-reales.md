@@ -55,7 +55,16 @@ tags: [tickets, archivos, backend, frontend]
 - `i18n/locale/{es,en}/index.js` — import `gestorTickets.json`
 - `i18n/locale/{es,en}/settings.json` — claves `SIDEBAR.TICKETS/ALL_TICKETS/TICKET_METRICS/TICKET_RULES`
 
+**Vistas guardadas** (`feat/tickets_filtros`, detalle en [[Vistas-guardadas]]) — reusa el
+modelo nativo `CustomFilter`, no crea tabla propia:
+- `db/migrate/20260904180000_add_shared_to_custom_filters.rb` — columna `shared`
+- `app/models/custom_filter.rb` · `app/policies/custom_filter_policy.rb`
+- `app/controllers/api/v1/accounts/custom_filters_controller.rb`
+- `app/views/api/v1/models/_custom_filter.json.jbuilder`
+- `views/gestorTickets/SavedViewsModal.vue` (nuevo) · `views/gestorTickets/Index.vue`
+- `routes/dashboard/customviews/AddCustomViews.vue` ⚠️ nativo compartido con Conversaciones y Contactos
+
 
 
 ## 🔗 Relacionado
-- [[Rutas-Metricas-Builder]] · [[Archivos-y-fases]]
+- [[Rutas-Metricas-Builder]] · [[Archivos-y-fases]] · [[Vistas-guardadas]]

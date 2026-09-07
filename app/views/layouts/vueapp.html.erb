@@ -38,6 +38,9 @@
         googleOAuthClientId: '<%= ENV.fetch('GOOGLE_OAUTH_CLIENT_ID', nil) %>',
         googleOAuthCallbackUrl: '<%= ENV.fetch('GOOGLE_OAUTH_CALLBACK_URL', nil) %>',
         fbApiVersion: '<%= @global_config['FACEBOOK_API_VERSION'] %>',
+        <%# el canal nativo de Instagram construye la URL de autorización en backend: al front
+            solo le hace falta saber si hay credenciales para atenuar o no la tarjeta %>
+        instagramEnabled: <%= @global_config['INSTAGRAM_APP_ID'].present? %>,
         signupEnabled: '<%= @global_config['ENABLE_ACCOUNT_SIGNUP'] %>',
         isEnterprise: '<%= @global_config['IS_ENTERPRISE'] %>',
         <% if @global_config['IS_ENTERPRISE'] %>

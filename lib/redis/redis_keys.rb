@@ -27,6 +27,16 @@ module Redis::RedisKeys
   AUTHORIZATION_ERROR_COUNT = 'AUTHORIZATION_ERROR_COUNT:%<obj_type>s:%<obj_id>d'.freeze
   REAUTHORIZATION_REQUIRED =  'REAUTHORIZATION_REQUIRED:%<obj_type>s:%<obj_id>d'.freeze
 
+  ## CONTPAQi — Agente de Servicio (kbase remota)
+  # Token de aplicacion. Se comparte entre procesos a proposito: dura una hora, el
+  # servicio NO emite refresh token y cada pedido gasta cuota, asi que un token por
+  # worker seria desperdicio.
+  CONTPAQ_ACCESS_TOKEN = 'CONTPAQ::SOURCE::%<source_id>d::ACCESS_TOKEN'.freeze
+  # Contador de llamadas del minuto en curso. El limite es POR INTEGRADOR y compartido
+  # entre todos los procesos que usan las mismas credenciales, asi que contar en memoria
+  # no sirve: cada worker creeria tener los 60 para el solo.
+  CONTPAQ_RATE_BUCKET = 'CONTPAQ::SOURCE::%<source_id>d::RATE::%<minute>s'.freeze
+
   ## Internal Installation related keys
   CHATWOOT_INSTALLATION_ONBOARDING = 'CHATWOOT_INSTALLATION_ONBOARDING'.freeze
   CHATWOOT_INSTALLATION_CONFIG_RESET_WARNING = 'CHATWOOT_CONFIG_RESET_WARNING'.freeze
@@ -34,6 +44,10 @@ module Redis::RedisKeys
   # Check if a message create with same source-id is in progress?
   MESSAGE_SOURCE_KEY = 'MESSAGE_SOURCE_KEY::%<id>s'.freeze
   OPENAI_CONVERSATION_KEY = 'OPEN_AI_CONVERSATION_KEY::V1::%<event_name>s::%<conversation_id>d::%<updated_at>d'.freeze
+
+  # Guarda la cuenta mientras el administrador autoriza en Instagram. El callback de Meta
+  # llega sin sesión, así que el `state` del OAuth es lo único que las relaciona.
+  IG_OAUTH_STATE = 'IG_OAUTH_STATE::%<state>s'.freeze
 
   ## Sempahores / Locks
   # We don't want to process messages from the same sender concurrently to prevent creating double conversations

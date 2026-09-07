@@ -114,6 +114,9 @@ export default {
     this.$store.dispatch('teams/get');
     this.$store.dispatch('labels/get');
     this.$store.dispatch('campaigns/get');
+    // proyecto@automatizacion_tracking: ver comentario en Index.vue — sin esto el
+    // desplegable de "Asignar Agente IA" queda vacío.
+    this.$store.dispatch('trackingTemplates/get');
     this.allCustomAttributes = this.$store.getters['attributes/getAttributes'];
     this.manifestCustomAttributes(this.automationTypes);
   },

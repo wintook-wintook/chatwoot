@@ -46,6 +46,7 @@ import userNotificationSettings from './modules/userNotificationSettings';
 import webhooks from './modules/webhooks';
 import draftMessages from './modules/draftMessages';
 import SLAReports from './modules/SLAReports';
+import CaseReports from './modules/CaseReports'; // proyecto@metricas_casos
 import webphone from './modules/webphone';
 
 import scheduledMessages from './modules/scheduledMessages';
@@ -132,6 +133,7 @@ export default new Vuex.Store({
     trackingTemplates, // proyecto@tracking_templates
     googleCalendar, // proyecto@google_calendar
     caseTickets, // @tickets_cases
+    caseReports: CaseReports, // proyecto@metricas_casos
     externalDb, // @query_databases
     whatsappTemplates, // @waba_templates
   },

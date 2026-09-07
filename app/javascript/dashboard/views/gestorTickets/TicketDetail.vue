@@ -9,8 +9,14 @@ import CaseTicketInternalModal from './CaseTicketInternalModal.vue';
 import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
 import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
 import TicketNotes from '../../components/contacts/CaseTicket/TicketNotes.vue';
+// @tickets_cases — CRUD nativo de notas del contacto, se reusa tal cual.
+import NotesOnContactPage from '../../modules/notes/NotesOnContactPage.vue';
+// @tickets_cases — ficha del contacto, la misma que usa la pagina de Contactos.
+import ContactInfoPanel from 'dashboard/routes/dashboard/contacts/components/ContactInfoPanel.vue';
+import TicketMeetings from '../../components/contacts/CaseTicket/TicketMeetings.vue';
 import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
 import CaseTicketsAPI from 'dashboard/api/caseTickets';
+import CaseMeetingsAPI from 'dashboard/api/caseMeetings';
 import {
   SIMPLE_TRANSITION_TARGETS,
   toSimpleStatus,
@@ -24,6 +30,9 @@ export default {
     TicketConversation,
     TicketTasks,
     TicketNotes,
+    NotesOnContactPage,
+    ContactInfoPanel,
+    TicketMeetings,
     MultiselectDropdown,
   },
   props: {
@@ -40,6 +49,8 @@ export default {
       // abre la pestaña Notas (filtrada por la tarea, o el modal de alta si
       // compose=1) en cuanto el ticket termina de cargar. { seq, taskId, compose }.
       entryNote: null,
+      // @tickets_cases F2 — igual que entryNote, para ?tab=meetings.
+      entryMeeting: null,
       lockedAcquired: false, // @tickets_cases — este agente tomó el bloqueo
       showTransitionMenu: false,
       showPriorityMenu: false, // @tickets_cases P1 — prioridad inline
@@ -47,6 +58,8 @@ export default {
       dueDraft: '', // valor del input datetime-local
       taskCount: 0, // @tickets_cases P4 — total de tareas (badge del tab)
       noteCount: 0, // @tickets_cases — total de notas internas (badge del tab)
+      showContactPanel: false, // @tickets_cases — ficha del contacto abierta
+      meetingCount: 0, // @tickets_cases F2 — total de reuniones (badge del tab)
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
       // @tickets_cases — bitácora de notas internas
@@ -58,6 +71,12 @@ export default {
       // @tickets_cases — motivo opcional al cambiar de estado (osTicket)
       showReasonModal: false,
       pendingStatus: null,
+      // @tickets_cases F5 (§11.2) — reuniones futuras del ticket al cambiar de
+      // estado. El default de la casilla lo dicta el estado destino: `resolved` y
+      // `validating` NO son terminales (la cita puede ser justo la de validación),
+      // así que se ofrece desmarcada; `closed`/`cancelled` van marcadas.
+      orphanMeetings: [],
+      cancelOrphanMeetings: false,
       transitionReason: '',
       // 2E — relaciones entre tickets
       showRelationModal: false,
@@ -286,11 +305,26 @@ export default {
         label: this.$t('CASE_TICKETS.DETAIL_TABS.NOTES'),
         count: this.noteCount,
       });
+      // @tickets_cases — Notas del contacto (CRUD nativo), entre Notas y Tareas.
+      // Solo si el caso tiene contacto: sin él no hay notas que administrar.
+      if (this.ticket?.contact_id) {
+        tabs.push({
+          key: 'contact_notes',
+          label: this.$t('CASE_TICKETS.DETAIL_TABS.CONTACT_NOTES'),
+          count: this.contactNoteCount,
+        });
+      }
       // @tickets_cases P4 — Tareas como pestaña propia, con contador.
       tabs.push({
         key: 'tasks',
         label: this.$t('CASE_TICKETS.DETAIL_TABS.TASKS'),
         count: this.taskCount,
+      });
+      // @tickets_cases F2 — Reuniones, después de Tareas (plan §6.1).
+      tabs.push({
+        key: 'meetings',
+        label: this.$t('CASE_TICKETS.DETAIL_TABS.MEETINGS'),
+        count: this.meetingCount,
       });
       // @tickets_cases — el Resumen ya no muestra info (vive en el header); su
       // contenido real es la conversación, así que la pestaña se llama así.
@@ -312,6 +346,36 @@ export default {
     // Clave de la pestaña realmente visible (autocorrige si la guardada ya no existe).
     currentTabKey() {
       return this.detailTabs[this.activeDetailTabIndex]?.key || 'detail';
+    },
+    // @tickets_cases — el contacto completo para la ficha lateral. Lo sirve el
+    // store de contactos; se carga al abrir el panel, no antes.
+    contactRecord() {
+      const contactId = this.ticket?.contact_id;
+      if (!contactId) return {};
+      return this.$store.getters['contacts/getContact'](contactId) || {};
+    },
+    // @tickets_cases — nombre y organización para el encabezado. Los campos que
+    // vienen dentro del ticket son una foto del momento en que se cargó el caso,
+    // así que al editar el contacto quedaban viejos. Cuando el store ya tiene el
+    // contacto, manda ese: refleja la edición al instante. Si el store lo tiene,
+    // se le cree por completo — si le borraron la empresa, debe desaparecer, no
+    // reaparecer desde la copia vieja del ticket.
+    contactDisplayName() {
+      const c = this.contactRecord;
+      if (c && c.id) return c.name || '';
+      return this.ticket?.contact_name || '';
+    },
+    contactDisplayCompany() {
+      const c = this.contactRecord;
+      if (c && c.id) return c.additional_attributes?.company_name || '';
+      return this.ticket?.contact_company || '';
+    },
+    // @tickets_cases — total de notas del contacto para el badge de la pestaña.
+    contactNoteCount() {
+      const contactId = this.ticket?.contact_id;
+      if (!contactId) return 0;
+      return this.$store.getters['contactNotes/getAllNotesByContact'](contactId)
+        .length;
     },
     // @tickets_cases 2G
     isClosed() {
@@ -439,6 +503,12 @@ export default {
         this.entryNote = null;
         this.$nextTick(() => this.applyEntryNote(payload));
       }
+      // @tickets_cases F2 — lo mismo para la entrada a Reuniones.
+      if (val && this.entryMeeting) {
+        const payload = this.entryMeeting;
+        this.entryMeeting = null;
+        this.$nextTick(() => this.applyEntryMeeting(payload));
+      }
     },
   },
   mounted() {
@@ -453,6 +523,17 @@ export default {
     this.releaseLock();
   },
   methods: {
+    // @tickets_cases — abre la ficha del contacto. Pide el contacto completo al
+    // backend: el ticket solo trae nombre y correo, no el resto de sus datos.
+    openContactPanel() {
+      const id = this.ticket?.contact_id;
+      if (!id) return;
+      this.$store.dispatch('contacts/show', { id });
+      this.showContactPanel = true;
+    },
+    closeContactPanel() {
+      this.showContactPanel = false;
+    },
     // @tickets_cases — toma el bloqueo del ticket al abrir; si lo tiene otro, no
     // lo toma (el banner avisará). Refresca el ticket para reflejar el estado.
     async acquireLock() {
@@ -526,6 +607,7 @@ export default {
       // como "Motivo" en el Recorrido; aquí solo se captura.
       this.pendingStatus = status;
       this.transitionReason = '';
+      await this.loadOrphanMeetings(status);
       this.showReasonModal = true;
       this.$nextTick(() => this.$refs.reasonInput?.focus());
     },
@@ -535,9 +617,30 @@ export default {
       if (!status) return;
       const reason = this.transitionReason.trim();
       this.showReasonModal = false;
-      await this.runTransition(status, reason ? { reason } : {});
+      const extra = reason ? { reason } : {};
+      // F5 — solo se cancela si el agente lo aceptó, con las citas a la vista.
+      if (this.orphanMeetings.length && this.cancelOrphanMeetings) {
+        extra.cancel_meetings = true;
+      }
+      await this.runTransition(status, extra);
       this.pendingStatus = null;
       this.transitionReason = '';
+      this.orphanMeetings = [];
+    },
+    // F5 — reuniones futuras que quedarían huérfanas con este cambio de estado.
+    // El backend devuelve también el default de la casilla para ese destino.
+    async loadOrphanMeetings(status) {
+      this.orphanMeetings = [];
+      this.cancelOrphanMeetings = false;
+      try {
+        const { data } = await CaseMeetingsAPI.upcoming(this.ticketId, {
+          target_status: status,
+        });
+        this.orphanMeetings = data.case_meetings || [];
+        this.cancelOrphanMeetings = !!data.cancel_default;
+      } catch (e) {
+        this.orphanMeetings = [];
+      }
     },
     // @tickets_cases 2G — confirmar cierre documentado
     async confirmClose() {
@@ -1086,12 +1189,29 @@ export default {
       this.activeDetailTab = 'notes';
       this.$nextTick(() => this.$refs.ticketNotes?.showTaskNotes(task));
     },
+    // @tickets_cases F2 — "agregar reunión" desde una fila de la tabla de tareas:
+    // salta a la pestaña Reuniones y abre el modal ya atado a esa tarea.
+    openMeetingForTask(task) {
+      this.activeDetailTab = 'meetings';
+      this.$nextTick(() => this.$refs.ticketMeetings?.openCreate(task));
+    },
+    // @tickets_cases F2 — "ver reuniones" de una tarea: salta a la pestaña ya
+    // filtrada por el folio de esa tarea.
+    openMeetingsForTask(task) {
+      this.activeDetailTab = 'meetings';
+      this.$nextTick(() => this.$refs.ticketMeetings?.showTaskMeetings(task));
+    },
     // @tickets_cases — al entrar con ?tab=notes&task=N (desde la bandeja de
     // tareas): abre Notas; compose=1 abre el modal de alta atado a la tarea, si
     // no filtra por su folio. Si el ticket ya está cargado actúa ya; si no, deja
     // la acción pendiente para el watcher `ticket`.
     applyEntryQuery() {
       const q = this.$route.query || {};
+      // @tickets_cases F2 — mismo contrato que Notas, pero para Reuniones.
+      if (q.tab === 'meetings') {
+        this.applyEntryMeetings(q);
+        return;
+      }
       if (q.tab !== 'notes') return;
       this.activeDetailTab = 'notes';
       const seq = Number(q.task);
@@ -1103,6 +1223,28 @@ export default {
       };
       if (this.ticket) this.$nextTick(() => this.applyEntryNote(payload));
       else this.entryNote = payload;
+    },
+    // @tickets_cases F2 — ?tab=meetings&task=N[&taskId=&compose=1]
+    applyEntryMeetings(q) {
+      this.activeDetailTab = 'meetings';
+      const seq = Number(q.task);
+      if (!seq) return;
+      const payload = {
+        seq,
+        taskId: Number(q.taskId) || null,
+        compose: q.compose === '1',
+      };
+      if (this.ticket) this.$nextTick(() => this.applyEntryMeeting(payload));
+      else this.entryMeeting = payload;
+    },
+    applyEntryMeeting({ seq, taskId, compose }) {
+      const meetings = this.$refs.ticketMeetings;
+      if (!meetings) return;
+      if (compose && taskId) {
+        meetings.openCreate({ id: taskId, sequence: seq, title: '' });
+      } else {
+        meetings.showTaskMeetings({ sequence: seq });
+      }
     },
     applyEntryNote({ seq, taskId, compose }) {
       const notes = this.$refs.ticketNotes;
@@ -1285,7 +1427,7 @@ export default {
 
 <template>
   <div
-    class="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900"
+    class="relative flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900"
   >
     <!-- Header -->
     <div
@@ -1311,11 +1453,25 @@ export default {
               class="font-mono text-lg font-bold leading-none tracking-wider text-woot-600 dark:text-woot-300 flex-shrink-0"
               >#{{ ticket.folio }}</span
             >
-            <span
-              v-if="ticket.contact_name"
-              class="text-base font-medium truncate text-slate-600 dark:text-slate-300"
-              >· {{ ticket.contact_name }}</span
+            <!-- @tickets_cases — manda la organización; el contacto va después
+                 y en tono más tenue. Sin organización, solo el contacto. -->
+            <button
+              v-if="contactDisplayCompany || contactDisplayName"
+              type="button"
+              class="flex items-center min-w-0 gap-1 text-base font-medium cursor-pointer text-slate-600 dark:text-slate-300 hover:text-woot-600 dark:hover:text-woot-400 hover:underline"
+              :title="$t('CASE_TICKETS.CONTACT_PANEL.OPEN')"
+              @click="openContactPanel"
             >
+              <span v-if="contactDisplayCompany" class="truncate">
+                · {{ contactDisplayCompany }}
+              </span>
+              <span
+                v-if="contactDisplayName"
+                class="font-normal truncate text-slate-500 dark:text-slate-400"
+              >
+                · {{ contactDisplayName }}
+              </span>
+            </button>
           </div>
           <!-- @tickets_cases — cada badge lleva su etiqueta (Tipo/Estado/Prioridad/
                SLA/Nivel) para que se entienda qué representa cada valor. -->
@@ -1365,19 +1521,37 @@ export default {
               {{ escalationLabel }}</span
             >
           </div>
-          <h2 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
+          <!-- @tickets_cases — título a UNA sola línea con "…": envolver a dos
+               líneas empujaba las pestañas y descuadraba la cabecera. Completo
+               en el tooltip y al abrir "Editar ticket". -->
+          <h2
+            class="m-0 mt-0.5 text-xl font-bold truncate text-slate-800 dark:text-slate-100"
+            :title="ticket.title"
+          >
             {{ ticket.title }}
           </h2>
-          <!-- @tickets_cases — descripción a UNA sola línea con "…": si es larga
-               se recorta; para leerla completa se abre "Editar ticket". El
-               title nativo la muestra al pasar el cursor. -->
-          <p
-            v-if="ticket.description"
-            class="m-0 text-sm truncate text-slate-600 dark:text-slate-300"
-            :title="ticket.description"
-          >
-            {{ ticket.description }}
-          </p>
+          <!-- @tickets_cases — descripción a UNA sola línea con "…". El enlace
+               "Ver" abre el modal del ticket, que es donde se leen título y
+               descripción completos: el tooltip nativo no se descubre solo y en
+               táctil no existe. Se oculta en cerrado, igual que el lápiz de
+               editar, para no ofrecer algo que el backend rechazaría. -->
+          <div class="flex items-baseline gap-1.5 min-w-0">
+            <p
+              v-if="ticket.description"
+              class="m-0 text-sm truncate text-slate-600 dark:text-slate-300"
+              :title="ticket.description"
+            >
+              {{ ticket.description }}
+            </p>
+            <button
+              v-if="!isFrozen"
+              type="button"
+              class="flex-shrink-0 text-xs font-medium text-woot-600 dark:text-woot-300 hover:underline"
+              @click="showEditModal = true"
+            >
+              {{ $t('CASE_TICKETS.DETAIL.VIEW_FULL') }}
+            </button>
+          </div>
         </div>
 
         <!-- @tickets_cases — columna derecha: acciones arriba + fechas debajo -->
@@ -2432,6 +2606,18 @@ export default {
         @changed="reloadEvents"
       />
 
+      <!-- ════ Pestaña Notas del Contacto — CRUD nativo de contactos ════ -->
+      <div
+        v-show="currentTabKey === 'contact_notes'"
+        class="flex-1 min-h-0 overflow-y-auto"
+      >
+        <NotesOnContactPage
+          v-if="ticket.contact_id"
+          :key="`contact-notes-${ticket.contact_id}`"
+          :contact-id="ticket.contact_id"
+        />
+      </div>
+
       <!-- ════ Pestaña Tareas (P4) — checklist a ancho completo ════ -->
       <TicketTasks
         v-show="currentTabKey === 'tasks'"
@@ -2442,6 +2628,21 @@ export default {
         @count="taskCount = $event"
         @addNote="openNoteForTask"
         @viewNotes="openNotesForTask"
+        @addMeeting="openMeetingForTask"
+        @viewMeetings="openMeetingsForTask"
+      />
+
+      <!-- ════ Pestaña Reuniones (F2) — tabla + modal, como Notas ════ -->
+      <TicketMeetings
+        v-show="currentTabKey === 'meetings'"
+        ref="ticketMeetings"
+        :key="`meetings-${ticket.id}`"
+        :ticket-id="ticket.id"
+        :is-frozen="isFrozen"
+        :contact-email="ticket.contact_email || ''"
+        class="flex-1 min-h-0"
+        @count="meetingCount = $event"
+        @changed="reloadEvents"
       />
 
       <!-- ════ Pestaña Avance del ticket (2L) — 3 vistas conmutables ════ -->
@@ -2621,6 +2822,53 @@ export default {
               :placeholder="$t('CASE_TICKETS.STATUS_QUICK.REASON_PLACEHOLDER')"
             />
           </label>
+
+          <!-- @tickets_cases F5 (§11.2) — reuniones futuras del ticket. Se
+               muestran SIEMPRE; la casilla viene marcada solo si el estado
+               destino es terminal. Cancelar no se deshace, y se dice. -->
+          <div
+            v-if="orphanMeetings.length"
+            class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-600"
+          >
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              {{
+                $t('CASE_TICKETS.STATUS_QUICK.MEETINGS_TITLE', {
+                  count: orphanMeetings.length,
+                })
+              }}
+            </span>
+            <ul class="m-0 list-none">
+              <li
+                v-for="m in orphanMeetings"
+                :key="m.id"
+                class="flex items-center gap-2 py-0.5 text-sm text-slate-600 dark:text-slate-300"
+              >
+                <span class="font-mono text-xs">{{ m.folio }}</span>
+                <span class="truncate">{{ m.title }}</span>
+                <span class="text-xs text-slate-400">{{
+                  formatDate(m.starts_at)
+                }}</span>
+              </li>
+            </ul>
+            <label class="flex items-center gap-2 m-0">
+              <input
+                v-model="cancelOrphanMeetings"
+                type="checkbox"
+                class="m-0"
+              />
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CASE_TICKETS.STATUS_QUICK.MEETINGS_CANCEL')
+              }}</span>
+            </label>
+            <p
+              v-if="cancelOrphanMeetings"
+              class="m-0 text-xs text-amber-700 dark:text-amber-300"
+            >
+              {{ $t('CASE_TICKETS.STATUS_QUICK.MEETINGS_IRREVERSIBLE') }}
+            </p>
+          </div>
 
           <div class="flex justify-end gap-2 mt-2">
             <woot-button
@@ -3158,5 +3406,47 @@ export default {
         </form>
       </div>
     </woot-modal>
+
+    <!-- ════ Ficha del contacto — cajón deslizante sobre el detalle ════
+         ContactInfoPanel es el mismo panel de la página de Contactos: su raíz
+         mide w-1/4, que aquí resuelve contra el área invisible (todo el
+         detalle), así que ocupa el mismo cuarto de pantalla que en la
+         conversación. El fondo no se atenúa: el caso se sigue viendo tal cual y
+         la ficha se separa por su sombra. El área sigue capturando el clic
+         fuera del panel para cerrarlo. -->
+    <transition name="contact-panel">
+      <div
+        v-if="showContactPanel && ticket.contact_id"
+        class="absolute inset-0 z-30 flex justify-end"
+        @click.self="closeContactPanel"
+      >
+        <ContactInfoPanel
+          class="case-contact-panel shadow-2xl"
+          :contact="contactRecord"
+          :on-close="closeContactPanel"
+          @panelClose="closeContactPanel"
+        />
+      </div>
+    </transition>
   </div>
 </template>
+
+<style scoped>
+/* La ficha entra deslizándose desde la derecha; el fondo no se atenúa. */
+.contact-panel-enter-active,
+.contact-panel-leave-active {
+  transition: opacity 0.2s ease;
+}
+.contact-panel-enter-from,
+.contact-panel-leave-to {
+  opacity: 0;
+}
+.contact-panel-enter-active :deep(.case-contact-panel),
+.contact-panel-leave-active :deep(.case-contact-panel) {
+  transition: transform 0.2s ease;
+}
+.contact-panel-enter-from :deep(.case-contact-panel),
+.contact-panel-leave-to :deep(.case-contact-panel) {
+  transform: translateX(100%);
+}
+</style>

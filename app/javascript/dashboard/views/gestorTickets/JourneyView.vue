@@ -50,12 +50,15 @@ const STATUS_DOT = {
 // @tickets_cases — Recorrido "Fases + desvíos": espina obligatoria de 5 fases
 // (cada una agrupa sus sub-estados); 'En espera' y 'Escalado' NO son fases de la
 // espina sino desvíos que se dibujan sangrados bajo la fase donde ocurrieron.
-const SPINE = [
-  { key: 'new', dot: 'bg-blue-500', states: ['open', 'classified'] },
-  { key: 'assigned', dot: 'bg-cyan-500', states: ['assigned', 'in_diagnosis'] },
-  { key: 'progress', dot: 'bg-sky-500', states: ['in_progress'] },
-  { key: 'resolved', dot: 'bg-green-500', states: ['resolved', 'validating'] },
-  { key: 'closed', dot: 'bg-slate-500', states: ['closed', 'cancelled'] },
+// Sólo se usa como respaldo cuando el tipo de caso no tiene columnas propias
+// configuradas (ver computed `phases`). Colores en hex (no clases Tailwind)
+// para pintarse igual que las columnas reales de `case_type_columns`.
+const DEFAULT_SPINE = [
+  { key: 'new', color: '#3b82f6', states: ['open', 'classified'] },
+  { key: 'assigned', color: '#06b6d4', states: ['assigned', 'in_diagnosis'] },
+  { key: 'progress', color: '#0ea5e9', states: ['in_progress'] },
+  { key: 'resolved', color: '#10b981', states: ['resolved', 'validating'] },
+  { key: 'closed', color: '#64748b', states: ['closed', 'cancelled'] },
 ];
 const DETOUR_KIND = {
   waiting_on_customer: 'waiting',
@@ -110,14 +113,46 @@ export default {
           toLevel: e.payload.to_level, // @tickets_cases 2D — nivel de escalado (N1/N2/N3)
         }));
     },
-    // @tickets_cases — Recorrido "Fases + desvíos": espina de 5 fases con el
-    // sub-estado realmente alcanzado, y los desvíos (espera/escalado) sangrados
-    // bajo la fase en la que ocurrieron. No se inventan pasos no recorridos.
+    // @tickets_cases — Fases del Recorrido: las columnas propias del tipo de
+    // caso (`ticket.case_type.columns`, ya vienen en el JSON del ticket, sin
+    // fetch aparte) ordenadas por posición; si el tipo no tiene ninguna
+    // configurada (dato legado), la espina fija de siempre como respaldo.
+    phases() {
+      const cols =
+        (this.ticket &&
+          this.ticket.case_type &&
+          this.ticket.case_type.columns) ||
+        [];
+      if (cols.length) {
+        return [...cols]
+          .sort((a, b) => a.position - b.position)
+          .map(c => ({
+            key: `col-${c.id}`,
+            id: c.id,
+            label: c.label,
+            color: c.color,
+            states: c.statuses || [],
+          }));
+      }
+      return DEFAULT_SPINE.map(p => ({
+        key: p.key,
+        id: null,
+        label: this.$t(`CASE_TICKETS.KANBAN.COLUMNS.${p.key}`),
+        color: p.color,
+        states: p.states,
+      }));
+    },
+    // @tickets_cases — Recorrido "Fases + desvíos": las fases (columnas del tipo
+    // de caso) con el sub-estado realmente alcanzado, y los desvíos (espera/
+    // escalado, no cubiertos por ninguna columna) sangrados bajo la fase en la
+    // que ocurrieron. No se inventan pasos no recorridos.
     phaseJourney() {
       if (!this.ticket) return [];
-      const phases = SPINE.map(p => ({
+      const phases = this.phases.map(p => ({
         key: p.key,
-        dot: p.dot,
+        id: p.id,
+        label: p.label,
+        color: p.color,
         reached: false,
         subState: null,
         meta: null,
@@ -136,7 +171,7 @@ export default {
       ];
       let curIdx = 0;
       steps.forEach(s => {
-        const idx = SPINE.findIndex(p => p.states.includes(s.to));
+        const idx = this.phases.findIndex(p => p.states.includes(s.to));
         if (idx >= 0) {
           const ph = phases[idx];
           ph.reached = true;
@@ -160,8 +195,16 @@ export default {
         }
       });
       const cur = this.ticket.status;
-      const curSpine = SPINE.findIndex(p => p.states.includes(cur));
-      if (curSpine >= 0) phases[curSpine].current = true;
+      // Fase actual: prioriza el puntero real (case_type_column_id) — con
+      // columnas custom, varias pueden compartir status, así que el status
+      // solo no basta para saber en cuál está.
+      const colId = this.ticket.case_type_column_id;
+      let curPhaseIdx =
+        colId != null ? phases.findIndex(p => p.id === colId) : -1;
+      if (curPhaseIdx < 0) {
+        curPhaseIdx = this.phases.findIndex(p => p.states.includes(cur));
+      }
+      if (curPhaseIdx >= 0) phases[curPhaseIdx].current = true;
       phases.forEach(ph =>
         ph.detoursAfter.forEach(d => {
           d.current = d.state === cur;
@@ -253,10 +296,6 @@ export default {
       const k = `CASE_TICKETS.PRIORITIES.${key}`;
       return this.$te(k) ? this.$t(k) : key;
     },
-    // @tickets_cases — etiqueta de fase reutilizando las columnas del Tablero
-    phaseLabel(key) {
-      return this.$t(`CASE_TICKETS.KANBAN.COLUMNS.${key}`) || key;
-    },
     detourBadge(kind) {
       return kind === 'escalated'
         ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
@@ -291,8 +330,21 @@ export default {
       const k = `CASE_TICKETS.EVENT_TYPES.${event.event_type}`;
       return this.$te(k) ? this.$t(k) : event.event_type;
     },
+    // @tickets_cases F1 — eventos de reunión: folio · título · fecha de la cita
+    // (y el alcance cuando la acción fue sobre la serie completa).
+    meetingSummary(p) {
+      const parts = [p.folio, p.title].filter(Boolean);
+      if (p.starts_at) parts.push(this.formatDate(p.starts_at));
+      if (p.scope === 'all') {
+        parts.push(this.$t('CASE_TICKETS.JOURNEY.MEETING_SCOPE_ALL'));
+      }
+      return parts.length ? parts.join(' · ') : null;
+    },
     payloadSummary(event) {
       const p = event.payload || {};
+      if (event.event_type.startsWith('meeting_')) {
+        return this.meetingSummary(p);
+      }
       // Vencimiento: from/to son fechas.
       if (event.event_type === 'due_date_changed') {
         return `${p.from ? this.formatDate(p.from) : '—'} → ${
@@ -403,15 +455,16 @@ export default {
                 class="relative z-10 flex-shrink-0 w-4 h-4 mt-2 rounded-full ring-4 ring-white dark:ring-slate-800"
                 :class="[
                   ph.reached
-                    ? ph.dot
+                    ? ''
                     : 'bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600',
                   ph.current ? '!ring-woot-100 dark:!ring-woot-900/60' : '',
                 ]"
+                :style="ph.reached ? { backgroundColor: ph.color } : {}"
               >
                 <span
                   v-if="ph.current"
                   class="block w-full h-full rounded-full animate-ping opacity-50"
-                  :class="ph.dot"
+                  :style="{ backgroundColor: ph.color }"
                 />
               </span>
             </div>
@@ -429,7 +482,7 @@ export default {
               <div class="flex flex-wrap items-center gap-2">
                 <span
                   class="text-base font-bold text-slate-800 dark:text-slate-100"
-                  >{{ phaseLabel(ph.key) }}</span
+                  >{{ ph.label }}</span
                 >
                 <span
                   v-if="ph.reached && ph.subState"
@@ -481,7 +534,11 @@ export default {
                   {{ d.kind === 'escalated' ? '⚠' : '⏸' }}
                   {{ statusLabel(d.state)
                   }}<template v-if="d.level != null">
-                    · N{{ d.level + 1 }}</template
+                    {{
+                      $t('CASE_TICKETS.JOURNEY.LEVEL_SUFFIX', {
+                        level: d.level + 1,
+                      })
+                    }}</template
                   >
                 </span>
                 <span class="text-slate-400 dark:text-slate-500 tabular-nums">

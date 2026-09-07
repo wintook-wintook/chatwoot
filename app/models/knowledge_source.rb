@@ -32,11 +32,24 @@ class KnowledgeSource < ApplicationRecord
   # {{doc:nombre}}. Para estos el nombre debe ser único por cuenta. Las fuentes
   # nativas (canned_response/article) se autogestionan con nombre localizado fijo y
   # quedan fuera (su recreación vía create_or_find_by no debe disparar RecordInvalid).
-  ADDRESSABLE_BY_NAME = %w[discourse google_doc google_sheet].freeze
+  ADDRESSABLE_BY_NAME = %w[discourse google_doc google_sheet contpaq_support].freeze
+
+  # contpaq_support — Agente de Servicio CONTPAQi, una API remota que NO se vectoriza:
+  # no tiene knowledge_items ni sync, porque la busqueda y la redaccion ocurren del otro
+  # lado. La fuente existe solo para guardar sus credenciales y para que la directiva
+  # @soporte_contpaq(nombre) pueda direccionarla. Forma del config:
+  #
+  #   { "base_url": "https://.../agente-servicio/v1", "token_url": "https://.../oauth2/v2.0/token",
+  #     "client_id": "...", "client_secret": "...", "scope": "api://.../.default" }
+  #
+  # No se validan esas claves aca, igual que no se validan las de discourse: al motor le
+  # toca ser fail-soft, y una fuente a medio configurar debe dejar el turno al
+  # conversacional, no impedir que se guarde mientras se termina de configurar.
 
   has_many :google_sheet_rows, dependent: :destroy
 
-  validates :source_type, presence: true, inclusion: { in: %w[canned_response discourse article google_doc google_sheet] }
+  validates :source_type, presence: true,
+                          inclusion: { in: %w[canned_response discourse article google_doc google_sheet contpaq_support] }
   validates :name, presence: true
   validates :name, uniqueness: { scope: :account_id, case_sensitive: false }, if: :addressable_by_name?
 
