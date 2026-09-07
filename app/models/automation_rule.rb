@@ -42,6 +42,7 @@ class AutomationRule < ApplicationRecord
     %w[send_message add_label remove_label send_email_to_team assign_team assign_agent send_webhook_event mute_conversation
        send_attachment change_status resolve_conversation snooze_conversation change_priority send_email_transcript send_private_note
        assign_kanban_type_process
+       assign_case_type
        assign_tracking_template
        cancel_active_tracking
        pause_active_tracking].freeze # proyecto@automatizacion_tracking

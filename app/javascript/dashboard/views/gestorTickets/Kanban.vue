@@ -12,7 +12,7 @@ import { toSimpleStatus } from 'dashboard/helper/caseSimpleStatus';
 
 // Filtros rápidos (pestañas) — mismo set que el listado (Index.vue).
 const QUICK_FILTERS = [
-  { key: 'mine', label: 'Mis Tickets' },
+  { key: 'mine', label: 'Mis Casos' },
   { key: 'unassigned', label: 'Sin Asignar' },
   { key: 'all', label: 'Todos' },
   { key: 'sla_overdue', label: 'SLA vencidos' },
@@ -115,7 +115,7 @@ export default {
       slaOverdueCount: 'caseTickets/getBoardSlaOverdue',
       services: 'caseTickets/getServices',
       agents: 'agents/getAgents',
-      currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
+      currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Casos"
       itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
       types: 'caseTickets/getTypes', // columnas por tipo (A+)
     }),

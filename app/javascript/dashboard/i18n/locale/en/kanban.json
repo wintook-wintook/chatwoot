@@ -1,12 +1,12 @@
 {
   "KANBAN": {
-    "HEADER": "Conversations Board",
+    "HEADER": "Conversation Board",
     "DESCRIPTION": "Manage your workflows with a visual Conversations system",
     "LEARN_MORE": "Learn more",
     "HEADER_BTN_TXT": "Add Stage",
     
     "BOARD": {
-      "TITLE": "Conversations Board",
+      "TITLE": "Conversation Board",
       "SELECT_PROCESS": "Select Conversations Types",
       "NO_PROCESSES": "No processes available",
       "NO_TYPE_PROCESSES": "No columns available",
