@@ -240,6 +240,28 @@ export default {
       const a = (this.agents || []).find(x => x.id === ticket.assignee_id);
       return a ? a.name : null;
     },
+    // @tickets_cases — encabezado de la ficha: manda la organización del contacto.
+    // Sin organización sube el nombre del contacto; sin contacto (ticket interno)
+    // sube el título, para que la ficha nunca quede sin encabezado.
+    cardHeading(ticket) {
+      return (
+        ticket.contact_company || ticket.contact_name || ticket.title || ''
+      );
+    },
+    // El icono acompaña al encabezado según qué subió: edificio para la empresa,
+    // persona para el contacto. Sin icono cuando el encabezado es el título.
+    cardHeadingIcon(ticket) {
+      if (ticket.contact_company) return 'building-bank';
+      return ticket.contact_name ? 'person' : '';
+    },
+    // El contacto solo se repite debajo cuando arriba fue la organización.
+    cardSubheading(ticket) {
+      return ticket.contact_company ? ticket.contact_name || '' : '';
+    },
+    // El título no se reimprime cuando ya ocupó el encabezado.
+    cardTitle(ticket) {
+      return this.cardHeading(ticket) === ticket.title ? '' : ticket.title;
+    },
     openDetail(ticket) {
       this.$router.push({
         name: 'gestorTickets_detail',
@@ -572,9 +594,38 @@ export default {
               </span>
             </div>
             <p
-              class="m-0 mb-2 text-sm font-medium text-slate-800 dark:text-slate-100 line-clamp-2"
+              v-if="cardHeading(ticket)"
+              class="flex items-center gap-1 m-0 text-sm font-medium text-slate-800 dark:text-slate-100"
             >
-              {{ ticket.title }}
+              <fluent-icon
+                v-if="cardHeadingIcon(ticket)"
+                :icon="cardHeadingIcon(ticket)"
+                size="14"
+                class="flex-shrink-0 text-slate-400 dark:text-slate-500"
+              />
+              <span class="truncate" :title="cardHeading(ticket)">
+                {{ cardHeading(ticket) }}
+              </span>
+            </p>
+            <p
+              v-if="cardSubheading(ticket)"
+              class="flex items-center gap-1 m-0 text-xs font-normal text-slate-500 dark:text-slate-400"
+            >
+              <fluent-icon
+                icon="person"
+                size="12"
+                class="flex-shrink-0 text-slate-400 dark:text-slate-500"
+              />
+              <span class="truncate" :title="cardSubheading(ticket)">
+                {{ cardSubheading(ticket) }}
+              </span>
+            </p>
+            <p
+              v-if="cardTitle(ticket)"
+              class="m-0 mt-1 mb-2 text-xs truncate text-slate-600 dark:text-slate-300"
+              :title="cardTitle(ticket)"
+            >
+              {{ cardTitle(ticket) }}
             </p>
             <div class="flex items-center gap-2 text-xs text-slate-500">
               <span
