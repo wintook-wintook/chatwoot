@@ -729,6 +729,9 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       updated_at:                 ticket.updated_at,
       contact_id:                 ticket.contact_id,
       contact_name:               ticket.contact&.name, # @tickets_cases — nombre del contacto para la ficha
+      # @tickets_cases — organización/empresa del contacto. Encabeza la ficha del tablero
+      # cuando existe; vive en additional_attributes, que puede venir nil.
+      contact_company:            ticket.contact&.additional_attributes&.dig('company_name').presence,
       # @tickets_cases F2 — correo del contacto: el formulario de reunión ofrece
       # "invitar al cliente" solo si existe (ticket interno o contacto sin correo
       # → la casilla se deshabilita con la razón a la vista, no se bloquea el alta).
