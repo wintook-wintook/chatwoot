@@ -354,6 +354,22 @@ export default {
       if (!contactId) return {};
       return this.$store.getters['contacts/getContact'](contactId) || {};
     },
+    // @tickets_cases — nombre y organización para el encabezado. Los campos que
+    // vienen dentro del ticket son una foto del momento en que se cargó el caso,
+    // así que al editar el contacto quedaban viejos. Cuando el store ya tiene el
+    // contacto, manda ese: refleja la edición al instante. Si el store lo tiene,
+    // se le cree por completo — si le borraron la empresa, debe desaparecer, no
+    // reaparecer desde la copia vieja del ticket.
+    contactDisplayName() {
+      const c = this.contactRecord;
+      if (c && c.id) return c.name || '';
+      return this.ticket?.contact_name || '';
+    },
+    contactDisplayCompany() {
+      const c = this.contactRecord;
+      if (c && c.id) return c.additional_attributes?.company_name || '';
+      return this.ticket?.contact_company || '';
+    },
     // @tickets_cases — total de notas del contacto para el badge de la pestaña.
     contactNoteCount() {
       const contactId = this.ticket?.contact_id;
@@ -1440,20 +1456,20 @@ export default {
             <!-- @tickets_cases — manda la organización; el contacto va después
                  y en tono más tenue. Sin organización, solo el contacto. -->
             <button
-              v-if="ticket.contact_company || ticket.contact_name"
+              v-if="contactDisplayCompany || contactDisplayName"
               type="button"
               class="flex items-center min-w-0 gap-1 text-base font-medium cursor-pointer text-slate-600 dark:text-slate-300 hover:text-woot-600 dark:hover:text-woot-400 hover:underline"
               :title="$t('CASE_TICKETS.CONTACT_PANEL.OPEN')"
               @click="openContactPanel"
             >
-              <span v-if="ticket.contact_company" class="truncate">
-                · {{ ticket.contact_company }}
+              <span v-if="contactDisplayCompany" class="truncate">
+                · {{ contactDisplayCompany }}
               </span>
               <span
-                v-if="ticket.contact_name"
+                v-if="contactDisplayName"
                 class="font-normal truncate text-slate-500 dark:text-slate-400"
               >
-                · {{ ticket.contact_name }}
+                · {{ contactDisplayName }}
               </span>
             </button>
           </div>
