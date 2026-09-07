@@ -4,6 +4,12 @@
 class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseController
   before_action :set_source, only: %i[update destroy sync]
 
+  # `directive` solo soporta @buscar_predefinidas SIN argumento (sin GRUPO): se valida
+  # por match exacto, no por include?, para rechazar con 422 en vez de aceptar en
+  # silencio una sintaxis cuyo grupo después se ignoraría. Contrato ya entregado a
+  # Daiko con este alcance — ver artifact "Contrato buscar_predefinidas".
+  SUPPORTED_DIRECTIVE = /\A@buscar_predefinidas\z/i
+
   # GET /api/v1/accounts/:account_id/knowledge_base/items
   def items
     items = current_account.knowledge_items.order(updated_at: :desc)
@@ -14,7 +20,7 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
 
     total = items.count
     page = [params[:page].to_i, 1].max
-    per_page = [[params[:per_page].to_i, 1].max, 100].min
+    per_page = params[:per_page].to_i.clamp(1, 100)
     per_page = 5 if per_page.zero?
 
     render json: {
@@ -30,9 +36,9 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     items = items.where(knowledge_source_id: params[:knowledge_source_id]) if params[:knowledge_source_id].present?
 
     cats = items
-      .pluck(Arel.sql("DISTINCT metadata->>'category', metadata->>'category_name'"))
-      .filter_map { |id, name| { id: id, name: name.presence || id } if id.present? }
-      .sort_by { |c| c[:name] }
+           .pluck(Arel.sql("DISTINCT metadata->>'category', metadata->>'category_name'"))
+           .filter_map { |id, name| { id: id, name: name.presence || id } if id.present? }
+           .sort_by { |c| c[:name] }
 
     render json: { categories: cats }
   end
@@ -111,12 +117,12 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
   def sync
     case @source.source_type
     when 'canned_response'
-      return render_openai_required unless openai_api_key.present?
+      return render_openai_required if openai_api_key.blank?
 
       sync_canned_responses
       render json: { message: 'Sincronización iniciada' }
     when 'article'
-      return render_openai_required unless openai_api_key.present?
+      return render_openai_required if openai_api_key.blank?
 
       # Re-vectoriza todos los artículos del Centro de Ayuda (incluye los aún sin vectorizar).
       sync_articles
@@ -125,14 +131,14 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
       # Discourse se busca en vivo vía el plugin Discourse AI; no hay sync local.
       render json: { message: 'Las fuentes Discourse se consultan en vivo; no requieren sincronización.' }
     when 'google_doc'
-      return render_openai_required unless openai_api_key.present?
-      return render_google_required unless google_integration.present?
+      return render_openai_required if openai_api_key.blank?
+      return render_google_required if google_integration.blank?
 
       enqueue_google_doc_sync(@source)
       render json: { message: 'Sincronización iniciada' }
     when 'google_sheet'
-      return render_openai_required unless openai_api_key.present?
-      return render_google_required unless google_integration.present?
+      return render_openai_required if openai_api_key.blank?
+      return render_google_required if google_integration.blank?
 
       enqueue_google_sheet_sync(@source)
       render json: { message: 'Sincronización iniciada' }
@@ -185,8 +191,8 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     settings = current_account.custom_attributes&.dig('kbase_search') || {}
     render json: {
       similarity_threshold: settings['similarity_threshold'] || KnowledgeBaseResponseService::DEFAULTS['similarity_threshold'],
-      max_results:          (settings['max_results'] || KnowledgeBaseResponseService::DEFAULTS['max_results']).to_i,
-      max_context_chars:    (settings['max_context_chars'] || KnowledgeBaseResponseService::DEFAULTS['max_context_chars']).to_i
+      max_results: (settings['max_results'] || KnowledgeBaseResponseService::DEFAULTS['max_results']).to_i,
+      max_context_chars: (settings['max_context_chars'] || KnowledgeBaseResponseService::DEFAULTS['max_context_chars']).to_i
     }
   end
 
@@ -199,8 +205,8 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     attrs = (current_account.custom_attributes || {}).merge(
       'kbase_search' => {
         'similarity_threshold' => threshold,
-        'max_results'          => max_res,
-        'max_context_chars'    => max_chars
+        'max_results' => max_res,
+        'max_context_chars' => max_chars
       }
     )
     current_account.update!(custom_attributes: attrs)
@@ -233,7 +239,54 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     render json: { results: results }
   end
 
+  # POST /api/v1/accounts/:account_id/knowledge_base/directive
+  # Dispara @buscar_predefinidas sin conversación real (Daiko, n8n, etc.) — ver
+  # KnowledgeBase::DirectiveRunner. `knowledge_base` no está en BOT_ACCESSIBLE_ENDPOINTS,
+  # así que un token de Agent Bot recibe 401 acá (queda para una fase futura).
+  def directive
+    error = directive_validation_error
+    return render json: { error: error[:message] }, status: error[:status] if error
+    return render_openai_required if openai_api_key.blank?
+
+    render json: directive_json(KnowledgeBase::DirectiveRunner.new(directive_context).call)
+  end
+
   private
+
+  def directive_validation_error
+    unless params[:directive].to_s.strip.match?(SUPPORTED_DIRECTIVE)
+      return { message: 'directive debe ser exactamente @buscar_predefinidas', status: :unprocessable_entity }
+    end
+    return { message: 'query requerido', status: :bad_request } if params[:query].to_s.strip.blank?
+
+    nil
+  end
+
+  def directive_context
+    KnowledgeBase::Context.new(
+      account: current_account,
+      query: params[:query].to_s.strip,
+      contact_name: params[:contact_name],
+      max_results: params[:limit],
+      similarity_threshold: params[:threshold],
+      compose: ActiveModel::Type::Boolean.new.cast(params.fetch(:compose, true))
+    )
+  end
+
+  def directive_json(result)
+    payload = {
+      directive: '@buscar_predefinidas',
+      mode: 'canned_response',
+      threshold: result.threshold,
+      items: result.items,
+      reply: result.reply,
+      source: result.source,
+      model: result.model,
+      resolved: result.resolved?
+    }
+    payload[:reason] = result.reason if result.reason.present?
+    payload
+  end
 
   # Fuentes nativas de Chatwoot que no se configuran (a diferencia de Discourse):
   # 'canned_response' (Respuestas predefinidas) y 'article' (Centro de Ayuda).
@@ -294,7 +347,7 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
       return 'Por ahora solo se soportan Google Docs (documentos de texto). Las Hojas de cálculo ' \
              'estarán disponibles próximamente.'
     end
-    return 'Configura la integración de OpenAI en la cuenta para vectorizar esta fuente.' unless openai_api_key.present?
+    return 'Configura la integración de OpenAI en la cuenta para vectorizar esta fuente.' if openai_api_key.blank?
 
     nil
   end
@@ -305,8 +358,8 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     config ||= {}
     raw = config['file_url'].presence || config['file_id'].presence
     {
-      'file_url'       => config['file_url'],
-      'file_id'        => GoogleDocsService.extract_file_id(raw),
+      'file_url' => config['file_url'],
+      'file_id' => GoogleDocsService.extract_file_id(raw),
       'integration_id' => google_integration&.id
     }
   end
@@ -321,7 +374,7 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     url = (config || {})['file_url'].to_s
     return 'Conecta tu cuenta de Google (Calendario) para leer Google Sheets.' unless google_integration
     return 'Pega la URL de una Hoja de cálculo de Google (/spreadsheets/...).' unless url.include?('/spreadsheets/')
-    return 'Configura la integración de OpenAI en la cuenta para usar esta fuente.' unless openai_api_key.present?
+    return 'Configura la integración de OpenAI en la cuenta para usar esta fuente.' if openai_api_key.blank?
 
     nil
   end
@@ -334,13 +387,13 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
     mode = config['sheet_mode'].to_s == 'data' ? 'data' : 'faq'
     live = mode == 'data' && ActiveModel::Type::Boolean.new.cast(config['live'])
     {
-      'file_url'        => config['file_url'],
-      'file_id'         => GoogleDocsService.extract_file_id(raw),
-      'integration_id'  => google_integration&.id,
-      'sheet_mode'      => mode,
-      'sheet_range'     => config['sheet_range'].presence,
-      'live'            => live || false,
-      'live_ttl'        => (config['live_ttl'].presence || 60).to_i
+      'file_url' => config['file_url'],
+      'file_id' => GoogleDocsService.extract_file_id(raw),
+      'integration_id' => google_integration&.id,
+      'sheet_mode' => mode,
+      'sheet_range' => config['sheet_range'].presence,
+      'live' => live || false,
+      'live_ttl' => (config['live_ttl'].presence || 60).to_i
     }
   end
 

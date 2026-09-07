@@ -38,6 +38,15 @@ class KnowledgeBaseResponseService
   GROUP_SIMILARITY_THRESHOLD = 0.45
   MAX_POST_CHARS = 2000
 
+  # Class method (además de la instancia, abajo) para que KnowledgeBase::Context lo
+  # reutilice sin necesitar una instancia de este servicio (no hay @message/@tracking
+  # en un request headless de /knowledge_base/directive).
+  def self.kbase_setting(account, key)
+    overrides = account.custom_attributes&.dig('kbase_search') || {}
+    value     = overrides[key.to_s]
+    value.present? ? value.to_f : DEFAULTS[key.to_s]
+  end
+
   # `branch:` — rama ya decidida por el job (@ruta). Se recibe para no clasificar dos
   # veces y pagar dos llamadas al LLM en el mismo turno. `:auto` = clasificar aquí.
   def initialize(message, tracking: nil, branch: :auto)
@@ -1074,8 +1083,6 @@ class KnowledgeBaseResponseService
   end
 
   def kbase_setting(key)
-    overrides = @account.custom_attributes&.dig('kbase_search') || {}
-    value     = overrides[key.to_s]
-    value.present? ? value.to_f : DEFAULTS[key.to_s]
+    self.class.kbase_setting(@account, key)
   end
 end

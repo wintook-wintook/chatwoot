@@ -126,6 +126,7 @@ Rails.application.routes.draw do
           post   'knowledge_base/discourse_categories', to: 'knowledge_base#discourse_categories'
           get    'knowledge_base/search_settings',  to: 'knowledge_base#search_settings'
           patch  'knowledge_base/search_settings',  to: 'knowledge_base#update_search_settings'
+          post   'knowledge_base/directive',        to: 'knowledge_base#directive'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
           end
