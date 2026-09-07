@@ -9,6 +9,8 @@ import CaseTicketInternalModal from './CaseTicketInternalModal.vue';
 import TicketConversation from '../../components/contacts/CaseTicket/TicketConversation.vue';
 import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
 import TicketNotes from '../../components/contacts/CaseTicket/TicketNotes.vue';
+// @tickets_cases — CRUD nativo de notas del contacto, se reusa tal cual.
+import NotesOnContactPage from '../../modules/notes/NotesOnContactPage.vue';
 import TicketMeetings from '../../components/contacts/CaseTicket/TicketMeetings.vue';
 import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
 import CaseTicketsAPI from 'dashboard/api/caseTickets';
@@ -26,6 +28,7 @@ export default {
     TicketConversation,
     TicketTasks,
     TicketNotes,
+    NotesOnContactPage,
     TicketMeetings,
     MultiselectDropdown,
   },
@@ -298,6 +301,15 @@ export default {
         label: this.$t('CASE_TICKETS.DETAIL_TABS.NOTES'),
         count: this.noteCount,
       });
+      // @tickets_cases — Notas del contacto (CRUD nativo), entre Notas y Tareas.
+      // Solo si el caso tiene contacto: sin él no hay notas que administrar.
+      if (this.ticket?.contact_id) {
+        tabs.push({
+          key: 'contact_notes',
+          label: this.$t('CASE_TICKETS.DETAIL_TABS.CONTACT_NOTES'),
+          count: this.contactNoteCount,
+        });
+      }
       // @tickets_cases P4 — Tareas como pestaña propia, con contador.
       tabs.push({
         key: 'tasks',
@@ -330,6 +342,13 @@ export default {
     // Clave de la pestaña realmente visible (autocorrige si la guardada ya no existe).
     currentTabKey() {
       return this.detailTabs[this.activeDetailTabIndex]?.key || 'detail';
+    },
+    // @tickets_cases — total de notas del contacto para el badge de la pestaña.
+    contactNoteCount() {
+      const contactId = this.ticket?.contact_id;
+      if (!contactId) return 0;
+      return this.$store.getters['contactNotes/getAllNotesByContact'](contactId)
+        .length;
     },
     // @tickets_cases 2G
     isClosed() {
@@ -2534,6 +2553,18 @@ export default {
         @count="noteCount = $event"
         @changed="reloadEvents"
       />
+
+      <!-- ════ Pestaña Notas del Contacto — CRUD nativo de contactos ════ -->
+      <div
+        v-show="currentTabKey === 'contact_notes'"
+        class="flex-1 min-h-0 overflow-y-auto"
+      >
+        <NotesOnContactPage
+          v-if="ticket.contact_id"
+          :key="`contact-notes-${ticket.contact_id}`"
+          :contact-id="ticket.contact_id"
+        />
+      </div>
 
       <!-- ════ Pestaña Tareas (P4) — checklist a ancho completo ════ -->
       <TicketTasks
