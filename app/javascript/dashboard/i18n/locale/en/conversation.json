@@ -88,10 +88,10 @@
     "NO_INBOX_AGENT": "Uh Oh! Looks like you are not part of any inbox. Please contact your administrator",
     "SEARCH_MESSAGES": "Search for messages in conversations",
     "KANBAN": {
-      "TITLE": "Assigned Conversations Types",
-      "SELECTOR": "Select Conversations Type",
-      "NOT_FOUND": "No Conversations types found",
-      "SEARCH": "Search Conversations type..."
+      "TITLE": "Assigned Conversation Board",
+      "SELECTOR": "Select Board",
+      "NOT_FOUND": "No boards found",
+      "SEARCH": "Search board..."
     },
     "EMPTY_STATE": {
       "CMD_BAR": "to open command menu",

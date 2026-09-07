@@ -1,12 +1,12 @@
 {
   "KANBAN": {
-    "HEADER": "Tablero conversación",
+    "HEADER": "Tablero de conversación",
     "DESCRIPTION": "Gestiona tus flujos de trabajo con un sistema tablero visual",
     "LEARN_MORE": "Aprende más",
     "HEADER_BTN_TXT": "Agregar Etapa",
     
     "BOARD": {
-      "TITLE": "Tablero conversación",
+      "TITLE": "Tablero de conversación",
       "SELECT_PROCESS": "Seleccionar tipo de conversación",
       "NO_PROCESSES": "No hay etapas disponibles",
       "NO_TYPE_PROCESSES": "No hay columnas disponibles",

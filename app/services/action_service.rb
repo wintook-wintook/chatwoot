@@ -94,6 +94,34 @@ class ActionService
     end
   end
 
+  # proyecto@automatizaciones: asigna un Tipo de Caso a la conversación. Reutiliza el CaseTicket
+  # ya vinculado a la conversación si existe (evita duplicar casos); si no hay ninguno, crea uno
+  # nuevo con ese tipo. Al asignar 'nil' limpia el tipo del caso vinculado sin borrarlo.
+  def assign_case_type(params)
+    case_type_id = params[0]
+    case_ticket = @conversation.case_tickets.order(created_at: :desc).first
+
+    if case_type_id.to_s == 'nil'
+      case_ticket&.update!(case_type_id: nil)
+      return
+    end
+
+    case_type = @account.case_types.find_by(id: case_type_id)
+    return if case_type.blank?
+
+    if case_ticket.present?
+      case_ticket.update!(case_type_id: case_type.id)
+    else
+      @conversation.case_tickets.create!(
+        account: @account,
+        contact_id: @conversation.contact_id,
+        case_type_id: case_type.id,
+        title: case_type.name,
+        origin: :manual
+      )
+    end
+  end
+
   # proyecto@automatizacion_tracking: crea un ContactTracking para el contacto de la conversación
   # usando los datos de la plantilla seleccionada (objective, ai_context, complementary_prompt, whatsapp_templates).
   # Usa el inbox_id de la plantilla si está definido, o el inbox de la conversación como fallback.

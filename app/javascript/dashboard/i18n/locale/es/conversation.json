@@ -99,10 +99,10 @@
     "NO_INBOX_AGENT": "¡Oh no! Parece que no eres parte de ninguna bandeja de entrada. Por favor contacta a tu administrador",
     "SEARCH_MESSAGES": "Buscar mensajes en conversaciones",
     "KANBAN": {
-      "TITLE": "Tipo de conversación asignado",
-      "SELECTOR": "Seleccionar tipo de conversación",
-      "NOT_FOUND": "No se encontraron tipos de conversación",
-      "SEARCH": "Buscar tipo de conversación..."
+      "TITLE": "Tablero de conversación asignado",
+      "SELECTOR": "Seleccionar tablero",
+      "NOT_FOUND": "No se encontraron tableros",
+      "SEARCH": "Buscar tablero..."
 
     },
     "EMPTY_STATE": {

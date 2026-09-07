@@ -439,7 +439,7 @@ import {
 } from 'dashboard/helper/caseSimpleStatus'; // modo simple/ITIL
 
 const QUICK_FILTERS = [
-  { key: 'mine', label: 'Mis Tickets' },
+  { key: 'mine', label: 'Mis Casos' },
   { key: 'unassigned', label: 'Sin Asignar' },
   { key: 'all', label: 'Todos' },
   { key: 'sla_overdue', label: 'SLA vencidos' },
@@ -551,7 +551,7 @@ export default {
       meta: 'caseTickets/getTicketsMeta',
       uiFlags: 'caseTickets/getUIFlags',
       types: 'caseTickets/getTypes',
-      currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
+      currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Casos"
       currentRole: 'getCurrentRole', // @tickets_cases F4 — quien puede sobreescribir una vista
       itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
       agents: 'agents/getAgents', // @tickets_cases P3 — nombre del asignado + lote

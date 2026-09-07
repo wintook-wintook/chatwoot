@@ -121,7 +121,7 @@ export const AUTOMATIONS = {
       // proyecto@automatizaciones: acción para asignar tipo de oportunidad (KanbanTypeProcess) a la conversación
       {
         key: 'assign_kanban_type_process',
-        name: 'Asignar tipo de oportunidad',
+        name: 'Asignar tablero de conversación',
         attributeI18nKey: 'ASSIGN_KANBAN_TYPE_PROCESS',
       },
     ],
@@ -258,7 +258,7 @@ export const AUTOMATIONS = {
       // proyecto@automatizaciones: acción para asignar tipo de oportunidad (KanbanTypeProcess) a la conversación
       {
         key: 'assign_kanban_type_process',
-        name: 'Asignar tipo de oportunidad',
+        name: 'Asignar tablero de conversación',
         attributeI18nKey: 'ASSIGN_KANBAN_TYPE_PROCESS',
       },
     ],
@@ -409,7 +409,7 @@ export const AUTOMATIONS = {
       // proyecto@automatizaciones: acción para asignar tipo de oportunidad (KanbanTypeProcess) a la conversación
       {
         key: 'assign_kanban_type_process',
-        name: 'Asignar tipo de oportunidad',
+        name: 'Asignar tablero de conversación',
         attributeI18nKey: 'ASSIGN_KANBAN_TYPE_PROCESS',
       },
     ],
@@ -548,7 +548,7 @@ export const AUTOMATIONS = {
       // proyecto@automatizaciones: acción para asignar tipo de oportunidad (KanbanTypeProcess) a la conversación
       {
         key: 'assign_kanban_type_process',
-        name: 'Asignar tipo de oportunidad',
+        name: 'Asignar tablero de conversación',
         attributeI18nKey: 'ASSIGN_KANBAN_TYPE_PROCESS',
       },
     ],
@@ -654,7 +654,13 @@ export const AUTOMATION_ACTION_TYPES = [
   // proyecto@automatizaciones: registro del tipo de acción global; inputType search_select muestra dropdown con opción None
   {
     key: 'assign_kanban_type_process',
-    label: 'Asignar tipo de oportunidad',
+    label: 'Asignar tablero de conversación',
+    inputType: 'search_select',
+  },
+  // proyecto@automatizaciones: asigna un Tipo de Caso a la conversación (crea o reutiliza el caso vinculado)
+  {
+    key: 'assign_case_type',
+    label: 'Asignar Caso',
     inputType: 'search_select',
   },
   // proyecto@automatizacion_tracking: muestra dropdown de Agentes IA filtrados por inbox de las condiciones

@@ -34,6 +34,8 @@ export function useAutomation() {
   const slaPolicies = useMapGetter('sla/getSLA');
   // proyecto@automatizaciones: obtiene los tipos de oportunidad del store para la acción assign_kanban_type_process
   const kanbanTypeProcesses = useMapGetter('kanbanTypeProcesses/getKanbanTypeProcesses');
+  // proyecto@automatizaciones: obtiene los tipos de caso del store para la acción assign_case_type
+  const caseTypes = useMapGetter('caseTickets/getTypes');
   // proyecto@automatizacion_tracking: obtiene todas las plantillas de seguimiento del store
   const trackingTemplates = useMapGetter('trackingTemplates/getTemplates');
 
@@ -47,6 +49,13 @@ export function useAutomation() {
     (kanbanTypeProcesses.value || []).map(ktp => ({
       id: ktp.id,
       name: ktp.process_name,
+    }))
+  );
+
+  const caseTypeOptions = computed(() =>
+    (caseTypes.value || []).map(ct => ({
+      id: ct.id,
+      name: ct.name,
     }))
   );
 
@@ -239,6 +248,7 @@ export function useAutomation() {
       teams: teams.value,
       slaPolicies: slaPolicies.value,
       kanbanTypeProcesses: kanbanTypeProcessOptions.value, // proyecto@automatizaciones
+      caseTypes: caseTypeOptions.value, // proyecto@automatizaciones
       trackingTemplates: trackingTemplateOptions, // proyecto@automatizacion_tracking
       languages,
       type,
