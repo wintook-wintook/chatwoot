@@ -705,6 +705,7 @@
       "CURRENTLY": "Actualmente",
       "RETURNED": "Volvió",
       "REASON": "Motivo",
+      "LEVEL_SUFFIX": "· N{level}",
       "VIEWS": {
         "diagram": "Recorrido",
         "timeline": "Historial",

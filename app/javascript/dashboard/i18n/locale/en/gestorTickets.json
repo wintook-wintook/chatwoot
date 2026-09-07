@@ -702,6 +702,7 @@
       "CURRENTLY": "Currently",
       "RETURNED": "Returned",
       "REASON": "Reason",
+      "LEVEL_SUFFIX": "· N{level}",
       "VIEWS": {
         "diagram": "Journey",
         "timeline": "History",
