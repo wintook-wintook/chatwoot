@@ -302,6 +302,7 @@
     "ONGOING": "Webpage campaigns",
     "ONE_OFF": "SMS campaigns",
     "REPORTS_SLA": "SLA",
+    "REPORTS_OPPORTUNITY": "Opportunities",
     "REPORTS_BOT": "Bot",
     "REPORTS_AGENT": "Agents",
     "REPORTS_LABEL": "Labels",

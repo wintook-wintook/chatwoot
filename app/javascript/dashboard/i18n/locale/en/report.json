@@ -560,5 +560,75 @@
       },
       "VIEW_DETAILS": "View Details"
     }
+  },
+  "OPPORTUNITY_REPORTS": {
+    "HEADER": "Opportunity Reports",
+    "FILTERS": {
+      "ALL_CASE_TYPES": "All case types",
+      "ALL_ASSIGNEES": "All salespeople",
+      "ALL_TEAMS": "All teams",
+      "DATE_RANGE": "Date range"
+    },
+    "FUNNEL": {
+      "TITLE": "Opportunity funnel",
+      "LOADING": "Loading funnel...",
+      "EMPTY": "No opportunities in this period.",
+      "UNASSIGNED_COLUMN": "No column",
+      "STATUS_FALLBACK_NOTICE": "Pick a case type to see the funnel by Kanban column. Without one it groups by overall status instead."
+    },
+    "OUTCOME": {
+      "TITLE": "Won / lost",
+      "LOADING": "Loading outcomes...",
+      "EMPTY": "No closed opportunities in this period.",
+      "CONVERSION_RATE": "Conversion rate",
+      "OPEN": "Open",
+      "WON": "Won",
+      "LOST": "Lost",
+      "OTHER_CLOSED": "Other closure"
+    },
+    "TIMESERIES": {
+      "TITLE": "New vs. closed",
+      "LOADING": "Loading timeseries...",
+      "EMPTY": "No data in this period.",
+      "CREATED": "Created",
+      "CLOSED": "Closed",
+      "GROUP_BY": {
+        "DAY": "Day",
+        "WEEK": "Week",
+        "MONTH": "Month"
+      }
+    },
+    "ASSIGNEES": {
+      "TITLE": "Salesperson ranking",
+      "LOADING": "Loading ranking...",
+      "EMPTY": "No opportunities in this period.",
+      "UNASSIGNED": "Unassigned",
+      "HEADER": {
+        "ASSIGNEE": "Salesperson",
+        "OPEN": "Open",
+        "WON": "Won",
+        "LOST": "Lost",
+        "CONVERSION_RATE": "Conversion",
+        "AVG_CLOSE_DAYS": "Avg. days to close"
+      }
+    },
+    "VELOCITY": {
+      "TITLE": "Velocity by stage",
+      "LOADING": "Loading velocity...",
+      "EMPTY": "No completed transitions in this period yet."
+    },
+    "STALLED": {
+      "TITLE": "Stalled opportunities",
+      "LOADING": "Loading stalled...",
+      "EMPTY": "No stalled opportunities at this threshold.",
+      "THRESHOLD_OPTION": "Over {days} days",
+      "HEADER": {
+        "FOLIO": "Folio",
+        "TITLE": "Title",
+        "STATUS": "Status",
+        "ASSIGNEE": "Salesperson",
+        "STALLED_DAYS": "Days stalled"
+      }
+    }
   }
 }

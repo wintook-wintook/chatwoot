@@ -665,6 +665,17 @@ Rails.application.routes.draw do
               get :bot_metrics
             end
           end
+          # proyecto@metricas_casos — Informes de Casos (seguimiento de oportunidades)
+          resources :case_reports, only: [] do
+            collection do
+              get :funnel
+              get :outcome
+              get :timeseries
+              get :assignees
+              get :velocity
+              get :stalled
+            end
+          end
         end
       end
     end
