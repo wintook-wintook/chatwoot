@@ -198,6 +198,9 @@
     "VIEW_TIMELINE": "Ver historial",
     "CHANGE_STATUS": "Cambiar estado",
     "SLA_OVERDUE": "SLA vencido",
+    "CONTACT_PANEL": {
+      "OPEN": "Ver ficha del contacto"
+    },
     "DETAIL_TABS": {
       "SUMMARY": "Resumen",
       "CONVERSATION": "Conversación",

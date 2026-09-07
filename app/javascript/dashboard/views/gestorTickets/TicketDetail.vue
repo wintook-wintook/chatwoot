@@ -11,6 +11,8 @@ import TicketTasks from '../../components/contacts/CaseTicket/TicketTasks.vue';
 import TicketNotes from '../../components/contacts/CaseTicket/TicketNotes.vue';
 // @tickets_cases — CRUD nativo de notas del contacto, se reusa tal cual.
 import NotesOnContactPage from '../../modules/notes/NotesOnContactPage.vue';
+// @tickets_cases — ficha del contacto, la misma que usa la pagina de Contactos.
+import ContactInfoPanel from 'dashboard/routes/dashboard/contacts/components/ContactInfoPanel.vue';
 import TicketMeetings from '../../components/contacts/CaseTicket/TicketMeetings.vue';
 import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
 import CaseTicketsAPI from 'dashboard/api/caseTickets';
@@ -29,6 +31,7 @@ export default {
     TicketTasks,
     TicketNotes,
     NotesOnContactPage,
+    ContactInfoPanel,
     TicketMeetings,
     MultiselectDropdown,
   },
@@ -55,6 +58,7 @@ export default {
       dueDraft: '', // valor del input datetime-local
       taskCount: 0, // @tickets_cases P4 — total de tareas (badge del tab)
       noteCount: 0, // @tickets_cases — total de notas internas (badge del tab)
+      showContactPanel: false, // @tickets_cases — ficha del contacto abierta
       meetingCount: 0, // @tickets_cases F2 — total de reuniones (badge del tab)
       showEscalateModal: false,
       escalateForm: { team_id: '', reason: '' },
@@ -343,6 +347,29 @@ export default {
     currentTabKey() {
       return this.detailTabs[this.activeDetailTabIndex]?.key || 'detail';
     },
+    // @tickets_cases — el contacto completo para la ficha lateral. Lo sirve el
+    // store de contactos; se carga al abrir el panel, no antes.
+    contactRecord() {
+      const contactId = this.ticket?.contact_id;
+      if (!contactId) return {};
+      return this.$store.getters['contacts/getContact'](contactId) || {};
+    },
+    // @tickets_cases — nombre y organización para el encabezado. Los campos que
+    // vienen dentro del ticket son una foto del momento en que se cargó el caso,
+    // así que al editar el contacto quedaban viejos. Cuando el store ya tiene el
+    // contacto, manda ese: refleja la edición al instante. Si el store lo tiene,
+    // se le cree por completo — si le borraron la empresa, debe desaparecer, no
+    // reaparecer desde la copia vieja del ticket.
+    contactDisplayName() {
+      const c = this.contactRecord;
+      if (c && c.id) return c.name || '';
+      return this.ticket?.contact_name || '';
+    },
+    contactDisplayCompany() {
+      const c = this.contactRecord;
+      if (c && c.id) return c.additional_attributes?.company_name || '';
+      return this.ticket?.contact_company || '';
+    },
     // @tickets_cases — total de notas del contacto para el badge de la pestaña.
     contactNoteCount() {
       const contactId = this.ticket?.contact_id;
@@ -496,6 +523,17 @@ export default {
     this.releaseLock();
   },
   methods: {
+    // @tickets_cases — abre la ficha del contacto. Pide el contacto completo al
+    // backend: el ticket solo trae nombre y correo, no el resto de sus datos.
+    openContactPanel() {
+      const id = this.ticket?.contact_id;
+      if (!id) return;
+      this.$store.dispatch('contacts/show', { id });
+      this.showContactPanel = true;
+    },
+    closeContactPanel() {
+      this.showContactPanel = false;
+    },
     // @tickets_cases — toma el bloqueo del ticket al abrir; si lo tiene otro, no
     // lo toma (el banner avisará). Refresca el ticket para reflejar el estado.
     async acquireLock() {
@@ -1389,7 +1427,7 @@ export default {
 
 <template>
   <div
-    class="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900"
+    class="relative flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900"
   >
     <!-- Header -->
     <div
@@ -1415,11 +1453,25 @@ export default {
               class="font-mono text-lg font-bold leading-none tracking-wider text-woot-600 dark:text-woot-300 flex-shrink-0"
               >#{{ ticket.folio }}</span
             >
-            <span
-              v-if="ticket.contact_name"
-              class="text-base font-medium truncate text-slate-600 dark:text-slate-300"
-              >· {{ ticket.contact_name }}</span
+            <!-- @tickets_cases — manda la organización; el contacto va después
+                 y en tono más tenue. Sin organización, solo el contacto. -->
+            <button
+              v-if="contactDisplayCompany || contactDisplayName"
+              type="button"
+              class="flex items-center min-w-0 gap-1 text-base font-medium cursor-pointer text-slate-600 dark:text-slate-300 hover:text-woot-600 dark:hover:text-woot-400 hover:underline"
+              :title="$t('CASE_TICKETS.CONTACT_PANEL.OPEN')"
+              @click="openContactPanel"
             >
+              <span v-if="contactDisplayCompany" class="truncate">
+                · {{ contactDisplayCompany }}
+              </span>
+              <span
+                v-if="contactDisplayName"
+                class="font-normal truncate text-slate-500 dark:text-slate-400"
+              >
+                · {{ contactDisplayName }}
+              </span>
+            </button>
           </div>
           <!-- @tickets_cases — cada badge lleva su etiqueta (Tipo/Estado/Prioridad/
                SLA/Nivel) para que se entienda qué representa cada valor. -->
@@ -3354,5 +3406,47 @@ export default {
         </form>
       </div>
     </woot-modal>
+
+    <!-- ════ Ficha del contacto — cajón deslizante sobre el detalle ════
+         ContactInfoPanel es el mismo panel de la página de Contactos: su raíz
+         mide w-1/4, que aquí resuelve contra el área invisible (todo el
+         detalle), así que ocupa el mismo cuarto de pantalla que en la
+         conversación. El fondo no se atenúa: el caso se sigue viendo tal cual y
+         la ficha se separa por su sombra. El área sigue capturando el clic
+         fuera del panel para cerrarlo. -->
+    <transition name="contact-panel">
+      <div
+        v-if="showContactPanel && ticket.contact_id"
+        class="absolute inset-0 z-30 flex justify-end"
+        @click.self="closeContactPanel"
+      >
+        <ContactInfoPanel
+          class="case-contact-panel shadow-2xl"
+          :contact="contactRecord"
+          :on-close="closeContactPanel"
+          @panelClose="closeContactPanel"
+        />
+      </div>
+    </transition>
   </div>
 </template>
+
+<style scoped>
+/* La ficha entra deslizándose desde la derecha; el fondo no se atenúa. */
+.contact-panel-enter-active,
+.contact-panel-leave-active {
+  transition: opacity 0.2s ease;
+}
+.contact-panel-enter-from,
+.contact-panel-leave-to {
+  opacity: 0;
+}
+.contact-panel-enter-active :deep(.case-contact-panel),
+.contact-panel-leave-active :deep(.case-contact-panel) {
+  transition: transform 0.2s ease;
+}
+.contact-panel-enter-from :deep(.case-contact-panel),
+.contact-panel-leave-to :deep(.case-contact-panel) {
+  transform: translateX(100%);
+}
+</style>

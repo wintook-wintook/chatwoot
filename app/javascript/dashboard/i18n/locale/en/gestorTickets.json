@@ -195,6 +195,9 @@
     "VIEW_TIMELINE": "View history",
     "CHANGE_STATUS": "Change status",
     "SLA_OVERDUE": "SLA overdue",
+    "CONTACT_PANEL": {
+      "OPEN": "View contact details"
+    },
     "DETAIL_TABS": {
       "SUMMARY": "Summary",
       "CONVERSATION": "Conversation",
