@@ -1437,14 +1437,24 @@ export default {
               class="font-mono text-lg font-bold leading-none tracking-wider text-woot-600 dark:text-woot-300 flex-shrink-0"
               >#{{ ticket.folio }}</span
             >
+            <!-- @tickets_cases — manda la organización; el contacto va después
+                 y en tono más tenue. Sin organización, solo el contacto. -->
             <button
-              v-if="ticket.contact_name"
+              v-if="ticket.contact_company || ticket.contact_name"
               type="button"
-              class="text-base font-medium truncate cursor-pointer text-slate-600 dark:text-slate-300 hover:text-woot-600 dark:hover:text-woot-400 hover:underline"
+              class="flex items-center min-w-0 gap-1 text-base font-medium cursor-pointer text-slate-600 dark:text-slate-300 hover:text-woot-600 dark:hover:text-woot-400 hover:underline"
               :title="$t('CASE_TICKETS.CONTACT_PANEL.OPEN')"
               @click="openContactPanel"
             >
-              · {{ ticket.contact_name }}
+              <span v-if="ticket.contact_company" class="truncate">
+                · {{ ticket.contact_company }}
+              </span>
+              <span
+                v-if="ticket.contact_name"
+                class="font-normal truncate text-slate-500 dark:text-slate-400"
+              >
+                · {{ ticket.contact_name }}
+              </span>
             </button>
           </div>
           <!-- @tickets_cases — cada badge lleva su etiqueta (Tipo/Estado/Prioridad/
@@ -3383,16 +3393,19 @@ export default {
 
     <!-- ════ Ficha del contacto — cajón deslizante sobre el detalle ════
          ContactInfoPanel es el mismo panel de la página de Contactos: su raíz
-         mide w-1/4, que aquí resuelve contra el velo (todo el detalle), así que
-         ocupa el mismo cuarto de pantalla que en la conversación. -->
+         mide w-1/4, que aquí resuelve contra el área invisible (todo el
+         detalle), así que ocupa el mismo cuarto de pantalla que en la
+         conversación. El fondo no se atenúa: el caso se sigue viendo tal cual y
+         la ficha se separa por su sombra. El área sigue capturando el clic
+         fuera del panel para cerrarlo. -->
     <transition name="contact-panel">
       <div
         v-if="showContactPanel && ticket.contact_id"
-        class="absolute inset-0 z-30 flex justify-end bg-slate-900/20"
+        class="absolute inset-0 z-30 flex justify-end"
         @click.self="closeContactPanel"
       >
         <ContactInfoPanel
-          class="case-contact-panel"
+          class="case-contact-panel shadow-2xl"
           :contact="contactRecord"
           :on-close="closeContactPanel"
           @panelClose="closeContactPanel"
@@ -3403,7 +3416,7 @@ export default {
 </template>
 
 <style scoped>
-/* El velo atenúa el fondo y la ficha entra deslizándose desde la derecha. */
+/* La ficha entra deslizándose desde la derecha; el fondo no se atenúa. */
 .contact-panel-enter-active,
 .contact-panel-leave-active {
   transition: opacity 0.2s ease;
