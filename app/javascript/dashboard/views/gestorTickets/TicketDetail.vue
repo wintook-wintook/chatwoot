@@ -71,6 +71,9 @@ export default {
       // @tickets_cases — motivo opcional al cambiar de estado (osTicket)
       showReasonModal: false,
       pendingStatus: null,
+      // @tickets_cases — columna del tipo elegida en el dropdown de estado (modo
+      // simple); tras confirmar la transición, fija el puntero a esa columna.
+      pendingColumnId: null,
       // @tickets_cases F5 (§11.2) — reuniones futuras del ticket al cambiar de
       // estado. El default de la casilla lo dicta el estado destino: `resolved` y
       // `validating` NO son terminales (la cita puede ser justo la de validación),
@@ -414,11 +417,65 @@ export default {
     isTransitioning() {
       return this.uiFlags.isTransitioning;
     },
+    // @tickets_cases — columnas configuradas del tipo del ticket (Opción A+).
+    typeColumns() {
+      return this.ticket?.case_type?.columns || [];
+    },
+    // Opciones que ofrece el dropdown "Cambiar estado": { status, columnId, label }.
+    // - Modo ITIL: los 13 estados tal cual, uno a uno (can_transition_to).
+    // - Modo simple: como una columna del tipo puede agrupar VARIOS estados
+    //   ITIL (ej. "En proceso" = classified+assigned+in_diagnosis+in_progress+
+    //   escalated), y el backend solo permite saltos de un paso, hay que
+    //   ofrecer DOS clases de opción para no dejar destinos inalcanzables:
+    //   (a) avanzar a otro estado que sigue dentro de la MISMA etapa actual
+    //       (o que ninguna columna cubre) — se muestra el estado puntual;
+    //   (b) saltar a OTRA etapa — una sola opción por columna destino, con el
+    //       primer estado de esa columna que sea alcanzable (mismo criterio
+    //       que ya usa el Kanban en move_across_state).
+    //   Si el tipo no tiene columnas (ticket sin tipo), cae al filtro viejo.
     validTransitions() {
       const all = this.ticket?.can_transition_to || [];
-      // Modo simple (osTicket): solo se ofrecen los estados destino simples.
-      if (this.itilEnabled) return all;
-      return all.filter(s => SIMPLE_TRANSITION_TARGETS.includes(s));
+      if (this.itilEnabled) {
+        return all.map(status => ({
+          status,
+          columnId: null,
+          label: this.statusLabel(status),
+        }));
+      }
+      const currentStatus = this.ticket?.status;
+      const columns = this.typeColumns;
+      if (!columns.length) {
+        return all
+          .filter(s => SIMPLE_TRANSITION_TARGETS.includes(s))
+          .map(status => ({
+            status,
+            columnId: null,
+            label: this.statusLabel(status),
+          }));
+      }
+      const columnOf = status =>
+        columns.find(c => (c.statuses || []).includes(status));
+      const currentColumn = columnOf(currentStatus);
+      const options = [];
+      all.forEach(status => {
+        const col = columnOf(status);
+        if (!col || (currentColumn && col.id === currentColumn.id)) {
+          options.push({
+            status,
+            columnId: col ? col.id : null,
+            label: this.statusLabel(status),
+          });
+        }
+      });
+      columns
+        .filter(c => !currentColumn || c.id !== currentColumn.id)
+        .forEach(c => {
+          const target = (c.statuses || []).find(s => all.includes(s));
+          if (target) {
+            options.push({ status: target, columnId: c.id, label: c.label });
+          }
+        });
+      return options;
     },
     // @tickets_cases 2D — nivel y disponibilidad de escalamiento.
     escalationLabel() {
@@ -578,6 +635,12 @@ export default {
       this.showPriorityMenu = false;
       this.showDueMenu = false;
       this.showTransitionMenu = false;
+    },
+    // @tickets_cases — entrada del dropdown de estado: recuerda a qué columna
+    // del tipo apunta la opción elegida (si aplica) y dispara la transición.
+    selectTransition(opt) {
+      this.pendingColumnId = opt.columnId || null;
+      this.transitionTo(opt.status);
     },
     async transitionTo(status) {
       this.showTransitionMenu = false;
@@ -892,6 +955,8 @@ export default {
       return this.$t(`CASE_TICKETS.KB.STATUS.${status}`) || status;
     },
     async runTransition(status, extra = {}) {
+      const columnId = this.pendingColumnId;
+      this.pendingColumnId = null;
       try {
         await this.$store.dispatch('caseTickets/transitionTicket', {
           ticketId: this.ticketId,
@@ -899,6 +964,24 @@ export default {
           status,
           ...extra,
         });
+        // Tras transitar, transition! ya corrió resync_type_column (el puntero
+        // se limpia si la columna anterior no cubre el nuevo estado). Si la
+        // opción elegida venía de una columna del tipo y esa columna SÍ cubre
+        // el estado alcanzado, fijamos el puntero — solo mueve el puntero
+        // (move_within_state en el backend), nunca dispara otra transición.
+        const column =
+          columnId && this.typeColumns.find(c => c.id === columnId);
+        if (column && (column.statuses || []).includes(status)) {
+          try {
+            await this.$store.dispatch('caseTickets/moveTicketColumn', {
+              ticketId: this.ticketId,
+              caseTypeColumnId: columnId,
+            });
+          } catch (e) {
+            // No bloqueante: el estado ya cambió; el tablero cae al fallback
+            // por status si el puntero no queda fijado.
+          }
+        }
         this.refetch();
       } catch (e) {
         this.$emitter.emit('newToastMessage', {
@@ -1723,12 +1806,12 @@ export default {
               class="absolute right-0 z-50 py-1 mt-1 list-none bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[180px]"
             >
               <li
-                v-for="s in validTransitions"
-                :key="s"
+                v-for="opt in validTransitions"
+                :key="opt.status"
                 class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                @click="transitionTo(s)"
+                @click="selectTransition(opt)"
               >
-                {{ statusLabel(s) }}
+                {{ opt.label }}
               </li>
               <li
                 v-if="!validTransitions.length"
