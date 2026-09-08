@@ -33,15 +33,15 @@ class Cases::OrchestratorService
     return ticket if ticket
 
     ticket = CaseTicket.create!(
-      account:          @account,
-      contact:          @contact,
-      conversation:     @conversation,
+      account: @account,
+      contact: @contact,
+      conversation: @conversation,
       contact_tracking: tracking,
-      case_type:        default_case_type,
-      origin:           infer_origin(message),
-      priority:         :medium,
-      assignee_type:    :bot,
-      title:            title_from_message(message)
+      case_type: default_case_type,
+      origin: infer_origin(message),
+      priority: :medium,
+      assignee_type: :bot,
+      title: title_from_message(message)
     )
     enqueue_ai_classification(ticket) # @tickets_cases 3B
     ticket
@@ -57,16 +57,20 @@ class Cases::OrchestratorService
     team     = @account.teams.find_by(id: team_id)     if team_id.present?
 
     attrs = {
-      account:       @account,
-      contact:       @contact,
-      conversation:  @conversation,
-      case_type:     resolve_case_type(case_type_id),
-      origin:        :manual,
-      assignee:      assignee,
-      team:          team,
-      assignee_type: assignee ? :agent : (team ? :team : :bot),
-      title:         title,
-      description:   description,
+      account: @account,
+      contact: @contact,
+      conversation: @conversation,
+      case_type: resolve_case_type(case_type_id),
+      origin: :manual,
+      assignee: assignee,
+      team: team,
+      assignee_type: if assignee
+                       :agent
+                     else
+                       (team ? :team : :bot)
+                     end,
+      title: title,
+      description: description,
       # @tickets_cases 2K — valores de los campos personalizados del tipo de caso.
       custom_attributes: custom_attributes || {}
     }
@@ -78,7 +82,7 @@ class Cases::OrchestratorService
     attrs[:urgency]     = urgency     if urgency.present?
     # Resueltos dentro del scope de la cuenta (evita vincular registros de otra cuenta).
     attrs[:affected_service_id] = @account.case_services.where(id: affected_service_id).pick(:id) if affected_service_id.present?
-    attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id)        if category_id.present?
+    attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id) if category_id.present?
 
     ticket = CaseTicket.create!(attrs)
     # Asignación manual presente → las reglas no reasignan (sí enriquecen lo demás).
@@ -87,19 +91,48 @@ class Cases::OrchestratorService
     ticket
   end
 
+  # @tickets_cases — punto de entrada para la Automatización nativa de Chatwoot
+  # (dispara sobre una Conversation, sin un mensaje puntual garantizado — a
+  # diferencia de find_or_create_from_message). Mismo criterio anti-duplicado
+  # que el resto del módulo (find_active_ticket, por contacto): si ya hay un
+  # caso activo, lo reusa y vincula esta conversación si no tenía otra.
+  #   - título/descripción/clasificación: intake IA sobre la conversación si
+  #     la cuenta la tiene activa; si no, el mismo fallback de siempre (último
+  #     mensaje entrante truncado).
+  #   - tipo de caso: el que fije la regla (case_type_id) SIEMPRE gana sobre
+  #     lo que sugiera la IA — es una elección explícita del admin.
+  #   - servicio/categoría/prioridad: los sugiere la IA si está disponible; si
+  #     no, quedan sin fijar para que el agente los complete después (la
+  #     prioridad cae al default del modelo o a la matriz ITIL si hay impacto/
+  #     urgencia).
+  #   - asignación: SIEMPRE vía Cases::RuleEngineService, nunca hardcodeada
+  #     acá, igual que el resto de las vías de alta.
+  def create_from_automation(case_type_id: nil)
+    ticket = find_active_ticket
+    if ticket
+      ticket.update!(conversation: @conversation) if ticket.conversation_id.nil? && @conversation.present?
+      return ticket
+    end
+
+    ticket = CaseTicket.create!(automation_ticket_attrs(case_type_id))
+    Cases::RuleEngineService.new(ticket).evaluate!
+    enqueue_ai_classification(ticket)
+    ticket
+  end
+
   # @tickets_cases — User Portal (P1): ticket abierto por el cliente desde el portal.
   # origin: web. La asignación la deciden las reglas (rutea por tipo). El folio se
   # genera en before_create del modelo. La conversación ya viene resuelta por el caller.
   def create_from_portal(title:, case_type_id: nil, description: nil, priority: nil, custom_attributes: {})
     attrs = {
-      account:       @account,
-      contact:       @contact,
-      conversation:  @conversation,
-      case_type:     resolve_case_type(case_type_id),
-      origin:        :web,
+      account: @account,
+      contact: @contact,
+      conversation: @conversation,
+      case_type: resolve_case_type(case_type_id),
+      origin: :web,
       assignee_type: :bot,
-      title:         title,
-      description:   description,
+      title: title,
+      description: description,
       custom_attributes: custom_attributes || {}
     }
     attrs[:priority] = priority if priority.present?
@@ -117,16 +150,20 @@ class Cases::OrchestratorService
                       description: nil, ticket_kind: nil, impact: nil, urgency: nil,
                       affected_service_id: nil, category_id: nil, custom_attributes: {})
     attrs = {
-      account:       @account,
-      contact:       nil,
-      requester:     requester,
-      case_type:     resolve_case_type(case_type_id),
-      origin:        :internal,
-      assignee:      assignee,
-      team:          team,
-      assignee_type: assignee ? :agent : (team ? :team : :bot),
-      title:         title,
-      description:   description,
+      account: @account,
+      contact: nil,
+      requester: requester,
+      case_type: resolve_case_type(case_type_id),
+      origin: :internal,
+      assignee: assignee,
+      team: team,
+      assignee_type: if assignee
+                       :agent
+                     else
+                       (team ? :team : :bot)
+                     end,
+      title: title,
+      description: description,
       custom_attributes: custom_attributes || {}
     }
     # priority: si viene vacío y hay impacto+urgencia, lo deriva la matriz ITIL;
@@ -137,7 +174,7 @@ class Cases::OrchestratorService
     attrs[:urgency]     = urgency     if urgency.present?
     # Resueltos dentro del scope de la cuenta (evita vincular registros de otra cuenta).
     attrs[:affected_service_id] = @account.case_services.where(id: affected_service_id).pick(:id) if affected_service_id.present?
-    attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id)        if category_id.present?
+    attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id) if category_id.present?
 
     ticket = CaseTicket.create!(attrs)
     # Asignación manual presente (agente/equipo) → las reglas no reasignan.
@@ -151,20 +188,20 @@ class Cases::OrchestratorService
   # lo que el intake ya decidió). `force_priority` hace que la prioridad dada gane
   # sobre la matriz ITIL (directiva o ajuste por riesgo). El ruteo por reglas lo
   # dispara el caller (TicketCreatorService), igual que en el flujo automático.
-  def create_from_ai(message:, tracking: nil, title:, description: nil, priority: nil,
+  def create_from_ai(message:, title:, tracking: nil, description: nil, priority: nil,
                      case_type_id: nil, ticket_kind: nil, impact: nil, urgency: nil,
                      affected_service_id: nil, category_id: nil,
                      custom_attributes: {}, force_priority: false)
     attrs = {
-      account:           @account,
-      contact:           @contact,
-      conversation:      @conversation,
-      contact_tracking:  tracking,
-      case_type:         resolve_case_type(case_type_id),
-      origin:            infer_origin(message),
-      assignee_type:     :bot,
-      title:             title.to_s.strip.presence || title_from_message(message),
-      description:       description,
+      account: @account,
+      contact: @contact,
+      conversation: @conversation,
+      contact_tracking: tracking,
+      case_type: resolve_case_type(case_type_id),
+      origin: infer_origin(message),
+      assignee_type: :bot,
+      title: title.to_s.strip.presence || title_from_message(message),
+      description: description,
       custom_attributes: custom_attributes || {}
     }
     attrs[:priority]    = priority    if priority.present?
@@ -172,7 +209,7 @@ class Cases::OrchestratorService
     attrs[:impact]      = impact      if impact.present?
     attrs[:urgency]     = urgency     if urgency.present?
     attrs[:affected_service_id] = @account.case_services.where(id: affected_service_id).pick(:id) if affected_service_id.present?
-    attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id)        if category_id.present?
+    attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id) if category_id.present?
 
     ticket = CaseTicket.new(attrs)
     ticket.skip_priority_derivation = true if force_priority && priority.present?
@@ -215,5 +252,67 @@ class Cases::OrchestratorService
 
   def title_from_message(message)
     message.content.to_s.strip.truncate(100).presence || 'Consulta sin título'
+  end
+
+  # Atributos del ticket creado desde Automatización: título/descripción/
+  # clasificación de la IA si está disponible, con el fallback de siempre si no.
+  # Los campos con enum/FK NOT NULL (ticket_kind, impact, urgency, servicio,
+  # categoría) solo se incluyen si la IA los sugirió — pasar `nil` explícito
+  # pisaría el default de la columna y rompería la inserción; sin IA, quedan
+  # sin fijar para que el agente los complete después.
+  def automation_ticket_attrs(case_type_id)
+    message = representative_message
+    fields  = ai_intake_fields
+    title   = fields&.dig('title').presence || (message ? title_from_message(message) : 'Caso generado por automatización')
+    origin  = message ? infer_origin(message) : :bot
+
+    attrs = {
+      account: @account,
+      contact: @contact,
+      conversation: @conversation,
+      case_type: resolve_case_type(case_type_id || fields&.dig('case_type_id')),
+      origin: origin,
+      assignee_type: :bot,
+      title: title,
+      description: fields&.dig('description')
+    }
+    return attrs if fields.blank?
+
+    attrs[:ticket_kind] = fields['ticket_kind'] if fields['ticket_kind'].present?
+    attrs[:impact]      = fields['impact']      if fields['impact'].present?
+    attrs[:urgency]     = fields['urgency']     if fields['urgency'].present?
+    attrs[:affected_service_id] = @account.case_services.where(id: fields['affected_service_id']).pick(:id) if fields['affected_service_id'].present?
+    attrs[:category_id]         = @account.case_categories.where(id: fields['category_id']).pick(:id) if fields['category_id'].present?
+    attrs
+  end
+
+  # @tickets_cases — mensaje de referencia para inferir origen/título cuando no
+  # hay un mensaje puntual disparando la creación (eventos de Automatización
+  # sobre la conversación). El entrante más reciente.
+  def representative_message
+    return nil if @conversation.blank?
+
+    @conversation.messages.where(message_type: 0).reorder(created_at: :desc).first
+  end
+
+  # Intake IA sobre la conversación completa, o nil si la cuenta no tiene IA de
+  # clasificación activa o el LLM falla (el caller degrada al alta básica).
+  def ai_intake_fields
+    return nil if @conversation.blank?
+    return nil unless CaseAiConfig.for_account(@account).active?(:classify)
+
+    intake = Cases::Ai::Intake.new(account: @account)
+    return nil unless intake.available?
+
+    intake.extract(conversation_text: conversation_text_for_intake)
+  rescue StandardError => e
+    Rails.logger.error("[GestorTickets] automation ai intake: #{e.message}")
+    nil
+  end
+
+  # Transcripción reciente (Cliente/Bot) para darle contexto al intake.
+  def conversation_text_for_intake
+    msgs = @conversation.messages.where(message_type: [0, 1]).reorder(created_at: :desc).limit(8).reverse
+    msgs.map { |m| "#{m.incoming? ? 'Cliente' : 'Bot'}: #{m.content.to_s.strip.truncate(200)}" }.join("\n")
   end
 end
