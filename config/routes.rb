@@ -112,6 +112,8 @@ Rails.application.routes.draw do
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview
             get 'list', to: 'list#index' # listado filtrable a nivel cuenta
+            # proyecto@asistente_agentes_ia — generador de Entrenamientos
+            get 'assistant/inventory', to: 'assistant#inventory'
           end
 
           # @knowledge_sources
