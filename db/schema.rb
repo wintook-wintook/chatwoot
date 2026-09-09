@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_09_04_180000) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_09_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1204,7 +1204,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_04_180000) do
     t.bigint "account_id", null: false
     t.bigint "knowledge_source_id", null: false
     t.string "source_type", null: false
-    t.integer "source_id", null: false
+    t.bigint "source_id", null: false
     t.string "title"
     t.text "content", null: false
     t.vector "embedding", limit: 1536
@@ -1212,7 +1212,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_04_180000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "chunk_index", default: 0, null: false
-    t.index ["account_id", "source_type", "source_id", "chunk_index"], name: "idx_knowledge_items_source", unique: true
+    t.index ["account_id", "source_type", "knowledge_source_id", "source_id", "chunk_index"], name: "idx_knowledge_items_source", unique: true
     t.index ["account_id"], name: "index_knowledge_items_on_account_id"
     t.index ["knowledge_source_id"], name: "index_knowledge_items_on_knowledge_source_id"
   end

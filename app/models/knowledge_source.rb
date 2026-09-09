@@ -32,7 +32,7 @@ class KnowledgeSource < ApplicationRecord
   # {{doc:nombre}}. Para estos el nombre debe ser único por cuenta. Las fuentes
   # nativas (canned_response/article) se autogestionan con nombre localizado fijo y
   # quedan fuera (su recreación vía create_or_find_by no debe disparar RecordInvalid).
-  ADDRESSABLE_BY_NAME = %w[discourse google_doc google_sheet contpaq_support].freeze
+  ADDRESSABLE_BY_NAME = %w[discourse google_doc google_sheet contpaq_support wordpress].freeze
 
   # contpaq_support — Agente de Servicio CONTPAQi, una API remota que NO se vectoriza:
   # no tiene knowledge_items ni sync, porque la busqueda y la redaccion ocurren del otro
@@ -48,8 +48,11 @@ class KnowledgeSource < ApplicationRecord
 
   has_many :google_sheet_rows, dependent: :destroy
 
+  # 'wordpress' — un sitio entero, direccionado por nombre como el foro: una cuenta
+  # puede conectar más de uno.
   validates :source_type, presence: true,
-                          inclusion: { in: %w[canned_response discourse article google_doc google_sheet contpaq_support] }
+                          inclusion: { in: %w[canned_response discourse article google_doc google_sheet
+                                              contpaq_support wordpress] }
   validates :name, presence: true
   validates :name, uniqueness: { scope: :account_id, case_sensitive: false }, if: :addressable_by_name?
 
