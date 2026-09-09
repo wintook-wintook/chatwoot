@@ -23,6 +23,9 @@
 #   hilo— y devuelve el mensaje del asistente, el Entrenamiento si ya lo entregó, y
 #   su comprobación. Es el único endpoint del asistente que gasta tokens.
 #
+#   one_shot=true: sin entrevista, redacta de una. Lo usa el botón "generar" de la
+#   ficha del Agente IA, donde no hay conversación en la que preguntar.
+#
 # POST /api/v1/accounts/:account_id/contact_trackings/assistant/save
 #   Lleva el borrador a un Agente IA: crea uno nuevo (mode=create) o reemplaza el
 #   Entrenamiento de uno existente (mode=replace), guardando el anterior.
@@ -57,7 +60,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
   def interview
     result = ContactTrackings::Assistant::InterviewService
-             .new(Current.account, messages: interview_messages, inbox: inbox).call
+             .new(Current.account, messages: interview_messages, inbox: inbox,
+                                   one_shot: ActiveModel::Type::Boolean.new.cast(params[:one_shot])).call
 
     return render json: { error: result.error }, status: :unprocessable_entity unless result.success?
 

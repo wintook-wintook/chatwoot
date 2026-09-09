@@ -38,7 +38,7 @@ RSpec.describe ContactTrackings::Assistant::Contract do
     end
 
     it 'las seis secciones que dicta son las que busca el comprobador' do
-      expect(contrato).to include(*ContactTrackings::Assistant::ValidatorService::PROSE_SECTIONS)
+      expect(contrato).to include(*ContactTrackings::Assistant::ProseChecks::SECTIONS)
     end
   end
 

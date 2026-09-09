@@ -22,10 +22,13 @@ class AssistantAPI extends ApiClient {
   }
 
   // Un turno de entrevista. Es el único que gasta tokens.
-  interview(messages, inboxId) {
+  // oneShot: sin entrevista, redacta de una. Lo usa el botón "generar" de la ficha
+  // del Agente IA, donde no hay conversación en la que preguntar.
+  interview(messages, inboxId, { oneShot = false } = {}) {
     return axios.post(`${this.url}/interview`, {
       messages,
       inbox_id: inboxId,
+      one_shot: oneShot,
     });
   }
 

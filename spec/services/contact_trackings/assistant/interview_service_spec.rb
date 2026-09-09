@@ -155,4 +155,56 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
       expect(entrevistar.error).to eq(:unavailable)
     end
   end
+
+  # El botón "generar" de la ficha del Agente IA no tiene conversación donde
+  # preguntar: si el asistente devolviera una pregunta, nadie podría contestarla.
+  describe 'modo de una sola pasada' do
+    def de_una(texto = 'un agente de soporte')
+      described_class.new(account, messages: [{ 'role' => 'user', 'content' => texto }], one_shot: true).call
+    end
+
+    it 'le prohíbe entrevistar y le exige entregar el Entrenamiento' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: entrenamiento_ok))
+
+      de_una
+
+      pedido = a_request(:post, url).with do |req|
+        system = JSON.parse(req.body)['messages'].first['content']
+        system.include?('NO entrevistes') && system.include?('<PENDIENTE:')
+      end
+      expect(pedido).to have_been_made
+    end
+
+    it 'devuelve el Entrenamiento ya comprobado' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: entrenamiento_ok))
+
+      resultado = de_una
+
+      expect(resultado.draft).to eq(entrenamiento_ok)
+      expect(resultado.validation[:valid]).to be(true)
+    end
+
+    # El bucle de corrección vale igual acá: es lo que separa este botón del que
+    # había antes, que producía prosa que el motor no ejecutaba.
+    it 'corrige solo lo que el comprobador rechaza' do
+      stub_openai(openai_reply(mensaje: 'Ahí va', entrenamiento: entrenamiento_roto),
+                  openai_reply(mensaje: 'Corregido', entrenamiento: entrenamiento_ok))
+
+      resultado = de_una
+
+      expect(resultado.repairs).to eq(1)
+      expect(resultado.validation[:valid]).to be(true)
+    end
+
+    it 'no manda las instrucciones de entrevista' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: entrenamiento_ok))
+
+      de_una
+
+      pedido = a_request(:post, url).with do |req|
+        JSON.parse(req.body)['messages'].first['content'].exclude?('Máximo')
+      end
+      expect(pedido).to have_been_made
+    end
+  end
 end

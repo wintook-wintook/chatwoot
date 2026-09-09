@@ -35,16 +35,9 @@
 # ================================================================================
 
 class ContactTrackings::Assistant::ValidatorService
-  # Directivas de búsqueda sueltas en la prosa: el motor BLANQUEA el prompt entero
-  # (contact_tracking_response_analyzer_job.rb:545 — `clean_cp = '' if has_kbase_directive`).
-  # Se evalúa sobre el texto ya sin líneas @ruta, igual que hace el job.
-  LOOSE_SEARCH_RE = /@buscar_predefinidas\b|@buscar_art[ií]culo\b|@buscar_foro\([^)]*\)|@discourse\b/i
-  # Adjunto que escribe el modelo en su respuesta. Mismo patrón que el job.
-  ATTACHMENT_RE = /\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/
-  # Las seis secciones de la ZONA 2, en el orden del contrato.
-  PROSE_SECTIONS = ['[ROL]', '[ALCANCE POR RAMA]', '[FIDELIDAD]', '[ETIQUETAS]', '[ESTILO]', '[PROHIBIDO]'].freeze
-  # Nombres reservados que ATTACHMENT_RE captura pero que no son adjuntos.
-  NOT_ATTACHMENTS = %w[doc hoja consulta].freeze
+  # Directivas de ACCIÓN. Nunca son la fuente de una rama: si aparecen del lado
+  # izquierdo de la flecha, es que la flecha no está o está mal escrita.
+  ACTION_RE = /@crear_ticket\b|@estado_ticket\b|@agendar_calendar\b/i
 
   def initialize(text, account:)
     @text = text.to_s
@@ -57,10 +50,10 @@ class ContactTrackings::Assistant::ValidatorService
   # porque su diagnóstico suprime el genérico "0 ramas" (decirle a alguien que no
   # escribió ninguna @ruta cuando la escribió mal es lo que hace que descarte el aviso).
   CHECKS = %i[
-    check_unparsed_route_lines check_has_routes check_loose_directive_in_prose
-    check_route_sources check_ticket_types check_default_route
+    check_unparsed_route_lines check_has_routes
+    check_route_sources check_action_in_source check_ticket_types check_default_route
     check_descriptions check_tags_exist check_erp_directive_isolation
-    check_escalation_regime check_attachments_in_sourced_routes check_prose_sections
+    check_escalation_regime check_prose
   ].freeze
 
   def call
@@ -109,6 +102,13 @@ class ContactTrackings::Assistant::ValidatorService
     'no respeta la forma @ruta(nombre #etiqueta: descripción): fuente'
   end
 
+  # Las reglas de la ZONA 2 viven en ProseChecks: es la división que hace el propio
+  # contrato, y escriben en el mismo colector, así que para quien consume el
+  # resultado sigue habiendo un solo comprobador.
+  def check_prose
+    ContactTrackings::Assistant::ProseChecks.new(text, map: map, findings: findings).call
+  end
+
   # ── B1 · ninguna rama ───────────────────────────────────────────────────────
   def check_has_routes
     return if map.present?
@@ -118,32 +118,6 @@ class ContactTrackings::Assistant::ValidatorService
     add(:blocking, :no_routes,
         'El motor va a leer 0 ramas: no hay ninguna línea @ruta. Sin ramas, todos los mensajes ' \
         'caen al camino conversacional y no se consulta ninguna fuente.')
-  end
-
-  # ── B3 · directiva suelta en la prosa ───────────────────────────────────────
-  # El blanqueo (job:545) alcanza SOLO a la prosa del camino conversacional: se
-  # evalúa sobre el texto ya sin líneas @ruta y su resultado alimenta el prompt de
-  # generate_and_send_conversational_reply. Las ramas se parsean aparte y siguen
-  # funcionando. Por eso el mensaje cambia según haya ramas o no: decirle a alguien
-  # que su agente "se queda sin nada" cuando sus 5 ramas siguen andando es perder
-  # la única credibilidad que tiene este aviso.
-  def check_loose_directive_in_prose
-    prose = ContactTrackings::RouteMap.strip(text)
-    match = prose.match(LOOSE_SEARCH_RE)
-    return if match.nil?
-
-    add(:blocking, :loose_directive,
-        "La directiva #{match[0]} está suelta en la prosa, fuera de una línea @ruta. El motor " \
-        "borra la prosa entera cuando encuentra una así, y #{blanking_consequence}. " \
-        'Las directivas van únicamente dentro de las líneas @ruta.',
-        wrote: match[0])
-  end
-
-  def blanking_consequence
-    return 'esa prosa es toda la instrucción que tiene el agente: se queda sin ninguna' if map.routes.empty?
-
-    'el agente pierde sus instrucciones en los turnos que no resuelve ninguna rama ' \
-      '(las ramas en sí siguen funcionando)'
   end
 
   # ── B4 y B5 · la fuente de cada rama ────────────────────────────────────────
@@ -176,6 +150,27 @@ class ContactTrackings::Assistant::ValidatorService
         'El motor no va a fallar: va a buscar y no encontrar nunca. Las que sí existen: ' \
         "#{disponibles.any? ? disponibles.join(' · ') : '(ninguna cargada)'}.",
         wrote: route.directive)
+  end
+
+  # ── B8 · una acción atrapada dentro de la fuente ────────────────────────────
+  # Salió de una corrida real: el modelo escribió "- 3e" en vez de "->", así que
+  # RouteMap no partió la línea y todo quedó como fuente. `detect` igual encontró
+  # @buscar_articulo adelante y dio la rama por buena — con el @crear_ticket adentro,
+  # inerte. El agente que se pidió para abrir tickets no abría ninguno, y nada lo
+  # marcaba: un escalamiento vacío es perfectamente legal.
+  def check_action_in_source
+    map.routes.each do |route|
+      next if route.directive.blank?
+
+      match = route.directive.match(ACTION_RE)
+      next if match.nil?
+
+      add(:blocking, :action_trapped_in_source,
+          "En la rama '#{route.name}' la directiva #{match[0]} quedó del lado de la fuente, no del " \
+          'escalamiento: le falta la flecha "->" o está mal escrita. Tal como está, esa acción no se ' \
+          'ejecuta nunca. La forma es: fuente -> @crear_ticket(...)',
+          wrote: route.directive)
+    end
   end
 
   # ── B6 · el tipo de caso de @crear_ticket ───────────────────────────────────
@@ -262,32 +257,5 @@ class ContactTrackings::Assistant::ValidatorService
         "Hay ramas con escalamiento y ramas sin él (#{sin_flecha.join(', ')}). En cuanto UNA rama " \
         'lleva flecha, las que no la llevan dejan de abrir casos — incluso si hay un @crear_ticket ' \
         'suelto al final. Si esas ramas también tienen que abrir caso, hay que darles su propia flecha.')
-  end
-
-  # ── D6 · adjunto en una rama con fuente ─────────────────────────────────────
-  def check_attachments_in_sourced_routes
-    return if map.routes.none? { |r| r.directive.present? }
-
-    prose = ContactTrackings::RouteMap.strip(text)
-    nombres = prose.scan(ATTACHMENT_RE).flatten.uniq - NOT_ATTACHMENTS
-    return if nombres.empty?
-
-    add(:degrading, :attachment_with_source,
-        "El adjunto {{#{nombres.first}}} no se resuelve cuando la rama consulta una fuente: sale como " \
-        'texto literal en el mensaje al cliente. Los adjuntos solo funcionan en ramas sin fuente.',
-        wrote: "{{#{nombres.first}}}")
-  end
-
-  # ── C1 · secciones de la prosa ──────────────────────────────────────────────
-  def check_prose_sections
-    prose = ContactTrackings::RouteMap.strip(text)
-    faltan = PROSE_SECTIONS.reject { |section| prose.include?(section) }
-    return if faltan.empty?
-    # Sin ninguna sección no es que "falten": es que la prosa no sigue el formato.
-    return if faltan.size == PROSE_SECTIONS.size
-
-    add(:cosmetic, :missing_prose_sections,
-        "A la prosa le faltan estas secciones: #{faltan.join(' ')}. No rompen nada, pero cada una " \
-        'cubre una decisión que si no se escribe, el modelo la toma por su cuenta.')
   end
 end

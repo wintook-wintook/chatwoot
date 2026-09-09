@@ -46,10 +46,15 @@ class ContactTrackings::Assistant::InterviewService
     def success? = error.blank?
   end
 
-  def initialize(account, messages:, inbox: nil)
+  # one_shot: sin entrevista. Es el modo del botón "generar" que vive dentro de la
+  # ficha del Agente IA: ahí no hay una conversación donde preguntar, hay un campo y
+  # alguien esperando que se llene. Se redacta con lo que haya y lo que falte se marca
+  # <PENDIENTE:>, en vez de devolver una pregunta que nadie va a poder contestar.
+  def initialize(account, messages:, inbox: nil, one_shot: false)
     @account = account
     @inbox = inbox
     @messages = Array(messages)
+    @one_shot = one_shot
   end
 
   def call
@@ -66,7 +71,7 @@ class ContactTrackings::Assistant::InterviewService
 
   private
 
-  attr_reader :account, :inbox, :messages
+  attr_reader :account, :inbox, :messages, :one_shot
 
   # ── el bucle ────────────────────────────────────────────────────────────────
   def repair(message, draft)
@@ -116,7 +121,7 @@ class ContactTrackings::Assistant::InterviewService
     [
       ContactTrackings::Assistant::Contract.call,
       inventory_section,
-      interview_section
+      one_shot ? one_shot_section : interview_section
     ].join("\n\n")
   end
 
@@ -151,6 +156,23 @@ class ContactTrackings::Assistant::InterviewService
       Mientras entrevistás, "entrenamiento" va en null. Cuando entregás, va completo: las
       líneas @ruta y la prosa, sin explicaciones alrededor.
     ENTREVISTA
+  end
+
+  def one_shot_section
+    <<~UNICA.strip
+      ═══ CÓMO TRABAJÁS ═══
+      NO entrevistes: no vas a poder recibir la respuesta. Redactá el Entrenamiento completo
+      de una sola vez con lo que te dieron y el inventario de la cuenta.
+
+      Todo dato que te falte —un nombre de fuente, un tipo de caso, una etiqueta— lo dejás
+      como <PENDIENTE: qué falta> y lo enumerás al final del "mensaje". No lo inventes.
+
+      ═══ CÓMO RESPONDÉS ═══
+      SIEMPRE un JSON con estas dos llaves:
+        {"mensaje": "qué armaste y qué quedó pendiente",
+         "entrenamiento": "el Entrenamiento completo"}
+      "entrenamiento" NUNCA va en null en este modo.
+    UNICA
   end
 
   # ── OpenAI ──────────────────────────────────────────────────────────────────

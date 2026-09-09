@@ -162,6 +162,35 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
     end
   end
 
+  # Salió de una corrida real contra OpenAI: el modelo escribió "- 3e" en vez de
+  # "->", RouteMap no partió la línea, y el @crear_ticket quedó atrapado dentro de
+  # la fuente. La rama se veía válida —un escalamiento vacío es legal— y el agente
+  # que se pidió para abrir tickets no abría ninguno.
+  describe 'B8 · una acción atrapada dentro de la fuente' do
+    it 'la marca cuando la flecha está mal escrita' do
+      r = validar('@ruta(soporte #soporte: no puedo entrar): @buscar_articulo - 3e @crear_ticket(tipo=Soporte)')
+
+      hallazgo = r[:blocking].find { |f| f[:code] == :action_trapped_in_source }
+      expect(hallazgo[:message]).to include('le falta la flecha')
+      expect(r[:routes].first[:escalation]).to be_nil
+    end
+
+    it 'la marca cuando falta la flecha del todo' do
+      r = validar('@ruta(soporte #soporte: no puedo entrar): @buscar_articulo @agendar_calendar')
+
+      expect(codigos(r, :blocking)).to include(:action_trapped_in_source)
+    end
+
+    it 'no la dispara cuando la flecha está bien' do
+      case_type('Soporte')
+
+      r = validar('@ruta(soporte #soporte: no puedo entrar): @buscar_articulo -> @crear_ticket(tipo=Soporte)')
+
+      expect(codigos(r, :blocking)).not_to include(:action_trapped_in_source)
+      expect(r[:routes].first[:escalation]).to eq('@crear_ticket(tipo=Soporte)')
+    end
+  end
+
   describe 'B6 · tipo de caso inexistente' do
     it 'la marca y lista los tipos que sí existen' do
       case_type('Soporte')
