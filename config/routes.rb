@@ -124,6 +124,9 @@ Rails.application.routes.draw do
           post   'knowledge_base/sources/:id/sync', to: 'knowledge_base#sync'
           post   'knowledge_base/search',           to: 'knowledge_base#search'
           post   'knowledge_base/discourse_categories', to: 'knowledge_base#discourse_categories'
+          # @knowledge_sources — fuente WordPress
+          post   'knowledge_base/wordpress_probe',      to: 'knowledge_base#wordpress_probe'
+          get    'knowledge_base/sources/:id/wordpress_catalog', to: 'knowledge_base#wordpress_catalog'
           get    'knowledge_base/search_settings',  to: 'knowledge_base#search_settings'
           patch  'knowledge_base/search_settings',  to: 'knowledge_base#update_search_settings'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do

@@ -2,7 +2,7 @@
 # Controlador para la base de conocimiento semántica.
 # Endpoints: CRUD de fuentes + búsqueda semántica por similitud coseno.
 class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseController
-  before_action :set_source, only: %i[update destroy sync]
+  before_action :set_source, only: %i[update destroy sync wordpress_catalog]
 
   # GET /api/v1/accounts/:account_id/knowledge_base/items
   def items
@@ -136,9 +136,39 @@ class Api::V1::Accounts::KnowledgeBaseController < Api::V1::Accounts::BaseContro
 
       enqueue_google_sheet_sync(@source)
       render json: { message: 'Sincronización iniciada' }
+    when 'wordpress'
+      return render_openai_required if openai_api_key.blank?
+
+      WordpressSyncJob.perform_later(action: 'upsert', source_id: @source.id, account_id: current_account.id)
+      render json: { message: 'Sincronización iniciada' }
     else
       render json: { message: 'Sincronización iniciada' }
     end
+  end
+
+  # POST /api/v1/accounts/:account_id/knowledge_base/wordpress_probe
+  # @knowledge_sources — se llama ANTES de crear la fuente: dice si el sitio
+  # responde, cuánto contenido tiene de cada tipo y qué categorías. Sin esto, los
+  # checkboxes de la pantalla serían adivinanzas, y un sitio que bloquea la API
+  # REST (pasa, y no es raro) se descubriría recién con un agente en producción.
+  def wordpress_probe
+    result = WordpressClient.new(params[:site_url]).probe
+    return render json: { error: result.error, detail: result.detail }, status: :unprocessable_entity unless result.ok?
+
+    render json: result.data
+  end
+
+  # GET /api/v1/accounts/:account_id/knowledge_base/sources/:id/wordpress_catalog
+  # El listado de títulos para elegir, con una marca por ítem de si entra o no.
+  # Usa la MISMA resolución que el sincronizador, para que la pantalla no pueda
+  # decir una cosa distinta de la que después se va a indexar.
+  def wordpress_catalog
+    return render json: { error: 'La fuente no es de WordPress' }, status: :bad_request unless @source.source_type == 'wordpress'
+
+    type = params[:type].presence || 'posts'
+    client = WordpressClient.new(@source.config['site_url'])
+
+    render json: Wordpress::Selection.new(client, @source.config).catalog(type)
   end
 
   # POST /api/v1/accounts/:account_id/knowledge_base/discourse_categories
