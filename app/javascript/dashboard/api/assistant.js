@@ -20,6 +20,31 @@ class AssistantAPI extends ApiClient {
     const params = inboxId ? { inbox_id: inboxId } : {};
     return axios.get(`${this.url}/inventory`, { params });
   }
+
+  // Un turno de entrevista. Es el único que gasta tokens.
+  interview(messages, inboxId) {
+    return axios.post(`${this.url}/interview`, {
+      messages,
+      inbox_id: inboxId,
+    });
+  }
+
+  // Solo el comprobador, sin IA: por eso puede correr en cada tecleo del panel.
+  validate(draft) {
+    return axios.post(`${this.url}/validate`, { draft });
+  }
+
+  // mode: 'create' crea un Agente IA nuevo; 'replace' pisa el de uno existente.
+  save({ draft, mode, name, objective, inboxId, templateId }) {
+    return axios.post(`${this.url}/save`, {
+      draft,
+      mode,
+      name,
+      objective,
+      inbox_id: inboxId,
+      template_id: templateId,
+    });
+  }
 }
 
 export default new AssistantAPI();

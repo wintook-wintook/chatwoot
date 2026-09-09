@@ -1585,6 +1585,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_10_120100) do
     t.string "timezone"
     t.jsonb "booking_calendar_ids", default: {}, null: false
     t.string "slots_presentation", default: "detailed", null: false
+    t.text "previous_complementary_prompt"
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"

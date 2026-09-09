@@ -23,6 +23,11 @@
 #   hilo— y devuelve el mensaje del asistente, el Entrenamiento si ya lo entregó, y
 #   su comprobación. Es el único endpoint del asistente que gasta tokens.
 #
+# POST /api/v1/accounts/:account_id/contact_trackings/assistant/save
+#   Lleva el borrador a un Agente IA: crea uno nuevo (mode=create) o reemplaza el
+#   Entrenamiento de uno existente (mode=replace), guardando el anterior.
+#   Rechaza el guardado si el comprobador encuentra algo bloqueante.
+#
 # Cuelga de contact_trackings y no de un /assistant suelto a nivel cuenta: este
 # asistente es del motor de Seguimientos, y Chatwoot ya tiene otro asistente propio
 # (Captain) con el que no conviene confundirlo en la URL.
@@ -52,7 +57,23 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
     }
   end
 
+  def save
+    result = ContactTrackings::Assistant::SaveService
+             .new(Current.account, user: Current.user, draft: params[:draft],
+                                   mode: params[:mode], params: save_params).call
+
+    unless result.success?
+      return render json: { error: result.error, details: result.details }, status: :unprocessable_entity
+    end
+
+    render json: { tracking_template_id: result.template.id, name: result.template.name }, status: :ok
+  end
+
   private
+
+  def save_params
+    params.permit(:name, :objective, :inbox_id, :template_id)
+  end
 
   # Solo rol y contenido: el hilo lo manda el cliente y no se le confía nada más.
   def interview_messages
