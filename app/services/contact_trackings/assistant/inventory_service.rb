@@ -52,12 +52,19 @@ class ContactTrackings::Assistant::InventoryService
   # sea una decisión escrita y no un olvido.
   NOT_ADDRESSABLE = [].freeze
 
-  # Cuántos mensajes entrantes se leen para mostrar cómo escriben los clientes.
+  # Cuántas frases de clientes se muestran y se le pasan al modelo. Lo que hace
+  # falta es VARIEDAD DE TEMAS, no volumen: por eso el tope es chico.
   # La descripción de una @ruta es LO ÚNICO que el clasificador usa para rutear, y
   # el contrato exige escribirla "en las palabras del cliente": estas frases son
   # esas palabras. Sin ellas la descripción sale en lenguaje de manual y clasifica
   # peor, sin que el fallo se vea.
-  PHRASES_LIMIT = 40
+  PHRASES_LIMIT = 25
+  # Conversaciones recientes de las que se saca el primer mensaje. Acota la consulta
+  # para que una cuenta con años de historial no la pague entera.
+  CONVERSATIONS_SCANNED = 120
+  # Cuántos mensajes de cada conversación se miran buscando el planteo. Más allá de
+  # los primeros, lo que hay es diálogo: respuestas a lo que preguntó el agente.
+  OPENING_MESSAGES_SCANNED = 5
   # Un "hola" no describe ninguna situación; un mail pegado entero tampoco sirve.
   PHRASE_MIN_LENGTH = 15
   PHRASE_MAX_LENGTH = 160
@@ -160,20 +167,53 @@ class ContactTrackings::Assistant::InventoryService
     @labels ||= account.labels.pluck(:title)
   end
 
-  # Se devuelven textuales, con sus typos y su jerga: eso es lo que las hace
-  # útiles frente a redactar la descripción en lenguaje de manual.
+  # Con qué ABRE cada conversación, no los últimos entrantes sueltos. Un mensaje de
+  # mitad de hilo ("ya lo intenté y sigue igual") pasa el filtro de largo y no
+  # describe ningún tema; el planteo inicial es la señal limpia de sobre qué escribe
+  # la gente.
+  #
+  # Pero "el primer mensaje" a secas no sirve: la mayoría de las conversaciones
+  # abre con "Hola" y la pregunta real llega en el segundo. Medido contra la cuenta
+  # de pruebas, quedarse con el literal primero dejaba 1 frase de 8. Por eso se toma
+  # el primero que DIGA algo, dentro de los primeros OPENING_MESSAGES_SCANNED de
+  # cada conversación — pasado ese punto ya es diálogo, no planteo.
+  #
+  # Se devuelven con sus typos y su jerga —eso es lo que las hace útiles— pero
+  # enmascaradas: salen del servidor hacia OpenAI. Ver PhraseMasker.
+  # A lo ANCHO primero: una frase de cada conversación antes de tomar la segunda de
+  # ninguna. Así una conversación charlatana no se lleva el cupo entero y lo que le
+  # llega al modelo son temas distintos, que es lo que hace falta. Recién si sobra
+  # lugar se rellena con el resto — importa en cuentas con pocas conversaciones,
+  # que es justo cuando alguien está armando su primer agente.
   def customer_phrases
     @customer_phrases ||= begin
-      scope = account.messages.where(message_type: :incoming).where.not(content: [nil, ''])
-      scope = scope.where(inbox_id: inbox.id) if inbox
-      scope.order(created_at: :desc)
-           .limit(PHRASES_LIMIT * 3)
-           .pluck(:content)
-           .map { |content| content.to_s.squish }
-           .select { |content| content.length.between?(PHRASE_MIN_LENGTH, PHRASE_MAX_LENGTH) }
-           .uniq
-           .first(PHRASES_LIMIT)
+      por_conversacion = opening_messages.map { |contents| meaningful(contents) }
+      a_lo_ancho = por_conversacion.filter_map(&:first)
+      relleno    = por_conversacion.flat_map { |contents| contents.drop(1) }
+
+      (a_lo_ancho + relleno).uniq.first(PHRASES_LIMIT)
     end
+  end
+
+  def meaningful(contents)
+    contents.map { |content| ContactTrackings::Assistant::PhraseMasker.call(content).squish }
+            .select { |content| content.length.between?(PHRASE_MIN_LENGTH, PHRASE_MAX_LENGTH) }
+  end
+
+  # Devuelve, por conversación y de la más reciente a la más vieja, el contenido de
+  # sus primeros mensajes entrantes.
+  def opening_messages
+    conversations = account.conversations.order(last_activity_at: :desc)
+    conversations = conversations.where(inbox_id: inbox.id) if inbox
+    conversation_ids = conversations.limit(CONVERSATIONS_SCANNED).pluck(:id)
+
+    Message.where(conversation_id: conversation_ids, message_type: :incoming)
+           .where.not(content: [nil, ''])
+           .reorder(:id)
+           .pluck(:conversation_id, :content)
+           .group_by(&:first)
+           .sort_by { |conversation_id, _| conversation_ids.index(conversation_id) }
+           .map { |_, rows| rows.first(OPENING_MESSAGES_SCANNED).map(&:last) }
   end
 
   def erp_enabled?

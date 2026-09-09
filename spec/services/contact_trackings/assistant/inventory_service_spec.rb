@@ -104,27 +104,82 @@ RSpec.describe ContactTrackings::Assistant::InventoryService do
 
   describe 'frases de clientes' do
     let(:inbox) { create(:inbox, account: account) }
-    let(:conversation) { create(:conversation, account: account, inbox: inbox) }
 
-    def incoming(content)
-      create(:message, account: account, inbox: inbox, conversation: conversation,
-                       message_type: :incoming, content: content)
+    def conversacion_con(*contenidos)
+      conversation = create(:conversation, account: account, inbox: inbox)
+      contenidos.each do |content|
+        create(:message, account: account, inbox: inbox, conversation: conversation,
+                         message_type: :incoming, content: content)
+      end
+      conversation
     end
 
-    it 'devuelve los mensajes entrantes textuales, con sus typos' do
-      incoming('voy actualiza a firebird 5 kontrolya ya es comparble')
+    it 'devuelve los mensajes textuales, con sus typos' do
+      conversacion_con('voy actualiza a firebird 5 kontrolya ya es comparble')
 
       expect(described_class.new(account).call[:customer_phrases])
         .to eq(['voy actualiza a firebird 5 kontrolya ya es comparble'])
     end
 
+    # "El primer mensaje" a secas no sirve: la mayoría de las conversaciones abre
+    # con un saludo y el planteo llega después. Medido contra la cuenta de pruebas,
+    # el literal primero dejaba 1 frase de 8.
+    it 'saltea el saludo y toma el primer mensaje que dice algo' do
+      conversacion_con('hola', 'no puedo entrar al sistema desde ayer')
+
+      expect(described_class.new(account).call[:customer_phrases])
+        .to eq(['no puedo entrar al sistema desde ayer'])
+    end
+
+    # A lo ancho primero: una de cada conversación antes que la segunda de ninguna,
+    # para que una conversación charlatana no se lleve el cupo.
+    it 'pone primero una frase de cada conversación, y recién después las demás' do
+      conversacion_con('no puedo entrar al sistema desde ayer',
+                       'tambien me falla la impresion de recibos')
+      conversacion_con('cuanto sale la licencia anual')
+
+      frases = described_class.new(account).call[:customer_phrases]
+
+      expect(frases.first(2)).to contain_exactly('no puedo entrar al sistema desde ayer',
+                                                 'cuanto sale la licencia anual')
+      expect(frases.last).to eq('tambien me falla la impresion de recibos')
+    end
+
+    it 'no mira más allá del planteo: pasado ese punto es diálogo, no tema' do
+      conversacion_con('hola', 'buenas tardes como estan', 'gracias por responder tan rapido',
+                       'les escribo desde la sucursal norte', 'ahora si les cuento el problema',
+                       'el sistema no abre desde la actualizacion')
+
+      expect(described_class.new(account).call[:customer_phrases])
+        .not_to include('el sistema no abre desde la actualizacion')
+    end
+
+    # Las frases salen del servidor hacia OpenAI: lo que se muestra en pantalla es
+    # lo enmascarado, que es exactamente lo que se envía.
+    it 'las devuelve enmascaradas' do
+      conversacion_con('mi correo es juan.perez@empresa.com y no me llega nada')
+
+      frase = described_class.new(account).call[:customer_phrases].first
+
+      expect(frase).to include('[correo]')
+      expect(frase).not_to include('juan.perez@empresa.com')
+    end
+
+    it 'no tapa el vocabulario del negocio al enmascarar' do
+      conversacion_con('no puedo timbrar la factura A-1234 de CONTPAQi 2026')
+
+      expect(described_class.new(account).call[:customer_phrases])
+        .to eq(['no puedo timbrar la factura A-1234 de CONTPAQi 2026'])
+    end
+
     it 'descarta los saludos, que no describen ninguna situación' do
-      incoming('hola')
+      conversacion_con('hola')
 
       expect(described_class.new(account).call[:customer_phrases]).to be_empty
     end
 
     it 'no incluye lo que respondió el agente' do
+      conversation = create(:conversation, account: account, inbox: inbox)
       create(:message, account: account, inbox: inbox, conversation: conversation,
                        message_type: :outgoing, content: 'Con gusto le ayudo con la actualización')
 
@@ -132,7 +187,7 @@ RSpec.describe ContactTrackings::Assistant::InventoryService do
     end
 
     it 'no repite la misma frase dos veces' do
-      2.times { incoming('¿Cómo timbro la nómina en CONTPAQi Nóminas?') }
+      2.times { conversacion_con('como timbro la nomina en CONTPAQi Nominas') }
 
       expect(described_class.new(account).call[:customer_phrases].size).to eq(1)
     end
