@@ -42,16 +42,34 @@ module ContactTrackings
       conversational: 250,  # respuesta al cliente
       router: 300,          # clasificador de intención (JSON)
       datetime: 120,        # extracción de fecha/hora (JSON)
-      authoring: 250        # redacción de complementary_prompt desde /sigue
+      authoring: 250,       # redacción de complementary_prompt desde /sigue
+      # proyecto@asistente_agentes_ia — un Entrenamiento entero, no una frase: el
+      # tope de `authoring` (250) lo cortaría a la mitad.
+      authoring_assistant: 2000
     }.freeze
 
+    # proyecto@asistente_agentes_ia — piso de modelo por propósito.
+    #
+    # Dos problemas que resuelve, los dos medidos:
+    #   1. El Asistente de Agentes IA NO tiene inbox: es de cuenta. Sin piso,
+    #      model_for(nil) cae a DEFAULT_MODEL, que es el modelo chico.
+    #   2. gpt-4o-mini no cumple las reglas de un prompt largo (medido en KBase). El
+    #      asistente escribe configuración que el motor parsea con patrones exactos:
+    #      un modelo que se saltea reglas produce Entrenamientos que no ejecutan nada.
+    #
+    # Un piso NO fuerza el modelo: si el inbox configuró uno más capaz, ese gana.
+    MODEL_FLOOR = { authoring_assistant: 'gpt-4o' }.freeze
+    # Orden de capacidad, de menor a mayor. Solo para comparar contra el piso.
+    MODEL_RANK = %w[gpt-3.5-turbo gpt-4o-mini gpt-4-turbo gpt-4o].freeze
+
     class << self
-      # `purpose` no diferencia el modelo hoy: el selector es uno por inbox y aplica a
-      # todo el bot. Se recibe igualmente para que una política futura (por ejemplo,
-      # forzar un modelo barato en el router) tenga dónde vivir sin tocar los llamadores.
-      def model_for(inbox, _purpose = :conversational)
+      # El selector es uno por inbox y aplica a todo el bot. `purpose` existe para las
+      # políticas que no pueden depender de esa configuración: hoy, el piso de
+      # MODEL_FLOOR (ver ahí por qué).
+      def model_for(inbox, purpose = :conversational)
         configured = configured_model(inbox)
-        ALLOWED_MODELS.include?(configured) ? configured : DEFAULT_MODEL
+        model = ALLOWED_MODELS.include?(configured) ? configured : DEFAULT_MODEL
+        apply_floor(model, purpose)
       end
 
       # Atajo para los llamadores que tienen el ContactTracking a mano.
@@ -64,6 +82,14 @@ module ContactTrackings
       end
 
       private
+
+      # Sube al piso solo si el modelo resuelto queda por debajo; nunca lo baja.
+      def apply_floor(model, purpose)
+        floor = MODEL_FLOOR[purpose.to_sym]
+        return model if floor.blank?
+
+        MODEL_RANK.index(model).to_i < MODEL_RANK.index(floor).to_i ? floor : model
+      end
 
       def configured_model(inbox)
         return nil if inbox.blank?

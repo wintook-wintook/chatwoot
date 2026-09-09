@@ -115,6 +115,7 @@ Rails.application.routes.draw do
             # proyecto@asistente_agentes_ia — generador de Entrenamientos
             get  'assistant/inventory', to: 'assistant#inventory'
             post 'assistant/validate',  to: 'assistant#validate'
+            post 'assistant/interview', to: 'assistant#interview'
           end
 
           # @knowledge_sources
