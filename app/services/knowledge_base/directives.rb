@@ -43,7 +43,10 @@ module KnowledgeBase
       [/\{\{doc:([^}]+)\}\}/i,          :google_doc,            true],
       [/\{\{hoja:([^}]+)\}\}/i,         :google_sheet,          true],
       [/@discourse\b/i,                :discourse_integration, false],
-      [/@soporte_contpaq\(([^)]+)\)/i, :contpaq_support,       true]
+      [/@soporte_contpaq\(([^)]+)\)/i, :contpaq_support,       true],
+      # @knowledge_sources — un sitio WordPress. Va direccionada por nombre porque
+      # una cuenta puede conectar más de uno, igual que @buscar_foro.
+      [/@buscar_sitio\(([^)]+)\)/i,    :wordpress,             true]
     ].freeze
 
     # Primera directiva de fuente presente en el texto → { mode:, source_name: } o nil.
@@ -96,10 +99,22 @@ module KnowledgeBase
       when :google_sheet          then google_source?(account, 'google_sheet', directive[:source_name])
       when :discourse_integration then discourse_hook?(account, inbox_id)
       when :contpaq_support       then contpaq_source?(account, directive[:source_name])
+      # Sin este caso la directiva cae en `else false` y el motor da la rama por
+      # no disponible: parsea, y el agente nunca consulta el sitio.
+      when :wordpress             then wordpress_source?(account, directive[:source_name])
       else false
       end
     rescue StandardError
       false
+    end
+
+    # Además de existir y estar activa, tiene que tener algo indexado: un sitio
+    # conectado del que todavía no se eligió nada no puede resolver ningún turno.
+    def wordpress_source?(account, name)
+      source = account.knowledge_sources.active
+                      .find_by(['source_type = ? AND LOWER(name) = LOWER(?)', 'wordpress', name.to_s])
+
+      source.present? && account.knowledge_items.exists?(knowledge_source_id: source.id)
     end
 
     def items?(account, source_type)

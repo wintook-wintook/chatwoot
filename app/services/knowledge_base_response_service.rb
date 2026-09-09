@@ -79,6 +79,8 @@ class KnowledgeBaseResponseService
       perform_discourse_integration(question)
     when :contpaq_support
       perform_contpaq(question, directive[:source_name])
+    when :wordpress
+      perform_wordpress(question, directive[:source_name])
     else
       false
     end
@@ -413,6 +415,54 @@ class KnowledgeBaseResponseService
 
     send_reply("#{with_branch_tag(reply_text)}\n\n_#{source.name}_")
     true
+  end
+
+  # ==============================================================================
+  # MODO WordPress — directiva @buscar_sitio(nombre)
+  #   Un sitio son cientos de entradas, cada una con sus chunks, pero la búsqueda es
+  #   la misma de siempre: pgvector acotado a la fuente. Lo que cambia es la firma
+  #   al pie — se cita la ENTRADA concreta y no el nombre del sitio, porque "según
+  #   el Blog" no le sirve a nadie que quiera ir a leerlo.
+  # ==============================================================================
+
+  def perform_wordpress(question, source_name)
+    source = @account.knowledge_sources.active
+                     .where(source_type: 'wordpress')
+                     .where('LOWER(name) = LOWER(?)', source_name)
+                     .first
+    unless source
+      Rails.logger.warn "[KBase] ⚠️ Sitio WordPress '#{source_name}' no encontrado o inactivo"
+      return false
+    end
+
+    items = search_items(@account.knowledge_items.where(knowledge_source_id: source.id))
+    return false if items.nil?
+
+    if items.empty?
+      Rails.logger.info "[KBase] ⚠️ Sin resultados en el sitio '#{source.name}'"
+      return false
+    end
+
+    reply_text = generate_contextual_reply(question, wordpress_context(items))
+    return false if reply_text.blank?
+
+    send_reply("#{with_branch_tag(reply_text)}\n\n_#{wordpress_signature(items, source)}_")
+    true
+  end
+
+  def wordpress_context(items)
+    items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
+         .join("\n\n")
+         .truncate(kbase_setting('max_context_chars'))
+  end
+
+  # El título de la entrada más parecida, con su enlace si lo tiene. Se cita una
+  # sola: listar los tres fragmentos que se consultaron es ruido para el cliente.
+  def wordpress_signature(items, source)
+    mejor = items.first
+    url = mejor.metadata.is_a?(Hash) ? mejor.metadata['url'] : nil
+
+    [mejor.title.presence || source.name, url].compact.join(' — ')
   end
 
   # ==============================================================================
