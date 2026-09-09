@@ -90,4 +90,47 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       expect(response.parsed_body['customer_phrases']).to eq(['como puedo actualizar a la ultima version'])
     end
   end
+
+  describe 'POST validate' do
+    let(:validate_url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/validate" }
+
+    def validar(draft, user: admin)
+      post validate_url, params: { draft: draft }, headers: user.create_new_auth_token, as: :json
+    end
+
+    it 'no deja entrar a un agente' do
+      validar('@ruta(soporte #soporte: no puedo entrar): -', user: agent)
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'devuelve lo que el motor va a leer del Entrenamiento' do
+      source('discourse', 'Foro Kontrolya')
+
+      validar('@ruta(soporte #soporte: no puedo entrar): @buscar_foro(Foro Kontrolya)')
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body['valid']).to be(true)
+      expect(response.parsed_body['routes']).to contain_exactly(
+        hash_including('name' => 'soporte', 'source_name' => 'Foro Kontrolya')
+      )
+    end
+
+    # El caso medido el 08/09/2026: falta el ":" y el motor lee cero ramas sin avisar.
+    it 'diagnostica el carácter que falta, no solo que está mal' do
+      validar('@ruta(soporte #soporte: no puedo entrar) @buscar_articulo')
+
+      expect(response.parsed_body['valid']).to be(false)
+      hallazgo = response.parsed_body['blocking'].find { |f| f['code'] == 'route_line_unparsed' }
+      expect(hallazgo['line']).to eq(1)
+      expect(hallazgo['message']).to include('falta el ":"')
+    end
+
+    it 'no revienta con un Entrenamiento vacío' do
+      validar('')
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body['routes']).to be_empty
+    end
+  end
 end

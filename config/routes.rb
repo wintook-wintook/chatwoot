@@ -113,7 +113,8 @@ Rails.application.routes.draw do
             resource :overview, only: [:show], controller: :overview
             get 'list', to: 'list#index' # listado filtrable a nivel cuenta
             # proyecto@asistente_agentes_ia — generador de Entrenamientos
-            get 'assistant/inventory', to: 'assistant#inventory'
+            get  'assistant/inventory', to: 'assistant#inventory'
+            post 'assistant/validate',  to: 'assistant#validate'
           end
 
           # @knowledge_sources

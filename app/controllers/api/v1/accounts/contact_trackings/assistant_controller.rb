@@ -11,6 +11,13 @@
 #   Filtro opcional: inbox_id — acota las frases de clientes a ese canal. El resto
 #   del inventario es de cuenta, así que no cambia.
 #
+# POST /api/v1/accounts/:account_id/contact_trackings/assistant/validate
+#   Recibe un Entrenamiento y devuelve qué va a leer el motor de él y qué no va a
+#   ejecutar. Sin IA: lo revisa el parser real de produccion, así que es gratis e
+#   instantáneo. Va separado de la conversación a propósito — el panel del
+#   Entrenamiento es editable a mano y revalida en cada tecleo; si validar tuviera
+#   que pasar por el modelo, editar sería lento y caro.
+#
 # Cuelga de contact_trackings y no de un /assistant suelto a nivel cuenta: este
 # asistente es del motor de Seguimientos, y Chatwoot ya tiene otro asistente propio
 # (Captain) con el que no conviene confundirlo en la URL.
@@ -20,6 +27,10 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
   def inventory
     render json: ContactTrackings::Assistant::InventoryService.new(Current.account, inbox: inbox).call
+  end
+
+  def validate
+    render json: ContactTrackings::Assistant::ValidatorService.new(params[:draft], account: Current.account).call
   end
 
   private
