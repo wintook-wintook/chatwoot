@@ -34,6 +34,11 @@ class AssistantAPI extends ApiClient {
     return axios.post(`${this.url}/validate`, { draft });
   }
 
+  // Pasa todos los Agentes IA de la cuenta por el comprobador. Sin IA: son parseos.
+  audit() {
+    return axios.get(`${this.url}/audit`);
+  }
+
   // mode: 'create' crea un Agente IA nuevo; 'replace' pisa el de uno existente.
   save({ draft, mode, name, objective, inboxId, templateId }) {
     return axios.post(`${this.url}/save`, {

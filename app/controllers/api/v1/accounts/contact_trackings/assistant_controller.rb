@@ -28,11 +28,19 @@
 #   Entrenamiento de uno existente (mode=replace), guardando el anterior.
 #   Rechaza el guardado si el comprobador encuentra algo bloqueante.
 #
+# GET /api/v1/accounts/:account_id/contact_trackings/assistant/audit
+#   Pasa todos los Agentes IA de la cuenta por el comprobador y dice cuáles no
+#   ejecutan lo que su nombre promete. Sin IA: son parseos, no llamadas.
+#
 # Cuelga de contact_trackings y no de un /assistant suelto a nivel cuenta: este
 # asistente es del motor de Seguimientos, y Chatwoot ya tiene otro asistente propio
 # (Captain) con el que no conviene confundirlo en la URL.
 # ================================================================================
 class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accounts::BaseController
+  # El hilo de la entrevista lo manda el cliente: solo se aceptan estos dos roles, para
+  # que nadie pueda inyectar un `system` propio y reescribir el contrato del motor.
+  ALLOWED_ROLES = %w[user assistant].freeze
+
   before_action :check_authorization
 
   def inventory
@@ -41,6 +49,10 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
   def validate
     render json: ContactTrackings::Assistant::ValidatorService.new(params[:draft], account: Current.account).call
+  end
+
+  def audit
+    render json: ContactTrackings::Assistant::AuditService.new(Current.account).call
   end
 
   def interview
@@ -62,9 +74,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
              .new(Current.account, user: Current.user, draft: params[:draft],
                                    mode: params[:mode], params: save_params).call
 
-    unless result.success?
-      return render json: { error: result.error, details: result.details }, status: :unprocessable_entity
-    end
+    return render json: { error: result.error, details: result.details }, status: :unprocessable_entity unless result.success?
 
     render json: { tracking_template_id: result.template.id, name: result.template.name }, status: :ok
   end
@@ -78,7 +88,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   # Solo rol y contenido: el hilo lo manda el cliente y no se le confía nada más.
   def interview_messages
     Array(params[:messages]).map { |m| m.permit(:role, :content).to_h }
-                            .select { |m| %w[user assistant].include?(m['role']) && m['content'].present? }
+                            .select { |m| ALLOWED_ROLES.include?(m['role']) && m['content'].present? }
   end
 
   def inbox

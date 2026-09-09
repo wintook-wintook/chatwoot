@@ -43,6 +43,13 @@
     "CANCEL": "Cancelar",
     "ERROR_NO_KEY": "Esta cuenta no tiene configurada la integración con OpenAI, así que el asistente no puede redactar.",
     "TAB_ASSISTANT": "Asistente",
-    "TAB_INVENTORY": "Lo que tiene la cuenta"
+    "TAB_INVENTORY": "Lo que tiene la cuenta",
+    "TAB_AUDIT": "Revisar agentes",
+    "AUDIT_HINT": "Cada agente ya cargado, pasado por el mismo comprobador. «Conversacional» no es un defecto: es un agente sin temas declarados, que contesta solo con el modelo.",
+    "AUDIT_BROKEN": "no ejecuta",
+    "AUDIT_ROUTED": "con temas",
+    "AUDIT_CONVERSATIONAL": "conversacional",
+    "AUDIT_EMPTY": "sin Entrenamiento",
+    "AUDIT_FIX": "Arreglarlo acá"
   }
 }

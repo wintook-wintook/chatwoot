@@ -101,8 +101,27 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       TXT
 
       hallazgo = r[:blocking].find { |f| f[:code] == :loose_directive }
-      expect(hallazgo[:message]).to include('BLANQUEA')
+      expect(hallazgo[:message]).to include('borra la prosa entera')
       expect(hallazgo[:wrote]).to eq('@buscar_articulo')
+    end
+
+    # El blanqueo alcanza solo a la prosa del camino conversacional. Decirle a
+    # alguien que su agente "se queda sin nada" cuando sus ramas siguen andando
+    # quema la credibilidad del aviso.
+    it 'con ramas declaradas aclara que las ramas siguen funcionando' do
+      source('discourse', 'Foro Kontrolya')
+
+      r = validar("@ruta(soporte #soporte: no puedo entrar): @buscar_foro(Foro Kontrolya)\n\n[ROL] Usá @buscar_articulo.")
+
+      expect(r[:blocking].find { |f| f[:code] == :loose_directive }[:message])
+        .to include('las ramas en sí siguen funcionando')
+    end
+
+    it 'sin ramas dice que el agente se queda sin ninguna instrucción' do
+      r = validar('[ROL] Sos el agente. Si no sabés, usá @buscar_articulo.')
+
+      expect(r[:blocking].find { |f| f[:code] == :loose_directive }[:message])
+        .to include('se queda sin ninguna')
     end
 
     it 'no la dispara cuando las directivas viven dentro de las líneas @ruta' do

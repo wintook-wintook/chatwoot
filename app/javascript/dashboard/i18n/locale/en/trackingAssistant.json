@@ -43,6 +43,13 @@
     "CANCEL": "Cancel",
     "ERROR_NO_KEY": "This account has no OpenAI integration configured, so the assistant can't write.",
     "TAB_ASSISTANT": "Assistant",
-    "TAB_INVENTORY": "What this account has"
+    "TAB_INVENTORY": "What this account has",
+    "TAB_AUDIT": "Review agents",
+    "AUDIT_HINT": "Every saved agent, run through the same checker. \\u201cConversational\\u201d is not a defect: it's an agent with no declared topics, answering with the model alone.",
+    "AUDIT_BROKEN": "not running",
+    "AUDIT_ROUTED": "has topics",
+    "AUDIT_CONVERSATIONAL": "conversational",
+    "AUDIT_EMPTY": "no Training",
+    "AUDIT_FIX": "Fix it here"
   }
 }

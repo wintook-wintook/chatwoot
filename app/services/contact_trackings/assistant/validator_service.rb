@@ -121,6 +121,12 @@ class ContactTrackings::Assistant::ValidatorService
   end
 
   # ── B3 · directiva suelta en la prosa ───────────────────────────────────────
+  # El blanqueo (job:545) alcanza SOLO a la prosa del camino conversacional: se
+  # evalúa sobre el texto ya sin líneas @ruta y su resultado alimenta el prompt de
+  # generate_and_send_conversational_reply. Las ramas se parsean aparte y siguen
+  # funcionando. Por eso el mensaje cambia según haya ramas o no: decirle a alguien
+  # que su agente "se queda sin nada" cuando sus 5 ramas siguen andando es perder
+  # la única credibilidad que tiene este aviso.
   def check_loose_directive_in_prose
     prose = ContactTrackings::RouteMap.strip(text)
     match = prose.match(LOOSE_SEARCH_RE)
@@ -128,9 +134,16 @@ class ContactTrackings::Assistant::ValidatorService
 
     add(:blocking, :loose_directive,
         "La directiva #{match[0]} está suelta en la prosa, fuera de una línea @ruta. El motor " \
-        'BLANQUEA el Entrenamiento entero cuando encuentra una así: el agente se queda sin ninguna ' \
-        'instrucción. Las directivas van únicamente dentro de las líneas @ruta.',
+        "borra la prosa entera cuando encuentra una así, y #{blanking_consequence}. " \
+        'Las directivas van únicamente dentro de las líneas @ruta.',
         wrote: match[0])
+  end
+
+  def blanking_consequence
+    return 'esa prosa es toda la instrucción que tiene el agente: se queda sin ninguna' if map.routes.empty?
+
+    'el agente pierde sus instrucciones en los turnos que no resuelve ninguna rama ' \
+      '(las ramas en sí siguen funcionando)'
   end
 
   # ── B4 y B5 · la fuente de cada rama ────────────────────────────────────────

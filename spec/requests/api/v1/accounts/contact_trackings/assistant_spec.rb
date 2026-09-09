@@ -203,4 +203,46 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       expect(pedido).to have_been_made
     end
   end
+
+  describe 'GET audit' do
+    let(:audit_url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/audit" }
+
+    def revisar(user: admin)
+      get audit_url, headers: user.create_new_auth_token, as: :json
+    end
+
+    it 'no deja entrar a un agente' do
+      revisar(user: agent)
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    # Regresión: `audit` llegó a quedar definido dos veces y el segundo caía dentro
+    # de `private`, así que la acción existía en las rutas y no se podía invocar.
+    it 'responde: la acción es pública' do
+      revisar
+
+      expect(response).to have_http_status(:success)
+    end
+
+    it 'marca como broken al agente cuya prosa lleva una directiva suelta' do
+      account.tracking_templates.create!(name: 'Consultor', objective: 'Resolver dudas',
+                                         complementary_prompt: '[ROL] Si no sabés, consultá @discourse.')
+
+      revisar
+
+      fila = response.parsed_body.first
+      expect(fila['status']).to eq('broken')
+      expect(fila['headline']).to include('@discourse')
+    end
+
+    it 'no marca como roto a un agente conversacional' do
+      account.tracking_templates.create!(name: 'Asesor', objective: 'Vender licencias',
+                                         complementary_prompt: '[ROL] Sos un asesor amable.')
+
+      revisar
+
+      expect(response.parsed_body.first['status']).to eq('conversational')
+    end
+  end
 end

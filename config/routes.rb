@@ -117,6 +117,7 @@ Rails.application.routes.draw do
             post 'assistant/validate',  to: 'assistant#validate'
             post 'assistant/interview', to: 'assistant#interview'
             post 'assistant/save',      to: 'assistant#save'
+            get  'assistant/audit',     to: 'assistant#audit'
           end
 
           # @knowledge_sources

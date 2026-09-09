@@ -7,6 +7,10 @@
 //   DERECHA    el Entrenamiento escribiéndose, editable a mano
 //   ABAJO      lo que el motor va a leer, revalidado en cada cambio
 //
+// La tercera pestaña revisa los agentes YA cargados: la misma máquina al revés.
+// Ahí "0 ramas" no es un defecto —un agente sin ramas es conversacional, un estilo
+// válido— así que ese estado se muestra aparte y no en rojo.
+//
 // La segunda pestaña muestra el inventario: con qué material trabaja el asistente.
 // No es decorativa — ahí se ven las frases de clientes YA enmascaradas, que son
 // exactamente las que salen hacia OpenAI. Lo que se ve es lo que se manda.
@@ -28,6 +32,16 @@ import SaveModal from './assistant/SaveModal.vue';
 
 // El teclado va más rápido que un request: se espera a que la persona pare.
 const VALIDATE_DEBOUNCE_MS = 400;
+
+// Explícito y no armado por concatenación: una clave dinámica no la puede verificar
+// nadie —ni un linter ni quien traduce— y el día que el backend agregue un estado, el
+// cartel sale en blanco sin que falle nada.
+const AUDIT_STATUS_LABEL = {
+  broken: 'TRACKING_ASSISTANT_VIEW.AUDIT_BROKEN',
+  routed: 'TRACKING_ASSISTANT_VIEW.AUDIT_ROUTED',
+  conversational: 'TRACKING_ASSISTANT_VIEW.AUDIT_CONVERSATIONAL',
+  empty: 'TRACKING_ASSISTANT_VIEW.AUDIT_EMPTY',
+};
 
 export default {
   components: {
@@ -52,6 +66,8 @@ export default {
       saveError: '',
       validateTimer: null,
       activeTab: 0,
+      audit: [],
+      isAuditing: false,
     };
   },
   computed: {
@@ -60,6 +76,9 @@ export default {
     },
     unsupported() {
       return this.inventory?.unsupported || [];
+    },
+    brokenAgents() {
+      return this.audit.filter(row => row.status === 'broken');
     },
     hasBlocking() {
       return Boolean(this.validation?.blocking?.length);
@@ -80,6 +99,7 @@ export default {
     this.fetchInventory();
     this.$store.dispatch('inboxes/get');
     this.$store.dispatch('trackingTemplates/get');
+    this.fetchAudit();
   },
   beforeUnmount() {
     clearTimeout(this.validateTimer);
@@ -99,6 +119,28 @@ export default {
       } finally {
         this.isLoadingInventory = false;
       }
+    },
+    async fetchAudit() {
+      this.isAuditing = true;
+      try {
+        const { data } = await AssistantAPI.audit();
+        this.audit = data;
+      } catch (error) {
+        this.audit = [];
+      } finally {
+        this.isAuditing = false;
+      }
+    },
+    // Cargar un agente roto en el panel lo deja listo para corregir y reemplazar:
+    // el arreglo pasa por el mismo comprobador y el mismo guardado que uno nuevo.
+    auditLabel(status) {
+      return AUDIT_STATUS_LABEL[status] || AUDIT_STATUS_LABEL.empty;
+    },
+    openInAssistant(row) {
+      const template = this.templates.find(t => t.id === row.id);
+      this.draft = template?.complementary_prompt || '';
+      this.activeTab = 0;
+      this.validateDraft();
     },
     async sendMessage(content) {
       this.messages.push({ role: 'user', content });
@@ -223,6 +265,11 @@ export default {
             :index="1"
             :name="$t('TRACKING_ASSISTANT_VIEW.TAB_INVENTORY')"
             :show-badge="false"
+          />
+          <woot-tabs-item
+            :index="2"
+            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_AUDIT')"
+            :count="brokenAgents.length"
           />
         </woot-tabs>
 
@@ -372,6 +419,71 @@ export default {
               </li>
             </ul>
           </section>
+        </div>
+
+        <!-- Revisar los agentes ya cargados. La misma máquina al revés. -->
+        <div v-show="activeTab === 2" class="flex-1 min-h-0 overflow-y-auto">
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_HINT') }}
+          </p>
+          <ul class="flex flex-col gap-2">
+            <li
+              v-for="row in audit"
+              :key="row.id"
+              class="p-3 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="text-xs font-medium px-2 py-0.5 rounded shrink-0"
+                      :class="{
+                        'text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-300':
+                          row.status === 'broken',
+                        'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300':
+                          row.status === 'routed',
+                        'text-slate-600 bg-slate-100 dark:bg-slate-700 dark:text-slate-300':
+                          row.status === 'conversational' ||
+                          row.status === 'empty',
+                      }"
+                    >
+                      {{ $t(auditLabel(row.status)) }}
+                    </span>
+                    <span
+                      class="text-sm text-slate-800 dark:text-slate-100 truncate"
+                    >
+                      {{ row.name }}
+                    </span>
+                  </div>
+                  <p
+                    v-if="row.headline"
+                    class="text-xs text-red-700 dark:text-red-300 mt-1"
+                  >
+                    {{ row.headline }}
+                  </p>
+                  <p
+                    v-else-if="row.status === 'routed'"
+                    class="text-xs text-slate-500 dark:text-slate-400 mt-1"
+                  >
+                    {{
+                      $t('TRACKING_ASSISTANT_VIEW.REPORT_ROUTES', {
+                        count: row.routes,
+                      })
+                    }}
+                  </p>
+                </div>
+                <woot-button
+                  v-if="row.status === 'broken'"
+                  size="small"
+                  variant="clear"
+                  class="shrink-0"
+                  @click="openInAssistant(row)"
+                >
+                  {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_FIX') }}
+                </woot-button>
+              </div>
+            </li>
+          </ul>
         </div>
 
         <div
