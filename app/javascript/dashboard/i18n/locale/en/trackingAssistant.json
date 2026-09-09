@@ -1,0 +1,20 @@
+{
+  "TRACKING_ASSISTANT_VIEW": {
+    "TITLE": "AI Agent Assistant",
+    "DESCRIPTION": "Builds an AI Agent's Training and checks that the engine will actually be able to run it before you save.",
+    "REFRESH": "Refresh",
+    "SOURCES_TITLE": "Connected sources",
+    "UNSUPPORTED_HINT": "There are saved sources the assistant doesn't know how to offer and won't use:",
+    "CASE_TYPES_TITLE": "Case types",
+    "LABELS_TITLE": "Labels in use",
+    "GROUPS_TITLE": "Canned response groups",
+    "PHRASES_TITLE": "How your customers write",
+    "PHRASES_HINT": "Verbatim, typos and all. Each topic's description is written in these words, so the agent recognises real messages rather than manual language.",
+    "PHRASES_EMPTY": "No customer messages yet to use as a reference.",
+    "EMPTY_ACCOUNT_TITLE": "This account has nothing to build an agent from yet.",
+    "EMPTY_ACCOUNT_HINT": "You need at least one Knowledge Base source or one case type. Without that, the assistant has nothing to propose from and could only offer generic templates.",
+    "COMING_SOON": "The conversation with the assistant and the Training being written go here, with live checking.",
+    "ERROR_FORBIDDEN": "Only an administrator can use the AI Agent Assistant.",
+    "ERROR_GENERIC": "Couldn't read what this account has. Please try again."
+  }
+}

@@ -44,6 +44,7 @@ import gestorTickets from './gestorTickets.json'; // @tickets_cases
 import erp from './erp.json'; // @query_databases
 import bulkTrackingAssign from './bulkTrackingAssign.json'; // proyecto@bulk_tracking_assign
 import trackingCampaigns from './trackingCampaigns.json'; // @campanas_vendedor
+import trackingAssistant from './trackingAssistant.json'; // proyecto@asistente_agentes_ia
 
 export default {
   ...advancedFilters,
@@ -90,4 +91,5 @@ export default {
   ...erp, // @query_databases
   ...bulkTrackingAssign, // proyecto@bulk_tracking_assign
   ...trackingCampaigns, // @campanas_vendedor
+  ...trackingAssistant, // proyecto@asistente_agentes_ia
 };
