@@ -946,11 +946,50 @@ bloquea.
 
 | # | Decisión | Opciones |
 |---|---|---|
-| 1 | **Frases reales de clientes en el prompt** | ¿cuántos mensajes? ¿de toda la cuenta o del inbox elegido? ¿se anonimizan? Van a OpenAI: hay que decidirlo a conciencia |
+| 1 | ~~**Frases reales de clientes en el prompt**~~ | ✅ **RESUELTA (10/09/2026): sí, como está.** Confirmado por el dueño de la cuenta tras ver las frases reales que salen. Ver §13.4 |
 | 2 | ~~**Qué pasa con el botón viejo (F7)**~~ | ✅ **RESUELTA: apunta al motor nuevo.** `generate_prompt_with_ai` borrado |
 | 3 | ~~**Permisos**~~ | ✅ **RESUELTA: solo `administrator`.** El inventario expone mensajes reales de clientes, `save` reemplaza un agente en producción y la entrevista gasta tokens de la cuenta. Un spec recorre los 10 endpoints y exige 401 para un agente |
 | 4 | ~~**Versionado del Entrenamiento**~~ | ✅ **RESUELTA: la simple**, columna `previous_complementary_prompt` |
 | 5 | ~~**El asistente en inglés**~~ | ✅ **RESUELTA (10/09/2026): las dos.** Ver abajo |
+
+### 13.4 Frases de clientes hacia OpenAI (resuelto 10/09/2026)
+
+**Confirmado: sí, se mandan.** La decisión la tomó el dueño de la cuenta el
+10/09/2026, después de ver en pantalla las frases concretas que salen de la cuenta 2
+—8 en ese momento, ninguna delicada— y no sobre una descripción abstracta.
+
+Los parámetros que quedan fijos, tal como estaban corriendo:
+
+```
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │  QUÉ SALE                                                                │
+  │    hasta 25 mensajes           PHRASES_LIMIT                             │
+  │    de 15 a 160 caracteres      ni un "ok" ni tres párrafos               │
+  │    solo entrantes              lo que escribió el cliente, no el asesor  │
+  │    de toda la cuenta           salvo que se filtre por inbox             │
+  ├──────────────────────────────────────────────────────────────────────────┤
+  │  QUÉ SE TAPA ANTES  ·  Assistant::PhraseMasker                           │
+  │    correos · teléfonos · RFC · CURP · números de 7+ dígitos              │
+  │                                                                          │
+  │  QUÉ NO SE TAPA, a propósito                                             │
+  │    versiones y fechas    son justo lo que hace útil la frase             │
+  │    nombres sueltos       "hola soy juan perez" pasa tal cual             │
+  └──────────────────────────────────────────────────────────────────────────┘
+```
+
+**Por qué existe esto.** Las descripciones de rama son LO ÚNICO que usa el
+clasificador para decidir a qué rama va un mensaje. Escritas con las palabras reales
+de los clientes funcionan; escritas en lenguaje de manual, la rama casi nunca se
+elige — es la misma razón por la que D1 marca como *degrading* una rama sin
+descripción.
+
+**Dónde se ven.** La pestaña "Lo que tiene la cuenta" muestra las frases YA
+enmascaradas: lo que se ve ahí es exactamente lo que sale. No es decorativa.
+
+Si algún día hay que apagarlo, `PHRASES_LIMIT = 0` deja el resto del Asistente en pie:
+las descripciones salen genéricas, no vacías.
+
+---
 
 ### 13.3 El Asistente en dos idiomas (resuelto 10/09/2026)
 
