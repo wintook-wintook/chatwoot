@@ -71,6 +71,9 @@ export default {
       INDEX_SELECTED: 'Indexar lo elegido',
       CANCEL: 'Cancelar',
       NEW_ENTRIES: '%{count} entradas nuevas se agregaron al índice',
+      PRODUCT_CATEGORIES: 'Categorías de la tienda',
+      PAGES_NO_CATEGORIES:
+        'Las páginas no tienen categorías: se eligen una por una en la lista.',
       PICK_CONTENT: 'Elegir contenido',
     },
   },

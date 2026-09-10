@@ -10,6 +10,12 @@
 // Al revés serían mil casillas que nadie revisa — y un sitio real tiene 1.106
 // entradas, así que eso no es una hipótesis.
 //
+// CADA TIPO SE FILTRA DISTINTO, Y TRATARLOS IGUAL ERA UN FALLO SILENCIOSO:
+//   entradas   por categoría del blog
+//   páginas    NO tienen categorías: solo la lista. WordPress ignora el filtro y
+//              devuelve todas, así que ofrecerlo hacía creer que se acotó algo.
+//   productos  por categoría de la TIENDA, que es otra taxonomía con otros ids
+//
 // LA EXCEPCIÓN GANA SOBRE LA REGLA:
 //   Una entrada desmarcada a mano queda desmarcada aunque su categoría esté
 //   elegida. Si no, deseleccionar no serviría de nada: la próxima sincronización
@@ -47,6 +53,7 @@ export default {
     return {
       contentTypes: [],
       categories: [],
+      productCategories: [],
       excludedIds: [],
       includedIds: [],
       catalog: [],
@@ -67,20 +74,45 @@ export default {
         .filter(type => counts[type])
         .map(type => ({ type, count: counts[type] }));
     },
+    // Las del blog filtran entradas; las de la tienda, productos. Se ofrecen solo
+    // si el tipo correspondiente está elegido: un filtro que no aplica a nada
+    // confunde más de lo que ayuda.
     availableCategories() {
       return this.probe.categories || [];
+    },
+    availableProductCategories() {
+      return this.probe.product_categories || [];
+    },
+    showBlogCategories() {
+      return (
+        this.contentTypes.includes('posts') &&
+        this.availableCategories.length > 0
+      );
+    },
+    showProductCategories() {
+      return (
+        this.contentTypes.includes('products') &&
+        this.availableProductCategories.length > 0
+      );
     },
     // La resolución tiene que dar lo mismo que Wordpress::Selection en el backend:
     // si divergieran, la pantalla prometería algo distinto de lo que se indexa.
     isSelected() {
-      const cats = new Set(this.categories);
       const excluded = new Set(this.excludedIds);
       const included = new Set(this.includedIds);
+      // La taxonomía depende del tipo que se está viendo. Las páginas no tienen,
+      // así que para ellas la regla es "todas" y solo mandan las excepciones.
+      const cats = new Set(
+        this.activeType === 'products'
+          ? this.productCategories
+          : this.categories
+      );
+      const filterable = this.activeType !== 'pages';
 
       return item => {
         if (excluded.has(item.id)) return false;
         if (included.has(item.id)) return true;
-        if (!cats.size) return true;
+        if (!filterable || !cats.size) return true;
         return (item.category_ids || []).some(id => cats.has(id));
       };
     },
@@ -119,6 +151,7 @@ export default {
       const config = this.source?.config || {};
       this.contentTypes = [...(config.content_types || ['posts'])];
       this.categories = [...(config.categories || [])];
+      this.productCategories = [...(config.product_categories || [])];
       this.excludedIds = [...(config.excluded_ids || [])];
       this.includedIds = [...(config.included_ids || [])];
       this.activeType = this.contentTypes[0] || 'posts';
@@ -157,6 +190,11 @@ export default {
       if (index >= 0) this.categories.splice(index, 1);
       else this.categories.push(id);
     },
+    toggleProductCategory(id) {
+      const index = this.productCategories.indexOf(id);
+      if (index >= 0) this.productCategories.splice(index, 1);
+      else this.productCategories.push(id);
+    },
     // Marcar y desmarcar se guardan como EXCEPCIONES, no como una lista completa:
     // así una entrada que se publique mañana en una categoría elegida entra sola.
     toggleItem(item) {
@@ -172,6 +210,7 @@ export default {
       this.$emit('save', {
         content_types: this.contentTypes,
         categories: this.categories,
+        product_categories: this.productCategories,
         excluded_ids: this.excludedIds,
         included_ids: this.includedIds,
       });
@@ -220,9 +259,8 @@ export default {
         </div>
       </div>
 
-      <!-- La regla: elegir una categoría entra todo lo suyo, y lo que se publique
-           después en ella. -->
-      <div v-if="availableCategories.length" class="mb-4">
+      <!-- Categorías del BLOG: filtran entradas. Solo si hay entradas elegidas. -->
+      <div v-if="showBlogCategories" class="mb-4">
         <h3
           class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1"
         >
@@ -248,8 +286,54 @@ export default {
         </div>
       </div>
 
+      <!-- Categorías de la TIENDA: otra taxonomía, otros ids. Filtran productos. -->
+      <div v-if="showProductCategories" class="mb-4">
+        <h3
+          class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1"
+        >
+          {{ $t('KNOWLEDGE_SOURCES.WORDPRESS.PRODUCT_CATEGORIES') }}
+        </h3>
+        <div class="flex flex-wrap gap-3 max-h-24 overflow-y-auto">
+          <label
+            v-for="category in availableProductCategories"
+            :key="category.id"
+            class="flex items-center gap-2 text-sm"
+          >
+            <input
+              type="checkbox"
+              :checked="productCategories.includes(category.id)"
+              @change="toggleProductCategory(category.id)"
+            />
+            {{ category.name }}
+            <span class="text-slate-400">({{ category.count }})</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Las páginas no tienen categorías. Decirlo evita que alguien busque un
+           filtro que no existe. -->
+      <p
+        v-if="activeType === 'pages'"
+        class="text-xs text-slate-500 dark:text-slate-400 mb-3"
+      >
+        {{ $t('KNOWLEDGE_SOURCES.WORDPRESS.PAGES_NO_CATEGORIES') }}
+      </p>
+
       <!-- La lista: para las excepciones. Con buscador y filtro, porque un sitio
            real tiene más de mil entradas. -->
+      <!-- Qué tipo se está listando abajo: cada uno tiene su propia lista y su
+           propio filtro, así que se ven de a uno. -->
+      <div v-if="contentTypes.length > 1" class="flex items-center gap-3 mb-2">
+        <label
+          v-for="type in contentTypes"
+          :key="type"
+          class="flex items-center gap-1 text-xs"
+        >
+          <input v-model="activeType" type="radio" :value="type" />
+          {{ $t(typeLabel(type)) }}
+        </label>
+      </div>
+
       <div class="flex items-center gap-3 mb-2">
         <input
           v-model="search"

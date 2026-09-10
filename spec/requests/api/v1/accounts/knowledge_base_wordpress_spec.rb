@@ -38,12 +38,29 @@ RSpec.describe 'Base de Conocimiento — fuente WordPress' do
       stub_wp('/wp-json/wp/v2/pages', [], headers: { 'X-WP-Total' => '24' })
       stub_wp('/wp-json/wc/store/v1/products', {}, status: 404)
       stub_wp('/wp-json/wp/v2/categories', [{ 'id' => 3, 'name' => 'Soporte', 'count' => 113 }])
+      stub_wp('/wp-json/wc/store/v1/products/categories', {}, status: 404)
 
       probar(site)
 
       expect(response).to have_http_status(:success)
       expect(response.parsed_body['counts']).to include('posts' => 1106, 'pages' => 24, 'products' => nil)
       expect(response.parsed_body['categories'].first).to include('name' => 'Soporte')
+    end
+
+    # Las de la tienda son otra taxonomía: la pantalla necesita las dos listas por
+    # separado para no ofrecer las del blog como filtro de productos.
+    it 'devuelve las categorías de la tienda aparte de las del blog' do
+      stub_wp('/wp-json/wp/v2/posts', [], headers: { 'X-WP-Total' => '10' })
+      stub_wp('/wp-json/wp/v2/pages', [], headers: { 'X-WP-Total' => '2' })
+      stub_wp('/wp-json/wc/store/v1/products', [], headers: { 'X-WP-Total' => '87' })
+      stub_wp('/wp-json/wp/v2/categories', [{ 'id' => 3, 'name' => 'Blog', 'count' => 10 }])
+      stub_wp('/wp-json/wc/store/v1/products/categories',
+              [{ 'id' => 1028, 'name' => 'Contabilidad', 'count' => 27 }])
+
+      probar(site)
+
+      expect(response.parsed_body['categories'].pluck('name')).to eq(['Blog'])
+      expect(response.parsed_body['product_categories'].pluck('name')).to eq(['Contabilidad'])
     end
 
     # Hay instalaciones que bloquean la API REST por plugin de seguridad. Tiene que

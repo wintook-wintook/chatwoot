@@ -64,8 +64,16 @@ class Wordpress::Selection
     Array(@config[:content_types]).presence || []
   end
 
-  def categories
-    Array(@config[:categories]).map(&:to_i)
+  # Cada tipo tiene SU taxonomía, y confundirlas no da error: da un filtro que no
+  # filtra. Las páginas no tienen ninguna —WordPress ignora el parámetro y devuelve
+  # todas—, y las de la tienda son otra lista con otros ids que las del blog.
+  CATEGORY_KEY = { 'posts' => :categories, 'products' => :product_categories }.freeze
+
+  def categories_for(type)
+    key = CATEGORY_KEY[type]
+    return [] if key.nil?
+
+    Array(@config[key]).map(&:to_i)
   end
 
   def excluded
@@ -79,7 +87,7 @@ class Wordpress::Selection
   def ids_for(type)
     # El filtro por categoría lo aplica WordPress, no nosotros: así no se baja el
     # sitio entero para descartar después.
-    result = @client.titles(type, categories: categories)
+    result = @client.titles(type, categories: categories_for(type))
     # Un tipo que el sitio no tiene (404) no es un fallo; que el sitio no responda, sí.
     unless result.ok?
       @failed = true unless result.error == :not_found

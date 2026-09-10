@@ -120,4 +120,46 @@ RSpec.describe Wordpress::Selection do
       expect(catalogo.map { |i| [i[:id], i[:selected]] }).to eq([[1, true], [2, false], [3, true]])
     end
   end
+
+  # Cada tipo tiene SU taxonomía, y confundirlas no da error: da un filtro que no
+  # filtra. Es el fallo que aparecio al mirar la pantalla con el modelo correcto.
+  describe 'cada tipo con su taxonomía' do
+    it 'a las ENTRADAS les pasa las categorías del blog' do
+      allow(client).to receive(:titles).with('posts', categories: [3]).and_return(resultado([1]))
+
+      resolver('content_types' => ['posts'], 'categories' => [3])
+
+      expect(client).to have_received(:titles).with('posts', categories: [3])
+    end
+
+    # Una página no tiene categorías: WordPress ignora el parámetro y devuelve
+    # todas. Pasárselo hace creer que se acotó algo que no se acotó.
+    it 'a las PÁGINAS no les pasa ninguna categoría, aunque haya elegidas' do
+      allow(client).to receive(:titles).with('pages', categories: []).and_return(resultado([9]))
+
+      resolver('content_types' => ['pages'], 'categories' => [3])
+
+      expect(client).to have_received(:titles).with('pages', categories: [])
+    end
+
+    # Las de la tienda son otra lista con otros ids: las del blog no filtran nada.
+    it 'a los PRODUCTOS les pasa las categorías de la tienda, no las del blog' do
+      allow(client).to receive(:titles).with('products', categories: [1028]).and_return(resultado([7]))
+
+      resolver('content_types' => ['products'], 'categories' => [3], 'product_categories' => [1028])
+
+      expect(client).to have_received(:titles).with('products', categories: [1028])
+    end
+
+    it 'resuelve los tres tipos a la vez, cada uno con lo suyo' do
+      allow(client).to receive(:titles).with('posts', categories: [3]).and_return(resultado([1]))
+      allow(client).to receive(:titles).with('pages', categories: []).and_return(resultado([9]))
+      allow(client).to receive(:titles).with('products', categories: [1028]).and_return(resultado([7]))
+
+      resultado = resolver('content_types' => %w[posts pages products],
+                           'categories' => [3], 'product_categories' => [1028])
+
+      expect(resultado).to eq('posts' => [1], 'pages' => [9], 'products' => [7])
+    end
+  end
 end

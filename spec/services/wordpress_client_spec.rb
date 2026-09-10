@@ -50,11 +50,29 @@ RSpec.describe WordpressClient do
       stub_wp('/wp-json/wp/v2/pages', [], headers: { 'X-WP-Total' => '24' })
       stub_wp('/wp-json/wc/store/v1/products', [], headers: { 'X-WP-Total' => '87' })
       stub_wp('/wp-json/wp/v2/categories', [{ 'id' => 3, 'name' => 'Soporte', 'count' => 113 }])
+      stub_wp('/wp-json/wc/store/v1/products/categories', [])
 
       datos = described_class.new(site).probe.data
 
       expect(datos[:counts]).to eq('posts' => 1106, 'pages' => 24, 'products' => 87)
       expect(datos[:categories]).to eq([{ id: 3, name: 'Soporte', count: 113 }])
+    end
+
+    # Las de la tienda son OTRA taxonomía: en un sitio real wp/v2 da
+    # "Archive · Blog" y la tienda "Accounting · Additional purchases". Ofrecer las
+    # del blog para filtrar productos no filtra nada.
+    it 'trae las categorías de la tienda aparte de las del blog' do
+      stub_wp('/wp-json/wp/v2/posts', [], headers: { 'X-WP-Total' => '10' })
+      stub_wp('/wp-json/wp/v2/pages', [], headers: { 'X-WP-Total' => '2' })
+      stub_wp('/wp-json/wc/store/v1/products', [], headers: { 'X-WP-Total' => '5' })
+      stub_wp('/wp-json/wp/v2/categories', [{ 'id' => 3, 'name' => 'Blog', 'count' => 10 }])
+      stub_wp('/wp-json/wc/store/v1/products/categories',
+              [{ 'id' => 1028, 'name' => 'Contabilidad', 'count' => 27 }])
+
+      datos = described_class.new(site).probe.data
+
+      expect(datos[:categories].pluck(:name)).to eq(['Blog'])
+      expect(datos[:product_categories]).to eq([{ id: 1028, name: 'Contabilidad', count: 27 }])
     end
 
     # Un sitio sin tienda devuelve 404 en la Store API. Es lo normal, no un fallo.
@@ -63,6 +81,7 @@ RSpec.describe WordpressClient do
       stub_wp('/wp-json/wp/v2/pages', [], headers: { 'X-WP-Total' => '2' })
       stub_wp('/wp-json/wc/store/v1/products', { 'code' => 'rest_no_route' }, status: 404)
       stub_wp('/wp-json/wp/v2/categories', [])
+      stub_wp('/wp-json/wc/store/v1/products/categories', {}, status: 404)
 
       resultado = described_class.new(site).probe
 
@@ -134,13 +153,55 @@ RSpec.describe WordpressClient do
       )
     end
 
-    it 'acota por categoría del lado de WordPress, no del nuestro' do
+    it 'acota las ENTRADAS por categoría del lado de WordPress, no del nuestro' do
       stub_wp('/wp-json/wp/v2/posts', [], headers: { 'X-WP-TotalPages' => '1' })
 
       described_class.new(site).titles('posts', categories: [3, 7])
 
       expect(a_request(:get, "#{site}/wp-json/wp/v2/posts")
         .with(query: hash_including('categories' => '3,7'))).to have_been_made
+    end
+
+    # Una página NO tiene categorías: WordPress ignora el parámetro y devuelve
+    # TODAS igual, sin error. Mandarlo hace creer que se acotó algo que no se acotó
+    # — verificado contra un sitio real: 24 páginas con y sin ?categories=18.
+    it 'no manda el filtro de categoría en las páginas, porque no existe' do
+      stub_wp('/wp-json/wp/v2/pages', [], headers: { 'X-WP-TotalPages' => '1' })
+
+      described_class.new(site).titles('pages', categories: [3])
+
+      pedido = a_request(:get, %r{#{site}/wp-json/wp/v2/pages})
+               .with { |req| req.uri.query.exclude?('categories') }
+      expect(pedido).to have_been_made
+    end
+
+    # La Store API usa `category` en singular y admite UNA sola: ?category=1,2
+    # devuelve lo mismo que ?category=1. Hay que preguntar de a una y unir.
+    it 'pide los productos de a una categoría y une los resultados' do
+      stub_request(:get, "#{site}/wp-json/wc/store/v1/products")
+        .with(query: hash_including('category' => '10'))
+        .to_return(status: 200, headers: { 'Content-Type' => 'application/json', 'X-WP-TotalPages' => '1' },
+                   body: [{ 'id' => 1, 'name' => 'Uno', 'permalink' => 'u', 'categories' => [] }].to_json)
+      stub_request(:get, "#{site}/wp-json/wc/store/v1/products")
+        .with(query: hash_including('category' => '20'))
+        .to_return(status: 200, headers: { 'Content-Type' => 'application/json', 'X-WP-TotalPages' => '1' },
+                   body: [{ 'id' => 2, 'name' => 'Dos', 'permalink' => 'd', 'categories' => [] }].to_json)
+
+      resultado = described_class.new(site).titles('products', categories: [10, 20])
+
+      expect(resultado.data.pluck(:id)).to eq([1, 2])
+      expect(a_request(:get, %r{#{site}/wp-json/wc/store/v1/products\?})).to have_been_made.twice
+    end
+
+    # Un producto puede estar en dos de las categorías elegidas, y no debe entrar
+    # dos veces al índice.
+    it 'no repite un producto que está en dos categorías elegidas' do
+      stub_request(:get, "#{site}/wp-json/wc/store/v1/products")
+        .with(query: hash_including('category'))
+        .to_return(status: 200, headers: { 'Content-Type' => 'application/json', 'X-WP-TotalPages' => '1' },
+                   body: [{ 'id' => 7, 'name' => 'Repetido', 'permalink' => 'r', 'categories' => [] }].to_json)
+
+      expect(described_class.new(site).titles('products', categories: [10, 20]).data.size).to eq(1)
     end
 
     it 'recorre todas las páginas' do

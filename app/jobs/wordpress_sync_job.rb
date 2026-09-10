@@ -93,7 +93,8 @@ class WordpressSyncJob < ApplicationJob
   # Hash de lo que decide QUÉ entra. No incluye site_url ni nada operativo: cambiar
   # el sitio es otra fuente, no un resync.
   def fingerprint_of(source)
-    material = source.config.values_at('content_types', 'categories', 'excluded_ids', 'included_ids')
+    material = source.config.values_at('content_types', 'categories', 'product_categories',
+                                       'excluded_ids', 'included_ids')
     Digest::MD5.hexdigest(material.map { |v| Array(v).sort.join(',') }.join('|'))
   end
 

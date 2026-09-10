@@ -40,18 +40,37 @@ class WordpressClient
   OPEN_TIMEOUT = 10
   READ_TIMEOUT = 30
 
-  # Cada tipo con su ruta, los campos que alcanzan para el listado, y cómo se llama
-  # su forma normalizada. `wp` y `store` son dialectos distintos de la misma idea.
+  # Cada tipo con su ruta, sus campos de listado, su dialecto y CÓMO SE FILTRA.
+  #
+  # Los tres no se seleccionan igual, y tratarlos igual era un fallo silencioso
+  # (verificado el 10/09/2026 contra sitios reales):
+  #
+  #   posts     ?categories=3,7   filtra bien, admite varias
+  #   pages     ?categories=3     SE IGNORA — una página no tiene categorías, y
+  #                               WordPress devuelve las 24 igual, sin error
+  #   products  ?category=1021    otra taxonomía (las del blog no aplican) y UNA
+  #                               sola por consulta: ?category=1021,1028 devuelve
+  #                               lo mismo que ?category=1021
+  #
+  # Por eso `filter` dice el nombre del parámetro —o nil si el tipo no se puede
+  # filtrar— y `multi` si admite varias de una.
   TYPES = {
     'posts' => { path: '/wp-json/wp/v2/posts', dialect: :wp,
-                 fields: 'id,title,date,link,categories' },
+                 fields: 'id,title,date,link,categories',
+                 filter: :categories, multi: true },
     'pages' => { path: '/wp-json/wp/v2/pages', dialect: :wp,
-                 fields: 'id,title,date,link' },
+                 fields: 'id,title,date,link',
+                 filter: nil, multi: false },
     'products' => { path: '/wp-json/wc/store/v1/products', dialect: :store,
-                    fields: 'id,name,permalink,categories' }
+                    fields: 'id,name,permalink,categories',
+                    filter: :category, multi: false }
   }.freeze
 
   CATEGORIES_PATH = '/wp-json/wp/v2/categories'
+  # Las categorías de la tienda son OTRA taxonomía: en un sitio real, wp/v2 da
+  # "Archive · Blog · Business Ideas" y la tienda "Accounting · Additional
+  # purchases". Ofrecer las primeras para filtrar productos no filtra nada.
+  PRODUCT_CATEGORIES_PATH = '/wp-json/wc/store/v1/products/categories'
 
   Result = Struct.new(:ok, :data, :error, :detail, keyword_init: true) do
     def ok? = ok
@@ -80,19 +99,28 @@ class WordpressClient
       counts[type] = response.ok? ? total_from(response.data[:headers]) : nil
     end
 
-    Result.new(ok: true, data: { site_url: site_url, counts: counts, categories: categories })
+    Result.new(ok: true, data: { site_url: site_url, counts: counts,
+                                 categories: categories,
+                                 product_categories: product_categories })
   end
 
   # ── PARA ELEGIR ─────────────────────────────────────────────────────────────
   # Solo id, título, fecha y categoría. Es lo que hace que conectar sea instantáneo.
+  #
+  # El filtro se aplica según lo que el tipo admita (ver TYPES): las páginas no se
+  # pueden filtrar por categoría y los productos van de a una. Mandar el parámetro
+  # igual sería peor que no mandarlo: WordPress lo ignora en silencio y quien lo
+  # eligió cree que acotó algo.
   def titles(type, categories: [])
     spec = TYPES[type]
     return Result.new(ok: false, error: :unknown_type) if spec.nil?
 
-    params = { _fields: spec[:fields] }
-    params[:categories] = categories.join(',') if categories.present? && spec[:dialect] == :wp
+    base = { _fields: spec[:fields] }
+    return collect_titles(spec, type, base) if spec[:filter].nil? || categories.blank?
+    return collect_titles(spec, type, base.merge(spec[:filter] => categories.join(','))) if spec[:multi]
 
-    collect(spec, params) { |row| normalize_title(row, spec[:dialect], type) }
+    # Una consulta por categoría, y se unen: la Store API no admite varias.
+    merge_by_category(spec, type, base, categories)
   end
 
   # ── PARA INDEXAR ────────────────────────────────────────────────────────────
@@ -110,16 +138,43 @@ class WordpressClient
     collect(spec, params) { |row| normalize_item(row, spec[:dialect], type) }
   end
 
-  # Las categorías son de wp/v2. Un sitio solo con tienda no tiene, y eso no es un
-  # error: se devuelve vacío y la pantalla no ofrece filtro por categoría.
+  # Las categorías del blog: filtran ENTRADAS. Un sitio sin blog no tiene, y eso no
+  # es un error: se devuelve vacío y la pantalla no ofrece ese filtro.
   def categories
-    response = fetch(CATEGORIES_PATH, per_page: MAX_PER_PAGE, _fields: 'id,name,count')
+    category_list(CATEGORIES_PATH)
+  end
+
+  # Las de la tienda: filtran PRODUCTOS. Son otra taxonomía, con otros ids.
+  def product_categories
+    category_list(PRODUCT_CATEGORIES_PATH)
+  end
+
+  private
+
+  def category_list(path)
+    response = fetch(path, per_page: MAX_PER_PAGE, _fields: 'id,name,count')
     return [] unless response.ok?
 
     response.data[:body].map { |row| { id: row['id'], name: row['name'], count: row['count'] } }
   end
 
-  private
+  def collect_titles(spec, type, params)
+    collect(spec, params) { |row| normalize_title(row, spec[:dialect], type) }
+  end
+
+  # Se pide categoría por categoría y se unen sin repetir: un producto puede estar
+  # en dos de las elegidas y no debe entrar dos veces al índice.
+  def merge_by_category(spec, type, base, categories)
+    rows = []
+    categories.each do |category|
+      result = collect_titles(spec, type, base.merge(spec[:filter] => category))
+      return result unless result.ok?
+
+      rows.concat(result.data)
+    end
+
+    Result.new(ok: true, data: rows.uniq { |row| row[:id] })
+  end
 
   # Se acepta "misitio.com" tanto como la URL completa: nadie escribe el esquema.
   def normalize(url)

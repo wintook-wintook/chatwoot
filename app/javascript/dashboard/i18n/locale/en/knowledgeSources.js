@@ -71,6 +71,9 @@ export default {
       INDEX_SELECTED: 'Index what is chosen',
       CANCEL: 'Cancel',
       NEW_ENTRIES: '%{count} new entries were added to the index',
+      PRODUCT_CATEGORIES: 'Store categories',
+      PAGES_NO_CATEGORIES:
+        'Pages have no categories: pick them one by one in the list below.',
       PICK_CONTENT: 'Choose content',
     },
   },
