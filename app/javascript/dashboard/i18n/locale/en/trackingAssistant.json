@@ -90,6 +90,13 @@
     "DRY_RUN_CASE_BEFORE": "yes, before consulting the source",
     "DRY_RUN_CASE_TYPE_MISSING": "Type «%{name}» does not exist in the account: the case would be opened with whichever type the intake infers, not that one.",
     "DRY_RUN_CASE_INHERITED": "This topic declares no escalation of its own, so it inherits the loose @crear_ticket from the Training — and it runs before the source.",
-    "DRY_RUN_FOOTER": "The topic was classified by %{model}. No message was sent."
+    "DRY_RUN_FOOTER": "The topic was classified by %{model}. No message was sent.",
+    "STEP_INTERVIEW": "Interview",
+    "STEP_DRAFT": "Draft",
+    "STEP_CHECKED": "Checked",
+    "STEP_CHECKED_ROUTES": "%{count} topic(s)",
+    "STEP_CHECKED_BLOCKED": "%{count} problem(s)",
+    "STEP_TESTED": "Tested",
+    "REPORT_BLOCKING": "%{count} problem(s)"
   }
 }

@@ -9,11 +9,16 @@
 // Los hallazgos se muestran con las cuatro partes que trae el comprobador:
 // dónde, qué pasa, por qué, y qué se escribió. Recortarlos "para que se vean
 // más limpios" es justo lo que los vuelve inútiles.
+//
+// Esto es SOLO EL DETALLE. El marco, el título y el resumen los pone el
+// acordeón que lo contiene (Assistant.vue + ValidationBadge): el detalle ocupaba
+// diez líneas permanentes en la misma columna donde se edita un Entrenamiento
+// que acá tiene 46 líneas de mediana, así que se colapsa y lo que queda siempre
+// a la vista es el resumen.
 // ============================================================================
 export default {
   props: {
     validation: { type: Object, default: null },
-    isChecking: { type: Boolean, default: false },
   },
   computed: {
     routes() {
@@ -28,48 +33,12 @@ export default {
     cosmetic() {
       return this.validation?.cosmetic || [];
     },
-    // Sin ramas el agente cae siempre al camino conversacional: es el estado que
-    // hay que gritar, no un detalle más de la lista.
-    hasNoRoutes() {
-      return this.validation && this.routes.length === 0;
-    },
   },
 };
 </script>
 
 <template>
-  <div
-    class="p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-  >
-    <div class="flex items-center justify-between mb-3">
-      <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100">
-        {{ $t('TRACKING_ASSISTANT_VIEW.REPORT_TITLE') }}
-      </h3>
-      <span
-        v-if="isChecking"
-        class="text-xs text-slate-400 dark:text-slate-500"
-      >
-        {{ $t('TRACKING_ASSISTANT_VIEW.REPORT_CHECKING') }}
-      </span>
-      <span
-        v-else-if="validation"
-        class="text-xs font-medium px-2 py-0.5 rounded"
-        :class="
-          hasNoRoutes || blocking.length
-            ? 'text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-300'
-            : 'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300'
-        "
-      >
-        {{
-          hasNoRoutes
-            ? $t('TRACKING_ASSISTANT_VIEW.REPORT_NO_ROUTES')
-            : $t('TRACKING_ASSISTANT_VIEW.REPORT_ROUTES', {
-                count: routes.length,
-              })
-        }}
-      </span>
-    </div>
-
+  <div>
     <p v-if="!validation" class="text-xs text-slate-500 dark:text-slate-400">
       {{ $t('TRACKING_ASSISTANT_VIEW.REPORT_EMPTY') }}
     </p>

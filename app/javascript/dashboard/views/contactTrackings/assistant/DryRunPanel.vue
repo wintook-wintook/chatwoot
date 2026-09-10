@@ -8,6 +8,11 @@
 // con esto es leer el resultado, corregir el Entrenamiento que está arriba, y
 // volver a probar. Un modal tapa justo el texto que hay que corregir.
 //
+// Vive dentro de un acordeón CERRADO por defecto, y el marco y el título los
+// pone él. Probar es una acción puntual: como panel fijo se llevaba un cuarto de
+// la columna para mostrar un campo vacío, en la misma columna donde se edita un
+// texto que en esta cuenta llega a 645 líneas.
+//
 // SE DISPARA A MANO, SIEMPRE.
 //   El comprobador de arriba revalida en cada tecleo porque es una función pura
 //   y no cuesta nada. Esto sí cuesta: clasifica la rama con el modelo y vectoriza
@@ -85,12 +90,7 @@ export default {
 </script>
 
 <template>
-  <div
-    class="p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-  >
-    <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1">
-      {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_TITLE') }}
-    </h3>
+  <div>
     <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
       {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_HINT') }}
     </p>

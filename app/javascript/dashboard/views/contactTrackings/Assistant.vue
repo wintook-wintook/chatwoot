@@ -4,8 +4,16 @@
 // Pantalla del Asistente de Agentes IA: dos paneles.
 //
 //   IZQUIERDA  la conversación — pregunta qué querés que haga el agente
-//   DERECHA    el Entrenamiento escribiéndose, editable a mano
-//   ABAJO      lo que el motor va a leer, revalidado en cada cambio
+//   DERECHA    en qué va el trabajo, el Entrenamiento editable a mano, y
+//              colapsados abajo lo que el motor va a leer y la prueba en seco
+//
+// POR QUÉ EL ENTRENAMIENTO SE LLEVA TODO EL ALTO:
+//   La columna derecha tenía tres secciones de alto libre en un solo scroll, y
+//   la única con alto FIJO y chico (rows=14) era justo el texto que se está
+//   editando. Medido sobre los 28 agentes de la cuenta 2: 46 líneas de mediana,
+//   645 el más grande. Se veía el 30% del típico y el 2% del más grande.
+//   Ahora el texto toma lo que sobra y los otros dos se colapsan; del comprobador
+//   queda siempre a la vista el resumen, que es lo que no se puede esconder.
 //
 // La tercera pestaña revisa los agentes YA cargados: la misma máquina al revés.
 // Ahí "0 ramas" no es un defecto —un agente sin ramas es conversacional, un estilo
@@ -27,7 +35,10 @@ import { useAlert } from 'dashboard/composables';
 import AssistantAPI from 'dashboard/api/assistant';
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import Spinner from 'shared/components/Spinner.vue';
+import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
 import InterviewPanel from './assistant/InterviewPanel.vue';
+import ProgressStrip from './assistant/ProgressStrip.vue';
+import ValidationBadge from './assistant/ValidationBadge.vue';
 import ValidationReport from './assistant/ValidationReport.vue';
 import DryRunPanel from './assistant/DryRunPanel.vue';
 import SaveModal from './assistant/SaveModal.vue';
@@ -47,9 +58,12 @@ const AUDIT_STATUS_LABEL = {
 
 export default {
   components: {
+    AccordionItem,
     EmptyState,
     Spinner,
     InterviewPanel,
+    ProgressStrip,
+    ValidationBadge,
     ValidationReport,
     DryRunPanel,
     SaveModal,
@@ -85,6 +99,12 @@ export default {
       dryRun: null,
       isDryRunning: false,
       dryRunError: '',
+      // El comprobador arranca ABIERTO y la prueba CERRADA. El comprobador es el
+      // producto de esta pantalla: esconderlo de entrada sería devolverle el alto
+      // al texto a costa de que nadie lo vea. Probar es una acción puntual, y
+      // cerrada ocupa una línea en vez de un cuarto de la columna.
+      isReportOpen: true,
+      isDryRunOpen: false,
     };
   },
   computed: {
@@ -297,6 +317,11 @@ export default {
     onDraftInput() {
       clearTimeout(this.validateTimer);
       this.validateTimer = setTimeout(this.validateDraft, VALIDATE_DEBOUNCE_MS);
+      // La prueba en seco caduca al editar. Un resultado de hace tres cambios no
+      // dice nada del texto que hay ahora, y dejarlo en pantalla —con su rama y
+      // sus fragmentos— es peor que no mostrarlo: se lee como si describiera lo
+      // que se está viendo.
+      this.dryRun = null;
     },
     async validateDraft() {
       if (!this.draft.trim()) {
@@ -425,41 +450,85 @@ export default {
             />
           </section>
 
-          <section class="flex flex-col gap-4 min-h-0 overflow-y-auto">
+          <!-- El Entrenamiento manda: se lleva todo el alto que sobre, y los
+               dos paneles se colapsan. Antes eran tres secciones de alto libre
+               en una sola columna con scroll, y la única con alto FIJO y chico
+               (rows=14) era justo el texto que se está editando: en esta cuenta
+               los Entrenamientos tienen 46 líneas de mediana y llegan a 645, o
+               sea que se veía el 30% del típico y el 2% del más grande. -->
+          <section class="flex flex-col gap-2 min-h-0">
+            <ProgressStrip
+              class="shrink-0 px-1"
+              :messages="messages"
+              :draft="draft"
+              :validation="validation"
+              :dry-run="dryRun"
+              :editing-template="editingTemplate"
+            />
+
+            <!-- min-h-40: piso del editor. Sin él, un Entrenamiento con seis
+                 hallazgos abría tanto el informe que el texto se encogía a
+                 nada — el mismo problema de antes, por el otro lado. -->
             <div
-              class="p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+              class="flex flex-col flex-1 min-h-[10rem] p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
             >
               <h3
-                class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-2"
+                class="shrink-0 text-sm font-semibold text-slate-800 dark:text-slate-100 mb-2"
               >
                 {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TITLE') }}
               </h3>
+              <!-- resize-none: el alto lo decide el contenedor, no el navegador;
+                   arrastrarlo a mano volvería a empujar todo lo de abajo. -->
               <textarea
                 v-model="draft"
-                rows="14"
-                class="w-full font-mono text-xs"
+                class="flex-1 min-h-0 w-full font-mono text-xs resize-none !mb-0"
                 :placeholder="$t('TRACKING_ASSISTANT_VIEW.DRAFT_PLACEHOLDER')"
                 @input="onDraftInput"
               />
             </div>
 
-            <ValidationReport
-              :validation="validation"
-              :is-checking="isChecking"
-            />
+            <!-- Acordeón nativo, el mismo del panel de contacto. El resumen del
+                 comprobador queda SIEMPRE visible en la cabecera: revalida en
+                 cada tecla y esa señal no se puede esconder. -->
+            <!-- max-h-[40%]: techo de los dos paneles. Lo que no entra scrollea
+                 acá adentro en vez de empujar al editor. -->
+            <div
+              class="shrink-0 max-h-[40%] overflow-y-auto border rounded-lg border-slate-100 dark:border-slate-700"
+            >
+              <AccordionItem
+                :title="$t('TRACKING_ASSISTANT_VIEW.REPORT_TITLE')"
+                :is-open="isReportOpen"
+                @click="isReportOpen = !isReportOpen"
+              >
+                <template #button>
+                  <ValidationBadge
+                    class="mr-2"
+                    :validation="validation"
+                    :is-checking="isChecking"
+                  />
+                </template>
+                <ValidationReport :validation="validation" />
+              </AccordionItem>
 
-            <DryRunPanel
-              :draft="draft"
-              :result="dryRun"
-              :is-running="isDryRunning"
-              :error="dryRunError"
-              @run="runDryRun"
-            />
+              <AccordionItem
+                :title="$t('TRACKING_ASSISTANT_VIEW.DRY_RUN_TITLE')"
+                :is-open="isDryRunOpen"
+                @click="isDryRunOpen = !isDryRunOpen"
+              >
+                <DryRunPanel
+                  :draft="draft"
+                  :result="dryRun"
+                  :is-running="isDryRunning"
+                  :error="dryRunError"
+                  @run="runDryRun"
+                />
+              </AccordionItem>
+            </div>
 
             <!-- Fuentes guardadas que el asistente no sabe ofrecer. -->
             <p
               v-if="unsupported.length"
-              class="text-xs text-amber-600 dark:text-amber-400"
+              class="shrink-0 text-xs text-amber-600 dark:text-amber-400"
             >
               {{ $t('TRACKING_ASSISTANT_VIEW.UNSUPPORTED_HINT') }}
               {{ unsupported.map(s => s.name).join(' · ') }}
@@ -738,3 +807,13 @@ export default {
     />
   </div>
 </template>
+
+<style scoped>
+/* AccordionItem viene del panel de contacto, donde sus secciones SÍ se arrastran
+   para reordenarlas, así que su cabecera trae `cursor-grab`. Acá no se arrastra
+   nada: el cursor prometía un gesto que no existe. Se corrige solo dentro de esta
+   pantalla; el componente sigue igual para quien lo usa como fue pensado. */
+:deep(.drag-handle) {
+  cursor: pointer;
+}
+</style>

@@ -90,6 +90,13 @@
     "DRY_RUN_CASE_BEFORE": "sí, antes de consultar la fuente",
     "DRY_RUN_CASE_TYPE_MISSING": "El tipo «%{name}» no existe en la cuenta: el caso se abriría con el que deduzca el intake, no con ese.",
     "DRY_RUN_CASE_INHERITED": "Este tema no declara su propio escalamiento, así que hereda el @crear_ticket suelto del Entrenamiento — y encima se adelanta a la fuente.",
-    "DRY_RUN_FOOTER": "El tema lo clasificó %{model}. No se envió ningún mensaje."
+    "DRY_RUN_FOOTER": "El tema lo clasificó %{model}. No se envió ningún mensaje.",
+    "STEP_INTERVIEW": "Entrevista",
+    "STEP_DRAFT": "Borrador",
+    "STEP_CHECKED": "Comprobado",
+    "STEP_CHECKED_ROUTES": "%{count} tema(s)",
+    "STEP_CHECKED_BLOCKED": "%{count} problema(s)",
+    "STEP_TESTED": "Probado",
+    "REPORT_BLOCKING": "%{count} problema(s)"
   }
 }
