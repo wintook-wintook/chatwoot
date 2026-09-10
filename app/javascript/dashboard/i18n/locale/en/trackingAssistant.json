@@ -120,6 +120,10 @@
     "SESSIONS_COL_UPDATED": "Last touched",
     "SESSIONS_COL_ID": "Id",
     "SESSIONS_COL_CREATED": "Created",
-    "SESSIONS_COL_ACTIONS": "Actions"
+    "SESSIONS_COL_ACTIONS": "Actions",
+    "SESSION_UNSAVED": "new conversation, not saved yet",
+    "SESSION_FROM": "· from «%{name}»",
+    "SESSION_CREATED_AT": "· created %{date}",
+    "SESSION_SAVED_AT": "· saved %{date}"
   }
 }

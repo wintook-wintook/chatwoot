@@ -98,6 +98,9 @@ export default {
       // La conversación persistida. Sin esto el hilo vivía solo en el navegador y
       // cerrar la pestaña tiraba una entrevista de 30–45 minutos.
       sessionId: null,
+      // Su identidad —id, estado, fechas, de qué agente salió—. La pantalla
+      // mostraba el hilo y el borrador sin decir en CUÁL conversación estabas.
+      sessionMeta: null,
       isSaving: false,
       saveError: '',
       validateTimer: null,
@@ -243,17 +246,32 @@ export default {
         const { data } = await AssistantAPI.getSession();
         if (!data) return;
 
-        this.sessionId = data.id;
-        this.messages = data.messages || [];
-        this.draft = data.draft || '';
-        this.validation = data.validation || null;
-        this.proposal = data.proposal || null;
+        this.applySession(data);
         if (data.tracking_template_id) {
           this.loadEditingFrom(data.tracking_template_id);
         }
       } catch (error) {
         this.sessionId = null;
       }
+    },
+    // Retomar y abrir una conversación cargan lo mismo. Estaba escrito dos veces
+    // y sumar la identidad habría hecho una tercera copia: cada campo nuevo hay
+    // que acordarse de agregarlo en todas, y el que se olvida no falla — queda
+    // en blanco.
+    applySession(data) {
+      this.sessionId = data.id;
+      this.messages = data.messages || [];
+      this.draft = data.draft || '';
+      this.validation = data.validation || null;
+      this.proposal = data.proposal || null;
+      this.dryRun = null;
+      this.sessionMeta = {
+        id: data.id,
+        status: data.status,
+        template_name: data.template_name,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      };
     },
     loadEditingFrom(id) {
       const template = this.templates.find(t => t.id === id);
@@ -288,11 +306,7 @@ export default {
     async openSession(id) {
       try {
         const { data } = await AssistantAPI.openSession(id);
-        this.sessionId = data.id;
-        this.messages = data.messages || [];
-        this.draft = data.draft || '';
-        this.validation = data.validation || null;
-        this.proposal = data.proposal || null;
+        this.applySession(data);
         this.editingTemplate = null;
         if (data.tracking_template_id)
           this.loadEditingFrom(data.tracking_template_id);
@@ -312,10 +326,12 @@ export default {
     },
     startFresh() {
       this.sessionId = null;
+      this.sessionMeta = null;
       this.messages = [];
       this.draft = '';
       this.validation = null;
       this.proposal = null;
+      this.dryRun = null;
       this.editingTemplate = null;
       this.activeTab = 0;
     },
@@ -403,6 +419,11 @@ export default {
       this.draft = template.complementary_prompt || '';
       this.editingTemplate = { id: template.id, name: template.name };
       this.proposal = null;
+      // Traer un agente al Asistente arranca una conversación nueva: la
+      // identidad y la prueba de la anterior no describen nada de esto.
+      this.sessionId = null;
+      this.sessionMeta = null;
+      this.dryRun = null;
       this.activeTab = 0;
       this.validateDraft();
     },
@@ -414,6 +435,9 @@ export default {
           sessionId: this.sessionId,
         });
         this.sessionId = data.session_id || this.sessionId;
+        // El backend devuelve la identidad ya armada: sin eso habría que
+        // inventar las fechas del lado del cliente.
+        if (data.session) this.sessionMeta = data.session;
         this.messages.push({ role: 'assistant', content: data.reply });
         if (data.draft) {
           this.draft = data.draft;
@@ -587,6 +611,7 @@ export default {
               :validation="validation"
               :dry-run="dryRun"
               :editing-template="editingTemplate"
+              :session-meta="sessionMeta"
             />
 
             <!-- min-h-40: piso del editor. Sin él, un Entrenamiento con seis

@@ -471,6 +471,22 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       expect(response.parsed_body.first).not_to include('user_id')
     end
 
+    # La pantalla del Asistente mostraba el hilo y el borrador sin decir en CUÁL
+    # conversación estabas. Con doce en el listado eso lleva a guardar encima del
+    # Agente IA equivocado, así que la identidad viaja junto al contenido.
+    it 'al retomar una, trae su identidad y no solo su contenido' do
+      template = account.tracking_templates.create!(name: 'Soporte', objective: 'Resolver dudas')
+      sesion = crear_sesion(status: 'saved', tracking_template: template)
+
+      get "#{sessions_url}/#{sesion.id}", headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body).to include(
+        'id' => sesion.id, 'status' => 'saved', 'template_name' => 'Soporte'
+      )
+      expect(response.parsed_body['created_at']).to be_present
+      expect(response.parsed_body['updated_at']).to be_present
+    end
+
     it 'dice en qué agente terminó la que se guardó' do
       template = account.tracking_templates.create!(name: 'Soporte', objective: 'Resolver dudas')
       crear_sesion(status: 'saved', tracking_template: template)
