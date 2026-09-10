@@ -1,18 +1,14 @@
 <script>
-// proyecto@asistente_agentes_ia — QUÉ ESTOY ARMANDO Y EN QUÉ VA
+// proyecto@asistente_agentes_ia — EN QUÉ VA EL TRABAJO
 // ============================================================================
-// Dos líneas arriba del Entrenamiento: la IDENTIDAD de la conversación y los
-// cuatro HITOS del trabajo.
+// Una tira de cuatro hitos arriba del Entrenamiento. No es decoración: ninguno
+// de los tres paneles decía en qué estado estaba lo que estabas armando. Se
+// podía llegar a guardar un agente sin haberlo probado nunca, y nada lo
+// señalaba.
 //
-// LA IDENTIDAD, porque la pantalla mostraba el hilo y el borrador sin decir en
-// cuál de las conversaciones estabas. Con doce en el listado eso es un problema
-// real: se retoma una, se la confunde con otra, y se guarda encima del Agente IA
-// equivocado. El id es lo único con lo que dos conversaciones del mismo día
-// sobre el mismo agente se distinguen.
-//
-// LOS HITOS, porque ninguno de los tres paneles decía en qué estado estaba lo
-// que estabas armando. Se podía llegar a guardar un agente sin haberlo probado
-// nunca, y nada lo señalaba.
+// La IDENTIDAD de la conversación —id, fechas, de qué agente salió— vive en
+// SessionCard, encima de la conversación: es referencia, no progreso, y
+// mezclarlas hacía que la línea de arriba tuviera que leerse dos veces.
 //
 // NO GUARDA NADA. Los cuatro estados se derivan de lo que ya hay en la vista
 // —la conversación, el borrador, la última comprobación, la última prueba—, así
@@ -35,9 +31,6 @@ export default {
     dryRun: { type: Object, default: null },
     // El Agente IA del que salió el borrador, si salió de uno.
     editingTemplate: { type: Object, default: null },
-    // Identidad de la conversación guardada: id, estado y fechas. Llega null
-    // mientras no se guardó ningún turno todavía.
-    sessionMeta: { type: Object, default: null },
   },
   computed: {
     // De qué Agente IA salió el borrador. Puede venir por dos caminos —se entró
@@ -101,106 +94,51 @@ export default {
         },
       ];
     },
-    // El idioma sale del navegador y no de un 'es-MX' fijo: el Asistente habla
-    // los dos idiomas.
-    formatted() {
-      const meta = this.sessionMeta;
-      if (!meta) return null;
-
-      const fmt = value =>
-        value
-          ? new Date(value).toLocaleString(undefined, {
-              day: '2-digit',
-              month: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit',
-            })
-          : null;
-
-      return { created: fmt(meta.created_at), updated: fmt(meta.updated_at) };
-    },
   },
 };
 </script>
 
 <template>
-  <div class="flex flex-col gap-1">
-    <!-- IDENTIDAD -->
-    <div
-      class="flex flex-wrap items-center text-xs gap-x-2 text-slate-500 dark:text-slate-400"
+  <div class="flex items-center flex-wrap gap-x-1 gap-y-1 text-xs">
+    <span
+      v-for="(step, index) in steps"
+      :key="step.key"
+      class="flex items-center gap-1"
+      :class="{
+        'text-red-600 dark:text-red-400': step.alert,
+        'text-slate-700 dark:text-slate-200': step.done && !step.alert,
+        'text-slate-400 dark:text-slate-500': !step.done && !step.alert,
+      }"
     >
+      <fluent-icon
+        v-if="index > 0"
+        icon="chevron-right"
+        size="12"
+        class="shrink-0 text-slate-300 dark:text-slate-600"
+      />
+      <fluent-icon
+        v-if="step.alert"
+        icon="warning"
+        size="12"
+        class="shrink-0"
+      />
+      <fluent-icon
+        v-else-if="step.done"
+        icon="checkmark"
+        size="12"
+        class="shrink-0"
+      />
       <span
-        v-if="sessionMeta"
-        class="font-mono text-slate-400 dark:text-slate-500"
-      >
-        #{{ sessionMeta.id }}
-      </span>
-      <span v-else class="italic">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_UNSAVED') }}
-      </span>
-
-      <span v-if="fromTemplate" class="truncate">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_FROM', { name: fromTemplate }) }}
-      </span>
-
-      <span v-if="formatted && formatted.created" class="whitespace-nowrap">
-        {{
-          $t('TRACKING_ASSISTANT_VIEW.SESSION_CREATED_AT', {
-            date: formatted.created,
-          })
-        }}
-      </span>
-      <span v-if="formatted && formatted.updated" class="whitespace-nowrap">
-        {{
-          $t('TRACKING_ASSISTANT_VIEW.SESSION_SAVED_AT', {
-            date: formatted.updated,
-          })
-        }}
-      </span>
-    </div>
-
-    <!-- HITOS -->
-    <div class="flex items-center flex-wrap gap-x-1 gap-y-1 text-xs">
+        v-else
+        class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"
+      />
+      {{ step.label }}
       <span
-        v-for="(step, index) in steps"
-        :key="step.key"
-        class="flex items-center gap-1"
-        :class="{
-          'text-red-600 dark:text-red-400': step.alert,
-          'text-slate-700 dark:text-slate-200': step.done && !step.alert,
-          'text-slate-400 dark:text-slate-500': !step.done && !step.alert,
-        }"
+        v-if="step.detail"
+        class="text-slate-400 dark:text-slate-500 font-normal"
       >
-        <fluent-icon
-          v-if="index > 0"
-          icon="chevron-right"
-          size="12"
-          class="shrink-0 text-slate-300 dark:text-slate-600"
-        />
-        <fluent-icon
-          v-if="step.alert"
-          icon="warning"
-          size="12"
-          class="shrink-0"
-        />
-        <fluent-icon
-          v-else-if="step.done"
-          icon="checkmark"
-          size="12"
-          class="shrink-0"
-        />
-        <span
-          v-else
-          class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"
-        />
-        {{ step.label }}
-        <span
-          v-if="step.detail"
-          class="text-slate-400 dark:text-slate-500 font-normal"
-        >
-          {{ step.detail }}
-        </span>
+        {{ step.detail }}
       </span>
-    </div>
+    </span>
   </div>
 </template>

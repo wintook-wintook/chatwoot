@@ -67,18 +67,25 @@ export default {
       </div>
     </div>
 
-    <div class="pt-3 shrink-0">
+    <!-- El compositor va en una fila: el texto a la izquierda y Enviar a la
+         derecha. Apilados —textarea arriba, botón de ancho completo abajo— se
+         llevaban cuatro líneas de alto de la columna donde vive el hilo, que es
+         lo único que hay que leer acá.
+         items-end alinea el botón con la base del textarea; resize-none impide
+         que arrastrarlo le coma alto a la conversación. -->
+    <div class="flex items-end gap-2 pt-3 shrink-0">
       <textarea
         v-model="input"
         rows="2"
-        class="w-full text-sm"
+        class="flex-1 min-w-0 text-sm resize-none !mb-0"
         :placeholder="$t('TRACKING_ASSISTANT_VIEW.INPUT_PLACEHOLDER')"
         :disabled="isThinking"
         @keydown.enter.exact.prevent="send"
       />
       <woot-button
-        class="w-full"
+        class="shrink-0"
         :is-disabled="!input.trim() || isThinking"
+        :is-loading="isThinking"
         @click="send"
       >
         {{ $t('TRACKING_ASSISTANT_VIEW.SEND') }}

@@ -39,6 +39,7 @@ import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import { findRouteLine, lineRange } from './assistant/draftNavigation';
 import InterviewPanel from './assistant/InterviewPanel.vue';
+import SessionCard from './assistant/SessionCard.vue';
 import ProgressStrip from './assistant/ProgressStrip.vue';
 import CopyChip from './assistant/CopyChip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
@@ -72,6 +73,7 @@ export default {
     EmptyState,
     Spinner,
     InterviewPanel,
+    SessionCard,
     ProgressStrip,
     ValidationBadge,
     ValidationReport,
@@ -268,6 +270,7 @@ export default {
       this.sessionMeta = {
         id: data.id,
         status: data.status,
+        title: data.title,
         template_name: data.template_name,
         created_at: data.created_at,
         updated_at: data.updated_at,
@@ -590,6 +593,15 @@ export default {
             v-show="!isWideEditor"
             class="p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col min-h-0"
           >
+            <!-- De qué conversación se trata. Va acá, encima del hilo, porque
+                 es referencia y no progreso: mezclado con los hitos del
+                 Entrenamiento había que leer la línea de arriba dos veces. -->
+            <SessionCard
+              class="mb-3"
+              :session-meta="sessionMeta"
+              :editing-template="editingTemplate"
+            />
+
             <InterviewPanel
               :messages="messages"
               :is-thinking="isThinking"
@@ -611,7 +623,6 @@ export default {
               :validation="validation"
               :dry-run="dryRun"
               :editing-template="editingTemplate"
-              :session-meta="sessionMeta"
             />
 
             <!-- min-h-40: piso del editor. Sin él, un Entrenamiento con seis

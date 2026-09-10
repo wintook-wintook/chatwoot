@@ -481,7 +481,9 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       get "#{sessions_url}/#{sesion.id}", headers: admin.create_new_auth_token, as: :json
 
       expect(response.parsed_body).to include(
-        'id' => sesion.id, 'status' => 'saved', 'template_name' => 'Soporte'
+        'id' => sesion.id, 'status' => 'saved', 'template_name' => 'Soporte',
+        # De qué se trataba: el card de referencia lo muestra en su primera línea.
+        'title' => 'quiero un agente de soporte'
       )
       expect(response.parsed_body['created_at']).to be_present
       expect(response.parsed_body['updated_at']).to be_present

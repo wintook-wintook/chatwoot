@@ -222,6 +222,9 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
       validation: sesion.validation.presence, proposal: sesion.proposal.presence,
       tracking_template_id: sesion.tracking_template_id,
       status: sesion.status,
+      # De qué se trataba: el primer mensaje de la persona. Es lo que el card de
+      # referencia muestra arriba de la conversación.
+      title: sesion.title,
       template_name: sesion.tracking_template&.name,
       created_at: sesion.created_at,
       updated_at: sesion.updated_at
