@@ -45,18 +45,30 @@ export default {
     },
   },
   methods: {
-    // El idioma sale del navegador y no de un 'es-MX' fijo: el Asistente habla
-    // los dos idiomas, así que una fecha clavada en español le saldría en
-    // español a una cuenta en inglés.
+    // Día y mes con dos dígitos y el año completo: "9/9, 15:36" obliga a deducir
+    // el año, y en un listado donde conviven conversaciones de hace una semana y
+    // de hace dos meses eso se lee mal. Queda "09/09/2026 15:36".
+    //
+    // El orden de los campos y el reloj los decide el navegador, no un formato
+    // clavado: el Asistente habla los dos idiomas, así que un dd/mm/aaaa fijo le
+    // mostraría las fechas al revés a una cuenta en inglés. Lo único que se le
+    // quita es la coma que toLocaleString mete entre la fecha y la hora.
     formatted(value) {
       if (!value) return '';
 
-      return new Date(value).toLocaleString(undefined, {
-        day: 'numeric',
-        month: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      return new Date(value)
+        .toLocaleString(undefined, {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          // 24 horas siempre. Sin fijarlo, el mismo dato sale "15:36" en Chrome
+          // y "09:36 p.m." en otro motor con el mismo locale, y "09:36" a secas
+          // se confunde con la mañana.
+          hour12: false,
+        })
+        .replace(',', '');
     },
   },
 };
@@ -67,10 +79,10 @@ export default {
     class="px-3 py-2 border rounded-lg shrink-0 bg-slate-25 dark:bg-slate-900/40 border-slate-100 dark:border-slate-700"
   >
     <!-- LÍNEA 1 · quién es: el id y de qué se trataba -->
-    <div class="flex items-baseline gap-2">
+    <div class="flex items-baseline gap-2 flex-nowrap">
       <span
         v-if="sessionMeta"
-        class="font-mono text-xs text-slate-400 dark:text-slate-500 shrink-0"
+        class="font-mono text-xs text-slate-400 dark:text-slate-500 shrink-0 whitespace-nowrap"
       >
         #{{ sessionMeta.id }}
       </span>
@@ -90,16 +102,21 @@ export default {
       class="text-xs truncate text-slate-400 dark:text-slate-500"
       :class="{ 'mt-0.5': sessionMeta }"
     >
-      <span v-if="fromTemplate">
+      <!-- Las fechas van PRIMERO y con rótulo. Antes decía "· creada 9/9, 15:36
+           · guardada 10/9, 15:36": dos bullets, sin año, y con "guardada" que se
+           confunde con el guardado del Agente IA. Y van antes que el nombre del
+           agente para que, si la línea se corta, lo que se pierda sea el nombre
+           largo y no la fecha. -->
+      <span v-if="created" class="whitespace-nowrap">
+        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_CREATED_AT') }}
+        <span class="text-slate-500 dark:text-slate-400">{{ created }}</span>
+      </span>
+      <span v-if="updated" class="ml-2 whitespace-nowrap">
+        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_SAVED_AT') }}
+        <span class="text-slate-500 dark:text-slate-400">{{ updated }}</span>
+      </span>
+      <span v-if="fromTemplate" class="ml-2">
         {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_FROM', { name: fromTemplate }) }}
-      </span>
-      <span v-if="created">
-        {{
-          $t('TRACKING_ASSISTANT_VIEW.SESSION_CREATED_AT', { date: created })
-        }}
-      </span>
-      <span v-if="updated">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_SAVED_AT', { date: updated }) }}
       </span>
     </div>
   </div>

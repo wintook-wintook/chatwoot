@@ -123,7 +123,14 @@
     "SESSIONS_COL_ACTIONS": "Actions",
     "SESSION_UNSAVED": "new conversation, not saved yet",
     "SESSION_FROM": "· from «%{name}»",
-    "SESSION_CREATED_AT": "· created %{date}",
-    "SESSION_SAVED_AT": "· saved %{date}"
+    "SESSION_CREATED_AT": "Created:",
+    "SESSION_SAVED_AT": "Modified:",
+    "AGENTS_COL_STATUS": "Status",
+    "AGENTS_COL_NAME": "AI Agent",
+    "AGENTS_COL_ROUTES": "Topics",
+    "AGENTS_COL_DEFECTS": "Problems",
+    "AGENTS_COL_DEGRADING": "Warnings",
+    "AGENTS_COL_HEADLINE": "Finding",
+    "AUDIT_NEW_VERSION": "New version"
   }
 }

@@ -37,9 +37,11 @@ import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import { sortRows, nextOrder, NUMBER, DATE, TEXT } from './assistant/tableSort';
 import { findRouteLine, lineRange } from './assistant/draftNavigation';
 import InterviewPanel from './assistant/InterviewPanel.vue';
 import SessionCard from './assistant/SessionCard.vue';
+import SortableTh from './assistant/SortableTh.vue';
 import ProgressStrip from './assistant/ProgressStrip.vue';
 import CopyChip from './assistant/CopyChip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
@@ -54,6 +56,28 @@ const VALIDATE_DEBOUNCE_MS = 400;
 // así que el paginado es sobre lo que ya está en memoria: no hay una segunda página
 // que pedir. Diez por pantalla entran sin scroll en una laptop.
 const SESSIONS_PER_PAGE = 10;
+// La auditoría recorre TODOS los agentes de la cuenta —28 en esta— así que sin
+// paginar la pestaña era un scroll largo sin forma de comparar dos.
+const AGENTS_PER_PAGE = 10;
+
+// El tipo de cada columna ordenable, por tabla. Esta declaración ES la lista de
+// lo ordenable: una columna sin declarar no se ordena (ver tableSort.js).
+const SESSION_COLUMNS = {
+  id: NUMBER,
+  status: TEXT,
+  title: TEXT,
+  template_name: TEXT,
+  routes: NUMBER,
+  created_at: DATE,
+  updated_at: DATE,
+};
+const AGENT_COLUMNS = {
+  status: TEXT,
+  name: TEXT,
+  routes: NUMBER,
+  defects: NUMBER,
+  degrading: NUMBER,
+};
 
 // Explícito y no armado por concatenación: una clave dinámica no la puede verificar
 // nadie —ni un linter ni quien traduce— y el día que el backend agregue un estado, el
@@ -74,6 +98,7 @@ export default {
     Spinner,
     InterviewPanel,
     SessionCard,
+    SortableTh,
     ProgressStrip,
     ValidationBadge,
     ValidationReport,
@@ -125,6 +150,13 @@ export default {
       isWideEditor: false,
       sessionsPage: 1,
       SESSIONS_PER_PAGE,
+      // El orden arranca donde lo dejó el backend (recent_first): así el primer
+      // pintado y el que se ve después de tocar un encabezado son coherentes.
+      sessionsSort: { key: 'updated_at', order: 'desc' },
+      agentsPage: 1,
+      AGENTS_PER_PAGE,
+      // Los roto primero: es la pestaña a la que se entra para arreglar algo.
+      agentsSort: { key: 'defects', order: 'desc' },
     };
   },
   computed: {
@@ -152,9 +184,67 @@ export default {
     templates() {
       return this.$store.getters['trackingTemplates/getTemplates'] || [];
     },
+    // Los encabezados salen de una lista y no repetidos en el markup: trece
+    // columnas ordenables entre las dos tablas es donde a una se le olvida el
+    // @sort y queda muerta sin que nada falle.
+    sessionHeaders() {
+      return [
+        { key: 'id', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ID' },
+        { key: 'status', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_STATUS' },
+        { key: 'title', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TITLE' },
+        {
+          key: 'template_name',
+          label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TEMPLATE',
+        },
+        { key: 'routes', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ROUTES' },
+        {
+          key: 'created_at',
+          label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_CREATED',
+        },
+        {
+          key: 'updated_at',
+          label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_UPDATED',
+        },
+      ];
+    },
+    agentHeaders() {
+      return [
+        { key: 'status', label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_STATUS' },
+        { key: 'name', label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_NAME' },
+        {
+          key: 'routes',
+          label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_ROUTES',
+          right: true,
+        },
+        {
+          key: 'defects',
+          label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_DEFECTS',
+          right: true,
+        },
+        {
+          key: 'degrading',
+          label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_DEGRADING',
+          right: true,
+        },
+        {
+          key: 'headline',
+          label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_HEADLINE',
+        },
+      ];
+    },
+    sortedSessions() {
+      return sortRows(this.sessions, this.sessionsSort, SESSION_COLUMNS);
+    },
     pagedSessions() {
       const start = (this.sessionsPage - 1) * SESSIONS_PER_PAGE;
-      return this.sessions.slice(start, start + SESSIONS_PER_PAGE);
+      return this.sortedSessions.slice(start, start + SESSIONS_PER_PAGE);
+    },
+    sortedAgents() {
+      return sortRows(this.audit, this.agentsSort, AGENT_COLUMNS);
+    },
+    pagedAgents() {
+      const start = (this.agentsPage - 1) * AGENTS_PER_PAGE;
+      return this.sortedAgents.slice(start, start + AGENTS_PER_PAGE);
     },
     // Las cuatro piezas que se pueden nombrar en un Entrenamiento, cada una con
     // la cadena EXACTA que hay que escribir. El texto del chip no es una etiqueta
@@ -215,6 +305,10 @@ export default {
     sessions(list) {
       const pages = Math.max(1, Math.ceil(list.length / SESSIONS_PER_PAGE));
       if (this.sessionsPage > pages) this.sessionsPage = pages;
+    },
+    audit(list) {
+      const pages = Math.max(1, Math.ceil(list.length / AGENTS_PER_PAGE));
+      if (this.agentsPage > pages) this.agentsPage = pages;
     },
   },
   async mounted() {
@@ -349,6 +443,16 @@ export default {
         this.isAuditing = false;
       }
     },
+    // Tocar un encabezado vuelve a la primera página: quedarse en la página 3
+    // después de reordenar muestra filas del medio y se lee como un error.
+    sortSessionsBy(key) {
+      this.sessionsSort = nextOrder(this.sessionsSort, key);
+      this.sessionsPage = 1;
+    },
+    sortAgentsBy(key) {
+      this.agentsSort = nextOrder(this.agentsSort, key);
+      this.agentsPage = 1;
+    },
     // El idioma sale del navegador y no de un 'es-MX' fijo: el Asistente ahora
     // habla los dos idiomas, así que una fecha clavada en español le saldría en
     // español a una cuenta en inglés.
@@ -412,6 +516,40 @@ export default {
     },
     openInAssistant(row) {
       this.loadTemplate(this.templates.find(t => t.id === row.id));
+    },
+    // Partir de un agente SANO para hacer otra versión. Distinto de "arreglarlo
+    // acá": ahí se corrige el que está roto y se lo reemplaza; acá el original
+    // sigue andando en producción y lo que se guarda es un agente nuevo.
+    //
+    // Por eso NO se marca editingTemplate: con él puesto, el modal abre en
+    // "reemplazar" y guardar pisaría justo el agente que se quería conservar.
+    // Se deja el borrador y una propuesta de nombre libre, y el modal abre en
+    // "crear nuevo".
+    duplicateInAssistant(row) {
+      const template = this.templates.find(t => t.id === row.id);
+      if (!template) return;
+
+      this.startFresh();
+      this.draft = template.complementary_prompt || '';
+      this.proposal = {
+        name: this.nextVersionName(template.name),
+        objective: template.objective || '',
+        ai_context: template.ai_context || '',
+      };
+      this.validateDraft();
+    },
+    // "Soporte" → "Soporte v2", y si ese ya existe → v3. El nombre es único por
+    // cuenta: proponer uno tomado hace fallar el guardado con un error del
+    // modelo, que es peor que resolverlo acá.
+    nextVersionName(base) {
+      const taken = new Set(
+        this.templates.map(t => (t.name || '').trim().toLowerCase())
+      );
+      for (let version = 2; version < 100; version += 1) {
+        const candidate = `${base} v${version}`;
+        if (!taken.has(candidate.toLowerCase())) return candidate;
+      }
+      return `${base} v100`;
     },
     // Carga un Agente IA existente para mejorarlo. Deja anotado cuál es, para que
     // el guardado ofrezca reemplazarlo —conservando el Entrenamiento anterior— en
@@ -797,69 +935,146 @@ export default {
           </section>
         </div>
 
-        <!-- Revisar los agentes ya cargados. La misma máquina al revés. -->
-        <div v-show="activeTab === 2" class="flex-1 min-h-0 overflow-y-auto">
-          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+        <!-- AGENTES IA — los ya cargados, pasados por el mismo comprobador.
+             En tabla y no como tarjetas: son 28 en esta cuenta, y como lista
+             había que scrollear todo para encontrar los roto. Ordenable por
+             encabezado y paginada, igual que Conversaciones. -->
+        <div v-show="activeTab === 2" class="flex flex-col flex-1 min-h-0">
+          <p class="mb-3 text-xs shrink-0 text-slate-500 dark:text-slate-400">
             {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_HINT') }}
           </p>
-          <ul class="flex flex-col gap-2">
-            <li
-              v-for="row in audit"
-              :key="row.id"
-              class="p-3 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+
+          <div
+            v-if="isAuditing"
+            class="text-xs text-slate-500 dark:text-slate-400 py-4"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.REPORT_CHECKING') }}
+          </div>
+
+          <template v-else>
+            <div
+              class="flex-1 min-h-0 overflow-auto bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
             >
-              <div class="flex items-center justify-between gap-3">
-                <div class="min-w-0">
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="text-xs font-medium px-2 py-0.5 rounded shrink-0"
-                      :class="{
-                        'text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-300':
-                          row.status === 'broken',
-                        'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300':
-                          row.status === 'routed',
-                        'text-slate-600 bg-slate-100 dark:bg-slate-700 dark:text-slate-300':
-                          row.status === 'conversational' ||
-                          row.status === 'empty',
-                      }"
-                    >
-                      {{ $t(auditLabel(row.status)) }}
-                    </span>
-                    <span
-                      class="text-sm text-slate-800 dark:text-slate-100 truncate"
+              <table class="w-full text-sm">
+                <thead class="sticky top-0 z-10 bg-white dark:bg-slate-800">
+                  <tr
+                    class="text-left border-b text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700"
+                  >
+                    <SortableTh
+                      v-for="col in agentHeaders"
+                      :key="col.key"
+                      :label="$t(col.label)"
+                      :sort-key="col.key"
+                      :sort="agentsSort"
+                      :align-right="col.right"
+                      @sort="sortAgentsBy"
+                    />
+                    <th
+                      class="p-3 w-44"
+                      :aria-label="
+                        $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ACTIONS')
+                      "
+                    />
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="row in pagedAgents"
+                    :key="row.id"
+                    class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30"
+                  >
+                    <td class="p-3">
+                      <span
+                        class="text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap"
+                        :class="{
+                          'text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-300':
+                            row.status === 'broken',
+                          'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300':
+                            row.status === 'routed',
+                          'text-slate-600 bg-slate-100 dark:bg-slate-700 dark:text-slate-300':
+                            row.status === 'conversational' ||
+                            row.status === 'empty',
+                        }"
+                      >
+                        {{ $t(auditLabel(row.status)) }}
+                      </span>
+                    </td>
+                    <td
+                      class="p-3 font-medium text-slate-800 dark:text-slate-100"
                     >
                       {{ row.name }}
-                    </span>
-                  </div>
-                  <p
-                    v-if="row.headline"
-                    class="text-xs text-red-700 dark:text-red-300 mt-1"
-                  >
-                    {{ row.headline }}
-                  </p>
-                  <p
-                    v-else-if="row.status === 'routed'"
-                    class="text-xs text-slate-500 dark:text-slate-400 mt-1"
-                  >
-                    {{
-                      $t('TRACKING_ASSISTANT_VIEW.REPORT_ROUTES', {
-                        count: row.routes,
-                      })
-                    }}
-                  </p>
-                </div>
-                <woot-button
-                  v-if="row.status === 'broken'"
-                  size="small"
-                  variant="clear"
-                  class="shrink-0"
-                  @click="openInAssistant(row)"
-                >
-                  {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_FIX') }}
-                </woot-button>
-              </div>
-            </li>
-          </ul>
+                    </td>
+                    <td
+                      class="p-3 text-right text-slate-500 dark:text-slate-400"
+                    >
+                      {{ row.routes }}
+                    </td>
+                    <td class="p-3 text-right">
+                      <span
+                        :class="
+                          row.defects
+                            ? 'text-red-700 dark:text-red-300 font-medium'
+                            : 'text-slate-400 dark:text-slate-500'
+                        "
+                      >
+                        {{ row.defects }}
+                      </span>
+                    </td>
+                    <td class="p-3 text-right">
+                      <span
+                        :class="
+                          row.degrading
+                            ? 'text-amber-700 dark:text-amber-400'
+                            : 'text-slate-400 dark:text-slate-500'
+                        "
+                      >
+                        {{ row.degrading }}
+                      </span>
+                    </td>
+                    <!-- El primer defecto, truncado: alcanza para decidir si vale
+                         la pena abrirlo. El detalle sale al cargarlo. -->
+                    <td
+                      class="p-3 text-xs max-w-xs text-red-700 dark:text-red-300"
+                    >
+                      <span class="block truncate" :title="row.headline || ''">
+                        {{ row.headline || '—' }}
+                      </span>
+                    </td>
+                    <td class="p-3">
+                      <!-- Roto -> arreglarlo. Sano -> partir de él para otra
+                           versión, sin tocar el que está andando en producción. -->
+                      <woot-button
+                        v-if="row.status === 'broken'"
+                        size="small"
+                        variant="clear"
+                        @click="openInAssistant(row)"
+                      >
+                        {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_FIX') }}
+                      </woot-button>
+                      <woot-button
+                        v-else-if="row.status !== 'empty'"
+                        size="small"
+                        variant="clear"
+                        color-scheme="secondary"
+                        icon="copy"
+                        @click="duplicateInAssistant(row)"
+                      >
+                        {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_NEW_VERSION') }}
+                      </woot-button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <TableFooter
+              class="border-t shrink-0 border-slate-75 dark:border-slate-700/50"
+              :current-page="agentsPage"
+              :total-count="audit.length"
+              :page-size="AGENTS_PER_PAGE"
+              @pageChange="agentsPage = $event"
+            />
+          </template>
         </div>
 
         <!-- Las conversaciones: un Entrenamiento bueno rara vez sale de una
@@ -893,27 +1108,14 @@ export default {
                   <tr
                     class="text-left border-b text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700"
                   >
-                    <th class="p-3">
-                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ID') }}
-                    </th>
-                    <th class="p-3">
-                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_STATUS') }}
-                    </th>
-                    <th class="p-3">
-                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TITLE') }}
-                    </th>
-                    <th class="p-3">
-                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TEMPLATE') }}
-                    </th>
-                    <th class="p-3">
-                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ROUTES') }}
-                    </th>
-                    <th class="p-3">
-                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_CREATED') }}
-                    </th>
-                    <th class="p-3">
-                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_UPDATED') }}
-                    </th>
+                    <SortableTh
+                      v-for="col in sessionHeaders"
+                      :key="col.key"
+                      :label="$t(col.label)"
+                      :sort-key="col.key"
+                      :sort="sessionsSort"
+                      @sort="sortSessionsBy"
+                    />
                     <th
                       class="w-24 p-3"
                       :aria-label="
