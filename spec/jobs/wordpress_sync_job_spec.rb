@@ -211,4 +211,127 @@ RSpec.describe WordpressSyncJob do
         .not_to raise_error
     end
   end
+
+  # Un sitio de mil entradas no se rebaja entero cada vez.
+  describe 'resync incremental' do
+    before do
+      stub_titles([1, 2])
+      stub_items([entry(1, '<p>uno largo para pasar el minimo de caracteres</p>'),
+                  entry(2, '<p>dos largo para pasar el minimo de caracteres</p>')])
+      stub_embeddings(2)
+      sync
+    end
+
+    it 'la primera vez baja todo, sin modified_after' do
+      expect(a_request(:get, "#{site}/wp-json/wp/v2/posts")
+        .with(query: hash_including('include'))
+        .with { |req| req.uri.query.exclude?('modified_after') }).to have_been_made.at_least_once
+    end
+
+    it 'en el segundo sync pide solo lo modificado' do
+      stub_titles([1, 2])
+      stub_items([])
+      stub_embeddings(0)
+
+      sync
+
+      expect(a_request(:get, "#{site}/wp-json/wp/v2/posts")
+        .with(query: hash_including('modified_after'))).to have_been_made
+    end
+
+    # EL CASO QUE CASI SE ROMPE: con incremental, lo que se baja son solo las
+    # entradas que cambiaron. Si el borrado usara eso en vez de la selección
+    # completa, el segundo sync vaciaría el índice.
+    it 'no borra lo que no cambió' do
+      expect(items.count).to eq(2)
+
+      stub_titles([1, 2])
+      stub_items([])
+      stub_embeddings(0)
+      sync
+
+      expect(items.pluck(:source_id)).to contain_exactly(1, 2)
+    end
+
+    # Agregar una categoría no cambia la fecha de modificación de nada, así que con
+    # modified_after ese contenido no llegaría nunca.
+    it 'vuelve a bajar todo cuando cambia la selección' do
+      source.update!(config: source.config.merge('categories' => [7]))
+      stub_titles([1, 2])
+      stub_items([entry(1, '<p>uno largo para pasar el minimo de caracteres</p>')])
+      stub_embeddings(1)
+
+      sync
+
+      expect(a_request(:get, "#{site}/wp-json/wp/v2/posts")
+        .with(query: hash_including('include'))
+        .with { |req| req.uri.query.exclude?('modified_after') }).to have_been_made.at_least_once
+    end
+
+    it 'guarda la huella de la selección para poder compararla' do
+      expect(source.reload.config['config_fingerprint']).to be_present
+    end
+  end
+
+  # "Entra solo" no puede ser "entra a escondidas".
+  describe 'aviso de contenido nuevo' do
+    before do
+      stub_titles([1])
+      stub_items([entry(1, '<p>uno largo para pasar el minimo de caracteres</p>')])
+      stub_embeddings(1)
+      sync
+    end
+
+    it 'cuenta las entradas que entraron por la regla desde el último sync' do
+      stub_titles([1, 2, 3])
+      stub_items([entry(2, '<p>dos largo para pasar el minimo de caracteres</p>'),
+                  entry(3, '<p>tres largo para pasar el minimo de caracteres</p>')])
+      stub_embeddings(2)
+
+      sync
+
+      expect(source.reload.config['new_entries']).to eq(2)
+    end
+
+    it 'no avisa nada cuando no se publicó nada nuevo' do
+      stub_titles([1])
+      stub_items([])
+      stub_embeddings(0)
+
+      sync
+
+      expect(source.reload.config['new_entries']).to eq(0)
+    end
+
+    # En el primer sync todo es nuevo: avisarlo no le dice nada a nadie.
+    it 'no avisa en la primera sincronización' do
+      otra = KnowledgeSource.create!(account: account, source_type: 'wordpress', name: 'Otra',
+                                     status: 'active',
+                                     config: { 'site_url' => site, 'content_types' => ['posts'] })
+      stub_titles([1])
+      stub_items([entry(1, '<p>uno largo para pasar el minimo de caracteres</p>')])
+      stub_embeddings(1)
+
+      described_class.perform_now(action: 'upsert', source_id: otra.id, account_id: account.id)
+
+      expect(otra.reload.config['new_entries']).to eq(0)
+    end
+  end
+
+  describe 'los conteos que muestra la pantalla' do
+    # Con incremental, contar los chunks de la corrida daría un total equivocado.
+    it 'cuenta los chunks de la base, no los de esta corrida' do
+      stub_titles([1, 2])
+      stub_items([entry(1, '<p>uno largo para pasar el minimo de caracteres</p>'),
+                  entry(2, '<p>dos largo para pasar el minimo de caracteres</p>')])
+      stub_embeddings(2)
+      sync
+
+      stub_items([])
+      stub_embeddings(0)
+      sync
+
+      expect(source.reload.config).to include('indexed_entries' => 2, 'indexed_chunks' => 2)
+    end
+  end
 end

@@ -70,6 +70,7 @@ export default {
         '%{selected} of %{total} chosen · ≈ %{chunks} chunks · about %{seconds}s',
       INDEX_SELECTED: 'Index what is chosen',
       CANCEL: 'Cancel',
+      NEW_ENTRIES: '%{count} new entries were added to the index',
       PICK_CONTENT: 'Choose content',
     },
   },

@@ -261,6 +261,19 @@ export default {
         this.loadingItems = false;
       }
     },
+    // Abrir el selector cuenta como haber visto el aviso de contenido nuevo: si no
+    // se limpiara, el cartel quedaría para siempre y dejaría de significar algo.
+    onPickContent(source) {
+      this.pickingSource = source;
+      if (!source.config?.new_entries) return;
+
+      KnowledgeBaseAPI.updateSource(this.accountId, source.id, {
+        config: { ...source.config, new_entries: 0 },
+      }).then(({ data }) => {
+        const index = this.sources.findIndex(s => s.id === source.id);
+        if (index >= 0) this.sources.splice(index, 1, data);
+      });
+    },
     // Guardar la selección y sincronizar en el mismo gesto: elegir y no indexar
     // deja la pantalla diciendo una cosa y el agente sabiendo otra.
     async onSaveWordpressSelection(seleccion) {
@@ -701,7 +714,7 @@ export default {
             :google-disabled="isGoogleSourceDisabled(source)"
             @sync="onSync"
             @edit="onEditSource"
-            @pick="pickingSource = source"
+            @pick="onPickContent"
             @delete="onDelete"
           />
         </div>

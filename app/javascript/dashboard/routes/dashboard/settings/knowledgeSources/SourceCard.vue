@@ -191,6 +191,21 @@ export default {
       v-if="isSyncable || isConfigurable"
       class="flex gap-2 pt-1 border-t border-slate-100"
     >
+      <!-- @knowledge_sources — lo que entró solo por la regla de categoría. El
+           aviso existe para que "entra solo" no sea "entra a escondidas". -->
+      <span
+        v-if="
+          source.source_type === 'wordpress' && source.config.new_entries > 0
+        "
+        class="text-xs px-2 py-0.5 rounded text-amber-700 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400"
+      >
+        {{
+          $t('KNOWLEDGE_SOURCES.WORDPRESS.NEW_ENTRIES', {
+            count: source.config.new_entries,
+          })
+        }}
+      </span>
+
       <!-- @knowledge_sources — WordPress: elegir qué entra al índice es un paso
            propio, porque conectar no es indexar. -->
       <woot-button

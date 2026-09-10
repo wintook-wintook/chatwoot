@@ -70,6 +70,7 @@ export default {
         '%{selected} de %{total} elegidas · ≈ %{chunks} fragmentos · unos %{seconds} s',
       INDEX_SELECTED: 'Indexar lo elegido',
       CANCEL: 'Cancelar',
+      NEW_ENTRIES: '%{count} entradas nuevas se agregaron al índice',
       PICK_CONTENT: 'Elegir contenido',
     },
   },
