@@ -54,6 +54,15 @@
     "SAVE_NAME_TAKEN": "Ya existe un Agente IA con ese nombre en la cuenta. Elegí otro.",
     "SAVE_CONTEXT": "Contexto para el agente",
     "SAVE_CONTEXT_HINT": "Datos del negocio que mencionaste en la conversación. Vacío está bien: el asistente no completa lo que no le dijiste, porque el agente lo citaría como cierto.",
-    "SAVE_FROM_TEMPLATE": "Este Entrenamiento salió de «%{name}». Al guardar se reemplaza el suyo y se conserva una copia del anterior."
+    "SAVE_FROM_TEMPLATE": "Este Entrenamiento salió de «%{name}». Al guardar se reemplaza el suyo y se conserva una copia del anterior.",
+    "TAB_SESSIONS": "Conversaciones",
+    "SESSIONS_HINT": "Un Entrenamiento bueno rara vez sale de una sentada. Acá podés volver a una conversación, terminada o a medias.",
+    "SESSIONS_NEW": "Empezar una nueva",
+    "SESSIONS_RESUME": "Retomar",
+    "SESSIONS_SAVED": "guardada",
+    "SESSIONS_OPEN": "a medias",
+    "SESSIONS_UNTITLED": "sin título todavía",
+    "SESSIONS_EMPTY": "Todavía no hay conversaciones.",
+    "SESSIONS_OPEN_ERROR": "No se pudo abrir esa conversación."
   }
 }

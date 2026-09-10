@@ -39,6 +39,20 @@ class AssistantAPI extends ApiClient {
     return axios.get(`${this.url}/session`);
   }
 
+  // Las conversaciones de quien pregunta: un Entrenamiento bueno rara vez sale de
+  // una sentada, y sin listado cada una era un callejón sin salida.
+  getSessions() {
+    return axios.get(`${this.url}/sessions`);
+  }
+
+  openSession(id) {
+    return axios.get(`${this.url}/sessions/${id}`);
+  }
+
+  discardSession(id) {
+    return axios.delete(`${this.url}/sessions/${id}`);
+  }
+
   // Solo el comprobador, sin IA: por eso puede correr en cada tecleo del panel.
   validate(draft) {
     return axios.post(`${this.url}/validate`, { draft });

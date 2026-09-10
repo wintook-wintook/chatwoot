@@ -54,6 +54,15 @@
     "SAVE_NAME_TAKEN": "An AI Agent with that name already exists in this account. Pick another one.",
     "SAVE_CONTEXT": "Context for the agent",
     "SAVE_CONTEXT_HINT": "Business facts you mentioned in the conversation. Empty is fine: the assistant doesn't fill in what you didn't tell it, because the agent would quote it as true.",
-    "SAVE_FROM_TEMPLATE": "This Training came from “%{name}”. Saving replaces its own and keeps a copy of the previous one."
+    "SAVE_FROM_TEMPLATE": "This Training came from “%{name}”. Saving replaces its own and keeps a copy of the previous one.",
+    "TAB_SESSIONS": "Conversations",
+    "SESSIONS_HINT": "A good Training rarely comes out in one sitting. Here you can go back to a conversation, finished or not.",
+    "SESSIONS_NEW": "Start a new one",
+    "SESSIONS_RESUME": "Resume",
+    "SESSIONS_SAVED": "saved",
+    "SESSIONS_OPEN": "in progress",
+    "SESSIONS_UNTITLED": "no title yet",
+    "SESSIONS_EMPTY": "No conversations yet.",
+    "SESSIONS_OPEN_ERROR": "Couldn't open that conversation."
   }
 }

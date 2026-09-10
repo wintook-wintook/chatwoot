@@ -40,6 +40,13 @@
 #   abrir la pantalla: una entrevista dura 30–45 minutos y cerrar la pestaña no
 #   debería tirarla.
 #
+# GET    .../assistant/sessions        las conversaciones de quien pregunta
+# GET    .../assistant/sessions/:id    una, para retomarla
+# DELETE .../assistant/sessions/:id    descartarla
+#   Un Entrenamiento bueno rara vez sale de una sentada: se deja a medias, se
+#   vuelve, se compara con el de otro intento. Sin listado, cada conversación era
+#   un callejón sin salida salvo la última.
+#
 # Cuelga de contact_trackings y no de un /assistant suelto a nivel cuenta: este
 # asistente es del motor de Seguimientos, y Chatwoot ya tiene otro asistente propio
 # (Captain) con el que no conviene confundirlo en la URL.
@@ -71,6 +78,29 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
     return render json: nil if sesion.nil?
 
     render json: session_json(sesion)
+  end
+
+  def sessions
+    render json: TrackingAssistantSession.listable_for(Current.account, Current.user)
+                                         .map { |s| session_row(s) }
+  end
+
+  def show_session
+    sesion = find_session
+    return head :not_found if sesion.nil?
+
+    render json: session_json(sesion)
+  end
+
+  # Descartar no borra la fila: la marca. Un clic de más en una entrevista de 40
+  # minutos no debería ser irreversible, y para quien mira la pantalla el efecto
+  # es el mismo — deja de aparecer.
+  def discard_session
+    sesion = find_session
+    return head :not_found if sesion.nil?
+
+    sesion.update!(status: 'discarded')
+    head :no_content
   end
 
   def interview
@@ -131,6 +161,22 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
   def close_session(template)
     session_record&.mark_saved!(template)
+  end
+
+  def find_session
+    TrackingAssistantSession.find_by(id: params[:id], account: Current.account, user: Current.user)
+  end
+
+  # Lo justo para elegir cuál abrir: de qué se trataba, en qué quedó, y qué iba a
+  # leer el motor de ese borrador.
+  def session_row(sesion)
+    {
+      id: sesion.id, status: sesion.status, title: sesion.title,
+      routes: sesion.route_count, has_draft: sesion.draft.present?,
+      tracking_template_id: sesion.tracking_template_id,
+      template_name: sesion.tracking_template&.name,
+      updated_at: sesion.updated_at
+    }
   end
 
   def session_json(sesion)

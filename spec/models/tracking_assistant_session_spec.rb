@@ -96,4 +96,68 @@ RSpec.describe TrackingAssistantSession do
       expect(described_class.new(account: account, user: user, status: 'raro')).not_to be_valid
     end
   end
+
+  describe '.listable_for' do
+    it 'muestra las abiertas y las que terminaron en un agente' do
+      abierta = sesion
+      guardada = sesion(status: 'saved')
+
+      expect(described_class.listable_for(account, user)).to contain_exactly(abierta, guardada)
+    end
+
+    # Descartar no borra la fila: la saca de la vista. Un clic de más en una
+    # entrevista de 40 minutos no debería ser irreversible.
+    it 'no muestra las descartadas' do
+      sesion(status: 'discarded')
+
+      expect(described_class.listable_for(account, user)).to be_empty
+    end
+
+    it 'no muestra las de otra persona' do
+      sesion(user: otro)
+
+      expect(described_class.listable_for(account, user)).to be_empty
+    end
+
+    it 'las ordena de la más reciente a la más vieja' do
+      vieja = sesion
+      nueva = sesion
+      vieja.update!(updated_at: 3.days.ago)
+
+      expect(described_class.listable_for(account, user).to_a).to eq([nueva, vieja])
+    end
+  end
+
+  # Lo que hace elegible una conversación en el listado: de qué trataba y si el
+  # borrador servía.
+  describe 'cómo se presenta en el listado' do
+    it 'usa el primer mensaje de la persona como título' do
+      s = sesion(messages: [{ 'role' => 'user', 'content' => '  quiero un agente de soporte  ' },
+                            { 'role' => 'assistant', 'content' => '¿qué temas?' }])
+
+      expect(s.title).to eq('quiero un agente de soporte')
+    end
+
+    it 'recorta un título largo' do
+      s = sesion(messages: [{ 'role' => 'user', 'content' => 'a' * 200 }])
+
+      expect(s.title.length).to be <= 80
+    end
+
+    it 'no toma como título lo que dijo el asistente' do
+      s = sesion(messages: [{ 'role' => 'assistant', 'content' => 'hola, ¿en qué te ayudo?' }])
+
+      expect(s.title).to be_nil
+    end
+
+    it 'cuenta las ramas del último borrador sin volver a parsearlo' do
+      s = sesion(validation: { 'routes' => [{ 'name' => 'a' }, { 'name' => 'b' }] })
+
+      expect(s.route_count).to eq(2)
+    end
+
+    it 'cuenta cero cuando todavía no hay borrador' do
+      expect(sesion.route_count).to eq(0)
+    end
+  end
 end

@@ -323,4 +323,96 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       expect(response.parsed_body['reply']).to eq('¿Qué temas atiende?')
     end
   end
+
+  # Un Entrenamiento bueno rara vez sale de una sentada: se deja a medias, se
+  # vuelve, se compara con otro intento. Sin listado, cada conversación era un
+  # callejón sin salida salvo la última.
+  describe 'listar y retomar conversaciones' do
+    let(:sessions_url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/sessions" }
+
+    def crear_sesion(attrs = {})
+      TrackingAssistantSession.create!(
+        { account: account, user: admin,
+          messages: [{ 'role' => 'user', 'content' => 'quiero un agente de soporte' }] }.merge(attrs)
+      )
+    end
+
+    def listar(user: admin)
+      get sessions_url, headers: user.create_new_auth_token, as: :json
+    end
+
+    it 'no deja entrar a un agente' do
+      listar(user: agent)
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'devuelve lo justo para elegir cuál abrir' do
+      crear_sesion(validation: { 'routes' => [{ 'name' => 'soporte' }] }, draft: '@ruta(a #b: c): -')
+
+      listar
+
+      fila = response.parsed_body.first
+      expect(fila).to include('title' => 'quiero un agente de soporte', 'routes' => 1,
+                              'has_draft' => true, 'status' => 'open')
+    end
+
+    it 'dice en qué agente terminó la que se guardó' do
+      template = account.tracking_templates.create!(name: 'Soporte', objective: 'Resolver dudas')
+      crear_sesion(status: 'saved', tracking_template: template)
+
+      listar
+
+      expect(response.parsed_body.first).to include('template_name' => 'Soporte')
+    end
+
+    it 'no lista las de otra persona' do
+      crear_sesion(user: create(:user, account: account))
+
+      listar
+
+      expect(response.parsed_body).to be_empty
+    end
+
+    describe 'abrir una' do
+      it 'devuelve el hilo completo' do
+        sesion = crear_sesion(draft: '@ruta(a #b: c): -')
+
+        get "#{sessions_url}/#{sesion.id}", headers: admin.create_new_auth_token, as: :json
+
+        expect(response.parsed_body['messages'].size).to eq(1)
+        expect(response.parsed_body['draft']).to eq('@ruta(a #b: c): -')
+      end
+
+      it 'no deja abrir la de otra persona' do
+        ajena = crear_sesion(user: create(:user, account: account))
+
+        get "#{sessions_url}/#{ajena.id}", headers: admin.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    describe 'descartar' do
+      it 'la saca del listado sin borrar la fila' do
+        sesion = crear_sesion
+
+        delete "#{sessions_url}/#{sesion.id}", headers: admin.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:no_content)
+        expect(sesion.reload.status).to eq('discarded')
+        listar
+        expect(response.parsed_body).to be_empty
+      end
+
+      it 'no deja descartar la de otra persona' do
+        ajena = crear_sesion(user: create(:user, account: account))
+
+        delete "#{sessions_url}/#{ajena.id}", headers: admin.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:not_found)
+        expect(ajena.reload.status).to eq('open')
+      end
+    end
+  end
 end

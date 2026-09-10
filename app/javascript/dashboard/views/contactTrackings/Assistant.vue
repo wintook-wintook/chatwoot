@@ -23,6 +23,7 @@
 // Guardar queda apagado mientras haya un hallazgo bloqueante: guardar un agente
 // que no ejecuta nada es exactamente el problema que este módulo vino a arreglar.
 // ============================================================================
+import { useAlert } from 'dashboard/composables';
 import AssistantAPI from 'dashboard/api/assistant';
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import Spinner from 'shared/components/Spinner.vue';
@@ -77,6 +78,7 @@ export default {
       activeTab: 0,
       audit: [],
       isAuditing: false,
+      sessions: [],
     };
   },
   computed: {
@@ -112,6 +114,7 @@ export default {
     // entraría desde Agentes IA con el panel vacío y sin decir por qué.
     await this.$store.dispatch('trackingTemplates/get');
     this.fetchAudit();
+    this.fetchSessions();
     // El ?template_id manda sobre la conversación guardada: si se entró desde un
     // agente concreto, es a ese al que se vino, no a lo que quedó a medias.
     if (!this.loadTemplateFromRoute()) await this.resumeSession();
@@ -166,6 +169,50 @@ export default {
       } finally {
         this.isLoadingInventory = false;
       }
+    },
+    async fetchSessions() {
+      try {
+        const { data } = await AssistantAPI.getSessions();
+        this.sessions = data;
+      } catch (error) {
+        this.sessions = [];
+      }
+    },
+    // Abrir una conversación guardada la deja como estaba: hilo, borrador y su
+    // comprobación. Es lo que permite comparar dos intentos en vez de reescribir.
+    async openSession(id) {
+      try {
+        const { data } = await AssistantAPI.openSession(id);
+        this.sessionId = data.id;
+        this.messages = data.messages || [];
+        this.draft = data.draft || '';
+        this.validation = data.validation || null;
+        this.proposal = data.proposal || null;
+        this.editingTemplate = null;
+        if (data.tracking_template_id)
+          this.loadEditingFrom(data.tracking_template_id);
+        this.activeTab = 0;
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN_ERROR'));
+      }
+    },
+    async discardSession(id) {
+      try {
+        await AssistantAPI.discardSession(id);
+        this.sessions = this.sessions.filter(s => s.id !== id);
+        if (this.sessionId === id) this.startFresh();
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN_ERROR'));
+      }
+    },
+    startFresh() {
+      this.sessionId = null;
+      this.messages = [];
+      this.draft = '';
+      this.validation = null;
+      this.proposal = null;
+      this.editingTemplate = null;
+      this.activeTab = 0;
     },
     async fetchAudit() {
       this.isAuditing = true;
@@ -333,6 +380,11 @@ export default {
             :index="2"
             :name="$t('TRACKING_ASSISTANT_VIEW.TAB_AUDIT')"
             :count="brokenAgents.length"
+          />
+          <woot-tabs-item
+            :index="3"
+            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_SESSIONS')"
+            :count="sessions.length"
           />
         </woot-tabs>
 
@@ -545,6 +597,88 @@ export default {
                   {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_FIX') }}
                 </woot-button>
               </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Las conversaciones: un Entrenamiento bueno rara vez sale de una
+             sentada, así que hay que poder volver a una y comparar intentos. -->
+        <div v-show="activeTab === 3" class="flex-1 min-h-0 overflow-y-auto">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_HINT') }}
+            </p>
+            <woot-button variant="clear" size="small" @click="startFresh">
+              {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_NEW') }}
+            </woot-button>
+          </div>
+
+          <ul class="flex flex-col gap-2">
+            <li
+              v-for="row in sessions"
+              :key="row.id"
+              class="p-3 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="text-xs font-medium px-2 py-0.5 rounded shrink-0"
+                      :class="
+                        row.status === 'saved'
+                          ? 'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300'
+                          : 'text-slate-600 bg-slate-100 dark:bg-slate-700 dark:text-slate-300'
+                      "
+                    >
+                      {{
+                        row.status === 'saved'
+                          ? $t('TRACKING_ASSISTANT_VIEW.SESSIONS_SAVED')
+                          : $t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN')
+                      }}
+                    </span>
+                    <span
+                      class="text-sm text-slate-800 dark:text-slate-100 truncate"
+                    >
+                      {{
+                        row.title ||
+                        $t('TRACKING_ASSISTANT_VIEW.SESSIONS_UNTITLED')
+                      }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    <span v-if="row.template_name">
+                      {{ row.template_name }} ·
+                    </span>
+                    {{
+                      $t('TRACKING_ASSISTANT_VIEW.REPORT_ROUTES', {
+                        count: row.routes,
+                      })
+                    }}
+                  </p>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                  <woot-button
+                    size="small"
+                    variant="clear"
+                    @click="openSession(row.id)"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_RESUME') }}
+                  </woot-button>
+                  <woot-button
+                    size="small"
+                    variant="clear"
+                    color-scheme="alert"
+                    icon="delete"
+                    @click="discardSession(row.id)"
+                  />
+                </div>
+              </div>
+            </li>
+            <li
+              v-if="!sessions.length"
+              class="text-xs text-slate-500 dark:text-slate-400 py-4"
+            >
+              {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_EMPTY') }}
             </li>
           </ul>
         </div>

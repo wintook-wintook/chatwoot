@@ -118,6 +118,9 @@ Rails.application.routes.draw do
             post 'assistant/interview', to: 'assistant#interview'
             post 'assistant/save',      to: 'assistant#save'
             get  'assistant/session',   to: 'assistant#resume'
+            get  'assistant/sessions',      to: 'assistant#sessions'
+            get  'assistant/sessions/:id',  to: 'assistant#show_session'
+            delete 'assistant/sessions/:id', to: 'assistant#discard_session'
             get  'assistant/audit',     to: 'assistant#audit'
           end
 

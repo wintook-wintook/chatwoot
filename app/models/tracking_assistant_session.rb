@@ -22,6 +22,9 @@ class TrackingAssistantSession < ApplicationRecord
   # Los turnos que se conservan. Una entrevista real son 4 o 5; el tope existe para
   # que un hilo que se fue de las manos no crezca sin límite dentro del jsonb.
   MAX_MESSAGES = 60
+  # Tope del listado. Nadie revisa más que eso, y sin tope la pantalla se vuelve
+  # pesada en una cuenta que use mucho el asistente.
+  LIST_LIMIT = 50
 
   belongs_to :account
   belongs_to :user
@@ -40,6 +43,29 @@ class TrackingAssistantSession < ApplicationRecord
   end
 
   def open? = status == 'open'
+
+  # Las que se muestran en el listado. Las descartadas quedan en la tabla pero
+  # fuera de la vista: descartar no debería ser irreversible.
+  def self.listable_for(account, user)
+    where(account: account, user: user, status: %w[open saved])
+      .includes(:tracking_template).recent_first.limit(LIST_LIMIT)
+  end
+
+  # De qué se trataba, para el listado. El primer mensaje de la persona es lo más
+  # cercano a un título que hay: es con lo que arrancó la entrevista.
+  def title
+    primero = Array(messages).find { |m| m['role'] == 'user' }
+    texto = primero&.dig('content').to_s.squish
+
+    texto.presence&.truncate(80)
+  end
+
+  # Cuántas ramas leería el motor del último borrador. Sale de la comprobación ya
+  # guardada, sin volver a parsear: es lo que distingue un intento que sirve de uno
+  # que no, y es lo primero que se quiere ver en una lista.
+  def route_count
+    Array(validation['routes']).size
+  end
 
   # El hilo se guarda entero en cada turno: siempre se lee completo, así que no hay
   # nada que ganar guardando los mensajes de a uno.
