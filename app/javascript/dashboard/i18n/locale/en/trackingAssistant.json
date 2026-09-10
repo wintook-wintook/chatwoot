@@ -134,6 +134,7 @@
     "AUDIT_NEW_VERSION": "New version",
     "ACTIONS_TITLE": "Actions",
     "ACTIONS_HINT": "What a branch DOES when it escalates, on the right of the arrow. To open a case use @crear_ticket(tipo=…) above: with no type, the case opens with whichever the intake infers.",
-    "ACTIONS_UNAVAILABLE": "will not run"
+    "ACTIONS_UNAVAILABLE": "will not run",
+    "AUDIT_WRITE": "Write its Training"
   }
 }

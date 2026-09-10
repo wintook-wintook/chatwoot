@@ -647,6 +647,12 @@ export default {
         this.showSaveModal = false;
         this.editingTemplate = null;
         this.sessionId = null;
+        this.sessionMeta = null;
+        // Lo que el comprobador no podía revisar sobre el borrador: directivas
+        // que dependen de la configuración del AGENTE, que recién ahora existe.
+        // El aviso se muestra ANTES de navegar a propósito: la pantalla a la que
+        // se llega es justo donde se asigna el calendario.
+        (data.warnings || []).forEach(warning => useAlert(warning.message));
         this.$router.push({
           name: 'contact_trackings_agents',
           query: { template_id: data.tracking_template_id },
@@ -1055,8 +1061,16 @@ export default {
                       </span>
                     </td>
                     <td class="p-3">
-                      <!-- Roto -> arreglarlo. Sano -> partir de él para otra
-                           versión, sin tocar el que está andando en producción. -->
+                      <!-- Cada estado tiene su acción, y NINGUNO se queda sin
+                           una. El que no tiene Entrenamiento es el más inerte de
+                           todos —contesta sin ninguna configuración— y era
+                           justamente el único al que la pantalla no le ofrecía
+                           nada: se lo veía en rojo y ahí terminaba.
+
+                           Roto  -> arreglarlo y reemplazarlo.
+                           Vacío -> escribirle el Entrenamiento que no tiene.
+                           Sano  -> partir de él para otra versión, sin tocar el
+                                    que está andando en producción. -->
                       <woot-button
                         v-if="row.status === 'broken'"
                         size="small"
@@ -1066,7 +1080,17 @@ export default {
                         {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_FIX') }}
                       </woot-button>
                       <woot-button
-                        v-else-if="row.status !== 'empty'"
+                        v-else-if="row.status === 'empty'"
+                        size="small"
+                        variant="clear"
+                        color-scheme="secondary"
+                        icon="wand"
+                        @click="openInAssistant(row)"
+                      >
+                        {{ $t('TRACKING_ASSISTANT_VIEW.AUDIT_WRITE') }}
+                      </woot-button>
+                      <woot-button
+                        v-else
                         size="small"
                         variant="clear"
                         color-scheme="secondary"

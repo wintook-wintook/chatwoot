@@ -29,6 +29,11 @@ en:
         only if it could not resolve, or whether it ONLY collects data and always opens the case.
         Those are two different agents and it cannot be inferred from the request. Do not deliver
         anything yet: ask that question, with both options, and return "entrenamiento": null.
+    warnings:
+      calendar_not_assigned: >-
+        «%{name}» was saved, but it has no calendar assigned, so @agendar_calendar will not schedule
+        anything. Assign a calendar on the AI Agent's own page: having the calendar connected in the
+        account is not enough — the engine looks for it on the agent.
     findings:
       route_line_unparsed: >-
         Line %{line}: the engine does NOT read this as a branch — %{reason}. The exact pattern is

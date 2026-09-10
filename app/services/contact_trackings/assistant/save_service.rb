@@ -20,9 +20,20 @@
 # ================================================================================
 
 class ContactTrackings::Assistant::SaveService
-  Result = Struct.new(:template, :error, :details, keyword_init: true) do
+  Result = Struct.new(:template, :error, :details, :warnings, keyword_init: true) do
     def success? = error.blank?
   end
+
+  # Lo que el comprobador NO puede saber sobre un borrador: hay directivas cuya
+  # ejecución depende de la configuración del AGENTE, no del texto ni de la
+  # cuenta. Sobre un borrador el agente todavía no existe; recién acá, con la
+  # plantilla guardada, se puede mirar.
+  #
+  # Hoy hay una: @agendar_calendar solo agenda si el agente tiene calendarios
+  # asignados (appointment_dispatchable? exige calendar_configured?). Escrita sin
+  # eso, la directiva parsea, se guarda, y el turno pasa de largo sin agendar.
+  # Es la última rendija por la que se colaba una falla silenciosa.
+  AGENDAR_RE = /@agendar_calendar\b/i
 
   def initialize(account, user:, draft:, mode:, params: {})
     @account = account
@@ -47,6 +58,24 @@ class ContactTrackings::Assistant::SaveService
 
   private
 
+  # El aviso va DESPUÉS de guardar y no impide guardar: el agente quedó bien, lo
+  # que falta es asignarle el calendario en su ficha —otra pantalla— y frenar el
+  # guardado por eso obligaría a hacer las dos cosas en un orden que nadie
+  # adivina.
+  def warnings_for(template)
+    return [] unless @draft.match?(AGENDAR_RE)
+    return [] if template.calendar_integration_ids.present?
+
+    [{ code: :calendar_not_assigned,
+       message: I18n.t('tracking_assistant.warnings.calendar_not_assigned',
+                       name: template.name,
+                       locale: ContactTrackings::Assistant::Language.resolve) }]
+  end
+
+  def saved(template)
+    Result.new(template: template, warnings: warnings_for(template))
+  end
+
   def create
     template = @account.tracking_templates.new(
       name: @params[:name],
@@ -58,7 +87,7 @@ class ContactTrackings::Assistant::SaveService
       complementary_prompt: @draft,
       user: @user
     )
-    template.save ? Result.new(template: template) : Result.new(error: :invalid, details: template.errors.full_messages)
+    template.save ? saved(template) : Result.new(error: :invalid, details: template.errors.full_messages)
   end
 
   def replace
@@ -68,7 +97,7 @@ class ContactTrackings::Assistant::SaveService
     # El anterior se guarda ANTES de pisarlo; si el update falla, no se perdió nada.
     template.previous_complementary_prompt = template.complementary_prompt
     template.complementary_prompt = @draft
-    template.save ? Result.new(template: template) : Result.new(error: :invalid, details: template.errors.full_messages)
+    template.save ? saved(template) : Result.new(error: :invalid, details: template.errors.full_messages)
   end
 
   # Un inbox de otra cuenta no se liga: se ignora, igual que hace el inventario.

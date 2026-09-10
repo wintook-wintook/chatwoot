@@ -28,6 +28,11 @@ es:
         si no pudo resolver, o si SOLO recauda datos y abre el caso siempre. Son dos agentes
         distintos y no se deduce del pedido. No entregues nada todavía: hacé esa pregunta, con las
         dos opciones, y devolvé "entrenamiento": null.
+    warnings:
+      calendar_not_assigned: >-
+        «%{name}» quedó guardado, pero no tiene ningún calendario asignado, así que
+        @agendar_calendar no va a agendar nada. Asignale un calendario en la ficha del Agente IA:
+        tener el calendario conectado en la cuenta no alcanza, el motor lo busca en el agente.
     findings:
       route_line_unparsed: >-
         Línea %{line}: el motor NO la reconoce como rama — %{reason}. El patrón exacto es

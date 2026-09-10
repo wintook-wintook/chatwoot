@@ -155,7 +155,11 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
     close_session(result.template)
 
-    render json: { tracking_template_id: result.template.id, name: result.template.name }, status: :ok
+    # `warnings` no es un error: el agente se guardó. Son las directivas que
+    # dependen de la configuración del AGENTE y que el comprobador no podía
+    # revisar sobre un borrador, porque el agente todavía no existía.
+    render json: { tracking_template_id: result.template.id, name: result.template.name,
+                   warnings: result.warnings.presence }, status: :ok
   end
 
   private

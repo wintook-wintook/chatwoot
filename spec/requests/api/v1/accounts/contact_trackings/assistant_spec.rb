@@ -300,6 +300,37 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
     end
   end
 
+  # El último hueco de @agendar_calendar: el comprobador no puede revisarla sobre
+  # un borrador porque depende del calendario asignado AL AGENTE, y sobre un
+  # borrador el agente no existe. Recién al guardar se puede mirar.
+  describe 'aviso al guardar un agente que agenda sin calendario' do
+    let(:save_url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/save" }
+
+    def guardar(draft, nombre)
+      account.update!(locale: 'es')
+      post save_url,
+           params: { draft: draft, mode: 'create', name: nombre, objective: 'Agendar citas' },
+           headers: admin.create_new_auth_token, as: :json
+    end
+
+    it 'guarda igual y avisa que hay que asignarle un calendario' do
+      guardar('@ruta(agenda #agenda: quiero una cita): - -> @agendar_calendar', 'Agenda')
+
+      expect(response).to have_http_status(:success)
+      aviso = response.parsed_body['warnings'].first
+      expect(aviso['code']).to eq('calendar_not_assigned')
+      expect(aviso['message']).to include('«Agenda»')
+      expect(aviso['message']).to include('no tiene ningún calendario asignado')
+    end
+
+    it 'no avisa nada cuando el Entrenamiento no agenda' do
+      source('article', 'Centro de Ayuda')
+      guardar('@ruta(soporte #soporte: no puedo entrar): @buscar_articulo', 'Soporte')
+
+      expect(response.parsed_body['warnings']).to be_nil
+    end
+  end
+
   # F6 — probar sin enviar nada.
   describe 'POST dry_run' do
     let(:dry_run_url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/dry_run" }
