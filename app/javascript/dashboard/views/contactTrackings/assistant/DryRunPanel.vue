@@ -4,19 +4,15 @@
 // "Probar sin enviar nada": una pregunta contra el Entrenamiento, sin tocar
 // ninguna conversación.
 //
-// Va acá abajo y NO en un modal (como lo dibujaba el plan §7.6): lo que se hace
-// con esto es leer el resultado, corregir el Entrenamiento que está arriba, y
-// volver a probar. Un modal tapa justo el texto que hay que corregir.
+// ESTO ES SOLO EL INFORME de UNA corrida. El campo, el botón y el historial
+// viven en DryRunModal: probar un agente es hacerle varias preguntas seguidas y
+// comparar, y con un panel fijo cada prueba borraba la anterior.
 //
-// Vive dentro de un acordeón CERRADO por defecto, y el marco y el título los
-// pone él. Probar es una acción puntual: como panel fijo se llevaba un cuarto de
-// la columna para mostrar un campo vacío, en la misma columna donde se edita un
-// texto que en esta cuenta llega a 645 líneas.
-//
-// SE DISPARA A MANO, SIEMPRE.
-//   El comprobador de arriba revalida en cada tecleo porque es una función pura
-//   y no cuesta nada. Esto sí cuesta: clasifica la rama con el modelo y vectoriza
-//   la pregunta. Nunca se corre solo.
+// (La primera versión estaba abajo del Entrenamiento y no en un modal, con el
+// argumento de que un modal tapa el texto que se viene a corregir. El argumento
+// suponía que se lee y se edita a la vez; en el uso real se prueban varias
+// preguntas y DESPUÉS se edita, así que perder el historial costaba más que
+// tapar el borrador un rato.)
 //
 // LO QUE MÁS IMPORTA DE ESTE PANEL es la primera línea, la rama. El comprobador
 // ya dice si el Entrenamiento se ejecuta; lo que no puede decir es si rutea BIEN.
@@ -25,19 +21,9 @@
 // ============================================================================
 export default {
   props: {
-    draft: { type: String, default: '' },
     result: { type: Object, default: null },
-    isRunning: { type: Boolean, default: false },
-    error: { type: String, default: '' },
-  },
-  emits: ['run'],
-  data() {
-    return { question: '' };
   },
   computed: {
-    canRun() {
-      return this.question.trim().length > 2 && this.draft.trim().length > 0;
-    },
     routes() {
       return this.result?.routes || {};
     },
@@ -78,10 +64,6 @@ export default {
     },
   },
   methods: {
-    run() {
-      if (!this.canRun || this.isRunning) return;
-      this.$emit('run', this.question.trim());
-    },
     percent(similarity) {
       return `${Math.round(similarity * 100)}%`;
     },
@@ -91,33 +73,7 @@ export default {
 
 <template>
   <div>
-    <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
-      {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_HINT') }}
-    </p>
-
-    <div class="flex gap-2 items-start">
-      <input
-        v-model="question"
-        type="text"
-        class="flex-1 !mb-0"
-        :placeholder="$t('TRACKING_ASSISTANT_VIEW.DRY_RUN_PLACEHOLDER')"
-        @keyup.enter="run"
-      />
-      <woot-button
-        :is-disabled="!canRun"
-        :is-loading="isRunning"
-        size="small"
-        @click="run"
-      >
-        {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_BUTTON') }}
-      </woot-button>
-    </div>
-
-    <p v-if="error" class="text-xs text-red-600 dark:text-red-400 mt-2">
-      {{ error }}
-    </p>
-
-    <div v-if="result" class="mt-4 flex flex-col gap-3 text-xs">
+    <div v-if="result" class="flex flex-col gap-3 text-xs">
       <!-- RAMA — lo que el comprobador no podía contestar. -->
       <div>
         <span class="text-slate-500 dark:text-slate-400">

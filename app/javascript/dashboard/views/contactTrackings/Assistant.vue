@@ -46,7 +46,7 @@ import ProgressStrip from './assistant/ProgressStrip.vue';
 import CopyChip from './assistant/CopyChip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
 import ValidationReport from './assistant/ValidationReport.vue';
-import DryRunPanel from './assistant/DryRunPanel.vue';
+import DryRunModal from './assistant/DryRunModal.vue';
 import SaveModal from './assistant/SaveModal.vue';
 
 // El teclado va más rápido que un request: se espera a que la persona pare.
@@ -102,7 +102,7 @@ export default {
     ProgressStrip,
     ValidationBadge,
     ValidationReport,
-    DryRunPanel,
+    DryRunModal,
     SaveModal,
   },
   data() {
@@ -136,7 +136,12 @@ export default {
       isAuditing: false,
       sessions: [],
       // F6 — probar sin enviar nada. Se dispara con botón, nunca al teclear.
-      dryRun: null,
+      // El historial no se borra al editar el Entrenamiento: las corridas viejas
+      // se marcan como de otra versión. Borrarlas perdería justo la comparación
+      // que se vino a hacer.
+      dryRunHistory: [],
+      showDryRunModal: false,
+      draftVersion: 0,
       isDryRunning: false,
       dryRunError: '',
       // Las preguntas del último turno, para mostrarlas como botones.
@@ -146,7 +151,6 @@ export default {
       // al texto a costa de que nadie lo vea. Probar es una acción puntual, y
       // cerrada ocupa una línea en vez de un cuarto de la columna.
       isReportOpen: true,
-      isDryRunOpen: false,
       // Modo ancho: esconde la conversación y deja el Entrenamiento a todo el
       // ancho. Para los 6 agentes de la cuenta que pasan de 370 líneas.
       isWideEditor: false,
@@ -233,6 +237,14 @@ export default {
           label: 'TRACKING_ASSISTANT_VIEW.AGENTS_COL_HEADLINE',
         },
       ];
+    },
+    // El último resultado, para la tira de hitos: "Probado" se apaga cuando el
+    // borrador cambió después de la prueba.
+    lastDryRun() {
+      const ultima = this.dryRunHistory[this.dryRunHistory.length - 1];
+      return ultima && ultima.version === this.draftVersion
+        ? ultima.result
+        : null;
     },
     sortedSessions() {
       return sortRows(this.sessions, this.sessionsSort, SESSION_COLUMNS);
@@ -377,7 +389,7 @@ export default {
       this.draft = data.draft || '';
       this.validation = data.validation || null;
       this.proposal = data.proposal || null;
-      this.dryRun = null;
+      this.dryRunHistory = [];
       this.sessionMeta = {
         id: data.id,
         status: data.status,
@@ -442,11 +454,11 @@ export default {
       this.sessionId = null;
       this.sessionMeta = null;
       this.interviewOptions = null;
+      this.dryRunHistory = [];
       this.messages = [];
       this.draft = '';
       this.validation = null;
       this.proposal = null;
-      this.dryRun = null;
       this.editingTemplate = null;
       this.activeTab = 0;
     },
@@ -517,9 +529,14 @@ export default {
       this.dryRunError = '';
       try {
         const { data } = await AssistantAPI.dryRun(this.draft, question, null);
-        this.dryRun = data;
+        // Con la versión del borrador contra la que se corrió: es lo que después
+        // permite decir "esto ya no describe el texto actual".
+        this.dryRunHistory.push({
+          question,
+          result: data,
+          version: this.draftVersion,
+        });
       } catch (error) {
-        this.dryRun = null;
         this.dryRunError =
           error?.response?.data?.error ||
           this.$t('TRACKING_ASSISTANT_VIEW.DRY_RUN_FAILED');
@@ -583,7 +600,7 @@ export default {
       this.sessionId = null;
       this.sessionMeta = null;
       this.interviewOptions = null;
-      this.dryRun = null;
+      this.dryRunHistory = [];
       this.activeTab = 0;
       this.validateDraft();
     },
@@ -621,11 +638,10 @@ export default {
     onDraftInput() {
       clearTimeout(this.validateTimer);
       this.validateTimer = setTimeout(this.validateDraft, VALIDATE_DEBOUNCE_MS);
-      // La prueba en seco caduca al editar. Un resultado de hace tres cambios no
-      // dice nada del texto que hay ahora, y dejarlo en pantalla —con su rama y
-      // sus fragmentos— es peor que no mostrarlo: se lee como si describiera lo
-      // que se está viendo.
-      this.dryRun = null;
+      // Editar no borra las pruebas: las envejece. Cada corrida guardó contra qué
+      // versión se hizo, así que las anteriores quedan marcadas en vez de
+      // desaparecer — y la comparación entre preguntas se conserva.
+      this.draftVersion += 1;
     },
     async validateDraft() {
       if (!this.draft.trim()) {
@@ -655,6 +671,7 @@ export default {
         this.editingTemplate = null;
         this.sessionId = null;
         this.sessionMeta = null;
+        this.dryRunHistory = [];
         // Lo que el comprobador no podía revisar sobre el borrador: directivas
         // que dependen de la configuración del AGENTE, que recién ahora existe.
         // El aviso se muestra ANTES de navegar a propósito: la pantalla a la que
@@ -787,7 +804,7 @@ export default {
               :messages="messages"
               :draft="draft"
               :validation="validation"
-              :dry-run="dryRun"
+              :dry-run="lastDryRun"
               :editing-template="editingTemplate"
             />
 
@@ -855,20 +872,6 @@ export default {
                   :validation="validation"
                   @gotoRoute="goToRoute"
                   @gotoLine="goToLine"
-                />
-              </AccordionItem>
-
-              <AccordionItem
-                :title="$t('TRACKING_ASSISTANT_VIEW.DRY_RUN_TITLE')"
-                :is-open="isDryRunOpen"
-                @click="isDryRunOpen = !isDryRunOpen"
-              >
-                <DryRunPanel
-                  :draft="draft"
-                  :result="dryRun"
-                  :is-running="isDryRunning"
-                  :error="dryRunError"
-                  @run="runDryRun"
                 />
               </AccordionItem>
             </div>
@@ -1272,12 +1275,34 @@ export default {
           v-show="activeTab === 0"
           class="flex justify-end gap-2 pt-4 shrink-0"
         >
+          <!-- Probar va ANTES de guardar, y en ese orden se lee: el comprobador
+               dice si se ejecuta, esto dice si rutea bien, y recién después se
+               guarda. -->
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            :is-disabled="!draft.trim()"
+            @click="showDryRunModal = true"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_TITLE') }}
+          </woot-button>
           <woot-button :is-disabled="!canSave" @click="showSaveModal = true">
             {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CTA') }}
           </woot-button>
         </div>
       </template>
     </div>
+
+    <DryRunModal
+      :show="showDryRunModal"
+      :draft="draft"
+      :history="dryRunHistory"
+      :draft-version="draftVersion"
+      :is-running="isDryRunning"
+      :error="dryRunError"
+      @close="showDryRunModal = false"
+      @run="runDryRun"
+    />
 
     <SaveModal
       :show="showSaveModal"
