@@ -36,6 +36,7 @@ import AssistantAPI from 'dashboard/api/assistant';
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
+import { findRouteLine, lineRange } from './assistant/draftNavigation';
 import InterviewPanel from './assistant/InterviewPanel.vue';
 import ProgressStrip from './assistant/ProgressStrip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
@@ -262,42 +263,20 @@ export default {
     // Selecciona la línea entera, no solo la deja a la vista: en un texto
     // monoespaciado de cientos de líneas, "algo se movió" no le dice a nadie
     // cuál es la línea. Seleccionada, se ve.
+    //
+    // El cálculo vive en draftNavigation.js, con su spec: la regla del límite
+    // del nombre de rama se rompe sola y en silencio.
     goToLine(line) {
       const editor = this.$refs.draftEditor;
-      if (!editor || !line) return;
-
-      const lines = this.draft.split('\n');
-      if (line > lines.length) return;
-
-      const start = lines
-        .slice(0, line - 1)
-        .reduce((total, text) => total + text.length + 1, 0);
+      const range = lineRange(this.draft, line);
+      if (!editor || !range) return;
 
       editor.focus();
-      editor.setSelectionRange(start, start + lines[line - 1].length);
+      editor.setSelectionRange(range[0], range[1]);
     },
 
-    // Las ramas del informe no traen número de línea —RouteMap no lo registra— y
-    // agregárselo sería tocar el parser de producción por una comodidad de la
-    // pantalla. Se busca acá: los nombres de rama son únicos (RouteMap hace
-    // uniq(&:name)) y la línea siempre empieza con @ruta(nombre.
     goToRoute(name) {
-      const line = this.findRouteLine(name);
-      if (line) this.goToLine(line);
-    },
-
-    findRouteLine(name) {
-      const needle = `@ruta(${name}`.toLowerCase();
-      const index = this.draft.split('\n').findIndex(text => {
-        const line = text.trimStart().toLowerCase();
-        if (!line.startsWith(needle)) return false;
-
-        // Sin esto, una rama llamada "sop" saltaría a la línea de "soporte".
-        // Después del nombre solo puede venir la etiqueta, los dos puntos o el
-        // paréntesis de cierre.
-        return ' \t#:)'.includes(line.charAt(needle.length));
-      });
-      return index === -1 ? null : index + 1;
+      this.goToLine(findRouteLine(this.draft, name));
     },
 
     // F6 — probar sin enviar nada. A diferencia de validateDraft, esto NO corre
