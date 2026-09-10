@@ -89,10 +89,11 @@ export default {
     inboxes() {
       return this.$store.getters['inboxes/getInboxes'] || [];
     },
+    // El getter se llama getTemplates, no getTrackingTemplates: pedir el nombre
+    // equivocado devolvía undefined y el `|| []` dejaba el desplegable de
+    // "reemplazar" vacío, sin que nada fallara.
     templates() {
-      return (
-        this.$store.getters['trackingTemplates/getTrackingTemplates'] || []
-      );
+      return this.$store.getters['trackingTemplates/getTemplates'] || [];
     },
   },
   mounted() {

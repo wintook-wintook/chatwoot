@@ -37,6 +37,12 @@ class ContactTrackings::Assistant::InterviewService
   READ_TIMEOUT = 90
   # Vueltas de corrección antes de mostrarle los errores a la persona.
   MAX_REPAIRS = 3
+  # Los dos comportamientos posibles del agente. "responde" consulta una fuente y
+  # escala si no resuelve; "deriva" abre el caso siempre, sin intentar contestar.
+  # Cuál de los dos es NO se puede deducir del pedido —"un agente que junte
+  # información para abrir un ticket" se lee de las dos maneras— así que el modelo
+  # tiene que haberlo preguntado, y decirlo. Medido: si no se le exige, elige solo.
+  MODES = %w[responde deriva].freeze
   # Tope de turnos de entrevista. Más que esto no es una entrevista, es un chat: a
   # partir de acá el contrato le exige redactar con lo que tenga y marcar lo que
   # falte como <PENDIENTE:>.
@@ -65,6 +71,10 @@ class ContactTrackings::Assistant::InterviewService
 
     draft = reply['entrenamiento'].presence
     return Result.new(reply: reply['mensaje'], draft: nil, repairs: 0) if draft.blank?
+    # Entregar sin haber preguntado no es un error de sintaxis, así que el
+    # comprobador no lo caza: es el modelo decidiendo por la persona. Se rechaza
+    # acá y se lo devuelve al mismo hilo, igual que un hallazgo del comprobador.
+    return ask_missing_mode(reply, draft) if MODES.exclude?(reply['modo'])
 
     repair(reply['mensaje'], draft)
   end
@@ -72,6 +82,32 @@ class ContactTrackings::Assistant::InterviewService
   private
 
   attr_reader :account, :inbox, :messages, :one_shot
+
+  # El modelo redactó sin preguntar. Se descarta el borrador y se le devuelve al
+  # mismo hilo la pregunta que le faltó: es más barato que entregar un agente que
+  # se comporta distinto de lo que la persona pidió, sin que nadie lo note.
+  def ask_missing_mode(reply, draft)
+    history = conversation + [
+      { role: 'assistant', content: { mensaje: reply['mensaje'], entrenamiento: draft }.to_json },
+      { role: 'user', content: MISSING_MODE_PROMPT }
+    ]
+
+    corrected = ask(history)
+    return Result.new(reply: reply['mensaje'], draft: nil, repairs: 0) if corrected.nil?
+
+    nuevo = corrected['entrenamiento'].presence
+    return Result.new(reply: corrected['mensaje'], draft: nil, repairs: 0) if nuevo.blank?
+
+    repair(corrected['mensaje'], nuevo)
+  end
+
+  MISSING_MODE_PROMPT = <<~AVISO.strip
+    Entregaste el Entrenamiento sin preguntar si el agente CONTESTA primero y abre el caso solo
+    si no pudo resolver, o si SOLO recauda datos y abre el caso siempre. Son dos agentes
+    distintos y no se deduce del pedido.
+    No entregues nada todavía: hacé esa pregunta, con las dos opciones, y devolvé
+    "entrenamiento": null.
+  AVISO
 
   # ── el bucle ────────────────────────────────────────────────────────────────
   def repair(message, draft)
@@ -121,58 +157,14 @@ class ContactTrackings::Assistant::InterviewService
     [
       ContactTrackings::Assistant::Contract.call,
       inventory_section,
-      one_shot ? one_shot_section : interview_section
+      ContactTrackings::Assistant::Instructions.call(one_shot: one_shot,
+                                                     max_turns: MAX_INTERVIEW_TURNS)
     ].join("\n\n")
   end
 
   def inventory_section
     inventory = ContactTrackings::Assistant::InventoryService.new(account, inbox: inbox).call
     ContactTrackings::Assistant::InventoryPrompt.call(inventory)
-  end
-
-  def interview_section
-    <<~ENTREVISTA.strip
-      ═══ CÓMO TRABAJÁS ═══
-      No arranques con una pregunta en blanco: ya leíste el inventario, así que tu primer
-      mensaje es una PROPUESTA sobre lo que la cuenta tiene.
-
-      Preguntá solo lo que no podés deducir. Estas son las que importan:
-        1. Qué temas atiende el agente.
-        2. ¿Contesta primero y abre el caso solo si no pudo resolver, o siempre recauda datos
-           y abre el caso? Son dos agentes distintos: si no te lo dicen, PREGUNTALO.
-        3. Con qué etiqueta cierra cada tema.
-        4. Qué tipo de caso abre.
-      Ofrecé opciones tomadas del inventario, no preguntas abiertas. Máximo #{MAX_INTERVIEW_TURNS}
-      turnos de preguntas: después redactá con lo que tengas y marcá lo que falte.
-
-      Si la cuenta no tiene fuentes ni tipos de caso, no entrevistes sobre el vacío: ofrecé un
-      arquetipo (informativo simple, soporte con foro y escalamiento, coordinador multi-tema,
-      agente de agenda, intake de datos) y dejá los nombres como <PENDIENTE: ...>.
-
-      ═══ CÓMO RESPONDÉS ═══
-      SIEMPRE un JSON con estas dos llaves:
-        {"mensaje": "lo que le decís a la persona",
-         "entrenamiento": "el Entrenamiento completo, o null si todavía estás preguntando"}
-      Mientras entrevistás, "entrenamiento" va en null. Cuando entregás, va completo: las
-      líneas @ruta y la prosa, sin explicaciones alrededor.
-    ENTREVISTA
-  end
-
-  def one_shot_section
-    <<~UNICA.strip
-      ═══ CÓMO TRABAJÁS ═══
-      NO entrevistes: no vas a poder recibir la respuesta. Redactá el Entrenamiento completo
-      de una sola vez con lo que te dieron y el inventario de la cuenta.
-
-      Todo dato que te falte —un nombre de fuente, un tipo de caso, una etiqueta— lo dejás
-      como <PENDIENTE: qué falta> y lo enumerás al final del "mensaje". No lo inventes.
-
-      ═══ CÓMO RESPONDÉS ═══
-      SIEMPRE un JSON con estas dos llaves:
-        {"mensaje": "qué armaste y qué quedó pendiente",
-         "entrenamiento": "el Entrenamiento completo"}
-      "entrenamiento" NUNCA va en null en este modo.
-    UNICA
   end
 
   # ── OpenAI ──────────────────────────────────────────────────────────────────

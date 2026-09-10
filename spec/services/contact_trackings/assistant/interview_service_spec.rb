@@ -21,9 +21,15 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
     create(:label, account: account, title: 'soporte1')
   end
 
-  # Una respuesta de OpenAI con el JSON que exige el contrato de salida.
-  def openai_reply(mensaje:, entrenamiento: nil)
-    { choices: [{ message: { content: { mensaje: mensaje, entrenamiento: entrenamiento }.to_json } }] }.to_json
+  # Una respuesta de OpenAI con el JSON que exige el contrato de salida. `modo` es
+  # obligatorio cuando hay Entrenamiento: es la respuesta a la pregunta que el
+  # asistente no puede saltearse.
+  # :auto = "el que corresponda"; nil explícito = "no lo declaró", que es el caso
+  # que la guarda tiene que rechazar.
+  def openai_reply(mensaje:, entrenamiento: nil, modo: :auto)
+    modo = (entrenamiento ? 'responde' : nil) if modo == :auto
+    cuerpo = { mensaje: mensaje, modo: modo, entrenamiento: entrenamiento }
+    { choices: [{ message: { content: cuerpo.to_json } }] }.to_json
   end
 
   def stub_openai(*bodies)
@@ -205,6 +211,57 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
         JSON.parse(req.body)['messages'].first['content'].exclude?('Máximo')
       end
       expect(pedido).to have_been_made
+    end
+  end
+
+  # "Contesta primero" y "solo recauda datos" son dos agentes distintos, y la
+  # diferencia no se deduce del pedido: "un agente que junte información para abrir
+  # un ticket" se lee de las dos maneras. Elegir por la persona le cambia el
+  # comportamiento al agente sin que nadie se entere — pasó al probarlo en pantalla.
+  describe 'la pregunta que no se puede saltear' do
+    it 'rechaza un Entrenamiento entregado sin declarar el modo' do
+      stub_openai(openai_reply(mensaje: 'Ahí va', entrenamiento: entrenamiento_ok, modo: nil),
+                  openai_reply(mensaje: '¿Contesta primero o solo deriva?'))
+
+      resultado = entrevistar
+
+      expect(resultado.draft).to be_nil
+      expect(resultado.reply).to include('Contesta primero')
+    end
+
+    it 'le devuelve al mismo hilo la pregunta que le faltó' do
+      stub_openai(openai_reply(mensaje: 'Ahí va', entrenamiento: entrenamiento_ok, modo: nil),
+                  openai_reply(mensaje: '¿Contesta o deriva?'))
+
+      entrevistar
+
+      pedido = a_request(:post, url).with { |req| req.body.include?('sin preguntar si el agente CONTESTA') }
+      expect(pedido).to have_been_made
+    end
+
+    it 'acepta el Entrenamiento cuando el modo viene declarado' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: entrenamiento_ok, modo: 'deriva'))
+
+      resultado = entrevistar
+
+      expect(resultado.draft).to eq(entrenamiento_ok)
+      expect(a_request(:post, url)).to have_been_made.once
+    end
+
+    it 'rechaza un modo que no es ninguno de los dos' do
+      stub_openai(openai_reply(mensaje: 'Ahí va', entrenamiento: entrenamiento_ok, modo: 'lo que sea'),
+                  openai_reply(mensaje: '¿Contesta o deriva?'))
+
+      expect(entrevistar.draft).to be_nil
+    end
+
+    # Si vuelve a entregar tras el aviso, se sigue como siempre: el comprobador
+    # manda igual.
+    it 'sigue con el bucle normal si tras el aviso entrega bien' do
+      stub_openai(openai_reply(mensaje: 'Ahí va', entrenamiento: entrenamiento_ok, modo: nil),
+                  openai_reply(mensaje: 'Corregido', entrenamiento: entrenamiento_ok, modo: 'responde'))
+
+      expect(entrevistar.draft).to eq(entrenamiento_ok)
     end
   end
 end

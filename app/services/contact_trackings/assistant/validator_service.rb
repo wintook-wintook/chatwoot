@@ -52,7 +52,7 @@ class ContactTrackings::Assistant::ValidatorService
   CHECKS = %i[
     check_unparsed_route_lines check_has_routes
     check_route_sources check_action_in_source check_ticket_types check_default_route
-    check_descriptions check_tags_exist check_erp_directive_isolation
+    check_descriptions check_tags_exist check_corpus check_erp_directive_isolation
     check_escalation_regime check_prose
   ].freeze
 
@@ -100,6 +100,12 @@ class ContactTrackings::Assistant::ValidatorService
       if line.match?(/@ruta\(\s*[^a-z0-9_\-#:)]/i)
 
     'no respeta la forma @ruta(nombre #etiqueta: descripción): fuente'
+  end
+
+  # Comprobar la configuración contra lo que la cuenta TIENE es otro tipo de
+  # pregunta que comprobar la gramática, y vive aparte.
+  def check_corpus
+    ContactTrackings::Assistant::CorpusChecks.new(map, account: account, findings: findings).call
   end
 
   # Las reglas de la ZONA 2 viven en ProseChecks: es la división que hace el propio

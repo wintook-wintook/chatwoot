@@ -251,6 +251,57 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
     end
   end
 
+  # Con grupo el umbral sube de 0.20 a 0.45: la búsqueda se vuelve mucho más
+  # exigente. Sobre dos o tres respuestas, la rama casi nunca encuentra nada.
+  # Salió de una corrida real: el asistente le puso el grupo DATOS —dos respuestas,
+  # de datos fiscales y bancarios— a una rama de actualizaciones de versión.
+  describe 'D7 · grupo de predefinidas con corpus mínimo' do
+    it 'avisa cuando el grupo tiene muy pocas respuestas' do
+      create(:canned_response, account: account, short_code: 'DATOS FISCALES')
+      create(:canned_response, account: account, short_code: 'DATOS BANCARIOS')
+
+      r = validar('@ruta(actualizaciones #demo: instalar la nueva version): @buscar_predefinidas(DATOS)')
+
+      hallazgo = r[:degrading].find { |f| f[:code] == :canned_group_too_small }
+      expect(hallazgo[:message]).to include('2 respuestas predefinidas', '0.45')
+      expect(r[:valid]).to be(true)
+    end
+
+    it 'no avisa cuando el grupo tiene contenido suficiente' do
+      5.times { |i| create(:canned_response, account: account, short_code: "GESTION #{i}") }
+
+      r = validar('@ruta(gestion #demo: alta de usuario): @buscar_predefinidas(GESTION)')
+
+      expect(codigos(r, :degrading)).not_to include(:canned_group_too_small)
+    end
+
+    # Sin grupo el umbral es 0.20 y busca sobre todo el corpus: no aplica.
+    it 'no avisa cuando la rama busca sin grupo' do
+      create(:canned_response, account: account, short_code: 'DATOS FISCALES')
+
+      r = validar('@ruta(soporte #demo: no puedo entrar): @buscar_predefinidas')
+
+      expect(codigos(r, :degrading)).not_to include(:canned_group_too_small)
+    end
+
+    # Un grupo negado no estrecha el corpus: lo amplía.
+    it 'no avisa con un grupo negado' do
+      create(:canned_response, account: account, short_code: 'DATOS FISCALES')
+
+      r = validar('@ruta(soporte #demo: no puedo entrar): @buscar_predefinidas(!DATOS)')
+
+      expect(codigos(r, :degrading)).not_to include(:canned_group_too_small)
+    end
+
+    it 'no avisa cuando la rama no usa predefinidas' do
+      source('article', 'Centro de Ayuda')
+
+      r = validar('@ruta(soporte #demo: no puedo entrar): @buscar_articulo')
+
+      expect(codigos(r, :degrading)).not_to include(:canned_group_too_small)
+    end
+  end
+
   describe 'D4 · {{consulta:}} conviviendo con otra cosa' do
     # perform_erp_query manda el Entrenamiento ENTERO interpolado como mensaje:
     # con ramas o prosa, el cliente recibe el Entrenamiento completo.
