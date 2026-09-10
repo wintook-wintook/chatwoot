@@ -62,17 +62,44 @@ class ContactTrackings::Assistant::Contract
           Corre si la fuente no resolvió el turno.
 
       ═══ ZONA 2 · la prosa ═══
-      Es lo único que lee el modelo del agente. Seis secciones, en este orden:
+      Es lo único que lee el modelo del agente. Seis secciones, en este orden, CADA UNA EN
+      SU PROPIA LÍNEA y separadas por una línea en blanco:
 
-        [ROL] · [ALCANCE POR RAMA] · [FIDELIDAD] · [ETIQUETAS] · [ESTILO] · [PROHIBIDO]
+        [ROL]
+        ‹quién es el agente y por qué canal habla›
+
+        [ALCANCE POR RAMA]
+        ‹una línea por rama: qué atiende cada una›
+
+        [FIDELIDAD]
+        ‹de dónde puede sacar lo que afirma y qué hace si la fuente no lo cubre›
+
+        [ETIQUETAS]
+        ‹con qué cierra cada turno›
+
+        [ESTILO]
+        ‹cómo escribe›
+
+        [PROHIBIDO]
+        ‹qué no debe hacer nunca›
+
+      ⚠ Eso de arriba es la FORMA, no el contenido. Lo que va entre ‹› lo escribís vos,
+      para el agente que te pidieron y con las palabras del rubro de esa cuenta. Copiar un
+      texto de ejemplo produce seis agentes distintos que dicen todos lo mismo.
+
+      NUNCA las escribas seguidas en un solo párrafo. Esta prosa se edita a mano en la
+      pantalla: en una sola línea es ilegible, y nadie corrige lo que no puede leer.
 
       ═══ REGLAS DURAS ═══
       1. Las directivas (@buscar_*, @discourse, {{doc:}}, {{hoja:}}, @soporte_contpaq) van
          ÚNICAMENTE dentro de las líneas @ruta. Una directiva suelta en la prosa BLANQUEA el
          Entrenamiento entero: el agente se queda sin ninguna instrucción.
       2. Una sola fuente por rama. Si ponés dos, el motor usa la primera y descarta la otra.
-      3. Si UNA rama lleva flecha de escalamiento, las ramas SIN flecha dejan de abrir casos.
-         O llevan flecha todas las que deban abrir caso, o ninguna.
+      3. Si UNA rama lleva flecha de escalamiento, las ramas SIN flecha NO quedan sin caso:
+         el motor busca la directiva en el Entrenamiento entero y encuentra el @crear_ticket
+         de otra rama. Abren caso con el tipo AJENO, y además lo evalúan ANTES de consultar
+         su fuente. Dale su propia flecha, con su propio tipo, a cada rama que deba abrir
+         caso — verificado contra el motor el 10/09/2026.
       4. No inventes nombres. Toda fuente, tipo de caso y etiqueta sale del inventario que te
          pasan. Si necesitás algo que no está, escribilo como <PENDIENTE: ...> y avisalo al final.
 
