@@ -447,6 +447,30 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
                               'has_draft' => true, 'status' => 'open')
     end
 
+    # Las dos fechas, no una: cuándo se empezó a armar el agente y cuándo se lo
+    # tocó por última vez son preguntas distintas, y en una entrevista que se
+    # retoma tres días después la diferencia es el dato.
+    it 'trae la fecha de creación además de la de última modificación' do
+      crear_sesion
+
+      listar
+
+      fila = response.parsed_body.first
+      expect(fila['created_at']).to be_present
+      expect(fila['updated_at']).to be_present
+    end
+
+    # No hay columna de "quién la creó" porque no puede haber otra respuesta: el
+    # listado filtra por usuario y todas las acciones buscan con
+    # find_by(id:, account:, user:). Este ejemplo es el que sostiene esa decisión.
+    it 'no expone quién la creó, porque solo devuelve las propias' do
+      crear_sesion
+
+      listar
+
+      expect(response.parsed_body.first).not_to include('user_id')
+    end
+
     it 'dice en qué agente terminó la que se guardó' do
       template = account.tracking_templates.create!(name: 'Soporte', objective: 'Resolver dudas')
       crear_sesion(status: 'saved', tracking_template: template)

@@ -36,9 +36,11 @@ import AssistantAPI from 'dashboard/api/assistant';
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
+import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import { findRouteLine, lineRange } from './assistant/draftNavigation';
 import InterviewPanel from './assistant/InterviewPanel.vue';
 import ProgressStrip from './assistant/ProgressStrip.vue';
+import CopyChip from './assistant/CopyChip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
 import ValidationReport from './assistant/ValidationReport.vue';
 import DryRunPanel from './assistant/DryRunPanel.vue';
@@ -46,6 +48,11 @@ import SaveModal from './assistant/SaveModal.vue';
 
 // El teclado va más rápido que un request: se espera a que la persona pare.
 const VALIDATE_DEBOUNCE_MS = 400;
+
+// El backend devuelve hasta 50 conversaciones (TrackingAssistantSession::LIST_LIMIT),
+// así que el paginado es sobre lo que ya está en memoria: no hay una segunda página
+// que pedir. Diez por pantalla entran sin scroll en una laptop.
+const SESSIONS_PER_PAGE = 10;
 
 // Explícito y no armado por concatenación: una clave dinámica no la puede verificar
 // nadie —ni un linter ni quien traduce— y el día que el backend agregue un estado, el
@@ -60,6 +67,8 @@ const AUDIT_STATUS_LABEL = {
 export default {
   components: {
     AccordionItem,
+    CopyChip,
+    TableFooter,
     EmptyState,
     Spinner,
     InterviewPanel,
@@ -109,6 +118,8 @@ export default {
       // Modo ancho: esconde la conversación y deja el Entrenamiento a todo el
       // ancho. Para los 6 agentes de la cuenta que pasan de 370 líneas.
       isWideEditor: false,
+      sessionsPage: 1,
+      SESSIONS_PER_PAGE,
     };
   },
   computed: {
@@ -135,6 +146,70 @@ export default {
     // "reemplazar" vacío, sin que nada fallara.
     templates() {
       return this.$store.getters['trackingTemplates/getTemplates'] || [];
+    },
+    pagedSessions() {
+      const start = (this.sessionsPage - 1) * SESSIONS_PER_PAGE;
+      return this.sessions.slice(start, start + SESSIONS_PER_PAGE);
+    },
+    // Las cuatro piezas que se pueden nombrar en un Entrenamiento, cada una con
+    // la cadena EXACTA que hay que escribir. El texto del chip no es una etiqueta
+    // bonita: es lo que el parser busca, y por eso se copia tal cual.
+    resourceBlocks() {
+      if (!this.inventory) return [];
+
+      const t = key => this.$t(`TRACKING_ASSISTANT_VIEW.${key}`);
+      return [
+        {
+          key: 'sources',
+          title: t('SOURCES_TITLE'),
+          hint: t('SOURCES_HINT'),
+          empty: t('SOURCES_EMPTY'),
+          // La directiva la arma el backend desde SEARCH_DIRECTIVES: es la misma
+          // cadena que el motor va a detectar al atender un turno.
+          items: (this.inventory.sources || []).map(source => ({
+            text: source.directive,
+            note: source.name,
+          })),
+        },
+        {
+          key: 'groups',
+          title: t('GROUPS_TITLE'),
+          hint: t('GROUPS_HINT'),
+          empty: t('GROUPS_EMPTY'),
+          items: (this.inventory.canned_groups || []).map(group => ({
+            text: `@buscar_predefinidas(${group.prefix})`,
+            note: String(group.count),
+          })),
+        },
+        {
+          key: 'caseTypes',
+          title: t('CASE_TYPES_TITLE'),
+          hint: t('CASE_TYPES_HINT'),
+          empty: t('CASE_TYPES_EMPTY'),
+          items: (this.inventory.case_types || []).map(name => ({
+            text: `@crear_ticket(tipo=${name})`,
+            note: '',
+          })),
+        },
+        {
+          key: 'labels',
+          title: t('LABELS_TITLE'),
+          hint: t('LABELS_HINT'),
+          empty: t('LABELS_EMPTY'),
+          items: (this.inventory.labels || []).map(name => ({
+            text: `#${name}`,
+            note: '',
+          })),
+        },
+      ];
+    },
+  },
+  watch: {
+    // Descartar la última conversación de la página dejaba la tabla en blanco
+    // con el paginado marcando una página que ya no existe.
+    sessions(list) {
+      const pages = Math.max(1, Math.ceil(list.length / SESSIONS_PER_PAGE));
+      if (this.sessionsPage > pages) this.sessionsPage = pages;
     },
   },
   async mounted() {
@@ -255,6 +330,21 @@ export default {
         this.isAuditing = false;
       }
     },
+    // El idioma sale del navegador y no de un 'es-MX' fijo: el Asistente ahora
+    // habla los dos idiomas, así que una fecha clavada en español le saldría en
+    // español a una cuenta en inglés.
+    formatDate(value) {
+      if (!value) return '—';
+
+      return new Date(value).toLocaleString(undefined, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    },
+
     // ── El informe como índice ──────────────────────────────────────────
     // En un Entrenamiento de 645 líneas, saber que "la rama comercial no tiene
     // descripción" no sirve de nada si después hay que buscarla a mano. El
@@ -449,8 +539,8 @@ export default {
           />
           <woot-tabs-item
             :index="1"
-            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_INVENTORY')"
-            :show-badge="false"
+            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_SESSIONS')"
+            :count="sessions.length"
           />
           <woot-tabs-item
             :index="2"
@@ -459,8 +549,8 @@ export default {
           />
           <woot-tabs-item
             :index="3"
-            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_SESSIONS')"
-            :count="sessions.length"
+            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_INVENTORY')"
+            :show-badge="false"
           />
         </woot-tabs>
 
@@ -592,89 +682,68 @@ export default {
           </section>
         </div>
 
-        <!-- Con qué material trabaja el asistente. Las frases van enmascaradas:
-             son las mismas que salen hacia OpenAI. -->
-        <div
-          v-show="activeTab === 1"
-          class="flex-1 min-h-0 overflow-y-auto grid gap-4 md:grid-cols-2"
-        >
-          <section
-            class="p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-          >
-            <h3
-              class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-3"
+        <!-- RECURSOS — la paleta de piezas de la cuenta.
+             Antes esto era una referencia: cuatro bloques de texto separados por
+             puntos, con lo que la cuenta tiene. El problema es que el motor
+             reconoce estas cadenas con patrones EXACTOS y falla en silencio si
+             no coinciden, así que había que retipearlas —y una @ruta con la
+             fuente mal escrita parsea perfecto y no consulta nada.
+             Ahora cada pieza se muestra como la cadena que hay que escribir, y
+             tocarla la copia. La pestaña deja de ser una referencia y pasa a ser
+             la paleta desde la que se arma el Entrenamiento. -->
+        <div v-show="activeTab === 3" class="flex-1 min-h-0 overflow-y-auto">
+          <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
+            {{ $t('TRACKING_ASSISTANT_VIEW.RESOURCES_HINT') }}
+          </p>
+
+          <div class="grid gap-4 md:grid-cols-2">
+            <!-- Cada bloque dice PARA QUÉ sirve la pieza, no solo cómo se llama:
+                 sin eso, "grupos" y "etiquetas" son dos listas indistinguibles
+                 para quien nunca escribió una @ruta. -->
+            <section
+              v-for="block in resourceBlocks"
+              :key="block.key"
+              class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
             >
-              {{ $t('TRACKING_ASSISTANT_VIEW.SOURCES_TITLE') }}
-            </h3>
-            <ul class="flex flex-col gap-2">
-              <li
-                v-for="source in inventory.sources"
-                :key="source.directive"
-                class="flex items-center justify-between gap-3"
+              <h3
+                class="text-sm font-semibold text-slate-800 dark:text-slate-100"
               >
-                <code
-                  class="text-xs px-2 py-1 rounded bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 truncate"
-                >
-                  {{ source.directive }}
-                </code>
-                <span
-                  class="text-xs text-slate-500 dark:text-slate-400 shrink-0"
-                >
-                  {{ source.name }}
-                </span>
-              </li>
-            </ul>
-          </section>
+                {{ block.title }}
+              </h3>
+              <p class="mt-0.5 mb-3 text-xs text-slate-500 dark:text-slate-400">
+                {{ block.hint }}
+              </p>
 
+              <div v-if="block.items.length" class="flex flex-wrap gap-1.5">
+                <CopyChip
+                  v-for="item in block.items"
+                  :key="item.text"
+                  :text="item.text"
+                  :note="item.note"
+                />
+              </div>
+              <p v-else class="text-xs text-slate-400 dark:text-slate-500">
+                {{ block.empty }}
+              </p>
+            </section>
+          </div>
+
+          <!-- Las frases van ÚLTIMAS y aparte: son las únicas que no se escriben
+               en el Entrenamiento. Son el material con el que el asistente
+               redacta las descripciones de rama, y lo único de esta pantalla que
+               sale hacia OpenAI. -->
           <section
-            class="p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+            class="p-4 mt-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
           >
             <h3
-              class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-2"
-            >
-              {{ $t('TRACKING_ASSISTANT_VIEW.CASE_TYPES_TITLE') }}
-            </h3>
-            <p class="text-xs text-slate-600 dark:text-slate-400">
-              {{ inventory.case_types.join(' · ') || '—' }}
-            </p>
-
-            <h3
-              class="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-4 mb-2"
-            >
-              {{ $t('TRACKING_ASSISTANT_VIEW.LABELS_TITLE') }}
-            </h3>
-            <p class="text-xs text-slate-600 dark:text-slate-400">
-              {{ inventory.labels.join(' · ') || '—' }}
-            </p>
-
-            <h3
-              class="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-4 mb-2"
-            >
-              {{ $t('TRACKING_ASSISTANT_VIEW.GROUPS_TITLE') }}
-            </h3>
-            <p class="text-xs text-slate-600 dark:text-slate-400">
-              <span
-                v-for="group in inventory.canned_groups"
-                :key="group.prefix"
-              >
-                {{ group.prefix }} ({{ group.count }})
-              </span>
-              <span v-if="!inventory.canned_groups.length">—</span>
-            </p>
-          </section>
-
-          <section
-            class="p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700 md:col-span-2"
-          >
-            <h3
-              class="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-1"
+              class="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-100"
             >
               {{ $t('TRACKING_ASSISTANT_VIEW.PHRASES_TITLE') }}
             </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
               {{ $t('TRACKING_ASSISTANT_VIEW.PHRASES_HINT') }}
             </p>
-            <ul class="flex flex-col gap-1">
+            <ul class="grid gap-1 md:grid-cols-2">
               <li
                 v-for="phrase in inventory.customer_phrases"
                 :key="phrase"
@@ -684,7 +753,7 @@ export default {
               </li>
               <li
                 v-if="!inventory.customer_phrases.length"
-                class="text-xs text-slate-500 dark:text-slate-400"
+                class="text-xs text-slate-400 dark:text-slate-500"
               >
                 {{ $t('TRACKING_ASSISTANT_VIEW.PHRASES_EMPTY') }}
               </li>
@@ -758,9 +827,12 @@ export default {
         </div>
 
         <!-- Las conversaciones: un Entrenamiento bueno rara vez sale de una
-             sentada, así que hay que poder volver a una y comparar intentos. -->
-        <div v-show="activeTab === 3" class="flex-1 min-h-0 overflow-y-auto">
-          <div class="flex items-center justify-between mb-3">
+             sentada, así que hay que poder volver a una y comparar intentos.
+             En tabla y con el paginado nativo —el mismo de Campañas y del
+             listado de seguimientos—: como lista de tarjetas, 50 conversaciones
+             eran 50 pantallazos de scroll y no había forma de comparar dos. -->
+        <div v-show="activeTab === 1" class="flex flex-col flex-1 min-h-0">
+          <div class="flex items-center justify-between mb-3 shrink-0">
             <p class="text-xs text-slate-500 dark:text-slate-400">
               {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_HINT') }}
             </p>
@@ -769,83 +841,143 @@ export default {
             </woot-button>
           </div>
 
-          <ul class="flex flex-col gap-2">
-            <li
-              v-for="row in sessions"
-              :key="row.id"
-              class="p-3 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+          <div
+            v-if="!sessions.length"
+            class="text-xs text-slate-500 dark:text-slate-400 py-4"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_EMPTY') }}
+          </div>
+
+          <template v-else>
+            <div
+              class="flex-1 min-h-0 overflow-auto bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
             >
-              <div class="flex items-center justify-between gap-3">
-                <div class="min-w-0">
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="text-xs font-medium px-2 py-0.5 rounded shrink-0"
-                      :class="
-                        row.status === 'saved'
-                          ? 'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300'
-                          : 'text-slate-600 bg-slate-100 dark:bg-slate-700 dark:text-slate-300'
+              <table class="w-full text-sm">
+                <thead class="sticky top-0 z-10 bg-white dark:bg-slate-800">
+                  <tr
+                    class="text-left border-b text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700"
+                  >
+                    <th class="p-3">
+                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ID') }}
+                    </th>
+                    <th class="p-3">
+                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_STATUS') }}
+                    </th>
+                    <th class="p-3">
+                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TITLE') }}
+                    </th>
+                    <th class="p-3">
+                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TEMPLATE') }}
+                    </th>
+                    <th class="p-3">
+                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ROUTES') }}
+                    </th>
+                    <th class="p-3">
+                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_CREATED') }}
+                    </th>
+                    <th class="p-3">
+                      {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_UPDATED') }}
+                    </th>
+                    <th
+                      class="w-24 p-3"
+                      :aria-label="
+                        $t('TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ACTIONS')
                       "
+                    />
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="row in pagedSessions"
+                    :key="row.id"
+                    class="border-b cursor-pointer border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30"
+                    @click="openSession(row.id)"
+                  >
+                    <!-- El identificador es el id de la fila y nada más: esta
+                         tabla no tiene folio ni serie. Se muestra igual porque
+                         es lo único con lo que dos conversaciones del mismo día
+                         y el mismo agente se pueden distinguir al hablar de
+                         ellas. -->
+                    <td
+                      class="p-3 font-mono text-xs text-slate-400 dark:text-slate-500"
                     >
-                      {{
-                        row.status === 'saved'
-                          ? $t('TRACKING_ASSISTANT_VIEW.SESSIONS_SAVED')
-                          : $t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN')
-                      }}
-                    </span>
-                    <span
-                      class="text-sm text-slate-800 dark:text-slate-100 truncate"
+                      #{{ row.id }}
+                    </td>
+                    <td class="p-3">
+                      <span
+                        class="text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap"
+                        :class="
+                          row.status === 'saved'
+                            ? 'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300'
+                            : 'text-slate-600 bg-slate-100 dark:bg-slate-700 dark:text-slate-300'
+                        "
+                      >
+                        {{
+                          row.status === 'saved'
+                            ? $t('TRACKING_ASSISTANT_VIEW.SESSIONS_SAVED')
+                            : $t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN')
+                        }}
+                      </span>
+                    </td>
+                    <td
+                      class="p-3 font-medium text-slate-800 dark:text-slate-100"
                     >
                       {{
                         row.title ||
                         $t('TRACKING_ASSISTANT_VIEW.SESSIONS_UNTITLED')
                       }}
-                    </span>
-                  </div>
-                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    <span v-if="row.template_name">
-                      {{ row.template_name }} ·
-                    </span>
-                    {{
-                      $t('TRACKING_ASSISTANT_VIEW.REPORT_ROUTES', {
-                        count: row.routes,
-                      })
-                    }}
-                  </p>
-                </div>
-                <div class="flex items-center gap-1 shrink-0">
-                  <woot-button
-                    size="small"
-                    variant="clear"
-                    @click="openSession(row.id)"
-                  >
-                    {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_RESUME') }}
-                  </woot-button>
-                  <woot-button
-                    size="small"
-                    variant="clear"
-                    color-scheme="alert"
-                    icon="delete"
-                    @click="discardSession(row.id)"
-                  />
-                </div>
-              </div>
-            </li>
-            <li
-              v-if="!sessions.length"
-              class="text-xs text-slate-500 dark:text-slate-400 py-4"
-            >
-              {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_EMPTY') }}
-            </li>
-          </ul>
-        </div>
+                    </td>
+                    <td class="p-3 text-slate-500 dark:text-slate-400">
+                      {{ row.template_name || '—' }}
+                    </td>
+                    <td class="p-3 text-slate-500 dark:text-slate-400">
+                      {{ row.routes }}
+                    </td>
+                    <!-- Creación y última modificación son dos preguntas
+                         distintas: cuándo se empezó a armar este agente, y
+                         cuándo se lo tocó por última vez. En una entrevista que
+                         se retoma tres días después, la diferencia es el dato. -->
+                    <td
+                      class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap"
+                    >
+                      {{ formatDate(row.created_at) }}
+                    </td>
+                    <td
+                      class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap"
+                    >
+                      {{ formatDate(row.updated_at) }}
+                    </td>
+                    <td class="p-3">
+                      <div class="flex items-center justify-end gap-1">
+                        <woot-button
+                          size="small"
+                          variant="clear"
+                          @click.stop="openSession(row.id)"
+                        >
+                          {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_RESUME') }}
+                        </woot-button>
+                        <woot-button
+                          size="small"
+                          variant="clear"
+                          color-scheme="alert"
+                          icon="delete"
+                          @click.stop="discardSession(row.id)"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
-        <div
-          v-show="activeTab === 0"
-          class="flex justify-end gap-2 pt-4 shrink-0"
-        >
-          <woot-button :is-disabled="!canSave" @click="showSaveModal = true">
-            {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CTA') }}
-          </woot-button>
+            <TableFooter
+              class="border-t shrink-0 border-slate-75 dark:border-slate-700/50"
+              :current-page="sessionsPage"
+              :total-count="sessions.length"
+              :page-size="SESSIONS_PER_PAGE"
+              @pageChange="sessionsPage = $event"
+            />
+          </template>
         </div>
       </template>
     </div>

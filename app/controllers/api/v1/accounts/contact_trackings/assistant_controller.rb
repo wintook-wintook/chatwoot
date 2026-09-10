@@ -187,12 +187,22 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
   # Lo justo para elegir cuál abrir: de qué se trataba, en qué quedó, y qué iba a
   # leer el motor de ese borrador.
+  #
+  # `created_at` va además de `updated_at` porque son dos preguntas distintas:
+  # cuándo se empezó a armar este agente, y cuándo se lo tocó por última vez. En
+  # una entrevista que se retoma tres días después, la diferencia es el dato.
+  #
+  # NO se devuelve quién la creó, y no por olvido: `listable_for` filtra por
+  # usuario y todas las acciones buscan con `find_by(id:, account:, user:)`, así
+  # que cada quien ve únicamente las suyas. La columna sería siempre la misma
+  # persona. Si algún día se comparten entre administradores, ahí sí hace falta.
   def session_row(sesion)
     {
       id: sesion.id, status: sesion.status, title: sesion.title,
       routes: sesion.route_count, has_draft: sesion.draft.present?,
       tracking_template_id: sesion.tracking_template_id,
       template_name: sesion.tracking_template&.name,
+      created_at: sesion.created_at,
       updated_at: sesion.updated_at
     }
   end
