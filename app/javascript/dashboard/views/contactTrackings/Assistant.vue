@@ -105,6 +105,9 @@ export default {
       // cerrada ocupa una línea en vez de un cuarto de la columna.
       isReportOpen: true,
       isDryRunOpen: false,
+      // Modo ancho: esconde la conversación y deja el Entrenamiento a todo el
+      // ancho. Para los 6 agentes de la cuenta que pasan de 370 líneas.
+      isWideEditor: false,
     };
   },
   computed: {
@@ -251,6 +254,52 @@ export default {
         this.isAuditing = false;
       }
     },
+    // ── El informe como índice ──────────────────────────────────────────
+    // En un Entrenamiento de 645 líneas, saber que "la rama comercial no tiene
+    // descripción" no sirve de nada si después hay que buscarla a mano. El
+    // comprobador ya sabe dónde está: tocar el hallazgo lleva hasta ahí.
+
+    // Selecciona la línea entera, no solo la deja a la vista: en un texto
+    // monoespaciado de cientos de líneas, "algo se movió" no le dice a nadie
+    // cuál es la línea. Seleccionada, se ve.
+    goToLine(line) {
+      const editor = this.$refs.draftEditor;
+      if (!editor || !line) return;
+
+      const lines = this.draft.split('\n');
+      if (line > lines.length) return;
+
+      const start = lines
+        .slice(0, line - 1)
+        .reduce((total, text) => total + text.length + 1, 0);
+
+      editor.focus();
+      editor.setSelectionRange(start, start + lines[line - 1].length);
+    },
+
+    // Las ramas del informe no traen número de línea —RouteMap no lo registra— y
+    // agregárselo sería tocar el parser de producción por una comodidad de la
+    // pantalla. Se busca acá: los nombres de rama son únicos (RouteMap hace
+    // uniq(&:name)) y la línea siempre empieza con @ruta(nombre.
+    goToRoute(name) {
+      const line = this.findRouteLine(name);
+      if (line) this.goToLine(line);
+    },
+
+    findRouteLine(name) {
+      const needle = `@ruta(${name}`.toLowerCase();
+      const index = this.draft.split('\n').findIndex(text => {
+        const line = text.trimStart().toLowerCase();
+        if (!line.startsWith(needle)) return false;
+
+        // Sin esto, una rama llamada "sop" saltaría a la línea de "soporte".
+        // Después del nombre solo puede venir la etiqueta, los dos puntos o el
+        // paréntesis de cierre.
+        return ' \t#:)'.includes(line.charAt(needle.length));
+      });
+      return index === -1 ? null : index + 1;
+    },
+
     // F6 — probar sin enviar nada. A diferencia de validateDraft, esto NO corre
     // solo: clasifica la rama con el modelo y vectoriza la pregunta.
     async runDryRun(question) {
@@ -438,9 +487,14 @@ export default {
 
         <div
           v-show="activeTab === 0"
-          class="flex-1 min-h-0 grid gap-4 md:grid-cols-2"
+          class="grid flex-1 min-h-0 gap-4"
+          :class="isWideEditor ? 'grid-cols-1' : 'md:grid-cols-2'"
         >
+          <!-- v-show y no v-if: la conversación se esconde, no se desmonta. Con
+               v-if se perdería el scroll del hilo y lo tecleado sin enviar cada
+               vez que alguien entra y sale del modo ancho. -->
           <section
+            v-show="!isWideEditor"
             class="p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col min-h-0"
           >
             <InterviewPanel
@@ -472,14 +526,33 @@ export default {
             <div
               class="flex flex-col flex-1 min-h-[10rem] p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
             >
-              <h3
-                class="shrink-0 text-sm font-semibold text-slate-800 dark:text-slate-100 mb-2"
-              >
-                {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TITLE') }}
-              </h3>
+              <div class="flex items-center justify-between mb-2 shrink-0">
+                <h3
+                  class="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                >
+                  {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TITLE') }}
+                </h3>
+                <!-- Para los Entrenamientos largos: 38 líneas siguen siendo poco
+                     para uno de 645. Mientras se edita un texto así no hace falta
+                     ver el chat; al volver, sigue donde estaba. -->
+                <woot-button
+                  variant="clear"
+                  size="tiny"
+                  color-scheme="secondary"
+                  :icon="isWideEditor ? 'chat' : 'arrow-expand'"
+                  @click="isWideEditor = !isWideEditor"
+                >
+                  {{
+                    isWideEditor
+                      ? $t('TRACKING_ASSISTANT_VIEW.DRAFT_SHOW_CHAT')
+                      : $t('TRACKING_ASSISTANT_VIEW.DRAFT_WIDE')
+                  }}
+                </woot-button>
+              </div>
               <!-- resize-none: el alto lo decide el contenedor, no el navegador;
                    arrastrarlo a mano volvería a empujar todo lo de abajo. -->
               <textarea
+                ref="draftEditor"
                 v-model="draft"
                 class="flex-1 min-h-0 w-full font-mono text-xs resize-none !mb-0"
                 :placeholder="$t('TRACKING_ASSISTANT_VIEW.DRAFT_PLACEHOLDER')"
@@ -507,7 +580,11 @@ export default {
                     :is-checking="isChecking"
                   />
                 </template>
-                <ValidationReport :validation="validation" />
+                <ValidationReport
+                  :validation="validation"
+                  @gotoRoute="goToRoute"
+                  @gotoLine="goToLine"
+                />
               </AccordionItem>
 
               <AccordionItem

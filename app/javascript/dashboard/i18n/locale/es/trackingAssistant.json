@@ -97,6 +97,9 @@
     "STEP_CHECKED_ROUTES": "%{count} tema(s)",
     "STEP_CHECKED_BLOCKED": "%{count} problema(s)",
     "STEP_TESTED": "Probado",
-    "REPORT_BLOCKING": "%{count} problema(s)"
+    "REPORT_BLOCKING": "%{count} problema(s)",
+    "DRAFT_WIDE": "Editar en grande",
+    "DRAFT_SHOW_CHAT": "Ver la conversación",
+    "REPORT_GOTO": "Ir a esa línea del Entrenamiento"
   }
 }

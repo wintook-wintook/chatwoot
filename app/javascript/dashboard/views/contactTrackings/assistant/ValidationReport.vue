@@ -6,6 +6,11 @@
 // cada una. Si dice 0 ramas, el agente no ejecuta nada — y se ve acá, antes de
 // guardar, en vez de en producción tres semanas después.
 //
+// TAMBIÉN ES EL ÍNDICE. Cada rama y cada hallazgo con línea llevan al lugar
+// exacto del Entrenamiento. En un texto de 645 líneas —los hay en esta cuenta—
+// saber que "la rama comercial no tiene descripción" no sirve si después hay que
+// buscarla a mano; el comprobador ya sabe dónde está.
+//
 // Los hallazgos se muestran con las cuatro partes que trae el comprobador:
 // dónde, qué pasa, por qué, y qué se escribió. Recortarlos "para que se vean
 // más limpios" es justo lo que los vuelve inútiles.
@@ -20,6 +25,7 @@ export default {
   props: {
     validation: { type: Object, default: null },
   },
+  emits: ['gotoRoute', 'gotoLine'],
   computed: {
     routes() {
       return this.validation?.routes || [];
@@ -51,9 +57,13 @@ export default {
         class="text-xs border-l-2 border-slate-200 dark:border-slate-600 pl-2"
       >
         <div class="flex items-center gap-2">
-          <span class="font-medium text-slate-800 dark:text-slate-100">{{
-            route.name
-          }}</span>
+          <button
+            class="p-0 font-medium underline rounded-none cursor-pointer text-slate-800 dark:text-slate-100 decoration-dotted underline-offset-2 hover:text-woot-600 dark:hover:text-woot-400"
+            :title="$t('TRACKING_ASSISTANT_VIEW.REPORT_GOTO')"
+            @click="$emit('gotoRoute', route.name)"
+          >
+            {{ route.name }}
+          </button>
           <span v-if="route.tag" class="text-slate-500 dark:text-slate-400">{{
             route.tag
           }}</span>
@@ -99,7 +109,17 @@ export default {
         }"
       >
         <span class="font-medium">{{ group.icon }}</span>
-        {{ finding.message }}
+        <!-- El comprobador ya sabe en qué línea está; el hallazgo lleva hasta
+             ahí en vez de dejar a alguien buscándola. -->
+        <button
+          v-if="finding.line"
+          class="p-0 font-medium underline rounded-none cursor-pointer decoration-dotted underline-offset-2"
+          :title="$t('TRACKING_ASSISTANT_VIEW.REPORT_GOTO')"
+          @click="$emit('gotoLine', finding.line)"
+        >
+          {{ finding.message }}
+        </button>
+        <template v-else>{{ finding.message }}</template>
         <div
           v-if="finding.wrote"
           class="mt-1 px-2 py-1 rounded bg-slate-50 dark:bg-slate-900 font-mono text-slate-600 dark:text-slate-300 overflow-x-auto"
