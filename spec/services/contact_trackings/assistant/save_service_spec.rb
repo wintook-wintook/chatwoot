@@ -94,4 +94,23 @@ RSpec.describe ContactTrackings::Assistant::SaveService do
       expect(guardar(draft: '', mode: 'create').error).to eq(:empty_draft)
     end
   end
+
+  # El contexto entra al prompt del agente como "BASE DE CONOCIMIENTO" y se cita
+  # como cierto: solo lleva lo que la persona dijo, y vacío es válido.
+  describe 'el contexto del agente' do
+    it 'lo guarda cuando viene' do
+      resultado = guardar(draft: draft_ok, mode: 'create',
+                          params: { name: 'Soporte', objective: 'Resolver dudas',
+                                    ai_context: 'Atendemos de 9 a 18' })
+
+      expect(resultado.template.ai_context).to eq('Atendemos de 9 a 18')
+    end
+
+    it 'lo deja en blanco cuando el asistente no propuso nada' do
+      resultado = guardar(draft: draft_ok, mode: 'create',
+                          params: { name: 'Soporte', objective: 'Resolver dudas', ai_context: '' })
+
+      expect(resultado.template.ai_context).to be_nil
+    end
+  end
 end

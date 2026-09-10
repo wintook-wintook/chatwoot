@@ -62,6 +62,8 @@ export default {
       validation: null,
       isChecking: false,
       showSaveModal: false,
+      // Los datos del agente que el asistente propone junto al Entrenamiento.
+      proposal: null,
       isSaving: false,
       saveError: '',
       validateTimer: null,
@@ -152,6 +154,7 @@ export default {
         if (data.draft) {
           this.draft = data.draft;
           this.validation = data.validation;
+          this.proposal = data.proposal || null;
         }
       } catch (error) {
         const reason =
@@ -503,6 +506,7 @@ export default {
       :templates="templates"
       :inboxes="inboxes"
       :is-saving="isSaving"
+      :proposal="proposal"
       :error="saveError"
       @close="showSaveModal = false"
       @save="saveDraft"

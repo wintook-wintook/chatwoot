@@ -69,7 +69,11 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
       reply: result.reply,
       draft: result.draft,
       validation: result.validation,
-      repairs: result.repairs
+      repairs: result.repairs,
+      # Los datos del agente que el asistente propone. La pantalla los precarga
+      # editables: un nombre propuesto y equivocado se ve y se corrige; un campo
+      # vacío frena a quien acaba de explicar en la conversación lo que ahí va.
+      proposal: result.proposal
     }
   end
 
@@ -86,7 +90,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   private
 
   def save_params
-    params.permit(:name, :objective, :inbox_id, :template_id)
+    params.permit(:name, :objective, :ai_context, :inbox_id, :template_id)
   end
 
   # Solo rol y contenido: el hilo lo manda el cliente y no se le confía nada más.

@@ -51,6 +51,9 @@ class ContactTrackings::Assistant::SaveService
     template = @account.tracking_templates.new(
       name: @params[:name],
       objective: @params[:objective],
+      # Solo lo que la persona dijo en la conversación. Vacío es una respuesta
+      # válida: rellenarlo de memoria le haría citar al agente cosas falsas.
+      ai_context: @params[:ai_context].presence,
       inbox_id: resolved_inbox_id,
       complementary_prompt: @draft,
       user: @user

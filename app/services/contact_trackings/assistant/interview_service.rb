@@ -48,8 +48,21 @@ class ContactTrackings::Assistant::InterviewService
   # falte como <PENDIENTE:>.
   MAX_INTERVIEW_TURNS = 5
 
-  Result = Struct.new(:reply, :draft, :validation, :repairs, :error, keyword_init: true) do
+  Result = Struct.new(:reply, :draft, :validation, :repairs, :proposal, :error, keyword_init: true) do
     def success? = error.blank?
+  end
+
+  # Los datos del agente que el asistente propone junto al Entrenamiento. Se
+  # rescatan del JSON con cuidado: `contexto` es el único que puede hacer daño si
+  # el modelo lo rellena de memoria —entra al prompt como "BASE DE CONOCIMIENTO" y
+  # el agente lo cita como si fuera cierto—, así que se toma tal cual vino y la
+  # pantalla lo muestra editable, nunca oculto.
+  def self.proposal_from(reply)
+    raw = reply['propuesta']
+    return nil unless raw.is_a?(Hash)
+
+    { name: raw['nombre'].to_s.strip, objective: raw['objetivo'].to_s.strip,
+      ai_context: raw['contexto'].to_s.strip }
   end
 
   # one_shot: sin entrevista. Es el modo del botón "generar" que vive dentro de la
@@ -76,7 +89,7 @@ class ContactTrackings::Assistant::InterviewService
     # acá y se lo devuelve al mismo hilo, igual que un hallazgo del comprobador.
     return ask_missing_mode(reply, draft) if MODES.exclude?(reply['modo'])
 
-    repair(reply['mensaje'], draft)
+    repair(reply['mensaje'], draft, self.class.proposal_from(reply))
   end
 
   private
@@ -98,7 +111,7 @@ class ContactTrackings::Assistant::InterviewService
     nuevo = corrected['entrenamiento'].presence
     return Result.new(reply: corrected['mensaje'], draft: nil, repairs: 0) if nuevo.blank?
 
-    repair(corrected['mensaje'], nuevo)
+    repair(corrected['mensaje'], nuevo, self.class.proposal_from(corrected))
   end
 
   MISSING_MODE_PROMPT = <<~AVISO.strip
@@ -110,7 +123,7 @@ class ContactTrackings::Assistant::InterviewService
   AVISO
 
   # ── el bucle ────────────────────────────────────────────────────────────────
-  def repair(message, draft)
+  def repair(message, draft, proposal = nil)
     history = conversation
     repairs = 0
     validation = validate(draft)
@@ -128,7 +141,8 @@ class ContactTrackings::Assistant::InterviewService
       validation = validate(draft)
     end
 
-    Result.new(reply: message, draft: draft, validation: validation, repairs: repairs)
+    Result.new(reply: message, draft: draft, validation: validation,
+               repairs: repairs, proposal: proposal)
   end
 
   # Se le devuelven los mensajes del comprobador TEXTUALES. Reescribirlos "para que

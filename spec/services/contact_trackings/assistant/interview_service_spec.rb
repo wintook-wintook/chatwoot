@@ -26,9 +26,9 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
   # asistente no puede saltearse.
   # :auto = "el que corresponda"; nil explícito = "no lo declaró", que es el caso
   # que la guarda tiene que rechazar.
-  def openai_reply(mensaje:, entrenamiento: nil, modo: :auto)
+  def openai_reply(mensaje:, entrenamiento: nil, modo: :auto, propuesta: nil)
     modo = (entrenamiento ? 'responde' : nil) if modo == :auto
-    cuerpo = { mensaje: mensaje, modo: modo, entrenamiento: entrenamiento }
+    cuerpo = { mensaje: mensaje, modo: modo, entrenamiento: entrenamiento, propuesta: propuesta }
     { choices: [{ message: { content: cuerpo.to_json } }] }.to_json
   end
 
@@ -262,6 +262,57 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
                   openai_reply(mensaje: 'Corregido', entrenamiento: entrenamiento_ok, modo: 'responde'))
 
       expect(entrevistar.draft).to eq(entrenamiento_ok)
+    end
+  end
+
+  # El asistente acaba de entrevistar sobre qué hace el agente: pedir después que
+  # se reescriba el nombre y el objetivo es pedir un resumen de lo que se acaba de
+  # decir. Y `objective` es obligatorio, así que el campo vacío es un muro.
+  describe 'los datos del agente que propone' do
+    let(:propuesta) do
+      { nombre: 'Soporte Kontrolya', objetivo: 'Resolver dudas y abrir casos',
+        contexto: 'Atendemos de 9 a 18' }
+    end
+
+    it 'los devuelve junto al Entrenamiento' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: entrenamiento_ok, propuesta: propuesta))
+
+      expect(entrevistar.proposal).to eq(
+        name: 'Soporte Kontrolya', objective: 'Resolver dudas y abrir casos',
+        ai_context: 'Atendemos de 9 a 18'
+      )
+    end
+
+    # El contexto entra al prompt como "BASE DE CONOCIMIENTO" y el agente lo cita
+    # como cierto. Vacío es una respuesta válida; inventarlo, no.
+    it 'acepta un contexto vacío sin rellenarlo' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: entrenamiento_ok,
+                               propuesta: propuesta.merge(contexto: '')))
+
+      expect(entrevistar.proposal[:ai_context]).to eq('')
+    end
+
+    it 'no revienta si el modelo no manda propuesta' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: entrenamiento_ok))
+
+      expect(entrevistar.proposal).to be_nil
+    end
+
+    it 'no propone nada mientras todavía entrevista' do
+      stub_openai(openai_reply(mensaje: '¿Qué temas atiende?'))
+
+      expect(entrevistar.proposal).to be_nil
+    end
+
+    it 'le prohíbe al modelo inventar el contexto' do
+      stub_openai(openai_reply(mensaje: 'ok'))
+
+      entrevistar
+
+      pedido = a_request(:post, url).with do |req|
+        JSON.parse(req.body)['messages'].first['content'].include?('NO inventes nada acá')
+      end
+      expect(pedido).to have_been_made
     end
   end
 end

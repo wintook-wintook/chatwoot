@@ -50,6 +50,9 @@
     "AUDIT_ROUTED": "has topics",
     "AUDIT_CONVERSATIONAL": "conversational",
     "AUDIT_EMPTY": "no Training",
-    "AUDIT_FIX": "Fix it here"
+    "AUDIT_FIX": "Fix it here",
+    "SAVE_NAME_TAKEN": "An AI Agent with that name already exists in this account. Pick another one.",
+    "SAVE_CONTEXT": "Context for the agent",
+    "SAVE_CONTEXT_HINT": "Business facts you mentioned in the conversation. Empty is fine: the assistant doesn't fill in what you didn't tell it, because the agent would quote it as true."
   }
 }
