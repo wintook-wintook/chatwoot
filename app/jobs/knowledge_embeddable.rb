@@ -34,10 +34,12 @@ module KnowledgeEmbeddable
   #
   # POR QUÉ HACE FALTA:
   #   El de a uno manda una petición HTTP por chunk. Medido el 09/09/2026 contra la
-  #   API real: 367 ms cada uno, contra 671 ms por un lote de 100 — o sea 7 ms por
-  #   chunk, 50× más rápido. Con Google Docs nunca se notó, porque un documento son
-  #   dos o tres chunks; un sitio WordPress de 1.100 entradas son 2.286 chunks, y
-  #   eso convierte 17 segundos en 14 minutos de un worker de Sidekiq ocupado.
+  #   API real y con contenido real: 239 ms por chunk de a uno, contra 8 ms en lotes
+  #   llenos — unas 28 veces más rápido. (Con lotes chicos la ventaja baja a 4×,
+  #   porque ahí manda el costo fijo de la petición y no el tamaño del lote.)
+  #   Con Google Docs nunca se notó, porque un documento son dos o tres chunks; un
+  #   sitio WordPress de 1.100 entradas son 2.286 chunks, y eso convierte 17
+  #   segundos en 14 minutos de un worker de Sidekiq ocupado.
   #
   # POR QUÉ NO SE CAMBIA EL DE A UNO:
   #   Lo usan los jobs de canned_response y article, donde el volumen es de a un
@@ -53,7 +55,7 @@ module KnowledgeEmbeddable
 
   # 100 por petición. Medido: un lote de 100 chunks de 4.000 caracteres son ~81.700
   # tokens, cómodo dentro del límite por petición. Subirlo acerca al techo sin ganar
-  # casi nada, porque a 7 ms por chunk el costo ya es la red y no el lote.
+  # casi nada, porque a 8 ms por chunk el costo ya es la red y no el lote.
   EMBEDDING_BATCH_SIZE = 100
   EMBEDDING_MODEL = 'text-embedding-3-small'.freeze
   EMBEDDING_TIMEOUT = 60
