@@ -7,6 +7,7 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SourceCard from './SourceCard.vue';
 import AddSourceModal from './AddSourceModal.vue';
+import WordpressPickerModal from './WordpressPickerModal.vue'; // @knowledge_sources
 import KnowledgeBaseAPI from './api';
 // @query_databases — el módulo ERP ahora vive como tabs dentro de Base de Conocimiento.
 import ErpConnections from 'dashboard/views/erp/Connections.vue';
@@ -19,6 +20,7 @@ export default {
     BaseSettingsHeader,
     SourceCard,
     AddSourceModal,
+    WordpressPickerModal,
     ErpConnections,
     ErpBots,
     ErpConsole,
@@ -31,6 +33,8 @@ export default {
       loadingItems: false,
       showAddModal: false,
       editingSource: null,
+      // @knowledge_sources — el paso de elegir qué entra, propio de WordPress.
+      pickingSource: null,
       saving: false,
       showDeleteModal: false,
       deletingSource: null,
@@ -255,6 +259,24 @@ export default {
         useAlert('Error al cargar el contenido indexado');
       } finally {
         this.loadingItems = false;
+      }
+    },
+    // Guardar la selección y sincronizar en el mismo gesto: elegir y no indexar
+    // deja la pantalla diciendo una cosa y el agente sabiendo otra.
+    async onSaveWordpressSelection(seleccion) {
+      const source = this.pickingSource;
+      try {
+        const { data } = await KnowledgeBaseAPI.updateSource(
+          this.accountId,
+          source.id,
+          { config: { ...source.config, ...seleccion } }
+        );
+        const index = this.sources.findIndex(s => s.id === source.id);
+        if (index >= 0) this.sources.splice(index, 1, data);
+        this.pickingSource = null;
+        await this.onSync(data);
+      } catch (error) {
+        useAlert(this.$t('KNOWLEDGE_SOURCES.SOURCES.ERROR'));
       }
     },
     async onSaveSource(payload) {
@@ -679,6 +701,7 @@ export default {
             :google-disabled="isGoogleSourceDisabled(source)"
             @sync="onSync"
             @edit="onEditSource"
+            @pick="pickingSource = source"
             @delete="onDelete"
           />
         </div>
@@ -995,6 +1018,13 @@ export default {
         editingSource = null;
       "
       @save="onSaveSource"
+    />
+
+    <WordpressPickerModal
+      :show="!!pickingSource"
+      :source="pickingSource"
+      @close="pickingSource = null"
+      @save="onSaveWordpressSelection"
     />
 
     <!-- Modal visor de contenido completo -->

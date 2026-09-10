@@ -2,6 +2,17 @@
 <!-- Modal para agregar o editar una fuente de conocimiento. -->
 <script>
 import { mapGetters } from 'vuex';
+import KnowledgeBaseAPI from './api'; // @knowledge_sources
+
+// Cada motivo con su explicación: un "no se pudo conectar" genérico no le dice a
+// nadie qué revisar, y el 403 por plugin de seguridad es el caso más común.
+const WP_PROBE_ERROR = {
+  forbidden: 'KNOWLEDGE_SOURCES.WORDPRESS.ERROR_FORBIDDEN',
+  unreachable: 'KNOWLEDGE_SOURCES.WORDPRESS.ERROR_UNREACHABLE',
+  not_wordpress: 'KNOWLEDGE_SOURCES.WORDPRESS.ERROR_NOT_WORDPRESS',
+  invalid_url: 'KNOWLEDGE_SOURCES.WORDPRESS.ERROR_INVALID_URL',
+  default: 'KNOWLEDGE_SOURCES.WORDPRESS.ERROR_GENERIC',
+};
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 export default {
@@ -20,6 +31,12 @@ export default {
       discourseApiKey: '',
       discourseUsername: '',
       docUrl: '',
+      // @knowledge_sources — WordPress: solo la URL. Lo que entra al índice se
+      // elige DESPUÉS, en su propia pantalla: conectar no es indexar.
+      wpSiteUrl: '',
+      wpProbe: null,
+      wpProbing: false,
+      wpError: '',
       sheetUrl: '',
       sheetMode: 'faq',
       sheetRange: '',
@@ -53,6 +70,7 @@ export default {
           label: 'Agente de Servicio CONTPAQi',
           icon: 'globe',
         },
+        { value: 'wordpress', label: 'WordPress', icon: 'globe' },
       ];
       if (this.googleEnabled) {
         options.push(
@@ -92,6 +110,9 @@ export default {
         if (!this.discourseApiKey.trim()) return false;
       }
       if (this.sourceType === 'google_doc' && !this.docUrl.trim()) return false;
+      // Sin probe no se guarda: es lo que detecta un sitio que bloquea la API REST,
+      // y descubrirlo con un agente ya configurado sale mucho más caro.
+      if (this.sourceType === 'wordpress' && !this.wpProbe) return false;
       if (this.sourceType === 'google_sheet' && !this.sheetUrl.trim())
         return false;
       if (this.sourceType === 'contpaq_support') {
@@ -157,6 +178,28 @@ export default {
       this.reset();
       this.$emit('close');
     },
+    async probeWordpress() {
+      const url = this.wpSiteUrl.trim();
+      if (!url || this.wpProbing) return;
+
+      this.wpProbing = true;
+      this.wpError = '';
+      this.wpProbe = null;
+      try {
+        const { data } = await KnowledgeBaseAPI.probeWordpress(
+          this.currentUser.account_id,
+          url
+        );
+        this.wpProbe = data;
+      } catch (error) {
+        const reason = error?.response?.data?.error;
+        this.wpError = this.$t(
+          WP_PROBE_ERROR[reason] || WP_PROBE_ERROR.default
+        );
+      } finally {
+        this.wpProbing = false;
+      }
+    },
     onSave() {
       if (!this.isValid) return;
       this.$emit('save', {
@@ -175,6 +218,18 @@ export default {
       }
       if (this.sourceType === 'google_doc') {
         return { file_url: this.docUrl.trim() };
+      }
+      if (this.sourceType === 'wordpress') {
+        // El resultado del probe se guarda para que la pantalla de elegir sepa qué
+        // tipos y categorías ofrecer sin volver a salir a la red.
+        return {
+          site_url: this.wpProbe.site_url,
+          probe: this.wpProbe,
+          content_types: [],
+          categories: [],
+          excluded_ids: [],
+          included_ids: [],
+        };
       }
       if (this.sourceType === 'google_sheet') {
         return {
@@ -250,6 +305,49 @@ export default {
         </div>
 
         <!-- Campos Discourse -->
+        <!-- WordPress: solo la URL y probar. Lo que entra se elige después. -->
+        <template v-if="sourceType === 'wordpress'">
+          <label class="text-sm">
+            {{ $t('KNOWLEDGE_SOURCES.WORDPRESS.SITE_URL') }}
+            <input
+              v-model="wpSiteUrl"
+              type="text"
+              :placeholder="
+                $t('KNOWLEDGE_SOURCES.WORDPRESS.SITE_URL_PLACEHOLDER')
+              "
+              @input="wpProbe = null"
+            />
+          </label>
+          <woot-button
+            variant="clear"
+            :is-loading="wpProbing"
+            :is-disabled="!wpSiteUrl.trim()"
+            @click="probeWordpress"
+          >
+            {{ $t('KNOWLEDGE_SOURCES.WORDPRESS.TEST_CONNECTION') }}
+          </woot-button>
+
+          <p
+            v-if="wpProbe"
+            class="text-xs text-green-700 dark:text-green-400 mt-1"
+          >
+            {{
+              $t('KNOWLEDGE_SOURCES.WORDPRESS.PROBE_OK', {
+                posts: wpProbe.counts.posts || 0,
+                pages: wpProbe.counts.pages || 0,
+                products: wpProbe.counts.products || 0,
+                categories: wpProbe.categories.length,
+              })
+            }}
+          </p>
+          <p v-if="wpError" class="text-xs text-red-600 dark:text-red-400 mt-1">
+            {{ wpError }}
+          </p>
+          <p class="text-xs text-slate-400 mt-1">
+            {{ $t('KNOWLEDGE_SOURCES.WORDPRESS.CONNECT_HINT') }}
+          </p>
+        </template>
+
         <template v-if="sourceType === 'discourse'">
           <div class="flex flex-col gap-1">
             <label class="text-sm font-medium text-slate-700"

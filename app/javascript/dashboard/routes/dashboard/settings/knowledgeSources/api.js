@@ -42,6 +42,23 @@ export default {
     return axios.post(`${base(accountId)}/sources/${id}/sync`);
   },
 
+  // @knowledge_sources — se llama ANTES de crear la fuente: dice si el sitio
+  // responde, cuánto tiene de cada tipo y qué categorías. Es lo que evita que los
+  // checkboxes de la pantalla siguiente sean adivinanzas.
+  probeWordpress(accountId, siteUrl) {
+    return axios.post(`${base(accountId)}/wordpress_probe`, {
+      site_url: siteUrl,
+    });
+  },
+
+  // El listado de títulos con la marca de si entra o no, resuelto por el mismo
+  // servicio que usa el sincronizador.
+  getWordpressCatalog(accountId, id, type = 'posts') {
+    return axios.get(`${base(accountId)}/sources/${id}/wordpress_catalog`, {
+      params: { type },
+    });
+  },
+
   search(accountId, query, { limit = 5, threshold = 0.7 } = {}) {
     return axios.post(`${base(accountId)}/search`, { query, limit, threshold });
   },

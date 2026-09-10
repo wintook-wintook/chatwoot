@@ -191,6 +191,16 @@ export default {
       v-if="isSyncable || isConfigurable"
       class="flex gap-2 pt-1 border-t border-slate-100"
     >
+      <!-- @knowledge_sources — WordPress: elegir qué entra al índice es un paso
+           propio, porque conectar no es indexar. -->
+      <woot-button
+        v-if="source.source_type === 'wordpress'"
+        variant="clear"
+        size="small"
+        @click="$emit('pick', source)"
+      >
+        {{ $t('KNOWLEDGE_SOURCES.WORDPRESS.PICK_CONTENT') }}
+      </woot-button>
       <woot-button
         v-if="isSyncable"
         size="small"
