@@ -25,6 +25,8 @@ export default {
     isSaving: { type: Boolean, default: false },
     error: { type: String, default: '' },
     proposal: { type: Object, default: null },
+    // El Agente IA del que vino el borrador, si vino de uno.
+    editingTemplate: { type: Object, default: null },
   },
   emits: ['close', 'save'],
   data() {
@@ -60,7 +62,15 @@ export default {
     // Al abrirse se precargan las propuestas. No se pisan si la persona ya
     // escribió algo: lo suyo gana sobre lo propuesto.
     show(value) {
-      if (value) this.applyProposal();
+      if (!value) return;
+      this.applyProposal();
+      // Si el borrador vino de un agente existente, lo natural es REEMPLAZARLO.
+      // Abrir en "crear nuevo" dejaba dos agentes casi iguales y el original
+      // roto — que es justo lo que la persona vino a arreglar.
+      if (this.editingTemplate) {
+        this.mode = 'replace';
+        this.templateId = this.editingTemplate.id;
+      }
     },
   },
   methods: {
@@ -140,6 +150,16 @@ export default {
       </template>
 
       <template v-else>
+        <p
+          v-if="editingTemplate"
+          class="text-xs text-slate-600 dark:text-slate-400 mb-2"
+        >
+          {{
+            $t('TRACKING_ASSISTANT_VIEW.SAVE_FROM_TEMPLATE', {
+              name: editingTemplate.name,
+            })
+          }}
+        </p>
         <label class="text-sm">
           {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_TEMPLATE') }}
           <select v-model="templateId">

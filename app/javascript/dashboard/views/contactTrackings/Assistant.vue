@@ -64,6 +64,10 @@ export default {
       showSaveModal: false,
       // Los datos del agente que el asistente propone junto al Entrenamiento.
       proposal: null,
+      // De qué Agente IA vino el borrador, si vino de uno. Sin esto, arreglar un
+      // agente y guardar creaba un DUPLICADO en vez de corregir el original: el
+      // modal abría en "crear nuevo" y nadie lo notaba hasta ver la lista con dos.
+      editingTemplate: null,
       isSaving: false,
       saveError: '',
       validateTimer: null,
@@ -98,16 +102,26 @@ export default {
       return this.$store.getters['trackingTemplates/getTemplates'] || [];
     },
   },
-  mounted() {
+  async mounted() {
     this.fetchInventory();
     this.$store.dispatch('inboxes/get');
-    this.$store.dispatch('trackingTemplates/get');
+    // Se espera la lista antes de resolver el ?template_id de la URL: si no, se
+    // entraría desde Agentes IA con el panel vacío y sin decir por qué.
+    await this.$store.dispatch('trackingTemplates/get');
     this.fetchAudit();
+    this.loadTemplateFromRoute();
   },
   beforeUnmount() {
     clearTimeout(this.validateTimer);
   },
   methods: {
+    // Entrada desde Agentes IA: /tracking-dashboard/assistant?template_id=123
+    loadTemplateFromRoute() {
+      const id = Number(this.$route.query.template_id);
+      if (!id) return;
+
+      this.loadTemplate(this.templates.find(t => t.id === id));
+    },
     async fetchInventory() {
       this.isLoadingInventory = true;
       this.inventoryError = null;
@@ -140,8 +154,17 @@ export default {
       return AUDIT_STATUS_LABEL[status] || AUDIT_STATUS_LABEL.empty;
     },
     openInAssistant(row) {
-      const template = this.templates.find(t => t.id === row.id);
-      this.draft = template?.complementary_prompt || '';
+      this.loadTemplate(this.templates.find(t => t.id === row.id));
+    },
+    // Carga un Agente IA existente para mejorarlo. Deja anotado cuál es, para que
+    // el guardado ofrezca reemplazarlo —conservando el Entrenamiento anterior— en
+    // vez de crear otro al lado.
+    loadTemplate(template) {
+      if (!template) return;
+
+      this.draft = template.complementary_prompt || '';
+      this.editingTemplate = { id: template.id, name: template.name };
+      this.proposal = null;
       this.activeTab = 0;
       this.validateDraft();
     },
@@ -196,6 +219,7 @@ export default {
           draft: this.draft,
         });
         this.showSaveModal = false;
+        this.editingTemplate = null;
         this.$router.push({
           name: 'contact_trackings_agents',
           query: { template_id: data.tracking_template_id },
@@ -507,6 +531,7 @@ export default {
       :inboxes="inboxes"
       :is-saving="isSaving"
       :proposal="proposal"
+      :editing-template="editingTemplate"
       :error="saveError"
       @close="showSaveModal = false"
       @save="saveDraft"

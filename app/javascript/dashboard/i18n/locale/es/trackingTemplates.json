@@ -168,7 +168,8 @@
       "TIMEZONE": "Zona horaria",
       "TIMEZONE_INHERIT": "Usar la del canal (inbox)",
       "TIMEZONE_HELP": "Zona horaria con la que se ofrecen los horarios, se muestra la hora al cliente y se crea el evento. Si la dejas vacía, se usa la del canal."
-    }
+    },
+    "IMPROVE_WITH_ASSISTANT": "Mejorar con el Asistente"
   },
   "TRACKING_IMPORT": {
     "BTN_OPEN": "Importar desde Excel",

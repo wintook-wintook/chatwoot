@@ -117,6 +117,13 @@ export default {
       this.selectedTemplate = null;
       this.currentView = 'form';
     },
+    // proyecto@asistente_agentes_ia — abre el Asistente con este agente cargado.
+    improveWithAssistant(template) {
+      this.$router.push({
+        name: 'contact_trackings_assistant',
+        query: { template_id: template.id },
+      });
+    },
     goToEditForm(template) {
       this.formMode = 'edit';
       this.selectedTemplate = { ...template };
@@ -382,6 +389,17 @@ export default {
               </td>
               <td class="p-3 text-right">
                 <div class="flex items-center justify-end gap-2">
+                  <!-- proyecto@asistente_agentes_ia — llevarlo al Asistente para
+                       mejorarlo. Al guardar reemplaza ESTE agente y conserva el
+                       Entrenamiento anterior, en vez de crear otro al lado. -->
+                  <woot-button
+                    v-tooltip="$t('TRACKING_TEMPLATES.IMPROVE_WITH_ASSISTANT')"
+                    variant="smooth"
+                    size="small"
+                    color-scheme="secondary"
+                    icon="wand"
+                    @click="improveWithAssistant(template)"
+                  />
                   <woot-button
                     variant="smooth"
                     size="small"

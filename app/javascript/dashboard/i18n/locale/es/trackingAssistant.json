@@ -53,6 +53,7 @@
     "AUDIT_FIX": "Arreglarlo acá",
     "SAVE_NAME_TAKEN": "Ya existe un Agente IA con ese nombre en la cuenta. Elegí otro.",
     "SAVE_CONTEXT": "Contexto para el agente",
-    "SAVE_CONTEXT_HINT": "Datos del negocio que mencionaste en la conversación. Vacío está bien: el asistente no completa lo que no le dijiste, porque el agente lo citaría como cierto."
+    "SAVE_CONTEXT_HINT": "Datos del negocio que mencionaste en la conversación. Vacío está bien: el asistente no completa lo que no le dijiste, porque el agente lo citaría como cierto.",
+    "SAVE_FROM_TEMPLATE": "Este Entrenamiento salió de «%{name}». Al guardar se reemplaza el suyo y se conserva una copia del anterior."
   }
 }

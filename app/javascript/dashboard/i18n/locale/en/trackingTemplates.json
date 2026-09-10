@@ -168,6 +168,7 @@
       "TIMEZONE": "Time zone",
       "TIMEZONE_INHERIT": "Use the channel's (inbox)",
       "TIMEZONE_HELP": "Time zone used to offer slots, show the time to the customer and create the event. If left empty, the channel's is used."
-    }
+    },
+    "IMPROVE_WITH_ASSISTANT": "Improve with the Assistant"
   }
 }
