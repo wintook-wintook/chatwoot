@@ -74,6 +74,11 @@ es:
         @crear_ticket de otra rama —incluido su tipo— y además lo van a evaluar ANTES de consultar
         su fuente, no después. Si tienen que abrir caso, dales su propia flecha con su tipo; si no
         tienen que abrirlo, hoy no hay forma de evitarlo salvo sacar todo @crear_ticket suelto.
+      calendar_not_configured: >-
+        Esta cuenta no tiene ningún calendario de Google conectado, así que @agendar_calendar no va a
+        agendar nada: la directiva parsea bien y el turno pasa de largo, sin aviso. Hay que conectar
+        un calendario y además asignárselo a este Agente IA — con el calendario en la cuenta pero sin
+        asignar al agente, tampoco agenda.
       loose_directive: >-
         La directiva %{directive} está suelta en la prosa, fuera de una línea @ruta. El motor borra
         la prosa entera cuando encuentra una así, y %{consequence}. Las directivas van únicamente

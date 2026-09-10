@@ -287,6 +287,20 @@ export default {
           })),
         },
         {
+          key: 'actions',
+          title: t('ACTIONS_TITLE'),
+          hint: t('ACTIONS_HINT'),
+          empty: '',
+          // `note` acá no es contexto decorativo: dice que la directiva NO va a
+          // ejecutar. @agendar_calendar parsea bien y no agenda nada si la cuenta
+          // no tiene calendario conectado, así que si el chip no lo avisa, la
+          // pantalla ofrece algo que no funciona.
+          items: (this.inventory.actions || []).map(action => ({
+            text: action.directive,
+            note: action.available ? '' : t('ACTIONS_UNAVAILABLE'),
+          })),
+        },
+        {
           key: 'labels',
           title: t('LABELS_TITLE'),
           hint: t('LABELS_HINT'),

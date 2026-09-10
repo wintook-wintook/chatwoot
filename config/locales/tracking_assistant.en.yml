@@ -77,6 +77,11 @@ en:
         evaluate it BEFORE consulting their source, not after. If they must open a case, give them
         their own arrow with their own type; if they must not, today the only way is to remove
         every loose @crear_ticket.
+      calendar_not_configured: >-
+        This account has no Google calendar connected, so @agendar_calendar will not schedule
+        anything: the directive parses fine and the turn just passes through, with no warning.
+        Connect a calendar and also assign it to this AI Agent — with the calendar in the account but
+        not assigned to the agent, it still does not schedule.
       loose_directive: >-
         The directive %{directive} is loose in the prose, outside an @ruta line. The engine wipes
         the entire prose when it finds one like this, and %{consequence}. Directives belong only

@@ -131,6 +131,9 @@
     "AGENTS_COL_DEFECTS": "Problems",
     "AGENTS_COL_DEGRADING": "Warnings",
     "AGENTS_COL_HEADLINE": "Finding",
-    "AUDIT_NEW_VERSION": "New version"
+    "AUDIT_NEW_VERSION": "New version",
+    "ACTIONS_TITLE": "Actions",
+    "ACTIONS_HINT": "What a branch DOES when it escalates, on the right of the arrow. To open a case use @crear_ticket(tipo=…) above: with no type, the case opens with whichever the intake infers.",
+    "ACTIONS_UNAVAILABLE": "will not run"
   }
 }

@@ -409,4 +409,33 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       expect(r[:routes].size).to eq(1)
     end
   end
+  # ── D7 · @agendar_calendar sin calendario ───────────────────────────────────
+  # El motor solo agenda si el agente tiene calendarios asignados. Escrita sin
+  # ninguno en la cuenta, la directiva parsea, el comprobador la veía bien, y el
+  # turno pasaba de largo sin agendar y sin avisar.
+  describe 'D7 · @agendar_calendar sin ningún calendario en la cuenta' do
+    let(:entrenamiento) { '@ruta(agenda #agenda: quiero una cita): - -> @agendar_calendar' }
+
+    it 'avisa que no va a agendar nada' do
+      hallazgo = validar(entrenamiento)[:degrading].find { |f| f[:code] == :calendar_not_configured }
+
+      expect(hallazgo[:message]).to include('no tiene ningún calendario')
+      expect(hallazgo[:wrote]).to eq('@agendar_calendar')
+    end
+
+    it 'no avisa cuando la cuenta sí tiene un calendario conectado' do
+      UserCalendarIntegration.create!(account: account, user: create(:user, account: account),
+                                      google_email: 'agenda@empresa.com', tokens: {})
+
+      expect(validar(entrenamiento)[:degrading].map { |f| f[:code] }).not_to include(:calendar_not_configured)
+    end
+
+    # Avisa, no bloquea: el agente sigue contestando y sigue abriendo casos, y el
+    # arreglo está en los ajustes de Chatwoot, no en el Entrenamiento.
+    it 'no impide guardar' do
+      expect(validar(entrenamiento)[:valid]).to be(true)
+    end
+  end
+
+
 end

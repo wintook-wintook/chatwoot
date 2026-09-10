@@ -80,6 +80,7 @@ class ContactTrackings::Assistant::InventoryService
       unsupported: unsupported,
       canned_groups: canned_groups,
       case_types: case_types,
+      actions: actions,
       labels: labels,
       customer_phrases: customer_phrases,
       erp_enabled: erp_enabled?,
@@ -94,6 +95,30 @@ class ContactTrackings::Assistant::InventoryService
   end
 
   private
+
+  # Las ACCIONES que una rama puede ejecutar al escalar. Van aparte de las fuentes
+  # porque contestan otra pregunta: la fuente dice de dónde LEE la rama, la acción
+  # qué HACE cuando no resuelve.
+  #
+  # Faltaban las dos, y eso no es un detalle: si no se ven, nadie sabe que se
+  # pueden escribir. @crear_ticket no está acá porque se ofrece como
+  # @crear_ticket(tipo=X) junto a los tipos de caso — sin el tipo, el caso se abre
+  # con el que infiera el intake, y esa no es una decisión para dejar al azar.
+  def actions
+    [
+      { directive: Cases::TicketStatusService::DIRECTIVE, available: true },
+      { directive: '@agendar_calendar', available: calendar_available? }
+    ]
+  end
+
+  # @agendar_calendar solo ejecuta si el AGENTE tiene calendarios asignados —
+  # appointment_dispatchable? exige calendar_configured?. Eso no se puede saber
+  # sobre un borrador que todavía no se guardó, así que acá se comprueba lo único
+  # comprobable: que la cuenta tenga al menos una integración de calendario. Sin
+  # ninguna, la directiva no puede funcionar en NINGÚN agente.
+  def calendar_available?
+    UserCalendarIntegration.exists?(account_id: @account.id)
+  end
 
   attr_reader :account, :inbox
 

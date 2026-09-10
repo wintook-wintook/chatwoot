@@ -53,7 +53,7 @@ class ContactTrackings::Assistant::ValidatorService
     check_unparsed_route_lines check_has_routes
     check_route_sources check_action_in_source check_ticket_types check_default_route
     check_descriptions check_tags_exist check_corpus check_erp_directive_isolation
-    check_escalation_regime check_prose
+    check_escalation_regime check_calendar_directive check_prose
   ].freeze
 
   def call
@@ -248,6 +248,29 @@ class ContactTrackings::Assistant::ValidatorService
     return if map.routes.empty? && resto.blank?
 
     add(:degrading, :erp_directive_not_isolated, t('findings.erp_directive_not_isolated'))
+  end
+
+  # ── D7 · @agendar_calendar sin ningún calendario en la cuenta ───────────────
+  # El motor solo agenda si el AGENTE tiene calendarios asignados
+  # (appointment_dispatchable? exige calendar_configured?). Escrita sin eso, la
+  # directiva parsea, el comprobador la ve bien, y no agenda nada: silencio otra
+  # vez.
+  #
+  # Acá se comprueba lo único comprobable sobre un borrador sin guardar: que la
+  # cuenta tenga al menos un calendario conectado. Si no tiene ninguno, la
+  # directiva no puede funcionar en ningún agente.
+  #
+  # Es DEGRADANTE y no bloqueante, a diferencia de una fuente que no existe: el
+  # agente sigue contestando y sigue abriendo casos, lo único que no pasa es el
+  # agendado. Y se arregla en los ajustes de Chatwoot, no en el Entrenamiento —
+  # bloquear el guardado dejaría a alguien sin poder redactar el agente hasta
+  # terminar de conectar Google.
+  def check_calendar_directive
+    return unless text.match?(/@agendar_calendar\b/i)
+    return if UserCalendarIntegration.exists?(account_id: account.id)
+
+    add(:degrading, :calendar_not_configured, t('findings.calendar_not_configured'),
+        wrote: '@agendar_calendar')
   end
 
   # ── D5 · régimen de escalamiento mixto ──────────────────────────────────────
