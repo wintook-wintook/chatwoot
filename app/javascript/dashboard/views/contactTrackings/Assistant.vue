@@ -68,6 +68,9 @@ export default {
       // agente y guardar creaba un DUPLICADO en vez de corregir el original: el
       // modal abría en "crear nuevo" y nadie lo notaba hasta ver la lista con dos.
       editingTemplate: null,
+      // La conversación persistida. Sin esto el hilo vivía solo en el navegador y
+      // cerrar la pestaña tiraba una entrevista de 30–45 minutos.
+      sessionId: null,
       isSaving: false,
       saveError: '',
       validateTimer: null,
@@ -109,7 +112,9 @@ export default {
     // entraría desde Agentes IA con el panel vacío y sin decir por qué.
     await this.$store.dispatch('trackingTemplates/get');
     this.fetchAudit();
-    this.loadTemplateFromRoute();
+    // El ?template_id manda sobre la conversación guardada: si se entró desde un
+    // agente concreto, es a ese al que se vino, no a lo que quedó a medias.
+    if (!this.loadTemplateFromRoute()) await this.resumeSession();
   },
   beforeUnmount() {
     clearTimeout(this.validateTimer);
@@ -118,9 +123,34 @@ export default {
     // Entrada desde Agentes IA: /tracking-dashboard/assistant?template_id=123
     loadTemplateFromRoute() {
       const id = Number(this.$route.query.template_id);
-      if (!id) return;
+      if (!id) return false;
 
       this.loadTemplate(this.templates.find(t => t.id === id));
+      return true;
+    },
+    // Retomar lo que quedó a medias. Si falla, se arranca en limpio: no poder
+    // recuperar una conversación no debería impedir empezar otra.
+    async resumeSession() {
+      try {
+        const { data } = await AssistantAPI.getSession();
+        if (!data) return;
+
+        this.sessionId = data.id;
+        this.messages = data.messages || [];
+        this.draft = data.draft || '';
+        this.validation = data.validation || null;
+        this.proposal = data.proposal || null;
+        if (data.tracking_template_id) {
+          this.loadEditingFrom(data.tracking_template_id);
+        }
+      } catch (error) {
+        this.sessionId = null;
+      }
+    },
+    loadEditingFrom(id) {
+      const template = this.templates.find(t => t.id === id);
+      if (template)
+        this.editingTemplate = { id: template.id, name: template.name };
     },
     async fetchInventory() {
       this.isLoadingInventory = true;
@@ -172,7 +202,10 @@ export default {
       this.messages.push({ role: 'user', content });
       this.isThinking = true;
       try {
-        const { data } = await AssistantAPI.interview(this.messages);
+        const { data } = await AssistantAPI.interview(this.messages, null, {
+          sessionId: this.sessionId,
+        });
+        this.sessionId = data.session_id || this.sessionId;
         this.messages.push({ role: 'assistant', content: data.reply });
         if (data.draft) {
           this.draft = data.draft;
@@ -217,9 +250,11 @@ export default {
         const { data } = await AssistantAPI.save({
           ...payload,
           draft: this.draft,
+          sessionId: this.sessionId,
         });
         this.showSaveModal = false;
         this.editingTemplate = null;
+        this.sessionId = null;
         this.$router.push({
           name: 'contact_trackings_agents',
           query: { template_id: data.tracking_template_id },

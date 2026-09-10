@@ -10,41 +10,48 @@
 #
 # Table name: tracking_templates
 #
-#  id                             :bigint           not null, primary key
-#  ai_context                     :text
-#  booking_calendar_ids           :jsonb            not null
-#  calendar_event_duration        :integer          default(30)
-#  calendar_integration_ids       :jsonb            not null
-#  complementary_prompt           :text
-#  keyword_actions                :jsonb            not null
-#  name                           :string           not null
-#  objective                      :string           not null
-#  previous_complementary_prompt  :text
-#  retry_interval_unit            :string           default("days")
-#  retry_interval_value           :integer          default(1)
-#  slots_presentation             :string           default("detailed"), not null
-#  tags                           :json
-#  timezone                       :string
-#  whatsapp_templates             :json
-#  created_at                     :datetime         not null
-#  updated_at                     :datetime         not null
-#  account_id                     :bigint           not null
-#  inbox_id                       :bigint
-#  kbase_hook_id                  :integer
-#  user_id                        :bigint
+#  id                            :bigint           not null, primary key
+#  ai_context                    :text
+#  archived_at                   :datetime
+#  booking_calendar_ids          :jsonb            not null
+#  calendar_event_duration       :integer          default(30)
+#  calendar_integration_ids      :jsonb            not null
+#  complementary_prompt          :text
+#  keyword_actions               :jsonb            not null
+#  name                          :string           not null
+#  objective                     :string           not null
+#  previous_complementary_prompt :text
+#  retry_interval_unit           :string           default("days")
+#  retry_interval_value          :integer          default(1)
+#  slots_presentation            :string           default("detailed"), not null
+#  tags                          :json
+#  timezone                      :string
+#  use_as_knowledge              :boolean          default(FALSE), not null
+#  whatsapp_templates            :json
+#  created_at                    :datetime         not null
+#  updated_at                    :datetime         not null
+#  account_id                    :bigint           not null
+#  inbox_id                      :bigint
+#  kbase_hook_id                 :integer
+#  tracking_template_category_id :bigint
+#  user_id                       :bigint
 #
 # Indexes
 #
-#  index_tracking_templates_on_account_id           (account_id)
-#  index_tracking_templates_on_account_id_and_name  (account_id,name) UNIQUE
-#  index_tracking_templates_on_inbox_id             (inbox_id)
-#  index_tracking_templates_on_kbase_hook_id        (kbase_hook_id)
-#  index_tracking_templates_on_user_id              (user_id)
+#  index_tracking_templates_on_account_id                     (account_id)
+#  index_tracking_templates_on_account_id_and_name            (account_id,name) UNIQUE
+#  index_tracking_templates_on_archived_at                    (archived_at)
+#  index_tracking_templates_on_inbox_id                       (inbox_id)
+#  index_tracking_templates_on_kbase_hook_id                  (kbase_hook_id)
+#  index_tracking_templates_on_tracking_template_category_id  (tracking_template_category_id)
+#  index_tracking_templates_on_use_as_knowledge               (use_as_knowledge) WHERE use_as_knowledge
+#  index_tracking_templates_on_user_id                        (user_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (inbox_id => inboxes.id)
+#  fk_rails_...  (tracking_template_category_id => tracking_template_categories.id) ON DELETE => nullify
 #  fk_rails_...  (user_id => users.id)
 #
 

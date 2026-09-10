@@ -24,12 +24,19 @@ class AssistantAPI extends ApiClient {
   // Un turno de entrevista. Es el único que gasta tokens.
   // oneShot: sin entrevista, redacta de una. Lo usa el botón "generar" de la ficha
   // del Agente IA, donde no hay conversación en la que preguntar.
-  interview(messages, inboxId, { oneShot = false } = {}) {
+  interview(messages, inboxId, { oneShot = false, sessionId = null } = {}) {
     return axios.post(`${this.url}/interview`, {
       messages,
       inbox_id: inboxId,
       one_shot: oneShot,
+      session_id: sessionId,
     });
+  }
+
+  // La conversación a medias de quien pregunta, si la hay. Una entrevista dura
+  // 30–45 minutos: cerrar la pestaña no debería tirarla.
+  getSession() {
+    return axios.get(`${this.url}/session`);
   }
 
   // Solo el comprobador, sin IA: por eso puede correr en cada tecleo del panel.
@@ -43,14 +50,25 @@ class AssistantAPI extends ApiClient {
   }
 
   // mode: 'create' crea un Agente IA nuevo; 'replace' pisa el de uno existente.
-  save({ draft, mode, name, objective, inboxId, templateId }) {
+  save({
+    draft,
+    mode,
+    name,
+    objective,
+    aiContext,
+    inboxId,
+    templateId,
+    sessionId,
+  }) {
     return axios.post(`${this.url}/save`, {
       draft,
       mode,
       name,
       objective,
+      ai_context: aiContext,
       inbox_id: inboxId,
       template_id: templateId,
+      session_id: sessionId,
     });
   }
 }

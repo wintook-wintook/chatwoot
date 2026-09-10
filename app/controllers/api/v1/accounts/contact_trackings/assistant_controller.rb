@@ -35,6 +35,11 @@
 #   Pasa todos los Agentes IA de la cuenta por el comprobador y dice cuáles no
 #   ejecutan lo que su nombre promete. Sin IA: son parseos, no llamadas.
 #
+# GET /api/v1/accounts/:account_id/contact_trackings/assistant/session
+#   La conversación a medias de quien pregunta, si la hay. Se ofrece retomar al
+#   abrir la pantalla: una entrevista dura 30–45 minutos y cerrar la pestaña no
+#   debería tirarla.
+#
 # Cuelga de contact_trackings y no de un /assistant suelto a nivel cuenta: este
 # asistente es del motor de Seguimientos, y Chatwoot ya tiene otro asistente propio
 # (Captain) con el que no conviene confundirlo en la URL.
@@ -58,12 +63,24 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
     render json: ContactTrackings::Assistant::AuditService.new(Current.account).call
   end
 
+  # Se llama `resume` y no `session`: `session` es el hash de sesión de
+  # ActionController, y definirlo acá lo pisa y rompe TODO el controlador con un
+  # 500 — incluidos los endpoints que no tienen nada que ver.
+  def resume
+    sesion = TrackingAssistantSession.resumable_for(Current.account, Current.user)
+    return render json: nil if sesion.nil?
+
+    render json: session_json(sesion)
+  end
+
   def interview
     result = ContactTrackings::Assistant::InterviewService
              .new(Current.account, messages: interview_messages, inbox: inbox,
                                    one_shot: ActiveModel::Type::Boolean.new.cast(params[:one_shot])).call
 
     return render json: { error: result.error }, status: :unprocessable_entity unless result.success?
+
+    sesion = record_turn(result)
 
     render json: {
       reply: result.reply,
@@ -73,7 +90,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
       # Los datos del agente que el asistente propone. La pantalla los precarga
       # editables: un nombre propuesto y equivocado se ve y se corrige; un campo
       # vacío frena a quien acaba de explicar en la conversación lo que ahí va.
-      proposal: result.proposal
+      proposal: result.proposal,
+      session_id: sesion&.id
     }
   end
 
@@ -84,13 +102,47 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
     return render json: { error: result.error, details: result.details }, status: :unprocessable_entity unless result.success?
 
+    close_session(result.template)
+
     render json: { tracking_template_id: result.template.id, name: result.template.name }, status: :ok
   end
 
   private
 
+  # El hilo se guarda después de contestar, no antes: si la llamada al modelo falla
+  # no queda una sesión a medias que la pantalla ofrezca retomar sin contenido.
+  def record_turn(result)
+    sesion = session_record || TrackingAssistantSession.new(account: Current.account, user: Current.user)
+    turnos = interview_messages + [{ 'role' => 'assistant', 'content' => result.reply.to_s }]
+    sesion.record_turn(messages: turnos, draft: result.draft,
+                       validation: result.validation, proposal: result.proposal)
+    sesion
+  rescue StandardError => e
+    # Que no se pueda guardar el hilo no debe costarle la respuesta a la persona.
+    Rails.logger.error("[Asistente] no se pudo guardar la conversación: #{e.message}")
+    nil
+  end
+
+  def session_record
+    return nil if params[:session_id].blank?
+
+    TrackingAssistantSession.find_by(id: params[:session_id], account: Current.account, user: Current.user)
+  end
+
+  def close_session(template)
+    session_record&.mark_saved!(template)
+  end
+
+  def session_json(sesion)
+    {
+      id: sesion.id, messages: sesion.messages, draft: sesion.draft,
+      validation: sesion.validation.presence, proposal: sesion.proposal.presence,
+      tracking_template_id: sesion.tracking_template_id, updated_at: sesion.updated_at
+    }
+  end
+
   def save_params
-    params.permit(:name, :objective, :ai_context, :inbox_id, :template_id)
+    params.permit(:name, :objective, :ai_context, :inbox_id, :template_id, :session_id)
   end
 
   # Solo rol y contenido: el hilo lo manda el cliente y no se le confía nada más.

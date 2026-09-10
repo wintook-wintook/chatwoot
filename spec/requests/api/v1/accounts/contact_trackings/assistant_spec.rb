@@ -245,4 +245,82 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       expect(response.parsed_body.first['status']).to eq('conversational')
     end
   end
+
+  # Una entrevista dura 30–45 minutos: cerrar la pestaña no debería tirarla.
+  describe 'la conversación se guarda' do
+    let(:interview_url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/interview" }
+    let(:session_url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/session" }
+    let(:openai_url) { ContactTrackings::Assistant::InterviewService::API_URL }
+
+    before do
+      create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled',
+                                 settings: { 'api_key' => 'sk-test' })
+      stub_request(:post, openai_url).to_return(
+        status: 200,
+        body: { choices: [{ message: { content: { mensaje: '¿Qué temas atiende?' }.to_json } }] }.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
+    end
+
+    def entrevistar(mensajes, session_id: nil)
+      post interview_url, params: { messages: mensajes, session_id: session_id },
+                          headers: admin.create_new_auth_token, as: :json
+    end
+
+    it 'crea la conversación en el primer turno y devuelve su id' do
+      expect { entrevistar([{ role: 'user', content: 'quiero un agente de soporte' }]) }
+        .to change(TrackingAssistantSession, :count).by(1)
+
+      expect(response.parsed_body['session_id']).to be_present
+    end
+
+    it 'sigue en la misma conversación cuando le mandan su id' do
+      entrevistar([{ role: 'user', content: 'hola' }])
+      id = response.parsed_body['session_id']
+
+      expect { entrevistar([{ role: 'user', content: 'y esto' }], session_id: id) }
+        .not_to change(TrackingAssistantSession, :count)
+
+      expect(TrackingAssistantSession.find(id).messages.size).to eq(2)
+    end
+
+    it 'guarda también la respuesta del asistente, no solo lo que se escribió' do
+      entrevistar([{ role: 'user', content: 'hola' }])
+
+      sesion = TrackingAssistantSession.last
+      expect(sesion.messages.last).to include('role' => 'assistant', 'content' => '¿Qué temas atiende?')
+    end
+
+    it 'la devuelve para retomarla' do
+      entrevistar([{ role: 'user', content: 'quiero un agente' }])
+
+      get session_url, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['messages'].size).to eq(2)
+    end
+
+    it 'no devuelve la conversación de otra persona' do
+      entrevistar([{ role: 'user', content: 'hola' }])
+
+      get session_url, headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'devuelve vacío cuando no hay nada a medias' do
+      get session_url, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body).to be_nil
+    end
+
+    # Que no se pueda guardar el hilo no debe costarle la respuesta a la persona.
+    it 'contesta igual si la conversación no se pudo guardar' do
+      allow(TrackingAssistantSession).to receive(:new).and_raise(StandardError, 'boom')
+
+      entrevistar([{ role: 'user', content: 'hola' }])
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body['reply']).to eq('¿Qué temas atiende?')
+    end
+  end
 end
