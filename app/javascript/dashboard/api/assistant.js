@@ -63,6 +63,17 @@ class AssistantAPI extends ApiClient {
     return axios.get(`${this.url}/audit`);
   }
 
+  // Probar sin enviar nada: qué haría el motor con UNA pregunta. No escribe nada,
+  // pero sí gasta (clasifica la rama y vectoriza la pregunta), así que va con
+  // botón — a diferencia de validate, que corre al teclear.
+  dryRun(draft, question, inboxId) {
+    return axios.post(`${this.url}/dry_run`, {
+      draft,
+      question,
+      inbox_id: inboxId,
+    });
+  }
+
   // mode: 'create' crea un Agente IA nuevo; 'replace' pisa el de uno existente.
   save({
     draft,

@@ -122,6 +122,7 @@ Rails.application.routes.draw do
             get  'assistant/sessions/:id',  to: 'assistant#show_session'
             delete 'assistant/sessions/:id', to: 'assistant#discard_session'
             get  'assistant/audit',     to: 'assistant#audit'
+            post 'assistant/dry_run',   to: 'assistant#dry_run'
           end
 
           # @knowledge_sources

@@ -35,6 +35,13 @@
 #   Pasa todos los Agentes IA de la cuenta por el comprobador y dice cuáles no
 #   ejecutan lo que su nombre promete. Sin IA: son parseos, no llamadas.
 #
+# POST /api/v1/accounts/:account_id/contact_trackings/assistant/dry_run
+#   Corre UNA pregunta contra el Entrenamiento sin enviar nada: rama elegida, fuente
+#   consultada, fragmentos con su similitud, etiqueta y si abriría un caso. Es lo que
+#   el comprobador no puede contestar — un Entrenamiento puede parsear perfecto y
+#   rutear todo a la rama equivocada. Gasta tokens (clasificación + embedding), así
+#   que se dispara con un botón y nunca sola.
+#
 # GET /api/v1/accounts/:account_id/contact_trackings/assistant/session
 #   La conversación a medias de quien pregunta, si la hay. Se ofrece retomar al
 #   abrir la pantalla: una entrevista dura 30–45 minutos y cerrar la pestaña no
@@ -68,6 +75,17 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
   def audit
     render json: ContactTrackings::Assistant::AuditService.new(Current.account).call
+  end
+
+  # Prueba en seco: qué haría el motor con UNA pregunta. No envía nada ni escribe
+  # nada; lo único que gasta es la clasificación de rama y el embedding.
+  def dry_run
+    result = ContactTrackings::Assistant::DryRunService
+             .new(Current.account, draft: params[:draft], question: params[:question], inbox: inbox).call
+
+    return render json: { error: result.error }, status: :unprocessable_entity unless result.success?
+
+    render json: result.payload
   end
 
   # Se llama `resume` y no `session`: `session` es el hash de sesión de

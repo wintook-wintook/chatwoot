@@ -6,7 +6,7 @@ Entrenamiento de un Agente IA contra el parser real del motor**
 | | |
 |---|---|
 | **Rama de trabajo** | `feat/motor_agentes_ia` (sale de `develop`) |
-| **Estado** | solo plan — no hay código escrito |
+| **Estado** | F0–F7 implementadas, con specs. Sin PR a `develop` todavía |
 | **Ubicación en la app** | `/app/accounts/:id/tracking-dashboard/assistant` |
 | **Reemplaza** | el botón "generar prompt" de `EditTemplate.vue` |
 | **Fecha** | 08/09/2026 |
@@ -644,22 +644,63 @@ llena con su Entrenamiento actual, ya validado.
 
 ```
   ┌────────────────────────────────────────────────────────────────────┐
-  │  Probar sin enviar nada                                       [×]  │
+  │  Probar sin enviar nada                                            │
+  │  Escribí una pregunta como la haría un cliente.                    │
   ├────────────────────────────────────────────────────────────────────┤
-  │  Pregunta  [ no puedo entrar al sistema desde ayer            ]    │
+  │  Pregunta  [ necesito los datos para hacer una transferencia  ]    │
   │                                                    [ Probar ]      │
   ├────────────────────────────────────────────────────────────────────┤
-  │  Rama elegida       soporte                                        │
-  │  Fuente consultada  @buscar_foro(Foro Kontrolya)                   │
-  │  Fragmentos         3  (similitud 0.71 · 0.63 · 0.55)              │
-  │  Respuesta          "Revisá que el servicio de Firebird esté…"     │
-  │  Etiqueta           #soporte                                       │
-  │  ¿Abre caso?        no — la fuente resolvió el turno               │
+  │  Tema elegido       administrativo — facturas, datos fiscales      │
+  │  Fuente consultada  @buscar_predefinidas(DATOS)                    │
+  │  1 fragmento, con similitud mínima 0.45:                           │
+  │     DATOS BANCARIOS O TRANSFERENCIA              55%               │
+  │     Para transferencias, la cuenta es…                             │
+  │  Cierra con la etiqueta   #admin                                   │
+  │  ¿Abre caso?              sí, antes de consultar la fuente         │
+  │  ⚠ Este tema no declara su propio escalamiento, así que hereda     │
+  │    el @crear_ticket suelto del Entrenamiento — y encima se         │
+  │    adelanta a la fuente.                                           │
+  │                                                                    │
+  │  El tema lo clasificó gpt-4o-mini. No se envió ningún mensaje.     │
   └────────────────────────────────────────────────────────────────────┘
 ```
 
-Depende del núcleo extraíble del plan `kbase_directivas_api_plan.md`. Si esa rama no
-está lista, F6 se pospone sin bloquear el resto.
+Va **abajo del comprobador, en la misma pestaña**, y no en un modal como se dibujaba
+antes: lo que se hace con esto es leer el resultado, corregir el Entrenamiento que
+está arriba y volver a probar. Un modal tapa justo el texto que hay que corregir.
+
+**Ya no depende de `kbase_directivas_api_plan.md`**: esa rama se mergeó a develop
+(PR #50) y dejó `KnowledgeBase::DirectiveRunner`. Igual F6 no lo usa como ejecutor
+—ver abajo— pero el bloqueo se levantó.
+
+#### Dos recortes deliberados respecto de este dibujo
+
+**1. No redacta la respuesta final.** Redactarla de verdad exige el prompt completo
+del agente, el objetivo, la regla de rama y el historial de la conversación, que
+ensambla `KnowledgeBaseResponseService#generate_contextual_reply` — atado a una
+conversación real que acá no existe. Una respuesta armada por un SEGUNDO camino se
+vería igual de autoritaria y diría otra cosa que el agente en vivo; este módulo
+existe para que se vea lo que el motor hace de verdad. Lo que sí decide si la
+respuesta puede llegar a ser correcta son los FRAGMENTOS: si vuelven los
+equivocados, no hay redacción que lo salve. Eso sí se muestra, con su similitud.
+
+**2. Las fuentes en vivo no se ejecutan.** Se corren de verdad las que buscan en
+pgvector local (respuestas predefinidas, artículos, Google Doc y Hoja en modo FAQ).
+Las que consultan un servicio externo —foro Discourse, Contpaq, Hoja en modo Datos,
+`{{consulta:}}` al ERP— se nombran y se saltean; el resto del informe (tema,
+etiqueta, caso) sale igual, que es la parte que el comprobador no podía dar. Un modo
+nuevo que nadie clasifique rompe un spec, en vez de aparecer como "no se puede
+probar" sin que nadie lo haya decidido.
+
+#### Por qué no reusa `KnowledgeBase::DirectiveRunner`
+
+Ese servicio ignora el grupo de `@buscar_predefinidas(GRUPO)` — su endpoint incluso
+rechaza la directiva con paréntesis a propósito. Medido sobre la cuenta 2: con
+`@buscar_predefinidas(DATOS)`, la pregunta "cuál es el horario" devuelve **vacío**
+(grupo estrecho, umbral 0.45), que es lo que hace el motor. Con el Runner habría
+mostrado *HORARIO DE OFICINA* al 54% y parecido correcta. Por eso la búsqueda usa
+`KnowledgeBase::CannedGroup`, y un spec la corre contra el método privado real del
+motor para que las dos copias no se separen en silencio.
 
 ---
 
@@ -728,7 +769,7 @@ Namespace nuevo: `Api::V1::Accounts::Assistant::*`. Permiso: `administrator`.
          { mode: create|replace, template_id?, name?, objective?, inbox_id? }
          → crea o actualiza el tracking_template
 
-  POST   /api/v1/accounts/:id/assistant/dry_run          (F6)
+  POST   /api/v1/accounts/:id/contact_trackings/assistant/dry_run   (F6)
          { draft, question }
          → rama elegida, fuente, fragmentos, respuesta — sin tocar conversaciones
 ```
@@ -787,7 +828,7 @@ optimiza el generador.**
   F3 ██████            Meta-prompt, entrevista, bucle de corrección
   F4 ██████            Frontend completo + guardar en el agente
   F5 ████              Modo auditar
-  F6 ████              Probar en seco  (depende de kbase_directive_api)
+  F6 ████              Probar en seco  ✔ hecho
   F7 ██                Retirar el generador viejo
      └──┬──┘└──┬──┘└──┬──┘
       sem 1   sem 2   sem 3+
@@ -808,8 +849,9 @@ optimiza el generador.**
 puede pasar cualquier Entrenamiento existente y decir cuántas ramas lee el motor. Es la
 mitad del valor y no depende de OpenAI.
 
-**F6 está condicionada** a que exista el núcleo extraíble de
-`kbase_directivas_api_plan.md`. Si esa rama no avanzó, F6 se corre y el resto no se
+**F6 estaba condicionada** a que existiera el núcleo extraíble de
+`kbase_directivas_api_plan.md`; esa rama se mergeó a develop (PR #50) y el bloqueo se
+levantó. El texto original decía: si esa rama no avanzó, F6 se corre y el resto no se
 bloquea.
 
 ---

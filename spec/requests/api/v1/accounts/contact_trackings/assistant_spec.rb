@@ -246,6 +246,42 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
     end
   end
 
+  # F6 — probar sin enviar nada.
+  describe 'POST dry_run' do
+    let(:dry_run_url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/dry_run" }
+
+    def probar(params, user: admin)
+      post dry_run_url, params: params, headers: user.create_new_auth_token, as: :json
+    end
+
+    it 'no deja entrar a un agente' do
+      probar({ draft: '@buscar_articulo', question: 'hola' }, user: agent)
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'rechaza una pregunta vacía' do
+      probar({ draft: '@ruta(soporte #soporte: fallas): @buscar_articulo', question: '  ' })
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('blank_question')
+    end
+
+    it 'devuelve rama, fuente, etiqueta y caso' do
+      account.case_types.create!(name: 'Soporte')
+      probar({ draft: '@ruta(soporte #soporte: fallas): @buscar_foro(Foro) -> @crear_ticket(tipo=Soporte)',
+               question: 'no puedo entrar al sistema' })
+
+      expect(response).to have_http_status(:success)
+      cuerpo = response.parsed_body
+      expect(cuerpo['routes']).to include('chosen' => 'soporte')
+      expect(cuerpo['tag']).to eq('#soporte')
+      expect(cuerpo['case']).to include('creates' => true, 'after_source' => true)
+      # La fuente no existe en la cuenta, y eso es exactamente lo que hay que ver.
+      expect(cuerpo['source']).to include('available' => false, 'reason' => 'source_missing')
+    end
+  end
+
   # Una entrevista dura 30–45 minutos: cerrar la pestaña no debería tirarla.
   describe 'la conversación se guarda' do
     let(:interview_url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/interview" }

@@ -29,6 +29,7 @@ import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import InterviewPanel from './assistant/InterviewPanel.vue';
 import ValidationReport from './assistant/ValidationReport.vue';
+import DryRunPanel from './assistant/DryRunPanel.vue';
 import SaveModal from './assistant/SaveModal.vue';
 
 // El teclado va más rápido que un request: se espera a que la persona pare.
@@ -50,6 +51,7 @@ export default {
     Spinner,
     InterviewPanel,
     ValidationReport,
+    DryRunPanel,
     SaveModal,
   },
   data() {
@@ -79,6 +81,10 @@ export default {
       audit: [],
       isAuditing: false,
       sessions: [],
+      // F6 — probar sin enviar nada. Se dispara con botón, nunca al teclear.
+      dryRun: null,
+      isDryRunning: false,
+      dryRunError: '',
     };
   },
   computed: {
@@ -223,6 +229,23 @@ export default {
         this.audit = [];
       } finally {
         this.isAuditing = false;
+      }
+    },
+    // F6 — probar sin enviar nada. A diferencia de validateDraft, esto NO corre
+    // solo: clasifica la rama con el modelo y vectoriza la pregunta.
+    async runDryRun(question) {
+      this.isDryRunning = true;
+      this.dryRunError = '';
+      try {
+        const { data } = await AssistantAPI.dryRun(this.draft, question, null);
+        this.dryRun = data;
+      } catch (error) {
+        this.dryRun = null;
+        this.dryRunError =
+          error?.response?.data?.error ||
+          this.$t('TRACKING_ASSISTANT_VIEW.DRY_RUN_FAILED');
+      } finally {
+        this.isDryRunning = false;
       }
     },
     // Cargar un agente roto en el panel lo deja listo para corregir y reemplazar:
@@ -423,6 +446,14 @@ export default {
             <ValidationReport
               :validation="validation"
               :is-checking="isChecking"
+            />
+
+            <DryRunPanel
+              :draft="draft"
+              :result="dryRun"
+              :is-running="isDryRunning"
+              :error="dryRunError"
+              @run="runDryRun"
             />
 
             <!-- Fuentes guardadas que el asistente no sabe ofrecer. -->
