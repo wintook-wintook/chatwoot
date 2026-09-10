@@ -48,7 +48,15 @@ class ContactTrackings::Assistant::InterviewService
   # falte como <PENDIENTE:>.
   MAX_INTERVIEW_TURNS = 5
 
-  Result = Struct.new(:reply, :draft, :validation, :repairs, :proposal, :error, keyword_init: true) do
+  # Tope de lo que se acepta en `opciones`. El payload lo escribe un modelo, así
+  # que se recorta acá y no en la pantalla: seis preguntas de ocho botones ya es
+  # más de lo que alguien lee, y sin tope una respuesta rara deja la conversación
+  # cubierta de botones.
+  MAX_QUESTIONS = 6
+  MAX_CHOICES = 8
+  MAX_CHOICE_CHARS = 60
+
+  Result = Struct.new(:reply, :draft, :validation, :repairs, :proposal, :options, :error, keyword_init: true) do
     def success? = error.blank?
   end
 
@@ -63,6 +71,28 @@ class ContactTrackings::Assistant::InterviewService
 
     { name: raw['nombre'].to_s.strip, objective: raw['objetivo'].to_s.strip,
       ai_context: raw['contexto'].to_s.strip }
+  end
+
+  # Las preguntas que el asistente acaba de hacer, en forma de lista, para que la
+  # pantalla las muestre como botones. Se leen con desconfianza —las escribe el
+  # modelo— así que se recortan en cantidad y en largo, y se descarta cualquier
+  # pregunta sin elecciones: un botón vacío no sirve para nada.
+  def self.options_from(reply)
+    raw = reply['opciones']
+    return nil unless raw.is_a?(Array)
+
+    limpias = raw.first(MAX_QUESTIONS).filter_map do |item|
+      next unless item.is_a?(Hash)
+
+      elecciones = Array(item['elecciones']).first(MAX_CHOICES)
+                                            .map { |c| c.to_s.strip.truncate(MAX_CHOICE_CHARS) }
+                                            .compact_blank
+      next if elecciones.empty?
+
+      { question: item['pregunta'].to_s.strip.truncate(160), choices: elecciones }
+    end
+
+    limpias.presence
   end
 
   # one_shot: sin entrevista. Es el modo del botón "generar" que vive dentro de la
@@ -83,7 +113,10 @@ class ContactTrackings::Assistant::InterviewService
     return Result.new(error: :unavailable) if reply.nil?
 
     draft = reply['entrenamiento'].presence
-    return Result.new(reply: reply['mensaje'], draft: nil, repairs: 0) if draft.blank?
+    if draft.blank?
+      return Result.new(reply: reply['mensaje'], draft: nil, repairs: 0,
+                        options: self.class.options_from(reply))
+    end
     # Entregar sin haber preguntado no es un error de sintaxis, así que el
     # comprobador no lo caza: es el modelo decidiendo por la persona. Se rechaza
     # acá y se lo devuelve al mismo hilo, igual que un hallazgo del comprobador.

@@ -135,6 +135,8 @@
     "ACTIONS_TITLE": "Acciones",
     "ACTIONS_HINT": "Qué HACE una rama al escalar, del lado derecho de la flecha. Para abrir un caso usá @crear_ticket(tipo=…) de arriba: sin el tipo, el caso se abre con el que deduzca el intake.",
     "ACTIONS_UNAVAILABLE": "no va a ejecutar",
-    "AUDIT_WRITE": "Escribirle el Entrenamiento"
+    "AUDIT_WRITE": "Escribirle el Entrenamiento",
+    "SEND_PICKED": "Enviar %{count} respuesta(s)",
+    "PICK_OTHER_HINT": "Tocá acá y escribí cuál en el campo de abajo"
   }
 }

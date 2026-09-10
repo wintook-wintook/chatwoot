@@ -320,4 +320,44 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
       expect(pedido).to have_been_made
     end
   end
+
+  # Las opciones las escribe el MODELO, así que se leen con desconfianza: sin tope,
+  # una respuesta rara deja la conversación cubierta de botones.
+  describe '.options_from' do
+    it 'devuelve las preguntas con sus elecciones' do
+      salida = described_class.options_from(
+        'opciones' => [{ 'pregunta' => '¿Con qué etiqueta cierra?',
+                         'elecciones' => ['#demo', '#tracking', 'otra'] }]
+      )
+
+      expect(salida).to eq([{ question: '¿Con qué etiqueta cierra?',
+                              choices: ['#demo', '#tracking', 'otra'] }])
+    end
+
+    it 'recorta la cantidad de preguntas y de botones' do
+      salida = described_class.options_from(
+        'opciones' => Array.new(9) { |i| { 'pregunta' => "p#{i}", 'elecciones' => Array.new(12) { |j| "o#{j}" } } }
+      )
+
+      expect(salida.size).to eq(described_class::MAX_QUESTIONS)
+      expect(salida.first[:choices].size).to eq(described_class::MAX_CHOICES)
+    end
+
+    # Un botón sin texto no sirve para nada, y una pregunta sin botones tampoco.
+    it 'descarta las preguntas que quedaron sin elecciones' do
+      salida = described_class.options_from(
+        'opciones' => [{ 'pregunta' => 'sin nada', 'elecciones' => ['', '  '] },
+                       { 'pregunta' => 'buena', 'elecciones' => ['sí'] }]
+      )
+
+      expect(salida.pluck(:question)).to eq(['buena'])
+    end
+
+    it 'no revienta con lo que no es una lista' do
+      expect(described_class.options_from({})).to be_nil
+      expect(described_class.options_from('opciones' => 'a, b')).to be_nil
+      expect(described_class.options_from('opciones' => [])).to be_nil
+      expect(described_class.options_from('opciones' => ['suelta'])).to be_nil
+    end
+  end
 end

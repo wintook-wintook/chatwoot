@@ -139,6 +139,8 @@ export default {
       dryRun: null,
       isDryRunning: false,
       dryRunError: '',
+      // Las preguntas del último turno, para mostrarlas como botones.
+      interviewOptions: null,
       // El comprobador arranca ABIERTO y la prueba CERRADA. El comprobador es el
       // producto de esta pantalla: esconderlo de entrada sería devolverle el alto
       // al texto a costa de que nadie lo vea. Probar es una acción puntual, y
@@ -370,6 +372,7 @@ export default {
     // en blanco.
     applySession(data) {
       this.sessionId = data.id;
+      this.interviewOptions = null;
       this.messages = data.messages || [];
       this.draft = data.draft || '';
       this.validation = data.validation || null;
@@ -438,6 +441,7 @@ export default {
     startFresh() {
       this.sessionId = null;
       this.sessionMeta = null;
+      this.interviewOptions = null;
       this.messages = [];
       this.draft = '';
       this.validation = null;
@@ -578,6 +582,7 @@ export default {
       // identidad y la prueba de la anterior no describen nada de esto.
       this.sessionId = null;
       this.sessionMeta = null;
+      this.interviewOptions = null;
       this.dryRun = null;
       this.activeTab = 0;
       this.validateDraft();
@@ -593,6 +598,8 @@ export default {
         // El backend devuelve la identidad ya armada: sin eso habría que
         // inventar las fechas del lado del cliente.
         if (data.session) this.sessionMeta = data.session;
+        // Solo del último turno: en cuanto se contesta, dejan de ofrecerse.
+        this.interviewOptions = data.options || null;
         this.messages.push({ role: 'assistant', content: data.reply });
         if (data.draft) {
           this.draft = data.draft;
@@ -763,6 +770,7 @@ export default {
             <InterviewPanel
               :messages="messages"
               :is-thinking="isThinking"
+              :options="interviewOptions"
               @send="sendMessage"
             />
           </section>

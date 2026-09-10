@@ -139,6 +139,9 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
       # editables: un nombre propuesto y equivocado se ve y se corrige; un campo
       # vacío frena a quien acaba de explicar en la conversación lo que ahí va.
       proposal: result.proposal,
+      # Las preguntas en forma de lista: la pantalla las muestra como botones, así
+      # se contesta con un clic en vez de reescribir el nombre de una etiqueta.
+      options: result.options,
       session_id: sesion&.id,
       # La identidad completa y no solo el id: con el id suelto, la pantalla
       # tendría que inventar las fechas del lado del cliente.
