@@ -117,13 +117,28 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
     end
 
     # El caso medido el 08/09/2026: falta el ":" y el motor lee cero ramas sin avisar.
+    # Va con la cuenta en español: el idioma del diagnóstico sale del idioma de la
+    # cuenta, y el factory crea cuentas en inglés (locale por defecto de Chatwoot).
     it 'diagnostica el carácter que falta, no solo que está mal' do
+      account.update!(locale: 'es')
       validar('@ruta(soporte #soporte: no puedo entrar) @buscar_articulo')
 
       expect(response.parsed_body['valid']).to be(false)
       hallazgo = response.parsed_body['blocking'].find { |f| f['code'] == 'route_line_unparsed' }
       expect(hallazgo['line']).to eq(1)
       expect(hallazgo['message']).to include('falta el ":"')
+    end
+
+    # El circuito completo del idioma, extremo a extremo: el mismo Entrenamiento roto,
+    # la misma ruta, y el diagnóstico cambia solo porque cambió el idioma de la cuenta.
+    # Es lo único que prueba que el around_action del BaseController llega hasta acá.
+    it 'y lo diagnostica en inglés si la cuenta está en inglés' do
+      account.update!(locale: 'en')
+      validar('@ruta(soporte #soporte: no puedo entrar) @buscar_articulo')
+
+      hallazgo = response.parsed_body['blocking'].find { |f| f['code'] == 'route_line_unparsed' }
+      expect(hallazgo['message']).to include('the ":"')
+      expect(hallazgo['message']).to include('Line 1')
     end
 
     it 'no revienta con un Entrenamiento vacío' do
@@ -243,6 +258,45 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       revisar
 
       expect(response.parsed_body.first['status']).to eq('conversational')
+    end
+  end
+
+  # ============================================================================
+  # PERMISOS: el módulo entero es solo para administradores
+  # ============================================================================
+  # Se recorren TODOS los endpoints, no una muestra. El gate es un único
+  # before_action sin `only:`, así que hoy alcanza — pero justamente por eso: el
+  # día que alguien agregue una acción y le ponga un `only:` al filtro, o meta un
+  # `skip_before_action`, el agujero no se ve en la revisión del diff. Acá sí.
+  describe 'todos los endpoints rechazan a un agente' do
+    let(:base) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant" }
+
+    # [método, camino] — espejo de `rails routes` para este namespace.
+    [
+      [:get,    'inventory'],
+      [:post,   'validate'],
+      [:post,   'interview'],
+      [:post,   'save'],
+      [:get,    'session'],
+      [:get,    'sessions'],
+      [:get,    'sessions/1'],
+      [:delete, 'sessions/1'],
+      [:get,    'audit'],
+      [:post,   'dry_run']
+    ].each do |verbo, camino|
+      it "#{verbo.to_s.upcase} #{camino}" do
+        process(verbo, "#{base}/#{camino}", headers: agent.create_new_auth_token, as: :json)
+
+        expect(response).to have_http_status(:unauthorized)
+      end
+    end
+
+    # El contrapeso: sin esto, un gate que rechazara a TODO el mundo pasaría la
+    # lista de arriba entera y nadie lo notaría hasta abrir la pantalla.
+    it 'y en cambio dejan entrar a un administrador' do
+      get "#{base}/inventory", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
     end
   end
 

@@ -4,6 +4,10 @@
 require 'rails_helper'
 
 RSpec.describe ContactTrackings::Assistant::AuditService do
+  # Los hallazgos se traducen con el idioma de la cuenta; este archivo asegura los
+  # textos en español, así que lo fija en vez de heredar el default de test (`en`).
+  around { |example| I18n.with_locale(:es) { example.run } }
+
   let(:account) { create(:account) }
 
   def agente(name, prompt)

@@ -6,6 +6,13 @@ require 'rails_helper'
 RSpec.describe ContactTrackings::Assistant::ValidatorService do
   let(:account) { create(:account) }
 
+  # Los mensajes se traducen (config/locales/tracking_assistant.*.yml) y el idioma
+  # sale de la cuenta. Este archivo asegura los textos EN ESPAÑOL, así que fija el
+  # idioma en vez de heredar el default del entorno de test — que es `en` y hacía
+  # fallar todas las aserciones de texto sin que el comprobador tuviera nada malo.
+  # El inglés tiene su propio bloque al final.
+  around { |example| I18n.with_locale(:es) { example.run } }
+
   def source(source_type, name)
     KnowledgeSource.create!(account: account, source_type: source_type, name: name, status: 'active')
   end

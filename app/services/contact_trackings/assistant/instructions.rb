@@ -13,7 +13,39 @@
 
 class ContactTrackings::Assistant::Instructions
   def self.call(one_shot:, max_turns:)
-    one_shot ? one_shot_section : interview_section(max_turns)
+    [one_shot ? one_shot_section : interview_section(max_turns), language_section].join("\n\n")
+  end
+
+  # ⚠ QUÉ SE TRADUCE Y QUÉ NO — la distinción es la que hace que esto no rompa nada.
+  #
+  #   NO se traduce la GRAMÁTICA: @ruta, @ruta_por_defecto, @crear_ticket,
+  #   @buscar_predefinidas, tipo=, la flecha ->. El parser los busca con regex fijas
+  #   (RouteMap::LINE_RE, Directives::SEARCH_DIRECTIVES); un @route(...) no lo lee
+  #   nadie y el agente queda inerte, en silencio, que es justo la falla que este
+  #   módulo vino a eliminar.
+  #
+  #   SÍ se traduce todo lo que leen personas: el mensaje del asistente, la propuesta
+  #   de nombre/objetivo, y la PROSA del Entrenamiento — que es lo que el agente le
+  #   termina diciendo a los clientes de la cuenta. Los rótulos de sección ([ROL],
+  #   [ESTILO]...) son convención, no los parsea nadie (verificado), así que también
+  #   pueden ir en el idioma de la cuenta.
+  def self.language_section
+    idioma = ContactTrackings::Assistant::Language.name_for
+
+    <<~IDIOMA.strip
+      ═══ IDIOMA ═══
+      Escribí en #{idioma}: el "mensaje", la "propuesta" y la PROSA del Entrenamiento (el rol, el
+      estilo, las prohibiciones, lo que el agente le va a decir a los clientes).
+
+      NO traduzcas nunca la parte que parsea el sistema. Estas piezas van SIEMPRE tal cual, aunque
+      el resto esté en otro idioma:
+        @ruta(  @ruta_por_defecto:  @crear_ticket(  tipo=  prioridad=  ->
+        y el nombre exacto de cada directiva de fuente que te dio el inventario.
+      Traducirlas hace que el motor no las reconozca y el agente no ejecuta nada, sin avisar.
+
+      Los NOMBRES de rama y las ETIQUETAS (#soporte) son identificadores: elegilos en el idioma que
+      quieras pero sin espacios ni acentos, y usá los mismos en todo el Entrenamiento.
+    IDIOMA
   end
 
   def self.interview_section(max_turns)

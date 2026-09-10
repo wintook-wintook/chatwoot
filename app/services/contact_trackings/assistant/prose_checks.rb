@@ -42,6 +42,11 @@ class ContactTrackings::Assistant::ProseChecks
 
   attr_reader :prose, :map, :findings
 
+  # Mensajes en config/locales/tracking_assistant.*.yml — ver Assistant::Language.
+  def t(key, **args)
+    I18n.t("tracking_assistant.#{key}", locale: ContactTrackings::Assistant::Language.resolve, **args)
+  end
+
   # ── B3 ──────────────────────────────────────────────────────────────────────
   # El blanqueo alcanza SOLO a la prosa del camino conversacional: se evalúa sobre
   # el texto ya sin líneas @ruta y alimenta generate_and_send_conversational_reply.
@@ -53,17 +58,14 @@ class ContactTrackings::Assistant::ProseChecks
     return if match.nil?
 
     findings.add(:blocking, :loose_directive,
-                 "La directiva #{match[0]} está suelta en la prosa, fuera de una línea @ruta. El motor " \
-                 "borra la prosa entera cuando encuentra una así, y #{blanking_consequence}. " \
-                 'Las directivas van únicamente dentro de las líneas @ruta.',
+                 t('findings.loose_directive', directive: match[0], consequence: blanking_consequence),
                  wrote: match[0])
   end
 
   def blanking_consequence
-    return 'esa prosa es toda la instrucción que tiene el agente: se queda sin ninguna' if map.routes.empty?
+    return t('findings.blanking_no_routes') if map.routes.empty?
 
-    'el agente pierde sus instrucciones en los turnos que no resuelve ninguna rama ' \
-      '(las ramas en sí siguen funcionando)'
+    t('findings.blanking_with_routes')
   end
 
   # ── D6 ──────────────────────────────────────────────────────────────────────
@@ -74,8 +76,7 @@ class ContactTrackings::Assistant::ProseChecks
     return if nombres.empty?
 
     findings.add(:degrading, :attachment_with_source,
-                 "El adjunto {{#{nombres.first}}} no se resuelve cuando la rama consulta una fuente: sale " \
-                 'como texto literal en el mensaje al cliente. Los adjuntos solo funcionan en ramas sin fuente.',
+                 t('findings.attachment_with_source', name: nombres.first),
                  wrote: "{{#{nombres.first}}}")
   end
 
@@ -86,8 +87,6 @@ class ContactTrackings::Assistant::ProseChecks
     # Sin ninguna sección no es que "falten": es que la prosa no sigue el formato.
     return if faltan.size == SECTIONS.size
 
-    findings.add(:cosmetic, :missing_prose_sections,
-                 "A la prosa le faltan estas secciones: #{faltan.join(' ')}. No rompen nada, pero cada una " \
-                 'cubre una decisión que si no se escribe, el modelo la toma por su cuenta.')
+    findings.add(:cosmetic, :missing_prose_sections, t('findings.missing_prose_sections', sections: faltan.join(' ')))
   end
 end

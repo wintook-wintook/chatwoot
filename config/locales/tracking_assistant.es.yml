@@ -1,0 +1,90 @@
+# proyecto@asistente_agentes_ia — mensajes del comprobador
+#
+# ⚠ ESTOS TEXTOS NO SON COSMÉTICA.
+#   Van a dos lectores: la persona que corrige el Entrenamiento en el panel, y el
+#   MODELO, que los recibe textuales en el bucle de corrección
+#   (InterviewService#repair_prompt). Medido el 08/09/2026 con el mismo texto roto:
+#   con un veredicto pelado ("no hay ninguna línea @ruta") se reparaba 1 de 3 veces;
+#   nombrando el carácter que falta y su línea, 3 de 3.
+#
+#   Cada mensaje tiene que decir CUÁL ES LA CONSECUENCIA, no solo que algo está mal.
+#   Acortarlos "para que se vean más limpios" es lo que los vuelve inútiles.
+#
+# ⚠ Lo que va entre @ y paréntesis NO se traduce: @ruta, @crear_ticket,
+#   @buscar_predefinidas son literales que el parser busca con regex fijas.
+es:
+  tracking_assistant:
+    unparsed:
+      no_closing_paren: 'falta el paréntesis de cierre del @ruta('
+      no_colon: 'falta el ":" inmediatamente después del paréntesis de cierre'
+      bad_name: 'el nombre de la rama solo admite letras, números, guion y guion bajo, sin espacios ni acentos'
+      generic: 'no respeta la forma @ruta(nombre #etiqueta: descripción): fuente'
+    repair:
+      header: 'El comprobador del motor rechazó ese Entrenamiento:'
+      footer: Corregí exactamente eso y devolvé el Entrenamiento completo de nuevo.
+      wrote: 'Escribiste:'
+      missing_mode: >-
+        Entregaste el Entrenamiento sin preguntar si el agente CONTESTA primero y abre el caso solo
+        si no pudo resolver, o si SOLO recauda datos y abre el caso siempre. Son dos agentes
+        distintos y no se deduce del pedido. No entregues nada todavía: hacé esa pregunta, con las
+        dos opciones, y devolvé "entrenamiento": null.
+    findings:
+      route_line_unparsed: >-
+        Línea %{line}: el motor NO la reconoce como rama — %{reason}. El patrón exacto es
+        @ruta(nombre #etiqueta: descripción): fuente -> escalamiento
+      no_routes: >-
+        El motor va a leer 0 ramas: no hay ninguna línea @ruta. Sin ramas, todos los mensajes
+        caen al camino conversacional y no se consulta ninguna fuente.
+      unknown_source: >-
+        La rama '%{route}' declara una fuente que el motor no reconoce. Se ignora y la rama va a
+        contestar sin consultar nada.
+      source_not_found: >-
+        La rama '%{route}' apunta a la fuente "%{name}", que no existe en esta cuenta. El motor no
+        va a fallar: va a buscar y no encontrar nunca. Las que sí existen: %{available}.
+      source_none_loaded: (ninguna cargada)
+      action_trapped_in_source: >-
+        En la rama '%{route}' la directiva %{directive} quedó del lado de la fuente, no del
+        escalamiento: le falta la flecha "->" o está mal escrita. Tal como está, esa acción no se
+        ejecuta nunca. La forma es: fuente -> @crear_ticket(...)
+      case_type_not_found: >-
+        @crear_ticket(tipo=%{type}) — ese tipo de caso no existe en la cuenta. Los que existen: %{available}.
+      case_type_none_created: (ninguno creado)
+      default_route_unknown: >-
+        @ruta_por_defecto apunta a '%{declared}', que no es ninguna de las ramas declaradas (%{routes}).
+      default_route_no_routes: no hay ramas
+      route_without_description: >-
+        La rama '%{route}' no tiene descripción. La descripción es LO ÚNICO que el clasificador usa
+        para decidir a qué rama va un mensaje: sin ella, esta rama casi nunca se va a elegir.
+        Escribila como lista de situaciones, en las palabras del cliente.
+      label_not_found: >-
+        La etiqueta %{tag} de la rama '%{route}' no existe en la cuenta, así que no va a disparar
+        ninguna automatización. Hay que crearla en Etiquetas o usar una de las existentes: %{available}.
+      label_none_created: (no hay etiquetas creadas)
+      erp_directive_not_isolated: >-
+        Hay una directiva {{consulta:}} conviviendo con ramas o con prosa. El motor manda el
+        Entrenamiento ENTERO interpolado como mensaje al cliente: con {{consulta:}} el Entrenamiento
+        es la plantilla del mensaje, no puede llevar nada más.
+      # ⚠ Corregido el 10/09/2026 contra el motor real. Este mensaje decía que las ramas sin
+      # flecha "dejan de abrir casos", y es al revés: el job las manda a
+      # try_create_ticket(directive: nil), que cae al prompt ENTERO y encuentra ahí el
+      # @crear_ticket de OTRA rama. Abren caso, con el tipo ajeno, y ANTES de la fuente.
+      mixed_escalation_regime: >-
+        Hay ramas con escalamiento y ramas sin él (%{routes}). Eso NO las deja sin caso: el motor
+        busca la directiva en el Entrenamiento entero, así que esas ramas van a abrir caso con el
+        @crear_ticket de otra rama —incluido su tipo— y además lo van a evaluar ANTES de consultar
+        su fuente, no después. Si tienen que abrir caso, dales su propia flecha con su tipo; si no
+        tienen que abrirlo, hoy no hay forma de evitarlo salvo sacar todo @crear_ticket suelto.
+      loose_directive: >-
+        La directiva %{directive} está suelta en la prosa, fuera de una línea @ruta. El motor borra
+        la prosa entera cuando encuentra una así, y %{consequence}. Las directivas van únicamente
+        dentro de las líneas @ruta.
+      blanking_no_routes: 'esa prosa es toda la instrucción que tiene el agente: se queda sin ninguna'
+      blanking_with_routes: >-
+        el agente pierde sus instrucciones en los turnos que no resuelve ninguna rama (las ramas en
+        sí siguen funcionando)
+      attachment_with_source: >-
+        El adjunto {{%{name}}} no se resuelve cuando la rama consulta una fuente: sale como texto
+        literal en el mensaje al cliente. Los adjuntos solo funcionan en ramas sin fuente.
+      missing_prose_sections: >-
+        A la prosa le faltan estas secciones: %{sections}. No rompen nada, pero cada una cubre una
+        decisión que si no se escribe, el modelo la toma por su cuenta.

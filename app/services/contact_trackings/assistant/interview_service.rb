@@ -102,7 +102,7 @@ class ContactTrackings::Assistant::InterviewService
   def ask_missing_mode(reply, draft)
     history = conversation + [
       { role: 'assistant', content: { mensaje: reply['mensaje'], entrenamiento: draft }.to_json },
-      { role: 'user', content: MISSING_MODE_PROMPT }
+      { role: 'user', content: t('repair.missing_mode') }
     ]
 
     corrected = ask(history)
@@ -113,14 +113,6 @@ class ContactTrackings::Assistant::InterviewService
 
     repair(corrected['mensaje'], nuevo, self.class.proposal_from(corrected))
   end
-
-  MISSING_MODE_PROMPT = <<~AVISO.strip
-    Entregaste el Entrenamiento sin preguntar si el agente CONTESTA primero y abre el caso solo
-    si no pudo resolver, o si SOLO recauda datos y abre el caso siempre. Son dos agentes
-    distintos y no se deduce del pedido.
-    No entregues nada todavía: hacé esa pregunta, con las dos opciones, y devolvé
-    "entrenamiento": null.
-  AVISO
 
   # ── el bucle ────────────────────────────────────────────────────────────────
   def repair(message, draft, proposal = nil)
@@ -149,12 +141,17 @@ class ContactTrackings::Assistant::InterviewService
   # se entiendan mejor" es justo lo que los vuelve inútiles.
   def repair_prompt(blocking)
     detalle = blocking.map do |finding|
-      linea = finding[:wrote].present? ? "\n  Escribiste: #{finding[:wrote]}" : ''
+      linea = finding[:wrote].present? ? "\n  #{t('repair.wrote')} #{finding[:wrote]}" : ''
       "- #{finding[:message]}#{linea}"
     end
 
-    "El comprobador del motor rechazó ese Entrenamiento:\n#{detalle.join("\n")}\n\n" \
-      'Corregí exactamente eso y devolvé el Entrenamiento completo de nuevo.'
+    "#{t('repair.header')}\n#{detalle.join("\n")}\n\n#{t('repair.footer')}"
+  end
+
+  # Los hallazgos ya vienen traducidos; el texto que los envuelve tiene que ir en el
+  # mismo idioma o el modelo recibe un prompt mezclado.
+  def t(key, **args)
+    I18n.t("tracking_assistant.#{key}", locale: ContactTrackings::Assistant::Language.resolve, **args)
   end
 
   def validate(draft)

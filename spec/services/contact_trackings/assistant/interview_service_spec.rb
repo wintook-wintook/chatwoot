@@ -4,6 +4,11 @@
 require 'rails_helper'
 
 RSpec.describe ContactTrackings::Assistant::InterviewService do
+  # El prompt de corrección se traduce con la cuenta (config/locales/tracking_assistant.*).
+  # Este archivo asegura los textos en español, así que fija el idioma en vez de heredar
+  # el default del entorno de test, que es `en`.
+  around { |example| I18n.with_locale(:es) { example.run } }
+
   let(:account) { create(:account) }
   let(:url) { described_class::API_URL }
   let(:entrenamiento_ok) do

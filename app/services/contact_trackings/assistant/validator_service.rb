@@ -75,6 +75,13 @@ class ContactTrackings::Assistant::ValidatorService
 
   delegate :add, to: :findings
 
+  # Los mensajes viven en config/locales/tracking_assistant.*.yml. El idioma se
+  # resuelve a uno de los dos soportados, sin depender del fallback de Rails (que
+  # solo está configurado en production y staging — ver Assistant::Language).
+  def t(key, **args)
+    I18n.t("tracking_assistant.#{key}", locale: ContactTrackings::Assistant::Language.resolve, **args)
+  end
+
   # ── B2 · una línea que quiso ser @ruta y el motor no reconoce ────────────────
   # Va PRIMERO porque es la falla más cara: el texto se ve perfecto y el motor lee
   # cero ramas. Y es la que exige el diagnóstico más fino — decir "falta un @ruta"
@@ -86,20 +93,19 @@ class ContactTrackings::Assistant::ValidatorService
       next unless line.lstrip.start_with?('@ruta(')
       next if line.match?(ContactTrackings::RouteMap::LINE_RE)
 
-      add(:blocking, :route_line_unparsed, "Línea #{index + 1}: el motor NO la reconoce como rama — #{unparsed_reason(line)}. " \
-                                           'El patrón exacto es @ruta(nombre #etiqueta: descripción): fuente -> escalamiento',
+      add(:blocking, :route_line_unparsed,
+          t('findings.route_line_unparsed', line: index + 1, reason: unparsed_reason(line)),
           line: index + 1, wrote: line.strip)
     end
   end
 
   def unparsed_reason(line)
-    return 'falta el paréntesis de cierre del @ruta(' unless line.include?(')')
+    return t('unparsed.no_closing_paren') unless line.include?(')')
     # El caso que se midió: `@ruta(...)` seguido de la fuente sin los dos puntos.
-    return 'falta el ":" inmediatamente después del paréntesis de cierre' if line.match?(/@ruta\([^)]*\)\s*[^:\s]/)
-    return 'el nombre de la rama solo admite letras, números, guion y guion bajo, sin espacios ni acentos' \
-      if line.match?(/@ruta\(\s*[^a-z0-9_\-#:)]/i)
+    return t('unparsed.no_colon') if line.match?(/@ruta\([^)]*\)\s*[^:\s]/)
+    return t('unparsed.bad_name') if line.match?(/@ruta\(\s*[^a-z0-9_\-#:)]/i)
 
-    'no respeta la forma @ruta(nombre #etiqueta: descripción): fuente'
+    t('unparsed.generic')
   end
 
   # Comprobar la configuración contra lo que la cuenta TIENE es otro tipo de
@@ -121,9 +127,7 @@ class ContactTrackings::Assistant::ValidatorService
     # Si ya se explicó línea por línea por qué no parsean, no se repite el genérico.
     return if findings.code?(:route_line_unparsed)
 
-    add(:blocking, :no_routes,
-        'El motor va a leer 0 ramas: no hay ninguna línea @ruta. Sin ramas, todos los mensajes ' \
-        'caen al camino conversacional y no se consulta ninguna fuente.')
+    add(:blocking, :no_routes, t('findings.no_routes'))
   end
 
   # ── B4 y B5 · la fuente de cada rama ────────────────────────────────────────
@@ -133,9 +137,8 @@ class ContactTrackings::Assistant::ValidatorService
 
       detected = KnowledgeBase::Directives.detect(route.directive)
       if detected.nil?
-        add(:blocking, :unknown_source,
-            "La rama '#{route.name}' declara una fuente que el motor no reconoce. Se ignora y la " \
-            'rama va a contestar sin consultar nada.', wrote: route.directive)
+        add(:blocking, :unknown_source, t('findings.unknown_source', route: route.name),
+            wrote: route.directive)
         next
       end
 
@@ -152,9 +155,8 @@ class ContactTrackings::Assistant::ValidatorService
 
     disponibles = account.knowledge_sources.active.map(&:name)
     add(:blocking, :source_not_found,
-        "La rama '#{route.name}' apunta a la fuente \"#{name}\", que no existe en esta cuenta. " \
-        'El motor no va a fallar: va a buscar y no encontrar nunca. Las que sí existen: ' \
-        "#{disponibles.any? ? disponibles.join(' · ') : '(ninguna cargada)'}.",
+        t('findings.source_not_found', route: route.name, name: name,
+                                       available: listado(disponibles, 'findings.source_none_loaded')),
         wrote: route.directive)
   end
 
@@ -172,9 +174,7 @@ class ContactTrackings::Assistant::ValidatorService
       next if match.nil?
 
       add(:blocking, :action_trapped_in_source,
-          "En la rama '#{route.name}' la directiva #{match[0]} quedó del lado de la fuente, no del " \
-          'escalamiento: le falta la flecha "->" o está mal escrita. Tal como está, esa acción no se ' \
-          'ejecuta nunca. La forma es: fuente -> @crear_ticket(...)',
+          t('findings.action_trapped_in_source', route: route.name, directive: match[0]),
           wrote: route.directive)
     end
   end
@@ -188,10 +188,16 @@ class ContactTrackings::Assistant::ValidatorService
       next if tipo.blank? || tipos.any? { |t| t.casecmp?(tipo) }
 
       add(:blocking, :case_type_not_found,
-          "@crear_ticket(tipo=#{tipo}) — ese tipo de caso no existe en la cuenta. Los que existen: " \
-          "#{tipos.any? ? tipos.join(' · ') : '(ninguno creado)'}.",
+          t('findings.case_type_not_found', type: tipo, available: listado(tipos, 'findings.case_type_none_created')),
           wrote: "tipo=#{tipo}")
     end
+  end
+
+  # "Los que existen: A · B" o, si no hay ninguno, el texto que lo dice. Sin esto,
+  # el aviso termina en "Los que existen: ." y quien lee no sabe si es que no hay
+  # ninguno o si el comprobador se quedó a medias.
+  def listado(valores, clave_vacia, sep: ' · ')
+    valores.presence&.join(sep) || t(clave_vacia)
   end
 
   # ── B7 · la rama por defecto ────────────────────────────────────────────────
@@ -201,8 +207,8 @@ class ContactTrackings::Assistant::ValidatorService
     return if map.names.include?(declared)
 
     add(:blocking, :default_route_unknown,
-        "@ruta_por_defecto apunta a '#{declared}', que no es ninguna de las ramas declaradas " \
-        "(#{map.names.any? ? map.names.join(', ') : 'no hay ramas'}).",
+        t('findings.default_route_unknown', declared: declared,
+                                            routes: listado(map.names, 'findings.default_route_no_routes', sep: ', ')),
         wrote: "@ruta_por_defecto: #{declared}")
   end
 
@@ -212,9 +218,7 @@ class ContactTrackings::Assistant::ValidatorService
       next if route.description.present?
 
       add(:degrading, :route_without_description,
-          "La rama '#{route.name}' no tiene descripción. La descripción es LO ÚNICO que el " \
-          'clasificador usa para decidir a qué rama va un mensaje: sin ella, esta rama casi nunca ' \
-          'se va a elegir. Escribila como lista de situaciones, en las palabras del cliente.',
+          t('findings.route_without_description', route: route.name),
           wrote: "@ruta(#{route.name}...)")
     end
   end
@@ -228,9 +232,8 @@ class ContactTrackings::Assistant::ValidatorService
       next if existentes.any? { |t| t.casecmp?(route.tag) }
 
       add(:degrading, :label_not_found,
-          "La etiqueta #{route.hashtag} de la rama '#{route.name}' no existe en la cuenta, así que " \
-          'no va a disparar ninguna automatización. Hay que crearla en Etiquetas o usar una de las ' \
-          "existentes: #{existentes.any? ? existentes.join(' · ') : '(no hay etiquetas creadas)'}.",
+          t('findings.label_not_found', tag: route.hashtag, route: route.name,
+                                        available: listado(existentes, 'findings.label_none_created')),
           wrote: route.hashtag)
     end
   end
@@ -244,10 +247,7 @@ class ContactTrackings::Assistant::ValidatorService
     resto = ContactTrackings::RouteMap.strip(text).gsub(ExternalDb::ConsultaDirectiveRenderer::DIRECTIVE, '').strip
     return if map.routes.empty? && resto.blank?
 
-    add(:degrading, :erp_directive_not_isolated,
-        'Hay una directiva {{consulta:}} conviviendo con ramas o con prosa. El motor manda el ' \
-        'Entrenamiento ENTERO interpolado como mensaje al cliente: con {{consulta:}} el Entrenamiento ' \
-        'es la plantilla del mensaje, no puede llevar nada más.')
+    add(:degrading, :erp_directive_not_isolated, t('findings.erp_directive_not_isolated'))
   end
 
   # ── D5 · régimen de escalamiento mixto ──────────────────────────────────────
@@ -260,8 +260,6 @@ class ContactTrackings::Assistant::ValidatorService
     return if sin_flecha.empty?
 
     add(:degrading, :mixed_escalation_regime,
-        "Hay ramas con escalamiento y ramas sin él (#{sin_flecha.join(', ')}). En cuanto UNA rama " \
-        'lleva flecha, las que no la llevan dejan de abrir casos — incluso si hay un @crear_ticket ' \
-        'suelto al final. Si esas ramas también tienen que abrir caso, hay que darles su propia flecha.')
+        t('findings.mixed_escalation_regime', routes: sin_flecha.join(', ')))
   end
 end

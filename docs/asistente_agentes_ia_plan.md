@@ -947,10 +947,58 @@ bloquea.
 | # | Decisión | Opciones |
 |---|---|---|
 | 1 | **Frases reales de clientes en el prompt** | ¿cuántos mensajes? ¿de toda la cuenta o del inbox elegido? ¿se anonimizan? Van a OpenAI: hay que decidirlo a conciencia |
-| 2 | **Qué pasa con el botón viejo (F7)** | apuntarlo al motor nuevo (recomendado) · dejarlo · sacarlo y enlazar al asistente |
-| 3 | **Permisos** | ¿solo `administrator`, o también `agent`? Hoy `/tracking-dashboard` deja entrar a ambos |
-| 4 | **Versionado del Entrenamiento** | columna `previous_complementary_prompt` (simple) vs. tabla de versiones (completo) |
-| 5 | **El asistente en inglés** | el contrato y la entrevista están pensados en español; ¿se traduce o queda ES? |
+| 2 | ~~**Qué pasa con el botón viejo (F7)**~~ | ✅ **RESUELTA: apunta al motor nuevo.** `generate_prompt_with_ai` borrado |
+| 3 | ~~**Permisos**~~ | ✅ **RESUELTA: solo `administrator`.** El inventario expone mensajes reales de clientes, `save` reemplaza un agente en producción y la entrevista gasta tokens de la cuenta. Un spec recorre los 10 endpoints y exige 401 para un agente |
+| 4 | ~~**Versionado del Entrenamiento**~~ | ✅ **RESUELTA: la simple**, columna `previous_complementary_prompt` |
+| 5 | ~~**El asistente en inglés**~~ | ✅ **RESUELTA (10/09/2026): las dos.** Ver abajo |
+
+### 13.3 El Asistente en dos idiomas (resuelto 10/09/2026)
+
+El idioma sale del **idioma de la cuenta** (`account.locale`), el mismo que la persona
+ve en el resto del dashboard. No hace falta configurar nada: el
+`around_action :switch_locale_using_account_locale` del `BaseController` ya deja
+`I18n.locale` puesto en cada acción del Asistente.
+
+**La regla que gobierna qué se traduce:**
+
+```
+  ┌──────────────────────────────────────────┬─────────────────────────────────┐
+  │  LO LEEN PERSONAS  → se traduce          │  LO PARSEA EL MOTOR → jamás      │
+  ├──────────────────────────────────────────┼─────────────────────────────────┤
+  │  los mensajes del comprobador            │  @ruta(   @ruta_por_defecto:     │
+  │  el mensaje del asistente                │  @crear_ticket(   tipo=          │
+  │  nombre y objetivo propuestos            │  la flecha ->                    │
+  │  la PROSA del Entrenamiento              │  el nombre de cada directiva     │
+  │  (lo que el agente le dice al cliente)   │  de fuente del inventario        │
+  └──────────────────────────────────────────┴─────────────────────────────────┘
+```
+
+Un `@route(...)` no lo reconoce ninguna regex: el agente quedaría inerte, en silencio
+— la falla exacta que este módulo vino a eliminar. Por eso hay un spec que, en los dos
+idiomas, exige que esos literales sigan intactos en el prompt.
+
+**Dos decisiones dentro de esta:**
+
+1. **Solo español e inglés**, no los ~40 idiomas de Chatwoot. Cada idioma obliga a
+   traducir los mensajes del comprobador, y esos no son cosmética: son lo que decide
+   si un Entrenamiento roto se repara (1/3 con veredicto pelado, 3/3 con diagnóstico).
+   Una traducción floja rompe el bucle de corrección sin que se note. Una cuenta en
+   otro idioma cae a español y ve el panel completo — nunca `translation missing`, que
+   es lo que pasaría confiando en el fallback de Rails (solo configurado en production
+   y staging, no en desarrollo).
+
+2. **El meta-prompt sigue en español.** El contrato y las instrucciones que recibe el
+   modelo son texto de ingeniería, medido y afinado; se le agrega una directiva
+   explícita de idioma para la SALIDA. Traducir un prompt afinado sin volver a medirlo
+   arriesga justo lo que sostiene el módulo, y duplicaría el mantenimiento del texto
+   más delicado que hay acá.
+
+**Corrección encontrada al hacer esto.** El mensaje D5 (régimen de escalamiento mixto)
+decía que una rama sin flecha *"deja de abrir casos"*. Es al revés, verificado contra
+`Cases::TicketCreatorService`: el job la manda a `try_create_ticket(directive: nil)`,
+que cae al Entrenamiento ENTERO y encuentra ahí el `@crear_ticket` de otra rama. Abre
+caso, **con el tipo de esa otra rama**, y **antes** de consultar su fuente. El mensaje
+quedó reescrito en los dos idiomas y hay un spec que lo ata al comportamiento real.
 
 ---
 
