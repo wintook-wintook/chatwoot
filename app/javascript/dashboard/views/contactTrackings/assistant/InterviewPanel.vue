@@ -203,9 +203,10 @@ export default {
          derecha. Apilados —textarea arriba, botón de ancho completo abajo— se
          llevaban cuatro líneas de alto de la columna donde vive el hilo, que es
          lo único que hay que leer acá.
-         items-end alinea el botón con la base del textarea; resize-none impide
-         que arrastrarlo le coma alto a la conversación. -->
-    <div class="flex items-end gap-2 pt-3 shrink-0">
+         items-stretch le da al botón el ALTO del textarea: alineado solo a la
+         base quedaba un botón chico flotando junto a una caja de dos renglones.
+         resize-none impide que arrastrar el textarea le coma alto al hilo. -->
+    <div class="flex items-stretch gap-2 pt-3 shrink-0">
       <textarea
         ref="composer"
         v-model="input"

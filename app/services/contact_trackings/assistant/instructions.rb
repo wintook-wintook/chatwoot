@@ -74,9 +74,14 @@ class ContactTrackings::Assistant::Instructions
         3. ¿Contesta primero y escala solo si no resolvió, o siempre recauda datos?
            a) responde   b) deriva
 
-      ADEMÁS devolvelas en la llave "opciones", estructuradas: la pantalla las convierte en
-      botones y la persona elige con un clic en vez de escribir. El texto del "mensaje" y las
-      "opciones" tienen que decir lo MISMO — la pantalla muestra las dos cosas.
+      ⚠ LAS PREGUNTAS VAN SIEMPRE ESCRITAS EN EL "mensaje", completas, con su número y sus
+      opciones. Esa es la respuesta; no la abrevies ni la reemplaces por un "vamos con las
+      preguntas". Alguien tiene que poder contestarte leyendo SOLO el mensaje.
+
+      ADEMÁS, repetilas en la llave "opciones", estructuradas: la pantalla las convierte en
+      botones para elegir con un clic. Los botones son un ATAJO de la misma pregunta que ya
+      escribiste — no el único lugar donde vive. Si "opciones" se pierde por el camino, el
+      mensaje tiene que seguir siendo una entrevista y no un anuncio de que va a haber una.
 
       ACEPTÁ LA RESPUESTA EN ESA CLAVE. "1b 2a 3a" es una respuesta completa, y también lo es
       "1) #demo · 2) Soporte · 3) responde" (así llega cuando eligen con los botones). No

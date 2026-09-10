@@ -1263,6 +1263,19 @@ export default {
             />
           </template>
         </div>
+        <!-- GUARDAR — vive fuera de los paneles porque es la salida de la
+             pestaña Asistente, no de uno de sus bloques. Queda apagado mientras
+             el comprobador encuentre algo bloqueante: guardar un agente que no
+             ejecuta nada es exactamente el problema que este módulo vino a
+             arreglar. -->
+        <div
+          v-show="activeTab === 0"
+          class="flex justify-end gap-2 pt-4 shrink-0"
+        >
+          <woot-button :is-disabled="!canSave" @click="showSaveModal = true">
+            {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CTA') }}
+          </woot-button>
+        </div>
       </template>
     </div>
 
