@@ -222,8 +222,13 @@ class CaseTicket < ApplicationRecord
     }
   end
 
-  def transition!(new_status, actor: nil, reason: nil, closure: nil)
-    raise "Transición inválida: #{status} → #{new_status}" unless can_transition_to?(new_status)
+  # `force: true` — usado por el movimiento libre entre columnas personalizadas
+  # (Cases::TicketMove / case_tickets_controller#move_across_state): salta la
+  # validación de "un salto" de VALID_TRANSITIONS porque el orden de columnas que
+  # configuró el admin es el flujo real, no la espina ITIL fija. Todo lo demás
+  # (documentar cierre, timestamps, pausa de SLA, evento) sigue aplicando igual.
+  def transition!(new_status, actor: nil, reason: nil, closure: nil, force: false)
+    raise "Transición inválida: #{status} → #{new_status}" unless force || can_transition_to?(new_status)
     # @tickets_cases 2F — un cambio que requiere aprobación no puede ejecutarse sin aprobarse.
     if blocked_by_change_approval?(new_status)
       raise 'El cambio requiere aprobación antes de pasar a ejecución'

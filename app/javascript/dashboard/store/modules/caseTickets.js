@@ -371,10 +371,14 @@ export const actions = {
   },
 
   // @tickets_cases — mueve un ticket a otra columna del Kanban por tipo (A+).
-  async moveTicketColumn({ commit }, { ticketId, caseTypeColumnId }) {
+  async moveTicketColumn({ commit }, { ticketId, caseTypeColumnId, closure }) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {
-      const { data } = await caseTicketsAPI.move(ticketId, caseTypeColumnId);
+      const { data } = await caseTicketsAPI.move(
+        ticketId,
+        caseTypeColumnId,
+        closure
+      );
       return data;
     } finally {
       commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });

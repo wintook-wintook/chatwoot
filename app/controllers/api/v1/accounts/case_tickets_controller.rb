@@ -257,10 +257,17 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
   # PATCH /api/v1/accounts/:account_id/case_tickets/:id/move
   # @tickets_cases — mueve un ticket a otra columna del Kanban (Opción A+).
+  # El orden de columnas que configuró el admin ES el flujo de trabajo real: moverse
+  # a la siguiente columna funciona independientemente de si la espina ITIL de 13
+  # estados lo permitía como salto directo.
   #   Rama A (mismo estado): la columna destino ya cubre el status actual →
   #     solo cambia el puntero, `status` intacto, siempre legal.
-  #   Rama B (otro estado): elige el primer status de la columna destino que sea
-  #     alcanzable por VALID_TRANSITIONS → cambia status Y puntero juntos.
+  #   Rama B (otro estado): un caso CANCELADO nunca cambia de status (terminal a
+  #     propósito). Si no, se prefiere un status de la columna alcanzable en un salto
+  #     de VALID_TRANSITIONS y, si ninguno lo es, se usa el primero configurado en la
+  #     columna — el movimiento por columna ya no depende de esa tabla fija. Si el
+  #     status resuelto es `closed` sin datos de cierre, se rechaza con
+  #     `requires_closure: true` para que el front pida el modal de cierre.
   def move
     column = CaseTypeColumn.find_by!(id: params[:case_type_column_id], account_id: Current.account.id)
 
@@ -274,7 +281,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       move_across_state(column)
     end
 
-    render json: { case_ticket: ticket_json(@ticket.reload) }
+    render json: { case_ticket: ticket_json(@ticket.reload) } unless performed?
   rescue ActiveRecord::RecordNotFound
     render json: { error: 'Columna no encontrada' }, status: :not_found
   rescue StandardError => e
@@ -767,15 +774,24 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     )
   end
 
-  # @tickets_cases — Rama B: la columna destino es de otro estado. Se elige el
-  # primer status de la columna alcanzable por VALID_TRANSITIONS y se cambian
-  # status y puntero juntos. Si ninguno es alcanzable → se rechaza (como hoy).
+  # @tickets_cases — Rama B: la columna destino es de otro estado. Un caso CANCELADO
+  # nunca cambia de status (terminal a propósito). Si no, se prefiere un status de la
+  # columna alcanzable en un salto de VALID_TRANSITIONS y, si ninguno lo es, se usa el
+  # primero configurado en la columna — el movimiento por columna ya no depende de esa
+  # tabla fija (`force: true`): el orden de columnas que configuró el admin manda. Si
+  # el status resuelto es `closed` sin datos de cierre, renderiza el rechazo con
+  # `requires_closure: true` para que el front pida el modal de cierre.
   def move_across_state(column)
-    target = column.statuses.find { |s| @ticket.can_transition_to?(s) }
-    raise "Transición inválida: #{@ticket.status} → columna «#{column.label}»" if target.nil?
+    raise 'Un caso cancelado no puede moverse a otra etapa' if @ticket.cancelled?
+
+    target = column.statuses.find { |s| @ticket.can_transition_to?(s) } || column.statuses.first
+    if target == 'closed' && closure_params.blank?
+      return render json: { error: 'Para cerrar el caso hay que documentar el cierre', requires_closure: true },
+                    status: :unprocessable_entity
+    end
 
     ActiveRecord::Base.transaction do
-      @ticket.transition!(target, actor: current_user)
+      @ticket.transition!(target, actor: current_user, closure: closure_params, force: true)
       # transition! disparó el resync (puntero → NULL); lo fijamos a la columna destino.
       @ticket.update!(case_type_column_id: column.id)
     end
