@@ -334,9 +334,14 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
                               choices: ['#demo', '#tracking', 'otra'] }])
     end
 
+    # El tope se calcula desde la constante y no con un número escrito a mano: al
+    # subirlo de 6 a 10 este ejemplo se quedó pasando 9 —por debajo del tope— y
+    # dejó de probar nada. Atado a la constante, sigue probando el recorte aunque
+    # el tope cambie.
     it 'recorta la cantidad de preguntas y de botones' do
+      de_mas = described_class::MAX_QUESTIONS + 3
       salida = described_class.options_from(
-        'opciones' => Array.new(9) { |i| { 'pregunta' => "p#{i}", 'elecciones' => Array.new(12) { |j| "o#{j}" } } }
+        'opciones' => Array.new(de_mas) { |i| { 'pregunta' => "p#{i}", 'elecciones' => Array.new(12) { |j| "o#{j}" } } }
       )
 
       expect(salida.size).to eq(described_class::MAX_QUESTIONS)
