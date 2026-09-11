@@ -16,8 +16,11 @@
 # ================================================================================
 
 class ContactTrackings::Assistant::ProseChecks
-  # Directivas de búsqueda sueltas en la prosa: el motor BLANQUEA lo que queda
-  # (contact_tracking_response_analyzer_job.rb:545).
+  # Directivas de búsqueda sueltas en la prosa. El motor ya NO blanquea el prompt
+  # por esto: develop lo corrigió el 11/09/2026 (strip_tokens quita solo el token
+  # y conserva la prosa alrededor). Sigue siendo un defecto —la directiva no se
+  # ejecuta desde ahí— pero dejó de ser catastrófico, así que bajó de bloqueante a
+  # degradante.
   LOOSE_SEARCH_RE = /@buscar_predefinidas\b|@buscar_art[ií]culo\b|@buscar_foro\([^)]*\)|@discourse\b/i
   # Adjunto que escribe el modelo en su respuesta. Mismo patrón que el job.
   ATTACHMENT_RE = /\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/
@@ -47,25 +50,27 @@ class ContactTrackings::Assistant::ProseChecks
     I18n.t("tracking_assistant.#{key}", locale: ContactTrackings::Assistant::Language.resolve, **args)
   end
 
-  # ── B3 ──────────────────────────────────────────────────────────────────────
-  # El blanqueo alcanza SOLO a la prosa del camino conversacional: se evalúa sobre
-  # el texto ya sin líneas @ruta y alimenta generate_and_send_conversational_reply.
-  # Un agente con ramas conserva sus ramas. Por eso el mensaje cambia según haya
-  # ramas o no: decirle a alguien que su agente "se queda sin nada" cuando sus 5
-  # ramas siguen andando quema la única credibilidad que tiene este aviso.
+  # ── D7 · directiva suelta en la prosa (era B3, bloqueante) ──────────────────
+  # HASTA EL 11/09/2026 ESTO BLANQUEABA EL PROMPT ENTERO, y este aviso era
+  # bloqueante porque el agente se quedaba literalmente sin instrucciones.
+  # develop lo corrigió: `KnowledgeBase::Directives.strip_tokens` quita solo el
+  # token de la directiva y conserva la prosa de alrededor, así que una regla que
+  # apenas NOMBRA una directiva ya no cuesta el Entrenamiento completo.
+  #
+  # El aviso se queda, pero como DEGRADANTE: la directiva sigue sin ejecutarse
+  # desde la prosa —solo corre dentro de una línea @ruta— y quien la escribió ahí
+  # probablemente creía que sí. Lo que ya no corresponde es impedir el guardado
+  # por algo que el motor resuelve solo.
+  #
+  # ⚠ Si este aviso vuelve a decir "blanquea", está mintiendo: el comportamiento
+  # se verifica en Directives.strip_tokens, no acá.
   def check_loose_directive
     match = prose.match(LOOSE_SEARCH_RE)
     return if match.nil?
 
-    findings.add(:blocking, :loose_directive,
-                 t('findings.loose_directive', directive: match[0], consequence: blanking_consequence),
+    findings.add(:degrading, :loose_directive,
+                 t('findings.loose_directive', directive: match[0]),
                  wrote: match[0])
-  end
-
-  def blanking_consequence
-    return t('findings.blanking_no_routes') if map.routes.empty?
-
-    t('findings.blanking_with_routes')
   end
 
   # ── D6 ──────────────────────────────────────────────────────────────────────

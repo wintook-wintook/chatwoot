@@ -42,14 +42,20 @@ RSpec.describe ContactTrackings::Assistant::AuditService do
       expect(revisar.first).to include(status: :empty, routes: 0)
     end
 
-    # Lo que de verdad hay que encontrar: una directiva suelta en la prosa borra la
-    # prosa entera y el agente contesta sin instrucciones, sin error ni log.
-    it 'marca como broken al que tiene una directiva suelta en la prosa' do
+    # ⚠ CAMBIÓ CON EL MOTOR el 11/09/2026. Hasta ese día una directiva suelta en la
+    # prosa blanqueaba el Entrenamiento entero, así que la auditoría marcaba el
+    # agente como `broken` — y con razón. develop lo corrigió (strip_tokens quita
+    # solo el token y conserva la prosa), así que ese agente YA NO está roto: le
+    # sobra una directiva que no hace nada.
+    #
+    # No es un detalle de clasificación: en la cuenta 2, 6 de los 9 agentes que la
+    # auditoría daba por "no ejecuta" lo eran por esto. La cifra estaba inflada.
+    it 'ya NO marca como broken al que tiene una directiva suelta en la prosa' do
       agente('Consultor', '[ROL] Sos el consultor. Si no sabés, consultá @discourse.')
 
       fila = revisar.first
-      expect(fila[:status]).to eq(:broken)
-      expect(fila[:headline]).to include('@discourse')
+      expect(fila[:status]).to eq(:conversational)
+      expect(fila[:defects]).to eq(0)
     end
 
     it 'marca como broken al que quiso escribir una rama y no le salió' do

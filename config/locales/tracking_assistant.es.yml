@@ -84,14 +84,14 @@ es:
         agendar nada: la directiva parsea bien y el turno pasa de largo, sin aviso. Hay que conectar
         un calendario y además asignárselo a este Agente IA — con el calendario en la cuenta pero sin
         asignar al agente, tampoco agenda.
+      # ⚠ Corregido el 11/09/2026: hasta ese día el motor BLANQUEABA el Entrenamiento entero
+      # por esto y el aviso era bloqueante. develop lo arregló (strip_tokens conserva la prosa),
+      # así que el mensaje ya no puede decir "borra la prosa": sería mentira.
       loose_directive: >-
-        La directiva %{directive} está suelta en la prosa, fuera de una línea @ruta. El motor borra
-        la prosa entera cuando encuentra una así, y %{consequence}. Las directivas van únicamente
-        dentro de las líneas @ruta.
-      blanking_no_routes: 'esa prosa es toda la instrucción que tiene el agente: se queda sin ninguna'
-      blanking_with_routes: >-
-        el agente pierde sus instrucciones en los turnos que no resuelve ninguna rama (las ramas en
-        sí siguen funcionando)
+        La directiva %{directive} está suelta en la prosa, fuera de una línea @ruta. Ahí NO se
+        ejecuta: el motor la borra del texto antes de mandárselo al modelo y sigue de largo. Si
+        querías que esa rama consultara esa fuente, va dentro de su línea @ruta; si era solo una
+        mención, se puede dejar, pero no hace nada.
       attachment_with_source: >-
         El adjunto {{%{name}}} no se resuelve cuando la rama consulta una fuente: sale como texto
         literal en el mensaje al cliente. Los adjuntos solo funcionan en ramas sin fuente.

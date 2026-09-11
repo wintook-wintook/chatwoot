@@ -1,5 +1,33 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: tracking_assistant_sessions
+#
+#  id                   :bigint           not null, primary key
+#  draft                :text
+#  messages             :jsonb            not null
+#  proposal             :jsonb            not null
+#  status               :string           default("open"), not null
+#  validation           :jsonb            not null
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  account_id           :bigint           not null
+#  tracking_template_id :bigint
+#  user_id              :bigint           not null
+#
+# Indexes
+#
+#  idx_tracking_assistant_sessions_lookup                     (account_id,user_id,status,updated_at)
+#  index_tracking_assistant_sessions_on_tracking_template_id  (tracking_template_id)
+#  index_tracking_assistant_sessions_on_user_id               (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (tracking_template_id => tracking_templates.id) ON DELETE => nullify
+#  fk_rails_...  (user_id => users.id) ON DELETE => cascade
+#
 # ================================================================================
 # proyecto@asistente_agentes_ia — LA CONVERSACIÓN DEL ASISTENTE
 # ================================================================================

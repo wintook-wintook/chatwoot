@@ -95,48 +95,59 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
     end
   end
 
-  describe 'B3 · directiva suelta en la prosa' do
-    # El motor blanquea el complementary_prompt entero cuando encuentra una
-    # directiva de búsqueda fuera de las líneas @ruta.
-    it 'la marca como bloqueante y explica que blanquea el Entrenamiento entero' do
-      source('discourse', 'Foro Kontrolya')
-
-      r = validar(<<~TXT)
+  # ── D7 · lo que hasta el 11/09/2026 era B3, bloqueante ──────────────────────
+  # Hasta ese día el motor BLANQUEABA el Entrenamiento entero por una directiva
+  # suelta, y el aviso impedía guardar. develop lo corrigió: strip_tokens quita
+  # solo el token y conserva la prosa. Estos ejemplos cambiaron con el motor — y
+  # es la tercera vez en dos días que un mensaje de este módulo quedó afirmando
+  # algo que el motor dejó de hacer.
+  describe 'D7 · directiva suelta en la prosa' do
+    let(:con_directiva_suelta) do
+      <<~TXT
         @ruta(soporte #soporte: no puedo entrar): @buscar_foro(Foro Kontrolya)
 
         [ROL] Sos el agente de soporte. Si no sabés, usá @buscar_articulo.
       TXT
+    end
 
-      hallazgo = r[:blocking].find { |f| f[:code] == :loose_directive }
-      expect(hallazgo[:message]).to include('borra la prosa entera')
+    before { source('discourse', 'Foro Kontrolya') }
+
+    it 'avisa que ahí no se ejecuta, y deja guardar' do
+      r = validar(con_directiva_suelta)
+
+      hallazgo = r[:degrading].find { |f| f[:code] == :loose_directive }
+      expect(hallazgo[:message]).to include('NO se ejecuta')
       expect(hallazgo[:wrote]).to eq('@buscar_articulo')
+      expect(r[:valid]).to be(true)
     end
 
-    # El blanqueo alcanza solo a la prosa del camino conversacional. Decirle a
-    # alguien que su agente "se queda sin nada" cuando sus ramas siguen andando
-    # quema la credibilidad del aviso.
-    it 'con ramas declaradas aclara que las ramas siguen funcionando' do
-      source('discourse', 'Foro Kontrolya')
+    # El aviso ya no puede prometer un blanqueo que el motor no hace.
+    it 'ya no dice que borra la prosa' do
+      mensaje = validar(con_directiva_suelta)[:degrading]
+                .find { |f| f[:code] == :loose_directive }[:message]
 
-      r = validar("@ruta(soporte #soporte: no puedo entrar): @buscar_foro(Foro Kontrolya)\n\n[ROL] Usá @buscar_articulo.")
-
-      expect(r[:blocking].find { |f| f[:code] == :loose_directive }[:message])
-        .to include('las ramas en sí siguen funcionando')
+      expect(mensaje).not_to include('borra la prosa')
+      expect(mensaje).not_to include('se queda sin ninguna')
     end
 
-    it 'sin ramas dice que el agente se queda sin ninguna instrucción' do
-      r = validar('[ROL] Sos el agente. Si no sabés, usá @buscar_articulo.')
-
-      expect(r[:blocking].find { |f| f[:code] == :loose_directive }[:message])
-        .to include('se queda sin ninguna')
+    it 'no impide guardar, a diferencia de antes' do
+      expect(codigos(validar(con_directiva_suelta), :blocking)).not_to include(:loose_directive)
     end
 
     it 'no la dispara cuando las directivas viven dentro de las líneas @ruta' do
-      source('discourse', 'Foro Kontrolya')
-
       r = validar("@ruta(soporte #soporte: no puedo entrar): @buscar_foro(Foro Kontrolya)\n\n[ROL] Sos el agente.")
 
-      expect(codigos(r, :blocking)).not_to include(:loose_directive)
+      expect(codigos(r, :degrading)).not_to include(:loose_directive)
+    end
+
+    # El motor de verdad, no el mensaje: si strip_tokens volviera a blanquear, esto
+    # se pone rojo y el aviso hay que subirlo a bloqueante otra vez.
+    it 'coincide con lo que hace el motor: conserva la prosa alrededor' do
+      limpio = KnowledgeBase::Directives.strip_tokens('Si no sabés, usá @buscar_articulo para responder.')
+
+      expect(limpio).to include('Si no sabés, usá')
+      expect(limpio).to include('para responder.')
+      expect(limpio).not_to include('@buscar_articulo')
     end
   end
 

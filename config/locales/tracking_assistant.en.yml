@@ -87,14 +87,14 @@ en:
         anything: the directive parses fine and the turn just passes through, with no warning.
         Connect a calendar and also assign it to this AI Agent — with the calendar in the account but
         not assigned to the agent, it still does not schedule.
+      # ⚠ Corrected on 11/09/2026: until that day the engine WIPED the whole Training over this
+      # and the finding was blocking. develop fixed it (strip_tokens keeps the prose), so the
+      # message can no longer say "wipes the prose": it would be a lie.
       loose_directive: >-
-        The directive %{directive} is loose in the prose, outside an @ruta line. The engine wipes
-        the entire prose when it finds one like this, and %{consequence}. Directives belong only
-        inside @ruta lines.
-      blanking_no_routes: 'that prose is every instruction the agent has: it is left with none'
-      blanking_with_routes: >-
-        the agent loses its instructions on turns where no branch resolves (the branches themselves
-        keep working)
+        The directive %{directive} is loose in the prose, outside an @ruta line. It does NOT run
+        there: the engine strips it from the text before sending it to the model and carries on. If
+        you wanted that branch to consult that source, it goes inside its @ruta line; if it was just
+        a mention, you can leave it, but it does nothing.
       attachment_with_source: >-
         Attachment {{%{name}}} is not resolved when the branch consults a source: it goes out as
         literal text in the message to the customer. Attachments only work on branches with no source.

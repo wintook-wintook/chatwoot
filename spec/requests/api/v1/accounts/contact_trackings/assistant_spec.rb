@@ -240,15 +240,18 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       expect(response).to have_http_status(:success)
     end
 
-    it 'marca como broken al agente cuya prosa lleva una directiva suelta' do
+    # Cambió con el motor el 11/09/2026: la directiva suelta dejó de blanquear el
+    # Entrenamiento, así que ese agente ya no cuenta como roto. Ver el spec de
+    # AuditService para el detalle.
+    it 'ya NO marca como broken al agente cuya prosa lleva una directiva suelta' do
       account.tracking_templates.create!(name: 'Consultor', objective: 'Resolver dudas',
                                          complementary_prompt: '[ROL] Si no sabés, consultá @discourse.')
 
       revisar
 
       fila = response.parsed_body.first
-      expect(fila['status']).to eq('broken')
-      expect(fila['headline']).to include('@discourse')
+      expect(fila['status']).to eq('conversational')
+      expect(fila['defects']).to eq(0)
     end
 
     it 'no marca como roto a un agente conversacional' do
