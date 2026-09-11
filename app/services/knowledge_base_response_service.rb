@@ -745,15 +745,10 @@ class KnowledgeBaseResponseService
 
     # @ruta — las líneas de configuración se quitan ANTES que nada: en un agente
     # con rutas viven ahí las directivas de TODAS las ramas, y no deben llegar al
-    # modelo (ni de rebote al cliente). Las directivas sueltas se quitan también:
-    # son configuración, no instrucciones para el modelo.
-    ContactTrackings::RouteMap.strip(@tracking.complementary_prompt)
-                              .gsub(/@buscar_foro\([^)]+\)/i, '')
-                              .gsub(KnowledgeBase::Directives::CANNED_RE, '')
-                              .gsub(/@buscar_art[ií]culo\b/i, '')
-                              .gsub(/@discourse\b/i, '')
-                              .strip
-                              .presence
+    # modelo (ni de rebote al cliente). Los tokens de directiva sueltos se quitan
+    # también (ver KnowledgeBase::Directives.strip_tokens): son configuración, no
+    # instrucciones para el modelo.
+    KnowledgeBase::Directives.strip_tokens(ContactTrackings::RouteMap.strip(@tracking.complementary_prompt)).presence
   end
 
   # El clasificador (@ruta) ya decidió de qué trata el turno, y con esa decisión se eligió
