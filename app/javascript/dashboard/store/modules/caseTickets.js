@@ -102,9 +102,9 @@ const state = {
     isSaving: false,
     isDeleting: false,
   },
-  // Modo simple (osTicket) vs ITIL + reglas de reapertura — ajustes del módulo
+  // Reglas de reapertura — ajustes del módulo. El modo simple/ITIL dejó de ser
+  // un ajuste de cuenta: ahora es `itil_enabled` en cada tipo de caso (getTypes).
   settings: {
-    itil_enabled: false,
     reopen_window_days: 30,
     reopen_on_customer_reply: true,
   },
@@ -210,6 +210,13 @@ export const getters = {
   getTypesUIFlags(_state) {
     return _state.typesUiFlags;
   },
+  // ITIL es por tipo (CaseType#itil_enabled). Para pantallas agregadas que no
+  // están atadas a un solo tipo (Kanban/Index sin filtro, Metrics, Rules): si
+  // AL MENOS un tipo de la cuenta usa ITIL, se ofrecen las opciones ITIL — así
+  // no se le esconde nada relevante a una cuenta que sí tiene tipos ITIL.
+  getAnyTypeItilEnabled(_state) {
+    return (_state.types || []).some(t => t.itil_enabled);
+  },
   // User Portal
   getPortals(_state) {
     return _state.portals;
@@ -217,10 +224,7 @@ export const getters = {
   getPortalsUIFlags(_state) {
     return _state.portalsUiFlags;
   },
-  // Modo simple/ITIL + reapertura
-  getItilEnabled(_state) {
-    return _state.settings.itil_enabled;
-  },
+  // Reapertura
   getCaseSettings(_state) {
     return _state.settings;
   },

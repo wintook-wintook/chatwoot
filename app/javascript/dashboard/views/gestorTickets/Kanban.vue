@@ -18,27 +18,13 @@ const QUICK_FILTERS = [
   { key: 'sla_overdue', label: 'SLA vencidos' },
 ];
 
-// Columnas operativas: cada una agrupa uno o más estados del ciclo de vida (2A).
-const COLUMNS = [
-  { key: 'new', statuses: ['open', 'classified'] },
-  { key: 'assigned', statuses: ['assigned', 'in_diagnosis'] },
-  { key: 'progress', statuses: ['in_progress', 'escalated'] },
-  {
-    key: 'waiting',
-    statuses: [
-      'waiting_on_customer',
-      'waiting_on_third_party',
-      'waiting_on_internal',
-    ],
-  },
-  { key: 'resolved', statuses: ['resolved', 'validating'] },
-  { key: 'closed', statuses: ['closed', 'cancelled'] },
-];
-
-// Modo simple (osTicket): 5 columnas. "En proceso" agrupa classified/assigned/
-// in_diagnosis/in_progress/escalated (igual que SIMPLE_STATUS_MAP) → así arrastrar
-// "Nuevo" (open) a "En proceso" es válido (open → classified) y fluye el tablero.
-const SIMPLE_COLUMNS = [
+// Columnas por defecto del tablero cuando no hay un tipo de caso filtrado (así
+// que no hay columnas propias de un tipo que mostrar). ITIL dejó de ser un modo
+// de cuenta, así que esto ya no alterna entre "simple"/"ITIL": es una única
+// plantilla neutra, agrupando estados del ciclo de vida (2A). "En proceso"
+// agrupa classified/assigned/in_diagnosis/in_progress/escalated (igual que
+// SIMPLE_STATUS_MAP) → arrastrar "Nuevo" (open) ahí es válido (open → classified).
+const DEFAULT_COLUMNS = [
   { key: 'new', statuses: ['open'] },
   {
     key: 'progress',
@@ -116,7 +102,6 @@ export default {
       services: 'caseTickets/getServices',
       agents: 'agents/getAgents',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Casos"
-      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
       types: 'caseTickets/getTypes', // columnas por tipo (A+)
     }),
     isFetching() {
@@ -131,7 +116,7 @@ export default {
       return (type && type.columns) || [];
     },
     // Columnas del tablero: si hay un tipo con columnas configuradas, las suyas;
-    // si no, las fijas de hoy (simples 5 / ITIL 6).
+    // si no (sin filtro de tipo), las fijas por defecto.
     columns() {
       if (this.selectedTypeColumns.length) {
         return this.selectedTypeColumns.map(c => ({
@@ -143,7 +128,7 @@ export default {
           custom: true,
         }));
       }
-      return this.itilEnabled ? COLUMNS : SIMPLE_COLUMNS;
+      return DEFAULT_COLUMNS;
     },
     activeQuickTabIndex() {
       const i = QUICK_FILTERS.findIndex(f => f.key === this.quickFilter);

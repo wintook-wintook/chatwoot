@@ -144,7 +144,6 @@ export default {
       uiFlags: 'caseTickets/getUIFlags',
       teams: 'teams/getTeams',
       agents: 'agents/getAgents',
-      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
       currentUserID: 'getCurrentUserID', // @tickets_cases — bloqueo de ticket
     }),
     // ¿Otro agente tiene bloqueado este ticket?
@@ -420,6 +419,10 @@ export default {
     // @tickets_cases — columnas configuradas del tipo del ticket (Opción A+).
     typeColumns() {
       return this.ticket?.case_type?.columns || [];
+    },
+    // @tickets_cases — modo ITIL propio del tipo del ticket (ya no es un ajuste global).
+    itilEnabled() {
+      return !!this.ticket?.case_type?.itil_enabled;
     },
     // Opciones que ofrece el dropdown "Cambiar estado": { status, columnId, label }.
     // - Modo ITIL: los 13 estados tal cual, uno a uno (can_transition_to).

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_09_04_180000) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_10_120100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -582,6 +582,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_04_180000) do
     t.datetime "updated_at", null: false
     t.string "prefix", default: "", null: false
     t.boolean "public", default: false, null: false
+    t.boolean "itil_enabled", default: false, null: false
     t.index ["account_id", "position"], name: "index_case_types_on_account_id_and_position"
   end
 
