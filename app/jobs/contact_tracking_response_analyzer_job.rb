@@ -530,19 +530,22 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       inbox_timezone = appointment_timezone(tracking, message)
       next_contact = tracking.scheduled_for.in_time_zone(inbox_timezone).strftime('%d/%m/%Y a las %H:%M')
 
-      # Si el prompt contiene directivas kbase, no pasarlo al LLM conversacional:
-      # el prompt está diseñado para operar con la kbase y GPT lo simula literalmente
-      # generando output tipo "CONSULTA GENERADA / DEBUG / RESULTADO RECIBIDO".
+      # Los TOKENS de directiva kbase no deben llegar crudos al LLM conversacional: el
+      # prompt está diseñado para operar con la kbase y GPT los simula literalmente,
+      # generando output tipo "CONSULTA GENERADA / DEBUG / RESULTADO RECIBIDO". Antes
+      # esto se resolvía blanqueando el prompt COMPLETO en cuanto aparecía cualquier
+      # mención (incluida una oración de regla que solo NOMBRA la directiva, como
+      # "aplica esto a lo recibido de @discourse"), perdiendo de paso reglas de
+      # evidencia y el catálogo de etiquetas que no tenían nada que ver con la
+      # directiva activa de ese turno. KnowledgeBase::Directives.strip_tokens quita
+      # solo el token, conservando la prosa alrededor (mismo criterio que usa
+      # KnowledgeBaseResponseService#agent_system_prompt en el camino kbase).
       # @ruta — las líneas de configuración se quitan SIEMPRE (nunca deben llegar al
-      # modelo ni al cliente). Al evaluarse el blanqueo sobre el texto ya limpio, un
+      # modelo ni al cliente). Al limpiar los tokens sobre el texto ya limpio, un
       # agente con rutas conserva su prosa: sus directivas viven dentro de esas líneas.
       cp_raw = ContactTrackings::RouteMap.strip(tracking.complementary_prompt.to_s)
-      has_kbase_directive = cp_raw.match?(KnowledgeBase::Directives::CANNED_RE) ||
-                            cp_raw.match?(/@buscar_art[ií]culo\b/i) ||
-                            cp_raw.match?(/@buscar_foro\([^)]*\)/i) ||
-                            cp_raw.match?(/@discourse\b/i)
       # proyecto@bot_seguimiento_calendar — @agendar_calendar no debe filtrarse al LLM conversacional
-      clean_cp = has_kbase_directive ? '' : cp_raw.gsub(/@agendar_calendar\b/i, '').strip
+      clean_cp = KnowledgeBase::Directives.strip_tokens(cp_raw).gsub(/@agendar_calendar\b/i, '').strip
       scope_rule = branch_scope_rule(tracking, message)
       clean_cp = "#{clean_cp}\n\n#{scope_rule}" if clean_cp.present? && scope_rule.present?
 
@@ -565,6 +568,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
         Máximo 4 líneas. Tono natural y conversacional.
         No uses prefijos como "Asesor:" o "Bot:". No incluyas comillas al inicio ni al final.
+        #{clean_cp.present? ? 'Si las INSTRUCCIONES ADICIONALES de arriba definen etiquetas de cierre, esta respuesta debe terminar con la que corresponda, sola en la última línea — no es opcional.' : ''}
       USER
 
       reply = call_openai_for_reply(api_key_data[:key], [
