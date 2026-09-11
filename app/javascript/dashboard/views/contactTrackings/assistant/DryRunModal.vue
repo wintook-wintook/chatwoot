@@ -78,8 +78,8 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
-    <div class="flex flex-col p-8 h-[36rem]">
+  <woot-modal :show="show" size="dry-run-wide" :on-close="() => $emit('close')">
+    <div class="flex flex-col p-8 h-[80vh]">
       <h2 class="mb-1 text-lg font-medium text-slate-800 dark:text-slate-100">
         {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_TITLE') }}
       </h2>
@@ -160,3 +160,19 @@ export default {
     </div>
   </woot-modal>
 </template>
+
+<style lang="scss">
+// `size` en woot-modal es solo un nombre de clase: el ancho lo define el CSS —
+// el mismo camino que usa el modal de plantillas de WhatsApp.
+//
+// El ancho por defecto (37.5rem) alcanza para un formulario, no para esto: acá
+// conviven la pregunta, la rama elegida con su descripción, los fragmentos con
+// su similitud y el informe del caso. Angosto, cada informe se vuelve una
+// columna de ocho renglones y se pierde justo lo que se vino a comparar.
+//
+// El alto va en vh y no en rem porque el largo lo pone el historial, que crece
+// con cada pregunta; los topes lo dejan usable en una laptop y en un monitor.
+.modal-container.dry-run-wide {
+  @apply w-[58rem] max-w-[94vw];
+}
+</style>
