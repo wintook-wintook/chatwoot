@@ -296,7 +296,19 @@ export default {
 
       const valid = ticket.can_transition_to || [];
       const candidates = column.statuses.filter(s => valid.includes(s));
-      if (!candidates.length) {
+
+      // ── Tablero por tipo (A+): el orden de columnas manda, no la espina ITIL
+      // fija de "un salto" — salvo un caso CANCELADO, que nunca cambia de status
+      // (terminal a propósito). El tablero fijo mantiene el rechazo de siempre.
+      if (column.custom) {
+        if (ticket.status === 'cancelled') {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.KANBAN.CANCELLED_IMMUTABLE'),
+            type: 'error',
+          });
+          return;
+        }
+      } else if (!candidates.length) {
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.KANBAN.INVALID_MOVE'),
           type: 'error',
@@ -304,8 +316,12 @@ export default {
         return;
       }
       this.moveTicket = ticket;
-      this.moveCandidates = candidates;
-      this.moveTarget = candidates[0];
+      // El selector del modal es solo informativo (arma el mensaje de aviso al
+      // cliente); en tablero por tipo el backend decide el status real — si
+      // ningún estado de la columna es alcanzable en un salto, se muestran
+      // todos los de la columna en vez de dejar el selector vacío.
+      this.moveCandidates = candidates.length ? candidates : column.statuses;
+      this.moveTarget = this.moveCandidates[0];
       // En tablero por tipo, el destino es la columna (el backend elige el status).
       this.moveTargetColumn = column.custom ? column : null;
       this.moveReason = '';
@@ -381,10 +397,25 @@ export default {
         }
         this.fetch();
       } catch (e) {
-        this.$emitter.emit('newToastMessage', {
-          message: this.$t('CASE_TICKETS.KANBAN.MOVE_ERROR'),
-          type: 'error',
-        });
+        // @tickets_cases — este movimiento cierra el caso y el Kanban no tiene el
+        // modal de cierre documentado (2G): manda a la ficha del ticket, que sí lo
+        // tiene, en vez de duplicar el formulario aquí.
+        if (e.response?.data?.requires_closure) {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.KANBAN.REQUIRES_CLOSURE'),
+            type: 'error',
+            action: {
+              type: 'link',
+              to: { name: 'gestorTickets_detail', params: { id: ticket.id } },
+              message: this.$t('CASE_TICKETS.KANBAN.OPEN_TICKET_TO_CLOSE'),
+            },
+          });
+        } else {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.KANBAN.MOVE_ERROR'),
+            type: 'error',
+          });
+        }
       } finally {
         this.closeMove();
       }
