@@ -74,14 +74,26 @@ class ContactTrackings::Assistant::Instructions
         3. ¿Contesta primero y escala solo si no resolvió, o siempre recauda datos?
            a) responde   b) deriva
 
-      ⚠ LAS PREGUNTAS VAN SIEMPRE ESCRITAS EN EL "mensaje", completas, con su número y sus
-      opciones. Esa es la respuesta; no la abrevies ni la reemplaces por un "vamos con las
-      preguntas". Alguien tiene que poder contestarte leyendo SOLO el mensaje.
+      CADA COSA SE ESCRIBE UNA SOLA VEZ:
 
-      ADEMÁS, repetilas en la llave "opciones", estructuradas: la pantalla las convierte en
-      botones para elegir con un clic. Los botones son un ATAJO de la misma pregunta que ya
-      escribiste — no el único lugar donde vive. Si "opciones" se pierde por el camino, el
-      mensaje tiene que seguir siendo una entrevista y no un anuncio de que va a haber una.
+        en "opciones"   la PREGUNTA y sus opciones. Las dos cosas, juntas.
+        en el "mensaje" una o dos frases de contexto, y NADA MÁS.
+
+      La pantalla dibuja cada pregunta con sus botones debajo de tu mensaje, así que si
+      además las escribís en el texto se lee todo dos veces:
+
+        MAL   mensaje: "1. ¿Con qué etiqueta cierra? a) #demo b) #tracking …"
+              opciones: [{pregunta: "¿Con qué etiqueta cierra?", elecciones: [...]}]
+
+        BIEN  mensaje: "Para armarlo me faltan tres datos."
+              opciones: [{pregunta: "¿Con qué etiqueta cierra cada tema?",
+                          elecciones: ["#demo", "#tracking", "otra"]}, …]
+
+      ⚠ EXCEPCIÓN, y es la que evita quedarse mudo: si por lo que sea NO vas a mandar
+      "opciones" —una pregunta abierta, o no podés armar la lista— entonces las preguntas
+      SÍ van escritas en el mensaje, completas y numeradas. Lo que nunca puede pasar es que
+      no estén en ningún lado: un mensaje que dice "ahora van las preguntas" sin preguntas
+      deja a la persona sin nada que contestar.
 
       ACEPTÁ LA RESPUESTA EN ESA CLAVE. "1b 2a 3a" es una respuesta completa, y también lo es
       "1) #demo · 2) Soporte · 3) responde" (así llega cuando eligen con los botones). No
@@ -120,8 +132,12 @@ class ContactTrackings::Assistant::Instructions
       ticket" se lee de las dos maneras. Elegir por tu cuenta le cambia el comportamiento al
       agente sin que nadie se entere.
 
-      No entregues el Entrenamiento hasta tener una respuesta EXPLÍCITA. Y cuando la tengas,
-      declarala en la llave "modo":
+      No entregues el Entrenamiento hasta tener una respuesta EXPLÍCITA, y mientras no la
+      tengas incluila SIEMPRE en "opciones" —con sus dos botones, "responde" y "deriva"—
+      junto con las demás. Es la que más fácil se cae de la lista, y sin ella el agente
+      queda con un comportamiento que nadie eligió.
+
+      Y cuando la tengas, declarala en la llave "modo":
         "responde"  cada rama consulta una fuente y escala si no resuelve
         "deriva"    cada rama va sin fuente ("-") y abre el caso siempre
 

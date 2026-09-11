@@ -41,6 +41,16 @@ export default {
     },
   },
   methods: {
+    // Solo bajo el ÚLTIMO mensaje, y solo si es del asistente: el hilo de arriba
+    // es historial, y un botón de tres turnos atrás contestaría algo ya respondido.
+    showOptions(index, message) {
+      return (
+        message.role === 'assistant' &&
+        index === this.messages.length - 1 &&
+        !this.isThinking &&
+        Boolean(this.options && this.options.length)
+      );
+    },
     isOpenChoice(choice) {
       return /^otr[ao]s?$/i.test(choice.trim());
     },
@@ -123,85 +133,75 @@ export default {
         :class="message.role === 'user' ? 'justify-end' : 'justify-start'"
       >
         <div
-          class="max-w-[85%] text-sm px-3 py-2 rounded-lg whitespace-pre-wrap"
+          class="max-w-[85%] text-sm px-3 py-2 rounded-lg"
           :class="
             message.role === 'user'
               ? 'bg-woot-500 text-white'
               : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100'
           "
         >
-          {{ message.content }}
-        </div>
-      </div>
+          <span class="whitespace-pre-wrap">{{ message.content }}</span>
 
-      <!-- Los botones van SOLO bajo el último mensaje del asistente: el hilo de
-           arriba es historial, y un botón de tres turnos atrás contestaría una
-           pregunta que ya se respondió. -->
-      <div
-        v-if="options && options.length && !isThinking"
-        class="flex flex-col gap-2 pl-1"
-      >
-        <!-- Acá NO se repite el texto de la pregunta: ya está escrito en el
-             mensaje de arriba, con el mismo número. Repetirlo hacía leer todo
-             dos veces, y con siete preguntas era un muro. Queda el número, que
-             es lo que las ata, y el texto completo en el title por si hace falta. -->
-        <div
-          v-for="(question, index) in options"
-          :key="index"
-          class="flex flex-wrap items-center gap-1"
-          :title="question.question"
-        >
-          <span
-            class="text-xs font-medium w-4 shrink-0 text-slate-400 dark:text-slate-500"
+          <!-- Los botones van DENTRO de la burbuja del último mensaje del
+               asistente, no en un bloque aparte: separados se leían como dos
+               cosas distintas —el texto por un lado y una lista suelta por el
+               otro— cuando son la misma pregunta. -->
+          <div
+            v-if="showOptions(index, message)"
+            class="flex flex-col gap-2 pt-3 mt-3 border-t border-slate-200 dark:border-slate-600"
           >
-            {{ index + 1 }}.
-          </span>
-          <div class="flex flex-wrap items-center gap-1">
-            <button
-              v-for="choice in question.choices"
-              :key="choice"
-              class="px-2 py-1 text-xs border rounded cursor-pointer"
-              :class="
-                picked[index] === choice
-                  ? 'bg-woot-500 text-white border-woot-500'
-                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:border-woot-400'
-              "
-              :title="
-                isOpenChoice(choice)
-                  ? $t('TRACKING_ASSISTANT_VIEW.PICK_OTHER_HINT')
-                  : ''
-              "
-              @click="pick(index, choice)"
-            >
-              {{ choice }}
-              <!-- La flecha dice que esa opción no se resuelve acá: sigue en el
-                   campo de texto. -->
-              <fluent-icon
-                v-if="isOpenChoice(choice)"
-                icon="arrow-right"
-                size="12"
-                class="inline-block"
-              />
-            </button>
+            <!-- La pregunta se dibuja ACÁ, no en el texto del mensaje: el modelo
+                 vaciaba el mensaje cada vez que se le pedía no repetir las
+                 opciones. Con la pregunta y sus botones en la misma pieza, no
+                 hay dos lugares que puedan desincronizarse. -->
+            <div v-for="(question, qIndex) in options" :key="qIndex">
+              <p class="mb-1 text-sm">
+                {{ qIndex + 1 }}. {{ question.question }}
+              </p>
+              <div class="flex flex-wrap items-center gap-1">
+                <button
+                  v-for="choice in question.choices"
+                  :key="choice"
+                  class="px-2 py-1 text-xs border rounded cursor-pointer"
+                  :class="
+                    picked[qIndex] === choice
+                      ? 'bg-woot-500 text-white border-woot-500'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:border-woot-400'
+                  "
+                  :title="
+                    isOpenChoice(choice)
+                      ? $t('TRACKING_ASSISTANT_VIEW.PICK_OTHER_HINT')
+                      : ''
+                  "
+                  @click="pick(qIndex, choice)"
+                >
+                  {{ choice }}
+                  <fluent-icon
+                    v-if="isOpenChoice(choice)"
+                    icon="arrow-right"
+                    size="12"
+                    class="inline-block"
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <woot-button
+                size="small"
+                :is-disabled="!pickedCount"
+                @click="sendPicked"
+              >
+                {{
+                  pickedCount
+                    ? $t('TRACKING_ASSISTANT_VIEW.SEND_PICKED', {
+                        count: pickedCount,
+                      })
+                    : $t('TRACKING_ASSISTANT_VIEW.SEND_PICKED_EMPTY')
+                }}
+              </woot-button>
+            </div>
           </div>
-        </div>
-
-        <div>
-          <!-- Sin nada elegido decía "Enviar 0 respuesta(s)", que se lee como un
-               error. Con el contador solo cuando hay algo que contar. -->
-          <woot-button
-            size="small"
-            :is-disabled="!pickedCount"
-            @click="sendPicked"
-          >
-            {{
-              pickedCount
-                ? $t('TRACKING_ASSISTANT_VIEW.SEND_PICKED', {
-                    count: pickedCount,
-                  })
-                : $t('TRACKING_ASSISTANT_VIEW.SEND_PICKED_EMPTY')
-            }}
-          </woot-button>
         </div>
       </div>
 
