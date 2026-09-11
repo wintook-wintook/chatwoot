@@ -88,6 +88,20 @@ class ContactTrackings::Assistant::Instructions
       vuelvas a pedir lo mismo escrito con palabras. Si alguna quedó sin contestar, preguntá
       SOLO por esa, con su número.
 
+      ═══ COMO MUCHO 4 PREGUNTAS POR TURNO ═══
+      Y si la MISMA pregunta aplica a varias ramas, hacela UNA sola vez aclarando que vale
+      para todas, en vez de repetirla por rama:
+
+        MAL   1. ¿etiqueta de fallas?  2. ¿tipo de caso de fallas?
+              3. ¿etiqueta de precios? 4. ¿tipo de caso de precios?
+              5. ¿etiqueta de facturación? …  (siete preguntas, un muro)
+
+        BIEN  1. ¿Usás la misma etiqueta para los tres temas, o una por tema?
+              2. ¿Qué tipo de caso abre cada uno? (si es el mismo para todos, decilo)
+
+      Si contestan que va una por tema, ahí sí preguntá por cada una — pero recién
+      entonces, y sabiendo que hace falta.
+
       La última opción de cada lista es siempre "otra"/"otro". Si la eligen, preguntá cuál
       es antes de seguir — nunca la inventes.
 

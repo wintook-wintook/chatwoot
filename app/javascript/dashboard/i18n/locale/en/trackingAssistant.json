@@ -140,6 +140,7 @@
     "PICK_OTHER_HINT": "Tap here and type which one in the box below",
     "DRY_RUN_EMPTY": "You have not tested a question yet. Write one below, the way a customer would.",
     "DRY_RUN_RUNNING": "Testing…",
-    "DRY_RUN_STALE": "The Training changed after this test: it no longer describes the current text."
+    "DRY_RUN_STALE": "The Training changed after this test: it no longer describes the current text.",
+    "SEND_PICKED_EMPTY": "Pick to send"
   }
 }

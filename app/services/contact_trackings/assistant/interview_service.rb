@@ -49,10 +49,15 @@ class ContactTrackings::Assistant::InterviewService
   MAX_INTERVIEW_TURNS = 5
 
   # Tope de lo que se acepta en `opciones`. El payload lo escribe un modelo, así
-  # que se recorta acá y no en la pantalla: seis preguntas de ocho botones ya es
-  # más de lo que alguien lee, y sin tope una respuesta rara deja la conversación
-  # cubierta de botones.
-  MAX_QUESTIONS = 6
+  # que se recorta acá y no en la pantalla: sin tope, una respuesta rara deja la
+  # conversación cubierta de botones.
+  #
+  # ⚠ El tope estaba en 6 y el modelo hizo 7 preguntas: la séptima —la obligatoria,
+  # "¿contesta o deriva?"— se cayó SIN AVISO y quedó escrita en el mensaje pero sin
+  # botones. Ahora el tope va por encima de lo que el contrato permite pedir (4 por
+  # turno), así que el recorte es una red de seguridad y no algo que se dispare en
+  # el uso normal.
+  MAX_QUESTIONS = 10
   MAX_CHOICES = 8
   MAX_CHOICE_CHARS = 60
 

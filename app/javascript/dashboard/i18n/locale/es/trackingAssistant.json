@@ -140,6 +140,7 @@
     "PICK_OTHER_HINT": "Tocá acá y escribí cuál en el campo de abajo",
     "DRY_RUN_EMPTY": "Todavía no probaste ninguna pregunta. Escribí una abajo, como la haría un cliente.",
     "DRY_RUN_RUNNING": "Probando…",
-    "DRY_RUN_STALE": "El Entrenamiento cambió después de esta prueba: ya no describe el texto actual."
+    "DRY_RUN_STALE": "El Entrenamiento cambió después de esta prueba: ya no describe el texto actual.",
+    "SEND_PICKED_EMPTY": "Elegí para enviar"
   }
 }

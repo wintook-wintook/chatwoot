@@ -141,13 +141,20 @@ export default {
         v-if="options && options.length && !isThinking"
         class="flex flex-col gap-2 pl-1"
       >
+        <!-- Acá NO se repite el texto de la pregunta: ya está escrito en el
+             mensaje de arriba, con el mismo número. Repetirlo hacía leer todo
+             dos veces, y con siete preguntas era un muro. Queda el número, que
+             es lo que las ata, y el texto completo en el title por si hace falta. -->
         <div
           v-for="(question, index) in options"
           :key="index"
-          class="flex flex-col gap-1"
+          class="flex flex-wrap items-center gap-1"
+          :title="question.question"
         >
-          <span class="text-xs text-slate-500 dark:text-slate-400">
-            {{ index + 1 }}. {{ question.question }}
+          <span
+            class="text-xs font-medium w-4 shrink-0 text-slate-400 dark:text-slate-500"
+          >
+            {{ index + 1 }}.
           </span>
           <div class="flex flex-wrap items-center gap-1">
             <button
@@ -180,13 +187,19 @@ export default {
         </div>
 
         <div>
+          <!-- Sin nada elegido decía "Enviar 0 respuesta(s)", que se lee como un
+               error. Con el contador solo cuando hay algo que contar. -->
           <woot-button
             size="small"
             :is-disabled="!pickedCount"
             @click="sendPicked"
           >
             {{
-              $t('TRACKING_ASSISTANT_VIEW.SEND_PICKED', { count: pickedCount })
+              pickedCount
+                ? $t('TRACKING_ASSISTANT_VIEW.SEND_PICKED', {
+                    count: pickedCount,
+                  })
+                : $t('TRACKING_ASSISTANT_VIEW.SEND_PICKED_EMPTY')
             }}
           </woot-button>
         </div>
