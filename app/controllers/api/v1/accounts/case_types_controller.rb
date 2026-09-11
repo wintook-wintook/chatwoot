@@ -52,18 +52,20 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
   end
 
   def type_params
-    params.require(:case_type).permit(:name, :color, :position, :prefix, :public)
+    params.require(:case_type).permit(:name, :color, :position, :prefix, :public, :itil_enabled)
   end
 
   def type_json(type)
     {
-      id:         type.id,
-      name:       type.name,
-      prefix:     type.prefix,
-      color:      type.color,
-      position:   type.position,
+      id: type.id,
+      name: type.name,
+      prefix: type.prefix,
+      color: type.color,
+      position: type.position,
       # @tickets_cases — User Portal: visible en el formulario público del cliente.
-      public:     type[:public],
+      public: type[:public],
+      # @tickets_cases — modo ITIL propio del tipo (antes era un ajuste global de cuenta).
+      itil_enabled: type.itil_enabled,
       # @tickets_cases 2K — campos personalizados para render dinámico en alta/detalle.
       custom_fields: type.case_type_fields.ordered.map { |f| field_json(f) },
       # @tickets_cases — columnas del Kanban propias del tipo (Opción A+). Viajan
@@ -76,21 +78,21 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
 
   def field_json(field)
     {
-      id:         field.id,
-      key:        field.key,
-      label:      field.label,
+      id: field.id,
+      key: field.key,
+      label: field.label,
       field_type: field.field_type,
-      options:    field.options,
-      required:   field.required,
-      position:   field.position
+      options: field.options,
+      required: field.required,
+      position: field.position
     }
   end
 
   def column_json(column)
     {
-      id:       column.id,
-      label:    column.label,
-      color:    column.color,
+      id: column.id,
+      label: column.label,
+      color: column.color,
       position: column.position,
       statuses: column.statuses
     }

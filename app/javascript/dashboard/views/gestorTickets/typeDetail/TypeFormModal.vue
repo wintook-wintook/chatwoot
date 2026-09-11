@@ -21,6 +21,7 @@ const emptyForm = () => ({
   color: '#3b82f6',
   prefix: '',
   public: false,
+  itil_enabled: false,
 });
 
 export default {
@@ -68,6 +69,7 @@ export default {
           color: this.editing.color || '#3b82f6',
           prefix: this.editing.prefix || '',
           public: !!this.editing.public,
+          itil_enabled: !!this.editing.itil_enabled,
         };
       } else {
         this.form = emptyForm();
@@ -174,6 +176,21 @@ export default {
             >
             <span class="text-xs text-slate-400 dark:text-slate-500">{{
               $t('CASE_TICKETS.TYPES.PUBLIC_HELP')
+            }}</span>
+          </span>
+        </label>
+
+        <label class="flex items-start gap-2">
+          <input v-model="form.itil_enabled" type="checkbox" class="mt-1" />
+          <span class="flex flex-col">
+            <span
+              class="text-sm font-medium text-slate-700 dark:text-slate-200"
+              >{{ $t('CASE_TICKETS.TYPES.ITIL_LABEL') }}</span
+            >
+            <span class="text-xs text-slate-400 dark:text-slate-500">{{
+              editing
+                ? $t('CASE_TICKETS.TYPES.ITIL_HELP_EDIT')
+                : $t('CASE_TICKETS.TYPES.ITIL_HELP_CREATE')
             }}</span>
           </span>
         </label>

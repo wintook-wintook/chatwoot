@@ -211,7 +211,7 @@
           class="px-3 py-1 text-sm rounded text-woot-600 dark:text-woot-400 hover:bg-woot-50 dark:hover:bg-woot-800/30"
           @click="clearFilters"
         >
-          ✕ {{ $t('CASE_TICKETS.LIST.CLEAR_FILTERS') }}
+          {{ $t('CASE_TICKETS.LIST.CLEAR_FILTERS') }}
         </button>
       </div>
     </div>
@@ -334,7 +334,7 @@
           class="ml-auto text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           @click="clearSelection"
         >
-          ✕ {{ $t('CASE_TICKETS.BULK.CLEAR') }}
+          {{ $t('CASE_TICKETS.BULK.CLEAR') }}
         </button>
       </div>
 
@@ -424,6 +424,9 @@
   </div>
 </template>
 
+<!-- eslint-disable vue/block-order -- legacy file has <template> before
+     <script>; reordering is a large unrelated diff, left for a dedicated
+     cleanup instead of bundling it into an unrelated change. -->
 <script>
 import { mapGetters } from 'vuex';
 import { VeTable } from 'vue-easytable';
@@ -553,7 +556,7 @@ export default {
       types: 'caseTickets/getTypes',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Casos"
       currentRole: 'getCurrentRole', // @tickets_cases F4 — quien puede sobreescribir una vista
-      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
+      anyTypeItilEnabled: 'caseTickets/getAnyTypeItilEnabled',
       agents: 'agents/getAgents', // @tickets_cases P3 — nombre del asignado + lote
     }),
     isFetchingList() {
@@ -588,8 +591,19 @@ export default {
     slaOverdueCount() {
       return this.meta.sla_overdue_count || 0;
     },
+    // Con un tipo filtrado, usa el modo de ESE tipo; sin filtro, no se oculta
+    // nada relevante si al menos un tipo de la cuenta usa ITIL.
+    filteredTypeItilEnabled() {
+      if (!this.activeType) return this.anyTypeItilEnabled;
+      const type = (this.types || []).find(
+        t => String(t.id) === String(this.activeType)
+      );
+      return type ? !!type.itil_enabled : this.anyTypeItilEnabled;
+    },
     statusOptions() {
-      return this.itilEnabled ? STATUS_OPTIONS : SIMPLE_FILTER_STATUSES;
+      return this.filteredTypeItilEnabled
+        ? STATUS_OPTIONS
+        : SIMPLE_FILTER_STATUSES;
     },
     priorityOptions() {
       return PRIORITY_OPTIONS;
@@ -817,7 +831,7 @@ export default {
           sortBy: this.sortConfig.status || '',
           renderBodyCell: ({ row }) => (
             <span class="whitespace-nowrap text-slate-600 dark:text-slate-300">
-              {this.statusLabel(this.displayStatus(row.status))}
+              {this.statusLabel(this.displayStatus(row))}
             </span>
           ),
         },
@@ -1185,8 +1199,12 @@ export default {
     statusLabel(key) {
       return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key;
     },
-    displayStatus(s) {
-      return this.itilEnabled ? s : toSimpleStatus(s);
+    // Colapsa el estado ITIL a etiqueta simple según el modo del PROPIO tipo del
+    // ticket (cada fila puede ser de un tipo distinto).
+    displayStatus(ticket) {
+      return ticket?.case_type?.itil_enabled
+        ? ticket.status
+        : toSimpleStatus(ticket?.status);
     },
     priorityLabel(key) {
       return this.$t(`CASE_TICKETS.PRIORITIES.${key}`) || key;

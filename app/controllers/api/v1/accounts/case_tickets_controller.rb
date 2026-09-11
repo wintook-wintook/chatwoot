@@ -821,9 +821,11 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     return nil unless type
 
     {
-      id:    type.id,
-      name:  type.name,
+      id: type.id,
+      name: type.name,
       color: type.color,
+      # @tickets_cases — modo ITIL propio del tipo (antes era un ajuste global de cuenta).
+      itil_enabled: type.itil_enabled,
       # @tickets_cases 2K — definiciones para mostrar los campos personalizados con etiqueta.
       custom_fields: type.case_type_fields.ordered.map do |f|
         { key: f.key, label: f.label, field_type: f.field_type, options: f.options, required: f.required }

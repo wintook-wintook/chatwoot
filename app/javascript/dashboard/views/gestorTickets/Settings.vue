@@ -1,5 +1,7 @@
 <!--
-  @tickets_cases — Ajustes generales del módulo: modo simple (osTicket) vs ITIL.
+  @tickets_cases — Ajustes generales del módulo (ventana de reapertura). El
+  modo simple/ITIL dejó de ser un ajuste aquí: ahora se configura por tipo de
+  caso, en "Tipos de caso".
 -->
 <script>
 import { mapGetters } from 'vuex';
@@ -14,7 +16,6 @@ export default {
   },
   computed: {
     ...mapGetters({
-      itilEnabled: 'caseTickets/getItilEnabled',
       settings: 'caseTickets/getCaseSettings',
       uiFlags: 'caseTickets/getSettingsUIFlags',
     }),
@@ -60,9 +61,6 @@ export default {
           message: this.$t('CASE_TICKETS.SETTINGS.SAVE_ERROR'),
         });
       }
-    },
-    toggleItil() {
-      this.save({ itil_enabled: !this.itilEnabled });
     },
     toggleReopenReply() {
       this.save({ reopen_on_customer_reply: !this.reopenOnCustomerReply });
@@ -116,38 +114,25 @@ export default {
       >
         <div class="flex-1">
           <div class="flex items-center gap-2">
-            <fluent-icon
-              :icon="itilEnabled ? 'building-bank' : 'list'"
-              size="18"
-              class="text-woot-500"
-            />
+            <fluent-icon icon="building-bank" size="18" class="text-woot-500" />
             <span
               class="text-base font-semibold text-slate-800 dark:text-slate-100"
             >
-              {{
-                itilEnabled
-                  ? $t('CASE_TICKETS.SETTINGS.MODE_ITIL')
-                  : $t('CASE_TICKETS.SETTINGS.MODE_SIMPLE')
-              }}
+              {{ $t('CASE_TICKETS.SETTINGS.MODE_MOVED_TITLE') }}
             </span>
           </div>
           <p class="mt-1 mb-0 text-sm text-slate-500 dark:text-slate-400">
-            {{
-              itilEnabled
-                ? $t('CASE_TICKETS.SETTINGS.MODE_ITIL_DESC')
-                : $t('CASE_TICKETS.SETTINGS.MODE_SIMPLE_DESC')
-            }}
+            {{ $t('CASE_TICKETS.SETTINGS.MODE_MOVED_DESC') }}
           </p>
         </div>
-        <woot-switch :value="itilEnabled" @input="toggleItil" />
+        <woot-button
+          size="small"
+          color-scheme="secondary"
+          @click="$router.push({ name: 'gestorTickets_types' })"
+        >
+          {{ $t('CASE_TICKETS.SETTINGS.MODE_MOVED_CTA') }}
+        </woot-button>
       </div>
-
-      <ul
-        class="mt-2 ml-1 text-xs list-disc list-inside text-slate-400 dark:text-slate-500"
-      >
-        <li>{{ $t('CASE_TICKETS.SETTINGS.NOTE_DATA') }}</li>
-        <li>{{ $t('CASE_TICKETS.SETTINGS.NOTE_REVERSIBLE') }}</li>
-      </ul>
 
       <!-- @tickets_cases paso 7 — reglas de reapertura de tickets cerrados -->
       <h2
