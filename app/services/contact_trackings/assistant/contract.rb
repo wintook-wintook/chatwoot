@@ -57,6 +57,8 @@ class ContactTrackings::Assistant::Contract
         · descripción: es LO ÚNICO que el sistema usa para decidir si un mensaje va a esta rama.
           Escribila como lista de situaciones, EN LAS PALABRAS DEL CLIENTE, no en lenguaje de
           manual. Si te dieron frases reales de clientes, salen de ahí.
+          DOS RAMAS NUNCA PUEDEN DESCRIBIR LO MISMO: si una frase sirve para las dos, el motor
+          elige una al azar y la otra rama no se ejecuta nunca. Cada rama, situaciones propias.
         · fuente: UNA sola, del inventario que te pasan. O un guion "-" si la rama no consulta nada.
         · -> escalamiento: opcional. Solo admite @crear_ticket(tipo=..., prioridad=...).
           Corre si la fuente no resolvió el turno.

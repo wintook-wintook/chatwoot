@@ -71,6 +71,107 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
     end
   end
 
+  # ── el segundo bucle ────────────────────────────────────────────────────────
+  # El comprobador dice si el Entrenamiento se EJECUTA; esto dice si RUTEA. Las
+  # respuestas del clasificador se fijan acá (RouteSelfCheck tiene su propio spec):
+  # lo que se prueba es qué hace la entrevista con un cruce.
+  describe 'el bucle de ruteo' do
+    let(:dos_ramas) do
+      "@ruta(soporte #soporte1: no puedo entrar): @buscar_articulo\n" \
+        '@ruta(comercial #soporte1: quiero un asesor): @buscar_articulo'
+    end
+
+    def autoprueba_devuelve(*tandas)
+      restantes = tandas.dup
+      allow(ContactTrackings::Assistant::RouteSelfCheck).to receive(:new) do
+        instance_double(ContactTrackings::Assistant::RouteSelfCheck, call: restantes.shift || [])
+      end
+    end
+
+    def cruce(route:, probe:, chosen:)
+      ContactTrackings::Assistant::RouteSelfCheck::Mismatch.new(route: route, probe: probe, chosen: chosen)
+    end
+
+    it 'le devuelve el cruce y se queda con lo corregido' do
+      autoprueba_devuelve([cruce(route: 'soporte', probe: 'no puedo entrar', chosen: 'comercial')], [])
+      stub_openai(openai_reply(mensaje: 'Ahí va', entrenamiento: dos_ramas),
+                  openai_reply(mensaje: 'Separé las descripciones', entrenamiento: entrenamiento_ok))
+
+      resultado = entrevistar
+
+      expect(resultado.draft).to eq(entrenamiento_ok)
+      expect(resultado.route_mismatches).to be_empty
+      # No es una corrección del comprobador: el Entrenamiento anterior ya era válido.
+      expect(resultado.repairs).to eq(0)
+    end
+
+    it 'le nombra la rama, la frase y la que salió elegida' do
+      autoprueba_devuelve([cruce(route: 'soporte', probe: 'no puedo entrar', chosen: 'comercial')], [])
+      stub_openai(openai_reply(mensaje: 'Ahí va', entrenamiento: dos_ramas),
+                  openai_reply(mensaje: 'Corregido', entrenamiento: entrenamiento_ok))
+
+      entrevistar
+
+      pedido = a_request(:post, url).with do |req|
+        texto = JSON.parse(req.body)['messages'].last['content']
+        texto.include?('"soporte"') && texto.include?('no puedo entrar') && texto.include?('"comercial"')
+      end
+      expect(pedido).to have_been_made
+    end
+
+    # Una sola vuelta: si con el cruce señalado de frente no lo arregla, una segunda
+    # tampoco, y cada vuelta cuesta una clasificación por rama. Se entrega con el
+    # aviso a la vista en vez de seguir gastando.
+    it 'entrega con el cruce puesto cuando el modelo no lo arregla' do
+      cruces = [cruce(route: 'soporte', probe: 'no puedo entrar', chosen: 'comercial')]
+      autoprueba_devuelve(cruces, cruces, cruces)
+      stub_openai(openai_reply(mensaje: 'Ahí va', entrenamiento: dos_ramas),
+                  openai_reply(mensaje: 'Igual', entrenamiento: dos_ramas))
+
+      resultado = entrevistar
+
+      expect(resultado.route_mismatches.map(&:route)).to eq(['soporte'])
+      expect(resultado.validation[:valid]).to be(true)
+    end
+
+    # Un aviso que vive solo en el log no existe: el cruce que sobrevive sale por el
+    # mismo lugar que los hallazgos del comprobador, que es lo que la pantalla mira.
+    it 'deja el cruce que sobrevive como hallazgo degradante' do
+      cruces = [cruce(route: 'soporte', probe: 'no puedo entrar', chosen: 'comercial')]
+      autoprueba_devuelve(cruces, cruces, cruces)
+      stub_openai(openai_reply(mensaje: 'Ahí va', entrenamiento: dos_ramas),
+                  openai_reply(mensaje: 'Igual', entrenamiento: dos_ramas))
+
+      resultado = entrevistar
+
+      expect(resultado.validation[:degrading].pluck(:code)).to include(:route_not_self_chosen)
+      expect(resultado.validation[:degrading].find { |f| f[:code] == :route_not_self_chosen }[:message])
+        .to include('soporte', 'no puedo entrar', 'comercial')
+    end
+
+    # Un texto con hallazgos bloqueantes no llega a clasificar nada: probar el ruteo
+    # ahí es pagar llamadas para que el clasificador lea 0 ramas.
+    it 'no prueba el ruteo de un Entrenamiento que no ejecuta' do
+      allow(ContactTrackings::Assistant::RouteSelfCheck).to receive(:new)
+      stub_openai(*Array.new(4) { openai_reply(mensaje: 'Ahí va', entrenamiento: entrenamiento_roto) })
+
+      entrevistar
+
+      expect(ContactTrackings::Assistant::RouteSelfCheck).not_to have_received(:new)
+    end
+
+    # Que no se pueda probar el ruteo no debe costarle el Entrenamiento a nadie.
+    it 'entrega lo que ya pasó el comprobador si la prueba se cae' do
+      allow(ContactTrackings::Assistant::RouteSelfCheck).to receive(:new).and_raise(StandardError, 'sin red')
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: dos_ramas))
+
+      resultado = entrevistar
+
+      expect(resultado.draft).to eq(dos_ramas)
+      expect(resultado.route_mismatches).to be_empty
+    end
+  end
+
   # El bucle es lo que distingue esto de "pedirle un prompt a una IA": el auditor no
   # es otro modelo opinando, es el parser de producción.
   describe 'el bucle de corrección' do
@@ -318,51 +419,6 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
         JSON.parse(req.body)['messages'].first['content'].include?('NO inventes nada acá')
       end
       expect(pedido).to have_been_made
-    end
-  end
-
-  # Las opciones las escribe el MODELO, así que se leen con desconfianza: sin tope,
-  # una respuesta rara deja la conversación cubierta de botones.
-  describe '.options_from' do
-    it 'devuelve las preguntas con sus elecciones' do
-      salida = described_class.options_from(
-        'opciones' => [{ 'pregunta' => '¿Con qué etiqueta cierra?',
-                         'elecciones' => ['#demo', '#tracking', 'otra'] }]
-      )
-
-      expect(salida).to eq([{ question: '¿Con qué etiqueta cierra?',
-                              choices: ['#demo', '#tracking', 'otra'] }])
-    end
-
-    # El tope se calcula desde la constante y no con un número escrito a mano: al
-    # subirlo de 6 a 10 este ejemplo se quedó pasando 9 —por debajo del tope— y
-    # dejó de probar nada. Atado a la constante, sigue probando el recorte aunque
-    # el tope cambie.
-    it 'recorta la cantidad de preguntas y de botones' do
-      de_mas = described_class::MAX_QUESTIONS + 3
-      salida = described_class.options_from(
-        'opciones' => Array.new(de_mas) { |i| { 'pregunta' => "p#{i}", 'elecciones' => Array.new(12) { |j| "o#{j}" } } }
-      )
-
-      expect(salida.size).to eq(described_class::MAX_QUESTIONS)
-      expect(salida.first[:choices].size).to eq(described_class::MAX_CHOICES)
-    end
-
-    # Un botón sin texto no sirve para nada, y una pregunta sin botones tampoco.
-    it 'descarta las preguntas que quedaron sin elecciones' do
-      salida = described_class.options_from(
-        'opciones' => [{ 'pregunta' => 'sin nada', 'elecciones' => ['', '  '] },
-                       { 'pregunta' => 'buena', 'elecciones' => ['sí'] }]
-      )
-
-      expect(salida.pluck(:question)).to eq(['buena'])
-    end
-
-    it 'no revienta con lo que no es una lista' do
-      expect(described_class.options_from({})).to be_nil
-      expect(described_class.options_from('opciones' => 'a, b')).to be_nil
-      expect(described_class.options_from('opciones' => [])).to be_nil
-      expect(described_class.options_from('opciones' => ['suelta'])).to be_nil
     end
   end
 end

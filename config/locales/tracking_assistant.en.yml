@@ -24,6 +24,15 @@ en:
       header: 'The engine checker rejected that Training:'
       footer: Fix exactly that and return the complete Training again.
       wrote: 'You wrote:'
+      route_header: >-
+        I tested your Training: I took each branch's description and asked the real classifier which
+        branch it routes to. These do not pick themselves:
+      route_mismatch_line: '- branch "%{route}", tested with "%{probe}", landed on "%{chosen}"'
+      route_none: (no branch)
+      route_footer: >-
+        That means those descriptions are confusable. Rewrite them so they do not overlap —
+        different situations, in the customer's own words — and return the complete Training again.
+        Leave the lines that were already fine untouched.
       missing_mode: >-
         You delivered the Training without asking whether the agent ANSWERS first and opens the case
         only if it could not resolve, or whether it ONLY collects data and always opens the case.
@@ -58,6 +67,15 @@ en:
       default_route_unknown: >-
         @ruta_por_defecto points to '%{declared}', which is not one of the declared branches (%{routes}).
       default_route_no_routes: there are no branches
+      route_not_self_chosen: >-
+        I tested branch "%{route}" with its own description ("%{probe}") and the engine chose
+        "%{chosen}". That description overlaps another branch's: as written, this branch will
+        almost never be picked. Use situations that only apply to it.
+      duplicate_route_description: >-
+        These branches have the SAME description: %{routes}. The description is the only thing the
+        classifier uses to decide, so it cannot tell them apart: one of the two will never be
+        chosen, and which one loses depends on the order. Give them descriptions that cannot be
+        confused — different situations, in the customer's own words.
       route_without_description: >-
         Branch '%{route}' has no description. The description is the ONLY thing the classifier uses
         to decide which branch a message goes to: without it, this branch will almost never be

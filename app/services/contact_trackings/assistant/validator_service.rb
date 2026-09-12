@@ -52,7 +52,8 @@ class ContactTrackings::Assistant::ValidatorService
   CHECKS = %i[
     check_unparsed_route_lines check_has_routes
     check_route_sources check_action_in_source check_ticket_types check_default_route
-    check_descriptions check_tags_exist check_corpus check_erp_directive_isolation
+    check_descriptions check_duplicate_descriptions check_tags_exist check_corpus
+    check_erp_directive_isolation
     check_escalation_regime check_calendar_directive check_prose
   ].freeze
 
@@ -221,6 +222,35 @@ class ContactTrackings::Assistant::ValidatorService
           t('findings.route_without_description', route: route.name),
           wrote: "@ruta(#{route.name}...)")
     end
+  end
+
+  # ── D8 · dos ramas que dicen lo mismo ───────────────────────────────────────
+  # Salió de una corrida real del Asistente: escribió dos ramas —"gestiones" y
+  # "humano"— con la MISMA descripción, "quiero hablar con un asesor". El
+  # clasificador no las puede distinguir, así que una de las dos no se elige
+  # nunca, y cuál de las dos pierde lo decide el orden en que el modelo las mire.
+  #
+  # Es comprobable sin IA: la descripción es texto, y comparar texto es gratis.
+  # Por eso va acá y no en la comprobación de ruteo, que cuesta una llamada por
+  # rama.
+  def check_duplicate_descriptions
+    con_descripcion = map.routes.select { |r| r.description.present? }
+
+    con_descripcion.group_by { |r| normalizar(r.description) }
+                   .each_value do |grupo|
+      next if grupo.one?
+
+      add(:degrading, :duplicate_route_description,
+          t('findings.duplicate_route_description', routes: grupo.map(&:name).join(', ')),
+          wrote: grupo.first.description)
+    end
+  end
+
+  # Se comparan sin tildes, sin mayúsculas y sin puntuación: "no puedo entrar" y
+  # "No puedo entrar." son la misma descripción para quien lee, y para el
+  # clasificador también.
+  def normalizar(texto)
+    texto.to_s.unicode_normalize(:nfd).gsub(/\p{Mn}/, '').downcase.gsub(/[^a-z0-9 ]/, ' ').squish
   end
 
   # ── D2 · la etiqueta no existe ──────────────────────────────────────────────

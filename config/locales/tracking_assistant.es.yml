@@ -23,6 +23,15 @@ es:
       header: 'El comprobador del motor rechazó ese Entrenamiento:'
       footer: Corregí exactamente eso y devolvé el Entrenamiento completo de nuevo.
       wrote: 'Escribiste:'
+      route_header: >-
+        Probé tu Entrenamiento: tomé la descripción de cada rama y le pregunté al clasificador real
+        a qué rama la manda. Estas no se eligen a sí mismas:
+      route_mismatch_line: '- la rama "%{route}", probada con "%{probe}", cayó en "%{chosen}"'
+      route_none: (ninguna rama)
+      route_footer: >-
+        Eso significa que esas descripciones se confunden entre sí. Reescribilas para que no se
+        pisen —situaciones distintas, en las palabras del cliente— y devolvé el Entrenamiento
+        completo de nuevo. No toques las líneas que ya estaban bien.
       missing_mode: >-
         Entregaste el Entrenamiento sin preguntar si el agente CONTESTA primero y abre el caso solo
         si no pudo resolver, o si SOLO recauda datos y abre el caso siempre. Son dos agentes
@@ -57,6 +66,15 @@ es:
       default_route_unknown: >-
         @ruta_por_defecto apunta a '%{declared}', que no es ninguna de las ramas declaradas (%{routes}).
       default_route_no_routes: no hay ramas
+      route_not_self_chosen: >-
+        Probé la rama "%{route}" con su propia descripción ("%{probe}") y el motor eligió
+        "%{chosen}". Esa descripción se pisa con la de otra rama: como está, esta rama casi
+        nunca se va a elegir. Escribí situaciones que solo apliquen a ella.
+      duplicate_route_description: >-
+        Estas ramas tienen la MISMA descripción: %{routes}. La descripción es lo único que el
+        clasificador usa para decidir, así que no las puede distinguir: una de las dos no se va a
+        elegir nunca, y cuál pierde depende del orden. Dales descripciones que no se confundan —
+        situaciones distintas, en las palabras del cliente.
       route_without_description: >-
         La rama '%{route}' no tiene descripción. La descripción es LO ÚNICO que el clasificador usa
         para decidir a qué rama va un mensaje: sin ella, esta rama casi nunca se va a elegir.

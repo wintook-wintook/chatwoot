@@ -249,6 +249,52 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
     end
   end
 
+  describe 'D8 · dos ramas que describen lo mismo' do
+    # Salió de una corrida real del Asistente: escribió "quiero hablar con un asesor"
+    # como descripción de gestiones_comerciales Y de pase_a_humano. Parsea perfecto,
+    # y una de las dos ramas no se ejecuta nunca.
+    it 'avisa cuando dos ramas comparten la descripción' do
+      r = validar(<<~T)
+        @ruta(comercial #comercial: quiero hablar con un asesor): -
+        @ruta(humano #humano: quiero hablar con un asesor): -
+      T
+
+      expect(codigos(r, :degrading)).to include(:duplicate_route_description)
+      expect(r[:valid]).to be(true)
+    end
+
+    # Se compara el contenido, no los caracteres: tildes, mayúsculas y puntuación no
+    # cambian a qué rama manda el clasificador.
+    it 'las ve iguales aunque cambien tildes, mayúsculas o puntuación' do
+      r = validar(<<~T)
+        @ruta(comercial #comercial: ¿Cuánto cuesta la licencia?): -
+        @ruta(precios #precios: cuanto cuesta la licencia): -
+      T
+
+      expect(codigos(r, :degrading)).to include(:duplicate_route_description)
+    end
+
+    it 'no avisa cuando cada rama describe algo distinto' do
+      r = validar(<<~T)
+        @ruta(soporte #soporte: no puedo entrar al sistema): -
+        @ruta(precios #precios: cuanto cuesta la licencia): -
+      T
+
+      expect(codigos(r, :degrading)).not_to include(:duplicate_route_description)
+    end
+
+    # Las ramas sin descripción ya las marca D1: si además se agruparan entre ellas,
+    # el mismo defecto saldría dos veces con dos nombres distintos.
+    it 'no agrupa entre sí a las ramas que no tienen descripción' do
+      r = validar(<<~T)
+        @ruta(uno #uno_x): -
+        @ruta(dos #dos_x): -
+      T
+
+      expect(codigos(r, :degrading)).not_to include(:duplicate_route_description)
+    end
+  end
+
   describe 'D2 · etiqueta que no existe en la cuenta' do
     it 'avisa que no va a disparar ninguna automatización' do
       create(:label, account: account, title: 'demo')
@@ -420,6 +466,7 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       expect(r[:routes].size).to eq(1)
     end
   end
+
   # ── D7 · @agendar_calendar sin calendario ───────────────────────────────────
   # El motor solo agenda si el agente tiene calendarios asignados. Escrita sin
   # ninguno en la cuenta, la directiva parsea, el comprobador la veía bien, y el
@@ -438,7 +485,7 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       UserCalendarIntegration.create!(account: account, user: create(:user, account: account),
                                       google_email: 'agenda@empresa.com', tokens: {})
 
-      expect(validar(entrenamiento)[:degrading].map { |f| f[:code] }).not_to include(:calendar_not_configured)
+      expect(validar(entrenamiento)[:degrading].pluck(:code)).not_to include(:calendar_not_configured)
     end
 
     # Avisa, no bloquea: el agente sigue contestando y sigue abriendo casos, y el
@@ -447,6 +494,4 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       expect(validar(entrenamiento)[:valid]).to be(true)
     end
   end
-
-
 end

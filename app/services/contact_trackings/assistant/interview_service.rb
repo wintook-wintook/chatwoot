@@ -37,6 +37,10 @@ class ContactTrackings::Assistant::InterviewService
   READ_TIMEOUT = 90
   # Vueltas de corrección antes de mostrarle los errores a la persona.
   MAX_REPAIRS = 3
+  # Vueltas para arreglar el RUTEO (ver RouteSelfCheck). Solo una: cada vuelta
+  # cuesta una clasificación por rama, y si con el cruce señalado de frente no lo
+  # arregla, una segunda vuelta tampoco — mejor entregarlo con el aviso a la vista.
+  MAX_ROUTE_REPAIRS = 1
   # Los dos comportamientos posibles del agente. "responde" consulta una fuente y
   # escala si no resuelve; "deriva" abre el caso siempre, sin intentar contestar.
   # Cuál de los dos es NO se puede deducir del pedido —"un agente que junte
@@ -46,58 +50,16 @@ class ContactTrackings::Assistant::InterviewService
   # Tope de turnos de entrevista. Más que esto no es una entrevista, es un chat: a
   # partir de acá el contrato le exige redactar con lo que tenga y marcar lo que
   # falte como <PENDIENTE:>.
-  MAX_INTERVIEW_TURNS = 5
-
-  # Tope de lo que se acepta en `opciones`. El payload lo escribe un modelo, así
-  # que se recorta acá y no en la pantalla: sin tope, una respuesta rara deja la
-  # conversación cubierta de botones.
   #
-  # ⚠ El tope estaba en 6 y el modelo hizo 7 preguntas: la séptima —la obligatoria,
-  # "¿contesta o deriva?"— se cayó SIN AVISO y quedó escrita en el mensaje pero sin
-  # botones. Ahora el tope va por encima de lo que el contrato permite pedir (4 por
-  # turno), así que el recorte es una red de seguridad y no algo que se dispare en
-  # el uso normal.
-  MAX_QUESTIONS = 10
-  MAX_CHOICES = 8
-  MAX_CHOICE_CHARS = 60
+  # Estaba en 5 y la entrevista pasó a tener CUATRO pasos (ramas+modo, las frases del
+  # cliente por rama, fuente y escalamiento, etiquetas): con 5 no quedaba ni un turno
+  # de margen para una respuesta a medias, y el paso que se caía era el de las frases
+  # —el único que no se puede deducir del inventario—.
+  MAX_INTERVIEW_TURNS = 6
 
-  Result = Struct.new(:reply, :draft, :validation, :repairs, :proposal, :options, :error, keyword_init: true) do
+  Result = Struct.new(:reply, :draft, :validation, :repairs, :route_mismatches, :proposal, :options, :error,
+                      keyword_init: true) do
     def success? = error.blank?
-  end
-
-  # Los datos del agente que el asistente propone junto al Entrenamiento. Se
-  # rescatan del JSON con cuidado: `contexto` es el único que puede hacer daño si
-  # el modelo lo rellena de memoria —entra al prompt como "BASE DE CONOCIMIENTO" y
-  # el agente lo cita como si fuera cierto—, así que se toma tal cual vino y la
-  # pantalla lo muestra editable, nunca oculto.
-  def self.proposal_from(reply)
-    raw = reply['propuesta']
-    return nil unless raw.is_a?(Hash)
-
-    { name: raw['nombre'].to_s.strip, objective: raw['objetivo'].to_s.strip,
-      ai_context: raw['contexto'].to_s.strip }
-  end
-
-  # Las preguntas que el asistente acaba de hacer, en forma de lista, para que la
-  # pantalla las muestre como botones. Se leen con desconfianza —las escribe el
-  # modelo— así que se recortan en cantidad y en largo, y se descarta cualquier
-  # pregunta sin elecciones: un botón vacío no sirve para nada.
-  def self.options_from(reply)
-    raw = reply['opciones']
-    return nil unless raw.is_a?(Array)
-
-    limpias = raw.first(MAX_QUESTIONS).filter_map do |item|
-      next unless item.is_a?(Hash)
-
-      elecciones = Array(item['elecciones']).first(MAX_CHOICES)
-                                            .map { |c| c.to_s.strip.truncate(MAX_CHOICE_CHARS) }
-                                            .compact_blank
-      next if elecciones.empty?
-
-      { question: item['pregunta'].to_s.strip.truncate(160), choices: elecciones }
-    end
-
-    limpias.presence
   end
 
   # one_shot: sin entrevista. Es el modo del botón "generar" que vive dentro de la
@@ -120,14 +82,14 @@ class ContactTrackings::Assistant::InterviewService
     draft = reply['entrenamiento'].presence
     if draft.blank?
       return Result.new(reply: reply['mensaje'], draft: nil, repairs: 0,
-                        options: self.class.options_from(reply))
+                        options: ContactTrackings::Assistant::ReplyParser.options(reply))
     end
     # Entregar sin haber preguntado no es un error de sintaxis, así que el
     # comprobador no lo caza: es el modelo decidiendo por la persona. Se rechaza
     # acá y se lo devuelve al mismo hilo, igual que un hallazgo del comprobador.
     return ask_missing_mode(reply, draft) if MODES.exclude?(reply['modo'])
 
-    repair(reply['mensaje'], draft, self.class.proposal_from(reply))
+    repair(reply['mensaje'], draft, ContactTrackings::Assistant::ReplyParser.proposal(reply))
   end
 
   private
@@ -149,7 +111,7 @@ class ContactTrackings::Assistant::InterviewService
     nuevo = corrected['entrenamiento'].presence
     return Result.new(reply: corrected['mensaje'], draft: nil, repairs: 0) if nuevo.blank?
 
-    repair(corrected['mensaje'], nuevo, self.class.proposal_from(corrected))
+    repair(corrected['mensaje'], nuevo, ContactTrackings::Assistant::ReplyParser.proposal(corrected))
   end
 
   # ── el bucle ────────────────────────────────────────────────────────────────
@@ -171,8 +133,85 @@ class ContactTrackings::Assistant::InterviewService
       validation = validate(draft)
     end
 
-    Result.new(reply: message, draft: draft, validation: validation,
-               repairs: repairs, proposal: proposal)
+    # Recién acá, con el Entrenamiento ya EJECUTABLE, se prueba si RUTEA. Antes no
+    # tiene sentido: un texto con hallazgos bloqueantes no llega a clasificar nada.
+    message, draft, validation, cruces = repair_routing(history, message, draft, validation)
+
+    Result.new(reply: message, draft: draft, validation: with_route_findings(validation, cruces),
+               repairs: repairs, route_mismatches: cruces, proposal: proposal)
+  end
+
+  # ── el segundo bucle: que cada rama se elija a sí misma ─────────────────────
+  # El comprobador dice si el Entrenamiento se ejecuta. Esto dice si rutea, que es
+  # lo que ningún parser puede contestar — y es donde el Asistente fallaba: escribió
+  # dos ramas con la misma descripción, y "a como esta el dolar hoy" dentro de la
+  # rama comercial teniendo una rama fuera_de_alcance.
+  #
+  # Se le devuelve el cruce TEXTUAL, igual que con los hallazgos del comprobador:
+  # "probé la rama X con su propia descripción y el motor eligió Y". Medido el
+  # 08/09/2026 sobre los mensajes del comprobador: el diagnóstico concreto repara,
+  # el veredicto no.
+  def repair_routing(history, message, draft, validation)
+    return [message, draft, validation, []] if validation[:blocking].any?
+
+    cruces = route_mismatches(draft)
+    rondas = 0
+
+    while cruces.any? && rondas < MAX_ROUTE_REPAIRS
+      rondas += 1
+      history += [{ role: 'assistant', content: { mensaje: message, entrenamiento: draft }.to_json },
+                  { role: 'user', content: routing_prompt(cruces) }]
+
+      reply = ask(history)
+      break if reply.nil? || reply['entrenamiento'].blank?
+
+      message = reply['mensaje']
+      draft = reply['entrenamiento']
+      validation = validate(draft)
+      # Si la corrección del ruteo rompió la gramática, manda el comprobador: un
+      # Entrenamiento que no ejecuta es peor que uno que rutea flojo.
+      break if validation[:blocking].any?
+
+      cruces = route_mismatches(draft)
+    end
+
+    [message, draft, validation, cruces]
+  end
+
+  # Los cruces que quedaron después de la vuelta de corrección se muestran como un
+  # hallazgo más: quien mira la pantalla no tiene por qué saber que hubo dos
+  # comprobaciones distintas, y un aviso que vive solo en el log no existe.
+  #
+  # Van como DEGRADANTES —el Entrenamiento se guarda—: el motor igual va a elegir
+  # alguna rama, solo que no la que esa descripción prometía.
+  def with_route_findings(validation, cruces)
+    return validation if cruces.empty?
+
+    extra = cruces.map do |c|
+      { code: :route_not_self_chosen,
+        message: t('findings.route_not_self_chosen', route: c.route, probe: c.probe,
+                                                     chosen: c.chosen || t('repair.route_none')),
+        wrote: c.probe }
+    end
+
+    validation.merge(degrading: validation[:degrading] + extra)
+  end
+
+  def route_mismatches(draft)
+    ContactTrackings::Assistant::RouteSelfCheck.new(account, draft: draft, inbox: inbox).call
+  rescue StandardError => e
+    # Que no se pueda probar el ruteo no debe costarle el Entrenamiento a nadie:
+    # se entrega lo que ya pasó el comprobador.
+    Rails.logger.warn "[Asistente] no se pudo probar el ruteo: #{e.message}"
+    []
+  end
+
+  def routing_prompt(cruces)
+    detalle = cruces.map do |c|
+      t('repair.route_mismatch_line', route: c.route, probe: c.probe, chosen: c.chosen || t('repair.route_none'))
+    end
+
+    "#{t('repair.route_header')}\n#{detalle.join("\n")}\n\n#{t('repair.route_footer')}"
   end
 
   # Se le devuelven los mensajes del comprobador TEXTUALES. Reescribirlos "para que
