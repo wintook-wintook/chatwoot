@@ -84,7 +84,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     tickets = Current.account.case_tickets
 
     tickets = apply_search(tickets)
-    tickets = tickets.where(status:       CaseTicket.statuses[params[:status]])      if params[:status].present?
+    tickets = apply_status_filter(tickets)
     tickets = tickets.where(case_type_id: params[:case_type_id])                     if params[:case_type_id].present?
     tickets = tickets.where(ticket_kind:  CaseTicket.ticket_kinds[params[:ticket_kind]]) if params[:ticket_kind].present?
     tickets = tickets.where(affected_service_id: params[:affected_service_id])       if params[:affected_service_id].present?
@@ -1028,6 +1028,24 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   end
 
   # Filtro por agente. 'null'/'none'/'unassigned' → tickets sin asignar (IS NULL).
+  # @tickets_cases — la lista de casos filtra por status "agrupado" además del
+  # exacto: 'pending'/'closed' cubren varios estados a la vez (ver
+  # CaseTicket::PENDING_STATUSES/CLOSED_STATUSES); cualquier otro valor se
+  # asume un estado exacto del enum, como siempre (compatibilidad con vistas
+  # guardadas de antes de este filtro).
+  def apply_status_filter(tickets)
+    return tickets if params[:status].blank?
+
+    case params[:status]
+    when 'pending'
+      tickets.where(status: CaseTicket::PENDING_STATUSES)
+    when 'closed'
+      tickets.where(status: CaseTicket::CLOSED_STATUSES)
+    else
+      tickets.where(status: CaseTicket.statuses[params[:status]])
+    end
+  end
+
   def apply_assignee(tickets)
     return tickets if params[:assignee_id].blank?
 
