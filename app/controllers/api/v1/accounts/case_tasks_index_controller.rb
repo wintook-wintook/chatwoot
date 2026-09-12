@@ -13,151 +13,35 @@
 # Visibilidad DECIDIDA (plan §3.1): por cuenta, sin guard de rol. Cualquier
 # agente puede filtrar por cualquier otro (default = mis tareas, por comodidad).
 # Ver: docs/vault-tickets/implementacion/Plan-Bandeja-Tareas.md
+#
+# @tickets_cases — `item_type` decide qué se lista: '' (default) fusiona tareas
+# (CaseTask) y reuniones (CaseMeeting, "tareas agendadas" en el resto del código)
+# en un solo feed ordenado por fecha; 'task' u 'meeting' devuelve solo uno de los
+# dos. La consulta/orden/fusión vive en Cases::TasksInboxQuery — este controller
+# solo autoriza y serializa.
 # ================================================================================
 class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseController
-  PER_PAGE = 25
-
-  # Orden por columna (clic en el encabezado de la tabla). Whitelist: la clave es
-  # el `field` de la columna en el front y el valor la expresión SQL, así que es
-  # seguro interpolarla. Sin `sort_by` válido se mantiene el orden natural
-  # (`ordered` = posición dentro del ticket).
-  SORTABLE_COLUMNS = {
-    'sequence' => 'case_tasks.sequence',
-    'title' => 'case_tasks.title',
-    'priority' => 'case_tasks.priority',
-    'status' => 'case_tasks.status',
-    'due_at' => 'case_tasks.due_at',
-    'ticket' => 'case_tickets.folio',
-    'assignee' => 'assignee_users.name',
-    'requester' => 'requester_users.name'
-  }.freeze
+  include CaseMeetingSerializer
 
   def index
-    scope = filtered_scope
-    total = scope.count
-    page  = [params[:page].to_i, 1].max
-    rows  = apply_sort(scope)
-            .includes(:assignee, :requester, case_ticket: :case_type)
-            .limit(PER_PAGE)
-            .offset((page - 1) * PER_PAGE)
-            .to_a
-
-    @notes_count_map = notes_count_map_for(rows)
+    result = Cases::TasksInboxQuery.new(account: Current.account, current_user: current_user, params: params).call
+    @notes_count_map = notes_count_map_for(result[:rows])
 
     render json: {
-      case_tasks: rows.map { |t| task_json(t) },
-      meta: { current_page: page, page_size: PER_PAGE, count: total }
+      case_tasks: result[:rows].map { |record, kind| kind == :task ? task_json(record) : meeting_row_json(record) },
+      meta: { current_page: result[:page], page_size: Cases::TasksInboxQuery::PER_PAGE, count: result[:total] }
     }
   end
 
   private
 
-  def base_scope
-    CaseTask.where(account_id: Current.account.id)
-  end
-
-  # Aplica los filtros de la bandeja (todos opcionales salvo el default de asignado).
-  def filtered_scope
-    scope = filter_assignee(base_scope)
-    scope = filter_requester(scope)
-    scope = filter_status(scope)
-    scope = filter_due(scope)
-    scope = filter_case_type(scope)
-    filter_search(scope)
-  end
-
-  # requester_id: quién dio de alta la tarea. Ausente → sin filtro.
-  def filter_requester(scope)
-    raw = params[:requester_id].presence
-
-    return scope if raw.nil?
-    return scope.where(requester_id: nil) if raw == 'unassigned'
-
-    scope.where(requester_id: raw)
-  end
-
-  # assignee_id: ausente → mis tareas · 'all' → todos los agentes (sin filtro) ·
-  # 'unassigned' → huérfanas · id → ese agente.
-  def filter_assignee(scope)
-    raw = params[:assignee_id].presence
-
-    return scope if raw == 'all'
-    return scope.where(assignee_id: nil) if raw == 'unassigned'
-    return scope.where(assignee_id: current_user.id) if raw.nil?
-
-    scope.where(assignee_id: raw)
-  end
-
-  # status: ausente → pending · 'done' → completadas · 'all'/'' → todas.
-  def filter_status(scope)
-    raw = params[:status]
-
-    return scope if ['all', ''].include?(raw)
-    return scope.where(status: CaseTask.statuses[raw]) if CaseTask.statuses.key?(raw)
-
-    scope.pending
-  end
-
-  # due: overdue (vencidas y aún pendientes) · today · week (próximos 7 días).
-  def filter_due(scope)
-    case params[:due]
-    when 'overdue'
-      scope.pending.where('case_tasks.due_at < ?', Time.current)
-    when 'today'
-      scope.where(due_at: Time.zone.today.all_day)
-    when 'week'
-      scope.where(due_at: Time.zone.today.beginning_of_day..6.days.from_now.end_of_day)
-    else
-      scope
-    end
-  end
-
-  def filter_case_type(scope)
-    return scope if params[:case_type_id].blank?
-
-    scope.joins(:case_ticket).where(case_tickets: { case_type_id: params[:case_type_id] })
-  end
-
-  # Orden pedido por el front (sort_by = field de la columna, sort_order asc/desc).
-  # Las tareas sin dato (vencimiento vacío, sin responsable…) siempre al final.
-  def apply_sort(scope)
-    key = params[:sort_by].to_s
-    return scope.ordered unless SORTABLE_COLUMNS.key?(key)
-
-    dir = params[:sort_order] == 'desc' ? 'DESC' : 'ASC'
-    sort_joins(scope, key).reorder(
-      Arel.sql("#{SORTABLE_COLUMNS[key]} #{dir} NULLS LAST, case_tasks.id ASC")
-    )
-  end
-
-  # Las columnas que viven en otra tabla necesitan su join (alias propio para no
-  # chocar con el join de `filter_case_type`).
-  def sort_joins(scope, key)
-    case key
-    when 'ticket'
-      scope.joins(:case_ticket)
-    when 'assignee'
-      scope.joins('LEFT JOIN users AS assignee_users ON assignee_users.id = case_tasks.assignee_id')
-    when 'requester'
-      scope.joins('LEFT JOIN users AS requester_users ON requester_users.id = case_tasks.requester_id')
-    else
-      scope
-    end
-  end
-
-  def filter_search(scope)
-    return scope if params[:q].blank?
-
-    like = "%#{params[:q].to_s.strip}%"
-    scope.where('case_tasks.title ILIKE :q OR case_tasks.description ILIKE :q', q: like)
-  end
-
-  # --- serialización --------------------------------------------------------
+  # --- serialización: tareas ----------------------------------------------------
   # La tarea MÁS el contexto de su ticket: sin esto la bandeja no ahorra el
   # "entrar ticket por ticket" que motiva el plan.
   def task_json(task)
     {
       id: task.id,
+      item_type: 'task',
       # Folio consecutivo de la tarea dentro de su ticket (T001, T002…), igual
       # que en la vista de tareas dentro del ticket.
       sequence: task.sequence,
@@ -181,9 +65,21 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
     }
   end
 
-  # id de tarea → nº de notas internas, para las tareas de la página actual.
+  # --- serialización: reuniones ("tareas agendadas") -----------------------------
+  # `meeting_json` (CaseMeetingSerializer) ya trae sequence/folio/title/starts_at/
+  # ends_at/status/organizer/case_task/etc. — solo se etiqueta el tipo y se suma
+  # el contexto del ticket, igual que las tareas.
+  def meeting_row_json(meeting)
+    meeting_json(meeting).merge(
+      item_type: 'meeting',
+      case_ticket: ticket_context(meeting.case_ticket)
+    )
+  end
+
+  # id de tarea → nº de notas internas, solo para las filas de tarea de la
+  # página actual (las reuniones no tienen este concepto).
   def notes_count_map_for(rows)
-    ids = rows.map(&:id)
+    ids = rows.filter_map { |record, kind| record.id if kind == :task }
     return {} if ids.empty?
 
     CaseEvent.where(account_id: Current.account.id, event_type: :internal_note)

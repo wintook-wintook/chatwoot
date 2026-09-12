@@ -414,6 +414,10 @@ export const SET_CONTACT_CASE_TICKETS = 'SET_CONTACT_CASE_TICKETS';
 export const SET_CASE_TICKET_EVENTS = 'SET_CASE_TICKET_EVENTS';
 export const SET_CASE_TICKETS_LIST = 'SET_CASE_TICKETS_LIST';
 export const SET_CASE_TICKETS_META = 'SET_CASE_TICKETS_META';
+// @tickets_cases — filtros/página del listado (Index.vue), para que sobrevivan
+// a entrar a un ticket y volver (se pierden al desmontar el componente, no al
+// navegar dentro de la misma sesión de la app).
+export const SET_CASE_TICKETS_LIST_PREFS = 'SET_CASE_TICKETS_LIST_PREFS';
 export const SET_CASE_RULES = 'SET_CASE_RULES';
 export const SET_CASE_RULES_UI_FLAG = 'SET_CASE_RULES_UI_FLAG';
 export const SET_CASE_METRICS = 'SET_CASE_METRICS';

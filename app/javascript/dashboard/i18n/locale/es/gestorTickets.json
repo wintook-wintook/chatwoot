@@ -95,6 +95,8 @@
       "DATE_RANGE": "Rango de fechas",
       "APPLY": "Aplicar",
       "ALL_STATUSES": "Todos los estados",
+      "STATUS_PENDING": "Pendientes",
+      "STATUS_CLOSED": "Cerrados",
       "ALL_PRIORITIES": "Todas las prioridades",
       "ALL_ORIGINS": "Todos los orígenes",
       "SORT_BY": "Ordenar por",
@@ -326,6 +328,11 @@
           "PENDING": "Pendientes",
           "DONE": "Completadas",
           "ALL": "Todos los estados"
+        },
+        "ITEM_TYPE": {
+          "ALL": "Todas",
+          "TASK": "No agendadas",
+          "MEETING": "Agendadas"
         },
         "DUE": {
           "ANY": "Cualquier fecha",
@@ -1179,7 +1186,7 @@
         "MEETING": "Título",
         "WHEN": "Fecha",
         "STATUS": "Estado",
-        "ORGANIZER": "Organizador"
+        "ORGANIZER": "Responsable"
       },
       "STATUS": {
         "SCHEDULED": "Agendada",
@@ -1209,7 +1216,7 @@
         "DATE_ERROR": "La hora de fin debe ser posterior a la de inicio.",
         "TASK_LABEL": "Tarea",
         "TASK_NONE": "— Del caso (sin tarea) —",
-        "ORGANIZER_LABEL": "Organizador",
+        "ORGANIZER_LABEL": "Responsable",
         "ORGANIZER_ME": "— Yo —",
         "LOCATION_LABEL": "Lugar",
         "LOCATION_PLACEHOLDER": "Ej: Oficina, videollamada, teléfono…",

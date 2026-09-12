@@ -92,6 +92,8 @@
       "DATE_RANGE": "Date range",
       "APPLY": "Apply",
       "ALL_STATUSES": "All statuses",
+      "STATUS_PENDING": "Pending",
+      "STATUS_CLOSED": "Closed",
       "ALL_PRIORITIES": "All priorities",
       "ALL_ORIGINS": "All origins",
       "SORT_BY": "Sort by",
@@ -352,6 +354,11 @@
           "PENDING": "Pending",
           "DONE": "Completed",
           "ALL": "All statuses"
+        },
+        "ITEM_TYPE": {
+          "ALL": "All",
+          "TASK": "Not scheduled",
+          "MEETING": "Scheduled"
         },
         "DUE": {
           "ANY": "Any date",
@@ -1168,7 +1175,7 @@
         "MEETING": "Title",
         "WHEN": "Date",
         "STATUS": "Status",
-        "ORGANIZER": "Organizer"
+        "ORGANIZER": "Assignee"
       },
       "STATUS": {
         "SCHEDULED": "Scheduled",
@@ -1198,7 +1205,7 @@
         "DATE_ERROR": "The end time must be after the start time.",
         "TASK_LABEL": "Task",
         "TASK_NONE": "— Case (no task) —",
-        "ORGANIZER_LABEL": "Organizer",
+        "ORGANIZER_LABEL": "Assignee",
         "ORGANIZER_ME": "— Me —",
         "LOCATION_LABEL": "Location",
         "LOCATION_PLACEHOLDER": "e.g. Office, video call, phone…",
