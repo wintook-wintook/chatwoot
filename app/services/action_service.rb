@@ -95,11 +95,15 @@ class ActionService
   end
 
   # proyecto@automatizaciones: asigna un Tipo de Caso a la conversación. Reutiliza el CaseTicket
-  # ya vinculado a la conversación si existe (evita duplicar casos); si no hay ninguno, crea uno
-  # nuevo con ese tipo. Al asignar 'nil' limpia el tipo del caso vinculado sin borrarlo.
+  # vigente ya vinculado a la conversación si existe (evita duplicar casos); si no hay ninguno
+  # vigente, crea uno nuevo con ese tipo. Un ticket en CaseTicket::CLOSED_STATUSES (resolved,
+  # validating, closed, cancelled) NO cuenta como vigente: si es lo último que hay en la
+  # conversación, se trata como si no hubiera ninguno y se crea un caso nuevo en vez de tocar
+  # el viejo con un simple cambio de tipo (que además no lo reabre: se queda cerrado/resuelto/
+  # cancelado, "fantasma"). Al asignar 'nil' limpia el tipo del caso vigente sin borrarlo.
   def assign_case_type(params)
     case_type_id = params[0]
-    case_ticket = @conversation.case_tickets.order(created_at: :desc).first
+    case_ticket = @conversation.case_tickets.where.not(status: CaseTicket::CLOSED_STATUSES).order(created_at: :desc).first
 
     if case_type_id.to_s == 'nil'
       case_ticket&.update!(case_type_id: nil)
