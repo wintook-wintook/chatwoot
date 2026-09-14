@@ -93,9 +93,14 @@ class Cases::OrchestratorService
 
   # @tickets_cases — punto de entrada para la Automatización nativa de Chatwoot
   # (dispara sobre una Conversation, sin un mensaje puntual garantizado — a
-  # diferencia de find_or_create_from_message). Mismo criterio anti-duplicado
-  # que el resto del módulo (find_active_ticket, por contacto): si ya hay un
-  # caso activo, lo reusa y vincula esta conversación si no tenía otra.
+  # diferencia de find_or_create_from_message). Criterio anti-duplicado PROPIO
+  # de este flujo (por contacto, igual que find_active_ticket, pero excluyendo
+  # todo CaseTicket::CLOSED_STATUSES en vez de solo closed/cancelled): un caso
+  # resuelto o en validación tampoco cuenta como vigente acá, para que volver a
+  # ejecutar la automatización sobre un caso ya resuelto abra uno nuevo en vez
+  # de tocar el viejo sin reabrirlo. Los otros 3 flujos que usan
+  # find_active_ticket (mensajes entrantes, directiva IA, seguimientos)
+  # siguen con el criterio angosto de siempre — no se tocan acá.
   #   - título/descripción/clasificación: intake IA sobre la conversación si
   #     la cuenta la tiene activa; si no, el mismo fallback de siempre (último
   #     mensaje entrante truncado).
@@ -108,7 +113,7 @@ class Cases::OrchestratorService
   #   - asignación: SIEMPRE vía Cases::RuleEngineService, nunca hardcodeada
   #     acá, igual que el resto de las vías de alta.
   def create_from_automation(case_type_id: nil)
-    ticket = find_active_ticket
+    ticket = find_active_ticket_for_automation
     if ticket
       ticket.update!(conversation: @conversation) if ticket.conversation_id.nil? && @conversation.present?
       return ticket
@@ -218,6 +223,19 @@ class Cases::OrchestratorService
   end
 
   private
+
+  # @tickets_cases — versión de find_active_ticket solo para create_from_automation:
+  # excluye CaseTicket::CLOSED_STATUSES completo (resolved, validating, closed,
+  # cancelled) en vez de únicamente closed/cancelled. No se usa el nombre
+  # find_active_ticket para no ampliar sin querer el criterio de los otros 3
+  # flujos que sí llaman a ese método.
+  def find_active_ticket_for_automation
+    CaseTicket
+      .where(account: @account, contact: @contact)
+      .where.not(status: CaseTicket::CLOSED_STATUSES)
+      .order(created_at: :desc)
+      .first
+  end
 
   # @tickets_cases 3B — encola la clasificación IA si la cuenta la tiene activa
   # (off/suggest/auto). El job se autoprotege; corre en background sin bloquear.
