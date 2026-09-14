@@ -18,27 +18,13 @@ const QUICK_FILTERS = [
   { key: 'sla_overdue', label: 'SLA vencidos' },
 ];
 
-// Columnas operativas: cada una agrupa uno o más estados del ciclo de vida (2A).
-const COLUMNS = [
-  { key: 'new', statuses: ['open', 'classified'] },
-  { key: 'assigned', statuses: ['assigned', 'in_diagnosis'] },
-  { key: 'progress', statuses: ['in_progress', 'escalated'] },
-  {
-    key: 'waiting',
-    statuses: [
-      'waiting_on_customer',
-      'waiting_on_third_party',
-      'waiting_on_internal',
-    ],
-  },
-  { key: 'resolved', statuses: ['resolved', 'validating'] },
-  { key: 'closed', statuses: ['closed', 'cancelled'] },
-];
-
-// Modo simple (osTicket): 5 columnas. "En proceso" agrupa classified/assigned/
-// in_diagnosis/in_progress/escalated (igual que SIMPLE_STATUS_MAP) → así arrastrar
-// "Nuevo" (open) a "En proceso" es válido (open → classified) y fluye el tablero.
-const SIMPLE_COLUMNS = [
+// Columnas por defecto del tablero cuando no hay un tipo de caso filtrado (así
+// que no hay columnas propias de un tipo que mostrar). ITIL dejó de ser un modo
+// de cuenta, así que esto ya no alterna entre "simple"/"ITIL": es una única
+// plantilla neutra, agrupando estados del ciclo de vida (2A). "En proceso"
+// agrupa classified/assigned/in_diagnosis/in_progress/escalated (igual que
+// SIMPLE_STATUS_MAP) → arrastrar "Nuevo" (open) ahí es válido (open → classified).
+const DEFAULT_COLUMNS = [
   { key: 'new', statuses: ['open'] },
   {
     key: 'progress',
@@ -116,7 +102,6 @@ export default {
       services: 'caseTickets/getServices',
       agents: 'agents/getAgents',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Casos"
-      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
       types: 'caseTickets/getTypes', // columnas por tipo (A+)
     }),
     isFetching() {
@@ -131,7 +116,7 @@ export default {
       return (type && type.columns) || [];
     },
     // Columnas del tablero: si hay un tipo con columnas configuradas, las suyas;
-    // si no, las fijas de hoy (simples 5 / ITIL 6).
+    // si no (sin filtro de tipo), las fijas por defecto.
     columns() {
       if (this.selectedTypeColumns.length) {
         return this.selectedTypeColumns.map(c => ({
@@ -143,7 +128,7 @@ export default {
           custom: true,
         }));
       }
-      return this.itilEnabled ? COLUMNS : SIMPLE_COLUMNS;
+      return DEFAULT_COLUMNS;
     },
     activeQuickTabIndex() {
       const i = QUICK_FILTERS.findIndex(f => f.key === this.quickFilter);
@@ -311,7 +296,19 @@ export default {
 
       const valid = ticket.can_transition_to || [];
       const candidates = column.statuses.filter(s => valid.includes(s));
-      if (!candidates.length) {
+
+      // ── Tablero por tipo (A+): el orden de columnas manda, no la espina ITIL
+      // fija de "un salto" — salvo un caso CANCELADO, que nunca cambia de status
+      // (terminal a propósito). El tablero fijo mantiene el rechazo de siempre.
+      if (column.custom) {
+        if (ticket.status === 'cancelled') {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.KANBAN.CANCELLED_IMMUTABLE'),
+            type: 'error',
+          });
+          return;
+        }
+      } else if (!candidates.length) {
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.KANBAN.INVALID_MOVE'),
           type: 'error',
@@ -319,8 +316,12 @@ export default {
         return;
       }
       this.moveTicket = ticket;
-      this.moveCandidates = candidates;
-      this.moveTarget = candidates[0];
+      // El selector del modal es solo informativo (arma el mensaje de aviso al
+      // cliente); en tablero por tipo el backend decide el status real — si
+      // ningún estado de la columna es alcanzable en un salto, se muestran
+      // todos los de la columna en vez de dejar el selector vacío.
+      this.moveCandidates = candidates.length ? candidates : column.statuses;
+      this.moveTarget = this.moveCandidates[0];
       // En tablero por tipo, el destino es la columna (el backend elige el status).
       this.moveTargetColumn = column.custom ? column : null;
       this.moveReason = '';
@@ -396,10 +397,25 @@ export default {
         }
         this.fetch();
       } catch (e) {
-        this.$emitter.emit('newToastMessage', {
-          message: this.$t('CASE_TICKETS.KANBAN.MOVE_ERROR'),
-          type: 'error',
-        });
+        // @tickets_cases — este movimiento cierra el caso y el Kanban no tiene el
+        // modal de cierre documentado (2G): manda a la ficha del ticket, que sí lo
+        // tiene, en vez de duplicar el formulario aquí.
+        if (e.response?.data?.requires_closure) {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.KANBAN.REQUIRES_CLOSURE'),
+            type: 'error',
+            action: {
+              type: 'link',
+              to: { name: 'gestorTickets_detail', params: { id: ticket.id } },
+              message: this.$t('CASE_TICKETS.KANBAN.OPEN_TICKET_TO_CLOSE'),
+            },
+          });
+        } else {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.KANBAN.MOVE_ERROR'),
+            type: 'error',
+          });
+        }
       } finally {
         this.closeMove();
       }

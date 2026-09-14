@@ -46,6 +46,24 @@ module KnowledgeBase
       [/@soporte_contpaq\(([^)]+)\)/i, :contpaq_support,       true]
     ].freeze
 
+    # Quita los TOKENS de directiva de un texto, dejando la prosa alrededor intacta.
+    # Para prompts que van a un LLM sin la kbase detras (fallback conversacional, o el
+    # propio camino kbase armando su system prompt): la sintaxis cruda de directiva
+    # confunde al modelo -- la "simula" como si la estuviera ejecutando -- pero las
+    # reglas que la MENCIONAN en una oracion (p.ej. "aplica esto a lo recibido de
+    # @discourse") siguen siendo instrucciones validas y deben conservarse. Antes cada
+    # llamador decidia "todo o nada" (blanquear el prompt completo si aparecia CUALQUIER
+    # mencion), perdiendo reglas de evidencia/etiquetas que nada tenian que ver con una
+    # directiva activa de ese turno.
+    def strip_tokens(text)
+      text.to_s
+          .gsub(/@buscar_foro\([^)]+\)/i, '')
+          .gsub(CANNED_RE, '')
+          .gsub(/@buscar_art[ií]culo\b/i, '')
+          .gsub(/@discourse\b/i, '')
+          .strip
+    end
+
     # Primera directiva de fuente presente en el texto → { mode:, source_name: } o nil.
     def detect(text)
       prompt = text.to_s

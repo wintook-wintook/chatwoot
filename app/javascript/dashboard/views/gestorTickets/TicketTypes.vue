@@ -70,6 +70,11 @@ export default {
               <span class="text-sm font-medium truncate text-slate-800 dark:text-slate-100">
                 {row.name}
               </span>
+              {row.itil_enabled && (
+                <span class="flex-shrink-0 px-1.5 py-0.5 text-xs font-medium rounded bg-woot-100 text-woot-700 dark:bg-woot-800 dark:text-woot-100">
+                  ITIL
+                </span>
+              )}
             </div>
           ),
         },

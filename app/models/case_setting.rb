@@ -21,9 +21,10 @@
 #  fk_rails_...  (account_id => accounts.id)
 #
 
-# @tickets_cases — Ajustes generales del módulo de tickets por cuenta.
-# `itil_enabled = false` (default) = modo simple (osTicket): la UI oculta los
-# estados y campos ITIL. El modo es presentación; el backend no se restringe.
+# @tickets_cases — Ajustes generales del módulo de tickets por cuenta (ventana de
+# reapertura). El modo ITIL/simple dejó de ser un ajuste de cuenta y ahora es por
+# tipo de caso — ver CaseType#itil_enabled. La columna `itil_enabled` de esta
+# tabla sigue en la base (se elimina en un segundo PR) pero ya no se lee ni escribe.
 class CaseSetting < ApplicationRecord
   belongs_to :account
 

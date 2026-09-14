@@ -71,6 +71,9 @@ export default {
       // @tickets_cases — motivo opcional al cambiar de estado (osTicket)
       showReasonModal: false,
       pendingStatus: null,
+      // @tickets_cases — columna del tipo elegida en el dropdown de estado (modo
+      // simple); tras confirmar la transición, fija el puntero a esa columna.
+      pendingColumnId: null,
       // @tickets_cases F5 (§11.2) — reuniones futuras del ticket al cambiar de
       // estado. El default de la casilla lo dicta el estado destino: `resolved` y
       // `validating` NO son terminales (la cita puede ser justo la de validación),
@@ -104,6 +107,10 @@ export default {
         closure_solution: '',
         customer_confirmed: false,
       },
+      // @tickets_cases — si el modal de cierre se abrió por un salto de columna
+      // (moveToColumn) y no por el dropdown de estado, aquí va la columna destino
+      // pendiente, para que confirmClose sepa completar el movimiento por columna.
+      closeViaColumnMoveId: null,
       // 3C — respuesta sugerida desde KB
       replySuggestion: null,
       isSuggestingReply: false,
@@ -141,7 +148,6 @@ export default {
       uiFlags: 'caseTickets/getUIFlags',
       teams: 'teams/getTeams',
       agents: 'agents/getAgents',
-      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
       currentUserID: 'getCurrentUserID', // @tickets_cases — bloqueo de ticket
     }),
     // ¿Otro agente tiene bloqueado este ticket?
@@ -414,11 +420,78 @@ export default {
     isTransitioning() {
       return this.uiFlags.isTransitioning;
     },
+    // @tickets_cases — columnas configuradas del tipo del ticket (Opción A+).
+    typeColumns() {
+      return this.ticket?.case_type?.columns || [];
+    },
+    // @tickets_cases — modo ITIL propio del tipo del ticket (ya no es un ajuste global).
+    itilEnabled() {
+      return !!this.ticket?.case_type?.itil_enabled;
+    },
+    // Opciones que ofrece el dropdown "Cambiar estado": { status, columnId, label,
+    // viaColumnMove }.
+    // - Modo ITIL: los 13 estados tal cual, uno a uno (can_transition_to).
+    // - Modo simple: como una columna del tipo puede agrupar VARIOS estados ITIL
+    //   (ej. "En proceso" = classified+assigned+in_diagnosis+in_progress+escalated),
+    //   se ofrecen DOS clases de opción:
+    //   (a) avanzar a otro estado que sigue dentro de la MISMA etapa actual (o que
+    //       ninguna columna cubre) — sigue siendo una transición real de un paso,
+    //       vía el dropdown/modal de siempre (transitionTo → runTransition).
+    //   (b) saltar a OTRA etapa — una opción por columna destino, sin importar si
+    //       el estado es alcanzable en un salto: el orden de columnas del tipo ES
+    //       el flujo real, el backend decide el estado destino (moveToColumn, mismo
+    //       endpoint `move` que ya usa el Kanban). Un ticket CANCELADO es la única
+    //       excepción: nunca cambia de status, así que no ofrece este salto salvo
+    //       que la columna destino YA cubra `cancelled` (movimiento de puntero,
+    //       inofensivo — el backend lo permite igual).
+    //   Si el tipo no tiene columnas (ticket sin tipo), cae al filtro viejo.
     validTransitions() {
       const all = this.ticket?.can_transition_to || [];
-      // Modo simple (osTicket): solo se ofrecen los estados destino simples.
-      if (this.itilEnabled) return all;
-      return all.filter(s => SIMPLE_TRANSITION_TARGETS.includes(s));
+      if (this.itilEnabled) {
+        return all.map(status => ({
+          status,
+          columnId: null,
+          label: this.statusLabel(status),
+        }));
+      }
+      const currentStatus = this.ticket?.status;
+      const columns = this.typeColumns;
+      if (!columns.length) {
+        return all
+          .filter(s => SIMPLE_TRANSITION_TARGETS.includes(s))
+          .map(status => ({
+            status,
+            columnId: null,
+            label: this.statusLabel(status),
+          }));
+      }
+      const columnOf = status =>
+        columns.find(c => (c.statuses || []).includes(status));
+      const currentColumn = columnOf(currentStatus);
+      const options = [];
+      all.forEach(status => {
+        const col = columnOf(status);
+        if (!col || (currentColumn && col.id === currentColumn.id)) {
+          options.push({
+            status,
+            columnId: col ? col.id : null,
+            label: this.statusLabel(status),
+          });
+        }
+      });
+      columns
+        .filter(c => !currentColumn || c.id !== currentColumn.id)
+        .forEach(c => {
+          const freeMove = (c.statuses || []).includes(currentStatus);
+          if (!freeMove && currentStatus === 'cancelled') return; // terminal: sin salida real
+          options.push({
+            status: freeMove ? currentStatus : null,
+            columnId: c.id,
+            label: c.label,
+            viaColumnMove: true,
+          });
+        });
+      return options;
     },
     // @tickets_cases 2D — nivel y disponibilidad de escalamiento.
     escalationLabel() {
@@ -579,6 +652,47 @@ export default {
       this.showDueMenu = false;
       this.showTransitionMenu = false;
     },
+    // @tickets_cases — entrada del dropdown de estado. Un salto de columna
+    // (viaColumnMove) va directo por el endpoint `move` — el backend decide el
+    // estado destino, igual que el Kanban. El resto sigue el flujo de siempre:
+    // recuerda a qué columna apunta la opción elegida y dispara la transición.
+    selectTransition(opt) {
+      if (opt.viaColumnMove) {
+        this.moveToColumn(opt.columnId);
+        return;
+      }
+      this.pendingColumnId = opt.columnId || null;
+      this.transitionTo(opt.status);
+    },
+    // @tickets_cases — salto de columna independiente del status (ver
+    // validTransitions). Si el backend responde `requires_closure`, abre el modal
+    // de cierre ya existente y recuerda la columna destino para completarlo desde
+    // confirmClose.
+    async moveToColumn(columnId) {
+      this.showTransitionMenu = false;
+      try {
+        await this.$store.dispatch('caseTickets/moveTicketColumn', {
+          ticketId: this.ticketId,
+          caseTypeColumnId: columnId,
+        });
+        this.refetch();
+      } catch (e) {
+        if (e.response?.data?.requires_closure) {
+          this.closeViaColumnMoveId = columnId;
+          this.closeForm = {
+            closure_type: 'resolved',
+            closure_cause: '',
+            closure_solution: '',
+            customer_confirmed: false,
+          };
+          this.showCloseModal = true;
+          return;
+        }
+        this.$emitter.emit('newToastMessage', {
+          message: e.response?.data?.error || 'No se pudo mover el caso',
+        });
+      }
+    },
     async transitionTo(status) {
       this.showTransitionMenu = false;
       // 2G — cerrar exige documentar el cierre (modal obligatorio).
@@ -589,6 +703,7 @@ export default {
           closure_solution: '',
           customer_confirmed: false,
         };
+        this.closeViaColumnMoveId = null; // este cierre es un status directo, no un salto de columna
         this.showCloseModal = true;
         return;
       }
@@ -642,17 +757,43 @@ export default {
         this.orphanMeetings = [];
       }
     },
+    // @tickets_cases — cierra el modal de cierre sin aplicar nada; limpia también
+    // el rastro de un salto de columna pendiente (si el modal se abrió por ahí).
+    cancelCloseModal() {
+      this.showCloseModal = false;
+      this.closeViaColumnMoveId = null;
+    },
     // @tickets_cases 2G — confirmar cierre documentado
     async confirmClose() {
       if (!this.closeFormValid) return;
-      await this.runTransition('closed', {
-        closure: {
-          closure_type: this.closeForm.closure_type,
-          closure_cause: this.closeForm.closure_cause.trim(),
-          closure_solution: this.closeForm.closure_solution.trim(),
-          customer_confirmed: this.closeForm.customer_confirmed,
-        },
-      });
+      const closure = {
+        closure_type: this.closeForm.closure_type,
+        closure_cause: this.closeForm.closure_cause.trim(),
+        closure_solution: this.closeForm.closure_solution.trim(),
+        customer_confirmed: this.closeForm.customer_confirmed,
+      };
+      // @tickets_cases — el modal se abrió por un salto de columna (moveToColumn),
+      // no por el dropdown de 13 estados: completa el movimiento por columna con
+      // los datos de cierre en vez de transicionar directo a 'closed'.
+      if (this.closeViaColumnMoveId) {
+        const columnId = this.closeViaColumnMoveId;
+        this.closeViaColumnMoveId = null;
+        this.showCloseModal = false;
+        try {
+          await this.$store.dispatch('caseTickets/moveTicketColumn', {
+            ticketId: this.ticketId,
+            caseTypeColumnId: columnId,
+            closure,
+          });
+          this.refetch();
+        } catch (e) {
+          this.$emitter.emit('newToastMessage', {
+            message: e.response?.data?.error || 'No se pudo mover el caso',
+          });
+        }
+        return;
+      }
+      await this.runTransition('closed', { closure });
       this.showCloseModal = false;
     },
     closureTypeLabel(t) {
@@ -892,6 +1033,8 @@ export default {
       return this.$t(`CASE_TICKETS.KB.STATUS.${status}`) || status;
     },
     async runTransition(status, extra = {}) {
+      const columnId = this.pendingColumnId;
+      this.pendingColumnId = null;
       try {
         await this.$store.dispatch('caseTickets/transitionTicket', {
           ticketId: this.ticketId,
@@ -899,6 +1042,24 @@ export default {
           status,
           ...extra,
         });
+        // Tras transitar, transition! ya corrió resync_type_column (el puntero
+        // se limpia si la columna anterior no cubre el nuevo estado). Si la
+        // opción elegida venía de una columna del tipo y esa columna SÍ cubre
+        // el estado alcanzado, fijamos el puntero — solo mueve el puntero
+        // (move_within_state en el backend), nunca dispara otra transición.
+        const column =
+          columnId && this.typeColumns.find(c => c.id === columnId);
+        if (column && (column.statuses || []).includes(status)) {
+          try {
+            await this.$store.dispatch('caseTickets/moveTicketColumn', {
+              ticketId: this.ticketId,
+              caseTypeColumnId: columnId,
+            });
+          } catch (e) {
+            // No bloqueante: el estado ya cambió; el tablero cae al fallback
+            // por status si el puntero no queda fijado.
+          }
+        }
         this.refetch();
       } catch (e) {
         this.$emitter.emit('newToastMessage', {
@@ -1723,12 +1884,12 @@ export default {
               class="absolute right-0 z-50 py-1 mt-1 list-none bg-white border rounded-md shadow-md dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[180px]"
             >
               <li
-                v-for="s in validTransitions"
-                :key="s"
+                v-for="opt in validTransitions"
+                :key="`${opt.columnId || 'x'}-${opt.status || 'x'}`"
                 class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                @click="transitionTo(s)"
+                @click="selectTransition(opt)"
               >
-                {{ statusLabel(s) }}
+                {{ opt.label }}
               </li>
               <li
                 v-if="!validTransitions.length"
@@ -3217,7 +3378,7 @@ export default {
     <woot-modal
       v-if="showCloseModal"
       :show="showCloseModal"
-      :on-close="() => (showCloseModal = false)"
+      :on-close="cancelCloseModal"
       size="small"
     >
       <div class="flex flex-col h-auto overflow-auto">
@@ -3291,7 +3452,7 @@ export default {
               variant="clear"
               color-scheme="secondary"
               type="button"
-              @click="showCloseModal = false"
+              @click="cancelCloseModal"
             >
               {{ $t('CASE_TICKETS.CLOSURE.CANCEL') }}
             </woot-button>

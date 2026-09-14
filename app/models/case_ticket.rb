@@ -101,6 +101,16 @@ class CaseTicket < ApplicationRecord
     'cancelled'              => []
   }.freeze
 
+  # @tickets_cases — agrupación "pendiente vs cerrado" para el filtro de estado
+  # de la lista de casos. "Cerrado" incluye resuelto/validando aunque el status
+  # literal no sea `closed`: para el negocio, un caso resuelto ya no es trabajo
+  # activo aunque técnicamente pueda reabrirse o cambiar de estado después.
+  PENDING_STATUSES = %w[
+    open classified assigned in_diagnosis in_progress escalated
+    waiting_on_customer waiting_on_third_party waiting_on_internal
+  ].freeze
+  CLOSED_STATUSES = %w[resolved validating closed cancelled].freeze
+
   SLA_BY_PRIORITY = {
     'low'    => { first_response_time_target: 2880, resolution_time_target: 7200 },
     'medium' => { first_response_time_target: 480,  resolution_time_target: 2880 },
@@ -222,8 +232,13 @@ class CaseTicket < ApplicationRecord
     }
   end
 
-  def transition!(new_status, actor: nil, reason: nil, closure: nil)
-    raise "Transición inválida: #{status} → #{new_status}" unless can_transition_to?(new_status)
+  # `force: true` — usado por el movimiento libre entre columnas personalizadas
+  # (Cases::TicketMove / case_tickets_controller#move_across_state): salta la
+  # validación de "un salto" de VALID_TRANSITIONS porque el orden de columnas que
+  # configuró el admin es el flujo real, no la espina ITIL fija. Todo lo demás
+  # (documentar cierre, timestamps, pausa de SLA, evento) sigue aplicando igual.
+  def transition!(new_status, actor: nil, reason: nil, closure: nil, force: false)
+    raise "Transición inválida: #{status} → #{new_status}" unless force || can_transition_to?(new_status)
     # @tickets_cases 2F — un cambio que requiere aprobación no puede ejecutarse sin aprobarse.
     if blocked_by_change_approval?(new_status)
       raise 'El cambio requiere aprobación antes de pasar a ejecución'

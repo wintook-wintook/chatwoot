@@ -4,15 +4,16 @@
 #
 # Table name: case_types
 #
-#  id         :bigint           not null, primary key
-#  color      :string           default("#3b82f6"), not null
-#  name       :string           not null
-#  position   :integer          default(0), not null
-#  prefix     :string           default(""), not null
-#  public     :boolean          default(FALSE), not null
-#  created_at :datetime         not null
-#  updated_at :datetime         not null
-#  account_id :bigint           not null
+#  id           :bigint           not null, primary key
+#  color        :string           default("#3b82f6"), not null
+#  itil_enabled :boolean          default(FALSE), not null
+#  name         :string           not null
+#  position     :integer          default(0), not null
+#  prefix       :string           default(""), not null
+#  public       :boolean          default(FALSE), not null
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  account_id   :bigint           not null
 #
 # Indexes
 #
@@ -67,9 +68,8 @@ class CaseType < ApplicationRecord
     self.prefix = name.to_s.gsub(/[^a-zA-Z]/, '').upcase[0, 3]
   end
 
-  # Columnas por defecto según el modo (simple/ITIL) de la cuenta al momento de crear.
+  # Columnas por defecto según el modo (simple/ITIL) propio del tipo.
   def seed_default_columns
-    itil = CaseSetting.for_account(account).itil_enabled
-    CaseTypeColumn.seed_defaults_for(self, itil: itil)
+    CaseTypeColumn.seed_defaults_for(self, itil: itil_enabled)
   end
 end

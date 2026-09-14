@@ -10,8 +10,10 @@
     },
     "METRICS": {
       "TITLE": "Métricas de Casos",
+      "BACK": "Volver",
       "LOADING": "Cargando métricas...",
       "EMPTY": "Sin datos para el período seleccionado",
+      "NO_DATA": "Sin datos",
       "GROUP_VOLUME": "Volumen",
       "GROUP_SLA": "SLA",
       "GROUP_TIMES": "Tiempos de atención",
@@ -55,6 +57,9 @@
       "UNASSIGNED": "Sin asignar",
       "INVALID_MOVE": "Ese movimiento no es una transición válida para este caso.",
       "MOVE_ERROR": "No se pudo mover el caso.",
+      "CANCELLED_IMMUTABLE": "Un caso cancelado ya no puede moverse a otra etapa.",
+      "REQUIRES_CLOSURE": "Este movimiento cierra el caso: hay que documentar el cierre.",
+      "OPEN_TICKET_TO_CLOSE": "Ir a la ficha",
       "MOVE_TITLE": "Mover {folio}",
       "MOVE_TARGET": "Nuevo estado",
       "MOVE_TO": "Mover a:",
@@ -90,6 +95,8 @@
       "DATE_RANGE": "Rango de fechas",
       "APPLY": "Aplicar",
       "ALL_STATUSES": "Todos los estados",
+      "STATUS_PENDING": "Pendientes",
+      "STATUS_CLOSED": "Cerrados",
       "ALL_PRIORITIES": "Todas las prioridades",
       "ALL_ORIGINS": "Todos los orígenes",
       "SORT_BY": "Ordenar por",
@@ -101,7 +108,7 @@
       },
       "SORT_ASC": "Ascendente",
       "SORT_DESC": "Descendente",
-      "CLEAR_FILTERS": "Limpiar filtros",
+      "CLEAR_FILTERS": "✕ Limpiar filtros",
       "RESULTS_COUNT": "{from}–{to} de {total}",
       "PER_PAGE": "Por página",
       "FIRST": "Primera",
@@ -272,7 +279,7 @@
       "SELECTED": "{n} seleccionados",
       "ASSIGN": "Asignar a",
       "CLOSE": "Cerrar",
-      "CLEAR": "Limpiar selección",
+      "CLEAR": "✕ Limpiar selección",
       "SUCCESS": "{n} casos actualizados",
       "ERROR": "No se pudo aplicar la acción",
       "MEETINGS_PENDING": "{n} de los casos cerrados tienen tareas agendadas a futuro: revísalos uno por uno para cancelarlas."
@@ -321,6 +328,11 @@
           "PENDING": "Pendientes",
           "DONE": "Completadas",
           "ALL": "Todos los estados"
+        },
+        "ITEM_TYPE": {
+          "ALL": "Todas",
+          "TASK": "No agendadas",
+          "MEETING": "Agendadas"
         },
         "DUE": {
           "ANY": "Cualquier fecha",
@@ -825,6 +837,9 @@
       "PUBLIC_HELP": "Si se activa, este tipo aparece como opción en el formulario público del portal.",
       "PUBLIC_ON": "Público",
       "PUBLIC_OFF": "Privado",
+      "ITIL_LABEL": "Maneja ITIL",
+      "ITIL_HELP_CREATE": "Define las columnas iniciales del tablero: ITIL (13 estados, 6 etapas) o simples (5 etapas). Editables después.",
+      "ITIL_HELP_EDIT": "Cambia qué campos, estados y KPIs ITIL se muestran para los casos de este tipo. No modifica las columnas ya configuradas ni los casos existentes.",
       "DELETE": {
         "TITLE": "Eliminar tipo de caso",
         "MESSAGE": "Los casos con este tipo quedarán sin tipo asignado. ¿Eliminar",
@@ -856,13 +871,10 @@
       "TITLE": "Ajustes del módulo",
       "BACK": "Volver",
       "LOADING": "Cargando ajustes...",
-      "HELP": "Elige cómo se comporta el gestor de casos. El modo simple se parece a osTicket; el modo ITIL activa la gestión avanzada.",
-      "MODE_SIMPLE": "Modo simple",
-      "MODE_SIMPLE_DESC": "Experiencia sencilla: estados básicos y prioridad directa. Oculta los campos ITIL avanzados.",
-      "MODE_ITIL": "Modo ITIL (avanzado)",
-      "MODE_ITIL_DESC": "Activa estados ITIL completos, matriz Impacto×Urgencia, naturaleza del caso, problema/cambio y aprobaciones.",
-      "NOTE_DATA": "No se borra ni modifica ningún dato: el modo solo cambia lo que se muestra.",
-      "NOTE_REVERSIBLE": "Puedes cambiar de modo cuando quieras.",
+      "HELP": "Ajustes generales del módulo de casos.",
+      "MODE_MOVED_TITLE": "El modo ITIL ahora es por tipo de caso",
+      "MODE_MOVED_DESC": "Cada tipo de caso decide si maneja ITIL o columnas/campos simples. Configúralo al crear o editar un tipo.",
+      "MODE_MOVED_CTA": "Ir a Tipos de caso",
       "REOPEN": {
         "SECTION": "Reapertura de casos cerrados",
         "WINDOW_TITLE": "Ventana de reapertura",
@@ -1174,7 +1186,7 @@
         "MEETING": "Título",
         "WHEN": "Fecha",
         "STATUS": "Estado",
-        "ORGANIZER": "Organizador"
+        "ORGANIZER": "Responsable"
       },
       "STATUS": {
         "SCHEDULED": "Agendada",
@@ -1204,7 +1216,7 @@
         "DATE_ERROR": "La hora de fin debe ser posterior a la de inicio.",
         "TASK_LABEL": "Tarea",
         "TASK_NONE": "— Del caso (sin tarea) —",
-        "ORGANIZER_LABEL": "Organizador",
+        "ORGANIZER_LABEL": "Responsable",
         "ORGANIZER_ME": "— Yo —",
         "LOCATION_LABEL": "Lugar",
         "LOCATION_PLACEHOLDER": "Ej: Oficina, videollamada, teléfono…",

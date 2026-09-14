@@ -120,16 +120,22 @@
           </button>
         </div>
 
-        <!-- Estado -->
+        <!-- Estado: agrupado (pendiente/cerrado/todos), no el estado exacto —
+             ver CASE_TICKETS.STATUS_QUICK para cambiar el estado exacto de un
+             caso puntual. Por default solo se ven los pendientes; los cerrados
+             (incluye resuelto y validando) quedan en su propio filtro. -->
         <select
           v-model="statusFilter"
           class="!mb-0 w-40 text-sm"
           @change="onFilterChange"
         >
-          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_STATUSES') }}</option>
-          <option v-for="s in statusOptions" :key="s" :value="s">
-            {{ statusLabel(s) }}
+          <option value="pending">
+            {{ $t('CASE_TICKETS.LIST.STATUS_PENDING') }}
           </option>
+          <option value="closed">
+            {{ $t('CASE_TICKETS.LIST.STATUS_CLOSED') }}
+          </option>
+          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_STATUSES') }}</option>
         </select>
 
         <!-- Prioridad -->
@@ -211,7 +217,7 @@
           class="px-3 py-1 text-sm rounded text-woot-600 dark:text-woot-400 hover:bg-woot-50 dark:hover:bg-woot-800/30"
           @click="clearFilters"
         >
-          ✕ {{ $t('CASE_TICKETS.LIST.CLEAR_FILTERS') }}
+          {{ $t('CASE_TICKETS.LIST.CLEAR_FILTERS') }}
         </button>
       </div>
     </div>
@@ -334,7 +340,7 @@
           class="ml-auto text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           @click="clearSelection"
         >
-          ✕ {{ $t('CASE_TICKETS.BULK.CLEAR') }}
+          {{ $t('CASE_TICKETS.BULK.CLEAR') }}
         </button>
       </div>
 
@@ -424,6 +430,9 @@
   </div>
 </template>
 
+<!-- eslint-disable vue/block-order -- legacy file has <template> before
+     <script>; reordering is a large unrelated diff, left for a dedicated
+     cleanup instead of bundling it into an unrelated change. -->
 <script>
 import { mapGetters } from 'vuex';
 import { VeTable } from 'vue-easytable';
@@ -530,7 +539,9 @@ export default {
       search: '',
       searchDebounce: null,
       dateRange: [], // [Date, Date]
-      statusFilter: '',
+      // @tickets_cases — default: solo pendientes. 'closed' agrupa
+      // resuelto/validando/cerrado/cancelado; '' es "todos los estados".
+      statusFilter: 'pending',
       priorityFilter: '',
       originFilter: '', // @tickets_cases Fase C
       activeFilter: 'mine',
@@ -550,10 +561,13 @@ export default {
       tickets: 'caseTickets/getTicketsList',
       meta: 'caseTickets/getTicketsMeta',
       uiFlags: 'caseTickets/getUIFlags',
+      // @tickets_cases — filtros/página recordados de la última visita a esta
+      // pantalla en la sesión (null = primera vez, se usan los defaults de abajo).
+      listPrefs: 'caseTickets/getTicketsListPrefs',
       types: 'caseTickets/getTypes',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Casos"
       currentRole: 'getCurrentRole', // @tickets_cases F4 — quien puede sobreescribir una vista
-      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
+      anyTypeItilEnabled: 'caseTickets/getAnyTypeItilEnabled',
       agents: 'agents/getAgents', // @tickets_cases P3 — nombre del asignado + lote
     }),
     isFetchingList() {
@@ -588,8 +602,19 @@ export default {
     slaOverdueCount() {
       return this.meta.sla_overdue_count || 0;
     },
+    // Con un tipo filtrado, usa el modo de ESE tipo; sin filtro, no se oculta
+    // nada relevante si al menos un tipo de la cuenta usa ITIL.
+    filteredTypeItilEnabled() {
+      if (!this.activeType) return this.anyTypeItilEnabled;
+      const type = (this.types || []).find(
+        t => String(t.id) === String(this.activeType)
+      );
+      return type ? !!type.itil_enabled : this.anyTypeItilEnabled;
+    },
     statusOptions() {
-      return this.itilEnabled ? STATUS_OPTIONS : SIMPLE_FILTER_STATUSES;
+      return this.filteredTypeItilEnabled
+        ? STATUS_OPTIONS
+        : SIMPLE_FILTER_STATUSES;
     },
     priorityOptions() {
       return PRIORITY_OPTIONS;
@@ -666,7 +691,7 @@ export default {
       return (
         !!this.search ||
         this.dateRange.length > 0 ||
-        !!this.statusFilter ||
+        this.statusFilter !== 'pending' ||
         !!this.priorityFilter ||
         !!this.originFilter ||
         this.activeFilter !== 'mine' ||
@@ -817,7 +842,7 @@ export default {
           sortBy: this.sortConfig.status || '',
           renderBodyCell: ({ row }) => (
             <span class="whitespace-nowrap text-slate-600 dark:text-slate-300">
-              {this.statusLabel(this.displayStatus(row.status))}
+              {this.statusLabel(this.displayStatus(row))}
             </span>
           ),
         },
@@ -867,6 +892,7 @@ export default {
     },
   },
   mounted() {
+    this.restoreListPrefs();
     this.setSortConfig();
     this.$store.dispatch('caseTickets/fetchTypes');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
@@ -875,6 +901,47 @@ export default {
     this.fetch();
   },
   methods: {
+    // @tickets_cases — si ya se visitó el listado en esta sesión de la app,
+    // retoma filtros/orden/página donde se quedó (se perdían al entrar a un
+    // ticket y volver, porque el componente se destruye y se vuelve a montar).
+    // Tolerante a claves ausentes: un campo nuevo que se agregue después no
+    // rompe la restauración de una sesión ya en curso.
+    restoreListPrefs() {
+      const prefs = this.listPrefs;
+      if (!prefs) return;
+
+      this.search = prefs.search || '';
+      this.dateRange = prefs.dateRange || [];
+      this.statusFilter = prefs.statusFilter ?? 'pending';
+      this.priorityFilter = prefs.priorityFilter || '';
+      this.originFilter = prefs.originFilter || '';
+      this.activeFilter = prefs.activeFilter || 'mine';
+      this.activeType = prefs.activeType || '';
+      this.sortBy = prefs.sortBy || 'created_at';
+      this.sortOrder = prefs.sortOrder || 'desc';
+      this.currentPage = prefs.currentPage || 1;
+      this.perPage = prefs.perPage || 25;
+      this.activeViewId = prefs.activeViewId || '';
+    },
+    // Guarda el estado actual para la próxima vez que se monte este componente
+    // en la misma sesión (ver restoreListPrefs). Se llama en cada fetch(): así
+    // no hay que enganchar un watcher aparte por cada filtro.
+    persistListPrefs() {
+      this.$store.dispatch('caseTickets/setTicketsListPrefs', {
+        search: this.search,
+        dateRange: this.dateRange,
+        statusFilter: this.statusFilter,
+        priorityFilter: this.priorityFilter,
+        originFilter: this.originFilter,
+        activeFilter: this.activeFilter,
+        activeType: this.activeType,
+        sortBy: this.sortBy,
+        sortOrder: this.sortOrder,
+        currentPage: this.currentPage,
+        perPage: this.perPage,
+        activeViewId: this.activeViewId,
+      });
+    },
     // @tickets_cases Fase C — tras crear un ticket interno, refresca el listado.
     onInternalCreated() {
       this.showInternalModal = false;
@@ -892,6 +959,7 @@ export default {
     },
     fetch() {
       this.selected = []; // @tickets_cases P3 — la selección es por vista
+      this.persistListPrefs();
       const filters = { page: this.currentPage, per_page: this.perPage };
       if (this.search.trim()) filters.q = this.search.trim();
       if (this.dateRange[0])
@@ -1030,7 +1098,7 @@ export default {
       this.activeViewId = '';
       this.search = '';
       this.dateRange = [];
-      this.statusFilter = '';
+      this.statusFilter = 'pending';
       this.priorityFilter = '';
       this.originFilter = '';
       this.activeFilter = 'mine';
@@ -1185,8 +1253,12 @@ export default {
     statusLabel(key) {
       return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key;
     },
-    displayStatus(s) {
-      return this.itilEnabled ? s : toSimpleStatus(s);
+    // Colapsa el estado ITIL a etiqueta simple según el modo del PROPIO tipo del
+    // ticket (cada fila puede ser de un tipo distinto).
+    displayStatus(ticket) {
+      return ticket?.case_type?.itil_enabled
+        ? ticket.status
+        : toSimpleStatus(ticket?.status);
     },
     priorityLabel(key) {
       return this.$t(`CASE_TICKETS.PRIORITIES.${key}`) || key;

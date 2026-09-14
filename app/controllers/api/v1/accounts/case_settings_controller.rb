@@ -1,10 +1,13 @@
 # frozen_string_literal: true
 
 # ================================================================================
-# @tickets_cases — Ajustes generales del módulo (modo simple / ITIL)
+# @tickets_cases — Ajustes generales del módulo (ventana de reapertura)
 # ================================================================================
 # GET   /api/v1/accounts/:account_id/case_setting   → show
 # PATCH /api/v1/accounts/:account_id/case_setting   → update (admin)
+#
+# El modo ITIL/simple pasó a ser por tipo de caso (ver CaseType#itil_enabled /
+# Api::V1::Accounts::CaseTypesController) — ya no vive aquí.
 # ================================================================================
 
 class Api::V1::Accounts::CaseSettingsController < Api::V1::Accounts::BaseController
@@ -27,7 +30,7 @@ class Api::V1::Accounts::CaseSettingsController < Api::V1::Accounts::BaseControl
   end
 
   def setting_params
-    permitted = params.require(:case_setting).permit(:itil_enabled, :reopen_window_days, :reopen_on_customer_reply)
+    permitted = params.require(:case_setting).permit(:reopen_window_days, :reopen_on_customer_reply)
     # La ventana no puede ser negativa; 0 = sin límite.
     permitted[:reopen_window_days] = [permitted[:reopen_window_days].to_i, 0].max if permitted.key?(:reopen_window_days)
     permitted
@@ -35,8 +38,7 @@ class Api::V1::Accounts::CaseSettingsController < Api::V1::Accounts::BaseControl
 
   def setting_json
     {
-      itil_enabled:             @setting.itil_enabled,
-      reopen_window_days:       @setting.reopen_window_days,
+      reopen_window_days: @setting.reopen_window_days,
       reopen_on_customer_reply: @setting.reopen_on_customer_reply
     }
   end

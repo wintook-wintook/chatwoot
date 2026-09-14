@@ -60,9 +60,17 @@ export default {
       getContactTickets: 'caseTickets/getContactTickets',
       agents: 'agents/getAgents', // @tickets_cases — asignación manual
       teams: 'teams/getTeams',
-      itilEnabled: 'caseTickets/getItilEnabled', // modo simple/ITIL
       currentUser: 'getCurrentUser',
     }),
+    // Tipo de caso elegido en el form.
+    selectedType() {
+      return (this.types || []).find(t => t.id === this.form.case_type_id);
+    },
+    // @tickets_cases — modo ITIL propio del tipo elegido en el form (ya no es
+    // un ajuste global de cuenta).
+    itilEnabled() {
+      return !!this.selectedType?.itil_enabled;
+    },
     // @tickets_cases — al crear, el responsable arranca en el agente firmado.
     // Solo si ese usuario figura entre los agentes de la cuenta (un superadmin
     // que no es agente no aparece en el select y dejarlo daría un valor muerto).
@@ -132,10 +140,7 @@ export default {
     },
     // 2K — campos personalizados del tipo de caso seleccionado.
     selectedTypeFields() {
-      const type = (this.types || []).find(
-        t => t.id === this.form.case_type_id
-      );
-      return (type && type.custom_fields) || [];
+      return this.selectedType?.custom_fields || [];
     },
     // ¿Todos los campos requeridos tienen valor?
     customFieldsValid() {

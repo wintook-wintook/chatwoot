@@ -30,6 +30,7 @@ import {
   SET_CASE_TICKET_EVENTS,
   SET_CASE_TICKETS_LIST,
   SET_CASE_TICKETS_META,
+  SET_CASE_TICKETS_LIST_PREFS,
   SET_CASE_RULES,
   SET_CASE_RULES_UI_FLAG,
   SET_CASE_METRICS,
@@ -79,6 +80,10 @@ const state = {
   // Fase 4 — vista lista
   ticketsList: [],
   ticketsMeta: {},
+  // @tickets_cases — filtros/página del listado, para sobrevivir a entrar a un
+  // ticket y volver. null = todavía no se visitó el listado en esta sesión, así
+  // que Index.vue no debe pisar sus defaults con esto.
+  ticketsListPrefs: null,
   // Fase 5 — métricas
   metrics: null,
   // Fase 4 — reglas
@@ -102,9 +107,9 @@ const state = {
     isSaving: false,
     isDeleting: false,
   },
-  // Modo simple (osTicket) vs ITIL + reglas de reapertura — ajustes del módulo
+  // Reglas de reapertura — ajustes del módulo. El modo simple/ITIL dejó de ser
+  // un ajuste de cuenta: ahora es `itil_enabled` en cada tipo de caso (getTypes).
   settings: {
-    itil_enabled: false,
     reopen_window_days: 30,
     reopen_on_customer_reply: true,
   },
@@ -193,6 +198,9 @@ export const getters = {
   getTicketsMeta(_state) {
     return _state.ticketsMeta;
   },
+  getTicketsListPrefs(_state) {
+    return _state.ticketsListPrefs;
+  },
   getTicketById: _state => id =>
     _state.ticketsList.find(t => t.id === Number(id)) || null,
   getRules(_state) {
@@ -210,6 +218,13 @@ export const getters = {
   getTypesUIFlags(_state) {
     return _state.typesUiFlags;
   },
+  // ITIL es por tipo (CaseType#itil_enabled). Para pantallas agregadas que no
+  // están atadas a un solo tipo (Kanban/Index sin filtro, Metrics, Rules): si
+  // AL MENOS un tipo de la cuenta usa ITIL, se ofrecen las opciones ITIL — así
+  // no se le esconde nada relevante a una cuenta que sí tiene tipos ITIL.
+  getAnyTypeItilEnabled(_state) {
+    return (_state.types || []).some(t => t.itil_enabled);
+  },
   // User Portal
   getPortals(_state) {
     return _state.portals;
@@ -217,10 +232,7 @@ export const getters = {
   getPortalsUIFlags(_state) {
     return _state.portalsUiFlags;
   },
-  // Modo simple/ITIL + reapertura
-  getItilEnabled(_state) {
-    return _state.settings.itil_enabled;
-  },
+  // Reapertura
   getCaseSettings(_state) {
     return _state.settings;
   },
@@ -367,10 +379,14 @@ export const actions = {
   },
 
   // @tickets_cases — mueve un ticket a otra columna del Kanban por tipo (A+).
-  async moveTicketColumn({ commit }, { ticketId, caseTypeColumnId }) {
+  async moveTicketColumn({ commit }, { ticketId, caseTypeColumnId, closure }) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {
-      const { data } = await caseTicketsAPI.move(ticketId, caseTypeColumnId);
+      const { data } = await caseTicketsAPI.move(
+        ticketId,
+        caseTypeColumnId,
+        closure
+      );
       return data;
     } finally {
       commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
@@ -545,6 +561,13 @@ export const actions = {
     } finally {
       commit(SET_CASE_TICKET_UI_FLAG, { isFetchingList: false });
     }
+  },
+
+  // @tickets_cases — recuerda filtros/página del listado (Index.vue) mientras
+  // dure la sesión de la app, para que sobrevivan a entrar a un ticket y
+  // volver (se pierden al desmontar el componente, no al navegar).
+  setTicketsListPrefs({ commit }, prefs) {
+    commit(SET_CASE_TICKETS_LIST_PREFS, prefs);
   },
 
   // @tickets_cases — carga un ticket individual por id y lo fusiona en la lista
@@ -1170,6 +1193,9 @@ export const mutations = {
   },
   [SET_CASE_TICKETS_META](_state, meta) {
     _state.ticketsMeta = meta;
+  },
+  [SET_CASE_TICKETS_LIST_PREFS](_state, prefs) {
+    _state.ticketsListPrefs = prefs;
   },
   [SET_CASE_RULES](_state, rules) {
     _state.rules = rules;
