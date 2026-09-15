@@ -160,4 +160,57 @@ RSpec.describe TrackingAssistantSession do
       expect(sesion.route_count).to eq(0)
     end
   end
+
+  # Fase D de PROMPT STUDIO: las versiones del Entrenamiento en la conversación.
+  describe 'versiones' do
+    let(:sesion) { sesion_de_prueba }
+
+    def sesion_de_prueba
+      described_class.new(account: account, user: user)
+    end
+
+    it 'numera las versiones y guarda de dónde salió cada una' do
+      sesion.add_version(draft: 'uno', source: 'loaded')
+      sesion.add_version(draft: 'dos', source: 'manual', summary: '~ [ESTILO]')
+      sesion.add_version(draft: 'tres', source: 'assistant',
+                         validation: { routes: [{}, {}], blocking: [{}] })
+
+      expect(sesion.version_list.map { |v| v.slice('n', 'source') })
+        .to eq([{ 'n' => 1, 'source' => 'loaded' }, { 'n' => 2, 'source' => 'manual' },
+                { 'n' => 3, 'source' => 'assistant' }])
+      expect(sesion.version_list.last).to include('routes' => 2, 'blocking' => 1)
+    end
+
+    # Una edición rechazada devuelve el mismo texto que había: no es otra versión.
+    it 'no repite una versión con el mismo texto que la última' do
+      sesion.add_version(draft: 'uno', source: 'assistant')
+      sesion.add_version(draft: 'uno', source: 'manual')
+
+      expect(sesion.version_list.size).to eq(1)
+    end
+
+    # La lista viaja en cada turno: con prompts de 17.000 caracteres no puede llevar
+    # los textos.
+    it 'lista las versiones sin el texto, y lo da de a una' do
+      sesion.add_version(draft: 'el texto largo', source: 'assistant')
+
+      expect(sesion.version_list.first).not_to have_key('draft')
+      expect(sesion.version(1)['draft']).to eq('el texto largo')
+      expect(sesion.version(99)).to be_nil
+    end
+
+    it 'conserva solo las últimas, sin renumerar' do
+      (described_class::MAX_VERSIONS + 2).times { |i| sesion.add_version(draft: "v#{i}", source: 'assistant') }
+
+      expect(sesion.version_list.size).to eq(described_class::MAX_VERSIONS)
+      expect(sesion.version_list.first['n']).to eq(3)
+    end
+
+    it 'ignora un origen desconocido o un texto vacío' do
+      sesion.add_version(draft: 'x', source: 'inventado')
+      sesion.add_version(draft: '', source: 'manual')
+
+      expect(sesion.version_list).to be_empty
+    end
+  end
 end

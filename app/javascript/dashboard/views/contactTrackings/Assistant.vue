@@ -48,11 +48,15 @@ import CopyChip from './assistant/CopyChip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
 import ValidationReport from './assistant/ValidationReport.vue';
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
+import VersionsPanel from './assistant/VersionsPanel.vue';
 import DryRunModal from './assistant/DryRunModal.vue';
 import SaveModal from './assistant/SaveModal.vue';
 
 // El teclado va más rápido que un request: se espera a que la persona pare.
 const VALIDATE_DEBOUNCE_MS = 400;
+// Cada cuánto se pregunta en qué etapa está el turno. Las etapas duran de 1 a 58 s:
+// más seguido no muestra nada nuevo.
+const PROGRESS_POLL_MS = 1500;
 
 // El backend devuelve hasta 50 conversaciones (TrackingAssistantSession::LIST_LIMIT),
 // así que el paginado es sobre lo que ya está en memoria: no hay una segunda página
@@ -105,6 +109,7 @@ export default {
     ValidationBadge,
     ValidationReport,
     ManualConflictNotice,
+    VersionsPanel,
     DryRunModal,
     SaveModal,
   },
@@ -136,6 +141,13 @@ export default {
       // falló: una etiqueta adivinada no lleva marca, y la entrevista pasaba a
       // "editar" antes de preguntarla.
       isBuilding: true,
+      // Fase D: las versiones del Entrenamiento en esta conversación (sin texto) y
+      // qué muestra el panel derecho: el editor o la lista de versiones.
+      versions: [],
+      draftTab: 'editor',
+      // La etapa del turno en curso, consultada mientras se espera ({ stage, … }).
+      turnStage: null,
+      progressTimer: null,
       // De qué Agente IA vino el borrador, si vino de uno. Sin esto, arreglar un
       // agente y guardar creaba un DUPLICADO en vez de corregir el original: el
       // modal abría en "crear nuevo" y nadie lo notaba hasta ver la lista con dos.
@@ -385,6 +397,9 @@ export default {
   beforeUnmount() {
     clearTimeout(this.validateTimer);
   },
+  beforeDestroy() {
+    clearInterval(this.progressTimer);
+  },
   methods: {
     // Entrada desde Agentes IA: /tracking-dashboard/assistant?template_id=123
     loadTemplateFromRoute() {
@@ -425,6 +440,8 @@ export default {
       this.lastDelivered = data.draft || '';
       // La sesión no guarda el estado: sin borrador, o con marcas, sigue abierta.
       this.isBuilding = !data.draft || pendingCount(data.draft) > 0;
+      this.versions = data.versions || [];
+      this.draftTab = 'editor';
       this.dryRunHistory = [];
       this.sessionMeta = {
         id: data.id,
@@ -499,6 +516,8 @@ export default {
       this.manualConflict = null;
       this.lastDelivered = '';
       this.isBuilding = true;
+      this.versions = [];
+      this.draftTab = 'editor';
       this.editingTemplate = null;
       this.activeTab = 0;
     },
@@ -608,6 +627,8 @@ export default {
       this.draft = template.complementary_prompt || '';
       this.lastDelivered = this.draft;
       this.isBuilding = false;
+      this.versions = [];
+      this.draftTab = 'editor';
       this.proposal = {
         name: this.nextVersionName(template.name),
         objective: template.objective || '',
@@ -643,6 +664,8 @@ export default {
       // le cambie a partir de acá. Y está terminado: lo que se pida es editarlo.
       this.lastDelivered = this.draft;
       this.isBuilding = false;
+      this.versions = [];
+      this.draftTab = 'editor';
       // Traer un agente al Asistente arranca una conversación nueva: la
       // identidad y la prueba de la anterior no describen nada de esto.
       this.sessionId = null;
@@ -655,12 +678,14 @@ export default {
     async sendMessage(content) {
       this.messages.push({ role: 'user', content });
       this.isThinking = true;
+      const turnId = this.startProgress();
       try {
         const { data } = await AssistantAPI.interview(this.messages, null, {
           sessionId: this.sessionId,
           draft: this.draft.trim() ? this.draft : null,
           deliveredDraft: this.lastDelivered,
           building: this.isBuilding,
+          turnId,
         });
         this.sessionId = data.session_id || this.sessionId;
         // El backend devuelve la identidad ya armada: sin eso habría que
@@ -690,6 +715,10 @@ export default {
           if (data.proposal) this.proposal = data.proposal;
         }
         this.manualConflict = data.manual_conflict || null;
+        if (Array.isArray(data.versions)) this.versions = data.versions;
+        // Un aviso que pide decidir no puede quedar tapado por la lista de versiones.
+        if (data.manual_conflict || data.rejected_draft)
+          this.draftTab = 'editor';
         if (typeof data.building === 'boolean') this.isBuilding = data.building;
         this.rejected = data.rejected_draft
           ? { draft: data.rejected_draft, validation: data.rejected_validation }
@@ -701,8 +730,44 @@ export default {
             : this.$t('TRACKING_ASSISTANT_VIEW.ERROR_GENERIC');
         this.messages.push({ role: 'assistant', content: reason });
       } finally {
+        this.stopProgress();
         this.isThinking = false;
       }
+    },
+    // Fase D: mientras el turno corre, se consulta en qué etapa está. El id lo
+    // genera la pantalla porque la sesión puede no existir todavía (primer turno).
+    startProgress() {
+      const turnId = `t${Date.now().toString(36)}${Math.random()
+        .toString(36)
+        .slice(2, 10)}`;
+      this.turnStage = null;
+      clearInterval(this.progressTimer);
+      this.progressTimer = setInterval(async () => {
+        try {
+          const { data } = await AssistantAPI.getProgress(turnId);
+          if (data && data.stage) this.turnStage = data;
+        } catch (error) {
+          // Sin progreso se ve la espera de siempre: no es motivo para avisar nada.
+        }
+      }, PROGRESS_POLL_MS);
+      return turnId;
+    },
+    stopProgress() {
+      clearInterval(this.progressTimer);
+      this.progressTimer = null;
+      this.turnStage = null;
+    },
+    // Volver a una versión anterior. Pasa a ser la base: lo que se cambie desde acá
+    // es "a mano", y el próximo mensaje guarda como versión lo que había.
+    restoreVersion({ number, draft }) {
+      this.draft = draft;
+      this.lastDelivered = draft;
+      this.isBuilding = pendingCount(draft) > 0;
+      this.manualConflict = null;
+      this.rejected = null;
+      this.draftTab = 'editor';
+      this.validateDraft();
+      useAlert(this.$t('TRACKING_ASSISTANT_VIEW.VERSION_RESTORED', { number }));
     },
     // Lo propuesto no ejecuta, pero la persona lo quiere igual —para terminar de
     // arreglarlo a mano, por ejemplo—. El comprobador sigue impidiendo guardarlo.
@@ -880,6 +945,7 @@ export default {
               :is-thinking="isThinking"
               :options="interviewOptions"
               :is-editing="Boolean(draft.trim())"
+              :stage="turnStage"
               @send="sendMessage"
             />
           </section>
@@ -910,7 +976,35 @@ export default {
                 <h3
                   class="text-sm font-semibold text-slate-800 dark:text-slate-100"
                 >
-                  {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TITLE') }}
+                  <button
+                    class="mr-3 pb-0.5 border-b-2"
+                    :class="
+                      draftTab === 'editor'
+                        ? 'border-woot-500'
+                        : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                    "
+                    @click="draftTab = 'editor'"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_EDITOR') }}
+                  </button>
+                  <button
+                    class="pb-0.5 border-b-2"
+                    :class="
+                      draftTab === 'versions'
+                        ? 'border-woot-500'
+                        : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                    "
+                    @click="draftTab = 'versions'"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_VERSIONS') }}
+                    <span v-if="versions.length" class="font-normal">
+                      {{
+                        $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_COUNT', {
+                          count: versions.length,
+                        })
+                      }}
+                    </span>
+                  </button>
                   <span
                     v-if="hasManualEdits && draft.trim()"
                     class="ml-2 px-1.5 py-0.5 text-xs font-normal rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
@@ -936,61 +1030,70 @@ export default {
                   }}
                 </woot-button>
               </div>
-              <ManualConflictNotice
-                v-if="manualConflict"
-                :conflict="manualConflict"
-                @keep="manualConflict = null"
-                @use-assistant="useAssistantVersion"
+              <VersionsPanel
+                v-if="draftTab === 'versions'"
+                :versions="versions"
+                :session-id="sessionId"
+                :current-draft="draft"
+                @restore="restoreVersion"
               />
-              <!-- Lo propuesto que no se aplicó. Arriba del texto y no en un
-                   modal: hay que poder leer el Entrenamiento conservado mientras
-                   se decide. -->
-              <div
-                v-if="rejected"
-                class="flex flex-col gap-2 p-3 mb-2 text-xs border rounded shrink-0 border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
-              >
-                <p class="!m-0 font-semibold">
-                  {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_TITLE') }}
-                </p>
-                <p class="!m-0">
-                  {{
-                    $t('TRACKING_ASSISTANT_VIEW.REJECTED_HINT', {
-                      count: rejectedBlockingCount,
-                    })
-                  }}
-                </p>
-                <div class="flex gap-2">
-                  <woot-button
-                    size="tiny"
-                    variant="smooth"
-                    color-scheme="warning"
-                    @click="useRejected"
-                  >
-                    {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_USE') }}
-                  </woot-button>
-                  <woot-button
-                    size="tiny"
-                    variant="clear"
-                    color-scheme="secondary"
-                    @click="rejected = null"
-                  >
-                    {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_DISCARD') }}
-                  </woot-button>
+              <template v-else>
+                <ManualConflictNotice
+                  v-if="manualConflict"
+                  :conflict="manualConflict"
+                  @keep="manualConflict = null"
+                  @use-assistant="useAssistantVersion"
+                />
+                <!-- Lo propuesto que no se aplicó. Arriba del texto y no en un
+                     modal: hay que poder leer el Entrenamiento conservado mientras
+                     se decide. -->
+                <div
+                  v-if="rejected"
+                  class="flex flex-col gap-2 p-3 mb-2 text-xs border rounded shrink-0 border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
+                >
+                  <p class="!m-0 font-semibold">
+                    {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_TITLE') }}
+                  </p>
+                  <p class="!m-0">
+                    {{
+                      $t('TRACKING_ASSISTANT_VIEW.REJECTED_HINT', {
+                        count: rejectedBlockingCount,
+                      })
+                    }}
+                  </p>
+                  <div class="flex gap-2">
+                    <woot-button
+                      size="tiny"
+                      variant="smooth"
+                      color-scheme="warning"
+                      @click="useRejected"
+                    >
+                      {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_USE') }}
+                    </woot-button>
+                    <woot-button
+                      size="tiny"
+                      variant="clear"
+                      color-scheme="secondary"
+                      @click="rejected = null"
+                    >
+                      {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_DISCARD') }}
+                    </woot-button>
+                  </div>
                 </div>
-              </div>
-              <!-- resize-none: el alto lo decide el contenedor, no el navegador;
-                   arrastrarlo a mano volvería a empujar todo lo de abajo.
-                   readonly mientras el asistente trabaja: trabaja sobre el texto
-                   que se le mandó, y lo que se escribiera en esos segundos se
-                   perdería al llegar la respuesta. -->
-              <textarea
-                ref="draftEditor"
-                v-model="draft"
-                class="flex-1 min-h-0 w-full font-mono text-xs resize-none !mb-0"
-                :placeholder="$t('TRACKING_ASSISTANT_VIEW.DRAFT_PLACEHOLDER')"
-                :readonly="isThinking"
-                @input="onDraftInput"
-              />
+                <!-- resize-none: el alto lo decide el contenedor, no el navegador;
+                     arrastrarlo a mano volvería a empujar todo lo de abajo.
+                     readonly mientras el asistente trabaja: trabaja sobre el texto
+                     que se le mandó, y lo que se escribiera en esos segundos se
+                     perdería al llegar la respuesta. -->
+                <textarea
+                  ref="draftEditor"
+                  v-model="draft"
+                  class="flex-1 min-h-0 w-full font-mono text-xs resize-none !mb-0"
+                  :placeholder="$t('TRACKING_ASSISTANT_VIEW.DRAFT_PLACEHOLDER')"
+                  :readonly="isThinking"
+                  @input="onDraftInput"
+                />
+              </template>
             </div>
 
             <!-- Acordeón nativo, el mismo del panel de contacto. El resumen del

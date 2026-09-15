@@ -71,6 +71,38 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
     end
   end
 
+  # ── fase D: en qué etapa está el turno ─────────────────────────────────────
+  describe 'avisando la etapa en curso' do
+    def etapas_de(&)
+      etapas = []
+      servicio = described_class.new(account, messages: [{ 'role' => 'user', 'content' => 'soporte' }])
+                                .with_progress(->(etapa, **info) { etapas << [etapa, info] })
+      yield servicio if block_given?
+      servicio.call
+      etapas
+    end
+
+    it 'avisa redactar, comprobar y corregir con su número de vuelta' do
+      stub_openai(openai_reply(mensaje: 'Ahí va', entrenamiento: entrenamiento_roto),
+                  openai_reply(mensaje: 'Corregido', entrenamiento: entrenamiento_ok))
+
+      expect(etapas_de).to eq([[:writing, { editing: false }], [:checking, {}],
+                               [:repairing, { round: 1, of: described_class::MAX_REPAIRS }], [:routing, {}]])
+    end
+
+    it 'no avisa nada más que redactar cuando el modelo solo pregunta' do
+      stub_openai(openai_reply(mensaje: '¿Qué temas?'))
+
+      expect(etapas_de).to eq([[:writing, { editing: false }]])
+    end
+
+    it 'funciona sin nadie escuchando' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: entrenamiento_ok))
+
+      expect(entrevistar.draft).to eq(entrenamiento_ok)
+    end
+  end
+
   # ── fase C: el Entrenamiento se arma a la vista ─────────────────────────────
   describe 'armando el Entrenamiento a la vista' do
     let(:parcial) do

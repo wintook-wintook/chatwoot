@@ -6,6 +6,7 @@
 #
 #  id                   :bigint           not null, primary key
 #  draft                :text
+#  draft_versions       :jsonb            not null
 #  messages             :jsonb            not null
 #  proposal             :jsonb            not null
 #  status               :string           default("open"), not null
@@ -93,6 +94,46 @@ class TrackingAssistantSession < ApplicationRecord
   # que no, y es lo primero que se quiere ver en una lista.
   def route_count
     Array(validation['routes']).size
+  end
+
+  # ── versiones del Entrenamiento (fase D de PROMPT STUDIO) ───────────────────
+  # Una por cada Entrenamiento que entrega el asistente y una por cada tanda de
+  # edición a mano (se registra al mandar el turno siguiente). Tope: una
+  # conversación larga sobre un prompt de 17.000 caracteres son ~500 KB con 30.
+  MAX_VERSIONS = 30
+  VERSION_SOURCES = %w[loaded manual assistant].freeze
+
+  # Agrega una versión si el texto cambió respecto de la última. No guarda.
+  def add_version(draft:, source:, summary: nil, validation: nil)
+    return if draft.blank? || VERSION_SOURCES.exclude?(source)
+
+    versiones = Array(draft_versions)
+    return if versiones.last&.dig('draft') == draft
+
+    versiones << version_entry(versiones.last&.dig('n').to_i + 1, draft, source, summary, validation)
+    self.draft_versions = versiones.last(MAX_VERSIONS)
+  end
+
+  def version_entry(number, draft, source, summary, validation)
+    datos = (validation || {}).with_indifferent_access
+    { 'n' => number, 'source' => source, 'at' => Time.current.iso8601,
+      'summary' => summary.to_s.squish.truncate(140).presence,
+      'routes' => Array(datos[:routes]).size, 'blocking' => Array(datos[:blocking]).size,
+      'draft' => draft }.compact
+  end
+  private :version_entry
+
+  # Sin el texto: es lo que viaja en cada turno. El texto se pide de a una.
+  def version_list
+    Array(draft_versions).map { |version| version.except('draft') }
+  end
+
+  def version(number)
+    Array(draft_versions).find { |version| version['n'] == number.to_i }
+  end
+
+  def last_version_draft
+    Array(draft_versions).last&.dig('draft')
   end
 
   # El hilo se guarda entero en cada turno: siempre se lee completo, así que no hay

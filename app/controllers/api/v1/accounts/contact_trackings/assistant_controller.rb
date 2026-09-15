@@ -110,6 +110,19 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
     render json: session_json(sesion)
   end
 
+  # El texto de UNA versión: las listas viajan sin él (ver version_list).
+  def show_version
+    version = find_session&.version(params[:number])
+    return head :not_found if version.nil?
+
+    render json: { n: version['n'], draft: version['draft'] }
+  end
+
+  # En qué etapa está un turno que todavía no terminó (ver TurnProgress).
+  def progress
+    render json: ContactTrackings::Assistant::TurnProgress.read(Current.account, Current.user, params[:turn_id]) || {}
+  end
+
   # Descartar no borra la fila: la marca. Un clic de más en una entrevista de 40
   # minutos no debería ser irreversible, y para quien mira la pantalla el efecto
   # es el mismo — deja de aparecer.
@@ -124,11 +137,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   def interview
     # `draft`: el Entrenamiento que está en pantalla, con lo editado a mano. Sin él,
     # el modelo no puede modificar nada: solo reescribir de memoria.
-    result = ContactTrackings::Assistant::InterviewService
-             .new(Current.account, messages: interview_messages, inbox: inbox,
-                                   drafts: { current: params[:draft], delivered: delivered_draft,
-                                             building: building_param },
-                                   one_shot: ActiveModel::Type::Boolean.new.cast(params[:one_shot])).call
+    result = interview_service.call
 
     return render json: { error: result.error }, status: :unprocessable_entity unless result.success?
 
@@ -154,6 +163,17 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   end
 
   private
+
+  # La etapa en curso se va escribiendo en Redis para que la pantalla la consulte
+  # mientras espera (ver TurnProgress y #progress).
+  def interview_service
+    avance = ContactTrackings::Assistant::TurnProgress.new(Current.account, Current.user, params[:turn_id])
+    ContactTrackings::Assistant::InterviewService
+      .new(Current.account, messages: interview_messages, inbox: inbox,
+                            drafts: { current: params[:draft], delivered: delivered_draft, building: building_param },
+                            one_shot: ActiveModel::Type::Boolean.new.cast(params[:one_shot]))
+      .with_progress(avance.method(:update))
+  end
 
   def interview_json(result, sesion)
     {
@@ -181,9 +201,11 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
       # este turno no trajo Entrenamiento y el estado no cambia.
       building: result.building,
       session_id: sesion&.id,
+      # Las versiones del Entrenamiento en esta conversación, sin su texto.
+      versions: sesion&.version_list,
       # La identidad completa y no solo el id: con el id suelto, la pantalla
       # tendría que inventar las fechas del lado del cliente.
-      session: sesion && session_json(sesion).except(:messages, :draft, :validation, :proposal)
+      session: sesion && session_json(sesion).except(:messages, :draft, :validation, :proposal, :versions)
     }
   end
 
@@ -191,12 +213,9 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   # no queda una sesión a medias que la pantalla ofrezca retomar sin contenido.
   def record_turn(result)
     sesion = session_record || TrackingAssistantSession.new(account: Current.account, user: Current.user)
-    # Los cambios viajan pegados al turno que los hizo: al retomar la sesión se siguen
-    # viendo debajo de su mensaje. Al modelo no le vuelven (interview_messages solo
-    # deja pasar role y content).
-    respuesta = { 'role' => 'assistant', 'content' => result.reply.to_s }
-    respuesta['changes'] = result.changes.deep_stringify_keys if result.changes.present?
-    turnos = with_stored_changes(sesion, interview_messages) + [respuesta]
+    turnos = with_stored_changes(sesion, interview_messages) + [assistant_turn(result)]
+    ContactTrackings::Assistant::SessionVersions.new(sesion, on_screen: params[:draft], delivered: delivered_draft)
+                                                .record(result)
     sesion.record_turn(messages: turnos, draft: result.draft,
                        validation: result.validation, proposal: result.proposal)
     sesion
@@ -204,6 +223,15 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
     # Que no se pueda guardar el hilo no debe costarle la respuesta a la persona.
     Rails.logger.error("[Asistente] no se pudo guardar la conversación: #{e.message}")
     nil
+  end
+
+  # Los cambios viajan pegados al turno que los hizo: al retomar la sesión se siguen
+  # viendo debajo de su mensaje. Al modelo no le vuelven (interview_messages solo
+  # deja pasar role y content).
+  def assistant_turn(result)
+    respuesta = { 'role' => 'assistant', 'content' => result.reply.to_s }
+    respuesta['changes'] = result.changes.deep_stringify_keys if result.changes.present?
+    respuesta
   end
 
   # El cliente devuelve el hilo sin los cambios de turnos anteriores (y aunque los
@@ -250,6 +278,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
       routes: sesion.route_count, has_draft: sesion.draft.present?,
       tracking_template_id: sesion.tracking_template_id,
       template_name: sesion.tracking_template&.name,
+      versions: sesion.version_list,
       created_at: sesion.created_at,
       updated_at: sesion.updated_at
     }

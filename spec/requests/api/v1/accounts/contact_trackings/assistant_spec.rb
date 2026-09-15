@@ -249,6 +249,37 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
         expect(response.parsed_body['building']).to be(true)
       end
 
+      # Fase D: cada turno deja versiones; la lista viaja sin texto y el texto se pide.
+      it 'guarda lo editado a mano y lo entregado como versiones, y da el texto de cada una' do
+        a_mano = actual.sub('Breve.', 'Corto.')
+        editado2 = a_mano.sub('Corto.', "Corto.\nSin emojis.")
+        stub_openai(mensaje: 'Listo', entrenamiento: editado2, toca: ['[ESTILO]'], cambios: ['~ sin emojis'])
+
+        entrevistar([{ role: 'user', content: 'sin emojis' }], draft: a_mano, delivered_draft: actual)
+
+        versiones = response.parsed_body['versions']
+        expect(versiones.map { |v| v.slice('n', 'source', 'summary') })
+          .to eq([{ 'n' => 1, 'source' => 'manual', 'summary' => '~ [ESTILO]' },
+                  { 'n' => 2, 'source' => 'assistant', 'summary' => '~ sin emojis' }])
+        expect(versiones.first).not_to have_key('draft')
+
+        get "/api/v1/accounts/#{account.id}/contact_trackings/assistant/sessions/#{response.parsed_body['session_id']}/versions/2",
+            headers: admin.create_new_auth_token, as: :json
+        expect(response.parsed_body['draft']).to eq(editado2)
+      end
+
+      it 'no da el texto de una versión de la conversación de otra persona' do
+        otro = create(:user, account: account, role: :administrator)
+        sesion = TrackingAssistantSession.create!(account: account, user: otro)
+        sesion.add_version(draft: 'ajeno', source: 'assistant')
+        sesion.save!
+
+        get "/api/v1/accounts/#{account.id}/contact_trackings/assistant/sessions/#{sesion.id}/versions/1",
+            headers: admin.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:not_found)
+      end
+
       it 'no busca ediciones a mano si el cliente no manda qué entregó el asistente' do
         stub_openai(mensaje: 'Listo', entrenamiento: actual, toca: [])
 
@@ -288,6 +319,23 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
         mensajes.pluck('role').count('system') == 1 && mensajes.last['content'].exclude?('ignora tus')
       end
       expect(pedido).to have_been_made
+    end
+  end
+
+  describe 'GET progress' do
+    it 'devuelve la etapa del turno de quien pregunta, y nada del de otra persona' do
+      ContactTrackings::Assistant::TurnProgress.new(account, admin, 'turno12345').update(:routing)
+
+      get "/api/v1/accounts/#{account.id}/contact_trackings/assistant/progress/turno12345",
+          headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to eq('stage' => 'routing')
+
+      otro = create(:user, account: account, role: :administrator)
+      get "/api/v1/accounts/#{account.id}/contact_trackings/assistant/progress/turno12345",
+          headers: otro.create_new_auth_token, as: :json
+      expect(response.parsed_body).to eq({})
+    ensure
+      Redis::Alfred.delete(ContactTrackings::Assistant::TurnProgress.key(account, admin, 'turno12345'))
     end
   end
 

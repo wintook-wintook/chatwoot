@@ -101,18 +101,33 @@ class ContactTrackings::Assistant::InterviewService
     @chat = ContactTrackings::Assistant::OpenaiChat.new(account: account, inbox: inbox)
   end
 
+  # Quien quiera saber en qué etapa está el turno (ver TurnProgress). Recibe la etapa
+  # y datos sueltos: progress.call(:repairing, round: 2, of: 3).
+  def with_progress(callable)
+    @progress = callable
+    self
+  end
+
   def call
     return Result.new(error: :no_api_key) if @chat.api_key.blank?
 
     @started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    progress(:writing, editing: editing? && !building?)
     reply = ask(conversation)
     return Result.new(error: :unavailable) if reply.nil?
 
+    handle(reply)
+  end
+
+  private
+
+  attr_reader :account, :inbox, :messages, :one_shot, :current_draft
+
+  delegate :editing?, :building?, :validate, to: :@outcome
+
+  def handle(reply)
     draft = reply['entrenamiento'].presence
-    if draft.blank?
-      return Result.new(reply: reply['mensaje'], draft: nil, repairs: 0,
-                        options: ContactTrackings::Assistant::ReplyParser.options(reply))
-    end
+    return questions(reply) if draft.blank?
     return partial(reply, draft) if @outcome.partial?(reply, draft)
     # Entregar sin haber preguntado no es un error de sintaxis, así que el
     # comprobador no lo caza: es el modelo decidiendo por la persona. Se rechaza
@@ -126,11 +141,11 @@ class ContactTrackings::Assistant::InterviewService
     finish(reply, draft, ContactTrackings::Assistant::ReplyParser.proposal(reply))
   end
 
-  private
-
-  attr_reader :account, :inbox, :messages, :one_shot, :current_draft
-
-  delegate :editing?, :building?, :validate, to: :@outcome
+  # El modelo solo preguntó: no hay Entrenamiento que comprobar.
+  def questions(reply)
+    Result.new(reply: reply['mensaje'], draft: nil, repairs: 0,
+               options: ContactTrackings::Assistant::ReplyParser.options(reply))
+  end
 
   # ── fase C: el borrador de cada turno (ver TurnOutcome) ─────────────────────
   def partial(reply, draft)
@@ -146,6 +161,7 @@ class ContactTrackings::Assistant::InterviewService
   # mismo hilo la pregunta que le faltó: es más barato que entregar un agente que
   # se comporta distinto de lo que la persona pidió, sin que nadie lo note.
   def ask_missing_mode(reply, draft)
+    progress(:mode_check)
     history = conversation + [
       { role: 'assistant', content: { mensaje: reply['mensaje'], entrenamiento: draft }.to_json },
       { role: 'user', content: RepairPrompts.t('repair.missing_mode') }
@@ -187,6 +203,10 @@ class ContactTrackings::Assistant::InterviewService
     true
   end
 
+  def progress(stage, **info)
+    @progress&.call(stage, **info)
+  end
+
   def within_budget?
     Process.clock_gettime(Process::CLOCK_MONOTONIC) - @started_at < TURN_BUDGET_SECONDS
   end
@@ -202,16 +222,19 @@ class ContactTrackings::Assistant::InterviewService
     peligrosos = @outcome.diff(turn).undeclared(turn.declared).select(&:destructive?)
     return if peligrosos.empty? || !within_budget?
 
+    progress(:edit_repair)
     resend(turn, RepairPrompts.edit(peligrosos))
   end
 
   # ── 2 · gramática ───────────────────────────────────────────────────────────
   def repair_grammar(turn)
     repairs = 0
+    progress(:checking)
     validation = validate(turn.draft)
 
     while repairable(validation).any? && repairs < MAX_REPAIRS && within_budget?
       repairs += 1
+      progress(:repairing, round: repairs, of: MAX_REPAIRS)
       break unless resend(turn, RepairPrompts.grammar(repairable(validation)))
 
       validation = validate(turn.draft)
@@ -240,11 +263,13 @@ class ContactTrackings::Assistant::InterviewService
   def repair_routing(turn, validation)
     return [validation, []] if repairable(validation).any?
 
+    progress(:routing)
     cruces = route_mismatches(turn.draft)
     corregibles = correctable(turn, cruces)
     return [validation, cruces] if corregibles.empty? || !within_budget?
 
     MAX_ROUTE_REPAIRS.times do
+      progress(:routing_repair)
       break unless resend(turn, RepairPrompts.routing(corregibles))
 
       nueva = validate(turn.draft)

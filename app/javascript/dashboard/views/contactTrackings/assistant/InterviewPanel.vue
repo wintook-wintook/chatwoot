@@ -22,6 +22,9 @@ export default {
     // tarda (medido: 40–52 s por llamada con 17.000 caracteres). Un spinner solo
     // durante un minuto se lee como que se colgó.
     isEditing: { type: Boolean, default: false },
+    // Fase D: la etapa REAL del turno en curso ({ stage, round, of, editing }),
+    // consultada mientras se espera. null = todavía no hay dato.
+    stage: { type: Object, default: null },
   },
   emits: ['send'],
   data() {
@@ -29,6 +32,27 @@ export default {
     return { input: '', picked: {} };
   },
   computed: {
+    // Qué está haciendo el asistente, en palabras. Sin etapa todavía, la espera
+    // genérica: la de editar si hay Entrenamiento, que es la que tarda.
+    stageLabel() {
+      const etapa = this.stage?.stage;
+      if (!etapa) {
+        return this.isEditing
+          ? this.$t('TRACKING_ASSISTANT_VIEW.THINKING_EDIT')
+          : '';
+      }
+      if (etapa === 'writing') {
+        return this.$t(
+          this.stage.editing
+            ? 'TRACKING_ASSISTANT_VIEW.STAGE_WRITING_EDIT'
+            : 'TRACKING_ASSISTANT_VIEW.STAGE_WRITING'
+        );
+      }
+      return this.$t(`TRACKING_ASSISTANT_VIEW.STAGE_${etapa.toUpperCase()}`, {
+        round: this.stage.round,
+        of: this.stage.of,
+      });
+    },
     // Cuántas de las preguntas ofrecidas ya tienen respuesta elegida.
     pickedCount() {
       return Object.keys(this.picked).length;
@@ -223,10 +247,10 @@ export default {
         >
           <Spinner size="" />
           <span
-            v-if="isEditing"
+            v-if="stageLabel"
             class="text-xs text-slate-600 dark:text-slate-300"
           >
-            {{ $t('TRACKING_ASSISTANT_VIEW.THINKING_EDIT') }}
+            {{ stageLabel }}
           </span>
         </div>
       </div>

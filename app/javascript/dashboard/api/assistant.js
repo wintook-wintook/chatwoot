@@ -37,6 +37,7 @@ class AssistantAPI extends ApiClient {
       draft = null,
       deliveredDraft = null,
       building = null,
+      turnId = null,
     } = {}
   ) {
     const body = {
@@ -50,7 +51,19 @@ class AssistantAPI extends ApiClient {
     if (deliveredDraft !== null) body.delivered_draft = deliveredDraft;
     // La entrevista sigue abierta. Sin la llave, el backend lo deduce de las marcas.
     if (building !== null) body.building = building;
+    // Con él, el backend va dejando la etapa en curso para getProgress.
+    if (turnId) body.turn_id = turnId;
     return axios.post(`${this.url}/interview`, body);
+  }
+
+  // El texto de una versión del Entrenamiento: las listas llegan sin él.
+  getVersion(sessionId, number) {
+    return axios.get(`${this.url}/sessions/${sessionId}/versions/${number}`);
+  }
+
+  // En qué etapa está un turno que todavía no terminó.
+  getProgress(turnId) {
+    return axios.get(`${this.url}/progress/${turnId}`);
   }
 
   // La conversación a medias de quien pregunta, si la hay. Una entrevista dura
