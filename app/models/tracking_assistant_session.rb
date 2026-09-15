@@ -67,6 +67,8 @@ class TrackingAssistantSession < ApplicationRecord
   # La que se ofrece retomar al abrir la pantalla: la última a medias de esa
   # persona. Se acota por usuario y no por cuenta porque una entrevista es de quien
   # la tuvo — retomar la de otro sería seguir una conversación que no se leyó.
+  # La que se retoma sola al abrir el Asistente: la propia, no la de otro. Verlas
+  # todas no significa que la pantalla arranque en la conversación ajena.
   def self.resumable_for(account, user)
     open_sessions.where(account: account, user: user).recent_first.first
   end
@@ -75,9 +77,13 @@ class TrackingAssistantSession < ApplicationRecord
 
   # Las que se muestran en el listado. Las descartadas quedan en la tabla pero
   # fuera de la vista: descartar no debería ser irreversible.
-  def self.listable_for(account, user)
-    where(account: account, user: user, status: %w[open saved])
-      .includes(:tracking_template).recent_first.limit(LIST_LIMIT)
+  # De TODA la cuenta, no solo de quien pregunta: el Entrenamiento de un Agente IA
+  # es trabajo del equipo, y quedaba escondido en la conversación de quien lo armó.
+  # El módulo es de administradores (ver el controlador), así que "toda la cuenta"
+  # son ellos.
+  def self.listable_for(account)
+    where(account: account, status: %w[open saved])
+      .includes(:tracking_template, :user).recent_first.limit(LIST_LIMIT)
   end
 
   # De qué se trataba, para el listado. El primer mensaje de la persona es lo más

@@ -105,7 +105,7 @@
     "SAVE_CONTEXT_HINT": "Business facts you mentioned in the conversation. Empty is fine: the assistant doesn't fill in what you didn't tell it, because the agent would quote it as true.",
     "SAVE_FROM_TEMPLATE": "This Training came from “%{name}”. Saving replaces its own and keeps a copy of the previous one.",
     "TAB_SESSIONS": "Conversations",
-    "SESSIONS_HINT": "A good Training rarely comes out in one sitting. Here you can go back to a conversation, finished or not.",
+    "SESSIONS_HINT": "A good Training rarely comes out in one sitting. These are the conversations of every administrator in the account: you can go back to one, finished or half-done, and continue it.",
     "SESSIONS_NEW": "Start a new one",
     "SESSIONS_RESUME": "Resume",
     "SESSIONS_SAVED": "saved",
@@ -267,6 +267,10 @@
     "DICTATE_ERROR": "The audio could not be turned into text. Try again.",
     "DICTATE_ERROR_NO_API_KEY": "Dictation needs the account's OpenAI integration.",
     "DICTATE_ERROR_TOO_LARGE": "The recording is too long. Dictate it in parts.",
-    "DICTATE_ERROR_NO_AUDIO": "No audio arrived. Check that the browser has microphone permission."
+    "DICTATE_ERROR_NO_AUDIO": "No audio arrived. Check that the browser has microphone permission.",
+    "SESSIONS_COL_CREATOR": "Started by",
+    "SESSIONS_MINE": "you",
+    "SESSIONS_NO_CREATOR": "—",
+    "SESSION_CREATOR": "· by %{name}"
   }
 }

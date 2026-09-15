@@ -100,7 +100,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   end
 
   def sessions
-    render json: TrackingAssistantSession.listable_for(Current.account, Current.user)
+    render json: TrackingAssistantSession.listable_for(Current.account)
                                          .map { |s| session_row(s) }
   end
 
@@ -251,15 +251,17 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   def session_record
     return nil if params[:session_id].blank?
 
-    TrackingAssistantSession.find_by(id: params[:session_id], account: Current.account, user: Current.user)
+    TrackingAssistantSession.find_by(id: params[:session_id], account: Current.account)
   end
 
   def close_session(template)
     session_record&.mark_saved!(template)
   end
 
+  # De la cuenta, no de quien pregunta: las conversaciones se comparten entre
+  # administradores y cualquiera puede abrirlas, seguirlas y descartarlas.
   def find_session
-    TrackingAssistantSession.find_by(id: params[:id], account: Current.account, user: Current.user)
+    TrackingAssistantSession.find_by(id: params[:id], account: Current.account)
   end
 
   # Lo justo para elegir cuál abrir: de qué se trataba, en qué quedó, y qué iba a
@@ -269,13 +271,14 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   # cuándo se empezó a armar este agente, y cuándo se lo tocó por última vez. En
   # una entrevista que se retoma tres días después, la diferencia es el dato.
   #
-  # NO se devuelve quién la creó, y no por olvido: `listable_for` filtra por
-  # usuario y todas las acciones buscan con `find_by(id:, account:, user:)`, así
-  # que cada quien ve únicamente las suyas. La columna sería siempre la misma
-  # persona. Si algún día se comparten entre administradores, ahí sí hace falta.
+  # `creator` importa desde que las conversaciones se comparten entre
+  # administradores: en el listado hay trabajo de varias personas y hay que saber de
+  # quién es cada una antes de seguirla. `mine` distingue las propias.
   def session_row(sesion)
     {
       id: sesion.id, status: sesion.status, title: sesion.title,
+      creator: sesion.user&.available_name || sesion.user&.name,
+      mine: sesion.user_id == Current.user.id,
       routes: sesion.route_count, has_draft: sesion.draft.present?,
       tracking_template_id: sesion.tracking_template_id,
       template_name: sesion.tracking_template&.name,
@@ -294,6 +297,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   def session_json(sesion)
     {
       id: sesion.id, messages: sesion.messages, draft: sesion.draft,
+      creator: sesion.user&.available_name || sesion.user&.name,
+      mine: sesion.user_id == Current.user.id,
       validation: sesion.validation.presence, proposal: sesion.proposal.presence,
       tracking_template_id: sesion.tracking_template_id,
       status: sesion.status,

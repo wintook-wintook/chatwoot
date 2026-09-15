@@ -105,7 +105,7 @@
     "SAVE_CONTEXT_HINT": "Datos del negocio que mencionaste en la conversación. Vacío está bien: el asistente no completa lo que no le dijiste, porque el agente lo citaría como cierto.",
     "SAVE_FROM_TEMPLATE": "Este Entrenamiento salió de «%{name}». Al guardar se reemplaza el suyo y se conserva una copia del anterior.",
     "TAB_SESSIONS": "Conversaciones",
-    "SESSIONS_HINT": "Un Entrenamiento bueno rara vez sale de una sentada. Acá podés volver a una conversación, terminada o a medias.",
+    "SESSIONS_HINT": "Un Entrenamiento bueno rara vez sale de una sentada. Acá están las conversaciones de todos los administradores de la cuenta: podés volver a una, terminada o a medias, y seguirla.",
     "SESSIONS_NEW": "Empezar una nueva",
     "SESSIONS_RESUME": "Retomar",
     "SESSIONS_SAVED": "guardada",
@@ -267,6 +267,10 @@
     "DICTATE_ERROR": "No se pudo pasar el audio a texto. Intentá de nuevo.",
     "DICTATE_ERROR_NO_API_KEY": "Para dictar hace falta la integración de OpenAI de la cuenta.",
     "DICTATE_ERROR_TOO_LARGE": "La grabación es demasiado larga. Dictala en partes.",
-    "DICTATE_ERROR_NO_AUDIO": "No llegó audio. Revisá que el navegador tenga permiso de micrófono."
+    "DICTATE_ERROR_NO_AUDIO": "No llegó audio. Revisá que el navegador tenga permiso de micrófono.",
+    "SESSIONS_COL_CREATOR": "Creada por",
+    "SESSIONS_MINE": "vos",
+    "SESSIONS_NO_CREATOR": "—",
+    "SESSION_CREATOR": "· de %{name}"
   }
 }

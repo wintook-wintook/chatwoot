@@ -278,9 +278,22 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
         expect(response.parsed_body['draft']).to eq(editado2)
       end
 
-      it 'no da el texto de una versión de la conversación de otra persona' do
+      # Se comparten entre administradores, así que también sus versiones.
+      it 'da el texto de una versión de la conversación de otro administrador' do
         otro = create(:user, account: account, role: :administrator)
         sesion = TrackingAssistantSession.create!(account: account, user: otro)
+        sesion.add_version(draft: 'ajeno', source: 'assistant')
+        sesion.save!
+
+        get "/api/v1/accounts/#{account.id}/contact_trackings/assistant/sessions/#{sesion.id}/versions/1",
+            headers: admin.create_new_auth_token, as: :json
+
+        expect(response.parsed_body['draft']).to eq('ajeno')
+      end
+
+      it 'no da la de otra cuenta' do
+        otra = create(:account)
+        sesion = TrackingAssistantSession.create!(account: otra, user: create(:user, account: otra))
         sesion.add_version(draft: 'ajeno', source: 'assistant')
         sesion.save!
 
@@ -404,6 +417,64 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       post "/api/v1/accounts/#{account.id}/contact_trackings/assistant/transcribe", headers: admin.create_new_auth_token
 
       expect(response.parsed_body['error']).to eq('no_audio')
+    end
+  end
+
+  # Las conversaciones del Asistente se comparten entre administradores: el módulo
+  # sigue cerrado para los agentes comunes (ver el bloque de permisos más abajo).
+  describe 'conversaciones compartidas entre administradores' do
+    let(:otro_admin) { create(:user, account: account, role: :administrator) }
+    let(:base) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant" }
+    let!(:ajena) do
+      TrackingAssistantSession.create!(account: account, user: otro_admin, draft: '@ruta(a #aaa: x): -',
+                                       messages: [{ 'role' => 'user', 'content' => 'un agente de prueba' }])
+    end
+
+    it 'las lista con quién las creó' do
+      get "#{base}/sessions", headers: admin.create_new_auth_token, as: :json
+
+      fila = response.parsed_body.find { |s| s['id'] == ajena.id }
+      expect(fila['creator']).to eq(otro_admin.available_name)
+      expect(fila['mine']).to be(false)
+    end
+
+    it 'deja abrir la de otra persona' do
+      get "#{base}/sessions/#{ajena.id}", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body).to include('draft' => ajena.draft, 'mine' => false,
+                                              'creator' => otro_admin.available_name)
+    end
+
+    it 'deja seguirla: el turno nuevo se guarda en esa misma conversación' do
+      create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled',
+                                 settings: { 'api_key' => 'sk-test' })
+      stub_request(:post, ContactTrackings::Assistant::InterviewService::API_URL).to_return(
+        status: 200, headers: { 'Content-Type' => 'application/json' },
+        body: { choices: [{ message: { content: { mensaje: '¿Qué cambio?' }.to_json } }] }.to_json
+      )
+
+      post "#{base}/interview", params: { messages: [{ role: 'user', content: 'seguimos' }], session_id: ajena.id },
+                                headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['session_id']).to eq(ajena.id)
+      expect(ajena.reload.messages.last['content']).to eq('¿Qué cambio?')
+    end
+
+    it 'deja descartar la de otra persona' do
+      delete "#{base}/sessions/#{ajena.id}", headers: admin.create_new_auth_token, as: :json
+
+      expect(ajena.reload.status).to eq('discarded')
+    end
+
+    # Compartir la lista no cruza cuentas.
+    it 'no muestra las de otra cuenta' do
+      otra = create(:account)
+      TrackingAssistantSession.create!(account: otra, user: create(:user, account: otra))
+
+      get "#{base}/sessions", headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body.pluck('id')).to contain_exactly(ajena.id)
     end
   end
 
@@ -743,12 +814,13 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       expect(response.parsed_body.first).to include('template_name' => 'Soporte')
     end
 
-    it 'no lista las de otra persona' do
-      crear_sesion(user: create(:user, account: account))
+    it 'lista también las de otra persona de la cuenta, diciendo de quién son' do
+      otro = create(:user, account: account)
+      crear_sesion(user: otro)
 
       listar
 
-      expect(response.parsed_body).to be_empty
+      expect(response.parsed_body.first).to include('creator' => otro.available_name, 'mine' => false)
     end
 
     describe 'abrir una' do
@@ -761,8 +833,9 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
         expect(response.parsed_body['draft']).to eq('@ruta(a #b: c): -')
       end
 
-      it 'no deja abrir la de otra persona' do
-        ajena = crear_sesion(user: create(:user, account: account))
+      it 'no deja abrir la de otra cuenta' do
+        otra = create(:account)
+        ajena = TrackingAssistantSession.create!(account: otra, user: create(:user, account: otra))
 
         get "#{sessions_url}/#{ajena.id}", headers: admin.create_new_auth_token, as: :json
 
@@ -782,8 +855,9 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
         expect(response.parsed_body).to be_empty
       end
 
-      it 'no deja descartar la de otra persona' do
-        ajena = crear_sesion(user: create(:user, account: account))
+      it 'no deja descartar la de otra cuenta' do
+        otra = create(:account)
+        ajena = TrackingAssistantSession.create!(account: otra, user: create(:user, account: otra))
 
         delete "#{sessions_url}/#{ajena.id}", headers: admin.create_new_auth_token, as: :json
 

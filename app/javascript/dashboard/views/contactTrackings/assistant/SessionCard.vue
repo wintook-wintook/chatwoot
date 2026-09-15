@@ -32,6 +32,12 @@ export default {
     editingTemplate: { type: Object, default: null },
   },
   computed: {
+    // Solo si es de otra persona: en la propia, el nombre no aporta nada.
+    creator() {
+      return this.sessionMeta && !this.sessionMeta.mine
+        ? this.sessionMeta.creator
+        : '';
+    },
     fromTemplate() {
       return (
         this.editingTemplate?.name || this.sessionMeta?.template_name || ''
@@ -114,6 +120,9 @@ export default {
       <span v-if="updated" class="ml-2 whitespace-nowrap">
         {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_SAVED_AT') }}
         <span class="text-slate-500 dark:text-slate-400">{{ updated }}</span>
+      </span>
+      <span v-if="creator" class="ml-2">
+        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_CREATOR', { name: creator }) }}
       </span>
       <span v-if="fromTemplate" class="ml-2">
         {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_FROM', { name: fromTemplate }) }}

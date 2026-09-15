@@ -13,6 +13,13 @@ RSpec.describe TrackingAssistantSession do
   end
 
   describe '.resumable_for' do
+    # Verlas todas no significa que la pantalla arranque en la de otro.
+    it 'no retoma sola la conversación de otra persona' do
+      described_class.create!(account: account, user: otro)
+
+      expect(described_class.resumable_for(account, user)).to be_nil
+    end
+
     it 'devuelve la última conversación a medias de esa persona' do
       vieja = sesion
       nueva = sesion
@@ -102,7 +109,7 @@ RSpec.describe TrackingAssistantSession do
       abierta = sesion
       guardada = sesion(status: 'saved')
 
-      expect(described_class.listable_for(account, user)).to contain_exactly(abierta, guardada)
+      expect(described_class.listable_for(account)).to contain_exactly(abierta, guardada)
     end
 
     # Descartar no borra la fila: la saca de la vista. Un clic de más en una
@@ -110,13 +117,23 @@ RSpec.describe TrackingAssistantSession do
     it 'no muestra las descartadas' do
       sesion(status: 'discarded')
 
-      expect(described_class.listable_for(account, user)).to be_empty
+      expect(described_class.listable_for(account)).to be_empty
     end
 
-    it 'no muestra las de otra persona' do
-      sesion(user: otro)
+    # Se comparten entre administradores: el Entrenamiento de un Agente IA es
+    # trabajo del equipo y quedaba escondido en la conversación de quien lo armó.
+    it 'muestra también las de otra persona de la cuenta' do
+      ajena = sesion(user: otro)
 
-      expect(described_class.listable_for(account, user)).to be_empty
+      expect(described_class.listable_for(account)).to include(ajena)
+    end
+
+    it 'no muestra las de otra cuenta' do
+      propia = sesion
+      otra = create(:account)
+      described_class.create!(account: otra, user: create(:user, account: otra))
+
+      expect(described_class.listable_for(account)).to contain_exactly(propia)
     end
 
     it 'las ordena de la más reciente a la más vieja' do
@@ -124,7 +141,7 @@ RSpec.describe TrackingAssistantSession do
       nueva = sesion
       vieja.update!(updated_at: 3.days.ago)
 
-      expect(described_class.listable_for(account, user).to_a).to eq([nueva, vieja])
+      expect(described_class.listable_for(account).to_a).to eq([nueva, vieja])
     end
   end
 

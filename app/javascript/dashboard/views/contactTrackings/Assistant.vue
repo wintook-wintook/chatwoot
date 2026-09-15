@@ -75,6 +75,7 @@ const SESSION_COLUMNS = {
   id: NUMBER,
   status: TEXT,
   title: TEXT,
+  creator: TEXT,
   template_name: TEXT,
   routes: NUMBER,
   created_at: DATE,
@@ -265,6 +266,10 @@ export default {
         { key: 'id', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ID' },
         { key: 'status', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_STATUS' },
         { key: 'title', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TITLE' },
+        {
+          key: 'creator',
+          label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_CREATOR',
+        },
         {
           key: 'template_name',
           label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TEMPLATE',
@@ -1668,6 +1673,17 @@ export default {
                       {{
                         row.title ||
                         $t('TRACKING_ASSISTANT_VIEW.SESSIONS_UNTITLED')
+                      }}
+                    </td>
+                    <!-- De quién es: desde que las conversaciones se comparten
+                         entre administradores, el listado tiene trabajo de
+                         varias personas. -->
+                    <td class="p-3 text-slate-500 dark:text-slate-400">
+                      {{
+                        row.mine
+                          ? $t('TRACKING_ASSISTANT_VIEW.SESSIONS_MINE')
+                          : row.creator ||
+                            $t('TRACKING_ASSISTANT_VIEW.SESSIONS_NO_CREATOR')
                       }}
                     </td>
                     <td class="p-3 text-slate-500 dark:text-slate-400">
