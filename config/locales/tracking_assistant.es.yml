@@ -32,6 +32,15 @@ es:
         Eso significa que esas descripciones se confunden entre sí. Reescribilas para que no se
         pisen —situaciones distintas, en las palabras del cliente— y devolvé el Entrenamiento
         completo de nuevo. No toques las líneas que ya estaban bien.
+      edit_header: >-
+        Comparé lo que devolviste con el ENTRENAMIENTO ACTUAL y cambiaste esto sin declararlo en "toca":
+      edit_removed: '- quitaste %{key}'
+      edit_changed: '- cambiaste %{key}'
+      edit_added: '- agregaste %{key}'
+      edit_footer: >-
+        Si la persona no lo pidió, devolvé esas partes EXACTAMENTE como estaban en el ENTRENAMIENTO
+        ACTUAL, carácter por carácter. Si sí lo pidió, dejalas y nombralas en "toca". Devolvé el
+        Entrenamiento completo de nuevo.
       missing_mode: >-
         Entregaste el Entrenamiento sin preguntar si el agente CONTESTA primero y abre el caso solo
         si no pudo resolver, o si SOLO recauda datos y abre el caso siempre. Son dos agentes

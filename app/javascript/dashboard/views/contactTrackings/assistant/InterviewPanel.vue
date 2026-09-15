@@ -5,9 +5,11 @@
 // turno: el backend no guarda sesión, así que el cliente es el dueño del hilo.
 // ============================================================================
 import Spinner from 'shared/components/Spinner.vue';
+import ChangeList from './ChangeList.vue';
+import { hasChanges } from './changeList';
 
 export default {
-  components: { Spinner },
+  components: { Spinner, ChangeList },
   props: {
     messages: { type: Array, default: () => [] },
     isThinking: { type: Boolean, default: false },
@@ -16,6 +18,10 @@ export default {
     // —una pregunta abierta como "qué temas atiende" no tiene lista— y entonces
     // la conversación funciona como siempre, escribiendo.
     options: { type: Array, default: null },
+    // Hay un Entrenamiento en pantalla: el turno es una edición y, con uno largo,
+    // tarda (medido: 40–52 s por llamada con 17.000 caracteres). Un spinner solo
+    // durante un minuto se lee como que se colgó.
+    isEditing: { type: Boolean, default: false },
   },
   emits: ['send'],
   data() {
@@ -41,6 +47,7 @@ export default {
     },
   },
   methods: {
+    hasChanges,
     // Solo bajo el ÚLTIMO mensaje, y solo si es del asistente: el hilo de arriba
     // es historial, y un botón de tres turnos atrás contestaría algo ya respondido.
     showOptions(index, message) {
@@ -142,6 +149,11 @@ export default {
         >
           <span class="whitespace-pre-wrap">{{ message.content }}</span>
 
+          <ChangeList
+            v-if="message.role === 'assistant' && hasChanges(message.changes)"
+            :changes="message.changes"
+          />
+
           <!-- Los botones van DENTRO de la burbuja del último mensaje del
                asistente, no en un bloque aparte: separados se leían como dos
                cosas distintas —el texto por un lado y una lista suelta por el
@@ -206,8 +218,16 @@ export default {
       </div>
 
       <div v-if="isThinking" class="flex justify-start">
-        <div class="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700">
+        <div
+          class="flex items-center gap-2 max-w-[85%] px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700"
+        >
           <Spinner size="" />
+          <span
+            v-if="isEditing"
+            class="text-xs text-slate-600 dark:text-slate-300"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.THINKING_EDIT') }}
+          </span>
         </div>
       </div>
     </div>

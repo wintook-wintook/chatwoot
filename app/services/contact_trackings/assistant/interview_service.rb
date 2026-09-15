@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # ================================================================================
-# proyecto@asistente_agentes_ia — ENTREVISTA Y REDACCIÓN
+# proyecto@asistente_agentes_ia — ENTREVISTA, REDACCIÓN Y EDICIÓN
 # ================================================================================
 # UNA sola conversación con el modelo: entrevista y, cuando tiene lo que necesita,
 # escribe el Entrenamiento. Si lo que escribió no pasa el comprobador, vuelve al
@@ -15,32 +15,47 @@
 #   opina; el parser verifica. Acá el auditor es ValidatorService, que no gasta
 #   tokens y no puede alucinar.
 #
-# EL BUCLE:
-#   redacta → comprueba → ¿bloqueantes? → vuelve al mismo hilo con el DIAGNÓSTICO
-#   Tope duro de MAX_REPAIRS: sin tope, un contrato mal escrito quema tokens en
-#   círculo. Al agotarse se devuelve el borrador con sus errores para que los vea
-#   una persona, en vez de guardar algo roto.
+# LOS BUCLES, en este orden:
+#   1. edición   ¿tocó sin declarar algo destructivo del Entrenamiento que había?
+#   2. gramática ¿se ejecuta? (ValidatorService) — hasta MAX_REPAIRS vueltas
+#   3. ruteo     ¿cada rama se elige a sí misma? (RouteSelfCheck) — una vuelta
+#   Cada uno le devuelve al mismo hilo un diagnóstico CONCRETO. Medido el 08/09/2026:
+#   con un veredicto pelado se reparaba 1 de 3 veces; nombrando lo que falta, 3 de 3.
 #
-#   El mensaje que se le devuelve es el del comprobador, textual. Medido el
-#   08/09/2026: con un veredicto pelado se reparaba 1 de 3 veces; nombrando el
-#   carácter que faltaba y su línea, 3 de 3.
+# EDITAR, NO REESCRIBIR (fase A de PROMPT STUDIO):
+#   Hasta el 15/09/2026 el modelo NUNCA veía el Entrenamiento: el cliente mandaba solo
+#   la conversación. "Agregá una rama" se resolvía reescribiendo todo de memoria, y un
+#   agente cargado con "Arreglarlo acá" se reemplazaba por uno nuevo sin haberlo leído.
+#   Ahora recibe el que está en pantalla —con las ediciones a mano incluidas— y lo
+#   devuelve completo cambiando solo lo pedido. Medido sobre el v6.11 (17.066
+#   caracteres, 30 piezas): una regla nueva en [ESTILO] volvió con 1 línea distinta.
+#
+#   Y si lo nuevo no ejecuta y lo que había sí, se conserva lo que había: una
+#   modificación fallida nunca le cuesta a nadie el Entrenamiento que funcionaba.
 #
 # CONTRATO DE SALIDA:
 #   Se pide JSON para que el bucle sea determinista: hace falta saber si el modelo
 #   preguntó o entregó, y con texto libre eso habría que adivinarlo.
 #     { "mensaje": "lo que se le muestra a la persona",
-#       "entrenamiento": "el Entrenamiento completo, o null si todavía pregunta" }
+#       "entrenamiento": "el Entrenamiento completo, o null si todavía pregunta",
+#       "toca": [...], "cambios": [...]   ← solo al editar }
 # ================================================================================
 
 class ContactTrackings::Assistant::InterviewService
-  API_URL = 'https://api.openai.com/v1/chat/completions'
-  READ_TIMEOUT = 90
+  RepairPrompts = ContactTrackings::Assistant::RepairPrompts
+  API_URL = ContactTrackings::Assistant::OpenaiChat::API_URL
   # Vueltas de corrección antes de mostrarle los errores a la persona.
   MAX_REPAIRS = 3
   # Vueltas para arreglar el RUTEO (ver RouteSelfCheck). Solo una: cada vuelta
   # cuesta una clasificación por rama, y si con el cruce señalado de frente no lo
   # arregla, una segunda vuelta tampoco — mejor entregarlo con el aviso a la vista.
   MAX_ROUTE_REPAIRS = 1
+  # Tiempo total de un turno, con todas sus vueltas. Editando el v6.11 cada llamada
+  # tarda 40–52 s (medido), y el proxy de develop corta a los 300: con tres
+  # correcciones y la del ruteo, un turno se pasaría y la persona vería un error
+  # aunque el Entrenamiento hubiera salido bien. Pasado este tope no se abre otra
+  # vuelta: se entrega lo que hay, con sus hallazgos a la vista.
+  TURN_BUDGET_SECONDS = 200
   # Los dos comportamientos posibles del agente. "responde" consulta una fuente y
   # escala si no resuelve; "deriva" abre el caso siempre, sin intentar contestar.
   # Cuál de los dos es NO se puede deducir del pedido —"un agente que junte
@@ -57,25 +72,34 @@ class ContactTrackings::Assistant::InterviewService
   # —el único que no se puede deducir del inventario—.
   MAX_INTERVIEW_TURNS = 6
 
-  Result = Struct.new(:reply, :draft, :validation, :repairs, :route_mismatches, :proposal, :options, :error,
-                      keyword_init: true) do
+  Result = Struct.new(:reply, :draft, :validation, :repairs, :route_mismatches, :proposal, :options,
+                      :changes, :rejected_draft, :rejected_validation, :error, keyword_init: true) do
     def success? = error.blank?
   end
+
+  # Lo que va y viene entre vueltas de corrección.
+  Turn = Struct.new(:history, :message, :draft, :declared, :summary, keyword_init: true)
 
   # one_shot: sin entrevista. Es el modo del botón "generar" que vive dentro de la
   # ficha del Agente IA: ahí no hay una conversación donde preguntar, hay un campo y
   # alguien esperando que se llene. Se redacta con lo que haya y lo que falte se marca
   # <PENDIENTE:>, en vez de devolver una pregunta que nadie va a poder contestar.
-  def initialize(account, messages:, inbox: nil, one_shot: false)
+  #
+  # current_draft: el Entrenamiento que la persona tiene en pantalla, tal cual —con
+  # sus ediciones a mano—. Con él, el turno es una EDICIÓN.
+  def initialize(account, messages:, inbox: nil, one_shot: false, current_draft: nil)
     @account = account
     @inbox = inbox
     @messages = Array(messages)
     @one_shot = one_shot
+    @current_draft = one_shot ? nil : current_draft.to_s.presence
+    @chat = ContactTrackings::Assistant::OpenaiChat.new(account: account, inbox: inbox)
   end
 
   def call
-    return Result.new(error: :no_api_key) if api_key.blank?
+    return Result.new(error: :no_api_key) if @chat.api_key.blank?
 
+    @started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     reply = ask(conversation)
     return Result.new(error: :unavailable) if reply.nil?
 
@@ -87,14 +111,20 @@ class ContactTrackings::Assistant::InterviewService
     # Entregar sin haber preguntado no es un error de sintaxis, así que el
     # comprobador no lo caza: es el modelo decidiendo por la persona. Se rechaza
     # acá y se lo devuelve al mismo hilo, igual que un hallazgo del comprobador.
-    return ask_missing_mode(reply, draft) if MODES.exclude?(reply['modo'])
+    #
+    # Al EDITAR no se exige: el comportamiento ya está escrito en el Entrenamiento que
+    # había, y preguntar "¿contesta o deriva?" para agregar una regla de estilo sería
+    # hacer perder un turno.
+    return ask_missing_mode(reply, draft) if !editing? && MODES.exclude?(reply['modo'])
 
-    repair(reply['mensaje'], draft, ContactTrackings::Assistant::ReplyParser.proposal(reply))
+    finish(reply, draft, ContactTrackings::Assistant::ReplyParser.proposal(reply))
   end
 
   private
 
-  attr_reader :account, :inbox, :messages, :one_shot
+  attr_reader :account, :inbox, :messages, :one_shot, :current_draft
+
+  def editing? = current_draft.present?
 
   # El modelo redactó sin preguntar. Se descarta el borrador y se le devuelve al
   # mismo hilo la pregunta que le faltó: es más barato que entregar un agente que
@@ -102,7 +132,7 @@ class ContactTrackings::Assistant::InterviewService
   def ask_missing_mode(reply, draft)
     history = conversation + [
       { role: 'assistant', content: { mensaje: reply['mensaje'], entrenamiento: draft }.to_json },
-      { role: 'user', content: t('repair.missing_mode') }
+      { role: 'user', content: RepairPrompts.t('repair.missing_mode') }
     ]
 
     corrected = ask(history)
@@ -111,90 +141,109 @@ class ContactTrackings::Assistant::InterviewService
     nuevo = corrected['entrenamiento'].presence
     return Result.new(reply: corrected['mensaje'], draft: nil, repairs: 0) if nuevo.blank?
 
-    repair(corrected['mensaje'], nuevo, ContactTrackings::Assistant::ReplyParser.proposal(corrected))
+    finish(corrected, nuevo, ContactTrackings::Assistant::ReplyParser.proposal(corrected))
   end
 
-  # ── el bucle ────────────────────────────────────────────────────────────────
-  def repair(message, draft, proposal = nil)
-    history = conversation
+  def finish(reply, draft, proposal)
+    turn = Turn.new(history: conversation, message: reply['mensaje'], draft: draft,
+                    declared: Array(reply['toca']),
+                    summary: ContactTrackings::Assistant::ReplyParser.changes(reply))
+
+    repair_edit(turn)
+    validation, repairs = repair_grammar(turn)
+    validation, cruces = repair_routing(turn, validation)
+    validation = with_route_findings(validation, cruces)
+
+    result(turn, validation, repairs, cruces, proposal)
+  end
+
+  # ── la vuelta de corrección, una sola forma para los tres bucles ────────────
+  # Le muestra al modelo lo que entregó, le dice qué encontró, y se queda con lo
+  # nuevo. Devuelve false si no hubo respuesta usable: el turno sigue con lo anterior.
+  def resend(turn, prompt)
+    turn.history += [{ role: 'assistant', content: { mensaje: turn.message, entrenamiento: turn.draft }.to_json },
+                     { role: 'user', content: prompt }]
+
+    reply = ask(turn.history)
+    return false if reply.nil? || reply['entrenamiento'].blank?
+
+    turn.message = reply['mensaje']
+    turn.draft = reply['entrenamiento']
+    turn.declared |= Array(reply['toca'])
+    turn.summary = ContactTrackings::Assistant::ReplyParser.changes(reply).presence || turn.summary
+    true
+  end
+
+  def within_budget?
+    Process.clock_gettime(Process::CLOCK_MONOTONIC) - @started_at < TURN_BUDGET_SECONDS
+  end
+
+  # ── 1 · edición ─────────────────────────────────────────────────────────────
+  # Solo lo DESTRUCTIVO y no declarado vuelve al modelo (ver DraftDiff). Una línea
+  # de más en [ETIQUETAS] se muestra en los cambios; una sección borrada que nadie
+  # pidió borrar se le devuelve.
+  def repair_edit(turn)
+    return unless editing?
+
+    peligrosos = diff_for(turn).undeclared(turn.declared).select(&:destructive?)
+    return if peligrosos.empty? || !within_budget?
+
+    resend(turn, RepairPrompts.edit(peligrosos))
+  end
+
+  # ── 2 · gramática ───────────────────────────────────────────────────────────
+  def repair_grammar(turn)
     repairs = 0
-    validation = validate(draft)
+    validation = validate(turn.draft)
 
-    while validation[:blocking].any? && repairs < MAX_REPAIRS
+    while validation[:blocking].any? && repairs < MAX_REPAIRS && within_budget?
       repairs += 1
-      history += [{ role: 'assistant', content: { mensaje: message, entrenamiento: draft }.to_json },
-                  { role: 'user', content: repair_prompt(validation[:blocking]) }]
+      break unless resend(turn, RepairPrompts.grammar(validation[:blocking]))
 
-      reply = ask(history)
-      break if reply.nil? || reply['entrenamiento'].blank?
-
-      message = reply['mensaje']
-      draft = reply['entrenamiento']
-      validation = validate(draft)
+      validation = validate(turn.draft)
     end
 
-    # Recién acá, con el Entrenamiento ya EJECUTABLE, se prueba si RUTEA. Antes no
-    # tiene sentido: un texto con hallazgos bloqueantes no llega a clasificar nada.
-    message, draft, validation, cruces = repair_routing(history, message, draft, validation)
-
-    Result.new(reply: message, draft: draft, validation: with_route_findings(validation, cruces),
-               repairs: repairs, route_mismatches: cruces, proposal: proposal)
+    [validation, repairs]
   end
 
-  # ── el segundo bucle: que cada rama se elija a sí misma ─────────────────────
+  # ── 3 · ruteo: que cada rama se elija a sí misma ────────────────────────────
   # El comprobador dice si el Entrenamiento se ejecuta. Esto dice si rutea, que es
   # lo que ningún parser puede contestar — y es donde el Asistente fallaba: escribió
   # dos ramas con la misma descripción, y "a como esta el dolar hoy" dentro de la
   # rama comercial teniendo una rama fuera_de_alcance.
   #
-  # Se le devuelve el cruce TEXTUAL, igual que con los hallazgos del comprobador:
-  # "probé la rama X con su propia descripción y el motor eligió Y". Medido el
-  # 08/09/2026 sobre los mensajes del comprobador: el diagnóstico concreto repara,
-  # el veredicto no.
-  def repair_routing(history, message, draft, validation)
-    return [message, draft, validation, []] if validation[:blocking].any?
+  # Recién con el Entrenamiento EJECUTABLE: un texto con bloqueantes no clasifica nada.
+  #
+  # Al editar, solo se corrigen los cruces de las ramas que se TOCARON. Un cruce que el
+  # Entrenamiento ya traía se muestra, pero no justifica reescribir una rama que la
+  # persona no pidió cambiar.
+  def repair_routing(turn, validation)
+    return [validation, []] if validation[:blocking].any?
 
-    cruces = route_mismatches(draft)
-    rondas = 0
+    cruces = route_mismatches(turn.draft)
+    corregibles = correctable(turn, cruces)
+    return [validation, cruces] if corregibles.empty? || !within_budget?
 
-    while cruces.any? && rondas < MAX_ROUTE_REPAIRS
-      rondas += 1
-      history += [{ role: 'assistant', content: { mensaje: message, entrenamiento: draft }.to_json },
-                  { role: 'user', content: routing_prompt(cruces) }]
+    MAX_ROUTE_REPAIRS.times do
+      break unless resend(turn, RepairPrompts.routing(corregibles))
 
-      reply = ask(history)
-      break if reply.nil? || reply['entrenamiento'].blank?
-
-      message = reply['mensaje']
-      draft = reply['entrenamiento']
-      validation = validate(draft)
+      nueva = validate(turn.draft)
       # Si la corrección del ruteo rompió la gramática, manda el comprobador: un
       # Entrenamiento que no ejecuta es peor que uno que rutea flojo.
-      break if validation[:blocking].any?
+      return [nueva, []] if nueva[:blocking].any?
 
-      cruces = route_mismatches(draft)
+      validation = nueva
+      cruces = route_mismatches(turn.draft)
     end
 
-    [message, draft, validation, cruces]
+    [validation, cruces]
   end
 
-  # Los cruces que quedaron después de la vuelta de corrección se muestran como un
-  # hallazgo más: quien mira la pantalla no tiene por qué saber que hubo dos
-  # comprobaciones distintas, y un aviso que vive solo en el log no existe.
-  #
-  # Van como DEGRADANTES —el Entrenamiento se guarda—: el motor igual va a elegir
-  # alguna rama, solo que no la que esa descripción prometía.
-  def with_route_findings(validation, cruces)
-    return validation if cruces.empty?
+  def correctable(turn, cruces)
+    return cruces unless editing?
 
-    extra = cruces.map do |c|
-      { code: :route_not_self_chosen,
-        message: t('findings.route_not_self_chosen', route: c.route, probe: c.probe,
-                                                     chosen: c.chosen || t('repair.route_none')),
-        wrote: c.probe }
-    end
-
-    validation.merge(degrading: validation[:degrading] + extra)
+    tocadas = diff_for(turn).changes.select(&:route).map(&:key)
+    cruces.select { |c| tocadas.include?("@ruta(#{c.route})") }
   end
 
   def route_mismatches(draft)
@@ -206,33 +255,55 @@ class ContactTrackings::Assistant::InterviewService
     []
   end
 
-  def routing_prompt(cruces)
-    detalle = cruces.map do |c|
-      t('repair.route_mismatch_line', route: c.route, probe: c.probe, chosen: c.chosen || t('repair.route_none'))
-    end
+  # Los cruces que quedaron se muestran como un hallazgo más: quien mira la pantalla
+  # no tiene por qué saber que hubo dos comprobaciones distintas, y un aviso que vive
+  # solo en el log no existe.
+  #
+  # Van como DEGRADANTES —el Entrenamiento se guarda—: el motor igual va a elegir
+  # alguna rama, solo que no la que esa descripción prometía.
+  def with_route_findings(validation, cruces)
+    return validation if cruces.empty?
 
-    "#{t('repair.route_header')}\n#{detalle.join("\n")}\n\n#{t('repair.route_footer')}"
+    validation.merge(degrading: validation[:degrading] + cruces.map { |c| RepairPrompts.route_finding(c) })
   end
 
-  # Se le devuelven los mensajes del comprobador TEXTUALES. Reescribirlos "para que
-  # se entiendan mejor" es justo lo que los vuelve inútiles.
-  def repair_prompt(blocking)
-    detalle = blocking.map do |finding|
-      linea = finding[:wrote].present? ? "\n  #{t('repair.wrote')} #{finding[:wrote]}" : ''
-      "- #{finding[:message]}#{linea}"
+  # ── el resultado ────────────────────────────────────────────────────────────
+  # Una modificación que deja sin ejecutar un Entrenamiento que ejecutaba NO lo
+  # reemplaza: se devuelve el que había, y lo propuesto aparte para que la persona
+  # decida. Al crear no hay nada que conservar, así que se entrega igual, con sus
+  # errores a la vista.
+  def result(turn, validation, repairs, cruces, proposal)
+    base = { reply: turn.message, repairs: repairs, route_mismatches: cruces, proposal: proposal,
+             changes: editing? ? changes_payload(turn) : nil }
+
+    if editing? && validation[:blocking].any? && validate(current_draft)[:blocking].empty?
+      return Result.new(**base, draft: current_draft, validation: validate(current_draft),
+                                rejected_draft: turn.draft, rejected_validation: validation)
     end
 
-    "#{t('repair.header')}\n#{detalle.join("\n")}\n\n#{t('repair.footer')}"
+    Result.new(**base, draft: turn.draft, validation: validation)
   end
 
-  # Los hallazgos ya vienen traducidos; el texto que los envuelve tiene que ir en el
-  # mismo idioma o el modelo recibe un prompt mezclado.
-  def t(key, **args)
-    I18n.t("tracking_assistant.#{key}", locale: ContactTrackings::Assistant::Language.resolve, **args)
+  # Lo que se le muestra a la persona: el resumen que escribió el modelo y, al lado,
+  # lo que cambió DE VERDAD — marcando lo que tocó sin decirlo.
+  def changes_payload(turn)
+    diff = diff_for(turn)
+    sin_declarar = diff.undeclared(turn.declared).map(&:key)
+
+    { summary: turn.summary,
+      touched: diff.changes.map { |c| { key: c.key, kind: c.kind, declared: sin_declarar.exclude?(c.key) } } }
+  end
+
+  def diff_for(turn)
+    ContactTrackings::Assistant::DraftDiff.new(current_draft, turn.draft)
   end
 
   def validate(draft)
     ContactTrackings::Assistant::ValidatorService.new(draft, account: account).call
+  end
+
+  def ask(history)
+    @chat.call(history)
   end
 
   # ── el prompt ───────────────────────────────────────────────────────────────
@@ -240,78 +311,20 @@ class ContactTrackings::Assistant::InterviewService
     [{ role: 'system', content: system_prompt }] + messages.map { |m| m.slice('role', 'content').symbolize_keys }
   end
 
-  # Las dos mitades: el contrato fijo y el inventario de ESTA cuenta.
+  # El contrato fijo, el inventario de ESTA cuenta, cómo trabajar y —si hay— el
+  # Entrenamiento que se está editando. Va al final: es lo que el modelo tiene que
+  # tener más presente al contestar.
   def system_prompt
-    [
+    @system_prompt ||= [
       ContactTrackings::Assistant::Contract.call,
       inventory_section,
-      ContactTrackings::Assistant::Instructions.call(one_shot: one_shot,
-                                                     max_turns: MAX_INTERVIEW_TURNS)
-    ].join("\n\n")
+      ContactTrackings::Assistant::Instructions.call(one_shot: one_shot, max_turns: MAX_INTERVIEW_TURNS),
+      (ContactTrackings::Assistant::EditingInstructions.call(current_draft) if editing?)
+    ].compact.join("\n\n")
   end
 
   def inventory_section
     inventory = ContactTrackings::Assistant::InventoryService.new(account, inbox: inbox).call
     ContactTrackings::Assistant::InventoryPrompt.call(inventory)
-  end
-
-  # ── OpenAI ──────────────────────────────────────────────────────────────────
-  def ask(history)
-    body = {
-      model: ContactTrackings::EngineConfig.model_for(inbox, :authoring_assistant),
-      messages: history,
-      temperature: 0.2,
-      max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:authoring_assistant),
-      response_format: { type: 'json_object' }
-    }
-
-    parse(post(body))
-  end
-
-  def post(body)
-    response = http_client.request(build_request(body))
-    return log_failure("HTTP #{response.code}: #{response.body.to_s[0, 300]}") unless response.is_a?(Net::HTTPSuccess)
-
-    JSON.parse(response.body).dig('choices', 0, 'message', 'content')
-  rescue StandardError => e
-    log_failure(e.message)
-  end
-
-  def http_client
-    require 'net/http'
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = true
-    http.read_timeout = READ_TIMEOUT
-    http
-  end
-
-  def build_request(body)
-    request = Net::HTTP::Post.new(uri)
-    request['Authorization'] = "Bearer #{api_key}"
-    request['Content-Type'] = 'application/json'
-    request.body = body.to_json
-    request
-  end
-
-  def uri
-    @uri ||= URI(API_URL)
-  end
-
-  def parse(content)
-    return nil if content.blank?
-
-    JSON.parse(content)
-  rescue JSON::ParserError => e
-    log_failure("respuesta no es JSON: #{e.message}")
-  end
-
-  def log_failure(detail)
-    Rails.logger.error("[Asistente] #{detail}")
-    nil
-  end
-
-  # Cada cuenta usa su propia integración OpenAI, igual que el resto del motor.
-  def api_key
-    @api_key ||= account.hooks.find_by(app_id: 'openai', status: 'enabled')&.settings&.dig('api_key').presence
   end
 end

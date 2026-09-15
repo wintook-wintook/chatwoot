@@ -153,16 +153,17 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
     let(:interview_url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/interview" }
     let(:openai_url) { ContactTrackings::Assistant::InterviewService::API_URL }
 
-    def stub_openai(mensaje:, entrenamiento: nil)
+    def stub_openai(mensaje:, entrenamiento: nil, **extra)
+      contenido = { mensaje: mensaje, entrenamiento: entrenamiento, **extra }.to_json
       stub_request(:post, openai_url).to_return(
         status: 200,
-        body: { choices: [{ message: { content: { mensaje: mensaje, entrenamiento: entrenamiento }.to_json } }] }.to_json,
+        body: { choices: [{ message: { content: contenido } }] }.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
     end
 
-    def entrevistar(mensajes, user: admin)
-      post interview_url, params: { messages: mensajes }, headers: user.create_new_auth_token, as: :json
+    def entrevistar(mensajes, user: admin, **extra)
+      post interview_url, params: { messages: mensajes, **extra }, headers: user.create_new_auth_token, as: :json
     end
 
     it 'no deja entrar a un agente' do
@@ -200,6 +201,46 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq('no_api_key')
+    end
+
+    # Fase A: el Entrenamiento en pantalla viaja con el turno, y la respuesta dice qué
+    # cambió de verdad.
+    describe 'editando' do
+      let(:actual) { "@ruta(soporte #soporte: no puedo entrar): @buscar_articulo\n\n[ESTILO]\nBreve." }
+      let(:editado) { actual.sub('Breve.', "Breve.\nSin emojis.") }
+
+      before do
+        create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled',
+                                   settings: { 'api_key' => 'sk-test' })
+        source('article', 'Centro de Ayuda')
+      end
+
+      it 'le pasa el Entrenamiento al modelo y devuelve los cambios' do
+        stub_openai(mensaje: 'Listo', entrenamiento: editado, toca: ['[ESTILO]'], cambios: ['~ [ESTILO]: sin emojis'])
+
+        entrevistar([{ role: 'user', content: 'sin emojis' }], draft: actual)
+
+        expect(a_request(:post, openai_url).with { |req| req.body.include?('ENTRENAMIENTO ACTUAL') }).to have_been_made
+        expect(response.parsed_body['draft']).to eq(editado)
+        expect(response.parsed_body['changes']['touched']).to eq([{ 'key' => '[ESTILO]', 'kind' => 'changed',
+                                                                    'declared' => true }])
+      end
+
+      # El cliente devuelve el hilo sin los cambios de los turnos anteriores: si no se
+      # recuperaran de lo guardado, cada turno nuevo borraría los del anterior.
+      it 'conserva en la sesión los cambios de los turnos anteriores' do
+        stub_openai(mensaje: 'Listo', entrenamiento: editado, toca: ['[ESTILO]'], cambios: ['~ sin emojis'])
+        entrevistar([{ role: 'user', content: 'sin emojis' }], draft: actual)
+        sesion_id = response.parsed_body['session_id']
+
+        stub_openai(mensaje: '¿Algo más?')
+        entrevistar([{ role: 'user', content: 'sin emojis' }, { role: 'assistant', content: 'Listo' },
+                     { role: 'user', content: 'nada más' }], draft: editado, session_id: sesion_id)
+
+        mensajes = TrackingAssistantSession.find(sesion_id).messages
+        expect(mensajes[1]['changes']['summary']).to eq(['~ sin emojis'])
+        expect(mensajes[3]).not_to have_key('changes')
+      end
     end
 
     # El hilo lo manda el cliente: no se le confía ningún rol fuera de los dos válidos.

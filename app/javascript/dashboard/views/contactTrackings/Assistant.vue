@@ -118,6 +118,10 @@ export default {
       showSaveModal: false,
       // Los datos del agente que el asistente propone junto al Entrenamiento.
       proposal: null,
+      // Una edición que dejaba sin ejecutar el Entrenamiento que ejecutaba: el
+      // backend conserva el anterior y manda lo propuesto aparte ({ draft,
+      // validation }), para que la persona decida con los dos a la vista.
+      rejected: null,
       // De qué Agente IA vino el borrador, si vino de uno. Sin esto, arreglar un
       // agente y guardar creaba un DUPLICADO en vez de corregir el original: el
       // modal abría en "crear nuevo" y nadie lo notaba hasta ver la lista con dos.
@@ -166,6 +170,10 @@ export default {
     };
   },
   computed: {
+    // En la plantilla no: el loader de Vue 2 no entiende `?.` ahí.
+    rejectedBlockingCount() {
+      return this.rejected?.validation?.blocking?.length || 0;
+    },
     isEmptyAccount() {
       return this.inventory?.empty;
     },
@@ -389,6 +397,7 @@ export default {
       this.draft = data.draft || '';
       this.validation = data.validation || null;
       this.proposal = data.proposal || null;
+      this.rejected = null;
       this.dryRunHistory = [];
       this.sessionMeta = {
         id: data.id,
@@ -459,6 +468,7 @@ export default {
       this.draft = '';
       this.validation = null;
       this.proposal = null;
+      this.rejected = null;
       this.editingTemplate = null;
       this.activeTab = 0;
     },
@@ -595,6 +605,7 @@ export default {
       this.draft = template.complementary_prompt || '';
       this.editingTemplate = { id: template.id, name: template.name };
       this.proposal = null;
+      this.rejected = null;
       // Traer un agente al Asistente arranca una conversación nueva: la
       // identidad y la prueba de la anterior no describen nada de esto.
       this.sessionId = null;
@@ -610,6 +621,7 @@ export default {
       try {
         const { data } = await AssistantAPI.interview(this.messages, null, {
           sessionId: this.sessionId,
+          draft: this.draft.trim() ? this.draft : null,
         });
         this.sessionId = data.session_id || this.sessionId;
         // El backend devuelve la identidad ya armada: sin eso habría que
@@ -617,12 +629,21 @@ export default {
         if (data.session) this.sessionMeta = data.session;
         // Solo del último turno: en cuanto se contesta, dejan de ofrecerse.
         this.interviewOptions = data.options || null;
-        this.messages.push({ role: 'assistant', content: data.reply });
+        this.messages.push({
+          role: 'assistant',
+          content: data.reply,
+          changes: data.changes || null,
+        });
         if (data.draft) {
           this.draft = data.draft;
           this.validation = data.validation;
-          this.proposal = data.proposal || null;
+          // Al editar el modelo manda la propuesta en null: pisarla borraba el
+          // nombre ya elegido (el "Soporte v2" de crear otra versión).
+          if (data.proposal) this.proposal = data.proposal;
         }
+        this.rejected = data.rejected_draft
+          ? { draft: data.rejected_draft, validation: data.rejected_validation }
+          : null;
       } catch (error) {
         const reason =
           error?.response?.data?.error === 'no_api_key'
@@ -632,6 +653,14 @@ export default {
       } finally {
         this.isThinking = false;
       }
+    },
+    // Lo propuesto no ejecuta, pero la persona lo quiere igual —para terminar de
+    // arreglarlo a mano, por ejemplo—. El comprobador sigue impidiendo guardarlo.
+    useRejected() {
+      if (!this.rejected) return;
+      this.draft = this.rejected.draft;
+      this.validation = this.rejected.validation;
+      this.rejected = null;
     },
     // Se revalida también cuando la persona edita a mano: el borrador del modelo
     // no es más confiable que el suyo, y ninguno de los dos se guarda sin pasar.
@@ -788,6 +817,7 @@ export default {
               :messages="messages"
               :is-thinking="isThinking"
               :options="interviewOptions"
+              :is-editing="Boolean(draft.trim())"
               @send="sendMessage"
             />
           </section>
@@ -837,13 +867,53 @@ export default {
                   }}
                 </woot-button>
               </div>
+              <!-- Lo propuesto que no se aplicó. Arriba del texto y no en un
+                   modal: hay que poder leer el Entrenamiento conservado mientras
+                   se decide. -->
+              <div
+                v-if="rejected"
+                class="flex flex-col gap-2 p-3 mb-2 text-xs border rounded shrink-0 border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
+              >
+                <p class="!m-0 font-semibold">
+                  {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_TITLE') }}
+                </p>
+                <p class="!m-0">
+                  {{
+                    $t('TRACKING_ASSISTANT_VIEW.REJECTED_HINT', {
+                      count: rejectedBlockingCount,
+                    })
+                  }}
+                </p>
+                <div class="flex gap-2">
+                  <woot-button
+                    size="tiny"
+                    variant="smooth"
+                    color-scheme="warning"
+                    @click="useRejected"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_USE') }}
+                  </woot-button>
+                  <woot-button
+                    size="tiny"
+                    variant="clear"
+                    color-scheme="secondary"
+                    @click="rejected = null"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_DISCARD') }}
+                  </woot-button>
+                </div>
+              </div>
               <!-- resize-none: el alto lo decide el contenedor, no el navegador;
-                   arrastrarlo a mano volvería a empujar todo lo de abajo. -->
+                   arrastrarlo a mano volvería a empujar todo lo de abajo.
+                   readonly mientras el asistente trabaja: trabaja sobre el texto
+                   que se le mandó, y lo que se escribiera en esos segundos se
+                   perdería al llegar la respuesta. -->
               <textarea
                 ref="draftEditor"
                 v-model="draft"
                 class="flex-1 min-h-0 w-full font-mono text-xs resize-none !mb-0"
                 :placeholder="$t('TRACKING_ASSISTANT_VIEW.DRAFT_PLACEHOLDER')"
+                :readonly="isThinking"
                 @input="onDraftInput"
               />
             </div>

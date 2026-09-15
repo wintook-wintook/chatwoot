@@ -39,6 +39,12 @@ class ContactTrackings::Assistant::RouteSelfCheck
   # entera menciona varios temas y probaría el clasificador contra un mensaje que
   # ningún cliente escribiría.
   MAX_PROBE_CHARS = 120
+  # ⚠ Una situación de una sola palabra no es un mensaje de cliente. La rama soporte
+  # del v6.11 empieza "usar, configurar, dar de alta…": probada con "usar" a secas,
+  # gpt-4o-mini —el modelo que se usa cuando no hay canal, que en el Asistente es
+  # siempre— no eligió ninguna rama 3 de 3 veces, y la pantalla mostraba un cruce
+  # que no existía. Con "usar, configurar" eligió soporte 3 de 3 (medido 15/09/2026).
+  MIN_PROBE_WORDS = 3
 
   Mismatch = Struct.new(:route, :probe, :chosen, keyword_init: true)
 
@@ -69,8 +75,16 @@ class ContactTrackings::Assistant::RouteSelfCheck
   # La primera situación de la descripción. Se corta en la coma o el punto y coma
   # porque la descripción es una lista: "no puedo entrar, me da error, no abre" son
   # tres mensajes distintos, y el cliente escribe uno.
+  #
+  # Si la primera es muy corta se le suman las siguientes hasta MIN_PROBE_WORDS.
   def probe_for(route)
-    route.description.to_s.split(/[,;]/).first.to_s.strip.truncate(MAX_PROBE_CHARS).presence
+    frase = []
+    route.description.to_s.split(/[,;]/).map(&:strip).compact_blank.each do |situacion|
+      frase << situacion
+      break if frase.join(' ').split.size >= MIN_PROBE_WORDS
+    end
+
+    frase.join(', ').truncate(MAX_PROBE_CHARS).presence
   end
 
   # El clasificador REAL, el mismo que corre en producción. Si se reimplementara

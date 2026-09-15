@@ -40,6 +40,24 @@ RSpec.describe ContactTrackings::Assistant::RouteSelfCheck do
 
       expect(probadas).to eq(['no puedo entrar', 'cuanto cuesta la licencia'])
     end
+
+    # "usar" a secas no es un mensaje: sin canal, el clasificador no eligió ninguna
+    # rama y la pantalla mostraba un cruce que no existía.
+    it 'suma situaciones hasta que la frase tenga al menos tres palabras' do
+      draft = <<~T
+        @ruta(soporte #soporte: usar, configurar, dar de alta un cliente): @buscar_articulo
+        @ruta(precios #precios: cuanto cuesta la licencia): @buscar_predefinidas
+      T
+      probadas = []
+      allow(ContactTrackings::BranchClassifierService).to receive(:new) do |_t, message, map|
+        probadas << message.content
+        instance_double(ContactTrackings::BranchClassifierService, classify: map.routes.first)
+      end
+
+      probar(draft)
+
+      expect(probadas.first).to eq('usar, configurar, dar de alta un cliente')
+    end
   end
 
   describe 'el veredicto' do

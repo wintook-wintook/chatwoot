@@ -24,6 +24,10 @@ class ContactTrackings::Assistant::ReplyParser
   MAX_CHOICES = 8
   MAX_CHOICE_CHARS = 60
   MAX_QUESTION_CHARS = 160
+  # El resumen de cambios de una edición: renglones para leer de un vistazo, no un
+  # informe. Lo que cambió DE VERDAD no sale de acá sino de DraftDiff.
+  MAX_CHANGES = 10
+  MAX_CHANGE_CHARS = 200
 
   class << self
     # Los datos del agente que el asistente propone junto al Entrenamiento. Se
@@ -48,6 +52,12 @@ class ContactTrackings::Assistant::ReplyParser
 
       limpias = raw.first(MAX_QUESTIONS).filter_map { |item| question_from(item) }
       limpias.presence
+    end
+
+    # Lo que el modelo dice que cambió, en palabras. Nunca se usa para decidir nada:
+    # medido, declara de menos. Es solo el texto que acompaña al diff real.
+    def changes(reply)
+      Array(reply['cambios']).first(MAX_CHANGES).map { |c| c.to_s.strip.truncate(MAX_CHANGE_CHARS) }.compact_blank
     end
 
     private

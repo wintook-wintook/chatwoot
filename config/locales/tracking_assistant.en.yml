@@ -33,6 +33,15 @@ en:
         That means those descriptions are confusable. Rewrite them so they do not overlap —
         different situations, in the customer's own words — and return the complete Training again.
         Leave the lines that were already fine untouched.
+      edit_header: >-
+        I compared what you returned with the CURRENT TRAINING and you changed this without listing it in "toca":
+      edit_removed: '- you removed %{key}'
+      edit_changed: '- you changed %{key}'
+      edit_added: '- you added %{key}'
+      edit_footer: >-
+        If the person did not ask for it, return those parts EXACTLY as they were in the CURRENT
+        TRAINING, character by character. If they did ask, keep them and name them in "toca". Return
+        the complete Training again.
       missing_mode: >-
         You delivered the Training without asking whether the agent ANSWERS first and opens the case
         only if it could not resolve, or whether it ONLY collects data and always opens the case.

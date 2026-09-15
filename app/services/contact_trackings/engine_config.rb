@@ -45,7 +45,14 @@ module ContactTrackings
       authoring: 250,       # redacción de complementary_prompt desde /sigue
       # proyecto@asistente_agentes_ia — un Entrenamiento entero, no una frase: el
       # tope de `authoring` (250) lo cortaría a la mitad.
-      authoring_assistant: 2000
+      #
+      # ⚠ Estaba en 2000, que alcanza para CREAR (~30 líneas) pero no para EDITAR:
+      # devolver el v6.11 completo (17.066 caracteres) usó 4.365 y 4.421 tokens de
+      # salida, medido el 15/09/2026. Con 2000 la respuesta llegaba cortada y el
+      # turno fallaba sin decir por qué. 12000 cubre prompts de ~45.000 caracteres y
+      # queda debajo del máximo de gpt-4o (16384). El tope no se cobra: se paga lo
+      # que se genera.
+      authoring_assistant: 12_000
     }.freeze
 
     # proyecto@asistente_agentes_ia — piso de modelo por propósito.

@@ -122,31 +122,17 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   end
 
   def interview
+    # `draft`: el Entrenamiento que está en pantalla, con lo editado a mano. Sin él,
+    # el modelo no puede modificar nada: solo reescribir de memoria.
     result = ContactTrackings::Assistant::InterviewService
-             .new(Current.account, messages: interview_messages, inbox: inbox,
+             .new(Current.account, messages: interview_messages, inbox: inbox, current_draft: params[:draft],
                                    one_shot: ActiveModel::Type::Boolean.new.cast(params[:one_shot])).call
 
     return render json: { error: result.error }, status: :unprocessable_entity unless result.success?
 
     sesion = record_turn(result)
 
-    render json: {
-      reply: result.reply,
-      draft: result.draft,
-      validation: result.validation,
-      repairs: result.repairs,
-      # Los datos del agente que el asistente propone. La pantalla los precarga
-      # editables: un nombre propuesto y equivocado se ve y se corrige; un campo
-      # vacío frena a quien acaba de explicar en la conversación lo que ahí va.
-      proposal: result.proposal,
-      # Las preguntas en forma de lista: la pantalla las muestra como botones, así
-      # se contesta con un clic en vez de reescribir el nombre de una etiqueta.
-      options: result.options,
-      session_id: sesion&.id,
-      # La identidad completa y no solo el id: con el id suelto, la pantalla
-      # tendría que inventar las fechas del lado del cliente.
-      session: sesion && session_json(sesion).except(:messages, :draft, :validation, :proposal)
-    }
+    render json: interview_json(result, sesion)
   end
 
   def save
@@ -167,11 +153,42 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
   private
 
+  def interview_json(result, sesion)
+    {
+      reply: result.reply,
+      draft: result.draft,
+      validation: result.validation,
+      repairs: result.repairs,
+      # Los datos del agente que el asistente propone. La pantalla los precarga
+      # editables: un nombre propuesto y equivocado se ve y se corrige; un campo
+      # vacío frena a quien acaba de explicar en la conversación lo que ahí va.
+      proposal: result.proposal,
+      # Las preguntas en forma de lista: la pantalla las muestra como botones, así
+      # se contesta con un clic en vez de reescribir el nombre de una etiqueta.
+      options: result.options,
+      # Al editar: lo que dice el modelo que cambió, y lo que cambió de verdad.
+      changes: result.changes,
+      # Una edición que dejaba sin ejecutar un Entrenamiento que ejecutaba: `draft`
+      # sigue siendo el de antes, y esto es lo propuesto, para decidir a la vista.
+      rejected_draft: result.rejected_draft,
+      rejected_validation: result.rejected_validation,
+      session_id: sesion&.id,
+      # La identidad completa y no solo el id: con el id suelto, la pantalla
+      # tendría que inventar las fechas del lado del cliente.
+      session: sesion && session_json(sesion).except(:messages, :draft, :validation, :proposal)
+    }
+  end
+
   # El hilo se guarda después de contestar, no antes: si la llamada al modelo falla
   # no queda una sesión a medias que la pantalla ofrezca retomar sin contenido.
   def record_turn(result)
     sesion = session_record || TrackingAssistantSession.new(account: Current.account, user: Current.user)
-    turnos = interview_messages + [{ 'role' => 'assistant', 'content' => result.reply.to_s }]
+    # Los cambios viajan pegados al turno que los hizo: al retomar la sesión se siguen
+    # viendo debajo de su mensaje. Al modelo no le vuelven (interview_messages solo
+    # deja pasar role y content).
+    respuesta = { 'role' => 'assistant', 'content' => result.reply.to_s }
+    respuesta['changes'] = result.changes.deep_stringify_keys if result.changes.present?
+    turnos = with_stored_changes(sesion, interview_messages) + [respuesta]
     sesion.record_turn(messages: turnos, draft: result.draft,
                        validation: result.validation, proposal: result.proposal)
     sesion
@@ -179,6 +196,19 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
     # Que no se pueda guardar el hilo no debe costarle la respuesta a la persona.
     Rails.logger.error("[Asistente] no se pudo guardar la conversación: #{e.message}")
     nil
+  end
+
+  # El cliente devuelve el hilo sin los cambios de turnos anteriores (y aunque los
+  # mandara, no se le confían). Se recuperan de lo guardado, turno por turno, mientras
+  # el contenido coincida: sin esto, cada turno nuevo borraría los cambios del anterior.
+  def with_stored_changes(sesion, turnos)
+    guardados = Array(sesion.messages)
+    turnos.each_with_index.map do |turno, i|
+      previo = guardados[i]
+      next turno unless previo.is_a?(Hash) && previo['changes'].present? && previo['content'] == turno['content']
+
+      turno.merge('changes' => previo['changes'])
+    end
   end
 
   def session_record

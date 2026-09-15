@@ -48,4 +48,19 @@ RSpec.describe ContactTrackings::Assistant::ReplyParser do
       expect(described_class.options('opciones' => ['suelta'])).to be_nil
     end
   end
+
+  # El resumen de una edición lo escribe el modelo: se recorta, y nunca decide nada.
+  describe '.changes' do
+    it 'devuelve los renglones recortados en cantidad y largo' do
+      salida = described_class.changes('cambios' => Array.new(15) { |i| "+ cambio #{i} #{'x' * 300}" })
+
+      expect(salida.size).to eq(described_class::MAX_CHANGES)
+      expect(salida.first.size).to eq(described_class::MAX_CHANGE_CHARS)
+    end
+
+    it 'descarta los vacíos y no revienta sin la llave' do
+      expect(described_class.changes('cambios' => ['', '  ', '+ uno'])).to eq(['+ uno'])
+      expect(described_class.changes({})).to eq([])
+    end
+  end
 end

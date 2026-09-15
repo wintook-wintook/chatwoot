@@ -31,9 +31,9 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
   # asistente no puede saltearse.
   # :auto = "el que corresponda"; nil explícito = "no lo declaró", que es el caso
   # que la guarda tiene que rechazar.
-  def openai_reply(mensaje:, entrenamiento: nil, modo: :auto, propuesta: nil)
+  def openai_reply(mensaje:, entrenamiento: nil, modo: :auto, propuesta: nil, **extra)
     modo = (entrenamiento ? 'responde' : nil) if modo == :auto
-    cuerpo = { mensaje: mensaje, modo: modo, entrenamiento: entrenamiento, propuesta: propuesta }
+    cuerpo = { mensaje: mensaje, modo: modo, entrenamiento: entrenamiento, propuesta: propuesta, **extra }
     { choices: [{ message: { content: cuerpo.to_json } }] }.to_json
   end
 
@@ -68,6 +68,156 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
       expect(resultado.validation[:valid]).to be(true)
       expect(resultado.validation[:routes].size).to eq(1)
       expect(resultado.repairs).to eq(0)
+    end
+  end
+
+  # ── fase A: editar, no reescribir ───────────────────────────────────────────
+  # Hasta el 15/09/2026 el modelo nunca veía el Entrenamiento que estaba en pantalla:
+  # "agregá una rama" se resolvía reescribiendo de memoria.
+  describe 'editando un Entrenamiento que ya existe' do
+    let(:actual) do
+      <<~T.strip
+        @ruta(soporte #soporte1: no puedo entrar): @buscar_articulo -> @crear_ticket(tipo=Soporte, prioridad=media)
+        @ruta_por_defecto: soporte
+
+        [QUIEN ERES]
+        Sos el asistente de Kontrolya.
+
+        [NO SIMULAR]
+        Nunca digas que ya quedó agendado.
+
+        [ESTILO]
+        Breve.
+      T
+    end
+    let(:con_emojis) { actual.sub('Breve.', "Breve.\nSin emojis.") }
+
+    def editar(texto = 'sin emojis', draft: actual)
+      described_class.new(account, messages: [{ 'role' => 'user', 'content' => texto }], current_draft: draft).call
+    end
+
+    it 'le muestra al modelo el Entrenamiento que está en pantalla' do
+      stub_openai(openai_reply(mensaje: '¿Qué querés cambiar?'))
+
+      editar
+
+      pedido = a_request(:post, url).with do |req|
+        sistema = JSON.parse(req.body)['messages'].first['content']
+        sistema.include?('ENTRENAMIENTO ACTUAL') && sistema.include?('Nunca digas que ya quedó agendado.')
+      end
+      expect(pedido).to have_been_made
+    end
+
+    it 'no le muestra nada de eso al crear' do
+      stub_openai(openai_reply(mensaje: '¿Qué temas atiende?'))
+
+      entrevistar
+
+      expect(a_request(:post, url).with { |req| req.body.include?('ENTRENAMIENTO ACTUAL') }).not_to have_been_made
+    end
+
+    # El comportamiento ya está escrito en lo que había: preguntar "¿contesta o
+    # deriva?" para agregar una regla de estilo sería hacer perder un turno.
+    it 'no exige el modo para aceptar una edición' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: con_emojis, modo: nil, toca: ['[ESTILO]']))
+
+      resultado = editar
+
+      expect(resultado.draft).to eq(con_emojis)
+      expect(a_request(:post, url)).to have_been_made.once
+    end
+
+    it 'devuelve lo que cambió de verdad junto al resumen del modelo' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: con_emojis,
+                               toca: ['[ESTILO]'], cambios: ['~ [ESTILO]: sin emojis']))
+
+      cambios = editar.changes
+
+      expect(cambios[:summary]).to eq(['~ [ESTILO]: sin emojis'])
+      expect(cambios[:touched]).to eq([{ key: '[ESTILO]', kind: :changed, declared: true }])
+    end
+
+    # Medido sobre el v6.11: declaró la rama nueva y no la línea que sumó en
+    # [ETIQUETAS]. No es destructivo, así que no vale otra llamada; pero se marca.
+    it 'marca lo que cambió sin declararlo, sin gastar otra llamada si no es destructivo' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: con_emojis, toca: []))
+
+      resultado = editar
+
+      expect(resultado.changes[:touched]).to eq([{ key: '[ESTILO]', kind: :changed, declared: false }])
+      expect(a_request(:post, url)).to have_been_made.once
+    end
+
+    it 'le devuelve una sección borrada que nadie pidió borrar, y se queda con lo corregido' do
+      sin_seccion = con_emojis.sub("[NO SIMULAR]\nNunca digas que ya quedó agendado.\n\n", '')
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: sin_seccion, toca: ['[ESTILO]']),
+                  openai_reply(mensaje: 'Restaurada', entrenamiento: con_emojis, toca: ['[ESTILO]']))
+
+      resultado = editar
+
+      expect(resultado.draft).to eq(con_emojis)
+      correccion = a_request(:post, url).with do |req|
+        JSON.parse(req.body)['messages'].last['content'].include?('quitaste [NO SIMULAR]')
+      end
+      expect(correccion).to have_been_made
+    end
+
+    # Una modificación fallida nunca le cuesta a nadie el Entrenamiento que funcionaba.
+    it 'conserva lo que había si lo nuevo no ejecuta, y devuelve lo propuesto aparte' do
+      roto = actual.sub('@ruta(soporte #soporte1: no puedo entrar):', '@ruta(soporte #soporte1: no puedo entrar)')
+      stub_openai(*Array.new(described_class::MAX_REPAIRS + 1) do
+        openai_reply(mensaje: 'Ahí va', entrenamiento: roto, toca: ['@ruta(soporte)'])
+      end)
+
+      resultado = editar
+
+      expect(resultado.draft).to eq(actual)
+      expect(resultado.validation[:valid]).to be(true)
+      expect(resultado.rejected_draft).to eq(roto)
+      expect(resultado.rejected_validation[:valid]).to be(false)
+    end
+
+    # Si lo que había tampoco ejecutaba —"Arreglarlo acá"—, no hay nada mejor que
+    # conservar: se entrega lo nuevo con sus errores a la vista.
+    it 'entrega lo nuevo aunque no ejecute si lo que había tampoco ejecutaba' do
+      roto = '@ruta(soporte #soporte1: no puedo entrar) @buscar_articulo'
+      stub_openai(*Array.new(described_class::MAX_REPAIRS + 1) do
+        openai_reply(mensaje: 'Ahí va', entrenamiento: "#{roto}\n[ESTILO]\nBreve.", toca: ['[ESTILO]'])
+      end)
+
+      resultado = editar(draft: roto)
+
+      expect(resultado.draft).to include('[ESTILO]')
+      expect(resultado.rejected_draft).to be_nil
+    end
+
+    # Un cruce que el Entrenamiento ya traía se muestra, pero no justifica reescribir
+    # una rama que la persona no pidió tocar.
+    it 'no corrige el ruteo de una rama que no se tocó' do
+      dos = actual.sub('@ruta_por_defecto', "@ruta(precios #soporte1: cuanto cuesta): @buscar_articulo\n@ruta_por_defecto")
+      cruce = ContactTrackings::Assistant::RouteSelfCheck::Mismatch.new(route: 'soporte', probe: 'no puedo entrar',
+                                                                        chosen: 'precios')
+      allow(ContactTrackings::Assistant::RouteSelfCheck).to receive(:new)
+        .and_return(instance_double(ContactTrackings::Assistant::RouteSelfCheck, call: [cruce]))
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: dos.sub('Breve.', 'Corto.'), toca: ['[ESTILO]']))
+
+      resultado = editar(draft: dos)
+
+      expect(a_request(:post, url)).to have_been_made.once
+      expect(resultado.validation[:degrading].pluck(:code)).to include(:route_not_self_chosen)
+    end
+
+    # Pasado el presupuesto del turno no se abre otra vuelta: el proxy cortaría y la
+    # persona vería un error aunque el Entrenamiento hubiera salido.
+    it 'no abre vueltas de corrección pasado el presupuesto de tiempo' do
+      stub_const("#{described_class}::TURN_BUDGET_SECONDS", 0)
+      sin_seccion = actual.sub("[NO SIMULAR]\nNunca digas que ya quedó agendado.\n\n", '')
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: sin_seccion, toca: []))
+
+      resultado = editar
+
+      expect(a_request(:post, url)).to have_been_made.once
+      expect(resultado.changes[:touched]).to include(key: '[NO SIMULAR]', kind: :removed, declared: false)
     end
   end
 
