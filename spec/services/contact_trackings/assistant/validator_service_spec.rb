@@ -517,10 +517,16 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       expect(hallazgo[:wrote]).to eq('@agendar_calendar')
     end
 
+    # ⚠ Falló 2 veces de ~15 en la suite combinada (15/09/2026) y nunca sola; no se pudo
+    # reproducir. La primera expectativa separa las dos causas posibles la próxima vez:
+    # si falla ESA, la integración no quedó visible para la consulta (base compartida
+    # con desarrollo, conexión distinta); si falla la segunda, el comprobador la ignoró.
     it 'no avisa cuando la cuenta sí tiene un calendario conectado' do
       UserCalendarIntegration.create!(account: account, user: create(:user, account: account),
                                       google_email: 'agenda@empresa.com', tokens: {})
 
+      expect(UserCalendarIntegration.exists?(account_id: account.id))
+        .to be(true), "la integración recién creada no es visible (conexión: #{ActiveRecord::Base.connection.object_id})"
       expect(validar(entrenamiento)[:degrading].pluck(:code)).not_to include(:calendar_not_configured)
     end
 
