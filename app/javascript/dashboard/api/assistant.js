@@ -58,21 +58,26 @@ class AssistantAPI extends ApiClient {
 
   // Fase E: mensajes de prueba pasados por el clasificador real. Tarda (una
   // clasificación por mensaje): con turnId se puede consultar el avance.
-  suggestedTests(draft, turnId = null) {
+  suggestedTests(draft, turnId = null, inboxId = null) {
     return axios.post(`${this.url}/suggested_tests`, {
       draft,
       turn_id: turnId,
+      inbox_id: inboxId,
     });
   }
 
   // Fase E: hallazgos y una propuesta que nunca se aplica sola.
-  optimize(draft) {
-    return axios.post(`${this.url}/optimize`, { draft });
+  optimize(draft, inboxId = null) {
+    return axios.post(`${this.url}/optimize`, { draft, inbox_id: inboxId });
   }
 
   // Fase E: qué hace un fragmento del Entrenamiento.
-  explain(draft, excerpt) {
-    return axios.post(`${this.url}/explain`, { draft, excerpt });
+  explain(draft, excerpt, inboxId = null) {
+    return axios.post(`${this.url}/explain`, {
+      draft,
+      excerpt,
+      inbox_id: inboxId,
+    });
   }
 
   // El texto de una versión del Entrenamiento: las listas llegan sin él.

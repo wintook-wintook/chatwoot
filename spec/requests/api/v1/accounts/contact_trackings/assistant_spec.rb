@@ -80,6 +80,16 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       expect(response.parsed_body['customer_phrases']).to eq(['como puedo actualizar a la ultima version'])
     end
 
+    # Con qué modelo va a clasificar el agente en ese canal: la pantalla lo muestra
+    # junto al selector, porque sin canal se prueba con otro modelo.
+    it 'dice con qué modelos trabaja el agente en ese canal' do
+      get url, params: { inbox_id: inbox_a.id }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['models'].keys).to contain_exactly('router', 'conversational')
+      expect(response.parsed_body['models']['router'])
+        .to eq(ContactTrackings::EngineConfig.model_for(inbox_a, :router))
+    end
+
     it 'ignora un inbox_id que no es de la cuenta en vez de fallar' do
       incoming(inbox_a, 'como puedo actualizar a la ultima version')
       ajeno = create(:inbox, account: create(:account))
@@ -458,7 +468,12 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       [:get,    'sessions/1'],
       [:delete, 'sessions/1'],
       [:get,    'audit'],
-      [:post,   'dry_run']
+      [:post,   'dry_run'],
+      [:get,    'sessions/1/versions/1'],
+      [:get,    'progress/turno12345'],
+      [:post,   'suggested_tests'],
+      [:post,   'optimize'],
+      [:post,   'explain']
     ].each do |verbo, camino|
       it "#{verbo.to_s.upcase} #{camino}" do
         process(verbo, "#{base}/#{camino}", headers: agent.create_new_auth_token, as: :json)

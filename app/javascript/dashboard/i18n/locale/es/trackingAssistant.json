@@ -253,6 +253,10 @@
     "EXPLAIN_INTERPRETATION_HINT": "Es su interpretación del texto, no una verificación.",
     "EXPLAIN_APPLIES_TO": "Afecta a: %{routes}",
     "EXPLAIN_IF_REMOVED": "Si se quita: %{text}",
-    "EXPLAIN_ERROR": "No se pudo explicar ese fragmento. Intentá de nuevo."
+    "EXPLAIN_ERROR": "No se pudo explicar ese fragmento. Intentá de nuevo.",
+    "INBOX_LABEL": "Canal del agente",
+    "INBOX_NONE": "Sin canal (modelo por defecto)",
+    "INBOX_MODELS": "clasifica con %{router} · contesta con %{conversational}",
+    "INBOX_HINT": "Con este canal se prueba todo: el ruteo, los tests sugeridos y el banco de pruebas. Si no es el canal donde va a trabajar el agente, los resultados pueden no coincidir con lo que pase en producción."
   }
 }

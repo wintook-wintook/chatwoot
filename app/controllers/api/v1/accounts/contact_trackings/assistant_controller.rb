@@ -67,6 +67,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
   def inventory
     render json: ContactTrackings::Assistant::InventoryService.new(Current.account, inbox: inbox).call
+                                                              .merge(models: models_for(inbox))
   end
 
   def validate
@@ -325,6 +326,15 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   def interview_messages
     Array(params[:messages]).map { |m| m.permit(:role, :content).to_h }
                             .select { |m| ALLOWED_ROLES.include?(m['role']) && m['content'].present? }
+  end
+
+  # Con qué modelo va a clasificar y a contestar el agente en ese canal. La pantalla lo
+  # muestra junto al selector: sin canal, la prueba de ruteo usa el modelo por defecto
+  # y no el del agente, y eso cambia los resultados (medido: "usar" a secas no ruteaba
+  # con gpt-4o-mini y sí con gpt-4o).
+  def models_for(canal)
+    { router: ContactTrackings::EngineConfig.model_for(canal, :router),
+      conversational: ContactTrackings::EngineConfig.model_for(canal, :conversational) }
   end
 
   def inbox

@@ -253,6 +253,10 @@
     "EXPLAIN_INTERPRETATION_HINT": "This is its interpretation of the text, not a verification.",
     "EXPLAIN_APPLIES_TO": "Affects: %{routes}",
     "EXPLAIN_IF_REMOVED": "If removed: %{text}",
-    "EXPLAIN_ERROR": "That fragment could not be explained. Try again."
+    "EXPLAIN_ERROR": "That fragment could not be explained. Try again.",
+    "INBOX_LABEL": "Agent inbox",
+    "INBOX_NONE": "No inbox (default model)",
+    "INBOX_MODELS": "classifies with %{router} · answers with %{conversational}",
+    "INBOX_HINT": "Everything is tested with this inbox: routing, suggested tests and the test bench. If it is not the inbox the agent will work in, results may not match production."
   }
 }

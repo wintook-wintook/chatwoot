@@ -22,6 +22,8 @@ export default {
     show: { type: Boolean, default: false },
     templates: { type: Array, default: () => [] },
     inboxes: { type: Array, default: () => [] },
+    // El canal elegido arriba del chat: es con el que se probó, así que se propone.
+    defaultInboxId: { type: Number, default: null },
     isSaving: { type: Boolean, default: false },
     error: { type: String, default: '' },
     proposal: { type: Object, default: null },
@@ -64,6 +66,8 @@ export default {
     show(value) {
       if (!value) return;
       this.applyProposal();
+      if (!this.inboxId && this.defaultInboxId)
+        this.inboxId = this.defaultInboxId;
       // Si el borrador vino de un agente existente, lo natural es REEMPLAZARLO.
       // Abrir en "crear nuevo" dejaba dos agentes casi iguales y el original
       // roto — que es justo lo que la persona vino a arreglar.

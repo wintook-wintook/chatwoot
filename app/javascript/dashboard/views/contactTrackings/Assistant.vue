@@ -59,6 +59,7 @@ const VALIDATE_DEBOUNCE_MS = 400;
 // Cada cuánto se pregunta en qué etapa está el turno. Las etapas duran de 1 a 58 s:
 // más seguido no muestra nada nuevo.
 const PROGRESS_POLL_MS = 1500;
+const INBOX_STORAGE_KEY = 'tracking_assistant_inbox_id';
 
 // El backend devuelve hasta 50 conversaciones (TrackingAssistantSession::LIST_LIMIT),
 // así que el paginado es sobre lo que ya está en memoria: no hay una segunda página
@@ -151,6 +152,10 @@ export default {
       draftTab: 'editor',
       // La etapa del turno en curso, consultada mientras se espera ({ stage, … }).
       turnStage: null,
+      // El canal del agente. Decide con qué modelo clasifica y contesta el motor
+      // (y de dónde salen las frases de clientes del inventario). Sin canal, la
+      // prueba de ruteo y los tests usan el modelo por defecto, no el del agente.
+      inboxId: null,
       progressTimer: null,
       // De qué Agente IA vino el borrador, si vino de uno. Sin esto, arreglar un
       // agente y guardar creaba un DUPLICADO en vez de corregir el original: el
@@ -402,6 +407,14 @@ export default {
     },
   },
   async mounted() {
+    // El último canal elegido en este navegador: es una comodidad, no un dato
+    // de la conversación.
+    try {
+      const guardado = Number(window.localStorage.getItem(INBOX_STORAGE_KEY));
+      if (guardado) this.inboxId = guardado;
+    } catch (error) {
+      this.inboxId = null;
+    }
     this.fetchInventory();
     this.$store.dispatch('inboxes/get');
     // Se espera la lista antes de resolver el ?template_id de la URL: si no, se
@@ -413,10 +426,10 @@ export default {
     // agente concreto, es a ese al que se vino, no a lo que quedó a medias.
     if (!this.loadTemplateFromRoute()) await this.resumeSession();
   },
-  beforeUnmount() {
-    clearTimeout(this.validateTimer);
-  },
+  // ⚠ Era `beforeUnmount`, que en Vue 2.7 con la Options API no existe: el
+  // temporizador de validación nunca se limpiaba al salir de la pantalla.
   beforeDestroy() {
+    clearTimeout(this.validateTimer);
     clearInterval(this.progressTimer);
   },
   methods: {
@@ -482,7 +495,7 @@ export default {
       this.isLoadingInventory = true;
       this.inventoryError = null;
       try {
-        const { data } = await AssistantAPI.getInventory();
+        const { data } = await AssistantAPI.getInventory(this.inboxId);
         this.inventory = data;
       } catch (error) {
         this.inventoryError =
@@ -610,7 +623,11 @@ export default {
       this.isDryRunning = true;
       this.dryRunError = '';
       try {
-        const { data } = await AssistantAPI.dryRun(this.draft, question, null);
+        const { data } = await AssistantAPI.dryRun(
+          this.draft,
+          question,
+          this.inboxId
+        );
         // Con la versión del borrador contra la que se corrió: es lo que después
         // permite decir "esto ya no describe el texto actual".
         this.dryRunHistory.push({
@@ -648,6 +665,7 @@ export default {
 
       this.startFresh();
       this.draft = template.complementary_prompt || '';
+      if (template.inbox_id) this.setInbox(template.inbox_id);
       this.lastDelivered = this.draft;
       this.isBuilding = false;
       this.versions = [];
@@ -680,6 +698,7 @@ export default {
 
       this.draft = template.complementary_prompt || '';
       this.editingTemplate = { id: template.id, name: template.name };
+      if (template.inbox_id) this.setInbox(template.inbox_id);
       this.proposal = null;
       this.rejected = null;
       this.manualConflict = null;
@@ -705,13 +724,17 @@ export default {
       this.isThinking = true;
       const turnId = this.startProgress();
       try {
-        const { data } = await AssistantAPI.interview(this.messages, null, {
-          sessionId: this.sessionId,
-          draft: this.draft.trim() ? this.draft : null,
-          deliveredDraft: this.lastDelivered,
-          building: this.isBuilding,
-          turnId,
-        });
+        const { data } = await AssistantAPI.interview(
+          this.messages,
+          this.inboxId,
+          {
+            sessionId: this.sessionId,
+            draft: this.draft.trim() ? this.draft : null,
+            deliveredDraft: this.lastDelivered,
+            building: this.isBuilding,
+            turnId,
+          }
+        );
         this.sessionId = data.session_id || this.sessionId;
         // El backend devuelve la identidad ya armada: sin eso habría que
         // inventar las fechas del lado del cliente.
@@ -794,7 +817,7 @@ export default {
       this.optimizeError = '';
       const version = this.draftVersion;
       try {
-        const { data } = await AssistantAPI.optimize(this.draft);
+        const { data } = await AssistantAPI.optimize(this.draft, this.inboxId);
         this.optimizeResult = { ...data, version };
       } catch (error) {
         this.optimizeError = this.$t('TRACKING_ASSISTANT_VIEW.OPTIMIZE_ERROR');
@@ -811,6 +834,23 @@ export default {
       this.showOptimizeModal = false;
       this.validateDraft();
       useAlert(this.$t('TRACKING_ASSISTANT_VIEW.OPTIMIZE_APPLIED'));
+    },
+    // Cambiar de canal cambia el modelo que clasifica: lo probado con el canal
+    // anterior deja de valer, y el inventario se vuelve a pedir para ese canal.
+    setInbox(id) {
+      const nuevo = id ? Number(id) : null;
+      if (nuevo === this.inboxId) return;
+      this.inboxId = nuevo;
+      this.suggestedTests = null;
+      this.optimizeResult = null;
+      try {
+        if (nuevo)
+          window.localStorage.setItem(INBOX_STORAGE_KEY, String(nuevo));
+        else window.localStorage.removeItem(INBOX_STORAGE_KEY);
+      } catch (error) {
+        // Sin almacenamiento se pierde solo la comodidad de recordarlo.
+      }
+      this.fetchInventory();
     },
     // Lo seleccionado en el editor, para "Explicar selección".
     onDraftSelect(event) {
@@ -829,7 +869,8 @@ export default {
       try {
         const { data } = await AssistantAPI.explain(
           this.draft,
-          this.explainExcerpt
+          this.explainExcerpt,
+          this.inboxId
         );
         this.explainResult = data;
       } catch (error) {
@@ -849,7 +890,11 @@ export default {
         this.suggestStage = data;
       });
       try {
-        const { data } = await AssistantAPI.suggestedTests(this.draft, turnId);
+        const { data } = await AssistantAPI.suggestedTests(
+          this.draft,
+          turnId,
+          this.inboxId
+        );
         this.suggestedTests = { ...data, version };
       } catch (error) {
         this.dryRunError =
@@ -1044,6 +1089,48 @@ export default {
               :session-meta="sessionMeta"
               :editing-template="editingTemplate"
             />
+
+            <!-- El canal del agente, arriba de la conversación: cambia con qué
+                 modelo se prueba todo lo de la derecha. -->
+            <div
+              class="flex flex-wrap items-center gap-2 mb-3 text-xs shrink-0"
+            >
+              <label
+                for="assistant-inbox"
+                class="!m-0 text-slate-600 dark:text-slate-300"
+              >
+                {{ $t('TRACKING_ASSISTANT_VIEW.INBOX_LABEL') }}
+              </label>
+              <select
+                id="assistant-inbox"
+                class="!mb-0 !w-auto !py-1 text-xs"
+                :value="inboxId || ''"
+                @change="setInbox($event.target.value)"
+              >
+                <option value="">
+                  {{ $t('TRACKING_ASSISTANT_VIEW.INBOX_NONE') }}
+                </option>
+                <option
+                  v-for="inbox in inboxes"
+                  :key="inbox.id"
+                  :value="inbox.id"
+                >
+                  {{ inbox.name }}
+                </option>
+              </select>
+              <span
+                v-if="inventory && inventory.models"
+                class="text-slate-500 dark:text-slate-400"
+                :title="$t('TRACKING_ASSISTANT_VIEW.INBOX_HINT')"
+              >
+                {{
+                  $t('TRACKING_ASSISTANT_VIEW.INBOX_MODELS', {
+                    router: inventory.models.router,
+                    conversational: inventory.models.conversational,
+                  })
+                }}
+              </span>
+            </div>
 
             <InterviewPanel
               :messages="messages"
@@ -1708,6 +1795,7 @@ export default {
       :show="showSaveModal"
       :templates="templates"
       :inboxes="inboxes"
+      :default-inbox-id="inboxId"
       :is-saving="isSaving"
       :proposal="proposal"
       :editing-template="editingTemplate"
