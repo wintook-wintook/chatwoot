@@ -46,6 +46,7 @@ import ProgressStrip from './assistant/ProgressStrip.vue';
 import CopyChip from './assistant/CopyChip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
 import ValidationReport from './assistant/ValidationReport.vue';
+import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import DryRunModal from './assistant/DryRunModal.vue';
 import SaveModal from './assistant/SaveModal.vue';
 
@@ -102,6 +103,7 @@ export default {
     ProgressStrip,
     ValidationBadge,
     ValidationReport,
+    ManualConflictNotice,
     DryRunModal,
     SaveModal,
   },
@@ -122,6 +124,11 @@ export default {
       // backend conserva el anterior y manda lo propuesto aparte ({ draft,
       // validation }), para que la persona decida con los dos a la vista.
       rejected: null,
+      // Lo último que entregó el asistente (o el agente cargado). Lo que difiere
+      // de esto en el editor es lo que la persona escribió a mano (fase B).
+      lastDelivered: '',
+      // El asistente pisó algo editado a mano: { assistant_draft, items }.
+      manualConflict: null,
       // De qué Agente IA vino el borrador, si vino de uno. Sin esto, arreglar un
       // agente y guardar creaba un DUPLICADO en vez de corregir el original: el
       // modal abría en "crear nuevo" y nadie lo notaba hasta ver la lista con dos.
@@ -171,6 +178,12 @@ export default {
   },
   computed: {
     // En la plantilla no: el loader de Vue 2 no entiende `?.` ahí.
+    // Se comparan con los espacios normalizados: agregar un salto de línea no es
+    // "editar a mano" de nada que valga avisarle al asistente.
+    hasManualEdits() {
+      const plano = texto => (texto || '').replace(/\s+/g, ' ').trim();
+      return plano(this.draft) !== plano(this.lastDelivered);
+    },
     rejectedBlockingCount() {
       return this.rejected?.validation?.blocking?.length || 0;
     },
@@ -398,6 +411,8 @@ export default {
       this.validation = data.validation || null;
       this.proposal = data.proposal || null;
       this.rejected = null;
+      this.manualConflict = null;
+      this.lastDelivered = data.draft || '';
       this.dryRunHistory = [];
       this.sessionMeta = {
         id: data.id,
@@ -469,6 +484,8 @@ export default {
       this.validation = null;
       this.proposal = null;
       this.rejected = null;
+      this.manualConflict = null;
+      this.lastDelivered = '';
       this.editingTemplate = null;
       this.activeTab = 0;
     },
@@ -576,6 +593,7 @@ export default {
 
       this.startFresh();
       this.draft = template.complementary_prompt || '';
+      this.lastDelivered = this.draft;
       this.proposal = {
         name: this.nextVersionName(template.name),
         objective: template.objective || '',
@@ -606,6 +624,10 @@ export default {
       this.editingTemplate = { id: template.id, name: template.name };
       this.proposal = null;
       this.rejected = null;
+      this.manualConflict = null;
+      // El agente cargado cuenta como entregado: lo editado a mano es lo que se
+      // le cambie a partir de acá.
+      this.lastDelivered = this.draft;
       // Traer un agente al Asistente arranca una conversación nueva: la
       // identidad y la prueba de la anterior no describen nada de esto.
       this.sessionId = null;
@@ -622,6 +644,7 @@ export default {
         const { data } = await AssistantAPI.interview(this.messages, null, {
           sessionId: this.sessionId,
           draft: this.draft.trim() ? this.draft : null,
+          deliveredDraft: this.lastDelivered,
         });
         this.sessionId = data.session_id || this.sessionId;
         // El backend devuelve la identidad ya armada: sin eso habría que
@@ -636,11 +659,21 @@ export default {
         });
         if (data.draft) {
           this.draft = data.draft;
+          // Con conflicto, lo entregado es la versión DEL ASISTENTE: así las
+          // piezas que se le devolvieron a la persona siguen contando como
+          // editadas a mano, y en el próximo turno se le vuelven a proteger.
+          // Una edición rechazada no entregó nada.
+          if (!data.rejected_draft) {
+            this.lastDelivered = data.manual_conflict
+              ? data.manual_conflict.assistant_draft
+              : data.draft;
+          }
           this.validation = data.validation;
           // Al editar el modelo manda la propuesta en null: pisarla borraba el
           // nombre ya elegido (el "Soporte v2" de crear otra versión).
           if (data.proposal) this.proposal = data.proposal;
         }
+        this.manualConflict = data.manual_conflict || null;
         this.rejected = data.rejected_draft
           ? { draft: data.rejected_draft, validation: data.rejected_validation }
           : null;
@@ -659,8 +692,18 @@ export default {
     useRejected() {
       if (!this.rejected) return;
       this.draft = this.rejected.draft;
+      this.lastDelivered = this.rejected.draft;
       this.validation = this.rejected.validation;
       this.rejected = null;
+    },
+    // La persona prefiere lo que escribió el asistente en las piezas que había
+    // editado a mano: se pierde su versión, que es justo lo que eligió.
+    useAssistantVersion() {
+      if (!this.manualConflict) return;
+      this.draft = this.manualConflict.assistant_draft;
+      this.lastDelivered = this.manualConflict.assistant_draft;
+      this.manualConflict = null;
+      this.validateDraft();
     },
     // Se revalida también cuando la persona edita a mano: el borrador del modelo
     // no es más confiable que el suyo, y ninguno de los dos se guarda sin pasar.
@@ -849,6 +892,13 @@ export default {
                   class="text-sm font-semibold text-slate-800 dark:text-slate-100"
                 >
                   {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TITLE') }}
+                  <span
+                    v-if="hasManualEdits && draft.trim()"
+                    class="ml-2 px-1.5 py-0.5 text-xs font-normal rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                    :title="$t('TRACKING_ASSISTANT_VIEW.MANUAL_BADGE_HINT')"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.MANUAL_BADGE') }}
+                  </span>
                 </h3>
                 <!-- Para los Entrenamientos largos: 38 líneas siguen siendo poco
                      para uno de 645. Mientras se edita un texto así no hace falta
@@ -867,6 +917,12 @@ export default {
                   }}
                 </woot-button>
               </div>
+              <ManualConflictNotice
+                v-if="manualConflict"
+                :conflict="manualConflict"
+                @keep="manualConflict = null"
+                @use-assistant="useAssistantVersion"
+              />
               <!-- Lo propuesto que no se aplicó. Arriba del texto y no en un
                    modal: hay que poder leer el Entrenamiento conservado mientras
                    se decide. -->

@@ -226,6 +226,26 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
                                                                     'declared' => true }])
       end
 
+      # Fase B: sin `delivered_draft` no hay con qué comparar; con él, lo pisado vuelve.
+      it 'devuelve lo editado a mano que el asistente pisó, con la versión del asistente aparte' do
+        a_mano = actual.sub('Breve.', "Breve.\nSin emojis.")
+        del_asistente = actual.sub('no puedo entrar', 'no puedo entrar, me da error')
+        stub_openai(mensaje: 'Listo', entrenamiento: del_asistente, toca: ['@ruta(soporte)'])
+
+        entrevistar([{ role: 'user', content: 'agrega una frase' }], draft: a_mano, delivered_draft: actual)
+
+        expect(response.parsed_body['draft']).to include('me da error', 'Sin emojis.')
+        expect(response.parsed_body['manual_conflict']['assistant_draft']).to eq(del_asistente)
+      end
+
+      it 'no busca ediciones a mano si el cliente no manda qué entregó el asistente' do
+        stub_openai(mensaje: 'Listo', entrenamiento: actual, toca: [])
+
+        entrevistar([{ role: 'user', content: 'nada' }], draft: actual.sub('Breve.', 'Corto.'))
+
+        expect(response.parsed_body['manual_conflict']).to be_nil
+      end
+
       # El cliente devuelve el hilo sin los cambios de los turnos anteriores: si no se
       # recuperaran de lo guardado, cada turno nuevo borraría los del anterior.
       it 'conserva en la sesión los cambios de los turnos anteriores' do

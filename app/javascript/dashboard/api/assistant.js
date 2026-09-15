@@ -26,18 +26,28 @@ class AssistantAPI extends ApiClient {
   // del Agente IA, donde no hay conversación en la que preguntar.
   // `draft`: el Entrenamiento que está en pantalla, con lo editado a mano. Sin él
   // el asistente no puede modificar nada, solo reescribir de memoria.
+  // `deliveredDraft`: lo último que entregó el asistente. La diferencia con
+  // `draft` es lo editado a mano; "" = todavía no entregó nada.
   interview(
     messages,
     inboxId,
-    { oneShot = false, sessionId = null, draft = null } = {}
+    {
+      oneShot = false,
+      sessionId = null,
+      draft = null,
+      deliveredDraft = null,
+    } = {}
   ) {
-    return axios.post(`${this.url}/interview`, {
+    const body = {
       messages,
       inbox_id: inboxId,
       one_shot: oneShot,
       session_id: sessionId,
       draft,
-    });
+    };
+    // Solo si se sabe: sin la llave, el backend no busca ediciones a mano.
+    if (deliveredDraft !== null) body.delivered_draft = deliveredDraft;
+    return axios.post(`${this.url}/interview`, body);
   }
 
   // La conversación a medias de quien pregunta, si la hay. Una entrevista dura

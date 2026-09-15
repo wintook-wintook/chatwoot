@@ -22,7 +22,25 @@ class ContactTrackings::Assistant::EditingInstructions
   # "No reorganices a las seis secciones" va explícito porque el contrato las exige
   # al CREAR, y sin esta aclaración esa exigencia se lee también al editar: un prompt
   # escrito a mano, con sus propias secciones, se normalizaría en silencio.
-  def self.call(current_draft)
+  def self.call(current_draft, manual: [])
+    [body(current_draft), manual_section(manual)].compact.join("\n\n")
+  end
+
+  # Fase B: las piezas que la persona escribió a mano desde la última entrega. Se
+  # nombran porque "respetá las ediciones a mano" en general no le dice al modelo
+  # CUÁLES son: para él todo el texto es igual de actual.
+  def self.manual_section(manual)
+    return nil if manual.blank?
+
+    <<~MANUAL.strip
+      ═══ LA PERSONA EDITÓ ESTO A MANO ═══
+      Desde tu última entrega, la persona cambió con sus propias manos: #{manual.join('  ')}
+      Esas piezas NO se tocan salvo que el mensaje lo pida explícitamente. Si igual las
+      cambiás, se le devuelve su versión y la tuya queda como opción aparte.
+    MANUAL
+  end
+
+  def self.body(current_draft)
     <<~EDICION.strip
       ═══ ESTÁS EDITANDO UN ENTRENAMIENTO QUE YA EXISTE ═══
       Abajo está el ENTRENAMIENTO ACTUAL: lo que la persona tiene en pantalla ahora, con los

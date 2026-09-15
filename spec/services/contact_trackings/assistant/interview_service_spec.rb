@@ -93,7 +93,7 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
     let(:con_emojis) { actual.sub('Breve.', "Breve.\nSin emojis.") }
 
     def editar(texto = 'sin emojis', draft: actual)
-      described_class.new(account, messages: [{ 'role' => 'user', 'content' => texto }], current_draft: draft).call
+      described_class.new(account, messages: [{ 'role' => 'user', 'content' => texto }], drafts: { current: draft }).call
     end
 
     it 'le muestra al modelo el Entrenamiento que está en pantalla' do
@@ -189,6 +189,57 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
 
       expect(resultado.draft).to include('[ESTILO]')
       expect(resultado.rejected_draft).to be_nil
+    end
+
+    # ── fase B: lo editado a mano ──
+    describe 'con ediciones a mano' do
+      let(:entregado) { actual }
+      let(:a_mano) { actual.sub('Breve.', "Breve.\nSin emojis.") }
+
+      def editar_a_mano(texto = 'cambia el rol', draft: a_mano, delivered: entregado)
+        described_class.new(account, messages: [{ 'role' => 'user', 'content' => texto }],
+                                     drafts: { current: draft, delivered: delivered }).call
+      end
+
+      it 'le nombra al modelo las piezas que la persona editó a mano' do
+        stub_openai(openai_reply(mensaje: '¿Qué rol?'))
+
+        editar_a_mano
+
+        pedido = a_request(:post, url).with do |req|
+          sistema = JSON.parse(req.body)['messages'].first['content']
+          sistema.include?('LA PERSONA EDITÓ ESTO A MANO') && sistema.include?('[ESTILO]')
+        end
+        expect(pedido).to have_been_made
+      end
+
+      # El asistente cambió lo pedido ([QUIEN ERES]) y, de paso, pisó [ESTILO].
+      it 'devuelve la versión de la persona y manda la del asistente aparte' do
+        del_asistente = actual.sub('Sos el asistente', 'Sos la asistente')
+        stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: del_asistente, toca: ['[QUIEN ERES]']))
+
+        resultado = editar_a_mano
+
+        expect(resultado.draft).to include('Sos la asistente', "Breve.\nSin emojis.")
+        expect(resultado.manual_conflict[:assistant_draft]).to eq(del_asistente)
+        expect(resultado.manual_conflict[:items].pluck(:key)).to eq(['[ESTILO]'])
+        # Lo que se muestra como cambiado es lo que quedó aplicado, no lo que intentó.
+        expect(resultado.changes[:touched].pluck(:key)).to eq(['[QUIEN ERES]'])
+      end
+
+      it 'no marca conflicto si el asistente respetó lo editado a mano' do
+        stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: a_mano.sub('Sos el asistente', 'Sos la asistente'),
+                                 toca: ['[QUIEN ERES]']))
+
+        expect(editar_a_mano.manual_conflict).to be_nil
+      end
+
+      # Sin saber qué entregó el asistente, no hay ediciones a mano que proteger.
+      it 'no detecta nada si el cliente no dice qué entregó el asistente' do
+        stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: actual, toca: []))
+
+        expect(editar_a_mano(delivered: nil).manual_conflict).to be_nil
+      end
     end
 
     # Un cruce que el Entrenamiento ya traía se muestra, pero no justifica reescribir

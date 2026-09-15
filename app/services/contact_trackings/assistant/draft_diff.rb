@@ -9,16 +9,10 @@
 # solo la rama. Lo que cambió se saca de acá, comparando los dos textos; lo que el
 # modelo declara sirve para una sola cosa: detectar lo que tocó SIN AVISAR.
 #
-# LAS PIEZAS QUE SE COMPARAN — las mismas que ve quien edita:
-#   @ruta(nombre)       cada rama, por nombre: descripción, etiqueta, fuente, escalamiento
-#   @ruta_por_defecto
-#   [SECCIÓN]           cada sección de la prosa, por su rótulo, sea cual sea. No se
-#                       asume la lista del contrato: un prompt escrito a mano tiene las
-#                       suyas ([NO SIMULAR], [GESTION EN CURSO]…) y valen igual.
-#   (sin sección)       la prosa que va antes del primer rótulo
-#
-# Se compara con los espacios normalizados: reacomodar un salto de línea no es un
-# cambio que valga la pena mostrar.
+# Las piezas que se comparan salen de DraftPieces: cada @ruta por nombre, la
+# @ruta_por_defecto, cada [SECCIÓN] por su rótulo —sea cual sea— y la prosa antes del
+# primer rótulo. Se compara con los espacios normalizados: reacomodar un salto de
+# línea no es un cambio que valga la pena mostrar.
 #
 # DESTRUCTIVO: borrar cualquier pieza, o cambiar una rama. Es lo que no se puede
 # dejar pasar sin declarar: una rama con otra descripción rutea distinto, y una
@@ -27,16 +21,16 @@
 # ================================================================================
 
 class ContactTrackings::Assistant::DraftDiff
-  SECTION_RE = /^[ \t]*\[([^\]\n]+)\][ \t]*$/
-  DEFAULT_KEY = '@ruta_por_defecto'
-  PREAMBLE_KEY = '(sin sección)'
+  DEFAULT_KEY = ContactTrackings::Assistant::DraftPieces::DEFAULT_KEY
+  PREAMBLE_KEY = ContactTrackings::Assistant::DraftPieces::PREAMBLE_KEY
 
-  Change = Struct.new(:key, :kind, :route, keyword_init: true) do
+  # `slug`: la clave normalizada, la que sirve para cruzar con otras listas.
+  Change = Struct.new(:key, :kind, :route, :slug, keyword_init: true) do
     def destructive? = kind == :removed || (route && kind == :changed)
   end
 
   def self.normalize_key(key)
-    key.to_s.unicode_normalize(:nfd).gsub(/\p{Mn}/, '').downcase.gsub(/\s+/, ' ').strip
+    ContactTrackings::Assistant::DraftPieces.normalize_key(key)
   end
 
   def initialize(before, after)
@@ -53,18 +47,22 @@ class ContactTrackings::Assistant::DraftDiff
   # Lo que cambió y el modelo no nombró en `toca`.
   def undeclared(declared)
     nombrados = Array(declared).map { |key| self.class.normalize_key(key) }
-    changes.reject { |change| nombrados.include?(self.class.normalize_key(change.key)) }
+    changes.reject { |change| nombrados.include?(change.slug) }
   end
 
   private
 
+  def pieces(text)
+    ContactTrackings::Assistant::DraftPieces.new(text).pieces
+  end
+
   def compare(antes, despues)
-    (antes.keys + despues.keys).uniq.filter_map do |key|
-      kind = kind_of(antes[key], despues[key])
+    (antes.keys + despues.keys).uniq.filter_map do |slug|
+      kind = kind_of(antes[slug], despues[slug])
       next if kind.nil?
 
-      pieza = despues[key] || antes[key]
-      Change.new(key: pieza[:label], kind: kind, route: pieza[:route])
+      pieza = despues[slug] || antes[slug]
+      Change.new(key: pieza.label, kind: kind, route: pieza.route, slug: slug)
     end
   end
 
@@ -72,38 +70,6 @@ class ContactTrackings::Assistant::DraftDiff
     return :added if viejo.nil?
     return :removed if nuevo.nil?
 
-    :changed if viejo[:value] != nuevo[:value]
-  end
-
-  # { clave_normalizada => { label:, value:, route: } }
-  def pieces(text)
-    map = ContactTrackings::RouteMap.parse(text)
-    piezas = {}
-
-    map.routes.each do |route|
-      add(piezas, "@ruta(#{route.name})", route.to_h.transform_values { |v| v.to_s.squish }, route: true)
-    end
-    default = text[ContactTrackings::RouteMap::DEFAULT_RE, 1]
-    add(piezas, DEFAULT_KEY, default.to_s.downcase) if default
-
-    sections(ContactTrackings::RouteMap.strip(text)).each { |label, body| add(piezas, label, body.squish) }
-    piezas
-  end
-
-  # Un rótulo repetido no pisa al primero: se numera, así borrar el segundo
-  # [ESTILO] también se ve.
-  def add(piezas, label, value, route: false)
-    key = self.class.normalize_key(label)
-    key = "#{key}##{piezas.keys.count { |k| k.split('#').first == key } + 1}" if piezas.key?(key)
-    piezas[key] = { label: label, value: value, route: route }
-  end
-
-  def sections(prose)
-    partes = prose.split(SECTION_RE)
-    resultado = []
-    inicio = partes.shift.to_s
-    resultado << [PREAMBLE_KEY, inicio] if inicio.strip.present?
-    partes.each_slice(2) { |nombre, cuerpo| resultado << ["[#{nombre.strip}]", cuerpo.to_s] }
-    resultado
+    :changed if viejo.value != nuevo.value
   end
 end

@@ -125,7 +125,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
     # `draft`: el Entrenamiento que está en pantalla, con lo editado a mano. Sin él,
     # el modelo no puede modificar nada: solo reescribir de memoria.
     result = ContactTrackings::Assistant::InterviewService
-             .new(Current.account, messages: interview_messages, inbox: inbox, current_draft: params[:draft],
+             .new(Current.account, messages: interview_messages, inbox: inbox,
+                                   drafts: { current: params[:draft], delivered: delivered_draft },
                                    one_shot: ActiveModel::Type::Boolean.new.cast(params[:one_shot])).call
 
     return render json: { error: result.error }, status: :unprocessable_entity unless result.success?
@@ -172,6 +173,9 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
       # sigue siendo el de antes, y esto es lo propuesto, para decidir a la vista.
       rejected_draft: result.rejected_draft,
       rejected_validation: result.rejected_validation,
+      # El asistente pisó algo editado a mano: `draft` ya trae la versión de la
+      # persona en esas piezas, y esto trae la del asistente para elegirla.
+      manual_conflict: result.manual_conflict,
       session_id: sesion&.id,
       # La identidad completa y no solo el id: con el id suelto, la pantalla
       # tendría que inventar las fechas del lado del cliente.
@@ -270,6 +274,13 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
   def save_params
     params.permit(:name, :objective, :ai_context, :inbox_id, :template_id, :session_id)
+  end
+
+  # nil = el cliente no lo mandó (no sabe qué entregó el asistente) y no se detectan
+  # ediciones a mano. "" = todavía no hubo entrega: todo lo que hay lo escribió la
+  # persona. Por eso se mira si la llave vino, no si trae texto.
+  def delivered_draft
+    params.key?(:delivered_draft) ? params[:delivered_draft].to_s : nil
   end
 
   # Solo rol y contenido: el hilo lo manda el cliente y no se le confía nada más.

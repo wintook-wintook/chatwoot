@@ -73,26 +73,31 @@ class ContactTrackings::Assistant::InterviewService
   MAX_INTERVIEW_TURNS = 6
 
   Result = Struct.new(:reply, :draft, :validation, :repairs, :route_mismatches, :proposal, :options,
-                      :changes, :rejected_draft, :rejected_validation, :error, keyword_init: true) do
+                      :changes, :rejected_draft, :rejected_validation, :manual_conflict, :error,
+                      keyword_init: true) do
     def success? = error.blank?
   end
 
   # Lo que va y viene entre vueltas de corrección.
-  Turn = Struct.new(:history, :message, :draft, :declared, :summary, keyword_init: true)
+  Turn = Struct.new(:history, :message, :draft, :declared, :summary, :conflict, keyword_init: true)
 
   # one_shot: sin entrevista. Es el modo del botón "generar" que vive dentro de la
   # ficha del Agente IA: ahí no hay una conversación donde preguntar, hay un campo y
   # alguien esperando que se llene. Se redacta con lo que haya y lo que falte se marca
   # <PENDIENTE:>, en vez de devolver una pregunta que nadie va a poder contestar.
   #
-  # current_draft: el Entrenamiento que la persona tiene en pantalla, tal cual —con
-  # sus ediciones a mano—. Con él, el turno es una EDICIÓN.
-  def initialize(account, messages:, inbox: nil, one_shot: false, current_draft: nil)
+  # drafts:
+  #   current    el Entrenamiento que la persona tiene en pantalla, tal cual —con sus
+  #              ediciones a mano—. Con él, el turno es una EDICIÓN.
+  #   delivered  lo que entregó el asistente la última vez (ver ManualEdits). La
+  #              diferencia con `current` es lo que la persona editó a mano.
+  def initialize(account, messages:, inbox: nil, one_shot: false, drafts: {})
     @account = account
     @inbox = inbox
     @messages = Array(messages)
     @one_shot = one_shot
-    @current_draft = one_shot ? nil : current_draft.to_s.presence
+    @current_draft = one_shot ? nil : drafts[:current].to_s.presence
+    @manual = ContactTrackings::Assistant::ManualEdits.new(delivered: drafts[:delivered], current: @current_draft)
     @chat = ContactTrackings::Assistant::OpenaiChat.new(account: account, inbox: inbox)
   end
 
@@ -153,8 +158,25 @@ class ContactTrackings::Assistant::InterviewService
     validation, repairs = repair_grammar(turn)
     validation, cruces = repair_routing(turn, validation)
     validation = with_route_findings(validation, cruces)
+    turn.conflict = restore_manual(turn, cruces)
+    validation = with_route_findings(validate(turn.draft), cruces) if turn.conflict
 
     result(turn, validation, repairs, cruces, proposal)
+  end
+
+  # Si el asistente pisó sin avisar algo que la persona editó a mano, se le devuelve
+  # su versión de esa pieza (ver ManualEdits). Los cruces de ruteo de ramas que ya no
+  # están como el asistente las dejó dejan de valer.
+  def restore_manual(turn, cruces)
+    return nil unless editing?
+
+    resuelto = @manual.resolve(turn.draft, turn.declared)
+    return nil if resuelto.nil?
+
+    turn.draft = resuelto[:draft]
+    vigentes = ContactTrackings::RouteMap.parse(turn.draft).names
+    cruces.select! { |c| vigentes.include?(c.route) }
+    resuelto[:conflict]
   end
 
   # ── la vuelta de corrección, una sola forma para los tres bucles ────────────
@@ -274,10 +296,10 @@ class ContactTrackings::Assistant::InterviewService
   # errores a la vista.
   def result(turn, validation, repairs, cruces, proposal)
     base = { reply: turn.message, repairs: repairs, route_mismatches: cruces, proposal: proposal,
-             changes: editing? ? changes_payload(turn) : nil }
+             changes: editing? ? changes_payload(turn) : nil, manual_conflict: turn.conflict }
 
     if editing? && validation[:blocking].any? && validate(current_draft)[:blocking].empty?
-      return Result.new(**base, draft: current_draft, validation: validate(current_draft),
+      return Result.new(**base, draft: current_draft, validation: validate(current_draft), manual_conflict: nil,
                                 rejected_draft: turn.draft, rejected_validation: validation)
     end
 
@@ -319,7 +341,7 @@ class ContactTrackings::Assistant::InterviewService
       ContactTrackings::Assistant::Contract.call,
       inventory_section,
       ContactTrackings::Assistant::Instructions.call(one_shot: one_shot, max_turns: MAX_INTERVIEW_TURNS),
-      (ContactTrackings::Assistant::EditingInstructions.call(current_draft) if editing?)
+      (ContactTrackings::Assistant::EditingInstructions.call(current_draft, manual: @manual.labels) if editing?)
     ].compact.join("\n\n")
   end
 
