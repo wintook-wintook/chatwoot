@@ -97,7 +97,8 @@ class ContactTrackings::Assistant::InterviewService
     @current_draft = one_shot ? nil : drafts[:current].to_s.presence
     @manual = ContactTrackings::Assistant::ManualEdits.new(delivered: drafts[:delivered], current: @current_draft)
     @outcome = ContactTrackings::Assistant::TurnOutcome.new(account: account, current_draft: @current_draft,
-                                                            manual: @manual, building: drafts[:building])
+                                                            manual: @manual, building: drafts[:building],
+                                                            said: user_texts)
     @chat = ContactTrackings::Assistant::OpenaiChat.new(account: account, inbox: inbox)
   end
 
@@ -298,6 +299,11 @@ class ContactTrackings::Assistant::InterviewService
     # se entrega lo que ya pasó el comprobador.
     Rails.logger.warn "[Asistente] no se pudo probar el ruteo: #{e.message}"
     []
+  end
+
+  # Lo que escribió la persona: las etiquetas de un borrador solo valen si salen de acá.
+  def user_texts
+    messages.select { |m| m['role'] == 'user' }.map { |m| m['content'].to_s }
   end
 
   def ask(history)

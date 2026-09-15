@@ -123,6 +123,14 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
       expect(a_request(:post, url)).to have_been_made.once
     end
 
+    # Medido en 3 de 3 entrevistas: el modelo pone etiquetas antes de preguntarlas.
+    it 'quita del borrador las etiquetas que la persona no eligió' do
+      con_etiqueta = parcial.sub('@ruta(soporte:', '@ruta(soporte #soporte1:')
+      stub_openai(openai_reply(mensaje: '¿Fuente?', entrenamiento: con_etiqueta, completo: false))
+
+      expect(entrevistar('quiero un agente de soporte').draft).to include('@ruta(soporte:')
+    end
+
     # Medido: sin exigirlo, "completo" a veces no viene. Con marcas, es un borrador.
     it 'lo trata como borrador si no dice "completo" pero tiene marcas' do
       stub_openai(openai_reply(mensaje: 'Sigo', entrenamiento: parcial, modo: nil))

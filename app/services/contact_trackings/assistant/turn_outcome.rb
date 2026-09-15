@@ -22,11 +22,13 @@ class ContactTrackings::Assistant::TurnOutcome
 
   # building: lo que dijo el cliente sobre si la entrevista sigue abierta (nil = no
   # sabe, por ejemplo al retomar una sesión vieja).
-  def initialize(account:, current_draft:, manual:, building: nil)
+  # said: lo que escribió la persona en la conversación (ver GuessedTags).
+  def initialize(account:, current_draft:, manual:, building: nil, said: [])
     @account = account
     @current_draft = current_draft
     @manual = manual
     @building = building
+    @said = said
   end
 
   def editing? = @current_draft.present?
@@ -56,6 +58,7 @@ class ContactTrackings::Assistant::TurnOutcome
   end
 
   def partial(turn, options)
+    turn.draft, = ContactTrackings::Assistant::GuessedTags.strip(turn.draft, said: @said)
     turn.conflict = restore_manual(turn, [])
 
     Result.new(reply: turn.message, draft: turn.draft, validation: validate(turn.draft), repairs: 0,
