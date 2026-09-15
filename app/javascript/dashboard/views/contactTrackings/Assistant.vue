@@ -49,6 +49,8 @@ import ValidationBadge from './assistant/ValidationBadge.vue';
 import ValidationReport from './assistant/ValidationReport.vue';
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import VersionsPanel from './assistant/VersionsPanel.vue';
+import OptimizeModal from './assistant/OptimizeModal.vue';
+import ExplainModal from './assistant/ExplainModal.vue';
 import DryRunModal from './assistant/DryRunModal.vue';
 import SaveModal from './assistant/SaveModal.vue';
 
@@ -110,6 +112,8 @@ export default {
     ValidationReport,
     ManualConflictNotice,
     VersionsPanel,
+    OptimizeModal,
+    ExplainModal,
     DryRunModal,
     SaveModal,
   },
@@ -172,6 +176,17 @@ export default {
       dryRunHistory: [],
       // Fase E: tests sugeridos ({ cases, generated_by, version }) y su avance.
       suggestedTests: null,
+      // Fase E: optimizar ({ …, version }) y explicar lo seleccionado en el editor.
+      showOptimizeModal: false,
+      optimizeResult: null,
+      isOptimizing: false,
+      optimizeError: '',
+      draftSelection: '',
+      showExplainModal: false,
+      explainExcerpt: '',
+      explainResult: null,
+      isExplaining: false,
+      explainError: '',
       isSuggesting: false,
       suggestStage: null,
       showDryRunModal: false,
@@ -448,6 +463,7 @@ export default {
       this.draftTab = 'editor';
       this.dryRunHistory = [];
       this.suggestedTests = null;
+      this.optimizeResult = null;
       this.sessionMeta = {
         id: data.id,
         status: data.status,
@@ -514,6 +530,7 @@ export default {
       this.interviewOptions = null;
       this.dryRunHistory = [];
       this.suggestedTests = null;
+      this.optimizeResult = null;
       this.messages = [];
       this.draft = '';
       this.validation = null;
@@ -679,6 +696,7 @@ export default {
       this.interviewOptions = null;
       this.dryRunHistory = [];
       this.suggestedTests = null;
+      this.optimizeResult = null;
       this.activeTab = 0;
       this.validateDraft();
     },
@@ -767,6 +785,58 @@ export default {
       clearInterval(this.progressTimer);
       this.progressTimer = null;
       this.turnStage = null;
+    },
+    // Fase E: optimizar. El resultado se anota contra la versión del borrador:
+    // si después se edita, aplicar pisaría esos cambios y el modal lo impide.
+    async runOptimize() {
+      if (this.isOptimizing || !this.draft.trim()) return;
+      this.isOptimizing = true;
+      this.optimizeError = '';
+      const version = this.draftVersion;
+      try {
+        const { data } = await AssistantAPI.optimize(this.draft);
+        this.optimizeResult = { ...data, version };
+      } catch (error) {
+        this.optimizeError = this.$t('TRACKING_ASSISTANT_VIEW.OPTIMIZE_ERROR');
+      } finally {
+        this.isOptimizing = false;
+      }
+    },
+    applyOptimization(texto) {
+      if (!texto) return;
+      this.draft = texto;
+      this.manualConflict = null;
+      this.rejected = null;
+      this.optimizeResult = null;
+      this.showOptimizeModal = false;
+      this.validateDraft();
+      useAlert(this.$t('TRACKING_ASSISTANT_VIEW.OPTIMIZE_APPLIED'));
+    },
+    // Lo seleccionado en el editor, para "Explicar selección".
+    onDraftSelect(event) {
+      const { selectionStart, selectionEnd } = event.target;
+      this.draftSelection = this.draft
+        .slice(selectionStart, selectionEnd)
+        .trim();
+    },
+    async explainSelection() {
+      if (!this.draftSelection || this.isExplaining) return;
+      this.explainExcerpt = this.draftSelection;
+      this.explainResult = null;
+      this.explainError = '';
+      this.showExplainModal = true;
+      this.isExplaining = true;
+      try {
+        const { data } = await AssistantAPI.explain(
+          this.draft,
+          this.explainExcerpt
+        );
+        this.explainResult = data;
+      } catch (error) {
+        this.explainError = this.$t('TRACKING_ASSISTANT_VIEW.EXPLAIN_ERROR');
+      } finally {
+        this.isExplaining = false;
+      }
     },
     // Fase E: la batería de tests sugeridos. Se anota contra qué versión del
     // borrador corrió, para avisar si después se editó.
@@ -1048,6 +1118,18 @@ export default {
                     {{ $t('TRACKING_ASSISTANT_VIEW.MANUAL_BADGE') }}
                   </span>
                 </h3>
+                <!-- Fase E: explicar lo seleccionado. Aparece solo con algo
+                     seleccionado en el editor: sin selección no hay qué explicar. -->
+                <woot-button
+                  v-if="draftTab === 'editor' && draftSelection"
+                  variant="clear"
+                  size="tiny"
+                  color-scheme="secondary"
+                  icon="info"
+                  @click="explainSelection"
+                >
+                  {{ $t('TRACKING_ASSISTANT_VIEW.EXPLAIN_CTA') }}
+                </woot-button>
                 <!-- Para los Entrenamientos largos: 38 líneas siguen siendo poco
                      para uno de 645. Mientras se edita un texto así no hace falta
                      ver el chat; al volver, sigue donde estaba. -->
@@ -1126,6 +1208,9 @@ export default {
                   class="flex-1 min-h-0 w-full font-mono text-xs resize-none !mb-0"
                   :placeholder="$t('TRACKING_ASSISTANT_VIEW.DRAFT_PLACEHOLDER')"
                   :readonly="isThinking"
+                  @select="onDraftSelect"
+                  @keyup="onDraftSelect"
+                  @mouseup="onDraftSelect"
                   @input="onDraftInput"
                 />
               </template>
@@ -1570,6 +1655,14 @@ export default {
           >
             {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_TITLE') }}
           </woot-button>
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            :is-disabled="!draft.trim()"
+            @click="showOptimizeModal = true"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.OPTIMIZE_CTA') }}
+          </woot-button>
           <woot-button :is-disabled="!canSave" @click="showSaveModal = true">
             {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CTA') }}
           </woot-button>
@@ -1577,6 +1670,25 @@ export default {
       </template>
     </div>
 
+    <OptimizeModal
+      :show="showOptimizeModal"
+      :result="optimizeResult"
+      :is-running="isOptimizing"
+      :error="optimizeError"
+      :draft="draft"
+      :draft-version="draftVersion"
+      @close="showOptimizeModal = false"
+      @run="runOptimize"
+      @apply="applyOptimization"
+    />
+    <ExplainModal
+      :show="showExplainModal"
+      :excerpt="explainExcerpt"
+      :result="explainResult"
+      :is-running="isExplaining"
+      :error="explainError"
+      @close="showExplainModal = false"
+    />
     <DryRunModal
       :show="showDryRunModal"
       :draft="draft"

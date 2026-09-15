@@ -348,6 +348,33 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
     end
   end
 
+  describe 'POST optimize y explain' do
+    let(:base) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant" }
+
+    it 'no dejan entrar a un agente' do
+      post "#{base}/optimize", params: { draft: 'x' }, headers: agent.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      post "#{base}/explain", params: { draft: 'x', excerpt: 'x' }, headers: agent.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'devuelve el error del servicio como 422' do
+      post "#{base}/optimize", params: { draft: '@ruta(a #aaa: x): -' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('no_api_key')
+    end
+
+    it 'devuelve lo que lee el motor del fragmento' do
+      post "#{base}/explain", params: { draft: '@ruta(a #aaa: x): -', excerpt: '@ruta(a #aaa: x): -' },
+                              headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body['engine']['routes'].first['name']).to eq('a')
+    end
+  end
+
   describe 'GET progress' do
     it 'devuelve la etapa del turno de quien pregunta, y nada del de otra persona' do
       ContactTrackings::Assistant::TurnProgress.new(account, admin, 'turno12345').update(:routing)

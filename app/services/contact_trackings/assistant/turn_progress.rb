@@ -19,7 +19,7 @@
 class ContactTrackings::Assistant::TurnProgress
   TTL = 10.minutes
   TURN_ID_RE = /\A[A-Za-z0-9_-]{8,64}\z/
-  STAGES = %w[writing mode_check edit_repair checking repairing routing routing_repair testing].freeze
+  STAGES = %w[writing mode_check edit_repair checking repairing routing routing_repair testing optimizing].freeze
 
   def self.read(account, user, turn_id)
     return nil unless turn_id.to_s.match?(TURN_ID_RE)

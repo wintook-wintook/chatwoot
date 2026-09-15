@@ -7,6 +7,15 @@
 #   Mensajes de cliente escritos por el modelo, pasados por el clasificador real, con
 #   su veredicto. Ver SuggestedTests. Avisa el avance en `turn_id` (ver TurnProgress).
 #
+# POST …/assistant/optimize
+#   Hallazgos (redundante, contradicción, simplificable, sobrante) y un Entrenamiento
+#   propuesto que no toca el ruteo, no borra secciones y marca las reglas que pierde.
+#   Nunca se aplica solo. Ver Optimizer.
+#
+# POST …/assistant/explain
+#   Qué hace un fragmento seleccionado: lo que lee el motor (hecho) y la lectura del
+#   modelo (interpretación). Ver Explainer.
+#
 # Aparte de AssistantController: son herramientas que se aplican a un borrador ya
 # escrito, no parte de la conversación, y aquel controlador ya estaba en su tope de
 # largo. Mismo permiso: el Entrenamiento define cómo le contesta el bot a los clientes.
@@ -22,7 +31,26 @@ class Api::V1::Accounts::ContactTrackings::AssistantToolsController < Api::V1::A
       .new(Current.account, draft: params[:draft], inbox: inbox, progress: avance.method(:update)).call
   end
 
+  def optimize
+    avance = ContactTrackings::Assistant::TurnProgress.new(Current.account, Current.user, params[:turn_id])
+    result = ContactTrackings::Assistant::Optimizer
+             .new(Current.account, draft: params[:draft], inbox: inbox, progress: avance.method(:update)).call
+    render_result(result)
+  end
+
+  def explain
+    result = ContactTrackings::Assistant::Explainer
+             .new(Current.account, draft: params[:draft], excerpt: params[:excerpt], inbox: inbox).call
+    render_result(result)
+  end
+
   private
+
+  def render_result(result)
+    return render json: { error: result[:error] }, status: :unprocessable_entity if result[:error]
+
+    render json: result
+  end
 
   def require_draft
     render json: { error: 'blank_draft' }, status: :unprocessable_entity if params[:draft].blank?

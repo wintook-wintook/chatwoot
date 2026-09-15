@@ -65,6 +65,16 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // Fase E: hallazgos y una propuesta que nunca se aplica sola.
+  optimize(draft) {
+    return axios.post(`${this.url}/optimize`, { draft });
+  }
+
+  // Fase E: qué hace un fragmento del Entrenamiento.
+  explain(draft, excerpt) {
+    return axios.post(`${this.url}/explain`, { draft, excerpt });
+  }
+
   // El texto de una versión del Entrenamiento: las listas llegan sin él.
   getVersion(sessionId, number) {
     return axios.get(`${this.url}/sessions/${sessionId}/versions/${number}`);
