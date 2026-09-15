@@ -101,6 +101,16 @@ class CaseTicket < ApplicationRecord
     'cancelled'              => []
   }.freeze
 
+  # @tickets_cases — agrupación "pendiente vs cerrado" para el filtro de estado
+  # de la lista de casos. "Cerrado" incluye resuelto/validando aunque el status
+  # literal no sea `closed`: para el negocio, un caso resuelto ya no es trabajo
+  # activo aunque técnicamente pueda reabrirse o cambiar de estado después.
+  PENDING_STATUSES = %w[
+    open classified assigned in_diagnosis in_progress escalated
+    waiting_on_customer waiting_on_third_party waiting_on_internal
+  ].freeze
+  CLOSED_STATUSES = %w[resolved validating closed cancelled].freeze
+
   SLA_BY_PRIORITY = {
     'low'    => { first_response_time_target: 2880, resolution_time_target: 7200 },
     'medium' => { first_response_time_target: 480,  resolution_time_target: 2880 },

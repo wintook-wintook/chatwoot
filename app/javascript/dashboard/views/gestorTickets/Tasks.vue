@@ -44,6 +44,7 @@ const PERSISTED_FILTERS = [
   'case_type_id',
   'assignee_id',
   'requester_id',
+  'item_type',
 ];
 
 // Cada pestaña tiene SU juego de filtros: filtrar "Completadas" en Mis tareas no
@@ -55,6 +56,9 @@ const defaultTabFilters = () => ({
   assignee_id: '',
   case_type_id: '',
   requester_id: '',
+  // @tickets_cases — '' fusiona tareas + reuniones agendadas · 'task' / 'meeting'
+  // deja solo uno de los dos.
+  item_type: '',
   q: '',
 });
 
@@ -161,6 +165,15 @@ export default {
     filters() {
       return this.tabFilters[this.quickFilter] || this.tabFilters.mine;
     },
+    // @tickets_cases — la bandeja fusiona tareas y reuniones (`item_type`), que
+    // vienen de tablas distintas: un `id` de tarea y uno de reunión pueden
+    // coincidir, así que la tabla necesita una llave compuesta única por fila.
+    tableRows() {
+      return this.tasks.map(row => ({
+        ...row,
+        _row_key: `${row.item_type}-${row.id}`,
+      }));
+    },
     // El dropdown de responsable solo tiene sentido en Todas / Vencidas: en "Mis
     // tareas" el responsable ya soy yo y en "Sin asignar" no hay responsable.
     showAssigneeFilter() {
@@ -179,8 +192,16 @@ export default {
         bodyRowEvents: ({ row }) => ({
           click: event => {
             if (event.target.closest('button, input, a')) return;
-            if (this.ticketFrozen(row)) this.openView(row);
-            else this.openEdit(row);
+            // @tickets_cases — una reunión no tiene edición inline en la
+            // bandeja: lleva a la ficha del ticket, pestaña Reuniones, donde
+            // ya vive todo su flujo (editar/reprogramar/cancelar).
+            if (row.item_type === 'meeting') {
+              this.openMeetingTicket(row);
+            } else if (this.ticketFrozen(row)) {
+              this.openView(row);
+            } else {
+              this.openEdit(row);
+            }
           },
         }),
       };
@@ -199,7 +220,9 @@ export default {
           sortBy: this.sortConfig.sequence || '',
           renderBodyCell: ({ row }) => (
             <div class="flex items-center gap-2">
-              {this.ticketFrozen(row) ? null : (
+              {/* @tickets_cases — una reunión no tiene menú de acciones aquí:
+                  sus acciones viven en la ficha del ticket. */}
+              {this.ticketFrozen(row) || row.item_type === 'meeting' ? null : (
                 <woot-button
                   size="small"
                   variant="smooth"
@@ -214,7 +237,7 @@ export default {
                   row
                 )}`}
               >
-                {this.seqLabel(row.sequence)}
+                {this.seqLabel(row)}
               </span>
             </div>
           ),
@@ -277,7 +300,7 @@ export default {
             <div class="overflow-hidden">
               <p
                 class={
-                  row.status === 'done'
+                  ['done', 'cancelled'].includes(row.status)
                     ? 'm-0 text-sm truncate line-through text-slate-400 dark:text-slate-500'
                     : 'm-0 text-sm truncate text-slate-800 dark:text-slate-100'
                 }
@@ -305,18 +328,22 @@ export default {
           align: 'left',
           width: 115,
           sortBy: this.sortConfig.priority || '',
-          renderBodyCell: ({ row }) => (
-            <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
-              <span
-                class={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${this.priorityDot(
-                  row.priority
-                )}`}
-              />
-              <span class="text-sm text-slate-600 dark:text-slate-300">
-                {this.priorityLabel(row.priority)}
+          renderBodyCell: ({ row }) =>
+            // Una reunión no tiene prioridad propia.
+            row.item_type === 'meeting' ? (
+              <span class="text-slate-300 dark:text-slate-600">—</span>
+            ) : (
+              <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <span
+                  class={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${this.priorityDot(
+                    row.priority
+                  )}`}
+                />
+                <span class="text-sm text-slate-600 dark:text-slate-300">
+                  {this.priorityLabel(row.priority)}
+                </span>
               </span>
-            </span>
-          ),
+            ),
         },
         {
           // @tickets_cases — solicitante (quién abrió la tarea). Solo lectura.
@@ -360,7 +387,7 @@ export default {
                   : 'text-xs text-slate-600 dark:text-slate-300'
               }
             >
-              {this.formatDate(row.due_at) || '—'}
+              {this.formatDate(this.dueDate(row)) || '—'}
             </span>
           ),
         },
@@ -376,6 +403,15 @@ export default {
           width: 170,
           sortBy: this.sortConfig.status || '',
           renderBodyCell: ({ row }) => {
+            // Una reunión no se "completa" desde aquí (eso vive en la ficha del
+            // ticket): solo se lee su propio estado.
+            if (row.item_type === 'meeting') {
+              return (
+                <span class={this.meetingStatusClass(row.status)}>
+                  {this.meetingStatusLabel(row.status)}
+                </span>
+              );
+            }
             if (row.status !== 'done') {
               // Ticket cerrado: no hay acción posible, pero el estado se sigue
               // leyendo (antes esta celda quedaba en blanco).
@@ -521,6 +557,7 @@ export default {
       if (this.filters.status) p.status = this.filters.status;
       if (this.filters.case_type_id) p.case_type_id = this.filters.case_type_id;
       if (this.filters.requester_id) p.requester_id = this.filters.requester_id;
+      if (this.filters.item_type) p.item_type = this.filters.item_type;
       if (this.filters.q) p.q = this.filters.q;
       const due = this.quickFilter === 'overdue' ? 'overdue' : this.filters.due;
       if (due) p.due = due;
@@ -614,6 +651,16 @@ export default {
         params: { id: task.case_ticket.id },
       });
     },
+    // @tickets_cases — clic en una fila de reunión ("tarea agendada"): abre la
+    // ficha del ticket directo en la pestaña Reuniones.
+    openMeetingTicket(meeting) {
+      if (!meeting.case_ticket) return;
+      this.$router.push({
+        name: 'gestorTickets_detail',
+        params: { id: meeting.case_ticket.id },
+        query: { tab: 'meetings' },
+      });
+    },
     // ── Menú de acciones por fila ──────────────────────────────────
     // Menú anclado al botón "…" con posición FIJA (fuera de la tabla, que
     // recorta con overflow). Decide arriba/abajo según el espacio libre.
@@ -665,7 +712,7 @@ export default {
       if (!(task.notes_count > 0)) {
         this.$emitter.emit('caseToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.NOTES_NONE_TOAST', {
-            folio: this.seqLabel(task.sequence),
+            folio: this.seqLabel(task),
           }),
           icon: 'clipboard',
         });
@@ -703,8 +750,11 @@ export default {
         ? task.case_ticket.case_type.name
         : '';
     },
-    assigneeName(task) {
-      return task.assignee ? task.assignee.name : '';
+    // @tickets_cases — la reunión no tiene "assignee", tiene "organizer" (quién
+    // la organiza/tiene a su cargo) — mismo lugar en la fila que el responsable.
+    assigneeName(row) {
+      const person = row.assignee || row.organizer;
+      return person ? person.name : '';
     },
     requesterName(task) {
       return task.requester ? task.requester.name : '';
@@ -714,12 +764,31 @@ export default {
         ? this.$t('CASE_TICKETS.TASKS.STATUS.DONE')
         : this.$t('CASE_TICKETS.TASKS.STATUS.PENDING');
     },
-    isOverdue(task) {
-      return (
-        task.status !== 'done' &&
-        task.due_at &&
-        new Date(task.due_at) < new Date()
-      );
+    // Estado de una reunión (scheduled/held/no_show/cancelled/rescheduled),
+    // reutilizando las etiquetas ya existentes en la pestaña Reuniones.
+    meetingStatusLabel(status) {
+      return this.$t(`CASE_TICKETS.MEETINGS.STATUS.${status.toUpperCase()}`);
+    },
+    meetingStatusClass(status) {
+      if (status === 'held') {
+        return 'text-sm text-green-600 dark:text-green-400';
+      }
+      if (['cancelled', 'no_show'].includes(status)) {
+        return 'text-sm text-slate-400 dark:text-slate-500';
+      }
+      return 'text-sm text-slate-600 dark:text-slate-300'; // scheduled / rescheduled
+    },
+    // "Vence" para una tarea es `due_at`; para una reunión es cuándo empieza.
+    dueDate(row) {
+      return row.item_type === 'meeting' ? row.starts_at : row.due_at;
+    },
+    isOverdue(row) {
+      const due = this.dueDate(row);
+      if (!due || new Date(due) >= new Date()) return false;
+
+      return row.item_type === 'meeting'
+        ? row.status === 'scheduled'
+        : row.status !== 'done';
     },
     // Color del folio del ticket por SLA (verde a tiempo, ámbar en riesgo, rojo vencido).
     slaTextColor(sla) {
@@ -731,16 +800,26 @@ export default {
         }[sla] || 'text-woot-600 dark:text-woot-400'
       );
     },
-    // Folio de la tarea: T001, T012… (relleno a 3 dígitos), como dentro del ticket.
-    seqLabel(n) {
-      if (!n) return '';
-      return `T${String(n).padStart(3, '0')}`;
+    // Folio: T001… para tareas (relleno a 3 dígitos, como dentro del ticket);
+    // R001… para reuniones — el backend ya lo da armado (`meeting_json.folio`).
+    seqLabel(row) {
+      if (row.item_type === 'meeting') return row.folio || '';
+      if (!row.sequence) return '';
+      return `T${String(row.sequence).padStart(3, '0')}`;
     },
-    // Color del folio por estado (tonos claros): verde concluida, rojo atrasada,
-    // azul en tiempo.
-    seqClass(task) {
-      if (task.status === 'done') return 'text-green-400 dark:text-green-300';
-      if (this.isOverdue(task)) return 'text-red-400 dark:text-red-300';
+    // Color del folio por estado (tonos claros): verde concluida/realizada, rojo
+    // atrasada, gris cancelada/no asistió, azul en tiempo.
+    seqClass(row) {
+      if (row.item_type === 'meeting') {
+        if (row.status === 'held') return 'text-green-400 dark:text-green-300';
+        if (['cancelled', 'no_show'].includes(row.status)) {
+          return 'text-slate-400 dark:text-slate-500';
+        }
+        if (this.isOverdue(row)) return 'text-red-400 dark:text-red-300';
+        return 'text-woot-400 dark:text-woot-300';
+      }
+      if (row.status === 'done') return 'text-green-400 dark:text-green-300';
+      if (this.isOverdue(row)) return 'text-red-400 dark:text-red-300';
       return 'text-woot-400 dark:text-woot-300';
     },
     // ── Modal de edición ───────────────────────────────────────────
@@ -961,6 +1040,21 @@ export default {
             </option>
           </select>
           <select
+            v-model="filters.item_type"
+            class="!mb-0 text-sm w-36"
+            @change="onFilterChange"
+          >
+            <option value="">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.ITEM_TYPE.ALL') }}
+            </option>
+            <option value="task">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.ITEM_TYPE.TASK') }}
+            </option>
+            <option value="meeting">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.ITEM_TYPE.MEETING') }}
+            </option>
+          </select>
+          <select
             v-model="filters.case_type_id"
             class="!mb-0 text-sm w-40"
             @change="onFilterChange"
@@ -1065,9 +1159,9 @@ export default {
         <VeTable
           fixed-header
           max-height="100%"
-          row-key-field-name="id"
+          row-key-field-name="_row_key"
           :columns="columns"
-          :table-data="tasks"
+          :table-data="tableRows"
           :border-around="false"
           :sort-option="sortOption"
           :event-custom-option="eventCustomOption"

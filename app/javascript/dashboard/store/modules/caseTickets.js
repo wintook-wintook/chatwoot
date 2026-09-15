@@ -30,6 +30,7 @@ import {
   SET_CASE_TICKET_EVENTS,
   SET_CASE_TICKETS_LIST,
   SET_CASE_TICKETS_META,
+  SET_CASE_TICKETS_LIST_PREFS,
   SET_CASE_RULES,
   SET_CASE_RULES_UI_FLAG,
   SET_CASE_METRICS,
@@ -79,6 +80,10 @@ const state = {
   // Fase 4 — vista lista
   ticketsList: [],
   ticketsMeta: {},
+  // @tickets_cases — filtros/página del listado, para sobrevivir a entrar a un
+  // ticket y volver. null = todavía no se visitó el listado en esta sesión, así
+  // que Index.vue no debe pisar sus defaults con esto.
+  ticketsListPrefs: null,
   // Fase 5 — métricas
   metrics: null,
   // Fase 4 — reglas
@@ -192,6 +197,9 @@ export const getters = {
   },
   getTicketsMeta(_state) {
     return _state.ticketsMeta;
+  },
+  getTicketsListPrefs(_state) {
+    return _state.ticketsListPrefs;
   },
   getTicketById: _state => id =>
     _state.ticketsList.find(t => t.id === Number(id)) || null,
@@ -553,6 +561,13 @@ export const actions = {
     } finally {
       commit(SET_CASE_TICKET_UI_FLAG, { isFetchingList: false });
     }
+  },
+
+  // @tickets_cases — recuerda filtros/página del listado (Index.vue) mientras
+  // dure la sesión de la app, para que sobrevivan a entrar a un ticket y
+  // volver (se pierden al desmontar el componente, no al navegar).
+  setTicketsListPrefs({ commit }, prefs) {
+    commit(SET_CASE_TICKETS_LIST_PREFS, prefs);
   },
 
   // @tickets_cases — carga un ticket individual por id y lo fusiona en la lista
@@ -1178,6 +1193,9 @@ export const mutations = {
   },
   [SET_CASE_TICKETS_META](_state, meta) {
     _state.ticketsMeta = meta;
+  },
+  [SET_CASE_TICKETS_LIST_PREFS](_state, prefs) {
+    _state.ticketsListPrefs = prefs;
   },
   [SET_CASE_RULES](_state, rules) {
     _state.rules = rules;

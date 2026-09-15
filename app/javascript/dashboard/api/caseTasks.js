@@ -12,7 +12,8 @@ class CaseTasksAPI extends ApiClient {
   }
 
   // @tickets_cases — Bandeja de tareas (F1): índice a nivel cuenta, no anidado.
-  // filters: { assignee_id, status, due, case_type_id, q, page }
+  // filters: { assignee_id, status, due, case_type_id, q, page, item_type }
+  // item_type: '' (fusiona tareas + reuniones agendadas) | 'task' | 'meeting'
   getMine(filters = {}) {
     const base = this.url.replace(/case_tickets$/, 'case_tasks');
     return axios.get(base, { params: filters });

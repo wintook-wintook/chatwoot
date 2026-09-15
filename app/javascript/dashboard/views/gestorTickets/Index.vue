@@ -120,16 +120,22 @@
           </button>
         </div>
 
-        <!-- Estado -->
+        <!-- Estado: agrupado (pendiente/cerrado/todos), no el estado exacto —
+             ver CASE_TICKETS.STATUS_QUICK para cambiar el estado exacto de un
+             caso puntual. Por default solo se ven los pendientes; los cerrados
+             (incluye resuelto y validando) quedan en su propio filtro. -->
         <select
           v-model="statusFilter"
           class="!mb-0 w-40 text-sm"
           @change="onFilterChange"
         >
-          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_STATUSES') }}</option>
-          <option v-for="s in statusOptions" :key="s" :value="s">
-            {{ statusLabel(s) }}
+          <option value="pending">
+            {{ $t('CASE_TICKETS.LIST.STATUS_PENDING') }}
           </option>
+          <option value="closed">
+            {{ $t('CASE_TICKETS.LIST.STATUS_CLOSED') }}
+          </option>
+          <option value="">{{ $t('CASE_TICKETS.LIST.ALL_STATUSES') }}</option>
         </select>
 
         <!-- Prioridad -->
@@ -533,7 +539,9 @@ export default {
       search: '',
       searchDebounce: null,
       dateRange: [], // [Date, Date]
-      statusFilter: '',
+      // @tickets_cases — default: solo pendientes. 'closed' agrupa
+      // resuelto/validando/cerrado/cancelado; '' es "todos los estados".
+      statusFilter: 'pending',
       priorityFilter: '',
       originFilter: '', // @tickets_cases Fase C
       activeFilter: 'mine',
@@ -553,6 +561,9 @@ export default {
       tickets: 'caseTickets/getTicketsList',
       meta: 'caseTickets/getTicketsMeta',
       uiFlags: 'caseTickets/getUIFlags',
+      // @tickets_cases — filtros/página recordados de la última visita a esta
+      // pantalla en la sesión (null = primera vez, se usan los defaults de abajo).
+      listPrefs: 'caseTickets/getTicketsListPrefs',
       types: 'caseTickets/getTypes',
       currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Casos"
       currentRole: 'getCurrentRole', // @tickets_cases F4 — quien puede sobreescribir una vista
@@ -680,7 +691,7 @@ export default {
       return (
         !!this.search ||
         this.dateRange.length > 0 ||
-        !!this.statusFilter ||
+        this.statusFilter !== 'pending' ||
         !!this.priorityFilter ||
         !!this.originFilter ||
         this.activeFilter !== 'mine' ||
@@ -881,6 +892,7 @@ export default {
     },
   },
   mounted() {
+    this.restoreListPrefs();
     this.setSortConfig();
     this.$store.dispatch('caseTickets/fetchTypes');
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
@@ -889,6 +901,47 @@ export default {
     this.fetch();
   },
   methods: {
+    // @tickets_cases — si ya se visitó el listado en esta sesión de la app,
+    // retoma filtros/orden/página donde se quedó (se perdían al entrar a un
+    // ticket y volver, porque el componente se destruye y se vuelve a montar).
+    // Tolerante a claves ausentes: un campo nuevo que se agregue después no
+    // rompe la restauración de una sesión ya en curso.
+    restoreListPrefs() {
+      const prefs = this.listPrefs;
+      if (!prefs) return;
+
+      this.search = prefs.search || '';
+      this.dateRange = prefs.dateRange || [];
+      this.statusFilter = prefs.statusFilter ?? 'pending';
+      this.priorityFilter = prefs.priorityFilter || '';
+      this.originFilter = prefs.originFilter || '';
+      this.activeFilter = prefs.activeFilter || 'mine';
+      this.activeType = prefs.activeType || '';
+      this.sortBy = prefs.sortBy || 'created_at';
+      this.sortOrder = prefs.sortOrder || 'desc';
+      this.currentPage = prefs.currentPage || 1;
+      this.perPage = prefs.perPage || 25;
+      this.activeViewId = prefs.activeViewId || '';
+    },
+    // Guarda el estado actual para la próxima vez que se monte este componente
+    // en la misma sesión (ver restoreListPrefs). Se llama en cada fetch(): así
+    // no hay que enganchar un watcher aparte por cada filtro.
+    persistListPrefs() {
+      this.$store.dispatch('caseTickets/setTicketsListPrefs', {
+        search: this.search,
+        dateRange: this.dateRange,
+        statusFilter: this.statusFilter,
+        priorityFilter: this.priorityFilter,
+        originFilter: this.originFilter,
+        activeFilter: this.activeFilter,
+        activeType: this.activeType,
+        sortBy: this.sortBy,
+        sortOrder: this.sortOrder,
+        currentPage: this.currentPage,
+        perPage: this.perPage,
+        activeViewId: this.activeViewId,
+      });
+    },
     // @tickets_cases Fase C — tras crear un ticket interno, refresca el listado.
     onInternalCreated() {
       this.showInternalModal = false;
@@ -906,6 +959,7 @@ export default {
     },
     fetch() {
       this.selected = []; // @tickets_cases P3 — la selección es por vista
+      this.persistListPrefs();
       const filters = { page: this.currentPage, per_page: this.perPage };
       if (this.search.trim()) filters.q = this.search.trim();
       if (this.dateRange[0])
@@ -1044,7 +1098,7 @@ export default {
       this.activeViewId = '';
       this.search = '';
       this.dateRange = [];
-      this.statusFilter = '';
+      this.statusFilter = 'pending';
       this.priorityFilter = '';
       this.originFilter = '';
       this.activeFilter = 'mine';
