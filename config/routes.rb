@@ -123,6 +123,7 @@ Rails.application.routes.draw do
             delete 'assistant/sessions/:id', to: 'assistant#discard_session'
             get  'assistant/sessions/:id/versions/:number', to: 'assistant#show_version'
             get  'assistant/progress/:turn_id', to: 'assistant#progress'
+            post 'assistant/suggested_tests', to: 'assistant_tools#suggested_tests'
             get  'assistant/audit',     to: 'assistant#audit'
             post 'assistant/dry_run',   to: 'assistant#dry_run'
           end

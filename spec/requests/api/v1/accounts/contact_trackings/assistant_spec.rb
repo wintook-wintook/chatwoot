@@ -322,6 +322,32 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
     end
   end
 
+  describe 'POST suggested_tests' do
+    let(:url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/suggested_tests" }
+
+    it 'no deja entrar a un agente' do
+      post url, params: { draft: '@ruta(a #aaa: x): -' }, headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'rechaza un Entrenamiento vacío' do
+      post url, params: { draft: '' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it 'devuelve los casos probados' do
+      allow(ContactTrackings::Assistant::SuggestedTests).to receive(:new)
+        .and_return(instance_double(ContactTrackings::Assistant::SuggestedTests,
+                                    call: { cases: [{ message: 'hola', pass: nil }], generated_by: :assistant }))
+
+      post url, params: { draft: '@ruta(a #aaa: x): -' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['cases'].first['message']).to eq('hola')
+    end
+  end
+
   describe 'GET progress' do
     it 'devuelve la etapa del turno de quien pregunta, y nada del de otra persona' do
       ContactTrackings::Assistant::TurnProgress.new(account, admin, 'turno12345').update(:routing)

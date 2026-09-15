@@ -192,6 +192,23 @@
     "DRY_RUN_EMPTY": "Todavía no probaste ninguna pregunta. Escribí una abajo, como la haría un cliente.",
     "DRY_RUN_RUNNING": "Probando…",
     "DRY_RUN_STALE": "El Entrenamiento cambió después de esta prueba: ya no describe el texto actual.",
-    "SEND_PICKED_EMPTY": "Elegí para enviar"
+    "SEND_PICKED_EMPTY": "Elegí para enviar",
+    "TESTS_TITLE": "Tests sugeridos",
+    "TESTS_HINT": "Mensajes de cliente escritos por el asistente para cada rama, pasados por el clasificador real del motor. Un ✗ es un mensaje que cae en otra rama.",
+    "TESTS_RUN": "Generar y probar",
+    "TESTS_RERUN": "Volver a probar",
+    "TESTS_WRITING": "Escribiendo los mensajes de prueba…",
+    "TESTS_PROGRESS": "Probando %{done} de %{total}…",
+    "TESTS_SUMMARY": "%{passed} de %{total} cayeron en su rama · %{edge} caso(s) límite para que revises vos",
+    "TESTS_STALE": "El Entrenamiento cambió después de estas pruebas: volvé a probar.",
+    "TESTS_FROM_DESCRIPTIONS": "No se pudieron escribir mensajes nuevos: se probó con las frases de cada descripción.",
+    "TESTS_COL_MESSAGE": "Mensaje",
+    "TESTS_COL_EXPECTED": "Debería ir a",
+    "TESTS_COL_CHOSEN": "Fue a",
+    "TESTS_EDGE": "caso límite",
+    "TESTS_EDGE_OPINION": "según el asistente",
+    "TESTS_NO_ROUTE": "(ninguna)",
+    "TESTS_PROBE": "Probar a fondo",
+    "TESTS_ERROR": "No se pudieron correr las pruebas. Intentá de nuevo."
   }
 }

@@ -35,16 +35,6 @@ class ContactTrackings::Assistant::RouteSelfCheck
   # Tope de ramas a probar. Más que esto no es un Entrenamiento, es un catálogo, y
   # el costo crece lineal.
   MAX_PROBES = 8
-  # De la descripción se toma la primera situación, no toda la lista: la lista
-  # entera menciona varios temas y probaría el clasificador contra un mensaje que
-  # ningún cliente escribiría.
-  MAX_PROBE_CHARS = 120
-  # ⚠ Una situación de una sola palabra no es un mensaje de cliente. La rama soporte
-  # del v6.11 empieza "usar, configurar, dar de alta…": probada con "usar" a secas,
-  # gpt-4o-mini —el modelo que se usa cuando no hay canal, que en el Asistente es
-  # siempre— no eligió ninguna rama 3 de 3 veces, y la pantalla mostraba un cruce
-  # que no existía. Con "usar, configurar" eligió soporte 3 de 3 (medido 15/09/2026).
-  MIN_PROBE_WORDS = 3
 
   Mismatch = Struct.new(:route, :probe, :chosen, keyword_init: true)
 
@@ -56,54 +46,20 @@ class ContactTrackings::Assistant::RouteSelfCheck
 
   # Devuelve solo los CRUCES: [] significa que cada rama se eligió a sí misma.
   def call
-    map = ContactTrackings::RouteMap.parse(@draft)
+    clasificador = ContactTrackings::Assistant::DraftClassifier.new(@account, draft: @draft, inbox: @inbox)
+    map = clasificador.map
     return [] if map.routes.size < 2
 
     map.routes.first(MAX_PROBES).filter_map do |route|
-      probe = probe_for(route)
-      # Una descripción marcada como pendiente todavía no es algo que probar.
-      next if probe.blank? || ContactTrackings::Assistant::PendingMarkers.pending?(probe)
+      # La primera situación, no toda la lista: la lista entera menciona varios temas
+      # y probaría contra un mensaje que ningún cliente escribiría.
+      probe = ContactTrackings::Assistant::ProbePhrases.for(route).first
+      next if probe.blank?
 
-      chosen = classify(map, probe)
+      chosen = clasificador.classify(probe)&.name
       next if chosen == route.name
 
       Mismatch.new(route: route.name, probe: probe, chosen: chosen)
     end
-  end
-
-  private
-
-  # La primera situación de la descripción. Se corta en la coma o el punto y coma
-  # porque la descripción es una lista: "no puedo entrar, me da error, no abre" son
-  # tres mensajes distintos, y el cliente escribe uno.
-  #
-  # Si la primera es muy corta se le suman las siguientes hasta MIN_PROBE_WORDS.
-  def probe_for(route)
-    frase = []
-    route.description.to_s.split(/[,;]/).map(&:strip).compact_blank.each do |situacion|
-      frase << situacion
-      break if frase.join(' ').split.size >= MIN_PROBE_WORDS
-    end
-
-    frase.join(', ').truncate(MAX_PROBE_CHARS).presence
-  end
-
-  # El clasificador REAL, el mismo que corre en producción. Si se reimplementara
-  # acá, la comprobación diría algo distinto de lo que va a pasar.
-  def classify(map, probe)
-    ContactTrackings::BranchClassifierService.new(tracking_double, message_double(probe), map).classify&.name
-  rescue StandardError => e
-    Rails.logger.warn "[Asistente/AutoPrueba] no se pudo clasificar: #{e.message}"
-    nil
-  end
-
-  # Objetos reales sin persistir, igual que en DryRunService: el borrador todavía
-  # no es un agente y no hay conversación.
-  def message_double(content)
-    Message.new(account: @account, content: content, message_type: :incoming)
-  end
-
-  def tracking_double
-    @tracking_double ||= ContactTracking.new(inbox: @inbox, complementary_prompt: @draft)
   end
 end

@@ -24,9 +24,10 @@
 // marcar haría creer que describen el texto de ahora.
 // ============================================================================
 import DryRunPanel from './DryRunPanel.vue';
+import SuggestedTestsPanel from './SuggestedTestsPanel.vue';
 
 export default {
-  components: { DryRunPanel },
+  components: { DryRunPanel, SuggestedTestsPanel },
   props: {
     show: { type: Boolean, default: false },
     draft: { type: String, default: '' },
@@ -36,8 +37,12 @@ export default {
     draftVersion: { type: Number, default: 0 },
     isRunning: { type: Boolean, default: false },
     error: { type: String, default: '' },
+    // Fase E: los tests sugeridos (ver SuggestedTestsPanel).
+    suggested: { type: Object, default: null },
+    isSuggesting: { type: Boolean, default: false },
+    suggestStage: { type: Object, default: null },
   },
-  emits: ['close', 'run'],
+  emits: ['close', 'run', 'suggest'],
   data() {
     return { question: '' };
   },
@@ -61,6 +66,11 @@ export default {
       const pregunta = this.question.trim();
       this.question = '';
       this.$emit('run', pregunta);
+    },
+    // Un test sugerido, probado a fondo en el banco de abajo.
+    probe(message) {
+      if (this.isRunning) return;
+      this.$emit('run', message);
     },
     focusInput() {
       this.$refs.question?.focus();
@@ -86,6 +96,16 @@ export default {
       <p class="mb-4 text-xs shrink-0 text-slate-500 dark:text-slate-400">
         {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_HINT') }}
       </p>
+
+      <SuggestedTestsPanel
+        :result="suggested"
+        :is-running="isSuggesting"
+        :stage="suggestStage"
+        :draft-version="draftVersion"
+        :can-run="draft.trim().length > 0"
+        @generate="$emit('suggest')"
+        @probe="probe"
+      />
 
       <div
         ref="thread"

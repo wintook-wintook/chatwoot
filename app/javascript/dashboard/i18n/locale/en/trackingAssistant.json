@@ -192,6 +192,23 @@
     "DRY_RUN_EMPTY": "You have not tested a question yet. Write one below, the way a customer would.",
     "DRY_RUN_RUNNING": "Testing…",
     "DRY_RUN_STALE": "The Training changed after this test: it no longer describes the current text.",
-    "SEND_PICKED_EMPTY": "Pick to send"
+    "SEND_PICKED_EMPTY": "Pick to send",
+    "TESTS_TITLE": "Suggested tests",
+    "TESTS_HINT": "Customer messages written by the assistant for each branch, run through the engine's real classifier. A ✗ is a message that lands on another branch.",
+    "TESTS_RUN": "Generate and test",
+    "TESTS_RERUN": "Test again",
+    "TESTS_WRITING": "Writing the test messages…",
+    "TESTS_PROGRESS": "Testing %{done} of %{total}…",
+    "TESTS_SUMMARY": "%{passed} of %{total} landed on their branch · %{edge} edge case(s) for you to review",
+    "TESTS_STALE": "The Training changed after these tests: test again.",
+    "TESTS_FROM_DESCRIPTIONS": "New messages could not be written: the phrases from each description were used.",
+    "TESTS_COL_MESSAGE": "Message",
+    "TESTS_COL_EXPECTED": "Should go to",
+    "TESTS_COL_CHOSEN": "Went to",
+    "TESTS_EDGE": "edge case",
+    "TESTS_EDGE_OPINION": "per the assistant",
+    "TESTS_NO_ROUTE": "(none)",
+    "TESTS_PROBE": "Test in depth",
+    "TESTS_ERROR": "The tests could not run. Try again."
   }
 }

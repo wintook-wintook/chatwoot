@@ -56,6 +56,15 @@ class AssistantAPI extends ApiClient {
     return axios.post(`${this.url}/interview`, body);
   }
 
+  // Fase E: mensajes de prueba pasados por el clasificador real. Tarda (una
+  // clasificación por mensaje): con turnId se puede consultar el avance.
+  suggestedTests(draft, turnId = null) {
+    return axios.post(`${this.url}/suggested_tests`, {
+      draft,
+      turn_id: turnId,
+    });
+  }
+
   // El texto de una versión del Entrenamiento: las listas llegan sin él.
   getVersion(sessionId, number) {
     return axios.get(`${this.url}/sessions/${sessionId}/versions/${number}`);

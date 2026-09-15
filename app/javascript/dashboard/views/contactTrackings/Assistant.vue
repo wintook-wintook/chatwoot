@@ -170,6 +170,10 @@ export default {
       // se marcan como de otra versión. Borrarlas perdería justo la comparación
       // que se vino a hacer.
       dryRunHistory: [],
+      // Fase E: tests sugeridos ({ cases, generated_by, version }) y su avance.
+      suggestedTests: null,
+      isSuggesting: false,
+      suggestStage: null,
       showDryRunModal: false,
       draftVersion: 0,
       isDryRunning: false,
@@ -443,6 +447,7 @@ export default {
       this.versions = data.versions || [];
       this.draftTab = 'editor';
       this.dryRunHistory = [];
+      this.suggestedTests = null;
       this.sessionMeta = {
         id: data.id,
         status: data.status,
@@ -508,6 +513,7 @@ export default {
       this.sessionMeta = null;
       this.interviewOptions = null;
       this.dryRunHistory = [];
+      this.suggestedTests = null;
       this.messages = [];
       this.draft = '';
       this.validation = null;
@@ -672,6 +678,7 @@ export default {
       this.sessionMeta = null;
       this.interviewOptions = null;
       this.dryRunHistory = [];
+      this.suggestedTests = null;
       this.activeTab = 0;
       this.validateDraft();
     },
@@ -736,7 +743,11 @@ export default {
     },
     // Fase D: mientras el turno corre, se consulta en qué etapa está. El id lo
     // genera la pantalla porque la sesión puede no existir todavía (primer turno).
-    startProgress() {
+    startProgress(
+      onStage = data => {
+        this.turnStage = data;
+      }
+    ) {
       const turnId = `t${Date.now().toString(36)}${Math.random()
         .toString(36)
         .slice(2, 10)}`;
@@ -745,7 +756,7 @@ export default {
       this.progressTimer = setInterval(async () => {
         try {
           const { data } = await AssistantAPI.getProgress(turnId);
-          if (data && data.stage) this.turnStage = data;
+          if (data && data.stage) onStage(data);
         } catch (error) {
           // Sin progreso se ve la espera de siempre: no es motivo para avisar nada.
         }
@@ -756,6 +767,29 @@ export default {
       clearInterval(this.progressTimer);
       this.progressTimer = null;
       this.turnStage = null;
+    },
+    // Fase E: la batería de tests sugeridos. Se anota contra qué versión del
+    // borrador corrió, para avisar si después se editó.
+    async runSuggestedTests() {
+      if (this.isSuggesting || !this.draft.trim()) return;
+      this.isSuggesting = true;
+      this.suggestStage = null;
+      const version = this.draftVersion;
+      const turnId = this.startProgress(data => {
+        this.suggestStage = data;
+      });
+      try {
+        const { data } = await AssistantAPI.suggestedTests(this.draft, turnId);
+        this.suggestedTests = { ...data, version };
+      } catch (error) {
+        this.dryRunError =
+          error?.response?.data?.error ||
+          this.$t('TRACKING_ASSISTANT_VIEW.TESTS_ERROR');
+      } finally {
+        this.stopProgress();
+        this.isSuggesting = false;
+        this.suggestStage = null;
+      }
     },
     // Volver a una versión anterior. Pasa a ser la base: lo que se cambie desde acá
     // es "a mano", y el próximo mensaje guarda como versión lo que había.
@@ -828,6 +862,7 @@ export default {
         this.sessionId = null;
         this.sessionMeta = null;
         this.dryRunHistory = [];
+        this.suggestedTests = null;
         // Lo que el comprobador no podía revisar sobre el borrador: directivas
         // que dependen de la configuración del AGENTE, que recién ahora existe.
         // El aviso se muestra ANTES de navegar a propósito: la pantalla a la que
@@ -1549,8 +1584,12 @@ export default {
       :draft-version="draftVersion"
       :is-running="isDryRunning"
       :error="dryRunError"
+      :suggested="suggestedTests"
+      :is-suggesting="isSuggesting"
+      :suggest-stage="suggestStage"
       @close="showDryRunModal = false"
       @run="runDryRun"
+      @suggest="runSuggestedTests"
     />
 
     <SaveModal
