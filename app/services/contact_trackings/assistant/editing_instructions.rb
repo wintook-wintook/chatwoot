@@ -22,8 +22,30 @@ class ContactTrackings::Assistant::EditingInstructions
   # "No reorganices a las seis secciones" va explícito porque el contrato las exige
   # al CREAR, y sin esta aclaración esa exigencia se lee también al editar: un prompt
   # escrito a mano, con sus propias secciones, se normalizaría en silencio.
-  def self.call(current_draft, manual: [])
-    [body(current_draft), manual_section(manual)].compact.join("\n\n")
+  # building: lo que está en pantalla es un BORRADOR de la entrevista (tiene marcas
+  # <PENDIENTE:>), no un Entrenamiento terminado. Ahí las reglas de editar no aplican:
+  # la entrevista sigue, y cada respuesta completa marcas.
+  def self.call(current_draft, manual: [], building: false)
+    principal = building ? building_section(current_draft) : body(current_draft)
+    [principal, manual_section(manual)].compact.join("\n\n")
+  end
+
+  # Fase C: el borrador que se va armando a la vista.
+  def self.building_section(current_draft)
+    <<~CONSTRUCCION.strip
+      ═══ EL BORRADOR QUE ESTÁS ARMANDO ═══
+      Abajo está el borrador tal como lo ve la persona ahora, con lo que haya cambiado a mano.
+      La entrevista SIGUE: no la des por terminada porque ya haya un borrador.
+
+      Con la respuesta de este turno, devolvelo completo reemplazando las <PENDIENTE:> que ya
+      se puedan completar. Todo lo demás va copiado igual, incluido lo que la persona escribió
+      a mano. Lo que siga sin contestar, sigue marcado.
+
+      ENTRENAMIENTO ACTUAL:
+      <<<ENTRENAMIENTO
+      #{current_draft}
+      ENTRENAMIENTO>>>
+    CONSTRUCCION
   end
 
   # Fase B: las piezas que la persona escribió a mano desde la última entrega. Se

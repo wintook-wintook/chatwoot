@@ -36,6 +36,7 @@ class AssistantAPI extends ApiClient {
       sessionId = null,
       draft = null,
       deliveredDraft = null,
+      building = null,
     } = {}
   ) {
     const body = {
@@ -47,6 +48,8 @@ class AssistantAPI extends ApiClient {
     };
     // Solo si se sabe: sin la llave, el backend no busca ediciones a mano.
     if (deliveredDraft !== null) body.delivered_draft = deliveredDraft;
+    // La entrevista sigue abierta. Sin la llave, el backend lo deduce de las marcas.
+    if (building !== null) body.building = building;
     return axios.post(`${this.url}/interview`, body);
   }
 

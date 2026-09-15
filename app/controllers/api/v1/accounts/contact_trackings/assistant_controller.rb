@@ -126,7 +126,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
     # el modelo no puede modificar nada: solo reescribir de memoria.
     result = ContactTrackings::Assistant::InterviewService
              .new(Current.account, messages: interview_messages, inbox: inbox,
-                                   drafts: { current: params[:draft], delivered: delivered_draft },
+                                   drafts: { current: params[:draft], delivered: delivered_draft,
+                                             building: building_param },
                                    one_shot: ActiveModel::Type::Boolean.new.cast(params[:one_shot])).call
 
     return render json: { error: result.error }, status: :unprocessable_entity unless result.success?
@@ -176,6 +177,9 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
       # El asistente pisó algo editado a mano: `draft` ya trae la versión de la
       # persona en esas piezas, y esto trae la del asistente para elegirla.
       manual_conflict: result.manual_conflict,
+      # true: la entrevista sigue y `draft` es un borrador; false: se entregó; nil:
+      # este turno no trajo Entrenamiento y el estado no cambia.
+      building: result.building,
       session_id: sesion&.id,
       # La identidad completa y no solo el id: con el id suelto, la pantalla
       # tendría que inventar las fechas del lado del cliente.
@@ -274,6 +278,11 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
 
   def save_params
     params.permit(:name, :objective, :ai_context, :inbox_id, :template_id, :session_id)
+  end
+
+  # nil = el cliente no sabe si la entrevista sigue abierta (se deduce de las marcas).
+  def building_param
+    params.key?(:building) ? ActiveModel::Type::Boolean.new.cast(params[:building]) : nil
   end
 
   # nil = el cliente no lo mandó (no sabe qué entregó el asistente) y no se detectan

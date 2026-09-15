@@ -99,6 +99,17 @@ RSpec.describe ContactTrackings::Assistant::RouteSelfCheck do
       expect(probar('@ruta(soporte #soporte: no puedo entrar): @buscar_articulo')).to be_empty
     end
 
+    # Una descripción que todavía no existe no es algo que probar.
+    it 'saltea la rama cuya descripción está marcada como pendiente' do
+      draft = <<~T
+        @ruta(soporte #soporte: <PENDIENTE: frases del cliente>): @buscar_articulo
+        @ruta(comercial #comercial: cuanto cuesta): @buscar_predefinidas
+      T
+      clasificador_responde('cuanto cuesta' => 'comercial')
+
+      expect(probar(draft)).to be_empty
+    end
+
     it 'no prueba un Entrenamiento sin ramas' do
       expect(probar('[ROL] Sos un asesor amable.')).to be_empty
     end

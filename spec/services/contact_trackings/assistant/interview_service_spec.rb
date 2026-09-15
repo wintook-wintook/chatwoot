@@ -71,6 +71,105 @@ RSpec.describe ContactTrackings::Assistant::InterviewService do
     end
   end
 
+  # ── fase C: el Entrenamiento se arma a la vista ─────────────────────────────
+  describe 'armando el Entrenamiento a la vista' do
+    let(:parcial) do
+      "@ruta(soporte: <PENDIENTE: frases del cliente>): <PENDIENTE: fuente>\n\n[ESTILO]\nBreve."
+    end
+
+    it 'devuelve el borrador con sus preguntas, sin correcciones' do
+      stub_openai(openai_reply(mensaje: '¿Cómo lo dice el cliente?', entrenamiento: parcial, modo: nil,
+                               completo: false,
+                               opciones: [{ pregunta: '¿Contesta o deriva?', elecciones: %w[responde deriva] }]))
+
+      resultado = entrevistar
+
+      expect(resultado.draft).to eq(parcial)
+      expect(resultado.options.first[:choices]).to eq(%w[responde deriva])
+      expect(resultado.validation[:blocking].pluck(:code)).to eq([:pending_marker])
+      # Sus "errores" son preguntas sin contestar: mandarlos al modelo es pedirle que invente.
+      expect(a_request(:post, url)).to have_been_made.once
+    end
+
+    # Medido: sin exigirlo, "completo" a veces no viene. Con marcas, es un borrador.
+    it 'lo trata como borrador si no dice "completo" pero tiene marcas' do
+      stub_openai(openai_reply(mensaje: 'Sigo', entrenamiento: parcial, modo: nil))
+
+      expect(entrevistar.draft).to eq(parcial)
+      expect(a_request(:post, url)).to have_been_made.once
+    end
+
+    it 'sigue la entrevista sobre el borrador en pantalla, en vez de editarlo' do
+      stub_openai(openai_reply(mensaje: '¿Qué fuente?', entrenamiento: parcial, completo: false))
+
+      described_class.new(account, messages: [{ 'role' => 'user', 'content' => 'no puedo entrar' }],
+                                   drafts: { current: parcial }).call
+
+      pedido = a_request(:post, url).with do |req|
+        sistema = JSON.parse(req.body)['messages'].first['content']
+        sistema.include?('EL BORRADOR QUE ESTÁS ARMANDO') && sistema.exclude?('ESTÁS EDITANDO UN ENTRENAMIENTO')
+      end
+      expect(pedido).to have_been_made
+    end
+
+    # Medido en la primera entrevista real: el modelo adivinó las etiquetas (no admiten
+    # marca), el borrador quedó sin marcas y el turno siguiente se trató como EDICIÓN.
+    it 'sigue armando aunque el borrador ya no tenga marcas, si el turno anterior dijo que seguía' do
+      sin_marcas = entrenamiento_ok
+      stub_openai(openai_reply(mensaje: '¿Etiqueta?', entrenamiento: sin_marcas, completo: false))
+
+      resultado = described_class.new(account, messages: [{ 'role' => 'user', 'content' => 'Centro de Ayuda' }],
+                                               drafts: { current: sin_marcas, building: true }).call
+
+      expect(resultado.building).to be(true)
+      expect(a_request(:post, url).with { |req| req.body.include?('EL BORRADOR QUE ESTÁS ARMANDO') }).to have_been_made
+    end
+
+    it 'deja de armar al entregar' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: entrenamiento_ok, completo: true))
+
+      expect(entrevistar.building).to be(false)
+    end
+
+    # Un Entrenamiento terminado, cargado para editar: aunque tenga una marca, manda lo
+    # que dijo el cliente.
+    it 'edita un Entrenamiento terminado si el cliente dice que no se está armando' do
+      stub_openai(openai_reply(mensaje: '¿Qué cambio?'))
+
+      described_class.new(account, messages: [{ 'role' => 'user', 'content' => 'cambialo' }],
+                                   drafts: { current: parcial, building: false }).call
+
+      expect(a_request(:post, url).with { |req| req.body.include?('ESTÁS EDITANDO UN ENTRENAMIENTO') }).to have_been_made
+    end
+
+    # Al terminar la entrevista el modo vuelve a ser obligatorio, aunque ya hubiera borrador.
+    it 'exige el modo al terminar, aunque viniera de un borrador' do
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: entrenamiento_ok, modo: nil, completo: true),
+                  openai_reply(mensaje: 'Contesta primero', entrenamiento: entrenamiento_ok, completo: true))
+
+      resultado = described_class.new(account, messages: [{ 'role' => 'user', 'content' => 'listo' }],
+                                               drafts: { current: parcial }).call
+
+      correccion = a_request(:post, url).with do |req|
+        JSON.parse(req.body)['messages'].last['content'] == I18n.t('tracking_assistant.repair.missing_mode')
+      end
+      expect(correccion).to have_been_made
+      expect(resultado.draft).to eq(entrenamiento_ok)
+    end
+
+    # Si se agotaron los turnos y quedaron datos sin dar, se entrega con las marcas a
+    # la vista; lo que no se hace es pedirle al modelo que las "corrija".
+    it 'no manda las marcas a corregir en la entrega final' do
+      con_marca = "#{entrenamiento_ok}\n\n[ESTILO]\n<PENDIENTE: tono>"
+      stub_openai(openai_reply(mensaje: 'Listo', entrenamiento: con_marca, completo: true))
+
+      resultado = entrevistar
+
+      expect(a_request(:post, url)).to have_been_made.once
+      expect(resultado.validation[:blocking].pluck(:code)).to eq([:pending_marker])
+    end
+  end
+
   # ── fase A: editar, no reescribir ───────────────────────────────────────────
   # Hasta el 15/09/2026 el modelo nunca veía el Entrenamiento que estaba en pantalla:
   # "agregá una rama" se resolvía reescribiendo de memoria.

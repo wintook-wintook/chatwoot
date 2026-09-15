@@ -39,6 +39,7 @@ import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import { sortRows, nextOrder, NUMBER, DATE, TEXT } from './assistant/tableSort';
 import { findRouteLine, lineRange } from './assistant/draftNavigation';
+import { pendingCount } from './assistant/pendingMarkers';
 import InterviewPanel from './assistant/InterviewPanel.vue';
 import SessionCard from './assistant/SessionCard.vue';
 import SortableTh from './assistant/SortableTh.vue';
@@ -129,6 +130,12 @@ export default {
       lastDelivered: '',
       // El asistente pisó algo editado a mano: { assistant_draft, items }.
       manualConflict: null,
+      // La entrevista sigue abierta y lo que hay en el editor es un borrador (fase
+      // C). Lo decide el backend en cada turno que trae Entrenamiento; la pantalla
+      // solo lo recuerda y se lo devuelve. Deducirlo de las marcas <PENDIENTE:>
+      // falló: una etiqueta adivinada no lleva marca, y la entrevista pasaba a
+      // "editar" antes de preguntarla.
+      isBuilding: true,
       // De qué Agente IA vino el borrador, si vino de uno. Sin esto, arreglar un
       // agente y guardar creaba un DUPLICADO en vez de corregir el original: el
       // modal abría en "crear nuevo" y nadie lo notaba hasta ver la lista con dos.
@@ -183,6 +190,9 @@ export default {
     hasManualEdits() {
       const plano = texto => (texto || '').replace(/\s+/g, ' ').trim();
       return plano(this.draft) !== plano(this.lastDelivered);
+    },
+    draftPendingCount() {
+      return pendingCount(this.draft);
     },
     rejectedBlockingCount() {
       return this.rejected?.validation?.blocking?.length || 0;
@@ -413,6 +423,8 @@ export default {
       this.rejected = null;
       this.manualConflict = null;
       this.lastDelivered = data.draft || '';
+      // La sesión no guarda el estado: sin borrador, o con marcas, sigue abierta.
+      this.isBuilding = !data.draft || pendingCount(data.draft) > 0;
       this.dryRunHistory = [];
       this.sessionMeta = {
         id: data.id,
@@ -486,6 +498,7 @@ export default {
       this.rejected = null;
       this.manualConflict = null;
       this.lastDelivered = '';
+      this.isBuilding = true;
       this.editingTemplate = null;
       this.activeTab = 0;
     },
@@ -594,6 +607,7 @@ export default {
       this.startFresh();
       this.draft = template.complementary_prompt || '';
       this.lastDelivered = this.draft;
+      this.isBuilding = false;
       this.proposal = {
         name: this.nextVersionName(template.name),
         objective: template.objective || '',
@@ -626,8 +640,9 @@ export default {
       this.rejected = null;
       this.manualConflict = null;
       // El agente cargado cuenta como entregado: lo editado a mano es lo que se
-      // le cambie a partir de acá.
+      // le cambie a partir de acá. Y está terminado: lo que se pida es editarlo.
       this.lastDelivered = this.draft;
+      this.isBuilding = false;
       // Traer un agente al Asistente arranca una conversación nueva: la
       // identidad y la prueba de la anterior no describen nada de esto.
       this.sessionId = null;
@@ -645,6 +660,7 @@ export default {
           sessionId: this.sessionId,
           draft: this.draft.trim() ? this.draft : null,
           deliveredDraft: this.lastDelivered,
+          building: this.isBuilding,
         });
         this.sessionId = data.session_id || this.sessionId;
         // El backend devuelve la identidad ya armada: sin eso habría que
@@ -674,6 +690,7 @@ export default {
           if (data.proposal) this.proposal = data.proposal;
         }
         this.manualConflict = data.manual_conflict || null;
+        if (typeof data.building === 'boolean') this.isBuilding = data.building;
         this.rejected = data.rejected_draft
           ? { draft: data.rejected_draft, validation: data.rejected_validation }
           : null;
@@ -693,6 +710,8 @@ export default {
       if (!this.rejected) return;
       this.draft = this.rejected.draft;
       this.lastDelivered = this.rejected.draft;
+      // Solo una ENTREGA puede ser rechazada: la entrevista ya había terminado.
+      this.isBuilding = false;
       this.validation = this.rejected.validation;
       this.rejected = null;
     },
@@ -992,6 +1011,7 @@ export default {
                     class="mr-2"
                     :validation="validation"
                     :is-checking="isChecking"
+                    :pending-count="draftPendingCount"
                   />
                 </template>
                 <ValidationReport

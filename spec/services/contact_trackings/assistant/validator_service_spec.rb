@@ -249,6 +249,42 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
     end
   end
 
+  # Fase C: el Entrenamiento se arma a la vista, con marcas mientras dura la entrevista.
+  describe 'B9 · datos por completar' do
+    it 'bloquea mientras quede alguna marca, y dice cuáles' do
+      r = validar("@ruta(soporte #soporte: no puedo entrar): -\n\n[ESTILO]\n<PENDIENTE: tono>")
+
+      hallazgo = r[:blocking].find { |f| f[:code] == :pending_marker }
+      expect(hallazgo[:message]).to include('<PENDIENTE: tono>')
+      expect(r[:valid]).to be(false)
+    end
+
+    it 'cuenta todas las marcas aunque digan lo mismo' do
+      r = validar(<<~T)
+        @ruta(uno #uno_x: <PENDIENTE: frases>): -
+        @ruta(dos #dos_x: <PENDIENTE: frases>): -
+      T
+
+      expect(r[:blocking].find { |f| f[:code] == :pending_marker }[:message]).to include('Faltan 2')
+    end
+
+    # Antes cada marca salía disfrazada de otro problema, y peor explicado.
+    it 'no disfraza las marcas de fuente desconocida, descripción repetida o tipo inexistente' do
+      r = validar(<<~T)
+        @ruta(uno #uno_x: <PENDIENTE: frases>): <PENDIENTE: fuente> -> @crear_ticket(tipo=<PENDIENTE: tipo>)
+        @ruta(dos #dos_x: <PENDIENTE: frases>): <PENDIENTE: fuente>
+      T
+
+      codigos = (r[:blocking] + r[:degrading]).pluck(:code)
+      expect(codigos).to include(:pending_marker)
+      expect(codigos).not_to include(:unknown_source, :duplicate_route_description, :case_type_not_found)
+    end
+
+    it 'reconoce la marca en inglés' do
+      expect(codigos(validar("@ruta(uno #uno_x: x): -\n<PENDING: hours>"), :blocking)).to include(:pending_marker)
+    end
+  end
+
   describe 'D8 · dos ramas que describen lo mismo' do
     # Salió de una corrida real del Asistente: escribió "quiero hablar con un asesor"
     # como descripción de gestiones_comerciales Y de pase_a_humano. Parsea perfecto,

@@ -72,11 +72,7 @@ class ContactTrackings::Assistant::InterviewService
   # —el único que no se puede deducir del inventario—.
   MAX_INTERVIEW_TURNS = 6
 
-  Result = Struct.new(:reply, :draft, :validation, :repairs, :route_mismatches, :proposal, :options,
-                      :changes, :rejected_draft, :rejected_validation, :manual_conflict, :error,
-                      keyword_init: true) do
-    def success? = error.blank?
-  end
+  Result = ContactTrackings::Assistant::InterviewResult
 
   # Lo que va y viene entre vueltas de corrección.
   Turn = Struct.new(:history, :message, :draft, :declared, :summary, :conflict, keyword_init: true)
@@ -91,6 +87,8 @@ class ContactTrackings::Assistant::InterviewService
   #              ediciones a mano—. Con él, el turno es una EDICIÓN.
   #   delivered  lo que entregó el asistente la última vez (ver ManualEdits). La
   #              diferencia con `current` es lo que la persona editó a mano.
+  #   building   la entrevista sigue abierta: lo que devolvió el turno anterior en
+  #              `building` (ver TurnOutcome#building?).
   def initialize(account, messages:, inbox: nil, one_shot: false, drafts: {})
     @account = account
     @inbox = inbox
@@ -98,6 +96,8 @@ class ContactTrackings::Assistant::InterviewService
     @one_shot = one_shot
     @current_draft = one_shot ? nil : drafts[:current].to_s.presence
     @manual = ContactTrackings::Assistant::ManualEdits.new(delivered: drafts[:delivered], current: @current_draft)
+    @outcome = ContactTrackings::Assistant::TurnOutcome.new(account: account, current_draft: @current_draft,
+                                                            manual: @manual, building: drafts[:building])
     @chat = ContactTrackings::Assistant::OpenaiChat.new(account: account, inbox: inbox)
   end
 
@@ -113,6 +113,7 @@ class ContactTrackings::Assistant::InterviewService
       return Result.new(reply: reply['mensaje'], draft: nil, repairs: 0,
                         options: ContactTrackings::Assistant::ReplyParser.options(reply))
     end
+    return partial(reply, draft) if @outcome.partial?(reply, draft)
     # Entregar sin haber preguntado no es un error de sintaxis, así que el
     # comprobador no lo caza: es el modelo decidiendo por la persona. Se rechaza
     # acá y se lo devuelve al mismo hilo, igual que un hallazgo del comprobador.
@@ -120,7 +121,7 @@ class ContactTrackings::Assistant::InterviewService
     # Al EDITAR no se exige: el comportamiento ya está escrito en el Entrenamiento que
     # había, y preguntar "¿contesta o deriva?" para agregar una regla de estilo sería
     # hacer perder un turno.
-    return ask_missing_mode(reply, draft) if !editing? && MODES.exclude?(reply['modo'])
+    return ask_missing_mode(reply, draft) if @outcome.building? && MODES.exclude?(reply['modo'])
 
     finish(reply, draft, ContactTrackings::Assistant::ReplyParser.proposal(reply))
   end
@@ -129,7 +130,17 @@ class ContactTrackings::Assistant::InterviewService
 
   attr_reader :account, :inbox, :messages, :one_shot, :current_draft
 
-  def editing? = current_draft.present?
+  delegate :editing?, :building?, :validate, to: :@outcome
+
+  # ── fase C: el borrador de cada turno (ver TurnOutcome) ─────────────────────
+  def partial(reply, draft)
+    @outcome.partial(new_turn(reply, draft), ContactTrackings::Assistant::ReplyParser.options(reply))
+  end
+
+  def new_turn(reply, draft, history: nil)
+    Turn.new(history: history, message: reply['mensaje'], draft: draft, declared: Array(reply['toca']),
+             summary: ContactTrackings::Assistant::ReplyParser.changes(reply))
+  end
 
   # El modelo redactó sin preguntar. Se descarta el borrador y se le devuelve al
   # mismo hilo la pregunta que le faltó: es más barato que entregar un agente que
@@ -150,33 +161,13 @@ class ContactTrackings::Assistant::InterviewService
   end
 
   def finish(reply, draft, proposal)
-    turn = Turn.new(history: conversation, message: reply['mensaje'], draft: draft,
-                    declared: Array(reply['toca']),
-                    summary: ContactTrackings::Assistant::ReplyParser.changes(reply))
+    turn = new_turn(reply, draft, history: conversation)
 
     repair_edit(turn)
     validation, repairs = repair_grammar(turn)
     validation, cruces = repair_routing(turn, validation)
-    validation = with_route_findings(validation, cruces)
-    turn.conflict = restore_manual(turn, cruces)
-    validation = with_route_findings(validate(turn.draft), cruces) if turn.conflict
 
-    result(turn, validation, repairs, cruces, proposal)
-  end
-
-  # Si el asistente pisó sin avisar algo que la persona editó a mano, se le devuelve
-  # su versión de esa pieza (ver ManualEdits). Los cruces de ruteo de ramas que ya no
-  # están como el asistente las dejó dejan de valer.
-  def restore_manual(turn, cruces)
-    return nil unless editing?
-
-    resuelto = @manual.resolve(turn.draft, turn.declared)
-    return nil if resuelto.nil?
-
-    turn.draft = resuelto[:draft]
-    vigentes = ContactTrackings::RouteMap.parse(turn.draft).names
-    cruces.select! { |c| vigentes.include?(c.route) }
-    resuelto[:conflict]
+    @outcome.delivery(turn, validation, repairs, cruces, proposal)
   end
 
   # ── la vuelta de corrección, una sola forma para los tres bucles ────────────
@@ -205,9 +196,10 @@ class ContactTrackings::Assistant::InterviewService
   # de más en [ETIQUETAS] se muestra en los cambios; una sección borrada que nadie
   # pidió borrar se le devuelve.
   def repair_edit(turn)
-    return unless editing?
+    # Sobre un borrador, reescribir ramas marcadas es justamente completarlas.
+    return if building?
 
-    peligrosos = diff_for(turn).undeclared(turn.declared).select(&:destructive?)
+    peligrosos = @outcome.diff(turn).undeclared(turn.declared).select(&:destructive?)
     return if peligrosos.empty? || !within_budget?
 
     resend(turn, RepairPrompts.edit(peligrosos))
@@ -218,9 +210,9 @@ class ContactTrackings::Assistant::InterviewService
     repairs = 0
     validation = validate(turn.draft)
 
-    while validation[:blocking].any? && repairs < MAX_REPAIRS && within_budget?
+    while repairable(validation).any? && repairs < MAX_REPAIRS && within_budget?
       repairs += 1
-      break unless resend(turn, RepairPrompts.grammar(validation[:blocking]))
+      break unless resend(turn, RepairPrompts.grammar(repairable(validation)))
 
       validation = validate(turn.draft)
     end
@@ -239,8 +231,14 @@ class ContactTrackings::Assistant::InterviewService
   # Al editar, solo se corrigen los cruces de las ramas que se TOCARON. Un cruce que el
   # Entrenamiento ya traía se muestra, pero no justifica reescribir una rama que la
   # persona no pidió cambiar.
+  # Las marcas pendientes NO vuelven al modelo: son datos que tiene la persona, y
+  # pedirle que las "corrija" es pedirle que los invente.
+  def repairable(validation)
+    validation[:blocking].reject { |finding| finding[:code] == :pending_marker }
+  end
+
   def repair_routing(turn, validation)
-    return [validation, []] if validation[:blocking].any?
+    return [validation, []] if repairable(validation).any?
 
     cruces = route_mismatches(turn.draft)
     corregibles = correctable(turn, cruces)
@@ -262,9 +260,9 @@ class ContactTrackings::Assistant::InterviewService
   end
 
   def correctable(turn, cruces)
-    return cruces unless editing?
+    return cruces if building?
 
-    tocadas = diff_for(turn).changes.select(&:route).map(&:key)
+    tocadas = @outcome.diff(turn).changes.select(&:route).map(&:key)
     cruces.select { |c| tocadas.include?("@ruta(#{c.route})") }
   end
 
@@ -275,53 +273,6 @@ class ContactTrackings::Assistant::InterviewService
     # se entrega lo que ya pasó el comprobador.
     Rails.logger.warn "[Asistente] no se pudo probar el ruteo: #{e.message}"
     []
-  end
-
-  # Los cruces que quedaron se muestran como un hallazgo más: quien mira la pantalla
-  # no tiene por qué saber que hubo dos comprobaciones distintas, y un aviso que vive
-  # solo en el log no existe.
-  #
-  # Van como DEGRADANTES —el Entrenamiento se guarda—: el motor igual va a elegir
-  # alguna rama, solo que no la que esa descripción prometía.
-  def with_route_findings(validation, cruces)
-    return validation if cruces.empty?
-
-    validation.merge(degrading: validation[:degrading] + cruces.map { |c| RepairPrompts.route_finding(c) })
-  end
-
-  # ── el resultado ────────────────────────────────────────────────────────────
-  # Una modificación que deja sin ejecutar un Entrenamiento que ejecutaba NO lo
-  # reemplaza: se devuelve el que había, y lo propuesto aparte para que la persona
-  # decida. Al crear no hay nada que conservar, así que se entrega igual, con sus
-  # errores a la vista.
-  def result(turn, validation, repairs, cruces, proposal)
-    base = { reply: turn.message, repairs: repairs, route_mismatches: cruces, proposal: proposal,
-             changes: editing? ? changes_payload(turn) : nil, manual_conflict: turn.conflict }
-
-    if editing? && validation[:blocking].any? && validate(current_draft)[:blocking].empty?
-      return Result.new(**base, draft: current_draft, validation: validate(current_draft), manual_conflict: nil,
-                                rejected_draft: turn.draft, rejected_validation: validation)
-    end
-
-    Result.new(**base, draft: turn.draft, validation: validation)
-  end
-
-  # Lo que se le muestra a la persona: el resumen que escribió el modelo y, al lado,
-  # lo que cambió DE VERDAD — marcando lo que tocó sin decirlo.
-  def changes_payload(turn)
-    diff = diff_for(turn)
-    sin_declarar = diff.undeclared(turn.declared).map(&:key)
-
-    { summary: turn.summary,
-      touched: diff.changes.map { |c| { key: c.key, kind: c.kind, declared: sin_declarar.exclude?(c.key) } } }
-  end
-
-  def diff_for(turn)
-    ContactTrackings::Assistant::DraftDiff.new(current_draft, turn.draft)
-  end
-
-  def validate(draft)
-    ContactTrackings::Assistant::ValidatorService.new(draft, account: account).call
   end
 
   def ask(history)
@@ -341,7 +292,10 @@ class ContactTrackings::Assistant::InterviewService
       ContactTrackings::Assistant::Contract.call,
       inventory_section,
       ContactTrackings::Assistant::Instructions.call(one_shot: one_shot, max_turns: MAX_INTERVIEW_TURNS),
-      (ContactTrackings::Assistant::EditingInstructions.call(current_draft, manual: @manual.labels) if editing?)
+      (if editing?
+         ContactTrackings::Assistant::EditingInstructions.call(current_draft, manual: @manual.labels,
+                                                                              building: building?)
+       end)
     ].compact.join("\n\n")
   end
 

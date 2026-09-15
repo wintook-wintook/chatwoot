@@ -80,6 +80,9 @@ en:
         I tested branch "%{route}" with its own description ("%{probe}") and the engine chose
         "%{chosen}". That description overlaps another branch's: as written, this branch will
         almost never be picked. Use situations that only apply to it.
+      pending_marker: >-
+        %{count} item(s) still to fill in: %{items}. It cannot be saved while any marker like this
+        remains: the agent would read it verbatim and say it to the customer.
       duplicate_route_description: >-
         These branches have the SAME description: %{routes}. The description is the only thing the
         classifier uses to decide, so it cannot tell them apart: one of the two will never be

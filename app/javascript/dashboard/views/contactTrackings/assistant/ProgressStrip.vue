@@ -23,6 +23,8 @@
 // resultado de hace tres ediciones no dice nada del texto que hay ahora, y
 // dejarlo en verde sería peor que no mostrarlo.
 // ============================================================================
+import { pendingCount, realBlocking } from './pendingMarkers';
+
 export default {
   props: {
     messages: { type: Array, default: () => [] },
@@ -44,8 +46,13 @@ export default {
     hasDraft() {
       return this.draft.trim().length > 0;
     },
+    // Fase C: las marcas pendientes no frenan "Comprobado" en rojo; dejan el
+    // borrador "a medio armar". Ver ValidationBadge.
     blockingCount() {
-      return this.validation?.blocking?.length || 0;
+      return realBlocking(this.validation).length;
+    },
+    pending() {
+      return pendingCount(this.draft);
     },
     routeCount() {
       return this.validation?.routes?.length || 0;
@@ -75,14 +82,21 @@ export default {
         {
           key: 'draft',
           label: this.$t('TRACKING_ASSISTANT_VIEW.STEP_DRAFT'),
-          done: this.hasDraft,
-          detail: null,
+          done: this.hasDraft && this.pending === 0,
+          detail: this.pending
+            ? this.$t('TRACKING_ASSISTANT_VIEW.STEP_DRAFT_PENDING', {
+                count: this.pending,
+              })
+            : null,
         },
         {
           key: 'checked',
           label: this.$t('TRACKING_ASSISTANT_VIEW.STEP_CHECKED'),
           // Comprobado y limpio. Con bloqueantes NO está hecho: está frenado.
-          done: Boolean(this.validation) && this.blockingCount === 0,
+          done:
+            Boolean(this.validation) &&
+            this.blockingCount === 0 &&
+            this.pending === 0,
           alert: this.blockingCount > 0,
           detail: this.checkedDetail,
         },

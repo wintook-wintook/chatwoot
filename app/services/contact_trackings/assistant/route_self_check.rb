@@ -61,7 +61,8 @@ class ContactTrackings::Assistant::RouteSelfCheck
 
     map.routes.first(MAX_PROBES).filter_map do |route|
       probe = probe_for(route)
-      next if probe.blank?
+      # Una descripción marcada como pendiente todavía no es algo que probar.
+      next if probe.blank? || ContactTrackings::Assistant::PendingMarkers.pending?(probe)
 
       chosen = classify(map, probe)
       next if chosen == route.name

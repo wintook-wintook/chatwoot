@@ -50,6 +50,7 @@ class ContactTrackings::Assistant::ValidatorService
   # porque su diagnóstico suprime el genérico "0 ramas" (decirle a alguien que no
   # escribió ninguna @ruta cuando la escribió mal es lo que hace que descarte el aviso).
   CHECKS = %i[
+    check_pending_markers
     check_unparsed_route_lines check_has_routes
     check_route_sources check_action_in_source check_ticket_types check_default_route
     check_descriptions check_duplicate_descriptions check_tags_exist check_corpus
@@ -123,6 +124,20 @@ class ContactTrackings::Assistant::ValidatorService
   end
 
   # ── B1 · ninguna rama ───────────────────────────────────────────────────────
+  # ── B9 · datos por completar (ver PendingMarkers) ───────────────────────────
+  # Bloqueante, y un solo hallazgo para todas: la lista es lo que hay que completar.
+  # Las demás reglas saltean lo marcado, para no decir lo mismo con peores palabras.
+  def check_pending_markers
+    marcas = ContactTrackings::Assistant::PendingMarkers.scan(text)
+    return if marcas.empty?
+
+    add(:blocking, :pending_marker,
+        t('findings.pending_marker', count: marcas.size, items: marcas.uniq.first(5).join(' · ')),
+        wrote: marcas.first)
+  end
+
+  def pending?(value) = ContactTrackings::Assistant::PendingMarkers.pending?(value)
+
   def check_has_routes
     return if map.present?
     # Si ya se explicó línea por línea por qué no parsean, no se repite el genérico.
@@ -135,6 +150,7 @@ class ContactTrackings::Assistant::ValidatorService
   def check_route_sources
     map.routes.each do |route|
       next if route.directive.blank? # "-" es válido: la rama no consulta nada
+      next if pending?(route.directive) # falta elegirla: lo dice check_pending_markers
 
       detected = KnowledgeBase::Directives.detect(route.directive)
       if detected.nil?
@@ -169,7 +185,7 @@ class ContactTrackings::Assistant::ValidatorService
   # marcaba: un escalamiento vacío es perfectamente legal.
   def check_action_in_source
     map.routes.each do |route|
-      next if route.directive.blank?
+      next if route.directive.blank? || pending?(route.directive)
 
       match = route.directive.match(ACTION_RE)
       next if match.nil?
@@ -186,7 +202,7 @@ class ContactTrackings::Assistant::ValidatorService
 
     text.scan(/@crear_ticket\(([^)]*)\)/i).flatten.each do |args|
       tipo = args[/tipo\s*=\s*([^,)]+)/i, 1]&.strip
-      next if tipo.blank? || tipos.any? { |t| t.casecmp?(tipo) }
+      next if tipo.blank? || pending?(tipo) || tipos.any? { |t| t.casecmp?(tipo) }
 
       add(:blocking, :case_type_not_found,
           t('findings.case_type_not_found', type: tipo, available: listado(tipos, 'findings.case_type_none_created')),
@@ -234,7 +250,9 @@ class ContactTrackings::Assistant::ValidatorService
   # Por eso va acá y no en la comprobación de ruteo, que cuesta una llamada por
   # rama.
   def check_duplicate_descriptions
-    con_descripcion = map.routes.select { |r| r.description.present? }
+    # Varias "<PENDIENTE: frases>" iguales no son descripciones repetidas: son
+    # descripciones que todavía no existen.
+    con_descripcion = map.routes.select { |r| r.description.present? && !pending?(r.description) }
 
     con_descripcion.group_by { |r| normalizar(r.description) }
                    .each_value do |grupo|

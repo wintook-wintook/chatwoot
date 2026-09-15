@@ -17,18 +17,31 @@
 // "0 ramas" va en rojo aunque no haya ningún hallazgo bloqueante: un
 // Entrenamiento que parsea a cero ramas es sintácticamente impecable y no
 // ejecuta nada. Es el estado que hay que gritar.
+//
+// Fase C: un borrador con marcas <PENDIENTE:> va en ámbar y dice "en
+// construcción". Sus marcas bloquean el guardado, pero no son un error: son
+// preguntas que la entrevista todavía no cerró. En rojo, un borrador sano a
+// medio armar se leía como roto en cada turno.
 // ============================================================================
+import { PENDING_CODE, realBlocking } from './pendingMarkers';
+
 export default {
   props: {
     validation: { type: Object, default: null },
     isChecking: { type: Boolean, default: false },
+    pendingCount: { type: Number, default: 0 },
   },
   computed: {
     routes() {
       return this.validation?.routes || [];
     },
     blocking() {
-      return this.validation?.blocking || [];
+      return realBlocking(this.validation);
+    },
+    isBuilding() {
+      return (this.validation?.blocking || []).some(
+        finding => finding.code === PENDING_CODE
+      );
     },
     hasNoRoutes() {
       return Boolean(this.validation) && this.routes.length === 0;
@@ -43,11 +56,22 @@ export default {
       const routes = this.$t('TRACKING_ASSISTANT_VIEW.REPORT_ROUTES', {
         count: this.routes.length,
       });
-      if (!this.blocking.length) return routes;
-
-      return `${routes} · ${this.$t('TRACKING_ASSISTANT_VIEW.REPORT_BLOCKING', {
-        count: this.blocking.length,
-      })}`;
+      const partes = [routes];
+      if (this.isBuilding) {
+        partes.push(
+          this.$t('TRACKING_ASSISTANT_VIEW.REPORT_BUILDING', {
+            count: this.pendingCount,
+          })
+        );
+      }
+      if (this.blocking.length) {
+        partes.push(
+          this.$t('TRACKING_ASSISTANT_VIEW.REPORT_BLOCKING', {
+            count: this.blocking.length,
+          })
+        );
+      }
+      return partes.join(' · ');
     },
   },
 };
@@ -66,6 +90,8 @@ export default {
     :class="
       isBad
         ? 'text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-300'
+        : isBuilding
+        ? 'text-amber-800 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-200'
         : 'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300'
     "
   >

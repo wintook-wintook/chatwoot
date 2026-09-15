@@ -238,6 +238,17 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
         expect(response.parsed_body['manual_conflict']['assistant_draft']).to eq(del_asistente)
       end
 
+      # Fase C: el estado de la entrevista viaja con el turno y vuelve en la respuesta.
+      it 'devuelve si la entrevista sigue armando y respeta lo que manda el cliente' do
+        stub_openai(mensaje: '¿Fuente?', entrenamiento: actual, completo: false)
+
+        entrevistar([{ role: 'user', content: 'sigo' }], draft: actual, building: true)
+
+        expect(a_request(:post, openai_url).with { |req| req.body.include?('EL BORRADOR QUE ESTÁS ARMANDO') })
+          .to have_been_made
+        expect(response.parsed_body['building']).to be(true)
+      end
+
       it 'no busca ediciones a mano si el cliente no manda qué entregó el asistente' do
         stub_openai(mensaje: 'Listo', entrenamiento: actual, toca: [])
 

@@ -79,6 +79,9 @@ es:
         Probé la rama "%{route}" con su propia descripción ("%{probe}") y el motor eligió
         "%{chosen}". Esa descripción se pisa con la de otra rama: como está, esta rama casi
         nunca se va a elegir. Escribí situaciones que solo apliquen a ella.
+      pending_marker: >-
+        Faltan %{count} dato(s) por completar: %{items}. Mientras quede alguna marca así no se puede
+        guardar: el agente la leería tal cual y se la diría al cliente.
       duplicate_route_description: >-
         Estas ramas tienen la MISMA descripción: %{routes}. La descripción es lo único que el
         clasificador usa para decidir, así que no las puede distinguir: una de las dos no se va a

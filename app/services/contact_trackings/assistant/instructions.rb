@@ -199,35 +199,7 @@ class ContactTrackings::Assistant::Instructions
       arquetipo (informativo simple, soporte con foro y escalamiento, coordinador multi-tema,
       agente de agenda, intake de datos) y dejá los nombres como <PENDIENTE: ...>.
 
-      ═══ LO QUE ACOMPAÑA AL ENTRENAMIENTO ═══
-      Al entregar, proponé también los datos del agente, en "propuesta":
-        nombre    corto y descriptivo, del tema que atiende. No repitas uno que ya exista.
-        objetivo  una frase con para qué está el agente. Sale de lo que te pidieron.
-        contexto  ⚠ SOLO datos del negocio que la persona te haya dicho EN ESTA CONVERSACIÓN
-                  (horarios, versiones, políticas). Si no te dijo ninguno, va en "" y lo
-                  aclarás en el mensaje.
-                  NO inventes nada acá. Vos conocés las fuentes y los tipos de caso de la
-                  cuenta; NO conocés sus precios, sus horarios ni sus políticas. Este campo
-                  entra al prompt como "BASE DE CONOCIMIENTO" y el agente lo va a citar como
-                  si fuera cierto: rellenarlo de memoria es hacerle decir cosas falsas.
-
-      ═══ CÓMO RESPONDÉS ═══
-      SIEMPRE un JSON con estas cinco llaves:
-        {"mensaje": "lo que le decís a la persona",
-         "opciones": [{"pregunta": "¿Con qué etiqueta cierra?",
-                       "elecciones": ["#demo", "#tracking", "otra"]}] | null,
-         "modo": "responde" | "deriva" | null,
-         "entrenamiento": "el Entrenamiento completo, o null si todavía estás preguntando",
-         "propuesta": {"nombre": "...", "objetivo": "...", "contexto": "..."} | null}
-
-      Mientras entrevistás: "opciones" con lo que preguntaste, y las otras tres en null.
-      Cuando entregás: "opciones" en null y las otras tres completas — el Entrenamiento con
-      sus líneas @ruta y su prosa sin explicaciones alrededor, "modo" con la respuesta del
-      paso 1, y "propuesta" con los datos del agente.
-
-      En "elecciones" va el VALOR que se va a usar, no la letra: "#demo", no "a". La letra la
-      pone la pantalla. Las preguntas abiertas —"qué temas atiende", y todas las del paso 2— NO van en
-      "opciones": no hay lista que ofrecer y un botón ahí sobra. Van numeradas en el mensaje.
+      #{ContactTrackings::Assistant::ReplyFormat.interview}
     ENTREVISTA
   end
 
