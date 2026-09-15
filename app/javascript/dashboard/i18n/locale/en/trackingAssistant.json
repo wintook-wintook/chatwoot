@@ -257,6 +257,16 @@
     "INBOX_LABEL": "Agent inbox",
     "INBOX_NONE": "No inbox (default model)",
     "INBOX_MODELS": "classifies with %{router} · answers with %{conversational}",
-    "INBOX_HINT": "Everything is tested with this inbox: routing, suggested tests and the test bench. If it is not the inbox the agent will work in, results may not match production."
+    "INBOX_HINT": "Everything is tested with this inbox: routing, suggested tests and the test bench. If it is not the inbox the agent will work in, results may not match production.",
+    "DICTATE_HINT": "Dictate: record what you want to say and it is written in the box so you can review it before sending",
+    "DICTATE_RECORDING": "Recording %{time}",
+    "DICTATE_STOP": "Done, turn into text",
+    "DICTATE_CANCEL": "Cancel",
+    "DICTATE_TRANSCRIBING": "Turning into text…",
+    "DICTATE_EMPTY": "Nothing could be understood in the recording. Try again closer to the microphone.",
+    "DICTATE_ERROR": "The audio could not be turned into text. Try again.",
+    "DICTATE_ERROR_NO_API_KEY": "Dictation needs the account's OpenAI integration.",
+    "DICTATE_ERROR_TOO_LARGE": "The recording is too long. Dictate it in parts.",
+    "DICTATE_ERROR_NO_AUDIO": "No audio arrived. Check that the browser has microphone permission."
   }
 }

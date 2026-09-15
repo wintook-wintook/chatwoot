@@ -126,6 +126,7 @@ Rails.application.routes.draw do
             post 'assistant/suggested_tests', to: 'assistant_tools#suggested_tests'
             post 'assistant/optimize', to: 'assistant_tools#optimize'
             post 'assistant/explain', to: 'assistant_tools#explain'
+            post 'assistant/transcribe', to: 'assistant_tools#transcribe'
             get  'assistant/audit',     to: 'assistant#audit'
             post 'assistant/dry_run',   to: 'assistant#dry_run'
           end

@@ -385,6 +385,28 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
     end
   end
 
+  describe 'POST transcribe' do
+    it 'devuelve el texto de lo dictado' do
+      create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled',
+                                 settings: { 'api_key' => 'sk-test' })
+      stub_request(:post, ContactTrackings::Assistant::Transcriber::API_URL)
+        .to_return(status: 200, body: { text: 'un bot de citas' }.to_json, headers: { 'Content-Type' => 'application/json' })
+      audio = Rack::Test::UploadedFile.new(StringIO.new('OggS'), 'audio/ogg', original_filename: 'dictado.ogg')
+
+      post "/api/v1/accounts/#{account.id}/contact_trackings/assistant/transcribe",
+           params: { audio: audio }, headers: admin.create_new_auth_token
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body['text']).to eq('un bot de citas')
+    end
+
+    it 'no pide un Entrenamiento para dictar' do
+      post "/api/v1/accounts/#{account.id}/contact_trackings/assistant/transcribe", headers: admin.create_new_auth_token
+
+      expect(response.parsed_body['error']).to eq('no_audio')
+    end
+  end
+
   describe 'GET progress' do
     it 'devuelve la etapa del turno de quien pregunta, y nada del de otra persona' do
       ContactTrackings::Assistant::TurnProgress.new(account, admin, 'turno12345').update(:routing)
@@ -473,7 +495,8 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       [:get,    'progress/turno12345'],
       [:post,   'suggested_tests'],
       [:post,   'optimize'],
-      [:post,   'explain']
+      [:post,   'explain'],
+      [:post,   'transcribe']
     ].each do |verbo, camino|
       it "#{verbo.to_s.upcase} #{camino}" do
         process(verbo, "#{base}/#{camino}", headers: agent.create_new_auth_token, as: :json)

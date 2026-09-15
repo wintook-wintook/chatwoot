@@ -50,7 +50,9 @@ export default {
             </p>
             <pre
               class="!m-0 p-2 overflow-x-auto font-mono whitespace-pre-wrap rounded bg-white dark:bg-slate-800"
-              >{{ item.mine || $t('TRACKING_ASSISTANT_VIEW.MANUAL_MINE_REMOVED') }}</pre
+              >{{
+                item.mine || $t('TRACKING_ASSISTANT_VIEW.MANUAL_MINE_REMOVED')
+              }}</pre
             >
           </div>
           <div>
@@ -59,7 +61,10 @@ export default {
             </p>
             <pre
               class="!m-0 p-2 overflow-x-auto font-mono whitespace-pre-wrap rounded bg-white dark:bg-slate-800"
-              >{{ item.theirs || $t('TRACKING_ASSISTANT_VIEW.MANUAL_THEIRS_REMOVED') }}</pre
+              >{{
+                item.theirs ||
+                $t('TRACKING_ASSISTANT_VIEW.MANUAL_THEIRS_REMOVED')
+              }}</pre
             >
           </div>
         </div>

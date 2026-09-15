@@ -1246,7 +1246,7 @@ export default {
                   v-if="manualConflict"
                   :conflict="manualConflict"
                   @keep="manualConflict = null"
-                  @use-assistant="useAssistantVersion"
+                  @useAssistant="useAssistantVersion"
                 />
                 <!-- Lo propuesto que no se aplicó. Arriba del texto y no en un
                      modal: hay que poder leer el Entrenamiento conservado mientras

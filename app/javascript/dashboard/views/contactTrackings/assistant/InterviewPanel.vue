@@ -5,11 +5,18 @@
 // turno: el backend no guarda sesión, así que el cliente es el dueño del hilo.
 // ============================================================================
 import Spinner from 'shared/components/Spinner.vue';
+import WootAudioRecorder from 'dashboard/components/widgets/WootWriter/AudioRecorder.vue';
+import { useAlert } from 'dashboard/composables';
+import AssistantAPI from 'dashboard/api/assistant';
+import { AUDIO_FORMATS } from 'shared/constants/messages';
 import ChangeList from './ChangeList.vue';
 import { hasChanges } from './changeList';
 
+// Errores de la transcripción que merecen un mensaje propio: el resto es "no se pudo".
+const DICTATION_ERRORS = ['no_api_key', 'too_large', 'no_audio'];
+
 export default {
-  components: { Spinner, ChangeList },
+  components: { Spinner, ChangeList, WootAudioRecorder },
   props: {
     messages: { type: Array, default: () => [] },
     isThinking: { type: Boolean, default: false },
@@ -29,7 +36,17 @@ export default {
   emits: ['send'],
   data() {
     // Lo elegido en cada pregunta, por índice: { 0: '#demo', 2: 'responde' }.
-    return { input: '', picked: {} };
+    //
+    // dictation: '' | 'recording' | 'transcribing'. El grabador es el nativo del
+    // cuadro de respuesta de Chatwoot (graba al montarse); el texto lo pasa el
+    // backend con la integración de OpenAI de la cuenta.
+    return {
+      input: '',
+      picked: {},
+      dictation: '',
+      dictationTime: '00:00',
+      audioFormat: AUDIO_FORMATS.OGG,
+    };
   },
   computed: {
     // Qué está haciendo el asistente, en palabras. Sin etapa todavía, la espera
@@ -136,6 +153,50 @@ export default {
       const respuesta = this.composeAnswer();
       this.picked = {};
       this.$emit('send', respuesta);
+    },
+    // ── dictado ──
+    startDictation() {
+      if (this.isThinking || this.dictation) return;
+      this.dictationTime = '00:00';
+      this.dictation = 'recording';
+    },
+    stopDictation() {
+      if (this.dictation !== 'recording') return;
+      this.$refs.recorder?.stopAudioRecording();
+    },
+    cancelDictation() {
+      this.dictation = '';
+    },
+    onRecorderState(state) {
+      // Sin permiso de micrófono el grabador ya avisó: solo se cierra.
+      if (state === 'notallowederror') this.dictation = '';
+    },
+    // El texto se SUMA a lo que ya estaba escrito y no se envía: se revisa antes.
+    async onRecorded({ file }) {
+      this.dictation = 'transcribing';
+      try {
+        const { data } = await AssistantAPI.transcribe(file);
+        const texto = (data.text || '').trim();
+        if (!texto) {
+          useAlert(this.$t('TRACKING_ASSISTANT_VIEW.DICTATE_EMPTY'));
+          return;
+        }
+        this.input = this.input.trim()
+          ? `${this.input.trim()} ${texto}`
+          : texto;
+        this.$nextTick(() => this.$refs.composer?.focus());
+      } catch (error) {
+        const code = error?.response?.data?.error;
+        useAlert(
+          this.$t(
+            DICTATION_ERRORS.includes(code)
+              ? `TRACKING_ASSISTANT_VIEW.DICTATE_ERROR_${code.toUpperCase()}`
+              : 'TRACKING_ASSISTANT_VIEW.DICTATE_ERROR'
+          )
+        );
+      } finally {
+        this.dictation = '';
+      }
     },
     send() {
       const content = this.input.trim();
@@ -263,6 +324,47 @@ export default {
          items-stretch le da al botón el ALTO del textarea: alineado solo a la
          base quedaba un botón chico flotando junto a una caja de dos renglones.
          resize-none impide que arrastrar el textarea le coma alto al hilo. -->
+    <!-- Dictado: mientras graba, la onda del grabador nativo ocupa el lugar del
+         texto; al detener, lo dictado vuelve al cuadro para revisarlo. -->
+    <div
+      v-if="dictation"
+      class="flex items-center gap-2 pt-3 shrink-0 text-xs text-slate-600 dark:text-slate-300"
+    >
+      <WootAudioRecorder
+        v-if="dictation === 'recording'"
+        ref="recorder"
+        class="flex-1 min-w-0"
+        :audio-record-format="audioFormat"
+        @stateRecorderProgressChanged="dictationTime = $event"
+        @stateRecorderChanged="onRecorderState"
+        @finishRecord="onRecorded"
+      />
+      <span v-if="dictation === 'recording'" class="shrink-0 tabular-nums">
+        {{
+          $t('TRACKING_ASSISTANT_VIEW.DICTATE_RECORDING', {
+            time: dictationTime,
+          })
+        }}
+      </span>
+      <span v-else class="flex items-center gap-2">
+        <Spinner size="" />
+        {{ $t('TRACKING_ASSISTANT_VIEW.DICTATE_TRANSCRIBING') }}
+      </span>
+      <template v-if="dictation === 'recording'">
+        <woot-button size="small" @click="stopDictation">
+          {{ $t('TRACKING_ASSISTANT_VIEW.DICTATE_STOP') }}
+        </woot-button>
+        <woot-button
+          size="small"
+          variant="clear"
+          color-scheme="secondary"
+          @click="cancelDictation"
+        >
+          {{ $t('TRACKING_ASSISTANT_VIEW.DICTATE_CANCEL') }}
+        </woot-button>
+      </template>
+    </div>
+
     <div class="flex items-stretch gap-2 pt-3 shrink-0">
       <textarea
         ref="composer"
@@ -270,8 +372,17 @@ export default {
         rows="2"
         class="flex-1 min-w-0 text-sm resize-none !mb-0"
         :placeholder="$t('TRACKING_ASSISTANT_VIEW.INPUT_PLACEHOLDER')"
-        :disabled="isThinking"
+        :disabled="isThinking || dictation === 'transcribing'"
         @keydown.enter.exact.prevent="send"
+      />
+      <woot-button
+        class="shrink-0"
+        variant="smooth"
+        color-scheme="secondary"
+        icon="microphone"
+        :title="$t('TRACKING_ASSISTANT_VIEW.DICTATE_HINT')"
+        :is-disabled="isThinking || Boolean(dictation)"
+        @click="startDictation"
       />
       <woot-button
         class="shrink-0"

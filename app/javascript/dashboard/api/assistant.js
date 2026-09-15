@@ -80,6 +80,15 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // Lo que se dictó, en texto. Vuelve al cuadro de mensaje sin enviarse.
+  transcribe(file) {
+    const formData = new FormData();
+    formData.append('audio', file, file.name || 'dictado.ogg');
+    return axios.post(`${this.url}/transcribe`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
+
   // El texto de una versión del Entrenamiento: las listas llegan sin él.
   getVersion(sessionId, number) {
     return axios.get(`${this.url}/sessions/${sessionId}/versions/${number}`);

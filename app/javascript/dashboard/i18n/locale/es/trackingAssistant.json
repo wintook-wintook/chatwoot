@@ -257,6 +257,16 @@
     "INBOX_LABEL": "Canal del agente",
     "INBOX_NONE": "Sin canal (modelo por defecto)",
     "INBOX_MODELS": "clasifica con %{router} · contesta con %{conversational}",
-    "INBOX_HINT": "Con este canal se prueba todo: el ruteo, los tests sugeridos y el banco de pruebas. Si no es el canal donde va a trabajar el agente, los resultados pueden no coincidir con lo que pase en producción."
+    "INBOX_HINT": "Con este canal se prueba todo: el ruteo, los tests sugeridos y el banco de pruebas. Si no es el canal donde va a trabajar el agente, los resultados pueden no coincidir con lo que pase en producción.",
+    "DICTATE_HINT": "Dictar: grabá lo que querés decir y se escribe en el cuadro para que lo revises antes de enviar",
+    "DICTATE_RECORDING": "Grabando %{time}",
+    "DICTATE_STOP": "Listo, pasar a texto",
+    "DICTATE_CANCEL": "Cancelar",
+    "DICTATE_TRANSCRIBING": "Pasando a texto…",
+    "DICTATE_EMPTY": "No se entendió nada en la grabación. Probá de nuevo más cerca del micrófono.",
+    "DICTATE_ERROR": "No se pudo pasar el audio a texto. Intentá de nuevo.",
+    "DICTATE_ERROR_NO_API_KEY": "Para dictar hace falta la integración de OpenAI de la cuenta.",
+    "DICTATE_ERROR_TOO_LARGE": "La grabación es demasiado larga. Dictala en partes.",
+    "DICTATE_ERROR_NO_AUDIO": "No llegó audio. Revisá que el navegador tenga permiso de micrófono."
   }
 }

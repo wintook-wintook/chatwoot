@@ -16,6 +16,9 @@
 #   Qué hace un fragmento seleccionado: lo que lee el motor (hecho) y la lectura del
 #   modelo (interpretación). Ver Explainer.
 #
+# POST …/assistant/transcribe  (multipart: audio)
+#   Lo que la persona dictó, en texto, para el cuadro de mensaje. Ver Transcriber.
+#
 # Aparte de AssistantController: son herramientas que se aplican a un borrador ya
 # escrito, no parte de la conversación, y aquel controlador ya estaba en su tope de
 # largo. Mismo permiso: el Entrenamiento define cómo le contesta el bot a los clientes.
@@ -23,7 +26,7 @@
 
 class Api::V1::Accounts::ContactTrackings::AssistantToolsController < Api::V1::Accounts::BaseController
   before_action :check_authorization
-  before_action :require_draft
+  before_action :require_draft, except: :transcribe
 
   def suggested_tests
     avance = ContactTrackings::Assistant::TurnProgress.new(Current.account, Current.user, params[:turn_id])
@@ -42,6 +45,10 @@ class Api::V1::Accounts::ContactTrackings::AssistantToolsController < Api::V1::A
     result = ContactTrackings::Assistant::Explainer
              .new(Current.account, draft: params[:draft], excerpt: params[:excerpt], inbox: inbox).call
     render_result(result)
+  end
+
+  def transcribe
+    render_result(ContactTrackings::Assistant::Transcriber.new(Current.account, file: params[:audio]).call)
   end
 
   private
