@@ -259,6 +259,13 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       expect(r[:valid]).to be(false)
     end
 
+    # Sin la línea, la pantalla no puede señalar dónde falta el dato.
+    it 'dice en qué línea está la primera marca' do
+      r = validar("[ROL]\nSos un asesor.\n\n[ESTILO]\n<PENDIENTE: tono>")
+
+      expect(r[:blocking].find { |f| f[:code] == :pending_marker }[:line]).to eq(5)
+    end
+
     it 'cuenta todas las marcas aunque digan lo mismo' do
       r = validar(<<~T)
         @ruta(uno #uno_x: <PENDIENTE: frases>): -

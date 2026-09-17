@@ -138,7 +138,18 @@
         "ROUTE_NO_PHRASES": "Without customer phrases this branch will almost never be picked: it is the only thing the engine uses to decide.",
         "ROUTE_SCOPE": "What this branch handles, in the agent's words",
         "ROUTE_SCOPE_PLACEHOLDER": "answers pricing questions and quotes from the current list",
-        "ROUTE_SCOPE_HINT": "It goes as one line in the ALCANCE POR RAMA section, which is what the agent reads to know what it talks about in this topic. You can leave it empty and write it later."
+        "ROUTE_SCOPE_HINT": "It goes as one line in the ALCANCE POR RAMA section, which is what the agent reads to know what it talks about in this topic. You can leave it empty and write it later.",
+        "ROUTE_MODAL_EDIT": "Edit branch",
+        "ROUTE_MODAL_APPLY": "Save branch",
+        "ROUTE_AS_DEFAULT": "This is the default branch: messages that match no other one go here",
+        "ROUTE_DELETE_CONFIRM": "Remove the branch and its scope line",
+        "SECTION_MODAL_TITLE": "Add a section",
+        "SECTION_MODAL_EDIT": "Edit section",
+        "SECTION_MODAL_HINT": "Sections are the instructions the agent reads, in the order they are written.",
+        "SECTION_MODAL_PREAMBLE": "The leading text goes before the first section and has no label.",
+        "SECTION_MODAL_BODY": "Instructions for this section",
+        "SECTION_MODAL_SAVE": "Save section",
+        "SECTION_NAME_TAKEN": "There is already a section with that name. Two identical labels confuse the agent: it cannot tell which one applies."
       }
     },
     "CREATE": {

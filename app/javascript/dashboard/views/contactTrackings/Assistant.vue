@@ -49,8 +49,8 @@ import ValidationBadge from './assistant/ValidationBadge.vue';
 import ValidationReport from './assistant/ValidationReport.vue';
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import VersionsPanel from './assistant/VersionsPanel.vue';
-// El Entrenamiento por secciones: el mismo editor que la ficha del agente.
-import TrainingSectionsEditor from './assistant/TrainingSectionsEditor.vue';
+// La Estructura del Agente: el árbol con sus modales (docs/estructura_agente_arbol_plan.md).
+import AgentStructure from './assistant/AgentStructure.vue';
 import trainingSectionsMixin from './assistant/trainingSectionsMixin';
 import OptimizeModal from './assistant/OptimizeModal.vue';
 import ExplainModal from './assistant/ExplainModal.vue';
@@ -123,7 +123,7 @@ export default {
     ValidationReport,
     ManualConflictNotice,
     VersionsPanel,
-    TrainingSectionsEditor,
+    AgentStructure,
     OptimizeModal,
     ExplainModal,
     DryRunModal,
@@ -903,6 +903,11 @@ export default {
     reloadTrainingSections() {
       return this.loadTrainingFromText(this.draft);
     },
+    // El Objetivo y el Contexto del árbol. No son parte del Entrenamiento: viajan al
+    // Agente IA cuando se guarda (el modal de guardar los toma de acá).
+    updateDefinition(valores) {
+      this.proposal = { ...(this.proposal || {}), ...valores };
+    },
     // Lo seleccionado en el editor, para "Explicar selección".
     onDraftSelect(event) {
       const { selectionStart, selectionEnd } = event.target;
@@ -1209,18 +1214,20 @@ export default {
               <h3
                 class="mb-2 text-sm font-semibold shrink-0 text-slate-800 dark:text-slate-100"
               >
-                {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_SECTIONS') }}
+                {{ $t('TRACKING_ASSISTANT_VIEW.TREE_TITLE') }}
               </h3>
-              <div class="flex-1 min-h-0 pr-1 overflow-y-auto">
-                <TrainingSectionsEditor
-                  :value="trainingStructure"
-                  :titles="sectionTitles"
-                  :route-options="routeOptions"
-                  :can-explain="canExplainTraining"
-                  @input="onSectionsInput"
-                  @explain="explainFragment"
-                />
-              </div>
+              <AgentStructure
+                class="flex-1 min-h-0"
+                :value="trainingStructure"
+                :definition="proposal"
+                :titles="sectionTitles"
+                :route-options="routeOptions"
+                :issues="nodeIssues"
+                :can-explain="canExplainTraining"
+                @input="onSectionsInput"
+                @updateDefinition="updateDefinition"
+                @explain="explainFragment"
+              />
             </section>
 
             <!-- El Entrenamiento manda: se lleva todo el alto que sobre, y los

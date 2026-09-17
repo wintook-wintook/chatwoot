@@ -29,7 +29,20 @@ module ContactTrackings::TrainingStructure
   module_function
 
   def parse(text)
-    { 'version' => VERSION, 'blocks' => groups(text.to_s).map { |grupo| block(grupo) } }
+    { 'version' => VERSION, 'blocks' => numbered(groups(text.to_s).map { |grupo| block(grupo) }) }
+  end
+
+  # En qué líneas del texto cae cada bloque. Es lo que permite colgar un hallazgo del
+  # comprobador —que viene con su número de línea— del nodo que lo causó, en vez de
+  # dejarlo en el informe para que alguien lo busque a mano.
+  def numbered(bloques)
+    linea = 1
+    bloques.each do |bloque|
+      alto = block_text(bloque).to_s.count("\n") + 1
+      bloque['first_line'] = linea
+      bloque['last_line'] = linea + alto - 1
+      linea += alto
+    end
   end
 
   def compose(structure)

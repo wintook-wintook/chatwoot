@@ -272,6 +272,24 @@
     "SESSIONS_COL_CREATOR": "Creada por",
     "SESSIONS_MINE": "vos",
     "SESSIONS_NO_CREATOR": "—",
-    "SESSION_CREATOR": "· de %{name}"
+    "SESSION_CREATOR": "· de %{name}",
+    "TREE_TITLE": "Estructura del Agente",
+    "TREE_DEFINITION": "Definición del Agente",
+    "TREE_OBJECTIVE": "Objetivo",
+    "TREE_CONTEXT": "Contexto",
+    "TREE_ROUTES": "Ramas",
+    "TREE_SECTIONS": "Secciones",
+    "TREE_EMPTY": "sin escribir",
+    "TREE_NO_NAME": "(sin nombre)",
+    "TREE_DEFAULT": "por defecto",
+    "TREE_ROUTES_EMPTY": "Sin ramas: el agente atiende todo por conversación, sin consultar fuentes.",
+    "TREE_SECTIONS_EMPTY": "Sin secciones: el agente no tiene instrucciones escritas.",
+    "DEFINITION_TITLE": "Definición del Agente",
+    "DEFINITION_HINT": "Esto no es parte del Entrenamiento: se guarda en el Agente IA cuando das «Guardar en un Agente IA».",
+    "DEFINITION_NAME": "Agente: %{name}",
+    "DEFINITION_OBJECTIVE_HINT": "para qué está el agente, en una frase",
+    "DEFINITION_CONTEXT_HINT": "datos del negocio que el agente puede citar: horarios, versiones, políticas…",
+    "DEFINITION_CONTEXT_WARNING": "El agente cita esto como si fuera cierto: va solo lo que sabés que es verdad.",
+    "DEFINITION_SAVE": "Guardar la definición"
   }
 }

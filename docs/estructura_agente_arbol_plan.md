@@ -1,6 +1,6 @@
 # Estructura del Agente: el árbol
 
-**Rama:** `feat/motor_agentes_ia` · **Pedido:** 17/09/2026 · **Estado:** plan, sin código
+**Rama:** `feat/motor_agentes_ia` · **Pedido:** 17/09/2026 · **Estado:** F0–F5 hechas (ver §7)
 **Antecede:** `docs/formulario_entrenamiento_plan.md` (F0–F7: el formulario por secciones ya está
 hecho y vive en el Asistente).
 
@@ -222,6 +222,26 @@ se pueda ubicar queda en el informe de la derecha y no se pierde.
 
 **Total: 7 días hábiles.** F0 ya deja algo que se puede mirar y decidir si el árbol va por buen
 camino antes de gastar las otras fases.
+
+### Hecho el 17/09/2026 — F0 a F5
+
+| Qué | Dónde |
+|---|---|
+| Las operaciones sobre los bloques, puras y con specs | `trainingBlocks.js` (22 ejemplos) |
+| El árbol | `TrainingTree.vue` (10 ejemplos) |
+| Los tres modales | `SectionModal.vue`, `DefinitionModal.vue` y `RouteModal.vue` (que ya existía, con modo editar, rama por defecto y quitar) |
+| Los campos de una rama, en un solo lugar | `RouteFields.vue` (era `RouteCards`, que editaba una lista; ahora edita UNA rama y lo usa el modal) |
+| El pegamento y las reglas de guardado | `AgentStructure.vue` (12 ejemplos) |
+| Los hallazgos en el nodo | `route`/`routes` en `Findings#add` y `first_line`/`last_line` por bloque en `TrainingStructure.parse`; el mapeo, en `trainingSectionsMixin.js` |
+| Retirado | el acordeón (`TrainingSectionsEditor.vue`) y el conmutador de la ficha |
+
+**Dos cosas que aparecieron al hacerlo:**
+
+1. El aviso de "datos por completar" no traía número de línea, así que no se podía ubicar en ningún
+   nodo. Ahora lleva la línea de la primera marca (y el comprobador de esa regla se mudó a
+   `PendingMarkers`, donde vive la marca).
+2. La pantalla prefería la validación **guardada en la conversación**, que puede ser de antes de
+   que los hallazgos trajeran la línea. Ahora manda la del comprobador en vivo.
 
 ---
 

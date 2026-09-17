@@ -123,24 +123,15 @@ class ContactTrackings::Assistant::ValidatorService
     ContactTrackings::Assistant::ProseChecks.new(text, map: map, findings: findings).call
   end
 
-  # ── B1 · ninguna rama ───────────────────────────────────────────────────────
   # ── B9 · datos por completar (ver PendingMarkers) ───────────────────────────
-  # Bloqueante, y un solo hallazgo para todas: la lista es lo que hay que completar.
-  # Las demás reglas saltean lo marcado, para no decir lo mismo con peores palabras.
-  def check_pending_markers
-    marcas = ContactTrackings::Assistant::PendingMarkers.scan(text)
-    return if marcas.empty?
-
-    add(:blocking, :pending_marker,
-        t('findings.pending_marker', count: marcas.size, items: marcas.uniq.first(5).join(' · ')),
-        wrote: marcas.first)
-  end
+  def check_pending_markers = ContactTrackings::Assistant::PendingMarkers.check(text, findings: findings)
 
   # ── B10 · restos del contrato (ver ContractLeftovers) ────────────────────────
   def check_contract_leftovers = ContactTrackings::Assistant::ContractLeftovers.check(text, findings: findings)
 
   def pending?(value) = ContactTrackings::Assistant::PendingMarkers.pending?(value)
 
+  # ── B1 · ninguna rama ───────────────────────────────────────────────────────
   def check_has_routes
     return if map.present?
     # Si ya se explicó línea por línea por qué no parsean, no se repite el genérico.
@@ -158,7 +149,7 @@ class ContactTrackings::Assistant::ValidatorService
       detected = KnowledgeBase::Directives.detect(route.directive)
       if detected.nil?
         add(:blocking, :unknown_source, t('findings.unknown_source', route: route.name),
-            wrote: route.directive)
+            wrote: route.directive, route: route.name)
         next
       end
 
@@ -177,7 +168,7 @@ class ContactTrackings::Assistant::ValidatorService
     add(:blocking, :source_not_found,
         t('findings.source_not_found', route: route.name, name: name,
                                        available: listado(disponibles, 'findings.source_none_loaded')),
-        wrote: route.directive)
+        wrote: route.directive, route: route.name)
   end
 
   # ── B8 · una acción atrapada dentro de la fuente ────────────────────────────
@@ -195,7 +186,7 @@ class ContactTrackings::Assistant::ValidatorService
 
       add(:blocking, :action_trapped_in_source,
           t('findings.action_trapped_in_source', route: route.name, directive: match[0]),
-          wrote: route.directive)
+          wrote: route.directive, route: route.name)
     end
   end
 
@@ -239,7 +230,7 @@ class ContactTrackings::Assistant::ValidatorService
 
       add(:degrading, :route_without_description,
           t('findings.route_without_description', route: route.name),
-          wrote: "@ruta(#{route.name}...)")
+          wrote: "@ruta(#{route.name}...)", route: route.name)
     end
   end
 
@@ -258,13 +249,13 @@ class ContactTrackings::Assistant::ValidatorService
     con_descripcion = map.routes.select { |r| r.description.present? && !pending?(r.description) }
 
     con_descripcion.group_by { |r| normalizar(r.description) }
-                   .each_value do |grupo|
-      next if grupo.one?
+                   .each_value { |grupo| report_duplicate(grupo) unless grupo.one? }
+  end
 
-      add(:degrading, :duplicate_route_description,
-          t('findings.duplicate_route_description', routes: grupo.map(&:name).join(', ')),
-          wrote: grupo.first.description)
-    end
+  def report_duplicate(grupo)
+    add(:degrading, :duplicate_route_description,
+        t('findings.duplicate_route_description', routes: grupo.map(&:name).join(', ')),
+        wrote: grupo.first.description, routes: grupo.map(&:name))
   end
 
   # Se comparan sin tildes, sin mayúsculas y sin puntuación: "no puedo entrar" y
@@ -285,7 +276,7 @@ class ContactTrackings::Assistant::ValidatorService
       add(:degrading, :label_not_found,
           t('findings.label_not_found', tag: route.hashtag, route: route.name,
                                         available: listado(existentes, 'findings.label_none_created')),
-          wrote: route.hashtag)
+          wrote: route.hashtag, route: route.name)
     end
   end
 

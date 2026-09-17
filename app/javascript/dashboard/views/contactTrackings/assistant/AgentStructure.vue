@@ -1,0 +1,226 @@
+<script>
+// proyecto@asistente_agentes_ia — LA COLUMNA DE LA ESTRUCTURA
+// ============================================================================
+// Plan: docs/estructura_agente_arbol_plan.md. Junta el árbol con sus tres modales y
+// aplica los cambios sobre los bloques. Existe para que Assistant.vue no cargue con
+// esto: ahí solo se pone el componente y se escucha qué cambió.
+//
+// Lo que entra: la estructura del backend ({ blocks }) y la definición del agente.
+// Lo que sale: `input` con la estructura nueva —el texto lo arma Ruby— y
+// `updateDefinition` con el objetivo y el contexto, que NO son parte del texto.
+// ============================================================================
+import TrainingTree from './TrainingTree.vue';
+import RouteModal from './RouteModal.vue';
+import SectionModal from './SectionModal.vue';
+import DefinitionModal from './DefinitionModal.vue';
+import {
+  addRoute,
+  addSection,
+  defaultRouteName,
+  removeBlock,
+  removeRoute,
+  replaceRoute,
+  routeLines,
+  routeNames,
+  scopeTextFor,
+  scopeTitleFrom,
+  setDefaultRoute,
+  setScopeLine,
+  updateBlock,
+  withGaps,
+  withUids,
+} from './trainingBlocks';
+
+export default {
+  components: { TrainingTree, RouteModal, SectionModal, DefinitionModal },
+  props: {
+    value: { type: Object, default: () => ({ blocks: [] }) },
+    definition: { type: Object, default: null },
+    titles: {
+      type: Object,
+      default: () => ({ suggested: [], from_account: [] }),
+    },
+    routeOptions: { type: Object, default: () => ({}) },
+    issues: { type: Object, default: () => ({}) },
+    canExplain: { type: Boolean, default: false },
+  },
+  emits: ['input', 'updateDefinition', 'explain'],
+  data() {
+    return {
+      // Qué modal está abierto y sobre qué: la posición de la rama entre las ramas,
+      // o el lugar del bloque en la lista.
+      routeModal: { show: false, position: null },
+      sectionModal: { show: false, index: null },
+      definitionModal: { show: false, field: 'objective' },
+    };
+  },
+  computed: {
+    blocks() {
+      return withUids(this.value?.blocks);
+    },
+    scopeTitle() {
+      return scopeTitleFrom(this.titles.suggested);
+    },
+    editingRoute() {
+      const { position } = this.routeModal;
+      if (position === null) return null;
+      return routeLines(this.blocks)[position] || null;
+    },
+    // Al editar, su propio nombre no cuenta como "ya en uso".
+    takenRouteNames() {
+      const nombres = routeNames(this.blocks);
+      if (!this.editingRoute) return nombres;
+      return nombres.filter(n => n !== this.editingRoute.name);
+    },
+    editingRouteScope() {
+      return this.editingRoute
+        ? scopeTextFor(this.blocks, this.editingRoute.name)
+        : '';
+    },
+    editingRouteIsDefault() {
+      return Boolean(
+        this.editingRoute &&
+          this.editingRoute.name === defaultRouteName(this.blocks)
+      );
+    },
+    editingSection() {
+      const { index } = this.sectionModal;
+      return index === null ? null : this.blocks[index] || null;
+    },
+    takenTitles() {
+      return this.blocks.filter(b => b.type === 'section').map(b => b.title);
+    },
+  },
+  methods: {
+    emitBlocks(blocks) {
+      this.$emit('input', { ...this.value, blocks });
+    },
+    // ── ramas ────────────────────────────────────────────────────────────────
+    openAddRoute() {
+      this.routeModal = { show: true, position: null };
+    },
+    openEditRoute(position) {
+      this.routeModal = { show: true, position };
+    },
+    closeRouteModal() {
+      this.routeModal = { show: false, position: null };
+    },
+    saveRoute({ route, previousName, scope, isDefault }) {
+      const { position } = this.routeModal;
+      let blocks =
+        position === null
+          ? addRoute(this.blocks, route, scope, this.scopeTitle)
+          : replaceRoute(this.blocks, position, route);
+      // Al editar, la línea de alcance se reescribe (y se renombra si cambió el
+      // nombre); al agregar, addRoute ya la dejó escrita.
+      if (position !== null) {
+        blocks = setScopeLine(
+          blocks,
+          { previousName, name: route.name, scope },
+          this.scopeTitle
+        );
+      }
+      // La rama por defecto: se apunta a esta, o se saca si era esta y se destildó.
+      const actual = defaultRouteName(blocks);
+      if (isDefault) blocks = setDefaultRoute(blocks, route.name);
+      else if (actual === route.name || actual === previousName)
+        blocks = setDefaultRoute(blocks, '');
+      this.closeRouteModal();
+      this.emitBlocks(withGaps(blocks));
+    },
+    deleteRoute() {
+      const { position } = this.routeModal;
+      if (position === null) return;
+      const blocks = removeRoute(this.blocks, position);
+      this.closeRouteModal();
+      this.emitBlocks(withGaps(blocks));
+    },
+    // ── secciones ────────────────────────────────────────────────────────────
+    openAddSection() {
+      this.sectionModal = { show: true, index: null };
+    },
+    openEditSection(index) {
+      this.sectionModal = { show: true, index };
+    },
+    closeSectionModal() {
+      this.sectionModal = { show: false, index: null };
+    },
+    saveSection({ title, body }) {
+      const { index } = this.sectionModal;
+      let blocks;
+      if (index === null) {
+        blocks = addSection(this.blocks, title);
+        blocks = updateBlock(blocks, blocks.length - 1, { body });
+      } else if (this.blocks[index].type === 'preamble') {
+        blocks = updateBlock(this.blocks, index, { text: body });
+      } else {
+        blocks = updateBlock(this.blocks, index, { title, body });
+      }
+      this.closeSectionModal();
+      this.emitBlocks(blocks);
+    },
+    deleteSection() {
+      const { index } = this.sectionModal;
+      if (index === null) return;
+      const blocks = removeBlock(this.blocks, index);
+      this.closeSectionModal();
+      this.emitBlocks(blocks);
+    },
+    // ── definición ───────────────────────────────────────────────────────────
+    openDefinition(field) {
+      this.definitionModal = { show: true, field };
+    },
+    saveDefinition(valores) {
+      this.definitionModal = { show: false, field: 'objective' };
+      this.$emit('updateDefinition', valores);
+    },
+  },
+};
+</script>
+
+<template>
+  <div class="flex flex-col min-h-0">
+    <div class="flex-1 min-h-0 pr-1 overflow-y-auto">
+      <TrainingTree
+        :value="value"
+        :definition="definition"
+        :issues="issues"
+        @editDefinition="openDefinition"
+        @addRoute="openAddRoute"
+        @editRoute="openEditRoute"
+        @addSection="openAddSection"
+        @editSection="openEditSection"
+      />
+    </div>
+
+    <RouteModal
+      :show="routeModal.show"
+      :options="routeOptions"
+      :taken-names="takenRouteNames"
+      :value="editingRoute"
+      :scope-text="editingRouteScope"
+      :is-default="editingRouteIsDefault"
+      @close="closeRouteModal"
+      @save="saveRoute"
+      @delete="deleteRoute"
+    />
+    <SectionModal
+      :show="sectionModal.show"
+      :block="editingSection"
+      :titles="titles"
+      :taken-titles="takenTitles"
+      :can-explain="canExplain"
+      @close="closeSectionModal"
+      @save="saveSection"
+      @delete="deleteSection"
+      @explain="$emit('explain', $event)"
+    />
+    <DefinitionModal
+      :show="definitionModal.show"
+      :definition="definition"
+      :focus-field="definitionModal.field"
+      @close="definitionModal = { show: false, field: 'objective' }"
+      @save="saveDefinition"
+    />
+  </div>
+</template>

@@ -138,7 +138,18 @@
         "ROUTE_NO_PHRASES": "Sin frases del cliente, esta rama casi nunca se va a elegir: es lo único que el motor usa para decidir.",
         "ROUTE_SCOPE": "Qué atiende esta rama, en palabras del agente",
         "ROUTE_SCOPE_PLACEHOLDER": "responde precios y arma cotizaciones con la lista vigente",
-        "ROUTE_SCOPE_HINT": "Va como una línea en la sección ALCANCE POR RAMA, que es lo que lee el agente para saber de qué habla en este tema. Se puede dejar vacío y escribirlo después."
+        "ROUTE_SCOPE_HINT": "Va como una línea en la sección ALCANCE POR RAMA, que es lo que lee el agente para saber de qué habla en este tema. Se puede dejar vacío y escribirlo después.",
+        "ROUTE_MODAL_EDIT": "Editar la rama",
+        "ROUTE_MODAL_APPLY": "Guardar la rama",
+        "ROUTE_AS_DEFAULT": "Es la rama por defecto: acá van los mensajes que no caen en ninguna otra",
+        "ROUTE_DELETE_CONFIRM": "Quitar la rama y su línea de alcance",
+        "SECTION_MODAL_TITLE": "Agregar una sección",
+        "SECTION_MODAL_EDIT": "Editar la sección",
+        "SECTION_MODAL_HINT": "Las secciones son las instrucciones que lee el agente, en el orden en que están escritas.",
+        "SECTION_MODAL_PREAMBLE": "El texto inicial va antes de la primera sección y no lleva rótulo.",
+        "SECTION_MODAL_BODY": "Instrucciones de esta sección",
+        "SECTION_MODAL_SAVE": "Guardar la sección",
+        "SECTION_NAME_TAKEN": "Ya hay una sección con ese nombre. Dos rótulos iguales confunden al agente: no sabe cuál de los dos aplica."
       }
     },
     "CREATE": {

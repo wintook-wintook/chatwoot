@@ -1,17 +1,18 @@
 <script>
 // proyecto@asistente_agentes_ia — AGREGAR UNA RAMA
 // ============================================================================
-// Agregar una rama abre este modal en vez de dejar una tarjeta vacía en la lista.
+// Agregar o editar una rama abre este modal (desde el árbol de Estructura del
+// Agente, o desde las tarjetas).
 // La razón no es estética: una rama NO es solo su línea `@ruta`. La sección
 // [ALCANCE POR RAMA] lleva una línea por rama —qué atiende cada una— y es lo que
 // lee el modelo del agente para saber de qué habla en cada tema. Dos lugares que
 // hay que escribir juntos: dejarlos separados es como quedaron los agentes reales,
 // con ramas que el motor rutea y de las que la prosa no dice nada.
 //
-// Los campos de la rama son LOS MISMOS de la tarjeta (RouteCards en modo compacto):
-// un solo lugar donde viven, para que no se desincronicen.
+// Los campos de la rama viven en RouteFields: un solo lugar, para que el modal y
+// cualquier otra pantalla no se desincronicen.
 // ============================================================================
-import RouteCards from './RouteCards.vue';
+import RouteFields from './RouteFields.vue';
 
 // Lo que se guarda en el bloque de ramas (ver ContactTrackings::TrainingRoutes).
 const ramaVacia = () => ({
@@ -28,20 +29,28 @@ const ramaVacia = () => ({
 });
 
 export default {
-  components: { RouteCards },
+  components: { RouteFields },
   props: {
     show: { type: Boolean, default: false },
-    // { sources, labels, caseTypes, actions } — ver RouteCards.
+    // { sources, labels, caseTypes, actions } — ver RouteFields.
     options: { type: Object, default: () => ({}) },
     // Los nombres que ya están en uso: dos ramas con el mismo nombre no existen
-    // para el motor, se queda con la primera.
+    // para el motor, se queda con la primera. Al editar, sin el de esta rama.
     takenNames: { type: Array, default: () => [] },
+    // La rama que se está editando, o null para una nueva.
+    value: { type: Object, default: null },
+    // Su línea en [ALCANCE POR RAMA], sin el "nombre: " del principio.
+    scopeText: { type: String, default: '' },
+    // Si hoy es la rama por defecto (la línea @ruta_por_defecto apunta a ella).
+    isDefault: { type: Boolean, default: false },
   },
-  emits: ['close', 'save'],
+  emits: ['close', 'save', 'delete'],
   data() {
     return {
       route: ramaVacia(),
       scope: '',
+      asDefault: false,
+      confirmDelete: false,
     };
   },
   computed: {
@@ -63,25 +72,38 @@ export default {
     missingPhrases() {
       return !(this.route.description || '').trim();
     },
+    editing() {
+      return Boolean(this.value);
+    },
   },
   watch: {
     show(abierto) {
-      if (abierto) {
-        this.route = ramaVacia();
-        this.scope = '';
-      }
+      if (!abierto) return;
+      this.route = { ...ramaVacia(), ...(this.value || {}) };
+      this.scope = this.scopeText || '';
+      this.asDefault = this.isDefault;
+      this.confirmDelete = false;
     },
   },
   methods: {
-    onFields(lineas) {
-      this.route = { ...lineas[0] };
+    onFields(rama) {
+      this.route = { ...rama };
     },
     save() {
       if (!this.canSave) return;
       this.$emit('save', {
         route: { ...this.route, name: this.cleanName },
+        previousName: this.value ? this.value.name : '',
         scope: this.scope.trim(),
+        isDefault: this.asDefault,
       });
+    },
+    remove() {
+      if (!this.confirmDelete) {
+        this.confirmDelete = true;
+        return;
+      }
+      this.$emit('delete');
     },
   },
 };
@@ -92,17 +114,20 @@ export default {
     <div class="flex flex-col gap-4 p-8 text-sm max-h-[80vh] overflow-y-auto">
       <div>
         <h2 class="!m-0 text-lg font-medium text-slate-800 dark:text-slate-100">
-          {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_MODAL_TITLE') }}
+          {{
+            editing
+              ? $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_MODAL_EDIT')
+              : $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_MODAL_TITLE')
+          }}
         </h2>
         <p class="!mt-1 !mb-0 text-xs text-slate-500 dark:text-slate-400">
           {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_MODAL_HINT') }}
         </p>
       </div>
 
-      <RouteCards
-        compact
+      <RouteFields
         id-prefix="modal-route"
-        :lines="[route]"
+        :route="route"
         :options="options"
         @input="onFields"
       />
@@ -145,7 +170,29 @@ export default {
         </p>
       </div>
 
+      <!-- La rama por defecto: a la que van los mensajes que no caen en ninguna. -->
+      <label class="flex items-center gap-2 !mb-0 text-xs">
+        <input v-model="asDefault" type="checkbox" class="!m-0" />
+        <span class="text-slate-600 dark:text-slate-300">
+          {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_AS_DEFAULT') }}
+        </span>
+      </label>
+
       <div class="flex items-center justify-end gap-2">
+        <woot-button
+          v-if="editing"
+          class="mr-auto"
+          :variant="confirmDelete ? 'smooth' : 'clear'"
+          color-scheme="alert"
+          icon="delete"
+          @click="remove"
+        >
+          {{
+            confirmDelete
+              ? $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_DELETE_CONFIRM')
+              : $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_DELETE')
+          }}
+        </woot-button>
         <woot-button
           variant="clear"
           color-scheme="secondary"
@@ -154,7 +201,11 @@ export default {
           {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_MODAL_CANCEL') }}
         </woot-button>
         <woot-button :is-disabled="!canSave" @click="save">
-          {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_MODAL_SAVE') }}
+          {{
+            editing
+              ? $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_MODAL_APPLY')
+              : $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_MODAL_SAVE')
+          }}
         </woot-button>
       </div>
     </div>

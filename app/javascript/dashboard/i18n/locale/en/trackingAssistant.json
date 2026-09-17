@@ -272,6 +272,24 @@
     "SESSIONS_COL_CREATOR": "Started by",
     "SESSIONS_MINE": "you",
     "SESSIONS_NO_CREATOR": "—",
-    "SESSION_CREATOR": "· by %{name}"
+    "SESSION_CREATOR": "· by %{name}",
+    "TREE_TITLE": "Agent structure",
+    "TREE_DEFINITION": "Agent definition",
+    "TREE_OBJECTIVE": "Objective",
+    "TREE_CONTEXT": "Context",
+    "TREE_ROUTES": "Branches",
+    "TREE_SECTIONS": "Sections",
+    "TREE_EMPTY": "empty",
+    "TREE_NO_NAME": "(no name)",
+    "TREE_DEFAULT": "default",
+    "TREE_ROUTES_EMPTY": "No branches: the agent handles everything conversationally, without looking anything up.",
+    "TREE_SECTIONS_EMPTY": "No sections: the agent has no written instructions.",
+    "DEFINITION_TITLE": "Agent definition",
+    "DEFINITION_HINT": "This is not part of the Training: it is stored in the AI Agent when you click \"Save to an AI Agent\".",
+    "DEFINITION_NAME": "Agent: %{name}",
+    "DEFINITION_OBJECTIVE_HINT": "what the agent is for, in one sentence",
+    "DEFINITION_CONTEXT_HINT": "business facts the agent may quote: hours, versions, policies…",
+    "DEFINITION_CONTEXT_WARNING": "The agent quotes this as fact: only put in what you know is true.",
+    "DEFINITION_SAVE": "Save definition"
   }
 }

@@ -1,15 +1,15 @@
-// proyecto@asistente_agentes_ia — Entrenamiento por secciones en el Asistente
+// proyecto@asistente_agentes_ia — LA ESTRUCTURA DEL AGENTE, SINCRONIZADA
 // ============================================================================
-// Plan: docs/formulario_entrenamiento_plan.md. Conecta Assistant.vue con el editor
-// de secciones sin engordar esa pantalla: la estructura en bloques, el comprobador
-// y la sincronización con el texto.
+// Planes: docs/formulario_entrenamiento_plan.md y docs/estructura_agente_arbol_plan.md.
+// Conecta Assistant.vue con el árbol de la Estructura del Agente sin engordar esa
+// pantalla: la estructura en bloques, el comprobador y la sincronización con el texto.
 //
-// El Entrenamiento se arma acá, en la pestaña Secciones del panel del borrador
-// (la ficha del Agente IA quedó con su caja de texto de siempre). Cada cambio en
-// una sección o en una rama se manda a training_preview, y el texto que devuelve
-// se escribe en el borrador: el texto sigue siendo la verdad —es lo que lee el
-// motor, lo que comprueba el comprobador y lo que se guarda—. Al revés también:
-// si el borrador cambia por otro camino, se vuelve a separar en bloques.
+// El Entrenamiento se arma en el árbol de la izquierda (la ficha del Agente IA quedó
+// con su caja de texto de siempre). Cada cambio en una sección o en una rama se manda
+// a training_preview, y el texto que devuelve se escribe en el borrador: el texto
+// sigue siendo la verdad —es lo que lee el motor, lo que comprueba el comprobador y
+// lo que se guarda—. Al revés también: si el borrador cambia por otro camino, se
+// vuelve a separar en bloques.
 //
 // La pantalla define `trainingText` (get y set) y `trainingInboxId`.
 // ============================================================================
@@ -37,7 +37,7 @@ export default {
       return this.$store.getters.getCurrentRole === 'administrator';
     },
     // Las listas de las tarjetas de rama: fuente, etiqueta, tipo de caso y acción
-    // solo pueden ser algo que la cuenta TIENE (ver RouteCards).
+    // solo pueden ser algo que la cuenta TIENE (ver RouteFields).
     routeOptions() {
       const inv = this.inventory;
       if (!inv) return {};
@@ -57,6 +57,40 @@ export default {
           .filter(a => a.available)
           .map(a => a.directive),
       };
+    },
+    // Los hallazgos del comprobador, colgados del nodo que los causó:
+    //   { 'route:soporte': 'blocking', 'section:3': 'degrading' }
+    // Los de rama vienen con su nombre (`route`/`routes`); el resto se ubica por el
+    // número de línea contra el rango de cada bloque (first_line/last_line, que los
+    // manda el backend). Un hallazgo dentro del bloque de ramas que no dice de qué
+    // rama habla marca el grupo entero, con la clave pelada 'route:'.
+    nodeIssues() {
+      // Primero la del comprobador en vivo (training_preview, que corre al abrir y en
+      // cada cambio): la de la conversación viene guardada y puede ser vieja.
+      const v = this.trainingValidation || this.validation;
+      if (!v) return {};
+      const bloques = this.trainingStructure?.blocks || [];
+      const mapa = {};
+      const poner = (clave, nivel) => {
+        if (mapa[clave] !== 'blocking') mapa[clave] = nivel;
+      };
+      const bloqueDe = linea =>
+        bloques.findIndex(b => linea >= b.first_line && linea <= b.last_line);
+      ['blocking', 'degrading'].forEach(nivel => {
+        (v[nivel] || []).forEach(hallazgo => {
+          const ramas =
+            hallazgo.routes || (hallazgo.route ? [hallazgo.route] : []);
+          ramas.forEach(nombre => poner(`route:${nombre}`, nivel));
+          if (ramas.length || !hallazgo.line) return;
+          const i = bloqueDe(hallazgo.line);
+          if (i < 0) return;
+          poner(
+            bloques[i].type === 'routes' ? 'route:' : `section:${i}`,
+            nivel
+          );
+        });
+      });
+      return mapa;
     },
   },
   watch: {

@@ -29,8 +29,18 @@ class ContactTrackings::Assistant::Findings
 
   # `wrote` es lo que la persona (o el modelo) escribió de verdad. Sin eso, el
   # lector mira su propio texto, no ve el problema, y descarta el aviso.
-  def add(severity, code, message, line: nil, wrote: nil)
-    @items << { severity: severity, code: code, message: message, line: line, wrote: wrote }.compact
+  #
+  # `route` (o `routes`, cuando el hallazgo es sobre varias) dice DE QUÉ RAMA habla.
+  # Estaba solo dentro del mensaje, en prosa, así que la pantalla no podía colgar el
+  # aviso de la rama: había que leer el informe y buscarla a mano en el árbol.
+  # Dónde está el problema: `line`, `wrote`, `route` o `routes`. Van como opciones y
+  # no como parámetros para que agregar una forma de ubicarlo no cambie las 17
+  # llamadas que ya existen.
+  WHERE = %i[line wrote route routes].freeze
+
+  def add(severity, code, message, **where)
+    ubicacion = where.slice(*WHERE).transform_values(&:presence).compact
+    @items << { severity: severity, code: code, message: message }.merge(ubicacion)
   end
 
   def code?(code)

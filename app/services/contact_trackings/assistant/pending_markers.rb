@@ -27,4 +27,19 @@ module ContactTrackings::Assistant::PendingMarkers
   def scan(text)
     text.to_s.scan(RE)
   end
+
+  # B9 del comprobador. Bloqueante, y un solo hallazgo para todas: la lista es lo que
+  # hay que completar. Las demás reglas saltean lo marcado, para no decir lo mismo con
+  # peores palabras. Lleva la línea de la primera marca, que es lo que permite
+  # señalar el nodo donde falta el dato en vez de dejar el aviso suelto.
+  def check(text, findings:)
+    marcas = scan(text)
+    return if marcas.empty?
+
+    indice = text.to_s.lines.index { |linea| pending?(linea) }
+    mensaje = I18n.t('tracking_assistant.findings.pending_marker',
+                     locale: ContactTrackings::Assistant::Language.resolve,
+                     count: marcas.size, items: marcas.uniq.first(5).join(' · '))
+    findings.add(:blocking, :pending_marker, mensaje, line: indice && (indice + 1), wrote: marcas.first)
+  end
 end
