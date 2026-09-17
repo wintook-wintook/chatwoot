@@ -132,8 +132,8 @@ export default {
   mixins: [trainingSectionsMixin],
   data() {
     return {
-      // El Entrenamiento se arma en el formulario de secciones: es la vista inicial.
-      // La pestaña Entrenamiento (el texto crudo) queda para revisarlo o pegarlo.
+      // Las secciones tienen columna propia y no se apagan: el mixin siempre
+      // sincroniza en los dos sentidos (ver trainingSectionsMixin).
       trainingView: 'sections',
       inventory: null,
       isLoadingInventory: false,
@@ -164,7 +164,7 @@ export default {
       // Fase D: las versiones del Entrenamiento en esta conversación (sin texto) y
       // qué muestra el panel derecho: el editor o la lista de versiones.
       versions: [],
-      draftTab: 'sections',
+      draftTab: 'editor',
       // La etapa del turno en curso, consultada mientras se espera ({ stage, … }).
       turnStage: null,
       // El canal del agente. Decide con qué modelo clasifica y contesta el motor
@@ -443,17 +443,6 @@ export default {
       const pages = Math.max(1, Math.ceil(list.length / AGENTS_PER_PAGE));
       if (this.agentsPage > pages) this.agentsPage = pages;
     },
-    // La pestaña Secciones separa el borrador en bloques al entrar y termina de
-    // sincronizar lo pendiente al salir: el texto sigue siendo el que manda.
-    async draftTab(pestania, anterior) {
-      if (pestania === 'sections') {
-        this.trainingView = 'sections';
-        await this.loadTrainingFromText(this.draft);
-      } else if (anterior === 'sections') {
-        await this.flushTrainingPreview();
-        this.trainingView = 'text';
-      }
-    },
   },
   async mounted() {
     // El último canal elegido en este navegador: es una comodidad, no un dato
@@ -476,7 +465,7 @@ export default {
     if (!this.loadTemplateFromRoute()) await this.resumeSession();
     // Sin nada que retomar, el formulario igual tiene que estar listo (los nombres
     // de sección que ofrece "Agregar sección" salen del backend).
-    this.showSectionsTab();
+    this.reloadTrainingSections();
   },
   // ⚠ Era `beforeUnmount`, que en Vue 2.7 con la Options API no existe: el
   // temporizador de validación nunca se limpiaba al salir de la pantalla.
@@ -525,7 +514,8 @@ export default {
       // La sesión no guarda el estado: sin borrador, o con marcas, sigue abierta.
       this.isBuilding = !data.draft || pendingCount(data.draft) > 0;
       this.versions = data.versions || [];
-      this.showSectionsTab();
+      this.draftTab = 'editor';
+      this.reloadTrainingSections();
       this.dryRunHistory = [];
       this.suggestedTests = null;
       this.optimizeResult = null;
@@ -605,7 +595,8 @@ export default {
       this.lastDelivered = '';
       this.isBuilding = true;
       this.versions = [];
-      this.showSectionsTab();
+      this.draftTab = 'editor';
+      this.reloadTrainingSections();
       this.editingTemplate = null;
       this.activeTab = 0;
     },
@@ -721,7 +712,8 @@ export default {
       this.lastDelivered = this.draft;
       this.isBuilding = false;
       this.versions = [];
-      this.showSectionsTab();
+      this.draftTab = 'editor';
+      this.reloadTrainingSections();
       this.proposal = {
         name: this.nextVersionName(template.name),
         objective: template.objective || '',
@@ -759,7 +751,8 @@ export default {
       this.lastDelivered = this.draft;
       this.isBuilding = false;
       this.versions = [];
-      this.showSectionsTab();
+      this.draftTab = 'editor';
+      this.reloadTrainingSections();
       // Traer un agente al Asistente arranca una conversación nueva: la
       // identidad y la prueba de la anterior no describen nada de esto.
       this.sessionId = null;
@@ -904,15 +897,11 @@ export default {
       }
       this.fetchInventory();
     },
-    // Deja el panel en el formulario y separa el borrador que haya. Si ya estaba en
-    // Secciones el watcher no corre, así que la separación se pide igual.
-    showSectionsTab() {
-      if (this.draftTab === 'sections') {
-        this.trainingView = 'sections';
-        return this.loadTrainingFromText(this.draft);
-      }
-      this.draftTab = 'sections';
-      return Promise.resolve();
+    // Separa en bloques el borrador que haya quedado en pantalla. Se llama en cada
+    // carga —conversación, agente, empezar de cero— porque la columna de Secciones
+    // está siempre a la vista y tiene que decir lo mismo que el texto.
+    reloadTrainingSections() {
+      return this.loadTrainingFromText(this.draft);
     },
     // Lo seleccionado en el editor, para "Explicar selección".
     onDraftSelect(event) {
@@ -980,7 +969,8 @@ export default {
       this.isBuilding = pendingCount(draft) > 0;
       this.manualConflict = null;
       this.rejected = null;
-      this.showSectionsTab();
+      this.draftTab = 'editor';
+      this.reloadTrainingSections();
       this.validateDraft();
       useAlert(this.$t('TRACKING_ASSISTANT_VIEW.VERSION_RESTORED', { number }));
     },
@@ -1189,7 +1179,9 @@ export default {
 
           <div
             class="grid flex-1 min-h-0 gap-4"
-            :class="isWideEditor ? 'grid-cols-1' : 'md:grid-cols-2'"
+            :class="
+              showChat && !isWideEditor ? 'md:grid-cols-3' : 'md:grid-cols-2'
+            "
           >
             <!-- v-show y no v-if: la conversación se esconde, no se desmonta. Con
                v-if se perdería el scroll del hilo y lo tecleado sin enviar cada
@@ -1206,6 +1198,29 @@ export default {
                 :stage="turnStage"
                 @send="sendMessage"
               />
+            </section>
+
+            <!-- SECCIONES · el formulario, a la izquierda. Es donde se arma el
+                 Entrenamiento: cada cambio vuelve a armar el texto en el backend y
+                 se ve al instante en la columna de la derecha. -->
+            <section
+              class="flex flex-col min-h-0 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+            >
+              <h3
+                class="mb-2 text-sm font-semibold shrink-0 text-slate-800 dark:text-slate-100"
+              >
+                {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_SECTIONS') }}
+              </h3>
+              <div class="flex-1 min-h-0 pr-1 overflow-y-auto">
+                <TrainingSectionsEditor
+                  :value="trainingStructure"
+                  :titles="sectionTitles"
+                  :route-options="routeOptions"
+                  :can-explain="canExplainTraining"
+                  @input="onSectionsInput"
+                  @explain="explainFragment"
+                />
+              </div>
             </section>
 
             <!-- El Entrenamiento manda: se lleva todo el alto que sobre, y los
@@ -1244,17 +1259,6 @@ export default {
                       @click="draftTab = 'editor'"
                     >
                       {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_EDITOR') }}
-                    </button>
-                    <button
-                      class="mr-3 pb-0.5 border-b-2"
-                      :class="
-                        draftTab === 'sections'
-                          ? 'border-woot-500'
-                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
-                      "
-                      @click="draftTab = 'sections'"
-                    >
-                      {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_SECTIONS') }}
                     </button>
                     <button
                       class="pb-0.5 border-b-2"
@@ -1319,22 +1323,6 @@ export default {
                   :current-draft="draft"
                   @restore="restoreVersion"
                 />
-                <!-- Secciones: el mismo editor que la ficha del agente, sobre el
-                   borrador de esta conversación. Cada cambio vuelve a armar el
-                   texto en el backend, así que el informe de abajo sigue vivo. -->
-                <div
-                  v-else-if="draftTab === 'sections'"
-                  class="flex-1 min-h-0 pr-1 overflow-y-auto"
-                >
-                  <TrainingSectionsEditor
-                    :value="trainingStructure"
-                    :titles="sectionTitles"
-                    :route-options="routeOptions"
-                    :can-explain="canExplainTraining"
-                    @input="onSectionsInput"
-                    @explain="explainFragment"
-                  />
-                </div>
                 <template v-else>
                   <ManualConflictNotice
                     v-if="manualConflict"
