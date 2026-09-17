@@ -18,6 +18,7 @@ import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/
 // proyecto@asistente_agentes_ia — Entrenamiento por secciones (docs/formulario_entrenamiento_plan.md)
 import TrainingSectionsEditor from './TrainingSectionsEditor.vue';
 import TrainingToolbar from './TrainingToolbar.vue';
+import ExplainModal from 'dashboard/views/contactTrackings/assistant/ExplainModal.vue';
 import trainingSectionsMixin from './trainingSectionsMixin';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 // proyecto@ai_agent_attachments
@@ -41,6 +42,7 @@ export default {
     KeywordActionsEditor,
     TrainingSectionsEditor,
     TrainingToolbar,
+    ExplainModal,
   },
   mixins: [trainingSectionsMixin],
 
@@ -1417,7 +1419,9 @@ export default {
             ref="sectionsEditor"
             :value="trainingStructure"
             :titles="sectionTitles"
+            :can-explain="canExplainTraining"
             @input="onSectionsInput"
+            @explain="explainTrainingBlock"
           />
           <textarea
             v-else
@@ -2160,6 +2164,14 @@ export default {
         </ul>
       </div>
     </woot-modal>
+    <ExplainModal
+      :show="trainingExplain.show"
+      :excerpt="trainingExplain.excerpt"
+      :result="trainingExplain.result"
+      :is-running="trainingExplain.isRunning"
+      :error="trainingExplain.error"
+      @close="trainingExplain.show = false"
+    />
   </div>
 </template>
 

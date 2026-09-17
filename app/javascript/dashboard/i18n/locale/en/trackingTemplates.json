@@ -110,7 +110,9 @@
         "FROM_ACCOUNT": "Used in your agents",
         "CUSTOM": "Other name",
         "ADD": "Add",
-        "ADD_ROUTES": "Add branches"
+        "ADD_ROUTES": "Add branches",
+        "EXPLAIN": "Explain what this section does",
+        "EXPLAIN_ERROR": "That section could not be explained. Try again."
       }
     },
     "CREATE": {

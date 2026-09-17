@@ -166,4 +166,25 @@ describe('TrainingSectionsEditor', () => {
     expect(ultimo(wrapper)[0]).toMatchObject({ type: 'routes', text: '' });
     expect(montar().vm.hasRoutes).toBe(true);
   });
+
+  // F4: explicar manda la sección con su rótulo; sin permiso, no se ofrece.
+  it('explica una sección mandando su rótulo y su cuerpo', () => {
+    const wrapper = montar();
+
+    wrapper.vm.explain(wrapper.vm.blocks[2]);
+
+    expect(wrapper.emitted('explain')[0][0]).toBe(
+      '## PERSONALIDAD ##\n* cercano'
+    );
+  });
+
+  it('con la sección vacía manda solo el rótulo', () => {
+    const wrapper = montar({
+      blocks: [{ type: 'section', title: 'ROL', body: '' }],
+    });
+
+    wrapper.vm.explain(wrapper.vm.blocks[0]);
+
+    expect(wrapper.emitted('explain')[0][0]).toBe('[ROL]');
+  });
 });

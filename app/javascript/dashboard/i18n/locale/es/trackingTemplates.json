@@ -110,7 +110,9 @@
         "FROM_ACCOUNT": "Usadas en tus agentes",
         "CUSTOM": "Otro nombre",
         "ADD": "Agregar",
-        "ADD_ROUTES": "Agregar ramas"
+        "ADD_ROUTES": "Agregar ramas",
+        "EXPLAIN": "Explicar qué hace esta sección",
+        "EXPLAIN_ERROR": "No se pudo explicar esa sección. Intentá de nuevo."
       }
     },
     "CREATE": {

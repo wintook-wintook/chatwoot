@@ -12,6 +12,7 @@
 // cambia por otro camino, se vuelve a separar en bloques.
 // ============================================================================
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
+import AssistantAPI from 'dashboard/api/assistant';
 
 const PREVIEW_DEBOUNCE_MS = 500;
 
@@ -27,7 +28,20 @@ export default {
       // El texto que escribió la propia vista Secciones: el watcher no lo vuelve a
       // separar (movería el cursor y perdería lo que se está escribiendo).
       textFromSections: null,
+      // F4: Explicar una sección (ExplainModal del Asistente).
+      trainingExplain: {
+        show: false,
+        excerpt: '',
+        result: null,
+        isRunning: false,
+        error: '',
+      },
     };
+  },
+  computed: {
+    canExplainTraining() {
+      return this.$store.getters.getCurrentRole === 'administrator';
+    },
   },
   watch: {
     'form.complementary_prompt'(texto) {
@@ -123,6 +137,29 @@ export default {
             training_structure: { blocks: this.trainingStructure.blocks || [] },
           }
         : {};
+    },
+    async explainTrainingBlock(excerpt) {
+      this.trainingExplain = {
+        show: true,
+        excerpt,
+        result: null,
+        isRunning: true,
+        error: '',
+      };
+      try {
+        const { data } = await AssistantAPI.explain(
+          this.form.complementary_prompt,
+          excerpt,
+          this.selectedInboxId || null
+        );
+        this.trainingExplain.result = data;
+      } catch (error) {
+        this.trainingExplain.error = this.$t(
+          'TRACKING_TEMPLATES.FORM.TRAINING.EXPLAIN_ERROR'
+        );
+      } finally {
+        this.trainingExplain.isRunning = false;
+      }
     },
     trainingIssues() {
       const v = this.trainingValidation;

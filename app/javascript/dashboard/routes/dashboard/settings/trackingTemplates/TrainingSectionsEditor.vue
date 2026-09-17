@@ -28,12 +28,14 @@ export default {
   props: {
     value: { type: Object, default: () => ({ blocks: [] }) },
     // { suggested: [...], from_account: [...] }
+    // Explicar usa el endpoint del Asistente, que es solo de administradores.
+    canExplain: { type: Boolean, default: false },
     titles: {
       type: Object,
       default: () => ({ suggested: [], from_account: [] }),
     },
   },
-  emits: ['input'],
+  emits: ['input', 'explain'],
   data() {
     return {
       collapsed: {},
@@ -185,6 +187,15 @@ export default {
       const texto = block.body || block.text || '';
       return texto.trim() ? texto.split('\n').length : 0;
     },
+    // El fragmento que se manda a explicar: la sección con su rótulo, así el modelo
+    // sabe de qué parte del Entrenamiento se trata.
+    explain(block) {
+      const cuerpo = block.type === 'section' ? block.body : block.text;
+      const rotulo =
+        block.type === 'section' ? block.header || `[${block.title}]` : '';
+      const fragmento = [rotulo, cuerpo].filter(Boolean).join('\n').trim();
+      if (fragmento) this.$emit('explain', fragmento);
+    },
     blockTitle(block) {
       if (block.type === 'routes')
         return this.$t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTES');
@@ -248,6 +259,16 @@ export default {
           }}
         </span>
         <div class="flex items-center gap-1 shrink-0">
+          <woot-button
+            v-if="canExplain"
+            type="button"
+            size="tiny"
+            variant="clear"
+            color-scheme="secondary"
+            icon="info"
+            :title="$t('TRACKING_TEMPLATES.FORM.TRAINING.EXPLAIN')"
+            @click="explain(block)"
+          />
           <woot-button
             type="button"
             size="tiny"
