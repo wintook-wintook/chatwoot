@@ -64,6 +64,12 @@ const VALIDATE_DEBOUNCE_MS = 400;
 const PROGRESS_POLL_MS = 1500;
 const INBOX_STORAGE_KEY = 'tracking_assistant_inbox_id';
 
+// El chat del Asistente, escondido a pedido del usuario (17/09/2026): el
+// Entrenamiento se arma en el formulario de secciones, que se lleva todo el ancho.
+// No se borra nada — la entrevista sigue entera detrás de esta bandera, y volver a
+// mostrarla es ponerla en true.
+const SHOW_CHAT = false;
+
 // El backend devuelve hasta 50 conversaciones (TrackingAssistantSession::LIST_LIMIT),
 // así que el paginado es sobre lo que ya está en memoria: no hay una segunda página
 // que pedir. Diez por pantalla entran sin scroll en una laptop.
@@ -216,7 +222,7 @@ export default {
       isReportOpen: true,
       // Modo ancho: esconde la conversación y deja el Entrenamiento a todo el
       // ancho. Para los 6 agentes de la cuenta que pasan de 370 líneas.
-      isWideEditor: false,
+      isWideEditor: !SHOW_CHAT,
       sessionsPage: 1,
       SESSIONS_PER_PAGE,
       // El orden arranca donde lo dejó el backend (recent_first): así el primer
@@ -244,6 +250,9 @@ export default {
     },
     trainingInboxId() {
       return this.inboxId;
+    },
+    showChat() {
+      return SHOW_CHAT;
     },
     // En la plantilla no: el loader de Vue 2 no entiende `?.` ahí.
     // Se comparan con los espacios normalizados: agregar un salto de línea no es
@@ -1128,30 +1137,18 @@ export default {
 
         <div
           v-show="activeTab === 0"
-          class="grid flex-1 min-h-0 gap-4"
-          :class="isWideEditor ? 'grid-cols-1' : 'md:grid-cols-2'"
+          class="flex flex-col flex-1 min-h-0 gap-3"
         >
-          <!-- v-show y no v-if: la conversación se esconde, no se desmonta. Con
-               v-if se perdería el scroll del hilo y lo tecleado sin enviar cada
-               vez que alguien entra y sale del modo ancho. -->
-          <section
-            v-show="!isWideEditor"
-            class="p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col min-h-0"
-          >
-            <!-- De qué conversación se trata. Va acá, encima del hilo, porque
-                 es referencia y no progreso: mezclado con los hitos del
-                 Entrenamiento había que leer la línea de arriba dos veces. -->
+          <!-- De qué conversación se trata y con qué canal se prueba. Están fuera
+               de las dos columnas porque valen para toda la pantalla: el canal
+               decide con qué modelo se clasifica y se contesta, y la tarjeta dice
+               qué agente se está editando. Con el chat escondido, siguen acá. -->
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-2 shrink-0">
             <SessionCard
-              class="mb-3"
               :session-meta="sessionMeta"
               :editing-template="editingTemplate"
             />
-
-            <!-- El canal del agente, arriba de la conversación: cambia con qué
-                 modelo se prueba todo lo de la derecha. -->
-            <div
-              class="flex flex-wrap items-center gap-2 mb-3 text-xs shrink-0"
-            >
+            <div class="flex flex-wrap items-center gap-2 text-xs shrink-0">
               <label
                 for="assistant-inbox"
                 class="!m-0 text-slate-600 dark:text-slate-300"
@@ -1188,243 +1185,259 @@ export default {
                 }}
               </span>
             </div>
+          </div>
 
-            <InterviewPanel
-              :messages="messages"
-              :is-thinking="isThinking"
-              :options="interviewOptions"
-              :is-editing="Boolean(draft.trim())"
-              :stage="turnStage"
-              @send="sendMessage"
-            />
-          </section>
+          <div
+            class="grid flex-1 min-h-0 gap-4"
+            :class="isWideEditor ? 'grid-cols-1' : 'md:grid-cols-2'"
+          >
+            <!-- v-show y no v-if: la conversación se esconde, no se desmonta. Con
+               v-if se perdería el scroll del hilo y lo tecleado sin enviar cada
+               vez que alguien entra y sale del modo ancho. -->
+            <section
+              v-show="showChat && !isWideEditor"
+              class="p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col min-h-0"
+            >
+              <InterviewPanel
+                :messages="messages"
+                :is-thinking="isThinking"
+                :options="interviewOptions"
+                :is-editing="Boolean(draft.trim())"
+                :stage="turnStage"
+                @send="sendMessage"
+              />
+            </section>
 
-          <!-- El Entrenamiento manda: se lleva todo el alto que sobre, y los
+            <!-- El Entrenamiento manda: se lleva todo el alto que sobre, y los
                dos paneles se colapsan. Antes eran tres secciones de alto libre
                en una sola columna con scroll, y la única con alto FIJO y chico
                (rows=14) era justo el texto que se está editando: en esta cuenta
                los Entrenamientos tienen 46 líneas de mediana y llegan a 645, o
                sea que se veía el 30% del típico y el 2% del más grande. -->
-          <section class="flex flex-col gap-2 min-h-0">
-            <ProgressStrip
-              class="shrink-0 px-1"
-              :messages="messages"
-              :draft="draft"
-              :validation="validation"
-              :dry-run="lastDryRun"
-              :editing-template="editingTemplate"
-            />
+            <section class="flex flex-col gap-2 min-h-0">
+              <ProgressStrip
+                class="shrink-0 px-1"
+                :messages="messages"
+                :draft="draft"
+                :validation="validation"
+                :dry-run="lastDryRun"
+                :editing-template="editingTemplate"
+              />
 
-            <!-- min-h-40: piso del editor. Sin él, un Entrenamiento con seis
+              <!-- min-h-40: piso del editor. Sin él, un Entrenamiento con seis
                  hallazgos abría tanto el informe que el texto se encogía a
                  nada — el mismo problema de antes, por el otro lado. -->
-            <div
-              class="flex flex-col flex-1 min-h-[10rem] p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-            >
-              <div class="flex items-center justify-between mb-2 shrink-0">
-                <h3
-                  class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-                >
-                  <button
-                    class="mr-3 pb-0.5 border-b-2"
-                    :class="
-                      draftTab === 'editor'
-                        ? 'border-woot-500'
-                        : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
-                    "
-                    @click="draftTab = 'editor'"
+              <div
+                class="flex flex-col flex-1 min-h-[10rem] p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+              >
+                <div class="flex items-center justify-between mb-2 shrink-0">
+                  <h3
+                    class="text-sm font-semibold text-slate-800 dark:text-slate-100"
                   >
-                    {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_EDITOR') }}
-                  </button>
-                  <button
-                    class="mr-3 pb-0.5 border-b-2"
-                    :class="
-                      draftTab === 'sections'
-                        ? 'border-woot-500'
-                        : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
-                    "
-                    @click="draftTab = 'sections'"
-                  >
-                    {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_SECTIONS') }}
-                  </button>
-                  <button
-                    class="pb-0.5 border-b-2"
-                    :class="
-                      draftTab === 'versions'
-                        ? 'border-woot-500'
-                        : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
-                    "
-                    @click="draftTab = 'versions'"
-                  >
-                    {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_VERSIONS') }}
-                    <span v-if="versions.length" class="font-normal">
-                      {{
-                        $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_COUNT', {
-                          count: versions.length,
-                        })
-                      }}
+                    <button
+                      class="mr-3 pb-0.5 border-b-2"
+                      :class="
+                        draftTab === 'editor'
+                          ? 'border-woot-500'
+                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                      "
+                      @click="draftTab = 'editor'"
+                    >
+                      {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_EDITOR') }}
+                    </button>
+                    <button
+                      class="mr-3 pb-0.5 border-b-2"
+                      :class="
+                        draftTab === 'sections'
+                          ? 'border-woot-500'
+                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                      "
+                      @click="draftTab = 'sections'"
+                    >
+                      {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_SECTIONS') }}
+                    </button>
+                    <button
+                      class="pb-0.5 border-b-2"
+                      :class="
+                        draftTab === 'versions'
+                          ? 'border-woot-500'
+                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                      "
+                      @click="draftTab = 'versions'"
+                    >
+                      {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_VERSIONS') }}
+                      <span v-if="versions.length" class="font-normal">
+                        {{
+                          $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_COUNT', {
+                            count: versions.length,
+                          })
+                        }}
+                      </span>
+                    </button>
+                    <span
+                      v-if="hasManualEdits && draft.trim()"
+                      class="ml-2 px-1.5 py-0.5 text-xs font-normal rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                      :title="$t('TRACKING_ASSISTANT_VIEW.MANUAL_BADGE_HINT')"
+                    >
+                      {{ $t('TRACKING_ASSISTANT_VIEW.MANUAL_BADGE') }}
                     </span>
-                  </button>
-                  <span
-                    v-if="hasManualEdits && draft.trim()"
-                    class="ml-2 px-1.5 py-0.5 text-xs font-normal rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-                    :title="$t('TRACKING_ASSISTANT_VIEW.MANUAL_BADGE_HINT')"
-                  >
-                    {{ $t('TRACKING_ASSISTANT_VIEW.MANUAL_BADGE') }}
-                  </span>
-                </h3>
-                <!-- Fase E: explicar lo seleccionado. Aparece solo con algo
+                  </h3>
+                  <!-- Fase E: explicar lo seleccionado. Aparece solo con algo
                      seleccionado en el editor: sin selección no hay qué explicar. -->
-                <woot-button
-                  v-if="draftTab === 'editor' && draftSelection"
-                  variant="clear"
-                  size="tiny"
-                  color-scheme="secondary"
-                  icon="info"
-                  @click="explainSelection"
-                >
-                  {{ $t('TRACKING_ASSISTANT_VIEW.EXPLAIN_CTA') }}
-                </woot-button>
-                <!-- Para los Entrenamientos largos: 38 líneas siguen siendo poco
+                  <woot-button
+                    v-if="draftTab === 'editor' && draftSelection"
+                    variant="clear"
+                    size="tiny"
+                    color-scheme="secondary"
+                    icon="info"
+                    @click="explainSelection"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.EXPLAIN_CTA') }}
+                  </woot-button>
+                  <!-- Para los Entrenamientos largos: 38 líneas siguen siendo poco
                      para uno de 645. Mientras se edita un texto así no hace falta
                      ver el chat; al volver, sigue donde estaba. -->
-                <woot-button
-                  variant="clear"
-                  size="tiny"
-                  color-scheme="secondary"
-                  :icon="isWideEditor ? 'chat' : 'arrow-expand'"
-                  @click="isWideEditor = !isWideEditor"
-                >
-                  {{
-                    isWideEditor
-                      ? $t('TRACKING_ASSISTANT_VIEW.DRAFT_SHOW_CHAT')
-                      : $t('TRACKING_ASSISTANT_VIEW.DRAFT_WIDE')
-                  }}
-                </woot-button>
-              </div>
-              <VersionsPanel
-                v-if="draftTab === 'versions'"
-                :versions="versions"
-                :session-id="sessionId"
-                :current-draft="draft"
-                @restore="restoreVersion"
-              />
-              <!-- Secciones: el mismo editor que la ficha del agente, sobre el
+                  <woot-button
+                    v-if="showChat"
+                    variant="clear"
+                    size="tiny"
+                    color-scheme="secondary"
+                    :icon="isWideEditor ? 'chat' : 'arrow-expand'"
+                    @click="isWideEditor = !isWideEditor"
+                  >
+                    {{
+                      isWideEditor
+                        ? $t('TRACKING_ASSISTANT_VIEW.DRAFT_SHOW_CHAT')
+                        : $t('TRACKING_ASSISTANT_VIEW.DRAFT_WIDE')
+                    }}
+                  </woot-button>
+                </div>
+                <VersionsPanel
+                  v-if="draftTab === 'versions'"
+                  :versions="versions"
+                  :session-id="sessionId"
+                  :current-draft="draft"
+                  @restore="restoreVersion"
+                />
+                <!-- Secciones: el mismo editor que la ficha del agente, sobre el
                    borrador de esta conversación. Cada cambio vuelve a armar el
                    texto en el backend, así que el informe de abajo sigue vivo. -->
-              <div
-                v-else-if="draftTab === 'sections'"
-                class="flex-1 min-h-0 pr-1 overflow-y-auto"
-              >
-                <TrainingSectionsEditor
-                  :value="trainingStructure"
-                  :titles="sectionTitles"
-                  :route-options="routeOptions"
-                  :can-explain="canExplainTraining"
-                  @input="onSectionsInput"
-                  @explain="explainFragment"
-                />
-              </div>
-              <template v-else>
-                <ManualConflictNotice
-                  v-if="manualConflict"
-                  :conflict="manualConflict"
-                  @keep="manualConflict = null"
-                  @useAssistant="useAssistantVersion"
-                />
-                <!-- Lo propuesto que no se aplicó. Arriba del texto y no en un
+                <div
+                  v-else-if="draftTab === 'sections'"
+                  class="flex-1 min-h-0 pr-1 overflow-y-auto"
+                >
+                  <TrainingSectionsEditor
+                    :value="trainingStructure"
+                    :titles="sectionTitles"
+                    :route-options="routeOptions"
+                    :can-explain="canExplainTraining"
+                    @input="onSectionsInput"
+                    @explain="explainFragment"
+                  />
+                </div>
+                <template v-else>
+                  <ManualConflictNotice
+                    v-if="manualConflict"
+                    :conflict="manualConflict"
+                    @keep="manualConflict = null"
+                    @useAssistant="useAssistantVersion"
+                  />
+                  <!-- Lo propuesto que no se aplicó. Arriba del texto y no en un
                      modal: hay que poder leer el Entrenamiento conservado mientras
                      se decide. -->
-                <div
-                  v-if="rejected"
-                  class="flex flex-col gap-2 p-3 mb-2 text-xs border rounded shrink-0 border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
-                >
-                  <p class="!m-0 font-semibold">
-                    {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_TITLE') }}
-                  </p>
-                  <p class="!m-0">
-                    {{
-                      $t('TRACKING_ASSISTANT_VIEW.REJECTED_HINT', {
-                        count: rejectedBlockingCount,
-                      })
-                    }}
-                  </p>
-                  <div class="flex gap-2">
-                    <woot-button
-                      size="tiny"
-                      variant="smooth"
-                      color-scheme="warning"
-                      @click="useRejected"
-                    >
-                      {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_USE') }}
-                    </woot-button>
-                    <woot-button
-                      size="tiny"
-                      variant="clear"
-                      color-scheme="secondary"
-                      @click="rejected = null"
-                    >
-                      {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_DISCARD') }}
-                    </woot-button>
+                  <div
+                    v-if="rejected"
+                    class="flex flex-col gap-2 p-3 mb-2 text-xs border rounded shrink-0 border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
+                  >
+                    <p class="!m-0 font-semibold">
+                      {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_TITLE') }}
+                    </p>
+                    <p class="!m-0">
+                      {{
+                        $t('TRACKING_ASSISTANT_VIEW.REJECTED_HINT', {
+                          count: rejectedBlockingCount,
+                        })
+                      }}
+                    </p>
+                    <div class="flex gap-2">
+                      <woot-button
+                        size="tiny"
+                        variant="smooth"
+                        color-scheme="warning"
+                        @click="useRejected"
+                      >
+                        {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_USE') }}
+                      </woot-button>
+                      <woot-button
+                        size="tiny"
+                        variant="clear"
+                        color-scheme="secondary"
+                        @click="rejected = null"
+                      >
+                        {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_DISCARD') }}
+                      </woot-button>
+                    </div>
                   </div>
-                </div>
-                <!-- resize-none: el alto lo decide el contenedor, no el navegador;
+                  <!-- resize-none: el alto lo decide el contenedor, no el navegador;
                      arrastrarlo a mano volvería a empujar todo lo de abajo.
                      readonly mientras el asistente trabaja: trabaja sobre el texto
                      que se le mandó, y lo que se escribiera en esos segundos se
                      perdería al llegar la respuesta. -->
-                <textarea
-                  ref="draftEditor"
-                  v-model="draft"
-                  class="flex-1 min-h-0 w-full font-mono text-xs resize-none !mb-0"
-                  :placeholder="$t('TRACKING_ASSISTANT_VIEW.DRAFT_PLACEHOLDER')"
-                  :readonly="isThinking"
-                  @select="onDraftSelect"
-                  @keyup="onDraftSelect"
-                  @mouseup="onDraftSelect"
-                  @input="onDraftInput"
-                />
-              </template>
-            </div>
-
-            <!-- Acordeón nativo, el mismo del panel de contacto. El resumen del
-                 comprobador queda SIEMPRE visible en la cabecera: revalida en
-                 cada tecla y esa señal no se puede esconder. -->
-            <!-- max-h-[40%]: techo de los dos paneles. Lo que no entra scrollea
-                 acá adentro en vez de empujar al editor. -->
-            <div
-              class="shrink-0 max-h-[40%] overflow-y-auto border rounded-lg border-slate-100 dark:border-slate-700"
-            >
-              <AccordionItem
-                :title="$t('TRACKING_ASSISTANT_VIEW.REPORT_TITLE')"
-                :is-open="isReportOpen"
-                @click="isReportOpen = !isReportOpen"
-              >
-                <template #button>
-                  <ValidationBadge
-                    class="mr-2"
-                    :validation="validation"
-                    :is-checking="isChecking"
-                    :pending-count="draftPendingCount"
+                  <textarea
+                    ref="draftEditor"
+                    v-model="draft"
+                    class="flex-1 min-h-0 w-full font-mono text-xs resize-none !mb-0"
+                    :placeholder="
+                      $t('TRACKING_ASSISTANT_VIEW.DRAFT_PLACEHOLDER')
+                    "
+                    :readonly="isThinking"
+                    @select="onDraftSelect"
+                    @keyup="onDraftSelect"
+                    @mouseup="onDraftSelect"
+                    @input="onDraftInput"
                   />
                 </template>
-                <ValidationReport
-                  :validation="validation"
-                  @gotoRoute="goToRoute"
-                  @gotoLine="goToLine"
-                />
-              </AccordionItem>
-            </div>
+              </div>
 
-            <!-- Fuentes guardadas que el asistente no sabe ofrecer. -->
-            <p
-              v-if="unsupported.length"
-              class="shrink-0 text-xs text-amber-600 dark:text-amber-400"
-            >
-              {{ $t('TRACKING_ASSISTANT_VIEW.UNSUPPORTED_HINT') }}
-              {{ unsupported.map(s => s.name).join(' · ') }}
-            </p>
-          </section>
+              <!-- Acordeón nativo, el mismo del panel de contacto. El resumen del
+                 comprobador queda SIEMPRE visible en la cabecera: revalida en
+                 cada tecla y esa señal no se puede esconder. -->
+              <!-- max-h-[40%]: techo de los dos paneles. Lo que no entra scrollea
+                 acá adentro en vez de empujar al editor. -->
+              <div
+                class="shrink-0 max-h-[40%] overflow-y-auto border rounded-lg border-slate-100 dark:border-slate-700"
+              >
+                <AccordionItem
+                  :title="$t('TRACKING_ASSISTANT_VIEW.REPORT_TITLE')"
+                  :is-open="isReportOpen"
+                  @click="isReportOpen = !isReportOpen"
+                >
+                  <template #button>
+                    <ValidationBadge
+                      class="mr-2"
+                      :validation="validation"
+                      :is-checking="isChecking"
+                      :pending-count="draftPendingCount"
+                    />
+                  </template>
+                  <ValidationReport
+                    :validation="validation"
+                    @gotoRoute="goToRoute"
+                    @gotoLine="goToLine"
+                  />
+                </AccordionItem>
+              </div>
+
+              <!-- Fuentes guardadas que el asistente no sabe ofrecer. -->
+              <p
+                v-if="unsupported.length"
+                class="shrink-0 text-xs text-amber-600 dark:text-amber-400"
+              >
+                {{ $t('TRACKING_ASSISTANT_VIEW.UNSUPPORTED_HINT') }}
+                {{ unsupported.map(s => s.name).join(' · ') }}
+              </p>
+            </section>
+          </div>
         </div>
 
         <!-- RECURSOS — la paleta de piezas de la cuenta.
