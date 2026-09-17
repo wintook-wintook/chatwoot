@@ -56,6 +56,20 @@ RSpec.describe 'Agentes IA — Entrenamiento por secciones' do
     expect(response.parsed_body['from_account']).not_to include('ROL')
   end
 
+  # proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió.
+  it 'lista las ramas de la cuenta para copiar una' do
+    create(:tracking_template, account: account, name: 'Licencias',
+                               complementary_prompt: "@ruta(comercial #demo: precios): {{hoja:Precios}}\n\n" \
+                                                     "[ALCANCE POR RAMA]\ncomercial: responde precios.")
+
+    get "#{base}/route_catalog", headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body.first).to include('name' => 'comercial', 'tag' => 'demo',
+                                                  'source' => '{{hoja:Precios}}',
+                                                  'scope' => 'responde precios.',
+                                                  'agents' => ['Licencias'])
+  end
+
   # La ficha cambia de vista sin guardar: la conversión vive solo en Ruby.
   describe 'POST training_preview' do
     it 'separa un texto en bloques y lo comprueba' do

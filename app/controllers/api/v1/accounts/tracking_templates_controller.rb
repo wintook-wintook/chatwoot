@@ -43,6 +43,12 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
     render json: ContactTrackings::TrainingSectionTitles.new(Current.account).call
   end
 
+  # proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió, para copiar
+  # una a un agente nuevo en vez de escribirla de cero. Ver TrainingRouteCatalog.
+  def route_catalog
+    render json: ContactTrackings::TrainingRouteCatalog.new(Current.account).call
+  end
+
   # proyecto@asistente_agentes_ia — la ficha cambia entre la vista Secciones y la vista
   # Texto sin guardar: esto convierte en cualquiera de los dos sentidos y comprueba el
   # resultado. La conversión vive solo acá (TrainingStructure), no duplicada en el

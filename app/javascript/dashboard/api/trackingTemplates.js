@@ -24,6 +24,12 @@ class TrackingTemplatesAPI extends ApiClient {
   }
 
   // { text } o { training_structure } → { text, training_structure, validation }.
+  // proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió, para copiar
+  // una a un agente nuevo (ver TrainingRouteCatalog).
+  getRouteCatalog() {
+    return axios.get(`${this.url}/route_catalog`);
+  }
+
   trainingPreview(payload) {
     return axios.post(`${this.url}/training_preview`, payload);
   }

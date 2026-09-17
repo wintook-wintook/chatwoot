@@ -13,6 +13,8 @@ import TrainingTree from './TrainingTree.vue';
 import RouteModal from './RouteModal.vue';
 import SectionModal from './SectionModal.vue';
 import DefinitionModal from './DefinitionModal.vue';
+import RouteCatalogModal from './RouteCatalogModal.vue';
+import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import {
   addRoute,
   addSection,
@@ -34,7 +36,13 @@ import {
 } from './trainingBlocks';
 
 export default {
-  components: { TrainingTree, RouteModal, SectionModal, DefinitionModal },
+  components: {
+    TrainingTree,
+    RouteModal,
+    SectionModal,
+    DefinitionModal,
+    RouteCatalogModal,
+  },
   props: {
     value: { type: Object, default: () => ({ blocks: [] }) },
     definition: { type: Object, default: null },
@@ -56,6 +64,9 @@ export default {
       routeModal: { show: false, position: null },
       sectionModal: { show: false, index: null },
       definitionModal: { show: false, field: 'objective' },
+      // El catálogo de ramas de la cuenta se pide una vez, al abrir el buscador.
+      catalogModal: { show: false, loading: false },
+      catalog: null,
     };
   },
   computed: {
@@ -70,9 +81,13 @@ export default {
       if (position === null) return null;
       return routeLines(this.blocks)[position] || null;
     },
+    // Los nombres de las ramas que el agente tiene ahora.
+    currentRouteNames() {
+      return routeNames(this.blocks);
+    },
     // Al editar, su propio nombre no cuenta como "ya en uso".
     takenRouteNames() {
-      const nombres = routeNames(this.blocks);
+      const nombres = this.currentRouteNames;
       if (!this.editingRoute) return nombres;
       return nombres.filter(n => n !== this.editingRoute.name);
     },
@@ -144,6 +159,26 @@ export default {
       this.closeRouteModal();
       this.emitBlocks(withGaps(blocks));
     },
+    // Copiar una rama que la cuenta ya escribió.
+    async openRouteCatalog() {
+      this.catalogModal = { show: true, loading: this.catalog === null };
+      if (this.catalog !== null) return;
+      try {
+        const { data } = await TrackingTemplatesAPI.getRouteCatalog();
+        this.catalog = data;
+      } catch (error) {
+        this.catalog = [];
+      } finally {
+        this.catalogModal = { show: true, loading: false };
+      }
+    },
+    // Llega con sus dos mitades: la rama y su línea de alcance (ver RouteCatalogModal).
+    pickFromCatalog({ route, scope }) {
+      this.catalogModal = { show: false, loading: false };
+      this.emitBlocks(
+        withGaps(addRoute(this.blocks, route, scope, this.scopeTitle))
+      );
+    },
     // ── secciones ────────────────────────────────────────────────────────────
     openAddSection() {
       this.sectionModal = { show: true, index: null };
@@ -201,6 +236,7 @@ export default {
         :issues="issues"
         @editDefinition="openDefinition"
         @addRoute="openAddRoute"
+        @findRoute="openRouteCatalog"
         @editRoute="openEditRoute"
         @moveRoute="moveRoute"
         @addSection="openAddSection"
@@ -219,6 +255,14 @@ export default {
       @close="closeRouteModal"
       @save="saveRoute"
       @delete="deleteRoute"
+    />
+    <RouteCatalogModal
+      :show="catalogModal.show"
+      :routes="catalog || []"
+      :is-loading="catalogModal.loading"
+      :taken-names="currentRouteNames"
+      @close="catalogModal = { show: false, loading: false }"
+      @pick="pickFromCatalog"
     />
     <SectionModal
       :show="sectionModal.show"

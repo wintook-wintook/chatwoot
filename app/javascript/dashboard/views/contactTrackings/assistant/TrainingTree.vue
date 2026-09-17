@@ -38,6 +38,7 @@ export default {
     'editDefinition',
     'editRoute',
     'addRoute',
+    'findRoute',
     'editSection',
     'addSection',
     'moveSection',
@@ -200,7 +201,18 @@ export default {
         />
       </button>
       <!-- La acción del grupo, en su misma fila: agregar es lo que se hace desde
-           el grupo, y con el nombre puesto no hay que adivinar qué agrega. -->
+           el grupo, y con el nombre puesto no hay que adivinar qué agrega. Al lado,
+           copiar una rama que la cuenta ya escribió (ver RouteCatalogModal). -->
+      <woot-button
+        type="button"
+        size="tiny"
+        variant="smooth"
+        color-scheme="secondary"
+        icon="search"
+        @click="$emit('findRoute')"
+      >
+        {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_FIND') }}
+      </woot-button>
       <woot-button
         type="button"
         size="tiny"

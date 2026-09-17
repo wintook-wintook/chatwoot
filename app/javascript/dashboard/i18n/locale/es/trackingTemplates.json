@@ -149,7 +149,18 @@
         "SECTION_MODAL_PREAMBLE": "El texto inicial va antes de la primera sección y no lleva rótulo.",
         "SECTION_MODAL_BODY": "Instrucciones de esta sección",
         "SECTION_MODAL_SAVE": "Guardar la sección",
-        "SECTION_NAME_TAKEN": "Ya hay una sección con ese nombre. Dos rótulos iguales confunden al agente: no sabe cuál de los dos aplica."
+        "SECTION_NAME_TAKEN": "Ya hay una sección con ese nombre. Dos rótulos iguales confunden al agente: no sabe cuál de los dos aplica.",
+        "ROUTE_FIND": "Buscar rama",
+        "ROUTE_FIND_TITLE": "Ramas que ya existen en la cuenta",
+        "ROUTE_FIND_HINT": "Copiá una rama de otro agente, con sus frases, su fuente y su alcance. Después se puede editar.",
+        "ROUTE_FIND_SEARCH": "Buscar por nombre, frases, fuente o agente…",
+        "ROUTE_FIND_LOADING": "Buscando las ramas de la cuenta…",
+        "ROUTE_FIND_EMPTY": "Todavía no hay ramas escritas en ningún agente de la cuenta.",
+        "ROUTE_FIND_NO_MATCH": "Ninguna rama coincide con esa búsqueda.",
+        "ROUTE_FIND_USE": "Usar esta",
+        "ROUTE_FIND_TAKEN": "Ya está en este agente",
+        "ROUTE_FIND_SCOPE": "Alcance",
+        "ROUTE_FIND_AGENTS": "Está en"
       }
     },
     "CREATE": {

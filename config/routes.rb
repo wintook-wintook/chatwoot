@@ -87,6 +87,7 @@ Rails.application.routes.draw do
             collection do
               get :calendar_integrations
               get :section_titles # proyecto@asistente_agentes_ia — sugerencias del formulario por secciones
+              get :route_catalog # proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió
               post :training_preview # proyecto@asistente_agentes_ia — texto ↔ bloques + comprobador
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
