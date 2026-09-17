@@ -228,12 +228,16 @@ se abre en vista Texto, como hoy).
 | **F3** Formulario de secciones | `TrainingSectionsEditor` en la pestaña: cajas, agregar, borrar, reordenar, plegar, vista Texto | Vitest del armado en el cliente + prueba en el navegador | 3 |
 | **F4** Ayudas por sección | selectores de directiva/adjunto en la caja activa, comprobador en vivo, Explicar por sección | prueba en el navegador | 1,5 |
 | **F5** Ramas en tarjetas | `RouteCards` + `TrainingRoutes`: nombre, etiqueta, frases, fuente y escalamiento (acción + tipo de caso + prioridad), con listas del inventario | ida y vuelta idéntico sobre los 28 prompts del respaldo + specs + Vitest + prueba en el navegador | 2 |
-| **F6** Secciones en el Asistente | pestaña Secciones en el panel del borrador, con el mismo editor | prueba en el navegador | 0,5 |
+| **F6** Secciones en el Asistente | pestaña Secciones (la inicial) en el panel del borrador | prueba en el navegador | 0,5 |
+| **F7** Solo en el Asistente | la ficha del Agente IA vuelve a su caja de texto; el formulario queda en el Asistente | prueba en el navegador en las dos pantallas | 0,5 |
 
-Total F0–F6: **11 días hábiles**.
+Total F0–F7: **11,5 días hábiles**.
 
-Hecho el 17/09/2026: F0–F6. El editor y su mixin viven en los componentes del
-Asistente (`views/contactTrackings/assistant/`) y los usan las dos pantallas.
+Hecho el 17/09/2026: F0–F7. **Dónde vive:** el formulario quedó SOLO en el Asistente
+(`views/contactTrackings/assistant/`), que es donde se arma el prompt; la ficha del Agente IA
+volvió a su caja de texto de siempre, y el chat del Asistente se deja pero no se va a usar.
+Lo de §1–§8 sobre "la ficha" se hizo primero ahí y se revirtió a pedido del usuario: el backend
+(columna, `section_titles`, `training_preview`) es el mismo y no cambió.
 
 ---
 
