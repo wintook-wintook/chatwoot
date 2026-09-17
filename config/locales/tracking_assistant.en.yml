@@ -80,6 +80,13 @@ en:
         I tested branch "%{route}" with its own description ("%{probe}") and the engine chose
         "%{chosen}". That description overlaps another branch's: as written, this branch will
         almost never be picked. Use situations that only apply to it.
+      contract_label: >-
+        %{count} line(s) with an Assistant label between ═══ (line(s) %{lines}). Those labels belong to
+        the instructions used to build the Training, not to the agent: if they stay, the agent reads
+        them as part of its prompt. Delete those lines entirely.
+      contract_wrap: >-
+        %{count} line(s) with text between ‹ › (line(s) %{lines}). In the template, ‹ › mark where the
+        content goes; they are not part of it. Remove only the ‹ › signs and keep the instruction as is.
       pending_marker: >-
         %{count} item(s) still to fill in: %{items}. It cannot be saved while any marker like this
         remains: the agent would read it verbatim and say it to the customer.

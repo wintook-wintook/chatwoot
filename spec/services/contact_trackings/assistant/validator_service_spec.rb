@@ -285,6 +285,51 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
     end
   end
 
+  describe 'B10 · restos del contrato del Asistente' do
+    # Así se entregó el agente #7512: los rótulos de zona y la prosa entre ‹ ›.
+    let(:con_restos) do
+      <<~T
+        ═══ ZONA 1 · líneas de configuración ═══
+        @ruta(citas #citado: quiero una cita): -
+
+        ═══ ZONA 2 · la prosa ═══
+        [ROL]
+        ‹El agente agenda citas médicas.›
+
+        [LIMITES]
+        ‹No da diagnósticos.›
+      T
+    end
+
+    it 'bloquea los rótulos ═══ y dice en qué líneas están' do
+      hallazgo = validar(con_restos)[:blocking].find { |f| f[:code] == :contract_label }
+
+      expect(hallazgo[:message]).to include('2 línea(s)').and include('1, 4')
+      expect(hallazgo).to include(line: 1, wrote: '═══ ZONA 1 · líneas de configuración ═══')
+    end
+
+    it 'bloquea el texto entre ‹ › aparte, porque se corrige distinto' do
+      r = validar(con_restos)
+
+      hallazgo = r[:blocking].find { |f| f[:code] == :contract_wrap }
+      expect(hallazgo[:message]).to include('6, 9')
+      expect(r[:valid]).to be(false)
+    end
+
+    # Hay Entrenamientos reales con renglones de === como separador.
+    it 'no confunde una línea de decoración con un rótulo' do
+      r = validar("@ruta(citas #citado: quiero una cita): -\n\n=====================\n═══════════\n[ROL]\nAgenda citas.")
+
+      expect(codigos(r, :blocking)).not_to include(:contract_label, :contract_wrap)
+    end
+
+    it 'sin restos no dice nada' do
+      r = validar("@ruta(citas #citado: quiero una cita): -\n\n[ROL]\nAgenda «citas» médicas.")
+
+      expect(codigos(r, :blocking)).not_to include(:contract_label, :contract_wrap)
+    end
+  end
+
   describe 'D8 · dos ramas que describen lo mismo' do
     # Salió de una corrida real del Asistente: escribió "quiero hablar con un asesor"
     # como descripción de gestiones_comerciales Y de pase_a_humano. Parsea perfecto,

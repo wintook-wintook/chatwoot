@@ -79,6 +79,13 @@ es:
         Probé la rama "%{route}" con su propia descripción ("%{probe}") y el motor eligió
         "%{chosen}". Esa descripción se pisa con la de otra rama: como está, esta rama casi
         nunca se va a elegir. Escribí situaciones que solo apliquen a ella.
+      contract_label: >-
+        %{count} línea(s) con un rótulo del Asistente entre ═══ (línea(s) %{lines}). Esos rótulos son de
+        las instrucciones con las que se arma el Entrenamiento, no del agente: si quedan, el agente los
+        lee como parte de su prompt. Borrá esas líneas enteras.
+      contract_wrap: >-
+        %{count} línea(s) con texto entre ‹ › (línea(s) %{lines}). Los ‹ › marcan en la plantilla dónde
+        va el contenido; no son parte de él. Sacá solo los signos ‹ › y dejá la instrucción tal cual.
       pending_marker: >-
         Faltan %{count} dato(s) por completar: %{items}. Mientras quede alguna marca así no se puede
         guardar: el agente la leería tal cual y se la diría al cliente.

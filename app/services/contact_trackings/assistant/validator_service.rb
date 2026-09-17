@@ -50,7 +50,7 @@ class ContactTrackings::Assistant::ValidatorService
   # porque su diagnóstico suprime el genérico "0 ramas" (decirle a alguien que no
   # escribió ninguna @ruta cuando la escribió mal es lo que hace que descarte el aviso).
   CHECKS = %i[
-    check_pending_markers
+    check_pending_markers check_contract_leftovers
     check_unparsed_route_lines check_has_routes
     check_route_sources check_action_in_source check_ticket_types check_default_route
     check_descriptions check_duplicate_descriptions check_tags_exist check_corpus
@@ -135,6 +135,9 @@ class ContactTrackings::Assistant::ValidatorService
         t('findings.pending_marker', count: marcas.size, items: marcas.uniq.first(5).join(' · ')),
         wrote: marcas.first)
   end
+
+  # ── B10 · restos del contrato (ver ContractLeftovers) ────────────────────────
+  def check_contract_leftovers = ContactTrackings::Assistant::ContractLeftovers.check(text, findings: findings)
 
   def pending?(value) = ContactTrackings::Assistant::PendingMarkers.pending?(value)
 
