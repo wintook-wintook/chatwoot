@@ -55,4 +55,23 @@ RSpec.describe 'Agentes IA — Entrenamiento por secciones' do
     expect(response.parsed_body['from_account']).to include('REGLA DE EVIDENCIA')
     expect(response.parsed_body['from_account']).not_to include('ROL')
   end
+
+  # La ficha cambia de vista sin guardar: la conversión vive solo en Ruby.
+  describe 'POST training_preview' do
+    it 'separa un texto en bloques y lo comprueba' do
+      post "#{base}/training_preview", params: { text: "@ruta(a #aaa: x): -\n\n[ROL]\nSos amable." },
+                                       headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['training_structure']['blocks'].pluck('type')).to eq(%w[routes section])
+      expect(response.parsed_body['validation']['routes'].size).to eq(1)
+    end
+
+    it 'arma el texto de los bloques del formulario' do
+      post "#{base}/training_preview",
+           params: { training_structure: { blocks: [{ type: 'section', title: 'ESTILO', body: 'Breve.' }] } },
+           headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['text']).to eq("[ESTILO]\nBreve.")
+    end
+  end
 end

@@ -88,6 +88,29 @@
         "LOADING": "Loading channel templates...",
         "NO_TEMPLATES": "This channel has no WhatsApp templates configured. Contact the administrator to add templates in Meta Business.",
         "NOT_WHATSAPP": "This channel is not WhatsApp type. WhatsApp templates only apply to WhatsApp channels."
+      },
+      "TRAINING": {
+        "VIEW_SECTIONS": "Sections",
+        "VIEW_TEXT": "Text",
+        "CHECK": "%{routes} branch(es) · %{blocking} blocking · %{degrading} warning(s)",
+        "ROUTES": "Branches",
+        "PREAMBLE": "Opening text",
+        "ROUTES_PLACEHOLDER": "@ruta(name #label: customer phrases): source -> escalation",
+        "BODY_PLACEHOLDER": "Write the instructions for this section…",
+        "EMPTY": "No sections yet. Add the first one, for example ROL.",
+        "TOGGLE": "Collapse or expand",
+        "SECTION_NAME": "Section name",
+        "LINES": "%{count} line(s)",
+        "MOVE_UP": "Move up",
+        "MOVE_DOWN": "Move down",
+        "DELETE": "Delete",
+        "CONFIRM_DELETE": "Delete? It has text",
+        "ADD_SECTION": "Add section",
+        "SUGGESTED": "Suggested",
+        "FROM_ACCOUNT": "Used in your agents",
+        "CUSTOM": "Other name",
+        "ADD": "Add",
+        "ADD_ROUTES": "Add branches"
       }
     },
     "CREATE": {

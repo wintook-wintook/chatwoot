@@ -88,6 +88,29 @@
         "LOADING": "Cargando plantillas del canal...",
         "NO_TEMPLATES": "Este canal no tiene plantillas WhatsApp configuradas. Contacta al administrador para agregar plantillas en Meta Business.",
         "NOT_WHATSAPP": "Este canal no es de tipo WhatsApp. Las plantillas WhatsApp solo aplican a canales WhatsApp."
+      },
+      "TRAINING": {
+        "VIEW_SECTIONS": "Secciones",
+        "VIEW_TEXT": "Texto",
+        "CHECK": "%{routes} rama(s) · %{blocking} bloqueante(s) · %{degrading} aviso(s)",
+        "ROUTES": "Ramas",
+        "PREAMBLE": "Texto inicial",
+        "ROUTES_PLACEHOLDER": "@ruta(nombre #etiqueta: frases del cliente): fuente -> escalamiento",
+        "BODY_PLACEHOLDER": "Escribí las instrucciones de esta sección…",
+        "EMPTY": "Todavía no hay secciones. Agregá la primera, por ejemplo ROL.",
+        "TOGGLE": "Plegar o desplegar",
+        "SECTION_NAME": "Nombre de la sección",
+        "LINES": "%{count} línea(s)",
+        "MOVE_UP": "Subir",
+        "MOVE_DOWN": "Bajar",
+        "DELETE": "Borrar",
+        "CONFIRM_DELETE": "¿Borrar? Tiene texto",
+        "ADD_SECTION": "Agregar sección",
+        "SUGGESTED": "Sugeridas",
+        "FROM_ACCOUNT": "Usadas en tus agentes",
+        "CUSTOM": "Otro nombre",
+        "ADD": "Agregar",
+        "ADD_ROUTES": "Agregar ramas"
       }
     },
     "CREATE": {

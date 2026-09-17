@@ -43,6 +43,23 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
     render json: ContactTrackings::TrainingSectionTitles.new(Current.account).call
   end
 
+  # proyecto@asistente_agentes_ia — la ficha cambia entre la vista Secciones y la vista
+  # Texto sin guardar: esto convierte en cualquiera de los dos sentidos y comprueba el
+  # resultado. La conversión vive solo acá (TrainingStructure), no duplicada en el
+  # navegador: si hubiera dos implementaciones, las vistas podrían no coincidir.
+  def training_preview
+    texto = if params[:training_structure].present?
+              raw = params[:training_structure]
+              raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+              ContactTrackings::TrainingStructure.compose('blocks' => sanitized_blocks(raw))
+            else
+              params[:text].to_s
+            end
+
+    render json: { text: texto, training_structure: ContactTrackings::TrainingStructure.parse(texto),
+                   validation: ContactTrackings::Assistant::ValidatorService.new(texto, account: Current.account).call }
+  end
+
   def destroy
     @tracking_template.destroy!
     head :ok
