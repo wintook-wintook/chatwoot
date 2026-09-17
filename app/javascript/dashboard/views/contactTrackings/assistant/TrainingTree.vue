@@ -186,15 +186,6 @@ export default {
           "
         />
       </button>
-      <woot-button
-        type="button"
-        size="tiny"
-        variant="clear"
-        color-scheme="secondary"
-        icon="add"
-        :title="$t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_ADD')"
-        @click="$emit('addRoute')"
-      />
     </div>
     <div v-if="open.routes" class="flex flex-col">
       <button
@@ -236,6 +227,20 @@ export default {
       >
         {{ $t('TRACKING_ASSISTANT_VIEW.TREE_ROUTES_EMPTY') }}
       </p>
+      <!-- Al pie del grupo y con su nombre: es la acción del grupo, no un icono
+           perdido en la cabecera. -->
+      <div class="py-1 pl-6">
+        <woot-button
+          type="button"
+          size="small"
+          variant="smooth"
+          color-scheme="success"
+          icon="add"
+          @click="$emit('addRoute')"
+        >
+          {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_ADD') }}
+        </woot-button>
+      </div>
     </div>
 
     <!-- ── Secciones ────────────────────────────────────────────────────── -->
@@ -254,15 +259,6 @@ export default {
         </span>
         <span class="text-xs text-slate-400">({{ sections.length }})</span>
       </button>
-      <woot-button
-        type="button"
-        size="tiny"
-        variant="clear"
-        color-scheme="secondary"
-        icon="add"
-        :title="$t('TRACKING_TEMPLATES.FORM.TRAINING.ADD_SECTION')"
-        @click="$emit('addSection')"
-      />
     </div>
     <div v-if="open.sections" class="flex flex-col">
       <button
@@ -302,6 +298,18 @@ export default {
       >
         {{ $t('TRACKING_ASSISTANT_VIEW.TREE_SECTIONS_EMPTY') }}
       </p>
+      <div class="py-1 pl-6">
+        <woot-button
+          type="button"
+          size="small"
+          variant="smooth"
+          color-scheme="success"
+          icon="add"
+          @click="$emit('addSection')"
+        >
+          {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ADD_SECTION') }}
+        </woot-button>
+      </div>
     </div>
   </div>
 </template>

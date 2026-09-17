@@ -160,8 +160,8 @@ export default {
     <textarea
       :id="`${idPrefix}-desc`"
       :value="route.description"
-      rows="2"
-      class="w-full !mb-0 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2"
+      rows="4"
+      class="w-full !mb-0 min-h-[5rem] text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2"
       :placeholder="
         $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_PHRASES_PLACEHOLDER')
       "

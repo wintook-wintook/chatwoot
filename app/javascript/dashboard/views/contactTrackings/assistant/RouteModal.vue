@@ -110,8 +110,8 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" :on-close="() => $emit('close')">
-    <div class="flex flex-col gap-4 p-8 text-sm max-h-[80vh] overflow-y-auto">
+  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
+    <div class="flex flex-col gap-4 p-8 text-sm max-h-[85vh] overflow-y-auto">
       <div>
         <h2 class="!m-0 text-lg font-medium text-slate-800 dark:text-slate-100">
           {{

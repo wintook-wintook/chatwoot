@@ -102,8 +102,8 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" :on-close="() => $emit('close')">
-    <div class="flex flex-col gap-4 p-8 text-sm max-h-[80vh] overflow-y-auto">
+  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
+    <div class="flex flex-col gap-4 p-8 text-sm max-h-[85vh] overflow-y-auto">
       <div>
         <h2 class="!m-0 text-lg font-medium text-slate-800 dark:text-slate-100">
           {{
@@ -164,8 +164,8 @@ export default {
         <textarea
           id="section-modal-body"
           v-model="body"
-          rows="14"
-          class="w-full !mb-0 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2"
+          rows="18"
+          class="w-full !mb-0 min-h-[24rem] text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2"
           :placeholder="$t('TRACKING_TEMPLATES.FORM.TRAINING.BODY_PLACEHOLDER')"
         />
       </div>

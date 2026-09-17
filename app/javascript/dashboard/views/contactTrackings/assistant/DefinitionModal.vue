@@ -61,8 +61,8 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" :on-close="() => $emit('close')">
-    <div class="flex flex-col gap-4 p-8 text-sm max-h-[80vh] overflow-y-auto">
+  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
+    <div class="flex flex-col gap-4 p-8 text-sm max-h-[85vh] overflow-y-auto">
       <div>
         <h2 class="!m-0 text-lg font-medium text-slate-800 dark:text-slate-100">
           {{ $t('TRACKING_ASSISTANT_VIEW.DEFINITION_TITLE') }}
@@ -107,8 +107,8 @@ export default {
           id="definition-context"
           ref="contexto"
           v-model="aiContext"
-          rows="12"
-          class="w-full !mb-1 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2"
+          rows="16"
+          class="w-full !mb-1 min-h-[16rem] text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2"
           :placeholder="$t('TRACKING_ASSISTANT_VIEW.DEFINITION_CONTEXT_HINT')"
         />
         <p class="!m-0 text-xs text-amber-600 dark:text-amber-400">
