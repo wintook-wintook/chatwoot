@@ -310,17 +310,17 @@ export default {
           </span>
         </button>
         <!-- El orden importa: el agente lee las secciones en el orden en que están.
-             Atenuadas pero SIEMPRE visibles: escondidas hasta pasar el mouse, nadie
-             se enteraba de que las secciones se pueden reordenar. -->
+             Botones con color y SIEMPRE visibles —subir verde, bajar rojo—: con
+             flechas grises y atenuadas nadie se enteraba de que se pueden reordenar. -->
         <div
           v-if="block.type === 'section'"
-          class="flex items-center opacity-40 shrink-0 group-hover/fila:opacity-100"
+          class="flex items-center gap-1 shrink-0"
         >
           <woot-button
             type="button"
             size="tiny"
-            variant="clear"
-            color-scheme="secondary"
+            variant="smooth"
+            color-scheme="success"
             icon="arrow-up"
             :is-disabled="!canMove(block.index, -1)"
             :title="$t('TRACKING_TEMPLATES.FORM.TRAINING.MOVE_UP')"
@@ -329,8 +329,8 @@ export default {
           <woot-button
             type="button"
             size="tiny"
-            variant="clear"
-            color-scheme="secondary"
+            variant="smooth"
+            color-scheme="alert"
             icon="arrow-up"
             class="[&_svg]:rotate-180"
             :is-disabled="!canMove(block.index, 1)"
