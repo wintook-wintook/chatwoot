@@ -86,6 +86,7 @@ Rails.application.routes.draw do
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
+              get :section_titles # proyecto@asistente_agentes_ia — sugerencias del formulario por secciones
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates

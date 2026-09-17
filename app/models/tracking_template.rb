@@ -26,6 +26,7 @@
 #  slots_presentation            :string           default("detailed"), not null
 #  tags                          :json
 #  timezone                      :string
+#  training_structure            :jsonb            not null
 #  use_as_knowledge              :boolean          default(FALSE), not null
 #  whatsapp_templates            :json
 #  created_at                    :datetime         not null
@@ -80,8 +81,30 @@ class TrackingTemplate < ApplicationRecord
   scope :ordered, -> { order(updated_at: :desc) }
 
   before_save :ensure_arrays
+  # proyecto@asistente_agentes_ia — el Entrenamiento por bloques (plan:
+  # docs/formulario_entrenamiento_plan.md). Se regenera SIEMPRE del texto cuando el texto
+  # cambia, así las dos columnas no pueden decir cosas distintas, escriba quien escriba
+  # (la ficha, el Asistente, la API). El único camino que se saltea los callbacks es
+  # update_columns: quien lo use tiene que pasar las dos (ver DirectiveReferenceService).
+  before_save :sync_training_structure, if: :will_save_change_to_complementary_prompt?
+
+  # La estructura para mostrar: la guardada, o la del texto si el agente es anterior a
+  # la columna y todavía no se corrió el backfill.
+  def training_blocks
+    training_structure.presence || ContactTrackings::TrainingStructure.parse(complementary_prompt)
+  end
+
+  # El formulario manda bloques: se arma el texto y, al guardar, el callback vuelve a
+  # separar la estructura desde ese texto — la guardada es siempre la canónica.
+  def training_structure_from_form=(estructura)
+    self.complementary_prompt = ContactTrackings::TrainingStructure.compose(estructura)
+  end
 
   private
+
+  def sync_training_structure
+    self.training_structure = ContactTrackings::TrainingStructure.parse(complementary_prompt)
+  end
 
   def ensure_arrays
     self.whatsapp_templates = [] unless whatsapp_templates.is_a?(Array)

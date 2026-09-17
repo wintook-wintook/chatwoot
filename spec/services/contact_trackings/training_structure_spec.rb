@@ -72,6 +72,13 @@ RSpec.describe ContactTrackings::TrainingStructure do
       expect(described_class.compose(estructura)).to eq("[ROL]\nSos el asistente del consultorio.\n\n## ESTILO\nBreve.\n")
     end
 
+    it 'separa con un renglón en blanco una sección nueva aunque la anterior no terminara en uno' do
+      pegado = described_class.parse("[ROL]\nSos amable.")
+      pegado['blocks'] << { 'type' => 'section', 'title' => 'ESTILO', 'body' => 'Breve.' }
+
+      expect(described_class.compose(pegado)).to eq("[ROL]\nSos amable.\n\n[ESTILO]\nBreve.")
+    end
+
     it 'agrega una sección nueva con formato [TÍTULO]' do
       estructura['blocks'] << { 'type' => 'section', 'title' => 'NO SIMULAR', 'body' => 'Nunca confirmes sin confirmar.' }
 

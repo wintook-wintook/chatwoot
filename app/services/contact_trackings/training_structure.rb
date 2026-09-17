@@ -33,7 +33,23 @@ module ContactTrackings::TrainingStructure
   end
 
   def compose(structure)
-    Array((structure || {})['blocks'] || (structure || {})[:blocks]).filter_map { |b| block_text(b.stringify_keys) }.join("\n")
+    bloques = blocks_of(structure)
+    bloques.each_with_index.filter_map do |bloque, i|
+      texto = block_text(bloque)
+      texto && new_section_after_tight_block?(bloque, bloques[i - 1], i) ? "\n#{texto}" : texto
+    end.join("\n")
+  end
+
+  def blocks_of(structure)
+    datos = (structure || {}).to_h.stringify_keys
+    Array(datos['blocks']).map { |b| b.to_h.stringify_keys }
+  end
+
+  # Una sección NUEVA (todavía sin rótulo original) va separada por un renglón en blanco
+  # aunque el bloque anterior no terminara en uno. Las que ya existían no se tocan: su
+  # formato es parte del ida y vuelta idéntico.
+  def new_section_after_tight_block?(bloque, anterior, indice)
+    indice.positive? && bloque['type'] == 'section' && bloque['header'].blank? && anterior['gap'].to_i.zero?
   end
 
   # ── texto → bloques ─────────────────────────────────────────────────────────
