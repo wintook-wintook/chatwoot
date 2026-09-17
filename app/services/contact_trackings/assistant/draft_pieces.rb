@@ -15,10 +15,21 @@
 # El corte es por líneas y se puede rearmar: `to_s` devuelve el texto de entrada tal
 # cual. Una @ruta en medio de una sección es su propia pieza; lo que sigue debajo
 # vuelve a ser de esa sección.
+#
+# LOS DOS FORMATOS DE SECCIÓN (medido 17/09/2026 sobre los 28 prompts del respaldo de
+# la cuenta 2: 7 con [X], 7 con Markdown, 6 con los dos, 8 sin secciones):
+#   [ROL]          siempre es una sección
+#   ## ROL         es sección si es el nivel de encabezado MÁS ALTO del texto; los más
+#                  bajos (### debajo de ##) quedan dentro de su sección — son subtítulos
+#                  como "A. COINCIDENCIA EXACTA", que no se separan de su regla
+#   # TÍTULO       un único # al principio es el título del prompt: va al texto inicial
+# Los encabezados dentro de un bloque de código (```) no cuentan.
 # ================================================================================
 
 class ContactTrackings::Assistant::DraftPieces
   SECTION_RE = /\A[ \t]*\[([^\]\n]+)\][ \t]*\z/
+  MARKDOWN_RE = /\A[ \t]{0,3}(\#{1,3})[ \t]+(\S.*?)[ \t]*\#*[ \t]*\z/
+  FENCE_RE = /\A[ \t]*```/
   DEFAULT_KEY = '@ruta_por_defecto'
   PREAMBLE_KEY = '(sin sección)'
 
@@ -58,6 +69,12 @@ class ContactTrackings::Assistant::DraftPieces
 
   def keys_in_order
     @chunks.map(&:key).uniq
+  end
+
+  # Los tramos en orden, para quien necesita el texto original línea por línea
+  # (TrainingStructure). Copia: nadie de afuera modifica el corte.
+  def chunks
+    @chunks.map(&:dup)
   end
 
   def chunks_for(key)
@@ -115,9 +132,11 @@ class ContactTrackings::Assistant::DraftPieces
     chunks = []
     seccion = nil
     vistas = Hash.new(0)
+    lineas = text.split("\n", -1)
+    @markdown_sections = markdown_section_lines(lineas)
 
-    text.split("\n", -1).each do |line|
-      pieza = line_piece(line, vistas)
+    lineas.each_with_index do |line, indice|
+      pieza = line_piece(line, vistas, indice)
       if pieza
         seccion = pieza if pieza[:section]
         append(chunks, pieza[:key], pieza[:label], pieza[:route], line)
@@ -131,7 +150,7 @@ class ContactTrackings::Assistant::DraftPieces
   end
 
   # La pieza que ABRE esta línea, o nil si la línea sigue a la pieza en curso.
-  def line_piece(line, vistas)
+  def line_piece(line, vistas, indice = nil)
     if (match = line.match(ContactTrackings::RouteMap::LINE_RE))
       label = "@ruta(#{match[1].strip.downcase})"
       { key: unique_key(label, vistas), label: label, route: true }
@@ -140,7 +159,42 @@ class ContactTrackings::Assistant::DraftPieces
     elsif (match = line.match(SECTION_RE))
       label = "[#{match[1].strip}]"
       { key: unique_key(label, vistas), label: label, route: false, section: true }
+    elsif @markdown_sections.include?(indice)
+      match = line.match(MARKDOWN_RE)
+      label = "#{match[1]} #{match[2].strip}"
+      { key: unique_key(label, vistas), label: label, route: false, section: true }
     end
+  end
+
+  # Índices de las líneas Markdown que abren sección (ver el encabezado del archivo).
+  def markdown_section_lines(lineas)
+    encabezados = markdown_headings(lineas)
+    titulo = leading_title(lineas, encabezados)
+    encabezados.delete(titulo) if titulo
+    nivel = encabezados.values.min
+    return Set.new if nivel.nil?
+
+    encabezados.select { |_, n| n == nivel }.keys.to_set
+  end
+
+  # { índice => nivel } de los encabezados fuera de bloques de código.
+  def markdown_headings(lineas)
+    en_codigo = false
+    lineas.each_with_index.with_object({}) do |(linea, indice), acc|
+      en_codigo = !en_codigo if linea.match?(FENCE_RE)
+      next if en_codigo || (match = linea.match(MARKDOWN_RE)).nil?
+
+      acc[indice] = match[1].size
+    end
+  end
+
+  # Un único "# TÍTULO" en la primera línea con texto es el título del prompt.
+  def leading_title(lineas, encabezados)
+    primera = lineas.index { |l| l.strip.present? }
+    return nil unless primera && encabezados[primera] == 1
+    return nil if encabezados.values.count(1) > 1
+
+    primera
   end
 
   # Un rótulo repetido no pisa al primero: se numera, así borrar el segundo [ESTILO]

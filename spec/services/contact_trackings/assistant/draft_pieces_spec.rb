@@ -84,4 +84,18 @@ RSpec.describe ContactTrackings::Assistant::DraftPieces do
       expect(restaurar(texto, mio, ['[quién eres]'])).to include('Sos la asistente')
     end
   end
+
+  describe 'encabezados Markdown' do
+    it 'reconoce ## como sección y deja ### dentro de ella' do
+      etiquetas = described_class.new("## ROL\nx\n### sub\ny\n\n## ESTILO\nz").pieces.values.map(&:label)
+
+      expect(etiquetas).to eq(['## ROL', '## ESTILO'])
+    end
+
+    it 'no cuenta los encabezados dentro de un bloque de código' do
+      etiquetas = described_class.new("```\n## no\n```\n## SI\nx").pieces.values.map(&:label)
+
+      expect(etiquetas).to eq(['(sin sección)', '## SI'])
+    end
+  end
 end
