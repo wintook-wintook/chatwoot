@@ -291,6 +291,9 @@
     "DEFINITION_CONTEXT_HINT": "business facts the agent may quote: hours, versions, policies…",
     "DEFINITION_CONTEXT_WARNING": "The agent quotes this as fact: only put in what you know is true.",
     "DEFINITION_SAVE": "Save definition",
-    "NEW_AGENT": "New AI agent"
+    "NEW_AGENT": "New AI agent",
+    "DEFINITION_FIX": "Improve the wording",
+    "DEFINITION_FIX_UNDO": "Back to the original",
+    "DEFINITION_FIX_ERROR": "The text could not be corrected. Try again."
   }
 }

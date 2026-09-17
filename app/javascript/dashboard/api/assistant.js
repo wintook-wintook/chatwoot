@@ -80,6 +80,16 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // El Objetivo o el Contexto con la redacción y la ortografía corregidas. No toca
+  // ningún dato (ver Proofreader) y la pantalla siempre deja volver al original.
+  proofread(text, kind, inboxId = null) {
+    return axios.post(`${this.url}/proofread`, {
+      text,
+      kind,
+      inbox_id: inboxId,
+    });
+  }
+
   // Lo que se dictó, en texto. Vuelve al cuadro de mensaje sin enviarse.
   transcribe(file) {
     const formData = new FormData();

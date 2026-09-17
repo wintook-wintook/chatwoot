@@ -1239,6 +1239,7 @@ export default {
                 :titles="sectionTitles"
                 :route-options="routeOptions"
                 :issues="nodeIssues"
+                :inbox-id="inboxId"
                 :can-explain="canExplainTraining"
                 @input="onSectionsInput"
                 @updateDefinition="updateDefinition"

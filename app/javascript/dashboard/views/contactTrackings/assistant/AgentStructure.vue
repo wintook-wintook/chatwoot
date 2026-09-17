@@ -43,6 +43,8 @@ export default {
       default: () => ({ suggested: [], from_account: [] }),
     },
     routeOptions: { type: Object, default: () => ({}) },
+    // El canal elegido: con qué modelo se corrige la redacción de la definición.
+    inboxId: { type: Number, default: null },
     issues: { type: Object, default: () => ({}) },
     canExplain: { type: Boolean, default: false },
   },
@@ -233,6 +235,8 @@ export default {
       :show="definitionModal.show"
       :definition="definition"
       :focus-field="definitionModal.field"
+      :can-proofread="canExplain"
+      :inbox-id="inboxId"
       @close="definitionModal = { show: false, field: 'objective' }"
       @save="saveDefinition"
     />

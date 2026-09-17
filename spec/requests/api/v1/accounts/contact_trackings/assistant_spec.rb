@@ -567,6 +567,7 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       [:post,   'suggested_tests'],
       [:post,   'optimize'],
       [:post,   'explain'],
+      [:post,   'proofread'],
       [:post,   'transcribe']
     ].each do |verbo, camino|
       it "#{verbo.to_s.upcase} #{camino}" do

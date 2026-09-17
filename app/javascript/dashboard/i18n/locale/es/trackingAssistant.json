@@ -291,6 +291,9 @@
     "DEFINITION_CONTEXT_HINT": "datos del negocio que el agente puede citar: horarios, versiones, políticas…",
     "DEFINITION_CONTEXT_WARNING": "El agente cita esto como si fuera cierto: va solo lo que sabés que es verdad.",
     "DEFINITION_SAVE": "Guardar la definición",
-    "NEW_AGENT": "Nuevo Agente IA"
+    "NEW_AGENT": "Nuevo Agente IA",
+    "DEFINITION_FIX": "Mejorar la redacción",
+    "DEFINITION_FIX_UNDO": "Volver al original",
+    "DEFINITION_FIX_ERROR": "No se pudo corregir el texto. Intentá de nuevo."
   }
 }

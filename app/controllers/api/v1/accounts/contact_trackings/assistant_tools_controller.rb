@@ -16,6 +16,10 @@
 #   Qué hace un fragmento seleccionado: lo que lee el motor (hecho) y la lectura del
 #   modelo (interpretación). Ver Explainer.
 #
+# POST …/assistant/proofread
+#   El Objetivo o el Contexto del agente con la redacción y la ortografía corregidas,
+#   sin tocar ni un dato. Ver Proofreader.
+#
 # POST …/assistant/transcribe  (multipart: audio)
 #   Lo que la persona dictó, en texto, para el cuadro de mensaje. Ver Transcriber.
 #
@@ -26,7 +30,7 @@
 
 class Api::V1::Accounts::ContactTrackings::AssistantToolsController < Api::V1::Accounts::BaseController
   before_action :check_authorization
-  before_action :require_draft, except: :transcribe
+  before_action :require_draft, except: [:transcribe, :proofread]
 
   def suggested_tests
     avance = ContactTrackings::Assistant::TurnProgress.new(Current.account, Current.user, params[:turn_id])
@@ -44,6 +48,12 @@ class Api::V1::Accounts::ContactTrackings::AssistantToolsController < Api::V1::A
   def explain
     result = ContactTrackings::Assistant::Explainer
              .new(Current.account, draft: params[:draft], excerpt: params[:excerpt], inbox: inbox).call
+    render_result(result)
+  end
+
+  def proofread
+    result = ContactTrackings::Assistant::Proofreader
+             .new(Current.account, text: params[:text], kind: params[:kind], inbox: inbox).call
     render_result(result)
   end
 
