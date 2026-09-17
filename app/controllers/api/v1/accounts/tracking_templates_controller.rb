@@ -125,7 +125,7 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
     permitted
   end
 
-  TRAINING_BLOCK_KEYS = %w[type title style header body text gap].freeze
+  TRAINING_BLOCK_KEYS = %w[type title style header body text gap lines].freeze
   MAX_TRAINING_BLOCKS = 300
 
   def sanitized_blocks(raw)
@@ -133,8 +133,17 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
       bloque = bloque.to_unsafe_h if bloque.respond_to?(:to_unsafe_h)
       next unless bloque.is_a?(Hash)
 
-      bloque.stringify_keys.slice(*TRAINING_BLOCK_KEYS)
+      sanitized_block(bloque.stringify_keys.slice(*TRAINING_BLOCK_KEYS))
     end
+  end
+
+  # Las ramas llegan como campos (nombre, etiqueta, frases, fuente, escalamiento) y se
+  # limpian con sus propias reglas: son líneas de una gramática exacta, no prosa.
+  def sanitized_block(bloque)
+    return bloque if bloque['lines'].blank?
+
+    lineas = Array(bloque['lines']).map { |linea| linea.respond_to?(:to_unsafe_h) ? linea.to_unsafe_h : linea }
+    bloque.merge('lines' => ContactTrackings::TrainingRoutes.sanitize(lineas.select { |l| l.is_a?(Hash) }))
   end
 
   # proyecto@bot_seguimiento_calendar — { integration_id => [google_calendar_id, ...] }: en qué

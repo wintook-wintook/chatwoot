@@ -73,5 +73,30 @@ RSpec.describe 'Agentes IA — Entrenamiento por secciones' do
 
       expect(response.parsed_body['text']).to eq("[ESTILO]\nBreve.")
     end
+
+    # Las ramas también vuelven como campos, que es lo que editan las tarjetas.
+    it 'devuelve cada rama en campos' do
+      post "#{base}/training_preview",
+           params: { text: '@ruta(comercial #precios: cuanto cuesta): @buscar_articulo -> @crear_ticket(tipo=X)' },
+           headers: admin.create_new_auth_token, as: :json
+
+      rama = response.parsed_body['training_structure']['blocks'].first['lines'].first
+      expect(rama).to include('kind' => 'route', 'name' => 'comercial', 'tag' => 'precios',
+                              'description' => 'cuanto cuesta', 'source' => '@buscar_articulo',
+                              'escalation' => '@crear_ticket(tipo=X)')
+    end
+
+    it 'vuelve a escribir la línea @ruta con lo que cambió la tarjeta' do
+      post "#{base}/training_preview",
+           params: { training_structure: { blocks: [{ type: 'routes', text: '@ruta(comercial #precios: cuanto cuesta): -',
+                                                      lines: [{ kind: 'route', name: 'comercial', tag: 'precios',
+                                                                description: 'cuanto cuesta, precios',
+                                                                source: '@buscar_articulo', escalation: '',
+                                                                raw: '@ruta(comercial #precios: cuanto cuesta): -' }] }] } },
+           headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['text']).to eq('@ruta(comercial #precios: cuanto cuesta, precios): @buscar_articulo')
+      expect(response.parsed_body['validation']['routes'].size).to eq(1)
+    end
   end
 end

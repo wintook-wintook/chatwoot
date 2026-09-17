@@ -192,10 +192,12 @@ El pedido es sobre las secciones de instrucciones. Las ramas van en dos pasos:
 | Fase | Cómo se editan |
 |---|---|
 | **1** (este plan) | un bloque **Ramas** con una caja para las líneas `@ruta` y la rama por defecto, con el comprobador en vivo debajo |
-| **2** (siguiente) | **tarjetas por rama**: frases del cliente, etiqueta, fuente, escalamiento y acción de calendario, con **listas** que salen del inventario (no se puede elegir una fuente, etiqueta o calendario que no exista) |
+| **2** (hecha el 17/09/2026) | **tarjetas por rama**: frases del cliente, etiqueta, fuente, escalamiento y acción de calendario, con **listas** que salen del inventario (no se puede elegir una fuente, etiqueta o calendario que no exista) |
 
-La fase 2 es la que evitaría errores como el "cuesta 15" (fuente equivocada) o el calendario borrado
-del 15/09; queda fuera de este plan para no mezclar alcances.
+La fase 2 es la que evita errores como el "cuesta 15" (fuente equivocada) o el calendario borrado
+del 15/09: la fuente, la etiqueta, el tipo de caso y la prioridad se eligen de listas de lo que la
+cuenta TIENE. Un valor guardado que ya no existe se sigue ofreciendo, marcado — si desapareciera del
+selector, abrir el agente le cambiaría la fuente sin avisar.
 
 ---
 
@@ -225,9 +227,13 @@ se abre en vista Texto, como hoy).
 | **F2** API | la ficha recibe y manda `training_structure`; validación del título | request specs | 1 |
 | **F3** Formulario de secciones | `TrainingSectionsEditor` en la pestaña: cajas, agregar, borrar, reordenar, plegar, vista Texto | Vitest del armado en el cliente + prueba en el navegador | 3 |
 | **F4** Ayudas por sección | selectores de directiva/adjunto en la caja activa, comprobador en vivo, Explicar por sección | prueba en el navegador | 1,5 |
-| **F5** Ramas en tarjetas | ver §7 fase 2 | — | *plan aparte* |
+| **F5** Ramas en tarjetas | `RouteCards` + `TrainingRoutes`: nombre, etiqueta, frases, fuente y escalamiento (acción + tipo de caso + prioridad), con listas del inventario | ida y vuelta idéntico sobre los 28 prompts del respaldo + specs + Vitest + prueba en el navegador | 2 |
+| **F6** Secciones en el Asistente | pestaña Secciones en el panel del borrador, con el mismo editor | prueba en el navegador | 0,5 |
 
-Total F0–F4: **8,5 días hábiles**.
+Total F0–F6: **11 días hábiles**.
+
+Hecho el 17/09/2026: F0–F6. El editor y su mixin viven en los componentes del
+Asistente (`views/contactTrackings/assistant/`) y los usan las dos pantallas.
 
 ---
 

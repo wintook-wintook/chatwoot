@@ -13,6 +13,8 @@
 // guardar sin tocar nada no cambie ni un carácter del prompt.
 // ============================================================================
 
+import RouteCards from './RouteCards.vue';
+
 // Con muchas secciones (medido: hasta 31 en un agente) se abren plegadas; con
 // pocas, abiertas.
 const COLLAPSE_FROM = 8;
@@ -25,6 +27,7 @@ const nextUid = () => {
 const withUid = block => ({ ...block, uid: block.uid || nextUid() });
 
 export default {
+  components: { RouteCards },
   props: {
     value: { type: Object, default: () => ({ blocks: [] }) },
     // { suggested: [...], from_account: [...] }
@@ -34,6 +37,8 @@ export default {
       type: Object,
       default: () => ({ suggested: [], from_account: [] }),
     },
+    // Las listas del inventario para las tarjetas de rama (ver RouteCards).
+    routeOptions: { type: Object, default: () => ({}) },
   },
   emits: ['input', 'explain'],
   data() {
@@ -307,7 +312,17 @@ export default {
       </div>
 
       <div v-show="!collapsed[block.uid]" class="px-3 pb-3">
+        <!-- Las ramas se editan en tarjetas: nombre, etiqueta, frases, fuente y
+             escalamiento, con listas del inventario. La caja con las líneas crudas
+             sigue disponible en la vista Texto del Entrenamiento. -->
+        <RouteCards
+          v-if="block.type === 'routes' && block.lines"
+          :lines="block.lines"
+          :options="routeOptions"
+          @input="update(index, { lines: $event })"
+        />
         <textarea
+          v-else
           :id="`section-body-${block.uid}`"
           :ref="`body-${block.uid}`"
           :value="block.type === 'section' ? block.body : block.text"

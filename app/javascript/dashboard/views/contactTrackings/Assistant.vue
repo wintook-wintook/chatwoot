@@ -244,6 +244,10 @@ export default {
     trainingInboxId() {
       return this.inboxId;
     },
+    // El Asistente ya carga el inventario al entrar: el mixin no lo pide de nuevo.
+    ownsTrainingInventory() {
+      return true;
+    },
     // En la plantilla no: el loader de Vue 2 no entiende `?.` ahí.
     // Se comparan con los espacios normalizados: agregar un salto de línea no es
     // "editar a mano" de nada que valga avisarle al asistente.
@@ -1305,6 +1309,7 @@ export default {
                 <TrainingSectionsEditor
                   :value="trainingStructure"
                   :titles="sectionTitles"
+                  :route-options="routeOptions"
                   :can-explain="canExplainTraining"
                   @input="onSectionsInput"
                   @explain="explainFragment"

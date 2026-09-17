@@ -32,6 +32,9 @@ export default {
       // El texto que escribió la propia vista Secciones: el watcher no lo vuelve a
       // separar (movería el cursor y perdería lo que se está escribiendo).
       textFromSections: null,
+      // El inventario de la cuenta para las listas de las tarjetas de rama. Lo carga
+      // la pantalla que no tenga uno propio (la ficha; el Asistente ya lo tiene).
+      trainingInventory: null,
       // F4: Explicar una sección (ExplainModal del Asistente).
       trainingExplain: {
         show: false,
@@ -59,6 +62,37 @@ export default {
     trainingInboxId() {
       return this.selectedInboxId || null;
     },
+    // Lo redefine en true la pantalla que ya carga el inventario por su cuenta.
+    ownsTrainingInventory() {
+      return false;
+    },
+    trainingInventoryData() {
+      return this.ownsTrainingInventory
+        ? this.inventory
+        : this.trainingInventory;
+    },
+    // Las listas de las tarjetas de rama: fuente, etiqueta y escalamiento solo
+    // pueden ser algo que la cuenta TIENE (ver RouteCards).
+    routeOptions() {
+      const inv = this.trainingInventoryData;
+      if (!inv) return {};
+      const fuentes = [
+        ...new Set((inv.sources || []).map(f => f.directive).filter(Boolean)),
+      ];
+      // @buscar_predefinidas(GRUPO): el grupo acota el corpus, y sin él la rama
+      // busca en todas las respuestas predefinidas de la cuenta.
+      const grupos = (inv.canned_groups || [])
+        .map(g => `@buscar_predefinidas(${g.prefix})`)
+        .filter(g => !fuentes.includes(g));
+      return {
+        sources: [...fuentes, ...grupos],
+        labels: inv.labels || [],
+        caseTypes: inv.case_types || [],
+        actions: (inv.actions || [])
+          .filter(a => a.available)
+          .map(a => a.directive),
+      };
+    },
   },
   watch: {
     trainingText(texto) {
@@ -77,9 +111,12 @@ export default {
       this.textFromSections = template?.complementary_prompt || '';
       this.trainingValidation = null;
       this.fetchSectionTitles();
+      this.fetchTrainingInventory();
+      // replaceStructure: la que manda es la que vuelve del backend, no la guardada
+      // (que puede ser de antes de que las ramas viajaran en campos).
       this.scheduleTrainingPreview(
         { text: template?.complementary_prompt || '' },
-        { delay: 0 }
+        { delay: 0, replaceStructure: true }
       );
     },
     // El Asistente no tiene ficha: arranca del texto del borrador.
@@ -88,11 +125,21 @@ export default {
       this.textFromSections = texto || '';
       this.trainingValidation = null;
       this.fetchSectionTitles();
+      this.fetchTrainingInventory();
       // replaceStructure: acá la estructura sale del texto, no de una ficha guardada.
       return this.scheduleTrainingPreview(
         { text: texto || '' },
         { delay: 0, replaceStructure: true }
       );
+    },
+    async fetchTrainingInventory() {
+      if (this.ownsTrainingInventory || this.trainingInventory) return;
+      try {
+        const { data } = await AssistantAPI.getInventory(this.trainingInboxId);
+        this.trainingInventory = data;
+      } catch (error) {
+        // Sin inventario, los selectores de rama quedan con lo que ya tenía el agente.
+      }
     },
     async fetchSectionTitles() {
       try {

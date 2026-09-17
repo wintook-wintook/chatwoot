@@ -89,9 +89,14 @@ class TrackingTemplate < ApplicationRecord
   before_save :sync_training_structure, if: :will_save_change_to_complementary_prompt?
 
   # La estructura para mostrar: la guardada, o la del texto si el agente es anterior a
-  # la columna y todavía no se corrió el backfill.
+  # la columna y todavía no se corrió el backfill, o si la guardada quedó vieja —
+  # las ramas empezaron a viajar en campos después del backfill, y una estructura sin
+  # ellos dejaba el formulario de ramas sin datos (ver TrainingRoutes).
   def training_blocks
-    training_structure.presence || ContactTrackings::TrainingStructure.parse(complementary_prompt)
+    guardada = training_structure.presence
+    return ContactTrackings::TrainingStructure.parse(complementary_prompt) if guardada.blank? || stale_structure?(guardada)
+
+    guardada
   end
 
   # El formulario manda bloques: se arma el texto y, al guardar, el callback vuelve a
@@ -101,6 +106,11 @@ class TrackingTemplate < ApplicationRecord
   end
 
   private
+
+  # Un bloque de ramas sin sus campos es de antes de que existieran.
+  def stale_structure?(estructura)
+    Array(estructura['blocks']).any? { |b| b['type'] == 'routes' && !b.key?('lines') }
+  end
 
   def sync_training_structure
     self.training_structure = ContactTrackings::TrainingStructure.parse(complementary_prompt)

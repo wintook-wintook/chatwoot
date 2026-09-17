@@ -7,7 +7,7 @@
 # edita el Entrenamiento sección por sección; esto convierte el texto en bloques y los
 # bloques en texto.
 #
-#   routes    las líneas @ruta y @ruta_por_defecto
+#   routes    las líneas @ruta y @ruta_por_defecto (en campos: ver TrainingRoutes)
 #   preamble  lo que va antes de la primera sección (en 8 de 28 agentes medidos, TODO)
 #   section   un rótulo ([ROL], ## PERSONALIDAD) y su cuerpo
 #
@@ -87,7 +87,14 @@ module ContactTrackings::TrainingStructure
     lineas = grupo[:lines]
     gap = lineas.reverse.take_while(&:blank?).size
     contenido = lineas.first(lineas.size - gap)
-    return { 'type' => grupo[:type], 'text' => contenido.join("\n"), 'gap' => gap } unless grupo[:type] == 'section'
+    unless grupo[:type] == 'section'
+      texto = contenido.join("\n")
+      bloque = { 'type' => grupo[:type], 'text' => texto, 'gap' => gap }
+      # Las ramas viajan además en campos, para el formulario. El texto sigue estando:
+      # es lo que se muestra en la vista Texto y lo que lee el motor.
+      bloque['lines'] = ContactTrackings::TrainingRoutes.parse(texto) if grupo[:type] == 'routes'
+      return bloque
+    end
 
     titulo, estilo = header_parts(contenido.first)
     { 'type' => 'section', 'title' => titulo, 'style' => estilo, 'header' => contenido.first,
@@ -115,6 +122,9 @@ module ContactTrackings::TrainingStructure
     if bloque['type'] == 'section'
       cuerpo = bloque['body'].to_s.sub(/\n+\z/, '')
       [header_for(bloque)] + (cuerpo.empty? ? [] : cuerpo.split("\n", -1))
+    elsif bloque['type'] == 'routes' && bloque['lines'].present?
+      # Editado en tarjetas: los campos mandan sobre el texto, que se vuelve a armar.
+      ContactTrackings::TrainingRoutes.compose(bloque['lines']).split("\n", -1)
     else
       texto = bloque['text'].to_s.sub(/\n+\z/, '')
       texto.empty? ? [] : texto.split("\n", -1)

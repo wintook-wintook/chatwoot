@@ -1419,6 +1419,7 @@ export default {
             ref="sectionsEditor"
             :value="trainingStructure"
             :titles="sectionTitles"
+            :route-options="routeOptions"
             :can-explain="canExplainTraining"
             @input="onSectionsInput"
             @explain="explainTrainingBlock"
