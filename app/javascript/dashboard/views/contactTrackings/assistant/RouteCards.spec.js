@@ -63,20 +63,28 @@ describe('RouteCards', () => {
     expect(emitidas[0]).toEqual(lineas()[0]);
   });
 
-  // La rama por defecto va al final del bloque: una nueva se agrega antes.
-  it('agrega la rama nueva antes de la rama por defecto', () => {
+  // Agregar una rama abre el modal: la rama se arma allá, con su línea de alcance.
+  it('avisa que se quiere agregar una rama en vez de crearla acá', () => {
     const wrapper = montar();
+    const botones = wrapper.findAll('woot-button-stub');
 
-    wrapper.vm.addRoute();
+    // El último es el "Agregar rama" del pie.
+    botones.at(botones.length - 1).vm.$emit('click');
 
-    const emitidas = wrapper.emitted('input')[0][0];
-    expect(emitidas.map(l => l.kind)).toEqual([
-      'route',
-      'route',
-      'route',
-      'default',
-    ]);
-    expect(emitidas[2]).toMatchObject({ name: '', source: '', raw: '' });
+    expect(wrapper.emitted('add')).toBeTruthy();
+    expect(wrapper.emitted('input')).toBeUndefined();
+  });
+
+  // Dentro del modal: una sola rama, sin pie ni botones de mover y quitar.
+  it('en modo compacto no muestra el pie ni los botones de la tarjeta', () => {
+    const compacto = montar({ lines: [lineas()[0]], compact: true });
+    const normal = montar({ lines: [lineas()[0]] });
+
+    expect(compacto.find('#route-default').exists()).toBe(false);
+    expect(normal.find('#route-default').exists()).toBe(true);
+    expect(compacto.findAll('woot-button-stub').length).toBeLessThan(
+      normal.findAll('woot-button-stub').length
+    );
   });
 
   it('cambia la rama por defecto sin tocar las demás líneas', () => {

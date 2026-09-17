@@ -129,7 +129,16 @@
         "ROUTE_CASE_TYPE": "Tipo de caso",
         "ROUTE_CASE_TYPE_NONE": "Sin especificar (lo decide el intake)",
         "ROUTE_PRIORITY": "Prioridad",
-        "ROUTE_PRIORITY_NONE": "Sin especificar"
+        "ROUTE_PRIORITY_NONE": "Sin especificar",
+        "ROUTE_MODAL_TITLE": "Agregar una rama",
+        "ROUTE_MODAL_HINT": "Una rama es un tema que el agente atiende: con qué frases se elige, de dónde saca la respuesta y qué hace si no resuelve.",
+        "ROUTE_MODAL_SAVE": "Agregar rama",
+        "ROUTE_MODAL_CANCEL": "Cancelar",
+        "ROUTE_NAME_TAKEN": "Ya hay una rama llamada «%{name}». Para el motor existe una sola: se queda con la primera y la otra no se elige nunca.",
+        "ROUTE_NO_PHRASES": "Sin frases del cliente, esta rama casi nunca se va a elegir: es lo único que el motor usa para decidir.",
+        "ROUTE_SCOPE": "Qué atiende esta rama, en palabras del agente",
+        "ROUTE_SCOPE_PLACEHOLDER": "responde precios y arma cotizaciones con la lista vigente",
+        "ROUTE_SCOPE_HINT": "Va como una línea en la sección ALCANCE POR RAMA, que es lo que lee el agente para saber de qué habla en este tema. Se puede dejar vacío y escribirlo después."
       }
     },
     "CREATE": {

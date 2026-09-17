@@ -14,10 +14,15 @@
 // ============================================================================
 
 import RouteCards from './RouteCards.vue';
+import RouteModal from './RouteModal.vue';
 
 // Con muchas secciones (medido: hasta 31 en un agente) se abren plegadas; con
 // pocas, abiertas.
 const COLLAPSE_FROM = 8;
+
+// La sección que lleva una línea por rama. El nombre del contrato es
+// "[ALCANCE POR RAMA]", pero los agentes de la cuenta la escriben de varias formas.
+const SCOPE_RE = /ALCANCE|SCOPE/i;
 
 let uidCounter = 0;
 const nextUid = () => {
@@ -27,7 +32,7 @@ const nextUid = () => {
 const withUid = block => ({ ...block, uid: block.uid || nextUid() });
 
 export default {
-  components: { RouteCards },
+  components: { RouteCards, RouteModal },
   props: {
     value: { type: Object, default: () => ({ blocks: [] }) },
     // { suggested: [...], from_account: [...] }
@@ -49,6 +54,7 @@ export default {
       customTitle: '',
       // Dónde insertan los selectores de directiva y adjunto.
       cursor: { uid: null, start: 0, end: 0 },
+      showRouteModal: false,
     };
   },
   computed: {
@@ -60,6 +66,21 @@ export default {
     },
     hasRoutes() {
       return this.blocks.some(b => b.type === 'routes');
+    },
+    // El nombre con el que se crea la sección del alcance: el del contrato que manda
+    // el backend en las sugerencias, y si no el del contrato tal cual.
+    scopeTitle() {
+      return (
+        (this.titles.suggested || []).find(t => SCOPE_RE.test(t)) ||
+        'ALCANCE POR RAMA'
+      );
+    },
+    routeNames() {
+      return this.blocks
+        .filter(b => b.type === 'routes')
+        .flatMap(b => b.lines || [])
+        .filter(l => l.kind === 'route')
+        .map(l => l.name);
     },
     usedTitles() {
       return new Set(
@@ -134,30 +155,55 @@ export default {
       this.showAddMenu = false;
       this.$nextTick(() => this.focusBody(nueva.uid));
     },
-    // Con `lines` desde el arranque: es lo que hace que el bloque salga en tarjetas
-    // (ver RouteCards) y no como caja de texto. Y con una rama vacía adentro, para
-    // que se vean los campos sin un clic más.
-    addRoutes() {
-      const ramas = withUid({
-        type: 'routes',
-        text: '',
+    // Una rama entra por el modal, con su línea de alcance: las dos mitades juntas
+    // (ver RouteModal). Acá se la mete en el bloque de ramas —creándolo si es el
+    // primero— y en la sección [ALCANCE POR RAMA].
+    addRouteFromModal({ route, scope }) {
+      this.showRouteModal = false;
+      let blocks = [...this.blocks];
+      let indice = blocks.findIndex(b => b.type === 'routes');
+      if (indice < 0) {
+        blocks = [
+          withUid({ type: 'routes', text: '', gap: 1, lines: [] }),
+          ...blocks,
+        ];
+        indice = 0;
+      }
+      const lineas = [...(blocks[indice].lines || [])];
+      // Antes de la rama por defecto, que por convención va al final del bloque.
+      const corte = lineas.findIndex(l => l.kind === 'default');
+      lineas.splice(corte < 0 ? lineas.length : corte, 0, route);
+      blocks[indice] = { ...blocks[indice], lines: lineas };
+      this.emitBlocks(
+        this.withGaps(this.withScopeLine(blocks, route.name, scope))
+      );
+    },
+    // La línea de la rama en [ALCANCE POR RAMA]. Si la sección no está, se crea
+    // después de la primera sección (o al final si el Entrenamiento no tiene ninguna).
+    withScopeLine(blocks, name, scope) {
+      if (!scope) return blocks;
+      const linea = `${name}: ${scope}`;
+      const indice = blocks.findIndex(
+        b => b.type === 'section' && SCOPE_RE.test(b.title || '')
+      );
+      if (indice >= 0) {
+        const cuerpo = (blocks[indice].body || '').replace(/\n+$/, '');
+        const nuevos = [...blocks];
+        nuevos[indice] = {
+          ...nuevos[indice],
+          body: cuerpo ? `${cuerpo}\n${linea}` : linea,
+        };
+        return nuevos;
+      }
+      const seccion = withUid({
+        type: 'section',
+        title: this.scopeTitle,
+        body: linea,
         gap: 1,
-        lines: [
-          {
-            kind: 'route',
-            name: '',
-            tag: '',
-            description: '',
-            source: '',
-            escalation: '',
-            action: '',
-            case_type: '',
-            priority: '',
-            raw: '',
-          },
-        ],
       });
-      this.emitBlocks([ramas, ...this.blocks]);
+      const primera = blocks.findIndex(b => b.type === 'section');
+      const donde = primera < 0 ? blocks.length : primera + 1;
+      return [...blocks.slice(0, donde), seccion, ...blocks.slice(donde)];
     },
     // Entre bloques, un renglón en blanco como mínimo; el último, sin colgar.
     withGaps(blocks) {
@@ -340,6 +386,7 @@ export default {
           :lines="block.lines"
           :options="routeOptions"
           @input="update(index, { lines: $event })"
+          @add="showRouteModal = true"
         />
         <textarea
           v-else
@@ -441,10 +488,18 @@ export default {
         size="small"
         variant="clear"
         color-scheme="secondary"
-        @click="addRoutes"
+        @click="showRouteModal = true"
       >
         {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ADD_ROUTES') }}
       </woot-button>
     </div>
+
+    <RouteModal
+      :show="showRouteModal"
+      :options="routeOptions"
+      :taken-names="routeNames"
+      @close="showRouteModal = false"
+      @save="addRouteFromModal"
+    />
   </div>
 </template>

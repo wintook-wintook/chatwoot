@@ -129,7 +129,16 @@
         "ROUTE_CASE_TYPE": "Case type",
         "ROUTE_CASE_TYPE_NONE": "Unspecified (intake decides)",
         "ROUTE_PRIORITY": "Priority",
-        "ROUTE_PRIORITY_NONE": "Unspecified"
+        "ROUTE_PRIORITY_NONE": "Unspecified",
+        "ROUTE_MODAL_TITLE": "Add a branch",
+        "ROUTE_MODAL_HINT": "A branch is a topic the agent handles: which phrases pick it, where the answer comes from and what it does if it does not resolve.",
+        "ROUTE_MODAL_SAVE": "Add branch",
+        "ROUTE_MODAL_CANCEL": "Cancel",
+        "ROUTE_NAME_TAKEN": "There is already a branch named \"%{name}\". For the engine only one exists: it keeps the first and the other is never picked.",
+        "ROUTE_NO_PHRASES": "Without customer phrases this branch will almost never be picked: it is the only thing the engine uses to decide.",
+        "ROUTE_SCOPE": "What this branch handles, in the agent's words",
+        "ROUTE_SCOPE_PLACEHOLDER": "answers pricing questions and quotes from the current list",
+        "ROUTE_SCOPE_HINT": "It goes as one line in the ALCANCE POR RAMA section, which is what the agent reads to know what it talks about in this topic. You can leave it empty and write it later."
       }
     },
     "CREATE": {

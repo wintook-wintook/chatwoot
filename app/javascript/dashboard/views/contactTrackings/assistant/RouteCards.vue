@@ -16,20 +16,6 @@
 // Lo que el parser no reconoció viaja como `other` y se muestra igual, tal cual:
 // esconderlo lo borraría al guardar.
 // ============================================================================
-
-const vacia = () => ({
-  kind: 'route',
-  name: '',
-  tag: '',
-  description: '',
-  source: '',
-  escalation: '',
-  action: '',
-  case_type: '',
-  priority: '',
-  raw: '',
-});
-
 // Las prioridades que entiende @crear_ticket(prioridad=…), en las palabras que acepta
 // el motor (Cases::TicketCreatorService::PRIORITY_ALIASES).
 const PRIORITIES = ['baja', 'media', 'alta', 'urgente'];
@@ -41,8 +27,16 @@ export default {
     lines: { type: Array, default: () => [] },
     // { sources: [...], labels: [...], caseTypes: [...], actions: [...] }
     options: { type: Object, default: () => ({}) },
+    // Dentro del modal de "Agregar rama": una sola rama, sin el pie (agregar y rama
+    // por defecto) ni los botones de mover y quitar. Los campos son los mismos, y
+    // viven en un solo lugar para que no se desincronicen.
+    compact: { type: Boolean, default: false },
+    // Prefijo de los `id` de los campos. El modal usa el suyo: con el mismo, la
+    // página tenía dos elementos con el mismo id —los de la lista y los del
+    // modal— y quien buscaba uno se llevaba el otro.
+    idPrefix: { type: String, default: 'route' },
   },
-  emits: ['input'],
+  emits: ['input', 'add'],
   computed: {
     routes() {
       return this.lines
@@ -103,14 +97,6 @@ export default {
     update(index, changes) {
       const lineas = [...this.lines];
       lineas[index] = { ...lineas[index], ...changes };
-      this.emitLines(lineas);
-    },
-    addRoute() {
-      // Antes de la rama por defecto, que por convención va al final del bloque.
-      const lineas = [...this.lines];
-      const corte = lineas.findIndex(l => l.kind === 'default');
-      const donde = corte < 0 ? lineas.length : corte;
-      lineas.splice(donde, 0, vacia());
       this.emitLines(lineas);
     },
     remove(index) {
@@ -174,13 +160,13 @@ export default {
       <div class="flex flex-wrap items-end gap-2">
         <div class="flex-1 min-w-[10rem]">
           <label
-            :for="`route-name-${rama.index}`"
+            :for="`${idPrefix}-name-${rama.index}`"
             class="!mb-1 text-xs text-slate-500 dark:text-slate-400"
           >
             {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_NAME') }}
           </label>
           <input
-            :id="`route-name-${rama.index}`"
+            :id="`${idPrefix}-name-${rama.index}`"
             :value="rama.name"
             type="text"
             class="w-full !mb-0 !py-1 font-mono text-xs"
@@ -192,13 +178,13 @@ export default {
         </div>
         <div class="w-40">
           <label
-            :for="`route-tag-${rama.index}`"
+            :for="`${idPrefix}-tag-${rama.index}`"
             class="!mb-1 text-xs text-slate-500 dark:text-slate-400"
           >
             {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_TAG') }}
           </label>
           <select
-            :id="`route-tag-${rama.index}`"
+            :id="`${idPrefix}-tag-${rama.index}`"
             :key="`tag-${rama.index}-${optionsKey}`"
             :value="rama.tag"
             class="w-full !mb-0 !py-1 text-xs"
@@ -222,7 +208,7 @@ export default {
             </option>
           </select>
         </div>
-        <div class="flex items-center gap-1 pb-0.5">
+        <div v-if="!compact" class="flex items-center gap-1 pb-0.5">
           <woot-button
             type="button"
             size="tiny"
@@ -255,13 +241,13 @@ export default {
       </div>
 
       <label
-        :for="`route-desc-${rama.index}`"
+        :for="`${idPrefix}-desc-${rama.index}`"
         class="!mb-1 mt-2 text-xs text-slate-500 dark:text-slate-400"
       >
         {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_PHRASES') }}
       </label>
       <textarea
-        :id="`route-desc-${rama.index}`"
+        :id="`${idPrefix}-desc-${rama.index}`"
         :value="rama.description"
         rows="2"
         class="w-full !mb-0 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2"
@@ -274,13 +260,13 @@ export default {
       <div class="flex flex-wrap gap-2 mt-2">
         <div class="flex-1 min-w-[12rem]">
           <label
-            :for="`route-source-${rama.index}`"
+            :for="`${idPrefix}-source-${rama.index}`"
             class="!mb-1 text-xs text-slate-500 dark:text-slate-400"
           >
             {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SOURCE') }}
           </label>
           <select
-            :id="`route-source-${rama.index}`"
+            :id="`${idPrefix}-source-${rama.index}`"
             :key="`src-${rama.index}-${optionsKey}`"
             :value="rama.source"
             class="w-full !mb-0 !py-1 font-mono text-xs"
@@ -306,13 +292,13 @@ export default {
         </div>
         <div class="flex-1 min-w-[12rem]">
           <label
-            :for="`route-esc-${rama.index}`"
+            :for="`${idPrefix}-esc-${rama.index}`"
             class="!mb-1 text-xs text-slate-500 dark:text-slate-400"
           >
             {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_ESCALATION') }}
           </label>
           <select
-            :id="`route-esc-${rama.index}`"
+            :id="`${idPrefix}-esc-${rama.index}`"
             :key="`esc-${rama.index}-${optionsKey}`"
             :value="rama.action"
             class="w-full !mb-0 !py-1 font-mono text-xs"
@@ -346,13 +332,13 @@ export default {
       <div v-if="opensCase(rama)" class="flex flex-wrap gap-2 mt-2">
         <div class="flex-1 min-w-[12rem]">
           <label
-            :for="`route-case-${rama.index}`"
+            :for="`${idPrefix}-case-${rama.index}`"
             class="!mb-1 text-xs text-slate-500 dark:text-slate-400"
           >
             {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_CASE_TYPE') }}
           </label>
           <select
-            :id="`route-case-${rama.index}`"
+            :id="`${idPrefix}-case-${rama.index}`"
             :key="`case-${rama.index}-${optionsKey}`"
             :value="rama.case_type"
             class="w-full !mb-0 !py-1 text-xs"
@@ -378,13 +364,13 @@ export default {
         </div>
         <div class="w-44">
           <label
-            :for="`route-prio-${rama.index}`"
+            :for="`${idPrefix}-prio-${rama.index}`"
             class="!mb-1 text-xs text-slate-500 dark:text-slate-400"
           >
             {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_PRIORITY') }}
           </label>
           <select
-            :id="`route-prio-${rama.index}`"
+            :id="`${idPrefix}-prio-${rama.index}`"
             :value="rama.priority"
             class="w-full !mb-0 !py-1 text-xs"
             @change="update(rama.index, { priority: $event.target.value })"
@@ -411,9 +397,14 @@ export default {
     </div>
 
     <!-- Lo que estaba escrito en el bloque y no es una rama ni la rama por defecto. -->
-    <div v-for="linea in others" :key="`o-${linea.index}`" class="flex gap-2">
+    <div
+      v-for="linea in others"
+      v-show="!compact"
+      :key="`o-${linea.index}`"
+      class="flex gap-2"
+    >
       <input
-        :id="`route-other-${linea.index}`"
+        :id="`${idPrefix}-other-${linea.index}`"
         :value="linea.raw"
         type="text"
         class="flex-1 !mb-0 !py-1 font-mono text-xs"
@@ -431,13 +422,13 @@ export default {
       />
     </div>
 
-    <div class="flex flex-wrap items-center gap-3">
+    <div v-if="!compact" class="flex flex-wrap items-center gap-3">
       <woot-button
         type="button"
         size="small"
         variant="smooth"
         icon="add"
-        @click="addRoute"
+        @click="$emit('add')"
       >
         {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_ADD') }}
       </woot-button>

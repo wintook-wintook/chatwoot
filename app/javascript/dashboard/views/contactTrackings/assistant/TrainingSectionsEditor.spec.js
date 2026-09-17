@@ -5,7 +5,12 @@ import TrainingSectionsEditor from './TrainingSectionsEditor.vue';
 const estructura = () => ({
   version: 1,
   blocks: [
-    { type: 'routes', text: '@ruta(a #aaa: x): -', gap: 1 },
+    {
+      type: 'routes',
+      text: '@ruta(a #aaa: x): -',
+      gap: 1,
+      lines: [{ kind: 'route', name: 'a', tag: 'aaa', description: 'x' }],
+    },
     {
       type: 'section',
       title: 'ROL',
@@ -157,18 +162,99 @@ describe('TrainingSectionsEditor', () => {
     expect(Object.values(montar().vm.collapsed).some(Boolean)).toBe(false);
   });
 
-  it('ofrece agregar ramas solo si no hay un bloque de ramas', () => {
-    const sinRamas = { blocks: estructura().blocks.slice(1) };
-    const wrapper = montar(sinRamas);
+  // Una rama son DOS cosas: su línea @ruta y su línea en [ALCANCE POR RAMA]. El
+  // modal las manda juntas y acá se guardan juntas.
+  describe('agregar una rama desde el modal', () => {
+    const rama = {
+      kind: 'route',
+      name: 'comercial',
+      description: 'cuanto cuesta',
+    };
 
-    wrapper.vm.addRoutes();
+    it('mete la rama en el bloque de ramas y su línea en el alcance', () => {
+      const wrapper = montar({
+        blocks: [
+          {
+            type: 'routes',
+            text: '@ruta(a #aaa: x): -',
+            gap: 1,
+            lines: [{ kind: 'route', name: 'a' }],
+          },
+          { type: 'section', title: 'ROL', body: 'Sos amable.', gap: 1 },
+          {
+            type: 'section',
+            title: 'ALCANCE POR RAMA',
+            body: 'a: atiende lo de siempre.',
+            gap: 1,
+          },
+        ],
+      });
 
-    // Con una rama vacía adentro y con `lines`: es lo que lo hace salir en tarjetas.
-    expect(ultimo(wrapper)[0]).toMatchObject({ type: 'routes', text: '' });
-    expect(ultimo(wrapper)[0].lines).toEqual([
-      expect.objectContaining({ kind: 'route', name: '' }),
-    ]);
-    expect(montar().vm.hasRoutes).toBe(true);
+      wrapper.vm.addRouteFromModal({ route: rama, scope: 'responde precios' });
+
+      const blocks = ultimo(wrapper);
+      expect(blocks[0].lines.map(l => l.name)).toEqual(['a', 'comercial']);
+      expect(blocks[2].body).toBe(
+        'a: atiende lo de siempre.\ncomercial: responde precios'
+      );
+    });
+
+    it('crea el bloque de ramas y la sección de alcance si no estaban', () => {
+      const wrapper = montar({
+        blocks: [
+          { type: 'section', title: 'ROL', body: 'Sos amable.', gap: 1 },
+        ],
+      });
+
+      wrapper.vm.addRouteFromModal({ route: rama, scope: 'responde precios' });
+
+      const blocks = ultimo(wrapper);
+      expect(blocks.map(b => b.type)).toEqual(['routes', 'section', 'section']);
+      expect(blocks[0].lines).toEqual([rama]);
+      // Después de ROL, que es el orden del contrato.
+      expect(blocks[2]).toMatchObject({
+        title: 'ALCANCE POR RAMA',
+        body: 'comercial: responde precios',
+      });
+    });
+
+    it('deja la rama antes de la rama por defecto', () => {
+      const wrapper = montar({
+        blocks: [
+          {
+            type: 'routes',
+            text: '',
+            gap: 1,
+            lines: [
+              { kind: 'route', name: 'a' },
+              { kind: 'default', name: 'a' },
+            ],
+          },
+        ],
+      });
+
+      wrapper.vm.addRouteFromModal({ route: rama, scope: '' });
+
+      expect(ultimo(wrapper)[0].lines.map(l => l.kind)).toEqual([
+        'route',
+        'route',
+        'default',
+      ]);
+    });
+
+    it('sin alcance escrito no toca ninguna sección', () => {
+      const wrapper = montar();
+
+      wrapper.vm.addRouteFromModal({ route: rama, scope: '' });
+
+      expect(ultimo(wrapper).filter(b => b.type === 'section').length).toBe(
+        montar().vm.sectionCount
+      );
+    });
+
+    it('los nombres en uso son los que el modal no deja repetir', () => {
+      expect(montar().vm.routeNames).toEqual(['a']);
+    });
   });
 
   // F4: explicar manda la sección con su rótulo; sin permiso, no se ofrece.
