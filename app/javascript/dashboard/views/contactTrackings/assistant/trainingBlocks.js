@@ -226,6 +226,27 @@ export const removeRoute = (blocks, position, { withScope = true } = {}) => {
   return withScope ? withoutScopeLine(nuevos, nombre) : nuevos;
 };
 
+// Cambiar de lugar una rama. Como en las secciones, se cambia con la RAMA vecina y
+// no con la línea vecina: el bloque también lleva la rama por defecto y lo que el
+// parser no reconoce, y esas líneas se quedan donde están.
+export const moveRoute = (blocks, position, delta) => {
+  const indice = routesIndex(blocks);
+  if (indice < 0) return blocks;
+  const lineas = blocks[indice].lines || [];
+  const lugares = lineas
+    .map((l, i) => (l.kind === 'route' ? i : null))
+    .filter(i => i !== null);
+  const desde = lugares[position];
+  const hasta = lugares[position + delta];
+  if (desde === undefined || hasta === undefined) return blocks;
+  const nuevas = [...lineas];
+  [nuevas[desde], nuevas[hasta]] = [nuevas[hasta], nuevas[desde]];
+  return updateBlock(blocks, indice, { lines: nuevas });
+};
+
+export const canMoveRoute = (blocks, position, delta) =>
+  moveRoute(blocks, position, delta) !== blocks;
+
 // La rama por defecto: la línea @ruta_por_defecto del bloque. Sin nombre, se quita.
 export const setDefaultRoute = (blocks, name) => {
   const indice = routesIndex(blocks);

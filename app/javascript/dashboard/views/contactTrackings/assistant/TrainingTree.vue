@@ -16,7 +16,12 @@
 // grupo de secciones se pliega solo cuando pasa de 8 — y 19 de 28 no tienen ninguna
 // rama, por eso el grupo vacío se ve igual, con su "Agregar rama".
 // ============================================================================
-import { routeLines, defaultRouteName, canMoveSection } from './trainingBlocks';
+import {
+  routeLines,
+  defaultRouteName,
+  canMoveSection,
+  canMoveRoute,
+} from './trainingBlocks';
 
 const COLLAPSE_FROM = 8;
 
@@ -36,6 +41,7 @@ export default {
     'editSection',
     'addSection',
     'moveSection',
+    'moveRoute',
   ],
   data() {
     return {
@@ -94,6 +100,9 @@ export default {
     },
     canMove(index, delta) {
       return canMoveSection(this.blocks, index, delta);
+    },
+    canMoveR(position, delta) {
+      return canMoveRoute(this.blocks, position, delta);
     },
     issue(clave) {
       return this.issues[clave] || '';
@@ -204,39 +213,67 @@ export default {
       </woot-button>
     </div>
     <div v-if="open.routes" class="flex flex-col">
-      <button
+      <div
         v-for="rama in routes"
         :key="`r-${rama.position}`"
-        type="button"
-        class="flex items-center gap-2 py-1 pl-6 pr-1 text-left rounded hover:bg-slate-50 dark:hover:bg-slate-700"
-        @click="$emit('editRoute', rama.position)"
+        class="flex items-center gap-2 pl-6 pr-1 rounded group/rama hover:bg-slate-50 dark:hover:bg-slate-700"
       >
-        <span
-          v-if="issue(`route:${rama.name}`)"
-          class="w-1.5 h-1.5 rounded-full shrink-0"
-          :class="
-            issue(`route:${rama.name}`) === 'blocking'
-              ? 'bg-red-500'
-              : 'bg-amber-500'
-          "
-        />
-        <span
-          class="font-mono text-xs shrink-0 text-slate-700 dark:text-slate-200"
+        <button
+          type="button"
+          class="flex items-center flex-1 min-w-0 gap-2 py-1 text-left"
+          @click="$emit('editRoute', rama.position)"
         >
-          {{ rama.name || $t('TRACKING_ASSISTANT_VIEW.TREE_NO_NAME') }}
-        </span>
-        <span
-          v-if="rama.name && rama.name === defaultRoute"
-          class="px-1 text-xs rounded shrink-0 bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
-        >
-          {{ $t('TRACKING_ASSISTANT_VIEW.TREE_DEFAULT') }}
-        </span>
-        <span
-          class="flex-1 min-w-0 text-xs truncate text-slate-500 dark:text-slate-400"
-        >
-          {{ preview(rama.description) }}
-        </span>
-      </button>
+          <span
+            v-if="issue(`route:${rama.name}`)"
+            class="w-1.5 h-1.5 rounded-full shrink-0"
+            :class="
+              issue(`route:${rama.name}`) === 'blocking'
+                ? 'bg-red-500'
+                : 'bg-amber-500'
+            "
+          />
+          <span
+            class="font-mono text-xs shrink-0 text-slate-700 dark:text-slate-200"
+          >
+            {{ rama.name || $t('TRACKING_ASSISTANT_VIEW.TREE_NO_NAME') }}
+          </span>
+          <span
+            v-if="rama.name && rama.name === defaultRoute"
+            class="px-1 text-xs rounded shrink-0 bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.TREE_DEFAULT') }}
+          </span>
+          <span
+            class="flex-1 min-w-0 text-xs truncate text-slate-500 dark:text-slate-400"
+          >
+            {{ preview(rama.description) }}
+          </span>
+        </button>
+        <!-- El orden de las ramas es el orden de las líneas @ruta. -->
+        <div class="flex items-center gap-1 shrink-0">
+          <woot-button
+            type="button"
+            size="tiny"
+            variant="smooth"
+            color-scheme="success"
+            icon="arrow-up"
+            :is-disabled="!canMoveR(rama.position, -1)"
+            :title="$t('TRACKING_TEMPLATES.FORM.TRAINING.MOVE_UP')"
+            @click="$emit('moveRoute', { position: rama.position, delta: -1 })"
+          />
+          <woot-button
+            type="button"
+            size="tiny"
+            variant="smooth"
+            color-scheme="alert"
+            icon="arrow-up"
+            class="[&_svg]:rotate-180"
+            :is-disabled="!canMoveR(rama.position, 1)"
+            :title="$t('TRACKING_TEMPLATES.FORM.TRAINING.MOVE_DOWN')"
+            @click="$emit('moveRoute', { position: rama.position, delta: 1 })"
+          />
+        </div>
+      </div>
       <p
         v-if="!routes.length"
         class="!m-0 py-1 pl-6 text-xs text-slate-400 dark:text-slate-500"

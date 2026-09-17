@@ -17,6 +17,7 @@ import {
   addRoute,
   addSection,
   defaultRouteName,
+  moveRoute,
   moveSection,
   removeBlock,
   removeRoute,
@@ -129,6 +130,11 @@ export default {
       this.closeRouteModal();
       this.emitBlocks(withGaps(blocks));
     },
+    // Cambiar de lugar una rama.
+    moveRoute({ position, delta }) {
+      const blocks = moveRoute(this.blocks, position, delta);
+      if (blocks !== this.blocks) this.emitBlocks(blocks);
+    },
     deleteRoute() {
       const { position } = this.routeModal;
       if (position === null) return;
@@ -194,6 +200,7 @@ export default {
         @editDefinition="openDefinition"
         @addRoute="openAddRoute"
         @editRoute="openEditRoute"
+        @moveRoute="moveRoute"
         @addSection="openAddSection"
         @editSection="openEditSection"
         @moveSection="moveSection"

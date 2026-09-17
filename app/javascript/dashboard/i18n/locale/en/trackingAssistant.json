@@ -290,6 +290,7 @@
     "DEFINITION_OBJECTIVE_HINT": "what the agent is for, in one sentence",
     "DEFINITION_CONTEXT_HINT": "business facts the agent may quote: hours, versions, policies…",
     "DEFINITION_CONTEXT_WARNING": "The agent quotes this as fact: only put in what you know is true.",
-    "DEFINITION_SAVE": "Save definition"
+    "DEFINITION_SAVE": "Save definition",
+    "NEW_AGENT": "New AI agent"
   }
 }

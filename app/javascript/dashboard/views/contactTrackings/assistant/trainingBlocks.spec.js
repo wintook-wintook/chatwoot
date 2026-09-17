@@ -2,6 +2,8 @@ import {
   addRoute,
   moveSection,
   canMoveSection,
+  moveRoute,
+  canMoveRoute,
   setScopeLine,
   scopeTextFor,
   addSection,
@@ -96,6 +98,27 @@ describe('trainingBlocks', () => {
       const blocks = removeRoute(estructura(), 0, { withScope: false });
 
       expect(blocks[2].body).toContain('soporte: atiende fallas.');
+    });
+
+    // El orden de las ramas es el orden en que se leen las líneas @ruta.
+    it('cambia una rama de lugar con su rama vecina', () => {
+      const blocks = moveRoute(estructura(), 0, 1);
+
+      expect(blocks[0].lines.map(l => `${l.kind}:${l.name}`)).toEqual([
+        'route:comercial',
+        'route:soporte',
+        'default:soporte',
+      ]);
+    });
+
+    // La línea de la rama por defecto se queda donde está: no es una rama.
+    it('no mueve una rama más allá de la última', () => {
+      const blocks = estructura();
+
+      expect(moveRoute(blocks, 1, 1)).toBe(blocks);
+      expect(canMoveRoute(blocks, 1, 1)).toBe(false);
+      expect(canMoveRoute(blocks, 1, -1)).toBe(true);
+      expect(canMoveRoute(blocks, 0, -1)).toBe(false);
     });
 
     it('cambia y quita la rama por defecto', () => {

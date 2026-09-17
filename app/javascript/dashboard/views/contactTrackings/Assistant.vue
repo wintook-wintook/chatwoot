@@ -475,7 +475,12 @@ export default {
   },
   methods: {
     // Entrada desde Agentes IA: /tracking-dashboard/assistant?template_id=123
+    // o ?nuevo=1 para armar uno nuevo, sin retomar lo que quedó a medias.
     loadTemplateFromRoute() {
+      if (this.$route.query.nuevo) {
+        this.startFresh();
+        return true;
+      }
       const id = Number(this.$route.query.template_id);
       if (!id) return false;
 
@@ -1143,6 +1148,17 @@ export default {
               :session-meta="sessionMeta"
               :editing-template="editingTemplate"
             />
+            <!-- Empezar de cero. Estaba solo en la pestaña Conversaciones, donde
+                 nadie lo encontraba: es la puerta para armar un agente nuevo. -->
+            <woot-button
+              size="small"
+              variant="smooth"
+              color-scheme="success"
+              icon="add"
+              @click="startFresh"
+            >
+              {{ $t('TRACKING_ASSISTANT_VIEW.NEW_AGENT') }}
+            </woot-button>
             <div class="flex flex-wrap items-center gap-2 text-xs shrink-0">
               <label
                 for="assistant-inbox"
