@@ -17,6 +17,7 @@ import {
   addRoute,
   addSection,
   defaultRouteName,
+  moveSection,
   removeBlock,
   removeRoute,
   replaceRoute,
@@ -159,6 +160,11 @@ export default {
       this.closeSectionModal();
       this.emitBlocks(blocks);
     },
+    // Cambiar de lugar una sección: el agente las lee en el orden en que están.
+    moveSection({ index, delta }) {
+      const blocks = moveSection(this.blocks, index, delta);
+      if (blocks !== this.blocks) this.emitBlocks(blocks);
+    },
     deleteSection() {
       const { index } = this.sectionModal;
       if (index === null) return;
@@ -190,6 +196,7 @@ export default {
         @editRoute="openEditRoute"
         @addSection="openAddSection"
         @editSection="openEditSection"
+        @moveSection="moveSection"
       />
     </div>
 

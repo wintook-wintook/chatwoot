@@ -187,6 +187,28 @@ describe('AgentStructure', () => {
       ]);
     });
 
+    // El agente lee las secciones en el orden en que están escritas.
+    it('cambia una sección de lugar con su vecina', () => {
+      const wrapper = montar();
+
+      wrapper.vm.moveSection({ index: 1, delta: 1 });
+
+      expect(ultimo(wrapper).map(b => b.title)).toEqual([
+        undefined,
+        'ALCANCE POR RAMA',
+        'ROL',
+      ]);
+    });
+
+    // La primera sección no sube más: arriba está el bloque de ramas.
+    it('no avisa ningún cambio cuando la sección ya está en el extremo', () => {
+      const wrapper = montar();
+
+      wrapper.vm.moveSection({ index: 1, delta: -1 });
+
+      expect(wrapper.emitted('input')).toBeUndefined();
+    });
+
     it('los nombres en uso son los que no se pueden repetir', () => {
       expect(montar().vm.takenTitles).toEqual(['ROL', 'ALCANCE POR RAMA']);
     });

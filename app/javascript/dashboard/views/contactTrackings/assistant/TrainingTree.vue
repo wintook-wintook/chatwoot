@@ -16,7 +16,7 @@
 // grupo de secciones se pliega solo cuando pasa de 8 — y 19 de 28 no tienen ninguna
 // rama, por eso el grupo vacío se ve igual, con su "Agregar rama".
 // ============================================================================
-import { routeLines, defaultRouteName } from './trainingBlocks';
+import { routeLines, defaultRouteName, canMoveSection } from './trainingBlocks';
 
 const COLLAPSE_FROM = 8;
 
@@ -35,6 +35,7 @@ export default {
     'addRoute',
     'editSection',
     'addSection',
+    'moveSection',
   ],
   data() {
     return {
@@ -90,6 +91,9 @@ export default {
     lineCount(block) {
       const texto = block.body || block.text || '';
       return texto.trim() ? texto.split('\n').length : 0;
+    },
+    canMove(index, delta) {
+      return canMoveSection(this.blocks, index, delta);
     },
     issue(clave) {
       return this.issues[clave] || '';
@@ -269,37 +273,72 @@ export default {
       </woot-button>
     </div>
     <div v-if="open.sections" class="flex flex-col">
-      <button
+      <!-- La fila es un contenedor y no un botón: el nombre abre la sección y las
+           flechas la mueven de lugar, y un botón adentro de otro no es válido. -->
+      <div
         v-for="block in sections"
         :key="`s-${block.index}`"
-        type="button"
-        class="flex items-center gap-2 py-1 pl-6 pr-1 text-left rounded hover:bg-slate-50 dark:hover:bg-slate-700"
-        @click="$emit('editSection', block.index)"
+        class="flex items-center gap-2 pl-6 pr-1 rounded group/fila hover:bg-slate-50 dark:hover:bg-slate-700"
       >
-        <span
-          v-if="issue(`section:${block.index}`)"
-          class="w-1.5 h-1.5 rounded-full shrink-0"
-          :class="
-            issue(`section:${block.index}`) === 'blocking'
-              ? 'bg-red-500'
-              : 'bg-amber-500'
-          "
-        />
-        <span
-          class="text-xs font-semibold tracking-wide uppercase shrink-0 text-slate-700 dark:text-slate-200"
+        <button
+          type="button"
+          class="flex items-center flex-1 min-w-0 gap-2 py-1 text-left"
+          @click="$emit('editSection', block.index)"
         >
-          {{ sectionName(block) }}
-        </span>
-        <span
-          class="flex-1 min-w-0 text-xs truncate text-slate-500 dark:text-slate-400"
+          <span
+            v-if="issue(`section:${block.index}`)"
+            class="w-1.5 h-1.5 rounded-full shrink-0"
+            :class="
+              issue(`section:${block.index}`) === 'blocking'
+                ? 'bg-red-500'
+                : 'bg-amber-500'
+            "
+          />
+          <span
+            class="text-xs font-semibold tracking-wide uppercase shrink-0 text-slate-700 dark:text-slate-200"
+          >
+            {{ sectionName(block) }}
+          </span>
+          <span
+            class="flex-1 min-w-0 text-xs truncate text-slate-500 dark:text-slate-400"
+          >
+            {{
+              lineCount(block)
+                ? preview(block.body || block.text)
+                : $t('TRACKING_ASSISTANT_VIEW.TREE_EMPTY')
+            }}
+          </span>
+        </button>
+        <!-- El orden importa: el agente lee las secciones en el orden en que están.
+             Atenuadas pero SIEMPRE visibles: escondidas hasta pasar el mouse, nadie
+             se enteraba de que las secciones se pueden reordenar. -->
+        <div
+          v-if="block.type === 'section'"
+          class="flex items-center opacity-40 shrink-0 group-hover/fila:opacity-100"
         >
-          {{
-            lineCount(block)
-              ? preview(block.body || block.text)
-              : $t('TRACKING_ASSISTANT_VIEW.TREE_EMPTY')
-          }}
-        </span>
-      </button>
+          <woot-button
+            type="button"
+            size="tiny"
+            variant="clear"
+            color-scheme="secondary"
+            icon="arrow-up"
+            :is-disabled="!canMove(block.index, -1)"
+            :title="$t('TRACKING_TEMPLATES.FORM.TRAINING.MOVE_UP')"
+            @click="$emit('moveSection', { index: block.index, delta: -1 })"
+          />
+          <woot-button
+            type="button"
+            size="tiny"
+            variant="clear"
+            color-scheme="secondary"
+            icon="arrow-up"
+            class="[&_svg]:rotate-180"
+            :is-disabled="!canMove(block.index, 1)"
+            :title="$t('TRACKING_TEMPLATES.FORM.TRAINING.MOVE_DOWN')"
+            @click="$emit('moveSection', { index: block.index, delta: 1 })"
+          />
+        </div>
+      </div>
       <p
         v-if="!sections.length"
         class="!m-0 py-1 pl-6 text-xs text-slate-400 dark:text-slate-500"

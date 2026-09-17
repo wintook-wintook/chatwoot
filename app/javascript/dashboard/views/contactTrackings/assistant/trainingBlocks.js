@@ -45,6 +45,30 @@ export const moveBlock = (blocks, index, delta) => {
   return withGaps(nuevos);
 };
 
+// Mover una SECCIÓN de lugar. No usa el vecino de al lado sino la sección vecina, y
+// por dos razones:
+//   · el bloque de ramas no se mueve: sus líneas las lee el motor esté donde estén,
+//     pero cruzarlo de lado no cambia nada y desordena el texto;
+//   · el "texto inicial" no lleva rótulo, así que es SIEMPRE el primero: si una
+//     sección quedara arriba de él, al volver a separar el texto ese texto pasaría a
+//     ser parte del cuerpo de la sección anterior, en silencio.
+// Devuelve la misma lista si esa sección ya es la primera o la última.
+export const moveSection = (blocks, index, delta) => {
+  const hermanas = blocks
+    .map((b, i) => (b.type === 'section' ? i : null))
+    .filter(i => i !== null);
+  const lugar = hermanas.indexOf(index);
+  const destino = hermanas[lugar + delta];
+  if (lugar < 0 || destino === undefined) return blocks;
+  const nuevos = [...blocks];
+  [nuevos[index], nuevos[destino]] = [nuevos[destino], nuevos[index]];
+  return withGaps(nuevos);
+};
+
+// Si esa sección puede moverse en esa dirección (para apagar la flecha).
+export const canMoveSection = (blocks, index, delta) =>
+  moveSection(blocks, index, delta) !== blocks;
+
 export const removeBlock = (blocks, index) =>
   withGaps(blocks.filter((_, i) => i !== index));
 

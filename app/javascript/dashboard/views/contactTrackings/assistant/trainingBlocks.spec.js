@@ -1,5 +1,7 @@
 import {
   addRoute,
+  moveSection,
+  canMoveSection,
   setScopeLine,
   scopeTextFor,
   addSection,
@@ -235,6 +237,50 @@ describe('trainingBlocks', () => {
       // renglones del final son parte del texto original y no se tocan.
       expect(blocks[1].gap).toBe(1);
       expect(blocks[2].gap).toBe(1);
+    });
+
+    // El orden importa: el modelo lee las secciones en el orden en que están.
+    describe('mover una sección', () => {
+      const conTexto = () => [
+        { type: 'preamble', text: 'AGENTE v1', gap: 1 },
+        { type: 'routes', text: '', gap: 1, lines: [] },
+        { type: 'section', title: 'ROL', body: 'a', gap: 1 },
+        { type: 'section', title: 'ESTILO', body: 'b', gap: 1 },
+        { type: 'section', title: 'PROHIBIDO', body: 'c', gap: 0 },
+      ];
+
+      it('cambia el orden con la sección vecina', () => {
+        expect(moveSection(conTexto(), 3, 1).map(b => b.title)).toEqual([
+          undefined,
+          undefined,
+          'ROL',
+          'PROHIBIDO',
+          'ESTILO',
+        ]);
+      });
+
+      // El bloque de ramas no se cruza: la primera sección ya es la primera.
+      it('no cruza el bloque de ramas ni el texto inicial', () => {
+        const blocks = conTexto();
+
+        expect(moveSection(blocks, 2, -1)).toBe(blocks);
+        expect(canMoveSection(blocks, 2, -1)).toBe(false);
+        expect(canMoveSection(blocks, 2, 1)).toBe(true);
+      });
+
+      it('la última sección no baja más', () => {
+        const blocks = conTexto();
+
+        expect(moveSection(blocks, 4, 1)).toBe(blocks);
+        expect(canMoveSection(blocks, 4, 1)).toBe(false);
+      });
+
+      // El texto inicial no lleva rótulo: siempre va primero.
+      it('el texto inicial no se mueve', () => {
+        const blocks = conTexto();
+
+        expect(moveSection(blocks, 0, 1)).toBe(blocks);
+      });
     });
 
     it('no mueve más allá de los extremos', () => {
