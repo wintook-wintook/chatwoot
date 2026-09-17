@@ -90,9 +90,6 @@
         "NOT_WHATSAPP": "Este canal no es de tipo WhatsApp. Las plantillas WhatsApp solo aplican a canales WhatsApp."
       },
       "TRAINING": {
-        "VIEW_SECTIONS": "Secciones",
-        "VIEW_TEXT": "Texto",
-        "CHECK": "%{routes} rama(s) · %{blocking} bloqueante(s) · %{degrading} aviso(s)",
         "ROUTES": "Ramas",
         "PREAMBLE": "Texto inicial",
         "ROUTES_PLACEHOLDER": "@ruta(nombre #etiqueta: frases del cliente): fuente -> escalamiento",
@@ -112,7 +109,6 @@
         "ADD": "Agregar",
         "ADD_ROUTES": "Agregar ramas",
         "EXPLAIN": "Explicar qué hace esta sección",
-        "EXPLAIN_ERROR": "No se pudo explicar esa sección. Intentá de nuevo.",
         "ROUTE_NAME": "Nombre de la rama",
         "ROUTE_NAME_PLACEHOLDER": "comercial_precios",
         "ROUTE_TAG": "Etiqueta",

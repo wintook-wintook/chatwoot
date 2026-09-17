@@ -1,22 +1,19 @@
-// proyecto@asistente_agentes_ia — Entrenamiento por secciones en la ficha
+// proyecto@asistente_agentes_ia — Entrenamiento por secciones en el Asistente
 // ============================================================================
-// Plan: docs/formulario_entrenamiento_plan.md. Conecta EditTemplate.vue con el
-// editor de secciones sin engordar esa pantalla (arrastra 167 errores de lint
-// previos): la vista elegida, la estructura, el comprobador y qué se manda al
-// guardar.
+// Plan: docs/formulario_entrenamiento_plan.md. Conecta Assistant.vue con el editor
+// de secciones sin engordar esa pantalla: la estructura en bloques, el comprobador
+// y la sincronización con el texto.
 //
-// Lo usan las dos pantallas: la ficha del agente (el texto es
-// `form.complementary_prompt`) y el Asistente (es `draft`). Cada una define
-// `trainingText` —get y set— y el resto del comportamiento es el mismo.
+// El Entrenamiento se arma acá, en la pestaña Secciones del panel del borrador
+// (la ficha del Agente IA quedó con su caja de texto de siempre). Cada cambio en
+// una sección o en una rama se manda a training_preview, y el texto que devuelve
+// se escribe en el borrador: el texto sigue siendo la verdad —es lo que lee el
+// motor, lo que comprueba el comprobador y lo que se guarda—. Al revés también:
+// si el borrador cambia por otro camino, se vuelve a separar en bloques.
 //
-// La verdad sigue siendo el texto para todo lo que ya existía
-// (validación del formulario, Generar con IA, Restaurar, el editor expandido).
-// En la vista Secciones, cada cambio se manda a training_preview y el texto que
-// devuelve se escribe en `form.complementary_prompt`; al revés, si el texto
-// cambia por otro camino, se vuelve a separar en bloques.
+// La pantalla define `trainingText` (get y set) y `trainingInboxId`.
 // ============================================================================
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
-import AssistantAPI from 'dashboard/api/assistant';
 
 const PREVIEW_DEBOUNCE_MS = 500;
 
@@ -32,49 +29,17 @@ export default {
       // El texto que escribió la propia vista Secciones: el watcher no lo vuelve a
       // separar (movería el cursor y perdería lo que se está escribiendo).
       textFromSections: null,
-      // El inventario de la cuenta para las listas de las tarjetas de rama. Lo carga
-      // la pantalla que no tenga uno propio (la ficha; el Asistente ya lo tiene).
-      trainingInventory: null,
-      // F4: Explicar una sección (ExplainModal del Asistente).
-      trainingExplain: {
-        show: false,
-        excerpt: '',
-        result: null,
-        isRunning: false,
-        error: '',
-      },
     };
   },
   computed: {
+    // Explicar usa el endpoint del Asistente, que es solo de administradores.
     canExplainTraining() {
       return this.$store.getters.getCurrentRole === 'administrator';
     },
-    // La pantalla que use el mixin lo redefine si su texto no es el de la ficha.
-    trainingText: {
-      get() {
-        return this.form.complementary_prompt;
-      },
-      set(texto) {
-        this.form.complementary_prompt = texto;
-      },
-    },
-    // Con qué canal se explica una sección (el Asistente tiene el suyo elegido).
-    trainingInboxId() {
-      return this.selectedInboxId || null;
-    },
-    // Lo redefine en true la pantalla que ya carga el inventario por su cuenta.
-    ownsTrainingInventory() {
-      return false;
-    },
-    trainingInventoryData() {
-      return this.ownsTrainingInventory
-        ? this.inventory
-        : this.trainingInventory;
-    },
-    // Las listas de las tarjetas de rama: fuente, etiqueta y escalamiento solo
-    // pueden ser algo que la cuenta TIENE (ver RouteCards).
+    // Las listas de las tarjetas de rama: fuente, etiqueta, tipo de caso y acción
+    // solo pueden ser algo que la cuenta TIENE (ver RouteCards).
     routeOptions() {
-      const inv = this.trainingInventoryData;
+      const inv = this.inventory;
       if (!inv) return {};
       const fuentes = [
         ...new Set((inv.sources || []).map(f => f.directive).filter(Boolean)),
@@ -105,41 +70,17 @@ export default {
     clearTimeout(this.trainingPreviewTimer);
   },
   methods: {
-    // Al abrir la ficha: la estructura que mandó el backend y las sugerencias.
-    loadTrainingStructure(template) {
-      this.trainingStructure = template?.training_structure || { blocks: [] };
-      this.textFromSections = template?.complementary_prompt || '';
-      this.trainingValidation = null;
-      this.fetchSectionTitles();
-      this.fetchTrainingInventory();
-      // replaceStructure: la que manda es la que vuelve del backend, no la guardada
-      // (que puede ser de antes de que las ramas viajaran en campos).
-      this.scheduleTrainingPreview(
-        { text: template?.complementary_prompt || '' },
-        { delay: 0, replaceStructure: true }
-      );
-    },
-    // El Asistente no tiene ficha: arranca del texto del borrador.
+    // Separa el borrador en bloques y trae las sugerencias de nombres de sección.
     loadTrainingFromText(texto) {
       this.trainingStructure = { blocks: [] };
       this.textFromSections = texto || '';
       this.trainingValidation = null;
       this.fetchSectionTitles();
-      this.fetchTrainingInventory();
-      // replaceStructure: acá la estructura sale del texto, no de una ficha guardada.
+      // replaceStructure: la estructura sale del texto, no de una ficha guardada.
       return this.scheduleTrainingPreview(
         { text: texto || '' },
         { delay: 0, replaceStructure: true }
       );
-    },
-    async fetchTrainingInventory() {
-      if (this.ownsTrainingInventory || this.trainingInventory) return;
-      try {
-        const { data } = await AssistantAPI.getInventory(this.trainingInboxId);
-        this.trainingInventory = data;
-      } catch (error) {
-        // Sin inventario, los selectores de rama quedan con lo que ya tenía el agente.
-      }
     },
     async fetchSectionTitles() {
       try {
@@ -180,7 +121,7 @@ export default {
         // Sin vista previa sigue valiendo lo último que se sincronizó.
       }
     },
-    // Termina la sincronización pendiente antes de cambiar de vista o guardar.
+    // Termina la sincronización pendiente antes de cambiar de vista o de guardar.
     async flushTrainingPreview() {
       if (this.trainingPreviewPromise) {
         clearTimeout(this.trainingPreviewTimer);
@@ -194,53 +135,6 @@ export default {
         );
         this.trainingPreviewPromise = null;
       }
-    },
-    async switchTrainingView(vista) {
-      if (vista === this.trainingView) return;
-      await this.flushTrainingPreview();
-      if (vista === 'sections') {
-        await this.runTrainingPreview({ text: this.trainingText }, true);
-      }
-      this.trainingView = vista;
-    },
-    // Lo que se agrega al payload de guardado.
-    trainingPayload() {
-      return this.trainingView === 'sections'
-        ? {
-            training_structure: { blocks: this.trainingStructure.blocks || [] },
-          }
-        : {};
-    },
-    async explainTrainingBlock(excerpt) {
-      this.trainingExplain = {
-        show: true,
-        excerpt,
-        result: null,
-        isRunning: true,
-        error: '',
-      };
-      try {
-        const { data } = await AssistantAPI.explain(
-          this.trainingText,
-          excerpt,
-          this.trainingInboxId
-        );
-        this.trainingExplain.result = data;
-      } catch (error) {
-        this.trainingExplain.error = this.$t(
-          'TRACKING_TEMPLATES.FORM.TRAINING.EXPLAIN_ERROR'
-        );
-      } finally {
-        this.trainingExplain.isRunning = false;
-      }
-    },
-    trainingIssues() {
-      const v = this.trainingValidation;
-      return {
-        blocking: v?.blocking?.length || 0,
-        degrading: v?.degrading?.length || 0,
-        routes: v?.routes?.length || 0,
-      };
     },
   },
 };

@@ -134,10 +134,30 @@ export default {
       this.showAddMenu = false;
       this.$nextTick(() => this.focusBody(nueva.uid));
     },
+    // Con `lines` desde el arranque: es lo que hace que el bloque salga en tarjetas
+    // (ver RouteCards) y no como caja de texto. Y con una rama vacía adentro, para
+    // que se vean los campos sin un clic más.
     addRoutes() {
-      const ramas = withUid({ type: 'routes', text: '', gap: 1 });
+      const ramas = withUid({
+        type: 'routes',
+        text: '',
+        gap: 1,
+        lines: [
+          {
+            kind: 'route',
+            name: '',
+            tag: '',
+            description: '',
+            source: '',
+            escalation: '',
+            action: '',
+            case_type: '',
+            priority: '',
+            raw: '',
+          },
+        ],
+      });
       this.emitBlocks([ramas, ...this.blocks]);
-      this.$nextTick(() => this.focusBody(ramas.uid));
     },
     // Entre bloques, un renglón en blanco como mínimo; el último, sin colgar.
     withGaps(blocks) {

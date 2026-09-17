@@ -15,11 +15,6 @@ import AssistantAPI from 'dashboard/api/assistant'; // proyecto@asistente_agente
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
-// proyecto@asistente_agentes_ia — Entrenamiento por secciones (docs/formulario_entrenamiento_plan.md)
-import TrainingSectionsEditor from 'dashboard/views/contactTrackings/assistant/TrainingSectionsEditor.vue';
-import TrainingToolbar from 'dashboard/views/contactTrackings/assistant/TrainingToolbar.vue';
-import ExplainModal from 'dashboard/views/contactTrackings/assistant/ExplainModal.vue';
-import trainingSectionsMixin from 'dashboard/views/contactTrackings/assistant/trainingSectionsMixin';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 // proyecto@ai_agent_attachments
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';
@@ -38,13 +33,7 @@ const DIRECTIVE_GROUPS = [
 ];
 
 export default {
-  components: {
-    KeywordActionsEditor,
-    TrainingSectionsEditor,
-    TrainingToolbar,
-    ExplainModal,
-  },
-  mixins: [trainingSectionsMixin],
+  components: { KeywordActionsEditor },
 
   props: {
     templateData: {
@@ -478,7 +467,6 @@ export default {
       immediate: true,
       handler(val) {
         if (val && val.id) {
-          this.loadTrainingStructure(val);
           this.form = {
             id: val.id,
             name: val.name || '',
@@ -563,16 +551,12 @@ export default {
     this.loadCalendarIntegrations();
     this.loadDiscourseSources();
     this.loadErpCatalog();
-    if (!this.templateData?.id) this.fetchSectionTitles();
   },
   methods: {
     onCancel() {
       this.$emit('cancel');
     },
-    async onSubmit() {
-      // La vista Secciones sincroniza el texto con un retardo: se termina antes de
-      // validar y de armar el payload.
-      await this.flushTrainingPreview();
+    onSubmit() {
       if (!this.isFormValid) {
         this.showValidationModal = true;
         return;
@@ -594,7 +578,6 @@ export default {
           calendar_integration_ids: this.form.calendar_integration_ids || [],
           booking_calendar_ids: this.bookingCalendarIdsPayload(),
           slots_presentation: this.form.slots_presentation || 'detailed',
-          ...this.trainingPayload(),
           calendar_event_duration: this.form.calendar_event_duration || 30,
           timezone: this.form.timezone || '', // proyecto@bot_seguimiento_calendar
         },
@@ -1048,13 +1031,6 @@ export default {
     },
     // Inserta un token aislado por espacios en la posición recordada
     insertTokenAtPrompt(rawToken) {
-      // En la vista Secciones inserta en la caja de la sección activa.
-      if (
-        this.trainingView === 'sections' &&
-        this.pickerTarget !== 'modal' &&
-        this.$refs.sectionsEditor?.insertToken(rawToken)
-      )
-        return;
       const text = this.form.complementary_prompt || '';
       const pos =
         this.pickerInsertPos == null ? text.length : this.pickerInsertPos;
@@ -1409,23 +1385,7 @@ export default {
 
         <!-- Tab 1: Entrenamiento -->
         <div v-show="activeContextTab === 1" class="mt-2">
-          <TrainingToolbar
-            :view="trainingView"
-            :validation="trainingValidation"
-            @switch="switchTrainingView"
-          />
-          <TrainingSectionsEditor
-            v-if="trainingView === 'sections'"
-            ref="sectionsEditor"
-            :value="trainingStructure"
-            :titles="sectionTitles"
-            :route-options="routeOptions"
-            :can-explain="canExplainTraining"
-            @input="onSectionsInput"
-            @explain="explainTrainingBlock"
-          />
           <textarea
-            v-else
             ref="complementaryTextarea"
             v-model="form.complementary_prompt"
             rows="10"
@@ -2165,14 +2125,6 @@ export default {
         </ul>
       </div>
     </woot-modal>
-    <ExplainModal
-      :show="trainingExplain.show"
-      :excerpt="trainingExplain.excerpt"
-      :result="trainingExplain.result"
-      :is-running="trainingExplain.isRunning"
-      :error="trainingExplain.error"
-      @close="trainingExplain.show = false"
-    />
   </div>
 </template>
 

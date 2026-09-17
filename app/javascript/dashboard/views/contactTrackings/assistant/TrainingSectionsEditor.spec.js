@@ -163,7 +163,11 @@ describe('TrainingSectionsEditor', () => {
 
     wrapper.vm.addRoutes();
 
+    // Con una rama vacía adentro y con `lines`: es lo que lo hace salir en tarjetas.
     expect(ultimo(wrapper)[0]).toMatchObject({ type: 'routes', text: '' });
+    expect(ultimo(wrapper)[0].lines).toEqual([
+      expect.objectContaining({ kind: 'route', name: '' }),
+    ]);
     expect(montar().vm.hasRoutes).toBe(true);
   });
 

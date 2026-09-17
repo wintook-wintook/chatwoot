@@ -126,8 +126,9 @@ export default {
   mixins: [trainingSectionsMixin],
   data() {
     return {
-      // El Asistente arranca en el editor de texto; la pestaña Secciones lo cambia.
-      trainingView: 'text',
+      // El Entrenamiento se arma en el formulario de secciones: es la vista inicial.
+      // La pestaña Entrenamiento (el texto crudo) queda para revisarlo o pegarlo.
+      trainingView: 'sections',
       inventory: null,
       isLoadingInventory: false,
       inventoryError: null,
@@ -157,7 +158,7 @@ export default {
       // Fase D: las versiones del Entrenamiento en esta conversación (sin texto) y
       // qué muestra el panel derecho: el editor o la lista de versiones.
       versions: [],
-      draftTab: 'editor',
+      draftTab: 'sections',
       // La etapa del turno en curso, consultada mientras se espera ({ stage, … }).
       turnStage: null,
       // El canal del agente. Decide con qué modelo clasifica y contesta el motor
@@ -243,10 +244,6 @@ export default {
     },
     trainingInboxId() {
       return this.inboxId;
-    },
-    // El Asistente ya carga el inventario al entrar: el mixin no lo pide de nuevo.
-    ownsTrainingInventory() {
-      return true;
     },
     // En la plantilla no: el loader de Vue 2 no entiende `?.` ahí.
     // Se comparan con los espacios normalizados: agregar un salto de línea no es
@@ -468,6 +465,9 @@ export default {
     // El ?template_id manda sobre la conversación guardada: si se entró desde un
     // agente concreto, es a ese al que se vino, no a lo que quedó a medias.
     if (!this.loadTemplateFromRoute()) await this.resumeSession();
+    // Sin nada que retomar, el formulario igual tiene que estar listo (los nombres
+    // de sección que ofrece "Agregar sección" salen del backend).
+    this.showSectionsTab();
   },
   // ⚠ Era `beforeUnmount`, que en Vue 2.7 con la Options API no existe: el
   // temporizador de validación nunca se limpiaba al salir de la pantalla.
@@ -516,7 +516,7 @@ export default {
       // La sesión no guarda el estado: sin borrador, o con marcas, sigue abierta.
       this.isBuilding = !data.draft || pendingCount(data.draft) > 0;
       this.versions = data.versions || [];
-      this.draftTab = 'editor';
+      this.showSectionsTab();
       this.dryRunHistory = [];
       this.suggestedTests = null;
       this.optimizeResult = null;
@@ -596,7 +596,7 @@ export default {
       this.lastDelivered = '';
       this.isBuilding = true;
       this.versions = [];
-      this.draftTab = 'editor';
+      this.showSectionsTab();
       this.editingTemplate = null;
       this.activeTab = 0;
     },
@@ -712,7 +712,7 @@ export default {
       this.lastDelivered = this.draft;
       this.isBuilding = false;
       this.versions = [];
-      this.draftTab = 'editor';
+      this.showSectionsTab();
       this.proposal = {
         name: this.nextVersionName(template.name),
         objective: template.objective || '',
@@ -750,7 +750,7 @@ export default {
       this.lastDelivered = this.draft;
       this.isBuilding = false;
       this.versions = [];
-      this.draftTab = 'editor';
+      this.showSectionsTab();
       // Traer un agente al Asistente arranca una conversación nueva: la
       // identidad y la prueba de la anterior no describen nada de esto.
       this.sessionId = null;
@@ -895,6 +895,16 @@ export default {
       }
       this.fetchInventory();
     },
+    // Deja el panel en el formulario y separa el borrador que haya. Si ya estaba en
+    // Secciones el watcher no corre, así que la separación se pide igual.
+    showSectionsTab() {
+      if (this.draftTab === 'sections') {
+        this.trainingView = 'sections';
+        return this.loadTrainingFromText(this.draft);
+      }
+      this.draftTab = 'sections';
+      return Promise.resolve();
+    },
     // Lo seleccionado en el editor, para "Explicar selección".
     onDraftSelect(event) {
       const { selectionStart, selectionEnd } = event.target;
@@ -961,7 +971,7 @@ export default {
       this.isBuilding = pendingCount(draft) > 0;
       this.manualConflict = null;
       this.rejected = null;
-      this.draftTab = 'editor';
+      this.showSectionsTab();
       this.validateDraft();
       useAlert(this.$t('TRACKING_ASSISTANT_VIEW.VERSION_RESTORED', { number }));
     },

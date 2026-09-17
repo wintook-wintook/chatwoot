@@ -90,9 +90,6 @@
         "NOT_WHATSAPP": "This channel is not WhatsApp type. WhatsApp templates only apply to WhatsApp channels."
       },
       "TRAINING": {
-        "VIEW_SECTIONS": "Sections",
-        "VIEW_TEXT": "Text",
-        "CHECK": "%{routes} branch(es) · %{blocking} blocking · %{degrading} warning(s)",
         "ROUTES": "Branches",
         "PREAMBLE": "Opening text",
         "ROUTES_PLACEHOLDER": "@ruta(name #label: customer phrases): source -> escalation",
@@ -112,7 +109,6 @@
         "ADD": "Add",
         "ADD_ROUTES": "Add branches",
         "EXPLAIN": "Explain what this section does",
-        "EXPLAIN_ERROR": "That section could not be explained. Try again.",
         "ROUTE_NAME": "Branch name",
         "ROUTE_NAME_PLACEHOLDER": "sales_pricing",
         "ROUTE_TAG": "Label",
