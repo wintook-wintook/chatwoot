@@ -16,10 +16,10 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
 // proyecto@asistente_agentes_ia — Entrenamiento por secciones (docs/formulario_entrenamiento_plan.md)
-import TrainingSectionsEditor from './TrainingSectionsEditor.vue';
-import TrainingToolbar from './TrainingToolbar.vue';
+import TrainingSectionsEditor from 'dashboard/views/contactTrackings/assistant/TrainingSectionsEditor.vue';
+import TrainingToolbar from 'dashboard/views/contactTrackings/assistant/TrainingToolbar.vue';
 import ExplainModal from 'dashboard/views/contactTrackings/assistant/ExplainModal.vue';
-import trainingSectionsMixin from './trainingSectionsMixin';
+import trainingSectionsMixin from 'dashboard/views/contactTrackings/assistant/trainingSectionsMixin';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 // proyecto@ai_agent_attachments
 import AiAgentAttachmentsAPI from 'dashboard/api/aiAgentAttachments';

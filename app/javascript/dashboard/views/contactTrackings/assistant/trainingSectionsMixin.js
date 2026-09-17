@@ -5,7 +5,11 @@
 // previos): la vista elegida, la estructura, el comprobador y qué se manda al
 // guardar.
 //
-// La verdad sigue siendo `form.complementary_prompt` para todo lo que ya existía
+// Lo usan las dos pantallas: la ficha del agente (el texto es
+// `form.complementary_prompt`) y el Asistente (es `draft`). Cada una define
+// `trainingText` —get y set— y el resto del comportamiento es el mismo.
+//
+// La verdad sigue siendo el texto para todo lo que ya existía
 // (validación del formulario, Generar con IA, Restaurar, el editor expandido).
 // En la vista Secciones, cada cambio se manda a training_preview y el texto que
 // devuelve se escribe en `form.complementary_prompt`; al revés, si el texto
@@ -42,9 +46,22 @@ export default {
     canExplainTraining() {
       return this.$store.getters.getCurrentRole === 'administrator';
     },
+    // La pantalla que use el mixin lo redefine si su texto no es el de la ficha.
+    trainingText: {
+      get() {
+        return this.form.complementary_prompt;
+      },
+      set(texto) {
+        this.form.complementary_prompt = texto;
+      },
+    },
+    // Con qué canal se explica una sección (el Asistente tiene el suyo elegido).
+    trainingInboxId() {
+      return this.selectedInboxId || null;
+    },
   },
   watch: {
-    'form.complementary_prompt'(texto) {
+    trainingText(texto) {
       if (this.trainingView !== 'sections' || texto === this.textFromSections)
         return;
       this.scheduleTrainingPreview({ text: texto }, { replaceStructure: true });
@@ -63,6 +80,18 @@ export default {
       this.scheduleTrainingPreview(
         { text: template?.complementary_prompt || '' },
         { delay: 0 }
+      );
+    },
+    // El Asistente no tiene ficha: arranca del texto del borrador.
+    loadTrainingFromText(texto) {
+      this.trainingStructure = { blocks: [] };
+      this.textFromSections = texto || '';
+      this.trainingValidation = null;
+      this.fetchSectionTitles();
+      // replaceStructure: acá la estructura sale del texto, no de una ficha guardada.
+      return this.scheduleTrainingPreview(
+        { text: texto || '' },
+        { delay: 0, replaceStructure: true }
       );
     },
     async fetchSectionTitles() {
@@ -97,7 +126,7 @@ export default {
         this.trainingValidation = data.validation;
         if (payload.training_structure) {
           this.textFromSections = data.text;
-          this.form.complementary_prompt = data.text;
+          this.trainingText = data.text;
         }
         if (replaceStructure) this.trainingStructure = data.training_structure;
       } catch (error) {
@@ -111,7 +140,7 @@ export default {
         const pendiente =
           this.trainingView === 'sections'
             ? { training_structure: this.trainingStructure }
-            : { text: this.form.complementary_prompt };
+            : { text: this.trainingText };
         await this.runTrainingPreview(
           pendiente,
           this.trainingView !== 'sections'
@@ -123,10 +152,7 @@ export default {
       if (vista === this.trainingView) return;
       await this.flushTrainingPreview();
       if (vista === 'sections') {
-        await this.runTrainingPreview(
-          { text: this.form.complementary_prompt },
-          true
-        );
+        await this.runTrainingPreview({ text: this.trainingText }, true);
       }
       this.trainingView = vista;
     },
@@ -148,9 +174,9 @@ export default {
       };
       try {
         const { data } = await AssistantAPI.explain(
-          this.form.complementary_prompt,
+          this.trainingText,
           excerpt,
-          this.selectedInboxId || null
+          this.trainingInboxId
         );
         this.trainingExplain.result = data;
       } catch (error) {

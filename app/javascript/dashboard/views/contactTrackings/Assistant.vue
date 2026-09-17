@@ -49,6 +49,9 @@ import ValidationBadge from './assistant/ValidationBadge.vue';
 import ValidationReport from './assistant/ValidationReport.vue';
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import VersionsPanel from './assistant/VersionsPanel.vue';
+// El Entrenamiento por secciones: el mismo editor que la ficha del agente.
+import TrainingSectionsEditor from './assistant/TrainingSectionsEditor.vue';
+import trainingSectionsMixin from './assistant/trainingSectionsMixin';
 import OptimizeModal from './assistant/OptimizeModal.vue';
 import ExplainModal from './assistant/ExplainModal.vue';
 import DryRunModal from './assistant/DryRunModal.vue';
@@ -114,13 +117,17 @@ export default {
     ValidationReport,
     ManualConflictNotice,
     VersionsPanel,
+    TrainingSectionsEditor,
     OptimizeModal,
     ExplainModal,
     DryRunModal,
     SaveModal,
   },
+  mixins: [trainingSectionsMixin],
   data() {
     return {
+      // El Asistente arranca en el editor de texto; la pestaña Secciones lo cambia.
+      trainingView: 'text',
       inventory: null,
       isLoadingInventory: false,
       inventoryError: null,
@@ -221,6 +228,22 @@ export default {
     };
   },
   computed: {
+    // El texto que edita el mixin de secciones acá es el borrador. Al escribirlo se
+    // pasa por onDraftInput, igual que si se hubiera tipeado en el editor: revalida,
+    // envejece las pruebas y cuenta como edición a mano.
+    trainingText: {
+      get() {
+        return this.draft;
+      },
+      set(texto) {
+        if (texto === this.draft) return;
+        this.draft = texto;
+        this.onDraftInput();
+      },
+    },
+    trainingInboxId() {
+      return this.inboxId;
+    },
     // En la plantilla no: el loader de Vue 2 no entiende `?.` ahí.
     // Se comparan con los espacios normalizados: agregar un salto de línea no es
     // "editar a mano" de nada que valga avisarle al asistente.
@@ -409,6 +432,17 @@ export default {
     audit(list) {
       const pages = Math.max(1, Math.ceil(list.length / AGENTS_PER_PAGE));
       if (this.agentsPage > pages) this.agentsPage = pages;
+    },
+    // La pestaña Secciones separa el borrador en bloques al entrar y termina de
+    // sincronizar lo pendiente al salir: el texto sigue siendo el que manda.
+    async draftTab(pestania, anterior) {
+      if (pestania === 'sections') {
+        this.trainingView = 'sections';
+        await this.loadTrainingFromText(this.draft);
+      } else if (anterior === 'sections') {
+        await this.flushTrainingPreview();
+        this.trainingView = 'text';
+      }
     },
   },
   async mounted() {
@@ -864,9 +898,13 @@ export default {
         .slice(selectionStart, selectionEnd)
         .trim();
     },
-    async explainSelection() {
-      if (!this.draftSelection || this.isExplaining) return;
-      this.explainExcerpt = this.draftSelection;
+    explainSelection() {
+      if (this.draftSelection) this.explainFragment(this.draftSelection);
+    },
+    // Lo usa también el editor de secciones (@explain), con la sección y su rótulo.
+    async explainFragment(fragmento) {
+      if (!fragmento || this.isExplaining) return;
+      this.explainExcerpt = fragmento;
       this.explainResult = null;
       this.explainError = '';
       this.showExplainModal = true;
@@ -1185,6 +1223,17 @@ export default {
                     {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_EDITOR') }}
                   </button>
                   <button
+                    class="mr-3 pb-0.5 border-b-2"
+                    :class="
+                      draftTab === 'sections'
+                        ? 'border-woot-500'
+                        : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                    "
+                    @click="draftTab = 'sections'"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_SECTIONS') }}
+                  </button>
+                  <button
                     class="pb-0.5 border-b-2"
                     :class="
                       draftTab === 'versions'
@@ -1246,6 +1295,21 @@ export default {
                 :current-draft="draft"
                 @restore="restoreVersion"
               />
+              <!-- Secciones: el mismo editor que la ficha del agente, sobre el
+                   borrador de esta conversación. Cada cambio vuelve a armar el
+                   texto en el backend, así que el informe de abajo sigue vivo. -->
+              <div
+                v-else-if="draftTab === 'sections'"
+                class="flex-1 min-h-0 pr-1 overflow-y-auto"
+              >
+                <TrainingSectionsEditor
+                  :value="trainingStructure"
+                  :titles="sectionTitles"
+                  :can-explain="canExplainTraining"
+                  @input="onSectionsInput"
+                  @explain="explainFragment"
+                />
+              </div>
               <template v-else>
                 <ManualConflictNotice
                   v-if="manualConflict"

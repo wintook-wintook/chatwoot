@@ -52,6 +52,7 @@
     "MANUAL_MINE_REMOVED": "(you had removed it)",
     "MANUAL_THEIRS_REMOVED": "(it removed it)",
     "DRAFT_TAB_EDITOR": "Training",
+    "DRAFT_TAB_SECTIONS": "Sections",
     "DRAFT_TAB_VERSIONS": "Versions",
     "DRAFT_TAB_COUNT": "(%{count})",
     "VERSIONS_EMPTY": "No versions yet. One is saved each time the assistant delivers the Training and each time you change it by hand before sending a message.",

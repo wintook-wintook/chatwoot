@@ -52,6 +52,7 @@
     "MANUAL_MINE_REMOVED": "(la habías quitado)",
     "MANUAL_THEIRS_REMOVED": "(la quitó)",
     "DRAFT_TAB_EDITOR": "Entrenamiento",
+    "DRAFT_TAB_SECTIONS": "Secciones",
     "DRAFT_TAB_VERSIONS": "Versiones",
     "DRAFT_TAB_COUNT": "(%{count})",
     "VERSIONS_EMPTY": "Todavía no hay versiones. Se guarda una cada vez que el asistente entrega el Entrenamiento y cada vez que lo cambiás a mano antes de mandar un mensaje.",

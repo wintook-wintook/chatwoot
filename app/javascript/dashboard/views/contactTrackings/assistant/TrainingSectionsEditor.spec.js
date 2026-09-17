@@ -1,5 +1,5 @@
 import { shallowMount } from '@vue/test-utils';
-import TrainingSectionsEditor from '../TrainingSectionsEditor.vue';
+import TrainingSectionsEditor from './TrainingSectionsEditor.vue';
 
 // proyecto@asistente_agentes_ia — docs/formulario_entrenamiento_plan.md
 const estructura = () => ({
