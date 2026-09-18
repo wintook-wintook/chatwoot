@@ -97,9 +97,11 @@ export default {
       >
         <!-- Andrés Liverio 020822 **Wintook** -->
         <template #legacy>
-          <!-- Dos columnas: el menú a la izquierda; el contenido completo y el link a la
+          <!-- Dos columnas, 40 % y 50 %: el menú a la izquierda; el contenido completo y el link a la
                derecha. En pantallas angostas quedan una debajo de la otra. -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+          <div
+            class="grid grid-cols-1 md:grid-cols-[40%_50%] md:justify-between gap-y-2"
+          >
             <div class="flex flex-col gap-2">
               <div class="flex items-center w-full gap-2">
                 <input v-model="opcMenu" type="checkbox" :checked="opcMenu" />
