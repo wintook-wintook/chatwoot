@@ -160,7 +160,14 @@
         "ROUTE_FIND_USE": "Use this one",
         "ROUTE_FIND_TAKEN": "Already in this agent",
         "ROUTE_FIND_SCOPE": "Scope",
-        "ROUTE_FIND_AGENTS": "Used in"
+        "ROUTE_FIND_AGENTS": "Used in",
+        "SECTION_FIND": "Find a section",
+        "SECTION_FIND_TITLE": "Sections that already exist in this account",
+        "SECTION_FIND_HINT": "Copy a whole section from another agent, with its text. You can edit it afterwards. The same name may appear several times: those are the different ways it is written.",
+        "SECTION_FIND_SEARCH": "Search by name, content or agent…",
+        "SECTION_FIND_LOADING": "Looking up this account's sections…",
+        "SECTION_FIND_EMPTY": "No sections written in any agent of this account yet.",
+        "SECTION_FIND_TAKEN": "Already has that section"
       }
     },
     "CREATE": {

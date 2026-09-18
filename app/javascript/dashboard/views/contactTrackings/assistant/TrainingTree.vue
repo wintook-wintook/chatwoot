@@ -41,6 +41,7 @@ export default {
     'findRoute',
     'editSection',
     'addSection',
+    'findSection',
     'moveSection',
     'moveRoute',
   ],
@@ -310,6 +311,16 @@ export default {
         </span>
         <span class="text-xs text-slate-400">({{ sections.length }})</span>
       </button>
+      <woot-button
+        type="button"
+        size="tiny"
+        variant="smooth"
+        color-scheme="secondary"
+        icon="search"
+        @click="$emit('findSection')"
+      >
+        {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.SECTION_FIND') }}
+      </woot-button>
       <woot-button
         type="button"
         size="tiny"

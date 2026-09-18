@@ -49,6 +49,12 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
     render json: ContactTrackings::TrainingRouteCatalog.new(Current.account).call
   end
 
+  # proyecto@asistente_agentes_ia — las secciones enteras que la cuenta ya escribió
+  # (section_titles trae solo los nombres). Ver TrainingSectionCatalog.
+  def section_catalog
+    render json: ContactTrackings::TrainingSectionCatalog.new(Current.account).call
+  end
+
   # proyecto@asistente_agentes_ia — la ficha cambia entre la vista Secciones y la vista
   # Texto sin guardar: esto convierte en cualquiera de los dos sentidos y comprueba el
   # resultado. La conversión vive solo acá (TrainingStructure), no duplicada en el

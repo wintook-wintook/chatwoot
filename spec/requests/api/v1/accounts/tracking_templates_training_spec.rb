@@ -70,6 +70,18 @@ RSpec.describe 'Agentes IA — Entrenamiento por secciones' do
                                                   'agents' => ['Licencias'])
   end
 
+  # proyecto@asistente_agentes_ia — las secciones enteras, para copiar una.
+  it 'lista las secciones de la cuenta con su contenido' do
+    create(:tracking_template, account: account, name: 'Licencias',
+                               complementary_prompt: "[ROL]\nSos un asesor de licencias.")
+
+    get "#{base}/section_catalog", headers: admin.create_new_auth_token, as: :json
+
+    # La cuenta del ejemplo ya tiene otros agentes: se busca la de este.
+    entrada = response.parsed_body.find { |e| e['agents'] == ['Licencias'] }
+    expect(entrada).to include('title' => 'ROL', 'body' => 'Sos un asesor de licencias.', 'lines' => 1)
+  end
+
   # La ficha cambia de vista sin guardar: la conversión vive solo en Ruby.
   describe 'POST training_preview' do
     it 'separa un texto en bloques y lo comprueba' do

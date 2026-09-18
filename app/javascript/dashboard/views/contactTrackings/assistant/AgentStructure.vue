@@ -14,6 +14,7 @@ import RouteModal from './RouteModal.vue';
 import SectionModal from './SectionModal.vue';
 import DefinitionModal from './DefinitionModal.vue';
 import RouteCatalogModal from './RouteCatalogModal.vue';
+import SectionCatalogModal from './SectionCatalogModal.vue';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import {
   addRoute,
@@ -42,6 +43,7 @@ export default {
     SectionModal,
     DefinitionModal,
     RouteCatalogModal,
+    SectionCatalogModal,
   },
   props: {
     value: { type: Object, default: () => ({ blocks: [] }) },
@@ -67,6 +69,8 @@ export default {
       // El catálogo de ramas de la cuenta se pide una vez, al abrir el buscador.
       catalogModal: { show: false, loading: false },
       catalog: null,
+      sectionCatalogModal: { show: false, loading: false },
+      sectionCatalog: null,
     };
   },
   computed: {
@@ -215,6 +219,27 @@ export default {
       this.closeSectionModal();
       this.emitBlocks(blocks);
     },
+    // Copiar una sección entera que la cuenta ya escribió.
+    async openSectionCatalog() {
+      this.sectionCatalogModal = {
+        show: true,
+        loading: this.sectionCatalog === null,
+      };
+      if (this.sectionCatalog !== null) return;
+      try {
+        const { data } = await TrackingTemplatesAPI.getSectionCatalog();
+        this.sectionCatalog = data;
+      } catch (error) {
+        this.sectionCatalog = [];
+      } finally {
+        this.sectionCatalogModal = { show: true, loading: false };
+      }
+    },
+    pickSectionFromCatalog({ title, body }) {
+      this.sectionCatalogModal = { show: false, loading: false };
+      const blocks = addSection(this.blocks, title);
+      this.emitBlocks(updateBlock(blocks, blocks.length - 1, { body }));
+    },
     // ── definición ───────────────────────────────────────────────────────────
     openDefinition(field) {
       this.definitionModal = { show: true, field };
@@ -240,6 +265,7 @@ export default {
         @editRoute="openEditRoute"
         @moveRoute="moveRoute"
         @addSection="openAddSection"
+        @findSection="openSectionCatalog"
         @editSection="openEditSection"
         @moveSection="moveSection"
       />
@@ -263,6 +289,14 @@ export default {
       :taken-names="currentRouteNames"
       @close="catalogModal = { show: false, loading: false }"
       @pick="pickFromCatalog"
+    />
+    <SectionCatalogModal
+      :show="sectionCatalogModal.show"
+      :sections="sectionCatalog || []"
+      :is-loading="sectionCatalogModal.loading"
+      :taken-titles="takenTitles"
+      @close="sectionCatalogModal = { show: false, loading: false }"
+      @pick="pickSectionFromCatalog"
     />
     <SectionModal
       :show="sectionModal.show"

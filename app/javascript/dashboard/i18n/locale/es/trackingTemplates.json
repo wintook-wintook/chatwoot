@@ -160,7 +160,14 @@
         "ROUTE_FIND_USE": "Usar esta",
         "ROUTE_FIND_TAKEN": "Ya está en este agente",
         "ROUTE_FIND_SCOPE": "Alcance",
-        "ROUTE_FIND_AGENTS": "Está en"
+        "ROUTE_FIND_AGENTS": "Está en",
+        "SECTION_FIND": "Buscar sección",
+        "SECTION_FIND_TITLE": "Secciones que ya existen en la cuenta",
+        "SECTION_FIND_HINT": "Copiá una sección entera de otro agente, con su texto. Después se puede editar. El mismo nombre puede aparecer varias veces: son las distintas maneras en que está escrito.",
+        "SECTION_FIND_SEARCH": "Buscar por nombre, contenido o agente…",
+        "SECTION_FIND_LOADING": "Buscando las secciones de la cuenta…",
+        "SECTION_FIND_EMPTY": "Todavía no hay secciones escritas en ningún agente de la cuenta.",
+        "SECTION_FIND_TAKEN": "Ya tiene esa sección"
       }
     },
     "CREATE": {

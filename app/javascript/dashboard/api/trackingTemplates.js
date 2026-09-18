@@ -30,6 +30,12 @@ class TrackingTemplatesAPI extends ApiClient {
     return axios.get(`${this.url}/route_catalog`);
   }
 
+  // proyecto@asistente_agentes_ia — las secciones enteras de la cuenta, para copiar
+  // una a un agente nuevo (ver TrainingSectionCatalog).
+  getSectionCatalog() {
+    return axios.get(`${this.url}/section_catalog`);
+  }
+
   trainingPreview(payload) {
     return axios.post(`${this.url}/training_preview`, payload);
   }
