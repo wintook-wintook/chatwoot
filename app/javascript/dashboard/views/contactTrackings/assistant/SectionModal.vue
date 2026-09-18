@@ -9,7 +9,10 @@
 // el campo de nombre: es un bloque sin rótulo, y ponerle nombre lo convertiría en
 // una sección.
 // ============================================================================
+import ProofreadBar from './ProofreadBar.vue';
+
 export default {
+  components: { ProofreadBar },
   props: {
     show: { type: Boolean, default: false },
     // El bloque que se edita, o null para una sección nueva.
@@ -21,8 +24,10 @@ export default {
     },
     // Los nombres ya usados: dos secciones con el mismo rótulo confunden al modelo.
     takenTitles: { type: Array, default: () => [] },
-    // Se puede explicar (endpoint del Asistente, solo administradores).
+    // Se puede explicar y corregir la redacción (endpoints del Asistente, solo
+    // administradores).
     canExplain: { type: Boolean, default: false },
+    inboxId: { type: Number, default: null },
   },
   emits: ['close', 'save', 'delete', 'explain'],
   data() {
@@ -167,6 +172,15 @@ export default {
           rows="18"
           class="w-full !mb-0 min-h-[24rem] text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2"
           :placeholder="$t('TRACKING_TEMPLATES.FORM.TRAINING.BODY_PLACEHOLDER')"
+        />
+        <!-- Las directivas, las etiquetas y las marcas de la sección no pueden
+             cambiar: si la corrección las toca, el backend la descarta. -->
+        <ProofreadBar
+          v-if="canExplain"
+          :text="body"
+          kind="section_body"
+          :inbox-id="inboxId"
+          @input="body = $event"
         />
       </div>
 

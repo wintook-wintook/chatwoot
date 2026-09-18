@@ -21,7 +21,10 @@
 const PRIORITIES = ['baja', 'media', 'alta', 'urgente'];
 const CREATE_TICKET = '@crear_ticket';
 
+import ProofreadBar from './ProofreadBar.vue';
+
 export default {
+  components: { ProofreadBar },
   props: {
     // La rama: { name, tag, description, source, action, case_type, priority, … }
     route: { type: Object, default: () => ({}) },
@@ -30,6 +33,9 @@ export default {
     // Prefijo de los `id` de los campos: dos formularios en la misma página no
     // pueden repetirlos, o quien busca uno se lleva el otro.
     idPrefix: { type: String, default: 'route' },
+    // "Mejorar la redacción" en las frases (endpoint del Asistente, solo admins).
+    canProofread: { type: Boolean, default: false },
+    inboxId: { type: Number, default: null },
   },
   emits: ['input'],
   computed: {
@@ -166,6 +172,15 @@ export default {
         $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_PHRASES_PLACEHOLDER')
       "
       @input="update({ description: $event.target.value })"
+    />
+    <!-- Las frases NO se formalizan: el clasificador las compara con mensajes
+         reales de clientes (ver Proofreader, kind route_phrases). -->
+    <ProofreadBar
+      v-if="canProofread"
+      :text="route.description || ''"
+      kind="route_phrases"
+      :inbox-id="inboxId"
+      @input="update({ description: $event })"
     />
 
     <div class="flex flex-wrap gap-2 mt-2">

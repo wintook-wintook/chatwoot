@@ -63,8 +63,10 @@ class Api::V1::Accounts::ContactTrackings::AssistantToolsController < Api::V1::A
 
   private
 
+  # `lost`: lo que una corrección de redacción intentó cambiar y no podía (ver
+  # Proofreader). Viaja con el error para que la pantalla diga qué fue.
   def render_result(result)
-    return render json: { error: result[:error] }, status: :unprocessable_entity if result[:error]
+    return render json: result.slice(:error, :lost), status: :unprocessable_entity if result[:error]
 
     render json: result
   end

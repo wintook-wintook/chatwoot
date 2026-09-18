@@ -13,6 +13,7 @@
 // cualquier otra pantalla no se desincronicen.
 // ============================================================================
 import RouteFields from './RouteFields.vue';
+import ProofreadBar from './ProofreadBar.vue';
 
 // Lo que se guarda en el bloque de ramas (ver ContactTrackings::TrainingRoutes).
 const ramaVacia = () => ({
@@ -29,7 +30,7 @@ const ramaVacia = () => ({
 });
 
 export default {
-  components: { RouteFields },
+  components: { RouteFields, ProofreadBar },
   props: {
     show: { type: Boolean, default: false },
     // { sources, labels, caseTypes, actions } — ver RouteFields.
@@ -43,6 +44,9 @@ export default {
     scopeText: { type: String, default: '' },
     // Si hoy es la rama por defecto (la línea @ruta_por_defecto apunta a ella).
     isDefault: { type: Boolean, default: false },
+    // "Mejorar la redacción" (endpoint del Asistente, solo administradores).
+    canProofread: { type: Boolean, default: false },
+    inboxId: { type: Number, default: null },
   },
   emits: ['close', 'save', 'delete'],
   data() {
@@ -129,6 +133,8 @@ export default {
         id-prefix="modal-route"
         :route="route"
         :options="options"
+        :can-proofread="canProofread"
+        :inbox-id="inboxId"
         @input="onFields"
       />
 
@@ -164,6 +170,13 @@ export default {
           :placeholder="
             $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SCOPE_PLACEHOLDER')
           "
+        />
+        <ProofreadBar
+          v-if="canProofread"
+          :text="scope"
+          kind="route_scope"
+          :inbox-id="inboxId"
+          @input="scope = $event"
         />
         <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
           {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SCOPE_HINT') }}

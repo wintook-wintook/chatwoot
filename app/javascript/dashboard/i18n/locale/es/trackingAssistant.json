@@ -294,6 +294,7 @@
     "NEW_AGENT": "Nuevo Agente IA",
     "DEFINITION_FIX": "Mejorar la redacción",
     "DEFINITION_FIX_UNDO": "Volver al original",
-    "DEFINITION_FIX_ERROR": "No se pudo corregir el texto. Intentá de nuevo."
+    "DEFINITION_FIX_ERROR": "No se pudo corregir el texto. Intentá de nuevo.",
+    "FIX_PROTECTED": "La corrección cambiaba algo que no puede cambiar (%{items}): se dejó el texto como estaba."
   }
 }
