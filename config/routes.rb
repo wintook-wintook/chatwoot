@@ -86,6 +86,10 @@ Rails.application.routes.draw do
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
+              get :section_titles # proyecto@asistente_agentes_ia — sugerencias del formulario por secciones
+              get :route_catalog # proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió
+              get :section_catalog # proyecto@asistente_agentes_ia — las secciones enteras que ya escribió
+              post :training_preview # proyecto@asistente_agentes_ia — texto ↔ bloques + comprobador
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
@@ -112,6 +116,24 @@ Rails.application.routes.draw do
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview
             get 'list', to: 'list#index' # listado filtrable a nivel cuenta
+            # proyecto@asistente_agentes_ia — generador de Entrenamientos
+            get  'assistant/inventory', to: 'assistant#inventory'
+            post 'assistant/validate',  to: 'assistant#validate'
+            post 'assistant/interview', to: 'assistant#interview'
+            post 'assistant/save',      to: 'assistant#save'
+            get  'assistant/session',   to: 'assistant#resume'
+            get  'assistant/sessions',      to: 'assistant#sessions'
+            get  'assistant/sessions/:id',  to: 'assistant#show_session'
+            delete 'assistant/sessions/:id', to: 'assistant#discard_session'
+            get  'assistant/sessions/:id/versions/:number', to: 'assistant#show_version'
+            get  'assistant/progress/:turn_id', to: 'assistant#progress'
+            post 'assistant/suggested_tests', to: 'assistant_tools#suggested_tests'
+            post 'assistant/optimize', to: 'assistant_tools#optimize'
+            post 'assistant/explain', to: 'assistant_tools#explain'
+            post 'assistant/proofread', to: 'assistant_tools#proofread'
+            post 'assistant/transcribe', to: 'assistant_tools#transcribe'
+            get  'assistant/audit',     to: 'assistant#audit'
+            post 'assistant/dry_run',   to: 'assistant#dry_run'
           end
 
           # @knowledge_sources

@@ -1,0 +1,140 @@
+# proyecto@asistente_agentes_ia — engine checker messages
+#
+# ⚠ THESE STRINGS ARE NOT COSMETIC.
+#   They reach two readers: the person fixing the Training in the panel, and the
+#   MODEL, which gets them verbatim in the repair loop
+#   (InterviewService#repair_prompt). Measured on 08/09/2026 with the same broken
+#   text: a bare verdict ("there is no @ruta line") repaired 1 out of 3 times;
+#   naming the missing character and its line, 3 out of 3.
+#
+#   Every message must state the CONSEQUENCE, not just that something is wrong.
+#   Shortening them "so they look cleaner" is what makes them useless.
+#
+# ⚠ Anything starting with @ or wrapped in braces is NOT translated: @ruta,
+#   @crear_ticket, @buscar_predefinidas are literals the parser matches with fixed
+#   regexes. An @route(...) is read by nobody.
+en:
+  tracking_assistant:
+    unparsed:
+      no_closing_paren: 'the closing parenthesis of @ruta( is missing'
+      no_colon: 'the ":" immediately after the closing parenthesis is missing'
+      bad_name: 'the branch name only accepts letters, numbers, hyphen and underscore — no spaces or accents'
+      generic: 'it does not follow the form @ruta(name #label: description): source'
+    repair:
+      header: 'The engine checker rejected that Training:'
+      footer: Fix exactly that and return the complete Training again.
+      wrote: 'You wrote:'
+      route_header: >-
+        I tested your Training: I took each branch's description and asked the real classifier which
+        branch it routes to. These do not pick themselves:
+      route_mismatch_line: '- branch "%{route}", tested with "%{probe}", landed on "%{chosen}"'
+      route_none: (no branch)
+      route_footer: >-
+        That means those descriptions are confusable. Rewrite them so they do not overlap —
+        different situations, in the customer's own words — and return the complete Training again.
+        Leave the lines that were already fine untouched.
+      edit_header: >-
+        I compared what you returned with the CURRENT TRAINING and you changed this without listing it in "toca":
+      edit_removed: '- you removed %{key}'
+      edit_changed: '- you changed %{key}'
+      edit_added: '- you added %{key}'
+      edit_footer: >-
+        If the person did not ask for it, return those parts EXACTLY as they were in the CURRENT
+        TRAINING, character by character. If they did ask, keep them and name them in "toca". Return
+        the complete Training again.
+      missing_mode: >-
+        You delivered the Training without asking whether the agent ANSWERS first and opens the case
+        only if it could not resolve, or whether it ONLY collects data and always opens the case.
+        Those are two different agents and it cannot be inferred from the request. Do not deliver
+        anything yet: ask that question, with both options, and return "entrenamiento": null.
+    warnings:
+      calendar_not_assigned: >-
+        «%{name}» was saved, but it has no calendar assigned, so @agendar_calendar will not schedule
+        anything. Assign a calendar on the AI Agent's own page: having the calendar connected in the
+        account is not enough — the engine looks for it on the agent.
+    findings:
+      route_line_unparsed: >-
+        Line %{line}: the engine does NOT read this as a branch — %{reason}. The exact pattern is
+        @ruta(name #label: description): source -> escalation
+      no_routes: >-
+        The engine will read 0 branches: there is no @ruta line. With no branches, every message
+        falls to the conversational path and no source is ever consulted.
+      unknown_source: >-
+        Branch '%{route}' declares a source the engine does not recognise. It is ignored and the
+        branch will answer without consulting anything.
+      source_not_found: >-
+        Branch '%{route}' points to source "%{name}", which does not exist in this account. The
+        engine will not fail: it will search and never find. The ones that do exist: %{available}.
+      source_none_loaded: (none loaded)
+      action_trapped_in_source: >-
+        In branch '%{route}' the directive %{directive} ended up on the source side, not the
+        escalation side: the "->" arrow is missing or misspelled. As written, that action never
+        runs. The form is: source -> @crear_ticket(...)
+      case_type_not_found: >-
+        @crear_ticket(tipo=%{type}) — that case type does not exist in the account. The ones that do: %{available}.
+      case_type_none_created: (none created)
+      default_route_unknown: >-
+        @ruta_por_defecto points to '%{declared}', which is not one of the declared branches (%{routes}).
+      default_route_no_routes: there are no branches
+      route_not_self_chosen: >-
+        I tested branch "%{route}" with its own description ("%{probe}") and the engine chose
+        "%{chosen}". That description overlaps another branch's: as written, this branch will
+        almost never be picked. Use situations that only apply to it.
+      contract_label: >-
+        %{count} line(s) with an Assistant label between ═══ (line(s) %{lines}). Those labels belong to
+        the instructions used to build the Training, not to the agent: if they stay, the agent reads
+        them as part of its prompt. Delete those lines entirely.
+      contract_wrap: >-
+        %{count} line(s) with text between ‹ › (line(s) %{lines}). In the template, ‹ › mark where the
+        content goes; they are not part of it. Remove only the ‹ › signs and keep the instruction as is.
+      pending_marker: >-
+        %{count} item(s) still to fill in: %{items}. It cannot be saved while any marker like this
+        remains: the agent would read it verbatim and say it to the customer.
+      duplicate_route_description: >-
+        These branches have the SAME description: %{routes}. The description is the only thing the
+        classifier uses to decide, so it cannot tell them apart: one of the two will never be
+        chosen, and which one loses depends on the order. Give them descriptions that cannot be
+        confused — different situations, in the customer's own words.
+      route_without_description: >-
+        Branch '%{route}' has no description. The description is the ONLY thing the classifier uses
+        to decide which branch a message goes to: without it, this branch will almost never be
+        chosen. Write it as a list of situations, in the customer's own words.
+      label_not_found: >-
+        Label %{tag} on branch '%{route}' does not exist in the account, so it will not trigger any
+        automation. Create it under Labels or use one of the existing ones: %{available}.
+      label_none_created: (no labels created)
+      erp_directive_not_isolated: >-
+        There is a {{consulta:}} directive living alongside branches or prose. The engine sends the
+        WHOLE interpolated Training as the message to the customer: with {{consulta:}} the Training
+        is the message template and cannot carry anything else.
+      # ⚠ Corrected on 10/09/2026 against the real engine. This message used to say branches
+      # without an arrow "stop opening cases", and it is the opposite: the job sends them to
+      # try_create_ticket(directive: nil), which falls back to the WHOLE prompt and finds
+      # another branch's @crear_ticket there. They do open cases, with the other branch's
+      # type, and BEFORE the source rather than after.
+      mixed_escalation_regime: >-
+        Some branches have an escalation and some do not (%{routes}). That does NOT leave them
+        without a case: the engine looks for the directive in the whole Training, so those branches
+        will open a case using another branch's @crear_ticket —including its type— and will
+        evaluate it BEFORE consulting their source, not after. If they must open a case, give them
+        their own arrow with their own type; if they must not, today the only way is to remove
+        every loose @crear_ticket.
+      calendar_not_configured: >-
+        This account has no Google calendar connected, so @agendar_calendar will not schedule
+        anything: the directive parses fine and the turn just passes through, with no warning.
+        Connect a calendar and also assign it to this AI Agent — with the calendar in the account but
+        not assigned to the agent, it still does not schedule.
+      # ⚠ Corrected on 11/09/2026: until that day the engine WIPED the whole Training over this
+      # and the finding was blocking. develop fixed it (strip_tokens keeps the prose), so the
+      # message can no longer say "wipes the prose": it would be a lie.
+      loose_directive: >-
+        The directive %{directive} is loose in the prose, outside an @ruta line. It does NOT run
+        there: the engine strips it from the text before sending it to the model and carries on. If
+        you wanted that branch to consult that source, it goes inside its @ruta line; if it was just
+        a mention, you can leave it, but it does nothing.
+      attachment_with_source: >-
+        Attachment {{%{name}}} is not resolved when the branch consults a source: it goes out as
+        literal text in the message to the customer. Attachments only work on branches with no source.
+      missing_prose_sections: >-
+        The prose is missing these sections: %{sections}. They break nothing, but each one covers a
+        decision that the model will otherwise make on its own.

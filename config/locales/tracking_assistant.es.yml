@@ -1,0 +1,137 @@
+# proyecto@asistente_agentes_ia — mensajes del comprobador
+#
+# ⚠ ESTOS TEXTOS NO SON COSMÉTICA.
+#   Van a dos lectores: la persona que corrige el Entrenamiento en el panel, y el
+#   MODELO, que los recibe textuales en el bucle de corrección
+#   (InterviewService#repair_prompt). Medido el 08/09/2026 con el mismo texto roto:
+#   con un veredicto pelado ("no hay ninguna línea @ruta") se reparaba 1 de 3 veces;
+#   nombrando el carácter que falta y su línea, 3 de 3.
+#
+#   Cada mensaje tiene que decir CUÁL ES LA CONSECUENCIA, no solo que algo está mal.
+#   Acortarlos "para que se vean más limpios" es lo que los vuelve inútiles.
+#
+# ⚠ Lo que va entre @ y paréntesis NO se traduce: @ruta, @crear_ticket,
+#   @buscar_predefinidas son literales que el parser busca con regex fijas.
+es:
+  tracking_assistant:
+    unparsed:
+      no_closing_paren: 'falta el paréntesis de cierre del @ruta('
+      no_colon: 'falta el ":" inmediatamente después del paréntesis de cierre'
+      bad_name: 'el nombre de la rama solo admite letras, números, guion y guion bajo, sin espacios ni acentos'
+      generic: 'no respeta la forma @ruta(nombre #etiqueta: descripción): fuente'
+    repair:
+      header: 'El comprobador del motor rechazó ese Entrenamiento:'
+      footer: Corregí exactamente eso y devolvé el Entrenamiento completo de nuevo.
+      wrote: 'Escribiste:'
+      route_header: >-
+        Probé tu Entrenamiento: tomé la descripción de cada rama y le pregunté al clasificador real
+        a qué rama la manda. Estas no se eligen a sí mismas:
+      route_mismatch_line: '- la rama "%{route}", probada con "%{probe}", cayó en "%{chosen}"'
+      route_none: (ninguna rama)
+      route_footer: >-
+        Eso significa que esas descripciones se confunden entre sí. Reescribilas para que no se
+        pisen —situaciones distintas, en las palabras del cliente— y devolvé el Entrenamiento
+        completo de nuevo. No toques las líneas que ya estaban bien.
+      edit_header: >-
+        Comparé lo que devolviste con el ENTRENAMIENTO ACTUAL y cambiaste esto sin declararlo en "toca":
+      edit_removed: '- quitaste %{key}'
+      edit_changed: '- cambiaste %{key}'
+      edit_added: '- agregaste %{key}'
+      edit_footer: >-
+        Si la persona no lo pidió, devolvé esas partes EXACTAMENTE como estaban en el ENTRENAMIENTO
+        ACTUAL, carácter por carácter. Si sí lo pidió, dejalas y nombralas en "toca". Devolvé el
+        Entrenamiento completo de nuevo.
+      missing_mode: >-
+        Entregaste el Entrenamiento sin preguntar si el agente CONTESTA primero y abre el caso solo
+        si no pudo resolver, o si SOLO recauda datos y abre el caso siempre. Son dos agentes
+        distintos y no se deduce del pedido. No entregues nada todavía: hacé esa pregunta, con las
+        dos opciones, y devolvé "entrenamiento": null.
+    warnings:
+      calendar_not_assigned: >-
+        «%{name}» quedó guardado, pero no tiene ningún calendario asignado, así que
+        @agendar_calendar no va a agendar nada. Asignale un calendario en la ficha del Agente IA:
+        tener el calendario conectado en la cuenta no alcanza, el motor lo busca en el agente.
+    findings:
+      route_line_unparsed: >-
+        Línea %{line}: el motor NO la reconoce como rama — %{reason}. El patrón exacto es
+        @ruta(nombre #etiqueta: descripción): fuente -> escalamiento
+      no_routes: >-
+        El motor va a leer 0 ramas: no hay ninguna línea @ruta. Sin ramas, todos los mensajes
+        caen al camino conversacional y no se consulta ninguna fuente.
+      unknown_source: >-
+        La rama '%{route}' declara una fuente que el motor no reconoce. Se ignora y la rama va a
+        contestar sin consultar nada.
+      source_not_found: >-
+        La rama '%{route}' apunta a la fuente "%{name}", que no existe en esta cuenta. El motor no
+        va a fallar: va a buscar y no encontrar nunca. Las que sí existen: %{available}.
+      source_none_loaded: (ninguna cargada)
+      action_trapped_in_source: >-
+        En la rama '%{route}' la directiva %{directive} quedó del lado de la fuente, no del
+        escalamiento: le falta la flecha "->" o está mal escrita. Tal como está, esa acción no se
+        ejecuta nunca. La forma es: fuente -> @crear_ticket(...)
+      case_type_not_found: >-
+        @crear_ticket(tipo=%{type}) — ese tipo de caso no existe en la cuenta. Los que existen: %{available}.
+      case_type_none_created: (ninguno creado)
+      default_route_unknown: >-
+        @ruta_por_defecto apunta a '%{declared}', que no es ninguna de las ramas declaradas (%{routes}).
+      default_route_no_routes: no hay ramas
+      route_not_self_chosen: >-
+        Probé la rama "%{route}" con su propia descripción ("%{probe}") y el motor eligió
+        "%{chosen}". Esa descripción se pisa con la de otra rama: como está, esta rama casi
+        nunca se va a elegir. Escribí situaciones que solo apliquen a ella.
+      contract_label: >-
+        %{count} línea(s) con un rótulo del Asistente entre ═══ (línea(s) %{lines}). Esos rótulos son de
+        las instrucciones con las que se arma el Entrenamiento, no del agente: si quedan, el agente los
+        lee como parte de su prompt. Borrá esas líneas enteras.
+      contract_wrap: >-
+        %{count} línea(s) con texto entre ‹ › (línea(s) %{lines}). Los ‹ › marcan en la plantilla dónde
+        va el contenido; no son parte de él. Sacá solo los signos ‹ › y dejá la instrucción tal cual.
+      pending_marker: >-
+        Faltan %{count} dato(s) por completar: %{items}. Mientras quede alguna marca así no se puede
+        guardar: el agente la leería tal cual y se la diría al cliente.
+      duplicate_route_description: >-
+        Estas ramas tienen la MISMA descripción: %{routes}. La descripción es lo único que el
+        clasificador usa para decidir, así que no las puede distinguir: una de las dos no se va a
+        elegir nunca, y cuál pierde depende del orden. Dales descripciones que no se confundan —
+        situaciones distintas, en las palabras del cliente.
+      route_without_description: >-
+        La rama '%{route}' no tiene descripción. La descripción es LO ÚNICO que el clasificador usa
+        para decidir a qué rama va un mensaje: sin ella, esta rama casi nunca se va a elegir.
+        Escribila como lista de situaciones, en las palabras del cliente.
+      label_not_found: >-
+        La etiqueta %{tag} de la rama '%{route}' no existe en la cuenta, así que no va a disparar
+        ninguna automatización. Hay que crearla en Etiquetas o usar una de las existentes: %{available}.
+      label_none_created: (no hay etiquetas creadas)
+      erp_directive_not_isolated: >-
+        Hay una directiva {{consulta:}} conviviendo con ramas o con prosa. El motor manda el
+        Entrenamiento ENTERO interpolado como mensaje al cliente: con {{consulta:}} el Entrenamiento
+        es la plantilla del mensaje, no puede llevar nada más.
+      # ⚠ Corregido el 10/09/2026 contra el motor real. Este mensaje decía que las ramas sin
+      # flecha "dejan de abrir casos", y es al revés: el job las manda a
+      # try_create_ticket(directive: nil), que cae al prompt ENTERO y encuentra ahí el
+      # @crear_ticket de OTRA rama. Abren caso, con el tipo ajeno, y ANTES de la fuente.
+      mixed_escalation_regime: >-
+        Hay ramas con escalamiento y ramas sin él (%{routes}). Eso NO las deja sin caso: el motor
+        busca la directiva en el Entrenamiento entero, así que esas ramas van a abrir caso con el
+        @crear_ticket de otra rama —incluido su tipo— y además lo van a evaluar ANTES de consultar
+        su fuente, no después. Si tienen que abrir caso, dales su propia flecha con su tipo; si no
+        tienen que abrirlo, hoy no hay forma de evitarlo salvo sacar todo @crear_ticket suelto.
+      calendar_not_configured: >-
+        Esta cuenta no tiene ningún calendario de Google conectado, así que @agendar_calendar no va a
+        agendar nada: la directiva parsea bien y el turno pasa de largo, sin aviso. Hay que conectar
+        un calendario y además asignárselo a este Agente IA — con el calendario en la cuenta pero sin
+        asignar al agente, tampoco agenda.
+      # ⚠ Corregido el 11/09/2026: hasta ese día el motor BLANQUEABA el Entrenamiento entero
+      # por esto y el aviso era bloqueante. develop lo arregló (strip_tokens conserva la prosa),
+      # así que el mensaje ya no puede decir "borra la prosa": sería mentira.
+      loose_directive: >-
+        La directiva %{directive} está suelta en la prosa, fuera de una línea @ruta. Ahí NO se
+        ejecuta: el motor la borra del texto antes de mandárselo al modelo y sigue de largo. Si
+        querías que esa rama consultara esa fuente, va dentro de su línea @ruta; si era solo una
+        mención, se puede dejar, pero no hace nada.
+      attachment_with_source: >-
+        El adjunto {{%{name}}} no se resuelve cuando la rama consulta una fuente: sale como texto
+        literal en el mensaje al cliente. Los adjuntos solo funcionan en ramas sin fuente.
+      missing_prose_sections: >-
+        A la prosa le faltan estas secciones: %{sections}. No rompen nada, pero cada una cubre una
+        decisión que si no se escribe, el modelo la toma por su cuenta.

@@ -10,40 +10,49 @@
 #
 # Table name: tracking_templates
 #
-#  id                       :bigint           not null, primary key
-#  ai_context               :text
-#  booking_calendar_ids     :jsonb            not null
-#  calendar_event_duration  :integer          default(30)
-#  calendar_integration_ids :jsonb            not null
-#  complementary_prompt     :text
-#  keyword_actions          :jsonb            not null
-#  name                     :string           not null
-#  objective                :string           not null
-#  retry_interval_unit      :string           default("days")
-#  retry_interval_value     :integer          default(1)
-#  slots_presentation       :string           default("detailed"), not null
-#  tags                     :json
-#  timezone                 :string
-#  whatsapp_templates       :json
-#  created_at               :datetime         not null
-#  updated_at               :datetime         not null
-#  account_id               :bigint           not null
-#  inbox_id                 :bigint
-#  kbase_hook_id            :integer
-#  user_id                  :bigint
+#  id                            :bigint           not null, primary key
+#  ai_context                    :text
+#  archived_at                   :datetime
+#  booking_calendar_ids          :jsonb            not null
+#  calendar_event_duration       :integer          default(30)
+#  calendar_integration_ids      :jsonb            not null
+#  complementary_prompt          :text
+#  keyword_actions               :jsonb            not null
+#  name                          :string           not null
+#  objective                     :string           not null
+#  previous_complementary_prompt :text
+#  retry_interval_unit           :string           default("days")
+#  retry_interval_value          :integer          default(1)
+#  slots_presentation            :string           default("detailed"), not null
+#  tags                          :json
+#  timezone                      :string
+#  training_structure            :jsonb            not null
+#  use_as_knowledge              :boolean          default(FALSE), not null
+#  whatsapp_templates            :json
+#  created_at                    :datetime         not null
+#  updated_at                    :datetime         not null
+#  account_id                    :bigint           not null
+#  inbox_id                      :bigint
+#  kbase_hook_id                 :integer
+#  tracking_template_category_id :bigint
+#  user_id                       :bigint
 #
 # Indexes
 #
-#  index_tracking_templates_on_account_id           (account_id)
-#  index_tracking_templates_on_account_id_and_name  (account_id,name) UNIQUE
-#  index_tracking_templates_on_inbox_id             (inbox_id)
-#  index_tracking_templates_on_kbase_hook_id        (kbase_hook_id)
-#  index_tracking_templates_on_user_id              (user_id)
+#  index_tracking_templates_on_account_id                     (account_id)
+#  index_tracking_templates_on_account_id_and_name            (account_id,name) UNIQUE
+#  index_tracking_templates_on_archived_at                    (archived_at)
+#  index_tracking_templates_on_inbox_id                       (inbox_id)
+#  index_tracking_templates_on_kbase_hook_id                  (kbase_hook_id)
+#  index_tracking_templates_on_tracking_template_category_id  (tracking_template_category_id)
+#  index_tracking_templates_on_use_as_knowledge               (use_as_knowledge) WHERE use_as_knowledge
+#  index_tracking_templates_on_user_id                        (user_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (inbox_id => inboxes.id)
+#  fk_rails_...  (tracking_template_category_id => tracking_template_categories.id) ON DELETE => nullify
 #  fk_rails_...  (user_id => users.id)
 #
 
@@ -72,8 +81,40 @@ class TrackingTemplate < ApplicationRecord
   scope :ordered, -> { order(updated_at: :desc) }
 
   before_save :ensure_arrays
+  # proyecto@asistente_agentes_ia — el Entrenamiento por bloques (plan:
+  # docs/formulario_entrenamiento_plan.md). Se regenera SIEMPRE del texto cuando el texto
+  # cambia, así las dos columnas no pueden decir cosas distintas, escriba quien escriba
+  # (la ficha, el Asistente, la API). El único camino que se saltea los callbacks es
+  # update_columns: quien lo use tiene que pasar las dos (ver DirectiveReferenceService).
+  before_save :sync_training_structure, if: :will_save_change_to_complementary_prompt?
+
+  # La estructura para mostrar: la guardada, o la del texto si el agente es anterior a
+  # la columna y todavía no se corrió el backfill, o si la guardada quedó vieja —
+  # las ramas empezaron a viajar en campos después del backfill, y una estructura sin
+  # ellos dejaba el formulario de ramas sin datos (ver TrainingRoutes).
+  def training_blocks
+    guardada = training_structure.presence
+    return ContactTrackings::TrainingStructure.parse(complementary_prompt) if guardada.blank? || stale_structure?(guardada)
+
+    guardada
+  end
+
+  # El formulario manda bloques: se arma el texto y, al guardar, el callback vuelve a
+  # separar la estructura desde ese texto — la guardada es siempre la canónica.
+  def training_structure_from_form=(estructura)
+    self.complementary_prompt = ContactTrackings::TrainingStructure.compose(estructura)
+  end
 
   private
+
+  # Un bloque de ramas sin sus campos es de antes de que existieran.
+  def stale_structure?(estructura)
+    Array(estructura['blocks']).any? { |b| b['type'] == 'routes' && !b.key?('lines') }
+  end
+
+  def sync_training_structure
+    self.training_structure = ContactTrackings::TrainingStructure.parse(complementary_prompt)
+  end
 
   def ensure_arrays
     self.whatsapp_templates = [] unless whatsapp_templates.is_a?(Array)

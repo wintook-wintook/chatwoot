@@ -36,6 +36,42 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
     render json: template_json(@tracking_template)
   end
 
+  # proyecto@asistente_agentes_ia — qué ofrece "Agregar sección": las del contrato del
+  # Asistente y las que más usa la cuenta. Medido: 110 nombres distintos en 28 prompts,
+  # así que la lista no puede ser fija, pero ofrecerlos todos sería una lista inusable.
+  def section_titles
+    render json: ContactTrackings::TrainingSectionTitles.new(Current.account).call
+  end
+
+  # proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió, para copiar
+  # una a un agente nuevo en vez de escribirla de cero. Ver TrainingRouteCatalog.
+  def route_catalog
+    render json: ContactTrackings::TrainingRouteCatalog.new(Current.account).call
+  end
+
+  # proyecto@asistente_agentes_ia — las secciones enteras que la cuenta ya escribió
+  # (section_titles trae solo los nombres). Ver TrainingSectionCatalog.
+  def section_catalog
+    render json: ContactTrackings::TrainingSectionCatalog.new(Current.account).call
+  end
+
+  # proyecto@asistente_agentes_ia — la ficha cambia entre la vista Secciones y la vista
+  # Texto sin guardar: esto convierte en cualquiera de los dos sentidos y comprueba el
+  # resultado. La conversión vive solo acá (TrainingStructure), no duplicada en el
+  # navegador: si hubiera dos implementaciones, las vistas podrían no coincidir.
+  def training_preview
+    texto = if params[:training_structure].present?
+              raw = params[:training_structure]
+              raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+              ContactTrackings::TrainingStructure.compose('blocks' => sanitized_blocks(raw))
+            else
+              params[:text].to_s
+            end
+
+    render json: { text: texto, training_structure: ContactTrackings::TrainingStructure.parse(texto),
+                   validation: ContactTrackings::Assistant::ValidatorService.new(texto, account: Current.account).call }
+  end
+
   def destroy
     @tracking_template.destroy!
     head :ok
@@ -85,7 +121,41 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
     # booking_calendar_ids es un mapa de claves dinámicas { integration_id => [cal_ids] } que
     # strong-params no sabe permitir; lo saneamos a mano (claves int, valores arrays de strings).
     permitted[:booking_calendar_ids] = sanitized_booking_calendar_ids if params[:tracking_template].key?(:booking_calendar_ids)
+    with_training_structure(permitted)
+  end
+
+  # proyecto@asistente_agentes_ia — la vista Secciones de la ficha manda bloques en vez de
+  # texto. Si vienen, mandan sobre `complementary_prompt`: el texto se arma de los bloques
+  # y el modelo vuelve a separar la estructura al guardar (ver TrackingTemplate).
+  def with_training_structure(permitted)
+    raw = params.dig(:tracking_template, :training_structure)
+    return permitted if raw.blank?
+
+    raw = raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+    permitted.delete(:complementary_prompt)
+    permitted[:training_structure_from_form] = { 'blocks' => sanitized_blocks(raw) }
     permitted
+  end
+
+  TRAINING_BLOCK_KEYS = %w[type title style header body text gap lines].freeze
+  MAX_TRAINING_BLOCKS = 300
+
+  def sanitized_blocks(raw)
+    Array(raw['blocks'] || raw[:blocks]).first(MAX_TRAINING_BLOCKS).filter_map do |bloque|
+      bloque = bloque.to_unsafe_h if bloque.respond_to?(:to_unsafe_h)
+      next unless bloque.is_a?(Hash)
+
+      sanitized_block(bloque.stringify_keys.slice(*TRAINING_BLOCK_KEYS))
+    end
+  end
+
+  # Las ramas llegan como campos (nombre, etiqueta, frases, fuente, escalamiento) y se
+  # limpian con sus propias reglas: son líneas de una gramática exacta, no prosa.
+  def sanitized_block(bloque)
+    return bloque if bloque['lines'].blank?
+
+    lineas = Array(bloque['lines']).map { |linea| linea.respond_to?(:to_unsafe_h) ? linea.to_unsafe_h : linea }
+    bloque.merge('lines' => ContactTrackings::TrainingRoutes.sanitize(lineas.select { |l| l.is_a?(Hash) }))
   end
 
   # proyecto@bot_seguimiento_calendar — { integration_id => [google_calendar_id, ...] }: en qué
@@ -108,6 +178,7 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
                       end
     json['inbox_name']      = template.inbox&.name
     json['keyword_actions'] = template.keyword_actions || [] # proyecto@contact_tracking
+    json['training_structure'] = template.training_blocks # proyecto@asistente_agentes_ia
     json
   end
 end

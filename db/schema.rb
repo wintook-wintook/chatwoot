@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_09_10_120100) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_17_163715) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1546,6 +1546,23 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_10_120100) do
     t.datetime "updated_at", precision: nil, null: false
   end
 
+  create_table "tracking_assistant_sessions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "tracking_template_id"
+    t.string "status", default: "open", null: false
+    t.jsonb "messages", default: [], null: false
+    t.text "draft"
+    t.jsonb "validation", default: {}, null: false
+    t.jsonb "proposal", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "draft_versions", default: [], null: false
+    t.index ["account_id", "user_id", "status", "updated_at"], name: "idx_tracking_assistant_sessions_lookup"
+    t.index ["tracking_template_id"], name: "index_tracking_assistant_sessions_on_tracking_template_id"
+    t.index ["user_id"], name: "index_tracking_assistant_sessions_on_user_id"
+  end
+
   create_table "tracking_campaigns", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -1585,6 +1602,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_10_120100) do
     t.string "timezone"
     t.jsonb "booking_calendar_ids", default: {}, null: false
     t.string "slots_presentation", default: "detailed", null: false
+    t.text "previous_complementary_prompt"
+    t.jsonb "training_structure", default: {}, null: false
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
@@ -1761,6 +1780,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_10_120100) do
   add_foreign_key "scheduled_messages", "accounts"
   add_foreign_key "scheduled_messages", "conversations"
   add_foreign_key "scheduled_messages", "users"
+  add_foreign_key "tracking_assistant_sessions", "accounts"
+  add_foreign_key "tracking_assistant_sessions", "tracking_templates", on_delete: :nullify
+  add_foreign_key "tracking_assistant_sessions", "users", on_delete: :cascade
   add_foreign_key "tracking_campaigns", "accounts"
   add_foreign_key "tracking_campaigns", "inboxes"
   add_foreign_key "tracking_campaigns", "tracking_templates"

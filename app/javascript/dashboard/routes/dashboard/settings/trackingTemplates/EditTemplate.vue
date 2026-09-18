@@ -11,6 +11,7 @@
 
 <script>
 import { mapGetters } from 'vuex';
+import AssistantAPI from 'dashboard/api/assistant'; // proyecto@asistente_agentes_ia
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
@@ -80,6 +81,8 @@ export default {
       originalAiContext: null,
       originalComplementaryPrompt: null,
       isImprovingAI: false,
+      // proyecto@asistente_agentes_ia — qué leyó el motor del Entrenamiento generado.
+      assistantValidation: null,
       showPromptModal: false, // proyecto@automatizacion_tracking: modal expandido para entrenamiento
       showAiContextModal: false,
       showValidationModal: false,
@@ -594,7 +597,6 @@ export default {
       if (this.isImprovingAI) return;
 
       const isGeneratePrompt = field === 'complementary_prompt';
-      const mode = isGeneratePrompt ? 'generate_prompt' : 'improve';
 
       let text;
       if (isGeneratePrompt) {
@@ -605,6 +607,17 @@ export default {
         text = (this.form[field] || '').trim();
       }
       if (!text) return;
+
+      // proyecto@asistente_agentes_ia — generar el Entrenamiento pasa por el
+      // asistente nuevo: redacta contra el inventario real de la cuenta y comprueba
+      // el resultado con el parser del motor. El generador anterior producía prosa
+      // que el motor no parsea, así que el agente nacía sin ejecutar nada.
+      if (isGeneratePrompt) {
+        await this.generateTrainingWithAssistant();
+        return;
+      }
+
+      const mode = 'improve';
 
       // Guardar original
       if (field === 'ai_context') {
@@ -631,6 +644,37 @@ export default {
         if (field === 'ai_context') this.originalAiContext = null;
         else if (field === 'complementary_prompt')
           this.originalComplementaryPrompt = null;
+      } finally {
+        this.isImprovingAI = false;
+      }
+    },
+    // Una sola pasada: acá no hay conversación donde preguntar, así que el asistente
+    // redacta con lo que haya y marca lo que falte como <PENDIENTE:>.
+    async generateTrainingWithAssistant() {
+      this.originalComplementaryPrompt = this.form.complementary_prompt;
+      this.isImprovingAI = true;
+      this.assistantValidation = null;
+      try {
+        const { data } = await AssistantAPI.interview(
+          [
+            {
+              role: 'user',
+              content: [
+                `Objetivo del agente: ${(this.form.objective || '').trim()}`,
+                `Contexto: ${(this.form.ai_context || '').trim()}`,
+                `Instrucciones adicionales: ${(this.form.complementary_prompt || '').trim()}`,
+              ].join('\n'),
+            },
+          ],
+          this.selectedInboxId,
+          { oneShot: true }
+        );
+        if (data.draft) {
+          this.form.complementary_prompt = data.draft;
+          this.assistantValidation = data.validation;
+        }
+      } catch (error) {
+        this.originalComplementaryPrompt = null;
       } finally {
         this.isImprovingAI = false;
       }
