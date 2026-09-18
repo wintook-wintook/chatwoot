@@ -460,6 +460,38 @@ información para el cliente.
 - **Hecho:** guardado, modal y marca en la lista. **Falta:** que el motor la use (va con F2); hay que
   definir cómo se combina con `content_prompts` cuando la respuesta tiene las dos cosas.
 
+### 3.7 La regla del motor (decidida por el usuario, 18/09/2026) — IMPLEMENTADA
+
+Sobre la **primera** respuesta predefinida que encuentra `@buscar_predefinidas`:
+
+```
+                     ┌─────────────────────────────┐
+                     │ respuesta encontrada (1ª)   │
+                     └──────────────┬──────────────┘
+                  ¿content_is_prompt = true?
+                   ┌────────── sí ──┴── no ──────────┐
+                   ▼                                 ▼
+   ┌───────────────────────────────┐   ¿content_prompts con texto?
+   │ A · el mensaje ES el prompt   │     ┌──── sí ───┴─── no ────┐
+   │ content_prompts se ignora     │     ▼                       ▼
+   └───────────────────────────────┘  ┌────────────────────┐  ┌──────────────┐
+                                      │ B · mensaje = info │  │ C · como     │
+                                      │ content_prompts =  │  │ siempre      │
+                                      │ cómo responder     │  └──────────────┘
+                                      └────────────────────┘
+```
+
+- A y B usan **solo** esa respuesta (no las otras dos). Si la que tiene prompt sale 2ª o 3ª: C.
+- Las instrucciones se **suman** a las del agente: su prompt sigue en el system, con el objetivo y la
+  regla de la rama al final. Van en el mensaje del turno, marcadas como internas.
+- **Que no se filtre:** se le pide no citarlas, y si la respuesta copia 8 palabras seguidas de ellas
+  (sin contar lo que va entre comillas, que es texto para decir) se descarta, no se guarda en el
+  historial y se responde como siempre (C).
+- Los 1.047 prompts viejos de staging entran en B en cuanto esto llegue allá (aceptado por el usuario).
+- Código: `KnowledgeBase::CannedPrompt` + `KnowledgeBaseResponseService#canned_prompt_reply`.
+  No cubre `KnowledgeBase::DirectiveRunner` (API externa `/knowledge_base/directive`) ni la prueba en
+  seco del Asistente, que no redacta.
+
 ## 4. Riesgos y cómo se cubren
 
 | Riesgo | Cubierto por |
@@ -483,8 +515,8 @@ información para el cliente.
 |---|---|---|---|
 | **F0** ✅ El guardado | columna `content_prompts` (migración tolerante); el controlador acepta solo columnas reales; los campos viejos detrás de `SHOW_LEGACY_FIELDS` | request spec: crear y editar con y sin prompt, y con los campos viejos sin reventar | 1 |
 | **F1** ✅ Sin re-vectorizar de más | el sync se salta cuando solo cambió el prompt | spec del job: cambiar el prompt no encola embedding; cambiar el contenido sí | 0,5 |
-| **F2** El motor | `perform_pgvector`: si la primera tiene prompt, modo prompt (§3.3); si no, como hoy | specs del servicio: sin prompt = mismo mensaje que hoy; con prompt en la 1ª = system con las instrucciones y solo su contenido; con prompt en la 2ª = como hoy | 1,5 |
-| **F3** Que no se filtre | instrucción de no citarlo + control de repetición | spec con una respuesta del modelo que copia el prompt → se descarta | 0,5 |
+| **F2** ✅ El motor | `perform_pgvector`: si la primera tiene prompt, modo prompt (§3.3); si no, como hoy | specs del servicio: sin prompt = mismo mensaje que hoy; con prompt en la 1ª = system con las instrucciones y solo su contenido; con prompt en la 2ª = como hoy | 1,5 |
+| **F3** ✅ Que no se filtre | instrucción de no citarlo + control de repetición | spec con una respuesta del modelo que copia el prompt → se descarta | 0,5 |
 | **F4** ✅ La pantalla | modal ancho con pestañas "Mensaje" y "Prompt de Contenido" (punto cuando tiene prompt, salto a la pestaña con error); formulario compartido entre agregar y editar; i18n; marca en la lista; aviso de etiquetas | Vitest del formulario (pestañas, salto al error, aviso con `#SolicitaCotización`); navegador | 1,5 |
 | **F5** Prueba real | pasar #1330 al campo nuevo (contenido = de qué trata; instrucciones = su guion) y una conversación de punta a punta pidiendo cotizar equipo | conversación en develop.wintook.com | 0,5 |
 

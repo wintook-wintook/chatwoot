@@ -377,13 +377,27 @@ class KnowledgeBaseResponseService
                    .join("\n\n")
                    .truncate(kbase_setting('max_context_chars'))
 
-    reply_text = generate_contextual_reply(question, context)
+    reply_text = canned_prompt_reply(question, source_type, items) || generate_contextual_reply(question, context)
     return false if reply_text.blank?
 
     source_tag = @account.knowledge_sources.find_by(source_type: source_type)&.name ||
                  I18n.t("knowledge_sources.names.#{source_type}", locale: @account.locale.presence || I18n.default_locale)
     send_reply("#{with_branch_tag(reply_text)}\n\n_#{source_tag}_")
     true
+  end
+
+  # proyecto@predefinidas_prompt — si la PRIMERA respuesta predefinida encontrada trae
+  # prompt (el mensaje es el prompt, o tiene Prompt de Contenido), el agente redacta
+  # siguiéndolo y solo con esa respuesta. Ver KnowledgeBase::CannedPrompt.
+  # nil = no aplica, o la respuesta copió las instrucciones: se responde como siempre.
+  def canned_prompt_reply(question, source_type, items)
+    return nil unless source_type == 'canned_response'
+
+    prompt = KnowledgeBase::CannedPrompt.detect(@account, items)
+    return nil unless prompt
+
+    Rails.logger.info "[KBase] 📝 Respuesta predefinida con prompt (#{prompt.mode}): #{prompt.canned.short_code}"
+    generate_contextual_reply(question, nil, canned_prompt: prompt)
   end
 
   # ==============================================================================
@@ -480,7 +494,7 @@ class KnowledgeBaseResponseService
     true
   end
 
-  def generate_contextual_reply(question, context)
+  def generate_contextual_reply(question, context, canned_prompt: nil)
     api_key = openai_api_key
     return nil unless api_key
 
@@ -518,6 +532,7 @@ class KnowledgeBaseResponseService
       exacto para su caso y ofrecé pasarlo con un asesor. Una respuesta honesta que no
       resuelve es mejor que una inventada que parece resolver.
     USER
+    user_prompt = canned_prompt_user_prompt(first_name, question, canned_prompt) if canned_prompt
 
     history  = load_history
     messages = [{ role: 'system', content: system_prompt }]
@@ -533,8 +548,27 @@ class KnowledgeBaseResponseService
     return nil if reply.blank?
 
     reply = strip_echoed_sources(reply)
+    # Se revisa ANTES de guardar el historial: una respuesta que copió las instrucciones
+    # no puede quedar ahí, porque el modelo la vería en el turno siguiente.
+    if canned_prompt&.leaks?(reply)
+      Rails.logger.warn "[KBase] 🚫 La respuesta copió el prompt de '#{canned_prompt.canned.short_code}' → se descarta"
+      return nil
+    end
+
     save_history(history, question, reply)
     reply
+  end
+
+  # El turno en modo prompt: la pregunta y el bloque de la respuesta predefinida
+  # (información + instrucciones). Las reglas del agente siguen en el system.
+  def canned_prompt_user_prompt(first_name, question, canned_prompt)
+    <<~USER.strip
+      El cliente #{first_name} preguntó: "#{question.truncate(300)}"
+
+      #{canned_prompt.turn_block}
+
+      Tono natural y conversacional. No uses prefijos como "Asesor:" ni comillas al inicio o final.
+    USER
   end
 
   # ==============================================================================
