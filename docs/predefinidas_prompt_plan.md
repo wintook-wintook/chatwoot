@@ -153,6 +153,34 @@ solo se aplica con su contenido*:
 Por eso el plan suma una comprobación al guardar (§3.4): avisar si las instrucciones nombran una
 etiqueta que no existe o que el motor no puede leer.
 
+### 2.5 Lo que hay en una base tipo producción (`chatwoot_staging_v2`, solo lectura)
+
+| En `canned_responses` | Respuestas |
+|---|---|
+| total | **1.870** |
+| con `content_prompts` | **1.047**, en **95 cuentas** (largo mediana 321, máximo 2.741; última edición 09/07/2026) |
+| `content_full` (tal cual) | 563 |
+| con link (`url_content`) | 697 |
+| en el menú (`menu`) | 309 |
+
+**⚠ Los `content_prompts` que ya existen significan OTRA cosa.** Una muestra al azar:
+
+```
+  "¿Qué indicación visual confirma que la a…" → Esta es la respuesta que darás si alguien te pregunta
+                                                ¿Qué indicación visual confirma que la actualización se…
+  "Modificar escalas en diagrama de Gantt"     → Esta será tu respuesta cuando alguien te pregunte
+                                                ¿Cómo modificar escalas de Diagrama de Gantt? o escriba las…
+```
+
+Los escribió el bot viejo para **encontrar** la respuesta (esa tabla tiene además `embedding`,
+`trained` y `content_processed`): dicen **cuándo** darla. El prompt de este plan dice **cómo** darla
+(el guion de #1330). Mismo campo, dos significados.
+
+Consecuencia: si F2 sale tal cual está en §3, en una base como esa **1.047 respuestas de 95 cuentas
+cambian de comportamiento de un día para otro**, con instrucciones que nadie escribió para eso. La
+frase vieja es mayormente inofensiva ("esta es la respuesta que darás si…"), pero no es lo que se
+probó ni lo que se quiso. Ver la decisión 7 (§6).
+
 ---
 
 ## 3. La propuesta
@@ -282,10 +310,16 @@ El modal de agregar y editar pasa a ser **más ancho** (el tamaño grande nativo
 
 #### Qué hacía el bot con ellos
 
-Editar una respuesta llamaba a `URL_WEBHOOK/api/setCannedReponse` con esos cinco campos, y el bot los
-guardaba en **su propia base** (la "otra base" de §2.1, con su copia de `canned_responses`).
+Editar una respuesta llamaba a `URL_WEBHOOK/api/setCannedReponse` con esos cinco campos, y
 `getCannedReponse` los leía de vuelta. **Esa API no hacía nada más que guardar**: el
 comportamiento vivía en el bot.
+
+**Corrección (18/09/2026, medido):** no los guardaba en una base aparte. En `chatwoot_staging_v2`
+—una copia de una base tipo producción que está en este mismo servidor, con los esquemas del bot
+(`wintook`, `openai`, `chatzeus`) junto al `public` de Chatwoot— las columnas están **en la propia
+tabla `canned_responses` de Chatwoot**, con datos (ver §2.5). Es de ahí de donde se colaron al
+`schema.rb`. Donde esas columnas existen, la API de Chatwoot ya las guardaba (el controlador las
+aceptaba); el único lugar donde reventaba era `chatwoot_dev`, que no las tiene.
 
 Y en esta instalación **nunca funcionó**:
 
@@ -296,8 +330,9 @@ Y en esta instalación **nunca funcionó**:
  bot.wintook.com hoy ──► 404 · su código no está en este servidor
 ```
 
-Desde este formulario, esos campos no se guardaban en ningún lado. Si la base del bot tiene valores
-cargados, no se pueden traer desde acá: **arrancan vacíos**.
+En `chatwoot_dev` esos campos no se guardaban en ningún lado y **arrancan vacíos**. En una base como
+`chatwoot_staging_v2` **no hay nada que migrar**: los datos ya están en la tabla de Chatwoot, y la
+migración tolerante no toca una columna que ya existe.
 
 #### Qué se trae y qué no
 
@@ -375,7 +410,8 @@ En la pestaña **"Mensaje"**, debajo del editor, porque dicen qué se hace con e
 | Respuestas sin prompt cambian de comportamiento | sin prompt, el camino es **exactamente** el de hoy (se prueba) |
 | "Tal cual" manda un mensaje con variables sin reemplazar | lo resuelve el mismo `Liquidable` de todo mensaje saliente (se prueba con `{{contact.name}}`) |
 | Se marca "tal cual" y además hay prompt | son excluyentes en el formulario; en el motor, "tal cual" gana y se registra en el log |
-| Las columnas viejas ya existen en la base del bot | migración tolerante, como la de `content_prompts` |
+| Las columnas viejas ya existen en la base tipo producción | migración tolerante, como la de `content_prompts`: no las toca y los datos quedan |
+| 1.047 prompts del bot viejo, con otro significado, entran de golpe al modo prompt | decisión 7: activación explícita por respuesta |
 
 ---
 
@@ -415,3 +451,13 @@ En la pestaña **"Mensaje"**, debajo del editor, porque dicen qué se hace con e
    `setSystemSettings` contra `bot.wintook.com`).
 5. **¿Se muestra el prompt en el Asistente de Agentes IA?** Por ejemplo, en Recursos, las
    respuestas predefinidas que tienen prompt. No es necesario para que funcione; queda para después.
+7. **Los 1.047 prompts que ya existen (§2.5).** Escritos por el bot viejo para *encontrar* la
+   respuesta, no para *redactarla*. Opciones:
+   - **(propuesta) Activación explícita:** una casilla por respuesta, "Usar el prompt como
+     instrucciones". Las nuevas y las que se editen desde el modal nuevo quedan activadas; las 1.047
+     viejas, apagadas hasta que alguien las revise. Nada cambia sin que nadie lo decida.
+   - **Aplicarlas a todas:** su frase es mayormente inofensiva, pero se prueba antes con una muestra
+     de cada cuenta. Más rápido, y con 95 cuentas de por medio.
+   - **Otra columna para las instrucciones nuevas**, y `content_prompts` queda con su significado
+     viejo (y podría volver a usarse para mejorar la búsqueda, que es para lo que se escribió).
+     Contradice lo pedido: el campo del modal es `content_prompts`.
