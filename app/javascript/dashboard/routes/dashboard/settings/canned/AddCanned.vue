@@ -97,10 +97,10 @@ export default {
       >
         <!-- Andrés Liverio 020822 **Wintook** -->
         <template #legacy>
-          <!-- Dos columnas, 40 % y 50 %: el menú a la izquierda; el contenido completo y el link a la
+          <!-- Dos columnas, 30 % y el resto, con 10 % entre ellas: el menú a la izquierda; el contenido completo y el link a la
                derecha. En pantallas angostas quedan una debajo de la otra. -->
           <div
-            class="grid grid-cols-1 md:grid-cols-[40%_50%] md:justify-between gap-y-2"
+            class="grid grid-cols-1 md:grid-cols-[30%_1fr] md:gap-x-[10%] gap-y-2"
           >
             <div class="flex flex-col gap-2">
               <div class="flex items-center w-full gap-2">
