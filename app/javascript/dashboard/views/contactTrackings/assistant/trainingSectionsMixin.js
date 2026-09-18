@@ -58,8 +58,9 @@ export default {
           .map(a => a.directive),
       };
     },
-    // Los hallazgos del comprobador, colgados del nodo que los causó:
-    //   { 'route:soporte': 'blocking', 'section:3': 'degrading' }
+    // Los hallazgos del comprobador, colgados del nodo que los causó, con su texto
+    // (es lo que muestra el punto al pasar el mouse):
+    //   { 'route:soporte': { level: 'blocking', messages: ['…'] }, 'section:3': … }
     // Los de rama vienen con su nombre (`route`/`routes`); el resto se ubica por el
     // número de línea contra el rango de cada bloque (first_line/last_line, que los
     // manda el backend). Un hallazgo dentro del bloque de ramas que no dice de qué
@@ -71,8 +72,13 @@ export default {
       if (!v) return {};
       const bloques = this.trainingStructure?.blocks || [];
       const mapa = {};
-      const poner = (clave, nivel) => {
-        if (mapa[clave] !== 'blocking') mapa[clave] = nivel;
+      // El nivel es el peor de los que tenga el nodo; los textos, todos.
+      const poner = (clave, nivel, mensaje) => {
+        const actual = mapa[clave] || { level: nivel, messages: [] };
+        mapa[clave] = {
+          level: actual.level === 'blocking' ? 'blocking' : nivel,
+          messages: mensaje ? [...actual.messages, mensaje] : actual.messages,
+        };
       };
       const bloqueDe = linea =>
         bloques.findIndex(b => linea >= b.first_line && linea <= b.last_line);
@@ -80,13 +86,16 @@ export default {
         (v[nivel] || []).forEach(hallazgo => {
           const ramas =
             hallazgo.routes || (hallazgo.route ? [hallazgo.route] : []);
-          ramas.forEach(nombre => poner(`route:${nombre}`, nivel));
+          ramas.forEach(nombre =>
+            poner(`route:${nombre}`, nivel, hallazgo.message)
+          );
           if (ramas.length || !hallazgo.line) return;
           const i = bloqueDe(hallazgo.line);
           if (i < 0) return;
           poner(
             bloques[i].type === 'routes' ? 'route:' : `section:${i}`,
-            nivel
+            nivel,
+            hallazgo.message
           );
         });
       });

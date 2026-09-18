@@ -31,7 +31,8 @@ export default {
     value: { type: Object, default: () => ({ blocks: [] }) },
     // { name, objective, ai_context } o null: lo que se va a guardar en el agente.
     definition: { type: Object, default: null },
-    // Hallazgos del comprobador por nodo: { 'route:soporte': 'blocking', … }
+    // Hallazgos del comprobador por nodo:
+    //   { 'route:soporte': { level: 'blocking', messages: ['…'] }, … }
     issues: { type: Object, default: () => ({}) },
   },
   emits: [
@@ -107,15 +108,35 @@ export default {
       return canMoveRoute(this.blocks, position, delta);
     },
     issue(clave) {
-      return this.issues[clave] || '';
+      return (this.issues[clave] || {}).level || '';
+    },
+    // El texto del aviso, para el tooltip del punto: sin él, un punto de color no
+    // dice qué pasa y había que abrir el informe para enterarse.
+    issueText(clave) {
+      return ((this.issues[clave] || {}).messages || []).join('\n\n');
     },
     // Un grupo se marca con lo peor que tengan sus hijos.
     groupIssue(prefijo) {
-      const suyos = Object.entries(this.issues).filter(([clave]) =>
+      const suyos = this.groupEntries(prefijo);
+      if (suyos.some(([, h]) => h.level === 'blocking')) return 'blocking';
+      return suyos.length ? 'degrading' : '';
+    },
+    // El tooltip del grupo junta los avisos de sus hijos.
+    groupIssueText(prefijo) {
+      return this.groupEntries(prefijo)
+        .flatMap(([, h]) => h.messages || [])
+        .join('\n\n');
+    },
+    // Los avisos son párrafos, no etiquetas cortas: el tooltip del dashboard los
+    // ponía en una sola línea que se salía de la pantalla. Esta clase le da ancho
+    // máximo y respeta los saltos entre avisos.
+    tip(texto) {
+      return { content: texto, classes: ['agent-issue-tooltip'] };
+    },
+    groupEntries(prefijo) {
+      return Object.entries(this.issues).filter(([clave]) =>
         clave.startsWith(prefijo)
       );
-      if (suyos.some(([, nivel]) => nivel === 'blocking')) return 'blocking';
-      return suyos.length ? 'degrading' : '';
     },
     definitionValue(campo) {
       return (this.definition || {})[campo] || '';
@@ -195,6 +216,7 @@ export default {
              sus hijos (ver groupIssue). -->
         <span
           v-if="groupIssue('route:')"
+          v-tooltip.right="tip(groupIssueText('route:'))"
           class="w-1.5 h-1.5 rounded-full shrink-0"
           :class="
             groupIssue('route:') === 'blocking' ? 'bg-red-500' : 'bg-amber-500'
@@ -238,7 +260,8 @@ export default {
         >
           <span
             v-if="issue(`route:${rama.name}`)"
-            class="w-1.5 h-1.5 rounded-full shrink-0"
+            v-tooltip.right="tip(issueText(`route:${rama.name}`))"
+            class="w-2 h-2 rounded-full shrink-0"
             :class="
               issue(`route:${rama.name}`) === 'blocking'
                 ? 'bg-red-500'
@@ -347,7 +370,8 @@ export default {
         >
           <span
             v-if="issue(`section:${block.index}`)"
-            class="w-1.5 h-1.5 rounded-full shrink-0"
+            v-tooltip.right="tip(issueText(`section:${block.index}`))"
+            class="w-2 h-2 rounded-full shrink-0"
             :class="
               issue(`section:${block.index}`) === 'blocking'
                 ? 'bg-red-500'
@@ -408,3 +432,10 @@ export default {
     </div>
   </div>
 </template>
+
+<style lang="scss">
+/* Sin `scoped`: el tooltip se dibuja en el <body>, fuera de este componente. */
+.tooltip.agent-issue-tooltip {
+  @apply max-w-sm whitespace-pre-line leading-snug;
+}
+</style>

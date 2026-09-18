@@ -27,6 +27,7 @@ const montar = (props = {}) =>
       $t: (clave, args) => (args ? `${clave} ${JSON.stringify(args)}` : clave),
     },
     stubs: ['woot-button', 'fluent-icon'],
+    directives: { tooltip: {} },
   });
 
 describe('TrainingTree', () => {
@@ -83,15 +84,42 @@ describe('TrainingTree', () => {
     expect(wrapper.vm.definitionValue('ai_context')).toBe('Horario 9 a 18');
   });
 
+  const conAvisos = () => ({
+    issues: {
+      'route:soporte': {
+        level: 'degrading',
+        messages: ['La etiqueta #soporte no existe en la cuenta.'],
+      },
+      'route:comercial': {
+        level: 'blocking',
+        messages: ['La fuente de comercial no existe.'],
+      },
+    },
+  });
+
   // Un grupo se marca con lo peor que tengan sus hijos.
   it('el grupo de ramas toma el peor estado de sus ramas', () => {
-    const wrapper = montar({
-      issues: { 'route:soporte': 'degrading', 'route:comercial': 'blocking' },
-    });
+    const wrapper = montar(conAvisos());
 
     expect(wrapper.vm.groupIssue('route:')).toBe('blocking');
     expect(wrapper.vm.issue('route:soporte')).toBe('degrading');
     expect(wrapper.vm.groupIssue('section:')).toBe('');
+  });
+
+  // Lo que muestra el punto al pasar el mouse: el aviso mismo.
+  it('el punto de cada rama muestra su aviso, y el del grupo los junta', () => {
+    const wrapper = montar(conAvisos());
+
+    expect(wrapper.vm.issueText('route:soporte')).toBe(
+      'La etiqueta #soporte no existe en la cuenta.'
+    );
+    expect(wrapper.vm.groupIssueText('route:')).toContain(
+      'La fuente de comercial no existe.'
+    );
+    expect(wrapper.vm.groupIssueText('route:')).toContain(
+      'La etiqueta #soporte no existe en la cuenta.'
+    );
+    expect(wrapper.vm.issueText('route:nada')).toBe('');
   });
 
   // Medido: hay un agente con 31 secciones. Abiertas de entrada no se puede navegar.
