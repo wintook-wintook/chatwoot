@@ -29,11 +29,16 @@
 # con lo primero que pase:
 #   · la respuesta del agente trae una etiqueta que el guion nombra (#closes?);
 #   · la búsqueda trae primera OTRA respuesta con prompt (se cambia a esa);
-#   · el clasificador cambia de ruta (el cliente cambió de tema);
 #   · MAX_TURNS mensajes, o TTL sin usarse;
 #   · la respuesta se borró o dejó de tener prompt.
 # Mientras sigue, el agente recibe también lo que encontró la búsqueda en ese mensaje,
 # por si el cliente preguntó otra cosa a la mitad.
+#
+# El cambio de ruta NO lo suelta, a propósito: en un agente con rutas, "quiero cotizar
+# laptops" cae en la de información y "5 laptops i7" en la de gestión ("el dato suelto
+# de una gestión en curso"), y las dos consultan @buscar_predefinidas. Soltarlo ahí
+# cortaba el guion justo a la mitad. Si la ruta nueva no consulta respuestas
+# predefinidas (soporte, @discourse…) este código ni corre en ese mensaje.
 # ================================================================================
 class KnowledgeBase::CannedPrompt
   MAX_CHARS = 4000
@@ -67,10 +72,9 @@ class KnowledgeBase::CannedPrompt
 
   # El guion en curso de la conversación, si sigue valiendo para este mensaje. `items` es
   # lo que encontró la búsqueda ahora: va aparte, por si el cliente preguntó otra cosa.
-  def self.resume(account, conversation, route_name, items)
+  def self.resume(account, conversation, items)
     state = conversation.additional_attributes&.dig(STATE_KEY)
     return nil unless state.is_a?(Hash)
-    return nil unless state['route'] == route_name
     return nil if state['turns'].to_i >= MAX_TURNS
 
     at = Time.zone.parse(state['at'].to_s)
@@ -149,6 +153,7 @@ class KnowledgeBase::CannedPrompt
   end
 
   # Guarda el guion como en curso, contando este mensaje (ver .forget! por el update_columns).
+  # La ruta queda solo como dato para quien revise la conversación: no suelta el guion.
   # rubocop:disable Rails/SkipsModelValidations
   def remember!(conversation, route_name)
     state = { 'id' => canned.id, 'route' => route_name, 'turns' => turns + 1, 'at' => Time.current.iso8601 }

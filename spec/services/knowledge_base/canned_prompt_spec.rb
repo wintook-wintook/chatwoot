@@ -85,27 +85,24 @@ RSpec.describe KnowledgeBase::CannedPrompt do
       conversation.update!(additional_attributes: { 'kb_canned_prompt' => state })
     end
 
-    it 'retoma el guion en la misma ruta' do
+    it 'retoma el guion, aunque el mensaje haya caído en otra ruta' do
       en_curso
-      prompt = described_class.resume(account, conversation, 'comercial', [])
+      prompt = described_class.resume(account, conversation, [])
 
       expect(prompt.canned).to eq(guion)
       expect(prompt).to be_continuing
     end
 
-    it 'lo suelta si cambió la ruta, llegó al tope de mensajes, venció o la respuesta ya no tiene prompt' do
-      en_curso
-      expect(described_class.resume(account, conversation, 'soporte', [])).to be_nil
-
+    it 'lo suelta si llegó al tope de mensajes, venció o la respuesta ya no tiene prompt' do
       en_curso('turns' => described_class::MAX_TURNS)
-      expect(described_class.resume(account, conversation, 'comercial', [])).to be_nil
+      expect(described_class.resume(account, conversation, [])).to be_nil
 
       en_curso('at' => 25.hours.ago.iso8601)
-      expect(described_class.resume(account, conversation, 'comercial', [])).to be_nil
+      expect(described_class.resume(account, conversation, [])).to be_nil
 
       en_curso
       guion.update!(content_is_prompt: false)
-      expect(described_class.resume(account, conversation, 'comercial', [])).to be_nil
+      expect(described_class.resume(account, conversation, [])).to be_nil
     end
 
     it 'recuerda y olvida sin tocar el resto de los atributos' do

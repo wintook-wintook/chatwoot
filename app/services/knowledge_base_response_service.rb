@@ -402,7 +402,7 @@ class KnowledgeBaseResponseService
     return nil unless source_type == 'canned_response'
 
     prompt = KnowledgeBase::CannedPrompt.detect(@account, items) ||
-             KnowledgeBase::CannedPrompt.resume(@account, @conversation, @route&.name, items)
+             KnowledgeBase::CannedPrompt.resume(@account, @conversation, items)
     KnowledgeBase::CannedPrompt.forget!(@conversation) unless prompt
     prompt
   end

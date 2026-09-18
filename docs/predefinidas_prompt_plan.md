@@ -507,8 +507,13 @@ respuesta con #solicita_cotizacion        → 🏁 se suelta
 ```
 
 Se suelta con lo primero que pase: la respuesta trae una etiqueta **que el guion nombra**; la
-búsqueda trae primera **otra** respuesta con prompt (se cambia a esa); el clasificador cambia de
-**ruta**; **8 mensajes** o **24 h** sin usarse; la respuesta se borró o dejó de tener prompt.
+búsqueda trae primera **otra** respuesta con prompt (se cambia a esa); **8 mensajes** o **24 h** sin
+usarse; la respuesta se borró o dejó de tener prompt.
+
+El **cambio de ruta no lo suelta** (se propuso y se descartó al revisarlo contra el agente #6543): allí
+"quiero cotizar laptops" cae en `comercial_info` y "5 laptops i7" en `comercial_gestion`, y las dos
+consultan `@buscar_predefinidas`; soltarlo cortaba el guion a la mitad. Una ruta que no consulta
+respuestas predefinidas (soporte → `@discourse`) no pasa por este código.
 
 A mitad del guion el modelo recibe "GUION EN CURSO: continúa desde donde quedó, no repitas pasos ni
 pidas datos ya dados", las instrucciones, y lo que encontró la búsqueda en ese mensaje (para
