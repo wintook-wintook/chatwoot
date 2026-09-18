@@ -53,6 +53,18 @@ class KnowledgeBase::CannedPrompt
   # depende de la cantidad") coincide por azar.
   LEAK_RUN_WORDS = 8
 
+  # Una copia solo es filtración si el tramo copiado habla DEL PROMPT: de instrucciones,
+  # pasos, etiquetas, "el usuario"/"el cliente" en tercera persona, o le da órdenes al
+  # agente. Medido en la prueba real con #1330: el paso 4 dice "Explícale que esta
+  # información será enviada a un asesor comercial para que pueda preparar y dar
+  # seguimiento a su solicitud", y el agente, obedeciéndolo, escribió casi esas mismas
+  # palabras; contar eso como filtración descartaba justo la respuesta correcta.
+  META_WORDS = %w[
+    instruccion instrucciones prompt paso pasos usuario usuarios cliente clientes etiqueta
+    aplica utiliza usa responde respondele solicita pide pidele explicale preguntale agrega
+    repitas repite daras
+  ].to_set.freeze
+
   # Lo que va entre comillas en unas instrucciones es texto para decirle al cliente
   # ("respondé: «Nuestro horario es…»"): copiarlo es obedecer, no filtrar.
   QUOTED_RE = /"[^"]*"|“[^”]*”|«[^»]*»|'[^']*'/
@@ -137,13 +149,15 @@ class KnowledgeBase::CannedPrompt
   end
 
   # ¿La respuesta copia las instrucciones? Una corrida de LEAK_RUN_WORDS palabras seguidas
-  # de ellas (sin contar lo que va entre comillas) basta.
+  # de ellas (sin contar lo que va entre comillas) que además hable del prompt (META_WORDS).
   def leaks?(reply)
     source = words(instructions.gsub(QUOTED_RE, ' '))
     return false if source.size < LEAK_RUN_WORDS
 
     haystack = " #{words(reply).join(' ')} "
-    source.each_cons(LEAK_RUN_WORDS).any? { |run| haystack.include?(" #{run.join(' ')} ") }
+    source.each_cons(LEAK_RUN_WORDS).any? do |run|
+      run.any? { |w| META_WORDS.include?(w) } && haystack.include?(" #{run.join(' ')} ")
+    end
   end
 
   # ¿Con esta respuesta termina el guion? Sí, si trae una etiqueta que el guion nombra

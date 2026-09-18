@@ -71,6 +71,19 @@ RSpec.describe KnowledgeBase::CannedPrompt do
         .to be(false)
     end
 
+    # Medido en develop con #1330: obedecer el paso 4 lleva a escribir casi sus mismas
+    # palabras, y eso no es filtrar.
+    it 'repetir lo que el prompt manda decir no es filtración; citar el prompt sí' do
+      guion = described_class.new(:message_is_prompt, canned(short_code: 'GUION', content: <<~TXT))
+        Aplica esta instrucción únicamente cuando el usuario solicite una cotización de equipo.
+        4. Explícale que esta información será enviada a un asesor comercial para que pueda preparar y dar seguimiento a su solicitud.
+      TXT
+
+      expect(guion.leaks?('Esta información será enviada a un asesor comercial para que pueda preparar y dar seguimiento a tu solicitud.'))
+        .to be(false)
+      expect(guion.leaks?('Aplica esta instrucción únicamente cuando el usuario solicite una cotización.')).to be(true)
+    end
+
     it 'una respuesta propia no es filtración' do
       expect(prompt.leaks?('¿Qué equipo necesitas y cuántas unidades?')).to be(false)
     end

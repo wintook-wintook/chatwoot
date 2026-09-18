@@ -485,8 +485,11 @@ Sobre la **primera** respuesta predefinida que encuentra `@buscar_predefinidas`:
 - Las instrucciones se **suman** a las del agente: su prompt sigue en el system, con el objetivo y la
   regla de la rama al final. Van en el mensaje del turno, marcadas como internas.
 - **Que no se filtre:** se le pide no citarlas, y si la respuesta copia 8 palabras seguidas de ellas
-  (sin contar lo que va entre comillas, que es texto para decir) se descarta, no se guarda en el
-  historial y se responde como siempre (C).
+  (sin contar lo que va entre comillas, que es texto para decir) **y ese tramo habla del prompt**
+  (instrucción, paso, etiqueta, "el usuario", órdenes al agente) se descarta, no se guarda en el
+  historial y se responde como siempre (C). Lo del prompt se agregó tras la prueba real con #1330:
+  obedecer "Explícale que esta información será enviada a un asesor…" lleva a escribir casi esas
+  mismas palabras, y el detector descartaba justo la respuesta correcta.
 - Los 1.047 prompts viejos de staging entran en B en cuanto esto llegue allá (aceptado por el usuario).
 - Código: `KnowledgeBase::CannedPrompt` + `KnowledgeBaseResponseService#canned_prompt_reply`.
   No cubre `KnowledgeBase::DirectiveRunner` (API externa `/knowledge_base/directive`) ni la prueba en
