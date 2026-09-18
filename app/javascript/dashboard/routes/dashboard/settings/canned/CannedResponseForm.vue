@@ -140,12 +140,14 @@ export default {
 <template>
   <form class="flex flex-col w-full gap-3" @submit.prevent="submit">
     <!-- El nombre queda afuera de las pestañas: es de las dos, y es lo que se ve en la
-         lista. -->
+         lista. !mb-0: el input trae 1rem abajo, que sumado al gap del form dejaba las
+         pestañas muy lejos. -->
     <label :class="{ error: v$.form.shortCode.$error }">
       {{ $t('CANNED_MGMT.ADD.FORM.SHORT_CODE.LABEL') }}
       <input
         v-model.trim="form.shortCode"
         type="text"
+        class="!mb-0"
         :placeholder="$t('CANNED_MGMT.ADD.FORM.SHORT_CODE.PLACEHOLDER')"
         @input="v$.form.shortCode.$touch"
       />
