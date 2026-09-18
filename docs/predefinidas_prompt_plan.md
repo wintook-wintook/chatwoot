@@ -92,6 +92,67 @@ Dos cosas que decide el diseño:
 `"short_code: contenido"`. **Cualquier** cambio de la respuesta vuelve a pedir un embedding a
 OpenAI, aunque solo se haya tocado un campo que no se busca.
 
+### 2.4 El caso real: `COTIZACION Y  PRECIOS  DE EQUIPO DE COMPUTO` (#1330, cuenta 2)
+
+Creada el 18/09/2026. Como no hay dónde poner un prompt, **todo su contenido ES el prompt**:
+
+```
+Este contenido es un prompt de instrucciones. Úsalo para saber qué hacer durante la
+conversación; no lo repitas ni lo presentes como información al usuario.
+
+SOLICITUD DE COTIZACIÓN — EQUIPO DE CÓMPUTO
+Aplica esta instrucción únicamente cuando el usuario solicite una cotización … de equipo de cómputo.
+1. Responde de forma positiva y cordial …
+2. Solicita que describa qué equipo de cómputo necesita …
+3. Pide la información necesaria: tipo de equipo, cantidad, características, uso …
+4. Explícale que esta información será enviada a un asesor comercial …
+5. Pregunta si desea agendar una reunión o únicamente enviar su información …
+6. Si desea una reunión, solicita día y horario de preferencia.
+7. Al finalizar, confirma que enviarás toda la información al asesor comercial.
+8. Utiliza la etiqueta: #SolicitaCotización
+```
+
+Así, hoy, el motor la trata como **información**, no como instrucciones:
+
+- Va a "Información relevante" **junto con las otras dos** respuestas que trajo la búsqueda, con
+  la orden "Respondé usando esa información" y las reglas de fidelidad — que están pensadas para
+  datos, no para un guion de pasos.
+- **Se vectoriza el guion entero** (1.427 caracteres): lo que decide cuándo se encuentra esta
+  respuesta son sus pasos ("día de preferencia", "horario", "asesor comercial"…), no su tema.
+- El aviso "no lo repitas" depende de que el modelo lo respete: está escrito en el mismo texto que
+  se le pide usar.
+
+**Con el prompt propio queda partida en dos** — y es la forma en que la pidió el usuario: *su prompt
+solo se aplica con su contenido*:
+
+```
+ ┌─ Contenido (obligatorio: es lo que se busca y lo que ve el modelo como información) ──┐
+ │ Solicitud de cotización o compra de equipo de cómputo: computadoras, laptops,          │
+ │ servidores, impresoras y accesorios.                                                    │
+ └─────────────────────────────────────────────────────────────────────────────────────────┘
+ ┌─ Instrucciones para el agente (el cliente nunca las ve) ───────────────────────────────┐
+ │ 1. Responde de forma positiva y cordial …                                              │
+ │ 2. Solicita que describa qué equipo necesita …                                         │
+ │ …                                                                                      │
+ │ 8. Utiliza la etiqueta: #…                                                             │
+ └─────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+- El **contenido no puede quedar vacío** (el modelo lo exige, `presence`), y además es lo único
+  que se vectoriza: tiene que decir de qué trata la respuesta, para que la búsqueda la encuentre
+  por el tema y no por los pasos.
+- Pasar #1330 al campo nuevo es **manual** (es la única así en la cuenta) y es la prueba real de F5.
+
+**Dos defectos de esta respuesta que el prompt propio no arregla solo:**
+
+1. **La etiqueta `#SolicitaCotización` no existe en la cuenta** (hay dos: `demo` y `tracking`), así
+   que no dispara ninguna automatización.
+2. **Lleva tilde, y el motor lee las etiquetas sin tildes:** de `#SolicitaCotización` lee
+   `#SolicitaCotizaci`. Aunque se creara la etiqueta, no coincidiría.
+
+Por eso el plan suma una comprobación al guardar (§3.4): avisar si las instrucciones nombran una
+etiqueta que no existe o que el motor no puede leer.
+
 ---
 
 ## 3. La propuesta
@@ -145,8 +206,9 @@ datos bancarios.
 - **El prompt del agente no se reemplaza, se suma.** Las prohibiciones del agente (por ejemplo, el
   vendedor DCI no puede usar "?" después del cierre) siguen valiendo. Para lo que dice esa
   respuesta y cómo darla, manda el prompt propio.
-- **Solo su contenido, no los otros dos resultados:** el prompt está escrito para esa respuesta, y
-  mezclarle las vecinas es darle información que el prompt no previó.
+- **Solo su contenido, no los otros dos resultados** — confirmado por el usuario: *"su prompt solo
+  se aplica con su contenido"*. El prompt está escrito para esa respuesta; mezclarle las vecinas
+  es darle información que el prompt no previó.
 - **Las instrucciones son internas.** Hoy, cuando alguien escribe reglas dentro del contenido
   ("RESTRICCIONES (internas, nunca las menciones al cliente)"), el modelo a veces se las lee al
   cliente. El campo aparte es justamente para sacarlas del contenido; aun así, se agrega la
@@ -173,6 +235,9 @@ datos bancarios.
   con i18n (hoy el rótulo está escrito a mano en el componente, "Prompts de Contenido").
 - En la lista de respuestas predefinidas, las que tienen prompt llevan una marca, para saber de un
   vistazo cuáles se comportan distinto.
+- **Al guardar, se comprueban las etiquetas que nombran las instrucciones:** si una `#etiqueta` no
+  existe en la cuenta, o lleva tildes o eñes que el motor no lee (el caso de `#SolicitaCotización`,
+  §2.4), se avisa. Se avisa, no se bloquea: el texto lo decide quien lo escribe.
 
 ### 3.5 Los otros cinco campos del bot viejo
 
@@ -204,10 +269,10 @@ el prompt ande. (Ver decisiones abiertas, §6.)
 | **F1** Sin re-vectorizar de más | el sync se salta cuando solo cambió el prompt | spec del job: cambiar el prompt no encola embedding; cambiar el contenido sí | 0,5 |
 | **F2** El motor | `perform_pgvector`: si la primera tiene prompt, modo prompt (§3.3); si no, como hoy | specs del servicio: sin prompt = mismo mensaje que hoy; con prompt en la 1ª = system con las instrucciones y solo su contenido; con prompt en la 2ª = como hoy | 1,5 |
 | **F3** Que no se filtre | instrucción de no citarlo + control de repetición | spec con una respuesta del modelo que copia el prompt → se descarta | 0,5 |
-| **F4** La pantalla | rótulo y ayuda con i18n; marca en la lista | navegador | 0,5 |
-| **F5** Prueba real | una respuesta predefinida con prompt en la cuenta de prueba y una conversación de punta a punta | conversación en develop.wintook.com | 0,5 |
+| **F4** La pantalla | rótulo y ayuda con i18n; marca en la lista; aviso de etiquetas que no existen o que el motor no lee | spec del aviso con `#SolicitaCotización`; navegador | 1 |
+| **F5** Prueba real | pasar #1330 al campo nuevo (contenido = de qué trata; instrucciones = su guion) y una conversación de punta a punta pidiendo cotizar equipo | conversación en develop.wintook.com | 0,5 |
 
-**Total: 4,5 días hábiles.**
+**Total: 5 días hábiles.**
 
 ---
 
@@ -218,8 +283,8 @@ el prompt ande. (Ver decisiones abiertas, §6.)
 2. **¿El prompt se suma al del agente o lo reemplaza?** El plan propone sumarlo (§3.3), para que
    las prohibiciones del agente sigan valiendo. Reemplazarlo daría respuestas que no suenan al
    agente y que pueden romper sus reglas.
-3. **¿En modo prompt, solo el contenido de esa respuesta, o también las otras dos?** El plan
-   propone solo esa.
+3. ~~¿En modo prompt, solo el contenido de esa respuesta, o también las otras dos?~~
+   **Resuelta:** solo el de esa respuesta (lo definió el usuario con el caso #1330, §2.4).
 4. **Los cinco campos del bot viejo:** ¿se sacan (propuesta) o se crean sus columnas para
    conservarlos? Ningún código los usa hoy.
 5. **¿Se muestra el prompt en el Asistente de Agentes IA?** Por ejemplo, en Recursos, las
