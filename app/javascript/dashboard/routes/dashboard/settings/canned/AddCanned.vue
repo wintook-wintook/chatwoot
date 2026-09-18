@@ -97,44 +97,56 @@ export default {
       >
         <!-- Andrés Liverio 020822 **Wintook** -->
         <template #legacy>
-          <div class="flex items-center w-full gap-2">
-            <input v-model="opcMenu" type="checkbox" :checked="opcMenu" />
-            <label>{{ $t('CANNED_MGMT.LEGACY.MENU') }}</label>
-          </div>
-          <div class="w-full">
-            <label>{{ $t('CANNED_MGMT.LEGACY.MENU_OPTION') }}</label>
-            <input
-              v-model.number="noOptionMenu"
-              type="number"
-              step="1"
-              min="3"
-              max="99"
-              class="!w-36"
-              :disabled="!opcMenu"
-            />
-          </div>
-          <div class="flex items-center w-full gap-2">
-            <input
-              v-model="contentFull"
-              type="checkbox"
-              :checked="contentFull"
-            />
-            <label>{{ $t('CANNED_MGMT.LEGACY.CONTENT_FULL') }}</label>
-          </div>
-          <div class="flex items-center w-full gap-2">
-            <input v-model="urlContent" type="checkbox" :checked="urlContent" />
-            <label>{{ $t('CANNED_MGMT.LEGACY.URL_CONTENT') }}</label>
-          </div>
-          <div v-show="urlContent" class="w-full">
-            <label class="w-full">
-              {{ $t('CANNED_MGMT.LEGACY.URL') }}
-              <input
-                v-model.trim="urlShortCode"
-                class="w-full"
-                type="url"
-                :placeholder="$t('CANNED_MGMT.LEGACY.URL_PLACEHOLDER')"
-              />
-            </label>
+          <!-- Dos columnas: el menú a la izquierda; el contenido completo y el link a la
+               derecha. En pantallas angostas quedan una debajo de la otra. -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center w-full gap-2">
+                <input v-model="opcMenu" type="checkbox" :checked="opcMenu" />
+                <label>{{ $t('CANNED_MGMT.LEGACY.MENU') }}</label>
+              </div>
+              <div class="w-full">
+                <label>{{ $t('CANNED_MGMT.LEGACY.MENU_OPTION') }}</label>
+                <input
+                  v-model.number="noOptionMenu"
+                  type="number"
+                  step="1"
+                  min="3"
+                  max="99"
+                  class="!w-36"
+                  :disabled="!opcMenu"
+                />
+              </div>
+            </div>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center w-full gap-2">
+                <input
+                  v-model="contentFull"
+                  type="checkbox"
+                  :checked="contentFull"
+                />
+                <label>{{ $t('CANNED_MGMT.LEGACY.CONTENT_FULL') }}</label>
+              </div>
+              <div class="flex items-center w-full gap-2">
+                <input
+                  v-model="urlContent"
+                  type="checkbox"
+                  :checked="urlContent"
+                />
+                <label>{{ $t('CANNED_MGMT.LEGACY.URL_CONTENT') }}</label>
+              </div>
+              <div v-show="urlContent" class="w-full">
+                <label class="w-full">
+                  {{ $t('CANNED_MGMT.LEGACY.URL') }}
+                  <input
+                    v-model.trim="urlShortCode"
+                    class="w-full"
+                    type="url"
+                    :placeholder="$t('CANNED_MGMT.LEGACY.URL_PLACEHOLDER')"
+                  />
+                </label>
+              </div>
+            </div>
           </div>
         </template>
         <!-- Andrés Liverio 020822 **Wintook** -->
