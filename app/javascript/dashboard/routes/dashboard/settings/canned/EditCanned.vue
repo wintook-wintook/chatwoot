@@ -111,7 +111,7 @@ export default {
               step="1"
               min="3"
               max="99"
-              class="w-36"
+              class="!w-36"
               :disabled="!opcMenu"
             />
           </div>

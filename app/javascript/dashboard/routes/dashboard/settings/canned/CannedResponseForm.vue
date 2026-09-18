@@ -9,6 +9,8 @@
 //   Prompt de Contenido  cómo tiene que usar el agente ESE mensaje. El cliente nunca
 //                        lo ve, y se aplica solo junto con el mensaje de esta
 //                        respuesta. Vacío = el agente usa el mensaje como siempre.
+// Cada pestaña tiene solo lo suyo; las opciones de la respuesta (menú, contenido
+// completo, link) van debajo, afuera de las pestañas.
 //
 // Las pestañas no esconden nada:
 //   · la del prompt lleva un punto cuando tiene texto, para saber desde "Mensaje" que
@@ -176,7 +178,6 @@ export default {
           {{ $t('CANNED_MGMT.ADD.FORM.CONTENT.ERROR') }}
         </span>
       </div>
-      <slot name="legacy" />
     </div>
 
     <div v-show="activeTab === $options.PROMPT_TAB" class="flex flex-col gap-2">
@@ -196,6 +197,16 @@ export default {
       >
         {{ aviso }}
       </p>
+    </div>
+
+    <!-- Las opciones de la respuesta (menú, contenido completo, link) van afuera de las
+         pestañas: no son del mensaje ni del prompt, son de la respuesta entera, y se
+         ven estando en cualquiera de las dos. -->
+    <div
+      v-if="$slots.legacy"
+      class="flex flex-col gap-2 pt-3 border-t border-slate-100 dark:border-slate-700"
+    >
+      <slot name="legacy" />
     </div>
 
     <div class="flex flex-row justify-end w-full gap-2 px-0 py-2">
