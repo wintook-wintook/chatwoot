@@ -158,7 +158,6 @@
         "ROUTE_FIND_EMPTY": "No branches written in any agent of this account yet.",
         "ROUTE_FIND_NO_MATCH": "No branch matches that search.",
         "ROUTE_FIND_USE": "Use this one",
-        "ROUTE_FIND_TAKEN": "Already in this agent",
         "ROUTE_FIND_SCOPE": "Scope",
         "ROUTE_FIND_AGENTS": "Used in",
         "SECTION_FIND": "Find a section",
@@ -167,7 +166,8 @@
         "SECTION_FIND_SEARCH": "Search by name, content or agent…",
         "SECTION_FIND_LOADING": "Looking up this account's sections…",
         "SECTION_FIND_EMPTY": "No sections written in any agent of this account yet.",
-        "SECTION_FIND_TAKEN": "Already has that section"
+        "ROUTE_FIND_ALL_TAKEN": "This agent already has every branch written in the account.",
+        "SECTION_FIND_ALL_TAKEN": "This agent already has every section written in the account."
       }
     },
     "CREATE": {

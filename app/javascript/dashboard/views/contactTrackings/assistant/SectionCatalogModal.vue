@@ -10,7 +10,9 @@
 // va escrito adentro, y eso solo se juzga leyéndolo.
 //
 // El mismo nombre aparece varias veces cuando está escrito distinto en distintos
-// agentes: comparar esas versiones es justamente para qué sirve la pantalla.
+// agentes: comparar esas versiones es justamente para qué sirve la pantalla. Las
+// que el agente YA tiene no se listan: dos rótulos iguales lo confunden —no sabe
+// cuál de los dos aplica—, así que no hay nada que hacer con ellas.
 // ============================================================================
 export default {
   props: {
@@ -31,10 +33,24 @@ export default {
     upperTaken() {
       return this.takenTitles.map(t => (t || '').toUpperCase());
     },
+    // Sin las que el agente ya tiene: dos rótulos iguales lo confunden, así que no
+    // hay nada que hacer con ellas.
+    available() {
+      return this.sections.filter(s => !this.taken(s));
+    },
+    // Tres motivos distintos para una lista vacía, y se dicen distinto.
+    emptyMessage() {
+      const clave = !this.sections.length
+        ? 'SECTION_FIND_EMPTY'
+        : this.available.length
+        ? 'ROUTE_FIND_NO_MATCH'
+        : 'SECTION_FIND_ALL_TAKEN';
+      return this.$t(`TRACKING_TEMPLATES.FORM.TRAINING.${clave}`);
+    },
     filtered() {
       const q = this.query.trim().toLowerCase();
-      if (!q) return this.sections;
-      return this.sections.filter(s =>
+      if (!q) return this.available;
+      return this.available.filter(s =>
         [s.title, s.body, (s.agents || []).join(' ')]
           .join(' ')
           .toLowerCase()
@@ -91,11 +107,7 @@ export default {
         v-else-if="!filtered.length"
         class="!m-0 py-6 text-xs text-center text-slate-500 dark:text-slate-400"
       >
-        {{
-          sections.length
-            ? $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_FIND_NO_MATCH')
-            : $t('TRACKING_TEMPLATES.FORM.TRAINING.SECTION_FIND_EMPTY')
-        }}
+        {{ emptyMessage }}
       </p>
 
       <div class="flex flex-col flex-1 min-h-0 gap-2 overflow-y-auto">
@@ -130,14 +142,9 @@ export default {
               variant="smooth"
               color-scheme="success"
               icon="add"
-              :is-disabled="taken(seccion)"
               @click="pick(seccion)"
             >
-              {{
-                taken(seccion)
-                  ? $t('TRACKING_TEMPLATES.FORM.TRAINING.SECTION_FIND_TAKEN')
-                  : $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_FIND_USE')
-              }}
+              {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_FIND_USE') }}
             </woot-button>
           </div>
 

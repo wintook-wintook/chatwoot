@@ -67,15 +67,23 @@ describe('SectionCatalogModal', () => {
     });
   });
 
-  // Dos rótulos iguales confunden al agente: no sabe cuál de los dos aplica.
-  it('no deja copiar una sección que el agente ya tiene, sin importar mayúsculas', () => {
+  // Dos rótulos iguales confunden al agente: no sabe cuál de los dos aplica, así que
+  // las que ya tiene no se listan. El nombre se compara sin mayúsculas.
+  it('no lista las secciones que el agente ya tiene', () => {
     const wrapper = montar({ takenTitles: ['rol'] });
 
-    expect(wrapper.vm.taken(secciones()[0])).toBe(true);
-    expect(wrapper.vm.taken(secciones()[2])).toBe(false);
+    expect(wrapper.vm.filtered.map(s => s.title)).toEqual(['ETIQUETAS']);
     wrapper.vm.pick(secciones()[0]);
-
     expect(wrapper.emitted('pick')).toBeUndefined();
+  });
+
+  it('dice por qué la lista quedó vacía', () => {
+    expect(montar({ sections: [] }).vm.emptyMessage).toContain(
+      'SECTION_FIND_EMPTY'
+    );
+    expect(
+      montar({ takenTitles: ['ROL', 'ETIQUETAS'] }).vm.emptyMessage
+    ).toContain('SECTION_FIND_ALL_TAKEN');
   });
 
   it('al abrirse limpia la búsqueda anterior', async () => {

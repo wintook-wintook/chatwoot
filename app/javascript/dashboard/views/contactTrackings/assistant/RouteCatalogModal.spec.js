@@ -75,14 +75,27 @@ describe('RouteCatalogModal', () => {
     });
   });
 
-  // Dos ramas con el mismo nombre no existen para el motor: se queda con la primera.
-  it('no deja copiar una rama cuyo nombre el agente ya tiene', () => {
+  // Dos ramas con el mismo nombre no existen para el motor: se queda con la primera,
+  // así que la que el agente ya tiene no se lista.
+  it('no lista una rama cuyo nombre el agente ya tiene', () => {
     const wrapper = montar({ takenNames: ['comercial'] });
 
-    expect(wrapper.vm.taken(ramas()[0])).toBe(true);
+    expect(wrapper.vm.filtered.map(r => r.name)).toEqual(['soporte']);
     wrapper.vm.pick(ramas()[0]);
-
     expect(wrapper.emitted('pick')).toBeUndefined();
+  });
+
+  it('dice por qué la lista quedó vacía', () => {
+    expect(montar({ routes: [] }).vm.emptyMessage).toContain(
+      'ROUTE_FIND_EMPTY'
+    );
+    expect(
+      montar({ takenNames: ['comercial', 'soporte'] }).vm.emptyMessage
+    ).toContain('ROUTE_FIND_ALL_TAKEN');
+
+    const wrapper = montar();
+    wrapper.setData({ query: 'no existe' });
+    expect(wrapper.vm.emptyMessage).toContain('ROUTE_FIND_NO_MATCH');
   });
 
   it('al abrirse limpia la búsqueda anterior', async () => {

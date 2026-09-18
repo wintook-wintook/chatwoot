@@ -158,7 +158,6 @@
         "ROUTE_FIND_EMPTY": "Todavía no hay ramas escritas en ningún agente de la cuenta.",
         "ROUTE_FIND_NO_MATCH": "Ninguna rama coincide con esa búsqueda.",
         "ROUTE_FIND_USE": "Usar esta",
-        "ROUTE_FIND_TAKEN": "Ya está en este agente",
         "ROUTE_FIND_SCOPE": "Alcance",
         "ROUTE_FIND_AGENTS": "Está en",
         "SECTION_FIND": "Buscar sección",
@@ -167,7 +166,8 @@
         "SECTION_FIND_SEARCH": "Buscar por nombre, contenido o agente…",
         "SECTION_FIND_LOADING": "Buscando las secciones de la cuenta…",
         "SECTION_FIND_EMPTY": "Todavía no hay secciones escritas en ningún agente de la cuenta.",
-        "SECTION_FIND_TAKEN": "Ya tiene esa sección"
+        "ROUTE_FIND_ALL_TAKEN": "El agente ya tiene todas las ramas que hay escritas en la cuenta.",
+        "SECTION_FIND_ALL_TAKEN": "El agente ya tiene todas las secciones que hay escritas en la cuenta."
       }
     },
     "CREATE": {

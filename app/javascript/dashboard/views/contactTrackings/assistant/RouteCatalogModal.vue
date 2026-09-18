@@ -9,9 +9,10 @@
 // La ficha muestra las dos mitades de una rama: la línea @ruta y su línea de
 // [ALCANCE POR RAMA] (ver RouteModal), porque al copiarla se copian las dos.
 //
-// Una rama con un nombre que el agente ya tiene NO se puede agregar: para el motor
-// existe una sola con ese nombre, se queda con la primera y la otra no se elige
-// nunca. Se muestra igual, marcada: verla es la mitad de la utilidad.
+// Las ramas cuyo nombre el agente YA tiene no se listan. Para el motor existe una
+// sola con ese nombre —se queda con la primera y la otra no se elige nunca—, así que
+// no hay nada que hacer con ellas: mostrarlas marcadas era ocupar la lista con
+// fichas que no se pueden usar.
 // ============================================================================
 export default {
   props: {
@@ -32,10 +33,23 @@ export default {
   computed: {
     // Busca por nombre, por las frases del cliente, por la fuente y por el agente de
     // donde sale: son las cuatro formas en que alguien recuerda una rama.
+    // Sin las que el agente ya tiene.
+    available() {
+      return this.routes.filter(r => !this.taken(r));
+    },
+    // Tres motivos distintos para una lista vacía, y se dicen distinto.
+    emptyMessage() {
+      const clave = !this.routes.length
+        ? 'ROUTE_FIND_EMPTY'
+        : this.available.length
+        ? 'ROUTE_FIND_NO_MATCH'
+        : 'ROUTE_FIND_ALL_TAKEN';
+      return this.$t(`TRACKING_TEMPLATES.FORM.TRAINING.${clave}`);
+    },
     filtered() {
       const q = this.query.trim().toLowerCase();
-      if (!q) return this.routes;
-      return this.routes.filter(r =>
+      if (!q) return this.available;
+      return this.available.filter(r =>
         [
           r.name,
           r.description,
@@ -49,6 +63,7 @@ export default {
       );
     },
   },
+
   watch: {
     show(abierto) {
       if (abierto) this.query = '';
@@ -101,11 +116,7 @@ export default {
         v-else-if="!filtered.length"
         class="!m-0 py-6 text-xs text-center text-slate-500 dark:text-slate-400"
       >
-        {{
-          routes.length
-            ? $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_FIND_NO_MATCH')
-            : $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_FIND_EMPTY')
-        }}
+        {{ emptyMessage }}
       </p>
 
       <!-- La lista scrollea: la cuenta puede tener decenas de ramas escritas. -->
@@ -134,19 +145,9 @@ export default {
               variant="smooth"
               color-scheme="success"
               icon="add"
-              :is-disabled="taken(rama)"
-              :title="
-                taken(rama)
-                  ? $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_FIND_TAKEN')
-                  : ''
-              "
               @click="pick(rama)"
             >
-              {{
-                taken(rama)
-                  ? $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_FIND_TAKEN')
-                  : $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_FIND_USE')
-              }}
+              {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_FIND_USE') }}
             </woot-button>
           </div>
 
