@@ -252,8 +252,12 @@ const confirmDeletion = () => {
                 {{ $t('CANNED_MGMT.FORM_PROMPT.LIST_BADGE_IS_PROMPT') }}
               </span>
             </td>
+            <!-- proyecto@predefinidas_prompt — en la lista el contenido se corta a 3 líneas
+                 (solo la vista; el texto completo se ve al editar y al pasar el mouse). -->
             <td class="py-4 pr-4 md:break-all whitespace-normal">
-              {{ cannedItem.content }}
+              <div class="line-clamp-3" :title="cannedItem.content">
+                {{ cannedItem.content }}
+              </div>
             </td>
             <td class="py-4 flex justify-end gap-1">
               <woot-button
