@@ -249,7 +249,7 @@ export default {
 <style scoped lang="scss">
 // El alto de las dos pestañas (ver el template).
 .panel-height {
-  @apply h-[18rem];
+  @apply h-[24rem];
 }
 
 ::v-deep {
@@ -258,7 +258,7 @@ export default {
   }
 
   .ProseMirror-woot-style {
-    @apply min-h-[15rem];
+    @apply min-h-[21rem];
 
     p {
       @apply text-base;
