@@ -1,6 +1,6 @@
 # Respuestas predefinidas con prompt propio
 
-**Rama:** `feat/predefinidas_prompt` (desde `develop`) · **Pedido:** 18/09/2026 · **Estado:** plan, sin código
+**Rama:** `feat/predefinidas_prompt` (desde `develop`) · **Pedido:** 18/09/2026 · **Estado:** F0, F1 y F4 hechas (`e8e21943`); F2, F3, F5 y los campos del bot viejo (§3.5, F6–F8) pendientes
 
 ---
 
@@ -275,12 +275,91 @@ El modal de agregar y editar pasa a ser **más ancho** (el tamaño grande nativo
 - Agregar y Editar usan el mismo cuerpo de formulario: hoy son dos componentes casi iguales
   (`AddCanned.vue` y `EditCanned.vue`) y cualquier cambio habría que hacerlo dos veces.
 
-### 3.5 Los otros cinco campos del bot viejo
+### 3.5 Los cinco campos del bot viejo, nativos en Chatwoot
 
-`menu`, `opcion`, `content_full`, `url_content` y `url_short_code` **también rompen el guardado**
-y **ningún código los lee**: eran del bot viejo, que ya no existe. Propuesta: sacarlos del
-formulario y del controlador. Si se los deja, crear una respuesta predefinida sigue fallando aunque
-el prompt ande. (Ver decisiones abiertas, §6.)
+**Decidido el 18/09/2026:** se traen a Chatwoot. Hoy quedaron escondidos detrás de la bandera
+`SHOW_LEGACY_FIELDS` (F0 ya hecha): no se muestran ni se mandan, para que el guardado no falle.
+
+#### Qué hacía el bot con ellos
+
+Editar una respuesta llamaba a `URL_WEBHOOK/api/setCannedReponse` con esos cinco campos, y el bot los
+guardaba en **su propia base** (la "otra base" de §2.1, con su copia de `canned_responses`).
+`getCannedReponse` los leía de vuelta. **Esa API no hacía nada más que guardar**: el
+comportamiento vivía en el bot.
+
+Y en esta instalación **nunca funcionó**:
+
+```
+ Editar  ──► process.env.URL_WEBHOOK  ──► no está definida en ninguna parte (webpack, .env)
+              └─► POST https://develop.wintook.com/undefined/api/setCannedReponse  → 404
+ Agregar ──► tenía la función hacia WINTOOK_BOT (https://bot.wintook.com), pero no la llamaba
+ bot.wintook.com hoy ──► 404 · su código no está en este servidor
+```
+
+Desde este formulario, esos campos no se guardaban en ningún lado. Si la base del bot tiene valores
+cargados, no se pueden traer desde acá: **arrancan vacíos**.
+
+#### Qué se trae y qué no
+
+| Campo(s) | En el bot | En Chatwoot | Esta rama |
+|---|---|---|---|
+| `content_full` | mostrar el contenido completo en el resultado de la búsqueda | **enviar el mensaje tal cual**, sin que el modelo lo redacte | **sí** |
+| `url_content` + `url_short_code` | agregar un link de dirección web alternativa | el link al final de la respuesta | **sí** |
+| `menu` + `opcion` | mostrar la respuesta como opción numerada del menú del bot | — | **no**: es otro proyecto (depende del "Menú del sistema", cuya configuración también le habla al bot viejo) |
+
+`menu` y `opcion` se guardan igual (la columna no cuesta nada y así no se pierden si alguien los
+carga), pero siguen escondidos en el formulario hasta que exista el menú.
+
+**Guardarlos no necesita ninguna API:** es una migración tolerante, igual a la de `content_prompts`
+(`unless column_exists?`, porque en la base del bot ya existen), y apagar la bandera. El controlador
+ya acepta solo las columnas que la tabla tiene (F0), así que los toma solo. Antecedente: los
+sinónimos ya se pasaron del bot viejo a Rails nativo (`6e3a1d98`).
+
+La llamada a `setCannedReponse` se **borra** en esta fase: su único trabajo era guardar en la base
+del bot, y ahora se guarda en la de Chatwoot.
+
+#### Los tres modos de responder con una respuesta predefinida
+
+Con `content_full`, una respuesta predefinida puede contestar de tres maneras. Son excluyentes, y el
+formulario lo deja claro:
+
+```
+  la búsqueda trae esta respuesta primera
+          │
+          ├── "Enviar tal cual" marcado ─────► se manda el MENSAJE exacto, sin pasar por el modelo
+          │                                   (+ el link, si tiene)
+          │
+          ├── tiene Prompt de Contenido ─────► el modelo redacta con el mensaje y SU prompt (§3.3)
+          │                                   (+ el link, si tiene)
+          │
+          └── ninguna de las dos ────────────► como hoy: el modelo redacta con las 3 que trajo
+                                              (+ el link, si tiene)
+```
+
+- **"Tal cual" y el prompt no conviven:** un mensaje que se manda exacto no se puede redactar
+  siguiendo instrucciones. Si se marca "Enviar tal cual", la pestaña del prompt se apaga y lo dice.
+- **Las variables se resuelven solas:** un `{{contact.name}}` en el mensaje lo reemplaza Chatwoot
+  al crear el mensaje saliente (`Liquidable#process_liquid_in_content`, `before_create`), el mismo
+  procesador que usa cualquier respuesta enviada. Verificado en el código; hoy ninguna de las 4
+  respuestas de la cuenta usa variables.
+- **"Tal cual" es la opción segura** para textos que no se pueden alterar: datos bancarios, una
+  CLABE, una política con redacción legal. Hoy el modelo los reescribe siempre.
+- **El link** va al final, en su renglón, antes de la etiqueta de la fuente (`_Respuestas
+  predefinidas_`). Se valida que sea una URL al guardar.
+
+#### Dónde van en el modal
+
+En la pestaña **"Mensaje"**, debajo del editor, porque dicen qué se hace con el mensaje:
+
+```
+ │  Mensaje    Prompt de Contenido                                                  │
+ │  [ editor del mensaje …                                                       ]  │
+ │                                                                                  │
+ │  ☐ Enviar tal cual (sin que el agente lo redacte)                               │
+ │  ☐ Agregar un link al final   [ https://kontrolya.com/precios/              ]   │
+```
+
+---
 
 ---
 
@@ -294,6 +373,9 @@ el prompt ande. (Ver decisiones abiertas, §6.)
 | El prompt de un resultado vecino se aplica a otra pregunta | solo cuenta el de la PRIMERA (§3.2) |
 | La migración falla en la base donde la columna ya existe | `unless column_exists?` (§3.1) |
 | Respuestas sin prompt cambian de comportamiento | sin prompt, el camino es **exactamente** el de hoy (se prueba) |
+| "Tal cual" manda un mensaje con variables sin reemplazar | lo resuelve el mismo `Liquidable` de todo mensaje saliente (se prueba con `{{contact.name}}`) |
+| Se marca "tal cual" y además hay prompt | son excluyentes en el formulario; en el motor, "tal cual" gana y se registra en el log |
+| Las columnas viejas ya existen en la base del bot | migración tolerante, como la de `content_prompts` |
 
 ---
 
@@ -301,14 +383,18 @@ el prompt ande. (Ver decisiones abiertas, §6.)
 
 | Fase | Entrega | Cómo se verifica | Días hábiles |
 |---|---|---|---|
-| **F0** El guardado | columna `content_prompts` (migración tolerante); fuera `menu`, `opcion`, `content_full`, `url_content`, `url_short_code` del formulario y del controlador | request spec: crear y editar con y sin prompt; navegador: el formulario vuelve a guardar | 1 |
-| **F1** Sin re-vectorizar de más | el sync se salta cuando solo cambió el prompt | spec del job: cambiar el prompt no encola embedding; cambiar el contenido sí | 0,5 |
+| **F0** ✅ El guardado | columna `content_prompts` (migración tolerante); el controlador acepta solo columnas reales; los campos viejos detrás de `SHOW_LEGACY_FIELDS` | request spec: crear y editar con y sin prompt, y con los campos viejos sin reventar | 1 |
+| **F1** ✅ Sin re-vectorizar de más | el sync se salta cuando solo cambió el prompt | spec del job: cambiar el prompt no encola embedding; cambiar el contenido sí | 0,5 |
 | **F2** El motor | `perform_pgvector`: si la primera tiene prompt, modo prompt (§3.3); si no, como hoy | specs del servicio: sin prompt = mismo mensaje que hoy; con prompt en la 1ª = system con las instrucciones y solo su contenido; con prompt en la 2ª = como hoy | 1,5 |
 | **F3** Que no se filtre | instrucción de no citarlo + control de repetición | spec con una respuesta del modelo que copia el prompt → se descarta | 0,5 |
-| **F4** La pantalla | modal ancho con pestañas "Mensaje" y "Prompt de Contenido" (punto cuando tiene prompt, salto a la pestaña con error); formulario compartido entre agregar y editar; i18n; marca en la lista; aviso de etiquetas | Vitest del formulario (pestañas, salto al error, aviso con `#SolicitaCotización`); navegador | 1,5 |
+| **F4** ✅ La pantalla | modal ancho con pestañas "Mensaje" y "Prompt de Contenido" (punto cuando tiene prompt, salto a la pestaña con error); formulario compartido entre agregar y editar; i18n; marca en la lista; aviso de etiquetas | Vitest del formulario (pestañas, salto al error, aviso con `#SolicitaCotización`); navegador | 1,5 |
 | **F5** Prueba real | pasar #1330 al campo nuevo (contenido = de qué trata; instrucciones = su guion) y una conversación de punta a punta pidiendo cotizar equipo | conversación en develop.wintook.com | 0,5 |
 
-**Total: 5,5 días hábiles.**
+| **F6** Los campos viejos, nativos | migración tolerante de `menu`, `opcion`, `content_full`, `url_content`, `url_short_code`; se borra la llamada a `setCannedReponse`; en el modal, "Enviar tal cual" y "Agregar un link" en "Mensaje" (`menu`/`opcion` siguen escondidos) | request spec: se guardan y se leen; Vitest: "tal cual" apaga la pestaña del prompt | 1 |
+| **F7** "Tal cual" en el motor | la primera con `content_full` se manda exacta, sin modelo; las variables las resuelve `Liquidable` | spec del servicio: no llama a OpenAI y el mensaje sale igual; `{{contact.name}}` reemplazado | 0,5 |
+| **F8** El link | se agrega al final en los tres modos, antes de la etiqueta de la fuente | spec del servicio en los tres modos; validación de URL | 0,5 |
+
+**Total: 7,5 días hábiles** (3 ya hechos: F0, F1 y F4).
 
 ---
 
@@ -321,7 +407,11 @@ el prompt ande. (Ver decisiones abiertas, §6.)
    agente y que pueden romper sus reglas.
 3. ~~¿En modo prompt, solo el contenido de esa respuesta, o también las otras dos?~~
    **Resuelta:** solo el de esa respuesta (lo definió el usuario con el caso #1330, §2.4).
-4. **Los cinco campos del bot viejo:** ¿se sacan (propuesta) o se crean sus columnas para
-   conservarlos? Ningún código los usa hoy.
+4. ~~Los cinco campos del bot viejo: ¿se sacan o se crean sus columnas?~~
+   **Resuelta (18/09/2026):** se traen a Chatwoot (§3.5). `content_full` y el link se usan en esta
+   rama; `menu`/`opcion` se guardan pero quedan escondidos hasta que exista el menú.
+6. **El menú numerado** (`menu`/`opcion` y la pestaña "Menú del sistema"): proyecto aparte. Hoy
+   la configuración de esa pestaña también depende del bot viejo (`getSystemSettings` /
+   `setSystemSettings` contra `bot.wintook.com`).
 5. **¿Se muestra el prompt en el Asistente de Agentes IA?** Por ejemplo, en Recursos, las
    respuestas predefinidas que tienen prompt. No es necesario para que funcione; queda para después.
