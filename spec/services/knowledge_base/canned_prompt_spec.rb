@@ -75,4 +75,58 @@ RSpec.describe KnowledgeBase::CannedPrompt do
       expect(prompt.leaks?('¿Qué equipo necesitas y cuántas unidades?')).to be(false)
     end
   end
+
+  describe '.resume' do
+    let(:conversation) { create(:conversation, account: account) }
+    let(:guion) { canned(content_is_prompt: true) }
+
+    def en_curso(**over)
+      state = { 'id' => guion.id, 'route' => 'comercial', 'turns' => 2, 'at' => Time.current.iso8601 }.merge(over)
+      conversation.update!(additional_attributes: { 'kb_canned_prompt' => state })
+    end
+
+    it 'retoma el guion en la misma ruta' do
+      en_curso
+      prompt = described_class.resume(account, conversation, 'comercial', [])
+
+      expect(prompt.canned).to eq(guion)
+      expect(prompt).to be_continuing
+    end
+
+    it 'lo suelta si cambió la ruta, llegó al tope de mensajes, venció o la respuesta ya no tiene prompt' do
+      en_curso
+      expect(described_class.resume(account, conversation, 'soporte', [])).to be_nil
+
+      en_curso('turns' => described_class::MAX_TURNS)
+      expect(described_class.resume(account, conversation, 'comercial', [])).to be_nil
+
+      en_curso('at' => 25.hours.ago.iso8601)
+      expect(described_class.resume(account, conversation, 'comercial', [])).to be_nil
+
+      en_curso
+      guion.update!(content_is_prompt: false)
+      expect(described_class.resume(account, conversation, 'comercial', [])).to be_nil
+    end
+
+    it 'recuerda y olvida sin tocar el resto de los atributos' do
+      conversation.update!(additional_attributes: { 'kb_history' => [1] })
+      prompt = described_class.detect(account, [item_for(guion)])
+
+      prompt.remember!(conversation, 'comercial')
+      expect(conversation.reload.additional_attributes['kb_canned_prompt']).to include('id' => guion.id, 'turns' => 1)
+
+      described_class.forget!(conversation)
+      expect(conversation.reload.additional_attributes).to eq('kb_history' => [1])
+    end
+  end
+
+  describe '#closes?' do
+    it 'cierra con una etiqueta que el guion nombra, sin importar mayúsculas' do
+      prompt = described_class.new(:message_is_prompt, canned(content: 'Al final usa #solicita_cotizacion.'))
+
+      expect(prompt.closes?("Listo.\n#Solicita_Cotizacion")).to be(true)
+      expect(prompt.closes?("Listo.\n#comercial2")).to be(false)
+      expect(prompt.closes?('¿Qué equipo necesitas?')).to be(false)
+    end
+  end
 end

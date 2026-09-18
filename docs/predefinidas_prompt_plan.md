@@ -492,6 +492,33 @@ Sobre la **primera** respuesta predefinida que encuentra `@buscar_predefinidas`:
   No cubre `KnowledgeBase::DirectiveRunner` (API externa `/knowledge_base/directive`) ni la prueba en
   seco del Asistente, que no redacta.
 
+### 3.8 Guion en curso (opción B, elegida por el usuario 18/09/2026) — IMPLEMENTADO
+
+Un prompt suele ser un guion de varios mensajes, pero la búsqueda es por mensaje: "5 laptops i7" o
+"el martes a las 10" ya no traen la respuesta del guion en primer lugar. Cuando una respuesta con
+prompt se usa, la conversación la recuerda (`additional_attributes.kb_canned_prompt`) y la sigue
+aplicando:
+
+```
+"quiero cotizar laptops"  → #1330 sale 1ª → aplica guion → 📌 en curso: #1330 (1)
+"5 laptops i7, oficina"   → sale otra     → 📌 sigue #1330 (2) + lo encontrado, por si acaso
+"el martes a las 10"      → no sale nada  → 📌 sigue #1330 (3)
+respuesta con #solicita_cotizacion        → 🏁 se suelta
+```
+
+Se suelta con lo primero que pase: la respuesta trae una etiqueta **que el guion nombra**; la
+búsqueda trae primera **otra** respuesta con prompt (se cambia a esa); el clasificador cambia de
+**ruta**; **8 mensajes** o **24 h** sin usarse; la respuesta se borró o dejó de tener prompt.
+
+A mitad del guion el modelo recibe "GUION EN CURSO: continúa desde donde quedó, no repitas pasos ni
+pidas datos ya dados", las instrucciones, y lo que encontró la búsqueda en ese mensaje (para
+contestar una pregunta suelta y retomar). Una respuesta descartada por filtración no hace avanzar el
+guion. La agenda (`@agendar_calendar`) y `@crear_ticket` corren antes que la búsqueda en el job, así
+que pueden tomar un mensaje en medio del guion sin romperlo.
+
+**Qué pide esto del contenido:** que el guion termine con una etiqueta escrita en él (la de cierre),
+y que su condición de uso no impida seguirlo en los mensajes siguientes.
+
 ## 4. Riesgos y cómo se cubren
 
 | Riesgo | Cubierto por |

@@ -118,4 +118,76 @@ RSpec.describe KnowledgeBaseResponseService do
     expect(conversation.reload.additional_attributes['kb_history'].pluck('a'))
       .to eq(['La laptop Dell cuesta $15,000.'])
   end
+
+  # §3.8 — el guion sigue en los mensajes siguientes aunque la búsqueda ya no lo traiga.
+  describe 'guion en curso' do
+    def say(text)
+      msg = create(:message, account: account, inbox: inbox, conversation: conversation, sender: contact, content: text)
+      described_class.new(msg, tracking: tracking).perform
+    end
+
+    def state
+      conversation.reload.additional_attributes['kb_canned_prompt']
+    end
+
+    before do
+      precios.update!(content: 'Pide equipo y cantidad. Al terminar, cierra con #solicita_cotizacion.',
+                      content_is_prompt: true)
+    end
+
+    it 'sigue con el guion cuando el siguiente mensaje trae otra respuesta, y le pasa esa por si acaso' do
+      found(precios)
+      stub_chat('¡Claro! ¿Qué equipo y cuántos?', 'Anotado: 5 laptops i7.')
+      say('quiero cotizar laptops')
+      expect(state).to include('id' => precios.id, 'turns' => 1)
+
+      found(vecina)
+      expect(say('5 laptops i7 para oficina')).to be(true)
+
+      expect(turn_sent(1)).to include('GUION EN CURSO', 'Pide equipo y cantidad.', 'Garantía de un año.')
+      expect(state['turns']).to eq(2)
+    end
+
+    it 'sigue aunque el mensaje no encuentre nada' do
+      found(precios)
+      stub_chat('¿Qué equipo necesitas?', 'Perfecto, el martes a las 10.')
+      say('quiero cotizar laptops')
+
+      allow(KnowledgeItem).to receive(:search_by_embedding).and_return([])
+      expect(say('el martes a las 10')).to be(true)
+      expect(turn_sent(1)).to include('GUION EN CURSO')
+    end
+
+    it 'se suelta cuando la respuesta trae la etiqueta de cierre que nombra el guion' do
+      found(precios)
+      stub_chat("Listo, se lo paso al asesor.\n#solicita_cotizacion", 'La garantía es de un año.')
+      say('quiero cotizar laptops, 5 i7, sin reunión')
+      expect(state).to be_nil
+
+      found(vecina)
+      say('y la garantía?')
+      expect(turn_sent(1)).to include('Información relevante:')
+      expect(turn_sent(1)).not_to include('GUION EN CURSO')
+    end
+
+    it 'otra respuesta con prompt en primer lugar reemplaza al guion' do
+      found(precios)
+      stub_chat('¿Qué equipo?', 'La garantía cubre un año.')
+      say('quiero cotizar laptops')
+
+      vecina.update!(content_prompts: 'Explica la garantía en una frase.')
+      found(vecina)
+      say('y la garantía?')
+
+      expect(turn_sent(1)).to include('Explica la garantía en una frase.')
+      expect(turn_sent(1)).not_to include('GUION EN CURSO', 'Pide equipo y cantidad.')
+      expect(state).to include('id' => vecina.id, 'turns' => 1)
+    end
+
+    it 'sin guion y sin resultados, no responde (como siempre)' do
+      allow(KnowledgeItem).to receive(:search_by_embedding).and_return([])
+
+      expect(say('hola')).to be(false)
+    end
+  end
 end
