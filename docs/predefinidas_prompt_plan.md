@@ -181,6 +181,44 @@ cambian de comportamiento de un día para otro**, con instrucciones que nadie es
 frase vieja es mayormente inofensiva ("esta es la respuesta que darás si…"), pero no es lo que se
 probó ni lo que se quiso. Ver la decisión 7 (§6).
 
+### 2.6 Quién usa esos campos en staging.wintook.com (medido, solo lectura)
+
+`staging.wintook.com` → nginx → puerto 3020 → `/home/chatwoot_staging/chatwoot` (rama `staging`,
+`2188003d`) → base **`chatwoot_staging_v2`** (la de §2.5).
+
+```
+                ┌────────────────── chatwoot_staging_v2 ──────────────────┐
+                │ public.canned_responses                                  │
+                │   short_code · content · content_prompts · content_full │
+                │   url_content · url_short_code · menu · opcion          │
+                │   trained · embedding · content_processed …             │
+                │ esquemas del bot: wintook · openai (embedding, resources)│
+                │                   chatzeus                               │
+                └─────────▲──────────────────────────────────▲─────────────┘
+                          │ GUARDA (el controlador            │ LEE y ENTRENA
+                          │ acepta los campos)                │ (fuera de Chatwoot)
+                ┌─────────┴─────────┐              ┌──────────┴────────────────┐
+                │ Chatwoot staging  │              │ servicios Wintook externos│
+                │ (su backend Ruby  │              │ bot.wintook.com     → 404 │
+                │ NO lee ninguno)   │              │ openai.wintook.com  → 403 │
+                └───────────────────┘              │ api.wintook.com     → 403 │
+                                                   └───────────────────────────┘
+```
+
+- **El backend de Chatwoot de staging no lee esos campos en ninguna parte:** solo el controlador los
+  guarda. Quien los usa está **fuera de Chatwoot**: los servicios Wintook (la pantalla "Entrenamiento
+  ChatGPT" de staging habla con `openai.wintook.com`; la base tiene su esquema `openai` con
+  `embedding` y `resources`).
+- **Esos servicios responden** (404/403 en la raíz: están en pie, no caídos). No se los consultó más
+  allá de eso.
+- **La llamada `setCannedReponse` tampoco funciona en staging:** `URL_WEBHOOK` no está definida ahí
+  tampoco (solo `WINTOOK_BOT`, `WINTOOK_API` y `WINTOOK_OPENAI`). Borrarla no cambia nada.
+
+**⚠ Lo que implica: el mismo campo lo van a leer DOS motores.** Si el motor de Chatwoot empieza a
+usar `content_prompts` como instrucciones (F2) y alguien escribe ahí un guion como el de #1330, los
+servicios Wintook **también** lo van a leer —y lo usan para otra cosa: entrenar y encontrar la
+respuesta (§2.5)—. Ver decisión 8 (§6).
+
 ---
 
 ## 3. La propuesta
@@ -461,3 +499,13 @@ En la pestaña **"Mensaje"**, debajo del editor, porque dicen qué se hace con e
    - **Otra columna para las instrucciones nuevas**, y `content_prompts` queda con su significado
      viejo (y podría volver a usarse para mejorar la búsqueda, que es para lo que se escribió).
      Contradice lo pedido: el campo del modal es `content_prompts`.
+8. **Dos motores sobre el mismo campo (§2.6).** En staging (y, por lo visto, en producción) los
+   servicios Wintook externos leen `content_prompts`, `content_full`, el link y el menú desde la
+   base. Opciones:
+   - **Compartirlo** (lo pedido: el campo del modal es `content_prompts`): hay que confirmar con
+     quien mantiene los servicios Wintook qué hacen con ese campo y si un guion de instrucciones
+     ahí les rompe algo — por ejemplo, el entrenamiento.
+   - **Separarlo:** una columna nueva solo para las instrucciones del motor de Chatwoot, y
+     `content_prompts` queda para los servicios Wintook. Cero interferencia entre los dos motores,
+     pero es otro campo en el modal.
+   Mientras los servicios Wintook sigan en pie, esta decisión va antes que la 7.
