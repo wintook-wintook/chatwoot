@@ -13,11 +13,11 @@
 #  updated_at          :datetime         not null
 #  account_id          :bigint           not null
 #  knowledge_source_id :bigint           not null
-#  source_id           :integer          not null
+#  source_id           :bigint           not null
 #
 # Indexes
 #
-#  idx_knowledge_items_source                    (account_id,source_type,source_id,chunk_index) UNIQUE
+#  idx_knowledge_items_source                    (account_id,source_type,knowledge_source_id,source_id,chunk_index) UNIQUE
 #  index_knowledge_items_on_account_id           (account_id)
 #  index_knowledge_items_on_knowledge_source_id  (knowledge_source_id)
 #

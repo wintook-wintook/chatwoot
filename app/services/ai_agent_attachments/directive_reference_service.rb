@@ -46,7 +46,12 @@ module AiAgentAttachments
         prompt = template.complementary_prompt.to_s
         if prompt.match?(directive_regex(name))
           new_prompt = yield(prompt)
-          template.update_columns(complementary_prompt: new_prompt) if new_prompt != prompt
+          # update_columns se saltea el callback que mantiene la estructura por bloques:
+          # se pasan las dos columnas juntas o el formulario mostraría el prompt viejo.
+          if new_prompt != prompt
+            template.update_columns(complementary_prompt: new_prompt,
+                                    training_structure: ContactTrackings::TrainingStructure.parse(new_prompt))
+          end
         end
 
         # (b) Seguimientos vivos que copiaron el prompt. El LIKE es un prefiltro coarse

@@ -16,6 +16,13 @@ export const routes = [
     component: () => import('../settings/trackingTemplates/Index.vue'),
   },
   {
+    // proyecto@asistente_agentes_ia — generador de Entrenamientos
+    path: frontendURL('accounts/:accountId/tracking-dashboard/assistant'),
+    name: 'contact_trackings_assistant',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/contactTrackings/Assistant.vue'),
+  },
+  {
     path: frontendURL('accounts/:accountId/tracking-dashboard/metrics'),
     name: 'contact_trackings_metrics',
     meta: { permissions: ['administrator', 'agent'] },

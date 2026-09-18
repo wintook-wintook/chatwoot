@@ -246,6 +246,7 @@
     "TRACKING_LIST": "All follow-ups",
     "TRACKING_AGENTS": "AI Agents",
     "TRACKING_CAMPAIGNS": "AI Agent Campaigns",
+    "TRACKING_ASSISTANT": "Assistant",
     "TRACKING_SUMMARY": "Summary",
     "ERP": "Collections / ERP",
     "ERP_CONSOLE": "Console",
