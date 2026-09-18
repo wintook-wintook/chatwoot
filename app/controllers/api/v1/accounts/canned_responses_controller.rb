@@ -31,17 +31,21 @@ class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseCont
   #   params.require(:canned_response).permit(:short_code, :content)
   # end
 
+  # proyecto@predefinidas_prompt — `menu`, `opcion`, `content_full`, `url_content` y
+  # `url_short_code` son del bot viejo: sus columnas existen en la base de donde salió,
+  # pero no en todas (en chatwoot_dev no). Aceptarlos a ciegas hacía reventar el guardado
+  # con UnknownAttributeError, así que se quedan solo los que la tabla tiene de verdad.
   def canned_response_params
     params.require(:canned_response).permit(
-      :short_code, 
-      :content, 
-      :content_prompts, 
-      :menu, 
-      :opcion, 
-      :content_full, 
-      :url_content, 
+      :short_code,
+      :content,
+      :content_prompts,
+      :menu,
+      :opcion,
+      :content_full,
+      :url_content,
       :url_short_code
-    )
+    ).slice(*CannedResponse.column_names)
   end
 
   def canned_responses

@@ -1,23 +1,22 @@
 <script>
-
 // **Wintook** 100823
-import axios from "axios";
-import { mapGetters } from "vuex";
+import axios from 'axios';
 // **Wintook** 100823
 
-import { useVuelidate } from '@vuelidate/core';
-import { required, minLength } from '@vuelidate/validators';
 import { useAlert } from 'dashboard/composables';
-
-import WootSubmitButton from '../../../../components/buttons/FormSubmitButton.vue';
 import Modal from '../../../../components/Modal.vue';
-import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
+import CannedResponseForm from './CannedResponseForm.vue';
+
+// proyecto@predefinidas_prompt — los campos del bot viejo (menú, opción, contenido
+// completo, link alternativo) quedan escondidos detrás de esta bandera: ningún código los
+// lee, sus columnas no existen en todas las bases, y mandarlos hacía fallar el guardado.
+// No se borra nada: ponerla en true los vuelve a mostrar y a mandar.
+const SHOW_LEGACY_FIELDS = false;
 
 export default {
   components: {
-    WootSubmitButton,
     Modal,
-    WootMessageEditor,
+    CannedResponseForm,
   },
   props: {
     responseContent: {
@@ -26,26 +25,17 @@ export default {
     },
     onClose: {
       type: Function,
-      default: () => { },
+      default: () => {},
     },
-  },
-  setup() {
-    return { v$: useVuelidate() };
   },
   data() {
     return {
-      shortCode: '',
-      content: this.responseContent || '',
-
       // <!-- Andrés Liverio 020822  **Wintook**-->
-      content_prompts: "",
-      urlShortCode: "",
+      urlShortCode: '',
       contentFull: false,
       urlContent: false,
       opcMenu: false,
       noOptionMenu: 0,
-      existsOption: false,
-      insert: {},
       // <!-- Andrés Liverio 020822 **Wintook**-->
 
       addCanned: {
@@ -55,51 +45,22 @@ export default {
       show: true,
     };
   },
-  validations: {
-    shortCode: {
-      required,
-      minLength: minLength(2),
-    },
-    content: {
-      required,
-    },
-  },
-
-  // <!-- Andrés Liverio 020822  **Wintook**-->
   computed: {
-    ...mapGetters({
-      currentUser: "getCurrentUser",
-    }),
-  },
-  // <!-- Andrés Liverio 020822  **Wintook**-->
-
-  methods: {
-    resetForm() {
-      this.shortCode = '';
-      this.content = '';
-      this.v$.shortCode.$reset();
-      this.v$.content.$reset();
+    showLegacyFields() {
+      return SHOW_LEGACY_FIELDS;
     },
-    addCannedResponse() {
-      // Show loading on button
+  },
+  methods: {
+    addCannedResponse(campos) {
       this.addCanned.showLoading = true;
-      // Make API Calls
       this.$store
         .dispatch('createCannedResponse', {
-          short_code: this.shortCode,
-          content: this.content,
-          content_prompts: this.content_prompts, 
-          menu: this.opcMenu,
-          opcion: this.noOptionMenu,
-          content_full: this.contentFull,
-          url_content: this.urlContent,
-          url_short_code: this.urlShortCode,
-
+          ...campos,
+          ...(this.showLegacyFields ? this.legacyFields() : {}),
         })
         .then(() => {
           this.addCanned.showLoading = false;
           useAlert(this.$t('CANNED_MGMT.ADD.API.SUCCESS_MESSAGE'));
-          this.resetForm();
           this.onClose();
         })
         .catch(error => {
@@ -111,34 +72,30 @@ export default {
     },
 
     // <!-- Andrés Liverio 020822 **Wintook**-->
+    legacyFields() {
+      return {
+        menu: this.opcMenu,
+        opcion: this.noOptionMenu,
+        content_full: this.contentFull,
+        url_content: this.urlContent,
+        url_short_code: this.urlShortCode,
+      };
+    },
     setCannedReponse(data) {
-      let id = data.id;
-      let account_id = data.account_id;
-      let url_short_code = this.urlShortCode;
-      let content_full = this.contentFull;
-      let url_content = this.urlContent;
-      let opcMenu = this.opcMenu;
-      let noOptionMenu = this.noOptionMenu;
-
-      let response = axios
-        .post(process.env.WINTOOK_BOT + "/api/setCannedReponse", {
+      return axios
+        .post(`${process.env.WINTOOK_BOT}/api/setCannedReponse`, {
           params: {
-            id: id,
-            account_id: account_id,
-            url_short_code: url_short_code,
-            content_full: content_full,
-            url_content: url_content,
-            opcMenu: opcMenu,
-            noOptionMenu: noOptionMenu,
+            id: data.id,
+            account_id: data.account_id,
+            url_short_code: this.urlShortCode,
+            content_full: this.contentFull,
+            url_content: this.urlContent,
+            opcMenu: this.opcMenu,
+            noOptionMenu: this.noOptionMenu,
           },
         })
-        .then(function (resp) {
-          return resp.data;
-        })
-        .catch(function (error) {
-          return error;
-        });
-      return response;
+        .then(resp => resp.data)
+        .catch(error => error);
     },
     // <!-- Andrés Liverio 020822 **Wintook**-->
   },
@@ -146,100 +103,67 @@ export default {
 </script>
 
 <template>
-  <Modal :show.sync="show" :on-close="onClose">
+  <!-- size="medium": el modal grande del dashboard (900 px). El mensaje y su prompt
+       son textos largos: en el ancho de siempre no se leían. -->
+  <Modal :show.sync="show" :on-close="onClose" size="medium">
     <div class="flex flex-col h-auto overflow-auto">
-      <woot-modal-header :header-title="$t('CANNED_MGMT.ADD.TITLE')" :header-content="$t('CANNED_MGMT.ADD.DESC')" />
-      <form class="flex flex-col w-full" @submit.prevent="addCannedResponse()">
-        <div class="w-full">
-          <label :class="{ error: v$.shortCode.$error }">
-            {{ $t('CANNED_MGMT.ADD.FORM.SHORT_CODE.LABEL') }}
-            <input v-model.trim="shortCode" type="text" :placeholder="$t('CANNED_MGMT.ADD.FORM.SHORT_CODE.PLACEHOLDER')"
-              @input="v$.shortCode.$touch" />
-          </label>
-        </div>
-
-        <div class="w-full">
-          <label :class="{ error: v$.content.$error }">
-            {{ $t('CANNED_MGMT.ADD.FORM.CONTENT.LABEL') }}
-          </label>
-          <div class="editor-wrap">
-            <WootMessageEditor v-model="content" class="message-editor [&>div]:px-1"
-              :class="{ editor_warning: v$.content.$error }" enable-variables :enable-canned-responses="false"
-              :placeholder="$t('CANNED_MGMT.ADD.FORM.CONTENT.PLACEHOLDER')" @blur="v$.content.$touch" />
+      <woot-modal-header
+        :header-title="$t('CANNED_MGMT.ADD.TITLE')"
+        :header-content="$t('CANNED_MGMT.ADD.DESC')"
+      />
+      <CannedResponseForm
+        class="px-8 pb-6"
+        :content="responseContent"
+        :submit-text="$t('CANNED_MGMT.ADD.FORM.SUBMIT')"
+        :cancel-text="$t('CANNED_MGMT.ADD.CANCEL_BUTTON_TEXT')"
+        :loading="addCanned.showLoading"
+        @submit="addCannedResponse"
+        @cancel="onClose"
+      >
+        <!-- Andrés Liverio 020822 **Wintook** -->
+        <template v-if="showLegacyFields" #legacy>
+          <div class="flex items-center w-full gap-2">
+            <input v-model="opcMenu" type="checkbox" :checked="opcMenu" />
+            <label>{{ $t('CANNED_MGMT.LEGACY.MENU') }}</label>
           </div>
-        </div>
-
-        <div class="w-full">
-          <label>
-            {{ 'Prompts de Contenido' }}
-            <textarea v-model.trim="content_prompts" type="text" rows="5"
-              :placeholder="'Describe los prompts de contenido...'" />
-          </label>
-        </div>
-
+          <div class="w-full">
+            <label>{{ $t('CANNED_MGMT.LEGACY.MENU_OPTION') }}</label>
+            <input
+              v-model="noOptionMenu"
+              type="number"
+              step="1"
+              min="3"
+              max="99"
+              class="w-36"
+              :disabled="!opcMenu"
+            />
+          </div>
+          <div class="flex items-center w-full gap-2">
+            <input
+              v-model="contentFull"
+              type="checkbox"
+              :checked="contentFull"
+            />
+            <label>{{ $t('CANNED_MGMT.LEGACY.CONTENT_FULL') }}</label>
+          </div>
+          <div class="flex items-center w-full gap-2">
+            <input v-model="urlContent" type="checkbox" :checked="urlContent" />
+            <label>{{ $t('CANNED_MGMT.LEGACY.URL_CONTENT') }}</label>
+          </div>
+          <div v-show="urlContent" class="w-full">
+            <label class="w-full">
+              {{ $t('CANNED_MGMT.LEGACY.URL') }}
+              <input
+                v-model.trim="urlShortCode"
+                class="w-full"
+                type="url"
+                :placeholder="$t('CANNED_MGMT.LEGACY.URL_PLACEHOLDER')"
+              />
+            </label>
+          </div>
+        </template>
         <!-- Andrés Liverio 020822 **Wintook** -->
-        <div class="w-full flex items-center gap-2">
-          <input v-model="opcMenu" type="checkbox" :checked="opcMenu" />
-          <label>
-            {{ "Mostrar como opción de Menú." }}
-          </label>
-        </div>
-
-        <div class="w-full">
-          <label>
-            {{ "Número de opción del menú." }}
-          </label>
-          <input type="number" step="1" min="3" max="99" v-model="noOptionMenu" style="width: 150px"
-            :disabled="!opcMenu" />
-        </div>
-
-        <div class="w-full flex items-center gap-2">
-          <input v-model="contentFull" type="checkbox" :checked="contentFull" />
-          <label>
-            {{ "Mostrar el contenido completo en el resultado de la búsqueda" }}
-          </label>
-        </div>
-
-        <div class="w-full flex items-center gap-2">
-          <input v-model="urlContent" type="checkbox" :checked="urlContent" />
-          <label>
-            {{ "Agregar link de dirección web alternativa" }}
-          </label>
-        </div>
-
-        <div class="w-full" v-show="urlContent">
-          <label class="w-full">
-            {{ "Link de direccón web alternativa" }}
-            <input class="w-full" v-model.trim="urlShortCode" type="url" placeholder="Por favor, Introduzca una dirección web" />
-          </label>
-        </div>
-        <!-- Andrés Liverio 020822 **Wintook** -->
-
-        <div class="flex flex-row justify-end w-full gap-2 px-0 py-2">
-          <WootSubmitButton :disabled="v$.content.$invalid ||
-            v$.shortCode.$invalid ||
-            addCanned.showLoading
-            " :button-text="$t('CANNED_MGMT.ADD.FORM.SUBMIT')" :loading="addCanned.showLoading" />
-          <button class="button clear" @click.prevent="onClose">
-            {{ $t('CANNED_MGMT.ADD.CANCEL_BUTTON_TEXT') }}
-          </button>
-        </div>
-      </form>
+      </CannedResponseForm>
     </div>
   </Modal>
 </template>
-<!-- <style scoped lang="scss">
-::v-deep {
-  .ProseMirror-menubar {
-    @apply hidden;
-  }
-
-  .ProseMirror-woot-style {
-    @apply min-h-[12.5rem];
-
-    p {
-      @apply text-base;
-    }
-  }
-}
-</style> -->
