@@ -4,8 +4,13 @@
 #
 #  id              :integer          not null, primary key
 #  content         :text
+#  content_full    :boolean          default(FALSE), not null
 #  content_prompts :text
+#  menu            :boolean          default(FALSE), not null
+#  opcion          :bigint           default(0), not null
 #  short_code      :string
+#  url_content     :boolean          default(FALSE), not null
+#  url_short_code  :text
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  account_id      :integer          not null

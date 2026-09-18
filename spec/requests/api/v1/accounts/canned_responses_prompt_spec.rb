@@ -27,15 +27,37 @@ RSpec.describe 'Respuestas predefinidas con prompt propio' do
     expect(canned.reload.content_prompts).to eq('')
   end
 
-  # Lo que rompía el formulario: los campos del bot viejo no tienen columna en todas las
-  # bases, y el modelo reventaba con UnknownAttributeError.
-  it 'no revienta si llegan los campos del bot viejo' do
+  # Los campos que antes guardaba el bot viejo (y en chatwoot_dev reventaban el guardado):
+  # ahora los guarda la API de Chatwoot, en su tabla.
+  it 'guarda los campos del menú, el contenido completo y el link' do
     post base, params: { short_code: 'CON CAMPOS VIEJOS', content: 'algo', menu: true, opcion: 3,
                          content_full: true, url_content: true, url_short_code: 'https://x.test' },
                headers: agent.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:success)
-    expect(account.canned_responses.find_by(short_code: 'CON CAMPOS VIEJOS').content).to eq('algo')
+    guardada = account.canned_responses.find_by(short_code: 'CON CAMPOS VIEJOS')
+    expect(guardada.attributes.slice('menu', 'opcion', 'content_full', 'url_content', 'url_short_code'))
+      .to eq('menu' => true, 'opcion' => 3, 'content_full' => true, 'url_content' => true,
+             'url_short_code' => 'https://x.test')
+  end
+
+  it 'los actualiza y los devuelve al editar' do
+    canned = create(:canned_response, account: account)
+
+    put "#{base}/#{canned.id}", params: { menu: true, opcion: 5, url_content: true, url_short_code: 'https://y.test' },
+                                headers: agent.create_new_auth_token, as: :json
+
+    expect(response.parsed_body).to include('menu' => true, 'opcion' => 5, 'url_content' => true,
+                                            'url_short_code' => 'https://y.test', 'content_full' => false)
+  end
+
+  # Una respuesta sin tocar esos campos queda con los defaults de la tabla.
+  it 'sin esos campos, usa los valores por defecto' do
+    post base, params: { short_code: 'SIN CAMPOS', content: 'algo' }, headers: agent.create_new_auth_token, as: :json
+
+    guardada = account.canned_responses.find_by(short_code: 'SIN CAMPOS')
+    expect(guardada.attributes.slice('menu', 'opcion', 'content_full', 'url_content', 'url_short_code'))
+      .to eq('menu' => false, 'opcion' => 0, 'content_full' => false, 'url_content' => false, 'url_short_code' => nil)
   end
 
   it 'devuelve el prompt en la lista' do

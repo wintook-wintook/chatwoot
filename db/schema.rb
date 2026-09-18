@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_09_18_184830) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_18_201124) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -247,6 +247,11 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_18_184830) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.text "content_prompts"
+    t.boolean "content_full", default: false, null: false
+    t.boolean "url_content", default: false, null: false
+    t.text "url_short_code"
+    t.boolean "menu", default: false, null: false
+    t.bigint "opcion", default: 0, null: false
   end
 
   create_table "case_ai_configs", force: :cascade do |t|

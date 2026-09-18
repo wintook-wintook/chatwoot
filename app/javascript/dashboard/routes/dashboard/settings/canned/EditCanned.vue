@@ -1,15 +1,12 @@
 <script>
-// **Wintook** 100823
-import axios from 'axios';
-// **Wintook** 100823
-
 import { useAlert } from 'dashboard/composables';
 import Modal from '../../../../components/Modal.vue';
 import CannedResponseForm from './CannedResponseForm.vue';
 
-// proyecto@predefinidas_prompt — ver AddCanned.vue: los campos del bot viejo y su
-// llamada al webhook del bot quedan detrás de esta bandera.
-const SHOW_LEGACY_FIELDS = false;
+// proyecto@predefinidas_prompt — los campos del bot viejo (menú, opción, contenido
+// completo, link alternativo) los guarda ahora la API de Chatwoot, en su propia tabla,
+// igual que el nombre, el mensaje y el prompt. Antes se mandaban además al bot viejo
+// (setCannedReponse), por una URL que no estaba definida: ya no hace falta.
 
 export default {
   components: {
@@ -32,20 +29,17 @@ export default {
       show: true,
 
       // <!-- Andrés Liverio 020822 **Wintook** -->
-      urlShortCode: this.edactiveResponse.url_short_code,
-      contentFull: this.edactiveResponse.content_full,
-      urlContent: this.edactiveResponse.url_content,
-      opcMenu: this.edactiveResponse.menu,
-      noOptionMenu: this.edactiveResponse.opcion,
+      urlShortCode: this.edactiveResponse.url_short_code || '',
+      contentFull: Boolean(this.edactiveResponse.content_full),
+      urlContent: Boolean(this.edactiveResponse.url_content),
+      opcMenu: Boolean(this.edactiveResponse.menu),
+      noOptionMenu: this.edactiveResponse.opcion || 0,
       // <!-- Andrés Liverio 020822 **Wintook** -->
     };
   },
   computed: {
     pageTitle() {
       return `${this.$t('CANNED_MGMT.EDIT.TITLE')} - ${this.edshortCode}`;
-    },
-    showLegacyFields() {
-      return SHOW_LEGACY_FIELDS;
     },
   },
   methods: {
@@ -55,11 +49,9 @@ export default {
         .dispatch('updateCannedResponse', {
           id: this.id,
           ...campos,
-          ...(this.showLegacyFields ? this.legacyFields() : {}),
+          ...this.legacyFields(),
         })
         .then(() => {
-          // <!-- Andrés Liverio 020822 **Wintook** -->
-          if (this.showLegacyFields) this.setCannedReponse();
           this.editCanned.showLoading = false;
           useAlert(this.$t('CANNED_MGMT.EDIT.API.SUCCESS_MESSAGE'));
           setTimeout(() => {
@@ -84,26 +76,6 @@ export default {
         url_short_code: this.urlShortCode,
       };
     },
-    async setCannedReponse() {
-      const response = await axios
-        .post(`${process.env.URL_WEBHOOK}/api/setCannedReponse`, {
-          params: {
-            id: this.id,
-            account_id: this.edactiveResponse.account_id,
-            url_short_code: this.urlShortCode,
-            content_full: this.contentFull,
-            url_content: this.urlContent,
-            opcMenu: this.opcMenu,
-            noOptionMenu: this.noOptionMenu,
-          },
-        })
-        .then(resp => resp.data)
-        .catch(error => error);
-
-      if (response.status === 400) {
-        useAlert(response.status.message);
-      }
-    },
     // <!-- Andrés Liverio 020822 **Wintook** -->
   },
 };
@@ -126,7 +98,7 @@ export default {
         @cancel="onClose"
       >
         <!-- Andrés Liverio 020822 **Wintook** -->
-        <template v-if="showLegacyFields" #legacy>
+        <template #legacy>
           <div class="flex items-center w-full gap-2">
             <input v-model="opcMenu" type="checkbox" :checked="opcMenu" />
             <label>{{ $t('CANNED_MGMT.LEGACY.MENU') }}</label>
@@ -134,7 +106,7 @@ export default {
           <div class="w-full">
             <label>{{ $t('CANNED_MGMT.LEGACY.MENU_OPTION') }}</label>
             <input
-              v-model="noOptionMenu"
+              v-model.number="noOptionMenu"
               type="number"
               step="1"
               min="3"

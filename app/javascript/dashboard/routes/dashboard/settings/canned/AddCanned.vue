@@ -1,17 +1,12 @@
 <script>
-// **Wintook** 100823
-import axios from 'axios';
-// **Wintook** 100823
-
 import { useAlert } from 'dashboard/composables';
 import Modal from '../../../../components/Modal.vue';
 import CannedResponseForm from './CannedResponseForm.vue';
 
 // proyecto@predefinidas_prompt — los campos del bot viejo (menú, opción, contenido
-// completo, link alternativo) quedan escondidos detrás de esta bandera: ningún código los
-// lee, sus columnas no existen en todas las bases, y mandarlos hacía fallar el guardado.
-// No se borra nada: ponerla en true los vuelve a mostrar y a mandar.
-const SHOW_LEGACY_FIELDS = false;
+// completo, link alternativo) los guarda ahora la API de Chatwoot, en su propia tabla,
+// igual que el nombre, el mensaje y el prompt. Antes se mandaban además al bot viejo
+// (setCannedReponse), por una URL que no estaba definida: ya no hace falta.
 
 export default {
   components: {
@@ -45,18 +40,14 @@ export default {
       show: true,
     };
   },
-  computed: {
-    showLegacyFields() {
-      return SHOW_LEGACY_FIELDS;
-    },
-  },
+  computed: {},
   methods: {
     addCannedResponse(campos) {
       this.addCanned.showLoading = true;
       this.$store
         .dispatch('createCannedResponse', {
           ...campos,
-          ...(this.showLegacyFields ? this.legacyFields() : {}),
+          ...this.legacyFields(),
         })
         .then(() => {
           this.addCanned.showLoading = false;
@@ -80,22 +71,6 @@ export default {
         url_content: this.urlContent,
         url_short_code: this.urlShortCode,
       };
-    },
-    setCannedReponse(data) {
-      return axios
-        .post(`${process.env.WINTOOK_BOT}/api/setCannedReponse`, {
-          params: {
-            id: data.id,
-            account_id: data.account_id,
-            url_short_code: this.urlShortCode,
-            content_full: this.contentFull,
-            url_content: this.urlContent,
-            opcMenu: this.opcMenu,
-            noOptionMenu: this.noOptionMenu,
-          },
-        })
-        .then(resp => resp.data)
-        .catch(error => error);
     },
     // <!-- Andrés Liverio 020822 **Wintook**-->
   },
@@ -121,7 +96,7 @@ export default {
         @cancel="onClose"
       >
         <!-- Andrés Liverio 020822 **Wintook** -->
-        <template v-if="showLegacyFields" #legacy>
+        <template #legacy>
           <div class="flex items-center w-full gap-2">
             <input v-model="opcMenu" type="checkbox" :checked="opcMenu" />
             <label>{{ $t('CANNED_MGMT.LEGACY.MENU') }}</label>
@@ -129,7 +104,7 @@ export default {
           <div class="w-full">
             <label>{{ $t('CANNED_MGMT.LEGACY.MENU_OPTION') }}</label>
             <input
-              v-model="noOptionMenu"
+              v-model.number="noOptionMenu"
               type="number"
               step="1"
               min="3"

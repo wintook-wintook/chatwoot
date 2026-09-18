@@ -1,6 +1,6 @@
 # Respuestas predefinidas con prompt propio
 
-**Rama:** `feat/predefinidas_prompt` (desde `develop`) · **Pedido:** 18/09/2026 · **Estado:** F0, F1 y F4 hechas (`e8e21943`); F2, F3, F5 y los campos del bot viejo (§3.5, F6–F8) pendientes
+**Rama:** `feat/predefinidas_prompt` (desde `develop`) · **Pedido:** 18/09/2026 · **Estado:** F0, F1, F4 y el guardado de F6 hechos; F2, F3, F5, el resto de F6 ("tal cual" y link en el modal nuevo) y F7–F8 pendientes
 
 ---
 
@@ -464,7 +464,7 @@ En la pestaña **"Mensaje"**, debajo del editor, porque dicen qué se hace con e
 | **F4** ✅ La pantalla | modal ancho con pestañas "Mensaje" y "Prompt de Contenido" (punto cuando tiene prompt, salto a la pestaña con error); formulario compartido entre agregar y editar; i18n; marca en la lista; aviso de etiquetas | Vitest del formulario (pestañas, salto al error, aviso con `#SolicitaCotización`); navegador | 1,5 |
 | **F5** Prueba real | pasar #1330 al campo nuevo (contenido = de qué trata; instrucciones = su guion) y una conversación de punta a punta pidiendo cotizar equipo | conversación en develop.wintook.com | 0,5 |
 
-| **F6** Los campos viejos, nativos | migración tolerante de `menu`, `opcion`, `content_full`, `url_content`, `url_short_code`; se borra la llamada a `setCannedReponse`; en el modal, "Enviar tal cual" y "Agregar un link" en "Mensaje" (`menu`/`opcion` siguen escondidos) | request spec: se guardan y se leen; Vitest: "tal cual" apaga la pestaña del prompt | 1 |
+| **F6** (guardado ✅) Los campos viejos, nativos | migración tolerante de `menu`, `opcion`, `content_full`, `url_content`, `url_short_code`; se borra la llamada a `setCannedReponse`; en el modal, "Enviar tal cual" y "Agregar un link" en "Mensaje" (`menu`/`opcion` siguen escondidos) | request spec: se guardan y se leen; Vitest: "tal cual" apaga la pestaña del prompt | 1 |
 | **F7** "Tal cual" en el motor | la primera con `content_full` se manda exacta, sin modelo; las variables las resuelve `Liquidable` | spec del servicio: no llama a OpenAI y el mensaje sale igual; `{{contact.name}}` reemplazado | 0,5 |
 | **F8** El link | se agrega al final en los tres modos, antes de la etiqueta de la fuente | spec del servicio en los tres modos; validación de URL | 0,5 |
 
@@ -482,8 +482,10 @@ En la pestaña **"Mensaje"**, debajo del editor, porque dicen qué se hace con e
 3. ~~¿En modo prompt, solo el contenido de esa respuesta, o también las otras dos?~~
    **Resuelta:** solo el de esa respuesta (lo definió el usuario con el caso #1330, §2.4).
 4. ~~Los cinco campos del bot viejo: ¿se sacan o se crean sus columnas?~~
-   **Resuelta (18/09/2026):** se traen a Chatwoot (§3.5). `content_full` y el link se usan en esta
-   rama; `menu`/`opcion` se guardan pero quedan escondidos hasta que exista el menú.
+   **Resuelta (18/09/2026):** los seis campos (`content_prompts` y los cinco del bot viejo) los guarda
+   la API de Chatwoot, en su tabla; se ven y se editan en el modal con sus rótulos de siempre. Sin
+   llamadas al bot: se borraron `setCannedReponse` y `getCannedReponse`. La migración usa los mismos
+   tipos que en `chatwoot_staging_v2`, así que allá no hace nada y los datos quedan.
 6. **El menú numerado** (`menu`/`opcion` y la pestaña "Menú del sistema"): proyecto aparte. Hoy
    la configuración de esa pestaña también depende del bot viejo (`getSystemSettings` /
    `setSystemSettings` contra `bot.wintook.com`).
