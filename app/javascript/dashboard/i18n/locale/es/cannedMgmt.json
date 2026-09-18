@@ -74,7 +74,6 @@
       "TAB_PROMPT": "Prompt de Contenido",
       "TAB_PROMPT_ACTIVE": "Prompt de Contenido ●",
       "PLACEHOLDER": "Ej.: 1. Responde de forma cordial. 2. Pedí qué equipo necesita y la cantidad. 3. Explicá que un asesor comercial le va a dar seguimiento…",
-      "HELP": "Instrucciones para el agente IA sobre cómo usar este mensaje. El cliente nunca las ve, y se aplican solo junto con el mensaje de esta respuesta. Si lo dejás vacío, el agente usa el mensaje como hasta ahora.",
       "TAG_MISSING": "La etiqueta %{tag} no existe en la cuenta: no va a disparar ninguna automatización.",
       "TAG_UNREADABLE": "La etiqueta %{tag} tiene caracteres que el motor no lee (tildes, eñes, guiones): la toma como %{read}. Usá solo minúsculas, números y guion bajo.",
       "LIST_BADGE": "Con prompt",

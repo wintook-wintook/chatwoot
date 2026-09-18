@@ -74,7 +74,6 @@
       "TAB_PROMPT": "Content prompt",
       "TAB_PROMPT_ACTIVE": "Content prompt ●",
       "PLACEHOLDER": "E.g.: 1. Answer warmly. 2. Ask which equipment they need and how many. 3. Explain a sales advisor will follow up…",
-      "HELP": "Instructions for the AI agent on how to use this message. The customer never sees them, and they only apply together with this response's message. Leave it empty and the agent uses the message as before.",
       "TAG_MISSING": "The label %{tag} does not exist in this account: it will not trigger any automation.",
       "TAG_UNREADABLE": "The label %{tag} has characters the engine does not read (accents, ñ, hyphens): it reads it as %{read}. Use only lowercase letters, numbers and underscores.",
       "LIST_BADGE": "With prompt",

@@ -166,39 +166,40 @@ export default {
       />
     </woot-tabs>
 
-    <!-- v-show y no v-if: el editor conserva lo escrito al cambiar de pestaña. -->
+    <!-- v-show y no v-if: el editor conserva lo escrito al cambiar de pestaña.
+         Las dos pestañas miden lo mismo (PANEL_HEIGHT) para que el modal no cambie de
+         alto al pasar de una a otra: lo que no entra, se desplaza adentro. El aviso de
+         error y los de etiquetas van dentro de esa altura, achicando el campo. -->
     <div
       v-show="activeTab === $options.MESSAGE_TAB"
-      class="flex flex-col gap-3"
+      class="flex flex-col gap-1 panel-height"
+      :class="{ error: v$.form.content.$error }"
     >
-      <div :class="{ error: v$.form.content.$error }">
-        <div class="editor-wrap">
-          <WootMessageEditor
-            v-model="form.content"
-            class="message-editor [&>div]:px-1"
-            :class="{ editor_warning: v$.form.content.$error }"
-            enable-variables
-            :enable-canned-responses="false"
-            :placeholder="$t('CANNED_MGMT.ADD.FORM.CONTENT.PLACEHOLDER')"
-            @blur="v$.form.content.$touch"
-          />
-        </div>
-        <span v-if="v$.form.content.$error" class="message">
-          {{ $t('CANNED_MGMT.ADD.FORM.CONTENT.ERROR') }}
-        </span>
+      <div class="flex-1 min-h-0 editor-wrap !mb-0">
+        <WootMessageEditor
+          v-model="form.content"
+          class="message-editor h-full overflow-y-auto [&>div]:px-1"
+          :class="{ editor_warning: v$.form.content.$error }"
+          enable-variables
+          :enable-canned-responses="false"
+          :placeholder="$t('CANNED_MGMT.ADD.FORM.CONTENT.PLACEHOLDER')"
+          @blur="v$.form.content.$touch"
+        />
       </div>
+      <span v-if="v$.form.content.$error" class="message !mb-0">
+        {{ $t('CANNED_MGMT.ADD.FORM.CONTENT.ERROR') }}
+      </span>
     </div>
 
-    <div v-show="activeTab === $options.PROMPT_TAB" class="flex flex-col gap-2">
+    <div
+      v-show="activeTab === $options.PROMPT_TAB"
+      class="flex flex-col gap-1 panel-height"
+    >
       <textarea
         v-model="form.contentPrompts"
-        rows="14"
-        class="w-full !mb-0 min-h-[20rem]"
+        class="flex-1 w-full min-h-0 !h-auto !mb-0 resize-none"
         :placeholder="$t('CANNED_MGMT.FORM_PROMPT.PLACEHOLDER')"
       />
-      <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
-        {{ $t('CANNED_MGMT.FORM_PROMPT.HELP') }}
-      </p>
       <p
         v-for="aviso in tagWarnings"
         :key="aviso"
@@ -246,13 +247,18 @@ export default {
 </template>
 
 <style scoped lang="scss">
+// El alto de las dos pestañas (ver el template).
+.panel-height {
+  @apply h-[18rem];
+}
+
 ::v-deep {
   .ProseMirror-menubar {
     @apply hidden;
   }
 
   .ProseMirror-woot-style {
-    @apply min-h-[16rem];
+    @apply min-h-[15rem];
 
     p {
       @apply text-base;
