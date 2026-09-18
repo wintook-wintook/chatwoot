@@ -217,27 +217,63 @@ datos bancarios.
 
 ### 3.4 La pantalla
 
+El modal de agregar y editar pasa a ser **más ancho** (el tamaño grande nativo del dashboard,
+`size="medium"`, 900 px: el mismo de los modales del Asistente) y se parte en **dos pestañas**
+(`woot-tabs`, nativas):
+
 ```
- ┌─ Agregar respuesta predefinida ─────────────────────────────────────────┐
- │ Nombre (short code)   [ DATOS BANCARIOS                        ]        │
- │ Contenido             [ Banco: BBVA · CLABE 012… · A nombre de… ]       │
- │                                                                         │
- │ Instrucciones para el agente (opcional)                                 │
- │ [ Da la CLABE solo si el cliente ya dijo su razón social. Si no la   ]  │
- │ [ dio, pedila antes. Nunca des el número de cuenta por partes.       ]  │
- │  El cliente nunca ve esto. Si lo dejás vacío, el agente usa el          │
- │  contenido como hasta ahora.                                            │
- │                                              [ Cancelar ] [ Guardar ]   │
- └─────────────────────────────────────────────────────────────────────────┘
+ ┌─ Agregar respuesta predefinida ─────────────────────────────────────────────────────────┐
+ │ Nombre (short code)  [ COTIZACION Y PRECIOS DE EQUIPO DE COMPUTO                    ]    │
+ │                                                                                          │
+ │   Mensaje    Prompt de Contenido ●                                                       │
+ │  ──────────  ─────────────────────                                                       │
+ │                                                                                          │
+ │  PESTAÑA "Mensaje" — lo que se busca y lo que el agente usa como información             │
+ │  ┌────────────────────────────────────────────────────────────────────────────────────┐ │
+ │  │ Solicitud de cotización o compra de equipo de cómputo: computadoras, laptops,      │ │
+ │  │ servidores, impresoras y accesorios.                                               │ │
+ │  └────────────────────────────────────────────────────────────────────────────────────┘ │
+ │                                                                                          │
+ │                                                          [ Cancelar ]  [ Guardar ]       │
+ └──────────────────────────────────────────────────────────────────────────────────────────┘
+
+ ┌─ Agregar respuesta predefinida ─────────────────────────────────────────────────────────┐
+ │ Nombre (short code)  [ COTIZACION Y PRECIOS DE EQUIPO DE COMPUTO                    ]    │
+ │                                                                                          │
+ │   Mensaje    Prompt de Contenido ●                                                       │
+ │              ─────────────────────                                                       │
+ │                                                                                          │
+ │  PESTAÑA "Prompt de Contenido" — cómo tiene que usar el agente este mensaje              │
+ │  ┌────────────────────────────────────────────────────────────────────────────────────┐ │
+ │  │ 1. Responde de forma positiva y cordial, indicando que con gusto le ayudaremos.    │ │
+ │  │ 2. Solicita que describa qué equipo de cómputo necesita …                          │ │
+ │  │ …                                                                                  │ │
+ │  │ 8. Utiliza la etiqueta: #solicita_cotizacion                                       │ │
+ │  └────────────────────────────────────────────────────────────────────────────────────┘ │
+ │  El cliente nunca ve esto. Se aplica SOLO con el mensaje de esta respuesta.             │
+ │  Si lo dejás vacío, el agente usa el mensaje como hasta ahora.                          │
+ │  ⚠ La etiqueta #SolicitaCotización no existe en la cuenta, y con la tilde el motor      │
+ │    lee #SolicitaCotizaci.                                                               │
+ │                                                          [ Cancelar ]  [ Guardar ]       │
+ └──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- El campo pasa a llamarse **"Instrucciones para el agente (opcional)"**, con la ayuda de abajo y
-  con i18n (hoy el rótulo está escrito a mano en el componente, "Prompts de Contenido").
-- En la lista de respuestas predefinidas, las que tienen prompt llevan una marca, para saber de un
-  vistazo cuáles se comportan distinto.
-- **Al guardar, se comprueban las etiquetas que nombran las instrucciones:** si una `#etiqueta` no
-  existe en la cuenta, o lleva tildes o eñes que el motor no lee (el caso de `#SolicitaCotización`,
-  §2.4), se avisa. Se avisa, no se bloquea: el texto lo decide quien lo escribe.
+- **El nombre queda arriba, fuera de las pestañas:** es de las dos, y es lo que se ve en la lista.
+- **"Mensaje"** tiene el editor de contenido de siempre (`WootMessageEditor`), más alto.
+- **"Prompt de Contenido"** tiene una caja amplia (el guion de #1330 son 1.382 caracteres) con
+  la ayuda de abajo.
+- **El punto en la pestaña** (●) dice que tiene prompt sin tener que abrirla: con el modal en
+  "Mensaje", es la única pista de que esa respuesta se comporta distinto.
+- **Los errores no se esconden en la otra pestaña:** si "Mensaje" está vacío y se aprieta Guardar
+  estando en "Prompt de Contenido", el modal salta a "Mensaje" y marca el campo. (El contenido es
+  obligatorio; el prompt no.)
+- **Al guardar, se comprueban las etiquetas que nombra el prompt:** si una `#etiqueta` no existe en
+  la cuenta, o lleva tildes o eñes que el motor no lee (el caso de `#SolicitaCotización`, §2.4), se
+  avisa debajo de la caja. Se avisa, no se bloquea: el texto lo decide quien lo escribe.
+- En la **lista** de respuestas predefinidas, las que tienen prompt llevan una marca.
+- Los rótulos pasan a i18n (hoy "Prompts de Contenido" está escrito a mano en el componente).
+- Agregar y Editar usan el mismo cuerpo de formulario: hoy son dos componentes casi iguales
+  (`AddCanned.vue` y `EditCanned.vue`) y cualquier cambio habría que hacerlo dos veces.
 
 ### 3.5 Los otros cinco campos del bot viejo
 
@@ -269,10 +305,10 @@ el prompt ande. (Ver decisiones abiertas, §6.)
 | **F1** Sin re-vectorizar de más | el sync se salta cuando solo cambió el prompt | spec del job: cambiar el prompt no encola embedding; cambiar el contenido sí | 0,5 |
 | **F2** El motor | `perform_pgvector`: si la primera tiene prompt, modo prompt (§3.3); si no, como hoy | specs del servicio: sin prompt = mismo mensaje que hoy; con prompt en la 1ª = system con las instrucciones y solo su contenido; con prompt en la 2ª = como hoy | 1,5 |
 | **F3** Que no se filtre | instrucción de no citarlo + control de repetición | spec con una respuesta del modelo que copia el prompt → se descarta | 0,5 |
-| **F4** La pantalla | rótulo y ayuda con i18n; marca en la lista; aviso de etiquetas que no existen o que el motor no lee | spec del aviso con `#SolicitaCotización`; navegador | 1 |
+| **F4** La pantalla | modal ancho con pestañas "Mensaje" y "Prompt de Contenido" (punto cuando tiene prompt, salto a la pestaña con error); formulario compartido entre agregar y editar; i18n; marca en la lista; aviso de etiquetas | Vitest del formulario (pestañas, salto al error, aviso con `#SolicitaCotización`); navegador | 1,5 |
 | **F5** Prueba real | pasar #1330 al campo nuevo (contenido = de qué trata; instrucciones = su guion) y una conversación de punta a punta pidiendo cotizar equipo | conversación en develop.wintook.com | 0,5 |
 
-**Total: 5 días hábiles.**
+**Total: 5,5 días hábiles.**
 
 ---
 
