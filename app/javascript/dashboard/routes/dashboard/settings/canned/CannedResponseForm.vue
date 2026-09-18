@@ -12,6 +12,10 @@
 // Cada pestaña tiene solo lo suyo; las opciones de la respuesta (menú, contenido
 // completo, link) van debajo, afuera de las pestañas.
 //
+// Entre esas opciones, la casilla "El mensaje es el prompt" (content_is_prompt): marca
+// que el mensaje no es información para el cliente sino instrucciones para el agente.
+// Es aparte del Prompt de Contenido, que acompaña a un mensaje.
+//
 // Las pestañas no esconden nada:
 //   · la del prompt lleva un punto cuando tiene texto, para saber desde "Mensaje" que
 //     esta respuesta se comporta distinto;
@@ -42,6 +46,7 @@ export default {
     shortCode: { type: String, default: '' },
     content: { type: String, default: '' },
     contentPrompts: { type: String, default: '' },
+    contentIsPrompt: { type: Boolean, default: false },
     submitText: { type: String, default: '' },
     cancelText: { type: String, default: '' },
     loading: { type: Boolean, default: false },
@@ -56,6 +61,7 @@ export default {
         shortCode: this.shortCode || '',
         content: this.content || '',
         contentPrompts: this.contentPrompts || '',
+        contentIsPrompt: this.contentIsPrompt,
       },
       activeTab: MESSAGE_TAB,
     };
@@ -119,6 +125,7 @@ export default {
         short_code: this.form.shortCode,
         content: this.form.content,
         content_prompts: this.form.contentPrompts,
+        content_is_prompt: this.form.contentIsPrompt,
       });
     },
     showTab(index) {
@@ -203,9 +210,23 @@ export default {
          pestañas: no son del mensaje ni del prompt, son de la respuesta entera, y se
          ven estando en cualquiera de las dos. -->
     <div
-      v-if="$slots.legacy"
       class="flex flex-col gap-2 pt-3 border-t border-slate-100 dark:border-slate-700"
     >
+      <div>
+        <div class="flex items-center w-full gap-2">
+          <input
+            id="canned-content-is-prompt"
+            v-model="form.contentIsPrompt"
+            type="checkbox"
+          />
+          <label for="canned-content-is-prompt" class="!mb-0">
+            {{ $t('CANNED_MGMT.FORM_PROMPT.CONTENT_IS_PROMPT') }}
+          </label>
+        </div>
+        <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
+          {{ $t('CANNED_MGMT.FORM_PROMPT.CONTENT_IS_PROMPT_HELP') }}
+        </p>
+      </div>
       <slot name="legacy" />
     </div>
 

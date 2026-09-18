@@ -91,6 +91,7 @@ export default {
         :short-code="edshortCode"
         :content="edcontent"
         :content-prompts="edactiveResponse.content_prompts || ''"
+        :content-is-prompt="Boolean(edactiveResponse.content_is_prompt)"
         :submit-text="$t('CANNED_MGMT.EDIT.FORM.SUBMIT')"
         :cancel-text="$t('CANNED_MGMT.EDIT.CANCEL_BUTTON_TEXT')"
         :loading="editCanned.showLoading"

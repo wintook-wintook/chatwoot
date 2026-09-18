@@ -77,7 +77,10 @@
       "HELP": "Instructions for the AI agent on how to use this message. The customer never sees them, and they only apply together with this response's message. Leave it empty and the agent uses the message as before.",
       "TAG_MISSING": "The label %{tag} does not exist in this account: it will not trigger any automation.",
       "TAG_UNREADABLE": "The label %{tag} has characters the engine does not read (accents, ñ, hyphens): it reads it as %{read}. Use only lowercase letters, numbers and underscores.",
-      "LIST_BADGE": "With prompt"
+      "LIST_BADGE": "With prompt",
+      "CONTENT_IS_PROMPT": "The message is the prompt",
+      "CONTENT_IS_PROMPT_HELP": "Check it when the message is not information for the customer but instructions for the AI agent. It is separate from the Content Prompt.",
+      "LIST_BADGE_IS_PROMPT": "Message = prompt"
     },
     "LEGACY": {
       "MENU": "Show as a menu option.",

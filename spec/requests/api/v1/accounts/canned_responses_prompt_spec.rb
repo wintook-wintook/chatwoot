@@ -60,6 +60,20 @@ RSpec.describe 'Respuestas predefinidas con prompt propio' do
       .to eq('menu' => false, 'opcion' => 0, 'content_full' => false, 'url_content' => false, 'url_short_code' => nil)
   end
 
+  # La casilla "El mensaje es el prompt": aparte de content_prompts, apagada por defecto.
+  it 'guarda, devuelve y apaga la casilla "El mensaje es el prompt"' do
+    post base, params: { short_code: 'MENSAJE PROMPT', content: 'Pedí el equipo y la cantidad.', content_is_prompt: true },
+               headers: agent.create_new_auth_token, as: :json
+
+    guardada = account.canned_responses.find_by(short_code: 'MENSAJE PROMPT')
+    expect(guardada.content_is_prompt).to be(true)
+    expect(guardada.content_prompts).to be_nil
+
+    put "#{base}/#{guardada.id}", params: { content_is_prompt: false }, headers: agent.create_new_auth_token, as: :json
+    expect(response.parsed_body['content_is_prompt']).to be(false)
+    expect(create(:canned_response, account: account).content_is_prompt).to be(false)
+  end
+
   it 'devuelve el prompt en la lista' do
     create(:canned_response, account: account, short_code: 'CON PROMPT', content_prompts: 'instrucciones')
 

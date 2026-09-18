@@ -77,7 +77,10 @@
       "HELP": "Instrucciones para el agente IA sobre cómo usar este mensaje. El cliente nunca las ve, y se aplican solo junto con el mensaje de esta respuesta. Si lo dejás vacío, el agente usa el mensaje como hasta ahora.",
       "TAG_MISSING": "La etiqueta %{tag} no existe en la cuenta: no va a disparar ninguna automatización.",
       "TAG_UNREADABLE": "La etiqueta %{tag} tiene caracteres que el motor no lee (tildes, eñes, guiones): la toma como %{read}. Usá solo minúsculas, números y guion bajo.",
-      "LIST_BADGE": "Con prompt"
+      "LIST_BADGE": "Con prompt",
+      "CONTENT_IS_PROMPT": "El mensaje es el prompt",
+      "CONTENT_IS_PROMPT_HELP": "Marcalo si el mensaje no es información para el cliente sino instrucciones para el agente IA. Es aparte del Prompt de Contenido.",
+      "LIST_BADGE_IS_PROMPT": "Mensaje = prompt"
     },
     "LEGACY": {
       "MENU": "Mostrar como opción de Menú.",

@@ -436,6 +436,30 @@ En la pestaña **"Mensaje"**, debajo del editor, porque dicen qué se hace con e
 
 ---
 
+### 3.6 La casilla "El mensaje es el prompt" (`content_is_prompt`)
+
+Pedido del usuario (18/09/2026): una casilla aparte de `content_prompts` que marca que el
+**mensaje mismo** de la respuesta es el prompt, es decir, instrucciones para el agente IA y no
+información para el cliente.
+
+```
+┌─ Editar respuesta predefinida ───────────────────────────────┐
+│ Nombre  [ COTIZACION EQUIPO                              ]   │
+│ ┌ Mensaje ┐ Prompt de Contenido ●                            │
+│ │ …                                                          │
+│ ├──────────────────────────────────────────────────────────  │
+│ │ [x] El mensaje es el prompt                                │
+│ │     (instrucciones para el agente, no para el cliente)     │
+│ │ [ ] Mostrar como opción de Menú.  … (campos del bot viejo)  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+- Columna `content_is_prompt` boolean, default `false`, not null. No existe en
+  `chatwoot_staging_v2`: es nueva, y todas las respuestas que ya existen quedan apagadas.
+- La guarda la API de Chatwoot como los demás campos; en la lista sale la marca "Mensaje = prompt".
+- **Hecho:** guardado, modal y marca en la lista. **Falta:** que el motor la use (va con F2); hay que
+  definir cómo se combina con `content_prompts` cuando la respuesta tiene las dos cosas.
+
 ## 4. Riesgos y cómo se cubren
 
 | Riesgo | Cubierto por |

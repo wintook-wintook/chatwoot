@@ -245,6 +245,12 @@ const confirmDeletion = () => {
               >
                 {{ $t('CANNED_MGMT.FORM_PROMPT.LIST_BADGE') }}
               </span>
+              <span
+                v-if="cannedItem.content_is_prompt"
+                class="ml-1 px-1.5 py-0.5 text-xs font-normal rounded bg-woot-50 text-woot-600 dark:bg-woot-800 dark:text-woot-100"
+              >
+                {{ $t('CANNED_MGMT.FORM_PROMPT.LIST_BADGE_IS_PROMPT') }}
+              </span>
             </td>
             <td class="py-4 pr-4 md:break-all whitespace-normal">
               {{ cannedItem.content }}

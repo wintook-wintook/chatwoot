@@ -40,6 +40,7 @@ class Api::V1::Accounts::CannedResponsesController < Api::V1::Accounts::BaseCont
       :short_code,
       :content,
       :content_prompts,
+      :content_is_prompt,
       :menu,
       :opcion,
       :content_full,

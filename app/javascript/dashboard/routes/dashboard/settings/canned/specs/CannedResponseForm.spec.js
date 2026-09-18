@@ -35,6 +35,21 @@ describe('CannedResponseForm', () => {
       short_code: 'COTIZACION',
       content: 'Cotización de equipo.',
       content_prompts: '1. Pedí la cantidad.',
+      content_is_prompt: false,
+    });
+  });
+
+  // La casilla "El mensaje es el prompt" viaja aparte del Prompt de Contenido.
+  it('entrega la casilla "El mensaje es el prompt" marcada y desmarcada', async () => {
+    const wrapper = montar({ contentIsPrompt: true });
+    wrapper.vm.submit();
+    expect(wrapper.emitted('submit')[0][0].content_is_prompt).toBe(true);
+
+    await wrapper.find('#canned-content-is-prompt').setChecked(false);
+    wrapper.vm.submit();
+    expect(wrapper.emitted('submit')[1][0]).toMatchObject({
+      content_is_prompt: false,
+      content_prompts: '',
     });
   });
 
