@@ -69,6 +69,11 @@ const INBOX_STORAGE_KEY = 'tracking_assistant_inbox_id';
 // mostrarla es ponerla en true.
 const SHOW_CHAT = false;
 
+// La pestaña Conversaciones, escondida a pedido del usuario (18/09/2026): lista las
+// conversaciones del chat, y el chat no se usa. La tabla y el retomar siguen enteros
+// detrás de esta bandera; empezar de cero está en el botón "Nuevo Agente IA".
+const SHOW_SESSIONS_TAB = false;
+
 // El backend devuelve hasta 50 conversaciones (TrackingAssistantSession::LIST_LIMIT),
 // así que el paginado es sobre lo que ya está en memoria: no hay una segunda página
 // que pedir. Diez por pantalla entran sin scroll en una laptop.
@@ -252,6 +257,9 @@ export default {
     },
     showChat() {
       return SHOW_CHAT;
+    },
+    showSessionsTab() {
+      return SHOW_SESSIONS_TAB;
     },
     // En la plantilla no: el loader de Vue 2 no entiende `?.` ahí.
     // Se comparan con los espacios normalizados: agregar un salto de línea no es
@@ -1117,7 +1125,10 @@ export default {
             :name="$t('TRACKING_ASSISTANT_VIEW.TAB_ASSISTANT')"
             :show-badge="false"
           />
+          <!-- El `index` de cada pestaña es explícito, así que esconder esta no
+               corre las otras. -->
           <woot-tabs-item
+            v-if="showSessionsTab"
             :index="1"
             :name="$t('TRACKING_ASSISTANT_VIEW.TAB_SESSIONS')"
             :count="sessions.length"
