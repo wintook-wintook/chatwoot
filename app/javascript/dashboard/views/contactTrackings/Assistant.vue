@@ -35,7 +35,6 @@ import { useAlert } from 'dashboard/composables';
 import AssistantAPI from 'dashboard/api/assistant';
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import Spinner from 'shared/components/Spinner.vue';
-import AccordionItem from 'dashboard/components/Accordion/AccordionItem.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import { sortRows, nextOrder, NUMBER, DATE, TEXT } from './assistant/tableSort';
 import { findRouteLine, lineRange } from './assistant/draftNavigation';
@@ -46,7 +45,7 @@ import SortableTh from './assistant/SortableTh.vue';
 import ProgressStrip from './assistant/ProgressStrip.vue';
 import CopyChip from './assistant/CopyChip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
-import ValidationReport from './assistant/ValidationReport.vue';
+import ReportModal from './assistant/ReportModal.vue';
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import VersionsPanel from './assistant/VersionsPanel.vue';
 // La Estructura del Agente: el árbol con sus modales (docs/estructura_agente_arbol_plan.md).
@@ -110,7 +109,6 @@ const AUDIT_STATUS_LABEL = {
 
 export default {
   components: {
-    AccordionItem,
     CopyChip,
     TableFooter,
     EmptyState,
@@ -120,7 +118,7 @@ export default {
     SortableTh,
     ProgressStrip,
     ValidationBadge,
-    ValidationReport,
+    ReportModal,
     ManualConflictNotice,
     VersionsPanel,
     AgentStructure,
@@ -219,7 +217,8 @@ export default {
       // producto de esta pantalla: esconderlo de entrada sería devolverle el alto
       // al texto a costa de que nadie lo vea. Probar es una acción puntual, y
       // cerrada ocupa una línea en vez de un cuarto de la columna.
-      isReportOpen: true,
+      // El informe del comprobador, en un modal: el alto de la columna es del texto.
+      showReportModal: false,
       // Modo ancho: esconde la conversación y deja el Entrenamiento a todo el
       // ancho. Para los 6 agentes de la cuenta que pasan de 370 líneas.
       isWideEditor: !SHOW_CHAT,
@@ -1322,6 +1321,21 @@ export default {
                   >
                     {{ $t('TRACKING_ASSISTANT_VIEW.EXPLAIN_CTA') }}
                   </woot-button>
+                  <!-- El resumen del comprobador: revalida en cada tecla y es el
+                     botón que abre el informe. El detalle ya no ocupa el 40% del
+                     alto de la columna: ese espacio es del texto. -->
+                  <button
+                    type="button"
+                    class="mr-2"
+                    :title="$t('TRACKING_ASSISTANT_VIEW.REPORT_TITLE')"
+                    @click="showReportModal = true"
+                  >
+                    <ValidationBadge
+                      :validation="validation"
+                      :is-checking="isChecking"
+                      :pending-count="draftPendingCount"
+                    />
+                  </button>
                   <!-- Para los Entrenamientos largos: 38 líneas siguen siendo poco
                      para uno de 645. Mientras se edita un texto así no hace falta
                      ver el chat; al volver, sigue donde estaba. -->
@@ -1410,44 +1424,6 @@ export default {
                   />
                 </template>
               </div>
-
-              <!-- Acordeón nativo, el mismo del panel de contacto. El resumen del
-                 comprobador queda SIEMPRE visible en la cabecera: revalida en
-                 cada tecla y esa señal no se puede esconder. -->
-              <!-- max-h-[40%]: techo de los dos paneles. Lo que no entra scrollea
-                 acá adentro en vez de empujar al editor. -->
-              <div
-                class="shrink-0 max-h-[40%] overflow-y-auto border rounded-lg border-slate-100 dark:border-slate-700"
-              >
-                <AccordionItem
-                  :title="$t('TRACKING_ASSISTANT_VIEW.REPORT_TITLE')"
-                  :is-open="isReportOpen"
-                  @click="isReportOpen = !isReportOpen"
-                >
-                  <template #button>
-                    <ValidationBadge
-                      class="mr-2"
-                      :validation="validation"
-                      :is-checking="isChecking"
-                      :pending-count="draftPendingCount"
-                    />
-                  </template>
-                  <ValidationReport
-                    :validation="validation"
-                    @gotoRoute="goToRoute"
-                    @gotoLine="goToLine"
-                  />
-                </AccordionItem>
-              </div>
-
-              <!-- Fuentes guardadas que el asistente no sabe ofrecer. -->
-              <p
-                v-if="unsupported.length"
-                class="shrink-0 text-xs text-amber-600 dark:text-amber-400"
-              >
-                {{ $t('TRACKING_ASSISTANT_VIEW.UNSUPPORTED_HINT') }}
-                {{ unsupported.map(s => s.name).join(' · ') }}
-              </p>
             </section>
           </div>
         </div>
@@ -1888,6 +1864,16 @@ export default {
       @run="runOptimize"
       @apply="applyOptimization"
     />
+    <ReportModal
+      :show="showReportModal"
+      :validation="validation"
+      :is-checking="isChecking"
+      :pending-count="draftPendingCount"
+      :unsupported="unsupported"
+      @close="showReportModal = false"
+      @gotoRoute="goToRoute"
+      @gotoLine="goToLine"
+    />
     <ExplainModal
       :show="showExplainModal"
       :excerpt="explainExcerpt"
@@ -1925,13 +1911,3 @@ export default {
     />
   </div>
 </template>
-
-<style scoped>
-/* AccordionItem viene del panel de contacto, donde sus secciones SÍ se arrastran
-   para reordenarlas, así que su cabecera trae `cursor-grab`. Acá no se arrastra
-   nada: el cursor prometía un gesto que no existe. Se corrige solo dentro de esta
-   pantalla; el componente sigue igual para quien lo usa como fue pensado. */
-:deep(.drag-handle) {
-  cursor: pointer;
-}
-</style>
