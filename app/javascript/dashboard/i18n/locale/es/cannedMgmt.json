@@ -10,11 +10,7 @@
       "404": "No hay respuestas predefinidas disponibles en esta cuenta.",
       "TITLE": "Gestionar respuestas predefinidas",
       "DESC": "Las Respuestas Predefinidas son plantillas de respuesta predefinidas que se pueden usar para enviar rápidamente respuestas a las conversaciones.",
-      "TABLE_HEADER": [
-        "Código corto",
-        "Contenido",
-        "Acciones"
-      ]
+      "TABLE_HEADER": ["Código corto", "Contenido", "Acciones"]
     },
     "ADD": {
       "TITLE": "Agregar respuesta predefinida",
@@ -72,6 +68,26 @@
         "YES": "Sí, eliminar ",
         "NO": "No, mantener "
       }
+    },
+    "FORM_PROMPT": {
+      "TAB_MESSAGE": "Mensaje",
+      "TAB_PROMPT": "Prompt de Contenido",
+      "TAB_PROMPT_ACTIVE": "Prompt de Contenido ●",
+      "PLACEHOLDER": "Ej.: 1. Responde de forma cordial. 2. Pedí qué equipo necesita y la cantidad. 3. Explicá que un asesor comercial le va a dar seguimiento…",
+      "TAG_MISSING": "La etiqueta %{tag} no existe en la cuenta: no va a disparar ninguna automatización.",
+      "TAG_UNREADABLE": "La etiqueta %{tag} tiene caracteres que el motor no lee (tildes, eñes, guiones): la toma como %{read}. Usá solo minúsculas, números y guion bajo.",
+      "LIST_BADGE": "Con prompt",
+      "CONTENT_IS_PROMPT": "El mensaje es el prompt",
+      "CONTENT_IS_PROMPT_HELP": "Marcalo si el mensaje no es información para el cliente sino instrucciones para el agente IA. Es aparte del Prompt de Contenido.",
+      "LIST_BADGE_IS_PROMPT": "Mensaje = prompt"
+    },
+    "LEGACY": {
+      "MENU": "Mostrar como opción de Menú.",
+      "MENU_OPTION": "Número de opción del menú.",
+      "CONTENT_FULL": "Mostrar el contenido completo en el resultado de la búsqueda",
+      "URL_CONTENT": "Agregar link de dirección web alternativa",
+      "URL": "Link de dirección web alternativa",
+      "URL_PLACEHOLDER": "Por favor, introduzca una dirección web"
     }
   }
 }

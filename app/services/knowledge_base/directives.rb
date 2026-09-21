@@ -61,6 +61,7 @@ module KnowledgeBase
           .gsub(CANNED_RE, '')
           .gsub(/@buscar_art[ií]culo\b/i, '')
           .gsub(/@discourse\b/i, '')
+          .gsub(/@agendar_calendar\b/i, '') # proyecto@predefinidas_prompt — igual que el conversacional
           .strip
     end
 
