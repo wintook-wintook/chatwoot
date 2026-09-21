@@ -52,6 +52,8 @@ onMounted(() => {
   // del store de plantillas. Sin este fetch el desplegable sale vacío al entrar directo
   // a Automatizaciones, y solo se llenaba si antes habías pasado por Agentes IA.
   store.dispatch('trackingTemplates/get');
+  // proyecto@automatizacion_campanas: opciones de "Agregar a campaña" (mismo motivo)
+  store.dispatch('trackingCampaignOptions/get');
   // proyecto@automatizaciones: la acción "Asignar Caso" saca sus opciones del store
   // de tipos de caso; mismo motivo que el fetch de plantillas de arriba.
   store.dispatch('caseTickets/fetchTypes');

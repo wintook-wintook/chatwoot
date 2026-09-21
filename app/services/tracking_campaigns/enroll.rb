@@ -18,6 +18,12 @@
 #
 # Dos inscripciones del mismo contacto al mismo tiempo (dos automatizaciones que disparan
 # juntas): el índice único deja pasar una; la otra queda "already_enrolled".
+#
+# CONVERSACIÓN EN VIVO: si la automatización la disparó una conversación del mismo inbox
+# de la campaña, el cliente ya está escribiendo y el analizador le contesta por ahí. Un
+# primer mensaje proactivo "ya" saldría doble, así que se corre al intervalo de reintento
+# de la plantilla —lo mismo que hace la acción vieja "Asignar Agente IA"— y el seguimiento
+# usa esa conversación. La ventana se juzga con la hora de la inscripción.
 # ================================================================================
 class TrackingCampaigns::Enroll
   include ContactTrackings::Eligibility
@@ -44,6 +50,7 @@ class TrackingCampaigns::Enroll
     send_at = TrackingCampaigns::Schedule.new(@campaign).send_at(@at)
     return skip('outside_window') unless send_at
 
+    send_at = [send_at, @at + follow_up_delay].max if live_conversation?
     enroll(send_at)
   rescue ActiveRecord::RecordNotUnique
     skip('already_enrolled')
@@ -82,7 +89,24 @@ class TrackingCampaigns::Enroll
   end
 
   def builder
-    @builder ||= TrackingCampaigns::TrackingBuilder.new(@campaign, @contact, agent: @agent, note: note)
+    @builder ||= TrackingCampaigns::TrackingBuilder.new(@campaign, @contact, agent: @agent, note: note,
+                                                                             conversation: @conversation)
+  end
+
+  def live_conversation?
+    @source == 'automation' && @conversation.present? && @conversation.inbox_id == @campaign.inbox_id
+  end
+
+  # El intervalo de reintento de la plantilla, con los mismos valores por defecto que la
+  # acción "Asignar Agente IA" (1 día).
+  def follow_up_delay
+    template = @campaign.tracking_template
+    value = template.retry_interval_value.presence || 1
+    case template.retry_interval_unit
+    when 'minutes' then value.minutes
+    when 'hours' then value.hours
+    else value.days
+    end
   end
 
   # La inscripción se guarda PRIMERO, sola: si otra ganó la carrera, el índice único salta

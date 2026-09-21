@@ -63,6 +63,8 @@ import contactTrackings from './modules/contactTrackings';
 
 // proyecto@tracking_templates
 import trackingTemplates from './modules/trackingTemplates';
+// proyecto@automatizacion_campanas
+import trackingCampaignOptions from './modules/trackingCampaignOptions';
 // @tickets_cases
 import caseTickets from './modules/caseTickets';
 // @query_databases
@@ -131,6 +133,7 @@ export default new Vuex.Store({
     // KANBAN0725
     contactTrackings, // proyecto@contact_tracking
     trackingTemplates, // proyecto@tracking_templates
+    trackingCampaignOptions, // proyecto@automatizacion_campanas
     googleCalendar, // proyecto@google_calendar
     caseTickets, // @tickets_cases
     caseReports: CaseReports, // proyecto@metricas_casos

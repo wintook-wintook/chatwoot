@@ -140,6 +140,15 @@ En **por lote** es el mismo cálculo para todos a la vez: hoy la fecha es "cuán
 - Si la campaña se **borra**, la acción queda "campaña eliminada" en la automatización y no hace nada.
 - La acción vieja **"Asignar Agente IA"** sigue funcionando igual (decisión 5).
 
+### 4.0 Conversación en vivo (encontrado al implementar la F2)
+
+Si la conversación que dispara la automatización es **del mismo inbox** que la campaña, el cliente ya
+está escribiendo y el analizador le contesta por ahí. Un primer mensaje proactivo "ya" saldría doble.
+Por eso, igual que la acción vieja "Asignar Agente IA", el seguimiento usa **esa** conversación y su
+primer mensaje proactivo se corre al **intervalo de reintento de la plantilla** (si el cliente se queda
+callado). La ventana se juzga con la hora de la inscripción. Además `Message` sabe que esta acción crea
+seguimientos, para que el analizador espere los 5 s que ya espera con "Asignar Agente IA".
+
 ### 4.1 Qué pasa cuando la automatización inscribe a alguien
 
 ```
@@ -277,7 +286,7 @@ Una columna **Tipo** (Por lote / Continua) y la **ventana** (01/10 → 31/10) en
 |---|---|---|---|
 | **F0** ✅ Datos | columnas nuevas en `tracking_campaigns`, tabla `tracking_campaign_entries`, las existentes quedan "por lote" | spec del modelo; migración tolerante | 1 |
 | **F1** ✅ Inscribir (`Schedule` · `TrackingBuilder` · `Enroll`) | `TrackingCampaigns::Enroll`: ventana, espera, horario, duplicados, omitidos; el bulk pasa a usarlo | specs de cada caso de §4.1 | 1,5 |
-| **F2** La automatización | acción "Agregar a campaña" (backend + desplegable con estado y ventana) | spec de la acción; Vitest del desplegable | 1 |
+| **F2** ✅ La automatización | acción "Agregar a campaña" (backend + desplegable con estado y ventana) | spec de la acción; Vitest del desplegable | 1 |
 | **F3** Ciclo de vida | job que abre y cierra campañas por su ventana | spec del job | 0,5 |
 | **F4** Formulario | tipo, ventana, espera, horario; "Continua" sin selector de audiencia | Vitest + navegador | 1,5 |
 | **F5** Detalle y listado | pestaña "Inscritos" con fuente y omitidos; tipo y ventana en el listado | Vitest + navegador | 1 |

@@ -104,6 +104,43 @@ export const addNoneToList = agents => [
   ...(agents || []),
 ];
 
+// proyecto@automatizacion_campanas — "Campaña Octubre · En curso · 01/10 → 31/10".
+// Se listan TODAS (también las terminadas): una regla vieja que apunta a una terminada
+// tiene que seguir mostrando cuál era. La etiqueta dice su estado; el backend no inscribe
+// en una cerrada.
+const CAMPAIGN_STATUS = {
+  draft: 'Programada',
+  running: 'En curso',
+  paused: 'Pausada',
+  finished: 'Terminada',
+};
+
+const shortDate = value => {
+  if (!value) return null;
+  const date = new Date(value);
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}`;
+};
+
+export const campaignOptionLabel = campaign => {
+  const start = shortDate(campaign.scheduled_for);
+  const end = shortDate(campaign.ends_at);
+  const window = start && `${start} → ${end || 'sin fin'}`;
+  return [
+    campaign.name,
+    CAMPAIGN_STATUS[campaign.status] || campaign.status,
+    window,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+};
+
+export const trackingCampaignOptions = campaigns =>
+  (campaigns || []).map(campaign => ({
+    id: campaign.id,
+    name: campaignOptionLabel(campaign),
+  }));
+
 export const getActionOptions = ({
   agents,
   teams,
@@ -112,6 +149,7 @@ export const getActionOptions = ({
   kanbanTypeProcesses, // proyecto@automatizaciones: tipos de oportunidad del Kanban para el dropdown de la acción
   caseTypes, // proyecto@automatizaciones: tipos de caso para el dropdown de la acción assign_case_type
   trackingTemplates, // proyecto@automatizacion_tracking: plantillas filtradas por inbox de las condiciones
+  trackingCampaigns, // proyecto@automatizacion_campanas: campañas para "Agregar a campaña"
   type,
 }) => {
   const actionsMap = {
@@ -125,6 +163,7 @@ export const getActionOptions = ({
     assign_kanban_type_process: addNoneToList(kanbanTypeProcesses), // proyecto@automatizaciones
     assign_case_type: addNoneToList(caseTypes), // proyecto@automatizaciones
     assign_tracking_template: trackingTemplates || [], // proyecto@automatizacion_tracking
+    add_to_tracking_campaign: trackingCampaignOptions(trackingCampaigns), // proyecto@automatizacion_campanas
   };
   return actionsMap[type];
 };

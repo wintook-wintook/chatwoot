@@ -497,6 +497,8 @@ class Message < ApplicationRecord
   # tiene uno activo, la acción no crea uno nuevo (ver action_service.rb) y
   # el analyzer ya lo verá sin esperar.
   TRACKING_AUTOMATION_EVENTS = %w[conversation_created conversation_opened message_created].freeze
+  # proyecto@automatizacion_campanas: "Agregar a campaña" también crea el seguimiento.
+  TRACKING_CREATING_ACTIONS = %w[assign_tracking_template add_to_tracking_campaign].freeze
 
   def will_trigger_tracking_automation?
     active_statuses = %w[pending scheduled active paused]
@@ -504,7 +506,7 @@ class Message < ApplicationRecord
     return false if ContactTracking.exists?(contact_id: conversation.contact_id, inbox_id: conversation.inbox_id, status: active_statuses)
 
     account.automation_rules.active.where(event_name: TRACKING_AUTOMATION_EVENTS).any? do |rule|
-      rule.actions.any? { |action| action['action_name'] == 'assign_tracking_template' } &&
+      rule.actions.any? { |action| TRACKING_CREATING_ACTIONS.include?(action['action_name']) } &&
         AutomationRules::ConditionsFilterService.new(rule, conversation, message: self).perform
     end
   rescue StandardError => e

@@ -15,10 +15,12 @@
 class TrackingCampaigns::TrackingBuilder
   DEFAULT_MAX_ATTEMPTS = 3
 
-  def initialize(campaign, contact, agent: nil, note: nil)
+  # conversation: la que disparó la automatización; se usa si es del inbox de la campaña.
+  def initialize(campaign, contact, agent: nil, note: nil, conversation: nil)
     @campaign = campaign
     @account = campaign.account
     @contact = contact
+    @conversation = conversation if conversation&.inbox_id == campaign.inbox_id
     @agent = agent || @account.users.first
     @note = note || '📋 Seguimiento asignado de forma masiva'
   end
@@ -26,10 +28,10 @@ class TrackingCampaigns::TrackingBuilder
   # La conversación que va a usar el seguimiento: la del contacto en el inbox de la
   # campaña, la más reciente abierta primero. nil si no tiene.
   def existing_conversation
-    @existing_conversation ||= @contact.conversations
-                                       .where(inbox_id: @campaign.inbox_id)
-                                       .order(status: :asc, last_activity_at: :desc)
-                                       .first
+    @existing_conversation ||= @conversation || @contact.conversations
+                                                        .where(inbox_id: @campaign.inbox_id)
+                                                        .order(status: :asc, last_activity_at: :desc)
+                                                        .first
   end
 
   # El id del ContactTracking creado, programado para `scheduled_for`.

@@ -9,6 +9,7 @@
 # estadísticas se agregan en una sola consulta para evitar N+1.
 #
 # GET /api/v1/accounts/:account_id/tracking_campaigns        → listado con stats
+#     ?lite=true → solo lo que necesita un selector (automatizaciones), sin stats
 # GET /api/v1/accounts/:account_id/tracking_campaigns/:id     → una campaña con stats
 # ================================================================================
 
@@ -17,6 +18,8 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   INTERESTED_INTENTS = %w[interested book_appointment reschedule].freeze
 
   def index
+    return render(json: lite_list) if ActiveModel::Type::Boolean.new.cast(params[:lite])
+
     campaigns = Current.account.tracking_campaigns
                        .includes(:tracking_template, :inbox)
                        .order(created_at: :desc)
@@ -139,6 +142,12 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     end
   end
 
+  # proyecto@automatizacion_campanas — para el desplegable "Agregar a campaña".
+  def lite_list
+    Current.account.tracking_campaigns.order(created_at: :desc)
+           .map { |c| c.slice(:id, :name, :status, :mode, :scheduled_for, :ends_at, :inbox_id) }
+  end
+
   def campaign_json(campaign, status_counts, delivery_counts, funnel_counts)
     {
       id: campaign.id,
@@ -146,6 +155,12 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       status: campaign.status,
       objective: campaign.objective,
       scheduled_for: campaign.scheduled_for,
+      # proyecto@automatizacion_campanas — la ventana y cómo se agenda a cada inscrito
+      mode: campaign.mode,
+      ends_at: campaign.ends_at,
+      entry_delay_minutes: campaign.entry_delay_minutes,
+      respect_working_hours: campaign.respect_working_hours,
+      daily_cap: campaign.daily_cap,
       created_at: campaign.created_at,
       template_name: campaign.tracking_template&.name,
       inbox_name: campaign.inbox&.name,
