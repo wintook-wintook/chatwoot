@@ -188,7 +188,7 @@ el comprobador del Asistente (`ValidatorService`) y el autocompletado de directi
 | Fase | Entrega | Cómo se verifica | Días |
 |---|---|---|---|
 | **F0** ✅ La consulta | `buscar_productos` en `QueryLibrary` para SAE, Microsip y Contpaq (verificada en vivo, solo lectura) + siembra; filtros opcionales (texto por palabras con comodines escapados, línea, precios, existencia, lista, max) | spec por ERP; prueba contra las 3 conexiones | 1,5 |
-| **F1** El `?` en la sintaxis | `ConsultaDirectiveRenderer` reconoce `param=?`; sin `?` todo igual | specs de parseo + regresión de cobranza | 0,5 |
+| **F1** ✅ El `?` en la sintaxis | `ConsultaDirectiveRenderer` reconoce `param=?`; sin `?` todo igual | specs de parseo + regresión de cobranza | 0,5 |
 | **F2** El agente | `AskedParams` (IA llena los `?`), consulta, redacción con fidelidad e historial; `{{consulta:}}` de ruta usa la directiva de la ruta (§3.6) | specs con la IA simulada; regresión de cobranza | 1,5 |
 | **F3** Comprobador y autocompletado | el Asistente valida `{{consulta:…(…=?)}}` (consulta existe, parámetros válidos, conexión) y la ofrece en `/` | specs del comprobador; Vitest | 1 |
 | **F4** La pantalla | `buscar_productos` en Conexión ERP (lista de precios, existencia, solo activos) + probar en Consola ERP | Vitest + navegador | 1 |

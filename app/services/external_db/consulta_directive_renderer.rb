@@ -15,14 +15,54 @@
 # Resolución de conexión:
 #   con prefijo  → ExternalDbConnection por erp_type o por nombre (scoped a la cuenta)
 #   sin prefijo  → conexión del ErpCollectionBot activo del inbox (específico > global)
+#
+# proyecto@erp_productos — PARÁMETROS "?" (docs/erp_productos_plan.md §3):
+#   {{consulta:buscar_productos(linea=COMPUTO, texto=?, precio_max=?)}}
+#   Un "?" significa "lo llena la IA con lo que escribió el cliente" (lo hace el motor,
+#   F2); los valores fijos siempre ganan. Este archivo solo LEE la directiva: `.parse`
+#   la devuelve como datos (fijos y pedidos por separado) para el motor y el comprobador.
+#   El render de siempre no cambia: una directiva sin "?" se interpola igual que antes, y
+#   si alguna con "?" llegara acá, el "?" nunca viaja como valor a la consulta.
 class ExternalDb::ConsultaDirectiveRenderer
   DIRECTIVE = %r!\{\{consulta:(?:(?<conn>[a-z0-9_]+)/)?(?<name>[a-z0-9_]+)(?:\((?<args>[^}]*)\))?\}\}!i
 
   RFC_PARAM = 'rfc'
   CONTACT_RFC_ATTR = 'erp_rfc'
+  ASKED = '?'
+
+  # Una {{consulta:}} leída: `fixed` son los valores que escribió quien arma el agente;
+  # `asked`, los parámetros que tiene que llenar la IA ("?"). `positional` es el valor
+  # suelto de {{consulta:nombre(valor)}}, que va al primer parámetro de la consulta.
+  Directive = Struct.new(:raw, :conn, :name, :fixed, :asked, :positional, keyword_init: true) do
+    def asks?
+      asked.any?
+    end
+  end
 
   def self.contains?(text)
     text.to_s.match?(DIRECTIVE)
+  end
+
+  def self.parse(text)
+    text.to_s.to_enum(:scan, DIRECTIVE).map { directive_from(Regexp.last_match) }
+  end
+
+  def self.directive_from(match)
+    parts = match[:args].to_s.split(',').map(&:strip).reject(&:blank?)
+    named = named_pairs(parts)
+    Directive.new(raw: match[0], conn: match[:conn], name: match[:name],
+                  fixed: named.reject { |_, v| v == ASKED }, asked: named.select { |_, v| v == ASKED }.keys,
+                  positional: parts.find { |p| p.exclude?('=') })
+  end
+
+  def self.named_pairs(parts)
+    parts.select { |p| p.include?('=') }.to_h { |p| p.split('=', 2).map(&:strip) }.reject { |k, _| k.blank? }
+  end
+  private_class_method :directive_from, :named_pairs
+
+  # ¿Alguna {{consulta:}} del texto pide parámetros a la IA?
+  def self.asks?(text)
+    parse(text).any?(&:asks?)
   end
 
   def initialize(account:, contact: nil, inbox: nil)
@@ -37,6 +77,13 @@ class ExternalDb::ConsultaDirectiveRenderer
       m = Regexp.last_match
       render_one(m[:conn], m[:name], m[:args]).to_s
     end
+  end
+
+  # La conexión y la consulta de una directiva ya leída, o nil. La usa el motor (F2) con
+  # las mismas reglas de conexión que el render.
+  def resolve(directive)
+    connection = resolve_connection(directive.conn)
+    connection&.external_db_queries&.active&.find_by('LOWER(name) = LOWER(?)', directive.name)
   end
 
   private
@@ -92,10 +139,11 @@ class ExternalDb::ConsultaDirectiveRenderer
     positional_arg(parts.first, query)
   end
 
+  # Un "?" no es un valor: en el camino determinista el parámetro queda sin dar.
   def named_args(parts)
     parts.each_with_object({}) do |pair, acc|
       key, value = pair.split('=', 2).map(&:strip)
-      acc[key] = value if key.present?
+      acc[key] = value if key.present? && value != ASKED
     end
   end
 
