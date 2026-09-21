@@ -48,8 +48,6 @@
       "RESPECT_WORKING_HOURS": "Respetar el horario de atención del inbox",
       "DAILY_CAP_LABEL": "Tope de inscripciones por día (opcional)",
       "DAILY_CAP_PLACEHOLDER": "Sin tope",
-      "CONTINUOUS_AUDIENCE_TITLE": "Audiencia dinámica",
-      "CONTINUOUS_AUDIENCE_BODY": "Esta campaña no tiene una lista fija. Después de crearla, agrega en Automatizaciones la acción \"Agregar a campaña\" y elige esta campaña: cada contacto que la automatización inscriba recibirá al Agente IA dentro de la ventana.",
       "CREATE_CONTINUOUS": "Crear campaña continua",
       "CONTINUOUS_CREATED": "Campaña \"{name}\" creada. Ahora agrégala a una automatización con \"Agregar a campaña\"."
     },

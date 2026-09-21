@@ -431,20 +431,7 @@ export default {
         <!-- Audiencia: los radios ("Audiencia por Segmento/Etiqueta") hacen de
              encabezado del campo, por eso no hay un título "Audiencia" aparte
              (así la celda queda alineada con la de Fecha en el grid). -->
-        <div
-          v-if="isContinuous"
-          class="p-3 rounded-md bg-slate-25 dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-        >
-          <span
-            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
-          >
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.CONTINUOUS_AUDIENCE_TITLE') }}
-          </span>
-          <p class="mt-1 mb-0 text-xs text-slate-500 dark:text-slate-400">
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.CONTINUOUS_AUDIENCE_BODY') }}
-          </p>
-        </div>
-        <div v-else>
+        <div v-if="!isContinuous">
           <template v-if="allowAudienceSelection">
             <div class="flex items-center gap-4 h-5 mb-1">
               <label

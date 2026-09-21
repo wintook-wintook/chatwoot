@@ -48,8 +48,6 @@
       "RESPECT_WORKING_HOURS": "Respect the inbox business hours",
       "DAILY_CAP_LABEL": "Max enrollments per day (optional)",
       "DAILY_CAP_PLACEHOLDER": "No limit",
-      "CONTINUOUS_AUDIENCE_TITLE": "Dynamic audience",
-      "CONTINUOUS_AUDIENCE_BODY": "This campaign has no fixed list. After creating it, add the \"Add to campaign\" action in Automations and pick this campaign: every contact the automation enrolls will get the AI Agent within the window.",
       "CREATE_CONTINUOUS": "Create continuous campaign",
       "CONTINUOUS_CREATED": "Campaign \"{name}\" created. Now add it to an automation with \"Add to campaign\"."
     },
