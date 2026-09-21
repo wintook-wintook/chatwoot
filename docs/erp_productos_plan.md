@@ -192,7 +192,7 @@ el comprobador del Asistente (`ValidatorService`) y el autocompletado de directi
 | **F2** ✅ El agente | `AskedParams` (IA llena los `?`), consulta, redacción con fidelidad e historial; `{{consulta:}}` de ruta usa la directiva de la ruta (§3.6) | specs con la IA simulada; regresión de cobranza | 1,5 |
 | **F3** ✅ Comprobador y autocompletado | el Asistente valida `{{consulta:…(…=?)}}` (consulta existe, parámetros válidos, conexión) y la ofrece en `/` | specs del comprobador; Vitest | 1 |
 | **F4** ✅ La pantalla | `buscar_productos` en Conexión ERP (lista de precios, existencia, solo activos) + probar en Consola ERP | Vitest + navegador | 1 |
-| **F5** Prueba real | agente con `{{consulta:buscar_productos(texto=?, precio_max=?)}}` en "Agents IA Test" contra SAE | conversación de punta a punta | 0,5 |
+| **F5** ✅ Prueba real | agente con `{{consulta:buscar_productos(texto=?, precio_max=?)}}` en "Agents IA Test" contra SAE | conversación de punta a punta | 0,5 |
 
 **Total: 6 días hábiles.**
 
@@ -251,6 +251,39 @@ activos; esa pantalla duplicaba lo mismo. En su lugar:
 La consulta **no se agrega sola** a las conexiones existentes: se agrega con el botón **"Sembrar consultas"**
 de cada conexión (agrega las que faltan por nombre). Aparte: a Microsip le falta `facturas_vencidas` porque la
 librería nunca la tuvo para Microsip (pendiente fuera de esta rama).
+
+
+### 7.5 F5 hecha (21/09/2026) — prueba real en "Agents IA Test"
+
+Agente de prueba **#8724 "Vendedor Catálogo (prueba ERP)"** (inbox 493), conversación **#171**, contra SAE.
+Rutas: productos (`{{consulta:sae/buscar_productos(texto=?, precio_min=?, precio_max=?, con_existencia=?, lista=1, max=5)}}`),
+pedido, humano, fuera_de_alcance.
+
+```
+ Cliente                                   Qué pasó                              Resultado
+ ─────────────────────────────────────     ────────────────────────────────────  ─────────
+ ¿tienen cascos de beisbol?                parcial → Casco Baseball $450         ✅
+ balones de menos de 1000 disponibles      0 filas → "no encontré"               ✅
+ ¿tienen computadoras mac?                 0 filas → "no encontré"               ✅
+ me interesa el casco, quiero comprar 2    rama pedido → pide el nombre          ✅ (conversacional, correcto)
+ ok, gracias por la info                   ANTES repetía el casco → ahora cierra ✅ tras arreglo 2
+ ¿tienen bats de beisbol?                  parcial → Bat Maxxum Wilson           ✅ tras arreglo 3
+ ¿y de menos de 300?                       texto=bat + precio_max=300 → nada     ✅
+```
+
+Tres arreglos que salieron de la prueba:
+
+1. **El modelo inventaba productos** (tres cascos con marca y precio): `kbase_available?` no miraba
+   `{{consulta:}}` y el turno se iba al conversacional. Nuevo `KnowledgeBase::Directives.erp_available?`:
+   cuenta la `{{consulta:}}` que es fuente de una ruta o la que tiene `?`; una plantilla de cobranza fija, sin
+   rutas, sigue fuera.
+2. **"Gracias" repetía la búsqueda anterior**: `AskedParams` ahora decide por el último mensaje; el historial
+   solo completa una búsqueda que ese mensaje continúa ("¿y de menos de 300?").
+3. **"No encontré bats" y luego ofrecía un bat**: el catálogo escribe "Baseball"; la nota de coincidencia
+   parcial ahora deja presentar como lo pedido lo que sí lo es (sinónimo u otro idioma).
+
+Queda menor: la redacción a veces arrastra un filtro del turno anterior en la frase ("no tengo bats por menos de
+$300") aunque la búsqueda no lo usó. Los datos son correctos; es solo la frase.
 
 ---
 

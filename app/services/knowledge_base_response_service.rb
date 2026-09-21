@@ -585,8 +585,11 @@ class KnowledgeBaseResponseService
     USER
   end
 
-  PARTIAL_NOTE = 'COINCIDENCIA PARCIAL: nada coincidió con todo lo que pidió el cliente; estos coinciden solo ' \
-                 'con alguna de sus palabras. Preséntalos como opciones que podrían interesarle, no como lo que pidió.'
+  # "Si alguno SÍ es…": el catálogo escribe "Baseball" y el cliente "béisbol"; medido en F5,
+  # el agente decía "no encontré bats" y en seguida ofrecía un bat.
+  PARTIAL_NOTE = 'COINCIDENCIA PARCIAL: nada coincidió con todas las palabras del cliente; estos coinciden solo ' \
+                 'con alguna. Si alguno SÍ es lo que pidió (otro idioma o sinónimo: baseball = béisbol), ' \
+                 'preséntalo como lo que pidió; los demás, como opciones que podrían interesarle.'
 
   def erp_rows_text(data)
     return 'La consulta no encontró resultados.' if data[:rows].empty?
