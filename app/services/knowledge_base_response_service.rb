@@ -395,24 +395,64 @@ class KnowledgeBaseResponseService
     items = search_items(grouped_items(source_type, group), threshold: group_threshold(group))
     return false if items.nil?
 
-    if items.empty?
+    # proyecto@predefinidas_prompt — un guion en curso sigue aunque este mensaje no
+    # encuentre nada: "el martes a las 10" no se parece a ninguna respuesta predefinida.
+    prompt = canned_prompt_for(source_type, items)
+    if items.empty? && prompt.nil?
       Rails.logger.info "[KBase] ⚠️ Sin resultados en #{source_type}"
       return false
     end
 
     Rails.logger.info "[KBase] ✅ #{items.size} resultado(s) en #{source_type}"
 
-    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
-                   .join("\n\n")
-                   .truncate(kbase_setting('max_context_chars'))
-
-    reply_text = generate_contextual_reply(question, context)
+    reply_text = (canned_prompt_reply(question, prompt) if prompt)
+    reply_text ||= generate_contextual_reply(question, pgvector_context(items)) if items.any?
     return false if reply_text.blank?
 
     source_tag = @account.knowledge_sources.find_by(source_type: source_type)&.name ||
                  I18n.t("knowledge_sources.names.#{source_type}", locale: @account.locale.presence || I18n.default_locale)
     send_reply("#{with_branch_tag(reply_text)}\n\n_#{source_tag}_")
     true
+  end
+
+  def pgvector_context(items)
+    items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
+         .join("\n\n")
+         .truncate(kbase_setting('max_context_chars'))
+  end
+
+  # proyecto@predefinidas_prompt — la respuesta predefinida con prompt que manda en este
+  # mensaje (ver KnowledgeBase::CannedPrompt):
+  #   1. la PRIMERA encontrada, si trae prompt (el mensaje es el prompt, o tiene Prompt de
+  #      Contenido) — empieza su guion, o lo reemplaza si había otro;
+  #   2. si no, el guion en curso de la conversación, si sigue valiendo;
+  #   3. si no, ninguna (y se olvida el guion vencido, si había).
+  def canned_prompt_for(source_type, items)
+    return nil unless source_type == 'canned_response'
+
+    prompt = KnowledgeBase::CannedPrompt.detect(@account, items) ||
+             KnowledgeBase::CannedPrompt.resume(@account, @conversation, items)
+    KnowledgeBase::CannedPrompt.forget!(@conversation) unless prompt
+    prompt
+  end
+
+  # El agente redacta siguiendo el prompt, solo con esa respuesta (y, a mitad de un guion,
+  # con lo que encontró la búsqueda por si el cliente preguntó otra cosa).
+  # nil = la respuesta copió las instrucciones: se responde como siempre y el guion no
+  # avanza.
+  def canned_prompt_reply(question, prompt)
+    Rails.logger.info "[KBase] 📝 Respuesta predefinida con prompt (#{prompt.mode}" \
+                      "#{", guion en curso, mensaje #{prompt.turns + 1}" if prompt.continuing?}): #{prompt.canned.short_code}"
+    reply = generate_contextual_reply(question, nil, canned_prompt: prompt)
+    return nil if reply.blank?
+
+    if prompt.closes?(reply)
+      Rails.logger.info "[KBase] 🏁 Guion de '#{prompt.canned.short_code}' cerrado con su etiqueta"
+      KnowledgeBase::CannedPrompt.forget!(@conversation)
+    else
+      prompt.remember!(@conversation, @route&.name)
+    end
+    reply
   end
 
   # ==============================================================================
@@ -509,7 +549,7 @@ class KnowledgeBaseResponseService
     true
   end
 
-  def generate_contextual_reply(question, context, erp_data: nil)
+  def generate_contextual_reply(question, context, erp_data: nil, canned_prompt: nil)
     api_key = openai_api_key
     return nil unless api_key
 
@@ -548,6 +588,7 @@ class KnowledgeBaseResponseService
       resuelve es mejor que una inventada que parece resolver.
     USER
     user_prompt = erp_user_prompt(first_name, question, erp_data) if erp_data
+    user_prompt = canned_prompt_user_prompt(first_name, question, canned_prompt) if canned_prompt
 
     history  = load_history
     messages = [{ role: 'system', content: system_prompt }]
@@ -563,6 +604,13 @@ class KnowledgeBaseResponseService
     return nil if reply.blank?
 
     reply = strip_echoed_sources(reply)
+    # Se revisa ANTES de guardar el historial: una respuesta que copió las instrucciones
+    # no puede quedar ahí, porque el modelo la vería en el turno siguiente.
+    if canned_prompt&.leaks?(reply)
+      Rails.logger.warn "[KBase] 🚫 La respuesta copió el prompt de '#{canned_prompt.canned.short_code}' → se descarta"
+      return nil
+    end
+
     save_history(history, question, reply)
     reply
   end
@@ -607,6 +655,18 @@ class KnowledgeBaseResponseService
     when Time, DateTime, ActiveSupport::TimeWithZone, Date then value.strftime('%d/%m/%Y')
     else value.to_s
     end
+  end
+
+  # El turno en modo prompt: la pregunta y el bloque de la respuesta predefinida
+  # (información + instrucciones). Las reglas del agente siguen en el system.
+  def canned_prompt_user_prompt(first_name, question, canned_prompt)
+    <<~USER.strip
+      El cliente #{first_name} preguntó: "#{question.truncate(300)}"
+
+      #{canned_prompt.turn_block}
+
+      Tono natural y conversacional. No uses prefijos como "Asesor:" ni comillas al inicio o final.
+    USER
   end
 
   # ==============================================================================

@@ -62,6 +62,7 @@ module KnowledgeBase
           .gsub(/@buscar_art[ií]culo\b/i, '')
           .gsub(/@discourse\b/i, '')
           .gsub(ExternalDb::ConsultaDirectiveRenderer::DIRECTIVE, '') # proyecto@erp_productos: configuración
+          .gsub(/@agendar_calendar\b/i, '') # proyecto@predefinidas_prompt — igual que el conversacional
           .strip
     end
 

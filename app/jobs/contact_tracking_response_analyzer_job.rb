@@ -1793,12 +1793,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def create_private_note(tracking, message, note_content)
     return unless message&.conversation
 
+    # MessageBuilder recibe (usuario, conversación, params) posicionales; con keywords
+    # reventaba con "wrong number of arguments" y la nota nunca se creaba. Nota privada
+    # de Chatwoot = saliente + private (no se envía al canal).
     Messages::MessageBuilder.new(
-      user: bot_user(tracking.account),
-      conversation: message.conversation,
-      message_type: :activity,
-      content: note_content,
-      private: true
+      bot_user(tracking.account),
+      message.conversation,
+      { message_type: 'outgoing', content: note_content, private: true }
     ).perform
 
     Rails.logger.info '[TrackingBot] 📝 Nota privada creada'
@@ -1811,7 +1812,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     conversation = message.conversation
     account = conversation.account
-    assignee = account.users.where(role: :administrator).first || account.users.first
+    # El rol vive en account_users, no en users (users.role no existe: reventaba y nadie
+    # se enteraba). Account#administrators ya hace ese join.
+    assignee = account.administrators.first || account.users.first
 
     if assignee
       conversation.update(assignee_id: assignee.id)
