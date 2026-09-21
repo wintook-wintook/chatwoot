@@ -112,7 +112,10 @@ Rails.application.routes.draw do
           resources :contact_tracking_bulk_assigns, only: [:create] do # proyecto@bulk_tracking_assign
             post :preview, on: :collection # @campanas_vendedor — dry-run de buckets
           end
-          resources :tracking_campaigns, only: [:index, :show, :create, :destroy] # @campanas_vendedor / @automatizacion_campanas (create = continua)
+          # @campanas_vendedor / @automatizacion_campanas (create = campaña continua)
+          resources :tracking_campaigns, only: [:index, :show, :create, :destroy] do
+            get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
+          end
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview
             get 'list', to: 'list#index' # listado filtrable a nivel cuenta

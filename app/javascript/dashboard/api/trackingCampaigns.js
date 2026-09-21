@@ -18,6 +18,11 @@ class TrackingCampaignsAPI extends ApiClient {
   getOptions() {
     return axios.get(this.url, { params: { lite: true } });
   }
+
+  // proyecto@automatizacion_campanas — inscritos y omitidos de una campaña (paginado).
+  getEntries(id, page = 1) {
+    return axios.get(`${this.url}/${id}/entries`, { params: { page } });
+  }
 }
 
 export default new TrackingCampaignsAPI();

@@ -291,7 +291,7 @@ Una columna **Tipo** (Por lote / Continua) y la **ventana** (01/10 → 31/10) en
 | **F2** ✅ La automatización | acción "Agregar a campaña" (backend + desplegable con estado y ventana) | spec de la acción; Vitest del desplegable | 1 |
 | **F3** ✅ Ciclo de vida | job que abre y cierra campañas por su ventana | spec del job | 0,5 |
 | **F4** ✅ Formulario | tipo, ventana, espera, horario; "Continua" sin selector de audiencia | Vitest + navegador | 1,5 |
-| **F5** Detalle y listado | pestaña "Inscritos" con fuente y omitidos; tipo y ventana en el listado | Vitest + navegador | 1 |
+| **F5** ✅ Detalle y listado | pestaña "Inscritos" con fuente y omitidos; tipo y ventana en el listado | Vitest + navegador | 1 |
 | **F6** Prueba real | campaña continua en "Agents IA Test" + automatización por etiqueta | conversación de punta a punta en develop | 0,5 |
 
 **Total: 7 días hábiles.**

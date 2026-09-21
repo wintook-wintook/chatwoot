@@ -55,10 +55,11 @@ RSpec.describe 'Tracking Campaigns API: ventana', type: :request do
     before { create(:contact, :with_phone_number, account: account) }
 
     it 'guarda el fin, la espera y el horario en la campaña, y la audiencia elegida' do
-      starts = 1.day.from_now
+      starts = 1.day.from_now.change(usec: 0)
+      ends = 5.days.from_now.change(usec: 0)
       post "/api/v1/accounts/#{account.id}/contact_tracking_bulk_assigns",
            params: { payload: payload, campaign_name: 'Lote', template_id: sms_template.id,
-                     scheduled_for: starts.iso8601, ends_at: 5.days.from_now.iso8601,
+                     scheduled_for: starts.iso8601, ends_at: ends.iso8601,
                      entry_delay_minutes: 15, respect_working_hours: false },
            headers: admin.create_new_auth_token, as: :json
 
@@ -66,7 +67,7 @@ RSpec.describe 'Tracking Campaigns API: ventana', type: :request do
       campaign = account.tracking_campaigns.find(response.parsed_body['campaign_id'])
       expect(campaign).to have_attributes(mode: 'batch', status: 'draft', entry_delay_minutes: 15,
                                           respect_working_hours: false)
-      expect(campaign.ends_at).to be_within(1.second).of(5.days.from_now)
+      expect(campaign.ends_at).to eq(ends)
       expect(campaign.audience['filter_payload']).to eq(payload)
     end
 
@@ -78,6 +79,39 @@ RSpec.describe 'Tracking Campaigns API: ventana', type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq('El fin debe ser posterior al inicio')
+    end
+  end
+
+  describe 'GET /api/v1/accounts/{account.id}/tracking_campaigns/{id}/entries' do
+    let(:campaign) { create(:tracking_campaign, account: account, inbox: inbox, tracking_template: template) }
+    let(:rule) { create(:automation_rule, account: account, name: 'Etiqueta demo') }
+
+    before do
+      create(:tracking_campaign_entry, tracking_campaign: campaign, source: 'batch')
+      create(:tracking_campaign_entry, tracking_campaign: campaign, source: 'automation', automation_rule: rule)
+      create(:tracking_campaign_entry, tracking_campaign: campaign, source: 'automation', automation_rule: rule,
+                                       status: 'skipped', reason: 'already_enrolled')
+    end
+
+    it 'devuelve el resumen por fuente y motivo, y la lista con la automatización que inscribió' do
+      get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}/entries",
+          headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      body = response.parsed_body
+      expect(body['summary']).to eq('enrolled' => 2, 'batch' => 1, 'automation' => 1, 'skipped' => 1,
+                                    'skipped_by_reason' => { 'already_enrolled' => 1 })
+      expect(body['meta']).to include('count' => 3, 'page' => 1)
+      expect(body['entries'].first).to include('status' => 'skipped', 'reason' => 'already_enrolled',
+                                               'automation_rule_name' => 'Etiqueta demo')
+    end
+
+    it 'no deja ver las inscripciones de otra cuenta' do
+      other = create(:tracking_campaign)
+
+      get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{other.id}/entries",
+          headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:not_found)
     end
   end
 end

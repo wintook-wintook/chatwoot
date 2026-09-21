@@ -142,6 +142,13 @@ export default {
     statusClass(status) {
       return STATUS_COLOR[status] || 'text-slate-500 bg-slate-100';
     },
+    // proyecto@automatizacion_campanas: "01/10/2026 10:00 → sin fin"
+    windowText(campaign) {
+      const end = campaign.ends_at
+        ? this.formatDate(campaign.ends_at)
+        : this.$t('TRACKING_CAMPAIGNS_VIEW.NO_END');
+      return `${this.formatDate(campaign.scheduled_for)} → ${end}`;
+    },
     formatDate(value) {
       if (!value) return '—';
       return new Date(value).toLocaleString('es-MX', {
@@ -325,7 +332,9 @@ export default {
             <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.NAME') }}</th>
             <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.AGENT') }}</th>
             <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.CHANNEL') }}</th>
-            <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.START') }}</th>
+            <!-- proyecto@automatizacion_campanas: tipo y ventana (antes, solo el inicio) -->
+            <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.TYPE') }}</th>
+            <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.WINDOW') }}</th>
             <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.STATUS') }}</th>
             <th class="p-3 text-right">
               {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.PROGRESS') }}
@@ -349,10 +358,13 @@ export default {
             <td class="p-3 text-slate-500 dark:text-slate-400">
               {{ c.inbox_name || '—' }}
             </td>
+            <td class="p-3 text-slate-500 dark:text-slate-400">
+              {{ $t(`TRACKING_CAMPAIGNS_VIEW.MODE.${c.mode || 'batch'}`) }}
+            </td>
             <td
               class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap"
             >
-              {{ formatDate(c.scheduled_for) }}
+              {{ windowText(c) }}
             </td>
             <td class="p-3">
               <span

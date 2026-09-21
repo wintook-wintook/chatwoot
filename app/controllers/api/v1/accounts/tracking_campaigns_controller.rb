@@ -14,9 +14,12 @@
 # POST /api/v1/accounts/:account_id/tracking_campaigns        → crea una campaña CONTINUA
 #     (proyecto@automatizacion_campanas): sin audiencia, la llenan las automatizaciones.
 #     Las por lote se crean por contact_tracking_bulk_assigns, que además asigna la audiencia.
+# GET /api/v1/accounts/:account_id/tracking_campaigns/:id/entries?page=N → inscritos y omitidos
+#     (proyecto@automatizacion_campanas, ver TrackingCampaignEntriesJson)
 # ================================================================================
 
 class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseController
+  include TrackingCampaignEntriesJson
   # Intenciones que cuentan como "interesado" en el embudo (igual que el overview de cuenta).
   INTERESTED_INTENTS = %w[interested book_appointment reschedule].freeze
 
@@ -46,6 +49,11 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   # Borra la campaña. Antes cancela los seguimientos aún vivos (detiene sus jobs)
   # para que no sigan enviando mensajes sin campaña. Los seguimientos NO se borran:
   # el modelo los desvincula (dependent: :nullify) y quedan sueltos en "Todos".
+  def entries
+    campaign = Current.account.tracking_campaigns.find(params[:id])
+    render json: entries_payload(campaign, [params[:page].to_i, 1].max)
+  end
+
   def create
     template = Current.account.tracking_templates.find_by(id: params[:tracking_template_id])
     return render_error('Plantilla no encontrada') unless template
