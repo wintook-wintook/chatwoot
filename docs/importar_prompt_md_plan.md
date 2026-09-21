@@ -308,7 +308,37 @@ completo al modelo serían ≈ 280 K tokens **solo para leerlo**, y además no c
 | **F4** Job y API | tabla, job con avance, endpoints, huella para no reprocesar | request spec: subir, avance, propuesta; reimportar no gasta | 1 |
 | **F5** Pantalla | botón "Importar .md", modal con pestañas y medidor, "Cargar en el Asistente" | Vitest + navegador | 2 |
 | **F6** Conocimiento | crear respuestas predefinidas (servicios, glosario) y guiones con prompt | spec: se crean, se vectorizan, los guiones tienen `content_is_prompt` | 1,5 |
-| **F7** Prueba real | importar ADAM, pruebas sugeridas, conversación en "Agents IA Test" | conversación de punta a punta en develop | 1 |
+| **F7** Prueba real | importar ADAM, pruebas sugeridas, conversación en "Agents IA Test"; comparar contra la línea base (§8.1) | cumple §8.1 + conversación de punta a punta en develop | 1 |
+
+### 8.1 Línea base: la muestra hecha a mano (criterio de aceptación de la F7)
+
+`docs/ejemplos/adam_entrenamiento_linea_base.txt` es el Entrenamiento de ADAM armado a mano (21/09/2026)
+siguiendo las reglas de este plan: **14.701 caracteres** (≈ 3.700 tokens), 6 rutas + por defecto, 6
+secciones globales y 6 por ruta. Pasó el comprobador real: 0 bloqueantes; avisos por etiquetas que no
+existen en la cuenta, `@crear_ticket` heredado y secciones sugeridas.
+
+Lo que quedó fuera del prompt en la muestra, y a dónde va:
+
+| Parte | Destino |
+|---|---|
+| C6: 13 servicios (142 reglas) | una respuesta predefinida por servicio; sus reglas como Prompt de Contenido |
+| C7: guiones de redes, Trafficker y web | respuestas predefinidas con "El mensaje es el prompt" |
+| C2 Glosario, C3 Analogías, C4 Errores | respuestas predefinidas |
+| C4 Diagnóstico Ejecutivo y Final | fuera: los hace el consultor en sesión |
+| C1 Forma de aprender / registro de datos | fuera: el agente no escribe en la base de conocimiento |
+| C5 gestión de prompts | fuera: es para quien administra |
+| C3 Comunicación verbal, C7 Seguimiento | fuera: voz, y los reintentos ya los maneja el motor |
+
+**La F7 se da por cumplida si, importando ADAM, el resultado de la función:**
+1. cabe en el presupuesto (≤ 24.000 caracteres) y no pasa de ~1,5 veces la línea base;
+2. cubre las 373 inviolables (en el prompt, en una ruta o descartadas a mano), cosa que la muestra
+   no pudo verificar y la función sí;
+3. propone rutas equivalentes (diagnóstico, servicios, precios, objeciones, reunión, dirección) y el
+   comprobador no da bloqueantes;
+4. manda a Conocimiento o Fuera lo mismo que la tabla de arriba, o explica por qué no;
+5. en las pruebas sugeridas enruta al menos tan bien como la línea base cargada en el mismo agente.
+
+Si sale peor en alguno, se ajusta el reparto o la condensación antes de cerrar la F7.
 
 **Total: 10,5 días hábiles.** F6 necesita que `feat/predefinidas_prompt` esté mergeada; si no, las F0–F5
 funcionan igual y los guiones quedan como alcance de su ruta.
