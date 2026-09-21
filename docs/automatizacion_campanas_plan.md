@@ -185,7 +185,7 @@ automatización y cuántos no, y por qué**.
 | `automation_rule_id` | bigint, null | qué automatización lo inscribió |
 | `conversation_id` | bigint, null | la conversación que disparó la automatización |
 | `status` | string | `enrolled` · `skipped` |
-| `reason` | string, null | `campaign_closed` · `already_enrolled` · `active_tracking` · `outside_window` · `daily_cap` |
+| `reason` | string, null | `campaign_closed` · `already_enrolled` · `active_tracking` · `not_contactable` (sin teléfono en WhatsApp, sin correo en Email…) · `outside_window` · `daily_cap` |
 | `contact_tracking_id` | bigint, null | el seguimiento que se creó |
 
 Índice único (`tracking_campaign_id`, `contact_id`) **solo para los inscritos**: un contacto entra una
@@ -276,7 +276,7 @@ Una columna **Tipo** (Por lote / Continua) y la **ventana** (01/10 → 31/10) en
 | Fase | Entrega | Cómo se verifica | Días |
 |---|---|---|---|
 | **F0** ✅ Datos | columnas nuevas en `tracking_campaigns`, tabla `tracking_campaign_entries`, las existentes quedan "por lote" | spec del modelo; migración tolerante | 1 |
-| **F1** Inscribir | `TrackingCampaigns::Enroll`: ventana, espera, horario, duplicados, omitidos; el bulk pasa a usarlo | specs de cada caso de §4.1 | 1,5 |
+| **F1** ✅ Inscribir (`Schedule` · `TrackingBuilder` · `Enroll`) | `TrackingCampaigns::Enroll`: ventana, espera, horario, duplicados, omitidos; el bulk pasa a usarlo | specs de cada caso de §4.1 | 1,5 |
 | **F2** La automatización | acción "Agregar a campaña" (backend + desplegable con estado y ventana) | spec de la acción; Vitest del desplegable | 1 |
 | **F3** Ciclo de vida | job que abre y cierra campañas por su ventana | spec del job | 0,5 |
 | **F4** Formulario | tipo, ventana, espera, horario; "Continua" sin selector de audiencia | Vitest + navegador | 1,5 |
