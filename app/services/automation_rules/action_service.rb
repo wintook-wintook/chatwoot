@@ -53,13 +53,27 @@ class AutomationRules::ActionService < ActionService
     params = { content: message[0], private: true, content_attributes: { automation_rule_id: @rule.id } }
     Messages::MessageBuilder.new(nil, @conversation, params).perform
   end
-  
+
   def send_email_to_team(params)
     teams = Team.where(id: params[0][:team_ids])
 
     teams.each do |team|
       TeamNotifications::AutomationNotificationMailer.conversation_creation(@conversation, team, params[0][:message])&.deliver_now
     end
+  end
+
+  # proyecto@automatizacion_campanas: "Agregar a campaña" (docs/automatizacion_campanas_plan.md §4).
+  # Guarda el id de la campaña, no su nombre: renombrarla no rompe la regla. Toda la lógica
+  # (ventana, duplicados, tope, horario) está en TrackingCampaigns::Enroll, que deja la
+  # inscripción registrada entre o no; una campaña borrada solo deja una línea en el log.
+  def add_to_tracking_campaign(params)
+    campaign = @account.tracking_campaigns.find_by(id: Array(params).first)
+    return Rails.logger.info("[AutomationAction] add_to_tracking_campaign: campaña #{params.inspect} no existe") unless campaign
+
+    entry = TrackingCampaigns::Enroll.new(campaign, @conversation.contact, source: 'automation',
+                                                                           conversation: @conversation,
+                                                                           automation_rule: @rule).call
+    Rails.logger.info "[AutomationAction] campaña #{campaign.id}: #{entry.status} #{entry.reason}".strip
   end
 
   # proyecto@automatizacion_tracking: pausa el seguimiento activo del contacto en el inbox indicado

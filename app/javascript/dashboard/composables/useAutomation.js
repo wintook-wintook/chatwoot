@@ -38,6 +38,10 @@ export function useAutomation() {
   const caseTypes = useMapGetter('caseTickets/getTypes');
   // proyecto@automatizacion_tracking: obtiene todas las plantillas de seguimiento del store
   const trackingTemplates = useMapGetter('trackingTemplates/getTemplates');
+  // proyecto@automatizacion_campanas: campañas para la acción "Agregar a campaña"
+  const trackingCampaigns = useMapGetter(
+    'trackingCampaignOptions/getCampaignOptions'
+  );
 
   const booleanFilterOptions = computed(() => [
     { id: true, name: t('FILTER.ATTRIBUTE_LABELS.TRUE') },
@@ -250,6 +254,7 @@ export function useAutomation() {
       kanbanTypeProcesses: kanbanTypeProcessOptions.value, // proyecto@automatizaciones
       caseTypes: caseTypeOptions.value, // proyecto@automatizaciones
       trackingTemplates: trackingTemplateOptions, // proyecto@automatizacion_tracking
+      trackingCampaigns: trackingCampaigns.value, // proyecto@automatizacion_campanas
       languages,
       type,
     });

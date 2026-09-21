@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_09_18_222811) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_21_182758) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1570,6 +1570,28 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_18_222811) do
     t.index ["user_id"], name: "index_tracking_assistant_sessions_on_user_id"
   end
 
+  create_table "tracking_campaign_entries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_campaign_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "conversation_id"
+    t.bigint "automation_rule_id"
+    t.bigint "contact_tracking_id"
+    t.string "source", null: false
+    t.string "status", null: false
+    t.string "reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_tracking_campaign_entries_on_account_id"
+    t.index ["automation_rule_id"], name: "index_tracking_campaign_entries_on_automation_rule_id"
+    t.index ["contact_id"], name: "index_tracking_campaign_entries_on_contact_id"
+    t.index ["contact_tracking_id"], name: "index_tracking_campaign_entries_on_contact_tracking_id"
+    t.index ["conversation_id"], name: "index_tracking_campaign_entries_on_conversation_id"
+    t.index ["tracking_campaign_id", "contact_id"], name: "index_tracking_campaign_entries_one_enrollment", unique: true, where: "((status)::text = 'enrolled'::text)"
+    t.index ["tracking_campaign_id", "status"], name: "index_tracking_campaign_entries_by_status"
+    t.index ["tracking_campaign_id"], name: "index_tracking_campaign_entries_on_tracking_campaign_id"
+  end
+
   create_table "tracking_campaigns", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -1581,6 +1603,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_18_222811) do
     t.string "status", default: "running", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "mode", default: "batch", null: false
+    t.datetime "ends_at"
+    t.integer "entry_delay_minutes", default: 0, null: false
+    t.boolean "respect_working_hours", default: true, null: false
+    t.integer "daily_cap"
+    t.jsonb "audience", default: {}, null: false
     t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
     t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_campaigns_on_inbox_id"
@@ -1790,6 +1818,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_18_222811) do
   add_foreign_key "tracking_assistant_sessions", "accounts"
   add_foreign_key "tracking_assistant_sessions", "tracking_templates", on_delete: :nullify
   add_foreign_key "tracking_assistant_sessions", "users", on_delete: :cascade
+  add_foreign_key "tracking_campaign_entries", "accounts", on_delete: :cascade
+  add_foreign_key "tracking_campaign_entries", "automation_rules", on_delete: :nullify
+  add_foreign_key "tracking_campaign_entries", "contact_trackings", on_delete: :nullify
+  add_foreign_key "tracking_campaign_entries", "contacts", on_delete: :cascade
+  add_foreign_key "tracking_campaign_entries", "conversations", on_delete: :nullify
+  add_foreign_key "tracking_campaign_entries", "tracking_campaigns", on_delete: :cascade
   add_foreign_key "tracking_campaigns", "accounts"
   add_foreign_key "tracking_campaigns", "inboxes"
   add_foreign_key "tracking_campaigns", "tracking_templates"

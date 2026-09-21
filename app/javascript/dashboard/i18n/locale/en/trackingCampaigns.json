@@ -29,14 +29,24 @@
       "ACTIVE": "Active",
       "COMPLETED": "Completed",
       "FAILED": "Failed",
-      "PROGRESS": "Progress"
+      "PROGRESS": "Progress",
+      "TYPE": "Type",
+      "WINDOW": "Window"
     },
     "STATUS": {
-      "draft": "Draft",
+      "draft": "Scheduled",
       "running": "Running",
       "paused": "Paused",
       "finished": "Finished"
-    }
+    },
+    "MODE": {
+      "batch": "Batch",
+      "continuous": "Continuous"
+    },
+    "NO_END": "no end",
+    "CONTINUOUS_CREATED": "Campaign \"{name}\" created. To receive contacts, create an automation that uses it.",
+    "CREATE_AUTOMATION": "Create automation for this campaign",
+    "DISMISS": "Close"
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campaigns",
@@ -125,6 +135,43 @@
       "ATTEMPTS": "Attempts",
       "ACTION": "Action"
     },
-    "OPEN_CONVERSATION": "Open conversation"
+    "OPEN_CONVERSATION": "Open conversation",
+    "TYPE": "Type",
+    "WINDOW": "Window",
+    "TABS": {
+      "PROSPECTS": "Prospects",
+      "ENTRIES": "Enrolled"
+    },
+    "ENTRIES": {
+      "LOADING": "Loading enrollments…",
+      "EMPTY": "Nobody has been enrolled yet. In a continuous campaign, contacts arrive through the \"Add to campaign\" automation action.",
+      "SUMMARY_ENROLLED": "Enrolled",
+      "SUMMARY_BATCH": "batch",
+      "SUMMARY_AUTOMATION": "by automation",
+      "SUMMARY_SKIPPED": "skipped",
+      "COL": {
+        "CONTACT": "Contact",
+        "SOURCE": "Came from",
+        "STATUS": "Status",
+        "WHEN": "When"
+      },
+      "SOURCE": {
+        "batch": "Batch",
+        "automation": "Automation",
+        "automation_named": "Automation \"{name}\""
+      },
+      "STATUS": {
+        "enrolled": "Enrolled",
+        "skipped": "Skipped"
+      },
+      "REASON": {
+        "campaign_closed": "campaign closed",
+        "already_enrolled": "already enrolled",
+        "active_tracking": "already has an active AI Agent",
+        "not_contactable": "the channel can't reach them",
+        "outside_window": "outside the window",
+        "daily_cap": "daily limit"
+      }
+    }
   }
 }
