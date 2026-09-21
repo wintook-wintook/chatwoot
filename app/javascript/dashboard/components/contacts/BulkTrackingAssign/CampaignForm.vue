@@ -557,12 +557,23 @@ export default {
               class="field-input"
             />
           </label>
-          <label
-            class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 md:self-end md:pb-2"
-          >
-            <input v-model="respectWorkingHours" type="checkbox" class="m-0" />
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.RESPECT_WORKING_HOURS') }}
-          </label>
+          <!-- Mismo molde que los otros campos (título + caja del alto de un input)
+               para que las tres columnas queden alineadas. -->
+          <div class="block">
+            <span class="field-label">
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.WORKING_HOURS_LABEL') }}
+            </span>
+            <label
+              class="field-input flex items-center gap-2 !h-10 !py-0 cursor-pointer"
+            >
+              <input
+                v-model="respectWorkingHours"
+                type="checkbox"
+                class="m-0"
+              />
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.RESPECT_WORKING_HOURS') }}
+            </label>
+          </div>
         </div>
       </section>
 

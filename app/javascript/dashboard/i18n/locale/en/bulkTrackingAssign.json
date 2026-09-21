@@ -54,7 +54,8 @@
       "SUMMARY_CONTINUOUS": "Receives contacts {from} → {to}",
       "NOW": "from now",
       "NO_END": "no end",
-      "CREATE": "Create campaign"
+      "CREATE": "Create campaign",
+      "WORKING_HOURS_LABEL": "Hours"
     },
     "REVIEW": {
       "TITLE": "Review selected contacts",

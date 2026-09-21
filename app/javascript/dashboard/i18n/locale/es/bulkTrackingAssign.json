@@ -54,7 +54,8 @@
       "SUMMARY_CONTINUOUS": "Recibe contactos {from} → {to}",
       "NOW": "desde ahora",
       "NO_END": "sin fin",
-      "CREATE": "Crear campaña"
+      "CREATE": "Crear campaña",
+      "WORKING_HOURS_LABEL": "Horario"
     },
     "REVIEW": {
       "TITLE": "Revisar contactos seleccionados",
