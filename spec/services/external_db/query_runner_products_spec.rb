@@ -59,6 +59,12 @@ RSpec.describe ExternalDb::QueryRunner do
     end
   end
 
+  it 'lleva cada palabra a su singular para encontrar singular y plural' do
+    described_class.new(products_query(connection(:firebird, :sae)), 'texto' => 'cascos balones HP-240s').perform
+
+    expect(sent[:binds]).to include('cascos'.delete_suffix('s'), 'balon', 'HP-240s')
+  end
+
   describe 'parámetro boolean' do
     it 'entiende sí/no' do
       query = products_query(connection(:firebird, :sae))

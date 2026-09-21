@@ -10,6 +10,9 @@
 #   words    texto libre del cliente ("laptop hp"): se parte en hasta WORDS_MAX palabras,
 #            cada una solo con letras, números, punto y guion (sin comodines ni comillas),
 #            y el SQL las usa como :clave_1, :clave_2, :clave_3 (las que falten, NULL).
+#            Cada palabra va a su singular ("cascos" → casco, "balones" → balon): la
+#            búsqueda es por "contiene", así que la raíz encuentra singular y plural
+#            (medido: "cascos" no encontraba "Casco de Baseball").
 #   boolean  "si/sí/true/1/yes" → 1; "no/false/0" → 0 (se bindea como entero).
 class ExternalDb::QueryRunner
   Result = Struct.new(:columns, :rows, :row_count, :duration_ms, keyword_init: true)
@@ -76,13 +79,20 @@ class ExternalDb::QueryRunner
 
   # "laptop hp" → :texto_1 = LAPTOP, :texto_2 = HP, :texto_3 = NULL (y :texto, la frase limpia).
   def expand_words(key, value, typed, types)
-    words = value.to_s.split.map { |w| w.gsub(WORD_CHARS, '') }.reject(&:blank?).first(WORDS_MAX)
+    words = value.to_s.split.map { |w| singular(w.gsub(WORD_CHARS, '')) }.reject(&:blank?).first(WORDS_MAX)
     typed[key] = words.join(' ').presence
     types[key] = 'string'
     WORDS_MAX.times do |i|
       typed["#{key}_#{i + 1}"] = words[i]
       types["#{key}_#{i + 1}"] = 'string'
     end
+  end
+
+  def singular(word)
+    return word.delete_suffix('es') if word.length > 5 && word.downcase.end_with?('es')
+    return word.delete_suffix('s') if word.length > 3 && word.downcase.end_with?('s') && !word.match?(/\d/)
+
+    word
   end
 
   def coerce_boolean(raw, key)

@@ -86,6 +86,15 @@ class ExternalDb::ConsultaDirectiveRenderer
     connection&.external_db_queries&.active&.find_by('LOWER(name) = LOWER(?)', directive.name)
   end
 
+  # Los parámetros finales de una directiva con "?": lo que llenó la IA, pisado por los
+  # valores fijos (siempre ganan), más el posicional y el RFC del contacto como siempre.
+  def params_for(directive, query, asked_values)
+    params = asked_values.to_h.transform_keys(&:to_s).merge(directive.fixed)
+    params.merge!(positional_arg(directive.positional, query)) { |_, current, _| current } if directive.positional
+    fill_rfc_from_contact(query, params)
+    params
+  end
+
   private
 
   def render_one(conn_key, name, args_str)

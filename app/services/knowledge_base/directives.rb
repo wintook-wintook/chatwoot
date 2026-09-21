@@ -61,6 +61,7 @@ module KnowledgeBase
           .gsub(CANNED_RE, '')
           .gsub(/@buscar_art[ií]culo\b/i, '')
           .gsub(/@discourse\b/i, '')
+          .gsub(ExternalDb::ConsultaDirectiveRenderer::DIRECTIVE, '') # proyecto@erp_productos: configuración
           .strip
     end
 

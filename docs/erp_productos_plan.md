@@ -189,7 +189,7 @@ el comprobador del Asistente (`ValidatorService`) y el autocompletado de directi
 |---|---|---|---|
 | **F0** ✅ La consulta | `buscar_productos` en `QueryLibrary` para SAE, Microsip y Contpaq (verificada en vivo, solo lectura) + siembra; filtros opcionales (texto por palabras con comodines escapados, línea, precios, existencia, lista, max) | spec por ERP; prueba contra las 3 conexiones | 1,5 |
 | **F1** ✅ El `?` en la sintaxis | `ConsultaDirectiveRenderer` reconoce `param=?`; sin `?` todo igual | specs de parseo + regresión de cobranza | 0,5 |
-| **F2** El agente | `AskedParams` (IA llena los `?`), consulta, redacción con fidelidad e historial; `{{consulta:}}` de ruta usa la directiva de la ruta (§3.6) | specs con la IA simulada; regresión de cobranza | 1,5 |
+| **F2** ✅ El agente | `AskedParams` (IA llena los `?`), consulta, redacción con fidelidad e historial; `{{consulta:}}` de ruta usa la directiva de la ruta (§3.6) | specs con la IA simulada; regresión de cobranza | 1,5 |
 | **F3** Comprobador y autocompletado | el Asistente valida `{{consulta:…(…=?)}}` (consulta existe, parámetros válidos, conexión) y la ofrece en `/` | specs del comprobador; Vitest | 1 |
 | **F4** La pantalla | `buscar_productos` en Conexión ERP (lista de precios, existencia, solo activos) + probar en Consola ERP | Vitest + navegador | 1 |
 | **F5** Prueba real | agente con `{{consulta:buscar_productos(texto=?, precio_max=?)}}` en "Agents IA Test" contra SAE | conversación de punta a punta | 0,5 |
@@ -208,6 +208,22 @@ el comprobador del Asistente (`ValidatorService`) y el autocompletado de directi
 Resultados en vivo: SAE 50 productos (todo) · "toshiba" 1 · existencia y ≤ $1,000: 19. Microsip "cañón" 1 · línea
 Armas lista 2: 6 · con existencia 46. Contpaq "mouse" 5 · con existencia 29. Un intento de inyección
 (`x' OR 1=1 --`) devuelve 0 filas en SAE y Contpaq.
+
+### 7.2 F2 hecha (21/09/2026)
+
+`ExternalDb::AskedParams` (la IA llena solo los `?`, modelo del inbox con piso `:router`, JSON) +
+`ExternalDb::AskedConsulta` (fijos ganan, posicional y RFC del contacto, `max` 5 / tope 10) + el motor
+(`perform_erp_asked`: redacta con los datos exactos, regla de fidelidad, historial; §3.6 arreglado: con rutas
+se usa la directiva de la ruta). La sintaxis `{{consulta:…}}` ya no llega al modelo (`Directives.strip_tokens`).
+
+Probado con la IA y las bases reales (sin escribir nada): "¿tienen aire acondicionado toshiba?" → texto;
+"cascos de menos de 500 que tengan disponibles" → texto + precio_max + con_existencia; "gracias" → no consulta.
+Dos arreglos de búsqueda que salieron de ahí:
+
+| Caso real | Arreglo |
+|---|---|
+| "cascos" no encontraba "Casco de Baseball" | cada palabra va a su singular (la búsqueda es "contiene": la raíz encuentra ambos) |
+| el catálogo dice "AIERE ACONDICIONADO TOSHIBA": con todas las palabras, nada | si no hay nada, se busca por palabra y se ordena por la palabra más específica (1 / cuántos la tienen); al modelo se le avisa "COINCIDENCIA PARCIAL" para que lo presente como "podría interesarle" |
 
 La consulta **no se agrega sola** a las conexiones existentes: se agrega con el botón **"Sembrar consultas"**
 de cada conexión (agrega las que faltan por nombre). Aparte: a Microsip le falta `facturas_vencidas` porque la
