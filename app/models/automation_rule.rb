@@ -45,7 +45,8 @@ class AutomationRule < ApplicationRecord
        assign_case_type
        assign_tracking_template
        cancel_active_tracking
-       pause_active_tracking].freeze # proyecto@automatizacion_tracking
+       pause_active_tracking
+       add_to_tracking_campaign].freeze # proyecto@automatizacion_tracking / @automatizacion_campanas
   end
 
   def file_base_data

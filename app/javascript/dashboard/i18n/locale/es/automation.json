@@ -125,6 +125,7 @@
       "ACTION_PARAMETERS_REQUIRED": "Los parámetros de la acción son obligatorios",
       "ATLEAST_ONE_CONDITION_REQUIRED": "Se requiere al menos una condición",
       "ATLEAST_ONE_ACTION_REQUIRED": "Se requiere al menos una acción"
-    }
+    },
+    "ADD_TO_CAMPAIGN_PRESET_NAME": "Inscribir en \"{name}\""
   }
 }

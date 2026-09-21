@@ -669,6 +669,13 @@ export const AUTOMATION_ACTION_TYPES = [
     label: 'Asignar Agente IA',
     inputType: 'search_select',
   },
+  // proyecto@automatizacion_campanas: inscribe al contacto en una campaña (se elige por
+  // nombre, se guarda el id). La ventana, duplicados y horario los resuelve el backend.
+  {
+    key: 'add_to_tracking_campaign',
+    label: 'Agregar a campaña',
+    inputType: 'search_select',
+  },
   // proyecto@automatizacion_tracking: cancela el seguimiento activo del contacto en el inbox de las condiciones
   {
     key: 'cancel_active_tracking',
