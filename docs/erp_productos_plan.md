@@ -1,4 +1,4 @@
-# Buscar productos del ERP desde el Agente IA: directiva `@productos`
+# Buscar productos del ERP desde el Agente IA: `{{consulta:}}` con parámetros `?`
 
 Rama: `feat/erp_consulta` (desde `develop`, 21/09/2026). **Solo plan**: nada se programa hasta que el
 usuario lo revise.
@@ -9,8 +9,12 @@ usuario lo revise.
 
 1. Una **consulta de productos** en Base de Conocimiento → **Conexión ERP**, que busque en el catálogo del
    ERP del cliente (Contpaq, SAE o Microsip).
-2. Una **directiva** para el prompt de los Agentes IA, **`@productos`**, que permita **filtrar**: que el
-   agente conteste "¿tienen laptops HP de menos de 15 mil?" con los productos reales del ERP.
+2. Usarla desde el prompt de los Agentes IA **permitiendo filtrar**: que el agente conteste "¿tienen
+   laptops HP de menos de 15 mil?" con los productos reales del ERP.
+
+**Decisión (usuario, 21/09/2026):** no se crea una directiva nueva: se **extiende `{{consulta:}}`** (la de
+`@query_databases`) con parámetros **`?`**, que llena la IA con lo que escribió el cliente. La primera
+versión del plan proponía `@productos`; queda solo como atajo opcional (§3.5).
 
 ---
 
@@ -38,79 +42,93 @@ Falta: una consulta de productos, y una directiva cuyos **filtros salgan de lo q
 
 ---
 
-## 3. La idea
+## 3. La idea: `{{consulta:}}` con parámetros `?`
+
+### 3.1 Hoy vs. con `?`
+
+```
+ HOY (sin cambios)                               CON "?"
+ ─────────────────                               ───────
+ {{consulta:sae/saldo_cliente}}                  {{consulta:sae/buscar_productos(linea=COMPUTO, texto=?, precio_max=?)}}
+   · parámetros fijos en el prompt                 · los "?" los llena la IA con el mensaje del cliente
+     (el RFC sale del contacto: erp_rfc)            · los valores fijos siempre ganan
+   · sin IA: el prompt, con el resultado           · el agente REDACTA con sus reglas, citando los
+     insertado, ES la respuesta                      datos tal cual
+```
+
+**Compatibilidad:** una `{{consulta:}}` **sin ningún `?`** se comporta exactamente como hoy. La cobranza no
+cambia.
+
+### 3.2 El recorrido con `?`
 
 ```
  Cliente: "¿tienen laptops HP de menos de 15 mil?"
     │
     ▼
- Agente IA con @productos(linea=COMPUTO)            ← filtro FIJO que puso quien arma el agente
+ Agente:  {{consulta:sae/buscar_productos(linea=COMPUTO, texto=?, precio_max=?)}}
     │
-    ▼  1. La IA saca los filtros del mensaje (function calling, sin SQL):
+    ▼  1. La IA llena SOLO los "?" (function calling con los parámetros de la consulta; sin SQL):
     │       { texto: "laptop hp", precio_max: 15000 }
-    │  2. Se suman al filtro fijo de la directiva:  linea = COMPUTO
+    │  2. Se suman los fijos:  linea = COMPUTO
     ▼
- ProductSearch (por ERP) ── SELECT parametrizado, solo lectura, tope de filas ──► ERP
+ QueryRunner ── SELECT de la consulta, parámetros con bind, solo lectura, tope de filas ──► ERP (SAE)
     │
-    ▼  3. Resultados reales:
+    ▼  3. Filas reales:
     │     LAP-HP-240  HP 240 G9 Core i5 · $13,499 · 4 en existencia
     │     LAP-HP-250  HP 250 G10 Core i3 · $11,299 · sin existencia
     ▼
- 4. El agente redacta con SUS reglas (tono, etiquetas), citando solo esos datos
+ 4. El agente redacta con SUS reglas (tono, etiquetas) y la regla de fidelidad
     "Tenemos la HP 240 G9 (Core i5) en $13,499, con 4 disponibles…"
 ```
 
-### 3.1 Dos niveles de filtro
+- Si el mensaje no pide nada que la consulta pueda responder ("gracias", "¿y el envío?"), la IA devuelve
+  `usar: false` y el agente contesta como siempre.
+- Si faltan datos que el cliente no dio (un `?` obligatorio sin valor), el agente **pregunta** en vez de
+  consultar a ciegas.
 
-| Nivel | Quién lo pone | Ejemplo | Para qué |
-|---|---|---|---|
-| **Fijo** (en la directiva) | quien arma el agente | `@productos(linea=COMPUTO, con_existencia)` | que un agente solo ofrezca una parte del catálogo |
-| **Del mensaje** | la IA, leyendo al cliente | texto, código, precio mínimo y máximo, solo disponibles | buscar lo que el cliente pidió |
-
-**El fijo siempre gana:** el cliente no puede ampliar lo que el agente tiene permitido. Si pide algo de otra
-línea, la búsqueda sale vacía y el agente responde que no lo maneja.
-
-### 3.2 La sintaxis
+### 3.3 La sintaxis
 
 ```
-@productos                                   todo el catálogo de la conexión del agente
-@productos(sae)                              de una conexión, por tipo de ERP o por nombre
-@productos(linea=COMPUTO)                    filtro fijo por línea o clasificación
-@productos(sae, linea=COMPUTO, con_existencia, lista=2, max=5)
+{{consulta:nombre(param=valor, otro=?)}}
+             │          │         └── "?" = lo llena la IA desde el mensaje del cliente
+             │          └──────────── valor fijo = lo pone quien arma el agente (siempre gana)
+             └─────────────────────── nombre de la consulta (en Conexión ERP)
+{{consulta:sae/nombre(…)}}             con prefijo de conexión (tipo de ERP o nombre), como hoy
 ```
 
-| Filtro fijo | Significado |
-|---|---|
-| `linea=…` | línea (SAE, Microsip) o clasificación (Contpaq); se pueden varias: `linea=A\|B` |
-| `con_existencia` | solo productos con existencia > 0 |
-| `lista=N` | qué lista de precios mostrar (por defecto la 1) |
-| `max=N` | cuántos productos como máximo (por defecto 5, tope 10) |
+Para productos, con la consulta nueva `buscar_productos`:
 
-- Funciona suelta en el prompt o como fuente de una ruta: `@ruta(catalogo #productos: precios, existencias, qué modelos tienen): @productos(linea=COMPUTO)`.
-- Sin prefijo, la conexión es la **única** de la cuenta; si hay varias, el comprobador del Asistente avisa
-  que hay que elegir una (como hoy con `{{consulta:}}`).
+| Parámetro | Fijo (ejemplo) | Con `?` |
+|---|---|---|
+| `texto` | — | palabras del cliente: nombre, descripción o código |
+| `codigo` | — | un código exacto si lo da |
+| `linea` | `linea=COMPUTO` (varias: `A\|B`) | — (normalmente fijo) |
+| `precio_min`, `precio_max` | `precio_max=50000` | lo que diga el cliente |
+| `con_existencia` | `con_existencia=si` | "¿cuáles tienen disponibles?" |
+| `lista` | `lista=2` (por defecto 1) | — |
+| `max` | `max=5` (tope 10) | — |
 
-### 3.3 Los filtros del mensaje (lo que saca la IA)
-
-Una sola llamada con *function calling*, igual que `AiQueryService`:
-
-```json
-{ "texto": "laptop hp", "codigo": null, "precio_min": null, "precio_max": 15000,
-  "solo_disponibles": false, "orden": "precio_asc" }
-```
-
-- La IA **nunca escribe SQL**: solo llena este objeto. El SQL es fijo, por ERP, con parámetros.
-- `texto` se busca palabra por palabra en nombre, descripción y código (`LIKE` con los comodines escapados).
-- Si el mensaje no pide productos ("gracias", "¿y el envío?"), la IA devuelve `buscar: false` y el agente
-  contesta como siempre.
+- Funciona suelta en el prompt o como **fuente de una ruta**:
+  `@ruta(catalogo #productos: precios, modelos, existencias): {{consulta:buscar_productos(texto=?, precio_max=?)}}`
 
 ### 3.4 La respuesta
 
-- El modelo redacta con el prompt del agente (sus reglas siguen valiendo) y recibe los productos como
-  **información exacta**: código, nombre, precio de la lista elegida, existencia.
-- **Regla de fidelidad**, como el modo Datos de Google Sheets: precios y existencias se citan tal cual, y si
-  no hay resultados se dice, sin inventar ni "parecidos".
-- Se guarda en el historial de la conversación, así "¿y la más barata?" se entiende.
+- El modelo recibe el prompt del agente (sin las directivas) + los resultados como **información exacta**
+  (código, nombre, precio de la lista elegida, existencia) + la **regla de fidelidad** del modo Datos de
+  Google Sheets: precios y existencias tal cual; sin resultados, se dice; nada de "parecidos" inventados.
+- Se guarda en el historial, así "¿y la más barata?" se entiende en el siguiente mensaje.
+
+### 3.5 Atajo opcional `@productos(…)`
+
+Si se quiere algo más fácil de escribir, `@productos(linea=COMPUTO)` puede ser un **alias** de
+`{{consulta:buscar_productos(linea=COMPUTO, texto=?, codigo=?, precio_min=?, precio_max=?, con_existencia=?)}}`.
+Decisión 1.
+
+### 3.6 Encontrado al revisar el motor: `{{consulta:}}` como fuente de una ruta
+
+`KnowledgeBaseResponseService#perform_erp_query` arma la respuesta con **todo** el `complementary_prompt`
+del agente, no con la fuente de la ruta elegida. En un agente con rutas, la respuesta sería el Entrenamiento
+completo (con sus `@ruta`). Se corrige en la F2: con rutas, se usa la directiva de la ruta del turno.
 
 ---
 
@@ -136,18 +154,18 @@ Conexión ERP › SAE Servicios › Consultas
 ## 5. Dónde vive
 
 ```
- Directivas (KnowledgeBase::Directives) ── detecta @productos(...) ──► modo :product_search
+ KnowledgeBase::Directives ── {{consulta:…}} ──► modo :erp_query (como hoy)
         │
- KnowledgeBaseResponseService#perform_product_search
-        │   1. ExternalDb::ProductFilters   (IA → filtros del mensaje, function calling)
-        │   2. ExternalDb::ProductSearch    (filtro fijo + del mensaje → SELECT por ERP → filas)
-        │   3. redacción con el prompt del agente + regla de fidelidad
-        ▼
-     send_reply
+ KnowledgeBaseResponseService#perform_erp_query
+        ├── sin "?"  → ConsultaDirectiveRenderer (como hoy: determinista, sin IA)
+        └── con "?"  → ExternalDb::AskedParams   (IA → valores de los "?", function calling)
+                       QueryRunner               (fijos + de la IA → SELECT → filas)
+                       redacción con el prompt del agente + regla de fidelidad + historial
 ```
 
-Se reutiliza: `QueryRunner` (solo `SELECT`, binds, tope), los adaptadores, `EngineConfig` (modelo),
-`OpenaiChat`, el comprobador del Asistente (`ValidatorService`) y el autocompletado de directivas (`/`).
+Se reutiliza: `ConsultaDirectiveRenderer` (sintaxis, conexión, RFC del contacto), `QueryRunner` (solo
+`SELECT`, binds, tope), los adaptadores, el *function calling* de `AiQueryService`, `EngineConfig` (modelo),
+el comprobador del Asistente (`ValidatorService`) y el autocompletado de directivas (`/`).
 
 ---
 
@@ -156,7 +174,8 @@ Se reutiliza: `QueryRunner` (solo `SELECT`, binds, tope), los adaptadores, `Engi
 | Riesgo | Cobertura |
 |---|---|
 | Inyección SQL | la IA no escribe SQL; filtros como parámetros; comodines de `LIKE` escapados; solo `SELECT` (QueryRunner) |
-| El cliente saca productos fuera de lo permitido | el filtro fijo de la directiva siempre gana |
+| El cliente saca productos fuera de lo permitido | los valores fijos siempre ganan; la IA solo llena los `?` |
+| Romper la cobranza que ya usa `{{consulta:}}` | sin `?` el camino es el de hoy, sin tocar; spec de regresión |
 | Precio o existencia inventados | los datos van como información exacta + regla de fidelidad; sin resultados → se dice |
 | Catálogos grandes lentos | tope de filas, `LIKE` sobre columnas del producto, `max` ≤ 10 |
 | Contpaq no tiene existencia total | decisión 2 |
@@ -168,24 +187,24 @@ Se reutiliza: `QueryRunner` (solo `SELECT`, binds, tope), los adaptadores, `Engi
 
 | Fase | Entrega | Cómo se verifica | Días |
 |---|---|---|---|
-| **F0** La consulta | `buscar_productos` en `QueryLibrary` para SAE, Microsip y Contpaq (verificada en vivo) + siembra | spec por ERP; prueba en vivo solo lectura contra las 3 conexiones | 1,5 |
-| **F1** La búsqueda | `ProductSearch`: filtros fijos + del mensaje → SQL por ERP, comodines escapados, orden, tope | specs de cada filtro e inyección | 1 |
-| **F2** La directiva | `@productos(...)`: sintaxis, conexión, comprobador del Asistente, autocompletado `/`, fuente de ruta | specs de parseo y del comprobador | 1 |
-| **F3** El agente | `ProductFilters` (IA → filtros) + modo en el motor + redacción con fidelidad + historial | specs con la IA simulada | 1,5 |
-| **F4** La pantalla | `buscar_productos` en Conexión ERP (lista de precios, existencia, solo activos) + prueba en Consola | Vitest + navegador | 1 |
-| **F5** Prueba real | agente con `@productos` en "Agents IA Test" contra SAE | conversación de punta a punta | 0,5 |
+| **F0** La consulta | `buscar_productos` en `QueryLibrary` para SAE, Microsip y Contpaq (verificada en vivo, solo lectura) + siembra; filtros opcionales (texto por palabras con comodines escapados, línea, precios, existencia, lista, max) | spec por ERP; prueba contra las 3 conexiones | 1,5 |
+| **F1** El `?` en la sintaxis | `ConsultaDirectiveRenderer` reconoce `param=?`; sin `?` todo igual | specs de parseo + regresión de cobranza | 0,5 |
+| **F2** El agente | `AskedParams` (IA llena los `?`), consulta, redacción con fidelidad e historial; `{{consulta:}}` de ruta usa la directiva de la ruta (§3.6) | specs con la IA simulada; regresión de cobranza | 1,5 |
+| **F3** Comprobador y autocompletado | el Asistente valida `{{consulta:…(…=?)}}` (consulta existe, parámetros válidos, conexión) y la ofrece en `/` | specs del comprobador; Vitest | 1 |
+| **F4** La pantalla | `buscar_productos` en Conexión ERP (lista de precios, existencia, solo activos) + probar en Consola ERP | Vitest + navegador | 1 |
+| **F5** Prueba real | agente con `{{consulta:buscar_productos(texto=?, precio_max=?)}}` en "Agents IA Test" contra SAE | conversación de punta a punta | 0,5 |
 
-**Total: 6,5 días hábiles.**
+**Total: 6 días hábiles.**
 
 ---
 
 ## 8. Decisiones para el usuario
 
-1. **El nombre:** `@productos` (en el pedido decía `@produtos`). ¿Así?
+1. **¿Atajo `@productos(…)`?** (§3.5). Propuesta: sí, como alias; la forma completa `{{consulta:…=?}}` sigue
+   sirviendo para cualquier consulta.
 2. **Existencia en Contpaq:** no hay un total; hay entradas y salidas por periodo. Propuesta: calcularla del
    ejercicio actual (entradas − salidas), **o** en Contpaq no mostrar existencia en esta versión.
 3. **Lista de precios por defecto:** la 1. ¿Con o sin IVA? (Contpaq/SAE guardan el precio sin impuesto.)
-4. **Productos sin existencia:** propuesta: se muestran con "sin existencia" salvo que la directiva diga
-   `con_existencia`.
+4. **Productos sin existencia:** propuesta: se muestran con "sin existencia", salvo `con_existencia=si`.
 5. **Cuántos productos por respuesta:** propuesta 5 (tope 10), para no saturar un WhatsApp.
 6. **Imágenes del producto** (Contpaq `CIDFOTOPRODUCTO`, SAE `CVE_IMAGEN`): fuera de esta versión.
