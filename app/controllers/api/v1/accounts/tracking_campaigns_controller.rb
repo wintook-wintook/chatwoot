@@ -11,6 +11,9 @@
 # GET /api/v1/accounts/:account_id/tracking_campaigns        → listado con stats
 #     ?lite=true → solo lo que necesita un selector (automatizaciones), sin stats
 # GET /api/v1/accounts/:account_id/tracking_campaigns/:id     → una campaña con stats
+# POST /api/v1/accounts/:account_id/tracking_campaigns        → crea una campaña CONTINUA
+#     (proyecto@automatizacion_campanas): sin audiencia, la llenan las automatizaciones.
+#     Las por lote se crean por contact_tracking_bulk_assigns, que además asigna la audiencia.
 # ================================================================================
 
 class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseController
@@ -43,6 +46,17 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   # Borra la campaña. Antes cancela los seguimientos aún vivos (detiene sus jobs)
   # para que no sigan enviando mensajes sin campaña. Los seguimientos NO se borran:
   # el modelo los desvincula (dependent: :nullify) y quedan sueltos en "Todos".
+  def create
+    template = Current.account.tracking_templates.find_by(id: params[:tracking_template_id])
+    return render_error('Plantilla no encontrada') unless template
+    return render_error("La plantilla '#{template.name}' no tiene un inbox configurado.") if template.inbox_id.blank?
+
+    campaign = Current.account.tracking_campaigns.new(continuous_attributes(template))
+    return render_error(campaign.errors.messages.values.flatten.to_sentence) unless campaign.save
+
+    render json: { campaign_id: campaign.id, campaign_name: campaign.name }
+  end
+
   def destroy
     campaign = Current.account.tracking_campaigns.find(params[:id])
     cancel_active_trackings(campaign)
@@ -140,6 +154,35 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
         objective_met: objective_met[id].to_i
       }
     end
+  end
+
+  # Sin inicio = desde ahora. Con inicio futuro nace Programada (la abre WindowJob).
+  def continuous_attributes(template)
+    starts = parse_time(params[:scheduled_for]) || Time.current
+    {
+      name: params[:name].to_s.strip, tracking_template: template, inbox_id: template.inbox_id, user: current_user,
+      objective: template.objective, mode: 'continuous', scheduled_for: starts,
+      status: starts > Time.current ? 'draft' : 'running'
+    }.merge(window_attributes)
+  end
+
+  def window_attributes
+    {
+      ends_at: parse_time(params[:ends_at]),
+      entry_delay_minutes: params[:entry_delay_minutes].presence&.to_i || 0,
+      respect_working_hours: ActiveModel::Type::Boolean.new.cast(params.fetch(:respect_working_hours, true)),
+      daily_cap: params[:daily_cap].presence&.to_i
+    }
+  end
+
+  def parse_time(value)
+    value.present? ? Time.zone.parse(value.to_s) : nil
+  rescue ArgumentError, TypeError
+    nil
+  end
+
+  def render_error(message)
+    render json: { error: message }, status: :unprocessable_entity
   end
 
   # proyecto@automatizacion_campanas — para el desplegable "Agregar a campaña".

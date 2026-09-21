@@ -27,8 +27,10 @@ class ContactTrackings::BulkAssignService
 
   MAX_BULK_ASSIGN = 100 # Límite de seguridad por asignación masiva
 
+  # window: la ventana de la campaña por lote (proyecto@automatizacion_campanas):
+  #   { ends_at:, entry_delay_minutes:, respect_working_hours: } — todo opcional.
   def initialize(account:, current_user:, filter_payload:, template_id:, scheduled_for:,
-                 campaign_name:, excluded_contact_ids: [], skip_active: true, campaign: nil)
+                 campaign_name:, excluded_contact_ids: [], skip_active: true, campaign: nil, window: {})
     @account              = account
     @current_user         = current_user
     @filter_payload       = filter_payload
@@ -38,6 +40,7 @@ class ContactTrackings::BulkAssignService
     @excluded_contact_ids = Array(excluded_contact_ids).map(&:to_i)
     @skip_active          = skip_active
     @campaign             = campaign
+    @window               = window.to_h.symbolize_keys.compact
     @results              = { inserted: 0, skipped: 0, errors: [] }
   end
 
@@ -49,6 +52,7 @@ class ContactTrackings::BulkAssignService
     return error_result('El nombre de la campaña es obligatorio') if @campaign_name.blank?
 
     return error_result('La fecha debe ser futura') if @scheduled_for.blank? || @scheduled_for <= Time.current
+    return error_result('El fin debe ser posterior al inicio') if @window[:ends_at] && @window[:ends_at] <= @scheduled_for
 
     # La campaña fija su inbox; sin inbox no hay canal por el cual conversar.
     if template.inbox_id.blank?
@@ -109,7 +113,8 @@ class ContactTrackings::BulkAssignService
       # TrackingCampaigns::WindowJob; las inscripciones no esperan a eso.
       status: @scheduled_for > Time.current ? 'draft' : 'running',
       mode: 'batch',
-      audience: { filter_payload: @filter_payload, excluded_contact_ids: @excluded_contact_ids }
+      audience: { filter_payload: @filter_payload, excluded_contact_ids: @excluded_contact_ids },
+      **@window.slice(:ends_at, :entry_delay_minutes, :respect_working_hours)
     )
   end
 

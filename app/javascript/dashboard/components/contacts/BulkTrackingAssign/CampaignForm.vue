@@ -8,9 +8,17 @@
                "Nueva campaña" de Campañas de seguimiento. Debajo embebe AudiencePreview
                (los buckets). Hace UN solo /preview y recalcula los conteos en cliente.
 
+  proyecto@automatizacion_campanas — tipo y VENTANA (docs/automatizacion_campanas_plan.md §7.1):
+    - Por lote: la audiencia de siempre (segmento o etiqueta + vista previa) y se crea por
+      contact_tracking_bulk_assigns.
+    - Continua: sin audiencia; se crea sola (POST tracking_campaigns) y la llenan las
+      automatizaciones con "Agregar a campaña". El inicio es opcional (vacío = ahora).
+    En las dos: fin opcional, espera tras la inscripción y horario de atención del inbox;
+    la continua además tiene tope diario.
+
   Props:
     - presetFilterPayload: si viene (p. ej. desde Contactos), la audiencia es ese
-      filtro y se oculta el selector de segmento/etiqueta.
+      filtro y se oculta el selector de segmento/etiqueta (y el tipo: es por lote).
   Emits:
     - created(result): tras lanzar la campaña ({ queued, campaign_id, campaign_name }).
   ================================================================================
@@ -21,6 +29,7 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import contactAPI from 'dashboard/api/contacts';
 import contactTrackingBulkAssignsAPI from 'dashboard/api/contactTrackingBulkAssigns';
+import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import { getMinDateTime } from '../../../helper/trackingHelpers';
 import AudiencePreview from './AudiencePreview.vue';
 
@@ -39,7 +48,12 @@ export default {
     return {
       campaignName: '',
       selectedTemplateId: '',
+      mode: 'batch',
       scheduledFor: '',
+      endsAt: '',
+      entryDelayMinutes: 0,
+      respectWorkingHours: true,
+      dailyCap: '',
       skipActive: true,
       excludedContactIds: [],
       audienceType: 'segment',
@@ -67,6 +81,22 @@ export default {
     // Cuando llega un filtro preestablecido (desde Contactos) no se elige audiencia.
     allowAudienceSelection() {
       return !this.presetFilterPayload;
+    },
+    isContinuous() {
+      return this.mode === 'continuous';
+    },
+    // El fin, si lo hay, después del inicio (o de ahora, si la continua no tiene inicio).
+    windowError() {
+      if (!this.endsAt) return '';
+      const start = this.scheduledFor
+        ? new Date(this.scheduledFor)
+        : new Date();
+      return new Date(this.endsAt) <= start
+        ? this.$t('BULK_TRACKING_ASSIGN.MODAL.ENDS_BEFORE_START')
+        : '';
+    },
+    endsAtMin() {
+      return this.scheduledFor || this.minDateTime;
     },
     effectiveFilterPayload() {
       if (!this.allowAudienceSelection) return this.presetFilterPayload;
@@ -116,6 +146,14 @@ export default {
       return this.selectedCount > MAX_BULK_ASSIGN;
     },
     canConfirm() {
+      if (this.isContinuous) {
+        return (
+          !!this.campaignName.trim() &&
+          !!this.selectedTemplateId &&
+          !this.windowError &&
+          !this.isSubmitting
+        );
+      }
       const hasTargets =
         this.readyCount !== null ? this.readyCount > 0 : this.selectedCount > 0;
       return (
@@ -123,6 +161,7 @@ export default {
         this.hasAudienceSelected &&
         !!this.selectedTemplateId &&
         !!this.scheduledFor &&
+        !this.windowError &&
         hasTargets &&
         !this.exceedsLimit &&
         !this.isLoadingPreview &&
@@ -141,7 +180,10 @@ export default {
       this.onAudienceChange();
     },
     selectedTemplateId() {
-      this.fetchPreview();
+      if (!this.isContinuous) this.fetchPreview();
+    },
+    mode() {
+      if (!this.isContinuous) this.fetchPreview();
     },
   },
   mounted() {
@@ -219,17 +261,49 @@ export default {
         ? this.excludedContactIds.filter(id => id !== contactId)
         : [...this.excludedContactIds, contactId];
     },
+    toIso(value) {
+      return value ? new Date(value).toISOString() : null;
+    },
+    windowPayload() {
+      return {
+        ends_at: this.toIso(this.endsAt),
+        entry_delay_minutes: Number(this.entryDelayMinutes) || 0,
+        respect_working_hours: this.respectWorkingHours,
+      };
+    },
+    createContinuous() {
+      return TrackingCampaignsAPI.create({
+        name: this.campaignName.trim(),
+        tracking_template_id: this.selectedTemplateId,
+        scheduled_for: this.toIso(this.scheduledFor),
+        daily_cap: this.dailyCap ? Number(this.dailyCap) : null,
+        ...this.windowPayload(),
+      });
+    },
+    createBatch() {
+      return contactTrackingBulkAssignsAPI.create({
+        payload: this.effectiveFilterPayload,
+        campaignName: this.campaignName.trim(),
+        templateId: this.selectedTemplateId,
+        scheduledFor: this.toIso(this.scheduledFor),
+        excludedContactIds: this.excludedContactIds,
+        skipActive: this.skipActive,
+        window: this.windowPayload(),
+      });
+    },
     async onConfirm() {
       this.isSubmitting = true;
       try {
-        const { data } = await contactTrackingBulkAssignsAPI.create({
-          payload: this.effectiveFilterPayload,
-          campaignName: this.campaignName.trim(),
-          templateId: this.selectedTemplateId,
-          scheduledFor: new Date(this.scheduledFor).toISOString(),
-          excludedContactIds: this.excludedContactIds,
-          skipActive: this.skipActive,
-        });
+        const { data } = this.isContinuous
+          ? await this.createContinuous()
+          : await this.createBatch();
+        if (this.isContinuous) {
+          useAlert(
+            this.$t('BULK_TRACKING_ASSIGN.MODAL.CONTINUOUS_CREATED', {
+              name: data.campaign_name,
+            })
+          );
+        }
         this.$emit('created', data);
         this.resetForm();
       } catch (error) {
@@ -245,7 +319,12 @@ export default {
     resetForm() {
       this.campaignName = '';
       this.selectedTemplateId = '';
+      this.mode = 'batch';
       this.scheduledFor = '';
+      this.endsAt = '';
+      this.entryDelayMinutes = 0;
+      this.respectWorkingHours = true;
+      this.dailyCap = '';
       this.skipActive = true;
       this.excludedContactIds = [];
       this.audienceType = 'segment';
@@ -264,6 +343,50 @@ export default {
     <div
       class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-md p-4"
     >
+      <!-- proyecto@automatizacion_campanas: tipo de campaña. Desde Contactos (audiencia
+           ya elegida) solo cabe "por lote", así que no se muestra. -->
+      <div v-if="allowAudienceSelection" class="mb-4">
+        <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          {{ $t('BULK_TRACKING_ASSIGN.MODAL.TYPE_LABEL') }}
+        </span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+          <label
+            v-for="option in ['batch', 'continuous']"
+            :key="option"
+            class="flex items-start gap-2 p-3 border rounded-md cursor-pointer"
+            :class="
+              mode === option
+                ? 'border-woot-300 bg-woot-25 dark:bg-woot-900/20'
+                : 'border-slate-200 dark:border-slate-600'
+            "
+          >
+            <input v-model="mode" type="radio" :value="option" class="mt-1" />
+            <span>
+              <span
+                class="block text-sm font-semibold text-slate-800 dark:text-slate-100"
+              >
+                {{
+                  $t(
+                    option === 'batch'
+                      ? 'BULK_TRACKING_ASSIGN.MODAL.TYPE_BATCH'
+                      : 'BULK_TRACKING_ASSIGN.MODAL.TYPE_CONTINUOUS'
+                  )
+                }}
+              </span>
+              <span class="block text-xs text-slate-500 dark:text-slate-400">
+                {{
+                  $t(
+                    option === 'batch'
+                      ? 'BULK_TRACKING_ASSIGN.MODAL.TYPE_BATCH_HINT'
+                      : 'BULK_TRACKING_ASSIGN.MODAL.TYPE_CONTINUOUS_HINT'
+                  )
+                }}
+              </span>
+            </span>
+          </label>
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
         <!-- Nombre de la campaña -->
         <label class="block">
@@ -306,7 +429,20 @@ export default {
         <!-- Audiencia: los radios ("Audiencia por Segmento/Etiqueta") hacen de
              encabezado del campo, por eso no hay un título "Audiencia" aparte
              (así la celda queda alineada con la de Fecha en el grid). -->
-        <div>
+        <div
+          v-if="isContinuous"
+          class="p-3 rounded-md bg-slate-25 dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+        >
+          <span
+            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.CONTINUOUS_AUDIENCE_TITLE') }}
+          </span>
+          <p class="mt-1 mb-0 text-xs text-slate-500 dark:text-slate-400">
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.CONTINUOUS_AUDIENCE_BODY') }}
+          </p>
+        </div>
+        <div v-else>
           <template v-if="allowAudienceSelection">
             <div class="flex items-center gap-4 h-5 mb-1">
               <label
@@ -380,7 +516,13 @@ export default {
             <span
               class="flex items-center h-5 text-sm font-semibold text-slate-700 dark:text-slate-300"
             >
-              {{ $t('BULK_TRACKING_ASSIGN.MODAL.SCHEDULED_FOR_LABEL') }}
+              {{
+                $t(
+                  isContinuous
+                    ? 'BULK_TRACKING_ASSIGN.MODAL.STARTS_AT_OPTIONAL'
+                    : 'BULK_TRACKING_ASSIGN.MODAL.STARTS_AT_LABEL'
+                )
+              }}
             </span>
             <input
               v-model="scheduledFor"
@@ -392,9 +534,71 @@ export default {
         </div>
       </div>
 
+      <!-- proyecto@automatizacion_campanas: el resto de la ventana y cómo se agenda
+           a cada inscrito (plan §3.3). -->
+      <div
+        class="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-3 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700"
+      >
+        <label class="block">
+          <span
+            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.ENDS_AT_LABEL') }}
+          </span>
+          <input
+            v-model="endsAt"
+            type="datetime-local"
+            :min="endsAtMin"
+            class="w-full mt-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+          />
+        </label>
+        <label class="block">
+          <span
+            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.ENTRY_DELAY_LABEL') }}
+          </span>
+          <input
+            v-model.number="entryDelayMinutes"
+            type="number"
+            min="0"
+            step="5"
+            class="w-full mt-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+          />
+        </label>
+        <label v-if="isContinuous" class="block">
+          <span
+            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.DAILY_CAP_LABEL') }}
+          </span>
+          <input
+            v-model.number="dailyCap"
+            type="number"
+            min="1"
+            :placeholder="
+              $t('BULK_TRACKING_ASSIGN.MODAL.DAILY_CAP_PLACEHOLDER')
+            "
+            class="w-full mt-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+          />
+        </label>
+        <label
+          class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 md:col-span-3"
+        >
+          <input v-model="respectWorkingHours" type="checkbox" class="m-0" />
+          {{ $t('BULK_TRACKING_ASSIGN.MODAL.RESPECT_WORKING_HOURS') }}
+        </label>
+        <p
+          v-if="windowError"
+          class="m-0 text-sm text-red-600 dark:text-red-400 md:col-span-3"
+        >
+          {{ windowError }}
+        </p>
+      </div>
+
       <!-- Aviso de límite -->
       <div
-        v-if="exceedsLimit"
+        v-if="!isContinuous && exceedsLimit"
         class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md text-sm text-yellow-800 dark:text-yellow-200"
       >
         {{
@@ -408,24 +612,33 @@ export default {
         class="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-700"
       >
         <span class="text-sm text-slate-600 dark:text-slate-300">
-          {{
-            $t('BULK_TRACKING_ASSIGN.PREVIEW.WILL_CREATE', {
-              count: displayCount,
-            })
-          }}
+          <template v-if="!isContinuous">
+            {{
+              $t('BULK_TRACKING_ASSIGN.PREVIEW.WILL_CREATE', {
+                count: displayCount,
+              })
+            }}
+          </template>
         </span>
         <woot-button
           :is-loading="isSubmitting"
           :disabled="!canConfirm"
           @click="onConfirm"
         >
-          {{ $t('BULK_TRACKING_ASSIGN.MODAL.LAUNCH') }}
+          {{
+            $t(
+              isContinuous
+                ? 'BULK_TRACKING_ASSIGN.MODAL.CREATE_CONTINUOUS'
+                : 'BULK_TRACKING_ASSIGN.MODAL.LAUNCH'
+            )
+          }}
         </woot-button>
       </div>
     </div>
 
-    <!-- Revisar audiencia -->
+    <!-- Revisar audiencia (solo por lote: la continua no tiene lista) -->
     <div
+      v-if="!isContinuous"
       class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-md p-4"
     >
       <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
