@@ -8,7 +8,18 @@ RSpec.describe ContactTrackings::Assistant::TurnProgress do
   let(:user) { create(:user, account: account) }
   let(:turn_id) { 'tabc12345' }
 
-  after { Redis::Alfred.delete(described_class.key(account, user, turn_id)) }
+  after do
+    Redis::Alfred.delete(described_class.key(account, user, turn_id))
+    Redis::Alfred.delete(described_class.result_key(account, user, turn_id))
+  end
+
+  # Resultado de un turno que corre en Sidekiq (OptimizeJob).
+  it 'guarda el resultado final y solo lo lee quien lo pidió' do
+    described_class.store_result(account, user, turn_id, { findings: [], summary: 'ok' })
+
+    expect(described_class.read_result(account, user, turn_id)).to eq('findings' => [], 'summary' => 'ok')
+    expect(described_class.read_result(account, create(:user, account: account), turn_id)).to be_nil
+  end
 
   it 'guarda la etapa y la devuelve con sus datos' do
     described_class.new(account, user, turn_id).update(:repairing, round: 2, of: 3)

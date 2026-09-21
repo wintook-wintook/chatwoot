@@ -11,6 +11,9 @@
 #   Hallazgos (redundante, contradicción, simplificable, sobrante) y un Entrenamiento
 #   propuesto que no toca el ruteo, no borra secciones y marca las reglas que pierde.
 #   Nunca se aplica solo. Ver Optimizer.
+#   Tarda más de lo que aguanta una request (rack-timeout: 15 s), así que corre en
+#   Sidekiq: el POST devuelve 202 y `turn_id` (obligatorio), y la pantalla consulta
+#   GET …/assistant/optimize/:turn_id hasta que trae el resultado. Ver OptimizeJob.
 #
 # POST …/assistant/explain
 #   Qué hace un fragmento seleccionado: lo que lee el motor (hecho) y la lectura del
@@ -30,7 +33,7 @@
 
 class Api::V1::Accounts::ContactTrackings::AssistantToolsController < Api::V1::Accounts::BaseController
   before_action :check_authorization
-  before_action :require_draft, except: [:transcribe, :proofread]
+  before_action :require_draft, except: [:transcribe, :proofread, :optimize_result]
 
   def suggested_tests
     avance = ContactTrackings::Assistant::TurnProgress.new(Current.account, Current.user, params[:turn_id])
@@ -39,10 +42,21 @@ class Api::V1::Accounts::ContactTrackings::AssistantToolsController < Api::V1::A
   end
 
   def optimize
-    avance = ContactTrackings::Assistant::TurnProgress.new(Current.account, Current.user, params[:turn_id])
-    result = ContactTrackings::Assistant::Optimizer
-             .new(Current.account, draft: params[:draft], inbox: inbox, progress: avance.method(:update)).call
-    render_result(result)
+    unless params[:turn_id].to_s.match?(ContactTrackings::Assistant::TurnProgress::TURN_ID_RE)
+      return render json: { error: 'invalid_turn_id' }, status: :unprocessable_entity
+    end
+
+    ContactTrackings::Assistant::OptimizeJob
+      .perform_later(Current.account.id, Current.user.id, params[:turn_id], params[:draft], inbox&.id)
+    render json: { status: 'pending' }, status: :accepted
+  end
+
+  # 202 mientras el job no terminó; 200 con el resultado, o 422 con el error, al terminar.
+  def optimize_result
+    result = ContactTrackings::Assistant::TurnProgress.read_result(Current.account, Current.user, params[:turn_id])
+    return render json: { status: 'pending' }, status: :accepted if result.nil?
+
+    render_result(result.symbolize_keys)
   end
 
   def explain

@@ -61,6 +61,7 @@ const VALIDATE_DEBOUNCE_MS = 400;
 // Cada cuánto se pregunta en qué etapa está el turno. Las etapas duran de 1 a 58 s:
 // más seguido no muestra nada nuevo.
 const PROGRESS_POLL_MS = 1500;
+const OPTIMIZE_MAX_WAIT_MS = 5 * 60 * 1000;
 const INBOX_STORAGE_KEY = 'tracking_assistant_inbox_id';
 
 // El chat del Asistente, escondido a pedido del usuario (17/09/2026): el
@@ -873,14 +874,32 @@ export default {
       this.isOptimizing = true;
       this.optimizeError = '';
       const version = this.draftVersion;
+      const turnId = this.startProgress();
       try {
-        const { data } = await AssistantAPI.optimize(this.draft, this.inboxId);
+        await AssistantAPI.optimize(this.draft, turnId, this.inboxId);
+        const data = await this.waitOptimizeResult(turnId);
         this.optimizeResult = { ...data, version };
       } catch (error) {
         this.optimizeError = this.$t('TRACKING_ASSISTANT_VIEW.OPTIMIZE_ERROR');
       } finally {
+        this.stopProgress();
         this.isOptimizing = false;
       }
+    },
+    // El backend responde 202 mientras trabaja, 200 con el resultado y 422 si falló
+    // (axios lo lanza como error). Se rinde a los 5 minutos.
+    async waitOptimizeResult(turnId) {
+      const deadline = Date.now() + OPTIMIZE_MAX_WAIT_MS;
+      while (Date.now() < deadline) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise(resolve => {
+          setTimeout(resolve, PROGRESS_POLL_MS);
+        });
+        // eslint-disable-next-line no-await-in-loop
+        const { status, data } = await AssistantAPI.getOptimizeResult(turnId);
+        if (status === 200) return data;
+      }
+      throw new Error('optimize timeout');
     },
     applyOptimization(texto) {
       if (!texto) return;
