@@ -167,4 +167,16 @@ describe('CampaignForm con ventana', () => {
       'BULK_TRACKING_ASSIGN.MODAL.SUMMARY_CONTINUOUS'
     );
   });
+
+  it('los selectores de segmento y etiqueta siempre se ven; solo se habilita el elegido', async () => {
+    const wrapper = mountForm();
+    const [segment, label] = wrapper.findAll('select').wrappers.slice(1, 3);
+
+    expect(segment.attributes('disabled')).toBeUndefined();
+    expect(label.attributes('disabled')).toBe('disabled');
+
+    await wrapper.setData({ audienceType: 'automation' });
+    expect(segment.attributes('disabled')).toBe('disabled');
+    expect(label.attributes('disabled')).toBe('disabled');
+  });
 });

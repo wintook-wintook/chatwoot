@@ -405,7 +405,9 @@ export default {
         </div>
       </section>
 
-      <!-- 2 · ¿A quién? Segmento o etiqueta = por lote; automatizaciones = continua. -->
+      <!-- 2 · ¿A quién? Segmento o etiqueta = por lote; automatizaciones = continua.
+           Los selectores siempre se ven (alineados en columna) y solo se habilita el
+           de la opción elegida. -->
       <section class="mt-5">
         <h3 class="section-title">
           {{ $t('BULK_TRACKING_ASSIGN.MODAL.SECTION_WHO') }}
@@ -417,8 +419,8 @@ export default {
               {{ $t('BULK_TRACKING_ASSIGN.MODAL.WHO_SEGMENT') }}
             </label>
             <select
-              v-if="audienceType === 'segment'"
               v-model="selectedSegmentId"
+              :disabled="audienceType !== 'segment'"
               class="field-input md:max-w-sm !mt-0"
             >
               <option value="" disabled>
@@ -437,8 +439,8 @@ export default {
               {{ $t('BULK_TRACKING_ASSIGN.MODAL.WHO_LABEL') }}
             </label>
             <select
-              v-if="audienceType === 'label'"
               v-model="selectedLabel"
+              :disabled="audienceType !== 'label'"
               class="field-input md:max-w-sm !mt-0"
             >
               <option value="" disabled>
@@ -626,6 +628,10 @@ export default {
 
 .field-input {
   @apply w-full mt-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200;
+}
+
+.field-input:disabled {
+  @apply bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed;
 }
 
 .audience-option {
