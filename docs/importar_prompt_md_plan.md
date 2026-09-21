@@ -317,6 +317,8 @@ funcionan igual y los guiones quedan como alcance de su ruta.
 
 ## 9. Decisiones para el usuario
 
+> **21/09/2026:** el usuario aceptó las propuestas de las decisiones 1 a 5. Queda abierta la 6.
+
 1. **Presupuesto del Entrenamiento.** Propuesta: 24.000 caracteres (≈ 6.000 tokens). El agente más
    grande que hoy funciona (v6.11) tiene 17.000.
 2. **El "Texto oficial".** Propuesta: no va al prompt; en la F6 solo se importan como Conocimiento los
