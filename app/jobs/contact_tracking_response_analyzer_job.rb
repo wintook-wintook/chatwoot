@@ -464,13 +464,14 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     if route_map.present?
       return route_map.routes.any? do |route|
-        route.source? && KnowledgeBase::Directives.available?(
+        route.source? && (KnowledgeBase::Directives.available?(
           route.directive, account: message.account, inbox_id: message.inbox_id
-        )
+        ) || KnowledgeBase::Directives.erp_available?(route.directive, account: message.account, as_route_source: true))
       end
     end
 
-    KnowledgeBase::Directives.available?(cp, account: message.account, inbox_id: message.inbox_id)
+    KnowledgeBase::Directives.available?(cp, account: message.account, inbox_id: message.inbox_id) ||
+      KnowledgeBase::Directives.erp_available?(cp, account: message.account) # proyecto@erp_productos
   rescue StandardError
     false
   end

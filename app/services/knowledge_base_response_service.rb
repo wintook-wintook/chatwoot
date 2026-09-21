@@ -73,7 +73,7 @@ class KnowledgeBaseResponseService
 
     case directive[:mode]
     when :erp_query
-      perform_erp_query
+      perform_erp_query(question)
     when :canned_response
       perform_pgvector(question, 'canned_response', directive[:group])
     when :article
@@ -225,8 +225,13 @@ class KnowledgeBaseResponseService
   # Reemplaza cada {{consulta:...}} de la plantilla por el resultado de la consulta
   # predefinida y envía el texto ya interpolado. Sin IA, fail-soft, scoped a la cuenta.
   # ==============================================================================
-  def perform_erp_query
-    template = @tracking&.complementary_prompt.to_s
+  #
+  # proyecto@erp_productos (docs/erp_productos_plan.md §3): si la directiva pide parámetros
+  # a la IA ("?"), va por perform_erp_asked; sin "?", el camino de siempre.
+  def perform_erp_query(question)
+    template = erp_source
+    return perform_erp_asked(question, template) if ExternalDb::ConsultaDirectiveRenderer.asks?(template)
+
     rendered = ExternalDb::ConsultaDirectiveRenderer.new(
       account: @account, contact: @conversation&.contact, inbox: @inbox
     ).render(template).strip
@@ -237,6 +242,30 @@ class KnowledgeBaseResponseService
     end
 
     send_reply(rendered)
+    true
+  end
+
+  # §3.6: con rutas, la {{consulta:}} es la FUENTE de la ruta del turno, y es lo único que
+  # se usa. Antes se renderizaba el Entrenamiento entero: el cliente recibía el prompt
+  # completo con sus @ruta. Sin rutas, el Entrenamiento, como siempre.
+  def erp_source
+    route_directive = @route&.directive.to_s
+    return route_directive if ExternalDb::ConsultaDirectiveRenderer.contains?(route_directive)
+
+    @tracking&.complementary_prompt.to_s
+  end
+
+  # La IA llena los "?", corre la consulta y el agente redacta con esos datos exactos.
+  # Si no aplica (el mensaje no la pide, falló), false: el motor contesta como siempre.
+  def perform_erp_asked(question, source)
+    data = ExternalDb::AskedConsulta.new(source: source, question: question, conversation: @conversation,
+                                         history: load_history).call
+    return false unless data
+
+    reply = generate_contextual_reply(question, nil, erp_data: data)
+    return false if reply.blank?
+
+    send_reply(with_branch_tag(reply))
     true
   end
 
@@ -520,7 +549,7 @@ class KnowledgeBaseResponseService
     true
   end
 
-  def generate_contextual_reply(question, context, canned_prompt: nil)
+  def generate_contextual_reply(question, context, erp_data: nil, canned_prompt: nil)
     api_key = openai_api_key
     return nil unless api_key
 
@@ -558,6 +587,7 @@ class KnowledgeBaseResponseService
       exacto para su caso y ofrecé pasarlo con un asesor. Una respuesta honesta que no
       resuelve es mejor que una inventada que parece resolver.
     USER
+    user_prompt = erp_user_prompt(first_name, question, erp_data) if erp_data
     user_prompt = canned_prompt_user_prompt(first_name, question, canned_prompt) if canned_prompt
 
     history  = load_history
@@ -583,6 +613,48 @@ class KnowledgeBaseResponseService
 
     save_history(history, question, reply)
     reply
+  end
+
+  # proyecto@erp_productos — el turno con los datos de una {{consulta:}} con "?".
+  def erp_user_prompt(first_name, question, data)
+    <<~USER.strip
+      El cliente #{first_name} preguntó: "#{question.truncate(300)}"
+
+      Datos exactos del sistema (#{data[:rows].size} resultado(s)):
+      #{erp_rows_text(data)}
+
+      Respondé con esos datos. Tono natural y conversacional. No uses prefijos como "Asesor:" ni comillas.
+
+      DATOS EXACTOS (regla dura): precios, existencias, códigos y nombres se citan tal como
+      están arriba. Nunca inventes productos, precios ni disponibilidad, ni completes con
+      "parecidos" que no aparecen. Existencia 0 o negativa = sin existencia. Si no hay
+      resultados, decilo y ofrecé buscar de otra forma o pasarlo con un asesor. No
+      menciones que consultaste un sistema ni los nombres de las columnas.
+    USER
+  end
+
+  # "Si alguno SÍ es…": el catálogo escribe "Baseball" y el cliente "béisbol"; medido en F5,
+  # el agente decía "no encontré bats" y en seguida ofrecía un bat.
+  PARTIAL_NOTE = 'COINCIDENCIA PARCIAL: nada coincidió con todas las palabras del cliente; estos coinciden solo ' \
+                 'con alguna. Si alguno SÍ es lo que pidió (otro idioma o sinónimo: baseball = béisbol), ' \
+                 'preséntalo como lo que pidió; los demás, como opciones que podrían interesarle.'
+
+  def erp_rows_text(data)
+    return 'La consulta no encontró resultados.' if data[:rows].empty?
+
+    lines = data[:rows].map.with_index(1) do |row, n|
+      "#{n}. #{data[:columns].filter_map { |col| (v = erp_value(row[col])) && "#{col}: #{v}" }.join(' · ')}"
+    end
+    [(PARTIAL_NOTE if data[:partial]), *lines].compact.join("\n")
+  end
+
+  def erp_value(value)
+    case value
+    when nil, '' then nil
+    when Float, BigDecimal then format('%.2f', value)
+    when Time, DateTime, ActiveSupport::TimeWithZone, Date then value.strftime('%d/%m/%Y')
+    else value.to_s
+    end
   end
 
   # El turno en modo prompt: la pregunta y el bloque de la respuesta predefinida

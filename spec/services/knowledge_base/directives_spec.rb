@@ -97,4 +97,39 @@ RSpec.describe KnowledgeBase::Directives do
       expect(described_class.ready?(directive, account: account, inbox_id: inbox.id)).to be(false)
     end
   end
+
+  # proyecto@erp_productos — sin esto el turno se iba al conversacional y el modelo
+  # inventaba productos (medido en F5).
+  describe '.erp_available?' do
+    let(:account) { create(:account) }
+    let(:asked) { '{{consulta:sae/buscar_productos(texto=?, max=5)}}' }
+    let(:fixed) { '{{consulta:sae/saldo(rfc=XAXX010101000)}}' }
+
+    context 'with una conexión activa' do
+      before do
+        ExternalDbConnection.create!(account: account, name: 'SAE', engine: :firebird, erp_type: :sae,
+                                     host: 'erp.test', port: 3050, database: 'db', company_suffix: '01')
+      end
+
+      it 'acepta una {{consulta:}} con "?"' do
+        expect(described_class.erp_available?("Busca: #{asked}", account: account)).to be(true)
+      end
+
+      it 'rechaza una {{consulta:}} fija fuera de una ruta (plantilla de cobranza)' do
+        expect(described_class.erp_available?("Tu saldo: #{fixed}", account: account)).to be(false)
+      end
+
+      it 'acepta una {{consulta:}} fija cuando es la fuente de una ruta' do
+        expect(described_class.erp_available?(fixed, account: account, as_route_source: true)).to be(true)
+      end
+
+      it 'rechaza un texto sin {{consulta:}}' do
+        expect(described_class.erp_available?('@buscar_predefinidas', account: account)).to be(false)
+      end
+    end
+
+    it 'rechaza si la cuenta no tiene conexiones activas' do
+      expect(described_class.erp_available?(asked, account: account)).to be(false)
+    end
+  end
 end

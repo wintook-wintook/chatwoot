@@ -470,6 +470,43 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
     end
   end
 
+  # proyecto@erp_productos — con la F2, el motor ya no manda el Entrenamiento cuando la
+  # consulta pide "?" (el agente redacta) ni cuando es la fuente de una ruta.
+  describe 'B9, B10 y D4 · {{consulta:}} con "?" (erp_productos)' do
+    let(:connection) do
+      ExternalDbConnection.create!(account: account, name: 'SAE', engine: :firebird, erp_type: :sae, host: 'erp.test',
+                                   port: 3050, database: 'db')
+    end
+
+    before do
+      connection.external_db_queries.create!(account: account, name: 'buscar_productos',
+                                             sql_template: 'SELECT 1 FROM INVE01',
+                                             params_schema: ExternalDb::QueryLibrary::PRODUCT_PARAMS)
+    end
+
+    it 'con "?" o como fuente de una ruta, puede convivir con otra cosa' do
+      con_pregunta = validar("Eres el vendedor.\n{{consulta:sae/buscar_productos(texto=?, precio_max=?)}}")
+      de_ruta = validar("@ruta(catalogo #productos: precios, modelos): {{consulta:sae/buscar_productos}}\nEres el vendedor.")
+
+      expect(codigos(con_pregunta, :degrading)).not_to include(:erp_directive_not_isolated)
+      expect(codigos(de_ruta, :degrading)).not_to include(:erp_directive_not_isolated)
+      expect(codigos(con_pregunta, :blocking)).not_to include(:consulta_not_found, :consulta_unknown_param)
+    end
+
+    it 'bloquea una consulta que no existe en la conexión' do
+      r = validar('{{consulta:sae/buscar_producto(texto=?)}}')
+
+      expect(codigos(r, :blocking)).to include(:consulta_not_found)
+    end
+
+    it 'bloquea un parámetro que la consulta no tiene y dice cuáles sí' do
+      r = validar('{{consulta:sae/buscar_productos(texto=?, pecio_max=?)}}')
+      hallazgo = r[:blocking].find { |f| f[:code] == :consulta_unknown_param }
+
+      expect(hallazgo[:message]).to include('pecio_max', 'precio_max')
+    end
+  end
+
   describe 'D5 · régimen de escalamiento mixto' do
     # En cuanto UNA rama lleva flecha, las que no la llevan dejan de abrir casos.
     it 'nombra las ramas que se quedaron sin abrir casos' do
