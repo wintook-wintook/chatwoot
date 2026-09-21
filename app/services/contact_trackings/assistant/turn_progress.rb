@@ -34,6 +34,27 @@ class ContactTrackings::Assistant::TurnProgress
     "assistant_progress:#{account.id}:#{user.id}:#{turn_id}"
   end
 
+  # El resultado final de un turno que corre en Sidekiq (ver OptimizeJob): la request
+  # HTTP no puede esperarlo (rack-timeout corta a los 15 s) y la pantalla lo consulta.
+  def self.result_key(account, user, turn_id)
+    "assistant_result:#{account.id}:#{user.id}:#{turn_id}"
+  end
+
+  def self.store_result(account, user, turn_id, result)
+    return unless turn_id.to_s.match?(TURN_ID_RE)
+
+    Redis::Alfred.setex(result_key(account, user, turn_id), result.to_json, TTL)
+  end
+
+  def self.read_result(account, user, turn_id)
+    return nil unless turn_id.to_s.match?(TURN_ID_RE)
+
+    raw = Redis::Alfred.get(result_key(account, user, turn_id))
+    raw.present? ? JSON.parse(raw) : nil
+  rescue JSON::ParserError
+    nil
+  end
+
   def initialize(account, user, turn_id)
     @key = turn_id.to_s.match?(TURN_ID_RE) ? self.class.key(account, user, turn_id) : nil
   end

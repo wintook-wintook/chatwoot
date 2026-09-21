@@ -66,9 +66,19 @@ class AssistantAPI extends ApiClient {
     });
   }
 
-  // Fase E: hallazgos y una propuesta que nunca se aplica sola.
-  optimize(draft, inboxId = null) {
-    return axios.post(`${this.url}/optimize`, { draft, inbox_id: inboxId });
+  // Fase E: hallazgos y una propuesta que nunca se aplica sola. Corre en segundo
+  // plano (tarda más que el límite de la request): responde 202 y el resultado se
+  // pide con getOptimizeResult(turnId) hasta que deja de ser 202.
+  optimize(draft, turnId, inboxId = null) {
+    return axios.post(`${this.url}/optimize`, {
+      draft,
+      turn_id: turnId,
+      inbox_id: inboxId,
+    });
+  }
+
+  getOptimizeResult(turnId) {
+    return axios.get(`${this.url}/optimize/${turnId}`);
   }
 
   // Fase E: qué hace un fragmento del Entrenamiento.
