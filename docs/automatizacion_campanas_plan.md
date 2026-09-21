@@ -173,6 +173,7 @@ automatización y cuántos no, y por qué**.
 | `ends_at` | datetime, null | fin de la ventana. `scheduled_for` sigue siendo el **inicio** (no se renombra: hay datos y código que lo leen). |
 | `entry_delay_minutes` | integer, default 0 | espera después de la inscripción. |
 | `respect_working_hours` | boolean, default true | usar el horario de atención del inbox. |
+| `daily_cap` | integer, null | tope de inscripciones por día en las continuas (decisión 7); vacío = sin tope. |
 | `audience` | jsonb, default `{}` | en por lote, **qué** se eligió (segmento o etiqueta + filtro). Hoy no se guarda. |
 
 ### 5.2 `tracking_campaign_entries` (tabla nueva: las inscripciones)
@@ -184,7 +185,7 @@ automatización y cuántos no, y por qué**.
 | `automation_rule_id` | bigint, null | qué automatización lo inscribió |
 | `conversation_id` | bigint, null | la conversación que disparó la automatización |
 | `status` | string | `enrolled` · `skipped` |
-| `reason` | string, null | `campaign_closed` · `already_enrolled` · `active_tracking` · `outside_window` |
+| `reason` | string, null | `campaign_closed` · `already_enrolled` · `active_tracking` · `outside_window` · `daily_cap` |
 | `contact_tracking_id` | bigint, null | el seguimiento que se creó |
 
 Índice único (`tracking_campaign_id`, `contact_id`) **solo para los inscritos**: un contacto entra una
@@ -274,7 +275,7 @@ Una columna **Tipo** (Por lote / Continua) y la **ventana** (01/10 → 31/10) en
 
 | Fase | Entrega | Cómo se verifica | Días |
 |---|---|---|---|
-| **F0** Datos | columnas nuevas en `tracking_campaigns`, tabla `tracking_campaign_entries`, las existentes quedan "por lote" | spec del modelo; migración tolerante | 1 |
+| **F0** ✅ Datos | columnas nuevas en `tracking_campaigns`, tabla `tracking_campaign_entries`, las existentes quedan "por lote" | spec del modelo; migración tolerante | 1 |
 | **F1** Inscribir | `TrackingCampaigns::Enroll`: ventana, espera, horario, duplicados, omitidos; el bulk pasa a usarlo | specs de cada caso de §4.1 | 1,5 |
 | **F2** La automatización | acción "Agregar a campaña" (backend + desplegable con estado y ventana) | spec de la acción; Vitest del desplegable | 1 |
 | **F3** Ciclo de vida | job que abre y cierra campañas por su ventana | spec del job | 0,5 |
@@ -288,7 +289,8 @@ Una columna **Tipo** (Por lote / Continua) y la **ventana** (01/10 → 31/10) en
 
 ## 10. Decisiones para el usuario
 
-> **21/09/2026:** el usuario aceptó las propuestas de las decisiones 1 a 7. Queda abierta la 8.
+> **21/09/2026:** el usuario aceptó las propuestas de las decisiones 1 a 7. La 8: el límite del lote se
+> queda en **100**.
 
 1. **Nombres** (§3.1): "Por lote / Continua", "audiencia fija / dinámica", "inscritos / omitidos".
    ¿Así, o prefieren otros?
