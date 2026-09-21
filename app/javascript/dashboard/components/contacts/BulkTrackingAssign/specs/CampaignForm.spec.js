@@ -39,18 +39,20 @@ const mountForm = (props = {}) =>
 describe('CampaignForm con ventana', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('arranca por lote, con horario respetado y sin espera', () => {
+  it('arranca por lote (un segmento), con horario respetado y sin espera', () => {
     const wrapper = mountForm();
 
     expect(wrapper.vm.mode).toBe('batch');
+    expect(wrapper.vm.audienceType).toBe('segment');
     expect(wrapper.vm.respectWorkingHours).toBe(true);
     expect(wrapper.vm.entryDelayMinutes).toBe(0);
   });
 
-  it('la continua solo pide nombre y Agente IA, y esconde la audiencia', async () => {
+  it('"los que agreguen mis automatizaciones" es una continua: solo pide nombre y Agente IA', async () => {
     const wrapper = mountForm();
-    await wrapper.setData({ mode: 'continuous' });
+    await wrapper.setData({ audienceType: 'automation' });
 
+    expect(wrapper.vm.mode).toBe('continuous');
     expect(wrapper.vm.canConfirm).toBe(false);
     await wrapper.setData({ campaignName: 'Octubre', selectedTemplateId: 3 });
     expect(wrapper.vm.canConfirm).toBe(true);
@@ -65,7 +67,7 @@ describe('CampaignForm con ventana', () => {
     });
     const wrapper = mountForm();
     await wrapper.setData({
-      mode: 'continuous',
+      audienceType: 'automation',
       campaignName: ' Octubre ',
       selectedTemplateId: 3,
       endsAt: '2099-10-31T23:59',
@@ -89,6 +91,7 @@ describe('CampaignForm con ventana', () => {
     expect(wrapper.emitted('created')[0][0]).toEqual({
       campaign_id: 9,
       campaign_name: 'Octubre',
+      mode: 'continuous',
     });
   });
 
@@ -117,7 +120,7 @@ describe('CampaignForm con ventana', () => {
   it('avisa si el fin no es posterior al inicio y no deja confirmar', async () => {
     const wrapper = mountForm();
     await wrapper.setData({
-      mode: 'continuous',
+      audienceType: 'automation',
       campaignName: 'X',
       selectedTemplateId: 3,
       scheduledFor: '2099-10-10T10:00',
@@ -130,9 +133,38 @@ describe('CampaignForm con ventana', () => {
     expect(wrapper.vm.canConfirm).toBe(false);
   });
 
-  it('desde Contactos (audiencia ya elegida) no ofrece el tipo', () => {
+  it('desde Contactos (audiencia ya elegida) no ofrece elegir a quién', () => {
     const wrapper = mountForm({ presetFilterPayload: [] });
 
-    expect(wrapper.text()).not.toContain('BULK_TRACKING_ASSIGN.MODAL.TYPE_LABEL');
+    expect(wrapper.text()).not.toContain(
+      'BULK_TRACKING_ASSIGN.MODAL.WHO_AUTOMATION'
+    );
+    expect(wrapper.text()).toContain(
+      'BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_FROM_CONTACTS'
+    );
+  });
+
+  it('las opciones de envío arrancan plegadas', async () => {
+    const wrapper = mountForm();
+
+    expect(wrapper.text()).not.toContain(
+      'BULK_TRACKING_ASSIGN.MODAL.RESPECT_WORKING_HOURS'
+    );
+    await wrapper.setData({ showSendOptions: true });
+    expect(wrapper.text()).toContain(
+      'BULK_TRACKING_ASSIGN.MODAL.RESPECT_WORKING_HOURS'
+    );
+  });
+
+  it('el resumen dice lo que va a pasar', async () => {
+    const wrapper = mountForm();
+    expect(wrapper.vm.summaryText).toBe(
+      'BULK_TRACKING_ASSIGN.MODAL.SUMMARY_BATCH_NO_DATE'
+    );
+
+    await wrapper.setData({ audienceType: 'automation' });
+    expect(wrapper.vm.summaryText).toBe(
+      'BULK_TRACKING_ASSIGN.MODAL.SUMMARY_CONTINUOUS'
+    );
   });
 });

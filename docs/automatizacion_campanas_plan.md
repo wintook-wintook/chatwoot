@@ -222,30 +222,31 @@ Una campaña con inicio futuro nace **Programada** (antes nacía "En curso").
 
 ## 7. Pantallas
 
-### 7.1 Nueva campaña (formulario de hoy + tipo + ventana)
+### 7.1 Nueva campaña — en tres preguntas (rediseño pedido por el usuario, 21/09/2026)
 
 ```
-┌─ Nueva campaña ─────────────────────────────────────────────────────────────────┐
-│ Nombre        [ Campaña Octubre                               ]                 │
-│ Agente IA     [ Agente Vendedor v6.11                       ▾ ]                 │
-│                                                                                 │
-│ Tipo          (•) Por lote — audiencia fija     ( ) Continua — audiencia dinámica│
-│                                                                                 │
-│ Ventana       Inicio [ 01/10/2026 10:00 ]   Fin [ 31/10/2026 23:59 ] (opcional) │
-│               [✓] Respetar el horario de atención del inbox                     │
-│               Escribir  [ 0 ] minutos después de la inscripción                 │
-│                                                                                 │
-│ ── Por lote ─────────────────────────────────────────────────────────────────── │
-│ Audiencia     (•) Segmento [ Prospectos Colima ▾ ]   ( ) Etiqueta [ demo ▾ ]    │
-│               150 contactos · 142 listos · 8 ya tienen Agente IA   (vista previa)│
-│ ── Continua ─────────────────────────────────────────────────────────────────── │
-│ Audiencia     La llenan las automatizaciones con "Agregar a campaña".           │
-│               Automatizaciones que la usan: ninguna todavía                     │
-│               [+ Crear automatización para esta campaña]                        │
-└─────────────────────────────────────────────────────────────────────────────────┘
+┌─ Nueva campaña ──────────────────────────────────────────────────────────────┐
+│ 1 · ¿Qué?                                                                    │
+│ Nombre [Ej. Reactivación clientes junio        ]   Agente IA [ Vendedor   ▾ ] │
+│ 2 · ¿A quién?                                                                │
+│ (•) Un segmento   [ Prospectos Colima ▾ ]                                     │
+│ ( ) Una etiqueta  [ demo ▾ ]                                                  │
+│ ( ) Los que agreguen mis automatizaciones                                     │
+│ 3 · ¿Cuándo?                                                                 │
+│ Desde [ 01/10/2026 10:00 ]   Hasta [ 31/10/2026 23:59 ] (opcional)            │
+│ ▸ Opciones de envío   (espera · tope por día · horario del inbox, plegadas)   │
+│ ─────────────────────────────────────────────────────────────────────────── │
+│ 142 contactos · empieza el 01/10 10:00                 [ Lanzar campaña ]    │
+└──────────────────────────────────────────────────────────────────────────────┘
+ Revisar audiencia (solo con segmento o etiqueta)
 ```
 
-Con componentes nativos (`woot-tabs`, `woot-button`, los selectores de fecha del dashboard).
+- No hay "tipo de campaña" en pantalla: **segmento o etiqueta = por lote**; **"los que agreguen mis
+  automatizaciones" = continua**. Por dentro no cambia nada.
+- En la continua el resumen dice *"Recibe contactos desde ahora → sin fin"* y el botón, **Crear campaña**.
+- Al crearla, el listado muestra un aviso con **"Crear automatización para esta campaña"**: abre
+  Automatizaciones con el modal de nueva regla y la acción "Agregar a campaña" ya puesta
+  (`?add_to_campaign=ID&campaign_name=…`).
 
 ### 7.2 Detalle de la campaña: pestaña "Inscritos"
 

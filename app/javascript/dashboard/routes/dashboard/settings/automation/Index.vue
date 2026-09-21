@@ -5,6 +5,7 @@ import EditAutomationRule from './EditAutomationRule.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import { computed, onMounted, ref } from 'vue';
+import { useRoute } from 'dashboard/composables/route';
 import { useI18n } from 'dashboard/composables/useI18n';
 import { useStoreGetters, useStore } from 'dashboard/composables/store';
 import AutomationRuleRow from './AutomationRuleRow.vue';
@@ -15,6 +16,10 @@ const confirmDialog = ref(null);
 
 const loading = ref({});
 const showAddPopup = ref(false);
+// proyecto@automatizacion_campanas: desde una campaña continua recién creada se llega
+// con ?add_to_campaign=ID&campaign_name=… y el modal abre con la acción ya puesta.
+const route = useRoute();
+const addPreset = ref(null);
 const showEditPopup = ref(false);
 const showDeleteConfirmationPopup = ref(false);
 const selectedAutomation = ref({});
@@ -58,6 +63,18 @@ onMounted(() => {
   // de tipos de caso; mismo motivo que el fetch de plantillas de arriba.
   store.dispatch('caseTickets/fetchTypes');
   store.dispatch('automations/get');
+  const campaignId = Number(route.query.add_to_campaign);
+  if (campaignId) {
+    const name = route.query.campaign_name || '';
+    addPreset.value = {
+      name: t('AUTOMATION.ADD_TO_CAMPAIGN_PRESET_NAME', { name }),
+      action: {
+        action_name: 'add_to_tracking_campaign',
+        action_params: { id: campaignId, name },
+      },
+    };
+    showAddPopup.value = true;
+  }
   if (isSLAEnabled.value) {
     store.dispatch('sla/get');
   }
@@ -230,6 +247,7 @@ const toggleAutomation = async ({ id, name, status }) => {
     >
       <AddAutomationRule
         v-if="showAddPopup"
+        :preset="addPreset"
         :on-close="hideAddPopup"
         @saveAutomation="submitAutomation"
       />

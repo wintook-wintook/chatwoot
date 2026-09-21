@@ -43,7 +43,10 @@
       "batch": "Batch",
       "continuous": "Continuous"
     },
-    "NO_END": "no end"
+    "NO_END": "no end",
+    "CONTINUOUS_CREATED": "Campaign \"{name}\" created. To receive contacts, create an automation that uses it.",
+    "CREATE_AUTOMATION": "Create automation for this campaign",
+    "DISMISS": "Close"
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campaigns",

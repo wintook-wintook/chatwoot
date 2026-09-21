@@ -27,6 +27,12 @@ export default {
       type: Function,
       default: () => {},
     },
+    // proyecto@automatizacion_campanas: { name, action } para abrir el modal con la
+    // acción "Agregar a campaña" ya puesta (desde una campaña continua recién creada).
+    preset: {
+      type: Object,
+      default: null,
+    },
   },
   setup() {
     const {
@@ -62,7 +68,7 @@ export default {
       automationMutated: false,
       show: true,
       automation: {
-        name: null,
+        name: this.preset?.name || null,
         description: null,
         event_name: 'conversation_created',
         conditions: [
@@ -75,7 +81,7 @@ export default {
           },
         ],
         actions: [
-          {
+          this.preset?.action || {
             action_name: 'assign_agent',
             action_params: [],
           },

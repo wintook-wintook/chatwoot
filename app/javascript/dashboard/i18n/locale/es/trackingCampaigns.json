@@ -43,7 +43,10 @@
       "batch": "Por lote",
       "continuous": "Continua"
     },
-    "NO_END": "sin fin"
+    "NO_END": "sin fin",
+    "CONTINUOUS_CREATED": "Campaña \"{name}\" creada. Para que reciba contactos, crea una automatización que la use.",
+    "CREATE_AUTOMATION": "Crear automatización para esta campaña",
+    "DISMISS": "Cerrar"
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campañas",

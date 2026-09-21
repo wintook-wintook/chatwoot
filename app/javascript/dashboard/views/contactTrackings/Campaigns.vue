@@ -26,6 +26,9 @@ export default {
       showDeleteModal: false,
       campaignToDelete: null,
       activeTab: 'list',
+      // proyecto@automatizacion_campanas: la campaña continua recién creada, para
+      // ofrecer el siguiente paso (crear la automatización que la llena).
+      createdContinuous: null,
       // Filtro preestablecido cuando se llega desde Contactos (history.state).
       presetFilter: null,
       // Filtro + paginado (cliente) de la tabla de campañas.
@@ -163,6 +166,15 @@ export default {
       if (!stats || !stats.total) return 0;
       return Math.round((stats.completed / stats.total) * 100);
     },
+    // Lleva a Automatizaciones con el modal de nueva regla abierto y la acción
+    // "Agregar a campaña" ya puesta en esta campaña.
+    createAutomationFor(campaign) {
+      this.$router.push({
+        name: 'automation_list',
+        params: { accountId: this.$route.params.accountId },
+        query: { add_to_campaign: campaign.id, campaign_name: campaign.name },
+      });
+    },
     openCampaign(campaign) {
       this.$router.push({
         name: 'contact_trackings_campaign_detail',
@@ -196,11 +208,18 @@ export default {
       }
     },
     onCampaignCreated(result) {
-      useAlert(
-        this.$t('BULK_TRACKING_ASSIGN.MODAL.RESULT_QUEUED_BODY', {
-          count: result?.queued || 0,
-        })
-      );
+      if (result?.mode === 'continuous') {
+        this.createdContinuous = {
+          id: result.campaign_id,
+          name: result.campaign_name,
+        };
+      } else {
+        useAlert(
+          this.$t('BULK_TRACKING_ASSIGN.MODAL.RESULT_QUEUED_BODY', {
+            count: result?.queued || 0,
+          })
+        );
+      }
       this.presetFilter = null;
       this.activeTab = 'list';
       this.fetchCampaigns();
@@ -262,6 +281,35 @@ export default {
 
     <!-- Tab: Campañas -->
     <template v-else>
+      <!-- proyecto@automatizacion_campanas: el siguiente paso de una campaña continua -->
+      <div
+        v-if="createdContinuous"
+        class="flex flex-wrap items-center justify-between gap-3 mb-4 p-3 rounded-md border border-woot-100 dark:border-woot-800 bg-woot-25 dark:bg-woot-900/20 text-sm text-slate-700 dark:text-slate-200"
+      >
+        <span>
+          {{
+            $t('TRACKING_CAMPAIGNS_VIEW.CONTINUOUS_CREATED', {
+              name: createdContinuous.name,
+            })
+          }}
+        </span>
+        <span class="flex items-center gap-2">
+          <woot-button
+            size="small"
+            @click="createAutomationFor(createdContinuous)"
+          >
+            {{ $t('TRACKING_CAMPAIGNS_VIEW.CREATE_AUTOMATION') }}
+          </woot-button>
+          <woot-button
+            size="small"
+            variant="clear"
+            color-scheme="secondary"
+            icon="dismiss"
+            :aria-label="$t('TRACKING_CAMPAIGNS_VIEW.DISMISS')"
+            @click="createdContinuous = null"
+          />
+        </span>
+      </div>
       <div v-if="isLoading" class="py-16 text-center text-slate-400">
         {{ $t('TRACKING_CAMPAIGNS_VIEW.LOADING') }}
       </div>
