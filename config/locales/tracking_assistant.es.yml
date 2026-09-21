@@ -103,9 +103,16 @@ es:
         ninguna automatización. Hay que crearla en Etiquetas o usar una de las existentes: %{available}.
       label_none_created: (no hay etiquetas creadas)
       erp_directive_not_isolated: >-
-        Hay una directiva {{consulta:}} conviviendo con ramas o con prosa. El motor manda el
-        Entrenamiento ENTERO interpolado como mensaje al cliente: con {{consulta:}} el Entrenamiento
-        es la plantilla del mensaje, no puede llevar nada más.
+        Hay una directiva {{consulta:}} sin "?" que no es la fuente de una ruta, conviviendo con ramas o
+        con prosa. El motor manda el Entrenamiento ENTERO interpolado como mensaje al cliente. Ponla como
+        fuente de una ruta, o pide sus datos con "?" (texto=?) para que el agente redacte la respuesta.
+      consulta_not_found: >-
+        La consulta '%{name}' no existe (o está inactiva) en la conexión '%{connection}'. El motor no
+        falla: la corre, no encuentra nada y el agente contesta sin datos. Revisa el nombre en Base de
+        Conocimiento → Conexión ERP, o siembra las consultas de la conexión.
+      consulta_unknown_param: >-
+        La consulta '%{name}' no tiene el parámetro %{params}: nunca se va a llenar. Parámetros que sí
+        tiene: %{available}.
       # ⚠ Corregido el 10/09/2026 contra el motor real. Este mensaje decía que las ramas sin
       # flecha "dejan de abrir casos", y es al revés: el job las manda a
       # try_create_ticket(directive: nil), que cae al prompt ENTERO y encuentra ahí el

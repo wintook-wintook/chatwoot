@@ -280,16 +280,9 @@ class ContactTrackings::Assistant::ValidatorService
     end
   end
 
-  # ── D4 · {{consulta:}} no convive con nada ──────────────────────────────────
-  # perform_erp_query manda el complementary_prompt ENTERO interpolado como mensaje:
-  # con líneas @ruta o prosa, el cliente recibe el Entrenamiento completo.
+  # ── D4, B9, B10 · {{consulta:}} (proyecto@erp_productos): ver ErpChecks ─────
   def check_erp_directive_isolation
-    return unless ExternalDb::ConsultaDirectiveRenderer.contains?(text)
-
-    resto = ContactTrackings::RouteMap.strip(text).gsub(ExternalDb::ConsultaDirectiveRenderer::DIRECTIVE, '').strip
-    return if map.routes.empty? && resto.blank?
-
-    add(:degrading, :erp_directive_not_isolated, t('findings.erp_directive_not_isolated'))
+    ContactTrackings::Assistant::ErpChecks.new(text, map: map, account: account, findings: findings).call
   end
 
   # ── D7 · @agendar_calendar sin ningún calendario en la cuenta ───────────────
