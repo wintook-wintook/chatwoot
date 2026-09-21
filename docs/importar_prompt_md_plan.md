@@ -301,7 +301,7 @@ completo al modelo serían ≈ 280 K tokens **solo para leerlo**, y además no c
 
 | Fase | Entrega | Cómo se verifica | Días |
 |---|---|---|---|
-| **F0** Lectura | árbol de bloques + detector de formato de reglas + modo genérico | spec con ADAM: 818 reglas, 8 capítulos; spec con un prompt común | 1 |
+| **F0** ✅ Lectura (`PromptImport::Reader`, rama `feat/importador_md`) | árbol de bloques + detector de formato de reglas + modo genérico | spec con ADAM: 818 reglas, 8 capítulos; spec con un prompt común | 1 |
 | **F1** Reparto | reglas fijas de destino + llamada de IA para lo dudoso | spec: cada capítulo de ADAM cae donde dice §4.2 | 1 |
 | **F2** Prompt en presupuesto | dedupe por embeddings, global vs ruta, orden, condensado, secciones con nombres de la cuenta | spec: cabe en el presupuesto y las 373 inviolables están cubiertas | 1,5 |
 | **F3** Rutas | propuesta de rutas + alcance + escalamiento, validadas con el parser real | spec: el comprobador no da bloqueantes; frases y etiquetas válidas | 1,5 |
