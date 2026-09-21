@@ -292,9 +292,28 @@ Una columna **Tipo** (Por lote / Continua) y la **ventana** (01/10 → 31/10) en
 | **F3** ✅ Ciclo de vida | job que abre y cierra campañas por su ventana | spec del job | 0,5 |
 | **F4** ✅ Formulario | tipo, ventana, espera, horario; "Continua" sin selector de audiencia | Vitest + navegador | 1,5 |
 | **F5** ✅ Detalle y listado | pestaña "Inscritos" con fuente y omitidos; tipo y ventana en el listado | Vitest + navegador | 1 |
-| **F6** Prueba real | campaña continua en "Agents IA Test" + automatización por etiqueta | conversación de punta a punta en develop | 0,5 |
+| **F6** ✅ Prueba real | campaña continua en "Agents IA Test" + automatización por etiqueta | conversación de punta a punta en develop | 0,5 |
 
 **Total: 7 días hábiles.**
+
+### 9.1 Prueba real (F6, 21/09/2026, develop, cuenta 2, inbox "Agents IA Test" 493)
+
+Todo por la API real: campaña continua **#255** "Demo continua F6" (Agente #6544, sin fin, tope 50/día)
+y automatización **#368** "conversación creada en el inbox 493 → Agregar a campaña #255".
+
+| Caso | Resultado |
+|---|---|
+| Contacto nuevo abre conversación (#165) | ✅ inscrito por la automatización #368; el seguimiento usa **esa** conversación y su primer mensaje proactivo quedó al día siguiente (intervalo de la plantilla: 1 día) |
+| El cliente escribe "quiero cotizar laptops" | ✅ el agente contesta **una sola vez** |
+| El mismo contacto abre otra conversación (#166) | ✅ omitido: ya inscrito; no se creó otro seguimiento |
+| Campaña pausada, contacto nuevo (#167) | ✅ omitido: campaña cerrada; se volvió a poner en curso |
+| `GET …/tracking_campaigns/255/entries` | ✅ resumen 1 inscrito (automatización) · 1 omitido (ya inscrito) |
+
+**Encontrado:** en esta versión las automatizaciones **no tienen "etiqueta" entre sus condiciones**
+(`AutomationRule#conditions_attributes`: contenido, correo, estado, inbox, prioridad…). El ejemplo de §4
+("se agrega la etiqueta demo") hoy no se puede armar; los disparadores que sí sirven son conversación
+creada / abierta / mensaje creado, con condiciones de inbox, contenido, etc. Agregar la condición de
+etiqueta es un cambio aparte (toca el filtro de condiciones de todas las automatizaciones).
 
 ---
 
