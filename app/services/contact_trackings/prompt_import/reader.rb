@@ -32,6 +32,7 @@ class ContactTrackings::PromptImport::Reader
 
   HEADING_RE = /\A(?<marks>\#{1,6})[ \t]+(?<title>.+?)[ \t]*#*[ \t]*\z/
   FENCE_RE   = /\A[ \t]*(```|~~~)/
+  RULER_RE   = /\A[-*_]{3,}\z/
   RULE_RE    = /\A\*\*(?<id>[A-Z][A-Z0-9]*-\d+(?:\.\d+)*)\*\*[ \t]*\((?<severity>[^)]+)\)[ \t]*[—–-][ \t]*(?<text>.+)\z/
   FIELD_RE   = /\A[ \t]+[-*][ \t]+(?<key>[^:]{1,40}):[ \t]*(?<value>.*)\z/
 
@@ -40,7 +41,10 @@ class ContactTrackings::PromptImport::Reader
   SEVERITIES = %w[inviolable obligatoria recomendada].freeze
   ROLES = { 'norma' => :norm, 'texto oficial' => :official_text }.freeze
 
-  Block = Struct.new(:index, :level, :title, :path, :role, :line, :chars, keyword_init: true)
+  # excerpt: el primer párrafo del bloque (sin sus subtítulos), para que el reparto pueda
+  # juzgarlo sin leer el documento entero.
+  EXCERPT_CHARS = 300
+  Block = Struct.new(:index, :level, :title, :path, :role, :line, :chars, :excerpt, keyword_init: true)
   Rule = Struct.new(:id, :severity, :text, :activation, :verification, :prompt, :path, :role, :line,
                     keyword_init: true)
   Result = Struct.new(:format, :blocks, :rules, :stats, :error, keyword_init: true) do
@@ -99,6 +103,7 @@ class ContactTrackings::PromptImport::Reader
   end
 
   def read_body(line, number)
+    remember_excerpt(line)
     if (found = line.match(RULE_RE))
       @rule = add_rule(found, number)
     elsif @rule && (field = line.match(FIELD_RE))
@@ -108,13 +113,36 @@ class ContactTrackings::PromptImport::Reader
     end
   end
 
+  # Solo el primer párrafo: termina en la primera línea en blanco que venga después de texto,
+  # o al llegar a EXCERPT_CHARS. Un excerpt congelado ya no crece.
+  def remember_excerpt(line)
+    excerpt = open_excerpt
+    text = line.strip
+    return if excerpt.nil?
+    return excerpt.freeze if text.empty? && excerpt.present?
+    return if text.empty? || text.match?(RULER_RE)
+
+    append_excerpt(excerpt, text)
+  end
+
+  def append_excerpt(excerpt, text)
+    excerpt << (excerpt.empty? ? text : " #{text}")
+    excerpt.replace(excerpt.truncate(EXCERPT_CHARS)).freeze if excerpt.size >= EXCERPT_CHARS
+  end
+
+  def open_excerpt
+    excerpt = @blocks.last&.excerpt
+    excerpt unless excerpt.nil? || excerpt.frozen?
+  end
+
   def open_block(heading, number)
     @rule = nil
     level = heading[:marks].size
     title = heading[:title].strip
     @stack = @stack.take_while { |b| b.level < level }
     block = Block.new(index: @blocks.size, level: level, title: title, path: @stack.map(&:title) + [title],
-                      role: ROLES[key_for(title)] || @stack.last&.role, line: number + 1, chars: 0)
+                      role: ROLES[key_for(title)] || @stack.last&.role, line: number + 1, chars: 0,
+                      excerpt: +'')
     @blocks << block
     @stack << block
   end

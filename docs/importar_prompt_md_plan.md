@@ -147,6 +147,16 @@ Primero **reglas fijas** (gratis, instantáneas), por el título y la ruta del b
 La **IA solo ve lo que las reglas fijas no resolvieron**, y solo **títulos + primeras líneas**, no el
 texto completo. En ADAM eso es una llamada chica.
 
+> **Cambio al implementar la F1 (21/09/2026, medido con ADAM):** la IA revisa **todas** las unidades
+> (81 secciones, una llamada de ≈ 25 s), no solo las dudosas, porque las reglas fijas no ven el
+> criterio ("Diagnóstico Ejecutivo" suena a sección y es trabajo del consultor). Pero no se le
+> pregunta "¿qué destino?": con la sugerencia a la vista confirmó 80 de 81. Responde **quién** ejecuta
+> la sección (agente en el chat / persona / sistema / voz / envío automático) y **cuándo** aplica
+> (siempre / tema que trae el cliente / información / guion), y el código deriva el destino. Lo que
+> las reglas fijas reconocieron se queda; la IA solo puede sacarlo (fuera). Resultado con ADAM:
+> 40 secciones en 5 nombres, 15 de rutas, 16 de conocimiento, 3 guiones y 7 fuera —casi lo mismo que
+> la línea base hecha a mano—.
+
 ### 4.3 Paso 3 — Armar el prompt dentro de un presupuesto
 
 ```
@@ -302,7 +312,7 @@ completo al modelo serían ≈ 280 K tokens **solo para leerlo**, y además no c
 | Fase | Entrega | Cómo se verifica | Días |
 |---|---|---|---|
 | **F0** ✅ Lectura (`PromptImport::Reader`, rama `feat/importador_md`) | árbol de bloques + detector de formato de reglas + modo genérico | spec con ADAM: 818 reglas, 8 capítulos; spec con un prompt común | 1 |
-| **F1** Reparto | reglas fijas de destino + llamada de IA para lo dudoso | spec: cada capítulo de ADAM cae donde dice §4.2 | 1 |
+| **F1** ✅ Reparto (`PromptImport::Distributor` + `AiReview`) | reglas fijas de destino + llamada de IA para lo dudoso | spec: cada capítulo de ADAM cae donde dice §4.2 | 1 |
 | **F2** Prompt en presupuesto | dedupe por embeddings, global vs ruta, orden, condensado, secciones con nombres de la cuenta | spec: cabe en el presupuesto y las 373 inviolables están cubiertas | 1,5 |
 | **F3** Rutas | propuesta de rutas + alcance + escalamiento, validadas con el parser real | spec: el comprobador no da bloqueantes; frases y etiquetas válidas | 1,5 |
 | **F4** Job y API | tabla, job con avance, endpoints, huella para no reprocesar | request spec: subir, avance, propuesta; reimportar no gasta | 1 |
