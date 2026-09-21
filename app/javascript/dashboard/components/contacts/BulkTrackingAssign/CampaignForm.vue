@@ -343,9 +343,49 @@ export default {
     <div
       class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-md p-4"
     >
-      <!-- proyecto@automatizacion_campanas: tipo de campaña. Desde Contactos (audiencia
-           ya elegida) solo cabe "por lote", así que no se muestra. -->
-      <div v-if="allowAudienceSelection" class="mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+        <!-- Nombre de la campaña -->
+        <label class="block">
+          <span
+            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.CAMPAIGN_NAME_LABEL') }}
+          </span>
+          <input
+            v-model="campaignName"
+            type="text"
+            maxlength="120"
+            :placeholder="
+              $t('BULK_TRACKING_ASSIGN.MODAL.CAMPAIGN_NAME_PLACEHOLDER')
+            "
+            class="w-full mt-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+          />
+        </label>
+
+        <!-- Agente IA -->
+        <label class="block">
+          <span
+            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.TEMPLATE_LABEL') }}
+          </span>
+          <select
+            v-model="selectedTemplateId"
+            class="w-full mt-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
+          >
+            <option value="" disabled>
+              {{ $t('BULK_TRACKING_ASSIGN.MODAL.TEMPLATE_PLACEHOLDER') }}
+            </option>
+            <option v-for="t in templates" :key="t.id" :value="t.id">
+              {{ t.name }}
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <!-- proyecto@automatizacion_campanas: tipo de campaña, debajo de nombre y Agente IA.
+           Desde Contactos (audiencia ya elegida) solo cabe "por lote": no se muestra. -->
+      <div v-if="allowAudienceSelection" class="mt-4 mb-4">
         <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">
           {{ $t('BULK_TRACKING_ASSIGN.MODAL.TYPE_LABEL') }}
         </span>
@@ -388,44 +428,6 @@ export default {
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
-        <!-- Nombre de la campaña -->
-        <label class="block">
-          <span
-            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
-          >
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.CAMPAIGN_NAME_LABEL') }}
-          </span>
-          <input
-            v-model="campaignName"
-            type="text"
-            maxlength="120"
-            :placeholder="
-              $t('BULK_TRACKING_ASSIGN.MODAL.CAMPAIGN_NAME_PLACEHOLDER')
-            "
-            class="w-full mt-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
-          />
-        </label>
-
-        <!-- Agente IA -->
-        <label class="block">
-          <span
-            class="text-sm font-semibold text-slate-700 dark:text-slate-300"
-          >
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.TEMPLATE_LABEL') }}
-          </span>
-          <select
-            v-model="selectedTemplateId"
-            class="w-full mt-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-woot-200 focus:border-woot-200"
-          >
-            <option value="" disabled>
-              {{ $t('BULK_TRACKING_ASSIGN.MODAL.TEMPLATE_PLACEHOLDER') }}
-            </option>
-            <option v-for="t in templates" :key="t.id" :value="t.id">
-              {{ t.name }}
-            </option>
-          </select>
-        </label>
-
         <!-- Audiencia: los radios ("Audiencia por Segmento/Etiqueta") hacen de
              encabezado del campo, por eso no hay un título "Audiencia" aparte
              (así la celda queda alineada con la de Fecha en el grid). -->
