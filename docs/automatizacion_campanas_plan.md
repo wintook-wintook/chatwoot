@@ -288,6 +288,8 @@ Una columna **Tipo** (Por lote / Continua) y la **ventana** (01/10 → 31/10) en
 
 ## 10. Decisiones para el usuario
 
+> **21/09/2026:** el usuario aceptó las propuestas de las decisiones 1 a 7. Queda abierta la 8.
+
 1. **Nombres** (§3.1): "Por lote / Continua", "audiencia fija / dinámica", "inscritos / omitidos".
    ¿Así, o prefieren otros?
 2. **Pausada:** propuesta: deja de recibir inscripciones, pero los ya inscritos **siguen** conversando.
