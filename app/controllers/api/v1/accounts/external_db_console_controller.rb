@@ -39,7 +39,36 @@ class Api::V1::Accounts::ExternalDbConsoleController < Api::V1::Accounts::BaseCo
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
+  # proyecto@erp_productos — "Probar como el agente": el mensaje de un cliente → la IA llena
+  # los parámetros que el agente pediría con "?" → la consulta, igual que en el chat
+  # (AskedParams + AskedRun). Por defecto se piden los parámetros de búsqueda (texto,
+  # números, sí/no); `asked` permite elegirlos.
+  def try_asked
+    query = Current.account.external_db_queries.active.find(params[:query_id])
+    filled = ExternalDb::AskedParams.new(query: query, asked: asked_keys(query), question: params[:message].to_s).call
+    return render json: { error: 'La IA no respondió (revisa la integración de OpenAI).' }, status: :unprocessable_entity unless filled
+    return render json: { use: false, params: {} } unless filled[:use]
+
+    render json: asked_json(filled[:params], ExternalDb::AskedRun.new(query, filled[:params]).call)
+  rescue ExternalDb::QueryRunner::ParamError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
   private
+
+  ASKABLE_TYPES = %w[words number boolean].freeze
+
+  def asked_keys(query)
+    requested = Array(params[:asked]).map(&:to_s).compact_blank
+    return requested if requested.any?
+
+    Array(query.params_schema).select { |p| ASKABLE_TYPES.include?(p['type']) }.pluck('key')
+  end
+
+  def asked_json(filled, data)
+    { use: true, params: filled, partial: data[:partial], columns: data[:columns], rows: data[:rows],
+      row_count: data[:rows].size }
+  end
 
   def catalog_connection_json(conn)
     {

@@ -105,6 +105,7 @@ Rails.application.routes.draw do
           get  'external_db_console/catalog', to: 'external_db_console#catalog'
           post 'external_db_console/run',     to: 'external_db_console#run'
           post 'external_db_console/ask',     to: 'external_db_console#ask'
+          post 'external_db_console/try_asked', to: 'external_db_console#try_asked' # proyecto@erp_productos
           resources :erp_collection_bots, only: [:index, :show, :create, :update, :destroy] do
             post :preview, on: :member
           end

@@ -191,7 +191,7 @@ el comprobador del Asistente (`ValidatorService`) y el autocompletado de directi
 | **F1** ✅ El `?` en la sintaxis | `ConsultaDirectiveRenderer` reconoce `param=?`; sin `?` todo igual | specs de parseo + regresión de cobranza | 0,5 |
 | **F2** ✅ El agente | `AskedParams` (IA llena los `?`), consulta, redacción con fidelidad e historial; `{{consulta:}}` de ruta usa la directiva de la ruta (§3.6) | specs con la IA simulada; regresión de cobranza | 1,5 |
 | **F3** ✅ Comprobador y autocompletado | el Asistente valida `{{consulta:…(…=?)}}` (consulta existe, parámetros válidos, conexión) y la ofrece en `/` | specs del comprobador; Vitest | 1 |
-| **F4** La pantalla | `buscar_productos` en Conexión ERP (lista de precios, existencia, solo activos) + probar en Consola ERP | Vitest + navegador | 1 |
+| **F4** ✅ La pantalla | `buscar_productos` en Conexión ERP (lista de precios, existencia, solo activos) + probar en Consola ERP | Vitest + navegador | 1 |
 | **F5** Prueba real | agente con `{{consulta:buscar_productos(texto=?, precio_max=?)}}` en "Agents IA Test" contra SAE | conversación de punta a punta | 0,5 |
 
 **Total: 6 días hábiles.**
@@ -235,6 +235,18 @@ Dos arreglos de búsqueda que salieron de ahí:
   con la nota "los «?» los llena la IA". Las de cobranza, como siempre.
 - **Pendiente anotado:** el inventario del Asistente (fuentes para el generador de rutas) no lista las
   consultas ERP; el generador todavía no propone `{{consulta:}}` como fuente de una ruta.
+
+### 7.4 F4 hecha (21/09/2026) — con un cambio respecto del plan
+
+La configuración por conexión de §4 (lista de precios, existencia, solo activos) **no se hizo**: la directiva
+ya elige la lista (`lista=2`) y la existencia (`con_existencia=si`), y la consulta siempre trae solo
+activos; esa pantalla duplicaba lo mismo. En su lugar:
+
+- **Consola ERP → "Probar como el agente"** (solo en consultas de búsqueda): se escribe lo que diría un
+  cliente y se ve qué llenó la IA, qué devolvería el ERP y si fue coincidencia parcial. Usa las mismas piezas
+  que el chat (`AskedParams` + `ExternalDb::AskedRun`, extraído de `AskedConsulta`). Endpoint
+  `POST external_db_console/try_asked`.
+- Los parámetros sí/no se eligen con un selector en la consola.
 
 La consulta **no se agrega sola** a las conexiones existentes: se agrega con el botón **"Sembrar consultas"**
 de cada conexión (agrega las que faltan por nombre). Aparte: a Microsip le falta `facturas_vencidas` porque la
