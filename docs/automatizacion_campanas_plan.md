@@ -86,7 +86,7 @@ pueda **nombrar la campaña**, y que la fecha diga **hasta cuándo** se recibe.
 ```
             inicio                                        fin (opcional)
  ──────────────┼──────────────────────────────────────────────┼──────────►
-  BORRADOR     │                 EN CURSO                     │  TERMINADA
+  PROGRAMADA   │                 EN CURSO                     │  FINALIZADA
   (programada) │  recibe inscripciones; el agente conversa    │  no recibe más;
                │                                              │  los ya inscritos
                │                                              │  terminan su conversación
@@ -95,7 +95,7 @@ pueda **nombrar la campaña**, y que la fecha diga **hasta cuándo** se recibe.
 - **Antes del inicio:** la campaña está programada. Una inscripción que llegue antes queda **programada
   para el inicio** (no se pierde).
 - **Durante:** cada inscrito recibe al Agente IA.
-- **Después del fin:** la campaña pasa sola a **terminada** y la automatización ya no inscribe a nadie
+- **Después del fin:** la campaña pasa sola a **finalizada** y la automatización ya no inscribe a nadie
   (se cuenta como omitido "ventana cerrada").
 - **Sin fin:** queda en curso hasta que alguien la pause o la termine.
 
@@ -136,7 +136,8 @@ En **por lote** es el mismo cálculo para todos a la vez: hoy la fecha es "cuán
 ```
 
 - **Se elige por nombre, se guarda el id.** Renombrar la campaña no rompe la automatización.
-- El desplegable muestra el **estado y la ventana** de cada campaña; una terminada se ve deshabilitada.
+- El desplegable muestra el **estado y la ventana** de cada campaña. Lista también las finalizadas (una
+  regla vieja tiene que seguir mostrando la suya); el backend no inscribe en una cerrada.
 - Si la campaña se **borra**, la acción queda "campaña eliminada" en la automatización y no hace nada.
 - La acción vieja **"Asignar Agente IA"** sigue funcionando igual (decisión 5).
 
@@ -208,13 +209,14 @@ Las inscripciones se crean también en **por lote**, así las dos audiencias se 
 
 | Estado | Qué hace | Quién lo cambia |
 |---|---|---|
-| **Borrador** (programada) | antes del inicio; las inscripciones quedan programadas para el inicio | nace así si el inicio es futuro |
+| **Programada** (`draft`) | antes del inicio; las inscripciones quedan programadas para el inicio | nace así si el inicio es futuro |
 | **En curso** | recibe inscripciones; el agente conversa | solo, al llegar el inicio; o a mano |
 | **Pausada** | **no recibe** inscripciones; los ya inscritos **siguen** conversando (decisión 2) | a mano |
-| **Terminada** | no recibe más; los inscritos terminan su conversación | sola, al llegar el fin; o a mano |
+| **Finalizada** | no recibe más; los inscritos terminan su conversación | sola, al llegar el fin; o a mano |
 
-Un job cada 5 minutos (el mismo horario que `ExecutePendingJob`) abre las que llegan a su inicio y
-cierra las que pasan su fin.
+`TrackingCampaigns::WindowJob`, cada 5 minutos, abre las que llegan a su inicio y cierra las que pasan
+su fin. Es el estado que se ve: las inscripciones miran la hora del fin en el momento, sin esperar al job.
+Una campaña con inicio futuro nace **Programada** (antes nacía "En curso").
 
 ---
 
@@ -287,7 +289,7 @@ Una columna **Tipo** (Por lote / Continua) y la **ventana** (01/10 → 31/10) en
 | **F0** ✅ Datos | columnas nuevas en `tracking_campaigns`, tabla `tracking_campaign_entries`, las existentes quedan "por lote" | spec del modelo; migración tolerante | 1 |
 | **F1** ✅ Inscribir (`Schedule` · `TrackingBuilder` · `Enroll`) | `TrackingCampaigns::Enroll`: ventana, espera, horario, duplicados, omitidos; el bulk pasa a usarlo | specs de cada caso de §4.1 | 1,5 |
 | **F2** ✅ La automatización | acción "Agregar a campaña" (backend + desplegable con estado y ventana) | spec de la acción; Vitest del desplegable | 1 |
-| **F3** Ciclo de vida | job que abre y cierra campañas por su ventana | spec del job | 0,5 |
+| **F3** ✅ Ciclo de vida | job que abre y cierra campañas por su ventana | spec del job | 0,5 |
 | **F4** Formulario | tipo, ventana, espera, horario; "Continua" sin selector de audiencia | Vitest + navegador | 1,5 |
 | **F5** Detalle y listado | pestaña "Inscritos" con fuente y omitidos; tipo y ventana en el listado | Vitest + navegador | 1 |
 | **F6** Prueba real | campaña continua en "Agents IA Test" + automatización por etiqueta | conversación de punta a punta en develop | 0,5 |

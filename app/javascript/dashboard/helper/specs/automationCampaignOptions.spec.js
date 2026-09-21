@@ -35,7 +35,7 @@ describe('Agregar a campaña', () => {
     });
 
     expect(options.map(o => o.id)).toEqual([7, 8]);
-    expect(options[1].name).toContain('Terminada');
+    expect(options[1].name).toContain('Finalizada');
   });
 
   it('sin campañas cargadas, lista vacía', () => {

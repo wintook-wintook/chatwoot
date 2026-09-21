@@ -32,7 +32,7 @@
       "PROGRESS": "Progress"
     },
     "STATUS": {
-      "draft": "Draft",
+      "draft": "Scheduled",
       "running": "Running",
       "paused": "Paused",
       "finished": "Finished"

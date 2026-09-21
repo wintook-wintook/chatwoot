@@ -112,7 +112,7 @@ const CAMPAIGN_STATUS = {
   draft: 'Programada',
   running: 'En curso',
   paused: 'Pausada',
-  finished: 'Terminada',
+  finished: 'Finalizada',
 };
 
 const shortDate = value => {

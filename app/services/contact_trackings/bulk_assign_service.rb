@@ -105,7 +105,9 @@ class ContactTrackings::BulkAssignService
       user_id: @current_user&.id,
       objective: template.objective,
       scheduled_for: @scheduled_for,
-      status: 'running',
+      # proyecto@automatizacion_campanas: con inicio futuro nace Programada y la abre
+      # TrackingCampaigns::WindowJob; las inscripciones no esperan a eso.
+      status: @scheduled_for > Time.current ? 'draft' : 'running',
       mode: 'batch',
       audience: { filter_payload: @filter_payload, excluded_contact_ids: @excluded_contact_ids }
     )
