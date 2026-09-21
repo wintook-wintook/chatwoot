@@ -406,22 +406,28 @@ export default {
       </section>
 
       <!-- 2 · ¿A quién? Segmento o etiqueta = por lote; automatizaciones = continua.
-           Los selectores siempre se ven (alineados en columna) y solo se habilita el
-           de la opción elegida. -->
+           Tres fichas del mismo alto; los selectores siempre se ven y solo se habilita
+           el de la opción elegida. -->
       <section class="mt-5">
         <h3 class="section-title">
           {{ $t('BULK_TRACKING_ASSIGN.MODAL.SECTION_WHO') }}
         </h3>
-        <div v-if="allowAudienceSelection" class="flex flex-col gap-2">
-          <div class="audience-option">
-            <label class="audience-radio">
+        <div
+          v-if="allowAudienceSelection"
+          class="grid grid-cols-1 md:grid-cols-3 gap-3"
+        >
+          <label
+            class="audience-card"
+            :class="{ 'audience-card--active': audienceType === 'segment' }"
+          >
+            <span class="audience-radio">
               <input v-model="audienceType" type="radio" value="segment" />
               {{ $t('BULK_TRACKING_ASSIGN.MODAL.WHO_SEGMENT') }}
-            </label>
+            </span>
             <select
               v-model="selectedSegmentId"
               :disabled="audienceType !== 'segment'"
-              class="field-input md:max-w-sm !mt-0"
+              class="field-input"
             >
               <option value="" disabled>
                 {{
@@ -432,16 +438,19 @@ export default {
                 {{ s.name }}
               </option>
             </select>
-          </div>
-          <div class="audience-option">
-            <label class="audience-radio">
+          </label>
+          <label
+            class="audience-card"
+            :class="{ 'audience-card--active': audienceType === 'label' }"
+          >
+            <span class="audience-radio">
               <input v-model="audienceType" type="radio" value="label" />
               {{ $t('BULK_TRACKING_ASSIGN.MODAL.WHO_LABEL') }}
-            </label>
+            </span>
             <select
               v-model="selectedLabel"
               :disabled="audienceType !== 'label'"
-              class="field-input md:max-w-sm !mt-0"
+              class="field-input"
             >
               <option value="" disabled>
                 {{
@@ -452,13 +461,16 @@ export default {
                 {{ l.title }}
               </option>
             </select>
-          </div>
-          <div class="audience-option">
-            <label class="audience-radio">
+          </label>
+          <label
+            class="audience-card"
+            :class="{ 'audience-card--active': audienceType === 'automation' }"
+          >
+            <span class="audience-radio">
               <input v-model="audienceType" type="radio" value="automation" />
               {{ $t('BULK_TRACKING_ASSIGN.MODAL.WHO_AUTOMATION') }}
-            </label>
-          </div>
+            </span>
+          </label>
         </div>
         <p v-else class="m-0 text-sm text-slate-500 dark:text-slate-400 italic">
           {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_FROM_CONTACTS') }}
@@ -634,12 +646,22 @@ export default {
   @apply bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed;
 }
 
-.audience-option {
-  @apply flex flex-col md:flex-row md:items-center gap-2;
+.audience-card {
+  @apply flex flex-col gap-2 m-0 p-3 rounded-md border border-slate-200 dark:border-slate-600 cursor-pointer;
+}
+
+/* El selector gris de una ficha no elegida deja pasar el clic a la ficha: así un clic
+   ahí la elige (un <select> deshabilitado se traga el clic). */
+.audience-card select:disabled {
+  @apply pointer-events-none;
+}
+
+.audience-card--active {
+  @apply border-woot-300 dark:border-woot-600 bg-woot-25 dark:bg-woot-900/20;
 }
 
 .audience-radio {
-  @apply flex items-center gap-2 m-0 text-sm text-slate-700 dark:text-slate-300 md:w-72 shrink-0;
+  @apply flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300;
 }
 
 .audience-radio input {
