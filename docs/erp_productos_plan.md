@@ -187,7 +187,7 @@ el comprobador del Asistente (`ValidatorService`) y el autocompletado de directi
 
 | Fase | Entrega | Cómo se verifica | Días |
 |---|---|---|---|
-| **F0** La consulta | `buscar_productos` en `QueryLibrary` para SAE, Microsip y Contpaq (verificada en vivo, solo lectura) + siembra; filtros opcionales (texto por palabras con comodines escapados, línea, precios, existencia, lista, max) | spec por ERP; prueba contra las 3 conexiones | 1,5 |
+| **F0** ✅ La consulta | `buscar_productos` en `QueryLibrary` para SAE, Microsip y Contpaq (verificada en vivo, solo lectura) + siembra; filtros opcionales (texto por palabras con comodines escapados, línea, precios, existencia, lista, max) | spec por ERP; prueba contra las 3 conexiones | 1,5 |
 | **F1** El `?` en la sintaxis | `ConsultaDirectiveRenderer` reconoce `param=?`; sin `?` todo igual | specs de parseo + regresión de cobranza | 0,5 |
 | **F2** El agente | `AskedParams` (IA llena los `?`), consulta, redacción con fidelidad e historial; `{{consulta:}}` de ruta usa la directiva de la ruta (§3.6) | specs con la IA simulada; regresión de cobranza | 1,5 |
 | **F3** Comprobador y autocompletado | el Asistente valida `{{consulta:…(…=?)}}` (consulta existe, parámetros válidos, conexión) y la ofrece en `/` | specs del comprobador; Vitest | 1 |
@@ -195,6 +195,23 @@ el comprobador del Asistente (`ValidatorService`) y el autocompletado de directi
 | **F5** Prueba real | agente con `{{consulta:buscar_productos(texto=?, precio_max=?)}}` en "Agents IA Test" contra SAE | conversación de punta a punta | 0,5 |
 
 **Total: 6 días hábiles.**
+
+### 7.1 F0 hecha (21/09/2026): lo que apareció al probar en vivo (solo lectura)
+
+| Hallazgo | Arreglo |
+|---|---|
+| La gem `fb` **no puede mandar un parámetro NULL** a un `CAST(? AS …)` ("specified column is not permitted to be null"); los filtros opcionales son justo `(CAST(? AS …) IS NULL OR …)` | `QueryRunner`: un parámetro vacío se escribe `NULL` en el SQL en vez de mandarse como `?` (seguro: `NULL` es una palabra fija) |
+| Firebird deduce el tipo de cada `?` por la columna con que se compara (NOT NULL → el `?` tampoco admite NULL) | en Firebird **cada** uso de un parámetro lleva `CAST` |
+| Con `charset NONE`, Firebird entrega los textos en la página de Windows ("p\\xFAblico", "ca\\xF1\\xF3n") | el adaptador los convierte a UTF-8 y manda los parámetros en Windows-1252 (así "cañón" encuentra "cañón"). **Arregla también los nombres con tilde de las consultas de cobranza.** |
+| Productos sin nombre (basura de captura) | no salen |
+
+Resultados en vivo: SAE 50 productos (todo) · "toshiba" 1 · existencia y ≤ $1,000: 19. Microsip "cañón" 1 · línea
+Armas lista 2: 6 · con existencia 46. Contpaq "mouse" 5 · con existencia 29. Un intento de inyección
+(`x' OR 1=1 --`) devuelve 0 filas en SAE y Contpaq.
+
+La consulta **no se agrega sola** a las conexiones existentes: se agrega con el botón **"Sembrar consultas"**
+de cada conexión (agrega las que faltan por nombre). Aparte: a Microsip le falta `facturas_vencidas` porque la
+librería nunca la tuvo para Microsip (pendiente fuera de esta rama).
 
 ---
 
