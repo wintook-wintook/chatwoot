@@ -58,12 +58,15 @@ class ExternalDb::AskedParams
       #{params}
 
       Reglas:
-      - Usa solo lo que dijo el cliente (el mensaje actual y, si lo continúa, los anteriores).
-        Si no dio un dato, OMITE ese parámetro: nunca lo inventes.
+      - Decide por el ÚLTIMO mensaje del cliente. Los anteriores sirven SOLO para completar una
+        búsqueda que ese último mensaje continúa ("¿y de menos de 300?", "¿y en azul?").
+      - Si el último mensaje no pide ni continúa una búsqueda —agradece, se despide, confirma,
+        saluda, da sus datos o habla de otra cosa—, usar = false (medido: con "ok, gracias por la
+        info" se repetía la búsqueda del mensaje anterior).
+      - Si no dio un dato, OMITE ese parámetro: nunca lo inventes.
       - Números sin símbolos ni comas ("15 mil" → 15000). Sí/no como "si" o "no".
       - Para texto a buscar, solo las palabras que identifican lo que busca
         ("¿tienen laptops hp?" → "laptop hp"), sin saludos ni verbos.
-      - Si el mensaje no pide nada que esta consulta pueda responder, usar = false.
       Responde SOLO JSON: {"usar": true, "parametros": {"clave": "valor"}}
     PROMPT
   end
