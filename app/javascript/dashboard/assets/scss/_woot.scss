@@ -388,4 +388,94 @@
     --color-orange-800: 255 160 87;
     --color-orange-900: 255 224 194;
   }
+
+  // Temas de color: redefinen el tinte de las escalas `woot` (acento) y
+  // `slate` (neutros). Sirven igual en modo claro y oscuro porque el
+  // marcado usa la misma rampa con variantes `dark:`.
+  // Cálido — arena + naranja
+  body[data-tema='calido'] {
+    --color-woot-25: 254 248 244;
+    --color-woot-50: 255 241 231;
+    --color-woot-75: 255 232 215;
+    --color-woot-100: 255 220 195;
+    --color-woot-200: 255 179 129;
+    --color-woot-300: 250 147 78;
+    --color-woot-400: 255 139 62;
+    --color-woot-500: 255 128 43;
+    --color-woot-600: 247 104 8;
+    --color-woot-700: 148 62 0;
+    --color-woot-800: 95 42 6;
+    --color-woot-900: 43 20 0;
+
+    --color-slate-25: 249 249 248;
+    --color-slate-50: 243 243 242;
+    --color-slate-75: 238 238 236;
+    --color-slate-100: 233 233 230;
+    --color-slate-200: 219 219 215;
+    --color-slate-300: 200 199 193;
+    --color-slate-400: 161 160 154;
+    --color-slate-500: 127 126 119;
+    --color-slate-600: 112 111 108;
+    --color-slate-700: 81 80 75;
+    --color-slate-800: 40 40 38;
+    --color-slate-900: 22 22 21;
+  }
+
+  // Bosque — salvia + verde
+  body[data-tema='bosque'] {
+    --color-woot-25: 243 252 243;
+    --color-woot-50: 235 249 235;
+    --color-woot-75: 223 243 223;
+    --color-woot-100: 206 235 207;
+    --color-woot-200: 151 207 156;
+    --color-woot-300: 101 186 117;
+    --color-woot-400: 99 193 116;
+    --color-woot-500: 85 180 103;
+    --color-woot-600: 70 167 88;
+    --color-woot-700: 47 110 59;
+    --color-woot-800: 29 68 39;
+    --color-woot-900: 15 30 19;
+
+    --color-slate-25: 248 250 249;
+    --color-slate-50: 241 244 243;
+    --color-slate-75: 236 239 237;
+    --color-slate-100: 230 233 232;
+    --color-slate-200: 215 220 218;
+    --color-slate-300: 194 201 198;
+    --color-slate-400: 153 162 158;
+    --color-slate-500: 117 129 123;
+    --color-slate-600: 106 113 110;
+    --color-slate-700: 74 82 78;
+    --color-slate-800: 37 42 39;
+    --color-slate-900: 20 23 22;
+  }
+
+  // Índigo — malva + índigo
+  body[data-tema='indigo'] {
+    --color-woot-25: 248 250 255;
+    --color-woot-50: 240 244 255;
+    --color-woot-75: 230 237 254;
+    --color-woot-100: 217 226 252;
+    --color-woot-200: 174 192 245;
+    --color-woot-300: 141 164 239;
+    --color-woot-400: 132 157 255;
+    --color-woot-500: 83 115 231;
+    --color-woot-600: 62 99 221;
+    --color-woot-700: 47 78 178;
+    --color-woot-800: 34 52 110;
+    --color-woot-900: 21 25 45;
+
+    --color-slate-25: 249 248 249;
+    --color-slate-50: 244 242 244;
+    --color-slate-75: 238 237 239;
+    --color-slate-100: 233 232 234;
+    --color-slate-200: 220 219 221;
+    --color-slate-300: 200 199 203;
+    --color-slate-400: 160 159 166;
+    --color-slate-500: 126 125 134;
+    --color-slate-600: 111 110 119;
+    --color-slate-700: 80 79 87;
+    --color-slate-800: 40 40 44;
+    --color-slate-900: 22 22 24;
+  }
 }

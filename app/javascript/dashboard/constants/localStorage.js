@@ -3,6 +3,7 @@ export const LOCAL_STORAGE_KEYS = {
   WIDGET_BUILDER: 'widgetBubble_',
   DRAFT_MESSAGES: 'draftMessages',
   COLOR_SCHEME: 'color_scheme',
+  COLOR_TINT: 'color_tint',
   DISMISSED_LABEL_SUGGESTIONS: 'labelSuggestionsDismissed',
   MESSAGE_REPLY_TO: 'messageReplyTo',
 };
