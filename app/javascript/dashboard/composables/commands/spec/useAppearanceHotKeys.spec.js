@@ -41,7 +41,13 @@ describe('useAppearanceHotKeys', () => {
       option => option.id === 'appearance_settings'
     );
     expect(parentOption).toBeDefined();
-    expect(parentOption.children.length).toBe(3);
+    // los tres modos más la entrada que abre los temas de color
+    expect(parentOption.children).toEqual([
+      'light',
+      'dark',
+      'auto',
+      'appearance_tint',
+    ]);
   });
 
   it('should have the correct theme options', () => {
@@ -49,11 +55,11 @@ describe('useAppearanceHotKeys', () => {
     const themeOptions = goToAppearanceHotKeys.value.filter(
       option => option.parent === 'appearance_settings'
     );
-    expect(themeOptions.length).toBe(3);
     expect(themeOptions.map(option => option.id)).toEqual([
       'light',
       'dark',
       'auto',
+      'appearance_tint',
     ]);
   });
 
@@ -63,6 +69,8 @@ describe('useAppearanceHotKeys', () => {
       option => option.id === 'appearance_tint'
     );
     expect(parentOption).toBeDefined();
+    // cuelga de Cambiar apariencia, no del primer nivel
+    expect(parentOption.parent).toBe('appearance_settings');
     expect(parentOption.children).toEqual([
       'tint_default',
       'tint_calido',
