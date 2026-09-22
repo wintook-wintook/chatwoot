@@ -12,7 +12,6 @@
 #
 #  id                            :bigint           not null, primary key
 #  ai_context                    :text
-#  archived_at                   :datetime
 #  booking_calendar_ids          :jsonb            not null
 #  calendar_event_duration       :integer          default(30)
 #  calendar_integration_ids      :jsonb            not null
@@ -27,32 +26,26 @@
 #  tags                          :json
 #  timezone                      :string
 #  training_structure            :jsonb            not null
-#  use_as_knowledge              :boolean          default(FALSE), not null
 #  whatsapp_templates            :json
 #  created_at                    :datetime         not null
 #  updated_at                    :datetime         not null
 #  account_id                    :bigint           not null
 #  inbox_id                      :bigint
 #  kbase_hook_id                 :integer
-#  tracking_template_category_id :bigint
 #  user_id                       :bigint
 #
 # Indexes
 #
-#  index_tracking_templates_on_account_id                     (account_id)
-#  index_tracking_templates_on_account_id_and_name            (account_id,name) UNIQUE
-#  index_tracking_templates_on_archived_at                    (archived_at)
-#  index_tracking_templates_on_inbox_id                       (inbox_id)
-#  index_tracking_templates_on_kbase_hook_id                  (kbase_hook_id)
-#  index_tracking_templates_on_tracking_template_category_id  (tracking_template_category_id)
-#  index_tracking_templates_on_use_as_knowledge               (use_as_knowledge) WHERE use_as_knowledge
-#  index_tracking_templates_on_user_id                        (user_id)
+#  index_tracking_templates_on_account_id           (account_id)
+#  index_tracking_templates_on_account_id_and_name  (account_id,name) UNIQUE
+#  index_tracking_templates_on_inbox_id             (inbox_id)
+#  index_tracking_templates_on_kbase_hook_id        (kbase_hook_id)
+#  index_tracking_templates_on_user_id              (user_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (inbox_id => inboxes.id)
-#  fk_rails_...  (tracking_template_category_id => tracking_template_categories.id) ON DELETE => nullify
 #  fk_rails_...  (user_id => users.id)
 #
 
@@ -75,7 +68,7 @@ class TrackingTemplate < ApplicationRecord
   # proyecto@contact_tracking: palabras clave de acción
   validate :keyword_actions_valid_structure
 
-  scope :by_tag, ->(tag) { where("tags @> ?", [tag].to_json) }
+  scope :by_tag, ->(tag) { where('tags @> ?', [tag].to_json) }
   scope :by_inbox, ->(inbox_id) { where(inbox_id: inbox_id) }
   scope :search_by_name, ->(query) { where('name ILIKE ?', "%#{query}%") }
   scope :ordered, -> { order(updated_at: :desc) }
@@ -126,13 +119,13 @@ class TrackingTemplate < ApplicationRecord
     return unless keyword_actions.is_a?(Array)
 
     keyword_actions.each do |ka|
-      unless ka.is_a?(Hash) &&
-             ka['keyword'].to_s.strip.present? &&
-             ContactTrackings::KeywordActionService::VALID_ACTIONS.include?(ka['action'].to_s) &&
-             ContactTrackings::KeywordActionService::VALID_DIRECTIONS.include?(ka['direction'].to_s)
-        errors.add(:keyword_actions, 'contiene una entrada con formato inválido')
-        break
-      end
+      next if ka.is_a?(Hash) &&
+              ka['keyword'].to_s.strip.present? &&
+              ContactTrackings::KeywordActionService::VALID_ACTIONS.include?(ka['action'].to_s) &&
+              ContactTrackings::KeywordActionService::VALID_DIRECTIONS.include?(ka['direction'].to_s)
+
+      errors.add(:keyword_actions, 'contiene una entrada con formato inválido')
+      break
     end
   end
 end
