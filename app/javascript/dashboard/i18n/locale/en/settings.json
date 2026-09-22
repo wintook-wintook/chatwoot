@@ -50,6 +50,29 @@
         "ERROR": "Message signature cannot be empty",
         "PLACEHOLDER": "Insert your personal message signature here."
       },
+      "APPEARANCE": {
+        "TITLE": "Appearance",
+        "NOTE": "Choose how the dashboard looks. The setting is saved in this browser.",
+        "MODE_LABEL": "Mode",
+        "TINT_LABEL": "Color theme",
+        "MODES": {
+          "LIGHT": "Light",
+          "DARK": "Dark",
+          "AUTO": "System"
+        },
+        "TINTS": {
+          "DEFAULT": "Default",
+          "CALIDO": "Warm",
+          "BOSQUE": "Forest",
+          "INDIGO": "Indigo",
+          "SEPIA": "Sepia",
+          "CONTRASTE": "High contrast",
+          "VIOLETA": "Violet",
+          "TURQUESA": "Teal",
+          "ROSA": "Pink",
+          "GRAFITO": "Graphite"
+        }
+      },
       "PASSWORD_SECTION": {
         "TITLE": "Password",
         "NOTE": "Updating your password will reset your logins on multiple devices.",

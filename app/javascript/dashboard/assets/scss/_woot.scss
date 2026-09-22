@@ -388,4 +388,263 @@
     --color-orange-800: 255 160 87;
     --color-orange-900: 255 224 194;
   }
+
+  // Temas de color: redefinen el tinte de las escalas `woot` (acento) y
+  // `slate` (neutros). Sirven igual en modo claro y oscuro porque el
+  // marcado usa la misma rampa con variantes `dark:`.
+  // Cálido — arena + naranja
+  body[data-tema='calido'] {
+    --color-woot-25: 254 248 244;
+    --color-woot-50: 255 241 231;
+    --color-woot-75: 255 232 215;
+    --color-woot-100: 255 220 195;
+    --color-woot-200: 255 179 129;
+    --color-woot-300: 250 147 78;
+    --color-woot-400: 255 139 62;
+    --color-woot-500: 255 128 43;
+    --color-woot-600: 247 104 8;
+    --color-woot-700: 148 62 0;
+    --color-woot-800: 95 42 6;
+    --color-woot-900: 43 20 0;
+
+    --color-slate-25: 249 249 248;
+    --color-slate-50: 243 243 242;
+    --color-slate-75: 238 238 236;
+    --color-slate-100: 233 233 230;
+    --color-slate-200: 219 219 215;
+    --color-slate-300: 200 199 193;
+    --color-slate-400: 161 160 154;
+    --color-slate-500: 127 126 119;
+    --color-slate-600: 112 111 108;
+    --color-slate-700: 81 80 75;
+    --color-slate-800: 40 40 38;
+    --color-slate-900: 22 22 21;
+  }
+
+  // Bosque — salvia + verde
+  body[data-tema='bosque'] {
+    --color-woot-25: 243 252 243;
+    --color-woot-50: 235 249 235;
+    --color-woot-75: 223 243 223;
+    --color-woot-100: 206 235 207;
+    --color-woot-200: 151 207 156;
+    --color-woot-300: 101 186 117;
+    --color-woot-400: 99 193 116;
+    --color-woot-500: 85 180 103;
+    --color-woot-600: 70 167 88;
+    --color-woot-700: 47 110 59;
+    --color-woot-800: 29 68 39;
+    --color-woot-900: 15 30 19;
+
+    --color-slate-25: 248 250 249;
+    --color-slate-50: 241 244 243;
+    --color-slate-75: 236 239 237;
+    --color-slate-100: 230 233 232;
+    --color-slate-200: 215 220 218;
+    --color-slate-300: 194 201 198;
+    --color-slate-400: 153 162 158;
+    --color-slate-500: 117 129 123;
+    --color-slate-600: 106 113 110;
+    --color-slate-700: 74 82 78;
+    --color-slate-800: 37 42 39;
+    --color-slate-900: 20 23 22;
+  }
+
+  // Índigo — malva + índigo
+  body[data-tema='indigo'] {
+    --color-woot-25: 248 250 255;
+    --color-woot-50: 240 244 255;
+    --color-woot-75: 230 237 254;
+    --color-woot-100: 217 226 252;
+    --color-woot-200: 174 192 245;
+    --color-woot-300: 141 164 239;
+    --color-woot-400: 132 157 255;
+    --color-woot-500: 83 115 231;
+    --color-woot-600: 62 99 221;
+    --color-woot-700: 47 78 178;
+    --color-woot-800: 34 52 110;
+    --color-woot-900: 21 25 45;
+
+    --color-slate-25: 249 248 249;
+    --color-slate-50: 244 242 244;
+    --color-slate-75: 238 237 239;
+    --color-slate-100: 233 232 234;
+    --color-slate-200: 220 219 221;
+    --color-slate-300: 200 199 203;
+    --color-slate-400: 160 159 166;
+    --color-slate-500: 126 125 134;
+    --color-slate-600: 111 110 119;
+    --color-slate-700: 80 79 87;
+    --color-slate-800: 40 40 44;
+    --color-slate-900: 22 22 24;
+  }
+  // Sepia lleva la rampa `sand` girada al ámbar, devolviendo cada tono a su
+  // luminancia original para no perder contraste. Alto contraste separa los
+  // pasos: superficies al blanco y al negro, textos al extremo de la escala.
+  body[data-tema='sepia'] {
+    --color-woot-25: 253 252 252;
+    --color-woot-50: 253 248 246;
+    --color-woot-75: 248 241 238;
+    --color-woot-100: 242 232 228;
+    --color-woot-200: 210 186 176;
+    --color-woot-300: 191 160 148;
+    --color-woot-400: 203 163 147;
+    --color-woot-500: 132 99 88;
+    --color-woot-600: 132 99 88;
+    --color-woot-700: 67 48 43;
+    --color-woot-800: 51 40 36;
+    --color-woot-900: 25 21 20;
+
+    --color-slate-25: 253 249 243;
+    --color-slate-50: 247 242 237;
+    --color-slate-75: 242 238 232;
+    --color-slate-100: 237 233 227;
+    --color-slate-200: 224 218 209;
+    --color-slate-300: 208 198 184;
+    --color-slate-400: 175 157 135;
+    --color-slate-500: 143 122 95;
+    --color-slate-600: 127 108 85;
+    --color-slate-700: 91 77 60;
+    --color-slate-800: 46 39 30;
+    --color-slate-900: 25 21 16;
+  }
+
+  body[data-tema='contraste'] {
+    --color-woot-25: 251 253 255;
+    --color-woot-50: 245 250 255;
+    --color-woot-75: 237 246 255;
+    --color-woot-100: 225 240 255;
+    --color-woot-200: 94 176 239;
+    --color-woot-300: 0 144 255;
+    --color-woot-400: 234 246 255;
+    --color-woot-500: 0 106 220;
+    --color-woot-600: 0 106 220;
+    --color-woot-700: 0 37 77;
+    --color-woot-800: 16 42 76;
+    --color-woot-900: 15 23 32;
+
+    --color-slate-25: 255 255 255;
+    --color-slate-50: 255 255 255;
+    --color-slate-75: 248 248 248;
+    --color-slate-100: 243 243 243;
+    --color-slate-200: 219 219 219;
+    --color-slate-300: 199 199 199;
+    --color-slate-400: 237 237 237;
+    --color-slate-500: 117 117 117;
+    --color-slate-600: 23 23 23;
+    --color-slate-700: 52 52 52;
+    --color-slate-800: 28 28 28;
+    --color-slate-900: 0 0 0;
+  }
+  body[data-tema='violeta'] {
+    --color-woot-25: 251 250 255;
+    --color-woot-50: 245 242 255;
+    --color-woot-75: 237 233 254;
+    --color-woot-100: 228 222 252;
+    --color-woot-200: 196 184 243;
+    --color-woot-300: 170 153 236;
+    --color-woot-400: 158 140 252;
+    --color-woot-500: 124 102 220;
+    --color-woot-600: 110 86 207;
+    --color-woot-700: 88 66 195;
+    --color-woot-800: 57 44 114;
+    --color-woot-900: 28 23 43;
+
+    --color-slate-25: 249 248 249;
+    --color-slate-50: 244 242 244;
+    --color-slate-75: 238 237 239;
+    --color-slate-100: 233 232 234;
+    --color-slate-200: 220 219 221;
+    --color-slate-300: 200 199 203;
+    --color-slate-400: 160 159 166;
+    --color-slate-500: 126 125 134;
+    --color-slate-600: 111 110 119;
+    --color-slate-700: 80 79 87;
+    --color-slate-800: 40 40 44;
+    --color-slate-900: 22 22 24;
+  }
+
+  body[data-tema='turquesa'] {
+    --color-woot-25: 241 252 250;
+    --color-woot-50: 231 249 245;
+    --color-woot-75: 217 243 238;
+    --color-woot-100: 199 235 229;
+    --color-woot-200: 141 206 195;
+    --color-woot-300: 83 185 171;
+    --color-woot-400: 10 197 179;
+    --color-woot-500: 16 179 163;
+    --color-woot-600: 18 165 148;
+    --color-woot-700: 12 109 98;
+    --color-woot-800: 9 68 60;
+    --color-woot-900: 4 32 27;
+
+    --color-slate-25: 248 250 249;
+    --color-slate-50: 241 244 243;
+    --color-slate-75: 236 239 237;
+    --color-slate-100: 230 233 232;
+    --color-slate-200: 215 220 218;
+    --color-slate-300: 194 201 198;
+    --color-slate-400: 153 162 158;
+    --color-slate-500: 117 129 123;
+    --color-slate-600: 106 113 110;
+    --color-slate-700: 74 82 78;
+    --color-slate-800: 37 42 39;
+    --color-slate-900: 20 23 22;
+  }
+
+  body[data-tema='rosa'] {
+    --color-woot-25: 255 247 252;
+    --color-woot-50: 254 238 248;
+    --color-woot-75: 252 229 243;
+    --color-woot-100: 249 216 236;
+    --color-woot-200: 236 173 212;
+    --color-woot-300: 227 142 195;
+    --color-woot-400: 246 92 182;
+    --color-woot-500: 227 75 169;
+    --color-woot-600: 214 64 159;
+    --color-woot-700: 167 24 115;
+    --color-woot-800: 96 29 72;
+    --color-woot-900: 39 20 33;
+
+    --color-slate-25: 249 248 249;
+    --color-slate-50: 244 242 244;
+    --color-slate-75: 238 237 239;
+    --color-slate-100: 233 232 234;
+    --color-slate-200: 220 219 221;
+    --color-slate-300: 200 199 203;
+    --color-slate-400: 160 159 166;
+    --color-slate-500: 126 125 134;
+    --color-slate-600: 111 110 119;
+    --color-slate-700: 80 79 87;
+    --color-slate-800: 40 40 44;
+    --color-slate-900: 22 22 24;
+  }
+
+  body[data-tema='grafito'] {
+    --color-woot-25: 248 248 248;
+    --color-woot-50: 243 243 243;
+    --color-woot-75: 237 237 237;
+    --color-woot-100: 232 232 232;
+    --color-woot-200: 219 219 219;
+    --color-woot-300: 199 199 199;
+    --color-woot-400: 160 160 160;
+    --color-woot-500: 126 126 126;
+    --color-woot-600: 112 112 112;
+    --color-woot-700: 80 80 80;
+    --color-woot-800: 52 52 52;
+    --color-woot-900: 28 28 28;
+
+    --color-slate-25: 248 250 248;
+    --color-slate-50: 242 244 242;
+    --color-slate-75: 236 239 236;
+    --color-slate-100: 230 233 230;
+    --color-slate-200: 216 220 216;
+    --color-slate-300: 195 200 194;
+    --color-slate-400: 154 162 153;
+    --color-slate-500: 119 129 117;
+    --color-slate-600: 107 113 106;
+    --color-slate-700: 76 81 75;
+    --color-slate-800: 38 41 37;
+    --color-slate-900: 21 23 21;
+  }
 }
