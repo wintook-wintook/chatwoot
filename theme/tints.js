@@ -162,6 +162,10 @@ const TEMAS = {
     tint: sepiaTint,
   },
   contraste: { accent: ['blue', HC_ACCENT], neutral: ['gray', HC_NEUTRAL] },
+  violeta: { accent: ['violet', ACCENT], neutral: ['mauve', NEUTRAL] },
+  turquesa: { accent: ['teal', ACCENT], neutral: ['sage', NEUTRAL] },
+  rosa: { accent: ['pink', ACCENT], neutral: ['mauve', NEUTRAL] },
+  grafito: { accent: ['gray', ACCENT], neutral: ['olive', NEUTRAL] },
 };
 
 const KEYS = [25, 50, 75, 100, 200, 300, 400, 500, 600, 700, 800, 900];

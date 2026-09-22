@@ -25,6 +25,10 @@ const TINT_SWATCHES = {
   indigo: ['#3E63DD', '#8DA4EF', '#E9E8EA', '#28282C'],
   sepia: ['#846358', '#BFA094', '#EDE9E3', '#2E271E'],
   contraste: ['#006ADC', '#0090FF', '#F3F3F3', '#1C1C1C'],
+  violeta: ['#6E56CF', '#AA99EC', '#E9E8EA', '#28282C'],
+  turquesa: ['#12A594', '#53B9AB', '#E6E9E8', '#252A27'],
+  rosa: ['#D6409F', '#E38EC3', '#E9E8EA', '#28282C'],
+  grafito: ['#707070', '#C7C7C7', '#E6E9E6', '#262925'],
 };
 
 const selectedMode = ref(

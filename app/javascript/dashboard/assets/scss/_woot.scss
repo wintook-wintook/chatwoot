@@ -536,4 +536,115 @@
     --color-slate-800: 28 28 28;
     --color-slate-900: 0 0 0;
   }
+  body[data-tema='violeta'] {
+    --color-woot-25: 251 250 255;
+    --color-woot-50: 245 242 255;
+    --color-woot-75: 237 233 254;
+    --color-woot-100: 228 222 252;
+    --color-woot-200: 196 184 243;
+    --color-woot-300: 170 153 236;
+    --color-woot-400: 158 140 252;
+    --color-woot-500: 124 102 220;
+    --color-woot-600: 110 86 207;
+    --color-woot-700: 88 66 195;
+    --color-woot-800: 57 44 114;
+    --color-woot-900: 28 23 43;
+
+    --color-slate-25: 249 248 249;
+    --color-slate-50: 244 242 244;
+    --color-slate-75: 238 237 239;
+    --color-slate-100: 233 232 234;
+    --color-slate-200: 220 219 221;
+    --color-slate-300: 200 199 203;
+    --color-slate-400: 160 159 166;
+    --color-slate-500: 126 125 134;
+    --color-slate-600: 111 110 119;
+    --color-slate-700: 80 79 87;
+    --color-slate-800: 40 40 44;
+    --color-slate-900: 22 22 24;
+  }
+
+  body[data-tema='turquesa'] {
+    --color-woot-25: 241 252 250;
+    --color-woot-50: 231 249 245;
+    --color-woot-75: 217 243 238;
+    --color-woot-100: 199 235 229;
+    --color-woot-200: 141 206 195;
+    --color-woot-300: 83 185 171;
+    --color-woot-400: 10 197 179;
+    --color-woot-500: 16 179 163;
+    --color-woot-600: 18 165 148;
+    --color-woot-700: 12 109 98;
+    --color-woot-800: 9 68 60;
+    --color-woot-900: 4 32 27;
+
+    --color-slate-25: 248 250 249;
+    --color-slate-50: 241 244 243;
+    --color-slate-75: 236 239 237;
+    --color-slate-100: 230 233 232;
+    --color-slate-200: 215 220 218;
+    --color-slate-300: 194 201 198;
+    --color-slate-400: 153 162 158;
+    --color-slate-500: 117 129 123;
+    --color-slate-600: 106 113 110;
+    --color-slate-700: 74 82 78;
+    --color-slate-800: 37 42 39;
+    --color-slate-900: 20 23 22;
+  }
+
+  body[data-tema='rosa'] {
+    --color-woot-25: 255 247 252;
+    --color-woot-50: 254 238 248;
+    --color-woot-75: 252 229 243;
+    --color-woot-100: 249 216 236;
+    --color-woot-200: 236 173 212;
+    --color-woot-300: 227 142 195;
+    --color-woot-400: 246 92 182;
+    --color-woot-500: 227 75 169;
+    --color-woot-600: 214 64 159;
+    --color-woot-700: 167 24 115;
+    --color-woot-800: 96 29 72;
+    --color-woot-900: 39 20 33;
+
+    --color-slate-25: 249 248 249;
+    --color-slate-50: 244 242 244;
+    --color-slate-75: 238 237 239;
+    --color-slate-100: 233 232 234;
+    --color-slate-200: 220 219 221;
+    --color-slate-300: 200 199 203;
+    --color-slate-400: 160 159 166;
+    --color-slate-500: 126 125 134;
+    --color-slate-600: 111 110 119;
+    --color-slate-700: 80 79 87;
+    --color-slate-800: 40 40 44;
+    --color-slate-900: 22 22 24;
+  }
+
+  body[data-tema='grafito'] {
+    --color-woot-25: 248 248 248;
+    --color-woot-50: 243 243 243;
+    --color-woot-75: 237 237 237;
+    --color-woot-100: 232 232 232;
+    --color-woot-200: 219 219 219;
+    --color-woot-300: 199 199 199;
+    --color-woot-400: 160 160 160;
+    --color-woot-500: 126 126 126;
+    --color-woot-600: 112 112 112;
+    --color-woot-700: 80 80 80;
+    --color-woot-800: 52 52 52;
+    --color-woot-900: 28 28 28;
+
+    --color-slate-25: 248 250 248;
+    --color-slate-50: 242 244 242;
+    --color-slate-75: 236 239 236;
+    --color-slate-100: 230 233 230;
+    --color-slate-200: 216 220 216;
+    --color-slate-300: 195 200 194;
+    --color-slate-400: 154 162 153;
+    --color-slate-500: 119 129 117;
+    --color-slate-600: 107 113 106;
+    --color-slate-700: 76 81 75;
+    --color-slate-800: 38 41 37;
+    --color-slate-900: 21 23 21;
+  }
 }

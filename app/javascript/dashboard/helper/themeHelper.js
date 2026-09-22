@@ -10,6 +10,10 @@ export const COLOR_TINTS = [
   'indigo',
   'sepia',
   'contraste',
+  'violeta',
+  'turquesa',
+  'rosa',
+  'grafito',
 ];
 
 export const setColorTheme = isOSOnDarkMode => {
