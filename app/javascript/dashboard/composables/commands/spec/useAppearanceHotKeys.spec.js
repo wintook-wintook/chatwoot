@@ -31,8 +31,8 @@ describe('useAppearanceHotKeys', () => {
 
   it('should have the correct number of appearance options', () => {
     const { goToAppearanceHotKeys } = useAppearanceHotKeys();
-    // 1 parent + 3 mode options, 1 parent + 4 color theme options
-    expect(goToAppearanceHotKeys.value.length).toBe(9);
+    // 1 parent + 3 mode options, 1 parent + 6 color theme options
+    expect(goToAppearanceHotKeys.value.length).toBe(11);
   });
 
   it('should have the correct parent option', () => {
@@ -68,6 +68,8 @@ describe('useAppearanceHotKeys', () => {
       'tint_calido',
       'tint_bosque',
       'tint_indigo',
+      'tint_sepia',
+      'tint_contraste',
     ]);
   });
 

@@ -478,4 +478,62 @@
     --color-slate-800: 40 40 44;
     --color-slate-900: 22 22 24;
   }
+  // Sepia lleva la rampa `sand` girada al ámbar, devolviendo cada tono a su
+  // luminancia original para no perder contraste. Alto contraste separa los
+  // pasos: superficies al blanco y al negro, textos al extremo de la escala.
+  body[data-tema='sepia'] {
+    --color-woot-25: 253 252 252;
+    --color-woot-50: 253 248 246;
+    --color-woot-75: 248 241 238;
+    --color-woot-100: 242 232 228;
+    --color-woot-200: 210 186 176;
+    --color-woot-300: 191 160 148;
+    --color-woot-400: 203 163 147;
+    --color-woot-500: 132 99 88;
+    --color-woot-600: 132 99 88;
+    --color-woot-700: 67 48 43;
+    --color-woot-800: 51 40 36;
+    --color-woot-900: 25 21 20;
+
+    --color-slate-25: 253 249 243;
+    --color-slate-50: 247 242 237;
+    --color-slate-75: 242 238 232;
+    --color-slate-100: 237 233 227;
+    --color-slate-200: 224 218 209;
+    --color-slate-300: 208 198 184;
+    --color-slate-400: 175 157 135;
+    --color-slate-500: 143 122 95;
+    --color-slate-600: 127 108 85;
+    --color-slate-700: 91 77 60;
+    --color-slate-800: 46 39 30;
+    --color-slate-900: 25 21 16;
+  }
+
+  body[data-tema='contraste'] {
+    --color-woot-25: 251 253 255;
+    --color-woot-50: 245 250 255;
+    --color-woot-75: 237 246 255;
+    --color-woot-100: 225 240 255;
+    --color-woot-200: 94 176 239;
+    --color-woot-300: 0 144 255;
+    --color-woot-400: 234 246 255;
+    --color-woot-500: 0 106 220;
+    --color-woot-600: 0 106 220;
+    --color-woot-700: 0 37 77;
+    --color-woot-800: 16 42 76;
+    --color-woot-900: 15 23 32;
+
+    --color-slate-25: 255 255 255;
+    --color-slate-50: 255 255 255;
+    --color-slate-75: 248 248 248;
+    --color-slate-100: 243 243 243;
+    --color-slate-200: 219 219 219;
+    --color-slate-300: 199 199 199;
+    --color-slate-400: 237 237 237;
+    --color-slate-500: 117 117 117;
+    --color-slate-600: 23 23 23;
+    --color-slate-700: 52 52 52;
+    --color-slate-800: 28 28 28;
+    --color-slate-900: 0 0 0;
+  }
 }

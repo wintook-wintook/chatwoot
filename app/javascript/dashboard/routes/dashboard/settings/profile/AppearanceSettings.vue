@@ -23,6 +23,8 @@ const TINT_SWATCHES = {
   calido: ['#F76808', '#FA934E', '#E9E9E6', '#282826'],
   bosque: ['#46A758', '#65BA75', '#E6E9E8', '#252A27'],
   indigo: ['#3E63DD', '#8DA4EF', '#E9E8EA', '#28282C'],
+  sepia: ['#846358', '#BFA094', '#EDE9E3', '#2E271E'],
+  contraste: ['#006ADC', '#0090FF', '#F3F3F3', '#1C1C1C'],
 };
 
 const selectedMode = ref(
@@ -80,7 +82,7 @@ const selectTint = key => {
       <span class="text-sm font-medium text-ash-900">
         {{ $t('PROFILE_SETTINGS.FORM.APPEARANCE.TINT_LABEL') }}
       </span>
-      <div class="grid w-full gap-4 sm:grid-cols-4">
+      <div class="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <AppearanceCard
           v-for="tint in tints"
           :key="tint.key"

@@ -64,7 +64,9 @@
           "DEFAULT": "Predeterminado",
           "CALIDO": "Cálido",
           "BOSQUE": "Bosque",
-          "INDIGO": "Índigo"
+          "INDIGO": "Índigo",
+          "SEPIA": "Sepia",
+          "CONTRASTE": "Alto contraste"
         }
       },
       "PASSWORD_SECTION": {

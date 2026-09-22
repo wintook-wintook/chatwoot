@@ -3,7 +3,14 @@ import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 
 // Temas de color. `default` no lleva atributo en el body: deja las escalas
 // `woot` y `slate` en los valores por omisión de tailwind.config.js.
-export const COLOR_TINTS = ['default', 'calido', 'bosque', 'indigo'];
+export const COLOR_TINTS = [
+  'default',
+  'calido',
+  'bosque',
+  'indigo',
+  'sepia',
+  'contraste',
+];
 
 export const setColorTheme = isOSOnDarkMode => {
   const selectedColorScheme =
