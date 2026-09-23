@@ -342,7 +342,6 @@
     "BRIEF_ERROR_MISSING_FILE": "No file arrived.",
     "BRIEF_FILE": "📎 %{name} · %{size} KB",
     "BRIEF_GAP_CONTRADICCION": "The brief contradicts itself; which one applies?",
-    "BRIEF_ASK_TITLE": "Before writing it, tell me:",
     "BRIEF_ASK_CONTRADICCION": "The brief contradicts itself about «%{sobre}». Which one applies?",
     "BRIEF_ASK_MODO": "Does the agent answer, or always hand off?",
     "BRIEF_ASK_TEMAS": "Which topics does it handle?",
@@ -358,6 +357,9 @@
     "BRIEF_WRITING": "Writing the Training… it can take about a minute.",
     "BRIEF_WRITE_ERROR": "The Training could not be written. Try again.",
     "BRIEF_REPLACES_DRAFT": "This replaces what you currently have in the Agent Structure.",
-    "BRIEF_COVERED": "%{count} points from the brief that the draft had left out were added."
+    "BRIEF_COVERED": "I added %{count} points from the brief that the draft had left out.",
+    "BRIEF_ASK_NOTHING": "Nothing is missing: the brief has everything needed. You can create the Training now.",
+    "BRIEF_CHAT_USER": "📎 Create the Training from the brief «%{name}»",
+    "BRIEF_CHAT_INVITE": "Want to change anything? Tell me here: for example «add that no appointments are booked on Sundays» or «a more formal tone»."
   }
 }

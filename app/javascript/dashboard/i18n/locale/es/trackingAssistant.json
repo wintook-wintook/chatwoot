@@ -342,7 +342,6 @@
     "BRIEF_ERROR_MISSING_FILE": "No llegó ningún archivo.",
     "BRIEF_FILE": "📎 %{name} · %{size} KB",
     "BRIEF_GAP_CONTRADICCION": "El encargo se contradice; ¿cuál vale?",
-    "BRIEF_ASK_TITLE": "Antes de escribirlo, contéstame:",
     "BRIEF_ASK_CONTRADICCION": "El encargo se contradice sobre «%{sobre}». ¿Cuál vale?",
     "BRIEF_ASK_MODO": "¿El agente contesta o deriva siempre?",
     "BRIEF_ASK_TEMAS": "¿Qué temas atiende?",
@@ -358,6 +357,9 @@
     "BRIEF_WRITING": "Escribiendo el Entrenamiento… puede tardar cerca de un minuto.",
     "BRIEF_WRITE_ERROR": "No se pudo escribir el Entrenamiento. Inténtalo de nuevo.",
     "BRIEF_REPLACES_DRAFT": "Esto reemplaza lo que tienes ahora en la Estructura del Agente.",
-    "BRIEF_COVERED": "Se agregaron %{count} puntos del encargo que la redacción había dejado afuera."
+    "BRIEF_COVERED": "Agregué %{count} puntos del encargo que la redacción había dejado afuera.",
+    "BRIEF_ASK_NOTHING": "No falta nada: el encargo trae todo lo necesario. Ya puedes crear el Entrenamiento.",
+    "BRIEF_CHAT_USER": "📎 Crear el Entrenamiento con el encargo «%{name}»",
+    "BRIEF_CHAT_INVITE": "¿Quieres cambiar algo? Escríbemelo aquí: por ejemplo «agrega que los domingos no se agenda» o «el tono más formal»."
   }
 }

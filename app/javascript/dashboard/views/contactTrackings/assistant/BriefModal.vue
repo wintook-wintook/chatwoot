@@ -65,6 +65,8 @@ export default {
       // Lo contestado en el formulario, por pregunta: { 'contradiccion:0': 'b' }.
       values: {},
       composing: false,
+      // 0 = Esto entendí · 1 = Me falta saber
+      tab: 0,
     };
   },
   computed: {
@@ -88,6 +90,14 @@ export default {
     },
     questions() {
       return briefQuestions(this.ficha, this.brief?.digest?.faltas || []);
+    },
+    // Lo que falta y no se contesta acá: una herramienta que la cuenta no tiene se
+    // conecta en la cuenta, no se escribe en un campo.
+    notices() {
+      return this.gaps.filter(g => g.que === 'herramienta_no_disponible');
+    },
+    ready() {
+      return this.brief?.status === 'ready';
     },
     stageLabel() {
       const etapa = this.stage;
@@ -147,6 +157,7 @@ export default {
         });
         this.brief = data;
         this.values = {};
+        this.tab = 0;
         this.follow();
       } catch (error) {
         const code = error?.response?.data?.error;
@@ -218,7 +229,11 @@ export default {
           this.brief.id,
           briefAnswers(this.values)
         );
-        this.$emit('write', { ...data, briefId: this.brief.id });
+        this.$emit('write', {
+          ...data,
+          briefId: this.brief.id,
+          filename: this.brief.filename,
+        });
       } catch (error) {
         this.error = this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_WRITE_ERROR');
       } finally {
@@ -238,8 +253,14 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
-    <div class="flex flex-col gap-4 p-8 text-sm max-h-[85vh]">
+  <!-- Ancho y de alto fijo: título, pestañas y botones quedan quietos y solo se
+       desplaza el contenido de la pestaña (pedido del usuario, 23/09/2026: con
+       todo en una columna el modal crecía hasta salirse de la pantalla). -->
+  <woot-modal :show="show" size="brief-wide" :on-close="() => $emit('close')">
+    <div
+      class="flex flex-col gap-3 p-8 text-sm"
+      :class="ready ? 'h-[80vh]' : 'max-h-[80vh]'"
+    >
       <div class="shrink-0">
         <h2 class="!m-0 text-lg font-medium text-slate-800 dark:text-slate-100">
           {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_TITLE') }}
@@ -259,7 +280,7 @@ export default {
         />
         <woot-button
           icon="attach"
-          :is-disabled="busy"
+          :is-disabled="busy || writing"
           :is-loading="uploading"
           @click="pickFile"
         >
@@ -280,16 +301,25 @@ export default {
             })
           }}
         </span>
+        <span
+          v-if="ready && usageLabel"
+          class="ml-auto text-xs text-slate-500 dark:text-slate-400"
+        >
+          {{ usageLabel }}
+        </span>
       </div>
 
-      <p v-if="error" class="!m-0 text-xs text-red-600 dark:text-red-400">
+      <p
+        v-if="error"
+        class="!m-0 text-xs text-red-600 dark:text-red-400 shrink-0"
+      >
         {{ error }}
       </p>
 
       <!-- Leyendo -->
       <div
         v-if="brief && busy"
-        class="flex flex-col gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-700"
+        class="flex flex-col gap-2 p-3 rounded-lg shrink-0 bg-slate-50 dark:bg-slate-700"
       >
         <div class="flex items-center gap-2">
           <Spinner size="" />
@@ -311,7 +341,7 @@ export default {
       <!-- Falló -->
       <div
         v-if="brief && brief.status === 'failed'"
-        class="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20"
+        class="flex flex-wrap items-center gap-3 p-3 rounded-lg shrink-0 bg-red-50 dark:bg-red-900/20"
       >
         <span class="text-xs text-red-700 dark:text-red-300">
           {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_FAILED') }}
@@ -321,136 +351,148 @@ export default {
         </woot-button>
       </div>
 
-      <!-- Esto entendí -->
-      <div
-        v-if="brief && brief.status === 'ready'"
-        class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-y-auto"
-      >
-        <h3
-          class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
-        >
-          {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_UNDERSTOOD') }}
-        </h3>
+      <template v-if="ready">
+        <woot-tabs :index="tab" class="shrink-0" @change="tab = $event">
+          <woot-tabs-item
+            :index="0"
+            :name="$t('TRACKING_ASSISTANT_VIEW.BRIEF_UNDERSTOOD')"
+            :show-badge="false"
+          />
+          <woot-tabs-item
+            :index="1"
+            :name="$t('TRACKING_ASSISTANT_VIEW.BRIEF_GAPS')"
+            :count="questions.length + notices.length"
+          />
+        </woot-tabs>
 
-        <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 !m-0 text-xs">
-          <template v-for="campo in ['identidad', 'objetivo']">
-            <dt
-              v-if="ficha[campo]"
-              :key="`${campo}-t`"
-              class="font-medium text-slate-600 dark:text-slate-300"
-            >
-              {{ $t(`TRACKING_ASSISTANT_VIEW.BRIEF_${campo.toUpperCase()}`) }}
-            </dt>
-            <dd
-              v-if="ficha[campo]"
-              :key="`${campo}-d`"
-              class="!m-0 text-slate-800 dark:text-slate-100"
-            >
-              {{ pointText(ficha[campo]) }}
-            </dd>
-          </template>
-          <dt class="font-medium text-slate-600 dark:text-slate-300">
-            {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_MODO') }}
-          </dt>
-          <dd class="!m-0 text-slate-800 dark:text-slate-100">
-            {{
-              ficha.modo
-                ? $t(
-                    `TRACKING_ASSISTANT_VIEW.BRIEF_MODO_${pointText(
-                      ficha.modo
-                    ).toUpperCase()}`
-                  )
-                : $t('TRACKING_ASSISTANT_VIEW.BRIEF_UNKNOWN')
-            }}
-          </dd>
-        </dl>
-
-        <div v-if="temas.length">
-          <p
-            class="!m-0 mb-1 text-xs font-medium text-slate-600 dark:text-slate-300"
-          >
-            {{
-              $t('TRACKING_ASSISTANT_VIEW.BRIEF_TEMAS', { count: temas.length })
-            }}
-          </p>
-          <ul class="!m-0 !pl-4 text-xs list-disc">
-            <li
-              v-for="(tema, i) in temas"
-              :key="i"
-              class="text-slate-800 dark:text-slate-100"
-            >
-              {{ tema.nombre }}
-              <span v-if="tema.etiqueta" class="text-slate-500">
-                #{{ tema.etiqueta }}
-              </span>
-              <span v-if="tema.que_hace" class="text-slate-500">
-                — {{ tema.que_hace }}
-              </span>
-            </li>
-          </ul>
-        </div>
-
-        <p v-if="herramientas.length" class="!m-0 text-xs">
-          <span class="font-medium text-slate-600 dark:text-slate-300">
-            {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_HERRAMIENTAS') }}
-          </span>
-          <span
-            v-for="(tool, i) in herramientas"
-            :key="i"
-            class="ml-2 text-slate-800 dark:text-slate-100"
-            :title="tool.para"
-          >
-            {{ tool.tipo }} {{ toolLabel(tool) }}
-          </span>
-        </p>
-
+        <!-- Esto entendí -->
         <div
-          v-if="gaps.length"
-          class="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20"
+          v-show="tab === 0"
+          class="flex flex-col flex-1 min-h-0 gap-3 pr-1 overflow-y-auto"
         >
-          <p
-            class="!m-0 mb-1 text-xs font-medium text-amber-800 dark:text-amber-300"
-          >
-            {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_GAPS') }}
-          </p>
-          <ul
-            class="!m-0 !pl-4 text-xs list-disc text-amber-900 dark:text-amber-200"
-          >
-            <li v-for="gap in gaps" :key="gap.que">
-              {{
-                $t(`TRACKING_ASSISTANT_VIEW.BRIEF_GAP_${gap.que.toUpperCase()}`)
-              }}
-              <!-- Una contradicción por renglón: son frases largas y hay que leerlas
-                   para decidir. -->
-              <ul
-                v-if="gap.que === 'contradiccion'"
-                class="!m-0 !pl-4 list-[circle]"
+          <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 !m-0 text-xs">
+            <template v-for="campo in ['identidad', 'objetivo']">
+              <dt
+                v-if="ficha[campo]"
+                :key="`${campo}-t`"
+                class="font-medium text-slate-600 dark:text-slate-300"
               >
-                <li v-for="item in gap.items" :key="item">{{ item }}</li>
+                {{ $t(`TRACKING_ASSISTANT_VIEW.BRIEF_${campo.toUpperCase()}`) }}
+              </dt>
+              <dd
+                v-if="ficha[campo]"
+                :key="`${campo}-d`"
+                class="!m-0 text-slate-800 dark:text-slate-100"
+              >
+                {{ pointText(ficha[campo]) }}
+              </dd>
+            </template>
+            <dt class="font-medium text-slate-600 dark:text-slate-300">
+              {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_MODO') }}
+            </dt>
+            <dd class="!m-0 text-slate-800 dark:text-slate-100">
+              {{
+                ficha.modo
+                  ? $t(
+                      `TRACKING_ASSISTANT_VIEW.BRIEF_MODO_${pointText(
+                        ficha.modo
+                      ).toUpperCase()}`
+                    )
+                  : $t('TRACKING_ASSISTANT_VIEW.BRIEF_UNKNOWN')
+              }}
+            </dd>
+          </dl>
+
+          <div v-if="temas.length">
+            <p
+              class="!m-0 mb-1 text-xs font-medium text-slate-600 dark:text-slate-300"
+            >
+              {{
+                $t('TRACKING_ASSISTANT_VIEW.BRIEF_TEMAS', {
+                  count: temas.length,
+                })
+              }}
+            </p>
+            <ul class="!m-0 !pl-4 text-xs list-disc">
+              <li
+                v-for="(tema, i) in temas"
+                :key="i"
+                class="text-slate-800 dark:text-slate-100"
+              >
+                {{ tema.nombre }}
+                <span v-if="tema.etiqueta" class="text-slate-500">
+                  #{{ tema.etiqueta }}
+                </span>
+                <span v-if="tema.que_hace" class="text-slate-500">
+                  — {{ tema.que_hace }}
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <p v-if="herramientas.length" class="!m-0 text-xs">
+            <span class="font-medium text-slate-600 dark:text-slate-300">
+              {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_HERRAMIENTAS') }}
+            </span>
+            <span
+              v-for="(tool, i) in herramientas"
+              :key="i"
+              class="ml-2 text-slate-800 dark:text-slate-100"
+              :title="tool.para"
+            >
+              {{ tool.tipo }} {{ toolLabel(tool) }}
+            </span>
+          </p>
+
+          <!-- La ficha completa, lista por lista. -->
+          <div v-if="lists.length" class="flex flex-col gap-1">
+            <p
+              class="!m-0 text-xs font-medium text-slate-600 dark:text-slate-300"
+            >
+              {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_FULL') }}
+            </p>
+            <div v-for="{ campo, count } in lists" :key="campo">
+              <button
+                class="text-xs text-woot-600 dark:text-woot-400 hover:underline"
+                @click="toggleList(campo)"
+              >
+                {{ openList === campo ? '▾' : '▸' }}
+                {{
+                  $t(
+                    `TRACKING_ASSISTANT_VIEW.BRIEF_LIST_${campo.toUpperCase()}`
+                  )
+                }}
+                ({{ count }})
+              </button>
+              <ul
+                v-if="openList === campo"
+                class="!m-0 !pl-5 mt-1 text-xs list-disc text-slate-800 dark:text-slate-100"
+              >
+                <li v-for="(punto, i) in ficha[campo]" :key="i">
+                  {{ listItemText(campo, punto) }}
+                </li>
               </ul>
-              <span v-else-if="gap.items.length">
-                : {{ gap.items.join(', ') }}
-              </span>
-            </li>
-          </ul>
+            </div>
+          </div>
         </div>
 
-        <!-- F3: lo que falta, para contestarlo antes de escribir. -->
+        <!-- Me falta saber: una pregunta por cada cosa que falta. -->
         <div
-          v-if="questions.length"
-          class="flex flex-col gap-3 p-3 border rounded-lg border-slate-200 dark:border-slate-600"
+          v-show="tab === 1"
+          class="flex flex-col flex-1 min-h-0 gap-4 pr-1 overflow-y-auto"
         >
           <p
-            class="!m-0 text-xs font-medium text-slate-700 dark:text-slate-200"
+            v-if="!questions.length && !notices.length"
+            class="!m-0 text-xs text-slate-600 dark:text-slate-300"
           >
-            {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_ASK_TITLE') }}
+            {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_ASK_NOTHING') }}
           </p>
           <div
             v-for="(pregunta, n) in questions"
             :key="questionId(pregunta)"
             class="flex flex-col gap-1 text-xs"
           >
-            <p class="!m-0 text-slate-800 dark:text-slate-100">
+            <p class="!m-0 font-medium text-slate-800 dark:text-slate-100">
               {{ n + 1 }}.
               {{
                 $t(
@@ -524,61 +566,42 @@ export default {
           <datalist id="brief-account-labels">
             <option v-for="label in labels" :key="label" :value="label" />
           </datalist>
-          <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
+
+          <div
+            v-for="notice in notices"
+            :key="notice.que"
+            class="p-3 text-xs rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-200"
+          >
+            {{
+              $t('TRACKING_ASSISTANT_VIEW.BRIEF_GAP_HERRAMIENTA_NO_DISPONIBLE')
+            }}:
+            {{ notice.items.join(', ') }}
+          </div>
+
+          <p
+            v-if="questions.length"
+            class="!m-0 text-xs text-slate-500 dark:text-slate-400"
+          >
             {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_ASK_EMPTY_HINT') }}
           </p>
         </div>
+      </template>
 
-        <!-- La ficha completa, lista por lista. -->
-        <div v-if="lists.length" class="flex flex-col gap-1">
-          <p
-            class="!m-0 text-xs font-medium text-slate-600 dark:text-slate-300"
-          >
-            {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_FULL') }}
-          </p>
-          <div v-for="{ campo, count } in lists" :key="campo">
-            <button
-              class="text-xs text-woot-600 dark:text-woot-400 hover:underline"
-              @click="toggleList(campo)"
-            >
-              {{ openList === campo ? '▾' : '▸' }}
-              {{
-                $t(`TRACKING_ASSISTANT_VIEW.BRIEF_LIST_${campo.toUpperCase()}`)
-              }}
-              ({{ count }})
-            </button>
-            <ul
-              v-if="openList === campo"
-              class="!m-0 !pl-5 mt-1 text-xs list-disc text-slate-800 dark:text-slate-100"
-            >
-              <li v-for="(punto, i) in ficha[campo]" :key="i">
-                {{ listItemText(campo, punto) }}
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <p
-          v-if="usageLabel"
-          class="!m-0 text-xs text-slate-500 dark:text-slate-400"
-        >
-          {{ usageLabel }}
-        </p>
-        <p
-          v-if="hasDraft"
-          class="!m-0 text-xs text-amber-700 dark:text-amber-300"
-        >
-          {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_REPLACES_DRAFT') }}
-        </p>
-      </div>
-
-      <div class="flex flex-wrap items-center justify-end gap-2 shrink-0">
+      <div
+        class="flex flex-wrap items-center justify-end gap-2 pt-3 border-t shrink-0 border-slate-100 dark:border-slate-700"
+      >
         <span
           v-if="writing"
           class="flex items-center gap-2 mr-auto text-xs text-slate-600 dark:text-slate-300"
         >
           <Spinner size="" />
           {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_WRITING') }}
+        </span>
+        <span
+          v-else-if="ready && hasDraft"
+          class="mr-auto text-xs text-amber-700 dark:text-amber-300"
+        >
+          {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_REPLACES_DRAFT') }}
         </span>
         <woot-button
           variant="clear"
@@ -589,7 +612,7 @@ export default {
           {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_CLOSE') }}
         </woot-button>
         <woot-button
-          v-if="brief && brief.status === 'ready'"
+          v-if="ready"
           :is-loading="composing || writing"
           :is-disabled="composing || writing"
           @click="write"
@@ -600,3 +623,9 @@ export default {
     </div>
   </woot-modal>
 </template>
+
+<style lang="scss">
+.modal-container.brief-wide {
+  @apply w-[64rem] max-w-[94vw];
+}
+</style>

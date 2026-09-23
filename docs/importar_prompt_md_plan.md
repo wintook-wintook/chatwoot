@@ -473,7 +473,13 @@ conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
   (objetivo y, si caben en 800, los datos del negocio como Contexto) sale de la ficha.
   **Medido con el gimnasio:** sin la cobertura, la redacción dejó 1.600–2.000 caracteres y soltó 4 reglas,
   los 3 datos a pedir y la decisión sobre el precio aun con «NADA SE PIERDE» en el pedido; con la
-  cobertura, las 8 vuelven. Pendiente de la F4 original: que la persona pueda decir «dejalo fuera». Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
+  cobertura, las 8 vuelven. Pendiente de la F4 original: que la persona pueda decir «dejalo fuera».
+- **Modal en pestañas y chat para refinar (23/09/2026, pedido del usuario).** El modal es más ancho
+  (64 rem) y de alto fijo; «Esto entendí» y «Me falta saber» van en pestañas y solo se desplaza su
+  contenido. Las faltas se contestan en el formulario (cero tokens, respuestas guardadas); el chat vuelve
+  (`SHOW_CHAT = true`) pero para REFINAR: la pantalla arranca a lo ancho y el chat se abre solo al crear
+  el Entrenamiento desde el encargo, con lo que escribió, lo que agregó la cobertura y la invitación a
+  pedir cambios. El chat nunca se probó con clics: falta una ronda en el navegador. Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
 predefinidas con lo consultable de la ficha (catálogo de servicios, glosario, guiones con "El mensaje es
 el prompt"), con confirmación por fila (+1,5 días): **queda para después** (decisión C).
 

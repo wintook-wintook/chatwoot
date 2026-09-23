@@ -67,9 +67,10 @@ const INBOX_STORAGE_KEY = 'tracking_assistant_inbox_id';
 
 // El chat del Asistente, escondido a pedido del usuario (17/09/2026): el
 // Entrenamiento se arma en el formulario de secciones, que se lleva todo el ancho.
-// No se borra nada — la entrevista sigue entera detrás de esta bandera, y volver a
-// mostrarla es ponerla en true.
-const SHOW_CHAT = false;
+// Vuelve el 23/09/2026 para REFINAR: la pantalla sigue arrancando a lo ancho (sin
+// chat) y el chat se abre solo al crear un Entrenamiento desde un encargo, o con el
+// botón «Mostrar la conversación» junto al Entrenamiento.
+const SHOW_CHAT = true;
 
 // La pestaña Conversaciones, escondida a pedido del usuario (18/09/2026): lista las
 // conversaciones del chat, y el chat no se usa. La tabla y el retomar siguen enteros
@@ -232,7 +233,7 @@ export default {
       isWritingBrief: false,
       // Modo ancho: esconde la conversación y deja el Entrenamiento a todo el
       // ancho. Para los 6 agentes de la cuenta que pasan de 370 líneas.
-      isWideEditor: !SHOW_CHAT,
+      isWideEditor: true,
       sessionsPage: 1,
       SESSIONS_PER_PAGE,
       // El orden arranca donde lo dejó el backend (recent_first): así el primer
@@ -854,41 +855,66 @@ export default {
     //
     // Después, la cobertura (BriefCoverage): la redacción de una sola vez sigue su
     // molde y suelta reglas; lo que falte del encargo se agrega en su sección.
-    async writeFromBrief({ message, proposal, briefId }) {
+    //
+    // El chat se abre al terminar: desde ahí se refina conversando (pedido del
+    // usuario, 23/09/2026). El mensaje del encargo es largo y escrito para el modelo:
+    // en pantalla se ve corto (`display`), y al modelo le sigue llegando entero.
+    async writeFromBrief({ message, proposal, briefId, filename }) {
       this.startFresh();
       this.isWritingBrief = true;
       await this.sendMessage(message, { oneShot: true });
+      // Reemplazado entero: en Vue 2 una propiedad nueva no es reactiva.
+      if (this.messages[0]) {
+        this.messages.splice(0, 1, {
+          ...this.messages[0],
+          display: this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_CHAT_USER', {
+            name: filename,
+          }),
+        });
+      }
       if (!this.draft.trim()) {
         this.isWritingBrief = false;
         useAlert(this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_WRITE_ERROR'));
         return;
       }
-      await this.coverFromBrief(briefId);
+      const agregados = await this.coverFromBrief(briefId);
       this.isWritingBrief = false;
+      this.inviteToRefine(agregados);
       const definicion = Object.fromEntries(
         Object.entries(proposal || {}).filter(([, valor]) => valor)
       );
       this.proposal = { ...(this.proposal || {}), ...definicion };
       this.showBriefModal = false;
+      this.isWideEditor = false;
+    },
+    // Al mensaje del Asistente se le suma lo que agregó la cobertura y la invitación
+    // a seguir: el chat queda abierto para eso.
+    inviteToRefine(agregados) {
+      const ultimo = this.messages[this.messages.length - 1];
+      if (!ultimo || ultimo.role !== 'assistant') return;
+      const extras = [];
+      if (agregados) {
+        extras.push(
+          this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_COVERED', { count: agregados })
+        );
+      }
+      extras.push(this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_CHAT_INVITE'));
+      ultimo.content = [ultimo.content, ...extras].filter(Boolean).join('\n\n');
     },
     // Si la cobertura falla, queda lo que escribió el Asistente: no es motivo para
     // tirar un Entrenamiento que ya está en pantalla.
+    // Devuelve cuántos puntos agregó.
     async coverFromBrief(briefId) {
       try {
         const { data } = await AssistantAPI.coverBrief(briefId, this.draft);
-        if (!data.draft || data.draft === this.draft) return;
+        if (!data.draft || data.draft === this.draft) return 0;
         this.draft = data.draft;
         this.lastDelivered = data.draft;
         this.validateDraft();
-        if (data.added?.length) {
-          useAlert(
-            this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_COVERED', {
-              count: data.added.length,
-            })
-          );
-        }
+        return (data.added || []).length;
       } catch (error) {
         // Queda lo escrito por el Asistente.
+        return 0;
       }
     },
     // Fase D: mientras el turno corre, se consulta en qué etapa está. El id lo

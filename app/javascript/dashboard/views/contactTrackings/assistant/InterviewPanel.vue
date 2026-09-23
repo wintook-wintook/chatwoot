@@ -232,7 +232,11 @@ export default {
               : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100'
           "
         >
-          <span class="whitespace-pre-wrap">{{ message.content }}</span>
+          <!-- `display`: una versión corta para la pantalla, cuando lo que se le
+               manda al modelo es largo y no está escrito para leerlo (el encargo). -->
+          <span class="whitespace-pre-wrap">{{
+            message.display || message.content
+          }}</span>
 
           <ChangeList
             v-if="message.role === 'assistant' && hasChanges(message.changes)"
