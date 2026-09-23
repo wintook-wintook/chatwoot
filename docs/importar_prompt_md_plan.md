@@ -426,7 +426,7 @@ conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
 
 **Total: 11,5 días hábiles.** Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
 predefinidas con lo consultable de la ficha (catálogo de servicios, glosario, guiones con "El mensaje es
-el prompt"), con confirmación por fila (+1,5 días; ver decisión C).
+el prompt"), con confirmación por fila (+1,5 días): **queda para después** (decisión C).
 
 ### 9.1 Criterios de aceptación (F7)
 
@@ -459,14 +459,10 @@ Con los encargos de una página: ficha en segundos y a lo sumo 2 turnos de pregu
 | — | Lo que falta se pregunta en el chat | 23/09 |
 | — | El encargo se guarda con el agente, para regenerar | 23/09 |
 | — | Plan rehecho aquí; `feat/importador_md` queda como está | 23/09 |
+| B | La ficha no se edita a mano: se corrige conversando; el Entrenamiento es lo único editable | 23/09 |
+| C | "Conocimiento sugerido" (respuestas predefinidas desde la ficha) queda para después, fuera de esta rama | 23/09 |
 
 Las decisiones 2 ("Texto oficial" fuera), 3 (guiones) y 5 (IDs de regla) del plan anterior **ya no
 aplican**: se leía el encargo para copiarlo y ahora se lee para entenderlo.
 
-**Abiertas**
-
-- **B. ¿La persona puede editar la ficha a mano?** Propuesta: **no**. Se corrige conversando ("no,
-  también atiende cobranza") y el Entrenamiento sigue siendo lo único editable, así no hay dos fuentes
-  de verdad que se contradigan.
-- **C. Conocimiento sugerido** (respuestas predefinidas desde la ficha). ¿Entra en esta rama o
-  después? Propuesta: después, cuando el flujo principal esté probado.
+**Sin decisiones abiertas.** El plan está listo para arrancar la F0 cuando el usuario lo indique.
