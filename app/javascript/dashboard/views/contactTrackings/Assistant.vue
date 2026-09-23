@@ -267,6 +267,38 @@ export default {
     showChat() {
       return SHOW_CHAT;
     },
+    // Las pestañas visibles, en orden. `panel` es el número que usa activeTab y que
+    // decide qué se muestra (v-show="activeTab === N"); no cambia al esconder una.
+    tabs() {
+      return [
+        {
+          panel: 0,
+          label: 'TRACKING_ASSISTANT_VIEW.TAB_ASSISTANT',
+          count: null,
+        },
+        this.showSessionsTab && {
+          panel: 1,
+          label: 'TRACKING_ASSISTANT_VIEW.TAB_SESSIONS',
+          count: this.sessions.length,
+        },
+        {
+          panel: 2,
+          label: 'TRACKING_ASSISTANT_VIEW.TAB_AUDIT',
+          count: this.brokenAgents.length,
+        },
+        {
+          panel: 3,
+          label: 'TRACKING_ASSISTANT_VIEW.TAB_INVENTORY',
+          count: null,
+        },
+      ].filter(Boolean);
+    },
+    activeTabPosition() {
+      return Math.max(
+        0,
+        this.tabs.findIndex(tab => tab.panel === this.activeTab)
+      );
+    },
     showSessionsTab() {
       return SHOW_SESSIONS_TAB;
     },
@@ -1135,33 +1167,23 @@ export default {
       />
 
       <template v-else>
+        <!-- ⚠ woot-tabs RENUMERA sus pestañas por posición (Tabs.js pisa el
+             `index` de cada una): con Conversaciones escondida, «Agentes IA»
+             abría Conversaciones y «Recursos» la tabla de agentes (visto por el
+             usuario el 23/09/2026). Por eso se trabaja con la POSICIÓN visible y
+             se traduce al panel (`tabs[n].panel`), que es lo que usa activeTab. -->
         <woot-tabs
-          :index="activeTab"
+          :index="activeTabPosition"
           class="mb-4 shrink-0"
-          @change="activeTab = $event"
+          @change="activeTab = tabs[$event].panel"
         >
           <woot-tabs-item
-            :index="0"
-            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_ASSISTANT')"
-            :show-badge="false"
-          />
-          <!-- El `index` de cada pestaña es explícito, así que esconder esta no
-               corre las otras. -->
-          <woot-tabs-item
-            v-if="showSessionsTab"
-            :index="1"
-            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_SESSIONS')"
-            :count="sessions.length"
-          />
-          <woot-tabs-item
-            :index="2"
-            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_AUDIT')"
-            :count="brokenAgents.length"
-          />
-          <woot-tabs-item
-            :index="3"
-            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_INVENTORY')"
-            :show-badge="false"
+            v-for="(tab, position) in tabs"
+            :key="tab.panel"
+            :index="position"
+            :name="$t(tab.label)"
+            :count="tab.count || 0"
+            :show-badge="tab.count !== null"
           />
         </woot-tabs>
 
