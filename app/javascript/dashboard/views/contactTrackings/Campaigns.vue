@@ -12,7 +12,7 @@ import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 const STATUS_COLOR = {
   draft: 'text-slate-500 bg-slate-100 dark:bg-slate-700',
   running: 'text-green-700 bg-green-100 dark:bg-green-900/30',
-  paused: 'text-amber-600 bg-amber-100 dark:bg-amber-900/30',
+  paused: 'text-amber-800 bg-amber-100 dark:bg-amber-900/30',
   finished: 'text-slate-600 bg-slate-100 dark:bg-slate-700',
 };
 

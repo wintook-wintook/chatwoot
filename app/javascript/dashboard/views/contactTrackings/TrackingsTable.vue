@@ -15,7 +15,7 @@ const STATUS_META = {
   pending: { label: 'Pendiente', color: 'text-slate-500' },
   scheduled: { label: 'Programado', color: 'text-blue-500' },
   active: { label: 'Activo', color: 'text-green-600' },
-  paused: { label: 'Pausado', color: 'text-amber-500' },
+  paused: { label: 'Pausado', color: 'text-amber-800' },
   completed: { label: 'Completado', color: 'text-green-700' },
   objective_met: { label: 'Objetivo cumplido', color: 'text-emerald-600' },
   cancelled: { label: 'Cancelado', color: 'text-red-500' },
