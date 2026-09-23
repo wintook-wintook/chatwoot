@@ -20,6 +20,12 @@
 
 class ContactTrackings::Assistant::BriefIntake
   Result = Struct.new(:brief, :reused, :error, keyword_init: true)
+  # Unas instrucciones que no vienen de un archivo sino de la conversación del
+  # Asistente (DraftingChat): entran por el mismo camino que una subida.
+  TextUpload = Struct.new(:text, :original_filename) do
+    def read = text.to_s
+    def size = text.to_s.bytesize
+  end
   BOM = "\uFEFF"
 
   def initialize(account, user, file:, session: nil)

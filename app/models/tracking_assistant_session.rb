@@ -60,6 +60,9 @@ class TrackingAssistantSession < ApplicationRecord
   belongs_to :tracking_template, optional: true
 
   validates :status, inclusion: { in: STATUSES }
+  # Las instrucciones iniciales que se llenan conversando (DraftingChat). Sin tope propio
+  # rige el de ApplicationRecord para text (20.000), y unas instrucciones largas pasan.
+  validates :instructions, length: { maximum: ContactTrackings::Assistant::DraftingChat::MAX_INSTRUCTIONS_CHARS }
 
   scope :open_sessions, -> { where(status: 'open') }
   scope :recent_first, -> { order(updated_at: :desc) }
@@ -146,8 +149,9 @@ class TrackingAssistantSession < ApplicationRecord
 
   # El hilo se guarda entero en cada turno: siempre se lee completo, así que no hay
   # nada que ganar guardando los mensajes de a uno.
-  def record_turn(messages:, draft: nil, validation: nil, proposal: nil)
+  def record_turn(messages:, draft: nil, validation: nil, proposal: nil, instructions: nil)
     assign_attributes(messages: Array(messages).last(MAX_MESSAGES))
+    self.instructions = instructions if instructions.present?
     self.draft = draft if draft.present?
     self.validation = validation if validation.present?
     self.proposal = proposal if proposal.present?

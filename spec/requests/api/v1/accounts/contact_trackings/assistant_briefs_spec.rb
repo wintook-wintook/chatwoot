@@ -55,6 +55,18 @@ RSpec.describe 'Asistente de Agentes IA — encargos' do
       expect { subir({ session_id: sesion.id }) }.not_to have_enqueued_job(ContactTrackings::Assistant::AgentBriefDigestJob)
     end
 
+    # «Crear el Entrenamiento» desde la conversación: las instrucciones que se llenaron
+    # conversando entran igual que un archivo subido.
+    it 'recibe instrucciones escritas en la conversación como si fueran un archivo' do
+      post "#{base}/from_instructions", params: { content: texto, filename: 'instrucciones_psicologo.md' },
+                                        headers: admin.create_new_auth_token
+
+      expect(response).to have_http_status(:created)
+      expect(TrackingAgentBrief.find(response.parsed_body['id'])).to have_attributes(
+        filename: 'instrucciones_psicologo.md', content: texto, status: 'pending'
+      )
+    end
+
     it 'lo liga a la conversación del Asistente' do
       conversacion = sesion
       subir({ session_id: conversacion.id })

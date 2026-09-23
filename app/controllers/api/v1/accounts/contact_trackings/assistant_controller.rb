@@ -296,7 +296,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   # equivocado.
   def session_json(sesion)
     {
-      id: sesion.id, messages: sesion.messages, draft: sesion.draft,
+      id: sesion.id, messages: sesion.messages, draft: sesion.draft, instructions: sesion.instructions,
       creator: sesion.user&.available_name || sesion.user&.name,
       mine: sesion.user_id == Current.user.id,
       validation: sesion.validation.presence, proposal: sesion.proposal.presence,

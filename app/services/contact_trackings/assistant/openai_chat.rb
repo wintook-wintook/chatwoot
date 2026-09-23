@@ -21,6 +21,7 @@ class ContactTrackings::Assistant::OpenaiChat
   # llamada tardó 40 y 52 segundos medidos el 15/09/2026, y un prompt más largo tarda
   # más. 180 deja margen sin pasar el límite del proxy (300 s en develop).
   READ_TIMEOUT = 180
+  REASONING_MODEL_RE = /\A(gpt-5|o\d)/
 
   # Tokens de la última llamada, como los informa OpenAI ({"prompt_tokens"=>…,
   # "completion_tokens"=>…}). Para medir lo que cuesta leer un encargo (ver
@@ -40,19 +41,26 @@ class ContactTrackings::Assistant::OpenaiChat
   end
 
   # max_tokens: para quien necesite más salida que un Entrenamiento (BriefMerger).
-  def call(history, max_tokens: nil)
-    body = {
-      model: ContactTrackings::EngineConfig.model_for(@inbox, :authoring_assistant),
-      messages: history,
-      temperature: 0.2,
-      max_tokens: max_tokens || ContactTrackings::EngineConfig.max_tokens_for(:authoring_assistant),
-      response_format: { type: 'json_object' }
-    }
+  # temperature: 0.2 para escribir configuración; conversar pide más (DraftingChat).
+  # model: para quien no usa el del canal (DraftingChat conversa con gpt-5.4-mini).
+  def call(history, max_tokens: nil, temperature: 0.2, model: nil)
+    modelo = model || ContactTrackings::EngineConfig.model_for(@inbox, :authoring_assistant)
+    tope = max_tokens || ContactTrackings::EngineConfig.max_tokens_for(:authoring_assistant)
+    body = { model: modelo, messages: history, response_format: { type: 'json_object' } }
+           .merge(limits(modelo, tope, temperature))
 
     parse(post(body))
   end
 
   private
+
+  # La familia gpt-5 (y los o1/o3/o4) pide max_completion_tokens y no acepta otra
+  # temperatura que la suya: con los parámetros de gpt-4o contesta 400.
+  def limits(modelo, tope, temperature)
+    return { max_completion_tokens: tope } if modelo.match?(REASONING_MODEL_RE)
+
+    { max_tokens: tope, temperature: temperature }
+  end
 
   def post(body)
     @last_usage = nil

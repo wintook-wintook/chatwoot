@@ -15,6 +15,10 @@
 #   Volver a leerlo, por ejemplo después de una falla. Lo ya leído no se vuelve a pagar.
 #   202 si se encoló; 200 si ya estaba leído.
 #
+# POST …/assistant/briefs/from_instructions  (content, filename, session_id, turn_id)
+#   Lo mismo que subir un archivo, con las instrucciones que se llenaron conversando
+#   (DraftingChat) en vez de un .md. Mismas respuestas que POST …/briefs.
+#
 # GET …/assistant/briefs/:id
 #   Datos del encargo, sin el texto. Con la ficha y lo que falta cuando ya se leyó.
 #
@@ -46,17 +50,12 @@ class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::
   end
 
   def create
-    return render json: { error: 'session_not_found' }, status: :not_found if params[:session_id].present? && assistant_session.nil?
+    intake(params[:file])
+  end
 
-    result = ContactTrackings::Assistant::BriefIntake
-             .new(Current.account, Current.user, file: params[:file], session: assistant_session).call
-    return render json: { error: result.error }, status: :unprocessable_entity if result.error
-
-    enqueue_digest(result.brief)
-    # Con la ficha si ya viene leída (copiada de otro encargo con el mismo archivo):
-    # sin ella, la pantalla mostraba "listo" con la ficha vacía (23/09).
-    render json: payload(result.brief).merge(reused: result.reused).compact,
-           status: result.reused == 'same_session' ? :ok : :created
+  def from_instructions
+    nombre = File.basename(params[:filename].presence || 'instrucciones_iniciales.md')
+    intake(ContactTrackings::Assistant::BriefIntake::TextUpload.new(params[:content].to_s, nombre))
   end
 
   def digest
@@ -87,6 +86,20 @@ class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::
   end
 
   private
+
+  def intake(archivo)
+    return render json: { error: 'session_not_found' }, status: :not_found if params[:session_id].present? && assistant_session.nil?
+
+    result = ContactTrackings::Assistant::BriefIntake
+             .new(Current.account, Current.user, file: archivo, session: assistant_session).call
+    return render json: { error: result.error }, status: :unprocessable_entity if result.error
+
+    enqueue_digest(result.brief)
+    # Con la ficha si ya viene leída (copiada de otro encargo con el mismo archivo):
+    # sin ella, la pantalla mostraba "listo" con la ficha vacía (23/09).
+    render json: payload(result.brief).merge(reused: result.reused).compact,
+           status: result.reused == 'same_session' ? :ok : :created
+  end
 
   def payload(brief)
     brief.summary.merge(brief.ready? ? { digest: brief.digest, usage: brief.usage } : {})

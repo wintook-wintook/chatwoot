@@ -140,12 +140,15 @@ Rails.application.routes.draw do
             get  'assistant/audit',     to: 'assistant#audit'
             post 'assistant/dry_run',   to: 'assistant#dry_run'
             # el encargo (.md) con la idea del agente — ver docs/importar_prompt_md_plan.md
-            post 'assistant/briefs',             to: 'assistant_briefs#create'
+            post 'assistant/briefs', to: 'assistant_briefs#create'
+            post 'assistant/briefs/from_instructions', to: 'assistant_briefs#from_instructions'
             get  'assistant/briefs/:id',         to: 'assistant_briefs#show'
             get  'assistant/briefs/:id/content', to: 'assistant_briefs#content'
             post 'assistant/briefs/:id/digest',  to: 'assistant_briefs#digest'
             post 'assistant/briefs/:id/compose', to: 'assistant_briefs#compose'
             post 'assistant/briefs/:id/cover',   to: 'assistant_briefs#cover'
+            # armar un agente desde cero conversando (llena las instrucciones iniciales)
+            post 'assistant/drafting_chat', to: 'assistant_drafting#create'
           end
 
           # @knowledge_sources
