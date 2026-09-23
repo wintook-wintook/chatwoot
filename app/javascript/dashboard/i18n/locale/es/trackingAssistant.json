@@ -389,6 +389,8 @@
     "CATALOG_SECCION_NEEDS": "Nada. Lo que vale solo para una ruta va en [ALCANCE POR RAMA].",
     "CATALOG_CONTEXTO_WHAT": "Datos del negocio que el agente cita como ciertos: horarios, dirección, versiones, políticas.",
     "CATALOG_CONTEXTO_NEEDS": "Se leen solo los primeros 800 caracteres: lo más largo va como una sección del Entrenamiento.",
-    "TREE_DRAG": "Arrastra para reordenar"
+    "TREE_DRAG": "Arrastra para reordenar",
+    "CHAT_SHOW_MORE": "Mostrar más",
+    "CHAT_SHOW_LESS": "Mostrar menos"
   }
 }

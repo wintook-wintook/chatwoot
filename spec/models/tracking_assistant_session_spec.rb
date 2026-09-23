@@ -171,6 +171,14 @@ RSpec.describe TrackingAssistantSession do
       expect(s.title).to eq('📎 encargo_gimnasio.md')
     end
 
+    # Las guardadas antes del 23/09/2026 empiezan con el texto viejo («ENCARGO», voseo).
+    it 'reconoce también el inicio viejo de las instrucciones iniciales' do
+      viejo = ContactTrackings::Assistant::BriefComposer::LEGACY_HEADER_STARTS.first
+      s = sesion(messages: [{ 'role' => 'user', 'content' => "#{viejo}: … del archivo «cobranza.md». …" }])
+
+      expect(s.title).to eq('📎 cobranza.md')
+    end
+
     it 'no toma como título lo que dijo el asistente' do
       s = sesion(messages: [{ 'role' => 'assistant', 'content' => 'hola, ¿en qué te ayudo?' }])
 

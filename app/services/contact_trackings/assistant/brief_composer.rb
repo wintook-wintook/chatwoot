@@ -31,7 +31,10 @@ class ContactTrackings::Assistant::BriefComposer
   CONTEXT_MAX_CHARS = 800
   # Con qué empieza el mensaje que arma esta clase, y de dónde se saca el archivo: el
   # título de la conversación en «En construcción» lo usa (TrackingAssistantSession#title).
-  HEADER_START = 'Armá el Entrenamiento de un agente a partir de este ENCARGO'
+  HEADER_START = 'Arma el Entrenamiento de un agente a partir de estas INSTRUCCIONES INICIALES'
+  # Cómo empezaba antes del 23/09/2026 (voseo y «encargo»): conversaciones guardadas
+  # con ese inicio siguen titulándose con el archivo.
+  LEGACY_HEADER_STARTS = ['Armá el Entrenamiento de un agente a partir de este ENCARGO'].freeze
   FILENAME_RE = /archivo «([^»]+)»/
   SIDES = %w[a b].freeze
   # Las acciones van después de la flecha: medido el 23/09 con el gimnasio,
@@ -42,7 +45,7 @@ class ContactTrackings::Assistant::BriefComposer
 
   # "📎 encargo_gimnasio.md" si el mensaje es uno armado acá; nil si no.
   def self.title_for(mensaje)
-    return nil unless mensaje.to_s.start_with?(HEADER_START)
+    return nil unless mensaje.to_s.start_with?(HEADER_START, *LEGACY_HEADER_STARTS)
 
     "📎 #{mensaje[FILENAME_RE, 1] || '.md'}"
   end
@@ -81,14 +84,14 @@ class ContactTrackings::Assistant::BriefComposer
   # renglones", los datos a pedir y la decisión de la persona sobre el precio.
   def header
     <<~TXT.strip
-      #{HEADER_START}: la idea de cómo lo quiere la
-      persona, ya leída y resumida del archivo «#{@brief.filename}». Escribilo en el formato del
-      motor. Cada tema es una ruta. Lo que falte, <PENDIENTE: qué falta>.
+      #{HEADER_START}: la idea de cómo lo quiere la persona, ya
+      leída y resumida del archivo «#{@brief.filename}». Escríbelo en el formato del motor. Cada
+      tema es una ruta. Lo que falte, <PENDIENTE: qué falta>.
 
       ⚠ NADA SE PIERDE: cada regla, prohibición, punto de tono, dato a pedir y decisión de la
       persona de abajo tiene que quedar en el Entrenamiento, en su sección ([REGLAS],
       [PROHIBIDO], [ESTILO], [DATOS A PEDIR]…), con sus palabras o más claras, nunca resumida
-      hasta perderse. Escribí en el idioma del encargo.
+      hasta perderse. Escribe en el idioma de las instrucciones.
     TXT
   end
 
@@ -138,8 +141,8 @@ class ContactTrackings::Assistant::BriefComposer
     return ' → la cuenta NO la tiene conectada: <PENDIENTE>' if directivas.empty?
 
     donde = ACTION_TOOLS.include?(tipo) ? ' (como acción, después de la flecha: @ruta(…): … -> ACCIÓN)' : ''
-    " → las de la cuenta: #{directivas.first(8).join(' · ')}#{donde}. Usá una tal cual SOLO si es la que " \
-      'pide el encargo; si ninguna lo es, <PENDIENTE: cuál>'
+    " → las de la cuenta: #{directivas.first(8).join(' · ')}#{donde}. Usa una tal cual SOLO si es la que " \
+      'piden las instrucciones; si ninguna lo es, <PENDIENTE: cuál>'
   end
 
   def lists
@@ -153,7 +156,7 @@ class ContactTrackings::Assistant::BriefComposer
   def knowledge_block
     return nil if knowledge.empty? || context_fits?
 
-    (['DATOS DEL NEGOCIO Y CONOCIMIENTO (ponelos como una sección del Entrenamiento):'] +
+    (['DATOS DEL NEGOCIO Y CONOCIMIENTO (ponlos como una sección del Entrenamiento):'] +
       knowledge.map { |k| "- #{k}" }).join("\n")
   end
 
@@ -170,7 +173,7 @@ class ContactTrackings::Assistant::BriefComposer
   # dos opciones a la vista.
   def decisions
     lineas = contradictions.map do |c, lado|
-      next "- Sobre «#{c['sobre']}» el encargo se contradice: <PENDIENTE: «#{c['a']}» o «#{c['b']}»>" if lado.nil?
+      next "- Sobre «#{c['sobre']}» las instrucciones se contradicen: <PENDIENTE: «#{c['a']}» o «#{c['b']}»>" if lado.nil?
 
       "- Sobre «#{c['sobre']}»: vale «#{c[lado]}». NO pongas «#{c[other(lado)]}»."
     end
@@ -192,7 +195,7 @@ class ContactTrackings::Assistant::BriefComposer
   end
 
   def closing
-    'Al final del "mensaje", enumerá lo que quedó <PENDIENTE:>.'
+    'Al final del "mensaje", enumera lo que quedó <PENDIENTE:>.'
   end
 
   def line(titulo, punto)
