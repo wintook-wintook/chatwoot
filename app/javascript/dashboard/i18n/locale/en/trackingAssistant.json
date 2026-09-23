@@ -102,13 +102,13 @@
     "SAVE_CONTEXT_HINT": "Business facts you mentioned in the conversation. Empty is fine: the assistant doesn't fill in what you didn't tell it, because the agent would quote it as true.",
     "SAVE_FROM_TEMPLATE": "This Training came from “%{name}”. Saving replaces its own and keeps a copy of the previous one.",
     "TAB_SESSIONS": "In progress",
-    "SESSIONS_HINT": "Agents started in the Assistant that haven't been saved as an AI Agent yet, from every admin in the account. Resume one to continue where it was left.",
+    "SESSIONS_HINT": "Agents built in the Assistant by every admin in the account: the ones still in progress and, with the filter, the ones already saved as an AI Agent. Resume one to continue where it was left.",
     "SESSIONS_NEW": "Start a new one",
     "SESSIONS_RESUME": "Resume",
     "SESSIONS_SAVED": "saved",
     "SESSIONS_OPEN": "in progress",
     "SESSIONS_UNTITLED": "no title yet",
-    "SESSIONS_EMPTY": "No agents in progress.",
+    "SESSIONS_EMPTY": "No agents in this list.",
     "SESSIONS_OPEN_ERROR": "Couldn't open that conversation.",
     "DRY_RUN_TITLE": "Test without sending anything",
     "DRY_RUN_HINT": "Write a question the way a customer would. You will see which topic it falls into, which source it searches and what it finds. No message is sent and no case is opened.",
@@ -403,6 +403,9 @@
     "PANEL_INSTRUCTIONS": "Instructions (%{filled}/%{total})",
     "PANEL_INSTRUCTIONS_EMPTY": "Instructions",
     "INSTRUCTIONS_EMPTY": "The agent's initial instructions will build up here. Go to Conversation and tell the Assistant what agent you want, in your own words: for example, «an agent for a psychology practice that books appointments».",
-    "INSTRUCTIONS_HINT": "They fill in as you talk, and you can fix them here: the Assistant takes your edits in the next message. When they're ready, create the Training."
+    "INSTRUCTIONS_HINT": "They fill in as you talk, and you can fix them here: the Assistant takes your edits in the next message. When they're ready, create the Training.",
+    "SESSIONS_FILTER_OPEN": "In progress (%{count})",
+    "SESSIONS_FILTER_SAVED": "Already saved (%{count})",
+    "SESSIONS_FILTER_ALL": "All (%{count})"
   }
 }

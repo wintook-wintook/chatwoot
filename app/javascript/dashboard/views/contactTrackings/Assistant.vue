@@ -243,6 +243,8 @@ export default {
       // 'chat'. Uno a la vez (pedido del usuario, 23/09/2026): con los dos, más el
       // Entrenamiento, eran tres columnas apretadas.
       leftPanel: 'structure',
+      // Qué muestra «En construcción»: 'open' · 'saved' · 'all'.
+      sessionsFilter: 'open',
       // Las instrucciones iniciales que se llenan conversando mientras no hay
       // Entrenamiento (DraftingChat). Se guardan con la conversación.
       instructions: '',
@@ -440,12 +442,40 @@ export default {
         ? ultima.result
         : null;
     },
-    // Solo los que siguen a medias: un agente ya guardado está en «Agentes IA».
+    // Por defecto, los que siguen a medias; con el filtro, también los que ya se
+    // guardaron como Agente IA (pedido del usuario, 24/09/2026).
     openSessions() {
       return this.sessions.filter(sesion => sesion.status === 'open');
     },
+    savedSessions() {
+      return this.sessions.filter(sesion => sesion.status === 'saved');
+    },
+    visibleSessions() {
+      if (this.sessionsFilter === 'saved') return this.savedSessions;
+      if (this.sessionsFilter === 'all') return this.sessions;
+      return this.openSessions;
+    },
+    sessionFilters() {
+      return [
+        {
+          id: 'open',
+          label: 'SESSIONS_FILTER_OPEN',
+          count: this.openSessions.length,
+        },
+        {
+          id: 'saved',
+          label: 'SESSIONS_FILTER_SAVED',
+          count: this.savedSessions.length,
+        },
+        {
+          id: 'all',
+          label: 'SESSIONS_FILTER_ALL',
+          count: this.sessions.length,
+        },
+      ];
+    },
     sortedSessions() {
-      return sortRows(this.openSessions, this.sessionsSort, SESSION_COLUMNS);
+      return sortRows(this.visibleSessions, this.sessionsSort, SESSION_COLUMNS);
     },
     pagedSessions() {
       const start = (this.sessionsPage - 1) * SESSIONS_PER_PAGE;
@@ -1845,8 +1875,30 @@ export default {
             </woot-button>
           </div>
 
+          <div class="flex flex-wrap items-center gap-1 mb-3 shrink-0">
+            <woot-button
+              v-for="filtro in sessionFilters"
+              :key="filtro.id"
+              size="small"
+              :variant="sessionsFilter === filtro.id ? 'smooth' : 'clear'"
+              :color-scheme="
+                sessionsFilter === filtro.id ? 'primary' : 'secondary'
+              "
+              @click="
+                sessionsFilter = filtro.id;
+                sessionsPage = 1;
+              "
+            >
+              {{
+                $t(`TRACKING_ASSISTANT_VIEW.${filtro.label}`, {
+                  count: filtro.count,
+                })
+              }}
+            </woot-button>
+          </div>
+
           <div
-            v-if="!openSessions.length"
+            v-if="!visibleSessions.length"
             class="text-xs text-slate-500 dark:text-slate-400 py-4"
           >
             {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_EMPTY') }}
@@ -1975,7 +2027,7 @@ export default {
             <TableFooter
               class="border-t shrink-0 border-slate-75 dark:border-slate-700/50"
               :current-page="sessionsPage"
-              :total-count="openSessions.length"
+              :total-count="visibleSessions.length"
               :page-size="SESSIONS_PER_PAGE"
               @pageChange="sessionsPage = $event"
             />
