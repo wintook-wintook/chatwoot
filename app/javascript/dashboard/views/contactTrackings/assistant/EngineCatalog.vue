@@ -8,6 +8,10 @@
 // cada ficha: TRACKING_ASSISTANT_VIEW.CATALOG_<KEY>_WHAT / _NEEDS.
 // ============================================================================
 import CopyChip from './CopyChip.vue';
+import {
+  engineCatalogMarkdown,
+  downloadMarkdown,
+} from './engineCatalogMarkdown';
 
 const GROUPS = ['sources', 'actions', 'structure'];
 const STATUS_CLASSES = {
@@ -36,6 +40,21 @@ export default {
         `TRACKING_ASSISTANT_VIEW.CATALOG_${card.key.toUpperCase()}_${part}`
       );
     },
+    // Todo el catálogo, con los nombres de esta cuenta, en un .md para llevárselo.
+    download() {
+      const cuenta = this.$store.getters['accounts/getAccount'](
+        this.$store.getters.getCurrentAccountId
+      );
+      const contenido = engineCatalogMarkdown(
+        this.catalog,
+        this.$t.bind(this),
+        {
+          accountName: cuenta?.name || '',
+          locale: this.$i18n.locale,
+        }
+      );
+      downloadMarkdown(contenido, 'recursos_motor_agentes_ia.md');
+    },
     statusClass(status) {
       return STATUS_CLASSES[status] || STATUS_CLASSES.depends;
     },
@@ -45,6 +64,17 @@ export default {
 
 <template>
   <div class="flex flex-col gap-6">
+    <div v-if="catalog.length" class="flex justify-end -mb-4">
+      <woot-button
+        size="small"
+        variant="smooth"
+        color-scheme="secondary"
+        icon="arrow-download"
+        @click="download"
+      >
+        {{ $t('TRACKING_ASSISTANT_VIEW.CATALOG_DOWNLOAD') }}
+      </woot-button>
+    </div>
     <section v-for="{ group, cards } in groups" :key="group">
       <h3 class="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
         {{ $t(`TRACKING_ASSISTANT_VIEW.CATALOG_GROUP_${group.toUpperCase()}`) }}
