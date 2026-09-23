@@ -23,18 +23,6 @@
 # ================================================================================
 
 class ContactTrackings::Assistant::BriefGaps
-  # tipo de herramienta → cómo saber si la cuenta la tiene (nil = no depende de la cuenta)
-  TOOL_CHECKS = {
-    'agenda' => ->(inv) { inv[:actions].any? { |a| a[:directive] == '@agendar_calendar' && a[:available] } },
-    'erp' => ->(inv) { inv[:erp_enabled] },
-    'ticket' => ->(inv) { inv[:case_types].any? },
-    'documento' => ->(inv) { inv[:sources].any? { |s| s[:source_type] == 'google_doc' } },
-    'hoja' => ->(inv) { inv[:sources].any? { |s| s[:source_type] == 'google_sheet' } },
-    'predefinidas' => ->(inv) { inv[:canned_groups].any? || inv[:sources].any? { |s| s[:source_type] == 'canned_response' } },
-    'foro' => ->(inv) { inv[:sources].any? { |s| s[:source_type] == 'discourse' } },
-    'articulo' => ->(inv) { inv[:sources].any? { |s| s[:source_type] == 'article' } }
-  }.freeze
-
   def initialize(ficha, inventory:)
     @ficha = ficha
     @inventory = inventory
@@ -50,8 +38,7 @@ class ContactTrackings::Assistant::BriefGaps
   # Marca en cada herramienta si la cuenta la tiene (true/false) o si no depende (nil).
   def annotate_tools!
     temas_herramientas.each do |herramienta|
-      check = TOOL_CHECKS[herramienta['tipo']]
-      herramienta['disponible'] = check ? check.call(@inventory) : nil
+      herramienta['disponible'] = ContactTrackings::Assistant::BriefTools.available?(herramienta['tipo'], @inventory)
     end
     @ficha
   end

@@ -71,10 +71,7 @@ class ContactTrackings::Assistant::BriefReader
           → un tema: nombre, etiqueta (sin el #), la descripción son las frases del
             cliente, la fuente y el escalamiento van a "fuente" y "si_no_resuelve".
         @ruta_por_defecto: nombre → el tema que atiende cuando no encaja en otro.
-        Herramientas: {{consulta:…}} → erp · {{doc:…}} → documento · {{hoja:…}} → hoja
-          · @buscar_predefinidas → predefinidas · @buscar_foro / @discourse → foro
-          · @buscar_articulo → articulo · @crear_ticket → ticket · @agendar_calendar →
-          agenda · {{nombre}} de un archivo → adjunto.
+        Herramientas: #{ContactTrackings::Assistant::BriefTools.grammar}.
 
     Ejemplos de cómo se anota (de encargos distintos):
       "Si el perro no respira, que llamen a urgencias al 442…" → regla: "Ante una
@@ -93,7 +90,10 @@ class ContactTrackings::Assistant::BriefReader
   # Sube cada vez que cambian las instrucciones de PROMPT: una lectura hecha con otras
   # instrucciones no se reusa (ver BriefDigestService#cached_readings).
   # 2 (23/09/2026): datos del negocio a "conocimiento" y la herramienta de cada tema.
-  VERSION = 2
+  # La gramática de herramientas sale de BriefTools: agregar un tipo de fuente cambia
+  # este prompt, así que también hay que subir la versión.
+  # 3 (23/09/2026): la gramática sale de BriefTools; gana el tipo "contpaq".
+  VERSION = 3
   CONNECTORS = %w[de del la las el los y a en por con para un una].freeze
 
   attr_reader :chunk

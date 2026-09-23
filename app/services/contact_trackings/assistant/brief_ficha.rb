@@ -33,9 +33,9 @@ module ContactTrackings::Assistant::BriefFicha
   CATEGORIES = (SINGLE + LISTS).freeze
 
   MODES = %w[responde deriva].freeze
-  # Lo que un agente puede necesitar hacer o consultar. Se cruza con el inventario de
-  # la cuenta (BriefGaps): `persona` y `otra` no se cruzan con nada.
-  TOOLS = %w[agenda erp ticket documento hoja predefinidas foro articulo adjunto persona otra].freeze
+  # Lo que un agente puede necesitar hacer o consultar. La lista y su cruce con la
+  # cuenta viven en BriefTools, la única tabla contra el motor.
+  TOOLS = ContactTrackings::Assistant::BriefTools::TYPES
 
   # Un punto más largo que esto no es un punto: es un párrafo copiado.
   MAX_ITEM_CHARS = 400

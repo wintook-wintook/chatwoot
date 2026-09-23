@@ -30,19 +30,9 @@ class ContactTrackings::Assistant::BriefComposer
 
   CONTEXT_MAX_CHARS = 800
   SIDES = %w[a b].freeze
-  # Qué directiva del motor corresponde a cada herramienta. Medido el 23/09 con el
-  # gimnasio: sin esto, "se agenda en el calendario de recepción" salió como
-  # <PENDIENTE: calendario de recepción> en vez de @agendar_calendar.
-  DIRECTIVES = {
-    'agenda' => '@agendar_calendar, como acción después de la flecha: @ruta(…): - -> @agendar_calendar',
-    'ticket' => '@crear_ticket(tipo=…) con un tipo de caso de la cuenta',
-    'hoja' => '{{hoja:NOMBRE EXACTO de la hoja en la cuenta}}',
-    'documento' => '{{doc:NOMBRE EXACTO del documento en la cuenta}}',
-    'erp' => '{{consulta:…}}',
-    'predefinidas' => '@buscar_predefinidas',
-    'foro' => '@buscar_foro(NOMBRE del foro)',
-    'articulo' => '@buscar_articulo'
-  }.freeze
+  # Las acciones van después de la flecha: medido el 23/09 con el gimnasio,
+  # @agendar_calendar quedó del lado de la fuente y el motor la ignoraba.
+  ACTION_TOOLS = %w[agenda ticket].freeze
   LISTS = { 'reglas' => 'REGLAS', 'prohibiciones' => 'PROHIBICIONES (nunca)', 'tono' => 'TONO',
             'datos_a_pedir' => 'DATOS QUE TIENE QUE PEDIR', 'fuera' => 'FUERA DEL AGENTE (no lo hace)' }.freeze
 
@@ -55,8 +45,11 @@ class ContactTrackings::Assistant::BriefComposer
     end.to_set
   end
 
-  def initialize(brief, answers: {})
+  # inventory: el de InventoryService; de ahí salen las directivas EXACTAS de la cuenta
+  # para cada herramienta (ver BriefTools).
+  def initialize(brief, answers: {}, inventory: {})
     @brief = brief
+    @inventory = inventory
     @ficha = brief.digest['ficha'] || {}
     @answers = (answers.respond_to?(:to_unsafe_h) ? answers.to_unsafe_h : answers.to_h).deep_stringify_keys
   end
@@ -122,11 +115,20 @@ class ContactTrackings::Assistant::BriefComposer
 
   def tools
     lista = Array(@ficha['herramientas']).map do |h|
-      nota = h['disponible'] == false ? ' (la cuenta NO la tiene conectada: <PENDIENTE>)' : ''
-      directiva = DIRECTIVES[h['tipo']] ? " → #{DIRECTIVES[h['tipo']]}" : ''
-      "- #{h['tipo']}: #{h['para']}#{directiva}#{nota}"
+      "- #{h['tipo']}: #{h['para']}#{tool_hint(h['tipo'])}"
     end
     lista.any? ? (['HERRAMIENTAS:'] + lista).join("\n") : nil
+  end
+
+  # Las directivas reales de la cuenta, o <PENDIENTE> si no tiene ninguna.
+  def tool_hint(tipo)
+    directivas = ContactTrackings::Assistant::BriefTools.directives(tipo, @inventory)
+    return '' if directivas.nil?
+    return ' → la cuenta NO la tiene conectada: <PENDIENTE>' if directivas.empty?
+
+    donde = ACTION_TOOLS.include?(tipo) ? ' (como acción, después de la flecha: @ruta(…): … -> ACCIÓN)' : ''
+    " → las de la cuenta: #{directivas.first(8).join(' · ')}#{donde}. Usá una tal cual SOLO si es la que " \
+      'pide el encargo; si ninguna lo es, <PENDIENTE: cuál>'
   end
 
   def lists

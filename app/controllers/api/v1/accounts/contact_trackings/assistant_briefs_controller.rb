@@ -69,7 +69,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::
 
     respuestas = params[:answers].respond_to?(:to_unsafe_h) ? params[:answers].to_unsafe_h : {}
     @brief.update!(answers: respuestas)
-    render json: ContactTrackings::Assistant::BriefComposer.new(@brief, answers: respuestas).call
+    inventario = ContactTrackings::Assistant::InventoryService.new(Current.account).call
+    render json: ContactTrackings::Assistant::BriefComposer.new(@brief, answers: respuestas, inventory: inventario).call
   end
 
   def cover
