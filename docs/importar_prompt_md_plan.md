@@ -321,7 +321,7 @@ Se guarda **con el agente**:
  navegador                        Rails                                   Sidekiq
  ─────────                        ─────                                   ───────
  Asistente: 📎 Subir encargo ──► AssistantBriefsController ──crea/reusa─► tracking_agent_briefs
-   (.md, ≤ 5 MB)                  (tamaño, tipo, huella)                   estado: en_cola
+   (.md, ≤ 5 MB)                  (tamaño, tipo, huella)                   estado: pending
                                                                               │
                                                                               ▼
                                                                   AgentBriefDigestJob
@@ -329,7 +329,7 @@ Se guarda **con el agente**:
                                                                     ├─ Entender  (4 a la vez)
                                                                     └─ Juntar    (1–2)
  barra "leyendo tema 12 de 45" ◄──GET progress/:turn_id──  TurnProgress (Redis, ya existe)
- tarjeta "Esto entendí" ◄───────────────────────────────── estado: lista + ficha
+ tarjeta "Esto entendí" ◄───────────────────────────────── estado: ready + ficha
  conversación de siempre ──────► InterviewService (+ la ficha como primer mensaje)
  Guardar ──────────────────────► SaveService ── además liga el encargo al agente
 ```
@@ -345,7 +345,7 @@ Tabla nueva **`tracking_agent_briefs`**:
 | `filename` | string | |
 | `content` | text | el `.md` completo (ADAM: 1,1 MB) |
 | `sha256` | string, índice | reusar sin volver a pagar |
-| `status` | string | `en_cola` · `leyendo` · `lista` · `error` |
+| `status` | string | `pending` (subido) · `reading` · `ready` (ficha lista) · `failed` |
 | `chunks` | jsonb | huella + ruta de títulos + ficha parcial de cada trozo |
 | `digest` | jsonb | la ficha junta |
 | `answers` | jsonb | preguntas y respuestas del chat, y lo marcado "dejar fuera" |
@@ -415,7 +415,7 @@ conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
 
 | Fase | Entrega | Cómo se verifica | Días |
 |---|---|---|---|
-| **F0** Encargo guardado | tabla `tracking_agent_briefs`, subir `.md` (≤ 5 MB), huella, reuso | request spec: subir, mismo archivo no se duplica, otra cuenta no lo ve | 1 |
+| **F0** ✅ Encargo guardado | tabla `tracking_agent_briefs`, subir `.md` (≤ 5 MB), huella, reuso | request spec: subir, mismo archivo no se duplica, otra cuenta no lo ve | 1 |
 | **F1** Troceo general | títulos Markdown, `[X]`, decorados, MAYÚSCULAS, párrafos; ≤ 24 K por trozo; escribir los 2 encargos que faltan del banco | spec con los 9 encargos del banco: ninguno da 0 trozos, ninguno corta una regla | 1 |
 | **F2** Entender y juntar | job con avance, 4 a la vez, ficha parcial → ficha junta, faltas y contradicciones, herramientas cruzadas con el inventario | con el banco: cada ficha trae el objetivo, el modo y los temas correctos (citas = agenda, soporte = deriva, ADAM = sus 6 temas); costo y tiempo medidos | 2 |
 | **F3** Asistente con encargo | ficha como primer mensaje, "Esto entendí", preguntas solo de lo que falta; respuestas guardadas en el encargo | e2e contra gpt-4o: con un encargo completo no pregunta el paso 1; con uno sin etiquetas pregunta solo el 4 | 2 |
@@ -424,7 +424,16 @@ conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
 | **F6** Regenerar | subir versión nueva: relee solo temas cambiados, reusa respuestas, edita el Entrenamiento como versión nueva | spec: cambiar un tema cuesta 1 trozo; lo editado a mano sobrevive | 1 |
 | **F7** Prueba real | el banco completo, de punta a punta en develop, cuenta 2 | criterios de §9.1 | 1,5 |
 
-**Total: 11,5 días hábiles.** Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
+**Total: 11,5 días hábiles.**
+
+**Avance**
+- **F0 hecha (23/09/2026).** Tabla `tracking_agent_briefs`, modelo `TrackingAgentBrief`, `BriefIntake`
+  (valida .md/.markdown/.txt ≤ 5 MB, UTF-8 sin bytes nulos, quita BOM, saltos Unix) y
+  `AssistantBriefsController` (`POST assistant/briefs`, `GET assistant/briefs/:id`, `GET …/:id/content`).
+  El mismo archivo en la misma conversación no se duplica; en otra conversación de la cuenta copia la
+  lectura si ya estaba hecha (no las respuestas). 21 specs. Probado con ADAM real: entra entero
+  (1.142.201 bytes, 0,24 s). Hizo falta un tope propio de largo: `ApplicationRecord` corta todo `text` en
+  20.000 caracteres. Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
 predefinidas con lo consultable de la ficha (catálogo de servicios, glosario, guiones con "El mensaje es
 el prompt"), con confirmación por fila (+1,5 días): **queda para después** (decisión C).
 

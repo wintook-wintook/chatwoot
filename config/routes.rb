@@ -139,6 +139,10 @@ Rails.application.routes.draw do
             post 'assistant/transcribe', to: 'assistant_tools#transcribe'
             get  'assistant/audit',     to: 'assistant#audit'
             post 'assistant/dry_run',   to: 'assistant#dry_run'
+            # el encargo (.md) con la idea del agente — ver docs/importar_prompt_md_plan.md
+            post 'assistant/briefs',             to: 'assistant_briefs#create'
+            get  'assistant/briefs/:id',         to: 'assistant_briefs#show'
+            get  'assistant/briefs/:id/content', to: 'assistant_briefs#content'
           end
 
           # @knowledge_sources

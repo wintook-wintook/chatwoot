@@ -1,0 +1,64 @@
+# frozen_string_literal: true
+
+# ================================================================================
+# proyecto@asistente_agentes_ia — EL ENCARGO (.md) DE UN AGENTE IA
+# ================================================================================
+# POST /api/v1/accounts/:account_id/contact_trackings/assistant/briefs
+#   (multipart: file, session_id opcional) Guarda el encargo. 201 si es nuevo; 200 si
+#   ya estaba en esa conversación. `reused: 'reading'` = otro encargo de la cuenta con
+#   el mismo archivo ya se había leído y la lectura se copió. Ver BriefIntake.
+#
+# GET …/assistant/briefs/:id
+#   Datos del encargo, sin el texto.
+#
+# GET …/assistant/briefs/:id/content
+#   El .md tal cual se guardó (text/markdown). Aparte porque puede pesar 1 MB y la
+#   pantalla casi nunca lo necesita.
+#
+# Aparte de AssistantController, que ya está en su tope de largo. Mismo permiso: el
+# encargo decide cómo le va a contestar el bot a los clientes, y puede traer
+# material interno.
+# ================================================================================
+
+class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::Accounts::BaseController
+  before_action :check_authorization
+  before_action :fetch_brief, only: [:show, :content]
+
+  def show
+    render json: @brief.summary
+  end
+
+  def create
+    return render json: { error: 'session_not_found' }, status: :not_found if params[:session_id].present? && assistant_session.nil?
+
+    result = ContactTrackings::Assistant::BriefIntake
+             .new(Current.account, Current.user, file: params[:file], session: assistant_session).call
+    return render json: { error: result.error }, status: :unprocessable_entity if result.error
+
+    render json: result.brief.summary.merge(reused: result.reused).compact,
+           status: result.reused == 'same_session' ? :ok : :created
+  end
+
+  def content
+    send_data @brief.content, filename: @brief.filename, type: 'text/markdown; charset=utf-8', disposition: 'inline'
+  end
+
+  private
+
+  # De la cuenta, no de quien pregunta: igual que las conversaciones del Asistente,
+  # el encargo es trabajo del equipo de administradores.
+  def fetch_brief
+    @brief = TrackingAgentBrief.find_by(id: params[:id], account: Current.account)
+    render json: { error: 'not_found' }, status: :not_found if @brief.nil?
+  end
+
+  def assistant_session
+    return nil if params[:session_id].blank?
+
+    @assistant_session ||= TrackingAssistantSession.find_by(id: params[:session_id], account: Current.account)
+  end
+
+  def check_authorization
+    render json: { error: I18n.t('errors.unauthorized') }, status: :unauthorized unless Current.account_user&.administrator?
+  end
+end

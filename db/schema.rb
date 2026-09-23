@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_09_21_182758) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_23_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1553,6 +1553,27 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_21_182758) do
     t.datetime "updated_at", precision: nil, null: false
   end
 
+  create_table "tracking_agent_briefs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "tracking_template_id"
+    t.bigint "tracking_assistant_session_id"
+    t.string "filename", null: false
+    t.text "content", null: false
+    t.string "sha256", null: false
+    t.string "status", default: "pending", null: false
+    t.jsonb "chunks", default: [], null: false
+    t.jsonb "digest", default: {}, null: false
+    t.jsonb "answers", default: {}, null: false
+    t.jsonb "usage", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "sha256"], name: "index_tracking_agent_briefs_on_account_id_and_sha256"
+    t.index ["tracking_assistant_session_id"], name: "index_tracking_agent_briefs_on_tracking_assistant_session_id"
+    t.index ["tracking_template_id"], name: "index_tracking_agent_briefs_on_tracking_template_id"
+    t.index ["user_id"], name: "index_tracking_agent_briefs_on_user_id"
+  end
+
   create_table "tracking_assistant_sessions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
@@ -1815,6 +1836,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_21_182758) do
   add_foreign_key "scheduled_messages", "accounts"
   add_foreign_key "scheduled_messages", "conversations"
   add_foreign_key "scheduled_messages", "users"
+  add_foreign_key "tracking_agent_briefs", "accounts"
+  add_foreign_key "tracking_agent_briefs", "tracking_assistant_sessions", on_delete: :nullify
+  add_foreign_key "tracking_agent_briefs", "tracking_templates", on_delete: :nullify
+  add_foreign_key "tracking_agent_briefs", "users", on_delete: :cascade
   add_foreign_key "tracking_assistant_sessions", "accounts"
   add_foreign_key "tracking_assistant_sessions", "tracking_templates", on_delete: :nullify
   add_foreign_key "tracking_assistant_sessions", "users", on_delete: :cascade
