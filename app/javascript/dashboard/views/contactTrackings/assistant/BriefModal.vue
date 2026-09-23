@@ -51,6 +51,9 @@ export default {
   props: {
     show: { type: Boolean, default: false },
     sessionId: { type: [Number, String], default: null },
+    // Unas instrucciones ya mandadas a leer (desde la conversación del Asistente):
+    // el modal las sigue como si se hubieran subido acá.
+    initialBrief: { type: Object, default: null },
     // Las etiquetas de la cuenta, para sugerirlas (inventario del Asistente).
     labels: { type: Array, default: () => [] },
     // La vista del Asistente está escribiendo el Entrenamiento con este encargo.
@@ -138,6 +141,18 @@ export default {
       });
     },
   },
+  watch: {
+    initialBrief(brief) {
+      if (!brief) return;
+      this.brief = brief;
+      this.values = {};
+      this.tab = 0;
+      this.error = '';
+      this.stage = null;
+      this.turnId = null;
+      this.follow();
+    },
+  },
   beforeDestroy() {
     this.stopPolling();
   },
@@ -207,7 +222,11 @@ export default {
       try {
         const [{ data: brief }, progreso] = await Promise.all([
           AssistantAPI.getBrief(this.brief.id),
-          AssistantAPI.getProgress(this.turnId).catch(() => ({ data: null })),
+          this.turnId
+            ? AssistantAPI.getProgress(this.turnId).catch(() => ({
+                data: null,
+              }))
+            : Promise.resolve({ data: null }),
         ]);
         this.brief = brief;
         if (progreso?.data?.stage) this.stage = progreso.data;

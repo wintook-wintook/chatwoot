@@ -46,6 +46,12 @@ import ProgressStrip from './assistant/ProgressStrip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
 import ReportModal from './assistant/ReportModal.vue';
 import EngineCatalog from './assistant/EngineCatalog.vue';
+import InstructionsPanel from './assistant/InstructionsPanel.vue';
+import {
+  instructionsProgress,
+  instructionsFilename,
+} from './assistant/instructionsProgress';
+import { downloadMarkdown } from './assistant/engineCatalogMarkdown';
 import BriefModal from './assistant/BriefModal.vue';
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import VersionsPanel from './assistant/VersionsPanel.vue';
@@ -128,6 +134,7 @@ export default {
     ValidationBadge,
     ReportModal,
     EngineCatalog,
+    InstructionsPanel,
     BriefModal,
     ManualConflictNotice,
     VersionsPanel,
@@ -236,6 +243,12 @@ export default {
       // 'chat'. Uno a la vez (pedido del usuario, 23/09/2026): con los dos, más el
       // Entrenamiento, eran tres columnas apretadas.
       leftPanel: 'structure',
+      // Las instrucciones iniciales que se llenan conversando mientras no hay
+      // Entrenamiento (DraftingChat). Se guardan con la conversación.
+      instructions: '',
+      // Unas instrucciones mandadas a leer desde el chat: el modal las toma de acá.
+      chatBrief: null,
+      isSendingInstructions: false,
       sessionsPage: 1,
       SESSIONS_PER_PAGE,
       // El orden arranca donde lo dejó el backend (recent_first): así el primer
@@ -298,6 +311,34 @@ export default {
         0,
         this.tabs.findIndex(tab => tab.panel === this.activeTab)
       );
+    },
+    // Qué puede ocupar la columna izquierda, con el texto de su botón.
+    leftPanels() {
+      const avance = instructionsProgress(this.instructions);
+      return [
+        {
+          id: 'structure',
+          icon: 'list',
+          label: this.$t('TRACKING_ASSISTANT_VIEW.TREE_TITLE'),
+        },
+        {
+          id: 'chat',
+          icon: 'chat',
+          label: this.$t('TRACKING_ASSISTANT_VIEW.PANEL_CHAT', {
+            count: this.messages.length,
+          }),
+        },
+        {
+          id: 'instructions',
+          icon: 'document',
+          label: avance.total
+            ? this.$t('TRACKING_ASSISTANT_VIEW.PANEL_INSTRUCTIONS', {
+                filled: avance.filled,
+                total: avance.total,
+              })
+            : this.$t('TRACKING_ASSISTANT_VIEW.PANEL_INSTRUCTIONS_EMPTY'),
+        },
+      ];
     },
     showSessionsTab() {
       return SHOW_SESSIONS_TAB;
@@ -484,6 +525,7 @@ export default {
       this.sessionId = data.id;
       this.interviewOptions = null;
       this.messages = data.messages || [];
+      this.instructions = data.instructions || '';
       this.draft = data.draft || '';
       this.validation = data.validation || null;
       this.proposal = data.proposal || null;
@@ -559,6 +601,8 @@ export default {
       }
     },
     startFresh() {
+      this.instructions = '';
+      this.chatBrief = null;
       this.sessionId = null;
       this.sessionMeta = null;
       this.interviewOptions = null;
@@ -744,7 +788,13 @@ export default {
       this.validateDraft();
     },
     // oneShot: redacta de una, sin preguntar (lo usa el encargo, ver writeFromBrief).
+    // Sin Entrenamiento todavía, el chat conversa para llenar las instrucciones
+    // iniciales (armar un agente desde cero); con uno en pantalla, lo edita.
     async sendMessage(content, { oneShot = false } = {}) {
+      if (!oneShot && !this.draft.trim()) {
+        await this.sendDraftingMessage(content);
+        return;
+      }
       this.messages.push({ role: 'user', content });
       this.isThinking = true;
       const turnId = this.startProgress();
@@ -819,14 +869,21 @@ export default {
     // El chat se abre al terminar: desde ahí se refina conversando (pedido del
     // usuario, 23/09/2026). El mensaje del encargo es largo y escrito para el modelo:
     // en pantalla se ve corto (`display`), y al modelo le sigue llegando entero.
+    //
+    // Si las instrucciones salieron de la conversación, la conversación sigue: no se
+    // arranca en limpio (se perdería lo hablado).
     async writeFromBrief({ message, proposal, briefId, filename }) {
-      this.startFresh();
+      if (!this.chatBrief) this.startFresh();
+      this.chatBrief = null;
       this.isWritingBrief = true;
       await this.sendMessage(message, { oneShot: true });
       // Reemplazado entero: en Vue 2 una propiedad nueva no es reactiva.
-      if (this.messages[0]) {
-        this.messages.splice(0, 1, {
-          ...this.messages[0],
+      const donde = this.messages.findIndex(
+        m => m.role === 'user' && m.content === message
+      );
+      if (donde >= 0) {
+        this.messages.splice(donde, 1, {
+          ...this.messages[donde],
           display: this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_CHAT_USER', {
             name: filename,
           }),
@@ -846,6 +903,55 @@ export default {
       this.proposal = { ...(this.proposal || {}), ...definicion };
       this.showBriefModal = false;
       this.leftPanel = 'chat';
+    },
+    // Un turno de la conversación que arma un agente desde cero (DraftingChat).
+    async sendDraftingMessage(content) {
+      this.messages.push({ role: 'user', content });
+      this.isThinking = true;
+      try {
+        const { data } = await AssistantAPI.draftingChat(
+          this.messages,
+          this.instructions,
+          { sessionId: this.sessionId }
+        );
+        this.sessionId = data.session_id || this.sessionId;
+        if (data.session) this.sessionMeta = data.session;
+        this.messages.push({ role: 'assistant', content: data.reply });
+        if (data.instructions) this.instructions = data.instructions;
+      } catch (error) {
+        const reason =
+          error?.response?.data?.error === 'no_api_key'
+            ? this.$t('TRACKING_ASSISTANT_VIEW.ERROR_NO_KEY')
+            : this.$t('TRACKING_ASSISTANT_VIEW.ERROR_GENERIC');
+        this.messages.push({ role: 'assistant', content: reason });
+      } finally {
+        this.isThinking = false;
+      }
+    },
+    // «Crear el Entrenamiento» desde las instrucciones de la conversación: entran
+    // como un .md subido y siguen en el modal de siempre (Esto entendí / Me falta saber).
+    async createFromInstructions() {
+      if (!this.instructions.trim() || this.isSendingInstructions) return;
+      this.isSendingInstructions = true;
+      try {
+        const { data } = await AssistantAPI.briefFromInstructions(
+          this.instructions,
+          instructionsFilename(this.instructions),
+          { sessionId: this.sessionId }
+        );
+        this.chatBrief = data;
+        this.showBriefModal = true;
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_ERROR'));
+      } finally {
+        this.isSendingInstructions = false;
+      }
+    },
+    downloadInstructions() {
+      downloadMarkdown(
+        this.instructions,
+        instructionsFilename(this.instructions)
+      );
     },
     // Al mensaje del Asistente se le suma lo que agregó la cobertura y la invitación
     // a seguir: el chat queda abierto para eso.
@@ -1273,23 +1379,19 @@ export default {
                 role="tablist"
               >
                 <woot-button
-                  v-for="panel in ['structure', 'chat']"
-                  :key="panel"
+                  v-for="panel in leftPanels"
+                  :key="panel.id"
                   size="small"
-                  :variant="leftPanel === panel ? 'smooth' : 'clear'"
-                  :color-scheme="leftPanel === panel ? 'primary' : 'secondary'"
-                  :icon="panel === 'chat' ? 'chat' : 'list'"
+                  :variant="leftPanel === panel.id ? 'smooth' : 'clear'"
+                  :color-scheme="
+                    leftPanel === panel.id ? 'primary' : 'secondary'
+                  "
+                  :icon="panel.icon"
                   role="tab"
-                  :aria-selected="leftPanel === panel"
-                  @click="leftPanel = panel"
+                  :aria-selected="leftPanel === panel.id"
+                  @click="leftPanel = panel.id"
                 >
-                  {{
-                    panel === 'chat'
-                      ? $t('TRACKING_ASSISTANT_VIEW.PANEL_CHAT', {
-                          count: messages.length,
-                        })
-                      : $t('TRACKING_ASSISTANT_VIEW.TREE_TITLE')
-                  }}
+                  {{ panel.label }}
                 </woot-button>
               </div>
               <!-- v-show y no v-if: la conversación se esconde, no se desmonta. Con
@@ -1306,6 +1408,20 @@ export default {
                   :is-editing="Boolean(draft.trim())"
                   :stage="turnStage"
                   @send="sendMessage"
+                />
+              </section>
+
+              <!-- Las instrucciones iniciales que se llenan conversando. -->
+              <section
+                v-if="showChat"
+                v-show="leftPanel === 'instructions'"
+                class="flex flex-col flex-1 min-h-0 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+              >
+                <InstructionsPanel
+                  v-model="instructions"
+                  :busy="isSendingInstructions || isWritingBrief"
+                  @create="createFromInstructions"
+                  @download="downloadInstructions"
                 />
               </section>
 
@@ -1913,6 +2029,7 @@ export default {
     />
     <BriefModal
       :show="showBriefModal"
+      :initial-brief="chatBrief"
       :session-id="sessionId"
       :labels="(inventory && inventory.labels) || []"
       :writing="isWritingBrief"

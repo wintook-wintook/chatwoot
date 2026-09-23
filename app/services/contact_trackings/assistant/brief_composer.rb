@@ -140,8 +140,15 @@ class ContactTrackings::Assistant::BriefComposer
     return '' if directivas.nil?
     return ' → la cuenta NO la tiene conectada: <PENDIENTE>' if directivas.empty?
 
-    donde = ACTION_TOOLS.include?(tipo) ? ' (como acción, después de la flecha: @ruta(…): … -> ACCIÓN)' : ''
-    " → las de la cuenta: #{directivas.first(8).join(' · ')}#{donde}. Usa una tal cual SOLO si es la que " \
+    lista = directivas.first(8).join(' · ')
+    # Medido el 24/09 con el consultorio: con la misma frase que las fuentes, la
+    # agenda quedó como «<PENDIENTE: cuál> -> @agendar_calendar».
+    if ACTION_TOOLS.include?(tipo)
+      return " → las de la cuenta: #{lista}. Es una ACCIÓN: va después de la flecha, y si esa ruta no " \
+             'consulta ninguna fuente, antes de la flecha va «-» (ej. @ruta(…): - -> ACCIÓN)'
+    end
+
+    " → las de la cuenta: #{lista}. Usa una tal cual SOLO si es la que " \
       'piden las instrucciones; si ninguna lo es, <PENDIENTE: cuál>'
   end
 

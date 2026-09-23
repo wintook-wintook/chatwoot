@@ -121,6 +121,25 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // Las instrucciones que se llenaron conversando, como si fueran un .md subido.
+  briefFromInstructions(content, filename, { sessionId = null } = {}) {
+    return axios.post(`${this.url}/briefs/from_instructions`, {
+      content,
+      filename,
+      session_id: sessionId,
+    });
+  }
+
+  // Un turno de la conversación que arma un agente desde cero: devuelve la
+  // respuesta y las instrucciones iniciales actualizadas (DraftingChat).
+  draftingChat(messages, instructions, { sessionId = null } = {}) {
+    return axios.post(`${this.url}/drafting_chat`, {
+      messages,
+      instructions,
+      session_id: sessionId,
+    });
+  }
+
   // Estado del encargo; con la ficha y lo que falta cuando ya se leyó.
   getBrief(id) {
     return axios.get(`${this.url}/briefs/${id}`);

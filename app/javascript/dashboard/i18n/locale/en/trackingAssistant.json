@@ -399,6 +399,10 @@
     "CATALOG_MD_EXAMPLE_TITLE": "How a Training is built",
     "CATALOG_MD_EXAMPLE_HINT": "At the top, one @ruta line per customer topic: name, #label and the customer's phrases in parentheses; after the colon, the source; after the arrow, the action. Below, the sections in brackets, which the agent reads in every message.",
     "CATALOG_MD_EXAMPLE": "@ruta(prices #prices: how much is it?, what's the monthly fee?): {{hoja:Prices}}\n@ruta(trial_class #trial_class: I want to try, can I come one day for free?): - -> @agendar_calendar\n@ruta(issues #issues: I was charged twice, my card doesn't open the door): - -> @crear_ticket(tipo=Support)\n@ruta_por_defecto: prices\n\n[ROL]\nYou are Leo, from Fuerza Gym's front desk.\n\n[ESTILO]\nInformal, short messages, one question per message.\n\n[PROHIBIDO]\nNever make up prices or schedules.",
-    "CATALOG_MD_INTRO": "Everything the AI Agent engine can do, and whether this account already has it ready. What is in backticks is written exactly like that in the Training."
+    "CATALOG_MD_INTRO": "Everything the AI Agent engine can do, and whether this account already has it ready. What is in backticks is written exactly like that in the Training.",
+    "PANEL_INSTRUCTIONS": "Instructions (%{filled}/%{total})",
+    "PANEL_INSTRUCTIONS_EMPTY": "Instructions",
+    "INSTRUCTIONS_EMPTY": "The agent's initial instructions will build up here. Go to Conversation and tell the Assistant what agent you want, in your own words: for example, «an agent for a psychology practice that books appointments».",
+    "INSTRUCTIONS_HINT": "They fill in as you talk, and you can fix them here: the Assistant takes your edits in the next message. When they're ready, create the Training."
   }
 }

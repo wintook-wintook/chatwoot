@@ -399,6 +399,10 @@
     "CATALOG_MD_EXAMPLE_TITLE": "Cómo se arma un Entrenamiento",
     "CATALOG_MD_EXAMPLE_HINT": "Arriba, una línea @ruta por cada tema del cliente: nombre, #etiqueta y las frases del cliente entre paréntesis; después de los dos puntos, la fuente; después de la flecha, la acción. Abajo, las secciones entre corchetes, que el agente lee en todos los mensajes.",
     "CATALOG_MD_EXAMPLE": "@ruta(precios #precios: ¿cuánto cuesta?, ¿qué precio tiene la mensualidad?): {{hoja:Precios}}\n@ruta(clase_prueba #clase_prueba: quiero probar, ¿puedo ir un día gratis?): - -> @agendar_calendar\n@ruta(problemas #problemas: me cobraron doble, mi tarjeta no abre la puerta): - -> @crear_ticket(tipo=Soporte)\n@ruta_por_defecto: precios\n\n[ROL]\nEres Leo, de la recepción del Gimnasio Fuerza Bajío.\n\n[ESTILO]\nDe tú, mensajes cortos, una sola pregunta por mensaje.\n\n[PROHIBIDO]\nNunca inventes precios ni horarios.",
-    "CATALOG_MD_INTRO": "Todo lo que el motor de Agentes IA sabe hacer, y si esta cuenta ya lo tiene listo. Lo que va entre comillas invertidas se escribe así, exactamente, en el Entrenamiento."
+    "CATALOG_MD_INTRO": "Todo lo que el motor de Agentes IA sabe hacer, y si esta cuenta ya lo tiene listo. Lo que va entre comillas invertidas se escribe así, exactamente, en el Entrenamiento.",
+    "PANEL_INSTRUCTIONS": "Instrucciones (%{filled}/%{total})",
+    "PANEL_INSTRUCTIONS_EMPTY": "Instrucciones",
+    "INSTRUCTIONS_EMPTY": "Aquí se van a ir armando las instrucciones iniciales del agente. Ve a Conversación y cuéntale al Asistente qué agente quieres, con tus palabras: por ejemplo, «un agente para un consultorio de psicología que agende citas».",
+    "INSTRUCTIONS_HINT": "Se llenan solas mientras conversas, y puedes corregirlas aquí: el Asistente toma tus cambios en el siguiente mensaje. Cuando estén listas, crea el Entrenamiento."
   }
 }

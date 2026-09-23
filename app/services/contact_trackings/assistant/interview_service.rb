@@ -137,7 +137,12 @@ class ContactTrackings::Assistant::InterviewService
     # Al EDITAR no se exige: el comportamiento ya está escrito en el Entrenamiento que
     # había, y preguntar "¿contesta o deriva?" para agregar una regla de estilo sería
     # hacer perder un turno.
-    return ask_missing_mode(reply, draft) if @outcome.building? && MODES.exclude?(reply['modo'])
+    #
+    # Tampoco en la redacción de una sola vez: su contrato no trae "modo" y nadie
+    # puede contestar la pregunta. Medido el 24/09/2026 con unas instrucciones
+    # iniciales que ya decían «CÓMO ATIENDE: responde»: se preguntaba igual, el modelo
+    # devolvía la pregunta y el Entrenamiento salía vacío.
+    return ask_missing_mode(reply, draft) if !one_shot && @outcome.building? && MODES.exclude?(reply['modo'])
 
     finish(reply, draft, ContactTrackings::Assistant::ReplyParser.proposal(reply))
   end

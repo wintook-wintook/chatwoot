@@ -115,7 +115,15 @@ class ContactTrackings::Assistant::DraftingChat
     - Llénalas DESDE EL PRIMER MENSAJE con lo que ya se sabe. Si la persona dijo "un
       consultorio de psicología que agende", ya van: en "Qué tiene que lograr", agendar
       citas del consultorio; en "Lo que la gente viene a pedir", el tema Agendar cita
-      con lo que harás (agendar en el calendario de la cuenta). Lo demás, vacío. Solo
+      con lo que harás (agendar en el calendario de la cuenta). Lo demás, vacío.
+    - NADA DEL EJEMPLO: ni una regla, prohibición, tono ni dato de la plantilla del
+      gimnasio pasa a estas instrucciones ("una sola pregunta por mensaje", "máximo 3
+      renglones"… son de ESE ejemplo). Si crees que una regla le conviene, recomiéndala
+      en el mensaje y escríbela solo si la persona la acepta.
+    - Los recursos de la cuenta (un tipo de caso, una hoja, una ETIQUETA) se proponen en
+      el mensaje; en las instrucciones van solo si la persona los aceptó. Nunca asignes
+      a un tema una etiqueta de la cuenta que la persona no eligió: sin etiqueta dicha,
+      el tema va sin etiqueta. Solo
       lo que la persona dijo o aceptó. Una sección sin información queda con su título y
       vacía. Sin las notas <!-- --> ni el texto de ejemplo de la plantilla.
     - En palabras simples, como se lo explicarías a una persona nueva: nada de @ruta,
