@@ -66,8 +66,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   before_action :check_authorization
 
   def inventory
-    render json: ContactTrackings::Assistant::InventoryService.new(Current.account, inbox: inbox).call
-                                                              .merge(models: models_for(inbox))
+    inventario = ContactTrackings::Assistant::InventoryService.new(Current.account, inbox: inbox).call
+    render json: inventario.merge(models: models_for(inbox), catalog: ContactTrackings::Assistant::EngineCatalog.new(inventario).call)
   end
 
   def validate

@@ -43,9 +43,9 @@ import InterviewPanel from './assistant/InterviewPanel.vue';
 import SessionCard from './assistant/SessionCard.vue';
 import SortableTh from './assistant/SortableTh.vue';
 import ProgressStrip from './assistant/ProgressStrip.vue';
-import CopyChip from './assistant/CopyChip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
 import ReportModal from './assistant/ReportModal.vue';
+import EngineCatalog from './assistant/EngineCatalog.vue';
 import BriefModal from './assistant/BriefModal.vue';
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import VersionsPanel from './assistant/VersionsPanel.vue';
@@ -118,7 +118,6 @@ const AUDIT_STATUS_LABEL = {
 
 export default {
   components: {
-    CopyChip,
     TableFooter,
     EmptyState,
     Spinner,
@@ -128,6 +127,7 @@ export default {
     ProgressStrip,
     ValidationBadge,
     ReportModal,
+    EngineCatalog,
     BriefModal,
     ManualConflictNotice,
     VersionsPanel,
@@ -380,72 +380,6 @@ export default {
     pagedAgents() {
       const start = (this.agentsPage - 1) * AGENTS_PER_PAGE;
       return this.sortedAgents.slice(start, start + AGENTS_PER_PAGE);
-    },
-    // Las cuatro piezas que se pueden nombrar en un Entrenamiento, cada una con
-    // la cadena EXACTA que hay que escribir. El texto del chip no es una etiqueta
-    // bonita: es lo que el parser busca, y por eso se copia tal cual.
-    resourceBlocks() {
-      if (!this.inventory) return [];
-
-      const t = key => this.$t(`TRACKING_ASSISTANT_VIEW.${key}`);
-      return [
-        {
-          key: 'sources',
-          title: t('SOURCES_TITLE'),
-          hint: t('SOURCES_HINT'),
-          empty: t('SOURCES_EMPTY'),
-          // La directiva la arma el backend desde SEARCH_DIRECTIVES: es la misma
-          // cadena que el motor va a detectar al atender un turno.
-          items: (this.inventory.sources || []).map(source => ({
-            text: source.directive,
-            note: source.name,
-          })),
-        },
-        {
-          key: 'groups',
-          title: t('GROUPS_TITLE'),
-          hint: t('GROUPS_HINT'),
-          empty: t('GROUPS_EMPTY'),
-          items: (this.inventory.canned_groups || []).map(group => ({
-            text: `@buscar_predefinidas(${group.prefix})`,
-            note: String(group.count),
-          })),
-        },
-        {
-          key: 'caseTypes',
-          title: t('CASE_TYPES_TITLE'),
-          hint: t('CASE_TYPES_HINT'),
-          empty: t('CASE_TYPES_EMPTY'),
-          items: (this.inventory.case_types || []).map(name => ({
-            text: `@crear_ticket(tipo=${name})`,
-            note: '',
-          })),
-        },
-        {
-          key: 'actions',
-          title: t('ACTIONS_TITLE'),
-          hint: t('ACTIONS_HINT'),
-          empty: '',
-          // `note` acá no es contexto decorativo: dice que la directiva NO va a
-          // ejecutar. @agendar_calendar parsea bien y no agenda nada si la cuenta
-          // no tiene calendario conectado, así que si el chip no lo avisa, la
-          // pantalla ofrece algo que no funciona.
-          items: (this.inventory.actions || []).map(action => ({
-            text: action.directive,
-            note: action.available ? '' : t('ACTIONS_UNAVAILABLE'),
-          })),
-        },
-        {
-          key: 'labels',
-          title: t('LABELS_TITLE'),
-          hint: t('LABELS_HINT'),
-          empty: t('LABELS_EMPTY'),
-          items: (this.inventory.labels || []).map(name => ({
-            text: `#${name}`,
-            note: '',
-          })),
-        },
-      ];
     },
   },
   watch: {
@@ -1554,40 +1488,12 @@ export default {
              la paleta desde la que se arma el Entrenamiento. -->
         <div v-show="activeTab === 3" class="flex-1 min-h-0 overflow-y-auto">
           <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
-            {{ $t('TRACKING_ASSISTANT_VIEW.RESOURCES_HINT') }}
+            {{ $t('TRACKING_ASSISTANT_VIEW.CATALOG_HINT') }}
           </p>
 
-          <div class="grid gap-4 md:grid-cols-2">
-            <!-- Cada bloque dice PARA QUÉ sirve la pieza, no solo cómo se llama:
-                 sin eso, "grupos" y "etiquetas" son dos listas indistinguibles
-                 para quien nunca escribió una @ruta. -->
-            <section
-              v-for="block in resourceBlocks"
-              :key="block.key"
-              class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
-            >
-              <h3
-                class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-              >
-                {{ block.title }}
-              </h3>
-              <p class="mt-0.5 mb-3 text-xs text-slate-500 dark:text-slate-400">
-                {{ block.hint }}
-              </p>
-
-              <div v-if="block.items.length" class="flex flex-wrap gap-1.5">
-                <CopyChip
-                  v-for="item in block.items"
-                  :key="item.text"
-                  :text="item.text"
-                  :note="item.note"
-                />
-              </div>
-              <p v-else class="text-xs text-slate-400 dark:text-slate-500">
-                {{ block.empty }}
-              </p>
-            </section>
-          </div>
+          <!-- El catálogo del motor: una ficha por directiva, con su estado en la
+               cuenta y los nombres exactos para copiar (EngineCatalog). -->
+          <EngineCatalog :catalog="(inventory && inventory.catalog) || []" />
 
           <!-- Las frases van ÚLTIMAS y aparte: son las únicas que no se escriben
                en el Entrenamiento. Son el material con el que el asistente
