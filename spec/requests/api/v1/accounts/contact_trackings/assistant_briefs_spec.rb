@@ -27,7 +27,7 @@ RSpec.describe 'Asistente de Agentes IA — encargos' do
       subir(user: agent)
 
       expect(response).to have_http_status(:unauthorized)
-      expect(TrackingAgentBrief.count).to eq(0)
+      expect(TrackingAgentBrief.where(account: account).count).to eq(0)
     end
 
     it 'guarda el encargo entero, con su huella, pendiente de leer' do
@@ -41,11 +41,24 @@ RSpec.describe 'Asistente de Agentes IA — encargos' do
       expect(response.parsed_body).not_to have_key('content')
     end
 
+    it 'lo manda a leer en segundo plano, con el turno para seguir el avance' do
+      expect { subir({ turn_id: 'turno-12345' }) }
+        .to have_enqueued_job(ContactTrackings::Assistant::AgentBriefDigestJob)
+        .with(kind_of(Integer), admin.id, 'turno-12345')
+    end
+
+    it 'no manda a leer uno que ya viene leído' do
+      subir({ session_id: sesion.id })
+      TrackingAgentBrief.where(account: account).last.update!(status: 'ready')
+
+      expect { subir({ session_id: sesion.id }) }.not_to have_enqueued_job(ContactTrackings::Assistant::AgentBriefDigestJob)
+    end
+
     it 'lo liga a la conversación del Asistente' do
       conversacion = sesion
       subir({ session_id: conversacion.id })
 
-      expect(TrackingAgentBrief.last.tracking_assistant_session).to eq(conversacion)
+      expect(TrackingAgentBrief.where(account: account).last.tracking_assistant_session).to eq(conversacion)
     end
 
     it 'no duplica el mismo archivo en la misma conversación' do
@@ -56,13 +69,13 @@ RSpec.describe 'Asistente de Agentes IA — encargos' do
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to include('id' => primero, 'reused' => 'same_session')
-      expect(TrackingAgentBrief.count).to eq(1)
+      expect(TrackingAgentBrief.where(account: account).count).to eq(1)
     end
 
     # Leer un encargo grande cuesta: si la cuenta ya lo leyó, se copia la lectura.
     it 'copia la lectura de otro encargo de la cuenta con el mismo archivo' do
       subir({ session_id: sesion.id })
-      TrackingAgentBrief.last.update!(status: 'ready', digest: { 'objetivo' => 'agendar' }, answers: { 'x' => 1 })
+      TrackingAgentBrief.where(account: account).last.update!(status: 'ready', digest: { 'objetivo' => 'agendar' }, answers: { 'x' => 1 })
 
       subir({ session_id: sesion.id })
 
@@ -92,7 +105,7 @@ RSpec.describe 'Asistente de Agentes IA — encargos' do
     it 'deja el texto limpio: sin BOM y con saltos de línea Unix' do
       post base, params: { file: archivo("\uFEFFuno\r\ndos\rtres") }, headers: admin.create_new_auth_token
 
-      expect(TrackingAgentBrief.last.content).to eq("uno\ndos\ntres")
+      expect(TrackingAgentBrief.where(account: account).last.content).to eq("uno\ndos\ntres")
     end
 
     {
@@ -130,6 +143,21 @@ RSpec.describe 'Asistente de Agentes IA — encargos' do
 
       expect(response.parsed_body).to include('id' => brief.id, 'filename' => 'encargo.md', 'status' => 'pending')
       expect(response.parsed_body).not_to have_key('content')
+    end
+
+    it 'con la lectura hecha, devuelve la ficha y lo que falta' do
+      brief.update!(status: 'ready', digest: { 'ficha' => { 'objetivo' => { 'texto' => 'agendar' } }, 'faltas' => [] })
+      get "#{base}/#{brief.id}", headers: admin.create_new_auth_token
+
+      expect(response.parsed_body['digest']['ficha']['objetivo']['texto']).to eq('agendar')
+    end
+
+    it 'reintentar la lectura la vuelve a encolar' do
+      brief.update!(status: 'failed')
+
+      expect { post "#{base}/#{brief.id}/digest", headers: admin.create_new_auth_token }
+        .to have_enqueued_job(ContactTrackings::Assistant::AgentBriefDigestJob).with(brief.id, admin.id, nil)
+      expect(response).to have_http_status(:accepted)
     end
 
     it 'devuelve el .md tal cual' do

@@ -22,21 +22,30 @@ class ContactTrackings::Assistant::OpenaiChat
   # más. 180 deja margen sin pasar el límite del proxy (300 s en develop).
   READ_TIMEOUT = 180
 
-  def initialize(account:, inbox: nil)
+  # Tokens de la última llamada, como los informa OpenAI ({"prompt_tokens"=>…,
+  # "completion_tokens"=>…}). Para medir lo que cuesta leer un encargo (ver
+  # AgentBriefDigestJob); nil si la llamada falló.
+  attr_reader :last_usage
+
+  # api_key: la clave ya leída, para quien llama desde un hilo que no debe tocar la base
+  # (BriefMerger).
+  def initialize(account:, inbox: nil, api_key: nil)
     @account = account
     @inbox = inbox
+    @api_key = api_key
   end
 
   def api_key
     @api_key ||= @account.hooks.find_by(app_id: 'openai', status: 'enabled')&.settings&.dig('api_key').presence
   end
 
-  def call(history)
+  # max_tokens: para quien necesite más salida que un Entrenamiento (BriefMerger).
+  def call(history, max_tokens: nil)
     body = {
       model: ContactTrackings::EngineConfig.model_for(@inbox, :authoring_assistant),
       messages: history,
       temperature: 0.2,
-      max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:authoring_assistant),
+      max_tokens: max_tokens || ContactTrackings::EngineConfig.max_tokens_for(:authoring_assistant),
       response_format: { type: 'json_object' }
     }
 
@@ -46,10 +55,13 @@ class ContactTrackings::Assistant::OpenaiChat
   private
 
   def post(body)
+    @last_usage = nil
     response = http_client.request(build_request(body))
     return failure("HTTP #{response.code}: #{response.body.to_s[0, 300]}") unless response.is_a?(Net::HTTPSuccess)
 
-    choice = JSON.parse(response.body).dig('choices', 0)
+    datos = JSON.parse(response.body)
+    @last_usage = datos['usage']
+    choice = datos.dig('choices', 0)
     # Cortada por el tope de tokens: el JSON viene a la mitad. Se nombra acá porque
     # si no, el log dice "no es JSON" y no se entiende que falta subir el tope.
     return failure('respuesta cortada por max_tokens: el Entrenamiento no entró entero') if choice&.dig('finish_reason') == 'length'

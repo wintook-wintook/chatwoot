@@ -443,7 +443,20 @@ conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
   Banco (en `spec/fixtures/files/agent_briefs/`, salvo ADAM): los 8 encargos de una página o de un
   Entrenamiento son **1 trozo** cada uno y todos reconocen sus temas (el de soporte, en prosa, no tiene
   títulos y va entero); **ADAM: 73 trozos** por capítulo y tema, de 6 a 23 mil caracteres, en 0,27 s.
-  Con el tope bajado a 1.200 caracteres, ninguno corta a mitad de un párrafo. 36 specs. Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
+  Con el tope bajado a 1.200 caracteres, ninguno corta a mitad de un párrafo. 36 specs.
+- **F2 a medias (23/09/2026).** Hecho: `BriefFicha` (forma fija y limpieza), `BriefReader` (un trozo →
+  ficha parcial; las líneas `@ruta` las completa `RouteMap`, no el modelo), `BriefMerger` (junta por
+  familias —núcleo, temas, normas, conocimiento— en tandas de 10.000 caracteres en paralelo, con
+  reintento y sin perder prohibiciones ni temas), `BriefGaps` (faltas por los 4 pasos + herramientas
+  contra el inventario, sin IA), `BriefDigestService` + `AgentBriefDigestJob` (4 trozos a la vez, reusa
+  lecturas por huella), endpoint `POST assistant/briefs/:id/digest`. 18 specs nuevas; 402 del Asistente
+  pasan.
+  **Medido con gpt-4o en la cuenta 2:** los 8 encargos chicos, 5–15 s y USD 0,01–0,02 cada uno; objetivo
+  y modo correctos en todos (el de soporte deriva, el de citas agenda, ninguno sale vendedor).
+  **ADAM no queda listo:** la ficha sale de 120.000 caracteres (tope 16.000): 728 reglas, 291
+  prohibiciones, 79 temas, 150 faltas. El lector anota todo y el que junta casi no reduce. Leerlo tarda
+  ~25 min (no 4) y cuesta ~USD 2,5 por lectura; juntarlo ~USD 1,7 (la salida es lo caro). Pendiente:
+  poner topes de cantidad (ver el resumen al usuario del 23/09). Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
 predefinidas con lo consultable de la ficha (catálogo de servicios, glosario, guiones con "El mensaje es
 el prompt"), con confirmación por fila (+1,5 días): **queda para después** (decisión C).
 

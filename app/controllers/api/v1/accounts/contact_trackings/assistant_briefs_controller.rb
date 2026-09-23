@@ -8,8 +8,15 @@
 #   ya estaba en esa conversación. `reused: 'reading'` = otro encargo de la cuenta con
 #   el mismo archivo ya se había leído y la lectura se copió. Ver BriefIntake.
 #
+#   Un encargo nuevo se manda a leer solo (AgentBriefDigestJob); `turn_id` opcional para
+#   seguir el avance en …/assistant/progress/:turn_id.
+#
+# POST …/assistant/briefs/:id/digest  (turn_id opcional)
+#   Volver a leerlo, por ejemplo después de una falla. Lo ya leído no se vuelve a pagar.
+#   202 si se encoló; 200 si ya estaba leído.
+#
 # GET …/assistant/briefs/:id
-#   Datos del encargo, sin el texto.
+#   Datos del encargo, sin el texto. Con la ficha y lo que falta cuando ya se leyó.
 #
 # GET …/assistant/briefs/:id/content
 #   El .md tal cual se guardó (text/markdown). Aparte porque puede pesar 1 MB y la
@@ -22,10 +29,10 @@
 
 class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::Accounts::BaseController
   before_action :check_authorization
-  before_action :fetch_brief, only: [:show, :content]
+  before_action :fetch_brief, only: [:show, :content, :digest]
 
   def show
-    render json: @brief.summary
+    render json: @brief.summary.merge(@brief.ready? ? { digest: @brief.digest, usage: @brief.usage } : {})
   end
 
   def create
@@ -35,8 +42,16 @@ class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::
              .new(Current.account, Current.user, file: params[:file], session: assistant_session).call
     return render json: { error: result.error }, status: :unprocessable_entity if result.error
 
+    enqueue_digest(result.brief)
     render json: result.brief.summary.merge(reused: result.reused).compact,
            status: result.reused == 'same_session' ? :ok : :created
+  end
+
+  def digest
+    return render json: @brief.summary if @brief.ready?
+
+    enqueue_digest(@brief)
+    render json: @brief.summary, status: :accepted
   end
 
   def content
@@ -44,6 +59,13 @@ class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::
   end
 
   private
+
+  def enqueue_digest(brief)
+    return if brief.ready?
+
+    turno = params[:turn_id].to_s.match?(ContactTrackings::Assistant::TurnProgress::TURN_ID_RE) ? params[:turn_id] : nil
+    ContactTrackings::Assistant::AgentBriefDigestJob.perform_later(brief.id, Current.user.id, turno)
+  end
 
   # De la cuenta, no de quien pregunta: igual que las conversaciones del Asistente,
   # el encargo es trabajo del equipo de administradores.

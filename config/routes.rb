@@ -143,6 +143,7 @@ Rails.application.routes.draw do
             post 'assistant/briefs',             to: 'assistant_briefs#create'
             get  'assistant/briefs/:id',         to: 'assistant_briefs#show'
             get  'assistant/briefs/:id/content', to: 'assistant_briefs#content'
+            post 'assistant/briefs/:id/digest',  to: 'assistant_briefs#digest'
           end
 
           # @knowledge_sources
