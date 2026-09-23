@@ -147,7 +147,7 @@ export default {
       </p>
       <p
         v-else-if="missingPhrases"
-        class="!m-0 text-xs text-amber-600 dark:text-amber-400"
+        class="!m-0 text-xs text-amber-800 dark:text-amber-800"
       >
         {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_NO_PHRASES') }}
       </p>

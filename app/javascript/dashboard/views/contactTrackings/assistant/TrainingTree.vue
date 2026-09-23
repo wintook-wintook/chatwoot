@@ -186,7 +186,7 @@ export default {
           :class="
             definitionValue(campo)
               ? 'text-slate-500 dark:text-slate-400'
-              : 'text-amber-600 dark:text-amber-400'
+              : 'text-amber-800 dark:text-amber-800'
           "
         >
           {{

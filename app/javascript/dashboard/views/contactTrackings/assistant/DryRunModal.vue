@@ -139,7 +139,7 @@ export default {
           >
             <p
               v-if="isStale(entry)"
-              class="mb-2 text-xs text-amber-700 dark:text-amber-400"
+              class="mb-2 text-xs text-amber-800 dark:text-amber-800"
             >
               {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_STALE') }}
             </p>

@@ -78,7 +78,7 @@ export default {
             })
           }}
         </p>
-        <p v-if="isStale" class="!m-0 text-amber-700 dark:text-amber-300">
+        <p v-if="isStale" class="!m-0 text-amber-800 dark:text-amber-800">
           {{ $t('TRACKING_ASSISTANT_VIEW.TESTS_STALE') }}
         </p>
       </div>

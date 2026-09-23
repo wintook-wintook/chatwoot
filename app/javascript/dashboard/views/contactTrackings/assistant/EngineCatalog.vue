@@ -13,7 +13,7 @@ const GROUPS = ['sources', 'actions', 'structure'];
 const STATUS_CLASSES = {
   ready: 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300',
   missing:
-    'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
+    'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-800',
   depends: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
 };
 

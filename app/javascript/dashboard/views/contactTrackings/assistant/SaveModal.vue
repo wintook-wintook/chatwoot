@@ -179,7 +179,7 @@ export default {
             </option>
           </select>
         </label>
-        <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+        <p class="text-xs text-amber-800 dark:text-amber-800 mt-1">
           {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_REPLACE_HINT') }}
         </p>
       </template>

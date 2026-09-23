@@ -1448,7 +1448,7 @@ export default {
                      se decide. -->
                   <div
                     v-if="rejected"
-                    class="flex flex-col gap-2 p-3 mb-2 text-xs border rounded shrink-0 border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
+                    class="flex flex-col gap-2 p-3 mb-2 text-xs border rounded shrink-0 border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-800"
                   >
                     <p class="!m-0 font-semibold">
                       {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_TITLE') }}
@@ -1643,7 +1643,7 @@ export default {
                       <span
                         :class="
                           row.degrading
-                            ? 'text-amber-700 dark:text-amber-400'
+                            ? 'text-amber-800 dark:text-amber-800'
                             : 'text-slate-400 dark:text-slate-500'
                         "
                       >

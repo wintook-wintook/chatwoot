@@ -104,7 +104,7 @@ export default {
         class="text-xs mb-2"
         :class="{
           'text-red-700 dark:text-red-300': group.tone === 'red',
-          'text-amber-700 dark:text-amber-400': group.tone === 'amber',
+          'text-amber-800 dark:text-amber-800': group.tone === 'amber',
           'text-slate-500 dark:text-slate-400': group.tone === 'slate',
         }"
       >

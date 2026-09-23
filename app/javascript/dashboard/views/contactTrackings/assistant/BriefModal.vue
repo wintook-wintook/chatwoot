@@ -589,7 +589,7 @@ export default {
           <div
             v-for="notice in notices"
             :key="notice.que"
-            class="p-3 text-xs rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-200"
+            class="p-3 text-xs rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-800"
           >
             {{
               $t('TRACKING_ASSISTANT_VIEW.BRIEF_GAP_HERRAMIENTA_NO_DISPONIBLE')
@@ -618,7 +618,7 @@ export default {
         </span>
         <span
           v-else-if="ready && hasDraft"
-          class="mr-auto text-xs text-amber-700 dark:text-amber-300"
+          class="mr-auto text-xs text-amber-800 dark:text-amber-800"
         >
           {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_REPLACES_DRAFT') }}
         </span>

@@ -56,7 +56,7 @@ export default {
         class="px-1.5 py-0.5 font-mono text-xs border rounded"
         :class="
           row.undeclared
-            ? 'border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
+            ? 'border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-800'
             : 'border-slate-200 bg-white text-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600'
         "
         :title="
@@ -71,7 +71,7 @@ export default {
 
     <p
       v-if="undeclaredCount"
-      class="text-xs text-amber-700 dark:text-amber-300"
+      class="text-xs text-amber-800 dark:text-amber-800"
     >
       {{
         $t('TRACKING_ASSISTANT_VIEW.CHANGE_UNDECLARED', {
