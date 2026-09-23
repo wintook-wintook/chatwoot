@@ -88,11 +88,13 @@ class TrackingAssistantSession < ApplicationRecord
 
   # De qué se trataba, para el listado. El primer mensaje de la persona es lo más
   # cercano a un título que hay: es con lo que arrancó la entrevista.
+  # Si arrancó desde unas instrucciones iniciales, el primer mensaje es el encargo
+  # armado para el modelo (largo, y no escrito para leerlo): va el nombre del archivo.
   def title
     primero = Array(messages).find { |m| m['role'] == 'user' }
-    texto = primero&.dig('content').to_s.squish
+    texto = primero&.dig('content').to_s
 
-    texto.presence&.truncate(80)
+    ContactTrackings::Assistant::BriefComposer.title_for(texto) || texto.squish.presence&.truncate(80)
   end
 
   # Cuántas ramas leería el motor del último borrador. Sale de la comprobación ya

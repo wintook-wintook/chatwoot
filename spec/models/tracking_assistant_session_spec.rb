@@ -161,6 +161,16 @@ RSpec.describe TrackingAssistantSession do
       expect(s.title.length).to be <= 80
     end
 
+    # El primer mensaje de un agente armado desde instrucciones iniciales es el encargo
+    # completo para el modelo: en el listado va el nombre del archivo.
+    it 'si arrancó desde instrucciones iniciales, usa el nombre del archivo' do
+      mensaje = "#{ContactTrackings::Assistant::BriefComposer::HEADER_START}: la idea de cómo lo quiere la " \
+                'persona, ya leída y resumida del archivo «encargo_gimnasio.md». Escribilo…'
+      s = sesion(messages: [{ 'role' => 'user', 'content' => mensaje }])
+
+      expect(s.title).to eq('📎 encargo_gimnasio.md')
+    end
+
     it 'no toma como título lo que dijo el asistente' do
       s = sesion(messages: [{ 'role' => 'assistant', 'content' => 'hola, ¿en qué te ayudo?' }])
 

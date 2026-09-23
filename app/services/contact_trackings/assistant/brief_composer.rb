@@ -29,12 +29,23 @@ class ContactTrackings::Assistant::BriefComposer
   Ficha = ContactTrackings::Assistant::BriefFicha
 
   CONTEXT_MAX_CHARS = 800
+  # Con qué empieza el mensaje que arma esta clase, y de dónde se saca el archivo: el
+  # título de la conversación en «En construcción» lo usa (TrackingAssistantSession#title).
+  HEADER_START = 'Armá el Entrenamiento de un agente a partir de este ENCARGO'
+  FILENAME_RE = /archivo «([^»]+)»/
   SIDES = %w[a b].freeze
   # Las acciones van después de la flecha: medido el 23/09 con el gimnasio,
   # @agendar_calendar quedó del lado de la fuente y el motor la ignoraba.
   ACTION_TOOLS = %w[agenda ticket].freeze
   LISTS = { 'reglas' => 'REGLAS', 'prohibiciones' => 'PROHIBICIONES (nunca)', 'tono' => 'TONO',
             'datos_a_pedir' => 'DATOS QUE TIENE QUE PEDIR', 'fuera' => 'FUERA DEL AGENTE (no lo hace)' }.freeze
+
+  # "📎 encargo_gimnasio.md" si el mensaje es uno armado acá; nil si no.
+  def self.title_for(mensaje)
+    return nil unless mensaje.to_s.start_with?(HEADER_START)
+
+    "📎 #{mensaje[FILENAME_RE, 1] || '.md'}"
+  end
 
   # El texto de las reglas que la persona descartó al decidir una contradicción. Lo usa
   # también BriefCoverage: una descartada no se vuelve a agregar.
@@ -70,7 +81,7 @@ class ContactTrackings::Assistant::BriefComposer
   # renglones", los datos a pedir y la decisión de la persona sobre el precio.
   def header
     <<~TXT.strip
-      Armá el Entrenamiento de un agente a partir de este ENCARGO: la idea de cómo lo quiere la
+      #{HEADER_START}: la idea de cómo lo quiere la
       persona, ya leída y resumida del archivo «#{@brief.filename}». Escribilo en el formato del
       motor. Cada tema es una ruta. Lo que falte, <PENDIENTE: qué falta>.
 

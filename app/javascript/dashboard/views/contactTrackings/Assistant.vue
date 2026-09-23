@@ -73,10 +73,10 @@ const INBOX_STORAGE_KEY = 'tracking_assistant_inbox_id';
 // Entrenamiento desde un encargo.
 const SHOW_CHAT = true;
 
-// La pestaña Conversaciones, escondida a pedido del usuario (18/09/2026): lista las
-// conversaciones del chat, y el chat no se usa. La tabla y el retomar siguen enteros
-// detrás de esta bandera; empezar de cero está en el botón "Nuevo Agente IA".
-const SHOW_SESSIONS_TAB = false;
+// La pestaña de las conversaciones guardadas. Escondida el 18/09/2026 (el chat no se
+// usaba); vuelve el 23/09/2026 como «En construcción»: los agentes a medio armar,
+// que todavía no se guardaron como Agente IA (los guardados están en «Agentes IA»).
+const SHOW_SESSIONS_TAB = true;
 
 // El backend devuelve hasta 50 conversaciones (TrackingAssistantSession::LIST_LIMIT),
 // así que el paginado es sobre lo que ya está en memoria: no hay una segunda página
@@ -279,7 +279,7 @@ export default {
         this.showSessionsTab && {
           panel: 1,
           label: 'TRACKING_ASSISTANT_VIEW.TAB_SESSIONS',
-          count: this.sessions.length,
+          count: this.openSessions.length,
         },
         {
           panel: 2,
@@ -399,8 +399,12 @@ export default {
         ? ultima.result
         : null;
     },
+    // Solo los que siguen a medias: un agente ya guardado está en «Agentes IA».
+    openSessions() {
+      return this.sessions.filter(sesion => sesion.status === 'open');
+    },
     sortedSessions() {
-      return sortRows(this.sessions, this.sessionsSort, SESSION_COLUMNS);
+      return sortRows(this.openSessions, this.sessionsSort, SESSION_COLUMNS);
     },
     pagedSessions() {
       const start = (this.sessionsPage - 1) * SESSIONS_PER_PAGE;
@@ -1726,7 +1730,7 @@ export default {
           </div>
 
           <div
-            v-if="!sessions.length"
+            v-if="!openSessions.length"
             class="text-xs text-slate-500 dark:text-slate-400 py-4"
           >
             {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_EMPTY') }}
@@ -1855,7 +1859,7 @@ export default {
             <TableFooter
               class="border-t shrink-0 border-slate-75 dark:border-slate-700/50"
               :current-page="sessionsPage"
-              :total-count="sessions.length"
+              :total-count="openSessions.length"
               :page-size="SESSIONS_PER_PAGE"
               @pageChange="sessionsPage = $event"
             />
