@@ -271,10 +271,10 @@ export default {
           class="flex items-center gap-2 pl-1 pr-1 rounded group/rama hover:bg-slate-50 dark:hover:bg-slate-700"
         >
           <span
-            class="inline-flex shrink-0 cursor-grab active:cursor-grabbing drag-handle text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+            class="inline-flex items-center justify-center p-0.5 rounded shrink-0 cursor-grab active:cursor-grabbing drag-handle bg-woot-50 text-woot-600 hover:bg-woot-100 hover:text-woot-700 dark:bg-woot-800/50 dark:text-woot-300 dark:hover:bg-woot-700/60"
             :title="$t('TRACKING_ASSISTANT_VIEW.TREE_DRAG')"
           >
-            <fluent-icon icon="drag" size="16" />
+            <fluent-icon icon="drag" size="18" />
           </span>
           <button
             type="button"
@@ -399,10 +399,10 @@ export default {
           class="flex items-center gap-2 pl-1 pr-1 rounded group/fila hover:bg-slate-50 dark:hover:bg-slate-700"
         >
           <span
-            class="inline-flex shrink-0 cursor-grab active:cursor-grabbing drag-handle text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+            class="inline-flex items-center justify-center p-0.5 rounded shrink-0 cursor-grab active:cursor-grabbing drag-handle bg-woot-50 text-woot-600 hover:bg-woot-100 hover:text-woot-700 dark:bg-woot-800/50 dark:text-woot-300 dark:hover:bg-woot-700/60"
             :title="$t('TRACKING_ASSISTANT_VIEW.TREE_DRAG')"
           >
-            <fluent-icon icon="drag" size="16" />
+            <fluent-icon icon="drag" size="18" />
           </span>
           <button
             type="button"
