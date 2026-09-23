@@ -2,13 +2,15 @@ export default {
   GOOGLE_CALENDAR: {
     HEADER: 'Google Calendar',
     CONNECT: {
-      TITLE: 'Conectá tu Google Calendar',
-      DESCRIPTION: 'Visualizá tus eventos, compartí disponibilidad con el equipo y creá citas directamente desde las conversaciones.',
+      TITLE: 'Conecta tu Google Calendar',
+      DESCRIPTION:
+        'Visualiza tus eventos, comparte disponibilidad con el equipo y crea citas directamente desde las conversaciones.',
       BUTTON: 'Conectar cuenta de Google',
       CONNECTING: 'Conectando...',
       MODAL: {
         TITLE: 'Conectar Google Calendar',
-        DESCRIPTION: 'Se solicitarán los siguientes permisos en tu cuenta de Google:',
+        DESCRIPTION:
+          'Se solicitarán los siguientes permisos en tu cuenta de Google:',
         PERMISSIONS: [
           'Leer tus eventos de calendario',
           'Crear y editar eventos en tu nombre',
@@ -21,7 +23,7 @@ export default {
     },
     DISCONNECT: {
       BUTTON: 'Desconectar',
-      CONFIRM: '¿Estás seguro de que querés desconectar tu Google Calendar?',
+      CONFIRM: '¿Estás seguro de que quieres desconectar tu Google Calendar?',
     },
     RECONNECT: {
       BUTTON: 'Reconectar',
@@ -51,13 +53,16 @@ export default {
       SUBSCRIBE_PLACEHOLDER: 'email@ejemplo.com o ID del calendario',
       SUBSCRIBE_ADD: 'Agregar',
       SUBSCRIBE_MODAL_TITLE: 'Agregar otro calendario',
-      SUBSCRIBE_MODAL_SUBTITLE: 'Ingresá el email o el ID del calendario de Google que querés ver. Debe estar compartido con tu cuenta.',
+      SUBSCRIBE_MODAL_SUBTITLE:
+        'Ingresa el email o el ID del calendario de Google que quieres ver. Debe estar compartido con tu cuenta.',
       MODE_CREATE: 'Crear nuevo',
       MODE_SUBSCRIBE: 'Suscribir existente',
-      CREATE_HINT: 'Crea un calendario secundario NUEVO en tu cuenta de Google (como "Crear calendario nuevo" de Google).',
+      CREATE_HINT:
+        'Crea un calendario secundario NUEVO en tu cuenta de Google (como "Crear calendario nuevo" de Google).',
       CREATE_PLACEHOLDER: 'Nombre del calendario (p. ej. Consultorio Norte)',
       CREATE_ADD: 'Crear',
-      ADD_ERROR: 'No se pudo agregar el calendario. Es posible que debas reconectar tu Google Calendar para habilitar esta función.',
+      ADD_ERROR:
+        'No se pudo agregar el calendario. Es posible que debas reconectar tu Google Calendar para habilitar esta función.',
       FIELD_NAME: 'Nombre',
       FIELD_DESCRIPTION: 'Descripción',
       FIELD_DESCRIPTION_PLACEHOLDER: 'Descripción del calendario (opcional)',
@@ -65,7 +70,8 @@ export default {
       FIELD_TIMEZONE_DEFAULT: 'Predeterminada de la cuenta',
       FIELD_COLOR: 'Color',
       EDIT_MODAL_TITLE: 'Editar calendario',
-      EDIT_HINT: 'Modificá el nombre, la descripción, la zona horaria y el color del calendario.',
+      EDIT_HINT:
+        'Modifica el nombre, la descripción, la zona horaria y el color del calendario.',
       SAVE: 'Guardar',
     },
     AVAILABILITY: {
@@ -97,38 +103,38 @@ export default {
         NOTES: 'Notas',
         NOTES_PLACEHOLDER: 'Agregar notas (opcional)',
         ATTENDEES: 'Invitados',
-        ATTENDEES_PLACEHOLDER: 'Escribí un email y presioná Enter',
+        ATTENDEES_PLACEHOLDER: 'Escribe un email y presiona Enter',
       },
       SUBMIT: 'Crear Evento',
       SUBMIT_TASK: 'Crear Tarea',
       CANCEL: 'Cancelar',
       SUCCESS: 'Evento creado exitosamente',
       SUCCESS_TASK: 'Tarea creada exitosamente',
-      ERROR: 'No se pudo crear. Intentá de nuevo.',
+      ERROR: 'No se pudo crear. Inténtalo de nuevo.',
     },
     EDIT_EVENT: {
       TITLE: 'Editar Evento',
       SUBMIT: 'Guardar cambios',
       SUCCESS: 'Evento actualizado exitosamente',
-      ERROR: 'No se pudo actualizar el evento. Intentá de nuevo.',
+      ERROR: 'No se pudo actualizar el evento. Inténtalo de nuevo.',
     },
     CREATE_FROM_CONVERSATION: 'Crear evento de calendario',
     SHARE_AGENDA: {
       TITLE: 'Enviar mi agenda',
-      DESCRIPTION: 'Elegí el período y a quién enviarle la agenda.',
+      DESCRIPTION: 'Elige el período y a quién enviarle la agenda.',
       PERIOD: 'Período',
       TODAY: 'Hoy',
       DAYS_3: '3 días',
       DAYS_7: '7 días',
       INBOX: 'Canal de envío',
-      INBOX_PLACEHOLDER: 'Seleccioná un canal',
+      INBOX_PLACEHOLDER: 'Selecciona un canal',
       CONTACTS: 'Contactos',
       CONTACTS_PLACEHOLDER: 'Buscar contacto...',
       PREVIEW: 'Vista previa del mensaje',
       CANCEL: 'Cancelar',
       SEND: 'Enviar',
       SUCCESS: 'Agenda enviada exitosamente',
-      ERROR: 'No se pudo enviar la agenda. Intentá de nuevo.',
+      ERROR: 'No se pudo enviar la agenda. Inténtalo de nuevo.',
     },
     API: {
       CONNECT_ERROR: 'No se pudo conectar a Google Calendar',
