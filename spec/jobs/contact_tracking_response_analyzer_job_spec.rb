@@ -491,7 +491,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
 
     it 'le recuerda al cliente la cita existente y le ofrece moverla o cancelarla' do
       expect(job).to receive(:send_auto_reply)
-        .with(tracking, message, /ya tenés una cita agendada para el .*moverla.*cancelarla/im)
+        .with(tracking, message, /ya tienes una cita agendada para el .*moverla.*cancelarla/im)
       job.send(:handle_book_appointment, tracking, message)
     end
 

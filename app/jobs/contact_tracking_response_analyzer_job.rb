@@ -568,6 +568,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         "#{message_text_for_ai(message).truncate(300)}"
 
         Máximo 4 líneas. Tono natural y conversacional.
+        #{ContactTrackings::CustomerTone::RULE}
         No uses prefijos como "Asesor:" o "Bot:". No incluyas comillas al inicio ni al final.
         #{clean_cp.present? ? 'Si las INSTRUCCIONES ADICIONALES de arriba definen etiquetas de cierre, esta respuesta debe terminar con la que corresponda, sola en la última línea — no es opcional.' : ''}
       USER
@@ -751,7 +752,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       intro ||= 'Uy, ese horario no está disponible 😕. Para mover tu cita tengo estos horarios:'
       presentation = slots_presentation_for(tracking)
       alternatives = order_slots_for_presentation(alternatives, presentation)
-      reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número."
+      reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, presentation)}\n\n¿Cuál te queda mejor? Responde con el número."
       offer_slots(tracking, message, alternatives, reply)
     else
       send_auto_reply(tracking, message,
@@ -892,7 +893,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     slots = order_slots_for_presentation(slots, presentation)
     reply = if requested&.dig(:exact)
               "Uy, ese horario no está disponible 😕. Estos son los más cercanos:\n\n" \
-                "#{format_slots_lines(slots, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número."
+                "#{format_slots_lines(slots, timezone, presentation)}\n\n¿Cuál te queda mejor? Responde con el número."
             else
               format_slots_message(slots, timezone, presentation)
             end
@@ -947,7 +948,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     Rails.logger.info "[TrackingBot] 📅 El contacto ya tiene una cita (#{formatted}) → recordando en vez de re-ofrecer"
     send_auto_reply(
       tracking, message,
-      "Ya tenés una cita agendada para el #{formatted}. 📅 Si querés, puedo *moverla* a otro horario o *cancelarla*. ¿Qué preferís?"
+      "Ya tienes una cita agendada para el #{formatted}. 📅 Si quieres, puedo *moverla* a otro horario o *cancelarla*. ¿Qué prefieres?"
     )
   end
 
@@ -1067,7 +1068,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         Rails.logger.info '[TrackingBot] 📅 Ofreciendo horarios cercanos a lo pedido'
         presentation = slots_presentation_for(tracking)
         alternatives = order_slots_for_presentation(alternatives, presentation)
-        reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número."
+        reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, presentation)}\n\n¿Cuál te queda mejor? Responde con el número."
         offer_slots(tracking, message, alternatives, reply)
         return true
       end
@@ -1092,12 +1093,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     slots_list = format_slots_lines(display_slots, timezone, slots_presentation_for(tracking))
     send_auto_reply(tracking, message,
                     "Puedo agendarte en alguno de estos horarios 🙂:\n\n#{slots_list}\n\n" \
-                    "Respondé con el número (1 al #{current_slots.size}), o decime qué día y a qué hora te acomoda.")
+                    "Responde con el número (1 al #{current_slots.size}), o dime qué día y a qué hora te acomoda.")
     true
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error en handle_slot_negotiation: #{e.message}"
     send_auto_reply(tracking, message,
-                    "Respondé con el número del horario (1 al #{current_slots.size}) que prefieras, por favor 🙂.")
+                    "Responde con el número del horario (1 al #{current_slots.size}) que prefieras, por favor 🙂.")
     true
   end
 
@@ -1242,7 +1243,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def prompt_for_email(tracking, message, selected_slot)
     send_auto_reply(tracking, message,
                     '¡Perfecto! 📧 ¿A qué correo te envío la invitación de la cita? ' \
-                    'Si preferís, escribí "sin correo" y la agendo igual.')
+                    'Si prefieres, escribe "sin correo" y la agendo igual.')
     clear_pending_slot(tracking)
     clear_pending_email(tracking)
     tracking.update!(
@@ -1275,7 +1276,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     else
       # No es un email ni un "sin correo" claro → repreguntamos sin perder el estado
       send_auto_reply(tracking, message,
-                      'No reconocí un correo válido 😅. Escribí tu email (ej: nombre@correo.com) ' \
+                      'No reconocí un correo válido 😅. Escribe tu email (ej: nombre@correo.com) ' \
                       'o "sin correo" para agendar sin invitación.')
       return true
     end
@@ -1326,7 +1327,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       Rails.logger.warn '[TrackingBot] ⚠️ Evento NO creado en Calendar → no se confirma la cita, se escala a humano'
       send_auto_reply(tracking, message,
                       '¡Gracias por elegir un horario! 🙌 Estoy terminando de confirmar tu cita para el ' \
-                      "#{fecha_texto} a las #{hora_texto}. Un asesor te confirmará en breve, disculpá la demora. 😊")
+                      "#{fecha_texto} a las #{hora_texto}. Un asesor te confirmará en breve, disculpa la demora. 😊")
       clear_pending_slot(tracking)
       tracking.disable_auto_retry_mode!
       tracking.update!(
@@ -1340,7 +1341,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return
     end
 
-    reply = "✅ ¡Perfecto! Tu cita está agendada para el #{fecha_texto} de #{local_start.year} a las #{hora_texto}.\nTe esperamos. Si necesitás cambiarla, avisanos con anticipación. 😊"
+    reply = "✅ ¡Perfecto! Tu cita está agendada para el #{fecha_texto} de #{local_start.year} a las #{hora_texto}.\nTe esperamos. Si necesitas cambiarla, avísanos con anticipación. 😊"
     send_auto_reply(tracking, message, reply)
 
     clear_pending_slot(tracking)
@@ -1447,7 +1448,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     send_auto_reply(tracking, message,
-                    'Listo, cancelé tu cita. 🙌 Si más adelante querés agendar otra, escribime cuando gustes. 😊')
+                    'Listo, cancelé tu cita. 🙌 Si más adelante quieres agendar otra, escríbeme cuando gustes. 😊')
 
     tracking.disable_auto_retry_mode!
     tracking.update!(
@@ -1581,7 +1582,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
   def format_slots_message(slots, timezone, presentation = 'detailed')
     "¡Con gusto! 📅 Tenemos los siguientes horarios disponibles:\n\n#{format_slots_lines(slots, timezone,
-                                                                                         presentation)}\n\n¿Cuál te viene bien? Respondé con el número de tu preferencia."
+                                                                                         presentation)}\n\n¿Cuál te queda mejor? Responde con el número de tu preferencia."
   end
 
   # Envía un mensaje con horarios y deja el seguimiento esperando la elección
