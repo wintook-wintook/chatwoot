@@ -7,8 +7,14 @@
 // Entrenamiento.
 //
 // Adelantado de la F5 a pedido del usuario (23/09/2026) para poder probar la
-// lectura. Todavía NO pregunta ni escribe: eso es la F3. Va en un modal y no en el
-// chat porque el chat está escondido (SHOW_CHAT en Assistant.vue).
+// lectura. Va en un modal y no en el chat porque el chat está escondido (SHOW_CHAT
+// en Assistant.vue).
+//
+// F3 (23/09/2026): debajo de "Esto entendí", una pregunta por cada cosa que falta
+// (contradicciones, modo, frases, fuente, etiquetas). "Crear el Entrenamiento" arma
+// el encargo resuelto (BriefComposer) y lo emite: la vista del Asistente lo manda a
+// la redacción de una sola vez y lo carga en la Estructura del Agente. Lo que se
+// deje vacío sale <PENDIENTE:>.
 //
 // El modal se puede cerrar mientras lee: el componente sigue montado y la lectura
 // sigue en el servidor; al reabrirlo se ve dónde va.
@@ -21,6 +27,8 @@ import {
   listItemText,
   pointText,
   isBusy,
+  briefQuestions,
+  briefAnswers,
 } from './briefDigest';
 
 const POLL_MS = 2000;
@@ -37,8 +45,14 @@ export default {
   props: {
     show: { type: Boolean, default: false },
     sessionId: { type: [Number, String], default: null },
+    // Las etiquetas de la cuenta, para sugerirlas (inventario del Asistente).
+    labels: { type: Array, default: () => [] },
+    // La vista del Asistente está escribiendo el Entrenamiento con este encargo.
+    writing: { type: Boolean, default: false },
+    // Hay un Entrenamiento en pantalla: crear uno desde el encargo lo reemplaza.
+    hasDraft: { type: Boolean, default: false },
   },
-  emits: ['close'],
+  emits: ['close', 'write'],
   data() {
     return {
       brief: null,
@@ -48,6 +62,9 @@ export default {
       openList: '',
       timer: null,
       turnId: null,
+      // Lo contestado en el formulario, por pregunta: { 'contradiccion:0': 'b' }.
+      values: {},
+      composing: false,
     };
   },
   computed: {
@@ -68,6 +85,9 @@ export default {
     },
     herramientas() {
       return this.ficha.herramientas || [];
+    },
+    questions() {
+      return briefQuestions(this.ficha, this.brief?.digest?.faltas || []);
     },
     stageLabel() {
       const etapa = this.stage;
@@ -126,6 +146,7 @@ export default {
           turnId: this.turnId,
         });
         this.brief = data;
+        this.values = {};
         this.follow();
       } catch (error) {
         const code = error?.response?.data?.error;
@@ -175,6 +196,34 @@ export default {
     stopPolling() {
       clearInterval(this.timer);
       this.timer = null;
+    },
+    questionId(pregunta) {
+      return ['modo', 'temas'].includes(pregunta.kind)
+        ? pregunta.kind
+        : `${pregunta.kind}:${pregunta.key}`;
+    },
+    setValue(pregunta, valor) {
+      this.values = { ...this.values, [this.questionId(pregunta)]: valor };
+    },
+    valueOf(pregunta) {
+      return this.values[this.questionId(pregunta)] || '';
+    },
+    // Arma el encargo resuelto y se lo pasa a la vista, que escribe el Entrenamiento.
+    async write() {
+      if (!this.brief || this.composing || this.writing) return;
+      this.composing = true;
+      this.error = '';
+      try {
+        const { data } = await AssistantAPI.composeBrief(
+          this.brief.id,
+          briefAnswers(this.values)
+        );
+        this.$emit('write', { ...data, briefId: this.brief.id });
+      } catch (error) {
+        this.error = this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_WRITE_ERROR');
+      } finally {
+        this.composing = false;
+      }
     },
     toggleList(campo) {
       this.openList = this.openList === campo ? '' : campo;
@@ -386,6 +435,100 @@ export default {
           </ul>
         </div>
 
+        <!-- F3: lo que falta, para contestarlo antes de escribir. -->
+        <div
+          v-if="questions.length"
+          class="flex flex-col gap-3 p-3 border rounded-lg border-slate-200 dark:border-slate-600"
+        >
+          <p
+            class="!m-0 text-xs font-medium text-slate-700 dark:text-slate-200"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_ASK_TITLE') }}
+          </p>
+          <div
+            v-for="(pregunta, n) in questions"
+            :key="questionId(pregunta)"
+            class="flex flex-col gap-1 text-xs"
+          >
+            <p class="!m-0 text-slate-800 dark:text-slate-100">
+              {{ n + 1 }}.
+              {{
+                $t(
+                  `TRACKING_ASSISTANT_VIEW.BRIEF_ASK_${pregunta.kind.toUpperCase()}`,
+                  { sobre: pregunta.sobre, tema: pregunta.tema }
+                )
+              }}
+            </p>
+            <template v-if="pregunta.kind === 'contradiccion'">
+              <label
+                v-for="lado in ['a', 'b']"
+                :key="lado"
+                class="flex items-start gap-2 !m-0 cursor-pointer text-slate-700 dark:text-slate-200"
+              >
+                <input
+                  type="radio"
+                  class="!m-0 mt-0.5"
+                  :name="questionId(pregunta)"
+                  :checked="valueOf(pregunta) === lado"
+                  @change="setValue(pregunta, lado)"
+                />
+                {{ pregunta[lado] }}
+              </label>
+            </template>
+            <template v-else-if="pregunta.kind === 'modo'">
+              <label
+                v-for="modo in ['responde', 'deriva']"
+                :key="modo"
+                class="flex items-center gap-2 !m-0 cursor-pointer text-slate-700 dark:text-slate-200"
+              >
+                <input
+                  type="radio"
+                  class="!m-0"
+                  name="modo"
+                  :checked="valueOf(pregunta) === modo"
+                  @change="setValue(pregunta, modo)"
+                />
+                {{
+                  $t(`TRACKING_ASSISTANT_VIEW.BRIEF_MODO_${modo.toUpperCase()}`)
+                }}
+              </label>
+            </template>
+            <textarea
+              v-else-if="['frases', 'temas'].includes(pregunta.kind)"
+              rows="2"
+              class="!mb-0 text-xs"
+              :placeholder="
+                $t(
+                  `TRACKING_ASSISTANT_VIEW.BRIEF_ASK_${pregunta.kind.toUpperCase()}_HINT`
+                )
+              "
+              :value="valueOf(pregunta)"
+              @input="setValue(pregunta, $event.target.value)"
+            />
+            <input
+              v-else
+              type="text"
+              class="!mb-0 text-xs"
+              :list="
+                pregunta.kind === 'etiquetas' ? 'brief-account-labels' : null
+              "
+              :placeholder="
+                $t(
+                  `TRACKING_ASSISTANT_VIEW.BRIEF_ASK_${pregunta.kind.toUpperCase()}_HINT`
+                )
+              "
+              :value="valueOf(pregunta)"
+              @input="setValue(pregunta, $event.target.value)"
+            />
+          </div>
+          <datalist id="brief-account-labels">
+            <option v-for="label in labels" :key="label" :value="label" />
+          </datalist>
+          <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
+            {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_ASK_EMPTY_HINT') }}
+          </p>
+        </div>
+
         <!-- La ficha completa, lista por lista. -->
         <div v-if="lists.length" class="flex flex-col gap-1">
           <p
@@ -421,18 +564,37 @@ export default {
         >
           {{ usageLabel }}
         </p>
-        <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
-          {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_NEXT') }}
+        <p
+          v-if="hasDraft"
+          class="!m-0 text-xs text-amber-700 dark:text-amber-300"
+        >
+          {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_REPLACES_DRAFT') }}
         </p>
       </div>
 
-      <div class="flex items-center justify-end shrink-0">
+      <div class="flex flex-wrap items-center justify-end gap-2 shrink-0">
+        <span
+          v-if="writing"
+          class="flex items-center gap-2 mr-auto text-xs text-slate-600 dark:text-slate-300"
+        >
+          <Spinner size="" />
+          {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_WRITING') }}
+        </span>
         <woot-button
           variant="clear"
           color-scheme="secondary"
+          :is-disabled="writing"
           @click="$emit('close')"
         >
           {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_CLOSE') }}
+        </woot-button>
+        <woot-button
+          v-if="brief && brief.status === 'ready'"
+          :is-loading="composing || writing"
+          :is-disabled="composing || writing"
+          @click="write"
+        >
+          {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_WRITE') }}
         </woot-button>
       </div>
     </div>

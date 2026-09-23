@@ -68,3 +68,45 @@ export const listItemText = (campo, punto) => {
 };
 
 export const isBusy = status => ['pending', 'reading'].includes(status);
+
+// Las preguntas del formulario, desde las faltas crudas (no las agrupadas: cada tema
+// lleva su propio campo). Las contradicciones van por su índice en la ficha, que es
+// como las identifica el backend al armar el encargo (BriefComposer).
+export const briefQuestions = (ficha = {}, gaps = []) => {
+  const preguntas = (ficha.contradicciones || []).map((c, index) => ({
+    kind: 'contradiccion',
+    key: String(index),
+    ...c,
+  }));
+  gaps.forEach(gap => {
+    if (gap.que === 'modo') preguntas.push({ kind: 'modo', key: 'modo' });
+    if (gap.que === 'temas') preguntas.push({ kind: 'temas', key: 'temas' });
+    if (gap.que === 'frases_cliente')
+      preguntas.push({ kind: 'frases', key: gap.tema, tema: gap.tema });
+    if (gap.que === 'fuente_o_escalamiento')
+      preguntas.push({ kind: 'fuentes', key: gap.tema, tema: gap.tema });
+  });
+  const sinEtiqueta = (ficha.temas || []).filter(t => !t.etiqueta);
+  sinEtiqueta.forEach(t =>
+    preguntas.push({ kind: 'etiquetas', key: t.nombre, tema: t.nombre })
+  );
+  return preguntas;
+};
+
+// Las respuestas en la forma que espera el backend, sin las vacías.
+export const briefAnswers = (values = {}) => {
+  const respuestas = {};
+  Object.entries(values).forEach(([id, valor]) => {
+    const texto = typeof valor === 'string' ? valor.trim() : valor;
+    if (!texto) return;
+    const [kind, ...resto] = id.split(':');
+    const key = resto.join(':');
+    if (kind === 'modo' || kind === 'temas') {
+      respuestas[kind] = texto;
+      return;
+    }
+    const grupo = kind === 'contradiccion' ? 'contradicciones' : kind;
+    respuestas[grupo] = { ...(respuestas[grupo] || {}), [key]: texto };
+  });
+  return respuestas;
+};

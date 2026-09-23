@@ -1,4 +1,11 @@
-import { groupGaps, listSizes, listItemText, isBusy } from './briefDigest';
+import {
+  groupGaps,
+  listSizes,
+  listItemText,
+  isBusy,
+  briefQuestions,
+  briefAnswers,
+} from './briefDigest';
 
 describe('briefDigest', () => {
   it('agrupa las faltas por tipo, en el orden de los pasos', () => {
@@ -58,5 +65,37 @@ describe('briefDigest', () => {
   it('sabe cuándo todavía se está leyendo', () => {
     expect(isBusy('reading')).toBe(true);
     expect(isBusy('ready')).toBe(false);
+  });
+
+  it('arma una pregunta por contradicción, por tema sin frases y por tema sin etiqueta', () => {
+    const ficha = {
+      contradicciones: [{ sobre: 'precio', a: 'x', b: 'y' }],
+      temas: [
+        { nombre: 'Precios', etiqueta: 'precios' },
+        { nombre: 'Horarios' },
+      ],
+    };
+    const gaps = [{ que: 'frases_cliente', tema: 'Horarios' }];
+
+    expect(briefQuestions(ficha, gaps).map(p => `${p.kind}:${p.key}`)).toEqual([
+      'contradiccion:0',
+      'frases:Horarios',
+      'etiquetas:Horarios',
+    ]);
+  });
+
+  it('manda solo lo contestado, agrupado como lo espera el backend', () => {
+    expect(
+      briefAnswers({
+        'contradiccion:0': 'b',
+        'frases:Horarios': '¿a qué hora?\n',
+        'etiquetas:Horarios': '  ',
+        modo: 'deriva',
+      })
+    ).toEqual({
+      contradicciones: { 0: 'b' },
+      frases: { Horarios: '¿a qué hora?' },
+      modo: 'deriva',
+    });
   });
 });

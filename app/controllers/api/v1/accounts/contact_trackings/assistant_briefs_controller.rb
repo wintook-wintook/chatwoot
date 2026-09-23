@@ -18,6 +18,16 @@
 # GET …/assistant/briefs/:id
 #   Datos del encargo, sin el texto. Con la ficha y lo que falta cuando ya se leyó.
 #
+# POST …/assistant/briefs/:id/compose  (answers: lo que la persona contestó)
+#   El encargo ya resuelto, como mensaje para la redacción de una sola vez del Asistente
+#   (…/assistant/interview con one_shot), y el objetivo y contexto para la Definición.
+#   Guarda las respuestas en el encargo: regenerar no las vuelve a preguntar. Ver
+#   BriefComposer.
+#
+# POST …/assistant/briefs/:id/cover  (draft: lo que escribió el Asistente)
+#   El mismo Entrenamiento con lo que la redacción dejó afuera del encargo agregado en su
+#   sección, sin IA. `added`: qué se agregó. Ver BriefCoverage.
+#
 # GET …/assistant/briefs/:id/content
 #   El .md tal cual se guardó (text/markdown). Aparte porque puede pesar 1 MB y la
 #   pantalla casi nunca lo necesita.
@@ -29,7 +39,7 @@
 
 class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::Accounts::BaseController
   before_action :check_authorization
-  before_action :fetch_brief, only: [:show, :content, :digest]
+  before_action :fetch_brief, only: [:show, :content, :digest, :compose, :cover]
 
   def show
     render json: @brief.summary.merge(@brief.ready? ? { digest: @brief.digest, usage: @brief.usage } : {})
@@ -52,6 +62,21 @@ class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::
 
     enqueue_digest(@brief)
     render json: @brief.summary, status: :accepted
+  end
+
+  def compose
+    return render json: { error: 'not_ready' }, status: :unprocessable_entity unless @brief.ready?
+
+    respuestas = params[:answers].respond_to?(:to_unsafe_h) ? params[:answers].to_unsafe_h : {}
+    @brief.update!(answers: respuestas)
+    render json: ContactTrackings::Assistant::BriefComposer.new(@brief, answers: respuestas).call
+  end
+
+  def cover
+    return render json: { error: 'not_ready' }, status: :unprocessable_entity unless @brief.ready?
+
+    render json: ContactTrackings::Assistant::BriefCoverage
+      .new(params[:draft], ficha: @brief.digest['ficha'], answers: @brief.answers).call
   end
 
   def content

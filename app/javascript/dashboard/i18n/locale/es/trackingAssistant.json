@@ -333,7 +333,6 @@
     "BRIEF_LIST_FUERA": "Fuera del agente",
     "BRIEF_LIST_DUDAS": "Dudas",
     "BRIEF_USAGE": "Leído en %{chunks} partes · %{seconds} s · USD %{cost}",
-    "BRIEF_NEXT": "Próximamente: el asistente te preguntará lo que falta y escribirá el Entrenamiento con esto.",
     "BRIEF_CLOSE": "Cerrar",
     "BRIEF_ERROR": "No se pudo subir el encargo. Inténtalo de nuevo.",
     "BRIEF_ERROR_TOO_LARGE": "El archivo pasa de 5 MB.",
@@ -342,6 +341,23 @@
     "BRIEF_ERROR_EMPTY": "El archivo está vacío.",
     "BRIEF_ERROR_MISSING_FILE": "No llegó ningún archivo.",
     "BRIEF_FILE": "📎 %{name} · %{size} KB",
-    "BRIEF_GAP_CONTRADICCION": "El encargo se contradice; ¿cuál vale?"
+    "BRIEF_GAP_CONTRADICCION": "El encargo se contradice; ¿cuál vale?",
+    "BRIEF_ASK_TITLE": "Antes de escribirlo, contéstame:",
+    "BRIEF_ASK_CONTRADICCION": "El encargo se contradice sobre «%{sobre}». ¿Cuál vale?",
+    "BRIEF_ASK_MODO": "¿El agente contesta o deriva siempre?",
+    "BRIEF_ASK_TEMAS": "¿Qué temas atiende?",
+    "BRIEF_ASK_TEMAS_HINT": "Por ejemplo: precios, citas, reclamos",
+    "BRIEF_ASK_FRASES": "¿Cómo escribe el cliente cuando quiere «%{tema}»?",
+    "BRIEF_ASK_FRASES_HINT": "Una frase por renglón, como la escribiría el cliente",
+    "BRIEF_ASK_FUENTES": "En «%{tema}», ¿de dónde saca la respuesta o qué hace si no puede resolver?",
+    "BRIEF_ASK_FUENTES_HINT": "Por ejemplo: la hoja de precios, abrir un caso, pasar a una persona",
+    "BRIEF_ASK_ETIQUETAS": "¿Con qué etiqueta cierra «%{tema}»?",
+    "BRIEF_ASK_ETIQUETAS_HINT": "Elige una de la cuenta o escribe una nueva",
+    "BRIEF_ASK_EMPTY_HINT": "Lo que dejes vacío quedará marcado como pendiente en el Entrenamiento para completarlo después.",
+    "BRIEF_WRITE": "Crear el Entrenamiento",
+    "BRIEF_WRITING": "Escribiendo el Entrenamiento… puede tardar cerca de un minuto.",
+    "BRIEF_WRITE_ERROR": "No se pudo escribir el Entrenamiento. Inténtalo de nuevo.",
+    "BRIEF_REPLACES_DRAFT": "Esto reemplaza lo que tienes ahora en la Estructura del Agente.",
+    "BRIEF_COVERED": "Se agregaron %{count} puntos del encargo que la redacción había dejado afuera."
   }
 }

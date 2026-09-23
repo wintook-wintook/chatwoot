@@ -144,6 +144,8 @@ Rails.application.routes.draw do
             get  'assistant/briefs/:id',         to: 'assistant_briefs#show'
             get  'assistant/briefs/:id/content', to: 'assistant_briefs#content'
             post 'assistant/briefs/:id/digest',  to: 'assistant_briefs#digest'
+            post 'assistant/briefs/:id/compose', to: 'assistant_briefs#compose'
+            post 'assistant/briefs/:id/cover',   to: 'assistant_briefs#cover'
           end
 
           # @knowledge_sources

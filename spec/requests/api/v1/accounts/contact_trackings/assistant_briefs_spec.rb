@@ -152,6 +152,38 @@ RSpec.describe 'Asistente de Agentes IA — encargos' do
       expect(response.parsed_body['digest']['ficha']['objetivo']['texto']).to eq('agendar')
     end
 
+    it 'arma el encargo resuelto con lo que contestó la persona y lo guarda' do
+      brief.update!(status: 'ready', digest: { 'ficha' => {
+                      'objetivo' => { 'texto' => 'agendar citas' },
+                      'reglas' => [{ 'texto' => 'preguntar antes' }, { 'texto' => 'no preguntar' }],
+                      'contradicciones' => [{ 'sobre' => 'preguntas', 'a' => 'preguntar antes', 'b' => 'no preguntar' }]
+                    } })
+
+      post "#{base}/#{brief.id}/compose", params: { answers: { contradicciones: { '0' => 'b' } } },
+                                          headers: admin.create_new_auth_token, as: :json
+
+      mensaje = response.parsed_body['message']
+      expect(mensaje).to include('vale «no preguntar»')
+      expect(mensaje).not_to include('- preguntar antes')
+      expect(response.parsed_body['proposal']).to include('objective' => 'agendar citas')
+      expect(brief.reload.answers).to eq('contradicciones' => { '0' => 'b' })
+    end
+
+    it 'agrega al Entrenamiento lo que la redacción dejó afuera del encargo' do
+      brief.update!(status: 'ready', digest: { 'ficha' => { 'reglas' => [{ 'texto' => 'Una sola pregunta por mensaje' }] } })
+
+      post "#{base}/#{brief.id}/cover", params: { draft: "[ROL]\nSoy Leo." }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['draft']).to include("[REGLAS]\n- Una sola pregunta por mensaje")
+      expect(response.parsed_body['added'].size).to eq(1)
+    end
+
+    it 'no arma nada de un encargo que todavía no se leyó' do
+      post "#{base}/#{brief.id}/compose", headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['error']).to eq('not_ready')
+    end
+
     it 'reintentar la lectura la vuelve a encolar' do
       brief.update!(status: 'failed')
 

@@ -462,7 +462,18 @@ conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
   entendí» (quién es, objetivo, cómo atiende, temas, herramientas con ✓/✗, lo que falta, la ficha lista
   por lista, tiempo y costo). Va en un modal porque el chat está escondido (`SHOW_CHAT`). Todavía no
   pregunta ni escribe el Entrenamiento: eso es la F3. Probado de punta a punta en develop (cobranza.md:
-  9 s, USD 0,012). Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
+  9 s, USD 0,012).
+- **F3 y F4, versión modal (23/09/2026).** El usuario eligió contestar en el mismo modal (el chat sigue
+  escondido). Debajo de «Esto entendí», una pregunta por cada contradicción, tema sin frases, tema sin
+  fuente y tema sin etiqueta (con las etiquetas de la cuenta); «Crear el Entrenamiento» → `BriefComposer`
+  (`POST briefs/:id/compose`: el encargo resuelto, guarda las respuestas; la regla descartada en una
+  contradicción sale de las listas; cada herramienta con su directiva) → la redacción de una sola vez de
+  siempre (`interview` con `one_shot`) → `BriefCoverage` (`POST briefs/:id/cover`, sin IA: agrega en su
+  sección lo que la redacción soltó y limpia rótulos «═══» y la sección [PENDIENTE]). La Definición
+  (objetivo y, si caben en 800, los datos del negocio como Contexto) sale de la ficha.
+  **Medido con el gimnasio:** sin la cobertura, la redacción dejó 1.600–2.000 caracteres y soltó 4 reglas,
+  los 3 datos a pedir y la decisión sobre el precio aun con «NADA SE PIERDE» en el pedido; con la
+  cobertura, las 8 vuelven. Pendiente de la F4 original: que la persona pueda decir «dejalo fuera». Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
 predefinidas con lo consultable de la ficha (catálogo de servicios, glosario, guiones con "El mensaje es
 el prompt"), con confirmación por fila (+1,5 días): **queda para después** (decisión C).
 

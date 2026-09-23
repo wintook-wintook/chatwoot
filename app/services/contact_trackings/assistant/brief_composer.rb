@@ -1,0 +1,193 @@
+# frozen_string_literal: true
+
+# ================================================================================
+# proyecto@asistente_agentes_ia — EL ENCARGO, YA RESUELTO, PARA ESCRIBIR (F3 de docs/importar_prompt_md_plan.md)
+# ================================================================================
+# La ficha del encargo + lo que la persona contestó en el modal → UN mensaje para la
+# redacción de una sola vez del Asistente (InterviewService one_shot). No se escribe
+# un redactor nuevo: el que ya existe comprueba con el parser real y se corrige solo.
+#
+# Por qué en el modal y no en el chat (decisión del usuario, 23/09): el chat está
+# escondido (SHOW_CHAT en Assistant.vue). Las preguntas son las mismas cuatro de la
+# entrevista más las contradicciones; lo que se deje sin contestar sale <PENDIENTE:>.
+#
+# También arma la Definición del agente desde la ficha, sin IA: el objetivo, y los
+# datos del negocio como Contexto SOLO si caben en lo que el motor lee de él (800
+# caracteres, ver project_motor_limites_prompt); si no caben, se le pide al redactor
+# que los ponga como sección, que no se recorta.
+#
+# RESPUESTAS (lo que manda el modal, todo opcional):
+#   contradicciones  { "0" => "a" | "b" }        índice en la ficha → cuál vale
+#   modo             "responde" | "deriva"
+#   temas            "texto libre"                si el encargo no traía temas
+#   frases           { "tema" => "una por renglón" }
+#   fuentes          { "tema" => "de dónde / qué hace si no resuelve" }
+#   etiquetas        { "tema" => "#etiqueta" }
+# ================================================================================
+
+class ContactTrackings::Assistant::BriefComposer
+  Ficha = ContactTrackings::Assistant::BriefFicha
+
+  CONTEXT_MAX_CHARS = 800
+  SIDES = %w[a b].freeze
+  # Qué directiva del motor corresponde a cada herramienta. Medido el 23/09 con el
+  # gimnasio: sin esto, "se agenda en el calendario de recepción" salió como
+  # <PENDIENTE: calendario de recepción> en vez de @agendar_calendar.
+  DIRECTIVES = {
+    'agenda' => '@agendar_calendar, como acción después de la flecha: @ruta(…): - -> @agendar_calendar',
+    'ticket' => '@crear_ticket(tipo=…) con un tipo de caso de la cuenta',
+    'hoja' => '{{hoja:NOMBRE EXACTO de la hoja en la cuenta}}',
+    'documento' => '{{doc:NOMBRE EXACTO del documento en la cuenta}}',
+    'erp' => '{{consulta:…}}',
+    'predefinidas' => '@buscar_predefinidas',
+    'foro' => '@buscar_foro(NOMBRE del foro)',
+    'articulo' => '@buscar_articulo'
+  }.freeze
+  LISTS = { 'reglas' => 'REGLAS', 'prohibiciones' => 'PROHIBICIONES (nunca)', 'tono' => 'TONO',
+            'datos_a_pedir' => 'DATOS QUE TIENE QUE PEDIR', 'fuera' => 'FUERA DEL AGENTE (no lo hace)' }.freeze
+
+  # El texto de las reglas que la persona descartó al decidir una contradicción. Lo usa
+  # también BriefCoverage: una descartada no se vuelve a agregar.
+  def self.discarded(ficha, answers)
+    Array(ficha['contradicciones']).each_with_index.filter_map do |c, i|
+      lado = answers.to_h.deep_stringify_keys.dig('contradicciones', i.to_s)
+      c[lado == 'a' ? 'b' : 'a'] if SIDES.include?(lado)
+    end.to_set
+  end
+
+  def initialize(brief, answers: {})
+    @brief = brief
+    @ficha = brief.digest['ficha'] || {}
+    @answers = (answers.respond_to?(:to_unsafe_h) ? answers.to_unsafe_h : answers.to_h).deep_stringify_keys
+  end
+
+  # { message:, proposal: { objective:, ai_context: } }
+  def call
+    { message: message, proposal: proposal }
+  end
+
+  private
+
+  def message
+    [header, identity, topics, tools, *lists, knowledge_block, decisions, closing].compact.join("\n\n")
+  end
+
+  # Medido el 23/09 con el gimnasio: sin el "NADA SE PIERDE", la redacción de una sola
+  # vez dejó 1.600 caracteres y se comió "una sola pregunta por mensaje", "máximo 3
+  # renglones", los datos a pedir y la decisión de la persona sobre el precio.
+  def header
+    <<~TXT.strip
+      Armá el Entrenamiento de un agente a partir de este ENCARGO: la idea de cómo lo quiere la
+      persona, ya leída y resumida del archivo «#{@brief.filename}». Escribilo en el formato del
+      motor. Cada tema es una ruta. Lo que falte, <PENDIENTE: qué falta>.
+
+      ⚠ NADA SE PIERDE: cada regla, prohibición, punto de tono, dato a pedir y decisión de la
+      persona de abajo tiene que quedar en el Entrenamiento, en su sección ([REGLAS],
+      [PROHIBIDO], [ESTILO], [DATOS A PEDIR]…), con sus palabras o más claras, nunca resumida
+      hasta perderse. Escribí en el idioma del encargo.
+    TXT
+  end
+
+  def identity
+    [line('QUIÉN ES', @ficha['identidad']), line('OBJETIVO', @ficha['objetivo']),
+     "CÓMO ATIENDE: #{modo || '<PENDIENTE: contesta o deriva>'}"].compact.join("\n")
+  end
+
+  def modo
+    elegido = @answers['modo'].to_s
+    Ficha::MODES.include?(elegido) ? elegido : @ficha.dig('modo', 'texto')
+  end
+
+  def topics
+    temas = Array(@ficha['temas'])
+    return "TEMAS (cada uno es una ruta): #{@answers['temas'].presence || '<PENDIENTE: qué temas atiende>'}" if temas.empty?
+
+    (['TEMAS (cada uno es una ruta):'] + temas.map { |t| topic_line(t) }).join("\n")
+  end
+
+  # Lo que contestó la persona manda sobre lo que traía el encargo.
+  def topic_line(tema)
+    nombre = tema['nombre']
+    frases = answered_list('frases', nombre).presence || Array(tema['frases_cliente'])
+    fuente = [tema['fuente'], tema['si_no_resuelve'], @answers.dig('fuentes', nombre)].compact_blank
+    etiqueta = (@answers.dig('etiquetas', nombre).presence || tema['etiqueta']).to_s.delete_prefix('#')
+    partes = { 'qué hace' => tema['que_hace'], 'el cliente escribe' => frases.map { |f| "«#{f}»" }.join(', '),
+               'fuente / si no resuelve' => fuente.join(' · '), 'etiqueta' => etiqueta.presence&.prepend('#') }
+    (["- #{nombre}"] + partes.compact_blank.map { |titulo, valor| "#{titulo}: #{valor}" }).join(' · ')
+  end
+
+  def answered_list(campo, tema)
+    @answers.dig(campo, tema).to_s.split("\n").map(&:strip).compact_blank
+  end
+
+  def tools
+    lista = Array(@ficha['herramientas']).map do |h|
+      nota = h['disponible'] == false ? ' (la cuenta NO la tiene conectada: <PENDIENTE>)' : ''
+      directiva = DIRECTIVES[h['tipo']] ? " → #{DIRECTIVES[h['tipo']]}" : ''
+      "- #{h['tipo']}: #{h['para']}#{directiva}#{nota}"
+    end
+    lista.any? ? (['HERRAMIENTAS:'] + lista).join("\n") : nil
+  end
+
+  def lists
+    LISTS.filter_map do |campo, titulo|
+      puntos = Array(@ficha[campo]).reject { |p| discarded.include?(p['texto']) }.map { |p| "- #{p['texto']}" }
+      puntos.any? ? (["#{titulo}:"] + puntos).join("\n") : nil
+    end
+  end
+
+  # Los datos del negocio y lo consultable. Si ya van como Contexto, no se repiten.
+  def knowledge_block
+    return nil if knowledge.empty? || context_fits?
+
+    (['DATOS DEL NEGOCIO Y CONOCIMIENTO (ponelos como una sección del Entrenamiento):'] +
+      knowledge.map { |k| "- #{k}" }).join("\n")
+  end
+
+  def knowledge
+    @knowledge ||= Array(@ficha['conocimiento']).map { |c| "#{c['tema']}: #{c['resumen']}" }
+  end
+
+  def context_fits?
+    knowledge.any? && knowledge.join("\n").length <= CONTEXT_MAX_CHARS
+  end
+
+  # Lo que la persona decidió en las contradicciones: la que vale entra, la otra no
+  # (y se saca de las listas, ver #discarded). Sin elegir, queda <PENDIENTE:> con las
+  # dos opciones a la vista.
+  def decisions
+    lineas = contradictions.map do |c, lado|
+      next "- Sobre «#{c['sobre']}» el encargo se contradice: <PENDIENTE: «#{c['a']}» o «#{c['b']}»>" if lado.nil?
+
+      "- Sobre «#{c['sobre']}»: vale «#{c[lado]}». NO pongas «#{c[other(lado)]}»."
+    end
+    lineas.any? ? (['DECISIONES DE LA PERSONA:'] + lineas).join("\n") : nil
+  end
+
+  # [[contradicción, 'a' | 'b' | nil]]
+  def contradictions
+    Array(@ficha['contradicciones']).each_with_index.map do |c, i|
+      lado = @answers.dig('contradicciones', i.to_s)
+      [c, SIDES.include?(lado) ? lado : nil]
+    end
+  end
+
+  def other(lado) = lado == 'a' ? 'b' : 'a'
+
+  def discarded
+    @discarded ||= self.class.discarded(@ficha, @answers)
+  end
+
+  def closing
+    'Al final del "mensaje", enumerá lo que quedó <PENDIENTE:>.'
+  end
+
+  def line(titulo, punto)
+    texto = punto.is_a?(Hash) ? punto['texto'] : punto
+    texto.present? ? "#{titulo}: #{texto}" : nil
+  end
+
+  def proposal
+    { objective: @ficha.dig('objetivo', 'texto').to_s, ai_context: context_fits? ? knowledge.join("\n") : '' }
+  end
+end

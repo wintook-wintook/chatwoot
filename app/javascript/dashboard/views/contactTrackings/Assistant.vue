@@ -229,6 +229,7 @@ export default {
       showReportModal: false,
       // El encargo (.md) con la idea del agente: ver BriefModal.
       showBriefModal: false,
+      isWritingBrief: false,
       // Modo ancho: esconde la conversación y deja el Entrenamiento a todo el
       // ancho. Para los 6 agentes de la cuenta que pasan de 370 líneas.
       isWideEditor: !SHOW_CHAT,
@@ -781,7 +782,8 @@ export default {
       this.activeTab = 0;
       this.validateDraft();
     },
-    async sendMessage(content) {
+    // oneShot: redacta de una, sin preguntar (lo usa el encargo, ver writeFromBrief).
+    async sendMessage(content, { oneShot = false } = {}) {
       this.messages.push({ role: 'user', content });
       this.isThinking = true;
       const turnId = this.startProgress();
@@ -790,6 +792,7 @@ export default {
           this.messages,
           this.inboxId,
           {
+            oneShot,
             sessionId: this.sessionId,
             draft: this.draft.trim() ? this.draft : null,
             deliveredDraft: this.lastDelivered,
@@ -842,6 +845,50 @@ export default {
       } finally {
         this.stopProgress();
         this.isThinking = false;
+      }
+    },
+    // F3 del encargo (docs/importar_prompt_md_plan.md): el encargo ya resuelto con lo
+    // que se contestó en el modal va a la redacción de una sola vez, en un agente
+    // nuevo. La Definición sale de la ficha (objetivo, y los datos del negocio como
+    // Contexto si caben): el modelo de una sola vez no la propone.
+    //
+    // Después, la cobertura (BriefCoverage): la redacción de una sola vez sigue su
+    // molde y suelta reglas; lo que falte del encargo se agrega en su sección.
+    async writeFromBrief({ message, proposal, briefId }) {
+      this.startFresh();
+      this.isWritingBrief = true;
+      await this.sendMessage(message, { oneShot: true });
+      if (!this.draft.trim()) {
+        this.isWritingBrief = false;
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_WRITE_ERROR'));
+        return;
+      }
+      await this.coverFromBrief(briefId);
+      this.isWritingBrief = false;
+      const definicion = Object.fromEntries(
+        Object.entries(proposal || {}).filter(([, valor]) => valor)
+      );
+      this.proposal = { ...(this.proposal || {}), ...definicion };
+      this.showBriefModal = false;
+    },
+    // Si la cobertura falla, queda lo que escribió el Asistente: no es motivo para
+    // tirar un Entrenamiento que ya está en pantalla.
+    async coverFromBrief(briefId) {
+      try {
+        const { data } = await AssistantAPI.coverBrief(briefId, this.draft);
+        if (!data.draft || data.draft === this.draft) return;
+        this.draft = data.draft;
+        this.lastDelivered = data.draft;
+        this.validateDraft();
+        if (data.added?.length) {
+          useAlert(
+            this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_COVERED', {
+              count: data.added.length,
+            })
+          );
+        }
+      } catch (error) {
+        // Queda lo escrito por el Asistente.
       }
     },
     // Fase D: mientras el turno corre, se consulta en qué etapa está. El id lo
@@ -1910,7 +1957,11 @@ export default {
     <BriefModal
       :show="showBriefModal"
       :session-id="sessionId"
+      :labels="(inventory && inventory.labels) || []"
+      :writing="isWritingBrief"
+      :has-draft="Boolean(draft.trim())"
       @close="showBriefModal = false"
+      @write="writeFromBrief"
     />
     <ReportModal
       :show="showReportModal"

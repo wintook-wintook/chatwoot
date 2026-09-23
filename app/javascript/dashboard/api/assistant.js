@@ -126,6 +126,17 @@ class AssistantAPI extends ApiClient {
     return axios.get(`${this.url}/briefs/${id}`);
   }
 
+  // El encargo ya resuelto con lo que contestó la persona: { message, proposal }.
+  // `message` va a interview() con oneShot; guarda las respuestas en el encargo.
+  composeBrief(id, answers) {
+    return axios.post(`${this.url}/briefs/${id}/compose`, { answers });
+  }
+
+  // Lo que la redacción dejó afuera del encargo, agregado en su sección (sin IA).
+  coverBrief(id, draft) {
+    return axios.post(`${this.url}/briefs/${id}/cover`, { draft });
+  }
+
   // Volver a leerlo (después de una falla). Lo ya leído no se vuelve a pagar.
   digestBrief(id, turnId = null) {
     return axios.post(`${this.url}/briefs/${id}/digest`, { turn_id: turnId });

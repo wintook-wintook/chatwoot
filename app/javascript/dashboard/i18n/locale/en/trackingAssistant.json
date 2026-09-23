@@ -333,7 +333,6 @@
     "BRIEF_LIST_FUERA": "Outside the agent",
     "BRIEF_LIST_DUDAS": "Open questions",
     "BRIEF_USAGE": "Read in %{chunks} parts · %{seconds} s · USD %{cost}",
-    "BRIEF_NEXT": "Coming next: the assistant will ask what's missing and write the Training from this.",
     "BRIEF_CLOSE": "Close",
     "BRIEF_ERROR": "The brief could not be uploaded. Try again.",
     "BRIEF_ERROR_TOO_LARGE": "The file is over 5 MB.",
@@ -342,6 +341,23 @@
     "BRIEF_ERROR_EMPTY": "The file is empty.",
     "BRIEF_ERROR_MISSING_FILE": "No file arrived.",
     "BRIEF_FILE": "📎 %{name} · %{size} KB",
-    "BRIEF_GAP_CONTRADICCION": "The brief contradicts itself; which one applies?"
+    "BRIEF_GAP_CONTRADICCION": "The brief contradicts itself; which one applies?",
+    "BRIEF_ASK_TITLE": "Before writing it, tell me:",
+    "BRIEF_ASK_CONTRADICCION": "The brief contradicts itself about «%{sobre}». Which one applies?",
+    "BRIEF_ASK_MODO": "Does the agent answer, or always hand off?",
+    "BRIEF_ASK_TEMAS": "Which topics does it handle?",
+    "BRIEF_ASK_TEMAS_HINT": "For example: prices, appointments, complaints",
+    "BRIEF_ASK_FRASES": "How does the customer write when they want «%{tema}»?",
+    "BRIEF_ASK_FRASES_HINT": "One phrase per line, as the customer would write it",
+    "BRIEF_ASK_FUENTES": "For «%{tema}», where does the answer come from or what happens if it can't solve it?",
+    "BRIEF_ASK_FUENTES_HINT": "For example: the price sheet, open a case, hand off to a person",
+    "BRIEF_ASK_ETIQUETAS": "Which label does «%{tema}» close with?",
+    "BRIEF_ASK_ETIQUETAS_HINT": "Pick one from the account or type a new one",
+    "BRIEF_ASK_EMPTY_HINT": "Anything left blank will be marked as pending in the Training to complete later.",
+    "BRIEF_WRITE": "Create the Training",
+    "BRIEF_WRITING": "Writing the Training… it can take about a minute.",
+    "BRIEF_WRITE_ERROR": "The Training could not be written. Try again.",
+    "BRIEF_REPLACES_DRAFT": "This replaces what you currently have in the Agent Structure.",
+    "BRIEF_COVERED": "%{count} points from the brief that the draft had left out were added."
   }
 }
