@@ -270,7 +270,6 @@
     "DICTATE_ERROR_TOO_LARGE": "La grabación es demasiado larga. Dictala en partes.",
     "DICTATE_ERROR_NO_AUDIO": "No llegó audio. Revisa que el navegador tenga permiso de micrófono.",
     "SESSIONS_COL_CREATOR": "Creada por",
-    "SESSIONS_MINE": "tú",
     "SESSIONS_NO_CREATOR": "—",
     "SESSION_CREATOR": "· de %{name}",
     "TREE_TITLE": "Estructura del Agente",

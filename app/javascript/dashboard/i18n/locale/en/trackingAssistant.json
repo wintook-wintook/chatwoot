@@ -270,7 +270,6 @@
     "DICTATE_ERROR_TOO_LARGE": "The recording is too long. Dictate it in parts.",
     "DICTATE_ERROR_NO_AUDIO": "No audio arrived. Check that the browser has microphone permission.",
     "SESSIONS_COL_CREATOR": "Started by",
-    "SESSIONS_MINE": "you",
     "SESSIONS_NO_CREATOR": "—",
     "SESSION_CREATOR": "· by %{name}",
     "TREE_TITLE": "Agent structure",

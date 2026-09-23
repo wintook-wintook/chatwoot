@@ -1872,13 +1872,13 @@ export default {
                     </td>
                     <!-- De quién es: desde que las conversaciones se comparten
                          entre administradores, el listado tiene trabajo de
-                         varias personas. -->
+                         varias personas. Siempre el nombre del agente, también
+                         en las propias (pedido del usuario, 23/09/2026: antes
+                         decía «vos»). -->
                     <td class="p-3 text-slate-500 dark:text-slate-400">
                       {{
-                        row.mine
-                          ? $t('TRACKING_ASSISTANT_VIEW.SESSIONS_MINE')
-                          : row.creator ||
-                            $t('TRACKING_ASSISTANT_VIEW.SESSIONS_NO_CREATOR')
+                        row.creator ||
+                        $t('TRACKING_ASSISTANT_VIEW.SESSIONS_NO_CREATOR')
                       }}
                     </td>
                     <td class="p-3 text-slate-500 dark:text-slate-400">
