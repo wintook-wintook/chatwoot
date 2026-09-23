@@ -476,9 +476,12 @@ export default {
     await this.$store.dispatch('trackingTemplates/get');
     this.fetchAudit();
     this.fetchSessions();
-    // El ?template_id manda sobre la conversación guardada: si se entró desde un
-    // agente concreto, es a ese al que se vino, no a lo que quedó a medias.
-    if (!this.loadTemplateFromRoute()) await this.resumeSession();
+    // Se entra SIEMPRE como para crear un agente nuevo (pedido del usuario,
+    // 23/09/2026). Hasta entonces se retomaba la última conversación a medias,
+    // pensado para cuando el chat era la forma de trabajar; ahora lo es la
+    // Estructura, y encontrarla llena con un agente anterior confundía. La única
+    // excepción es ?template_id: si se vino desde un agente concreto, es ese.
+    if (!this.loadTemplateFromRoute()) this.startFresh();
     // Sin nada que retomar, el formulario igual tiene que estar listo (los nombres
     // de sección que ofrece "Agregar sección" salen del backend).
     this.reloadTrainingSections();
@@ -502,21 +505,6 @@ export default {
 
       this.loadTemplate(this.templates.find(t => t.id === id));
       return true;
-    },
-    // Retomar lo que quedó a medias. Si falla, se arranca en limpio: no poder
-    // recuperar una conversación no debería impedir empezar otra.
-    async resumeSession() {
-      try {
-        const { data } = await AssistantAPI.getSession();
-        if (!data) return;
-
-        this.applySession(data);
-        if (data.tracking_template_id) {
-          this.loadEditingFrom(data.tracking_template_id);
-        }
-      } catch (error) {
-        this.sessionId = null;
-      }
     },
     // Retomar y abrir una conversación cargan lo mismo. Estaba escrito dos veces
     // y sumar la identidad habría hecho una tercera copia: cada campo nuevo hay
