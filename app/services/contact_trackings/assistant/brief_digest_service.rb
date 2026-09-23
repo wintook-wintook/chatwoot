@@ -4,18 +4,21 @@
 # proyecto@asistente_agentes_ia — LEER UN ENCARGO ENTERO (F2 de docs/importar_prompt_md_plan.md)
 # ================================================================================
 #   trocear (BriefChunker) → entender cada trozo (BriefReader, PARALLEL a la vez)
-#     → juntar (BriefMerger) → lo que falta (BriefGaps) → guardar en el encargo
+#     → juntar (BriefMerger) → contradicciones (BriefContradictions)
+#     → lo que falta (BriefGaps) → guardar en el encargo
 #
 # NO SE PAGA DOS VECES UN TROZO: cada trozo guarda su huella y su lectura. Antes de
 # llamar a la IA se busca esa huella en el propio encargo (un reintento después de una
 # falla relee solo lo que faltó) y en los otros encargos leídos de la cuenta (regenerar
-# con un archivo que cambió en un tema relee solo ese tema).
+# con un archivo que cambió en un tema relee solo ese tema). Solo si la lectura se hizo
+# con las instrucciones actuales del lector (BriefReader::VERSION).
 #
 # Todo con gpt-4o (decisión A, 23/09): el piso de EngineConfig para :authoring_assistant.
 # ================================================================================
 
 class ContactTrackings::Assistant::BriefDigestService
   Chunker = ContactTrackings::Assistant::BriefChunker
+  BriefReader = ContactTrackings::Assistant::BriefReader
   Ficha = ContactTrackings::Assistant::BriefFicha
 
   PARALLEL = 4
@@ -91,7 +94,9 @@ class ContactTrackings::Assistant::BriefDigestService
     otros = TrackingAgentBrief.where(account: @account).where.not(id: @brief.id)
                               .order(updated_at: :desc).limit(CACHE_BRIEFS).pluck(:chunks)
     ([@brief.chunks] + otros).reverse.each_with_object({}) do |trozos, cache|
-      Array(trozos).each { |t| cache[t['sha256']] = t['lectura'] if t['lectura'].present? }
+      Array(trozos).each do |t|
+        cache[t['sha256']] = t['lectura'] if t['lectura'].present? && t['lector'] == BriefReader::VERSION
+      end
     end
   end
 
@@ -110,7 +115,9 @@ class ContactTrackings::Assistant::BriefDigestService
 
   # ── guardar ─────────────────────────────────────────────────────────────────
   def finish(trozos, lecturas, juntado, inicio)
-    ficha = juntado[:ficha]
+    choques = ContactTrackings::Assistant::BriefContradictions.new(@account, ficha: juntado[:ficha]).call
+    ficha = choques[:ficha]
+    juntado = juntado.merge(contradictions_usage: choques[:usage])
     inventario = ContactTrackings::Assistant::InventoryService.new(@account).call
     faltas = ContactTrackings::Assistant::BriefGaps.new(ficha, inventory: inventario).call
     @brief.update!(status: 'ready', chunks: stored_chunks(trozos, lecturas),
@@ -124,7 +131,8 @@ class ContactTrackings::Assistant::BriefDigestService
   def stored_chunks(trozos, lecturas)
     trozos.map do |t|
       lectura = lecturas[t.index]
-      t.to_h.stringify_keys.merge('lectura' => lectura && strip_ids(lectura[:ficha]))
+      t.to_h.stringify_keys.merge('lectura' => lectura && strip_ids(lectura[:ficha]),
+                                  'lector' => lectura && BriefReader::VERSION)
     end
   end
 
@@ -136,11 +144,13 @@ class ContactTrackings::Assistant::BriefDigestService
 
   def usage(lecturas, juntado, inicio)
     lectura = sum_tokens(lecturas.pluck(:usage))
-    total = sum_tokens([lectura, juntado[:usage]])
+    choques = sum_tokens([juntado[:contradictions_usage]])
+    total = sum_tokens([lectura, juntado[:usage], choques])
     {
       'modelo' => ContactTrackings::EngineConfig.model_for(nil, :authoring_assistant),
       'trozos' => lecturas.size, 'trozos_reusados' => lecturas.count { |l| l[:cached] },
       'lectura' => lectura, 'juntar' => juntado[:usage].merge('llamadas' => juntado[:calls]),
+      'contradicciones' => choques,
       'costo_usd' => cost(total).round(4),
       'segundos' => (Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).round(1),
       'reused_from' => @brief.usage['reused_from']

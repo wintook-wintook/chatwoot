@@ -18,6 +18,24 @@ describe('briefDigest', () => {
     ]);
   });
 
+  it('pone primero las contradicciones, con lo que dice cada parte', () => {
+    const gaps = [
+      { paso: 4, que: 'etiquetas' },
+      {
+        paso: 0,
+        que: 'contradiccion',
+        sobre: 'precio',
+        a: 'preguntar',
+        b: 'no preguntar',
+      },
+    ];
+
+    expect(groupGaps(gaps)).toEqual([
+      { que: 'contradiccion', items: ['precio: «preguntar» o «no preguntar»'] },
+      { que: 'etiquetas', items: [] },
+    ]);
+  });
+
   it('cuenta solo las listas que tienen algo', () => {
     expect(listSizes({ reglas: [{}, {}], tono: [] })).toEqual([
       { campo: 'reglas', count: 2 },

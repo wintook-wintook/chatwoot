@@ -158,6 +158,38 @@ RSpec.describe ContactTrackings::Assistant::BriefDigestService do
     end
   end
 
+  describe ContactTrackings::Assistant::BriefContradictions do
+    let(:ficha) do
+      { 'reglas' => [{ 'texto' => 'Preguntar si es estudiante antes del precio', 'origen' => [0] },
+                     { 'texto' => 'Una sola pregunta por mensaje', 'origen' => [0] },
+                     { 'texto' => 'Dar el precio sin preguntar nada antes', 'origen' => [1] }] }
+    end
+
+    def choques(json)
+      stub_request(:post, api).to_return(respuesta(json))
+      described_class.new(account, ficha: ficha).call[:ficha]['contradicciones']
+    end
+
+    # Medido con el gimnasio: el lector las marcaba en una lectura y en la otra no.
+    it 'arma cada contradicción con el texto de las reglas, no con el del modelo' do
+      resultado = choques({ 'contradicciones' => [{ 'sobre' => 'precio', 'a' => 1, 'b' => 3 }] })
+
+      expect(resultado).to eq([{ 'sobre' => 'precio', 'a' => 'Preguntar si es estudiante antes del precio',
+                                 'b' => 'Dar el precio sin preguntar nada antes', 'origen' => [0, 1] }])
+    end
+
+    it 'descarta números que no existen o que se repiten' do
+      expect(choques({ 'contradicciones' => [{ 'a' => 1, 'b' => 9 }, { 'a' => 2, 'b' => 2 }] })).to eq([])
+    end
+
+    it 'no repite una que el lector ya había anotado' do
+      ficha['contradicciones'] = [{ 'sobre' => 'x', 'a' => 'Dar el precio sin preguntar nada antes',
+                                    'b' => 'Preguntar si es estudiante antes del precio' }]
+
+      expect(choques({ 'contradicciones' => [{ 'sobre' => 'precio', 'a' => 1, 'b' => 3 }] }).size).to eq(1)
+    end
+  end
+
   describe ContactTrackings::Assistant::BriefGaps do
     let(:inventario) { ContactTrackings::Assistant::InventoryService.new(account).call }
 
@@ -174,6 +206,16 @@ RSpec.describe ContactTrackings::Assistant::BriefDigestService do
 
       expect(faltas(ficha)).to eq([[2, 'frases_cliente', 'reclamo'], [2, 'frases_cliente', 'urgencia'],
                                    [3, 'fuente_o_escalamiento', 'reclamo'], [4, 'etiquetas']])
+    end
+
+    # El modelo las anota pero no las resuelve: las decide la persona, antes que nada.
+    it 'pone primero las contradicciones del encargo' do
+      ficha = { 'modo' => { 'texto' => 'responde' }, 'temas' => [{ 'nombre' => 'precios', 'fuente' => 'hoja',
+                                                                   'frases_cliente' => ['cuánto'], 'etiqueta' => 'p' }],
+                'contradicciones' => [{ 'sobre' => 'precio', 'a' => 'preguntar antes', 'b' => 'no preguntar' }] }
+
+      expect(described_class.new(ficha, inventory: inventario).call)
+        .to eq([{ 'paso' => 0, 'que' => 'contradiccion', 'sobre' => 'precio', 'a' => 'preguntar antes', 'b' => 'no preguntar' }])
     end
 
     # Un encargo de cobranza que lee una hoja de Google en una cuenta sin hojas conectadas.
@@ -217,6 +259,19 @@ RSpec.describe ContactTrackings::Assistant::BriefDigestService do
       expect(a_request(:post, api)).not_to have_been_made
       expect(otro.usage).to include('trozos_reusados' => 1)
       expect(otro.digest['ficha']['objetivo']['texto']).to eq('agendar citas')
+    end
+
+    # Cambiar las instrucciones del lector invalida lo leído con las anteriores.
+    it 'no reusa una lectura hecha con otra versión del lector' do
+      modelo(lectura: { 'objetivo' => 'agendar citas' })
+      viejo = described_class.new(encargo).call
+      viejo.update!(chunks: viejo.chunks.map { |c| c.merge('lector' => ContactTrackings::Assistant::BriefReader::VERSION - 1) })
+      WebMock.reset_executed_requests!
+
+      otro = described_class.new(encargo).call
+
+      expect(a_request(:post, api)).to have_been_made.once
+      expect(otro.usage).to include('trozos_reusados' => 0)
     end
 
     it 'si falla, queda en failed' do

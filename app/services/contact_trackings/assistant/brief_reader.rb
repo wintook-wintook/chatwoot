@@ -52,15 +52,21 @@ class ContactTrackings::Assistant::BriefReader
        No las inventes.
     6. "prohibiciones" = lo que NUNCA hace. "reglas" = lo que hace siempre o cómo
        procede. Una misma idea va en una sola de las dos.
-    7. Información larga que el agente CONSULTA (un catálogo, una tabla de precios, la
-       descripción de cada servicio, un glosario) va en "conocimiento", resumida: no
-       es una regla.
+    7. Información que el agente CONSULTA o CITA va en "conocimiento", no en reglas:
+       lo largo (un catálogo, una tabla de precios, cada servicio, un glosario) resumido,
+       y los DATOS DEL NEGOCIO (dirección, horario de atención, teléfonos, sucursales)
+       completos y tal cual, porque el agente los va a dar: {"tema": "Horario", "resumen":
+       "lunes a viernes 6:00–22:00, sábados 8:00–14:00, domingos cerrado"}.
     8. Plantillas de mensaje textuales ("responde exactamente: …") van como regla
        que diga cuándo se usa y qué dice, en corto.
     9. Si el pedazo se contradice (una parte dice una cosa y otra lo contrario),
        anotalo en "contradicciones". No elijas.
     10. Nombres propios (empresa, producto, sucursal, teléfono) tal cual aparecen.
-    11. El texto puede ser un prompt viejo escrito con la gramática del motor. Se lee así:
+    11. Si un tema se atiende con una herramienta (se agenda en un calendario, se abre un
+        caso, se consulta una hoja o un documento), escribilo TAMBIÉN en ese tema: en
+        "fuente" si de ahí sale la respuesta, o en "si_no_resuelve" si es lo que hace el
+        agente para cerrar (agendar, abrir el caso, pasar a una persona).
+    12. El texto puede ser un prompt viejo escrito con la gramática del motor. Se lee así:
         @ruta(nombre #etiqueta: descripción): fuente -> escalamiento
           → un tema: nombre, etiqueta (sin el #), la descripción son las frases del
             cliente, la fuente y el escalamiento van a "fuente" y "si_no_resuelve".
@@ -84,6 +90,10 @@ class ContactTrackings::Assistant::BriefReader
   PROMPT
 
   MAX_ATTEMPTS = 2
+  # Sube cada vez que cambian las instrucciones de PROMPT: una lectura hecha con otras
+  # instrucciones no se reusa (ver BriefDigestService#cached_readings).
+  # 2 (23/09/2026): datos del negocio a "conocimiento" y la herramienta de cada tema.
+  VERSION = 2
   CONNECTORS = %w[de del la las el los y a en por con para un una].freeze
 
   attr_reader :chunk

@@ -6,7 +6,9 @@
 // ============================================================================
 
 // Orden en que se muestran las faltas: el de los pasos de la entrevista.
+// Las contradicciones primero: son decisiones, no datos que falten.
 const GAP_ORDER = [
+  'contradiccion',
   'temas',
   'modo',
   'frases_cliente',
@@ -23,7 +25,10 @@ export const groupGaps = (gaps = []) => {
   gaps.forEach(gap => {
     const que = gap.que === 'etiqueta' ? 'etiquetas' : gap.que;
     if (!grupos.has(que)) grupos.set(que, []);
-    const item = gap.tema || gap.tipo;
+    const item =
+      gap.que === 'contradiccion'
+        ? `${gap.sobre}: «${gap.a}» o «${gap.b}»`
+        : gap.tema || gap.tipo;
     if (item && !grupos.get(que).includes(item)) grupos.get(que).push(item);
   });
   return [...grupos.entries()]

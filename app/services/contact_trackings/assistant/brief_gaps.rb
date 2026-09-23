@@ -15,6 +15,9 @@
 # encargo de cobranza que lee "la hoja Cartera vencida" en una cuenta sin hojas de
 # Google conectadas no puede funcionar, y eso se pregunta antes de escribir.
 #
+# Y las CONTRADICCIONES del encargo: el modelo las anota pero no las resuelve, así que
+# son decisiones de la persona, igual que lo que falta.
+#
 # Por qué no lo decide el modelo: "¿falta algo?" es una opinión, y un modelo que opina
 # que no falta nada deja preguntas sin hacer. Qué campos están vacíos es un hecho.
 # ================================================================================
@@ -41,7 +44,7 @@ class ContactTrackings::Assistant::BriefGaps
   # Marca antes en cada herramienta si la cuenta la tiene (ver annotate_tools!).
   def call
     annotate_tools!
-    paso1 + paso2 + paso3 + paso4 + herramientas
+    contradicciones + paso1 + paso2 + paso3 + paso4 + herramientas
   end
 
   # Marca en cada herramienta si la cuenta la tiene (true/false) o si no depende (nil).
@@ -57,6 +60,10 @@ class ContactTrackings::Assistant::BriefGaps
 
   def temas = Array(@ficha['temas'])
   def temas_herramientas = Array(@ficha['herramientas'])
+
+  def contradicciones
+    Array(@ficha['contradicciones']).map { |c| gap(0, 'contradiccion', **c.slice('sobre', 'a', 'b').symbolize_keys) }
+  end
 
   def paso1
     faltas = []

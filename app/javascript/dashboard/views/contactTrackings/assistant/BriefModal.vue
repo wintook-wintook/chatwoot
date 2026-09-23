@@ -371,7 +371,17 @@ export default {
               {{
                 $t(`TRACKING_ASSISTANT_VIEW.BRIEF_GAP_${gap.que.toUpperCase()}`)
               }}
-              <span v-if="gap.items.length">: {{ gap.items.join(', ') }}</span>
+              <!-- Una contradicción por renglón: son frases largas y hay que leerlas
+                   para decidir. -->
+              <ul
+                v-if="gap.que === 'contradiccion'"
+                class="!m-0 !pl-4 list-[circle]"
+              >
+                <li v-for="item in gap.items" :key="item">{{ item }}</li>
+              </ul>
+              <span v-else-if="gap.items.length">
+                : {{ gap.items.join(', ') }}
+              </span>
             </li>
           </ul>
         </div>

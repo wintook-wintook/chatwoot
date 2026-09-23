@@ -341,6 +341,7 @@
     "BRIEF_ERROR_NOT_TEXT": "El archivo no es texto (¿un Word renombrado?). Guárdalo como .md o .txt.",
     "BRIEF_ERROR_EMPTY": "El archivo está vacío.",
     "BRIEF_ERROR_MISSING_FILE": "No llegó ningún archivo.",
-    "BRIEF_FILE": "📎 %{name} · %{size} KB"
+    "BRIEF_FILE": "📎 %{name} · %{size} KB",
+    "BRIEF_GAP_CONTRADICCION": "El encargo se contradice; ¿cuál vale?"
   }
 }

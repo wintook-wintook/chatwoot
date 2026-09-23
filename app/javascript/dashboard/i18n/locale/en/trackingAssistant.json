@@ -341,6 +341,7 @@
     "BRIEF_ERROR_NOT_TEXT": "The file isn't text (a renamed Word file?). Save it as .md or .txt.",
     "BRIEF_ERROR_EMPTY": "The file is empty.",
     "BRIEF_ERROR_MISSING_FILE": "No file arrived.",
-    "BRIEF_FILE": "📎 %{name} · %{size} KB"
+    "BRIEF_FILE": "📎 %{name} · %{size} KB",
+    "BRIEF_GAP_CONTRADICCION": "The brief contradicts itself; which one applies?"
   }
 }
