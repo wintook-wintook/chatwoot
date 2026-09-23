@@ -1,365 +1,421 @@
-# Importar un prompt (.md) al Asistente de Agentes IA
+# Crear un Agente IA a partir de un encargo (.md)
 
-Rama: `feat/importar_prompt_md` (desde `develop`, 21/09/2026). **Solo plan**: nada se programa hasta
-que el usuario lo revise.
+Rama: `feat/importar_prompt_md` (desde `develop`). **Solo plan**: nada se programa hasta que el
+usuario lo revise.
+
+> **23/09/2026 — el plan se rehízo.** La primera versión (21/09) trataba el `.md` como un prompt que
+> había que **repartir y recortar**, y copiaba pedazos del texto original a cada destino. El usuario
+> corrigió el enfoque: *"el `.md` es una idea de cómo se quiere el prompt; el motor debe ser capaz
+> de crear el prompt para el agente"*. El `.md` es un **encargo**, y el Entrenamiento lo **escribe el
+> Asistente**, el mismo que ya está en develop.
+>
+> Decisiones del usuario (23/09): **(1)** lo que al encargo le falte, el Asistente lo **pregunta en el
+> chat**; **(2)** el encargo **se guarda** junto al agente, para poder regenerar; **(3)** se rehace
+> el plan en esta rama, y `feat/importador_md` queda como está (F0/F1 del enfoque anterior).
 
 ---
 
 ## 1. Qué se pide
 
-Subir un archivo `.md` con las instrucciones de un agente y que el Asistente arme, **con ayuda del
-motor de agentes IA**, su Estructura (Definición · Rutas · Secciones). Tiene que ser **eficiente**:
-un documento grande no puede costar una fortuna ni tardar una eternidad, y el resultado tiene que
-caber en lo que el motor puede leer en cada mensaje.
+Alguien escribe en un `.md`, con sus palabras y con el largo que quiera, **cómo quiere que sea su
+agente**: quién es, qué vende o atiende, cómo habla, qué nunca debe hacer, cuándo pasa a una persona.
+Lo sube al Asistente de Agentes IA y el motor:
 
-Ejemplo real entregado por el usuario: `/tmp/adam/ADAM-2.0-Comportamiento.md`.
+1. **entiende** el encargo, aunque sea enorme;
+2. **pregunta en el chat** solo lo que el encargo no dice o dice de dos maneras;
+3. **escribe** el Entrenamiento en el formato que el motor ejecuta (Definición · Rutas · Secciones);
+4. lo **comprueba** con el parser real y lo corrige solo, como hoy;
+5. **guarda el encargo** con el agente, para poder regenerar más adelante.
+
+Lo que **no** es: copiar el texto del `.md` al Entrenamiento. Un encargo de ADAM (1,1 MB) y uno de
+media página tienen que terminar igual: en un Entrenamiento que el motor cumple bien (≈ 4–6 mil
+tokens).
 
 ---
 
-## 2. Lo que trae el ejemplo (medido)
+## 2. Lo que cambia respecto del plan anterior
 
 ```
-ADAM-2.0-Comportamiento.md
-  1,1 MB · 34.834 líneas · 157.834 palabras · ≈ 280.000 tokens · 3.223 títulos
-
-  # C0 CONSTITUCIÓN ........ 110 K caracteres   identidad, principios, reglas, ética
-  # C1 CARÁCTER ............  85 K              personalidad, forma de pensar
-  # C2 LENGUAJE ............  96 K              diccionario, terminología, glosario
-  # C3 CONVERSACIÓN ........ 226 K              escucha, objeciones, persuasión, memoria…
-  # C4 PROCEDIMIENTO ....... 167 K              diagnóstico, hipótesis, evidencia
-  # C5 LÍMITES .............  97 K              IA consultiva, papel del consultor humano
-  # C6 OFERTA .............. 201 K              13 servicios (ADAM, R.A.D.A.R., Branding…)
-  # C7 PROTOCOLO COMERCIAL . 135 K              guiones, objeciones, cierre, precios, escalamiento
+PLAN DEL 21/09  (feat/importador_md)                 PLAN NUEVO
+────────────────────────────────────                 ──────────
+.md = el prompt, ya escrito                          .md = el ENCARGO (la idea)
+  │                                                    │
+  ├─ leer reglas con formato **ID** (gravedad)         ├─ leer CUALQUIER formato, por temas
+  ├─ repartir cada regla por su título                 ├─ ENTENDER: sacar qué se pide
+  ├─ deduplicar / recortar al presupuesto              │   (la "ficha del encargo")
+  └─ Entrenamiento = pedazos del original              ├─ PREGUNTAR en el chat lo que falta
+                                                       └─ el Asistente ESCRIBE el Entrenamiento
+                                                          (redacción + comprobador de hoy)
+Resultado medido: ADAM bien, cualquier otro           Resultado buscado: cualquier encargo,
+.md → 0 o 1 unidades (solo leía el formato            largo o corto, con o sin formato
+de ADAM)
 ```
 
-Cada sección (`##`) tiene dos partes:
+**Qué se aprovecha de `feat/importador_md`:** la lectura por bloques (`PromptImport::Reader`), ampliada
+a formatos generales (§4.1), y la **línea base** de ADAM hecha a mano
+(`docs/ejemplos/adam_entrenamiento_linea_base.txt`, 14.701 caracteres) como vara para medir.
+**Qué se deja:** el reparto por reglas fijas (`Distributor`) y su revisión con IA (`AiReview`).
+**Lección que se conserva:** a la IA no se le muestra la respuesta sugerida. Con la sugerencia a la
+vista confirmó 80 de 81 y no sirvió de nada.
+
+---
+
+## 3. El flujo completo
 
 ```
-## Clasificación del lead — …
-   ### Norma            ← reglas numeradas, ya condensadas       (≈ 400 K caracteres en total)
-   ### Texto oficial    ← la explicación larga, con ejemplos     (≈ 600 K caracteres en total)
+ ┌───────────────────┐
+ │  encargo.md       │  cualquier largo · cualquier formato
+ └─────────┬─────────┘
+           │ 1. GUARDAR  (sin IA)
+           ▼
+ ┌───────────────────────────────────────────┐
+ │ tracking_agent_briefs                      │  texto completo + huella (SHA)
+ │   si la huella ya existe → se reusa todo   │  (no se vuelve a pagar)
+ └─────────┬─────────────────────────────────┘
+           │ 2. TROCEAR  (sin IA)  por temas, en pedazos de ≤ 24 K caracteres
+           ▼
+    ┌──────┬──────┬──────┬─ … ─┬──────┐
+    │ T1   │ T2   │ T3   │     │ Tn   │     ADAM ≈ 45 pedazos · media página = 1
+    └──┬───┴──┬───┴──┬───┴─ … ─┴──┬───┘
+       │ 3. ENTENDER  (IA, 4 a la vez)  cada pedazo → ficha parcial
+       ▼      ▼      ▼            ▼
+    ┌──────────────────────────────────┐
+    │ 4. JUNTAR  (IA, 1–2 llamadas)     │  une repetidos · marca contradicciones
+    │    → FICHA DEL ENCARGO            │  · marca lo que falta
+    └──────────┬───────────────────────┘
+               │ 5. ASISTENTE (la conversación de hoy, arrancando con la ficha)
+               ▼
+    ┌─────────────────────────────────────────────────────────┐
+    │  "Esto entendí"  +  preguntas SOLO de lo que falta/choca  │ ◄─┐
+    └──────────┬──────────────────────────────────────────────┘   │ la persona
+               │ con todo contestado                               │ contesta
+               ▼                                                   │ en el chat
+    ┌──────────────────────┐   errores   ┌──────────────────┐      │
+    │ redactar             │ ──────────► │ comprobador      │      │
+    │ Entrenamiento        │ ◄────────── │ (parser real)    │      │
+    └──────────┬───────────┘  máx. 3     └──────────────────┘      │
+               │                                                   │
+               ▼                                                   │
+    ┌──────────────────────────────────┐   algo de la ficha        │
+    │ 6. COBERTURA  (sin IA)            │ ── no quedó en ningún ────┘
+    │   cada punto de la ficha: ¿está?  │    lado → se avisa / se pregunta
+    └──────────┬───────────────────────┘
+               ▼
+    borrador en el Asistente (versiones, editar a mano, probar)
+               │ Guardar (SaveService, como hoy)
+               ▼
+    Agente IA  ── encargo + ficha + respuestas del chat guardados con él
 ```
 
-Y cada regla de la Norma tiene **siempre** la misma forma:
+---
+
+## 4. Los pasos, uno por uno
+
+### 4.1 Trocear (sin IA)
+
+El trozo tiene que respetar los temas, no cortar a la mitad de una regla. Se corta en este orden de
+preferencia:
+
+| Señal de tema | Ejemplo | De dónde sale |
+|---|---|---|
+| títulos Markdown, el nivel más alto que haya | `# C7 PROTOCOLO`, `## ROL` | `PromptImport::Reader` |
+| secciones entre corchetes | `[ROL]`, `[REGLAS]` | `DraftPieces` (ya mide los 28 prompts de la cuenta 2) |
+| títulos decorados | `## ROL ##`, `=== OBJETIVO ===` | nuevo |
+| renglón corto en MAYÚSCULAS | `PROHIBICIONES` | nuevo |
+| sin ninguna señal | párrafos | respaldo |
+
+Si un tema pasa de **24.000 caracteres**, se parte en sus subtítulos y, si no tiene, por párrafos. Cada
+trozo lleva su **ruta de títulos** (`C7 › Clasificación del lead`) para que la IA sepa dónde está.
+
+**Banco de pruebas** (el error del plan anterior fue medir solo con ADAM): ADAM-2.0, DCI V8.12 y los
+Entrenamientos reales #8533, #6543 (v6.11), #7466 y #7512. Ninguno puede dar 0 trozos.
+
+### 4.2 Entender (IA, un trozo por llamada)
+
+Cada trozo se lee **completo** (Norma y Texto oficial por igual: aquí no se copia nada, así que leer
+de más no ensucia el prompt; solo cuesta, ver §6). La IA devuelve una **ficha parcial** con esta forma
+fija:
 
 ```
-**C7-06.06** (inviolable) — Verifica la autoridad de decisión con una sola pregunta…
-  - Activación:   Cuando falte confirmar quién decide la contratación.
-  - Verificación: El mensaje contiene una única pregunta y no encadena urgencia ni presupuesto.
-  - Prompt:       Verifica autoridad de decisión con una sola pregunta por mensaje y espera respuesta.
+FICHA DEL ENCARGO
+├─ identidad         quién es el agente, a nombre de quién habla, para quién trabaja
+├─ objetivo          qué tiene que lograr en una conversación
+├─ temas             lo que el cliente viene a pedir  → serán las RUTAS
+│   └─ por tema: cómo lo dice el cliente · qué hace el agente · de dónde saca la
+│                respuesta · qué pasa si no resuelve (ticket, agenda, persona)
+├─ reglas siempre    lo que vale en toda la conversación
+├─ prohibiciones     lo que nunca hace
+├─ tono y formato    cómo escribe (largo, preguntas por mensaje, emojis…)
+├─ datos a pedir     qué tiene que averiguar del cliente
+├─ conocimiento      lo largo y consultable (catálogo, precios, glosario)
+│                    → NO va al prompt: se propone como respuesta predefinida (F6)
+├─ fuera             lo que es para quien administra, no para el agente
+└─ dudas             lo que este trozo deja abierto
 ```
 
-| Dato | Valor |
+Cada punto lleva **de qué trozo salió** (su ruta de títulos). La cobertura (§4.5) y la pantalla lo usan
+para mostrar "esto salió de C7 › Cierre".
+
+### 4.3 Juntar (IA, 1–2 llamadas)
+
+Las fichas parciales se unen en **una** ficha. Esta llamada:
+
+- **une repetidos**: en ADAM, "una sola pregunta por mensaje" aparece en más de 20 reglas y debe
+  quedar como un punto;
+- **marca contradicciones**, por ejemplo C3 que dice "nunca des precio" frente a C7 que dice "da el
+  rango si insiste". No las resuelve: van a las preguntas;
+- **marca lo que falta** contra lo que el Asistente necesita para escribir, que son los mismos 4 pasos
+  de la entrevista de hoy:
+
+```
+  PASO 1  temas y modo (contesta o deriva)   ── ¿la ficha lo dice?  sí → no se pregunta
+  PASO 2  cómo lo dice el cliente, por tema  ── ¿hay frases reales?  no → se pregunta
+  PASO 3  fuente y qué pasa si no resuelve   ── ¿dice ticket/agenda?
+  PASO 4  etiqueta de cada tema              ── casi nunca está en un encargo → se pregunta
+                                                (con opciones de las etiquetas de la cuenta)
+```
+
+Si la ficha junta pasa de lo que la conversación del Asistente puede cargar (tope propuesto:
+**16.000 caracteres**), esta misma llamada la condensa. Condensa la ficha y nunca el encargo, que
+queda guardado entero.
+
+### 4.4 El Asistente, arrancando con la ficha
+
+**No se escribe un redactor nuevo.** La conversación de hoy (`InterviewService`: entrevista →
+redacción → comprobador → ruteo) recibe la ficha como **primer mensaje** de la persona, con una
+instrucción agregada:
+
+> Ya tenés el encargo. No preguntes lo que la ficha contesta. Preguntá solo lo marcado como falta o
+> contradicción, con las mismas reglas de siempre: numeradas, con opciones, como mucho 4 con botones
+> por turno.
+
+En la pantalla, el primer turno se ve así:
+
+```
+┌─ Asistente de Agentes IA ─────────────────────────────┬─ Entrenamiento ──────────────┐
+│ 📎 ADAM-2.0-Comportamiento.md · 1,1 MB · leído        │ (en construcción)            │
+│                                                       │                              │
+│ ▾ Esto entendí                                        │ Objetivo: …                  │
+│   Agente consultivo de Sentidos Creativos. Atiende    │                              │
+│   6 temas: diagnóstico, servicios, precios,           │ @ruta(precios …): <PENDIENTE:│
+│   objeciones, reunión, dirección. Nunca da cifras…    │   etiqueta>                  │
+│   [ver la ficha completa]                             │ …                            │
+│                                                       │                              │
+│ Me faltan 3 cosas:                                    │                              │
+│ 1. ¿Con qué etiqueta cierra cada tema?                │                              │
+│    [a) una para todos] [b) una por tema] [c) otra]    │                              │
+│ 2. C3 dice "nunca des precio" y C7 "da el rango si    │                              │
+│    insiste". ¿Cuál manda?                             │                              │
+│    [a) nunca] [b) rango si insiste] [c) otra]         │                              │
+│ 3. Cuando alguien pregunta por precios, ¿cómo lo      │                              │
+│    escribe? (dame 2 o 3 frases reales)                │                              │
+│ ───────────────────────────────────────────────────── │                              │
+│ [ escribir… ]                               [Enviar]  │                              │
+└───────────────────────────────────────────────────────┴──────────────────────────────┘
+```
+
+Todo lo demás es igual que hoy: borrador a la vista con `<PENDIENTE:>`, versiones, editar a mano sin
+que el Asistente lo pise, probar, guardar.
+
+**Tope de turnos.** Hoy la entrevista tiene 6 turnos (`MAX_INTERVIEW_TURNS`). Con encargo arranca con
+casi todo contestado, así que no debería necesitar más. Si hay más dudas que turnos, se aplica la regla
+de siempre: redacta y marca lo que falte como `<PENDIENTE:>`.
+
+### 4.5 Cobertura: que nada del encargo se pierda (sin IA)
+
+Es el mismo principio de `LostRules`: el Optimizer borró prohibiciones llamándolas "redundantes". Cada
+punto de **prohibiciones**, **reglas siempre** y **temas** de la ficha se busca en el Entrenamiento por
+sus palabras con contenido. Lo que no aparece:
+
+- si es un tema, se avisa como bloqueante suave ("el encargo pide *reunión* y no hay ruta");
+- si es una regla o prohibición, se avisa con su origen ("C0 › Ética: *no prometas resultados*");
+- la persona decide en el chat: **"agregalo"** (el Asistente edita, no reescribe) o **"dejalo fuera"**
+  (queda anotado en el encargo y no vuelve a avisar).
+
+### 4.6 Guardar y regenerar
+
+Se guarda **con el agente**:
+
+| Qué | Para qué |
 |---|---|
-| Reglas | **818** — 373 inviolables · 419 obligatorias · 26 recomendadas |
-| Por capítulo | C7 211 · C6 142 · C3 133 · C4 102 · C0 79 · C2 59 · C5 56 · C1 36 |
-| Todas las líneas `Prompt:` juntas | 79 K caracteres ≈ **20.000 tokens** |
-| Solo las de reglas inviolables | 36 K caracteres ≈ 9.000 tokens |
-| El Entrenamiento más grande que hoy corre (v6.11, #6543) | 17 K caracteres ≈ 4.300 tokens |
+| el `.md` completo | poder releerlo y regenerar |
+| huella (SHA) | si se sube el mismo archivo, no se vuelve a leer ni a pagar |
+| la ficha | arrancar un Asistente nuevo sin volver a entender |
+| las respuestas del chat | que regenerar no vuelva a preguntar lo ya contestado |
+| lo marcado "dejar fuera" | que la cobertura no vuelva a avisar |
 
-**Conclusión que manda todo el diseño:**
+**Regenerar**, desde la ficha del Agente IA (enlace "Encargo"):
 
 ```
-  documento entero       ≈ 280.000 tokens   ✗ imposible en un prompt
-  solo las Normas        ≈ 100.000 tokens   ✗ imposible
-  solo las líneas Prompt ≈  20.000 tokens   ✗ 4–5 veces el agente más grande que funciona
-  lo que el motor aguanta bien ≈ 4–6.000   ✓ el objetivo
+ subir encargo nuevo ──► ¿misma huella? ── sí ──► misma ficha
+                              │
+                              no ──► trocear + entender solo los TEMAS que cambiaron
+                                     (huella por trozo) + juntar
+                                              │
+                                              ▼
+ Asistente abre con: ficha + respuestas guardadas + Entrenamiento actual
+   → pregunta solo lo nuevo
+   → EDITA el Entrenamiento (fase A de PROMPT STUDIO), no lo reescribe:
+     lo editado a mano se respeta (ManualEdits)
+   → queda como versión nueva del borrador; guardar es el botón de siempre
 ```
-
-Importar **no es copiar**: es **repartir** cada pedazo a donde el motor lo usa mejor, y **condensar**
-lo que va al prompt. Lo bueno: este formato ya viene casi resuelto (cada regla trae su versión
-corta, cuándo aplica y cómo se verifica), así que casi todo se puede hacer **sin IA**.
 
 ---
 
-## 3. La idea: repartir, no copiar
-
-Cada pedazo del documento tiene un destino natural en el motor:
+## 5. Dónde vive
 
 ```
-                          ┌─────────────────────────┐
-                          │   ADAM-2.0.md (1,1 MB)  │
-                          └────────────┬────────────┘
-                                       │ 1. LEER (sin IA, milisegundos)
-                                       ▼
-                    bloques: título · ruta de títulos · tipo · regla · tamaño
-                                       │ 2. REPARTIR (reglas fijas; IA solo en lo dudoso)
-       ┌──────────────┬───────────────┼────────────────┬──────────────────┬──────────────┐
-       ▼              ▼               ▼                ▼                  ▼              ▼
-  DEFINICIÓN      SECCIONES        RUTAS          CONOCIMIENTO          PRUEBAS        FUERA
-  Objetivo y      reglas que       lo que depende  lo que se consulta   "Verificación" portada,
-  Contexto        valen SIEMPRE    de lo que pide  cuando hace falta    y casos de    índices,
-  (C0 Identidad)  (C0,C1,C3,C5)    el cliente      (C6 Oferta, C2       "Aplicación    "Origen:",
-                                   (C7 protocolo)  Glosario, Textos     práctica"      notas
-                                                   oficiales, guiones)                 editoriales
-       │              │               │                │                  │
-       ▼              ▼               ▼                ▼                  ▼
-  Definición     [ROL] [REGLAS]   @ruta(...)       Respuestas         Pruebas sugeridas
-  del agente     [ESTILO] …       + ALCANCE        predefinidas       del Asistente
-                                  POR RUTA         (con prompt para   (clasificador real)
-                                                   los guiones)
+ navegador                        Rails                                   Sidekiq
+ ─────────                        ─────                                   ───────
+ Asistente: 📎 Subir encargo ──► AssistantBriefsController ──crea/reusa─► tracking_agent_briefs
+   (.md, ≤ 5 MB)                  (tamaño, tipo, huella)                   estado: en_cola
+                                                                              │
+                                                                              ▼
+                                                                  AgentBriefDigestJob
+                                                                    ├─ Trocear   (sin IA)
+                                                                    ├─ Entender  (4 a la vez)
+                                                                    └─ Juntar    (1–2)
+ barra "leyendo tema 12 de 45" ◄──GET progress/:turn_id──  TurnProgress (Redis, ya existe)
+ tarjeta "Esto entendí" ◄───────────────────────────────── estado: lista + ficha
+ conversación de siempre ──────► InterviewService (+ la ficha como primer mensaje)
+ Guardar ──────────────────────► SaveService ── además liga el encargo al agente
 ```
 
-Por qué así:
+Tabla nueva **`tracking_agent_briefs`**:
 
-- **Secciones** = lo que el modelo lee en **todos** los mensajes. Solo entra lo que vale siempre, en su
-  versión corta (la línea `Prompt:`), nunca el "Texto oficial".
-- **Rutas + alcance por ruta** = lo que vale **solo** en un tema (precios, objeciones, cierre). El
-  motor ya le dice al modelo "RAMA YA DECIDIDA: aplica solo las instrucciones de esta rama"
-  (`branch_scope_rule`), así que las reglas de C7 dejan de competir con las demás.
-- **Conocimiento** = lo largo y consultable (los 13 servicios de C6, el glosario, los guiones). Va a
-  **respuestas predefinidas**, que el motor busca por parecido solo cuando hace falta. Los
-  **guiones** ("Guion: páginas web", "Conducción a la reunión") van como respuesta predefinida con
-  **"El mensaje es el prompt"** y aprovechan el **guion en curso** (rama `feat/predefinidas_prompt`).
-- **Pruebas** = las líneas `Verificación` y los casos de "Aplicación práctica" son exactamente lo que
-  el Asistente necesita para probar el agente: se vuelven **pruebas sugeridas**, que el clasificador
-  real corre.
+| columna | tipo | nota |
+|---|---|---|
+| `account_id` | bigint | |
+| `tracking_template_id` | bigint, nulo | se llena al guardar el agente |
+| `tracking_assistant_session_id` | bigint, nulo | la conversación que lo usó |
+| `user_id` | bigint | quién lo subió |
+| `filename` | string | |
+| `content` | text | el `.md` completo (ADAM: 1,1 MB) |
+| `sha256` | string, índice | reusar sin volver a pagar |
+| `status` | string | `en_cola` · `leyendo` · `lista` · `error` |
+| `chunks` | jsonb | huella + ruta de títulos + ficha parcial de cada trozo |
+| `digest` | jsonb | la ficha junta |
+| `answers` | jsonb | preguntas y respuestas del chat, y lo marcado "dejar fuera" |
+| `usage` | jsonb | tokens y tiempo, por paso |
+
+Un agente puede tener varios encargos (el historial). El vigente es el último ligado.
+
+**Confidencial:** ADAM trae una sección "CONFIDENCIAL · USO INTERNO". El encargo se guarda solo dentro
+de la cuenta y no se usa como fuente de respuestas: no se vectoriza ni va a respuestas predefinidas sin
+que la persona lo confirme fila por fila (F6).
 
 ---
 
-## 4. Cómo trabaja el importador
+## 6. Cuánto cuesta y cuánto tarda (estimado; se mide en la F2)
 
-### 4.1 Paso 1 — Leer (sin IA)
+Precios de lista: gpt-4o USD 2,50 / 10 por millón (entrada / salida); gpt-4o-mini USD 0,15 / 0,60.
 
-- Árbol de títulos (`#`…`######`) → bloques con su **ruta** (`C7 › Clasificación del lead › Norma`).
-- **Detector de formato**: si encuentra el patrón `**ID** (severidad) — … / Activación / Verificación /
-  Prompt`, lee cada regla como registro (ID, severidad, texto, activación, verificación, prompt
-  corto). En ADAM, las 818.
-- Si el `.md` **no** trae ese formato (un prompt común, escrito a mano), cae al **modo genérico**:
-  bloques por título y la IA hace la parte que aquí resuelve el formato (§4.3).
-- Tope de archivo: **5 MB** (ADAM pesa 1,1).
+| Paso | ADAM (1,1 MB, ≈ 45 trozos) | Encargo de 1 página |
+|---|---|---|
+| Trocear | < 1 s · 0 | < 1 s · 0 |
+| Entender con gpt-4o | ≈ 360 K entrada + 70 K salida ≈ **USD 1,60** · ≈ 4 min (4 a la vez) | ≈ USD 0,02 · 10 s |
+| Entender con gpt-4o-mini | ≈ **USD 0,10** · ≈ 2 min | ≈ USD 0,001 · 5 s |
+| Juntar (gpt-4o) | ≈ 70 K entrada ≈ USD 0,30 · 40 s | (no hace falta: 1 trozo) |
+| Asistente (turnos de hoy) | igual que hoy: 40–60 s por turno | igual |
+| **Total para tener la ficha** | **USD 0,40 (mini) a 1,90 (4o)** · 3–5 min | **centavos · segundos** |
 
-### 4.2 Paso 2 — Repartir
+Se paga **una vez por versión del archivo**. Reabrir, regenerar con el mismo archivo o seguir
+conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
 
-Primero **reglas fijas** (gratis, instantáneas), por el título y la ruta del bloque:
+---
 
-| Señal | Destino |
+## 7. Qué se reutiliza (ya está en develop)
+
+| Pieza | Para qué |
 |---|---|
-| `### Norma` | reglas (Secciones o alcance de una Ruta, según §4.3) |
-| `### Texto oficial` | Conocimiento (nunca al prompt) |
-| título con "Guion", "Conducción", "Cierre", "Seguimiento" | Ruta + guion (respuesta predefinida con prompt) |
-| "Oferta", "Servicio", nombre con ® | Conocimiento (un servicio = una respuesta predefinida) |
-| "Glosario", "Diccionario", "Terminología", "Analogías", "Errores" | Conocimiento |
-| "Aplicación práctica", "Caso N", `Verificación:` | Pruebas |
-| portada, "Origen:", "Continuación editorial", índice | Fuera |
-| "CONFIDENCIAL · USO INTERNO" | Secciones (el prompt no lo ve el cliente) **y nunca** al Conocimiento, que sí puede terminar en una respuesta |
-
-La **IA solo ve lo que las reglas fijas no resolvieron**, y solo **títulos + primeras líneas**, no el
-texto completo. En ADAM eso es una llamada chica.
-
-### 4.3 Paso 3 — Armar el prompt dentro de un presupuesto
-
-```
- 818 reglas ─► ① deduplicar ─► ② ¿global o de una ruta? ─► ③ ordenar ─► ④ recortar al presupuesto
-```
-
-1. **Deduplicar** con embeddings de las líneas `Prompt:` (el mismo `text-embedding-3-small` del motor;
-   818 líneas ≈ 20 K tokens ≈ **USD 0,0004**). Reglas casi iguales (parecido ≥ 0,90) se juntan en una,
-   con la severidad más alta y todos sus IDs. ADAM repite mucho: "una sola pregunta por mensaje"
-   aparece en más de 20 reglas (C0-07.01, C1-01.10, C3-01.02 y 17 de C7).
-2. **¿Global o de una ruta?** Por su `Activación`: "en toda la conversación", "en cada respuesta"
-   → **Sección**; "cuando el prospecto pide precios", "ante una objeción" → **alcance de esa Ruta**.
-3. **Ordenar**: inviolable → obligatoria → recomendada.
-4. **Presupuesto** (decisión 1): por defecto **24.000 caracteres ≈ 6.000 tokens** entre Secciones y
-   alcances. Si no alcanza, se condensa **por sección** con IA (solo las que se pasan), y lo que no
-   entra se **informa**: nunca desaparece en silencio.
-
-**Secciones** con los nombres que la cuenta ya usa (catálogo de secciones del Asistente: `[ROL]`,
-`[REGLAS]`, `[ESTILO]`, `[PROHIBICIONES]`…), así el agente se parece a los que ya funcionan.
-
-### 4.4 Paso 4 — Proponer las Rutas (IA, pocas llamadas)
-
-Una llamada con los títulos de C7 y las `Activación` de sus reglas → rutas por **intención del
-cliente**, cada una con:
-
-- **nombre** y **#etiqueta** en minúsculas, sin tildes (se valida contra las etiquetas de la cuenta; si
-  no existe se avisa, como hace hoy el comprobador);
-- **frases del cliente** (lo que el clasificador lee: la lección de v5.9 es que el clasificador solo
-  ve la descripción de la ruta);
-- **fuente**: `@buscar_predefinidas` si se importó conocimiento;
-- **escalamiento** según el documento: "Escalamiento a dirección" → `@crear_ticket`; "Conducción a la
-  reunión" → `@agendar_calendar` (si el agente tiene calendario);
-- **alcance por ruta**: las reglas de §4.3-② de esa ruta.
-
-Todo pasa por el **parser real** (`RouteMap`, `TrainingRoutes`) y el **comprobador** antes de mostrarse.
-
-### 4.5 Paso 5 — Revisar y aplicar
-
-Nada se guarda en un agente sin que alguien lo apruebe. La vista previa va en un modal grande del
-Asistente, con componentes nativos:
-
-```
-┌─ Importar prompt · ADAM-2.0-Comportamiento.md ─────────────────────────────────────┐
-│ ████████████████████░░░░  21.300 / 24.000 caracteres del Entrenamiento             │
-│ 818 reglas · 402 al prompt · 211 en rutas · 17 unidas por repetidas · 0 perdidas    │
-├──────────┬────────────┬──────────────┬─────────┬──────────┬─────────────────────────┤
-│ Resumen  │ Estructura │ Conocimiento │ Pruebas │ Fuera    │ Avisos (3)              │
-├──────────┴────────────┴──────────────┴─────────┴──────────┴─────────────────────────┤
-│ ▾ Definición                                                                        │
-│    Objetivo · Contexto                                                              │
-│ ▾ Rutas (7)                                                  [☑ todas]              │
-│    ☑ precios #precios_sin_cifra  — 22 reglas · "cuánto cuesta", "precio"…           │
-│    ☑ objeciones #objecion        — 31 reglas · "está caro", "lo pienso"…            │
-│    ☑ reunion #reunion            — 12 reglas · → @agendar_calendar                  │
-│ ▾ Secciones (6)                                                                     │
-│    ☑ [ROL] ☑ [PRINCIPIOS] ☑ [ESTILO] ☑ [PROHIBICIONES] ☑ [LÍMITES] ☑ [CONVERSACIÓN] │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│ Cada regla lleva su ID (C7-06.06): se puede ver de dónde salió.                     │
-│                                  [Cancelar]  [Cargar en el Asistente]               │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
-
-- **Cargar en el Asistente** pone la estructura en el **borrador**, no en un agente. Guardar sigue
-  siendo el botón de siempre (`SaveService`), que **no deja guardar con bloqueantes** y guarda el
-  Entrenamiento anterior para poder volver atrás.
-- **Conocimiento** se crea aparte y también con confirmación: lista de respuestas predefinidas a crear
-  (nombre, si es guion con prompt), con casilla por fila.
-- **Cobertura de inviolables** (pestaña Avisos): cada una de las 373 tiene que terminar en el prompt,
-  en una ruta, o **descartada a mano** por la persona. Es el mismo principio de `LostRules`: el v6.11
-  enseñó que un "resumen" borra prohibiciones llamándolas redundantes.
-
-### 4.6 Dónde vive
-
-```
- navegador                       Rails                                Sidekiq
- ─────────                       ─────                                ───────
- [Importar .md] ──POST archivo──► AssistantImportsController ──crea──► TrackingPromptImport
-                                   (valida tamaño y tipo)              (estado: en_cola)
-                                                                           │
-                                                                           ▼
-                                                              PromptImportJob
-                                                                ├─ Leer        (sin IA)
-                                                                ├─ Repartir    (reglas + 1 llamada)
-                                                                ├─ Deduplicar  (embeddings)
-                                                                ├─ Rutas       (1–2 llamadas)
-                                                                ├─ Condensar   (solo si se pasa)
-                                                                └─ Comprobar   (parser real)
- barra de avance ◄──GET estado/avance (cada 2 s)──────────────  estado: lista + propuesta (JSON)
- vista previa ◄───────────────────────────────────────────────  
- [Cargar en el Asistente] ──► borrador del Asistente (como hoy)
-```
-
-- Tabla nueva **`tracking_prompt_imports`**: cuenta, usuario, nombre del archivo, huella (SHA) del
-  contenido, estado, avance, propuesta (jsonb), costo en tokens. Con la huella, **reimportar el mismo
-  archivo no vuelve a gastar**: se reusa la propuesta.
-- El archivo no se guarda: se lee, se procesa y queda solo la propuesta.
-- Llamadas a OpenAI con la integración de la cuenta, como todo el motor (`OpenaiChat`).
+| `InterviewService` + `Instructions` | la conversación: preguntar, redactar, corregir (con la ficha como primer mensaje) |
+| `ValidatorService`, `RouteSelfCheck` | comprobar y reparar lo escrito |
+| `PendingMarkers` | lo que quede sin contestar va como `<PENDIENTE:>` |
+| `DraftPieces` | trocear por secciones `[X]` y `## X` |
+| `LostRules` | la idea (y el cálculo de palabras) de la cobertura |
+| `ManualEdits`, `DraftDiff` | regenerar sin pisar lo editado a mano |
+| `SessionVersions` | cada regeneración es una versión |
+| `TurnProgress` | barra de avance mientras lee |
+| `OpenaiChat` + `EngineConfig` | llamadas con la integración OpenAI de la cuenta |
+| `SaveService` | guardar el agente (con bloqueantes y versión anterior) |
+| `PromptImport::Reader` (rama `feat/importador_md`) | base del troceo por títulos Markdown |
 
 ---
 
-## 5. Cuánto cuesta y cuánto tarda (estimado para ADAM)
-
-| Paso | IA | Tokens aprox. | Tiempo |
-|---|---|---|---|
-| Leer y repartir con reglas fijas | no | 0 | < 1 s |
-| Repartir lo dudoso (títulos + primeras líneas) | sí | 5–10 K | 5–10 s |
-| Deduplicar (embeddings de 818 líneas cortas) | embeddings | 20 K | 3–5 s |
-| Proponer rutas | sí | 15–25 K | 15–30 s |
-| Condensar secciones que se pasen del presupuesto | sí, solo esas | 10–40 K | 10–40 s |
-| Comprobar con el parser real | no | 0 | < 1 s |
-| **Total** | | **≈ 50–95 K** | **≈ 1 minuto** |
-
-Con gpt-4o eso es del orden de **USD 0,25 a 0,50 por importación**. Si se mandara el documento
-completo al modelo serían ≈ 280 K tokens **solo para leerlo**, y además no cabría en una sola llamada.
-
----
-
-## 6. Qué se reutiliza (ya existe en develop)
-
-| Pieza | Para qué en el importador |
-|---|---|
-| `TrainingStructure` / `DraftPieces` | armar el texto del Entrenamiento desde los bloques |
-| `TrainingRoutes` + `RouteMap` (parser real) | escribir y validar las líneas `@ruta` |
-| `TrainingSectionCatalog` / títulos de sección | nombres de sección como los de la cuenta |
-| `ValidatorService` (comprobador) | avisos y bloqueantes antes de mostrar la propuesta |
-| `LostRules` | cobertura de reglas inviolables |
-| `SuggestedTests` + `DraftClassifier` | pruebas desde `Verificación` y "Aplicación práctica" |
-| `Proofreader` | "Mejorar la redacción" sobre lo importado, con deshacer |
-| `SaveService` | guardar en el agente, con bloqueantes y versión anterior |
-| `OpenaiChat` + `EngineConfig` | llamadas y elección del modelo |
-| `KnowledgeItemSyncJob` | vectorizar las respuestas predefinidas que se creen |
-| **`feat/predefinidas_prompt`** (sin mergear) | guiones como respuesta con "El mensaje es el prompt" + guion en curso |
-
----
-
-## 7. Riesgos y cómo se cubren
+## 8. Riesgos y cómo se cubren
 
 | Riesgo | Cobertura |
 |---|---|
-| Se pierden reglas importantes al condensar | cobertura por ID de las 373 inviolables; nada se descarta sin decisión de la persona |
-| El prompt queda demasiado largo y el modelo lo cumple mal | presupuesto con medidor; reglas de tema a las rutas (el modelo solo ve las de la ruta del turno) |
-| Rutas que el clasificador no distingue | frases del cliente escritas por IA + pruebas sugeridas con el clasificador real antes de guardar |
-| Etiquetas con tildes o inexistentes | mismo aviso que el modal de predefinidas y el comprobador |
-| Contenido confidencial que termina en una respuesta al cliente | lo marcado "USO INTERNO" nunca va a Conocimiento |
-| Un `.md` sin formato de reglas | modo genérico (§4.1): más IA, mismo flujo y mismas garantías |
-| Costo al reimportar | huella del archivo: la misma versión no se procesa dos veces |
-| Crear muchas respuestas predefinidas de golpe | confirmación por fila; se crean en un job, sin bloquear la pantalla |
+| El encargo es enorme y la conversación no lo aguanta | el Asistente nunca ve el `.md`: ve la ficha (≤ 16 K caracteres) |
+| La ficha pierde algo importante al juntar/condensar | cada punto trae su origen; cobertura contra el Entrenamiento; la ficha completa se puede ver |
+| El Asistente pregunta de más (lo que el encargo ya decía) | la ficha marca qué pasos están contestados; en la F7 se cuentan las preguntas redundantes |
+| Solo funciona con el formato de un documento (el error del 21/09) | banco de pruebas de 6 textos distintos desde la F1 |
+| Contradicciones del encargo resueltas en silencio por la IA | juntar solo las marca; las decide la persona en el chat |
+| Regenerar pisa ediciones a mano | edición, no reescritura (fase A) + `ManualEdits` (fase B) |
+| Costo al reprocesar | huella por archivo y por trozo |
+| Contenido confidencial que termina en una respuesta al cliente | el encargo no es fuente de respuestas; Conocimiento solo con confirmación por fila |
 
 ---
 
-## 8. Fases (días hábiles)
+## 9. Fases (días hábiles)
 
 | Fase | Entrega | Cómo se verifica | Días |
 |---|---|---|---|
-| **F0** Lectura | árbol de bloques + detector de formato de reglas + modo genérico | spec con ADAM: 818 reglas, 8 capítulos; spec con un prompt común | 1 |
-| **F1** Reparto | reglas fijas de destino + llamada de IA para lo dudoso | spec: cada capítulo de ADAM cae donde dice §4.2 | 1 |
-| **F2** Prompt en presupuesto | dedupe por embeddings, global vs ruta, orden, condensado, secciones con nombres de la cuenta | spec: cabe en el presupuesto y las 373 inviolables están cubiertas | 1,5 |
-| **F3** Rutas | propuesta de rutas + alcance + escalamiento, validadas con el parser real | spec: el comprobador no da bloqueantes; frases y etiquetas válidas | 1,5 |
-| **F4** Job y API | tabla, job con avance, endpoints, huella para no reprocesar | request spec: subir, avance, propuesta; reimportar no gasta | 1 |
-| **F5** Pantalla | botón "Importar .md", modal con pestañas y medidor, "Cargar en el Asistente" | Vitest + navegador | 2 |
-| **F6** Conocimiento | crear respuestas predefinidas (servicios, glosario) y guiones con prompt | spec: se crean, se vectorizan, los guiones tienen `content_is_prompt` | 1,5 |
-| **F7** Prueba real | importar ADAM, pruebas sugeridas, conversación en "Agents IA Test"; comparar contra la línea base (§8.1) | cumple §8.1 + conversación de punta a punta en develop | 1 |
+| **F0** Encargo guardado | tabla `tracking_agent_briefs`, subir `.md` (≤ 5 MB), huella, reuso | request spec: subir, mismo archivo no se duplica, otra cuenta no lo ve | 1 |
+| **F1** Troceo general | títulos Markdown, `[X]`, decorados, MAYÚSCULAS, párrafos; ≤ 24 K por trozo | spec con el banco de 6 textos: ninguno da 0 trozos, ninguno corta una regla | 1 |
+| **F2** Entender y juntar | job con avance, 4 a la vez, ficha parcial → ficha junta, faltas y contradicciones; **medir 4o vs mini** | spec con ADAM y DCI: la ficha trae los 6 temas de la línea base; costo y tiempo medidos | 2 |
+| **F3** Asistente con encargo | ficha como primer mensaje, "Esto entendí", preguntas solo de lo que falta; respuestas guardadas en el encargo | e2e contra gpt-4o: con un encargo completo no pregunta el paso 1; con uno sin etiquetas pregunta solo el 4 | 2 |
+| **F4** Cobertura | cada punto de la ficha buscado en el Entrenamiento; "agregalo" / "dejalo fuera" | spec: una prohibición borrada a propósito aparece como aviso con su origen | 1 |
+| **F5** Pantalla | 📎 en el chat, barra de avance, tarjeta "Esto entendí", ficha completa, enlace "Encargo" en la ficha del agente | Vitest + navegador | 2 |
+| **F6** Regenerar | subir versión nueva: relee solo temas cambiados, reusa respuestas, edita el Entrenamiento como versión nueva | spec: cambiar un tema cuesta 1 trozo; lo editado a mano sobrevive | 1 |
+| **F7** Prueba real | ADAM, DCI V8.12 y un encargo de una página, de punta a punta en develop | criterios de §9.1 | 1 |
 
-### 8.1 Línea base: la muestra hecha a mano (criterio de aceptación de la F7)
+**Total: 11 días hábiles.** Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
+predefinidas con lo consultable de la ficha (catálogo de servicios, glosario, guiones con "El mensaje es
+el prompt"), con confirmación por fila (+1,5 días; ver decisión C).
 
-`docs/ejemplos/adam_entrenamiento_linea_base.txt` es el Entrenamiento de ADAM armado a mano (21/09/2026)
-siguiendo las reglas de este plan: **14.701 caracteres** (≈ 3.700 tokens), 6 rutas + por defecto, 6
-secciones globales y 6 por ruta. Pasó el comprobador real: 0 bloqueantes; avisos por etiquetas que no
-existen en la cuenta, `@crear_ticket` heredado y secciones sugeridas.
+### 9.1 Criterios de aceptación (F7)
 
-Lo que quedó fuera del prompt en la muestra, y a dónde va:
+Con ADAM, comparado contra la línea base hecha a mano
+(`docs/ejemplos/adam_entrenamiento_linea_base.txt`, en `feat/importador_md`):
 
-| Parte | Destino |
-|---|---|
-| C6: 13 servicios (142 reglas) | una respuesta predefinida por servicio; sus reglas como Prompt de Contenido |
-| C7: guiones de redes, Trafficker y web | respuestas predefinidas con "El mensaje es el prompt" |
-| C2 Glosario, C3 Analogías, C4 Errores | respuestas predefinidas |
-| C4 Diagnóstico Ejecutivo y Final | fuera: los hace el consultor en sesión |
-| C1 Forma de aprender / registro de datos | fuera: el agente no escribe en la base de conocimiento |
-| C5 gestión de prompts | fuera: es para quien administra |
-| C3 Comunicación verbal, C7 Seguimiento | fuera: voz, y los reintentos ya los maneja el motor |
-
-**La F7 se da por cumplida si, importando ADAM, el resultado de la función:**
-1. cabe en el presupuesto (≤ 24.000 caracteres) y no pasa de ~1,5 veces la línea base;
-2. cubre las 373 inviolables (en el prompt, en una ruta o descartadas a mano), cosa que la muestra
-   no pudo verificar y la función sí;
-3. propone rutas equivalentes (diagnóstico, servicios, precios, objeciones, reunión, dirección) y el
-   comprobador no da bloqueantes;
-4. manda a Conocimiento o Fuera lo mismo que la tabla de arriba, o explica por qué no;
+1. el Entrenamiento cabe en el presupuesto (≤ 24.000 caracteres) y el comprobador no da bloqueantes;
+2. tiene rutas equivalentes a las de la línea base (diagnóstico, servicios, precios, objeciones,
+   reunión, dirección);
+3. la cobertura no deja prohibiciones del encargo sin decidir;
+4. el Asistente no preguntó nada que la ficha ya contestaba, y sí preguntó las contradicciones;
 5. en las pruebas sugeridas enruta al menos tan bien como la línea base cargada en el mismo agente.
 
-Si sale peor en alguno, se ajusta el reparto o la condensación antes de cerrar la F7.
-
-**Total: 10,5 días hábiles.** F6 necesita que `feat/predefinidas_prompt` esté mergeada; si no, las F0–F5
-funcionan igual y los guiones quedan como alcance de su ruta.
+Con un encargo de una página: ficha en segundos, a lo sumo 2 turnos de preguntas, mismo nivel de
+Entrenamiento que la entrevista de hoy.
 
 ---
 
-## 9. Decisiones para el usuario
+## 10. Decisiones
 
-> **21/09/2026:** el usuario aceptó las propuestas de las decisiones 1 a 5. Queda abierta la 6.
+**Ya tomadas**
 
-1. **Presupuesto del Entrenamiento.** Propuesta: 24.000 caracteres (≈ 6.000 tokens). El agente más
-   grande que hoy funciona (v6.11) tiene 17.000.
-2. **El "Texto oficial".** Propuesta: no va al prompt; en la F6 solo se importan como Conocimiento los
-   servicios (C6), el glosario (C2) y los guiones (C7). El resto (≈ 600 K caracteres de explicación)
-   queda fuera en esta versión.
-3. **Los guiones.** Propuesta: respuesta predefinida con "El mensaje es el prompt" (usa el guion en
-   curso). Alternativa: alcance de su ruta (no necesita la otra rama, pero no sigue el hilo entre
-   mensajes).
-4. **Modelo para importar.** Propuesta: gpt-4o siempre, sin importar el modelo del inbox (medido: el
-   mini no cumple reglas largas; aquí se escribe el prompt de todo el agente).
-5. **¿IDs de regla en el prompt?** Propuesta: no (cuestan tokens y el cliente nunca los debe ver); el
-   mapa ID → dónde quedó se guarda en la importación y se ve en la vista previa.
-6. **¿En qué cuenta vive ADAM?** Para las etiquetas, el calendario y las respuestas predefinidas. Es
-   de Sentidos Creativos: ¿cuenta nueva, o se prueba en la cuenta 2?
+| # | Decisión | Fecha |
+|---|---|---|
+| 1 | Presupuesto del Entrenamiento: 24.000 caracteres | 21/09 (se mantiene) |
+| 4 | El motor que escribe usa gpt-4o, sin importar el modelo del inbox | 21/09 (se mantiene) |
+| — | Lo que falta se pregunta en el chat | 23/09 |
+| — | El encargo se guarda con el agente, para regenerar | 23/09 |
+| — | Plan rehecho aquí; `feat/importador_md` queda como está | 23/09 |
+
+Las decisiones 2 ("Texto oficial" fuera), 3 (guiones) y 5 (IDs de regla) del plan anterior **ya no
+aplican**: se leía el encargo para copiarlo y ahora se lee para entenderlo.
+
+**Abiertas**
+
+- **A. Modelo para *entender* los trozos.** gpt-4o (≈ USD 1,90 por ADAM) o gpt-4o-mini (≈ USD 0,40).
+  Propuesta: medir los dos en la F2 contra la línea base y elegir con datos. Juntar y escribir siguen
+  con gpt-4o.
+- **B. ¿La persona puede editar la ficha a mano?** Propuesta: **no**. Se corrige conversando ("no,
+  también atiende cobranza") y el Entrenamiento sigue siendo lo único editable, así no hay dos fuentes
+  de verdad que se contradigan.
+- **C. Conocimiento sugerido** (respuestas predefinidas desde la ficha). ¿Entra en esta rama o
+  después? Propuesta: después, cuando el flujo principal esté probado.
+- **D. ¿En qué cuenta se prueba ADAM?** (sigue abierta la 6 del plan anterior). Importa por las
+  etiquetas, el calendario y las respuestas predefinidas: ¿cuenta nueva de Sentidos Creativos o la
+  cuenta 2?
