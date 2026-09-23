@@ -58,6 +58,51 @@ a formatos generales (§4.1), y la **línea base** de ADAM hecha a mano
 **Lección que se conserva:** a la IA no se le muestra la respuesta sugerida. Con la sugerencia a la
 vista confirmó 80 de 81 y no sirvió de nada.
 
+### 2.1 ADAM es solo un ejemplo
+
+ADAM (ventas consultivas, 1,1 MB, con reglas numeradas) es **un** encargo entre muchos. Otros tienen
+otros objetivos, otro largo y otra forma de escribirse, y el motor tiene que servir igual para todos.
+Nada del diseño puede depender de ADAM: ni su formato (`**ID** (gravedad)`, `### Norma`), ni sus
+capítulos, ni que el agente venda.
+
+```
+             ┌─ vende (consultivo, catálogo, escuela)       ─┐
+             ├─ agenda (citas médicas, reuniones)             │
+ un encargo  ├─ cobra (recordatorios, promesas de pago)       ├─ misma ficha,
+ puede ser   ├─ da soporte y abre tickets (deriva)            │  mismo Asistente,
+             ├─ coordina una operación (pedidos, choferes)    │  mismo comprobador
+             ├─ factura / licencias                           │
+             └─ …lo que venga                                ─┘
+   escrito como: manual enorme · página suelta · viñetas · un Entrenamiento viejo · un correo
+```
+
+Por eso:
+
+- la **ficha** (§4.2) describe cualquier agente, no uno de ventas: objetivo, temas, modo (contesta o
+  deriva), herramientas que necesita, datos a pedir;
+- lo que un objetivo necesita del motor (calendario para agendar, `{{consulta:}}` para el ERP,
+  `@crear_ticket` para soporte, documentos y hojas de Google para cobranza) sale de la ficha y se cruza
+  con el **inventario de la cuenta**, como ya hace la entrevista; si la cuenta no lo tiene, se pregunta
+  o queda `<PENDIENTE:>`;
+- el **banco de pruebas** se arma desde la F1 con encargos de objetivos distintos y se corre en cada
+  fase (no solo en la F7):
+
+| Encargo | Objetivo | Forma | Tamaño |
+|---|---|---|---|
+| ADAM-2.0 | ventas consultivas | manual con reglas numeradas | 1,1 MB |
+| DCI V8.12 | vendedor consultivo | prompt plano, sin @ruta | medio |
+| #8533 Vendedor Escuela | ventas (escuela) | Entrenamiento existente | 18,7 K |
+| #6543 Coordinador de Operación v6.11 | operación | Entrenamiento existente | 17 K |
+| #7466 Licencias y Facturación | facturación | Entrenamiento existente | 1,7 K |
+| #7512 Citas Médicas | agenda | Entrenamiento existente | 1,1 K |
+| #8724 Vendedor Catálogo | catálogo con ERP | Entrenamiento existente | 3 K |
+| cobranza (a escribir) | cobra | una página, viñetas | < 3 K |
+| soporte que deriva (a escribir) | abre tickets | un correo en prosa | < 2 K |
+
+Los Entrenamientos existentes sirven como encargo **y** como vara: si se le da al motor la idea de un
+agente que ya funciona, lo que escribe tiene que funcionar por lo menos igual (mismas rutas, las mismas
+pruebas sugeridas pasan).
+
 ---
 
 ## 3. El flujo completo
@@ -127,8 +172,8 @@ preferencia:
 Si un tema pasa de **24.000 caracteres**, se parte en sus subtítulos y, si no tiene, por párrafos. Cada
 trozo lleva su **ruta de títulos** (`C7 › Clasificación del lead`) para que la IA sepa dónde está.
 
-**Banco de pruebas** (el error del plan anterior fue medir solo con ADAM): ADAM-2.0, DCI V8.12 y los
-Entrenamientos reales #8533, #6543 (v6.11), #7466 y #7512. Ninguno puede dar 0 trozos.
+Se prueba con el **banco de §2.1** (el error del plan anterior fue medir solo con ADAM). Ninguno puede
+dar 0 trozos.
 
 ### 4.2 Entender (IA, un trozo por llamada)
 
@@ -139,7 +184,11 @@ fija:
 ```
 FICHA DEL ENCARGO
 ├─ identidad         quién es el agente, a nombre de quién habla, para quién trabaja
-├─ objetivo          qué tiene que lograr en una conversación
+├─ objetivo          qué tiene que lograr en una conversación (vender, agendar,
+│                    cobrar, resolver, derivar, coordinar…)
+├─ modo              contesta y escala si no resuelve · o deriva siempre
+├─ herramientas      lo que necesita hacer o consultar: agenda, ERP, tickets,
+│                    documentos/hojas, adjuntos → se cruza con el inventario
 ├─ temas             lo que el cliente viene a pedir  → serán las RUTAS
 │   └─ por tema: cómo lo dice el cliente · qué hace el agente · de dónde saca la
 │                respuesta · qué pasa si no resuelve (ticket, agenda, persona)
@@ -147,7 +196,7 @@ FICHA DEL ENCARGO
 ├─ prohibiciones     lo que nunca hace
 ├─ tono y formato    cómo escribe (largo, preguntas por mensaje, emojis…)
 ├─ datos a pedir     qué tiene que averiguar del cliente
-├─ conocimiento      lo largo y consultable (catálogo, precios, glosario)
+├─ conocimiento      lo largo y consultable (catálogo, precios, glosario, tarifas)
 │                    → NO va al prompt: se propone como respuesta predefinida (F6)
 ├─ fuera             lo que es para quien administra, no para el agente
 └─ dudas             lo que este trozo deja abierto
@@ -156,12 +205,15 @@ FICHA DEL ENCARGO
 Cada punto lleva **de qué trozo salió** (su ruta de títulos). La cobertura (§4.5) y la pantalla lo usan
 para mostrar "esto salió de C7 › Cierre".
 
+Las instrucciones para entender **no traen ejemplos de ADAM ni de ventas**: los ejemplos del prompt se
+reparten entre objetivos distintos, porque un solo ejemplo termina copiado en todos los agentes.
+
 ### 4.3 Juntar (IA, 1–2 llamadas)
 
 Las fichas parciales se unen en **una** ficha. Esta llamada:
 
-- **une repetidos**: en ADAM, "una sola pregunta por mensaje" aparece en más de 20 reglas y debe
-  quedar como un punto;
+- **une repetidos**: por ejemplo, en ADAM "una sola pregunta por mensaje" aparece en más de 20 reglas
+  y debe quedar como un punto;
 - **marca contradicciones**, por ejemplo C3 que dice "nunca des precio" frente a C7 que dice "da el
   rango si insiste". No las resuelve: van a las preguntas;
 - **marca lo que falta** contra lo que el Asistente necesita para escribir, que son los mismos 4 pasos
@@ -170,7 +222,8 @@ Las fichas parciales se unen en **una** ficha. Esta llamada:
 ```
   PASO 1  temas y modo (contesta o deriva)   ── ¿la ficha lo dice?  sí → no se pregunta
   PASO 2  cómo lo dice el cliente, por tema  ── ¿hay frases reales?  no → se pregunta
-  PASO 3  fuente y qué pasa si no resuelve   ── ¿dice ticket/agenda?
+  PASO 3  fuente y qué pasa si no resuelve   ── ¿dice ticket/agenda/persona?
+          + herramientas: ¿la cuenta tiene lo que el encargo pide? (calendario, ERP…)
   PASO 4  etiqueta de cada tema              ── casi nunca está en un encargo → se pregunta
                                                 (con opciones de las etiquetas de la cuenta)
 ```
@@ -308,16 +361,16 @@ que la persona lo confirme fila por fila (F6).
 
 ## 6. Cuánto cuesta y cuánto tarda (estimado; se mide en la F2)
 
-Precios de lista: gpt-4o USD 2,50 / 10 por millón (entrada / salida); gpt-4o-mini USD 0,15 / 0,60.
+Todo con **gpt-4o** (decisión A). Precio de lista: USD 2,50 / 10 por millón (entrada / salida). ADAM
+es el caso extremo; la mayoría de los encargos son de una página.
 
-| Paso | ADAM (1,1 MB, ≈ 45 trozos) | Encargo de 1 página |
+| Paso | Caso extremo: ADAM (1,1 MB, ≈ 45 trozos) | Encargo de 1 página (lo común) |
 |---|---|---|
 | Trocear | < 1 s · 0 | < 1 s · 0 |
-| Entender con gpt-4o | ≈ 360 K entrada + 70 K salida ≈ **USD 1,60** · ≈ 4 min (4 a la vez) | ≈ USD 0,02 · 10 s |
-| Entender con gpt-4o-mini | ≈ **USD 0,10** · ≈ 2 min | ≈ USD 0,001 · 5 s |
-| Juntar (gpt-4o) | ≈ 70 K entrada ≈ USD 0,30 · 40 s | (no hace falta: 1 trozo) |
+| Entender | ≈ 360 K entrada + 70 K salida ≈ **USD 1,60** · ≈ 4 min (4 a la vez) | ≈ USD 0,02 · 10 s |
+| Juntar | ≈ 70 K entrada ≈ USD 0,30 · 40 s | (no hace falta: 1 trozo) |
 | Asistente (turnos de hoy) | igual que hoy: 40–60 s por turno | igual |
-| **Total para tener la ficha** | **USD 0,40 (mini) a 1,90 (4o)** · 3–5 min | **centavos · segundos** |
+| **Total para tener la ficha** | **≈ USD 1,90** · 3–5 min | **centavos · segundos** |
 
 Se paga **una vez por versión del archivo**. Reabrir, regenerar con el mismo archivo o seguir
 conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
@@ -349,7 +402,8 @@ conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
 | El encargo es enorme y la conversación no lo aguanta | el Asistente nunca ve el `.md`: ve la ficha (≤ 16 K caracteres) |
 | La ficha pierde algo importante al juntar/condensar | cada punto trae su origen; cobertura contra el Entrenamiento; la ficha completa se puede ver |
 | El Asistente pregunta de más (lo que el encargo ya decía) | la ficha marca qué pasos están contestados; en la F7 se cuentan las preguntas redundantes |
-| Solo funciona con el formato de un documento (el error del 21/09) | banco de pruebas de 6 textos distintos desde la F1 |
+| Solo funciona con un formato o un objetivo (el error del 21/09) | banco de §2.1: 9 encargos de 6 objetivos y 5 formas, corrido en cada fase |
+| Todos los agentes salen "vendedores" | la ficha no asume objetivo; los ejemplos del prompt se reparten entre objetivos |
 | Contradicciones del encargo resueltas en silencio por la IA | juntar solo las marca; las decide la persona en el chat |
 | Regenerar pisa ediciones a mano | edición, no reescritura (fase A) + `ManualEdits` (fase B) |
 | Costo al reprocesar | huella por archivo y por trozo |
@@ -362,32 +416,33 @@ conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
 | Fase | Entrega | Cómo se verifica | Días |
 |---|---|---|---|
 | **F0** Encargo guardado | tabla `tracking_agent_briefs`, subir `.md` (≤ 5 MB), huella, reuso | request spec: subir, mismo archivo no se duplica, otra cuenta no lo ve | 1 |
-| **F1** Troceo general | títulos Markdown, `[X]`, decorados, MAYÚSCULAS, párrafos; ≤ 24 K por trozo | spec con el banco de 6 textos: ninguno da 0 trozos, ninguno corta una regla | 1 |
-| **F2** Entender y juntar | job con avance, 4 a la vez, ficha parcial → ficha junta, faltas y contradicciones; **medir 4o vs mini** | spec con ADAM y DCI: la ficha trae los 6 temas de la línea base; costo y tiempo medidos | 2 |
+| **F1** Troceo general | títulos Markdown, `[X]`, decorados, MAYÚSCULAS, párrafos; ≤ 24 K por trozo; escribir los 2 encargos que faltan del banco | spec con los 9 encargos del banco: ninguno da 0 trozos, ninguno corta una regla | 1 |
+| **F2** Entender y juntar | job con avance, 4 a la vez, ficha parcial → ficha junta, faltas y contradicciones, herramientas cruzadas con el inventario | con el banco: cada ficha trae el objetivo, el modo y los temas correctos (citas = agenda, soporte = deriva, ADAM = sus 6 temas); costo y tiempo medidos | 2 |
 | **F3** Asistente con encargo | ficha como primer mensaje, "Esto entendí", preguntas solo de lo que falta; respuestas guardadas en el encargo | e2e contra gpt-4o: con un encargo completo no pregunta el paso 1; con uno sin etiquetas pregunta solo el 4 | 2 |
 | **F4** Cobertura | cada punto de la ficha buscado en el Entrenamiento; "agregalo" / "dejalo fuera" | spec: una prohibición borrada a propósito aparece como aviso con su origen | 1 |
 | **F5** Pantalla | 📎 en el chat, barra de avance, tarjeta "Esto entendí", ficha completa, enlace "Encargo" en la ficha del agente | Vitest + navegador | 2 |
 | **F6** Regenerar | subir versión nueva: relee solo temas cambiados, reusa respuestas, edita el Entrenamiento como versión nueva | spec: cambiar un tema cuesta 1 trozo; lo editado a mano sobrevive | 1 |
-| **F7** Prueba real | ADAM, DCI V8.12 y un encargo de una página, de punta a punta en develop | criterios de §9.1 | 1 |
+| **F7** Prueba real | el banco completo, de punta a punta en develop, cuenta 2 | criterios de §9.1 | 1,5 |
 
-**Total: 11 días hábiles.** Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
+**Total: 11,5 días hábiles.** Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
 predefinidas con lo consultable de la ficha (catálogo de servicios, glosario, guiones con "El mensaje es
 el prompt"), con confirmación por fila (+1,5 días; ver decisión C).
 
 ### 9.1 Criterios de aceptación (F7)
 
-Con ADAM, comparado contra la línea base hecha a mano
-(`docs/ejemplos/adam_entrenamiento_linea_base.txt`, en `feat/importador_md`):
+En la **cuenta 2**, con **cada** encargo del banco (§2.1):
 
 1. el Entrenamiento cabe en el presupuesto (≤ 24.000 caracteres) y el comprobador no da bloqueantes;
-2. tiene rutas equivalentes a las de la línea base (diagnóstico, servicios, precios, objeciones,
-   reunión, dirección);
+2. el objetivo y el modo son los del encargo (el de citas agenda, el de soporte deriva, ninguno sale
+   vendiendo si no se lo pidieron) y usa las herramientas que pedía, o las deja `<PENDIENTE:>` si la
+   cuenta no las tiene;
 3. la cobertura no deja prohibiciones del encargo sin decidir;
 4. el Asistente no preguntó nada que la ficha ya contestaba, y sí preguntó las contradicciones;
-5. en las pruebas sugeridas enruta al menos tan bien como la línea base cargada en el mismo agente.
+5. contra su vara: con los Entrenamientos existentes (#8533, #6543, #7466, #7512, #8724), mismas rutas
+   y las pruebas sugeridas enrutan al menos igual; con ADAM, rutas equivalentes a la línea base hecha a
+   mano (`docs/ejemplos/adam_entrenamiento_linea_base.txt`, en `feat/importador_md`).
 
-Con un encargo de una página: ficha en segundos, a lo sumo 2 turnos de preguntas, mismo nivel de
-Entrenamiento que la entrevista de hoy.
+Con los encargos de una página: ficha en segundos y a lo sumo 2 turnos de preguntas.
 
 ---
 
@@ -399,6 +454,8 @@ Entrenamiento que la entrevista de hoy.
 |---|---|---|
 | 1 | Presupuesto del Entrenamiento: 24.000 caracteres | 21/09 (se mantiene) |
 | 4 | El motor que escribe usa gpt-4o, sin importar el modelo del inbox | 21/09 (se mantiene) |
+| A | Entender, juntar y escribir: todo con gpt-4o | 23/09 |
+| D | Se prueba en la cuenta 2. ADAM es solo un ejemplo: el banco lleva encargos de otros objetivos (§2.1) | 23/09 |
 | — | Lo que falta se pregunta en el chat | 23/09 |
 | — | El encargo se guarda con el agente, para regenerar | 23/09 |
 | — | Plan rehecho aquí; `feat/importador_md` queda como está | 23/09 |
@@ -408,14 +465,8 @@ aplican**: se leía el encargo para copiarlo y ahora se lee para entenderlo.
 
 **Abiertas**
 
-- **A. Modelo para *entender* los trozos.** gpt-4o (≈ USD 1,90 por ADAM) o gpt-4o-mini (≈ USD 0,40).
-  Propuesta: medir los dos en la F2 contra la línea base y elegir con datos. Juntar y escribir siguen
-  con gpt-4o.
 - **B. ¿La persona puede editar la ficha a mano?** Propuesta: **no**. Se corrige conversando ("no,
   también atiende cobranza") y el Entrenamiento sigue siendo lo único editable, así no hay dos fuentes
   de verdad que se contradigan.
 - **C. Conocimiento sugerido** (respuestas predefinidas desde la ficha). ¿Entra en esta rama o
   después? Propuesta: después, cuando el flujo principal esté probado.
-- **D. ¿En qué cuenta se prueba ADAM?** (sigue abierta la 6 del plan anterior). Importa por las
-  etiquetas, el calendario y las respuestas predefinidas: ¿cuenta nueva de Sentidos Creativos o la
-  cuenta 2?
