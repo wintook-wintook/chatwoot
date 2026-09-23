@@ -456,7 +456,13 @@ conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
   **ADAM no queda listo:** la ficha sale de 120.000 caracteres (tope 16.000): 728 reglas, 291
   prohibiciones, 79 temas, 150 faltas. El lector anota todo y el que junta casi no reduce. Leerlo tarda
   ~25 min (no 4) y cuesta ~USD 2,5 por lectura; juntarlo ~USD 1,7 (la salida es lo caro). Pendiente:
-  poner topes de cantidad (ver el resumen al usuario del 23/09). Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
+  poner topes de cantidad (ver el resumen al usuario del 23/09).
+- **F5 adelantada, solo la parte de subir (23/09/2026, a pedido del usuario).** Botón «Subir encargo
+  (.md)» junto a «Nuevo Agente IA» → `BriefModal`: elegir el archivo, avance real (tema N de M), y «Esto
+  entendí» (quién es, objetivo, cómo atiende, temas, herramientas con ✓/✗, lo que falta, la ficha lista
+  por lista, tiempo y costo). Va en un modal porque el chat está escondido (`SHOW_CHAT`). Todavía no
+  pregunta ni escribe el Entrenamiento: eso es la F3. Probado de punta a punta en develop (cobranza.md:
+  9 s, USD 0,012). Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
 predefinidas con lo consultable de la ficha (catálogo de servicios, glosario, guiones con "El mensaje es
 el prompt"), con confirmación por fila (+1,5 días): **queda para después** (decisión C).
 

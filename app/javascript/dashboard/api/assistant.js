@@ -109,6 +109,28 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // El encargo (.md) con la idea del agente. Se guarda y se manda a leer solo; con
+  // turnId se sigue el avance en getProgress. Ver docs/importar_prompt_md_plan.md.
+  uploadBrief(file, { sessionId = null, turnId = null } = {}) {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    if (sessionId) formData.append('session_id', sessionId);
+    if (turnId) formData.append('turn_id', turnId);
+    return axios.post(`${this.url}/briefs`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
+
+  // Estado del encargo; con la ficha y lo que falta cuando ya se leyó.
+  getBrief(id) {
+    return axios.get(`${this.url}/briefs/${id}`);
+  }
+
+  // Volver a leerlo (después de una falla). Lo ya leído no se vuelve a pagar.
+  digestBrief(id, turnId = null) {
+    return axios.post(`${this.url}/briefs/${id}/digest`, { turn_id: turnId });
+  }
+
   // El texto de una versión del Entrenamiento: las listas llegan sin él.
   getVersion(sessionId, number) {
     return axios.get(`${this.url}/sessions/${sessionId}/versions/${number}`);

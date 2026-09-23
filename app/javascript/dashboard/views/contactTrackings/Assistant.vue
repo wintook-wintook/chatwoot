@@ -46,6 +46,7 @@ import ProgressStrip from './assistant/ProgressStrip.vue';
 import CopyChip from './assistant/CopyChip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
 import ReportModal from './assistant/ReportModal.vue';
+import BriefModal from './assistant/BriefModal.vue';
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import VersionsPanel from './assistant/VersionsPanel.vue';
 // La Estructura del Agente: el árbol con sus modales (docs/estructura_agente_arbol_plan.md).
@@ -125,6 +126,7 @@ export default {
     ProgressStrip,
     ValidationBadge,
     ReportModal,
+    BriefModal,
     ManualConflictNotice,
     VersionsPanel,
     AgentStructure,
@@ -225,6 +227,8 @@ export default {
       // cerrada ocupa una línea en vez de un cuarto de la columna.
       // El informe del comprobador, en un modal: el alto de la columna es del texto.
       showReportModal: false,
+      // El encargo (.md) con la idea del agente: ver BriefModal.
+      showBriefModal: false,
       // Modo ancho: esconde la conversación y deja el Entrenamiento a todo el
       // ancho. Para los 6 agentes de la cuenta que pasan de 370 líneas.
       isWideEditor: !SHOW_CHAT,
@@ -1188,6 +1192,15 @@ export default {
             >
               {{ $t('TRACKING_ASSISTANT_VIEW.NEW_AGENT') }}
             </woot-button>
+            <woot-button
+              size="small"
+              variant="smooth"
+              color-scheme="secondary"
+              icon="attach"
+              @click="showBriefModal = true"
+            >
+              {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_OPEN') }}
+            </woot-button>
             <div class="flex flex-wrap items-center gap-2 text-xs shrink-0">
               <label
                 for="assistant-inbox"
@@ -1893,6 +1906,11 @@ export default {
       @close="showOptimizeModal = false"
       @run="runOptimize"
       @apply="applyOptimization"
+    />
+    <BriefModal
+      :show="showBriefModal"
+      :session-id="sessionId"
+      @close="showBriefModal = false"
     />
     <ReportModal
       :show="showReportModal"
