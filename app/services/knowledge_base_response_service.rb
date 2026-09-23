@@ -571,8 +571,9 @@ class KnowledgeBaseResponseService
       Información relevante:
       #{context}
 
-      Respondé usando esa información de forma completa y útil. Tono natural y conversacional.
+      Responde usando esa información de forma completa y útil. Tono natural y conversacional.
       No uses prefijos como "Asesor:" ni comillas al inicio o final.
+      #{ContactTrackings::CustomerTone::RULE}
 
       FIDELIDAD A LA FUENTE (regla dura): la información de arriba se recuperó por
       parecido semántico, así que puede tratar de un tema vecino pero distinto al que
@@ -582,9 +583,9 @@ class KnowledgeBaseResponseService
       los pasos del vendedor). Los nombres de permisos, parámetros, campos y menús se
       citan textualmente como aparecen en la fuente.
 
-      Si la fuente no cubre exactamente lo que preguntaron, decilo de frente: explicá
-      brevemente qué sí cubre la documentación, aclará que no tenés el procedimiento
-      exacto para su caso y ofrecé pasarlo con un asesor. Una respuesta honesta que no
+      Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica
+      brevemente qué sí cubre la documentación, aclara que no tienes el procedimiento
+      exacto para su caso y ofrece pasarlo con un asesor. Una respuesta honesta que no
       resuelve es mejor que una inventada que parece resolver.
     USER
     user_prompt = erp_user_prompt(first_name, question, erp_data) if erp_data
@@ -623,7 +624,8 @@ class KnowledgeBaseResponseService
       Datos exactos del sistema (#{data[:rows].size} resultado(s)):
       #{erp_rows_text(data)}
 
-      Respondé con esos datos. Tono natural y conversacional. No uses prefijos como "Asesor:" ni comillas.
+      Responde con esos datos. Tono natural y conversacional. No uses prefijos como "Asesor:" ni comillas.
+      #{ContactTrackings::CustomerTone::RULE}
 
       DATOS EXACTOS (regla dura): precios, existencias, códigos y nombres se citan tal como
       están arriba. Nunca inventes productos, precios ni disponibilidad, ni completes con
@@ -926,8 +928,8 @@ class KnowledgeBaseResponseService
     - Llegan por parecido semántico, así que la mejor puede tratar de un tema vecino
       pero distinto al que preguntaron. No adaptes una fuente para que encaje: no
       sustituyas el sujeto de un procedimiento por el de la pregunta.
-    - Empezá SIEMPRE tu respuesta con una línea "FUENTE_USADA: n", donde n es el número
-      de la [FUENTE n] en la que te basaste. Si no te basaste en ninguna, escribí
+    - Empieza SIEMPRE tu respuesta con una línea "FUENTE_USADA: n", donde n es el número
+      de la [FUENTE n] en la que te basaste. Si no te basaste en ninguna, escribe
       "FUENTE_USADA: 0". Esa línea se elimina antes de mostrarla al cliente.
   RULE
 
@@ -936,14 +938,15 @@ class KnowledgeBaseResponseService
 
   def build_messages(question, context, history)
     system_content = agent_system_prompt || <<~PROMPT.strip
-      Eres un agente de soporte de #{@account.name}. Respondé preguntas
+      Eres un agente de soporte de #{@account.name}. Responde preguntas
       de forma conversacional y concisa, como lo haría un experto de soporte.
-      - Usá el contenido del foro como referencia, respondé con tus propias palabras.
-      - Si necesitás más información, hacé UNA pregunta de seguimiento.
-      - Respondé en el mismo idioma que el cliente.
+      - Usa el contenido del foro como referencia, responde con tus propias palabras.
+      - Si necesitas más información, haz UNA pregunta de seguimiento.
+      - Responde en el mismo idioma que el cliente.
       - No menciones que consultaste un foro o base de conocimiento.
     PROMPT
 
+    system_content += "\n\n#{ContactTrackings::CustomerTone::RULE}"
     system_content += "\n\nContenido relevante del foro:\n#{context}#{SOURCE_FIDELITY_RULE}" if context.present?
     system_content += "\n\n#{branch_scope_rule}" if branch_scope_rule.present?
 
