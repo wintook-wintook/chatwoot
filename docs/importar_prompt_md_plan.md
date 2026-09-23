@@ -416,7 +416,7 @@ conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
 | Fase | Entrega | Cómo se verifica | Días |
 |---|---|---|---|
 | **F0** ✅ Encargo guardado | tabla `tracking_agent_briefs`, subir `.md` (≤ 5 MB), huella, reuso | request spec: subir, mismo archivo no se duplica, otra cuenta no lo ve | 1 |
-| **F1** Troceo general | títulos Markdown, `[X]`, decorados, MAYÚSCULAS, párrafos; ≤ 24 K por trozo; escribir los 2 encargos que faltan del banco | spec con los 9 encargos del banco: ninguno da 0 trozos, ninguno corta una regla | 1 |
+| **F1** ✅ Troceo general | títulos Markdown, `[X]`, decorados, MAYÚSCULAS, párrafos; ≤ 24 K por trozo; escribir los 2 encargos que faltan del banco | spec con los 9 encargos del banco: ninguno da 0 trozos, ninguno corta una regla | 1 |
 | **F2** Entender y juntar | job con avance, 4 a la vez, ficha parcial → ficha junta, faltas y contradicciones, herramientas cruzadas con el inventario | con el banco: cada ficha trae el objetivo, el modo y los temas correctos (citas = agenda, soporte = deriva, ADAM = sus 6 temas); costo y tiempo medidos | 2 |
 | **F3** Asistente con encargo | ficha como primer mensaje, "Esto entendí", preguntas solo de lo que falta; respuestas guardadas en el encargo | e2e contra gpt-4o: con un encargo completo no pregunta el paso 1; con uno sin etiquetas pregunta solo el 4 | 2 |
 | **F4** Cobertura | cada punto de la ficha buscado en el Entrenamiento; "agregalo" / "dejalo fuera" | spec: una prohibición borrada a propósito aparece como aviso con su origen | 1 |
@@ -433,7 +433,17 @@ conversando no vuelve a leerlo. Si se cambia un solo tema, se relee solo ese.
   El mismo archivo en la misma conversación no se duplica; en otra conversación de la cuenta copia la
   lectura si ya estaba hecha (no las respuestas). 21 specs. Probado con ADAM real: entra entero
   (1.142.201 bytes, 0,24 s). Hizo falta un tope propio de largo: `ApplicationRecord` corta todo `text` en
-  20.000 caracteres. Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
+  20.000 caracteres.
+- **F1 hecha (23/09/2026).** `ContactTrackings::Assistant::BriefChunker`: reconoce temas por Markdown
+  (cada nivel), `[X]`, decorados (`=== X ===`) y MAYÚSCULAS sueltas, o parte por párrafos; un título
+  único arriba es el nombre del documento; un bloque de código que envuelve todo no tapa los títulos
+  (el Vendedor Escuela viene entero dentro de un ```` ```text ````). Temas vecinos se juntan mientras
+  quepan en 24.000 caracteres; un tema grande se parte por sus subtemas, y el título del capítulo viaja
+  con el primero. Los trozos pegados dan el texto original, carácter por carácter.
+  Banco (en `spec/fixtures/files/agent_briefs/`, salvo ADAM): los 8 encargos de una página o de un
+  Entrenamiento son **1 trozo** cada uno y todos reconocen sus temas (el de soporte, en prosa, no tiene
+  títulos y va entero); **ADAM: 73 trozos** por capítulo y tema, de 6 a 23 mil caracteres, en 0,27 s.
+  Con el tope bajado a 1.200 caracteres, ninguno corta a mitad de un párrafo. 36 specs. Aparte y opcional: **Conocimiento sugerido**, que propone respuestas
 predefinidas con lo consultable de la ficha (catálogo de servicios, glosario, guiones con "El mensaje es
 el prompt"), con confirmación por fila (+1,5 días): **queda para después** (decisión C).
 
