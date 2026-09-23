@@ -96,6 +96,19 @@ execute_pending_trackings:
   description: "Execute pending contact tracking follow-ups"
 
 # ==============================================================================
+# Job: Abrir y cerrar campañas por su ventana (proyecto@automatizacion_campanas)
+# ==============================================================================
+# Programada → En curso al llegar el inicio; → Finalizada al pasar el fin.
+# Frecuencia: Cada 5 minutos
+# Queue: scheduled_jobs
+# ==============================================================================
+tracking_campaigns_window:
+  cron: "*/5 * * * *"
+  class: "TrackingCampaigns::WindowJob"
+  queue: scheduled_jobs
+  description: "Open and close tracking campaigns by their window"
+
+# ==============================================================================
 # Job: Limpieza de trackings antiguos
 # ==============================================================================
 # Descripción: Elimina trackings completados/cancelados/fallidos antiguos

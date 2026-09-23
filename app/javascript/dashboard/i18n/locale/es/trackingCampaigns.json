@@ -29,14 +29,24 @@
       "ACTIVE": "Activos",
       "COMPLETED": "Completados",
       "FAILED": "Fallidos",
-      "PROGRESS": "Avance"
+      "PROGRESS": "Avance",
+      "TYPE": "Tipo",
+      "WINDOW": "Ventana"
     },
     "STATUS": {
-      "draft": "Borrador",
+      "draft": "Programada",
       "running": "En curso",
       "paused": "Pausada",
       "finished": "Finalizada"
-    }
+    },
+    "MODE": {
+      "batch": "Por lote",
+      "continuous": "Continua"
+    },
+    "NO_END": "sin fin",
+    "CONTINUOUS_CREATED": "Campaña \"{name}\" creada. Para que reciba contactos, crea una automatización que la use.",
+    "CREATE_AUTOMATION": "Crear automatización para esta campaña",
+    "DISMISS": "Cerrar"
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campañas",
@@ -125,6 +135,43 @@
       "ATTEMPTS": "Intentos",
       "ACTION": "Acción"
     },
-    "OPEN_CONVERSATION": "Abrir conversación"
+    "OPEN_CONVERSATION": "Abrir conversación",
+    "TYPE": "Tipo",
+    "WINDOW": "Ventana",
+    "TABS": {
+      "PROSPECTS": "Prospectos",
+      "ENTRIES": "Inscritos"
+    },
+    "ENTRIES": {
+      "LOADING": "Cargando inscripciones…",
+      "EMPTY": "Todavía no se inscribió a nadie. En una campaña continua, los inscritos llegan por la acción \"Agregar a campaña\" de una automatización.",
+      "SUMMARY_ENROLLED": "Inscritos",
+      "SUMMARY_BATCH": "por lote",
+      "SUMMARY_AUTOMATION": "por automatización",
+      "SUMMARY_SKIPPED": "omitidos",
+      "COL": {
+        "CONTACT": "Contacto",
+        "SOURCE": "Entró por",
+        "STATUS": "Estado",
+        "WHEN": "Cuándo"
+      },
+      "SOURCE": {
+        "batch": "Lote",
+        "automation": "Automatización",
+        "automation_named": "Automatización \"{name}\""
+      },
+      "STATUS": {
+        "enrolled": "Inscrito",
+        "skipped": "Omitido"
+      },
+      "REASON": {
+        "campaign_closed": "campaña cerrada",
+        "already_enrolled": "ya inscrito",
+        "active_tracking": "ya tiene un Agente IA activo",
+        "not_contactable": "el canal no lo puede contactar",
+        "outside_window": "fuera de la ventana",
+        "daily_cap": "tope del día"
+      }
+    }
   }
 }

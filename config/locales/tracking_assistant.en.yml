@@ -104,9 +104,16 @@ en:
         automation. Create it under Labels or use one of the existing ones: %{available}.
       label_none_created: (no labels created)
       erp_directive_not_isolated: >-
-        There is a {{consulta:}} directive living alongside branches or prose. The engine sends the
-        WHOLE interpolated Training as the message to the customer: with {{consulta:}} the Training
-        is the message template and cannot carry anything else.
+        There is a {{consulta:}} directive without "?" that is not a route source, living alongside
+        branches or prose. The engine sends the WHOLE interpolated Training as the message. Make it a
+        route source, or ask for its data with "?" (texto=?) so the agent writes the reply.
+      consulta_not_found: >-
+        The query '%{name}' does not exist (or is inactive) on connection '%{connection}'. The engine
+        does not fail: it runs it, finds nothing and the agent answers without data. Check the name in
+        Knowledge Base → ERP Connection, or seed the connection's queries.
+      consulta_unknown_param: >-
+        The query '%{name}' has no parameter %{params}: it will never be filled. Its parameters:
+        %{available}.
       # ⚠ Corrected on 10/09/2026 against the real engine. This message used to say branches
       # without an arrow "stop opening cases", and it is the opposite: the job sends them to
       # try_create_ticket(directive: nil), which falls back to the WHOLE prompt and finds

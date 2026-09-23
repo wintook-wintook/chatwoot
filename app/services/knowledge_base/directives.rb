@@ -61,6 +61,8 @@ module KnowledgeBase
           .gsub(CANNED_RE, '')
           .gsub(/@buscar_art[ií]culo\b/i, '')
           .gsub(/@discourse\b/i, '')
+          .gsub(ExternalDb::ConsultaDirectiveRenderer::DIRECTIVE, '') # proyecto@erp_productos: configuración
+          .gsub(/@agendar_calendar\b/i, '') # proyecto@predefinidas_prompt — igual que el conversacional
           .strip
     end
 
@@ -100,6 +102,21 @@ module KnowledgeBase
     # ¿El texto pide una fuente que además existe y está operativa?
     def available?(text, account:, inbox_id:)
       ready?(detect_search(text), account: account, inbox_id: inbox_id)
+    end
+
+    # proyecto@erp_productos — ¿una {{consulta:}} puede CONTESTARLE al cliente? `available?`
+    # no las mira (ver el encabezado), así que sin esto el job mandaba el turno al
+    # conversacional y el modelo contestaba sin datos (medido: inventó tres cascos con
+    # marca y precio). Solo cuenta:
+    #   · la {{consulta:}} que es FUENTE de una ruta (as_route_source: true), o
+    #   · una {{consulta:}} con "?" (el agente redacta con los datos).
+    # Un Entrenamiento que ES la plantilla de un mensaje de cobranza (sin "?", sin rutas)
+    # sigue fuera: si no, cada respuesta al cliente sería esa plantilla.
+    def erp_available?(text, account:, as_route_source: false)
+      return false unless ExternalDb::ConsultaDirectiveRenderer.contains?(text)
+      return false unless as_route_source || ExternalDb::ConsultaDirectiveRenderer.asks?(text)
+
+      account.external_db_connections.active.exists?
     end
 
     # Misma pregunta, sobre una directiva ya detectada.

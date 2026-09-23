@@ -105,6 +105,7 @@ Rails.application.routes.draw do
           get  'external_db_console/catalog', to: 'external_db_console#catalog'
           post 'external_db_console/run',     to: 'external_db_console#run'
           post 'external_db_console/ask',     to: 'external_db_console#ask'
+          post 'external_db_console/try_asked', to: 'external_db_console#try_asked' # proyecto@erp_productos
           resources :erp_collection_bots, only: [:index, :show, :create, :update, :destroy] do
             post :preview, on: :member
           end
@@ -112,7 +113,10 @@ Rails.application.routes.draw do
           resources :contact_tracking_bulk_assigns, only: [:create] do # proyecto@bulk_tracking_assign
             post :preview, on: :collection # @campanas_vendedor — dry-run de buckets
           end
-          resources :tracking_campaigns, only: [:index, :show, :destroy] # @campanas_vendedor
+          # @campanas_vendedor / @automatizacion_campanas (create = campaña continua)
+          resources :tracking_campaigns, only: [:index, :show, :create, :destroy] do
+            get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
+          end
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview
             get 'list', to: 'list#index' # listado filtrable a nivel cuenta
@@ -129,6 +133,7 @@ Rails.application.routes.draw do
             get  'assistant/progress/:turn_id', to: 'assistant#progress'
             post 'assistant/suggested_tests', to: 'assistant_tools#suggested_tests'
             post 'assistant/optimize', to: 'assistant_tools#optimize'
+            get  'assistant/optimize/:turn_id', to: 'assistant_tools#optimize_result'
             post 'assistant/explain', to: 'assistant_tools#explain'
             post 'assistant/proofread', to: 'assistant_tools#proofread'
             post 'assistant/transcribe', to: 'assistant_tools#transcribe'

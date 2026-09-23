@@ -9,6 +9,7 @@ import { frontendURL } from 'dashboard/helper/URLHelper';
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import ContactTrackingsAPI from 'dashboard/api/contactTrackings';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import CampaignEntries from './CampaignEntries.vue';
 
 const PAGE_SIZE = 25;
 
@@ -69,7 +70,7 @@ const PROSPECT_FILTERS = {
 };
 
 export default {
-  components: { TableFooter },
+  components: { TableFooter, CampaignEntries },
   data() {
     return {
       campaign: null,
@@ -79,6 +80,7 @@ export default {
       pageSize: PAGE_SIZE,
       activeFilter: null, // id del filtro por KPI (PROSPECT_FILTERS) o null
       activeFilterLabel: '', // etiqueta traducida del KPI activo (para el chip)
+      activeTab: 0, // proyecto@automatizacion_campanas: 0 = Prospectos, 1 = Inscritos
     };
   },
   computed: {
@@ -313,6 +315,13 @@ export default {
       if (/failed to send/i.test(err)) return this.$t(`${base}.SEND_FAILED`);
       return err || this.$t(`${base}.UNKNOWN`);
     },
+    // proyecto@automatizacion_campanas: "01/10/2026 10:00 → sin fin"
+    windowText(campaign) {
+      const end = campaign.ends_at
+        ? this.formatDate(campaign.ends_at)
+        : this.$t('TRACKING_CAMPAIGNS_VIEW.NO_END');
+      return `${this.formatDate(campaign.scheduled_for)} → ${end}`;
+    },
     formatDate(value) {
       if (!value) return '—';
       return new Date(value).toLocaleString('es-MX', {
@@ -373,9 +382,16 @@ export default {
           {{ $t('TRACKING_CAMPAIGN_DETAIL.CHANNEL') }}:
           <strong>{{ campaign.inbox_name || '—' }}</strong>
         </span>
+        <!-- proyecto@automatizacion_campanas: tipo y ventana (inicio → fin) -->
         <span>
-          {{ $t('TRACKING_CAMPAIGN_DETAIL.START') }}:
-          <strong>{{ formatDate(campaign.scheduled_for) }}</strong>
+          {{ $t('TRACKING_CAMPAIGN_DETAIL.TYPE') }}:
+          <strong>{{
+            $t(`TRACKING_CAMPAIGNS_VIEW.MODE.${campaign.mode || 'batch'}`)
+          }}</strong>
+        </span>
+        <span>
+          {{ $t('TRACKING_CAMPAIGN_DETAIL.WINDOW') }}:
+          <strong>{{ windowText(campaign) }}</strong>
         </span>
         <span v-if="campaign.objective">
           {{ $t('TRACKING_CAMPAIGN_DETAIL.OBJECTIVE') }}:
@@ -500,8 +516,29 @@ export default {
         </div>
       </div>
 
+      <!-- proyecto@automatizacion_campanas: Prospectos (sus seguimientos) e Inscritos
+           (cada intento de inscripción, por lote o por automatización, y los omitidos). -->
+      <woot-tabs
+        class="mb-3 shrink-0"
+        :index="activeTab"
+        @change="index => (activeTab = index)"
+      >
+        <woot-tabs-item
+          :index="0"
+          :name="$t('TRACKING_CAMPAIGN_DETAIL.TABS.PROSPECTS')"
+          :show-badge="false"
+        />
+        <woot-tabs-item
+          :index="1"
+          :name="$t('TRACKING_CAMPAIGN_DETAIL.TABS.ENTRIES')"
+          :show-badge="false"
+        />
+      </woot-tabs>
+
+      <CampaignEntries v-if="activeTab === 1" :campaign-id="campaignId" />
+
       <!-- Prospectos -->
-      <div class="mb-2 flex items-center gap-3 shrink-0">
+      <div v-else class="mb-2 flex items-center gap-3 shrink-0">
         <h2 class="text-base font-semibold text-slate-700 dark:text-slate-200">
           {{ $t('TRACKING_CAMPAIGN_DETAIL.PROSPECTS') }} ({{ totalProspects }})
         </h2>
@@ -530,7 +567,7 @@ export default {
       </div>
 
       <div
-        v-if="totalProspects === 0"
+        v-if="activeTab === 0 && totalProspects === 0"
         class="py-10 text-center text-slate-400 shrink-0"
       >
         {{
@@ -541,7 +578,7 @@ export default {
       </div>
 
       <!-- Área de tabla: ocupa el alto restante y hace scroll interno -->
-      <div v-else class="flex flex-col flex-1 min-h-0">
+      <div v-else-if="activeTab === 0" class="flex flex-col flex-1 min-h-0">
         <div
           class="flex-1 min-h-0 overflow-y-auto border border-slate-75 dark:border-slate-700 rounded-md"
         >

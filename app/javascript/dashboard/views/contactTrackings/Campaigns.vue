@@ -26,6 +26,9 @@ export default {
       showDeleteModal: false,
       campaignToDelete: null,
       activeTab: 'list',
+      // proyecto@automatizacion_campanas: la campaña continua recién creada, para
+      // ofrecer el siguiente paso (crear la automatización que la llena).
+      createdContinuous: null,
       // Filtro preestablecido cuando se llega desde Contactos (history.state).
       presetFilter: null,
       // Filtro + paginado (cliente) de la tabla de campañas.
@@ -142,6 +145,13 @@ export default {
     statusClass(status) {
       return STATUS_COLOR[status] || 'text-slate-500 bg-slate-100';
     },
+    // proyecto@automatizacion_campanas: "01/10/2026 10:00 → sin fin"
+    windowText(campaign) {
+      const end = campaign.ends_at
+        ? this.formatDate(campaign.ends_at)
+        : this.$t('TRACKING_CAMPAIGNS_VIEW.NO_END');
+      return `${this.formatDate(campaign.scheduled_for)} → ${end}`;
+    },
     formatDate(value) {
       if (!value) return '—';
       return new Date(value).toLocaleString('es-MX', {
@@ -155,6 +165,15 @@ export default {
     progressPct(stats) {
       if (!stats || !stats.total) return 0;
       return Math.round((stats.completed / stats.total) * 100);
+    },
+    // Lleva a Automatizaciones con el modal de nueva regla abierto y la acción
+    // "Agregar a campaña" ya puesta en esta campaña.
+    createAutomationFor(campaign) {
+      this.$router.push({
+        name: 'automation_list',
+        params: { accountId: this.$route.params.accountId },
+        query: { add_to_campaign: campaign.id, campaign_name: campaign.name },
+      });
     },
     openCampaign(campaign) {
       this.$router.push({
@@ -189,11 +208,18 @@ export default {
       }
     },
     onCampaignCreated(result) {
-      useAlert(
-        this.$t('BULK_TRACKING_ASSIGN.MODAL.RESULT_QUEUED_BODY', {
-          count: result?.queued || 0,
-        })
-      );
+      if (result?.mode === 'continuous') {
+        this.createdContinuous = {
+          id: result.campaign_id,
+          name: result.campaign_name,
+        };
+      } else {
+        useAlert(
+          this.$t('BULK_TRACKING_ASSIGN.MODAL.RESULT_QUEUED_BODY', {
+            count: result?.queued || 0,
+          })
+        );
+      }
       this.presetFilter = null;
       this.activeTab = 'list';
       this.fetchCampaigns();
@@ -255,6 +281,35 @@ export default {
 
     <!-- Tab: Campañas -->
     <template v-else>
+      <!-- proyecto@automatizacion_campanas: el siguiente paso de una campaña continua -->
+      <div
+        v-if="createdContinuous"
+        class="flex flex-wrap items-center justify-between gap-3 mb-4 p-3 rounded-md border border-woot-100 dark:border-woot-800 bg-woot-25 dark:bg-woot-900/20 text-sm text-slate-700 dark:text-slate-200"
+      >
+        <span>
+          {{
+            $t('TRACKING_CAMPAIGNS_VIEW.CONTINUOUS_CREATED', {
+              name: createdContinuous.name,
+            })
+          }}
+        </span>
+        <span class="flex items-center gap-2">
+          <woot-button
+            size="small"
+            @click="createAutomationFor(createdContinuous)"
+          >
+            {{ $t('TRACKING_CAMPAIGNS_VIEW.CREATE_AUTOMATION') }}
+          </woot-button>
+          <woot-button
+            size="small"
+            variant="clear"
+            color-scheme="secondary"
+            icon="dismiss"
+            :aria-label="$t('TRACKING_CAMPAIGNS_VIEW.DISMISS')"
+            @click="createdContinuous = null"
+          />
+        </span>
+      </div>
       <div v-if="isLoading" class="py-16 text-center text-slate-400">
         {{ $t('TRACKING_CAMPAIGNS_VIEW.LOADING') }}
       </div>
@@ -325,7 +380,9 @@ export default {
             <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.NAME') }}</th>
             <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.AGENT') }}</th>
             <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.CHANNEL') }}</th>
-            <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.START') }}</th>
+            <!-- proyecto@automatizacion_campanas: tipo y ventana (antes, solo el inicio) -->
+            <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.TYPE') }}</th>
+            <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.WINDOW') }}</th>
             <th class="p-3">{{ $t('TRACKING_CAMPAIGNS_VIEW.COL.STATUS') }}</th>
             <th class="p-3 text-right">
               {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.PROGRESS') }}
@@ -349,10 +406,13 @@ export default {
             <td class="p-3 text-slate-500 dark:text-slate-400">
               {{ c.inbox_name || '—' }}
             </td>
+            <td class="p-3 text-slate-500 dark:text-slate-400">
+              {{ $t(`TRACKING_CAMPAIGNS_VIEW.MODE.${c.mode || 'batch'}`) }}
+            </td>
             <td
               class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap"
             >
-              {{ formatDate(c.scheduled_for) }}
+              {{ windowText(c) }}
             </td>
             <td class="p-3">
               <span

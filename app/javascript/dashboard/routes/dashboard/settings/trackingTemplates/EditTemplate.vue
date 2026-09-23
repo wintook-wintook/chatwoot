@@ -390,16 +390,28 @@ export default {
           const prefix = this.erpConnPrefix(conn);
           if (!prefix) return;
           (conn.queries || []).forEach(q => {
-            const keys = (q.params_schema || [])
-              .map(p => `${p.key}=`)
-              .join(', ');
+            // proyecto@erp_productos — una consulta de búsqueda (con un parámetro de
+            // texto libre, tipo "words") se ofrece con "?": los llena la IA con lo que
+            // escribe el cliente. Las demás, como siempre (valores fijos a completar).
+            const schema = q.params_schema || [];
+            const isSearch = schema.some(p => p.type === 'words');
+            const keys = isSearch
+              ? schema
+                  .filter(p => ['words', 'number', 'boolean'].includes(p.type))
+                  .filter(p => p.key !== 'precio_min')
+                  .map(p => `${p.key}=?`)
+                  .join(', ')
+              : schema.map(p => `${p.key}=`).join(', ');
             const args = keys ? `(${keys})` : '';
+            const askedHint = isSearch
+              ? '. Los «?» los llena la IA con lo que pide el cliente'
+              : '';
             items.push({
               group: 'erp',
               token: `{{consulta:${prefix}/${q.name}${args}}}`,
               label: `Consulta «${q.name}» en «${conn.name}»${
                 q.description ? ` (${q.description})` : ''
-              }.`,
+              }${askedHint}.`,
             });
           });
         });

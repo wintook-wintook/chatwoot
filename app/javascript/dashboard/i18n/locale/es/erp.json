@@ -83,7 +83,16 @@
       "ASK_ANSWER": "Respuesta",
       "ASK_QUERY_USED": "Consulta elegida: {name}",
       "RESULT_PLACEHOLDER": "Ejecuta una consulta o haz una pregunta para ver los resultados aquí.",
-      "QUERY_TITLE": "Consulta predefinida (Modo A)"
+      "QUERY_TITLE": "Consulta predefinida (Modo A)",
+      "YES": "Sí",
+      "NO": "No",
+      "AGENT_TITLE": "Probar como el agente",
+      "AGENT_HINT": "Escribe lo que diría un cliente. La IA llena los parámetros de búsqueda como lo haría un Agente IA con esta consulta y los «?», y se muestra lo que devolvería el ERP.",
+      "AGENT_PLACEHOLDER": "Ej. ¿tienen laptops HP de menos de 15 mil?",
+      "AGENT_RUN": "Probar",
+      "AGENT_NOT_USED": "El mensaje no pide nada que esta consulta pueda responder: el agente contestaría sin consultar.",
+      "AGENT_FILLED": "La IA llenó:",
+      "AGENT_PARTIAL": "Coincidencia parcial"
     },
     "BOTS": {
       "TITLE": "Agente Cobrador",

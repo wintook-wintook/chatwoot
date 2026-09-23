@@ -50,6 +50,29 @@
         "ERROR": "La firma de mensaje no puede estar vacía",
         "PLACEHOLDER": "Inserta tu firma de mensaje personal aquí."
       },
+      "APPEARANCE": {
+        "TITLE": "Apariencia",
+        "NOTE": "Elige cómo se ve el tablero. La preferencia se guarda en este navegador.",
+        "MODE_LABEL": "Modo",
+        "TINT_LABEL": "Tema de color",
+        "MODES": {
+          "LIGHT": "Claro",
+          "DARK": "Oscuro",
+          "AUTO": "Sistema"
+        },
+        "TINTS": {
+          "DEFAULT": "Predeterminado",
+          "CALIDO": "Cálido",
+          "BOSQUE": "Bosque",
+          "INDIGO": "Índigo",
+          "SEPIA": "Sepia",
+          "CONTRASTE": "Alto contraste",
+          "VIOLETA": "Violeta",
+          "TURQUESA": "Turquesa",
+          "ROSA": "Rosa",
+          "GRAFITO": "Grafito"
+        }
+      },
       "PASSWORD_SECTION": {
         "TITLE": "Contraseña",
         "NOTE": "Actualizar tu contraseña restablecerá tus inicios de sesión en múltiples dispositivos.",
