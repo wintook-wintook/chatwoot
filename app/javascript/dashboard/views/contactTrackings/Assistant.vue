@@ -67,9 +67,10 @@ const INBOX_STORAGE_KEY = 'tracking_assistant_inbox_id';
 
 // El chat del Asistente, escondido a pedido del usuario (17/09/2026): el
 // Entrenamiento se arma en el formulario de secciones, que se lleva todo el ancho.
-// Vuelve el 23/09/2026 para REFINAR: la pantalla sigue arrancando a lo ancho (sin
-// chat) y el chat se abre solo al crear un Entrenamiento desde un encargo, o con el
-// botón «Mostrar la conversación» junto al Entrenamiento.
+// Vuelve el 23/09/2026 para REFINAR, y comparte la columna izquierda con la
+// Estructura del Agente: se ve uno a la vez (`leftPanel`), con un selector arriba.
+// La pantalla arranca en la Estructura; el chat se abre solo al crear un
+// Entrenamiento desde un encargo.
 const SHOW_CHAT = true;
 
 // La pestaña Conversaciones, escondida a pedido del usuario (18/09/2026): lista las
@@ -231,9 +232,10 @@ export default {
       // El encargo (.md) con la idea del agente: ver BriefModal.
       showBriefModal: false,
       isWritingBrief: false,
-      // Modo ancho: esconde la conversación y deja el Entrenamiento a todo el
-      // ancho. Para los 6 agentes de la cuenta que pasan de 370 líneas.
-      isWideEditor: true,
+      // Qué ocupa la columna izquierda: 'structure' (la Estructura del Agente) o
+      // 'chat'. Uno a la vez (pedido del usuario, 23/09/2026): con los dos, más el
+      // Entrenamiento, eran tres columnas apretadas.
+      leftPanel: 'structure',
       sessionsPage: 1,
       SESSIONS_PER_PAGE,
       // El orden arranca donde lo dejó el backend (recent_first): así el primer
@@ -885,7 +887,7 @@ export default {
       );
       this.proposal = { ...(this.proposal || {}), ...definicion };
       this.showBriefModal = false;
-      this.isWideEditor = false;
+      this.leftPanel = 'chat';
     },
     // Al mensaje del Asistente se le suma lo que agregó la cobertura y la invitación
     // a seguir: el chat queda abierto para eso.
@@ -1313,54 +1315,80 @@ export default {
             </div>
           </div>
 
-          <div
-            class="grid flex-1 min-h-0 gap-4"
-            :class="
-              showChat && !isWideEditor ? 'md:grid-cols-3' : 'md:grid-cols-2'
-            "
-          >
-            <!-- v-show y no v-if: la conversación se esconde, no se desmonta. Con
+          <div class="grid flex-1 min-h-0 gap-4 md:grid-cols-2">
+            <!-- La columna izquierda: la Estructura del Agente o la conversación,
+                 una a la vez, con el selector arriba. -->
+            <div class="flex flex-col min-h-0 gap-2">
+              <div
+                v-if="showChat"
+                class="flex items-center gap-1 shrink-0"
+                role="tablist"
+              >
+                <woot-button
+                  v-for="panel in ['structure', 'chat']"
+                  :key="panel"
+                  size="small"
+                  :variant="leftPanel === panel ? 'smooth' : 'clear'"
+                  :color-scheme="leftPanel === panel ? 'primary' : 'secondary'"
+                  :icon="panel === 'chat' ? 'chat' : 'list'"
+                  role="tab"
+                  :aria-selected="leftPanel === panel"
+                  @click="leftPanel = panel"
+                >
+                  {{
+                    panel === 'chat'
+                      ? $t('TRACKING_ASSISTANT_VIEW.PANEL_CHAT', {
+                          count: messages.length,
+                        })
+                      : $t('TRACKING_ASSISTANT_VIEW.TREE_TITLE')
+                  }}
+                </woot-button>
+              </div>
+              <!-- v-show y no v-if: la conversación se esconde, no se desmonta. Con
                v-if se perdería el scroll del hilo y lo tecleado sin enviar cada
-               vez que alguien entra y sale del modo ancho. -->
-            <section
-              v-show="showChat && !isWideEditor"
-              class="p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col min-h-0"
-            >
-              <InterviewPanel
-                :messages="messages"
-                :is-thinking="isThinking"
-                :options="interviewOptions"
-                :is-editing="Boolean(draft.trim())"
-                :stage="turnStage"
-                @send="sendMessage"
-              />
-            </section>
+               vez que se cambia a la Estructura y se vuelve. -->
+              <section
+                v-show="showChat && leftPanel === 'chat'"
+                class="flex-1 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col min-h-0"
+              >
+                <InterviewPanel
+                  :messages="messages"
+                  :is-thinking="isThinking"
+                  :options="interviewOptions"
+                  :is-editing="Boolean(draft.trim())"
+                  :stage="turnStage"
+                  @send="sendMessage"
+                />
+              </section>
 
-            <!-- SECCIONES · el formulario, a la izquierda. Es donde se arma el
+              <!-- SECCIONES · el formulario, a la izquierda. Es donde se arma el
                  Entrenamiento: cada cambio vuelve a armar el texto en el backend y
                  se ve al instante en la columna de la derecha. -->
-            <section
-              class="flex flex-col min-h-0 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-            >
-              <h3
-                class="mb-2 text-sm font-semibold shrink-0 text-slate-800 dark:text-slate-100"
+              <section
+                v-show="!showChat || leftPanel === 'structure'"
+                class="flex flex-col flex-1 min-h-0 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
               >
-                {{ $t('TRACKING_ASSISTANT_VIEW.TREE_TITLE') }}
-              </h3>
-              <AgentStructure
-                class="flex-1 min-h-0"
-                :value="trainingStructure"
-                :definition="proposal"
-                :titles="sectionTitles"
-                :route-options="routeOptions"
-                :issues="nodeIssues"
-                :inbox-id="inboxId"
-                :can-explain="canExplainTraining"
-                @input="onSectionsInput"
-                @updateDefinition="updateDefinition"
-                @explain="explainFragment"
-              />
-            </section>
+                <h3
+                  v-if="!showChat"
+                  class="mb-2 text-sm font-semibold shrink-0 text-slate-800 dark:text-slate-100"
+                >
+                  {{ $t('TRACKING_ASSISTANT_VIEW.TREE_TITLE') }}
+                </h3>
+                <AgentStructure
+                  class="flex-1 min-h-0"
+                  :value="trainingStructure"
+                  :definition="proposal"
+                  :titles="sectionTitles"
+                  :route-options="routeOptions"
+                  :issues="nodeIssues"
+                  :inbox-id="inboxId"
+                  :can-explain="canExplainTraining"
+                  @input="onSectionsInput"
+                  @updateDefinition="updateDefinition"
+                  @explain="explainFragment"
+                />
+              </section>
+            </div>
 
             <!-- El Entrenamiento manda: se lleva todo el alto que sobre, y los
                dos paneles se colapsan. Antes eran tres secciones de alto libre
@@ -1452,23 +1480,6 @@ export default {
                       :pending-count="draftPendingCount"
                     />
                   </button>
-                  <!-- Para los Entrenamientos largos: 38 líneas siguen siendo poco
-                     para uno de 645. Mientras se edita un texto así no hace falta
-                     ver el chat; al volver, sigue donde estaba. -->
-                  <woot-button
-                    v-if="showChat"
-                    variant="clear"
-                    size="tiny"
-                    color-scheme="secondary"
-                    :icon="isWideEditor ? 'chat' : 'arrow-expand'"
-                    @click="isWideEditor = !isWideEditor"
-                  >
-                    {{
-                      isWideEditor
-                        ? $t('TRACKING_ASSISTANT_VIEW.DRAFT_SHOW_CHAT')
-                        : $t('TRACKING_ASSISTANT_VIEW.DRAFT_WIDE')
-                    }}
-                  </woot-button>
                 </div>
                 <VersionsPanel
                   v-if="draftTab === 'versions'"

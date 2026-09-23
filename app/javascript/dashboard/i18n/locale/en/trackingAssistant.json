@@ -360,6 +360,7 @@
     "BRIEF_COVERED": "I added %{count} points from the brief that the draft had left out.",
     "BRIEF_ASK_NOTHING": "Nothing is missing: the brief has everything needed. You can create the Training now.",
     "BRIEF_CHAT_USER": "📎 Create the Training from the brief «%{name}»",
-    "BRIEF_CHAT_INVITE": "Want to change anything? Tell me here: for example «add that no appointments are booked on Sundays» or «a more formal tone»."
+    "BRIEF_CHAT_INVITE": "Want to change anything? Tell me here: for example «add that no appointments are booked on Sundays» or «a more formal tone».",
+    "PANEL_CHAT": "Conversation (%{count})"
   }
 }

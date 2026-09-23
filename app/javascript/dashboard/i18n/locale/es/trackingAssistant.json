@@ -360,6 +360,7 @@
     "BRIEF_COVERED": "Agregué %{count} puntos del encargo que la redacción había dejado afuera.",
     "BRIEF_ASK_NOTHING": "No falta nada: el encargo trae todo lo necesario. Ya puedes crear el Entrenamiento.",
     "BRIEF_CHAT_USER": "📎 Crear el Entrenamiento con el encargo «%{name}»",
-    "BRIEF_CHAT_INVITE": "¿Quieres cambiar algo? Escríbemelo aquí: por ejemplo «agrega que los domingos no se agenda» o «el tono más formal»."
+    "BRIEF_CHAT_INVITE": "¿Quieres cambiar algo? Escríbemelo aquí: por ejemplo «agrega que los domingos no se agenda» o «el tono más formal».",
+    "PANEL_CHAT": "Conversación (%{count})"
   }
 }
