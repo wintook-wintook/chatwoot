@@ -361,6 +361,7 @@
     "BRIEF_ASK_NOTHING": "Nothing is missing: the instructions have everything needed. You can create the Training now.",
     "BRIEF_CHAT_USER": "📎 Create the Training from the instructions «%{name}»",
     "BRIEF_CHAT_INVITE": "Want to change anything? Tell me here: for example «add that no appointments are booked on Sundays» or «a more formal tone».",
-    "PANEL_CHAT": "Conversation (%{count})"
+    "PANEL_CHAT": "Conversation (%{count})",
+    "BRIEF_EXAMPLE": "Download an example (.md)"
   }
 }

@@ -361,6 +361,7 @@
     "BRIEF_ASK_NOTHING": "No falta nada: las instrucciones traen todo lo necesario. Ya puedes crear el Entrenamiento.",
     "BRIEF_CHAT_USER": "📎 Crear el Entrenamiento con las instrucciones «%{name}»",
     "BRIEF_CHAT_INVITE": "¿Quieres cambiar algo? Escríbemelo aquí: por ejemplo «agrega que los domingos no se agenda» o «el tono más formal».",
-    "PANEL_CHAT": "Conversación (%{count})"
+    "PANEL_CHAT": "Conversación (%{count})",
+    "BRIEF_EXAMPLE": "Descargar un ejemplo (.md)"
   }
 }

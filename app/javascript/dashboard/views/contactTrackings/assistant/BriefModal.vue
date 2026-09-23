@@ -32,6 +32,12 @@ import {
 } from './briefDigest';
 
 const POLL_MS = 2000;
+// Una plantilla con cada sección que el lector sabe leer, con su ejemplo (pedido del
+// usuario, 23/09/2026). Archivos estáticos en public/assistant/, uno por idioma.
+const EXAMPLE_FILES = {
+  es: '/assistant/instrucciones_iniciales_ejemplo.md',
+  en: '/assistant/initial_instructions_example.md',
+};
 const UPLOAD_ERRORS = [
   'too_large',
   'bad_extension',
@@ -98,6 +104,12 @@ export default {
     },
     ready() {
       return this.brief?.status === 'ready';
+    },
+    exampleUrl() {
+      const idioma = String(this.$i18n.locale || '').startsWith('es')
+        ? 'es'
+        : 'en';
+      return EXAMPLE_FILES[idioma];
     },
     stageLabel() {
       const etapa = this.stage;
@@ -267,6 +279,13 @@ export default {
         </h2>
         <p class="!m-0 mt-1 text-xs text-slate-600 dark:text-slate-300">
           {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_HINT') }}
+          <a
+            :href="exampleUrl"
+            download
+            class="ml-1 font-medium text-woot-600 dark:text-woot-400 hover:underline"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_EXAMPLE') }}
+          </a>
         </p>
       </div>
 
