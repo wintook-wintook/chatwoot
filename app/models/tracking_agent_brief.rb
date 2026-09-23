@@ -80,9 +80,16 @@ class TrackingAgentBrief < ApplicationRecord
     Digest::SHA256.hexdigest(text.to_s)
   end
 
-  # Un encargo de la cuenta con el mismo archivo y la lectura ya hecha.
+  # Un encargo de la cuenta con el mismo archivo y la lectura ya hecha CON LAS
+  # INSTRUCCIONES ACTUALES del lector: copiar una lectura vieja devolvía una ficha sin
+  # los arreglos posteriores (medido el 23/09 con el gimnasio: salió la de la versión 2).
   def self.read_twin(account, sha256)
-    where(account: account, sha256: sha256, status: 'ready').recent_first.first
+    where(account: account, sha256: sha256, status: 'ready').recent_first
+                                                            .find(&:read_with_current_reader?)
+  end
+
+  def read_with_current_reader?
+    chunks.present? && chunks.all? { |c| c['lector'] == ContactTrackings::Assistant::BriefReader::VERSION }
   end
 
   def ready? = status == 'ready'

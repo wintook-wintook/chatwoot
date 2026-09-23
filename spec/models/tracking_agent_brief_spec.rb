@@ -13,15 +13,23 @@ RSpec.describe TrackingAgentBrief do
   end
 
   describe '.read_twin' do
+    let(:leido) { [{ 'lector' => ContactTrackings::Assistant::BriefReader::VERSION }] }
+
     it 'solo devuelve uno con la lectura ya hecha' do
       brief(status: 'reading')
 
       expect(described_class.read_twin(account, described_class.fingerprint('hola'))).to be_nil
     end
 
+    it 'no copia una lectura hecha con otra versión del lector' do
+      brief(status: 'ready', chunks: [{ 'lector' => ContactTrackings::Assistant::BriefReader::VERSION - 1 }])
+
+      expect(described_class.read_twin(account, described_class.fingerprint('hola'))).to be_nil
+    end
+
     it 'devuelve el último leído con esa huella' do
-      viejo = brief(status: 'ready')
-      nuevo = brief(status: 'ready')
+      viejo = brief(status: 'ready', chunks: leido)
+      nuevo = brief(status: 'ready', chunks: leido)
       viejo.update!(created_at: 1.day.ago)
 
       expect(described_class.read_twin(account, described_class.fingerprint('hola'))).to eq(nuevo)

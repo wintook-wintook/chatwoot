@@ -49,7 +49,8 @@ RSpec.describe 'Asistente de Agentes IA — encargos' do
 
     it 'no manda a leer uno que ya viene leído' do
       subir({ session_id: sesion.id })
-      TrackingAgentBrief.where(account: account).last.update!(status: 'ready')
+      TrackingAgentBrief.where(account: account).last
+                        .update!(status: 'ready', chunks: [{ 'lector' => ContactTrackings::Assistant::BriefReader::VERSION }])
 
       expect { subir({ session_id: sesion.id }) }.not_to have_enqueued_job(ContactTrackings::Assistant::AgentBriefDigestJob)
     end
@@ -75,13 +76,18 @@ RSpec.describe 'Asistente de Agentes IA — encargos' do
     # Leer un encargo grande cuesta: si la cuenta ya lo leyó, se copia la lectura.
     it 'copia la lectura de otro encargo de la cuenta con el mismo archivo' do
       subir({ session_id: sesion.id })
-      TrackingAgentBrief.where(account: account).last.update!(status: 'ready', digest: { 'objetivo' => 'agendar' }, answers: { 'x' => 1 })
+      TrackingAgentBrief.where(account: account).last.update!(
+        status: 'ready', digest: { 'objetivo' => 'agendar' }, answers: { 'x' => 1 },
+        chunks: [{ 'lector' => ContactTrackings::Assistant::BriefReader::VERSION }]
+      )
 
       subir({ session_id: sesion.id })
 
       expect(response).to have_http_status(:created)
       nuevo = TrackingAgentBrief.find(response.parsed_body['id'])
       expect(response.parsed_body['reused']).to eq('reading')
+      # La ficha viaja en la respuesta: la pantalla no vuelve a preguntar por un encargo listo.
+      expect(response.parsed_body['digest']).to eq('objetivo' => 'agendar')
       expect(nuevo).to have_attributes(status: 'ready', digest: { 'objetivo' => 'agendar' }, answers: {})
     end
 

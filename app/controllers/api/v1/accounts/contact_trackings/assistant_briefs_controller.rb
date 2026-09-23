@@ -42,7 +42,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::
   before_action :fetch_brief, only: [:show, :content, :digest, :compose, :cover]
 
   def show
-    render json: @brief.summary.merge(@brief.ready? ? { digest: @brief.digest, usage: @brief.usage } : {})
+    render json: payload(@brief)
   end
 
   def create
@@ -53,7 +53,9 @@ class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::
     return render json: { error: result.error }, status: :unprocessable_entity if result.error
 
     enqueue_digest(result.brief)
-    render json: result.brief.summary.merge(reused: result.reused).compact,
+    # Con la ficha si ya viene leída (copiada de otro encargo con el mismo archivo):
+    # sin ella, la pantalla mostraba "listo" con la ficha vacía (23/09).
+    render json: payload(result.brief).merge(reused: result.reused).compact,
            status: result.reused == 'same_session' ? :ok : :created
   end
 
@@ -85,6 +87,10 @@ class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::
   end
 
   private
+
+  def payload(brief)
+    brief.summary.merge(brief.ready? ? { digest: brief.digest, usage: brief.usage } : {})
+  end
 
   def enqueue_digest(brief)
     return if brief.ready?
