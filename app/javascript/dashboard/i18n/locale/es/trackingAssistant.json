@@ -405,6 +405,10 @@
     "INSTRUCTIONS_HINT": "Se llenan solas mientras conversas, y puedes corregirlas aquí: el Asistente toma tus cambios en el siguiente mensaje. Cuando estén listas, crea el Entrenamiento.",
     "SESSIONS_FILTER_OPEN": "En construcción (%{count})",
     "SESSIONS_FILTER_SAVED": "Ya guardados (%{count})",
-    "SESSIONS_FILTER_ALL": "Todos (%{count})"
+    "SESSIONS_FILTER_ALL": "Todos (%{count})",
+    "SAVE_CALENDAR": "Calendario donde agenda",
+    "SAVE_CALENDAR_HINT": "Este agente agenda citas: elige con qué cuenta de Google. Crea los eventos en su calendario principal; el calendario exacto se puede cambiar después en la ficha del agente.",
+    "SAVE_CALENDAR_REQUIRED": "Elige al menos uno: sin calendario el agente no puede ofrecer horarios.",
+    "SAVE_CALENDAR_NONE": "La cuenta no tiene ningún calendario de Google conectado: el agente no podrá agendar hasta que conectes uno en Integraciones y se lo asignes en su ficha."
   }
 }

@@ -312,7 +312,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   end
 
   def save_params
-    params.permit(:name, :objective, :ai_context, :inbox_id, :template_id, :session_id)
+    params.permit(:name, :objective, :ai_context, :inbox_id, :template_id, :session_id, calendar_integration_ids: [])
   end
 
   # nil = el cliente no sabe si la entrevista sigue abierta (se deduce de las marcas).

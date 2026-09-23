@@ -16,6 +16,10 @@
 //   las fuentes de la cuenta pero NO su negocio. Ese campo entra al prompt como
 //   "BASE DE CONOCIMIENTO" y el agente lo cita como cierto, así que solo lleva
 //   lo que la persona dijo en la conversación. Vacío es una respuesta válida.
+//
+// EL CALENDARIO (24/09/2026): si el Entrenamiento agenda (@agendar_calendar), se
+// elige acá con qué cuenta de Google. Antes era un aviso pasajero después de guardar
+// y un agente quedó sin calendario: elegía la ruta de agendar y no ofrecía horarios.
 // ============================================================================
 export default {
   props: {
@@ -29,6 +33,10 @@ export default {
     proposal: { type: Object, default: null },
     // El Agente IA del que vino el borrador, si vino de uno.
     editingTemplate: { type: Object, default: null },
+    // El Entrenamiento usa @agendar_calendar: sin calendario no agenda nada.
+    needsCalendar: { type: Boolean, default: false },
+    // Las cuentas de Google conectadas: [{ id, google_email, user_name }].
+    calendarIntegrations: { type: Array, default: () => [] },
   },
   emits: ['close', 'save'],
   data() {
@@ -39,6 +47,7 @@ export default {
       aiContext: '',
       inboxId: null,
       templateId: null,
+      calendarIds: [],
     };
   },
   computed: {
@@ -49,7 +58,16 @@ export default {
       if (!needle) return false;
       return this.templates.some(t => (t.name || '').toLowerCase() === needle);
     },
+    // Si agenda y la cuenta tiene con qué, hay que elegir al menos un calendario.
+    calendarMissing() {
+      return (
+        this.needsCalendar &&
+        this.calendarIntegrations.length > 0 &&
+        !this.calendarIds.length
+      );
+    },
     canSave() {
+      if (this.calendarMissing) return false;
       if (this.mode === 'create') {
         return (
           this.name.trim().length >= 2 &&
@@ -75,6 +93,14 @@ export default {
         this.mode = 'replace';
         this.templateId = this.editingTemplate.id;
       }
+      this.preselectCalendars();
+    },
+    // Al reemplazar, los calendarios que ya tiene ese agente.
+    templateId() {
+      this.preselectCalendars();
+    },
+    calendarIntegrations() {
+      this.preselectCalendars();
     },
   },
   methods: {
@@ -83,6 +109,26 @@ export default {
       if (!this.name) this.name = this.proposal.name || '';
       if (!this.objective) this.objective = this.proposal.objective || '';
       if (!this.aiContext) this.aiContext = this.proposal.ai_context || '';
+    },
+    preselectCalendars() {
+      if (!this.needsCalendar) return;
+      const agente =
+        this.mode === 'replace'
+          ? this.templates.find(t => t.id === this.templateId)
+          : null;
+      const actuales = (agente?.calendar_integration_ids || []).map(Number);
+      if (actuales.length) {
+        this.calendarIds = actuales;
+        return;
+      }
+      if (!this.calendarIds.length && this.calendarIntegrations.length === 1) {
+        this.calendarIds = [this.calendarIntegrations[0].id];
+      }
+    },
+    toggleCalendar(id) {
+      this.calendarIds = this.calendarIds.includes(id)
+        ? this.calendarIds.filter(c => c !== id)
+        : [...this.calendarIds, id];
     },
     submit() {
       if (!this.canSave || this.isSaving) return;
@@ -93,6 +139,7 @@ export default {
         aiContext: this.aiContext.trim(),
         inboxId: this.inboxId,
         templateId: this.templateId,
+        calendarIntegrationIds: this.needsCalendar ? this.calendarIds : null,
       });
     },
   },
@@ -183,6 +230,49 @@ export default {
           {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_REPLACE_HINT') }}
         </p>
       </template>
+
+      <!-- El calendario: solo si el Entrenamiento agenda. -->
+      <div
+        v-if="needsCalendar"
+        class="flex flex-col gap-2 p-3 mt-4 border rounded-lg border-slate-200 dark:border-slate-600"
+      >
+        <p class="!m-0 text-sm font-medium text-slate-800 dark:text-slate-100">
+          {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CALENDAR') }}
+        </p>
+        <p
+          v-if="!calendarIntegrations.length"
+          class="!m-0 text-xs text-amber-800 dark:text-amber-800"
+        >
+          {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CALENDAR_NONE') }}
+        </p>
+        <template v-else>
+          <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
+            {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CALENDAR_HINT') }}
+          </p>
+          <label
+            v-for="integration in calendarIntegrations"
+            :key="integration.id"
+            class="flex items-center gap-2 !m-0 text-sm cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              class="!m-0"
+              :checked="calendarIds.includes(integration.id)"
+              @change="toggleCalendar(integration.id)"
+            />
+            {{ integration.user_name }}
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              {{ integration.google_email }}
+            </span>
+          </label>
+          <p
+            v-if="calendarMissing"
+            class="!m-0 text-xs text-red-600 dark:text-red-400"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.SAVE_CALENDAR_REQUIRED') }}
+          </p>
+        </template>
+      </div>
 
       <p v-if="error" class="text-xs text-red-600 dark:text-red-400 mt-3">
         {{ error }}

@@ -222,8 +222,9 @@ class AssistantAPI extends ApiClient {
     inboxId,
     templateId,
     sessionId,
+    calendarIntegrationIds = null,
   }) {
-    return axios.post(`${this.url}/save`, {
+    const body = {
       draft,
       mode,
       name,
@@ -232,7 +233,11 @@ class AssistantAPI extends ApiClient {
       inbox_id: inboxId,
       template_id: templateId,
       session_id: sessionId,
-    });
+    };
+    // Solo si el Entrenamiento agenda: sin la llave, el agente conserva los que tiene.
+    if (calendarIntegrationIds)
+      body.calendar_integration_ids = calendarIntegrationIds;
+    return axios.post(`${this.url}/save`, body);
   }
 }
 

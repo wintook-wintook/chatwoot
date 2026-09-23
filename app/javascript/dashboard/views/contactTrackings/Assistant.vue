@@ -33,6 +33,7 @@
 // ============================================================================
 import { useAlert } from 'dashboard/composables';
 import AssistantAPI from 'dashboard/api/assistant';
+import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
@@ -251,6 +252,8 @@ export default {
       // Unas instrucciones mandadas a leer desde el chat: el modal las toma de acá.
       chatBrief: null,
       isSendingInstructions: false,
+      // Las cuentas de Google conectadas, para elegir el calendario al guardar.
+      calendarIntegrations: [],
       sessionsPage: 1,
       SESSIONS_PER_PAGE,
       // El orden arranca donde lo dejó el backend (recent_first): así el primer
@@ -341,6 +344,10 @@ export default {
             : this.$t('TRACKING_ASSISTANT_VIEW.PANEL_INSTRUCTIONS_EMPTY'),
         },
       ];
+    },
+    // El Entrenamiento agenda: al guardar hay que elegir el calendario.
+    usesCalendar() {
+      return /@agendar_calendar\b/i.test(this.draft);
     },
     showSessionsTab() {
       return SHOW_SESSIONS_TAB;
@@ -490,6 +497,17 @@ export default {
     },
   },
   watch: {
+    // Los calendarios se piden al abrir Guardar y solo si el agente agenda: la
+    // lista consulta Google por cada cuenta conectada.
+    async showSaveModal(abierto) {
+      if (!abierto || !this.usesCalendar) return;
+      try {
+        const { data } = await TrackingTemplatesAPI.getCalendarIntegrations();
+        this.calendarIntegrations = Array.isArray(data) ? data : [];
+      } catch (error) {
+        this.calendarIntegrations = [];
+      }
+    },
     // Descartar la última conversación de la página dejaba la tabla en blanco
     // con el paginado marcando una página que ya no existe.
     sessions(list) {
@@ -2141,6 +2159,8 @@ export default {
       :proposal="proposal"
       :editing-template="editingTemplate"
       :error="saveError"
+      :needs-calendar="usesCalendar"
+      :calendar-integrations="calendarIntegrations"
       @close="showSaveModal = false"
       @save="saveDraft"
     />

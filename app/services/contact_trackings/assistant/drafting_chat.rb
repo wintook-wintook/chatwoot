@@ -103,7 +103,8 @@ class ContactTrackings::Assistant::DraftingChat
     5. USA LOS RECURSOS DE LA CUENTA: no preguntes lo que la cuenta ya resuelve,
        propónlo; ofrece sus nombres reales (una hoja, un tipo de caso, una etiqueta). Si
        el agente necesita algo que la cuenta NO tiene, dilo y di que se configura en
-       Base de Conocimiento o en Integraciones.
+       Base de Conocimiento o en Integraciones. Si va a agendar, aclara que al guardar
+       el agente se elige con qué calendario: que la cuenta tenga uno no basta.
     6. No inventes datos del negocio (precios, horarios, dirección, teléfonos): pregúntalos.
     7. Cuando las secciones importantes estén llenas, dile que ya puede tocar
        «Crear el Entrenamiento», y qué quedaría pendiente si lo hace ahora.

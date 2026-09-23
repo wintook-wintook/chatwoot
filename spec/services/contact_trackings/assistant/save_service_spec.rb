@@ -113,4 +113,40 @@ RSpec.describe ContactTrackings::Assistant::SaveService do
       expect(resultado.template.ai_context).to be_nil
     end
   end
+
+  # Pedido del usuario (24/09/2026): un agente con @agendar_calendar quedó sin
+  # calendario y no agendaba. Ahora se elige al guardar.
+  describe 'el calendario del agente' do
+    let(:draft_agenda) { '@ruta(citas #citas: quiero una cita, ¿tienen horario?): - -> @agendar_calendar' }
+    let(:calendario) do
+      UserCalendarIntegration.create!(account: account, user: user, google_email: 'agenda@consultorio.com', tokens: {})
+    end
+
+    it 'le asigna el calendario elegido y ya no avisa que falta' do
+      resultado = guardar(draft: draft_agenda, mode: 'create',
+                          params: { name: 'Consultorio', objective: 'Agendar citas',
+                                    calendar_integration_ids: [calendario.id.to_s] })
+
+      expect(resultado.template.calendar_integration_ids).to eq([calendario.id])
+      expect(resultado.warnings).to eq([])
+    end
+
+    it 'no asigna un calendario de otra cuenta' do
+      otra = create(:account)
+      ajeno = UserCalendarIntegration.create!(account: otra, user: create(:user, account: otra),
+                                              google_email: 'x@otra.com', tokens: {})
+      resultado = guardar(draft: draft_agenda, mode: 'create',
+                          params: { name: 'Consultorio', objective: 'Agendar citas', calendar_integration_ids: [ajeno.id] })
+
+      expect(resultado.template.calendar_integration_ids).to eq([])
+    end
+
+    it 'al reemplazar, sin elegir calendario deja el que ya tenía' do
+      template = account.tracking_templates.create!(name: 'Citas', objective: 'Agendar citas', user: user,
+                                                    calendar_integration_ids: [calendario.id])
+      guardar(draft: draft_agenda, mode: 'replace', params: { template_id: template.id })
+
+      expect(template.reload.calendar_integration_ids).to eq([calendario.id])
+    end
+  end
 end

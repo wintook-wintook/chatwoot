@@ -405,6 +405,10 @@
     "INSTRUCTIONS_HINT": "They fill in as you talk, and you can fix them here: the Assistant takes your edits in the next message. When they're ready, create the Training.",
     "SESSIONS_FILTER_OPEN": "In progress (%{count})",
     "SESSIONS_FILTER_SAVED": "Already saved (%{count})",
-    "SESSIONS_FILTER_ALL": "All (%{count})"
+    "SESSIONS_FILTER_ALL": "All (%{count})",
+    "SAVE_CALENDAR": "Calendar it books on",
+    "SAVE_CALENDAR_HINT": "This agent books appointments: choose which Google account. Events go to its main calendar; the exact calendar can be changed later in the agent's settings.",
+    "SAVE_CALENDAR_REQUIRED": "Choose at least one: without a calendar the agent can't offer slots.",
+    "SAVE_CALENDAR_NONE": "The account has no Google calendar connected: the agent won't be able to book until you connect one in Integrations and assign it in its settings."
   }
 }

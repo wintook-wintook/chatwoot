@@ -92,6 +92,10 @@ class ContactTrackings::Assistant::BriefComposer
       persona de abajo tiene que quedar en el Entrenamiento, en su sección ([REGLAS],
       [PROHIBIDO], [ESTILO], [DATOS A PEDIR]…), con sus palabras o más claras, nunca resumida
       hasta perderse. Escribe en el idioma de las instrucciones.
+
+      Nada de una sección [ETIQUETAS] general: cada ruta lleva su #etiqueta y el motor la
+      agrega sola a sus respuestas. Una etiqueta general se pega a TODAS (medido: un
+      agente cerraba cada mensaje con #humano).
     TXT
   end
 
