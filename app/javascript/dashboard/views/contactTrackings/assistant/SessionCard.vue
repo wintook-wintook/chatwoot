@@ -81,52 +81,37 @@ export default {
 </script>
 
 <template>
-  <div
-    class="px-3 py-2 border rounded-lg shrink-0 bg-slate-25 dark:bg-slate-900/40 border-slate-100 dark:border-slate-700"
-  >
-    <!-- LÍNEA 1 · quién es: el id y de qué se trataba -->
-    <div class="flex items-baseline gap-2 flex-nowrap">
-      <span
-        v-if="sessionMeta"
-        class="font-mono text-xs text-slate-400 dark:text-slate-500 shrink-0 whitespace-nowrap"
-      >
-        #{{ sessionMeta.id }}
-      </span>
-      <span
-        v-if="sessionMeta && sessionMeta.title"
-        class="min-w-0 text-xs truncate text-slate-700 dark:text-slate-200"
-      >
-        {{ sessionMeta.title }}
-      </span>
-      <span v-else class="text-xs italic text-slate-400 dark:text-slate-500">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_UNSAVED') }}
-      </span>
-    </div>
-
-    <!-- LÍNEA 2 · de dónde salió y cuándo -->
-    <div
-      class="text-xs truncate text-slate-400 dark:text-slate-500"
-      :class="{ 'mt-0.5': sessionMeta }"
+  <!-- Qué se está editando (pedido del usuario, 24/09/2026: la franja de arriba se veía
+       desordenada). Título en grande —el agente, o de qué trata la conversación— y
+       debajo, en gris y en una línea, el número, las fechas y quién la creó. El marco
+       lo pone la barra de Assistant.vue, que junta esto con el canal y las acciones. -->
+  <div class="min-w-0">
+    <p
+      class="!m-0 text-sm font-medium truncate text-slate-800 dark:text-slate-100"
     >
-      <!-- Las fechas van PRIMERO y con rótulo. Antes decía "· creada 9/9, 15:36
-           · guardada 10/9, 15:36": dos bullets, sin año, y con "guardada" que se
-           confunde con el guardado del Agente IA. Y van antes que el nombre del
-           agente para que, si la línea se corta, lo que se pierda sea el nombre
-           largo y no la fecha. -->
-      <span v-if="created" class="whitespace-nowrap">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_CREATED_AT') }}
-        <span class="text-slate-500 dark:text-slate-400">{{ created }}</span>
-      </span>
-      <span v-if="updated" class="ml-2 whitespace-nowrap">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_SAVED_AT') }}
-        <span class="text-slate-500 dark:text-slate-400">{{ updated }}</span>
-      </span>
-      <span v-if="creator" class="ml-2">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_CREATOR', { name: creator }) }}
-      </span>
-      <span v-if="fromTemplate" class="ml-2">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_FROM', { name: fromTemplate }) }}
-      </span>
-    </div>
+      {{
+        fromTemplate ||
+        (sessionMeta && sessionMeta.title) ||
+        $t('TRACKING_ASSISTANT_VIEW.SESSION_UNSAVED')
+      }}
+    </p>
+    <p
+      v-if="sessionMeta"
+      class="!m-0 mt-0.5 text-xs truncate text-slate-500 dark:text-slate-400"
+    >
+      <span class="font-mono">#{{ sessionMeta.id }}</span>
+      <template v-if="fromTemplate && sessionMeta.title">
+        · {{ sessionMeta.title }}
+      </template>
+      <template v-if="created">
+        · {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_CREATED_AT') }} {{ created }}
+      </template>
+      <template v-if="updated">
+        · {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_SAVED_AT') }} {{ updated }}
+      </template>
+      <template v-if="creator">
+        · {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_CREATOR', { name: creator }) }}
+      </template>
+    </p>
   </div>
 </template>

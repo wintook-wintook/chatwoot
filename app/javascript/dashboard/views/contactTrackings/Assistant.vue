@@ -1335,67 +1335,77 @@ export default {
                de las dos columnas porque valen para toda la pantalla: el canal
                decide con qué modelo se clasifica y se contesta, y la tarjeta dice
                qué agente se está editando. Con el chat escondido, siguen acá. -->
-          <div class="flex flex-wrap items-center gap-x-4 gap-y-2 shrink-0">
+          <!-- Una barra: a la izquierda qué se edita; a la derecha el canal (con qué
+               modelos clasifica y contesta) y las acciones, con «Nuevo Agente IA» al
+               final. En pantallas angostas, la derecha baja a otra línea. -->
+          <div
+            class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 bg-white border rounded-lg shrink-0 dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+          >
             <SessionCard
+              class="flex-1 min-w-[16rem]"
               :session-meta="sessionMeta"
               :editing-template="editingTemplate"
             />
-            <!-- Empezar de cero. Estaba solo en la pestaña Conversaciones, donde
-                 nadie lo encontraba: es la puerta para armar un agente nuevo. -->
-            <woot-button
-              size="small"
-              variant="smooth"
-              color-scheme="success"
-              icon="add"
-              @click="startFresh"
-            >
-              {{ $t('TRACKING_ASSISTANT_VIEW.NEW_AGENT') }}
-            </woot-button>
-            <woot-button
-              size="small"
-              variant="smooth"
-              color-scheme="secondary"
-              icon="attach"
-              @click="showBriefModal = true"
-            >
-              {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_OPEN') }}
-            </woot-button>
-            <div class="flex flex-wrap items-center gap-2 text-xs shrink-0">
-              <label
-                for="assistant-inbox"
-                class="!m-0 text-slate-600 dark:text-slate-300"
-              >
-                {{ $t('TRACKING_ASSISTANT_VIEW.INBOX_LABEL') }}
-              </label>
-              <select
-                id="assistant-inbox"
-                class="!mb-0 !w-auto !py-1 text-xs"
-                :value="inboxId || ''"
-                @change="setInbox($event.target.value)"
-              >
-                <option value="">
-                  {{ $t('TRACKING_ASSISTANT_VIEW.INBOX_NONE') }}
-                </option>
-                <option
-                  v-for="inbox in inboxes"
-                  :key="inbox.id"
-                  :value="inbox.id"
+            <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <div class="flex flex-col gap-0.5 text-xs">
+                <div class="flex items-center gap-2">
+                  <label
+                    for="assistant-inbox"
+                    class="!m-0 text-slate-600 dark:text-slate-300"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.INBOX_LABEL') }}
+                  </label>
+                  <select
+                    id="assistant-inbox"
+                    class="!mb-0 !w-auto !py-1 text-xs"
+                    :value="inboxId || ''"
+                    @change="setInbox($event.target.value)"
+                  >
+                    <option value="">
+                      {{ $t('TRACKING_ASSISTANT_VIEW.INBOX_NONE') }}
+                    </option>
+                    <option
+                      v-for="inbox in inboxes"
+                      :key="inbox.id"
+                      :value="inbox.id"
+                    >
+                      {{ inbox.name }}
+                    </option>
+                  </select>
+                </div>
+                <span
+                  v-if="inventory && inventory.models"
+                  class="text-slate-500 dark:text-slate-400"
+                  :title="$t('TRACKING_ASSISTANT_VIEW.INBOX_HINT')"
                 >
-                  {{ inbox.name }}
-                </option>
-              </select>
-              <span
-                v-if="inventory && inventory.models"
-                class="text-slate-500 dark:text-slate-400"
-                :title="$t('TRACKING_ASSISTANT_VIEW.INBOX_HINT')"
-              >
-                {{
-                  $t('TRACKING_ASSISTANT_VIEW.INBOX_MODELS', {
-                    router: inventory.models.router,
-                    conversational: inventory.models.conversational,
-                  })
-                }}
-              </span>
+                  {{
+                    $t('TRACKING_ASSISTANT_VIEW.INBOX_MODELS', {
+                      router: inventory.models.router,
+                      conversational: inventory.models.conversational,
+                    })
+                  }}
+                </span>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <woot-button
+                  size="small"
+                  variant="smooth"
+                  color-scheme="secondary"
+                  icon="attach"
+                  @click="showBriefModal = true"
+                >
+                  {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_OPEN') }}
+                </woot-button>
+                <!-- Empezar de cero: la puerta para armar un agente nuevo. -->
+                <woot-button
+                  size="small"
+                  color-scheme="success"
+                  icon="add"
+                  @click="startFresh"
+                >
+                  {{ $t('TRACKING_ASSISTANT_VIEW.NEW_AGENT') }}
+                </woot-button>
+              </div>
             </div>
           </div>
 
