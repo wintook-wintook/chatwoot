@@ -16,16 +16,13 @@
 // grupo de secciones se pliega solo cuando pasa de 8 — y 19 de 28 no tienen ninguna
 // rama, por eso el grupo vacío se ve igual, con su "Agregar rama".
 // ============================================================================
-import {
-  routeLines,
-  defaultRouteName,
-  canMoveSection,
-  canMoveRoute,
-} from './trainingBlocks';
+import Draggable from 'vuedraggable';
+import { routeLines, defaultRouteName } from './trainingBlocks';
 
 const COLLAPSE_FROM = 8;
 
 export default {
+  components: { Draggable },
   props: {
     // La estructura del backend: { blocks: [...] }.
     value: { type: Object, default: () => ({ blocks: [] }) },
@@ -43,8 +40,10 @@ export default {
     'editSection',
     'addSection',
     'findSection',
-    'moveSection',
-    'moveRoute',
+    // Arrastrar y soltar (23/09/2026, reemplaza a las flechas): { from, to } son
+    // posiciones dentro de la lista de rutas o de secciones.
+    'reorderSection',
+    'reorderRoute',
   ],
   data() {
     return {
@@ -70,6 +69,13 @@ export default {
       return this.blocks
         .map((block, index) => ({ ...block, index }))
         .filter(b => b.type === 'section' || b.type === 'preamble');
+    },
+    // El texto inicial va siempre primero: no se arrastra.
+    preambles() {
+      return this.sections.filter(b => b.type === 'preamble');
+    },
+    movableSections() {
+      return this.sections.filter(b => b.type === 'section');
     },
     tooManySections() {
       return this.sections.length >= COLLAPSE_FROM;
@@ -101,11 +107,15 @@ export default {
       const texto = block.body || block.text || '';
       return texto.trim() ? texto.split('\n').length : 0;
     },
-    canMove(index, delta) {
-      return canMoveSection(this.blocks, index, delta);
+    // vuedraggable no toca la lista (se le pasa `value`, no v-model): avisa de dónde
+    // a dónde y el padre reordena los bloques, que vuelven por `value`.
+    dropRoute({ oldIndex, newIndex }) {
+      if (oldIndex !== newIndex)
+        this.$emit('reorderRoute', { from: oldIndex, to: newIndex });
     },
-    canMoveR(position, delta) {
-      return canMoveRoute(this.blocks, position, delta);
+    dropSection({ oldIndex, newIndex }) {
+      if (oldIndex !== newIndex)
+        this.$emit('reorderSection', { from: oldIndex, to: newIndex });
     },
     issue(clave) {
       return (this.issues[clave] || {}).level || '';
@@ -248,68 +258,58 @@ export default {
       </woot-button>
     </div>
     <div v-if="open.routes" class="flex flex-col">
-      <div
-        v-for="rama in routes"
-        :key="`r-${rama.position}`"
-        class="flex items-center gap-2 pl-6 pr-1 rounded group/rama hover:bg-slate-50 dark:hover:bg-slate-700"
+      <Draggable
+        :value="routes"
+        handle=".drag-handle"
+        ghost-class="opacity-40"
+        :animation="150"
+        @end="dropRoute"
       >
-        <button
-          type="button"
-          class="flex items-center flex-1 min-w-0 gap-2 py-1 text-left"
-          @click="$emit('editRoute', rama.position)"
+        <div
+          v-for="rama in routes"
+          :key="`r-${rama.position}`"
+          class="flex items-center gap-2 pl-1 pr-1 rounded group/rama hover:bg-slate-50 dark:hover:bg-slate-700"
         >
           <span
-            v-if="issue(`route:${rama.name}`)"
-            v-tooltip.right="tip(issueText(`route:${rama.name}`))"
-            class="w-2 h-2 rounded-full shrink-0"
-            :class="
-              issue(`route:${rama.name}`) === 'blocking'
-                ? 'bg-red-500'
-                : 'bg-amber-500'
-            "
-          />
-          <span
-            class="font-mono text-xs shrink-0 text-slate-700 dark:text-slate-200"
+            class="inline-flex shrink-0 cursor-grab active:cursor-grabbing drag-handle text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+            :title="$t('TRACKING_ASSISTANT_VIEW.TREE_DRAG')"
           >
-            {{ rama.name || $t('TRACKING_ASSISTANT_VIEW.TREE_NO_NAME') }}
+            <fluent-icon icon="drag" size="16" />
           </span>
-          <span
-            v-if="rama.name && rama.name === defaultRoute"
-            class="px-1 text-xs rounded shrink-0 bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
-          >
-            {{ $t('TRACKING_ASSISTANT_VIEW.TREE_DEFAULT') }}
-          </span>
-          <span
-            class="flex-1 min-w-0 text-xs truncate text-slate-500 dark:text-slate-400"
-          >
-            {{ preview(rama.description) }}
-          </span>
-        </button>
-        <!-- El orden de las ramas es el orden de las líneas @ruta. -->
-        <div class="flex items-center gap-1 shrink-0">
-          <woot-button
+          <button
             type="button"
-            size="tiny"
-            variant="smooth"
-            color-scheme="success"
-            icon="arrow-up"
-            :is-disabled="!canMoveR(rama.position, -1)"
-            :title="$t('TRACKING_TEMPLATES.FORM.TRAINING.MOVE_UP')"
-            @click="$emit('moveRoute', { position: rama.position, delta: -1 })"
-          />
-          <woot-button
-            type="button"
-            size="tiny"
-            variant="smooth"
-            color-scheme="alert"
-            icon="arrow-up"
-            class="[&_svg]:rotate-180"
-            :is-disabled="!canMoveR(rama.position, 1)"
-            :title="$t('TRACKING_TEMPLATES.FORM.TRAINING.MOVE_DOWN')"
-            @click="$emit('moveRoute', { position: rama.position, delta: 1 })"
-          />
+            class="flex items-center flex-1 min-w-0 gap-2 py-1 text-left"
+            @click="$emit('editRoute', rama.position)"
+          >
+            <span
+              v-if="issue(`route:${rama.name}`)"
+              v-tooltip.right="tip(issueText(`route:${rama.name}`))"
+              class="w-2 h-2 rounded-full shrink-0"
+              :class="
+                issue(`route:${rama.name}`) === 'blocking'
+                  ? 'bg-red-500'
+                  : 'bg-amber-500'
+              "
+            />
+            <span
+              class="font-mono text-xs shrink-0 text-slate-700 dark:text-slate-200"
+            >
+              {{ rama.name || $t('TRACKING_ASSISTANT_VIEW.TREE_NO_NAME') }}
+            </span>
+            <span
+              v-if="rama.name && rama.name === defaultRoute"
+              class="px-1 text-xs rounded shrink-0 bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
+            >
+              {{ $t('TRACKING_ASSISTANT_VIEW.TREE_DEFAULT') }}
+            </span>
+            <span
+              class="flex-1 min-w-0 text-xs truncate text-slate-500 dark:text-slate-400"
+            >
+              {{ preview(rama.description) }}
+            </span>
+          </button>
         </div>
-      </div>
+      </Draggable>
       <p
         v-if="!routes.length"
         class="!m-0 py-1 pl-6 text-xs text-slate-400 dark:text-slate-500"
@@ -356,28 +356,17 @@ export default {
       </woot-button>
     </div>
     <div v-if="open.sections" class="flex flex-col">
-      <!-- La fila es un contenedor y no un botón: el nombre abre la sección y las
-           flechas la mueven de lugar, y un botón adentro de otro no es válido. -->
+      <!-- El texto inicial, siempre primero: no se arrastra. -->
       <div
-        v-for="block in sections"
+        v-for="block in preambles"
         :key="`s-${block.index}`"
-        class="flex items-center gap-2 pl-6 pr-1 rounded group/fila hover:bg-slate-50 dark:hover:bg-slate-700"
+        class="flex items-center gap-2 pl-6 pr-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700"
       >
         <button
           type="button"
           class="flex items-center flex-1 min-w-0 gap-2 py-1 text-left"
           @click="$emit('editSection', block.index)"
         >
-          <span
-            v-if="issue(`section:${block.index}`)"
-            v-tooltip.right="tip(issueText(`section:${block.index}`))"
-            class="w-2 h-2 rounded-full shrink-0"
-            :class="
-              issue(`section:${block.index}`) === 'blocking'
-                ? 'bg-red-500'
-                : 'bg-amber-500'
-            "
-          />
           <span
             class="text-xs font-semibold tracking-wide uppercase shrink-0 text-slate-700 dark:text-slate-200"
           >
@@ -393,36 +382,60 @@ export default {
             }}
           </span>
         </button>
-        <!-- El orden importa: el agente lee las secciones en el orden en que están.
-             Botones con color y SIEMPRE visibles —subir verde, bajar rojo—: con
-             flechas grises y atenuadas nadie se enteraba de que se pueden reordenar. -->
-        <div
-          v-if="block.type === 'section'"
-          class="flex items-center gap-1 shrink-0"
-        >
-          <woot-button
-            type="button"
-            size="tiny"
-            variant="smooth"
-            color-scheme="success"
-            icon="arrow-up"
-            :is-disabled="!canMove(block.index, -1)"
-            :title="$t('TRACKING_TEMPLATES.FORM.TRAINING.MOVE_UP')"
-            @click="$emit('moveSection', { index: block.index, delta: -1 })"
-          />
-          <woot-button
-            type="button"
-            size="tiny"
-            variant="smooth"
-            color-scheme="alert"
-            icon="arrow-up"
-            class="[&_svg]:rotate-180"
-            :is-disabled="!canMove(block.index, 1)"
-            :title="$t('TRACKING_TEMPLATES.FORM.TRAINING.MOVE_DOWN')"
-            @click="$emit('moveSection', { index: block.index, delta: 1 })"
-          />
-        </div>
       </div>
+      <!-- El orden importa: el agente lee las secciones en el orden en que están.
+           Se reordenan arrastrando desde la manija, que está SIEMPRE visible:
+           con controles escondidos nadie se enteraba de que se podía. -->
+      <Draggable
+        :value="movableSections"
+        handle=".drag-handle"
+        ghost-class="opacity-40"
+        :animation="150"
+        @end="dropSection"
+      >
+        <div
+          v-for="block in movableSections"
+          :key="`s-${block.index}`"
+          class="flex items-center gap-2 pl-1 pr-1 rounded group/fila hover:bg-slate-50 dark:hover:bg-slate-700"
+        >
+          <span
+            class="inline-flex shrink-0 cursor-grab active:cursor-grabbing drag-handle text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+            :title="$t('TRACKING_ASSISTANT_VIEW.TREE_DRAG')"
+          >
+            <fluent-icon icon="drag" size="16" />
+          </span>
+          <button
+            type="button"
+            class="flex items-center flex-1 min-w-0 gap-2 py-1 text-left"
+            @click="$emit('editSection', block.index)"
+          >
+            <span
+              v-if="issue(`section:${block.index}`)"
+              v-tooltip.right="tip(issueText(`section:${block.index}`))"
+              class="w-2 h-2 rounded-full shrink-0"
+              :class="
+                issue(`section:${block.index}`) === 'blocking'
+                  ? 'bg-red-500'
+                  : 'bg-amber-500'
+              "
+            />
+            <span
+              class="text-xs font-semibold tracking-wide uppercase shrink-0 text-slate-700 dark:text-slate-200"
+            >
+              {{ sectionName(block) }}
+            </span>
+            <span
+              class="flex-1 min-w-0 text-xs truncate text-slate-500 dark:text-slate-400"
+            >
+              {{
+                lineCount(block)
+                  ? preview(block.body || block.text)
+                  : $t('TRACKING_ASSISTANT_VIEW.TREE_EMPTY')
+              }}
+            </span>
+          </button>
+        </div>
+      </Draggable>
       <p
         v-if="!sections.length"
         class="!m-0 py-1 pl-6 text-xs text-slate-400 dark:text-slate-500"

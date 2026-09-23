@@ -11,6 +11,8 @@ import {
   moveBlock,
   removeBlock,
   removeRoute,
+  reorderRoute,
+  reorderSection,
   replaceRoute,
   routeNames,
   scopeTitleFrom,
@@ -328,5 +330,52 @@ describe('trainingBlocks', () => {
     ]);
 
     expect(blocks.map(b => b.gap)).toEqual([1, 3]);
+  });
+
+  // Arrastrar y soltar: llevar un elemento a cualquier lugar de su lista.
+  describe('reordenar arrastrando', () => {
+    const tres = () => [
+      {
+        type: 'routes',
+        text: '',
+        gap: 1,
+        lines: [
+          rama('a'),
+          rama('b'),
+          rama('c'),
+          { kind: 'default', name: 'a' },
+        ],
+      },
+      { type: 'preamble', text: 'Hola', gap: 1 },
+      { type: 'section', title: 'UNO', body: '1', gap: 1 },
+      { type: 'section', title: 'DOS', body: '2', gap: 1 },
+      { type: 'section', title: 'TRES', body: '3', gap: 0 },
+    ];
+
+    it('lleva una ruta dos lugares abajo sin mover la línea por defecto', () => {
+      const lineas = reorderRoute(tres(), 0, 2)[0].lines;
+
+      expect(lineas.map(l => l.name)).toEqual(['b', 'c', 'a', 'a']);
+      expect(lineas[3].kind).toBe('default');
+    });
+
+    it('lleva la última sección al principio sin mover el texto inicial', () => {
+      const blocks = reorderSection(tres(), 2, 0);
+
+      expect(blocks.map(b => b.title || b.type)).toEqual([
+        'routes',
+        'preamble',
+        'TRES',
+        'UNO',
+        'DOS',
+      ]);
+    });
+
+    it('soltar en el mismo lugar no cambia nada', () => {
+      const blocks = tres();
+
+      expect(reorderRoute(blocks, 1, 1)).toBe(blocks);
+      expect(reorderSection(blocks, 5, 0)).toBe(blocks);
+    });
   });
 });

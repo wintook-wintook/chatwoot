@@ -69,6 +69,31 @@ export const moveSection = (blocks, index, delta) => {
 export const canMoveSection = (blocks, index, delta) =>
   moveSection(blocks, index, delta) !== blocks;
 
+// Arrastrar y soltar (23/09/2026): llevar el elemento `from` a la posición `to` de su
+// lista. Los elementos se reacomodan en los MISMOS lugares que ocupaban, así lo que
+// hay entre ellos (el texto inicial, la línea @ruta_por_defecto) no se mueve.
+const reorderInSlots = (items, slots, from, to) => {
+  if (from === to || slots[from] === undefined || slots[to] === undefined)
+    return null;
+  const orden = slots.map(i => items[i]);
+  const [movido] = orden.splice(from, 1);
+  orden.splice(to, 0, movido);
+  const nuevos = [...items];
+  slots.forEach((lugar, n) => {
+    nuevos[lugar] = orden[n];
+  });
+  return nuevos;
+};
+
+// `from` y `to`: posiciones entre las secciones (sin el texto inicial).
+export const reorderSection = (blocks, from, to) => {
+  const lugares = blocks
+    .map((b, i) => (b.type === 'section' ? i : null))
+    .filter(i => i !== null);
+  const nuevos = reorderInSlots(blocks, lugares, from, to);
+  return nuevos ? withGaps(nuevos) : blocks;
+};
+
 export const removeBlock = (blocks, index) =>
   withGaps(blocks.filter((_, i) => i !== index));
 
@@ -246,6 +271,18 @@ export const moveRoute = (blocks, position, delta) => {
 
 export const canMoveRoute = (blocks, position, delta) =>
   moveRoute(blocks, position, delta) !== blocks;
+
+// `from` y `to`: posiciones entre las rutas, como en moveRoute.
+export const reorderRoute = (blocks, from, to) => {
+  const indice = routesIndex(blocks);
+  if (indice < 0) return blocks;
+  const lineas = blocks[indice].lines || [];
+  const lugares = lineas
+    .map((l, i) => (l.kind === 'route' ? i : null))
+    .filter(i => i !== null);
+  const nuevas = reorderInSlots(lineas, lugares, from, to);
+  return nuevas ? updateBlock(blocks, indice, { lines: nuevas }) : blocks;
+};
 
 // La rama por defecto: la línea @ruta_por_defecto del bloque. Sin nombre, se quita.
 export const setDefaultRoute = (blocks, name) => {

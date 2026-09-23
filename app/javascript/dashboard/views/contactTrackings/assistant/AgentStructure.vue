@@ -20,8 +20,8 @@ import {
   addRoute,
   addSection,
   defaultRouteName,
-  moveRoute,
-  moveSection,
+  reorderRoute,
+  reorderSection,
   removeBlock,
   removeRoute,
   replaceRoute,
@@ -151,9 +151,9 @@ export default {
       this.closeRouteModal();
       this.emitBlocks(withGaps(blocks));
     },
-    // Cambiar de lugar una rama.
-    moveRoute({ position, delta }) {
-      const blocks = moveRoute(this.blocks, position, delta);
+    // Cambiar de lugar una rama, arrastrándola.
+    reorderRoute({ from, to }) {
+      const blocks = reorderRoute(this.blocks, from, to);
       if (blocks !== this.blocks) this.emitBlocks(blocks);
     },
     deleteRoute() {
@@ -207,9 +207,10 @@ export default {
       this.closeSectionModal();
       this.emitBlocks(blocks);
     },
-    // Cambiar de lugar una sección: el agente las lee en el orden en que están.
-    moveSection({ index, delta }) {
-      const blocks = moveSection(this.blocks, index, delta);
+    // Cambiar de lugar una sección, arrastrándola: el agente las lee en el orden en
+    // que están.
+    reorderSection({ from, to }) {
+      const blocks = reorderSection(this.blocks, from, to);
       if (blocks !== this.blocks) this.emitBlocks(blocks);
     },
     deleteSection() {
@@ -263,11 +264,11 @@ export default {
         @addRoute="openAddRoute"
         @findRoute="openRouteCatalog"
         @editRoute="openEditRoute"
-        @moveRoute="moveRoute"
+        @reorderRoute="reorderRoute"
         @addSection="openAddSection"
         @findSection="openSectionCatalog"
         @editSection="openEditSection"
-        @moveSection="moveSection"
+        @reorderSection="reorderSection"
       />
     </div>
 

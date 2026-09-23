@@ -388,6 +388,7 @@
     "CATALOG_SECCION_WHAT": "A titled block of instructions ([ROL], [ESTILO], [PROHIBIDO]…). The model reads it in every message.",
     "CATALOG_SECCION_NEEDS": "Nothing. What applies to one route only goes in [ALCANCE POR RAMA].",
     "CATALOG_CONTEXTO_WHAT": "Business facts the agent quotes as true: hours, address, versions, policies.",
-    "CATALOG_CONTEXTO_NEEDS": "Only the first 800 characters are read: anything longer goes as a Training section."
+    "CATALOG_CONTEXTO_NEEDS": "Only the first 800 characters are read: anything longer goes as a Training section.",
+    "TREE_DRAG": "Drag to reorder"
   }
 }

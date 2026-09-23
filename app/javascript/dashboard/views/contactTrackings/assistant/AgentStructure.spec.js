@@ -188,10 +188,11 @@ describe('AgentStructure', () => {
     });
 
     // El agente lee las secciones en el orden en que están escritas.
-    it('cambia una sección de lugar con su vecina', () => {
+    // Arrastrar la primera sección debajo de la segunda.
+    it('cambia una sección de lugar arrastrándola', () => {
       const wrapper = montar();
 
-      wrapper.vm.moveSection({ index: 1, delta: 1 });
+      wrapper.vm.reorderSection({ from: 0, to: 1 });
 
       expect(ultimo(wrapper).map(b => b.title)).toEqual([
         undefined,
@@ -200,11 +201,11 @@ describe('AgentStructure', () => {
       ]);
     });
 
-    // La primera sección no sube más: arriba está el bloque de ramas.
-    it('no avisa ningún cambio cuando la sección ya está en el extremo', () => {
+    // Soltarla donde estaba no es un cambio.
+    it('no avisa ningún cambio si se suelta en el mismo lugar', () => {
       const wrapper = montar();
 
-      wrapper.vm.moveSection({ index: 1, delta: -1 });
+      wrapper.vm.reorderSection({ from: 0, to: 0 });
 
       expect(wrapper.emitted('input')).toBeUndefined();
     });
