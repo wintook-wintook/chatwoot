@@ -89,7 +89,7 @@ class ContactTrackings::Assistant::EditingInstructions
 
         Solo si falta una de esas tres cosas, pregunta POR ESA, con "entrenamiento" en null.
 
-      SI EL MENSAJE ES UNA PREGUNTA sobre el Entrenamiento y no un cambio, contestala con
+      SI EL MENSAJE ES UNA PREGUNTA sobre el Entrenamiento y no un cambio, contéstala con
       "entrenamiento" en null.
 
       AL ENTREGAR UNA EDICIÓN agrega dos llaves al JSON:
