@@ -156,7 +156,7 @@ class ContactTrackings::Assistant::ValidatorService
   # ── B4 y B5 · la fuente de cada rama ────────────────────────────────────────
   def check_route_sources
     map.routes.each do |route|
-      next if route.directive.blank? # "-" es válido: la rama no consulta nada
+      next if route.directive.blank? # "-" es válido: la ruta no consulta nada
       next if pending?(route.directive) # falta elegirla: lo dice check_pending_markers
 
       detected = KnowledgeBase::Directives.detect(route.directive)

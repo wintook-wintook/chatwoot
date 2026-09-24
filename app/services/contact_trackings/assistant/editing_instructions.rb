@@ -70,7 +70,7 @@ class ContactTrackings::Assistant::EditingInstructions
 
       SI EL MENSAJE PIDE UN CAMBIO
         Devuelve el Entrenamiento COMPLETO con SOLO ese cambio. Todo lo demás va copiado
-        carácter por carácter: las ramas, las secciones, el orden, las mayúsculas, hasta los
+        carácter por carácter: las rutas, las secciones, el orden, las mayúsculas, hasta los
         errores de tipeo. No "mejores" nada que no te hayan pedido.
 
         NO lo reorganices a las seis secciones del contrato: esa forma es para CREAR. Si tiene
@@ -81,10 +81,10 @@ class ContactTrackings::Assistant::EditingInstructions
         fuentes del inventario, las frases del cliente en las descripciones.
 
         LOS PASOS DE LA ENTREVISTA SON PARA CREAR, NO PARA EDITAR. Acá no se recorren: si el
-        pedido trae lo necesario, se aplica en este mismo turno. Para una rama nueva lo
+        pedido trae lo necesario, se aplica en este mismo turno. Para una ruta nueva lo
         necesario es solo esto: frases del cliente, fuente (o "-") y etiqueta. El escalamiento
-        es OPCIONAL: si no lo mencionan, la rama va sin flecha, sin preguntar. Nunca vuelvas a
-        preguntar algo que el pedido ya dice ni algo que valga para las demás ramas: esas ya
+        es OPCIONAL: si no lo mencionan, la ruta va sin flecha, sin preguntar. Nunca vuelvas a
+        preguntar algo que el pedido ya dice ni algo que valga para las demás rutas: esas ya
         están escritas.
 
         Solo si falta una de esas tres cosas, pregunta POR ESA, con "entrenamiento" en null.
@@ -96,9 +96,9 @@ class ContactTrackings::Assistant::EditingInstructions
         "toca":    cada pieza que cambiaste, escrita EXACTAMENTE así:
                    "@ruta(nombre)"   "@ruta_por_defecto"   "[RÓTULO DE LA SECCIÓN]"
         "cambios": renglones cortos para la persona, uno por cambio:
-                   "+ Se agregó la rama facturacion"   "~ [ESTILO]: sin emojis"   "- Se quitó [HORARIO]"
+                   "+ Se agregó la ruta facturacion"   "~ [ESTILO]: sin emojis"   "- Se quitó [HORARIO]"
       Tu texto se compara línea por línea con el actual: lo que cambies y no nombres en "toca"
-      te lo voy a devolver. Si agregar una rama te obliga a sumar su etiqueta en [ETIQUETAS],
+      te lo voy a devolver. Si agregar una ruta te obliga a sumar su etiqueta en [ETIQUETAS],
       nombra las dos.
 
       Al editar, "modo" no hace falta. "propuesta" va en null salvo que pidan cambiar el nombre

@@ -30,15 +30,15 @@ class ContactTrackings::Assistant::ReplyFormat
                   si fuera cierto: rellenarlo de memoria es hacerle decir cosas falsas.
 
       ═══ EL ENTRENAMIENTO SE ARMA A LA VISTA ═══
-      La persona ve el Entrenamiento al lado del chat. Así que desde que sabes QUÉ RAMAS hay,
+      La persona ve el Entrenamiento al lado del chat. Así que desde que sabes QUÉ RUTAS hay,
       cada turno devuelve también el borrador, con todo lo que ya sabes y NADA MÁS:
 
         Lo que todavía no te contestaron NO se adivina, se marca:
           descripción sin frases del cliente  →  @ruta(soporte: <PENDIENTE: frases del cliente>)
           fuente sin elegir                   →  ): <PENDIENTE: fuente>
-          etiqueta sin elegir                 →  la rama va sin #etiqueta (no admite marca)
-          escalamiento sin decidir            →  la rama va sin flecha
-          rama por defecto sin decidir        →  no escribas la línea @ruta_por_defecto
+          etiqueta sin elegir                 →  la ruta va sin #etiqueta (no admite marca)
+          escalamiento sin decidir            →  la ruta va sin flecha
+          ruta por defecto sin decidir        →  no escribas la línea @ruta_por_defecto
           algo de la prosa que no sabes       →  <PENDIENTE: qué falta> en su sección
 
         ⚠ NO escribas #etiqueta, flecha -> ni @ruta_por_defecto hasta que la persona los haya
@@ -47,7 +47,7 @@ class ContactTrackings::Assistant::ReplyFormat
         un hueco, se lee como lo que es: una pregunta abierta.
 
         Con cada respuesta, reemplaza las marcas que ya se pueden completar y copia igual todo
-        lo demás. La etiqueta que elija la persona se escribe EN LA LÍNEA @ruta de su rama
+        lo demás. La etiqueta que elija la persona se escribe EN LA LÍNEA @ruta de su ruta
         (@ruta(soporte #demo: ...)): esa es la que usa el motor. Si hay una sección [ETIQUETAS],
         solo repite lo mismo; escribirla ahí y no en la línea @ruta no cambia nada. Los rótulos ═══ son de estas instrucciones: NUNCA van dentro del
         Entrenamiento.
@@ -58,7 +58,7 @@ class ContactTrackings::Assistant::ReplyFormat
          "opciones": [{"pregunta": "¿Con qué etiqueta cierra?",
                        "elecciones": ["#demo", "#tracking", "otra"]}] | null,
          "modo": "responde" | "deriva" | null,
-         "entrenamiento": "el borrador (o el Entrenamiento terminado), o null si todavía no sabes qué ramas hay",
+         "entrenamiento": "el borrador (o el Entrenamiento terminado), o null si todavía no sabes qué rutas hay",
          "completo": true | false,
          "propuesta": {"nombre": "...", "objetivo": "...", "contexto": "..."} | null}
 

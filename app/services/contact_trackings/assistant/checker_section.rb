@@ -26,7 +26,7 @@ module ContactTrackings::Assistant::CheckerSection
       ═══ LO QUE YA COMPROBÓ EL COMPROBADOR (el parser real del motor) ═══
       Son HECHOS, no opiniones, y la persona los ve marcados en pantalla (rojo: no se ejecuta;
       ámbar: funciona mal). Si te preguntan por errores o por qué algo no funciona, parte de
-      esta lista: nombra cada punto con su línea o su rama. Puedes sumar tu lectura
+      esta lista: nombra cada punto con su línea o su ruta. Puedes sumar tu lectura
       (contradicciones, reglas vagas, lo que falta), pero sepárala con «Mi lectura:». Nunca
       digas que algo está bien si aparece aquí. Todo va DENTRO de "mensaje", como texto con
       viñetas: no agregues llaves nuevas al JSON.
@@ -51,8 +51,8 @@ module ContactTrackings::Assistant::CheckerSection
   def where(finding)
     partes = []
     partes << "línea #{finding[:line]}" if finding[:line]
-    ramas = finding[:routes] || [finding[:route]].compact
-    partes << "rama #{ramas.join(', ')}" if ramas.any?
+    rutas = finding[:routes] || [finding[:route]].compact
+    partes << "ruta #{rutas.join(', ')}" if rutas.any?
     partes.any? ? " (#{partes.join(' · ')})" : ''
   end
 end

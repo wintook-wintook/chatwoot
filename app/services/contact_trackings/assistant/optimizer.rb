@@ -106,7 +106,7 @@ class ContactTrackings::Assistant::Optimizer
         redundante     reglas que dicen lo mismo con otras palabras, o repetidas en varias secciones
         contradiccion  reglas que se contradicen entre sí
         simplificable  reglas demasiado largas o específicas que se pueden decir en menos
-        sobrante       etiquetas mencionadas que ninguna rama usa, secciones vacías, ejemplos repetidos
+        sobrante       etiquetas mencionadas que ninguna ruta usa, secciones vacías, ejemplos repetidos
 
       Y propón el Entrenamiento optimizado, con estas reglas duras:
         · Las líneas que empiezan con @ruta( y @ruta_por_defecto van EXACTAMENTE igual, carácter por carácter.

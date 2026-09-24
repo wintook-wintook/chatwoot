@@ -50,10 +50,10 @@ class ContactTrackings::Assistant::CorpusChecks
 
       findings.add(
         :degrading, :canned_group_too_small,
-        "La rama '#{route.name}' busca en el grupo #{group}, que tiene #{cuantas}. Con grupo el " \
-        'umbral de similitud sube de 0.20 a 0.45, así que sobre tan pocas respuestas la rama ' \
+        "La ruta '#{route.name}' busca en el grupo #{group}, que tiene #{cuantas}. Con grupo el " \
+        'umbral de similitud sube de 0.20 a 0.45, así que sobre tan pocas respuestas la ruta ' \
         'casi nunca va a encontrar nada. Conviene revisar que el grupo sea el correcto y que ' \
-        'tenga contenido del tema de esta rama.',
+        'tenga contenido del tema de esta ruta.',
         wrote: route.directive
       )
     end

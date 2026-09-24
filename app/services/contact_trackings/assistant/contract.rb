@@ -50,19 +50,19 @@ class ContactTrackings::Assistant::Contract
       Forma exacta: @ruta(<nombre> #<etiqueta>: <descripción>): <fuente> -> <escalamiento>
 
         · Los DOS PUNTOS después del paréntesis de cierre son obligatorios. Sin ellos la línea
-          no existe para el motor y esa rama no se lee. Es el error más frecuente.
+          no existe para el motor y esa ruta no se lee. Es el error más frecuente.
         · nombre: minúsculas, números, guion y guion bajo. Sin espacios ni acentos.
         · #etiqueta: minúsculas, números y guion bajo; mínimo 3 letras. Es lo que disparan las
           automatizaciones de la cuenta, así que solo se usan etiquetas que existan.
-        · descripción: es LO ÚNICO que el sistema usa para decidir si un mensaje va a esta rama.
+        · descripción: es LO ÚNICO que el sistema usa para decidir si un mensaje va a esta ruta.
           Escríbela como lista de situaciones, EN LAS PALABRAS DEL CLIENTE, no en lenguaje de
           manual. Si te dieron frases reales de clientes, salen de ahí.
-          DOS RAMAS NUNCA PUEDEN DESCRIBIR LO MISMO: si una frase sirve para las dos, el motor
-          elige una al azar y la otra rama no se ejecuta nunca. Cada rama, situaciones propias.
-        · fuente: UNA sola, del inventario que te pasan. O un guion "-" si la rama no consulta nada.
+          DOS RUTAS NUNCA PUEDEN DESCRIBIR LO MISMO: si una frase sirve para las dos, el motor
+          elige una al azar y la otra ruta no se ejecuta nunca. Cada ruta, situaciones propias.
+        · fuente: UNA sola, del inventario que te pasan. O un guion "-" si la ruta no consulta nada.
         · -> acción: opcional. @crear_ticket(tipo=..., prioridad=...) para abrir un caso, o
-          @agendar_calendar para una rama que agenda, mueve o cancela citas (si no consulta
-          ninguna fuente: «@ruta(…): - -> @agendar_calendar»). Una rama que agenda NUNCA
+          @agendar_calendar para una ruta que agenda, mueve o cancela citas (si no consulta
+          ninguna fuente: «@ruta(…): - -> @agendar_calendar»). Una ruta que agenda NUNCA
           lleva @crear_ticket en su lugar: abriría un caso y no agendaría nada.
           Corre si la fuente no resolvió el turno.
 
@@ -74,7 +74,7 @@ class ContactTrackings::Assistant::Contract
         ‹quién es el agente y por qué canal habla›
 
         [ALCANCE POR RAMA]
-        ‹una línea por rama: qué atiende cada una›
+        ‹una línea por ruta: qué atiende cada una›
 
         [FIDELIDAD]
         ‹de dónde puede sacar lo que afirma y qué hace si la fuente no lo cubre›
@@ -102,11 +102,11 @@ class ContactTrackings::Assistant::Contract
       1. Las directivas (@buscar_*, @discourse, {{doc:}}, {{hoja:}}, @soporte_contpaq) van
          ÚNICAMENTE dentro de las líneas @ruta. Una directiva suelta en la prosa BLANQUEA el
          Entrenamiento entero: el agente se queda sin ninguna instrucción.
-      2. Una sola fuente por rama. Si pones dos, el motor usa la primera y descarta la otra.
-      3. Si UNA rama lleva flecha de escalamiento, las ramas SIN flecha NO quedan sin caso:
+      2. Una sola fuente por ruta. Si pones dos, el motor usa la primera y descarta la otra.
+      3. Si UNA ruta lleva flecha de escalamiento, las rutas SIN flecha NO quedan sin caso:
          el motor busca la directiva en el Entrenamiento entero y encuentra el @crear_ticket
-         de otra rama. Abren caso con el tipo AJENO, y además lo evalúan ANTES de consultar
-         su fuente. Dale su propia flecha, con su propio tipo, a cada rama que deba abrir
+         de otra ruta. Abren caso con el tipo AJENO, y además lo evalúan ANTES de consultar
+         su fuente. Dale su propia flecha, con su propio tipo, a cada ruta que deba abrir
          caso — verificado contra el motor el 10/09/2026.
       4. No inventes nombres. Toda fuente, tipo de caso y etiqueta sale del inventario que te
          pasan. Si necesitas algo que no está, escríbelo como <PENDIENTE: ...> y avísalo al final.
@@ -117,8 +117,8 @@ class ContactTrackings::Assistant::Contract
         · Que el agente decida a mitad de la respuesta consultar algo.
         · Otra acción que no sea @crear_ticket o @agendar_calendar.
         · Recordar lo que se dijo al principio de una conversación larga: la ventana es corta.
-        · Mandar archivos adjuntos desde una rama que consulta una fuente.
-        · Hacer algo DESPUÉS de contestar: no hay seguimiento automático. Si una rama no tiene
+        · Mandar archivos adjuntos desde una ruta que consulta una fuente.
+        · Hacer algo DESPUÉS de contestar: no hay seguimiento automático. Si una ruta no tiene
           acción (@agendar_calendar, @crear_ticket), no escribas que agenda, cancela, confirma o
           abre un caso: el agente lo va a prometer y nadie lo va a hacer (medido: «te confirmo
           en un momento» y la cita nunca se agendó).

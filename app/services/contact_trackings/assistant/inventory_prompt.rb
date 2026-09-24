@@ -36,10 +36,10 @@ class ContactTrackings::Assistant::InventoryPrompt
 
   def sources
     lineas = @inventory[:sources].map { |s| "  #{s[:directive].ljust(34)} #{s[:name]}" }
-    return 'FUENTES DISPONIBLES: ninguna. Ninguna rama puede consultar nada; usa "-" como fuente.' if lineas.empty?
+    return 'FUENTES DISPONIBLES: ninguna. Ninguna ruta puede consultar nada; usa "-" como fuente.' if lineas.empty?
 
     # La directiva va literal porque es texto exacto: el motor la busca con un patrón.
-    "FUENTES DISPONIBLES (escribe la directiva EXACTA de la izquierda, una por rama):\n#{lineas.join("\n")}"
+    "FUENTES DISPONIBLES (escribe la directiva EXACTA de la izquierda, una por ruta):\n#{lineas.join("\n")}"
   end
 
   # El grupo de @buscar_predefinidas(GRUPO) es el prefijo del nombre de la respuesta;
@@ -73,7 +73,7 @@ class ContactTrackings::Assistant::InventoryPrompt
     return nil if @inventory[:customer_phrases].blank?
 
     "ASÍ ESCRIBEN LOS CLIENTES DE ESTA CUENTA (textual, con sus typos — usa estas palabras\n" \
-      "en las descripciones de las ramas, no lenguaje de manual):\n" \
+      "en las descripciones de las rutas, no lenguaje de manual):\n" \
       "#{@inventory[:customer_phrases].map { |p| "  · #{p}" }.join("\n")}"
   end
 

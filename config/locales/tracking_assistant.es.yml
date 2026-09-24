@@ -17,18 +17,18 @@ es:
     unparsed:
       no_closing_paren: 'falta el paréntesis de cierre del @ruta('
       no_colon: 'falta el ":" inmediatamente después del paréntesis de cierre'
-      bad_name: 'el nombre de la rama solo admite letras, números, guion y guion bajo, sin espacios ni acentos'
-      no_source: 'después del paréntesis de cierre falta «: fuente»; si esta rama no consulta nada, termínala con «): -»'
+      bad_name: 'el nombre de la ruta solo admite letras, números, guion y guion bajo, sin espacios ni acentos'
+      no_source: 'después del paréntesis de cierre falta «: fuente»; si esta ruta no consulta nada, termínala con «): -»'
       generic: 'no respeta la forma @ruta(nombre #etiqueta: descripción): fuente'
     repair:
       header: 'El comprobador del motor rechazó ese Entrenamiento:'
       footer: Corrige exactamente eso y devuelve el Entrenamiento completo de nuevo.
       wrote: 'Escribiste:'
       route_header: >-
-        Probé tu Entrenamiento: tomé la descripción de cada rama y le pregunté al clasificador real
-        a qué rama la manda. Estas no se eligen a sí mismas:
-      route_mismatch_line: '- la rama "%{route}", probada con "%{probe}", cayó en "%{chosen}"'
-      route_none: (ninguna rama)
+        Probé tu Entrenamiento: tomé la descripción de cada ruta y le pregunté al clasificador real
+        a qué ruta la manda. Estas no se eligen a sí mismas:
+      route_mismatch_line: '- la ruta "%{route}", probada con "%{probe}", cayó en "%{chosen}"'
+      route_none: (ninguna ruta)
       route_footer: >-
         Eso significa que esas descripciones se confunden entre sí. Reescribilas para que no se
         pisen —situaciones distintas, en las palabras del cliente— y devolvé el Entrenamiento
@@ -54,31 +54,31 @@ es:
         tener el calendario conectado en la cuenta no alcanza, el motor lo busca en el agente.
     findings:
       route_line_unparsed: >-
-        Línea %{line}: el motor NO la reconoce como rama — %{reason}. El patrón exacto es
+        Línea %{line}: el motor NO la reconoce como ruta — %{reason}. El patrón exacto es
         @ruta(nombre #etiqueta: descripción): fuente -> escalamiento
       no_routes: >-
-        El motor va a leer 0 ramas: no hay ninguna línea @ruta. Sin ramas, todos los mensajes
+        El motor va a leer 0 rutas: no hay ninguna línea @ruta. Sin rutas, todos los mensajes
         caen al camino conversacional y no se consulta ninguna fuente.
       unknown_source: >-
-        La rama '%{route}' declara una fuente que el motor no reconoce. Se ignora y la rama va a
+        La ruta '%{route}' declara una fuente que el motor no reconoce. Se ignora y la ruta va a
         contestar sin consultar nada.
       source_not_found: >-
-        La rama '%{route}' apunta a la fuente "%{name}", que no existe en esta cuenta. El motor no
+        La ruta '%{route}' apunta a la fuente "%{name}", que no existe en esta cuenta. El motor no
         va a fallar: va a buscar y no encontrar nunca. Las que sí existen: %{available}.
       source_none_loaded: (ninguna cargada)
       action_trapped_in_source: >-
-        En la rama '%{route}' la directiva %{directive} quedó del lado de la fuente, no del
+        En la ruta '%{route}' la directiva %{directive} quedó del lado de la fuente, no del
         escalamiento: le falta la flecha "->" o está mal escrita. Tal como está, esa acción no se
         ejecuta nunca. La forma es: fuente -> @crear_ticket(...)
       case_type_not_found: >-
         @crear_ticket(tipo=%{type}) — ese tipo de caso no existe en la cuenta. Los que existen: %{available}.
       case_type_none_created: (ninguno creado)
       default_route_unknown: >-
-        @ruta_por_defecto apunta a '%{declared}', que no es ninguna de las ramas declaradas (%{routes}).
-      default_route_no_routes: no hay ramas
+        @ruta_por_defecto apunta a '%{declared}', que no es ninguna de las rutas declaradas (%{routes}).
+      default_route_no_routes: no hay rutas
       route_not_self_chosen: >-
-        Probé la rama "%{route}" con su propia descripción ("%{probe}") y el motor eligió
-        "%{chosen}". Esa descripción se pisa con la de otra rama: como está, esta rama casi
+        Probé la ruta "%{route}" con su propia descripción ("%{probe}") y el motor eligió
+        "%{chosen}". Esa descripción se pisa con la de otra ruta: como está, esta ruta casi
         nunca se va a elegir. Escribe situaciones que solo apliquen a ella.
       contract_label: >-
         %{count} línea(s) con un rótulo del Asistente entre ═══ (línea(s) %{lines}). Esos rótulos son de
@@ -91,16 +91,16 @@ es:
         Faltan %{count} dato(s) por completar: %{items}. Mientras quede alguna marca así no se puede
         guardar: el agente la leería tal cual y se la diría al cliente.
       duplicate_route_description: >-
-        Estas ramas tienen la MISMA descripción: %{routes}. La descripción es lo único que el
+        Estas rutas tienen la MISMA descripción: %{routes}. La descripción es lo único que el
         clasificador usa para decidir, así que no las puede distinguir: una de las dos no se va a
         elegir nunca, y cuál pierde depende del orden. Dales descripciones que no se confundan —
         situaciones distintas, en las palabras del cliente.
       unclosed_ticket: >-
-        La rama '%{route}' tiene «%{wrote}» sin el «%{closer}» de cierre. El motor abre el caso igual,
+        La ruta '%{route}' tiene «%{wrote}» sin el «%{closer}» de cierre. El motor abre el caso igual,
         pero IGNORA lo que va entre paréntesis (tipo y prioridad): sale con los de por defecto. Agrega
         el «%{closer}» al final.
       unclosed_directive: >-
-        La rama '%{route}' tiene «%{wrote}» sin el «%{closer}» de cierre: el motor no lee lo que va
+        La ruta '%{route}' tiene «%{wrote}» sin el «%{closer}» de cierre: el motor no lee lo que va
         adentro. Agrega el «%{closer}».
       section_header_broken: >-
         Línea %{line}: el rótulo «%{wrote}» está mal escrito — %{problem}. Va así: [%{title}]. Como
@@ -110,8 +110,8 @@ es:
         no_opening_bracket: falta el «[» de apertura
         extra_bracket: sobra un par de corchetes
       default_route_line_broken: >-
-        Línea %{line}: el motor no lee esta rama por defecto. Va así: @ruta_por_defecto: nombre_de_la_rama
-        (con los dos puntos). Como está, los mensajes que no caen en ninguna rama no van a ninguna.
+        Línea %{line}: el motor no lee esta ruta por defecto. Va así: @ruta_por_defecto: nombre_de_la_rama
+        (con los dos puntos). Como está, los mensajes que no caen en ninguna ruta no van a ninguna.
       duplicate_section: >-
         La sección [%{title}] está dos veces (líneas %{first} y %{line}): el agente lee las dos y, si
         dicen cosas distintas, no sabe cuál vale. Júntalas en una.
@@ -128,31 +128,31 @@ es:
       promised_action_missing:
         calendar: >-
           Línea %{line}: «%{route}» dice que agenda, mueve o cancela citas, pero el Entrenamiento no tiene
-          @agendar_calendar en ninguna rama. El agente lo va a prometer y nadie lo va a hacer. Agrega
-          @agendar_calendar después de la flecha de esa rama, o cambia lo que dice que hace.
+          @agendar_calendar en ninguna ruta. El agente lo va a prometer y nadie lo va a hacer. Agrega
+          @agendar_calendar después de la flecha de esa ruta, o cambia lo que dice que hace.
         ticket: >-
           Línea %{line}: «%{route}» dice que abre un caso, pero el Entrenamiento no tiene @crear_ticket en
-          ninguna rama. El agente lo va a prometer y no se abre nada. Agrega @crear_ticket después de la
-          flecha de esa rama, o cambia lo que dice que hace.
+          ninguna ruta. El agente lo va a prometer y no se abre nada. Agrega @crear_ticket después de la
+          flecha de esa ruta, o cambia lo que dice que hace.
       follow_up_promise: >-
         Línea %{line}: le pide al agente prometer algo para después («te confirmo en un momento», «lo
         estoy revisando»…). No hay seguimiento automático: el cliente se queda esperando. Escribe lo
         que sí pasa (se abre un caso, lo contacta una persona) o prohíbelo en [PROHIBIDO].
       route_does_nothing: >-
-        La rama '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
+        La ruta '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
         con lo que dice el Entrenamiento. Ante algo concreto (precios, horarios) puede inventar o prometer
         lo que no hace. Si es a propósito (saludo, pedir datos), déjala así; si no, dale una fuente o un
         «si no resuelve» (abrir un caso, agendar).
       route_without_description: >-
-        La rama '%{route}' no tiene descripción. La descripción es LO ÚNICO que el clasificador usa
-        para decidir a qué rama va un mensaje: sin ella, esta rama casi nunca se va a elegir.
+        La ruta '%{route}' no tiene descripción. La descripción es LO ÚNICO que el clasificador usa
+        para decidir a qué ruta va un mensaje: sin ella, esta ruta casi nunca se va a elegir.
         Escríbela como lista de situaciones, en las palabras del cliente.
       label_not_found: >-
-        La etiqueta %{tag} de la rama '%{route}' no existe en la cuenta, así que no va a disparar
+        La etiqueta %{tag} de la ruta '%{route}' no existe en la cuenta, así que no va a disparar
         ninguna automatización. Hay que crearla en Etiquetas o usar una de las existentes: %{available}.
       label_none_created: (no hay etiquetas creadas)
       erp_directive_not_isolated: >-
-        Hay una directiva {{consulta:}} sin "?" que no es la fuente de una ruta, conviviendo con ramas o
+        Hay una directiva {{consulta:}} sin "?" que no es la fuente de una ruta, conviviendo con rutas o
         con prosa. El motor manda el Entrenamiento ENTERO interpolado como mensaje al cliente. Ponla como
         fuente de una ruta, o pide sus datos con "?" (texto=?) para que el agente redacte la respuesta.
       consulta_not_found: >-
@@ -162,14 +162,14 @@ es:
       consulta_unknown_param: >-
         La consulta '%{name}' no tiene el parámetro %{params}: nunca se va a llenar. Parámetros que sí
         tiene: %{available}.
-      # ⚠ Corregido el 10/09/2026 contra el motor real. Este mensaje decía que las ramas sin
+      # ⚠ Corregido el 10/09/2026 contra el motor real. Este mensaje decía que las rutas sin
       # flecha "dejan de abrir casos", y es al revés: el job las manda a
       # try_create_ticket(directive: nil), que cae al prompt ENTERO y encuentra ahí el
-      # @crear_ticket de OTRA rama. Abren caso, con el tipo ajeno, y ANTES de la fuente.
+      # @crear_ticket de OTRA ruta. Abren caso, con el tipo ajeno, y ANTES de la fuente.
       mixed_escalation_regime: >-
-        Hay ramas con escalamiento y ramas sin él (%{routes}). Eso NO las deja sin caso: el motor
-        busca la directiva en el Entrenamiento entero, así que esas ramas van a abrir caso con el
-        @crear_ticket de otra rama —incluido su tipo— y además lo van a evaluar ANTES de consultar
+        Hay rutas con escalamiento y rutas sin él (%{routes}). Eso NO las deja sin caso: el motor
+        busca la directiva en el Entrenamiento entero, así que esas rutas van a abrir caso con el
+        @crear_ticket de otra ruta —incluido su tipo— y además lo van a evaluar ANTES de consultar
         su fuente, no después. Si tienen que abrir caso, dales su propia flecha con su tipo; si no
         tienen que abrirlo, hoy no hay forma de evitarlo salvo sacar todo @crear_ticket suelto.
       calendar_not_configured: >-
@@ -183,11 +183,11 @@ es:
       loose_directive: >-
         La directiva %{directive} está suelta en la prosa, fuera de una línea @ruta. Ahí NO se
         ejecuta: el motor la borra del texto antes de mandárselo al modelo y sigue de largo. Si
-        querías que esa rama consultara esa fuente, va dentro de su línea @ruta; si era solo una
+        querías que esa ruta consultara esa fuente, va dentro de su línea @ruta; si era solo una
         mención, se puede dejar, pero no hace nada.
       attachment_with_source: >-
-        El adjunto {{%{name}}} no se resuelve cuando la rama consulta una fuente: sale como texto
-        literal en el mensaje al cliente. Los adjuntos solo funcionan en ramas sin fuente.
+        El adjunto {{%{name}}} no se resuelve cuando la ruta consulta una fuente: sale como texto
+        literal en el mensaje al cliente. Los adjuntos solo funcionan en rutas sin fuente.
       missing_prose_sections: >-
         A la prosa le faltan estas secciones: %{sections}. No rompen nada, pero cada una cubre una
         decisión que si no se escribe, el modelo la toma por su cuenta.

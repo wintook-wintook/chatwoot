@@ -93,7 +93,7 @@ class ContactTrackings::Assistant::Explainer
 
       Con el Entrenamiento completo como contexto, responde en #{ContactTrackings::Assistant::Language.name_for}, en lenguaje llano:
         explicacion   qué hace este fragmento y por qué parece estar ahí (2 a 4 frases)
-        aplica_a      a qué ramas (nombres exactos de las @ruta) afecta, o [] si a todas o a ninguna en particular
+        aplica_a      a qué rutas (nombres exactos de las @ruta) afecta, o [] si a todas o a ninguna en particular
         si_se_quita   qué comportamiento cambiaría si se borra (1 o 2 frases)
       Si el fragmento contradice o repite otra parte del Entrenamiento, dilo en la explicación.
       No inventes intenciones que el texto no sugiere.
