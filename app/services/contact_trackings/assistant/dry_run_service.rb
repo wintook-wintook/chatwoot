@@ -73,11 +73,15 @@ class ContactTrackings::Assistant::DryRunService
     erp_query: :live
   }.freeze
 
-  def initialize(account, draft:, question:, inbox: nil)
+  # recent_context: los mensajes anteriores, como los arma el motor ("Cliente: …\nBot: …").
+  # Lo usa la revisión de una conversación real (ConversationReview): sin él, un «sí»
+  # o «mañana a las 10» suelto no cae en ninguna ruta, y en producción sí.
+  def initialize(account, draft:, question:, inbox: nil, recent_context: nil)
     @account  = account
     @draft    = draft.to_s
     @question = question.to_s.strip
     @inbox    = inbox
+    @recent_context = recent_context
   end
 
   def call
@@ -117,7 +121,7 @@ class ContactTrackings::Assistant::DryRunService
   def pick_route(map)
     return nil if map.routes.empty?
 
-    ContactTrackings::BranchClassifierService.new(tracking_double, message_double, map).classify
+    ContactTrackings::BranchClassifierService.new(tracking_double, message_double, map, recent_context: @recent_context).classify
   rescue StandardError => e
     Rails.logger.warn "[Asistente/EnSeco] no se pudo clasificar: #{e.message}"
     nil

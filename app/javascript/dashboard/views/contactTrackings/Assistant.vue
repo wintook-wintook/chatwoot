@@ -53,6 +53,11 @@ import {
   instructionsFilename,
 } from './assistant/instructionsProgress';
 import { downloadMarkdown } from './assistant/engineCatalogMarkdown';
+import {
+  mentionsConversation,
+  reviewMessage,
+  hasTrainingFixes,
+} from './assistant/conversationReview';
 import BriefModal from './assistant/BriefModal.vue';
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import VersionsPanel from './assistant/VersionsPanel.vue';
@@ -838,7 +843,14 @@ export default {
     // oneShot: redacta de una, sin preguntar (lo usa el encargo, ver writeFromBrief).
     // Sin Entrenamiento todavía, el chat conversa para llenar las instrucciones
     // iniciales (armar un agente desde cero); con uno en pantalla, lo edita.
+    //
+    // Un link a una conversación (…/conversations/173) no es un turno: es pedir que
+    // se revise esa conversación real (reviewConversation).
     async sendMessage(content, { oneShot = false } = {}) {
+      if (!oneShot && mentionsConversation(content)) {
+        await this.reviewConversation(content);
+        return;
+      }
       if (!oneShot && !this.draft.trim()) {
         await this.sendDraftingMessage(content);
         return;
@@ -951,6 +963,75 @@ export default {
       this.proposal = { ...(this.proposal || {}), ...definicion };
       this.showBriefModal = false;
       this.leftPanel = 'chat';
+    },
+    // Revisar una conversación real (pedido del usuario, 24/09/2026): qué respuestas
+    // del agente estuvieron mal, por qué y qué cambiar. El resultado entra al hilo
+    // como mensaje del Asistente; si se pide corregir, el editor lo tiene a la vista.
+    // Sin Entrenamiento abierto, se abre el del agente que atendió: corregir es el
+    // paso siguiente y el chat solo edita lo que está abierto.
+    async reviewConversation(content) {
+      this.messages.push({ role: 'user', content });
+      this.interviewOptions = null;
+      this.isThinking = true;
+      const turnId = this.startProgress();
+      try {
+        await AssistantAPI.reviewConversation(content, turnId, {
+          draft: this.draft.trim() ? this.draft : null,
+          inboxId: this.inboxId,
+        });
+        const result = await this.waitTurnResult(() =>
+          AssistantAPI.getConversationReview(turnId)
+        );
+        const aviso = this.openReviewedAgent(result.agent);
+        this.messages.push({
+          role: 'assistant',
+          content: [reviewMessage(result, (k, a) => this.$t(k, a)), aviso]
+            .filter(Boolean)
+            .join('\n\n'),
+        });
+        if (this.draft.trim() && hasTrainingFixes(result)) {
+          this.interviewOptions = [
+            {
+              question: this.$t('TRACKING_ASSISTANT_VIEW.REVIEW_NEXT'),
+              choices: [this.$t('TRACKING_ASSISTANT_VIEW.REVIEW_APPLY')],
+            },
+          ];
+        }
+      } catch (error) {
+        this.messages.push({
+          role: 'assistant',
+          content: this.reviewError(error?.response?.data?.error),
+        });
+      } finally {
+        this.stopProgress();
+        this.isThinking = false;
+      }
+    },
+    reviewError(code) {
+      if (code === 'no_api_key')
+        return this.$t('TRACKING_ASSISTANT_VIEW.ERROR_NO_KEY');
+      const conocidos = ['not_found', 'no_conversation', 'no_messages'];
+      return this.$t(
+        conocidos.includes(code)
+          ? `TRACKING_ASSISTANT_VIEW.REVIEW_ERROR_${code.toUpperCase()}`
+          : 'TRACKING_ASSISTANT_VIEW.REVIEW_ERROR'
+      );
+    },
+    // Devuelve el aviso para el mensaje, o ''.
+    openReviewedAgent(agent) {
+      if (!agent?.template_id) return '';
+      if (!this.draft.trim()) {
+        const template = this.templates.find(t => t.id === agent.template_id);
+        if (!template) return '';
+        this.loadTemplate(template);
+        return this.$t('TRACKING_ASSISTANT_VIEW.REVIEW_OPENED_AGENT', {
+          name: template.name,
+        });
+      }
+      if (this.editingTemplate?.id === agent.template_id) return '';
+      return this.$t('TRACKING_ASSISTANT_VIEW.REVIEW_OTHER_AGENT', {
+        name: agent.name,
+      });
     },
     // Un turno de la conversación que arma un agente desde cero (DraftingChat).
     async sendDraftingMessage(content) {
@@ -1080,6 +1161,11 @@ export default {
     // El backend responde 202 mientras trabaja, 200 con el resultado y 422 si falló
     // (axios lo lanza como error). Se rinde a los 5 minutos.
     async waitOptimizeResult(turnId) {
+      return this.waitTurnResult(() => AssistantAPI.getOptimizeResult(turnId));
+    },
+    // Lo mismo para cualquier turno que corre en segundo plano (optimizar, revisar
+    // una conversación): `fetch` pide el resultado.
+    async waitTurnResult(fetch) {
       const deadline = Date.now() + OPTIMIZE_MAX_WAIT_MS;
       while (Date.now() < deadline) {
         // eslint-disable-next-line no-await-in-loop
@@ -1087,10 +1173,10 @@ export default {
           setTimeout(resolve, PROGRESS_POLL_MS);
         });
         // eslint-disable-next-line no-await-in-loop
-        const { status, data } = await AssistantAPI.getOptimizeResult(turnId);
+        const { status, data } = await fetch();
         if (status === 200) return data;
       }
-      throw new Error('optimize timeout');
+      throw new Error('turn timeout');
     },
     applyOptimization(texto) {
       if (!texto) return;

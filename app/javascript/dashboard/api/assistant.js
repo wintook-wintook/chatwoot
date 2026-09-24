@@ -140,6 +140,22 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // Revisar una conversación real: `text` es lo que se escribió en el chat, con el
+  // link de la conversación. Corre en segundo plano: el resultado se pide con
+  // getConversationReview(turnId) hasta que deja de ser 202.
+  reviewConversation(text, turnId, { draft = null, inboxId = null } = {}) {
+    return axios.post(`${this.url}/conversation_review`, {
+      text,
+      draft,
+      inbox_id: inboxId,
+      turn_id: turnId,
+    });
+  }
+
+  getConversationReview(turnId) {
+    return axios.get(`${this.url}/conversation_review/${turnId}`);
+  }
+
   // Estado del encargo; con la ficha y lo que falta cuando ya se leyó.
   getBrief(id) {
     return axios.get(`${this.url}/briefs/${id}`);

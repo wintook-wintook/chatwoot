@@ -149,6 +149,8 @@ Rails.application.routes.draw do
             post 'assistant/briefs/:id/cover',   to: 'assistant_briefs#cover'
             # armar un agente desde cero conversando (llena las instrucciones iniciales)
             post 'assistant/drafting_chat', to: 'assistant_drafting#create'
+            post 'assistant/conversation_review', to: 'assistant_review#create'
+            get  'assistant/conversation_review/:turn_id', to: 'assistant_review#show'
           end
 
           # @knowledge_sources
