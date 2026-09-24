@@ -265,6 +265,7 @@
     "TREE_NO_NAME": "(no name)",
     "TREE_DEFAULT": "default",
     "TREE_BROKEN_ROUTE": "the engine cannot read it",
+    "TREE_BROKEN_HEADER": "malformed header",
     "TREE_ROUTES_EMPTY": "No routes: the agent handles everything conversationally, without looking anything up.",
     "TREE_SECTIONS_EMPTY": "No sections: the agent has no written instructions.",
     "DEFINITION_TITLE": "Agent definition",

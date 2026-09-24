@@ -66,6 +66,23 @@ RSpec.describe ContactTrackings::TrainingStructure do
       expect(rutas['lines'].pluck('kind')).to eq(%w[broken route])
     end
 
+    # 24/09/2026: «[ESTILO» sin «]» se pegaba a la sección anterior y desaparecía.
+    it 'una sección con el rótulo mal escrito sigue siendo su sección, marcada' do
+      texto = "[ROL]\nAmable.\n\n[ESTILO\nCálido.\n\n[PROHIBIDO]\nNada."
+      estilo = bloques(texto)[1]
+
+      expect(resumen(texto)).to eq(['bracket:ROL', 'bracket:ESTILO', 'bracket:PROHIBIDO'])
+      expect(estilo).to include('header' => '[ESTILO', 'broken' => true, 'body' => 'Cálido.')
+      expect(described_class.compose(described_class.parse(texto))).to eq(texto)
+    end
+
+    it 'editada sin el rótulo original, se escribe bien' do
+      estructura = described_class.parse("[ESTILO\nCálido.")
+      estructura['blocks'][0]['header'] = ''
+
+      expect(described_class.compose(estructura)).to eq("[ESTILO]\nCálido.")
+    end
+
     it 'no confunde una etiqueta #soporte con un encabezado' do
       expect(resumen("[ETIQUETAS]\n#soporte1 para soporte")).to eq(['bracket:ETIQUETAS'])
     end

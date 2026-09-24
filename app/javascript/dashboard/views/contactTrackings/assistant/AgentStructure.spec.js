@@ -143,6 +143,29 @@ describe('AgentStructure', () => {
       });
     });
 
+    // «[ESTILO» sin «]»: guardarla desde el formulario escribe el rótulo bien.
+    it('una con el rótulo mal escrito se guarda sin el rótulo viejo', () => {
+      const wrapper = montar({
+        value: {
+          blocks: [
+            {
+              type: 'section',
+              title: 'ESTILO',
+              header: '[ESTILO',
+              broken: true,
+              body: 'Cálido.',
+              gap: 0,
+            },
+          ],
+        },
+      });
+      wrapper.vm.openEditSection(0);
+
+      wrapper.vm.saveSection({ title: 'ESTILO', body: 'Cálido.' });
+
+      expect(ultimo(wrapper)[0]).toMatchObject({ header: '', broken: false });
+    });
+
     // El texto inicial no lleva rótulo: su contenido va en `text`, no en `body`.
     it('el texto inicial se guarda en su propio campo', () => {
       const wrapper = montar({

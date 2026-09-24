@@ -164,6 +164,11 @@ class ContactTrackings::Assistant::DraftPieces
     elsif (match = line.match(SECTION_RE))
       label = "[#{match[1].strip}]"
       { key: unique_key(label, vistas), label: label, route: false, section: true }
+    elsif ContactTrackings::Assistant::StructureChecks.broken_header?(line)
+      # Un rótulo mal escrito («[ESTILO») sigue abriendo su sección: así no desaparece
+      # del árbol, que la muestra marcada (pedido del usuario, 24/09/2026).
+      label = "[#{ContactTrackings::Assistant::StructureChecks.broken_header_title(line)}]"
+      { key: unique_key(label, vistas), label: label, route: false, section: true }
     elsif @markdown_sections.include?(indice)
       match = line.match(MARKDOWN_RE)
       label = "#{match[1]} #{match[2].strip}"

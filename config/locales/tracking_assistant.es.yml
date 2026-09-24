@@ -103,9 +103,12 @@ es:
         La rama '%{route}' tiene «%{wrote}» sin el «%{closer}» de cierre: el motor no lee lo que va
         adentro. Agrega el «%{closer}».
       section_header_broken: >-
-        Línea %{line}: «%{wrote}» parece el rótulo de una sección, pero está mal escrito (va así:
-        [NOMBRE]). Como está, la sección no existe: su texto queda pegado a la anterior y el agente
-        lee esa línea como una instrucción más.
+        Línea %{line}: el rótulo «%{wrote}» está mal escrito — %{problem}. Va así: [%{title}]. Como
+        está, el agente lee «%{wrote}» como una instrucción más, y el árbol la marca en rojo.
+      section_header_problem:
+        no_closing_bracket: falta el «]» de cierre
+        no_opening_bracket: falta el «[» de apertura
+        extra_bracket: sobra un par de corchetes
       default_route_line_broken: >-
         Línea %{line}: el motor no lee esta rama por defecto. Va así: @ruta_por_defecto: nombre_de_la_rama
         (con los dos puntos). Como está, los mensajes que no caen en ninguna rama no van a ninguna.

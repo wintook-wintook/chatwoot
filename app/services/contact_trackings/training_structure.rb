@@ -110,8 +110,11 @@ module ContactTrackings::TrainingStructure
     end
 
     titulo, estilo = header_parts(contenido.first)
-    { 'type' => 'section', 'title' => titulo, 'style' => estilo, 'header' => contenido.first,
-      'body' => contenido.drop(1).join("\n"), 'gap' => gap }
+    # broken: el rótulo está mal escrito («[ESTILO»). Se muestra igual, marcado; el
+    # texto no cambia hasta que se edite la sección desde el formulario.
+    seccion = { 'type' => 'section', 'title' => titulo, 'style' => estilo, 'header' => contenido.first,
+                'body' => contenido.drop(1).join("\n"), 'gap' => gap }
+    ContactTrackings::Assistant::StructureChecks.broken_header?(contenido.first.to_s) ? seccion.merge('broken' => true) : seccion
   end
 
   # [título, estilo] de una línea de rótulo, o nil.
@@ -120,6 +123,8 @@ module ContactTrackings::TrainingStructure
       [m[1].strip, 'bracket']
     elsif (m = linea.to_s.match(Pieces::MARKDOWN_RE))
       [m[2].strip, "markdown#{m[1].size}"]
+    elsif ContactTrackings::Assistant::StructureChecks.broken_header?(linea.to_s)
+      [ContactTrackings::Assistant::StructureChecks.broken_header_title(linea), 'bracket']
     end
   end
 

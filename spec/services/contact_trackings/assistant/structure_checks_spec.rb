@@ -19,6 +19,13 @@ RSpec.describe ContactTrackings::Assistant::StructureChecks do
       expect(hallazgos("[[ROL]]\nx")).to eq([[:section_header_broken, 1]])
     end
 
+    it 'es rojo y dice qué corchete falta' do
+      findings = ContactTrackings::Assistant::Findings.new
+      described_class.check("[ESTILO\nEscribo cálido.", findings: findings)
+
+      expect(findings.of(:blocking).first[:message]).to include('falta el «]» de cierre', 'Va así: [ESTILO]')
+    end
+
     it 'no marca un rótulo bien escrito ni texto con corchetes' do
       expect(hallazgos("[ROL]\nVer [aquí](https://x.com) y [x] hecho.\nTermina así ver nota].")).to be_empty
     end

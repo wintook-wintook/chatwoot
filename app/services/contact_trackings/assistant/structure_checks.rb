@@ -7,10 +7,11 @@
 # que quede mal al editar a mano, no solo de las @ruta. Medido ese día, pasaban sin
 # ningún aviso:
 #
-#   S1 rótulo de sección roto   «[ROL», «ROL]», «[[ROL]]». La sección desaparece: su
-#                               texto queda pegado a la anterior y el rótulo, como una
-#                               línea suelta que el agente lee. Ámbar: el agente sigue
-#                               leyendo el texto; lo que se rompe es la estructura.
+#   S1 rótulo de sección roto   «[ROL», «ROL]», «[[ROL]]». Rojo (pedido del usuario,
+#                               24/09): el agente lee el rótulo como una instrucción
+#                               suelta. El aviso dice qué corchete falta o sobra, y la
+#                               sección SIGUE en el árbol, marcada (DraftPieces y
+#                               TrainingStructure la leen con broken_header?).
 #   S2 rama por defecto rota    «@ruta_por_defecto a» sin «:». El motor no la lee y los
 #                               mensajes sin rama no caen en ninguna. Rojo.
 #   S3 sección repetida         dos [ROL]: el agente lee dos versiones y el árbol las
@@ -47,12 +48,31 @@ module ContactTrackings::Assistant::StructureChecks
     duplicate_sections(lineas, findings)
   end
 
-  def broken_header(linea, numero, findings)
-    return if linea.match?(SECTION_RE)
-    return unless linea.match?(OPEN_ONLY_RE) || linea.match?(CLOSE_ONLY_RE) || linea.match?(DOUBLE_RE)
-    return if linea.lstrip.start_with?('@ruta')
+  # ¿Quiso ser el rótulo de una sección y está mal escrito?
+  def broken_header?(linea)
+    return false if linea.match?(SECTION_RE) || linea.lstrip.start_with?('@ruta')
 
-    findings.add(:degrading, :section_header_broken, t('section_header_broken', line: numero, wrote: linea.strip),
+    linea.match?(OPEN_ONLY_RE) || linea.match?(CLOSE_ONLY_RE) || linea.match?(DOUBLE_RE)
+  end
+
+  # El nombre que quiso tener: «[ESTILO» → «ESTILO».
+  def broken_header_title(linea)
+    linea.to_s.strip.delete('[]').strip
+  end
+
+  def header_problem(linea)
+    return 'extra_bracket' if linea.match?(DOUBLE_RE)
+
+    linea.match?(OPEN_ONLY_RE) ? 'no_closing_bracket' : 'no_opening_bracket'
+  end
+
+  def broken_header(linea, numero, findings)
+    return unless broken_header?(linea)
+
+    titulo = broken_header_title(linea)
+    findings.add(:blocking, :section_header_broken,
+                 t('section_header_broken', line: numero, wrote: linea.strip, title: titulo,
+                                            problem: t("section_header_problem.#{header_problem(linea)}")),
                  line: numero, wrote: linea.strip)
   end
 

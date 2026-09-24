@@ -432,6 +432,13 @@ export default {
             >
               {{ sectionName(block) }}
             </span>
+            <!-- Rótulo mal escrito («[ESTILO»): la sección sigue acá, marcada. -->
+            <span
+              v-if="block.broken"
+              class="px-1 text-xs rounded shrink-0 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+            >
+              {{ $t('TRACKING_ASSISTANT_VIEW.TREE_BROKEN_HEADER') }}
+            </span>
             <span
               class="flex-1 min-w-0 text-xs truncate text-slate-500 dark:text-slate-400"
             >

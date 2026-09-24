@@ -201,6 +201,15 @@ export default {
         blocks = updateBlock(blocks, blocks.length - 1, { body });
       } else if (this.blocks[index].type === 'preamble') {
         blocks = updateBlock(this.blocks, index, { text: body });
+      } else if (this.blocks[index].broken) {
+        // Rótulo mal escrito («[ESTILO»): guardarla desde el formulario lo escribe de
+        // nuevo, bien. Sin el rótulo original, el backend lo arma con el título.
+        blocks = updateBlock(this.blocks, index, {
+          title,
+          body,
+          header: '',
+          broken: false,
+        });
       } else {
         blocks = updateBlock(this.blocks, index, { title, body });
       }

@@ -104,9 +104,12 @@ en:
         Branch '%{route}' has "%{wrote}" without the closing "%{closer}": the engine does not read what
         is inside. Add the "%{closer}".
       section_header_broken: >-
-        Line %{line}: "%{wrote}" looks like a section header but is malformed (it goes like this:
-        [NAME]). As it is, the section does not exist: its text sticks to the previous one and the
-        agent reads that line as one more instruction.
+        Line %{line}: the header "%{wrote}" is malformed — %{problem}. It goes like this: [%{title}]. As
+        it is, the agent reads "%{wrote}" as one more instruction, and the tree marks it red.
+      section_header_problem:
+        no_closing_bracket: the closing "]" is missing
+        no_opening_bracket: the opening "[" is missing
+        extra_bracket: there is an extra pair of brackets
       default_route_line_broken: >-
         Line %{line}: the engine does not read this default branch. It goes like this:
         @ruta_por_defecto: branch_name (with the colon). As it is, messages that match no branch go nowhere.
