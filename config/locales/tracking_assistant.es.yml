@@ -125,6 +125,19 @@ es:
       state_label_not_found: >-
         La etiqueta %{tag} del Entrenamiento no existe en la cuenta: si el agente la usa, no dispara
         ninguna automatización. Créala en Etiquetas o cámbiala por una que exista.
+      promised_action_missing:
+        calendar: >-
+          Línea %{line}: «%{route}» dice que agenda, mueve o cancela citas, pero el Entrenamiento no tiene
+          @agendar_calendar en ninguna rama. El agente lo va a prometer y nadie lo va a hacer. Agrega
+          @agendar_calendar después de la flecha de esa rama, o cambia lo que dice que hace.
+        ticket: >-
+          Línea %{line}: «%{route}» dice que abre un caso, pero el Entrenamiento no tiene @crear_ticket en
+          ninguna rama. El agente lo va a prometer y no se abre nada. Agrega @crear_ticket después de la
+          flecha de esa rama, o cambia lo que dice que hace.
+      follow_up_promise: >-
+        Línea %{line}: le pide al agente prometer algo para después («te confirmo en un momento», «lo
+        estoy revisando»…). No hay seguimiento automático: el cliente se queda esperando. Escribe lo
+        que sí pasa (se abre un caso, lo contacta una persona) o prohíbelo en [PROHIBIDO].
       route_does_nothing: >-
         La rama '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
         con lo que dice el Entrenamiento. Ante algo concreto (precios, horarios) puede inventar o prometer

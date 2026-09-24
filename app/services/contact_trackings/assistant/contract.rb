@@ -84,7 +84,9 @@ class ContactTrackings::Assistant::Contract
         ‹cómo escribe›
 
         [PROHIBIDO]
-        ‹qué no debe hacer nunca›
+        ‹qué no debe hacer nunca. Siempre incluye NO SIMULAR: nunca prometer una acción que
+         el sistema no hace («te confirmo en un momento», «lo estoy revisando», «te mantendré
+         informado», «estaré pendiente»)›
 
       ⚠ Eso de arriba es la FORMA, no el contenido. Lo que va entre ‹› lo escribes tú,
       para el agente que te pidieron y con las palabras del rubro de esa cuenta. Copiar un
@@ -113,6 +115,10 @@ class ContactTrackings::Assistant::Contract
         · Escalar a otra cosa que no sea @crear_ticket.
         · Recordar lo que se dijo al principio de una conversación larga: la ventana es corta.
         · Mandar archivos adjuntos desde una rama que consulta una fuente.
+        · Hacer algo DESPUÉS de contestar: no hay seguimiento automático. Si una rama no tiene
+          acción (@agendar_calendar, @crear_ticket), no escribas que agenda, cancela, confirma o
+          abre un caso: el agente lo va a prometer y nadie lo va a hacer (medido: «te confirmo
+          en un momento» y la cita nunca se agendó).
     CONTRATO
   end
 end

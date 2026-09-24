@@ -114,8 +114,10 @@ class ContactTrackings::Assistant::ValidatorService
   end
 
   # B11 (directiva sin cerrar) y D9 (rama que no hace nada): ver RouteLineChecks.
+  # P1–P2 (lo que el Entrenamiento promete y no pasa): ver PromiseChecks.
   def check_route_lines
     ContactTrackings::Assistant::RouteLineChecks.new(map, findings: findings).call
+    ContactTrackings::Assistant::PromiseChecks.check(text, map: map, findings: findings)
   end
 
   # Comprobar la configuración contra lo que la cuenta TIENE es otro tipo de

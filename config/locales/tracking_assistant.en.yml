@@ -126,6 +126,19 @@ en:
       state_label_not_found: >-
         Tag %{tag} in the Training does not exist in the account: if the agent uses it, it triggers no
         automation. Create it in Labels or change it for an existing one.
+      promised_action_missing:
+        calendar: >-
+          Line %{line}: "%{route}" says it books, moves or cancels appointments, but the Training has no
+          @agendar_calendar in any branch. The agent will promise it and nobody will do it. Add
+          @agendar_calendar after that branch's arrow, or change what it says it does.
+        ticket: >-
+          Line %{line}: "%{route}" says it opens a case, but the Training has no @crear_ticket in any
+          branch. The agent will promise it and nothing opens. Add @crear_ticket after that branch's
+          arrow, or change what it says it does.
+      follow_up_promise: >-
+        Line %{line}: it asks the agent to promise something for later ("I'll confirm in a moment", "I'm
+        checking it"…). There is no automatic follow-up: the customer is left waiting. Write what does
+        happen (a case opens, a person contacts them) or forbid it in [PROHIBIDO].
       route_does_nothing: >-
         Branch '%{route}' does not query any source and has nothing to do when it cannot solve: it answers
         only from the Training. Faced with something specific (prices, schedules) it may make things up or
