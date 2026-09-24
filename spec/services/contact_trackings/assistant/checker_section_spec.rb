@@ -13,7 +13,7 @@ RSpec.describe ContactTrackings::Assistant::CheckerSection do
 
     texto = described_class.call(draft, account: account)
 
-    expect(texto).to include('HECHOS', '- ROJO (ruta precios)', '- ROJO (línea 3)', 'DENTRO de "mensaje"')
+    expect(texto).to include('HECHOS', '- ROJO (ruta precios)', '- ROJO: Línea 3:', 'DENTRO de "mensaje"')
   end
 
   it 'sin hallazgos lo dice; sin Entrenamiento no agrega nada' do

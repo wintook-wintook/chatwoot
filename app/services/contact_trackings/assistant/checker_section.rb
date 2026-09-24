@@ -48,9 +48,10 @@ module ContactTrackings::Assistant::CheckerSection
     (lineas.first(MAX_FINDINGS) + extra).join("\n")
   end
 
+  # Sin repetir la línea cuando el aviso ya empieza con ella («Línea 8: …»).
   def where(finding)
     partes = []
-    partes << "línea #{finding[:line]}" if finding[:line]
+    partes << "línea #{finding[:line]}" if finding[:line] && !finding[:message].to_s.match?(/\A(Línea|Line) \d/)
     rutas = finding[:routes] || [finding[:route]].compact
     partes << "ruta #{rutas.join(', ')}" if rutas.any?
     partes.any? ? " (#{partes.join(' · ')})" : ''
