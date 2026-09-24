@@ -15,7 +15,9 @@
 #              el texto NO es error por sí sola: el motor la pone a propósito
 #              (with_branch_tag) y dispara las automatizaciones. Es error cuando no es
 #              la de la ruta del mensaje que se está contestando (la 173: una sección
-#              general de etiquetas le pegaba #humano a todo).
+#              general de etiquetas le pegaba #humano a todo). Tampoco lo es una
+#              etiqueta de ESTADO que el Entrenamiento declara con su significado
+#              (#cotizar2, #soporte3: ver TagDictionary).
 # ================================================================================
 
 class ContactTrackings::Assistant::ReplySignals
@@ -26,6 +28,7 @@ class ContactTrackings::Assistant::ReplySignals
   def initialize(ran:, current: nil)
     @ran = ran.to_s
     @current = current.to_s.presence
+    @declared = ContactTrackings::Assistant::TagDictionary.declared(@ran)
   end
 
   # replay: lo que DryRunService dice del mensaje del cliente que se contesta, o nil.
@@ -53,10 +56,13 @@ class ContactTrackings::Assistant::ReplySignals
   def wrong_tag(texto, replay)
     puestas = texto.scan(TAG_RE).flatten.map { |e| "##{e.downcase}" }.uniq
     esperada = replay && replay[:tag].to_s.downcase.presence
-    return nil if esperada.nil? || puestas.empty? || puestas.include?(esperada)
+    return nil if esperada.nil?
 
-    { code: 'wrong_tag', tags: puestas, expected: esperada, route: replay.dig(:routes, :chosen),
-      cause: 'entrenamiento', already_fixed: fixed_in_current?(puestas) }
+    sobran = puestas - [esperada] - @declared
+    return nil if sobran.empty?
+
+    { code: 'wrong_tag', tags: sobran, expected: esperada, route: replay.dig(:routes, :chosen),
+      cause: 'entrenamiento', already_fixed: fixed_in_current?(sobran) }
   end
 
   # El agente ya no tiene esas etiquetas: se corrigió, pero a esta conversación no le

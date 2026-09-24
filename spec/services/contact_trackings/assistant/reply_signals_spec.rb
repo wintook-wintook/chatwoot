@@ -39,6 +39,19 @@ RSpec.describe ContactTrackings::Assistant::ReplySignals do
     expect(signals('Claro. #humano', current: '@ruta(agendar_cita #agendar: citas): -').first[:already_fixed]).to be(true)
   end
 
+  # Manual de estructura (24/09/2026): varias etiquetas por ruta, como estados.
+  it 'no marca una etiqueta de estado que el Entrenamiento declara con su significado' do
+    ran = "[ETIQUETAS]\n#cotizar2 = el requerimiento ya se entiende y se canaliza"
+
+    expect(signals('Listo, lo paso a un asesor. #cotizar2', ran: ran)).to be_empty
+  end
+
+  it 'sí marca la que está suelta en [ETIQUETAS], sin significado (la 173)' do
+    ran = "[ETIQUETAS]\n#humano\n\n[ESTILO]\nBreve."
+
+    expect(signals('Claro. #humano', ran: ran).first).to include(code: 'wrong_tag', tags: ['#humano'])
+  end
+
   it 'sin ruta conocida no juzga la etiqueta' do
     expect(signals('Claro. #humano', ruta: nil)).to be_empty
   end

@@ -277,7 +277,9 @@ class ContactTrackings::Assistant::ValidatorService
   end
 
   # ── D2 · la etiqueta no existe ──────────────────────────────────────────────
+  # También la sección [ETIQUETAS] como diccionario de estados: ver TagDictionary.
   def check_tags_exist
+    ContactTrackings::Assistant::TagDictionary.check(text, map: map, account: account, findings: findings)
     existentes = account.labels.pluck(:title)
 
     map.routes.each do |route|

@@ -119,6 +119,13 @@ en:
       loose_pending_note: >-
         Line %{line}: this is a work note ("PENDIENTE: …") and the agent will read it as an instruction.
         Resolve it and delete it, or write it as a marker: <PENDIENTE: …>.
+      bare_tag_line: >-
+        Line %{line}: %{tags} stands alone, without saying what it means. The agent will stick it to
+        every reply (it happened in a real conversation with #humano). Write it as a dictionary —
+        %{tags} = when it is used— or delete it: the engine adds each route's tag by itself.
+      state_label_not_found: >-
+        Tag %{tag} in the Training does not exist in the account: if the agent uses it, it triggers no
+        automation. Create it in Labels or change it for an existing one.
       route_does_nothing: >-
         Branch '%{route}' does not query any source and has nothing to do when it cannot solve: it answers
         only from the Training. Faced with something specific (prices, schedules) it may make things up or

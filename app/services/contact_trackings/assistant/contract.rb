@@ -77,7 +77,8 @@ class ContactTrackings::Assistant::Contract
         ‹de dónde puede sacar lo que afirma y qué hace si la fuente no lo cubre›
 
         [ETIQUETAS]
-        ‹con qué cierra cada turno›
+        ‹un diccionario: una línea por etiqueta, «#etiqueta = cuándo se usa». Una etiqueta
+         sola, sin su significado, el agente la pega a TODAS sus respuestas›
 
         [ESTILO]
         ‹cómo escribe›

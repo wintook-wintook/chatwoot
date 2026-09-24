@@ -118,6 +118,13 @@ es:
       loose_pending_note: >-
         Línea %{line}: es una nota de trabajo («PENDIENTE: …») y el agente la va a leer como una
         instrucción. Resuélvela y bórrala, o escríbela como marca: <PENDIENTE: …>.
+      bare_tag_line: >-
+        Línea %{line}: %{tags} está suelta, sin decir qué significa. El agente la va a pegar a todas sus
+        respuestas (pasó en una conversación real con #humano). Escríbela como diccionario —
+        %{tags} = cuándo se usa— o bórrala: la etiqueta de cada ruta el motor la pone solo.
+      state_label_not_found: >-
+        La etiqueta %{tag} del Entrenamiento no existe en la cuenta: si el agente la usa, no dispara
+        ninguna automatización. Créala en Etiquetas o cámbiala por una que exista.
       route_does_nothing: >-
         La rama '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
         con lo que dice el Entrenamiento. Ante algo concreto (precios, horarios) puede inventar o prometer
