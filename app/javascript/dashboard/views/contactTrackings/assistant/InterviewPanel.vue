@@ -9,6 +9,7 @@ import WootAudioRecorder from 'dashboard/components/widgets/WootWriter/AudioReco
 import { useAlert } from 'dashboard/composables';
 import AssistantAPI from 'dashboard/api/assistant';
 import { AUDIO_FORMATS } from 'shared/constants/messages';
+import MessageFormatter from 'shared/helpers/MessageFormatter';
 import ChangeList from './ChangeList.vue';
 import { hasChanges } from './changeList';
 
@@ -116,6 +117,13 @@ export default {
       if (this.expanded[index] || !this.isLong(message)) return texto;
       const recorte = texto.split('\n').slice(0, COLLAPSED_LINES).join('\n');
       return `${recorte.slice(0, COLLAPSED_CHARS).trimEnd()}…`;
+    },
+    // El Asistente escribe en Markdown (**negritas**, viñetas): se muestra con formato,
+    // con el formateador nativo de los mensajes de Chatwoot, en vez de ver los
+    // asteriscos (pedido del usuario, 24/09/2026). Lo que escribe la persona va tal cual.
+    formatted(message, index) {
+      return new MessageFormatter(this.shownText(message, index))
+        .formattedMessage;
     },
     toggleExpanded(index) {
       this.expanded = { ...this.expanded, [index]: !this.expanded[index] };
@@ -265,7 +273,12 @@ export default {
         >
           <!-- `display`: una versión corta para la pantalla, cuando lo que se le
                manda al modelo es largo y no está escrito para leerlo (el encargo). -->
-          <span class="whitespace-pre-wrap">{{
+          <div
+            v-if="message.role === 'assistant'"
+            v-dompurify-html="formatted(message, index)"
+            class="break-words [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:mb-2 [&_li]:mb-0.5"
+          />
+          <span v-else class="whitespace-pre-wrap">{{
             shownText(message, index)
           }}</span>
           <button
