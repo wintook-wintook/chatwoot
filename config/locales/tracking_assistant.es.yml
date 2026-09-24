@@ -95,6 +95,13 @@ es:
         clasificador usa para decidir, así que no las puede distinguir: una de las dos no se va a
         elegir nunca, y cuál pierde depende del orden. Dales descripciones que no se confundan —
         situaciones distintas, en las palabras del cliente.
+      unclosed_ticket: >-
+        La rama '%{route}' tiene «%{wrote}» sin el «%{closer}» de cierre. El motor abre el caso igual,
+        pero IGNORA lo que va entre paréntesis (tipo y prioridad): sale con los de por defecto. Agrega
+        el «%{closer}» al final.
+      unclosed_directive: >-
+        La rama '%{route}' tiene «%{wrote}» sin el «%{closer}» de cierre: el motor no lee lo que va
+        adentro. Agrega el «%{closer}».
       route_does_nothing: >-
         La rama '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
         con lo que dice el Entrenamiento. Ante algo concreto (precios, horarios) puede inventar o prometer

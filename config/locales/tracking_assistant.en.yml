@@ -96,6 +96,13 @@ en:
         classifier uses to decide, so it cannot tell them apart: one of the two will never be
         chosen, and which one loses depends on the order. Give them descriptions that cannot be
         confused — different situations, in the customer's own words.
+      unclosed_ticket: >-
+        Branch '%{route}' has "%{wrote}" without the closing "%{closer}". The engine still opens the case,
+        but IGNORES what is inside the parentheses (type and priority): it uses the defaults. Add the
+        "%{closer}" at the end.
+      unclosed_directive: >-
+        Branch '%{route}' has "%{wrote}" without the closing "%{closer}": the engine does not read what
+        is inside. Add the "%{closer}".
       route_does_nothing: >-
         Branch '%{route}' does not query any source and has nothing to do when it cannot solve: it answers
         only from the Training. Faced with something specific (prices, schedules) it may make things up or

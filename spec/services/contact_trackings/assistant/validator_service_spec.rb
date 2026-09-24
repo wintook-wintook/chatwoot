@@ -95,6 +95,30 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
     end
   end
 
+  # 24/09/2026: el motor lee solo «@crear_ticket» y abre el caso con tipo y
+  # prioridad por defecto, sin avisar a nadie.
+  describe 'B11 · una directiva de la rama sin cerrar' do
+    it 'marca el @crear_ticket sin «)» y dice que ignora tipo y prioridad' do
+      r = validar('@ruta(info #info: ¿qué hacen?): @buscar_predefinidas -> @crear_ticket(tipo=Soporte, prioridad=media')
+
+      hallazgo = r[:blocking].find { |f| f[:code] == :unclosed_directive }
+      expect(hallazgo).to include(route: 'info', wrote: '@crear_ticket(tipo=Soporte, prioridad=media')
+      expect(hallazgo[:message]).to include('IGNORA', '«)»')
+    end
+
+    it 'marca una fuente sin «}}»' do
+      r = validar('@ruta(precios #precios: cuánto cuesta): {{hoja:Precios')
+
+      expect(r[:blocking].find { |f| f[:code] == :unclosed_directive }[:message]).to include('«}}»')
+    end
+
+    it 'no marca las que cierran' do
+      r = validar('@ruta(info #info: x): {{hoja:Precios}} -> @crear_ticket(tipo=Soporte, prioridad=media)')
+
+      expect(codigos(r, :blocking)).not_to include(:unclosed_directive)
+    end
+  end
+
   describe 'B1 · sin ninguna rama' do
     it 'avisa que el motor va a leer 0 ramas' do
       r = validar("[ROL] Sos un agente amable.\n[ESTILO] Breve.")
