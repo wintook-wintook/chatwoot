@@ -16,7 +16,7 @@ class ContactTrackings::Assistant::EditingInstructions
   # ⚠ Hasta el 15/09/2026 esto no existía y el modelo nunca veía el Entrenamiento: un
   # pedido de cambio se resolvía reescribiendo de memoria, y un agente cargado para
   # arreglar se reemplazaba sin haberse leído. Las reglas de abajo salen de medirlo
-  # sobre el v6.11: con "copiá todo lo demás carácter por carácter" una regla nueva
+  # sobre el v6.11: con "copia todo lo demás carácter por carácter" una regla nueva
   # volvió con 1 línea distinta de 198.
   #
   # "No reorganices a las seis secciones" va explícito porque el contrato las exige
@@ -37,7 +37,7 @@ class ContactTrackings::Assistant::EditingInstructions
       Abajo está el borrador tal como lo ve la persona ahora, con lo que haya cambiado a mano.
       La entrevista SIGUE: no la des por terminada porque ya haya un borrador.
 
-      Con la respuesta de este turno, devolvelo completo reemplazando las <PENDIENTE:> que ya
+      Con la respuesta de este turno, devuélvelo completo reemplazando las <PENDIENTE:> que ya
       se puedan completar. Todo lo demás va copiado igual, incluido lo que la persona escribió
       a mano. Lo que siga sin contestar, sigue marcado.
 
@@ -49,7 +49,7 @@ class ContactTrackings::Assistant::EditingInstructions
   end
 
   # Fase B: las piezas que la persona escribió a mano desde la última entrega. Se
-  # nombran porque "respetá las ediciones a mano" en general no le dice al modelo
+  # nombran porque "respeta las ediciones a mano" en general no le dice al modelo
   # CUÁLES son: para él todo el texto es igual de actual.
   def self.manual_section(manual)
     return nil if manual.blank?
@@ -58,7 +58,7 @@ class ContactTrackings::Assistant::EditingInstructions
       ═══ LA PERSONA EDITÓ ESTO A MANO ═══
       Desde tu última entrega, la persona cambió con sus propias manos: #{manual.join('  ')}
       Esas piezas NO se tocan salvo que el mensaje lo pida explícitamente. Si igual las
-      cambiás, se le devuelve su versión y la tuya queda como opción aparte.
+      cambias, se le devuelve su versión y la tuya queda como opción aparte.
     MANUAL
   end
 
@@ -69,13 +69,13 @@ class ContactTrackings::Assistant::EditingInstructions
       cambios que haya hecho a mano. Es la fuente de verdad. No tu recuerdo de la conversación.
 
       SI EL MENSAJE PIDE UN CAMBIO
-        Devolvé el Entrenamiento COMPLETO con SOLO ese cambio. Todo lo demás va copiado
+        Devuelve el Entrenamiento COMPLETO con SOLO ese cambio. Todo lo demás va copiado
         carácter por carácter: las ramas, las secciones, el orden, las mayúsculas, hasta los
         errores de tipeo. No "mejores" nada que no te hayan pedido.
 
         NO lo reorganices a las seis secciones del contrato: esa forma es para CREAR. Si tiene
         otras secciones ([NO SIMULAR], [GESTION EN CURSO], lo que sea), se quedan como están.
-        Una sección que no entendés se conserva; nunca se borra.
+        Una sección que no entiendes se conserva; nunca se borra.
 
         Lo que agregues o cambies sí respeta la gramática del contrato: la forma de @ruta, las
         fuentes del inventario, las frases del cliente en las descripciones.
@@ -87,19 +87,19 @@ class ContactTrackings::Assistant::EditingInstructions
         preguntar algo que el pedido ya dice ni algo que valga para las demás ramas: esas ya
         están escritas.
 
-        Solo si falta una de esas tres cosas, preguntá POR ESA, con "entrenamiento" en null.
+        Solo si falta una de esas tres cosas, pregunta POR ESA, con "entrenamiento" en null.
 
       SI EL MENSAJE ES UNA PREGUNTA sobre el Entrenamiento y no un cambio, contestala con
       "entrenamiento" en null.
 
-      AL ENTREGAR UNA EDICIÓN agregá dos llaves al JSON:
+      AL ENTREGAR UNA EDICIÓN agrega dos llaves al JSON:
         "toca":    cada pieza que cambiaste, escrita EXACTAMENTE así:
                    "@ruta(nombre)"   "@ruta_por_defecto"   "[RÓTULO DE LA SECCIÓN]"
         "cambios": renglones cortos para la persona, uno por cambio:
                    "+ Se agregó la rama facturacion"   "~ [ESTILO]: sin emojis"   "- Se quitó [HORARIO]"
       Tu texto se compara línea por línea con el actual: lo que cambies y no nombres en "toca"
       te lo voy a devolver. Si agregar una rama te obliga a sumar su etiqueta en [ETIQUETAS],
-      nombrá las dos.
+      nombra las dos.
 
       Al editar, "modo" no hace falta. "propuesta" va en null salvo que pidan cambiar el nombre
       o el objetivo del agente.

@@ -40,18 +40,18 @@ class ContactTrackings::Assistant::Proofreader
     'objective' => 'el OBJETIVO del agente: una sola frase que dice para qué está. ' \
                    'Mantenelo en una frase.',
     'ai_context' => 'el CONTEXTO del agente: datos del negocio (horarios, versiones, precios, ' \
-                    'políticas) que el agente le cita al cliente. Mantené la estructura: si son ' \
+                    'políticas) que el agente le cita al cliente. Mantén la estructura: si son ' \
                     'renglones o una lista, siguen siendo renglones o una lista.',
     'route_phrases' => 'las FRASES DEL CLIENTE de un tema: una lista separada por comas de cosas ' \
                        'que escribe un cliente real. Son lo único con lo que un clasificador decide ' \
                        'el tema, comparándolas con mensajes reales. NO LAS FORMALICES: siguen siendo ' \
                        'frases de cliente, cortas, en su registro —"no me deja entrar", no "el ' \
-                       'cliente reporta un problema de acceso"—. Solo corregí lo que se lee mal. ' \
+                       'cliente reporta un problema de acceso"—. Solo corrige lo que se lee mal. ' \
                        'Sigue siendo una lista separada por comas, sin punto final y sin paréntesis.',
     'route_scope' => 'QUÉ ATIENDE UN TEMA, en palabras del agente: una sola línea. Mantenela en ' \
                      'una sola línea, sin saltos.',
     'section_body' => 'las INSTRUCCIONES de una sección del prompt de un agente de atención. ' \
-                      'Mantené los renglones, las viñetas y el orden de las reglas: no juntes ni ' \
+                      'Mantén los renglones, las viñetas y el orden de las reglas: no juntes ni ' \
                       'separes reglas, no cambies lo que una regla pide.'
   }.freeze
 
@@ -99,7 +99,7 @@ class ContactTrackings::Assistant::Proofreader
 
   def prompt
     <<~PROMPT
-      Corregís la redacción de un campo que escribió quien administra un agente de atención
+      Corriges la redacción de un campo que escribió quien administra un agente de atención
       al cliente. Es #{KINDS[@kind]}
 
       TEXTO:
@@ -107,10 +107,10 @@ class ContactTrackings::Assistant::Proofreader
       #{@text}
       TEXTO>>>
 
-      Qué SÍ hacés: ortografía, acentos, puntuación, concordancia, y dejar las frases más
-      claras y directas. Escribí en #{ContactTrackings::Assistant::Language.name_for}.
+      Qué SÍ haces: ortografía, acentos, puntuación, concordancia, y dejar las frases más
+      claras y directas. Escribe en #{ContactTrackings::Assistant::Language.name_for}.
 
-      Qué NO hacés, nunca:
+      Qué NO haces, nunca:
         · agregar datos que el texto no dice —ni un horario, ni un precio, ni una política,
           ni un nombre—, aunque el texto parezca incompleto;
         · quitar datos, ni cambiar números, fechas, nombres propios, versiones ni montos;
@@ -118,9 +118,9 @@ class ContactTrackings::Assistant::Proofreader
           marcas <PENDIENTE: …>: van EXACTAMENTE igual, letra por letra;
         · cambiar el idioma, ni traducir;
         · cambiar el tono ni el largo.
-      Si no hay nada que corregir, devolvé el texto igual y "cambios": [].
+      Si no hay nada que corregir, devuelve el texto igual y "cambios": [].
 
-      Respondé SOLO un JSON: {"texto": "...", "cambios": ["qué cambiaste, en pocas palabras"]}
+      Responde SOLO un JSON: {"texto": "...", "cambios": ["qué cambiaste, en pocas palabras"]}
     PROMPT
   end
 end

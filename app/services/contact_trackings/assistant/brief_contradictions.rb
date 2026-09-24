@@ -22,7 +22,7 @@ class ContactTrackings::Assistant::BriefContradictions
   MAX_POINTS = 200
 
   PROMPT = <<~PROMPT
-    Te paso las reglas de un agente de IA de atención por chat, numeradas. Decime qué
+    Te paso las reglas de un agente de IA de atención por chat, numeradas. Dime qué
     pares se CONTRADICEN: no se pueden cumplir las dos a la vez en la misma situación
     (una pide hacer algo y otra prohíbe eso mismo; dos límites distintos para lo mismo;
     un orden de pasos y el contrario).
@@ -30,7 +30,7 @@ class ContactTrackings::Assistant::BriefContradictions
     No es contradicción: una regla general y una excepción explícita ("salvo que…"),
     ni dos reglas que hablan de cosas distintas.
 
-    Contestá SOLO este JSON:
+    Contesta SOLO este JSON:
     {"contradicciones": [{"sobre": "de qué se trata, en pocas palabras", "a": 3, "b": 7}]}
     Sin contradicciones: {"contradicciones": []}
   PROMPT

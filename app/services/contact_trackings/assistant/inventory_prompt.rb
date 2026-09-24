@@ -36,10 +36,10 @@ class ContactTrackings::Assistant::InventoryPrompt
 
   def sources
     lineas = @inventory[:sources].map { |s| "  #{s[:directive].ljust(34)} #{s[:name]}" }
-    return 'FUENTES DISPONIBLES: ninguna. Ninguna rama puede consultar nada; usá "-" como fuente.' if lineas.empty?
+    return 'FUENTES DISPONIBLES: ninguna. Ninguna rama puede consultar nada; usa "-" como fuente.' if lineas.empty?
 
     # La directiva va literal porque es texto exacto: el motor la busca con un patrón.
-    "FUENTES DISPONIBLES (escribí la directiva EXACTA de la izquierda, una por rama):\n#{lineas.join("\n")}"
+    "FUENTES DISPONIBLES (escribe la directiva EXACTA de la izquierda, una por rama):\n#{lineas.join("\n")}"
   end
 
   # El grupo de @buscar_predefinidas(GRUPO) es el prefijo del nombre de la respuesta;
@@ -59,12 +59,12 @@ class ContactTrackings::Assistant::InventoryPrompt
 
   def labels
     if @inventory[:labels].blank?
-      return 'ETIQUETAS: la cuenta no tiene ninguna creada. Proponé la que corresponda y avisá al ' \
+      return 'ETIQUETAS: la cuenta no tiene ninguna creada. Propón la que corresponda y avisa al ' \
              'final con una línea "PENDIENTE: crear la etiqueta #x".'
     end
 
     "ETIQUETAS que existen en la cuenta: #{@inventory[:labels].join(' · ')}\n" \
-      'Si hace falta una que no está, usala igual y avisá al final con "PENDIENTE: crear la etiqueta #x".'
+      'Si hace falta una que no está, úsala igual y avisa al final con "PENDIENTE: crear la etiqueta #x".'
   end
 
   # Lo más valioso del inventario para la calidad del ruteo: la descripción de cada
@@ -72,7 +72,7 @@ class ContactTrackings::Assistant::InventoryPrompt
   def phrases
     return nil if @inventory[:customer_phrases].blank?
 
-    "ASÍ ESCRIBEN LOS CLIENTES DE ESTA CUENTA (textual, con sus typos — usá estas palabras\n" \
+    "ASÍ ESCRIBEN LOS CLIENTES DE ESTA CUENTA (textual, con sus typos — usa estas palabras\n" \
       "en las descripciones de las ramas, no lenguaje de manual):\n" \
       "#{@inventory[:customer_phrases].map { |p| "  · #{p}" }.join("\n")}"
   end
@@ -81,8 +81,8 @@ class ContactTrackings::Assistant::InventoryPrompt
     <<~VACIO.strip
       ═══ INVENTARIO DE ESTA CUENTA ═══
       La cuenta todavía no tiene fuentes de conocimiento ni tipos de caso cargados.
-      No entrevistes sobre el vacío: ofrecé un arquetipo, explicá qué haría falta cargar, y
-      dejá TODO nombre propio como <PENDIENTE: ...>. No inventes ninguno.
+      No entrevistes sobre el vacío: ofrece un arquetipo, explica qué haría falta cargar, y
+      deja TODO nombre propio como <PENDIENTE: ...>. No inventes ninguno.
     VACIO
   end
 end

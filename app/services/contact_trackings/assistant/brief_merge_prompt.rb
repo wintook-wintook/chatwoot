@@ -9,9 +9,9 @@
 
 module ContactTrackings::Assistant::BriefMergePrompt
   PROMPT = <<~PROMPT.freeze
-    Juntás puntos sacados de distintas partes de UN MISMO encargo: el documento donde
+    Juntas puntos sacados de distintas partes de UN MISMO encargo: el documento donde
     alguien describe cómo quiere a su agente de IA de atención por chat. Te llega solo
-    una parte de la ficha; devolvé SOLO esas mismas categorías, con esta forma:
+    una parte de la ficha; devuelve SOLO esas mismas categorías, con esta forma:
 
     #{ContactTrackings::Assistant::BriefFicha::SHAPE}
     Cada punto de la entrada trae "ids". En la salida, cada punto lleva en "ids" TODOS
@@ -20,8 +20,8 @@ module ContactTrackings::Assistant::BriefMergePrompt
     objeto (tema, herramienta, conocimiento, contradicción) lleva además su "ids".
 
     ═══ REGLAS ═══
-    1. Uní lo que dice lo mismo aunque esté escrito distinto: un punto, con todos sus ids.
-    2. Temas: el mismo tema del cliente con distinto nombre es UNO; juntá sus frases.
+    1. Une lo que dice lo mismo aunque esté escrito distinto: un punto, con todos sus ids.
+    2. Temas: el mismo tema del cliente con distinto nombre es UNO; junta sus frases.
     3. Si dos puntos se contradicen (uno permite lo que otro prohíbe, dos plazos
        distintos), NO elijas: anotalo en "contradicciones" con lo que dice cada uno y
        los ids de ambos.
@@ -31,16 +31,16 @@ module ContactTrackings::Assistant::BriefMergePrompt
     7. "modo": si una parte dice que contesta y otra que deriva siempre, es una
        contradicción.
     8. La salida tiene que ser BASTANTE más corta que la entrada: es una ficha para
-       escribir un agente, no un índice del documento. Juntá con decisión lo parecido
-       (variantes de un mismo procedimiento, ejemplos de una misma regla) y resumí
+       escribir un agente, no un índice del documento. Junta con decisión lo parecido
+       (variantes de un mismo procedimiento, ejemplos de una misma regla) y resume
        "conocimiento" en pocas líneas por tema.
 
-    Contestá SOLO el JSON.
+    Contesta SOLO el JSON.
   PROMPT
 
   TIGHTEN = <<~TXT
-    ⚠ Esta parte de la ficha es demasiado larga para usarla. Apretala: uní con más
-    decisión los puntos parecidos y acortá textos, sin perder ninguna prohibición y sin
+    ⚠ Esta parte de la ficha es demasiado larga para usarla. Apriétala: une con más
+    decisión los puntos parecidos y acorta textos, sin perder ninguna prohibición y sin
     inventar.
   TXT
 end

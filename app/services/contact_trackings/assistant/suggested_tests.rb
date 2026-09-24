@@ -124,8 +124,8 @@ class ContactTrackings::Assistant::SuggestedTests
          empresa, un saludo sin pedido, un mensaje con dos temas, algo que podría ir a dos ramas. Para cada
          uno, la rama que te parece correcta (o null) y en una frase por qué.
 
-      Escribí en #{ContactTrackings::Assistant::Language.name_for}.
-      Respondé SOLO un JSON:
+      Escribe en #{ContactTrackings::Assistant::Language.name_for}.
+      Responde SOLO un JSON:
       {"ramas": [{"rama": "<nombre exacto>", "mensajes": ["...", "..."]}],
        "limites": [{"mensaje": "...", "rama": "<nombre exacto o null>", "por_que": "..."}]}
     PROMPT

@@ -100,31 +100,31 @@ class ContactTrackings::Assistant::Optimizer
 
   def prompt
     <<~PROMPT
-      Revisás el Entrenamiento de un agente de atención al cliente para dejarlo más claro, SIN cambiar lo que hace.
+      Revisas el Entrenamiento de un agente de atención al cliente para dejarlo más claro, SIN cambiar lo que hace.
 
-      Buscá:
+      Busca:
         redundante     reglas que dicen lo mismo con otras palabras, o repetidas en varias secciones
         contradiccion  reglas que se contradicen entre sí
         simplificable  reglas demasiado largas o específicas que se pueden decir en menos
         sobrante       etiquetas mencionadas que ninguna rama usa, secciones vacías, ejemplos repetidos
 
-      Y proponé el Entrenamiento optimizado, con estas reglas duras:
+      Y propón el Entrenamiento optimizado, con estas reglas duras:
         · Las líneas que empiezan con @ruta( y @ruta_por_defecto van EXACTAMENTE igual, carácter por carácter.
-        · No borres secciones: podés acortar su texto, no quitarlas.
-        · No agregues reglas nuevas ni cambies qué se permite o se prohíbe: solo decilo con menos redundancia.
+        · No borres secciones: puedes acortar su texto, no quitarlas.
+        · No agregues reglas nuevas ni cambies qué se permite o se prohíbe: solo dilo con menos redundancia.
         · NUNCA borres una regla que prohíbe u obliga (NUNCA, PROHIBIDO, SIEMPRE, SOLO, NO…) ni un ejemplo,
-          aunque te parezca redundante. Si está repetida, reportala como hallazgo y dejala. Decir "ya está
+          aunque te parezca redundante. Si está repetida, reportala como hallazgo y déjala. Decir "ya está
           en otra sección" solo vale si esa otra sección dice LO MISMO: se va a verificar regla por regla.
-        · Una contradicción NO la resuelvas eligiendo un lado: dejala como está y reportala.
+        · Una contradicción NO la resuelvas eligiendo un lado: déjala como está y reportala.
         · Mismo idioma, mismos rótulos de sección.
-      Si no hay nada que mejorar, devolvé el mismo texto y ningún hallazgo.
+      Si no hay nada que mejorar, devuelve el mismo texto y ningún hallazgo.
 
-      Respondé SOLO un JSON:
+      Responde SOLO un JSON:
       {"hallazgos": [{"tipo": "redundante|contradiccion|simplificable|sobrante", "donde": "[SECCIÓN] o @ruta(nombre)", "detalle": "qué y por qué, en una frase"}],
        "resumen": "una frase con lo que cambiaría",
        "entrenamiento": "el Entrenamiento completo optimizado"}
 
-      Escribí el detalle y el resumen en #{ContactTrackings::Assistant::Language.name_for}.
+      Escribe el detalle y el resumen en #{ContactTrackings::Assistant::Language.name_for}.
 
       ENTRENAMIENTO:
       <<<ENTRENAMIENTO

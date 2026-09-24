@@ -24,7 +24,7 @@
 #
 # EDITAR, NO REESCRIBIR (fase A de PROMPT STUDIO):
 #   Hasta el 15/09/2026 el modelo NUNCA veía el Entrenamiento: el cliente mandaba solo
-#   la conversación. "Agregá una rama" se resolvía reescribiendo todo de memoria, y un
+#   la conversación. "Agrega una rama" se resolvía reescribiendo todo de memoria, y un
 #   agente cargado con "Arreglarlo acá" se reemplazaba por uno nuevo sin haberlo leído.
 #   Ahora recibe el que está en pantalla —con las ediciones a mano incluidas— y lo
 #   devuelve completo cambiando solo lo pedido. Medido sobre el v6.11 (17.066

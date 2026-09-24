@@ -23,7 +23,7 @@ RSpec.describe ContactTrackings::Assistant::BriefDigestService do
   def modelo(lectura:, juntado: nil)
     stub_request(:post, api).to_return do |request|
       sistema = JSON.parse(request.body)['messages'].first['content']
-      respuesta(sistema.start_with?('Juntás') ? juntado : lectura)
+      respuesta(sistema.start_with?('Juntas') ? juntado : lectura)
     end
   end
 

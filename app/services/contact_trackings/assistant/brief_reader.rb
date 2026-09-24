@@ -29,7 +29,7 @@ class ContactTrackings::Assistant::BriefReader
   Ficha = ContactTrackings::Assistant::BriefFicha
 
   PROMPT = <<~PROMPT.freeze
-    Leés UN PEDAZO de un encargo: el texto donde alguien describe cómo quiere que sea
+    Lees UN PEDAZO de un encargo: el texto donde alguien describe cómo quiere que sea
     un agente de IA que atiende clientes por chat (WhatsApp, Instagram, web). Puede ser
     un manual enorme, una página suelta, viñetas, un correo o un prompt viejo.
 
@@ -38,10 +38,10 @@ class ContactTrackings::Assistant::BriefReader
 
     #{Ficha::SHAPE}
     ═══ REGLAS ═══
-    1. Solo lo que ESTE pedazo dice. Si no dice algo, dejalo en null o en lista vacía.
+    1. Solo lo que ESTE pedazo dice. Si no dice algo, déjalo en null o en lista vacía.
        No completes con lo que "suele" hacer un agente así: lo que falte se le pregunta
        a la persona después.
-    2. Entendé, no copies. Cada punto es UNA idea corta en tus palabras (una línea). Un
+    2. Entiende, no copies. Cada punto es UNA idea corta en tus palabras (una línea). Un
        párrafo de explicación, ejemplos o justificación se vuelve una regla corta, o
        nada si no pide nada del agente.
     3. Si varias frases dicen lo mismo, es UN punto.
@@ -63,7 +63,7 @@ class ContactTrackings::Assistant::BriefReader
        anotalo en "contradicciones". No elijas.
     10. Nombres propios (empresa, producto, sucursal, teléfono) tal cual aparecen.
     11. Si un tema se atiende con una herramienta (se agenda en un calendario, se abre un
-        caso, se consulta una hoja o un documento), escribilo TAMBIÉN en ese tema: en
+        caso, se consulta una hoja o un documento), escríbelo TAMBIÉN en ese tema: en
         "fuente" si de ahí sale la respuesta, o en "si_no_resuelve" si es lo que hace el
         agente para cerrar (agendar, abrir el caso, pasar a una persona).
     12. El texto puede ser un prompt viejo escrito con la gramática del motor. Se lee así:
@@ -83,7 +83,7 @@ class ContactTrackings::Assistant::BriefReader
       "Ofrecemos 13 servicios: …(dos páginas)…" → conocimiento, un punto por servicio
         con un resumen de una línea.
 
-    Contestá SOLO el JSON.
+    Contesta SOLO el JSON.
   PROMPT
 
   MAX_ATTEMPTS = 2

@@ -18,20 +18,20 @@ class ContactTrackings::Assistant::ReplyFormat
   def self.interview
     <<~FORMATO.strip
       ═══ LO QUE ACOMPAÑA AL ENTRENAMIENTO ═══
-      Al entregar, proponé también los datos del agente, en "propuesta":
+      Al entregar, propón también los datos del agente, en "propuesta":
         nombre    corto y descriptivo, del tema que atiende. No repitas uno que ya exista.
         objetivo  una frase con para qué está el agente. Sale de lo que te pidieron.
         contexto  ⚠ SOLO datos del negocio que la persona te haya dicho EN ESTA CONVERSACIÓN
                   (horarios, versiones, políticas). Si no te dijo ninguno, va en "" y lo
-                  aclarás en el mensaje.
-                  NO inventes nada acá. Vos conocés las fuentes y los tipos de caso de la
-                  cuenta; NO conocés sus precios, sus horarios ni sus políticas. Este campo
+                  aclaras en el mensaje.
+                  NO inventes nada acá. Tú conoces las fuentes y los tipos de caso de la
+                  cuenta; NO conoces sus precios, sus horarios ni sus políticas. Este campo
                   entra al prompt como "BASE DE CONOCIMIENTO" y el agente lo va a citar como
                   si fuera cierto: rellenarlo de memoria es hacerle decir cosas falsas.
 
       ═══ EL ENTRENAMIENTO SE ARMA A LA VISTA ═══
-      La persona ve el Entrenamiento al lado del chat. Así que desde que sabés QUÉ RAMAS hay,
-      cada turno devuelve también el borrador, con todo lo que ya sabés y NADA MÁS:
+      La persona ve el Entrenamiento al lado del chat. Así que desde que sabes QUÉ RAMAS hay,
+      cada turno devuelve también el borrador, con todo lo que ya sabes y NADA MÁS:
 
         Lo que todavía no te contestaron NO se adivina, se marca:
           descripción sin frases del cliente  →  @ruta(soporte: <PENDIENTE: frases del cliente>)
@@ -39,32 +39,32 @@ class ContactTrackings::Assistant::ReplyFormat
           etiqueta sin elegir                 →  la rama va sin #etiqueta (no admite marca)
           escalamiento sin decidir            →  la rama va sin flecha
           rama por defecto sin decidir        →  no escribas la línea @ruta_por_defecto
-          algo de la prosa que no sabés       →  <PENDIENTE: qué falta> en su sección
+          algo de la prosa que no sabes       →  <PENDIENTE: qué falta> en su sección
 
         ⚠ NO escribas #etiqueta, flecha -> ni @ruta_por_defecto hasta que la persona los haya
         elegido, AUNQUE TE PAREZCAN OBVIOS. Un borrador con etiquetas o tipos de caso que nadie
         eligió se lee como decisiones tomadas, y la persona no vuelve a revisarlos. Una marca, o
         un hueco, se lee como lo que es: una pregunta abierta.
 
-        Con cada respuesta, reemplazá las marcas que ya se pueden completar y copiá igual todo
+        Con cada respuesta, reemplaza las marcas que ya se pueden completar y copia igual todo
         lo demás. La etiqueta que elija la persona se escribe EN LA LÍNEA @ruta de su rama
         (@ruta(soporte #demo: ...)): esa es la que usa el motor. Si hay una sección [ETIQUETAS],
         solo repite lo mismo; escribirla ahí y no en la línea @ruta no cambia nada. Los rótulos ═══ son de estas instrucciones: NUNCA van dentro del
         Entrenamiento.
 
-      ═══ CÓMO RESPONDÉS ═══
+      ═══ CÓMO RESPONDES ═══
       SIEMPRE un JSON con estas llaves:
-        {"mensaje": "lo que le decís a la persona",
+        {"mensaje": "lo que le dices a la persona",
          "opciones": [{"pregunta": "¿Con qué etiqueta cierra?",
                        "elecciones": ["#demo", "#tracking", "otra"]}] | null,
          "modo": "responde" | "deriva" | null,
-         "entrenamiento": "el borrador (o el Entrenamiento terminado), o null si todavía no sabés qué ramas hay",
+         "entrenamiento": "el borrador (o el Entrenamiento terminado), o null si todavía no sabes qué ramas hay",
          "completo": true | false,
          "propuesta": {"nombre": "...", "objetivo": "...", "contexto": "..."} | null}
 
-      Mientras entrevistás: "opciones" con lo que preguntaste, "entrenamiento" con el borrador
+      Mientras entrevistas: "opciones" con lo que preguntaste, "entrenamiento" con el borrador
       y sus marcas, "completo": false.
-      Cuando terminás: "opciones" en null, "completo": true, el Entrenamiento SIN ninguna
+      Cuando terminas: "opciones" en null, "completo": true, el Entrenamiento SIN ninguna
       marca <PENDIENTE:> (con sus líneas @ruta y su prosa, sin explicaciones alrededor),
       "modo" con la respuesta del paso 1, y "propuesta" con los datos del agente.
 

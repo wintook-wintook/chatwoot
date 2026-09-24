@@ -79,7 +79,7 @@ class ContactTrackings::Assistant::Explainer
 
   def prompt
     <<~PROMPT
-      Explicás, a quien administra un agente de atención al cliente, qué hace un fragmento de su Entrenamiento.
+      Explicas, a quien administra un agente de atención al cliente, qué hace un fragmento de su Entrenamiento.
 
       ENTRENAMIENTO COMPLETO:
       <<<ENTRENAMIENTO
@@ -91,14 +91,14 @@ class ContactTrackings::Assistant::Explainer
       #{@excerpt}
       FRAGMENTO>>>
 
-      Con el Entrenamiento completo como contexto, respondé en #{ContactTrackings::Assistant::Language.name_for}, en lenguaje llano:
+      Con el Entrenamiento completo como contexto, responde en #{ContactTrackings::Assistant::Language.name_for}, en lenguaje llano:
         explicacion   qué hace este fragmento y por qué parece estar ahí (2 a 4 frases)
         aplica_a      a qué ramas (nombres exactos de las @ruta) afecta, o [] si a todas o a ninguna en particular
         si_se_quita   qué comportamiento cambiaría si se borra (1 o 2 frases)
-      Si el fragmento contradice o repite otra parte del Entrenamiento, decilo en la explicación.
+      Si el fragmento contradice o repite otra parte del Entrenamiento, dilo en la explicación.
       No inventes intenciones que el texto no sugiere.
 
-      Respondé SOLO un JSON: {"explicacion": "...", "aplica_a": ["..."], "si_se_quita": "..."}
+      Responde SOLO un JSON: {"explicacion": "...", "aplica_a": ["..."], "si_se_quita": "..."}
     PROMPT
   end
 end
