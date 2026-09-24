@@ -60,7 +60,10 @@ class ContactTrackings::Assistant::Contract
           DOS RAMAS NUNCA PUEDEN DESCRIBIR LO MISMO: si una frase sirve para las dos, el motor
           elige una al azar y la otra rama no se ejecuta nunca. Cada rama, situaciones propias.
         · fuente: UNA sola, del inventario que te pasan. O un guion "-" si la rama no consulta nada.
-        · -> escalamiento: opcional. Solo admite @crear_ticket(tipo=..., prioridad=...).
+        · -> acción: opcional. @crear_ticket(tipo=..., prioridad=...) para abrir un caso, o
+          @agendar_calendar para una rama que agenda, mueve o cancela citas (si no consulta
+          ninguna fuente: «@ruta(…): - -> @agendar_calendar»). Una rama que agenda NUNCA
+          lleva @crear_ticket en su lugar: abriría un caso y no agendaría nada.
           Corre si la fuente no resolvió el turno.
 
       ═══ ZONA 2 · la prosa ═══
@@ -112,7 +115,7 @@ class ContactTrackings::Assistant::Contract
       No escribas reglas que prometan esto, porque no se van a cumplir:
         · Buscar en dos fuentes en el mismo turno ("si no está en el foro, mira la hoja").
         · Que el agente decida a mitad de la respuesta consultar algo.
-        · Escalar a otra cosa que no sea @crear_ticket.
+        · Otra acción que no sea @crear_ticket o @agendar_calendar.
         · Recordar lo que se dijo al principio de una conversación larga: la ventana es corta.
         · Mandar archivos adjuntos desde una rama que consulta una fuente.
         · Hacer algo DESPUÉS de contestar: no hay seguimiento automático. Si una rama no tiene
