@@ -116,16 +116,20 @@ export default {
     class="absolute box-border overflow-hidden pointer-events-none select-none"
     :style="box"
   >
+    <!-- El texto va en un <span> con pre-wrap y el <div> no: el salto de línea y
+         la sangría que el template deja alrededor del texto, con pre-wrap, se
+         pintaban como renglones de más — el color de las rutas bajaba hasta
+         [ROL] (24/09/2026). En el <div> normal esos espacios no cuentan. -->
     <div
       v-for="(linea, index) in lines"
       :key="index"
-      class="text-transparent whitespace-pre-wrap [overflow-wrap:break-word]"
+      class="text-transparent [overflow-wrap:break-word]"
       :class="{
         'bg-red-100 dark:bg-red-900/40': linea.level === 'blocking',
         'bg-amber-50 dark:bg-amber-900/30': linea.level === 'degrading',
       }"
     >
-      {{ linea.texto || EMPTY_LINE }}
+      <span class="whitespace-pre-wrap">{{ linea.texto || EMPTY_LINE }}</span>
     </div>
   </div>
 </template>
