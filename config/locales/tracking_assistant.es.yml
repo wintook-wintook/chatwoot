@@ -52,6 +52,9 @@ es:
         «%{name}» quedó guardado, pero no tiene ningún calendario asignado, así que
         @agendar_calendar no va a agendar nada. Asígnale un calendario en la ficha del Agente IA:
         tener el calendario conectado en la cuenta no alcanza, el motor lo busca en el agente.
+    fix_offer:
+      question: '%{count} de estos avisos se arreglan editando el texto. ¿Los corrijo?'
+      'yes': 'Sí, corrige lo que se puede en el texto'
     findings:
       route_line_unparsed: >-
         Línea %{line}: el motor NO la reconoce como ruta — %{reason}. El patrón exacto es

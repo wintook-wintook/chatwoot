@@ -148,10 +148,27 @@ class ContactTrackings::Assistant::InterviewService
   end
 
   # El modelo solo preguntó: no hay Entrenamiento que comprobar.
+  # Si pidieron un análisis y hay avisos que se arreglan editando, se ofrece corregirlos
+  # aunque el modelo no lo haya propuesto (ver CheckerSection.fix_offer).
   def questions(reply)
     Result.new(reply: reply['mensaje'], draft: nil, repairs: 0,
-               options: ContactTrackings::Assistant::ReplyParser.options(reply))
+               options: ContactTrackings::Assistant::ReplyParser.options(reply) || fix_offer)
   end
+
+  def fix_offer
+    ContactTrackings::Assistant::CheckerSection.fix_offer(checker_result, user_texts.last) if editing? && !building?
+  end
+
+  # La corrección del botón no toca las rutas que no tenían un aviso corregible. Va al
+  # final, después de las reparaciones: la de gramática también las cambiaba.
+  def guard_fix(turn, validation)
+    return validation unless editing? && ContactTrackings::Assistant::CheckerSection.fix_request?(user_texts.last)
+
+    turn.draft = ContactTrackings::Assistant::CheckerSection.restore_routes(current_draft, turn.draft, checker_result)
+    validate(turn.draft)
+  end
+
+  def checker_result = @checker_result ||= ContactTrackings::Assistant::CheckerSection.result(current_draft, account)
 
   # ── fase C: el borrador de cada turno (ver TurnOutcome) ─────────────────────
   def partial(reply, draft)
@@ -188,6 +205,7 @@ class ContactTrackings::Assistant::InterviewService
     repair_edit(turn)
     validation, repairs = repair_grammar(turn)
     validation, cruces = repair_routing(turn, validation)
+    validation = guard_fix(turn, validation)
 
     @outcome.delivery(turn, validation, repairs, cruces, proposal)
   end
@@ -262,8 +280,13 @@ class ContactTrackings::Assistant::InterviewService
   # persona no pidió cambiar.
   # Las marcas pendientes NO vuelven al modelo: son datos que tiene la persona, y
   # pedirle que las "corrija" es pedirle que los invente.
+  # Al editar un agente que ya existe, lo que depende de la cuenta (una fuente, un tipo
+  # de caso) no se repara solo: medido el 24/09/2026, una hoja que no existía en la
+  # cuenta de prueba terminó cambiada por el foro de otra empresa. Queda en rojo y lo
+  # decide la persona. Al crear, sí: ahí el modelo elige del inventario.
   def repairable(validation)
-    validation[:blocking].reject { |finding| finding[:code] == :pending_marker }
+    fijos = editing? && !building? ? ContactTrackings::Assistant::CheckerSection::ACCOUNT_BOUND : []
+    validation[:blocking].reject { |finding| finding[:code] == :pending_marker || fijos.include?(finding[:code]) }
   end
 
   def repair_routing(turn, validation)
@@ -328,7 +351,7 @@ class ContactTrackings::Assistant::InterviewService
       ContactTrackings::Assistant::Contract.call,
       inventory_section,
       ContactTrackings::Assistant::Instructions.call(one_shot: one_shot, max_turns: MAX_INTERVIEW_TURNS),
-      (ContactTrackings::Assistant::CheckerSection.call(current_draft, account: account) if editing?),
+      (ContactTrackings::Assistant::CheckerSection.call(current_draft, account: account, result: checker_result) if editing?),
       (if editing?
          ContactTrackings::Assistant::EditingInstructions.call(current_draft, manual: @manual.labels,
                                                                               building: building?)
