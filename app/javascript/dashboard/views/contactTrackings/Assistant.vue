@@ -1343,6 +1343,15 @@ export default {
     // Se revalida también cuando la persona edita a mano: el borrador del modelo
     // no es más confiable que el suyo, y ninguno de los dos se guarda sin pasar.
     onDraftInput() {
+      // Un prompt pegado (o escrito) en un Asistente nuevo es un agente que ya existe,
+      // no una entrevista a medias: se trata como uno cargado (loadTemplate) — cuenta
+      // como entregado y no está en construcción. Sin esto, «observa y analiza el
+      // prompt» contestaba preguntando los temas y si contesta o deriva (24/09/2026).
+      // Solo si el Asistente todavía no entregó nada: sus borradores siguen su curso.
+      if (!this.lastDelivered && this.draft.trim()) {
+        this.lastDelivered = this.draft;
+        this.isBuilding = pendingCount(this.draft) > 0;
+      }
       clearTimeout(this.validateTimer);
       this.validateTimer = setTimeout(this.validateDraft, VALIDATE_DEBOUNCE_MS);
       // Editar no borra las pruebas: las envejece. Cada corrida guardó contra qué
