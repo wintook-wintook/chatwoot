@@ -155,7 +155,7 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       r = validar(con_directiva_suelta)
 
       hallazgo = r[:degrading].find { |f| f[:code] == :loose_directive }
-      expect(hallazgo[:message]).to include('NO se ejecuta')
+      expect(hallazgo[:message]).to include('no se ejecuta', 'El agente lee esa línea así')
       expect(hallazgo[:wrote]).to eq('@buscar_articulo')
       expect(r[:valid]).to be(true)
     end
@@ -187,6 +187,21 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       expect(limpio).to include('Si no sabés, usá')
       expect(limpio).to include('para responder.')
       expect(limpio).not_to include('@buscar_articulo')
+    end
+
+    # 24/09/2026: borrada, «Solo @buscar_predefinidas autoriza…» le llegaba al agente como
+    # «Solo  autoriza…». Ahora la regla se lee entera.
+    it 'en el motor la directiva de búsqueda se cambia por «la información consultada»' do
+      limpio = KnowledgeBase::Directives.strip_tokens('Solo @buscar_predefinidas(CARRERAS) autoriza: costo, beca.')
+
+      expect(limpio).to eq('Solo la información consultada autoriza: costo, beca.')
+    end
+
+    it 'un aviso por línea, con su número, para pintarlas en el editor' do
+      texto = "@ruta(a #aaa: x): -\n\n[EVIDENCIA]\nSolo @buscar_predefinidas autoriza.\nSin @buscar_predefinidas no."
+
+      lineas = validar(texto)[:degrading].select { |f| f[:code] == :loose_directive }.pluck(:line)
+      expect(lineas).to eq([4, 5])
     end
   end
 

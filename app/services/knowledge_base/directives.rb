@@ -55,12 +55,21 @@ module KnowledgeBase
     # llamador decidia "todo o nada" (blanquear el prompt completo si aparecia CUALQUIER
     # mencion), perdiendo reglas de evidencia/etiquetas que nada tenian que ver con una
     # directiva activa de ese turno.
+    #
+    # Las de BÚSQUEDA no se borran: se cambian por PROSE_STAND_IN. Borradas, una regla
+    # que las nombra le llegaba rota al modelo (24/09/2026, un agente de carreras):
+    #   «Solo @buscar_predefinidas autoriza: costo, beca…» → «Solo  autoriza: costo, beca…»
+    # Con el reemplazo llega «Solo la información consultada autoriza: …», que es lo que
+    # la regla quería decir: lo que trae la búsqueda de la ruta (en el prompt de la kbase,
+    # bajo «Información relevante:»).
+    PROSE_STAND_IN = 'la información consultada'
+
     def strip_tokens(text)
       text.to_s
-          .gsub(/@buscar_foro\([^)]+\)/i, '')
-          .gsub(CANNED_RE, '')
-          .gsub(/@buscar_art[ií]culo\b/i, '')
-          .gsub(/@discourse\b/i, '')
+          .gsub(/@buscar_foro\([^)]+\)/i, PROSE_STAND_IN)
+          .gsub(CANNED_RE, PROSE_STAND_IN)
+          .gsub(/@buscar_art[ií]culo\b/i, PROSE_STAND_IN)
+          .gsub(/@discourse\b/i, PROSE_STAND_IN)
           .gsub(ExternalDb::ConsultaDirectiveRenderer::DIRECTIVE, '') # proyecto@erp_productos: configuración
           .gsub(/@agendar_calendar\b/i, '') # proyecto@predefinidas_prompt — igual que el conversacional
           .strip

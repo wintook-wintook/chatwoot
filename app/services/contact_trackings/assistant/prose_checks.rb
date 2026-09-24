@@ -30,6 +30,7 @@ class ContactTrackings::Assistant::ProseChecks
   SECTIONS = ['[ROL]', '[ALCANCE POR RAMA]', '[FIDELIDAD]', '[ETIQUETAS]', '[ESTILO]', '[PROHIBIDO]'].freeze
 
   def initialize(text, map:, findings:)
+    @text = text.to_s
     @prose = ContactTrackings::RouteMap.strip(text)
     @map = map
     @findings = findings
@@ -64,13 +65,30 @@ class ContactTrackings::Assistant::ProseChecks
   #
   # ⚠ Si este aviso vuelve a decir "blanquea", está mintiendo: el comportamiento
   # se verifica en Directives.strip_tokens, no acá.
-  def check_loose_directive
-    match = prose.match(LOOSE_SEARCH_RE)
-    return if match.nil?
+  #
+  # Una por línea, con su número (24/09/2026): el editor pinta cada una y el aviso
+  # muestra la línea TAL COMO LE LLEGA AL AGENTE, que es lo que se entiende de verdad.
+  # Antes decía «si era solo una mención, se puede dejar», y una regla de evidencia
+  # entera («Solo @buscar_predefinidas autoriza…») le llegaba al agente sin sujeto.
+  MAX_LOOSE_LINES = 10
 
-    findings.add(:degrading, :loose_directive,
-                 t('findings.loose_directive', directive: match[0]),
-                 wrote: match[0])
+  def check_loose_directive
+    loose_lines.first(MAX_LOOSE_LINES).each do |numero, linea|
+      directiva = linea[LOOSE_SEARCH_RE]
+      findings.add(:degrading, :loose_directive,
+                   t('findings.loose_directive', directive: directiva, line: numero,
+                                                 as_read: KnowledgeBase::Directives.strip_tokens(linea).squish.truncate(160)),
+                   wrote: directiva, line: numero)
+    end
+  end
+
+  # [[número, línea]] de la prosa (sin las líneas @ruta) que nombran una directiva.
+  def loose_lines
+    @text.split("\n", -1).each_with_index.filter_map do |linea, indice|
+      next if linea.lstrip.start_with?('@ruta')
+
+      [indice + 1, linea] if linea.match?(LOOSE_SEARCH_RE)
+    end
   end
 
   # ── D6 ──────────────────────────────────────────────────────────────────────

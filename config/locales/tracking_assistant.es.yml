@@ -181,10 +181,11 @@ es:
       # por esto y el aviso era bloqueante. develop lo arregló (strip_tokens conserva la prosa),
       # así que el mensaje ya no puede decir "borra la prosa": sería mentira.
       loose_directive: >-
-        La directiva %{directive} está suelta en la prosa, fuera de una línea @ruta. Ahí NO se
-        ejecuta: el motor la borra del texto antes de mandárselo al modelo y sigue de largo. Si
-        querías que esa ruta consultara esa fuente, va dentro de su línea @ruta; si era solo una
-        mención, se puede dejar, pero no hace nada.
+        Línea %{line}: %{directive} está en la prosa, fuera de una línea @ruta, y ahí no se ejecuta:
+        la búsqueda la hace el motor según la ruta del mensaje. El agente lee esa línea así:
+        «%{as_read}». Para que la regla se entienda, nombra el resultado («la información
+        consultada») en vez de la directiva, y pon %{directive} en la línea @ruta de las rutas que
+        necesitan esos datos.
       attachment_with_source: >-
         El adjunto {{%{name}}} no se resuelve cuando la ruta consulta una fuente: sale como texto
         literal en el mensaje al cliente. Los adjuntos solo funcionan en rutas sin fuente.

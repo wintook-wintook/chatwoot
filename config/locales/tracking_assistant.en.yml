@@ -184,10 +184,11 @@ en:
       # and the finding was blocking. develop fixed it (strip_tokens keeps the prose), so the
       # message can no longer say "wipes the prose": it would be a lie.
       loose_directive: >-
-        The directive %{directive} is loose in the prose, outside an @ruta line. It does NOT run
-        there: the engine strips it from the text before sending it to the model and carries on. If
-        you wanted that branch to consult that source, it goes inside its @ruta line; if it was just
-        a mention, you can leave it, but it does nothing.
+        Line %{line}: %{directive} is in the prose, outside a @ruta line, and it does not run there:
+        the engine searches according to the message's route. The agent reads that line as:
+        "%{as_read}". For the rule to make sense, name the result ("la información consultada")
+        instead of the directive, and put %{directive} in the @ruta line of the routes that need
+        that data.
       attachment_with_source: >-
         Attachment {{%{name}}} is not resolved when the branch consults a source: it goes out as
         literal text in the message to the customer. Attachments only work on branches with no source.
