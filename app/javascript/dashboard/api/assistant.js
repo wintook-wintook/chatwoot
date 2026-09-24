@@ -156,6 +156,19 @@ class AssistantAPI extends ApiClient {
     return axios.get(`${this.url}/conversation_review/${turnId}`);
   }
 
+  // Conocimiento sugerido: las respuestas predefinidas que el agente del encargo
+  // necesita (propuestas, no crea nada) y crear las elegidas.
+  knowledgeSuggestions(briefId) {
+    return axios.post(`${this.url}/briefs/${briefId}/knowledge`);
+  }
+
+  createKnowledge(briefId, group, items) {
+    return axios.post(`${this.url}/briefs/${briefId}/knowledge/create`, {
+      group,
+      items,
+    });
+  }
+
   // Estado del encargo; con la ficha y lo que falta cuando ya se leyó.
   getBrief(id) {
     return axios.get(`${this.url}/briefs/${id}`);

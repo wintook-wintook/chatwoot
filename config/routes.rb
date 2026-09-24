@@ -147,6 +147,8 @@ Rails.application.routes.draw do
             post 'assistant/briefs/:id/digest',  to: 'assistant_briefs#digest'
             post 'assistant/briefs/:id/compose', to: 'assistant_briefs#compose'
             post 'assistant/briefs/:id/cover',   to: 'assistant_briefs#cover'
+            post 'assistant/briefs/:id/knowledge', to: 'assistant_knowledge#suggestions'
+            post 'assistant/briefs/:id/knowledge/create', to: 'assistant_knowledge#create'
             # armar un agente desde cero conversando (llena las instrucciones iniciales)
             post 'assistant/drafting_chat', to: 'assistant_drafting#create'
             post 'assistant/conversation_review', to: 'assistant_review#create'

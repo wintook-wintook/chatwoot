@@ -447,6 +447,25 @@
     "REVIEW_ERROR_NOT_FOUND": "I could not find that conversation in this account.",
     "REVIEW_ERROR_NO_CONVERSATION": "I did not get which conversation to review. Paste its link, for example …/conversations/173.",
     "REVIEW_ERROR_NO_MESSAGES": "That conversation has no text messages to review.",
-    "REVIEW_ERROR": "I could not review the conversation. Try again."
+    "REVIEW_ERROR": "I could not review the conversation. Try again.",
+    "KNOWLEDGE_TAB": "Canned responses",
+    "KNOWLEDGE_HINT": "Data that changes (prices, hours, requirements) works better as canned responses than inside the Training: you edit it in one place and the agent looks it up when asked. Review, fill in what is missing and create the ones you want.",
+    "KNOWLEDGE_LOADING": "Looking for the responses this agent needs…",
+    "KNOWLEDGE_ERROR": "I could not prepare the canned responses. Try again.",
+    "KNOWLEDGE_GROUP": "Group",
+    "KNOWLEDGE_GROUP_HINT": "They all start with this name, and the routes search only in them: @buscar_predefinidas({group}).",
+    "KNOWLEDGE_STATE_READY": "ready",
+    "KNOWLEDGE_STATE_MISSING": "missing data: fill it in",
+    "KNOWLEDGE_STATE_UNVERIFIED": "check: {numbers} was not in the instructions",
+    "KNOWLEDGE_STATE_EXISTING": "already exists",
+    "KNOWLEDGE_CONFIRM": "It is fine",
+    "KNOWLEDGE_MOVE_CONTEXT": "Remove this data from the agent's Context. Only the routes that search these responses will find it.",
+    "KNOWLEDGE_CREATE": "Create {count} responses",
+    "KNOWLEDGE_APPLY": "Use group {group} in the open Training",
+    "KNOWLEDGE_APPLY_DONE": "The routes now search only the responses in group {group}.",
+    "KNOWLEDGE_APPLY_NONE": "No route in the Training searched all canned responses.",
+    "KNOWLEDGE_DONE": "Done: {created} created, {skipped} already existed. When the Training is written, the routes will search group {group}.",
+    "KNOWLEDGE_FAILED": "Not created: {list}",
+    "KNOWLEDGE_NONE": "This brief has no business data nor routes that search canned responses."
   }
 }

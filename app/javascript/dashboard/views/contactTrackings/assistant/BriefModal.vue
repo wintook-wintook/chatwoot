@@ -21,6 +21,7 @@
 // ============================================================================
 import Spinner from 'shared/components/Spinner.vue';
 import AssistantAPI from 'dashboard/api/assistant';
+import KnowledgePanel from './KnowledgePanel.vue';
 import {
   groupGaps,
   listSizes,
@@ -47,7 +48,7 @@ const UPLOAD_ERRORS = [
 ];
 
 export default {
-  components: { Spinner },
+  components: { Spinner, KnowledgePanel },
   props: {
     show: { type: Boolean, default: false },
     sessionId: { type: [Number, String], default: null },
@@ -61,7 +62,7 @@ export default {
     // Hay un Entrenamiento en pantalla: crear uno desde el encargo lo reemplaza.
     hasDraft: { type: Boolean, default: false },
   },
-  emits: ['close', 'write'],
+  emits: ['close', 'write', 'applyGroup'],
   data() {
     return {
       brief: null,
@@ -74,8 +75,11 @@ export default {
       // Lo contestado en el formulario, por pregunta: { 'contradiccion:0': 'b' }.
       values: {},
       composing: false,
-      // 0 = Esto entendí · 1 = Me falta saber
+      // 0 = Esto entendí · 1 = Me falta saber · 2 = Respuestas predefinidas
       tab: 0,
+      // Lo creado en la pestaña de respuestas predefinidas: { group, moved } o null.
+      // Viaja con las respuestas al escribir (BriefComposer).
+      knowledge: null,
     };
   },
   computed: {
@@ -146,6 +150,7 @@ export default {
       if (!brief) return;
       this.brief = brief;
       this.values = {};
+      this.knowledge = null;
       this.tab = 0;
       this.error = '';
       this.stage = null;
@@ -184,6 +189,7 @@ export default {
         });
         this.brief = data;
         this.values = {};
+        this.knowledge = null;
         this.tab = 0;
         this.follow();
       } catch (error) {
@@ -256,9 +262,14 @@ export default {
       this.composing = true;
       this.error = '';
       try {
+        const respuestas = briefAnswers(this.values);
+        if (this.knowledge) {
+          respuestas.predefinidas_grupo = this.knowledge.group;
+          respuestas.conocimiento_movido = this.knowledge.moved;
+        }
         const { data } = await AssistantAPI.composeBrief(
           this.brief.id,
-          briefAnswers(this.values)
+          respuestas
         );
         this.$emit('write', {
           ...data,
@@ -400,6 +411,11 @@ export default {
             :index="1"
             :name="$t('TRACKING_ASSISTANT_VIEW.BRIEF_GAPS')"
             :count="questions.length + notices.length"
+          />
+          <woot-tabs-item
+            :index="2"
+            :name="$t('TRACKING_ASSISTANT_VIEW.KNOWLEDGE_TAB')"
+            :show-badge="false"
           />
         </woot-tabs>
 
@@ -622,6 +638,20 @@ export default {
           >
             {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_ASK_EMPTY_HINT') }}
           </p>
+        </div>
+
+        <!-- Respuestas predefinidas: el conocimiento fuera del prompt. -->
+        <div
+          v-show="tab === 2"
+          class="flex flex-col flex-1 min-h-0 pr-1 overflow-y-auto"
+        >
+          <KnowledgePanel
+            :brief-id="brief && brief.id"
+            :active="tab === 2"
+            :has-draft="hasDraft"
+            @change="knowledge = $event"
+            @applyGroup="$emit('applyGroup', $event)"
+          />
         </div>
       </template>
 

@@ -447,6 +447,25 @@
     "REVIEW_ERROR_NOT_FOUND": "No encontré esa conversación en esta cuenta.",
     "REVIEW_ERROR_NO_CONVERSATION": "No entendí qué conversación revisar. Pega su link, por ejemplo …/conversations/173.",
     "REVIEW_ERROR_NO_MESSAGES": "Esa conversación no tiene mensajes con texto para revisar.",
-    "REVIEW_ERROR": "No pude revisar la conversación. Inténtalo de nuevo."
+    "REVIEW_ERROR": "No pude revisar la conversación. Inténtalo de nuevo.",
+    "KNOWLEDGE_TAB": "Respuestas predefinidas",
+    "KNOWLEDGE_HINT": "Los datos que cambian (precios, horarios, requisitos) van mejor en respuestas predefinidas que en el Entrenamiento: se editan en un solo lugar y el agente los busca cuando se los preguntan. Revisa, completa lo que falte y crea las que quieras.",
+    "KNOWLEDGE_LOADING": "Buscando qué respuestas necesita este agente…",
+    "KNOWLEDGE_ERROR": "No pude preparar las respuestas predefinidas. Inténtalo de nuevo.",
+    "KNOWLEDGE_GROUP": "Grupo",
+    "KNOWLEDGE_GROUP_HINT": "Todas empiezan con este nombre, y las rutas buscan solo en ellas: @buscar_predefinidas({group}).",
+    "KNOWLEDGE_STATE_READY": "lista",
+    "KNOWLEDGE_STATE_MISSING": "falta un dato: llénalo",
+    "KNOWLEDGE_STATE_UNVERIFIED": "revisa: {numbers} no venía en las instrucciones",
+    "KNOWLEDGE_STATE_EXISTING": "ya existe",
+    "KNOWLEDGE_CONFIRM": "Está bien así",
+    "KNOWLEDGE_MOVE_CONTEXT": "Quitar estos datos del Contexto del agente. Solo las rutas que buscan en estas respuestas los van a encontrar.",
+    "KNOWLEDGE_CREATE": "Crear {count} respuestas",
+    "KNOWLEDGE_APPLY": "Usar el grupo {group} en el Entrenamiento abierto",
+    "KNOWLEDGE_APPLY_DONE": "Las rutas ahora buscan solo en las respuestas del grupo {group}.",
+    "KNOWLEDGE_APPLY_NONE": "Ninguna ruta del Entrenamiento buscaba en todas las respuestas predefinidas.",
+    "KNOWLEDGE_DONE": "Listo: {created} creadas, {skipped} ya existían. Al escribir el Entrenamiento, las rutas buscarán en el grupo {group}.",
+    "KNOWLEDGE_FAILED": "No se crearon: {list}",
+    "KNOWLEDGE_NONE": "Este encargo no trae datos del negocio ni rutas que busquen en respuestas predefinidas."
   }
 }

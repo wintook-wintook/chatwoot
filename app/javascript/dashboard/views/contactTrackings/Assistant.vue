@@ -44,6 +44,7 @@ import {
   lineMarks,
 } from './assistant/draftNavigation';
 import DraftLineMarks from './assistant/DraftLineMarks.vue';
+import { withCannedGroup } from './assistant/knowledgeGroup';
 import { pendingCount } from './assistant/pendingMarkers';
 import InterviewPanel from './assistant/InterviewPanel.vue';
 import SessionCard from './assistant/SessionCard.vue';
@@ -1050,6 +1051,20 @@ export default {
       return this.$t('TRACKING_ASSISTANT_VIEW.REVIEW_OTHER_AGENT', {
         name: agent.name,
       });
+    },
+    // Conocimiento sugerido: creadas las respuestas predefinidas del agente, las rutas
+    // del Entrenamiento abierto que buscaban en TODAS pasan a buscar en su grupo.
+    applyCannedGroup(group) {
+      const nuevo = withCannedGroup(this.draft, group);
+      if (nuevo === this.draft) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.KNOWLEDGE_APPLY_NONE'));
+        return;
+      }
+      this.draft = nuevo;
+      this.onDraftInput();
+      useAlert(
+        this.$t('TRACKING_ASSISTANT_VIEW.KNOWLEDGE_APPLY_DONE', { group })
+      );
     },
     // Un turno de la conversación que arma un agente desde cero (DraftingChat).
     async sendDraftingMessage(content) {
@@ -2232,6 +2247,7 @@ export default {
       :has-draft="Boolean(draft.trim())"
       @close="showBriefModal = false"
       @write="writeFromBrief"
+      @applyGroup="applyCannedGroup"
     />
     <ReportModal
       :show="showReportModal"

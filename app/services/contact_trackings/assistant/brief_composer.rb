@@ -23,6 +23,11 @@
 #   frases           { "tema" => "una por renglón" }
 #   fuentes          { "tema" => "de dónde / qué hace si no resuelve" }
 #   etiquetas        { "tema" => "#etiqueta" }
+#   predefinidas_grupo  "PATITAS"   las respuestas predefinidas del agente, creadas
+#                                   desde el modal (KnowledgeSuggestions): la ruta
+#                                   busca solo en ese grupo
+#   conocimiento_movido true        los datos del negocio ya están en esas respuestas:
+#                                   no van al Contexto ni al Entrenamiento
 # ================================================================================
 
 class ContactTrackings::Assistant::BriefComposer
@@ -76,7 +81,23 @@ class ContactTrackings::Assistant::BriefComposer
   private
 
   def message
-    [header, identity, topics, tools, *lists, knowledge_block, decisions, closing].compact.join("\n\n")
+    [header, identity, topics, tools, *lists, knowledge_block, moved_note, decisions, closing].compact.join("\n\n")
+  end
+
+  def canned_group
+    grupo = @answers['predefinidas_grupo'].to_s.strip.upcase
+    grupo.match?(ContactTrackings::Assistant::KnowledgeSuggestions::GROUP_RE) ? grupo : nil
+  end
+
+  def knowledge_moved?
+    canned_group.present? && ActiveModel::Type::Boolean.new.cast(@answers['conocimiento_movido'])
+  end
+
+  def moved_note
+    return nil unless knowledge_moved?
+
+    "DATOS DEL NEGOCIO: ya están en las respuestas predefinidas del grupo #{canned_group}. No los copies al " \
+      "Entrenamiento: las rutas que los necesitan los buscan con @buscar_predefinidas(#{canned_group})."
   end
 
   # Medido el 23/09 con el gimnasio: sin el "NADA SE PIERDE", la redacción de una sola
@@ -141,6 +162,10 @@ class ContactTrackings::Assistant::BriefComposer
 
   # Las directivas reales de la cuenta, o <PENDIENTE> si no tiene ninguna.
   def tool_hint(tipo)
+    if tipo == 'predefinidas' && canned_group
+      return " → usa EXACTAMENTE @buscar_predefinidas(#{canned_group}): las respuestas de este agente, y solo esas"
+    end
+
     directivas = ContactTrackings::Assistant::BriefTools.directives(tipo, @inventory)
     return '' if directivas.nil?
     return ' → la cuenta NO la tiene conectada: <PENDIENTE>' if directivas.empty?
@@ -166,7 +191,7 @@ class ContactTrackings::Assistant::BriefComposer
 
   # Los datos del negocio y lo consultable. Si ya van como Contexto, no se repiten.
   def knowledge_block
-    return nil if knowledge.empty? || context_fits?
+    return nil if knowledge.empty? || context_fits? || knowledge_moved?
 
     (['DATOS DEL NEGOCIO Y CONOCIMIENTO (ponlos como una sección del Entrenamiento):'] +
       knowledge.map { |k| "- #{k}" }).join("\n")
@@ -216,6 +241,7 @@ class ContactTrackings::Assistant::BriefComposer
   end
 
   def proposal
-    { objective: @ficha.dig('objetivo', 'texto').to_s, ai_context: context_fits? ? knowledge.join("\n") : '' }
+    contexto = context_fits? && !knowledge_moved? ? knowledge.join("\n") : ''
+    { objective: @ficha.dig('objetivo', 'texto').to_s, ai_context: contexto }
   end
 end
