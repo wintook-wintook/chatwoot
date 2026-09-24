@@ -207,7 +207,9 @@ class ContactTrackings::Assistant::ValidatorService
   def check_ticket_types
     tipos = CaseType.where(account_id: account.id).pluck(:name)
 
-    text.scan(/@crear_ticket\(([^)]*)\)/i).flatten.each do |args|
+    # Sin cruzar de línea: con un «)» faltante (lo marca RouteLineChecks) la captura se
+    # comía la línea siguiente y avisaba un tipo «Comercial\n@ruta(saludo…» inexistente.
+    text.scan(/@crear_ticket\(([^)\n]*)\)/i).flatten.each do |args|
       tipo = args[/tipo\s*=\s*([^,)]+)/i, 1]&.strip
       next if tipo.blank? || pending?(tipo) || tipos.any? { |t| t.casecmp?(tipo) }
 

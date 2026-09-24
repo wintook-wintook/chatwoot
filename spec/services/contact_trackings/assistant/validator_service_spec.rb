@@ -112,6 +112,12 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       expect(r[:blocking].find { |f| f[:code] == :unclosed_directive }[:message]).to include('«}}»')
     end
 
+    it 'no inventa un tipo de caso con la línea siguiente' do
+      r = validar("@ruta(info #info: x): - -> @crear_ticket(tipo=Soporte\n@ruta(otra #otra: y): -")
+
+      expect(codigos(r, :blocking)).not_to include(:case_type_not_found)
+    end
+
     it 'no marca las que cierran' do
       r = validar('@ruta(info #info: x): {{hoja:Precios}} -> @crear_ticket(tipo=Soporte, prioridad=media)')
 

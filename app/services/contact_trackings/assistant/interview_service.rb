@@ -114,7 +114,7 @@ class ContactTrackings::Assistant::InterviewService
 
     @started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     progress(:writing, editing: editing? && !building?)
-    reply = ask(conversation)
+    reply = ContactTrackings::Assistant::ReplyParser.with_extras(ask(conversation))
     return Result.new(error: :unavailable) if reply.nil?
 
     handle(reply)
@@ -320,14 +320,15 @@ class ContactTrackings::Assistant::InterviewService
     [{ role: 'system', content: system_prompt }] + messages.map { |m| m.slice('role', 'content').symbolize_keys }
   end
 
-  # El contrato fijo, el inventario de ESTA cuenta, cómo trabajar y —si hay— el
-  # Entrenamiento que se está editando. Va al final: es lo que el modelo tiene que
+  # El contrato fijo, el inventario de ESTA cuenta, cómo trabajar, lo que ya marcó el
+  # comprobador (CheckerSection) y —si hay— el Entrenamiento que se está editando. Va al final: es lo que el modelo tiene que
   # tener más presente al contestar.
   def system_prompt
     @system_prompt ||= [
       ContactTrackings::Assistant::Contract.call,
       inventory_section,
       ContactTrackings::Assistant::Instructions.call(one_shot: one_shot, max_turns: MAX_INTERVIEW_TURNS),
+      (ContactTrackings::Assistant::CheckerSection.call(current_draft, account: account) if editing?),
       (if editing?
          ContactTrackings::Assistant::EditingInstructions.call(current_draft, manual: @manual.labels,
                                                                               building: building?)

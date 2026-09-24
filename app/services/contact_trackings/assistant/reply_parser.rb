@@ -29,7 +29,28 @@ class ContactTrackings::Assistant::ReplyParser
   MAX_CHANGES = 10
   MAX_CHANGE_CHARS = 200
 
+  # Las llaves que el contrato define. Lo demás que el modelo agregue se suma al mensaje.
+  KNOWN_KEYS = %w[mensaje opciones modo entrenamiento completo propuesta toca cambios].freeze
+
   class << self
+    # Medido el 24/09/2026: a «¿qué errores tiene?» el modelo contestó «tiene varios
+    # errores:» en "mensaje" y puso la lista en una llave nueva, "errores", que la
+    # pantalla no muestra. Lo que venga en llaves que el contrato no define (texto o lista
+    # de textos) se agrega al final del mensaje: la persona lo ve y nada se pierde.
+    def with_extras(reply)
+      return reply unless reply.is_a?(Hash)
+
+      extras = extra_texts(reply)
+      return reply if extras.empty?
+
+      reply.merge('mensaje' => [reply['mensaje'].to_s.strip, *extras].compact_blank.join("\n"))
+    end
+
+    def extra_texts(reply)
+      reply.except(*KNOWN_KEYS).values.flat_map { |v| Array.wrap(v) }
+           .grep(String).map(&:strip).compact_blank
+    end
+
     # Los datos del agente que el asistente propone junto al Entrenamiento. Se
     # rescatan con cuidado: `contexto` es el único que puede hacer daño si el
     # modelo lo rellena de memoria —entra al prompt como "BASE DE CONOCIMIENTO" y
