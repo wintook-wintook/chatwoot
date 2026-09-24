@@ -115,8 +115,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     # [2] proyecto@bot_seguimiento_calendar — Detección de elección de slot
     if pending_slot_selection?(tracking)
-      Rails.logger.info '[TrackingBot] 📅 PENDING_SLOT detectado → procesando elección de horario'
-      return handle_slot_selection(tracking, message)
+      if leaves_slot_offer?(tracking, message)
+        Rails.logger.info '[TrackingBot] 📅 PENDING_SLOT, pero el mensaje es de una rama de caso propio → se cierra la oferta'
+        clear_pending_slot(tracking)
+      else
+        Rails.logger.info '[TrackingBot] 📅 PENDING_SLOT detectado → procesando elección de horario'
+        return handle_slot_selection(tracking, message)
+      end
     end
 
     # [2b] proyecto@bot_seguimiento_calendar — Esperando el email (opcional) para la cita
@@ -201,17 +206,21 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # rama sin flecha no abre ticket. Si ninguna lo declara, rige la directiva global.
     if branch_escalations?(tracking)
       ticket_directive   = branch&.escalation
-      ticket_as_fallback = ticket_directive.present?
+      # Una rama SIN fuente no tiene nada que consultar antes: su caso va primero, antes
+      # que la agenda. Como último recurso, una oferta de horarios abierta se comía el
+      # turno (24/09/2026: «mi perro se comió veneno» → horarios para mañana).
+      ticket_as_fallback = ticket_directive.present? && !ticket_first_branch?(branch)
     else
       ticket_directive   = nil
       ticket_as_fallback = Cases::TicketCreatorService.fallback?(tracking)
     end
-    return true if !ticket_as_fallback && try_create_ticket(tracking, message, route_result, directive: ticket_directive)
+    ticket_now = !ticket_as_fallback
+    return true if ticket_now && try_create_ticket(tracking, message, route_result, directive: ticket_directive, branch: branch)
 
     # proyecto@bot_seguimiento_calendar — @agendar_calendar (appointment-aware): el clasificador
     # ve el ESTADO DE LA CITA y decide la acción concreta (consultar/agendar/mover/cancelar). No
     # es "eager": appointment_action es null salvo que el cliente realmente hable de una cita.
-    if appointment_dispatchable?(tracking)
+    if appointment_dispatchable?(tracking) && appointment_allowed_for?(branch)
       appt = classify_appointment(tracking, message, route_result)
       if appt && appt[:appointment_action]
         Rails.logger.info "[TrackingBot] 📅 @agendar_calendar → acción de cita: #{appt[:appointment_action]}"
@@ -235,7 +244,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     # @tickets_cases: @crear_ticket(fallback=true) — la KBase no resolvió el turno, así que
     # ahora sí se ofrece/levanta el caso.
-    if ticket_as_fallback && try_create_ticket(tracking, message, route_result, directive: ticket_directive)
+    if ticket_as_fallback && try_create_ticket(tracking, message, route_result, directive: ticket_directive, branch: branch)
       Rails.logger.info '[TrackingBot] 🎫 Ticket como último recurso' \
                         "#{branch ? " (rama #{branch.name})" : ' (fallback=true)'}"
       return true
@@ -246,7 +255,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
   # @tickets_cases — alta de ticket vía @crear_ticket. Devuelve true si el turno quedó
   # atendido: ticket creado, caso abierto reusado o dato faltante solicitado.
-  def try_create_ticket(tracking, message, route_result, directive: nil)
+  # Rama sin fuente que abre su propio caso (urgencias, quejas, hablar con una persona):
+  # su caso va antes que la agenda, y la agenda no le toma el turno.
+  def ticket_first_branch?(branch)
+    branch.present? && branch.directive.blank? &&
+      branch.escalation.to_s.match?(Cases::TicketCreatorService::DIRECTIVE_RE) &&
+      !branch.escalation.to_s.match?(/@agendar_calendar/i)
+  end
+
+  # La agenda (ofrecer horarios, agendar) no corre en una rama de caso propio.
+  def appointment_allowed_for?(branch)
+    !ticket_first_branch?(branch)
+  end
+
+  def try_create_ticket(tracking, message, route_result, directive: nil, branch: nil)
     creator = Cases::TicketCreatorService.new(message, tracking: tracking, directive: directive)
     return false unless creator.create_if_needed
 
@@ -256,7 +278,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # el mismo turno (ETAPA 3), en vez de esperar a que el cliente lo pida en otro mensaje.
     # Mismo comportamiento que ya tenía dispatch_book_appointment cuando el Router detecta
     # appointment_action explícito.
-    if %i[created linked_existing].include?(creator.outcome) && appointment_dispatchable?(tracking)
+    if %i[created linked_existing].include?(creator.outcome) && appointment_dispatchable?(tracking) &&
+       appointment_allowed_for?(branch)
       handle_book_appointment(tracking, message, route_result)
     end
     true
@@ -400,10 +423,19 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar — lee la zona horaria de la cuenta de Google Calendar
   # vinculada (la que el usuario ve en su calendario) y la cachea 12h en Redis para no pegar
   # a la API en cada mensaje. Devuelve el IANA tz o nil si no hay calendario / falla.
+  #
+  # Se pregunta a cada calendario del agente hasta que uno conteste, no solo al primero:
+  # con el acceso de Google vencido en el primero (invalid_grant), la zona caía a la del
+  # inbox, UTC por defecto, y el chat ofrecía «09:00 hs (hora de UTC)» (24/09/2026).
   def google_calendar_timezone(tracking)
-    cal_id = appointment_timezone_calendar_id(tracking)
-    return nil if cal_id.blank?
+    appointment_timezone_calendar_ids(tracking).each do |cal_id|
+      tz = calendar_timezone(cal_id)
+      return tz if tz.present?
+    end
+    nil
+  end
 
+  def calendar_timezone(cal_id)
     cache_key = "gcal_tz::#{cal_id}"
     cached = Redis::Alfred.get(cache_key)
     return cached if cached.present?
@@ -415,16 +447,16 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     Redis::Alfred.setex(cache_key, tz, 12.hours) if tz.present?
     tz
   rescue StandardError => e
-    Rails.logger.warn "[TrackingBot] ⚠️ google_calendar_timezone falló: #{e.message}"
+    Rails.logger.warn "[TrackingBot] ⚠️ google_calendar_timezone falló (calendario #{cal_id}): #{e.message}"
     nil
   end
 
-  # Agenda de referencia para la zona: la de la cita ya creada, o la primera configurada.
-  def appointment_timezone_calendar_id(tracking)
-    return nil if tracking.blank?
+  # Agendas de referencia para la zona: la de la cita ya creada primero, y después las
+  # configuradas, en orden.
+  def appointment_timezone_calendar_ids(tracking)
+    return [] if tracking.blank?
 
-    tracking.appointment_calendar_id.presence ||
-      Array(appointment_calendar_ids(tracking)).first
+    [tracking.appointment_calendar_id, *Array(appointment_calendar_ids(tracking))].compact_blank.uniq
   end
 
   def classify_route(tracking, message)
@@ -1218,6 +1250,21 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     nil
+  end
+
+  # Con horarios ofrecidos, todo mensaje se tomaba como elección de horario: «mi perro se
+  # comió veneno» recibía otra vez los horarios (24/09/2026). Si NO es una elección (un
+  # número suelto, una fecha u hora) y cae en una rama que abre su propio caso
+  # (urgencias, quejas), la oferta se cierra y el mensaje sigue por su rama. Solo en ese
+  # caso se clasifica: una elección normal no paga la llamada.
+  def leaves_slot_offer?(tracking, message)
+    text = message_text_for_ai(message).to_s
+    return false if text.strip.match?(/\A\D{0,12}[1-5]\D{0,3}\z/) || looks_like_datetime_proposal?(text)
+
+    ticket_first_branch?(branch_for(tracking, message))
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ No se pudo ver si el mensaje deja la oferta de horarios: #{e.message}"
+    false
   end
 
   def clear_pending_slot(tracking)

@@ -271,7 +271,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
 
     it 'devuelve el valor cacheado en Redis sin pegar a la API de Google' do
-      allow(job).to receive(:appointment_timezone_calendar_id).with(tracking).and_return(7)
+      allow(job).to receive(:appointment_timezone_calendar_ids).with(tracking).and_return([7])
       allow(Redis::Alfred).to receive(:get).with('gcal_tz::7').and_return('America/Bogota')
       expect(UserCalendarIntegration).not_to receive(:find_by)
       expect(job.send(:google_calendar_timezone, tracking)).to eq('America/Bogota')
@@ -280,12 +280,51 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     it 'lee la zona de Google y la cachea cuando no está en Redis' do
       integration = instance_double(UserCalendarIntegration)
       gcal = instance_double(GoogleCalendarService, account_timezone: 'America/Argentina/Buenos_Aires')
-      allow(job).to receive(:appointment_timezone_calendar_id).with(tracking).and_return(7)
+      allow(job).to receive(:appointment_timezone_calendar_ids).with(tracking).and_return([7])
       allow(Redis::Alfred).to receive(:get).with('gcal_tz::7').and_return(nil)
       allow(UserCalendarIntegration).to receive(:find_by).with(id: 7).and_return(integration)
       allow(GoogleCalendarService).to receive(:new).with(integration).and_return(gcal)
       expect(Redis::Alfred).to receive(:setex).with('gcal_tz::7', 'America/Argentina/Buenos_Aires', 12.hours)
       expect(job.send(:google_calendar_timezone, tracking)).to eq('America/Argentina/Buenos_Aires')
+    end
+
+    # 24/09/2026: el primer calendario con el acceso de Google vencido dejaba la zona en
+    # la del inbox (UTC). Se pregunta al siguiente.
+    it 'si el primer calendario no contesta, pregunta al siguiente' do
+      vencida = instance_double(UserCalendarIntegration)
+      buena = instance_double(UserCalendarIntegration)
+      allow(job).to receive(:appointment_timezone_calendar_ids).with(tracking).and_return([9, 65])
+      allow(Redis::Alfred).to receive(:get).and_return(nil)
+      allow(Redis::Alfred).to receive(:setex)
+      allow(UserCalendarIntegration).to receive(:find_by).with(id: 9).and_return(vencida)
+      allow(UserCalendarIntegration).to receive(:find_by).with(id: 65).and_return(buena)
+      allow(GoogleCalendarService).to receive(:new).with(vencida).and_return(instance_double(GoogleCalendarService, account_timezone: nil))
+      allow(GoogleCalendarService).to receive(:new).with(buena)
+                                                   .and_return(instance_double(GoogleCalendarService, account_timezone: 'America/Mexico_City'))
+
+      expect(job.send(:google_calendar_timezone, tracking)).to eq('America/Mexico_City')
+    end
+  end
+
+  describe 'rama de caso propio contra la agenda (24/09/2026)' do
+    def rama(linea)
+      ContactTrackings::RouteMap.parse(linea).routes.first
+    end
+
+    it 'una rama sin fuente que abre su caso va antes que la agenda, y la agenda no le toma el turno' do
+      urgencias = rama('@ruta(urgencias #urgencia: se envenenó): - -> @crear_ticket(tipo=Soporte, prioridad=alta)')
+
+      expect(job.send(:ticket_first_branch?, urgencias)).to be(true)
+      expect(job.send(:appointment_allowed_for?, urgencias)).to be(false)
+    end
+
+    it 'la rama que agenda, o la que consulta una fuente, sigue igual' do
+      agenda = rama('@ruta(agendar #agendar: quiero cita): - -> @agendar_calendar')
+      precios = rama('@ruta(precios #precios: cuánto cuesta): @buscar_predefinidas -> @crear_ticket(tipo=Comercial)')
+
+      expect(job.send(:appointment_allowed_for?, agenda)).to be(true)
+      expect(job.send(:ticket_first_branch?, precios)).to be(false)
+      expect(job.send(:appointment_allowed_for?, nil)).to be(true)
     end
   end
 
