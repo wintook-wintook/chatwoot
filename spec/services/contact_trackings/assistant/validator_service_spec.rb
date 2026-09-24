@@ -197,6 +197,14 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       expect(limpio).to eq('Solo la información consultada autoriza: costo, beca.')
     end
 
+    it 'también {{hoja:}} y {{doc:}}: se marcan y el motor las cambia' do
+      texto = "@ruta(a #aaa: x): {{hoja:CATALOGO}}\n\n[EVIDENCIA]\nPara esos datos ejecuta {{hoja:CATALOGO}}."
+
+      expect(codigos(validar(texto), :degrading)).to include(:loose_directive)
+      expect(KnowledgeBase::Directives.strip_tokens('Solo {{hoja:CATALOGO DE CARRERAS}} autoriza.'))
+        .to eq('Solo la información consultada autoriza.')
+    end
+
     it 'un aviso por línea, con su número, para pintarlas en el editor' do
       texto = "@ruta(a #aaa: x): -\n\n[EVIDENCIA]\nSolo @buscar_predefinidas autoriza.\nSin @buscar_predefinidas no."
 

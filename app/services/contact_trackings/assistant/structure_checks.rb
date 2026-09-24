@@ -46,6 +46,8 @@ module ContactTrackings::Assistant::StructureChecks
       loose_pending(linea, numero, findings)
     end
     duplicate_sections(lineas, findings)
+    # R1–R4: las referencias entre secciones («→ [6] OBJECIONES»), ver SectionRefs.
+    ContactTrackings::Assistant::SectionRefs.check(text, findings: findings)
   end
 
   # ¿Quiso ser el rótulo de una sección y está mal escrito?

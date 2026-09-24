@@ -138,6 +138,18 @@ es:
         Línea %{line}: le pide al agente prometer algo para después («te confirmo en un momento», «lo
         estoy revisando»…). No hay seguimiento automático: el cliente se queda esperando. Escribe lo
         que sí pasa (se abre un caso, lo contacta una persona) o prohíbelo en [PROHIBIDO].
+      section_ref_missing: >-
+        Línea %{line}: «%{wrote}» cita la sección %{number}, y no hay ninguna sección [%{number}. …]. El
+        agente no va a saber a dónde lo manda esa regla. Corrige el número o agrega la sección.
+      section_ref_title: >-
+        Línea %{line}: «%{wrote}» cita la sección %{number} con otro nombre: se llama «%{title}».
+        Si se renumeró o se renombró, la referencia apunta a otra cosa. Corrígela.
+      section_ref_part: >-
+        Línea %{line}: «%{wrote}» cita «%{part}» dentro de la sección %{number} («%{title}»), y ahí no
+        hay ninguna subsección ni renglón que empiece así. Puede que se haya movido o renombrado.
+      section_ref_name: >-
+        Línea %{line}: «%{wrote}» cita una sección que no existe en el Entrenamiento. El agente no va
+        a encontrar a dónde lo manda esa regla. Corrige el nombre o agrega la sección.
       route_does_nothing: >-
         La ruta '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
         con lo que dice el Entrenamiento. Ante algo concreto (precios, horarios) puede inventar o prometer

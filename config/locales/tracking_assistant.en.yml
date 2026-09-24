@@ -139,6 +139,18 @@ en:
         Line %{line}: it asks the agent to promise something for later ("I'll confirm in a moment", "I'm
         checking it"…). There is no automatic follow-up: the customer is left waiting. Write what does
         happen (a case opens, a person contacts them) or forbid it in [PROHIBIDO].
+      section_ref_missing: >-
+        Line %{line}: "%{wrote}" cites section %{number}, and there is no section [%{number}. …]. The agent
+        will not know where that rule sends it. Fix the number or add the section.
+      section_ref_title: >-
+        Line %{line}: "%{wrote}" cites section %{number} with another name: it is called "%{title}".
+        If it was renumbered or renamed, the reference points elsewhere. Fix it.
+      section_ref_part: >-
+        Line %{line}: "%{wrote}" cites "%{part}" inside section %{number} ("%{title}"), and there is no
+        subsection or line starting like that there. It may have been moved or renamed.
+      section_ref_name: >-
+        Line %{line}: "%{wrote}" cites a section that does not exist in the Training. The agent will not
+        find where that rule sends it. Fix the name or add the section.
       route_does_nothing: >-
         Branch '%{route}' does not query any source and has nothing to do when it cannot solve: it answers
         only from the Training. Faced with something specific (prices, schedules) it may make things up or
