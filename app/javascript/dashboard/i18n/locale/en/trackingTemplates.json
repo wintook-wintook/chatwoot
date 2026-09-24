@@ -119,6 +119,7 @@
         "ROUTE_SOURCE_NONE": "Looks nothing up",
         "ROUTE_ESCALATION": "If it does not resolve",
         "ROUTE_ESCALATION_NONE": "Nothing: keeps talking",
+        "ROUTE_DOES_NOTHING": "It queries nothing and has nothing to do when it cannot solve: it answers only from the Training and may make up prices or schedules. If that is intended (greeting, asking for data), leave it.",
         "ROUTE_ADD": "Add route",
         "ROUTE_DELETE": "Remove",
         "ROUTE_DEFAULT": "Default route",

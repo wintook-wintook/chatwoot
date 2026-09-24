@@ -119,6 +119,7 @@
         "ROUTE_SOURCE_NONE": "No consulta nada",
         "ROUTE_ESCALATION": "Si no resuelve",
         "ROUTE_ESCALATION_NONE": "Nada: sigue conversando",
+        "ROUTE_DOES_NOTHING": "No consulta nada y no tiene qué hacer si no resuelve: contesta solo con el Entrenamiento y puede inventar precios u horarios. Si es a propósito (saludo, pedir datos), déjala así.",
         "ROUTE_ADD": "Agregar ruta",
         "ROUTE_DELETE": "Quitar",
         "ROUTE_DEFAULT": "Ruta por defecto",

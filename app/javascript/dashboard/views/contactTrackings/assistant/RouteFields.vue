@@ -60,6 +60,14 @@ export default {
     opensCase() {
       return this.route.action === CREATE_TICKET;
     },
+    // Ni fuente ni «si no resuelve»: contesta solo con el Entrenamiento. Es el mismo
+    // aviso ámbar del comprobador (ValidatorService#check_routes_doing_nothing), acá
+    // a la vista mientras se edita. No impide guardar: a veces es a propósito.
+    doesNothing() {
+      return (
+        !(this.route.source || '').trim() && !(this.route.action || '').trim()
+      );
+    },
     // Las listas llegan del inventario DESPUÉS del primer pintado. Un <select> con
     // :value (no v-model) no vuelve a aplicar el valor cuando aparecen sus opciones,
     // y el campo se veía vacío aunque la rama tuviera el tipo de caso escrito. Esto
@@ -253,6 +261,14 @@ export default {
         </select>
       </div>
     </div>
+
+    <p
+      v-if="doesNothing"
+      class="flex items-start gap-1 !mt-2 !mb-0 text-xs text-amber-800 dark:text-amber-800"
+    >
+      <fluent-icon icon="warning" size="14" class="shrink-0 mt-px" />
+      {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_DOES_NOTHING') }}
+    </p>
 
     <!-- Solo para abrir caso: de qué tipo y con qué prioridad. -->
     <div v-if="opensCase" class="flex flex-wrap gap-2 mt-2">

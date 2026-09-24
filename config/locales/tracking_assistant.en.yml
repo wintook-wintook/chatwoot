@@ -95,6 +95,11 @@ en:
         classifier uses to decide, so it cannot tell them apart: one of the two will never be
         chosen, and which one loses depends on the order. Give them descriptions that cannot be
         confused — different situations, in the customer's own words.
+      route_does_nothing: >-
+        Branch '%{route}' does not query any source and has nothing to do when it cannot solve: it answers
+        only from the Training. Faced with something specific (prices, schedules) it may make things up or
+        promise what it does not do. If that is intended (greeting, asking for data), leave it; if not,
+        give it a source or an "if it cannot solve" action (open a case, book).
       route_without_description: >-
         Branch '%{route}' has no description. The description is the ONLY thing the classifier uses
         to decide which branch a message goes to: without it, this branch will almost never be

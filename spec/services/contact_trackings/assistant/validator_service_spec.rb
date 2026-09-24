@@ -249,6 +249,29 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
     end
   end
 
+  describe 'D9 · rama que no consulta nada ni hace nada si no resuelve' do
+    it 'avisa en ámbar, colgado de la rama, sin impedir guardar' do
+      r = validar('@ruta(saludo #saludo: hola, buenos días): -')
+
+      aviso = r[:degrading].find { |f| f[:code] == :route_does_nothing }
+      expect(aviso).to include(route: 'saludo')
+      expect(aviso[:message]).to include("'saludo'", 'a propósito')
+      expect(r[:valid]).to be(true)
+    end
+
+    it 'con una acción después de la flecha sí hace algo' do
+      r = validar('@ruta(agendar #agendar: quiero una cita): - -> @agendar_calendar')
+
+      expect(codigos(r, :degrading)).not_to include(:route_does_nothing)
+    end
+
+    it 'con una fuente tampoco' do
+      r = validar('@ruta(soporte #soporte: no puedo entrar): @buscar_articulo')
+
+      expect(codigos(r, :degrading)).not_to include(:route_does_nothing)
+    end
+  end
+
   # Fase C: el Entrenamiento se arma a la vista, con marcas mientras dura la entrevista.
   describe 'B9 · datos por completar' do
     it 'bloquea mientras quede alguna marca, y dice cuáles' do

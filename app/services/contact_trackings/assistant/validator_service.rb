@@ -53,7 +53,7 @@ class ContactTrackings::Assistant::ValidatorService
     check_pending_markers check_contract_leftovers
     check_unparsed_route_lines check_has_routes
     check_route_sources check_action_in_source check_ticket_types check_default_route
-    check_descriptions check_duplicate_descriptions check_tags_exist check_corpus
+    check_descriptions check_duplicate_descriptions check_routes_doing_nothing check_tags_exist check_corpus
     check_erp_directive_isolation
     check_escalation_regime check_calendar_directive check_prose
   ].freeze
@@ -231,6 +231,22 @@ class ContactTrackings::Assistant::ValidatorService
       add(:degrading, :route_without_description,
           t('findings.route_without_description', route: route.name),
           wrote: "@ruta(#{route.name}...)", route: route.name)
+    end
+  end
+
+  # ── D9 · rama que no consulta nada ni hace nada si no resuelve ──────────────
+  # Pedido del usuario (24/09/2026): «De dónde saca la respuesta» en «No consulta
+  # nada» y «Si no resuelve» en «Nada: sigue conversando» es válido y no se avisaba.
+  # Esa rama contesta solo con el Entrenamiento: ante algo concreto (precio, horario)
+  # el modelo inventa o promete lo que no hace — la 173: «te confirmo en un momento».
+  # Ámbar y no rojo: a veces es a propósito (saludo, pedir datos). Con una acción
+  # después de la flecha (- -> @agendar_calendar) sí hace algo y no se marca.
+  def check_routes_doing_nothing
+    map.routes.each do |route|
+      next if route.source? || route.escalates?
+
+      add(:degrading, :route_does_nothing, t('findings.route_does_nothing', route: route.name),
+          wrote: "@ruta(#{route.name}...): -", route: route.name)
     end
   end
 

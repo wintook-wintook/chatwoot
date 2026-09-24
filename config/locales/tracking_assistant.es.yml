@@ -21,7 +21,7 @@ es:
       generic: 'no respeta la forma @ruta(nombre #etiqueta: descripción): fuente'
     repair:
       header: 'El comprobador del motor rechazó ese Entrenamiento:'
-      footer: Corregí exactamente eso y devolvé el Entrenamiento completo de nuevo.
+      footer: Corrige exactamente eso y devuelve el Entrenamiento completo de nuevo.
       wrote: 'Escribiste:'
       route_header: >-
         Probé tu Entrenamiento: tomé la descripción de cada rama y le pregunté al clasificador real
@@ -49,7 +49,7 @@ es:
     warnings:
       calendar_not_assigned: >-
         «%{name}» quedó guardado, pero no tiene ningún calendario asignado, así que
-        @agendar_calendar no va a agendar nada. Asignale un calendario en la ficha del Agente IA:
+        @agendar_calendar no va a agendar nada. Asígnale un calendario en la ficha del Agente IA:
         tener el calendario conectado en la cuenta no alcanza, el motor lo busca en el agente.
     findings:
       route_line_unparsed: >-
@@ -78,14 +78,14 @@ es:
       route_not_self_chosen: >-
         Probé la rama "%{route}" con su propia descripción ("%{probe}") y el motor eligió
         "%{chosen}". Esa descripción se pisa con la de otra rama: como está, esta rama casi
-        nunca se va a elegir. Escribí situaciones que solo apliquen a ella.
+        nunca se va a elegir. Escribe situaciones que solo apliquen a ella.
       contract_label: >-
         %{count} línea(s) con un rótulo del Asistente entre ═══ (línea(s) %{lines}). Esos rótulos son de
         las instrucciones con las que se arma el Entrenamiento, no del agente: si quedan, el agente los
-        lee como parte de su prompt. Borrá esas líneas enteras.
+        lee como parte de su prompt. Borra esas líneas enteras.
       contract_wrap: >-
         %{count} línea(s) con texto entre ‹ › (línea(s) %{lines}). Los ‹ › marcan en la plantilla dónde
-        va el contenido; no son parte de él. Sacá solo los signos ‹ › y dejá la instrucción tal cual.
+        va el contenido; no son parte de él. Quita solo los signos ‹ › y deja la instrucción tal cual.
       pending_marker: >-
         Faltan %{count} dato(s) por completar: %{items}. Mientras quede alguna marca así no se puede
         guardar: el agente la leería tal cual y se la diría al cliente.
@@ -94,10 +94,15 @@ es:
         clasificador usa para decidir, así que no las puede distinguir: una de las dos no se va a
         elegir nunca, y cuál pierde depende del orden. Dales descripciones que no se confundan —
         situaciones distintas, en las palabras del cliente.
+      route_does_nothing: >-
+        La rama '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
+        con lo que dice el Entrenamiento. Ante algo concreto (precios, horarios) puede inventar o prometer
+        lo que no hace. Si es a propósito (saludo, pedir datos), déjala así; si no, dale una fuente o un
+        «si no resuelve» (abrir un caso, agendar).
       route_without_description: >-
         La rama '%{route}' no tiene descripción. La descripción es LO ÚNICO que el clasificador usa
         para decidir a qué rama va un mensaje: sin ella, esta rama casi nunca se va a elegir.
-        Escribila como lista de situaciones, en las palabras del cliente.
+        Escríbela como lista de situaciones, en las palabras del cliente.
       label_not_found: >-
         La etiqueta %{tag} de la rama '%{route}' no existe en la cuenta, así que no va a disparar
         ninguna automatización. Hay que crearla en Etiquetas o usar una de las existentes: %{available}.
