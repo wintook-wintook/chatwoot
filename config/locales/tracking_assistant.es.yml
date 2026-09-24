@@ -18,6 +18,7 @@ es:
       no_closing_paren: 'falta el paréntesis de cierre del @ruta('
       no_colon: 'falta el ":" inmediatamente después del paréntesis de cierre'
       bad_name: 'el nombre de la rama solo admite letras, números, guion y guion bajo, sin espacios ni acentos'
+      no_source: 'después del paréntesis de cierre falta «: fuente»; si esta rama no consulta nada, termínala con «): -»'
       generic: 'no respeta la forma @ruta(nombre #etiqueta: descripción): fuente'
     repair:
       header: 'El comprobador del motor rechazó ese Entrenamiento:'

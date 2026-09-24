@@ -296,6 +296,14 @@ export default {
             >
               {{ rama.name || $t('TRACKING_ASSISTANT_VIEW.TREE_NO_NAME') }}
             </span>
+            <!-- El motor no la lee: se ve igual, marcada, para que no pase
+                 desapercibida (antes quedaba escondida en una sección). -->
+            <span
+              v-if="rama.kind === 'broken'"
+              class="px-1 text-xs rounded shrink-0 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+            >
+              {{ $t('TRACKING_ASSISTANT_VIEW.TREE_BROKEN_ROUTE') }}
+            </span>
             <span
               v-if="rama.name && rama.name === defaultRoute"
               class="px-1 text-xs rounded shrink-0 bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300"

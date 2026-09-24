@@ -38,7 +38,12 @@ import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import { sortRows, nextOrder, NUMBER, DATE, TEXT } from './assistant/tableSort';
-import { findRouteLine, lineRange } from './assistant/draftNavigation';
+import {
+  findRouteLine,
+  lineRange,
+  lineMarks,
+} from './assistant/draftNavigation';
+import DraftLineMarks from './assistant/DraftLineMarks.vue';
 import { pendingCount } from './assistant/pendingMarkers';
 import InterviewPanel from './assistant/InterviewPanel.vue';
 import SessionCard from './assistant/SessionCard.vue';
@@ -134,6 +139,7 @@ export default {
     EmptyState,
     Spinner,
     InterviewPanel,
+    DraftLineMarks,
     SessionCard,
     SortableTh,
     ProgressStrip,
@@ -220,6 +226,10 @@ export default {
       // Fase E: optimizar ({ …, version }) y explicar lo seleccionado en el editor.
       showOptimizeModal: false,
       optimizeResult: null,
+      // El <textarea> del Entrenamiento, para DraftLineMarks. Los $refs no son
+      // reactivos y el editor aparece y desaparece con las pestañas: se toma en
+      // cada render (ver `updated`).
+      draftEditorEl: null,
       isOptimizing: false,
       optimizeError: '',
       draftSelection: '',
@@ -271,6 +281,10 @@ export default {
     };
   },
   computed: {
+    // Las líneas del texto con hallazgos, para pintarlas en el editor.
+    draftLineMarks() {
+      return lineMarks(this.draft, this.validation);
+    },
     // El texto que edita el mixin de secciones acá es el borrador. Al escribirlo se
     // pasa por onDraftInput, igual que si se hubiera tipeado en el editor: revalida,
     // envejece las pruebas y cuenta como edición a mano.
@@ -523,6 +537,10 @@ export default {
       const pages = Math.max(1, Math.ceil(list.length / AGENTS_PER_PAGE));
       if (this.agentsPage > pages) this.agentsPage = pages;
     },
+  },
+  updated() {
+    const editor = this.$refs.draftEditor || null;
+    if (editor !== this.draftEditorEl) this.draftEditorEl = editor;
   },
   async mounted() {
     // El último canal elegido en este navegador: es una comodidad, no un dato
@@ -1744,19 +1762,31 @@ export default {
                      readonly mientras el asistente trabaja: trabaja sobre el texto
                      que se le mandó, y lo que se escribiera en esos segundos se
                      perdería al llegar la respuesta. -->
-                  <textarea
-                    ref="draftEditor"
-                    v-model="draft"
-                    class="flex-1 min-h-0 w-full font-mono text-xs resize-none !mb-0"
-                    :placeholder="
-                      $t('TRACKING_ASSISTANT_VIEW.DRAFT_PLACEHOLDER')
-                    "
-                    :readonly="isThinking"
-                    @select="onDraftSelect"
-                    @keyup="onDraftSelect"
-                    @mouseup="onDraftSelect"
-                    @input="onDraftInput"
-                  />
+                  <!-- Las líneas con hallazgos se pintan DETRÁS del texto
+                       (DraftLineMarks): rojo lo que no se ejecuta, ámbar lo que
+                       funciona mal. El textarea va transparente encima. -->
+                  <div
+                    class="relative flex flex-1 min-h-0 bg-white rounded-md dark:bg-slate-900"
+                  >
+                    <DraftLineMarks
+                      :text="draft"
+                      :marks="draftLineMarks"
+                      :target="draftEditorEl"
+                    />
+                    <textarea
+                      ref="draftEditor"
+                      v-model="draft"
+                      class="relative flex-1 min-h-0 w-full h-full font-mono text-xs resize-none !mb-0 !bg-transparent focus:!bg-transparent"
+                      :placeholder="
+                        $t('TRACKING_ASSISTANT_VIEW.DRAFT_PLACEHOLDER')
+                      "
+                      :readonly="isThinking"
+                      @select="onDraftSelect"
+                      @keyup="onDraftSelect"
+                      @mouseup="onDraftSelect"
+                      @input="onDraftInput"
+                    />
+                  </div>
                 </template>
               </div>
             </section>

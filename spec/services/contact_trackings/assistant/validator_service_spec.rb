@@ -78,6 +78,15 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
         .to include('falta el paréntesis de cierre')
     end
 
+    # 24/09/2026: una rama real terminaba en «?)», sin fuente después.
+    it 'señala la fuente que falta al final, y cuelga el aviso de la rama' do
+      r = validar('@ruta(informacion_general #informacion: ¿cómo trabajan?, ¿qué me pueden decir?)')
+
+      hallazgo = r[:blocking].find { |f| f[:code] == :route_line_unparsed }
+      expect(hallazgo[:message]).to include('falta «: fuente»', '«): -»')
+      expect(hallazgo[:route]).to eq('informacion_general')
+    end
+
     it 'no repite el genérico "0 ramas" cuando ya explicó línea por línea' do
       r = validar('@ruta(soporte #soporte: no puedo entrar) @buscar_articulo')
 

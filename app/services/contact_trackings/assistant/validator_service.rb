@@ -95,14 +95,17 @@ class ContactTrackings::Assistant::ValidatorService
       next unless line.lstrip.start_with?('@ruta(')
       next if line.match?(ContactTrackings::RouteMap::LINE_RE)
 
+      # `route`: el nombre leído a ojo, para colgar el aviso de la rama rota en el árbol.
       add(:blocking, :route_line_unparsed,
           t('findings.route_line_unparsed', line: index + 1, reason: unparsed_reason(line)),
-          line: index + 1, wrote: line.strip)
+          line: index + 1, wrote: line.strip, route: ContactTrackings::TrainingRoutes.broken_entry(line)['name'])
     end
   end
 
   def unparsed_reason(line)
     return t('unparsed.no_closing_paren') unless line.include?(')')
+    # Medido con una rama real (24/09): terminaba en «?)», sin nada después.
+    return t('unparsed.no_source') if line.rstrip.end_with?(')') && line.count('(') == line.count(')')
     # El caso que se midió: `@ruta(...)` seguido de la fuente sin los dos puntos.
     return t('unparsed.no_colon') if line.match?(/@ruta\([^)]*\)\s*[^:\s]/)
     return t('unparsed.bad_name') if line.match?(/@ruta\(\s*[^a-z0-9_\-#:)]/i)

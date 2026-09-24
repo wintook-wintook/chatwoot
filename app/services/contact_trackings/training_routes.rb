@@ -22,11 +22,21 @@
 # formulario y guardarlo sin tocar nada no cambia ni un carácter — ni el espaciado, ni
 # un `=>` en vez de `->`, ni una línea que el parser no reconoce (que se conserva como
 # `other` en su lugar, en vez de desaparecer).
+#
+# LA RAMA ROTA (24/09/2026): una línea que empieza con `@ruta(` y el motor no lee
+# (p. ej. sin «: fuente» al final) era `other` y no aparecía en el árbol: la persona
+# no veía que la tenía. Ahora es `broken`, con los campos leídos a ojo para abrirla en
+# el formulario. El texto no cambia mientras no se edite; al editarla se escribe una
+# línea válida (sin fuente, con «-»).
 # ================================================================================
 
 module ContactTrackings::TrainingRoutes
   Map = ContactTrackings::RouteMap
-  KINDS = %w[route default other].freeze
+  KINDS = %w[route broken default other].freeze
+  STARTS_AS_ROUTE_RE = /\A[ \t]*@ruta\(/i
+  # Lectura a ojo de una rama que el motor no lee: nombre, etiqueta, frases y lo que
+  # venga después del paréntesis. Solo para mostrarla; el motor sigue sin leerla.
+  LOOSE_RE = /@ruta\(\s*([^\s#:)]*)\s*(?:#([^\s:)]*))?\s*:?\s*([^)]*)\)?\s*:?\s*(.*)\z/i
   # `escalation` es la cadena tal cual; `action`, `case_type` y `priority` son la misma
   # cosa partida en los tres selectores del formulario. Si vienen, mandan ellos.
   FIELDS = %w[kind name tag description source escalation action case_type priority raw].freeze
@@ -47,6 +57,8 @@ module ContactTrackings::TrainingRoutes
       route_entry(m, line)
     elsif (m = line.match(Map::DEFAULT_RE))
       { 'kind' => 'default', 'name' => m[1].downcase, 'raw' => line }
+    elsif broken?(line)
+      broken_entry(line)
     else
       { 'kind' => 'other', 'raw' => line }
     end
@@ -62,6 +74,16 @@ module ContactTrackings::TrainingRoutes
       'source' => Map::NO_SOURCE.include?(source) ? '' : source.to_s,
       'escalation' => escalation.to_s,
       'raw' => line }.merge(escalation_fields(escalation.to_s))
+  end
+
+  def broken?(line) = line.match?(STARTS_AS_ROUTE_RE) && !line.match?(Map::LINE_RE) && !line.match?(Map::DEFAULT_RE)
+
+  def broken_entry(line)
+    m = line.strip.match(LOOSE_RE)
+    source, escalation = m[4].to_s.strip.split(Map::ARROW_RE, 2).map(&:to_s).map(&:strip)
+    { 'kind' => 'broken', 'name' => m[1].to_s.downcase, 'tag' => m[2].to_s.downcase, 'description' => m[3].to_s.strip,
+      'source' => Map::NO_SOURCE.include?(source) ? '' : source.to_s, 'escalation' => escalation.to_s, 'raw' => line }
+      .merge(escalation_fields(escalation.to_s))
   end
 
   # Abrir un caso se edita en tres campos, porque son tres decisiones distintas: que
@@ -88,7 +110,8 @@ module ContactTrackings::TrainingRoutes
     return raw if raw.present? && same_fields?(entry(raw), entrada)
 
     case entrada['kind']
-    when 'route' then route_line(entrada)
+    # Una rota que se editó sale escrita de cero, ya válida.
+    when 'route', 'broken' then route_line(entrada)
     when 'default' then default_line(entrada)
     else raw
     end

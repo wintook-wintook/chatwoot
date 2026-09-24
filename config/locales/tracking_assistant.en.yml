@@ -19,6 +19,7 @@ en:
       no_closing_paren: 'the closing parenthesis of @ruta( is missing'
       no_colon: 'the ":" immediately after the closing parenthesis is missing'
       bad_name: 'the branch name only accepts letters, numbers, hyphen and underscore — no spaces or accents'
+      no_source: 'the ": source" after the closing parenthesis is missing; if this branch queries nothing, end it with "): -"'
       generic: 'it does not follow the form @ruta(name #label: description): source'
     repair:
       header: 'The engine checker rejected that Training:'

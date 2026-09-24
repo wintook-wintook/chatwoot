@@ -56,3 +56,28 @@ export function lineRange(draft, line) {
 
   return [start, start + lines[line - 1].length];
 }
+
+/**
+ * Qué líneas del texto pintar, y de qué color: { 12: 'blocking', 30: 'degrading' }.
+ *
+ * Pedido del usuario (24/09/2026): una @ruta mal escrita tiene que verse EN EL
+ * CÓDIGO, no solo en el informe. Los hallazgos traen la línea (`line`) o la rama
+ * (`route`/`routes`), que se busca con findRouteLine. Lo rojo gana a lo ámbar.
+ */
+export function lineMarks(draft, validation) {
+  const marks = {};
+  if (!draft || !validation) return marks;
+
+  ['degrading', 'blocking'].forEach(level => {
+    (validation[level] || []).forEach(finding => {
+      const ramas = finding.routes || (finding.route ? [finding.route] : []);
+      const lineas = finding.line
+        ? [finding.line]
+        : ramas.map(name => findRouteLine(draft, name)).filter(Boolean);
+      lineas.forEach(line => {
+        marks[line] = level;
+      });
+    });
+  });
+  return marks;
+}

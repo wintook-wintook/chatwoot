@@ -154,6 +154,11 @@ class ContactTrackings::Assistant::DraftPieces
     if (match = line.match(ContactTrackings::RouteMap::LINE_RE))
       label = "@ruta(#{match[1].strip.downcase})"
       { key: unique_key(label, vistas), label: label, route: true }
+    elsif ContactTrackings::TrainingRoutes.broken?(line)
+      # Una rama mal escrita sigue siendo una rama para quien la lee: va con las demás
+      # (y en el árbol, como rota), no escondida en el cuerpo de una sección.
+      label = "@ruta(#{ContactTrackings::TrainingRoutes.broken_entry(line)['name']})"
+      { key: unique_key(label, vistas), label: label, route: true }
     elsif line.match?(ContactTrackings::RouteMap::DEFAULT_RE)
       { key: unique_key(DEFAULT_KEY, vistas), label: DEFAULT_KEY, route: false }
     elsif (match = line.match(SECTION_RE))

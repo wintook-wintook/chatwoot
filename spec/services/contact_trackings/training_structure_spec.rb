@@ -58,6 +58,14 @@ RSpec.describe ContactTrackings::TrainingStructure do
       expect(resumen("# AGENTE DE CITAS\n\n## ROL\nx")).to eq(['preamble', 'markdown2:ROL'])
     end
 
+    it 'una rama mal escrita va con las demás ramas, no escondida en una sección' do
+      texto = "@ruta(info #info: ¿qué hacen?)\n@ruta(a #aaa: x): -\n\n[ROL]\nAmable."
+      rutas = bloques(texto).first
+
+      expect(resumen(texto)).to eq(['routes', 'bracket:ROL'])
+      expect(rutas['lines'].pluck('kind')).to eq(%w[broken route])
+    end
+
     it 'no confunde una etiqueta #soporte con un encabezado' do
       expect(resumen("[ETIQUETAS]\n#soporte1 para soporte")).to eq(['bracket:ETIQUETAS'])
     end

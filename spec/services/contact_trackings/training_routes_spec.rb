@@ -140,6 +140,35 @@ RSpec.describe ContactTrackings::TrainingRoutes do
     end
   end
 
+  # Una línea que empieza con @ruta( y el motor no lee: se ve como rama rota.
+  describe 'la rama rota' do
+    let(:rota) { '@ruta(informacion_general #informacion: ¿cómo trabajan?, ¿qué me pueden decir?)' }
+
+    it 'se lee a ojo, para mostrarla y abrirla en el formulario' do
+      expect(described_class.parse(rota).first).to include(
+        'kind' => 'broken', 'name' => 'informacion_general', 'tag' => 'informacion',
+        'description' => '¿cómo trabajan?, ¿qué me pueden decir?', 'source' => '', 'raw' => rota
+      )
+    end
+
+    it 'sin tocarla vuelve igual' do
+      expect(described_class.compose(described_class.parse(rota))).to eq(rota)
+    end
+
+    it 'editada sale escrita de cero, ya válida' do
+      entradas = described_class.parse(rota)
+      entradas.first['kind'] = 'route'
+
+      linea = described_class.compose(entradas)
+      expect(linea).to eq('@ruta(informacion_general #informacion: ¿cómo trabajan?, ¿qué me pueden decir?): -')
+      expect(ContactTrackings::RouteMap.parse(linea).names).to eq(['informacion_general'])
+    end
+
+    it 'la rama por defecto no es una rama rota' do
+      expect(described_class.parse('@ruta_por_defecto: soporte').first['kind']).to eq('default')
+    end
+  end
+
   describe '.sanitize' do
     it 'se queda solo con las claves y los tipos conocidos' do
       lineas = [{ 'kind' => 'route', 'name' => 'soporte', 'password' => 'x' },

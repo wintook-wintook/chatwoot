@@ -111,11 +111,15 @@ export const addSection = (blocks, title) => {
 
 export const routesIndex = blocks => blocks.findIndex(b => b.type === 'routes');
 
+// Una rama rota (`broken`: empieza con @ruta( y el motor no la lee) cuenta como rama
+// en el árbol y en las posiciones: se ve, se abre, se mueve y se quita como las demás.
+export const isRouteLine = l => l.kind === 'route' || l.kind === 'broken';
+
 export const routeLines = blocks =>
   blocks
     .filter(b => b.type === 'routes')
     .flatMap(b => b.lines || [])
-    .filter(l => l.kind === 'route');
+    .filter(isRouteLine);
 
 export const routeNames = blocks => routeLines(blocks).map(l => l.name);
 
@@ -223,12 +227,14 @@ export const replaceRoute = (blocks, position, route) => {
   const lineas = [...(blocks[indice].lines || [])];
   let vistas = -1;
   const donde = lineas.findIndex(l => {
-    if (l.kind !== 'route') return false;
+    if (!isRouteLine(l)) return false;
     vistas += 1;
     return vistas === position;
   });
   if (donde < 0) return blocks;
-  lineas[donde] = { ...lineas[donde], ...route };
+  // Guardada desde el formulario, una rota pasa a rama: el backend la escribe de cero,
+  // ya válida (TrainingRoutes#line_for).
+  lineas[donde] = { ...lineas[donde], ...route, kind: 'route' };
   return updateBlock(blocks, indice, { lines: lineas });
 };
 
@@ -239,7 +245,7 @@ export const removeRoute = (blocks, position, { withScope = true } = {}) => {
   const lineas = blocks[indice].lines || [];
   let vistas = -1;
   const donde = lineas.findIndex(l => {
-    if (l.kind !== 'route') return false;
+    if (!isRouteLine(l)) return false;
     vistas += 1;
     return vistas === position;
   });
@@ -259,7 +265,7 @@ export const moveRoute = (blocks, position, delta) => {
   if (indice < 0) return blocks;
   const lineas = blocks[indice].lines || [];
   const lugares = lineas
-    .map((l, i) => (l.kind === 'route' ? i : null))
+    .map((l, i) => (isRouteLine(l) ? i : null))
     .filter(i => i !== null);
   const desde = lugares[position];
   const hasta = lugares[position + delta];
@@ -278,7 +284,7 @@ export const reorderRoute = (blocks, from, to) => {
   if (indice < 0) return blocks;
   const lineas = blocks[indice].lines || [];
   const lugares = lineas
-    .map((l, i) => (l.kind === 'route' ? i : null))
+    .map((l, i) => (isRouteLine(l) ? i : null))
     .filter(i => i !== null);
   const nuevas = reorderInSlots(lineas, lugares, from, to);
   return nuevas ? updateBlock(blocks, indice, { lines: nuevas }) : blocks;

@@ -264,6 +264,7 @@
     "TREE_EMPTY": "sin escribir",
     "TREE_NO_NAME": "(sin nombre)",
     "TREE_DEFAULT": "por defecto",
+    "TREE_BROKEN_ROUTE": "el motor no la lee",
     "TREE_ROUTES_EMPTY": "Sin rutas: el agente atiende todo por conversación, sin consultar fuentes.",
     "TREE_SECTIONS_EMPTY": "Sin secciones: el agente no tiene instrucciones escritas.",
     "DEFINITION_TITLE": "Definición del Agente",

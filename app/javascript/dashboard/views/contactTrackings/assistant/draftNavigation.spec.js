@@ -1,4 +1,4 @@
-import { findRouteLine, lineRange } from './draftNavigation';
+import { findRouteLine, lineRange, lineMarks } from './draftNavigation';
 
 // proyecto@asistente_agentes_ia — el informe como índice
 //
@@ -75,5 +75,34 @@ describe('draftNavigation', () => {
         '@ruta(comercial: precios): @buscar_predefinidas'
       );
     });
+  });
+});
+
+describe('lineMarks', () => {
+  const draft = [
+    '@ruta(info #info: ¿qué hacen?)',
+    '@ruta(agendar #agendar: cita): - -> @agendar_calendar',
+    '@ruta(saludo #saludo: hola): -',
+  ].join('\n');
+
+  it('pinta la línea del hallazgo, o la de su rama, y lo rojo gana', () => {
+    const validation = {
+      blocking: [{ line: 1, route: 'info' }],
+      degrading: [
+        { route: 'info' },
+        { route: 'saludo' },
+        { routes: ['agendar'] },
+      ],
+    };
+
+    expect(lineMarks(draft, validation)).toEqual({
+      1: 'blocking',
+      2: 'degrading',
+      3: 'degrading',
+    });
+  });
+
+  it('sin comprobación no pinta nada', () => {
+    expect(lineMarks(draft, null)).toEqual({});
   });
 });

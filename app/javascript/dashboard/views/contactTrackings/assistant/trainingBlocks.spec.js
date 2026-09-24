@@ -14,6 +14,7 @@ import {
   reorderRoute,
   reorderSection,
   replaceRoute,
+  routeLines,
   routeNames,
   scopeTitleFrom,
   setDefaultRoute,
@@ -377,5 +378,29 @@ describe('trainingBlocks', () => {
       expect(reorderRoute(blocks, 1, 1)).toBe(blocks);
       expect(reorderSection(blocks, 5, 0)).toBe(blocks);
     });
+  });
+});
+
+describe('la rama rota (el motor no la lee)', () => {
+  const bloques = [
+    {
+      type: 'routes',
+      lines: [
+        { kind: 'broken', name: 'info', raw: '@ruta(info #info: ¿qué hacen?)' },
+        { kind: 'route', name: 'agendar', raw: '@ruta(agendar): -' },
+        { kind: 'default', name: 'agendar' },
+      ],
+    },
+  ];
+
+  it('cuenta como rama en el árbol y en las posiciones', () => {
+    expect(routeLines(bloques).map(l => l.name)).toEqual(['info', 'agendar']);
+  });
+
+  it('guardada desde el formulario pasa a rama, para escribirse válida', () => {
+    const nuevos = replaceRoute(bloques, 0, { name: 'info', source: '' });
+
+    expect(nuevos[0].lines[0].kind).toBe('route');
+    expect(nuevos[0].lines[1].name).toBe('agendar');
   });
 });

@@ -2,7 +2,7 @@ import {
   mentionsConversation,
   reviewMessage,
   hasTrainingFixes,
-} from '../conversationReview';
+} from './conversationReview';
 
 // Devuelve la llave y sus argumentos: se prueba qué se arma, no las traducciones.
 const t = (key, args) =>
