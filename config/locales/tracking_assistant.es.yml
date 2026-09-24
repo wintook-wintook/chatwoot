@@ -102,6 +102,19 @@ es:
       unclosed_directive: >-
         La rama '%{route}' tiene «%{wrote}» sin el «%{closer}» de cierre: el motor no lee lo que va
         adentro. Agrega el «%{closer}».
+      section_header_broken: >-
+        Línea %{line}: «%{wrote}» parece el rótulo de una sección, pero está mal escrito (va así:
+        [NOMBRE]). Como está, la sección no existe: su texto queda pegado a la anterior y el agente
+        lee esa línea como una instrucción más.
+      default_route_line_broken: >-
+        Línea %{line}: el motor no lee esta rama por defecto. Va así: @ruta_por_defecto: nombre_de_la_rama
+        (con los dos puntos). Como está, los mensajes que no caen en ninguna rama no van a ninguna.
+      duplicate_section: >-
+        La sección [%{title}] está dos veces (líneas %{first} y %{line}): el agente lee las dos y, si
+        dicen cosas distintas, no sabe cuál vale. Júntalas en una.
+      loose_pending_note: >-
+        Línea %{line}: es una nota de trabajo («PENDIENTE: …») y el agente la va a leer como una
+        instrucción. Resuélvela y bórrala, o escríbela como marca: <PENDIENTE: …>.
       route_does_nothing: >-
         La rama '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
         con lo que dice el Entrenamiento. Ante algo concreto (precios, horarios) puede inventar o prometer

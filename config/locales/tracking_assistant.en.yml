@@ -103,6 +103,19 @@ en:
       unclosed_directive: >-
         Branch '%{route}' has "%{wrote}" without the closing "%{closer}": the engine does not read what
         is inside. Add the "%{closer}".
+      section_header_broken: >-
+        Line %{line}: "%{wrote}" looks like a section header but is malformed (it goes like this:
+        [NAME]). As it is, the section does not exist: its text sticks to the previous one and the
+        agent reads that line as one more instruction.
+      default_route_line_broken: >-
+        Line %{line}: the engine does not read this default branch. It goes like this:
+        @ruta_por_defecto: branch_name (with the colon). As it is, messages that match no branch go nowhere.
+      duplicate_section: >-
+        Section [%{title}] appears twice (lines %{first} and %{line}): the agent reads both and, if they
+        differ, does not know which one applies. Merge them.
+      loose_pending_note: >-
+        Line %{line}: this is a work note ("PENDIENTE: …") and the agent will read it as an instruction.
+        Resolve it and delete it, or write it as a marker: <PENDIENTE: …>.
       route_does_nothing: >-
         Branch '%{route}' does not query any source and has nothing to do when it cannot solve: it answers
         only from the Training. Faced with something specific (prices, schedules) it may make things up or
