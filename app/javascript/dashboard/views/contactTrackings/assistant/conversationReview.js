@@ -14,6 +14,9 @@ export const mentionsConversation = text => CONVERSATION_RE.test(text || '');
 const PREFIX = 'TRACKING_ASSISTANT_VIEW.REVIEW_';
 
 const signalText = (signal, t) => {
+  if (signal.code === 'calendar_took_over') {
+    return t(`${PREFIX}SIGNAL_CALENDAR`, { route: signal.route });
+  }
   if (signal.code === 'voseo') {
     return t(`${PREFIX}SIGNAL_VOSEO_${signal.cause.toUpperCase()}`, {
       words: signal.words.join(', '),

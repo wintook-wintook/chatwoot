@@ -180,7 +180,14 @@ class ContactTrackings::Assistant::ConversationReview
     base = { n: numero, said: turn(numero).content.squish.truncate(240), signals: senales }
     return base.merge(verdict: 'mal', cause: senales.first[:cause], already_fixed: senales.all? { |s| s[:already_fixed] }) if juicio.nil?
 
-    base.merge(judgement(juicio))
+    base.merge(judgement(juicio)).merge(proven_cause(senales))
+  end
+
+  # Lo comprobado le gana a la opinión: si el agendado del motor tomó el turno, la
+  # respuesta entera es eso, diga lo que diga el modelo (lo culpaba al Entrenamiento).
+  def proven_cause(senales)
+    tomado = senales.find { |s| s[:code] == 'calendar_took_over' }
+    tomado ? { cause: tomado[:cause] } : {}
   end
 
   def judgement(juicio)

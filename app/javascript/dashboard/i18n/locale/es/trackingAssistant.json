@@ -466,6 +466,7 @@
     "KNOWLEDGE_APPLY_NONE": "Ninguna ruta del Entrenamiento buscaba en todas las respuestas predefinidas.",
     "KNOWLEDGE_DONE": "Listo: {created} creadas, {skipped} ya existían. Al escribir el Entrenamiento, las rutas buscarán en el grupo {group}.",
     "KNOWLEDGE_FAILED": "No se crearon: {list}",
-    "KNOWLEDGE_NONE": "Este encargo no trae datos del negocio ni rutas que busquen en respuestas predefinidas."
+    "KNOWLEDGE_NONE": "Este encargo no trae datos del negocio ni rutas que busquen en respuestas predefinidas.",
+    "REVIEW_SIGNAL_CALENDAR": "Ofrece horarios, pero el mensaje es de la ruta {route}, que no agenda: el agendado del motor tomó el turno antes de mirar la ruta. No es del Entrenamiento."
   }
 }

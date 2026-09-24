@@ -466,6 +466,7 @@
     "KNOWLEDGE_APPLY_NONE": "No route in the Training searched all canned responses.",
     "KNOWLEDGE_DONE": "Done: {created} created, {skipped} already existed. When the Training is written, the routes will search group {group}.",
     "KNOWLEDGE_FAILED": "Not created: {list}",
-    "KNOWLEDGE_NONE": "This brief has no business data nor routes that search canned responses."
+    "KNOWLEDGE_NONE": "This brief has no business data nor routes that search canned responses.",
+    "REVIEW_SIGNAL_CALENDAR": "It offers time slots, but the message belongs to route {route}, which does not book: the engine's booking took the turn before looking at the route. It is not the Training."
   }
 }
