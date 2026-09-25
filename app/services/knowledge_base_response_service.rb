@@ -539,7 +539,8 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
+    hidden = sheet_lookup_columns(source)
+    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{without_columns(i.content, hidden).truncate(MAX_ITEM_CHARS)}" }
                    .join("\n\n")
                    .truncate(kbase_setting('max_context_chars'))
     reply_text = generate_contextual_reply(question, context)
@@ -547,6 +548,23 @@ class KnowledgeBaseResponseService
 
     send_reply("#{with_branch_tag(reply_text)}\n\n_#{source.name}_")
     true
+  end
+
+  # proyecto@hoja_buscar — las columnas que una {{hoja_buscar:}} del Entrenamiento regresa
+  # sobre esta hoja son para la agenda, no para el cliente. Medido el 25/09/2026: con
+  # Calendar_ID en el contexto, «¿qué horarios tiene la TP-64?» le pasó al cliente los links
+  # de los calendarios internos.
+  def sheet_lookup_columns(source)
+    ContactTrackings::SheetLookup.parse_all(@tracking&.complementary_prompt)
+                                 .select { |spec| spec.sheet.casecmp?(source.name) }
+                                 .flat_map(&:returns).map { |col| col.strip.downcase }.uniq
+  end
+
+  # Las filas FAQ se vectorizan como «columna: valor» por línea.
+  def without_columns(content, columns)
+    return content if columns.empty?
+
+    content.to_s.lines.reject { |line| columns.include?(line.split(':', 2).first.to_s.strip.downcase) }.join.strip
   end
 
   def generate_contextual_reply(question, context, erp_data: nil, canned_prompt: nil)
