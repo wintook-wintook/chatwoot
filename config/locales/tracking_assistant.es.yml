@@ -180,6 +180,19 @@ es:
         Hay una directiva {{consulta:}} sin "?" que no es la fuente de una ruta, conviviendo con rutas o
         con prosa. El motor manda el Entrenamiento ENTERO interpolado como mensaje al cliente. Ponla como
         fuente de una ruta, o pide sus datos con "?" (texto=?) para que el agente redacte la respuesta.
+      sheet_lookup_invalid: >-
+        Línea %{line}: a esta {{hoja_buscar:}} le falta una de sus tres partes. Se escribe
+        {{hoja_buscar: Hoja | columna=valores | columna a regresar}}, separadas por «|». Así, el
+        motor no la lee y la agenda no sabe en qué calendario buscar.
+      sheet_lookup_sheet_missing: >-
+        Línea %{line}: la hoja '%{name}' no existe (o está inactiva) en Base de Conocimiento. El
+        motor no encuentra nada y la agenda no ofrece horarios. Revisa el nombre exacto de la hoja.
+      sheet_lookup_column_missing: >-
+        Línea %{line}: la hoja '%{name}' no tiene la columna %{columns}, así que nunca va a
+        encontrar nada. Columnas que sí tiene: %{available}.
+      sheet_lookup_no_rows: >-
+        Línea %{line}: la hoja '%{name}' todavía no tiene sus filas guardadas para buscar exacto.
+        Dale «Sincronizar ahora» en Base de Conocimiento; mientras, la agenda no ofrece horarios.
       consulta_not_found: >-
         La consulta '%{name}' no existe (o está inactiva) en la conexión '%{connection}'. El motor no
         falla: la corre, no encuentra nada y el agente contesta sin datos. Revisa el nombre en Base de

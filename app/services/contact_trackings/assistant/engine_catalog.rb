@@ -49,6 +49,8 @@ class ContactTrackings::Assistant::EngineCatalog
     'crear_ticket' => ['actions', '@crear_ticket(tipo=…)', 'ticket'],
     'estado_ticket' => ['actions', Cases::TicketStatusService::DIRECTIVE, nil],
     'agendar' => ['actions', '@agendar_calendar', 'agenda'],
+    # proyecto@hoja_buscar: sus ejemplos salen de las hojas de la cuenta (ver #sheet_lookup_items).
+    'hoja_buscar' => ['actions', '{{hoja_buscar: Hoja | columna=? | columna a regresar}}', nil],
     'adjunto' => ['actions', '{{nombre_del_archivo}}', nil],
     'ruta' => ['structure', '@ruta(nombre #etiqueta: frases del cliente): fuente -> acción', nil],
     'ruta_defecto' => ['structure', '@ruta_por_defecto: nombre', nil],
@@ -87,6 +89,7 @@ class ContactTrackings::Assistant::EngineCatalog
     when 'predefinidas' then canned_items
     when 'etiqueta' then Array(@inventory[:labels]).map { |l| "##{l}" }
     when 'estado_ticket' then [Cases::TicketStatusService::DIRECTIVE]
+    when 'hoja_buscar' then sheet_lookup_items
     else tool_directives(key)
     end
   end
@@ -94,6 +97,14 @@ class ContactTrackings::Assistant::EngineCatalog
   def tool_directives(key)
     tipo = CARDS.dig(key, 2)
     tipo ? Array(ContactTrackings::Assistant::BriefTools.directives(tipo, @inventory)) : []
+  end
+
+  # Una por hoja de la cuenta, con las columnas por llenar: cuáles son depende de la hoja.
+  def sheet_lookup_items
+    tool_directives('hoja').filter_map do |directiva|
+      nombre = directiva[/\{\{hoja:([^}]+)\}\}/, 1]
+      "{{hoja_buscar: #{nombre} | columna=? | columna a regresar}}" if nombre
+    end
   end
 
   # @buscar_predefinidas sola y una por grupo de la cuenta (prefijo del short_code).

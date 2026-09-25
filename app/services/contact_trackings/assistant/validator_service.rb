@@ -54,7 +54,7 @@ class ContactTrackings::Assistant::ValidatorService
     check_unparsed_route_lines check_has_routes
     check_route_sources check_route_lines check_action_in_source check_ticket_types check_default_route
     check_descriptions check_duplicate_descriptions check_tags_exist check_corpus
-    check_erp_directive_isolation
+    check_erp_directive_isolation check_sheet_lookup
     check_escalation_regime check_calendar_directive check_prose
   ].freeze
 
@@ -301,6 +301,9 @@ class ContactTrackings::Assistant::ValidatorService
   def check_erp_directive_isolation
     ContactTrackings::Assistant::ErpChecks.new(text, map: map, account: account, findings: findings).call
   end
+
+  # ── {{hoja_buscar:}} (proyecto@hoja_buscar): ver SheetLookupChecks ─────────
+  def check_sheet_lookup = ContactTrackings::Assistant::SheetLookupChecks.new(text, account: account, findings: findings).call
 
   # ── D7 · @agendar_calendar sin ningún calendario en la cuenta ───────────────
   # El motor solo agenda si el AGENTE tiene calendarios asignados

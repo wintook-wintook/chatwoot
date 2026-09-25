@@ -377,6 +377,8 @@
     "CATALOG_ESTADO_TICKET_NEEDS": "Nada: funciona con los casos del contacto.",
     "CATALOG_AGENDAR_WHAT": "Agenda, mueve o cancela citas: ve la disponibilidad real, ofrece horarios, negocia y crea el evento. Si el cliente no habla de una cita, no hace nada.",
     "CATALOG_AGENDAR_NEEDS": "Un calendario de Google conectado en la cuenta y asignado al Agente IA.",
+    "CATALOG_HOJA_BUSCAR_WHAT": "Busca exacto en una hoja, sin IA: las filas cuya columna tenga los valores (o, con ?, los que se nombraron en la conversación) y regresa otra columna. Con @agendar_calendar, los horarios salen solo del calendario de lo que se nombró (por ejemplo, el remolque).",
+    "CATALOG_HOJA_BUSCAR_NEEDS": "La hoja agregada en Base de Conocimiento y sincronizada; para agendar, sus calendarios marcados en una agenda del Agente IA.",
     "CATALOG_ADJUNTO_WHAT": "El agente escribe {{nombre}} en su respuesta y en su lugar se envía el archivo con ese nombre (hasta 5 por mensaje).",
     "CATALOG_ADJUNTO_NEEDS": "El archivo cargado en la pestaña Archivos del Agente IA, con el nombre exacto, sin acentos ni espacios.",
     "CATALOG_RUTA_WHAT": "Un tema del cliente: el motor elige la ruta leyendo SOLO su descripción, así que escríbela con las palabras del cliente. Después de los dos puntos, la fuente; después de la flecha, la acción.",

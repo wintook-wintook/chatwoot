@@ -34,6 +34,7 @@ RSpec.describe ContactTrackings::Assistant::EngineCatalog do
     KnowledgeSource.create!(account: account, source_type: 'google_sheet', name: 'Precios', status: 'active')
 
     expect(fichas['hoja']).to include(status: 'ready', items: ['{{hoja:Precios}}'])
+    expect(fichas['hoja_buscar']).to include(status: 'ready', items: ['{{hoja_buscar: Precios | columna=? | columna a regresar}}'])
     expect(fichas['doc']).to include(status: 'missing', items: [])
   end
 

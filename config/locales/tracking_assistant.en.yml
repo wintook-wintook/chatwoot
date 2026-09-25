@@ -181,6 +181,19 @@ en:
         There is a {{consulta:}} directive without "?" that is not a route source, living alongside
         branches or prose. The engine sends the WHOLE interpolated Training as the message. Make it a
         route source, or ask for its data with "?" (texto=?) so the agent writes the reply.
+      sheet_lookup_invalid: >-
+        Line %{line}: this {{hoja_buscar:}} is missing one of its three parts. It is written
+        {{hoja_buscar: Sheet | column=values | column to return}}, separated by "|". As it is, the
+        engine does not read it and scheduling does not know which calendar to search.
+      sheet_lookup_sheet_missing: >-
+        Line %{line}: the sheet '%{name}' does not exist (or is inactive) in the Knowledge Base. The
+        engine finds nothing and scheduling offers no slots. Check the sheet's exact name.
+      sheet_lookup_column_missing: >-
+        Line %{line}: the sheet '%{name}' has no column %{columns}, so it will never find anything.
+        Columns it does have: %{available}.
+      sheet_lookup_no_rows: >-
+        Line %{line}: the sheet '%{name}' does not have its rows stored for exact search yet. Click
+        "Sync now" in the Knowledge Base; until then, scheduling offers no slots.
       consulta_not_found: >-
         The query '%{name}' does not exist (or is inactive) on connection '%{connection}'. The engine
         does not fail: it runs it, finds nothing and the agent answers without data. Check the name in
