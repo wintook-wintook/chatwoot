@@ -174,7 +174,11 @@
         "ROUTE_SOURCE_ADDED": "Fuente agregada. Ya la puede usar esta ruta.",
         "ROUTE_SOURCE_ADD_ERROR": "No se pudo agregar la fuente. Revisa los datos e inténtalo de nuevo.",
         "ROUTE_INTEGRATION_MISSING": "@discourse usa la integración de Discourse del canal, y el canal elegido no la tiene conectada: la ruta no va a encontrar nada.",
-        "ROUTE_INTEGRATION_OPEN": "Conectarla en Integraciones ↗"
+        "ROUTE_INTEGRATION_OPEN": "Conectarla en Integraciones ↗",
+        "ROUTE_SCOPE_GENERATE": "Generar desde las frases",
+        "ROUTE_SCOPE_REGENERATE": "Volver a generar desde las frases",
+        "ROUTE_SCOPE_NEEDS_PHRASES": "Primero escribe las frases del cliente.",
+        "ROUTE_SCOPE_GENERATE_ERROR": "No se pudo generar. Inténtalo de nuevo o escríbela a mano."
       }
     },
     "CREATE": {

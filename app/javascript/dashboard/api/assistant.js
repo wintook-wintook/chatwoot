@@ -140,6 +140,17 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // La línea de [ALCANCE POR RAMA] de una ruta, redactada desde sus frases.
+  routeScope({ name, phrases, source, action }, inboxId = null) {
+    return axios.post(`${this.url}/route_scope`, {
+      name,
+      phrases,
+      source,
+      action_directive: action,
+      inbox_id: inboxId,
+    });
+  }
+
   // Nombre puesto a mano a una conversación (vacío vuelve al automático).
   renameSession(id, name) {
     return axios.patch(`${this.url}/sessions/${id}/name`, { name });

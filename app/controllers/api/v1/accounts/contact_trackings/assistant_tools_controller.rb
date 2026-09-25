@@ -23,6 +23,9 @@
 #   El Objetivo o el Contexto del agente con la redacción y la ortografía corregidas,
 #   sin tocar ni un dato. Ver Proofreader.
 #
+# POST …/assistant/route_scope  { name, phrases, source, action_directive }
+#   La línea de [ALCANCE POR RAMA] de una ruta, redactada desde sus frases. Ver ScopeWriter.
+#
 # POST …/assistant/transcribe  (multipart: audio)
 #   Lo que la persona dictó, en texto, para el cuadro de mensaje. Ver Transcriber.
 #
@@ -33,7 +36,7 @@
 
 class Api::V1::Accounts::ContactTrackings::AssistantToolsController < Api::V1::Accounts::BaseController
   before_action :check_authorization
-  before_action :require_draft, except: [:transcribe, :proofread, :optimize_result]
+  before_action :require_draft, except: [:transcribe, :proofread, :optimize_result, :route_scope]
 
   def suggested_tests
     avance = ContactTrackings::Assistant::TurnProgress.new(Current.account, Current.user, params[:turn_id])
@@ -69,6 +72,12 @@ class Api::V1::Accounts::ContactTrackings::AssistantToolsController < Api::V1::A
     result = ContactTrackings::Assistant::Proofreader
              .new(Current.account, text: params[:text], kind: params[:kind], inbox: inbox).call
     render_result(result)
+  end
+
+  # La línea de [ALCANCE POR RAMA] de una ruta, desde sus frases (ver ScopeWriter).
+  def route_scope
+    ruta = { name: params[:name], phrases: params[:phrases], source: params[:source], action: params[:action_directive] }
+    render_result(ContactTrackings::Assistant::ScopeWriter.new(Current.account, route: ruta, inbox: inbox).call)
   end
 
   def transcribe

@@ -14,6 +14,8 @@
 // ============================================================================
 import RouteFields from './RouteFields.vue';
 import ProofreadBar from './ProofreadBar.vue';
+import AssistantAPI from 'dashboard/api/assistant';
+import { useAlert } from 'dashboard/composables';
 
 // Lo que se guarda en el bloque de ramas (ver ContactTrackings::TrainingRoutes).
 const ramaVacia = () => ({
@@ -55,6 +57,7 @@ export default {
       scope: '',
       asDefault: false,
       confirmDelete: false,
+      generatingScope: false,
     };
   },
   computed: {
@@ -92,6 +95,31 @@ export default {
   methods: {
     onFields(rama) {
       this.route = { ...rama };
+    },
+    // Pedido del usuario (25/09/2026): la línea de alcance, redactada desde las frases
+    // del cliente, la fuente y lo que hace si no resuelve (ScopeWriter). Reemplaza lo
+    // escrito: para corregir, se edita a mano después.
+    async generateScope() {
+      if (this.missingPhrases || this.generatingScope) return;
+      this.generatingScope = true;
+      try {
+        const { data } = await AssistantAPI.routeScope(
+          {
+            name: this.cleanName,
+            phrases: this.route.description,
+            source: this.route.source,
+            action: this.route.action,
+          },
+          this.inboxId
+        );
+        this.scope = data.scope || this.scope;
+      } catch (error) {
+        useAlert(
+          this.$t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SCOPE_GENERATE_ERROR')
+        );
+      } finally {
+        this.generatingScope = false;
+      }
     },
     save() {
       if (!this.canSave) return;
@@ -171,6 +199,30 @@ export default {
             $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SCOPE_PLACEHOLDER')
           "
         />
+        <div class="flex flex-wrap items-center gap-2 mb-1">
+          <woot-button
+            v-if="canProofread"
+            size="tiny"
+            variant="smooth"
+            icon="wand"
+            :is-loading="generatingScope"
+            :is-disabled="missingPhrases || generatingScope"
+            :title="
+              missingPhrases
+                ? $t(
+                    'TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SCOPE_NEEDS_PHRASES'
+                  )
+                : ''
+            "
+            @click="generateScope"
+          >
+            {{
+              scope.trim()
+                ? $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SCOPE_REGENERATE')
+                : $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SCOPE_GENERATE')
+            }}
+          </woot-button>
+        </div>
         <ProofreadBar
           v-if="canProofread"
           :text="scope"

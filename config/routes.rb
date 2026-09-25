@@ -137,6 +137,7 @@ Rails.application.routes.draw do
             post 'assistant/explain', to: 'assistant_tools#explain'
             post 'assistant/proofread', to: 'assistant_tools#proofread'
             post 'assistant/transcribe', to: 'assistant_tools#transcribe'
+            post 'assistant/route_scope', to: 'assistant_tools#route_scope'
             get  'assistant/audit',     to: 'assistant#audit'
             post 'assistant/dry_run',   to: 'assistant#dry_run'
             # el encargo (.md) con la idea del agente — ver docs/importar_prompt_md_plan.md

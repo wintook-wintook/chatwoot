@@ -38,7 +38,7 @@ class ContactTrackings::Assistant::Proofreader
   # Qué es cada campo y qué forma tiene que conservar.
   KINDS = {
     'objective' => 'el OBJETIVO del agente: una sola frase que dice para qué está. ' \
-                   'Mantenelo en una frase.',
+                   'Mantenlo en una frase.',
     'ai_context' => 'el CONTEXTO del agente: datos del negocio (horarios, versiones, precios, ' \
                     'políticas) que el agente le cita al cliente. Mantén la estructura: si son ' \
                     'renglones o una lista, siguen siendo renglones o una lista.',
@@ -48,7 +48,7 @@ class ContactTrackings::Assistant::Proofreader
                        'frases de cliente, cortas, en su registro —"no me deja entrar", no "el ' \
                        'cliente reporta un problema de acceso"—. Solo corrige lo que se lee mal. ' \
                        'Sigue siendo una lista separada por comas, sin punto final y sin paréntesis.',
-    'route_scope' => 'QUÉ ATIENDE UN TEMA, en palabras del agente: una sola línea. Mantenela en ' \
+    'route_scope' => 'QUÉ ATIENDE UN TEMA, en palabras del agente: una sola línea. Mantenla en ' \
                      'una sola línea, sin saltos.',
     'section_body' => 'las INSTRUCCIONES de una sección del prompt de un agente de atención. ' \
                       'Mantén los renglones, las viñetas y el orden de las reglas: no juntes ni ' \
