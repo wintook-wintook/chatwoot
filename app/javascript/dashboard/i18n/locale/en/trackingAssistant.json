@@ -467,6 +467,11 @@
     "KNOWLEDGE_DONE": "Done: {created} created, {skipped} already existed. When the Training is written, the routes will search group {group}.",
     "KNOWLEDGE_FAILED": "Not created: {list}",
     "KNOWLEDGE_NONE": "This brief has no business data nor routes that search canned responses.",
-    "REVIEW_SIGNAL_CALENDAR": "It offers time slots, but the message belongs to route {route}, which does not book: the engine's booking took the turn before looking at the route. It is not the Training."
+    "REVIEW_SIGNAL_CALENDAR": "It offers time slots, but the message belongs to route {route}, which does not book: the engine's booking took the turn before looking at the route. It is not the Training.",
+    "PASTE_ANALYZE_TITLE": "Should I analyze the prompt you pasted?",
+    "PASTE_ANALYZE_DESCRIPTION": "I check it against the engine rules and tell you what is wrong, why, and what can be fixed. I change nothing until you ask.",
+    "PASTE_ANALYZE_YES": "Yes, analyze it",
+    "PASTE_ANALYZE_NO": "No, just paste it",
+    "PASTE_ANALYZE_MESSAGE": "Analyze my prompt"
   }
 }

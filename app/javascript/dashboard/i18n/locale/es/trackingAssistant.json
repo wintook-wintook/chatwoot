@@ -467,6 +467,11 @@
     "KNOWLEDGE_DONE": "Listo: {created} creadas, {skipped} ya existían. Al escribir el Entrenamiento, las rutas buscarán en el grupo {group}.",
     "KNOWLEDGE_FAILED": "No se crearon: {list}",
     "KNOWLEDGE_NONE": "Este encargo no trae datos del negocio ni rutas que busquen en respuestas predefinidas.",
-    "REVIEW_SIGNAL_CALENDAR": "Ofrece horarios, pero el mensaje es de la ruta {route}, que no agenda: el agendado del motor tomó el turno antes de mirar la ruta. No es del Entrenamiento."
+    "REVIEW_SIGNAL_CALENDAR": "Ofrece horarios, pero el mensaje es de la ruta {route}, que no agenda: el agendado del motor tomó el turno antes de mirar la ruta. No es del Entrenamiento.",
+    "PASTE_ANALYZE_TITLE": "¿Analizo el prompt que pegaste?",
+    "PASTE_ANALYZE_DESCRIPTION": "Lo reviso contra las reglas del motor y te digo qué está mal, por qué y qué se puede corregir. No cambio nada hasta que me lo pidas.",
+    "PASTE_ANALYZE_YES": "Sí, analízalo",
+    "PASTE_ANALYZE_NO": "No, solo pegarlo",
+    "PASTE_ANALYZE_MESSAGE": "Analiza mi prompt"
   }
 }

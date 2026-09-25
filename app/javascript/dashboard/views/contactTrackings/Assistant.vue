@@ -81,6 +81,9 @@ const VALIDATE_DEBOUNCE_MS = 400;
 // más seguido no muestra nada nuevo.
 const PROGRESS_POLL_MS = 1500;
 const OPTIMIZE_MAX_WAIT_MS = 5 * 60 * 1000;
+// Pegar un prompt en el Entrenamiento vacío ofrece analizarlo (onDraftPaste). Menos
+// que esto es un nombre o una prueba, no un prompt.
+const MIN_PASTE_TO_ANALYZE = 80;
 const INBOX_STORAGE_KEY = 'tracking_assistant_inbox_id';
 
 // El chat del Asistente, escondido a pedido del usuario (17/09/2026): el
@@ -1342,6 +1345,27 @@ export default {
     },
     // Se revalida también cuando la persona edita a mano: el borrador del modelo
     // no es más confiable que el suyo, y ninguno de los dos se guarda sin pasar.
+    // Pedido del usuario (25/09/2026): con el Entrenamiento VACÍO, pegar un prompt
+    // pregunta si se analiza; al aceptar, el análisis arranca en el chat (y ahí mismo
+    // se ofrece corregir lo que se arregla escribiendo). Con texto ya escrito, pegar
+    // es editar: no se pregunta nada.
+    async onDraftPaste(event) {
+      if (this.draft.trim() || this.isThinking) return;
+      const pegado = event.clipboardData?.getData('text') || '';
+      if (pegado.trim().length < MIN_PASTE_TO_ANALYZE) return;
+      // El texto entra con el evento `input`, después de este: se espera a que el
+      // editor lo tenga (y onDraftInput lo marque como un agente que ya existe).
+      await new Promise(resolve => {
+        setTimeout(resolve, 0);
+      });
+      if (!this.draft.trim()) return;
+      const analizar = await this.$refs.analyzePastedDialog.showConfirmation();
+      if (!analizar) return;
+      this.leftPanel = 'chat';
+      await this.sendMessage(
+        this.$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_MESSAGE')
+      );
+    },
     onDraftInput() {
       // Un prompt pegado (o escrito) en un Asistente nuevo es un agente que ya existe,
       // no una entrevista a medias: se trata como uno cargado (loadTemplate) — cuenta
@@ -1809,6 +1833,7 @@ export default {
                       @keyup="onDraftSelect"
                       @mouseup="onDraftSelect"
                       @input="onDraftInput"
+                      @paste="onDraftPaste"
                     />
                   </div>
                 </template>
@@ -2246,6 +2271,13 @@ export default {
       @close="showOptimizeModal = false"
       @run="runOptimize"
       @apply="applyOptimization"
+    />
+    <woot-confirm-modal
+      ref="analyzePastedDialog"
+      :title="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_TITLE')"
+      :description="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_DESCRIPTION')"
+      :confirm-label="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_YES')"
+      :cancel-label="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_NO')"
     />
     <BriefModal
       :show="showBriefModal"
