@@ -5,6 +5,10 @@
 #   - 'data' : filas crudas en google_sheet_rows (consulta analítica exacta) + 1 item
 #              "resumen" embebido con los encabezados, para que el bot ubique la hoja.
 # Disparado por el botón "Sincronizar ahora".
+#
+# proyecto@hoja_buscar (25/09/2026) — las filas crudas se guardan en LOS DOS modos:
+# {{hoja_buscar:}} busca exacto por columna (remolque=TP-64 → Calendar_ID) y lo necesita
+# también en una hoja FAQ, que antes no las guardaba («Servicio Gruas»: 0 filas).
 class GoogleSheetSyncJob < ApplicationJob
   include KnowledgeEmbeddable
   queue_as :default
@@ -53,8 +57,7 @@ class GoogleSheetSyncJob < ApplicationJob
 
   # --- Modo FAQ: una fila = un chunk semántico ---------------------------------
   def sync_faq_mode(account, source, table)
-    # Modo FAQ no usa google_sheet_rows: limpiamos por si cambió de modo.
-    source.google_sheet_rows.delete_all
+    replace_rows(account, source, table)
 
     rows = table[:rows]
     rows.each_with_index do |row, index|
@@ -71,7 +74,17 @@ class GoogleSheetSyncJob < ApplicationJob
 
   # --- Modo Datos: filas tipadas + 1 item resumen ------------------------------
   def sync_data_mode(account, source, table)
-    # Refrescar filas: reemplazo completo (barato, no toca OpenAI).
+    replace_rows(account, source, table)
+
+    # 1 item resumen embebido: encabezados + nombre, para ubicar la hoja en la búsqueda.
+    summary = "Hoja de datos: #{source.name}\nColumnas: #{table[:headers].join(', ')}\nFilas: #{table[:rows].size}"
+    embedding = generate_embedding(account, summary)
+    upsert_item(account, source, source.name, summary, 0, embedding) if embedding
+    delete_orphan_items(account, source, 1)
+  end
+
+  # Filas crudas: reemplazo completo (barato, no toca OpenAI).
+  def replace_rows(account, source, table)
     source.google_sheet_rows.delete_all
     now = Time.current
     records = table[:rows].each_with_index.map do |row, index|
@@ -79,12 +92,6 @@ class GoogleSheetSyncJob < ApplicationJob
         data: row, created_at: now, updated_at: now }
     end
     GoogleSheetRow.insert_all(records) if records.any?
-
-    # 1 item resumen embebido: encabezados + nombre, para ubicar la hoja en la búsqueda.
-    summary = "Hoja de datos: #{source.name}\nColumnas: #{table[:headers].join(', ')}\nFilas: #{table[:rows].size}"
-    embedding = generate_embedding(account, summary)
-    upsert_item(account, source, source.name, summary, 0, embedding) if embedding
-    delete_orphan_items(account, source, 1)
   end
 
   def destroy_sheet(account, source)
@@ -129,8 +136,12 @@ class GoogleSheetSyncJob < ApplicationJob
   end
 
   def humanize_error(message)
-    return 'Habilita la Google Sheets API en tu proyecto de Google Cloud (consola de GCP → APIs y servicios).' if message.include?('has not been used in project') || message.include?('accessNotConfigured') || message.include?('it is disabled')
-    return 'Reconecta tu cuenta de Google: faltan permisos de Sheets/Drive (vuelve a autorizar).' if message.include?('SCOPE_INSUFFICIENT') || message.include?('insufficient')
+    if message.include?('has not been used in project') || message.include?('accessNotConfigured') || message.include?('it is disabled')
+      return 'Habilita la Google Sheets API en tu proyecto de Google Cloud (consola de GCP → APIs y servicios).'
+    end
+    if message.include?('SCOPE_INSUFFICIENT') || message.include?('insufficient')
+      return 'Reconecta tu cuenta de Google: faltan permisos de Sheets/Drive (vuelve a autorizar).'
+    end
     return 'No se pudo leer la hoja. Verifica que la cuenta de Google tenga acceso.' if message.include?('404') || message.include?('not found')
 
     message.to_s.truncate(180)
