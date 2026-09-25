@@ -168,7 +168,11 @@
         "SECTION_FIND_LOADING": "Looking up this account's sections…",
         "SECTION_FIND_EMPTY": "No sections written in any agent of this account yet.",
         "ROUTE_FIND_ALL_TAKEN": "This agent already has every route written in the account.",
-        "SECTION_FIND_ALL_TAKEN": "This agent already has every section written in the account."
+        "SECTION_FIND_ALL_TAKEN": "This agent already has every section written in the account.",
+        "ROUTE_SOURCE_MISSING": "This source does not exist in the account: the route will find nothing.",
+        "ROUTE_SOURCE_ADD": "Add it",
+        "ROUTE_SOURCE_ADDED": "Source added. This route can use it now.",
+        "ROUTE_SOURCE_ADD_ERROR": "The source could not be added. Check the data and try again."
       }
     },
     "CREATE": {

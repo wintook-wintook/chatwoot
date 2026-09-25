@@ -168,7 +168,11 @@
         "SECTION_FIND_LOADING": "Buscando las secciones de la cuenta…",
         "SECTION_FIND_EMPTY": "Todavía no hay secciones escritas en ningún agente de la cuenta.",
         "ROUTE_FIND_ALL_TAKEN": "El agente ya tiene todas las rutas que hay escritas en la cuenta.",
-        "SECTION_FIND_ALL_TAKEN": "El agente ya tiene todas las secciones que hay escritas en la cuenta."
+        "SECTION_FIND_ALL_TAKEN": "El agente ya tiene todas las secciones que hay escritas en la cuenta.",
+        "ROUTE_SOURCE_MISSING": "Esta fuente no existe en la cuenta: la ruta no va a encontrar nada.",
+        "ROUTE_SOURCE_ADD": "Agregarla",
+        "ROUTE_SOURCE_ADDED": "Fuente agregada. Ya la puede usar esta ruta.",
+        "ROUTE_SOURCE_ADD_ERROR": "No se pudo agregar la fuente. Revisa los datos e inténtalo de nuevo."
       }
     },
     "CREATE": {

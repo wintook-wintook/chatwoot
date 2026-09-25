@@ -21,10 +21,19 @@
 const PRIORITIES = ['baja', 'media', 'alta', 'urgente'];
 const CREATE_TICKET = '@crear_ticket';
 
+import { mapGetters } from 'vuex';
+import { useAlert } from 'dashboard/composables';
+import { emitter } from 'shared/helpers/mitt';
+import KnowledgeBaseAPI from 'dashboard/routes/dashboard/settings/knowledgeSources/api';
+import AddSourceModal from 'dashboard/routes/dashboard/settings/knowledgeSources/AddSourceModal.vue';
 import ProofreadBar from './ProofreadBar.vue';
+import {
+  sourceFromDirective,
+  ASSISTANT_SOURCES_CHANGED,
+} from './sourceDirective';
 
 export default {
-  components: { ProofreadBar },
+  components: { ProofreadBar, AddSourceModal },
   props: {
     // La rama: { name, tag, description, source, action, case_type, priority, … }
     route: { type: Object, default: () => ({}) },
@@ -38,7 +47,21 @@ export default {
     inboxId: { type: Number, default: null },
   },
   emits: ['input'],
+  data() {
+    return { showAddSource: false, savingSource: false };
+  },
   computed: {
+    ...mapGetters({ accountId: 'getCurrentAccountId' }),
+    // La fuente escrita no está entre las de la cuenta (pedido del usuario, 25/09/2026:
+    // poder crearla sin salir del Asistente).
+    missingSource() {
+      return Boolean(this.extraOption(this.route.source, this.sourceOptions));
+    },
+    // { source_type, name } si se puede crear en la Base de Conocimiento; null si no
+    // (una directiva de predefinidas o de artículos).
+    addableSource() {
+      return this.missingSource ? sourceFromDirective(this.route.source) : null;
+    },
     sourceOptions() {
       return this.options.sources || [];
     },
@@ -98,6 +121,28 @@ export default {
     // cambiaría sin avisar.
     extraOption(valor, lista) {
       return valor && !lista.includes(valor) ? valor : null;
+    },
+    // Crea la fuente con el mismo modal y la misma API de la Base de Conocimiento, y
+    // avisa al Asistente para que recargue sus fuentes y vuelva a comprobar.
+    async createSource(payload) {
+      this.savingSource = true;
+      try {
+        await KnowledgeBaseAPI.createSource(this.accountId, payload);
+        this.showAddSource = false;
+        useAlert(
+          this.$t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SOURCE_ADDED')
+        );
+        emitter.emit(ASSISTANT_SOURCES_CHANGED);
+      } catch (error) {
+        const detalle =
+          error?.response?.data?.errors?.[0] || error?.response?.data?.error;
+        useAlert(
+          detalle ||
+            this.$t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SOURCE_ADD_ERROR')
+        );
+      } finally {
+        this.savingSource = false;
+      }
     },
     marca(valor) {
       return this.$t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_UNKNOWN', {
@@ -223,6 +268,29 @@ export default {
             {{ marca(route.source) }}
           </option>
         </select>
+        <p
+          v-if="missingSource"
+          class="flex flex-wrap items-center gap-2 !mt-1 !mb-0 text-xs text-amber-800 dark:text-amber-800"
+        >
+          {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SOURCE_MISSING') }}
+          <woot-button
+            v-if="addableSource"
+            size="tiny"
+            variant="smooth"
+            icon="add"
+            @click="showAddSource = true"
+          >
+            {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SOURCE_ADD') }}
+          </woot-button>
+        </p>
+        <AddSourceModal
+          v-if="addableSource"
+          :show="showAddSource"
+          :saving="savingSource"
+          :initial="addableSource"
+          @close="showAddSource = false"
+          @save="createSource"
+        />
       </div>
       <div class="flex-1 min-w-[12rem]">
         <label

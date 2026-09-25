@@ -45,6 +45,8 @@ import {
 } from './assistant/draftNavigation';
 import DraftLineMarks from './assistant/DraftLineMarks.vue';
 import { withCannedGroup } from './assistant/knowledgeGroup';
+import { emitter } from 'shared/helpers/mitt';
+import { ASSISTANT_SOURCES_CHANGED } from './assistant/sourceDirective';
 import { pendingCount } from './assistant/pendingMarkers';
 import InterviewPanel from './assistant/InterviewPanel.vue';
 import SessionCard from './assistant/SessionCard.vue';
@@ -556,6 +558,9 @@ export default {
       this.inboxId = null;
     }
     this.fetchInventory();
+    // Una fuente creada desde el modal de una ruta (RouteFields): la lista de fuentes
+    // se recarga y el Entrenamiento se vuelve a comprobar, sin salir del Asistente.
+    emitter.on(ASSISTANT_SOURCES_CHANGED, this.onSourcesChanged);
     this.$store.dispatch('inboxes/get');
     // Se espera la lista antes de resolver el ?template_id de la URL: si no, se
     // entraría desde Agentes IA con el panel vacío y sin decir por qué.
@@ -577,8 +582,16 @@ export default {
   beforeDestroy() {
     clearTimeout(this.validateTimer);
     clearInterval(this.progressTimer);
+    emitter.off(ASSISTANT_SOURCES_CHANGED, this.onSourcesChanged);
   },
   methods: {
+    async onSourcesChanged() {
+      await this.fetchInventory();
+      // El árbol toma la comprobación de la vista previa si la hay: se descarta para
+      // que use la nueva, que ya conoce la fuente.
+      this.trainingValidation = null;
+      this.validateDraft();
+    },
     // Entrada desde Agentes IA: /tracking-dashboard/assistant?template_id=123
     // o ?nuevo=1 para armar uno nuevo, sin retomar lo que quedó a medias.
     loadTemplateFromRoute() {
