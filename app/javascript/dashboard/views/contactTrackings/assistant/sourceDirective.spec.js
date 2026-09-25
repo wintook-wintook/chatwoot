@@ -1,4 +1,7 @@
-import { sourceFromDirective } from './sourceDirective';
+import {
+  sourceFromDirective,
+  integrationFromDirective,
+} from './sourceDirective';
 
 describe('sourceFromDirective', () => {
   it('lee el tipo y el nombre de la fuente que nombra la ruta', () => {
@@ -23,5 +26,11 @@ describe('sourceFromDirective', () => {
   it('las predefinidas o los artículos no se crean como fuente', () => {
     expect(sourceFromDirective('@buscar_predefinidas(UNIVERSIDAD)')).toBeNull();
     expect(sourceFromDirective('@buscar_articulo')).toBeNull();
+  });
+
+  it('@discourse es la integración del canal, no una fuente', () => {
+    expect(sourceFromDirective('@discourse')).toBeNull();
+    expect(integrationFromDirective('@discourse')).toBe('discourse');
+    expect(integrationFromDirective('{{hoja:X}}')).toBeNull();
   });
 });

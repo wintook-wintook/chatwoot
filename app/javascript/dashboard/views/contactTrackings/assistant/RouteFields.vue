@@ -29,6 +29,7 @@ import AddSourceModal from 'dashboard/routes/dashboard/settings/knowledgeSources
 import ProofreadBar from './ProofreadBar.vue';
 import {
   sourceFromDirective,
+  integrationFromDirective,
   ASSISTANT_SOURCES_CHANGED,
 } from './sourceDirective';
 
@@ -61,6 +62,23 @@ export default {
     // (una directiva de predefinidas o de artículos).
     addableSource() {
       return this.missingSource ? sourceFromDirective(this.route.source) : null;
+    },
+    // @discourse: la integración de Discourse del canal, que se conecta en
+    // Integraciones (no se crea como fuente).
+    missingIntegration() {
+      return this.missingSource
+        ? integrationFromDirective(this.route.source)
+        : null;
+    },
+    integrationUrl() {
+      if (!this.missingIntegration) return '';
+      return this.$router.resolve({
+        name: 'settings_applications_integration',
+        params: {
+          accountId: this.accountId,
+          integration_id: this.missingIntegration,
+        },
+      }).href;
     },
     sourceOptions() {
       return this.options.sources || [];
@@ -269,7 +287,21 @@ export default {
           </option>
         </select>
         <p
-          v-if="missingSource"
+          v-if="missingIntegration"
+          class="flex flex-wrap items-center gap-2 !mt-1 !mb-0 text-xs text-amber-800 dark:text-amber-800"
+        >
+          {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_INTEGRATION_MISSING') }}
+          <a
+            :href="integrationUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-medium underline"
+          >
+            {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_INTEGRATION_OPEN') }}
+          </a>
+        </p>
+        <p
+          v-else-if="missingSource"
           class="flex flex-wrap items-center gap-2 !mt-1 !mb-0 text-xs text-amber-800 dark:text-amber-800"
         >
           {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SOURCE_MISSING') }}

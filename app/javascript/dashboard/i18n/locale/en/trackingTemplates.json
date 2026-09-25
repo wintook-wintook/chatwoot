@@ -172,7 +172,9 @@
         "ROUTE_SOURCE_MISSING": "This source does not exist in the account: the route will find nothing.",
         "ROUTE_SOURCE_ADD": "Add it",
         "ROUTE_SOURCE_ADDED": "Source added. This route can use it now.",
-        "ROUTE_SOURCE_ADD_ERROR": "The source could not be added. Check the data and try again."
+        "ROUTE_SOURCE_ADD_ERROR": "The source could not be added. Check the data and try again.",
+        "ROUTE_INTEGRATION_MISSING": "@discourse uses the channel's Discourse integration, and the selected channel does not have it connected: the route will find nothing.",
+        "ROUTE_INTEGRATION_OPEN": "Connect it in Integrations ↗"
       }
     },
     "CREATE": {

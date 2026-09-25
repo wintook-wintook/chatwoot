@@ -15,6 +15,15 @@ const PATTERNS = [
   [/@soporte_contpaq\(\s*([^)]+?)\s*\)/i, 'contpaq_support'],
 ];
 
+// Directivas que no son una fuente sino una integración del canal: se conectan en
+// Configuración › Integraciones, no en la Base de Conocimiento.
+const INTEGRATIONS = [[/@discourse\b/i, 'discourse']];
+
+export const integrationFromDirective = directive => {
+  const hallada = INTEGRATIONS.find(([patron]) => patron.test(directive || ''));
+  return hallada ? hallada[1] : null;
+};
+
 // { source_type, name } o null si no es una fuente que se crea en la Base de
 // Conocimiento (una directiva de predefinidas o de artículos no lo es).
 export const sourceFromDirective = directive => {

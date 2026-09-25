@@ -206,4 +206,30 @@ RSpec.describe ContactTrackings::Assistant::InventoryService do
       expect(described_class.new(account).call[:empty]).to be(false)
     end
   end
+
+  # 25/09/2026: @discourse (la integración del canal) nunca se ofrecía como fuente, y la
+  # ruta que la usaba salía «no existe en la cuenta» aunque el canal la tuviera.
+  describe '@discourse, la integración de Discourse del canal' do
+    let(:cuenta) { create(:account) }
+    let(:con_foro) { create(:inbox, account: cuenta) }
+    let(:sin_foro) { create(:inbox, account: cuenta) }
+
+    before do
+      Integrations::Hook.create!(account: cuenta, inbox: con_foro, app_id: 'discourse', status: 'enabled',
+                                 settings: { 'url' => 'https://foro.example.com', 'api_key' => 'k' })
+    end
+
+    def directivas(inbox)
+      described_class.new(cuenta, inbox: inbox).call[:sources].pluck(:directive)
+    end
+
+    it 'se ofrece en el canal que la tiene, y sin canal elegido' do
+      expect(directivas(con_foro)).to include('@discourse')
+      expect(directivas(nil)).to include('@discourse')
+    end
+
+    it 'no se ofrece en un canal que no la tiene' do
+      expect(directivas(sin_foro)).not_to include('@discourse')
+    end
+  end
 end

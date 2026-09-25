@@ -129,7 +129,24 @@ class ContactTrackings::Assistant::InventoryService
   # Se recorre SOURCE_TYPES —la lista del modelo— y no las llaves de la tabla de
   # acá: así un tipo que el motor conoce y esta clase no, se nota.
   def sources
-    @sources ||= KnowledgeSource::SOURCE_TYPES.flat_map do |source_type|
+    @sources ||= knowledge_source_directives + integration_directives
+  end
+
+  # @discourse no es una fuente de la Base de Conocimiento sino la integración de
+  # Discourse del canal (Integraciones). No se ofrecía nunca, y una ruta que la usaba
+  # salía «no existe en la cuenta» aunque el canal la tuviera (25/09/2026). Con canal
+  # elegido, solo si ESE canal la tiene: es lo que mira el motor (Directives.ready?).
+  def integration_directives
+    hooks = account.hooks.where(app_id: 'discourse', status: 'enabled')
+    hooks = hooks.where(inbox_id: inbox.id) if inbox
+    return [] unless hooks.exists?
+
+    [{ source_type: 'discourse_integration', name: 'Discourse (integración del canal)',
+       directive: '@discourse', mode: :discourse_integration }]
+  end
+
+  def knowledge_source_directives
+    KnowledgeSource::SOURCE_TYPES.flat_map do |source_type|
       template, mode = SOURCE_DIRECTIVES[source_type]
       next [] if template.nil?
 
