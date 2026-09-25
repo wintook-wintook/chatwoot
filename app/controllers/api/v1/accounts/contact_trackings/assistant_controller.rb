@@ -217,7 +217,9 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
     turnos = with_stored_changes(sesion, interview_messages) + [assistant_turn(result)]
     ContactTrackings::Assistant::SessionVersions.new(sesion, on_screen: params[:draft], delivered: delivered_draft)
                                                 .record(result)
-    sesion.record_turn(messages: turnos, draft: result.draft,
+    # Sin Entrenamiento nuevo (una pregunta, un análisis) queda el que estaba en pantalla:
+    # si no, la conversación se reabría con el editor vacío (25/09/2026).
+    sesion.record_turn(messages: turnos, draft: result.draft.presence || params[:draft],
                        validation: result.validation, proposal: result.proposal)
     sesion
   rescue StandardError => e

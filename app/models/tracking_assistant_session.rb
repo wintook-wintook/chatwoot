@@ -93,16 +93,32 @@ class TrackingAssistantSession < ApplicationRecord
   # cercano a un título que hay: es con lo que arrancó la entrevista.
   # Si arrancó desde unas instrucciones iniciales, el primer mensaje es el encargo
   # armado para el modelo (largo, y no escrito para leerlo): va el nombre del archivo.
+  #
+  # Un primer mensaje que es solo un pedido («Analiza mi prompt», el botón Analizar) no
+  # distingue nada: todas las conversaciones se llamaban igual (25/09/2026). Ahí el
+  # título es la primera línea del prompt, con 🔎.
+  GENERIC_FIRST_MAX = 40
+
   def title
-    primero = Array(messages).find { |m| m['role'] == 'user' }
-    texto = primero&.dig('content').to_s
+    texto = first_user_text
+    return "🔎 #{draft_title}" if generic_request?(texto) && draft_title
 
     ContactTrackings::Assistant::BriefComposer.title_for(texto) || texto.squish.presence&.truncate(80) || draft_title
   end
 
+  def first_user_text
+    Array(messages).find { |m| m['role'] == 'user' }&.dig('content').to_s
+  end
+  private :first_user_text
+
+  def generic_request?(texto)
+    texto.squish.length <= GENERIC_FIRST_MAX && texto.match?(ContactTrackings::Assistant::CheckerSection::ANALYSIS_RE)
+  end
+  private :generic_request?
+
   # Sin mensajes (un prompt pegado que se guardó solo): la primera línea del texto.
   def draft_title
-    draft.to_s.lines.map { |l| l.delete('#').squish }.find(&:present?)&.truncate(80)
+    @draft_title ||= draft.to_s.lines.map { |l| l.delete('#').squish }.find(&:present?)&.truncate(80)
   end
   private :draft_title
 

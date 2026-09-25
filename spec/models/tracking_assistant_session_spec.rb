@@ -109,6 +109,14 @@ RSpec.describe TrackingAssistantSession do
     end
   end
 
+  # 25/09/2026: todas las conversaciones de análisis se llamaban «Analiza mi prompt».
+  it 'si el primer mensaje es solo «Analiza mi prompt», el título es la primera línea del prompt' do
+    s = sesion(messages: [{ 'role' => 'user', 'content' => 'Analiza mi prompt' }],
+               draft: "# PROMPT AGENTE NEOCLASE V8.4\n[ROL]\nx")
+
+    expect(s.title).to eq('🔎 PROMPT AGENTE NEOCLASE V8.4')
+  end
+
   describe 'guardado automático y bitácora' do
     it 'guarda lo editado a mano; pausas seguidas son una sola versión' do
       s = sesion
