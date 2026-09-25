@@ -797,12 +797,39 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def slot_service_for(cal_ids, tracking, timezone, message: nil)
+    booking = tracking.tracking_template&.booking_calendar_ids || {}
+    # proyecto@hoja_buscar — solo los calendarios de lo que se nombró. Sin mensaje (mover
+    # una cita) se queda en la agenda de la cita, como siempre.
+    sheet = message && sheet_calendars_for(tracking, message)
+    if sheet
+      cal_ids = sheet.integration_ids
+      booking = sheet.booking_calendars
+    end
+
     ContactTrackings::AvailabilitySlotService.new(
       calendar_integration_ids: cal_ids, timezone: timezone,
       slot_duration: tracking.tracking_template&.calendar_event_duration || 30,
       working_hours: working_hours_for(tracking, message),
-      booking_calendars: tracking.tracking_template&.booking_calendar_ids || {}
+      booking_calendars: booking
     )
+  end
+
+  # nil si el agente no usa {{hoja_buscar:}}. Una vez por mensaje: la búsqueda lee la hoja
+  # y la conversación.
+  def sheet_calendars_for(tracking, message)
+    @sheet_calendars ||= {}
+    key = [tracking.id, message.id]
+    return @sheet_calendars[key] if @sheet_calendars.key?(key)
+
+    @sheet_calendars[key] = ContactTrackings::SheetCalendars.for(tracking, message, branch_for(tracking, message))
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ {{hoja_buscar:}} falló: #{e.message}"
+    @sheet_calendars[key] = ContactTrackings::SheetCalendars.unavailable_outcome
+  end
+
+  def ask_sheet_value(tracking, message, column)
+    Rails.logger.info "[TrackingBot] 📅 {{hoja_buscar:}} sin #{column} nombrado → se pregunta cuál"
+    send_auto_reply(tracking, message, "¿Para cuál #{column} quieres agendar? Dime cuál y te paso sus horarios.")
   end
 
   # proyecto@bot_seguimiento_calendar — horarios del inbox (Opción A). Solo si el inbox los
@@ -888,6 +915,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       handle_no_calendar_configured(tracking, message)
       return
     end
+
+    # proyecto@hoja_buscar — la ruta agenda en el calendario de lo que se nombró y no se
+    # nombró nada: se pregunta cuál, no se ofrecen horarios de todos (decisión 25/09/2026).
+    sheet = sheet_calendars_for(tracking, message)
+    return ask_sheet_value(tracking, message, sheet.asked) if sheet&.status == :needs_value
 
     timezone = appointment_timezone(tracking, message)
     service  = slot_service_for(cal_ids, tracking, timezone, message: message)

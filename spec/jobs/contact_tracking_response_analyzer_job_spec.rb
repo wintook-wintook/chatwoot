@@ -877,4 +877,50 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       expect(target.in_time_zone('America/Mexico_City').strftime('%H:%M')).to eq('10:30')
     end
   end
+
+  # proyecto@hoja_buscar — la agenda busca en el calendario de lo que se nombró.
+  describe '{{hoja_buscar:}} en la agenda' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:tracking) do
+      ContactTracking.create!(account: account, contact: contact, inbox: inbox, conversation: conversation,
+                              objective: 'Grúas', scheduled_for: 1.hour.from_now, tracking_template: tracking_template)
+    end
+    let(:message) { create(:message, account: account, inbox: inbox, conversation: conversation, content: 'sí, agéndalo') }
+    let(:outcome) { ContactTrackings::SheetCalendars::Outcome }
+
+    before do
+      tracking_template.update!(calendar_integration_ids: [178], booking_calendar_ids: { '178' => %w[c64 c63] })
+      allow(job).to receive(:send_auto_reply)
+      allow(job).to receive(:appointment_timezone).and_return('America/Mexico_City')
+    end
+
+    it 'sin remolque nombrado pregunta cuál y no busca horarios' do
+      allow(ContactTrackings::SheetCalendars).to receive(:for).and_return(outcome.new(status: :needs_value, asked: 'remolque'))
+      expect(ContactTrackings::AvailabilitySlotService).not_to receive(:new)
+
+      job.send(:handle_book_appointment, tracking, message)
+      expect(job).to have_received(:send_auto_reply).with(tracking, message, /¿Para cuál remolque quieres agendar\?/)
+    end
+
+    it 'busca horarios solo en el calendario del remolque' do
+      allow(ContactTrackings::SheetCalendars).to receive(:for)
+        .and_return(outcome.new(status: :ok, integration_ids: [178], booking_calendars: { '178' => ['c63'] }))
+      allow(ContactTrackings::AvailabilitySlotService).to receive(:new).and_call_original
+
+      job.send(:slot_service_for, [178], tracking, 'America/Mexico_City', message: message)
+      expect(ContactTrackings::AvailabilitySlotService).to have_received(:new)
+        .with(hash_including(calendar_integration_ids: [178], booking_calendars: { '178' => ['c63'] }))
+    end
+
+    it 'sin {{hoja_buscar:}} usa los calendarios del agente como siempre' do
+      allow(ContactTrackings::SheetCalendars).to receive(:for).and_return(nil)
+      allow(ContactTrackings::AvailabilitySlotService).to receive(:new).and_call_original
+
+      job.send(:slot_service_for, [178], tracking, 'America/Mexico_City', message: message)
+      expect(ContactTrackings::AvailabilitySlotService).to have_received(:new)
+        .with(hash_including(calendar_integration_ids: [178], booking_calendars: { '178' => %w[c64 c63] }))
+    end
+  end
 end
