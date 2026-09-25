@@ -113,6 +113,8 @@
         "ROUTE_NAME_PLACEHOLDER": "sales_pricing",
         "ROUTE_TAG": "Label",
         "ROUTE_TAG_NONE": "No label",
+        "ROUTE_TAG_MISSING": "This label does not exist in the account.",
+        "ROUTE_TAG_ADD": "Create it",
         "ROUTE_PHRASES": "Customer phrases (this is what picks the route)",
         "ROUTE_PHRASES_PLACEHOLDER": "how much is it, pricing, i want a quote",
         "ROUTE_SOURCE": "Where the answer comes from",
