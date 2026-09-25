@@ -313,7 +313,10 @@ export default {
                  hay dos lugares que puedan desincronizarse. -->
             <div v-for="(question, qIndex) in options" :key="qIndex">
               <p class="mb-1 text-sm">
-                {{ qIndex + 1 }}. {{ question.question }}
+                <!-- El número solo con varias preguntas: con una sola, «1. 6 de estos
+                     avisos…» se leía como un decimal (25/09/2026). -->
+                <template v-if="options.length > 1">{{ qIndex + 1 }}.</template>
+                {{ question.question }}
               </p>
               <div class="flex flex-wrap items-center gap-1">
                 <button

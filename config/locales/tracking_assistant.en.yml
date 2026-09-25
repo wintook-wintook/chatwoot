@@ -57,7 +57,7 @@ en:
       header: '**What the checker flags** (%{count}):'
       clean: '**The checker flags nothing:** the engine reads and runs everything written.'
     fix_offer:
-      question: '%{count} of these warnings can be fixed by editing the text. Should I fix them?'
+      question: '%{count} warnings can be fixed by editing the text. Should I fix them?'
       'yes': 'Yes, fix what can be fixed in the text'
     findings:
       route_line_unparsed: >-

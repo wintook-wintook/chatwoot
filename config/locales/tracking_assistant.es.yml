@@ -56,7 +56,7 @@ es:
       header: '**Lo que marca el comprobador** (%{count}):'
       clean: '**El comprobador no marca nada:** el motor lee y ejecuta todo lo que está escrito.'
     fix_offer:
-      question: '%{count} de estos avisos se arreglan editando el texto. ¿Los corrijo?'
+      question: 'Se pueden corregir %{count} avisos editando el texto. ¿Los corrijo?'
       'yes': 'Sí, corrige lo que se puede en el texto'
     findings:
       route_line_unparsed: >-
