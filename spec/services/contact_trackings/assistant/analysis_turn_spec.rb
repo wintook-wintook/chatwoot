@@ -51,4 +51,20 @@ RSpec.describe ContactTrackings::Assistant::AnalysisTurn do
 
     expect(turno('1) Sí, corrige lo que se puede en el texto', draft: roto).guard(roto, arreglado)).to eq(arreglado)
   end
+
+  # 25/09/2026: 18 avisos eran 7 etiquetas, 6 directivas y 3 rutas, cada una con su párrafo.
+  it 'agrupa los avisos de la misma situación y dice a qué afectan' do
+    texto = "@ruta(uno #uno_x: a): -\n@ruta(dos #dos_x: b): -\n\n[EVIDENCIA]\nUsa @discourse.\nY @buscar_predefinidas."
+    bloque = turno('Analiza mi prompt', draft: texto).reply('')
+
+    expect(bloque).to include('**Etiquetas que no existen en la cuenta** (2)', '#uno_x · #dos_x')
+    expect(bloque).to include('**Directivas en la prosa que no se ejecutan** (2)', 'línea 5 @discourse')
+    expect(bloque).to include('**Rutas que no consultan nada', 'uno · dos')
+  end
+
+  it 'quita de la lectura del modelo los avisos que vuelve a copiar' do
+    lectura = "Aquí va:\n- ÁMBAR (ruta uno): la ruta no consulta nada.\n**ROJO** algo\nMi lectura: faltan ejemplos."
+
+    expect(turno('Analiza mi prompt').reply(lectura)).to end_with("Aquí va:\nMi lectura: faltan ejemplos.")
+  end
 end

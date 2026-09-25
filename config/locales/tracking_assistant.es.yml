@@ -55,6 +55,12 @@ es:
     analysis:
       header: '**Lo que marca el comprobador** (%{count}):'
       clean: '**El comprobador no marca nada:** el motor lee y ejecuta todo lo que está escrito.'
+      line: 'línea %{line} %{wrote}'
+      groups:
+        labels: '**Etiquetas que no existen en la cuenta** (%{count}): no disparan ninguna automatización. Créalas en Etiquetas o cámbialas por una que exista.'
+        loose: '**Directivas en la prosa que no se ejecutan** (%{count}): la búsqueda la hace el motor según la ruta. Nombra «la información consultada» en vez de la directiva.'
+        nothing: '**Rutas que no consultan nada ni tienen «si no resuelve»** (%{count}): contestan solo con el Entrenamiento. Si es a propósito (saludo, despedida, pedir datos), déjalas así.'
+        bare_tags: '**Etiquetas sueltas, sin significado** (%{count}): el agente las pega a todas sus respuestas. Escríbelas como diccionario («#x = cuándo se usa») o bórralas.'
     fix_offer:
       question: 'Se pueden corregir %{count} avisos editando el texto. ¿Los corrijo?'
       'yes': 'Sí, corrige lo que se puede en el texto'

@@ -71,9 +71,10 @@ module ContactTrackings::Assistant::CheckerSection
       (contradicciones, reglas vagas, lo que falta), pero sepárala con «Mi lectura:». Nunca
       digas que algo está bien si aparece aquí. Todo va DENTRO de "mensaje", como texto con
       viñetas: no agregues llaves nuevas al JSON.
-      Si piden analizar o revisar el prompt, NUNCA pidas que aclaren qué revisar: esta lista ya
-      se le muestra a la persona arriba de tu mensaje; tú da «Mi lectura:» (contradicciones,
-      reglas vagas, lo que falta) sin repetir la lista.
+      Si piden analizar o revisar el prompt, NUNCA pidas que aclaren qué revisar, y NO repitas
+      esta lista: ya se le muestra a la persona arriba de tu mensaje, agrupada. Tu mensaje es
+      solo «Mi lectura:», de 3 a 5 puntos que NO sean estos avisos (contradicciones, reglas
+      vagas, lo que falta, lo que el comprobador no puede ver).
 
       #{findings_text(resultado)}
 

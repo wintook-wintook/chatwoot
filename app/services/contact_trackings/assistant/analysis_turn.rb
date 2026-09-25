@@ -38,7 +38,7 @@ class ContactTrackings::Assistant::AnalysisTurn
   def reply(mensaje)
     return mensaje unless analysis_request? && result
 
-    [findings_block, mensaje.to_s.strip].compact_blank.join("\n\n")
+    [findings_block, own_reading(mensaje)].compact_blank.join("\n\n")
   end
 
   # [{ question:, choices: }] o nil.
@@ -75,11 +75,44 @@ class ContactTrackings::Assistant::AnalysisTurn
     findings.select { |f| Checker::FIXABLE.include?(f[:code]) }
   end
 
+  # Agrupada por situación (25/09/2026: 18 avisos eran 7 etiquetas, 6 directivas y 3
+  # rutas, cada una con el párrafo entero): qué pasa y qué hacer una sola vez, y a qué
+  # afecta. Un aviso sin compañeros va completo, que trae más detalle.
+  GROUPS = { route_does_nothing: 'nothing', label_not_found: 'labels', state_label_not_found: 'labels',
+             loose_directive: 'loose', bare_tag_line: 'bare_tags' }.freeze
+
   def findings_block
     return t('analysis.clean') if findings.empty?
 
-    lineas = findings.first(MAX_ITEMS).map { |f| "- #{f[:mark]} #{f[:message].to_s.squish.truncate(Checker::MAX_MESSAGE)}" }
+    grupos = findings.group_by { |f| GROUPS[f[:code]] || f.object_id }
+    lineas = grupos.values.first(MAX_ITEMS).map { |lista| group_line(lista) }
     ([t('analysis.header', count: findings.size)] + lineas).join("\n")
+  end
+
+  def group_line(lista)
+    primero = lista.first
+    clave = GROUPS[primero[:code]]
+    return "- #{primero[:mark]} #{primero[:message].to_s.squish.truncate(Checker::MAX_MESSAGE)}" if clave.nil? || lista.one?
+
+    afectados = lista.map { |f| affected(f) }.uniq.join(' · ')
+    "- #{primero[:mark]} #{t("analysis.groups.#{clave}", count: lista.size)}\n  #{afectados}"
+  end
+
+  def affected(finding)
+    case finding[:code]
+    when :label_not_found, :state_label_not_found then finding[:wrote].to_s
+    when :loose_directive then t('analysis.line', line: finding[:line], wrote: finding[:wrote])
+    else Array(finding[:routes] || finding[:route]).join(', ').presence || t('analysis.line', line: finding[:line], wrote: '')
+    end.strip
+  end
+
+  # Lo que el modelo escribió, sin los avisos que repite (la lista ya va arriba):
+  # medido el 25/09 con 18 avisos, los volvió a copiar uno por uno antes de su lectura.
+  REPEATED_RE = /\A\s*(?:[-*•]\s*)?(?:\*\*)?(?:ROJO|ÁMBAR|AMBAR|🔴|🟡)\b/i
+
+  def own_reading(mensaje)
+    lineas = mensaje.to_s.lines.grep_v(REPEATED_RE)
+    lineas.join.gsub(/\n{3,}/, "\n\n").strip
   end
 
   def route_lines(texto)
