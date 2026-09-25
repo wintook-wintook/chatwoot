@@ -61,6 +61,7 @@ es:
         loose: '**Directivas en la prosa que no se ejecutan** (%{count}): la búsqueda la hace el motor según la ruta. Nombra «la información consultada» en vez de la directiva.'
         nothing: '**Rutas que no consultan nada ni tienen «si no resuelve»** (%{count}): contestan solo con el Entrenamiento. Si es a propósito (saludo, despedida, pedir datos), déjalas así.'
         bare_tags: '**Etiquetas sueltas, sin significado** (%{count}): el agente las pega a todas sus respuestas. Escríbelas como diccionario («#x = cuándo se usa») o bórralas.'
+        sources: '**Rutas que buscan en una fuente que no existe en la cuenta** (%{count}): no van a encontrar nada. Créala desde el modal de la ruta («Agregarla») o elige una que exista.'
     fix_offer:
       question: 'Se pueden corregir %{count} avisos editando el texto. ¿Los corrijo?'
       'yes': 'Sí, corrige lo que se puede en el texto'

@@ -72,9 +72,21 @@ module ContactTrackings::Assistant::CheckerSection
       digas que algo está bien si aparece aquí. Todo va DENTRO de "mensaje", como texto con
       viñetas: no agregues llaves nuevas al JSON.
       Si piden analizar o revisar el prompt, NUNCA pidas que aclaren qué revisar, y NO repitas
-      esta lista: ya se le muestra a la persona arriba de tu mensaje, agrupada. Tu mensaje es
-      solo «Mi lectura:», de 3 a 5 puntos que NO sean estos avisos (contradicciones, reglas
-      vagas, lo que falta, lo que el comprobador no puede ver).
+      esta lista ni la parafrasees (nada de «revisa las etiquetas», «las directivas deben ir en
+      la ruta», «las rutas sin fuente…»): ya se le muestra a la persona arriba, agrupada.
+      Tu mensaje es solo «Mi lectura:» con lo que el comprobador NO puede ver. Revisa el
+      Entrenamiento buscando, uno por uno, estos casos, y reporta cada uno que encuentres (hasta 5),
+      citando la sección o la ruta y el texto exacto:
+        - dos reglas que se contradicen (cita las dos);
+        - dos rutas cuyas frases se pisan (da un mensaje real que podría caer en las dos);
+        - una ruta cuya fuente no corresponde a su tema (p. ej. orientación que busca en ayuda técnica);
+        - estados, variables o notas internas (X=SÍ, CARRERA=…) que el agente podría escribirle al
+          cliente si no se le prohíbe;
+        - algo que el agente promete (pasar con un asesor, avisar) y el Entrenamiento no le da con qué
+          cumplir (ninguna ruta abre un caso ni etiqueta para eso);
+        - una regla tan vaga que el agente no sabría cumplirla, o un caso frecuente que nada cubre.
+      Nada genérico («asegúrate de…», «considera…»). Solo si revisaste todos y no hay ninguno, escribe
+      exactamente: «Mi lectura: no encuentro nada más fuera de estos avisos.»
 
       #{findings_text(resultado)}
 

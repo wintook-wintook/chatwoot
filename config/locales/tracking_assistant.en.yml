@@ -62,6 +62,7 @@ en:
         loose: '**Directives in the prose that do not run** (%{count}): the engine searches according to the route. Name «la información consultada» instead of the directive.'
         nothing: '**Routes that query nothing and have no «if it cannot solve»** (%{count}): they answer only from the Training. If intended (greeting, goodbye, asking for data), leave them.'
         bare_tags: '**Loose tags without meaning** (%{count}): the agent sticks them to every reply. Write them as a dictionary («#x = when it is used») or delete them.'
+        sources: '**Routes that search a source that does not exist in the account** (%{count}): they will find nothing. Create it from the route modal («Add it») or pick an existing one.'
     fix_offer:
       question: '%{count} warnings can be fixed by editing the text. Should I fix them?'
       'yes': 'Yes, fix what can be fixed in the text'

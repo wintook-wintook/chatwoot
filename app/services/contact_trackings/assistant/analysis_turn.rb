@@ -79,7 +79,7 @@ class ContactTrackings::Assistant::AnalysisTurn
   # rutas, cada una con el párrafo entero): qué pasa y qué hacer una sola vez, y a qué
   # afecta. Un aviso sin compañeros va completo, que trae más detalle.
   GROUPS = { route_does_nothing: 'nothing', label_not_found: 'labels', state_label_not_found: 'labels',
-             loose_directive: 'loose', bare_tag_line: 'bare_tags' }.freeze
+             loose_directive: 'loose', bare_tag_line: 'bare_tags', source_not_found: 'sources' }.freeze
 
   def findings_block
     return t('analysis.clean') if findings.empty?
@@ -102,6 +102,7 @@ class ContactTrackings::Assistant::AnalysisTurn
     case finding[:code]
     when :label_not_found, :state_label_not_found then finding[:wrote].to_s
     when :loose_directive then t('analysis.line', line: finding[:line], wrote: finding[:wrote])
+    when :source_not_found then "#{finding[:route]} → #{finding[:wrote]}"
     else Array(finding[:routes] || finding[:route]).join(', ').presence || t('analysis.line', line: finding[:line], wrote: '')
     end.strip
   end
