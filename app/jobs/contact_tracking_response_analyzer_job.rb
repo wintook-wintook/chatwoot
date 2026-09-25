@@ -1007,6 +1007,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # arranca a las 12:00, "noche" a las 18:00, "mañana" (o sin franja) desde el inicio del día.
   # Como el servicio devuelve los primeros disponibles desde aquí, así caen en la franja pedida.
   TIME_OF_DAY_START = { 'afternoon' => 12, 'evening' => 18 }.freeze
+  TIME_OF_DAY_VALUES = %w[morning afternoon evening].freeze
   def booking_search_anchor(day, time_of_day, timezone)
     local = day.in_time_zone(timezone)
     hour  = TIME_OF_DAY_START[time_of_day.to_s]
@@ -1107,6 +1108,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     requested = parse_requested_datetime(tracking, message, timezone)
 
     if requested
+      # «¿Y en la tarde?»: sin día, es la tarde del día de los horarios que se le ofrecieron.
+      if requested[:day_given] == false && current_slots.any?
+        requested = requested.merge(at: Time.parse(current_slots.first['slot']).in_time_zone(timezone).beginning_of_day)
+      end
+
       # Bug #4 — si el cliente dio solo una hora ("a las 2pm"), parse_requested_datetime la
       # ancla a hoy/mañana, ignorando que los slots activos (current_slots) son de otra fecha.
       # Sin esto, slot_for podría confirmar la cita en el día equivocado. Anclamos la hora
@@ -1138,7 +1144,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       end
 
       # Hora exacta ocupada, o solo dio el día: ofrecemos horarios cerca de lo pedido.
-      alternatives = service.call(from: requested[:at].beginning_of_day)
+      alternatives = service.call(from: booking_search_anchor(requested[:at], requested[:time_of_day], timezone))
       if alternatives.any?
         # Bug #5 — si el día pedido no tiene disponibilidad, el servicio devuelve slots del
         # siguiente día hábil. Avisamos explícitamente en vez de mostrarlos sin contexto.
@@ -1208,12 +1214,16 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       specific_time: data['specific_time'].presence,
       relative_days: data['relative_days'].presence&.to_i
     }.compact
+    franja = TIME_OF_DAY_VALUES.include?(data['time_of_day']) ? data['time_of_day'] : nil
+    # «¿Y en la tarde?» (25/09/2026): solo la franja, sin día. El día lo pone quien llama
+    # (en la negociación, el de los horarios ofrecidos); mientras, hoy.
+    return { at: now, exact: false, time_of_day: franja, day_given: false } if rd.except(:weeks_ahead).empty? && franja
     return nil if rd.except(:weeks_ahead).empty?
 
     at = calculate_reschedule_datetime(rd, timezone)
     return nil unless at
 
-    { at: at, exact: rd[:specific_time].present? }
+    { at: at, exact: rd[:specific_time].present?, time_of_day: franja, day_given: true }
   rescue StandardError => e
     Rails.logger.warn "[TrackingBot] ⚠️ No se pudo interpretar la fecha pedida: #{e.message}"
     nil
@@ -1227,8 +1237,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       Hoy es #{today}. El cliente quiere agendar y puede proponer una fecha/hora en su mensaje.
       Devuelve SOLO un JSON:
       {"specific_date": "YYYY-MM-DD" o null, "weekday": 1..7 o null (1=lunes...7=domingo),
-       "weeks_ahead": número o null, "specific_time": "HH:MM" (24h) o null, "relative_days": número o null}.
+       "weeks_ahead": número o null, "specific_time": "HH:MM" (24h) o null, "relative_days": número o null,
+       "time_of_day": "morning" | "afternoon" | "evening" o null}.
       Si no propone ninguna fecha/hora concreta, deja todo en null.
+      - Franja sin hora: "en la tarde" → "afternoon"; "en la noche" → "evening"; "en la mañana" o
+        "temprano" → "morning". OJO: "mañana" sola es el día siguiente ("relative_days": 1), no una franja.
       Reglas (NO calcules fechas de calendario a mano; el sistema las resuelve):
       - Día de la semana nombrado ("el martes", "para el jueves"): poné "weekday" (1=lunes...7=domingo)
         y dejá "specific_date" en null. "weeks_ahead" SOLO si lo dice explícito ("en dos semanas"=2);

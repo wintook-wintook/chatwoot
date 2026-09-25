@@ -994,4 +994,29 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       expect(service).to have_received(:call).with(from: manana.in_time_zone('America/Mexico_City').beginning_of_day)
     end
   end
+
+  # 25/09/2026: «¿Y en la tarde?» con horarios del martes ofrecidos repetía los de la mañana.
+  describe 'franja sin día durante la negociación' do
+    let(:tz) { 'America/Mexico_City' }
+
+    it 'lee la franja aunque no diga día' do
+      allow(job).to receive_messages(get_api_key: { key: 'k' }, extract_datetime_json: { 'time_of_day' => 'afternoon' })
+      message = instance_double(Message, content: '¿Y en la tarde?', content_attributes: {}, attachments: [])
+      allow(job).to receive(:message_text_for_ai).and_return('¿Y en la tarde?')
+
+      expect(job.send(:parse_requested_datetime, tracking, message, tz)).to include(time_of_day: 'afternoon', day_given: false)
+    end
+
+    it 'busca desde las 12:00 del día de los horarios ofrecidos' do
+      martes = Time.find_zone(tz).local(2026, 9, 29, 9)
+      service = instance_double(ContactTrackings::AvailabilitySlotService, call: [])
+      allow(job).to receive_messages(appointment_timezone: tz, slot_service_for: service,
+                                     parse_requested_datetime: { at: Time.current, exact: false, time_of_day: 'afternoon',
+                                                                 day_given: false },
+                                     try_kbase_during_negotiation: true)
+
+      job.send(:handle_slot_negotiation, tracking, instance_double(Message), [{ 'slot' => martes.utc.iso8601 }])
+      expect(service).to have_received(:call).with(from: martes.change(hour: 12))
+    end
+  end
 end
