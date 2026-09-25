@@ -2154,9 +2154,6 @@ export default {
             <p class="text-xs text-slate-500 dark:text-slate-400">
               {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_HINT') }}
             </p>
-            <woot-button variant="clear" size="small" @click="startFresh">
-              {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_NEW') }}
-            </woot-button>
           </div>
 
           <div class="flex flex-wrap items-center gap-1 mb-3 shrink-0">

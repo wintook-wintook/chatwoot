@@ -103,7 +103,6 @@
     "SAVE_FROM_TEMPLATE": "Este Entrenamiento salió de «%{name}». Al guardar se reemplaza el suyo y se conserva una copia del anterior.",
     "TAB_SESSIONS": "En construcción",
     "SESSIONS_HINT": "Los agentes que se armaron en el Asistente, de todos los administradores de la cuenta: los que siguen a medias y, con el filtro, los que ya se guardaron como Agente IA. Retoma uno para seguirlo donde quedó.",
-    "SESSIONS_NEW": "Empezar una nueva",
     "SESSIONS_RESUME": "Retomar",
     "SESSIONS_SAVED": "guardada",
     "SESSIONS_OPEN": "a medias",

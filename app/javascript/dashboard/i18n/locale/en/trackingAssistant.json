@@ -103,7 +103,6 @@
     "SAVE_FROM_TEMPLATE": "This Training came from “%{name}”. Saving replaces its own and keeps a copy of the previous one.",
     "TAB_SESSIONS": "In progress",
     "SESSIONS_HINT": "Agents built in the Assistant by every admin in the account: the ones still in progress and, with the filter, the ones already saved as an AI Agent. Resume one to continue where it was left.",
-    "SESSIONS_NEW": "Start a new one",
     "SESSIONS_RESUME": "Resume",
     "SESSIONS_SAVED": "saved",
     "SESSIONS_OPEN": "in progress",
