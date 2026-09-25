@@ -495,6 +495,16 @@ export default {
     savedSessions() {
       return this.sessions.filter(sesion => sesion.status === 'saved');
     },
+    // En el computed y no en la plantilla: el compilador de plantillas de este
+    // webpack no acepta `?.` y la pantalla entera dejaba de cargar (25/09/2026).
+    discardDescription() {
+      const fila = this.discardTarget || {};
+      return this.$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_DESCRIPTION', {
+        id: fila.id,
+        title:
+          fila.title || this.$t('TRACKING_ASSISTANT_VIEW.SESSIONS_UNTITLED'),
+      });
+    },
     visibleSessions() {
       if (this.sessionsFilter === 'saved') return this.savedSessions;
       if (this.sessionsFilter === 'all') return this.sessions;
@@ -2383,14 +2393,7 @@ export default {
     <woot-confirm-modal
       ref="discardSessionDialog"
       :title="$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_TITLE')"
-      :description="
-        $t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_DESCRIPTION', {
-          id: discardTarget?.id,
-          title:
-            discardTarget?.title ||
-            $t('TRACKING_ASSISTANT_VIEW.SESSIONS_UNTITLED'),
-        })
-      "
+      :description="discardDescription"
       :confirm-label="$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_YES')"
       :cancel-label="$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_NO')"
     />
