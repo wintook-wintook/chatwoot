@@ -11,6 +11,16 @@
 // líneas largas cortarían en otro lugar y el color quedaría en la línea de al lado.
 // El desplazamiento se copia en cada scroll.
 // ============================================================================
+// Colores FIJOS, no los de la paleta (25/09/2026): con los temas de Apariencia el
+// ámbar es una variable que cambia con cada tema, y el red-50/100 de Chatwoot es casi
+// el color del fondo; la marca desaparecía. Semitransparentes para que se vean sobre
+// fondo claro y oscuro, más una franja sólida a la izquierda que se ve siempre.
+const LEVEL_COLORS = {
+  blocking: { fill: 'rgba(239, 68, 68, 0.22)', stripe: '#dc2626' },
+  degrading: { fill: 'rgba(245, 158, 11, 0.26)', stripe: '#d97706' },
+};
+const STRIPE_PX = 4;
+
 // Una línea vacía sin nada adentro no ocupa alto: con un espacio de ancho cero sí.
 const EMPTY_LINE = String.fromCharCode(0x200b);
 
@@ -65,6 +75,22 @@ export default {
     this.detach();
   },
   methods: {
+    // El fondo llega hasta el borde (entra en el relleno del editor) y la franja va en
+    // ese borde, así no tapa ni corre el texto.
+    lineStyle(level) {
+      const colores = LEVEL_COLORS[level];
+      if (!colores) return null;
+      const izq = this.box.paddingLeft || '0px';
+      const der = this.box.paddingRight || '0px';
+      return {
+        backgroundColor: colores.fill,
+        boxShadow: `inset ${STRIPE_PX}px 0 0 ${colores.stripe}`,
+        marginLeft: `-${izq}`,
+        paddingLeft: izq,
+        marginRight: `-${der}`,
+        paddingRight: der,
+      };
+    },
     attach() {
       this.detach();
       if (!this.target) return;
@@ -124,10 +150,7 @@ export default {
       v-for="(linea, index) in lines"
       :key="index"
       class="text-transparent [overflow-wrap:break-word]"
-      :class="{
-        'bg-red-100 dark:bg-red-900/40': linea.level === 'blocking',
-        'bg-amber-50 dark:bg-amber-900/30': linea.level === 'degrading',
-      }"
+      :style="lineStyle(linea.level)"
     >
       <span class="whitespace-pre-wrap">{{ linea.texto || EMPTY_LINE }}</span>
     </div>
