@@ -222,6 +222,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # es "eager": appointment_action es null salvo que el cliente realmente hable de una cita.
     if appointment_dispatchable?(tracking) && appointment_allowed_for?(branch)
       appt = classify_appointment(tracking, message, route_result)
+      appt = availability_appt(appt) if availability_branch?(branch)
       if appt && appt[:appointment_action]
         Rails.logger.info "[TrackingBot] 📅 @agendar_calendar → acción de cita: #{appt[:appointment_action]}"
         dispatch_appointment_action(tracking, message, appt)
@@ -261,6 +262,26 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     branch.present? && branch.directive.blank? &&
       branch.escalation.to_s.match?(Cases::TicketCreatorService::DIRECTIVE_RE) &&
       !branch.escalation.to_s.match?(/@agendar_calendar/i)
+  end
+
+  # proyecto@hoja_buscar — RUTA DE DISPONIBILIDAD: sin fuente y con {{hoja_buscar:}} ->
+  # @agendar_calendar. Quien la escribe dice «esta ruta es para ver horarios» (25/09/2026:
+  # «¿qué horarios tienen la TP-64 y la TP-63 para mañana?» a veces la IA de citas la
+  # tomaba como plática y contestaba con la hoja). Elegir la ruta ya decidió que es cita.
+  def availability_branch?(branch)
+    return false if branch.nil? || branch.directive.present?
+
+    accion = branch.escalation.to_s
+    accion.match?(ContactTrackings::SheetLookup::DIRECTIVE_RE) && accion.match?(/@agendar_calendar\b/i)
+  end
+
+  # Sin acción de cita, en una ruta de disponibilidad es agendar. La fecha pedida
+  # («mañana») se lee del mensaje, porque la IA que dijo «no es cita» tampoco la trajo.
+  def availability_appt(appt)
+    return appt if appt&.dig(:appointment_action).present?
+
+    Rails.logger.info '[TrackingBot] 📅 Ruta de disponibilidad → horarios sin preguntar si es cita'
+    (appt || {}).merge(appointment_action: :book_new, read_date: true)
   end
 
   # La agenda (ofrecer horarios, agendar) no corre en una rama de caso propio.
@@ -928,6 +949,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # confirmá ese horario si está libre, o ofrecé alternativas cerca del día pedido. Solo
     # si no pidió nada concreto caemos al comportamiento por defecto (primeros disponibles).
     requested = requested_datetime_for_booking(appt, timezone)
+    requested ||= parse_requested_datetime(tracking, message, timezone) if appt.is_a?(Hash) && appt[:read_date]
     return if try_book_requested_slot(tracking, message, service, requested)
 
     slots = if requested

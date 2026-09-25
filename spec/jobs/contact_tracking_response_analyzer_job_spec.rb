@@ -931,7 +931,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     let(:viernes) { Time.find_zone(tz).local(2026, 9, 25, 12) }
     let(:lunes) { [{ slot: Time.find_zone(tz).local(2026, 9, 28, 9) }] }
 
-    around { |example| travel_to(viernes) { example.run } }
+    before { travel_to(viernes) }
 
     it 'si el día pedido no se trabaja, lo dice' do
       allow(service).to receive(:working_day?).and_return(false)
@@ -949,6 +949,49 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
 
     it 'si los horarios son del día pedido, no agrega nada' do
       expect(job.send(:moved_day_intro, viernes + 3.days, lunes, service, tz)).to be_nil
+    end
+  end
+
+  # proyecto@hoja_buscar — ruta de disponibilidad: - -> {{hoja_buscar:}} -> @agendar_calendar
+  describe 'ruta de disponibilidad' do
+    let(:route) { ContactTrackings::RouteMap::Route }
+    let(:lookup) { '{{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}}' }
+
+    it 'es la que no tiene fuente y agenda con {{hoja_buscar:}}' do
+      expect(job.send(:availability_branch?, route.new(name: 'd', escalation: "#{lookup} -> @agendar_calendar"))).to be(true)
+      con_fuente = route.new(name: 'd', directive: '{{hoja:Servicio Gruas}}', escalation: "#{lookup} -> @agendar_calendar")
+      expect(job.send(:availability_branch?, con_fuente)).to be(false)
+      expect(job.send(:availability_branch?, route.new(name: 'd', escalation: '@agendar_calendar'))).to be(false)
+      expect(job.send(:availability_branch?, nil)).to be(false)
+    end
+
+    it 'si la IA de citas dice que no es cita, en esta ruta sí lo es y lee la fecha del mensaje' do
+      expect(job.send(:availability_appt, { appointment_action: nil, intent: 'tracking' }))
+        .to include(appointment_action: :book_new, read_date: true)
+    end
+
+    it 'si la IA sí trajo una acción (mover, cancelar), se respeta' do
+      expect(job.send(:availability_appt, { appointment_action: :cancel })).to eq(appointment_action: :cancel)
+    end
+
+    it 'en la agenda usa la fecha leída del mensaje: «mañana» no se pierde' do
+      inbox = create(:inbox, account: account)
+      contact = create(:contact, account: account)
+      conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
+      tracking = ContactTracking.create!(account: account, contact: contact, inbox: inbox, conversation: conversation,
+                                         objective: 'Grúas', scheduled_for: 1.hour.from_now, tracking_template: tracking_template)
+      message = create(:message, account: account, inbox: inbox, conversation: conversation, content: '¿horarios para mañana?')
+      tracking_template.update!(calendar_integration_ids: [178])
+      manana = 1.day.from_now.beginning_of_day
+      service = instance_double(ContactTrackings::AvailabilitySlotService, call: [])
+      allow(job).to receive_messages(appointment_timezone: 'America/Mexico_City', slot_service_for: service,
+                                     parse_requested_datetime: { at: manana, exact: false }, generate_action_reply: 'sin horarios')
+      allow(job).to receive(:send_auto_reply)
+      allow(job).to receive(:notify_admin_interested)
+      allow(job).to receive(:create_private_note)
+
+      job.send(:handle_book_appointment, tracking, message, { appointment_action: :book_new, read_date: true })
+      expect(service).to have_received(:call).with(from: manana.in_time_zone('America/Mexico_City').beginning_of_day)
     end
   end
 end
