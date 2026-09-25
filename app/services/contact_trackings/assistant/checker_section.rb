@@ -35,6 +35,10 @@ module ContactTrackings::Assistant::CheckerSection
       verbo para que se entienda: «ejecuta X» → «usa X», «NO ejecutes/consultes X» → «NO uses X», «al consultar X» →
       «al usar X». La búsqueda la hace el motor según la ruta; si una regla pide consultar OTRA fuente además de la
       de su ruta, quita ese paso: cada ruta consulta una sola fuente por turno.
+    - Un MAPA de fuentes en la prosa («SOPORTE: @discourse. COMERCIAL: @buscar_predefinidas»): no lo reemplaces
+      (quedaría «SOPORTE: la información consultada. COMERCIAL: la información consultada»); bórralo, porque ese
+      mapa lo hacen las líneas @ruta, y deja la regla de fondo («lo que afirmes de la empresa sale solo de la
+      información consultada»). Si a algún tipo del mapa le falta su ruta con esa fuente, dilo en el mensaje.
     - Paréntesis o }} sin cerrar: ciérralo al final de la directiva.
     - Rótulo de sección roto: escríbelo [NOMBRE]. Rama por defecto sin «:»: @ruta_por_defecto: nombre.
     - Etiqueta suelta sin significado: escríbela como diccionario («#x = cuándo se usa») o bórrala.
