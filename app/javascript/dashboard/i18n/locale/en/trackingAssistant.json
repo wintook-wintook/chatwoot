@@ -487,6 +487,12 @@
     "LOG_SOURCE_SAVED": "Saved to the agent",
     "SESSION_RENAME": "Rename",
     "SESSION_RENAME_PLACEHOLDER": "Name for this conversation (empty = automatic)",
-    "SESSION_RENAME_ERROR": "The name could not be changed. Try again."
+    "SESSION_RENAME_ERROR": "The name could not be changed. Try again.",
+    "SESSION_DISCARD_TITLE": "Delete this conversation?",
+    "SESSION_DISCARD_DESCRIPTION": "#%{id} “%{title}” will be removed from the list. The AI Agent, if already saved, is not affected.",
+    "SESSION_DISCARD_YES": "Yes, delete",
+    "SESSION_DISCARD_NO": "Cancel",
+    "SESSION_DISCARDED": "#%{id} was removed from the list.",
+    "SESSION_DISCARD_ERROR": "Could not delete. Please try again."
   }
 }

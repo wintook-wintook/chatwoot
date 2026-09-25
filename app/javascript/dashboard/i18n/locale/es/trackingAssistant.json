@@ -487,6 +487,12 @@
     "LOG_SOURCE_SAVED": "Guardado en el agente",
     "SESSION_RENAME": "Ponerle nombre",
     "SESSION_RENAME_PLACEHOLDER": "Nombre de esta conversación (vacío = automático)",
-    "SESSION_RENAME_ERROR": "No se pudo cambiar el nombre. Inténtalo de nuevo."
+    "SESSION_RENAME_ERROR": "No se pudo cambiar el nombre. Inténtalo de nuevo.",
+    "SESSION_DISCARD_TITLE": "¿Borrar esta conversación?",
+    "SESSION_DISCARD_DESCRIPTION": "Se quita #%{id} «%{title}» de la lista. El Agente IA, si ya se guardó, no se toca.",
+    "SESSION_DISCARD_YES": "Sí, borrar",
+    "SESSION_DISCARD_NO": "Cancelar",
+    "SESSION_DISCARDED": "Se borró #%{id} de la lista.",
+    "SESSION_DISCARD_ERROR": "No se pudo borrar. Inténtalo de nuevo."
   }
 }

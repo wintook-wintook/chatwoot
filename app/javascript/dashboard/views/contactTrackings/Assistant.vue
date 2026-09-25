@@ -287,6 +287,8 @@ export default {
       // El orden arranca donde lo dejó el backend (recent_first): así el primer
       // pintado y el que se ve después de tocar un encabezado son coherentes.
       sessionsSort: { key: 'updated_at', order: 'desc' },
+      // La fila que se va a borrar, para nombrarla en la confirmación.
+      discardTarget: null,
       agentsPage: 1,
       AGENTS_PER_PAGE,
       // Los roto primero: es la pestaña a la que se entra para arreglar algo.
@@ -730,13 +732,21 @@ export default {
         useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN_ERROR'));
       }
     },
-    async discardSession(id) {
+    // Sin confirmación ni aviso (25/09/2026) la fila se iba y las de abajo subían a
+    // ocupar su lugar: parecía que el clic había ordenado la tabla, no borrado.
+    async discardSession(row) {
+      this.discardTarget = row;
+      const borrar = await this.$refs.discardSessionDialog.showConfirmation();
+      if (!borrar) return;
       try {
-        await AssistantAPI.discardSession(id);
-        this.sessions = this.sessions.filter(s => s.id !== id);
-        if (this.sessionId === id) this.startFresh();
+        await AssistantAPI.discardSession(row.id);
+        this.sessions = this.sessions.filter(s => s.id !== row.id);
+        if (this.sessionId === row.id) this.startFresh();
+        useAlert(
+          this.$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARDED', { id: row.id })
+        );
       } catch (error) {
-        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN_ERROR'));
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_ERROR'));
       }
     },
     startFresh() {
@@ -2296,7 +2306,7 @@ export default {
                           variant="clear"
                           color-scheme="alert"
                           icon="delete"
-                          @click.stop="discardSession(row.id)"
+                          @click.stop="discardSession(row)"
                         />
                       </div>
                     </td>
@@ -2369,6 +2379,20 @@ export default {
       @close="showOptimizeModal = false"
       @run="runOptimize"
       @apply="applyOptimization"
+    />
+    <woot-confirm-modal
+      ref="discardSessionDialog"
+      :title="$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_TITLE')"
+      :description="
+        $t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_DESCRIPTION', {
+          id: discardTarget?.id,
+          title:
+            discardTarget?.title ||
+            $t('TRACKING_ASSISTANT_VIEW.SESSIONS_UNTITLED'),
+        })
+      "
+      :confirm-label="$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_YES')"
+      :cancel-label="$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_NO')"
     />
     <woot-confirm-modal
       ref="analyzePastedDialog"
