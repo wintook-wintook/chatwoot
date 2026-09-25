@@ -180,3 +180,21 @@ del remolque.
    horario dice de qué remolque es.
 4. **Pruebas** → los calendarios de la agenda 178 son de prueba: en F5 sí se puede llegar a
    crear la cita (a diferencia de aliverio.mx, que sigue prohibido).
+
+---
+
+## 9. Resultado F5 (25/09/2026)
+
+Copia de prueba del agente: **#10368 «Grúas SSUSA — prueba hoja_buscar»** (la #10238 no se tocó),
+ruta `solicitud_servicio` con `{{hoja:Servicio Gruas}} -> {{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}} -> @agendar_calendar`.
+
+| Conv | Cliente | Resultado | Calendario usado |
+|------|---------|-----------|------------------|
+| 219 | «Me interesa la TP-64, ¿qué horarios tiene?» | 5 horarios | TP-64 ✅ |
+| 220 | «Quiero agendar un servicio de remolque» | «¿Para cuál remolque quieres agendar?» | ninguno ✅ |
+| 221 | excavadora → el agente recomienda TP-93 → «agéndame en la que me recomiendes» | 5 horarios | TP-93 ✅ |
+| 222 | «Quiero agendar la TP-63» → «1» → «sin correo» | cita creada vie 25/09 17:00 | TP-63 ✅ (`appointment_calendar_gid`) |
+
+Pendiente de configuración (no de código): con «Presentación de horarios» = *detallada* cada
+horario dice el nombre del agente de Google («— Jose Luis Herrera»). Con **por calendario**
+salen agrupados bajo «📅 TP-64», que es lo que pide la decisión 3.
