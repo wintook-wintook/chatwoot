@@ -198,3 +198,31 @@ ruta `solicitud_servicio` con `{{hoja:Servicio Gruas}} -> {{hoja_buscar: Servici
 Pendiente de configuración (no de código): con «Presentación de horarios» = *detallada* cada
 horario dice el nombre del agente de Google («— Jose Luis Herrera»). Con **por calendario**
 salen agrupados bajo «📅 TP-64», que es lo que pide la decisión 3.
+
+---
+
+## 10. Ruta de disponibilidad (25/09/2026)
+
+Problema medido: «¿qué horarios tienen la TP-64 y la TP-63 para mañana?» a veces la IA de
+citas (RouterService) la tomaba como plática → contestaba la hoja (y con Calendar_ID en el
+contexto le pasó al cliente los links de los calendarios; ya corregido: las columnas que
+regresa una `{{hoja_buscar:}}` no llegan al modelo en `{{hoja:}}`).
+
+Regla del motor: una ruta **sin fuente** con `{{hoja_buscar:}} -> @agendar_calendar` es de
+disponibilidad. Si el mensaje cae ahí, va a horarios sin preguntarle a la IA si es cita; la
+fecha («mañana») se lee del mensaje. Si ya tiene cita, o la IA trajo mover/cancelar, se respeta.
+
+```
+@ruta(disponibilidad_remolque #consulta_producto: qué horarios tiene la TP-64, disponibilidad de un remolque para mañana, cuándo está libre un remolque, quiero agendar un remolque): - -> {{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}} -> @agendar_calendar
+@ruta(solicitud_servicio #tracking: Quiero un servicio de transporte): {{hoja:Servicio Gruas}} -> @crear_ticket(tipo=Comercial, prioridad=media)
+@ruta(consulta_catalogo #consulta_producto: Qué tipos de grúas manejan): {{hoja:Servicio Gruas}}
+```
+
+| Conv | Cliente | IA de citas | Resultado |
+|------|---------|-------------|-----------|
+| 227 | ¿horarios TP-64 y TP-63 para mañana? | cita | «Mañana sábado no hay servicio…» + lunes ✅ |
+| 228 | (igual) | plática | igual ✅ (la ruta decidió) |
+| 229 | (igual) | plática | igual ✅ (la ruta decidió) |
+| 230 | Quiero agendar un remolque | cita | «¿Para cuál remolque…?» ✅ |
+| 231 | ¿Qué capacidad tiene la TP-64? | plática | hoja: 60 t, sin links ✅ |
+| 232 | ¿Cuándo está libre la TP-93? | cita | horarios del calendario TP-93 ✅ |
