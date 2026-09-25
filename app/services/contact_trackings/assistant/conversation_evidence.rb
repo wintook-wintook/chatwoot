@@ -21,7 +21,10 @@
 
 class ContactTrackings::Assistant::ConversationEvidence
   # /app/accounts/2/conversations/173, o «conversación 173» / «conversacion #173».
-  LINK_RE = %r{/accounts/(\d+)/conversations/(\d+)}
+  # También con lo que Chatwoot pone en medio según desde dónde se abrió (24/09/2026:
+  # un link copiado de la bandeja, …/accounts/2/inbox/493/conversations/186, no se
+  # reconocía): inbox/N, label/x, team/N, custom_view/N, mentions, unattended…
+  LINK_RE = %r{/accounts/(\d+)/(?:[^\s/]+/){0,2}conversations/(\d+)}
   PLAIN_RE = /\bconversaci[oó]n\s*#?\s*(\d+)\b/i
 
   # Una conversación larga no cabe entera ni hace falta: lo que se revisa suele ser

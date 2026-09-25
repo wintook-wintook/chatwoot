@@ -13,6 +13,12 @@ RSpec.describe ContactTrackings::Assistant::ConversationEvidence do
       expect(described_class.display_id_in("revisa /app/accounts/#{account.id}/conversations/173 por favor", account)).to eq(173)
     end
 
+    it 'lee el link copiado desde una bandeja, etiqueta, equipo o vista' do
+      %w[inbox/493 label/ventas team/3 custom_view/7 mentions unattended].each do |medio|
+        expect(described_class.display_id_in("/app/accounts/#{account.id}/#{medio}/conversations/186 revisa", account)).to eq(186)
+      end
+    end
+
     it 'ignora un link de otra cuenta' do
       expect(described_class.display_id_in('/app/accounts/999999/conversations/173', account)).to be_nil
     end
