@@ -70,6 +70,7 @@ module KnowledgeBase
           .gsub(CANNED_RE, PROSE_STAND_IN)
           .gsub(/@buscar_art[ií]culo\b/i, PROSE_STAND_IN)
           .gsub(/@discourse\b/i, PROSE_STAND_IN)
+          .gsub(ContactTrackings::SheetLookup::DIRECTIVE_RE, '') # proyecto@hoja_buscar: configuración de la agenda
           .gsub(/\{\{\s*(?:doc|hoja)\s*:[^}]*\}\}/i, PROSE_STAND_IN) # 24/09: «ejecuta {{hoja:CATALOGO}}» llegaba literal
           .gsub(ExternalDb::ConsultaDirectiveRenderer::DIRECTIVE, '') # proyecto@erp_productos: configuración
           .gsub(/@agendar_calendar\b/i, '') # proyecto@predefinidas_prompt — igual que el conversacional
