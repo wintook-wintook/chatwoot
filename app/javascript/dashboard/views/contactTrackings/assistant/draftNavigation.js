@@ -64,20 +64,44 @@ export function lineRange(draft, line) {
  * CÓDIGO, no solo en el informe. Los hallazgos traen la línea (`line`) o la rama
  * (`route`/`routes`), que se busca con findRouteLine. Lo rojo gana a lo ámbar.
  */
+// Las líneas de un hallazgo: la suya, o la de cada rama que nombra.
+const findingLines = (draft, finding) => {
+  if (finding.line) return [finding.line];
+  const ramas = finding.routes || (finding.route ? [finding.route] : []);
+  return ramas.map(name => findRouteLine(draft, name)).filter(Boolean);
+};
+
 export function lineMarks(draft, validation) {
   const marks = {};
   if (!draft || !validation) return marks;
 
   ['degrading', 'blocking'].forEach(level => {
     (validation[level] || []).forEach(finding => {
-      const ramas = finding.routes || (finding.route ? [finding.route] : []);
-      const lineas = finding.line
-        ? [finding.line]
-        : ramas.map(name => findRouteLine(draft, name)).filter(Boolean);
-      lineas.forEach(line => {
+      findingLines(draft, finding).forEach(line => {
         marks[line] = level;
       });
     });
   });
   return marks;
+}
+
+/**
+ * Qué dice cada línea marcada, para el tooltip del editor (pedido del usuario,
+ * 25/09/2026): { 12: [{ level: 'blocking', message: '…' }, …] }. Los rojos primero.
+ */
+export function lineMessages(draft, validation) {
+  const mensajes = {};
+  if (!draft || !validation) return mensajes;
+
+  ['blocking', 'degrading'].forEach(level => {
+    (validation[level] || []).forEach(finding => {
+      findingLines(draft, finding).forEach(line => {
+        mensajes[line] = [
+          ...(mensajes[line] || []),
+          { level, message: finding.message },
+        ];
+      });
+    });
+  });
+  return mensajes;
 }

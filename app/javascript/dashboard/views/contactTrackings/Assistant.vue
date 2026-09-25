@@ -42,6 +42,7 @@ import {
   findRouteLine,
   lineRange,
   lineMarks,
+  lineMessages,
 } from './assistant/draftNavigation';
 import DraftLineMarks from './assistant/DraftLineMarks.vue';
 import ChangeLog from './assistant/ChangeLog.vue';
@@ -296,6 +297,10 @@ export default {
     // Las líneas del texto con hallazgos, para pintarlas en el editor.
     draftLineMarks() {
       return lineMarks(this.draft, this.validation);
+    },
+    // Lo que dice cada línea marcada, para el recuadro al pasar el mouse.
+    draftLineMessages() {
+      return lineMessages(this.draft, this.validation);
     },
     // El texto que edita el mixin de secciones acá es el borrador. Al escribirlo se
     // pasa por onDraftInput, igual que si se hubiera tipeado en el editor: revalida,
@@ -1904,6 +1909,7 @@ export default {
                     <DraftLineMarks
                       :text="draft"
                       :marks="draftLineMarks"
+                      :messages="draftLineMessages"
                       :target="draftEditorEl"
                     />
                     <textarea
