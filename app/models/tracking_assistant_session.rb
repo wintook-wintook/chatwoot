@@ -97,8 +97,14 @@ class TrackingAssistantSession < ApplicationRecord
     primero = Array(messages).find { |m| m['role'] == 'user' }
     texto = primero&.dig('content').to_s
 
-    ContactTrackings::Assistant::BriefComposer.title_for(texto) || texto.squish.presence&.truncate(80)
+    ContactTrackings::Assistant::BriefComposer.title_for(texto) || texto.squish.presence&.truncate(80) || draft_title
   end
+
+  # Sin mensajes (un prompt pegado que se guardó solo): la primera línea del texto.
+  def draft_title
+    draft.to_s.lines.map { |l| l.delete('#').squish }.find(&:present?)&.truncate(80)
+  end
+  private :draft_title
 
   # Cuántas ramas leería el motor del último borrador. Sale de la comprobación ya
   # guardada, sin volver a parsear: es lo que distingue un intento que sirve de uno
@@ -112,18 +118,42 @@ class TrackingAssistantSession < ApplicationRecord
   # edición a mano (se registra al mandar el turno siguiente). Tope: una
   # conversación larga sobre un prompt de 17.000 caracteres son ~500 KB con 30.
   MAX_VERSIONS = 30
-  VERSION_SOURCES = %w[loaded manual assistant].freeze
+  # saved: lo que se guardó en el Agente IA (25/09/2026: reabrir la sesión mostraba el
+  # texto de antes de las últimas ediciones a mano).
+  VERSION_SOURCES = %w[loaded manual assistant saved].freeze
+  MAX_CHANGE_LINES = 15
 
   # Agrega una versión si el texto cambió respecto de la última. No guarda.
-  def add_version(draft:, source:, summary: nil, validation: nil)
+  #
+  # Cada versión lleva su renglón de bitácora (pedido del usuario, 25/09/2026): qué
+  # piezas cambiaron respecto de la anterior (rutas y secciones, con DraftDiff),
+  # cuántas líneas entraron y salieron, y `notes`, lo que declaró el Asistente.
+  #
+  # autosave: el guardado automático de lo editado a mano. Pausas seguidas de la misma
+  # edición no suman una versión cada una: reemplazan a la anterior autoguardada.
+  # info: summary, validation, notes, autosave.
+  def add_version(draft:, source:, **info)
     return if draft.blank? || VERSION_SOURCES.exclude?(source)
 
-    versiones = Array(draft_versions)
-    return if versiones.last&.dig('draft') == draft
+    versiones = previous_versions(draft, info[:autosave])
+    return if versiones.nil?
 
-    versiones << version_entry(versiones.last&.dig('n').to_i + 1, draft, source, summary, validation)
+    anterior = versiones.last || {}
+    entrada = version_entry(anterior['n'].to_i + 1, draft, source, info[:summary], info[:validation])
+    versiones << entrada.merge(change_log(anterior['draft'], draft, info[:notes], info[:autosave]))
     self.draft_versions = versiones.last(MAX_VERSIONS)
   end
+
+  # Las versiones sobre las que se agrega, o nil si el texto no cambió. Un guardado
+  # automático reemplaza al anterior guardado automático.
+  def previous_versions(draft, autosave)
+    versiones = Array(draft_versions)
+    return nil if versiones.last&.dig('draft') == draft
+
+    versiones.pop if autosave && versiones.last&.dig('autosaved')
+    versiones
+  end
+  private :previous_versions
 
   def version_entry(number, draft, source, summary, validation)
     datos = (validation || {}).with_indifferent_access
@@ -133,6 +163,25 @@ class TrackingAssistantSession < ApplicationRecord
       'draft' => draft }.compact
   end
   private :version_entry
+
+  def change_log(antes, despues, notes, autosave)
+    piezas = antes.present? ? ContactTrackings::Assistant::DraftDiff.new(antes, despues).changes : []
+    signos = ContactTrackings::Assistant::SessionVersions::SIGNS
+    { 'changes' => piezas.map { |c| "#{signos[c.kind]} #{c.key}" }.first(MAX_CHANGE_LINES).presence,
+      'lines' => antes.present? ? line_stats(antes, despues) : nil,
+      'notes' => Array(notes).map { |n| n.to_s.squish.truncate(200) }.compact_blank.first(MAX_CHANGE_LINES).presence,
+      'autosaved' => autosave || nil }.compact
+  end
+  private :change_log
+
+  # Líneas que entraron y salieron, sin importar el orden ni los renglones vacíos.
+  def line_stats(antes, despues)
+    viejas = antes.split("\n").map(&:strip).compact_blank.tally
+    nuevas = despues.split("\n").map(&:strip).compact_blank.tally
+    { 'added' => nuevas.sum { |linea, n| [n - viejas.fetch(linea, 0), 0].max },
+      'removed' => viejas.sum { |linea, n| [n - nuevas.fetch(linea, 0), 0].max } }
+  end
+  private :line_stats
 
   # Sin el texto: es lo que viaja en cada turno. El texto se pide de a una.
   def version_list
@@ -158,7 +207,20 @@ class TrackingAssistantSession < ApplicationRecord
     save!
   end
 
-  def mark_saved!(template)
+  # Con el texto que se guardó: la sesión queda igual que el agente, y la bitácora
+  # registra el guardado.
+  def mark_saved!(template, draft: nil)
+    if draft.present?
+      add_version(draft: draft, source: 'saved', summary: template.name)
+      self.draft = draft
+    end
     update!(status: 'saved', tracking_template: template)
+  end
+
+  # El guardado automático de lo editado a mano (ver add_version, autosave:).
+  def autosave!(draft)
+    add_version(draft: draft, source: 'manual', autosave: true)
+    self.draft = draft
+    save!
   end
 end

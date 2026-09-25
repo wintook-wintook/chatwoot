@@ -140,6 +140,11 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // Guardado automático de lo editado a mano: crea la conversación si todavía no hay.
+  autosaveDraft(draft, sessionId = null) {
+    return axios.put(`${this.url}/autosave`, { draft, session_id: sessionId });
+  }
+
   // Revisar una conversación real: `text` es lo que se escribió en el chat, con el
   // link de la conversación. Corre en segundo plano: el resultado se pide con
   // getConversationReview(turnId) hasta que deja de ser 202.

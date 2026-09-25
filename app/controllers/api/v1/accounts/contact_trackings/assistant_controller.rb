@@ -255,7 +255,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   end
 
   def close_session(template)
-    session_record&.mark_saved!(template)
+    session_record&.mark_saved!(template, draft: params[:draft])
   end
 
   # De la cuenta, no de quien pregunta: las conversaciones se comparten entre

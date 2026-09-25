@@ -96,6 +96,40 @@ RSpec.describe TrackingAssistantSession do
       expect(s.reload).to have_attributes(status: 'saved', tracking_template: template)
       expect(described_class.resumable_for(account, user)).to be_nil
     end
+
+    # 25/09/2026: reabrir la sesión mostraba el texto de antes de las ediciones a mano.
+    it 'guarda el texto que quedó en el agente, como versión «guardado»' do
+      s = sesion(draft: 'viejo')
+      template = account.tracking_templates.create!(name: 'Soporte', objective: 'Resolver dudas')
+
+      s.mark_saved!(template, draft: "[ROL]\nnuevo")
+
+      expect(s.reload.draft).to eq("[ROL]\nnuevo")
+      expect(s.version_list.last).to include('source' => 'saved', 'summary' => 'Soporte')
+    end
+  end
+
+  describe 'guardado automático y bitácora' do
+    it 'guarda lo editado a mano; pausas seguidas son una sola versión' do
+      s = sesion
+      s.autosave!("[ROL]\nuno")
+      s.autosave!("[ROL]\nuno dos")
+      s.autosave!("[ROL]\nuno dos tres")
+
+      expect(s.reload.draft).to eq("[ROL]\nuno dos tres")
+      expect(s.version_list.size).to eq(1)
+      expect(s.title).to eq('[ROL]')
+    end
+
+    it 'cada versión dice qué partes cambiaron, cuántas líneas y lo que declaró el Asistente' do
+      s = sesion
+      s.add_version(draft: "[ROL]\nAmable.\n\n[ESTILO]\nBreve.", source: 'loaded')
+      s.add_version(draft: "[ROL]\nAmable.\n\n[ESTILO]\nBreve y claro.\nSin emojis.", source: 'assistant',
+                    notes: ['~ [ESTILO]: más claro'])
+
+      expect(s.version_list.last).to include('changes' => ['~ [ESTILO]'], 'lines' => { 'added' => 2, 'removed' => 1 },
+                                             'notes' => ['~ [ESTILO]: más claro'])
+    end
   end
 
   describe 'validaciones' do

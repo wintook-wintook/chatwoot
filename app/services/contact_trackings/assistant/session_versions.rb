@@ -25,8 +25,9 @@ class ContactTrackings::Assistant::SessionVersions
     record_on_screen
     return if result.draft.blank?
 
+    lo_dicho = Array(result.changes&.dig(:summary))
     @sesion.add_version(draft: result.draft, source: 'assistant', validation: result.validation,
-                        summary: Array(result.changes&.dig(:summary)).first || result.reply)
+                        summary: lo_dicho.first || result.reply, notes: lo_dicho)
   end
 
   private

@@ -473,6 +473,18 @@
     "PASTE_ANALYZE_YES": "Yes, analyze it",
     "PASTE_ANALYZE_NO": "No, just paste it",
     "PASTE_ANALYZE_MESSAGE": "Analyze my prompt",
-    "ANALYZE_CTA": "Analyze"
+    "ANALYZE_CTA": "Analyze",
+    "DRAFT_TAB_LOG": "Changes",
+    "LOG_HINT": "What changed in each version, who and when. To see the text or go back to a version: «Versions».",
+    "LOG_EMPTY": "No changes yet. They are logged when you edit by hand (saved automatically), with each Assistant reply and when saving to the agent.",
+    "LOG_DOWNLOAD": "Download log (.md)",
+    "LOG_MD_TITLE": "Training change log",
+    "LOG_VERSION": "version %{n}",
+    "LOG_LINES": "+%{added} −%{removed} lines",
+    "LOG_SOURCE_LOADED": "Loaded",
+    "LOG_SOURCE_MANUAL": "By hand",
+    "LOG_SOURCE_AUTOSAVE": "By hand (autosaved)",
+    "LOG_SOURCE_ASSISTANT": "Assistant",
+    "LOG_SOURCE_SAVED": "Saved to the agent"
   }
 }

@@ -473,6 +473,18 @@
     "PASTE_ANALYZE_YES": "Sí, analízalo",
     "PASTE_ANALYZE_NO": "No, solo pegarlo",
     "PASTE_ANALYZE_MESSAGE": "Analiza mi prompt",
-    "ANALYZE_CTA": "Analizar"
+    "ANALYZE_CTA": "Analizar",
+    "DRAFT_TAB_LOG": "Cambios",
+    "LOG_HINT": "Qué cambió en cada versión, quién y cuándo. Para ver el texto o volver a una versión: «Versiones».",
+    "LOG_EMPTY": "Todavía no hay cambios. Se registran al editar a mano (se guarda solo), con cada respuesta del Asistente y al guardar en el agente.",
+    "LOG_DOWNLOAD": "Descargar bitácora (.md)",
+    "LOG_MD_TITLE": "Bitácora del Entrenamiento",
+    "LOG_VERSION": "versión %{n}",
+    "LOG_LINES": "+%{added} −%{removed} líneas",
+    "LOG_SOURCE_LOADED": "Cargado",
+    "LOG_SOURCE_MANUAL": "A mano",
+    "LOG_SOURCE_AUTOSAVE": "A mano (guardado solo)",
+    "LOG_SOURCE_ASSISTANT": "Asistente",
+    "LOG_SOURCE_SAVED": "Guardado en el agente"
   }
 }

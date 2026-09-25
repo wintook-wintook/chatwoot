@@ -44,6 +44,7 @@ import {
   lineMarks,
 } from './assistant/draftNavigation';
 import DraftLineMarks from './assistant/DraftLineMarks.vue';
+import ChangeLog from './assistant/ChangeLog.vue';
 import { withCannedGroup } from './assistant/knowledgeGroup';
 import { emitter } from 'shared/helpers/mitt';
 import { ASSISTANT_SOURCES_CHANGED } from './assistant/sourceDirective';
@@ -83,6 +84,8 @@ const VALIDATE_DEBOUNCE_MS = 400;
 // más seguido no muestra nada nuevo.
 const PROGRESS_POLL_MS = 1500;
 const OPTIMIZE_MAX_WAIT_MS = 5 * 60 * 1000;
+// Guardado automático de lo editado a mano: tras esta pausa sin escribir.
+const AUTOSAVE_DELAY_MS = 4000;
 // Pegar un prompt en el Entrenamiento vacío ofrece analizarlo (onDraftPaste). Menos
 // que esto es un nombre o una prueba, no un prompt.
 const MIN_PASTE_TO_ANALYZE = 80;
@@ -146,6 +149,7 @@ export default {
     Spinner,
     InterviewPanel,
     DraftLineMarks,
+    ChangeLog,
     SessionCard,
     SortableTh,
     ProgressStrip,
@@ -236,6 +240,8 @@ export default {
       // reactivos y el editor aparece y desaparece con las pestañas: se toma en
       // cada render (ver `updated`).
       draftEditorEl: null,
+      // Lo último que se guardó solo (autosave), para no mandar lo mismo dos veces.
+      lastAutosaved: '',
       isOptimizing: false,
       optimizeError: '',
       draftSelection: '',
@@ -583,8 +589,31 @@ export default {
     clearTimeout(this.validateTimer);
     clearInterval(this.progressTimer);
     emitter.off(ASSISTANT_SOURCES_CHANGED, this.onSourcesChanged);
+    // Lo que quedaba por guardar solo, se manda al salir de la pantalla.
+    if (this.autosaveTimer) this.autosaveDraft();
   },
   methods: {
+    // Lo editado a mano se guarda solo, en la conversación (pedido del usuario,
+    // 25/09/2026: cerrar la pestaña sin mandar mensaje ni guardar lo perdía). Sin
+    // conversación todavía, el servidor la crea.
+    async autosaveDraft() {
+      clearTimeout(this.autosaveTimer);
+      const texto = this.draft;
+      if (!texto.trim() || this.isThinking || texto === this.lastAutosaved)
+        return;
+      try {
+        const { data } = await AssistantAPI.autosaveDraft(
+          texto,
+          this.sessionId
+        );
+        this.lastAutosaved = texto;
+        this.sessionId = data.session_id || this.sessionId;
+        if (data.session && !this.sessionMeta) this.sessionMeta = data.session;
+        if (Array.isArray(data.versions)) this.versions = data.versions;
+      } catch (error) {
+        // Sin guardado automático se sigue editando; se guarda al mandar o al guardar.
+      }
+    },
     async onSourcesChanged() {
       await this.fetchInventory();
       // El árbol toma la comprobación de la vista previa si la hay: se descarta para
@@ -704,6 +733,8 @@ export default {
       this.rejected = null;
       this.manualConflict = null;
       this.lastDelivered = '';
+      this.lastAutosaved = '';
+      clearTimeout(this.autosaveTimer);
       this.isBuilding = true;
       this.versions = [];
       this.draftTab = 'editor';
@@ -1396,6 +1427,8 @@ export default {
       }
       clearTimeout(this.validateTimer);
       this.validateTimer = setTimeout(this.validateDraft, VALIDATE_DEBOUNCE_MS);
+      clearTimeout(this.autosaveTimer);
+      this.autosaveTimer = setTimeout(this.autosaveDraft, AUTOSAVE_DELAY_MS);
       // Editar no borra las pruebas: las envejece. Cada corrida guardó contra qué
       // versión se hizo, así que las anteriores quedan marcadas en vez de
       // desaparecer — y la comparación entre preguntas se conserva.
@@ -1737,6 +1770,17 @@ export default {
                         }}
                       </span>
                     </button>
+                    <button
+                      class="ml-3 pb-0.5 border-b-2"
+                      :class="
+                        draftTab === 'log'
+                          ? 'border-woot-500'
+                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                      "
+                      @click="draftTab = 'log'"
+                    >
+                      {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_LOG') }}
+                    </button>
                     <span
                       v-if="hasManualEdits && draft.trim()"
                       class="ml-2 px-1.5 py-0.5 text-xs font-normal rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
@@ -1773,8 +1817,13 @@ export default {
                     />
                   </button>
                 </div>
+                <ChangeLog
+                  v-if="draftTab === 'log'"
+                  :versions="versions"
+                  :title="(sessionMeta && sessionMeta.title) || ''"
+                />
                 <VersionsPanel
-                  v-if="draftTab === 'versions'"
+                  v-else-if="draftTab === 'versions'"
                   :versions="versions"
                   :session-id="sessionId"
                   :current-draft="draft"
