@@ -20,7 +20,8 @@
 class ContactTrackings::SheetCalendars
   # status: :ok · :needs_value (nadie nombró un valor: hay que preguntar) ·
   #         :unavailable (la hoja no respondió o sus calendarios no están configurados)
-  Outcome = Struct.new(:status, :integration_ids, :booking_calendars, :asked, keyword_init: true)
+  # named_in: el mensaje donde se nombró lo buscado (con «?»); nil si los valores eran fijos.
+  Outcome = Struct.new(:status, :integration_ids, :booking_calendars, :asked, :named_in, keyword_init: true)
 
   # Si algo falla, no se agenda en ningún calendario: nunca en todos.
   def self.unavailable_outcome
@@ -46,6 +47,7 @@ class ContactTrackings::SheetCalendars
     return unavailable("la hoja respondió #{result.status} #{result.missing}") unless result.ok?
 
     narrow(result.found.map { |value| ContactTrackings::SheetLookup.calendar_id(value) })
+      .tap { |outcome| outcome.named_in = result.source_message_id }
   end
 
   private

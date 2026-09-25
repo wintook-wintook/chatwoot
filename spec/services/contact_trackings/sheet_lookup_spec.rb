@@ -71,6 +71,14 @@ RSpec.describe ContactTrackings::SheetLookup do
       expect([result.asked, result.found]).to eq([['TP-63'], ['calTP-63']])
     end
 
+    it 'dice de qué mensaje salió el valor' do
+      say('Te recomiendo la TP-64', :outgoing)
+      nombro = say('Mejor la TP-63')
+      say('¿Y en la tarde?')
+
+      expect(lookup('Servicio Gruas | remolque=? | Calendar_ID', conv: conversation).source_message_id).to eq(nombro.id)
+    end
+
     it 'si el cliente no nombró ninguno, todos los que ofreció el agente' do
       say('Necesito mover una excavadora')
       say('Te recomiendo la TP-64 o la TP-63', :outgoing)

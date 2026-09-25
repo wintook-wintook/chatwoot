@@ -1013,10 +1013,46 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       allow(job).to receive_messages(appointment_timezone: tz, slot_service_for: service,
                                      parse_requested_datetime: { at: Time.current, exact: false, time_of_day: 'afternoon',
                                                                  day_given: false },
-                                     try_kbase_during_negotiation: true)
+                                     try_kbase_during_negotiation: true, reoffer_for_named_resource: false)
 
       job.send(:handle_slot_negotiation, tracking, instance_double(Message), [{ 'slot' => martes.utc.iso8601 }])
       expect(service).to have_received(:call).with(from: martes.change(hour: 12))
+    end
+  end
+
+  # 25/09/2026: «¿cuándo está libre la TP-58?» con horarios de la TP-93 abiertos repetía los de la TP-93.
+  describe 'otro remolque durante la oferta abierta' do
+    let(:message) { instance_double(Message, id: 7) }
+    let(:ofrecidos) { [{ 'slot' => 1.day.from_now.utc.iso8601, 'gcal' => 'c93' }] }
+
+    def hoja(calendarios, named_in: 7)
+      ContactTrackings::SheetCalendars::Outcome.new(status: :ok, integration_ids: [178], named_in: named_in,
+                                                     booking_calendars: { '178' => calendarios })
+    end
+
+    before do
+      allow(job).to receive(:clear_pending_slot)
+      allow(job).to receive(:handle_book_appointment)
+    end
+
+    it 'si nombra otro en este mensaje, ofrece los horarios de ese' do
+      allow(job).to receive(:sheet_calendars_for).and_return(hoja(['c58']))
+
+      expect(job.send(:reoffer_for_named_resource, tracking, message, ofrecidos)).to be(true)
+      expect(job).to have_received(:handle_book_appointment).with(tracking, message, hash_including(read_date: true))
+    end
+
+    it 'el mismo remolque, o uno nombrado en un mensaje anterior, no vuelve a buscar' do
+      allow(job).to receive(:sheet_calendars_for).and_return(hoja(['c93']), hoja(['c58'], named_in: 3))
+
+      expect(job.send(:reoffer_for_named_resource, tracking, message, ofrecidos)).to be(false)
+      expect(job.send(:reoffer_for_named_resource, tracking, message, ofrecidos)).to be(false)
+    end
+
+    it '«¿cuándo está libre?» sin día muestra lo primero libre' do
+      allow(job).to receive_messages(sheet_calendars_for: hoja(['c93']), message_text_for_ai: '¿Cuándo está libre la TP-93?')
+
+      expect(job.send(:reoffer_when_asked_free, tracking, message)).to be(true)
     end
   end
 end

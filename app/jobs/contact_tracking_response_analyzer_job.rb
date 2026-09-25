@@ -264,6 +264,38 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       !branch.escalation.to_s.match?(/@agendar_calendar/i)
   end
 
+  # proyecto@hoja_buscar — con una oferta de horarios abierta, el motor solo esperaba un
+  # número, un día o una hora (25/09/2026: «¿cuándo está libre la TP-58?» repetía los
+  # horarios de la TP-93). Si en ESTE mensaje se nombra otro recurso de la hoja, se buscan
+  # los horarios de ese; el día, si lo dijo, se respeta.
+  def reoffer_for_named_resource(tracking, message, current_slots)
+    sheet = sheet_calendars_for(tracking, message)
+    return false unless sheet&.status == :ok && sheet.named_in == message.id
+
+    ofrecidos = current_slots.filter_map { |slot| slot['gcal'] }
+    return false if (sheet.booking_calendars.values.flatten - ofrecidos).empty?
+
+    Rails.logger.info '[TrackingBot] 📅 Nombró otro recurso durante la oferta → sus horarios'
+    reoffer_slots(tracking, message)
+  end
+
+  # «¿Cuándo está libre?» sin día, con la oferta abierta: lo primero libre desde ahora, en
+  # vez de repetir la oferta anterior. Solo en agentes con {{hoja_buscar:}}.
+  AVAILABILITY_ASK_RE = /\bcu[aá]ndo\b|\bdisponib|\blibres?\b/i
+  def reoffer_when_asked_free(tracking, message)
+    return false unless message_text_for_ai(message).to_s.match?(AVAILABILITY_ASK_RE)
+    return false unless sheet_calendars_for(tracking, message)&.status == :ok
+
+    Rails.logger.info '[TrackingBot] 📅 Preguntó cuándo está libre durante la oferta → lo primero libre'
+    reoffer_slots(tracking, message)
+  end
+
+  def reoffer_slots(tracking, message)
+    clear_pending_slot(tracking)
+    handle_book_appointment(tracking, message, { appointment_action: :book_new, read_date: true })
+    true
+  end
+
   # proyecto@hoja_buscar — RUTA DE DISPONIBILIDAD: sin fuente y con {{hoja_buscar:}} ->
   # @agendar_calendar. Quien la escribe dice «esta ruta es para ver horarios» (25/09/2026:
   # «¿qué horarios tienen la TP-64 y la TP-63 para mañana?» a veces la IA de citas la
@@ -1104,8 +1136,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def handle_slot_negotiation(tracking, message, current_slots)
+    return true if reoffer_for_named_resource(tracking, message, current_slots)
+
     timezone  = appointment_timezone(tracking, message)
     requested = parse_requested_datetime(tracking, message, timezone)
+    return true if requested.nil? && reoffer_when_asked_free(tracking, message)
 
     if requested
       # «¿Y en la tarde?»: sin día, es la tarde del día de los horarios que se le ofrecieron.

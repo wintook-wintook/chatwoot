@@ -40,7 +40,8 @@ class ContactTrackings::SheetLookup
   end
 
   # status: :ok · :sheet_missing · :column_missing · :needs_value (nadie nombró un valor) · :no_match
-  Result = Struct.new(:status, :rows, :found, :asked, :missing, keyword_init: true) do
+  # source_message_id: el mensaje de donde salió el «?» (para saber si se nombró AHORA).
+  Result = Struct.new(:status, :rows, :found, :asked, :missing, :source_message_id, keyword_init: true) do
     def ok?
       status == :ok
     end
@@ -106,7 +107,7 @@ class ContactTrackings::SheetLookup
     return Result.new(status: :needs_value, asked: @spec.asked_filter.column) if asked == :none
     return Result.new(status: :no_match, asked: asked) if filtered.empty?
 
-    Result.new(status: :ok, rows: filtered, asked: asked,
+    Result.new(status: :ok, rows: filtered, asked: asked, source_message_id: @mentioned_in,
                found: filtered.flat_map { |row| @spec.returns.map { |col| cell(row, col) } }.compact_blank.uniq)
   end
 
@@ -153,7 +154,10 @@ class ContactTrackings::SheetLookup
   def first_mention(messages, known)
     messages.each do |msg|
       found = known.select { |value| mentions?(msg.content.to_s, value) }
-      return found if found.any?
+      next if found.empty?
+
+      @mentioned_in = msg.id
+      return found
     end
     nil
   end
