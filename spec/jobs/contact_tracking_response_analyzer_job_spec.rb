@@ -923,4 +923,32 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
         .with(hash_including(calendar_integration_ids: [178], booking_calendars: { '178' => %w[c64 c63] }))
     end
   end
+
+  # 25/09/2026: «¿qué horarios tienen para mañana?» un viernes daba los del lunes sin avisar.
+  describe '#moved_day_intro' do
+    let(:tz) { 'America/Mexico_City' }
+    let(:service) { instance_double(ContactTrackings::AvailabilitySlotService) }
+    let(:viernes) { Time.find_zone(tz).local(2026, 9, 25, 12) }
+    let(:lunes) { [{ slot: Time.find_zone(tz).local(2026, 9, 28, 9) }] }
+
+    around { |example| travel_to(viernes) { example.run } }
+
+    it 'si el día pedido no se trabaja, lo dice' do
+      allow(service).to receive(:working_day?).and_return(false)
+
+      expect(job.send(:moved_day_intro, viernes + 1.day, lunes, service, tz))
+        .to eq('Mañana sábado no hay servicio. Los primeros horarios son el lunes 28:')
+    end
+
+    it 'si se trabaja pero ya no hay espacios, lo dice distinto' do
+      allow(service).to receive(:working_day?).and_return(true)
+
+      expect(job.send(:moved_day_intro, viernes, lunes, service, tz))
+        .to eq('Para hoy viernes ya no tengo horarios. Los más cercanos son el lunes 28:')
+    end
+
+    it 'si los horarios son del día pedido, no agrega nada' do
+      expect(job.send(:moved_day_intro, viernes + 3.days, lunes, service, tz)).to be_nil
+    end
+  end
 end

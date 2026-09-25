@@ -96,6 +96,13 @@ module ContactTrackings
       nil
     end
 
+    # ¿Ese día se trabaja? Con el horario del canal si está activo; si no, lun–vie. Lo usa
+    # el job para decir por qué no ofrece el día pedido: «no hay servicio» (día cerrado) no
+    # es lo mismo que «ya no tengo espacios» (día abierto pero lleno).
+    def working_day?(date)
+      open_day?(date.in_time_zone(@timezone).noon)
+    end
+
     private
 
     # Recursos agendables de una integración. Cada uno es { gcal:, read: } donde `gcal` es el

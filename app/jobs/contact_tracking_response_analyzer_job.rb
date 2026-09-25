@@ -955,8 +955,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # Si pidió una hora exacta que estaba ocupada, lo avisamos antes de las alternativas.
     presentation = slots_presentation_for(tracking)
     slots = order_slots_for_presentation(slots, presentation)
-    reply = if requested&.dig(:exact)
-              "Uy, ese horario no está disponible 😕. Estos son los más cercanos:\n\n" \
+    moved = requested && moved_day_intro(requested[:at], slots, service, timezone)
+    reply = if moved || requested&.dig(:exact)
+              "#{moved || 'Uy, ese horario no está disponible 😕. Estos son los más cercanos:'}\n\n" \
                 "#{format_slots_lines(slots, timezone, presentation)}\n\n¿Cuál te queda mejor? Responde con el número."
             else
               format_slots_message(slots, timezone, presentation)
@@ -1122,8 +1123,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         requested_date     = requested[:at].in_time_zone(timezone).to_date
         first_offered_date = alternatives.first[:slot].in_time_zone(timezone).to_date
         intro = if first_offered_date != requested_date
-                  day_name = SLOT_DAY_NAMES[requested_date.wday]
-                  "No hay disponibilidad el #{day_name}. Los primeros horarios disponibles son:"
+                  moved_day_intro(requested[:at], alternatives, service, timezone)
                 elsif requested[:exact]
                   'Uy, ese horario no está disponible 😕. Estos son los más cercanos:'
                 else
@@ -1556,6 +1556,34 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar — formato configurable (en el Agente IA) con el que se
   # listan los horarios. La numeración 1-5 SIEMPRE refleja la posición en `slots`, para que la
   # elección por número del cliente siga mapeando bien sin importar el agrupamiento.
+  # El día pedido no aparece en los horarios ofrecidos: se dice por qué, en vez de saltar
+  # a otro día sin avisar (25/09/2026: «¿qué horarios tienen para mañana?» un viernes daba
+  # los del lunes como si fueran de mañana). nil si el primer horario SÍ es del día pedido.
+  #   día no laboral → «Mañana sábado no hay servicio. Los primeros horarios son el lunes 28:»
+  #   día laboral    → «Para mañana ya no tengo horarios. Los más cercanos son el lunes 28:»
+  def moved_day_intro(requested_at, slots, service, timezone)
+    pedido = requested_at.in_time_zone(timezone).to_date
+    ofrecido = slots.first[:slot].in_time_zone(timezone)
+    return nil if ofrecido.to_date == pedido
+
+    primero = "el #{SLOT_DAY_NAMES[ofrecido.wday]} #{ofrecido.day}"
+    if service.working_day?(pedido)
+      "Para #{requested_day_label(pedido, timezone)} ya no tengo horarios. Los más cercanos son #{primero}:"
+    else
+      "#{requested_day_label(pedido, timezone).upcase_first} no hay servicio. Los primeros horarios son #{primero}:"
+    end
+  end
+
+  # «mañana sábado», «hoy viernes» o «el sábado 26».
+  def requested_day_label(date, timezone)
+    hoy = Time.current.in_time_zone(timezone).to_date
+    dia = SLOT_DAY_NAMES[date.wday]
+    return "hoy #{dia}" if date == hoy
+    return "mañana #{dia}" if date == hoy + 1
+
+    "el #{dia} #{date.day}"
+  end
+
   def slots_presentation_for(tracking)
     value = tracking.tracking_template&.slots_presentation
     SLOTS_PRESENTATIONS.include?(value) ? value : 'detailed'
