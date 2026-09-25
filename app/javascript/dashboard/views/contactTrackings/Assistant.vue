@@ -1360,7 +1360,12 @@ export default {
       });
       if (!this.draft.trim()) return;
       const analizar = await this.$refs.analyzePastedDialog.showConfirmation();
-      if (!analizar) return;
+      if (analizar) await this.analyzeDraft();
+    },
+    // Análisis del Entrenamiento en pantalla, en el chat: lo que marca el comprobador,
+    // la lectura del modelo y, si hay, el botón para corregir.
+    async analyzeDraft() {
+      if (!this.draft.trim() || this.isThinking) return;
       this.leftPanel = 'chat';
       await this.sendMessage(
         this.$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_MESSAGE')
@@ -2238,6 +2243,16 @@ export default {
           <!-- Probar va ANTES de guardar, y en ese orden se lee: el comprobador
                dice si se ejecuta, esto dice si rutea bien, y recién después se
                guarda. -->
+          <!-- Analizar: lo mismo que aceptar el modal al pegar, para quien dijo
+               «solo pegarlo» o quiere volver a revisar después de editar. -->
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            :is-disabled="!draft.trim() || isThinking"
+            @click="analyzeDraft"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.ANALYZE_CTA') }}
+          </woot-button>
           <woot-button
             variant="clear"
             color-scheme="secondary"

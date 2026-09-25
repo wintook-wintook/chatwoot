@@ -472,6 +472,7 @@
     "PASTE_ANALYZE_DESCRIPTION": "Lo reviso contra las reglas del motor y te digo qué está mal, por qué y qué se puede corregir. No cambio nada hasta que me lo pidas.",
     "PASTE_ANALYZE_YES": "Sí, analízalo",
     "PASTE_ANALYZE_NO": "No, solo pegarlo",
-    "PASTE_ANALYZE_MESSAGE": "Analiza mi prompt"
+    "PASTE_ANALYZE_MESSAGE": "Analiza mi prompt",
+    "ANALYZE_CTA": "Analizar"
   }
 }

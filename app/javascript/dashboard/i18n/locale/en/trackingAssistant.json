@@ -472,6 +472,7 @@
     "PASTE_ANALYZE_DESCRIPTION": "I check it against the engine rules and tell you what is wrong, why, and what can be fixed. I change nothing until you ask.",
     "PASTE_ANALYZE_YES": "Yes, analyze it",
     "PASTE_ANALYZE_NO": "No, just paste it",
-    "PASTE_ANALYZE_MESSAGE": "Analyze my prompt"
+    "PASTE_ANALYZE_MESSAGE": "Analyze my prompt",
+    "ANALYZE_CTA": "Analyze"
   }
 }
