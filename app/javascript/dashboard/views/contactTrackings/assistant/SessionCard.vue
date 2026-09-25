@@ -24,14 +24,29 @@
 // ============================================================================
 export default {
   props: {
-    // id, status, title, template_name, created_at, updated_at. Null mientras no
-    // se guardó ningún turno.
+    // id, status, title, named, template_name, created_at, updated_at. Null mientras
+    // no se guardó ningún turno.
     sessionMeta: { type: Object, default: null },
     // El Agente IA del que salió el borrador cuando se entró desde su ficha,
     // antes de que haya conversación guardada.
     editingTemplate: { type: Object, default: null },
   },
+  // rename: nombre puesto a mano (25/09/2026), el lápiz junto al título. Vacío
+  // vuelve al título automático.
+  emits: ['rename'],
+  data() {
+    return { editing: false, draftName: '' };
+  },
   computed: {
+    // Con nombre puesto a mano, ese manda; si no, el agente o de qué trata.
+    heading() {
+      if (this.sessionMeta?.named) return this.sessionMeta.title;
+      return (
+        this.fromTemplate ||
+        this.sessionMeta?.title ||
+        this.$t('TRACKING_ASSISTANT_VIEW.SESSION_UNSAVED')
+      );
+    },
     // Solo si es de otra persona: en la propia, el nombre no aporta nada.
     creator() {
       return this.sessionMeta && !this.sessionMeta.mine
@@ -51,6 +66,16 @@ export default {
     },
   },
   methods: {
+    startRename() {
+      this.draftName = this.sessionMeta?.named ? this.sessionMeta.title : '';
+      this.editing = true;
+      this.$nextTick(() => this.$refs.nameInput?.focus());
+    },
+    submitRename() {
+      if (!this.editing) return;
+      this.editing = false;
+      this.$emit('rename', this.draftName.trim());
+    },
     // Día y mes con dos dígitos y el año completo: "9/9, 15:36" obliga a deducir
     // el año, y en un listado donde conviven conversaciones de hace una semana y
     // de hace dos meses eso se lee mal. Queda "09/09/2026 15:36".
@@ -86,21 +111,52 @@ export default {
        debajo, en gris y en una línea, el número, las fechas y quién la creó. El marco
        lo pone la barra de Assistant.vue, que junta esto con el canal y las acciones. -->
   <div class="min-w-0">
-    <p
-      class="!m-0 text-sm font-medium truncate text-slate-800 dark:text-slate-100"
-    >
-      {{
-        fromTemplate ||
-        (sessionMeta && sessionMeta.title) ||
-        $t('TRACKING_ASSISTANT_VIEW.SESSION_UNSAVED')
-      }}
-    </p>
+    <div v-if="editing" class="flex items-center gap-1">
+      <input
+        ref="nameInput"
+        v-model="draftName"
+        type="text"
+        maxlength="120"
+        class="!mb-0 !py-1 text-sm"
+        :placeholder="$t('TRACKING_ASSISTANT_VIEW.SESSION_RENAME_PLACEHOLDER')"
+        @keydown.enter.prevent="submitRename"
+        @keydown.esc.prevent="editing = false"
+      />
+      <woot-button size="tiny" icon="checkmark" @click="submitRename" />
+      <woot-button
+        size="tiny"
+        variant="clear"
+        color-scheme="secondary"
+        icon="dismiss"
+        @click="editing = false"
+      />
+    </div>
+    <div v-else class="flex items-center min-w-0 gap-1">
+      <p
+        class="!m-0 text-sm font-medium truncate text-slate-800 dark:text-slate-100"
+      >
+        {{ heading }}
+      </p>
+      <woot-button
+        v-if="sessionMeta"
+        v-tooltip="$t('TRACKING_ASSISTANT_VIEW.SESSION_RENAME')"
+        size="tiny"
+        variant="clear"
+        color-scheme="secondary"
+        icon="edit"
+        class="shrink-0"
+        @click="startRename"
+      />
+    </div>
     <p
       v-if="sessionMeta"
       class="!m-0 mt-0.5 text-xs truncate text-slate-500 dark:text-slate-400"
     >
       <span class="font-mono">#{{ sessionMeta.id }}</span>
-      <template v-if="fromTemplate && sessionMeta.title">
+      <template v-if="sessionMeta.named && fromTemplate">
+        · {{ fromTemplate }}
+      </template>
+      <template v-else-if="fromTemplate && sessionMeta.title">
         · {{ sessionMeta.title }}
       </template>
       <template v-if="created">

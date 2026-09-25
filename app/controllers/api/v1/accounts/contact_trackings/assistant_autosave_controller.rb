@@ -11,6 +11,10 @@
 # lo manda unos segundos después de dejar de escribir. Sin conversación todavía (un
 # prompt recién pegado), la crea: así aparece en «En construcción» para retomarla.
 #
+# PATCH …/assistant/sessions/:id/name  { name }
+#   Nombre puesto a mano a la conversación (vacío lo quita y vuelve el automático).
+#   Pedido del usuario, 25/09/2026: varias se llamaban igual.
+#
 # Aparte de AssistantController, que ya está en su tope de largo. Mismo permiso.
 # ================================================================================
 
@@ -23,19 +27,34 @@ class Api::V1::Accounts::ContactTrackings::AssistantAutosaveController < Api::V1
 
     sesion = find_session || TrackingAssistantSession.new(account: Current.account, user: Current.user)
     sesion.autosave!(draft)
-    render json: { session_id: sesion.id, versions: sesion.version_list,
-                   session: { id: sesion.id, status: sesion.status, title: sesion.title,
-                              created_at: sesion.created_at, updated_at: sesion.updated_at } }
+    render json: { session_id: sesion.id, versions: sesion.version_list, session: meta(sesion) }
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.first }, status: :unprocessable_entity
+  end
+
+  def rename
+    sesion = find_session
+    return head :not_found if sesion.nil?
+
+    sesion.update!(name: params[:name].to_s.squish.presence)
+    render json: { id: sesion.id, title: sesion.title, named: sesion.name.present? }
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages.first }, status: :unprocessable_entity
   end
 
   private
 
-  def find_session
-    return nil if params[:session_id].blank?
+  def meta(sesion)
+    { id: sesion.id, status: sesion.status, title: sesion.title, named: sesion.name.present?,
+      created_at: sesion.created_at, updated_at: sesion.updated_at }
+  end
 
-    TrackingAssistantSession.find_by(id: params[:session_id], account: Current.account)
+  # :id en la ruta de renombrar; session_id en el cuerpo del guardado automático.
+  def find_session
+    id = params[:id].presence || params[:session_id].presence
+    return nil if id.nil?
+
+    TrackingAssistantSession.find_by(id: id, account: Current.account)
   end
 
   def check_authorization

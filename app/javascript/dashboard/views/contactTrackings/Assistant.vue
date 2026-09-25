@@ -614,6 +614,23 @@ export default {
         // Sin guardado automático se sigue editando; se guarda al mandar o al guardar.
       }
     },
+    // Nombre puesto a mano; se refleja también en la lista de «En construcción».
+    async renameSession(name) {
+      if (!this.sessionId) return;
+      try {
+        const { data } = await AssistantAPI.renameSession(this.sessionId, name);
+        this.sessionMeta = {
+          ...this.sessionMeta,
+          title: data.title,
+          named: data.named,
+        };
+        this.sessions = this.sessions.map(s =>
+          s.id === data.id ? { ...s, title: data.title, named: data.named } : s
+        );
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSION_RENAME_ERROR'));
+      }
+    },
     async onSourcesChanged() {
       await this.fetchInventory();
       // El árbol toma la comprobación de la vista previa si la hay: se descarta para
@@ -1566,6 +1583,7 @@ export default {
               class="flex-1 min-w-[16rem]"
               :session-meta="sessionMeta"
               :editing-template="editingTemplate"
+              @rename="renameSession"
             />
             <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
               <div class="flex flex-col gap-0.5 text-xs">

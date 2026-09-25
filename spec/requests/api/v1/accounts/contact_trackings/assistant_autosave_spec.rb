@@ -30,4 +30,31 @@ RSpec.describe 'Asistente de Agentes IA — guardado automático' do
 
     expect(response.parsed_body['error']).to eq('blank_draft')
   end
+
+  describe 'renombrar' do
+    let(:sesion) do
+      TrackingAssistantSession.create!(account: account, user: admin, draft: "# PROMPT X\n[ROL]\nx",
+                                       messages: [{ 'role' => 'user', 'content' => 'Analiza mi prompt' }])
+    end
+    let(:rename_url) { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/sessions/#{sesion.id}/name" }
+
+    it 'el nombre manda sobre el título automático; vacío lo quita' do
+      expect(sesion.title).to eq('🔎 PROMPT X')
+
+      patch rename_url, params: { name: 'Universidad — becas' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to include('title' => 'Universidad — becas', 'named' => true)
+
+      patch rename_url, params: { name: '' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to include('title' => '🔎 PROMPT X', 'named' => false)
+    end
+
+    it 'no renombra una conversación de otra cuenta' do
+      otra = create(:account)
+      ajena = TrackingAssistantSession.create!(account: otra, user: create(:user, account: otra))
+      patch "/api/v1/accounts/#{account.id}/contact_trackings/assistant/sessions/#{ajena.id}/name",
+            params: { name: 'x' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
 end

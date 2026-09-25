@@ -152,6 +152,7 @@ Rails.application.routes.draw do
             # armar un agente desde cero conversando (llena las instrucciones iniciales)
             post 'assistant/drafting_chat', to: 'assistant_drafting#create'
             put  'assistant/autosave', to: 'assistant_autosave#update'
+            patch 'assistant/sessions/:id/name', to: 'assistant_autosave#rename'
             post 'assistant/conversation_review', to: 'assistant_review#create'
             get  'assistant/conversation_review/:turn_id', to: 'assistant_review#show'
           end

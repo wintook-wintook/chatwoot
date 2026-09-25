@@ -485,6 +485,9 @@
     "LOG_SOURCE_MANUAL": "A mano",
     "LOG_SOURCE_AUTOSAVE": "A mano (guardado solo)",
     "LOG_SOURCE_ASSISTANT": "Asistente",
-    "LOG_SOURCE_SAVED": "Guardado en el agente"
+    "LOG_SOURCE_SAVED": "Guardado en el agente",
+    "SESSION_RENAME": "Ponerle nombre",
+    "SESSION_RENAME_PLACEHOLDER": "Nombre de esta conversación (vacío = automático)",
+    "SESSION_RENAME_ERROR": "No se pudo cambiar el nombre. Inténtalo de nuevo."
   }
 }

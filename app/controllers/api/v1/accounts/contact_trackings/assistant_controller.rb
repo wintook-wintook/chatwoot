@@ -278,7 +278,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   # quién es cada una antes de seguirla. `mine` distingue las propias.
   def session_row(sesion)
     {
-      id: sesion.id, status: sesion.status, title: sesion.title,
+      id: sesion.id, status: sesion.status, title: sesion.title, named: sesion.name.present?,
       creator: sesion.user&.available_name || sesion.user&.name,
       mine: sesion.user_id == Current.user.id,
       routes: sesion.route_count, has_draft: sesion.draft.present?,
@@ -306,7 +306,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
       status: sesion.status,
       # De qué se trataba: el primer mensaje de la persona. Es lo que el card de
       # referencia muestra arriba de la conversación.
-      title: sesion.title,
+      title: sesion.title, named: sesion.name.present?,
       template_name: sesion.tracking_template&.name,
       created_at: sesion.created_at,
       updated_at: sesion.updated_at

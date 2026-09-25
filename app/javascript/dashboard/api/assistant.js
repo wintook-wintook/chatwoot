@@ -140,6 +140,11 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // Nombre puesto a mano a una conversación (vacío vuelve al automático).
+  renameSession(id, name) {
+    return axios.patch(`${this.url}/sessions/${id}/name`, { name });
+  }
+
   // Guardado automático de lo editado a mano: crea la conversación si todavía no hay.
   autosaveDraft(draft, sessionId = null) {
     return axios.put(`${this.url}/autosave`, { draft, session_id: sessionId });

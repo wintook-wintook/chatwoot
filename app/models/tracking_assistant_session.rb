@@ -60,6 +60,9 @@ class TrackingAssistantSession < ApplicationRecord
   belongs_to :tracking_template, optional: true
 
   validates :status, inclusion: { in: STATUSES }
+  # Nombre puesto a mano (25/09/2026): manda sobre el título automático.
+  MAX_NAME = 120
+  validates :name, length: { maximum: MAX_NAME }
   # Las instrucciones iniciales que se llenan conversando (DraftingChat). Sin tope propio
   # rige el de ApplicationRecord para text (20.000), y unas instrucciones largas pasan.
   validates :instructions, length: { maximum: ContactTrackings::Assistant::DraftingChat::MAX_INSTRUCTIONS_CHARS }
@@ -100,6 +103,8 @@ class TrackingAssistantSession < ApplicationRecord
   GENERIC_FIRST_MAX = 40
 
   def title
+    return name if name.present?
+
     texto = first_user_text
     return "🔎 #{draft_title}" if generic_request?(texto) && draft_title
 
