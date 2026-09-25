@@ -13,10 +13,8 @@
 # ================================================================================
 
 #
-# OFRECER CORREGIR (24/09/2026): si la persona pide un análisis y hay avisos que se
-# arreglan editando el texto (FIXABLE), la respuesta termina con un botón para
-# corregirlos (fix_offer, sin IA: no depende de que el modelo se acuerde). Al pulsarlo,
-# el chat tiene la receta de cada uno (RECIPES).
+# FIXABLE, ANALYSIS_RE y ACCOUNT_BOUND los usa AnalysisTurn (la lista, el botón de
+# corregir y su candado); RECIPES es cómo se corrige cada aviso cuando lo piden.
 module ContactTrackings::Assistant::CheckerSection
   MAX_FINDINGS = 25
   MAX_MESSAGE = 300
@@ -61,51 +59,6 @@ module ContactTrackings::Assistant::CheckerSection
     nil
   end
 
-  # [{ question:, choices: }] para mostrar el botón, o nil.
-  def fix_offer(resultado, ultimo_mensaje)
-    return nil if resultado.nil? || !ultimo_mensaje.to_s.match?(ANALYSIS_RE)
-
-    arreglables = (resultado[:blocking] + resultado[:degrading]).count { |f| FIXABLE.include?(f[:code]) }
-    return nil if arreglables.zero?
-
-    [{ question: I18n.t('tracking_assistant.fix_offer.question', count: arreglables,
-                                                                 locale: ContactTrackings::Assistant::Language.resolve),
-       choices: [I18n.t('tracking_assistant.fix_offer.yes', locale: ContactTrackings::Assistant::Language.resolve)] }]
-  end
-
-  # ¿El último mensaje es el botón de corregir?
-  def fix_request?(texto)
-    opcion = I18n.t('tracking_assistant.fix_offer.yes', locale: ContactTrackings::Assistant::Language.resolve)
-    texto.to_s.include?(opcion)
-  end
-
-  # Candado sin IA para la corrección del botón (24/09/2026): el modelo cambió la fuente
-  # de dos rutas por <PENDIENTE: fuente> porque en la cuenta de prueba la hoja no existía.
-  # Toda línea @ruta que no tenía un aviso corregible vuelve a quedar como estaba.
-  def restore_routes(antes, despues, resultado)
-    corregibles = fixable_routes(resultado)
-    originales = route_lines(antes)
-    despues.to_s.split("\n", -1).map do |linea|
-      nombre = route_name(linea)
-      nombre && originales.key?(nombre) && corregibles.exclude?(nombre) ? originales[nombre] : linea
-    end.join("\n")
-  end
-
-  def fixable_routes(resultado)
-    return [] if resultado.nil?
-
-    (resultado[:blocking] + resultado[:degrading]).select { |f| FIXABLE.include?(f[:code]) }
-                                                  .flat_map { |f| f[:routes] || [f[:route]] }.compact
-  end
-
-  def route_lines(texto)
-    texto.to_s.split("\n").each_with_object({}) { |linea, acc| (n = route_name(linea)) && acc[n] ||= linea }
-  end
-
-  def route_name(linea)
-    linea[/\A\s*@ruta\(\s*([a-z0-9_-]+)/i, 1]&.downcase
-  end
-
   def call(draft, account:, result: nil)
     resultado = result || result(draft, account)
     return nil if resultado.nil?
@@ -118,6 +71,9 @@ module ContactTrackings::Assistant::CheckerSection
       (contradicciones, reglas vagas, lo que falta), pero sepárala con «Mi lectura:». Nunca
       digas que algo está bien si aparece aquí. Todo va DENTRO de "mensaje", como texto con
       viñetas: no agregues llaves nuevas al JSON.
+      Si piden analizar o revisar el prompt, NUNCA pidas que aclaren qué revisar: esta lista ya
+      se le muestra a la persona arriba de tu mensaje; tú da «Mi lectura:» (contradicciones,
+      reglas vagas, lo que falta) sin repetir la lista.
 
       #{findings_text(resultado)}
 

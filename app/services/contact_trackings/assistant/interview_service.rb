@@ -147,28 +147,27 @@ class ContactTrackings::Assistant::InterviewService
     finish(reply, draft, ContactTrackings::Assistant::ReplyParser.proposal(reply))
   end
 
-  # El modelo solo preguntó: no hay Entrenamiento que comprobar.
-  # Si pidieron un análisis y hay avisos que se arreglan editando, se ofrece corregirlos
-  # aunque el modelo no lo haya propuesto (ver CheckerSection.fix_offer).
+  # El modelo solo preguntó: no hay Entrenamiento que comprobar. Si fue un pedido de
+  # análisis, la respuesta lleva la lista del comprobador y el botón de corregir
+  # (ver AnalysisTurn).
   def questions(reply)
-    Result.new(reply: reply['mensaje'], draft: nil, repairs: 0,
-               options: ContactTrackings::Assistant::ReplyParser.options(reply) || fix_offer)
-  end
-
-  def fix_offer
-    ContactTrackings::Assistant::CheckerSection.fix_offer(checker_result, user_texts.last) if editing? && !building?
+    Result.new(reply: analysis.reply(reply['mensaje']), draft: nil, repairs: 0,
+               options: ContactTrackings::Assistant::ReplyParser.options(reply) || analysis.fix_offer)
   end
 
   # La corrección del botón no toca las rutas que no tenían un aviso corregible. Va al
   # final, después de las reparaciones: la de gramática también las cambiaba.
   def guard_fix(turn, validation)
-    return validation unless editing? && ContactTrackings::Assistant::CheckerSection.fix_request?(user_texts.last)
+    return validation unless analysis.fix_request?
 
-    turn.draft = ContactTrackings::Assistant::CheckerSection.restore_routes(current_draft, turn.draft, checker_result)
+    turn.draft = analysis.guard(current_draft, turn.draft)
     validate(turn.draft)
   end
 
-  def checker_result = @checker_result ||= ContactTrackings::Assistant::CheckerSection.result(current_draft, account)
+  def analysis
+    @analysis ||= ContactTrackings::Assistant::AnalysisTurn.new(account, draft: current_draft, said: user_texts.last,
+                                                                         editing: editing?, building: building?)
+  end
 
   # ── fase C: el borrador de cada turno (ver TurnOutcome) ─────────────────────
   def partial(reply, draft)
@@ -351,7 +350,7 @@ class ContactTrackings::Assistant::InterviewService
       ContactTrackings::Assistant::Contract.call,
       inventory_section,
       ContactTrackings::Assistant::Instructions.call(one_shot: one_shot, max_turns: MAX_INTERVIEW_TURNS),
-      (ContactTrackings::Assistant::CheckerSection.call(current_draft, account: account, result: checker_result) if editing?),
+      (ContactTrackings::Assistant::CheckerSection.call(current_draft, account: account, result: analysis.result) if editing?),
       (if editing?
          ContactTrackings::Assistant::EditingInstructions.call(current_draft, manual: @manual.labels,
                                                                               building: building?)

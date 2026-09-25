@@ -51,7 +51,7 @@
     "DRAFT_TAB_SECTIONS": "Secciones",
     "DRAFT_TAB_VERSIONS": "Versiones",
     "DRAFT_TAB_COUNT": "(%{count})",
-    "VERSIONS_EMPTY": "Todavía no hay versiones. Se guarda una cada vez que el asistente entrega el Entrenamiento y cada vez que lo cambiás a mano antes de mandar un mensaje.",
+    "VERSIONS_EMPTY": "Todavía no hay versiones. Se guarda una cada vez que el asistente entrega el Entrenamiento y cada vez que lo cambias a mano antes de mandar un mensaje.",
     "VERSIONS_ERROR": "No se pudo traer esa versión. Inténtalo de nuevo.",
     "VERSION_SOURCE_ASSISTANT": "asistente",
     "VERSION_SOURCE_MANUAL": "a mano",
