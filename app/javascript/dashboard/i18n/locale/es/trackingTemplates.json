@@ -113,6 +113,8 @@
         "ROUTE_NAME_PLACEHOLDER": "comercial_precios",
         "ROUTE_TAG": "Etiqueta",
         "ROUTE_TAG_NONE": "Sin etiqueta",
+        "ROUTE_TAG_MISSING": "Esta etiqueta no existe en la cuenta.",
+        "ROUTE_TAG_ADD": "Crearla",
         "ROUTE_PHRASES": "Frases del cliente (con esto se elige la ruta)",
         "ROUTE_PHRASES_PLACEHOLDER": "cuanto cuesta, precios, quiero cotizar",
         "ROUTE_SOURCE": "De dónde saca la respuesta",

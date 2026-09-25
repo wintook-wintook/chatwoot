@@ -21,7 +21,13 @@
 // que acá tiene 46 líneas de mediana, así que se colapsa y lo que queda siempre
 // a la vista es el resumen.
 // ============================================================================
+import CreateLabelButton from './CreateLabelButton.vue';
+
+// Avisos de una etiqueta que la cuenta no tiene: se puede crear desde aquí.
+const LABEL_CODES = ['label_not_found', 'state_label_not_found'];
+
 export default {
+  components: { CreateLabelButton },
   props: {
     validation: { type: Object, default: null },
   },
@@ -38,6 +44,11 @@ export default {
     },
     cosmetic() {
       return this.validation?.cosmetic || [];
+    },
+  },
+  methods: {
+    canCreateLabel(finding) {
+      return LABEL_CODES.includes(finding.code) && Boolean(finding.wrote);
     },
   },
 };
@@ -126,6 +137,11 @@ export default {
         >
           {{ finding.wrote }}
         </div>
+        <CreateLabelButton
+          v-if="canCreateLabel(finding)"
+          class="mt-1"
+          :tag="finding.wrote"
+        />
       </div>
     </div>
   </div>
