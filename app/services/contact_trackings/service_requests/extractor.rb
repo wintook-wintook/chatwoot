@@ -152,6 +152,10 @@ class ContactTrackings::ServiceRequests::Extractor
     Datos de cada servicio:
     - etiqueta: SIEMPRE, nombre corto para el cliente («Grúa 60 t», «Hiab 12 t», «Plana 12 m»,
       «Flete plataforma Haulotte HA20»).
+    - equipo.tipo: UNA sola palabra de esta lista: grúa, hiab, plana, cama baja, low boy, torton,
+      rabón, pick up, camión, tracto, quinta, contenedor, plataforma de elevación, otro.
+      «camión con grúa tipo hiab» = hiab; «tracto con plana de 12 mts» = plana; «unidad
+      ligera» = pick up. equipo.capacidad_t: solo si el cliente la dijo (toneladas).
     - paradas: en orden. «Presentarse en» / «origen» / «carga en» = origen. «Entregar en» /
       «destino» = destino. Un viaje redondo repite el origen al final.
     - fecha: SOLO el día, copiado como lo escribió el cliente («mañana», «el lunes 01 de junio»,

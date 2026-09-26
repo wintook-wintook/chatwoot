@@ -28,6 +28,8 @@
 # ================================================================================
 
 class ContactTrackings::SheetLookup
+  include ContactTrackings::SheetLookup::ServiceText
+  extend ContactTrackings::SheetLookup::Describe
   DIRECTIVE_RE = /\{\{\s*hoja_buscar\s*:([^{}]*)\}\}/i
   ASK = '?'
   # Cuántos mensajes atrás se buscan los valores del «?». Los últimos bastan: es lo que
@@ -116,10 +118,13 @@ class ContactTrackings::SheetLookup
     text
   end
 
-  def initialize(account, spec, conversation: nil)
+  # text: (pieza 5) en vez de los mensajes, los «?» se buscan en este texto — el de UN servicio
+  # («hiab 12 t»), porque en un mensaje con grúa y hiab cada uno busca su propio equipo.
+  def initialize(account, spec, conversation: nil, text: nil)
     @account = account
     @spec = spec
     @conversation = conversation
+    @text = text
   end
 
   def call
@@ -136,17 +141,6 @@ class ContactTrackings::SheetLookup
 
     Result.new(status: :ok, rows: filtered, asked: asked, source_message_id: @mentioned_in, criteria: @criteria,
                found: filtered.flat_map { |row| @spec.returns.map { |col| cell(row, col) } }.compact_blank.uniq)
-  end
-
-  # Lo que regresa, fila por fila y con los criterios: para dárselo al modelo tal cual.
-  def self.describe(spec, rows)
-    columnas = (spec.filters.map(&:column) + spec.returns).uniq
-    rows.map do |row|
-      columnas.filter_map do |col|
-        key = row.keys.find { |k| k.to_s.strip.casecmp?(col) }
-        "#{key}: #{row[key]}" if key && row[key].present?
-      end.join(' · ')
-    end
   end
 
   private
@@ -169,6 +163,7 @@ class ContactTrackings::SheetLookup
     filtered = @spec.filters.reduce(rows) do |acc, filter|
       wanted = filter_values(filter, rows)
       return [[], :none] if wanted.nil?
+      next acc if wanted == :skip
 
       acc.select { |row| keeps?(filter, wanted, cell(row, filter.column)) }
     end
@@ -178,6 +173,8 @@ class ContactTrackings::SheetLookup
   # Los valores de una condición, anotando qué se buscó. nil si un «?» no encontró nada.
   def filter_values(filter, rows)
     wanted = filter.ask? ? asked_values(filter, rows) : filter.wanted
+    return :skip if wanted == :skip
+
     if wanted.empty?
       @unanswered = filter.column
       return nil
@@ -191,7 +188,10 @@ class ContactTrackings::SheetLookup
     return mentioned_values(filter.column, rows) unless filter.numeric?
 
     numero = mentioned_number(filter)
-    numero ? [numero] : []
+    return [numero] if numero
+
+    # Con el texto de un servicio, «capacidad>=?» sin toneladas no se pregunta: no filtra.
+    @text ? :skip : []
   end
 
   def keeps?(filter, wanted, value)
@@ -212,6 +212,7 @@ class ContactTrackings::SheetLookup
   # Con «>=» manda el mayor que dijo («grúa de 80 t para una carga de 26 t» → 80): es lo
   # que cubre todo; con «<=», el menor.
   def mentioned_number(filter)
+    return service_number(filter) if @text
     return nil if @conversation.nil?
 
     recent_messages.select(&:incoming?).each do |msg|
@@ -229,7 +230,8 @@ class ContactTrackings::SheetLookup
   # el agente en su último mensaje que nombra alguno. Todos los nombrados, no solo uno.
   def mentioned_values(column, rows)
     known = rows.map { |row| cell(row, column).to_s.strip }.compact_blank.uniq
-    return [] if known.empty? || @conversation.nil?
+    return in_service_text(known) if @text
+    return [] if @conversation.nil?
 
     cliente, agente = recent_messages.partition(&:incoming?)
     first_mention(cliente, known) || first_mention(agente, known) || []

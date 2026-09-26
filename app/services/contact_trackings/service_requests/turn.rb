@@ -44,16 +44,52 @@ class ContactTrackings::ServiceRequests::Turn
     entries = ContactTrackings::ServiceRequests::Registry.new(
       tracking: @tracking, message: @message, escalation: @branch&.escalation, timezone: @timezone
     ).register!(servicios)
-    reply(entries)
+    reply(entries, plans(entries))
   end
 
   private
 
-  def reply(entries)
-    lineas = entries.map { |entry| line(entry) }
+  # F3: con @agendar_calendar en la ruta, las opciones de horario de cada servicio.
+  def plans(entries)
+    agenda = ContactTrackings::ServiceRequests::Scheduler.new(tracking: @tracking, route: @branch, timezone: @timezone)
+    return {} unless agenda.agenda?
+
+    entries.to_h { |entry| [entry.ticket.id, agenda.plan(entry.ticket, position(entry.ticket))] }
+  end
+
+  def position(ticket)
+    ContactTrackings::ServiceRequests::Registry.open_cases(@message.conversation).pluck(:id).index(ticket.id).to_i + 1
+  end
+
+  def reply(entries, planes)
+    lineas = entries.map { |entry| [line(entry), options_line(planes[entry.ticket.id])].compact.join("\n") }
     faltan = entries.filter_map { |entry| missing(entry) }
-    cierre = faltan.any? ? "Para programarlos me falta: #{faltan.join('; ')}." : 'Un asesor revisa la disponibilidad y te confirma.'
-    "#{header(entries)}\n\n#{lineas.join("\n")}\n\n#{cierre}"
+    "#{header(entries)}\n\n#{lineas.join("\n")}\n\n#{closing(faltan, planes)}"
+  end
+
+  def closing(faltan, planes)
+    partes = []
+    partes << "Para programarlos me falta: #{faltan.join('; ')}." if faltan.any?
+    if planes.values.any? { |plan| plan.offers.present? }
+      partes << 'Responde con los horarios que quieres apartar (por ejemplo «1A y 3B»), o «sí» para la primera opción de cada uno.'
+    end
+    partes << 'Un asesor revisa la disponibilidad y te confirma.' if partes.empty?
+    partes.join("\n")
+  end
+
+  # «   1A 08:00–09:00 (TP-64) · 1B 09:00–10:00 (TP-64)», o por qué no hay.
+  def options_line(plan)
+    return nil if plan.nil? || (plan.offers.empty? && plan.note.nil?)
+
+    opciones = plan.offers.map { |oferta| option_text(oferta, plan.requested) }
+    "    #{[plan.note, opciones.join(' · ').presence].compact.join(' → ')}"
+  end
+
+  def option_text(oferta, pedido)
+    inicio = Time.zone.parse(oferta['slot']).in_time_zone(@timezone)
+    fin = Time.zone.parse(oferta['end_time']).in_time_zone(@timezone)
+    dia = pedido && inicio.to_date == pedido.to_date ? '' : "#{DAYS[inicio.wday]} #{inicio.day} #{MONTHS[inicio.month - 1]} "
+    "#{oferta['code']} #{dia}#{inicio.strftime('%H:%M')}–#{fin.strftime('%H:%M')} (#{oferta['calendar_name']})"
   end
 
   def header(entries)

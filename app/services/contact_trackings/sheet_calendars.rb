@@ -32,6 +32,11 @@ class ContactTrackings::SheetCalendars
     new(tracking, message, branch).call
   end
 
+  # proyecto@solicitudes (pieza 5): los calendarios de UN servicio, ya buscados en la hoja.
+  def self.narrow(tracking, calendar_ids)
+    new(tracking, nil, nil).send(:narrow, calendar_ids)
+  end
+
   def initialize(tracking, message, branch)
     @tracking = tracking
     @message = message
