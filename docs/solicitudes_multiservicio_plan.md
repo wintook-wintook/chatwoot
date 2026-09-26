@@ -280,6 +280,9 @@ las siguientes unidades, programa de embarque.
 ```
 Luego «Analiza el prompt». (Se confirmará con la pila de pruebas en F6.)
 
+> **Ya no hace falta dictarle la línea** (26/09/2026): el Asistente la escribe a partir de lo que
+> la persona describe en sus palabras. Ver §15.
+
 ---
 
 ## 13. Bitácora por fase
@@ -463,7 +466,7 @@ Specs: `period_days` (2), `free_for_period` por tramos (1), `hold!` de día comp
 
 **Qué se hizo.**
 - 🔴 `solicitudes_without_ticket`: `@solicitudes` sin `@crear_ticket` después.
-- 🟡 `solicitudes_without_lookup`: `@solicitudes` con agenda pero sin `{{hoja_buscar:}}`.
+- 🔴 `solicitudes_without_lookup`: `@solicitudes` con agenda pero sin `{{hoja_buscar:}}` (era 🟡; rojo desde el 26/09/2026, ver §15).
 - Ficha «@solicitudes» en Recursos del Asistente (es/en) y el chat del Asistente la recibe en sus recursos.
 - `@solicitudes` nunca llega al modelo que redacta (`Directives.strip_tokens`).
 
@@ -528,3 +531,73 @@ requisicion.docx). Specs: `attachment_text_spec` (6).
 **Cómo pedírselo al Asistente.** Nada que escribir en el Entrenamiento: el motor lee los
 adjuntos en todas las rutas. Con `@solicitudes`, una requisición o un programa adjunto se separa
 en servicios igual que si el cliente los escribiera.
+
+---
+
+## 15. Pedírselo al Asistente en lenguaje natural (26/09/2026) ✅
+
+**Qué se hizo.** Que el Asistente arme las rutas de grúas y `@solicitudes` a partir de lo que la
+persona describe, sin dictarle la línea `@ruta`.
+- **Recetas en el contrato** (`Assistant::Contract`, sección «RECETAS»): de lo que pide la persona
+  a cómo se escribe. A = disponibilidad en el calendario del equipo nombrado; B = comparar
+  capacidad; C = la hoja como fuente de datos; D = duración, 24 h y rentas; E = apartado →
+  confirmado con pago; F = varios servicios en un mensaje. También: los adjuntos se leen solos.
+- **Inventario con columnas**: cada hoja de Google llega al Asistente con sus columnas
+  (`columnas: tipo, peso_max_t, Calendar_ID…`), así escribe `tipo=?; peso_max_t>=?` con nombres
+  reales.
+- **Comprobador**:
+  - 🔴 `paid_label_as_route_tag`: una ruta con la etiqueta `#pago_confirmado`. Esa etiqueta la pone
+    una persona al recibir el pago; en una ruta la pondría el cliente con solo escribir «le
+    confirmamos». Medido: el Asistente se la puso a la ruta de confirmación.
+  - 🔴 `solicitudes_without_lookup` (antes 🟡): sin `{{hoja_buscar:}}` ningún servicio sabe en qué
+    calendario buscar. En rojo el Asistente lo corrige solo.
+- **Ni preguntó ni entregó** (`Assistant::EmptyPromise`): al editar, si el Asistente contesta «Voy
+  a agregar la ruta…» sin hacer ninguna pregunta y sin entregar el Entrenamiento, se le da una
+  vuelta más para que entregue o pregunte algo concreto. No aplica a un pedido de análisis.
+
+**Cómo funciona.** La persona describe lo que quiere; el Asistente pregunta lo que no puede
+deducir (las frases del cliente, la etiqueta, el tipo de caso) y escribe las dos rutas. El
+comprobador revisa y, si algo sale en rojo, se lo devuelve al Asistente para que lo corrija
+antes de entregarlo.
+
+**Pila de pruebas** (Asistente editando el Entrenamiento de #10238, cuenta 2, en español; script
+`asistente_nl2.rb` del scratchpad, sin guardar nada):
+
+| Ronda | Qué se probó | Resultado |
+|---|---|---|
+| 1 | 1 turno, pedido en palabras | ❌ 3/3 preguntó las frases del cliente (correcto) y no escribió nada todavía |
+| 2 | 2 turnos (pedido + frases), antes de los arreglos | 3/3 escribió las dos rutas, pero corrida 2 contestó en inglés (el script no fijaba el idioma de la cuenta) |
+| 3 | 2 turnos, en español | ❌ 1/2 «necesito confirmar algunos detalles» sin preguntar nada ni entregar; 1/2 con `tipo=Renta Unidades` en vez de Comercial |
+| 4 | 2 turnos, con EmptyPromise | 3/3 entregó; ❌ 1/3 sin `{{hoja_buscar:}}` (salía ámbar), ❌ 1/3 `tipo=Renta Unidades` |
+| 5 | 3 turnos (pedido + frases + etiqueta y tipo), con todo | ✅ 4/4 las dos rutas completas, `tipo=Comercial`, `#confirmado` |
+
+Lo que escribió en la ronda 5 (las 4 corridas iguales salvo el nombre de la ruta):
+```
+@ruta(solicitud_multiple_servicio #solicita_servicio: solicito programar las siguientes unidades, favor de programar una plana y una grúa de 80 toneladas, les mando la requisición adjunta): {{hoja:Servicio Gruas}} -> @solicitudes -> @crear_ticket(tipo=Comercial) -> @agendar_calendar(duracion=?, horario=24h, modo=tentativo) -> {{hoja_buscar: Servicio Gruas | tipo=?; peso_max_t>=? | Calendar_ID}}
+@ruta(confirmacion_servicio #confirmado: confirmo el servicio 2, sí, adelante con los dos): - -> @confirmar_servicio(requiere=pago)
+```
+Queda en 🟡 `label_not_found`: la etiqueta `confirmado` no existe en la cuenta 2; hay que crearla
+(o elegir una que exista).
+
+Specs: `empty_promise_spec` (5), `sheet_lookup_checks_spec` (+2), `contract_spec`; carpeta
+`spec/services/contact_trackings/assistant/` completa: 491 ejemplos, 0 fallas.
+
+**Cómo pedírselo al Asistente** (en sus palabras; esto es lo que se probó):
+```
+Quiero que el agente pueda recibir pedidos de varios servicios en un solo mensaje (a veces
+mandan la requisición en PDF o Excel con varias unidades). Cada servicio debe quedar como su
+propio caso comercial y apartarse de forma tentativa en el calendario de la unidad que
+corresponda según la hoja Servicio Gruas, buscando por tipo y que el peso máximo alcance para lo
+que piden. Los servicios pueden durar varias horas y se trabaja las 24 horas. Cuando el cliente
+diga que confirma, el servicio queda esperando el pago.
+```
+Va a preguntar cómo lo escriben los clientes y qué etiqueta y tipo de caso usar. Contestar, por
+ejemplo:
+```
+Dicen «solicito programar las siguientes unidades», «favor de programar una plana y una grúa de
+80 toneladas», «les mando la requisición adjunta». Para confirmar: «confirmo el servicio 2», «sí,
+adelante con los dos». La etiqueta de los pedidos es #solicita_servicio y la de la confirmación
+#confirmado. El caso es Comercial.
+```
+Tip: dar las frases, la etiqueta y el tipo de caso desde el primer mensaje ahorra turnos.
+

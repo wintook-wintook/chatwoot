@@ -665,14 +665,11 @@ conversación nueva:
 | ¿Cómo va mi servicio? | estado_caso | estado del caso, sin abrir uno nuevo |
 
 ### 5.8 Qué NO pedirle todavía 🔧
-Esta directiva **no existe**; si el Asistente la escribe, el motor la ignora:
-
-```
-@solicitudes
-```
-Desde el 26/09 SÍ existen (ver la bitácora, sección 7): comparaciones en `{{hoja_buscar:}}`,
-`{{hoja_buscar:}}` como fuente de datos, `@agendar_calendar(duracion=?, horario=24h, modo=tentativo)`
-y `@confirmar_servicio(requiere=pago)`.
+Desde el 26/09 ya existe todo lo de esta guía (ver la bitácora, sección 7): comparaciones en
+`{{hoja_buscar:}}`, `{{hoja_buscar:}}` como fuente de datos,
+`@agendar_calendar(duracion=?, horario=24h, modo=tentativo)`, `@confirmar_servicio(requiere=pago)`,
+`@solicitudes` y la lectura de adjuntos. Tampoco hace falta dictarle las líneas: ver «Pedírselo
+en lenguaje natural» al final de la sección 7. Sin probar: el canal de correo.
 
 ---
 
@@ -912,3 +909,17 @@ la flecha: @confirmar_servicio(requiere=pago)
 El motor lee el contenido del adjunto (Excel y Word sin IA; PDF con IA) y `@solicitudes` saca los
 servicios de ahí. Pruebas: conversaciones 269–271 (ver `docs/solicitudes_multiservicio_plan.md` §14).
 Nada que pedirle al Asistente: funciona en todas las rutas.
+
+### Pedírselo al Asistente en lenguaje natural (26/09) ✅
+
+El Asistente ya arma estas rutas a partir de lo que la persona describe en sus palabras, sin
+dictarle la línea `@ruta`: el contrato trae «recetas» (de lo que pide la persona a cómo se
+escribe) y el inventario le pasa las columnas de cada hoja. El comprobador marca en rojo
+`#pago_confirmado` como etiqueta de una ruta y `@solicitudes` sin `{{hoja_buscar:}}`, y el
+Asistente los corrige solo. Si el Asistente dice «voy a agregar la ruta» sin preguntar ni
+entregar, se le da una vuelta más.
+
+Probado 4 de 4 veces: pedido en palabras → preguntó frases, etiqueta y tipo de caso → escribió
+las dos rutas completas. Detalle, pila de pruebas y el texto exacto para pedírselo:
+`docs/solicitudes_multiservicio_plan.md` §15.
+
