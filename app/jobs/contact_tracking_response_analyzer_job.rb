@@ -130,6 +130,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return handle_pending_email(tracking, message)
     end
 
+    # [2c] proyecto@hoja_buscar, pieza 4 — hay un servicio APARTADO y el mensaje cae en la
+    # ruta de @confirmar_servicio: se confirma (o se pide el pago) antes que nada.
+    return true if handle_service_confirmation(tracking, message)
+
     # [3] RouterService — clasifica ruta via IA
     route_result = classify_route(tracking, message)
     route        = route_result[:route]
@@ -1484,6 +1488,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     contact     = message.sender
     contact_name = contact&.name || 'Cliente'
 
+    tentative = tentative_booking?(tracking, message)
     event_created, event_id = create_or_move_calendar_event(tracking, message, slot_start, slot_end, cal_id, gcal)
 
     local_start = slot_start.in_time_zone(timezone)
@@ -1514,22 +1519,32 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return
     end
 
-    reply = "✅ ¡Perfecto! Tu cita está agendada para el #{fecha_texto} de #{local_start.year} a las #{hora_texto}.\nTe esperamos. Si necesitas cambiarla, avísanos con anticipación. 😊"
+    reply = if tentative
+              "📌 Te aparté el #{fecha_texto} de #{local_start.year} a las #{hora_texto}. Queda *pendiente de confirmar*: " \
+                'en cuanto me confirmes el servicio, lo dejo en firme.'
+            else
+              "✅ ¡Perfecto! Tu cita está agendada para el #{fecha_texto} de #{local_start.year} a las #{hora_texto}.\n" \
+                'Te esperamos. Si necesitas cambiarla, avísanos con anticipación. 😊'
+            end
     send_auto_reply(tracking, message, reply)
 
     clear_pending_slot(tracking)
     tracking.disable_auto_retry_mode!
     tracking.update!(
-      ai_context: "#{tracking.ai_context}\n\n✅ [CITA AGENDADA] #{fecha_texto} #{hora_texto} con #{agent_name}. Evento en Google Calendar: creado.",
+      ai_context: "#{tracking.ai_context}\n\n✅ [#{tentative ? 'SERVICIO APARTADO' : 'CITA AGENDADA'}] " \
+                  "#{fecha_texto} #{hora_texto} con #{agent_name}. Evento en Google Calendar: creado.",
       appointment_at: slot_start, # proyecto@contact_tracking: dashboard KPI citas
-      outcome: 'appointment',
+      outcome: tentative ? tracking.outcome : 'appointment', # apartado no cuenta como cita hasta confirmarse
+      appointment_status: tentative ? 'tentative' : nil,
       appointment_event_id: event_id,        # referencia para mover/cancelar (#2/#3)
       appointment_calendar_id: cal_id,
       appointment_calendar_gid: gcal         # calendario de Google donde quedó el evento
     )
     tracking.pause!
 
-    nota = "📅 Cita agendada con #{contact_name}\n• Fecha: #{fecha_texto} de #{local_start.year}\n• Hora: #{hora_texto}\n• Agente: #{agent_name}\n• Evento en Calendar: ✅ creado"
+    titulo = tentative ? '📌 Servicio APARTADO (pendiente de confirmar)' : '📅 Cita agendada'
+    nota = "#{titulo} con #{contact_name}\n• Fecha: #{fecha_texto} de #{local_start.year}\n• Hora: #{hora_texto}\n" \
+           "• Agente: #{agent_name}\n• Evento en Calendar: ✅ creado"
     create_private_note(tracking, message, nota)
     notify_admin_interested(tracking, message)
 
@@ -1550,7 +1565,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     contact      = message.sender
     contact_name = contact&.name || 'Cliente'
-    summary      = "Cita con #{contact_name} — #{tracking.objective.truncate(60)}"
+    prefijo      = ContactTrackings::ServiceConfirmation::TENTATIVE_PREFIX if tentative_booking?(tracking, message)
+    summary      = "#{prefijo}Cita con #{contact_name} — #{tracking.objective.truncate(60)}"
     description  = "Contacto: #{contact_name}\nTeléfono: #{contact&.phone_number}\nObjetivo: #{tracking.objective}"
     attendees    = [contact&.email].compact.select(&:present?)
     service      = GoogleCalendarService.new(integration)
@@ -1650,6 +1666,62 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar — formato configurable (en el Agente IA) con el que se
   # listan los horarios. La numeración 1-5 SIEMPRE refleja la posición en `slots`, para que la
   # elección por número del cliente siga mapeando bien sin importar el agrupamiento.
+  # proyecto@hoja_buscar — pieza 4: @agendar_calendar(modo=tentativo) en la ruta (o en el agente).
+  def tentative_booking?(tracking, message)
+    calendar_options_for(tracking, message)&.tentative || false
+  end
+
+  # proyecto@hoja_buscar — pieza 4: confirmar un servicio apartado (ver ServiceConfirmation).
+  # Solo si hay uno apartado y el mensaje cae en la ruta que tiene @confirmar_servicio.
+  def handle_service_confirmation(tracking, message)
+    confirmacion = ContactTrackings::ServiceConfirmation.new(tracking)
+    return false unless confirmacion.open?
+    return false unless tracking.complementary_prompt.to_s.match?(ContactTrackings::ServiceConfirmation::DIRECTIVE_RE)
+
+    accion = branch_for(tracking, message)&.escalation.to_s
+    return false unless accion.match?(ContactTrackings::ServiceConfirmation::DIRECTIVE_RE)
+
+    cuando = confirmacion.when_text(appointment_timezone(tracking, message))
+    if ContactTrackings::ServiceConfirmation.requires_payment?(accion)
+      ask_service_payment(tracking, message, confirmacion, cuando)
+    else
+      finish_service_confirmation(tracking, message, confirmacion, cuando)
+    end
+    true
+  end
+
+  def ask_service_payment(tracking, message, confirmacion, cuando)
+    Rails.logger.info '[TrackingBot] 💳 Confirmación de servicio apartado → falta el pago'
+    ya_pedido = confirmacion.pending_payment?
+    confirmacion.mark_pending_payment!
+    texto = if ya_pedido
+              "Gracias. En cuanto se confirme el pago te aviso y tu servicio del #{cuando} queda en firme."
+            else
+              "¡Gracias por confirmar! Para dejar en firme tu servicio del #{cuando} necesitamos el pago por " \
+                'adelantado. En cuanto lo recibamos, te lo confirmo.'
+            end
+    send_auto_reply(tracking, message, texto)
+    return if ya_pedido
+
+    create_private_note(tracking, message,
+                        "💳 El cliente confirmó el servicio del #{cuando}; falta el pago. Al recibirlo, pon la " \
+                        "etiqueta «#{ContactTrackings::ServiceConfirmation::PAID_LABEL}» y el servicio queda en firme.")
+    notify_admin_interested(tracking, message)
+  end
+
+  def finish_service_confirmation(tracking, message, confirmacion, cuando)
+    if confirmacion.confirm!
+      Rails.logger.info '[TrackingBot] ✅ Servicio apartado → confirmado'
+      send_auto_reply(tracking, message, "✅ ¡Listo! Tu servicio del #{cuando} quedó confirmado.")
+      create_private_note(tracking, message, "✅ Servicio del #{cuando} CONFIRMADO por el cliente (ya no es tentativo).")
+    else
+      send_auto_reply(tracking, message, "Gracias por confirmar. Un asesor deja en firme tu servicio del #{cuando} en un momento.")
+      create_private_note(tracking, message,
+                          "⚠️ El cliente confirmó el servicio del #{cuando} pero no se pudo actualizar el calendario. Confírmalo a mano.")
+      notify_admin_interested(tracking, message)
+    end
+  end
+
   # proyecto@hoja_buscar — pieza 6: «el día lunes» sin número (ver AmbiguousDate).
   def with_ambiguity(requested, message)
     return requested if requested.nil?

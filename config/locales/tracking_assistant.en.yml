@@ -168,6 +168,10 @@ en:
         Route '%{route}' has "%{option}" in @agendar_calendar(…) and the engine does not understand it:
         it books with the usual duration and hours. Valid options: duracion=90 (minutes), duracion=2h,
         duracion=? (the customer says it) and horario=24h.
+      paid_label_missing: >-
+        Route '%{route}' requires payment before confirming (@confirmar_servicio(requiere=pago)): the
+        service becomes firm when someone adds the label "%{label}" to the conversation, and the
+        account does not have it. Create it; otherwise the service stays on hold.
       route_does_nothing: >-
         Branch '%{route}' does not query any source and has nothing to do when it cannot solve: it answers
         only from the Training. Faced with something specific (prices, schedules) it may make things up or

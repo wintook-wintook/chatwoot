@@ -27,6 +27,7 @@
 #  ai_context                 :text
 #  appointment_at             :datetime
 #  appointment_calendar_gid   :string
+#  appointment_status         :string
 #  attempt_count              :integer          default(0), not null
 #  calendar_event_duration    :integer          default(30)
 #  calendar_integration_ids   :jsonb            not null

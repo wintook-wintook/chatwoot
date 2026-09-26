@@ -80,4 +80,13 @@ RSpec.describe ContactTrackings::Assistant::SheetLookupChecks do
 
     expect(resultado[:blocking].find { |f| f[:code] == :calendar_option_invalid }).to include(route: 'agenda')
   end
+
+  it 'con requiere=pago avisa si la cuenta no tiene la etiqueta pago_confirmado, con «Crearla» (pieza 4)' do
+    texto = "@ruta(confirmacion #consulta_producto: le confirmamos el servicio): - -> @confirmar_servicio(requiere=pago)\n" \
+            "@ruta_por_defecto: confirmacion\n\n[ROL]\nAgente."
+    avisos = ContactTrackings::Assistant::ValidatorService.new(texto, account: account).call[:degrading]
+    aviso = avisos.find { |f| f[:wrote] == '#pago_confirmado' }
+
+    expect(aviso).to include(code: :state_label_not_found, route: 'confirmacion')
+  end
 end

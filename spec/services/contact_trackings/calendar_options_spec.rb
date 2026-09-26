@@ -4,9 +4,15 @@ RSpec.describe ContactTrackings::CalendarOptions do
   describe '.parse' do
     it 'lee duración y horario' do
       expect(described_class.parse('- -> @agendar_calendar(duracion=?, horario=24h)').to_h)
-        .to eq(duration: nil, ask_duration: true, all_day: true)
+        .to eq(duration: nil, ask_duration: true, all_day: true, tentative: false)
       expect(described_class.parse('@agendar_calendar(duracion=2h)').duration).to eq(120)
       expect(described_class.parse('@agendar_calendar(duracion=90)').duration).to eq(90)
+    end
+
+    it 'modo=tentativo (pieza 4)' do
+      expect(described_class.parse('@agendar_calendar(horario=24h, modo=tentativo)').tentative).to be(true)
+      expect(described_class.invalid('@agendar_calendar(modo=tentativo)')).to eq([])
+      expect(described_class.invalid('@agendar_calendar(modo=firme)')).to eq([%w[modo firme]])
     end
 
     it 'sin opciones es nil: la agenda de siempre' do

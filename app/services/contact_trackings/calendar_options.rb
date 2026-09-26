@@ -12,6 +12,8 @@
 #                                                   si no la dijo, la del agente
 #   @agendar_calendar(horario=24h)                  cualquier hora, cualquier día
 #   @agendar_calendar(duracion=?, horario=24h)      las dos
+#   @agendar_calendar(modo=tentativo)               aparta sin dejarlo en firme (pieza 4,
+#                                                   ver ServiceConfirmation)
 #
 # Del mensaje (sin IA): «duración aproximada de una hora» → 60 · «jornada de 16 horas» → 960
 # · «6:00 pm – 12:00 am» / «de 18:00 a 00:00» → 360 · «2 hrs» → 120 · «45 minutos» → 45.
@@ -23,7 +25,8 @@ module ContactTrackings::CalendarOptions
   KNOWN = %w[duracion horario].freeze
   MAX_MINUTES = 24 * 60
 
-  Options = Struct.new(:duration, :ask_duration, :all_day, keyword_init: true)
+  # tentative (pieza 4): modo=tentativo — el horario se aparta, no queda en firme.
+  Options = Struct.new(:duration, :ask_duration, :all_day, :tentative, keyword_init: true)
 
   CLOCK = '(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.\s?m\.|p\.\s?m\.|hrs?|horas)?'
   RANGE_RE = /\b#{CLOCK}\s*(?:-|–|a|al|hasta)\s*#{CLOCK}/i
@@ -40,7 +43,7 @@ module ContactTrackings::CalendarOptions
 
     params = pairs(inner)
     Options.new(duration: fixed_duration(params['duracion']), ask_duration: params['duracion'] == '?',
-                all_day: params['horario'].to_s.casecmp?('24h'))
+                all_day: params['horario'].to_s.casecmp?('24h'), tentative: params['modo'].to_s.casecmp?('tentativo'))
   end
 
   # Lo mal escrito, para el comprobador: [['horario', 'noche'], ['color', 'rojo']].
@@ -52,6 +55,7 @@ module ContactTrackings::CalendarOptions
       case clave
       when 'duracion' then valor == '?' || fixed_duration(valor)
       when 'horario' then valor.casecmp?('24h')
+      when 'modo' then valor.casecmp?('tentativo')
       end
     end.to_a
   end

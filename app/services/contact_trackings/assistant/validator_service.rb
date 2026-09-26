@@ -37,7 +37,7 @@
 class ContactTrackings::Assistant::ValidatorService
   # Directivas de ACCIÓN. Nunca son la fuente de una rama: si aparecen del lado
   # izquierdo de la flecha, es que la flecha no está o está mal escrita.
-  ACTION_RE = /@crear_ticket\b|@estado_ticket\b|@agendar_calendar\b/i
+  ACTION_RE = /@crear_ticket\b|@estado_ticket\b|@agendar_calendar\b|@confirmar_servicio\b/i
 
   def initialize(text, account:)
     @text = text.to_s

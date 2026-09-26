@@ -167,6 +167,10 @@ es:
         La ruta '%{route}' tiene «%{option}» en @agendar_calendar(…) y el motor no lo entiende: agenda
         con la duración y el horario de siempre. Opciones válidas: duracion=90 (minutos), duracion=2h,
         duracion=? (la dice el cliente) y horario=24h.
+      paid_label_missing: >-
+        La ruta '%{route}' pide el pago antes de confirmar (@confirmar_servicio(requiere=pago)): el
+        servicio queda en firme cuando una persona le pone a la conversación la etiqueta «%{label}»,
+        y la cuenta no la tiene. Créala; si no, el servicio se queda apartado.
       route_does_nothing: >-
         La ruta '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
         con lo que dice el Entrenamiento. Ante algo concreto (precios, horarios) puede inventar o prometer

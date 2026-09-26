@@ -1139,4 +1139,56 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       expect(job.send(:resolve_reschedule_date, { weekday: 7, specific_date: '2026-10-05' }, tz)).to eq('2026-09-27')
     end
   end
+
+  # Pieza 4 (26/09/2026): apartado → confirmado.
+  describe 'servicio apartado y @confirmar_servicio' do
+    let(:mensaje) { instance_double(Message) }
+    let(:confirmacion) do
+      instance_double(ContactTrackings::ServiceConfirmation, open?: true, pending_payment?: false,
+                                                             when_text: 'lunes 28 de septiembre a las 09:00')
+    end
+    let(:ruta) { ContactTrackings::RouteMap::Route.new(name: 'confirmacion', escalation: escalation) }
+    let(:escalation) { '@confirmar_servicio' }
+
+    before do
+      tracking.complementary_prompt = "@ruta(confirmacion: le confirmamos el servicio): - -> #{escalation}"
+      allow(ContactTrackings::ServiceConfirmation).to receive(:new).and_return(confirmacion)
+      allow(job).to receive_messages(branch_for: ruta, appointment_timezone: 'America/Mexico_City')
+      allow(job).to receive(:send_auto_reply)
+      allow(job).to receive(:create_private_note)
+      allow(job).to receive(:notify_admin_interested)
+    end
+
+    it 'sin pago: lo deja en firme y se lo dice al cliente' do
+      allow(confirmacion).to receive(:confirm!).and_return(true)
+
+      expect(job.send(:handle_service_confirmation, tracking, mensaje)).to be(true)
+      expect(job).to have_received(:send_auto_reply).with(tracking, mensaje, /quedó confirmado/)
+    end
+
+    context 'con requiere=pago' do
+      let(:escalation) { '@confirmar_servicio(requiere=pago)' }
+
+      it 'pide el pago, lo deja esperando y avisa al equipo' do
+        allow(confirmacion).to receive(:mark_pending_payment!)
+
+        job.send(:handle_service_confirmation, tracking, mensaje)
+        expect(confirmacion).to have_received(:mark_pending_payment!)
+        expect(job).to have_received(:send_auto_reply).with(tracking, mensaje, /necesitamos el pago por adelantado/)
+        expect(job).to have_received(:create_private_note).with(tracking, mensaje, /pago_confirmado/)
+      end
+    end
+
+    it 'sin servicio apartado no interviene' do
+      allow(confirmacion).to receive(:open?).and_return(false)
+
+      expect(job.send(:handle_service_confirmation, tracking, mensaje)).to be(false)
+    end
+
+    it 'si el mensaje cae en otra ruta no interviene' do
+      allow(job).to receive(:branch_for).and_return(ContactTrackings::RouteMap::Route.new(name: 'otra', escalation: '@agendar_calendar'))
+
+      expect(job.send(:handle_service_confirmation, tracking, mensaje)).to be(false)
+    end
+  end
 end
