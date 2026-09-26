@@ -45,4 +45,19 @@ RSpec.describe ContactTrackings::CalendarOptions do
       end
     end
   end
+
+  describe '.period_days (F7, rentas)' do
+    let(:desde) { Date.new(2026, 11, 1) }
+
+    it 'meses de calendario, semanas, días, mensual' do
+      expect(described_class.period_days('6 meses', desde)).to eq(181) # 1 nov → 1 may
+      expect(described_class.period_days('3 semanas', desde)).to eq(21)
+      expect(described_class.period_days('15 días', desde)).to eq(15)
+      expect(described_class.period_days('Renta Mensual', desde)).to eq(30)
+    end
+
+    it 'una duración en horas no es renta' do
+      expect(described_class.period_days('jornada de 16 horas', desde)).to be_nil
+    end
+  end
 end

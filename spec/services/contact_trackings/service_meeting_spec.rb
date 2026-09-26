@@ -43,4 +43,14 @@ RSpec.describe ContactTrackings::ServiceMeeting do
     expect(google).to have_received(:rename_event).with('evt9', summary: 'Grúa 60 t', calendar_id: 'c60@group')
     expect(meeting.reload.attributes.slice('title', 'tentative')).to eq('title' => 'Grúa 60 t', 'tentative' => false)
   end
+
+  it 'una renta (all_day) se aparta como evento de días completos' do
+    allow(google).to receive(:create_event).and_return('id' => 'evt10')
+    inicio = Time.find_zone('America/Mexico_City').local(2026, 11, 1)
+    renta = slot.merge(slot: inicio, end_time: inicio + 181.days, all_day: true)
+
+    described_class.hold!(ticket: ticket, slot: renta, title: 'Grúa 90 t', timezone: 'America/Mexico_City')
+    expect(google).to have_received(:create_event)
+      .with(hash_including(all_day: true, due_date: '2026-11-01', end_date: '2027-05-01'))
+  end
 end

@@ -27,7 +27,7 @@ class ContactTrackings::ServiceMeeting
       starts_at: slot[:slot], ends_at: slot[:end_time], google_calendar_id: slot[:google_calendar_id],
       time_zone: timezone, notify_client: false, tentative: true, sync_status: :pending
     )
-    new(meeting).create_event(integration)
+    new(meeting).create_event(integration, all_day: slot[:all_day])
     meeting
   end
 
@@ -35,10 +35,11 @@ class ContactTrackings::ServiceMeeting
     @meeting = meeting
   end
 
-  def create_event(integration)
+  # all_day (F7, rentas): evento de días completos, del primer día al último.
+  def create_event(integration, all_day: false)
     evento = GoogleCalendarService.new(integration).create_event(
       calendar_id: calendar_id, summary: @meeting.title, description: @meeting.case_ticket.description,
-      start_time: @meeting.starts_at, end_time: @meeting.ends_at, send_updates: 'none'
+      start_time: @meeting.starts_at, end_time: @meeting.ends_at, send_updates: 'none', **all_day_window(all_day)
     )
     write!(google_event_id: evento['id'], sync_status: CaseMeeting.sync_statuses[:synced], sync_error: nil)
   rescue StandardError => e
@@ -63,6 +64,14 @@ class ContactTrackings::ServiceMeeting
   end
 
   private
+
+  def all_day_window(all_day)
+    return {} unless all_day
+
+    zona = @meeting.time_zone.presence || 'America/Mexico_City'
+    { all_day: true, due_date: @meeting.starts_at.in_time_zone(zona).to_date.iso8601,
+      end_date: @meeting.ends_at.in_time_zone(zona).to_date.iso8601 }
+  end
 
   def integration
     UserCalendarIntegration.find_by!(account_id: @meeting.account_id, user_id: @meeting.organizer_id)

@@ -113,6 +113,10 @@ class ContactTrackings::ServiceRequests::Actions
   end
 
   def option_text(oferta)
+    if oferta['all_day']
+      return "#{oferta['code']} #{ContactTrackings::ServiceRequests::Turn.period_text(oferta, @timezone)} (#{oferta['calendar_name']})"
+    end
+
     inicio = Time.zone.parse(oferta['slot']).in_time_zone(@timezone)
     "#{oferta['code']} #{inicio.strftime('%d/%m %H:%M')} (#{oferta['calendar_name']})"
   end

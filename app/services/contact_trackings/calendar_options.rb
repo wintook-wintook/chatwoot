@@ -94,6 +94,30 @@ module ContactTrackings::CalendarOptions
     WORDS.find { |regex, _| text.match?(regex) }&.last
   end
 
+  # proyecto@solicitudes (pieza 5, F7) — una renta NO se ofrece por horarios: es un bloque de
+  # días completos. «6 meses», «3 semanas», «15 días», «renta mensual», «un año». nil si no es renta.
+  PERIOD_RE = /(\d+|un|una)\s*(d[ií]as?|semanas?|mes(?:es)?|a[nñ]os?)\b|\b(mensual|semanal|anual)\b/i
+  PERIOD_WORDS = { 'mensual' => [1, 'mes'], 'semanal' => [1, 'semana'], 'anual' => [1, 'ano'] }.freeze
+
+  # Cuántos días dura desde `desde` (los meses se cuentan de calendario: 1 nov → 1 may).
+  def period_days(text, desde)
+    m = I18n.transliterate(text.to_s).downcase.match(PERIOD_RE)
+    return nil if m.nil?
+
+    cantidad, unidad = m[3] ? PERIOD_WORDS[m[3]] : [m[1].to_i.nonzero? || 1, m[2]]
+    hasta = advance(desde, cantidad, unidad)
+    (hasta - desde).to_i
+  end
+
+  def advance(desde, cantidad, unidad)
+    case unidad
+    when /\Adia/ then desde + cantidad
+    when /\Asemana/ then desde + (cantidad * 7)
+    when /\Ames/ then desde >> cantidad
+    else desde >> (cantidad * 12)
+    end
+  end
+
   def hours_minutes(text)
     horas = text[HOURS_RE, 1]
     horas && (horas.tr(',', '.').to_f * 60).round

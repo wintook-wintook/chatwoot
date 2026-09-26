@@ -121,4 +121,30 @@ RSpec.describe ContactTrackings::AvailabilitySlotService do
       expect(described_class.new(calendar_integration_ids: [1]).send(:step)).to eq(30)
     end
   end
+
+  # F7 (26/09/2026): Google rechaza freeBusy de más de 90 días («timeRangeTooLong»).
+  describe '#free_for_period' do
+    let(:tz) { 'America/Mexico_City' }
+    let(:user) { create(:user) }
+    let!(:integration) do
+      UserCalendarIntegration.create!(account: user.accounts.first || create(:account), user: user, google_email: 'a@b.com', tokens: {})
+    end
+    let(:service) do
+      described_class.new(calendar_integration_ids: [integration.id], timezone: tz, booking_calendars: { integration.id.to_s => %w[c1 c2] })
+    end
+    let(:desde) { Time.find_zone(tz).local(2026, 11, 1) }
+
+    before { allow(service).to receive(:calendar_name_for) { |_i, gcal| gcal.upcase } }
+
+    it 'consulta en tramos de 60 días y ofrece solo los libres todo el periodo' do
+      allow(service).to receive(:fetch_busy_periods) do |_i, cals, _desde, _hasta|
+        cals == ['c2'] ? [{ start: desde + 100.days, end: desde + 101.days }] : []
+      end
+
+      libres = service.free_for_period(desde, desde + 181.days)
+      expect(libres.pluck(:google_calendar_id)).to eq(['c1'])
+      expect(service).to have_received(:fetch_busy_periods).with(integration, ['c1'], anything, anything).exactly(4).times
+      expect(libres.first).to include(all_day: true, calendar_name: 'C1')
+    end
+  end
 end

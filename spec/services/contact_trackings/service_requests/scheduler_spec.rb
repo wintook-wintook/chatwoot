@@ -53,4 +53,13 @@ RSpec.describe ContactTrackings::ServiceRequests::Scheduler do
     allow(agenda).to receive(:slot_service).and_return(nil)
     expect(agenda.plan(caso('date' => '2027-10-05'), 1).note).to eq('no tengo ese equipo en el catálogo')
   end
+
+  it 'una renta de 6 meses ofrece los equipos libres todo el periodo (F7)' do
+    libre = slot(0).merge(all_day: true, calendar_name: 'GR-90')
+    allow(buscador).to receive(:free_for_period).and_return([libre])
+
+    plan = planear('date' => '2027-11-01', 'duration_text' => '6 meses')
+    expect(buscador).to have_received(:free_for_period).with(Time.find_zone(tz).local(2027, 11, 1), Time.find_zone(tz).local(2028, 5, 1))
+    expect(plan.offers.first).to include('code' => '1A', 'all_day' => true)
+  end
 end

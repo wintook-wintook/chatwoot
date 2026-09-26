@@ -77,6 +77,22 @@ module ContactTrackings
       balance_slots(slots_by_resource)
     end
 
+    # proyecto@solicitudes (pieza 5, F7) — rentas: los calendarios libres TODO el periodo
+    # [desde, hasta). Google no acepta rangos de más de 90 días en freeBusy
+    # («timeRangeTooLong», medido el 26/09/2026): se consulta en tramos.
+    PERIOD_CHUNK = 60.days
+
+    def free_for_period(desde, hasta)
+      UserCalendarIntegration.where(id: @calendar_integration_ids).flat_map do |integration|
+        resources_for(integration).filter_map do |res|
+          next unless free_all_period?(integration, res[:read], desde, hasta)
+
+          { slot: desde, end_time: hasta, calendar_integration_id: integration.id, google_calendar_id: res[:gcal],
+            calendar_name: calendar_name_for(integration, res[:gcal]) || integration.user&.name, all_day: true }
+        end
+      end
+    end
+
     # Verifica si un horario EXACTO propuesto por el cliente está libre (dentro del
     # horario laboral y sin choque) en alguna de las agendas. Devuelve el slot con la
     # agenda que lo tiene libre, o nil. Usado por la negociación multi-turno.
@@ -165,6 +181,18 @@ module ContactTrackings
     # Distinguir `nil` (no legible) de `[]` (legible y sin ocupación) es clave: quien
     # llama NO debe ofrecer horarios de una agenda cuya disponibilidad no pudo leerse,
     # porque tampoco podría crear la cita después.
+    def free_all_period?(integration, calendar_ids, desde, hasta)
+      inicio = desde
+      while inicio < hasta
+        fin = [inicio + PERIOD_CHUNK, hasta].min
+        ocupado = fetch_busy_periods(integration, calendar_ids, inicio, fin)
+        return false if ocupado.nil? || ocupado.any?
+
+        inicio = fin
+      end
+      true
+    end
+
     def fetch_busy_periods(integration, calendar_ids, time_min, time_max)
       calendar_ids = Array(calendar_ids).presence || ['primary']
       service   = GoogleCalendarService.new(integration)

@@ -27,6 +27,13 @@ class ContactTrackings::ServiceRequests::Turn
     lugar ? NUMBERS.fetch(lugar + 1, "#{lugar + 1}.") : '•'
   end
 
+  # Una renta (F7): «1A 1 nov 2026 → 30 abr 2027 (GR-90)», del primero al último día.
+  def self.period_text(oferta, timezone)
+    inicio = Time.zone.parse(oferta['slot']).in_time_zone(timezone).to_date
+    fin = Time.zone.parse(oferta['end_time']).in_time_zone(timezone).to_date - 1
+    "#{inicio.day} #{MONTHS[inicio.month - 1]} #{inicio.year} → #{fin.day} #{MONTHS[fin.month - 1]} #{fin.year}"
+  end
+
   def initialize(tracking:, message:, branch:, timezone:, context: nil)
     @tracking = tracking
     @message = message
@@ -86,6 +93,8 @@ class ContactTrackings::ServiceRequests::Turn
   end
 
   def option_text(oferta, pedido)
+    return "#{oferta['code']} #{self.class.period_text(oferta, @timezone)} (#{oferta['calendar_name']})" if oferta['all_day']
+
     inicio = Time.zone.parse(oferta['slot']).in_time_zone(@timezone)
     fin = Time.zone.parse(oferta['end_time']).in_time_zone(@timezone)
     dia = pedido && inicio.to_date == pedido.to_date ? '' : "#{DAYS[inicio.wday]} #{inicio.day} #{MONTHS[inicio.month - 1]} "

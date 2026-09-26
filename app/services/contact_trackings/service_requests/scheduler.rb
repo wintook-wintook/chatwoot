@@ -40,6 +40,9 @@ class ContactTrackings::ServiceRequests::Scheduler
     buscador = slot_service(datos)
     return Plan.new(ticket: ticket, offers: [], note: 'no tengo ese equipo en el catálogo') if buscador.nil?
 
+    dias = ContactTrackings::CalendarOptions.period_days(datos['duration_text'], at.to_date)
+    return rental_offer(ticket, number, buscador, at.beginning_of_day, dias) if dias
+
     offer(ticket, number, buscador, at, datos)
   end
 
@@ -52,6 +55,14 @@ class ContactTrackings::ServiceRequests::Scheduler
     ofertas = slots.each_with_index.map { |slot, i| payload(slot, "#{number}#{LETTERS[i]}") }
     ticket.update!(metadata: ticket.metadata.merge('oferta' => ofertas))
     Plan.new(ticket: ticket, offers: ofertas, note: note_for(slots, con_hora && exacto.nil?, at), requested: at)
+  end
+
+  # F7 — renta: un bloque de días completos; las opciones son los equipos libres TODO el periodo.
+  def rental_offer(ticket, number, buscador, desde, dias)
+    libres = buscador.free_for_period(desde, desde + dias.days).first(MAX_OPTIONS)
+    ofertas = libres.each_with_index.map { |slot, i| payload(slot, "#{number}#{LETTERS[i]}").merge('all_day' => true) }
+    ticket.update!(metadata: ticket.metadata.merge('oferta' => ofertas))
+    Plan.new(ticket: ticket, offers: ofertas, note: libres.empty? ? 'ningún equipo libre en todo ese periodo' : nil, requested: desde)
   end
 
   # La hora pedida (si está libre) primero, y después las siguientes libres.

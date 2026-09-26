@@ -56,7 +56,7 @@ class ContactTrackings::ServiceRequests::Choice
   def hold(caso, oferta)
     cancel_previous(caso) # al mover (F4): la tarea anterior se cancela al apartar la nueva
     slot = { slot: Time.zone.parse(oferta['slot']), end_time: Time.zone.parse(oferta['end_time']),
-             calendar_integration_id: oferta['cal_id'], google_calendar_id: oferta['gcal'] }
+             calendar_integration_id: oferta['cal_id'], google_calendar_id: oferta['gcal'], all_day: oferta['all_day'] }
     tarea = ContactTrackings::ServiceMeeting.hold!(ticket: caso, slot: slot, title: caso.title, timezone: @timezone)
     ContactTrackings::ServiceMeeting.new(tarea).confirm! unless @tentative
     caso.update!(metadata: caso.metadata.except('oferta').merge('meeting_id' => tarea.id,
@@ -79,6 +79,11 @@ class ContactTrackings::ServiceRequests::Choice
   end
 
   def line(caso, tarea, oferta)
+    if oferta['all_day']
+      return "#{number(caso)} #{caso.metadata.dig('servicio', 'label') || caso.title} · " \
+             "#{ContactTrackings::ServiceRequests::Turn.period_text(oferta, @timezone)} (#{oferta['calendar_name']})"
+    end
+
     inicio = tarea.starts_at.in_time_zone(@timezone)
     fin = tarea.ends_at.in_time_zone(@timezone)
     aviso = tarea.sync_failed? ? ' — un asesor confirma el horario' : ''
