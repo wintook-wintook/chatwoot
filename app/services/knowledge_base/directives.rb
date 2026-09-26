@@ -79,6 +79,7 @@ module KnowledgeBase
           .gsub(ExternalDb::ConsultaDirectiveRenderer::DIRECTIVE, '') # proyecto@erp_productos: configuración
           .gsub(/@agendar_calendar\b(?:\s*\([^)]*\))?/i, '') # proyecto@predefinidas_prompt — con sus opciones (pieza 3)
           .gsub(ContactTrackings::ServiceConfirmation::DIRECTIVE_RE, '') # proyecto@hoja_buscar pieza 4
+          .gsub(ContactTrackings::ServiceRequests::Turn::DIRECTIVE_RE, '') # proyecto@solicitudes pieza 5
           .strip
     end
 

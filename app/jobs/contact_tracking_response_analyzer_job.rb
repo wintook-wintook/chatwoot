@@ -134,6 +134,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # ruta de @confirmar_servicio: se confirma (o se pide el pago) antes que nada.
     return true if handle_service_confirmation(tracking, message)
 
+    # [2d] proyecto@solicitudes, pieza 5 — la ruta del mensaje tiene @solicitudes: cada servicio
+    # que pida es un caso (y en F3, su horario). Si no pide servicios, sigue como siempre.
+    return true if handle_service_requests(tracking, message)
+
     # [3] RouterService — clasifica ruta via IA
     route_result = classify_route(tracking, message)
     route        = route_result[:route]
@@ -1666,6 +1670,24 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar — formato configurable (en el Agente IA) con el que se
   # listan los horarios. La numeración 1-5 SIEMPRE refleja la posición en `slots`, para que la
   # elección por número del cliente siga mapeando bien sin importar el agrupamiento.
+  # proyecto@solicitudes — pieza 5 (ver ContactTrackings::ServiceRequests::Turn).
+  def handle_service_requests(tracking, message)
+    return false unless tracking.complementary_prompt.to_s.match?(ContactTrackings::ServiceRequests::Turn::DIRECTIVE_RE)
+
+    branch = branch_for(tracking, message)
+    return false unless ContactTrackings::ServiceRequests::Turn.route?(branch&.escalation)
+
+    texto = ContactTrackings::ServiceRequests::Turn.new(
+      tracking: tracking, message: message, branch: branch,
+      timezone: appointment_timezone(tracking, message), context: get_recent_context(message, 4)
+    ).call
+    return false if texto.blank?
+
+    Rails.logger.info '[TrackingBot] 🧾 @solicitudes → servicios registrados'
+    send_auto_reply(tracking, message, texto)
+    true
+  end
+
   # proyecto@hoja_buscar — pieza 4: @agendar_calendar(modo=tentativo) en la ruta (o en el agente).
   def tentative_booking?(tracking, message)
     calendar_options_for(tracking, message)&.tentative || false
