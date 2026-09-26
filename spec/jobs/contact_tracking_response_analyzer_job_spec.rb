@@ -1013,7 +1013,8 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       allow(job).to receive_messages(appointment_timezone: tz, slot_service_for: service,
                                      parse_requested_datetime: { at: Time.current, exact: false, time_of_day: 'afternoon',
                                                                  day_given: false },
-                                     try_kbase_during_negotiation: true, reoffer_for_named_resource: false)
+                                     try_kbase_during_negotiation: true, reoffer_for_named_resource: false,
+                                     message_text_for_ai: '¿Y en la tarde?')
 
       job.send(:handle_slot_negotiation, tracking, instance_double(Message), [{ 'slot' => martes.utc.iso8601 }])
       expect(service).to have_received(:call).with(from: martes.change(hour: 12))
@@ -1053,6 +1054,42 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       allow(job).to receive_messages(sheet_calendars_for: hoja(['c93']), message_text_for_ai: '¿Cuándo está libre la TP-93?')
 
       expect(job.send(:reoffer_when_asked_free, tracking, message)).to be(true)
+    end
+  end
+
+  # Pieza 6 (26/09/2026): «el día lunes a las 08:00» se agendaba en firme sin decir qué lunes.
+  describe 'fecha ambigua' do
+    let(:tz) { 'America/Mexico_City' }
+    let(:lunes) { Time.find_zone(tz).local(2026, 9, 28, 8) }
+    let(:slot) { { slot: lunes, end_time: lunes + 30.minutes, calendar_integration_id: 178, google_calendar_id: 'c64', calendar_name: 'TP-64' } }
+    let(:service) { instance_double(ContactTrackings::AvailabilitySlotService) }
+    let(:mensaje) { instance_double(Message) }
+
+    before do
+      allow(job).to receive(:message_text_for_ai).and_return('grúa para el día lunes a las 08:00')
+      allow(job).to receive(:offer_slots)
+    end
+
+    it 'con hora libre la ofrece como opción 1 con la fecha completa, no la agenda' do
+      allow(service).to receive(:slot_for).and_return(slot)
+      requested = job.send(:with_ambiguity, { at: lunes, exact: true }, mensaje)
+
+      expect(job.send(:offer_ambiguous_exact, tracking, mensaje, service, requested, tz)).to be(true)
+      expect(job).to have_received(:offer_slots)
+        .with(tracking, mensaje, [slot], /\AEntiendo que es el lunes 28 de septiembre, a las 08:00\. Está libre:.*Responde 1 para apartarlo/m)
+    end
+
+    it 'con fecha explícita no interviene' do
+      allow(job).to receive(:message_text_for_ai).and_return('el lunes 28 a las 08:00')
+      requested = job.send(:with_ambiguity, { at: lunes, exact: true }, mensaje)
+
+      expect(job.send(:offer_ambiguous_exact, tracking, mensaje, service, requested, tz)).to be(false)
+      expect(job.send(:ambiguity_intro, requested, tz, 'Hola')).to eq('Hola')
+    end
+
+    it 'sin hora, antepone la fecha a los horarios del día' do
+      expect(job.send(:ambiguity_intro, { at: lunes, ambiguous: true }, tz, nil))
+        .to eq('Entiendo que es el lunes 28 de septiembre. Estos son los horarios de ese día:')
     end
   end
 end

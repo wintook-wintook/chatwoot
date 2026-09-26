@@ -982,7 +982,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # si no pidió nada concreto caemos al comportamiento por defecto (primeros disponibles).
     requested = requested_datetime_for_booking(appt, timezone)
     requested ||= parse_requested_datetime(tracking, message, timezone) if appt.is_a?(Hash) && appt[:read_date]
-    return if try_book_requested_slot(tracking, message, service, requested)
+    requested = with_ambiguity(requested, message)
+    return if offer_ambiguous_exact(tracking, message, service, requested, timezone)
+    return if !requested&.dig(:ambiguous) && try_book_requested_slot(tracking, message, service, requested)
 
     slots = if requested
               from = booking_search_anchor(requested[:at], requested[:time_of_day], timezone)
@@ -1010,9 +1012,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     presentation = slots_presentation_for(tracking)
     slots = order_slots_for_presentation(slots, presentation)
     moved = requested && moved_day_intro(requested[:at], slots, service, timezone)
-    reply = if moved || requested&.dig(:exact)
-              "#{moved || 'Uy, ese horario no está disponible 😕. Estos son los más cercanos:'}\n\n" \
-                "#{format_slots_lines(slots, timezone, presentation)}\n\n¿Cuál te queda mejor? Responde con el número."
+    intro = moved || ('Uy, ese horario no está disponible 😕. Estos son los más cercanos:' if requested&.dig(:exact))
+    intro = ambiguity_intro(requested, timezone, intro) unless moved
+    reply = if intro
+              "#{intro}\n\n#{format_slots_lines(slots, timezone, presentation)}\n\n¿Cuál te queda mejor? Responde con el número."
             else
               format_slots_message(slots, timezone, presentation)
             end
@@ -1166,9 +1169,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
       cal_ids  = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
       service  = slot_service_for(cal_ids, tracking, timezone, message: message)
+      requested = with_ambiguity(requested, message)
+      return true if offer_ambiguous_exact(tracking, message, service, requested, timezone)
 
       # Si dio fecha Y hora concretas, intentamos confirmar ese horario exacto.
-      if requested[:exact]
+      if requested[:exact] && !requested[:ambiguous]
         slot = service.slot_for(requested[:at])
         if slot
           Rails.logger.info "[TrackingBot] 📅 Horario propuesto disponible (#{requested[:at]}) → confirmando"
@@ -1188,9 +1193,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         intro = if first_offered_date != requested_date
                   moved_day_intro(requested[:at], alternatives, service, timezone)
                 elsif requested[:exact]
-                  'Uy, ese horario no está disponible 😕. Estos son los más cercanos:'
+                  ambiguity_intro(requested, timezone, 'Uy, ese horario no está disponible 😕. Estos son los más cercanos:')
                 else
-                  '¡Claro! Para ese día tengo estos horarios:'
+                  ambiguity_intro(requested, timezone, '¡Claro! Para ese día tengo estos horarios:')
                 end
         Rails.logger.info '[TrackingBot] 📅 Ofreciendo horarios cercanos a lo pedido'
         presentation = slots_presentation_for(tracking)
@@ -1626,6 +1631,38 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar — formato configurable (en el Agente IA) con el que se
   # listan los horarios. La numeración 1-5 SIEMPRE refleja la posición en `slots`, para que la
   # elección por número del cliente siga mapeando bien sin importar el agrupamiento.
+  # proyecto@hoja_buscar — pieza 6: «el día lunes» sin número (ver AmbiguousDate).
+  def with_ambiguity(requested, message)
+    return requested if requested.nil?
+
+    requested.merge(ambiguous: ContactTrackings::AmbiguousDate.ambiguous?(message_text_for_ai(message)))
+  end
+
+  # Día de la semana sin número y con hora libre: en vez de agendarla en firme, se ofrece
+  # como opción 1 diciendo la fecha completa. Con «1» se agenda como cualquier horario.
+  def offer_ambiguous_exact(tracking, message, service, requested, timezone)
+    return false unless requested&.dig(:ambiguous) && requested&.dig(:exact)
+
+    slot = service.slot_for(requested[:at])
+    return false unless slot
+
+    hora = requested[:at].in_time_zone(timezone).strftime('%H:%M')
+    Rails.logger.info "[TrackingBot] 📅 Fecha ambigua con hora libre → se ofrece para confirmar (#{requested[:at]})"
+    offer_slots(tracking, message, [slot],
+                "#{ContactTrackings::AmbiguousDate.note(requested[:at], timezone)}, a las #{hora}. Está libre:\n\n" \
+                "#{format_slots_lines([slot], timezone, slots_presentation_for(tracking))}\n\n" \
+                'Responde 1 para apartarlo, o dime otra fecha.')
+    true
+  end
+
+  # «Entiendo que es el lunes 28 de septiembre. <intro>»: sin la fecha escrita, el cliente
+  # no puede darse cuenta de que era otro lunes.
+  def ambiguity_intro(requested, timezone, intro)
+    return intro unless requested&.dig(:ambiguous)
+
+    "#{ContactTrackings::AmbiguousDate.note(requested[:at], timezone)}. #{intro || 'Estos son los horarios de ese día:'}"
+  end
+
   # El día pedido no aparece en los horarios ofrecidos: se dice por qué, en vez de saltar
   # a otro día sin avisar (25/09/2026: «¿qué horarios tienen para mañana?» un viernes daba
   # los del lunes como si fueran de mañana). nil si el primer horario SÍ es del día pedido.
