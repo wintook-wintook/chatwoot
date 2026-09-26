@@ -1529,30 +1529,3 @@ https://develop.wintook.com/app/accounts/2/conversations/268 · creada 26/09 12:
 [26/09 12:34] 🤖 Bot:
     Para poder levantar tu caso necesito unos datos: Peso y Unidad. ¿Me lo compartes, por favor?
 ```
-
-## Anexo — conversaciones anteriores del mismo canal (otros agentes)
-
-| # | Creada | Contacto | Agente |
-|---|---|---|---|
-| [158](https://develop.wintook.com/app/accounts/2/conversations/158) | 11/09 18:20 | Prueba v6.11 | COORDINADOR OPERACION v6.11 (prueba) |
-| [164](https://develop.wintook.com/app/accounts/2/conversations/164) | 18/09 17:37 | Demo Cotización Equipo | COORDINADOR OPERACION v6.11 (prueba) |
-| [165](https://develop.wintook.com/app/accounts/2/conversations/165) | 21/09 13:09 | Prueba F6 Campaña | COORDINADOR OPERACION v6.11 (prueba) |
-| [166](https://develop.wintook.com/app/accounts/2/conversations/166) | 21/09 13:09 | Prueba F6 Campaña |  |
-| [167](https://develop.wintook.com/app/accounts/2/conversations/167) | 21/09 13:10 | Prueba F6 Pausada |  |
-| [171](https://develop.wintook.com/app/accounts/2/conversations/171) | 21/09 16:24 | Cliente Catálogo ERP | Vendedor Catálogo (prueba ERP) |
-| [174](https://develop.wintook.com/app/accounts/2/conversations/174) | 24/09 14:04 | Ana López (prueba Patitas) | Clínica Veterinaria Patitas |
-| [175](https://develop.wintook.com/app/accounts/2/conversations/175) | 24/09 16:27 | Luis Pérez (prueba Patitas 2) | Clínica Veterinaria Patitas |
-| [176](https://develop.wintook.com/app/accounts/2/conversations/176) | 24/09 16:29 | Marta Ruiz (prueba Patitas 3) | Clínica Veterinaria Patitas |
-| [188](https://develop.wintook.com/app/accounts/2/conversations/188) | 24/09 18:38 | Prueba Universidad v2 1 (003803) | Universidad |
-| [189](https://develop.wintook.com/app/accounts/2/conversations/189) | 24/09 18:38 | Prueba Universidad v2 2 (003813) | Universidad |
-| [190](https://develop.wintook.com/app/accounts/2/conversations/190) | 24/09 18:38 | Prueba Universidad v2 3 (003834) | Universidad |
-| [191](https://develop.wintook.com/app/accounts/2/conversations/191) | 24/09 18:38 | Prueba Universidad v2 4 (003843) | Universidad |
-| [192](https://develop.wintook.com/app/accounts/2/conversations/192) | 24/09 18:39 | Prueba Universidad v2 5 (003935) | Universidad |
-| [193](https://develop.wintook.com/app/accounts/2/conversations/193) | 24/09 18:39 | Prueba Universidad v2 6 (003947) | Universidad |
-| [194](https://develop.wintook.com/app/accounts/2/conversations/194) | 24/09 18:39 | Prueba Universidad v2 7 (003957) | Universidad |
-| [195](https://develop.wintook.com/app/accounts/2/conversations/195) | 24/09 18:40 | Prueba Universidad v2 8 (004009) | Universidad |
-| [196](https://develop.wintook.com/app/accounts/2/conversations/196) | 24/09 18:40 | Prueba Universidad v2 9 (004021) | Universidad |
-| [197](https://develop.wintook.com/app/accounts/2/conversations/197) | 24/09 18:40 | Prueba Universidad v2 10 (004046) | Universidad |
-| [198](https://develop.wintook.com/app/accounts/2/conversations/198) | 24/09 18:41 | Prueba Universidad v2 11 (004104) | Universidad |
-| [199](https://develop.wintook.com/app/accounts/2/conversations/199) | 24/09 18:41 | Prueba Universidad v2 12 (004116) | Universidad |
-| [200](https://develop.wintook.com/app/accounts/2/conversations/200) | 24/09 18:41 | Prueba Universidad v2 13 (004125) | Universidad |
