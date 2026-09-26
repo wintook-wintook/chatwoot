@@ -1,7 +1,7 @@
 # Plan — Pieza 5: `@solicitudes` (varios servicios en una conversación)
 
-> Solo plan (26/09/2026). Sigue a `docs/hoja_buscar_plan.md` (piezas 1–4) y al diseño del agente
-> de Grúas (`docs/agente_gruas_ssusa_rutas.md`). No se programa hasta revisar las decisiones (§11).
+> Plan (26/09/2026). Sigue a `docs/hoja_buscar_plan.md` (piezas 1–4) y al diseño del agente
+> de Grúas (`docs/agente_gruas_ssusa_rutas.md`). Decisiones cerradas el 26/09 (§11).
 
 ---
 
@@ -128,15 +128,17 @@ Una sola respuesta con todos los servicios, numerados:
    1 grúa cap. 60 tons, 01 tracto con plana de 12 mts, 01 camión con grúa tipo hiab
 
 🤖 Recibí 3 servicios:
-   1️⃣ Grúa 60 t — vie 29 may 08:00 · GR-60 libre → 📌 apartado
-   2️⃣ Plana 12 m — vie 29 may 08:00 · TP-37 libre → 📌 apartado
-   3️⃣ Hiab — vie 29 may 08:00 · ocupado. Tengo:  3A 09:00 · 3B 10:00 · 3C 11:00
-   Para dejarlos en firme, confírmame el servicio. Del 3, elige 3A, 3B o 3C.
+   1️⃣ Grúa 60 t — vie 29 may:   1A 08:00 ✅ libre (GR-60)
+   2️⃣ Plana 12 m — vie 29 may:  2A 08:00 ✅ libre (TP-37)
+   3️⃣ Hiab — 08:00 ocupado:     3A 09:00 · 3B 10:00 · 3C 11:00
+   Responde con los que quieres apartar (por ejemplo «1A, 2A y 3B»), o «sí» para 1A, 2A y 3A.
 ```
 
-- **Hora exacta libre** → se aparta directo (tentativo) y se dice.
+- **Hora exacta libre** → se OFRECE como opción para confirmar (decisión 2): «1A 08:00 ✅ libre».
+  No se aparta nada hasta que el cliente elige.
 - **Ocupado o sin hora** → alternativas con código **número + letra** (3A, 3B…): un «1» suelto ya
   no alcanza con varios servicios.
+- **«Sí» / «apártalos»** → la primera opción de cada servicio; «1A y 3B» → esas.
 - **Faltan datos** → UNA pregunta para todos: «Del 2 me falta el peso; del 3, el destino».
 - **«El día lunes»** sin número → la fecha completa, como en la pieza 6.
 
@@ -158,8 +160,12 @@ elección «3B» se resuelve por el número del servicio.
 
 Con varios abiertos y sin decir cuál → «¿Cuál? 1️⃣ Grúa 60 t · 2️⃣ Plana 12 m · 3️⃣ Hiab».
 
-**Pago** (`@confirmar_servicio(requiere=pago)`): la etiqueta `pago_confirmado` de la
-conversación confirma **todos** los servicios esperando pago (decisión §11-3).
+**Pago** (`@confirmar_servicio(requiere=pago)`, decisión 3):
+- etiqueta `pago_confirmado` en la conversación → **todos** los servicios esperando pago quedan en
+  firme (un pago por el paquete, lo común);
+- caso movido a la columna **«Pagado»** del Kanban (tipo «Solicitud de transporte») → **solo ese**
+  servicio queda en firme (pago parcial). Se engancha al cambio de `case_type_column_id`.
+Las dos avisan al cliente: «✅ Recibimos tu pago. Tu servicio N del … quedó confirmado».
 
 ---
 
@@ -189,12 +195,21 @@ ContactTrackingResponseAnalyzerJob
 
 ---
 
-## 7. Rentas de días o meses (ej. 18 y 25)
+## 7. Rentas de días o meses (ej. 18 y 25) — entra en esta pieza (decisión 5)
 
-La agenda llega hoy a 24 h. Una renta de 6 meses **no** se ofrece por horarios: se aparta un
-**bloque de días completos** (tarea agendada de día completo, inicio–fin). Propuesta: fase aparte
-(F7), con `duracion=?` aceptando «6 meses», «renta mensual» → bloque; disponibilidad = sin
-choques en todo el periodo.
+La agenda llega hoy a 24 h. Una renta de 6 meses **no** se ofrece por horarios: se ofrece un
+**bloque de días completos** (tarea agendada de día completo, inicio–fin):
+
+```
+👤 Renta de grúa 90 t por 6 meses a partir del 1 de noviembre
+🤖 1️⃣ Grúa 90 t — 1 nov 2026 → 30 abr 2027:  1A ✅ libre todo el periodo (GR-90)
+```
+- `duracion=?` acepta «6 meses», «3 semanas», «15 días», «renta mensual» (= 1 mes) → bloque.
+- Disponible = sin ningún choque en todo el periodo (freeBusy del periodo completo; Google
+  permite consultar rangos largos por partes).
+- Si choca: «ocupada del 3 al 10 de diciembre» y la siguiente fecha en que el periodo completo
+  cabe, o el mismo tipo de equipo que sí esté libre.
+- Sin fecha de inicio → se pregunta.
 
 ---
 
@@ -217,7 +232,7 @@ choques en todo el periodo.
 | F4 | Confirmar / mover / cancelar por servicio; pago de todos con la etiqueta | mediano |
 | F5 | Comprobador, catálogo, Asistente, i18n | chico |
 | F6 | Pila de pruebas (§10) + bitácora en los dos .md | chico |
-| F7 | Rentas de días/meses (bloques de días completos) | mediano (opcional) |
+| F7 | Rentas de días/meses (bloques de días completos, §7) | mediano |
 
 ---
 
@@ -238,17 +253,19 @@ En *Agents IA Test* con la copia #10368, calendarios de prueba (agenda 178). Con
 | P8 | P2 + «cancela el hiab» | solo el 3 cancelado (caso y tarea) |
 | P9 | P2 + etiqueta `pago_confirmado` | todos los que esperaban pago, en firme |
 | P10 | Ej. 7 (un solo servicio) con agente SIN `@solicitudes` | igual que hoy (una cita) |
+| P11 | Ej. 18: renta 6 meses de grúa 90 t desde el 1 de noviembre | bloque ofrecido con fechas completas |
+| P12 | P2 + mover solo el caso 2 a la columna «Pagado» | solo el 2 en firme |
 
 ---
 
-## 11. Decisiones abiertas
+## 11. Decisiones (26/09/2026)
 
-1. **Servicio = caso + tarea agendada** (recomendado) o una tabla nueva «servicios» aparte de Tickets.
-2. **Hora exacta libre**: ¿se aparta directo (tentativo) o se ofrece como opción para confirmar?
-3. **Pago**: ¿la etiqueta confirma todos los servicios de la conversación, o se confirma por caso
-   (mover el caso a una columna «Pagado» del Kanban)?
-4. **Tipo de caso**: uno solo «Solicitud de transporte», o uno por equipo (Grúa, Hiab, Plana…).
-5. **Rentas largas (F7)**: ¿entran en esta pieza o después?
+1. **Servicio = caso + tarea agendada.** ✅
+2. **Hora exacta libre → se OFRECE como opción** para que el cliente la confirme (no se aparta directo). ✅
+3. **Pago: las dos.** Etiqueta `pago_confirmado` = todos los servicios en espera de pago; columna
+   «Pagado» del Kanban = solo ese caso (pago parcial). ✅ (recomendación aceptada: «lo mejor»)
+4. **Un solo tipo de caso: «Solicitud de transporte».** ✅ (con su columna «Pagado»)
+5. **Rentas de días/meses entran en esta pieza** (F7, §7). ✅
 
 ---
 
