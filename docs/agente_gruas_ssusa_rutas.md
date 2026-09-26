@@ -685,7 +685,7 @@ y `@confirmar_servicio(requiere=pago)`.
 | 6 | ✅ HECHA 26/09 — Confirmar fechas ambiguas («el día lunes») | chico | 2 |
 | 3 | ✅ HECHA 26/09 — `@agendar_calendar(duracion=?, horario=24h)` (tope 24 h; rentas largas pendientes) | mediano | 1, 2, 3, 4, 9, 10, 17 |
 | 4 | ✅ HECHA 26/09 — `modo=tentativo` + `@confirmar_servicio(requiere=pago)` + etiqueta `pago_confirmado` | mediano | 4, 20, 21, 24 |
-| 5 | `@solicitudes`: un caso y una cita por servicio | **grande** | 3, 6, 10, 11, 14, 16, 18, 19, 25 |
+| 5 | ✅ HECHA 26/09 (falta la pila P1–P12) — `@solicitudes`: un caso y una cita por servicio, rentas en bloque | **grande** | 3, 6, 10, 11, 14, 16, 18, 19, 25 |
 | 7 | Leer PDF / Excel adjuntos · probar en canal de correo | mediano | 2, 8, 10, 23, 24 · los 26 |
 
 Orden recomendado: **1 → 2 → 6 → 3 → 4 → 5 → 7**. Con 1–4 más las hojas, los servicios de un
@@ -886,8 +886,9 @@ Después: «Analiza el prompt» → si avisa «#pago_confirmado no existe», bot
 Plan y bitácora completa: `docs/solicitudes_multiservicio_plan.md` §13. Hecho: F0 (Tarea agendada
 tentativa en el calendario del equipo), F1 (separar el mensaje en servicios, 12/12 ejemplos del
 corpus), F2 (un caso por servicio + reiteraciones), F3 (horarios 1A/2B por servicio y apartado),
-F4 (confirmar/cancelar/mover por servicio; pago con etiqueta = todos o columna «Pagado» = uno).
-Pruebas en vivo: conversaciones 256–259. Falta: F5 (comprobador/catálogo), F7 (rentas de días/meses).
+F4 (confirmar/cancelar/mover por servicio; pago con etiqueta = todos o columna «Pagado» = uno),
+F5 (comprobador y catálogo), F7 (rentas de días/meses como bloque de días completos).
+Pruebas en vivo: conversaciones 256–260. Falta: F6 (pila completa P1–P12).
 
 **Cómo pedírselo al Asistente (lo que ya funciona):**
 ```

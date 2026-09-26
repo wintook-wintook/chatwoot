@@ -439,3 +439,38 @@ la flecha: @confirmar_servicio(requiere=pago)
 Cancelar y mover no necesitan ruta propia: el motor los reconoce cuando hay servicios abiertos.
 En Tickets → Tipos de caso → «Solicitud de transporte»: crear la columna **«Pagado»** para los
 pagos parciales.
+
+### F7 — Rentas de días o meses (26/09/2026) ✅
+
+**Qué se hizo.** Si la duración del servicio es un periodo («6 meses», «3 semanas», «15 días»,
+«renta mensual», «un año»; `CalendarOptions.period_days`), no se ofrecen horarios: se ofrecen los
+equipos **libres todo el periodo** (`AvailabilitySlotService#free_for_period`). Google rechaza
+consultas de más de 90 días (`timeRangeTooLong`, medido): se consulta en tramos de 60. Al elegir, la
+Tarea agendada se aparta como evento de **días completos** del primero al último día.
+
+**Pruebas.**
+| Conv | Cliente | Resultado |
+|---|---|---|
+| 260 | renta de low boy de 50 t por 3 meses a partir del 1 de diciembre 2026 | «1A 1 dic 2026 → 28 feb 2027 (TP-64)» (el único low boy ≥ 50 t libre los 3 meses) ✅ |
+| 260 | «1A» | evento de día completo 1 dic → 1 mar en el calendario TP-64, «[TENTATIVO]» ✅ |
+
+Specs: `period_days` (2), `free_for_period` por tramos (1), `hold!` de día completo (1), oferta de renta en `scheduler_spec` (1).
+
+**Cómo pedírselo al Asistente.** Nada nuevo: la misma ruta de F3 con `duracion=?`; el cliente dice
+«por 6 meses» / «renta mensual» y el motor lo trata como bloque.
+
+### F5 — Comprobador y catálogo (26/09/2026) ✅
+
+**Qué se hizo.**
+- 🔴 `solicitudes_without_ticket`: `@solicitudes` sin `@crear_ticket` después.
+- 🟡 `solicitudes_without_lookup`: `@solicitudes` con agenda pero sin `{{hoja_buscar:}}`.
+- Ficha «@solicitudes» en Recursos del Asistente (es/en) y el chat del Asistente la recibe en sus recursos.
+- `@solicitudes` nunca llega al modelo que redacta (`Directives.strip_tokens`).
+
+**Pruebas.** `sheet_lookup_checks_spec` (3 nuevas): rojo sin caso · ámbar sin hoja · completa sin avisos.
+Suite del motor: 797 ejemplos, solo las 6 fallas previas.
+
+**Cómo pedírselo al Asistente.** Después de escribir la ruta: «Analiza el prompt». Si falta algo,
+sale pintado en la línea (con el aviso al pasar el mouse) y con punto en el árbol.
+
+### Pendiente: F6 — la pila completa P1–P12 (§10) y cierre
