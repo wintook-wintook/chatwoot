@@ -52,7 +52,10 @@ module ContactTrackings
       # turno fallaba sin decir por qué. 12000 cubre prompts de ~45.000 caracteres y
       # queda debajo del máximo de gpt-4o (16384). El tope no se cobra: se paga lo
       # que se genera.
-      authoring_assistant: 12_000
+      authoring_assistant: 12_000,
+      # proyecto@solicitudes (pieza 5): la lista de servicios de un correo con 3–6 equipos,
+      # cada uno con paradas, fecha, carga y folios.
+      service_requests: 2500
     }.freeze
 
     # proyecto@asistente_agentes_ia — piso de modelo por propósito.
@@ -65,7 +68,9 @@ module ContactTrackings
     #      un modelo que se saltea reglas produce Entrenamientos que no ejecutan nada.
     #
     # Un piso NO fuerza el modelo: si el inbox configuró uno más capaz, ese gana.
-    MODEL_FLOOR = { authoring_assistant: 'gpt-4o' }.freeze
+    # service_requests: separar un correo en servicios sigue reglas finas («consolidar» = uno,
+    # «entrega y recolección» = dos); el modelo chico se las salta.
+    MODEL_FLOOR = { authoring_assistant: 'gpt-4o', service_requests: 'gpt-4o' }.freeze
     # Orden de capacidad, de menor a mayor. Solo para comparar contra el piso.
     MODEL_RANK = %w[gpt-3.5-turbo gpt-4o-mini gpt-4-turbo gpt-4o].freeze
 

@@ -279,3 +279,48 @@ Frases: solicito programar, favor de programar las siguientes unidades, SOLICITU
 las siguientes unidades, programa de embarque.
 ```
 Luego «Analiza el prompt». (Se confirmará con la pila de pruebas en F6.)
+
+---
+
+## 13. Bitácora por fase
+
+### F0 — Tarea agendada tentativa en el calendario del equipo (26/09/2026) ✅
+
+**Qué se hizo.** `case_meetings.tentative` (migración `20260926140000`) y
+`ContactTrackings::ServiceMeeting`: `hold!` crea la Tarea agendada del caso con «[TENTATIVO] …»
+y su evento DIRECTO en el calendario del equipo (sin Meet ni invitaciones — el espejo de
+Tickets sí los manda); `confirm!` quita «[TENTATIVO]» del evento y de la tarea; `cancel!` usa el
+espejo de siempre. Mover y cancelar desde Tickets siguen funcionando con el mismo evento.
+
+**Pruebas.** `service_meeting_spec` (3): aparta sin Meet ni correos · si Google falla la tarea
+queda marcada · confirmar quita «[TENTATIVO]». En vivo: con F3.
+
+**Cómo pedírselo al Asistente.** No aplica todavía (pieza interna).
+
+### F1 — Separar un mensaje en servicios (26/09/2026) ✅
+
+**Qué se hizo.** `ContactTrackings::ServiceRequests::Extractor`: una llamada a la IA (gpt-4o como
+mínimo, `EngineConfig` `:service_requests`) con las reglas de §3; fechas, horas y duraciones se
+devuelven como las escribió el cliente. «Entrega y recolección» de ida y vuelta se parte en dos
+sin IA (la IA insistía en un viaje redondo).
+
+**Pila de pruebas (corpus, sin conversación).** 12 ejemplos, medido el 26/09:
+
+| Ejemplo | Esperado | 1ª vuelta | Final |
+|---|---|---|---|
+| 3 · 2 hiab distintos | 2 | ✅ 2 | ✅ 2 |
+| 6A · grúa + plana + hiab | 3 | ✅ 3 (fecha mezclada con la hora) | ✅ 3 (fecha «29 de mayo 2026», hora «08:00 am») |
+| 6B · programa (02 hiab + 1 hiab + grúa) | 4 | ❌ 3 (juntó los 2 hiab) | ✅ 4 |
+| 10 · 2 fletes «por separado» + horas de hiab | 3 | ✅ 3 (sin etiquetas) | ✅ 3, hora 6:00 pm + duración «6:00 pm - 12:00 am» |
+| 11 · SOLICITUD 01 | 1 | ✅ 1 + folio DMX | ✅ |
+| 14 · viaje redondo, 2 NAV | 1 | ✅ 1, 3 paradas, 2 folios | ✅ |
+| 16 · magneto + «adicionalmente» 3 tramos | 1 | ❌ 2 | ✅ 1 |
+| 19 · entrega y recolección | 2 | ❌ 1 | ✅ 2 (a veces 3: cuenta la renta del rack como servicio) |
+| 25 · consolidar 2 tramos | 1 | ✅ 1, 3 paradas, 2 folios | ✅ |
+| 7 · una plana | 1 | ✅ | ✅ |
+| 18 · renta 4 equipos 6 meses | 4 | ✅ | ✅ |
+| saludo | 0 | ✅ | ✅ |
+
+Resultado: **9/12 → 12/12** (el 19 varía entre 2 y 3 según la IA). Spec: `extractor_spec` (4).
+
+**Cómo pedírselo al Asistente.** No aplica todavía (se usa con `@solicitudes`, F2).
