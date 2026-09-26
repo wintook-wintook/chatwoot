@@ -136,6 +136,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     # [2d] proyecto@solicitudes, pieza 5 — la ruta del mensaje tiene @solicitudes: cada servicio
     # que pida es un caso (y en F3, su horario). Si no pide servicios, sigue como siempre.
+    return true if handle_service_actions(tracking, message)
     return true if handle_service_choice(tracking, message)
     return true if handle_service_requests(tracking, message)
 
@@ -1671,6 +1672,22 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar — formato configurable (en el Agente IA) con el que se
   # listan los horarios. La numeración 1-5 SIEMPRE refleja la posición en `slots`, para que la
   # elección por número del cliente siga mapeando bien sin importar el agrupamiento.
+  # proyecto@solicitudes — pieza 5, F4: confirmar, cancelar o mover UN servicio (ver Actions).
+  def handle_service_actions(tracking, message)
+    return false unless tracking.complementary_prompt.to_s.match?(ContactTrackings::ServiceRequests::Turn::DIRECTIVE_RE)
+    return false if ContactTrackings::ServiceRequests::Registry.open_cases(message.conversation).none?
+
+    texto = ContactTrackings::ServiceRequests::Actions.new(
+      tracking: tracking, message: message, branch: branch_for(tracking, message),
+      timezone: appointment_timezone(tracking, message)
+    ).call
+    return false if texto.blank?
+
+    Rails.logger.info '[TrackingBot] 🧾 @solicitudes → acción sobre un servicio'
+    send_auto_reply(tracking, message, texto)
+    true
+  end
+
   # proyecto@solicitudes — pieza 5, F3: el cliente elige horarios ofrecidos («1A y 3B», «sí»).
   def handle_service_choice(tracking, message)
     prompt = tracking.complementary_prompt.to_s

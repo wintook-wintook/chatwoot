@@ -12,6 +12,16 @@ class ContactTrackings::PaymentConfirmedJob < ApplicationJob
     ContactTracking.where(conversation_id: conversation.id).where(appointment_status: 'pending_payment').find_each do |tracking|
       confirm(tracking, conversation)
     end
+    confirm_services(conversation)
+  end
+
+  # proyecto@solicitudes (pieza 5, F4): la etiqueta deja en firme TODOS los servicios de la
+  # conversación que esperaban el pago (uno solo: columna «Pagado», ver ServicePaidJob).
+  def confirm_services(conversation)
+    casos = ContactTrackings::ServiceRequests::Registry.open_cases(conversation).select { |c| c.metadata['estado'] == 'esperando_pago' }
+    return if casos.empty?
+
+    ContactTrackings::ServiceRequests::PaidService.new(conversation).confirm!(casos)
   end
 
   private

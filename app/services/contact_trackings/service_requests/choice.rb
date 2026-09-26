@@ -54,6 +54,7 @@ class ContactTrackings::ServiceRequests::Choice
   end
 
   def hold(caso, oferta)
+    cancel_previous(caso) # al mover (F4): la tarea anterior se cancela al apartar la nueva
     slot = { slot: Time.zone.parse(oferta['slot']), end_time: Time.zone.parse(oferta['end_time']),
              calendar_integration_id: oferta['cal_id'], google_calendar_id: oferta['gcal'] }
     tarea = ContactTrackings::ServiceMeeting.hold!(ticket: caso, slot: slot, title: caso.title, timezone: @timezone)
@@ -61,6 +62,11 @@ class ContactTrackings::ServiceRequests::Choice
     caso.update!(metadata: caso.metadata.except('oferta').merge('meeting_id' => tarea.id,
                                                                 'estado' => @tentative ? 'apartado' : 'confirmado'))
     [caso, tarea.reload, oferta]
+  end
+
+  def cancel_previous(caso)
+    anterior = CaseMeeting.find_by(id: caso.metadata['meeting_id'])
+    ContactTrackings::ServiceMeeting.new(anterior).cancel! if anterior && !anterior.cancelled?
   end
 
   def reply(apartados, pendientes)

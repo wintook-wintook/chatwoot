@@ -82,9 +82,12 @@ class ContactTrackings::ServiceRequests::DateResolver
     year < 100 ? 2000 + year : year
   end
 
+  # «a las 10» (sin minutos ni am/pm) también es hora; un «10» suelto no.
+  LAS_RE = /\ba\s+las?\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?\s?m\.?|p\.?\s?m\.?|hrs?\.?|horas)?/i
+
   def time_from(text)
-    m = text.to_s.match(TIME_RE)
-    return nil if m.nil? || (m[2].nil? && m[3].nil?)
+    m = text.to_s.match(LAS_RE) || text.to_s.match(TIME_RE)
+    return nil if m.nil? || (m[2].nil? && m[3].nil? && !m[0].match?(/\Aa\s+las?/i))
 
     format('%<h>02d:%<m>02d', h: twenty_four(m[1].to_i, m[3].to_s.downcase), m: m[2].to_i)
   end
