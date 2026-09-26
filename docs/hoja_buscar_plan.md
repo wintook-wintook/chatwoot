@@ -264,3 +264,24 @@ En la agenda — primera oferta y negociación — el motor:
 |------|---------|-----------|-------------|
 | 250 | ¿disponibilidad de la TP-64 el lunes a las 12:00? | «Entiendo que es el lunes 28 de septiembre, a las 12:00. Está libre: 1️⃣ … Responde 1 para apartarlo» | no ✅ |
 | 251 | ¿disponibilidad de la TP-63 el día martes? | «Entiendo que es el martes 29 de septiembre. Estos son los horarios de ese día: …» | no ✅ |
+
+
+---
+
+## 13. Pieza 3 — duración y horario 24 h (26/09/2026)
+
+`@agendar_calendar(duracion=?, horario=24h)` (`ContactTrackings::CalendarOptions`):
+- `duracion=90` / `duracion=2h` fija; `duracion=?` la lee del mensaje, sin IA («una hora», «jornada
+  de 16 horas», «6:00 pm – 12:00 am», «2 hrs», «45 minutos»; una hora del día no cuenta; tope 24 h);
+  si no la dijo, la del agente.
+- `horario=24h`: cualquier hora de cualquier día (`AvailabilitySlotService` con `working_hours: ALL_DAY`);
+  el servicio puede cruzar la medianoche.
+- Servicios de más de 60 min se ofrecen cada hora (antes: cada «duración»).
+- El comprobador marca en rojo una opción que el motor no entiende (`horario=noche`).
+- Arreglo encontrado al probar: «domingo 4 de octubre» daba el domingo 27 — con día de semana y
+  fecha que coinciden, ahora manda la fecha.
+
+| Conv | Cliente | Resultado |
+|------|---------|-----------|
+| 254 | TP-64 domingo 4 de octubre, jornada de 16 horas | domingo 4 oct 00:00–16:00, 01:00–17:00… ✅ |
+| 253 | TP-93 el 5 de octubre, 6:00 pm – 12:00 am | 18:00–00:00 (6 h) libre → pide correo para confirmar ✅ |
