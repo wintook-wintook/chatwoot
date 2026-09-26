@@ -226,3 +226,25 @@ fecha («mañana») se lee del mensaje. Si ya tiene cita, o la IA trajo mover/ca
 | 230 | Quiero agendar un remolque | cita | «¿Para cuál remolque…?» ✅ |
 | 231 | ¿Qué capacidad tiene la TP-64? | plática | hoja: 60 t, sin links ✅ |
 | 232 | ¿Cuándo está libre la TP-93? | cita | horarios del calendario TP-93 ✅ |
+
+
+---
+
+## 11. Piezas 1 y 2 (26/09/2026)
+
+**Pieza 1 — comparaciones.** `columna>=valor`, `<=`, `>`, `<` (números) y `columna!=valores`.
+Con `?`, el número sale del mensaje más reciente del cliente que traiga uno **con la unidad de
+la columna** (`ContactTrackings::SheetNumbers`): toneladas (t, ton, toneladas; kg ÷ 1000),
+metros (m, mts, metros) o la palabra de la columna («5 extensiones»). Con `>=` manda el mayor;
+con `<=`, el menor. Comparación de textos sin acentos.
+
+**Pieza 2 — fuente de datos.** Como FUENTE de la ruta (antes de la flecha), `{{hoja_buscar:}}`
+responde con las filas exactas (`KnowledgeBaseResponseService#perform_sheet_lookup`); después de
+la flecha sigue siendo AGENDA (`SheetLookup.agenda_specs`). Solo las columnas de agenda se
+esconden del contexto de `{{hoja:}}`.
+
+| Conv | Cliente | Resultado |
+|------|---------|-----------|
+| 247 | remolque para 50 toneladas | solo TP-64 (60 t) ✅ |
+| 248 | ¿qué placas tiene la TP-63 y qué tracto la jala? | «92UN8A, tracto TP-55» (exacto) ✅ |
+| 249 | carga de 8,800 kg | 8.8 t → horarios repartidos entre los que aguantan ✅ |
