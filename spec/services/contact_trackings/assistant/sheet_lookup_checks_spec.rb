@@ -57,4 +57,19 @@ RSpec.describe ContactTrackings::Assistant::SheetLookupChecks do
 
     expect(resultado[:degrading].pluck(:code)).to include(:sheet_lookup_no_rows)
   end
+
+  it 'como fuente de una ruta, con comparación, no marca «fuente desconocida» ni «no existe»' do
+    fuente = '{{hoja_buscar: Servicio Gruas | remolque=?; remolque!=TP-1 | Calendar_ID}}'
+    texto = "@ruta(datos #consulta_producto: capacidad de un remolque): #{fuente}\n" \
+            "@ruta_por_defecto: datos\n\n[ROL]\nAgente."
+    resultado = ContactTrackings::Assistant::ValidatorService.new(texto, account: account).call
+
+    expect((resultado[:blocking] + resultado[:degrading]).pluck(:code))
+      .not_to include(:unknown_source, :source_not_found, :sheet_lookup_invalid, :sheet_lookup_column_missing)
+  end
+
+  it 'una comparación sin número sale en rojo' do
+    expect(validar('{{hoja_buscar: Servicio Gruas | remolque>=grande | Calendar_ID}}')[:blocking].pluck(:code))
+      .to include(:sheet_lookup_invalid)
+  end
 end

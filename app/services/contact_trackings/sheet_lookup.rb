@@ -11,9 +11,16 @@
 #                  └── la hoja ──┘ └─ buscar ─┘ └─ regresar ─┘
 #
 # · buscar:   columna=valores. Varias condiciones con «;». Valores separados por coma;
-#             se comparan sin mayúsculas, espacios ni guiones («tp 63» = «TP-63»).
+#             se comparan sin mayúsculas, acentos, espacios ni guiones («tp 63» = «TP-63»).
 #             «?» = el valor sale de la conversación (ver #mentioned_values).
+#             También columna!=valores, y con números columna>=, <=, >, < (pieza 1,
+#             26/09/2026): «capacidad_t>=?» = las grúas que aguantan lo que dijo el
+#             cliente («26 toneladas»). Ver SheetNumbers.
 # · regresar: una o varias columnas, separadas por coma.
+#
+# DÓNDE VA DICE PARA QUÉ ES (pieza 2):
+#   @ruta(x: …): - -> {{hoja_buscar: …}} -> @agendar_calendar   después de la flecha: AGENDA
+#   @ruta(x: …): {{hoja_buscar: …}} -> …                         como fuente: DATOS para responder
 #
 # Sin IA: comparación exacta sobre las filas crudas
 # (google_sheet_rows, que desde F0 se guardan también en modo FAQ). Sin coincidencias no
@@ -27,21 +34,26 @@ class ContactTrackings::SheetLookup
   # se está hablando ahora, no lo que se dijo hace media conversación.
   RECENT_MESSAGES = 6
 
-  Filter = Struct.new(:column, :wanted, keyword_init: true) do
+  OPERATOR_RE = /\A(.+?)\s*(>=|<=|!=|=|>|<)\s*(.*)\z/
+  NUMERIC_OPS = %w[>= <= > <].freeze
+
+  # op: '=', '!=', o una comparación numérica. wanted: ASK, textos, o [número].
+  Filter = Struct.new(:column, :op, :wanted, keyword_init: true) do
     def ask?
       wanted == ASK
     end
-  end
 
-  Spec = Struct.new(:sheet, :filters, :returns, keyword_init: true) do
-    def asked_filter
-      filters.find(&:ask?)
+    def numeric?
+      NUMERIC_OPS.include?(op)
     end
   end
 
+  Spec = Struct.new(:sheet, :filters, :returns, keyword_init: true)
+
   # status: :ok · :sheet_missing · :column_missing · :needs_value (nadie nombró un valor) · :no_match
   # source_message_id: el mensaje de donde salió el «?» (para saber si se nombró AHORA).
-  Result = Struct.new(:status, :rows, :found, :asked, :missing, :source_message_id, keyword_init: true) do
+  # criteria: lo que se buscó, legible («capacidad_t >= 26», «tipo = Grúa»).
+  Result = Struct.new(:status, :rows, :found, :asked, :missing, :source_message_id, :criteria, keyword_init: true) do
     def ok?
       status == :ok
     end
@@ -70,12 +82,27 @@ class ContactTrackings::SheetLookup
   private_class_method :parse_filters
 
   def self.parse_filter(cond)
-    column, wanted = cond.split('=', 2).map { |part| part.to_s.strip }
+    _, column, op, wanted = cond.match(OPERATOR_RE).to_a.map { |part| part.to_s.strip }
     return nil if column.blank? || wanted.blank?
+    return Filter.new(column: column, op: op, wanted: ASK) if wanted == ASK
+    return numeric_filter(column, op, wanted) if NUMERIC_OPS.include?(op)
 
-    Filter.new(column: column, wanted: wanted == ASK ? ASK : wanted.split(',').map(&:strip).compact_blank)
+    Filter.new(column: column, op: op, wanted: wanted.split(',').map(&:strip).compact_blank)
   end
   private_class_method :parse_filter
+
+  # «capacidad_t>=40»: un solo número. «>=grande» no es una condición válida.
+  def self.numeric_filter(column, operator, wanted)
+    numero = ContactTrackings::SheetNumbers.cell(wanted)
+    numero && Filter.new(column: column, op: operator, wanted: [numero])
+  end
+  private_class_method :numeric_filter
+
+  # Las que van DESPUÉS de la flecha de una ruta: esas alimentan la agenda. Antes de la
+  # flecha (como fuente) son datos para la respuesta y no deciden calendarios.
+  def self.agenda_specs(prompt)
+    ContactTrackings::RouteMap.parse(prompt).routes.flat_map { |route| parse_all(route.escalation) }
+  end
 
   # La columna Calendar_ID de la hoja trae el link para ver el calendario
   # (…/calendar/embed?src=<id>%40group.calendar.google.com&ctz=…). La agenda necesita el id.
@@ -104,11 +131,22 @@ class ContactTrackings::SheetLookup
     return Result.new(status: :column_missing, missing: missing) if missing.any?
 
     filtered, asked = apply_filters(rows)
-    return Result.new(status: :needs_value, asked: @spec.asked_filter.column) if asked == :none
-    return Result.new(status: :no_match, asked: asked) if filtered.empty?
+    return Result.new(status: :needs_value, asked: @unanswered) if asked == :none
+    return Result.new(status: :no_match, asked: asked, criteria: @criteria) if filtered.empty?
 
-    Result.new(status: :ok, rows: filtered, asked: asked, source_message_id: @mentioned_in,
+    Result.new(status: :ok, rows: filtered, asked: asked, source_message_id: @mentioned_in, criteria: @criteria,
                found: filtered.flat_map { |row| @spec.returns.map { |col| cell(row, col) } }.compact_blank.uniq)
+  end
+
+  # Lo que regresa, fila por fila y con los criterios: para dárselo al modelo tal cual.
+  def self.describe(spec, rows)
+    columnas = (spec.filters.map(&:column) + spec.returns).uniq
+    rows.map do |row|
+      columnas.filter_map do |col|
+        key = row.keys.find { |k| k.to_s.strip.casecmp?(col) }
+        "#{key}: #{row[key]}" if key && row[key].present?
+      end.join(' · ')
+    end
   end
 
   private
@@ -123,20 +161,67 @@ class ContactTrackings::SheetLookup
     (@spec.filters.map(&:column) + @spec.returns).reject { |col| headers.include?(norm(col)) }.uniq
   end
 
-  # Devuelve [filas, valores tomados de la conversación]. Si el «?» no encontró nada,
+  # Devuelve [filas, valores tomados de la conversación]. Si un «?» no encontró nada,
   # los valores son :none: no se busca en todas las filas, se pregunta.
   def apply_filters(rows)
-    asked = nil
+    @asked = nil
+    @criteria = []
     filtered = @spec.filters.reduce(rows) do |acc, filter|
-      wanted = filter.wanted
-      if filter.ask?
-        asked = wanted = mentioned_values(filter.column, rows)
-        return [[], :none] if wanted.empty?
-      end
-      keys = wanted.map { |v| loose(v) }
-      acc.select { |row| keys.include?(loose(cell(row, filter.column))) }
+      wanted = filter_values(filter, rows)
+      return [[], :none] if wanted.nil?
+
+      acc.select { |row| keeps?(filter, wanted, cell(row, filter.column)) }
     end
-    [filtered, asked]
+    [filtered, @asked]
+  end
+
+  # Los valores de una condición, anotando qué se buscó. nil si un «?» no encontró nada.
+  def filter_values(filter, rows)
+    wanted = filter.ask? ? asked_values(filter, rows) : filter.wanted
+    if wanted.empty?
+      @unanswered = filter.column
+      return nil
+    end
+    @asked ||= wanted if filter.ask? && !filter.numeric?
+    @criteria << "#{filter.column} #{filter.op} #{wanted.join(', ')}"
+    wanted
+  end
+
+  def asked_values(filter, rows)
+    return mentioned_values(filter.column, rows) unless filter.numeric?
+
+    numero = mentioned_number(filter)
+    numero ? [numero] : []
+  end
+
+  def keeps?(filter, wanted, value)
+    return compare(filter.op, ContactTrackings::SheetNumbers.cell(value), wanted.first) if filter.numeric?
+
+    dentro = wanted.map { |v| loose(v) }.include?(loose(value))
+    filter.op == '!=' ? !dentro : dentro
+  end
+
+  # Una celda sin número no cumple ninguna comparación.
+  def compare(operator, value, threshold)
+    return false if value.nil?
+
+    value.public_send(operator, threshold)
+  end
+
+  # El número del cliente para esa columna: del mensaje suyo más reciente que traiga uno.
+  # Con «>=» manda el mayor que dijo («grúa de 80 t para una carga de 26 t» → 80): es lo
+  # que cubre todo; con «<=», el menor.
+  def mentioned_number(filter)
+    return nil if @conversation.nil?
+
+    recent_messages.select(&:incoming?).each do |msg|
+      numeros = ContactTrackings::SheetNumbers.in_text(msg.content, filter.column)
+      next if numeros.empty?
+
+      @mentioned_in = [@mentioned_in, msg.id].compact.max
+      return filter.op.start_with?('>') ? numeros.max : numeros.min
+    end
+    nil
   end
 
   # Los valores de la columna que aparecen en los últimos mensajes. Decisión del usuario
@@ -156,7 +241,7 @@ class ContactTrackings::SheetLookup
       found = known.select { |value| mentions?(msg.content.to_s, value) }
       next if found.empty?
 
-      @mentioned_in = msg.id
+      @mentioned_in = [@mentioned_in, msg.id].compact.max
       return found
     end
     nil
@@ -167,12 +252,14 @@ class ContactTrackings::SheetLookup
                  .where.not(content: [nil, '']).reorder(created_at: :desc, id: :desc).limit(RECENT_MESSAGES).to_a
   end
 
-  # «TP-64», «tp 64» y «TP64» son el mismo remolque; «TP-6» no es «TP-64».
+  # «TP-64», «tp 64» y «TP64» son el mismo remolque; «TP-6» no es «TP-64». Sin acentos:
+  # el cliente escribe «grua» y la hoja dice «Grúa».
   def mentions?(text, value)
-    parts = value.scan(/[[:alnum:]]+/)
+    parts = ContactTrackings::SheetNumbers.fold(value).scan(/[[:alnum:]]+/)
     return false if parts.empty?
 
-    text.match?(/(?<![[:alnum:]])#{parts.map { |p| Regexp.escape(p) }.join('[\s\-_.]*')}(?![[:alnum:]])/i)
+    ContactTrackings::SheetNumbers.fold(text)
+                                  .match?(/(?<![[:alnum:]])#{parts.map { |p| Regexp.escape(p) }.join('[\s\-_.]*')}(?![[:alnum:]])/)
   end
 
   def cell(row, column)
@@ -182,7 +269,7 @@ class ContactTrackings::SheetLookup
 
   # Para comparar valores: «TP-63», «tp 63» y «TP63» son lo mismo.
   def loose(value)
-    value.to_s.downcase.scan(/[[:alnum:]]+/).join
+    ContactTrackings::SheetNumbers.fold(value).scan(/[[:alnum:]]+/).join
   end
 
   def norm(value)

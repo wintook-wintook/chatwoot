@@ -43,8 +43,9 @@ RSpec.describe KnowledgeBaseResponseService do
     body['messages'].pluck('content').join("\n")
   end
 
-  it 'con {{hoja_buscar:}} sobre esa hoja, el modelo no recibe la columna que regresa' do
-    enviado = contexto_enviado('Agente. {{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}}')
+  it 'con {{hoja_buscar:}} de agenda sobre esa hoja, el modelo no recibe la columna que regresa' do
+    enviado = contexto_enviado("@ruta(disponibilidad: horarios de un remolque): - -> \
+{{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}} -> @agendar_calendar\nAgente.")
 
     expect(enviado).to include('peso_max_t: 60')
     expect(enviado).not_to include('calendar.google.com')
@@ -52,5 +53,57 @@ RSpec.describe KnowledgeBaseResponseService do
 
   it 'sin {{hoja_buscar:}} la fila llega completa, como siempre' do
     expect(contexto_enviado('Agente de grúas.')).to include('Calendar_ID: https://calendar.google.com')
+  end
+
+  # Pieza 2: {{hoja_buscar:}} como FUENTE de la ruta — el modelo recibe las filas exactas.
+  describe 'como fuente de la ruta' do
+    let(:unidades) do
+      create(:knowledge_source, account: account, source_type: 'google_sheet', name: 'Unidades', config: { 'sheet_mode' => 'faq' })
+    end
+    let(:lookup) { '{{hoja_buscar: Unidades | economico=? | operador, placas}}' }
+
+    before do
+      account.enable_features!('google_calendar')
+      GoogleSheetRow.create!(account: account, knowledge_source: unidades, row_index: 0,
+                             data: { 'economico' => 'TP-60', 'operador' => 'Engar Bravo', 'placas' => '82AU1W', 'telefono' => '555' })
+    end
+
+    def responder(texto)
+      message.update!(content: texto)
+      tracking = create(:contact_tracking, account: account, contact: contact, inbox: inbox,
+                                           complementary_prompt: "@ruta(asignacion: datos de unidad): #{lookup}")
+      described_class.new(message, tracking: tracking, branch: ContactTrackings::RouteMap.parse(tracking.complementary_prompt).routes.first).perform
+    end
+
+    def enviado
+      body = nil
+      expect(a_request(:post, chat_url).with { |r| body = JSON.parse(r.body) }).to have_been_made
+      body['messages'].pluck('content').join("\n")
+    end
+
+    it 'detecta la directiva como fuente' do
+      expect(KnowledgeBase::Directives.detect(lookup)).to include(mode: :sheet_lookup)
+      expect(KnowledgeBase::Directives.available?(lookup, account: account, inbox_id: inbox.id)).to be(true)
+    end
+
+    it 'le da al modelo la fila exacta, solo con las columnas pedidas' do
+      expect(responder('Favor de confirmar datos de la unidad TP-60')).to be(true)
+      expect(enviado).to include('economico: TP-60 · operador: Engar Bravo · placas: 82AU1W')
+      expect(enviado).not_to include('telefono')
+    end
+
+    it 'si no nombró la unidad, le pide que pregunte cuál' do
+      responder('Favor de confirmar datos de la unidad')
+      expect(enviado).to include('falta saber «economico»')
+    end
+
+    describe 'con un valor fijo que no está en la hoja' do
+      let(:lookup) { '{{hoja_buscar: Unidades | economico=TP-999 | operador}}' }
+
+      it 'lo dice sin inventar' do
+        responder('Datos de la unidad')
+        expect(enviado).to include('no hay ninguna fila con: economico = TP-999')
+      end
+    end
   end
 end

@@ -10,7 +10,7 @@ RSpec.describe ContactTrackings::SheetCalendars do
                                     google_email: 'camion@gruas.com', tokens: {})
   end
   let(:prompt) do
-    "@ruta(solicitud #solicita_servicio: quiero un servicio): {{hoja:Servicio Gruas}} -> " \
+    '@ruta(solicitud #solicita_servicio: quiero un servicio): {{hoja:Servicio Gruas}} -> ' \
       "{{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}} -> @agendar_calendar\n\n[ROL]\nAgente de grúas."
   end
   let(:template) do
@@ -65,6 +65,14 @@ RSpec.describe ContactTrackings::SheetCalendars do
     say('Quiero la TP-64')
 
     expect(outcome.status).to eq(:unavailable)
+  end
+
+  it 'una {{hoja_buscar:}} usada como fuente (datos) no decide calendarios' do
+    tracking.update!(complementary_prompt: '@ruta(datos: operador de la unidad): ' \
+                                           '{{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}}')
+    say('Quiero la TP-64')
+
+    expect(outcome).to be_nil
   end
 
   it 'sin {{hoja_buscar:}} en el Entrenamiento la agenda sigue como siempre' do

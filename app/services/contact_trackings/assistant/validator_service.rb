@@ -174,7 +174,8 @@ class ContactTrackings::Assistant::ValidatorService
   # coincide con ninguna, el motor no falla: busca y no encuentra, siempre.
   def check_named_source_exists(route, detected)
     name = detected[:source_name]
-    return if name.blank?
+    # {{hoja_buscar:}}: la hoja y sus columnas las revisa SheetLookupChecks.
+    return if name.blank? || detected[:mode] == :sheet_lookup
     return if account.knowledge_sources.active.any? { |s| s.name.casecmp?(name) }
 
     disponibles = account.knowledge_sources.active.map(&:name)

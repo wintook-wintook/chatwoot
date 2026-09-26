@@ -52,12 +52,13 @@ class ContactTrackings::SheetCalendars
 
   private
 
-  # La de la ruta que se eligió; si esa ruta no trae una, la del resto del Entrenamiento
-  # (los calendarios son de los remolques, no de una ruta: «sí, agéndalo» puede caer en otra).
+  # La de la ruta que se eligió; si esa ruta no trae una, la de las otras rutas (los
+  # calendarios son de los remolques, no de una ruta: «sí, agéndalo» puede caer en otra).
+  # Solo las que van DESPUÉS de la flecha: como fuente, una {{hoja_buscar:}} regresa datos
+  # para responder (operador, placas…), no calendarios.
   def lookup_spec
-    route_text = [@branch&.directive, @branch&.escalation].compact.join(' ')
-    ContactTrackings::SheetLookup.parse_all(route_text).first ||
-      ContactTrackings::SheetLookup.parse_all(@tracking.complementary_prompt).first
+    ContactTrackings::SheetLookup.parse_all(@branch&.escalation).first ||
+      ContactTrackings::SheetLookup.agenda_specs(@tracking.complementary_prompt).first
   end
 
   def narrow(calendar_ids)

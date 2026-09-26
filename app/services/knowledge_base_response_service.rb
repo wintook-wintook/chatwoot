@@ -88,6 +88,8 @@ class KnowledgeBaseResponseService
       perform_discourse_integration(question)
     when :contpaq_support
       perform_contpaq(question, directive[:source_name])
+    when :sheet_lookup
+      perform_sheet_lookup(question, directive[:source_name])
     else
       false
     end
@@ -550,12 +552,57 @@ class KnowledgeBaseResponseService
     true
   end
 
+  # ==============================================================================
+  # proyecto@hoja_buscar — {{hoja_buscar:}} como FUENTE de la ruta (pieza 2, 26/09/2026)
+  #   @ruta(asignacion: …): {{hoja_buscar: Unidades | economico=? | operador, placas, color}}
+  # Ruby busca las filas exactas; el modelo solo redacta con ellas. Para los datos que el
+  # cliente pide tal cual (operador, placas, teléfono), la búsqueda por parecido de
+  # {{hoja:}} traía la fila equivocada o ninguna.
+  # ==============================================================================
+  MAX_LOOKUP_ROWS = 20
+  NO_MATCH_RULE = 'Dilo con claridad y no inventes otra opción.'
+
+  def perform_sheet_lookup(question, inner)
+    return false unless google_feature_enabled?
+
+    spec = ContactTrackings::SheetLookup.parse(inner)
+    return false if spec.nil?
+
+    result = ContactTrackings::SheetLookup.new(@account, spec, conversation: @conversation).call
+    context = sheet_lookup_context(spec, result)
+    return false if context.nil?
+
+    reply_text = generate_contextual_reply(question, context)
+    return false if reply_text.blank?
+
+    send_reply("#{with_branch_tag(reply_text)}\n\n_#{spec.sheet}_")
+    true
+  end
+
+  # nil = la hoja no respondió (no existe, columna mal escrita): sigue el conversacional.
+  def sheet_lookup_context(spec, result)
+    case result.status
+    when :ok
+      filas = ContactTrackings::SheetLookup.describe(spec, result.rows)
+      extra = filas.size > MAX_LOOKUP_ROWS ? "\n(y #{filas.size - MAX_LOOKUP_ROWS} más)" : ''
+      "Datos exactos de la hoja «#{spec.sheet}» (úsalos tal cual; lo que no esté aquí no lo sabes):\n" \
+        "#{filas.first(MAX_LOOKUP_ROWS).join("\n")}#{extra}"
+    when :needs_value
+      "Para responder falta saber «#{result.asked}». Pregúntaselo al cliente en una sola pregunta; no respondas nada más."
+    when :no_match
+      "En la hoja «#{spec.sheet}» no hay ninguna fila con: #{result.criteria.join('; ')}. #{NO_MATCH_RULE}"
+    else
+      Rails.logger.warn "[KBase] ⚠️ {{hoja_buscar:}} sin respuesta: #{result.status} #{result.missing}"
+      nil
+    end
+  end
+
   # proyecto@hoja_buscar — las columnas que una {{hoja_buscar:}} del Entrenamiento regresa
   # sobre esta hoja son para la agenda, no para el cliente. Medido el 25/09/2026: con
   # Calendar_ID en el contexto, «¿qué horarios tiene la TP-64?» le pasó al cliente los links
   # de los calendarios internos.
   def sheet_lookup_columns(source)
-    ContactTrackings::SheetLookup.parse_all(@tracking&.complementary_prompt)
+    ContactTrackings::SheetLookup.agenda_specs(@tracking&.complementary_prompt)
                                  .select { |spec| spec.sheet.casecmp?(source.name) }
                                  .flat_map(&:returns).map { |col| col.strip.downcase }.uniq
   end

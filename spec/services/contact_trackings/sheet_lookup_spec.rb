@@ -31,8 +31,8 @@ RSpec.describe ContactTrackings::SheetLookup do
       spec = described_class.parse_all('x {{hoja_buscar: Servicio Gruas | remolque=TP-64,TP-63; estatus=activo | Calendar_ID, peso_max_t}}').first
 
       expect(spec.sheet).to eq('Servicio Gruas')
-      expect(spec.filters.map(&:to_h)).to eq([{ column: 'remolque', wanted: %w[TP-64 TP-63] },
-                                              { column: 'estatus', wanted: ['activo'] }])
+      expect(spec.filters.map(&:to_h)).to eq([{ column: 'remolque', op: '=', wanted: %w[TP-64 TP-63] },
+                                              { column: 'estatus', op: '=', wanted: ['activo'] }])
       expect(spec.returns).to eq(%w[Calendar_ID peso_max_t])
     end
 
@@ -98,6 +98,47 @@ RSpec.describe ContactTrackings::SheetLookup do
     texto = 'Agenda en su calendario. {{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}} Consulta {{hoja:Servicio Gruas}}.'
 
     expect(KnowledgeBase::Directives.strip_tokens(texto)).to eq('Agenda en su calendario.  Consulta la información consultada.')
+  end
+
+  describe 'comparaciones (pieza 1)' do
+    it 'con número fijo: >=, <, !=' do
+      expect(lookup('Servicio Gruas | peso_max_t>=40 | remolque').found).to eq(%w[TP-64 TP-63])
+      expect(lookup('Servicio Gruas | peso_max_t<40 | remolque').found).to eq(['TP-6'])
+      expect(lookup('Servicio Gruas | estatus!=baja | remolque').found).to eq(%w[TP-64 TP-63])
+    end
+
+    it 'con «?»: el mayor número que dijo el cliente, en la unidad de la columna' do
+      say('Necesito una grúa de 50 toneladas para una carga de 26 t, el lunes 28')
+
+      result = lookup('Servicio Gruas | peso_max_t>=? | remolque', conv: conversation)
+      expect([result.found, result.criteria]).to eq([['TP-64'], ['peso_max_t >= 50.0']])
+    end
+
+    it 'si el cliente no dio un número con unidad, hay que preguntar' do
+      say('Necesito una grúa para el lunes 28')
+
+      result = lookup('Servicio Gruas | peso_max_t>=? | remolque', conv: conversation)
+      expect([result.status, result.asked]).to eq([:needs_value, 'peso_max_t'])
+    end
+
+    it 'sin acentos: «grua» encuentra «Grúa»' do
+      GoogleSheetRow.create!(account: account, knowledge_source: source, row_index: 9,
+                             data: { 'remolque' => 'Grúa 80', 'peso_max_t' => '80', 'estatus' => 'activo', 'Calendar_ID' => 'c80' })
+      say('¿tienen la grua 80?')
+
+      expect(lookup('Servicio Gruas | remolque=? | Calendar_ID', conv: conversation).found).to eq(['c80'])
+    end
+
+    it 'una comparación sin número no es válida' do
+      expect(described_class.parse('Servicio Gruas | peso_max_t>=grande | remolque')).to be_nil
+    end
+  end
+
+  it '.agenda_specs: solo las que van después de la flecha' do
+    prompt = "@ruta(a: x): {{hoja_buscar: Unidades | economico=? | operador}}\n" \
+             '@ruta(b: y): - -> {{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}} -> @agendar_calendar'
+
+    expect(described_class.agenda_specs(prompt).map(&:sheet)).to eq(['Servicio Gruas'])
   end
 
   describe '.calendar_id' do

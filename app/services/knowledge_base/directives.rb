@@ -43,7 +43,11 @@ module KnowledgeBase
       [/\{\{doc:([^}]+)\}\}/i,          :google_doc,            true],
       [/\{\{hoja:([^}]+)\}\}/i,         :google_sheet,          true],
       [/@discourse\b/i,                :discourse_integration, false],
-      [/@soporte_contpaq\(([^)]+)\)/i, :contpaq_support,       true]
+      [/@soporte_contpaq\(([^)]+)\)/i, :contpaq_support,       true],
+      # proyecto@hoja_buscar (pieza 2, 26/09/2026): como FUENTE de una ruta, busca exacto en
+      # la hoja y responde con esas filas. source_name trae la directiva entera (hoja |
+      # buscar | regresar); ver ContactTrackings::SheetLookup.
+      [ContactTrackings::SheetLookup::DIRECTIVE_RE, :sheet_lookup, true]
     ].freeze
 
     # Quita los TOKENS de directiva de un texto, dejando la prosa alrededor intacta.
@@ -142,6 +146,7 @@ module KnowledgeBase
       when :google_sheet          then google_source?(account, 'google_sheet', directive[:source_name])
       when :discourse_integration then discourse_hook?(account, inbox_id)
       when :contpaq_support       then contpaq_source?(account, directive[:source_name])
+      when :sheet_lookup          then sheet_lookup_source?(account, directive[:source_name])
       else false
       end
     rescue StandardError
@@ -168,6 +173,11 @@ module KnowledgeBase
 
       account.knowledge_sources.active
              .exists?(['source_type = ? AND LOWER(name) = LOWER(?)', 'contpaq_support', name.to_s])
+    end
+
+    def sheet_lookup_source?(account, inner)
+      spec = ContactTrackings::SheetLookup.parse(inner)
+      spec.present? && google_source?(account, 'google_sheet', spec.sheet)
     end
 
     def discourse_hook?(account, inbox_id)

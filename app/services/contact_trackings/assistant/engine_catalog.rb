@@ -33,7 +33,8 @@ class ContactTrackings::Assistant::EngineCatalog
     google_doc: 'doc',
     google_sheet: 'hoja',
     discourse_integration: 'discourse',
-    contpaq_support: 'contpaq'
+    contpaq_support: 'contpaq',
+    sheet_lookup: 'hoja_buscar'
   }.freeze
 
   # ficha → [grupo, cómo se escribe, tipo en BriefTools (o nil)]
