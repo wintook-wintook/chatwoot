@@ -1,6 +1,6 @@
 # Conversaciones de prueba — Agente de Grúas SSUSA, `{{hoja_buscar:}}` y `@solicitudes`
 
-> Canal **Agents IA Test** (inbox 493), cuenta 2 · generado 26/09/2026 12:44 desde la base.
+> Canal **Agents IA Test** (inbox 493), cuenta 2 · generado 26/09/2026 12:56 desde la base.
 > Se conservan como **evidencia** (no se limpian). Orden: de creación, como en Chatwoot.
 > Los calendarios usados son los de la agenda 178 (camion01kontrolya@gmail.com), **de prueba**.
 > Planes y bitácoras: `docs/hoja_buscar_plan.md`, `docs/solicitudes_multiservicio_plan.md`,
@@ -65,6 +65,9 @@
 | [266](https://develop.wintook.com/app/accounts/2/conversations/266) | 26/09 12:31 | F6 P10 (183145) | — (sin agente) | Pieza 5 · F6 — pila P1–P12 (26/09) |
 | [267](https://develop.wintook.com/app/accounts/2/conversations/267) | 26/09 12:33 | F6 P12 (183316) | Grúas SSUSA — prueba hoja_buscar | Pieza 5 · F6 — pila P1–P12 (26/09) |
 | [268](https://develop.wintook.com/app/accounts/2/conversations/268) | 26/09 12:34 | F6 P10 (183450) | copia temporal de #10238 (borrada) | Pieza 5 · F6 — pila P1–P12 (26/09) |
+| [269](https://develop.wintook.com/app/accounts/2/conversations/269) | 26/09 12:54 | P7-A  adjunto (185408) | Grúas SSUSA — prueba hoja_buscar | Pieza 7 — requisición en PDF (26/09) |
+| [270](https://develop.wintook.com/app/accounts/2/conversations/270) | 26/09 12:54 | P7-B  adjunto (185424) | Grúas SSUSA — prueba hoja_buscar | Pieza 7 — programa en Excel (26/09) |
+| [271](https://develop.wintook.com/app/accounts/2/conversations/271) | 26/09 12:55 | P7-A2 adjunto (185543) | Grúas SSUSA — prueba hoja_buscar | Pieza 7 — requisición en PDF, después del arreglo (26/09) |
 
 ## Conversaciones
 
@@ -1529,3 +1532,77 @@ https://develop.wintook.com/app/accounts/2/conversations/268 · creada 26/09 12:
 [26/09 12:34] 🤖 Bot:
     Para poder levantar tu caso necesito unos datos: Peso y Unidad. ¿Me lo compartes, por favor?
 ```
+
+---
+
+### #269 · P7-A  adjunto (185408)
+https://develop.wintook.com/app/accounts/2/conversations/269 · creada 26/09 12:54 · agente: **Grúas SSUSA — prueba hoja_buscar**
+> **Pieza 7 — requisición en PDF (26/09)** — ❌ La IA se negó a leer el PDF y la negativa se tomó como texto → arreglado.
+
+```
+[26/09 12:54] 👤 Cliente:
+    Solicito cotizar y confirmar disponibilidad de lo que viene en la requisición adjunta.
+[26/09 12:54] 🤖 Bot:
+    Para cotizar y confirmar disponibilidad de los remolques mencionados en tu requisición, aquí tienes la información relevante:
+    
+    1. **Remolque TP-117**: Tipo Góndola/caja de volteo, marca FRAVAZ, año 2024, con un peso máximo de 30 toneladas y base en Carmen. Actualmente está activo y sin asignar a un vehículo.
+    
+    2. **Remolque TP-73**: Tipo Cama baja, marca CAREIZA, año 2010, con un peso máximo de 40 toneladas y base en DB. Este remolque está activo y asignado al vehículo TP-77.
+    
+    3. **Remolque TP-46**: También tipo Cama baja, marca JR RAMIRO, año 2021, con un peso máximo de 40 toneladas y base en CDC. Está activo y asignado al vehículo TP-60.
+    
+    Si necesitas más detalles o quieres proceder con la programación, por favor indícame.
+    
+    #tracking
+    
+    _Servicio Gruas_
+```
+
+---
+
+### #270 · P7-B  adjunto (185424)
+https://develop.wintook.com/app/accounts/2/conversations/270 · creada 26/09 12:54 · agente: **Grúas SSUSA — prueba hoja_buscar**
+> **Pieza 7 — programa en Excel (26/09)** — El .xlsx se lee sin IA: 2 servicios con sus horarios.
+
+```
+[26/09 12:54] 👤 Cliente:
+    Les comparto el programa de unidades en el Excel, favor de programar.
+[26/09 12:54] 🤖 Bot:
+    Recibí 2 servicios:
+    
+    1️⃣ Plana 30 t · Patio Carmen → Dos Bocas · lun 12 oct 09:00 (caso 01093)
+        1A 09:00–09:30 (TP-111) · 1B 09:00–09:30 (TP-49) · 1C 09:30–10:00 (TP-95)
+    2️⃣ Low boy 50 t · Km 14+500 → Blue Giant · lun 12 oct 11:00 (caso 01094)
+        2A 11:00–11:30 (TP-64) · 2B 11:30–12:00 (TP-64) · 2C 12:00–12:30 (TP-64)
+    
+    Responde con los horarios que quieres apartar (por ejemplo «1A y 3B»), o «sí» para la primera opción de cada uno.
+```
+
+Casos y Tareas agendadas que dejó:
+- Caso **01093** «Plana 30 t — Patio Carmen → Dos Bocas» — open
+- Caso **01094** «Low boy 50 t — Km 14+500 → Blue Giant» — open
+
+---
+
+### #271 · P7-A2 adjunto (185543)
+https://develop.wintook.com/app/accounts/2/conversations/271 · creada 26/09 12:55 · agente: **Grúas SSUSA — prueba hoja_buscar**
+> **Pieza 7 — requisición en PDF, después del arreglo (26/09)** — 2 servicios desde el PDF; la plana con la duración del documento (3 h).
+
+```
+[26/09 12:55] 👤 Cliente:
+    Solicito cotizar y confirmar disponibilidad de lo que viene en la requisición adjunta.
+[26/09 12:55] 🤖 Bot:
+    Recibí 2 servicios:
+    
+    1️⃣ Grúa 80 t · Almacen Ciudad del Carmen · mié 14 oct 08:00 (caso 01095)
+        no tengo ese equipo en el catálogo
+    2️⃣ Plana 30 t · Almacen Ciudad del Carmen → Dos Bocas · mié 14 oct 10:00 (caso 01096)
+        2A 10:00–13:00 (TP-111) · 2B 10:00–13:00 (TP-49) · 2C 11:00–14:00 (TP-95)
+    
+    Responde con los horarios que quieres apartar (por ejemplo «1A y 3B»), o «sí» para la primera opción de cada uno.
+```
+
+Casos y Tareas agendadas que dejó:
+- Caso **01095** «Grúa 80 t» — open
+- Caso **01096** «Plana 30 t — Almacen Ciudad del Carmen → Dos Bocas» — open
+

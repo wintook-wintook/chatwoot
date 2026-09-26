@@ -500,3 +500,31 @@ Observaciones (fuera de esta pieza o por configurar):
 - Grúas, HIAB y pick up salen «no tengo ese equipo en el catálogo» hasta crear la hoja «Equipos».
 
 **Pieza 5 cerrada (F0–F7).**
+
+---
+
+## 14. Pieza 7 — el motor lee los adjuntos (26/09/2026) ✅
+
+**Qué se hizo.** `ContactTrackings::AttachmentText`: el texto de un adjunto llega al motor, al
+separador de servicios de `@solicitudes` y al clasificador de rutas (antes solo «[archivo
+adjunto: X.pdf]»). Una sola vez por adjunto (caché).
+- **Excel (.xlsx)** y **Word (.docx)**: filas, párrafos y tablas, sin IA — `ZipReader` (lector
+  ZIP mínimo con Zlib, sin gemas nuevas) + Nokogiri.
+- **CSV / texto**: tal cual.
+- **PDF**: lo lee la IA (gpt-4o-mini, el PDF va como archivo). Si la IA se niega («Lo siento, no
+  puedo…»), no se toma como texto ni se guarda.
+- **Correo**: no se probó (no hay canal de correo de prueba).
+
+**Pila de pruebas (copia #10368).**
+| Conv | Cliente | Adjunto | Resultado |
+|---|---|---|---|
+| 269 | «Solicito cotizar y confirmar disponibilidad de lo que viene en la requisición adjunta.» | requisicion.pdf | ❌ la IA se negó a leer el PDF y la negativa se guardó como texto → arreglado (archivo primero, «Extrae el texto…», negativas descartadas) |
+| 270 | «Les comparto el programa de unidades en el Excel, favor de programar.» | programa.xlsx | 2 servicios (plana 30 t 12 oct 09:00, low boy 50 t 11:00) con sus horarios ✅ |
+| 271 | la misma de la 269, después del arreglo | requisicion.pdf | 2 servicios: grúa 80 t (sin equipo en el catálogo) y plana 30 t 14 oct 10:00 con **3 h** (la duración del PDF) ✅ |
+
+Archivos de prueba: `spec/fixtures/files/solicitudes/` (requisicion.pdf, programa.xlsx,
+requisicion.docx). Specs: `attachment_text_spec` (6).
+
+**Cómo pedírselo al Asistente.** Nada que escribir en el Entrenamiento: el motor lee los
+adjuntos en todas las rutas. Con `@solicitudes`, una requisición o un programa adjunto se separa
+en servicios igual que si el cliente los escribiera.
