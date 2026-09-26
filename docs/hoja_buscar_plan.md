@@ -4,6 +4,21 @@
 > buscar en la hoja los remolques que salieron en la conversación, tomar su
 > `Calendar_ID` y buscar la disponibilidad **en el calendario de esos remolques**.
 
+
+> **Dónde está cada cosa (26/09/2026).** Cada fase de este plan (secciones 9–14) trae su **pila de
+> pruebas** (conversaciones de *Agents IA Test*) y **cómo pedírselo al Asistente** (texto para
+> copiar y pegar). El diseño completo del agente de Grúas y las 26 conversaciones del corpus están
+> en `docs/agente_gruas_ssusa_rutas.md`.
+>
+> | Sección | Fase | Pruebas | Cómo pedírselo |
+> |---|---|---|---|
+> | 9 | F0–F5 `{{hoja_buscar:}}` + calendario del remolque | 219–222 | ✅ |
+> | 10 | Ruta de disponibilidad + arreglos de agenda | 225–235 | ✅ |
+> | 11 | Piezas 1 y 2: comparaciones y fuente de datos | 247–249 | ✅ |
+> | 12 | Pieza 6: fechas ambiguas | 250–251 | (automático) |
+> | 13 | Pieza 3: duración y 24 h | 253–254 | ✅ |
+> | 14 | Pieza 4: apartado → confirmado | 255 | ✅ |
+
 ---
 
 ## 0. Lo que ya existe (medido hoy)
@@ -199,6 +214,14 @@ Pendiente de configuración (no de código): con «Presentación de horarios» =
 horario dice el nombre del agente de Google («— Jose Luis Herrera»). Con **por calendario**
 salen agrupados bajo «📅 TP-64», que es lo que pide la decisión 3.
 
+**Cómo pedírselo al Asistente** (Agentes IA → Asistente → abrir el agente → chat):
+```
+En la ruta disponibilidad_remolque, que no consulte ninguna fuente y que después de la flecha
+diga exactamente: {{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}} -> @agendar_calendar
+```
+Luego «Analiza el prompt». Requisito: la hoja «Servicio Gruas» con columna `Calendar_ID` y los
+calendarios marcados en una agenda del agente.
+
 ---
 
 ## 10. Ruta de disponibilidad (25/09/2026)
@@ -227,6 +250,26 @@ fecha («mañana») se lee del mensaje. Si ya tiene cita, o la IA trajo mover/ca
 | 231 | ¿Qué capacidad tiene la TP-64? | plática | hoja: 60 t, sin links ✅ |
 | 232 | ¿Cuándo está libre la TP-93? | cita | horarios del calendario TP-93 ✅ |
 
+**Más pruebas de esta fase** (arreglos de agenda, 25/09):
+
+| Conv | Cliente | Resultado |
+|------|---------|-----------|
+| 225 | ¿horarios de TP-64 y TP-63 para mañana? | «Mañana sábado no hay servicio. Los primeros horarios son el lunes 28» ✅ |
+| 226 | (igual, antes del arreglo) | links de calendarios al cliente ❌ → arreglado: `Calendar_ID` ya no llega al modelo |
+| 233 | ¿Cuándo está libre la TP-93? (agente #10238) | horarios de la TP-93 ✅ |
+| 234 | TP-93 para el martes → «¿y en la tarde?» | martes 09–11 → martes 12:00–14:30 ✅ |
+| 234 | «¿cuándo está libre la TP-58?» con horarios abiertos | horarios de la TP-58 (antes repetía los de la TP-93) ✅ |
+| 234 | «2» + «sin correo» | cita TP-64 lun 28 09:30 ✅ |
+| 235 | otro cliente: ¿TP-64 el lunes 28 a las 9:30? | «Uy, ese horario no está disponible» + cercanos ✅ |
+
+**Cómo pedírselo al Asistente:**
+```
+Agrega una ruta disponibilidad_remolque #consulta_producto con frases: qué horarios tiene la
+TP-64, cuándo está libre un remolque, disponibilidad para mañana, quiero agendar un remolque.
+Sin fuente, y después de la flecha exactamente:
+{{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}} -> @agendar_calendar
+```
+En la ficha del agente: **Presentación de horarios = por calendario** (cada horario dice su remolque).
 
 ---
 
@@ -249,6 +292,16 @@ esconden del contexto de `{{hoja:}}`.
 | 248 | ¿qué placas tiene la TP-63 y qué tracto la jala? | «92UN8A, tracto TP-55» (exacto) ✅ |
 | 249 | carga de 8,800 kg | 8.8 t → horarios repartidos entre los que aguantan ✅ |
 
+**Cómo pedírselo al Asistente:**
+```
+Pieza 1 — en la ruta disponibilidad_equipo, después de la flecha exactamente:
+{{hoja_buscar: Equipos | tipo=?; capacidad_t>=? | Calendar_ID}} -> @agendar_calendar
+
+Pieza 2 — agrega la ruta datos_remolque #consulta_producto con frases: qué placas tiene la
+TP-63, dame los datos de la TP-64, qué tracto jala la TP-93. Como FUENTE (antes de la flecha):
+{{hoja_buscar: Servicio Gruas | remolque=? | tipo, placas, peso_max_t, jalado_por}}
+```
+Regla para recordar: **antes de la flecha = datos para responder; después = agenda.**
 
 ---
 
@@ -265,6 +318,7 @@ En la agenda — primera oferta y negociación — el motor:
 | 250 | ¿disponibilidad de la TP-64 el lunes a las 12:00? | «Entiendo que es el lunes 28 de septiembre, a las 12:00. Está libre: 1️⃣ … Responde 1 para apartarlo» | no ✅ |
 | 251 | ¿disponibilidad de la TP-63 el día martes? | «Entiendo que es el martes 29 de septiembre. Estos son los horarios de ese día: …» | no ✅ |
 
+**Cómo pedírselo al Asistente:** no hace falta; el motor lo hace en toda ruta que agenda.
 
 ---
 
@@ -286,6 +340,14 @@ En la agenda — primera oferta y negociación — el motor:
 | 254 | TP-64 domingo 4 de octubre, jornada de 16 horas | domingo 4 oct 00:00–16:00, 01:00–17:00… ✅ |
 | 253 | TP-93 el 5 de octubre, 6:00 pm – 12:00 am | 18:00–00:00 (6 h) libre → pide correo para confirmar ✅ |
 
+**Cómo pedírselo al Asistente:**
+```
+En la ruta disponibilidad_equipo cambia la acción final por exactamente:
+@agendar_calendar(duracion=?, horario=24h)
+```
+Opciones válidas: `duracion=?` (la dice el cliente), `duracion=90` (minutos), `duracion=2h`,
+`horario=24h`. Otra cosa sale en rojo en el comprobador.
+
 ---
 
 ## 14. Pieza 4 — apartado → confirmado (26/09/2026)
@@ -296,3 +358,24 @@ Columna nueva `contact_trackings.appointment_status` (tentative / pending_paymen
 nil = como siempre). Prueba de punta a punta: conversación 255 (ver
 `docs/agente_gruas_ssusa_rutas.md` §7, que lleva la bitácora por fase con pruebas y cómo
 pedírselo al Asistente).
+
+**Pila de pruebas (conversación 255):**
+
+| Paso | Cliente / equipo | Resultado |
+|------|------------------|-----------|
+| 1 | ¿TP-64 el lunes 5 de octubre a las 10:00? dura 2 horas → «sin correo» | «📌 Te aparté… pendiente de confirmar»; calendario «[TENTATIVO]» 10:00–12:00 ✅ |
+| 2 | «Le confirmamos el servicio, favor de presentarse a las 10:00» | pide el pago + nota al equipo; estado pending_payment ✅ |
+| 3 | el equipo pone la etiqueta `pago_confirmado` | «✅ Recibimos tu pago…»; calendario sin [TENTATIVO]; estado confirmed ✅ |
+
+**Cómo pedírselo al Asistente:**
+```
+1) En la ruta disponibilidad_equipo la acción final debe ser exactamente:
+   @agendar_calendar(duracion=?, horario=24h, modo=tentativo)
+2) Agrega la ruta confirmacion_servicio #confirmado con frases: le confirmamos el servicio,
+   favor de presentarse mañana, solicito que el servicio se presente el día, queda confirmado.
+   Sin fuente, y después de la flecha: @confirmar_servicio(requiere=pago)
+3) En [REGLAS]: «Un horario apartado queda pendiente hasta que el cliente confirme; si pide el
+   pago, no digas que está confirmado hasta recibirlo.»
+```
+Después «Analiza el prompt»: si avisa que `#pago_confirmado` no existe → botón **Crearla**.
+Sin pago: `@confirmar_servicio` (sin paréntesis) lo deja en firme en cuanto el cliente confirma.
