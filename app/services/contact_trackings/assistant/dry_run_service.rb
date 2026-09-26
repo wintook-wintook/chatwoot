@@ -70,7 +70,9 @@ class ContactTrackings::Assistant::DryRunService
     google_sheet: :mixed,
     discourse_integration: :live,
     contpaq_support: :live,
-    erp_query: :live
+    erp_query: :live,
+    # proyecto@hoja_buscar: el «?» sale de la conversación (o del servicio); en seco no hay.
+    sheet_lookup: :live
   }.freeze
 
   # recent_context: los mensajes anteriores, como los arma el motor ("Cliente: …\nBot: …").
