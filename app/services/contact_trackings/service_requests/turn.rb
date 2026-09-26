@@ -44,7 +44,8 @@ class ContactTrackings::ServiceRequests::Turn
 
   def call
     servicios = ContactTrackings::ServiceRequests::Extractor.new(
-      account: @message.account, text: @message.content, tracking: @tracking, context: @context
+      account: @message.account, text: ContactTrackings::AttachmentText.message_text(@message), # pieza 7: y sus adjuntos
+      tracking: @tracking, context: @context
     ).call
     return nil if servicios.blank?
 

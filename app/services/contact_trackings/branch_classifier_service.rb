@@ -94,7 +94,7 @@ module ContactTrackings
         - Si ninguna encaja con claridad, devolvé null.
 
         #{contexto}Mensaje actual del cliente:
-        "#{@message.content.to_s.strip.truncate(300)}"
+        "#{ContactTrackings::AttachmentText.message_text(@message).strip.truncate(600)}"
 
         Respondé SOLO un JSON: {"rama": "<uno de: #{@route_map.names.join(' | ')} | null>"}
       PROMPT

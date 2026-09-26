@@ -2267,7 +2267,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       when 'video'  then parts << '[video adjunto]'
       when 'file'
         fname = att.file&.blob&.filename.to_s.presence || 'documento'
-        parts << "[archivo adjunto: #{fname}]"
+        # proyecto@solicitudes, pieza 7: el texto del PDF/Excel/Word, no solo su nombre.
+        texto = ContactTrackings::AttachmentText.for(att)
+        parts << "[archivo adjunto: #{fname}]#{"\n#{texto}" if texto.present?}"
       when 'location'
         parts << "[ubicación compartida: #{att.coordinates_lat}, #{att.coordinates_long}]"
       else
