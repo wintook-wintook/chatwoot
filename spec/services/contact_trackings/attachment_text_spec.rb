@@ -30,7 +30,7 @@ RSpec.describe ContactTrackings::AttachmentText do
   it 'PDF: lo transcribe la IA con el archivo, una sola vez' do
     create(:integrations_hook, :openai, account: account)
     pedido = stub_request(:post, 'https://api.openai.com/v1/chat/completions')
-             .with { |r| JSON.parse(r.body).dig('messages', 0, 'content', 1, 'type') == 'file' }
+             .with { |r| JSON.parse(r.body).dig('messages', 0, 'content', 0, 'type') == 'file' }
              .to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
                         body: { choices: [{ message: { content: 'REQUISICION OCI747255' } }] }.to_json)
     pdf = adjunto('requisicion.pdf', 'application/pdf')
@@ -38,6 +38,15 @@ RSpec.describe ContactTrackings::AttachmentText do
 
     2.times { expect(described_class.for(pdf)).to eq('REQUISICION OCI747255') }
     expect(pedido).to have_been_made.once
+  end
+
+  it 'si la IA se niega («Lo siento, no puedo…»), no se toma como el texto ni se guarda' do
+    create(:integrations_hook, :openai, account: account)
+    stub_request(:post, 'https://api.openai.com/v1/chat/completions')
+      .to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
+                 body: { choices: [{ message: { content: 'Lo siento, pero no puedo transcribir el texto de documentos.' } }] }.to_json)
+
+    expect(described_class.for(adjunto('requisicion.pdf', 'application/pdf'))).to be_nil
   end
 
   it 'el mensaje con el texto de sus adjuntos' do

@@ -20,7 +20,10 @@ class ContactTrackings::AttachmentText
   MAX_CHARS = 6000
   MAX_ROWS = 200
   MAX_PDF_BYTES = 8 * 1024 * 1024
-  CACHE_VERSION = 'v1'
+  # v2 (26/09/2026): con v1 se guardó en caché la NEGATIVA de la IA como si fuera el texto del PDF.
+  CACHE_VERSION = 'v2'
+  # «Lo siento, pero no puedo transcribir…»: la IA se negó. No es el texto del documento.
+  REFUSAL_RE = /\A\W*(lo siento|no puedo|no me es posible|i'?m sorry|i can'?t|i cannot)/i
 
   def self.for(attachment)
     return nil unless attachment&.file_type.to_s == 'file' && attachment.file.attached?
@@ -139,16 +142,20 @@ class ContactTrackings::AttachmentText
                               body: pdf_request.to_json, timeout: 90)
     raise "OpenAI #{respuesta.code}" unless respuesta.success?
 
-    respuesta.parsed_response.dig('choices', 0, 'message', 'content')
+    texto = respuesta.parsed_response.dig('choices', 0, 'message', 'content').to_s
+    # Sin guardar en caché (skip_nil): el siguiente mensaje lo vuelve a intentar.
+    texto.match?(REFUSAL_RE) ? nil : texto
   end
 
+  # El archivo PRIMERO y «Extrae el texto…» después: con «Transcribe TODO…» antes del archivo,
+  # gpt-4o-mini contestó «no puedo transcribir documentos» (medido el 26/09/2026, conv. 269).
   def pdf_request
     datos = "data:application/pdf;base64,#{Base64.strict_encode64(@blob.download)}"
     { model: 'gpt-4o-mini', temperature: 0, max_tokens: 3000,
       messages: [{ role: 'user', content: [
-        { type: 'text', text: 'Transcribe TODO el texto de este documento, tal cual, sin resumir ni comentar. ' \
-                              'Las tablas, una fila por línea con las celdas separadas por « | ».' },
-        { type: 'file', file: { filename: @blob.filename.to_s, file_data: datos } }
+        { type: 'file', file: { filename: @blob.filename.to_s, file_data: datos } },
+        { type: 'text', text: 'Extrae el texto completo de este PDF. Devuelve solo el texto del documento, línea por línea; ' \
+                              'las tablas, una fila por línea con celdas separadas por « | ». No agregues comentarios.' }
       ] }] }
   end
 end
