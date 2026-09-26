@@ -402,3 +402,40 @@ En la ruta solicitud_servicio, después de la flecha y en este orden exacto:
 -> {{hoja_buscar: Equipos | tipo=?; capacidad_t>=? | Calendar_ID}}
 ```
 (Con la hoja actual de remolques: `{{hoja_buscar: Servicio Gruas | tipo=?; peso_max_t>=? | Calendar_ID}}`.)
+
+### F4 — Confirmar, cancelar y mover POR servicio; pago (26/09/2026) ✅
+
+**Qué se hizo.** `ServiceRequests::Actions`: el cliente se refiere a un servicio por número («el 1 y
+el 3», «2️⃣») o por equipo («el hiab», «la plana»).
+- **Confirmar** (mensaje en la ruta con `@confirmar_servicio`): sin decir cuál → todos los
+  apartados. Con `(requiere=pago)` quedan «esperando pago» + nota al equipo.
+- **Cancelar** («cancela», «anula», «ya no lo necesito»): tarea agendada y caso cancelados. Con
+  varios abiertos y sin decir cuál → «¿Cuál quieres cancelar? 1️⃣ … 2️⃣ …».
+- **Mover** («pásala / muévelo / reprograma» + fecha u hora; también «a las 11»): nuevas opciones
+  (2A, 2B…); al elegir, la tarea anterior se cancela.
+- **Pago** (`PaidService`): la etiqueta `pago_confirmado` deja en firme TODOS los que esperaban
+  pago; mover un caso a la columna **«Pagado»** del Kanban deja en firme SOLO ese
+  (`ServicePaidJob`, desde `CaseTicket` al cambiar de columna). El cliente recibe «✅ Recibimos tu
+  pago. Tus servicios 1️⃣, 2️⃣ quedaron confirmados.»
+
+**Pila de pruebas (conversación 259, continuación de F3).**
+| Paso | Cliente / equipo | Resultado |
+|---|---|---|
+| 1 | «Cancela la grúa, ya no la necesitamos» | «Listo, cancelé: 3️⃣ Grúa 60 t (caso 01080)»; caso cancelled ✅ |
+| 2 | «La cama baja pásala a las 11:00» | «2️⃣ Cama baja 30 t: 2A 05/10 11:00 (TP-46) · 2B … · 2C …» ✅ |
+| 3 | «2A» | aparta 11:00–14:00 en TP-46; la tarea de las 09:00 queda cancelada (y su evento borrado) ✅ |
+| 4 | «Le confirmamos los servicios» (ruta con `requiere=pago`) | pide el pago de 1️⃣ y 2️⃣ + nota; estado esperando_pago ✅ |
+| 5 | etiqueta `pago_confirmado` | «✅ Recibimos tu pago. Tus servicios 1️⃣, 2️⃣ quedaron confirmados.»; tareas sin [TENTATIVO] ✅ |
+
+Specs: `actions_spec` (5), `service_paid_job_spec` (2); `choice_spec` y `payment_confirmed_job_spec` siguen pasando.
+Columna «Pagado»: probada con spec; en vivo requiere crear la columna en el tipo de caso.
+
+**Cómo pedírselo al Asistente.**
+```
+Agrega la ruta confirmacion_servicio #confirmado con frases: le confirmamos el servicio, le
+confirmamos los servicios, confirmo el 1, favor de presentarse mañana. Sin fuente, y después de
+la flecha: @confirmar_servicio(requiere=pago)
+```
+Cancelar y mover no necesitan ruta propia: el motor los reconoce cuando hay servicios abiertos.
+En Tickets → Tipos de caso → «Solicitud de transporte»: crear la columna **«Pagado»** para los
+pagos parciales.
