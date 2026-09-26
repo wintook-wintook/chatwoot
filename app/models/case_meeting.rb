@@ -19,6 +19,7 @@
 #  status                 :integer          default("scheduled"), not null
 #  sync_error             :text
 #  sync_status            :integer          default("pending"), not null
+#  tentative              :boolean          default(FALSE), not null
 #  time_zone              :string
 #  title                  :string           not null
 #  created_at             :datetime         not null

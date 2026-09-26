@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_09_26_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_26_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -369,6 +369,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_26_120000) do
     t.datetime "reconciled_at"
     t.datetime "cancelled_at"
     t.datetime "held_at"
+    t.boolean "tentative", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "starts_at"], name: "index_case_meetings_on_account_id_and_starts_at"
