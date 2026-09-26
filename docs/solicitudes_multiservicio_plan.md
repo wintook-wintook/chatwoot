@@ -324,3 +324,81 @@ sin IA (la IA insistía en un viaje redondo).
 Resultado: **9/12 → 12/12** (el 19 varía entre 2 y 3 según la IA). Spec: `extractor_spec` (4).
 
 **Cómo pedírselo al Asistente.** No aplica todavía (se usa con `@solicitudes`, F2).
+
+### F2 — `@solicitudes`: un caso por servicio (26/09/2026) ✅
+
+**Qué se hizo.** `@solicitudes` en una ruta: el mensaje se separa en servicios (F1) y cada uno
+es un caso (`CaseTicket`) de la conversación, con sus datos en `metadata['servicio']`, tipo y
+prioridad del `@crear_ticket(...)` de la ruta y las reglas de Tickets aplicadas.
+`DateResolver` vuelve fecha y hora lo que escribió el cliente, sin IA («29 de mayo 2026»,
+«03 DE AGOSTO», «01-JUN-26», «30/06/2026», «mañana», «el día lunes» → ambiguo). Reiteraciones: un
+servicio igual (tipo de equipo + fecha + origen) a uno abierto de un mensaje ANTERIOR lo
+actualiza (último dato gana); dentro del mismo mensaje «02 camiones» siguen siendo dos.
+
+**Cómo funciona.**
+```
+👤 …29 de mayo 2027 a las 08:00… UNIDADES REQUERIDAS 1 grúa cap. 60 tons, 01 tracto con plana de 12 mts, 01 camión con grúa tipo hiab
+🤖 Recibí 3 servicios:
+   1️⃣ Grúa 60 t · patio del km 14+500 → Blue Giant · sáb 29 may 08:00 (caso 01068)
+   2️⃣ Plana 12 m · …                                                   (caso 01069)
+   3️⃣ Hiab · …                                                         (caso 01070)
+```
+
+**Pruebas (Agents IA Test, copia #10368).**
+| Conv | Mensaje | Resultado |
+|---|---|---|
+| 256 | ej. 6A (grúa + plana + hiab) | 3 casos ✅ |
+| 256 | «Solicito nuevamente…» (mismo servicio) | grúa y plana actualizadas; el hiab se duplicó ❌ («camión con grúa tipo hiab» se leyó como grúa) → arreglado |
+| 258 | ej. 6A + «solicito nuevamente» (después del arreglo) | «Actualicé 3 servicios que ya tenía» — mismos casos ✅ |
+| 257 | ej. 10 (2 fletes por separado + horas de hiab) | 3 casos; «del 3️⃣ me falta la fecha y dónde es» ✅ |
+
+Specs: `registry_spec` (5), `turn_spec` (2).
+
+**Cómo pedírselo al Asistente.**
+```
+En la ruta solicitud_servicio, después de la flecha y en este orden exacto:
+@solicitudes -> @crear_ticket(tipo=Solicitud de transporte, prioridad=media)
+Frases: solicito programar unidades, favor de programar las siguientes unidades, unidades
+requeridas, SOLICITUD 01, solicito cotizar un flete.
+```
+
+### F3 — Horarios por servicio y apartado en el calendario de cada equipo (26/09/2026) ✅
+
+**Qué se hizo.** Con `@agendar_calendar(...)` y `{{hoja_buscar:}}` en la misma ruta, cada servicio
+con fecha recibe hasta 3 opciones (1A, 1B, 1C) de los calendarios de SU equipo — la hoja se busca
+con el texto del servicio («plana 40 t»), no con toda la conversación (`SheetLookup text:`). La hora
+pedida, si está libre, es la opción A: se OFRECE (decisión 2). «1A y 2B» o «sí» aparta cada una como
+Tarea agendada «[TENTATIVO]» en el calendario del equipo (`Choice` + `ServiceMeeting`). El extractor
+ahora devuelve el tipo de equipo en una palabra (grúa, hiab, plana, cama baja…).
+
+**Cómo funciona (conversación 259).**
+```
+👤 Solicito programar para el lunes 5 de octubre 2026 a las 09:00, del patio Carmen a Dos Bocas:
+   01 plana de 40 toneladas, 01 cama baja para 30 t y 01 grúa de 60 t. El servicio dura 3 horas.
+🤖 Recibí 3 servicios:
+   1️⃣ Plana 40 t · patio Carmen → Dos Bocas · lun 5 oct 09:00 (caso 01078)
+       1A 09:00–12:00 (TP-111) · 1B 09:00–12:00 (TP-82) · 1C 10:00–13:00 (TP-98)
+   2️⃣ Cama baja 30 t · … (caso 01079)
+       2A 09:00–12:00 (TP-46) · 2B 09:00–12:00 (TP-73) · 2C 10:00–13:00 (TP-74)
+   3️⃣ Grúa 60 t · … (caso 01080)
+       no tengo ese equipo en el catálogo
+   Responde con los horarios que quieres apartar (por ejemplo «1A y 3B»), o «sí» para la primera opción de cada uno.
+👤 1A y 2B
+🤖 📌 Aparté:
+   1️⃣ Plana 40 t · lun 5 oct 09:00–12:00 (TP-111)
+   2️⃣ Cama baja 30 t · lun 5 oct 09:00–12:00 (TP-73)
+   Quedan pendientes de confirmar: cuando me confirmes el servicio, los dejo en firme.
+```
+Resultado en la base: 2 Tareas agendadas «[TENTATIVO] …» 09:00–12:00, `synced`, en los calendarios de
+la TP-111 y la TP-73 (agenda 178, de prueba).
+
+**Pruebas.** Conversación 259 ✅ (arriba). Specs: `scheduler_spec` (3), `choice_spec` (4).
+
+**Cómo pedírselo al Asistente.**
+```
+En la ruta solicitud_servicio, después de la flecha y en este orden exacto:
+@solicitudes -> @crear_ticket(tipo=Solicitud de transporte, prioridad=media)
+-> @agendar_calendar(duracion=?, horario=24h, modo=tentativo)
+-> {{hoja_buscar: Equipos | tipo=?; capacidad_t>=? | Calendar_ID}}
+```
+(Con la hoja actual de remolques: `{{hoja_buscar: Servicio Gruas | tipo=?; peso_max_t>=? | Calendar_ID}}`.)

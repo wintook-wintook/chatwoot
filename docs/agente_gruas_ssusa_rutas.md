@@ -880,3 +880,21 @@ la etiqueta y ofrece «Crearla». Nuevo en la base: `contact_trackings.appointme
    pago, no digas que está confirmado hasta recibirlo.»
 ```
 Después: «Analiza el prompt» → si avisa «#pago_confirmado no existe», botón **Crearla**.
+
+### Pieza 5 — `@solicitudes`: varios servicios en una conversación (26/09, en curso)
+
+Plan y bitácora completa: `docs/solicitudes_multiservicio_plan.md` §13. Hecho: F0 (Tarea agendada
+tentativa en el calendario del equipo), F1 (separar el mensaje en servicios, 12/12 ejemplos del
+corpus), F2 (un caso por servicio + reiteraciones), F3 (horarios 1A/2B por servicio y apartado).
+Pruebas en vivo: conversaciones 256–259. Falta: F4 (confirmar/mover/cancelar por servicio, pago
+con etiqueta o columna «Pagado»), F5 (comprobador/catálogo), F7 (rentas de días/meses).
+
+**Cómo pedírselo al Asistente (lo que ya funciona):**
+```
+En la ruta solicitud_servicio, después de la flecha y en este orden exacto:
+@solicitudes -> @crear_ticket(tipo=Solicitud de transporte, prioridad=media)
+-> @agendar_calendar(duracion=?, horario=24h, modo=tentativo)
+-> {{hoja_buscar: Equipos | tipo=?; capacidad_t>=? | Calendar_ID}}
+Frases: solicito programar unidades, favor de programar las siguientes unidades, unidades
+requeridas, SOLICITUD 01, solicito cotizar un flete.
+```
