@@ -285,3 +285,14 @@ En la agenda — primera oferta y negociación — el motor:
 |------|---------|-----------|
 | 254 | TP-64 domingo 4 de octubre, jornada de 16 horas | domingo 4 oct 00:00–16:00, 01:00–17:00… ✅ |
 | 253 | TP-93 el 5 de octubre, 6:00 pm – 12:00 am | 18:00–00:00 (6 h) libre → pide correo para confirmar ✅ |
+
+---
+
+## 14. Pieza 4 — apartado → confirmado (26/09/2026)
+
+`@agendar_calendar(modo=tentativo)` + `@confirmar_servicio[(requiere=pago)]` +
+etiqueta `pago_confirmado` (`ServiceConfirmationListener` → `PaymentConfirmedJob`).
+Columna nueva `contact_trackings.appointment_status` (tentative / pending_payment / confirmed;
+nil = como siempre). Prueba de punta a punta: conversación 255 (ver
+`docs/agente_gruas_ssusa_rutas.md` §7, que lleva la bitácora por fase con pruebas y cómo
+pedírselo al Asistente).
