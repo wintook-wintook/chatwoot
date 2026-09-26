@@ -61,7 +61,10 @@ class ContactTrackings::ServiceRequests::Turn
     agenda = ContactTrackings::ServiceRequests::Scheduler.new(tracking: @tracking, route: @branch, timezone: @timezone)
     return {} unless agenda.agenda?
 
-    entries.to_h { |entry| [entry.ticket.id, agenda.plan(entry.ticket, position(entry.ticket))] }
+    # Un servicio que ya tiene su tarea (apartado, esperando pago, confirmado) no se vuelve a
+    # ofrecer al reiterarlo: su línea dice en qué estado está.
+    entries.reject { |entry| entry.ticket.metadata['meeting_id'].present? }
+           .to_h { |entry| [entry.ticket.id, agenda.plan(entry.ticket, position(entry.ticket))] }
   end
 
   def position(ticket)
@@ -109,9 +112,12 @@ class ContactTrackings::ServiceRequests::Turn
       "#{nuevos.positive? ? " y agregué #{nuevos}" : ''}:"
   end
 
+  STATES = { 'apartado' => '📌 apartado', 'esperando_pago' => '💳 esperando pago', 'confirmado' => '✅ confirmado' }.freeze
+
   def line(entry)
     datos = entry.ticket.metadata[ContactTrackings::ServiceRequests::Registry::META_KEY]
-    partes = [datos['label'].presence || 'Servicio', route(datos), when_text(datos)].compact_blank
+    partes = [datos['label'].presence || 'Servicio', route(datos), when_text(datos),
+              STATES[entry.ticket.metadata['estado']]].compact_blank
     "#{self.class.number(entry.ticket, @message.conversation)} #{partes.join(' · ')} (caso #{entry.ticket.folio.presence || entry.ticket.id})"
   end
 

@@ -36,4 +36,20 @@ RSpec.describe ContactTrackings::ServiceRequests::Turn do
 
     expect(turno).to be_nil
   end
+
+  it 'al reiterar un servicio ya apartado no lo vuelve a ofrecer: dice su estado' do
+    datos = { 'label' => 'Plana 40 t', 'equipment_type' => 'plana', 'date' => '2027-05-29', 'stops' => [{ 'lugar' => 'km 14' }] }
+    apartado = CaseTicket.create!(account: account, conversation: conversation, contact: conversation.contact, title: 'Plana',
+                                  metadata: { 'servicio' => datos, 'estado' => 'apartado', 'meeting_id' => 5 })
+    entry = ContactTrackings::ServiceRequests::Registry::Entry.new(ticket: apartado, created: false)
+    registro = instance_double(ContactTrackings::ServiceRequests::Registry, register!: [entry])
+    allow(ContactTrackings::ServiceRequests::Registry).to receive(:new).and_return(registro)
+    allow(extractor).to receive(:call).and_return([servicio.new(label: 'Plana 40 t')])
+    ruta_agenda = ContactTrackings::RouteMap::Route.new(name: 's', escalation: '@solicitudes -> @crear_ticket -> @agendar_calendar')
+    expect(ContactTrackings::ServiceRequests::Scheduler).to receive(:new).and_call_original
+
+    texto = described_class.new(tracking: nil, message: message, branch: ruta_agenda, timezone: 'America/Mexico_City').call
+    expect(texto).to include('Plana 40 t · km 14 · sáb 29 may · 📌 apartado')
+    expect(apartado.reload.metadata['oferta']).to be_nil
+  end
 end
