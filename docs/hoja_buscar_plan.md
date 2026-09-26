@@ -248,3 +248,19 @@ esconden del contexto de `{{hoja:}}`.
 | 247 | remolque para 50 toneladas | solo TP-64 (60 t) ✅ |
 | 248 | ¿qué placas tiene la TP-63 y qué tracto la jala? | «92UN8A, tracto TP-55» (exacto) ✅ |
 | 249 | carga de 8,800 kg | 8.8 t → horarios repartidos entre los que aguantan ✅ |
+
+
+---
+
+## 12. Pieza 6 — fechas ambiguas (26/09/2026)
+
+Un día de la semana sin número («el día lunes», «el martes a las 10») es ambiguo
+(`ContactTrackings::AmbiguousDate`, sin IA; «lunes 28», «01 de junio», «30/06» no lo son).
+En la agenda — primera oferta y negociación — el motor:
+- con hora libre: NO agenda en firme; la ofrece como opción 1 con la fecha completa;
+- sin hora, o con hora ocupada: antepone la fecha completa a los horarios.
+
+| Conv | Cliente | Respuesta | Cita creada |
+|------|---------|-----------|-------------|
+| 250 | ¿disponibilidad de la TP-64 el lunes a las 12:00? | «Entiendo que es el lunes 28 de septiembre, a las 12:00. Está libre: 1️⃣ … Responde 1 para apartarlo» | no ✅ |
+| 251 | ¿disponibilidad de la TP-63 el día martes? | «Entiendo que es el martes 29 de septiembre. Estos son los horarios de ese día: …» | no ✅ |
