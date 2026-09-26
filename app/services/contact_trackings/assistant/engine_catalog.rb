@@ -52,6 +52,8 @@ class ContactTrackings::Assistant::EngineCatalog
     'agendar' => ['actions', '@agendar_calendar', 'agenda'],
     # proyecto@hoja_buscar, pieza 4: depende de que el agente aparte con modo=tentativo.
     'confirmar_servicio' => ['actions', '@confirmar_servicio(requiere=pago)', nil],
+    # proyecto@solicitudes (pieza 5): varios servicios en un mensaje, un caso y una agenda por cada uno.
+    'solicitudes' => ['actions', '@solicitudes -> @crear_ticket(tipo=…) -> @agendar_calendar(…) -> {{hoja_buscar: …}}', nil],
     # proyecto@hoja_buscar: sus ejemplos salen de las hojas de la cuenta (ver #sheet_lookup_items).
     'hoja_buscar' => ['actions', '{{hoja_buscar: Hoja | columna=? | columna a regresar}}', nil],
     'adjunto' => ['actions', '{{nombre_del_archivo}}', nil],
@@ -63,7 +65,7 @@ class ContactTrackings::Assistant::EngineCatalog
   }.freeze
   GROUPS = %w[sources actions structure].freeze
   # Las que siempre están: son gramática del motor o dependen solo del Entrenamiento.
-  ALWAYS_READY = %w[estado_ticket ruta ruta_defecto etiqueta seccion contexto confirmar_servicio].freeze
+  ALWAYS_READY = %w[estado_ticket ruta ruta_defecto etiqueta seccion contexto confirmar_servicio solicitudes].freeze
   # Las que dependen del canal (@discourse: hook del inbox) o del agente (archivos).
   DEPENDS = %w[discourse adjunto].freeze
   MAX_ITEMS = 30

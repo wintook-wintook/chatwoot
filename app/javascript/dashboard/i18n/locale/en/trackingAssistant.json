@@ -379,6 +379,8 @@
     "CATALOG_AGENDAR_NEEDS": "A Google calendar connected in the account and assigned to the AI Agent.",
     "CATALOG_CONFIRMAR_SERVICIO_WHAT": "Makes a held service firm. With @agendar_calendar(modo=tentativo) the slot is held as \"[TENTATIVO]\"; when the customer confirms in the route that has @confirmar_servicio, the event becomes firm. With requiere=pago, it asks for payment and a person makes it firm with the pago_confirmado label.",
     "CATALOG_CONFIRMAR_SERVICIO_NEEDS": "A confirmation route (phrases like \"we confirm the service\") and, if payment is required, the pago_confirmado label in the account.",
+    "CATALOG_SOLICITUDES_WHAT": "A message with several services (\"1 60 t crane, 1 12 m flatbed, 1 hiab\", \"REQUEST 01, 02…\") is split into services: each one is a case with its own slots on ITS unit's calendar (1A, 2B…). The customer confirms, cancels or moves each by number or by unit. Rentals of days or months are held as a block of full days.",
+    "CATALOG_SOLICITUDES_NEEDS": "A case type (e.g. \"Solicitud de transporte\"), a sheet with the units and their Calendar_ID, and those calendars checked in one of the AI Agent's calendars.",
     "CATALOG_HOJA_BUSCAR_WHAT": "Exact search in a sheet, no AI: the rows whose column has the values (or, with ?, the ones named in the conversation), returning another column. With @agendar_calendar, slots come only from the calendar of what was named (for example, the trailer).",
     "CATALOG_HOJA_BUSCAR_NEEDS": "The sheet added in the Knowledge Base and synced; to book, its calendars checked in one of the AI Agent's calendars.",
     "CATALOG_ADJUNTO_WHAT": "The agent writes {{name}} in its answer and the file with that name is sent instead (up to 5 per message).",

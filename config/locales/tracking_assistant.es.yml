@@ -171,6 +171,14 @@ es:
         La ruta '%{route}' pide el pago antes de confirmar (@confirmar_servicio(requiere=pago)): el
         servicio queda en firme cuando una persona le pone a la conversación la etiqueta «%{label}»,
         y la cuenta no la tiene. Créala; si no, el servicio se queda apartado.
+      solicitudes_without_ticket: >-
+        La ruta '%{route}' tiene @solicitudes pero no @crear_ticket después: cada servicio que pida el
+        cliente se guarda como un caso, y sin @crear_ticket no hay dónde. Escríbelo así:
+        @solicitudes -> @crear_ticket(tipo=Solicitud de transporte).
+      solicitudes_without_lookup: >-
+        La ruta '%{route}' agenda servicios pero no dice en qué hoja buscar el calendario de cada equipo:
+        todos saldrán «no tengo ese equipo en el catálogo». Agrega después de la flecha, por ejemplo,
+        {{hoja_buscar: Equipos | tipo=?; capacidad_t>=? | Calendar_ID}}.
       route_does_nothing: >-
         La ruta '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
         con lo que dice el Entrenamiento. Ante algo concreto (precios, horarios) puede inventar o prometer

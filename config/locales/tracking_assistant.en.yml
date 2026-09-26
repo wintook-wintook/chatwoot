@@ -172,6 +172,14 @@ en:
         Route '%{route}' requires payment before confirming (@confirmar_servicio(requiere=pago)): the
         service becomes firm when someone adds the label "%{label}" to the conversation, and the
         account does not have it. Create it; otherwise the service stays on hold.
+      solicitudes_without_ticket: >-
+        Route '%{route}' has @solicitudes but no @crear_ticket after it: each service the customer asks
+        for is stored as a case, and without @crear_ticket there is nowhere to store it. Write it like
+        this: @solicitudes -> @crear_ticket(tipo=Solicitud de transporte).
+      solicitudes_without_lookup: >-
+        Route '%{route}' schedules services but does not say which sheet holds each unit's calendar:
+        every service will say "that unit is not in the catalog". Add after the arrow, for example,
+        {{hoja_buscar: Equipos | tipo=?; capacidad_t>=? | Calendar_ID}}.
       route_does_nothing: >-
         Branch '%{route}' does not query any source and has nothing to do when it cannot solve: it answers
         only from the Training. Faced with something specific (prices, schedules) it may make things up or

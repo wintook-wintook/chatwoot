@@ -89,4 +89,26 @@ RSpec.describe ContactTrackings::Assistant::SheetLookupChecks do
 
     expect(aviso).to include(code: :state_label_not_found, route: 'confirmacion')
   end
+
+  describe '@solicitudes (pieza 5, F5)' do
+    def codigos(accion)
+      texto = "@ruta(solicitud #consulta_producto: solicito programar unidades): {{hoja:Servicio Gruas}} -> #{accion}\n" \
+              "@ruta_por_defecto: solicitud\n\n[ROL]\nAgente."
+      r = ContactTrackings::Assistant::ValidatorService.new(texto, account: account).call
+      (r[:blocking] + r[:degrading]).pluck(:code)
+    end
+
+    it 'sin @crear_ticket después, rojo' do
+      expect(codigos('@solicitudes -> @agendar_calendar')).to include(:solicitudes_without_ticket)
+    end
+
+    it 'con agenda pero sin {{hoja_buscar:}}, ámbar' do
+      expect(codigos('@solicitudes -> @crear_ticket -> @agendar_calendar')).to include(:solicitudes_without_lookup)
+    end
+
+    it 'completa, sin avisos de @solicitudes' do
+      accion = '@solicitudes -> @crear_ticket -> @agendar_calendar(duracion=?) -> {{hoja_buscar: Servicio Gruas | tipo=? | Calendar_ID}}'
+      expect(codigos(accion).grep(/solicitudes/)).to be_empty
+    end
+  end
 end

@@ -18,6 +18,7 @@ class ContactTrackings::Assistant::RouteLineChecks
     check_unclosed_directives
     check_routes_doing_nothing
     check_calendar_options
+    check_service_requests
   end
 
   private
@@ -75,6 +76,26 @@ class ContactTrackings::Assistant::RouteLineChecks
                      t('findings.calendar_option_invalid', route: route.name, option: "#{clave}=#{valor}"),
                      wrote: route.escalation, route: route.name)
       end
+    end
+  end
+
+  # ── @solicitudes (pieza 5, F5) ───────────────────────────────────────────────
+  # Rojo: sin @crear_ticket después, cada servicio no tiene dónde guardarse.
+  # Ámbar: con agenda pero sin {{hoja_buscar:}}, ningún servicio sabe en qué calendario buscar
+  # y todos salen «no tengo ese equipo en el catálogo».
+  def check_service_requests
+    map.routes.each do |route|
+      accion = route.escalation.to_s
+      next unless ContactTrackings::ServiceRequests::Turn.route?(accion)
+
+      unless accion.match?(Cases::TicketCreatorService::DIRECTIVE_RE)
+        findings.add(:blocking, :solicitudes_without_ticket, t('findings.solicitudes_without_ticket', route: route.name),
+                     wrote: accion, route: route.name)
+      end
+      next unless accion.match?(/@agendar_calendar\b/i) && !accion.match?(ContactTrackings::SheetLookup::DIRECTIVE_RE)
+
+      findings.add(:degrading, :solicitudes_without_lookup, t('findings.solicitudes_without_lookup', route: route.name),
+                   wrote: accion, route: route.name)
     end
   end
 
