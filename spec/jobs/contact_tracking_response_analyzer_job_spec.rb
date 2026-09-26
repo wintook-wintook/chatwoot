@@ -1092,4 +1092,36 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
         .to eq('Entiendo que es el lunes 28 de septiembre. Estos son los horarios de ese día:')
     end
   end
+
+  # Pieza 3 (26/09/2026): @agendar_calendar(duracion=…, horario=24h).
+  describe 'opciones de @agendar_calendar' do
+    let(:options) { ContactTrackings::CalendarOptions::Options }
+    let(:mensaje) { instance_double(Message) }
+
+    before { tracking_template.update!(calendar_event_duration: 30) }
+
+    it 'la duración: fija, la del cliente, o la del agente' do
+      allow(job).to receive(:message_text_for_ai).and_return('grúa de 80 t, duración aproximada de una hora')
+
+      expect(job.send(:service_duration, tracking, mensaje, nil)).to eq(30)
+      expect(job.send(:service_duration, tracking, mensaje, options.new(duration: 120))).to eq(120)
+      expect(job.send(:service_duration, tracking, mensaje, options.new(ask_duration: true))).to eq(60)
+    end
+
+    it 'si el cliente no dijo cuánto dura, la del agente' do
+      allow(job).to receive(:message_text_for_ai).and_return('grúa de 80 t el lunes 28 a las 8')
+
+      expect(job.send(:service_duration, tracking, mensaje, options.new(ask_duration: true))).to eq(30)
+    end
+
+    it 'con horario=24h el buscador no usa el horario del canal' do
+      allow(job).to receive_messages(calendar_options_for: options.new(all_day: true), sheet_calendars_for: nil,
+                                     message_text_for_ai: '')
+      allow(ContactTrackings::AvailabilitySlotService).to receive(:new).and_call_original
+
+      job.send(:slot_service_for, [178], tracking, 'America/Mexico_City', message: mensaje)
+      expect(ContactTrackings::AvailabilitySlotService).to have_received(:new)
+        .with(hash_including(working_hours: ContactTrackings::AvailabilitySlotService::ALL_DAY))
+    end
+  end
 end

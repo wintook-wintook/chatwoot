@@ -375,7 +375,7 @@
     "CATALOG_CREAR_TICKET_NEEDS": "Tipos de caso creados en la cuenta (Tickets). Escribe el tipo: sin él, se adivina.",
     "CATALOG_ESTADO_TICKET_WHAT": "Cuando el cliente pregunta por su caso («¿cómo va mi ticket?»), responde con el estado de hasta 3 casos suyos, en lenguaje de cliente.",
     "CATALOG_ESTADO_TICKET_NEEDS": "Nada: funciona con los casos del contacto.",
-    "CATALOG_AGENDAR_WHAT": "Agenda, mueve o cancela citas: ve la disponibilidad real, ofrece horarios, negocia y crea el evento. Si el cliente no habla de una cita, no hace nada.",
+    "CATALOG_AGENDAR_WHAT": "Agenda, mueve o cancela citas: ve la disponibilidad real, ofrece horarios, negocia y crea el evento. Si el cliente no habla de una cita, no hace nada. Opciones: @agendar_calendar(duracion=?, horario=24h) — la duración que dice el cliente (o duracion=90, duracion=2h) y cualquier hora de cualquier día.",
     "CATALOG_AGENDAR_NEEDS": "Un calendario de Google conectado en la cuenta y asignado al Agente IA.",
     "CATALOG_HOJA_BUSCAR_WHAT": "Busca exacto en una hoja, sin IA: las filas cuya columna tenga los valores (o, con ?, los que se nombraron en la conversación) y regresa otra columna. Con @agendar_calendar, los horarios salen solo del calendario de lo que se nombró (por ejemplo, el remolque).",
     "CATALOG_HOJA_BUSCAR_NEEDS": "La hoja agregada en Base de Conocimiento y sincronizada; para agendar, sus calendarios marcados en una agenda del Agente IA.",

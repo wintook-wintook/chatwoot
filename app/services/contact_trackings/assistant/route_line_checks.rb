@@ -17,6 +17,7 @@ class ContactTrackings::Assistant::RouteLineChecks
   def call
     check_unclosed_directives
     check_routes_doing_nothing
+    check_calendar_options
   end
 
   private
@@ -61,6 +62,19 @@ class ContactTrackings::Assistant::RouteLineChecks
 
       findings.add(:degrading, :route_does_nothing, t('findings.route_does_nothing', route: route.name),
                    wrote: "@ruta(#{route.name}...): -", route: route.name)
+    end
+  end
+
+  # ── @agendar_calendar(…) con una opción que el motor no entiende (pieza 3) ────
+  # El motor ignora lo que no conoce y agenda con la duración y el horario de siempre:
+  # «horario=noche» no da horarios de noche. Rojo: lo escrito no hace lo que dice.
+  def check_calendar_options
+    map.routes.each do |route|
+      ContactTrackings::CalendarOptions.invalid(route.escalation).each do |clave, valor|
+        findings.add(:blocking, :calendar_option_invalid,
+                     t('findings.calendar_option_invalid', route: route.name, option: "#{clave}=#{valor}"),
+                     wrote: route.escalation, route: route.name)
+      end
     end
   end
 

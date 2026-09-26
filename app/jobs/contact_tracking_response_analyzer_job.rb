@@ -631,7 +631,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       # agente con rutas conserva su prosa: sus directivas viven dentro de esas líneas.
       cp_raw = ContactTrackings::RouteMap.strip(tracking.complementary_prompt.to_s)
       # proyecto@bot_seguimiento_calendar — @agendar_calendar no debe filtrarse al LLM conversacional
-      clean_cp = KnowledgeBase::Directives.strip_tokens(cp_raw).gsub(/@agendar_calendar\b/i, '').strip
+      clean_cp = KnowledgeBase::Directives.strip_tokens(cp_raw).gsub(/@agendar_calendar\b(?:\s*\([^)]*\))?/i, '').strip
       scope_rule = branch_scope_rule(tracking, message)
       clean_cp = "#{clean_cp}\n\n#{scope_rule}" if clean_cp.present? && scope_rule.present?
 
@@ -851,6 +851,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
   def slot_service_for(cal_ids, tracking, timezone, message: nil)
     booking = tracking.tracking_template&.booking_calendar_ids || {}
+    options = message && calendar_options_for(tracking, message)
     # proyecto@hoja_buscar — solo los calendarios de lo que se nombró. Sin mensaje (mover
     # una cita) se queda en la agenda de la cita, como siempre.
     sheet = message && sheet_calendars_for(tracking, message)
@@ -861,10 +862,28 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     ContactTrackings::AvailabilitySlotService.new(
       calendar_integration_ids: cal_ids, timezone: timezone,
-      slot_duration: tracking.tracking_template&.calendar_event_duration || 30,
-      working_hours: working_hours_for(tracking, message),
+      slot_duration: service_duration(tracking, message, options),
+      working_hours: options&.all_day ? ContactTrackings::AvailabilitySlotService::ALL_DAY : working_hours_for(tracking, message),
       booking_calendars: booking
     )
+  end
+
+  # proyecto@hoja_buscar, pieza 3 — @agendar_calendar(duracion=…, horario=…) de la ruta del
+  # turno; si esa ruta no agenda, el de la primera ruta que sí lo configura. nil = como siempre.
+  def calendar_options_for(tracking, message)
+    ContactTrackings::CalendarOptions.parse(branch_for(tracking, message)&.escalation) ||
+      ContactTrackings::CalendarOptions.parse(ContactTrackings::RouteMap.parse(tracking.complementary_prompt)
+                                                                        .routes.map(&:escalation).join("\n"))
+  end
+
+  # duracion=90 → 90 · duracion=? → la que dijo el cliente, o la del agente · sin opción → la del agente.
+  def service_duration(tracking, message, options)
+    del_agente = tracking.tracking_template&.calendar_event_duration || 30
+    return del_agente if options.nil?
+    return options.duration if options.duration
+    return del_agente unless options.ask_duration
+
+    ContactTrackings::CalendarOptions.duration_in(message_text_for_ai(message)) || del_agente
   end
 
   # nil si el agente no usa {{hoja_buscar:}}. Una vez por mensaje: la búsqueda lee la hoja

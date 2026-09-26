@@ -77,7 +77,7 @@ module KnowledgeBase
           .gsub(ContactTrackings::SheetLookup::DIRECTIVE_RE, '') # proyecto@hoja_buscar: configuración de la agenda
           .gsub(/\{\{\s*(?:doc|hoja)\s*:[^}]*\}\}/i, PROSE_STAND_IN) # 24/09: «ejecuta {{hoja:CATALOGO}}» llegaba literal
           .gsub(ExternalDb::ConsultaDirectiveRenderer::DIRECTIVE, '') # proyecto@erp_productos: configuración
-          .gsub(/@agendar_calendar\b/i, '') # proyecto@predefinidas_prompt — igual que el conversacional
+          .gsub(/@agendar_calendar\b(?:\s*\([^)]*\))?/i, '') # proyecto@predefinidas_prompt — con sus opciones (pieza 3)
           .strip
     end
 

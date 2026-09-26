@@ -90,4 +90,35 @@ RSpec.describe ContactTrackings::AvailabilitySlotService do
       expect(result.map { |s| s[:slot] }).to eq([morning[0], morning[1], afternoon[0]]) # orden cronológico
     end
   end
+
+  # proyecto@hoja_buscar, pieza 3 — @agendar_calendar(horario=24h) y servicios largos.
+  describe 'horario de 24 h y duración larga' do
+    let(:tz) { 'America/Mexico_City' }
+
+    it 'con ALL_DAY acepta domingo a las 03:00 y un servicio que cruza la medianoche' do
+      service = described_class.new(calendar_integration_ids: [1], timezone: tz, working_hours: described_class::ALL_DAY)
+      domingo = Time.find_zone(tz).local(2026, 8, 2, 3, 0)
+      noche = Time.find_zone(tz).local(2026, 6, 1, 18, 0)
+
+      expect(service.send(:within_work_hours?, domingo, domingo + 1.hour)).to be(true)
+      expect(service.send(:within_work_hours?, noche, noche + 6.hours)).to be(true)
+      expect(service.working_day?(domingo.to_date)).to be(true)
+    end
+
+    it 'un servicio largo se ofrece cada hora, no cada «duración»' do
+      service = described_class.new(calendar_integration_ids: [1], timezone: tz, slot_duration: 16 * 60,
+                                    working_hours: described_class::ALL_DAY)
+      integration = instance_double(UserCalendarIntegration, id: 1, user: nil)
+      allow(service).to receive(:calendar_name_for).and_return('TP-64')
+      desde = Time.find_zone(tz).local(2026, 10, 5, 7, 0)
+
+      slots = service.send(:free_slots_for, integration, 'c64', [], desde, desde + 1.day)
+      expect(slots.map { |s| s[:slot].strftime('%H:%M') }).to eq(%w[07:00 08:00 09:00 10:00 11:00])
+      expect(slots.first[:end_time] - slots.first[:slot]).to eq(16.hours)
+    end
+
+    it 'una cita corta sigue igual: cada 30 minutos' do
+      expect(described_class.new(calendar_integration_ids: [1]).send(:step)).to eq(30)
+    end
+  end
 end

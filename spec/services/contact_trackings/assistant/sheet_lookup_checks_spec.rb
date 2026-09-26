@@ -72,4 +72,12 @@ RSpec.describe ContactTrackings::Assistant::SheetLookupChecks do
     expect(validar('{{hoja_buscar: Servicio Gruas | remolque>=grande | Calendar_ID}}')[:blocking].pluck(:code))
       .to include(:sheet_lookup_invalid)
   end
+
+  it 'una opción de @agendar_calendar que el motor no entiende sale en rojo (pieza 3)' do
+    texto = "@ruta(agenda #consulta_producto: horarios): - -> @agendar_calendar(horario=noche)\n" \
+            "@ruta_por_defecto: agenda\n\n[ROL]\nAgente."
+    resultado = ContactTrackings::Assistant::ValidatorService.new(texto, account: account).call
+
+    expect(resultado[:blocking].find { |f| f[:code] == :calendar_option_invalid }).to include(route: 'agenda')
+  end
 end

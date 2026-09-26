@@ -163,6 +163,10 @@ es:
       section_ref_name: >-
         Línea %{line}: «%{wrote}» cita una sección que no existe en el Entrenamiento. El agente no va
         a encontrar a dónde lo manda esa regla. Corrige el nombre o agrega la sección.
+      calendar_option_invalid: >-
+        La ruta '%{route}' tiene «%{option}» en @agendar_calendar(…) y el motor no lo entiende: agenda
+        con la duración y el horario de siempre. Opciones válidas: duracion=90 (minutos), duracion=2h,
+        duracion=? (la dice el cliente) y horario=24h.
       route_does_nothing: >-
         La ruta '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
         con lo que dice el Entrenamiento. Ante algo concreto (precios, horarios) puede inventar o prometer

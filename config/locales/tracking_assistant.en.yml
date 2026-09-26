@@ -164,6 +164,10 @@ en:
       section_ref_name: >-
         Line %{line}: "%{wrote}" cites a section that does not exist in the Training. The agent will not
         find where that rule sends it. Fix the name or add the section.
+      calendar_option_invalid: >-
+        Route '%{route}' has "%{option}" in @agendar_calendar(…) and the engine does not understand it:
+        it books with the usual duration and hours. Valid options: duracion=90 (minutes), duracion=2h,
+        duracion=? (the customer says it) and horario=24h.
       route_does_nothing: >-
         Branch '%{route}' does not query any source and has nothing to do when it cannot solve: it answers
         only from the Training. Faced with something specific (prices, schedules) it may make things up or
