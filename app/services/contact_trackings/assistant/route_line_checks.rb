@@ -19,6 +19,7 @@ class ContactTrackings::Assistant::RouteLineChecks
     check_routes_doing_nothing
     check_calendar_options
     check_service_requests
+    check_paid_label_as_route_tag
   end
 
   private
@@ -81,8 +82,9 @@ class ContactTrackings::Assistant::RouteLineChecks
 
   # ── @solicitudes (pieza 5, F5) ───────────────────────────────────────────────
   # Rojo: sin @crear_ticket después, cada servicio no tiene dónde guardarse.
-  # Ámbar: con agenda pero sin {{hoja_buscar:}}, ningún servicio sabe en qué calendario buscar
-  # y todos salen «no tengo ese equipo en el catálogo».
+  # Rojo: con agenda pero sin {{hoja_buscar:}}, ningún servicio sabe en qué calendario buscar
+  # y todos salen «no tengo ese equipo en el catálogo» (Scheduler#calendars_for). Era ámbar
+  # hasta el 26/09/2026; así el Asistente no lo corregía solo (1 de 3 corridas lo dejó fuera).
   def check_service_requests
     map.routes.each do |route|
       accion = route.escalation.to_s
@@ -94,8 +96,21 @@ class ContactTrackings::Assistant::RouteLineChecks
       end
       next unless accion.match?(/@agendar_calendar\b/i) && !accion.match?(ContactTrackings::SheetLookup::DIRECTIVE_RE)
 
-      findings.add(:degrading, :solicitudes_without_lookup, t('findings.solicitudes_without_lookup', route: route.name),
+      findings.add(:blocking, :solicitudes_without_lookup, t('findings.solicitudes_without_lookup', route: route.name),
                    wrote: accion, route: route.name)
+    end
+  end
+
+  # ── #pago_confirmado como etiqueta de una ruta (pieza 4) ─────────────────────
+  # Medido el 26/09/2026: el Asistente se la puso a la ruta de confirmación. Esa etiqueta deja
+  # en firme los servicios que esperan pago: la pone una PERSONA al recibirlo. En una ruta, la
+  # pondría el cliente con solo decir «le confirmamos». Rojo.
+  def check_paid_label_as_route_tag
+    map.routes.each do |route|
+      next unless route.tag == ContactTrackings::ServiceConfirmation::PAID_LABEL
+
+      findings.add(:blocking, :paid_label_as_route_tag, t('findings.paid_label_as_route_tag', route: route.name),
+                   wrote: route.hashtag, route: route.name)
     end
   end
 

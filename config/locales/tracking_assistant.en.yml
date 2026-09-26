@@ -43,6 +43,11 @@ en:
         If the person did not ask for it, return those parts EXACTLY as they were in the CURRENT
         TRAINING, character by character. If they did ask, keep them and name them in "toca". Return
         the complete Training again.
+      empty_promise: >-
+        You asked no question and did not deliver the Training either: the person is left waiting. If you
+        already have what you need, deliver the complete Training with the change applied (anything
+        missing, marked <PENDIENTE:>). If you truly lack something only the person knows, ask that
+        specific question, ending with "?", and return "entrenamiento": null.
       missing_mode: >-
         You delivered the Training without asking whether the agent ANSWERS first and opens the case
         only if it could not resolve, or whether it ONLY collects data and always opens the case.
@@ -180,6 +185,10 @@ en:
         Route '%{route}' schedules services but does not say which sheet holds each unit's calendar:
         every service will say "that unit is not in the catalog". Add after the arrow, for example,
         {{hoja_buscar: Equipos | tipo=?; capacidad_t>=? | Calendar_ID}}.
+      paid_label_as_route_tag: >-
+        Route '%{route}' uses the #pago_confirmado label. That label makes services awaiting payment firm and
+        a person adds it when payment arrives; on a route, the customer would trigger it just by
+        writing. Use another label (e.g. #confirmado).
       route_does_nothing: >-
         Branch '%{route}' does not query any source and has nothing to do when it cannot solve: it answers
         only from the Training. Faced with something specific (prices, schedules) it may make things up or

@@ -102,13 +102,24 @@ RSpec.describe ContactTrackings::Assistant::SheetLookupChecks do
       expect(codigos('@solicitudes -> @agendar_calendar')).to include(:solicitudes_without_ticket)
     end
 
-    it 'con agenda pero sin {{hoja_buscar:}}, ámbar' do
-      expect(codigos('@solicitudes -> @crear_ticket -> @agendar_calendar')).to include(:solicitudes_without_lookup)
+    it 'con agenda pero sin {{hoja_buscar:}}, rojo: ningún servicio sabría en qué calendario buscar' do
+      texto = '@ruta(solicitud #consulta_producto: solicito programar unidades): {{hoja:Servicio Gruas}} -> ' \
+              "@solicitudes -> @crear_ticket -> @agendar_calendar\n@ruta_por_defecto: solicitud\n\n[ROL]\nAgente."
+      rojos = ContactTrackings::Assistant::ValidatorService.new(texto, account: account).call[:blocking]
+      expect(rojos.pluck(:code)).to include(:solicitudes_without_lookup)
     end
 
     it 'completa, sin avisos de @solicitudes' do
       accion = '@solicitudes -> @crear_ticket -> @agendar_calendar(duracion=?) -> {{hoja_buscar: Servicio Gruas | tipo=? | Calendar_ID}}'
       expect(codigos(accion).grep(/solicitudes/)).to be_empty
     end
+  end
+
+  it 'una ruta con la etiqueta #pago_confirmado sale en rojo' do
+    texto = "@ruta(confirmacion #pago_confirmado: le confirmamos el servicio): - -> @confirmar_servicio(requiere=pago)\n" \
+            "@ruta_por_defecto: confirmacion\n\n[ROL]\nAgente."
+    rojos = ContactTrackings::Assistant::ValidatorService.new(texto, account: account).call[:blocking]
+
+    expect(rojos.find { |f| f[:code] == :paid_label_as_route_tag }).to include(route: 'confirmacion')
   end
 end

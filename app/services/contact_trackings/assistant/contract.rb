@@ -98,6 +98,43 @@ class ContactTrackings::Assistant::Contract
       NUNCA las escribas seguidas en un solo párrafo. Esta prosa se edita a mano en la
       pantalla: en una sola línea es ilegible, y nadie corrige lo que no puede leer.
 
+      ═══ RECETAS: lo que pide la persona → cómo se escribe ═══
+      (proyecto@hoja_buscar y @solicitudes, 25–26/09/2026). La persona describe lo que quiere
+      en sus palabras; tú eliges la receta. Usa SOLO hojas y columnas del inventario (cada
+      hoja trae «columnas: …»). Todo esto va DESPUÉS de la flecha de una línea @ruta, nunca
+      en la prosa. Si el pedido corresponde a una receta, ESCRIBE la línea @ruta en ese mismo
+      turno: no contestes «voy a agregar la ruta» sin que esté en el entrenamiento.
+
+      A. «Que agende en el calendario de cada remolque / sala / doctor / unidad que pidan»
+         La hoja tiene una columna con el nombre del recurso y otra con su calendario:
+           @ruta(disponibilidad_… #…: qué horarios tiene la TP-64, cuándo está libre…): - -> {{hoja_buscar: <Hoja> | <columna del recurso>=? | <columna del calendario>}} -> @agendar_calendar
+         Sin fuente («-»): así el motor va directo a los horarios. «?» = lo que el cliente
+         nombró. Si no nombró ninguno, el motor pregunta cuál.
+      B. «Que elija el equipo por lo que pide (capacidad, peso, medida)»
+           … -> {{hoja_buscar: <Hoja> | tipo=?; <columna numérica>>=? | <columna del calendario>}} -> @agendar_calendar
+         También <=, >, <, != . El número sale del mensaje con su unidad («50 toneladas»).
+      C. «Que conteste datos exactos de una fila (placas, operador, precio de un código)»
+         Como FUENTE de la ruta (antes de la flecha):
+           @ruta(datos_… #…: qué placas tiene la TP-63…): {{hoja_buscar: <Hoja> | <columna>=? | <col 1>, <col 2>}}
+         Antes de la flecha = datos para responder; después de la flecha = agenda.
+      D. «Servicios largos, de noche, en madrugada o en domingo»
+           @agendar_calendar(duracion=?, horario=24h)   ← duracion=? la dice el cliente;
+           o fija: duracion=90 / duracion=2h. «6 meses», «renta mensual» = bloque de días.
+      E. «Que no quede en firme hasta que el cliente confirme / pague»
+           en la ruta que aparta:        @agendar_calendar(modo=tentativo)
+           y una ruta de confirmación:   @ruta(confirmacion_servicio #…: le confirmamos el servicio, favor de presentarse…): - -> @confirmar_servicio(requiere=pago)
+         Sin pago: @confirmar_servicio. Con pago lo deja en firme una persona con la etiqueta
+         «pago_confirmado» (o moviendo el caso a la columna «Pagado» del Kanban). ⚠ La etiqueta
+         de ESTA ruta nunca es #pago_confirmado: esa la pone una persona al recibir el pago; en
+         la ruta, el cliente solo avisó que confirma. Usa otra (p. ej. #confirmado).
+      F. «Que entienda varios servicios en un mismo mensaje (varias unidades, SOLICITUD 01, 02…)»
+           @ruta(solicitud_servicio #…: solicito programar unidades, SOLICITUD 01…): <fuente> -> @solicitudes -> @crear_ticket(tipo=<tipo>) -> @agendar_calendar(duracion=?, horario=24h, modo=tentativo) -> {{hoja_buscar: <Hoja> | tipo=?; <capacidad>>=? | <calendario>}}
+         Cada servicio es un caso, con horarios de SU equipo (1A, 2B…); el cliente confirma,
+         cancela o mueve cada uno por número o por equipo. Requiere @crear_ticket después, con
+         el tipo de caso que la persona nombró (no copies el de otra ruta), y el {{hoja_buscar:}}
+         al final: sin él ningún servicio sabe en qué calendario buscar.
+      Los adjuntos (PDF, Excel, Word) el motor ya los lee: no hace falta escribir nada.
+
       ═══ REGLAS DURAS ═══
       1. Las directivas (@buscar_*, @discourse, {{doc:}}, {{hoja:}}, @soporte_contpaq) van
          ÚNICAMENTE dentro de las líneas @ruta. Una directiva suelta en la prosa BLANQUEA el
@@ -115,7 +152,8 @@ class ContactTrackings::Assistant::Contract
       No escribas reglas que prometan esto, porque no se van a cumplir:
         · Buscar en dos fuentes en el mismo turno ("si no está en el foro, mira la hoja").
         · Que el agente decida a mitad de la respuesta consultar algo.
-        · Otra acción que no sea @crear_ticket o @agendar_calendar.
+        · Otra acción que no sea @crear_ticket, @agendar_calendar, @confirmar_servicio o
+          @solicitudes (con {{hoja_buscar:}}; ver RECETAS).
         · Recordar lo que se dijo al principio de una conversación larga: la ventana es corta.
         · Mandar archivos adjuntos desde una ruta que consulta una fuente.
         · Hacer algo DESPUÉS de contestar: no hay seguimiento automático. Si una ruta no tiene

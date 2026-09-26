@@ -43,6 +43,7 @@
 
 class ContactTrackings::Assistant::InterviewService
   RepairPrompts = ContactTrackings::Assistant::RepairPrompts
+  EmptyPromise = ContactTrackings::Assistant::EmptyPromise
   API_URL = ContactTrackings::Assistant::OpenaiChat::API_URL
   # Vueltas de corrección antes de mostrarle los errores a la persona.
   MAX_REPAIRS = 3
@@ -117,7 +118,8 @@ class ContactTrackings::Assistant::InterviewService
     reply = ContactTrackings::Assistant::ReplyParser.with_extras(ask(conversation))
     return Result.new(error: :unavailable) if reply.nil?
 
-    handle(reply)
+    # Ni preguntó ni entregó (ver EmptyPromise): una vuelta más, solo al editar.
+    handle(EmptyPromise.second_try(reply, said: user_texts.last, editing: editing? && !building? && !one_shot) { |more| ask(conversation + more) })
   end
 
   private
@@ -351,10 +353,7 @@ class ContactTrackings::Assistant::InterviewService
       inventory_section,
       ContactTrackings::Assistant::Instructions.call(one_shot: one_shot, max_turns: MAX_INTERVIEW_TURNS),
       (ContactTrackings::Assistant::CheckerSection.call(current_draft, account: account, result: analysis.result) if editing?),
-      (if editing?
-         ContactTrackings::Assistant::EditingInstructions.call(current_draft, manual: @manual.labels,
-                                                                              building: building?)
-       end)
+      (ContactTrackings::Assistant::EditingInstructions.call(current_draft, manual: @manual.labels, building: building?) if editing?)
     ].compact.join("\n\n")
   end
 

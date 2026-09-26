@@ -35,7 +35,12 @@ class ContactTrackings::Assistant::InventoryPrompt
   private
 
   def sources
-    lineas = @inventory[:sources].map { |s| "  #{s[:directive].ljust(34)} #{s[:name]}" }
+    # Las columnas de cada hoja (proyecto@hoja_buscar): sin ellas el Asistente inventaría
+    # «remolque=?» o «Calendar_ID» sin saber si existen.
+    lineas = @inventory[:sources].map do |s|
+      columnas = s[:columns].present? ? "\n  #{' ' * 34} columnas: #{s[:columns].join(', ')}" : ''
+      "  #{s[:directive].ljust(34)} #{s[:name]}#{columnas}"
+    end
     return 'FUENTES DISPONIBLES: ninguna. Ninguna ruta puede consultar nada; usa "-" como fuente.' if lineas.empty?
 
     # La directiva va literal porque es texto exacto: el motor la busca con un patrón.

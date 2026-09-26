@@ -155,10 +155,20 @@ class ContactTrackings::Assistant::InventoryService
           source_type: source_type,
           name: source.name,
           directive: format(template, source.name),
-          mode: mode
-        }
+          mode: mode,
+          columns: sheet_columns(source)
+        }.compact
       end
     end
+  end
+
+  # proyecto@hoja_buscar — los encabezados de una hoja, para que el Asistente escriba
+  # {{hoja_buscar: Hoja | columna=? | Calendar_ID}} con columnas que existen. nil si no es hoja
+  # o todavía no se sincronizó.
+  def sheet_columns(source)
+    return nil unless source.source_type == 'google_sheet'
+
+    source.google_sheet_rows.order(:row_index).first&.data&.keys.presence
   end
 
   # Fuentes que la cuenta tiene guardadas y que el asistente no sabe ofrecer.

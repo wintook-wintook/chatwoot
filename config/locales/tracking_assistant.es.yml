@@ -42,6 +42,11 @@ es:
         Si la persona no lo pidió, devolvé esas partes EXACTAMENTE como estaban en el ENTRENAMIENTO
         ACTUAL, carácter por carácter. Si sí lo pidió, dejalas y nombralas en "toca". Devolvé el
         Entrenamiento completo de nuevo.
+      empty_promise: >-
+        No hiciste ninguna pregunta y tampoco entregaste el Entrenamiento: la persona se queda esperando.
+        Si ya tienes lo necesario, entrega el Entrenamiento completo con el cambio aplicado (lo que falte,
+        marcado <PENDIENTE:>). Si de verdad te falta un dato que solo la persona sabe, hazle esa pregunta
+        concreta, terminada en «?», y devuelve "entrenamiento": null.
       missing_mode: >-
         Entregaste el Entrenamiento sin preguntar si el agente CONTESTA primero y abre el caso solo
         si no pudo resolver, o si SOLO recauda datos y abre el caso siempre. Son dos agentes
@@ -179,6 +184,10 @@ es:
         La ruta '%{route}' agenda servicios pero no dice en qué hoja buscar el calendario de cada equipo:
         todos saldrán «no tengo ese equipo en el catálogo». Agrega después de la flecha, por ejemplo,
         {{hoja_buscar: Equipos | tipo=?; capacidad_t>=? | Calendar_ID}}.
+      paid_label_as_route_tag: >-
+        La ruta '%{route}' tiene la etiqueta #pago_confirmado. Esa etiqueta deja en firme los servicios que
+        esperan pago y la pone una persona al recibirlo; en una ruta la pondría el cliente con solo
+        escribir. Usa otra etiqueta (p. ej. #confirmado).
       route_does_nothing: >-
         La ruta '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
         con lo que dice el Entrenamiento. Ante algo concreto (precios, horarios) puede inventar o prometer
