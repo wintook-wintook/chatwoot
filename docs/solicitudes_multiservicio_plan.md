@@ -473,4 +473,30 @@ Suite del motor: 797 ejemplos, solo las 6 fallas previas.
 **Cómo pedírselo al Asistente.** Después de escribir la ruta: «Analiza el prompt». Si falta algo,
 sale pintado en la línea (con el aviso al pasar el mouse) y con punto en el árbol.
 
-### Pendiente: F6 — la pila completa P1–P12 (§10) y cierre
+### F6 — Pila completa P1–P12 (26/09/2026) ✅
+
+Copia de prueba #10368 en *Agents IA Test*; columna «Pagado» creada en el tipo «Comercial» (cuenta 2).
+
+| # | Escenario | Conv | Resultado |
+|---|---|---|---|
+| P1 | ej. 11: SOLICITUD 01 (pick up) + SOLICITUD 02 (plana 30 t) | 261 | 2 casos; pick up «no tengo ese equipo»; plana 2A/2B/2C ✅ |
+| P2 | ej. 6: grúa 60 t + plana 12 m de 30 t + low boy 50 t, 4 h | 262 | 3 casos; grúa sin equipo; plana y low boy con 3 opciones de 4 h ✅ |
+| P3 | reiteración del mismo mensaje | 262 | «Actualicé 3 servicios que ya tenía», mismos casos ✅ |
+| P4 | ej. 10: 2 fletes por separado, 6:00 pm – 12:00 am | 263 | 2 casos, opciones de 6 h (18:00–00:00) ✅ |
+| P5 | ej. 25: consolidar 2 tramos | 264 | 1 caso, «me falta la fecha» ✅ |
+| P6 | ej. 19: entrega y recolección | 265 | 2 casos (Carmen → Villahermosa y regreso) ✅ |
+| P7 | «sí» + «Le confirmamos el servicio 2» (requiere pago) | 262 | aparta 2 y 3; solo el 2 queda esperando pago ✅ |
+| P8 | «Cancela el low boy» | 262 | caso 3 cancelado y su tarea cancelada ✅ |
+| P9 | etiqueta `pago_confirmado` | 262 | «Tu servicio 2️⃣ quedó confirmado»; tarea sin [TENTATIVO] ✅ |
+| P10 | ej. 7 con un agente SIN `@solicitudes` | 268 | como siempre: caso normal, pide los datos del tipo de caso ✅ |
+| P11 | renta de low boy 50 t por 3 meses | 260 | bloque 1 dic 2026 → 28 feb 2027, evento de día completo ✅ |
+| P12 | plana → «sí» → confirmar (pago) → caso a columna «Pagado» | 267 | «Tu servicio 1️⃣ quedó confirmado»; tarea en firme ✅ |
+
+Observaciones (fuera de esta pieza o por configurar):
+- P10: el creador de casos normal pidió «Peso y Unidad» aunque el cliente dio «8,800 kg»
+  (lectura de campos del tipo «Comercial», no de `@solicitudes`).
+- Sin duración dicha, la opción dura lo del agente (30 min, P1). Para servicios, conviene
+  `@agendar_calendar(duracion=2h, …)` o que el cliente la diga.
+- Grúas, HIAB y pick up salen «no tengo ese equipo en el catálogo» hasta crear la hoja «Equipos».
+
+**Pieza 5 cerrada (F0–F7).**
