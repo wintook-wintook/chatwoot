@@ -1124,4 +1124,19 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
         .with(hash_including(working_hours: ContactTrackings::AvailabilitySlotService::ALL_DAY))
     end
   end
+
+  # 26/09/2026: «el domingo 4 de octubre» daba el domingo 27 de septiembre.
+  describe '#resolve_reschedule_date con día de semana y fecha' do
+    let(:tz) { 'America/Mexico_City' }
+
+    before { travel_to(Time.find_zone(tz).local(2026, 9, 26, 12)) }
+
+    it 'si coinciden, manda la fecha que escribió el cliente' do
+      expect(job.send(:resolve_reschedule_date, { weekday: 7, specific_date: '2026-10-04' }, tz)).to eq('2026-10-04')
+    end
+
+    it 'si no coinciden, sigue mandando el día de la semana' do
+      expect(job.send(:resolve_reschedule_date, { weekday: 7, specific_date: '2026-10-05' }, tz)).to eq('2026-09-27')
+    end
+  end
 end

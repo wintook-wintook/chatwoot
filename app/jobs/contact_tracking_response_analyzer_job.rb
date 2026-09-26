@@ -2202,9 +2202,23 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # calcula Ruby (próxima ocurrencia + weeks_ahead), en vez de confiar en la aritmética del LLM.
   # Cae a specific_date (fecha de calendario explícita) si no hay weekday.
   def resolve_reschedule_date(reschedule_data, timezone)
+    # «el domingo 4 de octubre» (26/09/2026): con día de semana Y fecha, el weekday mandaba
+    # y daba el próximo domingo (27 sep). Si la fecha cae en ese día de la semana, la escribió
+    # el cliente y es la buena; si no coincide, sigue mandando el weekday (la IA calcula mal).
+    fecha = explicit_date_matching_weekday(reschedule_data)
+    return fecha if fecha
     return weekday_to_date(reschedule_data[:weekday], reschedule_data[:weeks_ahead], timezone)&.iso8601 if reschedule_data[:weekday].present?
 
     reschedule_data[:specific_date].presence
+  end
+
+  def explicit_date_matching_weekday(reschedule_data)
+    return nil if reschedule_data[:weekday].blank? || reschedule_data[:specific_date].blank?
+
+    fecha = Date.iso8601(reschedule_data[:specific_date].to_s)
+    fecha.cwday == reschedule_data[:weekday].to_i ? fecha.iso8601 : nil
+  rescue Date::Error
+    nil
   end
 
   # Próxima ocurrencia de un día de semana ISO (1=lunes ... 7=domingo) en la zona del agente.
