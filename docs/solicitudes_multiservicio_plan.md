@@ -1,0 +1,264 @@
+# Plan — Pieza 5: `@solicitudes` (varios servicios en una conversación)
+
+> Solo plan (26/09/2026). Sigue a `docs/hoja_buscar_plan.md` (piezas 1–4) y al diseño del agente
+> de Grúas (`docs/agente_gruas_ssusa_rutas.md`). No se programa hasta revisar las decisiones (§11).
+
+---
+
+## 0. El problema, medido
+
+Ejemplos del corpus que hoy no se pueden resolver:
+
+| Ej. | Cliente | Pide en UN mensaje |
+|---|---|---|
+| 6 | Blue Marine | grúa 60 t + tracto con plana 12 m + camión con hiab (y al otro día 2 hiab + 1 hiab + 1 grúa) |
+| 10 | MADISA | 2 fletes de maquinaria «por separado» + horas de hiab |
+| 11 | Expro | «SOLICITUD 01», «SOLICITUD 02»… cada una con origen, destino, fecha y hora |
+| 3 | Cotemar | 2 HIAB distintos (14–15 t y 12 t) |
+| 19 | ARBAMEX | «entrega y recolección» = 2 movimientos separados en el tiempo |
+| 14 / 25 | Baker Hughes | viaje redondo / «consolidar» 2 tramos = UN servicio con varias paradas |
+| 16 | OPEX | 2 cargas en un mismo servicio; una medida corregida en el hilo |
+
+Hoy el motor tiene **una** cita por conversación y **un** caso abierto por contacto:
+
+```
+conversación ──► seguimiento (ContactTracking)
+                   ├─ appointment_event_id / appointment_at / appointment_status   ← UNA cita
+                   └─ @crear_ticket → si ya hay un caso abierto, lo REUSA          ← UN caso
+```
+
+- El segundo servicio se pega al caso abierto (`TicketCreatorService#reuse_existing_ticket`).
+- La segunda cita choca con «ya tienes una cita» (`inform_existing_appointment`).
+
+---
+
+## 1. La idea: cada servicio es un CASO con su TAREA AGENDADA
+
+No se inventa una tabla nueva. El módulo de Tickets ya tiene lo que hace falta:
+
+| Hace falta | Ya existe en Tickets |
+|---|---|
+| Un registro por servicio, con sus datos | `CaseTicket` (tipo de caso, campos propios `custom_attributes`, folio, `contact_tracking_id`) |
+| Su horario en el calendario del equipo | `CaseMeeting` = **Tarea agendada** (inicio, fin, `google_calendar_id`, espejo en Google, mover, cancelar, recordatorios) |
+| Que el equipo lo vea y lo mueva | Kanban de Tickets, columnas por tipo |
+
+```
+conversación ─► seguimiento
+                   │  @solicitudes
+                   ▼
+   ┌──────────────── Servicio 1 ─────────────────┐  ┌──────────── Servicio 2 ────────────┐
+   │ CASO #00123 «Solicitud de transporte»        │  │ CASO #00124                        │
+   │  equipo: grúa ≥ 60 t   origen: km 14+500     │  │  equipo: hiab 10–12 t  …           │
+   │  destino: Blue Giant   folio: —              │  │                                    │
+   │  └─ TAREA AGENDADA  29 may 08:00–09:00       │  │  └─ TAREA AGENDADA 31 may 07:00…   │
+   │       calendario GR-60 · [TENTATIVO]         │  │       calendario HB-12 · tentativo │
+   └──────────────────────────────────────────────┘  └────────────────────────────────────┘
+```
+
+Los agentes **sin** `@solicitudes` siguen exactamente igual (una cita en el seguimiento).
+
+---
+
+## 2. La directiva
+
+```
+@ruta(solicitud_servicio #solicita_servicio: solicito programar, favor de programar las siguientes unidades, SOLICITUD 01, …):
+    {{hoja:Equipos}}
+    -> @solicitudes
+    -> @crear_ticket(tipo=Solicitud de transporte)
+    -> @agendar_calendar(duracion=?, horario=24h, modo=tentativo)
+    -> {{hoja_buscar: Equipos | tipo=?; capacidad_t>=? | Calendar_ID}}
+```
+
+`@solicitudes` cambia el significado de lo que sigue: **cada** acción se hace **por servicio**.
+Sin `@solicitudes`, las mismas directivas hacen lo de hoy.
+
+---
+
+## 3. Separar el mensaje en servicios (IA con esquema fijo)
+
+Una llamada a la IA con salida JSON validada (como el extractor de fechas):
+
+```json
+{ "servicios": [
+  { "ref": "1", "etiqueta": "Grúa 60 t",
+    "equipo": { "tipo": "grúa", "capacidad_t": 60 },
+    "paradas": [ { "tipo": "origen",  "lugar": "Patio Pemex km 14+500" },
+                 { "tipo": "destino", "lugar": "Patio Blue Giant (API)" } ],
+    "fecha": "2026-05-29", "hora": "08:00", "duracion_min": 60,
+    "carga": "materiales Pemex", "peso_t": null, "medidas": null,
+    "folios": ["NAV19602808"], "responsable_sitio": null,
+    "modalidad": "On Call", "notas": "datos de personal para accesos Pemex" }
+] }
+```
+
+Reglas del extractor (en su prompt, probadas con el corpus):
+
+| Regla | Ejemplo |
+|---|---|
+| Un servicio por equipo o por «SOLICITUD 0N» | ej. 6, 11 |
+| «por separado» = servicios distintos | ej. 10 |
+| «consolidar» / «viaje redondo» = UN servicio con varias paradas | ej. 14, 25 |
+| «entrega y recolección» = DOS servicios | ej. 19 |
+| «presentarse en» = origen · «entregar en» = destino | ej. 8, 9 |
+| Si un dato se corrige en el hilo, vale el último | ej. 16 (2 m → 10 m) |
+| Sin fecha → servicio sin agenda (solo caso) | ej. 17, 21, 22 |
+
+Lo que la IA **no** decide: fechas relativas y duraciones — las resuelve Ruby con lo que ya
+existe (`AmbiguousDate`, `CalendarOptions.duration_in`, `calculate_reschedule_datetime`).
+
+### 3.1 Duplicados y reiteraciones
+
+Antes de crear, cada servicio se compara contra los **abiertos** de la misma conversación:
+
+```
+mismo tipo de equipo + misma fecha + mismo origen   →  es el mismo: se ACTUALIZA (último dato gana)
+distinto                                            →  servicio nuevo
+```
+Ej. 6: «solicito nuevamente el servicio… de la plana y grúa» no abre casos repetidos.
+
+---
+
+## 4. La conversación
+
+Una sola respuesta con todos los servicios, numerados:
+
+```
+👤 Solicito disponibilidad para mañana 29 de mayo 08:00, patio km 14+500 → Blue Giant:
+   1 grúa cap. 60 tons, 01 tracto con plana de 12 mts, 01 camión con grúa tipo hiab
+
+🤖 Recibí 3 servicios:
+   1️⃣ Grúa 60 t — vie 29 may 08:00 · GR-60 libre → 📌 apartado
+   2️⃣ Plana 12 m — vie 29 may 08:00 · TP-37 libre → 📌 apartado
+   3️⃣ Hiab — vie 29 may 08:00 · ocupado. Tengo:  3A 09:00 · 3B 10:00 · 3C 11:00
+   Para dejarlos en firme, confírmame el servicio. Del 3, elige 3A, 3B o 3C.
+```
+
+- **Hora exacta libre** → se aparta directo (tentativo) y se dice.
+- **Ocupado o sin hora** → alternativas con código **número + letra** (3A, 3B…): un «1» suelto ya
+  no alcanza con varios servicios.
+- **Faltan datos** → UNA pregunta para todos: «Del 2 me falta el peso; del 3, el destino».
+- **«El día lunes»** sin número → la fecha completa, como en la pieza 6.
+
+Estado de espera: hoy es un bloque `[PENDING_SLOT]` en `ai_context` (una oferta por
+conversación). Con servicios, cada caso guarda **su** oferta (`metadata.offered_slots`) y la
+elección «3B» se resuelve por el número del servicio.
+
+---
+
+## 5. Confirmar, mover y cancelar POR servicio
+
+| Cliente | Qué hace |
+|---|---|
+| «Le confirmamos los servicios» / «confirmo todos» | `@confirmar_servicio` sobre todos los apartados |
+| «Confirmo el 1 y el 3» | solo esos |
+| «Cancela el hiab del muelle 13» | la IA elige el servicio de la lista (con su etiqueta); se cancela la tarea agendada y el caso |
+| «El de la plana pásalo a las 10» | mover solo ese |
+| «Vamos a reprogramar la entrega» (uno solo abierto) | ese |
+
+Con varios abiertos y sin decir cuál → «¿Cuál? 1️⃣ Grúa 60 t · 2️⃣ Plana 12 m · 3️⃣ Hiab».
+
+**Pago** (`@confirmar_servicio(requiere=pago)`): la etiqueta `pago_confirmado` de la
+conversación confirma **todos** los servicios esperando pago (decisión §11-3).
+
+---
+
+## 6. Qué cambia en el motor
+
+```
+ContactTrackingResponseAnalyzerJob
+  └─ ruta con @solicitudes ──► ContactTrackings::ServiceRequests (nuevo)
+                                 ├─ Extractor      (IA → servicios, §3)
+                                 ├─ Matcher        (duplicados, §3.1)
+                                 ├─ por servicio:
+                                 │    Cases::TicketCreatorService (sin reusar: 1 caso por servicio)
+                                 │    SheetLookup / SheetCalendars (calendario de SU equipo)
+                                 │    AvailabilitySlotService (su duración, 24 h)
+                                 │    CaseMeeting (tarea agendada, tentativa)  ← en vez de
+                                 │                  appointment_* del seguimiento
+                                 └─ Reply          (un mensaje con todos, §4)
+```
+
+| Pieza de hoy | Cambio |
+|---|---|
+| `TicketCreatorService#reuse_existing_ticket` | con `@solicitudes`, no reusa: busca por servicio (§3.1) |
+| `handle_book_appointment` / `[PENDING_SLOT]` | por servicio, oferta en el caso |
+| `ServiceConfirmation` (pieza 4) | trabaja sobre la tarea agendada del caso |
+| `ServiceConfirmationListener` | confirma todas las tareas en espera de pago de la conversación |
+| `CaseMeeting` | + estado tentativo (`metadata.tentative` o columna); el espejo de Google ya existe |
+
+---
+
+## 7. Rentas de días o meses (ej. 18 y 25)
+
+La agenda llega hoy a 24 h. Una renta de 6 meses **no** se ofrece por horarios: se aparta un
+**bloque de días completos** (tarea agendada de día completo, inicio–fin). Propuesta: fase aparte
+(F7), con `duracion=?` aceptando «6 meses», «renta mensual» → bloque; disponibilidad = sin
+choques en todo el periodo.
+
+---
+
+## 8. Comprobador, catálogo y Asistente
+
+- `@solicitudes` sin `@crear_ticket` después → rojo: «cada servicio necesita su caso».
+- `@solicitudes` con tipo de caso sin los campos del servicio (origen, destino, fecha…) → ámbar.
+- Ficha en Recursos del Asistente; `Directives.strip_tokens` la quita del texto al modelo.
+
+---
+
+## 9. Fases
+
+| Fase | Qué | Tamaño |
+|---|---|---|
+| F0 | Estado tentativo en `CaseMeeting`; el espejo de Google con «[TENTATIVO]» y calendario del equipo | chico |
+| F1 | Extractor de servicios (IA + esquema) con las reglas de §3, probado contra los 26 ejemplos (sin conversación) | mediano |
+| F2 | `@solicitudes` + un caso por servicio + duplicados/reiteraciones | mediano |
+| F3 | Agenda por servicio: calendario de su equipo, su duración, apartar si está libre, ofertas «3A/3B» | grande |
+| F4 | Confirmar / mover / cancelar por servicio; pago de todos con la etiqueta | mediano |
+| F5 | Comprobador, catálogo, Asistente, i18n | chico |
+| F6 | Pila de pruebas (§10) + bitácora en los dos .md | chico |
+| F7 | Rentas de días/meses (bloques de días completos) | mediano (opcional) |
+
+---
+
+## 10. Pila de pruebas prevista
+
+En *Agents IA Test* con la copia #10368, calendarios de prueba (agenda 178). Con las hojas
+«Equipos» y «Unidades» si ya existen; si no, con los 24 remolques.
+
+| # | Mensaje (del corpus) | Esperado |
+|---|---|---|
+| P1 | Ej. 11: SOLICITUD 01 pick up 11:00 + SOLICITUD 02 (agregada) 14:00 | 2 casos, 2 tareas tentativas, un mensaje con 1️⃣ y 2️⃣ |
+| P2 | Ej. 6-A: grúa 60 t + plana 12 m + hiab, mañana 08:00 | 3 casos; libres apartados; ocupado con 3A/3B |
+| P3 | Ej. 6-A repetido dos días después («solicito nuevamente») | 0 casos nuevos: se actualizan los 3 |
+| P4 | Ej. 10: 2 fletes «por separado» 18:00–00:00 | 2 casos, 6 h cada uno, horario 24 h |
+| P5 | Ej. 25: «consolidar» NAV…150 + NAV…449 | 1 caso con 2 paradas y 2 folios |
+| P6 | Ej. 19: «entrega y recolección» | 2 casos (entrega / recolección) |
+| P7 | P2 + «confirmo el 1 y el 3» | solo 1 y 3 en firme (o pago pedido) |
+| P8 | P2 + «cancela el hiab» | solo el 3 cancelado (caso y tarea) |
+| P9 | P2 + etiqueta `pago_confirmado` | todos los que esperaban pago, en firme |
+| P10 | Ej. 7 (un solo servicio) con agente SIN `@solicitudes` | igual que hoy (una cita) |
+
+---
+
+## 11. Decisiones abiertas
+
+1. **Servicio = caso + tarea agendada** (recomendado) o una tabla nueva «servicios» aparte de Tickets.
+2. **Hora exacta libre**: ¿se aparta directo (tentativo) o se ofrece como opción para confirmar?
+3. **Pago**: ¿la etiqueta confirma todos los servicios de la conversación, o se confirma por caso
+   (mover el caso a una columna «Pagado» del Kanban)?
+4. **Tipo de caso**: uno solo «Solicitud de transporte», o uno por equipo (Grúa, Hiab, Plana…).
+5. **Rentas largas (F7)**: ¿entran en esta pieza o después?
+
+---
+
+## 12. Cómo se le pedirá al Asistente (cuando esté hecho)
+
+```
+En la ruta solicitud_servicio, después de la flecha y en este orden exacto:
+@solicitudes -> @crear_ticket(tipo=Solicitud de transporte) -> @agendar_calendar(duracion=?, horario=24h, modo=tentativo)
+-> {{hoja_buscar: Equipos | tipo=?; capacidad_t>=? | Calendar_ID}}
+Frases: solicito programar, favor de programar las siguientes unidades, SOLICITUD 01, requerimos
+las siguientes unidades, programa de embarque.
+```
+Luego «Analiza el prompt». (Se confirmará con la pila de pruebas en F6.)
