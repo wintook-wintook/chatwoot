@@ -15,8 +15,10 @@
 
 class ContactTrackings::ServiceRequests::Registry
   META_KEY = 'servicio'
-  KINDS = ['cama baja', 'low boy', 'pick up', 'pickup', 'unidad ligera', 'grua', 'hiab', 'plana', 'torton', 'rabon',
-           'tracto', 'quinta', 'camion', 'plataforma', 'contenedor', 'flete'].freeze
+  # Del más específico al más general: «camión con grúa tipo hiab» es un hiab (no una grúa ni
+  # un camión) y «tracto con plana de 12 mts» es una plana (medido el 26/09 en la conv. 256).
+  KINDS = ['cama baja', 'low boy', 'pick up', 'pickup', 'unidad ligera', 'hiab', 'plana', 'grua', 'torton', 'rabon',
+           'quinta', 'tracto', 'camion', 'plataforma', 'contenedor', 'flete'].freeze
   PRIORITIES = { 'baja' => 'low', 'media' => 'medium', 'normal' => 'medium', 'alta' => 'high',
                  'urgente' => 'urgent', 'low' => 'low', 'medium' => 'medium', 'high' => 'high', 'urgent' => 'urgent' }.freeze
 

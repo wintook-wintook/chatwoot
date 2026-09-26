@@ -54,4 +54,12 @@ RSpec.describe ContactTrackings::ServiceRequests::Registry do
 
     expect(registrar(grua(date_text: '30 de mayo 2027')).first.created).to be(true)
   end
+
+  it '«camión con grúa tipo hiab» y «Hiab» son el mismo equipo al reiterar' do
+    hiab = servicio.new(label: 'Hiab', equipment_type: 'camión con grúa tipo hiab', stops: [{ 'lugar' => 'km 14+500' }],
+                        date_text: '29 de mayo 2027', folios: [])
+    registrar(hiab)
+
+    expect(registrar(hiab.dup.tap { |h| h.equipment_type = 'hiab' }).first.created).to be(false)
+  end
 end
