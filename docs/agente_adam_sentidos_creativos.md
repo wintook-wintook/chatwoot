@@ -107,3 +107,32 @@ Subir los dos `.md` de `tmp/Adam` con «Importar instrucciones» no sirve para e
 lo lee por partes y no cabe como Entrenamiento). Lo práctico: abrir el Asistente sobre #11833 y
 pedir cambios en palabras («que en precios nunca dé cifras y escale si insisten»); el comprobador
 revisa cada entrega.
+
+## 7. Prueba: el motor arma ADAM solo, desde los dos archivos (29/09/2026)
+
+Los dos `.md` unidos en uno (la pantalla acepta un solo archivo) y pasados por el mismo camino
+que «Importar instrucciones»: leer → redactar de una → completar. Sin respuestas de la persona.
+Encargo #1067. Resultados en `/tmp/Adam/motor-redaccion-13k.txt` y `/tmp/Adam/motor-final-93k.txt`.
+
+| Paso | Resultado |
+|---|---|
+| Leer | 74 trozos, 11.7 min, US$ 2.82 (gpt-4o) |
+| Ficha | 763 reglas (82 mil car.), 268 prohibiciones (24.5 mil), 51 temas, 7 puntos de conocimiento. El tope de la ficha es 16 mil: la vuelta de «apretar» no alcanzó |
+| Redactar de una | 13.8 mil car., **52 rutas** (cada tema una ruta, varios son etapas internas: «Concluir una intervención», «Duplicidad de información») |
+| Completar («nada se pierde») | vuelve a coser 989 puntos → **93.6 mil car.** ([REGLAS] 61.7 mil, [PROHIBIDO] 17.8 mil) |
+| Fuente | `@buscar_articulo` en todas: el documento nunca dice que el conocimiento está en el foro |
+| Comprobador | sin rojos; ámbar: 3 etiquetas, 1 nota pendiente |
+
+Comparado con la v2.4 hecha a mano (15 mil car., 18 rutas, foro): el motor sabe escribir la
+gramática, pero hoy protege «que no se pierda nada», no «que quepa y funcione».
+
+Lo que le falta (plan pendiente):
+1. Leer los niveles de regla (inviolable / obligatoria / recomendada) y capas; al prompt solo lo
+   que manda, condensado.
+2. Tope real del Entrenamiento; «completar» solo lo inviolable; el resto a una fuente de
+   conocimiento en vez de coserlo.
+3. Temas = intenciones del cliente, agrupadas (≈15–20 rutas), no una por sección.
+4. Cruzar con las fuentes de la cuenta (buscar en el foro los temas del documento) y elegir la fuente.
+5. Pila de pruebas automática desde los campos «Verificación» de cada regla.
+6. Avisar los límites del motor que contradicen reglas del cliente.
+7. Aceptar varios archivos en la pantalla.
