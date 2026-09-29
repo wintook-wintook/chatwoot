@@ -230,11 +230,9 @@ es:
       # try_create_ticket(directive: nil), que cae al prompt ENTERO y encuentra ahí el
       # @crear_ticket de OTRA ruta. Abren caso, con el tipo ajeno, y ANTES de la fuente.
       mixed_escalation_regime: >-
-        Hay rutas con escalamiento y rutas sin él (%{routes}). Eso NO las deja sin caso: el motor
-        busca la directiva en el Entrenamiento entero, así que esas rutas van a abrir caso con el
-        @crear_ticket de otra ruta —incluido su tipo— y además lo van a evaluar ANTES de consultar
-        su fuente, no después. Si tienen que abrir caso, dales su propia flecha con su tipo; si no
-        tienen que abrirlo, hoy no hay forma de evitarlo salvo sacar todo @crear_ticket suelto.
+        Estas rutas no tienen fuente ni flecha (%{routes}): van a abrir caso con el @crear_ticket de
+        otra ruta —incluido su tipo—. Si deben abrir caso, dales su propia flecha con su tipo; si solo
+        tienen que contestar, dales una fuente (una ruta con fuente y sin flecha contesta y no abre caso).
       calendar_not_configured: >-
         Esta cuenta no tiene ningún calendario de Google conectado, así que @agendar_calendar no va a
         agendar nada: la directiva parsea bien y el turno pasa de largo, sin aviso. Hay que conectar

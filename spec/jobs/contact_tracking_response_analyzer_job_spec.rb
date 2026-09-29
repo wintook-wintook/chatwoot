@@ -326,6 +326,27 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
       expect(job.send(:ticket_first_branch?, precios)).to be(false)
       expect(job.send(:appointment_allowed_for?, nil)).to be(true)
     end
+
+    it 'una ruta que declara sus acciones sin @agendar_calendar no ofrece horarios (ADAM, 28/09/2026)' do
+      web = rama('@ruta(desarrollo_web #desarrollo_web: sitio web): @buscar_foro(Foro) -> @crear_ticket(tipo=Comercial)')
+      consulta = rama('@ruta(presentacion #presentacion: quiénes son): @buscar_foro(Foro)')
+      con_agenda = rama('@ruta(demo #demo: quiero una demo): @buscar_foro(Foro) -> @crear_ticket(tipo=Comercial) -> @agendar_calendar')
+
+      expect(job.send(:appointment_allowed_for?, web)).to be(false)
+      expect(job.send(:appointment_allowed_for?, consulta)).to be(true)
+      expect(job.send(:appointment_allowed_for?, con_agenda)).to be(true)
+    end
+
+    it 'una ruta con fuente y sin flecha no hereda el caso de otra ruta; una sin fuente ni flecha sí (29/09/2026)' do
+      prompt = "@ruta(web #web: sitio web): @buscar_foro(Foro)\n@ruta(humano #humano: una persona): -\n" \
+               '@ruta(dir #dir: el director): - -> @crear_ticket(tipo=Comercial, prioridad=alta)'
+      tracking = instance_double(ContactTracking, complementary_prompt: prompt)
+      rutas = ContactTrackings::RouteMap.parse(prompt).routes.index_by(&:name)
+
+      expect(job.send(:source_only_branch?, tracking, rutas['web'])).to be(true)
+      expect(job.send(:source_only_branch?, tracking, rutas['humano'])).to be(false)
+      expect(job.send(:source_only_branch?, tracking, rutas['dir'])).to be(false)
+    end
   end
 
   describe '#classify_appointment (appointment-aware, no eager)' do

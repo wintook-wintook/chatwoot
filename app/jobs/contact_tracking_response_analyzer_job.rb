@@ -224,7 +224,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       ticket_directive   = nil
       ticket_as_fallback = Cases::TicketCreatorService.fallback?(tracking)
     end
-    ticket_now = !ticket_as_fallback
+    ticket_now = !ticket_as_fallback && !source_only_branch?(tracking, branch)
     return true if ticket_now && try_create_ticket(tracking, message, route_result, directive: ticket_directive, branch: branch)
 
     # proyecto@bot_seguimiento_calendar — @agendar_calendar (appointment-aware): el clasificador
@@ -326,9 +326,25 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     (appt || {}).merge(appointment_action: :book_new, read_date: true)
   end
 
+  # Ruta con fuente y sin flecha («@ruta(x): @buscar_foro(F)»): contesta con su fuente y no
+  # abre caso. Antes heredaba el @crear_ticket de otra ruta y lo abría ANTES de consultar la
+  # fuente: el 29/09/2026 el agente ADAM abría un caso (prioridad alta, el de su ruta de
+  # escalamiento) con «quiero rediseñar mi página web». Una ruta sin fuente ni flecha sigue
+  # heredándolo (p. ej. una ruta «humano» que debe pasar el caso).
+  def source_only_branch?(tracking, branch)
+    branch.present? && branch.directive.present? && branch.escalation.blank? && branch_escalations?(tracking)
+  end
+
   # La agenda (ofrecer horarios, agendar) no corre en una rama de caso propio.
+  # Tampoco en una ruta que declara sus acciones sin @agendar_calendar: el 28/09/2026 el
+  # agente ADAM (rutas «@buscar_foro(…) -> @crear_ticket(…)», calendario en otra ruta)
+  # ofrecía horarios después de abrir el caso en cualquier ruta. Sin ruta, o en una ruta
+  # sin flecha, sigue como antes.
   def appointment_allowed_for?(branch)
-    !ticket_first_branch?(branch)
+    return false if ticket_first_branch?(branch)
+    return true if branch.nil? || branch.escalation.blank?
+
+    branch.escalation.to_s.match?(/@agendar_calendar\b/i)
   end
 
   def try_create_ticket(tracking, message, route_result, directive: nil, branch: nil)

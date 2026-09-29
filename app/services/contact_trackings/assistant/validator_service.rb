@@ -330,12 +330,13 @@ class ContactTrackings::Assistant::ValidatorService
   end
 
   # ── D5 · régimen de escalamiento mixto ──────────────────────────────────────
-  # Si UNA rama lleva flecha, el motor cambia de régimen y las ramas sin flecha
-  # dejan de abrir casos, aunque haya un @crear_ticket global.
+  # Si UNA rama lleva flecha, las ramas sin flecha NI fuente heredan el @crear_ticket de
+  # otra. Las que tienen fuente contestan con ella y no abren caso (desde el 29/09/2026,
+  # ContactTrackingResponseAnalyzerJob#source_only_branch?): no se avisan.
   def check_escalation_regime
     return unless map.escalations?
 
-    sin_flecha = map.routes.reject(&:escalates?).map(&:name)
+    sin_flecha = map.routes.reject { |r| r.escalates? || r.directive.present? }.map(&:name)
     return if sin_flecha.empty?
 
     add(:degrading, :mixed_escalation_regime,

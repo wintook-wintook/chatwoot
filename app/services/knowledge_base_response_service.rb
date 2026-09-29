@@ -821,26 +821,22 @@ class KnowledgeBaseResponseService
     request['Api-Username'] = username
     request['Content-Type'] = 'application/json'
 
-    data      = JSON.parse(http.request(request).body)
-    posts     = data['posts'] || []
-    topic_map = (data['topics'] || []).index_by { |t| t['id'] }
+    response = http.request(request)
+    # Foro sin Discourse AI activo: la búsqueda normal (ver KnowledgeBase::DiscourseKeywordSearch).
+    return keyword_search(config).hits(query) if response.code == '404'
 
-    Rails.logger.info "[KBase] 📚 #{posts.size} resultado(s) en Discourse semantic-search"
-
-    posts.filter_map do |post|
-      topic = topic_map[post['topic_id']]
-      next unless topic
-
-      {
-        post_id: post['id'],
-        title: topic['title'].to_s.strip,
-        url: "#{url}/t/#{topic['slug']}/#{topic['id']}",
-        blurb: post['blurb'].to_s.strip
-      }
-    end
+    data = JSON.parse(response.body)
+    Rails.logger.info "[KBase] 📚 #{(data['posts'] || []).size} resultado(s) en Discourse semantic-search"
+    KnowledgeBase::DiscourseKeywordSearch.to_hits(data, url)
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error en Discourse search: #{e.message}"
     []
+  end
+
+  def keyword_search(config)
+    @keyword_search ||= KnowledgeBase::DiscourseKeywordSearch.new(
+      config, ask: ->(messages) { call_openai_simple(messages, max_tokens: 60, temperature: 0.0) }
+    )
   end
 
   # Recibe TODAS las consultas del turno (ver search_queries) y devuelve un solo contexto
