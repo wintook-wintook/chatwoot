@@ -112,20 +112,20 @@ class ContactTrackings::Assistant::SuggestedTests
   def prompt(rutas)
     catalogo = rutas.map { |r| "- #{r.name}: #{r.description}" }.join("\n")
     <<~PROMPT
-      Vas a escribir mensajes de prueba para un clasificador de atención al cliente. Estas son sus ramas
+      Vas a escribir mensajes de prueba para un clasificador de atención al cliente. Estas son sus rutas
       y la descripción que el clasificador usa para decidir:
 
       #{catalogo}
 
-      1. Por cada rama, #{PER_ROUTE} mensajes como los escribiría un cliente real por chat: cortos, en
+      1. Por cada ruta, #{PER_ROUTE} mensajes como los escribiría un cliente real por chat: cortos, en
          primera persona, con sus palabras. NO copies la descripción ni uses sus términos técnicos: la
          prueba tiene que ser un mensaje que alguien manda de verdad.
-      2. Hasta #{MAX_EDGE_CASES} casos límite que pongan a prueba el corte entre ramas: un tema ajeno a la
-         empresa, un saludo sin pedido, un mensaje con dos temas, algo que podría ir a dos ramas. Para cada
-         uno, la rama que te parece correcta (o null) y en una frase por qué.
+      2. Hasta #{MAX_EDGE_CASES} casos límite que pongan a prueba el corte entre rutas: un tema ajeno a la
+         empresa, un saludo sin pedido, un mensaje con dos temas, algo que podría ir a dos rutas. Para cada
+         uno, la ruta que te parece correcta (o null) y en una frase por qué.
 
-      Escribí en #{ContactTrackings::Assistant::Language.name_for}.
-      Respondé SOLO un JSON:
+      Escribe en #{ContactTrackings::Assistant::Language.name_for}.
+      Responde SOLO un JSON:
       {"ramas": [{"rama": "<nombre exacto>", "mensajes": ["...", "..."]}],
        "limites": [{"mensaje": "...", "rama": "<nombre exacto o null>", "por_que": "..."}]}
     PROMPT

@@ -17,7 +17,7 @@ const PAGE_SIZE = 25;
 const CAMPAIGN_STATUS_COLOR = {
   draft: 'text-slate-500 bg-slate-100 dark:bg-slate-700',
   running: 'text-green-700 bg-green-100 dark:bg-green-900/30',
-  paused: 'text-amber-600 bg-amber-100 dark:bg-amber-900/30',
+  paused: 'text-amber-800 bg-amber-100 dark:bg-amber-900/30',
   finished: 'text-slate-600 bg-slate-100 dark:bg-slate-700',
 };
 
@@ -26,7 +26,7 @@ const TRACKING_STATUS_META = {
   pending: { label: 'Pendiente', color: 'text-slate-500' },
   scheduled: { label: 'Programado', color: 'text-blue-500' },
   active: { label: 'Activo', color: 'text-green-600' },
-  paused: { label: 'Pausado', color: 'text-amber-500' },
+  paused: { label: 'Pausado', color: 'text-amber-800' },
   completed: { label: 'Completado', color: 'text-green-700' },
   cancelled: { label: 'Cancelado', color: 'text-red-500' },
   failed: { label: 'Fallido', color: 'text-red-700' },
@@ -176,7 +176,7 @@ export default {
         {
           key: 'PAUSED',
           value: this.stats.paused || 0,
-          color: 'text-amber-500 dark:text-amber-400',
+          color: 'text-amber-800 dark:text-amber-800',
           filter: 'ctrl_paused',
         },
         {

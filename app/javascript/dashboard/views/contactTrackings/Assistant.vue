@@ -33,19 +33,42 @@
 // ============================================================================
 import { useAlert } from 'dashboard/composables';
 import AssistantAPI from 'dashboard/api/assistant';
+import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
 import Spinner from 'shared/components/Spinner.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import { sortRows, nextOrder, NUMBER, DATE, TEXT } from './assistant/tableSort';
-import { findRouteLine, lineRange } from './assistant/draftNavigation';
+import {
+  findRouteLine,
+  lineRange,
+  lineMarks,
+  lineMessages,
+} from './assistant/draftNavigation';
+import DraftLineMarks from './assistant/DraftLineMarks.vue';
+import ChangeLog from './assistant/ChangeLog.vue';
+import { withCannedGroup } from './assistant/knowledgeGroup';
+import { emitter } from 'shared/helpers/mitt';
+import { ASSISTANT_SOURCES_CHANGED } from './assistant/sourceDirective';
 import { pendingCount } from './assistant/pendingMarkers';
 import InterviewPanel from './assistant/InterviewPanel.vue';
 import SessionCard from './assistant/SessionCard.vue';
 import SortableTh from './assistant/SortableTh.vue';
 import ProgressStrip from './assistant/ProgressStrip.vue';
-import CopyChip from './assistant/CopyChip.vue';
 import ValidationBadge from './assistant/ValidationBadge.vue';
 import ReportModal from './assistant/ReportModal.vue';
+import EngineCatalog from './assistant/EngineCatalog.vue';
+import InstructionsPanel from './assistant/InstructionsPanel.vue';
+import {
+  instructionsProgress,
+  instructionsFilename,
+} from './assistant/instructionsProgress';
+import { downloadMarkdown } from './assistant/engineCatalogMarkdown';
+import {
+  mentionsConversation,
+  reviewMessage,
+  hasTrainingFixes,
+} from './assistant/conversationReview';
+import BriefModal from './assistant/BriefModal.vue';
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import VersionsPanel from './assistant/VersionsPanel.vue';
 // La Estructura del Agente: el árbol con sus modales (docs/estructura_agente_arbol_plan.md).
@@ -54,6 +77,7 @@ import trainingSectionsMixin from './assistant/trainingSectionsMixin';
 import OptimizeModal from './assistant/OptimizeModal.vue';
 import ExplainModal from './assistant/ExplainModal.vue';
 import DryRunModal from './assistant/DryRunModal.vue';
+import TestBatteryModal from './assistant/TestBatteryModal.vue';
 import SaveModal from './assistant/SaveModal.vue';
 
 // El teclado va más rápido que un request: se espera a que la persona pare.
@@ -62,18 +86,25 @@ const VALIDATE_DEBOUNCE_MS = 400;
 // más seguido no muestra nada nuevo.
 const PROGRESS_POLL_MS = 1500;
 const OPTIMIZE_MAX_WAIT_MS = 5 * 60 * 1000;
+// Guardado automático de lo editado a mano: tras esta pausa sin escribir.
+const AUTOSAVE_DELAY_MS = 4000;
+// Pegar un prompt en el Entrenamiento vacío ofrece analizarlo (onDraftPaste). Menos
+// que esto es un nombre o una prueba, no un prompt.
+const MIN_PASTE_TO_ANALYZE = 80;
 const INBOX_STORAGE_KEY = 'tracking_assistant_inbox_id';
 
 // El chat del Asistente, escondido a pedido del usuario (17/09/2026): el
 // Entrenamiento se arma en el formulario de secciones, que se lleva todo el ancho.
-// No se borra nada — la entrevista sigue entera detrás de esta bandera, y volver a
-// mostrarla es ponerla en true.
-const SHOW_CHAT = false;
+// Vuelve el 23/09/2026 para REFINAR, y comparte la columna izquierda con la
+// Estructura del Agente: se ve uno a la vez (`leftPanel`), con un selector arriba.
+// La pantalla arranca en la Estructura; el chat se abre solo al crear un
+// Entrenamiento desde un encargo.
+const SHOW_CHAT = true;
 
-// La pestaña Conversaciones, escondida a pedido del usuario (18/09/2026): lista las
-// conversaciones del chat, y el chat no se usa. La tabla y el retomar siguen enteros
-// detrás de esta bandera; empezar de cero está en el botón "Nuevo Agente IA".
-const SHOW_SESSIONS_TAB = false;
+// La pestaña de las conversaciones guardadas. Escondida el 18/09/2026 (el chat no se
+// usaba); vuelve el 23/09/2026 como «En construcción»: los agentes a medio armar,
+// que todavía no se guardaron como Agente IA (los guardados están en «Agentes IA»).
+const SHOW_SESSIONS_TAB = true;
 
 // El backend devuelve hasta 50 conversaciones (TrackingAssistantSession::LIST_LIMIT),
 // así que el paginado es sobre lo que ya está en memoria: no hay una segunda página
@@ -115,22 +146,27 @@ const AUDIT_STATUS_LABEL = {
 
 export default {
   components: {
-    CopyChip,
     TableFooter,
     EmptyState,
     Spinner,
     InterviewPanel,
+    DraftLineMarks,
+    ChangeLog,
     SessionCard,
     SortableTh,
     ProgressStrip,
     ValidationBadge,
     ReportModal,
+    EngineCatalog,
+    InstructionsPanel,
+    BriefModal,
     ManualConflictNotice,
     VersionsPanel,
     AgentStructure,
     OptimizeModal,
     ExplainModal,
     DryRunModal,
+    TestBatteryModal,
     SaveModal,
   },
   mixins: [trainingSectionsMixin],
@@ -203,6 +239,12 @@ export default {
       // Fase E: optimizar ({ …, version }) y explicar lo seleccionado en el editor.
       showOptimizeModal: false,
       optimizeResult: null,
+      // El <textarea> del Entrenamiento, para DraftLineMarks. Los $refs no son
+      // reactivos y el editor aparece y desaparece con las pestañas: se toma en
+      // cada render (ver `updated`).
+      draftEditorEl: null,
+      // Lo último que se guardó solo (autosave), para no mandar lo mismo dos veces.
+      lastAutosaved: '',
       isOptimizing: false,
       optimizeError: '',
       draftSelection: '',
@@ -214,6 +256,9 @@ export default {
       isSuggesting: false,
       suggestStage: null,
       showDryRunModal: false,
+      // «Probar el agente» (pila en vivo, M5) y el encargo del que salió el agente.
+      showTestBattery: false,
+      batteryBriefId: null,
       draftVersion: 0,
       isDryRunning: false,
       dryRunError: '',
@@ -225,14 +270,30 @@ export default {
       // cerrada ocupa una línea en vez de un cuarto de la columna.
       // El informe del comprobador, en un modal: el alto de la columna es del texto.
       showReportModal: false,
-      // Modo ancho: esconde la conversación y deja el Entrenamiento a todo el
-      // ancho. Para los 6 agentes de la cuenta que pasan de 370 líneas.
-      isWideEditor: !SHOW_CHAT,
+      // El encargo (.md) con la idea del agente: ver BriefModal.
+      showBriefModal: false,
+      isWritingBrief: false,
+      // Qué ocupa la columna izquierda: 'structure' (la Estructura del Agente) o
+      // 'chat'. Uno a la vez (pedido del usuario, 23/09/2026): con los dos, más el
+      // Entrenamiento, eran tres columnas apretadas.
+      leftPanel: 'structure',
+      // Qué muestra «En construcción»: 'open' · 'saved' · 'all'.
+      sessionsFilter: 'open',
+      // Las instrucciones iniciales que se llenan conversando mientras no hay
+      // Entrenamiento (DraftingChat). Se guardan con la conversación.
+      instructions: '',
+      // Unas instrucciones mandadas a leer desde el chat: el modal las toma de acá.
+      chatBrief: null,
+      isSendingInstructions: false,
+      // Las cuentas de Google conectadas, para elegir el calendario al guardar.
+      calendarIntegrations: [],
       sessionsPage: 1,
       SESSIONS_PER_PAGE,
       // El orden arranca donde lo dejó el backend (recent_first): así el primer
       // pintado y el que se ve después de tocar un encabezado son coherentes.
       sessionsSort: { key: 'updated_at', order: 'desc' },
+      // La fila que se va a borrar, para nombrarla en la confirmación.
+      discardTarget: null,
       agentsPage: 1,
       AGENTS_PER_PAGE,
       // Los roto primero: es la pestaña a la que se entra para arreglar algo.
@@ -240,6 +301,14 @@ export default {
     };
   },
   computed: {
+    // Las líneas del texto con hallazgos, para pintarlas en el editor.
+    draftLineMarks() {
+      return lineMarks(this.draft, this.validation);
+    },
+    // Lo que dice cada línea marcada, para el recuadro al pasar el mouse.
+    draftLineMessages() {
+      return lineMessages(this.draft, this.validation);
+    },
     // El texto que edita el mixin de secciones acá es el borrador. Al escribirlo se
     // pasa por onDraftInput, igual que si se hubiera tipeado en el editor: revalida,
     // envejece las pruebas y cuenta como edición a mano.
@@ -258,6 +327,70 @@ export default {
     },
     showChat() {
       return SHOW_CHAT;
+    },
+    // Las pestañas visibles, en orden. `panel` es el número que usa activeTab y que
+    // decide qué se muestra (v-show="activeTab === N"); no cambia al esconder una.
+    tabs() {
+      return [
+        {
+          panel: 0,
+          label: 'TRACKING_ASSISTANT_VIEW.TAB_ASSISTANT',
+          count: null,
+        },
+        this.showSessionsTab && {
+          panel: 1,
+          label: 'TRACKING_ASSISTANT_VIEW.TAB_SESSIONS',
+          count: this.openSessions.length,
+        },
+        {
+          panel: 2,
+          label: 'TRACKING_ASSISTANT_VIEW.TAB_AUDIT',
+          count: this.brokenAgents.length,
+        },
+        {
+          panel: 3,
+          label: 'TRACKING_ASSISTANT_VIEW.TAB_INVENTORY',
+          count: null,
+        },
+      ].filter(Boolean);
+    },
+    activeTabPosition() {
+      return Math.max(
+        0,
+        this.tabs.findIndex(tab => tab.panel === this.activeTab)
+      );
+    },
+    // Qué puede ocupar la columna izquierda, con el texto de su botón.
+    leftPanels() {
+      const avance = instructionsProgress(this.instructions);
+      return [
+        {
+          id: 'structure',
+          icon: 'list',
+          label: this.$t('TRACKING_ASSISTANT_VIEW.TREE_TITLE'),
+        },
+        {
+          id: 'chat',
+          icon: 'chat',
+          label: this.$t('TRACKING_ASSISTANT_VIEW.PANEL_CHAT', {
+            count: this.messages.length,
+          }),
+        },
+        {
+          id: 'instructions',
+          icon: 'document',
+          label: avance.total
+            ? this.$t('TRACKING_ASSISTANT_VIEW.PANEL_INSTRUCTIONS', {
+                filled: avance.filled,
+                total: avance.total,
+              })
+            : this.$t('TRACKING_ASSISTANT_VIEW.PANEL_INSTRUCTIONS_EMPTY'),
+        },
+      ];
+    },
+    // El Entrenamiento agenda: al guardar hay que elegir el calendario.
+    usesCalendar() {
+      return /@agendar_calendar\b/i.test(this.draft);
     },
     showSessionsTab() {
       return SHOW_SESSIONS_TAB;
@@ -359,8 +492,50 @@ export default {
         ? ultima.result
         : null;
     },
+    // Por defecto, los que siguen a medias; con el filtro, también los que ya se
+    // guardaron como Agente IA (pedido del usuario, 24/09/2026).
+    openSessions() {
+      return this.sessions.filter(sesion => sesion.status === 'open');
+    },
+    savedSessions() {
+      return this.sessions.filter(sesion => sesion.status === 'saved');
+    },
+    // En el computed y no en la plantilla: el compilador de plantillas de este
+    // webpack no acepta `?.` y la pantalla entera dejaba de cargar (25/09/2026).
+    discardDescription() {
+      const fila = this.discardTarget || {};
+      return this.$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_DESCRIPTION', {
+        id: fila.id,
+        title:
+          fila.title || this.$t('TRACKING_ASSISTANT_VIEW.SESSIONS_UNTITLED'),
+      });
+    },
+    visibleSessions() {
+      if (this.sessionsFilter === 'saved') return this.savedSessions;
+      if (this.sessionsFilter === 'all') return this.sessions;
+      return this.openSessions;
+    },
+    sessionFilters() {
+      return [
+        {
+          id: 'open',
+          label: 'SESSIONS_FILTER_OPEN',
+          count: this.openSessions.length,
+        },
+        {
+          id: 'saved',
+          label: 'SESSIONS_FILTER_SAVED',
+          count: this.savedSessions.length,
+        },
+        {
+          id: 'all',
+          label: 'SESSIONS_FILTER_ALL',
+          count: this.sessions.length,
+        },
+      ];
+    },
     sortedSessions() {
-      return sortRows(this.sessions, this.sessionsSort, SESSION_COLUMNS);
+      return sortRows(this.visibleSessions, this.sessionsSort, SESSION_COLUMNS);
     },
     pagedSessions() {
       const start = (this.sessionsPage - 1) * SESSIONS_PER_PAGE;
@@ -373,74 +548,19 @@ export default {
       const start = (this.agentsPage - 1) * AGENTS_PER_PAGE;
       return this.sortedAgents.slice(start, start + AGENTS_PER_PAGE);
     },
-    // Las cuatro piezas que se pueden nombrar en un Entrenamiento, cada una con
-    // la cadena EXACTA que hay que escribir. El texto del chip no es una etiqueta
-    // bonita: es lo que el parser busca, y por eso se copia tal cual.
-    resourceBlocks() {
-      if (!this.inventory) return [];
-
-      const t = key => this.$t(`TRACKING_ASSISTANT_VIEW.${key}`);
-      return [
-        {
-          key: 'sources',
-          title: t('SOURCES_TITLE'),
-          hint: t('SOURCES_HINT'),
-          empty: t('SOURCES_EMPTY'),
-          // La directiva la arma el backend desde SEARCH_DIRECTIVES: es la misma
-          // cadena que el motor va a detectar al atender un turno.
-          items: (this.inventory.sources || []).map(source => ({
-            text: source.directive,
-            note: source.name,
-          })),
-        },
-        {
-          key: 'groups',
-          title: t('GROUPS_TITLE'),
-          hint: t('GROUPS_HINT'),
-          empty: t('GROUPS_EMPTY'),
-          items: (this.inventory.canned_groups || []).map(group => ({
-            text: `@buscar_predefinidas(${group.prefix})`,
-            note: String(group.count),
-          })),
-        },
-        {
-          key: 'caseTypes',
-          title: t('CASE_TYPES_TITLE'),
-          hint: t('CASE_TYPES_HINT'),
-          empty: t('CASE_TYPES_EMPTY'),
-          items: (this.inventory.case_types || []).map(name => ({
-            text: `@crear_ticket(tipo=${name})`,
-            note: '',
-          })),
-        },
-        {
-          key: 'actions',
-          title: t('ACTIONS_TITLE'),
-          hint: t('ACTIONS_HINT'),
-          empty: '',
-          // `note` acá no es contexto decorativo: dice que la directiva NO va a
-          // ejecutar. @agendar_calendar parsea bien y no agenda nada si la cuenta
-          // no tiene calendario conectado, así que si el chip no lo avisa, la
-          // pantalla ofrece algo que no funciona.
-          items: (this.inventory.actions || []).map(action => ({
-            text: action.directive,
-            note: action.available ? '' : t('ACTIONS_UNAVAILABLE'),
-          })),
-        },
-        {
-          key: 'labels',
-          title: t('LABELS_TITLE'),
-          hint: t('LABELS_HINT'),
-          empty: t('LABELS_EMPTY'),
-          items: (this.inventory.labels || []).map(name => ({
-            text: `#${name}`,
-            note: '',
-          })),
-        },
-      ];
-    },
   },
   watch: {
+    // Los calendarios se piden al abrir Guardar y solo si el agente agenda: la
+    // lista consulta Google por cada cuenta conectada.
+    async showSaveModal(abierto) {
+      if (!abierto || !this.usesCalendar) return;
+      try {
+        const { data } = await TrackingTemplatesAPI.getCalendarIntegrations();
+        this.calendarIntegrations = Array.isArray(data) ? data : [];
+      } catch (error) {
+        this.calendarIntegrations = [];
+      }
+    },
     // Descartar la última conversación de la página dejaba la tabla en blanco
     // con el paginado marcando una página que ya no existe.
     sessions(list) {
@@ -452,6 +572,10 @@ export default {
       if (this.agentsPage > pages) this.agentsPage = pages;
     },
   },
+  updated() {
+    const editor = this.$refs.draftEditor || null;
+    if (editor !== this.draftEditorEl) this.draftEditorEl = editor;
+  },
   async mounted() {
     // El último canal elegido en este navegador: es una comodidad, no un dato
     // de la conversación.
@@ -462,15 +586,21 @@ export default {
       this.inboxId = null;
     }
     this.fetchInventory();
+    // Una fuente creada desde el modal de una ruta (RouteFields): la lista de fuentes
+    // se recarga y el Entrenamiento se vuelve a comprobar, sin salir del Asistente.
+    emitter.on(ASSISTANT_SOURCES_CHANGED, this.onSourcesChanged);
     this.$store.dispatch('inboxes/get');
     // Se espera la lista antes de resolver el ?template_id de la URL: si no, se
     // entraría desde Agentes IA con el panel vacío y sin decir por qué.
     await this.$store.dispatch('trackingTemplates/get');
     this.fetchAudit();
     this.fetchSessions();
-    // El ?template_id manda sobre la conversación guardada: si se entró desde un
-    // agente concreto, es a ese al que se vino, no a lo que quedó a medias.
-    if (!this.loadTemplateFromRoute()) await this.resumeSession();
+    // Se entra SIEMPRE como para crear un agente nuevo (pedido del usuario,
+    // 23/09/2026). Hasta entonces se retomaba la última conversación a medias,
+    // pensado para cuando el chat era la forma de trabajar; ahora lo es la
+    // Estructura, y encontrarla llena con un agente anterior confundía. La única
+    // excepción es ?template_id: si se vino desde un agente concreto, es ese.
+    if (!this.loadTemplateFromRoute()) this.startFresh();
     // Sin nada que retomar, el formulario igual tiene que estar listo (los nombres
     // de sección que ofrece "Agregar sección" salen del backend).
     this.reloadTrainingSections();
@@ -480,8 +610,56 @@ export default {
   beforeDestroy() {
     clearTimeout(this.validateTimer);
     clearInterval(this.progressTimer);
+    emitter.off(ASSISTANT_SOURCES_CHANGED, this.onSourcesChanged);
+    // Lo que quedaba por guardar solo, se manda al salir de la pantalla.
+    if (this.autosaveTimer) this.autosaveDraft();
   },
   methods: {
+    // Lo editado a mano se guarda solo, en la conversación (pedido del usuario,
+    // 25/09/2026: cerrar la pestaña sin mandar mensaje ni guardar lo perdía). Sin
+    // conversación todavía, el servidor la crea.
+    async autosaveDraft() {
+      clearTimeout(this.autosaveTimer);
+      const texto = this.draft;
+      if (!texto.trim() || this.isThinking || texto === this.lastAutosaved)
+        return;
+      try {
+        const { data } = await AssistantAPI.autosaveDraft(
+          texto,
+          this.sessionId
+        );
+        this.lastAutosaved = texto;
+        this.sessionId = data.session_id || this.sessionId;
+        if (data.session && !this.sessionMeta) this.sessionMeta = data.session;
+        if (Array.isArray(data.versions)) this.versions = data.versions;
+      } catch (error) {
+        // Sin guardado automático se sigue editando; se guarda al mandar o al guardar.
+      }
+    },
+    // Nombre puesto a mano; se refleja también en la lista de «En construcción».
+    async renameSession(name) {
+      if (!this.sessionId) return;
+      try {
+        const { data } = await AssistantAPI.renameSession(this.sessionId, name);
+        this.sessionMeta = {
+          ...this.sessionMeta,
+          title: data.title,
+          named: data.named,
+        };
+        this.sessions = this.sessions.map(s =>
+          s.id === data.id ? { ...s, title: data.title, named: data.named } : s
+        );
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSION_RENAME_ERROR'));
+      }
+    },
+    async onSourcesChanged() {
+      await this.fetchInventory();
+      // El árbol toma la comprobación de la vista previa si la hay: se descarta para
+      // que use la nueva, que ya conoce la fuente.
+      this.trainingValidation = null;
+      this.validateDraft();
+    },
     // Entrada desde Agentes IA: /tracking-dashboard/assistant?template_id=123
     // o ?nuevo=1 para armar uno nuevo, sin retomar lo que quedó a medias.
     loadTemplateFromRoute() {
@@ -495,21 +673,6 @@ export default {
       this.loadTemplate(this.templates.find(t => t.id === id));
       return true;
     },
-    // Retomar lo que quedó a medias. Si falla, se arranca en limpio: no poder
-    // recuperar una conversación no debería impedir empezar otra.
-    async resumeSession() {
-      try {
-        const { data } = await AssistantAPI.getSession();
-        if (!data) return;
-
-        this.applySession(data);
-        if (data.tracking_template_id) {
-          this.loadEditingFrom(data.tracking_template_id);
-        }
-      } catch (error) {
-        this.sessionId = null;
-      }
-    },
     // Retomar y abrir una conversación cargan lo mismo. Estaba escrito dos veces
     // y sumar la identidad habría hecho una tercera copia: cada campo nuevo hay
     // que acordarse de agregarlo en todas, y el que se olvida no falla — queda
@@ -518,6 +681,7 @@ export default {
       this.sessionId = data.id;
       this.interviewOptions = null;
       this.messages = data.messages || [];
+      this.instructions = data.instructions || '';
       this.draft = data.draft || '';
       this.validation = data.validation || null;
       this.proposal = data.proposal || null;
@@ -583,16 +747,26 @@ export default {
         useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN_ERROR'));
       }
     },
-    async discardSession(id) {
+    // Sin confirmación ni aviso (25/09/2026) la fila se iba y las de abajo subían a
+    // ocupar su lugar: parecía que el clic había ordenado la tabla, no borrado.
+    async discardSession(row) {
+      this.discardTarget = row;
+      const borrar = await this.$refs.discardSessionDialog.showConfirmation();
+      if (!borrar) return;
       try {
-        await AssistantAPI.discardSession(id);
-        this.sessions = this.sessions.filter(s => s.id !== id);
-        if (this.sessionId === id) this.startFresh();
+        await AssistantAPI.discardSession(row.id);
+        this.sessions = this.sessions.filter(s => s.id !== row.id);
+        if (this.sessionId === row.id) this.startFresh();
+        useAlert(
+          this.$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARDED', { id: row.id })
+        );
       } catch (error) {
-        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN_ERROR'));
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_ERROR'));
       }
     },
     startFresh() {
+      this.instructions = '';
+      this.chatBrief = null;
       this.sessionId = null;
       this.sessionMeta = null;
       this.interviewOptions = null;
@@ -606,6 +780,8 @@ export default {
       this.rejected = null;
       this.manualConflict = null;
       this.lastDelivered = '';
+      this.lastAutosaved = '';
+      clearTimeout(this.autosaveTimer);
       this.isBuilding = true;
       this.versions = [];
       this.draftTab = 'editor';
@@ -777,7 +953,21 @@ export default {
       this.activeTab = 0;
       this.validateDraft();
     },
-    async sendMessage(content) {
+    // oneShot: redacta de una, sin preguntar (lo usa el encargo, ver writeFromBrief).
+    // Sin Entrenamiento todavía, el chat conversa para llenar las instrucciones
+    // iniciales (armar un agente desde cero); con uno en pantalla, lo edita.
+    //
+    // Un link a una conversación (…/conversations/173) no es un turno: es pedir que
+    // se revise esa conversación real (reviewConversation).
+    async sendMessage(content, { oneShot = false } = {}) {
+      if (!oneShot && mentionsConversation(content)) {
+        await this.reviewConversation(content);
+        return;
+      }
+      if (!oneShot && !this.draft.trim()) {
+        await this.sendDraftingMessage(content);
+        return;
+      }
       this.messages.push({ role: 'user', content });
       this.isThinking = true;
       const turnId = this.startProgress();
@@ -786,6 +976,7 @@ export default {
           this.messages,
           this.inboxId,
           {
+            oneShot,
             sessionId: this.sessionId,
             draft: this.draft.trim() ? this.draft : null,
             deliveredDraft: this.lastDelivered,
@@ -840,6 +1031,215 @@ export default {
         this.isThinking = false;
       }
     },
+    // F3 del encargo (docs/importar_prompt_md_plan.md): el encargo ya resuelto con lo
+    // que se contestó en el modal va a la redacción de una sola vez, en un agente
+    // nuevo. La Definición sale de la ficha (objetivo, y los datos del negocio como
+    // Contexto si caben): el modelo de una sola vez no la propone.
+    //
+    // Después, la cobertura (BriefCoverage): la redacción de una sola vez sigue su
+    // molde y suelta reglas; lo que falte del encargo se agrega en su sección.
+    //
+    // El chat se abre al terminar: desde ahí se refina conversando (pedido del
+    // usuario, 23/09/2026). El mensaje del encargo es largo y escrito para el modelo:
+    // en pantalla se ve corto (`display`), y al modelo le sigue llegando entero.
+    //
+    // Si las instrucciones salieron de la conversación, la conversación sigue: no se
+    // arranca en limpio (se perdería lo hablado).
+    async writeFromBrief({ message, proposal, briefId, filename }) {
+      this.batteryBriefId = briefId || null;
+      if (!this.chatBrief) this.startFresh();
+      this.chatBrief = null;
+      this.isWritingBrief = true;
+      await this.sendMessage(message, { oneShot: true });
+      // Reemplazado entero: en Vue 2 una propiedad nueva no es reactiva.
+      const donde = this.messages.findIndex(
+        m => m.role === 'user' && m.content === message
+      );
+      if (donde >= 0) {
+        this.messages.splice(donde, 1, {
+          ...this.messages[donde],
+          display: this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_CHAT_USER', {
+            name: filename,
+          }),
+        });
+      }
+      if (!this.draft.trim()) {
+        this.isWritingBrief = false;
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_WRITE_ERROR'));
+        return;
+      }
+      const agregados = await this.coverFromBrief(briefId);
+      this.isWritingBrief = false;
+      this.inviteToRefine(agregados);
+      const definicion = Object.fromEntries(
+        Object.entries(proposal || {}).filter(([, valor]) => valor)
+      );
+      this.proposal = { ...(this.proposal || {}), ...definicion };
+      this.showBriefModal = false;
+      this.leftPanel = 'chat';
+    },
+    // Revisar una conversación real (pedido del usuario, 24/09/2026): qué respuestas
+    // del agente estuvieron mal, por qué y qué cambiar. El resultado entra al hilo
+    // como mensaje del Asistente; si se pide corregir, el editor lo tiene a la vista.
+    // Sin Entrenamiento abierto, se abre el del agente que atendió: corregir es el
+    // paso siguiente y el chat solo edita lo que está abierto.
+    async reviewConversation(content) {
+      this.messages.push({ role: 'user', content });
+      this.interviewOptions = null;
+      this.isThinking = true;
+      const turnId = this.startProgress();
+      try {
+        await AssistantAPI.reviewConversation(content, turnId, {
+          draft: this.draft.trim() ? this.draft : null,
+          inboxId: this.inboxId,
+        });
+        const result = await this.waitTurnResult(() =>
+          AssistantAPI.getConversationReview(turnId)
+        );
+        const aviso = this.openReviewedAgent(result.agent);
+        this.messages.push({
+          role: 'assistant',
+          content: [reviewMessage(result, (k, a) => this.$t(k, a)), aviso]
+            .filter(Boolean)
+            .join('\n\n'),
+        });
+        if (this.draft.trim() && hasTrainingFixes(result)) {
+          this.interviewOptions = [
+            {
+              question: this.$t('TRACKING_ASSISTANT_VIEW.REVIEW_NEXT'),
+              choices: [this.$t('TRACKING_ASSISTANT_VIEW.REVIEW_APPLY')],
+            },
+          ];
+        }
+      } catch (error) {
+        this.messages.push({
+          role: 'assistant',
+          content: this.reviewError(error?.response?.data?.error),
+        });
+      } finally {
+        this.stopProgress();
+        this.isThinking = false;
+      }
+    },
+    reviewError(code) {
+      if (code === 'no_api_key')
+        return this.$t('TRACKING_ASSISTANT_VIEW.ERROR_NO_KEY');
+      const conocidos = ['not_found', 'no_conversation', 'no_messages'];
+      return this.$t(
+        conocidos.includes(code)
+          ? `TRACKING_ASSISTANT_VIEW.REVIEW_ERROR_${code.toUpperCase()}`
+          : 'TRACKING_ASSISTANT_VIEW.REVIEW_ERROR'
+      );
+    },
+    // Devuelve el aviso para el mensaje, o ''.
+    openReviewedAgent(agent) {
+      if (!agent?.template_id) return '';
+      if (!this.draft.trim()) {
+        const template = this.templates.find(t => t.id === agent.template_id);
+        if (!template) return '';
+        this.loadTemplate(template);
+        return this.$t('TRACKING_ASSISTANT_VIEW.REVIEW_OPENED_AGENT', {
+          name: template.name,
+        });
+      }
+      if (this.editingTemplate?.id === agent.template_id) return '';
+      return this.$t('TRACKING_ASSISTANT_VIEW.REVIEW_OTHER_AGENT', {
+        name: agent.name,
+      });
+    },
+    // Conocimiento sugerido: creadas las respuestas predefinidas del agente, las rutas
+    // del Entrenamiento abierto que buscaban en TODAS pasan a buscar en su grupo.
+    applyCannedGroup(group) {
+      const nuevo = withCannedGroup(this.draft, group);
+      if (nuevo === this.draft) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.KNOWLEDGE_APPLY_NONE'));
+        return;
+      }
+      this.draft = nuevo;
+      this.onDraftInput();
+      useAlert(
+        this.$t('TRACKING_ASSISTANT_VIEW.KNOWLEDGE_APPLY_DONE', { group })
+      );
+    },
+    // Un turno de la conversación que arma un agente desde cero (DraftingChat).
+    async sendDraftingMessage(content) {
+      this.messages.push({ role: 'user', content });
+      this.isThinking = true;
+      try {
+        const { data } = await AssistantAPI.draftingChat(
+          this.messages,
+          this.instructions,
+          { sessionId: this.sessionId }
+        );
+        this.sessionId = data.session_id || this.sessionId;
+        if (data.session) this.sessionMeta = data.session;
+        this.messages.push({ role: 'assistant', content: data.reply });
+        if (data.instructions) this.instructions = data.instructions;
+      } catch (error) {
+        const reason =
+          error?.response?.data?.error === 'no_api_key'
+            ? this.$t('TRACKING_ASSISTANT_VIEW.ERROR_NO_KEY')
+            : this.$t('TRACKING_ASSISTANT_VIEW.ERROR_GENERIC');
+        this.messages.push({ role: 'assistant', content: reason });
+      } finally {
+        this.isThinking = false;
+      }
+    },
+    // «Crear el Entrenamiento» desde las instrucciones de la conversación: entran
+    // como un .md subido y siguen en el modal de siempre (Esto entendí / Me falta saber).
+    async createFromInstructions() {
+      if (!this.instructions.trim() || this.isSendingInstructions) return;
+      this.isSendingInstructions = true;
+      try {
+        const { data } = await AssistantAPI.briefFromInstructions(
+          this.instructions,
+          instructionsFilename(this.instructions),
+          { sessionId: this.sessionId }
+        );
+        this.chatBrief = data;
+        this.showBriefModal = true;
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_ERROR'));
+      } finally {
+        this.isSendingInstructions = false;
+      }
+    },
+    downloadInstructions() {
+      downloadMarkdown(
+        this.instructions,
+        instructionsFilename(this.instructions)
+      );
+    },
+    // Al mensaje del Asistente se le suma lo que agregó la cobertura y la invitación
+    // a seguir: el chat queda abierto para eso.
+    inviteToRefine(agregados) {
+      const ultimo = this.messages[this.messages.length - 1];
+      if (!ultimo || ultimo.role !== 'assistant') return;
+      const extras = [];
+      if (agregados) {
+        extras.push(
+          this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_COVERED', { count: agregados })
+        );
+      }
+      extras.push(this.$t('TRACKING_ASSISTANT_VIEW.BRIEF_CHAT_INVITE'));
+      ultimo.content = [ultimo.content, ...extras].filter(Boolean).join('\n\n');
+    },
+    // Si la cobertura falla, queda lo que escribió el Asistente: no es motivo para
+    // tirar un Entrenamiento que ya está en pantalla.
+    // Devuelve cuántos puntos agregó.
+    async coverFromBrief(briefId) {
+      try {
+        const { data } = await AssistantAPI.coverBrief(briefId, this.draft);
+        if (!data.draft || data.draft === this.draft) return 0;
+        this.draft = data.draft;
+        this.lastDelivered = data.draft;
+        this.validateDraft();
+        return (data.added || []).length;
+      } catch (error) {
+        // Queda lo escrito por el Asistente.
+        return 0;
+      }
+    },
     // Fase D: mientras el turno corre, se consulta en qué etapa está. El id lo
     // genera la pantalla porque la sesión puede no existir todavía (primer turno).
     startProgress(
@@ -889,6 +1289,11 @@ export default {
     // El backend responde 202 mientras trabaja, 200 con el resultado y 422 si falló
     // (axios lo lanza como error). Se rinde a los 5 minutos.
     async waitOptimizeResult(turnId) {
+      return this.waitTurnResult(() => AssistantAPI.getOptimizeResult(turnId));
+    },
+    // Lo mismo para cualquier turno que corre en segundo plano (optimizar, revisar
+    // una conversación): `fetch` pide el resultado.
+    async waitTurnResult(fetch) {
       const deadline = Date.now() + OPTIMIZE_MAX_WAIT_MS;
       while (Date.now() < deadline) {
         // eslint-disable-next-line no-await-in-loop
@@ -896,10 +1301,10 @@ export default {
           setTimeout(resolve, PROGRESS_POLL_MS);
         });
         // eslint-disable-next-line no-await-in-loop
-        const { status, data } = await AssistantAPI.getOptimizeResult(turnId);
+        const { status, data } = await fetch();
         if (status === 200) return data;
       }
-      throw new Error('optimize timeout');
+      throw new Error('turn timeout');
     },
     applyOptimization(texto) {
       if (!texto) return;
@@ -1032,9 +1437,46 @@ export default {
     },
     // Se revalida también cuando la persona edita a mano: el borrador del modelo
     // no es más confiable que el suyo, y ninguno de los dos se guarda sin pasar.
+    // Pedido del usuario (25/09/2026): con el Entrenamiento VACÍO, pegar un prompt
+    // pregunta si se analiza; al aceptar, el análisis arranca en el chat (y ahí mismo
+    // se ofrece corregir lo que se arregla escribiendo). Con texto ya escrito, pegar
+    // es editar: no se pregunta nada.
+    async onDraftPaste(event) {
+      if (this.draft.trim() || this.isThinking) return;
+      const pegado = event.clipboardData?.getData('text') || '';
+      if (pegado.trim().length < MIN_PASTE_TO_ANALYZE) return;
+      // El texto entra con el evento `input`, después de este: se espera a que el
+      // editor lo tenga (y onDraftInput lo marque como un agente que ya existe).
+      await new Promise(resolve => {
+        setTimeout(resolve, 0);
+      });
+      if (!this.draft.trim()) return;
+      const analizar = await this.$refs.analyzePastedDialog.showConfirmation();
+      if (analizar) await this.analyzeDraft();
+    },
+    // Análisis del Entrenamiento en pantalla, en el chat: lo que marca el comprobador,
+    // la lectura del modelo y, si hay, el botón para corregir.
+    async analyzeDraft() {
+      if (!this.draft.trim() || this.isThinking) return;
+      this.leftPanel = 'chat';
+      await this.sendMessage(
+        this.$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_MESSAGE')
+      );
+    },
     onDraftInput() {
+      // Un prompt pegado (o escrito) en un Asistente nuevo es un agente que ya existe,
+      // no una entrevista a medias: se trata como uno cargado (loadTemplate) — cuenta
+      // como entregado y no está en construcción. Sin esto, «observa y analiza el
+      // prompt» contestaba preguntando los temas y si contesta o deriva (24/09/2026).
+      // Solo si el Asistente todavía no entregó nada: sus borradores siguen su curso.
+      if (!this.lastDelivered && this.draft.trim()) {
+        this.lastDelivered = this.draft;
+        this.isBuilding = pendingCount(this.draft) > 0;
+      }
       clearTimeout(this.validateTimer);
       this.validateTimer = setTimeout(this.validateDraft, VALIDATE_DEBOUNCE_MS);
+      clearTimeout(this.autosaveTimer);
+      this.autosaveTimer = setTimeout(this.autosaveDraft, AUTOSAVE_DELAY_MS);
       // Editar no borra las pruebas: las envejece. Cada corrida guardó contra qué
       // versión se hizo, así que las anteriores quedan marcadas en vez de
       // desaparecer — y la comparación entre preguntas se conserva.
@@ -1134,33 +1576,23 @@ export default {
       />
 
       <template v-else>
+        <!-- ⚠ woot-tabs RENUMERA sus pestañas por posición (Tabs.js pisa el
+             `index` de cada una): con Conversaciones escondida, «Agentes IA»
+             abría Conversaciones y «Recursos» la tabla de agentes (visto por el
+             usuario el 23/09/2026). Por eso se trabaja con la POSICIÓN visible y
+             se traduce al panel (`tabs[n].panel`), que es lo que usa activeTab. -->
         <woot-tabs
-          :index="activeTab"
+          :index="activeTabPosition"
           class="mb-4 shrink-0"
-          @change="activeTab = $event"
+          @change="activeTab = tabs[$event].panel"
         >
           <woot-tabs-item
-            :index="0"
-            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_ASSISTANT')"
-            :show-badge="false"
-          />
-          <!-- El `index` de cada pestaña es explícito, así que esconder esta no
-               corre las otras. -->
-          <woot-tabs-item
-            v-if="showSessionsTab"
-            :index="1"
-            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_SESSIONS')"
-            :count="sessions.length"
-          />
-          <woot-tabs-item
-            :index="2"
-            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_AUDIT')"
-            :count="brokenAgents.length"
-          />
-          <woot-tabs-item
-            :index="3"
-            :name="$t('TRACKING_ASSISTANT_VIEW.TAB_INVENTORY')"
-            :show-badge="false"
+            v-for="(tab, position) in tabs"
+            :key="tab.panel"
+            :index="position"
+            :name="$t(tab.label)"
+            :count="tab.count || 0"
+            :show-badge="tab.count !== null"
           />
         </woot-tabs>
 
@@ -1172,109 +1604,165 @@ export default {
                de las dos columnas porque valen para toda la pantalla: el canal
                decide con qué modelo se clasifica y se contesta, y la tarjeta dice
                qué agente se está editando. Con el chat escondido, siguen acá. -->
-          <div class="flex flex-wrap items-center gap-x-4 gap-y-2 shrink-0">
+          <!-- Una barra: a la izquierda qué se edita; a la derecha el canal (con qué
+               modelos clasifica y contesta) y las acciones, con «Nuevo Agente IA» al
+               final. En pantallas angostas, la derecha baja a otra línea. -->
+          <div
+            class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 bg-white border rounded-lg shrink-0 dark:bg-slate-800 border-slate-100 dark:border-slate-700"
+          >
             <SessionCard
+              class="flex-1 min-w-[16rem]"
               :session-meta="sessionMeta"
               :editing-template="editingTemplate"
+              @rename="renameSession"
             />
-            <!-- Empezar de cero. Estaba solo en la pestaña Conversaciones, donde
-                 nadie lo encontraba: es la puerta para armar un agente nuevo. -->
-            <woot-button
-              size="small"
-              variant="smooth"
-              color-scheme="success"
-              icon="add"
-              @click="startFresh"
-            >
-              {{ $t('TRACKING_ASSISTANT_VIEW.NEW_AGENT') }}
-            </woot-button>
-            <div class="flex flex-wrap items-center gap-2 text-xs shrink-0">
-              <label
-                for="assistant-inbox"
-                class="!m-0 text-slate-600 dark:text-slate-300"
-              >
-                {{ $t('TRACKING_ASSISTANT_VIEW.INBOX_LABEL') }}
-              </label>
-              <select
-                id="assistant-inbox"
-                class="!mb-0 !w-auto !py-1 text-xs"
-                :value="inboxId || ''"
-                @change="setInbox($event.target.value)"
-              >
-                <option value="">
-                  {{ $t('TRACKING_ASSISTANT_VIEW.INBOX_NONE') }}
-                </option>
-                <option
-                  v-for="inbox in inboxes"
-                  :key="inbox.id"
-                  :value="inbox.id"
+            <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <div class="flex flex-col gap-0.5 text-xs">
+                <div class="flex items-center gap-2">
+                  <label
+                    for="assistant-inbox"
+                    class="!m-0 text-slate-600 dark:text-slate-300"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.INBOX_LABEL') }}
+                  </label>
+                  <select
+                    id="assistant-inbox"
+                    class="!mb-0 !w-auto !py-1 text-xs"
+                    :value="inboxId || ''"
+                    @change="setInbox($event.target.value)"
+                  >
+                    <option value="">
+                      {{ $t('TRACKING_ASSISTANT_VIEW.INBOX_NONE') }}
+                    </option>
+                    <option
+                      v-for="inbox in inboxes"
+                      :key="inbox.id"
+                      :value="inbox.id"
+                    >
+                      {{ inbox.name }}
+                    </option>
+                  </select>
+                </div>
+                <span
+                  v-if="inventory && inventory.models"
+                  class="text-slate-500 dark:text-slate-400"
+                  :title="$t('TRACKING_ASSISTANT_VIEW.INBOX_HINT')"
                 >
-                  {{ inbox.name }}
-                </option>
-              </select>
-              <span
-                v-if="inventory && inventory.models"
-                class="text-slate-500 dark:text-slate-400"
-                :title="$t('TRACKING_ASSISTANT_VIEW.INBOX_HINT')"
-              >
-                {{
-                  $t('TRACKING_ASSISTANT_VIEW.INBOX_MODELS', {
-                    router: inventory.models.router,
-                    conversational: inventory.models.conversational,
-                  })
-                }}
-              </span>
+                  {{
+                    $t('TRACKING_ASSISTANT_VIEW.INBOX_MODELS', {
+                      router: inventory.models.router,
+                      conversational: inventory.models.conversational,
+                    })
+                  }}
+                </span>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <woot-button
+                  size="small"
+                  variant="smooth"
+                  color-scheme="secondary"
+                  icon="attach"
+                  @click="showBriefModal = true"
+                >
+                  {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_OPEN') }}
+                </woot-button>
+                <!-- Empezar de cero: la puerta para armar un agente nuevo. -->
+                <woot-button
+                  size="small"
+                  color-scheme="success"
+                  icon="add"
+                  @click="startFresh"
+                >
+                  {{ $t('TRACKING_ASSISTANT_VIEW.NEW_AGENT') }}
+                </woot-button>
+              </div>
             </div>
           </div>
 
-          <div
-            class="grid flex-1 min-h-0 gap-4"
-            :class="
-              showChat && !isWideEditor ? 'md:grid-cols-3' : 'md:grid-cols-2'
-            "
-          >
-            <!-- v-show y no v-if: la conversación se esconde, no se desmonta. Con
+          <div class="grid flex-1 min-h-0 gap-4 md:grid-cols-2">
+            <!-- La columna izquierda: la Estructura del Agente o la conversación,
+                 una a la vez, con el selector arriba. -->
+            <div class="flex flex-col min-h-0 gap-2">
+              <div
+                v-if="showChat"
+                class="flex items-center gap-1 shrink-0"
+                role="tablist"
+              >
+                <woot-button
+                  v-for="panel in leftPanels"
+                  :key="panel.id"
+                  size="small"
+                  :variant="leftPanel === panel.id ? 'smooth' : 'clear'"
+                  :color-scheme="
+                    leftPanel === panel.id ? 'primary' : 'secondary'
+                  "
+                  :icon="panel.icon"
+                  role="tab"
+                  :aria-selected="leftPanel === panel.id"
+                  @click="leftPanel = panel.id"
+                >
+                  {{ panel.label }}
+                </woot-button>
+              </div>
+              <!-- v-show y no v-if: la conversación se esconde, no se desmonta. Con
                v-if se perdería el scroll del hilo y lo tecleado sin enviar cada
-               vez que alguien entra y sale del modo ancho. -->
-            <section
-              v-show="showChat && !isWideEditor"
-              class="p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col min-h-0"
-            >
-              <InterviewPanel
-                :messages="messages"
-                :is-thinking="isThinking"
-                :options="interviewOptions"
-                :is-editing="Boolean(draft.trim())"
-                :stage="turnStage"
-                @send="sendMessage"
-              />
-            </section>
+               vez que se cambia a la Estructura y se vuelve. -->
+              <section
+                v-show="showChat && leftPanel === 'chat'"
+                class="flex-1 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col min-h-0"
+              >
+                <InterviewPanel
+                  :messages="messages"
+                  :is-thinking="isThinking"
+                  :options="interviewOptions"
+                  :is-editing="Boolean(draft.trim())"
+                  :stage="turnStage"
+                  @send="sendMessage"
+                />
+              </section>
 
-            <!-- SECCIONES · el formulario, a la izquierda. Es donde se arma el
+              <!-- Las instrucciones iniciales que se llenan conversando. -->
+              <section
+                v-if="showChat"
+                v-show="leftPanel === 'instructions'"
+                class="flex flex-col flex-1 min-h-0 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+              >
+                <InstructionsPanel
+                  v-model="instructions"
+                  :busy="isSendingInstructions || isWritingBrief"
+                  @create="createFromInstructions"
+                  @download="downloadInstructions"
+                />
+              </section>
+
+              <!-- SECCIONES · el formulario, a la izquierda. Es donde se arma el
                  Entrenamiento: cada cambio vuelve a armar el texto en el backend y
                  se ve al instante en la columna de la derecha. -->
-            <section
-              class="flex flex-col min-h-0 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-            >
-              <h3
-                class="mb-2 text-sm font-semibold shrink-0 text-slate-800 dark:text-slate-100"
+              <section
+                v-show="!showChat || leftPanel === 'structure'"
+                class="flex flex-col flex-1 min-h-0 p-4 bg-white rounded-lg dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
               >
-                {{ $t('TRACKING_ASSISTANT_VIEW.TREE_TITLE') }}
-              </h3>
-              <AgentStructure
-                class="flex-1 min-h-0"
-                :value="trainingStructure"
-                :definition="proposal"
-                :titles="sectionTitles"
-                :route-options="routeOptions"
-                :issues="nodeIssues"
-                :inbox-id="inboxId"
-                :can-explain="canExplainTraining"
-                @input="onSectionsInput"
-                @updateDefinition="updateDefinition"
-                @explain="explainFragment"
-              />
-            </section>
+                <h3
+                  v-if="!showChat"
+                  class="mb-2 text-sm font-semibold shrink-0 text-slate-800 dark:text-slate-100"
+                >
+                  {{ $t('TRACKING_ASSISTANT_VIEW.TREE_TITLE') }}
+                </h3>
+                <AgentStructure
+                  class="flex-1 min-h-0"
+                  :value="trainingStructure"
+                  :definition="proposal"
+                  :titles="sectionTitles"
+                  :route-options="routeOptions"
+                  :issues="nodeIssues"
+                  :inbox-id="inboxId"
+                  :can-explain="canExplainTraining"
+                  @input="onSectionsInput"
+                  @updateDefinition="updateDefinition"
+                  @explain="explainFragment"
+                />
+              </section>
+            </div>
 
             <!-- El Entrenamiento manda: se lleva todo el alto que sobre, y los
                dos paneles se colapsan. Antes eran tres secciones de alto libre
@@ -1331,6 +1819,17 @@ export default {
                         }}
                       </span>
                     </button>
+                    <button
+                      class="ml-3 pb-0.5 border-b-2"
+                      :class="
+                        draftTab === 'log'
+                          ? 'border-woot-500'
+                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                      "
+                      @click="draftTab = 'log'"
+                    >
+                      {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_LOG') }}
+                    </button>
                     <span
                       v-if="hasManualEdits && draft.trim()"
                       class="ml-2 px-1.5 py-0.5 text-xs font-normal rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
@@ -1366,26 +1865,14 @@ export default {
                       :pending-count="draftPendingCount"
                     />
                   </button>
-                  <!-- Para los Entrenamientos largos: 38 líneas siguen siendo poco
-                     para uno de 645. Mientras se edita un texto así no hace falta
-                     ver el chat; al volver, sigue donde estaba. -->
-                  <woot-button
-                    v-if="showChat"
-                    variant="clear"
-                    size="tiny"
-                    color-scheme="secondary"
-                    :icon="isWideEditor ? 'chat' : 'arrow-expand'"
-                    @click="isWideEditor = !isWideEditor"
-                  >
-                    {{
-                      isWideEditor
-                        ? $t('TRACKING_ASSISTANT_VIEW.DRAFT_SHOW_CHAT')
-                        : $t('TRACKING_ASSISTANT_VIEW.DRAFT_WIDE')
-                    }}
-                  </woot-button>
                 </div>
+                <ChangeLog
+                  v-if="draftTab === 'log'"
+                  :versions="versions"
+                  :title="(sessionMeta && sessionMeta.title) || ''"
+                />
                 <VersionsPanel
-                  v-if="draftTab === 'versions'"
+                  v-else-if="draftTab === 'versions'"
                   :versions="versions"
                   :session-id="sessionId"
                   :current-draft="draft"
@@ -1403,7 +1890,7 @@ export default {
                      se decide. -->
                   <div
                     v-if="rejected"
-                    class="flex flex-col gap-2 p-3 mb-2 text-xs border rounded shrink-0 border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"
+                    class="flex flex-col gap-2 p-3 mb-2 text-xs border rounded shrink-0 border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-800"
                   >
                     <p class="!m-0 font-semibold">
                       {{ $t('TRACKING_ASSISTANT_VIEW.REJECTED_TITLE') }}
@@ -1439,19 +1926,33 @@ export default {
                      readonly mientras el asistente trabaja: trabaja sobre el texto
                      que se le mandó, y lo que se escribiera en esos segundos se
                      perdería al llegar la respuesta. -->
-                  <textarea
-                    ref="draftEditor"
-                    v-model="draft"
-                    class="flex-1 min-h-0 w-full font-mono text-xs resize-none !mb-0"
-                    :placeholder="
-                      $t('TRACKING_ASSISTANT_VIEW.DRAFT_PLACEHOLDER')
-                    "
-                    :readonly="isThinking"
-                    @select="onDraftSelect"
-                    @keyup="onDraftSelect"
-                    @mouseup="onDraftSelect"
-                    @input="onDraftInput"
-                  />
+                  <!-- Las líneas con hallazgos se pintan DETRÁS del texto
+                       (DraftLineMarks): rojo lo que no se ejecuta, ámbar lo que
+                       funciona mal. El textarea va transparente encima. -->
+                  <div
+                    class="relative flex flex-1 min-h-0 bg-white rounded-md dark:bg-slate-900"
+                  >
+                    <DraftLineMarks
+                      :text="draft"
+                      :marks="draftLineMarks"
+                      :messages="draftLineMessages"
+                      :target="draftEditorEl"
+                    />
+                    <textarea
+                      ref="draftEditor"
+                      v-model="draft"
+                      class="relative flex-1 min-h-0 w-full h-full font-mono text-xs resize-none !mb-0 !bg-transparent focus:!bg-transparent"
+                      :placeholder="
+                        $t('TRACKING_ASSISTANT_VIEW.DRAFT_PLACEHOLDER')
+                      "
+                      :readonly="isThinking"
+                      @select="onDraftSelect"
+                      @keyup="onDraftSelect"
+                      @mouseup="onDraftSelect"
+                      @input="onDraftInput"
+                      @paste="onDraftPaste"
+                    />
+                  </div>
                 </template>
               </div>
             </section>
@@ -1469,40 +1970,12 @@ export default {
              la paleta desde la que se arma el Entrenamiento. -->
         <div v-show="activeTab === 3" class="flex-1 min-h-0 overflow-y-auto">
           <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
-            {{ $t('TRACKING_ASSISTANT_VIEW.RESOURCES_HINT') }}
+            {{ $t('TRACKING_ASSISTANT_VIEW.CATALOG_HINT') }}
           </p>
 
-          <div class="grid gap-4 md:grid-cols-2">
-            <!-- Cada bloque dice PARA QUÉ sirve la pieza, no solo cómo se llama:
-                 sin eso, "grupos" y "etiquetas" son dos listas indistinguibles
-                 para quien nunca escribió una @ruta. -->
-            <section
-              v-for="block in resourceBlocks"
-              :key="block.key"
-              class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
-            >
-              <h3
-                class="text-sm font-semibold text-slate-800 dark:text-slate-100"
-              >
-                {{ block.title }}
-              </h3>
-              <p class="mt-0.5 mb-3 text-xs text-slate-500 dark:text-slate-400">
-                {{ block.hint }}
-              </p>
-
-              <div v-if="block.items.length" class="flex flex-wrap gap-1.5">
-                <CopyChip
-                  v-for="item in block.items"
-                  :key="item.text"
-                  :text="item.text"
-                  :note="item.note"
-                />
-              </div>
-              <p v-else class="text-xs text-slate-400 dark:text-slate-500">
-                {{ block.empty }}
-              </p>
-            </section>
-          </div>
+          <!-- El catálogo del motor: una ficha por directiva, con su estado en la
+               cuenta y los nombres exactos para copiar (EngineCatalog). -->
+          <EngineCatalog :catalog="(inventory && inventory.catalog) || []" />
 
           <!-- Las frases van ÚLTIMAS y aparte: son las únicas que no se escriben
                en el Entrenamiento. Son el material con el que el asistente
@@ -1626,7 +2099,7 @@ export default {
                       <span
                         :class="
                           row.degrading
-                            ? 'text-amber-700 dark:text-amber-400'
+                            ? 'text-amber-800 dark:text-amber-800'
                             : 'text-slate-400 dark:text-slate-500'
                         "
                       >
@@ -1707,13 +2180,32 @@ export default {
             <p class="text-xs text-slate-500 dark:text-slate-400">
               {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_HINT') }}
             </p>
-            <woot-button variant="clear" size="small" @click="startFresh">
-              {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_NEW') }}
+          </div>
+
+          <div class="flex flex-wrap items-center gap-1 mb-3 shrink-0">
+            <woot-button
+              v-for="filtro in sessionFilters"
+              :key="filtro.id"
+              size="small"
+              :variant="sessionsFilter === filtro.id ? 'smooth' : 'clear'"
+              :color-scheme="
+                sessionsFilter === filtro.id ? 'primary' : 'secondary'
+              "
+              @click="
+                sessionsFilter = filtro.id;
+                sessionsPage = 1;
+              "
+            >
+              {{
+                $t(`TRACKING_ASSISTANT_VIEW.${filtro.label}`, {
+                  count: filtro.count,
+                })
+              }}
             </woot-button>
           </div>
 
           <div
-            v-if="!sessions.length"
+            v-if="!visibleSessions.length"
             class="text-xs text-slate-500 dark:text-slate-400 py-4"
           >
             {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_EMPTY') }}
@@ -1787,13 +2279,13 @@ export default {
                     </td>
                     <!-- De quién es: desde que las conversaciones se comparten
                          entre administradores, el listado tiene trabajo de
-                         varias personas. -->
+                         varias personas. Siempre el nombre del agente, también
+                         en las propias (pedido del usuario, 23/09/2026: antes
+                         decía «vos»). -->
                     <td class="p-3 text-slate-500 dark:text-slate-400">
                       {{
-                        row.mine
-                          ? $t('TRACKING_ASSISTANT_VIEW.SESSIONS_MINE')
-                          : row.creator ||
-                            $t('TRACKING_ASSISTANT_VIEW.SESSIONS_NO_CREATOR')
+                        row.creator ||
+                        $t('TRACKING_ASSISTANT_VIEW.SESSIONS_NO_CREATOR')
                       }}
                     </td>
                     <td class="p-3 text-slate-500 dark:text-slate-400">
@@ -1830,7 +2322,7 @@ export default {
                           variant="clear"
                           color-scheme="alert"
                           icon="delete"
-                          @click.stop="discardSession(row.id)"
+                          @click.stop="discardSession(row)"
                         />
                       </div>
                     </td>
@@ -1842,7 +2334,7 @@ export default {
             <TableFooter
               class="border-t shrink-0 border-slate-75 dark:border-slate-700/50"
               :current-page="sessionsPage"
-              :total-count="sessions.length"
+              :total-count="visibleSessions.length"
               :page-size="SESSIONS_PER_PAGE"
               @pageChange="sessionsPage = $event"
             />
@@ -1860,6 +2352,16 @@ export default {
           <!-- Probar va ANTES de guardar, y en ese orden se lee: el comprobador
                dice si se ejecuta, esto dice si rutea bien, y recién después se
                guarda. -->
+          <!-- Analizar: lo mismo que aceptar el modal al pegar, para quien dijo
+               «solo pegarlo» o quiere volver a revisar después de editar. -->
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            :is-disabled="!draft.trim() || isThinking"
+            @click="analyzeDraft"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.ANALYZE_CTA') }}
+          </woot-button>
           <woot-button
             variant="clear"
             color-scheme="secondary"
@@ -1867,6 +2369,14 @@ export default {
             @click="showDryRunModal = true"
           >
             {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_TITLE') }}
+          </woot-button>
+          <woot-button
+            v-if="editingTemplate"
+            variant="clear"
+            color-scheme="secondary"
+            @click="showTestBattery = true"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.BATTERY_CTA') }}
           </woot-button>
           <woot-button
             variant="clear"
@@ -1894,6 +2404,31 @@ export default {
       @run="runOptimize"
       @apply="applyOptimization"
     />
+    <woot-confirm-modal
+      ref="discardSessionDialog"
+      :title="$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_TITLE')"
+      :description="discardDescription"
+      :confirm-label="$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_YES')"
+      :cancel-label="$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_NO')"
+    />
+    <woot-confirm-modal
+      ref="analyzePastedDialog"
+      :title="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_TITLE')"
+      :description="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_DESCRIPTION')"
+      :confirm-label="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_YES')"
+      :cancel-label="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_NO')"
+    />
+    <BriefModal
+      :show="showBriefModal"
+      :initial-brief="chatBrief"
+      :session-id="sessionId"
+      :labels="(inventory && inventory.labels) || []"
+      :writing="isWritingBrief"
+      :has-draft="Boolean(draft.trim())"
+      @close="showBriefModal = false"
+      @write="writeFromBrief"
+      @applyGroup="applyCannedGroup"
+    />
     <ReportModal
       :show="showReportModal"
       :validation="validation"
@@ -1911,6 +2446,14 @@ export default {
       :is-running="isExplaining"
       :error="explainError"
       @close="showExplainModal = false"
+    />
+    <TestBatteryModal
+      v-if="editingTemplate"
+      :show="showTestBattery"
+      :template-id="editingTemplate.id"
+      :template-name="editingTemplate.name"
+      :brief-id="batteryBriefId"
+      @close="showTestBattery = false"
     />
     <DryRunModal
       :show="showDryRunModal"
@@ -1936,6 +2479,8 @@ export default {
       :proposal="proposal"
       :editing-template="editingTemplate"
       :error="saveError"
+      :needs-calendar="usesCalendar"
+      :calendar-integrations="calendarIntegrations"
       @close="showSaveModal = false"
       @save="saveDraft"
     />

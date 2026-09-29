@@ -63,4 +63,19 @@ RSpec.describe ContactTrackings::Assistant::ReplyParser do
       expect(described_class.changes({})).to eq([])
     end
   end
+
+  # 24/09/2026: la lista de errores llegó en una llave "errores" que la pantalla no muestra.
+  describe '.with_extras' do
+    it 'suma al mensaje lo que el modelo puso en llaves que el contrato no define' do
+      reply = { 'mensaje' => 'Tiene estos errores:', 'entrenamiento' => nil, 'errores' => ['- uno', '- dos'] }
+
+      expect(described_class.with_extras(reply)['mensaje']).to eq("Tiene estos errores:\n- uno\n- dos")
+    end
+
+    it 'deja igual una respuesta sin llaves de más' do
+      reply = { 'mensaje' => 'Listo', 'cambios' => ['+ algo'] }
+
+      expect(described_class.with_extras(reply)).to eq(reply)
+    end
+  end
 end

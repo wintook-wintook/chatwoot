@@ -129,7 +129,24 @@ class ContactTrackings::Assistant::InventoryService
   # Se recorre SOURCE_TYPES —la lista del modelo— y no las llaves de la tabla de
   # acá: así un tipo que el motor conoce y esta clase no, se nota.
   def sources
-    @sources ||= KnowledgeSource::SOURCE_TYPES.flat_map do |source_type|
+    @sources ||= knowledge_source_directives + integration_directives
+  end
+
+  # @discourse no es una fuente de la Base de Conocimiento sino la integración de
+  # Discourse del canal (Integraciones). No se ofrecía nunca, y una ruta que la usaba
+  # salía «no existe en la cuenta» aunque el canal la tuviera (25/09/2026). Con canal
+  # elegido, solo si ESE canal la tiene: es lo que mira el motor (Directives.ready?).
+  def integration_directives
+    hooks = account.hooks.where(app_id: 'discourse', status: 'enabled')
+    hooks = hooks.where(inbox_id: inbox.id) if inbox
+    return [] unless hooks.exists?
+
+    [{ source_type: 'discourse_integration', name: 'Discourse (integración del canal)',
+       directive: '@discourse', mode: :discourse_integration }]
+  end
+
+  def knowledge_source_directives
+    KnowledgeSource::SOURCE_TYPES.flat_map do |source_type|
       template, mode = SOURCE_DIRECTIVES[source_type]
       next [] if template.nil?
 
@@ -138,10 +155,20 @@ class ContactTrackings::Assistant::InventoryService
           source_type: source_type,
           name: source.name,
           directive: format(template, source.name),
-          mode: mode
-        }
+          mode: mode,
+          columns: sheet_columns(source)
+        }.compact
       end
     end
+  end
+
+  # proyecto@hoja_buscar — los encabezados de una hoja, para que el Asistente escriba
+  # {{hoja_buscar: Hoja | columna=? | Calendar_ID}} con columnas que existen. nil si no es hoja
+  # o todavía no se sincronizó.
+  def sheet_columns(source)
+    return nil unless source.source_type == 'google_sheet'
+
+    source.google_sheet_rows.order(:row_index).first&.data&.keys.presence
   end
 
   # Fuentes que la cuenta tiene guardadas y que el asistente no sabe ofrecer.

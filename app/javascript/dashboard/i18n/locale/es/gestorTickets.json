@@ -132,7 +132,7 @@
       "SHARED_BY_OTHERS": "Compartidas por otros",
       "MANAGE": {
         "TITLE": "Gestionar vistas",
-        "SUBTITLE": "Renombrá, compartí o eliminá las vistas guardadas del Gestor de Casos.",
+        "SUBTITLE": "Renombra, comparte o elimina las vistas guardadas del Gestor de Casos.",
         "EMPTY": "Todavía no hay vistas guardadas.",
         "BADGE_SHARED": "compartida",
         "RENAME": "Renombrar",
@@ -147,7 +147,7 @@
         "DELETED": "Vista eliminada",
         "DELETE_ERROR": "No se pudo eliminar la vista",
         "DELETE_TITLE": "Eliminar vista",
-        "DELETE_MESSAGE": "¿Seguro que querés eliminar la vista ",
+        "DELETE_MESSAGE": "¿Seguro que quieres eliminar la vista ",
         "DELETE_MESSAGE_SHARED": "Esta vista está compartida: la van a perder todos los de la cuenta. ¿Eliminar ",
         "DELETE_YES": "Sí, eliminar",
         "DELETE_NO": "No, conservar",

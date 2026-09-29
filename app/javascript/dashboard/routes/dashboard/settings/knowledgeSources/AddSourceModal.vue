@@ -10,6 +10,9 @@ export default {
     show: { type: Boolean, default: false },
     saving: { type: Boolean, default: false },
     source: { type: Object, default: null },
+    // Para crear con tipo y nombre ya puestos (el Asistente de Agentes IA, desde la
+    // ruta que nombra una fuente que no existe): { source_type, name }.
+    initial: { type: Object, default: null },
   },
   emits: ['close', 'save'],
   data() {
@@ -111,8 +114,10 @@ export default {
       this.name = '';
     },
     show(val) {
-      if (val) this.populate();
-      else this.reset();
+      if (val) {
+        this.populate();
+        this.prefill();
+      } else this.reset();
     },
   },
   methods: {
@@ -134,6 +139,15 @@ export default {
       this.contpaqClientId = this.source.config?.client_id || '';
       this.contpaqClientSecret = this.source.config?.client_secret || '';
       this.contpaqScope = this.source.config?.scope || '';
+    },
+    // El watcher de sourceType borra el nombre: primero el tipo, y el nombre
+    // después de que ese watcher corrió.
+    prefill() {
+      if (this.source || !this.initial) return;
+      if (this.initial.source_type) this.sourceType = this.initial.source_type;
+      this.$nextTick(() => {
+        this.name = this.initial.name || '';
+      });
     },
     reset() {
       this.sourceType = 'discourse';

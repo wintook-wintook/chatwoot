@@ -78,11 +78,50 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
         .to include('falta el paréntesis de cierre')
     end
 
+    # 24/09/2026: una rama real terminaba en «?)», sin fuente después.
+    it 'señala la fuente que falta al final, y cuelga el aviso de la rama' do
+      r = validar('@ruta(informacion_general #informacion: ¿cómo trabajan?, ¿qué me pueden decir?)')
+
+      hallazgo = r[:blocking].find { |f| f[:code] == :route_line_unparsed }
+      expect(hallazgo[:message]).to include('falta «: fuente»', '«): -»')
+      expect(hallazgo[:route]).to eq('informacion_general')
+    end
+
     it 'no repite el genérico "0 ramas" cuando ya explicó línea por línea' do
       r = validar('@ruta(soporte #soporte: no puedo entrar) @buscar_articulo')
 
       expect(codigos(r, :blocking)).to include(:route_line_unparsed)
       expect(codigos(r, :blocking)).not_to include(:no_routes)
+    end
+  end
+
+  # 24/09/2026: el motor lee solo «@crear_ticket» y abre el caso con tipo y
+  # prioridad por defecto, sin avisar a nadie.
+  describe 'B11 · una directiva de la rama sin cerrar' do
+    it 'marca el @crear_ticket sin «)» y dice que ignora tipo y prioridad' do
+      r = validar('@ruta(info #info: ¿qué hacen?): @buscar_predefinidas -> @crear_ticket(tipo=Soporte, prioridad=media')
+
+      hallazgo = r[:blocking].find { |f| f[:code] == :unclosed_directive }
+      expect(hallazgo).to include(route: 'info', wrote: '@crear_ticket(tipo=Soporte, prioridad=media')
+      expect(hallazgo[:message]).to include('IGNORA', '«)»')
+    end
+
+    it 'marca una fuente sin «}}»' do
+      r = validar('@ruta(precios #precios: cuánto cuesta): {{hoja:Precios')
+
+      expect(r[:blocking].find { |f| f[:code] == :unclosed_directive }[:message]).to include('«}}»')
+    end
+
+    it 'no inventa un tipo de caso con la línea siguiente' do
+      r = validar("@ruta(info #info: x): - -> @crear_ticket(tipo=Soporte\n@ruta(otra #otra: y): -")
+
+      expect(codigos(r, :blocking)).not_to include(:case_type_not_found)
+    end
+
+    it 'no marca las que cierran' do
+      r = validar('@ruta(info #info: x): {{hoja:Precios}} -> @crear_ticket(tipo=Soporte, prioridad=media)')
+
+      expect(codigos(r, :blocking)).not_to include(:unclosed_directive)
     end
   end
 
@@ -116,7 +155,7 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       r = validar(con_directiva_suelta)
 
       hallazgo = r[:degrading].find { |f| f[:code] == :loose_directive }
-      expect(hallazgo[:message]).to include('NO se ejecuta')
+      expect(hallazgo[:message]).to include('no se ejecuta', 'El agente lee esa línea así')
       expect(hallazgo[:wrote]).to eq('@buscar_articulo')
       expect(r[:valid]).to be(true)
     end
@@ -148,6 +187,29 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       expect(limpio).to include('Si no sabés, usá')
       expect(limpio).to include('para responder.')
       expect(limpio).not_to include('@buscar_articulo')
+    end
+
+    # 24/09/2026: borrada, «Solo @buscar_predefinidas autoriza…» le llegaba al agente como
+    # «Solo  autoriza…». Ahora la regla se lee entera.
+    it 'en el motor la directiva de búsqueda se cambia por «la información consultada»' do
+      limpio = KnowledgeBase::Directives.strip_tokens('Solo @buscar_predefinidas(CARRERAS) autoriza: costo, beca.')
+
+      expect(limpio).to eq('Solo la información consultada autoriza: costo, beca.')
+    end
+
+    it 'también {{hoja:}} y {{doc:}}: se marcan y el motor las cambia' do
+      texto = "@ruta(a #aaa: x): {{hoja:CATALOGO}}\n\n[EVIDENCIA]\nPara esos datos ejecuta {{hoja:CATALOGO}}."
+
+      expect(codigos(validar(texto), :degrading)).to include(:loose_directive)
+      expect(KnowledgeBase::Directives.strip_tokens('Solo {{hoja:CATALOGO DE CARRERAS}} autoriza.'))
+        .to eq('Solo la información consultada autoriza.')
+    end
+
+    it 'un aviso por línea, con su número, para pintarlas en el editor' do
+      texto = "@ruta(a #aaa: x): -\n\n[EVIDENCIA]\nSolo @buscar_predefinidas autoriza.\nSin @buscar_predefinidas no."
+
+      lineas = validar(texto)[:degrading].select { |f| f[:code] == :loose_directive }.pluck(:line)
+      expect(lineas).to eq([4, 5])
     end
   end
 
@@ -246,6 +308,29 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
 
       expect(codigos(r, :degrading)).to include(:route_without_description)
       expect(r[:valid]).to be(true)
+    end
+  end
+
+  describe 'D9 · rama que no consulta nada ni hace nada si no resuelve' do
+    it 'avisa en ámbar, colgado de la rama, sin impedir guardar' do
+      r = validar('@ruta(saludo #saludo: hola, buenos días): -')
+
+      aviso = r[:degrading].find { |f| f[:code] == :route_does_nothing }
+      expect(aviso).to include(route: 'saludo')
+      expect(aviso[:message]).to include("'saludo'", 'a propósito')
+      expect(r[:valid]).to be(true)
+    end
+
+    it 'con una acción después de la flecha sí hace algo' do
+      r = validar('@ruta(agendar #agendar: quiero una cita): - -> @agendar_calendar')
+
+      expect(codigos(r, :degrading)).not_to include(:route_does_nothing)
+    end
+
+    it 'con una fuente tampoco' do
+      r = validar('@ruta(soporte #soporte: no puedo entrar): @buscar_articulo')
+
+      expect(codigos(r, :degrading)).not_to include(:route_does_nothing)
     end
   end
 

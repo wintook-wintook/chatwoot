@@ -37,7 +37,7 @@
 class ContactTrackings::Assistant::ValidatorService
   # Directivas de ACCIÓN. Nunca son la fuente de una rama: si aparecen del lado
   # izquierdo de la flecha, es que la flecha no está o está mal escrita.
-  ACTION_RE = /@crear_ticket\b|@estado_ticket\b|@agendar_calendar\b/i
+  ACTION_RE = /@crear_ticket\b|@estado_ticket\b|@agendar_calendar\b|@confirmar_servicio\b|@solicitudes\b/i
 
   def initialize(text, account:)
     @text = text.to_s
@@ -50,11 +50,11 @@ class ContactTrackings::Assistant::ValidatorService
   # porque su diagnóstico suprime el genérico "0 ramas" (decirle a alguien que no
   # escribió ninguna @ruta cuando la escribió mal es lo que hace que descarte el aviso).
   CHECKS = %i[
-    check_pending_markers check_contract_leftovers
+    check_pending_markers check_contract_leftovers check_structure
     check_unparsed_route_lines check_has_routes
-    check_route_sources check_action_in_source check_ticket_types check_default_route
+    check_route_sources check_route_lines check_action_in_source check_ticket_types check_default_route
     check_descriptions check_duplicate_descriptions check_tags_exist check_corpus
-    check_erp_directive_isolation
+    check_erp_directive_isolation check_sheet_lookup
     check_escalation_regime check_calendar_directive check_prose
   ].freeze
 
@@ -95,19 +95,29 @@ class ContactTrackings::Assistant::ValidatorService
       next unless line.lstrip.start_with?('@ruta(')
       next if line.match?(ContactTrackings::RouteMap::LINE_RE)
 
+      # `route`: el nombre leído a ojo, para colgar el aviso de la rama rota en el árbol.
       add(:blocking, :route_line_unparsed,
           t('findings.route_line_unparsed', line: index + 1, reason: unparsed_reason(line)),
-          line: index + 1, wrote: line.strip)
+          line: index + 1, wrote: line.strip, route: ContactTrackings::TrainingRoutes.broken_entry(line)['name'])
     end
   end
 
   def unparsed_reason(line)
     return t('unparsed.no_closing_paren') unless line.include?(')')
+    # Medido con una rama real (24/09): terminaba en «?)», sin nada después.
+    return t('unparsed.no_source') if line.rstrip.end_with?(')') && line.count('(') == line.count(')')
     # El caso que se midió: `@ruta(...)` seguido de la fuente sin los dos puntos.
     return t('unparsed.no_colon') if line.match?(/@ruta\([^)]*\)\s*[^:\s]/)
     return t('unparsed.bad_name') if line.match?(/@ruta\(\s*[^a-z0-9_\-#:)]/i)
 
     t('unparsed.generic')
+  end
+
+  # B11 (directiva sin cerrar) y D9 (rama que no hace nada): ver RouteLineChecks.
+  # P1–P2 (lo que el Entrenamiento promete y no pasa): ver PromiseChecks.
+  def check_route_lines
+    ContactTrackings::Assistant::RouteLineChecks.new(map, findings: findings).call
+    ContactTrackings::Assistant::PromiseChecks.check(text, map: map, findings: findings)
   end
 
   # Comprobar la configuración contra lo que la cuenta TIENE es otro tipo de
@@ -129,6 +139,9 @@ class ContactTrackings::Assistant::ValidatorService
   # ── B10 · restos del contrato (ver ContractLeftovers) ────────────────────────
   def check_contract_leftovers = ContactTrackings::Assistant::ContractLeftovers.check(text, findings: findings)
 
+  # S1–S4: lo mal escrito a mano fuera de las rutas (ver StructureChecks).
+  def check_structure = ContactTrackings::Assistant::StructureChecks.check(text, findings: findings)
+
   def pending?(value) = ContactTrackings::Assistant::PendingMarkers.pending?(value)
 
   # ── B1 · ninguna rama ───────────────────────────────────────────────────────
@@ -143,7 +156,7 @@ class ContactTrackings::Assistant::ValidatorService
   # ── B4 y B5 · la fuente de cada rama ────────────────────────────────────────
   def check_route_sources
     map.routes.each do |route|
-      next if route.directive.blank? # "-" es válido: la rama no consulta nada
+      next if route.directive.blank? # "-" es válido: la ruta no consulta nada
       next if pending?(route.directive) # falta elegirla: lo dice check_pending_markers
 
       detected = KnowledgeBase::Directives.detect(route.directive)
@@ -161,7 +174,8 @@ class ContactTrackings::Assistant::ValidatorService
   # coincide con ninguna, el motor no falla: busca y no encuentra, siempre.
   def check_named_source_exists(route, detected)
     name = detected[:source_name]
-    return if name.blank?
+    # {{hoja_buscar:}}: la hoja y sus columnas las revisa SheetLookupChecks.
+    return if name.blank? || detected[:mode] == :sheet_lookup
     return if account.knowledge_sources.active.any? { |s| s.name.casecmp?(name) }
 
     disponibles = account.knowledge_sources.active.map(&:name)
@@ -194,7 +208,9 @@ class ContactTrackings::Assistant::ValidatorService
   def check_ticket_types
     tipos = CaseType.where(account_id: account.id).pluck(:name)
 
-    text.scan(/@crear_ticket\(([^)]*)\)/i).flatten.each do |args|
+    # Sin cruzar de línea: con un «)» faltante (lo marca RouteLineChecks) la captura se
+    # comía la línea siguiente y avisaba un tipo «Comercial\n@ruta(saludo…» inexistente.
+    text.scan(/@crear_ticket\(([^)\n]*)\)/i).flatten.each do |args|
       tipo = args[/tipo\s*=\s*([^,)]+)/i, 1]&.strip
       next if tipo.blank? || pending?(tipo) || tipos.any? { |t| t.casecmp?(tipo) }
 
@@ -266,7 +282,9 @@ class ContactTrackings::Assistant::ValidatorService
   end
 
   # ── D2 · la etiqueta no existe ──────────────────────────────────────────────
+  # También la sección [ETIQUETAS] como diccionario de estados: ver TagDictionary.
   def check_tags_exist
+    ContactTrackings::Assistant::TagDictionary.check(text, map: map, account: account, findings: findings)
     existentes = account.labels.pluck(:title)
 
     map.routes.each do |route|
@@ -284,6 +302,9 @@ class ContactTrackings::Assistant::ValidatorService
   def check_erp_directive_isolation
     ContactTrackings::Assistant::ErpChecks.new(text, map: map, account: account, findings: findings).call
   end
+
+  # ── {{hoja_buscar:}} (proyecto@hoja_buscar): ver SheetLookupChecks ─────────
+  def check_sheet_lookup = ContactTrackings::Assistant::SheetLookupChecks.new(text, account: account, findings: findings).call
 
   # ── D7 · @agendar_calendar sin ningún calendario en la cuenta ───────────────
   # El motor solo agenda si el AGENTE tiene calendarios asignados
@@ -309,12 +330,13 @@ class ContactTrackings::Assistant::ValidatorService
   end
 
   # ── D5 · régimen de escalamiento mixto ──────────────────────────────────────
-  # Si UNA rama lleva flecha, el motor cambia de régimen y las ramas sin flecha
-  # dejan de abrir casos, aunque haya un @crear_ticket global.
+  # Si UNA rama lleva flecha, las ramas sin flecha NI fuente heredan el @crear_ticket de
+  # otra. Las que tienen fuente contestan con ella y no abren caso (desde el 29/09/2026,
+  # ContactTrackingResponseAnalyzerJob#source_only_branch?): no se avisan.
   def check_escalation_regime
     return unless map.escalations?
 
-    sin_flecha = map.routes.reject(&:escalates?).map(&:name)
+    sin_flecha = map.routes.reject { |r| r.escalates? || r.directive.present? }.map(&:name)
     return if sin_flecha.empty?
 
     add(:degrading, :mixed_escalation_regime,

@@ -31,11 +31,29 @@ class ContactTrackings::Assistant::CorpusChecks
 
   def call
     check_canned_group_size
+    check_paid_label
   end
 
   private
 
   attr_reader :findings
+
+  # ── @confirmar_servicio(requiere=pago) sin la etiqueta del pago (pieza 4) ─────
+  # El servicio queda en firme cuando una persona le pone a la conversación la etiqueta
+  # «pago_confirmado». Si la cuenta no la tiene, nadie puede ponerla: el servicio se
+  # queda apartado para siempre. Ámbar, con el botón «Crearla» del informe.
+  def check_paid_label
+    ruta = @map.routes.find { |r| ContactTrackings::ServiceConfirmation.requires_payment?(r.escalation) }
+    return if ruta.nil?
+
+    etiqueta = ContactTrackings::ServiceConfirmation::PAID_LABEL
+    return if @account.labels.exists?(title: etiqueta)
+
+    findings.add(:degrading, :state_label_not_found,
+                 I18n.t('tracking_assistant.findings.paid_label_missing', route: ruta.name, label: etiqueta,
+                                                                          locale: ContactTrackings::Assistant::Language.resolve),
+                 wrote: "##{etiqueta}", route: ruta.name)
+  end
 
   def check_canned_group_size
     @map.routes.each do |route|
@@ -50,10 +68,10 @@ class ContactTrackings::Assistant::CorpusChecks
 
       findings.add(
         :degrading, :canned_group_too_small,
-        "La rama '#{route.name}' busca en el grupo #{group}, que tiene #{cuantas}. Con grupo el " \
-        'umbral de similitud sube de 0.20 a 0.45, así que sobre tan pocas respuestas la rama ' \
+        "La ruta '#{route.name}' busca en el grupo #{group}, que tiene #{cuantas}. Con grupo el " \
+        'umbral de similitud sube de 0.20 a 0.45, así que sobre tan pocas respuestas la ruta ' \
         'casi nunca va a encontrar nada. Conviene revisar que el grupo sea el correcto y que ' \
-        'tenga contenido del tema de esta rama.',
+        'tenga contenido del tema de esta ruta.',
         wrote: route.directive
       )
     end

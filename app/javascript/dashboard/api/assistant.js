@@ -109,6 +109,128 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // El encargo (.md) con la idea del agente. Se guarda y se manda a leer solo; con
+  // turnId se sigue el avance en getProgress. Ver docs/importar_prompt_md_plan.md.
+  uploadBrief(file, { sessionId = null, turnId = null } = {}) {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    if (sessionId) formData.append('session_id', sessionId);
+    if (turnId) formData.append('turn_id', turnId);
+    return axios.post(`${this.url}/briefs`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
+
+  // «Probar el agente»: la pila de pruebas en vivo del agente guardado (M5 de
+  // docs/importar_prompt_extenso_plan.md). Devuelve { id }; el avance se lee con
+  // testBattery(id) y el informe .md con downloadTestBatteryReport(id).
+  startTestBattery(templateId, { briefId = null } = {}) {
+    return axios.post(`${this.url}/test_battery`, {
+      template_id: templateId,
+      brief_id: briefId,
+    });
+  }
+
+  testBattery(id) {
+    return axios.get(`${this.url}/test_battery/${id}`);
+  }
+
+  downloadTestBatteryReport(id) {
+    return axios.get(`${this.url}/test_battery/${id}/report`, {
+      responseType: 'blob',
+    });
+  }
+
+  // Las instrucciones que se llenaron conversando, como si fueran un .md subido.
+  briefFromInstructions(content, filename, { sessionId = null } = {}) {
+    return axios.post(`${this.url}/briefs/from_instructions`, {
+      content,
+      filename,
+      session_id: sessionId,
+    });
+  }
+
+  // Un turno de la conversación que arma un agente desde cero: devuelve la
+  // respuesta y las instrucciones iniciales actualizadas (DraftingChat).
+  draftingChat(messages, instructions, { sessionId = null } = {}) {
+    return axios.post(`${this.url}/drafting_chat`, {
+      messages,
+      instructions,
+      session_id: sessionId,
+    });
+  }
+
+  // La línea de [ALCANCE POR RAMA] de una ruta, redactada desde sus frases.
+  routeScope({ name, phrases, source, action }, inboxId = null) {
+    return axios.post(`${this.url}/route_scope`, {
+      name,
+      phrases,
+      source,
+      action_directive: action,
+      inbox_id: inboxId,
+    });
+  }
+
+  // Nombre puesto a mano a una conversación (vacío vuelve al automático).
+  renameSession(id, name) {
+    return axios.patch(`${this.url}/sessions/${id}/name`, { name });
+  }
+
+  // Guardado automático de lo editado a mano: crea la conversación si todavía no hay.
+  autosaveDraft(draft, sessionId = null) {
+    return axios.put(`${this.url}/autosave`, { draft, session_id: sessionId });
+  }
+
+  // Revisar una conversación real: `text` es lo que se escribió en el chat, con el
+  // link de la conversación. Corre en segundo plano: el resultado se pide con
+  // getConversationReview(turnId) hasta que deja de ser 202.
+  reviewConversation(text, turnId, { draft = null, inboxId = null } = {}) {
+    return axios.post(`${this.url}/conversation_review`, {
+      text,
+      draft,
+      inbox_id: inboxId,
+      turn_id: turnId,
+    });
+  }
+
+  getConversationReview(turnId) {
+    return axios.get(`${this.url}/conversation_review/${turnId}`);
+  }
+
+  // Conocimiento sugerido: las respuestas predefinidas que el agente del encargo
+  // necesita (propuestas, no crea nada) y crear las elegidas.
+  knowledgeSuggestions(briefId) {
+    return axios.post(`${this.url}/briefs/${briefId}/knowledge`);
+  }
+
+  createKnowledge(briefId, group, items) {
+    return axios.post(`${this.url}/briefs/${briefId}/knowledge/create`, {
+      group,
+      items,
+    });
+  }
+
+  // Estado del encargo; con la ficha y lo que falta cuando ya se leyó.
+  getBrief(id) {
+    return axios.get(`${this.url}/briefs/${id}`);
+  }
+
+  // El encargo ya resuelto con lo que contestó la persona: { message, proposal }.
+  // `message` va a interview() con oneShot; guarda las respuestas en el encargo.
+  composeBrief(id, answers) {
+    return axios.post(`${this.url}/briefs/${id}/compose`, { answers });
+  }
+
+  // Lo que la redacción dejó afuera del encargo, agregado en su sección (sin IA).
+  coverBrief(id, draft) {
+    return axios.post(`${this.url}/briefs/${id}/cover`, { draft });
+  }
+
+  // Volver a leerlo (después de una falla). Lo ya leído no se vuelve a pagar.
+  digestBrief(id, turnId = null) {
+    return axios.post(`${this.url}/briefs/${id}/digest`, { turn_id: turnId });
+  }
+
   // El texto de una versión del Entrenamiento: las listas llegan sin él.
   getVersion(sessionId, number) {
     return axios.get(`${this.url}/sessions/${sessionId}/versions/${number}`);
@@ -170,8 +292,9 @@ class AssistantAPI extends ApiClient {
     inboxId,
     templateId,
     sessionId,
+    calendarIntegrationIds = null,
   }) {
-    return axios.post(`${this.url}/save`, {
+    const body = {
       draft,
       mode,
       name,
@@ -180,7 +303,11 @@ class AssistantAPI extends ApiClient {
       inbox_id: inboxId,
       template_id: templateId,
       session_id: sessionId,
-    });
+    };
+    // Solo si el Entrenamiento agenda: sin la llave, el agente conserva los que tiene.
+    if (calendarIntegrationIds)
+      body.calendar_integration_ids = calendarIntegrationIds;
+    return axios.post(`${this.url}/save`, body);
   }
 }
 

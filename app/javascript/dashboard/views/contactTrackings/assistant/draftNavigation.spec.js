@@ -1,4 +1,9 @@
-import { findRouteLine, lineRange } from './draftNavigation';
+import {
+  findRouteLine,
+  lineRange,
+  lineMarks,
+  lineMessages,
+} from './draftNavigation';
 
 // proyecto@asistente_agentes_ia — el informe como índice
 //
@@ -74,6 +79,52 @@ describe('draftNavigation', () => {
       expect(draft.slice(start, end)).toBe(
         '@ruta(comercial: precios): @buscar_predefinidas'
       );
+    });
+  });
+});
+
+describe('lineMarks', () => {
+  const draft = [
+    '@ruta(info #info: ¿qué hacen?)',
+    '@ruta(agendar #agendar: cita): - -> @agendar_calendar',
+    '@ruta(saludo #saludo: hola): -',
+  ].join('\n');
+
+  it('pinta la línea del hallazgo, o la de su rama, y lo rojo gana', () => {
+    const validation = {
+      blocking: [{ line: 1, route: 'info' }],
+      degrading: [
+        { route: 'info' },
+        { route: 'saludo' },
+        { routes: ['agendar'] },
+      ],
+    };
+
+    expect(lineMarks(draft, validation)).toEqual({
+      1: 'blocking',
+      2: 'degrading',
+      3: 'degrading',
+    });
+  });
+
+  it('sin comprobación no pinta nada', () => {
+    expect(lineMarks(draft, null)).toEqual({});
+  });
+});
+
+describe('lineMessages', () => {
+  it('junta lo que dice cada línea, los rojos primero', () => {
+    const draft = '@ruta(info #info: x)\n@ruta(otra #otra: y): -';
+    const validation = {
+      degrading: [{ route: 'info', message: 'etiqueta' }],
+      blocking: [{ line: 1, message: 'no se lee' }],
+    };
+
+    expect(lineMessages(draft, validation)).toEqual({
+      1: [
+        { level: 'blocking', message: 'no se lee' },
+        { level: 'degrading', message: 'etiqueta' },
+      ],
     });
   });
 });

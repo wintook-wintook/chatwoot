@@ -100,24 +100,28 @@ RSpec.describe ContactTrackings::Assistant::Language do
   # Cases::TicketCreatorService: es al revés. El job la manda a
   # try_create_ticket(directive: nil), que cae al Entrenamiento ENTERO y encuentra
   # ahí el @crear_ticket de OTRA rama.
+  # Desde el 29/09/2026 una rama CON fuente y sin flecha contesta y no abre caso
+  # (ContactTrackingResponseAnalyzerJob#source_only_branch?): solo hereda la que no tiene ni
+  # fuente ni flecha, y el aviso nombra solo a esas.
   describe 'régimen de escalamiento mixto' do
     let(:mixto) do
       "@ruta(soporte #soporte: fallas): @buscar_articulo -> @crear_ticket(tipo=Soporte)\n" \
-        '@ruta(otros #otros: lo demas): @buscar_predefinidas'
+        "@ruta(otros #otros: lo demas): @buscar_predefinidas\n" \
+        '@ruta(humano #humano: una persona): -'
     end
 
-    it 'ya no afirma que esas ramas dejan de abrir casos' do
+    it 'avisa que la rama sin fuente ni flecha abre caso con el @crear_ticket de otra' do
       mensaje = validar(mixto, :es)[:degrading].find { |f| f[:code] == :mixed_escalation_regime }[:message]
 
-      expect(mensaje).to include('NO las deja sin caso')
-      expect(mensaje).to include('ANTES de consultar')
+      expect(mensaje).to include('humano')
+      expect(mensaje).not_to include('otros')
+      expect(mensaje).to include('van a abrir caso')
     end
 
     it 'y lo dice igual en inglés' do
       mensaje = validar(mixto, :en)[:degrading].find { |f| f[:code] == :mixed_escalation_regime }[:message]
 
-      expect(mensaje).to include('does NOT leave them')
-      expect(mensaje).to include('BEFORE consulting')
+      expect(mensaje).to include('will open a case')
     end
 
     # El motor de verdad, no el mensaje: si esto cambiara, el aviso volvería a mentir.

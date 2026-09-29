@@ -137,8 +137,29 @@ Rails.application.routes.draw do
             post 'assistant/explain', to: 'assistant_tools#explain'
             post 'assistant/proofread', to: 'assistant_tools#proofread'
             post 'assistant/transcribe', to: 'assistant_tools#transcribe'
+            post 'assistant/route_scope', to: 'assistant_tools#route_scope'
             get  'assistant/audit',     to: 'assistant#audit'
             post 'assistant/dry_run',   to: 'assistant#dry_run'
+            # el encargo (.md) con la idea del agente — ver docs/importar_prompt_md_plan.md
+            post 'assistant/briefs', to: 'assistant_briefs#create'
+            post 'assistant/briefs/from_instructions', to: 'assistant_briefs#from_instructions'
+            get  'assistant/briefs/:id',         to: 'assistant_briefs#show'
+            get  'assistant/briefs/:id/content', to: 'assistant_briefs#content'
+            post 'assistant/briefs/:id/digest',  to: 'assistant_briefs#digest'
+            post 'assistant/briefs/:id/compose', to: 'assistant_briefs#compose'
+            post 'assistant/briefs/:id/cover',   to: 'assistant_briefs#cover'
+            post 'assistant/briefs/:id/knowledge', to: 'assistant_knowledge#suggestions'
+            post 'assistant/briefs/:id/knowledge/create', to: 'assistant_knowledge#create'
+            # «Probar el agente»: la pila de pruebas en vivo (docs/importar_prompt_extenso_plan.md, M5)
+            post 'assistant/test_battery', to: 'assistant_test_battery#create'
+            get  'assistant/test_battery/:id', to: 'assistant_test_battery#show'
+            get  'assistant/test_battery/:id/report', to: 'assistant_test_battery#report'
+            # armar un agente desde cero conversando (llena las instrucciones iniciales)
+            post 'assistant/drafting_chat', to: 'assistant_drafting#create'
+            put  'assistant/autosave', to: 'assistant_autosave#update'
+            patch 'assistant/sessions/:id/name', to: 'assistant_autosave#rename'
+            post 'assistant/conversation_review', to: 'assistant_review#create'
+            get  'assistant/conversation_review/:turn_id', to: 'assistant_review#show'
           end
 
           # @knowledge_sources

@@ -125,7 +125,7 @@ export default {
           class="w-full !mb-1 min-h-[16rem] text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2"
           :placeholder="$t('TRACKING_ASSISTANT_VIEW.DEFINITION_CONTEXT_HINT')"
         />
-        <p class="!m-0 text-xs text-amber-600 dark:text-amber-400">
+        <p class="!m-0 text-xs text-amber-800 dark:text-amber-800">
           {{ $t('TRACKING_ASSISTANT_VIEW.DEFINITION_CONTEXT_WARNING') }}
         </p>
         <ProofreadBar

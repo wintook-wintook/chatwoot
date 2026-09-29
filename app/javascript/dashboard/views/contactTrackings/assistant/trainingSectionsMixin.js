@@ -152,6 +152,12 @@ export default {
       return this.trainingPreviewPromise;
     },
     async runTrainingPreview(payload, replaceStructure) {
+      // El texto que se revisa pasa a ser el último sincronizado. Sin esto, el guardia
+      // del watch comparaba contra el texto de cuando se CARGÓ: al volver a él (poner de
+      // nuevo un «)» que se había borrado) no se revisaba, y el árbol se quedaba con el
+      // punto rojo de la revisión anterior (24/09/2026).
+      if (typeof payload.text === 'string')
+        this.textFromSections = payload.text;
       try {
         const { data } = await TrackingTemplatesAPI.trainingPreview(payload);
         this.trainingValidation = data.validation;

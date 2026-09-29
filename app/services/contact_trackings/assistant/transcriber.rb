@@ -21,7 +21,7 @@ class ContactTrackings::Assistant::Transcriber
   # El tope de OpenAI es 25 MB. 20 deja margen; en ogg/opus son horas de voz.
   MAX_BYTES = 20.megabytes
   READ_TIMEOUT = 120
-  VOCABULARY = %w[Entrenamiento rama ramas etiqueta escalamiento deriva agendar cita
+  VOCABULARY = %w[Entrenamiento ruta rutas rama ramas etiqueta escalamiento deriva agendar cita
                   @ruta @crear_ticket @agendar_calendar Kontrolya CFDI WhatsApp].freeze
 
   def initialize(account, file:)

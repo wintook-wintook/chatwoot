@@ -67,6 +67,13 @@ class GoogleCalendarService
     patch("/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}", body, query: { sendUpdates: send_updates })
   end
 
+  # proyecto@hoja_buscar, pieza 4 — cambia solo el título (quitar «[TENTATIVO]»), sin
+  # volver a escribirle a los invitados.
+  def rename_event(event_id, summary:, calendar_id: 'primary')
+    patch("/calendars/#{CGI.escape(calendar_id)}/events/#{CGI.escape(event_id)}", { summary: summary },
+          query: { sendUpdates: 'none' })
+  end
+
   # @tickets_cases F3 — un evento suelto por id. Devuelve :already_gone si Google
   # responde 404/410, para no confundir "borrado" con "falló la API".
   def get_event(event_id, calendar_id: 'primary')

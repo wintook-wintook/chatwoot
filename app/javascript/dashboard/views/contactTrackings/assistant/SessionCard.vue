@@ -24,14 +24,29 @@
 // ============================================================================
 export default {
   props: {
-    // id, status, title, template_name, created_at, updated_at. Null mientras no
-    // se guardó ningún turno.
+    // id, status, title, named, template_name, created_at, updated_at. Null mientras
+    // no se guardó ningún turno.
     sessionMeta: { type: Object, default: null },
     // El Agente IA del que salió el borrador cuando se entró desde su ficha,
     // antes de que haya conversación guardada.
     editingTemplate: { type: Object, default: null },
   },
+  // rename: nombre puesto a mano (25/09/2026), el lápiz junto al título. Vacío
+  // vuelve al título automático.
+  emits: ['rename'],
+  data() {
+    return { editing: false, draftName: '' };
+  },
   computed: {
+    // Con nombre puesto a mano, ese manda; si no, el agente o de qué trata.
+    heading() {
+      if (this.sessionMeta?.named) return this.sessionMeta.title;
+      return (
+        this.fromTemplate ||
+        this.sessionMeta?.title ||
+        this.$t('TRACKING_ASSISTANT_VIEW.SESSION_UNSAVED')
+      );
+    },
     // Solo si es de otra persona: en la propia, el nombre no aporta nada.
     creator() {
       return this.sessionMeta && !this.sessionMeta.mine
@@ -51,6 +66,16 @@ export default {
     },
   },
   methods: {
+    startRename() {
+      this.draftName = this.sessionMeta?.named ? this.sessionMeta.title : '';
+      this.editing = true;
+      this.$nextTick(() => this.$refs.nameInput?.focus());
+    },
+    submitRename() {
+      if (!this.editing) return;
+      this.editing = false;
+      this.$emit('rename', this.draftName.trim());
+    },
     // Día y mes con dos dígitos y el año completo: "9/9, 15:36" obliga a deducir
     // el año, y en un listado donde conviven conversaciones de hace una semana y
     // de hace dos meses eso se lee mal. Queda "09/09/2026 15:36".
@@ -81,52 +106,68 @@ export default {
 </script>
 
 <template>
-  <div
-    class="px-3 py-2 border rounded-lg shrink-0 bg-slate-25 dark:bg-slate-900/40 border-slate-100 dark:border-slate-700"
-  >
-    <!-- LÍNEA 1 · quién es: el id y de qué se trataba -->
-    <div class="flex items-baseline gap-2 flex-nowrap">
-      <span
+  <!-- Qué se está editando (pedido del usuario, 24/09/2026: la franja de arriba se veía
+       desordenada). Título en grande —el agente, o de qué trata la conversación— y
+       debajo, en gris y en una línea, el número, las fechas y quién la creó. El marco
+       lo pone la barra de Assistant.vue, que junta esto con el canal y las acciones. -->
+  <div class="min-w-0">
+    <div v-if="editing" class="flex items-center gap-1">
+      <input
+        ref="nameInput"
+        v-model="draftName"
+        type="text"
+        maxlength="120"
+        class="!mb-0 !py-1 text-sm"
+        :placeholder="$t('TRACKING_ASSISTANT_VIEW.SESSION_RENAME_PLACEHOLDER')"
+        @keydown.enter.prevent="submitRename"
+        @keydown.esc.prevent="editing = false"
+      />
+      <woot-button size="tiny" icon="checkmark" @click="submitRename" />
+      <woot-button
+        size="tiny"
+        variant="clear"
+        color-scheme="secondary"
+        icon="dismiss"
+        @click="editing = false"
+      />
+    </div>
+    <div v-else class="flex items-center min-w-0 gap-1">
+      <p
+        class="!m-0 text-sm font-medium truncate text-slate-800 dark:text-slate-100"
+      >
+        {{ heading }}
+      </p>
+      <woot-button
         v-if="sessionMeta"
-        class="font-mono text-xs text-slate-400 dark:text-slate-500 shrink-0 whitespace-nowrap"
-      >
-        #{{ sessionMeta.id }}
-      </span>
-      <span
-        v-if="sessionMeta && sessionMeta.title"
-        class="min-w-0 text-xs truncate text-slate-700 dark:text-slate-200"
-      >
-        {{ sessionMeta.title }}
-      </span>
-      <span v-else class="text-xs italic text-slate-400 dark:text-slate-500">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_UNSAVED') }}
-      </span>
+        v-tooltip="$t('TRACKING_ASSISTANT_VIEW.SESSION_RENAME')"
+        size="tiny"
+        variant="clear"
+        color-scheme="secondary"
+        icon="edit"
+        class="shrink-0"
+        @click="startRename"
+      />
     </div>
-
-    <!-- LÍNEA 2 · de dónde salió y cuándo -->
-    <div
-      class="text-xs truncate text-slate-400 dark:text-slate-500"
-      :class="{ 'mt-0.5': sessionMeta }"
+    <p
+      v-if="sessionMeta"
+      class="!m-0 mt-0.5 text-xs truncate text-slate-500 dark:text-slate-400"
     >
-      <!-- Las fechas van PRIMERO y con rótulo. Antes decía "· creada 9/9, 15:36
-           · guardada 10/9, 15:36": dos bullets, sin año, y con "guardada" que se
-           confunde con el guardado del Agente IA. Y van antes que el nombre del
-           agente para que, si la línea se corta, lo que se pierda sea el nombre
-           largo y no la fecha. -->
-      <span v-if="created" class="whitespace-nowrap">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_CREATED_AT') }}
-        <span class="text-slate-500 dark:text-slate-400">{{ created }}</span>
-      </span>
-      <span v-if="updated" class="ml-2 whitespace-nowrap">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_SAVED_AT') }}
-        <span class="text-slate-500 dark:text-slate-400">{{ updated }}</span>
-      </span>
-      <span v-if="creator" class="ml-2">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_CREATOR', { name: creator }) }}
-      </span>
-      <span v-if="fromTemplate" class="ml-2">
-        {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_FROM', { name: fromTemplate }) }}
-      </span>
-    </div>
+      <span class="font-mono">#{{ sessionMeta.id }}</span>
+      <template v-if="sessionMeta.named && fromTemplate">
+        · {{ fromTemplate }}
+      </template>
+      <template v-else-if="fromTemplate && sessionMeta.title">
+        · {{ sessionMeta.title }}
+      </template>
+      <template v-if="created">
+        · {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_CREATED_AT') }} {{ created }}
+      </template>
+      <template v-if="updated">
+        · {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_SAVED_AT') }} {{ updated }}
+      </template>
+      <template v-if="creator">
+        · {{ $t('TRACKING_ASSISTANT_VIEW.SESSION_CREATOR', { name: creator }) }}
+      </template>
+    </p>
   </div>
 </template>

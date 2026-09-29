@@ -24,7 +24,7 @@
 #
 # EDITAR, NO REESCRIBIR (fase A de PROMPT STUDIO):
 #   Hasta el 15/09/2026 el modelo NUNCA veía el Entrenamiento: el cliente mandaba solo
-#   la conversación. "Agregá una rama" se resolvía reescribiendo todo de memoria, y un
+#   la conversación. "Agrega una rama" se resolvía reescribiendo todo de memoria, y un
 #   agente cargado con "Arreglarlo acá" se reemplazaba por uno nuevo sin haberlo leído.
 #   Ahora recibe el que está en pantalla —con las ediciones a mano incluidas— y lo
 #   devuelve completo cambiando solo lo pedido. Medido sobre el v6.11 (17.066
@@ -43,6 +43,7 @@
 
 class ContactTrackings::Assistant::InterviewService
   RepairPrompts = ContactTrackings::Assistant::RepairPrompts
+  EmptyPromise = ContactTrackings::Assistant::EmptyPromise
   API_URL = ContactTrackings::Assistant::OpenaiChat::API_URL
   # Vueltas de corrección antes de mostrarle los errores a la persona.
   MAX_REPAIRS = 3
@@ -114,10 +115,11 @@ class ContactTrackings::Assistant::InterviewService
 
     @started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     progress(:writing, editing: editing? && !building?)
-    reply = ask(conversation)
+    reply = ContactTrackings::Assistant::ReplyParser.with_extras(ask(conversation))
     return Result.new(error: :unavailable) if reply.nil?
 
-    handle(reply)
+    # Ni preguntó ni entregó (ver EmptyPromise): una vuelta más, solo al editar.
+    handle(EmptyPromise.second_try(reply, said: user_texts.last, editing: editing? && !building? && !one_shot) { |more| ask(conversation + more) })
   end
 
   private
@@ -137,15 +139,36 @@ class ContactTrackings::Assistant::InterviewService
     # Al EDITAR no se exige: el comportamiento ya está escrito en el Entrenamiento que
     # había, y preguntar "¿contesta o deriva?" para agregar una regla de estilo sería
     # hacer perder un turno.
-    return ask_missing_mode(reply, draft) if @outcome.building? && MODES.exclude?(reply['modo'])
+    #
+    # Tampoco en la redacción de una sola vez: su contrato no trae "modo" y nadie
+    # puede contestar la pregunta. Medido el 24/09/2026 con unas instrucciones
+    # iniciales que ya decían «CÓMO ATIENDE: responde»: se preguntaba igual, el modelo
+    # devolvía la pregunta y el Entrenamiento salía vacío.
+    return ask_missing_mode(reply, draft) if !one_shot && @outcome.building? && MODES.exclude?(reply['modo'])
 
     finish(reply, draft, ContactTrackings::Assistant::ReplyParser.proposal(reply))
   end
 
-  # El modelo solo preguntó: no hay Entrenamiento que comprobar.
+  # El modelo solo preguntó: no hay Entrenamiento que comprobar. Si fue un pedido de
+  # análisis, la respuesta lleva la lista del comprobador y el botón de corregir
+  # (ver AnalysisTurn).
   def questions(reply)
-    Result.new(reply: reply['mensaje'], draft: nil, repairs: 0,
-               options: ContactTrackings::Assistant::ReplyParser.options(reply))
+    Result.new(reply: analysis.reply(reply['mensaje']), draft: nil, repairs: 0,
+               options: ContactTrackings::Assistant::ReplyParser.options(reply) || analysis.fix_offer)
+  end
+
+  # La corrección del botón no toca las rutas que no tenían un aviso corregible. Va al
+  # final, después de las reparaciones: la de gramática también las cambiaba.
+  def guard_fix(turn, validation)
+    return validation unless analysis.fix_request?
+
+    turn.draft = analysis.guard(current_draft, turn.draft)
+    validate(turn.draft)
+  end
+
+  def analysis
+    @analysis ||= ContactTrackings::Assistant::AnalysisTurn.new(account, draft: current_draft, said: user_texts.last,
+                                                                         editing: editing?, building: building?)
   end
 
   # ── fase C: el borrador de cada turno (ver TurnOutcome) ─────────────────────
@@ -183,6 +206,7 @@ class ContactTrackings::Assistant::InterviewService
     repair_edit(turn)
     validation, repairs = repair_grammar(turn)
     validation, cruces = repair_routing(turn, validation)
+    validation = guard_fix(turn, validation)
 
     @outcome.delivery(turn, validation, repairs, cruces, proposal)
   end
@@ -257,8 +281,13 @@ class ContactTrackings::Assistant::InterviewService
   # persona no pidió cambiar.
   # Las marcas pendientes NO vuelven al modelo: son datos que tiene la persona, y
   # pedirle que las "corrija" es pedirle que los invente.
+  # Al editar un agente que ya existe, lo que depende de la cuenta (una fuente, un tipo
+  # de caso) no se repara solo: medido el 24/09/2026, una hoja que no existía en la
+  # cuenta de prueba terminó cambiada por el foro de otra empresa. Queda en rojo y lo
+  # decide la persona. Al crear, sí: ahí el modelo elige del inventario.
   def repairable(validation)
-    validation[:blocking].reject { |finding| finding[:code] == :pending_marker }
+    fijos = editing? && !building? ? ContactTrackings::Assistant::CheckerSection::ACCOUNT_BOUND : []
+    validation[:blocking].reject { |finding| finding[:code] == :pending_marker || fijos.include?(finding[:code]) }
   end
 
   def repair_routing(turn, validation)
@@ -315,18 +344,16 @@ class ContactTrackings::Assistant::InterviewService
     [{ role: 'system', content: system_prompt }] + messages.map { |m| m.slice('role', 'content').symbolize_keys }
   end
 
-  # El contrato fijo, el inventario de ESTA cuenta, cómo trabajar y —si hay— el
-  # Entrenamiento que se está editando. Va al final: es lo que el modelo tiene que
+  # El contrato fijo, el inventario de ESTA cuenta, cómo trabajar, lo que ya marcó el
+  # comprobador (CheckerSection) y —si hay— el Entrenamiento que se está editando. Va al final: es lo que el modelo tiene que
   # tener más presente al contestar.
   def system_prompt
     @system_prompt ||= [
       ContactTrackings::Assistant::Contract.call,
       inventory_section,
       ContactTrackings::Assistant::Instructions.call(one_shot: one_shot, max_turns: MAX_INTERVIEW_TURNS),
-      (if editing?
-         ContactTrackings::Assistant::EditingInstructions.call(current_draft, manual: @manual.labels,
-                                                                              building: building?)
-       end)
+      (ContactTrackings::Assistant::CheckerSection.call(current_draft, account: account, result: analysis.result) if editing?),
+      (ContactTrackings::Assistant::EditingInstructions.call(current_draft, manual: @manual.labels, building: building?) if editing?)
     ].compact.join("\n\n")
   end
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_09_21_182758) do
+ActiveRecord::Schema[7.0].define(version: 2026_09_26_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -369,6 +369,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_21_182758) do
     t.datetime "reconciled_at"
     t.datetime "cancelled_at"
     t.datetime "held_at"
+    t.boolean "tentative", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "starts_at"], name: "index_case_meetings_on_account_id_and_starts_at"
@@ -854,6 +855,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_21_182758) do
     t.string "appointment_calendar_gid"
     t.bigint "tracking_campaign_id"
     t.jsonb "keyword_action_fired"
+    t.string "appointment_status"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
     t.index ["appointment_at"], name: "index_contact_trackings_on_appointment_at"
@@ -1553,6 +1555,27 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_21_182758) do
     t.datetime "updated_at", precision: nil, null: false
   end
 
+  create_table "tracking_agent_briefs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "tracking_template_id"
+    t.bigint "tracking_assistant_session_id"
+    t.string "filename", null: false
+    t.text "content", null: false
+    t.string "sha256", null: false
+    t.string "status", default: "pending", null: false
+    t.jsonb "chunks", default: [], null: false
+    t.jsonb "digest", default: {}, null: false
+    t.jsonb "answers", default: {}, null: false
+    t.jsonb "usage", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "sha256"], name: "index_tracking_agent_briefs_on_account_id_and_sha256"
+    t.index ["tracking_assistant_session_id"], name: "index_tracking_agent_briefs_on_tracking_assistant_session_id"
+    t.index ["tracking_template_id"], name: "index_tracking_agent_briefs_on_tracking_template_id"
+    t.index ["user_id"], name: "index_tracking_agent_briefs_on_user_id"
+  end
+
   create_table "tracking_assistant_sessions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
@@ -1565,6 +1588,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_21_182758) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "draft_versions", default: [], null: false
+    t.text "instructions"
+    t.string "name"
     t.index ["account_id", "user_id", "status", "updated_at"], name: "idx_tracking_assistant_sessions_lookup"
     t.index ["tracking_template_id"], name: "index_tracking_assistant_sessions_on_tracking_template_id"
     t.index ["user_id"], name: "index_tracking_assistant_sessions_on_user_id"
@@ -1815,6 +1840,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_21_182758) do
   add_foreign_key "scheduled_messages", "accounts"
   add_foreign_key "scheduled_messages", "conversations"
   add_foreign_key "scheduled_messages", "users"
+  add_foreign_key "tracking_agent_briefs", "accounts"
+  add_foreign_key "tracking_agent_briefs", "tracking_assistant_sessions", on_delete: :nullify
+  add_foreign_key "tracking_agent_briefs", "tracking_templates", on_delete: :nullify
+  add_foreign_key "tracking_agent_briefs", "users", on_delete: :cascade
   add_foreign_key "tracking_assistant_sessions", "accounts"
   add_foreign_key "tracking_assistant_sessions", "tracking_templates", on_delete: :nullify
   add_foreign_key "tracking_assistant_sessions", "users", on_delete: :cascade

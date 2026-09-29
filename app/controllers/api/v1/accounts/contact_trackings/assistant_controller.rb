@@ -66,8 +66,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   before_action :check_authorization
 
   def inventory
-    render json: ContactTrackings::Assistant::InventoryService.new(Current.account, inbox: inbox).call
-                                                              .merge(models: models_for(inbox))
+    inventario = ContactTrackings::Assistant::InventoryService.new(Current.account, inbox: inbox).call
+    render json: inventario.merge(models: models_for(inbox), catalog: ContactTrackings::Assistant::EngineCatalog.new(inventario).call)
   end
 
   def validate
@@ -217,7 +217,9 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
     turnos = with_stored_changes(sesion, interview_messages) + [assistant_turn(result)]
     ContactTrackings::Assistant::SessionVersions.new(sesion, on_screen: params[:draft], delivered: delivered_draft)
                                                 .record(result)
-    sesion.record_turn(messages: turnos, draft: result.draft,
+    # Sin Entrenamiento nuevo (una pregunta, un análisis) queda el que estaba en pantalla:
+    # si no, la conversación se reabría con el editor vacío (25/09/2026).
+    sesion.record_turn(messages: turnos, draft: result.draft.presence || params[:draft],
                        validation: result.validation, proposal: result.proposal)
     sesion
   rescue StandardError => e
@@ -255,7 +257,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   end
 
   def close_session(template)
-    session_record&.mark_saved!(template)
+    session_record&.mark_saved!(template, draft: params[:draft])
   end
 
   # De la cuenta, no de quien pregunta: las conversaciones se comparten entre
@@ -276,7 +278,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   # quién es cada una antes de seguirla. `mine` distingue las propias.
   def session_row(sesion)
     {
-      id: sesion.id, status: sesion.status, title: sesion.title,
+      id: sesion.id, status: sesion.status, title: sesion.title, named: sesion.name.present?,
       creator: sesion.user&.available_name || sesion.user&.name,
       mine: sesion.user_id == Current.user.id,
       routes: sesion.route_count, has_draft: sesion.draft.present?,
@@ -296,7 +298,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   # equivocado.
   def session_json(sesion)
     {
-      id: sesion.id, messages: sesion.messages, draft: sesion.draft,
+      id: sesion.id, messages: sesion.messages, draft: sesion.draft, instructions: sesion.instructions,
       creator: sesion.user&.available_name || sesion.user&.name,
       mine: sesion.user_id == Current.user.id,
       validation: sesion.validation.presence, proposal: sesion.proposal.presence,
@@ -304,7 +306,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
       status: sesion.status,
       # De qué se trataba: el primer mensaje de la persona. Es lo que el card de
       # referencia muestra arriba de la conversación.
-      title: sesion.title,
+      title: sesion.title, named: sesion.name.present?,
       template_name: sesion.tracking_template&.name,
       created_at: sesion.created_at,
       updated_at: sesion.updated_at
@@ -312,7 +314,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   end
 
   def save_params
-    params.permit(:name, :objective, :ai_context, :inbox_id, :template_id, :session_id)
+    params.permit(:name, :objective, :ai_context, :inbox_id, :template_id, :session_id, calendar_integration_ids: [])
   end
 
   # nil = el cliente no sabe si la entrevista sigue abierta (se deduce de las marcas).

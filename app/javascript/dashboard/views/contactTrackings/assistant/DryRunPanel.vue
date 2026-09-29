@@ -90,7 +90,7 @@ export default {
             — {{ routes.description }}
           </span>
         </template>
-        <span v-else class="text-amber-700 dark:text-amber-400 ml-1">
+        <span v-else class="text-amber-800 dark:text-amber-800 ml-1">
           {{
             routes.none_declared
               ? $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_ROUTE_NONE_DECLARED')
@@ -100,7 +100,7 @@ export default {
 
         <p
           v-if="chosenIsDefault"
-          class="text-amber-700 dark:text-amber-400 mt-1"
+          class="text-amber-800 dark:text-amber-800 mt-1"
         >
           {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_ROUTE_IS_DEFAULT') }}
         </p>
@@ -120,7 +120,7 @@ export default {
           :class="
             source.reason === 'live_source' || source.reason === 'no_source'
               ? 'text-slate-500 dark:text-slate-400'
-              : 'text-amber-700 dark:text-amber-400'
+              : 'text-amber-800 dark:text-amber-800'
           "
         >
           {{ $t(`TRACKING_ASSISTANT_VIEW.${sourceNoticeKey}`) }}
@@ -197,7 +197,7 @@ export default {
         <!-- El tipo escrito no existe: el caso se abre igual, pero con otro tipo. -->
         <p
           v-if="caseReport.case_type && !caseReport.case_type.exists"
-          class="text-amber-700 dark:text-amber-400"
+          class="text-amber-800 dark:text-amber-800"
         >
           {{
             $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_CASE_TYPE_MISSING', {
@@ -210,7 +210,7 @@ export default {
              escalamiento, hereda el @crear_ticket suelto del prompt. -->
         <p
           v-if="caseReport.inherited_from_prompt && caseReport.creates"
-          class="text-amber-700 dark:text-amber-400"
+          class="text-amber-800 dark:text-amber-800"
         >
           {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_CASE_INHERITED') }}
         </p>

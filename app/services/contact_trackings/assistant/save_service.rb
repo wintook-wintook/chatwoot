@@ -87,6 +87,7 @@ class ContactTrackings::Assistant::SaveService
       complementary_prompt: @draft,
       user: @user
     )
+    assign_calendars(template)
     template.save ? saved(template) : Result.new(error: :invalid, details: template.errors.full_messages)
   end
 
@@ -97,7 +98,18 @@ class ContactTrackings::Assistant::SaveService
     # El anterior se guarda ANTES de pisarlo; si el update falla, no se perdió nada.
     template.previous_complementary_prompt = template.complementary_prompt
     template.complementary_prompt = @draft
+    assign_calendars(template)
     template.save ? saved(template) : Result.new(error: :invalid, details: template.errors.full_messages)
+  end
+
+  # Los calendarios elegidos al guardar (pedido del usuario, 24/09/2026: un agente con
+  # @agendar_calendar quedó sin calendario y no agendaba; el aviso de después se
+  # perdía). Solo integraciones de ESTA cuenta; sin la llave, no se tocan los que tiene.
+  def assign_calendars(template)
+    return unless @params.key?(:calendar_integration_ids)
+
+    pedidos = Array(@params[:calendar_integration_ids]).map(&:to_i)
+    template.calendar_integration_ids = UserCalendarIntegration.where(account: @account, id: pedidos).pluck(:id)
   end
 
   # Un inbox de otra cuenta no se liga: se ignora, igual que hace el inventario.

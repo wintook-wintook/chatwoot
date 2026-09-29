@@ -88,7 +88,7 @@ export default {
       const active = (b.pending || 0) + (b.scheduled || 0) + (b.active || 0);
       return [
         { label: 'Activos', value: active, color: 'text-slate-800 dark:text-slate-100' },
-        { label: 'Pausados', value: b.paused || 0, color: 'text-amber-500' },
+        { label: 'Pausados', value: b.paused || 0, color: 'text-amber-800' },
         { label: 'Vencidos', value: this.summary.overdue || 0, color: 'text-red-500' },
         { label: 'Cancelados', value: b.cancelled || 0, color: 'text-red-500' },
         { label: 'Fallidos', value: b.failed || 0, color: 'text-red-700' },

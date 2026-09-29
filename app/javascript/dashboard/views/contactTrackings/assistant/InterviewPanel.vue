@@ -9,8 +9,15 @@ import WootAudioRecorder from 'dashboard/components/widgets/WootWriter/AudioReco
 import { useAlert } from 'dashboard/composables';
 import AssistantAPI from 'dashboard/api/assistant';
 import { AUDIO_FORMATS } from 'shared/constants/messages';
+import MessageFormatter from 'shared/helpers/MessageFormatter';
 import ChangeList from './ChangeList.vue';
 import { hasChanges } from './changeList';
+
+// Un mensaje de más de estas líneas (o caracteres) se muestra recortado, con «Mostrar
+// más» (pedido del usuario, 23/09/2026: el de las instrucciones iniciales ocupaba toda
+// la conversación).
+const COLLAPSED_LINES = 5;
+const COLLAPSED_CHARS = 500;
 
 // Errores de la transcripción que merecen un mensaje propio: el resto es "no se pudo".
 const DICTATION_ERRORS = ['no_api_key', 'too_large', 'no_audio'];
@@ -43,6 +50,8 @@ export default {
     return {
       input: '',
       picked: {},
+      // Los mensajes largos desplegados, por índice: { 0: true }.
+      expanded: {},
       dictation: '',
       dictationTime: '00:00',
       audioFormat: AUDIO_FORMATS.OGG,
@@ -76,7 +85,10 @@ export default {
     },
   },
   watch: {
-    messages() {
+    // Otra conversación (o una nueva): lo desplegado era de la anterior.
+    messages(nuevos, viejos) {
+      if (!viejos || nuevos.length < viejos.length || nuevos[0] !== viejos[0])
+        this.expanded = {};
       this.$nextTick(this.scrollToBottom);
     },
     // Cada turno trae sus propias preguntas: lo elegido en el anterior ya se
@@ -89,6 +101,33 @@ export default {
   },
   methods: {
     hasChanges,
+    messageText(message) {
+      return message.display || message.content || '';
+    },
+    isLong(message) {
+      const texto = this.messageText(message);
+      return (
+        texto.split('\n').length > COLLAPSED_LINES ||
+        texto.length > COLLAPSED_CHARS
+      );
+    },
+    // El texto a la vista: entero si está desplegado o es corto; si no, el principio.
+    shownText(message, index) {
+      const texto = this.messageText(message);
+      if (this.expanded[index] || !this.isLong(message)) return texto;
+      const recorte = texto.split('\n').slice(0, COLLAPSED_LINES).join('\n');
+      return `${recorte.slice(0, COLLAPSED_CHARS).trimEnd()}…`;
+    },
+    // El Asistente escribe en Markdown (**negritas**, viñetas): se muestra con formato,
+    // con el formateador nativo de los mensajes de Chatwoot, en vez de ver los
+    // asteriscos (pedido del usuario, 24/09/2026). Lo que escribe la persona va tal cual.
+    formatted(message, index) {
+      return new MessageFormatter(this.shownText(message, index))
+        .formattedMessage;
+    },
+    toggleExpanded(index) {
+      this.expanded = { ...this.expanded, [index]: !this.expanded[index] };
+    },
     // Solo bajo el ÚLTIMO mensaje, y solo si es del asistente: el hilo de arriba
     // es historial, y un botón de tres turnos atrás contestaría algo ya respondido.
     showOptions(index, message) {
@@ -232,7 +271,28 @@ export default {
               : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100'
           "
         >
-          <span class="whitespace-pre-wrap">{{ message.content }}</span>
+          <!-- `display`: una versión corta para la pantalla, cuando lo que se le
+               manda al modelo es largo y no está escrito para leerlo (el encargo). -->
+          <div
+            v-if="message.role === 'assistant'"
+            v-dompurify-html="formatted(message, index)"
+            class="break-words [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:mb-2 [&_li]:mb-0.5"
+          />
+          <span v-else class="whitespace-pre-wrap">{{
+            shownText(message, index)
+          }}</span>
+          <button
+            v-if="isLong(message)"
+            type="button"
+            class="block mt-1 text-xs font-medium underline opacity-80 hover:opacity-100"
+            @click="toggleExpanded(index)"
+          >
+            {{
+              expanded[index]
+                ? $t('TRACKING_ASSISTANT_VIEW.CHAT_SHOW_LESS')
+                : $t('TRACKING_ASSISTANT_VIEW.CHAT_SHOW_MORE')
+            }}
+          </button>
 
           <ChangeList
             v-if="message.role === 'assistant' && hasChanges(message.changes)"
@@ -253,7 +313,10 @@ export default {
                  hay dos lugares que puedan desincronizarse. -->
             <div v-for="(question, qIndex) in options" :key="qIndex">
               <p class="mb-1 text-sm">
-                {{ qIndex + 1 }}. {{ question.question }}
+                <!-- El número solo con varias preguntas: con una sola, «1. 6 de estos
+                     avisos…» se leía como un decimal (25/09/2026). -->
+                <template v-if="options.length > 1">{{ qIndex + 1 }}.</template>
+                {{ question.question }}
               </p>
               <div class="flex flex-wrap items-center gap-1">
                 <button

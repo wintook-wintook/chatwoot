@@ -271,7 +271,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
 
     it 'devuelve el valor cacheado en Redis sin pegar a la API de Google' do
-      allow(job).to receive(:appointment_timezone_calendar_id).with(tracking).and_return(7)
+      allow(job).to receive(:appointment_timezone_calendar_ids).with(tracking).and_return([7])
       allow(Redis::Alfred).to receive(:get).with('gcal_tz::7').and_return('America/Bogota')
       expect(UserCalendarIntegration).not_to receive(:find_by)
       expect(job.send(:google_calendar_timezone, tracking)).to eq('America/Bogota')
@@ -280,12 +280,90 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     it 'lee la zona de Google y la cachea cuando no está en Redis' do
       integration = instance_double(UserCalendarIntegration)
       gcal = instance_double(GoogleCalendarService, account_timezone: 'America/Argentina/Buenos_Aires')
-      allow(job).to receive(:appointment_timezone_calendar_id).with(tracking).and_return(7)
+      allow(job).to receive(:appointment_timezone_calendar_ids).with(tracking).and_return([7])
       allow(Redis::Alfred).to receive(:get).with('gcal_tz::7').and_return(nil)
       allow(UserCalendarIntegration).to receive(:find_by).with(id: 7).and_return(integration)
       allow(GoogleCalendarService).to receive(:new).with(integration).and_return(gcal)
       expect(Redis::Alfred).to receive(:setex).with('gcal_tz::7', 'America/Argentina/Buenos_Aires', 12.hours)
       expect(job.send(:google_calendar_timezone, tracking)).to eq('America/Argentina/Buenos_Aires')
+    end
+
+    # 24/09/2026: el primer calendario con el acceso de Google vencido dejaba la zona en
+    # la del inbox (UTC). Se pregunta al siguiente.
+    it 'si el primer calendario no contesta, pregunta al siguiente' do
+      vencida = instance_double(UserCalendarIntegration)
+      buena = instance_double(UserCalendarIntegration)
+      allow(job).to receive(:appointment_timezone_calendar_ids).with(tracking).and_return([9, 65])
+      allow(Redis::Alfred).to receive(:get).and_return(nil)
+      allow(Redis::Alfred).to receive(:setex)
+      allow(UserCalendarIntegration).to receive(:find_by).with(id: 9).and_return(vencida)
+      allow(UserCalendarIntegration).to receive(:find_by).with(id: 65).and_return(buena)
+      allow(GoogleCalendarService).to receive(:new).with(vencida).and_return(instance_double(GoogleCalendarService, account_timezone: nil))
+      allow(GoogleCalendarService).to receive(:new).with(buena)
+                                                   .and_return(instance_double(GoogleCalendarService, account_timezone: 'America/Mexico_City'))
+
+      expect(job.send(:google_calendar_timezone, tracking)).to eq('America/Mexico_City')
+    end
+  end
+
+  describe 'respuesta de respaldo con Entrenamiento (D5, 29/09/2026)' do
+    let(:tracking) { instance_double(ContactTracking, account: instance_double(Account, name: 'Sentidos')) }
+
+    it 'con Entrenamiento manda su identidad y su trato; ya no ordena ocultar que es un bot' do
+      identidad = job.send(:conversational_identity, tracking, '[ROL] Eres ADAM')
+      forma = job.send(:conversational_form, '[ROL] Eres ADAM')
+
+      expect(identidad).not_to include('NUNCA menciones que eres un bot')
+      expect(identidad).to include('INSTRUCCIONES ADICIONALES')
+      expect(forma).to include('El trato (tú o usted)')
+    end
+
+    it 'sin Entrenamiento queda como antes' do
+      expect(job.send(:conversational_identity, tracking, '')).to include('NUNCA menciones que eres un bot')
+      expect(job.send(:conversational_form, '')).to start_with('Máximo 4 líneas.')
+    end
+  end
+
+  describe 'rama de caso propio contra la agenda (24/09/2026)' do
+    def rama(linea)
+      ContactTrackings::RouteMap.parse(linea).routes.first
+    end
+
+    it 'una rama sin fuente que abre su caso va antes que la agenda, y la agenda no le toma el turno' do
+      urgencias = rama('@ruta(urgencias #urgencia: se envenenó): - -> @crear_ticket(tipo=Soporte, prioridad=alta)')
+
+      expect(job.send(:ticket_first_branch?, urgencias)).to be(true)
+      expect(job.send(:appointment_allowed_for?, urgencias)).to be(false)
+    end
+
+    it 'la rama que agenda, o la que consulta una fuente, sigue igual' do
+      agenda = rama('@ruta(agendar #agendar: quiero cita): - -> @agendar_calendar')
+      precios = rama('@ruta(precios #precios: cuánto cuesta): @buscar_predefinidas -> @crear_ticket(tipo=Comercial)')
+
+      expect(job.send(:appointment_allowed_for?, agenda)).to be(true)
+      expect(job.send(:ticket_first_branch?, precios)).to be(false)
+      expect(job.send(:appointment_allowed_for?, nil)).to be(true)
+    end
+
+    it 'una ruta que declara sus acciones sin @agendar_calendar no ofrece horarios (ADAM, 28/09/2026)' do
+      web = rama('@ruta(desarrollo_web #desarrollo_web: sitio web): @buscar_foro(Foro) -> @crear_ticket(tipo=Comercial)')
+      consulta = rama('@ruta(presentacion #presentacion: quiénes son): @buscar_foro(Foro)')
+      con_agenda = rama('@ruta(demo #demo: quiero una demo): @buscar_foro(Foro) -> @crear_ticket(tipo=Comercial) -> @agendar_calendar')
+
+      expect(job.send(:appointment_allowed_for?, web)).to be(false)
+      expect(job.send(:appointment_allowed_for?, consulta)).to be(true)
+      expect(job.send(:appointment_allowed_for?, con_agenda)).to be(true)
+    end
+
+    it 'una ruta con fuente y sin flecha no hereda el caso de otra ruta; una sin fuente ni flecha sí (29/09/2026)' do
+      prompt = "@ruta(web #web: sitio web): @buscar_foro(Foro)\n@ruta(humano #humano: una persona): -\n" \
+               '@ruta(dir #dir: el director): - -> @crear_ticket(tipo=Comercial, prioridad=alta)'
+      tracking = instance_double(ContactTracking, complementary_prompt: prompt)
+      rutas = ContactTrackings::RouteMap.parse(prompt).routes.index_by(&:name)
+
+      expect(job.send(:source_only_branch?, tracking, rutas['web'])).to be(true)
+      expect(job.send(:source_only_branch?, tracking, rutas['humano'])).to be(false)
+      expect(job.send(:source_only_branch?, tracking, rutas['dir'])).to be(false)
     end
   end
 
@@ -491,7 +569,7 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
 
     it 'le recuerda al cliente la cita existente y le ofrece moverla o cancelarla' do
       expect(job).to receive(:send_auto_reply)
-        .with(tracking, message, /ya tenés una cita agendada para el .*moverla.*cancelarla/im)
+        .with(tracking, message, /ya tienes una cita agendada para el .*moverla.*cancelarla/im)
       job.send(:handle_book_appointment, tracking, message)
     end
 
@@ -836,6 +914,320 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     it 'conserva la hora de la cita actual cuando el cliente solo da el día' do
       target = job.send(:move_target_time, tracking, { relative_days: 7 }, 'America/Mexico_City')
       expect(target.in_time_zone('America/Mexico_City').strftime('%H:%M')).to eq('10:30')
+    end
+  end
+
+  # proyecto@hoja_buscar — la agenda busca en el calendario de lo que se nombró.
+  describe '{{hoja_buscar:}} en la agenda' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:contact) { create(:contact, account: account) }
+    let(:conversation) { create(:conversation, account: account, inbox: inbox, contact: contact) }
+    let(:tracking) do
+      ContactTracking.create!(account: account, contact: contact, inbox: inbox, conversation: conversation,
+                              objective: 'Grúas', scheduled_for: 1.hour.from_now, tracking_template: tracking_template)
+    end
+    let(:message) { create(:message, account: account, inbox: inbox, conversation: conversation, content: 'sí, agéndalo') }
+    let(:outcome) { ContactTrackings::SheetCalendars::Outcome }
+
+    before do
+      tracking_template.update!(calendar_integration_ids: [178], booking_calendar_ids: { '178' => %w[c64 c63] })
+      allow(job).to receive(:send_auto_reply)
+      allow(job).to receive(:appointment_timezone).and_return('America/Mexico_City')
+    end
+
+    it 'sin remolque nombrado pregunta cuál y no busca horarios' do
+      allow(ContactTrackings::SheetCalendars).to receive(:for).and_return(outcome.new(status: :needs_value, asked: 'remolque'))
+      expect(ContactTrackings::AvailabilitySlotService).not_to receive(:new)
+
+      job.send(:handle_book_appointment, tracking, message)
+      expect(job).to have_received(:send_auto_reply).with(tracking, message, /¿Para cuál remolque quieres agendar\?/)
+    end
+
+    it 'busca horarios solo en el calendario del remolque' do
+      allow(ContactTrackings::SheetCalendars).to receive(:for)
+        .and_return(outcome.new(status: :ok, integration_ids: [178], booking_calendars: { '178' => ['c63'] }))
+      allow(ContactTrackings::AvailabilitySlotService).to receive(:new).and_call_original
+
+      job.send(:slot_service_for, [178], tracking, 'America/Mexico_City', message: message)
+      expect(ContactTrackings::AvailabilitySlotService).to have_received(:new)
+        .with(hash_including(calendar_integration_ids: [178], booking_calendars: { '178' => ['c63'] }))
+    end
+
+    it 'sin {{hoja_buscar:}} usa los calendarios del agente como siempre' do
+      allow(ContactTrackings::SheetCalendars).to receive(:for).and_return(nil)
+      allow(ContactTrackings::AvailabilitySlotService).to receive(:new).and_call_original
+
+      job.send(:slot_service_for, [178], tracking, 'America/Mexico_City', message: message)
+      expect(ContactTrackings::AvailabilitySlotService).to have_received(:new)
+        .with(hash_including(calendar_integration_ids: [178], booking_calendars: { '178' => %w[c64 c63] }))
+    end
+  end
+
+  # 25/09/2026: «¿qué horarios tienen para mañana?» un viernes daba los del lunes sin avisar.
+  describe '#moved_day_intro' do
+    let(:tz) { 'America/Mexico_City' }
+    let(:service) { instance_double(ContactTrackings::AvailabilitySlotService) }
+    let(:viernes) { Time.find_zone(tz).local(2026, 9, 25, 12) }
+    let(:lunes) { [{ slot: Time.find_zone(tz).local(2026, 9, 28, 9) }] }
+
+    before { travel_to(viernes) }
+
+    it 'si el día pedido no se trabaja, lo dice' do
+      allow(service).to receive(:working_day?).and_return(false)
+
+      expect(job.send(:moved_day_intro, viernes + 1.day, lunes, service, tz))
+        .to eq('Mañana sábado no hay servicio. Los primeros horarios son el lunes 28:')
+    end
+
+    it 'si se trabaja pero ya no hay espacios, lo dice distinto' do
+      allow(service).to receive(:working_day?).and_return(true)
+
+      expect(job.send(:moved_day_intro, viernes, lunes, service, tz))
+        .to eq('Para hoy viernes ya no tengo horarios. Los más cercanos son el lunes 28:')
+    end
+
+    it 'si los horarios son del día pedido, no agrega nada' do
+      expect(job.send(:moved_day_intro, viernes + 3.days, lunes, service, tz)).to be_nil
+    end
+  end
+
+  # proyecto@hoja_buscar — ruta de disponibilidad: - -> {{hoja_buscar:}} -> @agendar_calendar
+  describe 'ruta de disponibilidad' do
+    let(:route) { ContactTrackings::RouteMap::Route }
+    let(:lookup) { '{{hoja_buscar: Servicio Gruas | remolque=? | Calendar_ID}}' }
+
+    it 'es la que no tiene fuente y agenda con {{hoja_buscar:}}' do
+      expect(job.send(:availability_branch?, route.new(name: 'd', escalation: "#{lookup} -> @agendar_calendar"))).to be(true)
+      con_fuente = route.new(name: 'd', directive: '{{hoja:Servicio Gruas}}', escalation: "#{lookup} -> @agendar_calendar")
+      expect(job.send(:availability_branch?, con_fuente)).to be(false)
+      expect(job.send(:availability_branch?, route.new(name: 'd', escalation: '@agendar_calendar'))).to be(false)
+      expect(job.send(:availability_branch?, nil)).to be(false)
+    end
+
+    it 'si la IA de citas dice que no es cita, en esta ruta sí lo es y lee la fecha del mensaje' do
+      expect(job.send(:availability_appt, { appointment_action: nil, intent: 'tracking' }))
+        .to include(appointment_action: :book_new, read_date: true)
+    end
+
+    it 'si la IA sí trajo una acción (mover, cancelar), se respeta' do
+      expect(job.send(:availability_appt, { appointment_action: :cancel })).to eq(appointment_action: :cancel)
+    end
+
+    it 'en la agenda usa la fecha leída del mensaje: «mañana» no se pierde' do
+      inbox = create(:inbox, account: account)
+      contact = create(:contact, account: account)
+      conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
+      tracking = ContactTracking.create!(account: account, contact: contact, inbox: inbox, conversation: conversation,
+                                         objective: 'Grúas', scheduled_for: 1.hour.from_now, tracking_template: tracking_template)
+      message = create(:message, account: account, inbox: inbox, conversation: conversation, content: '¿horarios para mañana?')
+      tracking_template.update!(calendar_integration_ids: [178])
+      manana = 1.day.from_now.beginning_of_day
+      service = instance_double(ContactTrackings::AvailabilitySlotService, call: [])
+      allow(job).to receive_messages(appointment_timezone: 'America/Mexico_City', slot_service_for: service,
+                                     parse_requested_datetime: { at: manana, exact: false }, generate_action_reply: 'sin horarios')
+      allow(job).to receive(:send_auto_reply)
+      allow(job).to receive(:notify_admin_interested)
+      allow(job).to receive(:create_private_note)
+
+      job.send(:handle_book_appointment, tracking, message, { appointment_action: :book_new, read_date: true })
+      expect(service).to have_received(:call).with(from: manana.in_time_zone('America/Mexico_City').beginning_of_day)
+    end
+  end
+
+  # 25/09/2026: «¿Y en la tarde?» con horarios del martes ofrecidos repetía los de la mañana.
+  describe 'franja sin día durante la negociación' do
+    let(:tz) { 'America/Mexico_City' }
+
+    it 'lee la franja aunque no diga día' do
+      allow(job).to receive_messages(get_api_key: { key: 'k' }, extract_datetime_json: { 'time_of_day' => 'afternoon' })
+      message = instance_double(Message, content: '¿Y en la tarde?', content_attributes: {}, attachments: [])
+      allow(job).to receive(:message_text_for_ai).and_return('¿Y en la tarde?')
+
+      expect(job.send(:parse_requested_datetime, tracking, message, tz)).to include(time_of_day: 'afternoon', day_given: false)
+    end
+
+    it 'busca desde las 12:00 del día de los horarios ofrecidos' do
+      martes = Time.find_zone(tz).local(2026, 9, 29, 9)
+      service = instance_double(ContactTrackings::AvailabilitySlotService, call: [])
+      allow(job).to receive_messages(appointment_timezone: tz, slot_service_for: service,
+                                     parse_requested_datetime: { at: Time.current, exact: false, time_of_day: 'afternoon',
+                                                                 day_given: false },
+                                     try_kbase_during_negotiation: true, reoffer_for_named_resource: false,
+                                     message_text_for_ai: '¿Y en la tarde?')
+
+      job.send(:handle_slot_negotiation, tracking, instance_double(Message), [{ 'slot' => martes.utc.iso8601 }])
+      expect(service).to have_received(:call).with(from: martes.change(hour: 12))
+    end
+  end
+
+  # 25/09/2026: «¿cuándo está libre la TP-58?» con horarios de la TP-93 abiertos repetía los de la TP-93.
+  describe 'otro remolque durante la oferta abierta' do
+    let(:message) { instance_double(Message, id: 7) }
+    let(:ofrecidos) { [{ 'slot' => 1.day.from_now.utc.iso8601, 'gcal' => 'c93' }] }
+
+    def hoja(calendarios, named_in: 7)
+      ContactTrackings::SheetCalendars::Outcome.new(status: :ok, integration_ids: [178], named_in: named_in,
+                                                     booking_calendars: { '178' => calendarios })
+    end
+
+    before do
+      allow(job).to receive(:clear_pending_slot)
+      allow(job).to receive(:handle_book_appointment)
+    end
+
+    it 'si nombra otro en este mensaje, ofrece los horarios de ese' do
+      allow(job).to receive(:sheet_calendars_for).and_return(hoja(['c58']))
+
+      expect(job.send(:reoffer_for_named_resource, tracking, message, ofrecidos)).to be(true)
+      expect(job).to have_received(:handle_book_appointment).with(tracking, message, hash_including(read_date: true))
+    end
+
+    it 'el mismo remolque, o uno nombrado en un mensaje anterior, no vuelve a buscar' do
+      allow(job).to receive(:sheet_calendars_for).and_return(hoja(['c93']), hoja(['c58'], named_in: 3))
+
+      expect(job.send(:reoffer_for_named_resource, tracking, message, ofrecidos)).to be(false)
+      expect(job.send(:reoffer_for_named_resource, tracking, message, ofrecidos)).to be(false)
+    end
+
+    it '«¿cuándo está libre?» sin día muestra lo primero libre' do
+      allow(job).to receive_messages(sheet_calendars_for: hoja(['c93']), message_text_for_ai: '¿Cuándo está libre la TP-93?')
+
+      expect(job.send(:reoffer_when_asked_free, tracking, message)).to be(true)
+    end
+  end
+
+  # Pieza 6 (26/09/2026): «el día lunes a las 08:00» se agendaba en firme sin decir qué lunes.
+  describe 'fecha ambigua' do
+    let(:tz) { 'America/Mexico_City' }
+    let(:lunes) { Time.find_zone(tz).local(2026, 9, 28, 8) }
+    let(:slot) { { slot: lunes, end_time: lunes + 30.minutes, calendar_integration_id: 178, google_calendar_id: 'c64', calendar_name: 'TP-64' } }
+    let(:service) { instance_double(ContactTrackings::AvailabilitySlotService) }
+    let(:mensaje) { instance_double(Message) }
+
+    before do
+      allow(job).to receive(:message_text_for_ai).and_return('grúa para el día lunes a las 08:00')
+      allow(job).to receive(:offer_slots)
+    end
+
+    it 'con hora libre la ofrece como opción 1 con la fecha completa, no la agenda' do
+      allow(service).to receive(:slot_for).and_return(slot)
+      requested = job.send(:with_ambiguity, { at: lunes, exact: true }, mensaje)
+
+      expect(job.send(:offer_ambiguous_exact, tracking, mensaje, service, requested, tz)).to be(true)
+      expect(job).to have_received(:offer_slots)
+        .with(tracking, mensaje, [slot], /\AEntiendo que es el lunes 28 de septiembre, a las 08:00\. Está libre:.*Responde 1 para apartarlo/m)
+    end
+
+    it 'con fecha explícita no interviene' do
+      allow(job).to receive(:message_text_for_ai).and_return('el lunes 28 a las 08:00')
+      requested = job.send(:with_ambiguity, { at: lunes, exact: true }, mensaje)
+
+      expect(job.send(:offer_ambiguous_exact, tracking, mensaje, service, requested, tz)).to be(false)
+      expect(job.send(:ambiguity_intro, requested, tz, 'Hola')).to eq('Hola')
+    end
+
+    it 'sin hora, antepone la fecha a los horarios del día' do
+      expect(job.send(:ambiguity_intro, { at: lunes, ambiguous: true }, tz, nil))
+        .to eq('Entiendo que es el lunes 28 de septiembre. Estos son los horarios de ese día:')
+    end
+  end
+
+  # Pieza 3 (26/09/2026): @agendar_calendar(duracion=…, horario=24h).
+  describe 'opciones de @agendar_calendar' do
+    let(:options) { ContactTrackings::CalendarOptions::Options }
+    let(:mensaje) { instance_double(Message) }
+
+    before { tracking_template.update!(calendar_event_duration: 30) }
+
+    it 'la duración: fija, la del cliente, o la del agente' do
+      allow(job).to receive(:message_text_for_ai).and_return('grúa de 80 t, duración aproximada de una hora')
+
+      expect(job.send(:service_duration, tracking, mensaje, nil)).to eq(30)
+      expect(job.send(:service_duration, tracking, mensaje, options.new(duration: 120))).to eq(120)
+      expect(job.send(:service_duration, tracking, mensaje, options.new(ask_duration: true))).to eq(60)
+    end
+
+    it 'si el cliente no dijo cuánto dura, la del agente' do
+      allow(job).to receive(:message_text_for_ai).and_return('grúa de 80 t el lunes 28 a las 8')
+
+      expect(job.send(:service_duration, tracking, mensaje, options.new(ask_duration: true))).to eq(30)
+    end
+
+    it 'con horario=24h el buscador no usa el horario del canal' do
+      allow(job).to receive_messages(calendar_options_for: options.new(all_day: true), sheet_calendars_for: nil,
+                                     message_text_for_ai: '')
+      allow(ContactTrackings::AvailabilitySlotService).to receive(:new).and_call_original
+
+      job.send(:slot_service_for, [178], tracking, 'America/Mexico_City', message: mensaje)
+      expect(ContactTrackings::AvailabilitySlotService).to have_received(:new)
+        .with(hash_including(working_hours: ContactTrackings::AvailabilitySlotService::ALL_DAY))
+    end
+  end
+
+  # 26/09/2026: «el domingo 4 de octubre» daba el domingo 27 de septiembre.
+  describe '#resolve_reschedule_date con día de semana y fecha' do
+    let(:tz) { 'America/Mexico_City' }
+
+    before { travel_to(Time.find_zone(tz).local(2026, 9, 26, 12)) }
+
+    it 'si coinciden, manda la fecha que escribió el cliente' do
+      expect(job.send(:resolve_reschedule_date, { weekday: 7, specific_date: '2026-10-04' }, tz)).to eq('2026-10-04')
+    end
+
+    it 'si no coinciden, sigue mandando el día de la semana' do
+      expect(job.send(:resolve_reschedule_date, { weekday: 7, specific_date: '2026-10-05' }, tz)).to eq('2026-09-27')
+    end
+  end
+
+  # Pieza 4 (26/09/2026): apartado → confirmado.
+  describe 'servicio apartado y @confirmar_servicio' do
+    let(:mensaje) { instance_double(Message) }
+    let(:confirmacion) do
+      instance_double(ContactTrackings::ServiceConfirmation, open?: true, pending_payment?: false,
+                                                             when_text: 'lunes 28 de septiembre a las 09:00')
+    end
+    let(:ruta) { ContactTrackings::RouteMap::Route.new(name: 'confirmacion', escalation: escalation) }
+    let(:escalation) { '@confirmar_servicio' }
+
+    before do
+      tracking.complementary_prompt = "@ruta(confirmacion: le confirmamos el servicio): - -> #{escalation}"
+      allow(ContactTrackings::ServiceConfirmation).to receive(:new).and_return(confirmacion)
+      allow(job).to receive_messages(branch_for: ruta, appointment_timezone: 'America/Mexico_City')
+      allow(job).to receive(:send_auto_reply)
+      allow(job).to receive(:create_private_note)
+      allow(job).to receive(:notify_admin_interested)
+    end
+
+    it 'sin pago: lo deja en firme y se lo dice al cliente' do
+      allow(confirmacion).to receive(:confirm!).and_return(true)
+
+      expect(job.send(:handle_service_confirmation, tracking, mensaje)).to be(true)
+      expect(job).to have_received(:send_auto_reply).with(tracking, mensaje, /quedó confirmado/)
+    end
+
+    context 'con requiere=pago' do
+      let(:escalation) { '@confirmar_servicio(requiere=pago)' }
+
+      it 'pide el pago, lo deja esperando y avisa al equipo' do
+        allow(confirmacion).to receive(:mark_pending_payment!)
+
+        job.send(:handle_service_confirmation, tracking, mensaje)
+        expect(confirmacion).to have_received(:mark_pending_payment!)
+        expect(job).to have_received(:send_auto_reply).with(tracking, mensaje, /necesitamos el pago por adelantado/)
+        expect(job).to have_received(:create_private_note).with(tracking, mensaje, /pago_confirmado/)
+      end
+    end
+
+    it 'sin servicio apartado no interviene' do
+      allow(confirmacion).to receive(:open?).and_return(false)
+
+      expect(job.send(:handle_service_confirmation, tracking, mensaje)).to be(false)
+    end
+
+    it 'si el mensaje cae en otra ruta no interviene' do
+      allow(job).to receive(:branch_for).and_return(ContactTrackings::RouteMap::Route.new(name: 'otra', escalation: '@agendar_calendar'))
+
+      expect(job.send(:handle_service_confirmation, tracking, mensaje)).to be(false)
     end
   end
 end

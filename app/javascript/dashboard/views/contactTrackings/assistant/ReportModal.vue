@@ -64,7 +64,7 @@ export default {
 
       <p
         v-if="unsupported.length"
-        class="!m-0 text-xs shrink-0 text-amber-600 dark:text-amber-400"
+        class="!m-0 text-xs shrink-0 text-amber-800 dark:text-amber-800"
       >
         {{ $t('TRACKING_ASSISTANT_VIEW.UNSUPPORTED_HINT') }}
         {{ unsupported.map(s => s.name).join(' · ') }}

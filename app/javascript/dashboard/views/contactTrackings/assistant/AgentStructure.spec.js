@@ -143,6 +143,29 @@ describe('AgentStructure', () => {
       });
     });
 
+    // «[ESTILO» sin «]»: guardarla desde el formulario escribe el rótulo bien.
+    it('una con el rótulo mal escrito se guarda sin el rótulo viejo', () => {
+      const wrapper = montar({
+        value: {
+          blocks: [
+            {
+              type: 'section',
+              title: 'ESTILO',
+              header: '[ESTILO',
+              broken: true,
+              body: 'Cálido.',
+              gap: 0,
+            },
+          ],
+        },
+      });
+      wrapper.vm.openEditSection(0);
+
+      wrapper.vm.saveSection({ title: 'ESTILO', body: 'Cálido.' });
+
+      expect(ultimo(wrapper)[0]).toMatchObject({ header: '', broken: false });
+    });
+
     // El texto inicial no lleva rótulo: su contenido va en `text`, no en `body`.
     it('el texto inicial se guarda en su propio campo', () => {
       const wrapper = montar({
@@ -188,10 +211,11 @@ describe('AgentStructure', () => {
     });
 
     // El agente lee las secciones en el orden en que están escritas.
-    it('cambia una sección de lugar con su vecina', () => {
+    // Arrastrar la primera sección debajo de la segunda.
+    it('cambia una sección de lugar arrastrándola', () => {
       const wrapper = montar();
 
-      wrapper.vm.moveSection({ index: 1, delta: 1 });
+      wrapper.vm.reorderSection({ from: 0, to: 1 });
 
       expect(ultimo(wrapper).map(b => b.title)).toEqual([
         undefined,
@@ -200,11 +224,11 @@ describe('AgentStructure', () => {
       ]);
     });
 
-    // La primera sección no sube más: arriba está el bloque de ramas.
-    it('no avisa ningún cambio cuando la sección ya está en el extremo', () => {
+    // Soltarla donde estaba no es un cambio.
+    it('no avisa ningún cambio si se suelta en el mismo lugar', () => {
       const wrapper = montar();
 
-      wrapper.vm.moveSection({ index: 1, delta: -1 });
+      wrapper.vm.reorderSection({ from: 0, to: 0 });
 
       expect(wrapper.emitted('input')).toBeUndefined();
     });

@@ -96,6 +96,48 @@ RSpec.describe TrackingAssistantSession do
       expect(s.reload).to have_attributes(status: 'saved', tracking_template: template)
       expect(described_class.resumable_for(account, user)).to be_nil
     end
+
+    # 25/09/2026: reabrir la sesión mostraba el texto de antes de las ediciones a mano.
+    it 'guarda el texto que quedó en el agente, como versión «guardado»' do
+      s = sesion(draft: 'viejo')
+      template = account.tracking_templates.create!(name: 'Soporte', objective: 'Resolver dudas')
+
+      s.mark_saved!(template, draft: "[ROL]\nnuevo")
+
+      expect(s.reload.draft).to eq("[ROL]\nnuevo")
+      expect(s.version_list.last).to include('source' => 'saved', 'summary' => 'Soporte')
+    end
+  end
+
+  # 25/09/2026: todas las conversaciones de análisis se llamaban «Analiza mi prompt».
+  it 'si el primer mensaje es solo «Analiza mi prompt», el título es la primera línea del prompt' do
+    s = sesion(messages: [{ 'role' => 'user', 'content' => 'Analiza mi prompt' }],
+               draft: "# PROMPT AGENTE NEOCLASE V8.4\n[ROL]\nx")
+
+    expect(s.title).to eq('🔎 PROMPT AGENTE NEOCLASE V8.4')
+  end
+
+  describe 'guardado automático y bitácora' do
+    it 'guarda lo editado a mano; pausas seguidas son una sola versión' do
+      s = sesion
+      s.autosave!("[ROL]\nuno")
+      s.autosave!("[ROL]\nuno dos")
+      s.autosave!("[ROL]\nuno dos tres")
+
+      expect(s.reload.draft).to eq("[ROL]\nuno dos tres")
+      expect(s.version_list.size).to eq(1)
+      expect(s.title).to eq('[ROL]')
+    end
+
+    it 'cada versión dice qué partes cambiaron, cuántas líneas y lo que declaró el Asistente' do
+      s = sesion
+      s.add_version(draft: "[ROL]\nAmable.\n\n[ESTILO]\nBreve.", source: 'loaded')
+      s.add_version(draft: "[ROL]\nAmable.\n\n[ESTILO]\nBreve y claro.\nSin emojis.", source: 'assistant',
+                    notes: ['~ [ESTILO]: más claro'])
+
+      expect(s.version_list.last).to include('changes' => ['~ [ESTILO]'], 'lines' => { 'added' => 2, 'removed' => 1 },
+                                             'notes' => ['~ [ESTILO]: más claro'])
+    end
   end
 
   describe 'validaciones' do
@@ -159,6 +201,24 @@ RSpec.describe TrackingAssistantSession do
       s = sesion(messages: [{ 'role' => 'user', 'content' => 'a' * 200 }])
 
       expect(s.title.length).to be <= 80
+    end
+
+    # El primer mensaje de un agente armado desde instrucciones iniciales es el encargo
+    # completo para el modelo: en el listado va el nombre del archivo.
+    it 'si arrancó desde instrucciones iniciales, usa el nombre del archivo' do
+      mensaje = "#{ContactTrackings::Assistant::BriefComposer::HEADER_START}: la idea de cómo lo quiere la " \
+                'persona, ya leída y resumida del archivo «encargo_gimnasio.md». Escribilo…'
+      s = sesion(messages: [{ 'role' => 'user', 'content' => mensaje }])
+
+      expect(s.title).to eq('📎 encargo_gimnasio.md')
+    end
+
+    # Las guardadas antes del 23/09/2026 empiezan con el texto viejo («ENCARGO», voseo).
+    it 'reconoce también el inicio viejo de las instrucciones iniciales' do
+      viejo = ContactTrackings::Assistant::BriefComposer::LEGACY_HEADER_STARTS.first
+      s = sesion(messages: [{ 'role' => 'user', 'content' => "#{viejo}: … del archivo «cobranza.md». …" }])
+
+      expect(s.title).to eq('📎 cobranza.md')
     end
 
     it 'no toma como título lo que dijo el asistente' do

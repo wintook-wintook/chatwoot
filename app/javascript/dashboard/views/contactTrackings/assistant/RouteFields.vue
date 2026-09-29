@@ -21,10 +21,21 @@
 const PRIORITIES = ['baja', 'media', 'alta', 'urgente'];
 const CREATE_TICKET = '@crear_ticket';
 
+import { mapGetters } from 'vuex';
+import { useAlert } from 'dashboard/composables';
+import { emitter } from 'shared/helpers/mitt';
+import KnowledgeBaseAPI from 'dashboard/routes/dashboard/settings/knowledgeSources/api';
+import AddSourceModal from 'dashboard/routes/dashboard/settings/knowledgeSources/AddSourceModal.vue';
 import ProofreadBar from './ProofreadBar.vue';
+import CreateLabelButton from './CreateLabelButton.vue';
+import {
+  sourceFromDirective,
+  integrationFromDirective,
+  ASSISTANT_SOURCES_CHANGED,
+} from './sourceDirective';
 
 export default {
-  components: { ProofreadBar },
+  components: { ProofreadBar, AddSourceModal, CreateLabelButton },
   props: {
     // La rama: { name, tag, description, source, action, case_type, priority, … }
     route: { type: Object, default: () => ({}) },
@@ -38,12 +49,52 @@ export default {
     inboxId: { type: Number, default: null },
   },
   emits: ['input'],
+  data() {
+    return { showAddSource: false, savingSource: false };
+  },
   computed: {
+    ...mapGetters({ accountId: 'getCurrentAccountId' }),
+    // La fuente escrita no está entre las de la cuenta (pedido del usuario, 25/09/2026:
+    // poder crearla sin salir del Asistente).
+    missingSource() {
+      return Boolean(this.extraOption(this.route.source, this.sourceOptions));
+    },
+    // { source_type, name } si se puede crear en la Base de Conocimiento; null si no
+    // (una directiva de predefinidas o de artículos).
+    addableSource() {
+      return this.missingSource ? sourceFromDirective(this.route.source) : null;
+    },
+    // @discourse: la integración de Discourse del canal, que se conecta en
+    // Integraciones (no se crea como fuente).
+    missingIntegration() {
+      return this.missingSource
+        ? integrationFromDirective(this.route.source)
+        : null;
+    },
+    integrationUrl() {
+      if (!this.missingIntegration) return '';
+      return this.$router.resolve({
+        name: 'settings_applications_integration',
+        params: {
+          accountId: this.accountId,
+          integration_id: this.missingIntegration,
+        },
+      }).href;
+    },
     sourceOptions() {
       return this.options.sources || [];
     },
     labelOptions() {
       return this.options.labels || [];
+    },
+    // Una etiqueta escrita que la cuenta no tiene (con la lista ya cargada: mientras
+    // llega, todas «faltarían»).
+    missingLabel() {
+      return Boolean(
+        this.route.tag &&
+          this.options.labels &&
+          !this.labelOptions.includes(this.route.tag)
+      );
     },
     caseTypeOptions() {
       return this.options.caseTypes || [];
@@ -59,6 +110,14 @@ export default {
     },
     opensCase() {
       return this.route.action === CREATE_TICKET;
+    },
+    // Ni fuente ni «si no resuelve»: contesta solo con el Entrenamiento. Es el mismo
+    // aviso ámbar del comprobador (ValidatorService#check_routes_doing_nothing), acá
+    // a la vista mientras se edita. No impide guardar: a veces es a propósito.
+    doesNothing() {
+      return (
+        !(this.route.source || '').trim() && !(this.route.action || '').trim()
+      );
     },
     // Las listas llegan del inventario DESPUÉS del primer pintado. Un <select> con
     // :value (no v-model) no vuelve a aplicar el valor cuando aparecen sus opciones,
@@ -90,6 +149,28 @@ export default {
     // cambiaría sin avisar.
     extraOption(valor, lista) {
       return valor && !lista.includes(valor) ? valor : null;
+    },
+    // Crea la fuente con el mismo modal y la misma API de la Base de Conocimiento, y
+    // avisa al Asistente para que recargue sus fuentes y vuelva a comprobar.
+    async createSource(payload) {
+      this.savingSource = true;
+      try {
+        await KnowledgeBaseAPI.createSource(this.accountId, payload);
+        this.showAddSource = false;
+        useAlert(
+          this.$t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SOURCE_ADDED')
+        );
+        emitter.emit(ASSISTANT_SOURCES_CHANGED);
+      } catch (error) {
+        const detalle =
+          error?.response?.data?.errors?.[0] || error?.response?.data?.error;
+        useAlert(
+          detalle ||
+            this.$t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SOURCE_ADD_ERROR')
+        );
+      } finally {
+        this.savingSource = false;
+      }
     },
     marca(valor) {
       return this.$t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_UNKNOWN', {
@@ -154,6 +235,13 @@ export default {
             {{ marca(`#${route.tag}`) }}
           </option>
         </select>
+        <p
+          v-if="missingLabel"
+          class="flex flex-wrap items-center gap-2 !mt-1 !mb-0 text-xs text-amber-800 dark:text-amber-800"
+        >
+          {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_TAG_MISSING') }}
+          <CreateLabelButton :tag="route.tag" />
+        </p>
       </div>
     </div>
 
@@ -215,6 +303,43 @@ export default {
             {{ marca(route.source) }}
           </option>
         </select>
+        <p
+          v-if="missingIntegration"
+          class="flex flex-wrap items-center gap-2 !mt-1 !mb-0 text-xs text-amber-800 dark:text-amber-800"
+        >
+          {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_INTEGRATION_MISSING') }}
+          <a
+            :href="integrationUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-medium underline"
+          >
+            {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_INTEGRATION_OPEN') }}
+          </a>
+        </p>
+        <p
+          v-else-if="missingSource"
+          class="flex flex-wrap items-center gap-2 !mt-1 !mb-0 text-xs text-amber-800 dark:text-amber-800"
+        >
+          {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SOURCE_MISSING') }}
+          <woot-button
+            v-if="addableSource"
+            size="tiny"
+            variant="smooth"
+            icon="add"
+            @click="showAddSource = true"
+          >
+            {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SOURCE_ADD') }}
+          </woot-button>
+        </p>
+        <AddSourceModal
+          v-if="addableSource"
+          :show="showAddSource"
+          :saving="savingSource"
+          :initial="addableSource"
+          @close="showAddSource = false"
+          @save="createSource"
+        />
       </div>
       <div class="flex-1 min-w-[12rem]">
         <label
@@ -253,6 +378,14 @@ export default {
         </select>
       </div>
     </div>
+
+    <p
+      v-if="doesNothing"
+      class="flex items-start gap-1 !mt-2 !mb-0 text-xs text-amber-800 dark:text-amber-800"
+    >
+      <fluent-icon icon="warning" size="14" class="shrink-0 mt-px" />
+      {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_DOES_NOTHING') }}
+    </p>
 
     <!-- Solo para abrir caso: de qué tipo y con qué prioridad. -->
     <div v-if="opensCase" class="flex flex-wrap gap-2 mt-2">

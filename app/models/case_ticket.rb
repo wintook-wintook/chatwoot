@@ -153,6 +153,9 @@ class CaseTicket < ApplicationRecord
   belongs_to :team,              optional: true
   belongs_to :case_type,         optional: true # @tickets_cases: tipo configurable por cuenta
   belongs_to :case_type_column,  optional: true # @tickets_cases — sub-estado (columna del Kanban por tipo)
+  # proyecto@solicitudes (pieza 5, F4): un servicio movido a la columna «Pagado» queda en firme.
+  after_update_commit -> { ContactTrackings::ServicePaidJob.perform_later(id) if metadata&.key?('servicio') },
+                      if: :saved_change_to_case_type_column_id?
   belongs_to :affected_service,  class_name: 'CaseService',  optional: true # @tickets_cases 2B
   belongs_to :category,          class_name: 'CaseCategory', optional: true # @tickets_cases 2B
   belongs_to :kb_article,        class_name: 'Article', optional: true # @tickets_cases 2H

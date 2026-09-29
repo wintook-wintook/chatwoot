@@ -80,4 +80,20 @@ RSpec.describe ContactTrackings::Assistant::Contract do
       expect(contrato).not_to include('@buscar_foro(')
     end
   end
+
+  # 24/09/2026: el contrato decía «-> Solo admite @crear_ticket» y una rama de agendar de la
+  # veterinaria salió con @crear_ticket(tipo=Administrativo): abría un caso y no agendaba.
+  describe 'las acciones después de la flecha' do
+    it 'admite @agendar_calendar y prohíbe cambiarlo por @crear_ticket' do
+      expect(contrato).to include('- -> @agendar_calendar', 'NUNCA')
+      expect(contrato).not_to include('Solo admite @crear_ticket')
+    end
+
+    # Lo que el contrato dicta tiene que leerlo el motor: la rama y su acción.
+    it 'la forma que dicta la lee el motor' do
+      rama = ContactTrackings::RouteMap.parse('@ruta(agendar #agendar: quiero cita): - -> @agendar_calendar').routes.first
+
+      expect([rama.directive, rama.escalation]).to eq([nil, '@agendar_calendar'])
+    end
+  end
 end

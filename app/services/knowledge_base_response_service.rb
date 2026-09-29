@@ -88,6 +88,8 @@ class KnowledgeBaseResponseService
       perform_discourse_integration(question)
     when :contpaq_support
       perform_contpaq(question, directive[:source_name])
+    when :sheet_lookup
+      perform_sheet_lookup(question, directive[:source_name])
     else
       false
     end
@@ -539,7 +541,8 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
+    hidden = sheet_lookup_columns(source)
+    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{without_columns(i.content, hidden).truncate(MAX_ITEM_CHARS)}" }
                    .join("\n\n")
                    .truncate(kbase_setting('max_context_chars'))
     reply_text = generate_contextual_reply(question, context)
@@ -547,6 +550,68 @@ class KnowledgeBaseResponseService
 
     send_reply("#{with_branch_tag(reply_text)}\n\n_#{source.name}_")
     true
+  end
+
+  # ==============================================================================
+  # proyecto@hoja_buscar — {{hoja_buscar:}} como FUENTE de la ruta (pieza 2, 26/09/2026)
+  #   @ruta(asignacion: …): {{hoja_buscar: Unidades | economico=? | operador, placas, color}}
+  # Ruby busca las filas exactas; el modelo solo redacta con ellas. Para los datos que el
+  # cliente pide tal cual (operador, placas, teléfono), la búsqueda por parecido de
+  # {{hoja:}} traía la fila equivocada o ninguna.
+  # ==============================================================================
+  MAX_LOOKUP_ROWS = 20
+  NO_MATCH_RULE = 'Dilo con claridad y no inventes otra opción.'
+
+  def perform_sheet_lookup(question, inner)
+    return false unless google_feature_enabled?
+
+    spec = ContactTrackings::SheetLookup.parse(inner)
+    return false if spec.nil?
+
+    result = ContactTrackings::SheetLookup.new(@account, spec, conversation: @conversation).call
+    context = sheet_lookup_context(spec, result)
+    return false if context.nil?
+
+    reply_text = generate_contextual_reply(question, context)
+    return false if reply_text.blank?
+
+    send_reply("#{with_branch_tag(reply_text)}\n\n_#{spec.sheet}_")
+    true
+  end
+
+  # nil = la hoja no respondió (no existe, columna mal escrita): sigue el conversacional.
+  def sheet_lookup_context(spec, result)
+    case result.status
+    when :ok
+      filas = ContactTrackings::SheetLookup.describe(spec, result.rows)
+      extra = filas.size > MAX_LOOKUP_ROWS ? "\n(y #{filas.size - MAX_LOOKUP_ROWS} más)" : ''
+      "Datos exactos de la hoja «#{spec.sheet}» (úsalos tal cual; lo que no esté aquí no lo sabes):\n" \
+        "#{filas.first(MAX_LOOKUP_ROWS).join("\n")}#{extra}"
+    when :needs_value
+      "Para responder falta saber «#{result.asked}». Pregúntaselo al cliente en una sola pregunta; no respondas nada más."
+    when :no_match
+      "En la hoja «#{spec.sheet}» no hay ninguna fila con: #{result.criteria.join('; ')}. #{NO_MATCH_RULE}"
+    else
+      Rails.logger.warn "[KBase] ⚠️ {{hoja_buscar:}} sin respuesta: #{result.status} #{result.missing}"
+      nil
+    end
+  end
+
+  # proyecto@hoja_buscar — las columnas que una {{hoja_buscar:}} del Entrenamiento regresa
+  # sobre esta hoja son para la agenda, no para el cliente. Medido el 25/09/2026: con
+  # Calendar_ID en el contexto, «¿qué horarios tiene la TP-64?» le pasó al cliente los links
+  # de los calendarios internos.
+  def sheet_lookup_columns(source)
+    ContactTrackings::SheetLookup.agenda_specs(@tracking&.complementary_prompt)
+                                 .select { |spec| spec.sheet.casecmp?(source.name) }
+                                 .flat_map(&:returns).map { |col| col.strip.downcase }.uniq
+  end
+
+  # Las filas FAQ se vectorizan como «columna: valor» por línea.
+  def without_columns(content, columns)
+    return content if columns.empty?
+
+    content.to_s.lines.reject { |line| columns.include?(line.split(':', 2).first.to_s.strip.downcase) }.join.strip
   end
 
   def generate_contextual_reply(question, context, erp_data: nil, canned_prompt: nil)
@@ -571,8 +636,9 @@ class KnowledgeBaseResponseService
       Información relevante:
       #{context}
 
-      Respondé usando esa información de forma completa y útil. Tono natural y conversacional.
+      Responde usando esa información de forma completa y útil. Tono natural y conversacional.
       No uses prefijos como "Asesor:" ni comillas al inicio o final.
+      #{ContactTrackings::CustomerTone::RULE}
 
       FIDELIDAD A LA FUENTE (regla dura): la información de arriba se recuperó por
       parecido semántico, así que puede tratar de un tema vecino pero distinto al que
@@ -582,9 +648,9 @@ class KnowledgeBaseResponseService
       los pasos del vendedor). Los nombres de permisos, parámetros, campos y menús se
       citan textualmente como aparecen en la fuente.
 
-      Si la fuente no cubre exactamente lo que preguntaron, decilo de frente: explicá
-      brevemente qué sí cubre la documentación, aclará que no tenés el procedimiento
-      exacto para su caso y ofrecé pasarlo con un asesor. Una respuesta honesta que no
+      Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica
+      brevemente qué sí cubre la documentación, aclara que no tienes el procedimiento
+      exacto para su caso y ofrece pasarlo con un asesor. Una respuesta honesta que no
       resuelve es mejor que una inventada que parece resolver.
     USER
     user_prompt = erp_user_prompt(first_name, question, erp_data) if erp_data
@@ -623,7 +689,8 @@ class KnowledgeBaseResponseService
       Datos exactos del sistema (#{data[:rows].size} resultado(s)):
       #{erp_rows_text(data)}
 
-      Respondé con esos datos. Tono natural y conversacional. No uses prefijos como "Asesor:" ni comillas.
+      Responde con esos datos. Tono natural y conversacional. No uses prefijos como "Asesor:" ni comillas.
+      #{ContactTrackings::CustomerTone::RULE}
 
       DATOS EXACTOS (regla dura): precios, existencias, códigos y nombres se citan tal como
       están arriba. Nunca inventes productos, precios ni disponibilidad, ni completes con
@@ -754,26 +821,22 @@ class KnowledgeBaseResponseService
     request['Api-Username'] = username
     request['Content-Type'] = 'application/json'
 
-    data      = JSON.parse(http.request(request).body)
-    posts     = data['posts'] || []
-    topic_map = (data['topics'] || []).index_by { |t| t['id'] }
+    response = http.request(request)
+    # Foro sin Discourse AI activo: la búsqueda normal (ver KnowledgeBase::DiscourseKeywordSearch).
+    return keyword_search(config).hits(query) if response.code == '404'
 
-    Rails.logger.info "[KBase] 📚 #{posts.size} resultado(s) en Discourse semantic-search"
-
-    posts.filter_map do |post|
-      topic = topic_map[post['topic_id']]
-      next unless topic
-
-      {
-        post_id: post['id'],
-        title: topic['title'].to_s.strip,
-        url: "#{url}/t/#{topic['slug']}/#{topic['id']}",
-        blurb: post['blurb'].to_s.strip
-      }
-    end
+    data = JSON.parse(response.body)
+    Rails.logger.info "[KBase] 📚 #{(data['posts'] || []).size} resultado(s) en Discourse semantic-search"
+    KnowledgeBase::DiscourseKeywordSearch.to_hits(data, url)
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error en Discourse search: #{e.message}"
     []
+  end
+
+  def keyword_search(config)
+    @keyword_search ||= KnowledgeBase::DiscourseKeywordSearch.new(
+      config, ask: ->(messages) { call_openai_simple(messages, max_tokens: 60, temperature: 0.0) }
+    )
   end
 
   # Recibe TODAS las consultas del turno (ver search_queries) y devuelve un solo contexto
@@ -926,8 +989,8 @@ class KnowledgeBaseResponseService
     - Llegan por parecido semántico, así que la mejor puede tratar de un tema vecino
       pero distinto al que preguntaron. No adaptes una fuente para que encaje: no
       sustituyas el sujeto de un procedimiento por el de la pregunta.
-    - Empezá SIEMPRE tu respuesta con una línea "FUENTE_USADA: n", donde n es el número
-      de la [FUENTE n] en la que te basaste. Si no te basaste en ninguna, escribí
+    - Empieza SIEMPRE tu respuesta con una línea "FUENTE_USADA: n", donde n es el número
+      de la [FUENTE n] en la que te basaste. Si no te basaste en ninguna, escribe
       "FUENTE_USADA: 0". Esa línea se elimina antes de mostrarla al cliente.
   RULE
 
@@ -936,14 +999,15 @@ class KnowledgeBaseResponseService
 
   def build_messages(question, context, history)
     system_content = agent_system_prompt || <<~PROMPT.strip
-      Eres un agente de soporte de #{@account.name}. Respondé preguntas
+      Eres un agente de soporte de #{@account.name}. Responde preguntas
       de forma conversacional y concisa, como lo haría un experto de soporte.
-      - Usá el contenido del foro como referencia, respondé con tus propias palabras.
-      - Si necesitás más información, hacé UNA pregunta de seguimiento.
-      - Respondé en el mismo idioma que el cliente.
+      - Usa el contenido del foro como referencia, responde con tus propias palabras.
+      - Si necesitas más información, haz UNA pregunta de seguimiento.
+      - Responde en el mismo idioma que el cliente.
       - No menciones que consultaste un foro o base de conocimiento.
     PROMPT
 
+    system_content += "\n\n#{ContactTrackings::CustomerTone::RULE}"
     system_content += "\n\nContenido relevante del foro:\n#{context}#{SOURCE_FIDELITY_RULE}" if context.present?
     system_content += "\n\n#{branch_scope_rule}" if branch_scope_rule.present?
 

@@ -94,7 +94,7 @@ export default {
           <p
             v-for="directiva in engine.loose_directives || []"
             :key="directiva"
-            class="!m-0 text-xs text-amber-700 dark:text-amber-300"
+            class="!m-0 text-xs text-amber-800 dark:text-amber-800"
           >
             {{
               $t('TRACKING_ASSISTANT_VIEW.EXPLAIN_LOOSE', {
