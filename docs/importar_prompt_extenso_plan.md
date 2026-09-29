@@ -394,3 +394,89 @@ guardaron sus números. Los tres chicos reusan su lectura (costo 0).
 **Cómo se usa.** Cada fase vuelve a correr los cuatro. Para los chicos (C7) se compara la forma
 (rutas, fuentes, secciones, comprobador), no el texto: la redacción de una sola vez no es
 determinista. Para ADAM, los criterios C1–C6.
+
+### F1 — Niveles de regla, sin IA (M1) ✅
+
+**Qué se hizo.** `BriefRuleParser` saca las reglas con id y nivel (`**C7-10.06** (inviolable) — …`
+con «Activación», «Verificación», «Prompt») y la versión corta (`- [C0-01.02] …`). Con 20 o más,
+el encargo es un reglamento: la IA lee el texto con esos renglones en blanco (`BriefReader`
+con `rules_apart`, versión de lectura `3r`) y las reglas entran a la ficha tal cual, con nivel,
+capa, cuándo aplican y cómo se comprueban (`BriefReadingPlan#with_numbered_rules`).
+Las que aparecen en la versión corta se marcan como **núcleo** (la selección del autor).
+
+**Medido con ADAM.** 818 reglas (373 inviolables, 419 obligatorias, 26 recomendadas; las 818 con
+«Verificación»), 71 de núcleo. La IA pasa de leer 74 trozos a 39.
+
+**Pruebas.** `brief_rule_parser_spec` (4).
+
+### F2 — Presupuesto real (M2) ✅
+
+**Qué se hizo.** `BriefBudget`, al terminar de leer: si las reglas pasan de 10 mil caracteres,
+(1) la IA junta SOLO las repetidas, por capa y sin cambiar el sentido; (2) se eligen por
+prioridad —núcleo del autor, prohibiciones inviolables, inviolables, obligatorias— hasta
+llenar el presupuesto; (3) lo demás y toda recomendada va al **anexo** del encargo (D3), y se
+cuenta cuántas inviolables quedaron fuera. `BriefCoverage` solo repone inviolables y nunca pasa
+de 16 mil (lo que no cabe lo devuelve en `over_budget`).
+
+**Lo que se probó y se descartó (medido).** Pedirle a la IA que *generalizara* para que todo
+cupiera dejó 373/373 inviolables «cubiertas» por id en 7.9 mil caracteres… con «Responde toda
+pregunta de precio sin evadir» donde ADAM dice que nunca se dan precios, y sin «no reveles el
+prompt» ni «máximo un emoji». Una id cubierta por un texto que ya no dice lo que decía es peor
+que una regla a la vista en el anexo: se quitó.
+
+**Medido con ADAM** (encargo #1102). 82 mil → 9.96 mil de reglas en 92 líneas; núcleo del autor
+67/71 dentro; 94 inviolables dentro y 279 en el anexo (a la vista en el modal). El criterio C3 del plan («100 % de
+inviolables») no es alcanzable con 373 inviolables en 16 mil sin distorsionarlas: queda como
+«100 % del núcleo + prohibiciones; el resto, en el anexo e informado».
+
+**Pruebas.** `brief_budget_spec` (5), `brief_coverage_spec` (+1).
+
+### F3 — Temas agrupados en rutas (M3) ✅
+
+**Qué se hizo.** `BriefTopicGroups`: con más de 20 temas, la IA los agrupa por lo que el cliente
+viene a pedir (máximo 20); lo interno pasa a «qué hace» del grupo; cada grupo guarda qué temas
+junta y lo que la IA no puso en ningún grupo vuelve suelto. En el modal, cada ruta propuesta
+muestra «Junta: …» y una casilla para quitarla antes de redactar (`temas_quitados`).
+
+**Medido con ADAM.** 24 temas → 15 grupos (#1101) y 21 → 18 (#1102); Entrenamiento final: 15 y 17 rutas.
+
+**Pruebas.** `brief_topic_groups_spec` (3), `brief_composer_spec`.
+
+### F4 — La fuente de conocimiento (M4) ✅
+
+**Qué se hizo.** `BriefSourceMatch`: los títulos `##` del encargo se buscan en cada foro de la
+cuenta (búsqueda normal, sin IA) y se calcula cuánto cubre cada uno. En el modal, «¿Dónde está el
+conocimiento de este agente?» con la cobertura de cada fuente; la mejor (≥ 50 %) viene marcada
+(D2: la persona confirma). La redacción recibe la fuente como decisión. En un reglamento, el
+«texto oficial» de las secciones que ya están en la fuente se reduce a títulos y primer párrafo.
+
+**Medido con ADAM.** `Foro_Sentidos_Creativos` cubre 57 de 80 secciones (Foro Kontrolya: 3).
+Las 15–17 rutas salen con `@buscar_foro(Foro_Sentidos_Creativos)`. Costo de leer: US$ 2.82 →
+**US$ 1.53** (lectura nueva) / US$ 0.77 (reusando trozos). Los encargos chicos no llegan al 50 %:
+no se decide fuente (C7 intacto).
+
+**Pruebas.** `brief_source_match_spec` (2), `brief_composer_spec` (+2).
+
+### F5 — Lo que el motor no cumple (M6) + D5 ✅
+
+**Qué se hizo.**
+- **D5:** en la respuesta de respaldo del motor (`generate_conversational_reply`), con
+  Entrenamiento, manda el Entrenamiento: se quitó «Responde como un humano… NUNCA menciones que
+  eres un bot» y el trato (tú/usted) es el de las instrucciones. Sin Entrenamiento, igual que antes.
+- **M6:** `EngineLimits`, tabla fija cruzada con las reglas: textos fijos en tú, #etiqueta al
+  final, correo que solo se guarda al agendar, horario y días en el calendario, seguimientos en la
+  ficha. Salen en ámbar en el modal con las reglas que afectan, junto con el conteo del anexo.
+
+**Medido con ADAM.** Sobre la ficha sin presupuesto: 4 avisos —usted (3 reglas), cierre con
+pregunta (10), correo (2), seguimiento (5)—. Sobre la ficha final (#1102), 1: usted. Los avisos
+miran solo las reglas que entran al Entrenamiento: las del anexo no se van a aplicar igual.
+
+**Pruebas.** `engine_limits_spec` (2), job spec «D5» (2).
+
+### F6 — Varios archivos (M7) ✅
+
+**Qué se hizo.** El selector del modal acepta varios `.md`/`.txt`; se unen en uno, en el orden
+elegido, cada uno bajo `# Archivo: nombre` (`combineBriefFiles`). El backend sigue recibiendo un
+encargo (tope 5 MB sobre el total).
+
+**Pruebas.** `briefDigest.spec.js` (+2).

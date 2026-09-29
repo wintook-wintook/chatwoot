@@ -306,6 +306,24 @@ RSpec.describe ContactTrackingResponseAnalyzerJob do
     end
   end
 
+  describe 'respuesta de respaldo con Entrenamiento (D5, 29/09/2026)' do
+    let(:tracking) { instance_double(ContactTracking, account: instance_double(Account, name: 'Sentidos')) }
+
+    it 'con Entrenamiento manda su identidad y su trato; ya no ordena ocultar que es un bot' do
+      identidad = job.send(:conversational_identity, tracking, '[ROL] Eres ADAM')
+      forma = job.send(:conversational_form, '[ROL] Eres ADAM')
+
+      expect(identidad).not_to include('NUNCA menciones que eres un bot')
+      expect(identidad).to include('INSTRUCCIONES ADICIONALES')
+      expect(forma).to include('El trato (tú o usted)')
+    end
+
+    it 'sin Entrenamiento queda como antes' do
+      expect(job.send(:conversational_identity, tracking, '')).to include('NUNCA menciones que eres un bot')
+      expect(job.send(:conversational_form, '')).to start_with('Máximo 4 líneas.')
+    end
+  end
+
   describe 'rama de caso propio contra la agenda (24/09/2026)' do
     def rama(linea)
       ContactTrackings::RouteMap.parse(linea).routes.first

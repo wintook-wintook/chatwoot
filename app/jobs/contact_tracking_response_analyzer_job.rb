@@ -662,8 +662,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       clean_cp = "#{clean_cp}\n\n#{scope_rule}" if clean_cp.present? && scope_rule.present?
 
       system_prompt = <<~SYSTEM.strip
-        Eres un asesor de ventas para #{tracking.account.name}.
-        Responde como un humano amable y conocedor del tema. NUNCA menciones que eres un bot o sistema automático.
+        #{conversational_identity(tracking, clean_cp)}
 
         #{contact_profile}
         OBJETIVO DE LA CONVERSACIÓN: #{tracking.objective}
@@ -678,8 +677,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         #{message_history.present? ? "#{message_history}\n\n" : ''}Responde al siguiente mensaje de #{first_name}:
         "#{message_text_for_ai(message).truncate(300)}"
 
-        Máximo 4 líneas. Tono natural y conversacional.
-        #{ContactTrackings::CustomerTone::RULE}
+        #{conversational_form(clean_cp)}
         No uses prefijos como "Asesor:" o "Bot:". No incluyas comillas al inicio ni al final.
         #{clean_cp.present? ? 'Si las INSTRUCCIONES ADICIONALES de arriba definen etiquetas de cierre, esta respuesta debe terminar con la que corresponda, sola en la última línea — no es opcional.' : ''}
       USER
@@ -694,6 +692,30 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     nil
+  end
+
+  # Decisión D5 de docs/importar_prompt_extenso_plan.md (29/09/2026): con Entrenamiento,
+  # manda el Entrenamiento. Antes esta respuesta decía «Responde como un humano… NUNCA
+  # menciones que eres un bot» y cerraba con la regla de tú: el agente ADAM (cuya regla
+  # inviolable es no fingir ser humano, y que trata de usted) tuteaba y se hacía pasar por
+  # persona justo cuando su fuente no resolvía. Sin Entrenamiento, igual que antes.
+  def conversational_identity(tracking, clean_cp)
+    if clean_cp.blank?
+      return "Eres un asesor de ventas para #{tracking.account.name}.\nResponde como un humano amable y conocedor del tema. " \
+             'NUNCA menciones que eres un bot o sistema automático.'
+    end
+
+    "Eres el agente que describen las INSTRUCCIONES ADICIONALES de abajo y atiendes a nombre de #{tracking.account.name}. " \
+      'Su identidad, su trato y sus reglas mandan sobre estas indicaciones generales. Si te preguntan si eres una ' \
+      'persona, no lo afirmes: responde lo que digan tus instrucciones.'
+  end
+
+  def conversational_form(clean_cp)
+    return "Máximo 4 líneas. Tono natural y conversacional.\n#{ContactTrackings::CustomerTone::RULE}" if clean_cp.blank?
+
+    'Breve: máximo 4 líneas, salvo que tus instrucciones pidan otro largo. El trato (tú o usted), el tono y cómo ' \
+      'cierras el mensaje son los de las INSTRUCCIONES ADICIONALES; si no dicen nada del trato: ' \
+      "#{ContactTrackings::CustomerTone::RULE}"
   end
 
   def conversational_fallback(tracking, message)

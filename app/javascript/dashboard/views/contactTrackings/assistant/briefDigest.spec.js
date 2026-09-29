@@ -5,6 +5,7 @@ import {
   isBusy,
   briefQuestions,
   briefAnswers,
+  combineBriefFiles,
 } from './briefDigest';
 
 describe('briefDigest', () => {
@@ -96,6 +97,33 @@ describe('briefDigest', () => {
       contradicciones: { 0: 'b' },
       frases: { Horarios: '¿a qué hora?' },
       modo: 'deriva',
+    });
+  });
+
+  describe('combineBriefFiles (M7)', () => {
+    const archivo = (name, texto) => ({ name, text: async () => texto });
+    // jsdom no trae File#text (los navegadores sí): se lee con FileReader.
+    const leer = unido =>
+      new Promise(resolve => {
+        const lector = new FileReader();
+        lector.onload = () => resolve(lector.result);
+        lector.readAsText(unido);
+      });
+
+    it('un solo archivo pasa tal cual', async () => {
+      const uno = archivo('adam.md', 'hola');
+      expect(await combineBriefFiles([uno])).toBe(uno);
+    });
+
+    it('varios se unen en uno, cada uno bajo su nombre y en el orden elegido', async () => {
+      const unido = await combineBriefFiles([
+        archivo('ADAM-system-prompt.md', 'núcleo'),
+        archivo('ADAM-2.0-Comportamiento.md', 'reglas'),
+      ]);
+      expect(unido.name).toBe('ADAM-system-prompt +1.md');
+      expect(await leer(unido)).toBe(
+        '# Archivo: ADAM-system-prompt.md\n\nnúcleo\n\n# Archivo: ADAM-2.0-Comportamiento.md\n\nreglas'
+      );
     });
   });
 });

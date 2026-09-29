@@ -146,7 +146,8 @@ class ContactTrackings::Assistant::BriefDigestService
     { 'ficha' => ficha, 'faltas' => faltas, 'caracteres' => Ficha.size(ficha), 'anexo' => @presupuesto[:anexo].presence,
       'reglas_caracteres' => @presupuesto.slice(:antes, :despues).stringify_keys,
       'temas_agrupados' => @grupos.slice(:antes, :despues).stringify_keys,
-      'fuentes_sugeridas' => @plan.sources.presence&.map { |s| s.except('secciones') } }.compact
+      'fuentes_sugeridas' => @plan.sources.presence&.map { |s| s.except('secciones') },
+      'limites' => ContactTrackings::Assistant::EngineLimits.call(ficha).presence }.compact
   end
 
   # Lo que se guarda por trozo: dónde está, su huella y su lectura (sin el texto, que

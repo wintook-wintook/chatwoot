@@ -23,10 +23,10 @@ RSpec.describe ContactTrackings::Assistant::BriefBudget do
   end
 
   it 'junta con la IA, repone la inviolable que soltó y manda las recomendadas al anexo' do
-    reglas = Array.new(60) { |i| regla("C7-#{i}", i < 5 ? 'inviolable' : 'obligatoria') } +
+    reglas = Array.new(80) { |i| regla("C7-#{i}", i < 5 ? 'inviolable' : 'obligatoria') } +
              [regla('C7-R1', 'recomendada')]
     allow(chat).to receive(:call).and_return(
-      { 'lineas' => [{ 'texto' => 'Una sola pregunta por mensaje', 'ids' => (1..59).map { |i| "C7-#{i}" }, 'tipo' => 'regla' }] }
+      { 'lineas' => [{ 'texto' => 'Una sola pregunta por mensaje', 'ids' => (1..79).map { |i| "C7-#{i}" }, 'tipo' => 'regla' }] }
     )
 
     r = described_class.new(account, ficha: { 'reglas' => reglas }).call
@@ -36,6 +36,21 @@ RSpec.describe ContactTrackings::Assistant::BriefBudget do
     expect(r[:ficha]['reglas'].find { |l| l['ids'] == ['C7-0'] }['nivel']).to eq('inviolable') # soltada → vuelve
     expect(r[:ficha]['reglas'].first['nivel']).to eq('inviolable') # nivel: el más alto
     expect(r[:anexo].pluck('regla_id')).to eq(['C7-R1'])
+    expect(r[:despues]).to be <= described_class::RULES_BUDGET
+  end
+
+  it 'elige primero el núcleo del autor y las prohibiciones inviolables; lo que no cabe va al anexo y se cuenta' do
+    reglas = Array.new(70) { |i| regla("C3-#{i}", 'inviolable') } +
+             [regla('C0-N', 'obligatoria').merge('nucleo' => true)] +
+             [regla('C7-P', 'inviolable', "Nunca des precios #{'y' * 130}")]
+    allow(chat).to receive(:call).and_return(nil)
+
+    r = described_class.new(account, ficha: { 'reglas' => reglas }).call
+    dentro = r[:ficha]['reglas'].pluck('regla_id')
+
+    expect(dentro).to include('C0-N') # núcleo, aunque sea obligatoria
+    expect(dentro).to include('C7-P') # prohibición inviolable
+    expect(r[:inviolables_fuera]).to be_positive
     expect(r[:despues]).to be <= described_class::RULES_BUDGET
   end
 

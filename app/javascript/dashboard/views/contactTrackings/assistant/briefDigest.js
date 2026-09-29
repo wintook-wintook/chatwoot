@@ -110,3 +110,19 @@ export const briefAnswers = (values = {}) => {
   });
   return respuestas;
 };
+
+// M7 de docs/importar_prompt_extenso_plan.md: varios archivos se unen en UNO, en el orden
+// en que se eligieron, cada uno bajo «# Archivo: nombre». El backend sigue recibiendo un solo
+// encargo (y revisa el tope de 5 MB sobre el total). Con uno solo, pasa tal cual.
+export const combineBriefFiles = async (files = []) => {
+  if (files.length <= 1) return files[0] || null;
+  const partes = await Promise.all(
+    files.map(
+      async archivo => `# Archivo: ${archivo.name}\n\n${await archivo.text()}`
+    )
+  );
+  const base = files[0].name.replace(/\.(md|markdown|txt)$/i, '');
+  return new File([partes.join('\n\n')], `${base} +${files.length - 1}.md`, {
+    type: 'text/markdown',
+  });
+};

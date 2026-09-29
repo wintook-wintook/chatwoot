@@ -29,8 +29,10 @@
 class ContactTrackings::Assistant::BriefBudget
   Ficha = ContactTrackings::Assistant::BriefFicha
 
-  # Lo que las reglas pueden ocupar del Entrenamiento (tope D1: 16 mil en total).
-  RULES_BUDGET = 8_000
+  # Lo que las reglas pueden ocupar del Entrenamiento (tope D1: 16 mil en total). Con ADAM, lo
+  # demás del Entrenamiento (rutas, rol, estilo…) ocupó 5.6 mil: con 8 mil entraba el núcleo
+  # del autor pero no lo comercial (un emoji, sin descuentos, la reunión); 10 mil sí cabe.
+  RULES_BUDGET = 10_000
   GROUP_CHARS = 9_000
   PARALLEL = 4
   FIELDS = %w[reglas prohibiciones].freeze
@@ -130,6 +132,8 @@ class ContactTrackings::Assistant::BriefBudget
   def strongest(origen)
     { 'nivel' => LEVELS.find { |n| origen.any? { |o| o['nivel'] == n } }, 'capa' => origen.first['capa'],
       'nucleo' => origen.any? { |o| o['nucleo'] } || nil, 'orden' => origen.pluck('orden').min,
+      # Para la pila de pruebas (M5): cuándo aplica y cómo se comprueba, de la primera que junta.
+      'cuando' => origen.pluck('cuando').compact.first, 'verificar' => origen.pluck('verificar').compact.first,
       'origen' => origen.flat_map { |o| Array(o['origen']) }.uniq.sort }.compact
   end
 
@@ -156,8 +160,13 @@ class ContactTrackings::Assistant::BriefBudget
   end
 
   def priority(linea)
-    [linea['nucleo'] ? 0 : 1, linea['nivel'] == 'inviolable' && linea['campo'] == 'prohibiciones' ? 0 : 1,
+    [linea['nucleo'] ? 0 : 1, linea['nivel'] == 'inviolable' && prohibition?(linea) ? 0 : 1,
      LEVELS.index(linea['nivel']) || LEVELS.size, linea['orden'].to_i]
+  end
+
+  # Por su campo o por cómo empieza («Nunca…»): la IA a veces la deja como regla.
+  def prohibition?(linea)
+    linea['campo'] == 'prohibiciones' || linea['texto'].to_s.match?(ContactTrackings::Assistant::BriefRuleParser::PROHIBITION_RE)
   end
 
   def with_rules(lineas)

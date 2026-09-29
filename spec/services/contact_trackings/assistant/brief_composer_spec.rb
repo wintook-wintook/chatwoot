@@ -28,7 +28,7 @@ RSpec.describe ContactTrackings::Assistant::BriefComposer do
     it 'la usa en toda ruta de consulta y no copia el conocimiento' do
       texto = mensaje
 
-      expect(texto).to include('usa EXACTAMENTE @buscar_foro(Foro_SC) antes de la flecha')
+      expect(texto).to include('antes de la flecha va EXACTAMENTE @buscar_foro(Foro_SC)')
       expect(texto).not_to include('DATOS DEL NEGOCIO Y CONOCIMIENTO')
     end
 

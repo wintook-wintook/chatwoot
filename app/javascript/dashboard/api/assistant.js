@@ -121,6 +121,26 @@ class AssistantAPI extends ApiClient {
     });
   }
 
+  // «Probar el agente»: la pila de pruebas en vivo del agente guardado (M5 de
+  // docs/importar_prompt_extenso_plan.md). Devuelve { id }; el avance se lee con
+  // testBattery(id) y el informe .md con downloadTestBatteryReport(id).
+  startTestBattery(templateId, { briefId = null } = {}) {
+    return axios.post(`${this.url}/test_battery`, {
+      template_id: templateId,
+      brief_id: briefId,
+    });
+  }
+
+  testBattery(id) {
+    return axios.get(`${this.url}/test_battery/${id}`);
+  }
+
+  downloadTestBatteryReport(id) {
+    return axios.get(`${this.url}/test_battery/${id}/report`, {
+      responseType: 'blob',
+    });
+  }
+
   // Las instrucciones que se llenaron conversando, como si fueran un .md subido.
   briefFromInstructions(content, filename, { sessionId = null } = {}) {
     return axios.post(`${this.url}/briefs/from_instructions`, {

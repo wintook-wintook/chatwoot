@@ -150,6 +150,10 @@ Rails.application.routes.draw do
             post 'assistant/briefs/:id/cover',   to: 'assistant_briefs#cover'
             post 'assistant/briefs/:id/knowledge', to: 'assistant_knowledge#suggestions'
             post 'assistant/briefs/:id/knowledge/create', to: 'assistant_knowledge#create'
+            # «Probar el agente»: la pila de pruebas en vivo (docs/importar_prompt_extenso_plan.md, M5)
+            post 'assistant/test_battery', to: 'assistant_test_battery#create'
+            get  'assistant/test_battery/:id', to: 'assistant_test_battery#show'
+            get  'assistant/test_battery/:id/report', to: 'assistant_test_battery#report'
             # armar un agente desde cero conversando (llena las instrucciones iniciales)
             post 'assistant/drafting_chat', to: 'assistant_drafting#create'
             put  'assistant/autosave', to: 'assistant_autosave#update'

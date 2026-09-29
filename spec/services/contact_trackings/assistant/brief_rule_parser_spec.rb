@@ -40,6 +40,9 @@ RSpec.describe ContactTrackings::Assistant::BriefRuleParser do
 
     expect(r.rules.find { |x| x.id == 'C7-10.01' }.nivel).to eq('inviolable')
     expect(r.rules.find { |x| x.id == 'C7-99.01' }.nivel).to be_nil
+    # La versión corta es la selección del autor: su núcleo.
+    expect(r.rules.find { |x| x.id == 'C7-10.01' }.nucleo).to be(true)
+    expect(r.rules.find { |x| x.id == 'C7-10.02' }.nucleo).to be(false)
   end
 
   it 'un encargo común con alguna negrita suelta no es un reglamento' do

@@ -216,8 +216,11 @@ class ContactTrackings::Assistant::BriefComposer
     fuente = knowledge_source
     return nil if fuente.blank?
 
-    'FUENTE DE CONOCIMIENTO (decisión de la persona): toda ruta que consulta información usa EXACTAMENTE ' \
-      "#{fuente} antes de la flecha. El conocimiento del negocio ya está ahí: no lo copies al Entrenamiento."
+    # Medido el 29/09/2026: sin el «para ti», la redacción copió esta frase a la prosa del
+    # Entrenamiento y el comprobador la marcó como directiva suelta.
+    'FUENTE DE CONOCIMIENTO (decisión de la persona; instrucción para ti, NO la copies como texto del ' \
+      "Entrenamiento): en cada línea @ruta que consulta información, antes de la flecha va EXACTAMENTE #{fuente}. " \
+      'El conocimiento del negocio ya está ahí: no lo copies al Entrenamiento.'
   end
 
   # Los datos del negocio y lo consultable. Si ya van como Contexto, no se repiten.

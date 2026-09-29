@@ -77,6 +77,7 @@ import trainingSectionsMixin from './assistant/trainingSectionsMixin';
 import OptimizeModal from './assistant/OptimizeModal.vue';
 import ExplainModal from './assistant/ExplainModal.vue';
 import DryRunModal from './assistant/DryRunModal.vue';
+import TestBatteryModal from './assistant/TestBatteryModal.vue';
 import SaveModal from './assistant/SaveModal.vue';
 
 // El teclado va más rápido que un request: se espera a que la persona pare.
@@ -165,6 +166,7 @@ export default {
     OptimizeModal,
     ExplainModal,
     DryRunModal,
+    TestBatteryModal,
     SaveModal,
   },
   mixins: [trainingSectionsMixin],
@@ -254,6 +256,9 @@ export default {
       isSuggesting: false,
       suggestStage: null,
       showDryRunModal: false,
+      // «Probar el agente» (pila en vivo, M5) y el encargo del que salió el agente.
+      showTestBattery: false,
+      batteryBriefId: null,
       draftVersion: 0,
       isDryRunning: false,
       dryRunError: '',
@@ -1041,6 +1046,7 @@ export default {
     // Si las instrucciones salieron de la conversación, la conversación sigue: no se
     // arranca en limpio (se perdería lo hablado).
     async writeFromBrief({ message, proposal, briefId, filename }) {
+      this.batteryBriefId = briefId || null;
       if (!this.chatBrief) this.startFresh();
       this.chatBrief = null;
       this.isWritingBrief = true;
@@ -2365,6 +2371,14 @@ export default {
             {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_TITLE') }}
           </woot-button>
           <woot-button
+            v-if="editingTemplate"
+            variant="clear"
+            color-scheme="secondary"
+            @click="showTestBattery = true"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.BATTERY_CTA') }}
+          </woot-button>
+          <woot-button
             variant="clear"
             color-scheme="secondary"
             :is-disabled="!draft.trim()"
@@ -2432,6 +2446,14 @@ export default {
       :is-running="isExplaining"
       :error="explainError"
       @close="showExplainModal = false"
+    />
+    <TestBatteryModal
+      v-if="editingTemplate"
+      :show="showTestBattery"
+      :template-id="editingTemplate.id"
+      :template-name="editingTemplate.name"
+      :brief-id="batteryBriefId"
+      @close="showTestBattery = false"
     />
     <DryRunModal
       :show="showDryRunModal"

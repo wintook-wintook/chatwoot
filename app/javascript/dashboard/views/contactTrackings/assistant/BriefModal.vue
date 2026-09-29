@@ -30,6 +30,7 @@ import {
   isBusy,
   briefQuestions,
   briefAnswers,
+  combineBriefFiles,
 } from './briefDigest';
 
 const POLL_MS = 2000;
@@ -117,6 +118,21 @@ export default {
       );
       return mejor ? mejor.directiva : 'ninguna';
     },
+    // M6: lo que el motor hace por su cuenta y choca con reglas del encargo.
+    engineLimits() {
+      return this.brief?.digest?.limites || [];
+    },
+    // M2: reglas que no cupieron en el Entrenamiento (quedan guardadas, a la vista).
+    annex() {
+      const anexo = this.brief?.digest?.anexo || [];
+      const inviolables = new Set();
+      anexo
+        .filter(p => p.nivel === 'inviolable')
+        .forEach(p =>
+          (p.ids || [p.regla_id]).forEach(id => inviolables.add(id))
+        );
+      return { total: anexo.length, inviolables: inviolables.size };
+    },
     selectedSource: {
       get() {
         return this.knowledgeSource || this.bestSource;
@@ -199,7 +215,10 @@ export default {
         .slice(2, 10)}`;
     },
     async onFile(event) {
-      const [file] = event.target.files || [];
+      // M7: uno o varios archivos; varios se unen en uno (combineBriefFiles).
+      const file = await combineBriefFiles(
+        Array.from(event.target.files || [])
+      );
       event.target.value = '';
       if (!file) return;
 
@@ -371,6 +390,7 @@ export default {
           ref="file"
           type="file"
           accept=".md,.markdown,.txt"
+          multiple
           class="hidden"
           @change="onFile"
         />
@@ -594,6 +614,40 @@ export default {
               </option>
             </select>
           </label>
+
+          <p
+            v-if="annex.total"
+            class="!m-0 text-xs text-slate-600 dark:text-slate-300"
+          >
+            {{
+              $t('TRACKING_ASSISTANT_VIEW.BRIEF_ANEXO', {
+                total: annex.total,
+                inviolables: annex.inviolables,
+              })
+            }}
+          </p>
+
+          <div
+            v-if="engineLimits.length"
+            class="p-3 text-xs rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-800"
+          >
+            <p class="!m-0 mb-1 font-medium">
+              {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_LIMITES') }}
+            </p>
+            <ul class="!m-0 !pl-4 list-disc">
+              <li v-for="limite in engineLimits" :key="limite.clave">
+                {{ limite.aviso }}
+                <span class="opacity-75">
+                  {{
+                    $t('TRACKING_ASSISTANT_VIEW.BRIEF_LIMITE_REGLAS', {
+                      count: limite.cuantas,
+                      ejemplos: limite.ejemplos.join(', '),
+                    })
+                  }}
+                </span>
+              </li>
+            </ul>
+          </div>
 
           <!-- La ficha completa, lista por lista. -->
           <div v-if="lists.length" class="flex flex-col gap-1">
