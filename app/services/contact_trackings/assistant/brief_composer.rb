@@ -23,6 +23,8 @@
 #   frases           { "tema" => "una por renglón" }
 #   fuentes          { "tema" => "de dónde / qué hace si no resuelve" }
 #   etiquetas        { "tema" => "#etiqueta" }
+#   temas_quitados   ["nombre", …]              rutas que la persona quitó (M3)
+#   fuente_conocimiento "@buscar_foro(X)" | "ninguna"   dónde está el conocimiento (M4)
 #   predefinidas_grupo  "PATITAS"   las respuestas predefinidas del agente, creadas
 #                                   desde el modal (KnowledgeSuggestions): la ruta
 #                                   busca solo en ese grupo
@@ -81,7 +83,8 @@ class ContactTrackings::Assistant::BriefComposer
   private
 
   def message
-    [header, identity, topics, tools, *lists, knowledge_block, moved_note, decisions, closing].compact.join("\n\n")
+    [header, identity, topics, tools, source_decision, *lists, knowledge_block, moved_note, decisions,
+     closing].compact.join("\n\n")
   end
 
   def canned_group
@@ -132,10 +135,15 @@ class ContactTrackings::Assistant::BriefComposer
   end
 
   def topics
-    temas = Array(@ficha['temas'])
+    temas = Array(@ficha['temas']).reject { |t| removed_topics.include?(t['nombre']) }
     return "TEMAS (cada uno es una ruta): #{@answers['temas'].presence || '<PENDIENTE: qué temas atiende>'}" if temas.empty?
 
     (['TEMAS (cada uno es una ruta):'] + temas.map { |t| topic_line(t) }).join("\n")
+  end
+
+  # M3: las rutas que la persona quitó en el modal («temas_quitados»: [nombres]).
+  def removed_topics
+    @removed_topics ||= Array(@answers['temas_quitados']).to_set(&:to_s)
   end
 
   # Lo que contestó la persona manda sobre lo que traía el encargo.
@@ -143,10 +151,14 @@ class ContactTrackings::Assistant::BriefComposer
     nombre = tema['nombre']
     frases = answered_list('frases', nombre).presence || Array(tema['frases_cliente'])
     fuente = [tema['fuente'], tema['si_no_resuelve'], @answers.dig('fuentes', nombre)].compact_blank
-    etiqueta = (@answers.dig('etiquetas', nombre).presence || tema['etiqueta']).to_s.delete_prefix('#')
-    partes = { 'qué hace' => tema['que_hace'], 'el cliente escribe' => frases.map { |f| "«#{f}»" }.join(', '),
-               'fuente / si no resuelve' => fuente.join(' · '), 'etiqueta' => etiqueta.presence&.prepend('#') }
+    partes = { 'qué hace' => tema['que_hace'], 'junta' => Array(tema['junta']).join(', '),
+               'el cliente escribe' => frases.map { |f| "«#{f}»" }.join(', '),
+               'fuente / si no resuelve' => fuente.join(' · '), 'etiqueta' => topic_tag(tema) }
     (["- #{nombre}"] + partes.compact_blank.map { |titulo, valor| "#{titulo}: #{valor}" }).join(' · ')
+  end
+
+  def topic_tag(tema)
+    (@answers.dig('etiquetas', tema['nombre']).presence || tema['etiqueta']).to_s.delete_prefix('#').presence&.prepend('#')
   end
 
   def answered_list(campo, tema)
@@ -189,9 +201,28 @@ class ContactTrackings::Assistant::BriefComposer
     end
   end
 
+  # M4: la fuente del conocimiento la elige la persona en el modal («fuente_conocimiento»,
+  # una directiva o "ninguna"); sin respuesta, la que el encargo cubre mejor (lo mismo que el
+  # modal deja marcado). Medido con ADAM: sin esto la redacción puso @buscar_articulo.
+  def knowledge_source
+    elegida = @answers['fuente_conocimiento'].to_s.strip
+    return nil if elegida == 'ninguna'
+    return elegida if elegida.present?
+
+    ContactTrackings::Assistant::BriefSourceMatch.best(@brief.digest['fuentes_sugeridas'])&.dig('directiva')
+  end
+
+  def source_decision
+    fuente = knowledge_source
+    return nil if fuente.blank?
+
+    'FUENTE DE CONOCIMIENTO (decisión de la persona): toda ruta que consulta información usa EXACTAMENTE ' \
+      "#{fuente} antes de la flecha. El conocimiento del negocio ya está ahí: no lo copies al Entrenamiento."
+  end
+
   # Los datos del negocio y lo consultable. Si ya van como Contexto, no se repiten.
   def knowledge_block
-    return nil if knowledge.empty? || context_fits? || knowledge_moved?
+    return nil if knowledge.empty? || context_fits? || knowledge_moved? || knowledge_source.present?
 
     (['DATOS DEL NEGOCIO Y CONOCIMIENTO (ponlos como una sección del Entrenamiento):'] +
       knowledge.map { |k| "- #{k}" }).join("\n")

@@ -57,6 +57,17 @@ RSpec.describe ContactTrackings::Assistant::BriefCoverage do
             "- Dar el precio sin hacer preguntas antes\n[PROHIBIDO]\n- Nunca pedir datos de tarjeta por WhatsApp\n" \
             "[DATOS A PEDIR]\n- nombre y teléfono"
 
-    expect(cubrir(draft)).to eq(draft: draft, added: [])
+    expect(cubrir(draft)).to eq(draft: draft, added: [], over_budget: [])
+  end
+
+  it 'de un reglamento solo repone inviolables, y sin pasar el tope (29/09/2026)' do
+    ficha = { 'reglas' => [{ 'texto' => 'Nunca finjas ser una persona humana', 'nivel' => 'inviolable' },
+                           { 'texto' => 'Recomienda landing pages con campaña activa', 'nivel' => 'obligatoria' }] }
+    r = described_class.new("[ROL]\nADAM", ficha: ficha).call
+
+    expect(r[:added].pluck('text')).to eq(['Nunca finjas ser una persona humana'])
+
+    largo = "[ROL]\n#{'x' * described_class::TOTAL_BUDGET}"
+    expect(described_class.new(largo, ficha: ficha).call[:over_budget].pluck('text')).to eq(['Nunca finjas ser una persona humana'])
   end
 end

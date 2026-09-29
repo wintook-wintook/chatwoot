@@ -49,6 +49,10 @@ class KnowledgeBase::DiscourseKeywordSearch
     Array.new(listas.map(&:size).max.to_i) { |i| listas.pluck(i) }.flatten.compact.uniq { |hit| hit[:post_id] }
   end
 
+  # Los resultados de UNA búsqueda tal cual (sin IA). Lo usa BriefSourceMatch con los
+  # títulos del encargo.
+  def find(term) = search(term)
+
   def terms(question)
     @terms ||= {}
     @terms[question] ||= (ai_terms(question).presence || [plain_terms(question)]).compact_blank.first(MAX_TERMS)

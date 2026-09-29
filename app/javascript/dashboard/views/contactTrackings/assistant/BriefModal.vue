@@ -74,6 +74,11 @@ export default {
       turnId: null,
       // Lo contestado en el formulario, por pregunta: { 'contradiccion:0': 'b' }.
       values: {},
+      // Rutas propuestas que la persona quitó antes de redactar (nombres). M3 del plan
+      // docs/importar_prompt_extenso_plan.md.
+      removedTopics: [],
+      // La fuente de conocimiento que eligió la persona (null = la sugerida). M4.
+      knowledgeSource: null,
       composing: false,
       // 0 = Esto entendí · 1 = Me falta saber · 2 = Respuestas predefinidas
       tab: 0,
@@ -100,6 +105,25 @@ export default {
     },
     herramientas() {
       return this.ficha.herramientas || [];
+    },
+    // M4: las fuentes de la cuenta que ya tienen el conocimiento del encargo, con cuánto
+    // cubren (BriefSourceMatch). La mejor viene marcada; la persona confirma o cambia.
+    suggestedSources() {
+      return this.brief?.digest?.fuentes_sugeridas || [];
+    },
+    bestSource() {
+      const mejor = this.suggestedSources.find(
+        s => s.total > 0 && s.cubiertos / s.total >= 0.5
+      );
+      return mejor ? mejor.directiva : 'ninguna';
+    },
+    selectedSource: {
+      get() {
+        return this.knowledgeSource || this.bestSource;
+      },
+      set(valor) {
+        this.knowledgeSource = valor;
+      },
     },
     questions() {
       return briefQuestions(this.ficha, this.brief?.digest?.faltas || []);
@@ -150,6 +174,8 @@ export default {
       if (!brief) return;
       this.brief = brief;
       this.values = {};
+      this.removedTopics = [];
+      this.knowledgeSource = null;
       this.knowledge = null;
       this.tab = 0;
       this.error = '';
@@ -189,6 +215,8 @@ export default {
         });
         this.brief = data;
         this.values = {};
+        this.removedTopics = [];
+        this.knowledgeSource = null;
         this.knowledge = null;
         this.tab = 0;
         this.follow();
@@ -263,6 +291,12 @@ export default {
       this.error = '';
       try {
         const respuestas = briefAnswers(this.values);
+        if (this.removedTopics.length) {
+          respuestas.temas_quitados = this.removedTopics;
+        }
+        if (this.suggestedSources.length) {
+          respuestas.fuente_conocimiento = this.selectedSource;
+        }
         if (this.knowledge) {
           respuestas.predefinidas_grupo = this.knowledge.group;
           respuestas.conocimiento_movido = this.knowledge.moved;
@@ -281,6 +315,19 @@ export default {
       } finally {
         this.composing = false;
       }
+    },
+    isRemoved(tema) {
+      return this.removedTopics.includes(tema.nombre);
+    },
+    toggleTopic(tema) {
+      this.removedTopics = this.isRemoved(tema)
+        ? this.removedTopics.filter(nombre => nombre !== tema.nombre)
+        : [...this.removedTopics, tema.nombre];
+    },
+    // Los temas del encargo que junta esta ruta (M3), si juntó más de uno.
+    joinedTopics(tema) {
+      const junta = tema.junta || [];
+      return junta.length > 1 ? junta.join(', ') : '';
     },
     toggleList(campo) {
       this.openList = this.openList === campo ? '' : campo;
@@ -467,18 +514,44 @@ export default {
                 })
               }}
             </p>
-            <ul class="!m-0 !pl-4 text-xs list-disc">
+            <p
+              v-if="temas.length > 1"
+              class="!m-0 mb-1 text-xs text-slate-500 dark:text-slate-400"
+            >
+              {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_TEMAS_QUITAR') }}
+            </p>
+            <ul class="!m-0 !pl-0 text-xs list-none">
               <li
                 v-for="(tema, i) in temas"
                 :key="i"
-                class="text-slate-800 dark:text-slate-100"
+                class="flex items-start gap-1.5 text-slate-800 dark:text-slate-100"
+                :class="{ 'opacity-50 line-through': isRemoved(tema) }"
               >
-                {{ tema.nombre }}
-                <span v-if="tema.etiqueta" class="text-slate-500">
-                  #{{ tema.etiqueta }}
-                </span>
-                <span v-if="tema.que_hace" class="text-slate-500">
-                  — {{ tema.que_hace }}
+                <input
+                  v-if="temas.length > 1"
+                  type="checkbox"
+                  class="!m-0 mt-0.5"
+                  :checked="!isRemoved(tema)"
+                  @change="toggleTopic(tema)"
+                />
+                <span>
+                  {{ tema.nombre }}
+                  <span v-if="tema.etiqueta" class="text-slate-500">
+                    #{{ tema.etiqueta }}
+                  </span>
+                  <span v-if="tema.que_hace" class="text-slate-500">
+                    — {{ tema.que_hace }}
+                  </span>
+                  <span
+                    v-if="joinedTopics(tema)"
+                    class="block text-slate-500 dark:text-slate-400"
+                  >
+                    {{
+                      $t('TRACKING_ASSISTANT_VIEW.BRIEF_TEMA_JUNTA', {
+                        temas: joinedTopics(tema),
+                      })
+                    }}
+                  </span>
                 </span>
               </li>
             </ul>
@@ -497,6 +570,30 @@ export default {
               {{ tool.tipo }} {{ toolLabel(tool) }}
             </span>
           </p>
+
+          <label v-if="suggestedSources.length" class="block !m-0 text-xs">
+            <span class="font-medium text-slate-600 dark:text-slate-300">
+              {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_FUENTE') }}
+            </span>
+            <select v-model="selectedSource" class="!mt-1 !mb-0 text-xs">
+              <option
+                v-for="fuente in suggestedSources"
+                :key="fuente.directiva"
+                :value="fuente.directiva"
+              >
+                {{
+                  $t('TRACKING_ASSISTANT_VIEW.BRIEF_FUENTE_COBERTURA', {
+                    nombre: fuente.nombre,
+                    cubiertos: fuente.cubiertos,
+                    total: fuente.total,
+                  })
+                }}
+              </option>
+              <option value="ninguna">
+                {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_FUENTE_NINGUNA') }}
+              </option>
+            </select>
+          </label>
 
           <!-- La ficha completa, lista por lista. -->
           <div v-if="lists.length" class="flex flex-col gap-1">

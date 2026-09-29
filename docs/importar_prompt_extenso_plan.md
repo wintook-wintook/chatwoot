@@ -370,3 +370,27 @@ Asistente, en este mismo documento.
 | D4 | Pila de pruebas: ¿automática al redactar o con botón? | Con botón («Probar el agente»), por costo |
 | D5 | Respuesta de respaldo del motor que dice «NUNCA menciones que eres un bot» | Con Entrenamiento, que mande el Entrenamiento (identidad y trato) y quitar esa orden; sin Entrenamiento, igual que hoy. Pendiente desde el 29/09 |
 | D6 | Orden de fases | Como arriba: primero lo que evita los 93 mil (M1, M2, M3) |
+
+**Decididas el 29/09/2026** («Adelante»): D1–D6 como se proponen. Rama `feat/importar_extenso`
+(sale de `feat/hoja_buscar`).
+
+---
+
+## 10. Bitácora por fase
+
+### F0 — Línea base (29/09/2026) ✅
+
+**Qué se hizo.** Se pasaron cuatro encargos por el camino actual, sin respuestas de la persona,
+con `brief_import.rb` (scratchpad: `rails runner brief_import.rb "a.md,b.md" NOMBRE`), y se
+guardaron sus números. Los tres chicos reusan su lectura (costo 0).
+
+| Encargo | # | Car. del encargo | Trozos | Redacción | Final | Rutas | Fuentes | Comprobador |
+|---|---|---|---|---|---|---|---|---|
+| ADAM (2 archivos) | 1067 | 1.13 M | 74 | 13.8 mil | **93.6 mil** | **52** | `@buscar_articulo` ×52 | ámbar: 3 etiquetas, 1 nota |
+| Gimnasio | 1068 | 2.2 mil | 1 | 2.3 mil | 2.5 mil | 4 | `{{hoja:Precios Licenicas}}`, 1 `<PENDIENTE>` | rojo: 1 pendiente (esperado) |
+| Veterinaria | 1069 | 4.3 mil | 1 | 2.3 mil | 2.6 mil | 5 | `@buscar_predefinidas` | ámbar: etiquetas |
+| Grúas (plan) | 1070 | 13.3 mil | 1 | 2.3 mil | 2.7 mil | 4 | `{{hoja:Servicio Gruas}}` ×3 | limpio |
+
+**Cómo se usa.** Cada fase vuelve a correr los cuatro. Para los chicos (C7) se compara la forma
+(rutas, fuentes, secciones, comprobador), no el texto: la redacción de una sola vez no es
+determinista. Para ADAM, los criterios C1–C6.

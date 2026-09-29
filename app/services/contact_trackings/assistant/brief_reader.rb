@@ -95,13 +95,24 @@ class ContactTrackings::Assistant::BriefReader
   # 3 (23/09/2026): la gramática sale de BriefTools; gana el tipo "contpaq".
   VERSION = 3
   CONNECTORS = %w[de del la las el los y a en por con para un una].freeze
+  # M1 (29/09/2026): el encargo trae sus reglas numeradas y ya se leyeron sin IA
+  # (BriefRuleParser); aquí solo queda el resto del texto.
+  RULES_APART = <<~TXT.strip
+    Este documento trae sus reglas numeradas y ya se leyeron aparte, con su nivel. En este
+    pedazo NO anotes "reglas" ni "prohibiciones": déjalas vacías. Anota lo demás (temas,
+    identidad, objetivo, tono, datos a pedir, conocimiento, herramientas).
+  TXT
 
   attr_reader :chunk
 
-  def initialize(account, chunk:, filename:)
+  # La versión de lectura con la que se guarda (y se reusa) cada trozo.
+  def self.version(rules_apart: false) = rules_apart ? "#{VERSION}r" : VERSION.to_s
+
+  def initialize(account, chunk:, filename:, rules_apart: false)
     @account = account
     @chunk = chunk
     @filename = filename
+    @rules_apart = rules_apart
     @chat = ContactTrackings::Assistant::OpenaiChat.new(account: account)
   end
 
@@ -119,6 +130,7 @@ class ContactTrackings::Assistant::BriefReader
       usado << @chat.last_usage if @chat.last_usage
       next if raw.nil?
 
+      raw = raw.except('reglas', 'prohibiciones') if @rules_apart && raw.is_a?(Hash)
       ficha, origen = Ficha.from_reading(with_routes(raw), @chunk.index)
       return { ficha: ficha, origin: origen, usage: sum_usage(usado) }
     end
@@ -133,6 +145,7 @@ class ContactTrackings::Assistant::BriefReader
       { role: 'user', content: <<~TXT }
         Archivo: #{@filename}
         Dónde está este pedazo: #{@chunk.path.presence&.join(' › ') || 'principio del documento'}
+        #{RULES_APART if @rules_apart}
 
         ──── PEDAZO ────
         #{@chunk.text}

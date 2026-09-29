@@ -28,6 +28,8 @@ class ContactTrackings::Assistant::BriefCoverage
     'datos_a_pedir' => ['DATOS A PEDIR', ['DATOS A PEDIR', 'DATOS']]
   }.freeze
   LINE_COVERAGE = 0.6
+  # Tope del Entrenamiento (decisión D1 de docs/importar_prompt_extenso_plan.md).
+  TOTAL_BUDGET = 16_000
   MIN_WORD_CHARS = 4
   ASSISTANT_RULER = /\A\s*═{3}.*═{3}\s*\z/
   PENDING_SECTION = /\A\s*\[\s*PENDIENTES?:?\s*\]\s*\z/i
@@ -39,12 +41,12 @@ class ContactTrackings::Assistant::BriefCoverage
     @discarded = ContactTrackings::Assistant::BriefComposer.discarded(@ficha, answers)
   end
 
-  # { draft:, added: [{ 'section' => 'REGLAS', 'text' => '…' }] }
+  # { draft:, added: [{ 'section' => 'REGLAS', 'text' => '…' }], over_budget: [lo que no cupo] }
   def call
     lineas = clean(@draft.split("\n", -1))
-    agregados = missing(lineas.join("\n"))
+    agregados, no_caben = within_budget(lineas.join("\n").length, missing(lineas.join("\n")))
     agregados.group_by { |a| a['section'] }.each { |seccion, puntos| insert(lineas, seccion, puntos.pluck('text')) }
-    { draft: lineas.join("\n"), added: agregados }
+    { draft: lineas.join("\n"), added: agregados, over_budget: no_caben }
   end
 
   private
@@ -59,17 +61,32 @@ class ContactTrackings::Assistant::BriefCoverage
     end
   end
 
+  # M2 (29/09/2026): con ADAM esto cosió 989 puntos y el Entrenamiento pasó de 13.8 a 93.6
+  # mil. Lo que se repone no pasa del tope; lo que no cabe se informa.
+  def within_budget(largo, agregados)
+    agregados.partition do |a|
+      largo += a['text'].length + 3
+      largo <= TOTAL_BUDGET
+    end
+  end
+
   def missing(texto)
     lineas = texto.split("\n").map { |l| words(l) }
     todo = words(texto)
     SECTIONS.flat_map do |campo, (seccion, _)|
       Array(@ficha[campo]).filter_map do |punto|
         frase = punto['texto'].to_s.strip
-        next if frase.blank? || @discarded.include?(frase) || covered?(words(frase), lineas, todo)
+        next if skip?(punto, frase) || covered?(words(frase), lineas, todo)
 
         { 'section' => seccion, 'text' => frase }
       end
     end
+  end
+
+  # Vacía, descartada por la persona, o una regla con nivel (reglamento, M1) que no es
+  # inviolable: esas no se reponen.
+  def skip?(punto, frase)
+    frase.blank? || @discarded.include?(frase) || (punto['nivel'].present? && punto['nivel'] != 'inviolable')
   end
 
   # Una frase de una o dos palabras ("nombre", "teléfono") está si aparecen todas;

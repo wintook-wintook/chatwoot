@@ -37,7 +37,9 @@ class ContactTrackings::Assistant::BriefDigestService
   def call
     inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     @brief.update!(status: 'reading')
-    trozos = Chunker.call(@brief.content).chunks
+    # M1 y M4: qué parte del encargo necesita IA (ver BriefReadingPlan).
+    @plan = ContactTrackings::Assistant::BriefReadingPlan.new(@account, content: @brief.content)
+    trozos = @plan.chunks
     lecturas = read_all(trozos)
     return fail!(@error || :reading, trozos, lecturas) if lecturas.any?(&:nil?)
 
@@ -53,7 +55,7 @@ class ContactTrackings::Assistant::BriefDigestService
   # [{ ficha:, origin:, usage:, cached: }] en el orden de los trozos; nil si falló.
   def read_all(trozos)
     guardadas = cached_readings
-    lecturas = trozos.map { |t| from_cache(guardadas[t.sha256], t) }
+    lecturas = trozos.map { |t| t.text.strip.empty? ? blank_reading(t) : from_cache(guardadas[t.sha256], t) }
     pendientes = trozos.reject { |t| lecturas[t.index] }
     report(:reading_brief, trozos.size - pendientes.size, trozos.size)
     read_pending(pendientes, lecturas, trozos.size)
@@ -63,7 +65,9 @@ class ContactTrackings::Assistant::BriefDigestService
   def read_pending(pendientes, lecturas, total)
     return if pendientes.empty?
 
-    lectores = pendientes.map { |t| ContactTrackings::Assistant::BriefReader.new(@account, chunk: t, filename: @brief.filename) }
+    lectores = pendientes.map do |t|
+      ContactTrackings::Assistant::BriefReader.new(@account, chunk: t, filename: @brief.filename, rules_apart: @plan.rules_apart?)
+    end
     return @error = :no_api_key if lectores.first.api_key.blank?
 
     lectores.each(&:api_key) # la clave se lee acá: los hilos no tocan la base
@@ -95,15 +99,25 @@ class ContactTrackings::Assistant::BriefDigestService
                               .order(updated_at: :desc).limit(CACHE_BRIEFS).pluck(:chunks)
     ([@brief.chunks] + otros).reverse.each_with_object({}) do |trozos, cache|
       Array(trozos).each do |t|
-        cache[t['sha256']] = t['lectura'] if t['lectura'].present? && t['lector'] == BriefReader::VERSION
+        cache[t['sha256']] = t['lectura'] if t['lectura'].present? && t['lector'].to_s == reader_version
       end
     end
   end
+
+  # Con las reglas leídas aparte, el lector recibe otra instrucción: su lectura no se
+  # mezcla con la de antes (ver BriefReader#version).
+  def reader_version = BriefReader.version(rules_apart: @plan.rules_apart?)
 
   def from_cache(guardada, trozo)
     return nil if guardada.nil?
 
     ficha, origen = Ficha.from_reading(guardada, trozo.index)
+    { ficha: ficha, origin: origen, usage: {}, cached: true }
+  end
+
+  # Un trozo que quedó en blanco (eran solo reglas numeradas) no se le manda a la IA.
+  def blank_reading(trozo)
+    ficha, origen = Ficha.from_reading({}, trozo.index)
     { ficha: ficha, origin: origen, usage: {}, cached: true }
   end
 
@@ -116,14 +130,23 @@ class ContactTrackings::Assistant::BriefDigestService
   # ── guardar ─────────────────────────────────────────────────────────────────
   def finish(trozos, lecturas, juntado, inicio)
     choques = ContactTrackings::Assistant::BriefContradictions.new(@account, ficha: juntado[:ficha]).call
-    ficha = choques[:ficha]
+    # M2: las reglas se ajustan al presupuesto; lo que no entra queda como anexo (D3).
+    @presupuesto = ContactTrackings::Assistant::BriefBudget.new(@account, ficha: @plan.with_numbered_rules(choques[:ficha])).call
+    # M3: más de 20 temas se agrupan por lo que el cliente viene a pedir.
+    @grupos = ContactTrackings::Assistant::BriefTopicGroups.new(@account, ficha: @presupuesto[:ficha]).call
     juntado = juntado.merge(contradictions_usage: choques[:usage])
-    inventario = ContactTrackings::Assistant::InventoryService.new(@account).call
-    faltas = ContactTrackings::Assistant::BriefGaps.new(ficha, inventory: inventario).call
-    @brief.update!(status: 'ready', chunks: stored_chunks(trozos, lecturas),
-                   digest: { 'ficha' => ficha, 'faltas' => faltas, 'caracteres' => Ficha.size(ficha) },
+    @brief.update!(status: 'ready', chunks: stored_chunks(trozos, lecturas), digest: digest_for(@grupos[:ficha]),
                    usage: usage(lecturas, juntado, inicio))
     @brief
+  end
+
+  def digest_for(ficha)
+    inventario = ContactTrackings::Assistant::InventoryService.new(@account).call
+    faltas = ContactTrackings::Assistant::BriefGaps.new(ficha, inventory: inventario).call
+    { 'ficha' => ficha, 'faltas' => faltas, 'caracteres' => Ficha.size(ficha), 'anexo' => @presupuesto[:anexo].presence,
+      'reglas_caracteres' => @presupuesto.slice(:antes, :despues).stringify_keys,
+      'temas_agrupados' => @grupos.slice(:antes, :despues).stringify_keys,
+      'fuentes_sugeridas' => @plan.sources.presence&.map { |s| s.except('secciones') } }.compact
   end
 
   # Lo que se guarda por trozo: dónde está, su huella y su lectura (sin el texto, que
@@ -132,7 +155,7 @@ class ContactTrackings::Assistant::BriefDigestService
     trozos.map do |t|
       lectura = lecturas[t.index]
       t.to_h.stringify_keys.merge('lectura' => lectura && strip_ids(lectura[:ficha]),
-                                  'lector' => lectura && BriefReader::VERSION)
+                                  'lector' => lectura && reader_version)
     end
   end
 
@@ -143,18 +166,22 @@ class ContactTrackings::Assistant::BriefDigestService
   end
 
   def usage(lecturas, juntado, inicio)
-    lectura = sum_tokens(lecturas.pluck(:usage))
-    choques = sum_tokens([juntado[:contradictions_usage]])
-    total = sum_tokens([lectura, juntado[:usage], choques])
+    partes = token_parts(lecturas, juntado)
     {
       'modelo' => ContactTrackings::EngineConfig.model_for(nil, :authoring_assistant),
       'trozos' => lecturas.size, 'trozos_reusados' => lecturas.count { |l| l[:cached] },
-      'lectura' => lectura, 'juntar' => juntado[:usage].merge('llamadas' => juntado[:calls]),
-      'contradicciones' => choques,
-      'costo_usd' => cost(total).round(4),
+      'juntar' => juntado[:usage].merge('llamadas' => juntado[:calls]), **partes,
+      'reglas_numeradas' => @plan.numbered&.rules&.size, 'trozos_en_fuente' => @plan.summarized_count,
+      'costo_usd' => cost(sum_tokens([*partes.values, juntado[:usage]])).round(4),
       'segundos' => (Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).round(1),
       'reused_from' => @brief.usage['reused_from']
     }.compact
+  end
+
+  # Los tokens de cada paso con IA, salvo juntar (que trae también sus llamadas).
+  def token_parts(lecturas, juntado)
+    { 'lectura' => sum_tokens(lecturas.pluck(:usage)), 'contradicciones' => sum_tokens([juntado[:contradictions_usage]]),
+      'presupuesto' => sum_tokens([@presupuesto&.dig(:usage), @grupos&.dig(:usage)]) }
   end
 
   def sum_tokens(lista)
