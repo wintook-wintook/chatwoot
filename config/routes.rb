@@ -124,6 +124,7 @@ Rails.application.routes.draw do
             get  'assistant/inventory', to: 'assistant#inventory'
             post 'assistant/validate',  to: 'assistant#validate'
             post 'assistant/interview', to: 'assistant#interview'
+            get  'assistant/interview/:turn_id', to: 'assistant#interview_result'
             post 'assistant/save',      to: 'assistant#save'
             get  'assistant/session',   to: 'assistant#resume'
             get  'assistant/sessions',      to: 'assistant#sessions'

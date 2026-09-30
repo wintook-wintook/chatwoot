@@ -9,6 +9,14 @@
 /* global axios */
 import ApiClient from './ApiClient';
 
+const INTERVIEW_POLL_MS = 1500;
+// Un turno de edición con reparaciones y prueba de ruteo ronda los 2 minutos.
+const INTERVIEW_MAX_WAIT_MS = 5 * 60 * 1000;
+
+// Mismo formato que startProgress de Assistant.vue (TurnProgress::TURN_ID_RE).
+const newTurnId = () =>
+  `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+
 class AssistantAPI extends ApiClient {
   constructor() {
     super('contact_trackings/assistant', { accountScoped: true });
@@ -28,7 +36,7 @@ class AssistantAPI extends ApiClient {
   // el asistente no puede modificar nada, solo reescribir de memoria.
   // `deliveredDraft`: lo último que entregó el asistente. La diferencia con
   // `draft` es lo editado a mano; "" = todavía no entregó nada.
-  interview(
+  async interview(
     messages,
     inboxId,
     {
@@ -51,9 +59,24 @@ class AssistantAPI extends ApiClient {
     if (deliveredDraft !== null) body.delivered_draft = deliveredDraft;
     // La entrevista sigue abierta. Sin la llave, el backend lo deduce de las marcas.
     if (building !== null) body.building = building;
-    // Con él, el backend va dejando la etapa en curso para getProgress.
-    if (turnId) body.turn_id = turnId;
-    return axios.post(`${this.url}/interview`, body);
+    // Con él, el backend va dejando la etapa en curso para getProgress. Hace falta
+    // siempre: el turno corre en segundo plano y el resultado se pide por este id.
+    body.turn_id = turnId || newTurnId();
+    await axios.post(`${this.url}/interview`, body);
+    // Editar un Entrenamiento largo pasa los 15 s de rack-timeout: el backend
+    // encola (202) y acá se espera el resultado. Se devuelve como la respuesta de
+    // antes ({ data }), y un error (422) llega como error de axios, igual que antes.
+    const deadline = Date.now() + INTERVIEW_MAX_WAIT_MS;
+    while (Date.now() < deadline) {
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise(resolve => {
+        setTimeout(resolve, INTERVIEW_POLL_MS);
+      });
+      // eslint-disable-next-line no-await-in-loop
+      const response = await axios.get(`${this.url}/interview/${body.turn_id}`);
+      if (response.status === 200) return response;
+    }
+    throw new Error('interview timeout');
   }
 
   // Fase E: mensajes de prueba pasados por el clasificador real. Tarda (una

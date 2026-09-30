@@ -1024,7 +1024,7 @@ export default {
         const reason =
           error?.response?.data?.error === 'no_api_key'
             ? this.$t('TRACKING_ASSISTANT_VIEW.ERROR_NO_KEY')
-            : this.$t('TRACKING_ASSISTANT_VIEW.ERROR_GENERIC');
+            : this.$t('TRACKING_ASSISTANT_VIEW.ERROR_TURN');
         this.messages.push({ role: 'assistant', content: reason });
       } finally {
         this.stopProgress();
@@ -1179,7 +1179,7 @@ export default {
         const reason =
           error?.response?.data?.error === 'no_api_key'
             ? this.$t('TRACKING_ASSISTANT_VIEW.ERROR_NO_KEY')
-            : this.$t('TRACKING_ASSISTANT_VIEW.ERROR_GENERIC');
+            : this.$t('TRACKING_ASSISTANT_VIEW.ERROR_TURN');
         this.messages.push({ role: 'assistant', content: reason });
       } finally {
         this.isThinking = false;
@@ -1525,7 +1525,7 @@ export default {
         const details = error?.response?.data?.details;
         this.saveError = Array.isArray(details)
           ? details.join(' · ')
-          : this.$t('TRACKING_ASSISTANT_VIEW.ERROR_GENERIC');
+          : this.$t('TRACKING_ASSISTANT_VIEW.ERROR_SAVE');
       } finally {
         this.isSaving = false;
       }

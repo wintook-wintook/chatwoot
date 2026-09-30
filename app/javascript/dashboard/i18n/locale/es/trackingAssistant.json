@@ -11,6 +11,8 @@
     "EMPTY_ACCOUNT_HINT": "Hace falta al menos una fuente en Base de Conocimiento o un tipo de caso. Sin eso, el asistente no tiene de dónde proponer y solo podría ofrecer plantillas genéricas.",
     "ERROR_FORBIDDEN": "Solo un administrador puede usar el Asistente de Agentes IA.",
     "ERROR_GENERIC": "No se pudo leer lo que tiene la cuenta. Inténtalo de nuevo.",
+    "ERROR_TURN": "El asistente no alcanzó a responder. Inténtalo de nuevo; si vuelve a pasar, pide el cambio en partes más chicas.",
+    "ERROR_SAVE": "No se pudo guardar el Agente IA. Inténtalo de nuevo.",
     "REPORT_TITLE": "Lo que el motor va a leer",
     "REPORT_CHECKING": "comprobando…",
     "REPORT_ROUTES": "{count} tema(s)",
