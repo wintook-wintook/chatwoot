@@ -247,9 +247,6 @@ es:
         «%{as_read}». Para que la regla se entienda, nombra el resultado («la información
         consultada») en vez de la directiva, y pon %{directive} en la línea @ruta de las rutas que
         necesitan esos datos.
-      attachment_with_source: >-
-        El adjunto {{%{name}}} no se resuelve cuando la ruta consulta una fuente: sale como texto
-        literal en el mensaje al cliente. Los adjuntos solo funcionan en rutas sin fuente.
       missing_prose_sections: >-
         A la prosa le faltan estas secciones: %{sections}. No rompen nada, pero cada una cubre una
         decisión que si no se escribe, el modelo la toma por su cuenta.
