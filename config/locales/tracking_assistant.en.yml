@@ -250,9 +250,6 @@ en:
         "%{as_read}". For the rule to make sense, name the result ("la información consultada")
         instead of the directive, and put %{directive} in the @ruta line of the routes that need
         that data.
-      attachment_with_source: >-
-        Attachment {{%{name}}} is not resolved when the branch consults a source: it goes out as
-        literal text in the message to the customer. Attachments only work on branches with no source.
       missing_prose_sections: >-
         The prose is missing these sections: %{sections}. They break nothing, but each one covers a
         decision that the model will otherwise make on its own.

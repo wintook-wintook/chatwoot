@@ -627,6 +627,7 @@ class KnowledgeBaseResponseService
     system_prompt = [
       header,
       ("Objetivo de la conversación: #{objective}" if objective.present?),
+      ContactTrackings::AgentAttachments.hint(@tracking&.tracking_template),
       branch_scope_rule.presence
     ].compact_blank.join("\n\n")
 
@@ -905,8 +906,10 @@ class KnowledgeBaseResponseService
     @conversation.additional_attributes&.dig('kb_history') || []
   end
 
+  # El {{nombre}} de un adjunto se guarda como «archivo enviado»: con el token tal cual,
+  # el modelo lo imitaba en el turno siguiente y reenviaba el archivo.
   def save_history(history, question, answer)
-    history << { 'q' => question, 'a' => answer }
+    history << { 'q' => question, 'a' => ContactTrackings::AgentAttachments.for_history(answer) }
     history  = history.last(MAX_HISTORY)
     attrs    = (@conversation.additional_attributes || {}).merge('kb_history' => history)
     @conversation.update_columns(additional_attributes: attrs)
@@ -1008,6 +1011,8 @@ class KnowledgeBaseResponseService
     PROMPT
 
     system_content += "\n\n#{ContactTrackings::CustomerTone::RULE}"
+    attachments_hint = ContactTrackings::AgentAttachments.hint(@tracking&.tracking_template)
+    system_content += "\n\n#{attachments_hint}" if attachments_hint
     system_content += "\n\nContenido relevante del foro:\n#{context}#{SOURCE_FIDELITY_RULE}" if context.present?
     system_content += "\n\n#{branch_scope_rule}" if branch_scope_rule.present?
 
@@ -1175,12 +1180,14 @@ class KnowledgeBaseResponseService
     "#{text.rstrip}\n\n#{tag}"
   end
 
+  # proyecto@ai_agent_attachments: el {{nombre}} que escribió el modelo sale como archivo
+  # del Agente IA (ver ContactTrackings::AgentAttachments). Antes solo lo hacían las ramas
+  # sin fuente, y acá llegaba literal al cliente.
   def send_reply(text)
-    reply_message = Messages::MessageBuilder.new(
-      bot_user,
-      @conversation,
-      { content: text, private: false }
-    ).perform
+    content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text)
+    params = { content: content, private: false }
+    params[:attachments] = attachments if attachments.any?
+    reply_message = Messages::MessageBuilder.new(bot_user, @conversation, params).perform
 
     if reply_message.present?
       reply_message.content_attributes[:sentiment_auto_reply] = true

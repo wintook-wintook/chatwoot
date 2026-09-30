@@ -155,7 +155,6 @@ class ContactTrackings::Assistant::Contract
         · Otra acción que no sea @crear_ticket, @agendar_calendar, @confirmar_servicio o
           @solicitudes (con {{hoja_buscar:}}; ver RECETAS).
         · Recordar lo que se dijo al principio de una conversación larga: la ventana es corta.
-        · Mandar archivos adjuntos desde una ruta que consulta una fuente.
         · Hacer algo DESPUÉS de contestar: no hay seguimiento automático. Si una ruta no tiene
           acción (@agendar_calendar, @crear_ticket), no escribas que agenda, cancela, confirma o
           abre un caso: el agente lo va a prometer y nadie lo va a hacer (medido: «te confirmo

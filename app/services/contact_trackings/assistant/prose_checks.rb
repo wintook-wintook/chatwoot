@@ -24,10 +24,6 @@ class ContactTrackings::Assistant::ProseChecks
   # Con {{doc:}} y {{hoja:}} desde el 24/09/2026: un agente de admisiones las nombraba 9
   # veces en la prosa («ejecuta {{hoja:CATALOGO DE CARRERAS}}») y nada lo marcaba.
   LOOSE_SEARCH_RE = /@buscar_predefinidas\b|@buscar_art[ií]culo\b|@buscar_foro\([^)]*\)|@discourse\b|\{\{\s*(?:doc|hoja)\s*:[^}]*\}\}/i
-  # Adjunto que escribe el modelo en su respuesta. Mismo patrón que el job.
-  ATTACHMENT_RE = /\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/
-  # Nombres reservados que ATTACHMENT_RE captura pero que no son adjuntos.
-  NOT_ATTACHMENTS = %w[doc hoja consulta].freeze
   # Las seis secciones de la ZONA 2, en el orden del contrato.
   SECTIONS = ['[ROL]', '[ALCANCE POR RAMA]', '[FIDELIDAD]', '[ETIQUETAS]', '[ESTILO]', '[PROHIBIDO]'].freeze
 
@@ -40,7 +36,6 @@ class ContactTrackings::Assistant::ProseChecks
 
   def call
     check_loose_directive
-    check_attachment_with_source
     check_sections
   end
 
@@ -91,18 +86,6 @@ class ContactTrackings::Assistant::ProseChecks
 
       [indice + 1, linea] if linea.match?(LOOSE_SEARCH_RE)
     end
-  end
-
-  # ── D6 ──────────────────────────────────────────────────────────────────────
-  def check_attachment_with_source
-    return if map.routes.none? { |route| route.directive.present? }
-
-    nombres = prose.scan(ATTACHMENT_RE).flatten.uniq - NOT_ATTACHMENTS
-    return if nombres.empty?
-
-    findings.add(:degrading, :attachment_with_source,
-                 t('findings.attachment_with_source', name: nombres.first),
-                 wrote: "{{#{nombres.first}}}")
   end
 
   # ── C1 ──────────────────────────────────────────────────────────────────────

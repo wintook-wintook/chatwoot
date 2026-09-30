@@ -613,8 +613,10 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
     end
   end
 
+  # D6 se quitó el 30/09/2026: los adjuntos ya se resuelven también en las ramas con
+  # fuente (ContactTrackings::AgentAttachments), así que avisar que salen literales mentía.
   describe 'D6 · adjunto en un Entrenamiento con fuente' do
-    it 'avisa que el adjunto sale como texto literal' do
+    it 'ya no avisa: el adjunto también sale en una rama con fuente' do
       source('discourse', 'Foro Kontrolya')
 
       r = validar(<<~TXT)
@@ -622,14 +624,6 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
 
         [ROL] Si te piden el catálogo mandá {{catalogo}}.
       TXT
-
-      expect(codigos(r, :degrading)).to include(:attachment_with_source)
-    end
-
-    it 'no confunde {{doc:}} ni {{hoja:}} con un adjunto' do
-      source('google_sheet', 'Precios 2026')
-
-      r = validar('@ruta(comercial #comercial: precios): {{hoja:Precios 2026}}')
 
       expect(codigos(r, :degrading)).not_to include(:attachment_with_source)
     end
