@@ -9,6 +9,16 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
   let(:agent)   { create(:user, account: account, role: :agent) }
   let(:url)     { "/api/v1/accounts/#{account.id}/contact_trackings/assistant/inventory" }
 
+  # El turno corre en InterviewJob: se encola, se corre acá mismo y se pide el
+  # resultado. `response` queda con lo que la pantalla recibe al final del turno.
+  def interview_turn(url, params, user)
+    turn_id = "t#{SecureRandom.hex(6)}"
+    perform_enqueued_jobs(only: ContactTrackings::Assistant::InterviewJob) do
+      post url, params: params.merge(turn_id: turn_id), headers: user.create_new_auth_token, as: :json
+    end
+    get "#{url}/#{turn_id}", headers: user.create_new_auth_token, as: :json
+  end
+
   def source(source_type, name)
     KnowledgeSource.create!(account: account, source_type: source_type, name: name, status: 'active')
   end
@@ -173,13 +183,49 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
     end
 
     def entrevistar(mensajes, user: admin, **extra)
-      post interview_url, params: { messages: mensajes, **extra }, headers: user.create_new_auth_token, as: :json
+      interview_turn(interview_url, { messages: mensajes, **extra }, user)
     end
 
     it 'no deja entrar a un agente' do
       entrevistar([{ role: 'user', content: 'hola' }], user: agent)
 
       expect(response).to have_http_status(:unauthorized)
+    end
+
+    # Editar un Entrenamiento largo pasa los 15 s de rack-timeout: el turno no puede
+    # correr dentro de la request (500 en la cuenta 568, 30/09/2026).
+    it 'encola el turno y responde 202 sin llamar al modelo' do
+      expect do
+        post interview_url, params: { messages: [{ role: 'user', content: 'hola' }], turn_id: 'tabc12345' },
+                            headers: admin.create_new_auth_token, as: :json
+      end.to have_enqueued_job(ContactTrackings::Assistant::InterviewJob)
+
+      expect(response).to have_http_status(:accepted)
+    end
+
+    it 'rechaza un turno sin turn_id válido' do
+      post interview_url, params: { messages: [{ role: 'user', content: 'hola' }], turn_id: 'x' },
+                          headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('invalid_turn_id')
+    end
+
+    it 'el resultado: 202 mientras trabaja' do
+      get "#{interview_url}/tpendiente1", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:accepted)
+    end
+
+    it 'si el job revienta, el resultado dice unavailable y no queda esperando' do
+      create(:integrations_hook, account: account, app_id: 'openai', status: 'enabled',
+                                 settings: { 'api_key' => 'sk-test' })
+      allow(ContactTrackings::Assistant::InterviewService).to receive(:new).and_raise(StandardError, 'boom')
+
+      entrevistar([{ role: 'user', content: 'hola' }])
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('unavailable')
     end
 
     it 'devuelve el mensaje del asistente mientras entrevista' do
@@ -382,11 +428,25 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       expect(response).to have_http_status(:unauthorized)
     end
 
+    # Optimizar corre en OptimizeJob (21/09/2026): el error del servicio llega en el
+    # resultado del turno, no en el POST.
     it 'devuelve el error del servicio como 422' do
-      post "#{base}/optimize", params: { draft: '@ruta(a #aaa: x): -' }, headers: admin.create_new_auth_token, as: :json
+      perform_enqueued_jobs(only: ContactTrackings::Assistant::OptimizeJob) do
+        post "#{base}/optimize", params: { draft: '@ruta(a #aaa: x): -', turn_id: 'toptimiza1' },
+                                 headers: admin.create_new_auth_token, as: :json
+      end
+      expect(response).to have_http_status(:accepted)
+
+      get "#{base}/optimize/toptimiza1", headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq('no_api_key')
+    end
+
+    it 'optimize rechaza un turno sin turn_id válido' do
+      post "#{base}/optimize", params: { draft: 'x' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['error']).to eq('invalid_turn_id')
     end
 
     it 'devuelve lo que lee el motor del fragmento' do
@@ -454,8 +514,7 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
         body: { choices: [{ message: { content: { mensaje: '¿Qué cambio?' }.to_json } }] }.to_json
       )
 
-      post "#{base}/interview", params: { messages: [{ role: 'user', content: 'seguimos' }], session_id: ajena.id },
-                                headers: admin.create_new_auth_token, as: :json
+      interview_turn("#{base}/interview", { messages: [{ role: 'user', content: 'seguimos' }], session_id: ajena.id }, admin)
 
       expect(response.parsed_body['session_id']).to eq(ajena.id)
       expect(ajena.reload.messages.last['content']).to eq('¿Qué cambio?')
@@ -555,6 +614,7 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       [:get,    'inventory'],
       [:post,   'validate'],
       [:post,   'interview'],
+      [:get,    'interview/turno12345'],
       [:post,   'save'],
       [:get,    'session'],
       [:get,    'sessions'],
@@ -670,8 +730,7 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
     end
 
     def entrevistar(mensajes, session_id: nil)
-      post interview_url, params: { messages: mensajes, session_id: session_id },
-                          headers: admin.create_new_auth_token, as: :json
+      interview_turn(interview_url, { messages: mensajes, session_id: session_id }, admin)
     end
 
     it 'crea la conversación en el primer turno y devuelve su id' do

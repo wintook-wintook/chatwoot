@@ -11,6 +11,8 @@
     "EMPTY_ACCOUNT_HINT": "You need at least one Knowledge Base source or one case type. Without that, the assistant has nothing to propose from and could only offer generic templates.",
     "ERROR_FORBIDDEN": "Only an administrator can use the AI Agent Assistant.",
     "ERROR_GENERIC": "Couldn't read what this account has. Please try again.",
+    "ERROR_TURN": "The assistant couldn't finish its reply. Please try again; if it happens again, ask for the change in smaller parts.",
+    "ERROR_SAVE": "Couldn't save the AI Agent. Please try again.",
     "REPORT_TITLE": "What the engine will read",
     "REPORT_CHECKING": "checking…",
     "REPORT_ROUTES": "{count} topic(s)",
