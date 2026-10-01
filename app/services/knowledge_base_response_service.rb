@@ -542,9 +542,11 @@ class KnowledgeBaseResponseService
     end
 
     hidden = sheet_lookup_columns(source)
-    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{without_columns(i.content, hidden).truncate(MAX_ITEM_CHARS)}" }
-                   .join("\n\n")
-                   .truncate(kbase_setting('max_context_chars'))
+    # SheetRowFit y no truncate: cortar al final se comía las últimas columnas de las filas largas.
+    filas = items.map.with_index(1) do |i, n|
+      "#{n}. #{i.title}\n#{KnowledgeBase::SheetRowFit.call(without_columns(i.content, hidden), MAX_ITEM_CHARS)}"
+    end
+    context = filas.join("\n\n").truncate(kbase_setting('max_context_chars'))
     reply_text = generate_contextual_reply(question, context)
     return false if reply_text.blank?
 
