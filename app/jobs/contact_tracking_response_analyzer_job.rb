@@ -670,6 +670,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         PRÓXIMO CONTACTO PROGRAMADO: #{next_contact} (si el cliente pide reagendar, infórmale amablemente que su próximo contacto ya está programado para esa fecha y que si necesita cambiarlo debe comunicarse con un asesor)
         #{tracking.ai_context.present? ? "BASE DE CONOCIMIENTO:\n#{tracking.ai_context.truncate(800)}\n" : ''}
         #{clean_cp.present? ? "INSTRUCCIONES ADICIONALES:\n#{clean_cp}" : ''}
+        #{ContactTrackings::ConversationVariables.rule_for(tracking, message.conversation)}
         #{clean_cp.match?(ATTACHMENT_DIRECTIVE) ? 'ENVÍO DE ARCHIVOS: Para enviar un archivo al cliente, escribe la directiva EXACTA (por ejemplo {{nombre}}) dentro de tu respuesta, tal cual y sin comillas; el sistema la sustituirá por el archivo adjunto. No la describas ni la traduzcas.' : ''}
       SYSTEM
 
@@ -2129,6 +2130,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def send_auto_reply(tracking, message, reply_content)
     return unless AUTO_REPLY_ENABLED
     return if reply_content.blank?
+
+    # proyecto@contact_tracking: la línea «VARIABLES: …» se guarda y no llega al cliente
+    reply_content = ContactTrackings::ConversationVariables.settle(tracking, message.conversation, reply_content)
 
     # proyecto@ai_agent_attachments: resuelve {{nombre}} → archivos del Agente IA
     clean_content, attachment_signed_ids = resolve_attachment_directives(tracking, reply_content)

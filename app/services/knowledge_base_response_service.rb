@@ -630,6 +630,7 @@ class KnowledgeBaseResponseService
       header,
       ("Objetivo de la conversación: #{objective}" if objective.present?),
       ContactTrackings::AgentAttachments.hint(@tracking&.tracking_template),
+      variables_rule,
       branch_scope_rule.presence
     ].compact_blank.join("\n\n")
 
@@ -911,6 +912,7 @@ class KnowledgeBaseResponseService
   # El {{nombre}} de un adjunto se guarda como «archivo enviado»: con el token tal cual,
   # el modelo lo imitaba en el turno siguiente y reenviaba el archivo.
   def save_history(history, question, answer)
+    answer   = ContactTrackings::ConversationVariables.strip(@tracking, answer) if @tracking
     history << { 'q' => question, 'a' => ContactTrackings::AgentAttachments.for_history(answer) }
     history  = history.last(MAX_HISTORY)
     attrs    = (@conversation.additional_attributes || {}).merge('kb_history' => history)
@@ -979,6 +981,14 @@ class KnowledgeBaseResponseService
     RULE
   end
 
+  # proyecto@contact_tracking: los valores actuales de la sección [VARIABLES] del agente
+  # (ver ContactTrackings::ConversationVariables). nil si no declara variables.
+  def variables_rule
+    return @variables_rule if defined?(@variables_rule)
+
+    @variables_rule = @tracking && ContactTrackings::ConversationVariables.rule_for(@tracking, @conversation)
+  end
+
   # FUENTE_USADA acopla el texto al link: antes el footer adivinaba a posteriori, por
   # overlap de palabras, cuál de las fuentes había usado el modelo. Ahora lo declara él.
   #
@@ -1016,6 +1026,7 @@ class KnowledgeBaseResponseService
     attachments_hint = ContactTrackings::AgentAttachments.hint(@tracking&.tracking_template)
     system_content += "\n\n#{attachments_hint}" if attachments_hint
     system_content += "\n\nContenido relevante del foro:\n#{context}#{SOURCE_FIDELITY_RULE}" if context.present?
+    system_content += "\n\n#{variables_rule}" if variables_rule.present?
     system_content += "\n\n#{branch_scope_rule}" if branch_scope_rule.present?
 
     messages = [{ role: 'system', content: system_content }]
@@ -1186,6 +1197,7 @@ class KnowledgeBaseResponseService
   # del Agente IA (ver ContactTrackings::AgentAttachments). Antes solo lo hacían las ramas
   # sin fuente, y acá llegaba literal al cliente.
   def send_reply(text)
+    text = ContactTrackings::ConversationVariables.settle(@tracking, @conversation, text) if @tracking
     content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text)
     params = { content: content, private: false }
     params[:attachments] = attachments if attachments.any?
