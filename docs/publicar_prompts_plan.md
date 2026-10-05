@@ -285,16 +285,72 @@ users). Si se prefiere columna propia, es la decisión D1.
 > entrada más del mismo lugar.
 
 ```
- GET  /api/v1/accounts/:id/published_prompts            lista (búsqueda, categoría)
- GET  /api/v1/accounts/:id/published_prompts/:pid       detalle (prompt completo, solo lectura)
+ GET  /api/v1/accounts/:id/contact_trackings/assistant/published_prompts        lista (q, category)
+ GET  /api/v1/accounts/:id/contact_trackings/assistant/published_prompts/:pid   detalle (prompt completo)
 ```
 - En el Asistente, opción **"Partir de un prompt publicado"**: tarjetas con título,
   descripción, autor (nombre de la cuenta, decisión D2), versión, descargas.
 - Vista de detalle: el prompt completo en solo lectura antes de bajarlo.
 
+**✅ Hecho (05/10/2026)**
+
+```
+ Asistente de Agentes IA — barra de arriba
+ [ Crear desde instrucciones (.md) ] [ 🌐 Prompts publicados ] [ + Nuevo Agente IA ]
+                                              │
+                                              ▼
+ ┌─ Prompts publicados ───────────────────────────────────────┐
+ │ [ Buscar por título o descripción ] [ Todas las categorías ▾]│
+ │ ┌──────────────────────────────────────────────────────────┐ │
+ │ │ Agente de grúas  (Ventas)                                │ │
+ │ │ Cotiza remolques y agenda el servicio                    │ │
+ │ │ Grúas SSUSA · v2 · 14 descargas                          │ │
+ │ └──────────────────────────────────────────────────────────┘ │
+ │   clic ──► detalle: requisitos · objetivo · contexto ·       │
+ │            Entrenamiento completo (solo lectura) · Volver     │
+ └──────────────────────────────────────────────────────────────┘
+```
+
+- Qué se hizo:
+  - Las rutas cuelgan de `contact_trackings/assistant/` (no de la cuenta suelta): la
+    Galería es parte del Asistente, y piden lo mismo que él, **administrador** (D4).
+    Un agente (rol) recibe 401, como en el resto del Asistente.
+  - `ContactTrackings::AssistantPublishedPromptsController`: `index` (solo publicadas,
+    de todas las cuentas, sin el texto del prompt, tope 200, `own: true` en las de la
+    cuenta actual) y `show` (con objetivo, contexto, prompt, palabras clave y ajustes;
+    despublicada → 404). Autor = nombre de la cuenta, nunca el correo (D2).
+  - `PublishedPromptsModal.vue` (nuevo, en `views/contactTrackings/assistant/`): lista con
+    búsqueda (espera 300 ms al teclear) y categoría; detalle de solo lectura. Si la
+    publicación se despublica entre la lista y el clic, vuelve a la lista actualizada.
+  - `Assistant.vue`: botón **«Prompts publicados»** junto a «Crear desde instrucciones».
+  - `api/assistant.js`: `getPublishedPrompts`, `getPublishedPrompt`.
+  - i18n `TRACKING_ASSISTANT_VIEW.GALLERY.*` (es/en); categorías y requisitos reusan
+    `TRACKING_TEMPLATES.PUBLISH.*` de la F3.
+- **Arreglo de la F1 encontrado aquí:** ADAM #11833 no se podía publicar: su objetivo mide
+  371 caracteres y `ApplicationRecord` le pone 255 a toda columna `string` que no declare
+  su largo. `PublishedPrompt` ahora valida `objective` hasta 500, igual que
+  `TrackingTemplate`. (El prompt más largo de la base mide 18,738; el tope de `text` es
+  20,000, el mismo que ya tienen los agentes.)
+- Pila de pruebas (runner, transacción deshecha; cuenta 2 publica Grúas #10368 y ADAM
+  #11833, la cuenta 3 consulta):
+
+  | Paso | Esperado | Resultado |
+  |---|---|---|
+  | Lista desde la cuenta 3 | 2 publicaciones, autor = nombre de la cuenta, `own: false`, sin `prompt` | ✅ |
+  | `q=grúas` | solo «Agente de grúas» | ✅ |
+  | `category=atencion` | solo ADAM | ✅ |
+  | Detalle de Grúas | prompt de 3,276 caracteres + requisitos | ✅ |
+  | Lista desde la cuenta 2 | `own: true` | ✅ |
+  | Despublicar ADAM → detalle | 404; la lista baja a 1 | ✅ |
+  | Usuario con rol agente | 401 | ✅ |
+
+  Spec escrito (`spec/controllers/api/v1/accounts/contact_trackings/assistant_published_prompts_controller_spec.rb`), sin correr.
+  - **Falta en el navegador:** Asistente → «Prompts publicados» → buscar, filtrar, abrir
+    uno, Volver. (Para que haya algo que ver, primero publica uno con la F3.)
+
 ### F5 — Bajar a mi cuenta
 ```
- POST /api/v1/accounts/:id/published_prompts/:pid/install   → crea TrackingTemplate
+ POST /api/v1/accounts/:id/contact_trackings/assistant/published_prompts/:pid/install   → crea TrackingTemplate
 ```
 - Crea el agente con lo que viaja, `published_prompt_id` apuntando al origen, nombre
   único en la cuenta, `downloads_count + 1`.

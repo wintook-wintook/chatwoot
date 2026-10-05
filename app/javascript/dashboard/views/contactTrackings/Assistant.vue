@@ -69,6 +69,7 @@ import {
   hasTrainingFixes,
 } from './assistant/conversationReview';
 import BriefModal from './assistant/BriefModal.vue';
+import PublishedPromptsModal from './assistant/PublishedPromptsModal.vue'; // proyecto@publicar_prompts
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import VersionsPanel from './assistant/VersionsPanel.vue';
 // La Estructura del Agente: el árbol con sus modales (docs/estructura_agente_arbol_plan.md).
@@ -160,6 +161,7 @@ export default {
     EngineCatalog,
     InstructionsPanel,
     BriefModal,
+    PublishedPromptsModal,
     ManualConflictNotice,
     VersionsPanel,
     AgentStructure,
@@ -272,6 +274,8 @@ export default {
       showReportModal: false,
       // El encargo (.md) con la idea del agente: ver BriefModal.
       showBriefModal: false,
+      // proyecto@publicar_prompts: la Galería de prompts publicados por otras cuentas.
+      showPublishedPrompts: false,
       isWritingBrief: false,
       // Qué ocupa la columna izquierda: 'structure' (la Estructura del Agente) o
       // 'chat'. Uno a la vez (pedido del usuario, 23/09/2026): con los dos, más el
@@ -1666,6 +1670,17 @@ export default {
                 >
                   {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_OPEN') }}
                 </woot-button>
+                <!-- proyecto@publicar_prompts — partir de un prompt que publicó otra
+                     cuenta. Es la ÚNICA puerta para bajarlos (pedido del usuario). -->
+                <woot-button
+                  size="small"
+                  variant="smooth"
+                  color-scheme="secondary"
+                  icon="globe"
+                  @click="showPublishedPrompts = true"
+                >
+                  {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.OPEN') }}
+                </woot-button>
                 <!-- Empezar de cero: la puerta para armar un agente nuevo. -->
                 <woot-button
                   size="small"
@@ -2417,6 +2432,10 @@ export default {
       :description="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_DESCRIPTION')"
       :confirm-label="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_YES')"
       :cancel-label="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_NO')"
+    />
+    <PublishedPromptsModal
+      :show="showPublishedPrompts"
+      @close="showPublishedPrompts = false"
     />
     <BriefModal
       :show="showBriefModal"

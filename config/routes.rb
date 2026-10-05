@@ -141,6 +141,9 @@ Rails.application.routes.draw do
             post 'assistant/proofread', to: 'assistant_tools#proofread'
             post 'assistant/transcribe', to: 'assistant_tools#transcribe'
             post 'assistant/route_scope', to: 'assistant_tools#route_scope'
+            # proyecto@publicar_prompts — la Galería: los prompts publicados solo se ven y se bajan aquí
+            get  'assistant/published_prompts',     to: 'assistant_published_prompts#index'
+            get  'assistant/published_prompts/:id', to: 'assistant_published_prompts#show'
             get  'assistant/audit',     to: 'assistant#audit'
             post 'assistant/dry_run',   to: 'assistant#dry_run'
             # el encargo (.md) con la idea del agente — ver docs/importar_prompt_md_plan.md

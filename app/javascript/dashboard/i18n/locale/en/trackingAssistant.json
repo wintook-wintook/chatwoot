@@ -523,6 +523,23 @@
     "SESSION_DISCARD_YES": "Yes, delete",
     "SESSION_DISCARD_NO": "Cancel",
     "SESSION_DISCARDED": "#%{id} was removed from the list.",
-    "SESSION_DISCARD_ERROR": "Could not delete. Please try again."
+    "SESSION_DISCARD_ERROR": "Could not delete. Please try again.",
+    "GALLERY": {
+      "OPEN": "Published prompts",
+      "TITLE": "Published prompts",
+      "DESCRIPTION": "AI Agents shared by other accounts. Review one and download it to your account to adapt it to your business with the Assistant.",
+      "SEARCH": "Search by title or description",
+      "ALL_CATEGORIES": "All categories",
+      "EMPTY": "No published prompts match.",
+      "LOAD_ERROR": "Couldn't load the published prompts.",
+      "OWN": "From your account",
+      "META": "{author} · v{version} · {downloads} downloads",
+      "BACK": "Back to the list",
+      "REQUIREMENTS_TITLE": "To use it you'll need to set up in your account:",
+      "NO_REQUIREMENTS": "It doesn't use resources from another account: nothing extra to set up.",
+      "OBJECTIVE": "Objective",
+      "CONTEXT": "Context",
+      "PROMPT": "Training"
+    }
   }
 }

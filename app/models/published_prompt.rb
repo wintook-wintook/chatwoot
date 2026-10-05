@@ -59,7 +59,9 @@ class PublishedPrompt < ApplicationRecord
   validates :title, presence: true, length: { minimum: 2, maximum: 100 }
   validates :description, length: { maximum: 500 }
   validates :category, inclusion: { in: CATEGORIES }, allow_blank: true
-  validates :objective, presence: true
+  # El mismo tope que TrackingTemplate: sin él, ApplicationRecord le pone 255 a la
+  # columna string y un agente con objetivo largo no se podía publicar (ADAM #11833, 371).
+  validates :objective, presence: true, length: { maximum: 500 }
   validates :prompt, presence: true
   validates :status, inclusion: { in: STATUSES }
   validates :version, numericality: { only_integer: true, greater_than: 0 }
