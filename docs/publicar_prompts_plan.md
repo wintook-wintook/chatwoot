@@ -132,6 +132,44 @@ users). Si se prefiere columna propia, es la decisión D1.
   "Qué viaja" y detecta las directivas que piden configuración (`requirements`).
 - Specs del servicio (ojo: RSpec corre contra chatwoot_dev, nada destructivo).
 
+**✅ Hecho (05/10/2026)**
+
+- Qué se hizo:
+  - Migración `20261005120000_create_published_prompts`: tabla `published_prompts` y
+    `tracking_templates.published_prompt_id`. Si el autor borra su agente, la publicación
+    sigue viva (`tracking_template_id` queda vacío). Si se borra la publicación, las copias
+    siguen vivas (`published_prompt_id` queda vacío). Un agente tiene **una** publicación
+    (índice único): republicar sube `version`, no crea otra.
+  - `PublishedPrompt` (`app/models/published_prompt.rb`): estados `published|unpublished`,
+    categorías `ventas cobranza soporte agenda atencion otros`, scopes `published`,
+    `by_category`, `search` (título o descripción), `ordered`.
+  - `PublishedPrompts::Snapshot`: arma la foto según la tabla "Qué viaja". Los ajustes
+    vacíos (p. ej. `timezone: ""`) no se copian.
+  - `PublishedPrompts::Requirements`: detecta lo que hay que configurar. Usa las mismas
+    expresiones del motor (`KnowledgeBase::Directives`, `SheetLookup`,
+    `ConsultaDirectiveRenderer`, `AgentAttachments`), así no se desfasan.
+
+    | Directiva en el prompt | kind | name |
+    |---|---|---|
+    | `{{doc:X}}` | google_doc | X |
+    | `{{hoja:X}}`, `{{hoja_buscar: X \| …}}` | google_sheet | X |
+    | `{{consulta:conn/nombre(…)}}` | erp_query | conn/nombre |
+    | `{{nombre}}` | attachment | nombre |
+    | `@buscar_foro(X)` | knowledge_source | X |
+    | `@soporte_contpaq(X)` | contpaq_support | X |
+    | `@discourse` / `@buscar_articulo` | discourse_integration / article | — |
+    | `@agendar_calendar` / `@buscar_predefinidas` | calendar / canned_responses | — |
+
+- `schema.rb` armado a mano solo con lo de esta rama (el dump traía tablas de otras).
+- Pila de pruebas:
+  - Ya probado con el runner: los 12 tipos de directiva en un texto de prueba; 4 agentes
+    reales (#10368 y #10238 Grúas → hoja «Servicio Gruas» + calendario; #11833 y #11678
+    ADAM → foro «Foro_Sentidos_Creativos» + calendario); guardar una publicación, buscarla,
+    rechazar una segunda del mismo agente y validar campos malos. Todo dentro de una
+    transacción que se deshizo (quedaron 0 publicaciones).
+  - Specs escritos (`spec/services/published_prompts/`), **sin correr**: RSpec usa la base
+    de dev. No escriben nada (usan `build`).
+
 ### F2 — API para publicar (solo autorizado)
 ```
  POST   /api/v1/accounts/:id/tracking_templates/:tid/publish     publica o saca versión nueva

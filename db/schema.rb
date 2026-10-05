@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_09_26_140000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_05_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1421,6 +1421,31 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_26_140000) do
     t.index ["user_id"], name: "index_portals_members_on_user_id"
   end
 
+  create_table "published_prompts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.bigint "tracking_template_id"
+    t.string "title", null: false
+    t.string "objective", null: false
+    t.text "description"
+    t.string "category"
+    t.text "ai_context"
+    t.text "prompt", null: false
+    t.jsonb "keyword_actions", default: [], null: false
+    t.jsonb "settings", default: {}, null: false
+    t.jsonb "requirements", default: [], null: false
+    t.integer "version", default: 1, null: false
+    t.string "status", default: "published", null: false
+    t.integer "downloads_count", default: 0, null: false
+    t.datetime "published_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_published_prompts_on_account_id"
+    t.index ["status", "category"], name: "index_published_prompts_on_status_and_category"
+    t.index ["tracking_template_id"], name: "index_published_prompts_on_tracking_template_id", unique: true
+    t.index ["user_id"], name: "index_published_prompts_on_user_id"
+  end
+
   create_table "related_categories", force: :cascade do |t|
     t.bigint "category_id"
     t.bigint "related_category_id"
@@ -1664,10 +1689,12 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_26_140000) do
     t.string "slots_presentation", default: "detailed", null: false
     t.text "previous_complementary_prompt"
     t.jsonb "training_structure", default: {}, null: false
+    t.bigint "published_prompt_id"
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
     t.index ["kbase_hook_id"], name: "index_tracking_templates_on_kbase_hook_id"
+    t.index ["published_prompt_id"], name: "index_tracking_templates_on_published_prompt_id"
     t.index ["user_id"], name: "index_tracking_templates_on_user_id"
   end
 
@@ -1837,6 +1864,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_26_140000) do
   add_foreign_key "knowledge_items", "accounts"
   add_foreign_key "knowledge_items", "knowledge_sources"
   add_foreign_key "knowledge_sources", "accounts"
+  add_foreign_key "published_prompts", "accounts"
+  add_foreign_key "published_prompts", "tracking_templates", on_delete: :nullify
+  add_foreign_key "published_prompts", "users", on_delete: :nullify
   add_foreign_key "scheduled_messages", "accounts"
   add_foreign_key "scheduled_messages", "conversations"
   add_foreign_key "scheduled_messages", "users"
@@ -1859,6 +1889,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_09_26_140000) do
   add_foreign_key "tracking_campaigns", "users"
   add_foreign_key "tracking_templates", "accounts"
   add_foreign_key "tracking_templates", "inboxes"
+  add_foreign_key "tracking_templates", "published_prompts", on_delete: :nullify
   add_foreign_key "tracking_templates", "users"
   add_foreign_key "user_calendar_integrations", "accounts"
   add_foreign_key "user_calendar_integrations", "users"

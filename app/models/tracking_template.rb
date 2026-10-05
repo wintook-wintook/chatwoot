@@ -32,6 +32,7 @@
 #  account_id                    :bigint           not null
 #  inbox_id                      :bigint
 #  kbase_hook_id                 :integer
+#  published_prompt_id           :bigint
 #  user_id                       :bigint
 #
 # Indexes
@@ -40,12 +41,14 @@
 #  index_tracking_templates_on_account_id_and_name  (account_id,name) UNIQUE
 #  index_tracking_templates_on_inbox_id             (inbox_id)
 #  index_tracking_templates_on_kbase_hook_id        (kbase_hook_id)
+#  index_tracking_templates_on_published_prompt_id  (published_prompt_id)
 #  index_tracking_templates_on_user_id              (user_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (inbox_id => inboxes.id)
+#  fk_rails_...  (published_prompt_id => published_prompts.id) ON DELETE => nullify
 #  fk_rails_...  (user_id => users.id)
 #
 
@@ -53,6 +56,8 @@ class TrackingTemplate < ApplicationRecord
   belongs_to :account
   belongs_to :inbox, optional: true
   belongs_to :user, optional: true
+  # proyecto@publicar_prompts: la publicación de la que salió este agente (si se bajó de la Galería)
+  belongs_to :published_prompt, optional: true
 
   # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
   has_many :ai_agent_attachments, dependent: :destroy
