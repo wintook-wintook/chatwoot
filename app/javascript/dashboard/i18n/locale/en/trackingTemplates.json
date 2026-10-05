@@ -286,7 +286,7 @@
         "ATENCION": "Customer service",
         "OTROS": "Other"
       },
-      "NOT_PUBLISHED": "Not published: the inbox, calendars, Knowledge Base, WhatsApp templates, labels or the agent's files.",
+      "NOT_PUBLISHED": "Not published: the inbox, calendars, Knowledge Base, WhatsApp templates, labels or any file you don't check.",
       "REQUIREMENTS_TITLE": "Whoever downloads it will need to set up in their account:",
       "NO_REQUIREMENTS": "The prompt doesn't use resources from your account: nothing extra to set up.",
       "REQUIREMENTS": {
@@ -310,6 +310,10 @@
         "UNPUBLISHED": "Prompt unpublished",
         "LOAD_ERROR": "Couldn't load the publication",
         "SAVE_ERROR": "Couldn't save the publication"
+      },
+      "FILES": {
+        "TITLE": "Agent files to publish",
+        "HELP": "Every account that downloads the prompt gets a copy of the checked files. Don't check files that are only for your company."
       }
     }
   }

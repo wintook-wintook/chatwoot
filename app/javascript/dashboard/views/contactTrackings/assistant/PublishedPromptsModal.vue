@@ -14,6 +14,7 @@
 import { useAlert } from 'dashboard/composables';
 import Spinner from 'shared/components/Spinner.vue';
 import AssistantAPI from 'dashboard/api/assistant';
+import { formatBytes } from 'shared/helpers/FileHelper';
 
 const SEARCH_DELAY_MS = 300;
 
@@ -109,6 +110,9 @@ export default {
         `TRACKING_TEMPLATES.PUBLISH.REQUIREMENTS.${req.kind.toUpperCase()}`
       );
       return req.name ? `${kind}: ${req.name}` : kind;
+    },
+    fileSize(bytes) {
+      return formatBytes(bytes || 0, 1);
     },
     metaText(prompt) {
       return this.$t('TRACKING_ASSISTANT_VIEW.GALLERY.META', {
@@ -249,6 +253,23 @@ export default {
           <Spinner size="" />
         </div>
         <template v-else>
+          <!-- F6: los archivos del agente que vienen con el prompt -->
+          <div
+            v-if="selected.files && selected.files.length"
+            class="text-sm text-slate-700 dark:text-slate-200"
+          >
+            <p class="mb-1 font-medium">
+              {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.FILES_TITLE') }}
+            </p>
+            <ul class="mb-0 list-disc ltr:ml-5 rtl:mr-5">
+              <li v-for="file in selected.files" :key="file.name">
+                <span class="font-medium">{{ file.name }}</span>
+                <span class="text-xs text-slate-500 dark:text-slate-400">
+                  · {{ file.filename }} · {{ fileSize(file.byte_size) }}
+                </span>
+              </li>
+            </ul>
+          </div>
           <div
             class="p-3 text-sm border rounded-md border-slate-100 dark:border-slate-700 bg-slate-25 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
           >

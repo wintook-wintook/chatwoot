@@ -415,8 +415,62 @@ users). Si se prefiere columna propia, es la decisión D1.
     Agentes IA», el Asistente lo muestra cargado y el chat con el mensaje de bienvenida.
     Contestarle al chat → el Asistente adecua el Entrenamiento → Guardar (reemplaza la copia).
 
-### F6 — (opcional) Archivos adjuntos
+### F6 — Archivos adjuntos
 - Copiar los `ai_agent_attachments` del agente publicado a la cuenta que baja, si D3 = sí.
+
+**✅ Hecho (05/10/2026)** — D3 resuelta: **sí viajan, pero solo los que el autor marca.**
+
+```
+ Ventana Publicar                         published_prompt_files        Agente bajado
+ ┌──────────────────────────────┐        (copia propia, al publicar)   (copia propia, al bajar)
+ │ Archivos del agente que se    │
+ │ publican                       │
+ │ [x] catalogo_pdf  catalogo.pdf ├──────► catalogo_pdf ───────────────► Archivos: catalogo_pdf
+ │ [ ] logo_interno  logo.png     │        (logo_interno no viaja)       → {{catalogo_pdf}} funciona
+ └──────────────────────────────┘
+```
+
+- Qué se hizo:
+  - Tabla `published_prompt_files` (`published_prompt_id`, `name`; borrado en cascada) y
+    modelo `PublishedPromptFile` (`has_one_attached :file`, mismo formato de nombre que
+    `AiAgentAttachment`). `PublishedPrompt has_many :files`.
+  - `PublishedPrompts::FileCopier`: copia el archivo (lo descarga y lo sube como blob
+    nuevo con `create_and_upload!`). No se comparte el blob: borrar en un lado nunca deja
+    sin archivo al otro.
+  - `Publisher#publish!(attachment_ids:)`: copia **solo** los elegidos y los quita de
+    `requirements`. `attachment_ids` ausente (`nil`) = vuelve a copiar los mismos nombres
+    de la versión anterior; `[]` = ninguno. Un id de otro agente se ignora (se busca solo
+    entre los archivos de ESTE agente). Todo en una transacción con la publicación.
+  - `Installer`: el agente bajado recibe sus propios `AiAgentAttachment` (cuenta destino,
+    mismo nombre), así sus `{{nombre}}` funcionan sin configurar nada.
+  - API: `GET …/publication` trae `attachments` (`referenced`: el prompt lo usa;
+    `included`: va en la versión publicada) y `publication.files`; la Galería trae `files`.
+  - Ventana Publicar: casillas con nombre, archivo y tamaño. Vienen marcados los que el
+    prompt usa (primera vez) o los de la versión publicada (republicar), con el aviso
+    «Cualquier cuenta que baje el prompt recibirá una copia…». La lista «tendrá que
+    configurar» se actualiza al marcar/desmarcar.
+  - Galería (detalle): «Incluye estos archivos del agente».
+- Pila de pruebas (runner, transacción deshecha + borrado de los archivos subidos;
+  agente Grúas #10368 con 2 archivos de prueba, la cuenta 3 baja):
+
+  | Paso | Esperado | Resultado |
+  |---|---|---|
+  | Ver publicación | catalogo_pdf `referenced`, logo_interno no; requisito «Archivo: catalogo_pdf» | ✅ |
+  | Publicar con catalogo_pdf | 1 archivo; ya no figura en requisitos | ✅ |
+  | La copia publicada | blob distinto, mismo contenido | ✅ |
+  | El autor cambia su archivo | lo publicado no cambia | ✅ |
+  | Galería | trae `files: [catalogo_pdf]` | ✅ |
+  | Bajar en la cuenta 3 | el agente nuevo tiene catalogo_pdf, de la cuenta 3, mismo contenido | ✅ |
+  | Republicar sin `attachment_ids` | v2 con el archivo NUEVO del autor | ✅ |
+  | Republicar con `[]` | sin archivos; vuelve el requisito | ✅ |
+  | `attachment_ids` de otro agente | se ignora | ✅ |
+
+  Spec escrito (`spec/services/published_prompts/publisher_files_spec.rb`), sin correr.
+  - **Nota de prueba:** dentro de una transacción que se deshace, `attach(io:)` no sube el
+    archivo (Rails lo sube al confirmar). Por eso `FileCopier` usa `create_and_upload!`.
+  - **Falta en el navegador:** en un agente con archivos, Publicar → ver las casillas →
+    publicar → en otra cuenta, Galería muestra los archivos → Bajar → pestaña «Archivos»
+    del agente nuevo.
 
 ### F7 — (opcional) Aviso de versión nueva
 - En la ficha de un agente bajado: "El autor publicó la v3" + ver diferencias. Nunca se
@@ -428,7 +482,7 @@ users). Si se prefiere columna propia, es la decisión D1.
 |----|----------|-----------------------|
 | D1 | ¿Permiso en `custom_attributes` o columna propia `can_publish_prompts`? | `custom_attributes` (sin migrar `users`) |
 | D2 | ¿Qué se muestra como autor en la Galería? | Nombre de la cuenta, no el correo |
-| D3 | ¿Los archivos adjuntos viajan? | No en la primera versión (F6 después) |
+| D3 | ¿Los archivos adjuntos viajan? | ✅ Resuelta en F6: sí, solo los que el autor marca |
 | D4 | ¿Quién puede bajar prompts en la cuenta destino? | Solo administradores |
 | D5 | ¿La Galería es para todas las cuentas o el super admin elige cuáles la ven? | Todas |
 | D6 | ¿El super admin puede despublicar un prompt ajeno? | Sí, desde una lista en el super admin (F4 bis) |

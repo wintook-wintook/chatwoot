@@ -546,7 +546,8 @@
       "INTRO_DONE": "Bajé «{name}» a tu cuenta como un Agente IA nuevo. Es una copia tuya: lo que cambies aquí no afecta al original. Ya lo tienes en la Estructura del Agente.",
       "INTRO_SETUP": "Antes de usarlo, configura en tu cuenta:",
       "INTRO_INBOX": "- La bandeja (canal) donde va a atender",
-      "INTRO_ASK": "Cuéntame de tu negocio: qué vendes o qué servicio das, cómo se llama tu empresa y qué quieres que haga distinto. Con eso adecuo el Entrenamiento."
+      "INTRO_ASK": "Cuéntame de tu negocio: qué vendes o qué servicio das, cómo se llama tu empresa y qué quieres que haga distinto. Con eso adecuo el Entrenamiento.",
+      "FILES_TITLE": "Incluye estos archivos del agente:"
     }
   }
 }

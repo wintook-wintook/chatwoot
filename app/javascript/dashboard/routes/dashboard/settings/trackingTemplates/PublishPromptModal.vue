@@ -7,6 +7,9 @@
                IA para que otras cuentas lo bajen desde su Asistente. Solo lo abre el
                usuario con can_publish_prompts; la API responde 403 a cualquier otro.
                Muestra lo que NO se publica y lo que tendrá que configurar quien lo baje.
+               F6: casillas con los archivos del agente ({{nombre}}) para elegir cuáles
+               viajan; vienen marcados los que el prompt usa (o los de la versión
+               publicada). Un archivo marcado deja de figurar en «tendrá que configurar».
   Plan: docs/publicar_prompts_plan.md
   ================================================================================
 -->
@@ -14,6 +17,7 @@
 <script>
 import { useAlert } from 'dashboard/composables';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
+import { formatBytes } from 'shared/helpers/FileHelper';
 
 export default {
   props: {
@@ -28,6 +32,8 @@ export default {
       publication: null,
       requirements: [],
       categories: [],
+      attachments: [],
+      selectedAttachmentIds: [],
       form: { title: '', description: '', category: '' },
     };
   },
@@ -47,6 +53,17 @@ export default {
       return this.isPublished
         ? this.$t('TRACKING_TEMPLATES.PUBLISH.SUBMIT_NEW_VERSION')
         : this.$t('TRACKING_TEMPLATES.PUBLISH.SUBMIT');
+    },
+    // Lo que tendrá que configurar quien lo baje: sin los archivos que ya viajan.
+    pendingRequirements() {
+      const incluidos = this.attachments
+        .filter(a => this.selectedAttachmentIds.includes(a.id))
+        .map(a => a.name.toLowerCase());
+      return this.requirements.filter(
+        req =>
+          req.kind !== 'attachment' ||
+          !incluidos.includes((req.name || '').toLowerCase())
+      );
     },
     isTitleValid() {
       const length = this.form.title.trim().length;
@@ -78,6 +95,11 @@ export default {
       this.publication = data.publication;
       this.requirements = data.preview.requirements || [];
       this.categories = data.categories || [];
+      this.attachments = data.attachments || [];
+      const yaPublicada = !!data.publication;
+      this.selectedAttachmentIds = this.attachments
+        .filter(a => (yaPublicada ? a.included : a.referenced))
+        .map(a => a.id);
       const pub = data.publication || {};
       this.form = {
         title: pub.title || this.template.name,
@@ -91,6 +113,9 @@ export default {
       );
       return req.name ? `${kind}: ${req.name}` : kind;
     },
+    fileSize(bytes) {
+      return formatBytes(bytes || 0, 1);
+    },
     categoryText(category) {
       return this.$t(
         `TRACKING_TEMPLATES.PUBLISH.CATEGORIES.${category.toUpperCase()}`
@@ -99,7 +124,11 @@ export default {
     async publish() {
       if (!this.isTitleValid) return;
       await this.save(
-        () => TrackingTemplatesAPI.publish(this.template.id, this.form),
+        () =>
+          TrackingTemplatesAPI.publish(this.template.id, {
+            ...this.form,
+            attachment_ids: this.selectedAttachmentIds,
+          }),
         'PUBLISHED'
       );
     },
@@ -195,20 +224,49 @@ export default {
           </select>
         </label>
 
+        <!-- F6: qué archivos del agente viajan con el prompt -->
+        <fieldset v-if="attachments.length" class="flex flex-col gap-1">
+          <legend class="mb-1 text-sm">
+            {{ $t('TRACKING_TEMPLATES.PUBLISH.FILES.TITLE') }}
+          </legend>
+          <label
+            v-for="att in attachments"
+            :key="att.id"
+            class="flex items-center gap-2 !mb-0 text-sm"
+          >
+            <input
+              v-model="selectedAttachmentIds"
+              type="checkbox"
+              class="!mb-0"
+              :value="att.id"
+            />
+            <span class="font-medium">{{ att.name }}</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              {{ att.filename }} · {{ fileSize(att.byte_size) }}
+            </span>
+          </label>
+          <p class="mt-1 mb-0 text-xs text-slate-500 dark:text-slate-400">
+            {{ $t('TRACKING_TEMPLATES.PUBLISH.FILES.HELP') }}
+          </p>
+        </fieldset>
+
         <div
           class="rounded-md border border-slate-100 dark:border-slate-700 bg-slate-25 dark:bg-slate-800 p-3 text-sm text-slate-700 dark:text-slate-200"
         >
           <p class="mb-2">
             {{ $t('TRACKING_TEMPLATES.PUBLISH.NOT_PUBLISHED') }}
           </p>
-          <p v-if="requirements.length" class="mb-1 font-medium">
+          <p v-if="pendingRequirements.length" class="mb-1 font-medium">
             {{ $t('TRACKING_TEMPLATES.PUBLISH.REQUIREMENTS_TITLE') }}
           </p>
           <ul
-            v-if="requirements.length"
+            v-if="pendingRequirements.length"
             class="mb-0 list-disc ltr:ml-5 rtl:mr-5"
           >
-            <li v-for="req in requirements" :key="req.kind + (req.name || '')">
+            <li
+              v-for="req in pendingRequirements"
+              :key="req.kind + (req.name || '')"
+            >
               {{ requirementText(req) }}
             </li>
           </ul>

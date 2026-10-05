@@ -14,6 +14,7 @@
 #
 # GET …/assistant/published_prompts/:id
 #   Una publicación vigente con el prompt completo, para leerla antes de bajarla.
+#   Lista y detalle traen `files`: los archivos del agente que vienen incluidos (F6).
 #   Despublicada o inexistente → 404.
 #
 # POST …/assistant/published_prompts/:id/install
@@ -33,7 +34,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantPublishedPromptsController <
   before_action :check_authorization
 
   def index
-    scope = PublishedPrompt.published.includes(:account).ordered
+    scope = PublishedPrompt.published.includes(:account, files: { file_attachment: :blob }).ordered
     scope = scope.search(params[:q]) if params[:q].present?
     scope = scope.by_category(params[:category]) if params[:category].present?
     render json: {
@@ -62,7 +63,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantPublishedPromptsController <
   def summary_json(pub)
     pub.as_json(only: SUMMARY_FIELDS).merge(
       'author' => pub.account&.name,
-      'own' => pub.account_id == Current.account.id
+      'own' => pub.account_id == Current.account.id,
+      'files' => pub.files.map(&:summary) # F6: los archivos que trae
     )
   end
 end
