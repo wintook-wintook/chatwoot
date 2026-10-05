@@ -13,12 +13,14 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import TemplateForm from './EditTemplate.vue';
 import ImportModal from './ImportModal.vue'; // proyecto@import_seguimiento
+import PublishPromptModal from './PublishPromptModal.vue'; // proyecto@publicar_prompts
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 
 export default {
   components: {
     TemplateForm,
     ImportModal,
+    PublishPromptModal,
     TableFooter,
   },
   data() {
@@ -31,6 +33,7 @@ export default {
       showDeleteConfirmation: false,
       templateToDelete: null,
       showImportModal: false, // proyecto@import_seguimiento
+      templateToPublish: null, // proyecto@publicar_prompts
       currentPage: 1,
       perPage: 10,
     };
@@ -41,7 +44,12 @@ export default {
       templates: 'trackingTemplates/getTemplates',
       allInboxIds: 'trackingTemplates/getAllInboxIds',
       inboxes: 'inboxes/getInboxes',
+      currentUser: 'getCurrentUser',
     }),
+    // proyecto@publicar_prompts — lo marca el super admin; sin él no se ve nada de publicar.
+    canPublishPrompts() {
+      return !!this.currentUser.can_publish_prompts;
+    },
     isListView() {
       return this.currentView === 'list';
     },
@@ -180,6 +188,20 @@ export default {
       } finally {
         this.closeDeleteConfirm();
       }
+    },
+    // proyecto@publicar_prompts
+    isPublished(template) {
+      return (
+        !!template.publication && template.publication.status === 'published'
+      );
+    },
+    publishedLabel(template) {
+      return this.$t('TRACKING_TEMPLATES.PUBLISH.BADGE', {
+        version: template.publication.version,
+      });
+    },
+    refreshTemplates() {
+      this.$store.dispatch('trackingTemplates/get');
     },
     getInboxName(template) {
       return template.inbox_name || '-';
@@ -391,6 +413,14 @@ export default {
                 >
                   {{ template.name }}
                 </span>
+                <!-- proyecto@publicar_prompts -->
+                <woot-label
+                  v-if="canPublishPrompts && isPublished(template)"
+                  small
+                  :title="publishedLabel(template)"
+                  color-scheme="success"
+                  class="ltr:ml-2 rtl:mr-2 text-xs"
+                />
               </td>
               <td class="p-3">
                 <span class="text-sm text-slate-600 dark:text-slate-400">
@@ -429,6 +459,16 @@ export default {
                     icon="wand"
                     @click="improveWithAssistant(template)"
                   />
+                  <!-- proyecto@publicar_prompts — solo el usuario autorizado -->
+                  <woot-button
+                    v-if="canPublishPrompts"
+                    v-tooltip="$t('TRACKING_TEMPLATES.PUBLISH.BUTTON')"
+                    variant="smooth"
+                    size="small"
+                    color-scheme="secondary"
+                    icon="share"
+                    @click="templateToPublish = template"
+                  />
                   <woot-button
                     variant="smooth"
                     size="small"
@@ -462,6 +502,15 @@ export default {
 
       <!-- Import Modal - proyecto@import_seguimiento -->
       <ImportModal :show="showImportModal" @close="showImportModal = false" />
+
+      <!-- proyecto@publicar_prompts -->
+      <PublishPromptModal
+        v-if="canPublishPrompts"
+        :show="!!templateToPublish"
+        :template="templateToPublish"
+        @close="templateToPublish = null"
+        @changed="refreshTemplates"
+      />
 
       <!-- Delete Confirmation -->
       <woot-delete-modal

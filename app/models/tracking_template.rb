@@ -58,6 +58,8 @@ class TrackingTemplate < ApplicationRecord
   belongs_to :user, optional: true
   # proyecto@publicar_prompts: la publicación de la que salió este agente (si se bajó de la Galería)
   belongs_to :published_prompt, optional: true
+  # proyecto@publicar_prompts: la publicación de ESTE agente (si su autor lo publicó)
+  has_one :publication, class_name: 'PublishedPrompt', dependent: nil, inverse_of: :tracking_template
 
   # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
   has_many :ai_agent_attachments, dependent: :destroy

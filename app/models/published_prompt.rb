@@ -51,7 +51,7 @@ class PublishedPrompt < ApplicationRecord
 
   belongs_to :account
   belongs_to :user, optional: true
-  belongs_to :tracking_template, optional: true
+  belongs_to :tracking_template, optional: true, inverse_of: :publication
 
   # Los agentes que otras cuentas crearon al bajarla.
   has_many :installed_templates, class_name: 'TrackingTemplate', dependent: :nullify, inverse_of: :published_prompt

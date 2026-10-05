@@ -263,6 +263,54 @@
       "TIMEZONE_HELP": "Time zone used to offer slots, show the time to the customer and create the event. If left empty, the channel's is used."
     },
     "IMPROVE_WITH_ASSISTANT": "Improve with the Assistant",
-    "HEADER_BTN_ASSISTANT": "Build with the Assistant"
+    "HEADER_BTN_ASSISTANT": "Build with the Assistant",
+    "PUBLISH": {
+      "BUTTON": "Publish prompt",
+      "BADGE": "Published v{version}",
+      "TITLE": "Publish prompt",
+      "DESCRIPTION": "Other accounts will be able to download a copy of this prompt from their AI Agents Assistant and adapt it to their business. Later changes won't reach them until you publish a new version.",
+      "STATUS_PUBLISHED": "Published · v{version} · {downloads} downloads",
+      "STATUS_UNPUBLISHED": "Unpublished · last version v{version} · {downloads} downloads",
+      "FORM": {
+        "TITLE": "Title",
+        "DESCRIPTION": "Description",
+        "DESCRIPTION_PLACEHOLDER": "What this agent does and which kind of business it fits",
+        "CATEGORY": "Category",
+        "NO_CATEGORY": "No category"
+      },
+      "CATEGORIES": {
+        "VENTAS": "Sales",
+        "COBRANZA": "Collections",
+        "SOPORTE": "Support",
+        "AGENDA": "Scheduling",
+        "ATENCION": "Customer service",
+        "OTROS": "Other"
+      },
+      "NOT_PUBLISHED": "Not published: the inbox, calendars, Knowledge Base, WhatsApp templates, labels or the agent's files.",
+      "REQUIREMENTS_TITLE": "Whoever downloads it will need to set up in their account:",
+      "NO_REQUIREMENTS": "The prompt doesn't use resources from your account: nothing extra to set up.",
+      "REQUIREMENTS": {
+        "GOOGLE_DOC": "Google Doc",
+        "GOOGLE_SHEET": "Google Sheet",
+        "ERP_QUERY": "ERP query",
+        "ATTACHMENT": "Agent file",
+        "KNOWLEDGE_SOURCE": "Knowledge Base forum",
+        "DISCOURSE_INTEGRATION": "Discourse integration",
+        "CONTPAQ_SUPPORT": "Contpaq support",
+        "ARTICLE": "Help Center articles",
+        "CALENDAR": "Booking calendar",
+        "CANNED_RESPONSES": "Canned responses"
+      },
+      "SUBMIT": "Publish",
+      "SUBMIT_NEW_VERSION": "Publish new version",
+      "UNPUBLISH": "Unpublish",
+      "CANCEL": "Cancel",
+      "API": {
+        "PUBLISHED": "Prompt published",
+        "UNPUBLISHED": "Prompt unpublished",
+        "LOAD_ERROR": "Couldn't load the publication",
+        "SAVE_ERROR": "Couldn't save the publication"
+      }
+    }
   }
 }

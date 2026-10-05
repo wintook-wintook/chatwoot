@@ -13,7 +13,7 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
   before_action :fetch_tracking_template, only: [:show, :update, :destroy]
 
   def index
-    @tracking_templates = Current.account.tracking_templates.includes(:user, :inbox).ordered
+    @tracking_templates = Current.account.tracking_templates.includes(:user, :inbox, :publication).ordered
     @tracking_templates = @tracking_templates.search_by_name(params[:search]) if params[:search].present?
     @tracking_templates = @tracking_templates.by_tag(params[:tag]) if params[:tag].present?
     @tracking_templates = @tracking_templates.by_inbox(params[:inbox_id]) if params[:inbox_id].present?
@@ -173,12 +173,11 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
 
   def template_json(template)
     json = template.as_json(except: [:user_id])
-    json['creator'] = if template.user
-                        { id: template.user.id, name: template.user.available_name || template.user.name }
-                      end
+    json['creator'] = ({ id: template.user.id, name: template.user.available_name || template.user.name } if template.user)
     json['inbox_name']      = template.inbox&.name
     json['keyword_actions'] = template.keyword_actions || [] # proyecto@contact_tracking
     json['training_structure'] = template.training_blocks # proyecto@asistente_agentes_ia
+    json['publication'] = template.publication&.slice(:status, :version) # proyecto@publicar_prompts
     json
   end
 end

@@ -227,6 +227,40 @@ users). Si se prefiere columna propia, es la decisión D1.
   viaja y lista de requisitos detectados. Estado: "Publicado v2 · 14 descargas".
 - Botón "Despublicar".
 
+**✅ Hecho (05/10/2026)**
+
+- Dónde quedó el botón: en las **acciones de cada fila de la lista de Agentes IA**
+  (ícono de compartir, junto a Asistente / Editar / Borrar), no dentro de la ficha. Así
+  se publica sin abrir el agente y no se toca `EditTemplate.vue` (167 avisos de lint
+  previos). Junto al nombre aparece la etiqueta **«Publicado v2»**. Las dos cosas solo
+  las ve el usuario con `can_publish_prompts`.
+- Qué se hizo:
+  - `PublishPromptModal.vue` (nuevo): con `woot-modal`, `woot-modal-header`,
+    `woot-label`, `woot-button` y `woot-loading-state` (componentes nativos). Al abrir
+    pide `GET …/publication`, rellena título (o el nombre del agente), descripción y
+    categoría de la versión anterior, y muestra:
+    - el estado: «Publicado · v2 · 14 descargas» / «Despublicado · …»;
+    - qué **no** se publica;
+    - qué tendrá que configurar quien lo baje (`preview.requirements`, ya traducido:
+      «Hoja de Google: Servicio Gruas», «Calendario para agendar», …).
+    - Botones: Publicar / Publicar versión nueva, Despublicar (si está publicado), Cancelar.
+  - `Index.vue`: botón, etiqueta y el modal; al publicar/despublicar recarga la lista.
+  - `api/trackingTemplates.js`: `getPublication`, `publish`, `unpublish`.
+  - Backend: `TrackingTemplate has_one :publication`; el JSON de la lista trae
+    `publication: { status, version }` (o `null`), con `includes` para no hacer N+1.
+  - i18n `TRACKING_TEMPLATES.PUBLISH.*` en es (México, con tú) y en.
+- Pila de pruebas:
+  - Ya probado: webpack «Compiled successfully» y el bundle servido trae las claves
+    nuevas; la lista de la cuenta 2 trae `publication: null` en los 15 agentes, y con
+    una publicación (en transacción deshecha) `{"status":"published","version":1}`.
+  - **Falta en el navegador** (develop.wintook.com):
+    1. Sin la casilla del super admin: la lista se ve igual que antes (sin botón ni etiqueta).
+    2. Marcar la casilla al usuario → recargar → aparece el ícono de compartir en cada fila.
+    3. Abrir en Grúas #10368 → requisitos «Hoja de Google: Servicio Gruas» y «Calendario
+       para agendar» → Publicar → alerta «Prompt publicado» y etiqueta «Publicado v1».
+    4. Abrir otra vez → «Publicar versión nueva» → «Publicado v2».
+    5. Despublicar → desaparece la etiqueta.
+
 ```
  ┌─ Publicar prompt ───────────────────────────────┐
  │ Título       [ Ventas de grúas              ]   │
