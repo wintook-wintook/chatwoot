@@ -314,7 +314,9 @@
       "FILES": {
         "TITLE": "Archivos del agente que se publican",
         "HELP": "Cualquier cuenta que baje el prompt recibirá una copia de los archivos marcados. No marques los que sean solo de tu empresa."
-      }
+      },
+      "UPDATE_BADGE": "v{version} disponible",
+      "UPDATE_HINT": "El autor publicó una versión nueva. Ábrelo en el Asistente para ver los cambios."
     }
   },
   "TRACKING_IMPORT": {

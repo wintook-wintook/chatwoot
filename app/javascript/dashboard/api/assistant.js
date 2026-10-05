@@ -352,6 +352,13 @@ class AssistantAPI extends ApiClient {
   installPublishedPrompt(id) {
     return axios.post(`${this.url}/published_prompts/${id}/install`);
   }
+
+  // F7: la copia `templateId` ya revisó la versión actual; deja de avisar.
+  markPublishedPromptSeen(id, templateId) {
+    return axios.post(`${this.url}/published_prompts/${id}/seen`, {
+      template_id: templateId,
+    });
+  }
 }
 
 export default new AssistantAPI();

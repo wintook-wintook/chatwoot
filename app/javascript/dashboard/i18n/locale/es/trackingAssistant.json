@@ -547,7 +547,19 @@
       "INTRO_SETUP": "Antes de usarlo, configura en tu cuenta:",
       "INTRO_INBOX": "- La bandeja (canal) donde va a atender",
       "INTRO_ASK": "Cuéntame de tu negocio: qué vendes o qué servicio das, cómo se llama tu empresa y qué quieres que haga distinto. Con eso adecuo el Entrenamiento.",
-      "FILES_TITLE": "Incluye estos archivos del agente:"
+      "FILES_TITLE": "Incluye estos archivos del agente:",
+      "UPDATE_NOTICE": "El autor publicó la versión {version} del prompt del que salió este agente (tienes la {current}).",
+      "UPDATE_VIEW": "Ver cambios",
+      "UPDATE_TITLE": "Versión {version} disponible",
+      "UPDATE_DESCRIPTION": "Compara el Entrenamiento que tienes con el de la versión nueva. Nada cambia hasta que tú lo guardes.",
+      "UPDATE_STATS": "Con la versión nueva: {added} línea(s) agregada(s), {removed} quitada(s) respecto de tu Entrenamiento.",
+      "UPDATE_SAME": "La versión nueva tiene el mismo Entrenamiento que el tuyo.",
+      "UPDATE_NOTE": "Si la cargas, se pierden las adecuaciones que le hayas hecho y que no estén en la versión nueva. Solo cambia el Entrenamiento: ni los archivos ni la definición del agente.",
+      "UPDATE_IGNORE": "Ignorar esta versión",
+      "UPDATE_LOAD": "Cargar en el Asistente",
+      "UPDATE_LOADED": "Versión nueva cargada en el editor. Revísala y guarda si te sirve.",
+      "UPDATE_LOAD_ERROR": "No se pudo cargar la versión nueva.",
+      "UPDATE_SAVE_ERROR": "No se pudo guardar. Inténtalo de nuevo."
     }
   }
 }

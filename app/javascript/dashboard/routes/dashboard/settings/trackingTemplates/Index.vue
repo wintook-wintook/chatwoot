@@ -200,6 +200,11 @@ export default {
         version: template.publication.version,
       });
     },
+    updateLabel(template) {
+      return this.$t('TRACKING_TEMPLATES.PUBLISH.UPDATE_BADGE', {
+        version: template.published_prompt_update.version,
+      });
+    },
     refreshTemplates() {
       this.$store.dispatch('trackingTemplates/get');
     },
@@ -413,6 +418,15 @@ export default {
                 >
                   {{ template.name }}
                 </span>
+                <!-- proyecto@publicar_prompts (F7): el autor publicó una versión nueva -->
+                <woot-label
+                  v-if="template.published_prompt_update"
+                  v-tooltip="$t('TRACKING_TEMPLATES.PUBLISH.UPDATE_HINT')"
+                  small
+                  :title="updateLabel(template)"
+                  color-scheme="warning"
+                  class="ltr:ml-2 rtl:mr-2 text-xs"
+                />
                 <!-- proyecto@publicar_prompts -->
                 <woot-label
                   v-if="canPublishPrompts && isPublished(template)"

@@ -22,6 +22,11 @@
 #   descarga. 201 con { tracking_template: { id, name }, requirements }; el Asistente
 #   lo abre enseguida para adecuarlo. Despublicada → 404.
 #
+# POST …/assistant/published_prompts/:id/seen  (template_id)
+#   F7: la copia `template_id` (bajada de ESTA publicación) ya revisó la versión actual:
+#   deja de avisar hasta que el autor publique otra. No cambia el Entrenamiento. → 200
+#   con { published_prompt_update: null }.
+#
 # El autor se muestra con el nombre de su cuenta, nunca con el correo (decisión D2).
 # Plan: docs/publicar_prompts_plan.md
 # ================================================================================
@@ -52,6 +57,13 @@ class Api::V1::Accounts::ContactTrackings::AssistantPublishedPromptsController <
     pub = PublishedPrompt.published.find(params[:id])
     template = PublishedPrompts::Installer.new(pub, Current.account, Current.user).install!
     render json: { tracking_template: template.slice(:id, :name), requirements: pub.requirements }, status: :created
+  end
+
+  def seen
+    pub = PublishedPrompt.find(params[:id])
+    template = Current.account.tracking_templates.find_by!(id: params[:template_id], published_prompt_id: pub.id)
+    template.update!(published_prompt_version: pub.version)
+    render json: { published_prompt_update: template.published_prompt_update }
   end
 
   private

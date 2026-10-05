@@ -314,7 +314,9 @@
       "FILES": {
         "TITLE": "Agent files to publish",
         "HELP": "Every account that downloads the prompt gets a copy of the checked files. Don't check files that are only for your company."
-      }
+      },
+      "UPDATE_BADGE": "v{version} available",
+      "UPDATE_HINT": "The author published a new version. Open it in the Assistant to see the changes."
     }
   }
 }

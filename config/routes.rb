@@ -145,6 +145,7 @@ Rails.application.routes.draw do
             get  'assistant/published_prompts',     to: 'assistant_published_prompts#index'
             get  'assistant/published_prompts/:id', to: 'assistant_published_prompts#show'
             post 'assistant/published_prompts/:id/install', to: 'assistant_published_prompts#install'
+            post 'assistant/published_prompts/:id/seen',    to: 'assistant_published_prompts#seen'
             get  'assistant/audit',     to: 'assistant#audit'
             post 'assistant/dry_run',   to: 'assistant#dry_run'
             # el encargo (.md) con la idea del agente — ver docs/importar_prompt_md_plan.md

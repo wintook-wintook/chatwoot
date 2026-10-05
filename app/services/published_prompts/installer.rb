@@ -58,7 +58,8 @@ class PublishedPrompts::Installer
       complementary_prompt: @publication.prompt,
       keyword_actions: @publication.keyword_actions,
       user: @user,
-      published_prompt: @publication
+      published_prompt: @publication,
+      published_prompt_version: @publication.version # F7: para avisar de versiones nuevas
     }.merge(@publication.settings.slice(*PublishedPrompts::Snapshot::SETTINGS).symbolize_keys)
   end
 

@@ -547,7 +547,19 @@
       "INTRO_SETUP": "Before using it, set up in your account:",
       "INTRO_INBOX": "- The inbox (channel) it will answer on",
       "INTRO_ASK": "Tell me about your business: what you sell or which service you offer, your company name and what you want it to do differently. I'll adapt the Training with that.",
-      "FILES_TITLE": "Includes these agent files:"
+      "FILES_TITLE": "Includes these agent files:",
+      "UPDATE_NOTICE": "The author published version {version} of the prompt this agent came from (you have {current}).",
+      "UPDATE_VIEW": "See changes",
+      "UPDATE_TITLE": "Version {version} available",
+      "UPDATE_DESCRIPTION": "Compare your Training with the new version's. Nothing changes until you save it.",
+      "UPDATE_STATS": "With the new version: {added} line(s) added, {removed} removed compared to your Training.",
+      "UPDATE_SAME": "The new version has the same Training as yours.",
+      "UPDATE_NOTE": "If you load it, any adaptations you made that aren't in the new version are lost. Only the Training changes: not the files nor the agent definition.",
+      "UPDATE_IGNORE": "Ignore this version",
+      "UPDATE_LOAD": "Load in the Assistant",
+      "UPDATE_LOADED": "New version loaded in the editor. Review it and save if it works for you.",
+      "UPDATE_LOAD_ERROR": "Couldn't load the new version.",
+      "UPDATE_SAVE_ERROR": "Couldn't save. Try again."
     }
   }
 }
