@@ -346,6 +346,12 @@ class AssistantAPI extends ApiClient {
   getPublishedPrompt(id) {
     return axios.get(`${this.url}/published_prompts/${id}`);
   }
+
+  // Baja ESA publicación como Agente IA nuevo de la cuenta (una sola).
+  // → { tracking_template: { id, name }, requirements }
+  installPublishedPrompt(id) {
+    return axios.post(`${this.url}/published_prompts/${id}/install`);
+  }
 }
 
 export default new AssistantAPI();

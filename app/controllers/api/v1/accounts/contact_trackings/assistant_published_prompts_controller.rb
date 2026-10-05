@@ -16,6 +16,11 @@
 #   Una publicación vigente con el prompt completo, para leerla antes de bajarla.
 #   Despublicada o inexistente → 404.
 #
+# POST …/assistant/published_prompts/:id/install
+#   Baja ESA publicación (una sola) como Agente IA nuevo de la cuenta y suma una
+#   descarga. 201 con { tracking_template: { id, name }, requirements }; el Asistente
+#   lo abre enseguida para adecuarlo. Despublicada → 404.
+#
 # El autor se muestra con el nombre de su cuenta, nunca con el correo (decisión D2).
 # Plan: docs/publicar_prompts_plan.md
 # ================================================================================
@@ -40,6 +45,12 @@ class Api::V1::Accounts::ContactTrackings::AssistantPublishedPromptsController <
   def show
     pub = PublishedPrompt.published.find(params[:id])
     render json: summary_json(pub).merge(pub.as_json(only: DETAIL_FIELDS))
+  end
+
+  def install
+    pub = PublishedPrompt.published.find(params[:id])
+    template = PublishedPrompts::Installer.new(pub, Current.account, Current.user).install!
+    render json: { tracking_template: template.slice(:id, :name), requirements: pub.requirements }, status: :created
   end
 
   private

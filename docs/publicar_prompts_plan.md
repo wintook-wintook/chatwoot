@@ -358,6 +358,62 @@ users). Si se prefiere columna propia, es la decisión D1.
   conversación sobre él: le cuenta qué se bajó, qué falta configurar (bandeja,
   requisitos detectados) y pregunta lo necesario para adecuar el prompt a la cuenta.
 - Quién puede bajar: administradores de la cuenta (decisión D4).
+- **Se baja de a uno** (pedido del usuario, 05/10/2026): se elige un prompt en la
+  Galería, se abre su detalle y se baja ese. No hay "bajar todos" ni selección múltiple.
+
+**✅ Hecho (05/10/2026)**
+
+```
+ Galería ─► clic en un prompt ─► detalle ─► [ ⬇ Bajar a mi cuenta ]
+                                                   │ POST …/published_prompts/:id/install
+                                                   ▼
+                                  TrackingTemplate nuevo en la cuenta (copia)
+                                  downloads_count + 1 en la publicación
+                                                   │
+                                                   ▼
+                     Asistente: carga la copia (Estructura + Entrenamiento)
+                     y el chat abre con:
+                       «Bajé "Agente de grúas" a tu cuenta… Antes de usarlo, configura:
+                        - La bandeja (canal) donde va a atender
+                        - Hoja de Google: Servicio Gruas
+                        - Calendario para agendar
+                        Cuéntame de tu negocio… Con eso adecuo el Entrenamiento.»
+```
+
+- Qué se hizo:
+  - `PublishedPrompts::Installer`: crea **un** agente en la cuenta con nombre, objetivo,
+    contexto, Entrenamiento, palabras clave y ajustes de la publicación; `user` = quien lo
+    baja; `published_prompt_id` = la publicación. Sin bandeja, calendarios, Base de
+    Conocimiento, plantillas ni etiquetas. Nombre libre en la cuenta: «Título», si no
+    «Título (2)», «(3)»… Todo en una transacción; la descarga se suma en SQL
+    (`update_counters`) para que dos cuentas a la vez no se pisen.
+  - `POST …/contact_trackings/assistant/published_prompts/:id/install` (administrador;
+    despublicada → 404) → `{ tracking_template: { id, name }, requirements }`.
+  - `PublishedPromptsModal.vue`: botón **«Bajar a mi cuenta»** solo en el detalle; emite
+    `installed`.
+  - `Assistant.vue` (`onPromptInstalled`): cierra la Galería, recarga los agentes, abre la
+    copia con `loadTemplate` (guardar la reemplaza a **ella**, nunca al original), deja en
+    el chat el mensaje de bienvenida y cambia la columna izquierda al chat.
+  - i18n `GALLERY.INSTALL*` e `INTRO_*` (es/en).
+- Pila de pruebas (runner, transacción deshecha; la cuenta 2 publica, la cuenta 3 baja):
+
+  | Paso | Esperado | Resultado |
+  |---|---|---|
+  | Bajar «Agente de grúas» | 201, agente #nuevo en la cuenta 3, requisitos | ✅ |
+  | La copia | usuario que bajó, `published_prompt_id`, sin bandeja/kbase/calendarios/etiquetas; zona horaria, reintentos y presentación de horarios copiados | ✅ |
+  | Mismo prompt y objetivo; Estructura regenerada | sí | ✅ |
+  | Agentes nuevos en la cuenta | exactamente 1 | ✅ |
+  | Bajarlo otra vez | «Agente de grúas (2)» | ✅ |
+  | Descargas | Grúas 2, ADAM 0 (no se bajó) | ✅ |
+  | Agente original del autor | intacto en la cuenta 2 | ✅ |
+  | Bajar uno despublicado | 404 | ✅ |
+  | Usuario con rol agente | 401 | ✅ |
+
+  Spec escrito (`spec/services/published_prompts/installer_spec.rb`), sin correr.
+  - **Falta en el navegador:** con un prompt publicado (F3), desde OTRA cuenta: Asistente →
+    «Prompts publicados» → abrir uno → «Bajar a mi cuenta» → alerta «… ya está en tus
+    Agentes IA», el Asistente lo muestra cargado y el chat con el mensaje de bienvenida.
+    Contestarle al chat → el Asistente adecua el Entrenamiento → Guardar (reemplaza la copia).
 
 ### F6 — (opcional) Archivos adjuntos
 - Copiar los `ai_agent_attachments` del agente publicado a la cuenta que baja, si D3 = sí.

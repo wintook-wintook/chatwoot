@@ -927,6 +927,46 @@ export default {
       }
       return `${base} v100`;
     },
+    // proyecto@publicar_prompts (F5) — se bajó UN prompt publicado: la copia ya es un
+    // Agente IA de la cuenta. Se abre aquí como cualquier agente cargado (guardar la
+    // reemplaza a ella, nunca al original del autor) y el chat arranca diciendo qué se
+    // bajó, qué falta configurar y qué contar para adecuarlo.
+    async onPromptInstalled({ tracking_template: copia, requirements }) {
+      this.showPublishedPrompts = false;
+      await this.$store.dispatch('trackingTemplates/get');
+      const template = this.templates.find(t => t.id === copia.id);
+      useAlert(
+        this.$t('TRACKING_ASSISTANT_VIEW.GALLERY.INSTALLED', {
+          name: copia.name,
+        })
+      );
+      if (!template) return;
+
+      this.startFresh();
+      this.loadTemplate(template);
+      this.messages = [
+        {
+          role: 'assistant',
+          content: this.installedIntro(copia.name, requirements || []),
+        },
+      ];
+      if (this.showChat) this.leftPanel = 'chat';
+    },
+    installedIntro(name, requirements) {
+      const t = (key, args) =>
+        this.$t(`TRACKING_ASSISTANT_VIEW.GALLERY.${key}`, args);
+      const pendientes = requirements.map(req => {
+        const kind = this.$t(
+          `TRACKING_TEMPLATES.PUBLISH.REQUIREMENTS.${req.kind.toUpperCase()}`
+        );
+        return `- ${req.name ? `${kind}: ${req.name}` : kind}`;
+      });
+      return [
+        t('INTRO_DONE', { name }),
+        [t('INTRO_SETUP'), t('INTRO_INBOX'), ...pendientes].join('\n'),
+        t('INTRO_ASK'),
+      ].join('\n\n');
+    },
     // Carga un Agente IA existente para mejorarlo. Deja anotado cuál es, para que
     // el guardado ofrezca reemplazarlo —conservando el Entrenamiento anterior— en
     // vez de crear otro al lado.
@@ -2436,6 +2476,7 @@ export default {
     <PublishedPromptsModal
       :show="showPublishedPrompts"
       @close="showPublishedPrompts = false"
+      @installed="onPromptInstalled"
     />
     <BriefModal
       :show="showBriefModal"

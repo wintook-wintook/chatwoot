@@ -4,9 +4,14 @@
 // Los prompts que otras cuentas publicaron se ven y se bajan SOLO desde el
 // Asistente (decisión del usuario, 05/10/2026): de aquí se parte para adecuarlos a
 // la cuenta. Dos vistas en el mismo modal: la lista (buscar, filtrar por categoría)
-// y el detalle con el prompt completo en solo lectura. Bajarlo es la F5.
+// y el detalle con el prompt completo en solo lectura.
+//
+// F5: «Bajar a mi cuenta» está SOLO en el detalle: se elige un prompt y se baja ese
+// (pedido del usuario: nada de bajar todos). Emite `installed` con la respuesta de la
+// API y la vista del Asistente abre la copia para adecuarla.
 // Plan: docs/publicar_prompts_plan.md
 // ============================================================================
+import { useAlert } from 'dashboard/composables';
 import Spinner from 'shared/components/Spinner.vue';
 import AssistantAPI from 'dashboard/api/assistant';
 
@@ -17,7 +22,7 @@ export default {
   props: {
     show: { type: Boolean, default: false },
   },
-  emits: ['close'],
+  emits: ['close', 'installed'],
   data() {
     return {
       isLoading: false,
@@ -28,6 +33,7 @@ export default {
       category: '',
       selected: null,
       isLoadingDetail: false,
+      isInstalling: false,
     };
   },
   watch: {
@@ -76,6 +82,20 @@ export default {
         this.fetchList();
       } finally {
         this.isLoadingDetail = false;
+      }
+    },
+    async install() {
+      if (!this.selected || this.isInstalling) return;
+      this.isInstalling = true;
+      try {
+        const { data } = await AssistantAPI.installPublishedPrompt(
+          this.selected.id
+        );
+        this.$emit('installed', data);
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.GALLERY.INSTALL_ERROR'));
+      } finally {
+        this.isInstalling = false;
       }
     },
     categoryText(category) {
@@ -187,7 +207,7 @@ export default {
 
       <!-- DETALLE (solo lectura) -->
       <div v-else class="flex flex-col gap-3 px-8 pb-6">
-        <div>
+        <div class="flex items-center justify-between gap-2">
           <woot-button
             variant="clear"
             color-scheme="secondary"
@@ -196,6 +216,16 @@ export default {
             @click="selected = null"
           >
             {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.BACK') }}
+          </woot-button>
+          <woot-button
+            size="small"
+            color-scheme="success"
+            icon="arrow-download"
+            :is-loading="isInstalling"
+            :is-disabled="isLoadingDetail"
+            @click="install"
+          >
+            {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.INSTALL') }}
           </woot-button>
         </div>
         <div>
