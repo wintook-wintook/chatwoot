@@ -8,6 +8,10 @@ Un usuario **autorizado desde el super admin** puede publicar el prompt de uno d
 Agentes IA. Cualquier otra cuenta lo ve en una **Galería de prompts** y lo baja a la suya
 como un agente nuevo y suyo, para adecuarlo a sus necesidades.
 
+- **La Galería y la descarga viven SOLO dentro del Asistente de Agentes IA** (decisión
+  del 05/10/2026). Bajar un prompt arranca ahí mismo la conversación con el Asistente para
+  adecuarlo a la cuenta. No hay botón "Bajar" en la lista de Agentes IA ni en la ficha.
+
 - Solo el usuario autorizado ve el botón **Publicar**. Los demás no ven nada de publicar.
 - Bajar un prompt crea una **copia**: lo que la otra cuenta cambie no toca el original, y
   lo que el autor cambie después tampoco toca las copias ya bajadas.
@@ -25,12 +29,14 @@ como un agente nuevo y suyo, para adecuarlo a sus necesidades.
                                             └──────────┬────────────┘
                                                        │
                                                        ▼
-                                                 Galería de prompts
-                                                 [ Bajar a mi cuenta ]
+                                                 Asistente de Agentes IA
+                                                   └ Galería de prompts
+                                                     [ Bajar a mi cuenta ]
                                                        │
                                                        ▼
-                                                 Agente nuevo en B
-                                                 (copia, editable)
+                                                 Agente nuevo en B (copia)
+                                                 + el Asistente lo adecua
+                                                   conversando
 ```
 
 ## Lo que hay hoy (revisado en el código)
@@ -172,11 +178,48 @@ users). Si se prefiere columna propia, es la decisión D1.
 
 ### F2 — API para publicar (solo autorizado)
 ```
- POST   /api/v1/accounts/:id/tracking_templates/:tid/publish     publica o saca versión nueva
- DELETE /api/v1/accounts/:id/tracking_templates/:tid/publish     despublica
+ GET    /api/v1/accounts/:id/tracking_templates/:tid/publication   estado + requisitos que se publicarían
+ POST   /api/v1/accounts/:id/tracking_templates/:tid/publication   publica o saca versión nueva
+ DELETE /api/v1/accounts/:id/tracking_templates/:tid/publication   despublica
 ```
 - Policy: si el usuario no tiene `can_publish_prompts` → 403, aunque llame a mano.
 - Republicar = misma publicación, `version + 1` (las copias ya bajadas no cambian).
+
+**✅ Hecho (05/10/2026)**
+
+- Qué se hizo:
+  - Ruta `resource :publication` anidada en `tracking_templates` (`config/routes.rb`).
+  - `TrackingTemplates::PublicationsController`: primero revisa
+    `Current.user.can_publish_prompts?` (403 si no, aunque sea administrador); luego busca
+    el agente **solo en la cuenta actual** (otro → 404).
+  - `PublishedPrompts::Publisher`: `publish!` toma la foto, pone autor y fecha, `version` 1
+    la primera vez y +1 cada vez que se vuelve a publicar (también tras despublicar).
+    Lo que no se manda (`nil`) conserva el título/descripción/categoría anterior; el título
+    vacío cae al nombre del agente. `unpublish!` solo cambia el estado: la fila, el
+    contador y las copias se conservan.
+- Respuesta (las tres acciones):
+  ```json
+  { "publication": { "id", "title", "description", "category", "version", "status",
+                     "downloads_count", "published_at", "requirements" } | null,
+    "preview": { "requirements": [ … lo que se publicaría con el prompt de hoy … ] },
+    "categories": ["ventas", "cobranza", "soporte", "agenda", "atencion", "otros"] }
+  ```
+- Pila de pruebas (ya corrida con el runner contra el agente #10368, cuenta 2, usuario #1,
+  dentro de una transacción deshecha; quedaron 0 publicaciones y el permiso en `false`):
+
+  | Paso | Esperado | Resultado |
+  |---|---|---|
+  | GET/POST sin permiso | 403 | ✅ |
+  | GET con permiso, nunca publicado | `publication: null`, preview «Servicio Gruas» + calendario | ✅ |
+  | POST título/descr./categoría | 201, v1, published | ✅ |
+  | POST vacío | v2, conserva título y descripción | ✅ |
+  | POST categoría inventada | 422 | ✅ |
+  | DELETE | unpublished, v2 | ✅ |
+  | POST otra vez | published, v3 | ✅ |
+  | Agente que no es de la cuenta | 404 | ✅ |
+
+  Spec escrito (`spec/controllers/api/v1/accounts/tracking_templates/publications_controller_spec.rb`),
+  sin correr por la base de dev.
 
 ### F3 — Botón Publicar en la ficha del agente
 - Solo visible si `currentUser.can_publish_prompts`.
@@ -200,12 +243,18 @@ users). Si se prefiere columna propia, es la decisión D1.
  └─────────────────────────────────────────────────┘
 ```
 
-### F4 — Galería (todas las cuentas)
+### F4 — Galería dentro del Asistente de Agentes IA (todas las cuentas)
+
+> Cambio del 05/10/2026: la Galería **no** va junto a Importar en la lista de Agentes IA;
+> va dentro del Asistente. Al llegar a esta fase se revisa cómo entra hoy el Asistente
+> (armar desde cero, importar .md) para que "partir de un prompt publicado" sea una
+> entrada más del mismo lugar.
+
 ```
  GET  /api/v1/accounts/:id/published_prompts            lista (búsqueda, categoría)
  GET  /api/v1/accounts/:id/published_prompts/:pid       detalle (prompt completo, solo lectura)
 ```
-- En Agentes IA, botón **"Galería de prompts"** junto a Importar: tarjetas con título,
+- En el Asistente, opción **"Partir de un prompt publicado"**: tarjetas con título,
   descripción, autor (nombre de la cuenta, decisión D2), versión, descargas.
 - Vista de detalle: el prompt completo en solo lectura antes de bajarlo.
 
@@ -215,7 +264,9 @@ users). Si se prefiere columna propia, es la decisión D1.
 ```
 - Crea el agente con lo que viaja, `published_prompt_id` apuntando al origen, nombre
   único en la cuenta, `downloads_count + 1`.
-- Abre la ficha del agente nuevo con un aviso "Configura: bandeja, …, requisitos".
+- Se llama solo desde el Asistente. Tras crear el agente, el Asistente abre la
+  conversación sobre él: le cuenta qué se bajó, qué falta configurar (bandeja,
+  requisitos detectados) y pregunta lo necesario para adecuar el prompt a la cuenta.
 - Quién puede bajar: administradores de la cuenta (decisión D4).
 
 ### F6 — (opcional) Archivos adjuntos

@@ -93,6 +93,8 @@ Rails.application.routes.draw do
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
+            # proyecto@publicar_prompts: publicar el prompt para que otras cuentas lo bajen
+            resource :publication, only: [:show, :create, :destroy], module: :tracking_templates
           end
           # @query_databases — conexiones a ERPs + consultas predefinidas + consola
           resources :external_db_connections, only: [:index, :show, :create, :update, :destroy] do
