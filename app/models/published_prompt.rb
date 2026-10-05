@@ -55,6 +55,8 @@ class PublishedPrompt < ApplicationRecord
 
   # Los agentes que otras cuentas crearon al bajarla.
   has_many :installed_templates, class_name: 'TrackingTemplate', dependent: :nullify, inverse_of: :published_prompt
+  # F6: los archivos del agente que el autor eligió publicar (copias propias).
+  has_many :files, class_name: 'PublishedPromptFile', dependent: :destroy
 
   validates :title, presence: true, length: { minimum: 2, maximum: 100 }
   validates :description, length: { maximum: 500 }

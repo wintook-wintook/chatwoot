@@ -12,6 +12,9 @@
 # agente nuevo nace sin bandeja, calendarios, Base de Conocimiento, plantillas ni
 # etiquetas. Las directivas siguen en el texto; `requirements` dice qué configurar.
 #
+# F6: los archivos que el autor publicó llegan como archivos propios del agente nuevo
+# (pestaña «Archivos»), con el mismo nombre, así sus {{nombre}} funcionan desde ya.
+#
 # El nombre es único por cuenta: si «Agente de grúas» ya existe, se usa
 # «Agente de grúas (2)», «(3)», …
 # Plan: docs/publicar_prompts_plan.md
@@ -29,6 +32,7 @@ class PublishedPrompts::Installer
   def install!
     ActiveRecord::Base.transaction do
       template = @account.tracking_templates.create!(template_attributes)
+      copy_files(template)
       # Suma en SQL (downloads_count = downloads_count + 1): dos cuentas bajando a la vez
       # no se pisan la cuenta. No hay nada que validar en un contador.
       PublishedPrompt.update_counters(@publication.id, downloads_count: 1) # rubocop:disable Rails/SkipsModelValidations
@@ -38,6 +42,14 @@ class PublishedPrompts::Installer
 
   private
 
+  def copy_files(template)
+    @publication.files.includes(file_attachment: :blob).find_each do |publicado|
+      adjunto = template.ai_agent_attachments.new(name: publicado.name, account: @account)
+      PublishedPrompts::FileCopier.copy(publicado.file, adjunto.file)
+      adjunto.save!
+    end
+  end
+
   def template_attributes
     {
       name: available_name,
@@ -46,7 +58,8 @@ class PublishedPrompts::Installer
       complementary_prompt: @publication.prompt,
       keyword_actions: @publication.keyword_actions,
       user: @user,
-      published_prompt: @publication
+      published_prompt: @publication,
+      published_prompt_version: @publication.version # F7: para avisar de versiones nuevas
     }.merge(@publication.settings.slice(*PublishedPrompts::Snapshot::SETTINGS).symbolize_keys)
   end
 

@@ -14,12 +14,18 @@
 #
 # GET …/assistant/published_prompts/:id
 #   Una publicación vigente con el prompt completo, para leerla antes de bajarla.
+#   Lista y detalle traen `files`: los archivos del agente que vienen incluidos (F6).
 #   Despublicada o inexistente → 404.
 #
 # POST …/assistant/published_prompts/:id/install
 #   Baja ESA publicación (una sola) como Agente IA nuevo de la cuenta y suma una
 #   descarga. 201 con { tracking_template: { id, name }, requirements }; el Asistente
 #   lo abre enseguida para adecuarlo. Despublicada → 404.
+#
+# POST …/assistant/published_prompts/:id/seen  (template_id)
+#   F7: la copia `template_id` (bajada de ESTA publicación) ya revisó la versión actual:
+#   deja de avisar hasta que el autor publique otra. No cambia el Entrenamiento. → 200
+#   con { published_prompt_update: null }.
 #
 # El autor se muestra con el nombre de su cuenta, nunca con el correo (decisión D2).
 # Plan: docs/publicar_prompts_plan.md
@@ -33,7 +39,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantPublishedPromptsController <
   before_action :check_authorization
 
   def index
-    scope = PublishedPrompt.published.includes(:account).ordered
+    scope = PublishedPrompt.published.includes(:account, files: { file_attachment: :blob }).ordered
     scope = scope.search(params[:q]) if params[:q].present?
     scope = scope.by_category(params[:category]) if params[:category].present?
     render json: {
@@ -53,6 +59,13 @@ class Api::V1::Accounts::ContactTrackings::AssistantPublishedPromptsController <
     render json: { tracking_template: template.slice(:id, :name), requirements: pub.requirements }, status: :created
   end
 
+  def seen
+    pub = PublishedPrompt.find(params[:id])
+    template = Current.account.tracking_templates.find_by!(id: params[:template_id], published_prompt_id: pub.id)
+    template.update!(published_prompt_version: pub.version)
+    render json: { published_prompt_update: template.published_prompt_update }
+  end
+
   private
 
   def check_authorization
@@ -62,7 +75,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantPublishedPromptsController <
   def summary_json(pub)
     pub.as_json(only: SUMMARY_FIELDS).merge(
       'author' => pub.account&.name,
-      'own' => pub.account_id == Current.account.id
+      'own' => pub.account_id == Current.account.id,
+      'files' => pub.files.map(&:summary) # F6: los archivos que trae
     )
   end
 end

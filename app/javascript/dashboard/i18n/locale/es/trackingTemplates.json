@@ -286,7 +286,7 @@
         "ATENCION": "Atención a clientes",
         "OTROS": "Otros"
       },
-      "NOT_PUBLISHED": "No se publica: la bandeja, los calendarios, la Base de Conocimiento, las plantillas de WhatsApp, las etiquetas ni los archivos del agente.",
+      "NOT_PUBLISHED": "No se publica: la bandeja, los calendarios, la Base de Conocimiento, las plantillas de WhatsApp, las etiquetas ni los archivos que no marques.",
       "REQUIREMENTS_TITLE": "Quien lo baje tendrá que configurar en su cuenta:",
       "NO_REQUIREMENTS": "El prompt no usa recursos de tu cuenta: quien lo baje no tendrá que configurar nada extra.",
       "REQUIREMENTS": {
@@ -310,7 +310,13 @@
         "UNPUBLISHED": "Prompt despublicado",
         "LOAD_ERROR": "No se pudo cargar la publicación",
         "SAVE_ERROR": "No se pudo guardar la publicación"
-      }
+      },
+      "FILES": {
+        "TITLE": "Archivos del agente que se publican",
+        "HELP": "Cualquier cuenta que baje el prompt recibirá una copia de los archivos marcados. No marques los que sean solo de tu empresa."
+      },
+      "UPDATE_BADGE": "v{version} disponible",
+      "UPDATE_HINT": "El autor publicó una versión nueva. Ábrelo en el Asistente para ver los cambios."
     }
   },
   "TRACKING_IMPORT": {

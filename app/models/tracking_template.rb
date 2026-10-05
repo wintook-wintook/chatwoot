@@ -33,6 +33,7 @@
 #  inbox_id                      :bigint
 #  kbase_hook_id                 :integer
 #  published_prompt_id           :bigint
+#  published_prompt_version      :integer
 #  user_id                       :bigint
 #
 # Indexes
@@ -60,6 +61,15 @@ class TrackingTemplate < ApplicationRecord
   belongs_to :published_prompt, optional: true
   # proyecto@publicar_prompts: la publicación de ESTE agente (si su autor lo publicó)
   has_one :publication, class_name: 'PublishedPrompt', dependent: nil, inverse_of: :tracking_template
+
+  # proyecto@publicar_prompts (F7): si se bajó de la Galería y el autor publicó una versión
+  # más nueva que la que tiene (o ya revisó) esta copia. Nunca se aplica sola.
+  def published_prompt_update
+    pub = published_prompt
+    return unless pub&.published? && pub.version > published_prompt_version.to_i
+
+    { 'published_prompt_id' => pub.id, 'version' => pub.version, 'current_version' => published_prompt_version }
+  end
 
   # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
   has_many :ai_agent_attachments, dependent: :destroy

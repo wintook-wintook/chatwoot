@@ -70,6 +70,7 @@ import {
 } from './assistant/conversationReview';
 import BriefModal from './assistant/BriefModal.vue';
 import PublishedPromptsModal from './assistant/PublishedPromptsModal.vue'; // proyecto@publicar_prompts
+import PublishedUpdateModal from './assistant/PublishedUpdateModal.vue'; // proyecto@publicar_prompts (F7)
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import VersionsPanel from './assistant/VersionsPanel.vue';
 // La Estructura del Agente: el árbol con sus modales (docs/estructura_agente_arbol_plan.md).
@@ -162,6 +163,7 @@ export default {
     InstructionsPanel,
     BriefModal,
     PublishedPromptsModal,
+    PublishedUpdateModal,
     ManualConflictNotice,
     VersionsPanel,
     AgentStructure,
@@ -276,6 +278,7 @@ export default {
       showBriefModal: false,
       // proyecto@publicar_prompts: la Galería de prompts publicados por otras cuentas.
       showPublishedPrompts: false,
+      showPublishedUpdate: false, // F7: «el autor publicó una versión nueva»
       isWritingBrief: false,
       // Qué ocupa la columna izquierda: 'structure' (la Estructura del Agente) o
       // 'chat'. Uno a la vez (pedido del usuario, 23/09/2026): con los dos, más el
@@ -429,6 +432,23 @@ export default {
     },
     inboxes() {
       return this.$store.getters['inboxes/getInboxes'] || [];
+    },
+    // proyecto@publicar_prompts (F7) — el agente cargado se bajó de la Galería y el autor
+    // publicó una versión más nueva: { published_prompt_id, version, current_version }.
+    publishedUpdate() {
+      if (!this.editingTemplate) return null;
+      const template = this.templates.find(
+        t => t.id === this.editingTemplate.id
+      );
+      return (template && template.published_prompt_update) || null;
+    },
+    publishedUpdateText() {
+      const update = this.publishedUpdate;
+      if (!update) return '';
+      return this.$t('TRACKING_ASSISTANT_VIEW.GALLERY.UPDATE_NOTICE', {
+        version: update.version,
+        current: update.current_version || 1,
+      });
     },
     // El getter se llama getTemplates, no getTrackingTemplates: pedir el nombre
     // equivocado devolvía undefined y el `|| []` dejaba el desplegable de
@@ -966,6 +986,15 @@ export default {
         [t('INTRO_SETUP'), t('INTRO_INBOX'), ...pendientes].join('\n'),
         t('INTRO_ASK'),
       ].join('\n\n');
+    },
+    // F7: el texto de la versión nueva va al editor SIN guardar. Cuenta como editado a
+    // mano (lastDelivered sigue siendo el guardado): la persona revisa y guarda si quiere.
+    loadPublishedVersion(published) {
+      this.draft = published.prompt || '';
+      this.draftTab = 'editor';
+      this.reloadTrainingSections();
+      this.validateDraft();
+      useAlert(this.$t('TRACKING_ASSISTANT_VIEW.GALLERY.UPDATE_LOADED'));
     },
     // Carga un Agente IA existente para mejorarlo. Deja anotado cuál es, para que
     // el guardado ofrezca reemplazarlo —conservando el Entrenamiento anterior— en
@@ -1734,6 +1763,23 @@ export default {
             </div>
           </div>
 
+          <!-- proyecto@publicar_prompts (F7): el autor publicó una versión nueva del
+               prompt del que salió este agente. Nunca se aplica sola. -->
+          <div
+            v-if="publishedUpdate"
+            class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm border rounded-lg shrink-0 bg-woot-25 dark:bg-woot-900/30 border-woot-100 dark:border-woot-800 text-slate-700 dark:text-slate-200"
+          >
+            <span>{{ publishedUpdateText }}</span>
+            <woot-button
+              size="small"
+              variant="smooth"
+              icon="arrow-clockwise"
+              @click="showPublishedUpdate = true"
+            >
+              {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.UPDATE_VIEW') }}
+            </woot-button>
+          </div>
+
           <div class="grid flex-1 min-h-0 gap-4 md:grid-cols-2">
             <!-- La columna izquierda: la Estructura del Agente o la conversación,
                  una a la vez, con el selector arriba. -->
@@ -2477,6 +2523,15 @@ export default {
       :show="showPublishedPrompts"
       @close="showPublishedPrompts = false"
       @installed="onPromptInstalled"
+    />
+    <PublishedUpdateModal
+      :show="showPublishedUpdate"
+      :update="publishedUpdate"
+      :template-id="editingTemplate ? editingTemplate.id : null"
+      :draft="draft"
+      @close="showPublishedUpdate = false"
+      @load="loadPublishedVersion"
+      @seen="$store.dispatch('trackingTemplates/get')"
     />
     <BriefModal
       :show="showBriefModal"

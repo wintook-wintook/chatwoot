@@ -415,12 +415,121 @@ users). Si se prefiere columna propia, es la decisión D1.
     Agentes IA», el Asistente lo muestra cargado y el chat con el mensaje de bienvenida.
     Contestarle al chat → el Asistente adecua el Entrenamiento → Guardar (reemplaza la copia).
 
-### F6 — (opcional) Archivos adjuntos
+### F6 — Archivos adjuntos
 - Copiar los `ai_agent_attachments` del agente publicado a la cuenta que baja, si D3 = sí.
 
-### F7 — (opcional) Aviso de versión nueva
+**✅ Hecho (05/10/2026)** — D3 resuelta: **sí viajan, pero solo los que el autor marca.**
+
+```
+ Ventana Publicar                         published_prompt_files        Agente bajado
+ ┌──────────────────────────────┐        (copia propia, al publicar)   (copia propia, al bajar)
+ │ Archivos del agente que se    │
+ │ publican                       │
+ │ [x] catalogo_pdf  catalogo.pdf ├──────► catalogo_pdf ───────────────► Archivos: catalogo_pdf
+ │ [ ] logo_interno  logo.png     │        (logo_interno no viaja)       → {{catalogo_pdf}} funciona
+ └──────────────────────────────┘
+```
+
+- Qué se hizo:
+  - Tabla `published_prompt_files` (`published_prompt_id`, `name`; borrado en cascada) y
+    modelo `PublishedPromptFile` (`has_one_attached :file`, mismo formato de nombre que
+    `AiAgentAttachment`). `PublishedPrompt has_many :files`.
+  - `PublishedPrompts::FileCopier`: copia el archivo (lo descarga y lo sube como blob
+    nuevo con `create_and_upload!`). No se comparte el blob: borrar en un lado nunca deja
+    sin archivo al otro.
+  - `Publisher#publish!(attachment_ids:)`: copia **solo** los elegidos y los quita de
+    `requirements`. `attachment_ids` ausente (`nil`) = vuelve a copiar los mismos nombres
+    de la versión anterior; `[]` = ninguno. Un id de otro agente se ignora (se busca solo
+    entre los archivos de ESTE agente). Todo en una transacción con la publicación.
+  - `Installer`: el agente bajado recibe sus propios `AiAgentAttachment` (cuenta destino,
+    mismo nombre), así sus `{{nombre}}` funcionan sin configurar nada.
+  - API: `GET …/publication` trae `attachments` (`referenced`: el prompt lo usa;
+    `included`: va en la versión publicada) y `publication.files`; la Galería trae `files`.
+  - Ventana Publicar: casillas con nombre, archivo y tamaño. Vienen marcados los que el
+    prompt usa (primera vez) o los de la versión publicada (republicar), con el aviso
+    «Cualquier cuenta que baje el prompt recibirá una copia…». La lista «tendrá que
+    configurar» se actualiza al marcar/desmarcar.
+  - Galería (detalle): «Incluye estos archivos del agente».
+- Pila de pruebas (runner, transacción deshecha + borrado de los archivos subidos;
+  agente Grúas #10368 con 2 archivos de prueba, la cuenta 3 baja):
+
+  | Paso | Esperado | Resultado |
+  |---|---|---|
+  | Ver publicación | catalogo_pdf `referenced`, logo_interno no; requisito «Archivo: catalogo_pdf» | ✅ |
+  | Publicar con catalogo_pdf | 1 archivo; ya no figura en requisitos | ✅ |
+  | La copia publicada | blob distinto, mismo contenido | ✅ |
+  | El autor cambia su archivo | lo publicado no cambia | ✅ |
+  | Galería | trae `files: [catalogo_pdf]` | ✅ |
+  | Bajar en la cuenta 3 | el agente nuevo tiene catalogo_pdf, de la cuenta 3, mismo contenido | ✅ |
+  | Republicar sin `attachment_ids` | v2 con el archivo NUEVO del autor | ✅ |
+  | Republicar con `[]` | sin archivos; vuelve el requisito | ✅ |
+  | `attachment_ids` de otro agente | se ignora | ✅ |
+
+  Spec escrito (`spec/services/published_prompts/publisher_files_spec.rb`), sin correr.
+  - **Nota de prueba:** dentro de una transacción que se deshace, `attach(io:)` no sube el
+    archivo (Rails lo sube al confirmar). Por eso `FileCopier` usa `create_and_upload!`.
+  - **Falta en el navegador:** en un agente con archivos, Publicar → ver las casillas →
+    publicar → en otra cuenta, Galería muestra los archivos → Bajar → pestaña «Archivos»
+    del agente nuevo.
+
+### F7 — Aviso de versión nueva
 - En la ficha de un agente bajado: "El autor publicó la v3" + ver diferencias. Nunca se
   pisa solo.
+
+**✅ Hecho (05/10/2026)** — D7 resuelta: sí, solo como aviso. Como los prompts se bajan
+desde el Asistente, el aviso también vive ahí (no en la ficha).
+
+```
+ Agentes IA (lista)                         Asistente (agente bajado cargado)
+ Agente de grúas  [v3 disponible] ──🪄──►   ┌────────────────────────────────────────────┐
+                                            │ El autor publicó la versión 3 del prompt…  │
+                                            │ (tienes la 1)               [ Ver cambios ] │
+                                            └───────────────────────┬────────────────────┘
+                                                                    ▼
+                                    ┌─ Versión 3 disponible ──────────────────────────┐
+                                    │ +12 / −3 líneas respecto de tu Entrenamiento     │
+                                    │ − línea tuya                                     │
+                                    │ + línea de la v3                                 │
+                                    │ [ Ignorar esta versión ] [ Cargar en el Asistente ]│
+                                    └──────────────────────────────────────────────────┘
+       Cargar → el texto va al EDITOR sin guardar · Ignorar → no avisa hasta la v4
+```
+
+- Qué se hizo:
+  - Migración `20261005190000_add_published_prompt_version_to_tracking_templates`: qué
+    versión bajó (o ya revisó) cada copia. Las copias que ya existían se dan por al día
+    (no se sabe qué versión bajaron).
+  - `Installer` guarda la versión al bajar.
+  - `TrackingTemplate#published_prompt_update` → `{ published_prompt_id, version,
+    current_version }` si la publicación sigue publicada y es más nueva; si no, `nil`.
+    Va en el JSON de la lista de agentes.
+  - `POST …/assistant/published_prompts/:id/seen` (`template_id`): marca la versión como
+    revisada. Solo una copia de la cuenta que salió de ESA publicación (otra → 404). No
+    toca el Entrenamiento.
+  - Lista de Agentes IA: etiqueta **«v3 disponible»** con la ayuda «Ábrelo en el
+    Asistente para ver los cambios».
+  - Asistente: aviso arriba de las columnas + `PublishedUpdateModal.vue` (nuevo), que
+    compara el Entrenamiento del editor con el de la versión nueva (`diffHunks`, el mismo
+    formato que Versiones/Optimizar). «Cargar en el Asistente» pone el texto en el editor
+    **sin guardar** y avisa «revísala y guarda si te sirve». Solo el Entrenamiento: ni
+    archivos ni definición.
+- Pila de pruebas (runner, transacción deshecha; Grúas #10368 publicado, bajado en la
+  cuenta 3):
+
+  | Paso | Esperado | Resultado |
+  |---|---|---|
+  | Tu copia #12151 (bajada antes de la F7) | versión 1, sin aviso | ✅ |
+  | Recién bajada | versión 1, sin aviso | ✅ |
+  | El autor publica hasta v3 | aviso `{version: 3, current_version: 1}` | ✅ |
+  | «Ignorar» (`seen`) | 200, sin aviso | ✅ |
+  | El autor publica v4 | aviso `{4, 3}` | ✅ |
+  | El autor despublica | sin aviso | ✅ |
+  | `seen` con un agente que no salió de esa publicación | 404 | ✅ |
+
+  Spec escrito (`spec/models/tracking_template_published_prompt_update_spec.rb`), sin correr.
+  - **Falta en el navegador:** con una copia bajada, que el autor publique otra versión →
+    etiqueta en la lista → abrir en el Asistente → aviso → Ver cambios → Cargar (editor
+    cambia, nada guardado) / Ignorar (el aviso desaparece).
 
 ## Decisiones abiertas
 
@@ -428,8 +537,8 @@ users). Si se prefiere columna propia, es la decisión D1.
 |----|----------|-----------------------|
 | D1 | ¿Permiso en `custom_attributes` o columna propia `can_publish_prompts`? | `custom_attributes` (sin migrar `users`) |
 | D2 | ¿Qué se muestra como autor en la Galería? | Nombre de la cuenta, no el correo |
-| D3 | ¿Los archivos adjuntos viajan? | No en la primera versión (F6 después) |
+| D3 | ¿Los archivos adjuntos viajan? | ✅ Resuelta en F6: sí, solo los que el autor marca |
 | D4 | ¿Quién puede bajar prompts en la cuenta destino? | Solo administradores |
 | D5 | ¿La Galería es para todas las cuentas o el super admin elige cuáles la ven? | Todas |
 | D6 | ¿El super admin puede despublicar un prompt ajeno? | Sí, desde una lista en el super admin (F4 bis) |
-| D7 | ¿Las copias se enteran de versiones nuevas (F7)? | Sí, solo como aviso |
+| D7 | ¿Las copias se enteran de versiones nuevas (F7)? | ✅ Resuelta en F7: sí, solo como aviso, en el Asistente |

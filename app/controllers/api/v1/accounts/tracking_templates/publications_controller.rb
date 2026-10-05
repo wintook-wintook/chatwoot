@@ -45,17 +45,36 @@ class Api::V1::Accounts::TrackingTemplates::PublicationsController < Api::V1::Ac
   end
 
   def publication_params
-    params.fetch(:publication, {}).permit(:title, :description, :category)
+    params.fetch(:publication, {}).permit(:title, :description, :category, attachment_ids: [])
   end
+
+  PUBLICATION_FIELDS = %i[id title description category version status downloads_count published_at requirements].freeze
 
   # `publication` es null mientras el agente no se haya publicado nunca. `preview` es lo
   # que se publicaría HOY (requisitos detectados en el prompt actual), para el modal.
+  # `attachments`: los archivos del agente, para elegir cuáles viajan (F6).
   def publication_json
     pub = publisher.publication
     {
-      publication: (pub.as_json(only: %i[id title description category version status downloads_count published_at requirements]) if pub.persisted?),
+      publication: (pub.as_json(only: PUBLICATION_FIELDS).merge('files' => pub.files.map(&:summary)) if pub.persisted?),
       preview: { requirements: PublishedPrompts::Snapshot.new(@tracking_template).attributes[:requirements] },
+      attachments: attachments_json(pub),
       categories: PublishedPrompt::CATEGORIES
     }
+  end
+
+  # `referenced`: el prompt lo usa con {{nombre}}; `included`: va en la versión publicada.
+  def attachments_json(pub)
+    usados = PublishedPrompts::Requirements.attachments(@tracking_template.complementary_prompt.to_s).pluck('name').map(&:downcase)
+    publicados = pub.persisted? ? pub.files.map { |f| f.name.downcase } : []
+    agent_attachments.map do |adjunto|
+      nombre = adjunto.name.downcase
+      { id: adjunto.id, name: adjunto.name, filename: adjunto.file.filename.to_s, byte_size: adjunto.file.byte_size,
+        referenced: usados.include?(nombre), included: publicados.include?(nombre) }
+    end
+  end
+
+  def agent_attachments
+    @tracking_template.ai_agent_attachments.includes(file_attachment: :blob).order(:name).select { |a| a.file.attached? }
   end
 end

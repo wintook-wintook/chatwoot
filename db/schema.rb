@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_05_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_05_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1421,6 +1421,15 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_05_120000) do
     t.index ["user_id"], name: "index_portals_members_on_user_id"
   end
 
+  create_table "published_prompt_files", force: :cascade do |t|
+    t.bigint "published_prompt_id", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["published_prompt_id", "name"], name: "index_published_prompt_files_on_published_prompt_id_and_name", unique: true
+    t.index ["published_prompt_id"], name: "index_published_prompt_files_on_published_prompt_id"
+  end
+
   create_table "published_prompts", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id"
@@ -1690,6 +1699,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_05_120000) do
     t.text "previous_complementary_prompt"
     t.jsonb "training_structure", default: {}, null: false
     t.bigint "published_prompt_id"
+    t.integer "published_prompt_version"
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
@@ -1864,6 +1874,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_05_120000) do
   add_foreign_key "knowledge_items", "accounts"
   add_foreign_key "knowledge_items", "knowledge_sources"
   add_foreign_key "knowledge_sources", "accounts"
+  add_foreign_key "published_prompt_files", "published_prompts", on_delete: :cascade
   add_foreign_key "published_prompts", "accounts"
   add_foreign_key "published_prompts", "tracking_templates", on_delete: :nullify
   add_foreign_key "published_prompts", "users", on_delete: :nullify
