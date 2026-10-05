@@ -332,6 +332,26 @@ class AssistantAPI extends ApiClient {
       body.calendar_integration_ids = calendarIntegrationIds;
     return axios.post(`${this.url}/save`, body);
   }
+
+  // proyecto@publicar_prompts — la Galería de prompts que publicaron otras cuentas.
+  // { published_prompts: [...sin el prompt], categories }
+  getPublishedPrompts({ q = '', category = '' } = {}) {
+    const params = {};
+    if (q) params.q = q;
+    if (category) params.category = category;
+    return axios.get(`${this.url}/published_prompts`, { params });
+  }
+
+  // Una publicación con el prompt completo, para leerla antes de bajarla.
+  getPublishedPrompt(id) {
+    return axios.get(`${this.url}/published_prompts/${id}`);
+  }
+
+  // Baja ESA publicación como Agente IA nuevo de la cuenta (una sola).
+  // → { tracking_template: { id, name }, requirements }
+  installPublishedPrompt(id) {
+    return axios.post(`${this.url}/published_prompts/${id}/install`);
+  }
 }
 
 export default new AssistantAPI();

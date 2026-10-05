@@ -523,6 +523,30 @@
     "SESSION_DISCARD_YES": "Yes, delete",
     "SESSION_DISCARD_NO": "Cancel",
     "SESSION_DISCARDED": "#%{id} was removed from the list.",
-    "SESSION_DISCARD_ERROR": "Could not delete. Please try again."
+    "SESSION_DISCARD_ERROR": "Could not delete. Please try again.",
+    "GALLERY": {
+      "OPEN": "Published prompts",
+      "TITLE": "Published prompts",
+      "DESCRIPTION": "AI Agents shared by other accounts. Review one and download it to your account to adapt it to your business with the Assistant.",
+      "SEARCH": "Search by title or description",
+      "ALL_CATEGORIES": "All categories",
+      "EMPTY": "No published prompts match.",
+      "LOAD_ERROR": "Couldn't load the published prompts.",
+      "OWN": "From your account",
+      "META": "{author} · v{version} · {downloads} downloads",
+      "BACK": "Back to the list",
+      "REQUIREMENTS_TITLE": "To use it you'll need to set up in your account:",
+      "NO_REQUIREMENTS": "It doesn't use resources from another account: nothing extra to set up.",
+      "OBJECTIVE": "Objective",
+      "CONTEXT": "Context",
+      "PROMPT": "Training",
+      "INSTALL": "Download to my account",
+      "INSTALL_ERROR": "Couldn't download the prompt.",
+      "INSTALLED": "\"{name}\" is now in your AI Agents",
+      "INTRO_DONE": "I downloaded \"{name}\" to your account as a new AI Agent. It's your own copy: changes here don't affect the original. It's already in the Agent Structure.",
+      "INTRO_SETUP": "Before using it, set up in your account:",
+      "INTRO_INBOX": "- The inbox (channel) it will answer on",
+      "INTRO_ASK": "Tell me about your business: what you sell or which service you offer, your company name and what you want it to do differently. I'll adapt the Training with that."
+    }
   }
 }

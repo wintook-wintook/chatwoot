@@ -39,6 +39,20 @@ class TrackingTemplatesAPI extends ApiClient {
   trainingPreview(payload) {
     return axios.post(`${this.url}/training_preview`, payload);
   }
+
+  // proyecto@publicar_prompts — solo el usuario con can_publish_prompts (si no, 403).
+  // Las tres responden { publication, preview: { requirements }, categories }.
+  getPublication(templateId) {
+    return axios.get(`${this.url}/${templateId}/publication`);
+  }
+
+  publish(templateId, publication) {
+    return axios.post(`${this.url}/${templateId}/publication`, { publication });
+  }
+
+  unpublish(templateId) {
+    return axios.delete(`${this.url}/${templateId}/publication`);
+  }
 }
 
 export default new TrackingTemplatesAPI();

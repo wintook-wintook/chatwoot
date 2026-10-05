@@ -263,7 +263,55 @@
       "TIMEZONE_HELP": "Zona horaria con la que se ofrecen los horarios, se muestra la hora al cliente y se crea el evento. Si la dejas vacía, se usa la del canal."
     },
     "IMPROVE_WITH_ASSISTANT": "Mejorar con el Asistente",
-    "HEADER_BTN_ASSISTANT": "Armar con el Asistente"
+    "HEADER_BTN_ASSISTANT": "Armar con el Asistente",
+    "PUBLISH": {
+      "BUTTON": "Publicar prompt",
+      "BADGE": "Publicado v{version}",
+      "TITLE": "Publicar prompt",
+      "DESCRIPTION": "Otras cuentas podrán bajar una copia de este prompt desde su Asistente de Agentes IA y adecuarla a su negocio. Lo que cambies después no les llega hasta que publiques una versión nueva.",
+      "STATUS_PUBLISHED": "Publicado · v{version} · {downloads} descargas",
+      "STATUS_UNPUBLISHED": "Despublicado · última versión v{version} · {downloads} descargas",
+      "FORM": {
+        "TITLE": "Título",
+        "DESCRIPTION": "Descripción",
+        "DESCRIPTION_PLACEHOLDER": "Qué hace este agente y para qué tipo de negocio sirve",
+        "CATEGORY": "Categoría",
+        "NO_CATEGORY": "Sin categoría"
+      },
+      "CATEGORIES": {
+        "VENTAS": "Ventas",
+        "COBRANZA": "Cobranza",
+        "SOPORTE": "Soporte",
+        "AGENDA": "Agenda",
+        "ATENCION": "Atención a clientes",
+        "OTROS": "Otros"
+      },
+      "NOT_PUBLISHED": "No se publica: la bandeja, los calendarios, la Base de Conocimiento, las plantillas de WhatsApp, las etiquetas ni los archivos del agente.",
+      "REQUIREMENTS_TITLE": "Quien lo baje tendrá que configurar en su cuenta:",
+      "NO_REQUIREMENTS": "El prompt no usa recursos de tu cuenta: quien lo baje no tendrá que configurar nada extra.",
+      "REQUIREMENTS": {
+        "GOOGLE_DOC": "Documento de Google",
+        "GOOGLE_SHEET": "Hoja de Google",
+        "ERP_QUERY": "Consulta al ERP",
+        "ATTACHMENT": "Archivo del agente",
+        "KNOWLEDGE_SOURCE": "Foro de la Base de Conocimiento",
+        "DISCOURSE_INTEGRATION": "Integración con Discourse",
+        "CONTPAQ_SUPPORT": "Soporte Contpaq",
+        "ARTICLE": "Artículos del Centro de ayuda",
+        "CALENDAR": "Calendario para agendar",
+        "CANNED_RESPONSES": "Respuestas predefinidas"
+      },
+      "SUBMIT": "Publicar",
+      "SUBMIT_NEW_VERSION": "Publicar versión nueva",
+      "UNPUBLISH": "Despublicar",
+      "CANCEL": "Cancelar",
+      "API": {
+        "PUBLISHED": "Prompt publicado",
+        "UNPUBLISHED": "Prompt despublicado",
+        "LOAD_ERROR": "No se pudo cargar la publicación",
+        "SAVE_ERROR": "No se pudo guardar la publicación"
+      }
+    }
   },
   "TRACKING_IMPORT": {
     "BTN_OPEN": "Importar desde Excel",

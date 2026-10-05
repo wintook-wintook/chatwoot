@@ -69,6 +69,7 @@ import {
   hasTrainingFixes,
 } from './assistant/conversationReview';
 import BriefModal from './assistant/BriefModal.vue';
+import PublishedPromptsModal from './assistant/PublishedPromptsModal.vue'; // proyecto@publicar_prompts
 import ManualConflictNotice from './assistant/ManualConflictNotice.vue';
 import VersionsPanel from './assistant/VersionsPanel.vue';
 // La Estructura del Agente: el árbol con sus modales (docs/estructura_agente_arbol_plan.md).
@@ -160,6 +161,7 @@ export default {
     EngineCatalog,
     InstructionsPanel,
     BriefModal,
+    PublishedPromptsModal,
     ManualConflictNotice,
     VersionsPanel,
     AgentStructure,
@@ -272,6 +274,8 @@ export default {
       showReportModal: false,
       // El encargo (.md) con la idea del agente: ver BriefModal.
       showBriefModal: false,
+      // proyecto@publicar_prompts: la Galería de prompts publicados por otras cuentas.
+      showPublishedPrompts: false,
       isWritingBrief: false,
       // Qué ocupa la columna izquierda: 'structure' (la Estructura del Agente) o
       // 'chat'. Uno a la vez (pedido del usuario, 23/09/2026): con los dos, más el
@@ -922,6 +926,46 @@ export default {
         if (!taken.has(candidate.toLowerCase())) return candidate;
       }
       return `${base} v100`;
+    },
+    // proyecto@publicar_prompts (F5) — se bajó UN prompt publicado: la copia ya es un
+    // Agente IA de la cuenta. Se abre aquí como cualquier agente cargado (guardar la
+    // reemplaza a ella, nunca al original del autor) y el chat arranca diciendo qué se
+    // bajó, qué falta configurar y qué contar para adecuarlo.
+    async onPromptInstalled({ tracking_template: copia, requirements }) {
+      this.showPublishedPrompts = false;
+      await this.$store.dispatch('trackingTemplates/get');
+      const template = this.templates.find(t => t.id === copia.id);
+      useAlert(
+        this.$t('TRACKING_ASSISTANT_VIEW.GALLERY.INSTALLED', {
+          name: copia.name,
+        })
+      );
+      if (!template) return;
+
+      this.startFresh();
+      this.loadTemplate(template);
+      this.messages = [
+        {
+          role: 'assistant',
+          content: this.installedIntro(copia.name, requirements || []),
+        },
+      ];
+      if (this.showChat) this.leftPanel = 'chat';
+    },
+    installedIntro(name, requirements) {
+      const t = (key, args) =>
+        this.$t(`TRACKING_ASSISTANT_VIEW.GALLERY.${key}`, args);
+      const pendientes = requirements.map(req => {
+        const kind = this.$t(
+          `TRACKING_TEMPLATES.PUBLISH.REQUIREMENTS.${req.kind.toUpperCase()}`
+        );
+        return `- ${req.name ? `${kind}: ${req.name}` : kind}`;
+      });
+      return [
+        t('INTRO_DONE', { name }),
+        [t('INTRO_SETUP'), t('INTRO_INBOX'), ...pendientes].join('\n'),
+        t('INTRO_ASK'),
+      ].join('\n\n');
     },
     // Carga un Agente IA existente para mejorarlo. Deja anotado cuál es, para que
     // el guardado ofrezca reemplazarlo —conservando el Entrenamiento anterior— en
@@ -1665,6 +1709,17 @@ export default {
                   @click="showBriefModal = true"
                 >
                   {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_OPEN') }}
+                </woot-button>
+                <!-- proyecto@publicar_prompts — partir de un prompt que publicó otra
+                     cuenta. Es la ÚNICA puerta para bajarlos (pedido del usuario). -->
+                <woot-button
+                  size="small"
+                  variant="smooth"
+                  color-scheme="secondary"
+                  icon="globe"
+                  @click="showPublishedPrompts = true"
+                >
+                  {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.OPEN') }}
                 </woot-button>
                 <!-- Empezar de cero: la puerta para armar un agente nuevo. -->
                 <woot-button
@@ -2417,6 +2472,11 @@ export default {
       :description="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_DESCRIPTION')"
       :confirm-label="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_YES')"
       :cancel-label="$t('TRACKING_ASSISTANT_VIEW.PASTE_ANALYZE_NO')"
+    />
+    <PublishedPromptsModal
+      :show="showPublishedPrompts"
+      @close="showPublishedPrompts = false"
+      @installed="onPromptInstalled"
     />
     <BriefModal
       :show="showBriefModal"

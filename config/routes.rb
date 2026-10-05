@@ -93,6 +93,8 @@ Rails.application.routes.draw do
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
+            # proyecto@publicar_prompts: publicar el prompt para que otras cuentas lo bajen
+            resource :publication, only: [:show, :create, :destroy], module: :tracking_templates
           end
           # @query_databases — conexiones a ERPs + consultas predefinidas + consola
           resources :external_db_connections, only: [:index, :show, :create, :update, :destroy] do
@@ -139,6 +141,10 @@ Rails.application.routes.draw do
             post 'assistant/proofread', to: 'assistant_tools#proofread'
             post 'assistant/transcribe', to: 'assistant_tools#transcribe'
             post 'assistant/route_scope', to: 'assistant_tools#route_scope'
+            # proyecto@publicar_prompts — la Galería: los prompts publicados solo se ven y se bajan aquí
+            get  'assistant/published_prompts',     to: 'assistant_published_prompts#index'
+            get  'assistant/published_prompts/:id', to: 'assistant_published_prompts#show'
+            post 'assistant/published_prompts/:id/install', to: 'assistant_published_prompts#install'
             get  'assistant/audit',     to: 'assistant#audit'
             post 'assistant/dry_run',   to: 'assistant#dry_run'
             # el encargo (.md) con la idea del agente — ver docs/importar_prompt_md_plan.md

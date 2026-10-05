@@ -523,6 +523,30 @@
     "SESSION_DISCARD_YES": "Sí, borrar",
     "SESSION_DISCARD_NO": "Cancelar",
     "SESSION_DISCARDED": "Se borró #%{id} de la lista.",
-    "SESSION_DISCARD_ERROR": "No se pudo borrar. Inténtalo de nuevo."
+    "SESSION_DISCARD_ERROR": "No se pudo borrar. Inténtalo de nuevo.",
+    "GALLERY": {
+      "OPEN": "Prompts publicados",
+      "TITLE": "Prompts publicados",
+      "DESCRIPTION": "Agentes IA que otras cuentas compartieron. Revisa uno y bájalo a tu cuenta para adecuarlo a tu negocio con el Asistente.",
+      "SEARCH": "Buscar por título o descripción",
+      "ALL_CATEGORIES": "Todas las categorías",
+      "EMPTY": "No hay prompts publicados que coincidan.",
+      "LOAD_ERROR": "No se pudieron cargar los prompts publicados.",
+      "OWN": "De tu cuenta",
+      "META": "{author} · v{version} · {downloads} descargas",
+      "BACK": "Volver a la lista",
+      "REQUIREMENTS_TITLE": "Para usarlo tendrás que configurar en tu cuenta:",
+      "NO_REQUIREMENTS": "No usa recursos de otra cuenta: no tendrás que configurar nada extra.",
+      "OBJECTIVE": "Objetivo",
+      "CONTEXT": "Contexto",
+      "PROMPT": "Entrenamiento",
+      "INSTALL": "Bajar a mi cuenta",
+      "INSTALL_ERROR": "No se pudo bajar el prompt.",
+      "INSTALLED": "«{name}» ya está en tus Agentes IA",
+      "INTRO_DONE": "Bajé «{name}» a tu cuenta como un Agente IA nuevo. Es una copia tuya: lo que cambies aquí no afecta al original. Ya lo tienes en la Estructura del Agente.",
+      "INTRO_SETUP": "Antes de usarlo, configura en tu cuenta:",
+      "INTRO_INBOX": "- La bandeja (canal) donde va a atender",
+      "INTRO_ASK": "Cuéntame de tu negocio: qué vendes o qué servicio das, cómo se llama tu empresa y qué quieres que haga distinto. Con eso adecuo el Entrenamiento."
+    }
   }
 }
