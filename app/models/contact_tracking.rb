@@ -27,6 +27,7 @@
 #  ai_context                 :text
 #  appointment_at             :datetime
 #  appointment_calendar_gid   :string
+#  appointment_status         :string
 #  attempt_count              :integer          default(0), not null
 #  calendar_event_duration    :integer          default(30)
 #  calendar_integration_ids   :jsonb            not null
@@ -96,6 +97,8 @@ class ContactTracking < ApplicationRecord
   belongs_to :account
   belongs_to :tracking_template, optional: true
   belongs_to :tracking_campaign, optional: true # @campanas_vendedor
+  # @tickets_cases — al borrar el seguimiento, conserva el ticket como histórico (contact_tracking_id → NULL).
+  has_many :case_tickets, dependent: :nullify
 
   # ==============================================================================
   # Serializers - Para campos JSON

@@ -60,7 +60,25 @@ export default {
       getContactTickets: 'caseTickets/getContactTickets',
       agents: 'agents/getAgents', // @tickets_cases — asignación manual
       teams: 'teams/getTeams',
+      currentUser: 'getCurrentUser',
     }),
+    // Tipo de caso elegido en el form.
+    selectedType() {
+      return (this.types || []).find(t => t.id === this.form.case_type_id);
+    },
+    // @tickets_cases — modo ITIL propio del tipo elegido en el form (ya no es
+    // un ajuste global de cuenta).
+    itilEnabled() {
+      return !!this.selectedType?.itil_enabled;
+    },
+    // @tickets_cases — al crear, el responsable arranca en el agente firmado.
+    // Solo si ese usuario figura entre los agentes de la cuenta (un superadmin
+    // que no es agente no aparece en el select y dejarlo daría un valor muerto).
+    defaultAssigneeId() {
+      const id = this.currentUser?.id;
+      if (!id) return '';
+      return this.agents.some(ag => ag.id === id) ? id : '';
+    },
     tickets() {
       return this.getContactTickets(this.contactId);
     },
@@ -122,10 +140,7 @@ export default {
     },
     // 2K — campos personalizados del tipo de caso seleccionado.
     selectedTypeFields() {
-      const type = (this.types || []).find(
-        t => t.id === this.form.case_type_id
-      );
-      return (type && type.custom_fields) || [];
+      return this.selectedType?.custom_fields || [];
     },
     // ¿Todos los campos requeridos tienen valor?
     customFieldsValid() {
@@ -168,8 +183,12 @@ export default {
     });
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('caseTickets/fetchCategories');
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
     // @tickets_cases — agentes y equipos para la asignación manual.
-    this.$store.dispatch('agents/get');
+    this.$store.dispatch('agents/get').then(() => {
+      if (!this.form.assignee_id)
+        this.form.assignee_id = this.defaultAssigneeId;
+    });
     this.$store.dispatch('teams/get');
   },
   methods: {
@@ -270,7 +289,8 @@ export default {
         urgency: null,
         priority: 'medium',
         description: '',
-        assignee_id: '',
+        // Tras crear un caso el formulario vuelve al agente firmado, no a vacío.
+        assignee_id: this.defaultAssigneeId,
         team_id: '',
       };
     },
@@ -518,8 +538,8 @@ export default {
               </select>
             </label>
 
-            <!-- Tipo ITIL -->
-            <label class="flex flex-col gap-1">
+            <!-- Tipo ITIL (oculto en modo simple) -->
+            <label v-if="itilEnabled" class="flex flex-col gap-1">
               <span
                 class="text-sm font-medium text-slate-700 dark:text-slate-300"
               >
@@ -601,10 +621,13 @@ export default {
               </select>
             </label>
 
-            <!-- Impacto · Urgencia · Prioridad en una sola línea -->
-            <div class="grid grid-cols-3 col-span-2 gap-3">
+            <!-- Impacto · Urgencia · Prioridad (impacto/urgencia ocultos en modo simple) -->
+            <div
+              class="col-span-2 gap-3"
+              :class="itilEnabled ? 'grid grid-cols-3' : ''"
+            >
               <!-- Impacto -->
-              <label class="flex flex-col gap-1">
+              <label v-if="itilEnabled" class="flex flex-col gap-1">
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
@@ -625,7 +648,7 @@ export default {
               </label>
 
               <!-- Urgencia -->
-              <label class="flex flex-col gap-1">
+              <label v-if="itilEnabled" class="flex flex-col gap-1">
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >

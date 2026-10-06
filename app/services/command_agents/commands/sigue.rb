@@ -353,7 +353,7 @@ module CommandAgents
       # proyecto@commands_agents: genera el complementary_prompt via OpenAI
       # a partir del contexto crudo del agente y el objetivo del seguimiento.
       # Si OpenAI no está disponible, retorna el contexto crudo como fallback.
-      def generate_complementary_prompt(objective, raw_context)
+      def generate_complementary_prompt(objective, raw_context, inbox = nil)
         return '' if raw_context.blank?
 
         hook = @account.hooks.find_by(app_id: 'openai', status: 'enabled')
@@ -391,10 +391,11 @@ module CommandAgents
           request = Net::HTTP::Post.new(uri)
           request['Authorization'] = "Bearer #{hook.settings['api_key']}"
           request['Content-Type'] = 'application/json'
+          # proyecto@contact_tracking: modelo y tope desde la config del inbox.
           request.body = {
-            model: 'gpt-4o-mini',
+            model: ContactTrackings::EngineConfig.model_for(inbox || @inbox, :authoring),
             messages: [{ role: 'user', content: prompt }],
-            max_tokens: 250,
+            max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:authoring),
             temperature: 0.4
           }.to_json
 
@@ -623,7 +624,7 @@ module CommandAgents
           # si no, se genera desde el ai_context de la plantilla via IA
           complementary_prompt: template.complementary_prompt.present? \
             ? template.complementary_prompt \
-            : generate_complementary_prompt(template.objective, template.ai_context.to_s),
+            : generate_complementary_prompt(template.objective, template.ai_context.to_s, template.inbox),
           calendar_integration_ids: template.calendar_integration_ids.is_a?(Array) ? template.calendar_integration_ids : [],
           tracking_template_id: template.id
         )

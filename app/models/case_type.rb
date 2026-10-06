@@ -4,15 +4,16 @@
 #
 # Table name: case_types
 #
-#  id         :bigint           not null, primary key
-#  color      :string           default("#3b82f6"), not null
-#  name       :string           not null
-#  position   :integer          default(0), not null
-#  prefix     :string           default(""), not null
-#  public     :boolean          default(FALSE), not null
-#  created_at :datetime         not null
-#  updated_at :datetime         not null
-#  account_id :bigint           not null
+#  id           :bigint           not null, primary key
+#  color        :string           default("#3b82f6"), not null
+#  itil_enabled :boolean          default(FALSE), not null
+#  name         :string           not null
+#  position     :integer          default(0), not null
+#  prefix       :string           default(""), not null
+#  public       :boolean          default(FALSE), not null
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  account_id   :bigint           not null
 #
 # Indexes
 #
@@ -23,13 +24,20 @@ class CaseType < ApplicationRecord
   belongs_to :account
   has_many   :case_tickets, dependent: :nullify
   has_many   :case_type_fields, dependent: :destroy # @tickets_cases 2K
+  has_many   :case_type_columns, dependent: :destroy # @tickets_cases — columnas del Kanban por tipo
 
   validates :name,  presence: true, length: { maximum: 100 }
   validates :color, presence: true
 
   scope :ordered, -> { order(:position, :id) }
+  # @tickets_cases — User Portal: tipos visibles en el formulario público del cliente.
+  scope :public_only, -> { where(public: true) }
 
   before_validation :ensure_prefix, on: :create
+  # @tickets_cases — al crear un tipo se siembran columnas por defecto (espejo del
+  # tablero fijo: simple 5 / ITIL 6, según el modo de la cuenta) como punto de
+  # partida editable. El admin puede editarlas o borrarlas desde el panel.
+  after_create :seed_default_columns
 
   # Tipos por defecto que se crean cuando una cuenta abre el módulo sin tipos.
   DEFAULTS = [
@@ -58,5 +66,10 @@ class CaseType < ApplicationRecord
     return if prefix.present?
 
     self.prefix = name.to_s.gsub(/[^a-zA-Z]/, '').upcase[0, 3]
+  end
+
+  # Columnas por defecto según el modo (simple/ITIL) propio del tipo.
+  def seed_default_columns
+    CaseTypeColumn.seed_defaults_for(self, itil: itil_enabled)
   end
 end

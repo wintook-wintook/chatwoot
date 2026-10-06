@@ -4,9 +4,13 @@
   orden configurable y paginación. Tailwind + dark mode.
 -->
 <template>
-  <div class="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900">
+  <div
+    class="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900"
+  >
     <!-- Header -->
-    <div class="flex-shrink-0 px-6 pt-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50">
+    <div
+      class="flex-shrink-0 px-6 pt-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
+    >
       <div class="flex items-center justify-between mb-3">
         <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
           {{ $t('CASE_TICKETS.SIDEBAR.TITLE') }}
@@ -29,11 +33,76 @@
         />
       </woot-tabs>
 
-      <!-- Toolbar compacto: búsqueda + dropdowns + fecha + orden -->
+      <!-- Toolbar compacto: vistas + búsqueda + dropdowns + fecha + orden -->
       <div class="flex flex-wrap items-center gap-2 py-3">
+        <!-- @tickets_cases F3 — vistas guardadas -->
+        <div class="flex items-center gap-1">
+          <select
+            v-model="activeViewId"
+            class="!mb-0 w-48 text-sm"
+            @change="onViewChange"
+          >
+            <option value="">{{ $t('CASE_TICKETS.VIEWS.PLACEHOLDER') }}</option>
+            <optgroup
+              v-if="myViews.length"
+              :label="$t('CASE_TICKETS.VIEWS.MINE')"
+            >
+              <option v-for="v in myViews" :key="v.id" :value="v.id">
+                {{ v.name }}
+              </option>
+            </optgroup>
+            <optgroup
+              v-if="sharedViews.length"
+              :label="$t('CASE_TICKETS.VIEWS.SHARED')"
+            >
+              <option v-for="v in sharedViews" :key="v.id" :value="v.id">
+                {{ v.name }} · {{ v.owner_name }}
+              </option>
+            </optgroup>
+          </select>
+          <span
+            v-if="isViewDirty"
+            class="flex gap-1 items-center text-xs whitespace-nowrap text-amber-600 dark:text-amber-400"
+            :title="$t('CASE_TICKETS.VIEWS.DIRTY_HINT')"
+          >
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
+            {{ $t('CASE_TICKETS.VIEWS.DIRTY') }}
+          </span>
+          <woot-button
+            v-if="isViewDirty && canOverwriteView"
+            size="small"
+            variant="clear"
+            icon="save"
+            :title="$t('CASE_TICKETS.VIEWS.SAVE')"
+            @click="overwriteView"
+          >
+            {{ $t('CASE_TICKETS.VIEWS.SAVE') }}
+          </woot-button>
+          <woot-button
+            size="small"
+            variant="clear"
+            icon="copy"
+            :title="$t('CASE_TICKETS.VIEWS.SAVE_AS')"
+            @click="showSaveViewModal = true"
+          >
+            {{ $t('CASE_TICKETS.VIEWS.SAVE_AS') }}
+          </woot-button>
+          <woot-button
+            size="small"
+            variant="clear"
+            icon="settings"
+            :title="$t('CASE_TICKETS.VIEWS.MANAGE.TITLE')"
+            @click="showManageViewsModal = true"
+          />
+        </div>
+
         <!-- Búsqueda -->
         <div class="relative flex-1 min-w-[220px]">
-          <fluent-icon icon="search" size="16" class="absolute -translate-y-1/2 left-3 top-1/2 text-slate-400 dark:text-slate-500" />
+          <fluent-icon
+            icon="search"
+            size="16"
+            class="absolute -translate-y-1/2 left-3 top-1/2 text-slate-400 dark:text-slate-500"
+          />
           <input
             v-model="search"
             type="text"
@@ -51,21 +120,45 @@
           </button>
         </div>
 
-        <!-- Estado -->
-        <select v-model="statusFilter" class="!mb-0 w-40 text-sm" @change="onFilterChange">
+        <!-- Estado: agrupado (pendiente/cerrado/todos), no el estado exacto —
+             ver CASE_TICKETS.STATUS_QUICK para cambiar el estado exacto de un
+             caso puntual. Por default solo se ven los pendientes; los cerrados
+             (incluye resuelto y validando) quedan en su propio filtro. -->
+        <select
+          v-model="statusFilter"
+          class="!mb-0 w-40 text-sm"
+          @change="onFilterChange"
+        >
+          <option value="pending">
+            {{ $t('CASE_TICKETS.LIST.STATUS_PENDING') }}
+          </option>
+          <option value="closed">
+            {{ $t('CASE_TICKETS.LIST.STATUS_CLOSED') }}
+          </option>
           <option value="">{{ $t('CASE_TICKETS.LIST.ALL_STATUSES') }}</option>
-          <option v-for="s in statusOptions" :key="s" :value="s">{{ statusLabel(s) }}</option>
         </select>
 
         <!-- Prioridad -->
-        <select v-model="priorityFilter" class="!mb-0 w-36 text-sm" @change="onFilterChange">
+        <select
+          v-model="priorityFilter"
+          class="!mb-0 w-36 text-sm"
+          @change="onFilterChange"
+        >
           <option value="">{{ $t('CASE_TICKETS.LIST.ALL_PRIORITIES') }}</option>
-          <option v-for="p in priorityOptions" :key="p" :value="p">{{ priorityLabel(p) }}</option>
+          <option v-for="p in priorityOptions" :key="p" :value="p">
+            {{ priorityLabel(p) }}
+          </option>
         </select>
 
         <!-- Tipo (dinámico desde la cuenta) -->
-        <select v-model="activeType" class="!mb-0 w-40 text-sm" @change="onFilterChange">
-          <option v-for="t in typeFilters" :key="t.id" :value="t.id">{{ t.name }}</option>
+        <select
+          v-model="activeType"
+          class="!mb-0 w-40 text-sm"
+          @change="onFilterChange"
+        >
+          <option v-for="t in typeFilters" :key="t.id" :value="t.id">
+            {{ t.name }}
+          </option>
         </select>
 
         <!-- Origen (@tickets_cases Fase C) -->
@@ -91,7 +184,11 @@
 
         <!-- Ordenar por -->
         <div class="flex items-center gap-1">
-          <select v-model="sortBy" class="!mb-0 w-40 text-sm" @change="onFilterChange">
+          <select
+            v-model="sortBy"
+            class="!mb-0 w-40 text-sm"
+            @change="onFilterChange"
+          >
             <option v-for="o in sortOptions" :key="o.value" :value="o.value">
               {{ $t('CASE_TICKETS.LIST.SORT_BY') }}: {{ o.label }}
             </option>
@@ -99,10 +196,17 @@
           <button
             type="button"
             class="flex items-center justify-center w-8 h-8 border rounded bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-woot-500"
-            :title="sortOrder === 'asc' ? $t('CASE_TICKETS.LIST.SORT_ASC') : $t('CASE_TICKETS.LIST.SORT_DESC')"
+            :title="
+              sortOrder === 'asc'
+                ? $t('CASE_TICKETS.LIST.SORT_ASC')
+                : $t('CASE_TICKETS.LIST.SORT_DESC')
+            "
             @click="toggleSortOrder"
           >
-            <fluent-icon :icon="sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'" size="16" />
+            <fluent-icon
+              :icon="sortOrder === 'asc' ? 'chevron-up' : 'chevron-down'"
+              size="16"
+            />
           </button>
         </div>
 
@@ -113,104 +217,180 @@
           class="px-3 py-1 text-sm rounded text-woot-600 dark:text-woot-400 hover:bg-woot-50 dark:hover:bg-woot-800/30"
           @click="clearFilters"
         >
-          ✕ {{ $t('CASE_TICKETS.LIST.CLEAR_FILTERS') }}
+          {{ $t('CASE_TICKETS.LIST.CLEAR_FILTERS') }}
         </button>
       </div>
     </div>
 
-    <!-- Loading -->
-    <div v-if="isFetchingList" class="flex items-center justify-center flex-1 text-slate-400 dark:text-slate-500">
+    <!-- Loading (solo en la carga inicial; al ordenar/paginar la tabla se
+         mantiene montada y solo se refrescan las filas, como en Contactos). -->
+    <div
+      v-if="isFetchingList && !tickets.length"
+      class="flex items-center justify-center flex-1 text-slate-400 dark:text-slate-500"
+    >
       <span>{{ $t('CASE_TICKETS.LIST.LOADING') }}</span>
     </div>
 
     <!-- Empty state -->
-    <div v-else-if="!tickets.length" class="flex flex-col items-center justify-center flex-1 gap-4 text-slate-400 dark:text-slate-500">
+    <div
+      v-else-if="!tickets.length"
+      class="flex flex-col items-center justify-center flex-1 gap-4 text-slate-400 dark:text-slate-500"
+    >
       <fluent-icon icon="clipboard" size="40" />
       <p>{{ $t('CASE_TICKETS.LIST.EMPTY') }}</p>
     </div>
 
-    <!-- Lista -->
-    <div v-else class="flex-1 px-6 py-2 overflow-y-auto">
+    <!-- Cola (tabla densa estilo osTicket) + acciones en lote -->
+    <div v-else class="flex flex-col flex-1 min-h-0">
+      <!-- Barra de acciones en lote (aparece al seleccionar) -->
       <div
-        v-for="ticket in tickets"
-        :key="ticket.id"
-        class="flex items-center gap-4 p-4 mb-2 transition-colors bg-white border rounded-lg cursor-pointer dark:bg-slate-800 border-slate-75 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50"
-        @click="openDetail(ticket)"
+        v-if="selected.length"
+        class="relative flex flex-wrap items-center gap-2 px-6 py-2 border-b bg-woot-25 dark:bg-woot-800/20 border-slate-100 dark:border-slate-700"
       >
-        <!-- SLA dot -->
-        <span class="flex-shrink-0 w-2 h-2 rounded-full" :class="slaDotColor(ticket.sla_status)" :title="ticket.sla_status" />
-
-        <!-- Badges -->
-        <div class="flex flex-shrink-0 gap-1">
-          <span
-            v-if="ticket.case_type"
-            class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded text-white"
-            :style="{ backgroundColor: ticket.case_type.color }"
-          >
-            {{ ticket.case_type.name }}
-          </span>
-          <span class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded" :class="priorityBadge(ticket.priority)">
-            {{ priorityLabel(ticket.priority) }}
-          </span>
-          <!-- @tickets_cases Fase C — distintivo de ticket interno -->
-          <span
-            v-if="ticket.is_internal"
-            class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-300"
-          >
-            {{ $t('CASE_TICKETS.INTERNAL.BADGE') }}
-          </span>
-        </div>
-
-        <!-- Título y status -->
-        <div class="flex-1 min-w-0">
-          <p class="m-0 overflow-hidden text-sm font-medium whitespace-nowrap text-ellipsis text-slate-800 dark:text-slate-100">
-            <span v-if="ticket.folio" class="mr-1 font-mono text-xs text-slate-400 dark:text-slate-500">{{ ticket.folio }}</span>
-            {{ ticket.title }}
-          </p>
-          <span class="text-xs text-slate-500 dark:text-slate-400">{{ statusLabel(ticket.status) }}</span>
-        </div>
-
-        <!-- SLA tiempo restante -->
-        <span class="flex-shrink-0 text-xs font-medium" :class="slaTextColor(ticket.sla_status)">
-          {{ slaText(ticket) }}
+        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
+          {{ $t('CASE_TICKETS.BULK.SELECTED', { n: selected.length }) }}
         </span>
+        <woot-button
+          size="tiny"
+          variant="smooth"
+          color-scheme="secondary"
+          icon="person-add"
+          :is-loading="uiFlags.isTransitioning"
+          @click="bulkClaim"
+        >
+          {{ $t('CASE_TICKETS.CLAIM.BUTTON') }}
+        </woot-button>
 
-        <!-- Fecha -->
-        <span class="flex-shrink-0 text-xs text-slate-400 dark:text-slate-500">{{ formatDate(ticket.created_at) }}</span>
+        <!-- Asignar a -->
+        <div class="relative">
+          <woot-button
+            size="tiny"
+            variant="smooth"
+            color-scheme="secondary"
+            icon="chevron-down"
+            @click="
+              showBulkAssign = !showBulkAssign;
+              showBulkStatus = false;
+            "
+          >
+            {{ $t('CASE_TICKETS.BULK.ASSIGN') }}
+          </woot-button>
+          <ul
+            v-if="showBulkAssign"
+            class="absolute left-0 z-50 py-1 mt-1 list-none overflow-y-auto bg-white border rounded-md shadow-md top-full dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[180px] max-h-64"
+          >
+            <li
+              class="px-4 py-2 text-sm cursor-pointer text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
+              @click="bulkUnassign"
+            >
+              {{ $t('CASE_TICKETS.ASSIGN.NONE') }}
+            </li>
+            <li
+              v-for="ag in assignableAgents"
+              :key="ag.id"
+              class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+              @click="bulkAssign(ag.id)"
+            >
+              {{ ag.name }}
+            </li>
+          </ul>
+        </div>
 
-        <!-- Chevron -->
-        <fluent-icon icon="chevron-right" size="16" class="flex-shrink-0 text-slate-300 dark:text-slate-600" />
+        <!-- Cambiar estado -->
+        <div class="relative">
+          <woot-button
+            size="tiny"
+            variant="smooth"
+            color-scheme="secondary"
+            icon="chevron-down"
+            @click="
+              showBulkStatus = !showBulkStatus;
+              showBulkAssign = false;
+            "
+          >
+            {{ $t('CASE_TICKETS.STATUS_QUICK.LABEL') }}
+          </woot-button>
+          <ul
+            v-if="showBulkStatus"
+            class="absolute left-0 z-50 py-1 mt-1 list-none overflow-y-auto bg-white border rounded-md shadow-md top-full dark:bg-slate-800 border-slate-100 dark:border-slate-700 min-w-[180px] max-h-64"
+          >
+            <li
+              v-for="s in bulkStatusOptions"
+              :key="s"
+              class="px-4 py-2 text-sm cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+              @click="bulkStatus(s)"
+            >
+              {{ statusLabel(s) }}
+            </li>
+          </ul>
+        </div>
+
+        <woot-button
+          size="tiny"
+          variant="smooth"
+          color-scheme="alert"
+          icon="dismiss-circle"
+          @click="bulkClose"
+        >
+          {{ $t('CASE_TICKETS.BULK.CLOSE') }}
+        </woot-button>
+
+        <button
+          type="button"
+          class="ml-auto text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          @click="clearSelection"
+        >
+          {{ $t('CASE_TICKETS.BULK.CLEAR') }}
+        </button>
+      </div>
+
+      <!-- Tabla nativa de Chatwoot (vue-easytable), igual que Contactos/Notas/
+           Tareas. `fixed-header` + `max-height` hacen que scrolleen solo las
+           filas. Click en la fila abre el detalle; el orden de las columnas
+           marcadas es en servidor (sortChange → onSortChange → fetch). -->
+      <div class="flex-1 min-h-0 tickets-table-wrap">
+        <VeTable
+          fixed-header
+          max-height="100%"
+          row-key-field-name="id"
+          :columns="columns"
+          :table-data="tickets"
+          :border-around="false"
+          :sort-option="sortOption"
+          :event-custom-option="eventCustomOption"
+          :row-style-option="rowStyleOption"
+          :cell-style-option="cellStyleOption"
+        />
       </div>
     </div>
 
-    <!-- Paginación -->
+    <!-- Paginación estándar de Chatwoot (igual que Notas/Tareas/Seguimientos) +
+         selector de "por página" a la izquierda (server-side). -->
     <div
       v-if="tickets.length"
-      class="flex flex-wrap items-center justify-between flex-shrink-0 gap-3 px-6 py-3 bg-white border-t dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
+      class="flex items-center justify-between flex-shrink-0 bg-white border-t dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <!-- Conteo de resultados -->
-      <span class="text-xs text-slate-500 dark:text-slate-400">
-        {{ $t('CASE_TICKETS.LIST.RESULTS_COUNT', { from: resultFrom, to: resultTo, total: meta.total_count || 0 }) }}
-      </span>
+      <label
+        class="flex items-center gap-1 pl-6 text-xs text-slate-500 dark:text-slate-400"
+      >
+        {{ $t('CASE_TICKETS.LIST.PER_PAGE') }}
+        <select
+          v-model.number="perPage"
+          class="!mb-0 w-20 text-sm"
+          @change="changePerPage"
+        >
+          <option v-for="n in perPageOptions" :key="n" :value="n">
+            {{ n }}
+          </option>
+        </select>
+      </label>
 
-      <div class="flex items-center gap-3">
-        <!-- Por página -->
-        <label class="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-          {{ $t('CASE_TICKETS.LIST.PER_PAGE') }}
-          <select v-model.number="perPage" class="!mb-0 w-20 text-sm" @change="changePerPage">
-            <option v-for="n in perPageOptions" :key="n" :value="n">{{ n }}</option>
-          </select>
-        </label>
-
-        <!-- Botones de página -->
-        <div class="flex items-center gap-1">
-          <woot-button size="tiny" variant="clear" :disabled="currentPage <= 1" :title="$t('CASE_TICKETS.LIST.FIRST')" @click="changePage(1)">«</woot-button>
-          <woot-button size="tiny" variant="clear" :disabled="currentPage <= 1" :title="$t('CASE_TICKETS.LIST.PREV')" @click="changePage(currentPage - 1)">‹</woot-button>
-          <span class="text-sm text-slate-600 dark:text-slate-300">{{ currentPage }} / {{ totalPages }}</span>
-          <woot-button size="tiny" variant="clear" :disabled="currentPage >= totalPages" :title="$t('CASE_TICKETS.LIST.NEXT')" @click="changePage(currentPage + 1)">›</woot-button>
-          <woot-button size="tiny" variant="clear" :disabled="currentPage >= totalPages" :title="$t('CASE_TICKETS.LIST.LAST')" @click="changePage(totalPages)">»</woot-button>
-        </div>
-      </div>
+      <TableFooter
+        :current-page="currentPage"
+        :total-count="meta.total_count || 0"
+        :page-size="perPage"
+        @pageChange="changePage"
+      />
     </div>
 
     <!-- @tickets_cases Fase C — modal de alta de ticket interno -->
@@ -220,16 +400,55 @@
       @created="onInternalCreated"
       @close="showInternalModal = false"
     />
+
+    <!-- @tickets_cases F3 — guardar los filtros actuales como vista -->
+    <AddCustomViews
+      v-if="showSaveViewModal"
+      :filter-type="viewFilterType"
+      :custom-views-query="viewQuery"
+      allow-shared
+      :success-message="$t('CASE_TICKETS.VIEWS.SAVED')"
+      :open-last-saved-item="onViewSaved"
+      @close="showSaveViewModal = false"
+    />
+
+    <!-- @tickets_cases F5 — gestionar las vistas guardadas -->
+    <SavedViewsModal
+      v-if="showManageViewsModal"
+      @changed="onViewsChanged"
+      @close="showManageViewsModal = false"
+    />
+
+    <!-- @tickets_cases — edición desde la cola (mismo modal, modo edición) -->
+    <CaseTicketInternalModal
+      v-if="editingTicket"
+      :show="!!editingTicket"
+      :ticket="editingTicket"
+      @updated="onInternalUpdated"
+      @close="editingTicket = null"
+    />
   </div>
 </template>
 
+<!-- eslint-disable vue/block-order -- legacy file has <template> before
+     <script>; reordering is a large unrelated diff, left for a dedicated
+     cleanup instead of bundling it into an unrelated change. -->
 <script>
 import { mapGetters } from 'vuex';
+import { VeTable } from 'vue-easytable';
+import { useAlert } from 'dashboard/composables';
 import WootDateRangePicker from 'dashboard/components/ui/DateRangePicker.vue';
+import TableFooter from 'dashboard/components/widgets/TableFooter.vue'; // @tickets_cases — paginado estándar
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
+import AddCustomViews from 'dashboard/routes/dashboard/customviews/AddCustomViews.vue'; // @tickets_cases F3 — vistas guardadas
+import SavedViewsModal from './SavedViewsModal.vue'; // @tickets_cases F5 — gestion de vistas
+import {
+  SIMPLE_FILTER_STATUSES,
+  toSimpleStatus,
+} from 'dashboard/helper/caseSimpleStatus'; // modo simple/ITIL
 
 const QUICK_FILTERS = [
-  { key: 'mine', label: 'Mis Tickets' },
+  { key: 'mine', label: 'Mis Casos' },
   { key: 'unassigned', label: 'Sin Asignar' },
   { key: 'all', label: 'Todos' },
   { key: 'sla_overdue', label: 'SLA vencidos' },
@@ -238,9 +457,19 @@ const QUICK_FILTERS = [
 // Los 13 estados de ticket (sin los estados SLA que comparten el bloque STATUSES).
 // Orden = flujo del ciclo de vida ITIL (@tickets_cases 2A).
 const STATUS_OPTIONS = [
-  'open', 'classified', 'assigned', 'in_diagnosis', 'in_progress',
-  'waiting_on_customer', 'waiting_on_third_party', 'waiting_on_internal',
-  'escalated', 'resolved', 'validating', 'closed', 'cancelled',
+  'open',
+  'classified',
+  'assigned',
+  'in_diagnosis',
+  'in_progress',
+  'waiting_on_customer',
+  'waiting_on_third_party',
+  'waiting_on_internal',
+  'escalated',
+  'resolved',
+  'validating',
+  'closed',
+  'cancelled',
 ];
 const PRIORITY_OPTIONS = ['low', 'medium', 'high', 'urgent'];
 // @tickets_cases Fase C — orígenes del ticket (incluye 'internal').
@@ -253,49 +482,149 @@ const ORIGIN_OPTIONS = [
   'internal',
 ];
 const SORT_FIELDS = ['created_at', 'priority', 'status', 'sla_status'];
+// @tickets_cases F3 — las vistas guardadas se direccionan por nombre de tipo,
+// igual que el Sidebar y el store de customViews.
+const VIEW_FILTER_TYPE = 'case_ticket';
+// Version de la forma del `query` guardado. Hoy no se ramifica sobre ella, pero
+// cuando entren filtros nuevos es lo que distingue "no lo guardo" de "lo guardo
+// vacio" en una vista vieja.
+const VIEW_QUERY_VERSION = 1;
 const PER_PAGE_OPTIONS = [25, 50, 100];
 
 export default {
   name: 'GestorTicketsIndex',
-  components: { WootDateRangePicker, CaseTicketInternalModal },
+  components: {
+    VeTable,
+    TableFooter,
+    WootDateRangePicker,
+    CaseTicketInternalModal,
+    AddCustomViews,
+    SavedViewsModal,
+  },
   data() {
     return {
       showInternalModal: false, // @tickets_cases Fase C
+      editingTicket: null, // @tickets_cases — ticket en edición (modal)
+      selected: [], // @tickets_cases P3 — ids seleccionados para acciones en lote
+      // @tickets_cases — orden en servidor a través de VeTable. `sortConfig`
+      // mapea el campo activo → 'asc'|'desc' (lo que espera cada columna en su
+      // `sortBy`); `sortChange` reenvía el cambio a `onSortChange` → fetch.
+      sortConfig: {},
+      sortOption: {
+        sortAlways: true,
+        sortChange: params => this.onSortChange(params),
+      },
+      // Click en la fila = abrir el detalle (como el <tr @click> anterior). Las
+      // celdas de checkbox/lápiz cortan la propagación para no navegar.
+      eventCustomOption: {
+        bodyRowEvents: ({ row }) => ({
+          click: () => this.openDetail(row),
+        }),
+      },
+      // Sin rayado, con hover como el resto de las tablas del fork.
+      rowStyleOption: {
+        stripe: false,
+        clickHighlight: false,
+        hoverHighlight: true,
+      },
+      // Resalta la fila seleccionada: vue-easytable no expone una clase por
+      // fila, así que se pinta cada celda de la fila (bodyCellClass) y el color
+      // de fondo lo pone el CSS `.row--selected`.
+      cellStyleOption: {
+        bodyCellClass: ({ row }) =>
+          this.isSelected(row.id) ? 'row--selected' : '',
+      },
+      showBulkAssign: false,
+      showBulkStatus: false,
       search: '',
       searchDebounce: null,
-      dateRange: [],        // [Date, Date]
-      statusFilter: '',
+      dateRange: [], // [Date, Date]
+      // @tickets_cases — default: solo pendientes. 'closed' agrupa
+      // resuelto/validando/cerrado/cancelado; '' es "todos los estados".
+      statusFilter: 'pending',
       priorityFilter: '',
       originFilter: '', // @tickets_cases Fase C
       activeFilter: 'mine',
-      activeType: '',       // '' = todos, o un case_type_id
+      activeType: '', // '' = todos, o un case_type_id
       sortBy: 'created_at',
       sortOrder: 'desc',
       currentPage: 1,
       perPage: 25,
+      // @tickets_cases F3 — vistas guardadas
+      activeViewId: '',
+      showSaveViewModal: false,
+      showManageViewsModal: false,
     };
   },
   computed: {
     ...mapGetters({
-      tickets:       'caseTickets/getTicketsList',
-      meta:          'caseTickets/getTicketsMeta',
-      uiFlags:       'caseTickets/getUIFlags',
-      types:         'caseTickets/getTypes',
-      currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
+      tickets: 'caseTickets/getTicketsList',
+      meta: 'caseTickets/getTicketsMeta',
+      uiFlags: 'caseTickets/getUIFlags',
+      // @tickets_cases — filtros/página recordados de la última visita a esta
+      // pantalla en la sesión (null = primera vez, se usan los defaults de abajo).
+      listPrefs: 'caseTickets/getTicketsListPrefs',
+      types: 'caseTickets/getTypes',
+      currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Casos"
+      currentRole: 'getCurrentRole', // @tickets_cases F4 — quien puede sobreescribir una vista
+      anyTypeItilEnabled: 'caseTickets/getAnyTypeItilEnabled',
+      agents: 'agents/getAgents', // @tickets_cases P3 — nombre del asignado + lote
     }),
-    isFetchingList()  { return this.uiFlags.isFetchingList; },
-    quickFilters()    { return QUICK_FILTERS; },
+    isFetchingList() {
+      return this.uiFlags.isFetchingList;
+    },
+    // @tickets_cases P3 — selección múltiple para acciones en lote
+    pageIds() {
+      return this.tickets.map(t => t.id);
+    },
+    allSelected() {
+      return (
+        this.tickets.length > 0 &&
+        this.pageIds.every(id => this.selected.includes(id))
+      );
+    },
+    someSelected() {
+      return this.selected.length > 0 && !this.allSelected;
+    },
+    assignableAgents() {
+      return this.agents;
+    },
+    bulkStatusOptions() {
+      return this.statusOptions;
+    },
+    quickFilters() {
+      return QUICK_FILTERS;
+    },
     activeQuickTabIndex() {
       const i = QUICK_FILTERS.findIndex(f => f.key === this.activeFilter);
       return i < 0 ? 0 : i;
     },
-    slaOverdueCount() { return this.meta.sla_overdue_count || 0; },
-    statusOptions()   { return STATUS_OPTIONS; },
-    priorityOptions() { return PRIORITY_OPTIONS; },
+    slaOverdueCount() {
+      return this.meta.sla_overdue_count || 0;
+    },
+    // Con un tipo filtrado, usa el modo de ESE tipo; sin filtro, no se oculta
+    // nada relevante si al menos un tipo de la cuenta usa ITIL.
+    filteredTypeItilEnabled() {
+      if (!this.activeType) return this.anyTypeItilEnabled;
+      const type = (this.types || []).find(
+        t => String(t.id) === String(this.activeType)
+      );
+      return type ? !!type.itil_enabled : this.anyTypeItilEnabled;
+    },
+    statusOptions() {
+      return this.filteredTypeItilEnabled
+        ? STATUS_OPTIONS
+        : SIMPLE_FILTER_STATUSES;
+    },
+    priorityOptions() {
+      return PRIORITY_OPTIONS;
+    },
     originOptions() {
       return ORIGIN_OPTIONS;
     },
-    perPageOptions()  { return PER_PAGE_OPTIONS; },
+    perPageOptions() {
+      return PER_PAGE_OPTIONS;
+    },
     sortOptions() {
       return SORT_FIELDS.map(value => ({
         value,
@@ -305,51 +634,346 @@ export default {
     typeFilters() {
       return [{ id: '', name: 'Todos los tipos' }, ...this.types];
     },
-    totalPages() {
-      return this.meta.total_pages || 1;
+    // @tickets_cases F3 — vistas guardadas de tickets, separadas en dos grupos:
+    // las mias y las que alguien de la cuenta compartio.
+    viewFilterType() {
+      return VIEW_FILTER_TYPE;
     },
-    resultFrom() {
-      if (!this.meta.total_count) return 0;
-      return (this.currentPage - 1) * this.perPage + 1;
+    savedViews() {
+      return this.$store.getters['customViews/getCustomViewsByFilterType'](
+        VIEW_FILTER_TYPE
+      );
     },
-    resultTo() {
-      return Math.min(this.currentPage * this.perPage, this.meta.total_count || 0);
+    myViews() {
+      return this.savedViews.filter(v => v.user_id === this.currentUserID);
+    },
+    sharedViews() {
+      return this.savedViews.filter(v => v.user_id !== this.currentUserID);
+    },
+    activeView() {
+      return this.savedViews.find(v => v.id === this.activeViewId) || null;
+    },
+    // @tickets_cases F4 — ¿lo que se ve en pantalla sigue siendo la vista
+    // cargada? Sin esta senal nadie sabe si esta viendo la vista o algo que
+    // toco encima, que es la queja clasica de este tipo de barra.
+    isViewDirty() {
+      if (!this.activeView) return false;
+      return (
+        this.canonicalQuery(this.viewQuery) !==
+        this.canonicalQuery(this.activeView.query)
+      );
+    },
+    // Sobreescribe su dueno; un administrador tambien, pero solo sobre las
+    // compartidas. Es la misma regla que aplica el backend, repetida aqui solo
+    // para no ofrecer un boton que va a devolver 401.
+    canOverwriteView() {
+      if (!this.activeView) return false;
+      if (this.activeView.user_id === this.currentUserID) return true;
+      return this.currentRole === 'administrator' && this.activeView.shared;
+    },
+    // Lo que se guarda al pulsar "Guardar como": el estado de filtros, sin
+    // pagina ni tamano de pagina, que son navegacion y no criterio.
+    viewQuery() {
+      return {
+        v: VIEW_QUERY_VERSION,
+        search: this.search,
+        date_range: this.dateRange.map(d => this.formatDateParam(d)),
+        status: this.statusFilter,
+        priority: this.priorityFilter,
+        origin: this.originFilter,
+        quick: this.activeFilter,
+        case_type_id: this.activeType,
+        sort_by: this.sortBy,
+        sort_order: this.sortOrder,
+      };
     },
     hasActiveFilters() {
       return (
         !!this.search ||
         this.dateRange.length > 0 ||
-        !!this.statusFilter ||
+        this.statusFilter !== 'pending' ||
         !!this.priorityFilter ||
         !!this.originFilter ||
         this.activeFilter !== 'mine' ||
         !!this.activeType
       );
     },
+    // @tickets_cases — columnas de la cola en VeTable (tabla nativa de Chatwoot,
+    // igual que Contactos/Notas/Tareas). Las celdas se pintan con renderBodyCell
+    // (JSX). El orden de prioridad/estado/vence/creado es en servidor: cada
+    // columna declara su `sortBy` desde `sortConfig` y VeTable emite `sortChange`.
+    columns() {
+      return [
+        {
+          field: 'select',
+          key: 'select',
+          align: 'left',
+          width: 44,
+          // Checkbox "seleccionar todo" en la cabecera (indeterminado si es parcial).
+          renderHeaderCell: () => (
+            <input
+              type="checkbox"
+              class="!mb-0 align-middle"
+              domPropsChecked={this.allSelected}
+              domPropsIndeterminate={this.someSelected}
+              onClick={e => e.stopPropagation()}
+              onChange={() => this.toggleSelectAll()}
+            />
+          ),
+          renderBodyCell: ({ row }) => (
+            <div onClick={e => e.stopPropagation()}>
+              <input
+                type="checkbox"
+                class="!mb-0 align-middle"
+                domPropsChecked={this.isSelected(row.id)}
+                onChange={() => this.toggleSelect(row.id)}
+              />
+            </div>
+          ),
+        },
+        {
+          field: 'edit',
+          key: 'edit',
+          align: 'left',
+          width: 48,
+          // Editar desde la cola. El .stop en el wrapper impide abrir el detalle.
+          // Oculto en cerrado/cancelado (solo lectura).
+          renderBodyCell: ({ row }) =>
+            ['closed', 'cancelled'].includes(row.status) ? null : (
+              <div onClick={e => e.stopPropagation()}>
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="edit"
+                  title={this.$t('CASE_TICKETS.EDIT.BUTTON')}
+                  onClick={() => this.openEdit(row)}
+                />
+              </div>
+            ),
+        },
+        {
+          field: 'folio',
+          key: 'folio',
+          title: this.$t('CASE_TICKETS.TABLE.FOLIO'),
+          align: 'left',
+          width: 130,
+          // El propio folio se colorea según el SLA (verde a tiempo, ámbar en
+          // riesgo, rojo vencido); reemplaza al punto de color anterior.
+          renderBodyCell: ({ row }) => (
+            <span
+              class={`font-mono text-sm font-semibold whitespace-nowrap ${this.slaTextColor(
+                row.sla_status
+              )}`}
+              title={row.sla_status}
+            >
+              {row.folio || '—'}
+            </span>
+          ),
+        },
+        {
+          field: 'title',
+          key: 'title',
+          title: this.$t('CASE_TICKETS.TABLE.CONTACT_SUBJECT'),
+          align: 'left',
+          width: 360,
+          // Dos líneas: arriba el contacto, abajo el asunto (badges + título).
+          renderBodyCell: ({ row }) => (
+            <div class="min-w-0">
+              <p class="m-0 text-base font-semibold truncate text-slate-700 dark:text-slate-200">
+                {row.contact_name || this.noContactName(row)}
+              </p>
+              <div class="flex items-center gap-2 mt-1.5 min-w-0">
+                {row.case_type ? (
+                  <span
+                    class="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded text-white flex-shrink-0"
+                    style={{ backgroundColor: row.case_type.color }}
+                  >
+                    {row.case_type.name}
+                  </span>
+                ) : null}
+                {row.is_internal ? (
+                  <span class="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-300 flex-shrink-0">
+                    {this.$t('CASE_TICKETS.INTERNAL.BADGE')}
+                  </span>
+                ) : null}
+                <span class="text-xs truncate text-slate-500 dark:text-slate-400">
+                  {row.title}
+                </span>
+              </div>
+            </div>
+          ),
+        },
+        {
+          field: 'assignee',
+          key: 'assignee',
+          title: this.$t('CASE_TICKETS.TABLE.ASSIGNEE'),
+          align: 'left',
+          width: 150,
+          renderBodyCell: ({ row }) => (
+            <span class="whitespace-nowrap text-slate-600 dark:text-slate-300">
+              {this.assigneeName(row) || '—'}
+            </span>
+          ),
+        },
+        {
+          field: 'priority',
+          key: 'priority',
+          title: this.$t('CASE_TICKETS.TABLE.PRIORITY'),
+          align: 'left',
+          width: 120,
+          sortBy: this.sortConfig.priority || '',
+          renderBodyCell: ({ row }) => (
+            <span
+              class={`px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded ${this.priorityBadge(
+                row.priority
+              )}`}
+            >
+              {this.priorityLabel(row.priority)}
+            </span>
+          ),
+        },
+        {
+          field: 'status',
+          key: 'status',
+          title: this.$t('CASE_TICKETS.TABLE.STATUS'),
+          align: 'left',
+          width: 150,
+          sortBy: this.sortConfig.status || '',
+          renderBodyCell: ({ row }) => (
+            <span class="whitespace-nowrap text-slate-600 dark:text-slate-300">
+              {this.statusLabel(this.displayStatus(row))}
+            </span>
+          ),
+        },
+        {
+          field: 'due_at',
+          key: 'due_at',
+          title: this.$t('CASE_TICKETS.TABLE.DUE'),
+          align: 'left',
+          width: 140,
+          sortBy: this.sortConfig.due_at || '',
+          renderBodyCell: ({ row }) => (
+            <span
+              class={
+                row.due_overdue
+                  ? 'text-xs font-bold text-red-600 dark:text-red-400 whitespace-nowrap'
+                  : 'text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap'
+              }
+            >
+              {this.formatDue(row)}
+            </span>
+          ),
+        },
+        {
+          field: 'created_at',
+          key: 'created_at',
+          title: this.$t('CASE_TICKETS.TABLE.CREATED'),
+          align: 'left',
+          width: 130,
+          sortBy: this.sortConfig.created_at || '',
+          renderBodyCell: ({ row }) => (
+            <span class="text-xs whitespace-nowrap text-slate-400 dark:text-slate-500">
+              {this.formatDate(row.created_at)}
+            </span>
+          ),
+        },
+      ];
+    },
+  },
+  watch: {
+    // Mantiene el estado visual del orden en VeTable en sync con los controles
+    // del toolbar (select "Ordenar por" + botón asc/desc).
+    sortBy() {
+      this.setSortConfig();
+    },
+    sortOrder() {
+      this.setSortConfig();
+    },
   },
   mounted() {
+    this.restoreListPrefs();
+    this.setSortConfig();
     this.$store.dispatch('caseTickets/fetchTypes');
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
+    this.$store.dispatch('agents/get'); // @tickets_cases P3 — para asignar y mostrar nombre
+    this.$store.dispatch('customViews/get', VIEW_FILTER_TYPE); // @tickets_cases F3
     this.fetch();
   },
   methods: {
+    // @tickets_cases — si ya se visitó el listado en esta sesión de la app,
+    // retoma filtros/orden/página donde se quedó (se perdían al entrar a un
+    // ticket y volver, porque el componente se destruye y se vuelve a montar).
+    // Tolerante a claves ausentes: un campo nuevo que se agregue después no
+    // rompe la restauración de una sesión ya en curso.
+    restoreListPrefs() {
+      const prefs = this.listPrefs;
+      if (!prefs) return;
+
+      this.search = prefs.search || '';
+      this.dateRange = prefs.dateRange || [];
+      this.statusFilter = prefs.statusFilter ?? 'pending';
+      this.priorityFilter = prefs.priorityFilter || '';
+      this.originFilter = prefs.originFilter || '';
+      this.activeFilter = prefs.activeFilter || 'mine';
+      this.activeType = prefs.activeType || '';
+      this.sortBy = prefs.sortBy || 'created_at';
+      this.sortOrder = prefs.sortOrder || 'desc';
+      this.currentPage = prefs.currentPage || 1;
+      this.perPage = prefs.perPage || 25;
+      this.activeViewId = prefs.activeViewId || '';
+    },
+    // Guarda el estado actual para la próxima vez que se monte este componente
+    // en la misma sesión (ver restoreListPrefs). Se llama en cada fetch(): así
+    // no hay que enganchar un watcher aparte por cada filtro.
+    persistListPrefs() {
+      this.$store.dispatch('caseTickets/setTicketsListPrefs', {
+        search: this.search,
+        dateRange: this.dateRange,
+        statusFilter: this.statusFilter,
+        priorityFilter: this.priorityFilter,
+        originFilter: this.originFilter,
+        activeFilter: this.activeFilter,
+        activeType: this.activeType,
+        sortBy: this.sortBy,
+        sortOrder: this.sortOrder,
+        currentPage: this.currentPage,
+        perPage: this.perPage,
+        activeViewId: this.activeViewId,
+      });
+    },
     // @tickets_cases Fase C — tras crear un ticket interno, refresca el listado.
     onInternalCreated() {
       this.showInternalModal = false;
       this.currentPage = 1;
       this.fetch();
     },
+    // @tickets_cases — editar desde la cola: el listado ya trae el ticket
+    // completo (mismo ticket_json que el detalle), así que se pasa tal cual.
+    openEdit(ticket) {
+      this.editingTicket = ticket;
+    },
+    onInternalUpdated() {
+      this.editingTicket = null;
+      this.fetch();
+    },
     fetch() {
+      this.selected = []; // @tickets_cases P3 — la selección es por vista
+      this.persistListPrefs();
       const filters = { page: this.currentPage, per_page: this.perPage };
-      if (this.search.trim())      filters.q = this.search.trim();
-      if (this.dateRange[0])       filters.date_from = this.formatDateParam(this.dateRange[0]);
-      if (this.dateRange[1])       filters.date_to = this.formatDateParam(this.dateRange[1]);
-      if (this.statusFilter)       filters.status = this.statusFilter;
-      if (this.priorityFilter)     filters.priority = this.priorityFilter;
-      if (this.originFilter)       filters.origin = this.originFilter;
+      if (this.search.trim()) filters.q = this.search.trim();
+      if (this.dateRange[0])
+        filters.date_from = this.formatDateParam(this.dateRange[0]);
+      if (this.dateRange[1])
+        filters.date_to = this.formatDateParam(this.dateRange[1]);
+      if (this.statusFilter) filters.status = this.statusFilter;
+      if (this.priorityFilter) filters.priority = this.priorityFilter;
+      if (this.originFilter) filters.origin = this.originFilter;
       if (this.activeFilter === 'sla_overdue') filters.sla_status = 'overdue';
-      if (this.activeFilter === 'unassigned')  filters.assignee_id = 'null';
-      if (this.activeFilter === 'mine')        filters.assignee_id = this.currentUserID;
-      if (this.activeType)         filters.case_type_id = this.activeType;
+      if (this.activeFilter === 'unassigned') filters.assignee_id = 'null';
+      if (this.activeFilter === 'mine')
+        filters.assignee_id = this.currentUserID;
+      if (this.activeType) filters.case_type_id = this.activeType;
       filters.sort_by = this.sortBy;
       filters.sort_order = this.sortOrder;
       this.$store.dispatch('caseTickets/fetchTickets', filters);
@@ -387,10 +1011,94 @@ export default {
     onQuickTabChange(index) {
       this.applyFilter(QUICK_FILTERS[index].key);
     },
+    // @tickets_cases F3 — vistas guardadas ------------------------------------
+    onViewChange() {
+      const view = this.savedViews.find(v => v.id === this.activeViewId);
+      if (view) this.applyView(view);
+      else this.clearFilters();
+    },
+    // Tolerante a proposito: una clave ausente deja su default en pie y una
+    // desconocida se ignora. Una vista vieja tiene que seguir abriendo cuando
+    // agreguemos filtros nuevos.
+    applyView(view) {
+      const q = view.query || {};
+
+      this.search = q.search || '';
+      this.dateRange = Array.isArray(q.date_range)
+        ? q.date_range.map(d => new Date(`${d}T00:00:00`))
+        : [];
+      this.statusFilter = q.status || '';
+      this.priorityFilter = q.priority || '';
+      this.originFilter = q.origin || '';
+      this.activeFilter = QUICK_FILTERS.some(f => f.key === q.quick)
+        ? q.quick
+        : 'mine';
+      this.activeType = this.resolveSavedType(q.case_type_id, view.name);
+      this.sortBy = SORT_FIELDS.includes(q.sort_by) ? q.sort_by : 'created_at';
+      this.sortOrder = q.sort_order === 'asc' ? 'asc' : 'desc';
+
+      this.currentPage = 1;
+      this.setSortConfig();
+      this.fetch();
+    },
+    // Los tipos de caso son una tabla configurable por cuenta: alguien pudo
+    // borrar el tipo al que apunta una vista guardada. Eso no debe romperla.
+    resolveSavedType(id, viewName) {
+      if (!id) return '';
+      if (this.types.some(t => t.id === id)) return id;
+
+      useAlert(this.$t('CASE_TICKETS.VIEWS.MISSING_TYPE', { name: viewName }));
+      return '';
+    },
+    // Compara dos `query` sin depender del orden de las claves ni de la
+    // diferencia entre "ausente" y "vacio": el jsonb vuelve del servidor con
+    // las claves en cualquier orden.
+    canonicalQuery(q) {
+      const src = q || {};
+      const norm = {
+        search: src.search || '',
+        date_range: Array.isArray(src.date_range) ? src.date_range : [],
+        status: src.status || '',
+        priority: src.priority || '',
+        origin: src.origin || '',
+        quick: src.quick || 'mine',
+        case_type_id: src.case_type_id || '',
+        sort_by: src.sort_by || 'created_at',
+        sort_order: src.sort_order || 'desc',
+      };
+      return JSON.stringify(
+        Object.keys(norm)
+          .sort()
+          .map(k => [k, norm[k]])
+      );
+    },
+    async overwriteView() {
+      if (!this.canOverwriteView) return;
+      try {
+        await this.$store.dispatch('customViews/update', {
+          id: this.activeView.id,
+          query: this.viewQuery,
+        });
+        useAlert(this.$t('CASE_TICKETS.VIEWS.UPDATED'));
+      } catch (error) {
+        useAlert(this.$t('CASE_TICKETS.VIEWS.UPDATE_ERROR'));
+      }
+    },
+    // Si la vista que estaba cargada se borro, hay que soltarla: dejarla
+    // seleccionada mostraria un nombre que ya no existe.
+    onViewsChanged(deletedId) {
+      if (deletedId && deletedId === this.activeViewId) this.activeViewId = '';
+      this.$store.dispatch('customViews/get', VIEW_FILTER_TYPE);
+    },
+    onViewSaved() {
+      this.showSaveViewModal = false;
+      this.$store.dispatch('customViews/get', VIEW_FILTER_TYPE);
+    },
     clearFilters() {
+      this.activeViewId = '';
       this.search = '';
       this.dateRange = [];
-      this.statusFilter = '';
+      this.statusFilter = 'pending';
       this.priorityFilter = '';
       this.originFilter = '';
       this.activeFilter = 'mine';
@@ -407,7 +1115,111 @@ export default {
       this.fetch();
     },
     openDetail(ticket) {
-      this.$router.push({ name: 'gestorTickets_detail', params: { id: ticket.id } });
+      this.$router.push({
+        name: 'gestorTickets_detail',
+        params: { id: ticket.id },
+      });
+    },
+    // @tickets_cases P3 — selección múltiple
+    isSelected(id) {
+      return this.selected.includes(id);
+    },
+    toggleSelect(id) {
+      const i = this.selected.indexOf(id);
+      if (i === -1) this.selected.push(id);
+      else this.selected.splice(i, 1);
+    },
+    toggleSelectAll() {
+      if (this.allSelected) {
+        this.selected = this.selected.filter(id => !this.pageIds.includes(id));
+      } else {
+        this.selected = [...new Set([...this.selected, ...this.pageIds])];
+      }
+    },
+    clearSelection() {
+      this.selected = [];
+      this.showBulkAssign = false;
+      this.showBulkStatus = false;
+    },
+    // Refleja el orden actual en el `sortBy` de cada columna de VeTable.
+    setSortConfig() {
+      this.sortConfig = { [this.sortBy]: this.sortOrder };
+    },
+    // VeTable emite el estado de orden de todas las columnas; se toma la que
+    // quedó activa (valor 'asc'/'desc') y se pide al servidor con ese orden.
+    onSortChange(params) {
+      const field = Object.keys(params).find(k => params[k]);
+      if (!field) return;
+      this.sortBy = field;
+      this.sortOrder = params[field];
+      this.currentPage = 1;
+      this.fetch();
+    },
+    assigneeName(ticket) {
+      if (!ticket.assignee_id) return null;
+      const a = this.agents.find(x => x.id === ticket.assignee_id);
+      return a ? a.name : `#${ticket.assignee_id}`;
+    },
+    // @tickets_cases Fase C — sin contacto la primera línea muestra al agente
+    // asignado. Cae aquí el ticket interno (origin: internal, nunca tuvo
+    // contacto) y también el externo cuyo contacto se borró después
+    // (contact_id → NULL por la FK nullify), que no es interno.
+    noContactName(ticket) {
+      return (
+        this.assigneeName(ticket) ||
+        this.$t('CASE_TICKETS.INTERNAL.NO_ASSIGNEE')
+      );
+    },
+    // @tickets_cases P3 — acciones en lote
+    async runBulk(params) {
+      if (!this.selected.length) return;
+      try {
+        const res = await this.$store.dispatch('caseTickets/bulkAction', {
+          ids: this.selected,
+          ...params,
+        });
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.BULK.SUCCESS', {
+            n: res.updated || 0,
+          }),
+        });
+        // @tickets_cases F5 (§11.2) — el lote NUNCA cancela reuniones: cancelar
+        // en masa mandaría correos a N clientes sin que nadie los vea. Solo se
+        // avisa cuáles quedaron con citas vivas para revisarlos uno por uno.
+        const pending = (res.tickets_with_meetings || []).length;
+        if (pending) {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.BULK.MEETINGS_PENDING', {
+              n: pending,
+            }),
+          });
+        }
+        this.clearSelection();
+        this.fetch();
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message:
+            e.response?.data?.error || this.$t('CASE_TICKETS.BULK.ERROR'),
+        });
+      }
+    },
+    bulkClaim() {
+      this.runBulk({ bulk_action: 'assign', assignee_id: 'me' });
+    },
+    bulkAssign(agentId) {
+      this.showBulkAssign = false;
+      this.runBulk({ bulk_action: 'assign', assignee_id: agentId });
+    },
+    bulkUnassign() {
+      this.showBulkAssign = false;
+      this.runBulk({ bulk_action: 'assign', assignee_id: '' });
+    },
+    bulkStatus(status) {
+      this.showBulkStatus = false;
+      this.runBulk({ bulk_action: 'transition', status });
+    },
+    bulkClose() {
+      this.runBulk({ bulk_action: 'transition', status: 'closed' });
     },
     formatDateParam(d) {
       const date = d instanceof Date ? d : new Date(d);
@@ -416,51 +1228,95 @@ export default {
       const day = String(date.getDate()).padStart(2, '0');
       return `${y}-${m}-${day}`;
     },
-    slaDotColor(sla) {
-      return {
-        on_time: 'bg-green-500',
-        at_risk: 'bg-yellow-500',
-        overdue: 'bg-red-500',
-      }[sla] || 'bg-green-500';
-    },
+    // @tickets_cases — color del folio según el SLA (verde a tiempo, ámbar en
+    // riesgo, rojo vencido). Antes era un punto; ahora tiñe el propio número.
     slaTextColor(sla) {
-      return {
-        on_time: 'text-green-600 dark:text-green-400',
-        at_risk: 'text-yellow-600 dark:text-yellow-400',
-        overdue: 'text-red-600 dark:text-red-400 font-bold',
-      }[sla] || 'text-green-600 dark:text-green-400';
+      return (
+        {
+          on_time: 'text-green-600 dark:text-green-400',
+          at_risk: 'text-yellow-600 dark:text-yellow-400',
+          overdue: 'text-red-600 dark:text-red-400',
+        }[sla] || 'text-green-600 dark:text-green-400'
+      );
     },
     priorityBadge(p) {
-      return {
-        low:    'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
-        medium: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-        high:   'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-        urgent: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-      }[p] || 'bg-slate-100 text-slate-700';
+      return (
+        {
+          low: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
+          medium:
+            'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+          high: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+          urgent: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+        }[p] || 'bg-slate-100 text-slate-700'
+      );
     },
-    statusLabel(key)   { return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key; },
-    priorityLabel(key) { return this.$t(`CASE_TICKETS.PRIORITIES.${key}`) || key; },
+    statusLabel(key) {
+      return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key;
+    },
+    // Colapsa el estado ITIL a etiqueta simple según el modo del PROPIO tipo del
+    // ticket (cada fila puede ser de un tipo distinto).
+    displayStatus(ticket) {
+      return ticket?.case_type?.itil_enabled
+        ? ticket.status
+        : toSimpleStatus(ticket?.status);
+    },
+    priorityLabel(key) {
+      return this.$t(`CASE_TICKETS.PRIORITIES.${key}`) || key;
+    },
     originLabel(key) {
       return this.$t(`CASE_TICKETS.ORIGINS.${key}`) || key;
     },
     formatDate(dateStr) {
       if (!dateStr) return '';
       return new Date(dateStr).toLocaleDateString(undefined, {
-        day: '2-digit', month: '2-digit', year: 'numeric',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
       });
     },
-    slaText(ticket) {
-      if (ticket.sla_status === 'overdue') return this.$t('CASE_TICKETS.SLA_OVERDUE');
-      const target = ticket.first_response_at
-        ? ticket.resolution_time_target
-        : ticket.first_response_time_target;
-      if (!target) return '';
-      const elapsed  = (Date.now() - new Date(ticket.created_at).getTime()) / 60000;
-      const remaining = Math.max(0, target - elapsed);
-      const h = Math.floor(remaining / 60);
-      const m = Math.floor(remaining % 60);
-      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    // @tickets_cases P4 — vencimiento (osTicket "Due Date"): fecha efectiva corta.
+    formatDue(ticket) {
+      if (!ticket.effective_due_at) return '—';
+      return new Date(ticket.effective_due_at).toLocaleString(undefined, {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     },
   },
 };
 </script>
+
+<style lang="scss" scoped>
+// @tickets_cases — mismos ajustes que Notas/Tareas: celdas compactas, cabecera
+// mini y la cadena de alturas que hace que scrolleen solo las filas.
+.tickets-table-wrap {
+  overflow: hidden;
+}
+
+.tickets-table-wrap::v-deep {
+  // Sin esta altura el `max-height: 100%` de la tabla no resuelve (porcentaje
+  // contra `auto`) y la cola se desborda del contenedor en vez de scrollear.
+  .ve-table {
+    height: 100%;
+  }
+
+  .ve-table-header-th {
+    padding: var(--space-small) var(--space-one) !important;
+    font-size: var(--font-size-mini) !important;
+  }
+
+  .ve-table-body-td {
+    padding: var(--space-small) var(--space-one) !important;
+    vertical-align: middle;
+    cursor: pointer;
+  }
+
+  // Fila seleccionada: la clase la pinta `cellStyleOption.bodyCellClass` en cada
+  // celda, así que el fondo va sobre la propia celda.
+  .ve-table-body-td.row--selected {
+    @apply bg-woot-25 dark:bg-woot-800/20;
+  }
+}
+</style>

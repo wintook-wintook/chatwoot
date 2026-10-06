@@ -21,6 +21,19 @@ class Conversations::EventDataPresenter < SimpleDelegator
     }
   end
 
+  # CAMBIO LOCAL (no upstream): los eventos de conversacion salian sin ninguna referencia
+  # a la cuenta -- ni `account` anidado como en los de mensaje/contacto, ni el id -- asi
+  # que con `instance_url` sola el receptor seguia sin poder armar el enlace
+  # <instance_url>/app/accounts/<account_id>/conversations/<id>.
+  #
+  # Va aqui y NO en push_data porque push_data alimenta tambien el websocket del
+  # dashboard: agregarlo alli cambiaria el payload que reciben todos los agentes.
+  # Se manda el id y no `account.webhook_data` para no pagar una consulta por evento:
+  # account_id es columna de conversations.
+  def webhook_data
+    push_data.merge(account_id: account_id)
+  end
+
   private
 
   def push_messages

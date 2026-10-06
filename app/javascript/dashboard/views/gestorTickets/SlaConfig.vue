@@ -1,18 +1,28 @@
 <!--
   @tickets_cases 2I
-  Configuración de políticas SLA (prioridad × tipo × naturaleza). Tailwind + dark mode.
+  Configuración de políticas SLA (prioridad × tipo × naturaleza). Ahora con tabla
+  nativa de Chatwoot (vue-easytable) + paginado inferior, badge de prioridad y
+  toggle de activo, en lugar de la tabla HTML plana.
 -->
 <script>
 import { mapGetters } from 'vuex';
+import { VeTable } from 'vue-easytable';
+import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+
+const PER_PAGE_OPTIONS = [25, 50, 100];
 
 export default {
   name: 'SlaConfig',
+  components: { VeTable, TableFooter },
   data() {
     return {
       showModal: false,
       editingId: null,
       showDelete: false,
       toDelete: null,
+      currentPage: 1,
+      perPage: 25,
+      perPageOptions: PER_PAGE_OPTIONS,
       form: this.emptyForm(),
     };
   },
@@ -27,6 +37,137 @@ export default {
     },
     kindOptions() {
       return ['incident', 'service_request', 'problem', 'change', 'query'];
+    },
+    pagedPolicies() {
+      const start = (this.currentPage - 1) * this.perPage;
+      return this.policies.slice(start, start + this.perPage);
+    },
+    columns() {
+      return [
+        {
+          field: 'priority',
+          key: 'priority',
+          title: this.$t('CASE_TICKETS.SLA.PRIORITY'),
+          align: 'left',
+          width: 120,
+          renderBodyCell: ({ row }) => (
+            <span
+              class={`px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide rounded ${this.priorityBadge(
+                row.priority
+              )}`}
+            >
+              {this.priorityLabel(row.priority)}
+            </span>
+          ),
+        },
+        {
+          field: 'type',
+          key: 'type',
+          title: this.$t('CASE_TICKETS.SLA.TYPE'),
+          align: 'left',
+          width: 150,
+          renderBodyCell: ({ row }) => (
+            <span class="text-sm text-slate-600 dark:text-slate-300">
+              {this.typeName(row.case_type_id)}
+            </span>
+          ),
+        },
+        {
+          field: 'kind',
+          key: 'kind',
+          title: this.$t('CASE_TICKETS.SLA.KIND'),
+          align: 'left',
+          width: 150,
+          renderBodyCell: ({ row }) => (
+            <span class="text-sm text-slate-600 dark:text-slate-300">
+              {this.kindLabel(row.ticket_kind)}
+            </span>
+          ),
+        },
+        {
+          field: 'first_response',
+          key: 'first_response',
+          title: this.$t('CASE_TICKETS.SLA.FIRST_RESPONSE'),
+          align: 'left',
+          width: 140,
+          renderBodyCell: ({ row }) => (
+            <span class="text-sm whitespace-nowrap text-slate-600 dark:text-slate-300">
+              {this.formatMinutes(row.first_response_time_target)}
+            </span>
+          ),
+        },
+        {
+          field: 'resolution',
+          key: 'resolution',
+          title: this.$t('CASE_TICKETS.SLA.RESOLUTION'),
+          align: 'left',
+          width: 140,
+          renderBodyCell: ({ row }) => (
+            <span class="text-sm whitespace-nowrap text-slate-600 dark:text-slate-300">
+              {this.formatMinutes(row.resolution_time_target)}
+            </span>
+          ),
+        },
+        {
+          field: 'business_hours',
+          key: 'business_hours',
+          title: this.$t('CASE_TICKETS.SLA.BUSINESS_HOURS'),
+          align: 'left',
+          width: 120,
+          renderBodyCell: ({ row }) => (
+            <span class="text-sm text-slate-600 dark:text-slate-300">
+              {row.business_hours_only
+                ? this.$t('CASE_TICKETS.SLA.YES')
+                : this.$t('CASE_TICKETS.SLA.NO')}
+            </span>
+          ),
+        },
+        {
+          field: 'active',
+          key: 'active',
+          title: this.$t('CASE_TICKETS.SLA.ACTIVE'),
+          align: 'left',
+          width: 120,
+          renderBodyCell: ({ row }) => (
+            <woot-button
+              size="tiny"
+              variant={row.active ? 'smooth' : 'clear'}
+              color-scheme={row.active ? 'success' : 'secondary'}
+              icon={row.active ? 'checkmark-circle' : 'dismiss-circle'}
+              onClick={() => this.toggleActive(row)}
+            >
+              {row.active
+                ? this.$t('CASE_TICKETS.SLA.YES')
+                : this.$t('CASE_TICKETS.SLA.NO')}
+            </woot-button>
+          ),
+        },
+        {
+          field: 'actions',
+          key: 'actions',
+          title: '',
+          align: 'right',
+          width: 100,
+          renderBodyCell: ({ row }) => (
+            <div class="flex items-center justify-end gap-1">
+              <woot-button
+                size="tiny"
+                variant="clear"
+                color-scheme="secondary"
+                icon="edit"
+                onClick={() => this.openEdit(row)}
+              />
+              <woot-button
+                size="tiny"
+                variant="clear"
+                color-scheme="alert"
+                icon="delete"
+                onClick={() => this.openDelete(row)}
+              />
+            </div>
+          ),
+        },
+      ];
     },
   },
   mounted() {
@@ -96,6 +237,16 @@ export default {
         });
       }
     },
+    async toggleActive(p) {
+      try {
+        await this.$store.dispatch('caseTickets/updateSlaPolicy', {
+          id: p.id,
+          active: !p.active,
+        });
+      } catch (_e) {
+        /* silent */
+      }
+    },
     openDelete(p) {
       this.toDelete = p;
       this.showDelete = true;
@@ -108,6 +259,12 @@ export default {
       this.showDelete = false;
       this.toDelete = null;
     },
+    changePage(page) {
+      this.currentPage = page;
+    },
+    changePerPage() {
+      this.currentPage = 1;
+    },
     typeName(id) {
       const t = this.types.find(x => x.id === id);
       return t ? t.name : this.$t('CASE_TICKETS.SLA.ANY');
@@ -119,6 +276,17 @@ export default {
     },
     priorityLabel(p) {
       return this.$t(`CASE_TICKETS.PRIORITIES.${p}`) || p;
+    },
+    priorityBadge(p) {
+      return (
+        {
+          low: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
+          medium:
+            'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+          high: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+          urgent: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+        }[p] || 'bg-slate-100 text-slate-700'
+      );
     },
     formatMinutes(min) {
       if (!min) return '—';
@@ -138,7 +306,7 @@ export default {
 
 <template>
   <div
-    class="flex flex-col flex-1 w-full h-full overflow-auto bg-slate-25 dark:bg-slate-900"
+    class="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900"
   >
     <div
       class="flex items-center justify-between flex-shrink-0 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
@@ -156,118 +324,60 @@ export default {
       </woot-button>
     </div>
 
-    <div class="flex-1 w-full p-6">
-      <div
-        v-if="uiFlags.isFetching"
-        class="text-sm text-slate-400 dark:text-slate-500"
-      >
-        {{ $t('CASE_TICKETS.SLA.LOADING') }}
-      </div>
-      <table
-        v-else
-        class="w-full text-sm bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-      >
-        <thead>
-          <tr
-            class="text-xs tracking-wide text-left uppercase text-slate-400 dark:text-slate-500 border-b border-slate-75 dark:border-slate-700"
-          >
-            <th class="px-4 py-3 font-medium">
-              {{ $t('CASE_TICKETS.SLA.PRIORITY') }}
-            </th>
-            <th class="px-4 py-3 font-medium">
-              {{ $t('CASE_TICKETS.SLA.TYPE') }}
-            </th>
-            <th class="px-4 py-3 font-medium">
-              {{ $t('CASE_TICKETS.SLA.KIND') }}
-            </th>
-            <th class="px-4 py-3 font-medium">
-              {{ $t('CASE_TICKETS.SLA.FIRST_RESPONSE') }}
-            </th>
-            <th class="px-4 py-3 font-medium">
-              {{ $t('CASE_TICKETS.SLA.RESOLUTION') }}
-            </th>
-            <th class="px-4 py-3 font-medium">
-              {{ $t('CASE_TICKETS.SLA.BUSINESS_HOURS') }}
-            </th>
-            <th class="px-4 py-3 font-medium">
-              {{ $t('CASE_TICKETS.SLA.ACTIVE') }}
-            </th>
-            <th class="px-4 py-3" />
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="p in policies"
-            :key="p.id"
-            class="border-b border-slate-50 dark:border-slate-700/50 last:border-0"
-          >
-            <td
-              class="px-4 py-3 font-medium text-slate-700 dark:text-slate-200"
-            >
-              {{ priorityLabel(p.priority) }}
-            </td>
-            <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
-              {{ typeName(p.case_type_id) }}
-            </td>
-            <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
-              {{ kindLabel(p.ticket_kind) }}
-            </td>
-            <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
-              {{ formatMinutes(p.first_response_time_target) }}
-            </td>
-            <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
-              {{ formatMinutes(p.resolution_time_target) }}
-            </td>
-            <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
-              {{
-                p.business_hours_only
-                  ? $t('CASE_TICKETS.SLA.YES')
-                  : $t('CASE_TICKETS.SLA.NO')
-              }}
-            </td>
-            <td class="px-4 py-3">
-              <span
-                class="px-1.5 py-0.5 text-[11px] uppercase rounded"
-                :class="
-                  p.active
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                    : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
-                "
-                >{{
-                  p.active
-                    ? $t('CASE_TICKETS.SLA.YES')
-                    : $t('CASE_TICKETS.SLA.NO')
-                }}</span
-              >
-            </td>
-            <td class="px-4 py-3 text-right whitespace-nowrap">
-              <woot-button
-                size="tiny"
-                variant="clear"
-                color-scheme="secondary"
-                icon="edit"
-                @click="openEdit(p)"
-              />
-              <woot-button
-                size="tiny"
-                variant="clear"
-                color-scheme="alert"
-                icon="dismiss"
-                @click="openDelete(p)"
-              />
-            </td>
-          </tr>
-          <tr v-if="!policies.length">
-            <td
-              colspan="8"
-              class="px-4 py-6 text-center text-slate-400 dark:text-slate-500"
-            >
-              {{ $t('CASE_TICKETS.SLA.EMPTY') }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Loading -->
+    <div
+      v-if="uiFlags.isFetching && !policies.length"
+      class="flex items-center justify-center flex-1 text-slate-400 dark:text-slate-500"
+    >
+      {{ $t('CASE_TICKETS.SLA.LOADING') }}
     </div>
+
+    <!-- Empty -->
+    <div
+      v-else-if="!policies.length"
+      class="flex flex-col items-center justify-center flex-1 gap-3 text-slate-400 dark:text-slate-500"
+    >
+      <fluent-icon icon="clock" size="36" />
+      <p>{{ $t('CASE_TICKETS.SLA.EMPTY') }}</p>
+    </div>
+
+    <!-- Tabla + paginado -->
+    <template v-else>
+      <div class="flex-1 min-h-0 px-6 py-4 sla-table-wrap">
+        <VeTable
+          fixed-header
+          max-height="100%"
+          row-key-field-name="id"
+          :columns="columns"
+          :table-data="pagedPolicies"
+          :border-around="false"
+        />
+      </div>
+      <div
+        class="flex items-center justify-between flex-shrink-0 bg-white border-t dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
+      >
+        <label
+          class="flex items-center gap-1 pl-6 text-xs text-slate-500 dark:text-slate-400"
+        >
+          {{ $t('CASE_TICKETS.SLA.PER_PAGE') }}
+          <select
+            v-model.number="perPage"
+            class="!mb-0 w-20 text-sm"
+            @change="changePerPage"
+          >
+            <option v-for="n in perPageOptions" :key="n" :value="n">
+              {{ n }}
+            </option>
+          </select>
+        </label>
+        <TableFooter
+          :current-page="currentPage"
+          :total-count="policies.length"
+          :page-size="perPage"
+          @pageChange="changePage"
+        />
+      </div>
+    </template>
 
     <!-- Modal crear/editar -->
     <woot-modal
@@ -327,7 +437,8 @@ export default {
             <label class="flex flex-col flex-1 gap-1">
               <span
                 class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                >{{ $t('CASE_TICKETS.SLA.FIRST_RESPONSE') }} (min)</span
+                >{{ $t('CASE_TICKETS.SLA.FIRST_RESPONSE') }}
+                {{ $t('CASE_TICKETS.SLA.MINUTES_SUFFIX') }}</span
               >
               <input
                 v-model.number="form.first_response_time_target"
@@ -339,7 +450,8 @@ export default {
             <label class="flex flex-col flex-1 gap-1">
               <span
                 class="text-sm font-medium text-slate-700 dark:text-slate-200"
-                >{{ $t('CASE_TICKETS.SLA.RESOLUTION') }} (min)</span
+                >{{ $t('CASE_TICKETS.SLA.RESOLUTION') }}
+                {{ $t('CASE_TICKETS.SLA.MINUTES_SUFFIX') }}</span
               >
               <input
                 v-model.number="form.resolution_time_target"
@@ -400,3 +512,23 @@ export default {
     />
   </div>
 </template>
+
+<style lang="scss" scoped>
+.sla-table-wrap {
+  overflow: hidden;
+}
+
+.sla-table-wrap::v-deep {
+  .ve-table {
+    height: 100%;
+  }
+  .ve-table-header-th {
+    padding: var(--space-small) var(--space-one) !important;
+    font-size: var(--font-size-mini) !important;
+  }
+  .ve-table-body-td {
+    padding: var(--space-small) var(--space-one) !important;
+    vertical-align: middle;
+  }
+}
+</style>

@@ -16,6 +16,15 @@ class ExternalDbConsoleAPI extends ApiClient {
     return axios.post(`${this.url}/run`, { query_id: queryId, params });
   }
 
+  // proyecto@erp_productos — "Probar como el agente" (la IA llena los "?").
+  tryAsked({ queryId, message, asked }) {
+    return axios.post(`${this.url}/try_asked`, {
+      query_id: queryId,
+      message,
+      asked,
+    });
+  }
+
   ask({ connectionId, question }) {
     return axios.post(`${this.url}/ask`, {
       connection_id: connectionId,

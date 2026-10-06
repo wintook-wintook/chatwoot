@@ -114,6 +114,9 @@ export default {
     ...mapGetters({
       metrics: 'caseTickets/getMetrics',
       uiFlags: 'caseTickets/getUIFlags',
+      // ITIL es por tipo; Métricas es agregado de toda la cuenta, así que se
+      // muestran los KPIs ITIL si al menos un tipo de la cuenta los usa.
+      itilEnabled: 'caseTickets/getAnyTypeItilEnabled',
     }),
     isLoading() {
       return this.uiFlags.isFetchingList;
@@ -384,18 +387,27 @@ export default {
           ],
         },
         {
-          header: this.$t('CASE_TICKETS.METRICS.GROUP_ITIL'),
+          // Modo simple (osTicket): se ocultan los KPIs ITIL (problemas/cambios),
+          // queda solo CSAT y el grupo se titula "Calidad".
+          header: this.itilEnabled
+            ? this.$t('CASE_TICKETS.METRICS.GROUP_ITIL')
+            : this.$t('CASE_TICKETS.METRICS.GROUP_QUALITY'),
           metrics: [
-            {
-              value: s.open_problems ?? 0,
-              label: this.$t('CASE_TICKETS.METRICS.OPEN_PROBLEMS'),
-              valueClass: VALUE_NEUTRAL,
-            },
-            {
-              value: s.pending_changes ?? 0,
-              label: this.$t('CASE_TICKETS.METRICS.PENDING_CHANGES'),
-              valueClass: s.pending_changes > 0 ? VALUE_WARNING : VALUE_NEUTRAL,
-            },
+            ...(this.itilEnabled
+              ? [
+                  {
+                    value: s.open_problems ?? 0,
+                    label: this.$t('CASE_TICKETS.METRICS.OPEN_PROBLEMS'),
+                    valueClass: VALUE_NEUTRAL,
+                  },
+                  {
+                    value: s.pending_changes ?? 0,
+                    label: this.$t('CASE_TICKETS.METRICS.PENDING_CHANGES'),
+                    valueClass:
+                      s.pending_changes > 0 ? VALUE_WARNING : VALUE_NEUTRAL,
+                  },
+                ]
+              : []),
             {
               value: this.csatText,
               label: this.$t('CASE_TICKETS.METRICS.CSAT'),
@@ -408,6 +420,7 @@ export default {
   },
   mounted() {
     this.fetch();
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
   },
   methods: {
     fetch() {
@@ -472,10 +485,10 @@ export default {
           size="small"
           variant="clear"
           color-scheme="secondary"
-          icon="arrow-left"
+          icon="chevron-left"
           @click="$router.push({ name: 'gestorTickets_index' })"
         >
-          Volver
+          {{ $t('CASE_TICKETS.METRICS.BACK') }}
         </woot-button>
         <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
           {{ $t('CASE_TICKETS.METRICS.TITLE') }}
@@ -561,15 +574,12 @@ export default {
           v-else
           class="py-10 text-sm text-center text-slate-400 dark:text-slate-500"
         >
-          Sin datos
+          {{ $t('CASE_TICKETS.METRICS.NO_DATA') }}
         </p>
       </div>
 
       <!-- Distribuciones -->
-      <div
-        class="grid gap-4"
-        style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr))"
-      >
+      <div class="grid gap-4 grid-cols-[repeat(auto-fit,minmax(320px,1fr))]">
         <!-- Por estado — barra vertical -->
         <div
           class="p-4 bg-white border rounded-md shadow-sm dark:bg-slate-800 border-slate-75 dark:border-slate-700"
@@ -590,7 +600,7 @@ export default {
             v-else
             class="py-10 text-sm text-center text-slate-400 dark:text-slate-500"
           >
-            Sin datos
+            {{ $t('CASE_TICKETS.METRICS.NO_DATA') }}
           </p>
         </div>
 
@@ -614,7 +624,7 @@ export default {
             v-else
             class="py-10 text-sm text-center text-slate-400 dark:text-slate-500"
           >
-            Sin datos
+            {{ $t('CASE_TICKETS.METRICS.NO_DATA') }}
           </p>
         </div>
 
@@ -638,7 +648,7 @@ export default {
             v-else
             class="py-10 text-sm text-center text-slate-400 dark:text-slate-500"
           >
-            Sin datos
+            {{ $t('CASE_TICKETS.METRICS.NO_DATA') }}
           </p>
         </div>
 
@@ -662,7 +672,7 @@ export default {
             v-else
             class="py-10 text-sm text-center text-slate-400 dark:text-slate-500"
           >
-            Sin datos
+            {{ $t('CASE_TICKETS.METRICS.NO_DATA') }}
           </p>
         </div>
 
@@ -686,7 +696,7 @@ export default {
             v-else
             class="py-10 text-sm text-center text-slate-400 dark:text-slate-500"
           >
-            Sin datos
+            {{ $t('CASE_TICKETS.METRICS.NO_DATA') }}
           </p>
         </div>
 
@@ -710,7 +720,7 @@ export default {
             v-else
             class="py-10 text-sm text-center text-slate-400 dark:text-slate-500"
           >
-            Sin datos
+            {{ $t('CASE_TICKETS.METRICS.NO_DATA') }}
           </p>
         </div>
 
@@ -734,7 +744,7 @@ export default {
             v-else
             class="py-10 text-sm text-center text-slate-400 dark:text-slate-500"
           >
-            Sin datos
+            {{ $t('CASE_TICKETS.METRICS.NO_DATA') }}
           </p>
         </div>
       </div>

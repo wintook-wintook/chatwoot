@@ -15,6 +15,12 @@ export const routes = [
     component: () => import('../../../views/gestorTickets/Kanban.vue'),
   },
   {
+    path: frontendURL('accounts/:accountId/tickets/tasks'),
+    name: 'gestorTickets_tasks',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/gestorTickets/Tasks.vue'),
+  },
+  {
     path: frontendURL('accounts/:accountId/tickets/rules'),
     name: 'gestorTickets_rules',
     meta: { permissions: ['administrator'] },
@@ -25,6 +31,16 @@ export const routes = [
     name: 'gestorTickets_types',
     meta: { permissions: ['administrator'] },
     component: () => import('../../../views/gestorTickets/TicketTypes.vue'),
+  },
+  {
+    // Detalle de un tipo de caso: tabs de campos personalizados y columnas.
+    // 3 segmentos → no choca con el catch-all `tickets/:id` (2 segmentos).
+    path: frontendURL('accounts/:accountId/tickets/types/:typeId'),
+    name: 'gestorTickets_type_detail',
+    meta: { permissions: ['administrator'] },
+    component: () =>
+      import('../../../views/gestorTickets/TicketTypeDetail.vue'),
+    props: route => ({ typeId: Number(route.params.typeId) }),
   },
   {
     path: frontendURL('accounts/:accountId/tickets/classification'),
@@ -55,6 +71,18 @@ export const routes = [
     name: 'gestorTickets_ai',
     meta: { permissions: ['administrator'] },
     component: () => import('../../../views/gestorTickets/AiConfig.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/tickets/portals'),
+    name: 'gestorTickets_portals',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/gestorTickets/Portals.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/tickets/settings'),
+    name: 'gestorTickets_settings',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/gestorTickets/Settings.vue'),
   },
   {
     path: frontendURL('accounts/:accountId/tickets/:id'),

@@ -549,6 +549,20 @@ RSpec.describe Conversation do
     end
   end
 
+  describe '#webhook_data' do
+    subject(:webhook_data) { conversation.webhook_data }
+
+    let(:conversation) { create(:conversation) }
+
+    it 'is the push payload plus the account id' do
+      expect(webhook_data).to eq(conversation.push_event_data.merge(account_id: conversation.account_id))
+    end
+
+    it 'does not leak the account id into the websocket payload' do
+      expect(conversation.push_event_data).not_to have_key(:account_id)
+    end
+  end
+
   describe 'when conversation is created by blocked contact' do
     let(:account) { create(:account) }
     let(:blocked_contact) { create(:contact, account: account, blocked: true) }

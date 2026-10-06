@@ -46,7 +46,12 @@ class Notification < ApplicationRecord
     calendar_event_reminder: 9,
     # @tickets_cases Fase A — asignación de ticket a un agente. Append al final:
     # el bit de los flags de notification_settings se deriva de este entero.
-    case_ticket_assignment: 10
+    case_ticket_assignment: 10,
+    # @tickets_cases Bandeja de tareas — asignación (F3) y completado (F4) de tarea.
+    # Nacen apagados para email/push (account_user solo enciende conversation_assignment)
+    # y no se exponen en preferencias → solo campanita + toast. Append al final.
+    case_task_assignment: 11,
+    case_task_completed: 12
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -105,7 +110,9 @@ class Notification < ApplicationRecord
       'sla_missed_next_response' => 'notifications.notification_title.sla_missed_next_response',
       'sla_missed_resolution' => 'notifications.notification_title.sla_missed_resolution',
       'calendar_event_reminder' => 'notifications.notification_title.calendar_event_reminder',
-      'case_ticket_assignment' => 'notifications.notification_title.case_ticket_assignment'
+      'case_ticket_assignment' => 'notifications.notification_title.case_ticket_assignment',
+      'case_task_assignment' => 'notifications.notification_title.case_task_assignment',
+      'case_task_completed' => 'notifications.notification_title.case_task_completed'
     }
 
     i18n_key = notification_title_map[notification_type]
@@ -115,7 +122,7 @@ class Notification < ApplicationRecord
       I18n.t(i18n_key, display_id: conversation.display_id, inbox_name: primary_actor.inbox.name)
     elsif notification_type == 'calendar_event_reminder'
       I18n.t(i18n_key)
-    elsif notification_type == 'case_ticket_assignment'
+    elsif %w[case_ticket_assignment case_task_assignment case_task_completed].include?(notification_type)
       I18n.t(i18n_key, folio: primary_actor.folio)
     elsif %w[conversation_assignment assigned_conversation_new_message participating_conversation_new_message
              conversation_mention].include?(notification_type)
@@ -126,6 +133,7 @@ class Notification < ApplicationRecord
   end
   # rubocop:enable Metrics/MethodLength
 
+  # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity
   def push_message_body
     case notification_type
     when 'conversation_creation', 'sla_missed_first_response'
@@ -140,10 +148,14 @@ class Notification < ApplicationRecord
       I18n.t('notifications.calendar_event_reminder.body', title: title, minutes: minutes)
     when 'case_ticket_assignment'
       primary_actor.title.to_s
+    when 'case_task_assignment', 'case_task_completed'
+      # primary_actor es el TICKET (ruteo reusado); el nombre de la tarea viaja en meta.
+      meta&.dig('task_title').to_s
     else
       ''
     end
   end
+  # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity
 
   def conversation
     primary_actor

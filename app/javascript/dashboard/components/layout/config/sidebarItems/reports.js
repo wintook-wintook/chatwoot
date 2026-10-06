@@ -13,6 +13,7 @@ const reports = accountId => ({
     'inbox_reports',
     'team_reports',
     'sla_reports',
+    'opportunity_reports', // proyecto@metricas_casos
   ],
   menuItems: [
     {
@@ -79,6 +80,14 @@ const reports = accountId => ({
       featureFlag: FEATURE_FLAGS.SLA,
       toState: frontendURL(`accounts/${accountId}/reports/sla`),
       toStateName: 'sla_reports',
+    },
+    // proyecto@metricas_casos
+    {
+      icon: 'briefcase',
+      label: 'REPORTS_OPPORTUNITY',
+      hasSubMenu: false,
+      toState: frontendURL(`accounts/${accountId}/reports/opportunities`),
+      toStateName: 'opportunity_reports',
     },
   ],
 });

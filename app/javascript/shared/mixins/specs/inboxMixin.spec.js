@@ -53,6 +53,43 @@ describe('inboxMixin', () => {
     expect(wrapper.vm.isAFacebookInbox).toBe(true);
   });
 
+  describe('Instagram', () => {
+    it('isAnInstagramInbox returns true only for the native channel', () => {
+      const native = shallowMount(
+        getComponentConfigForInbox('Channel::Instagram')
+      );
+      const legacy = shallowMount(
+        getComponentConfigForInbox('Channel::FacebookPage')
+      );
+      expect(native.vm.isAnInstagramInbox).toBe(true);
+      expect(legacy.vm.isAnInstagramInbox).toBe(false);
+    });
+
+    // Instagram vivió siempre dentro de un inbox de Facebook, así que la interfaz debe
+    // tratar por igual a las dos rutas de Meta.
+    it('isAMetaInbox covers both the native channel and the legacy facebook page', () => {
+      expect(
+        shallowMount(getComponentConfigForInbox('Channel::Instagram')).vm
+          .isAMetaInbox
+      ).toBe(true);
+      expect(
+        shallowMount(getComponentConfigForInbox('Channel::FacebookPage')).vm
+          .isAMetaInbox
+      ).toBe(true);
+      expect(
+        shallowMount(getComponentConfigForInbox('Channel::Whatsapp')).vm
+          .isAMetaInbox
+      ).toBe(false);
+    });
+
+    it('supports replyTo like the legacy route did', () => {
+      const wrapper = shallowMount(
+        getComponentConfigForInbox('Channel::Instagram')
+      );
+      expect(wrapper.vm.inboxHasFeature('replyTo')).toBe(true);
+    });
+  });
+
   it('isAWebWidgetInbox returns true if channel type is Facebook', () => {
     const Component = getComponentConfigForInbox('Channel::WebWidget');
     const wrapper = shallowMount(Component);
@@ -211,6 +248,13 @@ describe('inboxMixin', () => {
       const Component = getComponentConfigForInbox('Channel::Whatsapp');
       const wrapper = shallowMount(Component);
       expect(wrapper.vm.inboxBadge).toBe('whatsapp');
+    });
+
+    // Sin rama propia caería al channelType y Thumbnail no encontraría icono
+    it('inboxBadge returns the instagram badge for the native channel', () => {
+      const Component = getComponentConfigForInbox('Channel::Instagram');
+      const wrapper = shallowMount(Component);
+      expect(wrapper.vm.inboxBadge).toBe('instagram_direct_message');
     });
 
     it('inboxBadge returns the channelType when no specific condition is true', () => {

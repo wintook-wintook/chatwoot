@@ -1,0 +1,189 @@
+# frozen_string_literal: true
+
+# ================================================================================
+# proyecto@contact_tracking — CATÁLOGO ÚNICO DE DIRECTIVAS DE FUENTE
+# ================================================================================
+# Esta cadena vivía DUPLICADA en KnowledgeBaseResponseService#detect_search_directive
+# y en ContactTrackingResponseAnalyzerJob#kbase_available?. Las dos copias divergieron
+# una vez (bug @buscar_predeterminadas, corregido en 4 sitios a la vez), así que ahora
+# hay una sola definición y las dos la consumen.
+#
+# `detect` responde QUÉ fuente pide un texto; `available?` responde si esa fuente existe
+# y está operativa para la cuenta/inbox. Nota: `available?` opera sobre la cadena de
+# BÚSQUEDA (sin {{consulta:}}), igual que hacía kbase_available? antes de este cambio.
+# ================================================================================
+
+module KnowledgeBase
+  module Directives
+    module_function
+
+    # @buscar_predefinidas(GRUPO)  -> solo las respuestas cuyo nombre empieza con GRUPO
+    # @buscar_predefinidas(!GRUPO) -> todas MENOS esas
+    # @buscar_predefinidas         -> todas (comportamiento historico)
+    #
+    # Existe para que dos ramas de un mismo agente puedan repartirse el corpus: la cuenta
+    # tiene UNA sola fuente de respuestas predefinidas (indice unico
+    # idx_unique_native_knowledge_sources), asi que separarlas en dos fuentes no es posible
+    # y el reparto tiene que hacerse dentro. El grupo se compara contra el nombre de la
+    # respuesta, que es lo que se vectoriza como titulo del knowledge_item.
+    CANNED_RE = /@buscar_predefinidas\b(?:\s*\(([^)]*)\))?/i
+
+    # Fuentes de busqueda, EN ORDEN DE PRECEDENCIA: gana la primera que coincida.
+    #
+    # El orden de esta tabla ES la precedencia, y una fuente nueva se agrega AL FINAL:
+    # adelantarla cambiaria la fuente de los agentes que ya estan configurados. Era una
+    # cadena de if/elsif; como tabla, el orden queda a la vista en lugar de repartido
+    # entre ramas, y agregar una fuente deja de tocar la logica.
+    #
+    # El tercer elemento dice si la directiva nombra su fuente: @buscar_foro(Foro X)
+    # la nombra, @discourse no.
+    SEARCH_DIRECTIVES = [
+      [/@buscar_art[ií]culo\b/i,       :article,               false],
+      [/@buscar_foro\(([^)]+)\)/i,     :knowledge_source,      true],
+      [/\{\{doc:([^}]+)\}\}/i,          :google_doc,            true],
+      [/\{\{hoja:([^}]+)\}\}/i,         :google_sheet,          true],
+      [/@discourse\b/i,                :discourse_integration, false],
+      [/@soporte_contpaq\(([^)]+)\)/i, :contpaq_support,       true],
+      # proyecto@hoja_buscar (pieza 2, 26/09/2026): como FUENTE de una ruta, busca exacto en
+      # la hoja y responde con esas filas. source_name trae la directiva entera (hoja |
+      # buscar | regresar); ver ContactTrackings::SheetLookup.
+      [ContactTrackings::SheetLookup::DIRECTIVE_RE, :sheet_lookup, true]
+    ].freeze
+
+    # Quita los TOKENS de directiva de un texto, dejando la prosa alrededor intacta.
+    # Para prompts que van a un LLM sin la kbase detras (fallback conversacional, o el
+    # propio camino kbase armando su system prompt): la sintaxis cruda de directiva
+    # confunde al modelo -- la "simula" como si la estuviera ejecutando -- pero las
+    # reglas que la MENCIONAN en una oracion (p.ej. "aplica esto a lo recibido de
+    # @discourse") siguen siendo instrucciones validas y deben conservarse. Antes cada
+    # llamador decidia "todo o nada" (blanquear el prompt completo si aparecia CUALQUIER
+    # mencion), perdiendo reglas de evidencia/etiquetas que nada tenian que ver con una
+    # directiva activa de ese turno.
+    #
+    # Las de BÚSQUEDA no se borran: se cambian por PROSE_STAND_IN. Borradas, una regla
+    # que las nombra le llegaba rota al modelo (24/09/2026, un agente de carreras):
+    #   «Solo @buscar_predefinidas autoriza: costo, beca…» → «Solo  autoriza: costo, beca…»
+    # Con el reemplazo llega «Solo la información consultada autoriza: …», que es lo que
+    # la regla quería decir: lo que trae la búsqueda de la ruta (en el prompt de la kbase,
+    # bajo «Información relevante:»).
+    PROSE_STAND_IN = 'la información consultada'
+
+    def strip_tokens(text)
+      text.to_s
+          .gsub(/@buscar_foro\([^)]+\)/i, PROSE_STAND_IN)
+          .gsub(CANNED_RE, PROSE_STAND_IN)
+          .gsub(/@buscar_art[ií]culo\b/i, PROSE_STAND_IN)
+          .gsub(/@discourse\b/i, PROSE_STAND_IN)
+          .gsub(ContactTrackings::SheetLookup::DIRECTIVE_RE, '') # proyecto@hoja_buscar: configuración de la agenda
+          .gsub(/\{\{\s*(?:doc|hoja)\s*:[^}]*\}\}/i, PROSE_STAND_IN) # 24/09: «ejecuta {{hoja:CATALOGO}}» llegaba literal
+          .gsub(ExternalDb::ConsultaDirectiveRenderer::DIRECTIVE, '') # proyecto@erp_productos: configuración
+          .gsub(/@agendar_calendar\b(?:\s*\([^)]*\))?/i, '') # proyecto@predefinidas_prompt — con sus opciones (pieza 3)
+          .gsub(ContactTrackings::ServiceConfirmation::DIRECTIVE_RE, '') # proyecto@hoja_buscar pieza 4
+          .gsub(ContactTrackings::ServiceRequests::Turn::DIRECTIVE_RE, '') # proyecto@solicitudes pieza 5
+          .strip
+    end
+
+    # Primera directiva de fuente presente en el texto → { mode:, source_name: } o nil.
+    def detect(text)
+      prompt = text.to_s
+      return { mode: :erp_query } if ExternalDb::ConsultaDirectiveRenderer.contains?(prompt)
+
+      detect_search(prompt)
+    end
+
+    # Igual que `detect` pero sin {{consulta:}} — solo las fuentes de búsqueda.
+    def detect_search(text)
+      prompt = text.to_s
+      canned = canned_directive(prompt)
+      return canned if canned
+
+      SEARCH_DIRECTIVES.each do |pattern, mode, named|
+        match = prompt.match(pattern)
+        next if match.nil?
+
+        return named ? { mode: mode, source_name: match[1].strip } : { mode: mode }
+      end
+
+      nil
+    end
+
+    # El grupo es opcional: @buscar_predefinidas sin paréntesis sigue trayendo TODO, que es
+    # lo que hacen los agentes que ya existen.
+    def canned_directive(prompt)
+      match = prompt.match(CANNED_RE)
+      return nil if match.nil?
+
+      { mode: :canned_response, group: match[1]&.strip.presence }
+    end
+
+    # ¿El texto pide una fuente que además existe y está operativa?
+    def available?(text, account:, inbox_id:)
+      ready?(detect_search(text), account: account, inbox_id: inbox_id)
+    end
+
+    # proyecto@erp_productos — ¿una {{consulta:}} puede CONTESTARLE al cliente? `available?`
+    # no las mira (ver el encabezado), así que sin esto el job mandaba el turno al
+    # conversacional y el modelo contestaba sin datos (medido: inventó tres cascos con
+    # marca y precio). Solo cuenta:
+    #   · la {{consulta:}} que es FUENTE de una ruta (as_route_source: true), o
+    #   · una {{consulta:}} con "?" (el agente redacta con los datos).
+    # Un Entrenamiento que ES la plantilla de un mensaje de cobranza (sin "?", sin rutas)
+    # sigue fuera: si no, cada respuesta al cliente sería esa plantilla.
+    def erp_available?(text, account:, as_route_source: false)
+      return false unless ExternalDb::ConsultaDirectiveRenderer.contains?(text)
+      return false unless as_route_source || ExternalDb::ConsultaDirectiveRenderer.asks?(text)
+
+      account.external_db_connections.active.exists?
+    end
+
+    # Misma pregunta, sobre una directiva ya detectada.
+    def ready?(directive, account:, inbox_id:)
+      return false if directive.blank? || account.blank?
+
+      case directive[:mode]
+      when :canned_response       then items?(account, 'canned_response')
+      when :article               then items?(account, 'article')
+      when :knowledge_source      then account.knowledge_sources.active.exists?(name: directive[:source_name])
+      when :google_doc            then google_source?(account, 'google_doc', directive[:source_name])
+      when :google_sheet          then google_source?(account, 'google_sheet', directive[:source_name])
+      when :discourse_integration then discourse_hook?(account, inbox_id)
+      when :contpaq_support       then contpaq_source?(account, directive[:source_name])
+      when :sheet_lookup          then sheet_lookup_source?(account, directive[:source_name])
+      else false
+      end
+    rescue StandardError
+      false
+    end
+
+    def items?(account, source_type)
+      account.knowledge_items.exists?(source_type: source_type)
+    end
+
+    # Las fuentes Google reutilizan la conexión de Google Calendar: sin esa feature,
+    # {{doc:}} y {{hoja:}} no operan.
+    def google_source?(account, source_type, name)
+      account.feature_enabled?('google_calendar') &&
+        account.knowledge_sources.active
+               .exists?(['source_type = ? AND LOWER(name) = LOWER(?)', source_type, name.to_s])
+    end
+
+    # Se compara tambien el source_type: la unicidad de ADDRESSABLE_BY_NAME impide dos
+    # fuentes con el mismo nombre, pero sin el tipo un @soporte_contpaq(Foro Kontrolya)
+    # daria por disponible la fuente de discourse que se llama asi.
+    def contpaq_source?(account, name)
+      return false if name.blank?
+
+      account.knowledge_sources.active
+             .exists?(['source_type = ? AND LOWER(name) = LOWER(?)', 'contpaq_support', name.to_s])
+    end
+
+    def sheet_lookup_source?(account, inner)
+      spec = ContactTrackings::SheetLookup.parse(inner)
+      spec.present? && google_source?(account, 'google_sheet', spec.sheet)
+    end
+
+    def discourse_hook?(account, inbox_id)
+      account.hooks.exists?(app_id: 'discourse', inbox_id: inbox_id, status: 'enabled')
+    end
+  end
+end

@@ -67,7 +67,6 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       Rails.logger.info '[Coordinator] 🤖 Sin seguimiento, @botseller disponible → [@botseller]'
       BotSeller::Dispatcher.new(message).dispatch
     end
-
   rescue StandardError => e
     Rails.logger.error "[Coordinator] ❌ Error: #{e.message}"
     Rails.logger.error e.backtrace.first(5).join("\n")
@@ -86,18 +85,18 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # [Gestor de Tickets] hook — falla silenciosamente para no romper el bot @tickets_cases
     begin
       ticket = Cases::OrchestratorService.new(
-        account:      message.account,
-        contact:      message.conversation.contact,
+        account: message.account,
+        contact: message.conversation.contact,
         conversation: message.conversation
       ).find_active_ticket
 
       if ticket
         ticket.update_columns(first_response_at: Time.current) if ticket.first_response_at.nil?
         ticket.case_events.create!(
-          account:    message.account,
+          account: message.account,
           event_type: :message_received,
-          origin:     :bot,
-          payload:    { message_id: message.id }
+          origin: :bot,
+          payload: { message_id: message.id }
         )
         Cases::RuleEngineService.new(ticket, trigger_message: message).evaluate!
       end
@@ -109,15 +108,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     if message.content.present? && defined?(ContactTrackings::KeywordActionService)
       keyword_service = ContactTrackings::KeywordActionService.new(tracking, message.content, 'incoming')
       if keyword_service.call
-        Rails.logger.info "[TrackingBot] ⌨️  Acción por keyword ejecutada — skip RouterService"
+        Rails.logger.info '[TrackingBot] ⌨️  Acción por keyword ejecutada — skip RouterService'
         return true
       end
     end
 
     # [2] proyecto@bot_seguimiento_calendar — Detección de elección de slot
     if pending_slot_selection?(tracking)
-      Rails.logger.info "[TrackingBot] 📅 PENDING_SLOT detectado → procesando elección de horario"
-      return handle_slot_selection(tracking, message)
+      if leaves_slot_offer?(tracking, message)
+        Rails.logger.info '[TrackingBot] 📅 PENDING_SLOT, pero el mensaje es de una rama de caso propio → se cierra la oferta'
+        clear_pending_slot(tracking)
+      else
+        Rails.logger.info '[TrackingBot] 📅 PENDING_SLOT detectado → procesando elección de horario'
+        return handle_slot_selection(tracking, message)
+      end
     end
 
     # [2b] proyecto@bot_seguimiento_calendar — Esperando el email (opcional) para la cita
@@ -125,6 +129,16 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       Rails.logger.info '[TrackingBot] 📧 PENDING_EMAIL detectado → procesando email'
       return handle_pending_email(tracking, message)
     end
+
+    # [2c] proyecto@hoja_buscar, pieza 4 — hay un servicio APARTADO y el mensaje cae en la
+    # ruta de @confirmar_servicio: se confirma (o se pide el pago) antes que nada.
+    return true if handle_service_confirmation(tracking, message)
+
+    # [2d] proyecto@solicitudes, pieza 5 — la ruta del mensaje tiene @solicitudes: cada servicio
+    # que pida es un caso (y en F3, su horario). Si no pide servicios, sigue como siempre.
+    return true if handle_service_actions(tracking, message)
+    return true if handle_service_choice(tracking, message)
+    return true if handle_service_requests(tracking, message)
 
     # [3] RouterService — clasifica ruta via IA
     route_result = classify_route(tracking, message)
@@ -135,10 +149,18 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                 handle_rejected(tracking, message, route_result[:confidence])
                 true
               when :interested
-                handle_interested(tracking, message, route_result[:confidence])
-                true
+                # proyecto@tickets_cases — en trackings de intake de datos (@crear_ticket),
+                # "interested" no es una señal accionable: el cliente pidiendo o dando datos
+                # del servicio ES el flujo normal, no algo que amerite pausar y derivar a un
+                # humano. El sistema de tickets ya decide cuándo escalar.
+                if ticket_directive_present?(tracking)
+                  try_kbase_then_conversational(tracking, message, route_result)
+                else
+                  handle_interested(tracking, message, route_result[:confidence])
+                  true
+                end
               when :book_appointment
-                handle_book_appointment(tracking, message, route_result)
+                dispatch_book_appointment(tracking, message, route_result)
                 true
               when :reschedule
                 handle_reschedule(tracking, message, route_result)
@@ -160,34 +182,57 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     save_sentiment_analysis(tracking, route_result, message)
     replied
-
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error en tracking ##{tracking.id}: #{e.message}"
     false
   end
 
   def try_kbase_then_conversational(tracking, message, route_result = nil)
-    if kbase_available?(message, tracking)
-      Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
-      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking).perform
-      if kbase_replied
-        Rails.logger.info '[TrackingBot] ✅ KBase respondió'
-        return true
-      end
-      Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → intentando @crear_ticket'
-    end
-
-    # @tickets_cases: si la directiva @crear_ticket está en el prompt, crea ticket y confirma
-    if Cases::TicketCreatorService.new(message, tracking: tracking).create_if_needed
-      Rails.logger.info '[TrackingBot] 🎫 Ticket creado via @crear_ticket'
+    # proyecto@bot_seguimiento_calendar — si el clasificador YA resolvió una acción de
+    # cita, el calendario gana sobre la KBase: "¿hay disponibilidad para mañana?" no es
+    # una consulta técnica. Sin llamada extra al LLM: se reusa el route_result.
+    if route_result&.dig(:appointment_action).present? && appointment_dispatchable?(tracking)
+      Rails.logger.info "[TrackingBot] 📅 Acción de cita ya clasificada (#{route_result[:appointment_action]}) → " \
+                        'calendario antes que KBase'
+      dispatch_appointment_action(tracking, message, route_result)
       return true
     end
+
+    # @tickets_cases: @estado_ticket — el cliente pregunta por su caso ("¿cuál es
+    # mi ticket?"). Va ANTES de @crear_ticket: consultar un caso no abre uno nuevo.
+    # También va ANTES de la KBase: agenda y tickets siempre ganan sobre la hoja.
+    if Cases::TicketStatusService.new(message, tracking: tracking).answer_if_status_query
+      Rails.logger.info '[TrackingBot] 🔎 Estado de ticket respondido via @estado_ticket'
+      return true
+    end
+
+    # @tickets_cases: si la directiva @crear_ticket está en el prompt, crea ticket y confirma.
+    # Con @crear_ticket(fallback=true) el alta se pospone hasta después de la KBase: el foro
+    # o la hoja contestan si pueden, y el ticket queda como último recurso.
+    # @ruta — la rama del turno se decide UNA vez y se reutiliza para la fuente y para el
+    # escalamiento, así el turno paga una sola llamada de clasificación.
+    branch = branch_for(tracking, message)
+    # Si alguna rama declara su propio escalamiento, manda lo declarado por rama: una
+    # rama sin flecha no abre ticket. Si ninguna lo declara, rige la directiva global.
+    if branch_escalations?(tracking)
+      ticket_directive   = branch&.escalation
+      # Una rama SIN fuente no tiene nada que consultar antes: su caso va primero, antes
+      # que la agenda. Como último recurso, una oferta de horarios abierta se comía el
+      # turno (24/09/2026: «mi perro se comió veneno» → horarios para mañana).
+      ticket_as_fallback = ticket_directive.present? && !ticket_first_branch?(branch)
+    else
+      ticket_directive   = nil
+      ticket_as_fallback = Cases::TicketCreatorService.fallback?(tracking)
+    end
+    ticket_now = !ticket_as_fallback && !source_only_branch?(tracking, branch)
+    return true if ticket_now && try_create_ticket(tracking, message, route_result, directive: ticket_directive, branch: branch)
 
     # proyecto@bot_seguimiento_calendar — @agendar_calendar (appointment-aware): el clasificador
     # ve el ESTADO DE LA CITA y decide la acción concreta (consultar/agendar/mover/cancelar). No
     # es "eager": appointment_action es null salvo que el cliente realmente hable de una cita.
-    if agendar_calendar_directive?(tracking) && calendar_configured?(tracking)
+    if appointment_dispatchable?(tracking) && appointment_allowed_for?(branch)
       appt = classify_appointment(tracking, message, route_result)
+      appt = availability_appt(appt) if availability_branch?(branch)
       if appt && appt[:appointment_action]
         Rails.logger.info "[TrackingBot] 📅 @agendar_calendar → acción de cita: #{appt[:appointment_action]}"
         dispatch_appointment_action(tracking, message, appt)
@@ -195,7 +240,187 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       end
     end
 
+    # KBase (hoja/foro/doc) va AL FINAL, como último recurso: si el cliente ya tiene
+    # un ticket/cita en curso, esas rutas resuelven el turno antes de llegar aquí y
+    # la hoja nunca se come la recolección de datos ni la confirmación de agenda.
+    if kbase_available?(message, tracking)
+      Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
+      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking, branch: branch).perform
+      if kbase_replied
+        Rails.logger.info '[TrackingBot] ✅ KBase respondió'
+        return true
+      end
+      Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → conversacional'
+    end
+
+    # @tickets_cases: @crear_ticket(fallback=true) — la KBase no resolvió el turno, así que
+    # ahora sí se ofrece/levanta el caso.
+    if ticket_as_fallback && try_create_ticket(tracking, message, route_result, directive: ticket_directive, branch: branch)
+      Rails.logger.info '[TrackingBot] 🎫 Ticket como último recurso' \
+                        "#{branch ? " (rama #{branch.name})" : ' (fallback=true)'}"
+      return true
+    end
+
     generate_and_send_conversational_reply(tracking, message)
+  end
+
+  # @tickets_cases — alta de ticket vía @crear_ticket. Devuelve true si el turno quedó
+  # atendido: ticket creado, caso abierto reusado o dato faltante solicitado.
+  # Rama sin fuente que abre su propio caso (urgencias, quejas, hablar con una persona):
+  # su caso va antes que la agenda, y la agenda no le toma el turno.
+  def ticket_first_branch?(branch)
+    branch.present? && branch.directive.blank? &&
+      branch.escalation.to_s.match?(Cases::TicketCreatorService::DIRECTIVE_RE) &&
+      !branch.escalation.to_s.match?(/@agendar_calendar/i)
+  end
+
+  # proyecto@hoja_buscar — con una oferta de horarios abierta, el motor solo esperaba un
+  # número, un día o una hora (25/09/2026: «¿cuándo está libre la TP-58?» repetía los
+  # horarios de la TP-93). Si en ESTE mensaje se nombra otro recurso de la hoja, se buscan
+  # los horarios de ese; el día, si lo dijo, se respeta.
+  def reoffer_for_named_resource(tracking, message, current_slots)
+    sheet = sheet_calendars_for(tracking, message)
+    return false unless sheet&.status == :ok && sheet.named_in == message.id
+
+    ofrecidos = current_slots.filter_map { |slot| slot['gcal'] }
+    return false if (sheet.booking_calendars.values.flatten - ofrecidos).empty?
+
+    Rails.logger.info '[TrackingBot] 📅 Nombró otro recurso durante la oferta → sus horarios'
+    reoffer_slots(tracking, message)
+  end
+
+  # «¿Cuándo está libre?» sin día, con la oferta abierta: lo primero libre desde ahora, en
+  # vez de repetir la oferta anterior. Solo en agentes con {{hoja_buscar:}}.
+  AVAILABILITY_ASK_RE = /\bcu[aá]ndo\b|\bdisponib|\blibres?\b/i
+  def reoffer_when_asked_free(tracking, message)
+    return false unless message_text_for_ai(message).to_s.match?(AVAILABILITY_ASK_RE)
+    return false unless sheet_calendars_for(tracking, message)&.status == :ok
+
+    Rails.logger.info '[TrackingBot] 📅 Preguntó cuándo está libre durante la oferta → lo primero libre'
+    reoffer_slots(tracking, message)
+  end
+
+  def reoffer_slots(tracking, message)
+    clear_pending_slot(tracking)
+    handle_book_appointment(tracking, message, { appointment_action: :book_new, read_date: true })
+    true
+  end
+
+  # proyecto@hoja_buscar — RUTA DE DISPONIBILIDAD: sin fuente y con {{hoja_buscar:}} ->
+  # @agendar_calendar. Quien la escribe dice «esta ruta es para ver horarios» (25/09/2026:
+  # «¿qué horarios tienen la TP-64 y la TP-63 para mañana?» a veces la IA de citas la
+  # tomaba como plática y contestaba con la hoja). Elegir la ruta ya decidió que es cita.
+  def availability_branch?(branch)
+    return false if branch.nil? || branch.directive.present?
+
+    accion = branch.escalation.to_s
+    accion.match?(ContactTrackings::SheetLookup::DIRECTIVE_RE) && accion.match?(/@agendar_calendar\b/i)
+  end
+
+  # Sin acción de cita, en una ruta de disponibilidad es agendar. La fecha pedida
+  # («mañana») se lee del mensaje, porque la IA que dijo «no es cita» tampoco la trajo.
+  def availability_appt(appt)
+    return appt if appt&.dig(:appointment_action).present?
+
+    Rails.logger.info '[TrackingBot] 📅 Ruta de disponibilidad → horarios sin preguntar si es cita'
+    (appt || {}).merge(appointment_action: :book_new, read_date: true)
+  end
+
+  # Ruta con fuente y sin flecha («@ruta(x): @buscar_foro(F)»): contesta con su fuente y no
+  # abre caso. Antes heredaba el @crear_ticket de otra ruta y lo abría ANTES de consultar la
+  # fuente: el 29/09/2026 el agente ADAM abría un caso (prioridad alta, el de su ruta de
+  # escalamiento) con «quiero rediseñar mi página web». Una ruta sin fuente ni flecha sigue
+  # heredándolo (p. ej. una ruta «humano» que debe pasar el caso).
+  def source_only_branch?(tracking, branch)
+    branch.present? && branch.directive.present? && branch.escalation.blank? && branch_escalations?(tracking)
+  end
+
+  # La agenda (ofrecer horarios, agendar) no corre en una rama de caso propio.
+  # Tampoco en una ruta que declara sus acciones sin @agendar_calendar: el 28/09/2026 el
+  # agente ADAM (rutas «@buscar_foro(…) -> @crear_ticket(…)», calendario en otra ruta)
+  # ofrecía horarios después de abrir el caso en cualquier ruta. Sin ruta, o en una ruta
+  # sin flecha, sigue como antes.
+  def appointment_allowed_for?(branch)
+    return false if ticket_first_branch?(branch)
+    return true if branch.nil? || branch.escalation.blank?
+
+    branch.escalation.to_s.match?(/@agendar_calendar\b/i)
+  end
+
+  def try_create_ticket(tracking, message, route_result, directive: nil, branch: nil)
+    creator = Cases::TicketCreatorService.new(message, tracking: tracking, directive: directive)
+    return false unless creator.create_if_needed
+
+    Rails.logger.info "[TrackingBot] 🎫 Ticket via @crear_ticket (outcome: #{creator.outcome})"
+    # proyecto@bot_seguimiento_calendar — si el ticket quedó completo (recién creado o ya
+    # existía) y hay calendario configurado, seguimos directo a ofrecer disponibilidad en
+    # el mismo turno (ETAPA 3), en vez de esperar a que el cliente lo pida en otro mensaje.
+    # Mismo comportamiento que ya tenía dispatch_book_appointment cuando el Router detecta
+    # appointment_action explícito.
+    if %i[created linked_existing].include?(creator.outcome) && appointment_dispatchable?(tracking) &&
+       appointment_allowed_for?(branch)
+      handle_book_appointment(tracking, message, route_result)
+    end
+    true
+  end
+
+  # @ruta — rama del turno, memorizada por (tracking, message) para no clasificar dos veces.
+  def branch_for(tracking, message)
+    @branch_cache ||= {}
+    key = [tracking.id, message.id]
+    return @branch_cache[key] if @branch_cache.key?(key)
+
+    map = ContactTrackings::RouteMap.parse(tracking.complementary_prompt)
+    @branch_cache[key] = if map.present?
+                           ContactTrackings::BranchClassifierService.new(
+                             tracking, message, map, recent_context: get_recent_context(message, 4)
+                           ).classify
+                         end
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ Clasificación de rama falló: #{e.message}"
+    nil
+  end
+
+  def branch_escalations?(tracking)
+    ContactTrackings::RouteMap.parse(tracking.complementary_prompt).escalations?
+  rescue StandardError
+    false
+  end
+
+  # Gemelo de KnowledgeBaseResponseService#with_branch_tag, para las ramas que se contestan
+  # por aqui. La etiqueta final es lo que dispara las automatizaciones, asi que si falta, la
+  # automatizacion no corre y nadie se entera. Solo se AGREGA cuando falta: la que puso el
+  # modelo se respeta siempre.
+  ANY_TAG_RE = /#[a-z0-9_]{3,}/i
+
+  def with_branch_tag(text, tracking, message)
+    route = branch_for(tracking, message)
+    tag   = route&.hashtag
+    return text if tag.blank? || text.blank? || text.match?(ANY_TAG_RE)
+
+    Rails.logger.info "[TrackingBot] 🏷️ Sin etiqueta → se repone la de la rama '#{route.name}': #{tag}"
+    "#{text.rstrip}\n\n#{tag}"
+  end
+
+  # Gemelo de KnowledgeBaseResponseService#branch_scope_rule, para las ramas SIN fuente
+  # (las declaradas con guion), que no pasan por la kbase y se contestan aquí. El prompt
+  # del agente trae las instrucciones de todas sus ramas; sin esta línea el modelo las ve
+  # todas y vuelve a decidir por su cuenta cuál aplica, pisando lo que ya resolvió el router.
+  def branch_scope_rule(tracking, message)
+    route = branch_for(tracking, message)
+    return '' if route.blank?
+
+    label = [route.name, route.description].compact_blank.join(' — ')
+    <<~RULE.chomp
+      RAMA YA DECIDIDA PARA ESTE TURNO: #{label}
+      El sistema clasificó el mensaje en esa rama. De las instrucciones de arriba aplica
+      únicamente las que correspondan a esa rama e ignora las de las otras. No vuelvas a
+      clasificar el mensaje ni cambies de rama por tu cuenta.
+    RULE
+  end
+
+  def appointment_dispatchable?(tracking)
+    agendar_calendar_directive?(tracking) && calendar_configured?(tracking)
   end
 
   # proyecto@bot_seguimiento_calendar — clasificación appointment-aware. Si DETECT_INTENT está
@@ -210,8 +435,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     ContactTrackings::RouterService.new(
       tracking, message, key,
       appointment_state: appointment_state_summary(tracking, message),
-      recent_messages:   get_recent_context(message, 4),
-      current_date:      router_current_date(tracking, message)
+      recent_messages: get_recent_context(message, 4),
+      current_date: router_current_date(tracking, message)
     ).classify
   rescue StandardError => e
     Rails.logger.warn "[TrackingBot] ⚠️ classify_appointment falló: #{e.message}"
@@ -238,9 +463,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar — resumen legible del estado de la cita para que el LLM
   # (clasificación y redacción) decida con contexto en vez de a ciegas.
   def appointment_state_summary(tracking, message)
-    unless tracking.appointment_event_id.present? && tracking.appointment_at.present?
-      return 'El contacto NO tiene ninguna cita agendada todavía.'
-    end
+    return 'El contacto NO tiene ninguna cita agendada todavía.' unless tracking.appointment_event_id.present? && tracking.appointment_at.present?
 
     timezone = appointment_timezone(tracking, message)
     "El contacto YA tiene una cita agendada para el #{format_appointment_datetime(tracking.appointment_at, timezone)}."
@@ -279,10 +502,19 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar — lee la zona horaria de la cuenta de Google Calendar
   # vinculada (la que el usuario ve en su calendario) y la cachea 12h en Redis para no pegar
   # a la API en cada mensaje. Devuelve el IANA tz o nil si no hay calendario / falla.
+  #
+  # Se pregunta a cada calendario del agente hasta que uno conteste, no solo al primero:
+  # con el acceso de Google vencido en el primero (invalid_grant), la zona caía a la del
+  # inbox, UTC por defecto, y el chat ofrecía «09:00 hs (hora de UTC)» (24/09/2026).
   def google_calendar_timezone(tracking)
-    cal_id = appointment_timezone_calendar_id(tracking)
-    return nil if cal_id.blank?
+    appointment_timezone_calendar_ids(tracking).each do |cal_id|
+      tz = calendar_timezone(cal_id)
+      return tz if tz.present?
+    end
+    nil
+  end
 
+  def calendar_timezone(cal_id)
     cache_key = "gcal_tz::#{cal_id}"
     cached = Redis::Alfred.get(cache_key)
     return cached if cached.present?
@@ -294,16 +526,16 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     Redis::Alfred.setex(cache_key, tz, 12.hours) if tz.present?
     tz
   rescue StandardError => e
-    Rails.logger.warn "[TrackingBot] ⚠️ google_calendar_timezone falló: #{e.message}"
+    Rails.logger.warn "[TrackingBot] ⚠️ google_calendar_timezone falló (calendario #{cal_id}): #{e.message}"
     nil
   end
 
-  # Agenda de referencia para la zona: la de la cita ya creada, o la primera configurada.
-  def appointment_timezone_calendar_id(tracking)
-    return nil if tracking.blank?
+  # Agendas de referencia para la zona: la de la cita ya creada primero, y después las
+  # configuradas, en orden.
+  def appointment_timezone_calendar_ids(tracking)
+    return [] if tracking.blank?
 
-    tracking.appointment_calendar_id.presence ||
-      Array(appointment_calendar_ids(tracking)).first
+    [tracking.appointment_calendar_id, *Array(appointment_calendar_ids(tracking))].compact_blank.uniq
   end
 
   def classify_route(tracking, message)
@@ -322,44 +554,35 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       tracking,
       message,
       api_key_data[:key],
-      kbase_available:     kbase_available?(message, tracking),
+      kbase_available: kbase_available?(message, tracking),
       botseller_available: BotSeller::Dispatcher.configured?,
-      recent_messages:     get_recent_context(message, 4),
-      appointment_state:   appointment_state_summary(tracking, message),
-      current_date:        router_current_date(tracking, message)
+      recent_messages: get_recent_context(message, 4),
+      appointment_state: appointment_state_summary(tracking, message),
+      current_date: router_current_date(tracking, message)
     ).classify
   rescue StandardError => e
     Rails.logger.warn "[TrackingBot] ⚠️ RouterService falló: #{e.message} → :tracking"
     { route: :tracking, confidence: 1.0, method: 'error' }
   end
 
+  # @ruta — con rutas declaradas basta con que ALGUNA rama tenga su fuente operativa;
+  # cuál se usa lo decide el clasificador dentro del servicio. Sin rutas, la de siempre.
   def kbase_available?(message, tracking = nil)
     return false unless tracking.present?
 
-    cp = tracking.complementary_prompt.to_s
+    cp        = tracking.complementary_prompt.to_s
+    route_map = ContactTrackings::RouteMap.parse(cp)
 
-    if cp.match?(/@buscar_predefinidas\b/i)
-      message.account.knowledge_items.where(source_type: 'canned_response').exists?
-    elsif cp.match?(/@buscar_art[ií]culo\b/i)
-      message.account.knowledge_items.where(source_type: 'article').exists?
-    elsif (match = cp.match(/@buscar_foro\(([^)]+)\)/i))
-      source_name = match[1].strip
-      message.account.knowledge_sources.active.exists?(name: source_name)
-    elsif (match = cp.match(/\{\{doc:([^}]+)\}\}/i))
-      source_name = match[1].strip
-      message.account.feature_enabled?('google_calendar') &&
-        message.account.knowledge_sources.active
-               .exists?(['source_type = ? AND LOWER(name) = LOWER(?)', 'google_doc', source_name])
-    elsif (match = cp.match(/\{\{hoja:([^}]+)\}\}/i))
-      source_name = match[1].strip
-      message.account.feature_enabled?('google_calendar') &&
-        message.account.knowledge_sources.active
-               .exists?(['source_type = ? AND LOWER(name) = LOWER(?)', 'google_sheet', source_name])
-    elsif cp.match?(/@discourse\b/i)
-      message.account.hooks.exists?(app_id: 'discourse', inbox_id: message.inbox_id, status: 'enabled')
-    else
-      false
+    if route_map.present?
+      return route_map.routes.any? do |route|
+        route.source? && (KnowledgeBase::Directives.available?(
+          route.directive, account: message.account, inbox_id: message.inbox_id
+        ) || KnowledgeBase::Directives.erp_available?(route.directive, account: message.account, as_route_source: true))
+      end
     end
+
+    KnowledgeBase::Directives.available?(cp, account: message.account, inbox_id: message.inbox_id) ||
+      KnowledgeBase::Directives.erp_available?(cp, account: message.account) # proyecto@erp_productos
   rescue StandardError
     false
   end
@@ -390,6 +613,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     reply_text = generate_conversational_reply(tracking, message)
     return false if reply_text.blank?
 
+    reply_text = with_branch_tag(reply_text, tracking, message)
     reply_text = "#{reply_text}\n\n-TB"
     send_auto_reply(tracking, message, reply_text)
     Rails.logger.info '[TrackingBot] ✅ Respuesta enviada → respondió TrackingBot'
@@ -408,55 +632,91 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       message_history = get_tracking_message_history(tracking)
 
       ia_note = tracking.contact.notes.for_ia.first
-      contact_profile = ia_note.present? ?
-        "PERFIL DEL CONTACTO: #{ActionController::Base.helpers.strip_tags(ia_note.content)}\n" : ''
+      contact_profile = if ia_note.present?
+                          "PERFIL DEL CONTACTO: #{ActionController::Base.helpers.strip_tags(ia_note.content)}\n"
+                        else
+                          ''
+                        end
 
       tracking.reload
       inbox_timezone = appointment_timezone(tracking, message)
       next_contact = tracking.scheduled_for.in_time_zone(inbox_timezone).strftime('%d/%m/%Y a las %H:%M')
 
-      # Si el prompt contiene directivas kbase, no pasarlo al LLM conversacional:
-      # el prompt está diseñado para operar con la kbase y GPT lo simula literalmente
-      # generando output tipo "CONSULTA GENERADA / DEBUG / RESULTADO RECIBIDO".
-      cp_raw = tracking.complementary_prompt.to_s
-      has_kbase_directive = cp_raw.match?(/@buscar_predefinidas\b/i) ||
-                            cp_raw.match?(/@buscar_art[ií]culo\b/i) ||
-                            cp_raw.match?(/@buscar_foro\([^)]*\)/i) ||
-                            cp_raw.match?(/@discourse\b/i)
+      # Los TOKENS de directiva kbase no deben llegar crudos al LLM conversacional: el
+      # prompt está diseñado para operar con la kbase y GPT los simula literalmente,
+      # generando output tipo "CONSULTA GENERADA / DEBUG / RESULTADO RECIBIDO". Antes
+      # esto se resolvía blanqueando el prompt COMPLETO en cuanto aparecía cualquier
+      # mención (incluida una oración de regla que solo NOMBRA la directiva, como
+      # "aplica esto a lo recibido de @discourse"), perdiendo de paso reglas de
+      # evidencia y el catálogo de etiquetas que no tenían nada que ver con la
+      # directiva activa de ese turno. KnowledgeBase::Directives.strip_tokens quita
+      # solo el token, conservando la prosa alrededor (mismo criterio que usa
+      # KnowledgeBaseResponseService#agent_system_prompt en el camino kbase).
+      # @ruta — las líneas de configuración se quitan SIEMPRE (nunca deben llegar al
+      # modelo ni al cliente). Al limpiar los tokens sobre el texto ya limpio, un
+      # agente con rutas conserva su prosa: sus directivas viven dentro de esas líneas.
+      cp_raw = ContactTrackings::RouteMap.strip(tracking.complementary_prompt.to_s)
       # proyecto@bot_seguimiento_calendar — @agendar_calendar no debe filtrarse al LLM conversacional
-      clean_cp = has_kbase_directive ? '' : cp_raw.gsub(/@agendar_calendar\b/i, '').strip
+      clean_cp = KnowledgeBase::Directives.strip_tokens(cp_raw).gsub(/@agendar_calendar\b(?:\s*\([^)]*\))?/i, '').strip
+      scope_rule = branch_scope_rule(tracking, message)
+      clean_cp = "#{clean_cp}\n\n#{scope_rule}" if clean_cp.present? && scope_rule.present?
 
       system_prompt = <<~SYSTEM.strip
-        Eres un asesor de ventas para #{tracking.account.name}.
-        Responde como un humano amable y conocedor del tema. NUNCA menciones que eres un bot o sistema automático.
+        #{conversational_identity(tracking, clean_cp)}
 
         #{contact_profile}
         OBJETIVO DE LA CONVERSACIÓN: #{tracking.objective}
         ESTADO DE LA CITA: #{appointment_state_summary(tracking, message)} (si el cliente pregunta por su cita, respóndele con esta fecha/hora exacta; no inventes ni ofrezcas horarios nuevos)
         PRÓXIMO CONTACTO PROGRAMADO: #{next_contact} (si el cliente pide reagendar, infórmale amablemente que su próximo contacto ya está programado para esa fecha y que si necesita cambiarlo debe comunicarse con un asesor)
-        #{tracking.ai_context.present? ? "BASE DE CONOCIMIENTO:\n#{tracking.ai_context.truncate(800)}\n" : ""}
-        #{clean_cp.present? ? "INSTRUCCIONES ADICIONALES:\n#{clean_cp}" : ""}
-        #{clean_cp.match?(ATTACHMENT_DIRECTIVE) ? "ENVÍO DE ARCHIVOS: Para enviar un archivo al cliente, escribe la directiva EXACTA (por ejemplo {{nombre}}) dentro de tu respuesta, tal cual y sin comillas; el sistema la sustituirá por el archivo adjunto. No la describas ni la traduzcas." : ""}
+        #{tracking.ai_context.present? ? "BASE DE CONOCIMIENTO:\n#{tracking.ai_context.truncate(800)}\n" : ''}
+        #{clean_cp.present? ? "INSTRUCCIONES ADICIONALES:\n#{clean_cp}" : ''}
+        #{ContactTrackings::ConversationVariables.rule_for(tracking, message.conversation)}
+        #{clean_cp.match?(ATTACHMENT_DIRECTIVE) ? 'ENVÍO DE ARCHIVOS: Para enviar un archivo al cliente, escribe la directiva EXACTA (por ejemplo {{nombre}}) dentro de tu respuesta, tal cual y sin comillas; el sistema la sustituirá por el archivo adjunto. No la describas ni la traduzcas.' : ''}
       SYSTEM
 
       user_prompt = <<~USER.strip
-        #{message_history.present? ? "#{message_history}\n\n" : ""}Responde al siguiente mensaje de #{first_name}:
+        #{message_history.present? ? "#{message_history}\n\n" : ''}Responde al siguiente mensaje de #{first_name}:
         "#{message_text_for_ai(message).truncate(300)}"
 
-        Máximo 4 líneas. Tono natural y conversacional.
+        #{conversational_form(clean_cp)}
         No uses prefijos como "Asesor:" o "Bot:". No incluyas comillas al inicio ni al final.
+        #{clean_cp.present? ? 'Si las INSTRUCCIONES ADICIONALES de arriba definen etiquetas de cierre, esta respuesta debe terminar con la que corresponda, sola en la última línea — no es opcional.' : ''}
       USER
 
       reply = call_openai_for_reply(api_key_data[:key], [
-        { role: 'system', content: system_prompt },
-        { role: 'user', content: user_prompt }
-      ])
+                                      { role: 'system', content: system_prompt },
+                                      { role: 'user', content: user_prompt }
+                                    ], tracking)
       return reply if reply.present?
     rescue StandardError => e
       Rails.logger.warn "[TrackingBot] ⚠️ Error en respuesta conversacional: #{e.message}"
     end
 
     nil
+  end
+
+  # Decisión D5 de docs/importar_prompt_extenso_plan.md (29/09/2026): con Entrenamiento,
+  # manda el Entrenamiento. Antes esta respuesta decía «Responde como un humano… NUNCA
+  # menciones que eres un bot» y cerraba con la regla de tú: el agente ADAM (cuya regla
+  # inviolable es no fingir ser humano, y que trata de usted) tuteaba y se hacía pasar por
+  # persona justo cuando su fuente no resolvía. Sin Entrenamiento, igual que antes.
+  def conversational_identity(tracking, clean_cp)
+    if clean_cp.blank?
+      return "Eres un asesor de ventas para #{tracking.account.name}.\nResponde como un humano amable y conocedor del tema. " \
+             'NUNCA menciones que eres un bot o sistema automático.'
+    end
+
+    "Eres el agente que describen las INSTRUCCIONES ADICIONALES de abajo y atiendes a nombre de #{tracking.account.name}. " \
+      'Su identidad, su trato y sus reglas mandan sobre estas indicaciones generales. Si te preguntan si eres una ' \
+      'persona, no lo afirmes: responde lo que digan tus instrucciones.'
+  end
+
+  def conversational_form(clean_cp)
+    return "Máximo 4 líneas. Tono natural y conversacional.\n#{ContactTrackings::CustomerTone::RULE}" if clean_cp.blank?
+
+    'Breve: máximo 4 líneas, salvo que tus instrucciones pidan otro largo. El trato (tú o usted), el tono y cómo ' \
+      'cierras el mensaje son los de las INSTRUCCIONES ADICIONALES; si no dicen nada del trato: ' \
+      "#{ContactTrackings::CustomerTone::RULE}"
   end
 
   def conversational_fallback(tracking, message)
@@ -468,35 +728,36 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # ==============================================================================
   # Handlers de Acciones
   # ==============================================================================
-  def handle_rejected(tracking, message, confidence)
-    Rails.logger.info "[TrackingBot] ❌ REJECTED → Pausando seguimiento"
+  def handle_rejected(tracking, message, _confidence)
+    Rails.logger.info '[TrackingBot] ❌ REJECTED → Pausando seguimiento'
 
     reply_text = generate_action_reply(tracking, message, :rejected)
     send_auto_reply(tracking, message, reply_text)
     tracking.disable_auto_retry_mode!
     tracking.update!(
       ai_context: "#{tracking.ai_context}\n\n⏸️ [IN] PAUSADO: Cliente rechazó\nMensaje: \"#{message_text_for_ai(message).truncate(100)}\"",
-      outcome: 'rejected'   # proyecto@contact_tracking: dashboard
+      outcome: 'rejected' # proyecto@contact_tracking: dashboard
     )
     tracking.pause!
     create_private_note(tracking, message, "Cliente rechazó el seguimiento: \"#{message_text_for_ai(message).truncate(100)}\"")
-    Rails.logger.info "[TrackingBot] ⏸️ Seguimiento pausado por rechazo del cliente"
+    Rails.logger.info '[TrackingBot] ⏸️ Seguimiento pausado por rechazo del cliente'
   end
 
-  def handle_interested(tracking, message, confidence)
-    Rails.logger.info "[TrackingBot] ✅ INTERESTED → Pausando seguimiento"
+  def handle_interested(tracking, message, _confidence)
+    Rails.logger.info '[TrackingBot] ✅ INTERESTED → Pausando seguimiento'
 
     tracking.disable_auto_retry_mode!
     reply_text = generate_action_reply(tracking, message, :interested)
     send_auto_reply(tracking, message, reply_text)
     tracking.update!(
       ai_context: "#{tracking.ai_context}\n\n⏸️ [IP] PAUSADO: Cliente mostró interés\nMensaje: \"#{message_text_for_ai(message).truncate(100)}\"\nRequiere atención humana.",
-      outcome: 'interested'   # proyecto@contact_tracking: dashboard
+      outcome: 'interested' # proyecto@contact_tracking: dashboard
     )
     tracking.pause!
     notify_admin_interested(tracking, message)
-    create_private_note(tracking, message, "⏸️ Seguimiento PAUSADO - ¡Cliente interesado! Requiere atención humana: \"#{message_text_for_ai(message).truncate(100)}\"")
-    Rails.logger.info "[TrackingBot] ⏸️ Seguimiento pausado, administrador notificado"
+    create_private_note(tracking, message,
+                        "⏸️ Seguimiento PAUSADO - ¡Cliente interesado! Requiere atención humana: \"#{message_text_for_ai(message).truncate(100)}\"")
+    Rails.logger.info '[TrackingBot] ⏸️ Seguimiento pausado, administrador notificado'
   end
 
   def handle_reschedule(tracking, message, action_data)
@@ -514,13 +775,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # Reagenda el recordatorio del seguimiento (scheduled_for). Comportamiento original,
   # usado cuando NO hay una cita de calendario activa.
   def handle_followup_reschedule(tracking, message, action_data)
-    Rails.logger.info "[TrackingBot] 📅 RESCHEDULE → Reagendando seguimiento"
+    Rails.logger.info '[TrackingBot] 📅 RESCHEDULE → Reagendando seguimiento'
 
     reschedule_data = action_data[:reschedule_data] || {}
     inbox_timezone = appointment_timezone(tracking, message)
 
     if reschedule_data.empty?
-      Rails.logger.info "[TrackingBot] ❓ Sin fecha/hora → solicitando cuándo"
+      Rails.logger.info '[TrackingBot] ❓ Sin fecha/hora → solicitando cuándo'
       reply_text = generate_action_reply(tracking, message, :reschedule_ask_when)
       send_auto_reply(tracking, message, reply_text)
       tracking.update!(
@@ -537,15 +798,15 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     if success
       reply_text = generate_action_reply(tracking, message, :reschedule_success, {
-        natural_desc: natural_desc,
-        formatted_time: formatted_time
-      })
+                                           natural_desc: natural_desc,
+                                           formatted_time: formatted_time
+                                         })
       send_auto_reply(tracking, message, reply_text)
       Rails.logger.info "[TrackingBot] ✅ Reagendado para #{formatted_time}"
     else
       reply_text = generate_action_reply(tracking, message, :reschedule_error)
       send_auto_reply(tracking, message, reply_text)
-      Rails.logger.error "[TrackingBot] ❌ No se pudo reagendar"
+      Rails.logger.error '[TrackingBot] ❌ No se pudo reagendar'
     end
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error en reschedule: #{e.message}"
@@ -625,7 +886,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       intro ||= 'Uy, ese horario no está disponible 😕. Para mover tu cita tengo estos horarios:'
       presentation = slots_presentation_for(tracking)
       alternatives = order_slots_for_presentation(alternatives, presentation)
-      reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número."
+      reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, presentation)}\n\n¿Cuál te queda mejor? Responde con el número."
       offer_slots(tracking, message, alternatives, reply)
     else
       send_auto_reply(tracking, message,
@@ -638,12 +899,58 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def slot_service_for(cal_ids, tracking, timezone, message: nil)
+    booking = tracking.tracking_template&.booking_calendar_ids || {}
+    options = message && calendar_options_for(tracking, message)
+    # proyecto@hoja_buscar — solo los calendarios de lo que se nombró. Sin mensaje (mover
+    # una cita) se queda en la agenda de la cita, como siempre.
+    sheet = message && sheet_calendars_for(tracking, message)
+    if sheet
+      cal_ids = sheet.integration_ids
+      booking = sheet.booking_calendars
+    end
+
     ContactTrackings::AvailabilitySlotService.new(
       calendar_integration_ids: cal_ids, timezone: timezone,
-      slot_duration: tracking.tracking_template&.calendar_event_duration || 30,
-      working_hours: working_hours_for(tracking, message),
-      booking_calendars: tracking.tracking_template&.booking_calendar_ids || {}
+      slot_duration: service_duration(tracking, message, options),
+      working_hours: options&.all_day ? ContactTrackings::AvailabilitySlotService::ALL_DAY : working_hours_for(tracking, message),
+      booking_calendars: booking
     )
+  end
+
+  # proyecto@hoja_buscar, pieza 3 — @agendar_calendar(duracion=…, horario=…) de la ruta del
+  # turno; si esa ruta no agenda, el de la primera ruta que sí lo configura. nil = como siempre.
+  def calendar_options_for(tracking, message)
+    ContactTrackings::CalendarOptions.parse(branch_for(tracking, message)&.escalation) ||
+      ContactTrackings::CalendarOptions.parse(ContactTrackings::RouteMap.parse(tracking.complementary_prompt)
+                                                                        .routes.map(&:escalation).join("\n"))
+  end
+
+  # duracion=90 → 90 · duracion=? → la que dijo el cliente, o la del agente · sin opción → la del agente.
+  def service_duration(tracking, message, options)
+    del_agente = tracking.tracking_template&.calendar_event_duration || 30
+    return del_agente if options.nil?
+    return options.duration if options.duration
+    return del_agente unless options.ask_duration
+
+    ContactTrackings::CalendarOptions.duration_in(message_text_for_ai(message)) || del_agente
+  end
+
+  # nil si el agente no usa {{hoja_buscar:}}. Una vez por mensaje: la búsqueda lee la hoja
+  # y la conversación.
+  def sheet_calendars_for(tracking, message)
+    @sheet_calendars ||= {}
+    key = [tracking.id, message.id]
+    return @sheet_calendars[key] if @sheet_calendars.key?(key)
+
+    @sheet_calendars[key] = ContactTrackings::SheetCalendars.for(tracking, message, branch_for(tracking, message))
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ {{hoja_buscar:}} falló: #{e.message}"
+    @sheet_calendars[key] = ContactTrackings::SheetCalendars.unavailable_outcome
+  end
+
+  def ask_sheet_value(tracking, message, column)
+    Rails.logger.info "[TrackingBot] 📅 {{hoja_buscar:}} sin #{column} nombrado → se pregunta cuál"
+    send_auto_reply(tracking, message, "¿Para cuál #{column} quieres agendar? Dime cuál y te paso sus horarios.")
   end
 
   # proyecto@bot_seguimiento_calendar — horarios del inbox (Opción A). Solo si el inbox los
@@ -693,6 +1000,25 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                         'vinculados. Coordinar la cita manualmente. Requiere atención humana.')
   end
 
+  # proyecto@bot_seguimiento_calendar — el Router puede clasificar intención de
+  # agendar ANTES de conocer el objeto del servicio (material, ubicaciones, peso).
+  # Si la cuenta usa @crear_ticket, los campos obligatorios del caso son la fuente
+  # de verdad de "qué necesita el cliente": los pedimos primero y solo ofrecemos
+  # horarios cuando ya están completos (o cuando el caso no aplica/ya existe).
+  def dispatch_book_appointment(tracking, message, route_result)
+    return handle_book_appointment(tracking, message, route_result) unless ticket_directive_present?(tracking)
+
+    creator = Cases::TicketCreatorService.new(message, tracking: tracking)
+    creator.create_if_needed
+    return if creator.outcome == :asked_missing_fields
+
+    handle_book_appointment(tracking, message, route_result)
+  end
+
+  def ticket_directive_present?(tracking)
+    Cases::TicketCreatorService::DIRECTIVE_RE.match?(tracking&.complementary_prompt.to_s)
+  end
+
   # ==============================================================================
   # proyecto@bot_seguimiento_calendar
   # Handler: Agendar cita via Google Calendar
@@ -700,11 +1026,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def handle_book_appointment(tracking, message, appt = nil)
     # Si el contacto YA tiene una cita activa, no ofrezcas slots nuevos: recuérdale la cita
     # existente y ofrécele moverla o cancelarla (responde "ya tenés una cita el X").
-    if tracking.appointment_event_id.present? && tracking.appointment_at.present?
-      return inform_existing_appointment(tracking, message)
-    end
+    return inform_existing_appointment(tracking, message) if tracking.appointment_event_id.present? && tracking.appointment_at.present?
 
-    Rails.logger.info "[TrackingBot] 📅 BOOK_APPOINTMENT → buscando disponibilidad en calendarios"
+    Rails.logger.info '[TrackingBot] 📅 BOOK_APPOINTMENT → buscando disponibilidad en calendarios'
 
     cal_ids = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
 
@@ -713,6 +1037,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return
     end
 
+    # proyecto@hoja_buscar — la ruta agenda en el calendario de lo que se nombró y no se
+    # nombró nada: se pregunta cuál, no se ofrecen horarios de todos (decisión 25/09/2026).
+    sheet = sheet_calendars_for(tracking, message)
+    return ask_sheet_value(tracking, message, sheet.asked) if sheet&.status == :needs_value
+
     timezone = appointment_timezone(tracking, message)
     service  = slot_service_for(cal_ids, tracking, timezone, message: message)
 
@@ -720,7 +1049,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # confirmá ese horario si está libre, o ofrecé alternativas cerca del día pedido. Solo
     # si no pidió nada concreto caemos al comportamiento por defecto (primeros disponibles).
     requested = requested_datetime_for_booking(appt, timezone)
-    return if try_book_requested_slot(tracking, message, service, requested)
+    requested ||= parse_requested_datetime(tracking, message, timezone) if appt.is_a?(Hash) && appt[:read_date]
+    requested = with_ambiguity(requested, message)
+    return if offer_ambiguous_exact(tracking, message, service, requested, timezone)
+    return if !requested&.dig(:ambiguous) && try_book_requested_slot(tracking, message, service, requested)
 
     slots = if requested
               from = booking_search_anchor(requested[:at], requested[:time_of_day], timezone)
@@ -739,16 +1071,19 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       )
       tracking.pause!
       notify_admin_interested(tracking, message)
-      create_private_note(tracking, message, "📅 Cliente quiso agendar una cita pero no había horarios disponibles en el calendario. Requiere atención humana.")
+      create_private_note(tracking, message,
+                          '📅 Cliente quiso agendar una cita pero no había horarios disponibles en el calendario. Requiere atención humana.')
       return
     end
 
     # Si pidió una hora exacta que estaba ocupada, lo avisamos antes de las alternativas.
     presentation = slots_presentation_for(tracking)
     slots = order_slots_for_presentation(slots, presentation)
-    reply = if requested&.dig(:exact)
-              "Uy, ese horario no está disponible 😕. Estos son los más cercanos:\n\n" \
-                "#{format_slots_lines(slots, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número."
+    moved = requested && moved_day_intro(requested[:at], slots, service, timezone)
+    intro = moved || ('Uy, ese horario no está disponible 😕. Estos son los más cercanos:' if requested&.dig(:exact))
+    intro = ambiguity_intro(requested, timezone, intro) unless moved
+    reply = if intro
+              "#{intro}\n\n#{format_slots_lines(slots, timezone, presentation)}\n\n¿Cuál te queda mejor? Responde con el número."
             else
               format_slots_message(slots, timezone, presentation)
             end
@@ -775,6 +1110,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # arranca a las 12:00, "noche" a las 18:00, "mañana" (o sin franja) desde el inicio del día.
   # Como el servicio devuelve los primeros disponibles desde aquí, así caen en la franja pedida.
   TIME_OF_DAY_START = { 'afternoon' => 12, 'evening' => 18 }.freeze
+  TIME_OF_DAY_VALUES = %w[morning afternoon evening].freeze
   def booking_search_anchor(day, time_of_day, timezone)
     local = day.in_time_zone(timezone)
     hour  = TIME_OF_DAY_START[time_of_day.to_s]
@@ -803,7 +1139,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     Rails.logger.info "[TrackingBot] 📅 El contacto ya tiene una cita (#{formatted}) → recordando en vez de re-ofrecer"
     send_auto_reply(
       tracking, message,
-      "Ya tenés una cita agendada para el #{formatted}. 📅 Si querés, puedo *moverla* a otro horario o *cancelarla*. ¿Qué preferís?"
+      "Ya tienes una cita agendada para el #{formatted}. 📅 Si quieres, puedo *moverla* a otro horario o *cancelarla*. ¿Qué prefieres?"
     )
   end
 
@@ -832,8 +1168,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     choice = parse_slot_choice(text, slots.size)
 
     # Un dígito 1-5 dentro de una frase con fecha/hora ("a las 5 de la tarde", "el jueves
-    # a las 3") NO es una elección de slot: es una propuesta → negociamos.
-    if choice.nil? || looks_like_datetime_proposal?(text)
+    # a las 3") o con una cantidad ("3 toneladas de arena") NO es una elección de slot:
+    # es una propuesta u otro dato → negociamos en vez de confirmar a ciegas.
+    if choice.nil? || looks_like_datetime_proposal?(text) || looks_like_quantity?(text)
       Rails.logger.info '[TrackingBot] 📅 No es elección de número → intentando negociar fecha/hora'
       return handle_slot_negotiation(tracking, message, slots)
     end
@@ -861,11 +1198,27 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar — negociación multi-turno: el cliente, en vez de
   # elegir un número, propone otra fecha/hora. Intentamos interpretarla, verificar
   # disponibilidad y: confirmarla si está libre, ofrecer cercanas si no, o repreguntar.
+  def try_kbase_during_negotiation(tracking, message)
+    return false unless kbase_available?(message, tracking)
+    return false unless KnowledgeBaseResponseService.new(message, tracking: tracking).perform
+
+    Rails.logger.info '[TrackingBot] 📚 KBase respondió durante la negociación de horario'
+    true
+  end
+
   def handle_slot_negotiation(tracking, message, current_slots)
+    return true if reoffer_for_named_resource(tracking, message, current_slots)
+
     timezone  = appointment_timezone(tracking, message)
     requested = parse_requested_datetime(tracking, message, timezone)
+    return true if requested.nil? && reoffer_when_asked_free(tracking, message)
 
     if requested
+      # «¿Y en la tarde?»: sin día, es la tarde del día de los horarios que se le ofrecieron.
+      if requested[:day_given] == false && current_slots.any?
+        requested = requested.merge(at: Time.parse(current_slots.first['slot']).in_time_zone(timezone).beginning_of_day)
+      end
+
       # Bug #4 — si el cliente dio solo una hora ("a las 2pm"), parse_requested_datetime la
       # ancla a hoy/mañana, ignorando que los slots activos (current_slots) son de otra fecha.
       # Sin esto, slot_for podría confirmar la cita en el día equivocado. Anclamos la hora
@@ -884,9 +1237,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
       cal_ids  = (tracking.tracking_template&.calendar_integration_ids.presence || tracking.calendar_integration_ids).presence
       service  = slot_service_for(cal_ids, tracking, timezone, message: message)
+      requested = with_ambiguity(requested, message)
+      return true if offer_ambiguous_exact(tracking, message, service, requested, timezone)
 
       # Si dio fecha Y hora concretas, intentamos confirmar ese horario exacto.
-      if requested[:exact]
+      if requested[:exact] && !requested[:ambiguous]
         slot = service.slot_for(requested[:at])
         if slot
           Rails.logger.info "[TrackingBot] 📅 Horario propuesto disponible (#{requested[:at]}) → confirmando"
@@ -897,28 +1252,33 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       end
 
       # Hora exacta ocupada, o solo dio el día: ofrecemos horarios cerca de lo pedido.
-      alternatives = service.call(from: requested[:at].beginning_of_day)
+      alternatives = service.call(from: booking_search_anchor(requested[:at], requested[:time_of_day], timezone))
       if alternatives.any?
         # Bug #5 — si el día pedido no tiene disponibilidad, el servicio devuelve slots del
         # siguiente día hábil. Avisamos explícitamente en vez de mostrarlos sin contexto.
         requested_date     = requested[:at].in_time_zone(timezone).to_date
         first_offered_date = alternatives.first[:slot].in_time_zone(timezone).to_date
         intro = if first_offered_date != requested_date
-                  day_name = SLOT_DAY_NAMES[requested_date.wday]
-                  "No hay disponibilidad el #{day_name}. Los primeros horarios disponibles son:"
+                  moved_day_intro(requested[:at], alternatives, service, timezone)
                 elsif requested[:exact]
-                  'Uy, ese horario no está disponible 😕. Estos son los más cercanos:'
+                  ambiguity_intro(requested, timezone, 'Uy, ese horario no está disponible 😕. Estos son los más cercanos:')
                 else
-                  '¡Claro! Para ese día tengo estos horarios:'
+                  ambiguity_intro(requested, timezone, '¡Claro! Para ese día tengo estos horarios:')
                 end
         Rails.logger.info '[TrackingBot] 📅 Ofreciendo horarios cercanos a lo pedido'
         presentation = slots_presentation_for(tracking)
         alternatives = order_slots_for_presentation(alternatives, presentation)
-        reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número."
+        reply = "#{intro}\n\n#{format_slots_lines(alternatives, timezone, presentation)}\n\n¿Cuál te queda mejor? Responde con el número."
         offer_slots(tracking, message, alternatives, reply)
         return true
       end
     end
+
+    # Antes de repreguntar a ciegas: si no es fecha ni elección, puede ser una pregunta
+    # real sobre lo ofrecido ("¿qué transporte es TP-113?", "¿qué unidad tienen?"). Dejamos
+    # que la KBase (hoja/foro) responda sin perder el estado [PENDING_SLOT] — el cliente
+    # sigue pudiendo elegir horario después.
+    return true if try_kbase_during_negotiation(tracking, message)
 
     # No pudimos interpretar la fecha/hora (o no hay alternativas): repreguntamos suave,
     # manteniendo el estado [PENDING_SLOT] para que pueda elegir o proponer de nuevo.
@@ -933,12 +1293,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     slots_list = format_slots_lines(display_slots, timezone, slots_presentation_for(tracking))
     send_auto_reply(tracking, message,
                     "Puedo agendarte en alguno de estos horarios 🙂:\n\n#{slots_list}\n\n" \
-                    "Respondé con el número (1 al #{current_slots.size}), o decime qué día y a qué hora te acomoda.")
+                    "Responde con el número (1 al #{current_slots.size}), o dime qué día y a qué hora te acomoda.")
     true
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error en handle_slot_negotiation: #{e.message}"
     send_auto_reply(tracking, message,
-                    "Respondé con el número del horario (1 al #{current_slots.size}) que prefieras, por favor 🙂.")
+                    "Responde con el número del horario (1 al #{current_slots.size}) que prefieras, por favor 🙂.")
     true
   end
 
@@ -950,34 +1310,51 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return nil if key.blank?
 
     text  = message_text_for_ai(message).to_s.truncate(200)
-    today = Time.current.in_time_zone(timezone).strftime('%Y-%m-%d (%A)')
-    data  = extract_datetime_json(key, today, text)
+    now   = Time.current.in_time_zone(timezone)
+    today = "#{now.strftime('%Y-%m-%d')} (#{SLOT_DAY_NAMES[now.wday]})"
+    data  = extract_datetime_json(key, today, text, tracking)
     return nil unless data.is_a?(Hash)
 
     rd = {
       specific_date: data['specific_date'].presence,
+      weekday: data['weekday'].presence,
+      weeks_ahead: data['weeks_ahead'].presence&.to_i,
       specific_time: data['specific_time'].presence,
       relative_days: data['relative_days'].presence&.to_i
     }.compact
-    return nil if rd.empty?
+    franja = TIME_OF_DAY_VALUES.include?(data['time_of_day']) ? data['time_of_day'] : nil
+    # «¿Y en la tarde?» (25/09/2026): solo la franja, sin día. El día lo pone quien llama
+    # (en la negociación, el de los horarios ofrecidos); mientras, hoy.
+    return { at: now, exact: false, time_of_day: franja, day_given: false } if rd.except(:weeks_ahead).empty? && franja
+    return nil if rd.except(:weeks_ahead).empty?
 
     at = calculate_reschedule_datetime(rd, timezone)
     return nil unless at
 
-    { at: at, exact: rd[:specific_time].present? }
+    { at: at, exact: rd[:specific_time].present?, time_of_day: franja, day_given: true }
   rescue StandardError => e
     Rails.logger.warn "[TrackingBot] ⚠️ No se pudo interpretar la fecha pedida: #{e.message}"
     nil
   end
 
-  def extract_datetime_json(api_key, today, text)
+  def extract_datetime_json(api_key, today, text, tracking = nil)
     require 'net/http'
     require 'json'
 
     prompt = <<~PROMPT
       Hoy es #{today}. El cliente quiere agendar y puede proponer una fecha/hora en su mensaje.
-      Devuelve SOLO un JSON: {"specific_date": "YYYY-MM-DD" o null, "specific_time": "HH:MM" (24h) o null, "relative_days": número o null}.
+      Devuelve SOLO un JSON:
+      {"specific_date": "YYYY-MM-DD" o null, "weekday": 1..7 o null (1=lunes...7=domingo),
+       "weeks_ahead": número o null, "specific_time": "HH:MM" (24h) o null, "relative_days": número o null,
+       "time_of_day": "morning" | "afternoon" | "evening" o null}.
       Si no propone ninguna fecha/hora concreta, deja todo en null.
+      - Franja sin hora: "en la tarde" → "afternoon"; "en la noche" → "evening"; "en la mañana" o
+        "temprano" → "morning". OJO: "mañana" sola es el día siguiente ("relative_days": 1), no una franja.
+      Reglas (NO calcules fechas de calendario a mano; el sistema las resuelve):
+      - Día de la semana nombrado ("el martes", "para el jueves"): poné "weekday" (1=lunes...7=domingo)
+        y dejá "specific_date" en null. "weeks_ahead" SOLO si lo dice explícito ("en dos semanas"=2);
+        si no, dejalo null.
+      - Fecha de calendario explícita ("el 30 de junio", "5/7"): poné "specific_date" (YYYY-MM-DD).
       Mensaje del cliente: "#{text}"
     PROMPT
 
@@ -989,11 +1366,12 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     request                  = Net::HTTP::Post.new(uri)
     request['Authorization'] = "Bearer #{api_key}"
     request['Content-Type']  = 'application/json'
+    # proyecto@contact_tracking: modelo y tope desde la config del inbox.
     request.body = {
-      model:           'gpt-4o-mini',
-      messages:        [{ role: 'user', content: prompt }],
-      max_tokens:      120,
-      temperature:     0,
+      model: ContactTrackings::EngineConfig.model_for_tracking(tracking, :datetime),
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:datetime),
+      temperature: 0,
       response_format: { type: 'json_object' }
     }.to_json
 
@@ -1017,6 +1395,20 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     text.to_s.match?(DATETIME_PROPOSAL_HINT)
   end
 
+  # Pistas de que un dígito del mensaje es una CANTIDAD (peso, unidades, viajes...) y
+  # no la elección de un horario numerado. Sin este guard, "3 toneladas de arena"
+  # confirmaba por error el horario #3 (parse_slot_choice solo mira dígitos sueltos).
+  QUANTITY_HINT = /
+    \d+\s*
+    (ton(elad[ao]s?)?|kgs?|kilos?|litros?|cajas?|pallets?|paquetes?|
+     piezas?|personas?|unidad(es)?|cami[oó]n(es)?|viajes?|horas?|
+     d[ií]as?|metros?|m3|m²|m2)\b
+  /ix
+
+  def looks_like_quantity?(text)
+    text.to_s.match?(QUANTITY_HINT)
+  end
+
   def parse_slot_choice(text, max)
     # Números escritos como dígito: "1", "2", etc.
     match = text.match(/\b([1-#{max}])\b/)
@@ -1033,6 +1425,21 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     nil
+  end
+
+  # Con horarios ofrecidos, todo mensaje se tomaba como elección de horario: «mi perro se
+  # comió veneno» recibía otra vez los horarios (24/09/2026). Si NO es una elección (un
+  # número suelto, una fecha u hora) y cae en una rama que abre su propio caso
+  # (urgencias, quejas), la oferta se cierra y el mensaje sigue por su rama. Solo en ese
+  # caso se clasifica: una elección normal no paga la llamada.
+  def leaves_slot_offer?(tracking, message)
+    text = message_text_for_ai(message).to_s
+    return false if text.strip.match?(/\A\D{0,12}[1-5]\D{0,3}\z/) || looks_like_datetime_proposal?(text)
+
+    ticket_first_branch?(branch_for(tracking, message))
+  rescue StandardError => e
+    Rails.logger.warn "[TrackingBot] ⚠️ No se pudo ver si el mensaje deja la oferta de horarios: #{e.message}"
+    false
   end
 
   def clear_pending_slot(tracking)
@@ -1058,7 +1465,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def prompt_for_email(tracking, message, selected_slot)
     send_auto_reply(tracking, message,
                     '¡Perfecto! 📧 ¿A qué correo te envío la invitación de la cita? ' \
-                    'Si preferís, escribí "sin correo" y la agendo igual.')
+                    'Si prefieres, escribe "sin correo" y la agendo igual.')
     clear_pending_slot(tracking)
     clear_pending_email(tracking)
     tracking.update!(
@@ -1091,7 +1498,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     else
       # No es un email ni un "sin correo" claro → repreguntamos sin perder el estado
       send_auto_reply(tracking, message,
-                      'No reconocí un correo válido 😅. Escribí tu email (ej: nombre@correo.com) ' \
+                      'No reconocí un correo válido 😅. Escribe tu email (ej: nombre@correo.com) ' \
                       'o "sin correo" para agendar sin invitación.')
       return true
     end
@@ -1126,6 +1533,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     contact     = message.sender
     contact_name = contact&.name || 'Cliente'
 
+    tentative = tentative_booking?(tracking, message)
     event_created, event_id = create_or_move_calendar_event(tracking, message, slot_start, slot_end, cal_id, gcal)
 
     local_start = slot_start.in_time_zone(timezone)
@@ -1141,8 +1549,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     unless event_created
       Rails.logger.warn '[TrackingBot] ⚠️ Evento NO creado en Calendar → no se confirma la cita, se escala a humano'
       send_auto_reply(tracking, message,
-                      "¡Gracias por elegir un horario! 🙌 Estoy terminando de confirmar tu cita para el " \
-                      "#{fecha_texto} a las #{hora_texto}. Un asesor te confirmará en breve, disculpá la demora. 😊")
+                      '¡Gracias por elegir un horario! 🙌 Estoy terminando de confirmar tu cita para el ' \
+                      "#{fecha_texto} a las #{hora_texto}. Un asesor te confirmará en breve, disculpa la demora. 😊")
       clear_pending_slot(tracking)
       tracking.disable_auto_retry_mode!
       tracking.update!(
@@ -1156,29 +1564,39 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return
     end
 
-    reply = "✅ ¡Perfecto! Tu cita está agendada para el #{fecha_texto} de #{local_start.year} a las #{hora_texto}.\nTe esperamos. Si necesitás cambiarla, avisanos con anticipación. 😊"
+    reply = if tentative
+              "📌 Te aparté el #{fecha_texto} de #{local_start.year} a las #{hora_texto}. Queda *pendiente de confirmar*: " \
+                'en cuanto me confirmes el servicio, lo dejo en firme.'
+            else
+              "✅ ¡Perfecto! Tu cita está agendada para el #{fecha_texto} de #{local_start.year} a las #{hora_texto}.\n" \
+                'Te esperamos. Si necesitas cambiarla, avísanos con anticipación. 😊'
+            end
     send_auto_reply(tracking, message, reply)
 
     clear_pending_slot(tracking)
     tracking.disable_auto_retry_mode!
     tracking.update!(
-      ai_context: "#{tracking.ai_context}\n\n✅ [CITA AGENDADA] #{fecha_texto} #{hora_texto} con #{agent_name}. Evento en Google Calendar: creado.",
-      appointment_at: slot_start,   # proyecto@contact_tracking: dashboard KPI citas
-      outcome: 'appointment',
+      ai_context: "#{tracking.ai_context}\n\n✅ [#{tentative ? 'SERVICIO APARTADO' : 'CITA AGENDADA'}] " \
+                  "#{fecha_texto} #{hora_texto} con #{agent_name}. Evento en Google Calendar: creado.",
+      appointment_at: slot_start, # proyecto@contact_tracking: dashboard KPI citas
+      outcome: tentative ? tracking.outcome : 'appointment', # apartado no cuenta como cita hasta confirmarse
+      appointment_status: tentative ? 'tentative' : nil,
       appointment_event_id: event_id,        # referencia para mover/cancelar (#2/#3)
       appointment_calendar_id: cal_id,
       appointment_calendar_gid: gcal         # calendario de Google donde quedó el evento
     )
     tracking.pause!
 
-    nota = "📅 Cita agendada con #{contact_name}\n• Fecha: #{fecha_texto} de #{local_start.year}\n• Hora: #{hora_texto}\n• Agente: #{agent_name}\n• Evento en Calendar: ✅ creado"
+    titulo = tentative ? '📌 Servicio APARTADO (pendiente de confirmar)' : '📅 Cita agendada'
+    nota = "#{titulo} con #{contact_name}\n• Fecha: #{fecha_texto} de #{local_start.year}\n• Hora: #{hora_texto}\n" \
+           "• Agente: #{agent_name}\n• Evento en Calendar: ✅ creado"
     create_private_note(tracking, message, nota)
     notify_admin_interested(tracking, message)
 
-    Rails.logger.info "[TrackingBot] ✅ Cita confirmada y seguimiento pausado"
+    Rails.logger.info '[TrackingBot] ✅ Cita confirmada y seguimiento pausado'
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error en confirm_and_create_appointment: #{e.message}"
-    send_auto_reply(tracking, message, "Lo siento, tuve un problema al confirmar la cita. Un asesor te contactará pronto.")
+    send_auto_reply(tracking, message, 'Lo siento, tuve un problema al confirmar la cita. Un asesor te contactará pronto.')
     clear_pending_slot(tracking)
   end
 
@@ -1192,7 +1610,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     contact      = message.sender
     contact_name = contact&.name || 'Cliente'
-    summary      = "Cita con #{contact_name} — #{tracking.objective.truncate(60)}"
+    prefijo      = ContactTrackings::ServiceConfirmation::TENTATIVE_PREFIX if tentative_booking?(tracking, message)
+    summary      = "#{prefijo}Cita con #{contact_name} — #{tracking.objective.truncate(60)}"
     description  = "Contacto: #{contact_name}\nTeléfono: #{contact&.phone_number}\nObjetivo: #{tracking.objective}"
     attendees    = [contact&.email].compact.select(&:present?)
     service      = GoogleCalendarService.new(integration)
@@ -1209,7 +1628,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       [true, existing_event_id]
     else
       result   = service.create_event(calendar_id: gcal, summary: summary, description: description,
-                                       start_time: slot_start, end_time: slot_end, attendees: attendees)
+                                      start_time: slot_start, end_time: slot_end, attendees: attendees)
       event_id = result.is_a?(Hash) ? result['id'] : nil
       Rails.logger.info "[TrackingBot] 📅 Evento creado en Google Calendar (cal: #{gcal}) para #{slot_start} (id: #{event_id})"
       delete_stale_appointment_event(tracking, cal_id, gcal)
@@ -1263,7 +1682,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     send_auto_reply(tracking, message,
-                    'Listo, cancelé tu cita. 🙌 Si más adelante querés agendar otra, escribime cuando gustes. 😊')
+                    'Listo, cancelé tu cita. 🙌 Si más adelante quieres agendar otra, escríbeme cuando gustes. 😊')
 
     tracking.disable_auto_retry_mode!
     tracking.update!(
@@ -1292,6 +1711,173 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # proyecto@bot_seguimiento_calendar — formato configurable (en el Agente IA) con el que se
   # listan los horarios. La numeración 1-5 SIEMPRE refleja la posición en `slots`, para que la
   # elección por número del cliente siga mapeando bien sin importar el agrupamiento.
+  # proyecto@solicitudes — pieza 5, F4: confirmar, cancelar o mover UN servicio (ver Actions).
+  def handle_service_actions(tracking, message)
+    return false unless tracking.complementary_prompt.to_s.match?(ContactTrackings::ServiceRequests::Turn::DIRECTIVE_RE)
+    return false if ContactTrackings::ServiceRequests::Registry.open_cases(message.conversation).none?
+
+    texto = ContactTrackings::ServiceRequests::Actions.new(
+      tracking: tracking, message: message, branch: branch_for(tracking, message),
+      timezone: appointment_timezone(tracking, message)
+    ).call
+    return false if texto.blank?
+
+    Rails.logger.info '[TrackingBot] 🧾 @solicitudes → acción sobre un servicio'
+    send_auto_reply(tracking, message, texto)
+    true
+  end
+
+  # proyecto@solicitudes — pieza 5, F3: el cliente elige horarios ofrecidos («1A y 3B», «sí»).
+  def handle_service_choice(tracking, message)
+    prompt = tracking.complementary_prompt.to_s
+    return false unless prompt.match?(ContactTrackings::ServiceRequests::Turn::DIRECTIVE_RE)
+
+    ruta = ContactTrackings::RouteMap.parse(prompt).routes.find { |r| ContactTrackings::ServiceRequests::Turn.route?(r.escalation) }
+    texto = ContactTrackings::ServiceRequests::Choice.new(
+      tracking: tracking, message: message, timezone: appointment_timezone(tracking, message),
+      tentative: ContactTrackings::CalendarOptions.parse(ruta&.escalation)&.tentative || false
+    ).call
+    return false if texto.blank?
+
+    Rails.logger.info '[TrackingBot] 📌 @solicitudes → horarios elegidos'
+    send_auto_reply(tracking, message, texto)
+    true
+  end
+
+  # proyecto@solicitudes — pieza 5 (ver ContactTrackings::ServiceRequests::Turn).
+  def handle_service_requests(tracking, message)
+    return false unless tracking.complementary_prompt.to_s.match?(ContactTrackings::ServiceRequests::Turn::DIRECTIVE_RE)
+
+    branch = branch_for(tracking, message)
+    return false unless ContactTrackings::ServiceRequests::Turn.route?(branch&.escalation)
+
+    texto = ContactTrackings::ServiceRequests::Turn.new(
+      tracking: tracking, message: message, branch: branch,
+      timezone: appointment_timezone(tracking, message), context: get_recent_context(message, 4)
+    ).call
+    return false if texto.blank?
+
+    Rails.logger.info '[TrackingBot] 🧾 @solicitudes → servicios registrados'
+    send_auto_reply(tracking, message, texto)
+    true
+  end
+
+  # proyecto@hoja_buscar — pieza 4: @agendar_calendar(modo=tentativo) en la ruta (o en el agente).
+  def tentative_booking?(tracking, message)
+    calendar_options_for(tracking, message)&.tentative || false
+  end
+
+  # proyecto@hoja_buscar — pieza 4: confirmar un servicio apartado (ver ServiceConfirmation).
+  # Solo si hay uno apartado y el mensaje cae en la ruta que tiene @confirmar_servicio.
+  def handle_service_confirmation(tracking, message)
+    confirmacion = ContactTrackings::ServiceConfirmation.new(tracking)
+    return false unless confirmacion.open?
+    return false unless tracking.complementary_prompt.to_s.match?(ContactTrackings::ServiceConfirmation::DIRECTIVE_RE)
+
+    accion = branch_for(tracking, message)&.escalation.to_s
+    return false unless accion.match?(ContactTrackings::ServiceConfirmation::DIRECTIVE_RE)
+
+    cuando = confirmacion.when_text(appointment_timezone(tracking, message))
+    if ContactTrackings::ServiceConfirmation.requires_payment?(accion)
+      ask_service_payment(tracking, message, confirmacion, cuando)
+    else
+      finish_service_confirmation(tracking, message, confirmacion, cuando)
+    end
+    true
+  end
+
+  def ask_service_payment(tracking, message, confirmacion, cuando)
+    Rails.logger.info '[TrackingBot] 💳 Confirmación de servicio apartado → falta el pago'
+    ya_pedido = confirmacion.pending_payment?
+    confirmacion.mark_pending_payment!
+    texto = if ya_pedido
+              "Gracias. En cuanto se confirme el pago te aviso y tu servicio del #{cuando} queda en firme."
+            else
+              "¡Gracias por confirmar! Para dejar en firme tu servicio del #{cuando} necesitamos el pago por " \
+                'adelantado. En cuanto lo recibamos, te lo confirmo.'
+            end
+    send_auto_reply(tracking, message, texto)
+    return if ya_pedido
+
+    create_private_note(tracking, message,
+                        "💳 El cliente confirmó el servicio del #{cuando}; falta el pago. Al recibirlo, pon la " \
+                        "etiqueta «#{ContactTrackings::ServiceConfirmation::PAID_LABEL}» y el servicio queda en firme.")
+    notify_admin_interested(tracking, message)
+  end
+
+  def finish_service_confirmation(tracking, message, confirmacion, cuando)
+    if confirmacion.confirm!
+      Rails.logger.info '[TrackingBot] ✅ Servicio apartado → confirmado'
+      send_auto_reply(tracking, message, "✅ ¡Listo! Tu servicio del #{cuando} quedó confirmado.")
+      create_private_note(tracking, message, "✅ Servicio del #{cuando} CONFIRMADO por el cliente (ya no es tentativo).")
+    else
+      send_auto_reply(tracking, message, "Gracias por confirmar. Un asesor deja en firme tu servicio del #{cuando} en un momento.")
+      create_private_note(tracking, message,
+                          "⚠️ El cliente confirmó el servicio del #{cuando} pero no se pudo actualizar el calendario. Confírmalo a mano.")
+      notify_admin_interested(tracking, message)
+    end
+  end
+
+  # proyecto@hoja_buscar — pieza 6: «el día lunes» sin número (ver AmbiguousDate).
+  def with_ambiguity(requested, message)
+    return requested if requested.nil?
+
+    requested.merge(ambiguous: ContactTrackings::AmbiguousDate.ambiguous?(message_text_for_ai(message)))
+  end
+
+  # Día de la semana sin número y con hora libre: en vez de agendarla en firme, se ofrece
+  # como opción 1 diciendo la fecha completa. Con «1» se agenda como cualquier horario.
+  def offer_ambiguous_exact(tracking, message, service, requested, timezone)
+    return false unless requested&.dig(:ambiguous) && requested&.dig(:exact)
+
+    slot = service.slot_for(requested[:at])
+    return false unless slot
+
+    hora = requested[:at].in_time_zone(timezone).strftime('%H:%M')
+    Rails.logger.info "[TrackingBot] 📅 Fecha ambigua con hora libre → se ofrece para confirmar (#{requested[:at]})"
+    offer_slots(tracking, message, [slot],
+                "#{ContactTrackings::AmbiguousDate.note(requested[:at], timezone)}, a las #{hora}. Está libre:\n\n" \
+                "#{format_slots_lines([slot], timezone, slots_presentation_for(tracking))}\n\n" \
+                'Responde 1 para apartarlo, o dime otra fecha.')
+    true
+  end
+
+  # «Entiendo que es el lunes 28 de septiembre. <intro>»: sin la fecha escrita, el cliente
+  # no puede darse cuenta de que era otro lunes.
+  def ambiguity_intro(requested, timezone, intro)
+    return intro unless requested&.dig(:ambiguous)
+
+    "#{ContactTrackings::AmbiguousDate.note(requested[:at], timezone)}. #{intro || 'Estos son los horarios de ese día:'}"
+  end
+
+  # El día pedido no aparece en los horarios ofrecidos: se dice por qué, en vez de saltar
+  # a otro día sin avisar (25/09/2026: «¿qué horarios tienen para mañana?» un viernes daba
+  # los del lunes como si fueran de mañana). nil si el primer horario SÍ es del día pedido.
+  #   día no laboral → «Mañana sábado no hay servicio. Los primeros horarios son el lunes 28:»
+  #   día laboral    → «Para mañana ya no tengo horarios. Los más cercanos son el lunes 28:»
+  def moved_day_intro(requested_at, slots, service, timezone)
+    pedido = requested_at.in_time_zone(timezone).to_date
+    ofrecido = slots.first[:slot].in_time_zone(timezone)
+    return nil if ofrecido.to_date == pedido
+
+    primero = "el #{SLOT_DAY_NAMES[ofrecido.wday]} #{ofrecido.day}"
+    if service.working_day?(pedido)
+      "Para #{requested_day_label(pedido, timezone)} ya no tengo horarios. Los más cercanos son #{primero}:"
+    else
+      "#{requested_day_label(pedido, timezone).upcase_first} no hay servicio. Los primeros horarios son #{primero}:"
+    end
+  end
+
+  # «mañana sábado», «hoy viernes» o «el sábado 26».
+  def requested_day_label(date, timezone)
+    hoy = Time.current.in_time_zone(timezone).to_date
+    dia = SLOT_DAY_NAMES[date.wday]
+    return "hoy #{dia}" if date == hoy
+    return "mañana #{dia}" if date == hoy + 1
+
+    "el #{dia} #{date.day}"
+  end
+
   def slots_presentation_for(tracking)
     value = tracking.tracking_template&.slots_presentation
     SLOTS_PRESENTATIONS.include?(value) ? value : 'detailed'
@@ -1396,7 +1982,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   def format_slots_message(slots, timezone, presentation = 'detailed')
-    "¡Con gusto! 📅 Tenemos los siguientes horarios disponibles:\n\n#{format_slots_lines(slots, timezone, presentation)}\n\n¿Cuál te viene bien? Respondé con el número de tu preferencia."
+    "¡Con gusto! 📅 Tenemos los siguientes horarios disponibles:\n\n#{format_slots_lines(slots, timezone,
+                                                                                         presentation)}\n\n¿Cuál te queda mejor? Responde con el número de tu preferencia."
   end
 
   # Envía un mensaje con horarios y deja el seguimiento esperando la elección
@@ -1431,13 +2018,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       return default_reply(reply_type, extra_data) unless prompt.present?
 
       reply = call_openai_for_reply(api_key_data[:key], [
-        {
-          role: 'system',
-          content: 'Eres un asesor de ventas. Responde SOLO con el mensaje final para el cliente. ' \
-                   'NUNCA incluyas prefijos de nombre (ej: "Bot:", "Asesor:") ni explicaciones adicionales.'
-        },
-        { role: 'user', content: prompt }
-      ])
+                                      {
+                                        role: 'system',
+                                        content: 'Eres un asesor de ventas. Responde SOLO con el mensaje final para el cliente. ' \
+                                                 'NUNCA incluyas prefijos de nombre (ej: "Bot:", "Asesor:") ni explicaciones adicionales.'
+                                      },
+                                      { role: 'user', content: prompt }
+                                    ], tracking)
       return reply if reply.present?
     rescue StandardError => e
       Rails.logger.warn "[TrackingBot] ⚠️ Error generando respuesta de acción: #{e.message}"
@@ -1451,7 +2038,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     objective  = tracking.objective
     behavior         = tracking.complementary_prompt.presence || ''
     customer_message = message_text_for_ai(message).truncate(300)
-    base = "Cliente: #{first_name}\nObjetivo: #{objective}\n#{behavior.present? ? "Instrucciones: #{behavior}\n" : ""}Mensaje del cliente: \"#{customer_message}\"\n\n"
+    base = "Cliente: #{first_name}\nObjetivo: #{objective}\n#{behavior.present? ? "Instrucciones: #{behavior}\n" : ''}Mensaje del cliente: \"#{customer_message}\"\n\n"
 
     case reply_type
     when :rejected
@@ -1459,7 +2046,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     when :interested
       "#{base}El cliente mostró interés. Genera una respuesta breve (2-3 líneas) que confirme con entusiasmo e indique que un asesor lo contactará pronto."
     when :reschedule_success
-      formatted_time = extra_data[:formatted_time] || extra_data[:natural_desc] || "en el momento solicitado"
+      formatted_time = extra_data[:formatted_time] || extra_data[:natural_desc] || 'en el momento solicitado'
       "#{base}El seguimiento fue reagendado para: #{formatted_time}. Genera una confirmación breve (1-2 líneas) mencionando la fecha/hora exacta."
     when :reschedule_ask_when
       "#{base}El cliente quiere reagendar pero no indicó cuándo. Pregúntale de forma natural para qué fecha u hora prefiere. Máximo 2 líneas."
@@ -1469,27 +2056,27 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def default_reply(reply_type, extra_data = {})
     case reply_type
     when :rejected
-      "Entendido, respetamos completamente tu decisión. 🙏 No recibirás más mensajes automáticos sobre este tema. ¡Gracias por tu tiempo!"
+      'Entendido, respetamos completamente tu decisión. 🙏 No recibirás más mensajes automáticos sobre este tema. ¡Gracias por tu tiempo!'
     when :interested
-      "¡Excelente! Me alegra saber que te interesa. ✨ Un asesor de nuestro equipo se pondrá en contacto contigo muy pronto."
+      '¡Excelente! Me alegra saber que te interesa. ✨ Un asesor de nuestro equipo se pondrá en contacto contigo muy pronto.'
     when :reschedule_success
-      formatted_time = extra_data[:formatted_time] || extra_data[:natural_desc] || "en el momento solicitado"
+      formatted_time = extra_data[:formatted_time] || extra_data[:natural_desc] || 'en el momento solicitado'
       "✅ ¡Listo! He reagendado tu recordatorio para el #{formatted_time}."
     when :reschedule_ask_when
-      "Con gusto te reagendo 📅 ¿Para qué fecha y hora prefieres que te contactemos?"
+      'Con gusto te reagendo 📅 ¿Para qué fecha y hora prefieres que te contactemos?'
     when :reschedule_error, :general_error
-      "Lo siento, tuve un problema al procesar tu solicitud. Un agente se pondrá en contacto contigo pronto."
+      'Lo siento, tuve un problema al procesar tu solicitud. Un agente se pondrá en contacto contigo pronto.'
     when :book_appointment_no_slots
-      "¡Gracias por tu interés! 😊 En este momento no tenemos horarios disponibles en agenda. Un asesor se pondrá en contacto contigo a la brevedad para coordinar una cita."
+      '¡Gracias por tu interés! 😊 En este momento no tenemos horarios disponibles en agenda. Un asesor se pondrá en contacto contigo a la brevedad para coordinar una cita.'
     when :book_appointment_no_calendar
-      "¡Con gusto te agendamos! 😊 En este momento no puedo confirmar el horario de forma automática, así que un asesor se pondrá en contacto contigo a la brevedad para coordinar tu cita."
+      '¡Con gusto te agendamos! 😊 En este momento no puedo confirmar el horario de forma automática, así que un asesor se pondrá en contacto contigo a la brevedad para coordinar tu cita.'
     end
   end
 
   # ==============================================================================
   # OpenAI - Llamada unificada
   # ==============================================================================
-  def call_openai_for_reply(api_key, messages)
+  def call_openai_for_reply(api_key, messages, tracking = nil)
     require 'net/http'
     require 'json'
 
@@ -1501,10 +2088,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     request = Net::HTTP::Post.new(uri)
     request['Authorization'] = "Bearer #{api_key}"
     request['Content-Type'] = 'application/json'
+    # proyecto@contact_tracking: modelo y tope desde la config del inbox.
     request.body = {
-      model: 'gpt-4o-mini',
+      model: ContactTrackings::EngineConfig.model_for_tracking(tracking, :conversational),
       messages: messages,
-      max_tokens: 250,
+      max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:conversational),
       temperature: 0.7
     }.to_json
 
@@ -1522,14 +2110,14 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return unless tracking.respond_to?(:last_sentiment_analysis=)
 
     tracking.update_columns(
-      last_intent: route_result&.dig(:route)&.to_s || 'tracking',   # proyecto@contact_tracking: dashboard
+      last_intent: route_result&.dig(:route)&.to_s || 'tracking', # proyecto@contact_tracking: dashboard
       last_sentiment_analysis: {
-        sentiment:       route_result&.dig(:route)&.to_s || 'tracking',
-        confidence:      route_result&.dig(:confidence) || 1.0,
-        method:          route_result&.dig(:method) || 'tracking',
+        sentiment: route_result&.dig(:route)&.to_s || 'tracking',
+        confidence: route_result&.dig(:confidence) || 1.0,
+        method: route_result&.dig(:method) || 'tracking',
         message_content: message_text_for_ai(message).truncate(200),
-        analyzed_at:     Time.current,
-        message_id:      message.id
+        analyzed_at: Time.current,
+        message_id: message.id
       }
     )
   rescue StandardError => e
@@ -1542,6 +2130,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def send_auto_reply(tracking, message, reply_content)
     return unless AUTO_REPLY_ENABLED
     return if reply_content.blank?
+
+    # proyecto@contact_tracking: la línea «VARIABLES: …» se guarda y no llega al cliente
+    reply_content = ContactTrackings::ConversationVariables.settle(tracking, message.conversation, reply_content)
 
     # proyecto@ai_agent_attachments: resuelve {{nombre}} → archivos del Agente IA
     clean_content, attachment_signed_ids = resolve_attachment_directives(tracking, reply_content)
@@ -1607,25 +2198,28 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def create_private_note(tracking, message, note_content)
     return unless message&.conversation
 
+    # MessageBuilder recibe (usuario, conversación, params) posicionales; con keywords
+    # reventaba con "wrong number of arguments" y la nota nunca se creaba. Nota privada
+    # de Chatwoot = saliente + private (no se envía al canal).
     Messages::MessageBuilder.new(
-      user: bot_user(tracking.account),
-      conversation: message.conversation,
-      message_type: :activity,
-      content: note_content,
-      private: true
+      bot_user(tracking.account),
+      message.conversation,
+      { message_type: 'outgoing', content: note_content, private: true }
     ).perform
 
-    Rails.logger.info "[TrackingBot] 📝 Nota privada creada"
+    Rails.logger.info '[TrackingBot] 📝 Nota privada creada'
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error creando nota privada: #{e.message}"
   end
 
-  def notify_admin_interested(tracking, message)
+  def notify_admin_interested(_tracking, message)
     return unless message&.conversation
 
     conversation = message.conversation
     account = conversation.account
-    assignee = account.users.where(role: :administrator).first || account.users.first
+    # El rol vive en account_users, no en users (users.role no existe: reventaba y nadie
+    # se enteraba). Account#administrators ya hace ese join.
+    assignee = account.administrators.first || account.users.first
 
     if assignee
       conversation.update(assignee_id: assignee.id)
@@ -1640,7 +2234,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       secondary_actor: message
     )
 
-    Rails.logger.info "[TrackingBot] 🔔 Notificación enviada al administrador"
+    Rails.logger.info '[TrackingBot] 🔔 Notificación enviada al administrador'
   rescue StandardError => e
     Rails.logger.error "[TrackingBot] ❌ Error notificando administrador: #{e.message}"
   end
@@ -1664,7 +2258,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     messages = Message.where(conversation_id: message.conversation_id)
                       .where(message_type: [0, 1])
                       .where.not(id: message.id)
-                      .order(created_at: :desc)
+                      .reorder(created_at: :desc)
                       .limit(limit)
                       .reverse
 
@@ -1715,7 +2309,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       when 'video'  then parts << '[video adjunto]'
       when 'file'
         fname = att.file&.blob&.filename.to_s.presence || 'documento'
-        parts << "[archivo adjunto: #{fname}]"
+        # proyecto@solicitudes, pieza 7: el texto del PDF/Excel/Word, no solo su nombre.
+        texto = ContactTrackings::AttachmentText.for(att)
+        parts << "[archivo adjunto: #{fname}]#{"\n#{texto}" if texto.present?}"
       when 'location'
         parts << "[ubicación compartida: #{att.coordinates_lat}, #{att.coordinates_long}]"
       else
@@ -1779,11 +2375,23 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # calcula Ruby (próxima ocurrencia + weeks_ahead), en vez de confiar en la aritmética del LLM.
   # Cae a specific_date (fecha de calendario explícita) si no hay weekday.
   def resolve_reschedule_date(reschedule_data, timezone)
-    if reschedule_data[:weekday].present?
-      return weekday_to_date(reschedule_data[:weekday], reschedule_data[:weeks_ahead], timezone)&.iso8601
-    end
+    # «el domingo 4 de octubre» (26/09/2026): con día de semana Y fecha, el weekday mandaba
+    # y daba el próximo domingo (27 sep). Si la fecha cae en ese día de la semana, la escribió
+    # el cliente y es la buena; si no coincide, sigue mandando el weekday (la IA calcula mal).
+    fecha = explicit_date_matching_weekday(reschedule_data)
+    return fecha if fecha
+    return weekday_to_date(reschedule_data[:weekday], reschedule_data[:weeks_ahead], timezone)&.iso8601 if reschedule_data[:weekday].present?
 
     reschedule_data[:specific_date].presence
+  end
+
+  def explicit_date_matching_weekday(reschedule_data)
+    return nil if reschedule_data[:weekday].blank? || reschedule_data[:specific_date].blank?
+
+    fecha = Date.iso8601(reschedule_data[:specific_date].to_s)
+    fecha.cwday == reschedule_data[:weekday].to_i ? fecha.iso8601 : nil
+  rescue Date::Error
+    nil
   end
 
   # Próxima ocurrencia de un día de semana ISO (1=lunes ... 7=domingo) en la zona del agente.

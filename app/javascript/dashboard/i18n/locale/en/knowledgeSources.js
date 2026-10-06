@@ -12,6 +12,7 @@ export default {
       INDEXED_CONTENT: 'Indexed content',
       SOURCES: 'Sources (%{count})',
       SEARCH_CONSOLE: 'Search Console (Sources)',
+      CONFIG: 'Settings',
       ERP_CONNECTION: 'ERP Connection',
       COLLECTION_AGENT: 'Collection Agent',
       QUERY_CONSOLE: 'Query Console (ERP)',

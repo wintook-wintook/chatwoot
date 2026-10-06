@@ -7,20 +7,35 @@
 <script>
 import { mapGetters } from 'vuex';
 import CaseTicketInternalModal from './CaseTicketInternalModal.vue'; // @tickets_cases Fase C
+import MessageApi from 'dashboard/api/inbox/message'; // @tickets_cases — notificar al mover
+import { toSimpleStatus } from 'dashboard/helper/caseSimpleStatus';
 
 // Filtros rápidos (pestañas) — mismo set que el listado (Index.vue).
 const QUICK_FILTERS = [
-  { key: 'mine', label: 'Mis Tickets' },
+  { key: 'mine', label: 'Mis Casos' },
   { key: 'unassigned', label: 'Sin Asignar' },
   { key: 'all', label: 'Todos' },
   { key: 'sla_overdue', label: 'SLA vencidos' },
 ];
 
-// Columnas operativas: cada una agrupa uno o más estados del ciclo de vida (2A).
-const COLUMNS = [
-  { key: 'new', statuses: ['open', 'classified'] },
-  { key: 'assigned', statuses: ['assigned', 'in_diagnosis'] },
-  { key: 'progress', statuses: ['in_progress', 'escalated'] },
+// Columnas por defecto del tablero cuando no hay un tipo de caso filtrado (así
+// que no hay columnas propias de un tipo que mostrar). ITIL dejó de ser un modo
+// de cuenta, así que esto ya no alterna entre "simple"/"ITIL": es una única
+// plantilla neutra, agrupando estados del ciclo de vida (2A). "En proceso"
+// agrupa classified/assigned/in_diagnosis/in_progress/escalated (igual que
+// SIMPLE_STATUS_MAP) → arrastrar "Nuevo" (open) ahí es válido (open → classified).
+const DEFAULT_COLUMNS = [
+  { key: 'new', statuses: ['open'] },
+  {
+    key: 'progress',
+    statuses: [
+      'classified',
+      'assigned',
+      'in_diagnosis',
+      'in_progress',
+      'escalated',
+    ],
+  },
   {
     key: 'waiting',
     statuses: [
@@ -53,7 +68,6 @@ export default {
   components: { CaseTicketInternalModal }, // @tickets_cases Fase C
   data() {
     return {
-      columns: COLUMNS,
       quickFilters: QUICK_FILTERS,
       quickFilter: 'mine',
       showInternalModal: false, // @tickets_cases Fase C
@@ -63,6 +77,7 @@ export default {
         priority: '',
         affected_service_id: '',
         assignee_id: '',
+        case_type_id: '', // columnas por tipo (A+)
       },
       searchDebounce: null,
       draggedTicket: null,
@@ -72,7 +87,11 @@ export default {
       moveTicket: null,
       moveCandidates: [],
       moveTarget: null,
+      moveTargetColumn: null, // columna destino cuando el tablero es por tipo (A+)
       moveReason: '',
+      // notificar al cliente al mover (reusa el envío de mensajes del inbox)
+      notifyContact: false,
+      notifyMessage: '',
     };
   },
   computed: {
@@ -82,10 +101,34 @@ export default {
       slaOverdueCount: 'caseTickets/getBoardSlaOverdue',
       services: 'caseTickets/getServices',
       agents: 'agents/getAgents',
-      currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Tickets"
+      currentUserID: 'getCurrentUserID', // @tickets_cases — filtro "Mis Casos"
+      types: 'caseTickets/getTypes', // columnas por tipo (A+)
     }),
     isFetching() {
       return this.boardUiFlags.isFetching;
+    },
+    // Columnas propias del tipo seleccionado (A+). Vienen ya en el JSON del tipo.
+    selectedTypeColumns() {
+      if (!this.filters.case_type_id) return [];
+      const type = (this.types || []).find(
+        t => String(t.id) === String(this.filters.case_type_id)
+      );
+      return (type && type.columns) || [];
+    },
+    // Columnas del tablero: si hay un tipo con columnas configuradas, las suyas;
+    // si no (sin filtro de tipo), las fijas por defecto.
+    columns() {
+      if (this.selectedTypeColumns.length) {
+        return this.selectedTypeColumns.map(c => ({
+          key: `col-${c.id}`,
+          id: c.id,
+          label: c.label,
+          color: c.color,
+          statuses: c.statuses || [],
+          custom: true,
+        }));
+      }
+      return DEFAULT_COLUMNS;
     },
     activeQuickTabIndex() {
       const i = QUICK_FILTERS.findIndex(f => f.key === this.quickFilter);
@@ -97,14 +140,20 @@ export default {
     ticketKindOptions() {
       return this.$t('CASE_TICKETS.TICKET_KIND');
     },
-    // Tickets agrupados por columna.
+    // Tickets agrupados por columna. En tablero por tipo (A+) manda el puntero
+    // (case_type_column_id); si es NULL, cae al fallback por status (Regla 1).
     grouped() {
       const map = {};
       this.columns.forEach(c => {
         map[c.key] = [];
       });
+      const custom = this.selectedTypeColumns.length > 0;
       (this.boardTickets || []).forEach(t => {
-        const col = this.columns.find(c => c.statuses.includes(t.status));
+        let col = null;
+        if (custom && t.case_type_column_id) {
+          col = this.columns.find(c => c.id === t.case_type_column_id);
+        }
+        if (!col) col = this.columns.find(c => c.statuses.includes(t.status));
         if (col) map[col.key].push(t);
       });
       return map;
@@ -119,6 +168,8 @@ export default {
     this.fetch();
     this.$store.dispatch('caseTickets/fetchServices');
     this.$store.dispatch('agents/get');
+    this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
+    this.$store.dispatch('caseTickets/fetchTypes'); // columnas por tipo (A+)
   },
   methods: {
     // @tickets_cases Fase C — tras crear un ticket interno, refresca el tablero.
@@ -151,8 +202,11 @@ export default {
       this.quickFilter = QUICK_FILTERS[index].key;
       this.fetch();
     },
-    columnLabel(key) {
-      return this.$t(`CASE_TICKETS.KANBAN.COLUMNS.${key}`);
+    columnLabel(col) {
+      // Columna del tipo (A+) → etiqueta libre de BD; fija → clave i18n.
+      return col.custom
+        ? col.label
+        : this.$t(`CASE_TICKETS.KANBAN.COLUMNS.${col.key}`);
     },
     statusLabel(key) {
       return this.$t(`CASE_TICKETS.STATUSES.${key}`) || key;
@@ -170,6 +224,28 @@ export default {
       if (!ticket.assignee_id) return null;
       const a = (this.agents || []).find(x => x.id === ticket.assignee_id);
       return a ? a.name : null;
+    },
+    // @tickets_cases — encabezado de la ficha: manda la organización del contacto.
+    // Sin organización sube el nombre del contacto; sin contacto (ticket interno)
+    // sube el título, para que la ficha nunca quede sin encabezado.
+    cardHeading(ticket) {
+      return (
+        ticket.contact_company || ticket.contact_name || ticket.title || ''
+      );
+    },
+    // El icono acompaña al encabezado según qué subió: edificio para la empresa,
+    // persona para el contacto. Sin icono cuando el encabezado es el título.
+    cardHeadingIcon(ticket) {
+      if (ticket.contact_company) return 'building-bank';
+      return ticket.contact_name ? 'person' : '';
+    },
+    // El contacto solo se repite debajo cuando arriba fue la organización.
+    cardSubheading(ticket) {
+      return ticket.contact_company ? ticket.contact_name || '' : '';
+    },
+    // El título no se reimprime cuando ya ocupó el encabezado.
+    cardTitle(ticket) {
+      return this.cardHeading(ticket) === ticket.title ? '' : ticket.title;
     },
     openDetail(ticket) {
       this.$router.push({
@@ -206,12 +282,33 @@ export default {
       this.draggedTicket = null;
       this.dragOverKey = null;
       if (!ticket) return;
-      // Soltado en su misma columna → no-op.
-      if (column.statuses.includes(ticket.status)) return;
+
+      // ── Tablero por tipo (A+): la columna destino ya cubre el estado actual →
+      // movimiento libre, solo cambia el puntero, SIN modal de cambio de estado.
+      if (column.custom && column.statuses.includes(ticket.status)) {
+        if (ticket.case_type_column_id === column.id) return; // misma columna
+        this.moveColumnOnly(ticket, column);
+        return;
+      }
+
+      // Soltado en su misma columna (mismo estado, tablero fijo) → no-op.
+      if (!column.custom && column.statuses.includes(ticket.status)) return;
 
       const valid = ticket.can_transition_to || [];
       const candidates = column.statuses.filter(s => valid.includes(s));
-      if (!candidates.length) {
+
+      // ── Tablero por tipo (A+): el orden de columnas manda, no la espina ITIL
+      // fija de "un salto" — salvo un caso CANCELADO, que nunca cambia de status
+      // (terminal a propósito). El tablero fijo mantiene el rechazo de siempre.
+      if (column.custom) {
+        if (ticket.status === 'cancelled') {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.KANBAN.CANCELLED_IMMUTABLE'),
+            type: 'error',
+          });
+          return;
+        }
+      } else if (!candidates.length) {
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.KANBAN.INVALID_MOVE'),
           type: 'error',
@@ -219,29 +316,38 @@ export default {
         return;
       }
       this.moveTicket = ticket;
-      this.moveCandidates = candidates;
-      this.moveTarget = candidates[0];
+      // El selector del modal es solo informativo (arma el mensaje de aviso al
+      // cliente); en tablero por tipo el backend decide el status real — si
+      // ningún estado de la columna es alcanzable en un salto, se muestran
+      // todos los de la columna en vez de dejar el selector vacío.
+      this.moveCandidates = candidates.length ? candidates : column.statuses;
+      this.moveTarget = this.moveCandidates[0];
+      // En tablero por tipo, el destino es la columna (el backend elige el status).
+      this.moveTargetColumn = column.custom ? column : null;
       this.moveReason = '';
+      // Notificar al cliente: por defecto activo si el ticket tiene conversación.
+      this.notifyContact = !!ticket.conversation_display_id;
+      this.notifyMessage = this.defaultNotifyMessage(this.moveTarget);
       this.showMoveModal = true;
     },
-    closeMove() {
-      this.showMoveModal = false;
-      this.moveTicket = null;
-      this.moveCandidates = [];
-      this.moveTarget = null;
-      this.moveReason = '';
+    // Plantilla de aviso por estado destino (colapsado a estado simple), con folio.
+    defaultNotifyMessage(status) {
+      const key = toSimpleStatus(status);
+      const folio = this.moveTicket?.folio || `#${this.moveTicket?.id}`;
+      const msg = this.$t(`CASE_TICKETS.KANBAN.NOTIFY_TEMPLATES.${key}`, {
+        folio,
+      });
+      return msg.includes('NOTIFY_TEMPLATES') ? '' : msg;
     },
-    async confirmMove() {
-      const ticket = this.moveTicket;
-      const status = this.moveTarget;
-      const reason = this.moveReason.trim() || undefined;
-      this.showMoveModal = false;
+    onMoveTargetChange() {
+      this.notifyMessage = this.defaultNotifyMessage(this.moveTarget);
+    },
+    // Movimiento libre entre columnas del mismo estado (A+): solo puntero.
+    async moveColumnOnly(ticket, column) {
       try {
-        await this.$store.dispatch('caseTickets/transitionTicket', {
+        await this.$store.dispatch('caseTickets/moveTicketColumn', {
           ticketId: ticket.id,
-          contactId: ticket.contact_id,
-          status,
-          reason,
+          caseTypeColumnId: column.id,
         });
         this.fetch();
       } catch (e) {
@@ -249,8 +355,83 @@ export default {
           message: this.$t('CASE_TICKETS.KANBAN.MOVE_ERROR'),
           type: 'error',
         });
+      }
+    },
+    closeMove() {
+      this.showMoveModal = false;
+      this.moveTicket = null;
+      this.moveCandidates = [];
+      this.moveTarget = null;
+      this.moveTargetColumn = null;
+      this.moveReason = '';
+      this.notifyContact = false;
+      this.notifyMessage = '';
+    },
+    async confirmMove() {
+      const ticket = this.moveTicket;
+      const status = this.moveTarget;
+      const reason = this.moveReason.trim() || undefined;
+      // capturar aviso antes de cerrar (closeMove resetea el estado)
+      const notify = this.notifyContact;
+      const notifyMessage = this.notifyMessage.trim();
+      const conversationId = ticket?.conversation_display_id;
+      const targetColumn = this.moveTargetColumn;
+      this.showMoveModal = false;
+      try {
+        if (targetColumn) {
+          // Tablero por tipo (A+): el backend transiciona y fija el puntero.
+          await this.$store.dispatch('caseTickets/moveTicketColumn', {
+            ticketId: ticket.id,
+            caseTypeColumnId: targetColumn.id,
+          });
+        } else {
+          await this.$store.dispatch('caseTickets/transitionTicket', {
+            ticketId: ticket.id,
+            contactId: ticket.contact_id,
+            status,
+            reason,
+          });
+        }
+        if (notify && notifyMessage && conversationId) {
+          await this.notifyOnMove(conversationId, notifyMessage);
+        }
+        this.fetch();
+      } catch (e) {
+        // @tickets_cases — este movimiento cierra el caso y el Kanban no tiene el
+        // modal de cierre documentado (2G): manda a la ficha del ticket, que sí lo
+        // tiene, en vez de duplicar el formulario aquí.
+        if (e.response?.data?.requires_closure) {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.KANBAN.REQUIRES_CLOSURE'),
+            type: 'error',
+            action: {
+              type: 'link',
+              to: { name: 'gestorTickets_detail', params: { id: ticket.id } },
+              message: this.$t('CASE_TICKETS.KANBAN.OPEN_TICKET_TO_CLOSE'),
+            },
+          });
+        } else {
+          this.$emitter.emit('newToastMessage', {
+            message: this.$t('CASE_TICKETS.KANBAN.MOVE_ERROR'),
+            type: 'error',
+          });
+        }
       } finally {
         this.closeMove();
+      }
+    },
+    // Envía el aviso al cliente por su canal (reusa la API de mensajes del inbox).
+    async notifyOnMove(conversationId, message) {
+      try {
+        await MessageApi.create({ conversationId, message, private: false });
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.KANBAN.NOTIFY_SENT'),
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.KANBAN.NOTIFY_ERROR'),
+          type: 'error',
+        });
       }
     },
   },
@@ -311,6 +492,16 @@ export default {
             <fluent-icon icon="dismiss" size="14" />
           </button>
         </div>
+        <select
+          v-model="filters.case_type_id"
+          class="!mb-0 text-sm w-40"
+          @change="fetch"
+        >
+          <option value="">{{ $t('CASE_TICKETS.KANBAN.ALL_TYPES') }}</option>
+          <option v-for="t in types" :key="t.id" :value="t.id">
+            {{ t.name }}
+          </option>
+        </select>
         <select
           v-model="filters.ticket_kind"
           class="!mb-0 text-sm w-40"
@@ -383,7 +574,14 @@ export default {
         <div
           class="flex items-center justify-between px-3 py-2 text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400"
         >
-          <span>{{ columnLabel(col.key) }}</span>
+          <span class="flex items-center gap-1.5 min-w-0">
+            <span
+              v-if="col.custom"
+              class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+              :style="{ backgroundColor: col.color }"
+            />
+            <span class="truncate">{{ columnLabel(col) }}</span>
+          </span>
           <span class="px-1.5 rounded bg-slate-200 dark:bg-slate-700">{{
             grouped[col.key].length
           }}</span>
@@ -412,9 +610,38 @@ export default {
               </span>
             </div>
             <p
-              class="m-0 mb-2 text-sm font-medium text-slate-800 dark:text-slate-100 line-clamp-2"
+              v-if="cardHeading(ticket)"
+              class="flex items-center gap-1 m-0 text-sm font-medium text-slate-800 dark:text-slate-100"
             >
-              {{ ticket.title }}
+              <fluent-icon
+                v-if="cardHeadingIcon(ticket)"
+                :icon="cardHeadingIcon(ticket)"
+                size="14"
+                class="flex-shrink-0 text-slate-400 dark:text-slate-500"
+              />
+              <span class="truncate" :title="cardHeading(ticket)">
+                {{ cardHeading(ticket) }}
+              </span>
+            </p>
+            <p
+              v-if="cardSubheading(ticket)"
+              class="flex items-center gap-1 m-0 text-xs font-normal text-slate-500 dark:text-slate-400"
+            >
+              <fluent-icon
+                icon="person"
+                size="12"
+                class="flex-shrink-0 text-slate-400 dark:text-slate-500"
+              />
+              <span class="truncate" :title="cardSubheading(ticket)">
+                {{ cardSubheading(ticket) }}
+              </span>
+            </p>
+            <p
+              v-if="cardTitle(ticket)"
+              class="m-0 mt-1 mb-2 text-xs truncate text-slate-600 dark:text-slate-300"
+              :title="cardTitle(ticket)"
+            >
+              {{ cardTitle(ticket) }}
             </p>
             <div class="flex items-center gap-2 text-xs text-slate-500">
               <span
@@ -463,13 +690,29 @@ export default {
           class="flex flex-col self-stretch w-full gap-4 pb-8"
           @submit.prevent="confirmMove"
         >
-          <label v-if="moveCandidates.length > 1" class="flex flex-col gap-1">
+          <!-- Tablero por tipo (A+): el destino es la columna; el backend elige el
+               estado legal. No se ofrece selección de estado. -->
+          <p
+            v-if="moveTargetColumn"
+            class="m-0 text-sm text-slate-600 dark:text-slate-300"
+          >
+            {{ $t('CASE_TICKETS.KANBAN.MOVE_TO') }}
+            <strong>{{ moveTargetColumn.label }}</strong>
+          </p>
+          <label
+            v-else-if="moveCandidates.length > 1"
+            class="flex flex-col gap-1"
+          >
             <span
               class="text-sm font-medium text-slate-700 dark:text-slate-200"
             >
               {{ $t('CASE_TICKETS.KANBAN.MOVE_TARGET') }}
             </span>
-            <select v-model="moveTarget" class="input">
+            <select
+              v-model="moveTarget"
+              class="input"
+              @change="onMoveTargetChange"
+            >
               <option v-for="s in moveCandidates" :key="s" :value="s">
                 {{ statusLabel(s) }}
               </option>
@@ -493,6 +736,32 @@ export default {
               :placeholder="$t('CASE_TICKETS.KANBAN.MOVE_NOTE_PLACEHOLDER')"
             />
           </label>
+
+          <!-- @tickets_cases — avisar al cliente al mover (solo si hay conversación) -->
+          <div
+            v-if="moveTicket && moveTicket.conversation_display_id"
+            class="flex flex-col gap-2 p-3 border border-dashed rounded-lg border-slate-300 dark:border-slate-600 bg-slate-25 dark:bg-slate-800/40"
+          >
+            <label
+              class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
+              <input v-model="notifyContact" type="checkbox" />
+              {{ $t('CASE_TICKETS.KANBAN.NOTIFY_LABEL') }}
+            </label>
+            <textarea
+              v-if="notifyContact"
+              v-model="notifyMessage"
+              class="input !mb-0"
+              rows="3"
+              :placeholder="$t('CASE_TICKETS.KANBAN.NOTIFY_PLACEHOLDER')"
+            />
+            <span
+              v-if="notifyContact"
+              class="text-xs text-slate-400 dark:text-slate-500"
+            >
+              {{ $t('CASE_TICKETS.KANBAN.NOTIFY_HELP') }}
+            </span>
+          </div>
 
           <div class="flex justify-end gap-2 mt-2">
             <woot-button

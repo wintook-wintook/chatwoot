@@ -11,6 +11,7 @@
 
 <script>
 import { mapGetters } from 'vuex';
+import AssistantAPI from 'dashboard/api/assistant'; // proyecto@asistente_agentes_ia
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { extractTemplateBody } from 'dashboard/helper/trackingHelpers';
 import KeywordActionsEditor from 'dashboard/components/contacts/ContactTracking/KeywordActionsEditor.vue';
@@ -80,6 +81,8 @@ export default {
       originalAiContext: null,
       originalComplementaryPrompt: null,
       isImprovingAI: false,
+      // proyecto@asistente_agentes_ia — qué leyó el motor del Entrenamiento generado.
+      assistantValidation: null,
       showPromptModal: false, // proyecto@automatizacion_tracking: modal expandido para entrenamiento
       showAiContextModal: false,
       showValidationModal: false,
@@ -387,16 +390,28 @@ export default {
           const prefix = this.erpConnPrefix(conn);
           if (!prefix) return;
           (conn.queries || []).forEach(q => {
-            const keys = (q.params_schema || [])
-              .map(p => `${p.key}=`)
-              .join(', ');
+            // proyecto@erp_productos — una consulta de búsqueda (con un parámetro de
+            // texto libre, tipo "words") se ofrece con "?": los llena la IA con lo que
+            // escribe el cliente. Las demás, como siempre (valores fijos a completar).
+            const schema = q.params_schema || [];
+            const isSearch = schema.some(p => p.type === 'words');
+            const keys = isSearch
+              ? schema
+                  .filter(p => ['words', 'number', 'boolean'].includes(p.type))
+                  .filter(p => p.key !== 'precio_min')
+                  .map(p => `${p.key}=?`)
+                  .join(', ')
+              : schema.map(p => `${p.key}=`).join(', ');
             const args = keys ? `(${keys})` : '';
+            const askedHint = isSearch
+              ? '. Los «?» los llena la IA con lo que pide el cliente'
+              : '';
             items.push({
               group: 'erp',
               token: `{{consulta:${prefix}/${q.name}${args}}}`,
               label: `Consulta «${q.name}» en «${conn.name}»${
                 q.description ? ` (${q.description})` : ''
-              }.`,
+              }${askedHint}.`,
             });
           });
         });
@@ -416,7 +431,14 @@ export default {
       items.push({
         group: 'actions',
         token: '@crear_ticket',
-        label: 'Crea un ticket automáticamente.',
+        label: 'Crea un ticket con IA desde la conversación (redacta y clasifica).',
+        hint: 'Opcional con parámetros: @crear_ticket(prioridad=alta, tipo=Soporte). Las reglas que escribas en el prompt (título, tipo, cuándo priorizar, qué datos pedir) guían cómo se arma el ticket. Prioridades: baja / media / alta / urgente.',
+      });
+      items.push({
+        group: 'actions',
+        token: '@estado_ticket',
+        label: 'Responde el estado del caso del cliente por el mismo canal.',
+        hint: 'Cuando el cliente pregunta "¿cuál es mi ticket?" o "¿cómo va mi caso?", el bot busca sus casos y responde con el folio y el estado, sin que teclee el folio.',
       });
       return items;
     },
@@ -587,7 +609,6 @@ export default {
       if (this.isImprovingAI) return;
 
       const isGeneratePrompt = field === 'complementary_prompt';
-      const mode = isGeneratePrompt ? 'generate_prompt' : 'improve';
 
       let text;
       if (isGeneratePrompt) {
@@ -598,6 +619,17 @@ export default {
         text = (this.form[field] || '').trim();
       }
       if (!text) return;
+
+      // proyecto@asistente_agentes_ia — generar el Entrenamiento pasa por el
+      // asistente nuevo: redacta contra el inventario real de la cuenta y comprueba
+      // el resultado con el parser del motor. El generador anterior producía prosa
+      // que el motor no parsea, así que el agente nacía sin ejecutar nada.
+      if (isGeneratePrompt) {
+        await this.generateTrainingWithAssistant();
+        return;
+      }
+
+      const mode = 'improve';
 
       // Guardar original
       if (field === 'ai_context') {
@@ -624,6 +656,37 @@ export default {
         if (field === 'ai_context') this.originalAiContext = null;
         else if (field === 'complementary_prompt')
           this.originalComplementaryPrompt = null;
+      } finally {
+        this.isImprovingAI = false;
+      }
+    },
+    // Una sola pasada: acá no hay conversación donde preguntar, así que el asistente
+    // redacta con lo que haya y marca lo que falte como <PENDIENTE:>.
+    async generateTrainingWithAssistant() {
+      this.originalComplementaryPrompt = this.form.complementary_prompt;
+      this.isImprovingAI = true;
+      this.assistantValidation = null;
+      try {
+        const { data } = await AssistantAPI.interview(
+          [
+            {
+              role: 'user',
+              content: [
+                `Objetivo del agente: ${(this.form.objective || '').trim()}`,
+                `Contexto: ${(this.form.ai_context || '').trim()}`,
+                `Instrucciones adicionales: ${(this.form.complementary_prompt || '').trim()}`,
+              ].join('\n'),
+            },
+          ],
+          this.selectedInboxId,
+          { oneShot: true }
+        );
+        if (data.draft) {
+          this.form.complementary_prompt = data.draft;
+          this.assistantValidation = data.validation;
+        }
+      } catch (error) {
+        this.originalComplementaryPrompt = null;
       } finally {
         this.isImprovingAI = false;
       }
@@ -2055,11 +2118,19 @@ export default {
                 >
                   {{ dir.label }}
                 </span>
+                <!-- Ayuda de uso extendida (parámetros/ejemplos): se muestra
+                     completa, con salto de línea, sin truncar. -->
+                <span
+                  v-if="dir.hint"
+                  class="block mt-1 text-xs leading-snug text-slate-400 dark:text-slate-500 whitespace-normal"
+                >
+                  {{ dir.hint }}
+                </span>
               </span>
               <fluent-icon
                 icon="add"
                 size="16"
-                class="shrink-0 text-slate-400"
+                class="shrink-0 self-start mt-0.5 text-slate-400"
               />
             </button>
           </li>

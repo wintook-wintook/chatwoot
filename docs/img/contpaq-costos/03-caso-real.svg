@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 620" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <rect x="0" y="0" width="940" height="620" fill="#f4f6f9"/>
+
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28" letter-spacing="-0.4">Caso real: producto 45 (ACC0001)</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">24 movimientos en su historia → solo 6 filas de costo histórico · el eje es CFECHACOSTOH</text>
+
+  <text x="40" y="104" font-size="11.5" font-weight="700" fill="#5c6675">DOCUMENTO CAPTURADO</text>
+
+  <!-- Documentos -->
+  <rect x="65" y="116" width="150" height="72" rx="8" fill="#ffffff" stroke="#fecaca" stroke-width="1.6"/>
+  <text x="140" y="140" font-size="11.5" font-weight="700" fill="#7f1d1d" text-anchor="middle">Factura al Contado</text>
+  <text x="140" y="158" font-size="10.5" fill="#5c6675" text-anchor="middle">2026-06-02 · 1 u</text>
+  <text x="140" y="177" font-size="10.5" font-weight="600" fill="#b91c1c" text-anchor="middle">no mueve costo</text>
+
+  <rect x="245" y="116" width="150" height="72" rx="8" fill="#ffffff" stroke="#fecaca" stroke-width="1.6"/>
+  <text x="320" y="140" font-size="11.5" font-weight="700" fill="#7f1d1d" text-anchor="middle">Factura al Contado</text>
+  <text x="320" y="158" font-size="10.5" fill="#5c6675" text-anchor="middle">2026-06-11 · 1 u</text>
+  <text x="320" y="177" font-size="10.5" font-weight="600" fill="#b91c1c" text-anchor="middle">no mueve costo</text>
+
+  <rect x="435" y="116" width="150" height="72" rx="8" fill="#ffffff" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="510" y="140" font-size="11.5" font-weight="700" fill="#14532d" text-anchor="middle">Compra</text>
+  <text x="510" y="158" font-size="10.5" fill="#5c6675" text-anchor="middle">2026-07-24 · 100 u @ 80</text>
+  <text x="510" y="177" font-size="10.5" font-weight="600" fill="#15803d" text-anchor="middle">entrada · almacén 1</text>
+
+  <rect x="605" y="116" width="150" height="72" rx="8" fill="#ffffff" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="680" y="140" font-size="11.5" font-weight="700" fill="#14532d" text-anchor="middle">Remisión</text>
+  <text x="680" y="158" font-size="10.5" fill="#5c6675" text-anchor="middle">2026-07-24 · 8 u</text>
+  <text x="680" y="177" font-size="10.5" font-weight="600" fill="#15803d" text-anchor="middle">salida · almacén 1</text>
+
+  <rect x="770" y="116" width="150" height="72" rx="8" fill="#ffffff" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="845" y="140" font-size="11.5" font-weight="700" fill="#14532d" text-anchor="middle">Remisión</text>
+  <text x="845" y="158" font-size="10.5" fill="#5c6675" text-anchor="middle">2026-08-03 · 1 u</text>
+  <text x="845" y="177" font-size="10.5" font-weight="600" fill="#15803d" text-anchor="middle">salida · almacén 1</text>
+
+  <!-- Conectores al eje -->
+  <path d="M140,188 L140,246" stroke="#fca5a5" stroke-width="1.4" stroke-dasharray="4 4" fill="none"/>
+  <path d="M320,188 L320,246" stroke="#fca5a5" stroke-width="1.4" stroke-dasharray="4 4" fill="none"/>
+  <path d="M510,188 L510,246" stroke="#16a34a" stroke-width="1.6" fill="none"/>
+  <path d="M680,188 L680,246" stroke="#16a34a" stroke-width="1.6" fill="none"/>
+  <path d="M845,188 L845,246" stroke="#16a34a" stroke-width="1.6" fill="none"/>
+
+  <!-- Eje -->
+  <line x1="55" y1="252" x2="920" y2="252" stroke="#cbd5e1" stroke-width="2"/>
+  <circle cx="140" cy="252" r="5" fill="#f4f6f9" stroke="#fca5a5" stroke-width="2"/>
+  <circle cx="320" cy="252" r="5" fill="#f4f6f9" stroke="#fca5a5" stroke-width="2"/>
+  <circle cx="510" cy="252" r="5.5" fill="#16a34a"/>
+  <circle cx="680" cy="252" r="5.5" fill="#16a34a"/>
+  <circle cx="845" cy="252" r="5.5" fill="#16a34a"/>
+
+  <path d="M510,258 L510,296" stroke="#7c3aed" stroke-width="1.6" fill="none"/>
+  <path d="M680,258 L680,296" stroke="#7c3aed" stroke-width="1.6" fill="none"/>
+  <path d="M845,258 L845,296" stroke="#7c3aed" stroke-width="1.6" fill="none"/>
+
+  <text x="40" y="286" font-size="11.5" font-weight="700" fill="#5c6675">FILAS EN admCostosHistoricos</text>
+
+  <!-- Filas de la compra: 2 -->
+  <rect x="420" y="300" width="180" height="52" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="434" y="320" font-size="11" font-weight="700" fill="#5b21b6">#66 · CIDALMACEN 0</text>
+  <text x="434" y="340" font-size="11" fill="#151b28">CCOSTOH <tspan font-weight="700">83.33</tspan> · últ 80.00</text>
+
+  <rect x="420" y="358" width="180" height="52" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="434" y="378" font-size="11" font-weight="700" fill="#5b21b6">#67 · CIDALMACEN 1</text>
+  <text x="434" y="398" font-size="11" fill="#151b28">CCOSTOH <tspan font-weight="700">84.21</tspan> · últ 80.00</text>
+
+  <text x="510" y="428" font-size="10.5" font-weight="700" fill="#5b21b6" text-anchor="middle">entrada → 2 filas</text>
+
+  <!-- Fila remision 1 -->
+  <rect x="610" y="300" width="150" height="52" rx="7" fill="#ffffff" stroke="#f59e0b" stroke-width="1.6"/>
+  <text x="624" y="320" font-size="11" font-weight="700" fill="#92400e">#74 · CIDALMACEN 2</text>
+  <text x="624" y="340" font-size="11" fill="#151b28">CCOSTOH <tspan font-weight="700">66.67</tspan></text>
+  <text x="685" y="370" font-size="10.5" font-weight="700" fill="#92400e" text-anchor="middle">salida → 1 fila</text>
+
+  <!-- Fila remision 2 -->
+  <rect x="775" y="300" width="150" height="52" rx="7" fill="#ffffff" stroke="#f59e0b" stroke-width="1.6"/>
+  <text x="789" y="320" font-size="11" font-weight="700" fill="#92400e">#78 · CIDALMACEN 2</text>
+  <text x="789" y="340" font-size="11" fill="#151b28">CCOSTOH <tspan font-weight="700">68.18</tspan></text>
+  <text x="850" y="370" font-size="10.5" font-weight="700" fill="#92400e" text-anchor="middle">salida → 1 fila</text>
+
+  <!-- Sin filas -->
+  <text x="140" y="318" font-size="11" fill="#b91c1c" text-anchor="middle">— ninguna —</text>
+  <text x="320" y="318" font-size="11" fill="#b91c1c" text-anchor="middle">— ninguna —</text>
+
+  <!-- Lecturas -->
+  <rect x="40" y="452" width="425" height="140" rx="9" fill="#ffffff" stroke="#dbe1ea"/>
+  <text x="62" y="478" font-size="13" font-weight="700" fill="#151b28">CCOSTOH vs CULTIMOCOSTOH</text>
+  <text x="62" y="502" font-size="11.5" fill="#5c6675">CCOSTOH = costo calculado del inventario tras el</text>
+  <text x="62" y="519" font-size="11.5" fill="#5c6675">movimiento (promedio ponderado).</text>
+  <text x="62" y="541" font-size="11.5" fill="#5c6675">CULTIMOCOSTOH = costo de la última compra, sin</text>
+  <text x="62" y="558" font-size="11.5" fill="#5c6675">ponderar. Aquí queda clavado en 80.00 → 83.33.</text>
+  <text x="62" y="580" font-size="11" font-weight="600" fill="#151b28">Valuar inventario → CCOSTOH · última compra → CULTIMOCOSTOH</text>
+
+  <rect x="485" y="452" width="415" height="140" rx="9" fill="#fffbeb" stroke="#fcd34d"/>
+  <text x="507" y="478" font-size="13" font-weight="700" fill="#92400e">Lo que este caso deja abierto</text>
+  <text x="507" y="502" font-size="11.5" fill="#78350f">Las 2 remisiones salieron del almacén 1, pero ambas</text>
+  <text x="507" y="519" font-size="11.5" fill="#78350f">filas se escribieron con CIDALMACEN = 2.</text>
+  <text x="507" y="541" font-size="11.5" fill="#78350f">Y el costo bajó de 84.21 a 66.67 en una SALIDA, algo</text>
+  <text x="507" y="558" font-size="11.5" fill="#78350f">que un promedio ponderado puro no haría.</text>
+  <text x="507" y="580" font-size="11.5" font-weight="600" fill="#78350f">Ojo: este producto trae CERRORCOSTO = 3 (2024-01-30).</text>
+</svg>

@@ -7,6 +7,7 @@ import SettingIntroBanner from 'dashboard/components/widgets/SettingIntroBanner.
 import SettingsSection from '../../../../components/SettingsSection.vue';
 import inboxMixin from 'shared/mixins/inboxMixin';
 import FacebookReauthorize from './facebook/Reauthorize.vue';
+import InstagramReauthorize from './instagram/Reauthorize.vue';
 import PreChatFormSettings from './PreChatForm/Settings.vue';
 import WeeklyAvailability from './components/WeeklyAvailability.vue';
 import GreetingsEditor from 'shared/components/GreetingsEditor.vue';
@@ -27,6 +28,7 @@ export default {
     ConfigurationPage,
     QuestionsPage,
     FacebookReauthorize,
+    InstagramReauthorize,
     GreetingsEditor,
     PreChatFormSettings,
     SettingIntroBanner,
@@ -203,7 +205,7 @@ export default {
     },
     canLocktoSingleConversation() {
       return (
-        this.isASmsInbox || this.isAWhatsAppChannel || this.isAFacebookInbox
+        this.isASmsInbox || this.isAWhatsAppChannel || this.isAMetaInbox
       );
     },
     inboxNameLabel() {
@@ -222,7 +224,7 @@ export default {
       if (
         this.isATwilioChannel ||
         this.isATwitterInbox ||
-        this.isAFacebookInbox
+        this.isAMetaInbox
       )
         return true;
       return false;
@@ -232,6 +234,11 @@ export default {
     },
     facebookUnauthorized() {
       return this.isAFacebookInbox && this.inbox.reauthorization_required;
+    },
+    // Instagram no se reautoriza con el SDK de Facebook: hay que rehacer el OAuth propio,
+    // así que se manda al agente a la pantalla del canal en vez de reusar el componente.
+    instagramUnauthorized() {
+      return this.isAnInstagramInbox && this.inbox.reauthorization_required;
     },
 
     isWavoipFeatureEnabled() {
@@ -413,6 +420,7 @@ export default {
 
     <MicrosoftReauthorize v-if="microsoftUnauthorized" :inbox="inbox" />
     <FacebookReauthorize v-if="facebookUnauthorized" :inbox="inbox" />
+    <InstagramReauthorize v-if="instagramUnauthorized" />
 
     <div v-if="selectedTabKey === 'inbox_settings'" class="mx-8">
       <SettingsSection

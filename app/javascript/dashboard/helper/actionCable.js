@@ -179,6 +179,38 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   onNotificationCreated = data => {
     this.app.$store.dispatch('notifications/addNotification', data);
+    this.maybeToastTaskNotification(data);
+  };
+
+  // @tickets_cases F3/F4 — además de la campanita, saca un toast en tiempo real
+  // para tipos de tarea en lista blanca (asignación y completado). Lista blanca,
+  // no "todas": convertir cada notificación en toast cambiaría el producto entero.
+  maybeToastTaskNotification = data => {
+    const TOAST_MAP = {
+      case_ticket_assignment: {
+        key: 'CASE_TICKETS.NOTIFICATIONS.TOAST_TICKET_ASSIGNED',
+        icon: 'person-add',
+      },
+      case_task_assignment: {
+        key: 'CASE_TICKETS.TASKS.INBOX.TOAST_ASSIGNED',
+        icon: 'person-add',
+      },
+      case_task_completed: {
+        key: 'CASE_TICKETS.TASKS.INBOX.TOAST_COMPLETED',
+        icon: 'checkmark-circle',
+      },
+    };
+    const n = data && data.notification;
+    const conf = n && TOAST_MAP[n.notification_type];
+    if (!conf) return;
+
+    const task = n.push_message_title || '';
+    const folio = (n.primary_actor && n.primary_actor.folio) || '';
+    // Canal propio del módulo (verde, a la derecha), no el Snackbar global.
+    emitter.emit('caseToastMessage', {
+      message: this.app.$t(conf.key, { task, folio }),
+      icon: conf.icon,
+    });
   };
 
   onNotificationDeleted = data => {

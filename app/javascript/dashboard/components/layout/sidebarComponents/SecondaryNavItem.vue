@@ -21,6 +21,12 @@ export default {
       type: Object,
       default: () => ({}),
     },
+    // `toState` del grupo colapsable abierto (acordeón: solo uno a la vez).
+    // Lo controla el padre `Secondary.vue`; null = todos plegados.
+    openGroup: {
+      type: String,
+      default: null,
+    },
   },
   setup() {
     const { isAdmin } = useAdmin();
@@ -45,6 +51,15 @@ export default {
     },
     hasSubMenu() {
       return !!this.menuItem.children;
+    },
+    isCollapsibleGroup() {
+      return this.hasSubMenu && !!this.menuItem.collapsible;
+    },
+    isExpanded() {
+      return this.openGroup === this.menuItem.toState;
+    },
+    areChildrenVisible() {
+      return !this.isCollapsibleGroup || this.isExpanded;
     },
     isMenuItemVisible() {
       if (this.menuItem.globalConfigFlag) {
@@ -180,6 +195,21 @@ export default {
     onClickOpen() {
       this.$emit('open');
     },
+    onLeafSelect() {
+      // Navegar a un ítem plano de primer nivel cierra el grupo abierto.
+      if (!this.hasSubMenu) {
+        this.$emit('toggleGroup', null);
+      }
+    },
+    toggleGroup() {
+      if (this.isCollapsibleGroup) {
+        // Acordeón: si ya está abierto, cerrar (null); si no, abrir este.
+        this.$emit(
+          'toggleGroup',
+          this.isExpanded ? null : this.menuItem.toState
+        );
+      }
+    },
     showChildCount(count) {
       return Number.isInteger(count);
     },
@@ -190,7 +220,21 @@ export default {
 <template>
   <li v-show="isMenuItemVisible" class="mt-1">
     <div v-if="hasSubMenu" class="flex justify-between">
+      <button
+        v-if="isCollapsibleGroup"
+        type="button"
+        class="flex items-center flex-grow gap-1 px-2 pt-1 my-2 text-sm font-semibold text-left bg-transparent border-0 cursor-pointer text-slate-700 dark:text-slate-200"
+        @click="toggleGroup"
+      >
+        <fluent-icon
+          :icon="isExpanded ? 'chevron-down' : 'chevron-right'"
+          size="12"
+          class="text-slate-400 dark:text-slate-500"
+        />
+        {{ $t(`SIDEBAR.${menuItem.label}`) }}
+      </button>
       <span
+        v-else
         class="px-2 pt-1 my-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
       >
         {{ $t(`SIDEBAR.${menuItem.label}`) }}
@@ -211,6 +255,7 @@ export default {
       class="flex items-center p-2 m-0 text-sm font-medium leading-4 rounded-lg text-slate-700 dark:text-slate-100 hover:bg-slate-25 dark:hover:bg-slate-800"
       :class="computedClass"
       :to="menuItem && menuItem.toState"
+      @click.native="onLeafSelect"
     >
       <fluent-icon
         :icon="menuItem.icon"
@@ -241,15 +286,19 @@ export default {
       </span>
     </router-link>
 
-    <ul v-if="hasSubMenu" class="mb-0 ml-0 list-none">
+    <ul
+      v-if="hasSubMenu && areChildrenVisible"
+      class="mb-0 ml-0 list-none"
+      :class="{ 'pl-3 rtl:pl-0 rtl:pr-3': isCollapsibleGroup }"
+    >
       <SecondaryChildNavItem
         v-for="child in menuItem.children"
         :key="child.id"
         :to="child.toState"
-        :label="child.label"
+        :label="child.translate ? $t(`SIDEBAR.${child.label}`) : child.label"
         :label-color="child.color"
         :should-truncate="child.truncateLabel"
-        :icon="computedInboxClass(child)"
+        :icon="child.icon || computedInboxClass(child)"
         :warning-icon="computedInboxErrorClass(child)"
         :show-child-count="showChildCount(child.count)"
         :child-item-count="child.count"

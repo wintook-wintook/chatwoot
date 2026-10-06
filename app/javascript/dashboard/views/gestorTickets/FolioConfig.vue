@@ -7,7 +7,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between flex-shrink-0 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50">
       <div class="flex items-center gap-4">
-        <woot-button size="small" variant="clear" color-scheme="secondary" icon="arrow-left" @click="$router.push({ name: 'gestorTickets_index' })">
+        <woot-button size="small" variant="clear" color-scheme="secondary" icon="chevron-left" @click="$router.push({ name: 'gestorTickets_index' })">
           Volver
         </woot-button>
         <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">{{ $t('CASE_TICKETS.FOLIO.TITLE') }}</h1>

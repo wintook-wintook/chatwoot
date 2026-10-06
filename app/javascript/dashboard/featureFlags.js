@@ -44,4 +44,6 @@ export const FEATURE_FLAGS = {
   ERP_CONNECTION: 'erp_connection',
   // @waba_templates — Gestión de plantillas de WhatsApp desde Configuración
   WHATSAPP_TEMPLATES: 'whatsapp_templates',
+  // @knowledge_sources — Tab de Configuración dentro de Base de Conocimiento
+  KNOWLEDGE_BASE_CONFIG: 'knowledge_base_config',
 };

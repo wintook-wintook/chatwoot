@@ -1,0 +1,17 @@
+<section class="max-w-xl mx-auto px-4 py-16">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 text-center">
+    <div class="w-14 h-14 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 flex items-center justify-center text-3xl mb-4">✓</div>
+    <h1 class="text-xl font-bold mb-2">¡Solicitud registrada!</h1>
+    <p class="text-slate-500 dark:text-slate-400 mb-4">Tu ticket quedó registrado con el folio:</p>
+    <div class="text-2xl font-mono font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg py-3 mb-4">
+      <%= @ticket.folio.presence || "##{@ticket.id}" %>
+    </div>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">
+      Te avisaremos por tu canal (correo / WhatsApp). Guarda el folio para consultar el estado cuando quieras.
+    </p>
+    <div class="flex gap-3">
+      <a href="<%= case_portal_status_path(@portal.slug, folio: @ticket.folio) %>" class="flex-1 px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700">Ver estado</a>
+      <a href="<%= case_portal_path(@portal.slug) %>" class="flex-1 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">Listo</a>
+    </div>
+  </div>
+</section>

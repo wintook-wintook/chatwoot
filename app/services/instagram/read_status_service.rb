@@ -11,13 +11,15 @@ class Instagram::ReadStatusService
     params[:recipient][:id]
   end
 
+  # Mismo router dual que WebhooksBaseService: el canal nativo manda sobre el legacy.
   def instagram_channel
-    @instagram_channel ||= Channel::FacebookPage.find_by(instagram_id: instagram_id)
+    @instagram_channel ||= Channel::Instagram.find_by(instagram_id: instagram_id) ||
+                           Channel::FacebookPage.find_by(instagram_id: instagram_id)
   end
 
   def message
     return unless params[:read][:mid]
 
-    @message ||= @instagram_channel.inbox.messages.find_by(source_id: params[:read][:mid])
+    @message ||= @instagram_channel.inbox&.messages&.find_by(source_id: params[:read][:mid])
   end
 end

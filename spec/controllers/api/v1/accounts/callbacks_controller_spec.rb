@@ -91,6 +91,45 @@ RSpec.describe 'Callbacks API', type: :request do
         expect(response).to have_http_status(:success)
         expect(response.body).to include(facebook_page.page_id.to_s)
       end
+
+      # Koala devuelve una GraphCollection: un Array que además sabe pedir la siguiente
+      # página. Se imita con un método real porque los dobles verificados no dejan
+      # simular `next_page` sobre un Array pelado.
+      def graph_collection(items, next_page: nil)
+        collection = Array(items).dup
+        collection.define_singleton_method(:next_page) { next_page }
+        collection
+      end
+
+      # Meta pagina el listado. Con una sola llamada, un administrador con muchas páginas
+      # solo veía las primeras y el resto no aparecía para conectar, sin ningún aviso.
+      it 'follows pagination so every page the admin manages is listed' do
+        second_page = graph_collection([{ 'id' => '999888777', 'access_token' => SecureRandom.hex(10) }])
+        first_page = graph_collection([{ 'id' => facebook_page.page_id, 'access_token' => SecureRandom.hex(10) }], next_page: second_page)
+        allow(koala_api).to receive(:get_connections).and_return(first_page)
+
+        post "/api/v1/accounts/#{account.id}/callbacks/facebook_pages",
+             headers: admin.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include(facebook_page.page_id.to_s)
+        expect(response.body).to include('999888777')
+      end
+
+      # Red de seguridad: si Meta devolviera páginas siguientes sin fin, esto no puede
+      # quedarse girando dentro de la petición
+      it 'stops after the safety cap when pagination never ends' do
+        endless = [{ 'id' => '111', 'access_token' => SecureRandom.hex(10) }]
+        endless.define_singleton_method(:next_page) { endless }
+        allow(koala_api).to receive(:get_connections).and_return(endless)
+
+        post "/api/v1/accounts/#{account.id}/callbacks/facebook_pages",
+             headers: admin.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:success)
+      end
     end
   end
 

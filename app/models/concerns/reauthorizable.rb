@@ -44,18 +44,30 @@ module Reauthorizable
     case self.class.name
     when 'Integrations::Hook'
       process_integration_hook_reauthorization_emails(mailer)
-    when 'Channel::FacebookPage'
-      mailer.facebook_disconnect(inbox).deliver_later
-    when 'Channel::Whatsapp'
-      mailer.whatsapp_disconnect(inbox).deliver_later
-    when 'Channel::Email'
-      mailer.email_disconnect(inbox).deliver_later
     when 'AutomationRule'
       update!(active: false)
       mailer.automation_rule_disabled(self).deliver_later
+    else
+      notify_channel_disconnect(mailer)
     end
 
     invalidate_inbox_cache unless instance_of?(::AutomationRule)
+  end
+
+  # Canales que avisan al administrador cuando su autorización caduca. Un canal ausente
+  # de la tabla simplemente no envía correo, igual que antes de existir esta tabla.
+  CHANNEL_DISCONNECT_MAILERS = {
+    'Channel::FacebookPage' => :facebook_disconnect,
+    'Channel::Instagram' => :instagram_disconnect,
+    'Channel::Whatsapp' => :whatsapp_disconnect,
+    'Channel::Email' => :email_disconnect
+  }.freeze
+
+  def notify_channel_disconnect(mailer)
+    mailer_method = CHANNEL_DISCONNECT_MAILERS[self.class.name]
+    return if mailer_method.blank?
+
+    mailer.public_send(mailer_method, inbox).deliver_later
   end
 
   def process_integration_hook_reauthorization_emails(mailer)

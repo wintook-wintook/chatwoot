@@ -125,7 +125,7 @@ export default {
       if (
         this.isAWhatsAppChannel ||
         this.isATwilioChannel ||
-        this.isAFacebookInbox ||
+        this.isAMetaInbox ||
         this.isASmsInbox ||
         this.isATelegramChannel
       ) {
@@ -146,7 +146,7 @@ export default {
         this.isAWhatsAppChannel ||
         this.isATwilioChannel ||
         this.isASmsInbox ||
-        this.isAFacebookInbox
+        this.isAMetaInbox
       ) {
         return this.sourceId && this.isDelivered;
       }
@@ -167,7 +167,7 @@ export default {
       if (
         this.isAWhatsAppChannel ||
         this.isATwilioChannel ||
-        this.isAFacebookInbox
+        this.isAMetaInbox
       ) {
         return this.sourceId && this.isRead;
       }

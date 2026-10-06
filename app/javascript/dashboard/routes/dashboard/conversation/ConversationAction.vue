@@ -774,8 +774,8 @@ export default {
       <ContactDetailsItem compact :title="$t('CONVERSATION.KANBAN.TITLE')" />
       <MultiselectDropdown :options="kanbanTypeOptions" :selected-item="assignedKanbanType"
         :multiselector-title="$t('CONVERSATION.KANBAN.SELECTOR')" :multiselector-placeholder="loadingKanbanTypes
-          ? 'Cargando tipos de oportunidad...'
-          : 'Seleccionar tipo de oportunidad'
+          ? 'Cargando tablero...'
+          : 'Seleccionar tablero'
           " :no-search-result="$t('CONVERSATION.KANBAN.NOT_FOUND')"
         :input-placeholder="$t('CONVERSATION.KANBAN.SEARCH')" :disabled="loadingKanbanTypes"
         @click="onClickAssignKanbanType" />

@@ -18,7 +18,11 @@ import caseCategoriesAPI from '../../api/caseCategories';
 import caseFolioConfigAPI from '../../api/caseFolioConfig';
 import caseSlaPoliciesAPI from '../../api/caseSlaPolicies';
 import caseTypeFieldsAPI from '../../api/caseTypeFields';
+import caseTypeColumnsAPI from '../../api/caseTypeColumns';
 import caseAiConfigAPI from '../../api/caseAiConfig';
+import casePortalsAPI from '../../api/casePortals';
+import caseSettingsAPI from '../../api/caseSettings';
+import caseTasksAPI from '../../api/caseTasks';
 import {
   SET_CASE_TICKET_UI_FLAG,
   SET_ACTIVE_CASE_TICKET,
@@ -26,6 +30,7 @@ import {
   SET_CASE_TICKET_EVENTS,
   SET_CASE_TICKETS_LIST,
   SET_CASE_TICKETS_META,
+  SET_CASE_TICKETS_LIST_PREFS,
   SET_CASE_RULES,
   SET_CASE_RULES_UI_FLAG,
   SET_CASE_METRICS,
@@ -44,8 +49,16 @@ import {
   SET_CASE_SLA_POLICIES_UI_FLAG,
   SET_CASE_TYPE_FIELDS,
   SET_CASE_TYPE_FIELDS_UI_FLAG,
+  SET_CASE_TYPE_COLUMNS,
+  SET_CASE_TYPE_COLUMNS_UI_FLAG,
   SET_CASE_AI_CONFIG,
   SET_CASE_AI_CONFIG_UI_FLAG,
+  SET_CASE_PORTALS,
+  SET_CASE_PORTALS_UI_FLAG,
+  SET_CASE_SETTINGS,
+  SET_CASE_SETTINGS_UI_FLAG,
+  SET_CASE_MY_TASKS,
+  SET_CASE_MY_TASKS_UI_FLAG,
 } from '../mutation-types';
 
 const CLOSED_STATUSES = ['closed', 'cancelled'];
@@ -59,6 +72,7 @@ const state = {
   uiFlags: {
     isFetching: false,
     isCreating: false,
+    isSaving: false, // @tickets_cases — edición del ticket desde el modal
     isTransitioning: false,
     isFetchingEvents: false,
     isFetchingList: false,
@@ -66,6 +80,10 @@ const state = {
   // Fase 4 — vista lista
   ticketsList: [],
   ticketsMeta: {},
+  // @tickets_cases — filtros/página del listado, para sobrevivir a entrar a un
+  // ticket y volver. null = todavía no se visitó el listado en esta sesión, así
+  // que Index.vue no debe pisar sus defaults con esto.
+  ticketsListPrefs: null,
   // Fase 5 — métricas
   metrics: null,
   // Fase 4 — reglas
@@ -81,6 +99,23 @@ const state = {
     isFetching: false,
     isSaving: false,
     isDeleting: false,
+  },
+  // User Portal — portales públicos del cliente
+  portals: [],
+  portalsUiFlags: {
+    isFetching: false,
+    isSaving: false,
+    isDeleting: false,
+  },
+  // Reglas de reapertura — ajustes del módulo. El modo simple/ITIL dejó de ser
+  // un ajuste de cuenta: ahora es `itil_enabled` en cada tipo de caso (getTypes).
+  settings: {
+    reopen_window_days: 30,
+    reopen_on_customer_reply: true,
+  },
+  settingsUiFlags: {
+    isFetching: false,
+    isSaving: false,
   },
   // 2B — Servicios afectados configurables por cuenta
   services: [],
@@ -125,11 +160,23 @@ const state = {
     isSaving: false,
     isDeleting: false,
   },
+  // Columnas del Kanban por tipo de caso (Opción A+), indexadas por caseTypeId
+  typeColumns: {},
+  typeColumnsUiFlags: {
+    isFetching: false,
+    isSaving: false,
+  },
   // 3A — Configuración de IA por cuenta
   aiConfig: null,
   aiConfigUiFlags: {
     isFetching: false,
     isSaving: false,
+  },
+  // Bandeja de tareas — índice a nivel cuenta ("¿qué tengo asignado?")
+  myTasks: [],
+  myTasksMeta: {},
+  myTasksUiFlags: {
+    isFetching: false,
   },
 };
 
@@ -151,6 +198,9 @@ export const getters = {
   getTicketsMeta(_state) {
     return _state.ticketsMeta;
   },
+  getTicketsListPrefs(_state) {
+    return _state.ticketsListPrefs;
+  },
   getTicketById: _state => id =>
     _state.ticketsList.find(t => t.id === Number(id)) || null,
   getRules(_state) {
@@ -168,10 +218,36 @@ export const getters = {
   getTypesUIFlags(_state) {
     return _state.typesUiFlags;
   },
+  // ITIL es por tipo (CaseType#itil_enabled). Para pantallas agregadas que no
+  // están atadas a un solo tipo (Kanban/Index sin filtro, Metrics, Rules): si
+  // AL MENOS un tipo de la cuenta usa ITIL, se ofrecen las opciones ITIL — así
+  // no se le esconde nada relevante a una cuenta que sí tiene tipos ITIL.
+  getAnyTypeItilEnabled(_state) {
+    return (_state.types || []).some(t => t.itil_enabled);
+  },
+  // User Portal
+  getPortals(_state) {
+    return _state.portals;
+  },
+  getPortalsUIFlags(_state) {
+    return _state.portalsUiFlags;
+  },
+  // Reapertura
+  getCaseSettings(_state) {
+    return _state.settings;
+  },
+  getSettingsUIFlags(_state) {
+    return _state.settingsUiFlags;
+  },
   // 2K — campos personalizados de un tipo de caso
   getTypeFields: _state => caseTypeId => _state.typeFields[caseTypeId] || [],
   getTypeFieldsUIFlags(_state) {
     return _state.typeFieldsUiFlags;
+  },
+  // Columnas del Kanban de un tipo de caso (Opción A+)
+  getTypeColumns: _state => caseTypeId => _state.typeColumns[caseTypeId] || [],
+  getTypeColumnsUIFlags(_state) {
+    return _state.typeColumnsUiFlags;
   },
   // 3A — configuración de IA
   getAiConfig(_state) {
@@ -213,6 +289,15 @@ export const getters = {
   },
   getSlaPoliciesUIFlags(_state) {
     return _state.slaPoliciesUiFlags;
+  },
+  getMyTasks(_state) {
+    return _state.myTasks;
+  },
+  getMyTasksMeta(_state) {
+    return _state.myTasksMeta;
+  },
+  getMyTasksUIFlags(_state) {
+    return _state.myTasksUiFlags;
   },
 };
 
@@ -293,6 +378,32 @@ export const actions = {
     }
   },
 
+  // @tickets_cases — mueve un ticket a otra columna del Kanban por tipo (A+).
+  async moveTicketColumn({ commit }, { ticketId, caseTypeColumnId, closure }) {
+    commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
+    try {
+      const { data } = await caseTicketsAPI.move(
+        ticketId,
+        caseTypeColumnId,
+        closure
+      );
+      return data;
+    } finally {
+      commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
+    }
+  },
+
+  // @tickets_cases P3 — acción en lote (assign/transition) sobre varios tickets.
+  async bulkAction({ commit }, params) {
+    commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
+    try {
+      const { data } = await caseTicketsAPI.bulk(params);
+      return data;
+    } finally {
+      commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
+    }
+  },
+
   // @tickets_cases 2D — escalamiento por niveles
   async escalateTicket(
     { commit },
@@ -315,6 +426,15 @@ export const actions = {
 
   // @tickets_cases Fase A — asignación manual a agente y/o equipo (coexisten).
   // Envía solo las claves presentes en el payload; '' / null limpia ese campo.
+  // @tickets_cases — reabre un ticket cerrado y refresca ficha + timeline.
+  async reopenTicket({ commit }, { ticketId, contactId, reason }) {
+    const { data } = await caseTicketsAPI.reopen(ticketId, reason);
+    const ticket = data.case_ticket;
+    if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
+    commit(SET_CASE_TICKETS_LIST, null); // forzar refetch de la cola
+    return ticket;
+  },
+
   async assignTicket({ commit }, { ticketId, contactId, assigneeId, teamId }) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {
@@ -345,6 +465,53 @@ export const actions = {
     });
     dispatch('mergeTicket', data.case_ticket);
     return data.case_ticket;
+  },
+
+  // @tickets_cases — edición completa del ticket desde el modal (título,
+  // descripción, clasificación). Manda solo los campos que envía el modal.
+  async editTicket({ commit, dispatch }, { ticketId, contactId, fields }) {
+    commit(SET_CASE_TICKET_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await caseTicketsAPI.update(ticketId, {
+        case_ticket: fields,
+      });
+      const ticket = data.case_ticket;
+      dispatch('mergeTicket', ticket);
+      if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
+      return ticket;
+    } finally {
+      commit(SET_CASE_TICKET_UI_FLAG, { isSaving: false });
+    }
+  },
+
+  // @tickets_cases P1 — cambio de prioridad inline (acción rápida estilo osTicket).
+  async updatePriority(
+    { commit, dispatch },
+    { ticketId, contactId, priority }
+  ) {
+    commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
+    try {
+      const { data } = await caseTicketsAPI.update(ticketId, {
+        case_ticket: { priority },
+      });
+      const ticket = data.case_ticket;
+      dispatch('mergeTicket', ticket);
+      if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
+      return ticket;
+    } finally {
+      commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
+    }
+  },
+
+  // @tickets_cases P4 — vencimiento inline (osTicket "Due Date"). dueAt ISO o null (limpiar).
+  async updateDueAt({ commit, dispatch }, { ticketId, contactId, dueAt }) {
+    const { data } = await caseTicketsAPI.update(ticketId, {
+      case_ticket: { due_at: dueAt },
+    });
+    const ticket = data.case_ticket;
+    dispatch('mergeTicket', ticket);
+    if (contactId) commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket });
+    return ticket;
   },
 
   async changeApproval({ dispatch }, { ticketId, status, reason }) {
@@ -394,6 +561,13 @@ export const actions = {
     } finally {
       commit(SET_CASE_TICKET_UI_FLAG, { isFetchingList: false });
     }
+  },
+
+  // @tickets_cases — recuerda filtros/página del listado (Index.vue) mientras
+  // dure la sesión de la app, para que sobrevivan a entrar a un ticket y
+  // volver (se pierden al desmontar el componente, no al navegar).
+  setTicketsListPrefs({ commit }, prefs) {
+    commit(SET_CASE_TICKETS_LIST_PREFS, prefs);
   },
 
   // @tickets_cases — carga un ticket individual por id y lo fusiona en la lista
@@ -523,6 +697,77 @@ export const actions = {
     }
   },
 
+  // ── User Portal — portales públicos del cliente ─────────────
+  async fetchPortals({ commit }) {
+    commit(SET_CASE_PORTALS_UI_FLAG, { isFetching: true });
+    try {
+      const { data } = await casePortalsAPI.get();
+      commit(SET_CASE_PORTALS, data.case_portals || []);
+    } finally {
+      commit(SET_CASE_PORTALS_UI_FLAG, { isFetching: false });
+    }
+  },
+  async createPortal({ commit, state: s }, payload) {
+    commit(SET_CASE_PORTALS_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await casePortalsAPI.create({ case_portal: payload });
+      commit(SET_CASE_PORTALS, [...s.portals, data.case_portal]);
+      return data.case_portal;
+    } finally {
+      commit(SET_CASE_PORTALS_UI_FLAG, { isSaving: false });
+    }
+  },
+  async updatePortal({ commit, state: s }, { id, ...payload }) {
+    commit(SET_CASE_PORTALS_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await casePortalsAPI.update(id, {
+        case_portal: payload,
+      });
+      commit(
+        SET_CASE_PORTALS,
+        s.portals.map(p => (p.id === id ? data.case_portal : p))
+      );
+      return data.case_portal;
+    } finally {
+      commit(SET_CASE_PORTALS_UI_FLAG, { isSaving: false });
+    }
+  },
+  async deletePortal({ commit, state: s }, id) {
+    commit(SET_CASE_PORTALS_UI_FLAG, { isDeleting: true });
+    try {
+      await casePortalsAPI.delete(id);
+      commit(
+        SET_CASE_PORTALS,
+        s.portals.filter(p => p.id !== id)
+      );
+    } finally {
+      commit(SET_CASE_PORTALS_UI_FLAG, { isDeleting: false });
+    }
+  },
+
+  // ── Modo simple (osTicket) vs ITIL ──────────────────────────
+  async fetchSettings({ commit }) {
+    commit(SET_CASE_SETTINGS_UI_FLAG, { isFetching: true });
+    try {
+      const { data } = await caseSettingsAPI.show();
+      commit(SET_CASE_SETTINGS, data);
+    } finally {
+      commit(SET_CASE_SETTINGS_UI_FLAG, { isFetching: false });
+    }
+  },
+  async updateSettings({ commit }, payload) {
+    commit(SET_CASE_SETTINGS_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await caseSettingsAPI.updateSettings({
+        case_setting: payload,
+      });
+      commit(SET_CASE_SETTINGS, data);
+      return data;
+    } finally {
+      commit(SET_CASE_SETTINGS_UI_FLAG, { isSaving: false });
+    }
+  },
+
   // ── 2K — Campos personalizados por tipo de caso ─────────────
   async fetchTypeFields({ commit }, caseTypeId) {
     commit(SET_CASE_TYPE_FIELDS_UI_FLAG, { isFetching: true });
@@ -581,6 +826,38 @@ export const actions = {
       });
     } finally {
       commit(SET_CASE_TYPE_FIELDS_UI_FLAG, { isDeleting: false });
+    }
+  },
+
+  // ── Columnas del Kanban por tipo (Opción A+) ─────────────────
+  async fetchTypeColumns({ commit }, caseTypeId) {
+    commit(SET_CASE_TYPE_COLUMNS_UI_FLAG, { isFetching: true });
+    try {
+      const { data } = await caseTypeColumnsAPI.getAll(caseTypeId);
+      commit(SET_CASE_TYPE_COLUMNS, {
+        caseTypeId,
+        columns: data.case_type_columns || [],
+      });
+    } finally {
+      commit(SET_CASE_TYPE_COLUMNS_UI_FLAG, { isFetching: false });
+    }
+  },
+
+  // Guarda el set completo del tipo (crea/actualiza/borra en una transacción).
+  async replaceTypeColumns({ commit }, { caseTypeId, columns }) {
+    commit(SET_CASE_TYPE_COLUMNS_UI_FLAG, { isSaving: true });
+    try {
+      const { data } = await caseTypeColumnsAPI.replaceColumns(
+        caseTypeId,
+        columns
+      );
+      commit(SET_CASE_TYPE_COLUMNS, {
+        caseTypeId,
+        columns: data.case_type_columns || [],
+      });
+      return data.case_type_columns;
+    } finally {
+      commit(SET_CASE_TYPE_COLUMNS_UI_FLAG, { isSaving: false });
     }
   },
 
@@ -769,6 +1046,20 @@ export const actions = {
     }
   },
 
+  // ── Bandeja de tareas ("¿qué tengo asignado?") ──────────────
+  async fetchMyTasks({ commit }, filters = {}) {
+    commit(SET_CASE_MY_TASKS_UI_FLAG, { isFetching: true });
+    try {
+      const { data } = await caseTasksAPI.getMine(filters);
+      commit(SET_CASE_MY_TASKS, {
+        tasks: data.case_tasks || [],
+        meta: data.meta || {},
+      });
+    } finally {
+      commit(SET_CASE_MY_TASKS_UI_FLAG, { isFetching: false });
+    }
+  },
+
   // ── 2E — Relaciones entre tickets ───────────────────────────
   async fetchRelations({ commit }, ticketId) {
     commit(SET_CASE_RELATIONS_UI_FLAG, { isFetching: true });
@@ -903,6 +1194,9 @@ export const mutations = {
   [SET_CASE_TICKETS_META](_state, meta) {
     _state.ticketsMeta = meta;
   },
+  [SET_CASE_TICKETS_LIST_PREFS](_state, prefs) {
+    _state.ticketsListPrefs = prefs;
+  },
   [SET_CASE_RULES](_state, rules) {
     _state.rules = rules;
   },
@@ -917,6 +1211,18 @@ export const mutations = {
   },
   [SET_CASE_TYPES_UI_FLAG](_state, flags) {
     _state.typesUiFlags = { ..._state.typesUiFlags, ...flags };
+  },
+  [SET_CASE_PORTALS](_state, portals) {
+    _state.portals = portals;
+  },
+  [SET_CASE_PORTALS_UI_FLAG](_state, flags) {
+    _state.portalsUiFlags = { ..._state.portalsUiFlags, ...flags };
+  },
+  [SET_CASE_SETTINGS](_state, settings) {
+    _state.settings = { ..._state.settings, ...settings };
+  },
+  [SET_CASE_SETTINGS_UI_FLAG](_state, flags) {
+    _state.settingsUiFlags = { ..._state.settingsUiFlags, ...flags };
   },
   [SET_CASE_SERVICES](_state, services) {
     _state.services = services;
@@ -952,6 +1258,12 @@ export const mutations = {
   [SET_CASE_TYPE_FIELDS_UI_FLAG](_state, flags) {
     _state.typeFieldsUiFlags = { ..._state.typeFieldsUiFlags, ...flags };
   },
+  [SET_CASE_TYPE_COLUMNS](_state, { caseTypeId, columns }) {
+    _state.typeColumns = { ..._state.typeColumns, [caseTypeId]: columns };
+  },
+  [SET_CASE_TYPE_COLUMNS_UI_FLAG](_state, flags) {
+    _state.typeColumnsUiFlags = { ..._state.typeColumnsUiFlags, ...flags };
+  },
   [SET_CASE_AI_CONFIG](_state, config) {
     _state.aiConfig = config;
   },
@@ -963,6 +1275,13 @@ export const mutations = {
   },
   [SET_CASE_SLA_POLICIES_UI_FLAG](_state, flags) {
     _state.slaPoliciesUiFlags = { ..._state.slaPoliciesUiFlags, ...flags };
+  },
+  [SET_CASE_MY_TASKS](_state, { tasks, meta }) {
+    _state.myTasks = tasks;
+    _state.myTasksMeta = meta;
+  },
+  [SET_CASE_MY_TASKS_UI_FLAG](_state, flags) {
+    _state.myTasksUiFlags = { ..._state.myTasksUiFlags, ...flags };
   },
 };
 

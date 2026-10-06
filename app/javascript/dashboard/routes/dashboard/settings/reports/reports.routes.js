@@ -10,6 +10,7 @@ const CsatResponses = () => import('./CsatResponses.vue');
 const BotReports = () => import('./BotReports.vue');
 const LiveReports = () => import('./LiveReports.vue');
 const SLAReports = () => import('./SLAReports.vue');
+const OpportunityReports = () => import('./OpportunityReports.vue'); // proyecto@metricas_casos
 
 export default {
   routes: [
@@ -184,6 +185,26 @@ export default {
             permissions: ['administrator', 'report_manage'],
           },
           component: SLAReports,
+        },
+      ],
+    },
+    // proyecto@metricas_casos
+    {
+      path: frontendURL('accounts/:accountId/reports'),
+      component: SettingsContent,
+      props: {
+        headerTitle: 'OPPORTUNITY_REPORTS.HEADER',
+        icon: 'briefcase',
+        keepAlive: false,
+      },
+      children: [
+        {
+          path: 'opportunities',
+          name: 'opportunity_reports',
+          meta: {
+            permissions: ['administrator', 'report_manage'],
+          },
+          component: OpportunityReports,
         },
       ],
     },

@@ -20,6 +20,8 @@ Rails.application.routes.draw do
     get '/app/accounts/:account_id/settings/inboxes/new/microsoft', to: 'dashboard#index', as: 'app_new_microsoft_inbox'
     get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_twitter_inbox_agents'
     get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_email_inbox_agents'
+    get '/app/accounts/:account_id/settings/inboxes/new/instagram', to: 'dashboard#index', as: 'app_new_instagram_inbox'
+    get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_instagram_inbox_agents'
     get '/app/accounts/:account_id/settings/inboxes/:inbox_id', to: 'dashboard#index', as: 'app_email_inbox_settings'
 
     resource :widget, only: [:show]
@@ -78,12 +80,21 @@ Rails.application.routes.draw do
             end
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
+          # Sinónimos nativos (esquema legacy wintook; reemplaza al servicio WINTOOK_BOT)
+          resources :palabras_sinonimos, only: [:index, :create, :update, :destroy]
+          resources :sinonimos_semanticos, only: [:index]
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
+              get :section_titles # proyecto@asistente_agentes_ia — sugerencias del formulario por secciones
+              get :route_catalog # proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió
+              get :section_catalog # proyecto@asistente_agentes_ia — las secciones enteras que ya escribió
+              post :training_preview # proyecto@asistente_agentes_ia — texto ↔ bloques + comprobador
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
+            # proyecto@publicar_prompts: publicar el prompt para que otras cuentas lo bajen
+            resource :publication, only: [:show, :create, :destroy], module: :tracking_templates
           end
           # @query_databases — conexiones a ERPs + consultas predefinidas + consola
           resources :external_db_connections, only: [:index, :show, :create, :update, :destroy] do
@@ -96,6 +107,7 @@ Rails.application.routes.draw do
           get  'external_db_console/catalog', to: 'external_db_console#catalog'
           post 'external_db_console/run',     to: 'external_db_console#run'
           post 'external_db_console/ask',     to: 'external_db_console#ask'
+          post 'external_db_console/try_asked', to: 'external_db_console#try_asked' # proyecto@erp_productos
           resources :erp_collection_bots, only: [:index, :show, :create, :update, :destroy] do
             post :preview, on: :member
           end
@@ -103,10 +115,59 @@ Rails.application.routes.draw do
           resources :contact_tracking_bulk_assigns, only: [:create] do # proyecto@bulk_tracking_assign
             post :preview, on: :collection # @campanas_vendedor — dry-run de buckets
           end
-          resources :tracking_campaigns, only: [:index, :show, :destroy] # @campanas_vendedor
+          # @campanas_vendedor / @automatizacion_campanas (create = campaña continua)
+          resources :tracking_campaigns, only: [:index, :show, :create, :destroy] do
+            get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
+          end
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview
             get 'list', to: 'list#index' # listado filtrable a nivel cuenta
+            # proyecto@asistente_agentes_ia — generador de Entrenamientos
+            get  'assistant/inventory', to: 'assistant#inventory'
+            post 'assistant/validate',  to: 'assistant#validate'
+            post 'assistant/interview', to: 'assistant#interview'
+            get  'assistant/interview/:turn_id', to: 'assistant#interview_result'
+            post 'assistant/save',      to: 'assistant#save'
+            get  'assistant/session',   to: 'assistant#resume'
+            get  'assistant/sessions',      to: 'assistant#sessions'
+            get  'assistant/sessions/:id',  to: 'assistant#show_session'
+            delete 'assistant/sessions/:id', to: 'assistant#discard_session'
+            get  'assistant/sessions/:id/versions/:number', to: 'assistant#show_version'
+            get  'assistant/progress/:turn_id', to: 'assistant#progress'
+            post 'assistant/suggested_tests', to: 'assistant_tools#suggested_tests'
+            post 'assistant/optimize', to: 'assistant_tools#optimize'
+            get  'assistant/optimize/:turn_id', to: 'assistant_tools#optimize_result'
+            post 'assistant/explain', to: 'assistant_tools#explain'
+            post 'assistant/proofread', to: 'assistant_tools#proofread'
+            post 'assistant/transcribe', to: 'assistant_tools#transcribe'
+            post 'assistant/route_scope', to: 'assistant_tools#route_scope'
+            # proyecto@publicar_prompts — la Galería: los prompts publicados solo se ven y se bajan aquí
+            get  'assistant/published_prompts',     to: 'assistant_published_prompts#index'
+            get  'assistant/published_prompts/:id', to: 'assistant_published_prompts#show'
+            post 'assistant/published_prompts/:id/install', to: 'assistant_published_prompts#install'
+            post 'assistant/published_prompts/:id/seen',    to: 'assistant_published_prompts#seen'
+            get  'assistant/audit',     to: 'assistant#audit'
+            post 'assistant/dry_run',   to: 'assistant#dry_run'
+            # el encargo (.md) con la idea del agente — ver docs/importar_prompt_md_plan.md
+            post 'assistant/briefs', to: 'assistant_briefs#create'
+            post 'assistant/briefs/from_instructions', to: 'assistant_briefs#from_instructions'
+            get  'assistant/briefs/:id',         to: 'assistant_briefs#show'
+            get  'assistant/briefs/:id/content', to: 'assistant_briefs#content'
+            post 'assistant/briefs/:id/digest',  to: 'assistant_briefs#digest'
+            post 'assistant/briefs/:id/compose', to: 'assistant_briefs#compose'
+            post 'assistant/briefs/:id/cover',   to: 'assistant_briefs#cover'
+            post 'assistant/briefs/:id/knowledge', to: 'assistant_knowledge#suggestions'
+            post 'assistant/briefs/:id/knowledge/create', to: 'assistant_knowledge#create'
+            # «Probar el agente»: la pila de pruebas en vivo (docs/importar_prompt_extenso_plan.md, M5)
+            post 'assistant/test_battery', to: 'assistant_test_battery#create'
+            get  'assistant/test_battery/:id', to: 'assistant_test_battery#show'
+            get  'assistant/test_battery/:id/report', to: 'assistant_test_battery#report'
+            # armar un agente desde cero conversando (llena las instrucciones iniciales)
+            post 'assistant/drafting_chat', to: 'assistant_drafting#create'
+            put  'assistant/autosave', to: 'assistant_autosave#update'
+            patch 'assistant/sessions/:id/name', to: 'assistant_autosave#rename'
+            post 'assistant/conversation_review', to: 'assistant_review#create'
+            get  'assistant/conversation_review/:turn_id', to: 'assistant_review#show'
           end
 
           # @knowledge_sources
@@ -121,6 +182,7 @@ Rails.application.routes.draw do
           post   'knowledge_base/discourse_categories', to: 'knowledge_base#discourse_categories'
           get    'knowledge_base/search_settings',  to: 'knowledge_base#search_settings'
           patch  'knowledge_base/search_settings',  to: 'knowledge_base#update_search_settings'
+          post   'knowledge_base/directive',        to: 'knowledge_base#directive'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
           end
@@ -136,9 +198,11 @@ Rails.application.routes.draw do
             collection do
               get :metrics
               get :kb_portals
+              post :bulk # @tickets_cases P3 — acciones en lote desde la cola
             end
             member do
               patch :transition
+              patch :move # @tickets_cases — mover de columna en el Kanban por tipo
               patch :assign
               patch :escalate
               patch :change_approval
@@ -149,18 +213,46 @@ Rails.application.routes.draw do
               post :summarize # @tickets_cases 3E
               post :detect_duplicates # @tickets_cases 3D
               post :follow_up # @tickets_cases 3F
+              patch :lock   # @tickets_cases — bloqueo de ticket
+              patch :unlock # @tickets_cases — bloqueo de ticket
+              patch :reopen # @tickets_cases — reapertura de ticket cerrado
             end
             resources :case_events, only: [:index]
             # @tickets_cases 2E — relaciones entre tickets
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
+            # @tickets_cases — tareas/subtareas del ticket
+            resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks'
+            # @tickets_cases — notas internas (viven en case_events, no en tabla propia)
+            resources :case_notes, only: [:index, :create, :update, :destroy], path: 'notes'
+            # @tickets_cases F1 — reuniones del ticket y sus series (plan §4.5)
+            resources :case_meetings, only: [:index, :create, :update, :destroy], path: 'meetings' do
+              collection do
+                get :upcoming # @tickets_cases F5 — reuniones futuras que quedarían huérfanas
+              end
+              member do
+                patch :hold   # marcar realizada / no asistió
+                patch :cancel # scope: 'one' | 'all'
+                post  :resync # reintentar el espejo con Google (F3)
+                patch :align_task_due # @tickets_cases F6 — mover el vencimiento de la tarea
+              end
+            end
+            resources :case_meeting_series, only: [:create, :update, :destroy], path: 'meeting-series'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
+          # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
+          resources :case_tasks, only: [:index], controller: 'case_tasks_index'
           resources :case_types, only: [:index, :create, :update, :destroy] do
             resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K
+            # @tickets_cases — columnas del Kanban por tipo (Opción A+)
+            resources :case_type_columns, only: [:index, :create, :update, :destroy], path: 'columns' do
+              put :replace, on: :collection
+            end
           end
           resources :case_services, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_categories, only: [:index, :create, :update, :destroy] # @tickets_cases 2B
           resources :case_sla_policies, only: [:index, :create, :update, :destroy] # @tickets_cases 2I
+          resources :case_portals, only: [:index, :create, :update, :destroy] # @tickets_cases — User Portal
+          resource  :case_setting, only: [:show, :update] # @tickets_cases — modo simple/ITIL
           resource  :case_folio_config, only: [:show, :update], controller: 'case_folio_configs'
           resource  :case_ai_config, only: [:show, :update], controller: 'case_ai_configs' # @tickets_cases 3A
           # =========================================================================
@@ -469,6 +561,10 @@ Rails.application.routes.draw do
             resource :authorization, only: [:create]
           end
 
+          namespace :instagram do
+            resource :authorization, only: [:create]
+          end
+
           namespace :google_calendar do
             resource :authorization, only: [:create, :destroy]
             resources :events, only: [:index, :create, :update] do
@@ -626,6 +722,17 @@ Rails.application.routes.draw do
               get :bot_metrics
             end
           end
+          # proyecto@metricas_casos — Informes de Casos (seguimiento de oportunidades)
+          resources :case_reports, only: [] do
+            collection do
+              get :funnel
+              get :outcome
+              get :timeseries
+              get :assignees
+              get :velocity
+              get :stalled
+            end
+          end
         end
       end
     end
@@ -709,6 +816,14 @@ Rails.application.routes.draw do
   get 'hc/:slug/articles/:article_slug', to: 'public/api/v1/portals/articles#show'
 
   # ----------------------------------------------------------------------
+  # @tickets_cases — User Portal (P1): superficie pública del cliente (estilo osTicket).
+  # Se resuelve por slug (/portal/:slug). HTML server-rendered.
+  get  'portal/:slug',         to: 'public/case_portal#show',   as: :case_portal
+  get  'portal/:slug/new',     to: 'public/case_portal#new',    as: :new_case_portal_ticket
+  post 'portal/:slug/tickets', to: 'public/case_portal#create', as: :case_portal_tickets
+  get  'portal/:slug/status',  to: 'public/case_portal#status', as: :case_portal_status
+
+  # ----------------------------------------------------------------------
   # Used in mailer templates
   resource :app, only: [:index] do
     resources :accounts do
@@ -737,9 +852,13 @@ Rails.application.routes.draw do
     resources :delivery_status, only: [:create]
   end
 
+  get 'instagram/callback', to: 'instagram/callbacks#show'
   get 'microsoft/callback', to: 'microsoft/callbacks#show'
   get 'google/callback', to: 'google/callbacks#show'
   get 'google_calendar/callback', to: 'google_calendar_callback#show'
+  # @tickets_cases F7 — receptor del push de Google Calendar. Público a propósito
+  # (Google no manda credenciales): el ping se autentica con X-Goog-Channel-Token.
+  post 'google_calendar/notifications', to: 'google_calendar_notifications#create'
 
   # ----------------------------------------------------------------------
   # Routes for external service verifications

@@ -12,6 +12,7 @@ export default {
       INDEXED_CONTENT: 'Contenido indexado',
       SOURCES: 'Fuentes (%{count})',
       SEARCH_CONSOLE: 'Consola de Búsqueda (Fuentes)',
+      CONFIG: 'Configuración',
       ERP_CONNECTION: 'Conexión ERP',
       COLLECTION_AGENT: 'Agente Cobrador',
       QUERY_CONSOLE: 'Consola de Consulta (ERP)',

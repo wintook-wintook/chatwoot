@@ -10,27 +10,31 @@
 #
 # Table name: tracking_templates
 #
-#  id                       :bigint           not null, primary key
-#  ai_context               :text
-#  booking_calendar_ids     :jsonb            not null
-#  calendar_event_duration  :integer          default(30)
-#  calendar_integration_ids :jsonb            not null
-#  complementary_prompt     :text
-#  keyword_actions          :jsonb            not null
-#  name                     :string           not null
-#  objective                :string           not null
-#  retry_interval_unit      :string           default("days")
-#  retry_interval_value     :integer          default(1)
-#  slots_presentation       :string           default("detailed"), not null
-#  tags                     :json
-#  timezone                 :string
-#  whatsapp_templates       :json
-#  created_at               :datetime         not null
-#  updated_at               :datetime         not null
-#  account_id               :bigint           not null
-#  inbox_id                 :bigint
-#  kbase_hook_id            :integer
-#  user_id                  :bigint
+#  id                            :bigint           not null, primary key
+#  ai_context                    :text
+#  booking_calendar_ids          :jsonb            not null
+#  calendar_event_duration       :integer          default(30)
+#  calendar_integration_ids      :jsonb            not null
+#  complementary_prompt          :text
+#  keyword_actions               :jsonb            not null
+#  name                          :string           not null
+#  objective                     :string           not null
+#  previous_complementary_prompt :text
+#  retry_interval_unit           :string           default("days")
+#  retry_interval_value          :integer          default(1)
+#  slots_presentation            :string           default("detailed"), not null
+#  tags                          :json
+#  timezone                      :string
+#  training_structure            :jsonb            not null
+#  whatsapp_templates            :json
+#  created_at                    :datetime         not null
+#  updated_at                    :datetime         not null
+#  account_id                    :bigint           not null
+#  inbox_id                      :bigint
+#  kbase_hook_id                 :integer
+#  published_prompt_id           :bigint
+#  published_prompt_version      :integer
+#  user_id                       :bigint
 #
 # Indexes
 #
@@ -38,12 +42,14 @@
 #  index_tracking_templates_on_account_id_and_name  (account_id,name) UNIQUE
 #  index_tracking_templates_on_inbox_id             (inbox_id)
 #  index_tracking_templates_on_kbase_hook_id        (kbase_hook_id)
+#  index_tracking_templates_on_published_prompt_id  (published_prompt_id)
 #  index_tracking_templates_on_user_id              (user_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (inbox_id => inboxes.id)
+#  fk_rails_...  (published_prompt_id => published_prompts.id) ON DELETE => nullify
 #  fk_rails_...  (user_id => users.id)
 #
 
@@ -51,6 +57,19 @@ class TrackingTemplate < ApplicationRecord
   belongs_to :account
   belongs_to :inbox, optional: true
   belongs_to :user, optional: true
+  # proyecto@publicar_prompts: la publicación de la que salió este agente (si se bajó de la Galería)
+  belongs_to :published_prompt, optional: true
+  # proyecto@publicar_prompts: la publicación de ESTE agente (si su autor lo publicó)
+  has_one :publication, class_name: 'PublishedPrompt', dependent: nil, inverse_of: :tracking_template
+
+  # proyecto@publicar_prompts (F7): si se bajó de la Galería y el autor publicó una versión
+  # más nueva que la que tiene (o ya revisó) esta copia. Nunca se aplica sola.
+  def published_prompt_update
+    pub = published_prompt
+    return unless pub&.published? && pub.version > published_prompt_version.to_i
+
+    { 'published_prompt_id' => pub.id, 'version' => pub.version, 'current_version' => published_prompt_version }
+  end
 
   # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
   has_many :ai_agent_attachments, dependent: :destroy
@@ -66,14 +85,46 @@ class TrackingTemplate < ApplicationRecord
   # proyecto@contact_tracking: palabras clave de acción
   validate :keyword_actions_valid_structure
 
-  scope :by_tag, ->(tag) { where("tags @> ?", [tag].to_json) }
+  scope :by_tag, ->(tag) { where('tags @> ?', [tag].to_json) }
   scope :by_inbox, ->(inbox_id) { where(inbox_id: inbox_id) }
   scope :search_by_name, ->(query) { where('name ILIKE ?', "%#{query}%") }
   scope :ordered, -> { order(updated_at: :desc) }
 
   before_save :ensure_arrays
+  # proyecto@asistente_agentes_ia — el Entrenamiento por bloques (plan:
+  # docs/formulario_entrenamiento_plan.md). Se regenera SIEMPRE del texto cuando el texto
+  # cambia, así las dos columnas no pueden decir cosas distintas, escriba quien escriba
+  # (la ficha, el Asistente, la API). El único camino que se saltea los callbacks es
+  # update_columns: quien lo use tiene que pasar las dos (ver DirectiveReferenceService).
+  before_save :sync_training_structure, if: :will_save_change_to_complementary_prompt?
+
+  # La estructura para mostrar: la guardada, o la del texto si el agente es anterior a
+  # la columna y todavía no se corrió el backfill, o si la guardada quedó vieja —
+  # las ramas empezaron a viajar en campos después del backfill, y una estructura sin
+  # ellos dejaba el formulario de ramas sin datos (ver TrainingRoutes).
+  def training_blocks
+    guardada = training_structure.presence
+    return ContactTrackings::TrainingStructure.parse(complementary_prompt) if guardada.blank? || stale_structure?(guardada)
+
+    guardada
+  end
+
+  # El formulario manda bloques: se arma el texto y, al guardar, el callback vuelve a
+  # separar la estructura desde ese texto — la guardada es siempre la canónica.
+  def training_structure_from_form=(estructura)
+    self.complementary_prompt = ContactTrackings::TrainingStructure.compose(estructura)
+  end
 
   private
+
+  # Un bloque de ramas sin sus campos es de antes de que existieran.
+  def stale_structure?(estructura)
+    Array(estructura['blocks']).any? { |b| b['type'] == 'routes' && !b.key?('lines') }
+  end
+
+  def sync_training_structure
+    self.training_structure = ContactTrackings::TrainingStructure.parse(complementary_prompt)
+  end
 
   def ensure_arrays
     self.whatsapp_templates = [] unless whatsapp_templates.is_a?(Array)
@@ -85,13 +136,13 @@ class TrackingTemplate < ApplicationRecord
     return unless keyword_actions.is_a?(Array)
 
     keyword_actions.each do |ka|
-      unless ka.is_a?(Hash) &&
-             ka['keyword'].to_s.strip.present? &&
-             ContactTrackings::KeywordActionService::VALID_ACTIONS.include?(ka['action'].to_s) &&
-             ContactTrackings::KeywordActionService::VALID_DIRECTIONS.include?(ka['direction'].to_s)
-        errors.add(:keyword_actions, 'contiene una entrada con formato inválido')
-        break
-      end
+      next if ka.is_a?(Hash) &&
+              ka['keyword'].to_s.strip.present? &&
+              ContactTrackings::KeywordActionService::VALID_ACTIONS.include?(ka['action'].to_s) &&
+              ContactTrackings::KeywordActionService::VALID_DIRECTIONS.include?(ka['direction'].to_s)
+
+      errors.add(:keyword_actions, 'contiene una entrada con formato inválido')
+      break
     end
   end
 end

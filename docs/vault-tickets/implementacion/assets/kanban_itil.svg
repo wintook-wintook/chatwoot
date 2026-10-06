@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="560" viewBox="0 0 1300 560" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <style>
+      .board-bg { fill:#f1f5f9; }
+      .col-body { fill:#e2e8f0; rx:10; }
+      .title { fill:#0f172a; font-size:24px; font-weight:700; }
+      .subtitle { fill:#64748b; font-size:14px; }
+      .col-name { fill:#ffffff; font-size:15px; font-weight:700; letter-spacing:.4px; }
+      .count { fill:#ffffff; font-size:13px; font-weight:700; }
+      .card { fill:#ffffff; stroke:#cbd5e1; stroke-width:1; }
+      .st-es { fill:#0f172a; font-size:13px; font-weight:600; }
+      .st-key { fill:#64748b; font-size:11.5px; font-family:'SFMono-Regular', Consolas, monospace; }
+      .legend { fill:#475569; font-size:12.5px; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1300" height="560" fill="#ffffff"/>
+  <text x="32" y="42" class="title">Kanban de Tickets — Modo ITIL (6 columnas)</text>
+  <text x="32" y="66" class="subtitle">Cada columna agrupa uno o más estados internos del ciclo de vida. El estado real vive en el ticket; la columna solo lo agrupa.</text>
+
+  <!-- ===== Column 1: Nuevo ===== -->
+  <g transform="translate(32,92)">
+    <rect class="col-body" width="196" height="404" rx="10" fill="#e2e8f0"/>
+    <rect width="196" height="40" rx="10" fill="#2563eb"/>
+    <rect y="20" width="196" height="20" fill="#2563eb"/>
+    <text x="16" y="26" class="col-name">NUEVO</text>
+    <circle cx="176" cy="20" r="12" fill="#1e40af"/>
+    <text x="176" y="25" class="count" text-anchor="middle">2</text>
+    <!-- cards -->
+    <g transform="translate(12,54)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">Abierto</text>
+      <text x="14" y="42" class="st-key">open</text>
+    </g>
+    <g transform="translate(12,116)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">Clasificado</text>
+      <text x="14" y="42" class="st-key">classified</text>
+    </g>
+  </g>
+
+  <!-- ===== Column 2: Asignado / Diagnóstico ===== -->
+  <g transform="translate(240,92)">
+    <rect class="col-body" width="196" height="404" rx="10" fill="#e2e8f0"/>
+    <rect width="196" height="40" rx="10" fill="#4f46e5"/>
+    <rect y="20" width="196" height="20" fill="#4f46e5"/>
+    <text x="16" y="26" class="col-name" font-size="13">ASIGNADO/DIAGN.</text>
+    <circle cx="176" cy="20" r="12" fill="#3730a3"/>
+    <text x="176" y="25" class="count" text-anchor="middle">2</text>
+    <g transform="translate(12,54)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">Asignado</text>
+      <text x="14" y="42" class="st-key">assigned</text>
+    </g>
+    <g transform="translate(12,116)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">En diagnóstico</text>
+      <text x="14" y="42" class="st-key">in_diagnosis</text>
+    </g>
+  </g>
+
+  <!-- ===== Column 3: En proceso ===== -->
+  <g transform="translate(448,92)">
+    <rect class="col-body" width="196" height="404" rx="10" fill="#e2e8f0"/>
+    <rect width="196" height="40" rx="10" fill="#7c3aed"/>
+    <rect y="20" width="196" height="20" fill="#7c3aed"/>
+    <text x="16" y="26" class="col-name">EN PROCESO</text>
+    <circle cx="176" cy="20" r="12" fill="#5b21b6"/>
+    <text x="176" y="25" class="count" text-anchor="middle">2</text>
+    <g transform="translate(12,54)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">En proceso</text>
+      <text x="14" y="42" class="st-key">in_progress</text>
+    </g>
+    <g transform="translate(12,116)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">Escalado</text>
+      <text x="14" y="42" class="st-key">escalated</text>
+    </g>
+  </g>
+
+  <!-- ===== Column 4: En espera ===== -->
+  <g transform="translate(656,92)">
+    <rect class="col-body" width="196" height="404" rx="10" fill="#e2e8f0"/>
+    <rect width="196" height="40" rx="10" fill="#d97706"/>
+    <rect y="20" width="196" height="20" fill="#d97706"/>
+    <text x="16" y="26" class="col-name">EN ESPERA</text>
+    <circle cx="176" cy="20" r="12" fill="#92400e"/>
+    <text x="176" y="25" class="count" text-anchor="middle">3</text>
+    <g transform="translate(12,54)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">En espera del cliente</text>
+      <text x="14" y="42" class="st-key">waiting_on_customer</text>
+    </g>
+    <g transform="translate(12,116)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">En espera de tercero</text>
+      <text x="14" y="42" class="st-key">waiting_on_third_party</text>
+    </g>
+    <g transform="translate(12,178)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">En espera interna</text>
+      <text x="14" y="42" class="st-key">waiting_on_internal</text>
+    </g>
+  </g>
+
+  <!-- ===== Column 5: Resuelto ===== -->
+  <g transform="translate(864,92)">
+    <rect class="col-body" width="196" height="404" rx="10" fill="#e2e8f0"/>
+    <rect width="196" height="40" rx="10" fill="#16a34a"/>
+    <rect y="20" width="196" height="20" fill="#16a34a"/>
+    <text x="16" y="26" class="col-name">RESUELTO</text>
+    <circle cx="176" cy="20" r="12" fill="#14532d"/>
+    <text x="176" y="25" class="count" text-anchor="middle">2</text>
+    <g transform="translate(12,54)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">Resuelto</text>
+      <text x="14" y="42" class="st-key">resolved</text>
+    </g>
+    <g transform="translate(12,116)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">Validando con cliente</text>
+      <text x="14" y="42" class="st-key">validating</text>
+    </g>
+  </g>
+
+  <!-- ===== Column 6: Cerrado ===== -->
+  <g transform="translate(1072,92)">
+    <rect class="col-body" width="196" height="404" rx="10" fill="#e2e8f0"/>
+    <rect width="196" height="40" rx="10" fill="#475569"/>
+    <rect y="20" width="196" height="20" fill="#475569"/>
+    <text x="16" y="26" class="col-name">CERRADO</text>
+    <circle cx="176" cy="20" r="12" fill="#1e293b"/>
+    <text x="176" y="25" class="count" text-anchor="middle">2</text>
+    <g transform="translate(12,54)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">Cerrado</text>
+      <text x="14" y="42" class="st-key">closed</text>
+    </g>
+    <g transform="translate(12,116)">
+      <rect class="card" width="172" height="52" rx="8"/>
+      <text x="14" y="24" class="st-es">Cancelado</text>
+      <text x="14" y="42" class="st-key">cancelled</text>
+    </g>
+  </g>
+
+  <text x="32" y="536" class="legend">13 estados internos agrupados en 6 columnas · el badge blanco de cada cabecera indica cuántos estados agrupa · "En espera" es la única con 3.</text>
+</svg>

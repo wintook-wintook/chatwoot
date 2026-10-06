@@ -27,6 +27,12 @@ export default {
       type: Function,
       default: () => {},
     },
+    // proyecto@automatizacion_campanas: { name, action } para abrir el modal con la
+    // acción "Agregar a campaña" ya puesta (desde una campaña continua recién creada).
+    preset: {
+      type: Object,
+      default: null,
+    },
   },
   setup() {
     const {
@@ -62,7 +68,7 @@ export default {
       automationMutated: false,
       show: true,
       automation: {
-        name: null,
+        name: this.preset?.name || null,
         description: null,
         event_name: 'conversation_created',
         conditions: [
@@ -75,7 +81,7 @@ export default {
           },
         ],
         actions: [
-          {
+          this.preset?.action || {
             action_name: 'assign_agent',
             action_params: [],
           },
@@ -114,6 +120,11 @@ export default {
     this.$store.dispatch('teams/get');
     this.$store.dispatch('labels/get');
     this.$store.dispatch('campaigns/get');
+    // proyecto@automatizacion_tracking: ver comentario en Index.vue — sin esto el
+    // desplegable de "Asignar Agente IA" queda vacío.
+    this.$store.dispatch('trackingTemplates/get');
+    // proyecto@automatizacion_campanas: opciones de "Agregar a campaña"
+    this.$store.dispatch('trackingCampaignOptions/get');
     this.allCustomAttributes = this.$store.getters['attributes/getAttributes'];
     this.manifestCustomAttributes(this.automationTypes);
   },
