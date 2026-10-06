@@ -30,12 +30,23 @@ class ContactTrackings::ServiceRequests::Registry
               .where('metadata ? :k', k: META_KEY).order(:created_at, :id)
   end
 
-  def initialize(tracking:, message:, escalation:, timezone:)
+  # text: el del mensaje con sus adjuntos (pieza 7); sin él, el contenido del mensaje.
+  def initialize(tracking:, message:, escalation:, timezone:, text: nil)
     @tracking = tracking
     @message = message
     @conversation = message.conversation
     @escalation = escalation.to_s
     @timezone = timezone
+    @text = text.presence || message.content.to_s
+  end
+
+  # El cliente contestó lo que se le pidió («es escombro, 14 t») sin pedir otro servicio:
+  # se completa ESE caso (campos, y fecha u hora si las dijo), no se abre otro.
+  def complete!(ticket)
+    datos = with_new_date(ticket.metadata[META_KEY].to_h)
+    ticket.update!(metadata: ticket.metadata.merge(META_KEY => datos))
+    store_fields(ticket, datos)
+    Entry.new(ticket: ticket, created: false)
   end
 
   def register!(services)
@@ -52,6 +63,16 @@ class ContactTrackings::ServiceRequests::Registry
 
   private
 
+  # La fecha o la hora que faltaban, si este mensaje las trae. Lo que ya tenía no se toca.
+  def with_new_date(datos)
+    nueva = ContactTrackings::ServiceRequests::DateResolver.new(timezone: @timezone).call(@text, @text)
+    if datos['date'].blank? && nueva.date
+      datos = datos.merge('date' => nueva.date.iso8601, 'date_text' => @text.truncate(80), 'ambiguous' => nueva.ambiguous)
+    end
+    datos = datos.merge('time' => nueva.time, 'time_text' => nueva.time) if datos['time'].blank? && nueva.time
+    datos
+  end
+
   def serialize(servicio)
     fecha = ContactTrackings::ServiceRequests::DateResolver.new(timezone: @timezone).call(servicio.date_text, servicio.time_text)
     servicio.to_h.transform_keys(&:to_s).merge(
@@ -60,8 +81,16 @@ class ContactTrackings::ServiceRequests::Registry
     )
   end
 
+  # Mismo equipo, y fecha y origen iguales — o que el caso anterior todavía no tenía
+  # (observación SSUSA 9: «para el 3 de octubre» después de «necesito un hiab» abría otro caso).
   def same?(anterior, nuevo)
-    anterior.present? && key(anterior) == key(nuevo) && key(nuevo).compact.size >= 2
+    return false if anterior.blank?
+
+    antes = key(anterior)
+    ahora = key(nuevo)
+    return false unless antes.first == ahora.first && ahora.compact.size >= 2
+
+    antes.drop(1).zip(ahora.drop(1)).all? { |viejo, nuevo_dato| viejo.nil? || viejo == nuevo_dato }
   end
 
   def key(datos)
@@ -74,7 +103,8 @@ class ContactTrackings::ServiceRequests::Registry
                                        .create_from_ai(message: @message, tracking: @tracking, title: title(datos),
                                                        description: description(datos), priority: priority,
                                                        case_type_id: case_type_id, force_priority: priority.present?)
-    ticket.update!(metadata: ticket.metadata.to_h.merge(META_KEY => datos))
+    ticket.update!(metadata: ticket.metadata.to_h.merge(META_KEY => datos).merge(assigned_meta))
+    store_fields(ticket, datos)
     Cases::RuleEngineService.new(ticket, trigger_message: @message).evaluate!
     Entry.new(ticket: ticket, created: true)
   end
@@ -84,7 +114,38 @@ class ContactTrackings::ServiceRequests::Registry
     anterior = ticket.metadata[META_KEY].to_h
     combinado = anterior.merge(datos.reject { |_, valor| valor.blank? })
     ticket.update!(metadata: ticket.metadata.merge(META_KEY => combinado), description: description(combinado))
+    store_fields(ticket, combinado)
     Entry.new(ticket: ticket, created: false)
+  end
+
+  # Los campos particulares del tipo de caso (observación SSUSA 2), con lo que ya tenía.
+  def store_fields(ticket, datos)
+    campos = ContactTrackings::ServiceRequests::Fields.new(account: @message.account, case_type_id: ticket.case_type_id,
+                                                           skip: ticket.metadata[ContactTrackings::ServiceRequests::Fields::ASSIGNED_KEY])
+    return unless campos.any?
+
+    resultado = campos.call(service_text: service_text(datos), message_text: @text,
+                            previous: ticket.custom_attributes.to_h.slice(*field_keys(ticket)))
+    ticket.update!(custom_attributes: ticket.custom_attributes.to_h.merge(resultado.found),
+                   metadata: ticket.metadata.merge(ContactTrackings::ServiceRequests::Fields::PENDING_KEY => resultado.missing))
+  end
+
+  # @solicitudes(asignar=unidad): el campo del tipo de caso que recibe la unidad apartada
+  # (Choice#hold). Lo llena el sistema, no el cliente.
+  ASSIGN_RE = /@solicitudes\s*\(\s*asignar\s*=\s*([^)\s,]+)\s*\)/i
+
+  def assigned_meta
+    clave = @escalation[ASSIGN_RE, 1]
+    clave.present? ? { ContactTrackings::ServiceRequests::Fields::ASSIGNED_KEY => clave } : {}
+  end
+
+  def field_keys(ticket)
+    ticket.case_type&.case_type_fields&.map(&:key) || []
+  end
+
+  # La descripción del caso y la fecha ya resuelta (el campo «Fecha» la quiere como día exacto).
+  def service_text(datos)
+    [description(datos), datos['date'].present? ? "Fecha del servicio (exacta): #{datos['date']}" : nil].compact.join("\n")
   end
 
   def title(datos)

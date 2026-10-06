@@ -34,6 +34,20 @@ class ContactTrackings::ServiceRequests::Choice
     reply(apartados, con_oferta.reject { |caso| elegidos.any? { |e| e.first.id == caso.id } })
   end
 
+  # Aparta UNA opción. Público para Turn: con la hora pedida libre se aparta sin preguntar
+  # (observación SSUSA 5). Devuelve [caso, tarea, oferta].
+  def hold(caso, oferta)
+    cancel_previous(caso) # al mover (F4): la tarea anterior se cancela al apartar la nueva
+    slot = { slot: Time.zone.parse(oferta['slot']), end_time: Time.zone.parse(oferta['end_time']),
+             calendar_integration_id: oferta['cal_id'], google_calendar_id: oferta['gcal'], all_day: oferta['all_day'] }
+    tarea = ContactTrackings::ServiceMeeting.hold!(ticket: caso, slot: slot, title: caso.title, timezone: @timezone)
+    ContactTrackings::ServiceMeeting.new(tarea).confirm! unless @tentative
+    caso.update!(metadata: caso.metadata.except('oferta').merge('meeting_id' => tarea.id,
+                                                                'estado' => @tentative ? 'apartado' : 'confirmado'),
+                 custom_attributes: assigned_unit(caso, oferta))
+    [caso, tarea.reload, oferta]
+  end
+
   private
 
   def chosen(abiertos, con_oferta)
@@ -53,15 +67,11 @@ class ContactTrackings::ServiceRequests::Choice
     oferta && [caso, oferta]
   end
 
-  def hold(caso, oferta)
-    cancel_previous(caso) # al mover (F4): la tarea anterior se cancela al apartar la nueva
-    slot = { slot: Time.zone.parse(oferta['slot']), end_time: Time.zone.parse(oferta['end_time']),
-             calendar_integration_id: oferta['cal_id'], google_calendar_id: oferta['gcal'], all_day: oferta['all_day'] }
-    tarea = ContactTrackings::ServiceMeeting.hold!(ticket: caso, slot: slot, title: caso.title, timezone: @timezone)
-    ContactTrackings::ServiceMeeting.new(tarea).confirm! unless @tentative
-    caso.update!(metadata: caso.metadata.except('oferta').merge('meeting_id' => tarea.id,
-                                                                'estado' => @tentative ? 'apartado' : 'confirmado'))
-    [caso, tarea.reload, oferta]
+  # @solicitudes(asignar=unidad): la unidad apartada (TP-111) va a ese campo del caso.
+  def assigned_unit(caso, oferta)
+    clave = caso.metadata[ContactTrackings::ServiceRequests::Fields::ASSIGNED_KEY]
+    atributos = caso.custom_attributes.to_h
+    clave.present? && oferta['calendar_name'].present? ? atributos.merge(clave => oferta['calendar_name']) : atributos
   end
 
   def cancel_previous(caso)

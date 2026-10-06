@@ -1749,7 +1749,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return false unless tracking.complementary_prompt.to_s.match?(ContactTrackings::ServiceRequests::Turn::DIRECTIVE_RE)
 
     branch = branch_for(tracking, message)
-    return false unless ContactTrackings::ServiceRequests::Turn.route?(branch&.escalation)
+    return handle_service_pending(tracking, message) unless ContactTrackings::ServiceRequests::Turn.route?(branch&.escalation)
 
     texto = ContactTrackings::ServiceRequests::Turn.new(
       tracking: tracking, message: message, branch: branch,
@@ -1758,6 +1758,24 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return false if texto.blank?
 
     Rails.logger.info '[TrackingBot] 🧾 @solicitudes → servicios registrados'
+    send_auto_reply(tracking, message, texto)
+    true
+  end
+
+  # Observaciones SSUSA 2 y 5: el bot pidió un dato o la hora y la respuesta («a las 10»,
+  # «es escombro») cayó en otra ruta. Si completa un caso que esperaba algo, se atiende con la
+  # ruta de @solicitudes; si no le agrega nada, el turno sigue por donde iba.
+  def handle_service_pending(tracking, message)
+    return false if ContactTrackings::ServiceRequests::Registry.open_cases(message.conversation).none?
+
+    ruta = ContactTrackings::RouteMap.parse(tracking.complementary_prompt.to_s).routes
+                                     .find { |r| ContactTrackings::ServiceRequests::Turn.route?(r.escalation) }
+    texto = ContactTrackings::ServiceRequests::Turn.new(
+      tracking: tracking, message: message, branch: ruta, timezone: appointment_timezone(tracking, message)
+    ).complete_pending
+    return false if texto.blank?
+
+    Rails.logger.info '[TrackingBot] 🧾 @solicitudes → datos pendientes completados'
     send_auto_reply(tracking, message, texto)
     true
   end

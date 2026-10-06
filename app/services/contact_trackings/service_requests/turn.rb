@@ -44,18 +44,50 @@ class ContactTrackings::ServiceRequests::Turn
 
   def call
     servicios = ContactTrackings::ServiceRequests::Extractor.new(
-      account: @message.account, text: ContactTrackings::AttachmentText.message_text(@message), # pieza 7: y sus adjuntos
-      tracking: @tracking, context: @context
+      account: @message.account, text: text, tracking: @tracking, context: @context
     ).call
-    return nil if servicios.blank?
+    return nil if servicios.nil?
+    return complete_pending if servicios.empty?
 
-    entries = ContactTrackings::ServiceRequests::Registry.new(
-      tracking: @tracking, message: @message, escalation: @branch&.escalation, timezone: @timezone
-    ).register!(servicios)
+    entries = registry.register!(servicios)
+    reply(entries, plans(entries))
+  end
+
+  # Observaciones SSUSA 2 y 5: el bot pidió datos o la hora y el cliente contesta solo eso
+  # («es escombro, 14 t», «a las 10»). Se completan los casos que esperaban algo; si el mensaje
+  # no les agregó nada, no es para ellos y el motor sigue como siempre.
+  def complete_pending
+    entries = waiting_cases.filter_map do |caso|
+      antes = [caso.metadata.deep_dup, caso.custom_attributes.deep_dup]
+      entry = registry.complete!(caso)
+      entry unless [caso.metadata.except(ContactTrackings::ServiceRequests::Fields::PENDING_KEY), caso.custom_attributes] ==
+                   [antes.first.except(ContactTrackings::ServiceRequests::Fields::PENDING_KEY), antes.last]
+    end
+    return nil if entries.empty?
+
     reply(entries, plans(entries))
   end
 
   private
+
+  def text
+    @text ||= ContactTrackings::AttachmentText.message_text(@message) # pieza 7: y sus adjuntos
+  end
+
+  def registry
+    @registry ||= ContactTrackings::ServiceRequests::Registry.new(
+      tracking: @tracking, message: @message, escalation: @branch&.escalation, timezone: @timezone, text: text
+    )
+  end
+
+  # Sin tarea todavía y con algo pendiente: un campo obligatorio, la fecha o la hora.
+  def waiting_cases
+    ContactTrackings::ServiceRequests::Registry.open_cases(@message.conversation).select do |caso|
+      datos = caso.metadata[ContactTrackings::ServiceRequests::Registry::META_KEY].to_h
+      caso.metadata['meeting_id'].blank? && caso.metadata['oferta'].blank? &&
+        (Array(caso.metadata[ContactTrackings::ServiceRequests::Fields::PENDING_KEY]).any? || datos['date'].blank? || datos['time'].blank?)
+    end
+  end
 
   # F3: con @agendar_calendar en la ruta, las opciones de horario de cada servicio.
   def plans(entries)
@@ -65,7 +97,23 @@ class ContactTrackings::ServiceRequests::Turn
     # Un servicio que ya tiene su tarea (apartado, esperando pago, confirmado) no se vuelve a
     # ofrecer al reiterarlo: su línea dice en qué estado está.
     entries.reject { |entry| entry.ticket.metadata['meeting_id'].present? }
-           .to_h { |entry| [entry.ticket.id, agenda.plan(entry.ticket, position(entry.ticket))] }
+           .to_h { |entry| [entry.ticket.id, hold_if_exact(agenda.plan(entry.ticket, position(entry.ticket)))] }
+  end
+
+  # Observación SSUSA 5: pidió una hora y está libre → se aparta directo (tentativo si la ruta
+  # dice modo=tentativo), sin hacerle elegir de una lista.
+  def hold_if_exact(plan)
+    return plan unless plan.exact && plan.offers.one?
+
+    ContactTrackings::ServiceRequests::Choice.new(tracking: @tracking, message: @message, timezone: @timezone,
+                                                  tentative: tentative?).hold(plan.ticket, plan.offers.first)
+    plan.held = plan.offers.first
+    plan.offers = []
+    plan
+  end
+
+  def tentative?
+    ContactTrackings::CalendarOptions.parse(@branch&.escalation)&.tentative || false
   end
 
   def position(ticket)
@@ -73,27 +121,54 @@ class ContactTrackings::ServiceRequests::Turn
   end
 
   def reply(entries, planes)
-    lineas = entries.map { |entry| [line(entry), options_line(planes[entry.ticket.id])].compact.join("\n") }
-    faltan = entries.filter_map { |entry| missing(entry) }
+    lineas = entries.map do |entry|
+      plan = planes[entry.ticket.id]
+      [line(entry), units_lines(plan), options_line(plan)].compact.join("\n")
+    end
+    faltan = entries.filter_map { |entry| missing(entry, planes[entry.ticket.id]) }
     "#{header(entries)}\n\n#{lineas.join("\n")}\n\n#{closing(faltan, planes)}"
   end
 
   def closing(faltan, planes)
     partes = []
     partes << "Para programarlos me falta: #{faltan.join('; ')}." if faltan.any?
-    if planes.values.any? { |plan| plan.offers.present? }
-      partes << 'Responde con los horarios que quieres apartar (por ejemplo «1A y 3B»), o «sí» para la primera opción de cada uno.'
-    end
+    partes.concat(schedule_hints(planes.values))
     partes << 'Un asesor revisa la disponibilidad y te confirma.' if partes.empty?
     partes.join("\n")
   end
 
-  # «   1A 08:00–09:00 (TP-64) · 1B 09:00–10:00 (TP-64)», o por qué no hay.
+  def schedule_hints(planes)
+    pistas = []
+    if planes.any? { |plan| plan.offers.present? }
+      pistas << 'Responde con los horarios que quieres apartar (por ejemplo «1A y 3B»), o «sí» para la primera opción de cada uno.'
+    end
+    pistas << 'Queda apartado; cuando me confirmes el servicio lo dejo en firme.' if planes.any?(&:held) && tentative?
+    pistas
+  end
+
+  # Observación SSUSA 4: antes del horario, qué unidad es («🚛 TP-64: Low boy · Peso max t: 60»),
+  # para que el cliente vea si le sirve. Las columnas las elige la ruta (ver Scheduler).
+  def units_lines(plan)
+    return nil if plan.nil? || plan.units.blank?
+
+    nombres = (plan.offers + [plan.held].compact).to_h { |oferta| [oferta['gcal'], oferta['calendar_name']] }
+    plan.units.map { |gcal, descripcion| "    🚛 #{nombres[gcal] || 'Unidad'}: #{descripcion}" }.join("\n")
+  end
+
+  # «   a las 08:00 no hay; lo que sí hay → 1A 09:00–10:00 (TP-64) · 1B …», o lo que se apartó.
   def options_line(plan)
-    return nil if plan.nil? || (plan.offers.empty? && plan.note.nil?)
+    return nil if plan.nil?
+    return "    ✅ #{plan.note.capitalize}: #{held_text(plan.held)}" if plan.held
+    return nil if plan.offers.empty? && plan.note.nil?
 
     opciones = plan.offers.map { |oferta| option_text(oferta, plan.requested) }
     "    #{[plan.note, opciones.join(' · ').presence].compact.join(' → ')}"
+  end
+
+  def held_text(oferta)
+    inicio = Time.zone.parse(oferta['slot']).in_time_zone(@timezone)
+    fin = Time.zone.parse(oferta['end_time']).in_time_zone(@timezone)
+    "#{tentative? ? 'te lo aparté' : 'te lo agendé'} de #{inicio.strftime('%H:%M')} a #{fin.strftime('%H:%M')} (#{oferta['calendar_name']})"
   end
 
   def option_text(oferta, pedido)
@@ -134,14 +209,24 @@ class ContactTrackings::ServiceRequests::Turn
     "#{DAYS[fecha.wday]} #{fecha.day} #{MONTHS[fecha.month - 1]}#{" #{datos['time']}" if datos['time']}"
   end
 
-  # Sin fecha no se puede programar; sin ningún lugar tampoco. Una renta sin fecha de inicio igual.
-  def missing(entry)
-    datos = entry.ticket.metadata[ContactTrackings::ServiceRequests::Registry::META_KEY]
-    faltan = []
-    faltan << 'la fecha' if datos['date'].blank?
-    faltan << 'dónde es' if Array(datos['stops']).empty?
+  # Sin fecha no se puede programar; una renta sin fecha de inicio igual. Lo demás que se pide:
+  #   · con campos en el tipo de caso → sus OBLIGATORIOS vacíos (observación SSUSA 2)
+  #   · sin campos → dónde es (como antes)
+  #   · con fecha y sin hora → la hora (observación SSUSA 5: no se lista la agenda entera)
+  def missing(entry, plan = nil)
+    faltan = ContactTrackings::ServiceRequests::Fields.missing_labels(entry.ticket) + basic_missing(entry.ticket)
+    faltan << 'a qué hora lo necesitas' if plan&.need_time
     return nil if faltan.empty?
 
-    "del #{self.class.number(entry.ticket, @message.conversation)} #{faltan.join(' y ')}"
+    # Con comas: las etiquetas de los campos ya traen «y» («Material a transportar y cantidad»).
+    "del #{self.class.number(entry.ticket, @message.conversation)} #{faltan.join(', ')}"
+  end
+
+  def basic_missing(caso)
+    datos = caso.metadata[ContactTrackings::ServiceRequests::Registry::META_KEY]
+    faltan = []
+    faltan << 'la fecha' if datos['date'].blank? && !ContactTrackings::ServiceRequests::Fields.date_field_missing?(caso)
+    faltan << 'dónde es' if Array(datos['stops']).empty? && caso.case_type&.case_type_fields.blank?
+    faltan
   end
 end
