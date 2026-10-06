@@ -101,3 +101,54 @@ Con `@solicitudes(asignar=unidad)` ese campo:
 
 > En la ruta solicitud_servicio cambia `@solicitudes` por `@solicitudes(asignar=unidad)`, para que
 > el campo Unidad del caso se llene con la grúa apartada.
+
+---
+
+## Bitácora — punto 9: casos duplicados (06/10/2026)
+
+Conversación real: **377** (inbox 4, Telegram) → 6 casos (01115–01120) para 2 servicios.
+
+### 1. Qué se hizo
+
+| Causa | Arreglo |
+|---|---|
+| «Serían los dos para el 3 de octubre»: los casos anteriores no tenían fecha y no coincidían | `registry.rb#same?`: un dato que el caso anterior no tenía ya no cuenta como diferencia (commit anterior) |
+| «de centro a paraíso, 14 t y 11 t»: el cliente **corrigió** lugar y capacidad | `extractor.rb`: la IA recibe los casos abiertos numerados (con folio) y dice cuál corrige (`"caso": N`; acepta también el folio) |
+| La IA a veces toma «Hiab 11 t» como otro equipo frente a «Hiab 12 t» | `registry.rb#same_kind_pending`: respaldo sin IA — un caso abierto del mismo tipo de equipo, sin tarea e incompleto se corrige; solo «adicional / además / agrega / otro más» abre otro |
+| Material = «Hiab 14 a 15 Ton», Peso = capacidad | `fields.rb`: el equipo y sus toneladas no son la carga; `registry.rb`: con varios servicios en un mensaje, cada caso se llena solo con sus datos (no con el mensaje completo) |
+
+Al actualizar un caso también se renueva su título (no se queda con el lugar viejo).
+
+### 2. Cómo funciona
+
+```
+Casos ya registrados en esta conversación:      ← se le pasa a la IA
+1. Hiab 14 a 15 t · KM10.5 Prefabricado · lun 12 oct (caso 01135)
+2. Hiab 12 t · KM10.5 Prefabricado · lun 12 oct (caso 01136)
+
+«…de uno de 14 t y el otro 11 t, de centro a paraíso»
+  → {"etiqueta": "Hiab 14 t", …, "caso": 1}, {"etiqueta": "Hiab 11 t", …, "caso": 2}
+  → «Actualicé 2 servicios que ya tenía»
+```
+
+### 3. Pila de pruebas (Agents IA Test, 493, agente #10368 — los 4 mensajes de la 377, fecha 12 oct)
+
+| Conv. | Resultado |
+|---|---|
+| 383 | ⚠️ Turno 2 ya no duplica; turno 4 abrió 2 (la IA contestó con el folio «01126» en vez de 1). Campos: Material = equipo |
+| 384 | ✅ 2 casos; ⚠️ Peso 11 t en los dos (mensaje completo mezclaba) |
+| 385 | ⚠️ 3 casos: la IA tomó «Hiab 11 t» como nuevo frente a «Hiab 12 t» → respaldo sin IA |
+| 386 | ✅ **2 casos**, cada uno con su peso, material y ruta; pidió Material y Peso desde el 1.er turno |
+
+Specs nuevas: `extractor_spec.rb` (número y folio), `registry_spec.rb` (case_ref, respaldo, «adicional»). No corridas.
+
+### 4. Cómo pedírselo al Asistente
+
+No hace falta: es del motor de `@solicitudes`; cualquier ruta con `@solicitudes` lo usa.
+
+### Pendiente — punto 3
+
+En la 377 no se creó ninguna cita: no hay hiab en la hoja «Servicio Gruas» («no tengo ese equipo
+en el catálogo»). Todas las citas de los agentes de Grúas tienen la fecha pedida, en la base y en
+Google (calendarios, cuenta y links de la hoja en America/Mexico_City). Falta que SSUSA aclare si
+«no se generó» (faltan los hiab en la hoja) o si fue otra conversación.

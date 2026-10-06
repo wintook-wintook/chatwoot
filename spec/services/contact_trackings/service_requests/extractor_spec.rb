@@ -28,6 +28,23 @@ RSpec.describe ContactTrackings::ServiceRequests::Extractor do
       .to eq(capacity_t: 60.0, date_text: '29 de mayo 2026', time_text: '08:00 am', folios: ['NAV1'])
   end
 
+  it 'con casos abiertos, «caso» dice cuál corrige; un número que no existe es servicio nuevo' do
+    responde([{ ref: '1', etiqueta: 'Hiab 14 t', equipo: { tipo: 'hiab' }, paradas: [], caso: 1 },
+              { ref: '2', etiqueta: 'Hiab 11 t', equipo: { tipo: 'hiab' }, paradas: [], caso: '7' }])
+
+    servicios = described_class.new(account: account, text: 'de centro a paraíso',
+                                    open_cases: ['1. Hiab 14 a 15 t (caso 01126)', '2. Hiab 12 t (caso 01127)']).call
+    expect(servicios.map(&:case_ref)).to eq([1, nil])
+  end
+
+  it 'si la IA contesta con el folio en vez del número, también encuentra el caso' do
+    responde([{ ref: '1', etiqueta: 'Hiab 11 t', equipo: { tipo: 'hiab' }, paradas: [], caso: '01127' }])
+
+    servicios = described_class.new(account: account, text: 'el otro de 11 t',
+                                    open_cases: ['1. Hiab 14 a 15 t (caso 01126)', '2. Hiab 12 t (caso 01127)']).call
+    expect(servicios.map(&:case_ref)).to eq([2])
+  end
+
   it '«entrega y recolección» de ida y vuelta se parte en dos servicios' do
     responde([{ ref: '1', etiqueta: 'Transporte', paradas: [{ tipo: 'origen', lugar: 'Carmen' },
                                                             { tipo: 'destino', lugar: 'Villahermosa' },

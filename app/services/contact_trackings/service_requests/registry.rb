@@ -50,10 +50,13 @@ class ContactTrackings::ServiceRequests::Registry
   end
 
   def register!(services)
-    previos = self.class.open_cases(@conversation).to_a
+    abiertos = self.class.open_cases(@conversation).to_a
+    previos = abiertos.dup
+    @several = services.size > 1
     services.map do |servicio|
       datos = serialize(servicio)
-      igual = previos.find { |caso| same?(caso.metadata[META_KEY], datos) }
+      igual = referenced(abiertos, previos, servicio) || previos.find { |caso| same?(caso.metadata[META_KEY], datos) } ||
+              same_kind_pending(previos, datos)
       next create(datos) if igual.nil?
 
       previos.delete(igual)
@@ -62,6 +65,33 @@ class ContactTrackings::ServiceRequests::Registry
   end
 
   private
+
+  # Observación SSUSA 9: la IA dijo qué caso abierto corrige este servicio («de centro a
+  # paraíso» cambió el lugar del 1️⃣). Manda sobre la comparación por equipo, fecha y lugar.
+  def referenced(abiertos, previos, servicio)
+    return nil if servicio.case_ref.blank?
+
+    caso = abiertos[servicio.case_ref - 1]
+    caso if previos.include?(caso)
+  end
+
+  # Respaldo sin IA (observación SSUSA 9, conv. 385: la IA tomó «Hiab 11 t» como otro equipo frente
+  # a «Hiab 12 t»): un caso abierto del MISMO tipo de equipo, sin tarea y todavía INCOMPLETO (le
+  # faltan campos o la fecha) es este servicio corregido, salvo que el cliente diga que es
+  # adicional. Uno ya completo pedido para otra fecha sigue siendo otro servicio.
+  ADDITIONAL_RE = /\b(adicional\w*|adem[aá]s|agreg\w*|otr[oa] m[aá]s|un[oa] m[aá]s)\b/i
+
+  def same_kind_pending(previos, datos)
+    return nil if @text.match?(ADDITIONAL_RE)
+
+    tipo = key(datos).first
+    previos.find { |caso| incomplete?(caso) && key(caso.metadata[META_KEY].to_h).first == tipo }
+  end
+
+  def incomplete?(caso)
+    caso.metadata['meeting_id'].blank? &&
+      (Array(caso.metadata[ContactTrackings::ServiceRequests::Fields::PENDING_KEY]).any? || caso.metadata.dig(META_KEY, 'date').blank?)
+  end
 
   # La fecha o la hora que faltaban, si este mensaje las trae. Lo que ya tenía no se toca.
   def with_new_date(datos)
@@ -75,7 +105,7 @@ class ContactTrackings::ServiceRequests::Registry
 
   def serialize(servicio)
     fecha = ContactTrackings::ServiceRequests::DateResolver.new(timezone: @timezone).call(servicio.date_text, servicio.time_text)
-    servicio.to_h.transform_keys(&:to_s).merge(
+    servicio.to_h.except(:case_ref).transform_keys(&:to_s).merge(
       'date' => fecha.date&.iso8601, 'time' => fecha.time, 'ambiguous' => fecha.ambiguous,
       'source_message_id' => @message.id
     )
@@ -113,7 +143,8 @@ class ContactTrackings::ServiceRequests::Registry
   def update(ticket, datos)
     anterior = ticket.metadata[META_KEY].to_h
     combinado = anterior.merge(datos.reject { |_, valor| valor.blank? })
-    ticket.update!(metadata: ticket.metadata.merge(META_KEY => combinado), description: description(combinado))
+    ticket.update!(metadata: ticket.metadata.merge(META_KEY => combinado), description: description(combinado),
+                   title: title(combinado))
     store_fields(ticket, combinado)
     Entry.new(ticket: ticket, created: false)
   end
@@ -124,7 +155,7 @@ class ContactTrackings::ServiceRequests::Registry
                                                            skip: ticket.metadata[ContactTrackings::ServiceRequests::Fields::ASSIGNED_KEY])
     return unless campos.any?
 
-    resultado = campos.call(service_text: service_text(datos), message_text: @text,
+    resultado = campos.call(service_text: service_text(datos), message_text: field_message_text,
                             previous: ticket.custom_attributes.to_h.slice(*field_keys(ticket)))
     ticket.update!(custom_attributes: ticket.custom_attributes.to_h.merge(resultado.found),
                    metadata: ticket.metadata.merge(ContactTrackings::ServiceRequests::Fields::PENDING_KEY => resultado.missing))
@@ -137,6 +168,13 @@ class ContactTrackings::ServiceRequests::Registry
   def assigned_meta
     clave = @escalation[ASSIGN_RE, 1]
     clave.present? ? { ContactTrackings::ServiceRequests::Fields::ASSIGNED_KEY => clave } : {}
+  end
+
+  # Con varios servicios en el mensaje, el texto completo mezcla los datos de uno con otro
+  # («uno de 14 t y el otro de 11 t» dejaba 11 t en los dos, conv. 384): cada caso se llena
+  # solo con lo que el Extractor ya separó para él.
+  def field_message_text
+    @several ? '(el mensaje pide varios servicios: usa solo los datos de ESTE servicio)' : @text
   end
 
   def field_keys(ticket)

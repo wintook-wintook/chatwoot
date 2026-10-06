@@ -17,15 +17,19 @@
 class ContactTrackings::ServiceRequests::Extractor
   Service = Struct.new(:ref, :label, :equipment_type, :capacity_t, :stops, :date_text, :time_text,
                        :duration_text, :cargo, :weight_t, :dimensions, :folios, :site_contact,
-                       :mode, :notes, keyword_init: true)
+                       :mode, :notes, :case_ref, keyword_init: true)
 
   MAX_TEXT = 6000
 
-  def initialize(account:, text:, tracking: nil, context: nil)
+  # open_cases: los casos abiertos de la conversación, ya numerados como los ve el cliente
+  # («1. Hiab 14 a 15 t · KM10.5 · sáb 3 oct»). Con ellos la IA dice si el mensaje corrige uno
+  # (observación SSUSA 9: «de centro a paraíso» abría otros dos casos).
+  def initialize(account:, text:, tracking: nil, context: nil, open_cases: [])
     @account = account
     @text = text.to_s.strip
     @tracking = tracking
     @context = context.to_s.strip
+    @open_cases = Array(open_cases)
   end
 
   def call
@@ -60,7 +64,18 @@ class ContactTrackings::ServiceRequests::Extractor
   def details(raw)
     { cargo: raw['carga'].presence, weight_t: number(raw['peso_t']), dimensions: raw['medidas'].presence,
       folios: Array(raw['folios']).map(&:to_s).compact_blank, site_contact: raw['responsable_sitio'].presence,
-      mode: raw['modalidad'].presence, notes: raw['notas'].presence }
+      mode: raw['modalidad'].presence, notes: raw['notas'].presence, case_ref: case_ref(raw['caso']) }
+  end
+
+  # El número (en la lista) del caso abierto que este servicio corrige; otro valor = nuevo.
+  # La IA a veces contesta con el folio que vio en la conversación («01126»): también vale.
+  def case_ref(value)
+    texto = value.to_s[/\d+/].to_s
+    return nil if texto.empty?
+    return texto.to_i if texto.to_i.between?(1, @open_cases.size) && texto.length < 3
+
+    lugar = @open_cases.index { |linea| linea.to_s[/\(caso 0*(\d+)\)/, 1] == texto.sub(/\A0+/, '') }
+    lugar ? lugar + 1 : nil
   end
 
   # «Entrega y recolección (Carmen – Villahermosa – Carmen)»: la IA insiste en un viaje redondo,
@@ -123,7 +138,8 @@ class ContactTrackings::ServiceRequests::Extractor
 
   def user_prompt
     contexto = @context.present? ? "Mensajes anteriores de la conversación:\n#{@context.truncate(2000)}\n\n" : ''
-    "#{contexto}Mensaje actual del cliente:\n\"\"\"\n#{@text.truncate(MAX_TEXT)}\n\"\"\""
+    casos = @open_cases.any? ? "Casos ya registrados en esta conversación:\n#{@open_cases.join("\n")}\n\n" : ''
+    "#{contexto}#{casos}Mensaje actual del cliente:\n\"\"\"\n#{@text.truncate(MAX_TEXT)}\n\"\"\""
   end
 
   RULES = <<~RULES
@@ -149,6 +165,16 @@ class ContactTrackings::ServiceRequests::Extractor
       servicio.
     - Si el mensaje no pide ningún servicio (saludo, pregunta general), la lista va vacía.
 
+    Casos ya registrados (si te los doy):
+    - Si el mensaje CORRIGE, COMPLETA o REPITE uno de ellos (otra fecha, otro lugar, otra
+      capacidad, la carga, «los dos para el 3 de octubre», «uno de 14 t y el otro de 11 t»),
+      devuelve ese servicio con "caso": su número en la lista (1, 2…), no el folio. No es un
+      servicio nuevo.
+    - "caso": null SOLO si pide un equipo ADICIONAL que no está en la lista («además otro hiab»,
+      «agrega una grúa»).
+    - En un servicio con "caso", llena los datos de ese caso que el mensaje no cambia, copiados de
+      la lista.
+
     Datos de cada servicio:
     - etiqueta: SIEMPRE, nombre corto para el cliente («Grúa 60 t», «Hiab 12 t», «Plana 12 m»,
       «Flete plataforma Haulotte HA20»).
@@ -171,7 +197,7 @@ class ContactTrackings::ServiceRequests::Extractor
     {"servicios": [{"ref": "1", "etiqueta": "", "equipo": {"tipo": "", "capacidad_t": null},
       "paradas": [{"tipo": "origen|destino|parada", "lugar": ""}], "fecha": null, "hora": null,
       "duracion": null, "carga": null, "peso_t": null, "medidas": null, "folios": [],
-      "responsable_sitio": null, "modalidad": null, "notas": null}]}
+      "responsable_sitio": null, "modalidad": null, "notas": null, "caso": null}]}
   RULES
   private_constant :RULES
 end

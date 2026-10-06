@@ -70,6 +70,26 @@ RSpec.describe ContactTrackings::ServiceRequests::Registry do
     expect([otra_vez.created, otra_vez.ticket.id]).to eq([false, primero.id])
   end
 
+  it 'con case_ref actualiza ese caso aunque cambien el lugar y la capacidad (observación SSUSA 9)' do
+    primero = registrar(grua).first.ticket
+    corregido = grua(label: 'Grúa 50 t', stops: [{ 'tipo' => 'origen', 'lugar' => 'Centro' }, { 'tipo' => 'destino', 'lugar' => 'Paraíso' }],
+                     case_ref: 1)
+
+    otra_vez = registrar(corregido).first
+    expect([otra_vez.created, otra_vez.ticket.id, otra_vez.ticket.title]).to eq([false, primero.id, 'Grúa 50 t — Centro → Paraíso'])
+    expect(otra_vez.ticket.metadata['servicio']).not_to have_key('case_ref')
+  end
+
+  it 'un caso incompleto del mismo equipo se corrige aunque la IA no dé el número; «adicional» abre otro' do
+    registrar(grua(date_text: nil, stops: []))
+
+    expect(registrar(grua(label: 'Grúa 50 t', stops: [{ 'lugar' => 'Centro' }])).first.created).to be(false)
+    otra = described_class.new(tracking: nil, message: mensaje, escalation: '@solicitudes -> @crear_ticket',
+                               timezone: 'America/Mexico_City', text: 'además otra grúa')
+    adicional = otra.register!([grua(date_text: nil, stops: [])])
+    expect(adicional.first.created).to be(true)
+  end
+
   context 'with campos en el tipo de caso (observación SSUSA 2)' do
     let(:extractor) { instance_double(Cases::Ai::FieldExtractor, available?: true) }
 

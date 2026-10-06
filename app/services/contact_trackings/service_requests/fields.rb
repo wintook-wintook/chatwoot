@@ -61,11 +61,12 @@ class ContactTrackings::ServiceRequests::Fields
 
   private
 
-  # «Equipo: plana» se copiaba al campo Material (prueba 06/10/2026, conv. 380): el equipo es lo
-  # que se pide, no lo que se mueve.
+  # «Equipo: plana» se copiaba al campo Material (conv. 380) y «Hiab 14 a 15 Ton» a Material y
+  # Peso (conv. 383): el equipo y lo que aguanta son lo que se pide, no lo que se mueve.
   def prompt_text(service_text, message_text)
-    'Datos de ESTE servicio («Equipo» es la unidad que el cliente pide; NO es la carga, el material ' \
-      "ni lo que se transporta):\n#{service_text}\n\n" \
+    'Datos de ESTE servicio. «Equipo» es la unidad que el cliente pide y sus toneladas son lo que AGUANTA: ' \
+      'NO son la carga, el material ni el peso de lo que se transporta. Si el cliente no dice qué va a ' \
+      "mover ni cuánto pesa, esos campos van en null:\n#{service_text}\n\n" \
       "Mensaje del cliente (si pide varios servicios, usa solo lo que es de este):\n#{message_text.to_s.truncate(3000)}"
   end
 

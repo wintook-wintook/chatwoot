@@ -44,7 +44,7 @@ class ContactTrackings::ServiceRequests::Turn
 
   def call
     servicios = ContactTrackings::ServiceRequests::Extractor.new(
-      account: @message.account, text: text, tracking: @tracking, context: @context
+      account: @message.account, text: text, tracking: @tracking, context: @context, open_cases: open_cases_text
     ).call
     return nil if servicios.nil?
     return complete_pending if servicios.empty?
@@ -69,6 +69,17 @@ class ContactTrackings::ServiceRequests::Turn
   end
 
   private
+
+  # «1. Hiab 14 a 15 t · KM10.5 Prefabricado · sáb 3 oct · carga escombro · 14.0 t (caso 01126)» — mismo
+  # número que ve el cliente, para que la IA diga cuál corrige (observación SSUSA 9).
+  def open_cases_text
+    ContactTrackings::ServiceRequests::Registry.open_cases(@message.conversation).each_with_index.map do |caso, i|
+      datos = caso.metadata[ContactTrackings::ServiceRequests::Registry::META_KEY].to_h
+      partes = [datos['label'].presence || caso.title, route(datos), when_text(datos),
+                datos['cargo'] && "carga #{datos['cargo']}", datos['weight_t'] && "#{datos['weight_t']} t"]
+      "#{i + 1}. #{partes.compact_blank.join(' · ')} (caso #{caso.folio.presence || caso.id})"
+    end
+  end
 
   def text
     @text ||= ContactTrackings::AttachmentText.message_text(@message) # pieza 7: y sus adjuntos
