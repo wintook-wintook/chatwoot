@@ -58,7 +58,16 @@ RSpec.describe ContactTrackings::ServiceRequests::Scheduler do
 
     agenda = described_class.new(tracking: tracking, route: ruta, timezone: tz)
     allow(agenda).to receive(:slot_service).and_return(nil)
-    expect(agenda.plan(caso('date' => '2027-10-05'), 1).note).to eq('no tengo ese equipo en el catálogo')
+    expect(agenda.plan(caso('date' => '2027-10-05'), 1).note).to eq('no tengo plana en el catálogo')
+  end
+
+  it 'sin el tipo pedido, la búsqueda relacionada quita el filtro de texto y deja el de capacidad (observación SSUSA 1)' do
+    ruta_capacidad = ContactTrackings::RouteMap::Route.new(name: 's', escalation: '@solicitudes -> @agendar_calendar ' \
+                                                                                  '-> {{hoja_buscar: Equipos | tipo=?; peso_max_t>=? | Calendar_ID}}')
+    agenda = described_class.new(tracking: tracking, route: ruta_capacidad, timezone: tz)
+
+    expect(agenda.send(:related_spec).filters.map(&:column)).to eq(['peso_max_t'])
+    expect(described_class.new(tracking: tracking, route: ruta, timezone: tz).send(:related_spec)).to be_nil
   end
 
   it 'una renta de 6 meses ofrece los equipos libres todo el periodo (F7)' do

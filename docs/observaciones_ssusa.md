@@ -152,3 +152,44 @@ En la 377 no se creó ninguna cita: no hay hiab en la hoja «Servicio Gruas» (�
 en el catálogo»). Todas las citas de los agentes de Grúas tienen la fecha pedida, en la base y en
 Google (calendarios, cuenta y links de la hoja en America/Mexico_City). Falta que SSUSA aclare si
 «no se generó» (faltan los hiab en la hoja) o si fue otra conversación.
+
+---
+
+## Bitácora — punto 1: la palabra «equipo» y recomendar relacionados (06/10/2026)
+
+### 1. Qué se hizo
+
+| Causa | Arreglo |
+|---|---|
+| «flete de este **equipo**: plataforma articulada Haulotte» → el motor guardaba tipo = «plataforma» y lo relacionaba con las «Plataforma plana» de la hoja (conv. 257, 263) | `extractor.rb`: el tipo es la unidad **de la empresa**; la máquina/equipo **del cliente** es carga. Sin unidad dicha → tipo vacío |
+| Lo pedido no está en la hoja (hiab) → solo «no tengo ese equipo en el catálogo» (conv. 377) | `scheduler.rb`: se busca otra vez sin el filtro de texto (`tipo=?`) y con el de números (`peso_max_t>=?`): «ℹ️ No tengo hiab; lo más parecido que tengo» |
+| Sin peso ni capacidad para comparar | «no tengo hiab en el catálogo; manejo: Low boy, Plataforma plana extendible, Cama baja, Plataforma plana, Gondola / caja de volteo» (valores de la columna de la hoja) |
+| Lo relacionado se apartaba solo | `turn.rb`: lo relacionado solo se **recomienda**; el cliente confirma con «sí» |
+
+### 2. Cómo funciona
+
+```
+👤 Necesito un hiab de 14 toneladas … a las 11:00 am … 8 toneladas de varilla
+🤖 1️⃣ Hiab 14 t · KM10.5 Prefabricado · lun 12 oct 11:00 (caso 01139)
+       ℹ️ No tengo hiab; lo más parecido que tengo:
+       🚛 TP-111: Plataforma plana · Peso max t: 40.8 · Largo m: 14.02 · Placas: 74UR8D
+       sí hay a las 11:00 → 1A 11:00–12:00 (TP-111)
+👤 sí
+🤖 📌 Aparté: 1️⃣ Hiab 14 t · lun 12 oct 11:00–12:00 (TP-111)
+```
+
+### 3. Pila de pruebas (Agents IA Test 493, agente #10368)
+
+| Conv. | Mensaje | Resultado |
+|---|---|---|
+| 387 | Hiab 14 t, lun 12 oct 09:00, 8 t de varilla | ⚠️ «No tengo hiab; lo más parecido» ✅ pero lo apartó solo → corregido |
+| 388 | Flete de «plataforma articulada Haulotte HA20 de 9.4 t» | ✅ Haulotte = Material (no tipo); «Estas unidades aguantan la carga» (también apartó solo → corregido) |
+| 389 | Hiab 14 t 11:00 · luego «sí» | ✅ Recomienda TP-111 sin apartar; con «sí» la aparta y Unidad = TP-111 |
+| consola | «hiab» sin peso | ✅ «no tengo hiab en el catálogo; manejo: …» |
+
+Spec nueva: `scheduler_spec.rb` (búsqueda relacionada). No corrida.
+
+### 4. Cómo pedírselo al Asistente
+
+No hace falta: lo hace el motor en cualquier ruta con `@solicitudes` cuyo `{{hoja_buscar:}}`
+tenga un filtro de texto (`tipo=?`) y uno de números (`peso_max_t>=?`).

@@ -113,8 +113,9 @@ class ContactTrackings::ServiceRequests::Turn
 
   # Observación SSUSA 5: pidió una hora y está libre → se aparta directo (tentativo si la ruta
   # dice modo=tentativo), sin hacerle elegir de una lista.
+  # Lo relacionado (no era lo que pidió, observación SSUSA 1) solo se recomienda: lo confirma él.
   def hold_if_exact(plan)
-    return plan unless plan.exact && plan.offers.one?
+    return plan unless plan.exact && plan.offers.one? && plan.related.blank?
 
     ContactTrackings::ServiceRequests::Choice.new(tracking: @tracking, message: @message, timezone: @timezone,
                                                   tentative: tentative?).hold(plan.ticket, plan.offers.first)
@@ -134,7 +135,7 @@ class ContactTrackings::ServiceRequests::Turn
   def reply(entries, planes)
     lineas = entries.map do |entry|
       plan = planes[entry.ticket.id]
-      [line(entry), units_lines(plan), options_line(plan)].compact.join("\n")
+      [line(entry), related_line(plan), units_lines(plan), options_line(plan)].compact.join("\n")
     end
     faltan = entries.filter_map { |entry| missing(entry, planes[entry.ticket.id]) }
     "#{header(entries)}\n\n#{lineas.join("\n")}\n\n#{closing(faltan, planes)}"
@@ -155,6 +156,11 @@ class ContactTrackings::ServiceRequests::Turn
     end
     pistas << 'Queda apartado; cuando me confirmes el servicio lo dejo en firme.' if planes.any?(&:held) && tentative?
     pistas
+  end
+
+  # Observación SSUSA 1: no hay lo pedido y se ofrece lo más parecido («No tengo hiab; …»).
+  def related_line(plan)
+    "    ℹ️ #{plan.related[0].upcase}#{plan.related[1..]}" if plan&.related.present?
   end
 
   # Observación SSUSA 4: antes del horario, qué unidad es («🚛 TP-64: Low boy · Peso max t: 60»),

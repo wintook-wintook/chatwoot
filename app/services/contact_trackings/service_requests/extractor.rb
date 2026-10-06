@@ -182,6 +182,10 @@ class ContactTrackings::ServiceRequests::Extractor
       rabón, pick up, camión, tracto, quinta, contenedor, plataforma de elevación, otro.
       «camión con grúa tipo hiab» = hiab; «tracto con plana de 12 mts» = plana; «unidad
       ligera» = pick up. equipo.capacidad_t: solo si el cliente la dijo (toneladas).
+    - equipo.tipo es la unidad DE LA EMPRESA que hace el servicio. La máquina o el equipo DEL
+      CLIENTE que se va a mover («equipo 1: plataforma articulada Haulotte HA20», «mi
+      excavadora», «equipo de izaje con certificados») es CARGA o requisito, NUNCA equipo.tipo.
+      Si el cliente no dice con qué unidad (p. ej. «flete de maquinaria»), equipo.tipo = null.
     - paradas: en orden. «Presentarse en» / «origen» / «carga en» = origen. «Entregar en» /
       «destino» = destino. Un viaje redondo repite el origen al final.
     - fecha: SOLO el día, copiado como lo escribió el cliente («mañana», «el lunes 01 de junio»,

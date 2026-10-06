@@ -24,8 +24,9 @@ class ContactTrackings::ServiceRequests::Scheduler
 
   # La nota explica por qué no hay opciones (o aclara algo) en la línea del servicio.
   # exact: la hora pedida está libre (una sola opción). units: { calendario => descripción }.
-  # held: la opción que Turn apartó directo (exact).
-  Plan = Struct.new(:ticket, :offers, :note, :requested, :exact, :need_time, :units, :held, keyword_init: true)
+  # held: la opción que Turn apartó directo (exact). related: no había lo pedido y se ofrece lo
+  # más parecido (observación SSUSA 1); el texto va antes de las unidades.
+  Plan = Struct.new(:ticket, :offers, :note, :requested, :exact, :need_time, :units, :held, :related, keyword_init: true)
 
   def initialize(tracking:, route:, timezone:)
     @tracking = tracking
@@ -46,8 +47,14 @@ class ContactTrackings::ServiceRequests::Scheduler
     return Plan.new(ticket: ticket, offers: [], note: 'esa fecha ya pasó') if at < Time.current
 
     buscador = slot_service(datos)
-    return Plan.new(ticket: ticket, offers: [], note: 'no tengo ese equipo en el catálogo') if buscador.nil?
+    return Plan.new(ticket: ticket, offers: [], note: not_in_catalog(datos)) if buscador.nil?
 
+    build_plan(ticket, number, buscador, at, datos).tap { |plan| plan.related = related_note(datos) if @related }
+  end
+
+  private
+
+  def build_plan(ticket, number, buscador, at, datos)
     dias = ContactTrackings::CalendarOptions.period_days(datos['duration_text'], at.to_date)
     return rental_offer(ticket, number, buscador, at.beginning_of_day, dias) if dias
     return Plan.new(ticket: ticket, offers: [], need_time: true, requested: at) if datos['time'].blank?
@@ -55,7 +62,42 @@ class ContactTrackings::ServiceRequests::Scheduler
     offer(ticket, number, buscador, at)
   end
 
-  private
+  # ── Observación SSUSA 1: lo pedido no está en la hoja ────────────────────────
+  # Se busca otra vez sin los filtros de texto («tipo=?») y con los de números («peso_max_t>=?»):
+  # las unidades que aguantan lo pedido, ofrecidas como «lo más parecido».
+  def related_spec
+    filtros = @spec.filters.reject { |filtro| filtro.ask? && !filtro.numeric? }
+    return nil if filtros.empty? || filtros.size == @spec.filters.size
+
+    ContactTrackings::SheetLookup::Spec.new(sheet: @spec.sheet, filters: filtros, returns: @spec.returns)
+  end
+
+  def related_note(datos)
+    tipo = datos['equipment_type'].presence
+    tipo ? "no tengo #{tipo}; lo más parecido que tengo:" : 'estas unidades aguantan la carga:'
+  end
+
+  # Sin nada parecido que ofrecer: qué sí se maneja (los valores de las columnas de texto).
+  def not_in_catalog(datos)
+    tipos = catalog_types
+    base = "no tengo #{datos['equipment_type'].presence || 'ese equipo'} en el catálogo"
+    tipos.any? ? "#{base}; manejo: #{tipos.join(', ')}" : base
+  end
+
+  def catalog_types
+    return [] if @spec.nil?
+
+    filas = sheet_rows
+    @spec.filters.select { |filtro| filtro.ask? && !filtro.numeric? }
+         .flat_map { |filtro| filas.filter_map { |fila| cell(fila, filtro.column).presence } }
+         .map { |valor| valor.to_s.sub(/\s*\(.*\)\s*\z/, '') }.uniq.first(8)
+  end
+
+  def sheet_rows
+    fuente = @tracking.account.knowledge_sources.active.where(source_type: 'google_sheet')
+                      .find_by('LOWER(name) = LOWER(?)', @spec.sheet)
+    fuente ? fuente.google_sheet_rows.order(:row_index).pluck(:data) : []
+  end
 
   def offer(ticket, number, buscador, at)
     exacto = buscador.slot_for(at)
@@ -114,14 +156,25 @@ class ContactTrackings::ServiceRequests::Scheduler
   def calendars_for(datos)
     return nil if @spec.nil?
 
-    texto = [datos['equipment_type'], datos['capacity_t'] && "#{datos['capacity_t']} t", datos['weight_t'] && "#{datos['weight_t']} t"]
-    resultado = ContactTrackings::SheetLookup.new(@tracking.account, @spec, text: texto.compact.join(' ')).call
-    return nil unless resultado.ok?
+    resultado = lookup_with_fallback(datos)
+    return nil unless resultado&.ok?
 
     filas = rows_by_calendar(resultado.rows)
     @units = filas.transform_values { |fila| describe_unit(fila) }.compact_blank
     salida = ContactTrackings::SheetCalendars.narrow(@tracking, filas.keys.compact_blank)
     salida.status == :ok ? salida : nil
+  end
+
+  def lookup_with_fallback(datos)
+    partes = [datos['equipment_type'], datos['capacity_t'] && "#{datos['capacity_t']} t", datos['weight_t'] && "#{datos['weight_t']} t"]
+    texto = partes.compact.join(' ')
+    @related = false
+    resultado = ContactTrackings::SheetLookup.new(@tracking.account, @spec, text: texto).call
+    # Sin capacidad ni peso no hay con qué comparar: «lo más parecido» serían todas.
+    return resultado if resultado.ok? || related_spec.nil? || (datos['capacity_t'].blank? && datos['weight_t'].blank?)
+
+    @related = true
+    ContactTrackings::SheetLookup.new(@tracking.account, related_spec, text: texto).call
   end
 
   # { id del calendario => fila }: el calendario es la 1.ª columna que regresa la directiva.
