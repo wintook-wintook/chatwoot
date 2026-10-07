@@ -950,7 +950,10 @@ class KnowledgeBaseResponseService
     # modelo (ni de rebote al cliente). Los tokens de directiva sueltos se quitan
     # también (ver KnowledgeBase::Directives.strip_tokens): son configuración, no
     # instrucciones para el modelo.
-    KnowledgeBase::Directives.strip_tokens(ContactTrackings::RouteMap.strip(@tracking.complementary_prompt)).presence
+    # La sección [MENSAJE DE BIENVENIDA] la manda el motor tal cual en el primer mensaje
+    # (ContactTrackings::WelcomeMessage): si el modelo la viera, la repetiría.
+    prompt = ContactTrackings::WelcomeMessage.strip(ContactTrackings::RouteMap.strip(@tracking.complementary_prompt))
+    KnowledgeBase::Directives.strip_tokens(prompt).presence
   end
 
   # El clasificador (@ruta) ya decidió de qué trata el turno, y con esa decisión se eligió
