@@ -193,3 +193,38 @@ Spec nueva: `scheduler_spec.rb` (búsqueda relacionada). No corrida.
 
 No hace falta: lo hace el motor en cualquier ruta con `@solicitudes` cuyo `{{hoja_buscar:}}`
 tenga un filtro de texto (`tipo=?`) y uno de números (`peso_max_t>=?`).
+
+---
+
+## Prueba del punto 5 en una conversación (07/10/2026)
+
+### Hallazgo: el pedido entraba por otra ruta
+Conv. **390**: «Necesito un low boy… para 30 toneladas» lo clasificó `disponibilidad_capacidad`
+(su ejemplo es «necesito un remolque para 50 toneladas»), que usaba la agenda general: listó 5
+horarios desde las 00:00 y pidió correo. Lo nuevo solo vivía en `@solicitudes`.
+
+**Arreglo (en el agente #10368, sin código):** `disponibilidad_capacidad` usa la misma cadena que
+`solicitud_servicio`:
+```
+- -> @solicitudes(asignar=unidad) -> @crear_ticket(tipo=Renta Unidades, prioridad=media)
+    -> @agendar_calendar(duracion=?, horario=24h, modo=tentativo)
+    -> {{hoja_buscar: Servicio Gruas | tipo=?; peso_max_t>=? | Calendar_ID, tipo, peso_max_t, largo_m, placas}}
+```
+`disponibilidad_remolque` queda igual (preguntas por una unidad nombrada). Comprobador: válido.
+
+### Hallazgo: «además otro» corregía el apartado
+Conv. **391**: «Necesito además otro low boy… a Cárdenas» cambió el destino del caso 1 ya apartado.
+**Arreglo** (`registry.rb`, `extractor.rb`): pedir otra unidad («además/también/necesito otro»,
+«adicional», «uno más») abre otro caso siempre; «el otro» (con artículo) sigue siendo corrección.
+Un caso apartado solo se trata como el mismo si no cambian día ni hora (para eso está «muévelo»).
+
+### Conversación de prueba: **393** (Agents IA Test)
+
+| Cliente | Bot |
+|---|---|
+| Low boy vie 16 oct, Paraíso → Comalcalco, excavadora 30 t (sin hora) | «me falta: a qué hora lo necesitas» — sin lista |
+| «a las 10:00 am» | 🚛 TP-64 descrita · «✅ Sí hay a las 10:00: te lo aparté» |
+| «además otro low boy… 10:00… retroexcavadora 25 t» | Caso 2 nuevo · 🚛 TP-93 · «✅ Sí hay a las 10:00» |
+| «además otro low boy… 10:00… motoconformadora 20 t» | Caso 3 · «a las 10:00 no hay; lo que sí hay → 3A 11:00 (TP-64) · 3B 12:00 (TP-93) · 3C 13:00 (TP-64)» |
+
+Regresión punto 9: conv. **394** (los 4 mensajes de la 377) → 2 casos ✅.

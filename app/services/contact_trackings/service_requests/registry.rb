@@ -55,8 +55,7 @@ class ContactTrackings::ServiceRequests::Registry
     @several = services.size > 1
     services.map do |servicio|
       datos = serialize(servicio)
-      igual = referenced(abiertos, previos, servicio) || previos.find { |caso| same?(caso.metadata[META_KEY], datos) } ||
-              same_kind_pending(previos, datos)
+      igual = another_unit? ? nil : match(abiertos, previos, servicio, datos)
       next create(datos) if igual.nil?
 
       previos.delete(igual)
@@ -68,22 +67,41 @@ class ContactTrackings::ServiceRequests::Registry
 
   # Observación SSUSA 9: la IA dijo qué caso abierto corrige este servicio («de centro a
   # paraíso» cambió el lugar del 1️⃣). Manda sobre la comparación por equipo, fecha y lugar.
-  def referenced(abiertos, previos, servicio)
+  def match(abiertos, previos, servicio, datos)
+    previos.find { |caso| same?(caso.metadata[META_KEY], datos) } ||
+      referenced(abiertos, previos, servicio, datos) || same_kind_pending(previos, datos)
+  end
+
+  def referenced(abiertos, previos, servicio, datos)
     return nil if servicio.case_ref.blank?
 
     caso = abiertos[servicio.case_ref - 1]
-    caso if previos.include?(caso)
+    caso if previos.include?(caso) && booking_compatible?(caso, datos)
+  end
+
+  # Prueba del 07/10/2026 (conv. 391): «necesito ADEMÁS OTRO low boy… a las 10» cambió el destino
+  # del que ya estaba apartado. Pedir otra unidad abre otro caso aunque la IA diga que corrige
+  # uno; «el otro de 11 t» (con artículo) sí es corrección (conv. 377).
+  ANOTHER_UNIT_RE = /\b(adicional\w*|agreg\w*|un[oa] m[aá]s|(?:necesito|quiero|ocupo|requiero|adem[aá]s|tambi[eé]n)\s+(?:de\s+)?otr[oa]s?)\b/i
+
+  def another_unit?
+    @text.match?(ANOTHER_UNIT_RE)
+  end
+
+  # Un caso ya apartado solo es «el mismo» si no le cambian el día ni la hora (para eso está
+  # «muévelo», Actions): nunca se le reescribe en silencio a lo que ya está en el calendario.
+  def booking_compatible?(caso, datos)
+    return true if caso.metadata['meeting_id'].blank?
+
+    anterior = caso.metadata[META_KEY].to_h
+    %w[date time].all? { |campo| datos[campo].blank? || datos[campo] == anterior[campo] }
   end
 
   # Respaldo sin IA (observación SSUSA 9, conv. 385: la IA tomó «Hiab 11 t» como otro equipo frente
   # a «Hiab 12 t»): un caso abierto del MISMO tipo de equipo, sin tarea y todavía INCOMPLETO (le
   # faltan campos o la fecha) es este servicio corregido, salvo que el cliente diga que es
   # adicional. Uno ya completo pedido para otra fecha sigue siendo otro servicio.
-  ADDITIONAL_RE = /\b(adicional\w*|adem[aá]s|agreg\w*|otr[oa] m[aá]s|un[oa] m[aá]s)\b/i
-
   def same_kind_pending(previos, datos)
-    return nil if @text.match?(ADDITIONAL_RE)
-
     tipo = key(datos).first
     previos.find { |caso| incomplete?(caso) && key(caso.metadata[META_KEY].to_h).first == tipo }
   end

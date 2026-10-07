@@ -90,6 +90,14 @@ RSpec.describe ContactTrackings::ServiceRequests::Registry do
     expect(adicional.first.created).to be(true)
   end
 
+  it '«además otro» abre otro caso aunque coincidan equipo, fecha y origen (prueba conv. 391)' do
+    registrar(grua)
+    otra = described_class.new(tracking: nil, message: mensaje, escalation: '@solicitudes -> @crear_ticket',
+                               timezone: 'America/Mexico_City', text: 'Necesito además otra grúa igual')
+
+    expect(otra.register!([grua]).first.created).to be(true)
+  end
+
   context 'with campos en el tipo de caso (observación SSUSA 2)' do
     let(:extractor) { instance_double(Cases::Ai::FieldExtractor, available?: true) }
 

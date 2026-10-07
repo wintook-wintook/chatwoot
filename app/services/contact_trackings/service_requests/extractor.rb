@@ -170,8 +170,9 @@ class ContactTrackings::ServiceRequests::Extractor
       capacidad, la carga, «los dos para el 3 de octubre», «uno de 14 t y el otro de 11 t»),
       devuelve ese servicio con "caso": su número en la lista (1, 2…), no el folio. No es un
       servicio nuevo.
-    - "caso": null SOLO si pide un equipo ADICIONAL que no está en la lista («además otro hiab»,
-      «agrega una grúa»).
+    - "caso": null SOLO si pide un equipo ADICIONAL («además otro hiab», «necesito otro low boy»,
+      «agrega una grúa», «uno más»): es un servicio NUEVO aunque se parezca a uno de la lista.
+      «El otro» (con artículo, «uno de 14 t y el otro de 11 t») sí se refiere a los de la lista.
     - En un servicio con "caso", llena los datos de ese caso que el mensaje no cambia, copiados de
       la lista.
 
