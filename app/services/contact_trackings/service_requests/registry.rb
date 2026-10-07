@@ -163,8 +163,15 @@ class ContactTrackings::ServiceRequests::Registry
     combinado = anterior.merge(datos.reject { |_, valor| valor.blank? })
     ticket.update!(metadata: ticket.metadata.merge(META_KEY => combinado), description: description(combinado),
                    title: title(combinado))
+    retitle_meeting(ticket)
     store_fields(ticket, combinado)
     Entry.new(ticket: ticket, created: false)
+  end
+
+  # Ya apartado: el evento del calendario toma el título corregido («→ Comalcalco»).
+  def retitle_meeting(ticket)
+    tarea = CaseMeeting.find_by(id: ticket.metadata['meeting_id'])
+    ContactTrackings::ServiceMeeting.new(tarea).retitle!(ticket.title) if tarea && !tarea.cancelled?
   end
 
   # Los campos particulares del tipo de caso (observación SSUSA 2), con lo que ya tenía.

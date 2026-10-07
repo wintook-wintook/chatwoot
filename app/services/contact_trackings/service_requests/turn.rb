@@ -42,11 +42,18 @@ class ContactTrackings::ServiceRequests::Turn
     @context = context
   end
 
+  # El mensaje cayó en OTRA ruta (punto 9, conv. 396: «perdón, el destino es Comalcalco» se fue a
+  # consulta_estado_caso). Solo se toman los servicios que la IA marcó como corrección de un caso
+  # abierto (o lo que completa uno pendiente); nunca se abre uno nuevo desde otra ruta.
+  def corrections_only = (@only_corrections = true) && call
+
   def call
     servicios = ContactTrackings::ServiceRequests::Extractor.new(
       account: @message.account, text: text, tracking: @tracking, context: @context, open_cases: open_cases_text
     ).call
     return nil if servicios.nil?
+
+    servicios = servicios.select(&:case_ref) if @only_corrections
     return complete_pending if servicios.empty?
 
     entries = registry.register!(servicios)
@@ -124,9 +131,7 @@ class ContactTrackings::ServiceRequests::Turn
     plan
   end
 
-  def tentative?
-    ContactTrackings::CalendarOptions.parse(@branch&.escalation)&.tentative || false
-  end
+  def tentative? = ContactTrackings::CalendarOptions.parse(@branch&.escalation)&.tentative || false
 
   def position(ticket)
     ContactTrackings::ServiceRequests::Registry.open_cases(@message.conversation).pluck(:id).index(ticket.id).to_i + 1
@@ -138,16 +143,21 @@ class ContactTrackings::ServiceRequests::Turn
       [line(entry), related_line(plan), units_lines(plan), options_line(plan)].compact.join("\n")
     end
     faltan = entries.filter_map { |entry| missing(entry, planes[entry.ticket.id]) }
-    "#{header(entries)}\n\n#{lineas.join("\n")}\n\n#{closing(faltan, planes)}"
+    "#{header(entries)}\n\n#{lineas.join("\n")}\n\n#{closing(faltan, planes, entries)}"
   end
 
-  def closing(faltan, planes)
+  def closing(faltan, planes, entries)
     partes = []
     partes << "Para programarlos me falta: #{faltan.join('; ')}." if faltan.any?
     partes.concat(schedule_hints(planes.values))
-    partes << 'Un asesor revisa la disponibilidad y te confirma.' if partes.empty?
+    partes << fallback_closing(entries) if partes.empty?
     partes.join("\n")
   end
+
+  # Todos ya apartados (una corrección, conv. 397): no se dice «un asesor revisa la disponibilidad».
+  def fallback_closing(entries) = entries.all? { |e| e.ticket.metadata['meeting_id'].present? } ? HELD_CLOSING : ADVISOR_CLOSING
+  HELD_CLOSING = 'Listo, quedó corregido y tu horario sigue apartado.'
+  ADVISOR_CLOSING = 'Un asesor revisa la disponibilidad y te confirma.'
 
   def schedule_hints(planes)
     pistas = []

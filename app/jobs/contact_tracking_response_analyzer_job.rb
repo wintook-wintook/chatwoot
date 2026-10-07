@@ -1766,20 +1766,22 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     true
   end
 
-  # Observaciones SSUSA 2 y 5: el bot pidió un dato o la hora y la respuesta («a las 10»,
-  # «es escombro») cayó en otra ruta. Si completa un caso que esperaba algo, se atiende con la
-  # ruta de @solicitudes; si no le agrega nada, el turno sigue por donde iba.
+  # Observaciones SSUSA 2, 5 y 9: el bot pidió un dato o la hora y la respuesta («a las 10»,
+  # «es escombro») cayó en otra ruta, o el cliente corrige un servicio («perdón, el destino es
+  # Comalcalco»). Si corrige o completa un caso abierto, se atiende con la ruta de @solicitudes;
+  # si no, el turno sigue por donde iba (desde otra ruta nunca se abre un caso nuevo).
   def handle_service_pending(tracking, message)
     return false if ContactTrackings::ServiceRequests::Registry.open_cases(message.conversation).none?
 
     ruta = ContactTrackings::RouteMap.parse(tracking.complementary_prompt.to_s).routes
                                      .find { |r| ContactTrackings::ServiceRequests::Turn.route?(r.escalation) }
     texto = ContactTrackings::ServiceRequests::Turn.new(
-      tracking: tracking, message: message, branch: ruta, timezone: appointment_timezone(tracking, message)
-    ).complete_pending
+      tracking: tracking, message: message, branch: ruta, timezone: appointment_timezone(tracking, message),
+      context: get_recent_context(message, 4)
+    ).corrections_only
     return false if texto.blank?
 
-    Rails.logger.info '[TrackingBot] 🧾 @solicitudes → datos pendientes completados'
+    Rails.logger.info '[TrackingBot] 🧾 @solicitudes → caso abierto corregido o completado'
     send_auto_reply(tracking, message, texto)
     true
   end

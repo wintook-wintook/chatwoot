@@ -228,3 +228,35 @@ Un caso apartado solo se trata como el mismo si no cambian día ni hora (para es
 | «además otro low boy… 10:00… motoconformadora 20 t» | Caso 3 · «a las 10:00 no hay; lo que sí hay → 3A 11:00 (TP-64) · 3B 12:00 (TP-93) · 3C 13:00 (TP-64)» |
 
 Regresión punto 9: conv. **394** (los 4 mensajes de la 377) → 2 casos ✅.
+
+---
+
+## Prueba del punto 9 en una conversación (07/10/2026)
+
+Un solo servicio del que se habla en 5 mensajes → tiene que quedar **1 caso**.
+
+### Hallazgo (conv. 396)
+«Perdón, el destino es Comalcalco, no Paraíso» lo clasificó `consulta_estado_caso`; como el caso ya
+estaba apartado no contaba como pendiente, y `@crear_ticket` contestó «Ya tienes el caso… sumé tu
+mensaje» sin corregir nada. El evento del calendario, además, conservaba el título viejo.
+
+### Arreglo
+- Job `handle_service_pending`: desde otra ruta se hace el turno de `@solicitudes` en modo
+  `corrections_only` (solo servicios que la IA marcó como corrección de un caso abierto, o lo que
+  completa uno pendiente). Desde otra ruta nunca se abre un caso nuevo.
+- `ServiceMeeting#retitle!` + `Registry#retitle_meeting`: el evento de Google toma el título
+  corregido, con su «[TENTATIVO]».
+- `Turn`: si todo ya estaba apartado, cierra con «Listo, quedó corregido y tu horario sigue apartado.»
+
+### Conversación de prueba: **399** (Agents IA Test)
+
+| Cliente | Bot | Casos |
+|---|---|---|
+| «necesito una plataforma plana para mover unas vigas» | Recibí 1 servicio · me falta Ubicación Recogida, Peso, Fecha | 1 |
+| «Sería para el martes 20 de octubre de 2026» | Actualicé 1 servicio · me falta …, a qué hora | 1 |
+| «Son 18 toneladas de vigas de acero, de Villahermosa a Paraíso» | Actualicé · me falta a qué hora | 1 |
+| «a las 1 pm» | 🚛 TP-111 · ✅ Sí hay a las 13:00: te lo aparté | 1 |
+| «Perdón, el destino es Comalcalco, no Paraíso» | Actualicé · Villahermosa → Comalcalco · 📌 apartado · «Listo, quedó corregido…» | **1** |
+
+Evento en Google después de la corrección: «[TENTATIVO] Plataforma plana — Villahermosa → Comalcalco».
+La conversación real (377) repetida: conv. 394 → 2 casos.
