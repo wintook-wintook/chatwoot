@@ -51,6 +51,8 @@ class ContactTrackings::ServiceRequests::Turn
   def replan(entries) = reply(entries, plans(entries))
 
   def call
+    return @resumen if (@resumen = ContactTrackings::ServiceRequests::Status.new(message: @message, timezone: @timezone).call)
+
     servicios = ContactTrackings::ServiceRequests::Extractor.new(
       account: @message.account, text: text, tracking: @tracking, context: @context, open_cases: open_cases_text
     ).call
@@ -91,9 +93,8 @@ class ContactTrackings::ServiceRequests::Turn
     end
   end
 
-  def text
-    @text ||= ContactTrackings::AttachmentText.message_text(@message) # pieza 7: y sus adjuntos
-  end
+  # pieza 7: el texto del mensaje y sus adjuntos
+  def text = (@text ||= ContactTrackings::AttachmentText.message_text(@message))
 
   def registry
     @registry ||= ContactTrackings::ServiceRequests::Registry.new(

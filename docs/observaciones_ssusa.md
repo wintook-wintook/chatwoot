@@ -294,3 +294,27 @@ La conversación real (377) repetida: conv. 394 → 2 casos.
 Pendiente: «no entendí, ¿son dos grúas?» todavía cae en la agenda general («¿Qué tipo necesitas?»);
 lo natural sería contestar con el resumen de sus servicios.
 Datos de la 398 real: la TP-111 sigue con dos tareas tentativas el dom 11 oct 06:00–22:00.
+
+---
+
+## Pregunta de estado: «no entendí, ¿son dos grúas?» (07/10/2026)
+
+**Antes** (conv. 398/401): caía en la agenda general → «¿Qué tipo necesitas?».
+
+**Ahora** (`service_requests/status.rb`, enganchado al inicio del turno de `@solicitudes`, así que
+también funciona si la pregunta cae en otra ruta): si el cliente pregunta por **sus** servicios
+(«no entendí», «¿son dos…?», «¿cuántos servicios tengo?», «¿cómo quedaron mis grúas?», «¿qué me
+apartaste?») y hay casos abiertos, contesta con el resumen, sin IA:
+
+```
+Tienes 2 servicios:
+
+1️⃣ Hiab 14 a 15 t · KM10.5 Prefabricado · dom 11 oct 06:00 · 📌 apartado · TP-58 (caso 01159)
+2️⃣ Hiab 12 t · KM10.5 Prefabricado · dom 11 oct 06:00 · 📌 apartado · TP-73 (caso 01160)
+
+Los apartados quedan en firme cuando me confirmes el servicio.
+```
+Si a alguno le falta algo: «Al 2️⃣ le falta: la hora.» Una pregunta de catálogo («¿qué tipos de
+grúas manejan?») no entra.
+
+Prueba: conv. **403** (Agents IA Test) ✅. Spec: `status_spec.rb` (no corrida).
