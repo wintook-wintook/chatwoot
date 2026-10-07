@@ -13,6 +13,7 @@
 #
 #   hold!     aparta: «[TENTATIVO] …», tentative = true
 #   confirm!  en firme: quita «[TENTATIVO]» del evento y de la tarea
+#   retitle!  el caso cambió (otro destino): el evento toma su título nuevo
 #   cancel!   cancela la tarea y borra el evento
 # ================================================================================
 
@@ -56,6 +57,18 @@ class ContactTrackings::ServiceMeeting
   rescue StandardError => e
     Rails.logger.error "[ServiceMeeting] ❌ confirmar la tarea #{@meeting.id}: #{e.message}"
     false
+  end
+
+  # Observación SSUSA 9 (conv. 397): el cliente corrigió el destino de un servicio apartado y el
+  # evento seguía diciendo «→ Paraíso». Mismo título que el caso, con su «[TENTATIVO]» si lo tiene.
+  def retitle!(title)
+    titulo = "#{@meeting.tentative? ? PREFIX : ''}#{title}".truncate(255)
+    return if titulo == @meeting.title
+
+    GoogleCalendarService.new(integration).rename_event(@meeting.google_event_id, summary: titulo, calendar_id: calendar_id)
+    @meeting.update!(title: titulo)
+  rescue StandardError => e
+    Rails.logger.error "[ServiceMeeting] ❌ renombrar la tarea #{@meeting.id}: #{e.message}"
   end
 
   def cancel!
