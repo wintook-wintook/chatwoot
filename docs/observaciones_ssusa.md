@@ -260,3 +260,37 @@ mensaje» sin corregir nada. El evento del calendario, además, conservaba el t�
 
 Evento en Google después de la corrección: «[TENTATIVO] Plataforma plana — Villahermosa → Comalcalco».
 La conversación real (377) repetida: conv. 394 → 2 casos.
+
+---
+
+## Conversación real 398 (Telegram, 07/10/2026): doble reserva y «¿tienes otra?»
+
+### Qué pasó
+| Mensaje | Falla |
+|---|---|
+| «Del 1… domingo 6am 16 h; el segundo… misma fecha» | A los dos servicios se les ofreció la **misma** unidad (TP-111) a la misma hora |
+| «Si esta bien» | Se apartaron **los dos** en la TP-111, dom 11 oct 06:00–22:00 (tareas 256 y 257) |
+| «el segundo es la misma grúa… ¿tienes otra?» | Se tomó como corrección del 1️⃣ (ruta «KM10.5 → KM10.5») |
+| «no entendí, ¿son dos grúas?» | «¿Para cuál **peso_max_t** quieres agendar?» (nombre interno de la columna) |
+
+### Arreglo
+- `service_requests/taken.rb` (nuevo): lo que ya tienen apartado u ofrecido los otros servicios de la
+  conversación. `Scheduler` no ofrece esas unidades a esa hora; `Choice` no aparta una opción que
+  choque («⚠️ 2A: esa unidad ya la tiene otro de tus servicios…»).
+- `service_requests/other_unit.rb` (nuevo): «la misma grúa», «grúas diferentes», «¿tienes/hay
+  otra?», «cambia la grúa» → al servicio nombrado (número u ordinal) o al que comparte unidad: se
+  cancela su tarea, esa unidad queda excluida y se buscan horarios en otra. «Necesito otra grúa
+  para el martes» sigue siendo un servicio nuevo.
+- Job: la pregunta de la agenda general dice «¿Qué peso máximo necesitas?» (no «peso_max_t»).
+- `registry.rb`: dos paradas iguales («KM10.5 → KM10.5») se guardan como un solo sitio.
+- `fields.rb`: «con certificados», «en buenas condiciones», «5 extensiones» no son material.
+
+### Pruebas (Agents IA Test 493)
+| Conv. | Resultado |
+|---|---|
+| 401 | Mensajes de la 398 tal cual: 1️⃣ TP-46; al 2️⃣ le pidió la hora («misma fecha» no dice hora); «¿tienes otra?» fue al 2️⃣; la última pregunta ya no dice «peso_max_t» |
+| 402 | Controlada (los dos con hora): 1️⃣ **TP-47** y 2️⃣ **TP-58** — distintas; «sí» aparta las dos; «¿tienes otra?» cancela la TP-58 del 2️⃣ y ofrece la **TP-73** |
+
+Pendiente: «no entendí, ¿son dos grúas?» todavía cae en la agenda general («¿Qué tipo necesitas?»);
+lo natural sería contestar con el resumen de sus servicios.
+Datos de la 398 real: la TP-111 sigue con dos tareas tentativas el dom 11 oct 06:00–22:00.

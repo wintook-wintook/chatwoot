@@ -28,10 +28,7 @@ class ContactTrackings::ServiceRequests::Choice
     return nil if con_oferta.empty?
 
     elegidos = chosen(abiertos, con_oferta)
-    return nil if elegidos.empty?
-
-    apartados = elegidos.map { |caso, oferta| hold(caso, oferta) }
-    reply(apartados, con_oferta.reject { |caso| elegidos.any? { |e| e.first.id == caso.id } })
+    elegidos.empty? ? nil : apply(elegidos, con_oferta)
   end
 
   # Aparta UNA opción. Público para Turn: con la hora pedida libre se aparta sin preguntar
@@ -74,18 +71,43 @@ class ContactTrackings::ServiceRequests::Choice
     clave.present? && oferta['calendar_name'].present? ? atributos.merge(clave => oferta['calendar_name']) : atributos
   end
 
+  def apply(elegidos, con_oferta)
+    libres, chocan = elegidos.partition { |caso, oferta| free?(caso, oferta) }
+    apartados = libres.map { |caso, oferta| hold(caso, oferta) }
+    reply(apartados, con_oferta.reject { |caso| libres.any? { |e| e.first.id == caso.id } }, chocan)
+  end
+
+  # Conv. 398: con un «sí» se apartaron dos servicios en la misma unidad a la misma hora. Se revisa
+  # contra lo ya apartado en la conversación, incluido lo de este mismo mensaje.
+  def free?(caso, oferta)
+    !ContactTrackings::ServiceRequests::Taken.new(caso, offers: false)
+                                             .busy?(oferta['gcal'], Time.zone.parse(oferta['slot']), Time.zone.parse(oferta['end_time']))
+  end
+
   def cancel_previous(caso)
     anterior = CaseMeeting.find_by(id: caso.metadata['meeting_id'])
     ContactTrackings::ServiceMeeting.new(anterior).cancel! if anterior && !anterior.cancelled?
   end
 
-  def reply(apartados, pendientes)
-    titulo = @tentative ? '📌 Aparté:' : '✅ Agendé:'
-    lineas = apartados.map { |caso, tarea, oferta| line(caso, tarea, oferta) }
-    partes = ["#{titulo}\n#{lineas.join("\n")}"]
-    partes << 'Quedan pendientes de confirmar: cuando me confirmes el servicio, los dejo en firme.' if @tentative
+  def reply(apartados, pendientes, chocan = [])
+    partes = held_parts(apartados)
+    partes << clash_text(chocan) if chocan.any?
     partes << "Falta elegir horario de: #{pendientes.map { |c| number(c) }.join(', ')}." if pendientes.any?
     partes.join("\n\n")
+  end
+
+  def held_parts(apartados)
+    return [] if apartados.empty?
+
+    titulo = @tentative ? '📌 Aparté:' : '✅ Agendé:'
+    partes = ["#{titulo}\n#{apartados.map { |caso, tarea, oferta| line(caso, tarea, oferta) }.join("\n")}"]
+    partes << 'Quedan pendientes de confirmar: cuando me confirmes el servicio, los dejo en firme.' if @tentative
+    partes
+  end
+
+  def clash_text(chocan)
+    codigos = chocan.map { |_, oferta| oferta['code'] }.join(', ')
+    "⚠️ #{codigos}: esa unidad ya la tiene otro de tus servicios a esa hora. Elige otra opción o dime otra hora."
   end
 
   def line(caso, tarea, oferta)

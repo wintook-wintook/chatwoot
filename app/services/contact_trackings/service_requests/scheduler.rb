@@ -49,6 +49,9 @@ class ContactTrackings::ServiceRequests::Scheduler
     buscador = slot_service(datos)
     return Plan.new(ticket: ticket, offers: [], note: not_in_catalog(datos)) if buscador.nil?
 
+    @taken = ContactTrackings::ServiceRequests::Taken.new(ticket)
+    @excluded = Array(ticket.metadata[ContactTrackings::ServiceRequests::OtherUnit::EXCLUDED_KEY])
+
     build_plan(ticket, number, buscador, at, datos).tap { |plan| plan.related = related_note(datos) if @related }
   end
 
@@ -59,7 +62,7 @@ class ContactTrackings::ServiceRequests::Scheduler
     return rental_offer(ticket, number, buscador, at.beginning_of_day, dias) if dias
     return Plan.new(ticket: ticket, offers: [], need_time: true, requested: at) if datos['time'].blank?
 
-    offer(ticket, number, buscador, at)
+    offer(ticket, number, buscador, at, datos)
   end
 
   # ── Observación SSUSA 1: lo pedido no está en la hoja ────────────────────────
@@ -99,8 +102,12 @@ class ContactTrackings::ServiceRequests::Scheduler
     fuente ? fuente.google_sheet_rows.order(:row_index).pluck(:data) : []
   end
 
-  def offer(ticket, number, buscador, at)
-    exacto = buscador.slot_for(at)
+  # Conv. 398: la hora exacta se busca SIN las unidades que otro servicio de la conversación ya
+  # tiene apartadas u ofrecidas a esa hora (si no, los dos hiab salían en la TP-111).
+  def offer(ticket, number, buscador, at, datos)
+    ocupadas = @taken.calendars_between(at, at + duration(datos).minutes) + @excluded
+    libres = ocupadas.empty? ? buscador : slot_service(datos, excluir: ocupadas)
+    exacto = libres&.slot_for(at)
     slots = exacto ? [exacto] : following(buscador, at)
     ofertas = slots.each_with_index.map { |slot, i| payload(slot, "#{number}#{LETTERS[i]}") }
     ticket.update!(metadata: ticket.metadata.merge('oferta' => ofertas))
@@ -110,7 +117,8 @@ class ContactTrackings::ServiceRequests::Scheduler
 
   # F7 — renta: un bloque de días completos; las opciones son los equipos libres TODO el periodo.
   def rental_offer(ticket, number, buscador, desde, dias)
-    libres = buscador.free_for_period(desde, desde + dias.days).first(MAX_OPTIONS)
+    libres = buscador.free_for_period(desde, desde + dias.days)
+                     .reject { |slot| unavailable?(slot) }.first(MAX_OPTIONS)
     ofertas = libres.each_with_index.map { |slot, i| payload(slot, "#{number}#{LETTERS[i]}").merge('all_day' => true) }
     ticket.update!(metadata: ticket.metadata.merge('oferta' => ofertas))
     Plan.new(ticket: ticket, offers: ofertas, note: libres.empty? ? 'ningún equipo libre en todo ese periodo' : nil, requested: desde,
@@ -119,7 +127,13 @@ class ContactTrackings::ServiceRequests::Scheduler
 
   # La hora pedida está ocupada: las siguientes libres.
   def following(buscador, desde)
-    buscador.call(from: desde).uniq { |s| [s[:slot], s[:google_calendar_id]] }.first(MAX_OPTIONS)
+    buscador.call(from: desde).uniq { |s| [s[:slot], s[:google_calendar_id]] }
+            .reject { |s| unavailable?(s) }.first(MAX_OPTIONS)
+  end
+
+  # Tomada por otro servicio de la conversación, o una unidad que el cliente ya pidió cambiar.
+  def unavailable?(slot)
+    @excluded.include?(slot[:google_calendar_id]) || @taken.busy?(slot[:google_calendar_id], slot[:slot], slot[:end_time])
   end
 
   def note_for(slots, exacto, at)
@@ -142,15 +156,23 @@ class ContactTrackings::ServiceRequests::Scheduler
   end
 
   # nil si la hoja no tiene ese equipo o sus calendarios no están en el agente.
-  def slot_service(datos)
+  # excluir: unidades (calendarios) que no cuentan como libres; si no queda ninguna, nil.
+  def slot_service(datos, excluir: [])
     calendarios = calendars_for(datos)
     return nil if calendarios.nil?
 
+    agendas = free_agendas(calendarios.booking_calendars, excluir)
+    return nil if agendas.empty?
+
     ContactTrackings::AvailabilitySlotService.new(
-      calendar_integration_ids: calendarios.integration_ids, timezone: @timezone, slot_duration: duration(datos),
+      calendar_integration_ids: agendas.keys.map(&:to_i), timezone: @timezone, slot_duration: duration(datos),
       working_hours: @options&.all_day ? ContactTrackings::AvailabilitySlotService::ALL_DAY : working_hours,
-      booking_calendars: calendarios.booking_calendars
+      booking_calendars: agendas
     )
+  end
+
+  def free_agendas(agendas, excluir)
+    agendas.transform_values { |ids| ids - excluir }.reject { |_, ids| ids.empty? }
   end
 
   def calendars_for(datos)

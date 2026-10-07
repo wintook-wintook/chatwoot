@@ -125,8 +125,16 @@ class ContactTrackings::ServiceRequests::Registry
     fecha = ContactTrackings::ServiceRequests::DateResolver.new(timezone: @timezone).call(servicio.date_text, servicio.time_text)
     servicio.to_h.except(:case_ref).transform_keys(&:to_s).merge(
       'date' => fecha.date&.iso8601, 'time' => fecha.time, 'ambiguous' => fecha.ambiguous,
-      'source_message_id' => @message.id
+      'stops' => single_site(Array(servicio.stops)), 'source_message_id' => @message.id
     )
+  end
+
+  # «trabajar en el KM10.5» salía «KM10.5 → KM10.5» (conv. 401): dos paradas iguales son un solo
+  # sitio. Un viaje redondo de verdad trae al menos tres (A → B → A).
+  def single_site(paradas)
+    return paradas unless paradas.size == 2 && fold(paradas.first['lugar']) == fold(paradas.last['lugar'])
+
+    [paradas.first]
   end
 
   # Mismo equipo, y fecha y origen iguales — o que el caso anterior todavía no tenía

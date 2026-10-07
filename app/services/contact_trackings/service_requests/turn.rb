@@ -47,6 +47,9 @@ class ContactTrackings::ServiceRequests::Turn
   # abierto (o lo que completa uno pendiente); nunca se abre uno nuevo desde otra ruta.
   def corrections_only = (@only_corrections = true) && call
 
+  # Casos que ya existían, con horarios nuevos (OtherUnit: «¿tienes otra?»).
+  def replan(entries) = reply(entries, plans(entries))
+
   def call
     servicios = ContactTrackings::ServiceRequests::Extractor.new(
       account: @message.account, text: text, tracking: @tracking, context: @context, open_cases: open_cases_text
@@ -170,7 +173,7 @@ class ContactTrackings::ServiceRequests::Turn
 
   # Observación SSUSA 1: no hay lo pedido y se ofrece lo más parecido («No tengo hiab; …»).
   def related_line(plan)
-    "    ℹ️ #{plan.related[0].upcase}#{plan.related[1..]}" if plan&.related.present?
+    "    ℹ️ #{plan.related[0].upcase}#{plan.related[1..]}" if plan&.related.present? && plan.units.present?
   end
 
   # Observación SSUSA 4: antes del horario, qué unidad es («🚛 TP-64: Low boy · Peso max t: 60»),

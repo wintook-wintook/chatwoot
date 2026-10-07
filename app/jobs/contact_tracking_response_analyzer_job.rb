@@ -954,7 +954,17 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
   def ask_sheet_value(tracking, message, column)
     Rails.logger.info "[TrackingBot] 📅 {{hoja_buscar:}} sin #{column} nombrado → se pregunta cuál"
-    send_auto_reply(tracking, message, "¿Para cuál #{column} quieres agendar? Dime cuál y te paso sus horarios.")
+    send_auto_reply(tracking, message, "¿Qué #{column_for_customer(column)} necesitas? Dímelo y te paso los horarios.")
+  end
+
+  # Conv. 398 (07/10/2026): al cliente le llegó «¿Para cuál peso_max_t…?». El nombre de la columna
+  # de la hoja, legible: «peso_max_t» → «peso máximo», «remolque» → «remolque».
+  COLUMN_UNITS = %w[t m kg ton cm].freeze
+  COLUMN_WORDS = { 'max' => 'máximo', 'min' => 'mínimo' }.freeze
+
+  def column_for_customer(column)
+    palabras = column.to_s.downcase.split(/[_\s]+/) - COLUMN_UNITS
+    palabras.map { |p| COLUMN_WORDS.fetch(p, p) }.join(' ').presence || 'dato'
   end
 
   # proyecto@bot_seguimiento_calendar — horarios del inbox (Opción A). Solo si el inbox los

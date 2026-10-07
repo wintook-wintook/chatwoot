@@ -66,7 +66,8 @@ class ContactTrackings::ServiceRequests::Fields
   def prompt_text(service_text, message_text)
     'Datos de ESTE servicio. «Equipo» es la unidad que el cliente pide y sus toneladas son lo que AGUANTA: ' \
       'NO son la carga, el material ni el peso de lo que se transporta. Si el cliente no dice qué va a ' \
-      "mover ni cuánto pesa, esos campos van en null:\n#{service_text}\n\n" \
+      'mover ni cuánto pesa, esos campos van en null. Los requisitos del equipo («con certificados», ' \
+      "«en buenas condiciones», «5 extensiones») tampoco son material:\n#{service_text}\n\n" \
       "Mensaje del cliente (si pide varios servicios, usa solo lo que es de este):\n#{message_text.to_s.truncate(3000)}"
   end
 
