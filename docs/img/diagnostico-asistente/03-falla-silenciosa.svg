@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 660" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="940" height="660" fill="#f4f6f9"/>
+
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28" letter-spacing="-0.4">La falla silenciosa con gpt-5.x</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Qué pasaría hoy si se agrega gpt-5.x a la lista sin cambiar cómo arma el motor sus llamadas</text>
+
+  <!-- columna de pasos -->
+  <g font-size="12.5">
+    <!-- 1 -->
+    <rect x="40" y="92" width="560" height="62" rx="9" fill="#ffffff" stroke="#cbd3df"/>
+    <circle cx="68" cy="123" r="13" fill="#64748b"/><text x="68" y="128" font-size="13" font-weight="800" fill="#ffffff" text-anchor="middle">1</text>
+    <text x="92" y="116" font-weight="700" fill="#151b28">El canal elige gpt-5.x en «Modelo de IA»</text>
+    <text x="92" y="136" fill="#5c6675">EngineConfig.model_for lo deja pasar (cuando esté en ALLOWED_MODELS)</text>
+
+    <!-- 2 -->
+    <rect x="40" y="170" width="560" height="62" rx="9" fill="#ffffff" stroke="#cbd3df"/>
+    <circle cx="68" cy="201" r="13" fill="#64748b"/><text x="68" y="206" font-size="13" font-weight="800" fill="#ffffff" text-anchor="middle">2</text>
+    <text x="92" y="194" font-weight="700" fill="#151b28">El motor arma la llamada a mano</text>
+    <text x="92" y="214" fill="#5c6675" font-family="ui-monospace, Menlo, monospace" font-size="11.5">{ model: "gpt-5.x", max_tokens: 250, temperature: 0.7 }</text>
+
+    <!-- 3 -->
+    <rect x="40" y="248" width="560" height="62" rx="9" fill="#fdeeee" stroke="#dc2626" stroke-width="1.6"/>
+    <circle cx="68" cy="279" r="13" fill="#dc2626"/><text x="68" y="284" font-size="13" font-weight="800" fill="#ffffff" text-anchor="middle">3</text>
+    <text x="92" y="272" font-weight="700" fill="#7f1d1d">OpenAI la rechaza (HTTP 400)</text>
+    <text x="92" y="292" fill="#7f1d1d">gpt-5 pide max_completion_tokens y no acepta temperature 0.7</text>
+
+    <!-- 4 -->
+    <rect x="40" y="326" width="560" height="62" rx="9" fill="#fdeeee" stroke="#dc2626" stroke-width="1.6"/>
+    <circle cx="68" cy="357" r="13" fill="#dc2626"/><text x="68" y="362" font-size="13" font-weight="800" fill="#ffffff" text-anchor="middle">4</text>
+    <text x="92" y="350" font-weight="700" fill="#7f1d1d">No se revisa el código HTTP: el error se lee como «sin texto»</text>
+    <text x="92" y="370" fill="#7f1d1d">no encuentra el texto → nil · sin excepción, así que no queda nada en el log</text>
+
+    <!-- 5 -->
+    <rect x="40" y="404" width="560" height="62" rx="9" fill="#ffffff" stroke="#cbd3df"/>
+    <circle cx="68" cy="435" r="13" fill="#64748b"/><text x="68" y="440" font-size="13" font-weight="800" fill="#ffffff" text-anchor="middle">5</text>
+    <text x="92" y="428" font-weight="700" fill="#151b28">La respuesta vacía no se envía</text>
+    <text x="92" y="448" fill="#5c6675">generate_and_send_conversational_reply devuelve false</text>
+
+    <!-- 6 -->
+    <rect x="40" y="482" width="560" height="62" rx="9" fill="#ffffff" stroke="#cbd3df"/>
+    <circle cx="68" cy="513" r="13" fill="#64748b"/><text x="68" y="518" font-size="13" font-weight="800" fill="#ffffff" text-anchor="middle">6</text>
+    <text x="92" y="506" font-weight="700" fill="#151b28">El coordinador ve «el seguimiento no respondió»</text>
+    <text x="92" y="526" fill="#5c6675">si la cuenta tiene BotSeller, le pasa el mensaje; si no, termina ahí</text>
+  </g>
+
+  <g stroke="#94a3b8" stroke-width="1.6" fill="none">
+    <path d="M320,154 L320,166" marker-end="url(#a3)"/>
+    <path d="M320,232 L320,244" marker-end="url(#a3)"/>
+    <path d="M320,310 L320,322" marker-end="url(#a3)"/>
+    <path d="M320,388 L320,400" marker-end="url(#a3)"/>
+    <path d="M320,466 L320,478" marker-end="url(#a3)"/>
+  </g>
+
+  <!-- dónde en el código -->
+  <text x="630" y="108" font-size="12" font-weight="700" fill="#5c6675" letter-spacing="1">DÓNDE EN EL CÓDIGO</text>
+  <g font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#3b4453">
+    <text x="630" y="127">engine_config.rb:81</text>
+    <text x="630" y="205">analyzer_job.rb:2096-2101</text>
+    <text x="630" y="221">kbase_response_service:1236-1256</text>
+    <text x="630" y="283">(respuesta de OpenAI)</text>
+    <text x="630" y="361">analyzer_job.rb:2103-2107</text>
+    <text x="630" y="439">analyzer_job.rb:618</text>
+    <text x="630" y="517">analyzer_job.rb:61-64</text>
+  </g>
+
+  <!-- resultado -->
+  <rect x="40" y="566" width="860" height="72" rx="10" fill="#151b28"/>
+  <text x="62" y="594" font-size="14" font-weight="700" fill="#ffffff">Resultado: el cliente escribe y nadie le contesta.</text>
+  <text x="62" y="616" font-size="12.5" fill="#cbd3df">Sin error en el log, sin aviso al agente, sin nota privada. Lo mismo pasa con la base de conocimiento (paso 2, KBase), que va antes.</text>
+</svg>

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 470" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <rect x="0" y="0" width="940" height="470" fill="#f4f6f9"/>
+
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28" letter-spacing="-0.4">D1 · Cómo subir el modelo del agente en vivo</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Tres opciones comparadas por quién paga más y quién mejora</text>
+
+  <!-- A -->
+  <rect x="40" y="96" width="270" height="290" rx="10" fill="#ffffff" stroke="#cbd3df"/>
+  <text x="60" y="128" font-size="20" font-weight="800" fill="#151b28">A</text>
+  <text x="84" y="128" font-size="15" font-weight="700" fill="#151b28">Piso para todos</text>
+  <text x="60" y="152" font-size="11.5" fill="#5c6675" font-family="ui-monospace, Menlo, monospace">MODEL_FLOOR[:conversational]</text>
+  <text x="60" y="168" font-size="11.5" fill="#5c6675" font-family="ui-monospace, Menlo, monospace">  = 'gpt-4o'</text>
+  <text x="60" y="204" font-size="12.5" fill="#15803d">+ calidad de inmediato</text>
+  <text x="60" y="224" font-size="12.5" fill="#15803d">+ un cambio de una línea</text>
+  <text x="60" y="254" font-size="12.5" fill="#b91c1c">− el costo sube en todas</text>
+  <text x="60" y="272" font-size="12.5" fill="#b91c1c">  las cuentas, aunque su</text>
+  <text x="60" y="290" font-size="12.5" fill="#b91c1c">  agente sea de 3 reglas</text>
+  <text x="60" y="340" font-size="11" fill="#5c6675" letter-spacing="1" font-weight="700">QUIÉN PAGA MÁS</text>
+  <rect x="60" y="350" width="230" height="10" rx="5" fill="#e3e7ee"/>
+  <rect x="60" y="350" width="230" height="10" rx="5" fill="#dc2626"/>
+
+  <!-- B -->
+  <rect x="335" y="96" width="270" height="290" rx="10" fill="#ffffff" stroke="#cbd3df"/>
+  <text x="355" y="128" font-size="20" font-weight="800" fill="#151b28">B</text>
+  <text x="379" y="128" font-size="15" font-weight="700" fill="#151b28">Solo aviso</text>
+  <text x="355" y="152" font-size="11.5" fill="#5c6675">al guardar un Entrenamiento largo</text>
+  <text x="355" y="168" font-size="11.5" fill="#5c6675">en un canal con gpt-4o-mini</text>
+  <text x="355" y="204" font-size="12.5" fill="#15803d">+ nadie paga sin decidirlo</text>
+  <text x="355" y="224" font-size="12.5" fill="#15803d">+ no cambia el motor</text>
+  <text x="355" y="254" font-size="12.5" fill="#b91c1c">− depende de que alguien</text>
+  <text x="355" y="272" font-size="12.5" fill="#b91c1c">  lo lea y suba el modelo</text>
+  <text x="355" y="290" font-size="12.5" fill="#b91c1c">  en el canal</text>
+  <text x="355" y="340" font-size="11" fill="#5c6675" letter-spacing="1" font-weight="700">QUIÉN PAGA MÁS</text>
+  <rect x="355" y="350" width="230" height="10" rx="5" fill="#e3e7ee"/>
+  <rect x="355" y="350" width="30" height="10" rx="5" fill="#16a34a"/>
+
+  <!-- C -->
+  <rect x="630" y="96" width="270" height="290" rx="10" fill="#ffffff" stroke="#2563eb" stroke-width="2.4"/>
+  <rect x="770" y="84" width="118" height="24" rx="12" fill="#2563eb"/>
+  <text x="829" y="100" font-size="11.5" font-weight="700" fill="#ffffff" text-anchor="middle">RECOMENDADA</text>
+  <text x="650" y="128" font-size="20" font-weight="800" fill="#151b28">C</text>
+  <text x="674" y="128" font-size="15" font-weight="700" fill="#151b28">Piso por tamaño</text>
+  <text x="650" y="152" font-size="11.5" fill="#5c6675">Entrenamiento &gt; N caracteres</text>
+  <text x="650" y="168" font-size="11.5" fill="#5c6675">o &gt; N rutas → piso gpt-4o</text>
+  <text x="650" y="204" font-size="12.5" fill="#15803d">+ paga más solo el agente</text>
+  <text x="650" y="222" font-size="12.5" fill="#15803d">  que lo necesita</text>
+  <text x="650" y="242" font-size="12.5" fill="#15803d">+ agentes cortos sin cambio</text>
+  <text x="650" y="272" font-size="12.5" fill="#b91c1c">− hay que medir el umbral</text>
+  <text x="650" y="290" font-size="12.5" fill="#b91c1c">  (lo da F0)</text>
+  <text x="650" y="340" font-size="11" fill="#5c6675" letter-spacing="1" font-weight="700">QUIÉN PAGA MÁS</text>
+  <rect x="650" y="350" width="230" height="10" rx="5" fill="#e3e7ee"/>
+  <rect x="650" y="350" width="95" height="10" rx="5" fill="#d97706"/>
+
+  <text x="40" y="420" font-size="12.5" fill="#3b4453">Las tres respetan un modelo mayor si el canal ya lo eligió: un piso sube, nunca baja (<tspan font-family="ui-monospace, Menlo, monospace" font-size="11.5">apply_floor</tspan>).</text>
+  <text x="40" y="442" font-size="12.5" fill="#3b4453">Las barras comparan a cuántas cuentas les sube el costo, no cuánto. El monto se mide en F0.</text>
+</svg>

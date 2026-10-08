@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 520" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="940" height="520" fill="#f4f6f9"/>
+
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28" letter-spacing="-0.4">P3 · Un solo constructor de parámetros</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">El Asistente ya lo resuelve en OpenaiChat#limits; el motor necesita lo mismo</text>
+
+  <!-- HOY -->
+  <text x="40" y="104" font-size="12" font-weight="700" fill="#dc2626" letter-spacing="1">HOY · CADA LLAMADA ARMA LO SUYO</text>
+  <g font-size="11.5">
+    <rect x="40" y="116" width="400" height="40" rx="7" fill="#ffffff" stroke="#cbd3df"/>
+    <text x="54" y="141" fill="#151b28">Respuesta al cliente · analyzer_job</text>
+    <text x="426" y="141" fill="#b91c1c" text-anchor="end" font-family="ui-monospace, Menlo, monospace">max_tokens + temp</text>
+    <rect x="40" y="164" width="400" height="40" rx="7" fill="#ffffff" stroke="#cbd3df"/>
+    <text x="54" y="189" fill="#151b28">Base de conocimiento · kbase_response</text>
+    <text x="426" y="189" fill="#b91c1c" text-anchor="end" font-family="ui-monospace, Menlo, monospace">max_tokens + temp</text>
+    <rect x="40" y="212" width="400" height="40" rx="7" fill="#ffffff" stroke="#cbd3df"/>
+    <text x="54" y="237" fill="#151b28">Clasificador de ruta · branch_classifier</text>
+    <text x="426" y="237" fill="#b91c1c" text-anchor="end" font-family="ui-monospace, Menlo, monospace">a mano</text>
+    <rect x="40" y="260" width="400" height="40" rx="7" fill="#ffffff" stroke="#cbd3df"/>
+    <text x="54" y="285" fill="#151b28">Router · router_service</text>
+    <text x="426" y="285" fill="#b91c1c" text-anchor="end" font-family="ui-monospace, Menlo, monospace">max_tokens + temp</text>
+    <rect x="40" y="308" width="400" height="40" rx="7" fill="#ffffff" stroke="#cbd3df"/>
+    <text x="54" y="333" fill="#151b28">ERP · asked_params · fechas · solicitudes…</text>
+    <text x="426" y="333" fill="#b91c1c" text-anchor="end" font-family="ui-monospace, Menlo, monospace">a mano</text>
+  </g>
+  <text x="40" y="374" font-size="12" fill="#5c6675">16 archivos en app/ llaman a OpenAI directo.</text>
+
+  <!-- DESPUÉS -->
+  <text x="500" y="104" font-size="12" font-weight="700" fill="#16a34a" letter-spacing="1">PROPUESTA · TODAS PASAN POR UNO</text>
+  <rect x="500" y="116" width="400" height="232" rx="10" fill="#ffffff" stroke="#16a34a" stroke-width="2"/>
+  <text x="520" y="146" font-size="13" font-weight="700" fill="#151b28" font-family="ui-monospace, Menlo, monospace">EngineConfig.request_params</text>
+  <text x="520" y="164" font-size="11.5" fill="#5c6675" font-family="ui-monospace, Menlo, monospace">(inbox, purpose, temperature:)</text>
+  <line x1="520" y1="180" x2="880" y2="180" stroke="#e3e7ee"/>
+  <text x="520" y="204" font-size="12" font-weight="700" fill="#151b28">gpt-4o / gpt-4o-mini</text>
+  <text x="520" y="222" font-size="11.5" fill="#3b4453" font-family="ui-monospace, Menlo, monospace">{ model, max_tokens, temperature }</text>
+  <text x="520" y="256" font-size="12" font-weight="700" fill="#151b28">gpt-5.x (razonamiento)</text>
+  <text x="520" y="274" font-size="11.5" fill="#3b4453" font-family="ui-monospace, Menlo, monospace">{ model, max_completion_tokens,</text>
+  <text x="520" y="290" font-size="11.5" fill="#3b4453" font-family="ui-monospace, Menlo, monospace">  reasoning_effort: "low" }</text>
+  <text x="520" y="326" font-size="11.5" fill="#5c6675">misma regla que REASONING_MODEL_RE</text>
+
+  <path d="M444,232 L496,232" stroke="#94a3b8" stroke-width="1.8" fill="none" marker-end="url(#a5)"/>
+
+  <!-- ojo -->
+  <rect x="40" y="398" width="860" height="96" rx="10" fill="#fff6e8" stroke="#f3d29b"/>
+  <text x="62" y="426" font-size="13.5" font-weight="700" fill="#7c4a03">Ojo: en gpt-5 los tokens de salida incluyen lo que el modelo piensa.</text>
+  <text x="62" y="448" font-size="12.5" fill="#7c4a03">Con un tope de 250 se gastaría pensando y la respuesta llegaría vacía: la misma falla silenciosa por otro camino.</text>
+  <text x="62" y="470" font-size="12.5" fill="#7c4a03">Cada propósito necesita su propio tope y su reasoning_effort (bajo para clasificar y responder).</text>
+</svg>
