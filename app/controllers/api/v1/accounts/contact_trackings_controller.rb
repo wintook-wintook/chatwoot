@@ -238,9 +238,12 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
     end
 
     begin
+      # proyecto@asistente_agentes_ia — el modo 'generate_prompt' se retiró: producía
+      # prosa en un formato que el motor no parsea (0 ramas, 0 fuentes, sin
+      # @crear_ticket), así que todo agente generado con él nacía sin ejecutar nada.
+      # Lo reemplaza .../contact_trackings/assistant/interview, que redacta contra el
+      # inventario real de la cuenta y comprueba el resultado con el parser del motor.
       improved = case mode
-                 when 'generate_prompt'
-                   generate_prompt_with_ai(text, params[:context], params[:objective])
                  when 'process_contact_context' # proyecto@contacts_notes - modo para estructurar notas como contexto IA
                    process_contact_context_with_ai(text)
                  else
@@ -442,93 +445,6 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
 
     improved = response_body.dig('choices', 0, 'message', 'content')&.strip
     improved.presence || text
-  end
-
-  def generate_prompt_with_ai(text, context = nil, objective = nil)
-    api_key = get_openai_api_key
-    raise 'API key de OpenAI no configurada' unless api_key.present?
-
-    require 'net/http'
-    require 'json'
-
-    uri = URI('https://api.openai.com/v1/chat/completions')
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = true
-    http.read_timeout = 15
-
-    request = Net::HTTP::Post.new(uri)
-    request['Authorization'] = "Bearer #{api_key}"
-    request['Content-Type'] = 'application/json'
-
-    prompt = <<~PROMPT
-      Eres un generador de prompts para un BOT DE SEGUIMIENTOS EMPRESARIAL.
-
-      Tu responsabilidad es:
-      1. Analizar el CONTEXTO y DATOS proporcionados
-      2. Construir un PROMPT OPERATIVO FINAL que defina:
-         – Comportamiento del bot
-         – Qué debe comunicar
-         – Qué NO debe hacer
-         – Tono
-         – Objetivo del seguimiento
-
-      REGLAS ABSOLUTAS:
-      – NO inventes información
-      – NO modifiques los datos proporcionados
-      – NO agregues ofertas, fechas o montos no indicados
-      – NO hagas preguntas al usuario final
-      – El mensaje debe ser claro, breve y orientado a acción
-      – El bot actúa como un asesor comercial profesional, no como un chatbot genérico
-
-      FORMATO OBLIGATORIO DE SALIDA (respetar exactamente esta estructura):
-
-      ROL:
-      [Descripción del rol del bot en una oración]
-
-      OBJETIVO:
-      [Objetivo del seguimiento en una oración]
-
-      INFORMACIÓN A COMUNICAR:
-      - [Dato 1]
-      - [Dato 2]
-      - [Dato N]
-
-      LLAMADO A ACCIÓN:
-      [Acción que se espera del cliente]
-
-      TONO:
-      [Descripción del tono en una oración]
-
-      PROHIBICIONES:
-      - [Prohibición 1]
-      - [Prohibición 2]
-      - [Prohibición N]
-
-      Genera ÚNICAMENTE el PROMPT OPERATIVO FINAL con el formato indicado.
-      NO incluyas explicaciones ni encabezados adicionales.
-      Cada sección debe estar separada por una línea en blanco.
-
-      DATOS DEL SEGUIMIENTO:
-
-      OBJETIVO: #{objective.presence || 'No especificado'}
-
-      CONTEXTO: #{context.presence || 'No especificado'}
-
-      INSTRUCCIONES ADICIONALES: #{text.presence || 'Ninguna'}
-    PROMPT
-
-    request.body = {
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1500,
-      temperature: 0.3
-    }.to_json
-
-    response = http.request(request)
-    response_body = JSON.parse(response.body)
-
-    generated = response_body.dig('choices', 0, 'message', 'content')&.strip
-    generated.presence || text
   end
 
   def process_contact_context_with_ai(text)

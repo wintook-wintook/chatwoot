@@ -1,0 +1,17 @@
+<%#
+# Password Form Partial (sobrescribe el de Administrate)
+
+proyecto@publicar_prompts — el navegador llenaba solo este campo con una contraseña
+guardada al editar un usuario en el super admin; al guardar (p. ej. para marcar
+"Can publish prompts") la contraseña cambiaba sin querer y la sesión se cerraba
+(05/10/2026). autocomplete="new-password" le dice al navegador que no lo autollene.
+Vacío = la contraseña no se toca (SuperAdmin::UsersController#resource_params).
+%>
+
+<div class="field-unit__label">
+  <%= f.label field.attribute %>
+</div>
+<div class="field-unit__field">
+  <%= f.password_field field.attribute, value: field.data, autocomplete: 'new-password' %>
+  <p class="field-unit__hint">Leave blank to keep the current password.</p>
+</div>

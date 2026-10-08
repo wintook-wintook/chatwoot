@@ -73,7 +73,7 @@ class KnowledgeBaseResponseService
 
     case directive[:mode]
     when :erp_query
-      perform_erp_query
+      perform_erp_query(question)
     when :canned_response
       perform_pgvector(question, 'canned_response', directive[:group])
     when :article
@@ -88,6 +88,8 @@ class KnowledgeBaseResponseService
       perform_discourse_integration(question)
     when :contpaq_support
       perform_contpaq(question, directive[:source_name])
+    when :sheet_lookup
+      perform_sheet_lookup(question, directive[:source_name])
     else
       false
     end
@@ -225,8 +227,13 @@ class KnowledgeBaseResponseService
   # Reemplaza cada {{consulta:...}} de la plantilla por el resultado de la consulta
   # predefinida y envía el texto ya interpolado. Sin IA, fail-soft, scoped a la cuenta.
   # ==============================================================================
-  def perform_erp_query
-    template = @tracking&.complementary_prompt.to_s
+  #
+  # proyecto@erp_productos (docs/erp_productos_plan.md §3): si la directiva pide parámetros
+  # a la IA ("?"), va por perform_erp_asked; sin "?", el camino de siempre.
+  def perform_erp_query(question)
+    template = erp_source
+    return perform_erp_asked(question, template) if ExternalDb::ConsultaDirectiveRenderer.asks?(template)
+
     rendered = ExternalDb::ConsultaDirectiveRenderer.new(
       account: @account, contact: @conversation&.contact, inbox: @inbox
     ).render(template).strip
@@ -237,6 +244,30 @@ class KnowledgeBaseResponseService
     end
 
     send_reply(rendered)
+    true
+  end
+
+  # §3.6: con rutas, la {{consulta:}} es la FUENTE de la ruta del turno, y es lo único que
+  # se usa. Antes se renderizaba el Entrenamiento entero: el cliente recibía el prompt
+  # completo con sus @ruta. Sin rutas, el Entrenamiento, como siempre.
+  def erp_source
+    route_directive = @route&.directive.to_s
+    return route_directive if ExternalDb::ConsultaDirectiveRenderer.contains?(route_directive)
+
+    @tracking&.complementary_prompt.to_s
+  end
+
+  # La IA llena los "?", corre la consulta y el agente redacta con esos datos exactos.
+  # Si no aplica (el mensaje no la pide, falló), false: el motor contesta como siempre.
+  def perform_erp_asked(question, source)
+    data = ExternalDb::AskedConsulta.new(source: source, question: question, conversation: @conversation,
+                                         history: load_history).call
+    return false unless data
+
+    reply = generate_contextual_reply(question, nil, erp_data: data)
+    return false if reply.blank?
+
+    send_reply(with_branch_tag(reply))
     true
   end
 
@@ -366,24 +397,64 @@ class KnowledgeBaseResponseService
     items = search_items(grouped_items(source_type, group), threshold: group_threshold(group))
     return false if items.nil?
 
-    if items.empty?
+    # proyecto@predefinidas_prompt — un guion en curso sigue aunque este mensaje no
+    # encuentre nada: "el martes a las 10" no se parece a ninguna respuesta predefinida.
+    prompt = canned_prompt_for(source_type, items)
+    if items.empty? && prompt.nil?
       Rails.logger.info "[KBase] ⚠️ Sin resultados en #{source_type}"
       return false
     end
 
     Rails.logger.info "[KBase] ✅ #{items.size} resultado(s) en #{source_type}"
 
-    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
-                   .join("\n\n")
-                   .truncate(kbase_setting('max_context_chars'))
-
-    reply_text = generate_contextual_reply(question, context)
+    reply_text = (canned_prompt_reply(question, prompt) if prompt)
+    reply_text ||= generate_contextual_reply(question, pgvector_context(items)) if items.any?
     return false if reply_text.blank?
 
     source_tag = @account.knowledge_sources.find_by(source_type: source_type)&.name ||
                  I18n.t("knowledge_sources.names.#{source_type}", locale: @account.locale.presence || I18n.default_locale)
     send_reply("#{with_branch_tag(reply_text)}\n\n_#{source_tag}_")
     true
+  end
+
+  def pgvector_context(items)
+    items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
+         .join("\n\n")
+         .truncate(kbase_setting('max_context_chars'))
+  end
+
+  # proyecto@predefinidas_prompt — la respuesta predefinida con prompt que manda en este
+  # mensaje (ver KnowledgeBase::CannedPrompt):
+  #   1. la PRIMERA encontrada, si trae prompt (el mensaje es el prompt, o tiene Prompt de
+  #      Contenido) — empieza su guion, o lo reemplaza si había otro;
+  #   2. si no, el guion en curso de la conversación, si sigue valiendo;
+  #   3. si no, ninguna (y se olvida el guion vencido, si había).
+  def canned_prompt_for(source_type, items)
+    return nil unless source_type == 'canned_response'
+
+    prompt = KnowledgeBase::CannedPrompt.detect(@account, items) ||
+             KnowledgeBase::CannedPrompt.resume(@account, @conversation, items)
+    KnowledgeBase::CannedPrompt.forget!(@conversation) unless prompt
+    prompt
+  end
+
+  # El agente redacta siguiendo el prompt, solo con esa respuesta (y, a mitad de un guion,
+  # con lo que encontró la búsqueda por si el cliente preguntó otra cosa).
+  # nil = la respuesta copió las instrucciones: se responde como siempre y el guion no
+  # avanza.
+  def canned_prompt_reply(question, prompt)
+    Rails.logger.info "[KBase] 📝 Respuesta predefinida con prompt (#{prompt.mode}" \
+                      "#{", guion en curso, mensaje #{prompt.turns + 1}" if prompt.continuing?}): #{prompt.canned.short_code}"
+    reply = generate_contextual_reply(question, nil, canned_prompt: prompt)
+    return nil if reply.blank?
+
+    if prompt.closes?(reply)
+      Rails.logger.info "[KBase] 🏁 Guion de '#{prompt.canned.short_code}' cerrado con su etiqueta"
+      KnowledgeBase::CannedPrompt.forget!(@conversation)
+    else
+      prompt.remember!(@conversation, @route&.name)
+    end
+    reply
   end
 
   # ==============================================================================
@@ -470,9 +541,12 @@ class KnowledgeBaseResponseService
       return false
     end
 
-    context = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
-                   .join("\n\n")
-                   .truncate(kbase_setting('max_context_chars'))
+    hidden = sheet_lookup_columns(source)
+    # SheetRowFit y no truncate: cortar al final se comía las últimas columnas de las filas largas.
+    filas = items.map.with_index(1) do |i, n|
+      "#{n}. #{i.title}\n#{KnowledgeBase::SheetRowFit.call(without_columns(i.content, hidden), MAX_ITEM_CHARS)}"
+    end
+    context = filas.join("\n\n").truncate(kbase_setting('max_context_chars'))
     reply_text = generate_contextual_reply(question, context)
     return false if reply_text.blank?
 
@@ -480,7 +554,69 @@ class KnowledgeBaseResponseService
     true
   end
 
-  def generate_contextual_reply(question, context)
+  # ==============================================================================
+  # proyecto@hoja_buscar — {{hoja_buscar:}} como FUENTE de la ruta (pieza 2, 26/09/2026)
+  #   @ruta(asignacion: …): {{hoja_buscar: Unidades | economico=? | operador, placas, color}}
+  # Ruby busca las filas exactas; el modelo solo redacta con ellas. Para los datos que el
+  # cliente pide tal cual (operador, placas, teléfono), la búsqueda por parecido de
+  # {{hoja:}} traía la fila equivocada o ninguna.
+  # ==============================================================================
+  MAX_LOOKUP_ROWS = 20
+  NO_MATCH_RULE = 'Dilo con claridad y no inventes otra opción.'
+
+  def perform_sheet_lookup(question, inner)
+    return false unless google_feature_enabled?
+
+    spec = ContactTrackings::SheetLookup.parse(inner)
+    return false if spec.nil?
+
+    result = ContactTrackings::SheetLookup.new(@account, spec, conversation: @conversation).call
+    context = sheet_lookup_context(spec, result)
+    return false if context.nil?
+
+    reply_text = generate_contextual_reply(question, context)
+    return false if reply_text.blank?
+
+    send_reply("#{with_branch_tag(reply_text)}\n\n_#{spec.sheet}_")
+    true
+  end
+
+  # nil = la hoja no respondió (no existe, columna mal escrita): sigue el conversacional.
+  def sheet_lookup_context(spec, result)
+    case result.status
+    when :ok
+      filas = ContactTrackings::SheetLookup.describe(spec, result.rows)
+      extra = filas.size > MAX_LOOKUP_ROWS ? "\n(y #{filas.size - MAX_LOOKUP_ROWS} más)" : ''
+      "Datos exactos de la hoja «#{spec.sheet}» (úsalos tal cual; lo que no esté aquí no lo sabes):\n" \
+        "#{filas.first(MAX_LOOKUP_ROWS).join("\n")}#{extra}"
+    when :needs_value
+      "Para responder falta saber «#{result.asked}». Pregúntaselo al cliente en una sola pregunta; no respondas nada más."
+    when :no_match
+      "En la hoja «#{spec.sheet}» no hay ninguna fila con: #{result.criteria.join('; ')}. #{NO_MATCH_RULE}"
+    else
+      Rails.logger.warn "[KBase] ⚠️ {{hoja_buscar:}} sin respuesta: #{result.status} #{result.missing}"
+      nil
+    end
+  end
+
+  # proyecto@hoja_buscar — las columnas que una {{hoja_buscar:}} del Entrenamiento regresa
+  # sobre esta hoja son para la agenda, no para el cliente. Medido el 25/09/2026: con
+  # Calendar_ID en el contexto, «¿qué horarios tiene la TP-64?» le pasó al cliente los links
+  # de los calendarios internos.
+  def sheet_lookup_columns(source)
+    ContactTrackings::SheetLookup.agenda_specs(@tracking&.complementary_prompt)
+                                 .select { |spec| spec.sheet.casecmp?(source.name) }
+                                 .flat_map(&:returns).map { |col| col.strip.downcase }.uniq
+  end
+
+  # Las filas FAQ se vectorizan como «columna: valor» por línea.
+  def without_columns(content, columns)
+    return content if columns.empty?
+
+    content.to_s.lines.reject { |line| columns.include?(line.split(':', 2).first.to_s.strip.downcase) }.join.strip
+  end
+
+  def generate_contextual_reply(question, context, erp_data: nil, canned_prompt: nil)
     api_key = openai_api_key
     return nil unless api_key
 
@@ -493,6 +629,8 @@ class KnowledgeBaseResponseService
     system_prompt = [
       header,
       ("Objetivo de la conversación: #{objective}" if objective.present?),
+      ContactTrackings::AgentAttachments.hint(@tracking&.tracking_template),
+      variables_rule,
       branch_scope_rule.presence
     ].compact_blank.join("\n\n")
 
@@ -502,8 +640,9 @@ class KnowledgeBaseResponseService
       Información relevante:
       #{context}
 
-      Respondé usando esa información de forma completa y útil. Tono natural y conversacional.
+      Responde usando esa información de forma completa y útil. Tono natural y conversacional.
       No uses prefijos como "Asesor:" ni comillas al inicio o final.
+      #{ContactTrackings::CustomerTone::RULE}
 
       FIDELIDAD A LA FUENTE (regla dura): la información de arriba se recuperó por
       parecido semántico, así que puede tratar de un tema vecino pero distinto al que
@@ -513,11 +652,13 @@ class KnowledgeBaseResponseService
       los pasos del vendedor). Los nombres de permisos, parámetros, campos y menús se
       citan textualmente como aparecen en la fuente.
 
-      Si la fuente no cubre exactamente lo que preguntaron, decilo de frente: explicá
-      brevemente qué sí cubre la documentación, aclará que no tenés el procedimiento
-      exacto para su caso y ofrecé pasarlo con un asesor. Una respuesta honesta que no
+      Si la fuente no cubre exactamente lo que preguntaron, dilo de frente: explica
+      brevemente qué sí cubre la documentación, aclara que no tienes el procedimiento
+      exacto para su caso y ofrece pasarlo con un asesor. Una respuesta honesta que no
       resuelve es mejor que una inventada que parece resolver.
     USER
+    user_prompt = erp_user_prompt(first_name, question, erp_data) if erp_data
+    user_prompt = canned_prompt_user_prompt(first_name, question, canned_prompt) if canned_prompt
 
     history  = load_history
     messages = [{ role: 'system', content: system_prompt }]
@@ -533,8 +674,70 @@ class KnowledgeBaseResponseService
     return nil if reply.blank?
 
     reply = strip_echoed_sources(reply)
+    # Se revisa ANTES de guardar el historial: una respuesta que copió las instrucciones
+    # no puede quedar ahí, porque el modelo la vería en el turno siguiente.
+    if canned_prompt&.leaks?(reply)
+      Rails.logger.warn "[KBase] 🚫 La respuesta copió el prompt de '#{canned_prompt.canned.short_code}' → se descarta"
+      return nil
+    end
+
     save_history(history, question, reply)
     reply
+  end
+
+  # proyecto@erp_productos — el turno con los datos de una {{consulta:}} con "?".
+  def erp_user_prompt(first_name, question, data)
+    <<~USER.strip
+      El cliente #{first_name} preguntó: "#{question.truncate(300)}"
+
+      Datos exactos del sistema (#{data[:rows].size} resultado(s)):
+      #{erp_rows_text(data)}
+
+      Responde con esos datos. Tono natural y conversacional. No uses prefijos como "Asesor:" ni comillas.
+      #{ContactTrackings::CustomerTone::RULE}
+
+      DATOS EXACTOS (regla dura): precios, existencias, códigos y nombres se citan tal como
+      están arriba. Nunca inventes productos, precios ni disponibilidad, ni completes con
+      "parecidos" que no aparecen. Existencia 0 o negativa = sin existencia. Si no hay
+      resultados, decilo y ofrecé buscar de otra forma o pasarlo con un asesor. No
+      menciones que consultaste un sistema ni los nombres de las columnas.
+    USER
+  end
+
+  # "Si alguno SÍ es…": el catálogo escribe "Baseball" y el cliente "béisbol"; medido en F5,
+  # el agente decía "no encontré bats" y en seguida ofrecía un bat.
+  PARTIAL_NOTE = 'COINCIDENCIA PARCIAL: nada coincidió con todas las palabras del cliente; estos coinciden solo ' \
+                 'con alguna. Si alguno SÍ es lo que pidió (otro idioma o sinónimo: baseball = béisbol), ' \
+                 'preséntalo como lo que pidió; los demás, como opciones que podrían interesarle.'
+
+  def erp_rows_text(data)
+    return 'La consulta no encontró resultados.' if data[:rows].empty?
+
+    lines = data[:rows].map.with_index(1) do |row, n|
+      "#{n}. #{data[:columns].filter_map { |col| (v = erp_value(row[col])) && "#{col}: #{v}" }.join(' · ')}"
+    end
+    [(PARTIAL_NOTE if data[:partial]), *lines].compact.join("\n")
+  end
+
+  def erp_value(value)
+    case value
+    when nil, '' then nil
+    when Float, BigDecimal then format('%.2f', value)
+    when Time, DateTime, ActiveSupport::TimeWithZone, Date then value.strftime('%d/%m/%Y')
+    else value.to_s
+    end
+  end
+
+  # El turno en modo prompt: la pregunta y el bloque de la respuesta predefinida
+  # (información + instrucciones). Las reglas del agente siguen en el system.
+  def canned_prompt_user_prompt(first_name, question, canned_prompt)
+    <<~USER.strip
+      El cliente #{first_name} preguntó: "#{question.truncate(300)}"
+
+      #{canned_prompt.turn_block}
+
+      Tono natural y conversacional. No uses prefijos como "Asesor:" ni comillas al inicio o final.
+    USER
   end
 
   # ==============================================================================
@@ -622,26 +825,22 @@ class KnowledgeBaseResponseService
     request['Api-Username'] = username
     request['Content-Type'] = 'application/json'
 
-    data      = JSON.parse(http.request(request).body)
-    posts     = data['posts'] || []
-    topic_map = (data['topics'] || []).index_by { |t| t['id'] }
+    response = http.request(request)
+    # Foro sin Discourse AI activo: la búsqueda normal (ver KnowledgeBase::DiscourseKeywordSearch).
+    return keyword_search(config).hits(query) if response.code == '404'
 
-    Rails.logger.info "[KBase] 📚 #{posts.size} resultado(s) en Discourse semantic-search"
-
-    posts.filter_map do |post|
-      topic = topic_map[post['topic_id']]
-      next unless topic
-
-      {
-        post_id: post['id'],
-        title: topic['title'].to_s.strip,
-        url: "#{url}/t/#{topic['slug']}/#{topic['id']}",
-        blurb: post['blurb'].to_s.strip
-      }
-    end
+    data = JSON.parse(response.body)
+    Rails.logger.info "[KBase] 📚 #{(data['posts'] || []).size} resultado(s) en Discourse semantic-search"
+    KnowledgeBase::DiscourseKeywordSearch.to_hits(data, url)
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error en Discourse search: #{e.message}"
     []
+  end
+
+  def keyword_search(config)
+    @keyword_search ||= KnowledgeBase::DiscourseKeywordSearch.new(
+      config, ask: ->(messages) { call_openai_simple(messages, max_tokens: 60, temperature: 0.0) }
+    )
   end
 
   # Recibe TODAS las consultas del turno (ver search_queries) y devuelve un solo contexto
@@ -710,8 +909,11 @@ class KnowledgeBaseResponseService
     @conversation.additional_attributes&.dig('kb_history') || []
   end
 
+  # El {{nombre}} de un adjunto se guarda como «archivo enviado»: con el token tal cual,
+  # el modelo lo imitaba en el turno siguiente y reenviaba el archivo.
   def save_history(history, question, answer)
-    history << { 'q' => question, 'a' => answer }
+    answer   = ContactTrackings::ConversationVariables.strip(@tracking, answer) if @tracking
+    history << { 'q' => question, 'a' => ContactTrackings::AgentAttachments.for_history(answer) }
     history  = history.last(MAX_HISTORY)
     attrs    = (@conversation.additional_attributes || {}).merge('kb_history' => history)
     @conversation.update_columns(additional_attributes: attrs)
@@ -748,7 +950,10 @@ class KnowledgeBaseResponseService
     # modelo (ni de rebote al cliente). Los tokens de directiva sueltos se quitan
     # también (ver KnowledgeBase::Directives.strip_tokens): son configuración, no
     # instrucciones para el modelo.
-    KnowledgeBase::Directives.strip_tokens(ContactTrackings::RouteMap.strip(@tracking.complementary_prompt)).presence
+    # La sección [MENSAJE DE BIENVENIDA] la manda el motor tal cual en el primer mensaje
+    # (ContactTrackings::WelcomeMessage): si el modelo la viera, la repetiría.
+    prompt = ContactTrackings::WelcomeMessage.strip(ContactTrackings::RouteMap.strip(@tracking.complementary_prompt))
+    KnowledgeBase::Directives.strip_tokens(prompt).presence
   end
 
   # El clasificador (@ruta) ya decidió de qué trata el turno, y con esa decisión se eligió
@@ -779,6 +984,14 @@ class KnowledgeBaseResponseService
     RULE
   end
 
+  # proyecto@contact_tracking: los valores actuales de la sección [VARIABLES] del agente
+  # (ver ContactTrackings::ConversationVariables). nil si no declara variables.
+  def variables_rule
+    return @variables_rule if defined?(@variables_rule)
+
+    @variables_rule = @tracking && ContactTrackings::ConversationVariables.rule_for(@tracking, @conversation)
+  end
+
   # FUENTE_USADA acopla el texto al link: antes el footer adivinaba a posteriori, por
   # overlap de palabras, cuál de las fuentes había usado el modelo. Ahora lo declara él.
   #
@@ -794,8 +1007,8 @@ class KnowledgeBaseResponseService
     - Llegan por parecido semántico, así que la mejor puede tratar de un tema vecino
       pero distinto al que preguntaron. No adaptes una fuente para que encaje: no
       sustituyas el sujeto de un procedimiento por el de la pregunta.
-    - Empezá SIEMPRE tu respuesta con una línea "FUENTE_USADA: n", donde n es el número
-      de la [FUENTE n] en la que te basaste. Si no te basaste en ninguna, escribí
+    - Empieza SIEMPRE tu respuesta con una línea "FUENTE_USADA: n", donde n es el número
+      de la [FUENTE n] en la que te basaste. Si no te basaste en ninguna, escribe
       "FUENTE_USADA: 0". Esa línea se elimina antes de mostrarla al cliente.
   RULE
 
@@ -804,15 +1017,19 @@ class KnowledgeBaseResponseService
 
   def build_messages(question, context, history)
     system_content = agent_system_prompt || <<~PROMPT.strip
-      Eres un agente de soporte de #{@account.name}. Respondé preguntas
+      Eres un agente de soporte de #{@account.name}. Responde preguntas
       de forma conversacional y concisa, como lo haría un experto de soporte.
-      - Usá el contenido del foro como referencia, respondé con tus propias palabras.
-      - Si necesitás más información, hacé UNA pregunta de seguimiento.
-      - Respondé en el mismo idioma que el cliente.
+      - Usa el contenido del foro como referencia, responde con tus propias palabras.
+      - Si necesitas más información, haz UNA pregunta de seguimiento.
+      - Responde en el mismo idioma que el cliente.
       - No menciones que consultaste un foro o base de conocimiento.
     PROMPT
 
+    system_content += "\n\n#{ContactTrackings::CustomerTone::RULE}"
+    attachments_hint = ContactTrackings::AgentAttachments.hint(@tracking&.tracking_template)
+    system_content += "\n\n#{attachments_hint}" if attachments_hint
     system_content += "\n\nContenido relevante del foro:\n#{context}#{SOURCE_FIDELITY_RULE}" if context.present?
+    system_content += "\n\n#{variables_rule}" if variables_rule.present?
     system_content += "\n\n#{branch_scope_rule}" if branch_scope_rule.present?
 
     messages = [{ role: 'system', content: system_content }]
@@ -979,12 +1196,15 @@ class KnowledgeBaseResponseService
     "#{text.rstrip}\n\n#{tag}"
   end
 
+  # proyecto@ai_agent_attachments: el {{nombre}} que escribió el modelo sale como archivo
+  # del Agente IA (ver ContactTrackings::AgentAttachments). Antes solo lo hacían las ramas
+  # sin fuente, y acá llegaba literal al cliente.
   def send_reply(text)
-    reply_message = Messages::MessageBuilder.new(
-      bot_user,
-      @conversation,
-      { content: text, private: false }
-    ).perform
+    text = ContactTrackings::ConversationVariables.settle(@tracking, @conversation, text) if @tracking
+    content, attachments = ContactTrackings::AgentAttachments.resolve(@tracking&.tracking_template, text)
+    params = { content: content, private: false }
+    params[:attachments] = attachments if attachments.any?
+    reply_message = Messages::MessageBuilder.new(bot_user, @conversation, params).perform
 
     if reply_message.present?
       reply_message.content_attributes[:sentiment_auto_reply] = true

@@ -92,4 +92,42 @@ RSpec.describe ContactTrackings::EngineConfig do
       expect(enum).to match_array(described_class::ALLOWED_MODELS)
     end
   end
+
+  # proyecto@asistente_agentes_ia — el Asistente de Agentes IA NO tiene inbox: es de
+  # cuenta. Sin piso caería al modelo chico, que ya se midió que no cumple las reglas
+  # de un prompt largo — y el asistente escribe configuración que el motor parsea con
+  # patrones exactos.
+  describe 'piso de modelo por propósito' do
+    it 'sube al piso cuando no hay inbox que resuelva un modelo' do
+      expect(described_class.model_for(nil, :authoring_assistant)).to eq('gpt-4o')
+    end
+
+    it 'sube al piso cuando el inbox tiene configurado uno más chico' do
+      enable_tracking_bot(inbox, 'gpt-4o-mini')
+
+      expect(described_class.model_for(inbox, :authoring_assistant)).to eq('gpt-4o')
+    end
+
+    # Es un piso, no una imposición: si la cuenta pagó por algo más capaz, gana.
+    it 'no baja un modelo que ya está por encima del piso' do
+      enable_tracking_bot(inbox, 'gpt-4o')
+
+      expect(described_class.model_for(inbox, :authoring_assistant)).to eq('gpt-4o')
+    end
+
+    it 'no toca los propósitos sin piso' do
+      expect(described_class.model_for(nil)).to eq(described_class::DEFAULT_MODEL)
+    end
+
+    it 'todo modelo del piso y del ranking está permitido' do
+      expect(described_class::MODEL_RANK).to match_array(described_class::ALLOWED_MODELS)
+      expect(described_class::ALLOWED_MODELS).to include(*described_class::MODEL_FLOOR.values)
+    end
+
+    # Un Entrenamiento entero no entra en el tope de una frase.
+    it 'le da al asistente un presupuesto propio de tokens' do
+      expect(described_class.max_tokens_for(:authoring_assistant))
+        .to be > described_class.max_tokens_for(:authoring)
+    end
+  end
 end

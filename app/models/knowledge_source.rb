@@ -28,6 +28,14 @@ class KnowledgeSource < ApplicationRecord
   belongs_to :account
   has_many :knowledge_items, dependent: :destroy
 
+  # Catálogo cerrado de fuentes que el motor sabe consultar. Es la lista que manda:
+  # cualquier consumidor que ofrezca fuentes —hoy el Asistente de Agentes IA, que
+  # dicta las directivas disponibles al modelo— debe recorrer ESTA constante, no una
+  # copia propia. Agregar un tipo acá sin darle su directiva en
+  # ContactTrackings::Assistant::InventoryService hace fallar el spec de ese servicio,
+  # que es lo que evita que una fuente nueva quede invisible en silencio.
+  SOURCE_TYPES = %w[canned_response discourse article google_doc google_sheet contpaq_support].freeze
+
   # Tipos cuyo nombre direcciona una directiva del bot: @buscar_foro(nombre) y
   # {{doc:nombre}}. Para estos el nombre debe ser único por cuenta. Las fuentes
   # nativas (canned_response/article) se autogestionan con nombre localizado fijo y
@@ -48,8 +56,7 @@ class KnowledgeSource < ApplicationRecord
 
   has_many :google_sheet_rows, dependent: :destroy
 
-  validates :source_type, presence: true,
-                          inclusion: { in: %w[canned_response discourse article google_doc google_sheet contpaq_support] }
+  validates :source_type, presence: true, inclusion: { in: SOURCE_TYPES }
   validates :name, presence: true
   validates :name, uniqueness: { scope: :account_id, case_sensitive: false }, if: :addressable_by_name?
 

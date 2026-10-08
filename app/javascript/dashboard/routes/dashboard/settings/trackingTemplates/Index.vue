@@ -13,12 +13,14 @@ import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import TemplateForm from './EditTemplate.vue';
 import ImportModal from './ImportModal.vue'; // proyecto@import_seguimiento
+import PublishPromptModal from './PublishPromptModal.vue'; // proyecto@publicar_prompts
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 
 export default {
   components: {
     TemplateForm,
     ImportModal,
+    PublishPromptModal,
     TableFooter,
   },
   data() {
@@ -31,6 +33,7 @@ export default {
       showDeleteConfirmation: false,
       templateToDelete: null,
       showImportModal: false, // proyecto@import_seguimiento
+      templateToPublish: null, // proyecto@publicar_prompts
       currentPage: 1,
       perPage: 10,
     };
@@ -41,7 +44,12 @@ export default {
       templates: 'trackingTemplates/getTemplates',
       allInboxIds: 'trackingTemplates/getAllInboxIds',
       inboxes: 'inboxes/getInboxes',
+      currentUser: 'getCurrentUser',
     }),
+    // proyecto@publicar_prompts — lo marca el super admin; sin él no se ve nada de publicar.
+    canPublishPrompts() {
+      return !!this.currentUser.can_publish_prompts;
+    },
     isListView() {
       return this.currentView === 'list';
     },
@@ -117,6 +125,20 @@ export default {
       this.selectedTemplate = null;
       this.currentView = 'form';
     },
+    // proyecto@asistente_agentes_ia — armar un agente nuevo en el Asistente.
+    createWithAssistant() {
+      this.$router.push({
+        name: 'contact_trackings_assistant',
+        query: { nuevo: 1 },
+      });
+    },
+    // proyecto@asistente_agentes_ia — abre el Asistente con este agente cargado.
+    improveWithAssistant(template) {
+      this.$router.push({
+        name: 'contact_trackings_assistant',
+        query: { template_id: template.id },
+      });
+    },
     goToEditForm(template) {
       this.formMode = 'edit';
       this.selectedTemplate = { ...template };
@@ -138,9 +160,10 @@ export default {
         }
         this.goBackToList();
       } catch (error) {
-        const msg = this.formMode === 'create'
-          ? this.$t('TRACKING_TEMPLATES.CREATE.API.ERROR_MESSAGE')
-          : this.$t('TRACKING_TEMPLATES.EDIT.API.ERROR_MESSAGE');
+        const msg =
+          this.formMode === 'create'
+            ? this.$t('TRACKING_TEMPLATES.CREATE.API.ERROR_MESSAGE')
+            : this.$t('TRACKING_TEMPLATES.EDIT.API.ERROR_MESSAGE');
         useAlert(msg);
       }
     },
@@ -165,6 +188,25 @@ export default {
       } finally {
         this.closeDeleteConfirm();
       }
+    },
+    // proyecto@publicar_prompts
+    isPublished(template) {
+      return (
+        !!template.publication && template.publication.status === 'published'
+      );
+    },
+    publishedLabel(template) {
+      return this.$t('TRACKING_TEMPLATES.PUBLISH.BADGE', {
+        version: template.publication.version,
+      });
+    },
+    updateLabel(template) {
+      return this.$t('TRACKING_TEMPLATES.PUBLISH.UPDATE_BADGE', {
+        version: template.published_prompt_update.version,
+      });
+    },
+    refreshTemplates() {
+      this.$store.dispatch('trackingTemplates/get');
     },
     getInboxName(template) {
       return template.inbox_name || '-';
@@ -195,7 +237,6 @@ export default {
 
 <template>
   <div class="flex flex-col flex-1 min-h-0 overflow-hidden p-4">
-
     <!-- Header (siempre visible) -->
     <div class="flex items-center justify-between mb-4 shrink-0">
       <div class="flex items-center gap-2">
@@ -220,6 +261,18 @@ export default {
           @click="showImportModal = true"
         >
           {{ $t('TRACKING_IMPORT.BTN_OPEN') }}
+        </woot-button>
+        <!-- proyecto@asistente_agentes_ia — armarlo en el Asistente: el árbol de
+             Estructura del Agente y el comprobador en vivo. El botón de al lado
+             sigue abriendo la ficha, para escribir el Entrenamiento a mano. -->
+        <woot-button
+          v-if="isListView"
+          icon="wand-outline"
+          variant="smooth"
+          color-scheme="success"
+          @click="createWithAssistant"
+        >
+          {{ $t('TRACKING_TEMPLATES.HEADER_BTN_ASSISTANT') }}
         </woot-button>
         <woot-button
           v-if="isListView"
@@ -253,7 +306,6 @@ export default {
 
     <!-- VISTA: LISTA -->
     <div v-else class="flex flex-col flex-1 min-h-0">
-
       <!-- Filtros (estilo unificado con el listado de Seguimientos) -->
       <div
         v-if="hasTemplates"
@@ -290,7 +342,10 @@ export default {
       </div>
 
       <!-- Loading -->
-      <div v-if="uiFlags.fetchingList" class="flex items-center justify-center py-12">
+      <div
+        v-if="uiFlags.fetchingList"
+        class="flex items-center justify-center py-12"
+      >
         <span class="text-slate-500 dark:text-slate-400">
           {{ $t('TRACKING_TEMPLATES.LOADING') }}
         </span>
@@ -301,7 +356,11 @@ export default {
         v-else-if="!hasTemplates"
         class="flex flex-col items-center justify-center py-16 text-center"
       >
-        <fluent-icon icon="document-outline" size="48" class="text-slate-300 dark:text-slate-600 mb-4" />
+        <fluent-icon
+          icon="document-outline"
+          size="48"
+          class="text-slate-300 dark:text-slate-600 mb-4"
+        />
         <p class="text-slate-500 dark:text-slate-400 max-w-md">
           {{ $t('TRACKING_TEMPLATES.NO_TEMPLATES') }}
         </p>
@@ -324,7 +383,9 @@ export default {
       >
         <table class="w-full text-sm">
           <thead class="sticky top-0 z-10 bg-white dark:bg-slate-800">
-            <tr class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
+            <tr
+              class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700"
+            >
               <th class="p-3">
                 {{ $t('TRACKING_TEMPLATES.TABLE.NAME') }}
               </th>
@@ -352,9 +413,28 @@ export default {
               class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
             >
               <td class="p-3">
-                <span class="text-sm font-medium text-slate-800 dark:text-slate-200">
+                <span
+                  class="text-sm font-medium text-slate-800 dark:text-slate-200"
+                >
                   {{ template.name }}
                 </span>
+                <!-- proyecto@publicar_prompts (F7): el autor publicó una versión nueva -->
+                <woot-label
+                  v-if="template.published_prompt_update"
+                  v-tooltip="$t('TRACKING_TEMPLATES.PUBLISH.UPDATE_HINT')"
+                  small
+                  :title="updateLabel(template)"
+                  color-scheme="warning"
+                  class="ltr:ml-2 rtl:mr-2 text-xs"
+                />
+                <!-- proyecto@publicar_prompts -->
+                <woot-label
+                  v-if="canPublishPrompts && isPublished(template)"
+                  small
+                  :title="publishedLabel(template)"
+                  color-scheme="success"
+                  class="ltr:ml-2 rtl:mr-2 text-xs"
+                />
               </td>
               <td class="p-3">
                 <span class="text-sm text-slate-600 dark:text-slate-400">
@@ -382,6 +462,27 @@ export default {
               </td>
               <td class="p-3 text-right">
                 <div class="flex items-center justify-end gap-2">
+                  <!-- proyecto@asistente_agentes_ia — llevarlo al Asistente para
+                       mejorarlo. Al guardar reemplaza ESTE agente y conserva el
+                       Entrenamiento anterior, en vez de crear otro al lado. -->
+                  <woot-button
+                    v-tooltip="$t('TRACKING_TEMPLATES.IMPROVE_WITH_ASSISTANT')"
+                    variant="smooth"
+                    size="small"
+                    color-scheme="secondary"
+                    icon="wand"
+                    @click="improveWithAssistant(template)"
+                  />
+                  <!-- proyecto@publicar_prompts — solo el usuario autorizado -->
+                  <woot-button
+                    v-if="canPublishPrompts"
+                    v-tooltip="$t('TRACKING_TEMPLATES.PUBLISH.BUTTON')"
+                    variant="smooth"
+                    size="small"
+                    color-scheme="secondary"
+                    icon="share"
+                    @click="templateToPublish = template"
+                  />
                   <woot-button
                     variant="smooth"
                     size="small"
@@ -414,9 +515,15 @@ export default {
       />
 
       <!-- Import Modal - proyecto@import_seguimiento -->
-      <ImportModal
-        :show="showImportModal"
-        @close="showImportModal = false"
+      <ImportModal :show="showImportModal" @close="showImportModal = false" />
+
+      <!-- proyecto@publicar_prompts -->
+      <PublishPromptModal
+        v-if="canPublishPrompts"
+        :show="!!templateToPublish"
+        :template="templateToPublish"
+        @close="templateToPublish = null"
+        @changed="refreshTemplates"
       />
 
       <!-- Delete Confirmation -->
@@ -425,7 +532,13 @@ export default {
         :on-close="closeDeleteConfirm"
         :on-confirm="confirmDelete"
         :title="$t('TRACKING_TEMPLATES.DELETE.TITLE')"
-        :message="templateToDelete ? $t('TRACKING_TEMPLATES.DELETE.CONFIRM_MESSAGE', { name: templateToDelete.name }) : ''"
+        :message="
+          templateToDelete
+            ? $t('TRACKING_TEMPLATES.DELETE.CONFIRM_MESSAGE', {
+                name: templateToDelete.name,
+              })
+            : ''
+        "
         :confirm-text="$t('TRACKING_TEMPLATES.DELETE.CONFIRM_YES')"
         :reject-text="$t('TRACKING_TEMPLATES.DELETE.CONFIRM_NO')"
       />

@@ -32,7 +32,8 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
       campaign_name: params[:campaign_name],
       scheduled_for: parse_scheduled_for(params[:scheduled_for]),
       excluded_contact_ids: params[:excluded_contact_ids] || [],
-      skip_active: ActiveModel::Type::Boolean.new.cast(params.fetch(:skip_active, true))
+      skip_active: ActiveModel::Type::Boolean.new.cast(params.fetch(:skip_active, true)),
+      window: window_params
     ).call
 
     return render json: result, status: :unprocessable_entity if result[:error].present?
@@ -57,6 +58,15 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
   end
 
   private
+
+  # proyecto@automatizacion_campanas — la ventana de la campaña por lote (todo opcional).
+  def window_params
+    {
+      ends_at: parse_scheduled_for(params[:ends_at]),
+      entry_delay_minutes: params[:entry_delay_minutes].presence&.to_i,
+      respect_working_hours: params.key?(:respect_working_hours) ? ActiveModel::Type::Boolean.new.cast(params[:respect_working_hours]) : nil
+    }
+  end
 
   def parse_scheduled_for(value)
     return nil if value.blank?

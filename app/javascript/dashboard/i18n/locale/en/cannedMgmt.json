@@ -10,11 +10,7 @@
       "404": "There are no canned responses available in this account.",
       "TITLE": "Manage canned responses",
       "DESC": "Canned Responses are predefined reply templates which can be used to quickly send out replies to conversations.",
-      "TABLE_HEADER": [
-        "Short code",
-        "Content",
-        "Actions"
-      ]
+      "TABLE_HEADER": ["Short code", "Content", "Actions"]
     },
     "ADD": {
       "TITLE": "Add canned response",
@@ -72,6 +68,26 @@
         "YES": "Yes, delete ",
         "NO": "No, keep "
       }
+    },
+    "FORM_PROMPT": {
+      "TAB_MESSAGE": "Message",
+      "TAB_PROMPT": "Content prompt",
+      "TAB_PROMPT_ACTIVE": "Content prompt ●",
+      "PLACEHOLDER": "E.g.: 1. Answer warmly. 2. Ask which equipment they need and how many. 3. Explain a sales advisor will follow up…",
+      "TAG_MISSING": "The label %{tag} does not exist in this account: it will not trigger any automation.",
+      "TAG_UNREADABLE": "The label %{tag} has characters the engine does not read (accents, ñ, hyphens): it reads it as %{read}. Use only lowercase letters, numbers and underscores.",
+      "LIST_BADGE": "With prompt",
+      "CONTENT_IS_PROMPT": "The message is the prompt",
+      "CONTENT_IS_PROMPT_HELP": "Check it when the message is not information for the customer but instructions for the AI agent. It is separate from the Content Prompt.",
+      "LIST_BADGE_IS_PROMPT": "Message = prompt"
+    },
+    "LEGACY": {
+      "MENU": "Show as a menu option.",
+      "MENU_OPTION": "Menu option number.",
+      "CONTENT_FULL": "Show the full content in the search result",
+      "URL_CONTENT": "Add an alternative web link",
+      "URL": "Alternative web link",
+      "URL_PLACEHOLDER": "Please enter a web address"
     }
   }
 }

@@ -10,15 +10,6 @@
 #  palabra_sinonimo_id   :integer          default(0), not null
 #  sinonimo_semantico_id :integer
 #
-# ================================================================================
-# Sinónimos nativos — tabla legacy wintook.palabras_sinonimos (auto-referenciada)
-# --------------------------------------------------------------------------------
-# Una sola tabla: una fila es RAÍZ o SINÓNIMO según palabra_sinonimo_id.
-#   RAÍZ     → palabra_id == palabra_sinonimo_id  (cabeza de su grupo)
-#   SINÓNIMO → palabra_sinonimo_id == palabra_id de su raíz (y != al propio)
-# La tabla NO tiene timestamps → record_timestamps = false.
-# La categoría semántica (opcional) vive solo en las RAÍCES.
-# ================================================================================
 class PalabraSinonimo < ApplicationRecord
   self.table_name = 'wintook.palabras_sinonimos'
   self.primary_key = 'palabra_id'

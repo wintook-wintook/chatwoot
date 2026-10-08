@@ -22,6 +22,7 @@ class ContactTrackingBulkAssignsAPI extends ApiClient {
     scheduledFor,
     excludedContactIds = [],
     skipActive = true,
+    window = {}, // proyecto@automatizacion_campanas: ends_at, entry_delay_minutes, respect_working_hours
   }) {
     return axios.post(this.url, {
       payload,
@@ -30,6 +31,7 @@ class ContactTrackingBulkAssignsAPI extends ApiClient {
       scheduled_for: scheduledFor,
       excluded_contact_ids: excludedContactIds,
       skip_active: skipActive,
+      ...window,
     });
   }
 

@@ -20,6 +20,7 @@ class AsyncDispatcher < BaseDispatcher
       NotificationListener.instance,
       ParticipationListener.instance,
       ReportingEventListener.instance,
+      ServiceConfirmationListener.instance, # proyecto@hoja_buscar — etiqueta «pago_confirmado»
       WebhookListener.instance
     ]
   end

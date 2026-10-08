@@ -86,9 +86,15 @@ Rails.application.routes.draw do
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
+              get :section_titles # proyecto@asistente_agentes_ia — sugerencias del formulario por secciones
+              get :route_catalog # proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió
+              get :section_catalog # proyecto@asistente_agentes_ia — las secciones enteras que ya escribió
+              post :training_preview # proyecto@asistente_agentes_ia — texto ↔ bloques + comprobador
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
+            # proyecto@publicar_prompts: publicar el prompt para que otras cuentas lo bajen
+            resource :publication, only: [:show, :create, :destroy], module: :tracking_templates
           end
           # @query_databases — conexiones a ERPs + consultas predefinidas + consola
           resources :external_db_connections, only: [:index, :show, :create, :update, :destroy] do
@@ -101,6 +107,7 @@ Rails.application.routes.draw do
           get  'external_db_console/catalog', to: 'external_db_console#catalog'
           post 'external_db_console/run',     to: 'external_db_console#run'
           post 'external_db_console/ask',     to: 'external_db_console#ask'
+          post 'external_db_console/try_asked', to: 'external_db_console#try_asked' # proyecto@erp_productos
           resources :erp_collection_bots, only: [:index, :show, :create, :update, :destroy] do
             post :preview, on: :member
           end
@@ -108,10 +115,59 @@ Rails.application.routes.draw do
           resources :contact_tracking_bulk_assigns, only: [:create] do # proyecto@bulk_tracking_assign
             post :preview, on: :collection # @campanas_vendedor — dry-run de buckets
           end
-          resources :tracking_campaigns, only: [:index, :show, :destroy] # @campanas_vendedor
+          # @campanas_vendedor / @automatizacion_campanas (create = campaña continua)
+          resources :tracking_campaigns, only: [:index, :show, :create, :destroy] do
+            get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
+          end
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview
             get 'list', to: 'list#index' # listado filtrable a nivel cuenta
+            # proyecto@asistente_agentes_ia — generador de Entrenamientos
+            get  'assistant/inventory', to: 'assistant#inventory'
+            post 'assistant/validate',  to: 'assistant#validate'
+            post 'assistant/interview', to: 'assistant#interview'
+            get  'assistant/interview/:turn_id', to: 'assistant#interview_result'
+            post 'assistant/save',      to: 'assistant#save'
+            get  'assistant/session',   to: 'assistant#resume'
+            get  'assistant/sessions',      to: 'assistant#sessions'
+            get  'assistant/sessions/:id',  to: 'assistant#show_session'
+            delete 'assistant/sessions/:id', to: 'assistant#discard_session'
+            get  'assistant/sessions/:id/versions/:number', to: 'assistant#show_version'
+            get  'assistant/progress/:turn_id', to: 'assistant#progress'
+            post 'assistant/suggested_tests', to: 'assistant_tools#suggested_tests'
+            post 'assistant/optimize', to: 'assistant_tools#optimize'
+            get  'assistant/optimize/:turn_id', to: 'assistant_tools#optimize_result'
+            post 'assistant/explain', to: 'assistant_tools#explain'
+            post 'assistant/proofread', to: 'assistant_tools#proofread'
+            post 'assistant/transcribe', to: 'assistant_tools#transcribe'
+            post 'assistant/route_scope', to: 'assistant_tools#route_scope'
+            # proyecto@publicar_prompts — la Galería: los prompts publicados solo se ven y se bajan aquí
+            get  'assistant/published_prompts',     to: 'assistant_published_prompts#index'
+            get  'assistant/published_prompts/:id', to: 'assistant_published_prompts#show'
+            post 'assistant/published_prompts/:id/install', to: 'assistant_published_prompts#install'
+            post 'assistant/published_prompts/:id/seen',    to: 'assistant_published_prompts#seen'
+            get  'assistant/audit',     to: 'assistant#audit'
+            post 'assistant/dry_run',   to: 'assistant#dry_run'
+            # el encargo (.md) con la idea del agente — ver docs/importar_prompt_md_plan.md
+            post 'assistant/briefs', to: 'assistant_briefs#create'
+            post 'assistant/briefs/from_instructions', to: 'assistant_briefs#from_instructions'
+            get  'assistant/briefs/:id',         to: 'assistant_briefs#show'
+            get  'assistant/briefs/:id/content', to: 'assistant_briefs#content'
+            post 'assistant/briefs/:id/digest',  to: 'assistant_briefs#digest'
+            post 'assistant/briefs/:id/compose', to: 'assistant_briefs#compose'
+            post 'assistant/briefs/:id/cover',   to: 'assistant_briefs#cover'
+            post 'assistant/briefs/:id/knowledge', to: 'assistant_knowledge#suggestions'
+            post 'assistant/briefs/:id/knowledge/create', to: 'assistant_knowledge#create'
+            # «Probar el agente»: la pila de pruebas en vivo (docs/importar_prompt_extenso_plan.md, M5)
+            post 'assistant/test_battery', to: 'assistant_test_battery#create'
+            get  'assistant/test_battery/:id', to: 'assistant_test_battery#show'
+            get  'assistant/test_battery/:id/report', to: 'assistant_test_battery#report'
+            # armar un agente desde cero conversando (llena las instrucciones iniciales)
+            post 'assistant/drafting_chat', to: 'assistant_drafting#create'
+            put  'assistant/autosave', to: 'assistant_autosave#update'
+            patch 'assistant/sessions/:id/name', to: 'assistant_autosave#rename'
+            post 'assistant/conversation_review', to: 'assistant_review#create'
+            get  'assistant/conversation_review/:turn_id', to: 'assistant_review#show'
           end
 
           # @knowledge_sources

@@ -574,7 +574,7 @@
       "LOADING": "Cargando embudo...",
       "EMPTY": "No hay oportunidades en este período.",
       "UNASSIGNED_COLUMN": "Sin columna",
-      "STATUS_FALLBACK_NOTICE": "Elegí un tipo de caso para ver el embudo por columna del Kanban. Sin esa selección se agrupa por estado general."
+      "STATUS_FALLBACK_NOTICE": "Elige un tipo de caso para ver el embudo por columna del Kanban. Sin esa selección se agrupa por estado general."
     },
     "OUTCOME": {
       "TITLE": "Ganados / perdidos",

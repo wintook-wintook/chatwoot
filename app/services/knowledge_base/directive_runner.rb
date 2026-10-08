@@ -88,8 +88,9 @@ class KnowledgeBase::DirectiveRunner
       Información relevante:
       #{context_text}
 
-      Respondé usando esa información de forma completa y útil. Tono natural y conversacional.
+      Responde usando esa información de forma completa y útil. Tono natural y conversacional.
       No uses prefijos como "Asesor:" ni comillas al inicio o final.
+      #{ContactTrackings::CustomerTone::RULE}
     USER
   end
 

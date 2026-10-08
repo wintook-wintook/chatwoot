@@ -173,9 +173,9 @@ hablar. En L5 pasa lo contrario: hay acciones que dispara el texto que él escri
   <text font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#0f172a" x="606" y="210">#gestion</text>
   <text font-family="ui-sans-serif, system-ui, sans-serif" font-size="9" fill="#64748b" x="606" y="223">→ queda en el mensaje y dispara</text>
   <text font-family="ui-sans-serif, system-ui, sans-serif" font-size="9" fill="#64748b" x="606" y="236">las automatizaciones de la cuenta</text>
-  <rect x="606" y="248" width="228" height="40" rx="7" fill="#fef2f2" stroke="#fecaca"/>
-  <text font-family="ui-sans-serif, system-ui, sans-serif" font-size="9.5" fill="#b91c1c" x="618" y="264">{{nombre}} NO se resuelve en el</text>
-  <text font-family="ui-sans-serif, system-ui, sans-serif" font-size="9.5" fill="#b91c1c" x="618" y="278">camino KBase: solo conversacional.</text>
+  <rect x="606" y="248" width="228" height="40" rx="7" fill="#f0fdf4" stroke="#bbf7d0"/>
+  <text font-family="ui-sans-serif, system-ui, sans-serif" font-size="9.5" fill="#15803d" x="618" y="264">{{nombre}} se resuelve en los dos</text>
+  <text font-family="ui-sans-serif, system-ui, sans-serif" font-size="9.5" fill="#15803d" x="618" y="278">caminos (desde 30/09/2026).</text>
   <rect x="30" y="318" width="820" height="52" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
   <text font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" fill="#0f172a" x="48" y="340">No hay tool calling nativo de OpenAI en ningún punto</text>
   <text font-family="ui-sans-serif, system-ui, sans-serif" font-size="10.5" fill="#64748b" x="48" y="360">El contrato es texto y JSON, y nadie valida un esquema. Una directiva mal escrita no produce error: simplemente no existe.</text>
@@ -426,8 +426,8 @@ Tres consecuencias de autoría:
 | **Forma** | el **modelo** escribe `{{catalogo}}` dentro de su respuesta |
 | **Qué hace** | se borra del texto y se adjunta el archivo del Agente IA con ese nombre (máx. 5 por mensaje) |
 | **Requiere** | archivo cargado en la pestaña Archivos del Agente IA, nombre exacto (sin acentos ni espacios) |
-| **Limitación** | solo se resuelve en el camino conversacional; en KBase la llave saldría literal |
-| **Cómo activarla** | el motor agrega solo la instrucción de uso si detecta `{{...}}` en el prompt visible |
+| **Dónde funciona** | en los dos caminos, conversacional y KBase (desde 30/09/2026, `ContactTrackings::AgentAttachments`). El nombre puede venir de la fuente: una columna de la hoja con el nombre exacto del archivo |
+| **Cómo activarla** | conversacional: el motor agrega la instrucción de uso si detecta `{{...}}` en el prompt visible. KBase: la agrega si el Agente IA tiene archivos cargados. En el historial queda como «(archivo enviado: nombre)» para que no se reenvíe en cada turno |
 
 ### 4.3 Fuera del prompt (pero mandan igual)
 
@@ -528,8 +528,8 @@ Tres consecuencias de autoría:
 | `@agendar_calendar` + `@crear_ticket` | ✓ | al completarse el ticket ofrece horarios en el mismo turno |
 | `@soporte_contpaq` + regla de tono en la prosa | ⚠ la regla no se aplica en esa rama | la redacción es de CONTPAQi, no nuestra |
 | `@soporte_contpaq` en la misma rama que otra fuente | ✗ gana la otra | va **última** en el catálogo, para no alterar agentes ya configurados |
-| `{{nombre}}` + rama con fuente | ✗ sale como texto literal | KBase no resuelve adjuntos |
-| `{{nombre}}` + rama sin fuente | ✓ | el conversacional sí los resuelve |
+| `{{nombre}}` + rama con fuente | ✓ | KBase los resuelve desde 30/09/2026; el nombre puede salir de una columna de la hoja |
+| `{{nombre}}` + rama sin fuente | ✓ | el conversacional los resuelve |
 | directiva de búsqueda suelta en la prosa | ✗✗ blanquea el prompt entero | `job:545` |
 | `#etiqueta` en `@ruta` + regla de etiquetas en la prosa | ✓ recomendado | la prosa elige el grado, la línea es la red |
 
@@ -874,7 +874,7 @@ regulares y solo se ejecuta lo que coincide exactamente.
    @buscar_articulo | @buscar_foro(<nombre exacto de la fuente>) | @discourse
    {{doc:<nombre>}} | {{hoja:<nombre>}} | {{consulta:<nombre>(param=valor)}}
 4. Acciones que van sueltas en la prosa si se necesitan: @agendar_calendar, @estado_ticket.
-   El adjunto {{nombre_archivo}} solo funciona en ramas SIN fuente.
+   El adjunto {{nombre_archivo}} funciona en cualquier rama, con o sin fuente.
 5. PROHIBIDO ABSOLUTO: inventar directivas nuevas, poner @buscar_* o @discourse fuera de
    una línea @ruta (borra el prompt entero), o poner dos fuentes en la misma rama.
 

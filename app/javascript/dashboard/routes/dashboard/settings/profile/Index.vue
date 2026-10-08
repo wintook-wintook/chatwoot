@@ -13,6 +13,7 @@ import ChangePassword from './ChangePassword.vue';
 import NotificationPreferences from './NotificationPreferences.vue';
 import AudioNotifications from './AudioNotifications.vue';
 import FormSection from 'dashboard/components/FormSection.vue';
+import AppearanceSettings from './AppearanceSettings.vue';
 import AccessToken from './AccessToken.vue';
 import Policy from 'dashboard/components/policy.vue';
 import {
@@ -22,6 +23,7 @@ import {
 
 export default {
   components: {
+    AppearanceSettings,
     MessageSignature,
     FormSection,
     UserProfilePicture,
@@ -237,6 +239,12 @@ export default {
           />
         </button>
       </div>
+    </FormSection>
+    <FormSection
+      :title="$t('PROFILE_SETTINGS.FORM.APPEARANCE.TITLE')"
+      :description="$t('PROFILE_SETTINGS.FORM.APPEARANCE.NOTE')"
+    >
+      <AppearanceSettings />
     </FormSection>
     <FormSection
       v-if="!globalConfig.disableUserProfileUpdate"

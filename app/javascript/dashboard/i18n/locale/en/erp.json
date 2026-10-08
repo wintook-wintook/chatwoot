@@ -83,7 +83,16 @@
       "ASK_ANSWER": "Answer",
       "ASK_QUERY_USED": "Query chosen: {name}",
       "RESULT_PLACEHOLDER": "Run a query or ask a question to see the results here.",
-      "QUERY_TITLE": "Predefined query (Mode A)"
+      "QUERY_TITLE": "Predefined query (Mode A)",
+      "YES": "Yes",
+      "NO": "No",
+      "AGENT_TITLE": "Try as the agent",
+      "AGENT_HINT": "Type what a customer would say. The AI fills the search parameters as an AI Agent would with this query and its «?», and you see what the ERP would return.",
+      "AGENT_PLACEHOLDER": "E.g. do you have HP laptops under 15k?",
+      "AGENT_RUN": "Try",
+      "AGENT_NOT_USED": "The message does not ask for anything this query can answer: the agent would reply without querying.",
+      "AGENT_FILLED": "The AI filled:",
+      "AGENT_PARTIAL": "Partial match"
     },
     "BOTS": {
       "TITLE": "Collection Agent",
