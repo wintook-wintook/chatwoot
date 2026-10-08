@@ -104,6 +104,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       Rails.logger.error "[GestorTickets] hook error: #{e.message}"
     end
 
+    # [0] proyecto@contact_tracking — el primer mensaje del cliente se contesta con la
+    # sección [MENSAJE DE BIENVENIDA] tal cual, diga lo que diga (ver WelcomeMessage).
+    return true if send_welcome_message(tracking, message)
+
     # [1] Keywords — prioridad máxima, sin IA (solo si hay texto)
     if message.content.present? && defined?(ContactTrackings::KeywordActionService)
       keyword_service = ContactTrackings::KeywordActionService.new(tracking, message.content, 'incoming')
@@ -655,7 +659,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       # @ruta — las líneas de configuración se quitan SIEMPRE (nunca deben llegar al
       # modelo ni al cliente). Al limpiar los tokens sobre el texto ya limpio, un
       # agente con rutas conserva su prosa: sus directivas viven dentro de esas líneas.
-      cp_raw = ContactTrackings::RouteMap.strip(tracking.complementary_prompt.to_s)
+      cp_raw = ContactTrackings::WelcomeMessage.strip(ContactTrackings::RouteMap.strip(tracking.complementary_prompt.to_s))
       # proyecto@bot_seguimiento_calendar — @agendar_calendar no debe filtrarse al LLM conversacional
       clean_cp = KnowledgeBase::Directives.strip_tokens(cp_raw).gsub(/@agendar_calendar\b(?:\s*\([^)]*\))?/i, '').strip
       scope_rule = branch_scope_rule(tracking, message)
@@ -2122,6 +2126,18 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     )
   rescue StandardError => e
     Rails.logger.warn "[TrackingBot] No se pudo guardar análisis: #{e.message}"
+  end
+
+  # ==============================================================================
+  # Mensaje de bienvenida fijo (ver ContactTrackings::WelcomeMessage)
+  # ==============================================================================
+  def send_welcome_message(tracking, message)
+    welcome = ContactTrackings::WelcomeMessage.claim(tracking, message.conversation)
+    return false if welcome.blank?
+
+    send_auto_reply(tracking, message, welcome)
+    Rails.logger.info "[TrackingBot] 👋 Bienvenida enviada (tracking ##{tracking.id})"
+    true
   end
 
   # ==============================================================================
