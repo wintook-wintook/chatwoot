@@ -539,9 +539,9 @@ Por cada tarea se mide:
 - tiempo y costo;
 - **tu calificación** de qué tan útil fue el chat (1 a 5).
 
-- [ ] Acordar las 5 tareas (decisión **D9**)
-- [ ] Guardar los tokens de cada llamada del Asistente (es el P6c; sin esto no se puede comparar costo)
-- [ ] Correr las 5 tareas con el Asistente de hoy y anotar los números en el Registro
+- [x] Acordar las 5 tareas (decisión **D9**)
+- [x] Guardar los tokens de cada llamada del Asistente (es el P6c; sin esto no se puede comparar costo)
+- [x] Correr las 5 tareas con el Asistente de hoy y anotar los números en el Registro (12/10/2026; falta la nota de la T5)
 
 #### Paso 1 · Prototipo
 - [ ] Servicio nuevo que conversa y usa herramientas: el modelo pide una herramienta, el código la corre, el modelo ve el resultado y sigue, hasta contestar.
@@ -637,7 +637,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 | D12 | Cuándo y cómo entra Claude | en el prototipo · en el Paso 3 | **Paso 3**: primero demostrar el diseño; luego comparar proveedores. Requiere una clave de Anthropic, porque hoy la clave sale de la integración OpenAI de cada cuenta |
 | D13 | ¿Qué se tapa al leer conversaciones completas? | lo que tapa hoy PhraseMasker · también correos y nombres | decidir al llegar a `ver_conversacion` (Paso 3) |
 
-**Decidido el 12/10/2026:** D8 = gpt-5.4-mini + gpt-5.5, con gpt-4o de referencia · D9 = las 5 tareas de la tabla · D10 = medir primero: P6c y UNA tarea con el Asistente de hoy; con ese costo real se propone el tope antes de correr las demás.
+**Decidido el 12/10/2026:** D8 = gpt-5.4-mini + gpt-5.5, con gpt-4o de referencia · D9 = las 5 tareas de la tabla · D10 = medir primero: P6c y UNA tarea con el Asistente de hoy; con ese costo real se propone el tope antes de correr las demás → tope de 3 USD para T2–T5 (la T1 costó < 0,10 USD).
 
 ---
 
@@ -687,7 +687,49 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
       6. El modal preselecciona como fuente el foro de otra empresa de la cuenta (Foro_Sentidos_Creativos); se eligió «ninguna».
       7. El chat hizo ~30 preguntas en un mensaje (su regla dice hasta 5) y preguntó por un calendario que ya conocía.
     - Lectura: el chat ayuda; lo que falla es la redacción y que nadie revisa lo escrito contra el encargo, más allá de que ejecute. Es lo que el P8 tiene que cubrir.
-  - Siguiente: tope de gasto (D10) → T2–T5.
+  - **Tope de gasto (D10):** 3 USD para T2–T5, con aviso si una sola tarea pasa de 1 USD. Es solo lo que se gasta en OpenAI corriendo las pruebas; no limita al agente ni al Asistente. Gastado: ~0,40 USD en las cinco.
+  - **T2 · agregar una ruta que use una hoja (sesión #3896, sobre una copia de ADAM v2.4 #11833; el agente no se tocó).** Pedido: «Agrega una ruta para cuando pregunten cuánto cuesta una licencia del CRM o qué incluye cada licencia. Que conteste con la hoja Precios Licenicas».
+    - 36 s · 1 llamada · 0,065 USD. ¿Se ejecuta? **Sí**. Agregó una sola línea, declarada, con `{{hoja:Precios Licenicas}}`; nada más cambió.
+    - ¿Rutea bien? **Sí, pero solo probado a mano** (4 de 4 frases). La ruta nueva quedó en la posición 19 de 19 y la prueba automática solo prueba las primeras 8 (`RouteSelfCheck::MAX_PROBES`): **no la probó**.
+    - Flojo: no miró la hoja (2 frases genéricas, sin Básica / Pro / Premium / CRM Zeus); reusó la etiqueta de otra ruta sin preguntar.
+    - **Calificación: 5/5.**
+  - **T3 · arreglar una ruta que se come mensajes de otra (sesión #3896, copia de ADAM).** ADAM original rutea bien (30 frases, 0 cruces); el cruce real apareció por la T2: «¿Cuánto cuesta Kontrolya?» caía en la ruta de licencias del CRM.
+
+    | Vuelta | Qué dijo | Qué hizo | ¿Arreglado? |
+    |---|---|---|---|
+    | 1 | «Se ajustó la ruta…» | nada: texto idéntico | ✗ |
+    | 2 (insistiendo) | «He ajustado las descripciones…» | nada: texto idéntico | ✗ |
+    | 3 (sin historial) | ajustó `propuesta_kontrolya` | agregó «cuánto cuesta Kontrolya» | ✓ (5 de 5) |
+
+    - ~0,16 USD · 3 llamadas de ~35 s. Las tres se ejecutan.
+    - **Dijo «arreglado» dos veces sin cambiar nada.** Comprobado con la salida cruda del modelo: el código no revierte; es el modelo el que devuelve el texto igual. El mismo pedido funcionó a la tercera.
+    - La prueba automática dio «0 cruces» en las tres vueltas (la ruta 19 no entra en las 8).
+    - La pantalla muestra «Se ajustó la ruta…» con la lista de cambios reales vacía.
+    - **Calificación: 3/5.**
+  - **T4 · mejorar una sección sin romper lo demás (sesión #3897, copia de ADAM).** Pedido: sin emojis en ningún canal y, ante un mensaje largo, resumir en una línea antes de preguntar.
+    - 31,6 s · 1 llamada · 0,067 USD. ¿Se ejecuta? **Sí**. Fuera de [ESTILO], idéntico carácter por carácter.
+    - **Reemplazó** la regla vieja («máximo un emoji…») en vez de dejar las dos; ninguna otra mención a emojis. Declaró exactamente lo que cambió.
+    - Flojo: la respuesta del chat es seca («He realizado los cambios solicitados…»).
+    - **Calificación: 5/5.**
+  - **T5 · revisar una conversación y proponer qué cambiar (conv 316, ADAM; canal de pruebas «Agents IA Test», la cuenta 2 no tiene conversaciones de clientes).** `ConversationReview`, con ADAM abierto.
+    - 7,4 s · 0,026 USD (+ el motor re-corrido sobre 4 mensajes). Detectó la copia vieja y el calendario bien conectado.
+    - De 3 fallas de referencia: ✓ dos preguntas en un mensaje · ✓ prometió enviar una propuesta · ✗ no vio que terminó en afirmación.
+    - Inventó una falla («reunión sin mostrar horarios», culpa a la configuración) contra su propio dato de calendario bien conectado.
+    - Propuso «enfatizar una sola pregunta por mensaje», regla que ADAM ya tiene escrita (en la copia vieja y en la actual); no notó que la regla existe y no se cumplió. Arreglos sin texto concreto.
+    - El agente en vivo usaba gpt-4o: no es el caso del P1.
+    - **Calificación: pendiente.**
+  - **Resumen del Paso 0:**
+
+    | Tarea | Nota | ¿Funcionó? | Costo |
+    |---|---|---|---|
+    | T1 crear desde cero | 5 | sí, con fallas de fondo (inglés, datos perdidos) | < 0,10 USD |
+    | T2 ruta con hoja | 5 | sí; la prueba automática no probó la ruta nueva | 0,07 USD |
+    | T3 arreglar un cruce | 3 | a la tercera; dos veces «arreglado» sin cambiar nada | 0,16 USD |
+    | T4 mejorar el estilo | 5 | sí, limpio | 0,07 USD |
+    | T5 revisar una conversación | — | a medias: síntomas sí, causas no | 0,03 USD |
+
+    Lectura: el Asistente de hoy **escribe bien cuando el cambio es claro y está en un solo lugar** (T2, T4) y **falla cuando tiene que razonar y comprobar** (T3, T5): afirma sin haber probado, su prueba de ruteo no cubre lo que cambió, y propone sin leer lo que ya existe. Es lo que el prototipo del Paso 1 tiene que ganar (`probar_ruta`, `ver_directiva`, `ver_hoja`, `comprobar`).
+  - Siguiente: Paso 1, prototipo con las 5 herramientas.
 - **Paso 1, qué se hizo:**
 - **Paso 2, comparación (hoy vs prototipo, por modelo):**
 - **Decisión (¿ganó?):**
