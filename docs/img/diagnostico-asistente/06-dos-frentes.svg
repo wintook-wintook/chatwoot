@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 520" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="940" height="520" fill="#f4f6f9"/>
+
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28" letter-spacing="-0.4">El plan en dos frentes</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Lo que pediste (un Asistente muy inteligente) es el frente A. El frente B cuida que lo escrito se ejecute bien.</text>
+
+  <!-- Frente A -->
+  <rect x="40" y="94" width="420" height="330" rx="12" fill="#ffffff" stroke="#2563eb" stroke-width="2.4"/>
+  <text x="62" y="126" font-size="12" font-weight="700" fill="#2563eb" letter-spacing="1">FRENTE A · EL ASISTENTE QUE ESCRIBE</text>
+  <text x="62" y="152" font-size="17" font-weight="800" fill="#151b28">Prioridad: lo que buscas</text>
+
+  <rect x="62" y="170" width="376" height="54" rx="8" fill="#eef3ff" stroke="#2563eb"/>
+  <text x="78" y="193" font-size="13.5" font-weight="800" fill="#1e3a8a">P8 · Asistente con herramientas</text>
+  <text x="78" y="212" font-size="11.5" fill="#1e3a8a">el centro: investiga, prueba y corrige solo</text>
+
+  <text x="62" y="250" font-size="11" font-weight="700" fill="#5c6675" letter-spacing="1">SE VUELVEN PARTE DEL P8</text>
+  <text x="62" y="274" font-size="12.5" fill="#3b4453"><tspan font-weight="700">P5</tspan> editar por piezas → herramienta editar_pieza</text>
+  <text x="62" y="296" font-size="12.5" fill="#3b4453"><tspan font-weight="700">P6</tspan> esquema, caché y costo → base del P8</text>
+  <text x="62" y="318" font-size="12.5" fill="#3b4453"><tspan font-weight="700">P2</tspan> simulador + juez → herramienta simular</text>
+  <text x="62" y="340" font-size="12.5" fill="#3b4453"><tspan font-weight="700">P4</tspan> revisión en lote → herramienta ver_conversacion</text>
+  <line x1="62" y1="360" x2="438" y2="360" stroke="#e3e7ee"/>
+  <text x="62" y="384" font-size="12" fill="#5c6675">No depende del frente B: el Asistente ya sabe</text>
+  <text x="62" y="402" font-size="12" fill="#5c6675">llamar a gpt-5 (openai_chat.rb:59-62).</text>
+
+  <!-- Frente B -->
+  <rect x="480" y="94" width="420" height="330" rx="12" fill="#ffffff" stroke="#cbd3df" stroke-width="1.6"/>
+  <text x="502" y="126" font-size="12" font-weight="700" fill="#64748b" letter-spacing="1">FRENTE B · EL MOTOR QUE ATIENDE</text>
+  <text x="502" y="152" font-size="17" font-weight="800" fill="#151b28">Para que lo escrito se cumpla</text>
+
+  <text x="502" y="190" font-size="12.5" fill="#3b4453"><tspan font-weight="700">F0</tspan> medir los agentes de hoy</text>
+  <text x="502" y="214" font-size="12.5" fill="#3b4453"><tspan font-weight="700">P3</tspan> el motor acepta gpt-5.x sin quedarse mudo</text>
+  <text x="502" y="238" font-size="12.5" fill="#3b4453"><tspan font-weight="700">P1</tspan> el agente atiende con el modelo adecuado</text>
+  <text x="502" y="262" font-size="12.5" fill="#3b4453"><tspan font-weight="700">P7</tspan> sin Entrenamiento no dice «no soy bot»</text>
+  <line x1="502" y1="360" x2="878" y2="360" stroke="#e3e7ee"/>
+  <text x="502" y="384" font-size="12" fill="#5c6675">Sin esto, un Entrenamiento excelente lo ejecuta</text>
+  <text x="502" y="402" font-size="12" fill="#5c6675">gpt-4o-mini y se salta sus reglas.</text>
+
+
+  <rect x="40" y="444" width="860" height="56" rx="10" fill="#151b28"/>
+  <text x="62" y="468" font-size="13.5" font-weight="700" fill="#ffffff">Respuesta corta: el plan F0–P7 estaba enfocado sobre todo en el frente B.</text>
+  <text x="62" y="488" font-size="12.5" fill="#cbd3df">Solo P5 y P6 tocaban al Asistente. El P8 pone el frente A primero, y P2 y P4 pasan a ser herramientas suyas.</text>
+</svg>

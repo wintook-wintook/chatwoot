@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <rect x="0" y="0" width="940" height="560" fill="#f4f6f9"/>
+
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28" letter-spacing="-0.4">Las herramientas del Asistente</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Casi todas ya existen como servicios. El P8 las expone al modelo; no las reescribe.</text>
+
+  <!-- encabezados -->
+  <g font-size="11" font-weight="700" fill="#5c6675" letter-spacing="1">
+    <text x="60" y="104">HERRAMIENTA</text>
+    <text x="250" y="104">QUÉ HACE</text>
+    <text x="560" y="104">SERVICIO QUE YA EXISTE</text>
+    <text x="800" y="104">CUÁNDO</text>
+  </g>
+  <rect x="40" y="114" width="860" height="1" fill="#cbd3df"/>
+
+  <!-- grupo VER -->
+  <text x="40" y="138" font-size="11" font-weight="800" fill="#2563eb" letter-spacing="1">VER</text>
+  <g font-size="12">
+    <text x="60" y="160" font-family="ui-monospace, Menlo, monospace" fill="#151b28">ver_recursos</text>
+    <text x="250" y="160" fill="#3b4453">qué tiene la cuenta: fuentes, casos, etiquetas</text>
+    <text x="560" y="160" fill="#5c6675" font-family="ui-monospace, Menlo, monospace" font-size="11">InventoryService</text>
+    <text x="800" y="160" font-weight="700" fill="#15803d">prototipo</text>
+
+    <text x="60" y="184" font-family="ui-monospace, Menlo, monospace" fill="#151b28">ver_directiva</text>
+    <text x="250" y="184" fill="#3b4453">sintaxis exacta de una directiva del motor</text>
+    <text x="560" y="184" fill="#5c6675" font-family="ui-monospace, Menlo, monospace" font-size="11">EngineCatalog</text>
+    <text x="800" y="184" font-weight="700" fill="#15803d">prototipo</text>
+
+    <text x="60" y="208" font-family="ui-monospace, Menlo, monospace" fill="#151b28">ver_hoja</text>
+    <text x="250" y="208" fill="#3b4453">columnas reales y unas filas de ejemplo</text>
+    <text x="560" y="208" fill="#5c6675" font-family="ui-monospace, Menlo, monospace" font-size="11">InventoryService#sheet_columns</text>
+    <text x="800" y="208" font-weight="700" fill="#15803d">prototipo</text>
+
+    <text x="60" y="232" font-family="ui-monospace, Menlo, monospace" fill="#151b28">ver_conversacion</text>
+    <text x="250" y="232" fill="#3b4453">qué falló en una conversación real</text>
+    <text x="560" y="232" fill="#5c6675" font-family="ui-monospace, Menlo, monospace" font-size="11">ConversationReview</text>
+    <text x="800" y="232" fill="#d97706" font-weight="700">después (P4)</text>
+  </g>
+  <rect x="40" y="246" width="860" height="1" fill="#e3e7ee"/>
+
+  <!-- grupo PROBAR -->
+  <text x="40" y="270" font-size="11" font-weight="800" fill="#16a34a" letter-spacing="1">PROBAR</text>
+  <g font-size="12">
+    <text x="60" y="292" font-family="ui-monospace, Menlo, monospace" fill="#151b28">comprobar</text>
+    <text x="250" y="292" fill="#3b4453">¿se ejecuta? hallazgos del comprobador</text>
+    <text x="560" y="292" fill="#5c6675" font-family="ui-monospace, Menlo, monospace" font-size="11">ValidatorService</text>
+    <text x="800" y="292" font-weight="700" fill="#15803d">prototipo</text>
+
+    <text x="60" y="316" font-family="ui-monospace, Menlo, monospace" fill="#151b28">probar_ruta</text>
+    <text x="250" y="316" fill="#3b4453">a qué ruta cae una frase de cliente</text>
+    <text x="560" y="316" fill="#5c6675" font-family="ui-monospace, Menlo, monospace" font-size="11">DraftClassifier · DryRun</text>
+    <text x="800" y="316" font-weight="700" fill="#15803d">prototipo</text>
+
+    <text x="60" y="340" font-family="ui-monospace, Menlo, monospace" fill="#151b28">probar_fuente</text>
+    <text x="250" y="340" fill="#3b4453">qué fragmentos trae la fuente de una ruta</text>
+    <text x="560" y="340" fill="#5c6675" font-family="ui-monospace, Menlo, monospace" font-size="11">DryRunService</text>
+    <text x="800" y="340" fill="#d97706" font-weight="700">después</text>
+
+    <text x="60" y="364" font-family="ui-monospace, Menlo, monospace" fill="#151b28">simular</text>
+    <text x="250" y="364" fill="#3b4453">la respuesta completa al cliente + juez</text>
+    <text x="560" y="364" fill="#b91c1c" font-size="11">no existe: es el P2</text>
+    <text x="800" y="364" fill="#d97706" font-weight="700">después (P2)</text>
+  </g>
+  <rect x="40" y="378" width="860" height="1" fill="#e3e7ee"/>
+
+  <!-- grupo CAMBIAR -->
+  <text x="40" y="402" font-size="11" font-weight="800" fill="#7c3aed" letter-spacing="1">CAMBIAR</text>
+  <g font-size="12">
+    <text x="60" y="424" font-family="ui-monospace, Menlo, monospace" fill="#151b28">editar_pieza</text>
+    <text x="250" y="424" fill="#3b4453">cambia una ruta o sección sin tocar el resto</text>
+    <text x="560" y="424" fill="#5c6675" font-family="ui-monospace, Menlo, monospace" font-size="11">DraftPieces</text>
+    <text x="800" y="424" fill="#d97706" font-weight="700">después (P5)</text>
+
+    <text x="60" y="448" font-family="ui-monospace, Menlo, monospace" fill="#151b28">optimizar</text>
+    <text x="250" y="448" fill="#3b4453">reglas repetidas o que se contradicen</text>
+    <text x="560" y="448" fill="#5c6675" font-family="ui-monospace, Menlo, monospace" font-size="11">Optimizer</text>
+    <text x="800" y="448" fill="#d97706" font-weight="700">después</text>
+  </g>
+
+  <rect x="40" y="474" width="860" height="66" rx="10" fill="#fff6e8" stroke="#f3d29b"/>
+  <text x="62" y="500" font-size="13" font-weight="700" fill="#7c4a03">En el prototipo ninguna herramienta escribe ni gasta fuera de OpenAI.</text>
+  <text x="62" y="520" font-size="12.5" fill="#7c4a03">Ver y probar son de lectura. Guardar sigue siendo el botón de siempre (SaveService), y lo decide la persona.</text>
+</svg>

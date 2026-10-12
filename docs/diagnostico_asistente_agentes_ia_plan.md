@@ -1,8 +1,9 @@
 # Diagnóstico del Asistente de Agentes IA — plan de mejoras
 
 > **Rama:** `diag/asistente_agentes_ia` (sale de `develop` en `3e58e050`)
-> **Fecha:** 08/10/2026
+> **Fecha:** 08/10/2026 · actualizado 12/10/2026 (dos frentes y P8)
 > **Estado:** SOLO PLAN. No se ha tocado código. Se revisa punto por punto y cada uno se aprueba antes de empezarlo.
+> **Prioridad:** el **frente A** (P8, Asistente con herramientas). Ver «0.2 Dos frentes».
 
 ---
 
@@ -61,6 +62,8 @@ Escribe bien. Lo que tiene alrededor del modelo (comprobador, correcciones, prue
 ---
 
 ## 0.1 Por dónde empezar
+
+> **Nota (12/10/2026):** estos tres pasos son el arranque del **frente B** (el motor que atiende). El frente A, que es la prioridad, arranca con el **P8 → Paso 0**. Ver «0.2 Dos frentes».
 
 > Se lee en 5 minutos. Explica los **tres primeros pasos** y **por qué van en ese orden**. El detalle de cada punto está más abajo, en su propio apartado.
 
@@ -136,27 +139,47 @@ Con los números (Paso 1), la decisión (Paso 2) y el motor listo (Paso 3), el *
 
 ---
 
+## 0.2 Dos frentes: qué busca este plan
+
+> Agregado el 12/10/2026, después de aclarar el objetivo: **un Asistente que escriba prompts tan bien como ChatGPT o Claude cuando les das contexto**, usando los recursos y servicios del sistema, y con un chat que de verdad ayude a crear y mejorar rutas, secciones y contexto.
+
+Con ese objetivo, el plan F0–P7 estaba enfocado sobre todo en **el motor que atiende** y no en **el Asistente que escribe**. Solo P5 y P6 tocaban al Asistente. Por eso el plan se ordena en dos frentes:
+
+![El plan en dos frentes](img/diagnostico-asistente/06-dos-frentes.svg)
+
+| Frente | Qué cuida | Puntos | Prioridad |
+|--------|-----------|--------|-----------|
+| **A · El Asistente que escribe** | que escriba, pruebe y mejore Entrenamientos como un experto | **P8** (centro) + P5, P6, P2, P4 como piezas suyas | **primero** |
+| **B · El motor que atiende** | que lo escrito se cumpla con el cliente | F0, P3, P1, P7 | en paralelo, sin bloquear al A |
+
+**El frente A no depende del B.** El Asistente ya sabe llamar a modelos gpt-5 (`assistant/openai_chat.rb:59-62`) y su chat consultor ya corre en gpt-5.4-mini. Lo que el P3 arregla es el motor que atiende clientes, no el Asistente.
+
+---
+
 ## 1. Mapa de puntos
 
-| # | Punto | Impacto | Esfuerzo | Depende de |
-|---|-------|---------|----------|------------|
-| F0 | Línea base: medir antes de cambiar | — | bajo | — |
-| P1 | El agente en vivo corre en un modelo menor | **alto** | bajo-medio | F0 · D1 · P3 |
-| P2 | Las pruebas no califican respuestas | **muy alto** | alto | P3 (deseable) |
-| P3 | Los modelos gpt-5.x no se pueden elegir | alto | medio | — |
-| P4 | Revisar conversaciones reales en lote | medio-alto | medio | P2 (el juez) |
-| P5 | Cada edición reescribe todo el Entrenamiento | medio | medio-alto | — |
-| P6 | Ajustes técnicos: esquema JSON y caché | bajo-medio | bajo | — |
-| P7 | Sin Entrenamiento, el agente dice no ser bot (casi resuelto) | bajo | bajo | D7 |
+| # | Frente | Punto | Impacto | Esfuerzo | Depende de |
+|---|--------|-------|---------|----------|------------|
+| **P8** | **A** | **Asistente con herramientas** | **muy alto** | alto (prototipo: medio) | P6c para medir costo |
+| P5 | A | Cada edición reescribe todo el Entrenamiento | medio | medio-alto | — (se vuelve `editar_pieza` del P8) |
+| P6 | A | Ajustes técnicos: esquema JSON, caché y costo | bajo-medio | bajo | — (base del P8) |
+| P2 | A · B | Las pruebas no califican respuestas | **muy alto** | alto | P3 (deseable); se vuelve `simular` del P8 |
+| P4 | A · B | Revisar conversaciones reales en lote | medio-alto | medio | P2 (el juez); se vuelve `ver_conversacion` del P8 |
+| F0 | B | Línea base: medir antes de cambiar | — | bajo | — |
+| P3 | B | Los modelos gpt-5.x no se pueden elegir (motor) | alto | medio | — |
+| P1 | B | El agente en vivo corre en un modelo menor | **alto** | bajo-medio | F0 · D1 · P3 |
+| P7 | B | Sin Entrenamiento, el agente dice no ser bot (casi resuelto) | bajo | bajo | D7 |
 
 ### Orden propuesto
 
 ```
-  F0 ──► P3 ──► P1 ──► P2 ──► P4
-  (medir) (permitir   (usar    (simular  (revisar
-          gpt-5.x)    mejor    y juzgar) en lote)
-                      modelo)
-  En paralelo, cuando haya hueco:  P6 · P7 · P5
+  FRENTE A (prioridad)
+  P6c ──► P8 Paso 0 ──► P8 prototipo ──► comparar ──► P8 crece: P5 · streaming · un chat · P2 · P4 · Claude
+  (medir   (5 tareas)   (5 herramientas)  (¿gana?)
+   tokens)
+
+  FRENTE B (en paralelo)
+  F0 ──► P3 ──► P1          P7 cuando haya hueco
 ```
 
 P3 va antes que P1 porque P1 quiere elegir entre gpt-4o y gpt-5.x, y hoy gpt-5.x no se puede elegir. Agregarlo a la lista sin preparar el motor haría que el agente deje de contestar sin dejar rastro: ver «0.1 Por dónde empezar → Paso 3».
@@ -453,6 +476,169 @@ Solo afecta a los seguimientos que no tienen Entrenamiento cargado.
 
 ---
 
+## P8 · Asistente con herramientas
+
+### El objetivo
+Un Asistente que, igual que ChatGPT o Claude con contexto, **investigue antes de contestar, pruebe lo que escribe y corrija con evidencia**, usando lo que la cuenta tiene de verdad: hojas, tipos de caso, etiquetas, calendario y las directivas del motor.
+
+### Por qué hoy no se siente así
+El Asistente **ya sabe mucho**:
+- las fuentes, las columnas reales de las hojas, los tipos de caso, las etiquetas y las frases de clientes (`InventoryService`);
+- la sintaxis de cada directiva (`EngineCatalog`);
+- si un Entrenamiento se ejecuta (`ValidatorService`) y si cada ruta se elige a sí misma (`RouteSelfCheck`).
+
+Pero el modelo **no puede usar nada de eso por su cuenta**. Recibe todo de golpe en un solo prompt, contesta un JSON, y el **código** decide qué revisar y en qué orden:
+
+![Hoy vs P8](img/diagnostico-asistente/07-hoy-vs-p8.svg)
+
+| | Hoy | Con el P8 |
+|---|---|---|
+| Quién decide qué revisar | el código, siempre los mismos pasos | el modelo, según lo que haga falta |
+| Hojas | ve una lista de columnas dentro de un prompt enorme | **lee** la hoja que necesita cuando la necesita |
+| Rutas | se prueba una frase por ruta, una corrección | **prueba las frases que quiera** y ve dónde caen |
+| Lo que te dice | «Listo, agregué la ruta» | qué leyó, qué probó, qué salió bien y qué no |
+| Chats | dos separados: consultor (`DraftingChat`, gpt-5.4-mini, en la petición) y redactor (`InterviewService`, gpt-4o, en segundo plano) | uno solo de principio a fin (Paso 3) |
+| Seguridad | comprobador al final | **igual**: la guardia del código se queda |
+
+### Las herramientas
+Casi todas ya existen como servicios. El P8 las pone al alcance del modelo (en OpenAI se llama *function calling*; en Claude, *tool use*), no las reescribe.
+
+![Las herramientas del Asistente](img/diagnostico-asistente/08-herramientas.svg)
+
+### Cómo se vería un turno
+Ejemplo ilustrativo: la hoja y las columnas son inventadas para mostrar el flujo.
+
+![Un turno del P8](img/diagnostico-asistente/09-ejemplo-turno.svg)
+
+Cada herramienta avisa su paso real en pantalla con el mismo mecanismo que ya existe (`TurnProgress` en Redis, consultado por la pantalla mientras espera). El turno corre en segundo plano como hoy (`InterviewJob`), así que varias llamadas seguidas no chocan con el tiempo de espera del proxy.
+
+### Lo que NO cambia
+- **La guardia final del código.** Haga lo que haga el modelo, antes de mostrar nada se corre el comprobador, y las rutas que la persona no pidió tocar se restauran (`DraftPieces.restore`, como ya hace el optimizador).
+- **Guardar lo decide la persona**, con el botón de siempre (`SaveService`).
+- **El Asistente de hoy sigue funcionando.** El P8 vive detrás de una bandera hasta demostrar que es mejor.
+
+### Cómo arranca
+
+![Cómo arranca el P8](img/diagnostico-asistente/10-arranque-p8.svg)
+
+#### Paso 0 · Con qué lo vamos a juzgar
+Cinco tareas reales, las mismas para el Asistente de hoy y para el prototipo:
+
+| # | Tarea | Qué demuestra |
+|---|-------|---------------|
+| T1 | Crear un agente desde cero conversando (ej. un consultorio que agenda) | el chat ayuda de verdad |
+| T2 | Agregar una ruta que use una hoja de la cuenta | usa los recursos reales |
+| T3 | Arreglar una ruta que se come mensajes de otra | mejora rutas con evidencia |
+| T4 | Mejorar una sección (contexto o estilo) sin romper lo demás | mejora secciones sin daños |
+| T5 | Revisar una conversación real y proponer qué cambiar | aprende de lo que pasó |
+
+Por cada tarea se mide:
+- ¿se ejecuta?
+- ¿rutea bien?
+- ¿cuántas vueltas hicieron falta?
+- tiempo y costo;
+- **tu calificación** de qué tan útil fue el chat (1 a 5).
+
+- [ ] Acordar las 5 tareas (decisión **D9**)
+- [ ] Guardar los tokens de cada llamada del Asistente (es el P6c; sin esto no se puede comparar costo)
+- [ ] Correr las 5 tareas con el Asistente de hoy y anotar los números en el Registro
+
+#### Paso 1 · Prototipo
+- [ ] Servicio nuevo que conversa y usa herramientas: el modelo pide una herramienta, el código la corre, el modelo ve el resultado y sigue, hasta contestar.
+- [ ] Las 5 herramientas del prototipo, todas de **solo leer y probar**: `ver_recursos`, `ver_directiva`, `ver_hoja`, `comprobar`, `probar_ruta`.
+- [ ] Topes: máximo de llamadas a herramientas por turno, y el mismo presupuesto de tiempo del turno de hoy (`TURN_BUDGET_SECONDS = 200`).
+- [ ] Cada herramienta devuelve un resumen corto (ej. columnas + 3 filas, no la hoja entera) para no llenar el contexto.
+- [ ] Cada herramienta avisa su paso en `TurnProgress`.
+- [ ] Detrás de una bandera, **solo la cuenta 2** (decisión **D11**). La pantalla no cambia: un interruptor «modo nuevo» solo para la prueba.
+
+#### Paso 2 · Comparar
+- [ ] Las 5 tareas con el prototipo, con 2 o 3 modelos (decisión **D8**)
+- [ ] Tabla en el Registro: hoy contra prototipo, por modelo
+- [ ] Decidir: si gana claro, sigue el Paso 3; si no, se apaga la bandera y se anota qué herramienta sí ayudó
+
+#### Paso 3 · Crecerlo (solo si ganó)
+1. **`editar_pieza`** (el P5): cambiar una ruta o sección sin reescribir el Entrenamiento.
+2. **Avance en vivo (streaming)**: la respuesta aparece mientras se escribe.
+3. **Un solo chat**: unir el consultor y el redactor, con un solo modelo y todo el contexto.
+4. **`simular` y `ver_conversacion`** (P2 y P4): probar la respuesta completa al cliente y aprender de conversaciones reales.
+5. **Claude como segundo proveedor** (decisión **D12**): misma pila de pruebas, y se queda el que gane por calidad, costo y tiempo.
+
+### Riesgos y cómo se controlan
+
+Cinco riesgos, y tres de los arreglos se apoyan en algo que ya existe en el código. El turno con todas las protecciones:
+
+```
+  Turno del Asistente (InterviewJob, segundo plano)
+  ┌───────────────────────────────────────────────────────────────────┐
+  │  ① presupuesto: máx. N herramientas · 200 s · tope de tokens      │
+  │                                                                   │
+  │  modelo ──pide──► herramienta ──resumen corto──► modelo  (repite) │
+  │     │              ▲  ② la misma consulta 2 veces → «ya la viste»  │
+  │     │              │  ③ datos de clientes enmascarados             │
+  │     │                                                             │
+  │     └─ al llegar al tope ─► ④ se le prohíben herramientas:        │
+  │                               tiene que contestar con lo que tiene │
+  │                                                                   │
+  │  ⑤ guardia del código: comprobar + probar rutas tocadas            │
+  │     + restaurar lo no pedido  (corre SIEMPRE, el modelo no decide) │
+  └───────────────────────────────────────────────────────────────────┘
+```
+
+#### 1 · Costo por turno más alto
+**Problema:** el modelo llama varias veces por turno y cada llamada reenvía el contexto.
+- **Medir antes de opinar:** guardar los tokens de cada llamada (P6c). OpenAI los devuelve en cada respuesta.
+- **Caché de OpenAI:** cuando varias llamadas comparten el mismo inicio del prompt, esa parte se cobra menos. En un turno con herramientas el inicio (instrucciones, catálogo, definición de herramientas) se repite en cada vuelta, y ahí está el ahorro. Hay que poner primero lo fijo y al final lo que cambia (P6b).
+- **Respuestas cortas de las herramientas:** `ver_hoja` devuelve columnas y 3 filas, no la hoja entera.
+- **Topes:** de llamadas y tokens por turno, y de gasto para la comparación del Paso 2 (**D10**).
+
+#### 2 · Que el modelo se quede dando vueltas
+- **Tope de herramientas por turno** (ej. 8), más el presupuesto de 200 s que ya existe (`TURN_BUDGET_SECONDS`).
+- **Al llegar al tope se le quitan las herramientas:** la última llamada va con `tool_choice: "none"` y el modelo tiene que contestar con lo que ya tiene.
+- **Consultas repetidas:** la misma herramienta con los mismos datos no se vuelve a correr; se le devuelve «ya lo consultaste» con el resultado anterior.
+- **Registro de cada turno:** qué herramientas usó y en qué orden, para ver en el Paso 2 si da vueltas de más.
+
+#### 3 · Que pruebe de menos
+**El arreglo es que no dependa del modelo.** La guardia final del código corre siempre:
+- **comprobar** (`ValidatorService`): si no se ejecuta, se le regresa el error, como hoy;
+- **probar las rutas que tocó** (`RouteSelfCheck`), aunque el modelo no lo haya hecho;
+- **restaurar lo que no se pidió cambiar** (`DraftPieces.restore`, ya existe).
+
+Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema estricto, P6a). Si dice que probó algo que no está en el registro del turno, se nota.
+
+#### 4 · Latencia
+- **Elegir el modelo midiendo** (**D8**): gpt-5.4-mini tardó 10 s contra 55 s de gpt-5.5 en el chat consultor.
+- **Pensar menos donde no hace falta:** bajar el razonamiento de gpt-5 (`reasoning_effort`) para leer y probar, y dejarlo más alto solo para escribir.
+- **Avisar cada paso real en pantalla** («Leyendo la hoja Tarifas…») con `TurnProgress`, que ya existe. El streaming llega en el Paso 3.
+- **Probar frases al mismo tiempo**, con una condición. Hoy las pruebas de ruteo corren una por una **a propósito** (`assistant/draft_classifier.rb:11-14`): si el clasificador falla, no avisa y devuelve la ruta por defecto, así que en paralelo una falla de conexión se confundiría con «cayó en la ruta equivocada». Es la misma raíz que la falla silenciosa del P3. Para paralelizar, primero el clasificador tiene que distinguir «falló» de «cayó aquí».
+
+#### 5 · Privacidad (cuando llegue `ver_conversacion`)
+- **Ya existe un enmascarado** (`assistant/phrase_masker.rb`) que tapa teléfonos (10 dígitos) y números largos (7 dígitos o más) antes de mandar frases de clientes a OpenAI. `ver_conversacion` pasaría por ahí.
+- **Lo que no tapa, a propósito:** nombres de persona y números cortos, porque no se distinguen bien de nombres de producto o folios. Para conversaciones completas hay que decidir si se tapa más, por ejemplo correos (**D13**).
+- **Solo la cuenta propia y con permiso:** solo conversaciones de la misma cuenta, pasando por la autorización que ya tiene el controlador del Asistente.
+- **Solo lo necesario:** los últimos N mensajes, no el historial completo.
+- **No guardar texto de clientes** en el registro del turno; solo qué herramienta se usó.
+
+| Riesgo | Arreglo principal | ¿Ya existe algo? |
+|---|---|---|
+| Costo | medir tokens + caché + topes | no: es el P6 |
+| Vueltas | tope + `tool_choice: none` + consultas repetidas | el presupuesto de 200 s |
+| Probar de menos | la guardia del código corre siempre | **sí**: comprobador, RouteSelfCheck, restore |
+| Latencia | modelo medido + razonamiento bajo + avance en pantalla | **sí**: TurnProgress |
+| Privacidad | enmascarar + misma cuenta + últimos N mensajes | **sí**: PhraseMasker |
+
+### Decisiones del P8
+
+| # | Decisión | Opciones | Recomendación |
+|---|----------|----------|---------------|
+| D8 | Modelo del prototipo | gpt-5.4-mini · gpt-5.5 · gpt-4o | comparar **gpt-5.4-mini** (velocidad) y **gpt-5.5** (techo); gpt-4o como referencia |
+| D9 | Las 5 tareas de prueba | las de la tabla · cambiar alguna | las de la tabla, con un agente real de la cuenta 2 en T2–T5 |
+| D10 | Tope de gasto en OpenAI para el Paso 2 | monto fijo · sin tope | monto fijo, acordado antes de correr |
+| D11 | Quién ve el prototipo | solo cuenta 2 · cuentas elegidas | **solo cuenta 2** |
+| D12 | Cuándo y cómo entra Claude | en el prototipo · en el Paso 3 | **Paso 3**: primero demostrar el diseño; luego comparar proveedores. Requiere una clave de Anthropic, porque hoy la clave sale de la integración OpenAI de cada cuenta |
+| D13 | ¿Qué se tapa al leer conversaciones completas? | lo que tapa hoy PhraseMasker · también correos y nombres | decidir al llegar a `ver_conversacion` (Paso 3) |
+
+---
+
 ## 2. Decisiones abiertas
 
 | # | Decisión | Opciones | Recomendación |
@@ -460,16 +646,25 @@ Solo afecta a los seguimientos que no tienen Entrenamiento cargado.
 | D1 | Cómo subir el modelo del agente en vivo | A piso para todos · B solo aviso · C piso por tamaño | **C**, con umbral medido en F0 |
 | D2 | ¿Se tocan los límites 250 tokens / 800 caracteres / 4 líneas? | sí · no · por agente | medir primero, decidir después |
 | D3 | Conversación simulada | objeto en memoria · transacción con rollback | **en memoria**: no hay escritura que revertir |
-| D4 | Modelo del redactor del Asistente | gpt-4o (hoy) · gpt-5.4-mini · gpt-5.5 | medir con F0; ojo con el tope de 200 s |
+| D4 | Modelo del redactor del Asistente | gpt-4o (hoy) · gpt-5.4-mini · gpt-5.5 | se decide con **D8** (comparación del P8) |
 | D5 | Qué conversaciones revisa el lote | últimas N · las que pasaron a humano · por etiqueta | las que pasaron a humano: ahí falló algo |
 | D6 | ¿El juez y la pila corren solos alguna vez? | solo con botón · programado | **solo con botón** (costo) |
 | D7 | ¿Un seguimiento sin Entrenamiento puede negar que es bot? | sí (como hoy) · no | **no**: misma regla que con Entrenamiento («si te preguntan si eres persona, no lo afirmes») |
+| D8–D13 | Decisiones del P8 (modelo, tareas, gasto, alcance, Claude, privacidad) | — | ver «P8 → Decisiones del P8» |
 
 ---
 
 ## 3. Registro por fase
 
 > Al cerrar cada pieza se anota aquí: qué se hizo, cómo funciona, la pila de pruebas y cómo pedírselo al Asistente.
+
+### P8 · Asistente con herramientas
+- **Paso 0, línea base (5 tareas con el Asistente de hoy):**
+- **Paso 1, qué se hizo:**
+- **Paso 2, comparación (hoy vs prototipo, por modelo):**
+- **Decisión (¿ganó?):**
+- **Cómo funciona:**
+- **Cómo pedírselo al Asistente:**
 
 ### F0 · Línea base
 - **Qué se hizo:**

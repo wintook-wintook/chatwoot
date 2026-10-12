@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="a7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="940" height="560" fill="#f4f6f9"/>
+
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28" letter-spacing="-0.4">Hoy vs P8: quién decide qué revisar</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Hoy el código fija los pasos. En el P8 el modelo investiga y prueba, y el código sigue vigilando la entrega.</text>
+
+  <!-- HOY -->
+  <text x="40" y="104" font-size="12" font-weight="700" fill="#dc2626" letter-spacing="1">HOY · PASOS FIJOS</text>
+  <g font-size="12">
+    <rect x="40" y="116" width="400" height="44" rx="7" fill="#ffffff" stroke="#cbd3df"/>
+    <text x="56" y="136" font-weight="700" fill="#151b28">1 · Un prompt gigante</text>
+    <text x="56" y="152" fill="#5c6675">contrato + inventario + instrucciones, todo de golpe</text>
+    <rect x="40" y="172" width="400" height="44" rx="7" fill="#ffffff" stroke="#cbd3df"/>
+    <text x="56" y="192" font-weight="700" fill="#151b28">2 · El modelo contesta un JSON</text>
+    <text x="56" y="208" fill="#5c6675">pregunta o entrega el Entrenamiento completo</text>
+    <rect x="40" y="228" width="400" height="44" rx="7" fill="#ffffff" stroke="#cbd3df"/>
+    <text x="56" y="248" font-weight="700" fill="#151b28">3 · El código comprueba</text>
+    <text x="56" y="264" fill="#5c6675">si falla, le regresa el error (hasta 3 veces)</text>
+    <rect x="40" y="284" width="400" height="44" rx="7" fill="#ffffff" stroke="#cbd3df"/>
+    <text x="56" y="304" font-weight="700" fill="#151b28">4 · El código prueba el ruteo</text>
+    <text x="56" y="320" fill="#5c6675">una frase por ruta, una corrección</text>
+    <rect x="40" y="340" width="400" height="44" rx="7" fill="#ffffff" stroke="#cbd3df"/>
+    <text x="56" y="360" font-weight="700" fill="#151b28">5 · Entrega</text>
+    <text x="56" y="376" fill="#5c6675">el modelo nunca vio una hoja ni probó una frase</text>
+  </g>
+  <g stroke="#94a3b8" stroke-width="1.5" fill="none">
+    <path d="M240,160 L240,170" marker-end="url(#a7)"/>
+    <path d="M240,216 L240,226" marker-end="url(#a7)"/>
+    <path d="M240,272 L240,282" marker-end="url(#a7)"/>
+    <path d="M240,328 L240,338" marker-end="url(#a7)"/>
+  </g>
+
+  <!-- P8 -->
+  <text x="500" y="104" font-size="12" font-weight="700" fill="#16a34a" letter-spacing="1">P8 · EL MODELO INVESTIGA</text>
+  <rect x="500" y="116" width="400" height="268" rx="12" fill="#ffffff" stroke="#16a34a" stroke-width="2"/>
+
+  <rect x="610" y="134" width="180" height="56" rx="28" fill="#ecfdf3" stroke="#16a34a"/>
+  <text x="700" y="158" font-size="13.5" font-weight="800" fill="#14532d" text-anchor="middle">Asistente</text>
+  <text x="700" y="176" font-size="11" fill="#14532d" text-anchor="middle">conversa y decide</text>
+
+  <rect x="520" y="234" width="112" height="44" rx="8" fill="#ffffff" stroke="#cbd3df"/>
+  <text x="576" y="254" font-size="12" font-weight="700" fill="#151b28" text-anchor="middle">VER</text>
+  <text x="576" y="270" font-size="10.5" fill="#5c6675" text-anchor="middle">recursos · hojas</text>
+  <rect x="644" y="234" width="112" height="44" rx="8" fill="#ffffff" stroke="#cbd3df"/>
+  <text x="700" y="254" font-size="12" font-weight="700" fill="#151b28" text-anchor="middle">PROBAR</text>
+  <text x="700" y="270" font-size="10.5" fill="#5c6675" text-anchor="middle">comprobar · rutas</text>
+  <rect x="768" y="234" width="112" height="44" rx="8" fill="#ffffff" stroke="#cbd3df"/>
+  <text x="824" y="254" font-size="12" font-weight="700" fill="#151b28" text-anchor="middle">CAMBIAR</text>
+  <text x="824" y="270" font-size="10.5" fill="#5c6675" text-anchor="middle">una pieza</text>
+
+  <g stroke="#16a34a" stroke-width="1.5" fill="none">
+    <path d="M640,190 L586,230" marker-end="url(#a7)"/>
+    <path d="M700,190 L700,230" marker-end="url(#a7)"/>
+    <path d="M760,190 L814,230" marker-end="url(#a7)"/>
+  </g>
+  <text x="700" y="214" font-size="10.5" fill="#15803d" text-anchor="middle">pide · ve el resultado · repite</text>
+
+  <rect x="520" y="300" width="360" height="66" rx="8" fill="#f8fafc" stroke="#cbd3df" stroke-dasharray="4 3"/>
+  <text x="536" y="322" font-size="12" font-weight="700" fill="#151b28">Guardia final del código (se queda)</text>
+  <text x="536" y="340" font-size="11.5" fill="#5c6675">comprobador + rutas no tocadas se restauran</text>
+  <text x="536" y="356" font-size="11.5" fill="#5c6675">antes de mostrar nada a la persona</text>
+
+  <!-- tabla comparativa -->
+  <g font-size="12">
+    <text x="40" y="420" font-size="11" font-weight="700" fill="#5c6675" letter-spacing="1">QUÉ CAMBIA PARA LA PERSONA</text>
+    <rect x="40" y="430" width="860" height="108" rx="10" fill="#ffffff" stroke="#cbd3df"/>
+    <text x="60" y="456" font-weight="700" fill="#151b28">Hoy</text>
+    <text x="150" y="456" fill="#3b4453">«Listo, agregué la ruta.»  (no sabe si la hoja tiene esa columna ni si la ruta cae bien)</text>
+    <line x1="60" y1="472" x2="880" y2="472" stroke="#e3e7ee"/>
+    <text x="60" y="498" font-weight="700" fill="#15803d">P8</text>
+    <text x="150" y="498" fill="#3b4453">«Leí la hoja Tarifas Grúas (Destino, Tonelaje, Precio), agregué la ruta y la probé con 5 frases:</text>
+    <text x="150" y="518" fill="#3b4453">4 caen bien; "cuánto me cobras" cae en comercial. ¿La separo?»</text>
+  </g>
+</svg>

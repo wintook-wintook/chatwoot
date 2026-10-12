@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 500" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="a10" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="940" height="500" fill="#f4f6f9"/>
+
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28" letter-spacing="-0.4">Cómo arranca el P8</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Primero se demuestra que vale la pena con un prototipo chico. Si no gana, se para sin haber tocado el Asistente de hoy.</text>
+
+  <!-- Paso 0 -->
+  <rect x="40" y="96" width="200" height="200" rx="10" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+  <text x="58" y="124" font-size="12" font-weight="700" fill="#2563eb" letter-spacing="1">PASO 0</text>
+  <text x="58" y="148" font-size="15" font-weight="800" fill="#151b28">Con qué juzgar</text>
+  <text x="58" y="176" font-size="12" fill="#3b4453">5 tareas reales</text>
+  <text x="58" y="196" font-size="12" fill="#3b4453">medir el Asistente</text>
+  <text x="58" y="214" font-size="12" fill="#3b4453">de hoy</text>
+  <text x="58" y="240" font-size="12" fill="#3b4453">guardar tokens por</text>
+  <text x="58" y="258" font-size="12" fill="#3b4453">llamada (P6c)</text>
+
+  <!-- Paso 1 -->
+  <rect x="260" y="96" width="200" height="200" rx="10" fill="#ffffff" stroke="#16a34a" stroke-width="2"/>
+  <text x="278" y="124" font-size="12" font-weight="700" fill="#16a34a" letter-spacing="1">PASO 1</text>
+  <text x="278" y="148" font-size="15" font-weight="800" fill="#151b28">Prototipo</text>
+  <text x="278" y="176" font-size="12" fill="#3b4453">5 herramientas de</text>
+  <text x="278" y="194" font-size="12" fill="#3b4453">leer y probar</text>
+  <text x="278" y="220" font-size="12" fill="#3b4453">no guarda nada</text>
+  <text x="278" y="246" font-size="12" fill="#3b4453">bandera · solo</text>
+  <text x="278" y="264" font-size="12" fill="#3b4453">cuenta 2</text>
+
+  <!-- Paso 2 -->
+  <rect x="480" y="96" width="200" height="200" rx="10" fill="#ffffff" stroke="#d97706" stroke-width="2"/>
+  <text x="498" y="124" font-size="12" font-weight="700" fill="#d97706" letter-spacing="1">PASO 2</text>
+  <text x="498" y="148" font-size="15" font-weight="800" fill="#151b28">Comparar</text>
+  <text x="498" y="176" font-size="12" fill="#3b4453">las 5 tareas: hoy vs</text>
+  <text x="498" y="194" font-size="12" fill="#3b4453">prototipo</text>
+  <text x="498" y="220" font-size="12" fill="#3b4453">gpt-5.4-mini</text>
+  <text x="498" y="238" font-size="12" fill="#3b4453">gpt-5.5</text>
+  <text x="498" y="256" font-size="12" fill="#3b4453">gpt-4o (referencia)</text>
+
+  <!-- decisión -->
+  <path d="M780,124 L840,196 L780,268 L720,196 Z" fill="#ffffff" stroke="#151b28" stroke-width="1.8"/>
+  <text x="780" y="192" font-size="13" font-weight="800" fill="#151b28" text-anchor="middle">¿gana</text>
+  <text x="780" y="210" font-size="13" font-weight="800" fill="#151b28" text-anchor="middle">claro?</text>
+
+  <g stroke="#94a3b8" stroke-width="1.8" fill="none">
+    <path d="M240,196 L256,196" marker-end="url(#a10)"/>
+    <path d="M460,196 L476,196" marker-end="url(#a10)"/>
+    <path d="M680,196 L716,196" marker-end="url(#a10)"/>
+    <path d="M780,268 L780,320" marker-end="url(#a10)"/>
+    <path d="M840,196 L872,196 L872,438" marker-end="url(#a10)"/>
+  </g>
+  <text x="790" y="300" font-size="12" font-weight="700" fill="#15803d">sí</text>
+  <text x="850" y="186" font-size="12" font-weight="700" fill="#b91c1c">no</text>
+
+  <!-- Paso 3 -->
+  <rect x="40" y="324" width="800" height="100" rx="10" fill="#ecfdf3" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="58" y="350" font-size="12" font-weight="700" fill="#15803d" letter-spacing="1">PASO 3 · CRECERLO, EN ESTE ORDEN</text>
+  <g font-size="12.5" fill="#14532d">
+    <text x="58" y="378"><tspan font-weight="800">1</tspan> editar_pieza (P5)</text>
+    <text x="250" y="378"><tspan font-weight="800">2</tspan> avance en vivo (streaming)</text>
+    <text x="490" y="378"><tspan font-weight="800">3</tspan> un solo chat: consultor + redactor</text>
+    <text x="58" y="404"><tspan font-weight="800">4</tspan> simular y ver_conversacion (P2, P4)</text>
+    <text x="350" y="404"><tspan font-weight="800">5</tspan> Claude como segundo proveedor (misma pila de pruebas)</text>
+  </g>
+
+  <rect x="40" y="440" width="860" height="44" rx="10" fill="#fdeeee" stroke="#f2b8b8"/>
+  <text x="62" y="467" font-size="12.5" fill="#7f1d1d"><tspan font-weight="700">Si no gana:</tspan> se apaga la bandera y se queda el Asistente de hoy. Lo aprendido (qué herramienta ayudó) se anota en el Registro.</text>
+</svg>
