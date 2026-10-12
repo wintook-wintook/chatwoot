@@ -695,11 +695,11 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
     | Prueba de ruteo | — | 4 clasificaciones | 0 cruces |
     | **Total** | **~52 s** | | **~0,05 USD + el chat (< 0,10 USD)** |
 
-    - ¿Se ejecuta? **Sí** (0 bloqueantes, 0 avisos). ¿Rutea bien? **Sí** (4 de 4). Vueltas: 3 turnos de chat + 1 pregunta del modal + 1 corrección automática.
+    - ¿Se ejecuta? **Sí** (0 bloqueantes; 4 que degradan: las etiquetas #cita_agendada, #informes y #crisis no existen en la cuenta, normal en un agente nuevo). ¿Rutea bien? **Sí** (4 de 4). Vueltas: 3 turnos de chat + 1 pregunta del modal + 1 corrección automática.
     - **Calificación del chat: 5/5.**
     - Bien: las instrucciones recogieron todo lo dicho sin inventar; propuso el calendario de la cuenta y recomendaciones del giro; los datos del negocio fueron al Contexto de la Definición (~470 caracteres).
     - Mal, para comparar con el prototipo:
-      1. El Entrenamiento salió en **inglés** ([ROL], [ALCANCE], [ESTILO]…) y el mensaje final también.
+      1. ~~El Entrenamiento salió en inglés~~ → **descartado**: lo causó la forma de probar (ver «Corrección» abajo). Repetida en español (sesión #3898), sale en español.
       2. Se perdió el número de la **Línea de la Vida** (800 911 2000): no está ni en el Entrenamiento ni en el Contexto.
       3. «Dudas sobre el consultorio» quedó `- -> @crear_ticket`, y es la ruta por defecto (falta confirmar cómo la ejecuta el motor).
       4. La redacción soltó 15 reglas (todas las de «Nunca»); la cobertura las repuso, duplicadas en prosa inglesa y viñetas en español.
@@ -738,11 +738,14 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
     - Propuso «enfatizar una sola pregunta por mensaje», regla que ADAM ya tiene escrita (en la copia vieja y en la actual); no notó que la regla existe y no se cumplió. Arreglos sin texto concreto.
     - El agente en vivo usaba gpt-4o: no es el caso del P1.
     - **Calificación: pendiente.**
+  - **Corrección (12/10/2026, al empezar el Paso 1):**
+    - **Idioma.** Las corridas se hicieron desde la consola, donde el idioma por defecto es inglés; en la pantalla, el job del turno usa el de la cuenta (español en la cuenta 2). El contrato del Asistente va en español siempre, pero los mensajes del comprobador y de las vueltas de corrección salieron en inglés. Afectó a la T1 (su vuelta de corrección): repetida en español sale en español, y las demás fallas se repiten (se pierde la Línea de la Vida; «Dudas» abre casos y es la ruta por defecto; «no estoy seguro/a» en crisis; además se cayó «Nombre» de los datos a pedir; la cobertura repuso 7 reglas). T2–T4 no tuvieron vueltas de corrección ni hallazgos: no les llegó texto en inglés. **El Paso 2 corre en español.**
+    - **Avisos.** El comprobador separa `blocking`, `degrading` y `cosmetic`; el «0 avisos» anotado leía una llave que no existe. Recomprobado: T2, T3 y T4 tienen 0 en las tres; la T1, 4 que degradan (etiquetas que faltan crear).
   - **Resumen del Paso 0:**
 
     | Tarea | Nota | ¿Funcionó? | Costo |
     |---|---|---|---|
-    | T1 crear desde cero | 5 | sí, con fallas de fondo (inglés, datos perdidos) | < 0,10 USD |
+    | T1 crear desde cero | 5 | sí, con fallas de fondo (datos perdidos, ruta por defecto que abre casos) | < 0,10 USD |
     | T2 ruta con hoja | 5 | sí; la prueba automática no probó la ruta nueva | 0,07 USD |
     | T3 arreglar un cruce | 3 | a la tercera; dos veces «arreglado» sin cambiar nada | 0,16 USD |
     | T4 mejorar el estilo | 5 | sí, limpio | 0,07 USD |
