@@ -28,6 +28,7 @@ class ContactTrackings::Assistant::InterviewTurn
 
   def call
     result = interview_service.call
+    @usage = interview_service.usage
     return { error: result.error.to_s } unless result.success?
 
     interview_json(result, record_turn(result))
@@ -36,11 +37,13 @@ class ContactTrackings::Assistant::InterviewTurn
   private
 
   def interview_service
-    servicio = ContactTrackings::Assistant::InterviewService
-               .new(@account, messages: messages, inbox: @inbox,
-                              drafts: { current: @params['draft'], delivered: delivered_draft, building: building },
-                              one_shot: ActiveModel::Type::Boolean.new.cast(@params['one_shot']))
-    @progress ? servicio.with_progress(@progress) : servicio
+    @interview_service ||= begin
+      servicio = ContactTrackings::Assistant::InterviewService
+                 .new(@account, messages: messages, inbox: @inbox,
+                                drafts: { current: @params['draft'], delivered: delivered_draft, building: building },
+                                one_shot: ActiveModel::Type::Boolean.new.cast(@params['one_shot']))
+      @progress ? servicio.with_progress(@progress) : servicio
+    end
   end
 
   def interview_json(result, sesion)
@@ -102,24 +105,19 @@ class ContactTrackings::Assistant::InterviewTurn
 
   # Los cambios viajan pegados al turno que los hizo: al retomar la sesión se siguen
   # viendo debajo de su mensaje. Al modelo no le vuelven (InterviewService solo deja
-  # pasar role y content).
+  # pasar role y content). Lo mismo el consumo del turno (ver TokenUsage).
   def assistant_turn(result)
     respuesta = { 'role' => 'assistant', 'content' => result.reply.to_s }
     respuesta['changes'] = result.changes.deep_stringify_keys if result.changes.present?
+    respuesta['consumo'] = @usage if @usage.present?
     respuesta
   end
 
-  # El cliente devuelve el hilo sin los cambios de turnos anteriores (y aunque los
+  # El cliente devuelve el hilo sin los datos de turnos anteriores (y aunque los
   # mandara, no se le confían). Se recuperan de lo guardado, turno por turno, mientras
-  # el contenido coincida: sin esto, cada turno nuevo borraría los cambios del anterior.
+  # el contenido coincida: sin esto, cada turno nuevo borraría los del anterior.
   def with_stored_changes(sesion, turnos)
-    guardados = Array(sesion.messages)
-    turnos.each_with_index.map do |turno, i|
-      previo = guardados[i]
-      next turno unless previo.is_a?(Hash) && previo['changes'].present? && previo['content'] == turno['content']
-
-      turno.merge('changes' => previo['changes'])
-    end
+    ContactTrackings::Assistant::StoredTurnData.merge(sesion.messages, turnos)
   end
 
   def session_record

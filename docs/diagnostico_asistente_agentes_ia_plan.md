@@ -637,6 +637,8 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 | D12 | Cuándo y cómo entra Claude | en el prototipo · en el Paso 3 | **Paso 3**: primero demostrar el diseño; luego comparar proveedores. Requiere una clave de Anthropic, porque hoy la clave sale de la integración OpenAI de cada cuenta |
 | D13 | ¿Qué se tapa al leer conversaciones completas? | lo que tapa hoy PhraseMasker · también correos y nombres | decidir al llegar a `ver_conversacion` (Paso 3) |
 
+**Decidido el 12/10/2026:** D8 = gpt-5.4-mini + gpt-5.5, con gpt-4o de referencia · D9 = las 5 tareas de la tabla · D10 = medir primero: P6c y UNA tarea con el Asistente de hoy; con ese costo real se propone el tope antes de correr las demás.
+
 ---
 
 ## 2. Decisiones abiertas
@@ -660,6 +662,9 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 
 ### P8 · Asistente con herramientas
 - **Paso 0, línea base (5 tareas con el Asistente de hoy):**
+  - Punto de retorno: tag `estable-2026-10-12-antes-p8` (código; la base de datos no la cubre).
+  - Medir tokens: hecho (P6c, ver «P6 · Esquema, caché y costo»). Desde aquí cada respuesta del Asistente guarda lo que gastó.
+  - Siguiente: UNA tarea con el Asistente de hoy → costo real → tope de gasto (D10) → las otras cuatro.
 - **Paso 1, qué se hizo:**
 - **Paso 2, comparación (hoy vs prototipo, por modelo):**
 - **Decisión (¿ganó?):**
@@ -701,8 +706,34 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 - **Pila de pruebas:**
 
 ### P6 · Esquema, caché y costo
-- **Qué se hizo:**
+- **Qué se hizo (6c, 12/10/2026):** cada respuesta del Asistente guarda lo que gastó su turno, en la entrevista y en el chat consultor. Sin migración: va pegado al mensaje en la sesión (`tracking_assistant_sessions.messages`), igual que los cambios.
+  - `TokenUsage` (nuevo) suma todas las llamadas del turno: las de corrección y las fallidas también.
+  - `OpenaiChat` le pasa cada llamada; `last_usage` sigue igual para quien ya lo usaba.
+  - `RouteSelfCheck` cuenta las clasificaciones de la prueba de ruteo.
+  - `StoredTurnData` (nuevo) conserva el consumo y los cambios de turnos anteriores, porque la pantalla devuelve el hilo sin ellos.
+- **Cómo funciona:** el mensaje del Asistente lleva `consumo`:
+
+  ```
+  { modelos, llamadas, fallidas, entrada, cacheados, salida, razonamiento,
+    segundos, clasificaciones, costo_usd }
+  ```
+
+  - Al modelo no le llega: solo recibe rol y texto. Tampoco va a la pantalla.
+  - `costo_usd` solo para modelos con precio conocido (gpt-4o, gpt-4o-mini). En gpt-5.x queda vacío hasta cargar el precio oficial; los tokens quedan guardados para calcularlo después.
+  - De las clasificaciones se guarda cuántas hubo, no sus tokens: usan el clasificador del motor, con su propia llamada.
+  - Para leerlo: la sesión, mensaje por mensaje (`TrackingAssistantSession#messages`).
 - **Pila de pruebas:**
+  - En consola, sin OpenAI: suma y costo (6.000 × 2,5 + 4.000 × 1,25 + 2.000 × 10 por millón = 0,04 USD ✓), llamada fallida contada, gpt-5.4-mini sin costo ✓, consumo recuperado al seguir la conversación ✓.
+  - Real, cuenta 2, dos turnos con gpt-4o («agente para una pizzería» y su continuación); la sesión de prueba se borró:
+
+    | Turno | Llamadas | Entrada | Cacheados | Salida | Tiempo | Costo |
+    |---|---|---|---|---|---|---|
+    | 1 | 1 | 6.895 | 0 | 172 | 2,2 s | 0,019 USD |
+    | 2 | 1 | 7.025 | 6.656 | 137 | 1,3 s | 0,011 USD |
+
+    El turno 2 conservó el consumo del 1 ✓; al modelo solo le llegaron rol y texto ✓; la pantalla no lo recibe ✓.
+  - **Primer dato para el 6b:** en el turno 2 la caché de OpenAI cubrió el 95 % de la entrada y el turno costó casi la mitad.
+  - Falta: un turno real del chat consultor y el conteo de clasificaciones (aparece cuando el Asistente entrega un Entrenamiento con 2 rutas o más). Se verán en la tarea de medición.
 
 ### P7 · Sin Entrenamiento dice no ser bot
 - **Qué se hizo:**

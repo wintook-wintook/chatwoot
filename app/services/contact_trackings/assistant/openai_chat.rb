@@ -28,12 +28,17 @@ class ContactTrackings::Assistant::OpenaiChat
   # AgentBriefDigestJob); nil si la llamada falló.
   attr_reader :last_usage
 
+  # Lo de TODAS las llamadas de esta instancia, con las que fallaron (ver TokenUsage).
+  # Un turno del chat usa una instancia, así que es lo que gastó el turno.
+  attr_reader :usage
+
   # api_key: la clave ya leída, para quien llama desde un hilo que no debe tocar la base
   # (BriefMerger).
   def initialize(account:, inbox: nil, api_key: nil)
     @account = account
     @inbox = inbox
     @api_key = api_key
+    @usage = ContactTrackings::Assistant::TokenUsage.new
   end
 
   def api_key
@@ -64,6 +69,7 @@ class ContactTrackings::Assistant::OpenaiChat
 
   def post(body)
     @last_usage = nil
+    inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     response = http_client.request(build_request(body))
     return failure("HTTP #{response.code}: #{response.body.to_s[0, 300]}") unless response.is_a?(Net::HTTPSuccess)
 
@@ -77,6 +83,8 @@ class ContactTrackings::Assistant::OpenaiChat
     choice&.dig('message', 'content')
   rescue StandardError => e
     failure(e.message)
+  ensure
+    @usage.add(body[:model], @last_usage, Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio)
   end
 
   def parse(content)

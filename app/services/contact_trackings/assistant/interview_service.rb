@@ -122,6 +122,9 @@ class ContactTrackings::Assistant::InterviewService
     handle(EmptyPromise.second_try(reply, said: user_texts.last, editing: editing? && !building? && !one_shot) { |more| ask(conversation + more) })
   end
 
+  # Lo que gastó el turno, todas sus vueltas incluidas (ver TokenUsage).
+  def usage = @chat.usage.to_h
+
   private
 
   attr_reader :account, :inbox, :messages, :one_shot, :current_draft
@@ -322,7 +325,7 @@ class ContactTrackings::Assistant::InterviewService
   end
 
   def route_mismatches(draft)
-    ContactTrackings::Assistant::RouteSelfCheck.new(account, draft: draft, inbox: inbox).call
+    ContactTrackings::Assistant::RouteSelfCheck.new(account, draft: draft, inbox: inbox, usage: @chat.usage).call
   rescue StandardError => e
     # Que no se pueda probar el ruteo no debe costarle el Entrenamiento a nadie:
     # se entrega lo que ya pasó el comprobador.

@@ -39,7 +39,10 @@ class Api::V1::Accounts::ContactTrackings::AssistantDraftingController < Api::V1
   def record(result)
     sesion = TrackingAssistantSession.find_by(id: params[:session_id], account: Current.account) if params[:session_id].present?
     sesion ||= TrackingAssistantSession.new(account: Current.account, user: Current.user)
-    turnos = messages + [{ 'role' => 'assistant', 'content' => result[:reply] }]
+    # El consumo va pegado al mensaje (ver TokenUsage); el de turnos anteriores se
+    # recupera de lo guardado, porque la pantalla no lo devuelve.
+    turnos = ContactTrackings::Assistant::StoredTurnData.merge(sesion.messages, messages) +
+             [{ 'role' => 'assistant', 'content' => result[:reply], 'consumo' => result[:usage] }.compact]
     sesion.record_turn(messages: turnos, instructions: result[:instructions])
     sesion
   rescue StandardError => e

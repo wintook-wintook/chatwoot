@@ -38,10 +38,13 @@ class ContactTrackings::Assistant::RouteSelfCheck
 
   Mismatch = Struct.new(:route, :probe, :chosen, keyword_init: true)
 
-  def initialize(account, draft:, inbox: nil)
+  # usage: el consumo del turno (ver TokenUsage). Cada frase mandada a clasificar se
+  # cuenta ahí: es una llamada que se paga, aunque sus tokens no se vean desde acá.
+  def initialize(account, draft:, inbox: nil, usage: nil)
     @account = account
     @draft = draft.to_s
     @inbox = inbox
+    @usage = usage
   end
 
   # Devuelve solo los CRUCES: [] significa que cada rama se eligió a sí misma.
@@ -56,6 +59,7 @@ class ContactTrackings::Assistant::RouteSelfCheck
       probe = ContactTrackings::Assistant::ProbePhrases.for(route).first
       next if probe.blank?
 
+      @usage&.add_classifications(1)
       chosen = clasificador.classify(probe)&.name
       next if chosen == route.name
 

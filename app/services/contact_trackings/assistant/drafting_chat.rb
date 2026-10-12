@@ -143,7 +143,8 @@ class ContactTrackings::Assistant::DraftingChat
     @chat = ContactTrackings::Assistant::OpenaiChat.new(account: account)
   end
 
-  # { reply:, instructions:, changed: } o { error: }
+  # { reply:, instructions:, changed:, usage: } o { error: }
+  # usage: lo que gastó el turno (ver TokenUsage); se guarda en la sesión, no va a la pantalla.
   def call
     return { error: :no_api_key } if @chat.api_key.blank?
     return { error: :no_messages } if @messages.empty?
@@ -152,7 +153,8 @@ class ContactTrackings::Assistant::DraftingChat
     return { error: :unavailable } if raw.nil? || raw['mensaje'].blank?
 
     nuevas = clean(raw['instrucciones'])
-    { reply: raw['mensaje'].to_s.strip, instructions: nuevas || @instructions, changed: nuevas.present? }
+    { reply: raw['mensaje'].to_s.strip, instructions: nuevas || @instructions, changed: nuevas.present?,
+      usage: @chat.usage.to_h }
   end
 
   private
