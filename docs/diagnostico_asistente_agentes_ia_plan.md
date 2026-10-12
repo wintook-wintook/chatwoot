@@ -664,7 +664,30 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 - **Paso 0, línea base (5 tareas con el Asistente de hoy):**
   - Punto de retorno: tag `estable-2026-10-12-antes-p8` (código; la base de datos no la cubre).
   - Medir tokens: hecho (P6c, ver «P6 · Esquema, caché y costo»). Desde aquí cada respuesta del Asistente guarda lo que gastó.
-  - Siguiente: UNA tarea con el Asistente de hoy → costo real → tope de gasto (D10) → las otras cuatro.
+  - **T1 · crear desde cero conversando (12/10/2026, cuenta 2, sesión #3895, encargo #1131).** Consultorio de psicología «Clara», por el camino completo de la pantalla: chat consultor → «Crear el Entrenamiento» → «Me falta saber» → redacción de una sola vez → cobertura.
+
+    | Tramo | Tiempo | Llamadas | Costo |
+    |---|---|---|---|
+    | Chat consultor, 3 turnos (gpt-5.4-mini) | 17 s | 3 | sin precio cargado (10.522 tokens de entrada, 4.608 cacheados; 2.907 de salida) |
+    | Lectura del encargo (gpt-4o) | 18,6 s | 2 | 0,017 USD |
+    | «Me falta saber» | — | — | 1 pregunta (fuente de «Dudas») |
+    | Redacción + 1 corrección (gpt-4o) | 16,4 s | 2 | 0,034 USD (66 % de la entrada cacheada) |
+    | Prueba de ruteo | — | 4 clasificaciones | 0 cruces |
+    | **Total** | **~52 s** | | **~0,05 USD + el chat (< 0,10 USD)** |
+
+    - ¿Se ejecuta? **Sí** (0 bloqueantes, 0 avisos). ¿Rutea bien? **Sí** (4 de 4). Vueltas: 3 turnos de chat + 1 pregunta del modal + 1 corrección automática.
+    - **Calificación del chat: 5/5.**
+    - Bien: las instrucciones recogieron todo lo dicho sin inventar; propuso el calendario de la cuenta y recomendaciones del giro; los datos del negocio fueron al Contexto de la Definición (~470 caracteres).
+    - Mal, para comparar con el prototipo:
+      1. El Entrenamiento salió en **inglés** ([ROL], [ALCANCE], [ESTILO]…) y el mensaje final también.
+      2. Se perdió el número de la **Línea de la Vida** (800 911 2000): no está ni en el Entrenamiento ni en el Contexto.
+      3. «Dudas sobre el consultorio» quedó `- -> @crear_ticket`, y es la ruta por defecto (falta confirmar cómo la ejecuta el motor).
+      4. La redacción soltó 15 reglas (todas las de «Nunca»); la cobertura las repuso, duplicadas en prosa inglesa y viñetas en español.
+      5. «no estoy seguro/a» quedó como frase de la ruta de crisis.
+      6. El modal preselecciona como fuente el foro de otra empresa de la cuenta (Foro_Sentidos_Creativos); se eligió «ninguna».
+      7. El chat hizo ~30 preguntas en un mensaje (su regla dice hasta 5) y preguntó por un calendario que ya conocía.
+    - Lectura: el chat ayuda; lo que falla es la redacción y que nadie revisa lo escrito contra el encargo, más allá de que ejecute. Es lo que el P8 tiene que cubrir.
+  - Siguiente: tope de gasto (D10) → T2–T5.
 - **Paso 1, qué se hizo:**
 - **Paso 2, comparación (hoy vs prototipo, por modelo):**
 - **Decisión (¿ganó?):**
