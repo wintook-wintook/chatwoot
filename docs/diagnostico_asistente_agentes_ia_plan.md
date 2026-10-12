@@ -551,8 +551,28 @@ Por cada tarea se mide:
 - [ ] Cada herramienta avisa su paso en `TurnProgress`.
 - [ ] Detrás de una bandera, **solo la cuenta 2** (decisión **D11**). La pantalla no cambia: un interruptor «modo nuevo» solo para la prueba.
 
+**Alcance (decidido el 12/10/2026, después de la medición):** el prototipo cubre **el chat de edición, T2–T5**, donde estuvieron las fallas serias (T3 y T5). Crear desde cero (T1) va por otro camino (chat consultor → encargo) y se une en el Paso 3, «un solo chat». En la T5 el prototipo recibe la evidencia de la revisión (`ConversationReview`) y comprueba las causas con sus herramientas.
+
+**Qué se toca:**
+
+| # | Archivo | Qué |
+|---|---------|-----|
+| 1 | `assistant/openai_chat.rb` | mandar herramientas al modelo y recibir sus pedidos; sigue sumando el consumo (P6c) |
+| 2 | `assistant/tool_interview_service.rb` (nuevo) | el bucle: el modelo pide, el código corre, el modelo sigue; al final, la guardia de hoy (comprobador, prueba de rutas, restaurar lo no pedido), reusada, no reescrita |
+| 3 | `assistant/assistant_tools.rb` (nuevo) | las 5 herramientas y su llamada a los servicios que ya existen |
+| 4 | `assistant/interview_turn.rb` | con la bandera, el servicio nuevo; sin ella, todo igual |
+| 5 | `config/features.yml` | bandera `assistant_tools`, apagada, agregada al final; se enciende solo en la cuenta 2 |
+| 6 | `TurnProgress` | cada herramienta avisa su paso («Probando la ruta…»); la pantalla no cambia |
+
+Sin migración; el punto de retorno sigue siendo el tag `estable-2026-10-12-antes-p8`.
+
+**Costo de las pruebas dentro del turno:** `probar_ruta` y `comprobar` **no reciben el Entrenamiento entero**, solo la línea que se quiere cambiar (por ejemplo, la `@ruta(…)` nueva); el código la aplica sobre el que está en pantalla. Si el modelo mandara 15.000 caracteres en cada prueba, el costo se multiplicaría por cada vuelta.
+
+**La prueba de ruteo de hoy solo prueba 8 rutas** (`RouteSelfCheck::MAX_PROBES`), y una ruta nueva o editada suele quedar fuera (T2, T3). **No se corrige en el Asistente de hoy hasta terminar la comparación**, para que la comparación sea justa. Se corrige después, gane o no el prototipo: al editar, probar primero las rutas tocadas.
+
 #### Paso 2 · Comparar
-- [ ] Las 5 tareas con el prototipo, con 2 o 3 modelos (decisión **D8**)
+- [ ] Las tareas T2–T5 con el prototipo, con 3 modelos (decisión **D8**): 12 corridas. La T1 queda para el Paso 3.
+- [ ] Tope de gasto: **10 USD** (estimado ~6 USD; con herramientas cada turno hace más llamadas). De gpt-5.5 no hay precio cargado: se guardan los tokens, y si una corrida se ve cara se detiene y se avisa.
 - [ ] Tabla en el Registro: hoy contra prototipo, por modelo
 - [ ] Decidir: si gana claro, sigue el Paso 3; si no, se apaga la bandera y se anota qué herramienta sí ayudó
 
@@ -637,7 +657,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 | D12 | Cuándo y cómo entra Claude | en el prototipo · en el Paso 3 | **Paso 3**: primero demostrar el diseño; luego comparar proveedores. Requiere una clave de Anthropic, porque hoy la clave sale de la integración OpenAI de cada cuenta |
 | D13 | ¿Qué se tapa al leer conversaciones completas? | lo que tapa hoy PhraseMasker · también correos y nombres | decidir al llegar a `ver_conversacion` (Paso 3) |
 
-**Decidido el 12/10/2026:** D8 = gpt-5.4-mini + gpt-5.5, con gpt-4o de referencia · D9 = las 5 tareas de la tabla · D10 = medir primero: P6c y UNA tarea con el Asistente de hoy; con ese costo real se propone el tope antes de correr las demás → tope de 3 USD para T2–T5 (la T1 costó < 0,10 USD).
+**Decidido el 12/10/2026:** D8 = gpt-5.4-mini + gpt-5.5, con gpt-4o de referencia · D9 = las 5 tareas de la tabla · D10 = medir primero: P6c y UNA tarea con el Asistente de hoy; con ese costo real se propone el tope antes de correr las demás → tope de 3 USD para T2–T5 (la T1 costó < 0,10 USD); para la comparación del Paso 2, **10 USD** · D11 = solo cuenta 2, bandera `assistant_tools` · Alcance del prototipo = chat de edición (T2–T5); T1 en el Paso 3.
 
 ---
 
