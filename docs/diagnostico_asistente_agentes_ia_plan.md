@@ -354,6 +354,31 @@ Las 4 llamadas del camino de la respuesta al cliente no miraban si OpenAI había
 
 Las otras 13 llamadas a OpenAI del código ya revisan la respuesta o no están en el camino de respuesta al cliente.
 
+### P3b · Preparar gpt-5 en el motor, sin activarlo (diseño acordado el 13/10/2026)
+**Hallazgo:** el selector de modelo del canal es uno solo y lo leen **9 puntos del motor** (ruta, fechas, respuesta conversacional, Base de Conocimiento, mensajes programados, separar solicitudes, parámetros del ERP, /sigue, router de intención). Con gpt-5 todos mandarían `max_tokens` y fallarían.
+
+**Medido (13/10/2026, respuesta real de la conversación 403, sin herramientas):** gpt-5 acepta `reasoning_effort` `none` y `low` y responde en 1,5–2,6 s (gpt-5.4-mini 1,5–1,7 s; gpt-5.5 2,2–2,6 s), dentro de los 10 s del motor; con `low` citó las unidades reales de la hoja.
+
+```
+  hoy:   9 puntos del motor ──► cada uno arma max_tokens + temperature a mano
+                                  └─ con gpt-5: HTTP 400 en todos
+
+  P3b:   9 puntos del motor ──► EngineOpenai (el punto único del P3a)
+                                  ├─ gpt-4o / mini  → max_tokens + temperature      (igual que hoy)
+                                  └─ gpt-5.x        → max_completion_tokens
+                                                      + razonamiento bajo por uso
+```
+
+1. `EngineOpenai` arma los parámetros según el modelo; cada llamada dice para qué es. gpt-5: `max_completion_tokens` = tope de hoy + margen para razonar; `none` para clasificar y extraer, `low` para contestar; sin `temperature`.
+2. Pasar a `EngineOpenai` los 5 puntos que faltan (mensajes programados, solicitudes, ERP, /sigue, router de intención).
+3. gpt-5.4-mini y gpt-5.5 en `ALLOWED_MODELS`, `MODEL_RANK` y el selector del canal (`apps.yml`). El modelo por defecto sigue siendo gpt-4o-mini; no se cambia ningún canal.
+4. Tiempos de espera: sin cambios (10 s y 45 s alcanzan).
+5. Pruebas en la cuenta 2 sin cambiar canales: los 9 puntos con gpt-4o dan lo mismo; forzando gpt-5.4-mini y gpt-5.5, sin HTTP 400. Sin RSpec (corre contra la base de desarrollo).
+
+**D18 decidida: si un canal elige gpt-5, se usa solo para CONTESTAR** (respuesta conversacional, Base de Conocimiento, mensajes programados). Clasificar rutas, fechas, solicitudes, ERP y redactar siguen en gpt-4o: ya funcionan bien, son rápidas, y el Asistente prueba con ese clasificador. La pantalla dirá «clasifica con gpt-4o · contesta con gpt-5.x».
+
+No incluye elegir gpt-5 para un canal real: eso es el P1 / D1, medido con la pila F0.
+
 ### Pasos
 - [x] Listar las llamadas y cuáles son del motor de seguimientos (17 archivos; 4 en el camino de la respuesta sin revisar el HTTP)
 - [x] **P3a** · Que cada llamada revise el código HTTP y registre el error de OpenAI, con nota privada cuando el cliente se queda sin respuesta (D17)
@@ -699,6 +724,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 | D15 | Ruta por defecto sin fuente propia | contestar con lo escrito · abrir caso primero · exigir fuente propia | **Decidido 13/10/2026: contesta con lo escrito**, con aviso nuevo del comprobador (ver Registro, 3.3) |
 | D16 | Tiempo de crear con herramientas (155–233 s) | aceptarlo · menos razonamiento · menos herramientas | **Decidido 13/10/2026: `none` al crear (47–53 s), el de por defecto al editar** (ver Registro, 3.3) |
 | D17 | Qué pasa cuando el agente IA no puede responder por una falla de OpenAI | nota privada · solo log · nota + mensaje fijo al cliente | **Decidido 13/10/2026: nota privada** (P3a) |
+| D18 | Si un canal elige gpt-5, ¿para todo o solo para contestar? | solo contestar · todo | **Decidido 13/10/2026: solo contestar**; clasificar, fechas, solicitudes, ERP y redactar siguen en gpt-4o (P3b) |
 
 **Decidido el 12/10/2026:** D8 = gpt-5.4-mini + gpt-5.5, con gpt-4o de referencia · D9 = las 5 tareas de la tabla · D10 = medir primero: P6c y UNA tarea con el Asistente de hoy; con ese costo real se propone el tope antes de correr las demás → tope de 3 USD para T2–T5 (la T1 costó < 0,10 USD); para la comparación del Paso 2, **10 USD** · D11 = solo cuenta 2, bandera `assistant_tools` · Alcance del prototipo = chat de edición (T2–T5); T1 en el Paso 3.
 
