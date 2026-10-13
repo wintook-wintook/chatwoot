@@ -1067,6 +1067,8 @@ export default {
             deliveredDraft: this.lastDelivered,
             building: this.isBuilding,
             turnId,
+            // Solo al crear desde un encargo (writeFromBrief lo deja antes de enviar).
+            briefId: oneShot ? this.batteryBriefId : null,
           }
         );
         this.sessionId = data.session_id || this.sessionId;

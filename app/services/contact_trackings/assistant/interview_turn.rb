@@ -41,7 +41,7 @@ class ContactTrackings::Assistant::InterviewTurn
       opciones = { messages: messages, inbox: @inbox, one_shot: one_shot?,
                    drafts: { current: @params['draft'], delivered: delivered_draft, building: building } }
       servicio = if with_tools?
-                   ContactTrackings::Assistant::ToolInterviewService.new(@account, model: @params['tools_model'], **opciones)
+                   ContactTrackings::Assistant::ToolInterviewService.new(@account, model: @params['tools_model'], brief: brief, **opciones)
                  else
                    ContactTrackings::Assistant::InterviewService.new(@account, **opciones)
                  end
@@ -49,10 +49,19 @@ class ContactTrackings::Assistant::InterviewTurn
     end
   end
 
-  # El prototipo con herramientas (P8): solo con la bandera de la cuenta y solo al
-  # editar un Entrenamiento que está en pantalla. Crear desde cero sigue igual.
+  # El prototipo con herramientas (P8): solo con la bandera de la cuenta, al editar un
+  # Entrenamiento que está en pantalla o al crear desde un encargo (Paso 3.3).
   def with_tools?
-    @account.feature_enabled?('assistant_tools') && @params['draft'].present? && !one_shot?
+    return false unless @account.feature_enabled?('assistant_tools')
+
+    one_shot? ? brief.present? : @params['draft'].present?
+  end
+
+  # El encargo del que se crea el agente, ya leído y de esta cuenta.
+  def brief
+    return nil if @params['brief_id'].blank?
+
+    @brief ||= TrackingAgentBrief.find_by(id: @params['brief_id'], account: @account)&.then { |b| b.ready? ? b : nil }
   end
 
   def one_shot?

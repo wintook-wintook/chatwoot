@@ -64,11 +64,34 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
        completar; [] si no hay nada.
   PROMPT
 
+  # Al crear desde un encargo (Paso 3.3): lo que tiene que cuidar además.
+  CREATE_PROMPT = <<~PROMPT
+    ═══ AL CREAR DESDE UN ENCARGO ═══
+    a) Antes de entregar, usa revisar_encargo con lo que llevas escrito. Pon cada cosa que falte en
+       su lugar (un dato duro, como un teléfono de emergencia, va en la ruta o la sección donde se
+       usa, tal cual). No entregues mientras falte algo, salvo que no quepa: entonces dilo en
+       "pendiente".
+    b) Prueba con probar_ruta las rutas que se cruzan fácil, sobre todo las delicadas (crisis,
+       quejas): frases ambiguas de otras rutas no deben caer ahí.
+    c) La @ruta_por_defecto es la que CONTESTA (informa), nunca una que abre un caso. Ojo con la regla
+       del motor: una ruta SIN fuente con flecha («: - -> @crear_ticket(…)») abre el caso PRIMERO, antes
+       de contestar. Una ruta que contesta con lo escrito va sin flecha: «@ruta(…): -». Si además
+       hace falta derivar lo que no se pueda resolver, eso va en otra ruta o en la prosa.
+    d) Al crear, "piezas" lleva TODAS las piezas del Entrenamiento: no hay uno anterior. Por lo mismo,
+       en probar_ruta el `cambio` lleva TODAS las líneas @ruta y la @ruta_por_defecto: el clasificador
+       elige entre las rutas que le mandas, y una prueba con algunas no vale para el agente completo.
+    e) Una fuente de la cuenta (respuestas predefinidas, foro, hoja, documento) solo si es de ESTE
+       negocio: la cuenta tiene material de otros negocios. @buscar_predefinidas siempre con el grupo
+       de este negocio; si no hay uno, la ruta contesta con lo escrito ("-") y lo dices en "pendiente".
+  PROMPT
+
   # model: uno de MODELS; cualquier otro valor cae al de por defecto.
-  def initialize(account, model: nil, **opciones)
+  # brief: el encargo del que se crea el agente (solo al crear desde un encargo).
+  def initialize(account, model: nil, brief: nil, **opciones)
     super(account, **opciones)
     @model = MODELS.include?(model) ? model : DEFAULT_MODEL
-    @tools = Tools.new(account, draft: current_draft, inbox: inbox, usage: @chat.usage)
+    @brief = brief
+    @tools = Tools.new(account, draft: current_draft, inbox: inbox, usage: @chat.usage, brief: brief)
     @tool_log = []
     @seen = {}
     @tested = Set.new
@@ -82,7 +105,7 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
 
   # El de InterviewService (ya memorizado allá) más cómo usar las herramientas.
   def system_prompt
-    [super, PROMPT].join("\n\n")
+    [super, PROMPT, (CREATE_PROMPT if @brief)].compact.join("\n\n")
   end
 
   # La pregunta al modelo, con herramientas: pide, se corre, sigue. Devuelve el JSON del
@@ -92,7 +115,7 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
     usadas = 0
     loop do
       cerrar = usadas >= MAX_TOOL_CALLS || !within_budget?
-      mensaje = @chat.call_with_tools(mensajes, tools: Tools.definitions, model: @model,
+      mensaje = @chat.call_with_tools(mensajes, tools: Tools.definitions(brief: @brief.present?), model: @model,
                                                 max_tokens: MAX_OUTPUT_TOKENS, tool_choice: cerrar ? 'none' : 'auto')
       return nil if mensaje.nil?
 
@@ -118,7 +141,7 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
     etapa = Tools::STAGES.fetch(nombre, :writing)
     progress(etapa)
     @seen[clave] = @tools.run(nombre, argumentos).tap do |resultado|
-      @report.record(nombre, argumentos, resultado)
+      @report.record(nombre, argumentos, resultado, texto: tested_text(argumentos))
       progress(etapa)
     end
   end
@@ -140,7 +163,14 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
   def with_report(reply)
     return reply if reply.blank? || reply['entrenamiento'].blank?
 
-    reply.merge('mensaje' => @report.message(reply['mensaje'], reply['pendiente']))
+    reply.merge('mensaje' => @report.message(reply['mensaje'], reply['pendiente'], final: reply['entrenamiento']))
+  end
+
+  def tested_text(argumentos)
+    texto = @tools.apply(JSON.parse(argumentos.presence || '{}')['cambio'])
+    texto.is_a?(String) ? texto : nil
+  rescue JSON::ParserError
+    nil
   end
 
   # Lo que el modelo PROBÓ con una herramienta no es un cambio a escondidas: cuenta como

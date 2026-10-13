@@ -76,8 +76,9 @@ en:
     tools_report:
       tested: "What I tested"
       pending: "Pending"
-      nothing: "I did not test anything in this turn."
-      stable: "«%{phrase}» → %{route} ✓ %{times}"
+      nothing: "I did not test the version I am delivering."
+      earlier: "%{count} test(s) were on earlier versions and are not shown."
+      stable: "«%{phrase}» → %{route} (%{times})"
       unstable: "«%{phrase}» → %{route} ⚠ %{times}, sometimes lands in %{others}"
       checker_ok: "Checker: it runs"
       checker_blocking: "Checker: %{count} error(s) that keep it from running"
@@ -91,6 +92,8 @@ en:
         route_stable: "Tested %{total} phrase(s): all stable ✓"
         route_unstable: "Tested %{total} phrase(s): %{unstable} unstable ⚠"
         failed: "Could not use %{tool}"
+        brief_ok: "Checked the brief: nothing missing ✓"
+        brief_missing: "Checked the brief: %{count} thing(s) missing"
     findings:
       route_line_unparsed: >-
         Line %{line}: the engine does NOT read this as a branch — %{reason}. The exact pattern is

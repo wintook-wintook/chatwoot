@@ -399,6 +399,7 @@ Tres consecuencias de autoría:
 | **Riesgo** | sube un nivel si el intake detecta churn o si el contacto abrió ≥2 casos en 14 días |
 | **`fallback=true`** | mueve el alta **después** de la búsqueda: la fuente contesta primero |
 | **Por rama** | como escalamiento (`-> @crear_ticket(...)`) cada rama abre su propio tipo |
+| **Rama sin fuente** | `@ruta(...): - -> @crear_ticket(...)` abre el caso **primero**, antes de contestar (solo lo frena el gate). Una rama que debe **contestar** con lo escrito va **sin flecha**: `@ruta(...): -` (`ticket_first_branch?` en `contact_tracking_response_analyzer_job.rb`) |
 
 #### `@estado_ticket`
 

@@ -81,6 +81,7 @@
     "STAGE_TOOL_SHEET": "Looking at the sheet…",
     "STAGE_TOOL_CHECK": "Checking the change with the engine…",
     "STAGE_TOOL_ROUTE": "Testing customer phrases against the routes…",
+    "STAGE_TOOL_BRIEF": "Checking that nothing from the brief is missing…",
     "SAVE_CTA": "Save to an AI Agent",
     "SAVE_TITLE": "Save Training",
     "SAVE_MODE_CREATE": "Create a new AI Agent",

@@ -75,8 +75,9 @@ es:
     tools_report:
       tested: "Qué probé"
       pending: "Pendiente"
-      nothing: "No probé nada en este turno."
-      stable: "«%{phrase}» → %{route} ✓ %{times}"
+      nothing: "No probé la versión que entrego."
+      earlier: "%{count} prueba(s) fueron sobre versiones anteriores y no se muestran."
+      stable: "«%{phrase}» → %{route} (%{times})"
       unstable: "«%{phrase}» → %{route} ⚠ %{times}, a veces cae en %{others}"
       checker_ok: "Comprobador: se ejecuta"
       checker_blocking: "Comprobador: %{count} error(es) que impiden ejecutarlo"
@@ -90,6 +91,8 @@ es:
         route_stable: "Probé %{total} frase(s): todas estables ✓"
         route_unstable: "Probé %{total} frase(s): %{unstable} inestable(s) ⚠"
         failed: "No se pudo usar %{tool}"
+        brief_ok: "Revisé el encargo: no falta nada ✓"
+        brief_missing: "Revisé el encargo: falta(n) %{count} cosa(s)"
     findings:
       route_line_unparsed: >-
         Línea %{line}: el motor NO la reconoce como ruta — %{reason}. El patrón exacto es

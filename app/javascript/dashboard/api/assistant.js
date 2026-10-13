@@ -46,6 +46,7 @@ class AssistantAPI extends ApiClient {
       deliveredDraft = null,
       building = null,
       turnId = null,
+      briefId = null,
     } = {}
   ) {
     const body = {
@@ -59,6 +60,8 @@ class AssistantAPI extends ApiClient {
     if (deliveredDraft !== null) body.delivered_draft = deliveredDraft;
     // La entrevista sigue abierta. Sin la llave, el backend lo deduce de las marcas.
     if (building !== null) body.building = building;
+    // Al crear desde un encargo: el Asistente con herramientas lo revisa (P8, 3.3).
+    if (briefId) body.brief_id = briefId;
     // Con él, el backend va dejando la etapa en curso para getProgress. Hace falta
     // siempre: el turno corre en segundo plano y el resultado se pide por este id.
     body.turn_id = turnId || newTurnId();

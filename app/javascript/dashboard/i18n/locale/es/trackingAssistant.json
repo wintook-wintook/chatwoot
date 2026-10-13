@@ -81,6 +81,7 @@
     "STAGE_TOOL_SHEET": "Mirando la hoja…",
     "STAGE_TOOL_CHECK": "Comprobando el cambio con el motor…",
     "STAGE_TOOL_ROUTE": "Probando frases de cliente contra las rutas…",
+    "STAGE_TOOL_BRIEF": "Revisando que no falte nada del encargo…",
     "SAVE_CTA": "Guardar en un Agente IA",
     "SAVE_TITLE": "Guardar Entrenamiento",
     "SAVE_MODE_CREATE": "Crear un Agente IA nuevo",

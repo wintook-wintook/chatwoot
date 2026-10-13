@@ -24,7 +24,7 @@ class ContactTrackings::Assistant::TurnProgress
   # tool_*: las herramientas del Asistente (P8, ToolInterviewService / AssistantTools).
   STAGES = %w[writing mode_check edit_repair checking repairing routing routing_repair testing optimizing
               reading_brief merging_brief review_loading review_replaying review_analyzing
-              tool_resources tool_directive tool_sheet tool_check tool_route].freeze
+              tool_resources tool_directive tool_sheet tool_check tool_route tool_brief].freeze
 
   def self.read(account, user, turn_id)
     return nil unless turn_id.to_s.match?(TURN_ID_RE)

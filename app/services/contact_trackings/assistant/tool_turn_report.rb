@@ -12,6 +12,11 @@
 #            hizo y por qué) + «Qué probé» (cada frase con su ruta y el comprobador) +
 #            «Pendiente». Los cambios no se repiten: la pantalla ya los muestra.
 #
+# SOLO LO PROBADO SOBRE LA VERSIÓN ENTREGADA: el modelo prueba varias veces mientras
+# corrige. Medido el 13/10/2026 (T1 con el prototipo): el reporte juntaba pruebas de
+# borradores intermedios y mostraba «¿cuánto cuesta?» → crisis, cuando en lo entregado
+# caía en informes 3 de 3. Lo probado sobre versiones anteriores se cuenta, no se lista.
+#
 # Textos en es/en: tracking_assistant.tools_report (config/locales).
 # ================================================================================
 
@@ -25,9 +30,10 @@ class ContactTrackings::Assistant::ToolTurnReport
   end
 
   # Cada herramienta que corrió (no las consultas repetidas: esas no corren).
-  def record(nombre, argumentos, resultado)
+  # texto: el Entrenamiento sobre el que corrió la prueba (AssistantTools#apply).
+  def record(nombre, argumentos, resultado, texto: nil)
     datos = JSON.parse(resultado)
-    remember(nombre, datos)
+    remember(nombre, datos, texto)
     @steps << step_line(nombre, parse_args(argumentos), datos)
   rescue JSON::ParserError
     @steps << t('live.failed', tool: nombre)
@@ -35,21 +41,34 @@ class ContactTrackings::Assistant::ToolTurnReport
 
   def steps = @steps.last(MAX_STEPS)
 
-  def message(mensaje, pendiente)
-    [mensaje.to_s.strip, tested, pending(pendiente)].compact_blank.join("\n\n")
+  def message(mensaje, pendiente, final: nil)
+    [mensaje.to_s.strip, tested(final), pending(pendiente)].compact_blank.join("\n\n")
   end
 
   private
 
   # Lo último de cada frase y del comprobador: si el modelo corrigió y volvió a probar,
   # vale la última prueba.
-  def remember(nombre, datos)
-    remember_probes(datos) if nombre == 'probar_ruta'
-    @check = datos if nombre == 'comprobar' && datos.is_a?(Hash) && datos.key?('ejecuta')
+  # La prueba de ruteo vale para lo entregado si las RUTAS son las mismas (el clasificador
+  # solo lee las líneas @ruta: el modelo las prueba solas, sin las secciones); el
+  # comprobador, si el texto entero es el mismo.
+  def remember(nombre, datos, texto)
+    remember_probes(datos, routes_version(texto)) if nombre == 'probar_ruta'
+    @check = datos.merge('version' => version(texto)) if nombre == 'comprobar' && datos.is_a?(Hash) && datos.key?('ejecuta')
   end
 
-  def remember_probes(datos)
-    Array(datos).each { |p| @probes[p['frase']] = p if p.is_a?(Hash) && p['frase'] }
+  # Por versión y frase: la misma frase sobre otra versión es otra prueba.
+  def remember_probes(datos, version)
+    Array(datos).each { |p| @probes[[version, p['frase']]] = p.merge('version' => version) if p.is_a?(Hash) && p['frase'] }
+  end
+
+  # Una huella del texto, sin espacios: para saber si lo probado es lo entregado.
+  def version(texto)
+    texto.nil? ? nil : Digest::SHA1.hexdigest(texto.to_s.gsub(/\s+/, ''))
+  end
+
+  def routes_version(texto)
+    texto.nil? ? nil : version(texto.to_s.lines.grep(/\A\s*@ruta/).join)
   end
 
   def parse_args(argumentos)
@@ -62,17 +81,24 @@ class ContactTrackings::Assistant::ToolTurnReport
   def step_line(nombre, args, datos)
     return t('live.failed', tool: nombre) if datos.is_a?(Hash) && datos['error']
 
-    case nombre
-    when 'ver_recursos' then t('live.resources')
-    when 'ver_directiva' then t('live.directive', name: args['nombre'])
-    when 'ver_hoja' then t('live.sheet', name: datos['nombre'])
-    when 'comprobar' then check_line(datos, 'live.check_ok', 'live.check_blocking')
-    else route_line(Array(datos))
-    end
+    metodo = "live_#{nombre}"
+    respond_to?(metodo, true) ? send(metodo, args, datos) : t('live.failed', tool: nombre)
   end
+
+  def live_ver_recursos(_args, _datos) = t('live.resources')
+  def live_ver_directiva(args, _datos) = t('live.directive', name: args['nombre'])
+  def live_ver_hoja(_args, datos) = t('live.sheet', name: datos['nombre'])
+  def live_comprobar(_args, datos) = check_line(datos, 'live.check_ok', 'live.check_blocking')
+  def live_revisar_encargo(_args, datos) = brief_line(datos)
+  def live_probar_ruta(_args, datos) = route_line(Array(datos))
 
   def check_line(datos, si_ejecuta, si_no)
     datos['ejecuta'] ? t(si_ejecuta) : t(si_no, count: Array(datos['bloqueantes']).size)
+  end
+
+  def brief_line(datos)
+    faltan = Array(datos['faltan_reglas']).size + Array(datos['faltan_datos']).size
+    faltan.zero? ? t('live.brief_ok') : t('live.brief_missing', count: faltan)
   end
 
   def route_line(frases)
@@ -83,11 +109,18 @@ class ContactTrackings::Assistant::ToolTurnReport
   end
 
   # ── el mensaje final ────────────────────────────────────────────────────────
-  def tested
-    lineas = @probes.values.map { |p| probe_line(p) }
-    lineas << check_line(@check, 'checker_ok', 'checker_blocking') if @check
-    lineas = [t('nothing')] if lineas.empty?
+  def tested(final)
+    lineas = final_lines(final).presence || [t('nothing')]
+    anteriores = @probes.values.count { |p| p['version'] != routes_version(final) }
+    lineas << t('earlier', count: anteriores) if anteriores.positive?
     "**#{t('tested')}**\n#{lineas.map { |l| "- #{l}" }.join("\n")}"
+  end
+
+  # Lo probado sobre la versión entregada: cada frase y el comprobador.
+  def final_lines(final)
+    lineas = @probes.values.select { |p| p['version'] == routes_version(final) }.map { |p| probe_line(p) }
+    lineas << check_line(@check, 'checker_ok', 'checker_blocking') if @check && @check['version'] == version(final)
+    lineas
   end
 
   def probe_line(probe)

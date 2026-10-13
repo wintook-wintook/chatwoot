@@ -27,7 +27,7 @@ class ContactTrackings::Assistant::AssistantTools
   # Qué etapa avisa cada herramienta en la pantalla (TurnProgress).
   STAGES = {
     'ver_recursos' => :tool_resources, 'ver_directiva' => :tool_directive, 'ver_hoja' => :tool_sheet,
-    'comprobar' => :tool_check, 'probar_ruta' => :tool_route
+    'comprobar' => :tool_check, 'probar_ruta' => :tool_route, 'revisar_encargo' => :tool_brief
   }.freeze
 
   CAMBIO = { type: 'string',
@@ -60,16 +60,29 @@ class ContactTrackings::Assistant::AssistantTools
                     required: ['frases'] } }
   ].freeze
 
-  def self.definitions
-    DEFINITIONS.map { |d| { type: 'function', function: d } }
+  # Solo al crear desde un encargo (Paso 3.3): lo que falta del encargo en lo escrito.
+  BRIEF_DEFINITION = {
+    name: 'revisar_encargo',
+    description: 'Compara lo que llevas escrito contra el encargo y devuelve lo que falta: reglas, prohibiciones, tono y datos a ' \
+                 'pedir, y los datos duros del encargo (teléfonos, números, montos, correos) que no están ni en el Entrenamiento ' \
+                 'ni en el Contexto. Úsalo antes de entregar.',
+    parameters: { type: 'object',
+                  properties: { cambio: CAMBIO.merge(description: 'Lo que llevas escrito: el Entrenamiento o sus piezas.') },
+                  required: ['cambio'] }
+  }.freeze
+
+  def self.definitions(brief: false)
+    (DEFINITIONS + (brief ? [BRIEF_DEFINITION] : [])).map { |d| { type: 'function', function: d } }
   end
 
   # usage: el consumo del turno (TokenUsage); cada frase clasificada se cuenta ahí.
-  def initialize(account, draft:, inbox: nil, usage: nil)
+  # brief: el encargo del que se crea el agente (TrackingAgentBrief), si lo hay.
+  def initialize(account, draft:, inbox: nil, usage: nil, brief: nil)
     @account = account
     @draft = draft.to_s
     @inbox = inbox
     @usage = usage
+    @brief = brief
   end
 
   # El resultado, en JSON, para el mensaje `tool` del modelo. Nunca levanta: un error
@@ -82,6 +95,10 @@ class ContactTrackings::Assistant::AssistantTools
     Rails.logger.warn "[Asistente/herramientas] #{name}: #{e.message}"
     { error: e.message.truncate(200) }.to_json
   end
+
+  # El texto sobre el que corre una prueba con ese `cambio` (o un { error: }): para saber
+  # después si lo probado es lo que se entregó (ToolTurnReport).
+  def apply(cambio) = with_change(cambio)
 
   private
 
@@ -183,6 +200,16 @@ class ContactTrackings::Assistant::AssistantTools
     return { error: 'el cambio tiene que ser una línea @ruta(…) completa o una [SECCIÓN] con su texto' } if claves.empty?
 
     ContactTrackings::Assistant::DraftPieces.restore(theirs: @draft, mine: cambio, keys: claves)
+  end
+
+  # ── revisar_encargo ─────────────────────────────────────────────────────────
+  def tool_revisar_encargo(args)
+    return { error: 'este turno no tiene encargo' } if @brief.nil?
+
+    texto = with_change(args['cambio'])
+    return texto if texto.is_a?(Hash)
+
+    ContactTrackings::Assistant::BriefHardData.new(@brief, inventory: inventory).check(texto)
   end
 
   # ── la cuenta ───────────────────────────────────────────────────────────────
