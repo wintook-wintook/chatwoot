@@ -156,3 +156,9 @@
 # feature_flags / FlagShihTzu).
 - name: channel_instagram
   enabled: false
+# @assistant_tools — Asistente de Agentes IA con herramientas (P8, prototipo): al editar un
+# Entrenamiento, el modelo consulta la cuenta y prueba rutas antes de contestar
+# (ToolInterviewService). Off por defecto; solo para la cuenta de pruebas mientras se compara.
+# IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
+- name: assistant_tools
+  enabled: false

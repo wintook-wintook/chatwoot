@@ -57,6 +57,15 @@ class ContactTrackings::Assistant::OpenaiChat
     parse(post(body))
   end
 
+  # Con herramientas (P8, ToolInterviewService): devuelve el MENSAJE del modelo —con su
+  # `content` o con los `tool_calls` que pide—, o nil. `tool_choice: 'none'` le prohíbe
+  # pedir más: tiene que contestar con lo que ya vio.
+  def call_with_tools(messages, tools:, model:, max_tokens:, tool_choice: 'auto')
+    body = { model: model, messages: messages, tools: tools, tool_choice: tool_choice,
+             response_format: { type: 'json_object' } }.merge(limits(model, max_tokens, 0.2))
+    post_message(body)
+  end
+
   private
 
   # La familia gpt-5 (y los o1/o3/o4) pide max_completion_tokens y no acepta otra
@@ -68,6 +77,10 @@ class ContactTrackings::Assistant::OpenaiChat
   end
 
   def post(body)
+    post_message(body)&.dig('content')
+  end
+
+  def post_message(body)
     @last_usage = nil
     inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     response = http_client.request(build_request(body))
@@ -80,7 +93,7 @@ class ContactTrackings::Assistant::OpenaiChat
     # si no, el log dice "no es JSON" y no se entiende que falta subir el tope.
     return failure('respuesta cortada por max_tokens: el Entrenamiento no entró entero') if choice&.dig('finish_reason') == 'length'
 
-    choice&.dig('message', 'content')
+    choice&.dig('message')
   rescue StandardError => e
     failure(e.message)
   ensure

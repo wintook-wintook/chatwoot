@@ -21,8 +21,10 @@ class ContactTrackings::Assistant::TurnProgress
   TURN_ID_RE = /\A[A-Za-z0-9_-]{8,64}\z/
   # reading_brief / merging_brief: leer y juntar un encargo (AgentBriefDigestJob).
   # review_*: revisar una conversación real (ConversationReviewJob).
+  # tool_*: las herramientas del Asistente (P8, ToolInterviewService / AssistantTools).
   STAGES = %w[writing mode_check edit_repair checking repairing routing routing_repair testing optimizing
-              reading_brief merging_brief review_loading review_replaying review_analyzing].freeze
+              reading_brief merging_brief review_loading review_replaying review_analyzing
+              tool_resources tool_directive tool_sheet tool_check tool_route].freeze
 
   def self.read(account, user, turn_id)
     return nil unless turn_id.to_s.match?(TURN_ID_RE)

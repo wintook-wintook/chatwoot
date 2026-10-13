@@ -38,12 +38,25 @@ class ContactTrackings::Assistant::InterviewTurn
 
   def interview_service
     @interview_service ||= begin
-      servicio = ContactTrackings::Assistant::InterviewService
-                 .new(@account, messages: messages, inbox: @inbox,
-                                drafts: { current: @params['draft'], delivered: delivered_draft, building: building },
-                                one_shot: ActiveModel::Type::Boolean.new.cast(@params['one_shot']))
+      opciones = { messages: messages, inbox: @inbox, one_shot: one_shot?,
+                   drafts: { current: @params['draft'], delivered: delivered_draft, building: building } }
+      servicio = if with_tools?
+                   ContactTrackings::Assistant::ToolInterviewService.new(@account, model: @params['tools_model'], **opciones)
+                 else
+                   ContactTrackings::Assistant::InterviewService.new(@account, **opciones)
+                 end
       @progress ? servicio.with_progress(@progress) : servicio
     end
+  end
+
+  # El prototipo con herramientas (P8): solo con la bandera de la cuenta y solo al
+  # editar un Entrenamiento que está en pantalla. Crear desde cero sigue igual.
+  def with_tools?
+    @account.feature_enabled?('assistant_tools') && @params['draft'].present? && !one_shot?
+  end
+
+  def one_shot?
+    ActiveModel::Type::Boolean.new.cast(@params['one_shot'])
   end
 
   def interview_json(result, sesion)
