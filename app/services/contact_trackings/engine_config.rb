@@ -36,7 +36,12 @@ module ContactTrackings
     # Espejo del enum de `model_ia` en config/integration/apps.yml. Si allí se agrega
     # un modelo, hay que agregarlo aquí (spec/services/contact_trackings/engine_config_spec.rb
     # lo verifica leyendo el YAML, para que no se desincronicen en silencio).
-    ALLOWED_MODELS = %w[gpt-4o-mini gpt-4o gpt-4-turbo gpt-3.5-turbo gpt-5.4-mini gpt-5.5].freeze
+    #
+    # Decisión D19 (13/10/2026, F0 del P1): gpt-5.5 se probó para contestar y NO se ofrece.
+    # Con 3 agentes × 43 pruebas acertó las mismas rutas que gpt-4o y gpt-5.4-mini, sin
+    # mejora medible, a 2,6× el costo de gpt-4o y con la llamada más lenta (2,4–3,7 s).
+    # gpt-5.4-mini queda como opción económica: mismas rutas a ~⅓ del costo de gpt-4o.
+    ALLOWED_MODELS = %w[gpt-4o-mini gpt-4o gpt-4-turbo gpt-3.5-turbo gpt-5.4-mini].freeze
 
     # Topes actuales de cada punto de llamada. Centralizarlos no cambia el
     # comportamiento — son los mismos valores que estaban en línea — pero deja el

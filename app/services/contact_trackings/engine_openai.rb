@@ -60,6 +60,7 @@ class ContactTrackings::EngineOpenai
   # body: el pedido ya armado. Devuelve el texto del modelo o nil.
   def complete(body)
     @error = nil
+    inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     response = http.request(request(body))
     datos = parse(response.body)
     return failure("HTTP #{response.code}: #{openai_message(datos, response)}") unless response.is_a?(Net::HTTPSuccess)
@@ -67,6 +68,7 @@ class ContactTrackings::EngineOpenai
     content = datos.dig('choices', 0, 'message', 'content')
     return failure("respuesta vacía (finish_reason: #{datos.dig('choices', 0, 'finish_reason').inspect})") if content.blank?
 
+    log_usage(body[:model], datos['usage'], inicio)
     content
   rescue StandardError => e
     failure("#{e.class}: #{e.message}")
@@ -99,6 +101,14 @@ class ContactTrackings::EngineOpenai
 
   def openai_message(datos, response)
     datos.dig('error', 'message').presence || response.body.to_s[0, 200]
+  end
+
+  # Lo que gastó cada llamada que salió bien (F0 del P1: costo y tiempo por respuesta).
+  def log_usage(model, usage, inicio)
+    u = usage.to_h
+    segundos = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).round(2)
+    Rails.logger.info "[TrackingBot/OpenAI] ✓ #{@purpose} #{model} · entrada #{u['prompt_tokens']} " \
+                      "(caché #{u.dig('prompt_tokens_details', 'cached_tokens').to_i}) · salida #{u['completion_tokens']} · #{segundos} s"
   end
 
   def failure(detalle)

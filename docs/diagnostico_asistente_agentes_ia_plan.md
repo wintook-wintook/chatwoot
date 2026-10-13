@@ -255,8 +255,8 @@ Los límites (250 tokens, 800 caracteres y 4 líneas) se revisan **aparte** y so
 
 ```
   D1  ¿Qué modelo recibe un canal nuevo que no elige?     → decidido: gpt-4o
-  D19 ¿Conviene contestar con gpt-5 en vez de gpt-4o?     → se mide con F0
-  D2  ¿Se tocan los límites 250 tokens / 800 car. / 4 líneas?  → aparte, después de D19
+  D19 ¿Conviene contestar con gpt-5 en vez de gpt-4o?     → decidido: no; gpt-5.4-mini como «Económico»
+  D2  ¿Se tocan los límites 250 tokens / 800 car. / 4 líneas?  → sigue (D19 ya cerrada)
 ```
 
 - **D1 decidida: `DEFAULT_MODEL` = gpt-4o** (era gpt-4o-mini). Reemplaza las opciones A/B/C, que suponían canales en gpt-4o-mini. Afecta a canales sin modelo elegido (hoy ninguno) y a llamadas sin canal (el ejecutor de directivas de Base de Conocimiento, la prueba de ruteo del Asistente sin canal). El selector ya no marca gpt-4o-mini como «Recomendado»: dice «Económico; no sigue bien Entrenamientos largos», y gpt-4o, «Recomendado».
@@ -279,7 +279,8 @@ Los límites (250 tokens, 800 caracteres y 4 líneas) se revisan **aparte** y so
 
 ### Pasos
 - [x] Decidir D1 → gpt-4o como modelo por defecto (13/10/2026)
-- [ ] Correr F0 con gpt-4o, gpt-5.4-mini y gpt-5.5 y decidir **D19**
+- [x] Correr F0 con gpt-4o, gpt-5.4-mini y gpt-5.5 y decidir **D19** → gpt-4o sigue por defecto; gpt-5.4-mini «Económico»; gpt-5.5 fuera del selector (13/10/2026, ver Registro)
+- [ ] Que el banco de pruebas funcione con agentes de canal propio (hallazgo de F0, ver Registro)
 - [x] Revisar si el tope de 10 s alcanza con gpt-4o (y con gpt-5.x, ver P3) → sí: 1–2,6 s medido (P3b)
 - [ ] Medir los límites 250 / 800 / 4 líneas por separado (decisión **D2**)
 - [ ] Repetir la pila de F0 y comparar
@@ -333,6 +334,7 @@ Fue una decisión **deliberada** (`dry_run_service.rb:20-33`): la respuesta la a
 - [ ] Diseñar la conversación simulada (decisión **D3**: objeto en memoria o transacción con rollback)
 - [ ] Hacer que el camino real acepte la simulación **sin cambiar** lo que hace con una conversación real
 - [ ] Escribir el juez con salida en esquema estricto (ver P6)
+- [ ] Que el juez no invente incumplimientos de un [ESTILO] largo (F0, 13/10/2026: reprobó 40 de 43 por «dos preguntas» y solo 1 de 129 respuestas las tenía); contar lo contable (preguntas, líneas, emojis) sin IA
 - [ ] Agregar el informe del juez al informe .md de la pila de pruebas
 - [ ] Probar con ADAM y el v6.11: ¿encuentra lo que ya sabemos que está mal?
 
@@ -411,10 +413,10 @@ No incluye elegir gpt-5 para un canal real: eso es el P1 / D1, medido con la pil
 - [x] **P3a** · Que cada llamada revise el código HTTP y registre el error de OpenAI, con nota privada cuando el cliente se queda sin respuesta (D17)
 - [x] **P3b** · Crear el constructor de parámetros (en `EngineOpenai`, el punto único del P3a) — hecho el 13/10/2026
 - [x] Pasar las llamadas del motor a ese constructor, una por una, sin cambiar el modelo todavía (los 9 puntos)
-- [ ] Correr la pila de F0 con gpt-4o: tiene que dar lo mismo
+- [x] Correr la pila de F0 con gpt-4o: tiene que dar lo mismo → corrida con el motor ya migrado: 0 errores de OpenAI en 129 respuestas (13/10/2026)
 - [x] Agregar gpt-5.x a la lista, al orden y al selector del canal (con D18: solo para contestar)
 - [x] Decidir qué modelo usa el redactor del Asistente (decisión **D4** → se decidió con D8: gpt-5.5 en el Asistente con herramientas)
-- [ ] Medir con F0: aciertos, tiempo y costo de gpt-4o contra gpt-5.x
+- [x] Medir con F0: aciertos, tiempo y costo de gpt-4o contra gpt-5.x (13/10/2026, ver Registro → P1)
 
 ### Riesgos
 - Una llamada que se quede con `max_tokens` falla **en silencio** con gpt-5 (el motor devuelve nil y el cliente no recibe nada).
@@ -752,7 +754,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 | D16 | Tiempo de crear con herramientas (155–233 s) | aceptarlo · menos razonamiento · menos herramientas | **Decidido 13/10/2026: `none` al crear (47–53 s), el de por defecto al editar** (ver Registro, 3.3) |
 | D17 | Qué pasa cuando el agente IA no puede responder por una falla de OpenAI | nota privada · solo log · nota + mensaje fijo al cliente | **Decidido 13/10/2026: nota privada** (P3a) |
 | D18 | Si un canal elige gpt-5, ¿para todo o solo para contestar? | solo contestar · todo | **Decidido 13/10/2026: solo contestar**; clasificar, fechas, solicitudes, ERP y redactar siguen en gpt-4o (P3b) |
-| D19 | ¿Contestar con gpt-5 en vez de gpt-4o? | gpt-4o · gpt-5.4-mini · gpt-5.5 | decidir con F0: gana si sube claramente el % que cumple sin pasar de ~3 s (ver P1) |
+| D19 | ¿Contestar con gpt-5 en vez de gpt-4o? | gpt-4o · gpt-5.4-mini · gpt-5.5 | **Decidido 13/10/2026: gpt-4o sigue por defecto; gpt-5.4-mini como opción «Económico» (mismas rutas, ~⅓ del costo); gpt-5.5 fuera del selector del motor** (2,6× el costo sin mejora medible; ver Registro → P1) |
 
 **Decidido el 12/10/2026:** D8 = gpt-5.4-mini + gpt-5.5, con gpt-4o de referencia · D9 = las 5 tareas de la tabla · D10 = medir primero: P6c y UNA tarea con el Asistente de hoy; con ese costo real se propone el tope antes de correr las demás → tope de 3 USD para T2–T5 (la T1 costó < 0,10 USD); para la comparación del Paso 2, **10 USD** · D11 = solo cuenta 2, bandera `assistant_tools` · Alcance del prototipo = chat de edición (T2–T5); T1 en el Paso 3.
 
@@ -763,7 +765,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 | # | Decisión | Opciones | Recomendación |
 |---|----------|----------|---------------|
 | D1 | Cómo subir el modelo del agente en vivo | A piso para todos · B solo aviso · C piso por tamaño · modelo por defecto gpt-4o | **Decidido 13/10/2026: modelo por defecto gpt-4o** (los canales reales ya lo usaban; ver P1) |
-| D2 | ¿Se tocan los límites 250 tokens / 800 caracteres / 4 líneas? | sí · no · por agente | medir primero, decidir después |
+| D2 | ¿Se tocan los límites 250 tokens / 800 caracteres / 4 líneas? | sí · no · por agente | medir primero, decidir después (ya sin esperar a D19, cerrada el 13/10/2026) |
 | D3 | Conversación simulada | objeto en memoria · transacción con rollback | **en memoria**: no hay escritura que revertir |
 | D4 | Modelo del redactor del Asistente | gpt-4o (hoy) · gpt-5.4-mini · gpt-5.5 | se decide con **D8** (comparación del P8) |
 | D5 | Qué conversaciones revisa el lote | últimas N · las que pasaron a humano · por etiqueta | las que pasaron a humano: ahí falló algo |
@@ -904,9 +906,14 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 - **Cómo pedírselo al Asistente:** con un agente abierto en el Asistente (cuenta 2), pedirlo como a una persona: «Agrega una ruta para … que conteste con la hoja …», «Un cliente preguntó "…" y cayó en la ruta equivocada: arréglalo», «Mejora el estilo: …». Debajo de la respuesta aparece «Qué probé».
 
 ### F0 · Línea base
-- **Qué se hizo:**
-- **Resultados:**
-- **Pila de pruebas:**
+- **Qué se hizo (13/10/2026):** la corrida para D19 (ver P1). Banco de pruebas real (`TestBatteryJob#run`) en el canal de prueba #493, 3 agentes: ADAM v2.4 (#11833, 29 escenarios), COORDINADOR v6.11 (#6544, 5) y Grúas (#10368, 9). Los escenarios se generaron una vez y se reusaron en los 3 modelos. El consumo sale de la línea nueva del log `[TrackingBot/OpenAI] ✓ <uso> <modelo> · entrada N (caché N) · salida N · X s` (`EngineOpenai#log_usage`).
+- **Resultados con gpt-4o (la línea base):** ruta correcta 26/31 (ADAM 17/18, v6.11 4/5, Grúas 5/8); primera respuesta en 7–10 s de mediana (5 s son la espera del motor; la llamada al modelo, 1,1–1,3 s); $0.002–0.008 por respuesta; 0 errores de OpenAI.
+- **Hallazgos:**
+  1. **El banco de pruebas no sirve con agentes de canal propio.** Grúas tiene canal #4: el seguimiento se ata ahí, la validación «Conversation must belong to the selected inbox» lo rechaza y toda la pila sale «sin respuesta» (también desde «Probar el agente»). En la medición se esquivó solo dentro del script. Pendiente arreglarlo en `TestBatteryJob` (P1, Pasos).
+  2. **El juez no distingue modelos con un [ESTILO] largo.** Reprobó 40 de 43 en los 3 modelos casi siempre por «dos preguntas en un mensaje»; contadas a mano, solo 1 de 129 respuestas trae dos «?». La columna «cumple» es ruido hoy: va al P2.
+  3. **Grúas inventa con los 3 modelos** (horarios, datos técnicos, «tu servicio ha sido confirmado»): es del Entrenamiento, no del modelo. No se creó ningún evento de calendario.
+  4. La caché de `rails runner` es `null_store`: el estado del banco no se lee desde consola; los resultados se rearmaron desde las conversaciones.
+- **Pila de pruebas:** 43 conversaciones por modelo en #493 (129 en total, más 3 de Grúas que no corrieron); el canal #493 quedó de vuelta en gpt-4o.
 
 ### P3 · Modelos gpt-5.x
 - **Qué se hizo (P3a, 13/10/2026):** `ContactTrackings::EngineOpenai` como punto único de las 4 llamadas del camino de la respuesta; revisa el HTTP y registra el error real; nota privada cuando la respuesta conversacional falla (D17).
@@ -926,10 +933,23 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 - **Cómo pedírselo al Asistente:**
 
 ### P1 · Modelo del agente en vivo
-- **Qué se hizo:**
-- **Cómo funciona:**
-- **Pila de pruebas:**
-- **Cómo pedírselo al Asistente:**
+- **Qué se hizo:** D1 (13/10/2026): `DEFAULT_MODEL` = gpt-4o. D19 (13/10/2026), con F0: gpt-4o sigue por defecto, gpt-5.4-mini queda en el selector como «Económico: ~⅓ del costo de GPT-4o al contestar; clasifica con GPT-4o», y gpt-5.5 sale del selector y de `ALLOWED_MODELS` (el Asistente con herramientas sigue usándolo: va por otro camino).
+- **Resultados de F0 (contesta cada modelo; clasifica gpt-4o en los 3, D18):**
+
+  | | gpt-4o | gpt-5.4-mini | gpt-5.5 |
+  |---|---|---|---|
+  | Ruta correcta (ADAM + v6.11 + Grúas) | 26/31 | 26/31 | 26/31 |
+  | Cumple según el juez (poco confiable, ver F0) | 3/43 | 2/43 | 2/43 |
+  | Primera respuesta, mediana | 7–10 s | 5–12 s | 6–11 s |
+  | Llamada al modelo, mediana | 1,1–1,3 s | 1,4–1,7 s | 2,4–3,7 s |
+  | Costo por respuesta | $0.002–0.008 | $0.001–0.003 | $0.006–0.020 |
+  | Costo de las 43 pruebas | $0.28 | $0.09 | $0.72 |
+
+  Precios estimados por millón de tokens (entrada / caché / salida): gpt-4o 2.50 / 1.25 / 10; gpt-5.4-mini 0.75 / 0.075 / 4.50; gpt-5.5 5 / 0.50 / 30.
+- **Por qué así:** la ruta no cambia con el modelo que contesta, y el juez no encontró diferencias reales de calidad. gpt-5.5 no cumple el criterio («sube claramente el % que cumple»): cuesta 2,6× y es el más lento. gpt-5.4-mini no empeoró nada medible y cuesta ~⅓: opción, no defecto, porque la calidad solo la midió un juez débil.
+- **Cómo funciona:** en la configuración del agente IA del canal, el selector ofrece gpt-4o (Recomendado) y GPT-5.4 Mini (Económico). Con GPT-5.4 Mini, solo las respuestas al cliente usan ese modelo; elegir ruta, fechas, etc. siguen en gpt-4o (D18). Para ver el selector nuevo hay que reiniciar `chatwoot-dev.service`.
+- **Pila de pruebas:** la de F0 (3 agentes × 3 modelos, 129 respuestas); `apps.yml` y `ALLOWED_MODELS` quedan con los mismos 5 modelos (lo verifica `engine_config_spec.rb`); ningún canal real cambió (los 3 siguen en gpt-4o).
+- **Cómo pedírselo al Asistente:** no aplica: el modelo se elige en la configuración del canal.
 
 ### P2 · Simulador y juez
 - **Qué se hizo:**

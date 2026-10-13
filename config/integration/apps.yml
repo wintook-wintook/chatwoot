@@ -28,7 +28,7 @@ tracking_bot:
     "properties": {
       "model_ia": { 
         "type": "string",
-        "enum": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo", "gpt-5.4-mini", "gpt-5.5"]
+        "enum": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo", "gpt-5.4-mini"]
       }
     },
     "required": ["model_ia"],
@@ -60,12 +60,8 @@ tracking_bot:
           "value": "gpt-3.5-turbo" 
         },
         { 
-          "label": "GPT-5.4 Mini ⚡⚡⚡ - ⭐⭐⭐⭐ - 💰 (Solo para contestar; clasifica con GPT-4o)", 
+          "label": "GPT-5.4 Mini ⚡⚡ - ⭐⭐⭐⭐ - 💰 (Económico: ~⅓ del costo de GPT-4o al contestar; clasifica con GPT-4o)", 
           "value": "gpt-5.4-mini" 
-        },
-        { 
-          "label": "GPT-5.5 ⚡⚡ - ⭐⭐⭐⭐⭐ - 💰💰💰 (Solo para contestar; clasifica con GPT-4o)", 
-          "value": "gpt-5.5" 
         }
       ]
     }
