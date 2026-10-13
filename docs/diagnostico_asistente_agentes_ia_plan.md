@@ -347,11 +347,18 @@ La lista de modelos permitidos solo conoce gpt-4 y gpt-3.5. Aunque alguien quier
 - **Ojo con el razonamiento:** en gpt-5 los tokens de salida incluyen lo que el modelo piensa. Un tope de 250 se gastaría pensando y la respuesta llegaría vacía. Cada propósito necesita su tope y su `reasoning_effort` (bajo para clasificar y responder).
 - Revisar los tiempos de espera: 10 s en la respuesta al cliente puede no alcanzar.
 
+### P3a · Que no falle en silencio (decidido y hecho el 13/10/2026)
+Las 4 llamadas del camino de la respuesta al cliente no miraban si OpenAI había aceptado: elegir la ruta (`branch_classifier_service.rb`), entender una fecha y la respuesta conversacional (`contact_tracking_response_analyzer_job.rb`), y la respuesta con Base de Conocimiento (`knowledge_base_response_service.rb`). Ahora pasan por un solo punto, **`ContactTrackings::EngineOpenai`**, que revisa el HTTP y registra el error real (`[TrackingBot/OpenAI] ❌ <uso>: HTTP 400: …`). El pedido no cambia: con todo funcionando, el resultado es el mismo.
+
+**D17 decidida: nota privada en la conversación** cuando la respuesta conversacional falla por OpenAI («El agente IA no pudo responder este mensaje: falló la llamada a OpenAI (…). El cliente no recibió respuesta del agente IA.»). Al cliente no se le manda nada inventado.
+
+Las otras 13 llamadas a OpenAI del código ya revisan la respuesta o no están en el camino de respuesta al cliente.
+
 ### Pasos
-- [ ] Listar las 16 llamadas y cuáles son del motor de seguimientos
-- [ ] Crear el constructor de parámetros en `EngineConfig`
+- [x] Listar las llamadas y cuáles son del motor de seguimientos (17 archivos; 4 en el camino de la respuesta sin revisar el HTTP)
+- [x] **P3a** · Que cada llamada revise el código HTTP y registre el error de OpenAI, con nota privada cuando el cliente se queda sin respuesta (D17)
+- [ ] **P3b** · Crear el constructor de parámetros (en `EngineOpenai`, el punto único del P3a)
 - [ ] Pasar las llamadas del motor a ese constructor, una por una, sin cambiar el modelo todavía
-- [ ] Que cada llamada revise el código HTTP y registre el error de OpenAI (hoy un rechazo se lee como «sin texto» y no deja log: `contact_tracking_response_analyzer_job.rb:2133-2137`)
 - [ ] Correr la pila de F0 con gpt-4o: tiene que dar lo mismo
 - [ ] Agregar gpt-5.x a la lista, al orden y al selector del canal
 - [ ] Decidir qué modelo usa el redactor del Asistente (decisión **D4**)
@@ -691,6 +698,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 | D14 | ¿A qué cuentas se activa el Asistente con herramientas y cuándo? | solo cuenta 2 · cuentas elegidas · todas | decidir después de 3.1 y 3.2, con el costo y el tiempo por turno a la vista |
 | D15 | Ruta por defecto sin fuente propia | contestar con lo escrito · abrir caso primero · exigir fuente propia | **Decidido 13/10/2026: contesta con lo escrito**, con aviso nuevo del comprobador (ver Registro, 3.3) |
 | D16 | Tiempo de crear con herramientas (155–233 s) | aceptarlo · menos razonamiento · menos herramientas | **Decidido 13/10/2026: `none` al crear (47–53 s), el de por defecto al editar** (ver Registro, 3.3) |
+| D17 | Qué pasa cuando el agente IA no puede responder por una falla de OpenAI | nota privada · solo log · nota + mensaje fijo al cliente | **Decidido 13/10/2026: nota privada** (P3a) |
 
 **Decidido el 12/10/2026:** D8 = gpt-5.4-mini + gpt-5.5, con gpt-4o de referencia · D9 = las 5 tareas de la tabla · D10 = medir primero: P6c y UNA tarea con el Asistente de hoy; con ese costo real se propone el tope antes de correr las demás → tope de 3 USD para T2–T5 (la T1 costó < 0,10 USD); para la comparación del Paso 2, **10 USD** · D11 = solo cuenta 2, bandera `assistant_tools` · Alcance del prototipo = chat de edición (T2–T5); T1 en el Paso 3.
 
@@ -847,9 +855,13 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 - **Pila de pruebas:**
 
 ### P3 · Modelos gpt-5.x
-- **Qué se hizo:**
-- **Cómo funciona:**
+- **Qué se hizo (P3a, 13/10/2026):** `ContactTrackings::EngineOpenai` como punto único de las 4 llamadas del camino de la respuesta; revisa el HTTP y registra el error real; nota privada cuando la respuesta conversacional falla (D17).
+- **Cómo funciona:** si OpenAI rechaza (modelo, parámetro, clave, saldo) o se agota el tiempo, el log dice `[TrackingBot/OpenAI] ❌ <uso>: <error real>`; en la respuesta conversacional queda además una nota privada en la conversación. El clasificador sigue cayendo en la ruta por defecto (como antes), ahora con el error a la vista.
 - **Pila de pruebas:**
+  - Contra OpenAI: gpt-4o válida → responde; gpt-5.5 con `max_tokens` → «HTTP 400: Unsupported parameter: 'max_tokens'…» (antes, silencio); clave inválida → «HTTP 401…».
+  - Motor, conversación 403 (Grúas, «Agents IA Test»): sin forzar, genera la respuesta igual que antes; forzando el rechazo, no se envía nada al cliente, queda la nota privada con el error y el log (la nota de prueba se borró).
+  - Clasificador forzando el rechazo: cae en la ruta por defecto de ADAM y el log trae el error real.
+  - Rubocop: el job del motor y el clasificador ya tenían hallazgos de estilo (28 y 1); el cambio no agrega ninguno.
 - **Cómo pedírselo al Asistente:**
 
 ### P1 · Modelo del agente en vivo

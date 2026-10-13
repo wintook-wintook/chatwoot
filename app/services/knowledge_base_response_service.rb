@@ -1237,26 +1237,13 @@ class KnowledgeBaseResponseService
     api_key = openai_api_key
     return nil unless api_key
 
-    require 'net/http'
-    require 'json'
-
-    uri               = URI('https://api.openai.com/v1/chat/completions')
-    http              = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl      = true
-    http.read_timeout = 45
-
-    request                  = Net::HTTP::Post.new(uri)
-    request['Authorization'] = "Bearer #{api_key}"
-    request['Content-Type']  = 'application/json'
-    request.body = {
+    # Un rechazo de OpenAI queda en el log con su mensaje real (EngineOpenai, P3a).
+    ContactTrackings::EngineOpenai.new(api_key, purpose: :kbase, timeout: 45).complete(
       model: resolved_model,
       messages: messages,
       max_tokens: max_tokens,
       temperature: temperature
-    }.to_json
-
-    response = http.request(request)
-    JSON.parse(response.body).dig('choices', 0, 'message', 'content')&.strip
+    )&.strip
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error OpenAI: #{e.message}"
     nil

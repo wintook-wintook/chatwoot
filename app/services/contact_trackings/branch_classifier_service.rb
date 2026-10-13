@@ -50,35 +50,24 @@ module ContactTrackings
       api_key = openai_api_key
       return nil if api_key.blank?
 
-      body = post_json(api_key)
-      raw  = JSON.parse(body).dig('choices', 0, 'message', 'content').to_s
+      raw = post_json(api_key)
+      return nil if raw.nil?
+
       JSON.parse(raw)['rama'].to_s.strip.downcase.presence
     rescue StandardError => e
       Rails.logger.warn "[BranchClassifier] ⚠️ LLM: #{e.message}"
       nil
     end
 
+    # El texto del modelo, o nil con el error real en el log (ver EngineOpenai, P3a).
     def post_json(api_key)
-      require 'net/http'
-      require 'json'
-
-      uri               = URI('https://api.openai.com/v1/chat/completions')
-      http              = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl      = true
-      http.read_timeout = 10
-
-      request                  = Net::HTTP::Post.new(uri)
-      request['Authorization'] = "Bearer #{api_key}"
-      request['Content-Type']  = 'application/json'
-      request.body = {
+      ContactTrackings::EngineOpenai.new(api_key, purpose: :router, timeout: 10).complete(
         model: ContactTrackings::EngineConfig.model_for_tracking(@tracking, :router),
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 60,
         temperature: 0.1,
         response_format: { type: 'json_object' }
-      }.to_json
-
-      http.request(request).body
+      )
     end
 
     def prompt

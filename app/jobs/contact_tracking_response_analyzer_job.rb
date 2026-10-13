@@ -614,14 +614,27 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # ==============================================================================
   def generate_and_send_conversational_reply(tracking, message)
     Rails.logger.info "[TrackingBot] 💬 Generando respuesta conversacional para tracking ##{tracking.id}"
+    @reply_error = nil
     reply_text = generate_conversational_reply(tracking, message)
-    return false if reply_text.blank?
+    return reply_failed(tracking, message) if reply_text.blank?
 
     reply_text = with_branch_tag(reply_text, tracking, message)
     reply_text = "#{reply_text}\n\n-TB"
     send_auto_reply(tracking, message, reply_text)
     Rails.logger.info '[TrackingBot] ✅ Respuesta enviada → respondió TrackingBot'
     true
+  end
+
+  # Decisión D17 (P3a): si la llamada a OpenAI falló (rechazo, tiempo agotado), que un agente se entere. Nota privada
+  # (no le llega al cliente) con el error real; al cliente no se le manda nada inventado.
+  # Sin error de OpenAI (por ejemplo, el modelo contestó vacío por otra razón) solo queda
+  # el log, como antes. Sigue devolviendo false: el coordinador pasa a BotSeller si hay.
+  def reply_failed(tracking, message)
+    return false if @reply_error.blank?
+
+    create_private_note(tracking, message, '🤖 El agente IA no pudo responder este mensaje: falló la llamada a OpenAI ' \
+                                           "(#{@reply_error}). El cliente no recibió respuesta del agente IA.")
+    false
   end
 
   def generate_conversational_reply(tracking, message)
@@ -1372,25 +1385,15 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       Mensaje del cliente: "#{text}"
     PROMPT
 
-    uri               = URI('https://api.openai.com/v1/chat/completions')
-    http              = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl      = true
-    http.read_timeout = 10
-
-    request                  = Net::HTTP::Post.new(uri)
-    request['Authorization'] = "Bearer #{api_key}"
-    request['Content-Type']  = 'application/json'
-    # proyecto@contact_tracking: modelo y tope desde la config del inbox.
-    request.body = {
+    # proyecto@contact_tracking: modelo y tope desde la config del inbox. Un rechazo de
+    # OpenAI queda en el log con su mensaje real (EngineOpenai, P3a).
+    content = ContactTrackings::EngineOpenai.new(api_key, purpose: :datetime, timeout: 10).complete(
       model: ContactTrackings::EngineConfig.model_for_tracking(tracking, :datetime),
       messages: [{ role: 'user', content: prompt }],
       max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:datetime),
       temperature: 0,
       response_format: { type: 'json_object' }
-    }.to_json
-
-    response = http.request(request)
-    content  = JSON.parse(response.body).dig('choices', 0, 'message', 'content')
+    )
     content.present? ? JSON.parse(content) : nil
   end
 
@@ -2110,30 +2113,18 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # ==============================================================================
   # OpenAI - Llamada unificada
   # ==============================================================================
+  # Un rechazo de OpenAI ya no es silencio (P3a): queda en el log con su mensaje real y en
+  # @reply_error, para que la respuesta conversacional deje una nota privada (D17).
   def call_openai_for_reply(api_key, messages, tracking = nil)
-    require 'net/http'
-    require 'json'
-
-    uri = URI('https://api.openai.com/v1/chat/completions')
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = true
-    http.read_timeout = 10
-
-    request = Net::HTTP::Post.new(uri)
-    request['Authorization'] = "Bearer #{api_key}"
-    request['Content-Type'] = 'application/json'
+    llamada = ContactTrackings::EngineOpenai.new(api_key, purpose: :conversational, timeout: 10)
     # proyecto@contact_tracking: modelo y tope desde la config del inbox.
-    request.body = {
+    reply = llamada.complete(
       model: ContactTrackings::EngineConfig.model_for_tracking(tracking, :conversational),
       messages: messages,
       max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:conversational),
       temperature: 0.7
-    }.to_json
-
-    response = http.request(request)
-    response_body = JSON.parse(response.body)
-
-    reply = response_body.dig('choices', 0, 'message', 'content')&.strip
+    )&.strip
+    @reply_error = llamada.error
     reply&.gsub(/\A[A-Za-záéíóúñÁÉÍÓÚÑ\s]{2,20}:\s*\n?/, '')&.strip
   end
 
