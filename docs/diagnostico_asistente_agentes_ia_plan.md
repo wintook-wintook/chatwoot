@@ -571,9 +571,9 @@ Sin migración; el punto de retorno sigue siendo el tag `estable-2026-10-12-ante
 **La prueba de ruteo de hoy solo prueba 8 rutas** (`RouteSelfCheck::MAX_PROBES`), y una ruta nueva o editada suele quedar fuera (T2, T3). **No se corrige en el Asistente de hoy hasta terminar la comparación**, para que la comparación sea justa. Se corrige después, gane o no el prototipo: al editar, probar primero las rutas tocadas.
 
 #### Paso 2 · Comparar
-- [ ] Las tareas T2–T5 con el prototipo, con 3 modelos (decisión **D8**): 12 corridas. La T1 queda para el Paso 3.
+- [x] Las tareas T2–T5 con el prototipo, con 3 modelos (decisión **D8**): 12 corridas. La T1 queda para el Paso 3.
 - [ ] Tope de gasto: **10 USD** (estimado ~6 USD; con herramientas cada turno hace más llamadas). De gpt-5.5 no hay precio cargado: se guardan los tokens, y si una corrida se ve cara se detiene y se avisa.
-- [ ] Tabla en el Registro: hoy contra prototipo, por modelo
+- [x] Tabla en el Registro: hoy contra prototipo, por modelo
 - [ ] Decidir: si gana claro, sigue el Paso 3; si no, se apaga la bandera y se anota qué herramienta sí ayudó
 
 #### Paso 3 · Crecerlo (solo si ganó)
@@ -762,7 +762,23 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
     3. **Entregar solo las piezas (P5 mínimo, adelantado con OK del 13/10/2026):** reescribiendo los 15.000 caracteres el modelo duplicó una ruta y copió marcadores. Ahora devuelve `piezas` / `quitar` y el código las pone con `DraftPieces.restore` sobre el Entrenamiento más reciente del turno; si igual manda el texto completo, se respeta.
   - Resultado tras los arreglos (3 corridas): sin duplicadas ni marcadores. El comportamiento de gpt-5.4-mini varía: una vez preguntó en vez de decidir, una arregló sin usar `probar_ruta` y dijo que funcionaba, una diagnosticó bien y no entregó. Lo mide el Paso 2.
   - **Hallazgo para toda medición de ruteo:** el clasificador del motor no siempre da la misma ruta para la misma frase y el mismo texto. Se verifica cada frase 3 veces.
-- **Paso 2, comparación (hoy vs prototipo, por modelo):**
+- **Paso 2, comparación (hoy vs prototipo, por modelo) — 13/10/2026:** T2–T5, una corrida por tarea y modelo, en español, por `InterviewTurn` como la pantalla (sesiones #3905 en adelante). Ruteo verificado 3 veces por frase. Si el modelo preguntaba en vez de entregar, se le contestó «Decide tú lo más razonable y aplícalo» (cuenta como vuelta).
+
+  | Tarea | Hoy (gpt-4o, sin herramientas) | Prototipo gpt-4o | Prototipo gpt-5.4-mini | Prototipo gpt-5.5 |
+  |---|---|---|---|---|
+  | T2 ruta con hoja | ✓ sin probar la ruta nueva · 36 s · 0,065 | ✓ miró la hoja y probó · 12 s · 0,065 | ✓ probó · 24 s · 0,027 | ✓ preguntó la etiqueta, luego probó e informó · 42 s · 0,171 |
+  | T3 cruce de Kontrolya | ✗ ✗ ✓ (3 vueltas; dos «arreglado» sin cambiar) · ~105 s · 0,16 | ✗ preguntó, luego creó una ruta que no rutea (0/3) · 24 s · 0,15 | ½ arregló 1 de 2 frases, sin `probar_ruta`, dijo «listo» · 22 s · 0,029 | **✓ a la primera**, 4 frases 3/3, informó qué probó · 44 s · 0,115 |
+  | T4 estilo | ✓ · 32 s · 0,067 | ✓ · 13 s · 0,039 | ½ dejó la regla del emoji y dijo «hecho» · 21 s · 0,027 | ✓ · 12 s · 0,036 |
+  | T5 revisar la 316 | 2 de 3, inventó una falla, propuso una regla que ya existe · 7 s · 0,026 | 1 de 3 (la promesa); propone agregar reglas que ya existen · 4 s · 0,021 | la promesa ✓; dijo que el mensaje con dos preguntas tenía una ✗ · 5 s · 0,007 | **dos preguntas ✓ y nota que la regla ya está escrita ✓**, la promesa ✓, texto de reemplazo concreto · 31 s · 0,081 |
+  | **Total** | ~0,32 USD | 0,28 USD | 0,09 USD* | 0,40 USD* |
+
+  \* Precios de gpt-5.x estimados con fuentes secundarias (no la página oficial): gpt-5.5 5 / 0,50 / 30 USD y gpt-5.4-mini 0,75 / 0,075 / 4,50 USD por millón (entrada / caché / salida). No se cargaron en el código. El Paso 2 costó ~0,77 USD de un tope de 10.
+
+  - **Ninguna corrida rompió nada:** 0 bloqueantes, sin rutas duplicadas ni marcadores, y fuera de lo pedido el Entrenamiento quedó idéntico en todas.
+  - **gpt-5.5** es el único que hizo las cuatro bien, y en las dos donde el Asistente de hoy falla (T3, T5). Es el más lento (12–44 s) y el más caro por turno (0,04–0,17 USD).
+  - **gpt-4o con herramientas** es rápido y barato, pero no razona mejor que hoy: en la T3 creó una ruta que no rutea. Además pone la pieza como mensaje para la persona (la respuesta en el chat es solo la línea `@ruta(…)` o la sección).
+  - **gpt-5.4-mini** es el más barato, pero hizo dos tareas a medias diciendo que estaban completas: el mismo defecto que el P8 quería quitar.
+  - Límite de la medición: una corrida por casilla. Antes de decidir conviene repetir la T3 con gpt-5.5 2 o 3 veces (~0,35 USD).
 - **Decisión (¿ganó?):**
 - **Cómo funciona:**
 - **Cómo pedírselo al Asistente:**
