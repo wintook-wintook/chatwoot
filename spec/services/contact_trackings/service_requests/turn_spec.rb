@@ -28,7 +28,7 @@ RSpec.describe ContactTrackings::ServiceRequests::Turn do
     texto = turno
     expect(texto).to start_with('Recibí 2 servicios:')
     expect(texto).to include('1️⃣ Grúa 60 t · km 14+500 → Blue Giant · sáb 29 may 08:00')
-    expect(texto).to include('Para programarlos me falta: del 2️⃣ la fecha y dónde es.')
+    expect(texto).to include('Para programarlos me falta: del 2️⃣ la fecha, dónde es.')
   end
 
   it 'sin servicios en el mensaje devuelve nil: el motor sigue como siempre' do
