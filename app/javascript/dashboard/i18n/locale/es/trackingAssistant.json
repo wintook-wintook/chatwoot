@@ -324,6 +324,8 @@
     "BATTERY_SUMMARY": "%{passed} de %{total} cumplen",
     "BATTERY_DOWNLOAD": "Descargar informe .md",
     "BATTERY_NO_SANDBOX": "Para probar hace falta un canal API sin webhook en la cuenta (ahí ningún mensaje le llega a un cliente). Créalo en Canales y vuelve a intentarlo.",
+    "BATTERY_SANDBOX": "Probado en el canal de prueba %{inbox} con su modelo (%{model}).",
+    "BATTERY_NOT_ASSIGNED": "Se detuvo la pila: no se pudo asignar el agente a las conversaciones de prueba. %{detail}",
     "BATTERY_ERROR": "No se pudo correr la pila de pruebas. Inténtalo de nuevo.",
     "BATTERY_COL_TEST": "Prueba",
     "BATTERY_COL_CUSTOMER": "Cliente",

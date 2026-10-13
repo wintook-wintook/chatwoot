@@ -40,8 +40,17 @@ module ContactTrackings::Assistant::TestBattery
     buenos = resultados.count { |r| r['cumple'] || r[:cumple] }
     lineas = ["# Pila de pruebas — #{estado['template']}", '',
               "#{estado['started_at']} · #{buenos} de #{resultados.size} cumplen", '',
+              *where(estado),
               '| Prueba | Conv. | Cliente | Agente | Ruta | Cumple | Por qué |', '|---|---|---|---|---|---|---|']
     lineas + resultados.map { |r| row(r.stringify_keys) }
+  end
+
+  # Se prueba en el canal de prueba y con SU modelo, que puede no ser el del canal real.
+  def where(estado)
+    canal = estado['sandbox'] || estado[:sandbox]
+    return [] if canal.blank?
+
+    ["Probado en el canal de prueba ##{canal['inbox_id']} #{canal['inbox']} con su modelo (#{canal['model']}).", '']
   end
 
   def row(fila)

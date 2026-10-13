@@ -280,7 +280,8 @@ Los límites (250 tokens, 800 caracteres y 4 líneas) se revisan **aparte** y so
 ### Pasos
 - [x] Decidir D1 → gpt-4o como modelo por defecto (13/10/2026)
 - [x] Correr F0 con gpt-4o, gpt-5.4-mini y gpt-5.5 y decidir **D19** → gpt-4o sigue por defecto; gpt-5.4-mini «Económico»; gpt-5.5 fuera del selector (13/10/2026, ver Registro)
-- [ ] Que el banco de pruebas funcione con agentes de canal propio (hallazgo de F0, ver Registro)
+- [x] Que el banco de pruebas funcione con agentes de canal propio (hallazgo de F0) → hecho el 13/10/2026, ver Registro → P1
+- [ ] Que «Probar el agente» guarde su estado donde la web lo pueda leer (hallazgo del 13/10/2026, ver Registro → P1)
 - [x] Revisar si el tope de 10 s alcanza con gpt-4o (y con gpt-5.x, ver P3) → sí: 1–2,6 s medido (P3b)
 - [ ] Medir los límites 250 / 800 / 4 líneas por separado (decisión **D2**)
 - [ ] Repetir la pila de F0 y comparar
@@ -288,6 +289,29 @@ Los límites (250 tokens, 800 caracteres y 4 líneas) se revisan **aparte** y so
 ### Riesgos
 - **Costo.** gpt-4o cuesta varias veces lo que gpt-4o-mini. Hay que medirlo con tráfico real antes de subirlo para todos.
 - Respuestas más lentas en el canal.
+
+### Banco de pruebas con agentes de canal propio (diseño acordado el 13/10/2026)
+
+**Problema (medido en F0):** 11 de los 19 agentes no se pueden probar (10 en el canal #4 kontrolyaBots y 1 en el #31777 Sentidos_Creativos_bot; solo funcionan los 7 del #493).
+
+```
+ Probar el agente (Grúas, canal #4)
+   ├─ conversación de prueba en #493 ✓
+   ├─ asignar el agente → seguimiento con canal = #4 (el del agente)
+   │     └─ ContactTracking rechaza: «Conversation must belong to the selected inbox»
+   │        ActionService lo traga y solo deja una línea en el log
+   ├─ llega el mensaje del cliente → el motor no encuentra seguimiento → no contesta
+   └─ espera 120 s por escenario → «Sin respuesta del agente» en TODO
+```
+
+**Propuesta:**
+1. **El banco ata el seguimiento al canal de prueba.** La creación del seguimiento sale de `ActionService#assign_tracking_template` a `ContactTrackings::TemplateAssignment`, que recibe el canal. Las automatizaciones le pasan el de siempre (el del agente o el de la conversación: sin cambio); el banco, el #493.
+2. **Si no se puede asignar, decirlo y no esperar:** la prueba sale al instante con el motivo real; si falla la primera tanda completa, el banco se detiene con un aviso.
+3. **El informe dice con qué se probó:** «Probado en el canal de prueba #493 con su modelo (gpt-4o)». Se prueba con el modelo del #493, no con el del canal real del agente.
+
+**Fuera de alcance (D20):** una automatización real que asigna un agente de otro canal falla igual, en silencio. Cambiarlo toca a clientes reales: se decide aparte.
+
+**Pruebas:** Grúas (#4) completa en #493 sin el truco del script de F0; ADAM (#493) igual que en F0; falla forzada (seguimiento activo previo) → motivo al instante y freno; una automatización real del mismo canal sigue igual; rubocop sin hallazgos nuevos. Sin RSpec.
 
 ---
 
@@ -771,6 +795,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 | D5 | Qué conversaciones revisa el lote | últimas N · las que pasaron a humano · por etiqueta | las que pasaron a humano: ahí falló algo |
 | D6 | ¿El juez y la pila corren solos alguna vez? | solo con botón · programado | **solo con botón** (costo) |
 | D7 | ¿Un seguimiento sin Entrenamiento puede negar que es bot? | sí (como hoy) · no | **no**: misma regla que con Entrenamiento («si te preguntan si eres persona, no lo afirmes») |
+| D20 | ¿Un agente puede atender en un canal que no es el suyo? (una automatización que lo asigna en otro canal hoy falla en silencio: «Conversation must belong to the selected inbox») | sí, en el canal de la conversación · no, pero avisar · como hoy | decidir aparte; el banco de pruebas ya lo esquiva (P1) |
 | D8–D14 | Decisiones del P8 (modelo, tareas, gasto, alcance, Claude, privacidad, activación) | — | ver «P8 → Decisiones del P8» |
 
 ---
@@ -950,6 +975,15 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 - **Cómo funciona:** en la configuración del agente IA del canal, el selector ofrece gpt-4o (Recomendado) y GPT-5.4 Mini (Económico). Con GPT-5.4 Mini, solo las respuestas al cliente usan ese modelo; elegir ruta, fechas, etc. siguen en gpt-4o (D18). Para ver el selector nuevo hay que reiniciar `chatwoot-dev.service`.
 - **Pila de pruebas:** la de F0 (3 agentes × 3 modelos, 129 respuestas); `apps.yml` y `ALLOWED_MODELS` quedan con los mismos 5 modelos (lo verifica `engine_config_spec.rb`); ningún canal real cambió (los 3 siguen en gpt-4o).
 - **Cómo pedírselo al Asistente:** no aplica: el modelo se elige en la configuración del canal.
+- **Qué se hizo (banco de pruebas con agentes de canal propio, 13/10/2026):** la creación del seguimiento salió de `ActionService#assign_tracking_template` a `ContactTrackings::TemplateAssignment`, que recibe el canal. Las automatizaciones le pasan el de siempre; `TestBatteryJob` le pasa el canal de prueba. Si no se puede asignar, la prueba sale al instante con el motivo y no manda el mensaje; si falla toda la primera tanda, la pila se detiene (`status: failed`, `error: not_assigned`). El estado guarda `sandbox` (canal y modelo), que salen en el informe .md y en la pantalla («Probado en el canal de prueba #493 … con su modelo (gpt-4o)»).
+- **Pila de pruebas (banco):**
+  - Grúas (#10368, canal #4), 9 escenarios: contesta 9/9 en #493 y abre su caso (01175); ruta 5/8, igual que en F0. Antes: 9/9 «sin respuesta».
+  - ADAM (#11833, canal #493), 4 escenarios: 4/4 en su ruta, igual que en F0.
+  - Falla forzada (canal que no es el de la conversación): la pila se detiene en 1 s tras la primera tanda, con «No se pudo asignar el agente…: Conversation must belong to the selected inbox». Antes: 120 s de espera por prueba.
+  - Automatización real: ADAM en una conversación del #493 crea el seguimiento como antes; repetida, no crea otro; Grúas en el #493 no se crea y deja la misma línea en el log que antes (D20). El seguimiento de prueba quedó cancelado.
+  - Rubocop y ESLint sin hallazgos nuevos.
+- **Hallazgo (pendiente, sin tocar):** en develop.wintook.com la caché es `null_store` (sin `tmp/caching-dev.txt`): `TestBattery` escribe el estado y se pierde, así que «Probar el agente» en la pantalla nunca muestra resultados. Aun con caché en memoria no serviría: la web y Sidekiq son procesos distintos. Propuesta: guardar el estado en Redis, como `TurnProgress`.
+- **Cómo pedírselo al Asistente (banco):** en el Asistente, con el agente guardado, botón «Probar el agente» → «Correr la pila» (cuando se arregle el hallazgo de arriba).
 
 ### P2 · Simulador y juez
 - **Qué se hizo:**

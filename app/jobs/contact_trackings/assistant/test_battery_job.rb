@@ -14,6 +14,13 @@
 # Los casos que abra el agente sí quedan (en ese canal): son parte de lo que se prueba.
 #
 # El avance y el resultado viven en la caché (TestBattery.key) dos días.
+#
+# CANAL PROPIO: el seguimiento se ata al canal de prueba aunque el agente tenga el suyo
+# (10 de los 19 de la cuenta 2 están en Telegram). Antes se ataba al del agente, la
+# validación lo rechazaba y toda la pila salía «sin respuesta» tras 2 min por prueba
+# (F0, 13/10/2026). Se prueba con el modelo del canal de prueba: el informe lo dice.
+# Si aun así no se puede asignar, la prueba sale al momento con el motivo, y si falla
+# toda la primera tanda, la pila se detiene.
 # ================================================================================
 
 class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
@@ -44,14 +51,28 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
   end
 
   def run(escenarios)
-    save!(status: 'running', total: escenarios.size, done: 0, results: [])
+    save!(status: 'running', total: escenarios.size, done: 0, results: [], **sandbox)
     juez = ContactTrackings::Assistant::TestBatteryJudge.new(@account, training: @template.complementary_prompt)
     resultados = []
     escenarios.each_slice(PARALLEL) do |tanda|
       resultados.concat(batch(tanda, juez))
+      return not_assigned!(escenarios, resultados) if resultados.all? { |r| r[:sin_agente] }
+
       save!(status: 'running', total: escenarios.size, done: resultados.size, results: resultados)
     end
     save!(status: 'done', total: escenarios.size, done: resultados.size, results: resultados, finished_at: Time.current.iso8601)
+  end
+
+  # Dónde y con qué modelo contesta el agente en la prueba (puede no ser su canal real).
+  def sandbox
+    { sandbox: { 'inbox_id' => @inbox.id, 'inbox' => @inbox.name,
+                 'model' => ContactTrackings::EngineConfig.model_for(@inbox, :conversational) } }
+  end
+
+  # La primera tanda entera sin agente: las demás saldrían igual.
+  def not_assigned!(escenarios, resultados)
+    save!(status: 'failed', error: 'not_assigned', detail: resultados.first[:motivo], total: escenarios.size,
+          done: resultados.size, results: resultados, finished_at: Time.current.iso8601)
   end
 
   # Sin soltar el candado de carga mientras espera, en desarrollo un hilo que carga una clase
@@ -65,6 +86,9 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
   # Una prueba: una conversación nueva, un mensaje del cliente, la respuesta y su calificación.
   def one(escenario, juez)
     conversacion = new_conversation(escenario)
+    asignacion = ContactTrackings::TemplateAssignment.new(conversacion, @template, inbox_id: @inbox.id)
+    return not_assigned(escenario, conversacion, asignacion.error) unless asignacion.call
+
     ultimo = conversacion.messages.maximum(:id).to_i
     conversacion.messages.create!(account: @account, inbox: @inbox, sender: conversacion.contact,
                                   message_type: :incoming, content: escenario.message)
@@ -76,10 +100,16 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
   def new_conversation(escenario)
     contacto = @account.contacts.create!(name: "Prueba #{@template.name.truncate(30)} · #{escenario.id.truncate(40)}")
     contacto_canal = ContactInbox.create!(contact: contacto, inbox: @inbox, source_id: SecureRandom.uuid)
-    conversacion = Conversation.create!(account: @account, inbox: @inbox, contact: contacto,
-                                        contact_inbox: contacto_canal, status: :open)
-    ActionService.new(conversacion).assign_tracking_template([@template.id])
-    conversacion
+    Conversation.create!(account: @account, inbox: @inbox, contact: contacto,
+                         contact_inbox: contacto_canal, status: :open)
+  end
+
+  # Sin seguimiento no contesta nadie: no se manda el mensaje ni se espera.
+  def not_assigned(escenario, conversacion, error)
+    # En español, como los motivos del juez (TestBatteryJudge).
+    motivo = "No se pudo asignar el agente a la conversación de prueba: #{error}"
+    escenario.to_h.merge(conversation: conversacion.display_id, reply: '', cases: [], cumple: false,
+                         fallas: [motivo], motivo: motivo, sin_agente: true)
   end
 
   # Espera hasta que el agente conteste y se quede callado QUIET_SECONDS, o WAIT_SECONDS.

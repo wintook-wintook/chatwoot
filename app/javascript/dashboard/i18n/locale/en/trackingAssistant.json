@@ -324,6 +324,8 @@
     "BATTERY_SUMMARY": "%{passed} of %{total} pass",
     "BATTERY_DOWNLOAD": "Download .md report",
     "BATTERY_NO_SANDBOX": "Testing needs an API inbox without a webhook in the account (messages there never reach a customer). Create one in Inboxes and try again.",
+    "BATTERY_SANDBOX": "Tested in the test inbox %{inbox} with its model (%{model}).",
+    "BATTERY_NOT_ASSIGNED": "The test run stopped: the agent could not be assigned to the test conversations. %{detail}",
     "BATTERY_ERROR": "The tests could not run. Try again.",
     "BATTERY_COL_TEST": "Test",
     "BATTERY_COL_CUSTOMER": "Customer",

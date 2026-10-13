@@ -42,6 +42,15 @@ export default {
     stateStatus() {
       return this.state ? this.state.status : '';
     },
+    // El canal y el modelo con que se probó: puede no ser el canal real del agente.
+    sandboxLine() {
+      const canal = this.state && this.state.sandbox;
+      if (!canal) return '';
+      return this.$t('TRACKING_ASSISTANT_VIEW.BATTERY_SANDBOX', {
+        inbox: `#${canal.inbox_id} ${canal.inbox}`,
+        model: canal.model,
+      });
+    },
     passed() {
       return this.results.filter(r => r.cumple).length;
     },
@@ -86,7 +95,12 @@ export default {
         const { data } = await AssistantAPI.testBattery(this.batteryId);
         this.state = data;
         if (data.status === 'failed') {
-          this.error = this.$t('TRACKING_ASSISTANT_VIEW.BATTERY_ERROR');
+          this.error =
+            data.error === 'not_assigned'
+              ? this.$t('TRACKING_ASSISTANT_VIEW.BATTERY_NOT_ASSIGNED', {
+                  detail: data.detail || '',
+                })
+              : this.$t('TRACKING_ASSISTANT_VIEW.BATTERY_ERROR');
           return;
         }
         if (data.status !== 'done') this.timer = setTimeout(this.poll, POLL_MS);
@@ -167,6 +181,10 @@ export default {
           {{ $t('TRACKING_ASSISTANT_VIEW.BATTERY_DOWNLOAD') }}
         </woot-button>
       </div>
+
+      <p v-if="sandboxLine" class="mb-2 text-xs shrink-0 text-slate-500">
+        {{ sandboxLine }}
+      </p>
 
       <p
         v-if="error"
