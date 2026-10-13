@@ -27,7 +27,11 @@
 
 module ContactTrackings
   class EngineConfig
-    DEFAULT_MODEL = 'gpt-4o-mini'
+    # Decisión D1 (13/10/2026, P1 de docs/diagnostico_asistente_agentes_ia_plan.md): era
+    # gpt-4o-mini, que está medido como que no cumple las reglas de un Entrenamiento largo
+    # (KBase); todos los canales con agente IA ya habían elegido gpt-4o. Solo afecta a los
+    # canales que no eligen modelo y a las llamadas sin canal.
+    DEFAULT_MODEL = 'gpt-4o'
 
     # Espejo del enum de `model_ia` en config/integration/apps.yml. Si allí se agrega
     # un modelo, hay que agregarlo aquí (spec/services/contact_trackings/engine_config_spec.rb
@@ -62,7 +66,7 @@ module ContactTrackings
     #
     # Dos problemas que resuelve, los dos medidos:
     #   1. El Asistente de Agentes IA NO tiene inbox: es de cuenta. Sin piso,
-    #      model_for(nil) cae a DEFAULT_MODEL, que es el modelo chico.
+    #      model_for(nil) cae a DEFAULT_MODEL (hasta el 13/10/2026, el modelo chico).
     #   2. gpt-4o-mini no cumple las reglas de un prompt largo (medido en KBase). El
     #      asistente escribe configuración que el motor parsea con patrones exactos:
     #      un modelo que se saltea reglas produce Entrenamientos que no ejecutan nada.

@@ -249,11 +249,38 @@ Además, la respuesta al cliente sale con límites muy cortos.
 
 Los límites (250 tokens, 800 caracteres y 4 líneas) se revisan **aparte** y solo con la medición de F0: subirlos alarga las respuestas en WhatsApp, y eso también es una decisión de producto.
 
+### Actualización del 13/10/2026 (con P3a, P3b y D18 hechos)
+- **En este entorno el problema original no ocurre:** los 3 canales con seguimientos (#493 Agents IA Test, #4 kontrolyaBots_bot, #31777 Sentidos_Creativos_bot) ya usan gpt-4o. Solo un canal nuevo, sin elegir modelo, caía en gpt-4o-mini.
+- Con el P3b y D18 ya se puede contestar con gpt-5 y clasificar sigue en gpt-4o: comparar modelos para contestar es limpio (el ruteo no cambia).
+
+```
+  D1  ¿Qué modelo recibe un canal nuevo que no elige?     → decidido: gpt-4o
+  D19 ¿Conviene contestar con gpt-5 en vez de gpt-4o?     → se mide con F0
+  D2  ¿Se tocan los límites 250 tokens / 800 car. / 4 líneas?  → aparte, después de D19
+```
+
+- **D1 decidida: `DEFAULT_MODEL` = gpt-4o** (era gpt-4o-mini). Reemplaza las opciones A/B/C, que suponían canales en gpt-4o-mini. Afecta a canales sin modelo elegido (hoy ninguno) y a llamadas sin canal (el ejecutor de directivas de Base de Conocimiento, la prueba de ruteo del Asistente sin canal). El selector ya no marca gpt-4o-mini como «Recomendado»: dice «Económico; no sigue bien Entrenamientos largos», y gpt-4o, «Recomendado».
+- **F0 para D19** (usa el banco de pruebas que ya existe: motor real en el canal de prueba #493 + juez):
+
+  ```
+    3 agentes × ~25 escenarios  ──► motor REAL (canal #493, no envía nada afuera)
+                                      clasifica: gpt-4o (igual en las 3 corridas, D18)
+                                      contesta:  gpt-4o │ gpt-5.4-mini │ gpt-5.5
+                                ──► juez: ¿cumple [ESTILO] y [PROHIBIDO]?  +  ¿cerró en su ruta?
+  ```
+
+  - Agentes: ADAM v2.4 (#11833), COORDINADOR v6.11 (#6544), Grúas (#10368).
+  - Escenarios: los arma el banco (uno por ruta y uno por regla de «nunca», hasta 15); se generan una vez y se reusan en los 3 modelos.
+  - Se mide por modelo: % que cumple (juez), % que cierra en su ruta, tiempo y costo por respuesta.
+  - El modelo del canal #493 se cambia solo durante cada corrida y se devuelve a gpt-4o.
+  - ~3 USD, ~30 min en segundo plano; crea una conversación de prueba por escenario en #493 (como «Probar el agente»).
+  - Límite: juez gpt-4o y una corrida por escenario; diferencias de 2–3 puntos no son concluyentes.
+- **Criterio propuesto para D19:** gpt-5 gana si sube claramente el % que cumple sin pasar de ~3 s por respuesta (hoy gpt-4o ~1 s, gpt-5.5 ~2,5 s).
+
 ### Pasos
-- [ ] Decidir A, B o C (decisión **D1**)
-- [ ] Si es C: fijar el umbral con los agentes de F0
-- [ ] Implementar en `EngineConfig` (un solo lugar, como pide su propia cabecera)
-- [ ] Revisar si el tope de 10 s alcanza con gpt-4o (y con gpt-5.x, ver P3)
+- [x] Decidir D1 → gpt-4o como modelo por defecto (13/10/2026)
+- [ ] Correr F0 con gpt-4o, gpt-5.4-mini y gpt-5.5 y decidir **D19**
+- [x] Revisar si el tope de 10 s alcanza con gpt-4o (y con gpt-5.x, ver P3) → sí: 1–2,6 s medido (P3b)
 - [ ] Medir los límites 250 / 800 / 4 líneas por separado (decisión **D2**)
 - [ ] Repetir la pila de F0 y comparar
 
@@ -725,6 +752,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 | D16 | Tiempo de crear con herramientas (155–233 s) | aceptarlo · menos razonamiento · menos herramientas | **Decidido 13/10/2026: `none` al crear (47–53 s), el de por defecto al editar** (ver Registro, 3.3) |
 | D17 | Qué pasa cuando el agente IA no puede responder por una falla de OpenAI | nota privada · solo log · nota + mensaje fijo al cliente | **Decidido 13/10/2026: nota privada** (P3a) |
 | D18 | Si un canal elige gpt-5, ¿para todo o solo para contestar? | solo contestar · todo | **Decidido 13/10/2026: solo contestar**; clasificar, fechas, solicitudes, ERP y redactar siguen en gpt-4o (P3b) |
+| D19 | ¿Contestar con gpt-5 en vez de gpt-4o? | gpt-4o · gpt-5.4-mini · gpt-5.5 | decidir con F0: gana si sube claramente el % que cumple sin pasar de ~3 s (ver P1) |
 
 **Decidido el 12/10/2026:** D8 = gpt-5.4-mini + gpt-5.5, con gpt-4o de referencia · D9 = las 5 tareas de la tabla · D10 = medir primero: P6c y UNA tarea con el Asistente de hoy; con ese costo real se propone el tope antes de correr las demás → tope de 3 USD para T2–T5 (la T1 costó < 0,10 USD); para la comparación del Paso 2, **10 USD** · D11 = solo cuenta 2, bandera `assistant_tools` · Alcance del prototipo = chat de edición (T2–T5); T1 en el Paso 3.
 
@@ -734,7 +762,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 
 | # | Decisión | Opciones | Recomendación |
 |---|----------|----------|---------------|
-| D1 | Cómo subir el modelo del agente en vivo | A piso para todos · B solo aviso · C piso por tamaño | **C**, con umbral medido en F0 |
+| D1 | Cómo subir el modelo del agente en vivo | A piso para todos · B solo aviso · C piso por tamaño · modelo por defecto gpt-4o | **Decidido 13/10/2026: modelo por defecto gpt-4o** (los canales reales ya lo usaban; ver P1) |
 | D2 | ¿Se tocan los límites 250 tokens / 800 caracteres / 4 líneas? | sí · no · por agente | medir primero, decidir después |
 | D3 | Conversación simulada | objeto en memoria · transacción con rollback | **en memoria**: no hay escritura que revertir |
 | D4 | Modelo del redactor del Asistente | gpt-4o (hoy) · gpt-5.4-mini · gpt-5.5 | se decide con **D8** (comparación del P8) |

@@ -44,11 +44,11 @@ tracking_bot:
       "help_text": "Selecciona el modelo según tu necesidad de velocidad, inteligencia y costo",
       "options": [
         { 
-          "label": "GPT-4o Mini ⚡⚡⚡ - ⭐⭐⭐ - 💰 (Recomendado: Balance perfecto)", 
+          "label": "GPT-4o Mini ⚡⚡⚡ - ⭐⭐⭐ - 💰 (Económico; no sigue bien Entrenamientos largos)", 
           "value": "gpt-4o-mini" 
         },
         { 
-          "label": "GPT-4o ⚡⚡ - ⭐⭐⭐⭐⭐ - 💰💰💰 (Casos complejos)", 
+          "label": "GPT-4o ⚡⚡ - ⭐⭐⭐⭐⭐ - 💰💰💰 (Recomendado)", 
           "value": "gpt-4o" 
         },
         { 
