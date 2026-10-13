@@ -23,9 +23,11 @@
 # ================================================================================
 
 class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assistant::InterviewService
-  # Los que se comparan en el Paso 2 (decisión D8).
-  MODELS = %w[gpt-5.4-mini gpt-5.5 gpt-4o].freeze
-  DEFAULT_MODEL = 'gpt-5.4-mini'
+  # Decisión D8 (13/10/2026, Paso 2 del P8): gpt-5.5 fue el único que hizo bien T2–T5;
+  # gpt-5.4-mini se descartó (dos veces hizo la mitad y dijo que estaba completo).
+  # gpt-4o queda como referencia.
+  MODELS = %w[gpt-5.5 gpt-4o].freeze
+  DEFAULT_MODEL = 'gpt-5.5'
   MAX_TOOL_CALLS = 8
   # Incluye lo que gpt-5 razona antes de contestar, más un Entrenamiento largo entero.
   MAX_OUTPUT_TOKENS = 16_000

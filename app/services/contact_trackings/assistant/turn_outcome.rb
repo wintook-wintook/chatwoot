@@ -87,6 +87,11 @@ class ContactTrackings::Assistant::TurnOutcome
     Result.new(**base, draft: turn.draft, validation: validation, building: false)
   end
 
+  # Los nombres de las rutas que cambiaron en el turno.
+  def touched_routes(turn)
+    diff(turn).changes.select(&:route).filter_map { |c| c.key[/\A@ruta\((.+)\)\z/, 1] }
+  end
+
   def diff(turn)
     ContactTrackings::Assistant::DraftDiff.new(@current_draft, turn.draft)
   end

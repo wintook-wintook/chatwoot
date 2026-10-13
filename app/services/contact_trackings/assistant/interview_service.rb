@@ -129,7 +129,7 @@ class ContactTrackings::Assistant::InterviewService
 
   attr_reader :account, :inbox, :messages, :one_shot, :current_draft
 
-  delegate :editing?, :building?, :validate, to: :@outcome
+  delegate :editing?, :building?, :validate, :touched_routes, to: :@outcome
 
   def handle(reply)
     draft = reply['entrenamiento'].presence
@@ -297,7 +297,7 @@ class ContactTrackings::Assistant::InterviewService
     return [validation, []] if repairable(validation).any?
 
     progress(:routing)
-    cruces = route_mismatches(turn.draft)
+    cruces = route_mismatches(turn)
     corregibles = correctable(turn, cruces)
     return [validation, cruces] if corregibles.empty? || !within_budget?
 
@@ -311,7 +311,7 @@ class ContactTrackings::Assistant::InterviewService
       return [nueva, []] if nueva[:blocking].any?
 
       validation = nueva
-      cruces = route_mismatches(turn.draft)
+      cruces = route_mismatches(turn)
     end
 
     [validation, cruces]
@@ -320,12 +320,15 @@ class ContactTrackings::Assistant::InterviewService
   def correctable(turn, cruces)
     return cruces if building?
 
-    tocadas = @outcome.diff(turn).changes.select(&:route).map(&:key)
-    cruces.select { |c| tocadas.include?("@ruta(#{c.route})") }
+    cruces.select { |c| touched_routes(turn).include?(c.route) }
   end
 
-  def route_mismatches(draft)
-    ContactTrackings::Assistant::RouteSelfCheck.new(account, draft: draft, inbox: inbox, usage: @chat.usage).call
+  # Al editar, las rutas tocadas se prueban PRIMERO: la prueba tiene un tope de rutas y
+  # una nueva queda al final (medido el 12/10/2026, T2 y T3 del P8: la ruta 19 de 19 no
+  # se probaba y el Asistente decía «0 cruces» sobre un cruce real).
+  def route_mismatches(turn)
+    ContactTrackings::Assistant::RouteSelfCheck.new(account, draft: turn.draft, inbox: inbox, usage: @chat.usage,
+                                                             first: building? ? [] : touched_routes(turn)).call
   rescue StandardError => e
     # Que no se pueda probar el ruteo no debe costarle el Entrenamiento a nadie:
     # se entrega lo que ya pasó el comprobador.

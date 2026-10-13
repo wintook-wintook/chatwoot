@@ -40,11 +40,13 @@ class ContactTrackings::Assistant::RouteSelfCheck
 
   # usage: el consumo del turno (ver TokenUsage). Cada frase mandada a clasificar se
   # cuenta ahí: es una llamada que se paga, aunque sus tokens no se vean desde acá.
-  def initialize(account, draft:, inbox: nil, usage: nil)
+  # first: rutas que se prueban antes que las demás (las que se tocaron al editar).
+  def initialize(account, draft:, inbox: nil, usage: nil, first: [])
     @account = account
     @draft = draft.to_s
     @inbox = inbox
     @usage = usage
+    @first = Array(first)
   end
 
   # Devuelve solo los CRUCES: [] significa que cada rama se eligió a sí misma.
@@ -53,7 +55,7 @@ class ContactTrackings::Assistant::RouteSelfCheck
     map = clasificador.map
     return [] if map.routes.size < 2
 
-    map.routes.first(MAX_PROBES).filter_map do |route|
+    ordered(map.routes).first(MAX_PROBES).filter_map do |route|
       # La primera situación, no toda la lista: la lista entera menciona varios temas
       # y probaría contra un mensaje que ningún cliente escribiría.
       probe = ContactTrackings::Assistant::ProbePhrases.for(route).first
@@ -65,5 +67,12 @@ class ContactTrackings::Assistant::RouteSelfCheck
 
       Mismatch.new(route: route.name, probe: probe, chosen: chosen)
     end
+  end
+
+  private
+
+  # Las de `first` adelante, cada grupo en su orden de aparición.
+  def ordered(routes)
+    routes.sort_by.with_index { |route, i| [@first.include?(route.name) ? 0 : 1, i] }
   end
 end

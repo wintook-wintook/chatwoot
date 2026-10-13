@@ -568,13 +568,13 @@ Sin migración; el punto de retorno sigue siendo el tag `estable-2026-10-12-ante
 
 **Costo de las pruebas dentro del turno:** `probar_ruta` y `comprobar` **no reciben el Entrenamiento entero**, solo la línea que se quiere cambiar (por ejemplo, la `@ruta(…)` nueva); el código la aplica sobre el que está en pantalla. Si el modelo mandara 15.000 caracteres en cada prueba, el costo se multiplicaría por cada vuelta.
 
-**La prueba de ruteo de hoy solo prueba 8 rutas** (`RouteSelfCheck::MAX_PROBES`), y una ruta nueva o editada suele quedar fuera (T2, T3). **No se corrige en el Asistente de hoy hasta terminar la comparación**, para que la comparación sea justa. Se corrige después, gane o no el prototipo: al editar, probar primero las rutas tocadas.
+**La prueba de ruteo de hoy solo prueba 8 rutas** (`RouteSelfCheck::MAX_PROBES`), y una ruta nueva o editada suele quedar fuera (T2, T3). **No se corrige en el Asistente de hoy hasta terminar la comparación**, para que la comparación sea justa. Se corrige después, gane o no el prototipo: al editar, probar primero las rutas tocadas. → **Corregido el 13/10/2026** (ver Registro, Decisión).
 
 #### Paso 2 · Comparar
 - [x] Las tareas T2–T5 con el prototipo, con 3 modelos (decisión **D8**): 12 corridas. La T1 queda para el Paso 3.
 - [ ] Tope de gasto: **10 USD** (estimado ~6 USD; con herramientas cada turno hace más llamadas). De gpt-5.5 no hay precio cargado: se guardan los tokens, y si una corrida se ve cara se detiene y se avisa.
 - [x] Tabla en el Registro: hoy contra prototipo, por modelo
-- [ ] Decidir: si gana claro, sigue el Paso 3; si no, se apaga la bandera y se anota qué herramienta sí ayudó
+- [x] Decidir: si gana claro, sigue el Paso 3; si no, se apaga la bandera y se anota qué herramienta sí ayudó
 
 #### Paso 3 · Crecerlo (solo si ganó)
 1. **`editar_pieza`** (el P5): cambiar una ruta o sección sin reescribir el Entrenamiento.
@@ -650,7 +650,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 
 | # | Decisión | Opciones | Recomendación |
 |---|----------|----------|---------------|
-| D8 | Modelo del prototipo | gpt-5.4-mini · gpt-5.5 · gpt-4o | comparar **gpt-5.4-mini** (velocidad) y **gpt-5.5** (techo); gpt-4o como referencia |
+| D8 | Modelo del prototipo | gpt-5.4-mini · gpt-5.5 · gpt-4o | **Decidido 13/10/2026: gpt-5.5** (único que hizo bien T2–T5; ver Registro, Paso 2) |
 | D9 | Las 5 tareas de prueba | las de la tabla · cambiar alguna | las de la tabla, con un agente real de la cuenta 2 en T2–T5 |
 | D10 | Tope de gasto en OpenAI para el Paso 2 | monto fijo · sin tope | monto fijo, acordado antes de correr |
 | D11 | Quién ve el prototipo | solo cuenta 2 · cuentas elegidas | **solo cuenta 2** |
@@ -779,7 +779,10 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
   - **gpt-4o con herramientas** es rápido y barato, pero no razona mejor que hoy: en la T3 creó una ruta que no rutea. Además pone la pieza como mensaje para la persona (la respuesta en el chat es solo la línea `@ruta(…)` o la sección).
   - **gpt-5.4-mini** es el más barato, pero hizo dos tareas a medias diciendo que estaban completas: el mismo defecto que el P8 quería quitar.
   - **T3 repetida con gpt-5.5 (3 corridas más, 13/10/2026):** entregó a la primera las 4 veces, siempre con `probar_ruta` y diciendo qué frases probó y dónde cayeron. Ruteo verificado (3 veces por frase): 3 corridas con todo 3/3 y una con 11 de 12 (una clasificación de «¿Qué precio tiene Kontrolya al mes?» cayó en licencias; el clasificador no es estable). Una vez creó una ruta nueva (`precio_kontrolya`) en vez de reforzar la existente; también cumple el pedido. 21–44 s y 0,056–0,115 USD por corrida (estimado). Costo total del Paso 2 con la repetición: ~0,95 USD.
-- **Decisión (¿ganó?):**
+- **Decisión (¿ganó?) — 13/10/2026: sí, ganó el prototipo con gpt-5.5.**
+  - **D8 = gpt-5.5** como modelo del Asistente con herramientas (`ToolInterviewService::DEFAULT_MODEL`); gpt-5.4-mini descartado; gpt-4o queda como referencia.
+  - **Prueba de ruteo del Asistente de hoy corregida:** al editar, `RouteSelfCheck` prueba primero las rutas tocadas (`TurnOutcome#touched_routes`) y después las demás, hasta 8. Verificado sobre la edición de la T2: la ruta 19 de 19 pasa a ser la primera probada; sin rutas tocadas, el orden no cambia.
+  - Sigue el **Paso 3**. Primero: que gpt-5.5 explique en el chat lo que hizo (con gpt-4o la respuesta era solo la pieza) y el avance en vivo mientras escribe (los turnos tardan 20–45 s).
 - **Cómo funciona:**
 - **Cómo pedírselo al Asistente:**
 
