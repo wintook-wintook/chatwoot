@@ -113,9 +113,9 @@ Escribe bien. Lo que tiene alrededor del modelo (comprobador, correcciones, prue
 
 **La falla, paso a paso:**
 1. El canal elige gpt-5.x en «Modelo de IA».
-2. El motor arma la llamada a mano con `max_tokens: 250` y `temperature: 0.7` (`contact_tracking_response_analyzer_job.rb:2096-2101`).
+2. El motor arma la llamada a mano con `max_tokens: 250` y `temperature: 0.7` (`contact_tracking_response_analyzer_job.rb:2126-2131`).
 3. OpenAI la rechaza: los modelos gpt-5 piden `max_completion_tokens` y no aceptan esa temperatura.
-4. El motor no revisa el código HTTP. Busca el texto de la respuesta, no lo encuentra y devuelve vacío. Como no hubo excepción, **no se escribe nada en el log** (`:2103-2107`).
+4. El motor no revisa el código HTTP. Busca el texto de la respuesta, no lo encuentra y devuelve vacío. Como no hubo excepción, **no se escribe nada en el log** (`:2133-2137`).
 5. La respuesta vacía no se envía (`:618`).
 6. El coordinador ve que el seguimiento «no respondió». Si la cuenta tiene BotSeller, le pasa el mensaje; si no, termina ahí (`:61-64`).
 
@@ -222,10 +222,10 @@ Además, la respuesta al cliente sale con límites muy cortos.
 |-----|-------|
 | `DEFAULT_MODEL = 'gpt-4o-mini'` | `app/services/contact_trackings/engine_config.rb:30` |
 | Piso de modelo solo para el Asistente y solicitudes, **no** para atender | `engine_config.rb:73` |
-| Respuesta conversacional: 250 tokens, temperatura 0.7 | `engine_config.rb:42` · `contact_tracking_response_analyzer_job.rb:2097-2100` |
+| Respuesta conversacional: 250 tokens, temperatura 0.7 | `engine_config.rb:42` · `contact_tracking_response_analyzer_job.rb:2127-2130` |
 | Base de conocimiento recortada a 800 caracteres | `contact_tracking_response_analyzer_job.rb:675` |
 | «Máximo 4 líneas» | `contact_tracking_response_analyzer_job.rb:719-721` |
-| Tiempo de espera de 10 s en esa llamada | `contact_tracking_response_analyzer_job.rb:2090` |
+| Tiempo de espera de 10 s en esa llamada | `contact_tracking_response_analyzer_job.rb:2120` |
 
 ### Propuesta (opciones a decidir)
 
@@ -328,7 +328,7 @@ La lista de modelos permitidos solo conoce gpt-4 y gpt-3.5. Aunque alguien quier
 | `MODEL_RANK` solo ordena esos cuatro | `engine_config.rb:75` |
 | El selector del canal tiene el mismo enum | `config/integration/apps.yml:31` |
 | El Asistente ya distingue modelos de razonamiento | `assistant/openai_chat.rb:24` (`REASONING_MODEL_RE`) y `:59-62` |
-| El motor manda `max_tokens` + `temperature` a mano | `knowledge_base_response_service.rb:1236-1256` · `contact_tracking_response_analyzer_job.rb:2096-2101` · `branch_classifier_service.rb:74` · `router_service.rb:209` · `external_db/asked_params.rb:85` |
+| El motor manda `max_tokens` + `temperature` a mano | `knowledge_base_response_service.rb:1236-1256` · `contact_tracking_response_analyzer_job.rb:2126-2131` · `branch_classifier_service.rb:74` · `router_service.rb:209` · `external_db/asked_params.rb:85` |
 | Archivos que llaman a OpenAI directo | 16 en `app/` |
 | El chat consultor ya midió gpt-5.x | `drafting_chat.rb:26-29` (gpt-5.5: nivel ChatGPT, pero 55 s) |
 
@@ -351,7 +351,7 @@ La lista de modelos permitidos solo conoce gpt-4 y gpt-3.5. Aunque alguien quier
 - [ ] Listar las 16 llamadas y cuáles son del motor de seguimientos
 - [ ] Crear el constructor de parámetros en `EngineConfig`
 - [ ] Pasar las llamadas del motor a ese constructor, una por una, sin cambiar el modelo todavía
-- [ ] Que cada llamada revise el código HTTP y registre el error de OpenAI (hoy un rechazo se lee como «sin texto» y no deja log: `contact_tracking_response_analyzer_job.rb:2103-2107`)
+- [ ] Que cada llamada revise el código HTTP y registre el error de OpenAI (hoy un rechazo se lee como «sin texto» y no deja log: `contact_tracking_response_analyzer_job.rb:2133-2137`)
 - [ ] Correr la pila de F0 con gpt-4o: tiene que dar lo mismo
 - [ ] Agregar gpt-5.x a la lista, al orden y al selector del canal
 - [ ] Decidir qué modelo usa el redactor del Asistente (decisión **D4**)
