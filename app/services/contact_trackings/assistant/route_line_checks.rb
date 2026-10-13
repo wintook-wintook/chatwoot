@@ -17,6 +17,7 @@ class ContactTrackings::Assistant::RouteLineChecks
   def call
     check_unclosed_directives
     check_routes_doing_nothing
+    check_default_route_ticket_first
     check_calendar_options
     check_service_requests
     check_paid_label_as_route_tag
@@ -65,6 +66,21 @@ class ContactTrackings::Assistant::RouteLineChecks
       findings.add(:degrading, :route_does_nothing, t('findings.route_does_nothing', route: route.name),
                    wrote: "@ruta(#{route.name}...): -", route: route.name)
     end
+  end
+
+  # ── la ruta por defecto abre un caso ANTES de contestar ─────────────────────
+  # Una ruta sin fuente con «-> @crear_ticket» abre el caso primero (ticket_first_branch?
+  # del motor): si es la ruta por defecto, todo lo que no encaje en otra ruta —dudas,
+  # precios— intenta abrir un caso en vez de contestar. Medido el 13/10/2026 (T1 del P8):
+  # el Asistente lo escribía así para «resolver» el aviso de route_does_nothing. Decisión
+  # D15: la ruta por defecto contesta con lo escrito. Ámbar: el motor no falla.
+  def check_default_route_ticket_first
+    ruta = map.default
+    return if ruta.nil? || ruta.source? || !ruta.escalation.to_s.match?(/@crear_ticket/i)
+    return if ruta.escalation.to_s.match?(/@agendar_calendar/i)
+
+    findings.add(:degrading, :default_route_ticket_first, t('findings.default_route_ticket_first', route: ruta.name),
+                 wrote: "@ruta(#{ruta.name}...): - -> #{ruta.escalation}", route: ruta.name)
   end
 
   # ── @agendar_calendar(…) con una opción que el motor no entiende (pieza 3) ────

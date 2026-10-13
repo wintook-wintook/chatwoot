@@ -214,8 +214,14 @@ es:
       route_does_nothing: >-
         La ruta '%{route}' no consulta ninguna fuente y no tiene qué hacer si no resuelve: contesta solo
         con lo que dice el Entrenamiento. Ante algo concreto (precios, horarios) puede inventar o prometer
-        lo que no hace. Si es a propósito (saludo, pedir datos), déjala así; si no, dale una fuente o un
-        «si no resuelve» (abrir un caso, agendar).
+        lo que no hace. Si es a propósito (saludo, pedir datos, o los datos ya están escritos en el
+        Entrenamiento), déjala así; si no, dale una fuente. Ojo: sin fuente, «-> @crear_ticket» no es un
+        «si no resuelve»: abre el caso antes de contestar.
+      default_route_ticket_first: >-
+        La ruta por defecto '%{route}' no consulta ninguna fuente y abre un caso: el motor abre el caso
+        ANTES de contestar. Todo lo que no encaje en otra ruta (dudas, precios, saludos) intentará abrir un
+        caso. Si la ruta por defecto debe contestar, déjala sin flecha («: -») o dale una fuente, y lo que
+        haya que derivar, en otra ruta.
       route_without_description: >-
         La ruta '%{route}' no tiene descripción. La descripción es LO ÚNICO que el clasificador usa
         para decidir a qué ruta va un mensaje: sin ella, esta ruta casi nunca se va a elegir.

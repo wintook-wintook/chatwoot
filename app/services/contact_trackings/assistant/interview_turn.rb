@@ -41,7 +41,8 @@ class ContactTrackings::Assistant::InterviewTurn
       opciones = { messages: messages, inbox: @inbox, one_shot: one_shot?,
                    drafts: { current: @params['draft'], delivered: delivered_draft, building: building } }
       servicio = if with_tools?
-                   ContactTrackings::Assistant::ToolInterviewService.new(@account, model: @params['tools_model'], brief: brief, **opciones)
+                   ContactTrackings::Assistant::ToolInterviewService.new(@account, model: @params['tools_model'], brief: brief,
+                                                                                   effort: @params['tools_effort'], **opciones)
                  else
                    ContactTrackings::Assistant::InterviewService.new(@account, **opciones)
                  end

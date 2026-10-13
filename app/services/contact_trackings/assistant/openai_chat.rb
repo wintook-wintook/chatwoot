@@ -60,9 +60,12 @@ class ContactTrackings::Assistant::OpenaiChat
   # Con herramientas (P8, ToolInterviewService): devuelve el MENSAJE del modelo —con su
   # `content` o con los `tool_calls` que pide—, o nil. `tool_choice: 'none'` le prohíbe
   # pedir más: tiene que contestar con lo que ya vio.
-  def call_with_tools(messages, tools:, model:, max_tokens:, tool_choice: 'auto')
+  # reasoning_effort: cuánto piensa la familia gpt-5 antes de contestar (low/medium/high);
+  # nil = el de por defecto del modelo. Los demás modelos no lo aceptan.
+  def call_with_tools(messages, tools:, model:, max_tokens:, tool_choice: 'auto', reasoning_effort: nil) # rubocop:disable Metrics/ParameterLists
     body = { model: model, messages: messages, tools: tools, tool_choice: tool_choice,
              response_format: { type: 'json_object' } }.merge(limits(model, max_tokens, 0.2))
+    body[:reasoning_effort] = reasoning_effort if reasoning_effort && model.match?(REASONING_MODEL_RE)
     post_message(body)
   end
 

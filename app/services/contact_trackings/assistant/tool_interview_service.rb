@@ -76,7 +76,9 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
     c) La @ruta_por_defecto es la que CONTESTA (informa), nunca una que abre un caso. Ojo con la regla
        del motor: una ruta SIN fuente con flecha («: - -> @crear_ticket(…)») abre el caso PRIMERO, antes
        de contestar. Una ruta que contesta con lo escrito va sin flecha: «@ruta(…): -». Si además
-       hace falta derivar lo que no se pueda resolver, eso va en otra ruta o en la prosa.
+       hace falta derivar lo que no se pueda resolver, eso va en otra ruta o en la prosa. Si comprobar
+       avisa que esa ruta «no consulta ninguna fuente», en la ruta por defecto déjala así (es a
+       propósito) y explícalo en "pendiente".
     d) Al crear, "piezas" lleva TODAS las piezas del Entrenamiento: no hay uno anterior. Por lo mismo,
        en probar_ruta el `cambio` lleva TODAS las líneas @ruta y la @ruta_por_defecto: el clasificador
        elige entre las rutas que le mandas, y una prueba con algunas no vale para el agente completo.
@@ -85,11 +87,24 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
        de este negocio; si no hay uno, la ruta contesta con lo escrito ("-") y lo dices en "pendiente".
   PROMPT
 
+  # Cuánto razona gpt-5 (D16, medido el 13/10/2026). nil = el de por defecto del modelo.
+  # ⚠ Con herramientas, /v1/chat/completions solo acepta 'none' para gpt-5.5 (HTTP 400:
+  # «Function tools with reasoning_effort are not supported … set reasoning_effort to
+  # 'none'»). Otro nivel pide la API /v1/responses.
+  #   crear desde un encargo: 'none' — 47–53 s y la misma calidad (3 corridas de la T1)
+  #                           contra 155–233 s con el de por defecto.
+  #   editar:                 el de por defecto — con 'none' no fue más rápido (32–48 s
+  #                           contra 21–44 s) y acertó menos en la T3 (1 de 2).
+  EFFORTS = %w[none].freeze
+  CREATE_EFFORT = 'none'
+
   # model: uno de MODELS; cualquier otro valor cae al de por defecto.
   # brief: el encargo del que se crea el agente (solo al crear desde un encargo).
-  def initialize(account, model: nil, brief: nil, **opciones)
+  # effort: uno de EFFORTS, para medir; nil = el del modelo.
+  def initialize(account, model: nil, brief: nil, effort: nil, **opciones)
     super(account, **opciones)
     @model = MODELS.include?(model) ? model : DEFAULT_MODEL
+    @effort = EFFORTS.include?(effort) ? effort : (CREATE_EFFORT if brief)
     @brief = brief
     @tools = Tools.new(account, draft: current_draft, inbox: inbox, usage: @chat.usage, brief: brief)
     @tool_log = []
@@ -99,7 +114,7 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
   end
 
   # Con qué herramientas, en qué orden, y con qué modelo: para la comparación (Paso 2).
-  def usage = super.merge('herramientas' => @tool_log, 'modelo_prototipo' => @model)
+  def usage = super.merge('herramientas' => @tool_log, 'modelo_prototipo' => @model, 'razonamiento_pedido' => @effort).compact
 
   private
 
@@ -116,7 +131,8 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
     loop do
       cerrar = usadas >= MAX_TOOL_CALLS || !within_budget?
       mensaje = @chat.call_with_tools(mensajes, tools: Tools.definitions(brief: @brief.present?), model: @model,
-                                                max_tokens: MAX_OUTPUT_TOKENS, tool_choice: cerrar ? 'none' : 'auto')
+                                                max_tokens: MAX_OUTPUT_TOKENS, tool_choice: cerrar ? 'none' : 'auto',
+                                                reasoning_effort: @effort)
       return nil if mensaje.nil?
 
       pedidos = Array(mensaje['tool_calls'])

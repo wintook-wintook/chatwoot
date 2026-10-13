@@ -215,8 +215,14 @@ en:
       route_does_nothing: >-
         Branch '%{route}' does not query any source and has nothing to do when it cannot solve: it answers
         only from the Training. Faced with something specific (prices, schedules) it may make things up or
-        promise what it does not do. If that is intended (greeting, asking for data), leave it; if not,
-        give it a source or an "if it cannot solve" action (open a case, book).
+        promise what it does not do. If that is intended (greeting, asking for data, or the data is already
+        written in the Training), leave it; if not, give it a source. Note: without a source,
+        "-> @crear_ticket" is not an "if it cannot solve": it opens the case before answering.
+      default_route_ticket_first: >-
+        The default branch '%{route}' does not query any source and opens a case: the engine opens the case
+        BEFORE answering. Everything that fits no other branch (questions, prices, greetings) will try to
+        open a case. If the default branch should answer, leave it without an arrow (": -") or give it a
+        source, and put what must be escalated in another branch.
       route_without_description: >-
         Branch '%{route}' has no description. The description is the ONLY thing the classifier uses
         to decide which branch a message goes to: without it, this branch will almost never be
