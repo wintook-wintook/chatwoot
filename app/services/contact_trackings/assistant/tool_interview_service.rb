@@ -72,8 +72,7 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
     @tool_log = []
     @seen = {}
     @tested = Set.new
-    @probes = {}
-    @check = nil
+    @report = ContactTrackings::Assistant::ToolTurnReport.new
   end
 
   # Con qué herramientas, en qué orden, y con qué modelo: para la comparación (Paso 2).
@@ -116,27 +115,20 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
     clave = [nombre, argumentos]
     return { repetida: 'ya hiciste esta misma consulta en este turno', resultado: JSON.parse(@seen[clave]) }.to_json if @seen.key?(clave)
 
-    progress(Tools::STAGES.fetch(nombre, :writing))
-    @seen[clave] = @tools.run(nombre, argumentos).tap { |resultado| remember_result(nombre, resultado) }
+    etapa = Tools::STAGES.fetch(nombre, :writing)
+    progress(etapa)
+    @seen[clave] = @tools.run(nombre, argumentos).tap do |resultado|
+      @report.record(nombre, argumentos, resultado)
+      progress(etapa)
+    end
   end
 
-  # Lo último que de verdad corrió: cada frase con su ruta, y el comprobador. Con esto se
-  # arma el reporte del turno (with_report), no con lo que el modelo diga que probó.
-  def remember_result(nombre, resultado)
-    datos = JSON.parse(resultado)
-    remember_probes(datos) if nombre == 'probar_ruta'
-    @check = datos if nombre == 'comprobar' && datos.is_a?(Hash) && datos.key?('ejecuta')
-  rescue JSON::ParserError
-    nil
+  # En vivo (Paso 3.2): lo que ya corrió viaja con CADA aviso de etapa —también los de
+  # la guardia—, y la pantalla lo muestra debajo de la etapa (ver ToolTurnReport).
+  def progress(stage, **info)
+    super(stage, **info, steps: @report.steps.presence)
   end
 
-  def remember_probes(datos)
-    Array(datos).each { |p| @probes[p['frase']] = p if p.is_a?(Hash) && p['frase'] }
-  end
-
-  # ── el reporte del turno (Paso 3.1): siempre el mismo formato ──────────────────
-  # El mensaje del modelo (qué hizo y por qué) + «Qué probé», armado con lo que corrió,
-  # + «Pendiente». Los cambios no se repiten: la pantalla ya los muestra (ChangeList).
   # Los campos del prototipo, ya usados. Si quedaran, ReplyParser.with_extras pega al
   # mensaje todo texto de un campo que no conoce: la pieza aparecía al final del chat.
   CONSUMED_KEYS = %w[piezas quitar pendiente].freeze
@@ -144,36 +136,11 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
     with_report(reply)&.except(*CONSUMED_KEYS)
   end
 
+  # El reporte fijo del turno (Paso 3.1), solo cuando entrega un cambio.
   def with_report(reply)
     return reply if reply.blank? || reply['entrenamiento'].blank?
 
-    partes = [reply['mensaje'].to_s.strip, probes_report, pending_report(reply['pendiente'])]
-    reply.merge('mensaje' => partes.compact_blank.join("\n\n"))
-  end
-
-  def probes_report
-    lineas = @probes.values.map { |p| probe_line(p) }
-    lineas << report_t(@check['ejecuta'] ? 'checker_ok' : 'checker_blocking', count: Array(@check['bloqueantes']).size) if @check
-    lineas = [report_t('nothing')] if lineas.empty?
-    "**#{report_t('tested')}**\n#{lineas.map { |l| "- #{l}" }.join("\n")}"
-  end
-
-  def probe_line(probe)
-    datos = { phrase: probe['frase'], route: probe['cae_en'], times: probe['veces'] }
-    return report_t('stable', **datos) unless probe['estable'] == false
-
-    report_t('unstable', **datos, others: Array(probe['a_veces_en']).join(', '))
-  end
-
-  def pending_report(pendiente)
-    lista = Array(pendiente).map(&:to_s).compact_blank
-    return nil if lista.empty?
-
-    "**#{report_t('pending')}**\n#{lista.map { |l| "- #{l}" }.join("\n")}"
-  end
-
-  def report_t(key, **args)
-    I18n.t("tracking_assistant.tools_report.#{key}", locale: ContactTrackings::Assistant::Language.resolve, **args)
+    reply.merge('mensaje' => @report.message(reply['mensaje'], reply['pendiente']))
   end
 
   # Lo que el modelo PROBÓ con una herramienta no es un cambio a escondidas: cuenta como

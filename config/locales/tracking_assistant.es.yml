@@ -80,6 +80,16 @@ es:
       unstable: "«%{phrase}» → %{route} ⚠ %{times}, a veces cae en %{others}"
       checker_ok: "Comprobador: se ejecuta"
       checker_blocking: "Comprobador: %{count} error(es) que impiden ejecutarlo"
+      # Lo que se ve EN VIVO mientras el turno corre (Paso 3.2): una línea por herramienta.
+      live:
+        resources: "Revisé lo que tiene la cuenta"
+        directive: "Leí cómo funciona %{name}"
+        sheet: "Miré la hoja %{name}"
+        check_ok: "Comprobé: se ejecuta ✓"
+        check_blocking: "Comprobé: %{count} error(es) que impiden ejecutarlo"
+        route_stable: "Probé %{total} frase(s): todas estables ✓"
+        route_unstable: "Probé %{total} frase(s): %{unstable} inestable(s) ⚠"
+        failed: "No se pudo usar %{tool}"
     findings:
       route_line_unparsed: >-
         Línea %{line}: el motor NO la reconoce como ruta — %{reason}. El patrón exacto es

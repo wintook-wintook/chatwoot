@@ -81,6 +81,16 @@ en:
       unstable: "«%{phrase}» → %{route} ⚠ %{times}, sometimes lands in %{others}"
       checker_ok: "Checker: it runs"
       checker_blocking: "Checker: %{count} error(s) that keep it from running"
+      # What is shown LIVE while the turn runs (step 3.2): one line per tool.
+      live:
+        resources: "Checked what the account has"
+        directive: "Read how %{name} works"
+        sheet: "Looked at the sheet %{name}"
+        check_ok: "Checked: it runs ✓"
+        check_blocking: "Checked: %{count} error(s) that keep it from running"
+        route_stable: "Tested %{total} phrase(s): all stable ✓"
+        route_unstable: "Tested %{total} phrase(s): %{unstable} unstable ⚠"
+        failed: "Could not use %{tool}"
     findings:
       route_line_unparsed: >-
         Line %{line}: the engine does NOT read this as a branch — %{reason}. The exact pattern is

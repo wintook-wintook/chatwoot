@@ -79,6 +79,12 @@ export default {
         of: this.stage.of,
       });
     },
+    // Paso 3.2 del P8: lo que ya corrió en el turno con herramientas, una línea por
+    // herramienta («Probé 4 frases: todas estables ✓»). Sin herramientas no viene.
+    stageSteps() {
+      const pasos = this.stage && this.stage.steps;
+      return Array.isArray(pasos) ? pasos : [];
+    },
     // Cuántas de las preguntas ofrecidas ya tienen respuesta elegida.
     pickedCount() {
       return Object.keys(this.picked).length;
@@ -367,15 +373,23 @@ export default {
 
       <div v-if="isThinking" class="flex justify-start">
         <div
-          class="flex items-center gap-2 max-w-[85%] px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700"
+          class="flex flex-col gap-1 max-w-[85%] px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700"
         >
-          <Spinner size="" />
-          <span
-            v-if="stageLabel"
-            class="text-xs text-slate-600 dark:text-slate-300"
+          <ul
+            v-if="stageSteps.length"
+            class="text-xs text-slate-500 dark:text-slate-400 list-none"
           >
-            {{ stageLabel }}
-          </span>
+            <li v-for="(paso, i) in stageSteps" :key="i">{{ paso }}</li>
+          </ul>
+          <div class="flex items-center gap-2">
+            <Spinner size="" />
+            <span
+              v-if="stageLabel"
+              class="text-xs text-slate-600 dark:text-slate-300"
+            >
+              {{ stageLabel }}
+            </span>
+          </div>
         </div>
       </div>
     </div>
