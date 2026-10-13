@@ -576,12 +576,27 @@ Sin migración; el punto de retorno sigue siendo el tag `estable-2026-10-12-ante
 - [x] Tabla en el Registro: hoy contra prototipo, por modelo
 - [x] Decidir: si gana claro, sigue el Paso 3; si no, se apaga la bandera y se anota qué herramienta sí ayudó
 
-#### Paso 3 · Crecerlo (solo si ganó)
-1. **`editar_pieza`** (el P5): cambiar una ruta o sección sin reescribir el Entrenamiento.
-2. **Avance en vivo (streaming)**: la respuesta aparece mientras se escribe.
-3. **Un solo chat**: unir el consultor y el redactor, con un solo modelo y todo el contexto.
-4. **`simular` y `ver_conversacion`** (P2 y P4): probar la respuesta completa al cliente y aprender de conversaciones reales.
-5. **Claude como segundo proveedor** (decisión **D12**): misma pila de pruebas, y se queda el que gane por calidad, costo y tiempo.
+#### Paso 3 · Crecerlo (ganó el 13/10/2026; reordenado con lo aprendido en la medición)
+`editar_pieza` (el P5) ya entró al prototipo en su forma mínima: el modelo entrega solo las piezas que cambia (ver Registro, Paso 1).
+
+```
+  3.1  Respuesta clara + prueba estable      chico     ── lo que ya tenemos, más confiable
+  3.2  Ver cada prueba en vivo               chico     ── reemplaza el "streaming"
+  3.3  Un solo chat (crear con herramientas) grande    ── la T1, que sigue con fallas
+  3.4  simular · ver_conversacion            mediano   ── P2 y P4 (decide D13)
+  3.5  Claude como segundo proveedor         mediano   ── D12, requiere clave de Anthropic
+  ───────────────────────────────────────────────────
+  D14  ¿A qué cuentas se activa y cuándo?    decisión  ── hoy solo la cuenta 2
+```
+
+- [ ] **3.1 · Respuesta clara y prueba estable.**
+  - La respuesta del chat siempre con el mismo formato: **qué cambié · qué probé · qué resultado dio · qué queda pendiente**. gpt-5.5 casi siempre lo hace, pero hoy depende de él (es el «esquema fijo» del P6a).
+  - `probar_ruta` clasifica cada frase **3 veces** y avisa si la ruta no es estable («cayó 2 de 3 en Kontrolya»): el clasificador del motor no siempre da la misma ruta (Registro, Paso 1). Cuesta poco: la clasificación es una llamada mínima.
+- [ ] **3.2 · Ver cada prueba en vivo** (reemplaza el «streaming» del texto, que con respuestas en JSON es complicado y aporta poco): mientras el turno corre se ve cada herramienta con su resultado corto («Probé 4 frases: 4 en su ruta ✓», «Comprobé: sin errores»). En los 20–45 s del turno se ve avance real.
+- [ ] **3.3 · Un solo chat.** Crear desde cero sigue por otro camino (chat consultor → encargo → redacción de una sola vez) y ahí siguen las fallas de la T1 (se pierde la Línea de la Vida, la ruta por defecto abre casos, una frase de crisis ambigua). Primero: que la redacción de una sola vez también use herramientas y entregue por piezas, y repetir la T1. La fusión completa del consultor con el editor, después, si esto funciona.
+- [ ] **3.4 · `simular` y `ver_conversacion`** (P2 y P4): `simular` pasa un mensaje de cliente por el motor real y devuelve la respuesta completa que daría el agente, no solo la ruta; `ver_conversacion` lee una conversación real enmascarada, solo de la misma cuenta y solo los últimos mensajes. Antes, decidir **D13**.
+- [ ] **3.5 · Claude como segundo proveedor** (**D12**): las mismas tareas de prueba; se queda el que gane en calidad, costo y tiempo. Requiere una clave de Anthropic (hoy la clave sale de la integración OpenAI de cada cuenta).
+- **D14 · ¿A qué cuentas se activa y cuándo?** Hoy solo la cuenta 2. Cada turno cuesta ~0,05–0,17 USD (estimado) y tarda 20–45 s. Se decide después de 3.1 y 3.2.
 
 ### Riesgos y cómo se controlan
 
@@ -656,6 +671,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 | D11 | Quién ve el prototipo | solo cuenta 2 · cuentas elegidas | **solo cuenta 2** |
 | D12 | Cuándo y cómo entra Claude | en el prototipo · en el Paso 3 | **Paso 3**: primero demostrar el diseño; luego comparar proveedores. Requiere una clave de Anthropic, porque hoy la clave sale de la integración OpenAI de cada cuenta |
 | D13 | ¿Qué se tapa al leer conversaciones completas? | lo que tapa hoy PhraseMasker · también correos y nombres | decidir al llegar a `ver_conversacion` (Paso 3) |
+| D14 | ¿A qué cuentas se activa el Asistente con herramientas y cuándo? | solo cuenta 2 · cuentas elegidas · todas | decidir después de 3.1 y 3.2, con el costo y el tiempo por turno a la vista |
 
 **Decidido el 12/10/2026:** D8 = gpt-5.4-mini + gpt-5.5, con gpt-4o de referencia · D9 = las 5 tareas de la tabla · D10 = medir primero: P6c y UNA tarea con el Asistente de hoy; con ese costo real se propone el tope antes de correr las demás → tope de 3 USD para T2–T5 (la T1 costó < 0,10 USD); para la comparación del Paso 2, **10 USD** · D11 = solo cuenta 2, bandera `assistant_tools` · Alcance del prototipo = chat de edición (T2–T5); T1 en el Paso 3.
 
@@ -672,7 +688,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 | D5 | Qué conversaciones revisa el lote | últimas N · las que pasaron a humano · por etiqueta | las que pasaron a humano: ahí falló algo |
 | D6 | ¿El juez y la pila corren solos alguna vez? | solo con botón · programado | **solo con botón** (costo) |
 | D7 | ¿Un seguimiento sin Entrenamiento puede negar que es bot? | sí (como hoy) · no | **no**: misma regla que con Entrenamiento («si te preguntan si eres persona, no lo afirmes») |
-| D8–D13 | Decisiones del P8 (modelo, tareas, gasto, alcance, Claude, privacidad) | — | ver «P8 → Decisiones del P8» |
+| D8–D14 | Decisiones del P8 (modelo, tareas, gasto, alcance, Claude, privacidad, activación) | — | ver «P8 → Decisiones del P8» |
 
 ---
 
