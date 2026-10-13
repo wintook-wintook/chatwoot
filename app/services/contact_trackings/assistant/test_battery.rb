@@ -66,7 +66,8 @@ module ContactTrackings::Assistant::TestBattery
   def row(fila)
     ruta = { true => '✅', false => '❌' }.fetch(fila['ruta_ok'], '—')
     celdas = [fila['id'], fila['conversation'], fila['message'], fila['reply'], ruta, fila['cumple'] ? '✅' : '❌',
-              [fila['motivo'], *Array(fila['fallas'])].compact_blank.join(' · ')]
+              [fila['motivo'], *Array(fila['fallas']), *Array(fila['avisos']).map { |a| "aviso: #{a}" },
+               *Array(fila['por_revisar']).map { |d| "por revisar: #{d}" }].compact_blank.join(' · ')]
     "| #{celdas.map { |c| c.to_s.gsub(/\s+/, ' ').gsub('|', '\\|').truncate(400) }.join(' | ')} |"
   end
 end

@@ -358,8 +358,8 @@ Fue una decisión **deliberada** (`dry_run_service.rb:20-33`): la respuesta la a
 - [ ] Diseñar la conversación simulada (decisión **D3**: objeto en memoria o transacción con rollback)
 - [ ] Hacer que el camino real acepte la simulación **sin cambiar** lo que hace con una conversación real
 - [ ] Escribir el juez con salida en esquema estricto (ver P6)
-- [ ] Que el juez no invente incumplimientos de un [ESTILO] largo (F0, 13/10/2026: reprobó 40 de 43 por «dos preguntas» y solo 1 de 129 respuestas las tenía); contar lo contable (preguntas, líneas, emojis) sin IA
-- [ ] Agregar el informe del juez al informe .md de la pila de pruebas
+- [x] Que el juez no invente incumplimientos de un [ESTILO] largo (F0, 13/10/2026: reprobó 40 de 43 por «dos preguntas» y solo 1 de 129 respuestas las tenía); contar lo contable (preguntas, líneas, emojis) sin IA → **3.4a**, ver Registro → P2
+- [x] Agregar el informe del juez al informe .md de la pila de pruebas (fallas, avisos y «por revisar»)
 - [ ] Probar con ADAM y el v6.11: ¿encuentra lo que ya sabemos que está mal?
 
 ### Riesgos
@@ -696,7 +696,20 @@ Sin migración; el punto de retorno sigue siendo el tag `estable-2026-10-12-ante
   5. Medición: repetir la **T1** (encargo #1131) con el prototipo contra la de hoy en español (sesión #3898): Línea de la Vida, «Dudas» abre casos y es la ruta por defecto, «no estoy seguro/a» en crisis, «Nombre» perdido, reglas duplicadas, idioma. Costo estimado 0,10–0,30 USD.
 
   No cambian el chat consultor ni la lectura del encargo. La fusión completa del consultor con el editor, después, si esto funciona.
-- [ ] **3.4 · `simular` y `ver_conversacion`** (P2 y P4): `simular` pasa un mensaje de cliente por el motor real y devuelve la respuesta completa que daría el agente, no solo la ruta; `ver_conversacion` lee una conversación real enmascarada, solo de la misma cuenta y solo los últimos mensajes. Antes, decidir **D13**.
+- [ ] **3.4 · El ciclo revisar → probar → diagnosticar → proponer** (P2 y P4). Que el Asistente trabaje como ChatGPT con el manual cargado, pero probando contra el motor real. Piezas, en orden:
+
+  ```
+   a) Juez que cuenta ──► b) simular ──► c) ver_pruebas ──► e) el ciclo ──► f) «revísalo tal cual»
+                                         d) ver_conversacion                 g) manual para ChatGPT
+  ```
+
+  - [x] **a) Un juez en el que se pueda confiar** (13/10/2026, ver Registro → P2): lo contable sin IA; lo que agregó el sistema, aparte; la fecha de hoy; los datos de sus hojas verificados antes; la ruta contra su línea de [ALCANCE POR RAMA].
+  - [ ] **b) `simular`:** 1–3 mensajes de cliente por el motor real en el canal de prueba; devuelve la respuesta completa, la ruta, lo que hizo (caso, etiqueta, evento) y el veredicto del juez. Tope de 5 por turno. Con el borrador sin guardar, en una copia temporal escondida que se borra al terminar (**D21**). El juez recibe también el contexto de la conversación (seguimiento, casos, calendario): hoy marca como «horario inventado» la fecha real del próximo contacto.
+  - [ ] **c) `ver_pruebas`:** lee el último resultado de «Probar el agente» (Redis) y dice qué falló y por qué.
+  - [ ] **d) `ver_conversacion`:** los últimos 20 mensajes de una conversación de la misma cuenta, con lo que tapa PhraseMasker más los correos (**D13**).
+  - [ ] **e) El ciclo** (instrucciones del Asistente): ante una falla, primero la causa (Entrenamiento, ruta que no se distingue, sección faltante, dato que no está en la hoja, modelo); propone solo las piezas que cambian; aplica solo con un sí; vuelve a probar lo que falló y muestra antes / después. Caso de aceptación: **Grúas** («tu servicio ha sido confirmado»).
+  - [ ] **f) Modo «revísalo tal cual»:** un prompt escrito fuera (ChatGPT) se diagnostica sin reescribirlo.
+  - [ ] **g) Manual para ChatGPT:** .md descargable con directivas, rutas, secciones y límites del motor, armado del mismo catálogo que usa el motor.
 - [ ] **3.5 · Claude como segundo proveedor** (**D12**): las mismas tareas de prueba; se queda el que gane en calidad, costo y tiempo. Requiere una clave de Anthropic (hoy la clave sale de la integración OpenAI de cada cuenta).
 - **D14 · ¿A qué cuentas se activa y cuándo?** Hoy solo la cuenta 2. Cada turno cuesta ~0,05–0,17 USD (estimado) y tarda 20–45 s. Se decide después de 3.1 y 3.2.
 
@@ -772,7 +785,8 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 | D10 | Tope de gasto en OpenAI para el Paso 2 | monto fijo · sin tope | monto fijo, acordado antes de correr |
 | D11 | Quién ve el prototipo | solo cuenta 2 · cuentas elegidas | **solo cuenta 2** |
 | D12 | Cuándo y cómo entra Claude | en el prototipo · en el Paso 3 | **Paso 3**: primero demostrar el diseño; luego comparar proveedores. Requiere una clave de Anthropic, porque hoy la clave sale de la integración OpenAI de cada cuenta |
-| D13 | ¿Qué se tapa al leer conversaciones completas? | lo que tapa hoy PhraseMasker · también correos y nombres | decidir al llegar a `ver_conversacion` (Paso 3) |
+| D13 | ¿Qué se tapa al leer conversaciones completas? | lo que tapa hoy PhraseMasker · también correos y nombres | **Decidido 13/10/2026: también los correos; los nombres no** (se confunden con nombres de producto) |
+| D21 | ¿`simular` prueba lo guardado o también el borrador sin guardar? | solo lo guardado · el borrador en una copia temporal | **Decidido 13/10/2026: el borrador, en una copia temporal escondida** que se borra al terminar |
 | D14 | ¿A qué cuentas se activa el Asistente con herramientas y cuándo? | solo cuenta 2 · cuentas elegidas · todas | decidir después de 3.1 y 3.2, con el costo y el tiempo por turno a la vista |
 | D15 | Ruta por defecto sin fuente propia | contestar con lo escrito · abrir caso primero · exigir fuente propia | **Decidido 13/10/2026: contesta con lo escrito**, con aviso nuevo del comprobador (ver Registro, 3.3) |
 | D16 | Tiempo de crear con herramientas (155–233 s) | aceptarlo · menos razonamiento · menos herramientas | **Decidido 13/10/2026: `none` al crear (47–53 s), el de por defecto al editar** (ver Registro, 3.3) |
@@ -935,8 +949,8 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 - **Resultados con gpt-4o (la línea base):** ruta correcta 26/31 (ADAM 17/18, v6.11 4/5, Grúas 5/8); primera respuesta en 7–10 s de mediana (5 s son la espera del motor; la llamada al modelo, 1,1–1,3 s); $0.002–0.008 por respuesta; 0 errores de OpenAI.
 - **Hallazgos:**
   1. **El banco de pruebas no sirve con agentes de canal propio.** Grúas tiene canal #4: el seguimiento se ata ahí, la validación «Conversation must belong to the selected inbox» lo rechaza y toda la pila sale «sin respuesta» (también desde «Probar el agente»). En la medición se esquivó solo dentro del script. Pendiente arreglarlo en `TestBatteryJob` (P1, Pasos).
-  2. **El juez no distingue modelos con un [ESTILO] largo.** Reprobó 40 de 43 en los 3 modelos casi siempre por «dos preguntas en un mensaje»; contadas a mano, solo 1 de 129 respuestas trae dos «?». La columna «cumple» es ruido hoy: va al P2.
-  3. **Grúas inventa con los 3 modelos** (horarios, datos técnicos, «tu servicio ha sido confirmado»): es del Entrenamiento, no del modelo. No se creó ningún evento de calendario.
+  2. **El juez no distingue modelos con un [ESTILO] largo.** Reprobó 40 de 43 en los 3 modelos casi siempre por «dos preguntas en un mensaje»; contadas a mano, solo 1 de 129 respuestas trae dos «?». La columna «cumple» era ruido: **arreglado en 3.4a** (ver Registro → P2).
+  3. **Grúas inventa con los 3 modelos** («tu servicio ha sido confirmado»): es del Entrenamiento, no del modelo. No se creó ningún evento de calendario. **Corregido con 3.4a:** los horarios y las placas que el juez llamó inventados eran reales (la placa 92UN8A está en su hoja de remolques; el 16/10 13:03 es el próximo contacto del seguimiento). Lo inventado es la confirmación.
   4. La caché de `rails runner` es `null_store`: el estado del banco no se lee desde consola; los resultados se rearmaron desde las conversaciones.
 - **Pila de pruebas:** 43 conversaciones por modelo en #493 (129 en total, más 3 de Grúas que no corrieron); el canal #493 quedó de vuelta en gpt-4o.
 
@@ -965,12 +979,14 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
   |---|---|---|---|
   | Ruta correcta (ADAM + v6.11 + Grúas) | 26/31 | 26/31 | 26/31 |
   | Cumple según el juez (poco confiable, ver F0) | 3/43 | 2/43 | 2/43 |
+  | Cumple según el juez nuevo (3.4a, mismas respuestas) | **14/43** | **23/43** | **24/43** |
   | Primera respuesta, mediana | 7–10 s | 5–12 s | 6–11 s |
   | Llamada al modelo, mediana | 1,1–1,3 s | 1,4–1,7 s | 2,4–3,7 s |
   | Costo por respuesta | $0.002–0.008 | $0.001–0.003 | $0.006–0.020 |
   | Costo de las 43 pruebas | $0.28 | $0.09 | $0.72 |
 
   Precios estimados por millón de tokens (entrada / caché / salida): gpt-4o 2.50 / 1.25 / 10; gpt-5.4-mini 0.75 / 0.075 / 4.50; gpt-5.5 5 / 0.50 / 30.
+- **Dato nuevo (3.4a, 13/10/2026):** con el juez arreglado, la calidad SÍ cambia por modelo: gpt-4o es el que más falla, sobre todo en ADAM (7/29 contra 17/29): le habla de tú al prospecto (14 veces) y cierra con una afirmación (8). Una sola corrida del juez (entre corridas ADAM con gpt-4o varió 4–9 de 29). **D19 se puede reabrir** con este dato; no se cambió nada.
 - **Por qué así:** la ruta no cambia con el modelo que contesta, y el juez no encontró diferencias reales de calidad. gpt-5.5 no cumple el criterio («sube claramente el % que cumple»): cuesta 2,6× y es el más lento. gpt-5.4-mini no empeoró nada medible y cuesta ~⅓: opción, no defecto, porque la calidad solo la midió un juez débil.
 - **Cómo funciona:** en la configuración del agente IA del canal, el selector ofrece gpt-4o (Recomendado) y GPT-5.4 Mini (Económico). Con GPT-5.4 Mini, solo las respuestas al cliente usan ese modelo; elegir ruta, fechas, etc. siguen en gpt-4o (D18). Para ver el selector nuevo hay que reiniciar `chatwoot-dev.service`.
 - **Pila de pruebas:** la de F0 (3 agentes × 3 modelos, 129 respuestas); `apps.yml` y `ALLOWED_MODELS` quedan con los mismos 5 modelos (lo verifica `engine_config_spec.rb`); ningún canal real cambió (los 3 siguen en gpt-4o).
@@ -988,10 +1004,30 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 - **Cómo pedírselo al Asistente (banco):** en el Asistente, con el agente guardado, botón «Probar el agente» → «Correr la pila».
 
 ### P2 · Simulador y juez
-- **Qué se hizo:**
-- **Cómo funciona:**
+- **Qué se hizo (3.4a · juez que cuenta, 13/10/2026):** el juez de la pila de pruebas (`TestBatteryJudge`) se rehízo en cinco partes:
+  1. `ReplyParts` separa lo que escribió el modelo de lo que agrega el sistema: la #etiqueta, la firma (`-TB`, `_Fuente_`), el enlace del foro, y los mensajes armados por código (horarios del calendario, «Recibí 1 servicio…», «Tu caso … fue registrado»).
+  2. `StyleCounts` lee del [ESTILO] las reglas que se pueden contar y las mide sin IA: preguntas, cierre en pregunta, renglones (~100 caracteres), párrafos y emojis. Un «preferentemente…» queda como aviso, no como falla, y con «el límite no aplica a procedimientos», los pasos no cuentan. La IA recibe el [ESTILO] **sin esas oraciones**: con ellas a la vista seguía contando aunque se le prohibiera.
+  3. `SheetFacts` busca en las hojas de la cuenta los datos con números de la respuesta (placas, modelos, toneladas) y se los pasa al juez como reales.
+  4. En una prueba de ruta, en qué ruta cayó lo dice solo la #etiqueta. Cómo atendió se califica contra la línea de esa ruta en [ALCANCE POR RAMA], no contra su nombre.
+  5. La IA recibe la fecha de hoy, y un dato que no puede comprobar va a «por revisar», no a fallas.
+  El job le pasa al juez los mensajes por separado. El informe .md agrega avisos y «por revisar».
+- **Cómo funciona:** `cumple` = sin fallas contadas y la IA dice que cumple. Cada resultado trae `medidas` (preguntas, renglones, párrafos, emojis, caracteres), `agregado` (lo del sistema), `avisos` y `por_revisar`.
 - **Pila de pruebas:**
-- **Cómo pedírselo al Asistente:**
+  - Reglas leídas de los 19 [ESTILO] de la cuenta 2: ADAM v2.4 → párrafos ≤4 · una pregunta · cierre en pregunta · 1 emoji; v6.11 → renglones ≤4 · 2 emojis; Grúas → una pregunta · renglones ≤4; Universidad → «preferentemente una pregunta» como aviso y 2 emojis como regla; los que no dicen nada contable, sin reglas.
+  - Las 129 respuestas de F0, calificadas otra vez (sin mandar mensajes, ~$0.40 por corrida):
+
+    | | Juez viejo | Juez nuevo |
+    |---|---|---|
+    | Fallas por «dos preguntas» | 40 | **0** (contadas: 0 respuestas con dos «?» en ADAM) |
+    | «No siguió la ruta X» en pruebas que sí cayeron en X | varias | **0** |
+    | Horarios del calendario / placa de la hoja «inventados» | sí | **0** |
+    | Cumple gpt-4o / gpt-5.4-mini / gpt-5.5 | 3 / 2 / 2 de 43 | 14 / 23 / 24 de 43 |
+
+  - Lo que queda reprobado es real y se puede comprobar: ADAM le habla de tú al prospecto (pide usted), cierra con «Así podré entender mejor…» (pide cerrar en pregunta) y, en «manejo de redes», no pregunta qué redes manejan (lo pide su ruta). Grúas confirma un servicio que el sistema no confirmó, y en el catálogo se pasa de 4 renglones.
+  - De punta a punta: la pila real de ADAM (4 pruebas, canal #493) corre, guarda `medidas` y `agregado`, y el informe sale bien.
+  - **Límite que queda:** el juez no ve el seguimiento ni el calendario de la conversación, y marca como inventada la fecha real del próximo contacto (16/10 13:03). Se resuelve en 3.4b (`simular` le pasará ese contexto).
+  - Rubocop sin hallazgos.
+- **Cómo pedírselo al Asistente:** no se pide: es el juez de «Probar el agente» (botón → «Correr la pila»). Desde 3.4c el Asistente lo leerá solo (`ver_pruebas`).
 
 ### P4 · Revisión en lote
 - **Qué se hizo:**

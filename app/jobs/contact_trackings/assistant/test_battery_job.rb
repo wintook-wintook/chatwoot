@@ -92,9 +92,9 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
     ultimo = conversacion.messages.maximum(:id).to_i
     conversacion.messages.create!(account: @account, inbox: @inbox, sender: conversacion.contact,
                                   message_type: :incoming, content: escenario.message)
-    respuesta = wait_reply(conversacion, ultimo)
-    escenario.to_h.merge(conversation: conversacion.display_id, reply: respuesta, cases: cases(conversacion),
-                         **juez.call(escenario, respuesta))
+    mensajes = wait_reply(conversacion, ultimo)
+    escenario.to_h.merge(conversation: conversacion.display_id, reply: mensajes.join("\n\n"), cases: cases(conversacion),
+                         **juez.call(escenario, mensajes))
   end
 
   def new_conversation(escenario)
@@ -113,6 +113,7 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
   end
 
   # Espera hasta que el agente conteste y se quede callado QUIET_SECONDS, o WAIT_SECONDS.
+  # Devuelve los mensajes uno por uno: el juez separa los que armó el sistema (ReplyParts).
   def wait_reply(conversacion, desde)
     inicio = Time.current
     loop do
@@ -121,7 +122,7 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
       break if salientes.any? && Time.current - salientes.last.created_at > QUIET_SECONDS
       break if Time.current - inicio > WAIT_SECONDS
     end
-    conversacion.messages.where('id > ?', desde).where(message_type: :outgoing, private: false).order(:id).pluck(:content).join("\n\n")
+    conversacion.messages.where('id > ?', desde).where(message_type: :outgoing, private: false).order(:id).pluck(:content)
   end
 
   def cases(conversacion)
