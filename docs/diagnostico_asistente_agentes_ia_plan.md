@@ -778,7 +778,7 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
   - **gpt-5.5** es el único que hizo las cuatro bien, y en las dos donde el Asistente de hoy falla (T3, T5). Es el más lento (12–44 s) y el más caro por turno (0,04–0,17 USD).
   - **gpt-4o con herramientas** es rápido y barato, pero no razona mejor que hoy: en la T3 creó una ruta que no rutea. Además pone la pieza como mensaje para la persona (la respuesta en el chat es solo la línea `@ruta(…)` o la sección).
   - **gpt-5.4-mini** es el más barato, pero hizo dos tareas a medias diciendo que estaban completas: el mismo defecto que el P8 quería quitar.
-  - Límite de la medición: una corrida por casilla. Antes de decidir conviene repetir la T3 con gpt-5.5 2 o 3 veces (~0,35 USD).
+  - **T3 repetida con gpt-5.5 (3 corridas más, 13/10/2026):** entregó a la primera las 4 veces, siempre con `probar_ruta` y diciendo qué frases probó y dónde cayeron. Ruteo verificado (3 veces por frase): 3 corridas con todo 3/3 y una con 11 de 12 (una clasificación de «¿Qué precio tiene Kontrolya al mes?» cayó en licencias; el clasificador no es estable). Una vez creó una ruta nueva (`precio_kontrolya`) en vez de reforzar la existente; también cumple el pedido. 21–44 s y 0,056–0,115 USD por corrida (estimado). Costo total del Paso 2 con la repetición: ~0,95 USD.
 - **Decisión (¿ganó?):**
 - **Cómo funciona:**
 - **Cómo pedírselo al Asistente:**
