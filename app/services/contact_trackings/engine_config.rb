@@ -32,7 +32,7 @@ module ContactTrackings
     # Espejo del enum de `model_ia` en config/integration/apps.yml. Si allí se agrega
     # un modelo, hay que agregarlo aquí (spec/services/contact_trackings/engine_config_spec.rb
     # lo verifica leyendo el YAML, para que no se desincronicen en silencio).
-    ALLOWED_MODELS = %w[gpt-4o-mini gpt-4o gpt-4-turbo gpt-3.5-turbo].freeze
+    ALLOWED_MODELS = %w[gpt-4o-mini gpt-4o gpt-4-turbo gpt-3.5-turbo gpt-5.4-mini gpt-5.5].freeze
 
     # Topes actuales de cada punto de llamada. Centralizarlos no cambia el
     # comportamiento — son los mismos valores que estaban en línea — pero deja el
@@ -72,7 +72,15 @@ module ContactTrackings
     # «entrega y recolección» = dos); el modelo chico se las salta.
     MODEL_FLOOR = { authoring_assistant: 'gpt-4o', service_requests: 'gpt-4o' }.freeze
     # Orden de capacidad, de menor a mayor. Solo para comparar contra el piso.
-    MODEL_RANK = %w[gpt-3.5-turbo gpt-4o-mini gpt-4-turbo gpt-4o].freeze
+    MODEL_RANK = %w[gpt-3.5-turbo gpt-4o-mini gpt-4-turbo gpt-4o gpt-5.4-mini gpt-5.5].freeze
+
+    # Decisión D18 (13/10/2026, P3b de docs/diagnostico_asistente_agentes_ia_plan.md): si el
+    # canal elige un modelo gpt-5, solo lo usan los propósitos que CONTESTAN al cliente
+    # (la Base de Conocimiento llama con :conversational). Clasificar rutas, entender
+    # fechas, separar solicitudes, el ERP y redactar siguen con REASONING_FALLBACK: ya
+    # funcionan bien, son rápidos, y el Asistente prueba el ruteo con ese clasificador.
+    REPLY_PURPOSES = %i[conversational scheduled].freeze
+    REASONING_FALLBACK = 'gpt-4o'
 
     class << self
       # El selector es uno por inbox y aplica a todo el bot. `purpose` existe para las
@@ -81,7 +89,7 @@ module ContactTrackings
       def model_for(inbox, purpose = :conversational)
         configured = configured_model(inbox)
         model = ALLOWED_MODELS.include?(configured) ? configured : DEFAULT_MODEL
-        apply_floor(model, purpose)
+        apply_floor(only_for_replies(model, purpose), purpose)
       end
 
       # Atajo para los llamadores que tienen el ContactTracking a mano.
@@ -94,6 +102,12 @@ module ContactTrackings
       end
 
       private
+
+      def only_for_replies(model, purpose)
+        return model unless model.match?(ContactTrackings::EngineOpenai::REASONING_MODEL_RE)
+
+        REPLY_PURPOSES.include?(purpose.to_sym) ? model : REASONING_FALLBACK
+      end
 
       # Sube al piso solo si el modelo resuelto queda por debajo; nunca lo baja.
       def apply_floor(model, purpose)

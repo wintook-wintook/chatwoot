@@ -1238,11 +1238,8 @@ class KnowledgeBaseResponseService
     return nil unless api_key
 
     # Un rechazo de OpenAI queda en el log con su mensaje real (EngineOpenai, P3a).
-    ContactTrackings::EngineOpenai.new(api_key, purpose: :kbase, timeout: 45).complete(
-      model: resolved_model,
-      messages: messages,
-      max_tokens: max_tokens,
-      temperature: temperature
+    ContactTrackings::EngineOpenai.new(api_key, purpose: :kbase, timeout: 45).chat(
+      model: resolved_model, messages: messages, max_tokens: max_tokens, temperature: temperature
     )&.strip
   rescue StandardError => e
     Rails.logger.error "[KBase] ❌ Error OpenAI: #{e.message}"

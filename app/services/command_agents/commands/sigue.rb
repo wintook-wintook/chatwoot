@@ -383,25 +383,13 @@ module CommandAgents
             Escribe solo las instrucciones, en español, máximo 3-4 oraciones.
           PROMPT
 
-          uri = URI('https://api.openai.com/v1/chat/completions')
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.use_ssl = true
-          http.read_timeout = 15
-
-          request = Net::HTTP::Post.new(uri)
-          request['Authorization'] = "Bearer #{hook.settings['api_key']}"
-          request['Content-Type'] = 'application/json'
-          # proyecto@contact_tracking: modelo y tope desde la config del inbox.
-          request.body = {
+          # proyecto@contact_tracking: modelo y tope desde la config del inbox; parámetros
+          # según el modelo y error real de OpenAI en el log: EngineOpenai (P3a/P3b).
+          generated = ContactTrackings::EngineOpenai.new(hook.settings['api_key'], purpose: :authoring, timeout: 15).chat(
             model: ContactTrackings::EngineConfig.model_for(inbox || @inbox, :authoring),
             messages: [{ role: 'user', content: prompt }],
-            max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:authoring),
-            temperature: 0.4
-          }.to_json
-
-          response = http.request(request)
-          result   = JSON.parse(response.body)
-          generated = result.dig('choices', 0, 'message', 'content')&.strip
+            max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:authoring), temperature: 0.4
+          )&.strip
 
           if generated.present?
             Rails.logger.info '[Commands::Sigue] complementary_prompt generado con IA'

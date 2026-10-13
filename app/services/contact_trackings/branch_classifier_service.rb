@@ -61,12 +61,9 @@ module ContactTrackings
 
     # El texto del modelo, o nil con el error real en el log (ver EngineOpenai, P3a).
     def post_json(api_key)
-      ContactTrackings::EngineOpenai.new(api_key, purpose: :router, timeout: 10).complete(
+      ContactTrackings::EngineOpenai.new(api_key, purpose: :router, timeout: 10).chat(
         model: ContactTrackings::EngineConfig.model_for_tracking(@tracking, :router),
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 60,
-        temperature: 0.1,
-        response_format: { type: 'json_object' }
+        messages: [{ role: 'user', content: prompt }], max_tokens: 60, temperature: 0.1, json: true
       )
     end
 

@@ -15,7 +15,6 @@
 # parámetros. Modelo del inbox con piso de propósito :router (tarea corta, JSON).
 # ================================================================================
 class ExternalDb::AskedParams
-  API_URL = 'https://api.openai.com/v1/chat/completions'
   HISTORY_TURNS = 3
 
   def initialize(query:, asked:, question:, inbox: nil, history: [])
@@ -76,16 +75,13 @@ class ExternalDb::AskedParams
     [{ role: 'system', content: instructions }, *turns, { role: 'user', content: @question }]
   end
 
+  # Los parámetros según el modelo y el error real de OpenAI: EngineOpenai (P3a/P3b).
   def request
-    uri = URI(API_URL)
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = true
-    http.read_timeout = 30
-    post = Net::HTTP::Post.new(uri, 'Authorization' => "Bearer #{api_key}", 'Content-Type' => 'application/json')
-    post.body = { model: ContactTrackings::EngineConfig.model_for(@inbox, :router), messages: messages, temperature: 0,
-                  max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:router),
-                  response_format: { type: 'json_object' } }.to_json
-    JSON.parse(JSON.parse(http.request(post).body).dig('choices', 0, 'message', 'content').to_s)
+    content = ContactTrackings::EngineOpenai.new(api_key, purpose: :router, timeout: 30).chat(
+      model: ContactTrackings::EngineConfig.model_for(@inbox, :router), messages: messages,
+      max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:router), temperature: 0, json: true
+    )
+    content.nil? ? nil : JSON.parse(content)
   rescue StandardError => e
     Rails.logger.warn "[ExternalDb::AskedParams] #{@query.name}: #{e.message}"
     nil

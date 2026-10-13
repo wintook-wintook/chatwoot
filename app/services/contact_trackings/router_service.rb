@@ -196,25 +196,13 @@ module ContactTrackings
         today:             @current_date.presence || Time.current.strftime('%Y-%m-%d (%A)')
       }
 
-      uri               = URI('https://api.openai.com/v1/chat/completions')
-      http              = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl      = true
-      http.read_timeout = 10
-
-      request                  = Net::HTTP::Post.new(uri)
-      request['Authorization'] = "Bearer #{@api_key}"
-      request['Content-Type']  = 'application/json'
-      # proyecto@contact_tracking: modelo y tope desde la config del inbox.
-      request.body = {
-        model:           ContactTrackings::EngineConfig.model_for_tracking(@tracking, :router),
-        messages:        [{ role: 'user', content: prompt }],
-        max_tokens:      ContactTrackings::EngineConfig.max_tokens_for(:router),
-        temperature:     0.1,
-        response_format: { type: 'json_object' }
-      }.to_json
-
-      response = http.request(request)
-      JSON.parse(response.body).dig('choices', 0, 'message', 'content')
+      # proyecto@contact_tracking: modelo y tope desde la config del inbox; parámetros según
+      # el modelo y error real de OpenAI en el log: EngineOpenai (P3a/P3b).
+      ContactTrackings::EngineOpenai.new(@api_key, purpose: :router, timeout: 10).chat(
+        model: ContactTrackings::EngineConfig.model_for_tracking(@tracking, :router),
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:router), temperature: 0.1, json: true
+      )
     end
 
     def parse_appointment_action(value)

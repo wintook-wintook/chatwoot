@@ -119,21 +119,17 @@ class ContactTrackings::ServiceRequests::Extractor
     value.nil? || value == '' ? nil : value.to_s.tr(',', '.').to_f
   end
 
+  # Los parámetros según el modelo y el error real de OpenAI: EngineOpenai (P3a/P3b).
   def ask(api_key)
-    response = HTTParty.post(
-      'https://api.openai.com/v1/chat/completions',
-      headers: { 'Authorization' => "Bearer #{api_key}", 'Content-Type' => 'application/json' },
-      body: {
-        model: ContactTrackings::EngineConfig.model_for_tracking(@tracking, :service_requests),
-        messages: [{ role: 'system', content: RULES }, { role: 'user', content: user_prompt }],
-        max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:service_requests),
-        temperature: 0, response_format: { type: 'json_object' }
-      }.to_json,
-      timeout: 40
+    llamada = ContactTrackings::EngineOpenai.new(api_key, purpose: :service_requests, timeout: 40)
+    content = llamada.chat(
+      model: ContactTrackings::EngineConfig.model_for_tracking(@tracking, :service_requests),
+      messages: [{ role: 'system', content: RULES }, { role: 'user', content: user_prompt }],
+      max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:service_requests), temperature: 0, json: true
     )
-    raise "OpenAI #{response.code}" unless response.success?
+    raise "OpenAI #{llamada.error}" if content.nil?
 
-    response.parsed_response.dig('choices', 0, 'message', 'content').to_s
+    content
   end
 
   def user_prompt

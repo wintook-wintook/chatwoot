@@ -1387,12 +1387,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     # proyecto@contact_tracking: modelo y tope desde la config del inbox. Un rechazo de
     # OpenAI queda en el log con su mensaje real (EngineOpenai, P3a).
-    content = ContactTrackings::EngineOpenai.new(api_key, purpose: :datetime, timeout: 10).complete(
+    content = ContactTrackings::EngineOpenai.new(api_key, purpose: :datetime, timeout: 10).chat(
       model: ContactTrackings::EngineConfig.model_for_tracking(tracking, :datetime),
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:datetime),
-      temperature: 0,
-      response_format: { type: 'json_object' }
+      max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:datetime), temperature: 0, json: true
     )
     content.present? ? JSON.parse(content) : nil
   end
@@ -2118,11 +2116,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   def call_openai_for_reply(api_key, messages, tracking = nil)
     llamada = ContactTrackings::EngineOpenai.new(api_key, purpose: :conversational, timeout: 10)
     # proyecto@contact_tracking: modelo y tope desde la config del inbox.
-    reply = llamada.complete(
+    reply = llamada.chat(
       model: ContactTrackings::EngineConfig.model_for_tracking(tracking, :conversational),
       messages: messages,
-      max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:conversational),
-      temperature: 0.7
+      max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:conversational), temperature: 0.7
     )&.strip
     @reply_error = llamada.error
     reply&.gsub(/\A[A-Za-záéíóúñÁÉÍÓÚÑ\s]{2,20}:\s*\n?/, '')&.strip

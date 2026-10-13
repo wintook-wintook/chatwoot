@@ -289,27 +289,14 @@ class ContactTrackingJob < ApplicationJob
 
       messages << { role: 'user', content: task_prompt }
 
-      uri = URI('https://api.openai.com/v1/chat/completions')
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = true
-
-      request = Net::HTTP::Post.new(uri)
-      request['Authorization'] = "Bearer #{api_key}"
-      request['Content-Type'] = 'application/json'
-
       # proyecto@contact_tracking: el modelo sale del selector "Modelo de IA" de la
-      # integración tracking_bot del inbox, no de una constante.
-      request.body = {
+      # integración tracking_bot del inbox, no de una constante. Los parámetros según el
+      # modelo y el error real de OpenAI en el log: EngineOpenai (P3a/P3b).
+      ai_message = ContactTrackings::EngineOpenai.new(api_key, purpose: :scheduled, timeout: 60).chat(
         model: ContactTrackings::EngineConfig.model_for_tracking(tracking, :scheduled),
         messages: messages,
-        max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:scheduled),
-        temperature: 0.7
-      }.to_json
-
-      response = http.request(request)
-      response_body = JSON.parse(response.body) rescue {}
-
-      ai_message = response_body.dig('choices', 0, 'message', 'content')&.strip
+        max_tokens: ContactTrackings::EngineConfig.max_tokens_for(:scheduled), temperature: 0.7
+      )&.strip
 
       if ai_message.present?
         ai_message = ai_message.gsub(/\A["']+|["']+\z/, '').strip

@@ -382,11 +382,11 @@ No incluye elegir gpt-5 para un canal real: eso es el P1 / D1, medido con la pil
 ### Pasos
 - [x] Listar las llamadas y cuáles son del motor de seguimientos (17 archivos; 4 en el camino de la respuesta sin revisar el HTTP)
 - [x] **P3a** · Que cada llamada revise el código HTTP y registre el error de OpenAI, con nota privada cuando el cliente se queda sin respuesta (D17)
-- [ ] **P3b** · Crear el constructor de parámetros (en `EngineOpenai`, el punto único del P3a)
-- [ ] Pasar las llamadas del motor a ese constructor, una por una, sin cambiar el modelo todavía
+- [x] **P3b** · Crear el constructor de parámetros (en `EngineOpenai`, el punto único del P3a) — hecho el 13/10/2026
+- [x] Pasar las llamadas del motor a ese constructor, una por una, sin cambiar el modelo todavía (los 9 puntos)
 - [ ] Correr la pila de F0 con gpt-4o: tiene que dar lo mismo
-- [ ] Agregar gpt-5.x a la lista, al orden y al selector del canal
-- [ ] Decidir qué modelo usa el redactor del Asistente (decisión **D4**)
+- [x] Agregar gpt-5.x a la lista, al orden y al selector del canal (con D18: solo para contestar)
+- [x] Decidir qué modelo usa el redactor del Asistente (decisión **D4** → se decidió con D8: gpt-5.5 en el Asistente con herramientas)
 - [ ] Medir con F0: aciertos, tiempo y costo de gpt-4o contra gpt-5.x
 
 ### Riesgos
@@ -888,6 +888,13 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
   - Motor, conversación 403 (Grúas, «Agents IA Test»): sin forzar, genera la respuesta igual que antes; forzando el rechazo, no se envía nada al cliente, queda la nota privada con el error y el log (la nota de prueba se borró).
   - Clasificador forzando el rechazo: cae en la ruta por defecto de ADAM y el log trae el error real.
   - Rubocop: el job del motor y el clasificador ya tenían hallazgos de estilo (28 y 1); el cambio no agrega ninguno.
+- **Qué se hizo (P3b, 13/10/2026):** `EngineOpenai#chat` arma los parámetros según el modelo (gpt-4o: `max_tokens` + `temperature`; gpt-5: `max_completion_tokens` = tope + 1.500 y `reasoning_effort` `low` para contestar, `none` para el resto). Los **9 puntos** del motor pasan por ahí (ruta, fechas, respuesta conversacional, Base de Conocimiento, mensajes programados, solicitudes, parámetros del ERP, /sigue, router de intención). gpt-5.4-mini y gpt-5.5 en `ALLOWED_MODELS`, `MODEL_RANK` y el selector del canal (`apps.yml`, con la leyenda «Solo para contestar; clasifica con GPT-4o»). **D18** en `EngineConfig.model_for`: con gpt-5 en el canal, solo `conversational` y `scheduled` (y la Base de Conocimiento, que llama con `conversational`) lo usan; lo demás cae a gpt-4o. Ningún canal cambió.
+- **Pila de pruebas (P3b):**
+  - D18 sin IA: canal en gpt-5.5 → conversational y scheduled gpt-5.5; router, datetime, service_requests, authoring y authoring_assistant gpt-4o. Canal en gpt-4o-mini → igual que hoy.
+  - Contra OpenAI, 7 usos × 3 modelos (21 llamadas): todas responden, sin HTTP 400; 0,5–2,5 s.
+  - De punta a punta, conversación 403 con el canal simulado en gpt-5.5: el clasificador real usó gpt-4o con sus parámetros de siempre y eligió la ruta; la respuesta usó gpt-5.5 con `max_completion_tokens` + `reasoning_effort` (solo se generó, no se envió).
+  - Rubocop: ningún hallazgo nuevo; bajaron los que había en el router (32→28), los mensajes programados (98→97) y /sigue (86→85).
+  - Para ver gpt-5 en el selector del canal en develop.wintook.com hay que reiniciar `chatwoot-dev.service` (`apps.yml` se carga al arrancar).
 - **Cómo pedírselo al Asistente:**
 
 ### P1 · Modelo del agente en vivo
