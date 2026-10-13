@@ -30,6 +30,7 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
   # Incluye lo que gpt-5 razona antes de contestar, más un Entrenamiento largo entero.
   MAX_OUTPUT_TOKENS = 16_000
   Tools = ContactTrackings::Assistant::AssistantTools
+  Pieces = ContactTrackings::Assistant::DraftPieces
 
   PROMPT = <<~PROMPT.freeze
     ═══ HERRAMIENTAS ═══
@@ -46,9 +47,16 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
     5. Si dudas cómo se escribe una directiva o qué necesita, usa ver_directiva; para los nombres
        exactos de la cuenta, ver_recursos.
     6. Si cambiaste algo, pásalo por comprobar antes de entregar.
-    7. Máximo #{MAX_TOOL_CALLS} herramientas por turno. Lo que entregas sigue el mismo contrato JSON:
-       el cambio que probaste va en "entrenamiento" tal cual lo probaste.
+    7. Máximo #{MAX_TOOL_CALLS} herramientas por turno.
     8. Al editar, llena "toca" con cada pieza que cambiaste, como piden las instrucciones de edición.
+    9. AL EDITAR, ENTREGA SOLO LO QUE CAMBIA. Esto reemplaza lo que se dice arriba sobre devolver el
+       Entrenamiento completo:
+         "entrenamiento": null
+         "piezas": [cada pieza que cambias o agregas, COMPLETA y como queda: una línea @ruta(…)
+                    entera, o una [SECCIÓN] con todo su texto]
+         "quitar": [las piezas que se borran, ej. "@ruta(nombre)" o "[SECCIÓN]"]
+       El código las pone en su lugar; lo que no mandes queda exactamente igual. La pieza que
+       probaste va en "piezas" tal cual la probaste. Si solo preguntas o explicas, "piezas": [].
   PROMPT
 
   # model: uno de MODELS; cualquier otro valor cae al de por defecto.
@@ -83,7 +91,7 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
       return nil if mensaje.nil?
 
       pedidos = Array(mensaje['tool_calls'])
-      return with_tested(without_markers(parse_reply(mensaje['content']))) if pedidos.empty? || cerrar
+      return with_tested(without_markers(with_pieces(parse_reply(mensaje['content']), history))) if pedidos.empty? || cerrar
 
       mensajes += [mensaje.slice('role', 'content', 'tool_calls')]
       pedidos.each do |pedido|
@@ -113,8 +121,49 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
     cambio = JSON.parse(argumentos.presence || '{}')['cambio']
     return if cambio.blank?
 
-    @tested.merge(ContactTrackings::Assistant::DraftPieces.new(cambio).pieces.keys - [ContactTrackings::Assistant::DraftPieces::PREAMBLE_KEY])
+    @tested.merge(Pieces.new(cambio).pieces.keys - [Pieces::PREAMBLE_KEY])
   rescue JSON::ParserError
+    nil
+  end
+
+  # ── entregar solo las piezas (P5 mínimo, adelantado al prototipo el 13/10/2026) ──
+  # Reescribir los 15.000 caracteres para cambiar una línea es donde fallaba: rutas
+  # duplicadas, marcadores copiados, choques con la guardia. El modelo manda las piezas;
+  # se ponen sobre el Entrenamiento más reciente del turno (el de la última vuelta de
+  # corrección, o el de la pantalla). Si igual mandó el texto completo, se respeta.
+  def with_pieces(reply, history)
+    return reply if reply.blank? || reply['entrenamiento'].present?
+
+    piezas, claves = delivered_pieces(reply)
+    return reply if claves.empty?
+
+    reply.merge('entrenamiento' => Pieces.restore(theirs: latest_draft(history), mine: piezas, keys: claves),
+                'toca' => Array(reply['toca']) | claves)
+  end
+
+  # El texto de las piezas y TODAS las claves que cambian: las que trae y las que quita
+  # (una clave que no está en el texto se borra, ver DraftPieces.restore).
+  def delivered_pieces(reply)
+    piezas = Array(reply['piezas']).map(&:to_s).compact_blank.join("\n")
+    quitar = Array(reply['quitar']).map { |k| Pieces.normalize_key(k) }.compact_blank
+    [piezas, (Pieces.new(piezas).pieces.keys - [Pieces::PREAMBLE_KEY]) | quitar]
+  end
+
+  # El último Entrenamiento que el modelo vio en el hilo (la vuelta de corrección se lo
+  # muestra como {mensaje, entrenamiento}), o el de la pantalla.
+  def latest_draft(history)
+    history.reverse_each do |m|
+      next unless (m[:role] || m['role']).to_s == 'assistant'
+
+      texto = draft_in(m[:content] || m['content'])
+      return texto if texto.present?
+    end
+    current_draft.to_s
+  end
+
+  def draft_in(content)
+    JSON.parse(content.to_s)['entrenamiento'].to_s
+  rescue JSON::ParserError, TypeError
     nil
   end
 

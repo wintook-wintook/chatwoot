@@ -544,12 +544,12 @@ Por cada tarea se mide:
 - [x] Correr las 5 tareas con el Asistente de hoy y anotar los números en el Registro (12/10/2026; falta la nota de la T5)
 
 #### Paso 1 · Prototipo
-- [ ] Servicio nuevo que conversa y usa herramientas: el modelo pide una herramienta, el código la corre, el modelo ve el resultado y sigue, hasta contestar.
-- [ ] Las 5 herramientas del prototipo, todas de **solo leer y probar**: `ver_recursos`, `ver_directiva`, `ver_hoja`, `comprobar`, `probar_ruta`.
-- [ ] Topes: máximo de llamadas a herramientas por turno, y el mismo presupuesto de tiempo del turno de hoy (`TURN_BUDGET_SECONDS = 200`).
-- [ ] Cada herramienta devuelve un resumen corto (ej. columnas + 3 filas, no la hoja entera) para no llenar el contexto.
-- [ ] Cada herramienta avisa su paso en `TurnProgress`.
-- [ ] Detrás de una bandera, **solo la cuenta 2** (decisión **D11**). La pantalla no cambia: un interruptor «modo nuevo» solo para la prueba.
+- [x] Servicio nuevo que conversa y usa herramientas: el modelo pide una herramienta, el código la corre, el modelo ve el resultado y sigue, hasta contestar.
+- [x] Las 5 herramientas del prototipo, todas de **solo leer y probar**: `ver_recursos`, `ver_directiva`, `ver_hoja`, `comprobar`, `probar_ruta`.
+- [x] Topes: máximo de llamadas a herramientas por turno, y el mismo presupuesto de tiempo del turno de hoy (`TURN_BUDGET_SECONDS = 200`).
+- [x] Cada herramienta devuelve un resumen corto (ej. columnas + 3 filas, no la hoja entera) para no llenar el contexto.
+- [x] Cada herramienta avisa su paso en `TurnProgress`.
+- [x] Detrás de una bandera, **solo la cuenta 2** (decisión **D11**). La pantalla no cambia: un interruptor «modo nuevo» solo para la prueba.
 
 **Alcance (decidido el 12/10/2026, después de la medición):** el prototipo cubre **el chat de edición, T2–T5**, donde estuvieron las fallas serias (T3 y T5). Crear desde cero (T1) va por otro camino (chat consultor → encargo) y se une en el Paso 3, «un solo chat». En la T5 el prototipo recibe la evidencia de la revisión (`ConversationReview`) y comprueba las causas con sus herramientas.
 
@@ -753,7 +753,15 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
 
     Lectura: el Asistente de hoy **escribe bien cuando el cambio es claro y está en un solo lugar** (T2, T4) y **falla cuando tiene que razonar y comprobar** (T3, T5): afirma sin haber probado, su prueba de ruteo no cubre lo que cambió, y propone sin leer lo que ya existe. Es lo que el prototipo del Paso 1 tiene que ganar (`probar_ruta`, `ver_directiva`, `ver_hoja`, `comprobar`).
   - Siguiente: Paso 1, prototipo con las 5 herramientas.
-- **Paso 1, qué se hizo:**
+- **Paso 1, qué se hizo (13/10/2026, commits a89bd736 y siguiente):**
+  - `ToolInterviewService` (hereda de `InterviewService`: la guardia del código corre igual) + `AssistantTools` (las 5 herramientas) + `OpenaiChat#call_with_tools`. Bandera `assistant_tools` encendida en la cuenta 2; solo al editar un Entrenamiento en pantalla. 5 etapas nuevas en `TurnProgress` con sus textos (es/en). Para verlo en develop.wintook.com hay que reiniciar `chatwoot-dev.service` (la bandera se carga al arrancar).
+  - Probadas las 5 herramientas en consola: `probar_ruta` muestra el cruce de Kontrolya y, con la línea corregida en `cambio`, que queda resuelto; un cambio inválido o una herramienta inexistente vuelven como error sin romper el turno.
+  - **Tres arreglos que salieron de las pruebas de humo** (el mismo pedido de la T3, gpt-5.4-mini):
+    1. Lo que el modelo probó con una herramienta cuenta como declarado en `toca`: lo había arreglado y probado, no lo declaró, y la guardia de edición le hizo deshacerlo.
+    2. Se quita el marcador `ENTRENAMIENTO>>>` que el modelo copiaba al final del texto.
+    3. **Entregar solo las piezas (P5 mínimo, adelantado con OK del 13/10/2026):** reescribiendo los 15.000 caracteres el modelo duplicó una ruta y copió marcadores. Ahora devuelve `piezas` / `quitar` y el código las pone con `DraftPieces.restore` sobre el Entrenamiento más reciente del turno; si igual manda el texto completo, se respeta.
+  - Resultado tras los arreglos (3 corridas): sin duplicadas ni marcadores. El comportamiento de gpt-5.4-mini varía: una vez preguntó en vez de decidir, una arregló sin usar `probar_ruta` y dijo que funcionaba, una diagnosticó bien y no entregó. Lo mide el Paso 2.
+  - **Hallazgo para toda medición de ruteo:** el clasificador del motor no siempre da la misma ruta para la misma frase y el mismo texto. Se verifica cada frase 3 veces.
 - **Paso 2, comparación (hoy vs prototipo, por modelo):**
 - **Decisión (¿ganó?):**
 - **Cómo funciona:**
