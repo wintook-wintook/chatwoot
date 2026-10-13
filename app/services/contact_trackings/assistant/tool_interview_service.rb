@@ -40,8 +40,7 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
     1. Si agregas o cambias una @ruta, antes de entregar usa probar_ruta con 3 a 6 frases como las
        escribiría un cliente —de esa ruta y de la ruta con la que podría cruzarse—, mandando en
        `cambio` la línea completa nueva. Si alguna cae donde no debe, corrige y vuelve a probar.
-    2. Nunca digas que algo quedó arreglado o que funciona si no lo probaste en este turno. Si lo
-       probaste, di en "mensaje" qué frases probaste y en qué ruta cayeron.
+    2. Nunca digas que algo quedó arreglado o que funciona si no lo probaste en este turno.
     3. Si una ruta usa una hoja, mírala con ver_hoja y usa sus valores reales (productos, planes,
        nombres) en las frases de esa ruta.
     4. Antes de proponer o agregar una regla, busca si el Entrenamiento ya la tiene. Si ya está y no
@@ -59,6 +58,10 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
          "quitar": [las piezas que se borran, ej. "@ruta(nombre)" o "[SECCIÓN]"]
        El código las pone en su lugar; lo que no mandes queda exactamente igual. La pieza que
        probaste va en "piezas" tal cual la probaste. Si solo preguntas o explicas, "piezas": [].
+    10. Al entregar un cambio, en "mensaje" explica en 1 a 3 frases qué hiciste y por qué. NO listes
+       las frases probadas ni los cambios: el código agrega abajo lo que de verdad probaste y la
+       pantalla muestra los cambios. En "pendiente" (lista) lo que la persona tenga que decidir o
+       completar; [] si no hay nada.
   PROMPT
 
   # model: uno de MODELS; cualquier otro valor cae al de por defecto.
@@ -69,6 +72,8 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
     @tool_log = []
     @seen = {}
     @tested = Set.new
+    @probes = {}
+    @check = nil
   end
 
   # Con qué herramientas, en qué orden, y con qué modelo: para la comparación (Paso 2).
@@ -93,7 +98,7 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
       return nil if mensaje.nil?
 
       pedidos = Array(mensaje['tool_calls'])
-      return with_tested(without_markers(with_pieces(parse_reply(mensaje['content']), history))) if pedidos.empty? || cerrar
+      return finished(with_tested(without_markers(with_pieces(parse_reply(mensaje['content']), history)))) if pedidos.empty? || cerrar
 
       mensajes += [mensaje.slice('role', 'content', 'tool_calls')]
       pedidos.each do |pedido|
@@ -112,7 +117,63 @@ class ContactTrackings::Assistant::ToolInterviewService < ContactTrackings::Assi
     return { repetida: 'ya hiciste esta misma consulta en este turno', resultado: JSON.parse(@seen[clave]) }.to_json if @seen.key?(clave)
 
     progress(Tools::STAGES.fetch(nombre, :writing))
-    @seen[clave] = @tools.run(nombre, argumentos)
+    @seen[clave] = @tools.run(nombre, argumentos).tap { |resultado| remember_result(nombre, resultado) }
+  end
+
+  # Lo último que de verdad corrió: cada frase con su ruta, y el comprobador. Con esto se
+  # arma el reporte del turno (with_report), no con lo que el modelo diga que probó.
+  def remember_result(nombre, resultado)
+    datos = JSON.parse(resultado)
+    remember_probes(datos) if nombre == 'probar_ruta'
+    @check = datos if nombre == 'comprobar' && datos.is_a?(Hash) && datos.key?('ejecuta')
+  rescue JSON::ParserError
+    nil
+  end
+
+  def remember_probes(datos)
+    Array(datos).each { |p| @probes[p['frase']] = p if p.is_a?(Hash) && p['frase'] }
+  end
+
+  # ── el reporte del turno (Paso 3.1): siempre el mismo formato ──────────────────
+  # El mensaje del modelo (qué hizo y por qué) + «Qué probé», armado con lo que corrió,
+  # + «Pendiente». Los cambios no se repiten: la pantalla ya los muestra (ChangeList).
+  # Los campos del prototipo, ya usados. Si quedaran, ReplyParser.with_extras pega al
+  # mensaje todo texto de un campo que no conoce: la pieza aparecía al final del chat.
+  CONSUMED_KEYS = %w[piezas quitar pendiente].freeze
+  def finished(reply)
+    with_report(reply)&.except(*CONSUMED_KEYS)
+  end
+
+  def with_report(reply)
+    return reply if reply.blank? || reply['entrenamiento'].blank?
+
+    partes = [reply['mensaje'].to_s.strip, probes_report, pending_report(reply['pendiente'])]
+    reply.merge('mensaje' => partes.compact_blank.join("\n\n"))
+  end
+
+  def probes_report
+    lineas = @probes.values.map { |p| probe_line(p) }
+    lineas << report_t(@check['ejecuta'] ? 'checker_ok' : 'checker_blocking', count: Array(@check['bloqueantes']).size) if @check
+    lineas = [report_t('nothing')] if lineas.empty?
+    "**#{report_t('tested')}**\n#{lineas.map { |l| "- #{l}" }.join("\n")}"
+  end
+
+  def probe_line(probe)
+    datos = { phrase: probe['frase'], route: probe['cae_en'], times: probe['veces'] }
+    return report_t('stable', **datos) unless probe['estable'] == false
+
+    report_t('unstable', **datos, others: Array(probe['a_veces_en']).join(', '))
+  end
+
+  def pending_report(pendiente)
+    lista = Array(pendiente).map(&:to_s).compact_blank
+    return nil if lista.empty?
+
+    "**#{report_t('pending')}**\n#{lista.map { |l| "- #{l}" }.join("\n")}"
+  end
+
+  def report_t(key, **args)
+    I18n.t("tracking_assistant.tools_report.#{key}", locale: ContactTrackings::Assistant::Language.resolve, **args)
   end
 
   # Lo que el modelo PROBÓ con una herramienta no es un cambio a escondidas: cuenta como

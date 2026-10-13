@@ -51,7 +51,8 @@ class ContactTrackings::Assistant::AssistantTools
                    'lo que impide que se ejecute y lo que lo degrada.',
       parameters: { type: 'object', properties: { cambio: CAMBIO }, required: [] } },
     { name: 'probar_ruta',
-      description: 'Manda frases de cliente al clasificador REAL del motor y dice a qué ruta cae cada una, con el cambio aplicado si lo mandas. ' \
+      description: 'Manda frases de cliente al clasificador REAL del motor y dice a qué ruta cae cada una (y si es estable), ' \
+                   'con el cambio aplicado si lo mandas. ' \
                    'Úsalo antes de decir que una ruta nueva o corregida funciona, con frases de esa ruta y de las que podrían cruzarse.',
       parameters: { type: 'object',
                     properties: { frases: { type: 'array', items: { type: 'string' }, description: "Hasta #{MAX_PHRASES}." },
@@ -149,8 +150,24 @@ class ContactTrackings::Assistant::AssistantTools
     return { error: 'faltan las frases' } if frases.empty?
 
     clasificador = ContactTrackings::Assistant::DraftClassifier.new(@account, draft: texto, inbox: @inbox)
-    @usage&.add_classifications(frases.size)
-    frases.map { |f| { frase: f, cae_en: clasificador.classify(f)&.name || '(ninguna: falló la clasificación o no hay rutas)' } }
+    frases.map { |f| verdict(clasificador, f) }
+  end
+
+  # El clasificador del motor no siempre da la misma ruta para la misma frase (medido el
+  # 13/10/2026, Paso 1 del P8). Dos veces; si no coinciden, una tercera para ver hacia
+  # dónde se inclina. Cada clasificación tarda ~0,8 s y van en serie (ver DraftClassifier).
+  def verdict(clasificador, frase)
+    caidas = Array.new(2) { route_name(clasificador, frase) }
+    caidas << route_name(clasificador, frase) if caidas.uniq.size > 1
+    @usage&.add_classifications(caidas.size)
+    principal, veces = caidas.tally.max_by { |_, n| n }
+    otras = caidas.uniq - [principal]
+    { frase: frase, cae_en: principal, veces: "#{veces}/#{caidas.size}", estable: otras.empty? }
+      .merge(otras.any? ? { a_veces_en: otras } : {})
+  end
+
+  def route_name(clasificador, frase)
+    clasificador.classify(frase)&.name || '(ninguna: falló la clasificación o no hay rutas)'
   end
 
   def phrases(lista)

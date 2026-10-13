@@ -71,6 +71,16 @@ en:
     fix_offer:
       question: '%{count} warnings can be fixed by editing the text. Should I fix them?'
       'yes': 'Yes, fix what can be fixed in the text'
+    # The report of each turn of the Assistant with tools (P8, step 3.1): built by the
+    # code from what actually ran, not from what the model says it tested.
+    tools_report:
+      tested: "What I tested"
+      pending: "Pending"
+      nothing: "I did not test anything in this turn."
+      stable: "«%{phrase}» → %{route} ✓ %{times}"
+      unstable: "«%{phrase}» → %{route} ⚠ %{times}, sometimes lands in %{others}"
+      checker_ok: "Checker: it runs"
+      checker_blocking: "Checker: %{count} error(s) that keep it from running"
     findings:
       route_line_unparsed: >-
         Line %{line}: the engine does NOT read this as a branch — %{reason}. The exact pattern is

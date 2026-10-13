@@ -589,7 +589,7 @@ Sin migración; el punto de retorno sigue siendo el tag `estable-2026-10-12-ante
   D14  ¿A qué cuentas se activa y cuándo?    decisión  ── hoy solo la cuenta 2
 ```
 
-- [ ] **3.1 · Respuesta clara y prueba estable.**
+- [x] **3.1 · Respuesta clara y prueba estable.** (hecho el 13/10/2026; ver Registro)
   - La respuesta del chat siempre con el mismo formato: **qué cambié · qué probé · qué resultado dio · qué queda pendiente**. gpt-5.5 casi siempre lo hace, pero hoy depende de él (es el «esquema fijo» del P6a).
   - `probar_ruta` clasifica cada frase **3 veces** y avisa si la ruta no es estable («cayó 2 de 3 en Kontrolya»): el clasificador del motor no siempre da la misma ruta (Registro, Paso 1). Cuesta poco: la clasificación es una llamada mínima.
 - [ ] **3.2 · Ver cada prueba en vivo** (reemplaza el «streaming» del texto, que con respuestas en JSON es complicado y aporta poco): mientras el turno corre se ve cada herramienta con su resultado corto («Probé 4 frases: 4 en su ruta ✓», «Comprobé: sin errores»). En los 20–45 s del turno se ve avance real.
@@ -799,8 +799,14 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
   - **D8 = gpt-5.5** como modelo del Asistente con herramientas (`ToolInterviewService::DEFAULT_MODEL`); gpt-5.4-mini descartado; gpt-4o queda como referencia.
   - **Prueba de ruteo del Asistente de hoy corregida:** al editar, `RouteSelfCheck` prueba primero las rutas tocadas (`TurnOutcome#touched_routes`) y después las demás, hasta 8. Verificado sobre la edición de la T2: la ruta 19 de 19 pasa a ser la primera probada; sin rutas tocadas, el orden no cambia.
   - Sigue el **Paso 3**. Primero: que gpt-5.5 explique en el chat lo que hizo (con gpt-4o la respuesta era solo la pieza) y el avance en vivo mientras escribe (los turnos tardan 20–45 s).
-- **Cómo funciona:**
-- **Cómo pedírselo al Asistente:**
+- **Paso 3.1, qué se hizo (13/10/2026):**
+  - **Reporte fijo de cada turno que entrega un cambio:** el mensaje del modelo (qué hizo y por qué, 1–3 frases) + **«Qué probé»**, que arma el CÓDIGO con lo que de verdad corrió (cada frase con su ruta y el comprobador), + **«Pendiente»** si hay algo que decidir. Si no probó nada, lo dice («No probé nada en este turno»). Los cambios no se repiten: la pantalla ya los muestra debajo del mensaje. Textos en es/en (`tracking_assistant.tools_report`).
+  - **`probar_ruta` estable:** cada frase se clasifica 2 veces; si no coinciden, una 3.ª, y avisa «⚠ 2/3, a veces cae en …». Se eligió 2+1 y no 3 siempre porque cada clasificación tarda ~0,8 s y van en serie: con 6 frases son ~10 s en vez de ~15.
+  - Arreglo de paso: `ReplyParser.with_extras` pega al mensaje el texto de cualquier campo que no conoce, y la pieza entregada (`piezas`) aparecía al final del chat (era lo que se veía con gpt-4o en el Paso 2). Ahora `piezas`, `quitar` y `pendiente` se quitan de la respuesta una vez usados.
+  - Además: la pantalla muestra con qué modelo edita el Asistente («El Asistente edita con gpt-5.5 · prueba antes de entregar»), junto a los modelos del agente del canal.
+  - Prueba real (cruce de Kontrolya, gpt-5.5, sesión #3920): 26 s, 3 llamadas; reporte con 6 frases 2/2 y el comprobador; verificación aparte 6 de 6 frases en 3/3.
+- **Cómo funciona:** con la bandera `assistant_tools` (cuenta 2), al editar un Entrenamiento el chat usa gpt-5.5 con herramientas: consulta la cuenta, prueba frases contra el clasificador real y comprueba antes de entregar; entrega solo las piezas que cambia; la guardia del código corre igual que siempre.
+- **Cómo pedírselo al Asistente:** con un agente abierto en el Asistente (cuenta 2), pedirlo como a una persona: «Agrega una ruta para … que conteste con la hoja …», «Un cliente preguntó "…" y cayó en la ruta equivocada: arréglalo», «Mejora el estilo: …». Debajo de la respuesta aparece «Qué probé».
 
 ### F0 · Línea base
 - **Qué se hizo:**

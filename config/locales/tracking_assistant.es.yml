@@ -70,6 +70,16 @@ es:
     fix_offer:
       question: 'Se pueden corregir %{count} avisos editando el texto. ¿Los corrijo?'
       'yes': 'Sí, corrige lo que se puede en el texto'
+    # El reporte de cada turno del Asistente con herramientas (P8, Paso 3.1): lo arma el
+    # código con lo que de verdad corrió, no con lo que el modelo dice que probó.
+    tools_report:
+      tested: "Qué probé"
+      pending: "Pendiente"
+      nothing: "No probé nada en este turno."
+      stable: "«%{phrase}» → %{route} ✓ %{times}"
+      unstable: "«%{phrase}» → %{route} ⚠ %{times}, a veces cae en %{others}"
+      checker_ok: "Comprobador: se ejecuta"
+      checker_blocking: "Comprobador: %{count} error(es) que impiden ejecutarlo"
     findings:
       route_line_unparsed: >-
         Línea %{line}: el motor NO la reconoce como ruta — %{reason}. El patrón exacto es
