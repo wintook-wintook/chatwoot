@@ -593,7 +593,24 @@ Sin migración; el punto de retorno sigue siendo el tag `estable-2026-10-12-ante
   - La respuesta del chat siempre con el mismo formato: **qué cambié · qué probé · qué resultado dio · qué queda pendiente**. gpt-5.5 casi siempre lo hace, pero hoy depende de él (es el «esquema fijo» del P6a).
   - `probar_ruta` clasifica cada frase **3 veces** y avisa si la ruta no es estable («cayó 2 de 3 en Kontrolya»): el clasificador del motor no siempre da la misma ruta (Registro, Paso 1). Cuesta poco: la clasificación es una llamada mínima.
 - [x] **3.2 · Ver cada prueba en vivo** (hecho el 13/10/2026; ver Registro) (reemplaza el «streaming» del texto, que con respuestas en JSON es complicado y aporta poco): mientras el turno corre se ve cada herramienta con su resultado corto («Probé 4 frases: 4 en su ruta ✓», «Comprobé: sin errores»). En los 20–45 s del turno se ve avance real.
-- [ ] **3.3 · Un solo chat.** Crear desde cero sigue por otro camino (chat consultor → encargo → redacción de una sola vez) y ahí siguen las fallas de la T1 (se pierde la Línea de la Vida, la ruta por defecto abre casos, una frase de crisis ambigua). Primero: que la redacción de una sola vez también use herramientas y entregue por piezas, y repetir la T1. La fusión completa del consultor con el editor, después, si esto funciona.
+- [ ] **3.3 · Un solo chat — primero: crear desde un encargo con herramientas** (diseño acordado el 13/10/2026).
+  Crear desde cero sigue por otro camino (chat consultor → encargo → redacción de una sola vez) y ahí siguen las fallas de la T1. Causa de la más grave: `BriefCoverage` solo revisa reglas, prohibiciones, tono y datos a pedir; el número de la Línea de la Vida estaba en **lo que hace un tema** y la redacción lo resumió sin él.
+
+  ```
+    Hoy:        encargo ─► redacción de una vez (sin herramientas) ─► cobertura pega
+                                                                      reglas al final
+    Propuesta:  encargo ─► redacción CON herramientas ─► revisar_encargo ─► corrige él
+                            (probar_ruta, comprobar)      (qué falta)         lo que falte
+                           └─ la cobertura sigue después, como red de seguridad ─┘
+  ```
+
+  1. El modo con herramientas también al **crear desde un encargo** (hoy solo al editar). La base está vacía y el modelo entrega todas las piezas.
+  2. Herramienta nueva **`revisar_encargo`** (sin IA): lo que falta de la ficha del encargo en lo escrito —reglas, prohibiciones, tono y datos a pedir (la medida de la cobertura, pero ANTES de entregar)— y los **datos duros** (teléfonos, números, montos, correos) que no están ni en el Entrenamiento ni en el Contexto de la Definición.
+  3. Reglas para crear: revisar el encargo antes de entregar; probar con `probar_ruta` las rutas que se cruzan fácil (una frase ambigua contra la ruta de crisis); la ruta por defecto es la que contesta, no la que abre casos.
+  4. La pantalla manda el id del encargo con el turno de creación.
+  5. Medición: repetir la **T1** (encargo #1131) con el prototipo contra la de hoy en español (sesión #3898): Línea de la Vida, «Dudas» abre casos y es la ruta por defecto, «no estoy seguro/a» en crisis, «Nombre» perdido, reglas duplicadas, idioma. Costo estimado 0,10–0,30 USD.
+
+  No cambian el chat consultor ni la lectura del encargo. La fusión completa del consultor con el editor, después, si esto funciona.
 - [ ] **3.4 · `simular` y `ver_conversacion`** (P2 y P4): `simular` pasa un mensaje de cliente por el motor real y devuelve la respuesta completa que daría el agente, no solo la ruta; `ver_conversacion` lee una conversación real enmascarada, solo de la misma cuenta y solo los últimos mensajes. Antes, decidir **D13**.
 - [ ] **3.5 · Claude como segundo proveedor** (**D12**): las mismas tareas de prueba; se queda el que gane en calidad, costo y tiempo. Requiere una clave de Anthropic (hoy la clave sale de la integración OpenAI de cada cuenta).
 - **D14 · ¿A qué cuentas se activa y cuándo?** Hoy solo la cuenta 2. Cada turno cuesta ~0,05–0,17 USD (estimado) y tarda 20–45 s. Se decide después de 3.1 y 3.2.
