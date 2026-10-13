@@ -247,6 +247,8 @@
     "INBOX_LABEL": "Canal del agente",
     "INBOX_NONE": "Sin canal (modelo por defecto)",
     "INBOX_MODELS": "clasifica con %{router} · contesta con %{conversational}",
+    "ASSISTANT_MODEL": "El Asistente edita con %{model}",
+    "ASSISTANT_MODEL_TOOLS": "El Asistente edita con %{model} · prueba antes de entregar",
     "INBOX_HINT": "Con este canal se prueba todo: el ruteo, los tests sugeridos y el banco de pruebas. Si no es el canal donde va a trabajar el agente, los resultados pueden no coincidir con lo que pase en producción.",
     "DICTATE_HINT": "Dictar: graba lo que quieres decir y se escribe en el cuadro para que lo revises antes de enviar",
     "DICTATE_RECORDING": "Grabando %{time}",

@@ -258,9 +258,18 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   # muestra junto al selector: sin canal, la prueba de ruteo usa el modelo por defecto
   # y no el del agente, y eso cambia los resultados (medido: "usar" a secas no ruteaba
   # con gpt-4o-mini y sí con gpt-4o).
+  # `assistant`: con qué modelo edita el Asistente mismo, que no es el del agente; con la
+  # bandera assistant_tools es el prototipo con herramientas (P8).
   def models_for(canal)
     { router: ContactTrackings::EngineConfig.model_for(canal, :router),
-      conversational: ContactTrackings::EngineConfig.model_for(canal, :conversational) }
+      conversational: ContactTrackings::EngineConfig.model_for(canal, :conversational),
+      assistant: assistant_model(canal), assistant_tools: Current.account.feature_enabled?('assistant_tools') }
+  end
+
+  def assistant_model(canal)
+    return ContactTrackings::Assistant::ToolInterviewService::DEFAULT_MODEL if Current.account.feature_enabled?('assistant_tools')
+
+    ContactTrackings::EngineConfig.model_for(canal, :authoring_assistant)
   end
 
   def inbox

@@ -308,6 +308,18 @@ export default {
     };
   },
   computed: {
+    // Con qué modelo edita el Asistente mismo (no el agente): con la bandera
+    // assistant_tools, el prototipo con herramientas del P8.
+    assistantModelLabel() {
+      const modelos = this.inventory && this.inventory.models;
+      if (!modelos || !modelos.assistant) return '';
+      return this.$t(
+        modelos.assistant_tools
+          ? 'TRACKING_ASSISTANT_VIEW.ASSISTANT_MODEL_TOOLS'
+          : 'TRACKING_ASSISTANT_VIEW.ASSISTANT_MODEL',
+        { model: modelos.assistant }
+      );
+    },
     // Las líneas del texto con hallazgos, para pintarlas en el editor.
     draftLineMarks() {
       return lineMarks(this.draft, this.validation);
@@ -1727,6 +1739,12 @@ export default {
                       conversational: inventory.models.conversational,
                     })
                   }}
+                </span>
+                <span
+                  v-if="assistantModelLabel"
+                  class="text-slate-500 dark:text-slate-400"
+                >
+                  {{ assistantModelLabel }}
                 </span>
               </div>
               <div class="flex flex-wrap items-center gap-2">
