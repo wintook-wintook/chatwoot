@@ -4,8 +4,12 @@
 # proyecto@asistente_agentes_ia — LA PILA DE PRUEBAS: ARRANCAR, LEER, INFORMAR (M5 de docs/importar_prompt_extenso_plan.md)
 # ================================================================================
 # El botón «Probar el agente» del Asistente (decisión D4: con botón, por costo). Arranca
-# TestBatteryJob, lee su avance de la caché y arma el informe .md (la «evidencia», como la
-# de las pruebas de Grúas).
+# TestBatteryJob, lee su avance y arma el informe .md (la «evidencia», como la de las
+# pruebas de Grúas).
+#
+# El avance vive en Redis, como TurnProgress, y no en Rails.cache: lo escribe Sidekiq y
+# lo lee la web, que son procesos distintos. En develop la caché es null_store y la
+# pantalla nunca veía resultados (13/10/2026, docs/diagnostico_asistente_agentes_ia_plan.md).
 # ================================================================================
 
 module ContactTrackings::Assistant::TestBattery
@@ -23,8 +27,8 @@ module ContactTrackings::Assistant::TestBattery
 
   def start(account, template, brief: nil)
     id = SecureRandom.alphanumeric(16).downcase
-    Rails.cache.write(key(id), { 'status' => 'queued', 'template' => template.name, 'template_id' => template.id,
-                                 'started_at' => Time.current.iso8601 }, expires_in: TTL)
+    write(id, { 'status' => 'queued', 'template' => template.name, 'template_id' => template.id,
+                'started_at' => Time.current.iso8601 })
     ContactTrackings::Assistant::TestBatteryJob.perform_later(id, account.id, template.id, brief&.id)
     id
   end
@@ -32,7 +36,13 @@ module ContactTrackings::Assistant::TestBattery
   def read(id)
     return nil unless id.to_s.match?(ID_RE)
 
-    Rails.cache.read(key(id))
+    raw = Redis::Alfred.get(key(id))
+    raw.present? ? JSON.parse(raw) : nil
+  end
+
+  # El estado entero, en JSON (las llaves vuelven como texto).
+  def write(id, estado)
+    Redis::Alfred.setex(key(id), estado.to_json, TTL.to_i)
   end
 
   def report(estado)

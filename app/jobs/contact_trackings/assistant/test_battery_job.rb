@@ -13,7 +13,7 @@
 # NUNCA AGENDA: cada prueba es un solo mensaje; si el agente ofrece horarios, nadie elige.
 # Los casos que abra el agente sí quedan (en ese canal): son parte de lo que se prueba.
 #
-# El avance y el resultado viven en la caché (TestBattery.key) dos días.
+# El avance y el resultado viven en Redis (TestBattery.key) dos días.
 #
 # CANAL PROPIO: el seguimiento se ata al canal de prueba aunque el agente tenga el suyo
 # (10 de los 19 de la cuenta 2 están en Telegram). Antes se ataba al del agente, la
@@ -129,8 +129,7 @@ class ContactTrackings::Assistant::TestBatteryJob < ApplicationJob
   end
 
   def save!(estado)
-    anterior = Rails.cache.read(ContactTrackings::Assistant::TestBattery.key(@id)) || {}
-    Rails.cache.write(ContactTrackings::Assistant::TestBattery.key(@id), anterior.merge(estado.stringify_keys),
-                      expires_in: ContactTrackings::Assistant::TestBattery::TTL)
+    anterior = ContactTrackings::Assistant::TestBattery.read(@id) || {}
+    ContactTrackings::Assistant::TestBattery.write(@id, anterior.merge(estado.stringify_keys))
   end
 end

@@ -281,7 +281,7 @@ Los límites (250 tokens, 800 caracteres y 4 líneas) se revisan **aparte** y so
 - [x] Decidir D1 → gpt-4o como modelo por defecto (13/10/2026)
 - [x] Correr F0 con gpt-4o, gpt-5.4-mini y gpt-5.5 y decidir **D19** → gpt-4o sigue por defecto; gpt-5.4-mini «Económico»; gpt-5.5 fuera del selector (13/10/2026, ver Registro)
 - [x] Que el banco de pruebas funcione con agentes de canal propio (hallazgo de F0) → hecho el 13/10/2026, ver Registro → P1
-- [ ] Que «Probar el agente» guarde su estado donde la web lo pueda leer (hallazgo del 13/10/2026, ver Registro → P1)
+- [x] Que «Probar el agente» guarde su estado donde la web lo pueda leer → Redis, hecho el 13/10/2026 (ver Registro → P1)
 - [x] Revisar si el tope de 10 s alcanza con gpt-4o (y con gpt-5.x, ver P3) → sí: 1–2,6 s medido (P3b)
 - [ ] Medir los límites 250 / 800 / 4 líneas por separado (decisión **D2**)
 - [ ] Repetir la pila de F0 y comparar
@@ -982,8 +982,10 @@ Además, el modelo tiene que **decir qué probó**, en un formato fijo (esquema 
   - Falla forzada (canal que no es el de la conversación): la pila se detiene en 1 s tras la primera tanda, con «No se pudo asignar el agente…: Conversation must belong to the selected inbox». Antes: 120 s de espera por prueba.
   - Automatización real: ADAM en una conversación del #493 crea el seguimiento como antes; repetida, no crea otro; Grúas en el #493 no se crea y deja la misma línea en el log que antes (D20). El seguimiento de prueba quedó cancelado.
   - Rubocop y ESLint sin hallazgos nuevos.
-- **Hallazgo (pendiente, sin tocar):** en develop.wintook.com la caché es `null_store` (sin `tmp/caching-dev.txt`): `TestBattery` escribe el estado y se pierde, así que «Probar el agente» en la pantalla nunca muestra resultados. Aun con caché en memoria no serviría: la web y Sidekiq son procesos distintos. Propuesta: guardar el estado en Redis, como `TurnProgress`.
-- **Cómo pedírselo al Asistente (banco):** en el Asistente, con el agente guardado, botón «Probar el agente» → «Correr la pila» (cuando se arregle el hallazgo de arriba).
+- **Qué se hizo (estado del banco en Redis, 13/10/2026):** en develop.wintook.com la caché es `null_store` (sin `tmp/caching-dev.txt`): `TestBattery` escribía el estado y se perdía, así que «Probar el agente» nunca mostraba resultados en la pantalla (y con caché en memoria tampoco: la web y Sidekiq son procesos distintos). Ahora `TestBattery.read`/`write` guardan el estado en Redis (`Redis::Alfred`, llave `assistant/test_battery/<id>`, 2 días), como `TurnProgress`.
+- **Pila de pruebas (Redis):** pila de v6.11 arrancada con `TestBattery.start` (el mismo camino que el botón), corrida por Sidekiq y leída desde otro proceso: `done`, 5/5 con respuesta, 4/5 en su ruta, con canal y modelo.
+- **Riesgo medido, solo en develop:** si se cambia código mientras corre una pila, la recarga de Rails espera a que termine el trabajo largo del banco y todo Sidekiq queda detenido, incluidas las respuestas que el banco espera (pasó el 13/10/2026: 10 min sin procesar nada; se destrabó reiniciando `chatwoot-dev`). En producción no hay recarga de código. Regla: no editar archivos con una pila corriendo en develop; si pasa, reiniciar `chatwoot-dev`.
+- **Cómo pedírselo al Asistente (banco):** en el Asistente, con el agente guardado, botón «Probar el agente» → «Correr la pila».
 
 ### P2 · Simulador y juez
 - **Qué se hizo:**
