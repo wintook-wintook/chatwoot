@@ -22,6 +22,7 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   include TrackingCampaignEntriesJson
   # Intenciones que cuentan como "interesado" en el embudo (igual que el overview de cuenta).
   INTERESTED_INTENTS = %w[interested book_appointment reschedule].freeze
+  ACTIVE_TRACKING_STATUSES = %w[pending scheduled active paused].freeze
 
   def index
     return render(json: lite_list) if ActiveModel::Type::Boolean.new.cast(params[:lite])
@@ -68,18 +69,24 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   def destroy
     campaign = Current.account.tracking_campaigns.find(params[:id])
     cancel_active_trackings(campaign)
+    # Al borrarla, los seguimientos se desvinculan: uno que siguiera vivo quedaría enviando
+    # sin campaña y fuera del dashboard. Si alguno no se pudo cancelar, no se borra.
+    return render_error('No se pudieron cancelar todos los seguimientos de la campaña.') if active_trackings(campaign).exists?
+
     campaign.destroy!
     head :no_content
   end
 
   private
 
+  def active_trackings(campaign)
+    campaign.contact_trackings.where(status: ACTIVE_TRACKING_STATUSES)
+  end
+
   # Cancela los seguimientos no terminales de la campaña (pending/scheduled/active/paused).
   # cancel! cancela los jobs programados y marca el estado como 'cancelled'.
   def cancel_active_trackings(campaign)
-    campaign.contact_trackings
-            .where(status: %w[pending scheduled active paused])
-            .find_each(&:cancel!)
+    active_trackings(campaign).find_each(&:cancel!)
   end
 
   # { campaign_id => { 'pending' => N, 'active' => N, ... } } en una sola query.

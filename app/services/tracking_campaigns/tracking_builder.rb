@@ -61,11 +61,20 @@ class TrackingCampaigns::TrackingBuilder
   end
   # rubocop:enable Rails/SkipsModelValidations
 
+  # Los intentos los define el Agente IA, igual que en la acción "Asignar Agente IA"
+  # (ActionService#assign_tracking_template): uno por plantilla WhatsApp; sin plantillas,
+  # DEFAULT_MAX_ATTEMPTS mensajes con IA. Con un número fijo, un agente con menos
+  # plantillas que intentos dejaba seguimientos que no pasan la validación y nunca salían.
+  def max_attempts
+    count = Array(template.whatsapp_templates).count(&:present?)
+    count.zero? ? DEFAULT_MAX_ATTEMPTS : count.clamp(1, 10)
+  end
+
   def tracking_attributes(conversation_id)
     {
       account_id: @account.id, contact_id: @contact.id, inbox_id: @campaign.inbox_id, conversation_id: conversation_id,
       tracking_template_id: template.id, tracking_campaign_id: @campaign.id, objective: template.objective,
-      scheduled_for: @scheduled_for, max_attempts: DEFAULT_MAX_ATTEMPTS, attempt_count: 0,
+      scheduled_for: @scheduled_for, max_attempts: max_attempts, attempt_count: 0,
       retry_interval_value: template.retry_interval_value || 30, retry_interval_unit: template.retry_interval_unit || 'minutes',
       ai_context: template.ai_context, complementary_prompt: template.complementary_prompt,
       whatsapp_templates: template.whatsapp_templates || [], keyword_actions: template.keyword_actions || [],

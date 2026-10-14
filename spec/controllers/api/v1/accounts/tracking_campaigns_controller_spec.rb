@@ -76,4 +76,46 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
       end
     end
   end
+
+  describe 'DELETE /api/v1/accounts/{account.id}/tracking_campaigns/{id}' do
+    def campaign_tracking(status)
+      create(:contact_tracking, account: account, contact: create(:contact, account: account), inbox: inbox,
+                                tracking_campaign_id: campaign.id, status: status)
+    end
+
+    # Caso real (campañas 17 y 57): 2 plantillas WhatsApp para 3 intentos no pasa la
+    # validación; antes cancel! no lo guardaba y quedaba vivo, sin campaña.
+    def invalid_tracking
+      campaign_tracking('pending').tap do |tracking|
+        tracking.update_columns(whatsapp_templates: %w[uno dos], max_attempts: 3) # rubocop:disable Rails/SkipsModelValidations
+      end
+    end
+
+    it 'cancela los seguimientos programados de la campaña, aunque no pasen la validación, y la borra' do
+      pending_one = campaign_tracking('pending')
+      scheduled = campaign_tracking('scheduled')
+      invalid = invalid_tracking
+      completed = campaign_tracking('completed')
+
+      delete "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}",
+             headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:no_content)
+      expect(TrackingCampaign.exists?(campaign.id)).to be(false)
+      expect([pending_one, scheduled, invalid].map { |t| t.reload.status }).to all(eq('cancelled'))
+      expect(completed.reload.status).to eq('completed')
+    end
+
+    it 'si algún seguimiento sigue vivo, no borra la campaña' do
+      tracking = campaign_tracking('pending')
+      allow_any_instance_of(ContactTracking).to receive(:cancel!).and_return(false) # rubocop:disable RSpec/AnyInstance
+
+      delete "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}",
+             headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(TrackingCampaign.exists?(campaign.id)).to be(true)
+      expect(tracking.reload.tracking_campaign_id).to eq(campaign.id)
+    end
+  end
 end
