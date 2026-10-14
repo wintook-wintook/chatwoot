@@ -99,6 +99,26 @@ RSpec.describe TrackingCampaigns::Enroll do
     expect(ContactTracking.where(tracking_campaign_id: campaign.id)).to be_empty
   end
 
+  describe 'intentos: los que define el Agente IA' do
+    it 'uno por plantilla WhatsApp' do
+      template.update!(whatsapp_templates: %w[uno dos])
+      expect(enroll.contact_tracking.max_attempts).to eq(2)
+
+      template.update!(whatsapp_templates: %w[uno dos tres cuatro])
+      expect(enroll(create(:contact, account: account)).contact_tracking.max_attempts).to eq(4)
+    end
+
+    it 'sin plantillas WhatsApp, 3 mensajes con IA' do
+      template.update!(whatsapp_templates: [])
+      expect(enroll.contact_tracking.max_attempts).to eq(3)
+    end
+
+    it 'el seguimiento nace válido (antes 2 plantillas para 3 intentos no pasaba la validación)' do
+      template.update!(whatsapp_templates: %w[uno dos])
+      expect(enroll.contact_tracking).to be_valid
+    end
+  end
+
   it 'si crear el seguimiento falla, deshace la inscripción y el error sube' do
     allow(ContactTracking).to receive(:insert!).and_raise(ActiveRecord::StatementInvalid, 'boom')
 

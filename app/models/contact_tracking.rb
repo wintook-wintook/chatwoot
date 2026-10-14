@@ -441,10 +441,14 @@ class ContactTracking < ApplicationRecord
   end
 
   # Cancela el seguimiento
+  # update_attribute (sin validaciones): cancelar no puede depender de que la configuración
+  # sea válida. Con update, un seguimiento inválido (p. ej. menos plantillas WhatsApp que
+  # intentos) no se guardaba, quedaba vivo y seguía reintentando cada minuto.
   def cancel!
     return false unless can_cancel?
+
     cancel_existing_jobs
-    update(status: 'cancelled')
+    update_attribute(:status, 'cancelled') # rubocop:disable Rails/SkipsModelValidations
   end
 
   # Marca el seguimiento como "objetivo cumplido" — el objetivo se alcanzó.
