@@ -134,12 +134,33 @@ class ContactTrackings::BulkAssignService
 
   def creation_error(template)
     return 'El nombre de la campaña es obligatorio' if @campaign_name.blank?
-    return 'La fecha debe ser futura' if @scheduled_for.blank? || @scheduled_for <= Time.current
-    return 'El fin debe ser posterior al inicio' if @window[:ends_at] && @window[:ends_at] <= @scheduled_for
+
+    error = window_error
+    return error if error
     # La campaña fija su inbox; sin inbox no hay canal por el cual conversar.
     return if template.inbox_id.present?
 
     "La plantilla '#{template.name}' no tiene un inbox configurado. Asígnale un inbox antes de lanzar la campaña."
+  end
+
+  def window_error
+    start_error || end_error
+  end
+
+  # Al modificar una Guardada (@campaign) su inicio puede haber pasado: Launch lo corre a ahora.
+  def start_error
+    return 'La fecha debe ser futura' if @scheduled_for.blank?
+
+    'La fecha debe ser futura' if @campaign.nil? && @scheduled_for <= Time.current
+  end
+
+  # El fin no: con la ventana vencida no se podría poner en curso.
+  def end_error
+    ends_at = @window[:ends_at]
+    return unless ends_at
+    return 'El fin ya pasó' if @campaign && ends_at <= Time.current
+
+    'El fin debe ser posterior al inicio' if ends_at <= @scheduled_for
   end
 
   def audience_error(contacts_count)

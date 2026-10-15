@@ -136,6 +136,19 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
                                         'source' => { 'type' => 'label', 'label' => 'vip' })
     end
 
+    it 'por lote: acepta un inicio que ya pasó (al ponerla en curso empieza ahora), no un fin vencido' do
+      url = "/api/v1/accounts/#{account.id}/contact_tracking_bulk_assigns/#{saved.id}"
+      body = { campaign_name: 'Lote', template_id: template.id, scheduled_for: 1.hour.ago.iso8601 }
+
+      patch url, params: body, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:success)
+      expect(saved.reload.status).to eq('saved')
+
+      patch url, params: body.merge(ends_at: 1.minute.ago.iso8601), headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('El fin ya pasó')
+    end
+
     it 'puede pasar de por lote a continua' do
       patch "/api/v1/accounts/#{account.id}/tracking_campaigns/#{saved.id}",
             params: { name: 'Ahora continua', tracking_template_id: template.id, daily_cap: 20 },

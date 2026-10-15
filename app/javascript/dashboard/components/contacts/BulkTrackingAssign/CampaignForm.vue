@@ -44,10 +44,10 @@ const MAX_BULK_ASSIGN = 100;
 // como string "contact"; el getter getCustomViewsByFilterType compara por ese string).
 const FILTER_TYPE_CONTACT = 'contact';
 
-// Fecha → valor de un <input type="datetime-local"> (hora local). Un inicio que ya pasó
-// queda vacío: hay que elegir otro (en la continua, vacío = desde que se ponga en curso).
+// Fecha → valor de un <input type="datetime-local"> (hora local). Se muestra aunque ya
+// haya pasado: al ponerla en curso, un inicio pasado se corre a ese momento.
 const toLocalInput = value => {
-  if (!value || new Date(value) <= new Date()) return '';
+  if (!value) return '';
   const d = new Date(value);
   const pad = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
@@ -207,8 +207,19 @@ export default {
       });
     },
     // El fin, si lo hay, después del inicio (o de ahora, si la continua no tiene inicio).
+    // Modificando una Guardada: su inicio ya pasó (se corre a cuando la pongan en curso)
+    startPassed() {
+      return (
+        this.isEditing &&
+        !!this.scheduledFor &&
+        new Date(this.scheduledFor) <= new Date()
+      );
+    },
     windowError() {
       if (!this.endsAt) return '';
+      if (new Date(this.endsAt) <= new Date()) {
+        return this.$t('BULK_TRACKING_ASSIGN.MODAL.ENDS_PASSED');
+      }
       const start = this.scheduledFor
         ? new Date(this.scheduledFor)
         : new Date();
@@ -654,6 +665,12 @@ export default {
         </div>
         <p v-if="windowError" class="m-0 mt-2 text-sm text-red-600">
           {{ windowError }}
+        </p>
+        <p
+          v-else-if="startPassed"
+          class="m-0 mt-2 text-sm text-amber-800 dark:text-amber-300"
+        >
+          {{ $t('BULK_TRACKING_ASSIGN.MODAL.START_PASSED') }}
         </p>
 
         <button

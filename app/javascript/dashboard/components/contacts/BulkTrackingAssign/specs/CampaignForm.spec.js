@@ -253,7 +253,7 @@ describe('CampaignForm al modificar una Guardada', () => {
     expect(wrapper.vm.scheduledFor).toMatch(/^2099-10-0\dT\d\d:00$/);
   });
 
-  it('un inicio que ya pasó queda vacío; una audiencia sin origen se usa pero se puede cambiar', async () => {
+  it('un inicio que ya pasó se muestra con aviso; una audiencia sin origen se usa pero se puede cambiar', async () => {
     const wrapper = mountForm({
       campaign: {
         ...savedBatch,
@@ -262,7 +262,9 @@ describe('CampaignForm al modificar una Guardada', () => {
       },
     });
 
-    expect(wrapper.vm.scheduledFor).toBe('');
+    expect(wrapper.vm.scheduledFor).toMatch(/^2020-01-01T\d\d:00$/);
+    expect(wrapper.vm.startPassed).toBe(true);
+    expect(wrapper.text()).toContain('BULK_TRACKING_ASSIGN.MODAL.START_PASSED');
     expect(wrapper.vm.allowAudienceSelection).toBe(true);
     expect(wrapper.vm.effectiveFilterPayload).toEqual([
       { attribute_key: 'name' },
@@ -368,5 +370,17 @@ describe('CampaignForm al modificar una Guardada', () => {
     expect(wrapper.emitted('updated')[0][0]).toEqual(
       expect.objectContaining({ status: 'running', launch: true })
     );
+  });
+
+  it('un fin que ya pasó no deja guardar', () => {
+    const wrapper = mountForm({
+      campaign: { ...savedBatch, ends_at: '2020-02-01T10:00:00Z' },
+    });
+
+    expect(wrapper.vm.endsAt).toMatch(/^2020-02-0\dT\d\d:00$/);
+    expect(wrapper.vm.windowError).toBe(
+      'BULK_TRACKING_ASSIGN.MODAL.ENDS_PASSED'
+    );
+    expect(wrapper.vm.canConfirm).toBe(false);
   });
 });

@@ -127,16 +127,20 @@ export default {
         col('inbox_name', 'CHANNEL', {
           renderBodyCell: ({ row }) => row.inbox_name || '—',
         }),
+        // Fecha arriba y hora abajo (como Ventana), para que no se pegue a Tipo
         col('created_at', 'CREATED', {
-          width: 150,
+          width: 130,
           renderBodyCell: ({ row }) => (
-            <span class="whitespace-nowrap">
-              {this.formatDate(row.created_at)}
-            </span>
+            <div class="flex flex-col leading-5 whitespace-nowrap">
+              <span>{this.formatDay(row.created_at)}</span>
+              <span class="text-slate-500 dark:text-slate-400">
+                {this.formatTime(row.created_at)}
+              </span>
+            </div>
           ),
         }),
         col('mode', 'TYPE', {
-          width: 100,
+          width: 110,
           // Tooltip con qué significa cada tipo
           renderBodyCell: ({ row }) => {
             const mode = row.mode || 'batch';
@@ -400,6 +404,21 @@ export default {
       return campaign.ends_at
         ? this.formatDate(campaign.ends_at)
         : this.$t('TRACKING_CAMPAIGNS_VIEW.NO_END');
+    },
+    formatDay(value) {
+      if (!value) return '—';
+      return new Date(value).toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    },
+    formatTime(value) {
+      if (!value) return '';
+      return new Date(value).toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     },
     formatDate(value) {
       if (!value) return '—';
