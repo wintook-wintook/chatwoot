@@ -4,10 +4,10 @@ import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import contactTrackingBulkAssignsAPI from 'dashboard/api/contactTrackingBulkAssigns';
 
 vi.mock('dashboard/api/trackingCampaigns', () => ({
-  default: { create: vi.fn() },
+  default: { create: vi.fn(), update: vi.fn(), launch: vi.fn() },
 }));
 vi.mock('dashboard/api/contactTrackingBulkAssigns', () => ({
-  default: { create: vi.fn(), preview: vi.fn() },
+  default: { create: vi.fn(), update: vi.fn(), preview: vi.fn() },
 }));
 vi.mock('dashboard/api/contacts', () => ({
   default: { filter: vi.fn(() => ({ data: { meta: { count: 0 } } })) },
@@ -200,5 +200,104 @@ describe('CampaignForm con ventana', () => {
     await wrapper.setData({ audienceType: 'automation' });
     expect(segment.attributes('disabled')).toBe('disabled');
     expect(label.attributes('disabled')).toBe('disabled');
+  });
+});
+
+describe('CampaignForm al modificar una Guardada', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const savedBatch = {
+    id: 12,
+    name: 'Lote',
+    mode: 'batch',
+    status: 'saved',
+    tracking_template_id: 3,
+    scheduled_for: '2099-10-01T16:00:00Z',
+    ends_at: null,
+    entry_delay_minutes: 30,
+    respect_working_hours: true,
+    audience: {
+      filter_payload: [{ attribute_key: 'labels', values: ['demo'] }],
+      excluded_contact_ids: [8],
+      skip_active: false,
+      source: { type: 'label', label: 'demo' },
+    },
+  };
+
+  it('arranca con los datos de la campaña', () => {
+    const wrapper = mountForm({ campaign: savedBatch });
+
+    expect(wrapper.vm).toMatchObject({
+      campaignName: 'Lote',
+      selectedTemplateId: 3,
+      audienceType: 'label',
+      selectedLabel: 'demo',
+      excludedContactIds: [8],
+      skipActive: false,
+      entryDelayMinutes: 30,
+      showSendOptions: true,
+    });
+    expect(wrapper.vm.scheduledFor).toMatch(/^2099-10-0\dT\d\d:00$/);
+  });
+
+  it('un inicio que ya pasó queda vacío y una audiencia sin origen queda fija', () => {
+    const wrapper = mountForm({
+      campaign: {
+        ...savedBatch,
+        scheduled_for: '2020-01-01T10:00:00Z',
+        audience: { filter_payload: [{ attribute_key: 'name' }] },
+      },
+    });
+
+    expect(wrapper.vm.scheduledFor).toBe('');
+    expect(wrapper.vm.allowAudienceSelection).toBe(false);
+    expect(wrapper.vm.effectiveFilterPayload).toEqual([
+      { attribute_key: 'name' },
+    ]);
+  });
+
+  it('Guardar modifica la Guardada (no crea otra) y no la pone en curso', async () => {
+    contactTrackingBulkAssignsAPI.update.mockResolvedValue({
+      data: { saved: true, campaign_id: 12 },
+    });
+    const wrapper = mountForm({ campaign: savedBatch });
+
+    await wrapper.vm.onConfirm(false);
+
+    expect(contactTrackingBulkAssignsAPI.update).toHaveBeenCalledWith(
+      12,
+      expect.objectContaining({
+        campaignName: 'Lote',
+        audienceSource: { type: 'label', label: 'demo' },
+      })
+    );
+    expect(contactTrackingBulkAssignsAPI.create).not.toHaveBeenCalled();
+    expect(TrackingCampaignsAPI.launch).not.toHaveBeenCalled();
+    expect(wrapper.emitted('updated')[0][0]).toEqual(
+      expect.objectContaining({ campaign_id: 12, launch: false })
+    );
+  });
+
+  it('Guardar y poner en curso guarda los cambios y después la lanza', async () => {
+    TrackingCampaignsAPI.update.mockResolvedValue({
+      data: { campaign_id: 12 },
+    });
+    TrackingCampaignsAPI.launch.mockResolvedValue({
+      data: { campaign_id: 12, status: 'running' },
+    });
+    const wrapper = mountForm({
+      campaign: { ...savedBatch, mode: 'continuous', audience: {} },
+    });
+
+    await wrapper.vm.onConfirm(true);
+
+    expect(TrackingCampaignsAPI.update).toHaveBeenCalledWith(
+      12,
+      expect.objectContaining({ name: 'Lote', tracking_template_id: 3 })
+    );
+    expect(TrackingCampaignsAPI.launch).toHaveBeenCalledWith(12);
+    expect(wrapper.emitted('updated')[0][0]).toEqual(
+      expect.objectContaining({ status: 'running', launch: true })
+    );
   });
 });

@@ -3,6 +3,7 @@
     "TITLE": "AI Agent Campaigns",
     "DESCRIPTION": "Launch an AI Agent over a group of contacts and track each campaign's progress.",
     "REFRESH": "Refresh",
+    "REFRESH_ERROR": "The table could not be refreshed.",
     "NEW_CAMPAIGN": "New campaign",
     "LOADING": "Loading campaigns…",
     "EMPTY_TITLE": "No campaigns yet.",
@@ -55,7 +56,12 @@
     "LAUNCH_QUEUED": "Campaign started: enrolling {count} contacts.",
     "LAUNCH_ERROR": "Could not start the campaign.",
     "SAVED_HINT": "Campaign saved. Nothing is sent until you press «Start».",
-    "SAVED_BANNER": "Saved: it does not enroll anyone or send messages until you start it."
+    "SAVED_BANNER": "Saved: it does not enroll anyone or send messages until you start it.",
+    "EDIT": "Edit",
+    "EDIT_CAMPAIGN": "Edit campaign “{name}”",
+    "EDIT_SUCCESS": "Changes saved. It stays Saved until you start it.",
+    "EDIT_ERROR": "The campaign could not be opened for editing.",
+    "EDIT_ONLY_SAVED": "Only a Saved campaign can be edited: this one has already started."
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campaigns",

@@ -3,12 +3,16 @@
 // @campanas_vendedor — Campañas de seguimiento (Dashboard de Seguimientos)
 // Entra a la tabla de campañas; "+ Agregar campaña" abre el formulario (con el preview
 // de audiencia debajo) y "Volver a campañas" regresa. Una campaña Guardada no corre
-// hasta "Poner en curso" (proyecto@automatizacion_campanas, TrackingCampaigns::Launch).
+// hasta "Poner en curso" (proyecto@automatizacion_campanas, TrackingCampaigns::Launch);
+// mientras siga Guardada se puede modificar ("Modificar", o ?edit=<id> desde el detalle).
+// La tabla es la de Contactos (VeTable): clic en una columna la ordena (en cliente).
 // ================================================================================
+import { VeTable } from 'vue-easytable';
 import { useAlert } from 'dashboard/composables';
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import CampaignForm from 'dashboard/components/contacts/BulkTrackingAssign/CampaignForm.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import { progressPct, sortCampaigns, sortFromParams } from './campaignsTable';
 
 const STATUS_COLOR = {
   saved: 'text-woot-700 bg-woot-50 dark:text-woot-300 dark:bg-woot-900/30',
@@ -19,18 +23,39 @@ const STATUS_COLOR = {
 };
 
 export default {
-  components: { CampaignForm, TableFooter },
+  components: { CampaignForm, TableFooter, VeTable },
   data() {
     return {
       campaigns: [],
       isLoading: false,
+      // Actualizar recarga solo la tabla: no la quita ni muestra "Cargando".
+      isRefreshing: false,
+      // Orden de la tabla: { campo: 'asc' | 'desc' }; vacío = las más nuevas primero.
+      sortConfig: {},
+      sortOption: {
+        sortAlways: true,
+        sortChange: params => this.onSortChange(params),
+      },
+      // Fila = abrir el detalle; los botones de acción cortan la propagación.
+      eventCustomOption: {
+        bodyRowEvents: ({ row }) => ({
+          click: () => this.openCampaign(row),
+        }),
+      },
+      rowStyleOption: {
+        stripe: false,
+        clickHighlight: false,
+        hoverHighlight: true,
+      },
       deletingId: null,
       showDeleteModal: false,
       campaignToDelete: null,
       // Poner en curso: la campaña a confirmar y la que se está lanzando
       campaignToLaunch: null,
       launchingId: null,
-      activeTab: 'list',
+      activeTab: 'list', // 'list' · 'new' · 'edit'
+      // La campaña Guardada que se está modificando (tab 'edit')
+      campaignToEdit: null,
       // proyecto@automatizacion_campanas: la campaña continua recién creada, para
       // ofrecer el siguiente paso (crear la automatización que la llena).
       createdContinuous: null,
@@ -68,9 +93,117 @@ export default {
         Math.ceil(this.filteredCampaigns.length / this.perPage)
       );
     },
+    sortedCampaigns() {
+      return sortCampaigns(this.filteredCampaigns, this.sortConfig);
+    },
     pagedCampaigns() {
       const start = (this.currentPage - 1) * this.perPage;
-      return this.filteredCampaigns.slice(start, start + this.perPage);
+      return this.sortedCampaigns.slice(start, start + this.perPage);
+    },
+    columns() {
+      const col = (field, key, extra = {}) => ({
+        field,
+        key: field,
+        title: this.$t(`TRACKING_CAMPAIGNS_VIEW.COL.${key}`),
+        align: 'left',
+        sortBy: this.sortConfig[field] || '',
+        ...extra,
+      });
+      return [
+        col('name', 'NAME', {
+          renderBodyCell: ({ row }) => (
+            <span class="font-medium text-woot-600 dark:text-woot-400">
+              {row.name}
+            </span>
+          ),
+        }),
+        col('template_name', 'AGENT', {
+          renderBodyCell: ({ row }) => row.template_name || '—',
+        }),
+        col('inbox_name', 'CHANNEL', {
+          renderBodyCell: ({ row }) => row.inbox_name || '—',
+        }),
+        col('mode', 'TYPE', {
+          renderBodyCell: ({ row }) =>
+            this.$t(`TRACKING_CAMPAIGNS_VIEW.MODE.${row.mode || 'batch'}`),
+        }),
+        col('scheduled_for', 'WINDOW', {
+          renderBodyCell: ({ row }) => (
+            <span class="whitespace-nowrap">{this.windowText(row)}</span>
+          ),
+        }),
+        // Guardada: en lugar del estado, el botón para ponerla en curso.
+        col('status', 'STATUS', {
+          renderBodyCell: ({ row }) =>
+            row.status === 'saved' ? (
+              <div onClick={e => e.stopPropagation()}>
+                <woot-button
+                  size="small"
+                  icon="send"
+                  isLoading={this.launchingId === row.id}
+                  onClick={() => this.openLaunch(row)}
+                >
+                  {this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH')}
+                </woot-button>
+              </div>
+            ) : (
+              <span
+                class={`px-2 py-0.5 rounded-full text-xs font-medium ${this.statusClass(
+                  row.status
+                )}`}
+              >
+                {this.statusLabel(row.status)}
+              </span>
+            ),
+        }),
+        col('progress', 'PROGRESS', {
+          align: 'right',
+          renderBodyCell: ({ row }) => (
+            <div class="flex items-center justify-end gap-2">
+              <div class="w-20 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                <div
+                  class="h-full bg-green-500"
+                  style={{ width: `${progressPct(row.stats)}%` }}
+                />
+              </div>
+              <span class="text-xs text-slate-400 w-9 text-right">
+                {progressPct(row.stats)}%
+              </span>
+            </div>
+          ),
+        }),
+        {
+          field: 'actions',
+          key: 'actions',
+          title: '',
+          align: 'right',
+          renderBodyCell: ({ row }) => (
+            <div
+              class="flex items-center justify-end gap-1 whitespace-nowrap"
+              onClick={e => e.stopPropagation()}
+            >
+              {row.status === 'saved' && (
+                <woot-button
+                  variant="clear"
+                  size="small"
+                  icon="edit"
+                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT')}
+                  onClick={() => this.openEdit(row)}
+                />
+              )}
+              <woot-button
+                variant="clear"
+                color-scheme="alert"
+                size="small"
+                icon="delete"
+                isLoading={this.deletingId === row.id}
+                title={this.$t('TRACKING_CAMPAIGNS_VIEW.DELETE')}
+                onClick={() => this.openDelete(row)}
+              />
+            </div>
+          ),
+        },
+      ];
     },
     // Estados disponibles para el selector (los que aparecen en STATUS_COLOR).
     statusOptions() {
@@ -116,6 +249,7 @@ export default {
       }
     }
     this.fetchCampaigns();
+    if (this.$route.query.edit) this.openEdit({ id: this.$route.query.edit });
   },
   methods: {
     async fetchCampaigns() {
@@ -129,8 +263,55 @@ export default {
         this.isLoading = false;
       }
     },
+    // Botón Actualizar: recarga los datos de la tabla sin quitarla de la pantalla.
+    async refreshTable() {
+      this.isRefreshing = true;
+      try {
+        const { data } = await TrackingCampaignsAPI.get();
+        this.campaigns = data;
+      } catch (error) {
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.REFRESH_ERROR'));
+      } finally {
+        this.isRefreshing = false;
+      }
+    },
+    onSortChange(params) {
+      this.sortConfig = sortFromParams(params);
+      this.currentPage = 1;
+    },
     goToList() {
       this.activeTab = 'list';
+      this.campaignToEdit = null;
+      if (this.$route.query.edit) this.$router.replace({ query: {} });
+    },
+    // Trae la campaña completa (audiencia incluida) y abre el formulario con sus datos.
+    async openEdit(campaign) {
+      try {
+        const { data } = await TrackingCampaignsAPI.show(campaign.id);
+        if (data.status !== 'saved') {
+          useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT_ONLY_SAVED'));
+          return;
+        }
+        this.campaignToEdit = data;
+        this.activeTab = 'edit';
+      } catch (error) {
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT_ERROR'));
+      }
+    },
+    onCampaignUpdated(result) {
+      if (result?.launch) {
+        useAlert(
+          result.queued
+            ? this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_QUEUED', {
+                count: result.queued,
+              })
+            : this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_SUCCESS')
+        );
+      } else {
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT_SUCCESS'));
+      }
+      this.goToList();
+      this.fetchCampaigns();
     },
     onPageChange(page) {
       this.currentPage = page;
@@ -160,7 +341,7 @@ export default {
               })
             : this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_SUCCESS')
         );
-        this.fetchCampaigns();
+        this.refreshTable();
       } catch (error) {
         useAlert(
           error.response?.data?.error ||
@@ -192,10 +373,6 @@ export default {
         hour: '2-digit',
         minute: '2-digit',
       });
-    },
-    progressPct(stats) {
-      if (!stats || !stats.total) return 0;
-      return Math.round((stats.completed / stats.total) * 100);
     },
     // Lleva a Automatizaciones con el modal de nueva regla abierto y la acción
     // "Agregar a campaña" ya puesta en esta campaña.
@@ -276,27 +453,12 @@ export default {
           </p>
         </div>
       </div>
-      <div v-if="activeTab === 'list'" class="flex items-center gap-2">
-        <woot-button
-          variant="clear"
-          icon="arrow-clockwise"
-          :is-loading="isLoading"
-          @click="fetchCampaigns"
-        >
-          {{ $t('TRACKING_CAMPAIGNS_VIEW.REFRESH') }}
-        </woot-button>
-        <woot-button icon="add" @click="goToNew">
-          {{ $t('TRACKING_CAMPAIGNS_VIEW.ADD_CAMPAIGN') }}
-        </woot-button>
-      </div>
-    </div>
-
-    <!-- Formulario: volver a la tabla -->
-    <div
-      v-if="activeTab === 'new'"
-      class="flex items-center gap-3 mb-4 shrink-0"
-    >
+      <!-- Arriba a la derecha: Agregar campaña en la tabla, Volver a campañas en el formulario -->
+      <woot-button v-if="activeTab === 'list'" icon="add" @click="goToNew">
+        {{ $t('TRACKING_CAMPAIGNS_VIEW.ADD_CAMPAIGN') }}
+      </woot-button>
       <woot-button
+        v-else
         variant="smooth"
         color-scheme="secondary"
         icon="chevron-left"
@@ -304,13 +466,31 @@ export default {
       >
         {{ $t('TRACKING_CAMPAIGNS_VIEW.BACK_TO_LIST') }}
       </woot-button>
+    </div>
+
+    <div v-if="activeTab !== 'list'" class="mb-4 shrink-0">
       <h2 class="text-base font-semibold text-slate-700 dark:text-slate-200">
-        {{ $t('TRACKING_CAMPAIGNS_VIEW.NEW_CAMPAIGN') }}
+        {{
+          activeTab === 'edit'
+            ? $t('TRACKING_CAMPAIGNS_VIEW.EDIT_CAMPAIGN', {
+                name: campaignToEdit.name,
+              })
+            : $t('TRACKING_CAMPAIGNS_VIEW.NEW_CAMPAIGN')
+        }}
       </h2>
     </div>
 
+    <!-- Modificar una Guardada -->
+    <div v-if="activeTab === 'edit'" class="flex-1 min-h-0 overflow-y-auto">
+      <CampaignForm
+        :key="campaignToEdit.id"
+        :campaign="campaignToEdit"
+        @updated="onCampaignUpdated"
+      />
+    </div>
+
     <!-- Tab: Nueva campaña -->
-    <div v-if="activeTab === 'new'" class="flex-1 min-h-0 overflow-y-auto">
+    <div v-else-if="activeTab === 'new'" class="flex-1 min-h-0 overflow-y-auto">
       <CampaignForm
         :preset-filter-payload="presetFilter"
         @created="onCampaignCreated"
@@ -373,6 +553,16 @@ export default {
         <div
           class="flex items-center gap-3 mb-3 shrink-0 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
         >
+          <woot-button
+            variant="smooth"
+            color-scheme="secondary"
+            icon="arrow-clockwise"
+            class="shrink-0"
+            :is-loading="isRefreshing"
+            @click="refreshTable"
+          >
+            {{ $t('TRACKING_CAMPAIGNS_VIEW.REFRESH') }}
+          </woot-button>
           <div class="relative flex-1 min-w-[120px]">
             <fluent-icon
               icon="search"
@@ -408,108 +598,19 @@ export default {
 
         <div
           v-else
-          class="flex-1 min-h-0 overflow-auto rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
+          class="campaigns-table-wrap flex-1 min-h-0 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
         >
-          <table class="w-full text-sm">
-            <thead class="sticky top-0 z-10 bg-white dark:bg-slate-800">
-              <tr
-                class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700"
-              >
-                <th class="p-3">
-                  {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.NAME') }}
-                </th>
-                <th class="p-3">
-                  {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.AGENT') }}
-                </th>
-                <th class="p-3">
-                  {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.CHANNEL') }}
-                </th>
-                <!-- proyecto@automatizacion_campanas: tipo y ventana (antes, solo el inicio) -->
-                <th class="p-3">
-                  {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.TYPE') }}
-                </th>
-                <th class="p-3">
-                  {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.WINDOW') }}
-                </th>
-                <th class="p-3">
-                  {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.STATUS') }}
-                </th>
-                <th class="p-3 text-right">
-                  {{ $t('TRACKING_CAMPAIGNS_VIEW.COL.PROGRESS') }}
-                </th>
-                <th class="p-3 w-10" aria-label="acciones" />
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="c in pagedCampaigns"
-                :key="c.id"
-                class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer"
-                @click="openCampaign(c)"
-              >
-                <td class="p-3 font-medium text-woot-600 dark:text-woot-400">
-                  {{ c.name }}
-                </td>
-                <td class="p-3 text-slate-500 dark:text-slate-400">
-                  {{ c.template_name || '—' }}
-                </td>
-                <td class="p-3 text-slate-500 dark:text-slate-400">
-                  {{ c.inbox_name || '—' }}
-                </td>
-                <td class="p-3 text-slate-500 dark:text-slate-400">
-                  {{ $t(`TRACKING_CAMPAIGNS_VIEW.MODE.${c.mode || 'batch'}`) }}
-                </td>
-                <td
-                  class="p-3 text-slate-500 dark:text-slate-400 whitespace-nowrap"
-                >
-                  {{ windowText(c) }}
-                </td>
-                <td class="p-3">
-                  <span
-                    class="px-2 py-0.5 rounded-full text-xs font-medium"
-                    :class="statusClass(c.status)"
-                  >
-                    {{ statusLabel(c.status) }}
-                  </span>
-                </td>
-                <td class="p-3 text-right whitespace-nowrap">
-                  <div class="flex items-center justify-end gap-2">
-                    <div
-                      class="w-20 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden"
-                    >
-                      <div
-                        class="h-full bg-green-500"
-                        :style="{ width: `${progressPct(c.stats)}%` }"
-                      />
-                    </div>
-                    <span class="text-xs text-slate-400 w-9 text-right">
-                      {{ progressPct(c.stats) }}%
-                    </span>
-                  </div>
-                </td>
-                <td class="p-3 text-right whitespace-nowrap">
-                  <woot-button
-                    v-if="c.status === 'saved'"
-                    size="small"
-                    icon="send"
-                    :is-loading="launchingId === c.id"
-                    @click.stop="openLaunch(c)"
-                  >
-                    {{ $t('TRACKING_CAMPAIGNS_VIEW.LAUNCH') }}
-                  </woot-button>
-                  <woot-button
-                    variant="clear"
-                    color-scheme="alert"
-                    size="small"
-                    icon="delete"
-                    :is-loading="deletingId === c.id"
-                    :title="$t('TRACKING_CAMPAIGNS_VIEW.DELETE')"
-                    @click.stop="openDelete(c)"
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <VeTable
+            fixed-header
+            max-height="100%"
+            row-key-field-name="id"
+            :columns="columns"
+            :table-data="pagedCampaigns"
+            :border-around="false"
+            :sort-option="sortOption"
+            :event-custom-option="eventCustomOption"
+            :row-style-option="rowStyleOption"
+          />
         </div>
 
         <!-- Pie de paginado nativo (mismo componente que Contactos) -->
@@ -546,3 +647,31 @@ export default {
     />
   </div>
 </template>
+
+<style lang="scss" scoped>
+// Misma densidad que la tabla de Contactos; solo scrollean las filas.
+.campaigns-table-wrap {
+  overflow: hidden;
+}
+
+.campaigns-table-wrap::v-deep {
+  .ve-table {
+    height: 100%;
+  }
+
+  .ve-table-header-th {
+    padding: var(--space-small) var(--space-two) !important;
+    font-size: var(--font-size-mini) !important;
+  }
+
+  .ve-table-body-td {
+    padding: var(--space-small) var(--space-two) !important;
+    vertical-align: middle;
+    cursor: pointer;
+  }
+
+  .ve-table-sort {
+    @apply -top-1;
+  }
+}
+</style>
