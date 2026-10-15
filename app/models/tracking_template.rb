@@ -135,14 +135,15 @@ class TrackingTemplate < ApplicationRecord
   def keyword_actions_valid_structure
     return unless keyword_actions.is_a?(Array)
 
-    keyword_actions.each do |ka|
-      next if ka.is_a?(Hash) &&
-              ka['keyword'].to_s.strip.present? &&
-              ContactTrackings::KeywordActionService::VALID_ACTIONS.include?(ka['action'].to_s) &&
-              ContactTrackings::KeywordActionService::VALID_DIRECTIONS.include?(ka['direction'].to_s)
+    return if keyword_actions.all? { |ka| valid_keyword_action?(ka) }
 
-      errors.add(:keyword_actions, 'contiene una entrada con formato inválido')
-      break
-    end
+    errors.add(:keyword_actions, 'contiene una entrada con formato inválido')
+  end
+
+  def valid_keyword_action?(rule)
+    rule.is_a?(Hash) &&
+      rule['keyword'].to_s.strip.present? &&
+      ContactTrackings::KeywordActionService::VALID_ACTIONS.include?(rule['action'].to_s) &&
+      ContactTrackings::KeywordActionService::VALID_DIRECTIONS.include?(rule['direction'].to_s)
   end
 end

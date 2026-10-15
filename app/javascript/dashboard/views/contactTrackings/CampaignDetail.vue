@@ -53,9 +53,9 @@ function deliveryBucket(messageStatus) {
 // 'clear' no está aquí (limpia el filtro); Avance/Progreso no es filtrable.
 const PROSPECT_FILTERS = {
   intent_replied: p => !!p.last_intent,
-  intent_interested: p =>
-    ['interested', 'book_appointment', 'reschedule'].includes(p.last_intent),
-  intent_appointment: p => !!p.appointment_at,
+  // Interesados/Agendaron: solo por las reglas de palabra clave (igual que el embudo)
+  intent_interested: p => !!p.interested_at,
+  intent_appointment: p => !!p.booked_at,
   intent_objective: p => p.status === 'objective_met',
   ctrl_pending: p => p.status === 'pending' || p.status === 'scheduled',
   ctrl_active: p => p.status === 'active',

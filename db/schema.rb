@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_05_190000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_15_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -856,6 +856,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_05_190000) do
     t.bigint "tracking_campaign_id"
     t.jsonb "keyword_action_fired"
     t.string "appointment_status"
+    t.datetime "interested_at"
+    t.datetime "booked_at"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
     t.index ["appointment_at"], name: "index_contact_trackings_on_appointment_at"

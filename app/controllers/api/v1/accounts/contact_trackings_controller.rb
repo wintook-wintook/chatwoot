@@ -325,7 +325,7 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
       :status,
       :tracking_template_id,                             # proyecto@bot_seguimiento_calendar
       whatsapp_templates: [],                            # ⭐ NUEVO - Array de strings
-      keyword_actions: [:keyword, :action, :direction],  # proyecto@contact_tracking
+      keyword_actions: [:keyword, :action, :direction, :label, :assignee_id, :team_id],  # proyecto@contact_tracking
       calendar_integration_ids: []                       # proyecto@bot_seguimiento_calendar
     )
   end

@@ -88,8 +88,8 @@
     "FILTER_EMPTY": "Ningún prospecto coincide con este filtro.",
     "FILTER_DESC": {
       "intent_replied": "Contactos que respondieron al menos una vez desde que se creó el seguimiento (cuenta incluso si respondieron antes del primer mensaje).",
-      "intent_interested": "El contacto mostró interés o pidió agendar; suele pausarse para que lo atienda un asesor.",
-      "intent_appointment": "El contacto agendó una cita a través del Agente IA (quedó registrada su fecha y hora).",
+      "intent_interested": "Una regla de palabra clave con acción Interesado lo marcó (por ejemplo, el Agente IA escribió #interesado al final del mensaje).",
+      "intent_appointment": "Una regla de palabra clave con acción Agendó lo marcó (por ejemplo, el Agente IA escribió #agendado al final del mensaje).",
       "intent_objective": "Se logró la meta del seguimiento; se marca como éxito y se detienen los envíos.",
       "ctrl_pending": "En cola o con próximo mensaje programado; aún no envían.",
       "ctrl_active": "Seguimiento en marcha: enviando mensajes y respondiendo al contacto según el objetivo.",

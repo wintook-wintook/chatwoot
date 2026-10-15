@@ -58,21 +58,21 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
 
     context 'when contacts have replied' do
       before do
-        # respondió + interesado
-        prospect_with_delivery('delivered', last_intent: 'interested')
-        # respondió pero no interesado
-        prospect_with_delivery('delivered', last_intent: 'not_interested')
-        # respondió + agendó
-        prospect_with_delivery('read', last_intent: 'book_appointment', appointment_at: 1.day.from_now)
+        # respondió + la regla Interesado lo marcó
+        prospect_with_delivery('delivered', last_intent: 'tracking', interested_at: 1.hour.ago)
+        # la IA dice interesado y tiene cita de calendario, pero ninguna regla lo marcó: no cuenta
+        prospect_with_delivery('delivered', last_intent: 'interested', appointment_at: 1.day.from_now)
+        # respondió + reglas Interesado y Agendó
+        prospect_with_delivery('read', last_intent: 'tracking', interested_at: 2.hours.ago, booked_at: 1.hour.ago)
         # no respondió (last_intent nil)
         prospect_with_delivery('sent')
       end
 
-      it 'expone el embudo: respondieron / interesados / agendaron' do
+      it 'expone el embudo: interesados / agendaron solo por las reglas de palabra clave' do
         get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}",
             headers: admin.create_new_auth_token, as: :json
 
-        expect(response.parsed_body['funnel']).to eq('replied' => 3, 'interested' => 2, 'appointment' => 1)
+        expect(response.parsed_body['funnel']).to eq('replied' => 3, 'interested' => 2, 'appointment' => 1, 'objective_met' => 0)
       end
     end
   end

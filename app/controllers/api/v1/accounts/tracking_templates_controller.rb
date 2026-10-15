@@ -115,7 +115,7 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
       :timezone, :slots_presentation, # proyecto@bot_seguimiento_calendar
       whatsapp_templates: [],
       tags: [],
-      keyword_actions: [:keyword, :action, :direction], # proyecto@contact_tracking
+      keyword_actions: [:keyword, :action, :direction, :label, :assignee_id, :team_id], # proyecto@contact_tracking
       calendar_integration_ids: []
     )
     # booking_calendar_ids es un mapa de claves dinámicas { integration_id => [cal_ids] } que
