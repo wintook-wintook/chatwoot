@@ -141,13 +141,18 @@ export default {
         PAUSE: 'Pause follow-up',
         OBJECTIVE_MET: 'Objective met',
         INTERESTED: 'Interested',
+        BOOKED: 'Booked',
       },
-      INTERESTED: {
+      MARK: {
         NO_LABEL: 'No label',
         NO_AGENT: 'No agent',
         NO_TEAM: 'No team',
-        REQUIRED_HINT:
-          'Pick a label, an agent or a team. The follow-up continues: the bot keeps replying.',
+        HINT_INTERESTED:
+          "Counts toward the campaign's Interested indicator. Label, agent and team are optional. The bot keeps replying.",
+        HINT_BOOKED:
+          "Counts toward the campaign's Booked indicator. Label, agent and team are optional. The bot keeps replying.",
+        HINT_OBJECTIVE_MET:
+          "Counts toward the campaign's Objective met indicator and closes the follow-up.",
       },
       DIRECTIONS: {
         LABEL: 'Direction',

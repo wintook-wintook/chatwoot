@@ -150,13 +150,18 @@ export default {
         PAUSE: 'Pausar seguimiento',
         OBJECTIVE_MET: 'Objetivo cumplido',
         INTERESTED: 'Interesado',
+        BOOKED: 'Agendó',
       },
-      INTERESTED: {
+      MARK: {
         NO_LABEL: 'Sin etiqueta',
         NO_AGENT: 'Sin asignar agente',
         NO_TEAM: 'Sin asignar equipo',
-        REQUIRED_HINT:
-          'Elige una etiqueta, un agente o un equipo. El seguimiento continúa: el bot sigue respondiendo.',
+        HINT_INTERESTED:
+          'Suma al indicador Interesados de la campaña. Etiqueta, agente y equipo son opcionales. El bot sigue respondiendo.',
+        HINT_BOOKED:
+          'Suma al indicador Agendaron de la campaña. Etiqueta, agente y equipo son opcionales. El bot sigue respondiendo.',
+        HINT_OBJECTIVE_MET:
+          'Suma al indicador Objetivo cumplido de la campaña y cierra el seguimiento.',
       },
       DIRECTIONS: {
         LABEL: 'Dirección',

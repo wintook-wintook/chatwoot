@@ -20,8 +20,6 @@
 
 class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseController
   include TrackingCampaignEntriesJson
-  # Intenciones que cuentan como "interesado" en el embudo (igual que el overview de cuenta).
-  INTERESTED_INTENTS = %w[interested book_appointment reschedule].freeze
   ACTIVE_TRACKING_STATUSES = %w[pending scheduled active paused].freeze
 
   def index
@@ -149,17 +147,18 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     end
   end
 
-  # Embudo de intención por campaña (respondieron/interesados/agendaron), mismo
-  # criterio que el overview de cuenta: replied = last_intent no nulo. 3 queries
-  # agregadas (sin N+1). Devuelve { campaign_id => { replied:, interested:, appointment: } }.
+  # Embudo por campaña, mismo criterio que el overview de cuenta: replied = last_intent
+  # no nulo; interesados/agendaron/objetivo cumplido solo por las reglas de palabra
+  # clave (interested_at / booked_at / status objective_met). Queries agregadas (sin N+1).
+  # Devuelve { campaign_id => { replied:, interested:, appointment:, objective_met: } }.
   def funnel_by_campaign(ids)
     return {} if ids.blank?
 
     base = ContactTracking.where(tracking_campaign_id: ids)
-    replied = base.where.not(last_intent: nil).group(:tracking_campaign_id).count
-    interested = base.where(last_intent: INTERESTED_INTENTS).group(:tracking_campaign_id).count
-    appointment = base.where.not(appointment_at: nil).group(:tracking_campaign_id).count
-    objective_met = base.where(status: 'objective_met').group(:tracking_campaign_id).count
+    replied = count_by_campaign(base.where.not(last_intent: nil))
+    interested = count_by_campaign(base.where.not(interested_at: nil))
+    appointment = count_by_campaign(base.where.not(booked_at: nil))
+    objective_met = count_by_campaign(base.where(status: 'objective_met'))
 
     ids.index_with do |id|
       {
@@ -169,6 +168,10 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
         objective_met: objective_met[id].to_i
       }
     end
+  end
+
+  def count_by_campaign(relation)
+    relation.group(:tracking_campaign_id).count
   end
 
   # Sin inicio = desde ahora. Con inicio futuro nace Programada (la abre WindowJob).

@@ -144,12 +144,6 @@ class TrackingTemplate < ApplicationRecord
     rule.is_a?(Hash) &&
       rule['keyword'].to_s.strip.present? &&
       ContactTrackings::KeywordActionService::VALID_ACTIONS.include?(rule['action'].to_s) &&
-      ContactTrackings::KeywordActionService::VALID_DIRECTIONS.include?(rule['direction'].to_s) &&
-      interested_rule_has_target?(rule)
-  end
-
-  # La regla "interested" tiene que etiquetar o asignar algo; sin eso no hace nada.
-  def interested_rule_has_target?(rule)
-    rule['action'].to_s != 'interested' || %w[label assignee_id team_id].any? { |field| rule[field].present? }
+      ContactTrackings::KeywordActionService::VALID_DIRECTIONS.include?(rule['direction'].to_s)
   end
 end

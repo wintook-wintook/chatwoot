@@ -88,8 +88,8 @@
     "FILTER_EMPTY": "No prospects match this filter.",
     "FILTER_DESC": {
       "intent_replied": "Contacts who replied at least once since the follow-up was created (counts even if they replied before the first message).",
-      "intent_interested": "The contact showed interest or asked to book; usually paused for an agent to take over.",
-      "intent_appointment": "The contact booked an appointment through the AI Agent (its date and time were recorded).",
+      "intent_interested": "A keyword rule with the Interested action marked it (e.g. the AI Agent wrote #interested at the end of its message).",
+      "intent_appointment": "A keyword rule with the Booked action marked it (e.g. the AI Agent wrote #booked at the end of its message).",
       "intent_objective": "The follow-up goal was achieved; marked as success and sending stops.",
       "ctrl_pending": "Queued or with a scheduled next message; not sent yet.",
       "ctrl_active": "Follow-up running: sending messages and replying to the contact toward the objective.",

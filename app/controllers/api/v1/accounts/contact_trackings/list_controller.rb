@@ -95,7 +95,12 @@ class Api::V1::Accounts::ContactTrackings::ListController < Api::V1::Accounts::B
       template_name: tracking.tracking_template&.name,
       conversation_id: tracking.conversation_id,
       conversation_display_id: tracking.conversation&.display_id
-    }.merge(delivery_fields(tracking))
+    }.merge(delivery_fields(tracking), rule_mark_fields(tracking))
+  end
+
+  # proyecto@contact_tracking: marcas de las reglas Interesado/Agendó (filtros de campaña)
+  def rule_mark_fields(tracking)
+    { interested_at: tracking.interested_at, booked_at: tracking.booked_at }
   end
 
   # Estado de entrega (WhatsApp) del último mensaje saliente ([[Entrega-vs-ejecucion]]).

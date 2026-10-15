@@ -6,14 +6,23 @@
   Descripción: Editor de palabras clave de acción para plantillas y seguimientos.
                Permite agregar/editar/eliminar entradas { keyword, action, direction }.
                Las acciones son silenciosas: no generan respuesta al contacto.
-               La acción "interested" suma { label, assignee_id, team_id } (opcionales,
-               al menos uno): etiqueta/asigna la conversación sin cortar el flujo.
+               Las acciones "interested" y "booked" suman a los indicadores
+               Interesados / Agendaron, aceptan { label, assignee_id, team_id }
+               (opcionales) para etiquetar/asignar la conversación y no cortan el flujo.
   ================================================================================
 -->
 <script>
 import { mapGetters } from 'vuex';
 
-const INTERESTED_FIELDS = ['label', 'assignee_id', 'team_id'];
+const MARK_FIELDS = ['label', 'assignee_id', 'team_id'];
+// Acciones que marcan el seguimiento (y aceptan etiqueta/agente/equipo)
+const MARK_ACTIONS = ['interested', 'booked'];
+// Texto de ayuda: a qué indicador de campaña suma cada acción
+const INDICATOR_HINTS = {
+  interested: 'HINT_INTERESTED',
+  booked: 'HINT_BOOKED',
+  objective_met: 'HINT_OBJECTIVE_MET',
+};
 
 export default {
   name: 'KeywordActionsEditor',
@@ -65,10 +74,10 @@ export default {
   methods: {
     cloneItems(items) {
       if (!Array.isArray(items)) return [];
-      // Los selects de "interested" necesitan '' (no undefined) para mostrar la opción vacía
+      // Los selects de etiqueta/agente/equipo necesitan '' (no undefined) para la opción vacía
       return items.map(item => {
         const copy = { ...item };
-        INTERESTED_FIELDS.forEach(field => {
+        MARK_FIELDS.forEach(field => {
           if (copy[field] === undefined || copy[field] === null)
             copy[field] = '';
         });
@@ -76,15 +85,24 @@ export default {
       });
     },
 
-    // Solo "interested" guarda etiqueta/agente/equipo, y sin los vacíos
+    // Solo interested/booked guardan etiqueta/agente/equipo, y sin los vacíos
+    isMarkAction(action) {
+      return MARK_ACTIONS.includes(action);
+    },
+
+    indicatorHint(action) {
+      const key = INDICATOR_HINTS[action];
+      return key ? this.$t(`CONTACT_TRACKING.KEYWORD_ACTIONS.MARK.${key}`) : '';
+    },
+
     cleanItem(item) {
       const clean = {
         keyword: item.keyword.trim(),
         action: item.action,
         direction: item.direction,
       };
-      if (item.action === 'interested') {
-        INTERESTED_FIELDS.forEach(field => {
+      if (this.isMarkAction(item.action)) {
+        MARK_FIELDS.forEach(field => {
           if (
             item[field] !== '' &&
             item[field] !== undefined &&
@@ -192,6 +210,9 @@ export default {
             <option value="interested">
               {{ $t('CONTACT_TRACKING.KEYWORD_ACTIONS.ACTIONS.INTERESTED') }}
             </option>
+            <option value="booked">
+              {{ $t('CONTACT_TRACKING.KEYWORD_ACTIONS.ACTIONS.BOOKED') }}
+            </option>
           </select>
 
           <!-- Dirección -->
@@ -222,8 +243,8 @@ export default {
           </button>
         </div>
 
-        <!-- Interesado: etiqueta / agente / equipo -->
-        <div v-if="item.action === 'interested'" class="mt-1.5 ml-4">
+        <!-- Interesado / Agendó: etiqueta / agente / equipo -->
+        <div v-if="isMarkAction(item.action)" class="mt-1.5 ml-4">
           <div class="flex gap-2 items-center">
             <select
               v-model="item.label"
@@ -231,7 +252,7 @@ export default {
               @change="emitUpdate"
             >
               <option value="">
-                {{ $t('CONTACT_TRACKING.KEYWORD_ACTIONS.INTERESTED.NO_LABEL') }}
+                {{ $t('CONTACT_TRACKING.KEYWORD_ACTIONS.MARK.NO_LABEL') }}
               </option>
               <option
                 v-for="label in labels"
@@ -247,7 +268,7 @@ export default {
               @change="emitUpdate"
             >
               <option value="">
-                {{ $t('CONTACT_TRACKING.KEYWORD_ACTIONS.INTERESTED.NO_AGENT') }}
+                {{ $t('CONTACT_TRACKING.KEYWORD_ACTIONS.MARK.NO_AGENT') }}
               </option>
               <option v-for="agent in agents" :key="agent.id" :value="agent.id">
                 {{ agent.name }}
@@ -259,22 +280,22 @@ export default {
               @change="emitUpdate"
             >
               <option value="">
-                {{ $t('CONTACT_TRACKING.KEYWORD_ACTIONS.INTERESTED.NO_TEAM') }}
+                {{ $t('CONTACT_TRACKING.KEYWORD_ACTIONS.MARK.NO_TEAM') }}
               </option>
               <option v-for="team in teams" :key="team.id" :value="team.id">
                 {{ team.name }}
               </option>
             </select>
           </div>
-          <p
-            v-if="!item.label && !item.assignee_id && !item.team_id"
-            class="text-xs text-amber-600 dark:text-amber-400 mt-1"
-          >
-            {{
-              $t('CONTACT_TRACKING.KEYWORD_ACTIONS.INTERESTED.REQUIRED_HINT')
-            }}
-          </p>
         </div>
+
+        <!-- A qué indicador de campaña suma -->
+        <p
+          v-if="indicatorHint(item.action)"
+          class="text-xs text-slate-500 dark:text-slate-400 mt-1 ml-4"
+        >
+          {{ indicatorHint(item.action) }}
+        </p>
       </div>
     </div>
   </div>
