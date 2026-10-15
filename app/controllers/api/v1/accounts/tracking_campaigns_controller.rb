@@ -21,6 +21,7 @@
 class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseController
   include TrackingCampaignEntriesJson
   ACTIVE_TRACKING_STATUSES = %w[pending scheduled active paused].freeze
+  EMPTY_FUNNEL = { replied: 0, interested: 0, appointment: 0, objective_met: 0, paused_rule: 0, cancelled_rule: 0 }.freeze
 
   def index
     return render(json: lite_list) if ActiveModel::Type::Boolean.new.cast(params[:lite])
@@ -148,26 +149,26 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   end
 
   # Embudo por campaña, mismo criterio que el overview de cuenta: replied = last_intent
-  # no nulo; interesados/agendaron/objetivo cumplido solo por las reglas de palabra
-  # clave (interested_at / booked_at / status objective_met). Queries agregadas (sin N+1).
-  # Devuelve { campaign_id => { replied:, interested:, appointment:, objective_met: } }.
+  # no nulo; el resto solo por las reglas de palabra clave: interested_at / booked_at,
+  # status objective_met, y pausados/cancelados que siguen así porque los dejó una regla
+  # (keyword_action_fired). Queries agregadas (sin N+1).
+  # Devuelve { campaign_id => { replied:, interested:, appointment:, objective_met:, paused_rule:, cancelled_rule: } }.
   def funnel_by_campaign(ids)
     return {} if ids.blank?
 
     base = ContactTracking.where(tracking_campaign_id: ids)
-    replied = count_by_campaign(base.where.not(last_intent: nil))
-    interested = count_by_campaign(base.where.not(interested_at: nil))
-    appointment = count_by_campaign(base.where.not(booked_at: nil))
-    objective_met = count_by_campaign(base.where(status: 'objective_met'))
+    # siguen en `status` porque una regla de palabra clave con `action` los dejó así
+    by_rule = ->(status, action) { base.where(status: status).where("keyword_action_fired->>'action' = ?", action) }
+    counts = {
+      replied: base.where.not(last_intent: nil),
+      interested: base.where.not(interested_at: nil),
+      appointment: base.where.not(booked_at: nil),
+      objective_met: base.where(status: 'objective_met'),
+      paused_rule: by_rule.call('paused', 'pause'),
+      cancelled_rule: by_rule.call('cancelled', 'cancel')
+    }.transform_values { |relation| count_by_campaign(relation) }
 
-    ids.index_with do |id|
-      {
-        replied: replied[id].to_i,
-        interested: interested[id].to_i,
-        appointment: appointment[id].to_i,
-        objective_met: objective_met[id].to_i
-      }
-    end
+    ids.index_with { |id| counts.transform_values { |by_campaign| by_campaign[id].to_i } }
   end
 
   def count_by_campaign(relation)
@@ -227,7 +228,7 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       inbox_name: campaign.inbox&.name,
       stats: aggregate_stats(status_counts || {}),
       delivery: aggregate_delivery(delivery_counts || {}),
-      funnel: funnel_counts || { replied: 0, interested: 0, appointment: 0, objective_met: 0 }
+      funnel: funnel_counts || EMPTY_FUNNEL
     }
   end
 

@@ -12,6 +12,8 @@ import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import CampaignEntries from './CampaignEntries.vue';
 
 const PAGE_SIZE = 25;
+// Cada cuánto se refrescan los indicadores mientras la pantalla está abierta
+const KPI_REFRESH_MS = 60 * 1000;
 
 // Colores del estado de la campaña (draft/running/paused/finished)
 const CAMPAIGN_STATUS_COLOR = {
@@ -57,12 +59,13 @@ const PROSPECT_FILTERS = {
   intent_interested: p => !!p.interested_at,
   intent_appointment: p => !!p.booked_at,
   intent_objective: p => p.status === 'objective_met',
+  // Pausados/Cancelados (Regla): siguen así porque los dejó una regla de palabra clave
+  intent_paused_rule: p => p.status === 'paused' && p.rule_action === 'pause',
+  intent_cancelled_rule: p =>
+    p.status === 'cancelled' && p.rule_action === 'cancel',
   ctrl_pending: p => p.status === 'pending' || p.status === 'scheduled',
-  ctrl_active: p => p.status === 'active',
-  ctrl_paused: p => p.status === 'paused',
   ctrl_completed_replied: p => p.status === 'completed' && !!p.last_intent,
   ctrl_completed_no_reply: p => p.status === 'completed' && !p.last_intent,
-  ctrl_cancelled: p => p.status === 'cancelled',
   ctrl_failed: p => p.status === 'failed',
   del_delivered: p => deliveryBucket(p.last_message_status) === 'delivered',
   del_sent: p => deliveryBucket(p.last_message_status) === 'sent',
@@ -81,6 +84,7 @@ export default {
       activeFilter: null, // id del filtro por KPI (PROSPECT_FILTERS) o null
       activeFilterLabel: '', // etiqueta traducida del KPI activo (para el chip)
       activeTab: 0, // proyecto@automatizacion_campanas: 0 = Prospectos, 1 = Inscritos
+      kpiTimer: null,
     };
   },
   computed: {
@@ -154,6 +158,18 @@ export default {
           color: 'text-emerald-600 dark:text-emerald-500',
           filter: 'intent_objective',
         },
+        {
+          key: 'PAUSED_RULE',
+          value: this.funnel.paused_rule || 0,
+          color: 'text-amber-800 dark:text-amber-800',
+          filter: 'intent_paused_rule',
+        },
+        {
+          key: 'CANCELLED_RULE',
+          value: this.funnel.cancelled_rule || 0,
+          color: 'text-red-500 dark:text-red-400',
+          filter: 'intent_cancelled_rule',
+        },
       ];
     },
     backRoute() {
@@ -168,18 +184,6 @@ export default {
           filter: 'ctrl_pending',
         },
         {
-          key: 'ACTIVE',
-          value: this.stats.active || 0,
-          color: 'text-green-600 dark:text-green-500',
-          filter: 'ctrl_active',
-        },
-        {
-          key: 'PAUSED',
-          value: this.stats.paused || 0,
-          color: 'text-amber-800 dark:text-amber-800',
-          filter: 'ctrl_paused',
-        },
-        {
           key: 'COMPLETED_REPLIED',
           value: this.stats.completed_replied || 0,
           color: 'text-green-700 dark:text-green-500',
@@ -190,12 +194,6 @@ export default {
           value: this.stats.completed_no_reply || 0,
           color: 'text-slate-500 dark:text-slate-400',
           filter: 'ctrl_completed_no_reply',
-        },
-        {
-          key: 'CANCELLED',
-          value: this.stats.cancelled || 0,
-          color: 'text-red-500 dark:text-red-400',
-          filter: 'ctrl_cancelled',
         },
         {
           key: 'FAILED',
@@ -227,8 +225,35 @@ export default {
   },
   mounted() {
     this.fetchAll();
+    this.kpiTimer = setInterval(this.refreshKpis, KPI_REFRESH_MS);
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
+  },
+  beforeDestroy() {
+    clearInterval(this.kpiTimer);
+    document.removeEventListener('visibilitychange', this.onVisibilityChange);
   },
   methods: {
+    // Refresca solo los números (stats/funnel/delivery) en su lugar: sin spinner ni
+    // recargar prospectos, para que la pantalla no parpadee. Con la pestaña oculta no
+    // pide nada; al volver a ella se pone al día. Si falla, deja los últimos valores.
+    async refreshKpis() {
+      if (document.hidden || this.isLoading || !this.campaign) return;
+      try {
+        const { data } = await TrackingCampaignsAPI.show(this.campaignId);
+        if (String(data.id) !== String(this.campaignId)) return;
+        this.campaign = {
+          ...this.campaign,
+          stats: data.stats,
+          funnel: data.funnel,
+          delivery: data.delivery,
+        };
+      } catch (error) {
+        // silencioso: se reintenta en el próximo ciclo
+      }
+    },
+    onVisibilityChange() {
+      if (!document.hidden) this.refreshKpis();
+    },
     async fetchAll() {
       this.isLoading = true;
       try {
