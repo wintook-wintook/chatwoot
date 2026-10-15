@@ -5,6 +5,7 @@
 // ContactTracking, reusando el endpoint de listado filtrado por campaign_id).
 // ================================================================================
 import { mapGetters } from 'vuex';
+import { useAlert } from 'dashboard/composables';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import ContactTrackingsAPI from 'dashboard/api/contactTrackings';
@@ -17,6 +18,7 @@ const KPI_REFRESH_MS = 60 * 1000;
 
 // Colores del estado de la campaña (draft/running/paused/finished)
 const CAMPAIGN_STATUS_COLOR = {
+  saved: 'text-woot-700 bg-woot-50 dark:text-woot-300 dark:bg-woot-900/30',
   draft: 'text-slate-500 bg-slate-100 dark:bg-slate-700',
   running: 'text-green-700 bg-green-100 dark:bg-green-900/30',
   paused: 'text-amber-800 bg-amber-100 dark:bg-amber-900/30',
@@ -85,6 +87,8 @@ export default {
       activeFilterLabel: '', // etiqueta traducida del KPI activo (para el chip)
       activeTab: 0, // proyecto@automatizacion_campanas: 0 = Prospectos, 1 = Inscritos
       kpiTimer: null,
+      showLaunchModal: false,
+      isLaunching: false,
     };
   },
   computed: {
@@ -293,6 +297,30 @@ export default {
       this.activeFilterLabel = '';
       this.currentPage = 1;
     },
+    // Pone en curso la campaña Guardada y recarga todo (por lote, los contactos
+    // se inscriben en background: aparecen en las siguientes actualizaciones).
+    async confirmLaunch() {
+      this.showLaunchModal = false;
+      this.isLaunching = true;
+      try {
+        const { data } = await TrackingCampaignsAPI.launch(this.campaignId);
+        useAlert(
+          data.queued
+            ? this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_QUEUED', {
+                count: data.queued,
+              })
+            : this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_SUCCESS')
+        );
+        await this.fetchAll();
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_ERROR')
+        );
+      } finally {
+        this.isLaunching = false;
+      }
+    },
     campaignStatusLabel(status) {
       return this.$t(`TRACKING_CAMPAIGNS_VIEW.STATUS.${status}`);
     },
@@ -369,14 +397,18 @@ export default {
 
 <template>
   <div class="flex flex-col flex-1 w-full h-full overflow-hidden p-4">
-    <!-- Volver -->
-    <router-link
-      :to="backRoute"
-      class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-woot-600 mb-3"
-    >
-      <fluent-icon icon="chevron-left" size="14" />
-      {{ $t('TRACKING_CAMPAIGN_DETAIL.BACK') }}
-    </router-link>
+    <!-- Volver a la tabla de campañas -->
+    <div class="mb-3 shrink-0">
+      <woot-button
+        variant="smooth"
+        color-scheme="secondary"
+        size="small"
+        icon="chevron-left"
+        @click="$router.push(backRoute)"
+      >
+        {{ $t('TRACKING_CAMPAIGNS_VIEW.BACK_TO_LIST') }}
+      </woot-button>
+    </div>
 
     <!-- Cargando -->
     <div v-if="isLoading" class="py-16 text-center text-slate-400">
@@ -395,7 +427,23 @@ export default {
         >
           {{ campaignStatusLabel(campaign.status) }}
         </span>
+        <woot-button
+          v-if="campaign.status === 'saved'"
+          size="small"
+          icon="send"
+          class="ml-auto"
+          :is-loading="isLaunching"
+          @click="showLaunchModal = true"
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.LAUNCH') }}
+        </woot-button>
       </div>
+      <p
+        v-if="campaign.status === 'saved'"
+        class="text-sm text-woot-700 dark:text-woot-300 mb-3 shrink-0"
+      >
+        {{ $t('TRACKING_CAMPAIGNS_VIEW.SAVED_BANNER') }}
+      </p>
       <div
         class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500 dark:text-slate-400 mb-5 shrink-0"
       >
@@ -707,5 +755,15 @@ export default {
         />
       </div>
     </template>
+    <woot-delete-modal
+      :show="showLaunchModal"
+      :on-close="() => (showLaunchModal = false)"
+      :on-confirm="confirmLaunch"
+      :title="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH')"
+      :message="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_CONFIRM')"
+      :message-value="campaign ? ` «${campaign.name}»?` : ''"
+      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_YES')"
+      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    />
   </div>
 </template>

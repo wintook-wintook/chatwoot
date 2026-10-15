@@ -22,7 +22,7 @@
       "LIMIT_EXCEEDED": "La selección supera el límite de {max} contactos. Ajusta el filtro o excluye contactos antes de confirmar.",
       "CANCEL": "Cancelar",
       "CONFIRM": "Confirmar",
-      "LAUNCH": "Lanzar campaña",
+      "SAVE": "Guardar",
       "PICK_AGENT_HINT": "Elige un Agente IA para ver el desglose de la audiencia.",
       "AUDIENCE_FROM_CONTACTS": "Audiencia tomada del filtro de Contactos.",
       "CLOSE": "Cerrar",
@@ -54,7 +54,7 @@
       "SUMMARY_CONTINUOUS": "Recibe contactos {from} → {to}",
       "NOW": "desde ahora",
       "NO_END": "sin fin",
-      "CREATE": "Crear campaña",
+      "SAVE_AND_LAUNCH": "Guardar y poner en curso",
       "WORKING_HOURS_LABEL": "Horario"
     },
     "REVIEW": {

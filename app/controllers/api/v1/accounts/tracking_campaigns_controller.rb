@@ -181,7 +181,8 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     {
       name: params[:name].to_s.strip, tracking_template: template, inbox_id: template.inbox_id, user: current_user,
       objective: template.objective, mode: 'continuous', scheduled_for: starts,
-      status: starts > Time.current ? 'draft' : 'running'
+      # launch=false → Guardada: no acepta inscripciones hasta que la pongan en curso.
+      status: ActiveModel::Type::Boolean.new.cast(params.fetch(:launch, true)) ? TrackingCampaign.status_for(starts) : 'saved'
     }.merge(window_attributes)
   end
 

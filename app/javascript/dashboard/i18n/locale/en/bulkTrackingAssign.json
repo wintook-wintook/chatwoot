@@ -22,7 +22,7 @@
       "LIMIT_EXCEEDED": "The selection exceeds the limit of {max} contacts. Adjust the filter or exclude contacts before confirming.",
       "CANCEL": "Cancel",
       "CONFIRM": "Confirm",
-      "LAUNCH": "Launch campaign",
+      "SAVE": "Save",
       "PICK_AGENT_HINT": "Pick an AI Agent to see the audience breakdown.",
       "AUDIENCE_FROM_CONTACTS": "Audience taken from the Contacts filter.",
       "CLOSE": "Close",
@@ -54,7 +54,7 @@
       "SUMMARY_CONTINUOUS": "Receives contacts {from} → {to}",
       "NOW": "from now",
       "NO_END": "no end",
-      "CREATE": "Create campaign",
+      "SAVE_AND_LAUNCH": "Save and start",
       "WORKING_HOURS_LABEL": "Hours"
     },
     "REVIEW": {

@@ -23,6 +23,7 @@ class ContactTrackingBulkAssignsAPI extends ApiClient {
     excludedContactIds = [],
     skipActive = true,
     window = {}, // proyecto@automatizacion_campanas: ends_at, entry_delay_minutes, respect_working_hours
+    launch = true, // false → la campaña queda Guardada, sin inscribir a nadie
   }) {
     return axios.post(this.url, {
       payload,
@@ -31,6 +32,7 @@ class ContactTrackingBulkAssignsAPI extends ApiClient {
       scheduled_for: scheduledFor,
       excluded_contact_ids: excludedContactIds,
       skip_active: skipActive,
+      launch,
       ...window,
     });
   }

@@ -4,11 +4,9 @@
     "DESCRIPTION": "Lanza un Agente IA sobre un grupo de contactos y sigue el avance de cada campaña.",
     "REFRESH": "Actualizar",
     "NEW_CAMPAIGN": "Nueva campaña",
-    "TAB_LIST": "Campañas",
-    "TAB_NEW": "Nueva campaña",
     "LOADING": "Cargando campañas…",
     "EMPTY_TITLE": "Todavía no hay campañas.",
-    "EMPTY_HINT": "Crea una con el botón «Nueva campaña» o asigna un Agente IA de forma masiva desde Contactos.",
+    "EMPTY_HINT": "Crea una con el botón «Agregar campaña» o asigna un Agente IA de forma masiva desde Contactos.",
     "SEARCH_PLACEHOLDER": "Buscar por nombre, Agente IA o canal…",
     "FILTER_STATUS_ALL": "Todos los estados",
     "NO_RESULTS": "No hay campañas que coincidan con el filtro.",
@@ -34,6 +32,7 @@
       "WINDOW": "Ventana"
     },
     "STATUS": {
+      "saved": "Guardada",
       "draft": "Programada",
       "running": "En curso",
       "paused": "Pausada",
@@ -46,7 +45,17 @@
     "NO_END": "sin fin",
     "CONTINUOUS_CREATED": "Campaña \"{name}\" creada. Para que reciba contactos, crea una automatización que la use.",
     "CREATE_AUTOMATION": "Crear automatización para esta campaña",
-    "DISMISS": "Cerrar"
+    "DISMISS": "Cerrar",
+    "ADD_CAMPAIGN": "Agregar campaña",
+    "BACK_TO_LIST": "Volver a campañas",
+    "LAUNCH": "Poner en curso",
+    "LAUNCH_CONFIRM": "Por lote se inscriben los contactos que tenga ahora el segmento o la etiqueta y empiezan los envíos; continua empieza a recibir contactos de las automatizaciones. ¿Poner en curso la campaña",
+    "LAUNCH_YES": "Sí, poner en curso",
+    "LAUNCH_SUCCESS": "Campaña en curso.",
+    "LAUNCH_QUEUED": "Campaña en curso: se están inscribiendo {count} contactos.",
+    "LAUNCH_ERROR": "No se pudo poner en curso la campaña.",
+    "SAVED_HINT": "Campaña guardada. No envía nada hasta que oprimas «Poner en curso».",
+    "SAVED_BANNER": "Guardada: no inscribe a nadie ni envía mensajes hasta que la pongas en curso."
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campañas",
