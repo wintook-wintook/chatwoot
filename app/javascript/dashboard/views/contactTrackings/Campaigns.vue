@@ -4,7 +4,7 @@
 // Entra a la tabla de campañas; "+ Agregar campaña" abre el formulario (con el preview
 // de audiencia debajo) y "Volver a campañas" regresa. Una campaña Guardada no corre
 // hasta "Poner en curso" (proyecto@automatizacion_campanas, TrackingCampaigns::Launch);
-// mientras siga Guardada se puede modificar ("Modificar", o ?edit=<id> desde el detalle).
+// mientras siga Guardada se puede modificar (clic en su fila, o ?edit=<id> desde el detalle).
 // La tabla es la de Contactos (VeTable): clic en una columna la ordena (en cliente).
 // ================================================================================
 import { VeTable } from 'vue-easytable';
@@ -36,10 +36,14 @@ export default {
         sortAlways: true,
         sortChange: params => this.onSortChange(params),
       },
-      // Fila = abrir el detalle; los botones de acción cortan la propagación.
+      // Fila: una Guardada abre el formulario para modificarla; las demás, su tablero
+      // de indicadores. Los botones de la fila cortan la propagación.
       eventCustomOption: {
         bodyRowEvents: ({ row }) => ({
-          click: () => this.openCampaign(row),
+          click: () =>
+            row.status === 'saved'
+              ? this.openEdit(row)
+              : this.openCampaign(row),
         }),
       },
       rowStyleOption: {
@@ -182,15 +186,6 @@ export default {
               class="flex items-center justify-end gap-1 whitespace-nowrap"
               onClick={e => e.stopPropagation()}
             >
-              {row.status === 'saved' && (
-                <woot-button
-                  variant="clear"
-                  size="small"
-                  icon="edit"
-                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT')}
-                  onClick={() => this.openEdit(row)}
-                />
-              )}
               <woot-button
                 variant="clear"
                 color-scheme="alert"
@@ -270,7 +265,13 @@ export default {
         const { data } = await TrackingCampaignsAPI.get();
         this.campaigns = data;
       } catch (error) {
-        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.REFRESH_ERROR'));
+        // El detalle (respuesta del servidor o mensaje) para saber qué falló
+        const detail = error.response?.data?.error || error.message;
+        useAlert(
+          detail
+            ? `${this.$t('TRACKING_CAMPAIGNS_VIEW.REFRESH_ERROR')} (${detail})`
+            : this.$t('TRACKING_CAMPAIGNS_VIEW.REFRESH_ERROR')
+        );
       } finally {
         this.isRefreshing = false;
       }
