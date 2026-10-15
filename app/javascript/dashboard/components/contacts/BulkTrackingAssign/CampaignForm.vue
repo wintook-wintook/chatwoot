@@ -734,7 +734,7 @@ export default {
         :is-loading="isLoadingPreview"
         :skip-active="skipActive"
         :excluded-contact-ids="excludedContactIds"
-        @toggle-exclude="onToggleExclude"
+        @toggleExclude="onToggleExclude"
       />
     </div>
   </div>

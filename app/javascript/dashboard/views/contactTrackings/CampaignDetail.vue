@@ -762,7 +762,7 @@ export default {
           :current-page="currentPage"
           :page-size="pageSize"
           :total-count="totalProspects"
-          @page-change="onPageChange"
+          @pageChange="onPageChange"
         />
       </div>
     </template>
