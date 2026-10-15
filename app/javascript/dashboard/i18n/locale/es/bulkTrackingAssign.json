@@ -39,6 +39,8 @@
       "STARTS_AT_OPTIONAL": "Desde (vacío = ahora)",
       "ENDS_AT_LABEL": "Hasta (opcional)",
       "ENDS_BEFORE_START": "El fin debe ser posterior al inicio.",
+      "ENDS_PASSED": "El fin ya pasó: elige una fecha de fin futura o déjala vacía.",
+      "START_PASSED": "El inicio ya pasó: al ponerla en curso empieza en ese momento.",
       "ENTRY_DELAY_LABEL": "Escribir minutos después de entrar",
       "RESPECT_WORKING_HOURS": "Respetar el horario de atención del inbox",
       "DAILY_CAP_LABEL": "Tope de inscripciones por día (opcional)",
