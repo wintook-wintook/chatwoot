@@ -427,11 +427,22 @@ export default {
         >
           {{ campaignStatusLabel(campaign.status) }}
         </span>
+        <!-- Guardada: se puede modificar (en el formulario de Campañas) -->
+        <woot-button
+          v-if="campaign.status === 'saved'"
+          variant="smooth"
+          color-scheme="secondary"
+          size="small"
+          icon="edit"
+          class="ml-auto"
+          @click="$router.push({ ...backRoute, query: { edit: campaign.id } })"
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.EDIT') }}
+        </woot-button>
         <woot-button
           v-if="campaign.status === 'saved'"
           size="small"
           icon="send"
-          class="ml-auto"
           :is-loading="isLaunching"
           @click="showLaunchModal = true"
         >

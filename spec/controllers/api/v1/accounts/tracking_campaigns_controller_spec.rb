@@ -104,6 +104,64 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
     end
   end
 
+  describe 'PATCH una campaña Guardada' do
+    let(:template) { create(:tracking_template, account: account, inbox_id: inbox.id) }
+    let(:other_template) { create(:tracking_template, account: account, inbox_id: inbox.id) }
+    let(:contacts) { create_list(:contact, 2, account: account) }
+    let(:saved) do
+      create(:tracking_campaign, account: account, inbox: inbox, tracking_template: template, mode: 'batch',
+                                 status: 'saved', scheduled_for: 1.day.from_now, ends_at: 3.days.from_now,
+                                 audience: { filter_payload: [], excluded_contact_ids: [], skip_active: true })
+    end
+
+    before do
+      allow_any_instance_of(ContactTrackings::BulkAssignService) # rubocop:disable RSpec/AnyInstance
+        .to receive(:resolve_contacts).and_return(Contact.where(id: contacts.map(&:id)))
+    end
+
+    it 'por lote: cambia sus datos y la audiencia, sigue Guardada y no inscribe a nadie' do
+      expect(ContactTrackings::BulkAssignJob).not_to receive(:perform_later)
+      start = 2.days.from_now.change(usec: 0)
+
+      patch "/api/v1/accounts/#{account.id}/contact_tracking_bulk_assigns/#{saved.id}",
+            params: { campaign_name: 'Lote nuevo', template_id: other_template.id, scheduled_for: start.iso8601,
+                      payload: [{ attribute_key: 'labels', filter_operator: 'equal_to', values: ['vip'] }],
+                      excluded_contact_ids: [contacts.first.id], audience_source: { type: 'label', label: 'vip' } },
+            headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(saved.reload).to have_attributes(name: 'Lote nuevo', tracking_template_id: other_template.id, status: 'saved',
+                                              scheduled_for: start, ends_at: nil)
+      expect(saved.audience).to include('excluded_contact_ids' => [contacts.first.id],
+                                        'source' => { 'type' => 'label', 'label' => 'vip' })
+    end
+
+    it 'puede pasar de por lote a continua' do
+      patch "/api/v1/accounts/#{account.id}/tracking_campaigns/#{saved.id}",
+            params: { name: 'Ahora continua', tracking_template_id: template.id, daily_cap: 20 },
+            headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(saved.reload).to have_attributes(mode: 'continuous', status: 'saved', daily_cap: 20, audience: {})
+      expect(saved.accepting_entries?).to be(false)
+    end
+
+    it 'ya puesta en curso no se modifica' do
+      running = create(:tracking_campaign, account: account, inbox: inbox, tracking_template: template, name: 'Corre')
+
+      patch "/api/v1/accounts/#{account.id}/contact_tracking_bulk_assigns/#{running.id}",
+            params: { campaign_name: 'Otro', template_id: template.id, scheduled_for: 1.day.from_now.iso8601 },
+            headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+
+      patch "/api/v1/accounts/#{account.id}/tracking_campaigns/#{running.id}",
+            params: { name: 'Otro', tracking_template_id: template.id },
+            headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(running.reload.name).to eq('Corre')
+    end
+  end
+
   describe 'POST /api/v1/accounts/{account.id}/tracking_campaigns/{id}/launch' do
     let(:template) { create(:tracking_template, account: account, inbox_id: inbox.id) }
 

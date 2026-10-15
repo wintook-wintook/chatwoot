@@ -17,28 +17,28 @@
 #     - scheduled_for: fecha/hora ISO 8601 del primer intento
 #     - excluded_contact_ids (array, opcional): IDs a excluir de la selección
 #     - skip_active (boolean, opcional, default true): omitir contactos con tracking activo
+#     - audience_source (opcional): { type: 'segment', segment_id: } | { type: 'label', label: },
+#       cómo se eligió la audiencia, para mostrarla al modificar una campaña Guardada
 #   Respuesta (200): { queued: N, campaign_id:, campaign_name: }
 #     El procesamiento por contacto corre en background (ContactTrackings::BulkAssignJob);
 #     el progreso real se ve en el detalle de la campaña (stats por status).
 #   Respuesta (422): { error: "mensaje" } ante validación fallida.
+#
+# PATCH /api/v1/accounts/:account_id/contact_tracking_bulk_assigns/:id
+#   Modifica la campaña Guardada :id como POR LOTE (mismos parámetros, sin launch). Sigue
+#   Guardada; ya puesta en curso no se modifica. Respuesta (200): { saved:, contacts:, campaign_id: }
 # ================================================================================
 
 class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Accounts::BaseController
   def create
-    result = ContactTrackings::BulkAssignService.new(
-      account: Current.account,
-      current_user: current_user,
-      filter_payload: params.permit!['payload'] || [],
-      template_id: params[:template_id],
-      campaign_name: params[:campaign_name],
-      scheduled_for: parse_scheduled_for(params[:scheduled_for]),
-      excluded_contact_ids: params[:excluded_contact_ids] || [],
-      skip_active: ActiveModel::Type::Boolean.new.cast(params.fetch(:skip_active, true)),
-      window: window_params,
-      launch: launch_param
-    ).call
+    render_result(assign_service(launch: launch_param).call)
+  end
 
-    render json: result, status: result[:error].present? ? :unprocessable_entity : :ok
+  def update
+    campaign = Current.account.tracking_campaigns.find(params[:id])
+    return render_result(error: 'Solo se puede modificar una campaña Guardada.') unless campaign.saved?
+
+    render_result(assign_service(campaign: campaign).update!)
   end
 
   # Dry-run: clasifica la audiencia en buckets sin crear nada (@campanas_vendedor).
@@ -59,9 +59,33 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
 
   private
 
+  def assign_service(**extra)
+    ContactTrackings::BulkAssignService.new(
+      account: Current.account,
+      current_user: current_user,
+      filter_payload: params.permit!['payload'] || [],
+      template_id: params[:template_id],
+      campaign_name: params[:campaign_name],
+      scheduled_for: parse_scheduled_for(params[:scheduled_for]),
+      excluded_contact_ids: params[:excluded_contact_ids] || [],
+      skip_active: ActiveModel::Type::Boolean.new.cast(params.fetch(:skip_active, true)),
+      window: window_params,
+      audience_source: audience_source_param,
+      **extra
+    )
+  end
+
+  def render_result(result)
+    render json: result, status: result[:error].present? ? :unprocessable_entity : :ok
+  end
+
   # false → la campaña queda Guardada, sin inscribir a nadie (por defecto true)
   def launch_param
     ActiveModel::Type::Boolean.new.cast(params.fetch(:launch, true))
+  end
+
+  def audience_source_param
+    params[:audience_source]&.permit(:type, :segment_id, :label)&.to_h
   end
 
   # proyecto@automatizacion_campanas — la ventana de la campaña por lote (todo opcional).

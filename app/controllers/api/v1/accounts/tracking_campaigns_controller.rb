@@ -14,12 +14,16 @@
 # POST /api/v1/accounts/:account_id/tracking_campaigns        → crea una campaña CONTINUA
 #     (proyecto@automatizacion_campanas): sin audiencia, la llenan las automatizaciones.
 #     Las por lote se crean por contact_tracking_bulk_assigns, que además asigna la audiencia.
+# PATCH /api/v1/accounts/:account_id/tracking_campaigns/:id → modifica una campaña Guardada
+#     como CONTINUA (mismos parámetros que create). Como por lote se modifica por
+#     PATCH contact_tracking_bulk_assigns/:id. Ya puesta en curso no se modifica.
 # GET /api/v1/accounts/:account_id/tracking_campaigns/:id/entries?page=N → inscritos y omitidos
 #     (proyecto@automatizacion_campanas, ver TrackingCampaignEntriesJson)
 # ================================================================================
 
 class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseController
   include TrackingCampaignEntriesJson
+  include TrackingCampaignContinuousParams
   ACTIVE_TRACKING_STATUSES = %w[pending scheduled active paused].freeze
   EMPTY_FUNNEL = { replied: 0, interested: 0, appointment: 0, objective_met: 0, paused_rule: 0, cancelled_rule: 0 }.freeze
 
@@ -55,12 +59,26 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
   end
 
   def create
-    template = Current.account.tracking_templates.find_by(id: params[:tracking_template_id])
-    return render_error('Plantilla no encontrada') unless template
-    return render_error("La plantilla '#{template.name}' no tiene un inbox configurado.") if template.inbox_id.blank?
+    template, error = continuous_template
+    return render_error(error) if error
 
-    campaign = Current.account.tracking_campaigns.new(continuous_attributes(template))
+    campaign = Current.account.tracking_campaigns.new(continuous_attributes(template).merge(user: current_user))
     return render_error(campaign.errors.messages.values.flatten.to_sentence) unless campaign.save
+
+    render json: { campaign_id: campaign.id, campaign_name: campaign.name }
+  end
+
+  # Una Guardada se puede modificar (y pasar de por lote a continua); en curso, ya no.
+  # Sigue Guardada: ponerla en curso es POST :id/launch.
+  def update
+    campaign = Current.account.tracking_campaigns.find(params[:id])
+    return render_error('Solo se puede modificar una campaña Guardada.') unless campaign.saved?
+
+    template, error = continuous_template
+    return render_error(error) if error
+
+    attributes = continuous_attributes(template).merge(status: 'saved', audience: {})
+    return render_error(campaign.errors.messages.values.flatten.to_sentence) unless campaign.update(attributes)
 
     render json: { campaign_id: campaign.id, campaign_name: campaign.name }
   end
@@ -175,32 +193,6 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     relation.group(:tracking_campaign_id).count
   end
 
-  # Sin inicio = desde ahora. Con inicio futuro nace Programada (la abre WindowJob).
-  def continuous_attributes(template)
-    starts = parse_time(params[:scheduled_for]) || Time.current
-    {
-      name: params[:name].to_s.strip, tracking_template: template, inbox_id: template.inbox_id, user: current_user,
-      objective: template.objective, mode: 'continuous', scheduled_for: starts,
-      # launch=false → Guardada: no acepta inscripciones hasta que la pongan en curso.
-      status: ActiveModel::Type::Boolean.new.cast(params.fetch(:launch, true)) ? TrackingCampaign.status_for(starts) : 'saved'
-    }.merge(window_attributes)
-  end
-
-  def window_attributes
-    {
-      ends_at: parse_time(params[:ends_at]),
-      entry_delay_minutes: params[:entry_delay_minutes].presence&.to_i || 0,
-      respect_working_hours: ActiveModel::Type::Boolean.new.cast(params.fetch(:respect_working_hours, true)),
-      daily_cap: params[:daily_cap].presence&.to_i
-    }
-  end
-
-  def parse_time(value)
-    value.present? ? Time.zone.parse(value.to_s) : nil
-  rescue ArgumentError, TypeError
-    nil
-  end
-
   def render_error(message)
     render json: { error: message }, status: :unprocessable_entity
   end
@@ -230,7 +222,12 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
       stats: aggregate_stats(status_counts || {}),
       delivery: aggregate_delivery(delivery_counts || {}),
       funnel: funnel_counts || EMPTY_FUNNEL
-    }
+    }.merge(editable_json(campaign))
+  end
+
+  # Para modificar una Guardada: CampaignForm la vuelve a llenar con esto.
+  def editable_json(campaign)
+    { tracking_template_id: campaign.tracking_template_id, audience: campaign.audience }
   end
 
   def aggregate_stats(status_counts)

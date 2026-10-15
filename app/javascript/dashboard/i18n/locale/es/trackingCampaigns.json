@@ -3,6 +3,7 @@
     "TITLE": "Campañas Agentes IA",
     "DESCRIPTION": "Lanza un Agente IA sobre un grupo de contactos y sigue el avance de cada campaña.",
     "REFRESH": "Actualizar",
+    "REFRESH_ERROR": "No se pudo actualizar la tabla.",
     "NEW_CAMPAIGN": "Nueva campaña",
     "LOADING": "Cargando campañas…",
     "EMPTY_TITLE": "Todavía no hay campañas.",
@@ -55,7 +56,12 @@
     "LAUNCH_QUEUED": "Campaña en curso: se están inscribiendo {count} contactos.",
     "LAUNCH_ERROR": "No se pudo poner en curso la campaña.",
     "SAVED_HINT": "Campaña guardada. No envía nada hasta que oprimas «Poner en curso».",
-    "SAVED_BANNER": "Guardada: no inscribe a nadie ni envía mensajes hasta que la pongas en curso."
+    "SAVED_BANNER": "Guardada: no inscribe a nadie ni envía mensajes hasta que la pongas en curso.",
+    "EDIT": "Modificar",
+    "EDIT_CAMPAIGN": "Modificar campaña «{name}»",
+    "EDIT_SUCCESS": "Cambios guardados. Sigue Guardada hasta que la pongas en curso.",
+    "EDIT_ERROR": "No se pudo abrir la campaña para modificarla.",
+    "EDIT_ONLY_SAVED": "Solo se puede modificar una campaña Guardada: esta ya está en curso."
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campañas",

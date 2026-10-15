@@ -14,6 +14,7 @@
 #      procesamiento pesado en background. Devuelve { queued:, campaign_id:, campaign_name: }.
 #      Con launch: false la campaña queda Guardada (saved): se guarda la audiencia y no se
 #      encola nada; la pone en curso TrackingCampaigns::Launch, que llama a #enqueue!.
+#      Mientras siga Guardada se puede modificar (#update!); ya en curso, no.
 #   2. #process! (background, ContactTrackings::BulkAssignJob): recorre los contactos
 #      y los inscribe con TrackingCampaigns::Enroll (proyecto@automatizacion_campanas),
 #      que crea el ContactTracking y deja la inscripción. Devuelve
@@ -31,8 +32,11 @@ class ContactTrackings::BulkAssignService
 
   # window: la ventana de la campaña por lote (proyecto@automatizacion_campanas):
   #   { ends_at:, entry_delay_minutes:, respect_working_hours: } — todo opcional.
+  # audience_source: cómo se eligió la audiencia ({ type: 'segment', segment_id: } o
+  #   { type: 'label', label: }), para volver a mostrarla al modificar una Guardada.
   def initialize(account:, current_user:, filter_payload:, template_id:, scheduled_for:, # rubocop:disable Metrics/ParameterLists
-                 campaign_name:, excluded_contact_ids: [], skip_active: true, campaign: nil, window: {}, launch: true)
+                 campaign_name:, excluded_contact_ids: [], skip_active: true, campaign: nil, window: {}, launch: true,
+                 audience_source: nil)
     @account              = account
     @current_user         = current_user
     @filter_payload       = filter_payload
@@ -44,24 +48,32 @@ class ContactTrackings::BulkAssignService
     @campaign             = campaign
     @window               = window.to_h.symbolize_keys.compact
     @launch               = launch
+    @audience_source      = audience_source.presence
     @results              = { inserted: 0, skipped: 0, errors: [] }
   end
 
   # Fase 1 (síncrona): valida, crea la campaña y encola el procesamiento.
   def call
     template = @account.tracking_templates.find_by(id: @template_id)
-    error = template ? creation_error(template) : 'Plantilla no encontrada'
+    error, contacts_count = validation(template)
     return error_result(error) if error
 
-    contacts_count = resolve_contacts.count
-    count_error = audience_error(contacts_count)
-    return error_result(count_error) if count_error
-
-    campaign = build_campaign(template)
-    return { saved: true, contacts: contacts_count, campaign_id: campaign.id, campaign_name: campaign.name } unless @launch
+    campaign = @account.tracking_campaigns.create!(campaign_attributes(template).merge(user_id: @current_user&.id))
+    return saved_result(campaign, contacts_count) unless @launch
 
     enqueue_job(campaign)
     { queued: contacts_count, campaign_id: campaign.id, campaign_name: campaign.name }
+  end
+
+  # Modificar una campaña Guardada (@campaign) con las mismas validaciones que al crearla.
+  # Sigue Guardada: ponerla en curso es aparte (TrackingCampaigns::Launch).
+  def update!
+    template = @account.tracking_templates.find_by(id: @template_id)
+    error, contacts_count = validation(template)
+    return error_result(error) if error
+
+    @campaign.update!(campaign_attributes(template).merge(status: 'saved', daily_cap: nil))
+    saved_result(@campaign, contacts_count)
   end
 
   # Poner en curso una campaña Guardada (lo llama TrackingCampaigns::Launch, ya con @campaign y
@@ -107,6 +119,19 @@ class ContactTrackings::BulkAssignService
 
   private
 
+  # [error, contactos de la audiencia]
+  def validation(template)
+    error = template ? creation_error(template) : 'Plantilla no encontrada'
+    return [error] if error
+
+    contacts_count = resolve_contacts.count
+    [audience_error(contacts_count), contacts_count]
+  end
+
+  def saved_result(campaign, contacts_count)
+    { saved: true, contacts: contacts_count, campaign_id: campaign.id, campaign_name: campaign.name }
+  end
+
   def creation_error(template)
     return 'El nombre de la campaña es obligatorio' if @campaign_name.blank?
     return 'La fecha debe ser futura' if @scheduled_for.blank? || @scheduled_for <= Time.current
@@ -131,12 +156,13 @@ class ContactTrackings::BulkAssignService
     TrackingCampaign.status_for(@scheduled_for)
   end
 
-  def build_campaign(template)
-    @account.tracking_campaigns.create!(
+  # Sin fin, sin espera o sin la opción de horario = los valores por defecto (al modificar,
+  # borrar el fin lo quita).
+  def campaign_attributes(template)
+    {
       name: @campaign_name,
       tracking_template_id: template.id,
       inbox_id: template.inbox_id,
-      user_id: @current_user&.id,
       objective: template.objective,
       scheduled_for: @scheduled_for,
       # proyecto@automatizacion_campanas: con inicio futuro nace Programada y la abre
@@ -144,9 +170,12 @@ class ContactTrackings::BulkAssignService
       # Guardada (launch: false) no inscribe a nadie hasta TrackingCampaigns::Launch.
       status: campaign_status,
       mode: 'batch',
-      audience: { filter_payload: @filter_payload, excluded_contact_ids: @excluded_contact_ids, skip_active: @skip_active },
-      **@window.slice(:ends_at, :entry_delay_minutes, :respect_working_hours)
-    )
+      audience: { filter_payload: @filter_payload, excluded_contact_ids: @excluded_contact_ids, skip_active: @skip_active,
+                  source: @audience_source }.compact,
+      ends_at: @window[:ends_at],
+      entry_delay_minutes: @window[:entry_delay_minutes] || 0,
+      respect_working_hours: @window.fetch(:respect_working_hours, true)
+    }
   end
 
   def resolve_contacts

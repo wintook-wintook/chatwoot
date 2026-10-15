@@ -22,8 +22,11 @@
   Props:
     - presetFilterPayload: si viene (p. ej. desde Contactos), la audiencia es ese
       filtro y se oculta el selector de segmento/etiqueta (y el tipo: es por lote).
+    - campaign: una campaña Guardada para modificarla (el formulario arranca con sus
+      datos). Ya puesta en curso no se modifica.
   Emits:
     - created(result): tras lanzar la campaña ({ queued, campaign_id, campaign_name }).
+    - updated(result): tras guardar los cambios de la Guardada (y ponerla en curso, si se pidió).
   ================================================================================
 -->
 
@@ -41,12 +44,69 @@ const MAX_BULK_ASSIGN = 100;
 // como string "contact"; el getter getCustomViewsByFilterType compara por ese string).
 const FILTER_TYPE_CONTACT = 'contact';
 
+// Fecha → valor de un <input type="datetime-local"> (hora local). Un inicio que ya pasó
+// queda vacío: hay que elegir otro (en la continua, vacío = desde que se ponga en curso).
+const toLocalInput = value => {
+  if (!value || new Date(value) <= new Date()) return '';
+  const d = new Date(value);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
+};
+
+// A quién va una campaña Guardada: como se eligió al guardarla (audience.source) o, si no
+// quedó registrado, una etiqueta reconocible; si no, su filtro tal cual (como desde Contactos).
+const audienceFromCampaign = campaign => {
+  if (campaign.mode === 'continuous') return { audienceType: 'automation' };
+  const { source, filter_payload: payload = [] } = campaign.audience || {};
+  if (source?.type === 'segment') {
+    return {
+      audienceType: 'segment',
+      selectedSegmentId: Number(source.segment_id),
+    };
+  }
+  if (source?.type === 'label') {
+    return { audienceType: 'label', selectedLabel: source.label };
+  }
+  const [only] = payload;
+  if (
+    payload.length === 1 &&
+    only.attribute_key === 'labels' &&
+    only.values?.length === 1
+  ) {
+    return { audienceType: 'label', selectedLabel: only.values[0] };
+  }
+  return { fixedFilterPayload: payload };
+};
+
+const campaignState = campaign => {
+  if (!campaign) return {};
+  const audience = campaign.audience || {};
+  const state = {
+    campaignName: campaign.name,
+    selectedTemplateId: campaign.tracking_template_id || '',
+    scheduledFor: toLocalInput(campaign.scheduled_for),
+    endsAt: toLocalInput(campaign.ends_at),
+    entryDelayMinutes: campaign.entry_delay_minutes || 0,
+    respectWorkingHours: campaign.respect_working_hours !== false,
+    dailyCap: campaign.daily_cap || '',
+    skipActive: audience.skip_active !== false,
+    excludedContactIds: audience.excluded_contact_ids || [],
+    ...audienceFromCampaign(campaign),
+  };
+  state.showSendOptions =
+    !!state.entryDelayMinutes || !state.respectWorkingHours || !!state.dailyCap;
+  return state;
+};
+
 export default {
   components: { AudiencePreview },
   props: {
     presetFilterPayload: { type: Array, default: null },
+    campaign: { type: Object, default: null },
   },
-  emits: ['created'],
+  emits: ['created', 'updated'],
   data() {
     return {
       campaignName: '',
@@ -62,6 +122,10 @@ export default {
       audienceType: 'segment',
       selectedSegmentId: '',
       selectedLabel: '',
+      // La audiencia ya elegida: desde Contactos, o la de una Guardada que no la eligió
+      // por segmento ni etiqueta.
+      fixedFilterPayload: this.presetFilterPayload,
+      ...campaignState(this.campaign),
       totalCount: 0,
       previewData: null,
       isLoadingPreview: false,
@@ -81,9 +145,20 @@ export default {
     minDateTime() {
       return getMinDateTime();
     },
+    isEditing() {
+      return !!this.campaign;
+    },
     // Cuando llega un filtro preestablecido (desde Contactos) no se elige audiencia.
     allowAudienceSelection() {
-      return !this.presetFilterPayload;
+      return !this.fixedFilterPayload;
+    },
+    // Cómo se eligió la audiencia, para volver a mostrarla al modificar la Guardada.
+    audienceSource() {
+      if (!this.allowAudienceSelection) return null;
+      if (this.audienceType === 'segment') {
+        return { type: 'segment', segment_id: this.selectedSegmentId };
+      }
+      return { type: 'label', label: this.selectedLabel };
     },
     // Sin "tipo de campaña" en pantalla: sale de a quién va dirigida.
     mode() {
@@ -128,7 +203,7 @@ export default {
       return this.scheduledFor || this.minDateTime;
     },
     effectiveFilterPayload() {
-      if (!this.allowAudienceSelection) return this.presetFilterPayload;
+      if (!this.allowAudienceSelection) return this.fixedFilterPayload;
       if (this.audienceType === 'segment' && this.selectedSegmentId) {
         const segment = this.segments.find(
           s => s.id === Number(this.selectedSegmentId)
@@ -305,18 +380,17 @@ export default {
         respect_working_hours: this.respectWorkingHours,
       };
     },
-    createContinuous(launch) {
-      return TrackingCampaignsAPI.create({
+    continuousBody() {
+      return {
         name: this.campaignName.trim(),
         tracking_template_id: this.selectedTemplateId,
         scheduled_for: this.toIso(this.scheduledFor),
         daily_cap: this.dailyCap ? Number(this.dailyCap) : null,
-        launch,
         ...this.windowPayload(),
-      });
+      };
     },
-    createBatch(launch) {
-      return contactTrackingBulkAssignsAPI.create({
+    batchBody() {
+      return {
         payload: this.effectiveFilterPayload,
         campaignName: this.campaignName.trim(),
         templateId: this.selectedTemplateId,
@@ -324,16 +398,34 @@ export default {
         excludedContactIds: this.excludedContactIds,
         skipActive: this.skipActive,
         window: this.windowPayload(),
-        launch,
-      });
+        audienceSource: this.audienceSource,
+      };
+    },
+    create(launch) {
+      return this.isContinuous
+        ? TrackingCampaignsAPI.create({ ...this.continuousBody(), launch })
+        : contactTrackingBulkAssignsAPI.create({ ...this.batchBody(), launch });
+    },
+    // La Guardada sigue Guardada con sus cambios; "Guardar y poner en curso" además la lanza.
+    async saveChanges(launch) {
+      const { id } = this.campaign;
+      const { data } = this.isContinuous
+        ? await TrackingCampaignsAPI.update(id, this.continuousBody())
+        : await contactTrackingBulkAssignsAPI.update(id, this.batchBody());
+      if (!launch) return data;
+      const { data: launched } = await TrackingCampaignsAPI.launch(id);
+      return { ...data, ...launched };
     },
     // launch=false → solo guarda: la campaña queda Guardada hasta "Poner en curso".
     async onConfirm(launch = true) {
       this.isSubmitting = true;
       try {
-        const { data } = this.isContinuous
-          ? await this.createContinuous(launch)
-          : await this.createBatch(launch);
+        if (this.isEditing) {
+          const data = await this.saveChanges(launch);
+          this.$emit('updated', { ...data, mode: this.mode, launch });
+          return;
+        }
+        const { data } = await this.create(launch);
         this.$emit('created', { ...data, mode: this.mode, launch });
         this.resetForm();
       } catch (error) {
