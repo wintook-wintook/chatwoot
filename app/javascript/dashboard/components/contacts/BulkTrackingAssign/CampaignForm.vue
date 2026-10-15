@@ -56,7 +56,8 @@ const toLocalInput = value => {
 };
 
 // A quién va una campaña Guardada: como se eligió al guardarla (audience.source) o, si no
-// quedó registrado, una etiqueta reconocible; si no, su filtro tal cual (como desde Contactos).
+// quedó registrado, una etiqueta reconocible; si no, su filtro tal cual (savedFilterPayload),
+// que se sigue usando hasta que elijan otra audiencia (o se reconoce su segmento al cargar).
 const audienceFromCampaign = campaign => {
   if (campaign.mode === 'continuous') return { audienceType: 'automation' };
   const { source, filter_payload: payload = [] } = campaign.audience || {};
@@ -77,7 +78,19 @@ const audienceFromCampaign = campaign => {
   ) {
     return { audienceType: 'label', selectedLabel: only.values[0] };
   }
-  return { fixedFilterPayload: payload };
+  return { savedFilterPayload: payload };
+};
+
+// Mismo filtro sin importar el orden de las claves (el JSONB las reordena).
+const stableJson = value => {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${stableJson(value[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
 };
 
 const campaignState = campaign => {
@@ -125,6 +138,10 @@ export default {
       // La audiencia ya elegida: desde Contactos, o la de una Guardada que no la eligió
       // por segmento ni etiqueta.
       fixedFilterPayload: this.presetFilterPayload,
+      // Guardada sin cómo se eligió su audiencia: su filtro, hasta que elijan otra
+      savedFilterPayload: null,
+      // Al reconocer el segmento de la Guardada no se borran sus excluidos
+      restoringAudience: false,
       ...campaignState(this.campaign),
       totalCount: 0,
       previewData: null,
@@ -154,7 +171,7 @@ export default {
     },
     // Cómo se eligió la audiencia, para volver a mostrarla al modificar la Guardada.
     audienceSource() {
-      if (!this.allowAudienceSelection) return null;
+      if (!this.allowAudienceSelection || this.savedFilterPayload) return null;
       if (this.audienceType === 'segment') {
         return { type: 'segment', segment_id: this.selectedSegmentId };
       }
@@ -220,10 +237,10 @@ export default {
           },
         ];
       }
-      return [];
+      return this.savedFilterPayload || [];
     },
     hasAudienceSelected() {
-      if (!this.allowAudienceSelection) return true;
+      if (!this.allowAudienceSelection || this.savedFilterPayload) return true;
       return this.audienceType === 'segment'
         ? !!this.selectedSegmentId
         : !!this.selectedLabel;
@@ -287,9 +304,10 @@ export default {
       if (!this.isContinuous) this.fetchPreview();
     },
   },
-  mounted() {
+  async mounted() {
     this.loadTemplates();
-    this.loadAudienceData();
+    // La vista previa espera a los segmentos: la de una Guardada sale del suyo.
+    await this.loadAudienceData();
     this.fetchPreview();
   },
   methods: {
@@ -313,8 +331,28 @@ export default {
       } catch (error) {
         // silencioso
       }
+      this.matchSavedSegment();
+    },
+    // Guardada sin cómo se eligió: si su filtro es el de un segmento, queda elegido ese.
+    matchSavedSegment() {
+      if (!this.savedFilterPayload) return;
+      const saved = stableJson(this.savedFilterPayload);
+      const segment = this.segments.find(
+        s => stableJson(s.query?.payload || []) === saved
+      );
+      if (!segment) return;
+      this.restoringAudience = true;
+      this.selectedSegmentId = segment.id;
+      this.savedFilterPayload = null;
     },
     onAudienceChange() {
+      // Reconocer el segmento de la Guardada no es cambiar la audiencia
+      if (this.restoringAudience) {
+        this.restoringAudience = false;
+        return;
+      }
+      // Elegir otra audiencia deja de usar la guardada
+      this.savedFilterPayload = null;
       this.excludedContactIds = [];
       this.previewData = null;
       this.fetchPreview();
@@ -569,6 +607,13 @@ export default {
         </div>
         <p v-else class="m-0 text-sm text-slate-500 dark:text-slate-400 italic">
           {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_FROM_CONTACTS') }}
+        </p>
+        <!-- Guardada cuyo filtro no es un segmento ni una etiqueta de ahora -->
+        <p
+          v-if="savedFilterPayload"
+          class="m-0 mt-2 text-sm text-slate-500 dark:text-slate-400 italic"
+        >
+          {{ $t('BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_SAVED_HINT') }}
         </p>
       </section>
 
