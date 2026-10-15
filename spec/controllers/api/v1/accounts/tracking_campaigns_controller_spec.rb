@@ -68,11 +68,25 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
         prospect_with_delivery('sent')
       end
 
+      it 'cuenta pausados/cancelados solo si los dejó así una regla de palabra clave' do
+        prospect_with_delivery('sent', status: 'paused', keyword_action_fired: { 'action' => 'pause', 'keyword' => '#pausar' })
+        prospect_with_delivery('sent', status: 'paused') # pausado a mano: no cuenta
+        prospect_with_delivery('sent', status: 'active', keyword_action_fired: { 'action' => 'pause' }) # ya se reanudó
+        prospect_with_delivery('sent', status: 'cancelled', keyword_action_fired: { 'action' => 'cancel', 'keyword' => '#cancelar' })
+        prospect_with_delivery('sent', status: 'cancelled') # cancelado al borrar o desde la UI: no cuenta
+
+        get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}",
+            headers: admin.create_new_auth_token, as: :json
+
+        expect(response.parsed_body['funnel']).to include('paused_rule' => 1, 'cancelled_rule' => 1)
+      end
+
       it 'expone el embudo: interesados / agendaron solo por las reglas de palabra clave' do
         get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}",
             headers: admin.create_new_auth_token, as: :json
 
-        expect(response.parsed_body['funnel']).to eq('replied' => 3, 'interested' => 2, 'appointment' => 1, 'objective_met' => 0)
+        expect(response.parsed_body['funnel']).to eq('replied' => 3, 'interested' => 2, 'appointment' => 1, 'objective_met' => 0,
+                                                     'paused_rule' => 0, 'cancelled_rule' => 0)
       end
     end
   end
