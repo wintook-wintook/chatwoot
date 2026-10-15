@@ -19,6 +19,7 @@
     "DELETE_ERROR": "Could not delete the campaign.",
     "COL": {
       "NAME": "Campaign",
+      "CREATED": "Created",
       "AGENT": "AI Agent",
       "CHANNEL": "Channel",
       "START": "Start",
@@ -42,6 +43,10 @@
     "MODE": {
       "batch": "Batch",
       "continuous": "Continuous"
+    },
+    "MODE_HINT": {
+      "batch": "A segment or label was chosen: when started, the contacts it has at that moment are enrolled at once (up to 100).",
+      "continuous": "No fixed list: your automations fill it with the “Add to campaign” action while it is open."
     },
     "NO_END": "no end",
     "CONTINUOUS_CREATED": "Campaign \"{name}\" created. To receive contacts, create an automation that uses it.",

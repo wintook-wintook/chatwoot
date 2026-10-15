@@ -127,17 +127,51 @@ export default {
         col('inbox_name', 'CHANNEL', {
           renderBodyCell: ({ row }) => row.inbox_name || '—',
         }),
+        col('created_at', 'CREATED', {
+          width: 150,
+          renderBodyCell: ({ row }) => (
+            <span class="whitespace-nowrap">
+              {this.formatDate(row.created_at)}
+            </span>
+          ),
+        }),
         col('mode', 'TYPE', {
-          renderBodyCell: ({ row }) =>
-            this.$t(`TRACKING_CAMPAIGNS_VIEW.MODE.${row.mode || 'batch'}`),
+          width: 100,
+          // Tooltip con qué significa cada tipo
+          renderBodyCell: ({ row }) => {
+            const mode = row.mode || 'batch';
+            const tooltip = {
+              content: this.$t(`TRACKING_CAMPAIGNS_VIEW.MODE_HINT.${mode}`),
+              classes: 'max-w-xs',
+            };
+            // Un solo spread (sin más atributos): el plugin de JSX no mezcla props.
+            const attrs = {
+              class: 'border-b border-dotted border-slate-400 cursor-help',
+              directives: [{ name: 'tooltip', value: tooltip }],
+            };
+            return (
+              <span {...attrs}>
+                {this.$t(`TRACKING_CAMPAIGNS_VIEW.MODE.${mode}`)}
+              </span>
+            );
+          },
         }),
         col('scheduled_for', 'WINDOW', {
+          width: 170,
           renderBodyCell: ({ row }) => (
-            <span class="whitespace-nowrap">{this.windowText(row)}</span>
+            <div class="flex flex-col leading-5">
+              <span class="whitespace-nowrap">
+                {this.formatDate(row.scheduled_for)}
+              </span>
+              <span class="whitespace-nowrap text-slate-500 dark:text-slate-400">
+                → {this.windowEnd(row)}
+              </span>
+            </div>
           ),
         }),
         // Guardada: en lugar del estado, el botón para ponerla en curso.
         col('status', 'STATUS', {
+          width: 170,
           renderBodyCell: ({ row }) =>
             row.status === 'saved' ? (
               <div onClick={e => e.stopPropagation()}>
@@ -161,6 +195,7 @@ export default {
             ),
         }),
         col('progress', 'PROGRESS', {
+          width: 150,
           align: 'right',
           renderBodyCell: ({ row }) => (
             <div class="flex items-center justify-end gap-2">
@@ -181,6 +216,7 @@ export default {
           key: 'actions',
           title: '',
           align: 'right',
+          width: 60,
           renderBodyCell: ({ row }) => (
             <div
               class="flex items-center justify-end gap-1 whitespace-nowrap"
@@ -359,11 +395,11 @@ export default {
       return STATUS_COLOR[status] || 'text-slate-500 bg-slate-100';
     },
     // proyecto@automatizacion_campanas: "01/10/2026 10:00 → sin fin"
-    windowText(campaign) {
-      const end = campaign.ends_at
+    // proyecto@automatizacion_campanas: la ventana va en dos renglones, inicio y "→ fin"
+    windowEnd(campaign) {
+      return campaign.ends_at
         ? this.formatDate(campaign.ends_at)
         : this.$t('TRACKING_CAMPAIGNS_VIEW.NO_END');
-      return `${this.formatDate(campaign.scheduled_for)} → ${end}`;
     },
     formatDate(value) {
       if (!value) return '—';

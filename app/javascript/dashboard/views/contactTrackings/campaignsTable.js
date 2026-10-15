@@ -12,6 +12,7 @@ const SORT_VALUE = {
   inbox_name: c => (c.inbox_name || '').toLowerCase(),
   mode: c => c.mode || 'batch',
   scheduled_for: c => c.scheduled_for || '',
+  created_at: c => c.created_at || '',
   status: c => c.status,
   progress: c => progressPct(c.stats),
 };
