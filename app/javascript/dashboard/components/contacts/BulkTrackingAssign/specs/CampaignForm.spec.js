@@ -203,6 +203,19 @@ describe('CampaignForm con ventana', () => {
   });
 });
 
+describe('CampaignForm · Excluir en la vista previa', () => {
+  it('el evento toggleExclude de la tabla excluye y deshace el contacto', async () => {
+    const wrapper = mountForm();
+    await wrapper.setData({ selectedTemplateId: 3 });
+    const preview = wrapper.findComponent({ name: 'AudiencePreview' });
+
+    preview.vm.$emit('toggleExclude', 5);
+    expect(wrapper.vm.excludedContactIds).toEqual([5]);
+    preview.vm.$emit('toggleExclude', 5);
+    expect(wrapper.vm.excludedContactIds).toEqual([]);
+  });
+});
+
 describe('CampaignForm al modificar una Guardada', () => {
   beforeEach(() => vi.clearAllMocks());
 

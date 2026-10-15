@@ -6,7 +6,7 @@
   Descripción: Panel (no modal) que muestra la audiencia clasificada en TABS por
                bucket: Listos · Ya en seguimiento · No contactables · Excluidos.
                Es PRESENTACIONAL: recibe el resultado del preview y el set de
-               excluidos por props, y emite `toggle-exclude` al excluir/deshacer.
+               excluidos por props, y emite `toggleExclude` al excluir/deshacer.
                La reclasificación se calcula en cliente con `excludedContactIds`.
   ================================================================================
 -->
@@ -246,7 +246,7 @@ export default {
         :current-page="currentPage"
         :page-size="pageSize"
         :total-count="currentTabContacts.length"
-        @page-change="onPageChange"
+        @pageChange="onPageChange"
       />
     </template>
   </div>
