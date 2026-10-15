@@ -19,6 +19,7 @@
     "DELETE_ERROR": "No se pudo borrar la campaña.",
     "COL": {
       "NAME": "Campaña",
+      "CREATED": "Creada",
       "AGENT": "Agente IA",
       "CHANNEL": "Canal",
       "START": "Inicio",
@@ -42,6 +43,10 @@
     "MODE": {
       "batch": "Por lote",
       "continuous": "Continua"
+    },
+    "MODE_HINT": {
+      "batch": "Se eligió un segmento o una etiqueta: al ponerla en curso se inscriben de una vez los contactos que tenga en ese momento (máximo 100).",
+      "continuous": "No tiene lista fija: la van llenando tus automatizaciones con la acción «Agregar a campaña» mientras esté abierta."
     },
     "NO_END": "sin fin",
     "CONTINUOUS_CREATED": "Campaña \"{name}\" creada. Para que reciba contactos, crea una automatización que la use.",
