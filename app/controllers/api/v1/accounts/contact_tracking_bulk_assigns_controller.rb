@@ -12,6 +12,7 @@
 #   Parámetros:
 #     - payload (array): filtro de contactos (mismo formato que Contacts::FilterService)
 #     - campaign_name: nombre de la TrackingCampaign que agrupa la corrida (@campanas_vendedor)
+#     - launch: false guarda la campaña sin inscribir a nadie (Guardada); por defecto true
 #     - template_id: ID de la TrackingTemplate a aplicar
 #     - scheduled_for: fecha/hora ISO 8601 del primer intento
 #     - excluded_contact_ids (array, opcional): IDs a excluir de la selección
@@ -33,12 +34,11 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
       scheduled_for: parse_scheduled_for(params[:scheduled_for]),
       excluded_contact_ids: params[:excluded_contact_ids] || [],
       skip_active: ActiveModel::Type::Boolean.new.cast(params.fetch(:skip_active, true)),
-      window: window_params
+      window: window_params,
+      launch: launch_param
     ).call
 
-    return render json: result, status: :unprocessable_entity if result[:error].present?
-
-    render json: result, status: :ok
+    render json: result, status: result[:error].present? ? :unprocessable_entity : :ok
   end
 
   # Dry-run: clasifica la audiencia en buckets sin crear nada (@campanas_vendedor).
@@ -58,6 +58,11 @@ class Api::V1::Accounts::ContactTrackingBulkAssignsController < Api::V1::Account
   end
 
   private
+
+  # false → la campaña queda Guardada, sin inscribir a nadie (por defecto true)
+  def launch_param
+    ActiveModel::Type::Boolean.new.cast(params.fetch(:launch, true))
+  end
 
   # proyecto@automatizacion_campanas — la ventana de la campaña por lote (todo opcional).
   def window_params

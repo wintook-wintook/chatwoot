@@ -92,7 +92,29 @@ describe('CampaignForm con ventana', () => {
       campaign_id: 9,
       campaign_name: 'Octubre',
       mode: 'continuous',
+      launch: true,
     });
+  });
+
+  it('Guardar (sin poner en curso) manda launch: false y lo avisa al emitir', async () => {
+    contactTrackingBulkAssignsAPI.create.mockResolvedValue({
+      data: { saved: true, campaign_id: 5, campaign_name: 'Lote' },
+    });
+    const wrapper = mountForm();
+    await wrapper.setData({
+      campaignName: 'Lote',
+      selectedTemplateId: 3,
+      scheduledFor: '2099-10-01T10:00',
+    });
+
+    await wrapper.vm.onConfirm(false);
+
+    expect(contactTrackingBulkAssignsAPI.create).toHaveBeenCalledWith(
+      expect.objectContaining({ launch: false })
+    );
+    expect(wrapper.emitted('created')[0][0]).toEqual(
+      expect.objectContaining({ campaign_id: 5, mode: 'batch', launch: false })
+    );
   });
 
   it('el lote manda la ventana junto con la audiencia', async () => {

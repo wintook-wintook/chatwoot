@@ -91,6 +91,41 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
     end
   end
 
+  describe 'POST /api/v1/accounts/{account.id}/tracking_campaigns (continua)' do
+    let(:template) { create(:tracking_template, account: account, inbox_id: inbox.id) }
+
+    it 'con launch: false la guarda sin ponerla en curso' do
+      post "/api/v1/accounts/#{account.id}/tracking_campaigns",
+           params: { name: 'Octubre', tracking_template_id: template.id, launch: false },
+           headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(TrackingCampaign.find(response.parsed_body['campaign_id'])).to have_attributes(status: 'saved', mode: 'continuous')
+    end
+  end
+
+  describe 'POST /api/v1/accounts/{account.id}/tracking_campaigns/{id}/launch' do
+    let(:template) { create(:tracking_template, account: account, inbox_id: inbox.id) }
+
+    it 'pone en curso una continua Guardada' do
+      saved = create(:tracking_campaign, account: account, inbox: inbox, tracking_template: template,
+                                         mode: 'continuous', status: 'saved', scheduled_for: 1.hour.ago)
+
+      post "/api/v1/accounts/#{account.id}/tracking_campaigns/#{saved.id}/launch",
+           headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body['status']).to eq('running')
+    end
+
+    it 'una que ya corre devuelve 422' do
+      post "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}/launch",
+           headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
   describe 'DELETE /api/v1/accounts/{account.id}/tracking_campaigns/{id}' do
     def campaign_tracking(status)
       create(:contact_tracking, account: account, contact: create(:contact, account: account), inbox: inbox,

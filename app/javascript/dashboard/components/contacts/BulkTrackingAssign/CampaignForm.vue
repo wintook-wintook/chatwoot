@@ -305,16 +305,17 @@ export default {
         respect_working_hours: this.respectWorkingHours,
       };
     },
-    createContinuous() {
+    createContinuous(launch) {
       return TrackingCampaignsAPI.create({
         name: this.campaignName.trim(),
         tracking_template_id: this.selectedTemplateId,
         scheduled_for: this.toIso(this.scheduledFor),
         daily_cap: this.dailyCap ? Number(this.dailyCap) : null,
+        launch,
         ...this.windowPayload(),
       });
     },
-    createBatch() {
+    createBatch(launch) {
       return contactTrackingBulkAssignsAPI.create({
         payload: this.effectiveFilterPayload,
         campaignName: this.campaignName.trim(),
@@ -323,15 +324,17 @@ export default {
         excludedContactIds: this.excludedContactIds,
         skipActive: this.skipActive,
         window: this.windowPayload(),
+        launch,
       });
     },
-    async onConfirm() {
+    // launch=false → solo guarda: la campaña queda Guardada hasta "Poner en curso".
+    async onConfirm(launch = true) {
       this.isSubmitting = true;
       try {
         const { data } = this.isContinuous
-          ? await this.createContinuous()
-          : await this.createBatch();
-        this.$emit('created', { ...data, mode: this.mode });
+          ? await this.createContinuous(launch)
+          : await this.createBatch(launch);
+        this.$emit('created', { ...data, mode: this.mode, launch });
         this.resetForm();
       } catch (error) {
         useAlert(
@@ -596,19 +599,24 @@ export default {
         <span class="text-sm text-slate-600 dark:text-slate-300">
           {{ summaryText }}
         </span>
-        <woot-button
-          :is-loading="isSubmitting"
-          :disabled="!canConfirm"
-          @click="onConfirm"
-        >
-          {{
-            $t(
-              isContinuous
-                ? 'BULK_TRACKING_ASSIGN.MODAL.CREATE'
-                : 'BULK_TRACKING_ASSIGN.MODAL.LAUNCH'
-            )
-          }}
-        </woot-button>
+        <span class="flex items-center gap-2 shrink-0">
+          <woot-button
+            variant="smooth"
+            color-scheme="secondary"
+            :is-loading="isSubmitting"
+            :disabled="!canConfirm"
+            @click="onConfirm(false)"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.SAVE') }}
+          </woot-button>
+          <woot-button
+            :is-loading="isSubmitting"
+            :disabled="!canConfirm"
+            @click="onConfirm(true)"
+          >
+            {{ $t('BULK_TRACKING_ASSIGN.MODAL.SAVE_AND_LAUNCH') }}
+          </woot-button>
+        </span>
       </div>
     </div>
 

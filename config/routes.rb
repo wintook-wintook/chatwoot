@@ -118,6 +118,7 @@ Rails.application.routes.draw do
           # @campanas_vendedor / @automatizacion_campanas (create = campaña continua)
           resources :tracking_campaigns, only: [:index, :show, :create, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
+            post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada
           end
           namespace :contact_trackings do # proyecto@contact_tracking — dashboard
             resource :overview, only: [:show], controller: :overview

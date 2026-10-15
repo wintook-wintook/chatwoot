@@ -23,6 +23,11 @@ class TrackingCampaignsAPI extends ApiClient {
   getEntries(id, page = 1) {
     return axios.get(`${this.url}/${id}/entries`, { params: { page } });
   }
+
+  // proyecto@automatizacion_campanas — pone en curso una campaña Guardada.
+  launch(id) {
+    return axios.post(`${this.url}/${id}/launch`);
+  }
 }
 
 export default new TrackingCampaignsAPI();
