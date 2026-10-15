@@ -25,6 +25,7 @@
       "SAVE": "Guardar",
       "PICK_AGENT_HINT": "Elige un Agente IA para ver el desglose de la audiencia.",
       "AUDIENCE_FROM_CONTACTS": "Audiencia tomada del filtro de Contactos.",
+      "AUDIENCE_SAVED_HINT": "Usa la audiencia con la que se guardó la campaña. Elige un segmento o una etiqueta para cambiarla.",
       "CLOSE": "Cerrar",
       "ERROR_GENERIC": "Ocurrió un error al asignar el Agente IA.",
       "RESULT_INSERTED": "Agentes IA asignados",

@@ -15,7 +15,7 @@ vi.mock('dashboard/api/contacts', () => ({
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
 // proyecto@automatizacion_campanas — F4 (docs/automatizacion_campanas_plan.md §7.1)
-const mountForm = (props = {}) =>
+const mountForm = (props = {}, segments = []) =>
   shallowMount(CampaignForm, {
     propsData: props,
     mocks: {
@@ -24,7 +24,7 @@ const mountForm = (props = {}) =>
         getters: {
           'trackingTemplates/getTemplates': [{ id: 3, name: 'Vendedor' }],
           'labels/getLabels': [{ id: 1, title: 'demo' }],
-          'customViews/getCustomViewsByFilterType': () => [],
+          'customViews/getCustomViewsByFilterType': () => segments,
         },
         dispatch: vi.fn(),
       },
@@ -253,7 +253,7 @@ describe('CampaignForm al modificar una Guardada', () => {
     expect(wrapper.vm.scheduledFor).toMatch(/^2099-10-0\dT\d\d:00$/);
   });
 
-  it('un inicio que ya pasó queda vacío y una audiencia sin origen queda fija', () => {
+  it('un inicio que ya pasó queda vacío; una audiencia sin origen se usa pero se puede cambiar', async () => {
     const wrapper = mountForm({
       campaign: {
         ...savedBatch,
@@ -263,10 +263,66 @@ describe('CampaignForm al modificar una Guardada', () => {
     });
 
     expect(wrapper.vm.scheduledFor).toBe('');
-    expect(wrapper.vm.allowAudienceSelection).toBe(false);
+    expect(wrapper.vm.allowAudienceSelection).toBe(true);
     expect(wrapper.vm.effectiveFilterPayload).toEqual([
       { attribute_key: 'name' },
     ]);
+    expect(wrapper.vm.audienceSource).toBeNull();
+    expect(wrapper.text()).toContain(
+      'BULK_TRACKING_ASSIGN.MODAL.AUDIENCE_SAVED_HINT'
+    );
+
+    // Elegir otra audiencia deja de usar la guardada
+    await wrapper.setData({ audienceType: 'label', selectedLabel: 'demo' });
+    expect(wrapper.vm.savedFilterPayload).toBeNull();
+    expect(wrapper.vm.audienceSource).toEqual({ type: 'label', label: 'demo' });
+  });
+
+  it('reconoce el segmento de una Guardada sin origen y conserva sus excluidos', async () => {
+    const payload = [
+      {
+        values: ['312'],
+        attribute_key: 'phone_number',
+        filter_operator: 'contains',
+      },
+    ];
+    const segment = {
+      id: 49,
+      name: 'C001',
+      // mismas claves en otro orden, como las devuelve el JSONB
+      query: {
+        payload: [
+          {
+            filter_operator: 'contains',
+            attribute_key: 'phone_number',
+            values: ['312'],
+          },
+        ],
+      },
+    };
+    const wrapper = mountForm(
+      {
+        campaign: {
+          ...savedBatch,
+          audience: { filter_payload: payload, excluded_contact_ids: [8] },
+        },
+      },
+      [segment]
+    );
+    await new Promise(resolve => {
+      setTimeout(resolve);
+    });
+
+    expect(wrapper.vm).toMatchObject({
+      audienceType: 'segment',
+      selectedSegmentId: 49,
+      savedFilterPayload: null,
+      excludedContactIds: [8],
+    });
+    expect(wrapper.vm.audienceSource).toEqual({
+      type: 'segment',
+      segment_id: 49,
+    });
   });
 
   it('Guardar modifica la Guardada (no crea otra) y no la pone en curso', async () => {

@@ -25,6 +25,7 @@
       "SAVE": "Save",
       "PICK_AGENT_HINT": "Pick an AI Agent to see the audience breakdown.",
       "AUDIENCE_FROM_CONTACTS": "Audience taken from the Contacts filter.",
+      "AUDIENCE_SAVED_HINT": "It uses the audience the campaign was saved with. Pick a segment or a label to change it.",
       "CLOSE": "Close",
       "ERROR_GENERIC": "An error occurred while assigning the AI Agent.",
       "RESULT_INSERTED": "AI Agents assigned",
