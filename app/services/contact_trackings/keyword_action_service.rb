@@ -8,18 +8,24 @@
 #              clave de acción configurada en el seguimiento y ejecuta la acción.
 #
 # Match: exacto, case-insensitive, word-boundary (no substring parcial)
-# Acciones soportadas: cancel, pause, objective_met
+# Acciones soportadas: cancel, pause, objective_met, interested
 # Respuesta: silenciosa — NO envía ningún mensaje al contacto
+#
+# interested: etiqueta y/o asigna la conversación (campos opcionales label,
+#             assignee_id, team_id) y NO corta el flujo: el bot sigue respondiendo.
 #
 # Uso:
 #   service = ContactTrackings::KeywordActionService.new(tracking, content, 'incoming')
-#   service.call  # => true si se ejecutó una acción, false si no hubo match
+#   service.call  # => true si se ejecutó una acción que corta el flujo
+#                 #    (cancel/pause/objective_met), false si no
 # ================================================================================
 
 module ContactTrackings
   class KeywordActionService
-    VALID_ACTIONS    = %w[cancel pause objective_met].freeze
+    VALID_ACTIONS    = %w[cancel pause objective_met interested].freeze
     VALID_DIRECTIONS = %w[incoming outgoing both].freeze
+    # Acciones que solo marcan la conversación y dejan seguir al bot.
+    PASSTHROUGH_ACTIONS = %w[interested].freeze
 
     def initialize(tracking, message_content, direction)
       @tracking  = tracking
@@ -28,31 +34,41 @@ module ContactTrackings
     end
 
     def call
-      return false unless @tracking.keyword_actions.is_a?(Array)
-      return false if @tracking.keyword_actions.empty?
+      matched = matching_rules
+      return false if matched.empty?
 
-      matched = @tracking.keyword_actions.find do |ka|
-        next false unless ka.is_a?(Hash)
+      passthrough, terminal = matched.partition { |ka| PASSTHROUGH_ACTIONS.include?(ka['action'].to_s) }
+      passthrough.each { |ka| apply_interested(ka) }
 
-        keyword   = ka['keyword'].to_s.strip
-        action    = ka['action'].to_s
-        direction = ka['direction'].to_s
+      rule = terminal.first
+      return false unless rule
 
-        next false if keyword.blank?
-        next false unless VALID_ACTIONS.include?(action)
-        next false unless VALID_DIRECTIONS.include?(direction)
-        next false unless direction_matches?(direction)
-
-        keyword_present?(keyword)
-      end
-
-      return false unless matched
-
-      execute_action(matched['action'], matched['keyword'])
+      execute_action(rule['action'], rule['keyword'])
       true
     end
 
     private
+
+    def matching_rules
+      return [] unless @tracking.keyword_actions.is_a?(Array)
+
+      @tracking.keyword_actions.select { |ka| rule_matches?(ka) }
+    end
+
+    def rule_matches?(rule)
+      return false unless rule.is_a?(Hash)
+
+      keyword   = rule['keyword'].to_s.strip
+      action    = rule['action'].to_s
+      direction = rule['direction'].to_s
+
+      return false if keyword.blank?
+      return false unless VALID_ACTIONS.include?(action)
+      return false unless VALID_DIRECTIONS.include?(direction)
+      return false unless direction_matches?(direction)
+
+      keyword_present?(keyword)
+    end
 
     def direction_matches?(configured_direction)
       configured_direction == 'both' || configured_direction == @direction
@@ -79,6 +95,34 @@ module ContactTrackings
       record_keyword_fire(action, keyword) if performed
     rescue StandardError => e
       Rails.logger.error "[KeywordAction] ❌ Error ejecutando '#{action}': #{e.message}"
+    end
+
+    # Etiqueta y/o asigna la conversación del seguimiento. La etiqueta, el agente y
+    # el equipo se buscan dentro de la cuenta: lo que ya no existe se ignora.
+    def apply_interested(rule)
+      conversation = @tracking.conversation
+      return Rails.logger.info("[KeywordAction] ⌨️  'interested' sin conversación en tracking ##{@tracking.id}") unless conversation
+
+      label = interested_label(conversation.account, rule)
+      conversation.add_labels([label]) if label
+      assignment = interested_assignment(conversation.account, rule)
+      conversation.update!(assignment) if assignment.any?
+
+      Rails.logger.info "[KeywordAction] ⌨️  Match '#{rule['keyword']}' → interested en tracking ##{@tracking.id} " \
+                        "(label: #{label || '-'}, #{assignment.presence || 'sin asignación'})"
+    rescue StandardError => e
+      Rails.logger.error "[KeywordAction] ❌ Error ejecutando 'interested': #{e.message}"
+    end
+
+    def interested_label(account, rule)
+      title = rule['label'].to_s.strip
+      title if title.present? && account.labels.exists?(title: title)
+    end
+
+    def interested_assignment(account, rule)
+      agent = account.users.find_by(id: rule['assignee_id']) if rule['assignee_id'].present?
+      team  = account.teams.find_by(id: rule['team_id']) if rule['team_id'].present?
+      { assignee_id: agent&.id, team_id: team&.id }.compact
     end
 
     # Atribución para KPIs de reglas: guarda qué regla disparó y cerró/pausó el
