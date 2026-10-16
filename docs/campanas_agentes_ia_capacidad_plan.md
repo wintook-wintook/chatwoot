@@ -87,7 +87,7 @@
 
 ## 3. Mediciones reales
 
-> Las secciones 3.1 a 3.5 se midieron en el **servidor de desarrollo** (donde vive el módulo de campañas). La §3.6 es el **servidor productivo**.
+> Las secciones 3.1 a 3.5 se midieron en el **servidor de desarrollo** (donde vive el módulo de campañas). La §3.6 es el **servidor productivo** y la §3.7 compara ambos.
 
 ### 3.1 Infraestructura del servidor de desarrollo
 
@@ -184,6 +184,76 @@ Lectura:
 5. **Capacidad de envío con 20 hilos:** ~600 envíos/minuto teóricos (6–7 campañas de 100 en el mismo minuto antes de la espiral de duplicados), **siempre que los hilos estén libres**.
 
 Pendiente: correr el script de solo lectura `diag_campanas_prod.sh` en producción para desglosar programados, muertos y trabajos que ocupan los hilos.
+
+### 3.7 ¿El servidor de desarrollo soporta la configuración de producción?
+
+> Medido el 2026-10-16. Sirve para decidir si las pruebas (incluida la prueba de carga de la Fase 2, paso 2.9) se pueden hacer aquí con la misma configuración que producción.
+
+**Respuesta corta:** sí, con un ajuste obligatorio: **las conexiones de Postgres**. Lo demás cabe. Además, el Postgres de desarrollo está **mejor afinado** que el de producción.
+
+#### 3.7.1 Comparación de recursos
+
+| Recurso | Producción | Desarrollo | ¿Soporta la config de producción? |
+|---|---|---|---|
+| CPU | 8 núcleos, carga ~1.3 | 8 núcleos, carga ~0.3 | ✅ Sobra |
+| RAM disponible | 21 GB | 21.5 GB | ✅ Sí (ver §3.7.2) |
+| Disco | 915 GB, 51 % usado | 908 GB, 22 % usado | ✅ Sí |
+| PostgreSQL | 16.15 | 16.15 | ✅ Misma versión |
+| Redis | 7.4.1 | 8.4.0 | ✅ Compatible con Sidekiq 7.3 |
+| Puma | 4 procesos × 5 hilos | 1 proceso × 5 hilos | ✅ Se puede subir |
+| Sidekiq | 20 hilos | 10 hilos | ✅ Se puede subir |
+| **Conexiones de Postgres** | 47 de 100 | **75 de 100** | ❌ **No alcanzan** (ver §3.7.3) |
+
+#### 3.7.2 Memoria
+
+Subir a la configuración de producción agrega unos **3–6 GB**:
+- 3 procesos más de Puma: ~0.5–0.8 GB cada uno.
+- Sidekiq con 20 hilos: ~1.5–3 GB. En producción usa 5.7 GB, pero lleva 367 días sin reiniciarse y la memoria se acumula.
+
+De 21.5 GB disponibles quedarían ~15 GB libres. Las 3 instancias de desarrollo (`luis`, `mariana`, `jose_luis`) ya usan ~1.5 GB cada una solo en webpack.
+
+#### 3.7.3 El bloqueo: conexiones de Postgres
+
+Uso actual en desarrollo: **75 de 100**.
+
+| Quién | Conexiones |
+|---|---|
+| zabbix | 32 |
+| Chatwoot (`wintook_dev`) | 16 |
+| Instancias de desarrollo (`jose_luis`, `luis`, `mariana`) | 21 |
+| Sistema | 6 |
+
+Con la configuración de producción, Chatwoot puede llegar a **40** (Puma 4 × 5 = 20 + Sidekiq 20). El total quedaría en **~99–100 de 100**: a la primera carga fuerte aparecería "too many connections", y afectaría también a las instancias de desarrollo y a la app Laravel.
+
+- **Solución:** subir `max_connections` a **200**. Con la memoria que tiene este Postgres no hay problema.
+- **Costo:** requiere **reiniciar Postgres**, lo que corta unos segundos todas las bases del servidor: `wintook_dev` (8.5 GB), `chatzeus` (4.2 GB), zabbix y las de desarrollo.
+- **Aparte:** zabbix usa 32 conexiones, que es mucho para monitoreo; conviene revisarlo.
+
+#### 3.7.4 Postgres: desarrollo está mejor afinado que producción
+
+| Parámetro | Producción | Desarrollo |
+|---|---|---|
+| `shared_buffers` | 128 MB (de fábrica) | **~7.8 GB** |
+| `effective_cache_size` | ~4 GB | **~23 GB** |
+| `work_mem` | 4 MB | **~31 MB** |
+| `maintenance_work_mem` | 64 MB | **~2 GB** |
+| `random_page_cost` | 4 | 1.1 |
+| `max_connections` | 100 | 100 |
+
+Consecuencias:
+1. **La configuración de desarrollo se puede llevar a producción**, que tiene la misma RAM (31 GB). Es el cambio con mejor relación costo-beneficio disponible allá. Requiere reiniciar Postgres de producción en una ventana de mantenimiento.
+2. **Una prueba de carga en desarrollo saldría más optimista que la realidad**, porque su base de datos rinde más. Para una prueba fiel: igualar producción a esta configuración antes, o tomar en cuenta la diferencia al leer los resultados.
+
+**Cuidado con `random_page_cost`:** en desarrollo está en 1.1 (valor para SSD), pero **sus discos son mecánicos** (2 × HGST HUS722T1TAL, 7200 rpm). Lo correcto sería ~2–4. Hoy no se nota porque casi toda la base cabe en memoria. **En producción hay que confirmar el tipo de disco antes de poner 1.1.**
+
+#### 3.7.5 Pasos para igualar desarrollo a la configuración de producción
+
+No aplicado. Requiere confirmación, en un momento en que nadie use las instancias de desarrollo:
+
+1. En `.env` de Chatwoot: `WEB_CONCURRENCY=4` y `SIDEKIQ_CONCURRENCY=20`.
+2. En `postgresql.conf`: `max_connections = 200` → reiniciar Postgres (**corta todas las bases unos segundos**).
+3. Reiniciar `chatwoot-web.1` y `chatwoot-worker.1` (siempre ambos).
+4. Verificar: conexiones totales en `pg_stat_activity`, RAM con `free -m`, y que Sidekiq muestre `[0 of 20 busy]`.
 
 ---
 
