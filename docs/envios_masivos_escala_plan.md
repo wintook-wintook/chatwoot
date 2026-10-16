@@ -310,6 +310,11 @@ Cabe en producción: +1 proceso ≈ +1–2 GB de RAM (hay 21 GB disponibles) y +
 Pide OK y una ventana; no se toca hasta entonces. Panel del 16/10: 175 M procesados, 488 k fallidos
 (0.28 %).
 
+**Estado (16/10/2026):** probado en dev (`Procfile.dev`, 10 + 10 hilos) sin errores. En producción, 10 + 10: las
+mismas 20 conexiones de Sidekiq que hoy, solo repartidas. Manual paso a paso
+para producción, con respaldo y retorno: `docs/manual_sidekiq_2procesos_produccion.md`. Plantillas
+de `deployment/` actualizadas para que `cwctl --upgrade` no deshaga el cambio.
+
 **Nota P2 — qué hay en los muertos (1.ª página, 16/10):**
 
 | Job | Error | Causa (en el código) | ¿Pierde algo? |

@@ -1,0 +1,27 @@
+[Unit]
+Requires=network.target
+PartOf=chatwoot.target
+
+[Service]
+Type=simple
+User=chatwoot
+WorkingDirectory=/home/chatwoot/chatwoot
+
+# diag/envios_masivos (P1): worker LENTO — IMAP, sync de plantillas, seguimientos y demás
+# jobs programados. Así sus ráfagas no frenan las colas urgentes de chatwoot-worker.1.
+ExecStart=/bin/bash -lc 'dotenv bundle exec sidekiq -C config/sidekiq.yml -c 10 -q low -q scheduled_jobs -q async_database_migration -q active_storage_analysis -q active_storage_purge -q action_mailbox_incineration'
+
+Restart=always
+RestartSec=1
+TimeoutStopSec=30
+KillMode=mixed
+StandardInput=null
+SyslogIdentifier=%p
+
+Environment="PATH=/home/chatwoot/.rvm/gems/ruby-3.3.3/bin:/home/chatwoot/.rvm/gems/ruby-3.3.3@global/bin:/home/chatwoot/.rvm/rubies/ruby-3.3.3/bin:/home/chatwoot/.rvm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:/home/chatwoot/.rvm/bin:/home/chatwoot/.rvm/bin"
+Environment="PORT=3000"
+Environment="RAILS_ENV=production"
+Environment="NODE_ENV=production"
+Environment="RAILS_LOG_TO_STDOUT=true"
+Environment="GEM_HOME=/home/chatwoot/.rvm/gems/ruby-3.3.3"
+Environment="GEM_PATH=/home/chatwoot/.rvm/gems/ruby-3.3.3:/home/chatwoot/.rvm/gems/ruby-3.3.3@global"

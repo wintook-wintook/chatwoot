@@ -386,6 +386,7 @@ EOF
 function configure_systemd_services() {
   cp /home/chatwoot/chatwoot/deployment/chatwoot-web.1.service /etc/systemd/system/chatwoot-web.1.service
   cp /home/chatwoot/chatwoot/deployment/chatwoot-worker.1.service /etc/systemd/system/chatwoot-worker.1.service
+  cp /home/chatwoot/chatwoot/deployment/chatwoot-worker.2.service /etc/systemd/system/chatwoot-worker.2.service
   cp /home/chatwoot/chatwoot/deployment/chatwoot.target /etc/systemd/system/chatwoot.target
 
   cp /home/chatwoot/chatwoot/deployment/chatwoot /etc/sudoers.d/chatwoot
@@ -839,6 +840,7 @@ EOF
   # Copy the updated targets
   cp /home/chatwoot/chatwoot/deployment/chatwoot-web.1.service /etc/systemd/system/chatwoot-web.1.service
   cp /home/chatwoot/chatwoot/deployment/chatwoot-worker.1.service /etc/systemd/system/chatwoot-worker.1.service
+  cp /home/chatwoot/chatwoot/deployment/chatwoot-worker.2.service /etc/systemd/system/chatwoot-worker.2.service
   cp /home/chatwoot/chatwoot/deployment/chatwoot.target /etc/systemd/system/chatwoot.target
 
   cp /home/chatwoot/chatwoot/deployment/chatwoot /etc/sudoers.d/chatwoot
