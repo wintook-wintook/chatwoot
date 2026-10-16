@@ -348,6 +348,18 @@ medir  aislar  saber   ritmo   lotes   cuidar   IA     infra   probar
 F1 es barata y quita el riesgo más grande (H1 + H3). F3 va antes que F2 para que el
 despachador ya sepa distinguir errores pasajeros de definitivos.
 
+### 5.1 Orden con los datos de producción (16/10/2026) — de menor a mayor riesgo
+
+| Paso | Qué | ¿Código? | ¿Afecta lo que funciona hoy? |
+|---|---|---|---|
+| 1 | **P1** separar Sidekiq en 2 procesos · **P4** memoria de Postgres · **P3** tope de memoria de Sidekiq | No: configuración del servidor | Los jobs hacen lo mismo; al reiniciar Sidekiq los jobs en curso se reencolan. **Reiniciar Postgres deja Chatwoot sin servicio unos segundos** → ventana de mantenimiento |
+| 2 | **P2** arreglar los 4 errores de los muertos y vaciar el cajón | Poco: unas líneas en el eco de WhatsApp, el ruteo de correo y el sync de plantillas | Solo cambia lo que hoy ya falla. Vaciar con *Delete*, **nunca con *Retry*** |
+| 3 | **F3** registro por destinatario | Sí, pero se suma: columnas nuevas + una línea en el webhook de estado | No: las campañas no se usan en producción |
+| 4 | **F1** enviar fuera del lock | Sí: `ContactTrackingJob`, que manda **todos** los seguimientos del Agente IA (sí se usan en producción) | Riesgo de **mensaje doble** si se hace mal → bandera por cuenta, probar en el inbox 493 y luego prender cuenta por cuenta |
+
+Los pasos 1 y 2 ayudan **aunque nunca se usen las campañas**: hoy las ráfagas de IMAP y de
+plantillas frenan a todo el sistema. Cada paso pide OK; los de servidor, además, una ventana.
+
 ---
 
 ## 6. Decisiones abiertas
