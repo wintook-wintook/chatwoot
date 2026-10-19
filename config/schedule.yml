@@ -115,11 +115,17 @@ tracking_campaigns_window:
 # Frecuencia: Diario a las 2 AM
 # Queue: low_priority
 # Retención: 90 días
+# proyecto@automatizacion_campanas: DESACTIVADO. La cola low_priority nunca estuvo en
+# sidekiq.yml (las copias se acumulaban sin correr) y el job borra con delete_all
+# trackings que tracking_campaign_entries y case_tickets referencian → rompería el
+# historial de campañas. Se deja declarado con status disabled (y no se quita) porque
+# load_from_hash no elimina de Redis los cron que ya existen.
 # ==============================================================================
 cleanup_old_trackings:
   cron: "0 2 * * *"
   class: "ContactTrackings::CleanupJob"
   queue: low_priority
+  status: disabled
   description: "Clean up old completed/cancelled trackings (older than 90 days)"
 
 # ==============================================================================
