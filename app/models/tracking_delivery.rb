@@ -1,5 +1,48 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: tracking_deliveries
+#
+#  id                   :bigint           not null, primary key
+#  attempt_number       :integer          not null
+#  delivered_at         :datetime
+#  error_code           :string
+#  error_kind           :string
+#  error_title          :text
+#  failed_at            :datetime
+#  kind                 :string           not null
+#  next_retry_at        :datetime
+#  read_at              :datetime
+#  repetition           :integer          default(0), not null
+#  retry_count          :integer          default(0), not null
+#  sent_at              :datetime
+#  status               :string           default("sent"), not null
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  account_id           :bigint           not null
+#  contact_tracking_id  :bigint           not null
+#  message_id           :bigint
+#  source_id            :string
+#  tracking_campaign_id :bigint
+#
+# Indexes
+#
+#  index_tracking_deliveries_on_account_id                       (account_id)
+#  index_tracking_deliveries_on_contact_tracking_id              (contact_tracking_id)
+#  index_tracking_deliveries_on_message_id                       (message_id) UNIQUE
+#  index_tracking_deliveries_on_source_id                        (source_id)
+#  index_tracking_deliveries_on_tracking_campaign_id             (tracking_campaign_id)
+#  index_tracking_deliveries_on_tracking_campaign_id_and_status  (tracking_campaign_id,status)
+#  index_tracking_deliveries_pending_confirmation                (sent_at) WHERE ((status)::text = 'sent'::text)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id) ON DELETE => cascade
+#  fk_rails_...  (contact_tracking_id => contact_trackings.id) ON DELETE => cascade
+#  fk_rails_...  (message_id => messages.id) ON DELETE => nullify
+#  fk_rails_...  (tracking_campaign_id => tracking_campaigns.id) ON DELETE => nullify
+#
 # ================================================================================
 # proyecto@automatizacion_campanas
 # Modelo: TrackingDelivery

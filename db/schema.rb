@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_19_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_20_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -859,7 +859,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_19_120000) do
     t.datetime "interested_at"
     t.datetime "booked_at"
     t.boolean "paused_by_campaign", default: false, null: false
+    t.datetime "dispatched_at"
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
+    t.index ["dispatched_at"], name: "index_contact_trackings_dispatched", where: "((status)::text = 'active'::text)"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
     t.index ["appointment_at"], name: "index_contact_trackings_on_appointment_at"
     t.index ["contact_id", "inbox_id", "status"], name: "index_unique_active_tracking_per_contact_inbox", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'scheduled'::character varying, 'active'::character varying, 'paused'::character varying])::text[]))"

@@ -108,6 +108,14 @@ tracking_campaigns_window:
   queue: scheduled_jobs
   description: "Open and close tracking campaigns by their window"
 
+# proyecto@automatizacion_campanas — Fase 2: despachador de seguimientos. Solo actúa en las
+# cuentas de TRACKING_DISPATCHER_ACCOUNTS; sin esa variable no hace nada.
+tracking_dispatch:
+  cron: "* * * * *"
+  class: "TrackingDispatch::DispatchJob"
+  queue: scheduled_jobs
+  description: "Dispatch due tracking follow-ups (accounts in TRACKING_DISPATCHER_ACCOUNTS)"
+
 # proyecto@automatizacion_campanas — envíos de seguimiento que Meta aceptó pero no
 # confirmó en 24 h pasan a 'unconfirmed' (no se reenvían). Ver TrackingDeliveries::UnconfirmedJob.
 tracking_deliveries_unconfirmed:

@@ -275,8 +275,9 @@ class ContactTrackingImportService
 
     tracking_id = result.rows.first.first
 
-    # Programar el job en la fecha exacta del Excel (ya validada como futura).
-    ContactTrackingJob.set(wait_until: scheduled_for).perform_later(tracking_id)
+    # Programar el job en la fecha exacta del Excel (ya validada como futura). Con despachador
+    # (proyecto@automatizacion_campanas, Fase 2) no hace falta: lo toma a su hora.
+    ContactTrackingJob.set(wait_until: scheduled_for).perform_later(tracking_id) unless TrackingDispatch.enabled_for?(@account.id)
 
     @results[:inserted] += 1
   rescue StandardError => e

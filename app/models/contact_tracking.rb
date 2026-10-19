@@ -32,6 +32,7 @@
 #  calendar_event_duration    :integer          default(30)
 #  calendar_integration_ids   :jsonb            not null
 #  complementary_prompt       :text
+#  dispatched_at              :datetime
 #  interval_days              :integer
 #  keyword_action_fired       :jsonb
 #  keyword_actions            :jsonb            not null
@@ -172,6 +173,12 @@ class ContactTracking < ApplicationRecord
   # Instance Methods - Control de estado
   # ==============================================================================
   
+  # proyecto@automatizacion_campanas — Fase 2: en las cuentas con despachador no hay job
+  # programado por seguimiento; TrackingDispatch::DispatchJob toma los vencidos.
+  def dispatched?
+    TrackingDispatch.enabled_for?(account_id)
+  end
+
   # Verifica si el seguimiento puede ejecutarse
   def can_execute?
     (pending? || scheduled? || active?) && scheduled_for <= Time.current
@@ -559,6 +566,8 @@ class ContactTracking < ApplicationRecord
   end
 
   def schedule_job
+    return if dispatched?
+
     # Programar nuevo job
     begin
       ContactTrackingJob.set(wait_until: scheduled_for).perform_later(id)
@@ -571,6 +580,9 @@ class ContactTracking < ApplicationRecord
 
   # ⭐ MEJORADO: Cancela todos los jobs existentes de este tracking en TODAS las colas de Sidekiq
   def cancel_existing_jobs
+    # Con despachador no hay jobs por seguimiento que cancelar: no se recorren las colas.
+    return 0 if dispatched?
+
     require 'sidekiq/api'
 
     cancelled_count = 0

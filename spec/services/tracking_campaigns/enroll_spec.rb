@@ -29,8 +29,19 @@ RSpec.describe TrackingCampaigns::Enroll do
     expect(tracking).to have_attributes(tracking_campaign_id: campaign.id, inbox_id: inbox.id, contact_id: contact.id,
                                         tracking_template_id: template.id, status: 'pending')
     expect(tracking.scheduled_for).to be_within(1.second).of(Time.current)
-    expect(tracking.conversation.messages.where(private: true).last.content)
-      .to eq(%(📋 Inscrito en la campaña "#{campaign.name}" por la automatización "Demo"))
+  end
+
+  # proyecto@automatizacion_campanas — Fase 2: la conversación se abre al enviar, no al inscribir.
+  it 'sin conversación en el inbox no abre una al inscribir: la abre el envío, asignada y con nota' do
+    tracking = enroll.contact_tracking
+    expect(tracking.conversation_id).to be_nil
+    expect(contact.conversations.where(inbox_id: inbox.id)).to be_empty
+
+    conversation = ContactTrackingJob.new.send(:find_or_create_conversation, tracking)
+
+    expect(conversation.inbox_id).to eq(inbox.id)
+    expect(conversation.assignee).to be_present
+    expect(conversation.messages.where(private: true).last.content).to eq(%(📋 Seguimiento de la campaña "#{campaign.name}"))
   end
 
   it 'reusa la conversación que el contacto ya tiene en el inbox de la campaña' do
