@@ -76,8 +76,8 @@
 #  fk_rails_...  (contact_id => contacts.id) ON DELETE => nullify
 #  fk_rails_...  (contact_tracking_id => contact_trackings.id) ON DELETE => nullify
 #  fk_rails_...  (conversation_id => conversations.id) ON DELETE => nullify
-#  fk_rails_...  (locked_by_id => users.id)
-#  fk_rails_...  (requester_id => users.id)
+#  fk_rails_...  (locked_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (requester_id => users.id) ON DELETE => nullify
 #
 
 class CaseTicket < ApplicationRecord

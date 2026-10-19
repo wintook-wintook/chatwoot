@@ -35,7 +35,7 @@
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
-#  fk_rails_...  (assignee_id => users.id)
+#  fk_rails_...  (assignee_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (case_ticket_id => case_tickets.id)
 #  fk_rails_...  (completed_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (requester_id => users.id) ON DELETE => nullify

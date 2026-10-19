@@ -50,7 +50,7 @@
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (inbox_id => inboxes.id)
 #  fk_rails_...  (published_prompt_id => published_prompts.id) ON DELETE => nullify
-#  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (user_id => users.id) ON DELETE => nullify
 #
 
 class TrackingTemplate < ApplicationRecord

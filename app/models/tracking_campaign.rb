@@ -37,7 +37,7 @@
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (inbox_id => inboxes.id)
 #  fk_rails_...  (tracking_template_id => tracking_templates.id)
-#  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (user_id => users.id) ON DELETE => nullify
 #
 
 # ================================================================================
