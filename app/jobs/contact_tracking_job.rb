@@ -194,7 +194,7 @@ class ContactTrackingJob < ApplicationJob
           end
         end
       else
-        tracking.update!(status: 'failed', last_error: 'Failed to send message')
+        tracking.update!(status: 'failed', last_error: @send_error.presence || 'Failed to send message')
         Rails.logger.error "[ContactTracking] ❌ Tracking ##{tracking.id} falló al enviar mensaje"
       end
     end  # Cierra with_lock
@@ -292,6 +292,10 @@ class ContactTrackingJob < ApplicationJob
       uri = URI('https://api.openai.com/v1/chat/completions')
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
+      # proyecto@automatizacion_campanas: corre dentro del with_lock del tracking;
+      # sin tope, una OpenAI lenta retiene la fila y el hilo de Sidekiq hasta 60 s.
+      http.open_timeout = 5
+      http.read_timeout = 15
 
       request = Net::HTTP::Post.new(uri)
       request['Authorization'] = "Bearer #{api_key}"
@@ -463,7 +467,8 @@ class ContactTrackingJob < ApplicationJob
       url = "https://graph.facebook.com/v21.0/#{business_account_id}/message_templates"
       response = HTTParty.get(url,
         headers: { 'Authorization' => "Bearer #{access_token}" },
-        query: { name: template_name, limit: 1 }
+        query: { name: template_name, limit: 1 },
+        timeout: 10
       )
 
       if response.success? && response['data']&.any?
@@ -596,7 +601,8 @@ class ContactTrackingJob < ApplicationJob
       )
 
       unless message_id.present?
-        Rails.logger.error "[ContactTracking] ❌ El servicio no retornó message_id"
+        @send_error = meta_error_summary(temp_message)
+        Rails.logger.error "[ContactTracking] ❌ El servicio no retornó message_id (#{@send_error})"
         return false
       end
 
@@ -724,7 +730,8 @@ class ContactTrackingJob < ApplicationJob
     message_id = channel.send_message(contact_phone, temp_message)
 
     unless message_id.present?
-      Rails.logger.error "[ContactTracking] ❌ El canal no retornó message_id"
+      @send_error = meta_error_summary(temp_message)
+      Rails.logger.error "[ContactTracking] ❌ El canal no retornó message_id (#{@send_error})"
       return false
     end
 
@@ -759,6 +766,18 @@ class ContactTrackingJob < ApplicationJob
     Rails.logger.error "[ContactTracking] ❌ Error enviando mensaje de sesión: #{e.message}"
     Rails.logger.error e.backtrace.first(10).join("\n")
     false
+  end
+
+  # proyecto@automatizacion_campanas: cuando Meta rechaza el envío, el proveedor deja el
+  # cuerpo de la respuesta en external_error del mensaje temporal. Se resume con el
+  # mismo formato que usan los webhooks de estado ("131026: ...") para last_error.
+  def meta_error_summary(temp_message)
+    raw = temp_message.external_error
+    return if raw.blank?
+
+    error = JSON.parse(raw)['error'] rescue nil
+    summary = error ? "#{error['code']}: #{error.dig('error_data', 'details') || error['message']}" : raw.to_s
+    "Meta #{summary}".truncate(250)
   end
 
   def find_or_create_conversation(tracking)
