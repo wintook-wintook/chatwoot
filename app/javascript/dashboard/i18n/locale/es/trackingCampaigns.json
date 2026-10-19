@@ -66,7 +66,12 @@
     "EDIT_CAMPAIGN": "Modificar campaña «{name}»",
     "EDIT_SUCCESS": "Cambios guardados. Sigue Guardada hasta que la pongas en curso.",
     "EDIT_ERROR": "No se pudo abrir la campaña para modificarla.",
-    "EDIT_ONLY_SAVED": "Solo se puede modificar una campaña Guardada: esta ya está en curso."
+    "EDIT_ONLY_SAVED": "Solo se puede modificar una campaña Guardada: esta ya está en curso.",
+    "PAUSED_BANNER": "Pausada automáticamente: WhatsApp rechazó un envío por un problema de configuración, así que los demás también fallarían. Motivo: {reason}",
+    "PAUSED_BANNER_HINT": "Corrige el problema (plantilla, pago o cuenta de WhatsApp en Meta) y reanuda la campaña: los seguimientos pausados vuelven a enviar el intento que falló.",
+    "RESUME": "Reanudar campaña",
+    "RESUME_SUCCESS": "Campaña reanudada: {count} seguimientos vuelven a enviar en un minuto.",
+    "RESUME_ERROR": "No se pudo reanudar la campaña."
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campañas",
@@ -87,9 +92,13 @@
     "DELIVERY": {
       "TITLE": "Entrega de Mensajes",
       "DELIVERED": "Entregados",
-      "SENT": "Sin confirmar",
+      "SENT": "Esperando confirmación",
+      "UNCONFIRMED": "Sin confirmar (+24 h)",
+      "RETRYING": "En reintento",
       "FAILED": "Error de entrega",
-      "EMPTY": "Aún no se han enviado mensajes."
+      "EMPTY": "Aún no se han enviado mensajes.",
+      "REASONS_TITLE": "Motivos de error",
+      "RETRY_AT": "Reintento: {date}"
     },
     "FUNNEL": {
       "TITLE": "Intención",
@@ -117,7 +126,9 @@
       "ctrl_completed_no_reply": "Agotaron los intentos sin ninguna respuesta.",
       "ctrl_failed": "No se pudo ejecutar el seguimiento. Pasa el cursor por el ℹ️ del estado para ver la causa exacta.",
       "del_delivered": "El canal confirmó que el último mensaje llegó al contacto (o que ya lo leyó).",
-      "del_sent": "El mensaje salió del sistema, pero el canal aún no confirma que haya llegado al contacto.",
+      "del_sent": "El mensaje salió del sistema y WhatsApp lo aceptó, pero aún no confirma que haya llegado al contacto.",
+      "del_unconfirmed": "WhatsApp aceptó el mensaje hace más de 24 h y nunca confirmó la entrega. No se reenvía: si sí llegó, el contacto lo recibiría dos veces.",
+      "del_retrying": "WhatsApp rechazó el envío por algo temporal (límite de velocidad o falla de Meta); el mismo intento se vuelve a enviar solo.",
       "del_failed": "El canal no pudo entregar el último mensaje (número inválido, bloqueo u otro rechazo)."
     },
     "INTENT_VALUES": {

@@ -37,20 +37,18 @@ const TRACKING_STATUS_META = {
 };
 
 // Eje de ENTREGA (WhatsApp), separado del de ejecución ([[Entrega-vs-ejecucion]]).
-// Mapea Message.status del último mensaje saliente a uno de 3 buckets.
+// proyecto@automatizacion_campanas: el backend manda delivery_status (último envío
+// registrado del seguimiento; sin envíos registrados, el último mensaje saliente).
 const DELIVERY_META = {
   delivered: { icon: '✅', key: 'DELIVERED', color: 'text-green-600' },
   sent: { icon: '⏳', key: 'SENT', color: 'text-slate-400' },
+  unconfirmed: { icon: '❔', key: 'UNCONFIRMED', color: 'text-amber-700' },
+  retrying: { icon: '🔁', key: 'RETRYING', color: 'text-blue-600' },
   failed: { icon: '⚠️', key: 'FAILED', color: 'text-red-600' },
 };
 
-function deliveryBucket(messageStatus) {
-  if (!messageStatus) return null;
-  if (messageStatus === 'delivered' || messageStatus === 'read') {
-    return 'delivered';
-  }
-  if (messageStatus === 'failed') return 'failed';
-  return 'sent';
+function deliveryBucket(prospect) {
+  return prospect.delivery_status || null;
 }
 
 // Filtros client-side: cada KPI clicable mapea a un predicado sobre el prospecto.
@@ -69,9 +67,11 @@ const PROSPECT_FILTERS = {
   ctrl_completed_replied: p => p.status === 'completed' && !!p.last_intent,
   ctrl_completed_no_reply: p => p.status === 'completed' && !p.last_intent,
   ctrl_failed: p => p.status === 'failed',
-  del_delivered: p => deliveryBucket(p.last_message_status) === 'delivered',
-  del_sent: p => deliveryBucket(p.last_message_status) === 'sent',
-  del_failed: p => deliveryBucket(p.last_message_status) === 'failed',
+  del_delivered: p => deliveryBucket(p) === 'delivered',
+  del_sent: p => deliveryBucket(p) === 'sent',
+  del_unconfirmed: p => deliveryBucket(p) === 'unconfirmed',
+  del_retrying: p => deliveryBucket(p) === 'retrying',
+  del_failed: p => deliveryBucket(p) === 'failed',
 };
 
 export default {
@@ -89,6 +89,7 @@ export default {
       kpiTimer: null,
       showLaunchModal: false,
       isLaunching: false,
+      isResuming: false,
     };
   },
   computed: {
@@ -105,7 +106,24 @@ export default {
     // Eje de entrega: se muestra solo si hay algún mensaje ya enviado.
     hasDelivery() {
       const d = this.delivery;
-      return (d.delivered || 0) + (d.sent || 0) + (d.failed || 0) > 0;
+      return (
+        (d.delivered || 0) +
+          (d.sent || 0) +
+          (d.unconfirmed || 0) +
+          (d.retrying || 0) +
+          (d.failed || 0) >
+        0
+      );
+    },
+    // proyecto@automatizacion_campanas: [{ code, title, count }] de los fallidos
+    failureReasons() {
+      return this.delivery.failure_reasons || [];
+    },
+    // Pausada por un error de configuración de Meta (ver TrackingCampaigns::Pause)
+    isPausedByError() {
+      return (
+        this.campaign?.status === 'paused' && !!this.campaign.paused_reason
+      );
     },
     deliveryKpis() {
       return [
@@ -120,6 +138,18 @@ export default {
           value: this.delivery.sent || 0,
           color: 'text-slate-800 dark:text-slate-100',
           filter: 'del_sent',
+        },
+        {
+          key: 'UNCONFIRMED',
+          value: this.delivery.unconfirmed || 0,
+          color: 'text-amber-700 dark:text-amber-500',
+          filter: 'del_unconfirmed',
+        },
+        {
+          key: 'RETRYING',
+          value: this.delivery.retrying || 0,
+          color: 'text-blue-600 dark:text-blue-400',
+          filter: 'del_retrying',
         },
         {
           key: 'FAILED',
@@ -247,6 +277,8 @@ export default {
         if (String(data.id) !== String(this.campaignId)) return;
         this.campaign = {
           ...this.campaign,
+          status: data.status,
+          paused_reason: data.paused_reason,
           stats: data.stats,
           funnel: data.funnel,
           delivery: data.delivery,
@@ -321,6 +353,27 @@ export default {
         this.isLaunching = false;
       }
     },
+    // proyecto@automatizacion_campanas: reanuda la pausada por error de Meta; sus
+    // seguimientos pausados se reprograman en background a partir de un minuto.
+    async resumeCampaign() {
+      this.isResuming = true;
+      try {
+        const { data } = await TrackingCampaignsAPI.resume(this.campaignId);
+        useAlert(
+          this.$t('TRACKING_CAMPAIGNS_VIEW.RESUME_SUCCESS', {
+            count: data.trackings,
+          })
+        );
+        await this.fetchAll();
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGNS_VIEW.RESUME_ERROR')
+        );
+      } finally {
+        this.isResuming = false;
+      }
+    },
     campaignStatusLabel(status) {
       return this.$t(`TRACKING_CAMPAIGNS_VIEW.STATUS.${status}`);
     },
@@ -334,13 +387,25 @@ export default {
       return TRACKING_STATUS_META[status]?.color || 'text-slate-500';
     },
     deliveryMeta(prospect) {
-      const bucket = deliveryBucket(prospect.last_message_status);
+      const bucket = deliveryBucket(prospect);
       return bucket ? DELIVERY_META[bucket] : null;
     },
     deliveryLabel(prospect) {
       const meta = this.deliveryMeta(prospect);
       if (!meta) return '—';
       return this.$t(`TRACKING_CAMPAIGN_DETAIL.DELIVERY.${meta.key}`);
+    },
+    // Tooltip: motivo de Meta y, si está en reintento, cuándo sale.
+    deliveryTitle(prospect) {
+      const parts = [prospect.delivery_error || this.deliveryLabel(prospect)];
+      if (prospect.delivery_retry_at) {
+        parts.push(
+          this.$t('TRACKING_CAMPAIGN_DETAIL.DELIVERY.RETRY_AT', {
+            date: this.formatDate(prospect.delivery_retry_at),
+          })
+        );
+      }
+      return parts.join(' · ');
     },
     // last_intent guarda la ruta técnica del bot (tracking/interested/…). La
     // traducimos a algo legible; 'tracking' = respondió sin intención especial.
@@ -455,6 +520,32 @@ export default {
       >
         {{ $t('TRACKING_CAMPAIGNS_VIEW.SAVED_BANNER') }}
       </p>
+      <!-- proyecto@automatizacion_campanas: pausada por error de configuración de Meta -->
+      <div
+        v-if="isPausedByError"
+        class="flex items-start gap-3 p-3 mb-3 rounded-lg shrink-0 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+      >
+        <div class="flex-1 text-sm text-amber-900 dark:text-amber-200">
+          <p class="font-medium">
+            {{
+              $t('TRACKING_CAMPAIGNS_VIEW.PAUSED_BANNER', {
+                reason: campaign.paused_reason,
+              })
+            }}
+          </p>
+          <p class="mt-1">
+            {{ $t('TRACKING_CAMPAIGNS_VIEW.PAUSED_BANNER_HINT') }}
+          </p>
+        </div>
+        <woot-button
+          size="small"
+          icon="arrow-clockwise"
+          :is-loading="isResuming"
+          @click="resumeCampaign"
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.RESUME') }}
+        </woot-button>
+      </div>
       <div
         class="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500 dark:text-slate-400 mb-5 shrink-0"
       >
@@ -597,6 +688,27 @@ export default {
           <p v-else class="text-xs text-slate-400 py-4 text-center">
             {{ $t('TRACKING_CAMPAIGN_DETAIL.DELIVERY.EMPTY') }}
           </p>
+          <!-- proyecto@automatizacion_campanas: por qué fallaron (código de Meta) -->
+          <div v-if="failureReasons.length" class="mt-2">
+            <span
+              class="text-xs font-medium text-slate-500 dark:text-slate-400"
+            >
+              {{ $t('TRACKING_CAMPAIGN_DETAIL.DELIVERY.REASONS_TITLE') }}
+            </span>
+            <ul class="mt-1 space-y-0.5">
+              <li
+                v-for="reason in failureReasons"
+                :key="`${reason.code}-${reason.title}`"
+                class="flex justify-between gap-2 text-xs text-slate-600 dark:text-slate-300"
+                :title="reason.title"
+              >
+                <span class="truncate">
+                  {{ reason.code ? `${reason.code}: ` : '' }}{{ reason.title }}
+                </span>
+                <span class="font-semibold">{{ reason.count }}</span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -722,7 +834,7 @@ export default {
                     v-if="deliveryMeta(p)"
                     class="inline-flex items-center gap-1 font-medium"
                     :class="deliveryMeta(p).color"
-                    :title="p.last_message_error || deliveryLabel(p)"
+                    :title="deliveryTitle(p)"
                   >
                     {{ deliveryMeta(p).icon }} {{ deliveryLabel(p) }}
                   </span>

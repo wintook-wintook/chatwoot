@@ -39,13 +39,36 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
                                   inbox: inbox, tracking_campaign_id: campaign.id)
       end
 
-      it 'expone el eje de entrega con 3 buckets basado en el último mensaje saliente' do
+      it 'sin envíos registrados (antes de la Fase 1), la entrega sale del último mensaje saliente' do
         get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}",
             headers: admin.create_new_auth_token, as: :json
 
         expect(response).to have_http_status(:success)
         delivery = response.parsed_body['delivery']
-        expect(delivery).to eq('delivered' => 2, 'sent' => 1, 'failed' => 1)
+        expect(delivery).to eq('delivered' => 2, 'sent' => 1, 'unconfirmed' => 0, 'retrying' => 0, 'failed' => 1,
+                               'failure_reasons' => [])
+      end
+
+      # proyecto@automatizacion_campanas — Fase 1: el último envío registrado del seguimiento manda.
+      it 'con envíos registrados usa el último de cada seguimiento y desglosa los motivos de fallo' do
+        record = lambda do |tracking, status, **extra|
+          TrackingDelivery.create!(account: account, contact_tracking: tracking, tracking_campaign: campaign,
+                                   kind: 'template', attempt_number: 1, status: status, **extra)
+        end
+        trackings = campaign.contact_trackings.where.not(conversation_id: nil).order(:id).to_a
+        record.call(trackings[0], 'failed', error_code: '131026', error_title: 'Message undeliverable')
+        record.call(trackings[0], 'read') # el último manda: entregado
+        record.call(trackings[1], 'unconfirmed')
+        record.call(trackings[2], 'failed', error_code: '130429', error_title: 'Rate limit', next_retry_at: 5.minutes.from_now)
+        record.call(trackings[3], 'failed', error_code: '131026', error_title: 'Message undeliverable')
+
+        get "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}",
+            headers: admin.create_new_auth_token, as: :json
+
+        expect(response.parsed_body['delivery']).to eq(
+          'delivered' => 1, 'sent' => 0, 'unconfirmed' => 1, 'retrying' => 1, 'failed' => 1,
+          'failure_reasons' => [{ 'code' => '131026', 'title' => 'Message undeliverable', 'count' => 1 }]
+        )
       end
 
       it 'mantiene el eje de ejecución (stats) separado de la entrega' do
@@ -236,6 +259,27 @@ RSpec.describe 'Tracking Campaigns API', type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(TrackingCampaign.exists?(campaign.id)).to be(true)
       expect(tracking.reload.tracking_campaign_id).to eq(campaign.id)
+    end
+  end
+
+  # proyecto@automatizacion_campanas — reanudar una campaña pausada por error de Meta
+  describe 'POST /api/v1/accounts/{account.id}/tracking_campaigns/{id}/resume' do
+    it 'reanuda la campaña pausada y devuelve su estado y los seguimientos a reanudar' do
+      TrackingCampaigns::Pause.new(campaign, reason: 'Meta 131042: payment issue').perform
+
+      post "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}/resume",
+           headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body).to include('campaign_id' => campaign.id, 'trackings' => 0)
+      expect(campaign.reload.paused_reason).to be_nil
+    end
+
+    it 'una campaña que no está pausada responde 422' do
+      post "/api/v1/accounts/#{account.id}/tracking_campaigns/#{campaign.id}/resume",
+           headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
     end
   end
 end

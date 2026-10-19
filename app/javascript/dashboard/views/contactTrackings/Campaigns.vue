@@ -193,8 +193,10 @@ export default {
                 class={`px-2 py-0.5 rounded-full text-xs font-medium ${this.statusClass(
                   row.status
                 )}`}
+                title={row.paused_reason || ''}
               >
                 {this.statusLabel(row.status)}
+                {row.paused_reason ? ' ⚠️' : ''}
               </span>
             ),
         }),

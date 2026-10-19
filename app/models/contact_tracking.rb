@@ -44,6 +44,7 @@
 #  objective                  :string           not null
 #  outcome                    :string
 #  paused_at                  :datetime
+#  paused_by_campaign         :boolean          default(FALSE), not null
 #  response_adjustments_count :integer          default(0), not null
 #  retry_interval_unit        :string           default("minutes")
 #  retry_interval_value       :integer          default(30)
@@ -99,6 +100,8 @@ class ContactTracking < ApplicationRecord
   belongs_to :tracking_campaign, optional: true # @campanas_vendedor
   # @tickets_cases — al borrar el seguimiento, conserva el ticket como histórico (contact_tracking_id → NULL).
   has_many :case_tickets, dependent: :nullify
+  # proyecto@automatizacion_campanas — cada envío real por WhatsApp y si Meta lo entregó.
+  has_many :tracking_deliveries, dependent: :delete_all
 
   # ==============================================================================
   # Serializers - Para campos JSON

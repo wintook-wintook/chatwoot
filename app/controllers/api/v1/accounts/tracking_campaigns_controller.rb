@@ -126,44 +126,9 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     acc
   end
 
-  # Eje de ENTREGA (WhatsApp), separado del de ejecución ([[Entrega-vs-ejecucion]]).
-  # Unidad = estado del ÚLTIMO mensaje saliente por conversación (1 por prospecto),
-  # NO mensajes crudos. Devuelve { campaign_id => { delivered:, sent:, failed: } }.
+  # Eje de ENTREGA (WhatsApp): ver TrackingCampaigns::DeliveryStats.
   def delivery_by_campaign(ids)
-    return {} if ids.blank?
-
-    # conversation_id => campaign_id (solo prospectos que ya tienen conversación)
-    conv_to_campaign = ContactTracking.where(tracking_campaign_id: ids)
-                                      .where.not(conversation_id: nil)
-                                      .pluck(:conversation_id, :tracking_campaign_id)
-                                      .to_h
-    return {} if conv_to_campaign.empty?
-
-    last_outgoing_messages(conv_to_campaign.keys).each_with_object({}) do |message, acc|
-      campaign_id = conv_to_campaign[message.conversation_id]
-      bucket = delivery_bucket(message.status)
-      (acc[campaign_id] ||= Hash.new(0))[bucket] += 1
-    end
-  end
-
-  # Último mensaje saliente (outgoing/template) por conversación, en 2 queries (sin N+1).
-  def last_outgoing_messages(conversation_ids)
-    # reorder(nil): Message tiene default_scope con ORDER BY que rompe el GROUP BY.
-    last_ids = Message.where(conversation_id: conversation_ids, message_type: %i[outgoing template])
-                      .reorder(nil).group(:conversation_id).maximum(:id)
-    return [] if last_ids.empty?
-
-    Message.where(id: last_ids.values).select(:id, :conversation_id, :status)
-  end
-
-  # Message.status (string del enum) → bucket de entrega. read cuenta como entregado;
-  # sent/progress = enviado sin confirmar; failed = rechazado por el canal.
-  def delivery_bucket(status)
-    case status
-    when 'delivered', 'read' then :delivered
-    when 'failed'            then :failed
-    else                          :sent
-    end
+    TrackingCampaigns::DeliveryStats.new(ids).call
   end
 
   # Embudo por campaña, mismo criterio que el overview de cuenta: replied = last_intent
@@ -225,9 +190,11 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     }.merge(editable_json(campaign))
   end
 
-  # Para modificar una Guardada: CampaignForm la vuelve a llenar con esto.
+  # Para modificar una Guardada: CampaignForm la vuelve a llenar con esto. Y, si está
+  # pausada por un error de configuración de Meta (proyecto@automatizacion_campanas), el motivo.
   def editable_json(campaign)
-    { tracking_template_id: campaign.tracking_template_id, audience: campaign.audience }
+    { tracking_template_id: campaign.tracking_template_id, audience: campaign.audience,
+      paused_reason: campaign.paused_reason, paused_at: campaign.paused_at }
   end
 
   def aggregate_stats(status_counts)
@@ -250,7 +217,10 @@ class Api::V1::Accounts::TrackingCampaignsController < Api::V1::Accounts::BaseCo
     {
       delivered: delivery_counts[:delivered].to_i,
       sent: delivery_counts[:sent].to_i,
-      failed: delivery_counts[:failed].to_i
+      unconfirmed: delivery_counts[:unconfirmed].to_i,
+      retrying: delivery_counts[:retrying].to_i,
+      failed: delivery_counts[:failed].to_i,
+      failure_reasons: delivery_counts.fetch(:failure_reasons, [])
     }
   end
 end
