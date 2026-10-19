@@ -293,15 +293,12 @@ export default {
     async fetchAll() {
       this.isLoading = true;
       try {
-        const [{ data: campaign }, { data: list }] = await Promise.all([
+        const [{ data: campaign }, prospects] = await Promise.all([
           TrackingCampaignsAPI.show(this.campaignId),
-          ContactTrackingsAPI.getList(this.accountId, {
-            campaign_id: this.campaignId,
-            per_page: 100,
-          }),
+          this.fetchProspects(),
         ]);
         this.campaign = campaign;
-        this.prospects = list.trackings || [];
+        this.prospects = prospects;
         this.currentPage = 1;
       } catch (error) {
         this.campaign = null;
@@ -309,6 +306,28 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+    // proyecto@automatizacion_campanas — Fase 2: una campaña llega a 1,000 prospectos y el
+    // listado entrega 100 por página: se piden todas las páginas (los filtros por indicador
+    // corren en el navegador sobre la campaña completa).
+    async fetchProspects() {
+      const params = { campaign_id: this.campaignId, per_page: 100 };
+      const { data: first } = await ContactTrackingsAPI.getList(
+        this.accountId,
+        params
+      );
+      const totalPages = first.meta?.total_pages || 1;
+      const rest = await Promise.all(
+        Array.from({ length: totalPages - 1 }, (_, index) =>
+          ContactTrackingsAPI.getList(this.accountId, {
+            ...params,
+            page: index + 2,
+          })
+        )
+      );
+      return [first, ...rest.map(response => response.data)].flatMap(
+        list => list.trackings || []
+      );
     },
     onPageChange(page) {
       this.currentPage = page;

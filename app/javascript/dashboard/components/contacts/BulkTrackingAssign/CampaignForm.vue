@@ -39,7 +39,8 @@ import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import { getMinDateTime } from '../../../helper/trackingHelpers';
 import AudiencePreview from './AudiencePreview.vue';
 
-const MAX_BULK_ASSIGN = 100;
+// proyecto@automatizacion_campanas — Fase 2: igual que ContactTrackings::BulkAssignService
+const MAX_BULK_ASSIGN = 1000;
 // Nombre del enum filter_type de customViews para "contactos" (el backend lo serializa
 // como string "contact"; el getter getCustomViewsByFilterType compara por ese string).
 const FILTER_TYPE_CONTACT = 'contact';

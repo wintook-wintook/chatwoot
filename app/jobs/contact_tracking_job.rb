@@ -16,6 +16,9 @@ class ContactTrackingJob < ApplicationJob
   def perform(tracking_id)
     tracking = ContactTracking.find_by(id: tracking_id)
     return unless tracking
+    # proyecto@automatizacion_campanas — Fase 2: la cuenta usa el despachador
+    # (TrackingDispatch::SendJob). Un job viejo que quedó en Sidekiq no debe enviar en paralelo.
+    return if tracking.dispatched?
 
     # ⭐ LOCK PESIMISTA: Evita ejecución simultánea del mismo tracking
     tracking.with_lock do
@@ -72,149 +75,10 @@ class ContactTrackingJob < ApplicationJob
 
       tracking.update!(status: 'active', last_attempt_at: Time.current)
 
-      # Verificar condiciones
-      has_template = tracking.use_template_for_current_attempt?
-      is_whatsapp = is_whatsapp_channel?(tracking)
-      window_open = whatsapp_window_open?(tracking)
+      success = deliver(tracking)
+      next if success == :aborted # ver CASO 1 en #deliver: con `return` la transacción se revierte
 
-      Rails.logger.info "[ContactTracking] 🔍 Análisis de envío:"
-      Rails.logger.info "[ContactTracking]    - Canal WhatsApp: #{is_whatsapp}"
-      Rails.logger.info "[ContactTracking]    - Tiene plantilla: #{has_template}"
-      Rails.logger.info "[ContactTracking]    - Ventana 24h: #{window_open ? 'ABIERTA ✅' : 'CERRADA ❌'}"
-  
-      # Decisión de envío
-      if is_whatsapp && !window_open && !has_template
-        # CASO 1: WhatsApp ventana CERRADA sin plantilla - ERROR
-        Rails.logger.error "[ContactTracking] ❌ IMPOSIBLE ENVIAR:"
-        Rails.logger.error "[ContactTracking]    - Ventana de 24h cerrada"
-        Rails.logger.error "[ContactTracking]    - No hay plantilla configurada"
-        Rails.logger.error "[ContactTracking]    - Solución: Configure plantillas o espere mensaje del cliente"
-        tracking.update!(
-          status: 'failed',
-          last_error: 'WhatsApp 24h window closed and no template configured'
-        )
-        # `next` y no `return`: en Rails 7.0 salir con return de un bloque with_lock
-        # revierte la transacción, así que este estado 'failed' se descartaba y el
-        # seguimiento se quedaba en 'scheduled', reintentándose indefinidamente.
-        next
-      elsif is_whatsapp && !window_open && has_template
-        # CASO 2: WhatsApp ventana CERRADA con plantilla - SOLO PLANTILLA
-        Rails.logger.info "[ContactTracking] 📱 ✅ VENTANA CERRADA → Enviando solo PLANTILLA"
-        success = send_whatsapp_template(tracking)
-      elsif is_whatsapp && window_open
-        # CASO 3: WhatsApp ventana ABIERTA - MENSAJE GENERADO CON IA (plantillas ignoradas)
-        Rails.logger.info "[ContactTracking] 🪟 ✅ VENTANA ABIERTA → Mensaje generado con IA pura (plantillas ignoradas)"
-
-        message_body = generate_message(tracking)
-        success = send_message_via_chatwoot(tracking, message_body)
-
-        if success
-          Rails.logger.info "[ContactTracking] ✅ Mensaje personalizado enviado con IA"
-        else
-          Rails.logger.error "[ContactTracking] ❌ Error al enviar mensaje personalizado"
-        end
-      elsif instagram_native_channel?(tracking) && !instagram_window_open?(tracking)
-        # CASO 3b: Instagram fuera de ventana. A diferencia de WhatsApp no hay plantillas
-        # a las que recurrir, así que Meta rechazaría el envío. Se falla aquí en vez de
-        # gastar un intento y dar por bueno un mensaje que nunca se entrega.
-        Rails.logger.error '[ContactTracking] ❌ IMPOSIBLE ENVIAR POR INSTAGRAM:'
-        Rails.logger.error '[ContactTracking]    - Ventana de mensajería cerrada'
-        Rails.logger.error '[ContactTracking]    - Instagram no admite plantillas fuera de ventana'
-        tracking.update!(
-          status: 'failed',
-          last_error: 'Instagram messaging window closed and the channel has no templates'
-        )
-        next # ver la nota del caso de WhatsApp: con `return` la transacción se revierte
-      else
-        # CASO 4: Otro canal (no WhatsApp)
-        Rails.logger.info "[ContactTracking] 💬 USANDO MENSAJE NORMAL (canal: #{tracking.inbox.channel_type})"
-        message_body = generate_message(tracking)
-        success = send_message_via_chatwoot(tracking, message_body)
-      end
-  
-      # Manejo post-envío
-      if success
-        # ⭐ NUEVA LÓGICA: Detectar modo reintento automático (reagendamiento)
-        if tracking.auto_retry_mode?
-          # Incrementar contador de repeticiones del mismo intento
-          tracking.increment!(:response_adjustments_count)
-          current_repetition = tracking.response_adjustments_count
-
-          Rails.logger.info "[ContactTracking] 🔁 MODO REINTENTO ACTIVO"
-          Rails.logger.info "[ContactTracking]    Plantilla actual: #{tracking.attempt_count + 1}"
-          Rails.logger.info "[ContactTracking]    Repetición: #{current_repetition}/#{tracking.max_attempts}"
-
-          # ⭐ REGLA: Si se alcanzó max_attempts repeticiones del mismo intento, pasar al siguiente
-          if current_repetition >= tracking.max_attempts
-            Rails.logger.info "[ContactTracking] ⚠️  Alcanzado máximo de repeticiones para este intento"
-
-            # Desactivar modo reintento y pasar al siguiente intento
-            tracking.disable_auto_retry_mode!
-            new_attempt_count = tracking.attempt_count + 1
-
-            # Verificar si hay más plantillas disponibles
-            if new_attempt_count >= tracking.whatsapp_templates_count
-              tracking.update!(
-                status: 'completed',
-                attempt_count: new_attempt_count,
-                response_adjustments_count: 0,
-                ai_context: tracking.ai_context  # Guardar el cambio de disable_auto_retry_mode!
-              )
-              Rails.logger.info "[ContactTracking] ✅ Tracking ##{tracking.id} completado - Sin más plantillas disponibles"
-            else
-              # Programar siguiente intento con la nueva plantilla
-              next_run = tracking.retry_interval_value.send(tracking.retry_interval_unit).from_now
-              tracking.update!(
-                scheduled_for: next_run,
-                status: 'scheduled',
-                attempt_count: new_attempt_count,
-                response_adjustments_count: 0,
-                ai_context: tracking.ai_context  # Guardar el cambio de disable_auto_retry_mode!
-              )
-              Rails.logger.info "[ContactTracking] 📅 Pasando a plantilla #{new_attempt_count + 1} para #{next_run.strftime('%d/%m/%Y %H:%M')}"
-            end
-          else
-            # Aún hay repeticiones disponibles, programar mismo intento
-            next_run = tracking.retry_interval_value.send(tracking.retry_interval_unit).from_now
-            tracking.update!(
-              scheduled_for: next_run,
-              status: 'scheduled'
-              # attempt_count NO cambia - se mantiene en la misma plantilla
-            )
-            Rails.logger.info "[ContactTracking] 🔁 Reprogramado mismo intento (repetición #{current_repetition + 1}) para #{next_run.strftime('%d/%m/%Y %H:%M')}"
-          end
-        else
-          # Modo normal: Incrementar attempt_count
-          tracking.increment!(:attempt_count)
-          Rails.logger.info "[ContactTracking] ✅ Mensaje enviado - Tracking ##{tracking.id} (intento #{tracking.attempt_count}/#{tracking.max_attempts})"
-
-          if tracking.attempt_count >= tracking.max_attempts
-            tracking.update!(status: 'completed')
-            Rails.logger.info "[ContactTracking] ✅ Tracking ##{tracking.id} completado"
-          else
-            next_run = tracking.next_scheduled_time
-
-            if next_run
-              tracking.update!(scheduled_for: next_run, status: 'scheduled')
-              # NO llamar schedule_job aquí - el callback after_update lo hace automáticamente
-              Rails.logger.info "[ContactTracking] 📅 Tracking ##{tracking.id} reprogramado para #{next_run}"
-            else
-              tracking.update!(status: 'completed')
-              Rails.logger.info "[ContactTracking] ✅ Tracking ##{tracking.id} completado (sin intervalo)"
-            end
-          end
-        end
-      else
-        # proyecto@automatizacion_campanas: si Meta rechazó al momento, según el error se
-        # reprograma el mismo intento o se pausa (HandleFailure ya dejó el estado).
-        outcome = @rejected_delivery && TrackingDeliveries::HandleFailure.new(@rejected_delivery, tracking: tracking, immediate: true).perform
-        if %i[retry config unreachable].include?(outcome)
-          Rails.logger.warn "[ContactTracking] ⚠️ Tracking ##{tracking.id}: #{@rejected_delivery.error_summary} → #{outcome}"
-        else
-          tracking.update!(status: 'failed', last_error: @send_error.presence || 'Failed to send message')
-          Rails.logger.error "[ContactTracking] ❌ Tracking ##{tracking.id} falló al enviar mensaje"
-        end
-      end
+      after_send(tracking, success)
     end  # Cierra with_lock
   rescue StandardError => e
     tracking&.update(status: 'failed', last_error: e.message)
@@ -223,6 +87,159 @@ class ContactTrackingJob < ApplicationJob
   end
 
   private
+
+  # Decide por dónde sale el intento (plantilla, sesión con IA u otro canal) y lo envía.
+  # true / false según se envió, o :aborted si no se puede enviar y el seguimiento ya quedó
+  # fallido (ventana cerrada sin plantilla).
+  def deliver(tracking)
+    # Verificar condiciones
+    has_template = tracking.use_template_for_current_attempt?
+    is_whatsapp = is_whatsapp_channel?(tracking)
+    window_open = whatsapp_window_open?(tracking)
+
+    Rails.logger.info "[ContactTracking] 🔍 Análisis de envío:"
+    Rails.logger.info "[ContactTracking]    - Canal WhatsApp: #{is_whatsapp}"
+    Rails.logger.info "[ContactTracking]    - Tiene plantilla: #{has_template}"
+    Rails.logger.info "[ContactTracking]    - Ventana 24h: #{window_open ? 'ABIERTA ✅' : 'CERRADA ❌'}"
+
+    # Decisión de envío
+    if is_whatsapp && !window_open && !has_template
+      # CASO 1: WhatsApp ventana CERRADA sin plantilla - ERROR
+      Rails.logger.error "[ContactTracking] ❌ IMPOSIBLE ENVIAR:"
+      Rails.logger.error "[ContactTracking]    - Ventana de 24h cerrada"
+      Rails.logger.error "[ContactTracking]    - No hay plantilla configurada"
+      Rails.logger.error "[ContactTracking]    - Solución: Configure plantillas o espere mensaje del cliente"
+      tracking.update!(
+        status: 'failed',
+        last_error: 'WhatsApp 24h window closed and no template configured'
+      )
+      # :aborted y perform sale con `next`: en Rails 7.0 salir con return de un bloque
+      # with_lock revierte la transacción, así que este estado 'failed' se descartaba y el
+      # seguimiento se quedaba en 'scheduled', reintentándose indefinidamente.
+      return :aborted
+    elsif is_whatsapp && !window_open && has_template
+      # CASO 2: WhatsApp ventana CERRADA con plantilla - SOLO PLANTILLA
+      Rails.logger.info "[ContactTracking] 📱 ✅ VENTANA CERRADA → Enviando solo PLANTILLA"
+      success = send_whatsapp_template(tracking)
+    elsif is_whatsapp && window_open
+      # CASO 3: WhatsApp ventana ABIERTA - MENSAJE GENERADO CON IA (plantillas ignoradas)
+      Rails.logger.info "[ContactTracking] 🪟 ✅ VENTANA ABIERTA → Mensaje generado con IA pura (plantillas ignoradas)"
+
+      message_body = generate_message(tracking)
+      success = send_message_via_chatwoot(tracking, message_body)
+
+      if success
+        Rails.logger.info "[ContactTracking] ✅ Mensaje personalizado enviado con IA"
+      else
+        Rails.logger.error "[ContactTracking] ❌ Error al enviar mensaje personalizado"
+      end
+    elsif instagram_native_channel?(tracking) && !instagram_window_open?(tracking)
+      # CASO 3b: Instagram fuera de ventana. A diferencia de WhatsApp no hay plantillas
+      # a las que recurrir, así que Meta rechazaría el envío. Se falla aquí en vez de
+      # gastar un intento y dar por bueno un mensaje que nunca se entrega.
+      Rails.logger.error '[ContactTracking] ❌ IMPOSIBLE ENVIAR POR INSTAGRAM:'
+      Rails.logger.error '[ContactTracking]    - Ventana de mensajería cerrada'
+      Rails.logger.error '[ContactTracking]    - Instagram no admite plantillas fuera de ventana'
+      tracking.update!(
+        status: 'failed',
+        last_error: 'Instagram messaging window closed and the channel has no templates'
+      )
+      return :aborted
+    else
+      # CASO 4: Otro canal (no WhatsApp)
+      Rails.logger.info "[ContactTracking] 💬 USANDO MENSAJE NORMAL (canal: #{tracking.inbox.channel_type})"
+      message_body = generate_message(tracking)
+      success = send_message_via_chatwoot(tracking, message_body)
+    end
+    success
+  end
+
+  # Después del envío: avanza el intento y reprograma, o decide qué hacer con el fallo.
+  def after_send(tracking, success)
+    # Manejo post-envío
+    if success
+      # ⭐ NUEVA LÓGICA: Detectar modo reintento automático (reagendamiento)
+      if tracking.auto_retry_mode?
+        # Incrementar contador de repeticiones del mismo intento
+        tracking.increment!(:response_adjustments_count)
+        current_repetition = tracking.response_adjustments_count
+
+        Rails.logger.info "[ContactTracking] 🔁 MODO REINTENTO ACTIVO"
+        Rails.logger.info "[ContactTracking]    Plantilla actual: #{tracking.attempt_count + 1}"
+        Rails.logger.info "[ContactTracking]    Repetición: #{current_repetition}/#{tracking.max_attempts}"
+
+        # ⭐ REGLA: Si se alcanzó max_attempts repeticiones del mismo intento, pasar al siguiente
+        if current_repetition >= tracking.max_attempts
+          Rails.logger.info "[ContactTracking] ⚠️  Alcanzado máximo de repeticiones para este intento"
+
+          # Desactivar modo reintento y pasar al siguiente intento
+          tracking.disable_auto_retry_mode!
+          new_attempt_count = tracking.attempt_count + 1
+
+          # Verificar si hay más plantillas disponibles
+          if new_attempt_count >= tracking.whatsapp_templates_count
+            tracking.update!(
+              status: 'completed',
+              attempt_count: new_attempt_count,
+              response_adjustments_count: 0,
+              ai_context: tracking.ai_context  # Guardar el cambio de disable_auto_retry_mode!
+            )
+            Rails.logger.info "[ContactTracking] ✅ Tracking ##{tracking.id} completado - Sin más plantillas disponibles"
+          else
+            # Programar siguiente intento con la nueva plantilla
+            next_run = tracking.retry_interval_value.send(tracking.retry_interval_unit).from_now
+            tracking.update!(
+              scheduled_for: next_run,
+              status: 'scheduled',
+              attempt_count: new_attempt_count,
+              response_adjustments_count: 0,
+              ai_context: tracking.ai_context  # Guardar el cambio de disable_auto_retry_mode!
+            )
+            Rails.logger.info "[ContactTracking] 📅 Pasando a plantilla #{new_attempt_count + 1} para #{next_run.strftime('%d/%m/%Y %H:%M')}"
+          end
+        else
+          # Aún hay repeticiones disponibles, programar mismo intento
+          next_run = tracking.retry_interval_value.send(tracking.retry_interval_unit).from_now
+          tracking.update!(
+            scheduled_for: next_run,
+            status: 'scheduled'
+            # attempt_count NO cambia - se mantiene en la misma plantilla
+          )
+          Rails.logger.info "[ContactTracking] 🔁 Reprogramado mismo intento (repetición #{current_repetition + 1}) para #{next_run.strftime('%d/%m/%Y %H:%M')}"
+        end
+      else
+        # Modo normal: Incrementar attempt_count
+        tracking.increment!(:attempt_count)
+        Rails.logger.info "[ContactTracking] ✅ Mensaje enviado - Tracking ##{tracking.id} (intento #{tracking.attempt_count}/#{tracking.max_attempts})"
+
+        if tracking.attempt_count >= tracking.max_attempts
+          tracking.update!(status: 'completed')
+          Rails.logger.info "[ContactTracking] ✅ Tracking ##{tracking.id} completado"
+        else
+          next_run = tracking.next_scheduled_time
+
+          if next_run
+            tracking.update!(scheduled_for: next_run, status: 'scheduled')
+            # NO llamar schedule_job aquí - el callback after_update lo hace automáticamente
+            Rails.logger.info "[ContactTracking] 📅 Tracking ##{tracking.id} reprogramado para #{next_run}"
+          else
+            tracking.update!(status: 'completed')
+            Rails.logger.info "[ContactTracking] ✅ Tracking ##{tracking.id} completado (sin intervalo)"
+          end
+        end
+      end
+    else
+      # proyecto@automatizacion_campanas: si Meta rechazó al momento, según el error se
+      # reprograma el mismo intento o se pausa (HandleFailure ya dejó el estado).
+      outcome = @rejected_delivery && TrackingDeliveries::HandleFailure.new(@rejected_delivery, tracking: tracking, immediate: true).perform
+      if %i[retry config unreachable].include?(outcome)
+        Rails.logger.warn "[ContactTracking] ⚠️ Tracking ##{tracking.id}: #{@rejected_delivery.error_summary} → #{outcome}"
+      else
+        tracking.update!(status: 'failed', last_error: @send_error.presence || 'Failed to send message')
+        Rails.logger.error "[ContactTracking] ❌ Tracking ##{tracking.id} falló al enviar mensaje"
+      end
+    end
+  end
 
   def generate_message(tracking, template_content = nil)
     # Intentar generar mensaje con IA si está disponible
@@ -846,6 +863,8 @@ class ContactTrackingJob < ApplicationJob
       if conversation
         conversation.update!(status: :open)
         Rails.logger.info "[ContactTracking] 🔄 Conversación ##{conversation.id} reabierta (sin conversation_id en tracking)"
+      elsif (conversation = open_campaign_conversation(tracking))
+        Rails.logger.info "[ContactTracking] 🆕 Conversación de campaña creada: ID #{conversation.id}"
       else
         conversation = Conversation.create!(
           account_id: tracking.account_id,
@@ -862,6 +881,18 @@ class ContactTrackingJob < ApplicationJob
   rescue StandardError => e
     Rails.logger.error "[ContactTracking] ❌ Error creando conversación: #{e.message}"
     nil
+  end
+
+  # proyecto@automatizacion_campanas — Fase 2: la campaña ya no abre la conversación al
+  # inscribir; se abre aquí, al salir el primer mensaje, como la abría la inscripción
+  # (asignada al dueño de la campaña y con nota privada).
+  def open_campaign_conversation(tracking)
+    campaign = tracking.tracking_campaign
+    return if campaign.nil? || campaign.inbox_id != tracking.inbox_id
+
+    TrackingCampaigns::TrackingBuilder.new(campaign, tracking.contact, agent: campaign.user,
+                                                                       note: "📋 Seguimiento de la campaña \"#{campaign.name}\"")
+                                      .open_conversation
   end
 
   def find_or_create_contact_inbox(tracking)

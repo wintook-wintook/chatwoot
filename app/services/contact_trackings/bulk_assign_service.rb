@@ -28,7 +28,10 @@
 class ContactTrackings::BulkAssignService
   include ContactTrackings::Eligibility # ACTIVE_STATUSES + reglas compartidas con el preview
 
-  MAX_BULK_ASSIGN = 100 # Límite de seguridad por asignación masiva
+  MAX_BULK_ASSIGN = 1000 # Límite de seguridad por asignación masiva (Fase 2: antes 100)
+  # proyecto@automatizacion_campanas — Fase 2: el lote se inscribe por tandas, cada una en su
+  # propio job (BulkAssignJob con cursor): un reinicio de Sidekiq no corta la campaña a medias.
+  BATCH_SIZE = 100
 
   # window: la ventana de la campaña por lote (proyecto@automatizacion_campanas):
   #   { ends_at:, entry_delay_minutes:, respect_working_hours: } — todo opcional.
@@ -108,13 +111,16 @@ class ContactTrackings::BulkAssignService
     )
   end
 
-  # Fase 2 (background): aplica la plantilla contacto por contacto.
-  def process!
+  # Fase 2 (background): aplica la plantilla contacto por contacto, en tandas de BATCH_SIZE
+  # por id. Devuelve también next_cursor: el último id de la tanda si quedan más (el job encola
+  # la siguiente), o nil si terminó. Ya inscritos no se repiten: Enroll los omite.
+  def process!(after_id: 0)
     template = @account.tracking_templates.find_by(id: @template_id)
     return @results unless template && @campaign
 
-    resolve_contacts.find_each { |contact| process_contact(contact, template) }
-    @results
+    batch = resolve_contacts.reorder('contacts.id').where('contacts.id > ?', after_id.to_i).limit(BATCH_SIZE).to_a
+    batch.each { |contact| process_contact(contact, template) }
+    @results.merge(next_cursor: batch.size == BATCH_SIZE ? batch.last.id : nil)
   end
 
   private
