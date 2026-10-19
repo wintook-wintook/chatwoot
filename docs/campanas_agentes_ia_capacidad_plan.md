@@ -2,7 +2,8 @@
 
 > **Rama:** `diag/campanas_agentes_ia` (creada desde `origin/develop`, commit `0d860df88`)
 > **Fecha del diagnóstico:** 2026-10-16
-> **Alcance:** solo análisis. Este documento no implica cambios de código ya hechos.
+> **Alcance:** análisis. La **Fase 0 ya está hecha** en la rama `fix/campanas_fase0` (§13, 2026-10-19); el resto del plan no implica cambios de código ya hechos.
+> **Corrección 2026-10-19:** las cifras de entrega de §3.4 estaban infladas (la consulta contaba un mismo mensaje una vez por cada seguimiento de la conversación e incluía canales que no son WhatsApp) y la afirmación de que los fallidos no guardaban el motivo de Meta era falsa (sí lo guardan; la consulta no lo veía por cómo está almacenado). Se corrigieron §1, §3.4, §6, §7, §10 y §13.
 > **Importante:** el módulo de campañas de Agentes IA está **en desarrollo** y solo existe en el servidor de desarrollo; **en producción no se ha usado**. Las cifras de uso de campañas y seguimientos de este documento son de **pruebas en desarrollo**, no de clientes. Lo que vale para producción es el análisis del código (misma versión 3.13.6) y los datos del servidor productivo de la §3.6.
 > **Meta del negocio:** 500 cuentas × 2 campañas × 1,000 contactos (~1,000,000 contactos), programadas en horarios distintos. Lo que no se entregue se reintenta; lo que ya se entregó nunca se reenvía.
 
@@ -40,7 +41,7 @@
   1. los niveles de envío de **WhatsApp (Meta)** por número,
   2. los límites de las **llaves de OpenAI** (varias cuentas comparten llave y no se maneja el error 429),
   3. un defecto interno: **la cola se auto-amplifica** cuando se atrasa (`ExecutePendingJob`) y **`cancel_existing_jobs` crece al cuadrado** con el volumen.
-- El sistema **no sabe si un mensaje se entregó**: cuenta como éxito que Meta acepte la petición. En las pruebas del último mes en desarrollo, **~11 %** de los mensajes de seguimiento por WhatsApp quedaron fallidos o sin confirmar y se contaron como intentos exitosos.
+- El sistema **no sabe si un mensaje se entregó**: cuenta como éxito que Meta acepte la petición. En las pruebas del último mes en desarrollo, **~16 %** de los mensajes de seguimiento por WhatsApp quedaron fallidos o sin confirmar y se contaron como intentos exitosos.
 - Chatwoot oficial (v4.4+) tiene campañas de WhatsApp, pero **más simples** (una plantilla fija, sin IA) y el seguimiento por destinatario es **Enterprise**. **No conviene actualizar**; conviene **portar el patrón** a nuestro módulo.
 - La versión local **ya tiene ~80 % de la infraestructura** necesaria para confirmar entregas (ID del mensaje en Meta, webhook de estados, código de error).
 - Propuesta: **Fase 0** (arreglos rápidos, ~1 día), **Fase 1** (entrega confirmada, ~3–5 días), **Fase 2** (volumen, ~1–2 semanas con prueba de carga).
@@ -144,12 +145,28 @@ Detalle de trabajo real (ejecuciones ≥ 0.8 s):
 
 | Estado | Mensajes | % |
 |---|---|---|
-| Leído (`read`) | 2,712 | 67 % |
-| Entregado (`delivered`) | 866 | 21 % |
-| **Solo enviado (`sent`, nunca confirmado)** | **330** | **8 %** |
-| **Fallido (`failed`)** | **139** | **3.4 %** |
+Solo canales de WhatsApp, cada mensaje contado una vez, del 2026-09-16 al 2026-10-16 (cifras corregidas el 2026-10-19).
 
-Los 139 fallidos **no tienen el motivo del error guardado**.
+| Estado | Mensajes | % |
+|---|---|---|
+| Leído (`read`) | 1,195 | 60.5 % |
+| Entregado (`delivered`) | 460 | 23.3 % |
+| **Solo enviado (`sent`, nunca confirmado)** | **281** | **14.2 %** |
+| **Fallido (`failed`)** | **38** | **1.9 %** |
+| Total | 1,974 | |
+
+Los 38 fallidos **sí tienen el motivo de Meta guardado** en el mensaje (`external_error`):
+
+| Código | Significado | Mensajes |
+|---|---|---|
+| 131047 | Fuera de la ventana de 24 h sin plantilla | 21 |
+| 131049 | Meta limitó el marketing a ese usuario | 14 |
+| 130472 | El número participa en un experimento de Meta | 2 |
+| 131026 | No entregable (sin WhatsApp o bloqueó) | 1 |
+
+Lo que faltaba era ese motivo **en el seguimiento**: guardaba solo "Failed to send message" (corregido en la Fase 0, §13).
+
+> **Ojo con consultas propias:** `content_attributes` está guardado como texto JSON dentro de JSON, así que el operador `?` de `jsonb` no encuentra `external_error`; hay que buscarlo con `LIKE` o leerlo por el modelo (`message.external_error`).
 
 ### 3.5 Estado de Sidekiq
 
@@ -158,8 +175,8 @@ Los 139 fallidos **no tienen el motivo del error guardado**.
 | Programados (`schedule`) | 571 | 510 `ActionMailbox::IncinerationJob`, 61 `ContactTrackingJob` |
 | Reintentos (`retry`) | 0 | |
 | Muertos (`dead`) | 709 | 178 `Internal::CheckNewVersionsJob`, 240 `Webhooks::WhatsappEventsJob`, 122 `CalendarAlertJob`, 17 `TrackingCampaigns::WindowJob` (StatementInvalid, sep), etc. |
-| Cola `low_priority` | **249** | `ContactTrackings::CleanupJob` desde **2026-02-10** — nunca procesados |
-| Cola `knowledge_base` | **49** | `KnowledgeBaseArticleProcessorJob` desde **2025-12-17** — nunca procesados |
+| Cola `low_priority` | **249** | `ContactTrackings::CleanupJob` desde **2026-02-10** — nunca procesados. **Vaciada el 2026-10-19 (Fase 0).** |
+| Cola `knowledge_base` | **49** | `KnowledgeBaseArticleProcessorJob` desde **2025-12-17** — nunca procesados; esa clase no existe en el repo. **Vaciada el 2026-10-19 (Fase 0).** |
 
 ### 3.6 Servidor productivo (hostdime, 2026-10-16 12:33 CST)
 
@@ -321,14 +338,14 @@ En el orden en que aparecen al crecer la carga:
 
 | # | Problema | Dónde | Impacto |
 |---|---|---|---|
-| 1 | Cola `low_priority` no está en `sidekiq.yml` | `config/sidekiq.yml` | `CleanupJob` nunca ha corrido (249 atorados desde feb). `contact_trackings` crece sin límite. |
-| 2 | Cola `knowledge_base` no está en `sidekiq.yml` | `config/sidekiq.yml` | 49 artículos de base de conocimiento nunca procesados (desde dic 2025). |
+| 1 | Cola `low_priority` no está en `sidekiq.yml` | `config/sidekiq.yml` | `CleanupJob` nunca ha corrido (249 atorados desde feb). `contact_trackings` crece sin límite. **Fase 0:** job apagado (borraría seguimientos que usan las campañas). |
+| 2 | Cola `knowledge_base` no está en `sidekiq.yml` | `config/sidekiq.yml` | 49 trabajos de una clase que no existe en el repo (desde dic 2025). **Fase 0:** borrados. |
 | 3 | 70 % de `ContactTrackingJob` son no-ops | `ExecutePendingJob` | Trabajo desperdiciado; se vuelve espiral con atraso. |
 | 4 | Recorrido completo de colas en cada reprogramación | `contact_tracking.rb:572` | O(N²) con volumen. |
-| 5 | OpenAI sin timeout dentro de `with_lock` | `contact_tracking_job.rb` (~línea 290) | Conexiones de BD bloqueadas hasta 60 s. |
+| 5 | OpenAI sin timeout dentro de `with_lock` | `contact_tracking_job.rb` (~línea 290) | Conexiones de BD bloqueadas hasta 60 s. **Fase 0:** tope de 15 s. |
 | 6 | Sin manejo de 429 de OpenAI | todo el bot | Respuestas degradadas sin aviso. |
-| 7 | Éxito = Meta aceptó, no entregado | `contact_tracking_job.rb` | En pruebas de desarrollo, ~11 % de mensajes no entregados contados como exitosos. |
-| 8 | Error de envío no guardado | envío de seguimiento | No se puede saber por qué falló. |
+| 7 | Éxito = Meta aceptó, no entregado | `contact_tracking_job.rb` | En pruebas de desarrollo, ~16 % de mensajes no entregados contados como exitosos. |
+| 8 | Motivo del error no llega al seguimiento | envío de seguimiento | El mensaje sí guarda el código de Meta, pero el seguimiento solo decía "Failed to send message". **Fase 0:** el seguimiento guarda el código y detalle de Meta. |
 | 9 | `Job adelantado` termina sin reprogramarse | `contact_tracking_job.rb:44-48` | Depende de `ExecutePendingJob` para recuperarse. |
 | 10 | `schedule_job` traga errores | `contact_tracking.rb:565` | Seguimientos sin trabajo programado, sin aviso. |
 
@@ -341,14 +358,15 @@ En el orden en que aparecen al crecer la carga:
 ### 7.1 Lo que se observa ya en el servidor de desarrollo
 
 **1. Mensajes que no llegaron y el sistema da por enviados**
-- En las pruebas de los últimos 30 días, de ~4,000 mensajes de seguimiento por WhatsApp, **469 no llegaron o nunca se confirmaron** (139 fallidos y 330 sin confirmar). Parte puede deberse a números de prueba.
+- En las pruebas de los últimos 30 días, de 1,974 mensajes de seguimiento por WhatsApp, **319 no llegaron o nunca se confirmaron** (38 fallidos y 281 sin confirmar). Parte puede deberse a números de prueba.
 - El seguimiento siguió como si se hubieran entregado. **Nunca se reintentó.** En producción pasaría lo mismo con clientes reales.
 - Las métricas de la campaña los cuentan como enviados, así que **muestran mejores resultados que los reales**.
-- Los 139 fallidos no tienen guardado el motivo: no se puede saber si eran números malos, contactos que bloquearon o un límite de Meta.
+- Los 38 fallidos tienen el motivo en el mensaje (sobre todo ventana de 24 h cerrada y límite de marketing de Meta), pero el seguimiento no lo mostraba. Desde la Fase 0 sí.
 
-**2. Artículos de base de conocimiento sin procesar desde diciembre**
-- 49 artículos llevan desde diciembre de 2025 en la cola `knowledge_base`, que Sidekiq no atiende.
-- Es el servidor de desarrollo, pero **hay que verificar si en producción pasa lo mismo**: la cola tampoco está en el `sidekiq.yml` que se despliega. Si pasa, el bot de esas cuentas responde sin ese contenido.
+**2. Trabajos de base de conocimiento atorados desde diciembre**
+- 49 trabajos llevaban desde diciembre de 2025 en la cola `knowledge_base`, que Sidekiq no atiende.
+- La clase `KnowledgeBaseArticleProcessorJob` **no existe en el repo** (ni en su historial), así que no había contenido pendiente: solo habrían fallado. Se borraron en la Fase 0.
+- **En producción conviene revisar si esa cola también tiene trabajos** y borrarlos igual.
 - No es del módulo de campañas.
 
 ### 7.2 Lo que no afecta hoy pero aparecería al usar campañas
@@ -360,7 +378,7 @@ En el orden en que aparecen al crecer la carga:
 | OpenAI dentro del bloqueo y sin timeout | No: el envío más lento tardó 7.6 s | Cuando OpenAI se pone lento o caído |
 | Sin manejo de 429 de OpenAI | Probablemente no | Cuando varias cuentas que comparten llave envían a la vez |
 | Envíos y respuestas compiten por 10 hilos | No: el pico es de 230 entrantes por hora | Cuando un pico de entrantes coincide con una campaña |
-| La limpieza (`CleanupJob`) nunca ha corrido | Mínimo: ~1,400 seguimientos | Con el tiempo, la tabla crece sin límite |
+| La limpieza (`CleanupJob`) nunca ha corrido | Mínimo: ~1,400 seguimientos | Con el tiempo, la tabla crece sin límite. Apagada a propósito en la Fase 0: hay que rediseñarla para que no borre seguimientos de campañas |
 
 ### 7.3 El umbral concreto
 
@@ -370,7 +388,7 @@ En el orden en que aparecen al crecer la carga:
 
 ### 7.4 En resumen
 
-- **Al desplegar tal como está:** los mensajes que no se entreguen (~11 % en las pruebas) se perderían sin aviso y las métricas lo ocultarían.
+- **Al desplegar tal como está:** los mensajes que no se entreguen (~16 % en las pruebas) se perderían sin aviso y las métricas lo ocultarían.
 - **Para crecer:** el sistema aguanta pocas campañas simultáneas; el problema aparece desde unas pocas campañas que salen en el mismo minuto, no desde cientos de cuentas.
 - Por eso conviene hacer **Fase 0 y Fase 1 antes de desplegar campañas a producción**, y **Fase 2 antes de abrirlas a muchas cuentas**.
 
@@ -429,8 +447,8 @@ En la Fase 2 se reemplaza por el despachador (§13, paso 2.1–2.2).
 
 - Hoy un intento es exitoso cuando **Meta acepta la petición** y devuelve un ID.
 - El webhook de estado (`delivered`, `read`, `failed`) **sí llega y sí actualiza el `Message`**, pero **nadie lo relaciona con el seguimiento ni con la campaña**.
-- Resultado en pruebas de desarrollo (§3.4): 8 % "solo enviado" + 3.4 % "fallido" = **~11 %** contados como exitosos. Parte puede deberse a números de prueba; la proporción con clientes reales está por medir.
-- A 1M de contactos ≈ **110,000 mensajes perdidos sin aviso**.
+- Resultado en pruebas de desarrollo (§3.4): 14.2 % "solo enviado" + 1.9 % "fallido" = **~16 %** contados como exitosos. Parte puede deberse a números de prueba; la proporción con clientes reales está por medir.
+- A 1M de contactos ≈ **160,000 mensajes perdidos sin aviso**.
 
 ---
 
@@ -500,21 +518,33 @@ Lo que **no** tienen:
 
 ### Fase 0 — Arreglos rápidos (~1 día)
 
-Independientes del resto; quitan problemas que ya existen hoy.
+**Estado: ✅ hecha el 2026-10-19.**
 
-**0.1 Agregar las colas faltantes a `config/sidekiq.yml`**
-- `low_priority`: 249 `CleanupJob` atorados desde febrero.
-- `knowledge_base`: 49 `KnowledgeBaseArticleProcessorJob` atorados desde diciembre de 2025.
-- **Antes de activar:** revisar qué harían esos 49 artículos viejos; quizá borrar y re-encolar solo los vigentes.
-- Del `CleanupJob` basta que corra una vez: los 249 son copias diarias del mismo trabajo → borrar 248.
+Independientes del resto; quitan problemas que ya existen hoy. Rama `fix/campanas_fase0` (desde `origin/develop`), commits `ac5fe9568` y `1d6477467`.
 
-**0.2 Timeout de OpenAI en `ContactTrackingJob`**
-- Hoy sin `read_timeout` (hasta 60 s) y dentro del bloqueo. Bajarlo a ~15 s, como el resto del bot.
+**0.1 Colas que Sidekiq no atendía** — resuelto distinto a lo planeado
+- **`CleanupJob` (cola `low_priority`) se apagó en lugar de activarse.** Hace `delete_all` de seguimientos completados, cancelados y fallidos de más de 90 días; aquí serían 628. Las llaves foráneas de `tracking_campaign_entries` y `case_tickets` son `ON DELETE SET NULL`, así que las entradas de campaña perderían su seguimiento y se rompería el historial.
+  - En `config/schedule.yml` quedó con `status: disabled`, no se quitó: `load_from_hash` no borra de Redis los cron que ya existen, así que quitarlo lo dejaría vivo en los servidores donde ya está cargado.
+  - La limpieza se rediseña más adelante para no tocar seguimientos de campañas ni de tickets.
+- **`knowledge_base`:** los 49 trabajos eran de `KnowledgeBaseArticleProcessorJob`, una clase que no existe en el repo; solo podían fallar. Se borraron y no se agregó la cola.
+- En el Redis de desarrollo: `low_priority` 252 → 0, `knowledge_base` 49 → 0 y el cron deshabilitado.
 
-**0.3 Guardar el motivo del error en envíos fallidos**
-- Sin el código de error no se puede decidir qué reintentar en la Fase 1.
+**0.2 Tope de tiempo en `ContactTrackingJob`**
+- OpenAI: `open_timeout` 5 s y `read_timeout` 15 s (antes hasta 60 s dentro del bloqueo). Si se pasa, se envía el mensaje simple sin IA, como con cualquier otro error.
+- Consulta del idioma de la plantilla a la Graph API de Meta: `timeout` 10 s.
 
-**Verificación:** las colas se vacían; un envío fallido de prueba deja su código de error visible.
+**0.3 Motivo del error en el seguimiento**
+- Cuando Meta rechaza el envío al momento (plantilla o mensaje de sesión), `last_error` del seguimiento guarda `Meta <código>: <detalle>`, por ejemplo `Meta 100: Param text cannot have new-line/tab characters or more than 4 consecutive spaces`, en lugar de "Failed to send message".
+- Los rechazos que llegan después por webhook ya guardaban el código en el mensaje (§3.4); pasarlos al seguimiento es parte de la Fase 1 (paso 1.3).
+
+**Hallazgo para la Fase 1:** cuando Meta rechaza al momento, `process_response` hace `update!` sobre el mensaje temporal (`Message.new`) y lo **inserta** como mensaje fallido sin remitente (20 casos en desarrollo), lo que además dispara `SendReplyJob`. El paso 1.2 debe evitarlo.
+
+**Verificación:**
+- ✅ Colas vacías y cron deshabilitado en desarrollo.
+- ✅ Resumen del error probado con un error real de Meta guardado en la base.
+- ⏳ Pendiente: reiniciar Sidekiq en desarrollo y hacer un envío fallido de prueba en un canal de WhatsApp de prueba.
+
+**Al desplegar en producción:** reiniciar Puma y Sidekiq (el cron se apaga al cargar `schedule.yml`) y revisar si allá también hay trabajos atorados en `low_priority` y `knowledge_base` para borrarlos.
 
 ---
 
@@ -542,7 +572,7 @@ Un registro por cada envío real:
 - **Antes de llamar a Meta:** si ese intento ya tiene entrega `sent`, `delivered` o `read` → **no se envía** y se termina (protege también contra duplicados).
 - Se crea la entrega en `queued`.
 - **Meta acepta:** pasa a `sent` con `source_id` y `message_id`.
-- **Meta rechaza al momento:** pasa a `failed` con el código de error de la respuesta (hoy solo va al log).
+- **Meta rechaza al momento:** pasa a `failed` con el código de error de la respuesta (desde la Fase 0 ya llega al `last_error` del seguimiento). Sin insertar el mensaje temporal como mensaje fallido.
 - Aplica a los dos caminos: plantilla y mensaje de sesión.
 
 **1.3 Escuchar los cambios de estado del mensaje**
@@ -642,7 +672,7 @@ Un registro por cada envío real:
 
 | Fase | Entrega | Esfuerzo | Riesgo |
 |---|---|---|---|
-| 0 | Colas atoradas, timeout de OpenAI, motivo de error | ~1 día | Bajo |
+| 0 ✅ | Colas atoradas, timeout de OpenAI, motivo de error | ~1 día (hecha 2026-10-19) | Bajo |
 | 1 | Entrega confirmada, reintento por tipo de error, sin reenvíos | ~3–5 días | Bajo–medio (se monta sobre lo actual) |
 | 2 | Despachador, límites por número, 1,000 por campaña, infraestructura | ~1–2 semanas | Medio (cambia cómo salen los envíos; lleva prueba de carga y bandera por cuenta) |
 
