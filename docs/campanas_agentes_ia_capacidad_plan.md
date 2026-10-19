@@ -2,7 +2,7 @@
 
 > **Rama:** `diag/campanas_agentes_ia` (creada desde `origin/develop`, commit `0d860df88`)
 > **Fecha del diagnóstico:** 2026-10-16
-> **Alcance:** análisis. **Fase 0 hecha** (PR #87, mergeado) y **Fase 1 hecha** (PR #88, pendiente de merge), ambas el 2026-10-19 (§13). La Fase 2 no tiene cambios de código todavía.
+> **Alcance:** análisis. **Fase 0** (PR #87) y **Fase 1** (PR #88) mergeadas; **Fase 2** con código hecho (PR #89, pendiente de merge; despachador apagado por bandera). Todo el 2026-10-19 (§13). Pendiente: infraestructura (2.8) y prueba de carga de punta a punta (2.9).
 > **Corrección 2026-10-19:** las cifras de entrega de §3.4 estaban infladas (la consulta contaba un mismo mensaje una vez por cada seguimiento de la conversación e incluía canales que no son WhatsApp) y la afirmación de que los fallidos no guardaban el motivo de Meta era falsa (sí lo guardan; la consulta no lo veía por cómo está almacenado). Se corrigieron §1, §3.4, §6, §7, §10 y §13.
 > **Importante:** el módulo de campañas de Agentes IA está **en desarrollo** y solo existe en el servidor de desarrollo; **en producción no se ha usado**. Las cifras de uso de campañas y seguimientos de este documento son de **pruebas en desarrollo**, no de clientes. Lo que vale para producción es el análisis del código (misma versión 3.13.6) y los datos del servidor productivo de la §3.6.
 > **Meta del negocio:** 500 cuentas × 2 campañas × 1,000 contactos (~1,000,000 contactos), programadas en horarios distintos. Lo que no se entregue se reintenta; lo que ya se entregó nunca se reenvía.
@@ -550,7 +550,7 @@ Independientes del resto; quitan problemas que ya existen hoy. Rama `fix/campana
 
 ### Fase 1 — Entrega confirmada (~3–5 días)
 
-**Estado: ✅ hecha el 2026-10-19.** Rama `feat/campanas_fase1_entregas`, commit `397030d1c`, **PR #88** a develop (pendiente de merge). La migración ya corrió en el servidor de desarrollo.
+**Estado: ✅ hecha el 2026-10-19.** Rama `feat/campanas_fase1_entregas`, commit `397030d1c`, **PR #88 mergeado** a develop. La migración ya corrió en el servidor de desarrollo.
 
 **Objetivo:** saber si cada mensaje llegó, reintentar solo lo que tiene sentido y nunca reenviar lo entregado.
 
@@ -638,57 +638,83 @@ Tabla `tracking_deliveries`, un registro por cada envío real por WhatsApp:
 
 ### Fase 2 — Volumen (~1–2 semanas, con prueba de carga)
 
+**Estado: ✅ código hecho el 2026-10-19.** Rama `feat/campanas_fase2_volumen`, commit `2701e97bd`, **PR #89** a develop (pendiente de merge). La migración `20261020120000_add_dispatched_at_to_contact_trackings` ya corrió en el servidor de desarrollo. **El despachador viene apagado:** solo actúa en las cuentas de `TRACKING_DISPATCHER_ACCOUNTS`.
+
 **Objetivo:** soportar ~1M de contactos repartidos, sin cuellos de botella y sin que una cuenta frene a las demás.
 
-**2.1 Despachador en lugar de un trabajo programado por seguimiento**
-- `TrackingCampaigns::DispatchJob` cada 15–30 s.
-- Toma un lote de vencidos con `FOR UPDATE SKIP LOCKED` (dos procesos nunca toman el mismo), los pasa a un estado nuevo `sending` con `claimed_at` y encola su envío en tandas.
-- Los que lleven >10 min en `sending` se liberan solos (proceso que murió a medias).
+**2.1 Despachador en lugar de un trabajo programado por seguimiento** ✅
+- `TrackingDispatch::DispatchJob`, cron **cada minuto** (no cada 15–30 s: dentro de cada corrida da vueltas durante hasta 45 s mientras haya vencidos y cupo). Un lock de Redis evita que dos corridas se pisen.
+- Cambio respecto al plan, para tomar los seguimientos: **no hay estado nuevo `sending` ni `FOR UPDATE SKIP LOCKED`.**
+  - `TrackingDispatch::Claim` marca los vencidos con un `UPDATE … RETURNING` condicionado al estado (`pending` / `scheduled` → `active`) y guarda la hora de la vuelta en `contact_trackings.dispatched_at`, que funciona como la marca de quién lo tiene. Si dos vueltas chocan, cada seguimiento lo toma solo una.
+  - Se reutilizó `active` (ya significaba "en ejecución") en vez de agregar `sending`: así sigue cubierto por el índice único de "un Agente IA activo por contacto e inbox", y no hubo que tocar pantallas ni scopes.
+- Cada seguimiento tomado se envía con `TrackingDispatch::SendJob` en la cola nueva `campaign_dispatch`.
+- **Recuperación:** lo que lleva más de 10 min tomado sin terminar se reencola una vez con la misma marca. Si el envío de esa marca ya quedó registrado en `tracking_deliveries`, no se vuelve a mandar: solo se termina de avanzar el intento.
 
-**2.2 Quitar lo que deja de hacer falta**
-- `ContactTrackingJob.set(wait_until:)` por seguimiento (sería ~1M de entradas en Redis).
-- `cancel_existing_jobs` (recorre todas las colas en cada reprogramación).
-- `ExecutePendingJob` (el despachador cumple la función de red de seguridad).
+**2.2 Quitar lo que deja de hacer falta** ✅ (en las cuentas con despachador)
+- Ya no se programa `ContactTrackingJob.set(wait_until:)` por seguimiento: `schedule_job`, `TrackingBuilder` y la importación desde Excel lo saltan.
+- `cancel_existing_jobs` ya no recorre las colas: no hay jobs por seguimiento que cancelar.
+- `ExecutePendingJob` excluye esas cuentas.
+- Un `ContactTrackingJob` viejo que haya quedado en Sidekiq al encender la bandera no envía, para que no salga en paralelo con el despachador.
+- En las cuentas sin bandera todo sigue igual. El código viejo se queda hasta que todas usen el despachador.
 
-**2.3 Límite de velocidad por número (WhatsApp)**
-- Límite en Redis por inbox, p. ej. 20 mensajes/s por número (Meta permite hasta 80).
-- **Tope diario según el nivel de Meta** (250 / 1K / 10K / 100K por 24 h): consultado en la Graph API, guardado en el canal; el despachador no lo rebasa y lo que sobra pasa al siguiente horario disponible.
+**2.3 Límite de velocidad por número (WhatsApp)** ✅
+- Por número (inbox): **600 envíos por minuto** (10/s) con contador en Redis (`TRACKING_DISPATCH_PER_INBOX_PER_MINUTE`). Se dejaron 10/s y no los 20/s del plan porque con 20 hilos Sidekiq saca ~600 envíos por minuto en total.
+- **Tope diario por nivel de Meta:** `TrackingDispatch::MessagingTier` consulta `messaging_limit_tier` en la Graph API (250 / 1K / 10K / 100K) y lo guarda 6 h en caché. El despachador no toma más de lo que le queda al número en 24 h; lo que sobra se queda vencido y sale cuando haya cupo.
+  - El conteo usa contactos distintos con envío de plantilla en 24 h, más los tomados en ese momento. **Solo ve los envíos de seguimientos:** los de agentes u otras campañas del mismo número no cuentan.
+  - Si el canal no es WhatsApp Cloud o la consulta falla, no hay tope (igual que antes).
 
-**2.4 Reparto justo entre cuentas**
-- Por vuelta, máximo K seguimientos por inbox, por turnos. Una cuenta con 2,000 envíos no tapa a otra con 50.
+**2.4 Reparto justo entre cuentas** ✅
+- Por vuelta, cada número aporta hasta 50 (`TRACKING_DISPATCH_PER_INBOX_PER_ROUND`), repartidos por turnos (el 1º de cada número, luego el 2º…), con tope de 500 por vuelta (`TRACKING_DISPATCH_MAX_PER_ROUND`).
+- Los seguimientos de campañas pausadas no se toman: se quedan como están y salen solos al reanudarla.
 
-**2.5 Sacar las llamadas externas del bloqueo de BD**
-- El bloqueo solo para tomar el seguimiento y cambiar su estado.
-- OpenAI y envío a Meta fuera del bloqueo, con la protección contra duplicados del paso 1.2.
+**2.5 Sacar las llamadas externas del bloqueo de BD** ✅ (`TrackingDispatch::SendJob`)
+- Paso 1, sin bloqueo: ¿sigue tomado con esta marca?
+- Paso 2, sin bloqueo: decidir y enviar. OpenAI y Meta corren aquí, y cada envío queda en `tracking_deliveries` en su propia transacción.
+- Paso 3, con bloqueo corto: avanzar el intento y soltar la marca.
+- Si alguien cambió el seguimiento durante el envío (el cliente respondió y el analizador lo pausó o reagendó, o un agente lo canceló), se respeta ese cambio y solo se cuenta el intento enviado.
+- Un lock de Redis por seguimiento evita que dos envíos de la misma marca corran juntos.
+- Esto resuelve el límite que dejó la Fase 1: ahora el registro del envío ya no se pierde si algo truena después de que Meta aceptó.
+- `ContactTrackingJob`: la decisión de envío (`#deliver`) y lo que pasa después (`#after_send`) se sacaron de `perform` para que los dos caminos los compartan. El camino de siempre no cambia: sigue todo dentro del bloqueo.
 
-**2.6 Primer mensaje con plantilla y sin IA**
-- Para contactos fríos WhatsApp solo permite plantillas: parámetros llenados con datos del contacto, sin OpenAI.
-- La IA entra cuando el cliente responde. Configurable por Agente IA.
-- Evita ~1M de llamadas a OpenAI y su costo.
+**2.6 Primer mensaje con plantilla y sin IA** ✅ ya se cumplía
+- Al revisar el código: con la ventana de 24 h cerrada (contacto frío), el envío es la plantilla con sus parámetros (`Whatsapp::TemplateParamsProcessor`, **sin OpenAI**). La IA solo entra con la ventana abierta. No hizo falta cambiar nada.
 
-**2.7 Subir el límite por campaña de 100 a 1,000**
-- Cambiar `MAX_BULK_ASSIGN` y revisar si la pantalla tiene su propio límite de 100.
-- `BulkAssignJob` por tandas de 100 con cursor (como la versión oficial): un reinicio de Sidekiq no lo corta a medias y al reanudar no repite contactos.
-- **Crear la conversación al enviar, no al inscribir:** evita 1M de conversaciones vacías por adelantado y posibles notificaciones de asignación (por verificar).
+**2.7 Subir el límite por campaña de 100 a 1,000** ✅ (todas las cuentas)
+- `MAX_BULK_ASSIGN` = 1,000 en el backend y en el formulario de campañas (que tenía su propio 100).
+- `BulkAssignJob` inscribe por tandas de 100 por `contact_id` y encola la siguiente con el cursor: con 1,000 contactos son 10 jobs cortos en vez de uno largo. Si un reinicio corta una tanda, al repetirse los ya inscritos se omiten.
+- **La conversación se abre al enviar, no al inscribir** (decisión del usuario, 2026-10-19):
+  - si el contacto no tiene conversación en el inbox, `ContactTrackingJob` la abre con el primer mensaje, asignada al dueño de la campaña y con la nota «📋 Seguimiento de la campaña "…"»;
+  - ya no aparece la nota que nombraba la automatización ("Inscrito … por la automatización X") cuando no había conversación;
+  - aplica a **todas** las cuentas, con o sin despachador.
+- El detalle de la campaña ahora carga todas las páginas de prospectos (antes solo los primeros 100, y los filtros por indicador corrían sobre esos 100).
 
-**2.8 Infraestructura**
-- Proceso de Sidekiq dedicado a una cola `campaign_dispatch`, para que los envíos no compitan con las respuestas.
-- PgBouncer frente a Postgres, o subir `max_connections` (hoy 72 de 100).
-- Separar los entornos de desarrollo (`luis`, `mariana`, `jose_luis`) del servidor de producción, o al menos limitarles CPU.
+**2.8 Infraestructura** ⏳ parcial
+- ✅ Cola `campaign_dispatch` en `config/sidekiq.yml`, debajo de `default`, para que las respuestas a clientes (`ContactTrackingResponseAnalyzerJob`) salgan primero.
+- ⏳ Pendiente de confirmar y aplicar en el servidor (no se tocó):
+  - un proceso de Sidekiq solo para esa cola (`bundle exec sidekiq -C config/sidekiq.yml -q campaign_dispatch`);
+  - `max_connections` de Postgres o PgBouncer (§3.7);
+  - separar los entornos de desarrollo.
 
-**2.9 Prueba de carga en la instancia de `luis`**
-- Meta y OpenAI simulados con latencias reales (~1–2 s).
-- Escenarios:
-  - 50 cuentas a la misma hora;
-  - 500 cuentas × 2 campañas × 1,000 contactos repartidas en el día;
-  - pico de respuestas entrantes durante el envío.
-- Medir: envíos por minuto, tiempo de respuesta a clientes, memoria de Redis, conexiones de Postgres.
+**2.9 Prueba de carga** ⏳ parcial
+- ✅ Medición del despachador en una transacción revertida (sin datos ni jobs que quedaran): 100,000 seguimientos vencidos en 200 números → **500 por vuelta en ~0.22 s** (máx. 0.255 s), con cada número recibiendo 20–30 por vuelta. En los 45 s de una corrida caben ~200 vueltas: el despachador no es el cuello de botella. El límite real es el envío (~1.9 s por envío; ~600 por minuto con 20 hilos) y Meta.
+- ⏳ Pendiente: prueba de punta a punta con Meta y OpenAI simulados (envíos por minuto, tiempo de respuesta a clientes durante la campaña, memoria de Redis, conexiones de Postgres), con escenarios de 50 cuentas a la misma hora y 500 × 2 × 1,000 repartidas en el día.
 
-**2.10 Despliegue gradual**
-- Bandera por cuenta: primero la 568, luego unas pocas, después todas.
-- Los seguimientos en curso al desplegar terminan con el mecanismo viejo; los nuevos usan el despachador.
+**2.10 Despliegue gradual** ✅ listo
+- Bandera por cuenta con la variable de entorno `TRACKING_DISPATCHER_ACCOUNTS`: ids separados por coma o `all`; vacía = ninguna. Variables nuevas en `.env.example`.
+- Al encender una cuenta, lo que tenía jobs viejos lo toma el despachador a su hora; al apagarla, lo vencido lo vuelve a tomar `ExecutePendingJob`.
+- Orden propuesto: **568** → unas pocas → todas.
 
-**Resultado de la Fase 2:** el volumen pasa a ser cuestión de capacidad (más hilos en el worker de envíos), no de diseño.
+**Pruebas:** 140 specs del módulo en verde. 15 nuevos:
+- `claim_spec`: marca, reparto por turnos, cupo del minuto, tope de Meta, campañas pausadas y cuentas sin bandera, no tomar dos veces;
+- `send_job_spec`: envío y reprogramación, marca vieja, recuperación sin reenviar, pausado durante el envío, campaña pausada, sin job ni recorrido de colas, job viejo que no envía, despachador y recuperación una sola vez;
+- `bulk_assign_job_spec`: tandas con cursor;
+- `enroll_spec`: conversación al enviar.
+
+Sin envío real todavía.
+
+**Al desplegar:** `rails db:migrate`, reiniciar Puma y Sidekiq (cola `campaign_dispatch` y cron `tracking_dispatch`), encender `TRACKING_DISPATCHER_ACCOUNTS=568`, probar con una campaña real y después ampliar.
+
+**Resultado de la Fase 2:** el volumen pasa a ser cuestión de capacidad (más hilos en el worker de envíos), no de diseño. Queda pendiente la prueba de carga de punta a punta y la infraestructura (2.8).
 
 ---
 
@@ -697,8 +723,8 @@ Tabla `tracking_deliveries`, un registro por cada envío real por WhatsApp:
 | Fase | Entrega | Esfuerzo | Riesgo |
 |---|---|---|---|
 | 0 ✅ | Colas atoradas, timeout de OpenAI, motivo de error | ~1 día (hecha 2026-10-19) | Bajo |
-| 1 ✅ | Entrega confirmada, reintento por tipo de error, sin reenvíos, pausa y reanudación por error de configuración | ~3–5 días (hecha 2026-10-19, PR #88) | Bajo–medio (se monta sobre lo actual) |
-| 2 | Despachador, límites por número, 1,000 por campaña, infraestructura | ~1–2 semanas | Medio (cambia cómo salen los envíos; lleva prueba de carga y bandera por cuenta) |
+| 1 ✅ | Entrega confirmada, reintento por tipo de error, sin reenvíos, pausa y reanudación por error de configuración | ~3–5 días (hecha 2026-10-19, PR #88 mergeado) | Bajo–medio (se monta sobre lo actual) |
+| 2 ✅ (código) | Despachador, límites por número, 1,000 por campaña, conversación al enviar; infraestructura y prueba de carga completa pendientes | ~1–2 semanas (código 2026-10-19, PR #89) | Medio (cambia cómo salen los envíos; bandera por cuenta, apagado por defecto) |
 
 Tiempos estimados; la Fase 2 puede moverse según la prueba de carga.
 
