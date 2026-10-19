@@ -2,7 +2,7 @@
 
 > **Rama:** `diag/campanas_agentes_ia` (creada desde `origin/develop`, commit `0d860df88`)
 > **Fecha del diagnóstico:** 2026-10-16
-> **Alcance:** análisis. La **Fase 0 ya está hecha** en la rama `fix/campanas_fase0` (§13, 2026-10-19); el resto del plan no implica cambios de código ya hechos.
+> **Alcance:** análisis. **Fase 0 hecha** (PR #87, mergeado) y **Fase 1 hecha** (PR #88, pendiente de merge), ambas el 2026-10-19 (§13). La Fase 2 no tiene cambios de código todavía.
 > **Corrección 2026-10-19:** las cifras de entrega de §3.4 estaban infladas (la consulta contaba un mismo mensaje una vez por cada seguimiento de la conversación e incluía canales que no son WhatsApp) y la afirmación de que los fallidos no guardaban el motivo de Meta era falsa (sí lo guardan; la consulta no lo veía por cómo está almacenado). Se corrigieron §1, §3.4, §6, §7, §10 y §13.
 > **Importante:** el módulo de campañas de Agentes IA está **en desarrollo** y solo existe en el servidor de desarrollo; **en producción no se ha usado**. Las cifras de uso de campañas y seguimientos de este documento son de **pruebas en desarrollo**, no de clientes. Lo que vale para producción es el análisis del código (misma versión 3.13.6) y los datos del servidor productivo de la §3.6.
 > **Meta del negocio:** 500 cuentas × 2 campañas × 1,000 contactos (~1,000,000 contactos), programadas en horarios distintos. Lo que no se entregue se reintenta; lo que ya se entregó nunca se reenvía.
@@ -520,7 +520,7 @@ Lo que **no** tienen:
 
 **Estado: ✅ hecha el 2026-10-19.**
 
-Independientes del resto; quitan problemas que ya existen hoy. Rama `fix/campanas_fase0` (desde `origin/develop`), commits `ac5fe9568` y `1d6477467`.
+Independientes del resto; quitan problemas que ya existen hoy. Rama `fix/campanas_fase0` (desde `origin/develop`), commits `ac5fe9568` y `1d6477467`, **PR #87 mergeado** a develop.
 
 **0.1 Colas que Sidekiq no atendía** — resuelto distinto a lo planeado
 - **`CleanupJob` (cola `low_priority`) se apagó en lugar de activarse.** Hace `delete_all` de seguimientos completados, cancelados y fallidos de más de 90 días; aquí serían 628. Las llaves foráneas de `tracking_campaign_entries` y `case_tickets` son `ON DELETE SET NULL`, así que las entradas de campaña perderían su seguimiento y se rompería el historial.
@@ -550,65 +550,89 @@ Independientes del resto; quitan problemas que ya existen hoy. Rama `fix/campana
 
 ### Fase 1 — Entrega confirmada (~3–5 días)
 
+**Estado: ✅ hecha el 2026-10-19.** Rama `feat/campanas_fase1_entregas`, commit `397030d1c`, **PR #88** a develop (pendiente de merge). La migración ya corrió en el servidor de desarrollo.
+
 **Objetivo:** saber si cada mensaje llegó, reintentar solo lo que tiene sentido y nunca reenviar lo entregado.
 
-**1.1 Migración: tabla `tracking_deliveries`**
+**1.1 Migración `20261019120000_create_tracking_deliveries`** ✅
 
-Un registro por cada envío real:
+Tabla `tracking_deliveries`, un registro por cada envío real por WhatsApp:
 
 | Campo | Para qué |
 |---|---|
 | `contact_tracking_id`, `tracking_campaign_id`, `account_id` | Relación con seguimiento y campaña |
-| `attempt_number` | Qué intento del seguimiento es (1, 2, 3…) |
+| `attempt_number`, `repetition` | Qué intento era (`attempt_count + 1`) y su repetición en modo reagenda (`response_adjustments_count`) |
+| `retry_count`, `next_retry_at` | Cuántas veces se reenvió este intento y, si hay reenvío programado, cuándo |
 | `message_id`, `source_id` | El mensaje en Chatwoot y su ID en Meta |
-| `status` | `queued` → `sent` → `delivered` → `read`, o `failed` / `skipped` / `unconfirmed` |
-| `error_code`, `error_title`, `error_kind` | Código de Meta y su tipo: temporal, permanente o de configuración |
-| `retry_count`, `next_retry_at` | Control de reintentos |
+| `kind` | `template` o `session` |
+| `status` | `sent` → `delivered` → `read`, o `failed` / `unconfirmed` |
+| `error_code`, `error_title`, `error_kind` | Código de Meta, detalle y tipo (ver 1.4) |
 | `sent_at`, `delivered_at`, `read_at`, `failed_at` | Tiempos, para métricas |
 
-- Índices: por `source_id` (webhook) y por `(contact_tracking_id, attempt_number)`.
+- Índices: `message_id` (único), `source_id`, `(tracking_campaign_id, status)` y uno parcial por `sent_at` para los que esperan confirmación.
+- Además: `tracking_campaigns.paused_reason` / `paused_at` y `contact_trackings.paused_by_campaign` (para la pausa por configuración, 1.5).
+- Cambio respecto al plan: **no hay estado `queued` ni `skipped`.** El registro se crea cuando Meta responde: `sent` si aceptó, `failed` si rechazó al momento.
 
-**1.2 Registrar el envío en `ContactTrackingJob`**
-- **Antes de llamar a Meta:** si ese intento ya tiene entrega `sent`, `delivered` o `read` → **no se envía** y se termina (protege también contra duplicados).
-- Se crea la entrega en `queued`.
-- **Meta acepta:** pasa a `sent` con `source_id` y `message_id`.
-- **Meta rechaza al momento:** pasa a `failed` con el código de error de la respuesta (desde la Fase 0 ya llega al `last_error` del seguimiento). Sin insertar el mensaje temporal como mensaje fallido.
-- Aplica a los dos caminos: plantilla y mensaje de sesión.
+**1.2 Registrar el envío en `ContactTrackingJob`** ✅ (`TrackingDeliveries::Recorder`)
+- **Meta acepta:** envío `sent` con su `Message` y `source_id`, tanto plantilla como mensaje de sesión.
+- **Meta rechaza al momento:** envío `failed` con el código de la respuesta, y `HandleFailure` decide (1.5).
+- **Bug corregido:** el proveedor hacía `update!` sobre el `Message.new` temporal cuando Meta rechazaba, así que lo **insertaba** como mensaje fallido sin `source_id`, y `SendReplyJob` lo volvía a mandar. Ahora el mensaje temporal no se guarda (`Recorder.unsaved_message`).
+- Cambio respecto al plan: **no se agregó la guarda "si ya tiene entrega no se envía".** El registro se escribe dentro de la misma transacción del `with_lock`: si algo truena después de que Meta aceptó, se revierte junto con todo lo demás, así que esa guarda no protegería el caso que importa. La protección real llega con la Fase 2 (paso 2.5: sacar el envío del bloqueo). Contra los trabajos duplicados sigue la guarda de 60 s que ya existía.
+- Solo se registran los envíos por WhatsApp. Los otros canales siguen igual.
 
-**1.3 Escuchar los cambios de estado del mensaje**
-- Concern propio en `Message` (etiquetado `proyecto@...`): cuando cambia `status` de un mensaje con entrega, se actualiza esa entrega.
-- No se toca el procesamiento de webhooks del core (ya actualiza `message.status` y `external_error`).
-- **El estado solo avanza:** si Meta manda `read` antes que `delivered`, un estado viejo nunca pisa a uno nuevo.
+**1.3 Escuchar los cambios de estado del mensaje** ✅ (concern `TrackingDeliverySync` en `Message`)
+- `after_update_commit` cuando cambia `status` de un mensaje saliente: si es de un seguimiento, se actualiza su envío. Si quedó `failed`, se encola `TrackingDeliveries::FailureJob`, que bloquea el seguimiento y aplica `HandleFailure`.
+- No se toca el procesamiento de webhooks del core.
+- **El estado solo avanza:** un `delivered` que llega después de un `read` no lo pisa, y un `failed` tardío no deshace una entrega confirmada. Un `delivered` que llega después de "sin confirmar" sí se registra.
 
-**1.4 Clasificar los errores de Meta**
+**1.4 Clasificar los errores de Meta** ✅ (`TrackingDeliveries::ErrorClassifier`)
 
-| Tipo | Códigos (ejemplos) | Qué se hace |
+| Tipo | Códigos | Qué se hace |
 |---|---|---|
-| **Temporal** | 130429 (límite de velocidad), 131048 (límite por spam), 131056 (demasiados mensajes al mismo número), 131000 / 131016 (fallo de Meta), timeouts | Reintentar con espera |
-| **Límite de marketing** | 131049 (Meta limitó marketing a ese usuario) | Reintentar en ≥24 h, máximo 1 vez |
-| **Permanente** | 131026 (no entregable: sin WhatsApp o bloqueó), 131047 (fuera de ventana 24 h sin plantilla), 100 (parámetro inválido) | Fallido definitivo con motivo |
-| **De configuración** | 132000 / 132001 / 132012 (plantilla inexistente o parámetros mal), 131031 (cuenta bloqueada), 131042 (pago), 368 (política) | **Pausar la campaña y avisar** (si no, fallarían todos) |
+| **Temporal** | 1, 2, 4, 80007, 130429, 131000, 131016, 131048, 131056, 132069, 133004 | Reenviar el mismo intento con espera |
+| **Marketing** | 131049 | Un solo reenvío a las 24 h |
+| **Permanente** | 131026, 131047, 100, 130472 y **cualquier código desconocido** | No se reenvía (reintentar a ciegas puede duplicar) |
+| ↳ contacto inalcanzable | 131021, 131026, 131050 | Además, el seguimiento queda **fallido** con el motivo |
+| **Configuración** | 0, 3, 10, 190, 200–299, 368, 131031, 131037, 131042, 131045, 133010, 132000, 132001, 132005, 132007, 132012, 132015, 132016, 132068 | **Pausar la campaña** con el motivo |
 
-**1.5 Política de reintento**
-- **Fallo temporal no cuenta como intento:** se reintenta el mismo intento a los 5 min, 30 min y 2 h. Máximo 3.
-- **Permanente:** entrega `failed`, seguimiento `failed` con motivo legible; sin reintento.
-- **Configuración:** campaña a `paused` con el motivo + aviso al dueño de la campaña.
-- **Entregado o leído:** el seguimiento sigue su curso normal (siguiente intento según `retry_interval`). Nunca se reenvía.
+**1.5 Política de reintento** ✅ (`TrackingDeliveries::HandleFailure`)
+- **Reintentar = regresar el seguimiento al intento que falló y reprogramarlo:** `attempt_count` y la repetición vuelven a como estaban antes del envío, y `scheduled_for` pasa a la hora del reintento. El envío normal lo vuelve a mandar y decide de nuevo entre plantilla y sesión según la ventana de 24 h. Así no hay un segundo camino de envío.
+- **Temporal:** a los 5 min, 30 min y 2 h; máximo 3. **Marketing:** una vez a las 24 h. Después se trata como permanente.
+- **Solo se reintenta si** es el último envío del seguimiento (no hay uno más nuevo) y el contacto no respondió después del envío. Por webhook, además, el seguimiento debe estar `pending`, `scheduled` o `completed`. Si falló el último intento, el seguimiento se reabre.
+- **Permanente:** rechazo al momento → seguimiento `failed` con el motivo (como antes). Por webhook → el seguimiento sigue su curso, con el motivo en `last_error`, porque el siguiente intento puede ir por otro camino.
+- **Configuración (decisión 2026-10-19: pausar y agregar botón Reanudar):**
+  - la campaña pasa a **Pausada** con el motivo (`TrackingCampaigns::Pause`) y deja de aceptar inscripciones;
+  - sus seguimientos **no se pausan todos de golpe**: cada uno se pausa (`paused_by_campaign`) cuando le toca enviar, para no recorrer las colas de Sidekiq por cada uno;
+  - el seguimiento del envío fallido se regresa al intento, para que al reanudar lo vuelva a mandar;
+  - el detalle muestra un aviso con el motivo y el botón **"Reanudar campaña"** (`POST tracking_campaigns/:id/resume`). `TrackingCampaigns::ResumeJob` reanuda solo los que pausó la campaña, a partir de 1 minuto y escalonados 1 s;
+  - si la ventana terminó mientras estaba pausada, queda Finalizada.
+- **Entregado o leído:** el seguimiento sigue su curso normal. Nunca se reenvía.
+- Límite conocido: en modo reagenda (repeticiones), si el reintento cae justo cuando el seguimiento ya había pasado al siguiente intento, la marca de modo reagenda puede perderse y la siguiente vuelta cuenta como intento normal.
 
-**1.6 Enviados que nunca se confirman**
-- Trabajo cada hora: entregas con >24 h en `sent` sin `delivered` → `unconfirmed`.
-- **No se reenvían** (duplicaría si sí llegaron). Se cuentan aparte en métricas.
+**1.6 Enviados que nunca se confirman** ✅ (`TrackingDeliveries::UnconfirmedJob`, cron `17 * * * *`)
+- Envíos con más de 24 h en `sent` → `unconfirmed`. **No se reenvían.** Se cuentan aparte.
 
-**1.7 Métricas de la campaña**
-- `TrackingCampaign#stats` agrega: enviados, entregados, leídos, fallidos (por motivo), sin confirmar, en reintento.
-- Pantalla de campañas: columna de entrega real y detalle de fallidos por motivo ("sin WhatsApp: 12", "bloqueado: 3"…).
+**1.7 Métricas de la campaña** ✅
+- `TrackingCampaigns::DeliveryStats` (sale del controlador): por prospecto, el **último envío registrado** del seguimiento → Entregados, Esperando confirmación, Sin confirmar (+24 h), En reintento, Error de entrega, más los **5 motivos de fallo más comunes** con su código de Meta.
+- Los seguimientos sin envíos registrados (de antes de la Fase 1) siguen usando el último mensaje saliente de su conversación.
+- Lista de prospectos: `delivery_status`, `delivery_error` y `delivery_retry_at`. Los filtros por grupo coinciden con los números, y el tooltip dice el motivo y cuándo es el reintento.
+- Listado de campañas: el estado Pausada lleva ⚠️ y el motivo en el tooltip.
+- Esto corrige además el hallazgo de que "Entregados" tomaba el último saliente de la conversación aunque fuera de antes de la campaña (solo para seguimientos nuevos).
 
-**1.8 Pruebas**
-- Specs con webhooks simulados: entregado, leído, fallido temporal, fallido permanente, estados en desorden, trabajo duplicado.
-- Prueba real en canal de prueba con un número inválido (forzar 131026) y uno válido.
-- Recordatorio: RSpec corre contra `wintook_dev` → solo specs acotados y transaccionales.
+**1.8 Pruebas** ✅
+- 31 specs nuevos:
+  - `tracking_delivery_spec` (orden de estados, lectura de errores, clasificador);
+  - `tracking_delivery_sync_spec` (webhook → envío, `UnconfirmedJob`);
+  - `handle_failure_spec` (reintentos, respuesta del contacto, envío más nuevo, marketing, configuración, inalcanzable, rechazo al momento);
+  - `resume_spec` (pausa, reanudación, ventana terminada, guarda del job);
+  - `contact_tracking_job_deliveries_spec` (Meta simulada con webmock: aceptado, temporal sin guardar el mensaje rechazado, permanente);
+  - 3 en el spec del controlador (entrega registrada y endpoint de reanudar).
+- 94 specs del módulo en verde. Vitest de `contactTrackings` en verde.
+- ⏳ **Pendiente: prueba real** en un canal de WhatsApp de prueba, con un número válido y uno inválido (para forzar 131026).
 
-**Resultado de la Fase 1:** se sabe exactamente qué llegó, qué no y por qué; lo temporal se reintenta solo; lo entregado nunca se repite. **Todavía no resuelve el volumen.**
+**Al desplegar:** `rails db:migrate`, reiniciar Puma y Sidekiq (carga el cron `tracking_deliveries_unconfirmed`) y hacer la prueba real.
+
+**Resultado de la Fase 1:** se sabe exactamente qué llegó, qué no y por qué; lo temporal se reintenta solo, lo entregado nunca se repite y un error de configuración detiene la campaña en vez de quemar todos sus envíos. **Todavía no resuelve el volumen.**
 
 ---
 
@@ -673,7 +697,7 @@ Un registro por cada envío real:
 | Fase | Entrega | Esfuerzo | Riesgo |
 |---|---|---|---|
 | 0 ✅ | Colas atoradas, timeout de OpenAI, motivo de error | ~1 día (hecha 2026-10-19) | Bajo |
-| 1 | Entrega confirmada, reintento por tipo de error, sin reenvíos | ~3–5 días | Bajo–medio (se monta sobre lo actual) |
+| 1 ✅ | Entrega confirmada, reintento por tipo de error, sin reenvíos, pausa y reanudación por error de configuración | ~3–5 días (hecha 2026-10-19, PR #88) | Bajo–medio (se monta sobre lo actual) |
 | 2 | Despachador, límites por número, 1,000 por campaña, infraestructura | ~1–2 semanas | Medio (cambia cómo salen los envíos; lleva prueba de carga y bandera por cuenta) |
 
 Tiempos estimados; la Fase 2 puede moverse según la prueba de carga.
