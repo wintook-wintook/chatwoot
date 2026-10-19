@@ -66,7 +66,12 @@
     "EDIT_CAMPAIGN": "Edit campaign “{name}”",
     "EDIT_SUCCESS": "Changes saved. It stays Saved until you start it.",
     "EDIT_ERROR": "The campaign could not be opened for editing.",
-    "EDIT_ONLY_SAVED": "Only a Saved campaign can be edited: this one has already started."
+    "EDIT_ONLY_SAVED": "Only a Saved campaign can be edited: this one has already started.",
+    "PAUSED_BANNER": "Paused automatically: WhatsApp rejected a message because of a configuration problem, so the rest would fail too. Reason: {reason}",
+    "PAUSED_BANNER_HINT": "Fix the problem (template, payment or WhatsApp account in Meta) and resume the campaign: paused follow-ups resend the attempt that failed.",
+    "RESUME": "Resume campaign",
+    "RESUME_SUCCESS": "Campaign resumed: {count} follow-ups send again in a minute.",
+    "RESUME_ERROR": "The campaign could not be resumed."
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campaigns",
@@ -87,9 +92,13 @@
     "DELIVERY": {
       "TITLE": "Message Delivery",
       "DELIVERED": "Delivered",
-      "SENT": "Unconfirmed",
+      "SENT": "Awaiting confirmation",
+      "UNCONFIRMED": "Unconfirmed (24 h+)",
+      "RETRYING": "Retrying",
       "FAILED": "Delivery failed",
-      "EMPTY": "No messages sent yet."
+      "EMPTY": "No messages sent yet.",
+      "REASONS_TITLE": "Failure reasons",
+      "RETRY_AT": "Retry: {date}"
     },
     "FUNNEL": {
       "TITLE": "Intent",
@@ -117,7 +126,9 @@
       "ctrl_completed_no_reply": "Exhausted attempts with no reply.",
       "ctrl_failed": "The follow-up could not run. Hover the ℹ️ on the status to see the exact cause.",
       "del_delivered": "The channel confirmed the last message reached the contact (or was already read).",
-      "del_sent": "The message left the system, but the channel hasn't confirmed it reached the contact yet.",
+      "del_sent": "WhatsApp accepted the message but hasn't confirmed it reached the contact yet.",
+      "del_unconfirmed": "WhatsApp accepted the message over 24 h ago and never confirmed delivery. It is not resent: if it did arrive, the contact would get it twice.",
+      "del_retrying": "WhatsApp rejected the message for a temporary reason (rate limit or Meta failure); the same attempt is resent automatically.",
       "del_failed": "The channel couldn't deliver the last message (invalid number, block, or other rejection)."
     },
     "INTENT_VALUES": {

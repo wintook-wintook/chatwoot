@@ -12,6 +12,8 @@
 #  mode                  :string           default("batch"), not null
 #  name                  :string           not null
 #  objective             :string
+#  paused_at             :datetime
+#  paused_reason         :string
 #  respect_working_hours :boolean          default(TRUE), not null
 #  scheduled_for         :datetime
 #  status                :string           default("running"), not null

@@ -29,7 +29,18 @@ class ContactTrackingJob < ApplicationJob
         return
       end
       return if tracking.cancelled? || tracking.completed? || tracking.objective_met?
+      # proyecto@automatizacion_campanas: un webhook pudo darlo por fallido (contacto
+      # inalcanzable) con el job ya programado.
+      return if tracking.failed?
       return if tracking.active?  # Ya se está ejecutando en otro job
+
+      # proyecto@automatizacion_campanas: campaña pausada por error de configuración de Meta
+      # (TrackingCampaigns::Pause). Se pausa al llegar su turno; la reanuda Resume.
+      if tracking.tracking_campaign&.status == 'paused'
+        tracking.update_columns(status: 'paused', paused_at: Time.current, paused_by_campaign: true, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        Rails.logger.info "[ContactTracking] ⏸️  Tracking #{tracking.id} pausado: campaña #{tracking.tracking_campaign_id} pausada"
+        next # con `return` la transacción del with_lock se revierte (ver CASO 1)
+      end
 
       # ⭐ FIX: Protección contra jobs duplicados que esperaron el lock
       # Si el último intento fue hace menos de 60 segundos, este job es duplicado
@@ -194,8 +205,15 @@ class ContactTrackingJob < ApplicationJob
           end
         end
       else
-        tracking.update!(status: 'failed', last_error: @send_error.presence || 'Failed to send message')
-        Rails.logger.error "[ContactTracking] ❌ Tracking ##{tracking.id} falló al enviar mensaje"
+        # proyecto@automatizacion_campanas: si Meta rechazó al momento, según el error se
+        # reprograma el mismo intento o se pausa (HandleFailure ya dejó el estado).
+        outcome = @rejected_delivery && TrackingDeliveries::HandleFailure.new(@rejected_delivery, tracking: tracking, immediate: true).perform
+        if %i[retry config unreachable].include?(outcome)
+          Rails.logger.warn "[ContactTracking] ⚠️ Tracking ##{tracking.id}: #{@rejected_delivery.error_summary} → #{outcome}"
+        else
+          tracking.update!(status: 'failed', last_error: @send_error.presence || 'Failed to send message')
+          Rails.logger.error "[ContactTracking] ❌ Tracking ##{tracking.id} falló al enviar mensaje"
+        end
       end
     end  # Cierra with_lock
   rescue StandardError => e
@@ -579,8 +597,8 @@ class ContactTrackingJob < ApplicationJob
       # ⭐ PASO 1: ENVIAR PLANTILLA PRIMERO (sin crear mensaje en BD)
       channel = tracking.inbox.channel
 
-      # Crear mensaje temporal solo para enviar (no se guarda en BD)
-      temp_message = Message.new(
+      # Crear mensaje temporal solo para enviar (no se guarda en BD, ni si Meta lo rechaza)
+      temp_message = TrackingDeliveries::Recorder.unsaved_message(
         conversation: conversation,
         account: tracking.account,
         inbox: tracking.inbox,
@@ -602,6 +620,7 @@ class ContactTrackingJob < ApplicationJob
 
       unless message_id.present?
         @send_error = meta_error_summary(temp_message)
+        record_rejected_delivery(tracking, 'template', temp_message)
         Rails.logger.error "[ContactTracking] ❌ El servicio no retornó message_id (#{@send_error})"
         return false
       end
@@ -639,6 +658,7 @@ class ContactTrackingJob < ApplicationJob
           last_message_sent: message_content
         )
 
+        TrackingDeliveries::Recorder.new(tracking, kind: 'template').sent(message)
         Rails.logger.info "[ContactTracking] ✅ Mensaje creado en BD con source_id: #{message_id}"
         true
       else
@@ -717,8 +737,8 @@ class ContactTrackingJob < ApplicationJob
 
     Rails.logger.info "[ContactTracking] 📞 Enviando mensaje de sesión a: #{contact_phone}"
 
-    # Crear mensaje temporal para enviar
-    temp_message = Message.new(
+    # Crear mensaje temporal para enviar (no se guarda en BD, ni si Meta lo rechaza)
+    temp_message = TrackingDeliveries::Recorder.unsaved_message(
       conversation: conversation,
       account: tracking.account,
       inbox: tracking.inbox,
@@ -731,6 +751,7 @@ class ContactTrackingJob < ApplicationJob
 
     unless message_id.present?
       @send_error = meta_error_summary(temp_message)
+      record_rejected_delivery(tracking, 'session', temp_message)
       Rails.logger.error "[ContactTracking] ❌ El canal no retornó message_id (#{@send_error})"
       return false
     end
@@ -756,6 +777,7 @@ class ContactTrackingJob < ApplicationJob
         conversation_id: conversation.id,
         last_message_sent: message_body
       )
+      TrackingDeliveries::Recorder.new(tracking, kind: 'session').sent(message)
       Rails.logger.info "[ContactTracking] ✅ Mensaje creado en BD con source_id: #{message_id}"
       true
     else
@@ -778,6 +800,14 @@ class ContactTrackingJob < ApplicationJob
     error = JSON.parse(raw)['error'] rescue nil
     summary = error ? "#{error['code']}: #{error.dig('error_data', 'details') || error['message']}" : raw.to_s
     "Meta #{summary}".truncate(250)
+  end
+
+  # proyecto@automatizacion_campanas: rechazo al momento → envío fallido con el error de
+  # Meta. En perform, HandleFailure decide si se reintenta, se pausa o se falla.
+  def record_rejected_delivery(tracking, kind, temp_message)
+    return if temp_message.external_error.blank?
+
+    @rejected_delivery = TrackingDeliveries::Recorder.new(tracking, kind: kind).rejected(temp_message.external_error)
   end
 
   def find_or_create_conversation(tracking)

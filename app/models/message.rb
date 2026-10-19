@@ -148,6 +148,9 @@ class Message < ApplicationRecord
 
   after_update_commit :dispatch_update_event
 
+  # proyecto@automatizacion_campanas: el estado de entrega de WhatsApp llega al envío del seguimiento
+  include TrackingDeliverySync
+
   def content_attributes_for(user)
     if content_type == 'input_csat' && !inbox.csat_response_visible? && !user&.administrator?
       content_attributes.except('submitted_values')

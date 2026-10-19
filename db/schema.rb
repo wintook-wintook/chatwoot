@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_15_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_19_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -858,6 +858,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_15_120000) do
     t.string "appointment_status"
     t.datetime "interested_at"
     t.datetime "booked_at"
+    t.boolean "paused_by_campaign", default: false, null: false
     t.index "((last_sentiment_analysis ->> 'sentiment'::text))", name: "index_contact_trackings_on_sentiment"
     t.index ["account_id"], name: "index_contact_trackings_on_account_id"
     t.index ["appointment_at"], name: "index_contact_trackings_on_appointment_at"
@@ -1670,11 +1671,43 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_15_120000) do
     t.boolean "respect_working_hours", default: true, null: false
     t.integer "daily_cap"
     t.jsonb "audience", default: {}, null: false
+    t.string "paused_reason"
+    t.datetime "paused_at"
     t.index ["account_id", "status"], name: "index_tracking_campaigns_on_account_id_and_status"
     t.index ["account_id"], name: "index_tracking_campaigns_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_campaigns_on_inbox_id"
     t.index ["tracking_template_id"], name: "index_tracking_campaigns_on_tracking_template_id"
     t.index ["user_id"], name: "index_tracking_campaigns_on_user_id"
+  end
+
+  create_table "tracking_deliveries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_tracking_id", null: false
+    t.bigint "tracking_campaign_id"
+    t.bigint "message_id"
+    t.integer "attempt_number", null: false
+    t.integer "repetition", default: 0, null: false
+    t.integer "retry_count", default: 0, null: false
+    t.string "kind", null: false
+    t.string "status", default: "sent", null: false
+    t.string "source_id"
+    t.string "error_code"
+    t.text "error_title"
+    t.string "error_kind"
+    t.datetime "next_retry_at"
+    t.datetime "sent_at"
+    t.datetime "delivered_at"
+    t.datetime "read_at"
+    t.datetime "failed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_tracking_deliveries_on_account_id"
+    t.index ["contact_tracking_id"], name: "index_tracking_deliveries_on_contact_tracking_id"
+    t.index ["message_id"], name: "index_tracking_deliveries_on_message_id", unique: true
+    t.index ["sent_at"], name: "index_tracking_deliveries_pending_confirmation", where: "((status)::text = 'sent'::text)"
+    t.index ["source_id"], name: "index_tracking_deliveries_on_source_id"
+    t.index ["tracking_campaign_id", "status"], name: "index_tracking_deliveries_on_tracking_campaign_id_and_status"
+    t.index ["tracking_campaign_id"], name: "index_tracking_deliveries_on_tracking_campaign_id"
   end
 
   create_table "tracking_templates", force: :cascade do |t|
@@ -1900,6 +1933,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_15_120000) do
   add_foreign_key "tracking_campaigns", "inboxes"
   add_foreign_key "tracking_campaigns", "tracking_templates"
   add_foreign_key "tracking_campaigns", "users"
+  add_foreign_key "tracking_deliveries", "accounts", on_delete: :cascade
+  add_foreign_key "tracking_deliveries", "contact_trackings", on_delete: :cascade
+  add_foreign_key "tracking_deliveries", "messages", on_delete: :nullify
+  add_foreign_key "tracking_deliveries", "tracking_campaigns", on_delete: :nullify
   add_foreign_key "tracking_templates", "accounts"
   add_foreign_key "tracking_templates", "inboxes"
   add_foreign_key "tracking_templates", "published_prompts", on_delete: :nullify

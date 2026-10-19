@@ -28,6 +28,11 @@ class TrackingCampaignsAPI extends ApiClient {
   launch(id) {
     return axios.post(`${this.url}/${id}/launch`);
   }
+
+  // proyecto@automatizacion_campanas — reanuda una campaña pausada por error de Meta.
+  resume(id) {
+    return axios.post(`${this.url}/${id}/resume`);
+  }
 }
 
 export default new TrackingCampaignsAPI();

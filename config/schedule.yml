@@ -108,6 +108,14 @@ tracking_campaigns_window:
   queue: scheduled_jobs
   description: "Open and close tracking campaigns by their window"
 
+# proyecto@automatizacion_campanas — envíos de seguimiento que Meta aceptó pero no
+# confirmó en 24 h pasan a 'unconfirmed' (no se reenvían). Ver TrackingDeliveries::UnconfirmedJob.
+tracking_deliveries_unconfirmed:
+  cron: "17 * * * *"
+  class: "TrackingDeliveries::UnconfirmedJob"
+  queue: scheduled_jobs
+  description: "Mark tracking deliveries without delivery confirmation after 24h"
+
 # ==============================================================================
 # Job: Limpieza de trackings antiguos
 # ==============================================================================
