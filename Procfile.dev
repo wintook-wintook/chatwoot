@@ -1,7 +1,4 @@
 backend: bin/rails s -p 3000
 frontend: export NODE_OPTIONS=--openssl-legacy-provider && bin/webpack-dev-server
 # https://github.com/mperham/sidekiq/issues/3090#issuecomment-389748695
-# diag/envios_masivos (P1): dos procesos para que las ráfagas lentas (IMAP, sync de plantillas,
-# seguimientos) no frenen lo urgente. -q en la línea gana sobre las colas de config/sidekiq.yml.
-worker_urgente: dotenv bundle exec sidekiq -C config/sidekiq.yml -c 10 -q critical -q high -q medium -q default -q mailers -q action_mailbox_routing
-worker_lento: dotenv bundle exec sidekiq -C config/sidekiq.yml -c 10 -q low -q scheduled_jobs -q async_database_migration -q active_storage_analysis -q active_storage_purge -q action_mailbox_incineration
+worker: dotenv bundle exec sidekiq -C config/sidekiq.yml
