@@ -1,18 +1,73 @@
 // @tickets_cases
 import { frontendURL } from '../../../helper/URLHelper';
+import {
+  CASE_CLASS_PATTERN,
+  CLASS_VIEW_ROUTES,
+  lastCaseClass,
+} from '../../../helper/caseClasses';
+
+// Plan-Casos E1 (F6) — Lista, Tablero y Métricas existen POR CLASE:
+// `tickets/:caseClass/list|board|metrics`. Las rutas de siempre (`tickets`,
+// `tickets/kanban`, `tickets/metrics`) quedan como redirección a la última clase
+// usada: así no se rompen enlaces guardados, `$router.push({ name: ... })` de las
+// vistas ni el menú, que apunta a ellas (neutras).
+const toLastClass = view => to => ({
+  name: CLASS_VIEW_ROUTES[view],
+  params: {
+    accountId: to.params.accountId,
+    caseClass: lastCaseClass(to.params.accountId),
+  },
+});
+const classProps = route => ({ caseClass: route.params.caseClass });
+const AGENT = { permissions: ['administrator', 'agent'] };
 
 export const routes = [
   {
     path: frontendURL('accounts/:accountId/tickets'),
     name: 'gestorTickets_index',
-    meta: { permissions: ['administrator', 'agent'] },
-    component: () => import('../../../views/gestorTickets/Index.vue'),
+    meta: AGENT,
+    redirect: toLastClass('list'),
   },
   {
     path: frontendURL('accounts/:accountId/tickets/kanban'),
     name: 'gestorTickets_kanban',
-    meta: { permissions: ['administrator', 'agent'] },
+    meta: AGENT,
+    redirect: toLastClass('board'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/tickets/metrics'),
+    name: 'gestorTickets_metrics',
+    meta: AGENT,
+    redirect: toLastClass('metrics'),
+  },
+  // Con slug acotado (support|commercial) para no chocar con `tickets/types/:typeId`
+  // ni con el catch-all `tickets/:id`.
+  {
+    path: frontendURL(
+      `accounts/:accountId/tickets/:caseClass(${CASE_CLASS_PATTERN})/list`
+    ),
+    name: CLASS_VIEW_ROUTES.list,
+    meta: AGENT,
+    component: () => import('../../../views/gestorTickets/Index.vue'),
+    props: classProps,
+  },
+  {
+    path: frontendURL(
+      `accounts/:accountId/tickets/:caseClass(${CASE_CLASS_PATTERN})/board`
+    ),
+    name: CLASS_VIEW_ROUTES.board,
+    meta: AGENT,
     component: () => import('../../../views/gestorTickets/Kanban.vue'),
+    props: classProps,
+  },
+  {
+    path: frontendURL(
+      `accounts/:accountId/tickets/:caseClass(${CASE_CLASS_PATTERN})/metrics`
+    ),
+    name: CLASS_VIEW_ROUTES.metrics,
+    meta: AGENT,
+    component: () => import('../../../views/gestorTickets/ClassMetrics.vue'),
+    props: classProps,
   },
   {
     path: frontendURL('accounts/:accountId/tickets/tasks'),
@@ -55,12 +110,6 @@ export const routes = [
     component: () => import('../../../views/gestorTickets/FolioConfig.vue'),
   },
   {
-    path: frontendURL('accounts/:accountId/tickets/metrics'),
-    name: 'gestorTickets_metrics',
-    meta: { permissions: ['administrator', 'agent'] },
-    component: () => import('../../../views/gestorTickets/Metrics.vue'),
-  },
-  {
     path: frontendURL('accounts/:accountId/tickets/sla'),
     name: 'gestorTickets_sla',
     meta: { permissions: ['administrator'] },
@@ -77,6 +126,13 @@ export const routes = [
     name: 'gestorTickets_portals',
     meta: { permissions: ['administrator'] },
     component: () => import('../../../views/gestorTickets/Portals.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/tickets/commercial-settings'),
+    name: 'gestorTickets_commercial_settings',
+    meta: { permissions: ['administrator'] },
+    component: () =>
+      import('../../../views/gestorTickets/CommercialConfig.vue'),
   },
   {
     path: frontendURL('accounts/:accountId/tickets/settings'),

@@ -285,6 +285,7 @@
     "TICKET_SLA": "SLA",
     "TICKET_AI": "Inteligencia Artificial",
     "TICKET_PORTALS": "Portales del cliente",
+    "TICKET_COMMERCIAL_SETTINGS": "Comercial",
     "TICKET_SETTINGS": "Ajustes del módulo",
     "TICKET_CONFIG": "Configuración de folio",
     "TICKET_GROUP_DEFINITIONS": "Definiciones",
@@ -355,7 +356,11 @@
       "TEXT": "Marcar como desconectado automáticamente",
       "INFO_TEXT": "Permite que el sistema te marque como desconectado automáticamente cuando no estés usando la aplicación o el panel."
     },
-    "DOCS": "Leer documentos"
+    "DOCS": "Leer documentos",
+    "CASES_LIST": "Lista",
+    "CASES_BOARD": "Tablero",
+    "CASES_METRICS": "Métricas",
+    "CASES_GROUP_CONFIG": "Configuración"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Facturación",

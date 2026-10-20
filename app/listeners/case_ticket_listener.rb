@@ -19,13 +19,17 @@ class CaseTicketListener < BaseListener
     message, account = extract_message_and_account(event)
     return unless reopen_candidate?(message)
 
-    ticket = closed_ticket_for(message)
+    closed = closed_tickets_for(message)
+    ticket = closed.first
     return if ticket.blank?
     return unless CaseSetting.for_account(account).reopen_on_customer_reply?
 
+    # Una oportunidad nunca cae aquí fuera de ventana: within_reopen_window? es
+    # siempre true para Comercial (Plan-Clase-Comercial F3, hallazgo #2).
     if ticket.within_reopen_window?
       # actor: nil → el evento queda con origin :system, no atribuido a un agente.
       ticket.reopen!(actor: nil, reason: REOPEN_REASON)
+      warn_other_class(closed, ticket, message)
     else
       # Fuera de la ventana no se resucita un caso de hace un año: se abre uno
       # nuevo enlazado al viejo, para no perder el hilo ni falsear las métricas.
@@ -43,10 +47,34 @@ class CaseTicketListener < BaseListener
   end
 
   # Un ticket puede haber sido reabierto y vuelto a cerrar; interesa el último.
-  def closed_ticket_for(message)
+  def closed_tickets_for(message)
     CaseTicket.where(conversation_id: message.conversation_id, status: :closed)
+              .includes(:case_type)
               .order(closed_at: :desc, id: :desc)
-              .first
+              .to_a
+  end
+
+  # Plan-Clase-Comercial F3 (hallazgo #3): si la conversación también tiene un caso
+  # cerrado de OTRA clase (una venta y un ticket de soporte), el mensaje pudo ser
+  # para ese. No se reabre a ciegas: se deja aviso en su historial para que el
+  # responsable decida.
+  def warn_other_class(closed, reopened, message)
+    reopened_class = case_class_of(reopened)
+    other = closed.find { |t| case_class_of(t) != reopened_class }
+    return if other.blank?
+
+    other.case_events.create!(
+      account:    other.account,
+      event_type: :message_received,
+      origin:     :system,
+      payload:    { content: "El cliente escribió en la conversación y se reabrió #{reopened.folio || "##{reopened.id}"}. " \
+                             'Revisa si el mensaje era para este caso.',
+                    message_id: message.id, reopened_ticket_id: reopened.id }
+    )
+  end
+
+  def case_class_of(ticket)
+    ticket.case_type&.case_class || 'support'
   end
 
   def spawn_follow_up_ticket(old_ticket, message)

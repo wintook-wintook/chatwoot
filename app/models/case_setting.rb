@@ -5,6 +5,7 @@
 # Table name: case_settings
 #
 #  id                       :bigint           not null, primary key
+#  default_currency         :string(3)        default("MXN"), not null
 #  itil_enabled             :boolean          default(FALSE), not null
 #  reopen_on_customer_reply :boolean          default(TRUE), not null
 #  reopen_window_days       :integer          default(30), not null
@@ -27,6 +28,9 @@
 # tabla sigue en la base (se elimina en un segundo PR) pero ya no se lee ni escribe.
 class CaseSetting < ApplicationRecord
   belongs_to :account
+
+  # Plan-Clase-Comercial F3 — moneda con la que nace una oportunidad.
+  validates :default_currency, format: { with: /\A[A-Z]{3}\z/ }
 
   def self.for_account(account)
     account.case_setting || account.create_case_setting!

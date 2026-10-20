@@ -45,6 +45,8 @@ export default {
     // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
     // ofrecer botones que el backend va a rechazar con 422.
     isFrozen: { type: Boolean, default: false },
+    // Plan-Clase-Proyecto P2 — en un proyecto una tarea puede ser «Hito».
+    allowMilestones: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -74,6 +76,7 @@ export default {
         due_at: '',
         status: 'pending',
         priority: 'medium',
+        milestone: false,
         // Solicitante: si ya existe se muestra fijo (requester_locked=true); en
         // tareas antiguas sin solicitante se puede elegir de la lista y se guarda.
         requester_name: '',
@@ -222,6 +225,11 @@ export default {
                 }
                 title={row.title}
               >
+                {row.milestone ? (
+                  <span class="mr-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 no-underline inline-block">
+                    {this.$t('CASE_TICKETS.TASKS.MILESTONE')}
+                  </span>
+                ) : null}
                 {row.title}
               </p>
               {row.description ? (
@@ -581,6 +589,7 @@ export default {
         });
         // Las reuniones canceladas cambian el Avance y la pestaña Reuniones.
         if (data.cancelled_meetings) this.$emit('changed');
+        this.$emit('saved'); // P2 — un hito hecho mueve el avance del proyecto
       } catch (e) {
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.COMPLETE_ERROR'),
@@ -605,6 +614,7 @@ export default {
         due_at: '',
         status: 'pending',
         priority: 'medium',
+        milestone: false,
         // Solicitante = agente actual al crear (fijo; el backend lo confirma).
         requester_name: this.currentUserName,
         requester_id: '',
@@ -638,6 +648,7 @@ export default {
         due_at: this.toInputDate(task.due_at),
         status: task.status || 'pending',
         priority: task.priority || 'medium',
+        milestone: !!task.milestone,
         // Con solicitante: se muestra fijo. Sin solicitante (tarea antigua): la
         // lista queda editable para asignarlo y guardarlo.
         requester_name: (task.requester && task.requester.name) || '',
@@ -656,6 +667,7 @@ export default {
         status: this.form.status || 'pending',
         priority: this.form.priority || 'medium',
       };
+      if (this.allowMilestones) payload.milestone = !!this.form.milestone;
       // Solicitante editable (tarea sin solicitante previo): se manda para fijarlo.
       if (!this.form.requester_locked) {
         payload.requester_id = this.form.requester_id || '';
@@ -680,6 +692,7 @@ export default {
           this.currentPage = 1;
         }
         this.showModal = false;
+        this.$emit('saved');
       } finally {
         this.isSaving = false;
       }
@@ -714,6 +727,7 @@ export default {
       await CaseTasksAPI.deleteTask(this.ticketId, task.id);
       this.tasks = this.tasks.filter(t => t.id !== task.id);
       this.pendingDelete = null;
+      this.$emit('saved');
       // Aviso en rojo (mismo toast que asignar/completar, variante danger).
       this.$emitter.emit('caseToastMessage', {
         message: this.$t('CASE_TICKETS.TASKS.TOAST_DELETED', {
@@ -1088,6 +1102,22 @@ export default {
               </select>
             </label>
           </div>
+
+          <!-- Plan-Clase-Proyecto P2 — hito del proyecto -->
+          <label v-if="allowMilestones" class="flex items-center gap-2 mt-3">
+            <input
+              v-model="form.milestone"
+              type="checkbox"
+              class="!mb-0"
+              :disabled="viewing"
+            />
+            <span class="text-sm text-slate-700 dark:text-slate-200">
+              {{ $t('CASE_TICKETS.TASKS.MILESTONE_LABEL') }}
+            </span>
+            <span class="text-xs text-slate-400 dark:text-slate-500">
+              {{ $t('CASE_TICKETS.TASKS.MILESTONE_HINT') }}
+            </span>
+          </label>
 
           <div class="flex items-center justify-end gap-2 mt-4">
             <woot-button

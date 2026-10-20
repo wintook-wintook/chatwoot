@@ -1,11 +1,13 @@
 // @tickets_cases
 import { frontendURL } from '../../../../helper/URLHelper';
 
-// Menú secundario del módulo de tickets. Se separa la OPERACIÓN (trabajo diario,
-// plano arriba) de la CONFIGURACIÓN (agrupada en secciones colapsables). Los
-// grupos usan `children`; para que el filtro de permisos no los descarte, el
-// padre lleva un `toStateName` de una ruta admin (así el grupo queda gateado a
-// administrador, que es donde vive la configuración).
+// Menú secundario de «Casos». Plan-Casos E1 (F6): la OPERACIÓN es plana y neutra
+// a la clase — Lista, Tablero y Métricas apuntan a rutas que redirigen a la
+// última clase usada, y la clase (Comercial | Soporte) se elige con el selector
+// del encabezado de cada vista. Así el menú no crece con cada clase nueva.
+// Se marcan activos por `toStateName` (el nombre de la ruta por clase).
+// La CONFIGURACIÓN va en un solo grupo colapsable; el padre lleva un
+// `toStateName` de ruta admin para que el grupo quede gateado a administrador.
 const gestorTickets = accountId => {
   const url = path => frontendURL(`accounts/${accountId}/tickets/${path}`);
 
@@ -14,10 +16,13 @@ const gestorTickets = accountId => {
     routes: [
       'gestorTickets_index',
       'gestorTickets_kanban',
+      'gestorTickets_metrics',
+      'gestorTickets_class_list',
+      'gestorTickets_class_board',
+      'gestorTickets_class_metrics',
       'gestorTickets_tasks',
       'gestorTickets_detail',
       'gestorTickets_rules',
-      'gestorTickets_metrics',
       'gestorTickets_types',
       'gestorTickets_type_detail',
       'gestorTickets_classification',
@@ -25,24 +30,33 @@ const gestorTickets = accountId => {
       'gestorTickets_ai',
       'gestorTickets_portals',
       'gestorTickets_settings',
+      'gestorTickets_commercial_settings',
       'gestorTickets_config',
     ],
     menuItems: [
-      // ── Operación (trabajo diario) ──
+      // ── Operación (de la clase elegida en el selector) ──
       {
         icon: 'list',
-        label: 'ALL_TICKETS',
+        label: 'CASES_LIST',
         hasSubMenu: false,
         toState: frontendURL(`accounts/${accountId}/tickets`),
-        toStateName: 'gestorTickets_index',
+        toStateName: 'gestorTickets_class_list',
       },
       {
         icon: 'table-switch',
-        label: 'TICKET_KANBAN',
+        label: 'CASES_BOARD',
         hasSubMenu: false,
         toState: url('kanban'),
-        toStateName: 'gestorTickets_kanban',
+        toStateName: 'gestorTickets_class_board',
       },
+      {
+        icon: 'document',
+        label: 'CASES_METRICS',
+        hasSubMenu: false,
+        toState: url('metrics'),
+        toStateName: 'gestorTickets_class_metrics',
+      },
+      // Tareas: de todas las clases (bandeja personal).
       {
         icon: 'checkmark-circle',
         label: 'TICKET_TASKS',
@@ -50,20 +64,13 @@ const gestorTickets = accountId => {
         toState: url('tasks'),
         toStateName: 'gestorTickets_tasks',
       },
+      // ── Configuración (solo administrador) ──
       {
-        icon: 'document',
-        label: 'TICKET_METRICS',
-        hasSubMenu: false,
-        toState: url('metrics'),
-        toStateName: 'gestorTickets_metrics',
-      },
-      // ── Definiciones (lo que modela el caso) ──
-      {
-        icon: 'folder',
-        label: 'TICKET_GROUP_DEFINITIONS',
+        icon: 'settings',
+        label: 'CASES_GROUP_CONFIG',
         hasSubMenu: true,
         collapsible: true,
-        toState: 'gestorTickets_group_definitions',
+        toState: 'gestorTickets_group_config',
         toStateName: 'gestorTickets_types',
         children: [
           {
@@ -91,25 +98,6 @@ const gestorTickets = accountId => {
             toStateName: 'gestorTickets_sla',
           },
           {
-            id: 'ticket-portals',
-            label: 'TICKET_PORTALS',
-            icon: 'globe',
-            translate: true,
-            toState: url('portals'),
-            toStateName: 'gestorTickets_portals',
-          },
-        ],
-      },
-      // ── Automatización e IA ──
-      {
-        icon: 'wand',
-        label: 'TICKET_GROUP_AUTOMATION',
-        hasSubMenu: true,
-        collapsible: true,
-        toState: 'gestorTickets_group_automation',
-        toStateName: 'gestorTickets_rules',
-        children: [
-          {
             id: 'ticket-rules',
             label: 'TICKET_RULES',
             icon: 'automation',
@@ -125,17 +113,22 @@ const gestorTickets = accountId => {
             toState: url('ai'),
             toStateName: 'gestorTickets_ai',
           },
-        ],
-      },
-      // ── Ajustes del módulo ──
-      {
-        icon: 'settings',
-        label: 'TICKET_GROUP_SETTINGS',
-        hasSubMenu: true,
-        collapsible: true,
-        toState: 'gestorTickets_group_settings',
-        toStateName: 'gestorTickets_settings',
-        children: [
+          {
+            id: 'ticket-portals',
+            label: 'TICKET_PORTALS',
+            icon: 'globe',
+            translate: true,
+            toState: url('portals'),
+            toStateName: 'gestorTickets_portals',
+          },
+          {
+            id: 'ticket-commercial-settings',
+            label: 'TICKET_COMMERCIAL_SETTINGS',
+            icon: 'building-bank',
+            translate: true,
+            toState: url('commercial-settings'),
+            toStateName: 'gestorTickets_commercial_settings',
+          },
           {
             id: 'ticket-settings',
             label: 'TICKET_SETTINGS',

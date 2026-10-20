@@ -6,13 +6,12 @@
 import { mapGetters } from 'vuex';
 import BarChart from 'dashboard/components/widgets/chart/BarChart';
 import DoughnutChart from 'dashboard/components/widgets/chart/DoughnutChart';
-
-const PERIODS = [
-  { key: '7d', label: '7 días', days: 7 },
-  { key: '30d', label: '30 días', days: 30 },
-  { key: '90d', label: '90 días', days: 90 },
-  { key: 'all', label: 'Todo', days: null },
-];
+import CaseClassSwitcher from './CaseClassSwitcher.vue'; // Plan-Casos E1
+import CaseTypeSelect from './filters/CaseTypeSelect.vue'; // Plan-Casos E1.1
+import { loadCaseState, saveCaseState } from '../../helper/caseClasses';
+// Plan-Casos E1.3 — mismo período que las Métricas comerciales.
+import { METRIC_PERIODS as PERIODS } from '../../helper/caseFilters';
+import MetricsPeriodPicker from './filters/MetricsPeriodPicker.vue';
 
 const CLOSED_STATUSES = ['closed', 'cancelled'];
 
@@ -101,10 +100,23 @@ const VALUE_SUCCESS = 'text-green-600 dark:text-green-400';
 
 export default {
   name: 'GestorTicketsMetrics',
-  components: { BarChart, DoughnutChart },
+  components: {
+    BarChart,
+    DoughnutChart,
+    CaseClassSwitcher,
+    CaseTypeSelect,
+    MetricsPeriodPicker,
+  },
+  props: {
+    // Plan-Casos E1 — estas son las métricas de Soporte (ver ClassMetrics.vue).
+    caseClass: { type: String, default: 'support' },
+  },
   data() {
     return {
       selectedPeriod: '30d',
+      caseTypeId: '', // Plan-Casos E1.1 — tipo junto al selector de clase
+      assigneeId: '', // Plan-Casos E1.3 — responsable
+      teamId: '', // Plan-Casos E1.3 — equipo
       barOptions: BAR_OPTIONS,
       dailyOptions: DAILY_OPTIONS,
       doughnutOptions: DOUGHNUT_OPTIONS,
@@ -117,12 +129,11 @@ export default {
       // ITIL es por tipo; Métricas es agregado de toda la cuenta, así que se
       // muestran los KPIs ITIL si al menos un tipo de la cuenta los usa.
       itilEnabled: 'caseTickets/getAnyTypeItilEnabled',
+      agents: 'agents/getAgents',
+      teams: 'teams/getTeams',
     }),
     isLoading() {
       return this.uiFlags.isFetchingList;
-    },
-    periods() {
-      return PERIODS;
     },
 
     // key que cambia con el período para forzar re-render de los charts
@@ -419,11 +430,29 @@ export default {
     },
   },
   mounted() {
+    // Plan-Casos E1.2 — vuelve con el tipo y el período que dejaste.
+    const st = loadCaseState(this.$route.params.accountId, this.caseClass);
+    this.caseTypeId = st.type ?? '';
+    const saved = st.metrics || {};
+    if (PERIODS.some(p => p.key === saved.period))
+      this.selectedPeriod = saved.period;
+    this.assigneeId = saved.assigneeId || '';
+    this.teamId = saved.teamId || '';
+    this.$store.dispatch('agents/get');
+    this.$store.dispatch('teams/get');
     this.fetch();
     this.$store.dispatch('caseTickets/fetchSettings'); // modo simple/ITIL
   },
   methods: {
     fetch() {
+      saveCaseState(this.$route.params.accountId, this.caseClass, {
+        type: this.caseTypeId,
+        metrics: {
+          period: this.selectedPeriod,
+          assigneeId: this.assigneeId,
+          teamId: this.teamId,
+        },
+      });
       const period = PERIODS.find(p => p.key === this.selectedPeriod);
       const params = {};
       if (period?.days) {
@@ -432,7 +461,14 @@ export default {
         params.date_from = from.toISOString().split('T')[0];
         params.date_to = new Date().toISOString().split('T')[0];
       }
+      if (this.caseTypeId) params.case_type_id = this.caseTypeId;
+      if (this.assigneeId) params.assignee_id = this.assigneeId;
+      if (this.teamId) params.team_id = this.teamId;
       this.$store.dispatch('caseTickets/fetchMetrics', params);
+    },
+    onTypeChange(id) {
+      this.caseTypeId = id;
+      this.fetch();
     },
     selectPeriod(key) {
       this.selectedPeriod = key;
@@ -490,26 +526,33 @@ export default {
         >
           {{ $t('CASE_TICKETS.METRICS.BACK') }}
         </woot-button>
-        <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
-          {{ $t('CASE_TICKETS.METRICS.TITLE') }}
-        </h1>
+        <!-- Plan-Casos E1 — el selector Comercial | Soporte es el título -->
+        <CaseClassSwitcher
+          :case-class="caseClass"
+          :title="$t('CASE_TICKETS.CLASSES.SUPPORT.METRICS')"
+        />
+        <CaseTypeSelect
+          :case-class="caseClass"
+          :value="caseTypeId"
+          @input="onTypeChange"
+        />
       </div>
 
-      <!-- Selector de período -->
-      <div class="flex gap-1">
-        <button
-          v-for="p in periods"
-          :key="p.key"
-          class="px-3 py-1 text-sm border rounded-full transition-colors"
-          :class="
-            selectedPeriod === p.key
-              ? 'bg-woot-500 border-woot-500 text-white'
-              : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-woot-500'
-          "
-          @click="selectPeriod(p.key)"
-        >
-          {{ p.label }}
-        </button>
+      <!-- E1.3 — responsable, equipo y período (el mismo que en Comercial) -->
+      <div class="flex flex-wrap items-center gap-2">
+        <select v-model="assigneeId" class="!mb-0 text-sm w-44" @change="fetch">
+          <option value="">{{ $t('CASE_TICKETS.FILTERS.ALL_AGENTS') }}</option>
+          <option v-for="a in agents" :key="a.id" :value="a.id">
+            {{ a.name }}
+          </option>
+        </select>
+        <select v-model="teamId" class="!mb-0 text-sm w-40" @change="fetch">
+          <option value="">{{ $t('CASE_TICKETS.FILTERS.ALL_TEAMS') }}</option>
+          <option v-for="t in teams" :key="t.id" :value="t.id">
+            {{ t.name }}
+          </option>
+        </select>
+        <MetricsPeriodPicker :value="selectedPeriod" @input="selectPeriod" />
       </div>
     </div>
 

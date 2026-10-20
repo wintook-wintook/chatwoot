@@ -57,6 +57,10 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 - [[Plan-Notas-Internas]] — 📄 plan: bitácora de notas internas en el ticket (enum ya existe, falta UI/endpoint)
 - [[Plan-Widget-Embebible]] — 🔌 plan: launcher + iframe para capturar tickets desde la web del cliente
 - [[Plan-Ticket-Cerrado]] — 🔒 plan: reglas del ticket cerrado (reabrir con motivo, congelar edición, reapertura por respuesta del cliente)
+- [[Plan-Clase-Comercial]] — 💼 plan: Clase de caso (Soporte/Comercial/…) + oportunidades (F0–F5 hechas)
+- [[Plan-Clase-Proyecto]] — 📐 plan: clase Proyecto (P1 hecha; hijos, hitos, línea de tiempo y métricas pendientes)
+- [[Plan-Clase-Orden-de-Trabajo]] — 🛠️ plan: clase Orden de trabajo y capacidades por clase (F1 hecha)
+- [[Plan-Casos-Hoja-de-ruta]] — 🧭 hoja de ruta: menú por clase (E1 hecho), clase fija, Comercial y Soporte completos
 - [[Historial-de-implementacion]] — changelog de todo lo resuelto
 
 ---

@@ -20,18 +20,23 @@
 
 class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseController
   # @tickets_cases — campos que se congelan al cerrar/cancelar un ticket.
-  FROZEN_FIELDS = %w[priority due_at case_type_id assignee_id team_id].freeze
+  FROZEN_FIELDS = (%w[priority due_at case_type_id assignee_id team_id] + CaseTicket::COMMERCIAL_FIELDS +
+                   CaseTicket::WORK_ORDER_FIELDS + CaseTicket::PROJECT_FIELDS).freeze
   FROZEN_MSG    = 'Ticket cerrado: no se puede editar. Reábrelo si necesitas cambiarlo.'
 
   before_action :set_ticket,
                 only: %i[show update transition move assign escalate change_approval generate_article
                          apply_ai_suggestion dismiss_ai_suggestion suggest_reply summarize
-                         detect_duplicates follow_up lock unlock reopen]
+                         detect_duplicates follow_up lock unlock reopen outcome postpone resume work_order project]
 
   # GET /api/v1/accounts/:account_id/case_tickets/metrics
   def metrics
     tickets = scoped_tickets_for_metrics
-    open_tickets = Current.account.case_tickets.where.not(status: %w[closed cancelled])
+    # Plan-Clase-Comercial F5 (hallazgo #9): estas métricas son de atención (SLA,
+    # resolución, CSAT), solo de las clases con SLA (Soporte); las oportunidades y
+    # las órdenes de trabajo tienen las suyas.
+    open_tickets = Current.account.case_tickets.with_capability(:sla).where.not(status: %w[closed cancelled])
+    open_tickets = filter_metrics_scope(open_tickets)
 
     render json: {
       period:   { from: date_from, to: date_to },
@@ -77,7 +82,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
   PER_PAGE_DEFAULT = 25
   PER_PAGE_MAX     = 100
-  SORTABLE_COLUMNS = %w[created_at priority sla_status status].freeze
+  SORTABLE_COLUMNS = %w[created_at priority sla_status status amount expected_close_at probability].freeze
 
   # GET /api/v1/accounts/:account_id/case_tickets
   def index
@@ -86,6 +91,12 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     tickets = apply_search(tickets)
     tickets = apply_status_filter(tickets)
     tickets = tickets.where(case_type_id: params[:case_type_id])                     if params[:case_type_id].present?
+    # Plan-Clase-Comercial F3 — por clase (?case_class=commercial) y por resultado (?outcome=won).
+    tickets = tickets.of_class(params[:case_class]) if CaseType.case_classes.key?(params[:case_class].to_s)
+    tickets = tickets.where(outcome: CaseTicket.outcomes[params[:outcome]]) if CaseTicket.outcomes.key?(params[:outcome].to_s)
+    tickets = apply_commercial_filters(tickets) # Plan-Casos E1.1
+    tickets = apply_work_order_filters(tickets) # Plan-Clase-Orden-de-Trabajo F2b
+    tickets = apply_closed_window(tickets)      # Plan-Casos E1.3 — Tablero
     tickets = tickets.where(ticket_kind:  CaseTicket.ticket_kinds[params[:ticket_kind]]) if params[:ticket_kind].present?
     tickets = tickets.where(affected_service_id: params[:affected_service_id])       if params[:affected_service_id].present?
     tickets = tickets.where(category_id:  params[:category_id])                       if params[:category_id].present?
@@ -95,6 +106,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     tickets = apply_assignee(tickets)
     tickets = tickets.where(contact_id:  params[:contact_id])                        if params[:contact_id].present?
     tickets = apply_date_range(tickets)
+    tickets = apply_closed_range(tickets)
     tickets = apply_sort(tickets)
 
     per_page = [[params.fetch(:per_page, PER_PAGE_DEFAULT).to_i, 1].max, PER_PAGE_MAX].min
@@ -104,7 +116,10 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       case_tickets: tickets.map { |t| ticket_json(t) },
       meta: pagination_meta(tickets).merge(
         # conteo global (sin filtros) para el badge del tab "SLA vencido"
-        sla_overdue_count: Current.account.case_tickets.where.not(status: %w[closed cancelled]).overdue.count
+        sla_overdue_count: Current.account.case_tickets.where.not(status: %w[closed cancelled]).overdue.count,
+        # Plan-Clase-Orden-de-Trabajo — el aviso rojo de la clase pedida (sin filtros):
+        # SLA vencido (Soporte), visitas vencidas (Orden), cierre vencido (Comercial).
+        alert_count: class_alert_scope(params[:case_class]).count
       )
     }
   end
@@ -141,7 +156,10 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       category_id:         ticket_params[:category_id],
       custom_attributes:   custom,
       assignee_id:         ticket_params[:assignee_id], # @tickets_cases — asignación manual al crear
-      team_id:             ticket_params[:team_id]
+      team_id:             ticket_params[:team_id],
+      commercial:          commercial_params.to_h, # Plan-Clase-Comercial F3 (solo lo usa Comercial)
+      work_order:          work_order_params.to_h, # Plan-Clase-Orden-de-Trabajo F2a (solo lo usa la orden)
+      project:             project_params.to_h # Plan-Clase-Proyecto P1 (solo lo usa el proyecto)
     )
     notify_assignee(ticket) # @tickets_cases Fase A — avisa al agente si se asignó a mano
 
@@ -200,6 +218,10 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     # @tickets_cases — edición completa desde el modal (título, descripción,
     # clasificación). Puede raise ArgumentError si un enum llega inválido.
     apply_core_edits
+    # Plan-Clase-Comercial F3 — monto, moneda, cierre estimado, probabilidad.
+    commercial_changes = @ticket.commercial? ? @ticket.assign_commercial_data(commercial_params) : {}
+    work_order_changes = @ticket.work_order? ? @ticket.assign_work_order_data(work_order_params) : {}
+    project_changes = @ticket.project? ? @ticket.assign_project_data(project_params) : {}
 
     @ticket.custom_attributes = @ticket.custom_attributes.merge(incoming) if incoming.any?
     @ticket.priority = new_priority if priority_changed
@@ -219,6 +241,10 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
                                   origin: :agent, actor: current_user,
                                   payload: { from: old_due, to: @ticket.due_at })
     end
+
+    @ticket.log_commercial_change!(commercial_changes, actor: current_user)
+    @ticket.log_work_order_change!(work_order_changes, actor: current_user)
+    @ticket.log_project_change!(project_changes, actor: current_user)
 
     render json: { case_ticket: ticket_json(@ticket.reload) }
   rescue ArgumentError => e
@@ -347,7 +373,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
         updated += 1
       when 'transition'
         status = params[:status].to_s
-        if ticket.can_transition_to?(status)
+        if ticket.can_transition_to?(status) && !needs_own_closure?(ticket, status)
           ticket.transition!(status, actor: current_user)
           updated += 1
         else
@@ -362,6 +388,48 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
                    tickets_with_meetings: with_meetings }
   rescue ActiveRecord::RecordNotFound
     render json: { error: 'Agente o equipo no encontrado' }, status: :not_found
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # ── Plan-Clase-Comercial F3 — oportunidades ─────────────────────────────────
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/outcome
+  # Cierra la oportunidad: outcome (won|lost|cancelled), outcome_reason_id, outcome_note.
+  def outcome
+    @ticket.close_with_outcome!(params[:outcome], actor: current_user,
+                                                  reason_id: params[:outcome_reason_id], note: params[:outcome_note])
+    cancelled_meetings = cancel_orphan_meetings
+    render json: { case_ticket: ticket_json(@ticket.reload), cancelled_meetings: cancelled_meetings }
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/postpone  { postponed_until, postpone_reason_id, reason }
+  def postpone
+    @ticket.postpone!(until_date: params[:postponed_until], actor: current_user, reason: params[:reason],
+                      reason_id: params[:postpone_reason_id])
+    render json: { case_ticket: ticket_json(@ticket.reload) }
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # POST /api/v1/accounts/:account_id/case_tickets/:id/work_order  { case_type_id }
+  # Plan-Clase-Orden-de-Trabajo F2b — orden de trabajo nueva desde este caso.
+  def work_order
+    create_case_from_this('work_order')
+  end
+
+  # POST /api/v1/accounts/:account_id/case_tickets/:id/project  { case_type_id }
+  # Plan-Clase-Proyecto P2 — proyecto nuevo desde una oportunidad ganada.
+  def project
+    create_case_from_this('project')
+  end
+
+  # PATCH /api/v1/accounts/:account_id/case_tickets/:id/resume
+  def resume
+    @ticket.resume!(actor: current_user, reason: params[:reason])
+    render json: { case_ticket: ticket_json(@ticket.reload) }
   rescue StandardError => e
     render json: { error: e.message }, status: :unprocessable_entity
   end
@@ -608,7 +676,50 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   def closure_params
     return nil if params[:closure].blank?
 
-    params[:closure].permit(:closure_type, :closure_cause, :closure_solution, :customer_confirmed).to_h
+    params[:closure].permit(:closure_type, :closure_cause, :closure_solution, :customer_confirmed,
+                            :outcome, :outcome_reason_id, :outcome_note, # outcome*: Plan-Clase-Comercial F3
+                            :actual_hours, :received_by, :conformity_note).to_h # Plan-Clase-Orden-de-Trabajo F2a
+  end
+
+  # Plan-Clase-Comercial F3 — datos de la oportunidad (el modelo los ignora fuera de Comercial).
+  def commercial_params
+    payload = params[:case_ticket]
+    return {} unless payload.respond_to?(:permit)
+
+    payload.permit(*CaseTicket::COMMERCIAL_FIELDS)
+  end
+
+  def create_case_from_this(target)
+    case_type = Current.account.case_types.find_by(id: params[:case_type_id])
+    created = Cases::CaseFromCaseService.new(origin: @ticket, case_type: case_type, actor: current_user,
+                                             target: target).call
+    render json: { case_ticket: ticket_json(created) }, status: :created
+  rescue Cases::CaseFromCaseService::Error, ActiveRecord::RecordInvalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # Plan-Clase-Proyecto P1 — datos del proyecto (se ignoran fuera de esa clase).
+  def project_params
+    payload = params[:case_ticket]
+    return {} unless payload.respond_to?(:permit)
+
+    payload.permit(*CaseTicket::PROJECT_FIELDS)
+  end
+
+  # Plan-Clase-Orden-de-Trabajo F2a — datos de la orden (se ignoran fuera de esa clase).
+  def work_order_params
+    payload = params[:case_ticket]
+    return {} unless payload.respond_to?(:permit)
+
+    payload.permit(*CaseTicket::WORK_ORDER_FIELDS)
+  end
+
+  # Hallazgo #8: una oportunidad no se cierra en lote; cada una necesita su resultado.
+  # Plan-Clase-Orden-de-Trabajo F2a — tampoco una orden: su cierre pide la conformidad.
+  def needs_own_closure?(ticket, status)
+    return true if ticket.commercial? && (CaseTicket::COMMERCIAL_BLOCKED_STATUSES + ['closed']).include?(status)
+
+    ticket.work_order? && status == 'closed'
   end
 
   # @tickets_cases 2F — solo los campos ITIL de Problema/Cambio (approval_status excluido:
@@ -755,17 +866,86 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       locked_at:                  (ticket.locked_at if ticket.lock_active?),
       is_internal:                ticket.internal?,                   # @tickets_cases Fase C
       can_transition_to:          valid_transitions_for(ticket)
+    }.merge(commercial_json(ticket)).merge(work_order_json(ticket)).merge(project_json(ticket))
+  end
+
+  # Plan-Clase-Proyecto P1 — datos del proyecto (el monto en `currency`, que ya
+  # viaja en los datos comerciales).
+  # P2: `progress` es el avance efectivo (automático con hijos/hitos, si no el
+  # capturado); `progress_manual` es el capturado y `project_summary` el desglose.
+  def project_json(ticket)
+    summary = ticket.project? ? ticket.project_progress_summary : nil
+    {
+      is_project:       ticket.project?,
+      project_start_on: ticket.project_start_on,
+      project_due_on:   ticket.project_due_on,
+      budget_hours:     ticket.budget_hours&.to_f,
+      budget_amount:    ticket.budget_amount&.to_f,
+      progress:         summary ? summary[:progress] : ticket.progress,
+      progress_manual:  ticket.progress,
+      project_summary:  summary,
+      project_overdue:  ticket.project_overdue?
     }
   end
 
+  # Plan-Clase-Comercial F3 — datos de la oportunidad (nil fuera de Comercial).
+  def commercial_json(ticket)
+    {
+      is_commercial:     ticket.commercial?,
+      amount:            ticket.amount&.to_f,
+      currency:          ticket.currency,
+      expected_close_at: ticket.expected_close_at,
+      probability:       ticket.probability,
+      outcome:           ticket.outcome,
+      outcome_at:        ticket.outcome_at,
+      outcome_reason_id: ticket.outcome_reason_id,
+      outcome_reason:    ticket.outcome_reason && { id: ticket.outcome_reason.id, label: ticket.outcome_reason.label },
+      outcome_note:      ticket.outcome_note,
+      postponed_until:   ticket.postponed_until,
+      postpone_reason:   ticket.postpone_reason && { id: ticket.postpone_reason.id, label: ticket.postpone_reason.label },
+      is_postponed:      ticket.postponed?
+    }
+  end
+
+  # Plan-Clase-Orden-de-Trabajo F2a — datos de la orden y sus materiales (los
+  # materiales solo se consultan en una orden).
+  def work_order_json(ticket)
+    {
+      is_work_order:    ticket.work_order?,
+      work_address:     ticket.work_address,
+      estimated_hours:  ticket.estimated_hours&.to_f,
+      actual_hours:     ticket.actual_hours&.to_f,
+      billable:         ticket.billable,
+      received_by:      ticket.received_by,
+      received_at:      ticket.received_at,
+      conformity_note:  ticket.conformity_note,
+      work_order_items: ticket.work_order? ? ticket.work_order_items.ordered.map { |i| work_order_item_json(i) } : [],
+      work_order_total: ticket.work_order? ? ticket.work_order_total.to_f : nil,
+      next_visit_at:    (ticket.next_visit_at if ticket.work_order?),
+      visit_overdue:    ticket.work_order? && ticket.visit_overdue?
+    }
+  end
+
+  def work_order_item_json(item)
+    { id: item.id, description: item.description, quantity: item.quantity.to_f, unit: item.unit,
+      unit_cost: item.unit_cost&.to_f, total: item.total&.to_f, position: item.position }
+  end
+
+  # Una oportunidad no se resuelve ni se cancela, y se cierra por /outcome (con resultado).
   def valid_transitions_for(ticket)
-    CaseTicket::VALID_TRANSITIONS[ticket.status] || []
+    list = CaseTicket::VALID_TRANSITIONS[ticket.status] || []
+    return list unless ticket.commercial?
+
+    list - CaseTicket::COMMERCIAL_BLOCKED_STATUSES - ['closed']
   end
 
   # @tickets_cases — Rama A: la columna destino cubre el estado actual. Movimiento
   # libre: solo cambia el puntero, sin tocar la máquina de estados. Se registra en
   # case_events para habilitar reportes por etapa más adelante (§10 del plan).
   def move_within_state(column)
+    # Plan-Clase-Comercial F3: de Perdida a Ganada no se pasa arrastrando; se reabre.
+    raise 'Reabre la oportunidad para cambiar su resultado' if column.outcome.present? && column.outcome != @ticket.outcome
+
     old_column_id = @ticket.case_type_column_id
     @ticket.update!(case_type_column_id: column.id)
     @ticket.case_events.create!(
@@ -783,6 +963,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # `requires_closure: true` para que el front pida el modal de cierre.
   def move_across_state(column)
     raise 'Un caso cancelado no puede moverse a otra etapa' if @ticket.cancelled?
+    return move_commercial_across(column) if @ticket.commercial?
 
     target = column.statuses.find { |s| @ticket.can_transition_to?(s) } || column.statuses.first
     if target == 'closed' && closure_params.blank?
@@ -793,6 +974,58 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     ActiveRecord::Base.transaction do
       @ticket.transition!(target, actor: current_user, closure: closure_params, force: true)
       # transition! disparó el resync (puntero → NULL); lo fijamos a la columna destino.
+      @ticket.update!(case_type_column_id: column.id)
+    end
+  end
+
+  # Plan-Clase-Comercial F3 — el embudo: soltar en una columna de resultado cierra la
+  # oportunidad (piden el motivo con `requires_outcome`; Ganada se cierra al
+  # instante solo si la cuenta no tiene motivos de ganada activos), y soltar en la espera la pospone (pide fecha con
+  # `requires_postpone`). Una oportunidad nunca toma resolved/validating/cancelled.
+  def move_commercial_across(column)
+    statuses = column.statuses - CaseTicket::COMMERCIAL_BLOCKED_STATUSES
+    target = column.outcome.present? ? 'closed' : (statuses.find { |s| @ticket.can_transition_to?(s) } || statuses.first)
+    raise CaseTicket::COMMERCIAL_STATUS_MSG if target.nil?
+
+    case target
+    when 'closed' then move_to_outcome(column)
+    when 'waiting_on_customer' then move_to_postponed(column)
+    else
+      ActiveRecord::Base.transaction do
+        @ticket.transition!(target, actor: current_user, force: true)
+        @ticket.update!(case_type_column_id: column.id)
+      end
+    end
+  end
+
+  def move_to_outcome(column)
+    closure = closure_params || {}
+    result = column.outcome || closure['outcome']
+    if result.blank? || (closure.blank? && outcome_needs_modal?(result))
+      return render json: { error: 'Indica el resultado de la oportunidad', requires_outcome: true, outcome: result },
+                    status: :unprocessable_entity
+    end
+
+    ActiveRecord::Base.transaction do
+      @ticket.close_with_outcome!(result, actor: current_user,
+                                          reason_id: closure['outcome_reason_id'], note: closure['outcome_note'])
+      @ticket.update!(case_type_column_id: column.id)
+    end
+  end
+
+  def outcome_needs_modal?(result)
+    result != 'won' || Current.account.case_outcome_reasons.outcome_won.enabled.exists?
+  end
+
+  def move_to_postponed(column)
+    if params[:postponed_until].blank?
+      return render json: { error: 'Indica hasta cuándo se pospone', requires_postpone: true },
+                    status: :unprocessable_entity
+    end
+
+    ActiveRecord::Base.transaction do
+      @ticket.postpone!(until_date: params[:postponed_until], actor: current_user, reason: params[:reason],
+                        reason_id: params[:postpone_reason_id])
       @ticket.update!(case_type_column_id: column.id)
     end
   end
@@ -842,6 +1075,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       color: type.color,
       # @tickets_cases — modo ITIL propio del tipo (antes era un ajuste global de cuenta).
       itil_enabled: type.itil_enabled,
+      # @tickets_cases — clase heredada del tipo (Plan-Clase-Comercial).
+      case_class: type.case_class,
       # @tickets_cases 2K — definiciones para mostrar los campos personalizados con etiqueta.
       custom_fields: type.case_type_fields.ordered.map do |f|
         { key: f.key, label: f.label, field_type: f.field_type, options: f.options, required: f.required }
@@ -979,7 +1214,9 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       urgency:             ticket_params[:urgency],
       affected_service_id: ticket_params[:affected_service_id],
       category_id:         ticket_params[:category_id],
-      custom_attributes:   custom
+      custom_attributes:   custom,
+      work_order:          work_order_params.to_h, # Plan-Clase-Orden-de-Trabajo F2a (orden sin cliente)
+      project:             project_params.to_h # Plan-Clase-Proyecto P1 (proyecto interno)
     }
   end
 
@@ -1034,6 +1271,11 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # asume un estado exacto del enum, como siempre (compatibilidad con vistas
   # guardadas de antes de este filtro).
   def apply_status_filter(tickets)
+    # Plan-Clase-Orden-de-Trabajo F2b — etapa = lista de estados (`statuses=a,b`).
+    if params[:statuses].present?
+      list = params[:statuses].to_s.split(',') & CaseTicket.statuses.keys
+      return tickets.where(status: list)
+    end
     return tickets if params[:status].blank?
 
     case params[:status]
@@ -1054,6 +1296,101 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     else
       tickets.where(assignee_id: params[:assignee_id])
     end
+  end
+
+  # Plan-Casos E1.1 — filtros finos de oportunidades: cierre estimado en un
+  # rango (`expected_close_from`/`_to`, YYYY-MM-DD) y solo pospuestas.
+  def apply_commercial_filters(tickets)
+    from = parse_filter_date(params[:expected_close_from])
+    to   = parse_filter_date(params[:expected_close_to])
+    tickets = tickets.where(case_tickets: { expected_close_at: from.. }) if from
+    tickets = tickets.where(case_tickets: { expected_close_at: ..to }) if to
+    # postponed=true → solo pospuestas; postponed=false → sin pospuestas («En curso»).
+    if params[:postponed].present?
+      postponed = ActiveModel::Type::Boolean.new.cast(params[:postponed])
+      tickets = postponed ? tickets.where.not(postponed_until: nil) : tickets.where(postponed_until: nil)
+    end
+    tickets
+  end
+
+  # Plan-Clase-Proyecto P1 — fecha objetivo (`project_due_from`/`project_due_to`).
+  def apply_project_due(tickets)
+    from = parse_filter_date(params[:project_due_from])
+    to   = parse_filter_date(params[:project_due_to])
+    tickets = tickets.where(case_tickets: { project_due_on: from.. }) if from
+    tickets = tickets.where(case_tickets: { project_due_on: ..to }) if to
+    tickets
+  end
+
+  # Casos abiertos de la cuenta que encienden el aviso de su clase (mismo criterio
+  # que el filtro que aplica el aviso en Lista y Tablero).
+  def class_alert_scope(klass)
+    tickets = Current.account.case_tickets.where(status: CaseTicket::PENDING_STATUSES)
+    case klass.to_s
+    when 'work_order'
+      late = CaseMeeting.active.where(starts_at: ...Time.current).select(:case_ticket_id)
+      tickets.of_class('work_order').where(id: late)
+    when 'commercial'
+      tickets.of_class('commercial').where(case_tickets: { expected_close_at: ...Date.current })
+    when 'project'
+      tickets.of_class('project').where(case_tickets: { project_due_on: ...Date.current })
+    else
+      tickets.with_capability(:sla).overdue
+    end
+  end
+
+  # Plan-Clase-Orden-de-Trabajo F2b — facturable y visitas: `visit_from`/`visit_to`
+  # (YYYY-MM-DD) = tiene una visita vigente ese rango; `visit_overdue=true` = sigue
+  # abierta con una visita vigente cuya hora ya pasó.
+  def apply_work_order_filters(tickets)
+    tickets = tickets.where(billable: ActiveModel::Type::Boolean.new.cast(params[:billable])) if params[:billable].present?
+    tickets = apply_project_due(tickets) # Plan-Clase-Proyecto P1
+    from = parse_filter_date(params[:visit_from])
+    to   = parse_filter_date(params[:visit_to])
+    if from || to
+      visits = CaseMeeting.active
+      visits = visits.where(starts_at: from.beginning_of_day..) if from
+      visits = visits.where(starts_at: ..to.end_of_day) if to
+      tickets = tickets.where(id: visits.select(:case_ticket_id))
+    end
+    if ActiveModel::Type::Boolean.new.cast(params[:visit_overdue])
+      late = CaseMeeting.active.where(starts_at: ...Time.current).select(:case_ticket_id)
+      tickets = tickets.where(status: CaseTicket::PENDING_STATUSES, id: late)
+    end
+    tickets
+  end
+
+  # Plan-Casos E1.3 — el Tablero no arrastra todos los cerrados de siempre: con
+  # `closed_within_days=N` los abiertos van completos y los cerrados (resuelto,
+  # validando, cerrado, cancelado) solo si se cerraron en los últimos N días.
+  def apply_closed_window(tickets)
+    days = params[:closed_within_days].to_i
+    return tickets unless days.positive?
+
+    closed_on = 'COALESCE(case_tickets.closed_at, case_tickets.resolved_at, case_tickets.updated_at)'
+    tickets.where.not(status: CaseTicket::CLOSED_STATUSES)
+           .or(tickets.where("#{closed_on} >= ?", days.days.ago))
+  end
+
+  def parse_filter_date(raw)
+    raw.present? ? Date.iso8601(raw.to_s) : nil
+  rescue ArgumentError
+    nil
+  end
+
+  # Fecha de cierre (`closed_from`/`closed_to`, YYYY-MM-DD): solo casos cerrados
+  # (resuelto, validando, cerrado, cancelado), por el día en que se cerraron.
+  def apply_closed_range(tickets)
+    from = parse_filter_date(params[:closed_from])
+    to   = parse_filter_date(params[:closed_to])
+    return tickets unless from || to
+
+    closed_on = 'COALESCE(case_tickets.outcome_at, case_tickets.closed_at, case_tickets.resolved_at, ' \
+                'case_tickets.updated_at)'
+    tickets = tickets.where(status: CaseTicket::CLOSED_STATUSES)
+    tickets = tickets.where("#{closed_on} >= ?", from.beginning_of_day) if from
+    tickets = tickets.where("#{closed_on} <= ?", to.end_of_day) if to
+    tickets
   end
 
   # Rango de fechas sobre created_at (solo aplica los extremos presentes).
@@ -1110,8 +1447,18 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   end
 
   def scoped_tickets_for_metrics
-    Current.account.case_tickets
-           .where(created_at: date_from.beginning_of_day..date_to.end_of_day)
+    tickets = Current.account.case_tickets
+                     .with_capability(:sla)
+                     .where(created_at: date_from.beginning_of_day..date_to.end_of_day)
+    filter_metrics_scope(tickets)
+  end
+
+  # Plan-Casos E1.1/E1.3 — tipo (junto al selector de clase), responsable y equipo.
+  def filter_metrics_scope(tickets)
+    tickets = tickets.where(case_type_id: params[:case_type_id]) if params[:case_type_id].present?
+    tickets = tickets.where(assignee_id: params[:assignee_id]) if params[:assignee_id].present?
+    tickets = tickets.where(team_id: params[:team_id]) if params[:team_id].present?
+    tickets
   end
 
   def enum_counts(tickets, column, enum_map)
@@ -1126,7 +1473,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   # by_type usa la tabla case_types (configurable por cuenta): { name => count }
   def type_counts(tickets)
     raw = tickets.group(:case_type_id).count
-    Current.account.case_types.ordered.each_with_object({}) do |type, h|
+    Current.account.case_types.where(case_class: CaseType.classes_with(:sla)).ordered.each_with_object({}) do |type, h|
       h[type.name] = raw[type.id] || 0
     end
   end

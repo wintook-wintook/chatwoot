@@ -21,6 +21,8 @@ class Api::V1::Accounts::CaseSettingsController < Api::V1::Accounts::BaseControl
   def update
     @setting.update!(setting_params)
     render json: setting_json
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
   end
 
   private
@@ -30,16 +32,19 @@ class Api::V1::Accounts::CaseSettingsController < Api::V1::Accounts::BaseControl
   end
 
   def setting_params
-    permitted = params.require(:case_setting).permit(:reopen_window_days, :reopen_on_customer_reply)
+    permitted = params.require(:case_setting).permit(:reopen_window_days, :reopen_on_customer_reply, :default_currency)
     # La ventana no puede ser negativa; 0 = sin límite.
     permitted[:reopen_window_days] = [permitted[:reopen_window_days].to_i, 0].max if permitted.key?(:reopen_window_days)
+    # Plan-Clase-Comercial F3 — código ISO de 3 letras (MXN, USD…).
+    permitted[:default_currency] = permitted[:default_currency].to_s.strip.upcase if permitted.key?(:default_currency)
     permitted
   end
 
   def setting_json
     {
       reopen_window_days: @setting.reopen_window_days,
-      reopen_on_customer_reply: @setting.reopen_on_customer_reply
+      reopen_on_customer_reply: @setting.reopen_on_customer_reply,
+      default_currency: @setting.default_currency
     }
   end
 end

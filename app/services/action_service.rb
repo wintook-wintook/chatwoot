@@ -100,26 +100,36 @@ class ActionService
   # validating, closed, cancelled) NO cuenta como vigente: si es lo último que hay en la
   # conversación, se trata como si no hubiera ninguno y se crea un caso nuevo en vez de tocar
   # el viejo con un simple cambio de tipo (que además no lo reabre: se queda cerrado/resuelto/
-  # cancelado, "fantasma"). Al asignar 'nil' limpia el tipo del caso vigente sin borrarlo.
+  # cancelado, "fantasma"). Al asignar 'nil' limpia el tipo del caso vigente sin borrarlo
+  # (salvo en una oportunidad: la clase es fija).
   def assign_case_type(params)
     case_type_id = params[0]
     case_ticket = @conversation.case_tickets.where.not(status: CaseTicket::CLOSED_STATUSES).order(created_at: :desc).first
 
     if case_type_id.to_s == 'nil'
-      case_ticket&.update!(case_type_id: nil)
+      # Hoja de ruta E1.4: sin tipo cuenta como Soporte, así que a una oportunidad
+      # no se le quita el tipo (la clase es fija).
+      case_ticket.update!(case_type_id: nil) if case_ticket.present? && !case_ticket.commercial?
       return
     end
 
     case_type = @account.case_types.find_by(id: case_type_id)
     return if case_type.blank?
 
-    if case_ticket.present?
+    # Plan-Clase-Comercial F3 (hallazgo #4): un tipo de OTRA clase no convierte en
+    # silencio el caso vigente (un ticket de soporte no se vuelve venta): abre uno nuevo.
+    if case_ticket.present? && same_case_class?(case_ticket, case_type)
       case_ticket.update!(case_type_id: case_type.id)
     else
       Cases::OrchestratorService.new(
         account: @account, contact: @conversation.contact, conversation: @conversation
       ).create_from_automation(case_type_id: case_type.id)
     end
+  end
+
+  # Un caso sin tipo cuenta como Soporte.
+  def same_case_class?(case_ticket, case_type)
+    (case_ticket.case_type&.case_class || 'support') == case_type.case_class
   end
 
   # proyecto@automatizacion_tracking: crea un ContactTracking para el contacto de la conversación

@@ -27,11 +27,16 @@ class CaseTicketRelation < ApplicationRecord
   belongs_to :related_ticket, class_name: 'CaseTicket'
 
   enum relation_type: {
-    duplicate:        0, # ticket es duplicado de related
-    parent_child:     1, # ticket es padre de related
-    incident_problem: 2, # ticket (incidente) pertenece a related (problema)
-    incident_change:  3, # ticket (incidente) asociado a related (cambio)
-    change_problem:   4  # ticket (cambio) resuelve related (problema)
+    duplicate:         0, # ticket es duplicado de related
+    parent_child:      1, # ticket es padre de related
+    incident_problem:  2, # ticket (incidente) pertenece a related (problema)
+    incident_change:   3, # ticket (incidente) asociado a related (cambio)
+    change_problem:    4, # ticket (cambio) resuelve related (problema)
+    # Plan-Clase-Orden-de-Trabajo F2b. Al FINAL, sin reordenar nada de arriba.
+    work_order_origin: 5, # ticket (orden de trabajo) nació de related (ticket u oportunidad)
+    # Plan-Clase-Proyecto P2. Al FINAL, sin reordenar nada de arriba.
+    project_member:    6, # ticket (orden o ticket de Soporte) pertenece a related (proyecto)
+    project_origin:    7  # ticket (proyecto) nació de related (oportunidad ganada)
   }
 
   validates :relation_type, presence: true
