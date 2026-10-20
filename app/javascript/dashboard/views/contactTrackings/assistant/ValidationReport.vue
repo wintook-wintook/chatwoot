@@ -23,8 +23,9 @@
 // ============================================================================
 import CreateLabelButton from './CreateLabelButton.vue';
 
-// Avisos de una etiqueta que la cuenta no tiene: se puede crear desde aquí.
-const LABEL_CODES = ['label_not_found', 'state_label_not_found'];
+// Avisos de una etiqueta que la cuenta no tiene: se puede crear desde aquí. Solo queda
+// pago_confirmado (@confirmar_servicio): las de las rutas y [ETIQUETAS] ya no se revisan.
+const LABEL_CODES = ['state_label_not_found'];
 
 export default {
   components: { CreateLabelButton },

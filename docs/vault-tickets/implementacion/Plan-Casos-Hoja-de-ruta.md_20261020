@@ -1,0 +1,83 @@
+---
+titulo: Plan — Casos: hoja de ruta (Comercial, Soporte, Órdenes, Proyectos)
+tipo: implementación
+fase: E0–E5
+tags: [tickets, plan, casos, comercial, soporte, ordenes-de-trabajo, proyectos, navegacion]
+---
+
+# Plan — Casos: hoja de ruta
+
+Continuación de [[Plan-Clase-Comercial]] (F0–F5). Rama `feat/nva_oportunidad`.
+
+## Decisiones
+- **«Casos»** es el nombre que agrupa todas las clases. Cada clase nombra a sus elementos:
+  Soporte → **Tickets**, Comercial → **Oportunidades**, Proyectos → **Proyectos**,
+  Órdenes de trabajo → **Órdenes**. «Ticket» = caso de Soporte.
+- Navegación con **selector de clase** (opción B), orden **Comercial | Soporte** (luego Proyectos, Órdenes).
+- **Soporte y Órdenes de trabajo son clases distintas**: soporte es reactivo y se mide por SLA; la
+  orden es trabajo planeado (fecha, técnico, horas, materiales, firma). Mientras no exista la
+  clase, una OT es un **tipo dentro de Soporte** con campos personalizados; luego se cambia de clase.
+- Recorrido del cliente: Comercial (ganada) → Proyecto / Orden (implementar) → Soporte.
+
+## Etapas
+| Etapa | Contenido | Estado |
+|---|---|---|
+| E0 | Revisión en navegador de F0–F5 (✅ por el usuario 2026-10-20) + commit F0–F5 | revisión ✅ · commit ⏳ |
+| E1 (F6) | Menú «Casos» con selector de clase, rutas por clase, Configuración en un bloque | ✅ 2026-10-20 |
+| E2 (F7) | Comercial completo | ⏳ |
+| E3 (F8) | Soporte completo | ⏳ |
+| E4 (F9) | Órdenes de trabajo (plan propio) | después |
+| E5 (F10) | Proyectos (plan propio) | después |
+
+## E1 — lo construido
+- `helper/caseClasses.js`: `CASE_CLASSES` (orden, flag, color, i18n), `CLASS_VIEW_ROUTES`,
+  `rememberCaseClass` / `lastCaseClass` (sessionStorage por cuenta, tolerante a fallos).
+- Rutas `tickets/:caseClass(support|commercial)/list|board|metrics` (`gestorTickets_class_*`).
+  `tickets`, `tickets/kanban`, `tickets/metrics` (nombres de siempre) **redirigen** a la última
+  clase usada (Soporte si no hay) → enlaces viejos, `$router.push` y menú siguen funcionando.
+- `CaseClassSwitcher.vue` en el encabezado de Lista, Tablero y Métricas: cambia de clase sin cambiar
+  de vista; oculto con una sola clase; recuerda la clase; si la clase no está habilitada manda a
+  Soporte (solo cuando la cuenta ya cargó sus flags).
+- `ClassMetrics.vue`: Métricas por clase (Soporte → `Metrics.vue`, Comercial → `CommercialMetrics.vue`).
+- Menú: **Lista · Tablero · Métricas · Tareas** (neutras; activas por `toStateName`) +
+  **Configuración** (un grupo admin: Tipos, Clasificación, SLA, Reglas, IA, Portales, Ajustes, Folios).
+  Se quitaron los grupos Definiciones / Automatización / Ajustes y el grupo Comercial de F4.
+- El selector **es el título** de la vista (decisión del usuario: no anteponer «Tickets» /
+  «Oportunidades»). Solo con una clase activa, sin selector, se pinta el título por clase
+  (`CASE_TICKETS.CLASSES.*`: Tickets / Tablero de tickets / Métricas de soporte; Oportunidades /
+  Embudo / Métricas comerciales) — lo dibuja el propio `CaseClassSwitcher` (prop `title`).
+- Detalle: al abrir un caso se recuerda su clase; «Volver» va a la lista de su clase.
+- Spec: `routes/dashboard/gestorTickets/routes.spec.js` (resolución, sin choques, redirecciones).
+
+## E2 — Comercial completo (F7)
+Necesario: (1) nueva oportunidad desde la lista con buscador de contacto; (2) «Usar columnas del
+embudo» en un tipo que pasó a Comercial (aviso @solicitudes/«Pagado»); (3) panel de conversación y
+contacto separando oportunidades y tickets; (4) notificación propia: oportunidad retomada y cierre
+estimado vencido (revisión diaria); (5) cliente escribe en una pospuesta → retomar o avisar (decide el usuario).
+Opcional: (6) cada vendedor ve solo las suyas; (7) `@crear_oportunidad`; (8) productos/cotización (plan aparte).
+
+## E3 — Soporte completo (F8)
+Necesario: (1) concurrencia — `update` respeta el lock + bloqueo optimista ([[Analisis-Concurrencia-Edicion]]);
+(2) validador de flujo de columnas; (3) historial de casos en el perfil del contacto; (4) guía para
+OT provisional como tipo «Visita técnica» con campos personalizados.
+Recomendado: (5) export CSV; (6) reglas precargadas; (7) ticket desde correo; (8) imprimir ficha;
+(9) badge de tareas vencidas en el menú. Portal (i18n en, Tailwind sin CDN, widget, dominio) queda en [[Plan-User-Portal]].
+
+## E4 — Órdenes de trabajo (F9)
+Clase `work_order` (enum ya reservado) + flag `case_work_order` al final. Fecha/hora programada,
+técnico(s), horas estimadas/reales, materiales, checklist (Tareas), conformidad/firma, facturable.
+Agenda (módulo Reuniones / Google Calendar). Nace de un ticket, de una oportunidad ganada o de un
+proyecto (enlazada). Métricas: cumplimiento, horas real vs estimado, retrabajos.
+
+## E5 — Proyectos (F10)
+Clase `project` + flag `case_project`. Fases como columnas con fechas, avance %, hitos; casos hijos
+(órdenes, tareas, tickets) por relaciones; nace de una oportunidad ganada; línea de tiempo;
+métricas de avance vs plan y horas vs presupuesto.
+
+## Pendiente de decidir
+- E2(5): ¿retomar sola la pospuesta cuando el cliente escribe, o solo avisar?
+- E2(6) y E2(7): ¿entran?
+- E3: confirmar necesarios y elegir recomendados.
+
+## 🔗 Relacionado
+[[00-Indice]] · [[Plan-Clase-Comercial]] · [[Pendiente]] · [[Trampas]]

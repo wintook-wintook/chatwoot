@@ -91,7 +91,7 @@ RSpec.describe ContactTrackings::Assistant::AuditService do
 
     # Los avisos de "funciona pero mal" se cuentan aparte: no descalifican al agente.
     it 'cuenta los que degradan sin marcar al agente como roto' do
-      agente('Soporte', '@ruta(soporte #soporte_inexistente: no puedo entrar): @buscar_articulo')
+      agente('Soporte', "@ruta(soporte #soporte: no puedo entrar): @buscar_articulo\n\n[EVIDENCIA]\nUsa @discourse.")
 
       fila = revisar.first
       expect(fila[:status]).to eq(:routed)

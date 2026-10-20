@@ -28,9 +28,15 @@ class PublishedPrompts::Publisher
     @publication ||= PublishedPrompt.find_or_initialize_by(tracking_template: @template)
   end
 
-  def publish!(title: nil, description: nil, category: nil, attachment_ids: nil)
+  # variables (proyecto@adaptar_prompts_publicados, F4): [{ text, label }] del negocio del
+  # autor, que en la copia publicada van como <PENDIENTE: label>. nil (no vino) = las de la
+  # versión anterior. Si alguna no aparece en el Entrenamiento, no se publica
+  # (PublishedPrompts::Variables::Invalid).
+  def publish!(title: nil, description: nil, category: nil, attachment_ids: nil, variables: nil)
+    variables = checked_variables(variables)
     archivos = selected_attachments(attachment_ids)
     take_snapshot(archivos)
+    apply_variables(variables)
     publication.assign_attributes(listing(title, description, category))
     publication.assign_attributes(
       account: @template.account,
@@ -52,6 +58,18 @@ class PublishedPrompts::Publisher
   end
 
   private
+
+  def checked_variables(variables)
+    lista = variables.nil? ? Array(publication.variables) : PublishedPrompts::Variables.normalize(variables)
+    PublishedPrompts::Variables.validate!(lista, @template.complementary_prompt)
+    lista
+  end
+
+  # Solo en el Entrenamiento publicado: el agente del autor no cambia.
+  def apply_variables(variables)
+    publication.prompt = PublishedPrompts::Variables.apply(publication.prompt, variables)
+    publication.variables = variables
+  end
 
   def selected_attachments(attachment_ids)
     adjuntos = @template.ai_agent_attachments.includes(file_attachment: :blob)

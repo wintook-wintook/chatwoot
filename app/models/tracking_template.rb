@@ -11,6 +11,7 @@
 # Table name: tracking_templates
 #
 #  id                            :bigint           not null, primary key
+#  adaptation_answers            :jsonb            not null
 #  ai_context                    :text
 #  booking_calendar_ids          :jsonb            not null
 #  calendar_event_duration       :integer          default(30)
@@ -50,7 +51,7 @@
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (inbox_id => inboxes.id)
 #  fk_rails_...  (published_prompt_id => published_prompts.id) ON DELETE => nullify
-#  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (user_id => users.id) ON DELETE => nullify
 #
 
 class TrackingTemplate < ApplicationRecord
@@ -84,6 +85,10 @@ class TrackingTemplate < ApplicationRecord
   validates :timezone, inclusion: { in: TZInfo::Timezone.all_identifiers }, allow_blank: true
   # proyecto@contact_tracking: palabras clave de acción
   validate :keyword_actions_valid_structure
+  # proyecto@adaptar_prompts_publicados (F5): con <PENDIENTE:> no se le asigna bandeja. Solo
+  # cuando cambia la bandeja o el texto, para no trabar ediciones que no tienen que ver.
+  validate :inbox_requires_complete_setup,
+           if: -> { inbox_id.present? && (will_save_change_to_inbox_id? || will_save_change_to_complementary_prompt?) }
 
   scope :by_tag, ->(tag) { where('tags @> ?', [tag].to_json) }
   scope :by_inbox, ->(inbox_id) { where(inbox_id: inbox_id) }
@@ -130,6 +135,12 @@ class TrackingTemplate < ApplicationRecord
     self.whatsapp_templates = [] unless whatsapp_templates.is_a?(Array)
     self.tags               = [] unless tags.is_a?(Array)
     self.keyword_actions    = [] unless keyword_actions.is_a?(Array)
+  end
+
+  def inbox_requires_complete_setup
+    return unless ContactTrackings::PendingSetup.blocked?(self)
+
+    errors.add(:base, ContactTrackings::PendingSetup.message(self, 'inbox_blocked'))
   end
 
   def keyword_actions_valid_structure

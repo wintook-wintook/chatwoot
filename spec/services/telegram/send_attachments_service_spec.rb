@@ -98,6 +98,21 @@ RSpec.describe Telegram::SendAttachmentsService do
       end
     end
 
+    # proyecto@telegram_acentos — con HTTParty estos nombres tronaban (Encoding::CompatibilityError) y el documento no salía.
+    context 'when the document name has accents' do
+      before do
+        attach_file_to_message(message, 'file', 'sample.pdf', 'application/pdf', name: 'Cotización LÓPEZ PÉREZ.pdf')
+        message.save!
+      end
+
+      it 'sends the document keeping its original name' do
+        expect(service.perform).to eq('document')
+        expect(a_request(:post, "#{telegram_api_url}/sendDocument")
+          .with { |req| req.body.dup.force_encoding('UTF-8').include?('filename="Cotización LÓPEZ PÉREZ.pdf"') })
+          .to have_been_made.once
+      end
+    end
+
     def attach_files(message)
       attach_file_to_message(message, 'file', 'sample.pdf', 'application/pdf')
       attach_file_to_message(message, 'image', 'sample.png', 'image/png')
@@ -106,9 +121,9 @@ RSpec.describe Telegram::SendAttachmentsService do
       message.save!
     end
 
-    def attach_file_to_message(message, type, filename, content_type)
+    def attach_file_to_message(message, type, filename, content_type, name: filename)
       attachment = message.attachments.new(account_id: message.account_id, file_type: type)
-      attachment.file.attach(io: Rails.root.join("spec/assets/#{filename}").open, filename: filename, content_type: content_type)
+      attachment.file.attach(io: Rails.root.join("spec/assets/#{filename}").open, filename: name, content_type: content_type)
     end
   end
 end

@@ -81,6 +81,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # decida si escala a BotSeller)
   def process_message_for_tracking(tracking, message)
     Rails.logger.info "[TrackingBot] 🔍 Tracking ##{tracking.id} (#{tracking.status})"
+    # proyecto@adaptar_prompts_publicados (F5): con <PENDIENTE:> en su Entrenamiento no contesta.
+    if ContactTrackings::PendingSetup.blocked?(tracking)
+      Rails.logger.warn "[TrackingBot] ⛔ Tracking ##{tracking.id}: #{ContactTrackings::PendingSetup.message(tracking)}"
+      return false
+    end
 
     # [Gestor de Tickets] hook — falla silenciosamente para no romper el bot @tickets_cases
     begin

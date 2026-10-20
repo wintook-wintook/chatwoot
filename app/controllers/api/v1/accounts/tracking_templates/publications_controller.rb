@@ -21,6 +21,8 @@ class Api::V1::Accounts::TrackingTemplates::PublicationsController < Api::V1::Ac
   def create
     publisher.publish!(**publication_params.to_h.symbolize_keys)
     render json: publication_json, status: :created
+  rescue PublishedPrompts::Variables::Invalid => e # proyecto@adaptar_prompts_publicados (F4)
+    render json: { message: e.message }, status: :unprocessable_entity
   end
 
   def destroy
@@ -45,10 +47,11 @@ class Api::V1::Accounts::TrackingTemplates::PublicationsController < Api::V1::Ac
   end
 
   def publication_params
-    params.fetch(:publication, {}).permit(:title, :description, :category, attachment_ids: [])
+    params.fetch(:publication, {}).permit(:title, :description, :category, attachment_ids: [], variables: %i[text label])
   end
 
-  PUBLICATION_FIELDS = %i[id title description category version status downloads_count published_at requirements].freeze
+  PUBLICATION_FIELDS = %i[id title description category version status downloads_count published_at requirements
+                          variables].freeze
 
   # `publication` es null mientras el agente no se haya publicado nunca. `preview` es lo
   # que se publicaría HOY (requisitos detectados en el prompt actual), para el modal.

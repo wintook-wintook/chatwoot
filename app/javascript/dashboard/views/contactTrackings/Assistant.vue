@@ -46,6 +46,7 @@ import {
 } from './assistant/draftNavigation';
 import DraftLineMarks from './assistant/DraftLineMarks.vue';
 import ChangeLog from './assistant/ChangeLog.vue';
+import ConfigureTab from './assistant/ConfigureTab.vue';
 import { withCannedGroup } from './assistant/knowledgeGroup';
 import { emitter } from 'shared/helpers/mitt';
 import { ASSISTANT_SOURCES_CHANGED } from './assistant/sourceDirective';
@@ -108,6 +109,10 @@ const SHOW_CHAT = true;
 // que todavía no se guardaron como Agente IA (los guardados están en «Agentes IA»).
 const SHOW_SESSIONS_TAB = true;
 
+// Las pestañas «Versiones» y «Cambios» del Entrenamiento. Escondidas el 20/10/2026
+// por el momento; el historial se sigue guardando igual.
+const SHOW_HISTORY_TABS = false;
+
 // El backend devuelve hasta 50 conversaciones (TrackingAssistantSession::LIST_LIMIT),
 // así que el paginado es sobre lo que ya está en memoria: no hay una segunda página
 // que pedir. Diez por pantalla entran sin scroll en una laptop.
@@ -154,6 +159,7 @@ export default {
     InterviewPanel,
     DraftLineMarks,
     ChangeLog,
+    ConfigureTab,
     SessionCard,
     SortableTh,
     ProgressStrip,
@@ -209,6 +215,10 @@ export default {
       // qué muestra el panel derecho: el editor o la lista de versiones.
       versions: [],
       draftTab: 'editor',
+      // proyecto@adaptar_prompts_publicados — pestaña «Configurar»: lo que el texto
+      // usa y la cuenta no tiene (AdaptationInventory). Se pide junto con el comprobador.
+      adaptationItems: [],
+      isAdapting: false,
       // La etapa del turno en curso, consultada mientras se espera ({ stage, … }).
       turnStage: null,
       // El canal del agente. Decide con qué modelo clasifica y contesta el motor
@@ -308,6 +318,29 @@ export default {
     };
   },
   computed: {
+    // proyecto@adaptar_prompts_publicados — cuántas cosas faltan configurar.
+    adaptationMissing() {
+      return this.adaptationItems.filter(item => item.status === 'missing')
+        .length;
+    },
+    editingTemplateId() {
+      return this.editingTemplate ? this.editingTemplate.id : null;
+    },
+    // Un agente bajado de la Galería trae cosas de la cuenta de su autor.
+    isDownloadedTemplate() {
+      const id = this.editingTemplateId;
+      const template = id && this.templates.find(t => t.id === id);
+      return Boolean(template && template.published_prompt_id);
+    },
+    // D1: la pestaña aparece con pendientes, en un agente bajado (aunque ya esté
+    // completo, para ver los ✔) y mientras se está en ella (no desaparece al aplicar).
+    showConfigureTab() {
+      return (
+        this.adaptationMissing > 0 ||
+        this.isDownloadedTemplate ||
+        this.draftTab === 'configure'
+      );
+    },
     // Las líneas del texto con hallazgos, para pintarlas en el editor.
     draftLineMarks() {
       return lineMarks(this.draft, this.validation);
@@ -334,6 +367,9 @@ export default {
     },
     showChat() {
       return SHOW_CHAT;
+    },
+    showHistoryTabs() {
+      return SHOW_HISTORY_TABS;
     },
     // Las pestañas visibles, en orden. `panel` es el número que usa activeTab y que
     // decide qué se muestra (v-show="activeTab === N"); no cambia al esconder una.
@@ -613,6 +649,8 @@ export default {
     // Una fuente creada desde el modal de una ruta (RouteFields): la lista de fuentes
     // se recarga y el Entrenamiento se vuelve a comprobar, sin salir del Asistente.
     emitter.on(ASSISTANT_SOURCES_CHANGED, this.onSourcesChanged);
+    // «Configurar» manda a otras pantallas en otra pestaña: al volver, se revisa.
+    window.addEventListener('focus', this.onWindowFocus);
     this.$store.dispatch('inboxes/get');
     // Se espera la lista antes de resolver el ?template_id de la URL: si no, se
     // entraría desde Agentes IA con el panel vacío y sin decir por qué.
@@ -635,6 +673,7 @@ export default {
     clearTimeout(this.validateTimer);
     clearInterval(this.progressTimer);
     emitter.off(ASSISTANT_SOURCES_CHANGED, this.onSourcesChanged);
+    window.removeEventListener('focus', this.onWindowFocus);
     // Lo que quedaba por guardar solo, se manda al salir de la pantalla.
     if (this.autosaveTimer) this.autosaveDraft();
   },
@@ -716,6 +755,7 @@ export default {
       this.isBuilding = !data.draft || pendingCount(data.draft) > 0;
       this.versions = data.versions || [];
       this.draftTab = 'editor';
+      this.adaptationItems = [];
       this.reloadTrainingSections();
       this.dryRunHistory = [];
       this.suggestedTests = null;
@@ -809,6 +849,7 @@ export default {
       this.isBuilding = true;
       this.versions = [];
       this.draftTab = 'editor';
+      this.adaptationItems = [];
       this.reloadTrainingSections();
       this.editingTemplate = null;
       this.activeTab = 0;
@@ -951,7 +992,9 @@ export default {
     // Agente IA de la cuenta. Se abre aquí como cualquier agente cargado (guardar la
     // reemplaza a ella, nunca al original del autor) y el chat arranca diciendo qué se
     // bajó, qué falta configurar y qué contar para adecuarlo.
-    async onPromptInstalled({ tracking_template: copia, requirements }) {
+    // proyecto@adaptar_prompts_publicados (F3): se abre en «Configurar» — lo que falta
+    // se resuelve ahí, ya no se lista en el chat.
+    async onPromptInstalled({ tracking_template: copia }) {
       this.showPublishedPrompts = false;
       await this.$store.dispatch('trackingTemplates/get');
       const template = this.templates.find(t => t.id === copia.id);
@@ -964,34 +1007,28 @@ export default {
 
       this.startFresh();
       this.loadTemplate(template);
+      this.draftTab = 'configure';
       this.messages = [
-        {
-          role: 'assistant',
-          content: this.installedIntro(copia.name, requirements || []),
-        },
+        { role: 'assistant', content: this.installedIntro(copia.name) },
       ];
       if (this.showChat) this.leftPanel = 'chat';
     },
-    installedIntro(name, requirements) {
+    installedIntro(name) {
       const t = (key, args) =>
         this.$t(`TRACKING_ASSISTANT_VIEW.GALLERY.${key}`, args);
-      const pendientes = requirements.map(req => {
-        const kind = this.$t(
-          `TRACKING_TEMPLATES.PUBLISH.REQUIREMENTS.${req.kind.toUpperCase()}`
-        );
-        return `- ${req.name ? `${kind}: ${req.name}` : kind}`;
-      });
       return [
         t('INTRO_DONE', { name }),
-        [t('INTRO_SETUP'), t('INTRO_INBOX'), ...pendientes].join('\n'),
+        t('INTRO_CONFIGURE'),
         t('INTRO_ASK'),
       ].join('\n\n');
     },
     // F7: el texto de la versión nueva va al editor SIN guardar. Cuenta como editado a
     // mano (lastDelivered sigue siendo el guardado): la persona revisa y guarda si quiere.
+    // proyecto@adaptar_prompts_publicados (F6): se abre en «Configurar», prellenada con lo
+    // que ya se había configurado en este agente (adaptation_answers): un clic en Aplicar.
     loadPublishedVersion(published) {
       this.draft = published.prompt || '';
-      this.draftTab = 'editor';
+      this.draftTab = 'configure';
       this.reloadTrainingSections();
       this.validateDraft();
       useAlert(this.$t('TRACKING_ASSISTANT_VIEW.GALLERY.UPDATE_LOADED'));
@@ -1558,8 +1595,10 @@ export default {
     async validateDraft() {
       if (!this.draft.trim()) {
         this.validation = null;
+        this.adaptationItems = [];
         return;
       }
+      this.fetchAdaptation();
       this.isChecking = true;
       try {
         const { data } = await AssistantAPI.validate(this.draft);
@@ -1568,6 +1607,53 @@ export default {
         this.validation = null;
       } finally {
         this.isChecking = false;
+      }
+    },
+    // proyecto@adaptar_prompts_publicados — qué le falta al texto en esta cuenta.
+    // Se pide cada vez que se comprueba: el contador de la pestaña sigue al texto.
+    async fetchAdaptation() {
+      const texto = this.draft;
+      if (!texto.trim()) return;
+      this.isAdapting = true;
+      try {
+        const { data } = await AssistantAPI.getAdaptation(
+          texto,
+          this.editingTemplateId
+        );
+        // Una respuesta vieja (se siguió escribiendo) no pisa a la nueva.
+        if (texto === this.draft) this.adaptationItems = data.items || [];
+      } catch (error) {
+        // Sin inventario, la pestaña se queda con lo último que supo.
+      } finally {
+        this.isAdapting = false;
+      }
+    },
+    // Se volvió a esta pestaña del navegador: si faltaba algo, puede que se haya
+    // creado en la otra (fuente, calendario, tipo de caso).
+    onWindowFocus() {
+      if (this.adaptationMissing > 0) this.onSourcesChanged();
+    },
+    // Lo aplicado en «Configurar» entra al editor como cualquier edición, pero queda
+    // como su propia versión «Configurado», con qué se configuró.
+    async onAdaptationApplied({ text, validation, items, notes }) {
+      this.draft = text;
+      this.validation = validation;
+      this.adaptationItems = items || [];
+      this.reloadTrainingSections();
+      this.draftVersion += 1;
+      clearTimeout(this.autosaveTimer);
+      try {
+        const { data } = await AssistantAPI.autosaveDraft(
+          text,
+          this.sessionId,
+          { source: 'configured', notes }
+        );
+        this.lastAutosaved = text;
+        this.sessionId = data.session_id || this.sessionId;
+        if (data.session && !this.sessionMeta) this.sessionMeta = data.session;
+        if (Array.isArray(data.versions)) this.versions = data.versions;
+      } catch (error) {
+        // Queda en el editor; se guarda con el próximo autoguardado o al guardar.
       }
     },
     async saveDraft(payload) {
@@ -1902,7 +1988,31 @@ export default {
                     >
                       {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_EDITOR') }}
                     </button>
+                    <!-- proyecto@adaptar_prompts_publicados: lo que falta en la cuenta -->
                     <button
+                      v-if="showConfigureTab"
+                      class="mr-3 pb-0.5 border-b-2"
+                      :class="
+                        draftTab === 'configure'
+                          ? 'border-woot-500'
+                          : 'border-transparent font-normal text-slate-500 dark:text-slate-400'
+                      "
+                      @click="draftTab = 'configure'"
+                    >
+                      {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_CONFIGURE') }}
+                      <span
+                        v-if="adaptationMissing"
+                        class="font-normal text-amber-700 dark:text-amber-400"
+                      >
+                        {{
+                          $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_COUNT', {
+                            count: adaptationMissing,
+                          })
+                        }}
+                      </span>
+                    </button>
+                    <button
+                      v-if="showHistoryTabs"
                       class="pb-0.5 border-b-2"
                       :class="
                         draftTab === 'versions'
@@ -1921,6 +2031,7 @@ export default {
                       </span>
                     </button>
                     <button
+                      v-if="showHistoryTabs"
                       class="ml-3 pb-0.5 border-b-2"
                       :class="
                         draftTab === 'log'
@@ -1971,6 +2082,14 @@ export default {
                   v-if="draftTab === 'log'"
                   :versions="versions"
                   :title="(sessionMeta && sessionMeta.title) || ''"
+                />
+                <ConfigureTab
+                  v-else-if="draftTab === 'configure'"
+                  :items="adaptationItems"
+                  :draft="draft"
+                  :template-id="editingTemplateId"
+                  :loading="isAdapting"
+                  @applied="onAdaptationApplied"
                 />
                 <VersionsPanel
                   v-else-if="draftTab === 'versions'"

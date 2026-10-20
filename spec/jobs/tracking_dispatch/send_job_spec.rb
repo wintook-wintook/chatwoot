@@ -47,6 +47,18 @@ RSpec.describe TrackingDispatch::SendJob do
     expect(tracking.tracking_deliveries.last).to have_attributes(status: 'sent', source_id: 'wamid.ok')
   end
 
+  # proyecto@adaptar_prompts_publicados (F5)
+  it 'con <PENDIENTE:> en su Entrenamiento no envía: queda fallido con el motivo' do
+    tracking.update_columns(complementary_prompt: 'Eres de <PENDIENTE: Nombre del negocio>.') # rubocop:disable Rails/SkipsModelValidations
+    envio = meta_accepts
+
+    run
+
+    expect(envio).not_to have_been_requested
+    expect(tracking.reload).to have_attributes(status: 'failed', dispatched_at: nil)
+    expect(tracking.last_error).to include('Nombre del negocio')
+  end
+
   it 'con otra marca no hace nada (otra vuelta ya lo resolvió)' do
     request = meta_accepts
 

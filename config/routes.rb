@@ -169,6 +169,11 @@ Rails.application.routes.draw do
             put  'assistant/autosave', to: 'assistant_autosave#update'
             patch 'assistant/sessions/:id/name', to: 'assistant_autosave#rename'
             post 'assistant/conversation_review', to: 'assistant_review#create'
+            # proyecto@adaptar_prompts_publicados — pestaña «Configurar»: qué falta y aplicarlo
+            post 'assistant/adaptation', to: 'assistant_adaptation#index'
+            post 'assistant/adaptation/apply', to: 'assistant_adaptation#apply'
+            post 'assistant/adaptation/suggest_variables', to: 'assistant_adaptation#suggest_variables'
+            post 'assistant/adaptation/mark_variables', to: 'assistant_adaptation#mark_variables'
             get  'assistant/conversation_review/:turn_id', to: 'assistant_review#show'
           end
 

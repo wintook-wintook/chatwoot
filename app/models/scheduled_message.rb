@@ -27,7 +27,7 @@
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (conversation_id => conversations.id)
-#  fk_rails_...  (user_id => users.id)
+#  fk_rails_...  (user_id => users.id) ON DELETE => cascade
 #
 
 # class ScheduledMessage < ApplicationRecord

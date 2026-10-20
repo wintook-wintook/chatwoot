@@ -113,7 +113,6 @@
         "ROUTE_NAME_PLACEHOLDER": "sales_pricing",
         "ROUTE_TAG": "Label",
         "ROUTE_TAG_NONE": "No label",
-        "ROUTE_TAG_MISSING": "This label does not exist in the account.",
         "ROUTE_TAG_ADD": "Create it",
         "ROUTE_PHRASES": "Customer phrases (this is what picks the route)",
         "ROUTE_PHRASES_PLACEHOLDER": "how much is it, pricing, i want a quote",
@@ -314,6 +313,17 @@
       "FILES": {
         "TITLE": "Agent files to publish",
         "HELP": "Every account that downloads the prompt gets a copy of the checked files. Don't check files that are only for your company."
+      },
+      "VARIABLES": {
+        "TITLE": "Your business details (whoever downloads it fills them in)",
+        "HELP": "Write the texts in your Training that belong only to your company (name, phone, hours) and what they are called. In the published version they become a detail to fill in, and whoever downloads it fills it in the «Set up» tab. Your agent doesn't change.",
+        "TEXT_PLACEHOLDER": "Text in your Training (e.g. Northern Cranes)",
+        "LABEL_PLACEHOLDER": "Called (e.g. Business name)",
+        "COUNT": "Appears {count} times in the Training",
+        "NOT_FOUND": "It doesn't appear in the Training (outside directives and route lines): it can't be published like this.",
+        "ELSEWHERE": "it is also in Context or Objective: it isn't replaced there, keep it generic",
+        "ADD": "Add detail",
+        "REMOVE": "Remove"
       },
       "UPDATE_BADGE": "v{version} available",
       "UPDATE_HINT": "The author published a new version. Open it in the Assistant to see the changes."

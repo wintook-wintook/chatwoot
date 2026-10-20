@@ -67,7 +67,7 @@ En lugar de preguntar «¿es Comercial?» por el código, cada clase declara lo 
 6. El cliente la ve en el bot `@estado_ticket`; en el portal no.
 
 ## F2a — lo construido
-- Migración `20261021160000_add_work_order_to_case_tickets`: en `case_tickets` work_address,
+- Migración `20261024160000_add_work_order_to_case_tickets`: en `case_tickets` work_address,
   estimated_hours / actual_hours (6,2), billable (default false), received_by, received_at,
   conformity_note; tabla `case_work_order_items` (descripción, cantidad > 0, unidad, unit_cost
   opcional, posición; FK cascade al caso).

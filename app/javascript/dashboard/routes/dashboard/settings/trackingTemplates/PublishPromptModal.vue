@@ -19,6 +19,22 @@ import { useAlert } from 'dashboard/composables';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import { formatBytes } from 'shared/helpers/FileHelper';
 
+// proyecto@adaptar_prompts_publicados (F4) — lo que el servidor no reemplaza
+// (PublishedPrompts::Variables::PROTECTED_RE): directivas, líneas @ruta y marcas.
+// Aquí solo sirve para decir «aparece N veces»; quien decide es el servidor.
+const PROTECTED_RE =
+  /\{\{[^}]*\}\}|@[a-z_]+\([^)\n]*\)|^[ \t]*@ruta[^\n]*$|<\s*(?:PENDIENTE|PENDING)\b[^>]*>/gim;
+
+const escapeRegExp = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const countInProse = (text, needle) => {
+  if (!text || !needle) return 0;
+  const patron = new RegExp(escapeRegExp(needle), 'gi');
+  return String(text)
+    .split(PROTECTED_RE)
+    .reduce((total, pieza) => total + (pieza.match(patron) || []).length, 0);
+};
+
 export default {
   props: {
     show: { type: Boolean, default: false },
@@ -35,6 +51,8 @@ export default {
       attachments: [],
       selectedAttachmentIds: [],
       form: { title: '', description: '', category: '' },
+      // F4: [{ text, label }] — datos del negocio que quien lo baje va a llenar.
+      variables: [],
     };
   },
   computed: {
@@ -68,6 +86,12 @@ export default {
     isTitleValid() {
       const length = this.form.title.trim().length;
       return length >= 2 && length <= 100;
+    },
+    // Las que se mandan: con texto. Una fila vacía es una que se está por escribir.
+    filledVariables() {
+      return this.variables
+        .map(v => ({ text: v.text.trim(), label: v.label.trim() }))
+        .filter(v => v.text);
     },
   },
   watch: {
@@ -106,6 +130,45 @@ export default {
         description: pub.description || '',
         category: pub.category || '',
       };
+      this.variables = (pub.variables || []).map(v => ({
+        text: v.text || '',
+        label: v.label || '',
+      }));
+    },
+    addVariable() {
+      this.variables = [...this.variables, { text: '', label: '' }];
+    },
+    removeVariable(index) {
+      this.variables = this.variables.filter((_, i) => i !== index);
+    },
+    // «aparece 3 veces» / «no aparece…» / «también en Contexto u Objetivo…»
+    variableHint(variable) {
+      const texto = variable.text.trim();
+      if (texto.length < 3) return '';
+      const veces = countInProse(this.template.complementary_prompt, texto);
+      if (!veces)
+        return this.$t('TRACKING_TEMPLATES.PUBLISH.VARIABLES.NOT_FOUND');
+      const conteo = this.$t('TRACKING_TEMPLATES.PUBLISH.VARIABLES.COUNT', {
+        count: veces,
+      });
+      const fuera = [this.template.ai_context, this.template.objective].some(
+        campo =>
+          String(campo || '')
+            .toLowerCase()
+            .includes(texto.toLowerCase())
+      );
+      return fuera
+        ? `${conteo} · ${this.$t(
+            'TRACKING_TEMPLATES.PUBLISH.VARIABLES.ELSEWHERE'
+          )}`
+        : conteo;
+    },
+    variableMissing(variable) {
+      const texto = variable.text.trim();
+      return (
+        texto.length >= 3 &&
+        countInProse(this.template.complementary_prompt, texto) === 0
+      );
     },
     requirementText(req) {
       const kind = this.$t(
@@ -128,6 +191,7 @@ export default {
           TrackingTemplatesAPI.publish(this.template.id, {
             ...this.form,
             attachment_ids: this.selectedAttachmentIds,
+            variables: this.filledVariables,
           }),
         'PUBLISHED'
       );
@@ -248,6 +312,73 @@ export default {
           <p class="mt-1 mb-0 text-xs text-slate-500 dark:text-slate-400">
             {{ $t('TRACKING_TEMPLATES.PUBLISH.FILES.HELP') }}
           </p>
+        </fieldset>
+
+        <!-- proyecto@adaptar_prompts_publicados (F4): datos del negocio como variables -->
+        <fieldset class="flex flex-col gap-2">
+          <legend class="mb-1 text-sm">
+            {{ $t('TRACKING_TEMPLATES.PUBLISH.VARIABLES.TITLE') }}
+          </legend>
+          <p class="mb-0 text-xs text-slate-500 dark:text-slate-400">
+            {{ $t('TRACKING_TEMPLATES.PUBLISH.VARIABLES.HELP') }}
+          </p>
+          <div
+            v-for="(variable, index) in variables"
+            :key="index"
+            class="flex flex-col gap-1"
+          >
+            <div class="flex items-center gap-2">
+              <input
+                v-model="variable.text"
+                type="text"
+                class="flex-1 !mb-0 text-sm"
+                maxlength="200"
+                :placeholder="
+                  $t('TRACKING_TEMPLATES.PUBLISH.VARIABLES.TEXT_PLACEHOLDER')
+                "
+              />
+              <input
+                v-model="variable.label"
+                type="text"
+                class="flex-1 !mb-0 text-sm"
+                maxlength="60"
+                :placeholder="
+                  $t('TRACKING_TEMPLATES.PUBLISH.VARIABLES.LABEL_PLACEHOLDER')
+                "
+              />
+              <woot-button
+                type="button"
+                variant="clear"
+                size="small"
+                color-scheme="secondary"
+                icon="dismiss"
+                :title="$t('TRACKING_TEMPLATES.PUBLISH.VARIABLES.REMOVE')"
+                @click="removeVariable(index)"
+              />
+            </div>
+            <span
+              v-if="variableHint(variable)"
+              class="text-xs"
+              :class="
+                variableMissing(variable)
+                  ? 'text-amber-800 dark:text-amber-400'
+                  : 'text-slate-500 dark:text-slate-400'
+              "
+            >
+              {{ variableHint(variable) }}
+            </span>
+          </div>
+          <div>
+            <woot-button
+              type="button"
+              variant="smooth"
+              size="small"
+              icon="add"
+              @click="addVariable"
+            >
+              {{ $t('TRACKING_TEMPLATES.PUBLISH.VARIABLES.ADD') }}
+            </woot-button>
+          </div>
         </fieldset>
 
         <div

@@ -86,6 +86,12 @@ class ExternalDb::ConsultaDirectiveRenderer
     connection&.external_db_queries&.active&.find_by('LOWER(name) = LOWER(?)', directive.name)
   end
 
+  # Solo la conexión de una directiva ya leída, o nil. La pestaña «Configurar» la usa
+  # para ofrecer las otras consultas de esa conexión (proyecto@adaptar_prompts_publicados).
+  def connection_for(directive)
+    resolve_connection(directive.conn)
+  end
+
   # Los parámetros finales de una directiva con "?": lo que llenó la IA, pisado por los
   # valores fijos (siempre ganan), más el posicional y el RFC del contacto como siempre.
   def params_for(directive, query, asked_values)

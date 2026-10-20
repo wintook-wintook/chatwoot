@@ -68,7 +68,7 @@ Clase (código)       Tipos (configurables)
 
 ## F1 — lo construido
 > El cambio de clase (modal de impacto, 409, `log_class_change!`) se retira en E1.4: la clase es fija.
-- Migración `20261021120000_add_case_class_to_case_types` (`case_class` int default 0 + índice).
+- Migración `20261024120000_add_case_class_to_case_types` (`case_class` int default 0 + índice).
 - `CaseType`: enum `case_class` (`_prefix: :class`), `class_change_impact`, `log_class_change!`.
 - `CaseEvent`: `case_class_changed: 34`.
 - `case_types_controller`: `?case_class=`, `OFFERED_CLASSES` (support/commercial),
@@ -80,7 +80,7 @@ Clase (código)       Tipos (configurables)
 - Spec: `spec/requests/api/v1/accounts/case_types_class_spec.rb` (8 casos).
 
 ## F2 — lo construido
-- Migración `20261021130000_add_case_type_to_case_classification` (`case_type_id` FK opcional
+- Migración `20261024130000_add_case_type_to_case_classification` (`case_type_id` FK opcional
   en `case_services` y `case_categories`; NULL = global).
 - `CaseService`/`CaseCategory`: `belongs_to :case_type`, scope `for_type(id)` (globales +
   propios), `applies_to_type?`, valida que el tipo sea de la cuenta. La subcategoría hereda
@@ -97,7 +97,7 @@ Clase (código)       Tipos (configurables)
 - Spec: `spec/models/case_classification_by_type_spec.rb` (8 casos).
 
 ## F3 — lo construido
-- Migración `20261021140000_add_commercial_to_case_tickets`: en `case_tickets` amount (14,2), currency,
+- Migración `20261024140000_add_commercial_to_case_tickets`: en `case_tickets` amount (14,2), currency,
   expected_close_at, probability, outcome (won 0 / lost 1 / cancelled 2), outcome_at, outcome_reason_id
   (FK nullify), outcome_note, postponed_until; `case_type_columns.outcome/probability`; tabla
   `case_outcome_reasons`; `case_settings.default_currency` (MXN).

@@ -36,7 +36,7 @@ contra presupuesto. Elementos: **«Proyectos»**. Color `#6366f1` (índigo).
   su flag. `CaseTypeColumn::PROJECT_TEMPLATE`: Planeación (open, classified, assigned, in_diagnosis)
   · Ejecución (in_progress, escalated) · Pausado (waiting_*) · Entrega (resolved, validating) ·
   Cerrado · Cancelado.
-- Migración `20261021170000_add_project_to_case_tickets`: project_start_on, project_due_on,
+- Migración `20261024170000_add_project_to_case_tickets`: project_start_on, project_due_on,
   budget_hours (8,2), budget_amount (14,2), progress (0–100) + índice parcial de la fecha objetivo.
 - `CaseTicket`: `PROJECT_FIELDS`, `project?`, `project_overdue?` (abierto con objetivo pasado),
   `assign_project_data` + `log_project_change!` (`CaseEvent project_changed: 40`), objetivo ≥ inicio,
@@ -58,7 +58,7 @@ contra presupuesto. Elementos: **«Proyectos»**. Color `#6366f1` (índigo).
   + hitos hechos) / (hijos no cancelados + hitos); sin hijos ni hitos manda `progress` (a mano).
   Horas reales = suma de `actual_hours` de sus órdenes. JSON: `progress` (efectivo),
   `progress_manual`, `project_summary`.
-- Migración `20261021180000_add_milestone_to_case_tasks` (`case_tasks.milestone`). La API de tareas
+- Migración `20261024180000_add_milestone_to_case_tasks` (`case_tasks.milestone`). La API de tareas
   lo acepta y lo devuelve.
 - `CaseProjectChildrenController` (`case_tickets/:id/project_children`): index, create (crear orden o
   ticket dentro —hereda el cliente— o ligar uno existente con `ticket_id`), destroy (lo saca, no lo

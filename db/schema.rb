@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_21_180000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_24_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1513,6 +1513,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_21_180000) do
     t.datetime "published_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "variables", default: [], null: false
     t.index ["account_id"], name: "index_published_prompts_on_account_id"
     t.index ["status", "category"], name: "index_published_prompts_on_status_and_category"
     t.index ["tracking_template_id"], name: "index_published_prompts_on_tracking_template_id", unique: true
@@ -1796,6 +1797,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_21_180000) do
     t.jsonb "training_structure", default: {}, null: false
     t.bigint "published_prompt_id"
     t.integer "published_prompt_version"
+    t.jsonb "adaptation_answers", default: {}, null: false
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
@@ -1941,7 +1943,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_21_180000) do
   add_foreign_key "case_settings", "accounts"
   add_foreign_key "case_tasks", "accounts"
   add_foreign_key "case_tasks", "case_tickets"
-  add_foreign_key "case_tasks", "users", column: "assignee_id"
+  add_foreign_key "case_tasks", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "completed_by_id", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "requester_id", on_delete: :nullify
   add_foreign_key "case_tickets", "case_outcome_reasons", column: "outcome_reason_id", on_delete: :nullify
@@ -1950,8 +1952,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_21_180000) do
   add_foreign_key "case_tickets", "contact_trackings", on_delete: :nullify
   add_foreign_key "case_tickets", "contacts", on_delete: :nullify
   add_foreign_key "case_tickets", "conversations", on_delete: :nullify
-  add_foreign_key "case_tickets", "users", column: "locked_by_id"
-  add_foreign_key "case_tickets", "users", column: "requester_id"
+  add_foreign_key "case_tickets", "users", column: "locked_by_id", on_delete: :nullify
+  add_foreign_key "case_tickets", "users", column: "requester_id", on_delete: :nullify
   add_foreign_key "case_type_columns", "accounts"
   add_foreign_key "case_type_columns", "case_types", on_delete: :cascade
   add_foreign_key "case_type_fields", "accounts"
@@ -1962,7 +1964,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_21_180000) do
   add_foreign_key "command_sessions", "contacts"
   add_foreign_key "command_sessions", "conversations"
   add_foreign_key "command_sessions", "inboxes"
-  add_foreign_key "command_sessions", "users"
+  add_foreign_key "command_sessions", "users", on_delete: :cascade
   add_foreign_key "contact_trackings", "accounts"
   add_foreign_key "contact_trackings", "contacts"
   add_foreign_key "contact_trackings", "conversations"
@@ -1983,7 +1985,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_21_180000) do
   add_foreign_key "published_prompts", "users", on_delete: :nullify
   add_foreign_key "scheduled_messages", "accounts"
   add_foreign_key "scheduled_messages", "conversations"
-  add_foreign_key "scheduled_messages", "users"
+  add_foreign_key "scheduled_messages", "users", on_delete: :cascade
   add_foreign_key "tracking_agent_briefs", "accounts"
   add_foreign_key "tracking_agent_briefs", "tracking_assistant_sessions", on_delete: :nullify
   add_foreign_key "tracking_agent_briefs", "tracking_templates", on_delete: :nullify
@@ -2000,7 +2002,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_21_180000) do
   add_foreign_key "tracking_campaigns", "accounts"
   add_foreign_key "tracking_campaigns", "inboxes"
   add_foreign_key "tracking_campaigns", "tracking_templates"
-  add_foreign_key "tracking_campaigns", "users"
+  add_foreign_key "tracking_campaigns", "users", on_delete: :nullify
   add_foreign_key "tracking_deliveries", "accounts", on_delete: :cascade
   add_foreign_key "tracking_deliveries", "contact_trackings", on_delete: :cascade
   add_foreign_key "tracking_deliveries", "messages", on_delete: :nullify
@@ -2008,9 +2010,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_21_180000) do
   add_foreign_key "tracking_templates", "accounts"
   add_foreign_key "tracking_templates", "inboxes"
   add_foreign_key "tracking_templates", "published_prompts", on_delete: :nullify
-  add_foreign_key "tracking_templates", "users"
+  add_foreign_key "tracking_templates", "users", on_delete: :nullify
   add_foreign_key "user_calendar_integrations", "accounts"
-  add_foreign_key "user_calendar_integrations", "users"
+  add_foreign_key "user_calendar_integrations", "users", on_delete: :cascade
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").
       after(:insert).
