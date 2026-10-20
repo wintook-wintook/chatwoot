@@ -19,6 +19,7 @@ class ContactTrackingJob < ApplicationJob
     # proyecto@automatizacion_campanas — Fase 2: la cuenta usa el despachador
     # (TrackingDispatch::SendJob). Un job viejo que quedó en Sidekiq no debe enviar en paralelo.
     return if tracking.dispatched?
+    return block_pending_setup(tracking) if ContactTrackings::PendingSetup.blocked?(tracking)
 
     # ⭐ LOCK PESIMISTA: Evita ejecución simultánea del mismo tracking
     tracking.with_lock do
@@ -87,6 +88,14 @@ class ContactTrackingJob < ApplicationJob
   end
 
   private
+
+  # proyecto@adaptar_prompts_publicados (F5): el Entrenamiento copiado todavía tiene
+  # <PENDIENTE: …>. No se le escribe al cliente: el seguimiento queda fallido y dice qué falta.
+  def block_pending_setup(tracking)
+    motivo = ContactTrackings::PendingSetup.message(tracking)
+    Rails.logger.warn "[ContactTracking] ⛔ Tracking #{tracking.id}: #{motivo}"
+    tracking.update_columns(status: 'failed', last_error: motivo.truncate(250), updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
 
   # Decide por dónde sale el intento (plantilla, sesión con IA u otro canal) y lo envía.
   # true / false según se envió, o :aborted si no se puede enviar y el seguimiento ya quedó

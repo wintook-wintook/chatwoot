@@ -15,6 +15,7 @@
 #  settings             :jsonb            not null
 #  status               :string           default("published"), not null
 #  title                :string           not null
+#  variables            :jsonb            not null
 #  version              :integer          default(1), not null
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null

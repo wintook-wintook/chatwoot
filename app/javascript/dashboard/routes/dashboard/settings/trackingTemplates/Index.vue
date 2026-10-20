@@ -110,13 +110,21 @@ export default {
       if (this.currentPage > pages) this.currentPage = pages;
     },
   },
-  mounted() {
-    this.$store.dispatch('trackingTemplates/get');
+  async mounted() {
     if (!this.inboxes || this.inboxes.length === 0) {
       this.$store.dispatch('inboxes/get');
     }
+    await this.$store.dispatch('trackingTemplates/get');
+    this.openFromQuery();
   },
   methods: {
+    // proyecto@adaptar_prompts_publicados (D7) — ?edit=<id> abre la ficha de ese agente:
+    // es a donde lleva «Configurar» del Asistente para la bandeja y el calendario.
+    openFromQuery() {
+      const id = Number(this.$route.query.edit);
+      const template = id && this.templates.find(t => t.id === id);
+      if (template) this.goToEditForm(template);
+    },
     onPageChange(page) {
       this.currentPage = page;
     },
@@ -164,7 +172,10 @@ export default {
           this.formMode === 'create'
             ? this.$t('TRACKING_TEMPLATES.CREATE.API.ERROR_MESSAGE')
             : this.$t('TRACKING_TEMPLATES.EDIT.API.ERROR_MESSAGE');
-        useAlert(msg);
+        // proyecto@adaptar_prompts_publicados (F5): el motivo del servidor (p. ej. «tiene
+        // datos por configurar») dice qué hacer; el genérico no.
+        const servidor = error && error.response && error.response.data;
+        useAlert((servidor && servidor.message) || msg);
       }
     },
     openDeleteConfirm(template) {

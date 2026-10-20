@@ -37,6 +37,8 @@ class TrackingDispatch::SendJob < ContactTrackingJob
       return unless claimed?(tracking, token)
       return release(tracking) if tracking.tracking_campaign&.status == 'paused'
 
+      # proyecto@adaptar_prompts_publicados (F5): con <PENDIENTE:> no sale; queda fallido con el motivo.
+      ContactTrackings::PendingSetup.ensure!(tracking)
       tracking.update_columns(last_attempt_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       result = previous_send(tracking) || deliver(tracking)
       finish(tracking, token, result)
