@@ -141,7 +141,8 @@ class TrackingAssistantSession < ApplicationRecord
   MAX_VERSIONS = 30
   # saved: lo que se guardó en el Agente IA (25/09/2026: reabrir la sesión mostraba el
   # texto de antes de las últimas ediciones a mano).
-  VERSION_SOURCES = %w[loaded manual assistant saved].freeze
+  # configured: lo aplicado desde la pestaña «Configurar» (proyecto@adaptar_prompts_publicados).
+  VERSION_SOURCES = %w[loaded manual assistant saved configured].freeze
   MAX_CHANGE_LINES = 15
 
   # Agrega una versión si el texto cambió respecto de la última. No guarda.
@@ -239,8 +240,14 @@ class TrackingAssistantSession < ApplicationRecord
   end
 
   # El guardado automático de lo editado a mano (ver add_version, autosave:).
-  def autosave!(draft)
-    add_version(draft: draft, source: 'manual', autosave: true)
+  # Lo configurado en «Configurar» es su propia versión, con sus notas: no la pisa el
+  # siguiente guardado automático (eso solo pasa entre autoguardados seguidos).
+  def autosave!(draft, source: 'manual', notes: nil)
+    if source == 'configured'
+      add_version(draft: draft, source: 'configured', notes: notes)
+    else
+      add_version(draft: draft, source: 'manual', autosave: true)
+    end
     self.draft = draft
     save!
   end

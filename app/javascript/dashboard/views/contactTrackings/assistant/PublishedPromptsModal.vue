@@ -35,7 +35,35 @@ export default {
       selected: null,
       isLoadingDetail: false,
       isInstalling: false,
+      // proyecto@adaptar_prompts_publicados (F3): el prompt cruzado con ESTA cuenta.
+      // null = no se pudo cruzar; se muestra la lista del autor como antes.
+      adaptation: null,
     };
+  },
+  computed: {
+    // Lo que falta en la cuenta, sin los archivos que viajan con la publicación
+    // (se bajan con ella y su {{nombre}} funciona desde ya).
+    toConfigure() {
+      if (!this.adaptation) return [];
+      const archivos = ((this.selected && this.selected.files) || []).map(f =>
+        String(f.name).toLowerCase()
+      );
+      return this.adaptation.filter(
+        item =>
+          item.status === 'missing' &&
+          !(
+            item.kind === 'attachment' &&
+            archivos.includes(String(item.name).toLowerCase())
+          )
+      );
+    },
+    alreadyHave() {
+      if (!this.adaptation) return [];
+      return this.adaptation.filter(item => item.status === 'ok');
+    },
+    alreadyHaveText() {
+      return this.alreadyHave.map(this.adaptationText).join(' · ');
+    },
   },
   watch: {
     show(visible) {
@@ -73,10 +101,12 @@ export default {
     },
     async openDetail(prompt) {
       this.selected = { ...prompt };
+      this.adaptation = null;
       this.isLoadingDetail = true;
       try {
         const { data } = await AssistantAPI.getPublishedPrompt(prompt.id);
         this.selected = data;
+        await this.fetchAdaptation(data.prompt);
       } catch (error) {
         // Despublicada entre la lista y el clic: se vuelve a la lista actualizada.
         this.selected = null;
@@ -84,6 +114,22 @@ export default {
       } finally {
         this.isLoadingDetail = false;
       }
+    },
+    // Sin agente todavía: la bandeja no sale aquí (siempre hay que elegirla).
+    async fetchAdaptation(prompt) {
+      if (!prompt) return;
+      try {
+        const { data } = await AssistantAPI.getAdaptation(prompt);
+        this.adaptation = data.items || [];
+      } catch (error) {
+        this.adaptation = null;
+      }
+    },
+    adaptationText(item) {
+      const kind = this.$t(
+        `TRACKING_ASSISTANT_VIEW.CONFIGURE.KIND.${item.kind.toUpperCase()}`
+      );
+      return item.name ? `${kind}: ${item.name}` : kind;
     },
     async install() {
       if (!this.selected || this.isInstalling) return;
@@ -273,11 +319,46 @@ export default {
           <div
             class="p-3 text-sm border rounded-md border-slate-100 dark:border-slate-700 bg-slate-25 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
           >
-            <p class="mb-1 font-medium">
+            <!-- F3: cruzado con tu cuenta (lo que ya tienes no se pide) -->
+            <template v-if="adaptation">
+              <p class="mb-1 font-medium">
+                {{
+                  $t('TRACKING_ASSISTANT_VIEW.GALLERY.CONFIGURE_TITLE', {
+                    count: toConfigure.length + 1,
+                  })
+                }}
+              </p>
+              <ul class="mb-0 list-disc ltr:ml-5 rtl:mr-5">
+                <li v-for="item in toConfigure" :key="item.key">
+                  {{ adaptationText(item) }}
+                </li>
+                <li>
+                  {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.CONFIGURE_INBOX') }}
+                </li>
+              </ul>
+              <p
+                v-if="alreadyHave.length"
+                class="mt-2 mb-0 text-xs text-slate-500 dark:text-slate-400"
+              >
+                {{
+                  $t('TRACKING_ASSISTANT_VIEW.GALLERY.CONFIGURE_READY', {
+                    list: alreadyHaveText,
+                  })
+                }}
+              </p>
+              <p class="mt-2 mb-0 text-xs text-slate-500 dark:text-slate-400">
+                {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.CONFIGURE_HINT') }}
+              </p>
+            </template>
+            <p v-else class="mb-1 font-medium">
               {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.REQUIREMENTS_TITLE') }}
             </p>
             <ul
-              v-if="selected.requirements && selected.requirements.length"
+              v-if="
+                !adaptation &&
+                selected.requirements &&
+                selected.requirements.length
+              "
               class="mb-0 list-disc ltr:ml-5 rtl:mr-5"
             >
               <li
@@ -287,7 +368,7 @@ export default {
                 {{ requirementText(req) }}
               </li>
             </ul>
-            <p v-else class="mb-0">
+            <p v-else-if="!adaptation" class="mb-0">
               {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.NO_REQUIREMENTS') }}
             </p>
           </div>

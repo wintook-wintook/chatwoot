@@ -113,7 +113,6 @@
         "ROUTE_NAME_PLACEHOLDER": "comercial_precios",
         "ROUTE_TAG": "Etiqueta",
         "ROUTE_TAG_NONE": "Sin etiqueta",
-        "ROUTE_TAG_MISSING": "Esta etiqueta no existe en la cuenta.",
         "ROUTE_TAG_ADD": "Crearla",
         "ROUTE_PHRASES": "Frases del cliente (con esto se elige la ruta)",
         "ROUTE_PHRASES_PLACEHOLDER": "cuanto cuesta, precios, quiero cotizar",
@@ -314,6 +313,17 @@
       "FILES": {
         "TITLE": "Archivos del agente que se publican",
         "HELP": "Cualquier cuenta que baje el prompt recibirá una copia de los archivos marcados. No marques los que sean solo de tu empresa."
+      },
+      "VARIABLES": {
+        "TITLE": "Datos de tu negocio (quien lo baje los va a llenar)",
+        "HELP": "Escribe los textos de tu Entrenamiento que son solo de tu empresa (nombre, teléfono, horario) y cómo se llaman. En la versión publicada se cambian por un dato por completar, y quien lo baje lo llena en la pestaña «Configurar». Tu agente no cambia.",
+        "TEXT_PLACEHOLDER": "Texto en tu Entrenamiento (ej. Grúas del Norte)",
+        "LABEL_PLACEHOLDER": "Se llamará (ej. Nombre del negocio)",
+        "COUNT": "Aparece {count} veces en el Entrenamiento",
+        "NOT_FOUND": "No aparece en el Entrenamiento (fuera de directivas y líneas de ruta): así no se puede publicar.",
+        "ELSEWHERE": "también está en Contexto u Objetivo: ahí no se cambia, déjalo genérico",
+        "ADD": "Agregar dato",
+        "REMOVE": "Quitar"
       },
       "UPDATE_BADGE": "v{version} disponible",
       "UPDATE_HINT": "El autor publicó una versión nueva. Ábrelo en el Asistente para ver los cambios."

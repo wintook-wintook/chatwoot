@@ -200,8 +200,14 @@ class AssistantAPI extends ApiClient {
   }
 
   // Guardado automático de lo editado a mano: crea la conversación si todavía no hay.
-  autosaveDraft(draft, sessionId = null) {
-    return axios.put(`${this.url}/autosave`, { draft, session_id: sessionId });
+  // source: 'configured' (pestaña «Configurar») queda como su propia versión, con notes.
+  autosaveDraft(draft, sessionId = null, { source = null, notes = [] } = {}) {
+    return axios.put(`${this.url}/autosave`, {
+      draft,
+      session_id: sessionId,
+      source,
+      notes,
+    });
   }
 
   // Revisar una conversación real: `text` es lo que se escribió en el chat, con el
@@ -357,6 +363,39 @@ class AssistantAPI extends ApiClient {
   markPublishedPromptSeen(id, templateId) {
     return axios.post(`${this.url}/published_prompts/${id}/seen`, {
       template_id: templateId,
+    });
+  }
+
+  // proyecto@adaptar_prompts_publicados — pestaña «Configurar».
+  // Qué le falta a este texto en la cuenta → { items }
+  getAdaptation(text, templateId = null) {
+    return axios.post(`${this.url}/adaptation`, {
+      text,
+      tracking_template_id: templateId,
+    });
+  }
+
+  // Escribe en el texto lo configurado ({ key: valor }); no guarda nada.
+  // → { text, applied, rejected, items, validation }
+  applyAdaptation(text, answers, templateId = null) {
+    return axios.post(`${this.url}/adaptation/apply`, {
+      text,
+      answers,
+      tracking_template_id: templateId,
+    });
+  }
+
+  // F7: el modelo propone qué textos son datos de un negocio → { variables: [{ text, label, count }] }
+  suggestVariables(text) {
+    return axios.post(`${this.url}/adaptation/suggest_variables`, { text });
+  }
+
+  // F7: los elegidos pasan a <PENDIENTE: label>; no guarda → { text, items, validation }
+  markVariables(text, variables, templateId = null) {
+    return axios.post(`${this.url}/adaptation/mark_variables`, {
+      text,
+      variables,
+      tracking_template_id: templateId,
     });
   }
 }

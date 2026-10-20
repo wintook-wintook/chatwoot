@@ -468,23 +468,13 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
     end
   end
 
+  # 20/10/2026: la etiqueta va en el mensaje y la lee una automatización; no es una
+  # etiqueta de Chatwoot que tenga que existir en la cuenta.
   describe 'D2 · etiqueta que no existe en la cuenta' do
-    it 'avisa que no va a disparar ninguna automatización' do
-      create(:label, account: account, title: 'demo')
+    it 'no avisa nada' do
+      r = validar("@ruta(soporte #soporte: no puedo entrar): -\n\n[ETIQUETAS]\n#humano = pidió una persona")
 
-      r = validar('@ruta(soporte #soporte: no puedo entrar): -')
-
-      hallazgo = r[:degrading].find { |f| f[:code] == :label_not_found }
-      expect(hallazgo[:message]).to include('no va a disparar ninguna automatización')
-      expect(hallazgo[:wrote]).to eq('#soporte')
-    end
-
-    it 'no la dispara cuando la etiqueta existe' do
-      create(:label, account: account, title: 'soporte')
-
-      r = validar('@ruta(soporte #soporte: no puedo entrar): -')
-
-      expect(codigos(r, :degrading)).not_to include(:label_not_found)
+      expect(r[:degrading].pluck(:wrote)).not_to include('#soporte', '#humano')
     end
   end
 

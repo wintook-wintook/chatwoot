@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_21_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1454,6 +1454,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_21_120000) do
     t.datetime "published_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "variables", default: [], null: false
     t.index ["account_id"], name: "index_published_prompts_on_account_id"
     t.index ["status", "category"], name: "index_published_prompts_on_status_and_category"
     t.index ["tracking_template_id"], name: "index_published_prompts_on_tracking_template_id", unique: true
@@ -1737,6 +1738,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_21_120000) do
     t.jsonb "training_structure", default: {}, null: false
     t.bigint "published_prompt_id"
     t.integer "published_prompt_version"
+    t.jsonb "adaptation_answers", default: {}, null: false
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"

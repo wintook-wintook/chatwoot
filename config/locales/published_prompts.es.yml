@@ -1,0 +1,10 @@
+# proyecto@adaptar_prompts_publicados (F4 y F5) — publicar con variables y el candado del motor
+es:
+  published_prompts:
+    variables:
+      text_length: "«%{text}»: el texto debe tener entre 3 y 200 caracteres."
+      label_invalid: "«%{text}»: falta cómo se llama el dato (hasta 60 caracteres, sin < ni >)."
+      not_found: "«%{text}» no aparece en el Entrenamiento (fuera de las directivas y de las líneas de ruta)."
+    pending_setup:
+      blocked: "El Agente IA tiene datos por configurar (%{labels}). Complétalos en la pestaña «Configurar» del Asistente antes de usarlo."
+      inbox_blocked: "No se puede asignar bandeja: el Entrenamiento tiene datos por configurar (%{labels}). Complétalos en la pestaña «Configurar» del Asistente."
