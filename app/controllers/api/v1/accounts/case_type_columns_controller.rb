@@ -74,11 +74,11 @@ class Api::V1::Accounts::CaseTypeColumnsController < Api::V1::Accounts::BaseCont
   end
 
   def column_params
-    params.require(:case_type_column).permit(:label, :color, :position, statuses: [])
+    params.require(:case_type_column).permit(:label, :color, :position, :outcome, :probability, statuses: [])
   end
 
   def replace_params
-    params.permit(columns: [:id, :label, :color, :position, { statuses: [] }])[:columns] || []
+    params.permit(columns: [:id, :label, :color, :position, :outcome, :probability, { statuses: [] }])[:columns] || []
   end
 
   def column_json(column)
@@ -87,7 +87,9 @@ class Api::V1::Accounts::CaseTypeColumnsController < Api::V1::Accounts::BaseCont
       label: column.label,
       color: column.color,
       position: column.position,
-      statuses: column.statuses
+      statuses: column.statuses,
+      outcome: column.outcome,         # Plan-Clase-Comercial F3 — columna final del embudo
+      probability: column.probability
     }
   end
 end

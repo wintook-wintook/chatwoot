@@ -285,6 +285,7 @@
     "TICKET_SLA": "SLA",
     "TICKET_AI": "Artificial Intelligence",
     "TICKET_PORTALS": "Customer portals",
+    "TICKET_COMMERCIAL_SETTINGS": "Commercial",
     "TICKET_SETTINGS": "Module settings",
     "TICKET_CONFIG": "Folio settings",
     "TICKET_GROUP_DEFINITIONS": "Definitions",
@@ -355,7 +356,11 @@
       "TEXT": "Set as offline automatically",
       "INFO_TEXT": "Let the system automatically mark you as offline when you are not using the app or dashboard."
     },
-    "DOCS": "Read docs"
+    "DOCS": "Read docs",
+    "CASES_LIST": "List",
+    "CASES_BOARD": "Board",
+    "CASES_METRICS": "Metrics",
+    "CASES_GROUP_CONFIG": "Settings"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",

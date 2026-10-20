@@ -5,16 +5,25 @@
 # Table name: case_tickets
 #
 #  id                         :bigint           not null, primary key
+#  actual_hours               :decimal(6, 2)
+#  amount                     :decimal(14, 2)
 #  assignee_type              :integer          default("bot"), not null
+#  billable                   :boolean          default(FALSE), not null
+#  budget_amount              :decimal(14, 2)
+#  budget_hours               :decimal(8, 2)
 #  closed_at                  :datetime
 #  closure_cause              :text
 #  closure_solution           :text
 #  closure_type               :integer
+#  conformity_note            :text
+#  currency                   :string(3)
 #  custom_attributes          :jsonb            not null
 #  customer_confirmed         :boolean          default(FALSE), not null
 #  description                :text
 #  due_at                     :datetime
 #  escalation_level           :integer          default(0), not null
+#  estimated_hours            :decimal(6, 2)
+#  expected_close_at          :date
 #  first_response_at          :datetime
 #  first_response_time_target :integer
 #  folio                      :string
@@ -22,7 +31,17 @@
 #  locked_at                  :datetime
 #  metadata                   :jsonb            not null
 #  origin                     :integer          default("whatsapp"), not null
+#  outcome                    :integer
+#  outcome_at                 :datetime
+#  outcome_note               :text
+#  postponed_until            :date
 #  priority                   :integer          default("medium"), not null
+#  probability                :integer
+#  progress                   :integer
+#  project_due_on             :date
+#  project_start_on           :date
+#  received_at                :datetime
+#  received_by                :string
 #  reopen_count               :integer          default(0), not null
 #  reopened_at                :datetime
 #  resolution_time_target     :integer
@@ -34,6 +53,7 @@
 #  ticket_kind                :integer          default("service_request"), not null
 #  title                      :string           not null
 #  urgency                    :integer
+#  work_address               :string
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  account_id                 :bigint           not null
@@ -47,6 +67,8 @@
 #  conversation_id            :bigint
 #  kb_article_id              :bigint
 #  locked_by_id               :bigint
+#  outcome_reason_id          :bigint
+#  postpone_reason_id         :bigint
 #  requester_id               :bigint
 #  team_id                    :bigint
 #
@@ -56,6 +78,7 @@
 #  index_case_tickets_on_account_id_and_case_type_id  (account_id,case_type_id)
 #  index_case_tickets_on_account_id_and_contact_id    (account_id,contact_id)
 #  index_case_tickets_on_account_id_and_due_at        (account_id,due_at)
+#  index_case_tickets_on_account_id_and_outcome       (account_id,outcome)
 #  index_case_tickets_on_account_id_and_sla_status    (account_id,sla_status)
 #  index_case_tickets_on_account_id_and_status        (account_id,status)
 #  index_case_tickets_on_account_id_and_ticket_kind   (account_id,ticket_kind)
@@ -68,6 +91,8 @@
 #  index_case_tickets_on_kb_article_id                (kb_article_id)
 #  index_case_tickets_on_locked_by_id                 (locked_by_id)
 #  index_case_tickets_on_metadata                     (metadata) USING gin
+#  index_case_tickets_on_postponed_until              (postponed_until) WHERE (postponed_until IS NOT NULL)
+#  index_case_tickets_on_project_due_on               (project_due_on) WHERE (project_due_on IS NOT NULL)
 #  index_case_tickets_on_requester_id                 (requester_id)
 #
 # Foreign Keys
@@ -77,6 +102,8 @@
 #  fk_rails_...  (contact_tracking_id => contact_trackings.id) ON DELETE => nullify
 #  fk_rails_...  (conversation_id => conversations.id) ON DELETE => nullify
 #  fk_rails_...  (locked_by_id => users.id) ON DELETE => nullify
+#  fk_rails_...  (outcome_reason_id => case_outcome_reasons.id) ON DELETE => nullify
+#  fk_rails_...  (postpone_reason_id => case_outcome_reasons.id) ON DELETE => nullify
 #  fk_rails_...  (requester_id => users.id) ON DELETE => nullify
 #
 
@@ -110,6 +137,18 @@ class CaseTicket < ApplicationRecord
     waiting_on_customer waiting_on_third_party waiting_on_internal
   ].freeze
   CLOSED_STATUSES = %w[resolved validating closed cancelled].freeze
+
+  # @tickets_cases — Plan-Clase-Comercial F3: una oportunidad no se resuelve ni se
+  # cancela como un ticket; termina en `closed` con un resultado (won/lost/cancelled).
+  COMMERCIAL_BLOCKED_STATUSES = %w[resolved validating cancelled].freeze
+  COMMERCIAL_STATUS_MSG = 'Una oportunidad se cierra con un resultado: ganada, perdida o cancelada'
+  # Datos de la oportunidad editables desde la ficha y el alta.
+  COMMERCIAL_FIELDS = %w[amount currency expected_close_at probability].freeze
+  # Plan-Clase-Orden-de-Trabajo F2a — datos de la orden que se editan (la conformidad
+  # —received_by/received_at/conformity_note— solo se llena al cerrar).
+  WORK_ORDER_FIELDS = %w[work_address estimated_hours actual_hours billable].freeze
+  # Plan-Clase-Proyecto P1 — datos del proyecto que se editan (el monto va en `currency`).
+  PROJECT_FIELDS = %w[project_start_on project_due_on budget_hours budget_amount progress].freeze
 
   SLA_BY_PRIORITY = {
     'low'    => { first_response_time_target: 2880, resolution_time_target: 7200 },
@@ -159,8 +198,11 @@ class CaseTicket < ApplicationRecord
   belongs_to :affected_service,  class_name: 'CaseService',  optional: true # @tickets_cases 2B
   belongs_to :category,          class_name: 'CaseCategory', optional: true # @tickets_cases 2B
   belongs_to :kb_article,        class_name: 'Article', optional: true # @tickets_cases 2H
+  belongs_to :outcome_reason,    class_name: 'CaseOutcomeReason', optional: true # Plan-Clase-Comercial F3
+  belongs_to :postpone_reason,   class_name: 'CaseOutcomeReason', optional: true # motivo de la pospuesta vigente
   has_many   :case_events,       dependent: :destroy
   has_many   :case_tasks,        dependent: :destroy # @tickets_cases — tareas/subtareas
+  has_many   :work_order_items,  class_name: 'CaseWorkOrderItem', dependent: :destroy # materiales de la orden
   # @tickets_cases F0 — reuniones del ticket y sus series (docs/tickets_reuniones_plan.md).
   has_many   :case_meetings,     dependent: :destroy
   has_many   :case_meeting_series, class_name: 'CaseMeetingSeries', dependent: :destroy, inverse_of: :case_ticket
@@ -184,6 +226,9 @@ class CaseTicket < ApplicationRecord
   # @tickets_cases 2G — tipo de cierre documentado. Prefijo obligatorio: resolved/cancelled
   # colisionan con los valores del enum status.
   enum closure_type: { resolved: 0, duplicate: 1, not_applicable: 2, cancelled: 3 }, _prefix: :closure
+  # @tickets_cases — Plan-Clase-Comercial F3: resultado de una oportunidad, separado de
+  # `status` (las tres quedan en `closed`). Valores nuevos SIEMPRE al final (Trampa 17).
+  enum outcome:      { won: 0, lost: 1, cancelled: 2 }, _prefix: :outcome
 
   validates :title,         presence: true, length: { maximum: 255 }
   validates :origin,        presence: true
@@ -195,9 +240,47 @@ class CaseTicket < ApplicationRecord
   # Solo en creación: si más tarde se borra el contacto (contact_id → NULL por
   # dependent: :nullify), el ticket histórico debe seguir siendo editable/cerrable.
   validate :contact_or_requester_present, on: :create
+  # Plan-Casos E2 — una oportunidad siempre es de un cliente (no hay oportunidad interna).
+  validate :commercial_needs_contact, on: :create
+  # Hoja de ruta E1.4 — un caso no cambia de clase al cambiar de tipo (el folio es
+  # inmutable y las series se mezclarían). Sin tipo cuenta como Soporte.
+  validate :case_class_unchanged, on: :update, if: :will_save_change_to_case_type_id?
+  # @tickets_cases — Plan-Clase-Comercial F2: servicio/categoría deben ser globales
+  # o del tipo del caso. Al crear, o si el TIPO cambia (modal, automatización, IA,
+  # @solicitudes), la clasificación ajena se limpia sola en vez de bloquear el guardado.
+  before_validation :drop_classification_of_other_type, if: -> { new_record? || will_save_change_to_case_type_id? }
+  validate :classification_matches_type
+  # @tickets_cases — Plan-Clase-Comercial F3: datos de la oportunidad.
+  validates :probability, numericality: { only_integer: true, in: 0..100 }, allow_nil: true
+  validates :amount,      numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :currency,    format: { with: /\A[A-Z]{3}\z/ }, allow_nil: true
+  validates :estimated_hours, :actual_hours, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :work_address, length: { maximum: 255 }, allow_blank: true
+  validates :budget_hours, :budget_amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :progress, numericality: { only_integer: true, in: 0..100 }, allow_nil: true
+  validate  :project_due_after_start
+  before_validation -> { self.work_address = work_address.to_s.strip.presence }, if: :will_save_change_to_work_address?
+  before_validation :normalize_commercial_data
 
   # @tickets_cases Fase C — tickets internos (origin: internal, sin contacto).
   scope :internal, -> { where(origin: :internal) }
+  # @tickets_cases — Plan-Clase-Comercial: casos de la clase Comercial y el resto
+  # (un caso sin tipo cuenta como Soporte). Subconsulta y no JOIN, a propósito: un
+  # JOIN con case_types vuelve ambiguo cualquier SQL suelto que diga `created_at`
+  # (las métricas del módulo tienen varios).
+  scope :commercial, -> { where(case_type_id: CaseType.class_commercial.select(:id)) }
+  scope :non_commercial, -> { where(case_type_id: nil).or(where.not(case_type_id: CaseType.class_commercial.select(:id))) }
+  # Plan-Clase-Orden-de-Trabajo F1 — casos cuya clase tiene la capacidad (ver
+  # CaseType::CLASS_CAPABILITIES); sin tipo cuenta como Soporte.
+  scope :with_capability, lambda { |capability|
+    classes = CaseType.classes_with(capability)
+    ids = CaseType.where(case_class: classes).select(:id)
+    classes.include?('support') ? where(case_type_id: nil).or(where(case_type_id: ids)) : where(case_type_id: ids)
+  }
+  scope :of_class, lambda { |name|
+    ids = CaseType.where(case_class: CaseType.case_classes.fetch(name.to_s)).select(:id)
+    name.to_s == 'support' ? where(case_type_id: nil).or(where(case_type_id: ids)) : where(case_type_id: ids)
+  }
 
   # @tickets_cases — cuando una prioridad viene FORZADA (directiva @crear_ticket
   # o ajuste por riesgo del intake IA), no dejar que la matriz ITIL la pise
@@ -210,6 +293,10 @@ class CaseTicket < ApplicationRecord
   # puntero de columna se limpia y el ticket cae al fallback por status. Un solo
   # hook en el modelo cubre las seis vías; ver §7 del Plan-Columnas-Por-Tipo.
   before_save :resync_type_column, if: -> { will_save_change_to_status? || will_save_change_to_case_type_id? }
+  # Plan-Clase-Comercial F3 — al entrar a una columna del embudo, la oportunidad toma
+  # su probabilidad. Va DESPUÉS del resync: si el puntero se limpió, no hay columna.
+  before_save :sync_probability_from_column,
+              if: -> { will_save_change_to_case_type_column_id? && case_type_column_id.present? && commercial? }
   before_create :assign_sla_targets
   before_create :assign_folio # @tickets_cases
   after_create  :create_ticket_created_event
@@ -247,25 +334,26 @@ class CaseTicket < ApplicationRecord
       raise 'El cambio requiere aprobación antes de pasar a ejecución'
     end
 
+    # @tickets_cases — Plan-Clase-Comercial F3: una oportunidad solo cierra con resultado.
+    raise COMMERCIAL_STATUS_MSG if commercial? && COMMERCIAL_BLOCKED_STATUSES.include?(new_status.to_s)
+
     closing    = new_status.to_s == 'closed'
     closure    = validate_closure!(closure) if closing # @tickets_cases 2G
 
     old_status  = status
+    old_outcome = outcome
     attrs       = { status: new_status }
     attrs[:resolved_at] = Time.current if new_status.to_s == 'resolved'
-    if closing
-      attrs[:closed_at]          = Time.current
-      attrs[:closure_type]       = closure['closure_type']
-      attrs[:closure_cause]      = closure['closure_cause']
-      attrs[:closure_solution]   = closure['closure_solution']
-      attrs[:customer_confirmed] = ActiveModel::Type::Boolean.new.cast(closure['customer_confirmed']) || false
-    end
+    attrs.merge!(closing_attrs(closure)) if closing
     attrs.merge!(sla_pause_attrs(old_status, new_status)) # @tickets_cases 2I
+    attrs.merge!(commercial_exit_attrs(old_status, new_status))
 
     update!(attrs)
 
     payload = { from: old_status, to: new_status.to_s, reason: reason }
-    payload[:closure_type] = closure['closure_type'] if closing
+    payload.merge!(closure_payload(closure)) if closing
+    # Reabrir una oportunidad borra su resultado; el evento conserva cuál era.
+    payload[:previous_outcome] = old_outcome if old_outcome.present? && outcome.nil?
     case_events.create!(
       account:    account,
       event_type: event_type_for_transition(old_status, new_status),
@@ -294,6 +382,10 @@ class CaseTicket < ApplicationRecord
       closure_solution:   nil,
       customer_confirmed: false,
       resolved_at:        nil,
+      # Orden de trabajo: la conformidad era del trabajo anterior (las horas se quedan).
+      received_by:        nil,
+      received_at:        nil,
+      conformity_note:    nil,
       reopened_at:        Time.current,
       reopen_count:       reopen_count + 1,
       sla_status:         :on_time,
@@ -323,11 +415,183 @@ class CaseTicket < ApplicationRecord
   end
 
   def within_reopen_window?
+    # Plan-Clase-Comercial F3 (hallazgo #2): una oportunidad SIEMPRE se reabre, sin
+    # ventana; abrir un caso de seguimiento partiría su historial comercial en dos.
+    return true if commercial?
+
     days = CaseSetting.for_account(account).reopen_window_days.to_i
     return true if days.zero? # 0 = sin límite
     return true if closed_at.blank?
 
     closed_at >= days.days.ago
+  end
+
+  # ── @tickets_cases — Plan-Clase-Comercial F3: oportunidades ─────────────────
+
+  def commercial?
+    case_type&.class_commercial? || false
+  end
+
+  def work_order?
+    case_type&.class_work_order? || false
+  end
+
+  def project?
+    case_type&.class_project? || false
+  end
+
+  # Plan-Clase-Proyecto P2 — casos dentro de un proyecto: órdenes de trabajo y
+  # tickets de Soporte (decisión 3), por la relación `project_member`.
+  PROJECT_CHILD_CLASSES = %w[work_order support].freeze
+  PROGRESS_DONE_STATUSES = %w[resolved validating closed].freeze
+
+  def project_children
+    CaseTicket.where(id: CaseTicketRelation.project_member.where(related_ticket_id: id).select(:ticket_id))
+  end
+
+  def parent_project
+    ticket_relations.project_member.first&.related_ticket
+  end
+
+  # Avance automático (decisión 1): % de casos hijos terminados + hitos hechos
+  # (los cancelados no cuentan). Sin hijos ni hitos manda el avance a mano.
+  def project_progress_summary
+    children = project_children.where.not(status: :cancelled).pluck(:status, :case_type_id)
+    milestones = case_tasks.where(milestone: true).pluck(:status)
+    done = children.count { |status, _| PROGRESS_DONE_STATUSES.include?(status) } + milestones.count('done')
+    total = children.size + milestones.size
+    {
+      progress: total.zero? ? progress : (done * 100.0 / total).round,
+      progress_auto: total.positive?,
+      children_total: children.size,
+      children_done: children.count { |status, _| PROGRESS_DONE_STATUSES.include?(status) },
+      milestones_total: milestones.size,
+      milestones_done: milestones.count('done'),
+      actual_hours: project_children.of_class('work_order').sum(:actual_hours).to_f
+    }
+  end
+
+  # Plan-Clase-Proyecto P1 — sigue abierto con la fecha objetivo ya pasada.
+  def project_overdue?
+    project? && project_due_on.present? && project_due_on < Date.current &&
+      !CLOSED_STATUSES.include?(status)
+  end
+
+  def class_capability?(capability)
+    CaseType.class_capability?(case_type&.case_class, capability)
+  end
+
+  # Pospuesta = en espera del cliente con fecha para retomarla (cuenta como Pendiente).
+  def postponed?
+    postponed_until.present? && waiting_on_customer?
+  end
+
+  # Cierra la oportunidad como ganada, perdida o cancelada. Pasa por transition!
+  # (force: el embudo no sigue la espina ITIL), que valida motivo y deja el evento.
+  def close_with_outcome!(result, actor: nil, reason_id: nil, note: nil)
+    raise 'Solo las oportunidades se cierran con un resultado' unless commercial?
+    raise 'La oportunidad ya está cerrada; reábrela para cambiar su resultado' if closed? || cancelled?
+
+    transition!('closed', actor: actor, force: true,
+                          closure: { 'outcome' => result.to_s, 'outcome_reason_id' => reason_id, 'outcome_note' => note })
+  end
+
+  # Deja la oportunidad en espera hasta `until_date`; Cases::ResumePostponedJob la
+  # retoma ese día. El evento guarda la columna de donde salió para regresarla ahí.
+  def postpone!(until_date:, actor: nil, reason: nil, reason_id: nil)
+    date = postpone_date!(until_date)
+    motive = postpone_reason!(reason_id)
+    payload = { from: status, to: 'waiting_on_customer', until: date.iso8601, reason: reason.presence,
+                reason_id: motive&.id, reason_label: motive&.label }
+    payload[:column_id] = case_type_column_id unless postponed?
+    update!(status: :waiting_on_customer, postponed_until: date, postpone_reason_id: motive&.id,
+            case_type_column_id: postponed_column_id || case_type_column_id)
+    case_events.create!(account: account, event_type: :postponed, origin: actor ? :agent : :system,
+                        actor: actor, payload: payload.compact)
+    self
+  end
+
+  # Regresa una oportunidad pospuesta a trabajo activo, a la etapa donde estaba.
+  def resume!(actor: nil, reason: nil)
+    raise 'La oportunidad no está pospuesta' unless postponed?
+
+    was_until = postponed_until
+    update!(status: :in_progress, postponed_until: nil, postpone_reason_id: nil, case_type_column_id: resume_column_id)
+    case_events.create!(account: account, event_type: :resumed, origin: actor ? :agent : :system, actor: actor,
+                        payload: { from: 'waiting_on_customer', to: 'in_progress',
+                                   postponed_until: was_until.iso8601, reason: reason.presence }.compact)
+    self
+  end
+
+  # Asigna (sin guardar) los datos comerciales recibidos y devuelve lo que cambia,
+  # para registrarlo con log_commercial_change! una vez guardado.
+  def assign_commercial_data(data)
+    data = data.to_h.stringify_keys.slice(*COMMERCIAL_FIELDS)
+    data['currency'] = data['currency'].to_s.strip.upcase.presence if data.key?('currency')
+    assign_attributes(data)
+    changes_to_save.slice(*COMMERCIAL_FIELDS)
+  end
+
+  def log_commercial_change!(changes, actor: nil)
+    return if changes.blank?
+
+    case_events.create!(account: account, event_type: :amount_changed, origin: actor ? :agent : :system,
+                        actor: actor, payload: changes.transform_values { |from, to| { from: from, to: to } })
+  end
+
+  # Plan-Clase-Orden-de-Trabajo F2a — igual que los datos comerciales: asigna (sin
+  # guardar) y devuelve lo que cambia, para registrarlo una vez guardado.
+  def assign_work_order_data(data)
+    data = data.to_h.stringify_keys.slice(*WORK_ORDER_FIELDS)
+    assign_attributes(data)
+    changes_to_save.slice(*WORK_ORDER_FIELDS)
+  end
+
+  # Plan-Clase-Proyecto P1 — mismo patrón que los datos de la orden.
+  def assign_project_data(data)
+    data = data.to_h.stringify_keys.slice(*PROJECT_FIELDS)
+    assign_attributes(data)
+    changes_to_save.slice(*PROJECT_FIELDS)
+  end
+
+  def log_project_change!(changes, actor: nil)
+    return if changes.blank?
+
+    case_events.create!(account: account, event_type: :project_changed, origin: actor ? :agent : :system,
+                        actor: actor, payload: changes.transform_values { |from, to| { from: from, to: to } })
+  end
+
+  def log_work_order_change!(changes, actor: nil)
+    return if changes.blank?
+
+    case_events.create!(account: account, event_type: :work_order_changed, origin: actor ? :agent : :system,
+                        actor: actor, payload: changes.transform_values { |from, to| { from: from, to: to } })
+  end
+
+  # Plan-Clase-Orden-de-Trabajo F2b — una orden «Por programar» (open/classified)
+  # pasa a «Programada» (assigned) al agendar su primera visita. Si ya avanzó, no
+  # se toca: reprogramar o agendar otra visita no la regresa.
+  TO_SCHEDULE_STATUSES = %w[open classified].freeze
+
+  def mark_visit_scheduled!
+    return unless work_order? && TO_SCHEDULE_STATUSES.include?(status)
+
+    transition!('assigned', force: true, reason: 'Visita programada')
+  end
+
+  # Próxima visita vigente (programada o reprogramada, desde ahora).
+  def next_visit_at
+    case_meetings.active.where(starts_at: Time.current..).minimum(:starts_at)
+  end
+
+  # ¿Hay una visita vigente cuya hora ya pasó (nadie la marcó realizada)?
+  def visit_overdue?
+    case_meetings.active.exists?(starts_at: ...Time.current)
+  end
+
+  # Suma de los materiales con costo (sin costo no suman).
+  def work_order_total
+    work_order_items.sum { |item| item.total || 0 }
   end
 
   # @tickets_cases 2D — Escalamiento funcional: sube el nivel (N1→N2→N3), reasigna a
@@ -516,6 +780,131 @@ class CaseTicket < ApplicationRecord
     self.case_type_column_id = nil
   end
 
+  # ── Plan-Clase-Comercial F3 ────────────────────────────────────────────────
+
+  def closing_attrs(closure)
+    return outcome_attrs(closure) if commercial?
+    return conformity_attrs(closure) if work_order?
+    return { closed_at: Time.current, closure_solution: closure['closure_solution'].presence } if project?
+
+    {
+      closed_at:          Time.current,
+      closure_type:       closure['closure_type'],
+      closure_cause:      closure['closure_cause'],
+      closure_solution:   closure['closure_solution'],
+      customer_confirmed: ActiveModel::Type::Boolean.new.cast(closure['customer_confirmed']) || false
+    }
+  end
+
+  # Cierre de oportunidad: resultado + motivo; la probabilidad queda en 100/0 y el
+  # caso se acomoda en la columna del resultado si el tipo la tiene.
+  def outcome_attrs(closure)
+    result = closure['outcome']
+    {
+      closed_at:           Time.current,
+      outcome:             result,
+      outcome_at:          Time.current,
+      outcome_reason_id:   closure['outcome_reason_id'].presence,
+      outcome_note:        closure['outcome_note'].presence,
+      probability:         result == 'won' ? 100 : 0,
+      postponed_until:     nil,
+      postpone_reason_id:  nil,
+      case_type_column_id: type_column_id { |c| c.outcome == result } || case_type_column_id
+    }
+  end
+
+  def closure_payload(closure)
+    if work_order?
+      return { received_by: closure['received_by'], actual_hours: closure['actual_hours'],
+               note: closure['conformity_note'].presence }.compact
+    end
+    return { note: closure['closure_solution'].presence }.compact if project?
+    return { closure_type: closure['closure_type'] } unless commercial?
+
+    { outcome: closure['outcome'], outcome_reason: outcome_reason&.label,
+      note: closure['outcome_note'].presence }.compact
+  end
+
+  # Salir de `closed` borra el resultado (el evento guarda cuál era) y salir de la
+  # espera borra la fecha de «retomar el». Para Soporte ambos ya son nil.
+  def commercial_exit_attrs(old_status, new_status)
+    attrs = {}
+    if old_status.to_s == 'closed' && new_status.to_s != 'closed' && outcome.present?
+      attrs.merge!(outcome: nil, outcome_at: nil, outcome_reason_id: nil, outcome_note: nil, probability: nil)
+    end
+    attrs.merge!(postponed_until: nil, postpone_reason_id: nil) if leaving_postponement?(new_status)
+    attrs
+  end
+
+  def project_due_after_start
+    return unless project_start_on && project_due_on && project_due_on < project_start_on
+
+    errors.add(:project_due_on, 'no puede ser antes de la fecha de inicio')
+  end
+
+  def leaving_postponement?(new_status)
+    postponed_until.present? && new_status.to_s != 'waiting_on_customer'
+  end
+
+  # Primera columna (no final) del tipo que cumpla la condición.
+  def type_column_id(&)
+    return nil if case_type.nil?
+
+    case_type.case_type_columns.ordered.to_a.detect(&)&.id
+  end
+
+  def postponed_column_id
+    type_column_id { |c| c.outcome.nil? && c.statuses.include?('waiting_on_customer') }
+  end
+
+  # La columna de donde salió al posponerse, si todavía sirve para `in_progress`.
+  def resume_column_id
+    event = case_events.where(event_type: :postponed).where("payload ? 'column_id'").order(:id).last
+    column_id = event&.payload&.dig('column_id')
+    type_column_id { |c| c.id == column_id && c.outcome.nil? && c.statuses.include?('in_progress') }
+  end
+
+  # Valida que se pueda posponer y devuelve la fecha (Date) de «retomar el».
+  def postpone_date!(value)
+    raise 'Solo las oportunidades se posponen' unless commercial?
+    raise 'Una oportunidad cerrada no se pospone' if closed? || cancelled?
+
+    date = parse_postpone_date(value)
+    raise 'Indica una fecha futura para retomarla' if date.nil? || date <= Date.current
+
+    date
+  end
+
+  def parse_postpone_date(value)
+    return value.to_date if value.respond_to?(:to_date) && !value.is_a?(String)
+
+    Date.iso8601(value.to_s)
+  rescue ArgumentError, TypeError
+    nil
+  end
+
+  def sync_probability_from_column
+    column_probability = CaseTypeColumn.where(id: case_type_column_id).pick(:probability)
+    self.probability = column_probability unless column_probability.nil?
+  end
+
+  # Moneda en mayúsculas; al crear una oportunidad, moneda de la cuenta y la
+  # probabilidad de la columna donde nace.
+  def normalize_commercial_data
+    self.currency = currency.to_s.strip.upcase.presence
+    # Plan-Clase-Proyecto P1 — el presupuesto también va en la moneda de la cuenta.
+    self.currency ||= CaseSetting.for_account(account).default_currency if new_record? && account && project?
+    return unless new_record? && account && commercial?
+
+    self.currency ||= CaseSetting.for_account(account).default_currency
+    self.probability ||= starting_probability
+  end
+
+  def starting_probability
+    column_id = type_column_id { |c| c.outcome.nil? && c.statuses.include?(status) }
+    CaseTypeColumn.where(id: column_id).pick(:probability)
+  end
+
   # @tickets_cases 2I — gestiona la pausa del SLA al entrar/salir de estados de espera.
   def sla_pause_attrs(old_status, new_status)
     entering = WAITING_STATUSES.include?(new_status.to_s) && WAITING_STATUSES.exclude?(old_status.to_s)
@@ -537,6 +926,10 @@ class CaseTicket < ApplicationRecord
   # Normaliza las claves a string y valida los campos obligatorios. Devuelve el hash limpio.
   def validate_closure!(closure)
     data = (closure || {}).stringify_keys
+    return validate_outcome!(data) if commercial? # Plan-Clase-Comercial F3
+    return validate_conformity!(data) if work_order? # Plan-Clase-Orden-de-Trabajo F2a
+    return data if project? # Plan-Clase-Proyecto P1: el resumen de cierre es opcional
+
     missing = []
     missing << 'tipo de cierre' if data['closure_type'].blank?
     missing << 'causa'          if data['closure_cause'].blank?
@@ -550,10 +943,68 @@ class CaseTicket < ApplicationRecord
     data
   end
 
+  # Plan-Clase-Comercial F3 (hallazgo #1) — la oportunidad cierra con resultado y, si
+  # se perdió o canceló, con motivo del catálogo. Sin catálogo, basta la nota.
+  def validate_outcome!(data)
+    result = data['outcome'].to_s
+    raise 'Para cerrar la oportunidad indica el resultado: ganada, perdida o cancelada' unless CaseTicket.outcomes.key?(result)
+
+    reasons = account.case_outcome_reasons.where(outcome: result)
+    if data['outcome_reason_id'].present?
+      raise 'El motivo no corresponde a este resultado' unless reasons.exists?(id: data['outcome_reason_id'])
+    else
+      require_reason_or_note!(reasons, data, note_required: result != 'won')
+    end
+    data
+  end
+
+  # Plan-Clase-Orden-de-Trabajo F2a — cerrar una orden pide la conformidad: quién
+  # recibió y las horas reales (si ya estaban capturadas en la orden, bastan).
+  def validate_conformity!(data)
+    data['actual_hours'] = data['actual_hours'].presence || actual_hours
+    missing = []
+    missing << 'horas reales' if data['actual_hours'].blank?
+    missing << 'quién recibió' if data['received_by'].to_s.strip.blank?
+    raise "Para cerrar la orden indica: #{missing.join(', ')}" if missing.any?
+    raise 'Las horas reales no pueden ser negativas' if BigDecimal(data['actual_hours'].to_s).negative?
+
+    data
+  rescue ArgumentError
+    raise 'Las horas reales deben ser un número'
+  end
+
+  def conformity_attrs(closure)
+    {
+      closed_at:       Time.current,
+      actual_hours:    closure['actual_hours'],
+      received_by:     closure['received_by'].to_s.strip,
+      received_at:     Time.current,
+      conformity_note: closure['conformity_note'].presence
+    }
+  end
+
+  # Con catálogo activo el motivo es obligatorio (también en Ganada). Sin catálogo,
+  # Perdida/Cancelada piden la nota; Ganada no.
+  def require_reason_or_note!(reasons, data, note_required: true)
+    raise 'Indica el motivo del resultado' if reasons.enabled.exists?
+    raise 'Describe el motivo en la nota' if note_required && data['outcome_note'].blank?
+  end
+
+  # Motivo de la pospuesta: obligatorio si la cuenta tiene motivos de pospuesta activos.
+  def postpone_reason!(reason_id)
+    reasons = account.case_outcome_reasons.outcome_postponed
+    if reason_id.present?
+      reasons.find_by(id: reason_id) || raise('El motivo no corresponde a una pospuesta')
+    elsif reasons.enabled.exists?
+      raise 'Indica el motivo de la pospuesta'
+    end
+  end
+
   # @tickets_cases 2B — si hay impacto y urgencia, la prioridad se deriva de la matriz ITIL.
   # Si no, se respeta la prioridad fijada manualmente (comportamiento original).
   def derive_priority_from_matrix
     return if skip_priority_derivation
+    return if commercial? # Plan-Clase-Comercial F3: la prioridad de una venta la decide el vendedor
 
     derived = Cases::PriorityMatrix.derive(impact, urgency)
     self.priority = derived if derived.present?
@@ -562,6 +1013,8 @@ class CaseTicket < ApplicationRecord
   # @tickets_cases 2I — usa la política SLA configurada (más específica) y, si no hay,
   # cae al hash SLA_BY_PRIORITY. No pisa targets ya fijados manualmente.
   def assign_sla_targets
+    return unless class_capability?(:sla) # hallazgo #7: solo Soporte lleva SLA (ni oportunidad ni orden)
+
     policy = CaseSlaPolicy.resolve_for(self)
     fr = policy&.first_response_time_target
     rt = policy&.resolution_time_target
@@ -602,6 +1055,32 @@ class CaseTicket < ApplicationRecord
     errors.add(:base, 'Debe tener un contacto o un solicitante interno')
   end
 
+  def commercial_needs_contact
+    errors.add(:contact_id, 'una oportunidad necesita un cliente') if commercial? && contact_id.blank?
+  end
+
+  def case_class_unchanged
+    old_type = CaseType.find_by(id: case_type_id_in_database)
+    return if (old_type&.case_class || 'support') == (case_type&.case_class || 'support')
+
+    errors.add(:case_type_id, 'es de otra clase. Cancela este caso y crea uno nuevo en la otra clase')
+  end
+
+  def drop_classification_of_other_type
+    self.affected_service_id = nil if other_type?(affected_service)
+    self.category_id = nil if other_type?(category)
+  end
+
+  def classification_matches_type
+    errors.add(:affected_service_id, 'no aplica a este tipo de caso') if other_type?(affected_service)
+    errors.add(:category_id, 'no aplica a este tipo de caso') if other_type?(category)
+  end
+
+  # Servicio/categoría que existe pero es propio de OTRO tipo.
+  def other_type?(classification)
+    classification.present? && !classification.applies_to_type?(case_type_id)
+  end
+
   def event_type_for_transition(old_status, new_status)
     case new_status.to_s
     when 'assigned'     then :assigned
@@ -609,7 +1088,7 @@ class CaseTicket < ApplicationRecord
     when 'escalated'    then :escalated
     when 'resolved'     then :resolved
     when 'validating'   then :validating
-    when 'closed'       then :closed
+    when 'closed'       then commercial? ? :outcome_set : :closed
     when 'in_progress'  then %w[resolved validating closed].include?(old_status.to_s) ? :reopened : :status_changed
     else :status_changed
     end

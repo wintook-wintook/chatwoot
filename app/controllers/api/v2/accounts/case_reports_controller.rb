@@ -28,6 +28,21 @@ class Api::V2::Accounts::CaseReportsController < Api::V1::Accounts::BaseControll
     render json: stage_duration_builder.stalled(threshold_days: threshold_days_param)
   end
 
+  # Plan-Clase-Comercial F5 — métricas del embudo comercial (solo clase Comercial).
+  def pipeline
+    render json: V2::Reports::Cases::PipelineBuilder.new(account: Current.account, params: permitted_params).build
+  end
+
+  # Plan-Clase-Orden-de-Trabajo F3 — métricas de órdenes de trabajo (solo esa clase).
+  def work_orders
+    render json: V2::Reports::Cases::WorkOrderBuilder.new(account: Current.account, params: permitted_params).build
+  end
+
+  # Plan-Clase-Proyecto P3 — métricas de proyectos (solo esa clase).
+  def projects
+    render json: V2::Reports::Cases::ProjectBuilder.new(account: Current.account, params: permitted_params).build
+  end
+
   private
 
   def distribution_builder

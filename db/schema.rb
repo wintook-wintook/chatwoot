@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_24_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -273,7 +273,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "case_type_id"
     t.index ["account_id", "position"], name: "index_case_categories_on_account_id_and_position"
+    t.index ["case_type_id"], name: "index_case_categories_on_case_type_id"
     t.index ["parent_id"], name: "index_case_categories_on_parent_id"
   end
 
@@ -380,6 +382,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
     t.index ["google_event_id"], name: "index_case_meetings_on_google_event_id"
   end
 
+  create_table "case_outcome_reasons", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.integer "outcome", null: false
+    t.string "label", null: false
+    t.integer "position", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "outcome"], name: "index_case_outcome_reasons_on_account_id_and_outcome"
+  end
+
   create_table "case_portals", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id"
@@ -421,7 +434,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "case_type_id"
     t.index ["account_id", "position"], name: "index_case_services_on_account_id_and_position"
+    t.index ["case_type_id"], name: "index_case_services_on_case_type_id"
   end
 
   create_table "case_settings", force: :cascade do |t|
@@ -431,6 +446,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
     t.datetime "updated_at", null: false
     t.integer "reopen_window_days", default: 30, null: false
     t.boolean "reopen_on_customer_reply", default: true, null: false
+    t.string "default_currency", limit: 3, default: "MXN", null: false
     t.index ["account_id"], name: "index_case_settings_on_account_id", unique: true
   end
 
@@ -465,6 +481,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
     t.integer "sequence"
     t.integer "priority", default: 1, null: false
     t.bigint "requester_id"
+    t.boolean "milestone", default: false, null: false
     t.index ["account_id", "priority"], name: "index_case_tasks_on_account_id_and_priority"
     t.index ["account_id"], name: "index_case_tasks_on_account_id"
     t.index ["assignee_id"], name: "index_case_tasks_on_assignee_id"
@@ -532,10 +549,33 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
     t.integer "reopen_count", default: 0, null: false
     t.datetime "reopened_at"
     t.bigint "case_type_column_id"
+    t.decimal "amount", precision: 14, scale: 2
+    t.string "currency", limit: 3
+    t.date "expected_close_at"
+    t.integer "probability"
+    t.integer "outcome"
+    t.datetime "outcome_at"
+    t.bigint "outcome_reason_id"
+    t.text "outcome_note"
+    t.date "postponed_until"
+    t.bigint "postpone_reason_id"
+    t.string "work_address"
+    t.decimal "estimated_hours", precision: 6, scale: 2
+    t.decimal "actual_hours", precision: 6, scale: 2
+    t.boolean "billable", default: false, null: false
+    t.string "received_by"
+    t.datetime "received_at"
+    t.text "conformity_note"
+    t.date "project_start_on"
+    t.date "project_due_on"
+    t.decimal "budget_hours", precision: 8, scale: 2
+    t.decimal "budget_amount", precision: 14, scale: 2
+    t.integer "progress"
     t.index ["account_id", "case_type_id"], name: "index_case_tickets_on_account_id_and_case_type_id"
     t.index ["account_id", "contact_id"], name: "index_case_tickets_on_account_id_and_contact_id"
     t.index ["account_id", "due_at"], name: "index_case_tickets_on_account_id_and_due_at"
     t.index ["account_id", "folio"], name: "index_case_tickets_on_account_and_folio", unique: true, where: "(folio IS NOT NULL)"
+    t.index ["account_id", "outcome"], name: "index_case_tickets_on_account_id_and_outcome"
     t.index ["account_id", "sla_status"], name: "index_case_tickets_on_account_id_and_sla_status"
     t.index ["account_id", "status"], name: "index_case_tickets_on_account_id_and_status"
     t.index ["account_id", "ticket_kind"], name: "index_case_tickets_on_account_id_and_ticket_kind"
@@ -548,6 +588,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
     t.index ["kb_article_id"], name: "index_case_tickets_on_kb_article_id"
     t.index ["locked_by_id"], name: "index_case_tickets_on_locked_by_id"
     t.index ["metadata"], name: "index_case_tickets_on_metadata", using: :gin
+    t.index ["postponed_until"], name: "index_case_tickets_on_postponed_until", where: "(postponed_until IS NOT NULL)"
+    t.index ["project_due_on"], name: "index_case_tickets_on_project_due_on", where: "(project_due_on IS NOT NULL)"
     t.index ["requester_id"], name: "index_case_tickets_on_requester_id"
   end
 
@@ -560,6 +602,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
     t.jsonb "statuses", default: [], null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "outcome"
+    t.integer "probability"
     t.index ["account_id"], name: "index_case_type_columns_on_account_id"
     t.index ["case_type_id", "position"], name: "index_case_type_columns_on_type_and_position"
   end
@@ -591,7 +635,22 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
     t.string "prefix", default: "", null: false
     t.boolean "public", default: false, null: false
     t.boolean "itil_enabled", default: false, null: false
+    t.integer "case_class", default: 0, null: false
+    t.index ["account_id", "case_class"], name: "index_case_types_on_account_id_and_case_class"
     t.index ["account_id", "position"], name: "index_case_types_on_account_id_and_position"
+  end
+
+  create_table "case_work_order_items", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_ticket_id", null: false
+    t.string "description", null: false
+    t.decimal "quantity", precision: 10, scale: 2, default: "1.0", null: false
+    t.string "unit"
+    t.decimal "unit_cost", precision: 14, scale: 2
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["case_ticket_id"], name: "index_case_work_order_items_on_case_ticket_id"
   end
 
   create_table "categories", force: :cascade do |t|
@@ -1863,6 +1922,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
   add_foreign_key "ai_agent_attachments", "accounts"
   add_foreign_key "ai_agent_attachments", "tracking_templates"
   add_foreign_key "case_ai_configs", "accounts"
+  add_foreign_key "case_categories", "case_types"
   add_foreign_key "case_events", "case_tasks", on_delete: :nullify
   add_foreign_key "case_meeting_series", "accounts"
   add_foreign_key "case_meeting_series", "case_tasks", on_delete: :nullify
@@ -1876,14 +1936,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
   add_foreign_key "case_meetings", "users", column: "cancelled_by_id", on_delete: :nullify
   add_foreign_key "case_meetings", "users", column: "held_by_id", on_delete: :nullify
   add_foreign_key "case_meetings", "users", column: "organizer_id", on_delete: :nullify
+  add_foreign_key "case_outcome_reasons", "accounts"
   add_foreign_key "case_portals", "accounts"
   add_foreign_key "case_portals", "inboxes"
+  add_foreign_key "case_services", "case_types"
   add_foreign_key "case_settings", "accounts"
   add_foreign_key "case_tasks", "accounts"
   add_foreign_key "case_tasks", "case_tickets"
   add_foreign_key "case_tasks", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "completed_by_id", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "requester_id", on_delete: :nullify
+  add_foreign_key "case_tickets", "case_outcome_reasons", column: "outcome_reason_id", on_delete: :nullify
+  add_foreign_key "case_tickets", "case_outcome_reasons", column: "postpone_reason_id", on_delete: :nullify
   add_foreign_key "case_tickets", "case_type_columns", on_delete: :nullify
   add_foreign_key "case_tickets", "contact_trackings", on_delete: :nullify
   add_foreign_key "case_tickets", "contacts", on_delete: :nullify
@@ -1894,6 +1958,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_23_120000) do
   add_foreign_key "case_type_columns", "case_types", on_delete: :cascade
   add_foreign_key "case_type_fields", "accounts"
   add_foreign_key "case_type_fields", "case_types"
+  add_foreign_key "case_work_order_items", "accounts"
+  add_foreign_key "case_work_order_items", "case_tickets", on_delete: :cascade
   add_foreign_key "command_sessions", "accounts"
   add_foreign_key "command_sessions", "contacts"
   add_foreign_key "command_sessions", "conversations"

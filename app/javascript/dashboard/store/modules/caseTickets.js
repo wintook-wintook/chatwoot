@@ -379,18 +379,79 @@ export const actions = {
   },
 
   // @tickets_cases — mueve un ticket a otra columna del Kanban por tipo (A+).
-  async moveTicketColumn({ commit }, { ticketId, caseTypeColumnId, closure }) {
+  async moveTicketColumn(
+    { commit },
+    {
+      ticketId,
+      caseTypeColumnId,
+      closure,
+      postponedUntil,
+      postponeReasonId,
+      reason,
+    }
+  ) {
     commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
     try {
+      const extra = {};
+      if (postponedUntil) extra.postponed_until = postponedUntil;
+      if (postponeReasonId) extra.postpone_reason_id = postponeReasonId;
+      if (reason) extra.reason = reason;
       const { data } = await caseTicketsAPI.move(
         ticketId,
         caseTypeColumnId,
-        closure
+        closure,
+        extra
       );
       return data;
     } finally {
       commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
     }
+  },
+
+  // ── Plan-Clase-Comercial F4 — oportunidades ─────────────────
+  // `params`: { outcome, outcome_reason_id, outcome_note } — cierra con resultado.
+  async closeWithOutcome({ commit }, { ticketId, contactId, ...params }) {
+    commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
+    try {
+      const { data } = await caseTicketsAPI.closeWithOutcome(ticketId, params);
+      if (contactId)
+        commit(SET_ACTIVE_CASE_TICKET, { contactId, ticket: data.case_ticket });
+      commit(SET_CASE_TICKETS_LIST, null); // forzar refetch de la cola
+      return data.case_ticket;
+    } finally {
+      commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
+    }
+  },
+  // `params`: { postponed_until: 'YYYY-MM-DD', postpone_reason_id, reason }
+  async postponeTicket({ commit }, { ticketId, ...params }) {
+    commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
+    try {
+      const { data } = await caseTicketsAPI.postpone(ticketId, params);
+      return data.case_ticket;
+    } finally {
+      commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
+    }
+  },
+  async resumeTicket({ commit }, { ticketId, reason }) {
+    commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: true });
+    try {
+      const { data } = await caseTicketsAPI.resume(ticketId, { reason });
+      return data.case_ticket;
+    } finally {
+      commit(SET_CASE_TICKET_UI_FLAG, { isTransitioning: false });
+    }
+  },
+  // Monto, moneda, cierre estimado y probabilidad (solo los usa Comercial).
+  async updateCommercialData(_ctx, { ticketId, data }) {
+    const res = await caseTicketsAPI.update(ticketId, { case_ticket: data });
+    return res.data.case_ticket;
+  },
+
+  // Plan-Clase-Orden-de-Trabajo F2a — dirección, horas y facturable de la orden
+  // (el backend deja `work_order_changed`); los materiales van por su API.
+  async updateWorkOrderData(_ctx, { ticketId, data }) {
+    const res = await caseTicketsAPI.update(ticketId, { case_ticket: data });
+    return res.data.case_ticket;
   },
 
   // @tickets_cases P3 — acción en lote (assign/transition) sobre varios tickets.
@@ -1039,7 +1100,8 @@ export const actions = {
       });
       commit(SET_CASE_BOARD, {
         tickets: data.case_tickets || [],
-        slaOverdue: (data.meta && data.meta.sla_overdue_count) || 0,
+        // Aviso rojo de la clase (SLA / visitas / cierre vencido).
+        slaOverdue: (data.meta && data.meta.alert_count) || 0,
       });
     } finally {
       commit(SET_CASE_BOARD_UI_FLAG, { isFetching: false });

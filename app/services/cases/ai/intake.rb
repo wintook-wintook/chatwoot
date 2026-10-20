@@ -29,8 +29,11 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
   # policy:            prompt complementario sin las directivas técnicas.
   def extract(conversation_text:, policy: nil)
     types      = @account.case_types.order(:position).pluck(:id, :name)
-    services   = @account.case_services.where(active: true).pluck(:id, :name)
-    categories = @account.case_categories.where(active: true).pluck(:id, :name)
+    # Plan-Clase-Comercial F2: [id, nombre, case_type_id]; NULL = global. El tipo
+    # se elige en la misma respuesta, así que se listan todos con su etiqueta y
+    # `sanitize` descarta los que no sean del tipo elegido.
+    services   = @account.case_services.where(active: true).pluck(:id, :name, :case_type_id)
+    categories = @account.case_categories.where(active: true).pluck(:id, :name, :case_type_id)
 
     raw = chat(
       system: system_prompt(policy),
@@ -87,11 +90,11 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
       TIPOS DE CASO DISPONIBLES (id: nombre):
       #{listing(types)}
 
-      SERVICIOS DISPONIBLES (id: nombre):
-      #{listing(services)}
+      SERVICIOS DISPONIBLES (id: nombre; «solo tipo N» = únicamente para ese tipo de caso):
+      #{typed_listing(services)}
 
-      CATEGORÍAS DISPONIBLES (id: nombre):
-      #{listing(categories)}
+      CATEGORÍAS DISPONIBLES (id: nombre; «solo tipo N» = únicamente para ese tipo de caso):
+      #{typed_listing(categories)}
     PROMPT
   end
 
@@ -101,11 +104,24 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
     pairs.map { |id, name| "#{id}: #{name}" }.join("\n")
   end
 
+  def typed_listing(rows)
+    return '(ninguno)' if rows.blank?
+
+    rows.map { |id, name, type_id| type_id ? "#{id}: #{name} (solo tipo #{type_id})" : "#{id}: #{name}" }.join("\n")
+  end
+
+  # El id elegido existe y es global o del tipo elegido; si no, nil.
+  def typed_pick(rows, raw_id, type_id)
+    row = rows.find { |id, _name, _type| id == raw_id }
+    return nil unless row && (row[2].nil? || row[2] == type_id)
+
+    raw_id
+  end
+
   # Mantiene solo valores válidos; descarta enums fuera de rango e ids inexistentes.
   def sanitize(raw, types, services, categories)
-    type_ids     = types.map(&:first)
-    service_ids  = services.map(&:first)
-    category_ids = categories.map(&:first)
+    type_ids = types.map(&:first)
+    type_id  = type_ids.include?(raw['case_type_id']) ? raw['case_type_id'] : nil
 
     {
       'ticket_worthy'       => ActiveModel::Type::Boolean.new.cast(raw.fetch('ticket_worthy', true)),
@@ -114,9 +130,9 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
       'ticket_kind'         => KINDS.include?(raw['ticket_kind']) ? raw['ticket_kind'] : nil,
       'impact'              => IMPACTS.include?(raw['impact']) ? raw['impact'] : nil,
       'urgency'             => URGENCIES.include?(raw['urgency']) ? raw['urgency'] : nil,
-      'case_type_id'        => type_ids.include?(raw['case_type_id']) ? raw['case_type_id'] : nil,
-      'affected_service_id' => service_ids.include?(raw['affected_service_id']) ? raw['affected_service_id'] : nil,
-      'category_id'         => category_ids.include?(raw['category_id']) ? raw['category_id'] : nil,
+      'case_type_id'        => type_id,
+      'affected_service_id' => typed_pick(services, raw['affected_service_id'], type_id),
+      'category_id'         => typed_pick(categories, raw['category_id'], type_id),
       'churn_risk'          => ActiveModel::Type::Boolean.new.cast(raw['churn_risk']) || false,
       'missing_info'        => Array(raw['missing_info']).map { |s| s.to_s.strip }.reject(&:blank?).first(5),
       'confidence'          => raw['confidence'].to_f.clamp(0.0, 1.0),

@@ -45,6 +45,23 @@ class CaseReportsAPI extends ApiClient {
     return axios.get(`${this.url}/velocity`, { params: filterParams(filters) });
   }
 
+  // Plan-Clase-Comercial F5 — métricas del embudo comercial.
+  getPipeline(filters = {}) {
+    return axios.get(`${this.url}/pipeline`, { params: filterParams(filters) });
+  }
+
+  // Plan-Clase-Proyecto P3 — métricas de proyectos.
+  getProjects(filters = {}) {
+    return axios.get(`${this.url}/projects`, { params: filterParams(filters) });
+  }
+
+  // Plan-Clase-Orden-de-Trabajo F3 — métricas de órdenes de trabajo.
+  getWorkOrders(filters = {}) {
+    return axios.get(`${this.url}/work_orders`, {
+      params: filterParams(filters),
+    });
+  }
+
   getStalled({ thresholdDays, ...filters } = {}) {
     return axios.get(`${this.url}/stalled`, {
       params: { ...filterParams(filters), threshold_days: thresholdDays },

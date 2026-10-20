@@ -1,0 +1,143 @@
+---
+titulo: Plan — Casos: hoja de ruta (Comercial, Soporte, Órdenes, Proyectos)
+tipo: implementación
+fase: E0–E5
+tags: [tickets, plan, casos, comercial, soporte, ordenes-de-trabajo, proyectos, navegacion]
+---
+
+# Plan — Casos: hoja de ruta
+
+Continuación de [[Plan-Clase-Comercial]] (F0–F5). Rama `feat/nva_oportunidad`.
+
+## Decisiones
+- **«Casos»** es el nombre que agrupa todas las clases. Cada clase nombra a sus elementos:
+  Soporte → **Tickets**, Comercial → **Oportunidades**, Proyectos → **Proyectos**,
+  Órdenes de trabajo → **Órdenes**. «Ticket» = caso de Soporte.
+- Navegación con **selector de clase** (opción B), orden **Comercial | Soporte** (luego Proyectos, Órdenes).
+- **Soporte y Órdenes de trabajo son clases distintas**: soporte es reactivo y se mide por SLA; la
+  orden es trabajo planeado (fecha, técnico, horas, materiales, firma). Mientras no exista la
+  clase, una OT es un **tipo dentro de Soporte** con campos personalizados; luego se cambia de clase.
+- Recorrido del cliente: Comercial (ganada) → Proyecto / Orden (implementar) → Soporte.
+
+## Etapas
+| Etapa | Contenido | Estado |
+|---|---|---|
+| E0 | Revisión en navegador de F0–F5 (✅ por el usuario 2026-10-20) + commit F0–F5 | revisión ✅ · commit ⏳ |
+| E1 (F6) | Menú «Casos» con selector de clase, rutas por clase, Configuración en un bloque | ✅ 2026-10-20 |
+| E1.1 | Filtros por niveles en Lista, Tablero y Métricas | ✅ 2026-10-20 |
+| E1.2 | Filtros persistentes (Lista ↔ Tablero, al salir y volver) | ✅ 2026-10-20 |
+| E1.3 | Resultado con Pospuestas, cerrados del Tablero, filtros de Métricas | ✅ 2026-10-20 |
+| E2 (F7) | Comercial completo | ⏳ |
+| E3 (F8) | Soporte completo | ⏳ |
+| E4 (F9) | Órdenes de trabajo (plan propio) | después |
+| E5 (F10) | Proyectos (plan propio) | después |
+
+## E1 — lo construido
+- `helper/caseClasses.js`: `CASE_CLASSES` (orden, flag, color, i18n), `CLASS_VIEW_ROUTES`,
+  `rememberCaseClass` / `lastCaseClass` (sessionStorage por cuenta, tolerante a fallos).
+- Rutas `tickets/:caseClass(support|commercial)/list|board|metrics` (`gestorTickets_class_*`).
+  `tickets`, `tickets/kanban`, `tickets/metrics` (nombres de siempre) **redirigen** a la última
+  clase usada (Soporte si no hay) → enlaces viejos, `$router.push` y menú siguen funcionando.
+- `CaseClassSwitcher.vue` en el encabezado de Lista, Tablero y Métricas: cambia de clase sin cambiar
+  de vista; oculto con una sola clase; recuerda la clase; si la clase no está habilitada manda a
+  Soporte (solo cuando la cuenta ya cargó sus flags).
+- `ClassMetrics.vue`: Métricas por clase (Soporte → `Metrics.vue`, Comercial → `CommercialMetrics.vue`).
+- Menú: **Lista · Tablero · Métricas · Tareas** (neutras; activas por `toStateName`) +
+  **Configuración** (un grupo admin: Tipos, Clasificación, SLA, Reglas, IA, Portales, Ajustes, Folios).
+  Se quitaron los grupos Definiciones / Automatización / Ajustes y el grupo Comercial de F4.
+- El selector **es el título** de la vista (decisión del usuario: no anteponer «Tickets» /
+  «Oportunidades»). Solo con una clase activa, sin selector, se pinta el título por clase
+  (`CASE_TICKETS.CLASSES.*`: Tickets / Tablero de tickets / Métricas de soporte; Oportunidades /
+  Embudo / Métricas comerciales) — lo dibuja el propio `CaseClassSwitcher` (prop `title`).
+- Detalle: al abrir un caso se recuerda su clase; «Volver» va a la lista de su clase.
+- Spec: `routes/dashboard/gestorTickets/routes.spec.js` (resolución, sin choques, redirecciones).
+
+## E1.1 — Filtros por niveles (lo construido)
+Orden: **clase → tipo → ¿de quién? → estado → búsqueda → filtros finos**.
+- Encabezado: selector de clase + **`filters/CaseTypeSelect.vue`** (solo tipos de la clase; recuerda
+  el tipo por clase en sessionStorage; el embudo exige un tipo). En Lista, Tablero y las dos Métricas.
+- **`filters/CaseScopeBar.vue`**: pestañas «Mis tickets / Mis oportunidades · Sin asignar · Todos»;
+  estado segmentado (Pendientes|Cerrados|Todos — Abiertas|Cerradas|Todas) solo en la Lista; en
+  Comercial cerradas → Ganadas/Perdidas/Canceladas; **«SLA vencido (n)» ya no es pestaña**: aviso
+  conmutable, solo Soporte.
+- **`filters/CaseFineFilters.vue`**: botón «Filtros (n)» con panel y etiquetas con ✕ + Limpiar.
+  Soporte: prioridad, origen, servicio, categoría, naturaleza (solo ITIL), responsable (solo en
+  «Todos»), creado. Comercial: cierre estimado (este mes / próximos 30 / vencido), solo pospuestas,
+  prioridad, responsable, creado. Servicio/categoría acotados al tipo elegido (F2).
+- `helper/caseFilters.js`: definición por clase y traducción a parámetros (`fineFiltersToParams`,
+  `scopeToParams`, `closeRange`). Spec `helper/specs/caseFilters.spec.js`.
+- Lista: **sin «Ordenar por»** (se ordena desde los encabezados de columna); **vistas guardadas en un
+  solo menú «Vistas»** (mis/compartidas, guardar, guardar como, administrar; punto ámbar si cambió).
+  `query` v2: `case_class`, `sla_overdue`, `fine`; una vista v1 se sigue abriendo
+  (`normalizeViewQuery`); una vista de otra clase cambia de clase y luego se aplica.
+- Backend: index acepta `expected_close_from/_to` y `postponed`; métricas de Soporte aceptan
+  `case_type_id`. Specs en `case_tickets_commercial_spec.rb`.
+
+## E1.2 — Filtros persistentes (lo construido)
+- `helper/caseClasses.js`: **localStorage por cuenta** (antes sessionStorage / Vuex de sesión):
+  `cases.lastClass.<cuenta>` y **un objeto por clase** `cases.state.<cuenta>.<clase>` con
+  `loadCaseState` / `saveCaseState` (mezcla). Tolerante a almacenamiento ausente o JSON corrupto.
+- Compartido entre Lista y Tablero de la misma clase: `type`, `scope`, `sla`, `fine`, `search`.
+  Solo Lista: `list` (estado, resultado, orden, página, tamaño, vista). Métricas: `type` + `metrics`
+  (período; vendedor en Comercial).
+- Lista y Tablero guardan en cada `fetch()` y restauran al montar **y al cambiar de clase** (ya no
+  se limpia al cambiar: cada clase vuelve como se dejó). La Lista dejó de usar `listPrefs` del store.
+- Spec `helper/specs/caseClasses.spec.js`.
+
+## E1.3 — Igualar filtros entre vistas (lo construido)
+- **Resultado comercial** en la Lista, en este orden (decisión del usuario): **Ganadas · Perdidas ·
+  Pospuestas · Canceladas** (`COMMERCIAL_RESULTS`). Elegir uno ajusta el estado (`statusForResult`:
+  Pospuestas → Abiertas, las otras → Cerradas); cambiar el estado suelta un resultado que no cabe.
+  Pospuestas filtra con `postponed=true`. «Solo pospuestas» salió de los filtros finos; lo guardado
+  así (estado o vista) se traduce al resultado Pospuestas.
+- **Tablero — cerrados**: selector «Cerrados: Ocultar / 7 / 30 / 90 días / Todo el historial»
+  (default 30, guardado por clase en `board.closed`). Backend `closed_within_days=N`: abiertos
+  completos + cerrados (resuelto/validando/cerrado/cancelado) con
+  `COALESCE(closed_at, resolved_at, updated_at)` en los últimos N días. Evita que los cerrados de
+  siempre ocupen el tope de 100 del tablero y escondan abiertos.
+- **Métricas de Soporte**: responsable y equipo (backend `filter_metrics_scope`: tipo, responsable, equipo).
+- **Métricas comerciales**: equipo (la API ya lo aceptaba).
+- **Mismo período en las dos Métricas**: `filters/MetricsPeriodPicker.vue` con `METRIC_PERIODS`
+  (7 días · 30 días · 90 días · 12 meses · Todo). Todo se guarda en `metrics` del estado de la clase.
+- Specs: 2 de request (ventana de cerrados, métricas por responsable) + helper.
+
+## E2 — Comercial completo (F7)
+**(1) hecho 2026-10-20 — botón de alta por clase/tipo.** En Lista y Tablero: «+ {tipo elegido}» o,
+en «Todos los tipos», «+ {clase}» (Comercial / Soporte). Abre `CaseTicketInternalModal` con
+`caseClass` + `presetTypeId`: solo tipos de la clase, buscador de cliente (`ContactPicker.vue`,
+API de contactos), datos comerciales si el tipo es Comercial. Soporte: cliente opcional (sin cliente
+= caso interno, como antes). Comercial: cliente obligatorio, también en el modelo
+(`commercial_needs_contact`, on: :create). Se quitó el texto «las oportunidades se crean desde la
+conversación».
+
+Necesario: (1) nueva oportunidad desde la lista con buscador de contacto; (2) «Usar columnas del
+embudo» en un tipo que pasó a Comercial (aviso @solicitudes/«Pagado»); (3) panel de conversación y
+contacto separando oportunidades y tickets; (4) notificación propia: oportunidad retomada y cierre
+estimado vencido (revisión diaria); (5) cliente escribe en una pospuesta → retomar o avisar (decide el usuario).
+Opcional: (6) cada vendedor ve solo las suyas; (7) `@crear_oportunidad`; (8) productos/cotización (plan aparte).
+
+## E3 — Soporte completo (F8)
+Necesario: (1) concurrencia — `update` respeta el lock + bloqueo optimista ([[Analisis-Concurrencia-Edicion]]);
+(2) validador de flujo de columnas; (3) historial de casos en el perfil del contacto; (4) guía para
+OT provisional como tipo «Visita técnica» con campos personalizados.
+Recomendado: (5) export CSV; (6) reglas precargadas; (7) ticket desde correo; (8) imprimir ficha;
+(9) badge de tareas vencidas en el menú. Portal (i18n en, Tailwind sin CDN, widget, dominio) queda en [[Plan-User-Portal]].
+
+## E4 — Órdenes de trabajo (F9)
+Clase `work_order` (enum ya reservado) + flag `case_work_order` al final. Fecha/hora programada,
+técnico(s), horas estimadas/reales, materiales, checklist (Tareas), conformidad/firma, facturable.
+Agenda (módulo Reuniones / Google Calendar). Nace de un ticket, de una oportunidad ganada o de un
+proyecto (enlazada). Métricas: cumplimiento, horas real vs estimado, retrabajos.
+
+## E5 — Proyectos (F10)
+Clase `project` + flag `case_project`. Fases como columnas con fechas, avance %, hitos; casos hijos
+(órdenes, tareas, tickets) por relaciones; nace de una oportunidad ganada; línea de tiempo;
+métricas de avance vs plan y horas vs presupuesto.
+
+## Pendiente de decidir
+- E2(5): ¿retomar sola la pospuesta cuando el cliente escribe, o solo avisar?
+- E2(6) y E2(7): ¿entran?
+- E3: confirmar necesarios y elegir recomendados.
+
+## 🔗 Relacionado
+[[00-Indice]] · [[Plan-Clase-Comercial]] · [[Pendiente]] · [[Trampas]]

@@ -36,6 +36,8 @@ export default {
     isFrozen: { type: Boolean, default: false },
     // Correo del contacto del ticket (vacío en tickets internos).
     contactEmail: { type: String, default: '' },
+    // Plan-Clase-Orden-de-Trabajo F2b — valores iniciales del alta (visita).
+    createDefaults: { type: Object, default: null },
   },
   data() {
     return {
@@ -772,6 +774,7 @@ export default {
       :organizers="organizers"
       :contact-email="contactEmail"
       :context-task="contextTask"
+      :defaults="createDefaults"
       :is-saving="isSaving"
       @submit="submitForm"
       @submitSeries="submitSeries"

@@ -9,6 +9,7 @@ import { mapGetters } from 'vuex';
 import { VeTable } from 'vue-easytable';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import TypeFormModal from './typeDetail/TypeFormModal.vue';
+import { CASE_CLASSES } from 'dashboard/helper/caseClasses';
 
 const PER_PAGE_OPTIONS = [25, 50, 100];
 
@@ -25,6 +26,8 @@ export default {
       currentPage: 1,
       perPage: 25,
       perPageOptions: PER_PAGE_OPTIONS,
+      // @tickets_cases — Plan-Clase-Comercial: 'all' | 'support' | 'commercial'.
+      classFilter: 'all',
       // Fila = abrir el detalle del tipo; los botones de acción cortan la
       // propagación para no navegar.
       eventCustomOption: {
@@ -43,7 +46,33 @@ export default {
     ...mapGetters({
       types: 'caseTickets/getTypes',
       typesUiFlags: 'caseTickets/getTypesUIFlags',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
+      accountId: 'getCurrentAccountId',
     }),
+    // Clases en juego: Soporte, las que tienen su flag activo y las que ya
+    // tienen algún tipo. La columna y el filtro de clase solo con más de una.
+    activeClasses() {
+      return ['support', 'commercial', 'work_order', 'project'].filter(key => {
+        const entry = CASE_CLASSES.find(c => c.key === key);
+        return (
+          !entry?.flag ||
+          this.isFeatureEnabledonAccount(this.accountId, entry.flag) ||
+          this.types.some(t => (t.case_class || 'support') === key)
+        );
+      });
+    },
+    showClasses() {
+      return this.activeClasses.length > 1;
+    },
+    classFilters() {
+      return ['all', ...this.activeClasses];
+    },
+    filteredTypes() {
+      if (this.classFilter === 'all') return this.types;
+      return this.types.filter(
+        t => (t.case_class || 'support') === this.classFilter
+      );
+    },
     isFetching() {
       return this.typesUiFlags.isFetching;
     },
@@ -52,7 +81,7 @@ export default {
     },
     pagedTypes() {
       const start = (this.currentPage - 1) * this.perPage;
-      return this.types.slice(start, start + this.perPage);
+      return this.filteredTypes.slice(start, start + this.perPage);
     },
     columns() {
       return [
@@ -78,6 +107,18 @@ export default {
             </div>
           ),
         },
+        ...(this.showClasses
+          ? [
+              {
+                field: 'case_class',
+                key: 'case_class',
+                title: this.$t('CASE_TICKETS.TYPES.TABLE.CLASS'),
+                align: 'left',
+                width: 140,
+                renderBodyCell: ({ row }) => this.classBadge(row),
+              },
+            ]
+          : []),
         {
           field: 'prefix',
           key: 'prefix',
@@ -192,6 +233,28 @@ export default {
         </span>
       );
     },
+    classBadge(type) {
+      const value = type.case_class || 'support';
+      const cls =
+        {
+          commercial:
+            'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-300',
+          work_order:
+            'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
+          project:
+            'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300',
+        }[value] ||
+        'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+      return (
+        <span class={`px-2 py-0.5 text-xs font-medium rounded-full ${cls}`}>
+          {this.$t(`CASE_TICKETS.TYPES.CLASS.OPTIONS.${value.toUpperCase()}`)}
+        </span>
+      );
+    },
+    setClassFilter(value) {
+      this.classFilter = value;
+      this.currentPage = 1;
+    },
     openDetail(type) {
       this.$router.push({
         name: 'gestorTickets_type_detail',
@@ -292,6 +355,21 @@ export default {
       >
         {{ $t('CASE_TICKETS.TYPES.HELP') }}
       </p>
+      <div
+        v-if="showClasses"
+        class="flex items-center flex-shrink-0 gap-2 px-6 pt-3"
+      >
+        <woot-button
+          v-for="c in classFilters"
+          :key="c"
+          size="tiny"
+          :variant="classFilter === c ? 'smooth' : 'clear'"
+          :color-scheme="classFilter === c ? 'primary' : 'secondary'"
+          @click="setClassFilter(c)"
+        >
+          {{ $t(`CASE_TICKETS.TYPES.CLASS.FILTER.${c.toUpperCase()}`) }}
+        </woot-button>
+      </div>
       <div class="flex-1 min-h-0 px-6 py-4 types-table-wrap">
         <VeTable
           fixed-header
@@ -328,7 +406,7 @@ export default {
 
       <TableFooter
         :current-page="currentPage"
-        :total-count="types.length"
+        :total-count="filteredTypes.length"
         :page-size="perPage"
         @pageChange="changePage"
       />

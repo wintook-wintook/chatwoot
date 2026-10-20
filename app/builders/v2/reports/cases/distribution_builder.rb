@@ -30,12 +30,13 @@ class V2::Reports::Cases::DistributionBuilder < V2::Reports::Cases::BaseBuilder
   # por ahí (`status: cancelled` directo, ej. el cliente desapareció a mitad de
   # camino). Por eso "perdido" mira ambos, no solo closure_type.
   def outcome
-    raw = scoped_tickets.group(:status, :closure_type).count
+    raw = scoped_tickets.group(:status, :closure_type, :outcome).count
     buckets = { open: 0, won: 0, lost: 0, other_closed: 0 }
-    raw.each do |(status_raw, closure_raw), count|
+    raw.each do |(status_raw, closure_raw, outcome_raw), count|
       status = enum_key(CaseTicket.statuses, status_raw)
       closure = closure_raw.nil? ? nil : enum_key(CaseTicket.closure_types, closure_raw)
-      buckets[outcome_bucket(status, closure)] += count
+      outcome = outcome_raw.nil? ? nil : enum_key(CaseTicket.outcomes, outcome_raw)
+      buckets[outcome_bucket(status, closure, outcome)] += count
     end
     buckets
   end

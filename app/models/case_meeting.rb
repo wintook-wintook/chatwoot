@@ -86,6 +86,10 @@ class CaseMeeting < ApplicationRecord
   scope :ordered, -> { order(:starts_at, :id) }
   scope :active,  -> { where(status: %i[scheduled rescheduled]) }
 
+  # Plan-Clase-Orden-de-Trabajo F2b — agendar una visita en una orden «Por
+  # programar» la pasa a «Programada» (cubre la reunión suelta y la serie).
+  after_create_commit -> { case_ticket.mark_visit_scheduled! }, if: -> { case_ticket&.work_order? }
+
   # Folio de la reunión dentro del ticket: R001, R002…
   def folio
     format('R%03d', sequence.to_i)

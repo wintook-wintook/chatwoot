@@ -86,7 +86,9 @@
         "waiting": "En espera",
         "resolved": "Resuelto",
         "closed": "Cerrado"
-      }
+      },
+      "CLOSE_OVERDUE": "Cierre vencido",
+      "EMPTY_COLUMN": "Sin casos"
     },
     "LIST": {
       "LOADING": "Cargando casos...",
@@ -104,7 +106,10 @@
         "created_at": "Fecha",
         "priority": "Prioridad",
         "status": "Estado",
-        "sla_status": "SLA"
+        "sla_status": "SLA",
+        "amount": "Monto",
+        "expected_close_at": "Cierre estimado",
+        "probability": "Probabilidad"
       },
       "SORT_ASC": "Ascendente",
       "SORT_DESC": "Descendente",
@@ -118,6 +123,8 @@
     },
     "VIEWS": {
       "PLACEHOLDER": "Vistas guardadas",
+      "DETACH": "Quitar vista",
+      "DETACH_HINT": "Deja de aplicar la vista; los filtros se quedan como están",
       "MINE": "Mis vistas",
       "SHARED": "Compartidas",
       "SAVE_AS": "Guardar como",
@@ -216,7 +223,10 @@
       "TASKS": "Tareas",
       "JOURNEY": "Avance",
       "AI": "Asistente IA",
-      "MEETINGS": "Tareas agendadas"
+      "MEETINGS": "Tareas agendadas",
+      "CONCEPTS": "Conceptos",
+      "PROJECT": "Proyecto",
+      "PROJECT_CASES": "Casos del proyecto"
     },
     "CONVERSATION": {
       "SUBTITLE": "Hilo con el cliente",
@@ -404,13 +414,17 @@
         "CONFIRM": "Completar tarea"
       },
       "TOAST_COMPLETED_MEETINGS": "Tarea «{task}» completada · {count} tarea(s) agendada(s) cancelada(s)",
-      "MEETINGS_BEYOND_DUE": "{count} tarea(s) agendada(s) después del vencimiento"
+      "MEETINGS_BEYOND_DUE": "{count} tarea(s) agendada(s) después del vencimiento",
+      "MILESTONE": "Hito",
+      "MILESTONE_LABEL": "Es un hito del proyecto",
+      "MILESTONE_HINT": "Cuenta para el avance del proyecto."
     },
     "MODAL": {
       "TITLE_CREATE": "Crear caso",
       "CASE_TYPE_LABEL": "Tipo de caso",
       "TICKET_KIND_LABEL": "Naturaleza del caso (ITIL)",
       "AFFECTED_SERVICE_LABEL": "Servicio afectado",
+      "INTEREST_PRODUCTS_LABEL": "Productos de interés",
       "CATEGORY_LABEL": "Categoría",
       "IMPACT_LABEL": "Impacto",
       "URGENCY_LABEL": "Urgencia",
@@ -435,7 +449,8 @@
       "TAB_CUSTOM": "Campos personalizados",
       "ASSIGN_AUTO": "— Automático (reglas) —",
       "ASSIGN_HINT": "Si lo dejas en automático, las reglas de automatización deciden la asignación. Lo que elijas aquí tiene prioridad sobre las reglas.",
-      "NO_CUSTOM_FIELDS": "Este tipo no tiene campos personalizados"
+      "NO_CUSTOM_FIELDS": "Este tipo no tiene campos personalizados",
+      "TAB_ADDRESS": "Dirección"
     },
     "ASSIGN": {
       "TITLE": "Asignación",
@@ -450,7 +465,9 @@
       "TITLE": "Editar caso",
       "SUBMIT": "Guardar cambios",
       "SUCCESS": "Caso actualizado",
-      "ERROR": "No se pudo actualizar el caso"
+      "ERROR": "No se pudo actualizar el caso",
+      "NO_CONTACT": "Caso interno (sin cliente)",
+      "CONTACT_LOCKED": "El cliente no se puede cambiar. Si es otro cliente, cancela este caso y crea uno nuevo."
     },
     "INTERNAL": {
       "TITLE": "Crear caso interno",
@@ -699,6 +716,18 @@
       "change_problem": {
         "outgoing": "Resuelve el problema",
         "incoming": "Resuelto por el cambio"
+      },
+      "work_order_origin": {
+        "outgoing": "Orden de trabajo de",
+        "incoming": "Orden de trabajo creada"
+      },
+      "project_member": {
+        "outgoing": "Pertenece al proyecto",
+        "incoming": "Caso del proyecto"
+      },
+      "project_origin": {
+        "outgoing": "Proyecto de",
+        "incoming": "Proyecto creado"
       }
     },
     "TIMELINE": {
@@ -832,7 +861,8 @@
       "NAME_LABEL": "Nombre",
       "COLOR_LABEL": "Color",
       "PREFIX_LABEL": "Prefijo del folio",
-      "PREFIX_HELP": "Se usa en el folio con el token {PREFIX}. Si lo dejas vacío se genera automáticamente.",
+      "PREFIX_HELP": "Se usa en el folio con el token {PREFIX}. Si lo dejas vacío se genera automáticamente. Queda fijo en cuanto el tipo tiene su primer caso.",
+      "PREFIX_LOCKED": "El prefijo no se puede cambiar: este tipo ya tiene casos con folio.",
       "PUBLIC_LABEL": "Visible en el portal del cliente",
       "PUBLIC_HELP": "Si se activa, este tipo aparece como opción en el formulario público del portal.",
       "PUBLIC_ON": "Público",
@@ -848,6 +878,7 @@
       },
       "TABLE": {
         "NAME": "Nombre",
+        "CLASS": "Clase",
         "PREFIX": "Prefijo",
         "FIELDS": "Campos",
         "COLUMNS": "Columnas",
@@ -865,7 +896,25 @@
         "LOADING": "Cargando…"
       },
       "NAME_PLACEHOLDER": "Ej: Postventa",
-      "PREFIX_PLACEHOLDER": "SOP"
+      "PREFIX_PLACEHOLDER": "SOP",
+      "CLASS": {
+        "LABEL": "Clase de caso",
+        "HELP": "La clase define el comportamiento: Soporte atiende tickets; Comercial maneja oportunidades (monto, embudo, ganada/perdida); Orden de trabajo, trabajo planeado (programación, técnico, horas); Proyecto, trabajo por fases (fecha objetivo, presupuesto, avance). Se elige al crear el tipo y no se puede cambiar después.",
+        "OPTIONS": {
+          "SUPPORT": "Soporte",
+          "COMMERCIAL": "Comercial",
+          "WORK_ORDER": "Orden de trabajo",
+          "PROJECT": "Proyecto"
+        },
+        "FILTER": {
+          "ALL": "Todas",
+          "SUPPORT": "Soporte",
+          "COMMERCIAL": "Comercial",
+          "WORK_ORDER": "Orden de trabajo",
+          "PROJECT": "Proyecto"
+        },
+        "LOCKED": "La clase no se puede cambiar. Para otra clase crea un tipo nuevo y, si hace falta, cancela el caso anterior y créalo de nuevo."
+      }
     },
     "SETTINGS": {
       "TITLE": "Ajustes del módulo",
@@ -1052,7 +1101,14 @@
       "ADD_SUB": "Añadir subcategoría",
       "PER_PAGE": "Por página",
       "EMPTY_SERVICES": "Aún no hay servicios. Crea el primero.",
-      "EMPTY_CATEGORIES": "Aún no hay categorías. Crea la primera."
+      "EMPTY_CATEGORIES": "Aún no hay categorías. Crea la primera.",
+      "FILTER_LABEL": "Aplica a:",
+      "FILTER_ALL": "Todo",
+      "FILTER_GLOBAL": "Solo globales (todos los tipos)",
+      "TABLE_SCOPE": "Aplica a",
+      "SCOPE_LABEL": "Aplica a",
+      "SCOPE_ALL": "Todos los tipos",
+      "SCOPE_HELP": "Elige un tipo de caso para que solo se ofrezca en ese tipo. Las subcategorías heredan el de su categoría."
     },
     "FOLIO": {
       "TITLE": "Configuración de folio",
@@ -1157,7 +1213,12 @@
       "meeting_scheduled": "Tarea agendada",
       "meeting_updated": "Tarea agendada reprogramada",
       "meeting_cancelled": "Tarea agendada cancelada",
-      "meeting_held": "Tarea agendada realizada"
+      "meeting_held": "Tarea agendada realizada",
+      "case_class_changed": "Clase de caso cambiada",
+      "outcome_set": "Resultado de la oportunidad",
+      "postponed": "Oportunidad pospuesta",
+      "resumed": "Oportunidad retomada",
+      "amount_changed": "Datos comerciales"
     },
     "DETAIL": {
       "BACK": "Volver",
@@ -1282,6 +1343,555 @@
       "SERIES_CREATED": "Serie {folio} creada con {count} tareas agendadas",
       "BEYOND_TICKET_HINT": "Se pasa del vencimiento comprometido con el cliente. No se mueve desde aquí: si el caso lo necesita, escala el caso.",
       "TOAST_DUE_ALIGNED": "Vencimiento de la tarea movido al {date}"
+    },
+    "COMMERCIAL": {
+      "NO_TYPES": "Aún no hay tipos de caso Comercial. Créalo en Tipos de caso.",
+      "FIELDS": {
+        "AMOUNT": "Monto",
+        "CURRENCY": "Moneda",
+        "EXPECTED_CLOSE": "Cierre estimado",
+        "PROBABILITY": "Probabilidad",
+        "WEIGHTED": "Ponderado",
+        "OUTCOME": "Resultado",
+        "REASON": "Motivo",
+        "NOTE": "Nota",
+        "OUTCOME_AT": "Cerrada el",
+        "STAGE": "Etapa"
+      },
+      "OUTCOMES": {
+        "won": "Ganada",
+        "lost": "Perdida",
+        "cancelled": "Cancelada"
+      },
+      "POSTPONED": "Pospuesta",
+      "POSTPONED_UNTIL": "Pospuesta hasta {date}",
+      "FILTER": {
+        "ALL_OUTCOMES": "Todos los resultados"
+      },
+      "COLUMN_TOTAL": "Total de la columna",
+      "PANEL": {
+        "TITLE": "Datos comerciales",
+        "SAVE": "Guardar",
+        "CANCEL": "Descartar",
+        "SAVED": "Datos comerciales guardados",
+        "SAVE_ERROR": "No se pudieron guardar los datos comerciales",
+        "PROBABILITY_HINT": "Al mover la oportunidad de etapa, toma la probabilidad de la nueva columna.",
+        "FROZEN": "La oportunidad está cerrada: reábrela para cambiar sus datos."
+      },
+      "ACTIONS": {
+        "WON": "Ganada",
+        "LOST": "Perdida",
+        "CANCEL": "Cancelar",
+        "POSTPONE": "Posponer",
+        "RESUME": "Retomar"
+      },
+      "OUTCOME_MODAL": {
+        "TITLE": "Cerrar oportunidad {folio}",
+        "RESULT": "Resultado",
+        "REASON": "Motivo",
+        "REASON_PLACEHOLDER": "Selecciona un motivo",
+        "NOTE": "Nota (opcional)",
+        "NOTE_REQUIRED": "Nota",
+        "NOTE_PLACEHOLDER": "Contexto para el equipo: contra quién se perdió, qué pidió el cliente…",
+        "NO_REASONS": "No hay motivos en el catálogo para este resultado: describe el motivo en la nota.",
+        "WON_HINT": "La probabilidad pasa a 100% y el monto cuenta como venta ganada.",
+        "CONFIRM": "Cerrar oportunidad",
+        "CANCEL": "Cancelar",
+        "SUCCESS": "Oportunidad cerrada como {outcome}",
+        "ERROR": "No se pudo cerrar la oportunidad"
+      },
+      "POSTPONE_MODAL": {
+        "TITLE": "Posponer {folio}",
+        "UNTIL": "Retomar el",
+        "REASON_CATALOG": "Motivo",
+        "REASON": "Nota (opcional)",
+        "REASON_PLACEHOLDER": "Ej. el cliente decide su presupuesto en enero",
+        "HINT": "Ese día la oportunidad vuelve a la etapa donde estaba y se avisa al responsable.",
+        "CONFIRM": "Posponer",
+        "CANCEL": "Cancelar",
+        "SUCCESS": "Oportunidad pospuesta",
+        "ERROR": "No se pudo posponer la oportunidad"
+      },
+      "RESUMED": "Oportunidad retomada",
+      "RESUME_ERROR": "No se pudo retomar la oportunidad",
+      "SETTINGS": {
+        "CURRENCY_TITLE": "Moneda por defecto",
+        "CURRENCY_DESC": "Moneda con la que nace cada oportunidad nueva (código ISO de 3 letras, p. ej. MXN o USD). Cada oportunidad puede cambiarla.",
+        "SAVE": "Guardar",
+        "CURRENCY_INVALID": "Usa un código de 3 letras, p. ej. MXN",
+        "REASONS_TITLE": "Motivos de cierre",
+        "REASONS_DESC": "Lo que se elige al marcar una oportunidad como ganada, perdida, pospuesta o cancelada. Si un resultado tiene motivos activos, elegir uno es obligatorio. Desactiva un motivo en lugar de borrarlo para conservar la historia.",
+        "PAGE_TITLE": "Comercial",
+        "DISABLED": "La clase Comercial no está activa en esta cuenta.",
+        "GROUPS": {
+          "won": "Ganada",
+          "lost": "Perdida",
+          "postponed": "Pospuesta",
+          "cancelled": "Cancelada"
+        },
+        "ADD": "Agregar",
+        "LABEL_PLACEHOLDER": "Nuevo motivo",
+        "ACTIVE": "Activo",
+        "DELETE": "Eliminar",
+        "EMPTY": "Sin motivos",
+        "SAVED": "Motivo guardado",
+        "DELETED": "Motivo eliminado",
+        "ERROR": "No se pudo guardar el motivo"
+      },
+      "METRICS": {
+        "HELP": "Lo abierto es la foto de hoy; lo ganado, perdido y cancelado se cuenta por la fecha en que se cerró dentro del período. Los montos van por moneda.",
+        "ALL_AGENTS": "Todos los vendedores",
+        "LOADING": "Cargando métricas…",
+        "EMPTY": "Sin oportunidades para estos filtros.",
+        "ERROR": "No se pudieron cargar las métricas",
+        "KPI": {
+          "OPEN_VALUE": "En proceso",
+          "OPEN_SUB": "{count} abiertas · {postponed} pospuestas",
+          "WEIGHTED": "Pronóstico ponderado",
+          "WEIGHTED_SUB": "Monto × probabilidad",
+          "WON": "Ganado en el período",
+          "WON_SUB": "{count} ganadas",
+          "WIN_RATE": "Tasa de cierre",
+          "WIN_RATE_SUB": "{won} ganadas de {decided} decididas",
+          "CYCLE": "Ciclo promedio",
+          "CYCLE_SUB": "Días del alta a ganada",
+          "DAYS": "{days} días",
+          "LOST": "Perdidas / canceladas",
+          "LOST_SUB": "{recovered} recuperadas tras reabrir"
+        },
+        "STAGES": {
+          "TITLE": "Embudo por etapa (abiertas)",
+          "NO_STAGE": "Sin etapa",
+          "COUNT": "{count} oportunidades"
+        },
+        "REASONS": {
+          "TITLE": "Motivos de pérdida y cancelación",
+          "NO_REASON": "Sin motivo"
+        },
+        "ASSIGNEES": {
+          "TITLE": "Por vendedor",
+          "NAME": "Vendedor",
+          "OPEN": "Abiertas",
+          "OPEN_VALUE": "En proceso",
+          "WEIGHTED": "Ponderado",
+          "WON": "Ganadas",
+          "WON_VALUE": "Ganado",
+          "LOST": "Perdidas",
+          "WIN_RATE": "Tasa",
+          "UNASSIGNED": "Sin asignar"
+        },
+        "TYPES": {
+          "TITLE": "Por tipo",
+          "NAME": "Tipo"
+        },
+        "FORECAST": {
+          "TITLE": "Pronóstico por mes de cierre estimado",
+          "MONTH": "Mes",
+          "COUNT": "Oportunidades",
+          "AMOUNT": "Monto",
+          "WEIGHTED": "Ponderado",
+          "PAST": "Fecha vencida",
+          "EMPTY": "Ninguna oportunidad abierta tiene cierre estimado."
+        },
+        "TABLE_VIEW": "Ver como tabla",
+        "CHART_VIEW": "Ver como barras"
+      }
+    },
+    "WORK_ORDER": {
+      "PANEL": {
+        "TITLE": "Orden de trabajo",
+        "SAVE": "Guardar",
+        "CANCEL": "Descartar",
+        "SAVED": "Datos de la orden guardados",
+        "SAVE_ERROR": "No se pudieron guardar los datos de la orden"
+      },
+      "FIELDS": {
+        "ADDRESS": "Dirección del servicio",
+        "ESTIMATED_HOURS": "Horas estimadas",
+        "ACTUAL_HOURS": "Horas reales",
+        "HOURS": "Horas (real / estimado)",
+        "BILLABLE": "Facturable",
+        "RECEIVED_BY": "Recibió",
+        "RECEIVED_AT": "Fecha de conformidad",
+        "NOTE": "Nota de conformidad"
+      },
+      "FORM": {
+        "ADDRESS_PLACEHOLDER": "Calle, número, colonia, ciudad",
+        "ADDRESS_HINT": "Se usa como lugar al programar la visita."
+      },
+      "ITEMS": {
+        "TITLE": "Materiales",
+        "DESCRIPTION": "Concepto",
+        "QUANTITY": "Cantidad",
+        "UNIT": "Unidad",
+        "UNIT_COST": "Costo unitario",
+        "TOTAL": "Importe",
+        "GRAND_TOTAL": "Total",
+        "ADD": "Agregar",
+        "DELETE": "Quitar material",
+        "EMPTY": "Sin materiales.",
+        "ERROR": "No se pudo guardar el material",
+        "DESCRIPTION_PLACEHOLDER": "Ej. Cable UTP cat 6"
+      },
+      "CLOSE": {
+        "TITLE": "Cerrar orden de trabajo",
+        "HELP": "Para cerrar la orden registra las horas reales y quién recibió el trabajo de conformidad.",
+        "RECEIVED_BY_PLACEHOLDER": "Nombre de quien recibe",
+        "NOTE_PLACEHOLDER": "Observaciones del cliente o del técnico (opcional)",
+        "CONFIRM": "Cerrar orden"
+      },
+      "VISIT": {
+        "NEXT": "Próxima visita:",
+        "NONE": "sin programar",
+        "OVERDUE": "Visita vencida",
+        "SCHEDULE": "Programar visita",
+        "DEFAULT_TITLE": "Visita · {title}"
+      },
+      "FROM_CASE": {
+        "BUTTON": "Crear orden de trabajo",
+        "TITLE": "Crear orden de trabajo",
+        "HELP": "La orden nueva toma el cliente, la conversación, el asunto y la descripción de este caso, y queda ligada a él.",
+        "CONFIRM": "Crear orden",
+        "SUCCESS": "Orden {folio} creada",
+        "ERROR": "No se pudo crear la orden de trabajo"
+      },
+      "TABLE": {
+        "NEXT_VISIT": "Próxima visita",
+        "HOURS": "Horas (real / est.)",
+        "TECHNICIAN": "Técnico",
+        "STAGE": "Etapa"
+      },
+      "METRICS": {
+        "HELP": "Lo abierto es foto de hoy. Lo terminado cuenta por el día en que se terminó dentro del período. A tiempo = terminada a más tardar el día de su última visita.",
+        "LOADING": "Cargando métricas…",
+        "EMPTY": "Aún no hay órdenes de trabajo para mostrar.",
+        "ERROR": "No se pudieron cargar las métricas de órdenes",
+        "TECHNICIAN": "Técnico",
+        "ALL_TECHNICIANS": "Todos los técnicos",
+        "UNASSIGNED": "Sin técnico",
+        "NO_TYPE": "Sin tipo",
+        "NO_STAGE": "Sin etapa",
+        "BY_TECHNICIAN": "Por técnico",
+        "BY_TYPE": "Por tipo",
+        "STAGES": "Abiertas por etapa",
+        "STAGE": "Etapa",
+        "CHART_VIEW": "Ver gráfica",
+        "TABLE_VIEW": "Ver tabla",
+        "KPI": {
+          "OPEN": "Abiertas",
+          "OPEN_SUB": "{toSchedule} por programar · {signoff} por conformidad",
+          "OVERDUE": "Visitas vencidas",
+          "OVERDUE_SUB": "Órdenes abiertas con una visita cuya hora ya pasó",
+          "ON_TIME": "Cumplimiento",
+          "ON_TIME_SUB": "{onTime} a tiempo · {late} tarde · {noVisit} sin visita",
+          "HOURS": "Horas real vs. estimado",
+          "HOURS_SUB": "{actual} reales / {estimated} estimadas en {count} órdenes",
+          "REWORK": "Retrabajos",
+          "REWORK_SUB": "{count} de {finished} terminadas se reabrieron",
+          "BILLABLE": "Materiales facturables",
+          "BILLABLE_SUB": "{count} órdenes facturables · {cancelled} canceladas"
+        },
+        "TIMING": {
+          "TITLE": "Puntualidad de lo terminado",
+          "EMPTY": "Ninguna orden terminada en el período.",
+          "on_time": "A tiempo",
+          "late": "Tarde",
+          "no_visit": "Sin visita",
+          "HINT": "El cumplimiento se calcula solo con las que tuvieron visita."
+        },
+        "COLS": {
+          "OPEN": "Abiertas",
+          "FINISHED": "Terminadas",
+          "ON_TIME": "A tiempo",
+          "HOURS": "Horas (real / est.)",
+          "VARIANCE": "Desvío",
+          "REWORK": "Retrabajos"
+        }
+      }
+    },
+    "CLASSES": {
+      "SWITCHER_LABEL": "Clase de caso",
+      "COMMERCIAL": {
+        "NAME": "Comercial",
+        "LIST": "Oportunidades",
+        "BOARD": "Embudo",
+        "METRICS": "Métricas comerciales",
+        "SCOPES": {
+          "mine": "Mías",
+          "unassigned": "No asignadas",
+          "all": "Todas"
+        },
+        "STATUS": {
+          "pending": "Abiertas",
+          "closed": "Cerradas",
+          "all": "Todas"
+        },
+        "CLOSED_LABEL": "Mostrar cerradas:"
+      },
+      "SUPPORT": {
+        "NAME": "Soporte",
+        "LIST": "Tickets",
+        "BOARD": "Tablero de tickets",
+        "METRICS": "Métricas de soporte",
+        "SCOPES": {
+          "mine": "Mías",
+          "unassigned": "No asignadas",
+          "all": "Todos"
+        },
+        "STATUS": {
+          "pending": "Pendientes",
+          "closed": "Cerrados",
+          "all": "Todos"
+        },
+        "CLOSED_LABEL": "Mostrar cerrados:"
+      },
+      "WORK_ORDER": {
+        "NAME": "Órdenes",
+        "LIST": "Órdenes de trabajo",
+        "BOARD": "Tablero de órdenes",
+        "METRICS": "Métricas de órdenes",
+        "SCOPES": {
+          "mine": "Mías",
+          "unassigned": "No asignadas",
+          "all": "Todas"
+        },
+        "STATUS": {
+          "pending": "Abiertas",
+          "closed": "Cerradas",
+          "all": "Todas"
+        },
+        "CLOSED_LABEL": "Mostrar cerradas:"
+      },
+      "PROJECT": {
+        "NAME": "Proyectos",
+        "LIST": "Proyectos",
+        "BOARD": "Tablero de proyectos",
+        "METRICS": "Métricas de proyectos",
+        "SCOPES": {
+          "mine": "Míos",
+          "unassigned": "No asignados",
+          "all": "Todos"
+        },
+        "STATUS": {
+          "pending": "Abiertos",
+          "closed": "Cerrados",
+          "all": "Todos"
+        },
+        "CLOSED_LABEL": "Mostrar cerrados:"
+      }
+    },
+    "FILTERS": {
+      "TYPE": "Tipo de caso",
+      "ALL_TYPES": "Todos los tipos",
+      "BUTTON": "Filtros",
+      "ANY": "Cualquiera",
+      "REMOVE": "Quitar filtro",
+      "CLEAR": "Limpiar",
+      "SLA_OVERDUE": "SLA vencido ({count})",
+      "VIEWS": "Vistas",
+      "FIELDS": {
+        "priority": "Prioridad",
+        "origin": "Origen",
+        "affected_service_id": "Servicio",
+        "category_id": "Categoría",
+        "ticket_kind": "Naturaleza",
+        "assignee_id": "Responsable",
+        "created": "Creado",
+        "close": "Cierre estimado",
+        "closed": "Fecha de cierre",
+        "visit": "Visita programada",
+        "billable": "Facturable",
+        "due": "Fecha objetivo"
+      },
+      "CLOSED": {
+        "this_month": "Este mes",
+        "last_month": "Mes pasado",
+        "last_30": "Últimos 30 días",
+        "last_90": "Últimos 90 días"
+      },
+      "CLOSE": {
+        "this_month": "Este mes",
+        "next_30": "Próximos 30 días",
+        "overdue": "Vencido"
+      },
+      "RESULT": "Resultado",
+      "STATUS_LABEL": "Estado",
+      "OUTCOMES_PLURAL": {
+        "active": "En curso",
+        "won": "Ganadas",
+        "lost": "Perdidas",
+        "postponed": "Pospuestas",
+        "cancelled": "Canceladas"
+      },
+      "BOARD_CLOSED": {
+        "hide": "No mostrar",
+        "7": "Últimos 7 días",
+        "30": "Últimos 30 días",
+        "90": "Últimos 90 días",
+        "all": "Todo el historial"
+      },
+      "PERIODS": {
+        "7d": "7 días",
+        "30d": "30 días",
+        "90d": "90 días",
+        "365d": "12 meses",
+        "all": "Todo"
+      },
+      "ALL_AGENTS": "Todos los responsables",
+      "ALL_TEAMS": "Todos los equipos",
+      "STAGE_LABEL": "Etapa",
+      "WO_STAGES": {
+        "open": "Abiertas",
+        "to_schedule": "Por programar",
+        "scheduled": "Programadas",
+        "in_execution": "En ejecución",
+        "paused": "Pausadas",
+        "finished": "Terminadas",
+        "closed": "Cerradas",
+        "cancelled": "Canceladas"
+      },
+      "VISIT": {
+        "today": "Hoy",
+        "this_week": "Esta semana",
+        "overdue": "Vencida"
+      },
+      "BILLABLE": {
+        "yes": "Sí",
+        "no": "No"
+      },
+      "BOARD_CLOSED_HINT": "Solo afecta a las columnas finales (cerrados, ganadas, canceladas…): los casos abiertos siempre se ven.",
+      "VISIT_OVERDUE_ALERT": "Visitas vencidas ({count})",
+      "CLOSE_OVERDUE_ALERT": "Cierre vencido ({count})",
+      "PROJECT_STAGES": {
+        "open": "Abiertos",
+        "planning": "Planeación",
+        "execution": "Ejecución",
+        "paused": "Pausados",
+        "delivery": "Entrega",
+        "closed": "Cerrados",
+        "cancelled": "Cancelados"
+      },
+      "PROJECT_OVERDUE_ALERT": "Atrasados ({count})"
+    },
+    "CREATE": {
+      "TITLE": "Nuevo: {name}",
+      "CONTACT": "Cliente",
+      "CONTACT_OPTIONAL": "Cliente (opcional)",
+      "CONTACT_PLACEHOLDER": "Busca por nombre, correo o teléfono",
+      "CONTACT_REQUIRED": "Una oportunidad necesita un cliente.",
+      "CONTACT_INTERNAL_HINT": "Sin cliente se crea como caso interno.",
+      "CHANGE_CONTACT": "Cambiar cliente",
+      "NO_CONTACTS": "Sin resultados",
+      "SUCCESS": "Caso {folio} creado"
+    },
+    "PROJECT": {
+      "PANEL": {
+        "TITLE": "Proyecto",
+        "SAVE": "Guardar",
+        "CANCEL": "Descartar",
+        "SAVED": "Datos del proyecto guardados",
+        "SAVE_ERROR": "No se pudieron guardar los datos del proyecto",
+        "AUTO": "{done} de {total} casos e hitos terminados",
+        "CHILDREN": "Casos terminados",
+        "MILESTONES": "Hitos hechos",
+        "HOURS": "Horas reales / presupuesto",
+        "MANUAL_HINT": "Mientras el proyecto no tenga casos ni hitos, el avance se captura a mano."
+      },
+      "FIELDS": {
+        "START": "Inicio",
+        "DUE": "Fecha objetivo",
+        "BUDGET_HOURS": "Horas presupuestadas",
+        "BUDGET_AMOUNT": "Presupuesto",
+        "PROGRESS": "Avance"
+      },
+      "OVERDUE": "Atrasado",
+      "TABLE": {
+        "DUE": "Fecha objetivo",
+        "PROGRESS": "Avance",
+        "STAGE": "Fase"
+      },
+      "CLOSE": {
+        "TITLE": "Cerrar proyecto",
+        "HELP": "Puedes dejar un resumen de cómo se entregó el proyecto (opcional).",
+        "SUMMARY": "Resumen de cierre",
+        "PLACEHOLDER": "Ej. Entregado y aceptado por el cliente el 15 de enero",
+        "CONFIRM": "Cerrar proyecto"
+      },
+      "CHILDREN": {
+        "TITLE": "Casos del proyecto",
+        "HELP": "Órdenes de trabajo y tickets de Soporte que forman parte del proyecto.",
+        "CREATE": "Crear caso",
+        "CREATE_CONFIRM": "Crear dentro del proyecto",
+        "LINK": "Ligar caso existente",
+        "SEARCH_PLACEHOLDER": "Busca por folio o asunto…",
+        "NO_RESULTS": "Sin órdenes ni tickets que coincidan.",
+        "EMPTY": "El proyecto todavía no tiene casos.",
+        "REMOVE": "Quitar del proyecto (el caso no se borra)",
+        "ERROR": "No se pudo actualizar los casos del proyecto"
+      },
+      "FROM_CASE": {
+        "BUTTON": "Crear proyecto",
+        "TITLE": "Crear proyecto",
+        "HELP": "El proyecto nuevo toma el cliente, la conversación, el asunto y la descripción de esta oportunidad, y queda ligado a ella.",
+        "CONFIRM": "Crear proyecto",
+        "SUCCESS": "Proyecto {folio} creado",
+        "ERROR": "No se pudo crear el proyecto"
+      },
+      "TIMELINE": {
+        "TITLE": "Línea de tiempo",
+        "MILESTONE": "Hito",
+        "CASE": "Caso",
+        "TODAY": "Hoy",
+        "LOADING": "Cargando…",
+        "EMPTY": "Sin hitos ni casos con fecha todavía.",
+        "STATE": {
+          "done": "Hecho",
+          "overdue": "Vencido",
+          "pending": "Pendiente"
+        }
+      },
+      "METRICS": {
+        "HELP": "Lo abierto es foto de hoy. En riesgo = su avance va más de 20 puntos detrás del tiempo transcurrido. Lo terminado cuenta por el día en que se terminó dentro del período.",
+        "LOADING": "Cargando métricas…",
+        "EMPTY": "Aún no hay proyectos para mostrar.",
+        "ERROR": "No se pudieron cargar las métricas de proyectos",
+        "ASSIGNEE": "Responsable",
+        "ALL_ASSIGNEES": "Todos los responsables",
+        "UNASSIGNED": "Sin responsable",
+        "NO_TYPE": "Sin tipo",
+        "NO_STAGE": "Sin fase",
+        "BY_ASSIGNEE": "Por responsable",
+        "BY_TYPE": "Por tipo",
+        "STAGES": "Abiertos por fase",
+        "CHART_VIEW": "Ver gráfica",
+        "TABLE_VIEW": "Ver tabla",
+        "KPI": {
+          "OPEN": "Abiertos",
+          "OPEN_SUB": "{late} atrasados · {risk} en riesgo",
+          "MILESTONES": "Hitos vencidos",
+          "MILESTONES_SUB": "Hitos pendientes con la fecha ya pasada",
+          "HOURS": "Horas usadas del presupuesto",
+          "HOURS_SUB": "{actual} reales / {budget} presupuestadas · {over} pasados de presupuesto",
+          "DELIVERY": "Entregas a tiempo",
+          "DELIVERY_SUB": "{onTime} a tiempo · {late} tarde de {finished} terminados"
+        },
+        "HEALTH": {
+          "TITLE": "Salud de los abiertos",
+          "on_track": "En tiempo",
+          "at_risk": "En riesgo",
+          "late": "Atrasado",
+          "no_dates": "Sin fechas",
+          "HINT": "«Sin fechas» = le falta inicio o fecha objetivo."
+        },
+        "COLS": {
+          "OPEN": "Abiertos",
+          "LATE": "Atrasados",
+          "RISK": "En riesgo",
+          "HOURS": "Horas (real / presup.)",
+          "FINISHED": "Terminados",
+          "ON_TIME": "A tiempo"
+        }
+      }
     }
   }
 }

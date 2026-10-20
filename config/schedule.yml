@@ -217,6 +217,14 @@ instagram_refresh_oauth_token_job:
   queue: scheduled_jobs
   description: "Refresh Instagram long lived tokens before they expire"
 
+# @tickets_cases — Plan-Clase-Comercial F3: el día de «retomar el», la oportunidad
+# pospuesta vuelve a trabajo activo y se avisa al vendedor.
+cases_resume_postponed_job:
+  cron: "0 7 * * *"
+  class: "Cases::ResumePostponedJob"
+  queue: scheduled_jobs
+  description: "Resume postponed commercial CaseTickets whose date arrived (Plan-Clase-Comercial F3)"
+
 # @tickets_cases 3F — redacta seguimientos para tickets en espera estancados
 case_ai_follow_up_scan_job:
   cron: "0 * * * *"

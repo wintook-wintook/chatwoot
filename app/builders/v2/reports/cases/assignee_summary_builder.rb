@@ -30,12 +30,13 @@ class V2::Reports::Cases::AssigneeSummaryBuilder < V2::Reports::Cases::BaseBuild
 
   def outcome_counts_by_assignee
     @outcome_counts_by_assignee ||= begin
-      raw = scoped_tickets.group(:assignee_id, :status, :closure_type).count
+      raw = scoped_tickets.group(:assignee_id, :status, :closure_type, :outcome).count
       raw.each_with_object(Hash.new { |h, k| h[k] = { open: 0, won: 0, lost: 0, other_closed: 0 } }) do |entry, per_assignee|
-        (assignee_id, status_raw, closure_raw), count = entry
+        (assignee_id, status_raw, closure_raw, outcome_raw), count = entry
         status = enum_key(CaseTicket.statuses, status_raw)
         closure = closure_raw.nil? ? nil : enum_key(CaseTicket.closure_types, closure_raw)
-        per_assignee[assignee_id][outcome_bucket(status, closure)] += count
+        outcome = outcome_raw.nil? ? nil : enum_key(CaseTicket.outcomes, outcome_raw)
+        per_assignee[assignee_id][outcome_bucket(status, closure, outcome)] += count
       end
     end
   end

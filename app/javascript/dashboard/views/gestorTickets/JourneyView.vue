@@ -8,6 +8,9 @@
     - stepper  → Ciclo de vida horizontal compacto.
 -->
 <script>
+// Plan-Clase-Comercial F4 — fecha corta de «retomar el» en el historial.
+import { formatDay } from 'dashboard/helper/caseCommercial';
+
 // Vistas con botón en la cabecera. 'stepper' (Ciclo de vida) sigue existiendo en
 // el template pero ya no se ofrece: el Recorrido cubre lo mismo.
 const VISIBLE_VIEWS = ['diagram', 'timeline'];
@@ -345,6 +348,9 @@ export default {
       if (event.event_type.startsWith('meeting_')) {
         return this.meetingSummary(p);
       }
+      // Plan-Clase-Comercial F4 — eventos de oportunidad.
+      const commercial = this.commercialSummary(event.event_type, p);
+      if (commercial) return commercial;
       // Vencimiento: from/to son fechas.
       if (event.event_type === 'due_date_changed') {
         return `${p.from ? this.formatDate(p.from) : '—'} → ${
@@ -360,6 +366,51 @@ export default {
         return `${label(p.from)} → ${label(p.to)}`;
       }
       if (p.content) return p.content.slice(0, 80);
+      return null;
+    },
+    // Plan-Clase-Comercial F4 — resultado + motivo + nota; fecha de «retomar el»;
+    // y qué datos comerciales cambiaron (monto, moneda, cierre, probabilidad).
+    commercialSummary(type, p) {
+      const fields = 'CASE_TICKETS.COMMERCIAL.FIELDS';
+      if (type === 'outcome_set') {
+        return [
+          p.outcome && this.$t(`CASE_TICKETS.COMMERCIAL.OUTCOMES.${p.outcome}`),
+          p.outcome_reason,
+          p.note,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+      }
+      if (type === 'postponed') {
+        return [
+          this.$t('CASE_TICKETS.COMMERCIAL.POSTPONED_UNTIL', {
+            date: formatDay(p.until),
+          }),
+          p.reason,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+      }
+      if (type === 'amount_changed') {
+        const labels = {
+          amount: `${fields}.AMOUNT`,
+          currency: `${fields}.CURRENCY`,
+          expected_close_at: `${fields}.EXPECTED_CLOSE`,
+          probability: `${fields}.PROBABILITY`,
+        };
+        return Object.keys(labels)
+          .filter(k => p[k])
+          .map(
+            k =>
+              `${this.$t(labels[k])}: ${p[k].from ?? '—'} → ${p[k].to ?? '—'}`
+          )
+          .join(' · ');
+      }
+      if (p.previous_outcome) {
+        return `${this.$t('CASE_TICKETS.COMMERCIAL.FIELDS.OUTCOME')}: ${this.$t(
+          `CASE_TICKETS.COMMERCIAL.OUTCOMES.${p.previous_outcome}`
+        )}${p.reason ? ` · ${p.reason}` : ''}`;
+      }
       return null;
     },
     formatDate(d) {

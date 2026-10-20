@@ -85,7 +85,8 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   end
 
   def task_params
-    permitted = params.require(:case_task).permit(:title, :description, :status, :priority, :assignee_id, :due_at, :position)
+    permitted = params.require(:case_task).permit(:title, :description, :status, :priority, :assignee_id, :due_at, :position,
+                                                  :milestone) # Plan-Clase-Proyecto P2 — hito
     # El asignado debe ser un usuario de la cuenta (si no, queda sin asignar).
     permitted[:assignee_id] = Current.account.users.where(id: permitted[:assignee_id]).pick(:id) if permitted.key?(:assignee_id)
     permitted
@@ -147,6 +148,7 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
       # @tickets_cases — solicitante (quién abrió la tarea), solo lectura.
       requester: ref_user(task.requester),
       due_at: task.due_at,
+      milestone: task.milestone, # Plan-Clase-Proyecto P2
       position: task.position,
       created_at: task.created_at,
       # @tickets_cases P4 — firma de completado (quién y cuándo).

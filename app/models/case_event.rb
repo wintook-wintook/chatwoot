@@ -69,7 +69,18 @@ class CaseEvent < ApplicationRecord
     meeting_scheduled:  30, # se agendó reunión o serie
     meeting_updated:    31, # se movió de fecha/hora
     meeting_cancelled:  32, # se canceló (una o toda la serie)
-    meeting_held:       33  # se marcó realizada / no asistió
+    meeting_held:       33, # se marcó realizada / no asistió
+    # @tickets_cases — Plan-Clase-Comercial F1. Al FINAL, sin reordenar nada de arriba.
+    case_class_changed: 34, # el caso pasó a otra clase (cambió su tipo, o la clase de su tipo)
+    # @tickets_cases — Plan-Clase-Comercial F3. Al FINAL, sin reordenar nada de arriba.
+    outcome_set:        35, # oportunidad cerrada como ganada/perdida/cancelada
+    postponed:          36, # oportunidad pospuesta hasta una fecha
+    resumed:            37, # oportunidad pospuesta que volvió a trabajarse
+    amount_changed:     38, # cambiaron los datos comerciales (monto, moneda, cierre, probabilidad)
+    # @tickets_cases — Plan-Clase-Orden-de-Trabajo F2a. Al FINAL, sin reordenar nada de arriba.
+    work_order_changed: 39, # cambiaron los datos de la orden (dirección, horas, facturable)
+    # @tickets_cases — Plan-Clase-Proyecto P1. Al FINAL, sin reordenar nada de arriba.
+    project_changed:    40  # cambiaron los datos del proyecto (fechas, presupuesto, avance)
   }
 
   enum origin: { bot: 0, agent: 1, system: 2 }

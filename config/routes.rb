@@ -223,12 +223,23 @@ Rails.application.routes.draw do
               patch :lock   # @tickets_cases — bloqueo de ticket
               patch :unlock # @tickets_cases — bloqueo de ticket
               patch :reopen # @tickets_cases — reapertura de ticket cerrado
+              patch :outcome  # Plan-Clase-Comercial F3 — cerrar oportunidad con resultado
+              patch :postpone # Plan-Clase-Comercial F3
+              patch :resume   # Plan-Clase-Comercial F3
+              post :work_order # Plan-Clase-Orden-de-Trabajo F2b — crear orden desde este caso
+              post :project # Plan-Clase-Proyecto P2 — crear proyecto desde una oportunidad ganada
             end
             resources :case_events, only: [:index]
             # @tickets_cases 2E — relaciones entre tickets
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
             # @tickets_cases — tareas/subtareas del ticket
             resources :case_tasks, only: [:index, :create, :update, :destroy], path: 'tasks'
+            # Plan-Clase-Orden-de-Trabajo F2a — materiales de la orden
+            resources :case_work_order_items, only: [:create, :update, :destroy], path: 'work_order_items'
+            # Plan-Clase-Proyecto P2 — casos dentro del proyecto (crear o ligar / quitar)
+            resources :case_project_children, only: [:index, :create, :destroy], path: 'project_children' do
+              collection { get :timeline } # Plan-Clase-Proyecto P3 — línea de tiempo
+            end
             # @tickets_cases — notas internas (viven en case_events, no en tabla propia)
             resources :case_notes, only: [:index, :create, :update, :destroy], path: 'notes'
             # @tickets_cases F1 — reuniones del ticket y sus series (plan §4.5)
@@ -260,6 +271,7 @@ Rails.application.routes.draw do
           resources :case_sla_policies, only: [:index, :create, :update, :destroy] # @tickets_cases 2I
           resources :case_portals, only: [:index, :create, :update, :destroy] # @tickets_cases — User Portal
           resource  :case_setting, only: [:show, :update] # @tickets_cases — modo simple/ITIL
+          resources :case_outcome_reasons, only: [:index, :create, :update, :destroy] # Plan-Clase-Comercial F3
           resource  :case_folio_config, only: [:show, :update], controller: 'case_folio_configs'
           resource  :case_ai_config, only: [:show, :update], controller: 'case_ai_configs' # @tickets_cases 3A
           # =========================================================================
@@ -738,6 +750,9 @@ Rails.application.routes.draw do
               get :assignees
               get :velocity
               get :stalled
+              get :pipeline # Plan-Clase-Comercial F5
+              get :work_orders # Plan-Clase-Orden-de-Trabajo F3
+              get :projects # Plan-Clase-Proyecto P3
             end
           end
         end

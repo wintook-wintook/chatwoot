@@ -8,6 +8,7 @@
 #  completed_at    :datetime
 #  description     :text
 #  due_at          :datetime
+#  milestone       :boolean          default(FALSE), not null
 #  position        :integer          default(0), not null
 #  priority        :integer          default("medium"), not null
 #  sequence        :integer

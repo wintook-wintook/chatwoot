@@ -6,9 +6,9 @@ export const FEATURE_FLAGS = {
   CAMPAIGNS: 'campaigns',
   CANNED_RESPONSES: 'canned_responses',
   CHATGPT: 'chatgpt',
-  //KANBAN0725
+  // KANBAN0725
   KANBAN: 'kanban',
-  //KANBAN0725
+  // KANBAN0725
   CRM: 'crm',
   CUSTOM_ATTRIBUTES: 'custom_attributes',
   INBOX_MANAGEMENT: 'inbox_management',
@@ -40,6 +40,10 @@ export const FEATURE_FLAGS = {
   GOOGLE_CALENDAR: 'google_calendar',
   // @tickets_cases — Gestor de Tickets
   CASE_MANAGEMENT: 'case_management',
+  // @tickets_cases — Clase de caso Comercial (oportunidades)
+  CASE_COMMERCIAL: 'case_commercial',
+  CASE_WORK_ORDER: 'case_work_order', // Plan-Clase-Orden-de-Trabajo F1
+  CASE_PROJECT: 'case_project', // Plan-Clase-Proyecto P1
   // @query_databases — Conexión ERP dentro de Base de Conocimiento
   ERP_CONNECTION: 'erp_connection',
   // @waba_templates — Gestión de plantillas de WhatsApp desde Configuración

@@ -5,6 +5,9 @@
   formulario ni la lógica de guardado.
 -->
 <script>
+import { mapGetters } from 'vuex';
+import { CASE_CLASSES } from 'dashboard/helper/caseClasses';
+
 const PALETTE = [
   '#3b82f6',
   '#8b5cf6',
@@ -22,7 +25,13 @@ const emptyForm = () => ({
   prefix: '',
   public: false,
   itil_enabled: false,
+  case_class: 'support',
 });
+
+// @tickets_cases — Plan-Clase-Comercial: clases que se ofrecen hoy, en este orden
+// Cada una exige su flag de cuenta (ver CASE_CLASSES).
+const OFFERED_CLASSES = ['support', 'commercial', 'work_order', 'project'];
+const CLASS_FLAG = Object.fromEntries(CASE_CLASSES.map(c => [c.key, c.flag]));
 
 export default {
   name: 'TypeFormModal',
@@ -44,6 +53,31 @@ export default {
     };
   },
   computed: {
+    ...mapGetters({
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
+      accountId: 'getCurrentAccountId',
+    }),
+    // Con su flag activo, o la del tipo que se edita (aunque el flag se apague).
+    classOptions() {
+      return OFFERED_CLASSES.filter(
+        c =>
+          !CLASS_FLAG[c] ||
+          this.isFeatureEnabledonAccount(this.accountId, CLASS_FLAG[c]) ||
+          this.editing?.case_class === c
+      );
+    },
+    // Sin flag y sin tipos comerciales solo existe Soporte: no tiene caso mostrar el selector.
+    showClassSelector() {
+      return this.classOptions.length > 1;
+    },
+    // Hoja de ruta E1.4 — la clase es fija: solo se elige al crear el tipo.
+    classLocked() {
+      return !!this.editing;
+    },
+    // El prefijo entra en el folio: fijo en cuanto el tipo tiene casos.
+    prefixLocked() {
+      return !!this.editing?.prefix_locked;
+    },
     isSaving() {
       return this.$store.getters['caseTickets/getTypesUIFlags'].isSaving;
     },
@@ -70,6 +104,7 @@ export default {
           prefix: this.editing.prefix || '',
           public: !!this.editing.public,
           itil_enabled: !!this.editing.itil_enabled,
+          case_class: this.editing.case_class || 'support',
         };
       } else {
         this.form = emptyForm();
@@ -91,8 +126,8 @@ export default {
         }
         this.$emit('saved');
         this.close();
-      } catch (_e) {
-        /* el store ya expone el error; se mantiene abierto el modal */
+      } catch {
+        // El store ya expone el error; el modal se mantiene abierto.
       }
     },
   },
@@ -106,7 +141,7 @@ export default {
 
       <form
         class="flex flex-col self-stretch w-full gap-4 pb-8"
-        @submit.prevent="save"
+        @submit.prevent="save()"
       >
         <label class="flex flex-col gap-1">
           <span class="text-sm font-medium text-slate-700 dark:text-slate-200"
@@ -121,6 +156,32 @@ export default {
             :placeholder="$t('CASE_TICKETS.TYPES.NAME_PLACEHOLDER')"
           />
         </label>
+
+        <div v-if="showClassSelector" class="flex flex-col gap-1">
+          <span
+            class="text-sm font-medium text-slate-700 dark:text-slate-200"
+            >{{ $t('CASE_TICKETS.TYPES.CLASS.LABEL') }}</span
+          >
+          <div class="flex items-center gap-2">
+            <woot-button
+              v-for="c in classOptions"
+              :key="c"
+              type="button"
+              size="small"
+              :variant="form.case_class === c ? 'smooth' : 'hollow'"
+              :color-scheme="form.case_class === c ? 'primary' : 'secondary'"
+              :is-disabled="classLocked && form.case_class !== c"
+              @click="form.case_class = c"
+            >
+              {{ $t(`CASE_TICKETS.TYPES.CLASS.OPTIONS.${c.toUpperCase()}`) }}
+            </woot-button>
+          </div>
+          <span class="text-xs text-slate-400 dark:text-slate-500">{{
+            classLocked
+              ? $t('CASE_TICKETS.TYPES.CLASS.LOCKED')
+              : $t('CASE_TICKETS.TYPES.CLASS.HELP')
+          }}</span>
+        </div>
 
         <div class="flex flex-col gap-1">
           <span
@@ -159,11 +220,14 @@ export default {
             type="text"
             class="w-32 font-mono uppercase"
             maxlength="8"
+            :disabled="prefixLocked"
             :placeholder="$t('CASE_TICKETS.TYPES.PREFIX_PLACEHOLDER')"
             @input="form.prefix = form.prefix.toUpperCase()"
           />
           <span class="text-xs text-slate-400 dark:text-slate-500">{{
-            $t('CASE_TICKETS.TYPES.PREFIX_HELP')
+            prefixLocked
+              ? $t('CASE_TICKETS.TYPES.PREFIX_LOCKED')
+              : $t('CASE_TICKETS.TYPES.PREFIX_HELP')
           }}</span>
         </label>
 

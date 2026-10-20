@@ -18,7 +18,7 @@ export default {
   components: {
     PrimarySidebar,
     SecondarySidebar,
-   // AddKanbanType, // Registrar el modal
+    // AddKanbanType, // Registrar el modal
   },
   props: {
     showSecondarySidebar: {
@@ -98,13 +98,9 @@ export default {
 
     // NUEVA: Computed property para kanbanTypes
     kanbanTypes() {
-      console.log('🔄 Sidebar: Computando kanbanTypes desde store...');
-      
       const storeData = this.$store.state.kanbanTypeProcesses;
-      console.log('📊 Sidebar: Store data:', storeData);
-      
+
       if (!storeData || !storeData.records) {
-        console.log('❌ Sidebar: No hay datos en el store');
         return [];
       }
 
@@ -120,7 +116,6 @@ export default {
         kanban_processes: record.kanban_processes || [],
       }));
 
-      console.log('✅ Sidebar: Kanban types mapeados:', types);
       return types;
     },
 
@@ -188,22 +183,11 @@ export default {
       const { secondaryMenu } = this.sideMenuConfig;
       const { name: currentRoute } = this.$route;
 
-      console.log('🔍 Debug Sidebar - Ruta actual:', currentRoute);
-      console.log('🔍 Debug Sidebar - Menús secundarios:', secondaryMenu);
-
-      const activeSecondaryMenu =
-        secondaryMenu.find(menuItem => {
-          const isRouteIncluded = menuItem.routes.includes(currentRoute);
-          console.log(`🔍 Debug Sidebar - Menu ${menuItem.parentNav}:`, {
-            routes: menuItem.routes,
-            currentRoute,
-            isIncluded: isRouteIncluded
-          });
-          return isRouteIncluded;
-        }) || {};
-
-      console.log('🔍 Debug Sidebar - Menu activo encontrado:', activeSecondaryMenu);
-      return activeSecondaryMenu;
+      return (
+        secondaryMenu.find(menuItem =>
+          menuItem.routes.includes(currentRoute)
+        ) || {}
+      );
     },
     activePrimaryMenu() {
       const activePrimaryMenu =
@@ -227,8 +211,19 @@ export default {
 
       // Rutas que siempre muestran el sidebar sin importar la preferencia del usuario
       const alwaysShowRoutes = [
-        'kanban_dashboard', 'kanban_board', 'kanban_processes', 'kanban_label', 'kanban_status', 'kanban_type',
-        'gestorTickets_index', 'gestorTickets_detail', 'gestorTickets_rules', 'gestorTickets_metrics', // @tickets_cases
+        'kanban_dashboard',
+        'kanban_board',
+        'kanban_processes',
+        'kanban_label',
+        'kanban_status',
+        'kanban_type',
+        'gestorTickets_index',
+        'gestorTickets_detail',
+        'gestorTickets_rules',
+        'gestorTickets_metrics', // @tickets_cases
+        'gestorTickets_class_list',
+        'gestorTickets_class_board',
+        'gestorTickets_class_metrics', // Plan-Casos E1
       ];
       if (alwaysShowRoutes.includes(currentRoute)) return true;
 
@@ -262,12 +257,6 @@ export default {
     this.fetchCustomViews();
     // NUEVO: Cargar kanban types
     this.loadKanbanTypes();
-
-    // DEBUG: Verificar configuración del sidebar
-    console.log('🔍 Debug Sidebar mounted:');
-    console.log('- Ruta actual:', this.$route.name);
-    console.log('- activeSecondaryMenu:', this.activeSecondaryMenu);
-    console.log('- shouldShowSecondarySidebar:', this.shouldShowSecondarySidebar);
   },
 
   methods: {
@@ -280,20 +269,15 @@ export default {
     // NUEVO: Método para cargar kanban types
     async loadKanbanTypes() {
       try {
-        console.log('🔄 Sidebar: Cargando kanbanTypes...');
         await this.$store.dispatch('kanbanTypeProcesses/get');
-        console.log('✅ Sidebar: kanbanTypes cargados correctamente');
       } catch (error) {
-        console.error('❌ Sidebar: Error cargando kanbanTypes:', error);
+        // Sin tipos de kanban el menú se pinta igual (sin esa sección).
       }
     },
 
     // NUEVO: Método para manejar la creación de nuevos tipos
     showAddKanbanTypePopup() {
-          console.log('AQUI🔄 Sidebar: Crear nuevo tipo de proceso');
-          console.log('🔄 Sidebar: showAddKanbanTypeModal antes:', this.showAddKanbanTypeModal);
-          this.showAddKanbanTypeModal = true;
-          console.log('🔄 Sidebar: showAddKanbanTypeModal después:', this.showAddKanbanTypeModal); 
+      this.showAddKanbanTypeModal = true;
     },
 
     // NUEVO: Método para cerrar el modal y recargar datos

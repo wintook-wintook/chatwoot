@@ -50,7 +50,7 @@ class Cases::OrchestratorService
   def create_for_manual(title:, priority: nil, case_type_id: nil, description: nil,
                         ticket_kind: nil, impact: nil, urgency: nil,
                         affected_service_id: nil, category_id: nil, custom_attributes: {},
-                        assignee_id: nil, team_id: nil)
+                        assignee_id: nil, team_id: nil, commercial: {}, work_order: {}, project: {})
     # @tickets_cases — asignación manual al crear (opcional). Resueltos dentro de
     # la cuenta. Si el agente asignó a mano, gana sobre las reglas (skip_assignment).
     assignee = @account.users.find_by(id: assignee_id) if assignee_id.present?
@@ -83,6 +83,10 @@ class Cases::OrchestratorService
     # Resueltos dentro del scope de la cuenta (evita vincular registros de otra cuenta).
     attrs[:affected_service_id] = @account.case_services.where(id: affected_service_id).pick(:id) if affected_service_id.present?
     attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id) if category_id.present?
+    # Plan-Clase-Comercial F3 — monto, moneda, cierre estimado y probabilidad de una oportunidad.
+    attrs.merge!(commercial.to_h.stringify_keys.slice(*CaseTicket::COMMERCIAL_FIELDS).compact_blank.symbolize_keys)
+    attrs.merge!(work_order_attrs(work_order)) # Plan-Clase-Orden-de-Trabajo F2a
+    attrs.merge!(project_attrs(project)) # Plan-Clase-Proyecto P1
 
     ticket = CaseTicket.create!(attrs)
     # Asignación manual presente → las reglas no reasignan (sí enriquecen lo demás).
@@ -113,7 +117,7 @@ class Cases::OrchestratorService
   #   - asignación: SIEMPRE vía Cases::RuleEngineService, nunca hardcodeada
   #     acá, igual que el resto de las vías de alta.
   def create_from_automation(case_type_id: nil)
-    ticket = find_active_ticket_for_automation
+    ticket = find_active_ticket_for_automation(case_type_id)
     if ticket
       ticket.update!(conversation: @conversation) if ticket.conversation_id.nil? && @conversation.present?
       return ticket
@@ -153,7 +157,8 @@ class Cases::OrchestratorService
   # No encola clasificación IA (no hay mensaje de cliente que clasificar).
   def create_internal(requester:, title:, assignee: nil, team: nil, priority: nil, case_type_id: nil,
                       description: nil, ticket_kind: nil, impact: nil, urgency: nil,
-                      affected_service_id: nil, category_id: nil, custom_attributes: {})
+                      affected_service_id: nil, category_id: nil, custom_attributes: {}, work_order: {},
+                      project: {})
     attrs = {
       account: @account,
       contact: nil,
@@ -180,6 +185,8 @@ class Cases::OrchestratorService
     # Resueltos dentro del scope de la cuenta (evita vincular registros de otra cuenta).
     attrs[:affected_service_id] = @account.case_services.where(id: affected_service_id).pick(:id) if affected_service_id.present?
     attrs[:category_id]         = @account.case_categories.where(id: category_id).pick(:id) if category_id.present?
+    attrs.merge!(work_order_attrs(work_order)) # Plan-Clase-Orden-de-Trabajo F2a — orden sin cliente
+    attrs.merge!(project_attrs(project)) # Plan-Clase-Proyecto P1 — proyecto interno
 
     ticket = CaseTicket.create!(attrs)
     # Asignación manual presente (agente/equipo) → las reglas no reasignan.
@@ -224,17 +231,30 @@ class Cases::OrchestratorService
 
   private
 
+  # Plan-Clase-Orden-de-Trabajo F2a — dirección, horas y facturable de una orden
+  # (vacíos se omiten; `billable` sí cuenta en false).
+  # Plan-Clase-Proyecto P1 — fechas, presupuesto y avance de un proyecto (vacíos se omiten).
+  def project_attrs(project)
+    project.to_h.stringify_keys.slice(*CaseTicket::PROJECT_FIELDS).compact_blank.symbolize_keys
+  end
+
+  def work_order_attrs(work_order)
+    data = work_order.to_h.stringify_keys.slice(*CaseTicket::WORK_ORDER_FIELDS)
+    data.reject { |key, value| key != 'billable' && value.blank? }.symbolize_keys
+  end
+
   # @tickets_cases — versión de find_active_ticket solo para create_from_automation:
   # excluye CaseTicket::CLOSED_STATUSES completo (resolved, validating, closed,
   # cancelled) en vez de únicamente closed/cancelled. No se usa el nombre
   # find_active_ticket para no ampliar sin querer el criterio de los otros 3
   # flujos que sí llaman a ese método.
-  def find_active_ticket_for_automation
-    CaseTicket
-      .where(account: @account, contact: @contact)
-      .where.not(status: CaseTicket::CLOSED_STATUSES)
-      .order(created_at: :desc)
-      .first
+  # Plan-Clase-Comercial F3 (hallazgo #4): con un tipo pedido, solo se reutiliza un
+  # caso vigente de la MISMA clase; una venta no absorbe un ticket de soporte ni al revés.
+  def find_active_ticket_for_automation(case_type_id = nil)
+    scope = CaseTicket.where(account: @account, contact: @contact).where.not(status: CaseTicket::CLOSED_STATUSES)
+    type = @account.case_types.find_by(id: case_type_id) if case_type_id.present?
+    scope = scope.of_class(type.case_class) if type
+    scope.order(created_at: :desc).first
   end
 
   # @tickets_cases 3B — encola la clasificación IA si la cuenta la tiene activa
