@@ -391,6 +391,17 @@ export default {
           .filter(Boolean)
           .join(' · ');
       }
+      // Plan-Metricas-Comercial — compromiso del cliente: se marcó, se movió la
+      // fecha, se quitó o cambió la nota.
+      if (type === 'commitment_changed') {
+        const c = 'CASE_TICKETS.COMMERCIAL.COMMITMENT.EVENTS';
+        const text = this.$t(`${c}.${p.action}`, {
+          on: formatDay(p.on),
+          from: formatDay(p.from),
+          to: formatDay(p.to),
+        });
+        return [text, p.note].filter(Boolean).join(' · ');
+      }
       if (type === 'amount_changed') {
         const labels = {
           amount: `${fields}.AMOUNT`,

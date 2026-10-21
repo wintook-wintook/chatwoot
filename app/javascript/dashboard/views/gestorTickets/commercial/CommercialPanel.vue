@@ -1,22 +1,38 @@
 <!--
   @tickets_cases — Plan-Clase-Comercial F4
   Franja «Datos comerciales» del detalle de una oportunidad: monto, moneda,
-  cierre estimado y probabilidad, editables en línea (se guardan juntos con
-  PATCH /case_tickets/:id; el backend deja `amount_changed` en el historial).
+  cierre estimado, probabilidad y la casilla «Comprometida por el cliente»
+  (Plan-Metricas-Comercial: marcada, el cierre es la fecha que prometió el
+  cliente), editables en línea (se guardan juntos con PATCH /case_tickets/:id;
+  el backend deja `amount_changed` / `commitment_changed` en el historial).
   Cerrada, se congela y muestra el resultado con su motivo y nota.
 -->
 <script>
 import {
+  COMMITTED_BADGE,
   OUTCOME_BADGE,
   POSTPONED_BADGE,
+  PROMISE_OVERDUE_BADGE,
   formatMoney,
   formatDay,
+  isOpenCommitted,
+  isoDayFromToday,
+  promiseOverdue,
 } from 'dashboard/helper/caseCommercial';
+import CommitmentFields from './CommitmentFields.vue';
 
-const FIELDS = ['amount', 'currency', 'expected_close_at', 'probability'];
+const FIELDS = [
+  'amount',
+  'currency',
+  'expected_close_at',
+  'probability',
+  'committed',
+  'commit_note',
+];
 
 export default {
   name: 'CommercialPanel',
+  components: { CommitmentFields },
   props: {
     ticket: { type: Object, required: true },
   },
@@ -47,6 +63,15 @@ export default {
     postponedBadge() {
       return POSTPONED_BADGE;
     },
+    // «Comprometida · 24 oct» (o «Promesa vencida») mientras siga abierta.
+    commitment() {
+      if (!isOpenCommitted(this.ticket)) return null;
+      const overdue = promiseOverdue(this.ticket, isoDayFromToday(0));
+      return {
+        key: overdue ? 'PROMISE_OVERDUE' : 'COMMITTED_ON',
+        cls: overdue ? PROMISE_OVERDUE_BADGE : COMMITTED_BADGE,
+      };
+    },
   },
   watch: {
     // Otro cambio (mover de etapa, cerrar, reabrir) trae datos nuevos.
@@ -62,6 +87,8 @@ export default {
         currency: t.currency || '',
         expected_close_at: t.expected_close_at || '',
         probability: t.probability ?? '',
+        committed: !!t.committed,
+        commit_note: t.commit_note || '',
       };
     },
     money(amount, currency) {
@@ -82,6 +109,8 @@ export default {
           expected_close_at: this.draft.expected_close_at || null,
           probability:
             this.draft.probability === '' ? null : this.draft.probability,
+          committed: this.draft.committed,
+          commit_note: this.draft.commit_note.trim() || null,
         };
         await this.$store.dispatch('caseTickets/updateCommercialData', {
           ticketId: this.ticket.id,
@@ -136,6 +165,18 @@ export default {
         }}<template v-if="ticket.postpone_reason">
           · {{ ticket.postpone_reason.label }}</template
         >
+      </span>
+      <span
+        v-if="commitment"
+        class="px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded"
+        :class="commitment.cls"
+        :title="ticket.commit_note || ''"
+      >
+        {{
+          $t(`CASE_TICKETS.COMMERCIAL.COMMITMENT.${commitment.key}`, {
+            date: day(ticket.expected_close_at),
+          })
+        }}
       </span>
     </div>
 
@@ -212,12 +253,17 @@ export default {
       </label>
       <label class="flex flex-col gap-1 w-40">
         <span class="text-xs uppercase text-slate-400 dark:text-slate-500">
-          {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.EXPECTED_CLOSE') }}
+          {{
+            draft.committed
+              ? $t('CASE_TICKETS.COMMERCIAL.COMMITMENT.DATE')
+              : $t('CASE_TICKETS.COMMERCIAL.FIELDS.EXPECTED_CLOSE')
+          }}
         </span>
         <input
           v-model="draft.expected_close_at"
           type="date"
           class="h-8 text-sm"
+          :required="draft.committed"
         />
       </label>
       <label
@@ -246,6 +292,12 @@ export default {
           {{ weighted }}
         </span>
       </div>
+      <CommitmentFields
+        :committed.sync="draft.committed"
+        :note.sync="draft.commit_note"
+        compact
+        class="w-full"
+      />
       <div v-if="isDirty" class="flex gap-2 ml-auto">
         <woot-button
           size="small"

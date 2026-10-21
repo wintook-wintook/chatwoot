@@ -19,6 +19,19 @@ class CaseTasksAPI extends ApiClient {
     return axios.get(base, { params: filters });
   }
 
+  // Plan-Bandeja-Prioridad F2 — orden propio de «Mi día» (reemplaza el plan del
+  // día): day = fecha LOCAL 'YYYY-MM-DD', taskIds = ids en el orden elegido.
+  saveMyDayPlan(day, taskIds) {
+    const base = this.url.replace(/case_tickets$/, 'case_tasks');
+    return axios.put(`${base}/my_day_plan`, { day, task_ids: taskIds });
+  }
+
+  // Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA (explica, no reordena).
+  myDayAi(day, tz) {
+    const base = this.url.replace(/case_tickets$/, 'case_tasks');
+    return axios.post(`${base}/my_day_ai`, { day, tz });
+  }
+
   createTask(ticketId, data) {
     return axios.post(`${this.url}/${ticketId}/tasks`, { case_task: data });
   }

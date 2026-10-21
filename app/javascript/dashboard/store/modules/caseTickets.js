@@ -239,6 +239,10 @@ export const getters = {
   getSettingsUIFlags(_state) {
     return _state.settingsUiFlags;
   },
+  // «Resumen del negocio»: lo decide el backend (admin o autorizado).
+  getCanViewBusinessSummary(_state) {
+    return !!(_state.settings && _state.settings.can_view_business_summary);
+  },
   // 2K — campos personalizados de un tipo de caso
   getTypeFields: _state => caseTypeId => _state.typeFields[caseTypeId] || [],
   getTypeFieldsUIFlags(_state) {

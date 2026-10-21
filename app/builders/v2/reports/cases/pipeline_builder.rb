@@ -9,14 +9,28 @@
 #   - Lo DECIDIDO (ganadas, perdidas, canceladas, tasa de cierre, ciclo, motivos)
 #     se acota por `outcome_at` dentro del rango: «qué se cerró en el período».
 # Los montos se agrupan SIEMPRE por moneda: nunca se suman pesos con dólares.
+#
+# Filtros propios (pestaña Embudo): `currency` acota todo a una moneda y `close`
+# acota lo ABIERTO por cierre estimado (overdue · this_week · this_month ·
+# next_month · this_quarter · none = sin fecha). `currencies` lista las monedas disponibles.
 class V2::Reports::Cases::PipelineBuilder < V2::Reports::Cases::BaseBuilder
+  include V2::Reports::Cases::PipelineOpenParts
+  include V2::Reports::Cases::PipelineCommitmentParts
   SECONDS_PER_DAY = 86_400.0
   AMOUNT   = 'COALESCE(SUM(case_tickets.amount), 0)'
   WEIGHTED = 'COALESCE(SUM(case_tickets.amount * COALESCE(case_tickets.probability, 0) / 100.0), 0)'
 
+  # Etapa «en espera» (Pospuesta): columna cuyos estados son solo de espera. En
+  # el embudo va aparte: no es un paso del avance.
+  WAITING_JSON = CaseTicket::WAITING_STATUSES.to_json
+  WAITING = "BOOL_AND(case_type_columns.statuses <@ '#{WAITING_JSON}'::jsonb)".freeze
+
   def build
     {
+      currencies: currencies,
       summary: summary,
+      previous: previous_summary,
+      attention: attention,
       stages: stages,
       loss_reasons: loss_reasons,
       by_assignee: by_assignee,
@@ -28,11 +42,29 @@ class V2::Reports::Cases::PipelineBuilder < V2::Reports::Cases::BaseBuilder
   private
 
   def commercial_tickets
-    filtered_tickets.commercial
+    scope = filtered_tickets.commercial
+    params[:currency].present? ? scope.where(currency: params[:currency].to_s.upcase) : scope
+  end
+
+  def currencies
+    filtered_tickets.commercial.where.not(currency: nil).distinct.order(:currency).pluck(:currency)
   end
 
   def open_scope
-    commercial_tickets.where(status: CaseTicket::PENDING_STATUSES)
+    close_window(commercial_tickets.where(status: CaseTicket::PENDING_STATUSES))
+  end
+
+  def close_window(scope)
+    today = Time.zone.today
+    case params[:close]
+    when 'overdue' then scope.where(expected_close_at: ...today)
+    when 'this_week' then scope.where(expected_close_at: today.all_week)
+    when 'this_month' then scope.where(expected_close_at: today.all_month)
+    when 'next_month' then scope.where(expected_close_at: today.next_month.all_month)
+    when 'this_quarter' then scope.where(expected_close_at: today.all_quarter)
+    when 'none' then scope.where(expected_close_at: nil)
+    else scope
+    end
   end
 
   def decided_scope
@@ -46,13 +78,35 @@ class V2::Reports::Cases::PipelineBuilder < V2::Reports::Cases::BaseBuilder
     open_summary.merge(decided_summary)
   end
 
+  # Plan-Metricas-Comercial M1 — lo decidido en el período de comparación (▲▼ de
+  # «¿Cómo vamos?»). El front manda el rango justo (`prev_since`/`prev_until`:
+  # «este mes» contra el mismo tramo del mes anterior); sin él, el período
+  # anterior de la misma duración. Sin período elegido, nil.
+  def previous_summary
+    return nil unless range
+
+    self.class.new(account: account, params: previous_params).send(:decided_summary)
+  end
+
+  def previous_params
+    since, till = params.values_at(:prev_since, :prev_until)
+    unless since.present? && till.present?
+      length = range.end - range.begin
+      since = (range.begin - length).to_i
+      till = range.begin.to_i
+    end
+    params.to_h.merge('since' => since.to_s, 'until' => till.to_s).with_indifferent_access
+  end
+
   def open_summary
     open_rows = open_scope.group('case_tickets.currency')
                           .pluck('case_tickets.currency', Arel.sql('COUNT(*)'), Arel.sql(AMOUNT), Arel.sql(WEIGHTED))
     {
       open_count: open_rows.sum { |r| r[1] },
       postponed_count: open_scope.where.not(postponed_until: nil).count,
-      open_value: open_rows.map { |cur, _n, amount, weighted| money(cur, amount: amount, weighted: weighted) }
+      open_value: open_rows.map { |cur, _n, amount, weighted| money(cur, amount: amount, weighted: weighted) },
+      closing_this_month: closing_this_month,
+      commitments: commitments
     }
   end
 
@@ -63,10 +117,11 @@ class V2::Reports::Cases::PipelineBuilder < V2::Reports::Cases::BaseBuilder
       cancelled_count: decided_counts['cancelled'],
       won_value: decided_values('won'),
       lost_value: decided_values('lost'),
+      cancelled_value: decided_values('cancelled'),
       win_rate: rate(decided_counts['won'], decided_counts['won'] + decided_counts['lost']),
       avg_cycle_days: avg_cycle_days,
       recovered_count: recovered_count
-    }
+    }.merge(promises)
   end
 
   def decided_rows
@@ -104,39 +159,21 @@ class V2::Reports::Cases::PipelineBuilder < V2::Reports::Cases::BaseBuilder
              .distinct.count(:case_ticket_id)
   end
 
-  # ── Embudo por etapa ─────────────────────────────────────────────────────────
-
-  # Abiertas por columna del embudo. Se agrupa por la ETIQUETA de la columna: sin
-  # filtro de tipo, «Propuesta» de dos tipos distintos es la misma etapa (los tipos
-  # Comercial nacen con el mismo embudo). Sin columna → label nil («Sin etapa» en el front).
-  def stages
-    rows = open_scope.left_joins(:case_type_column)
-                     .group('case_type_columns.label', 'case_tickets.currency')
-                     .pluck('case_type_columns.label', Arel.sql('MIN(case_type_columns.position)'),
-                            'case_tickets.currency', Arel.sql('COUNT(*)'), Arel.sql(AMOUNT), Arel.sql(WEIGHTED))
-    stage_rows = rows.group_by(&:first).map { |label, group| stage_row(label, group) }
-    stage_rows.sort_by { |s| [s[:position], s[:label].to_s] }
-  end
-
-  # group: [[label, position, currency, count, amount, weighted], ...] de una etapa.
-  def stage_row(label, group)
-    {
-      label: label,
-      position: group.filter_map { |r| r[1] }.min || 999,
-      count: group.sum { |r| r[3] },
-      values: group.map { |row| money(row[2], amount: row[4], weighted: row[5]) }
-    }
-  end
-
   # ── Motivos de pérdida / cancelación ─────────────────────────────────────────
 
+  # M4 — con el monto perdido por moneda (`values`): perder 10 chicas no es lo
+  # mismo que perder una grande.
   def loss_reasons
-    decided_scope.where(outcome: %i[lost cancelled])
-                 .left_joins(:outcome_reason)
-                 .group('case_tickets.outcome', 'case_outcome_reasons.label')
-                 .pluck('case_tickets.outcome', 'case_outcome_reasons.label', Arel.sql('COUNT(*)'))
-                 .map { |outcome, label, n| { outcome: outcome_key(outcome), label: label, count: n } }
-                 .sort_by { |r| -r[:count] }
+    rows = decided_scope.where(outcome: %i[lost cancelled])
+                        .left_joins(:outcome_reason)
+                        .group('case_tickets.outcome', 'case_outcome_reasons.label', 'case_tickets.currency')
+                        .pluck('case_tickets.outcome', 'case_outcome_reasons.label', 'case_tickets.currency',
+                               Arel.sql('COUNT(*)'), Arel.sql(AMOUNT))
+    reasons = rows.group_by { |outcome, label, *| [outcome_key(outcome), label] }.map do |(outcome, label), group|
+      { outcome: outcome, label: label, count: group.sum { |r| r[3] },
+        values: group.map { |r| money(r[2], amount: r[4], count: r[3]) } }
+    end
+    reasons.sort_by { |r| -r[:count] }
   end
 
   # ── Por vendedor y por tipo ──────────────────────────────────────────────────
@@ -186,19 +223,6 @@ class V2::Reports::Cases::PipelineBuilder < V2::Reports::Cases::BaseBuilder
 
   def empty_row
     { open_count: 0, open_value: [], won_count: 0, lost_count: 0, cancelled_count: 0, won_value: [] }
-  end
-
-  # ── Pronóstico ───────────────────────────────────────────────────────────────
-
-  # Abiertas con cierre estimado, por mes y moneda: monto y ponderado. Los meses
-  # ya pasados quedan (son oportunidades con la fecha vencida, que hay que revisar).
-  def forecast
-    month = "TO_CHAR(DATE_TRUNC('month', case_tickets.expected_close_at), 'YYYY-MM')"
-    open_scope.where.not(expected_close_at: nil)
-              .group(Arel.sql(month), 'case_tickets.currency')
-              .order(Arel.sql(month))
-              .pluck(Arel.sql(month), 'case_tickets.currency', Arel.sql('COUNT(*)'), Arel.sql(AMOUNT), Arel.sql(WEIGHTED))
-              .map { |m, cur, n, amount, weighted| money(cur, amount: amount, weighted: weighted, count: n).merge(month: m) }
   end
 
   # ── utilidades ───────────────────────────────────────────────────────────────

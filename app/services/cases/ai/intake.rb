@@ -28,7 +28,8 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
   # conversation_text: transcripción reciente (Cliente/Bot: ...).
   # policy:            prompt complementario sin las directivas técnicas.
   def extract(conversation_text:, policy: nil)
-    types      = @account.case_types.order(:position).pluck(:id, :name)
+    # [id, nombre, clase]: la clase le dice a la IA para qué es cada tipo.
+    types      = @account.case_types.order(:position).pluck(:id, :name, :case_class)
     # Plan-Clase-Comercial F2: [id, nombre, case_type_id]; NULL = global. El tipo
     # se elige en la misma respuesta, así que se listan todos con su etiqueta y
     # `sanitize` descarta los que no sean del tipo elegido.
@@ -87,8 +88,8 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
       CONVERSACIÓN:
       #{conversation_text.presence || '(sin contexto)'}
 
-      TIPOS DE CASO DISPONIBLES (id: nombre):
-      #{listing(types)}
+      TIPOS DE CASO DISPONIBLES (id: nombre · clase):
+      #{type_listing(types)}
 
       SERVICIOS DISPONIBLES (id: nombre; «solo tipo N» = únicamente para ese tipo de caso):
       #{typed_listing(services)}
@@ -98,10 +99,18 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
     PROMPT
   end
 
-  def listing(pairs)
-    return '(ninguno)' if pairs.blank?
+  # Qué significa cada clase, para que la IA elija bien el tipo.
+  CLASS_HINTS = {
+    'support' => 'Soporte: un problema, falla, queja o solicitud de servicio',
+    'commercial' => 'Comercial: interés de compra, cotización o venta',
+    'work_order' => 'Orden de trabajo: un trabajo o visita en sitio',
+    'project' => 'Proyecto: un trabajo largo con fases y entregas'
+  }.freeze
 
-    pairs.map { |id, name| "#{id}: #{name}" }.join("\n")
+  def type_listing(types)
+    return '(ninguno)' if types.blank?
+
+    types.map { |id, name, klass| "#{id}: #{name} · #{CLASS_HINTS[klass.presence || 'support']}" }.join("\n")
   end
 
   def typed_listing(rows)

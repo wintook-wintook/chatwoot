@@ -1,38 +1,62 @@
 <!--
-  @tickets_cases — Plan-Clase-Comercial F5
-  Métricas del embudo comercial (GET /api/v2/.../case_reports/pipeline).
-  Lo abierto es foto de hoy; lo decidido se acota al período por fecha de cierre.
-  Los montos van SIEMPRE por moneda (cada valor es una lista { currency, amount }).
-  Las barras son de una sola serie (conteo), con etiqueta directa y tooltip; cada
-  bloque tiene vista de tabla.
+  @tickets_cases — Plan-Clase-Comercial F5 · Plan-Metricas-Comercial
+  Métricas del embudo comercial (GET /api/v2/.../case_reports/pipeline), en cuatro
+  pestañas por la pregunta que responde cada una:
+    ¿Cómo vamos? (OverviewTab) · Dinero en juego (MoneyTab, con el embudo) ·
+    Mes a mes (MonthlyTab, a pedido) · ¿Por qué perdemos? (LossesTab).
+  Tipo, vendedor y equipo son de toda la página. El tiempo depende de la pestaña:
+  el período de calendario (Este mes, Mes pasado…) solo aplica a «¿Cómo vamos?» y
+  «¿Por qué perdemos?» (lo decidido, por fecha de cierre); «Dinero en juego» es
+  foto de hoy (su filtro de tiempo es el cierre estimado) y «Mes a mes» trae su
+  propia ventana. Montos SIEMPRE por moneda.
+  Este componente solo arma la página y pide el reporte que comparten
+  «¿Cómo vamos?», «Dinero en juego» y «¿Por qué perdemos?».
 -->
 <script>
 import { mapGetters } from 'vuex';
 import CaseReportsAPI from 'dashboard/api/caseReports';
-import { formatMoney } from 'dashboard/helper/caseCommercial';
 import CaseClassSwitcher from '../CaseClassSwitcher.vue'; // Plan-Casos E1
 import CaseTypeSelect from '../filters/CaseTypeSelect.vue'; // Plan-Casos E1.1
 import { loadCaseState, saveCaseState } from 'dashboard/helper/caseClasses';
-// Plan-Casos E1.3 — mismo período que las Métricas de Soporte.
-import { METRIC_PERIODS as PERIODS } from 'dashboard/helper/caseFilters';
-import MetricsPeriodPicker from '../filters/MetricsPeriodPicker.vue';
+// Plan-Metricas-Comercial — período de calendario con comparación justa.
+import { formatRange, toEpoch } from 'dashboard/helper/caseMetricsPeriod';
+import caseMetricsPeriodMixin from 'dashboard/mixins/caseMetricsPeriodMixin';
+import CalendarPeriodPicker from '../filters/CalendarPeriodPicker.vue';
+import OverviewTab from './metrics/OverviewTab.vue';
+import MoneyTab from './metrics/MoneyTab.vue';
+import MonthlyTab from './metrics/MonthlyTab.vue';
+import LossesTab from './metrics/LossesTab.vue';
+
+const TABS = ['overview', 'money', 'monthly', 'losses'];
+// Pestañas guardadas con los nombres anteriores (Generales / Embudo).
+const LEGACY_TABS = { general: 'overview', funnel: 'money' };
+// Pestañas a las que les aplica el período de arriba (lo decidido).
+const PERIOD_TABS = ['overview', 'losses'];
 
 export default {
   name: 'CommercialMetrics',
-  components: { CaseClassSwitcher, CaseTypeSelect, MetricsPeriodPicker },
+  components: {
+    CaseClassSwitcher,
+    CaseTypeSelect,
+    CalendarPeriodPicker,
+    OverviewTab,
+    MoneyTab,
+    MonthlyTab,
+    LossesTab,
+  },
+  mixins: [caseMetricsPeriodMixin],
   props: {
     caseClass: { type: String, default: 'commercial' },
   },
   data() {
     return {
-      period: '90d',
       caseTypeId: '',
       assigneeId: '',
       teamId: '', // Plan-Casos E1.3
+      tab: 'overview',
       report: null,
+      shownRange: null,
       isLoading: false,
-      // Vista de tabla por bloque de barras (accesibilidad / exportar a ojo).
-      tableView: { stages: false, reasons: false },
     };
   },
   computed: {
@@ -40,87 +64,103 @@ export default {
       agents: 'agents/getAgents',
       teams: 'teams/getTeams',
     }),
+    tabs() {
+      return TABS;
+    },
+    tabIndex() {
+      return Math.max(0, TABS.indexOf(this.tab));
+    },
+    // Filtros de la página para las pestañas que piden su propio reporte (se
+    // recalcula solo si cambian: el rango usa la hora de ese momento).
+    baseFilters() {
+      return this.filters({
+        period: this.period,
+        customFrom: this.customFrom,
+        customTo: this.customTo,
+        caseTypeId: this.caseTypeId,
+        assigneeId: this.assigneeId,
+        teamId: this.teamId,
+      });
+    },
+    showPeriod() {
+      return PERIOD_TABS.includes(this.tab);
+    },
+    // «1–21 oct» y, en «¿Cómo vamos?», contra qué se compara («1–21 sept»).
+    // Se fija al pedir el reporte, para que el texto siempre sea el de esos números.
+    rangeLabel() {
+      return this.shownRange
+        ? formatRange(this.shownRange.from, this.shownRange.to)
+        : '';
+    },
+    compareLabel() {
+      return this.shownRange
+        ? formatRange(this.shownRange.prevFrom, this.shownRange.prevTo)
+        : '';
+    },
     summary() {
-      return this.report?.summary || {};
-    },
-    decidedCount() {
-      return (this.summary.won_count || 0) + (this.summary.lost_count || 0);
-    },
-    stages() {
-      return this.report?.stages || [];
-    },
-    reasons() {
-      return this.report?.loss_reasons || [];
-    },
-    byAssignee() {
-      return this.report?.by_assignee || [];
-    },
-    byType() {
-      return this.report?.by_type || [];
-    },
-    forecast() {
-      return this.report?.forecast || [];
-    },
-    maxStageCount() {
-      return Math.max(1, ...this.stages.map(s => s.count));
-    },
-    maxReasonCount() {
-      return Math.max(1, ...this.reasons.map(r => r.count));
-    },
-    currentMonth() {
-      const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return (this.report && this.report.summary) || {};
     },
     isEmpty() {
+      const s = this.summary;
       return (
         this.report &&
-        !this.summary.open_count &&
-        !this.decidedCount &&
-        !this.summary.cancelled_count
+        !s.open_count &&
+        !s.won_count &&
+        !s.lost_count &&
+        !s.cancelled_count
       );
     },
   },
   mounted() {
     this.$store.dispatch('caseTickets/fetchTypes');
     this.$store.dispatch('agents/get');
-    // Plan-Casos E1.2 — vuelve con el tipo, período y vendedor que dejaste.
+    this.$store.dispatch('teams/get');
+    // Plan-Casos E1.2 — vuelve con el tipo, período, vendedor y pestaña que dejaste.
     const st = loadCaseState(this.$route.params.accountId, this.caseClass);
     const saved = st.metrics || {};
     this.caseTypeId = st.type ?? '';
-    if (PERIODS.some(p => p.key === saved.period)) this.period = saved.period;
+    this.restorePeriod(saved);
     this.assigneeId = saved.assigneeId || '';
     this.teamId = saved.teamId || '';
-    this.$store.dispatch('teams/get');
+    const tab = LEGACY_TABS[saved.tab] || saved.tab;
+    if (TABS.includes(tab)) this.tab = tab;
     this.fetch();
   },
   methods: {
-    filters() {
-      const period = PERIODS.find(p => p.key === this.period);
+    filters(state = this) {
       const f = {
-        caseTypeId: this.caseTypeId || undefined,
-        assigneeId: this.assigneeId || undefined,
-        teamId: this.teamId || undefined, // E1.3 — la API ya filtra por equipo
+        caseTypeId: state.caseTypeId || undefined,
+        assigneeId: state.assigneeId || undefined,
+        teamId: state.teamId || undefined, // E1.3 — la API ya filtra por equipo
       };
-      if (period?.days) {
-        const now = Math.floor(Date.now() / 1000);
-        f.from = now - period.days * 86400;
-        f.to = now;
+      const r = this.periodRangeOf(state);
+      if (r) {
+        f.from = toEpoch(r.from);
+        f.to = toEpoch(r.to);
+        f.prevFrom = toEpoch(r.prevFrom);
+        f.prevTo = toEpoch(r.prevTo);
       }
       return f;
     },
-    async fetch() {
+    persist() {
       saveCaseState(this.$route.params.accountId, this.caseClass, {
         type: this.caseTypeId,
         metrics: {
-          period: this.period,
+          ...this.periodState(),
           assigneeId: this.assigneeId,
           teamId: this.teamId,
+          tab: this.tab,
         },
       });
+    },
+    async fetch() {
+      this.persist();
       this.isLoading = true;
       try {
+        const range = this.periodRangeOf();
         const { data } = await CaseReportsAPI.getPipeline(this.filters());
         this.report = data;
+        this.shownRange = range;
       } catch (_e) {
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.COMMERCIAL.METRICS.ERROR'),
@@ -130,64 +170,13 @@ export default {
         this.isLoading = false;
       }
     },
+    setTab(index) {
+      this.tab = TABS[index] || 'overview';
+      this.persist();
+    },
     onTypeChange(id) {
       this.caseTypeId = id;
       this.fetch();
-    },
-    setPeriod(key) {
-      this.period = key;
-      this.fetch();
-    },
-    // [{ currency, amount }] → "$1,000 MXN · $500 USD"; vacío → "—".
-    moneyList(values, field = 'amount') {
-      const list = (values || []).filter(v => v[field] !== undefined);
-      if (!list.length) return '—';
-      return list.map(v => formatMoney(v[field], v.currency)).join(' · ');
-    },
-    pct(value) {
-      return value === null || value === undefined ? '—' : `${value}%`;
-    },
-    barWidth(count, max) {
-      return `${Math.max(2, (count / max) * 100)}%`;
-    },
-    stageLabel(stage) {
-      return (
-        stage.label ||
-        this.$t('CASE_TICKETS.COMMERCIAL.METRICS.STAGES.NO_STAGE')
-      );
-    },
-    stageTooltip(stage) {
-      return [
-        this.stageLabel(stage),
-        this.$t('CASE_TICKETS.COMMERCIAL.METRICS.STAGES.COUNT', {
-          count: stage.count,
-        }),
-        `${this.$t('CASE_TICKETS.COMMERCIAL.FIELDS.AMOUNT')}: ${this.moneyList(
-          stage.values
-        )}`,
-        `${this.$t(
-          'CASE_TICKETS.COMMERCIAL.FIELDS.WEIGHTED'
-        )}: ${this.moneyList(stage.values, 'weighted')}`,
-      ].join('\n');
-    },
-    reasonLabel(reason) {
-      return (
-        reason.label ||
-        this.$t('CASE_TICKETS.COMMERCIAL.METRICS.REASONS.NO_REASON')
-      );
-    },
-    outcomeLabel(outcome) {
-      return this.$t(`CASE_TICKETS.COMMERCIAL.OUTCOMES.${outcome}`);
-    },
-    monthLabel(month) {
-      const [y, m] = month.split('-').map(Number);
-      return new Date(y, m - 1, 1).toLocaleDateString(undefined, {
-        month: 'long',
-        year: 'numeric',
-      });
-    },
-    isPastMonth(month) {
-      return month < this.currentMonth;
     },
   },
 };
@@ -197,9 +186,9 @@ export default {
   <div
     class="flex flex-col flex-1 w-full h-full overflow-hidden bg-slate-25 dark:bg-slate-900"
   >
-    <!-- Encabezado + filtros (una sola fila) -->
+    <!-- Encabezado + filtros de toda la página + pestañas -->
     <div
-      class="flex flex-col flex-shrink-0 gap-3 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
+      class="flex flex-col flex-shrink-0 gap-3 px-6 pt-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
@@ -234,480 +223,86 @@ export default {
               {{ t.name }}
             </option>
           </select>
-          <MetricsPeriodPicker :value="period" @input="setPeriod" />
+          <CalendarPeriodPicker
+            v-if="showPeriod"
+            :value="period"
+            :from="customFrom"
+            :to="customTo"
+            @input="setPeriod"
+            @custom="setCustom"
+          />
+          <span
+            v-else-if="tab === 'money'"
+            class="px-2.5 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            :title="$t('CASE_TICKETS.COMMERCIAL.METRICS.SNAPSHOT_HINT')"
+          >
+            {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.SNAPSHOT') }}
+          </span>
         </div>
       </div>
+      <woot-tabs :index="tabIndex" @change="setTab">
+        <woot-tabs-item
+          v-for="(key, i) in tabs"
+          :key="key"
+          :index="i"
+          :name="$t(`CASE_TICKETS.COMMERCIAL.METRICS.TABS.${key}`)"
+          :show-badge="false"
+        />
+      </woot-tabs>
+    </div>
+
+    <div class="flex flex-col flex-1 gap-4 px-6 py-4 overflow-y-auto">
       <p class="m-0 text-xs text-slate-500 dark:text-slate-400">
-        {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.HELP') }}
+        {{ $t(`CASE_TICKETS.COMMERCIAL.METRICS.TAB_HELP.${tab}`) }}
+        <template v-if="showPeriod && rangeLabel">
+          ·
+          <strong class="font-semibold text-slate-700 dark:text-slate-200">
+            {{ rangeLabel }}
+          </strong>
+          <template v-if="tab === 'overview'">
+            {{
+              $t('CASE_TICKETS.COMMERCIAL.METRICS.COMPARED_WITH', {
+                range: compareLabel,
+              })
+            }}
+          </template>
+        </template>
       </p>
-    </div>
 
-    <div
-      v-if="isLoading && !report"
-      class="flex items-center justify-center flex-1 text-slate-400 dark:text-slate-500"
-    >
-      {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.LOADING') }}
-    </div>
-    <div
-      v-else-if="isEmpty"
-      class="flex items-center justify-center flex-1 text-slate-400 dark:text-slate-500"
-    >
-      {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.EMPTY') }}
-    </div>
-
-    <div
-      v-else-if="report"
-      class="flex flex-col flex-1 gap-4 px-6 py-4 overflow-y-auto"
-      :class="isLoading ? 'opacity-60' : ''"
-    >
-      <!-- KPIs -->
-      <div class="grid gap-3 grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
-        <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-        >
-          <p class="m-0 text-xs uppercase text-slate-500 dark:text-slate-400">
-            {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.OPEN_VALUE') }}
-          </p>
-          <p
-            class="m-0 mt-1 text-lg font-bold text-slate-800 dark:text-slate-100"
-          >
-            {{ moneyList(summary.open_value) }}
-          </p>
-          <p class="m-0 mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {{
-              $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.OPEN_SUB', {
-                count: summary.open_count || 0,
-                postponed: summary.postponed_count || 0,
-              })
-            }}
-          </p>
-        </div>
-        <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-        >
-          <p class="m-0 text-xs uppercase text-slate-500 dark:text-slate-400">
-            {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.WEIGHTED') }}
-          </p>
-          <p
-            class="m-0 mt-1 text-lg font-bold text-slate-800 dark:text-slate-100"
-          >
-            {{ moneyList(summary.open_value, 'weighted') }}
-          </p>
-          <p class="m-0 mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.WEIGHTED_SUB') }}
-          </p>
-        </div>
-        <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-        >
-          <p class="m-0 text-xs uppercase text-slate-500 dark:text-slate-400">
-            {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.WON') }}
-          </p>
-          <p
-            class="m-0 mt-1 text-lg font-bold text-slate-800 dark:text-slate-100"
-          >
-            {{ moneyList(summary.won_value) }}
-          </p>
-          <p class="m-0 mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {{
-              $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.WON_SUB', {
-                count: summary.won_count || 0,
-              })
-            }}
-          </p>
-        </div>
-        <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-        >
-          <p class="m-0 text-xs uppercase text-slate-500 dark:text-slate-400">
-            {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.WIN_RATE') }}
-          </p>
-          <p
-            class="m-0 mt-1 text-2xl font-bold text-slate-800 dark:text-slate-100"
-          >
-            {{ pct(summary.win_rate) }}
-          </p>
-          <p class="m-0 mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {{
-              $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.WIN_RATE_SUB', {
-                won: summary.won_count || 0,
-                decided: decidedCount,
-              })
-            }}
-          </p>
-        </div>
-        <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-        >
-          <p class="m-0 text-xs uppercase text-slate-500 dark:text-slate-400">
-            {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.CYCLE') }}
-          </p>
-          <p
-            class="m-0 mt-1 text-2xl font-bold text-slate-800 dark:text-slate-100"
-          >
-            {{
-              summary.avg_cycle_days === null ||
-              summary.avg_cycle_days === undefined
-                ? '—'
-                : $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.DAYS', {
-                    days: summary.avg_cycle_days,
-                  })
-            }}
-          </p>
-          <p class="m-0 mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.CYCLE_SUB') }}
-          </p>
-        </div>
-        <div
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-        >
-          <p class="m-0 text-xs uppercase text-slate-500 dark:text-slate-400">
-            {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.LOST') }}
-          </p>
-          <p
-            class="m-0 mt-1 text-2xl font-bold text-slate-800 dark:text-slate-100"
-          >
-            {{ summary.lost_count || 0 }} / {{ summary.cancelled_count || 0 }}
-          </p>
-          <p class="m-0 mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {{
-              $t('CASE_TICKETS.COMMERCIAL.METRICS.KPI.LOST_SUB', {
-                recovered: summary.recovered_count || 0,
-              })
-            }}
-          </p>
-        </div>
-      </div>
-
-      <div class="grid gap-4 lg:grid-cols-2">
-        <!-- Embudo por etapa: una serie (conteo), etiqueta directa + tooltip -->
-        <section
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-        >
-          <div class="flex items-center justify-between mb-3">
-            <h2
-              class="m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
-            >
-              {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.STAGES.TITLE') }}
-            </h2>
-            <button
-              type="button"
-              class="text-xs text-woot-600 dark:text-woot-300 hover:underline"
-              @click="tableView.stages = !tableView.stages"
-            >
-              {{
-                tableView.stages
-                  ? $t('CASE_TICKETS.COMMERCIAL.METRICS.CHART_VIEW')
-                  : $t('CASE_TICKETS.COMMERCIAL.METRICS.TABLE_VIEW')
-              }}
-            </button>
-          </div>
-          <p
-            v-if="!stages.length"
-            class="m-0 text-sm text-slate-400 dark:text-slate-500"
-          >
-            —
-          </p>
-          <div v-else-if="!tableView.stages" class="flex flex-col gap-2">
-            <div
-              v-for="stage in stages"
-              :key="stage.label || 'none'"
-              class="grid items-center gap-3 grid-cols-[8rem_1fr] group"
-              :title="stageTooltip(stage)"
-            >
-              <span class="text-sm truncate text-slate-600 dark:text-slate-300">
-                {{ stageLabel(stage) }}
-              </span>
-              <div class="flex items-center min-w-0 gap-2">
-                <div
-                  class="h-5 rounded-r bg-woot-500 group-hover:bg-woot-600 flex-shrink-0"
-                  :style="{ width: barWidth(stage.count, maxStageCount) }"
-                />
-                <span
-                  class="text-xs whitespace-nowrap text-slate-700 dark:text-slate-200"
-                >
-                  <strong>{{ stage.count }}</strong> ·
-                  {{ moneyList(stage.values) }}
-                </span>
-              </div>
-            </div>
-          </div>
-          <table v-else class="w-full text-sm">
-            <thead>
-              <tr class="text-xs text-left uppercase text-slate-500">
-                <th class="py-1">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.STAGE') }}
-                </th>
-                <th class="py-1 text-right">#</th>
-                <th class="py-1 text-right">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.AMOUNT') }}
-                </th>
-                <th class="py-1 text-right">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.WEIGHTED') }}
-                </th>
-              </tr>
-            </thead>
-            <tbody class="text-slate-700 dark:text-slate-200">
-              <tr v-for="stage in stages" :key="stage.label || 'none'">
-                <td class="py-1">{{ stageLabel(stage) }}</td>
-                <td class="py-1 text-right">{{ stage.count }}</td>
-                <td class="py-1 text-right">{{ moneyList(stage.values) }}</td>
-                <td class="py-1 text-right">
-                  {{ moneyList(stage.values, 'weighted') }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
-        <!-- Motivos de pérdida / cancelación -->
-        <section
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-        >
-          <div class="flex items-center justify-between mb-3">
-            <h2
-              class="m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
-            >
-              {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.REASONS.TITLE') }}
-            </h2>
-            <button
-              type="button"
-              class="text-xs text-woot-600 dark:text-woot-300 hover:underline"
-              @click="tableView.reasons = !tableView.reasons"
-            >
-              {{
-                tableView.reasons
-                  ? $t('CASE_TICKETS.COMMERCIAL.METRICS.CHART_VIEW')
-                  : $t('CASE_TICKETS.COMMERCIAL.METRICS.TABLE_VIEW')
-              }}
-            </button>
-          </div>
-          <p
-            v-if="!reasons.length"
-            class="m-0 text-sm text-slate-400 dark:text-slate-500"
-          >
-            —
-          </p>
-          <div v-else-if="!tableView.reasons" class="flex flex-col gap-2">
-            <div
-              v-for="r in reasons"
-              :key="`${r.outcome}-${r.label}`"
-              class="grid items-center gap-3 grid-cols-[10rem_1fr] group"
-              :title="`${outcomeLabel(r.outcome)} · ${reasonLabel(r)}: ${
-                r.count
-              }`"
-            >
-              <span class="text-sm truncate text-slate-600 dark:text-slate-300">
-                {{ reasonLabel(r) }}
-                <span class="text-xs text-slate-400 dark:text-slate-500">
-                  · {{ outcomeLabel(r.outcome) }}
-                </span>
-              </span>
-              <div class="flex items-center min-w-0 gap-2">
-                <div
-                  class="h-5 rounded-r bg-slate-400 dark:bg-slate-500 group-hover:bg-slate-500 flex-shrink-0"
-                  :style="{ width: barWidth(r.count, maxReasonCount) }"
-                />
-                <strong class="text-xs text-slate-700 dark:text-slate-200">{{
-                  r.count
-                }}</strong>
-              </div>
-            </div>
-          </div>
-          <table v-else class="w-full text-sm">
-            <thead>
-              <tr class="text-xs text-left uppercase text-slate-500">
-                <th class="py-1">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.REASON') }}
-                </th>
-                <th class="py-1">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.OUTCOME') }}
-                </th>
-                <th class="py-1 text-right">#</th>
-              </tr>
-            </thead>
-            <tbody class="text-slate-700 dark:text-slate-200">
-              <tr v-for="r in reasons" :key="`${r.outcome}-${r.label}`">
-                <td class="py-1">{{ reasonLabel(r) }}</td>
-                <td class="py-1">{{ outcomeLabel(r.outcome) }}</td>
-                <td class="py-1 text-right">{{ r.count }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-      </div>
-
-      <!-- Por vendedor -->
-      <section
-        class="p-4 overflow-x-auto bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
+      <!-- Mes a mes: su propio reporte, a pedido (no espera al general). -->
+      <MonthlyTab
+        v-if="tab === 'monthly'"
+        :base-filters="baseFilters"
+        :currencies="(report && report.currencies) || []"
+      />
+      <p
+        v-else-if="isLoading && !report"
+        class="m-0 py-12 text-center text-slate-400 dark:text-slate-500"
       >
-        <h2
-          class="m-0 mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100"
-        >
-          {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.TITLE') }}
-        </h2>
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-xs text-left uppercase text-slate-500">
-              <th class="py-1">
-                {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.NAME') }}
-              </th>
-              <th class="py-1 text-right">
-                {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.OPEN') }}
-              </th>
-              <th class="py-1 text-right">
-                {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.OPEN_VALUE') }}
-              </th>
-              <th class="py-1 text-right">
-                {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.WEIGHTED') }}
-              </th>
-              <th class="py-1 text-right">
-                {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.WON') }}
-              </th>
-              <th class="py-1 text-right">
-                {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.WON_VALUE') }}
-              </th>
-              <th class="py-1 text-right">
-                {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.LOST') }}
-              </th>
-              <th class="py-1 text-right">
-                {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.WIN_RATE') }}
-              </th>
-            </tr>
-          </thead>
-          <tbody class="text-slate-700 dark:text-slate-200">
-            <tr
-              v-for="row in byAssignee"
-              :key="row.assignee_id || 'none'"
-              class="border-t border-slate-50 dark:border-slate-700"
-            >
-              <td class="py-1.5">
-                {{
-                  row.assignee_name ||
-                  $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.UNASSIGNED')
-                }}
-              </td>
-              <td class="py-1.5 text-right">{{ row.open_count }}</td>
-              <td class="py-1.5 text-right">{{ moneyList(row.open_value) }}</td>
-              <td class="py-1.5 text-right">
-                {{ moneyList(row.open_value, 'weighted') }}
-              </td>
-              <td class="py-1.5 text-right">{{ row.won_count }}</td>
-              <td class="py-1.5 text-right">{{ moneyList(row.won_value) }}</td>
-              <td class="py-1.5 text-right">{{ row.lost_count }}</td>
-              <td class="py-1.5 text-right font-semibold">
-                {{ pct(row.win_rate) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <div class="grid gap-4 lg:grid-cols-2">
-        <!-- Pronóstico por mes -->
-        <section
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-        >
-          <h2
-            class="m-0 mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100"
-          >
-            {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.FORECAST.TITLE') }}
-          </h2>
-          <p
-            v-if="!forecast.length"
-            class="m-0 text-sm text-slate-400 dark:text-slate-500"
-          >
-            {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.FORECAST.EMPTY') }}
-          </p>
-          <table v-else class="w-full text-sm">
-            <thead>
-              <tr class="text-xs text-left uppercase text-slate-500">
-                <th class="py-1">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.FORECAST.MONTH') }}
-                </th>
-                <th class="py-1 text-right">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.FORECAST.COUNT') }}
-                </th>
-                <th class="py-1 text-right">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.FORECAST.AMOUNT') }}
-                </th>
-                <th class="py-1 text-right">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.FORECAST.WEIGHTED') }}
-                </th>
-              </tr>
-            </thead>
-            <tbody class="text-slate-700 dark:text-slate-200">
-              <tr
-                v-for="row in forecast"
-                :key="`${row.month}-${row.currency}`"
-                class="border-t border-slate-50 dark:border-slate-700"
-              >
-                <td class="py-1.5">
-                  {{ monthLabel(row.month) }}
-                  <span
-                    v-if="isPastMonth(row.month)"
-                    class="ml-1 px-1.5 py-0.5 text-[10px] rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
-                  >
-                    {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.FORECAST.PAST') }}
-                  </span>
-                </td>
-                <td class="py-1.5 text-right">{{ row.count }}</td>
-                <td class="py-1.5 text-right">{{ moneyList([row]) }}</td>
-                <td class="py-1.5 text-right font-semibold">
-                  {{ moneyList([row], 'weighted') }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
-        <!-- Por tipo -->
-        <section
-          class="p-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-75 dark:border-slate-700"
-        >
-          <h2
-            class="m-0 mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100"
-          >
-            {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.TYPES.TITLE') }}
-          </h2>
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="text-xs text-left uppercase text-slate-500">
-                <th class="py-1">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.TYPES.NAME') }}
-                </th>
-                <th class="py-1 text-right">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.OPEN') }}
-                </th>
-                <th class="py-1 text-right">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.WON') }}
-                </th>
-                <th class="py-1 text-right">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.LOST') }}
-                </th>
-                <th class="py-1 text-right">
-                  {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.ASSIGNEES.WIN_RATE') }}
-                </th>
-              </tr>
-            </thead>
-            <tbody class="text-slate-700 dark:text-slate-200">
-              <tr
-                v-for="row in byType"
-                :key="row.case_type_id || 'none'"
-                class="border-t border-slate-50 dark:border-slate-700"
-              >
-                <td class="py-1.5">{{ row.case_type_name || '—' }}</td>
-                <td class="py-1.5 text-right">{{ row.open_count }}</td>
-                <td class="py-1.5 text-right">{{ row.won_count }}</td>
-                <td class="py-1.5 text-right">{{ row.lost_count }}</td>
-                <td class="py-1.5 text-right font-semibold">
-                  {{ pct(row.win_rate) }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-      </div>
+        {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.LOADING') }}
+      </p>
+      <p
+        v-else-if="isEmpty"
+        class="m-0 py-12 text-center text-slate-400 dark:text-slate-500"
+      >
+        {{ $t('CASE_TICKETS.COMMERCIAL.METRICS.EMPTY') }}
+      </p>
+      <template v-else-if="report">
+        <div :class="isLoading ? 'opacity-60' : ''">
+          <OverviewTab
+            v-if="tab === 'overview'"
+            :report="report"
+            :compare-label="compareLabel"
+          />
+          <MoneyTab
+            v-else-if="tab === 'money'"
+            :report="report"
+            :base-filters="baseFilters"
+            :case-class="caseClass"
+          />
+          <LossesTab v-else :report="report" />
+        </div>
+      </template>
     </div>
   </div>
 </template>

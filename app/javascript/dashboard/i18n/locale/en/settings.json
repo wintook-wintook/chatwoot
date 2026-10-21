@@ -286,6 +286,7 @@
     "TICKET_AI": "Artificial Intelligence",
     "TICKET_PORTALS": "Customer portals",
     "TICKET_COMMERCIAL_SETTINGS": "Commercial",
+    "TICKET_TASK_SETTINGS": "Tasks",
     "TICKET_SETTINGS": "Module settings",
     "TICKET_CONFIG": "Folio settings",
     "TICKET_GROUP_DEFINITIONS": "Definitions",
@@ -360,7 +361,9 @@
     "CASES_LIST": "List",
     "CASES_BOARD": "Board",
     "CASES_METRICS": "Metrics",
-    "CASES_GROUP_CONFIG": "Settings"
+    "CASES_GROUP_CONFIG": "Settings",
+    "BUSINESS_SUMMARY": "Business summary",
+    "BUSINESS_SUMMARY_ACCESS": "Business summary: access"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",

@@ -89,11 +89,14 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     # [Gestor de Tickets] hook — falla silenciosamente para no romper el bot @tickets_cases
     begin
-      ticket = Cases::OrchestratorService.new(
-        account: message.account,
-        contact: message.conversation.contact,
-        conversation: message.conversation
-      ).find_active_ticket
+      # El caso de ESTA conversación primero; si no hay, el vigente más reciente del
+      # contacto (sin esto, el mensaje de soporte se anotaba en una oportunidad abierta).
+      ticket = message.conversation.case_tickets.where.not(status: %w[closed cancelled]).order(created_at: :desc).first ||
+               Cases::OrchestratorService.new(
+                 account: message.account,
+                 contact: message.conversation.contact,
+                 conversation: message.conversation
+               ).find_active_ticket
 
       if ticket
         ticket.update_columns(first_response_at: Time.current) if ticket.first_response_at.nil?

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_24_180000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_26_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -447,6 +447,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_24_180000) do
     t.integer "reopen_window_days", default: 30, null: false
     t.boolean "reopen_on_customer_reply", default: true, null: false
     t.string "default_currency", limit: 3, default: "MXN", null: false
+    t.jsonb "task_priority_weights", default: {}, null: false
+    t.bigint "business_summary_user_ids", default: [], null: false, array: true
     t.index ["account_id"], name: "index_case_settings_on_account_id", unique: true
   end
 
@@ -482,8 +484,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_24_180000) do
     t.integer "priority", default: 1, null: false
     t.bigint "requester_id"
     t.boolean "milestone", default: false, null: false
+    t.integer "estimated_minutes"
+    t.date "planned_on"
+    t.integer "focus_position"
+    t.datetime "focused_at"
     t.index ["account_id", "priority"], name: "index_case_tasks_on_account_id_and_priority"
     t.index ["account_id"], name: "index_case_tasks_on_account_id"
+    t.index ["assignee_id", "planned_on"], name: "index_case_tasks_on_assignee_id_and_planned_on"
     t.index ["assignee_id"], name: "index_case_tasks_on_assignee_id"
     t.index ["case_ticket_id", "position"], name: "index_case_tasks_on_case_ticket_id_and_position"
     t.index ["case_ticket_id", "sequence"], name: "index_case_tasks_on_case_ticket_id_and_sequence"
@@ -571,7 +578,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_24_180000) do
     t.decimal "budget_hours", precision: 8, scale: 2
     t.decimal "budget_amount", precision: 14, scale: 2
     t.integer "progress"
+    t.datetime "committed_at"
+    t.text "commit_note"
     t.index ["account_id", "case_type_id"], name: "index_case_tickets_on_account_id_and_case_type_id"
+    t.index ["account_id", "committed_at"], name: "index_case_tickets_on_account_committed", where: "(committed_at IS NOT NULL)"
     t.index ["account_id", "contact_id"], name: "index_case_tickets_on_account_id_and_contact_id"
     t.index ["account_id", "due_at"], name: "index_case_tickets_on_account_id_and_due_at"
     t.index ["account_id", "folio"], name: "index_case_tickets_on_account_and_folio", unique: true, where: "(folio IS NOT NULL)"

@@ -22,6 +22,7 @@ import {
   SCOPES,
   emptyFineFilters,
   fineFiltersToParams,
+  normalizeFineFilters,
   scopeToParams,
   classAlertParams,
 } from 'dashboard/helper/caseFilters';
@@ -35,11 +36,15 @@ import {
 import PostponeModal from './commercial/PostponeModal.vue';
 import {
   COMMERCIAL_CLASS,
+  COMMITTED_BADGE,
   POSTPONED_BADGE,
+  PROMISE_OVERDUE_BADGE,
   formatDay,
   formatMoney,
   totalsByCurrency,
+  isOpenCommitted,
   isoDayFromToday,
+  promiseOverdue,
 } from 'dashboard/helper/caseCommercial';
 import { formatHours } from 'dashboard/helper/caseWorkOrder';
 
@@ -119,6 +124,7 @@ export default {
       // vencido aparte y filtros finos del botón «Filtros».
       quickFilter: 'mine',
       slaOverdueOnly: false,
+      committedOnly: false, // Plan-Metricas-Comercial — «Solo comprometidas»
       fine: emptyFineFilters(),
       // Plan-Casos E1.3 — cerrados en el tablero: hide | 7 | 30 | 90 | all.
       closedWindow: DEFAULT_BOARD_CLOSED,
@@ -279,7 +285,8 @@ export default {
       this.filters.case_type_id = st.type ?? '';
       this.quickFilter = SCOPES.includes(st.scope) ? st.scope : 'mine';
       this.slaOverdueOnly = !!st.sla;
-      this.fine = { ...emptyFineFilters(), ...(st.fine || {}) };
+      this.committedOnly = !!st.committed;
+      this.fine = normalizeFineFilters(st.fine);
       const closed = st.board?.closed;
       this.closedWindow = BOARD_CLOSED_OPTIONS.includes(closed)
         ? closed
@@ -291,6 +298,7 @@ export default {
         type: this.filters.case_type_id,
         scope: this.quickFilter,
         sla: this.slaOverdueOnly,
+        committed: this.committedOnly,
         fine: this.fine,
         board: { closed: this.closedWindow },
       });
@@ -332,6 +340,7 @@ export default {
       // Plan-Clase-Comercial F4 — las clases no se mezclan (Soporte incluye los
       // casos sin tipo; ver CaseTicket.of_class).
       f.case_class = this.caseClass;
+      if (this.isCommercialBoard && this.committedOnly) f.committed = true;
       // Aviso rojo de Órdenes / Comercial (visitas / cierre vencido).
       if (this.slaOverdueOnly)
         Object.assign(f, classAlertParams(this.caseClass));
@@ -356,6 +365,10 @@ export default {
     },
     onSlaChange(on) {
       this.slaOverdueOnly = on;
+      this.fetch();
+    },
+    onCommittedChange(on) {
+      this.committedOnly = on;
       this.fetch();
     },
     onFineChange(fine) {
@@ -478,6 +491,17 @@ export default {
         return {
           label: this.$t('CASE_TICKETS.WORK_ORDER.VISIT.OVERDUE'),
           cls: SLA_BADGE.overdue,
+        };
+      }
+      // Plan-Metricas-Comercial — comprometida: la fecha es la promesa del cliente.
+      if (isOpenCommitted(ticket)) {
+        const overdue = promiseOverdue(ticket, isoDayFromToday(0));
+        const key = overdue ? 'PROMISE_OVERDUE' : 'COMMITTED_ON';
+        return {
+          label: this.$t(`CASE_TICKETS.COMMERCIAL.COMMITMENT.${key}`, {
+            date: this.day(ticket.expected_close_at),
+          }),
+          cls: overdue ? PROMISE_OVERDUE_BADGE : COMMITTED_BADGE,
         };
       }
       if (this.closeOverdue(ticket)) {
@@ -759,8 +783,10 @@ export default {
         :scope="quickFilter"
         :sla-only="slaOverdueOnly"
         :sla-count="slaOverdueCount"
+        :committed-only="committedOnly"
         @scope="onScopeChange"
         @sla="onSlaChange"
+        @committed="onCommittedChange"
       >
         <template #before>
           <!-- E1.1 — el tipo decide las columnas; el embudo exige uno -->

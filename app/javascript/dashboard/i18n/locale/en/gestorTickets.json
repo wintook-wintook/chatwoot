@@ -310,7 +310,8 @@
         "ASSIGNEE": "Assignee",
         "DUE": "Due",
         "NOTES": "Notes",
-        "REQUESTER": "Requester"
+        "REQUESTER": "Requester",
+        "PLANNED": "Planned"
       },
       "STATUS": {
         "PENDING": "Pending",
@@ -333,7 +334,11 @@
         "NEW_DESC": "Create a case task or subtask, with an assignee, priority and due date.",
         "EDIT_DESC": "Update the task details or change its status.",
         "VIEW_DESC": "Task detail.",
-        "REQUESTER_LABEL": "Requester"
+        "REQUESTER_LABEL": "Requester",
+        "ESTIMATE_LABEL": "Estimated time",
+        "ESTIMATE_NONE": "Not estimated",
+        "PLANNED_LABEL": "Planned for",
+        "PLANNED_AFTER_DUE": "After the due date: it will be late."
       },
       "INBOX": {
         "TITLE": "Tasks",
@@ -355,10 +360,10 @@
         "TOAST_ASSIGNED": "New task assigned: {task} · case {folio}",
         "TOAST_COMPLETED": "Task completed: {task} · case {folio}",
         "TABS": {
-          "mine": "My tasks",
+          "mine": "Mine",
           "unassigned": "Unassigned",
           "all": "All",
-          "overdue": "Overdue"
+          "my_day": "My day"
         },
         "STATUS": {
           "PENDING": "Pending",
@@ -414,7 +419,70 @@
       "MEETINGS_BEYOND_DUE": "{count} scheduled task(s) after the due date",
       "MILESTONE": "Milestone",
       "MILESTONE_LABEL": "This is a project milestone",
-      "MILESTONE_HINT": "It counts toward the project progress."
+      "MILESTONE_HINT": "It counts toward the project progress.",
+      "MY_DAY": {
+        "NEXT": "Next",
+        "LOAD": "For today: {count} tasks",
+        "LOAD_NONE": "Nothing due today",
+        "LOAD_TIME": "≈ {time} estimated",
+        "LOAD_UNESTIMATED": "({count} not estimated)",
+        "TOTAL": "{count} pending in total",
+        "DUE": "Due {date}",
+        "SCORE_TITLE": "Urgency score: higher goes first",
+        "AGENDA": "Today’s agenda",
+        "AGENDA_EMPTY": "No meetings today",
+        "EMPTY": "All clear: you have no pending tasks.",
+        "REASONS": {
+          "overdue": "Overdue {days} d",
+          "overdue_today": "Overdue",
+          "due_today": "Due today",
+          "due_tomorrow": "Due tomorrow",
+          "due_week": "Due in {days} d",
+          "priority_urgent": "Urgent",
+          "priority_high": "High priority",
+          "priority_medium": "Medium priority",
+          "project_overdue": "Project behind",
+          "milestone": "Milestone",
+          "project_due_soon": "Project due soon",
+          "sla_overdue": "SLA breached",
+          "sla_at_risk": "SLA at risk",
+          "case_urgent": "Urgent case",
+          "visit_overdue": "Visit overdue",
+          "visit_today": "Visit today",
+          "close_soon": "Close date near",
+          "age": "Created {days} d ago",
+          "waiting": "Case on hold",
+          "planned_missed": "Planned for {date}"
+        },
+        "MY_ORDER": "My order for today",
+        "MY_ORDER_HINT": "drag to reorder",
+        "MY_ORDER_EMPTY": "Drag here or move up (↑) the tasks you will do today, in the order you will do them.",
+        "SUGGESTED": "Suggested by priority",
+        "DRAG": "Drag",
+        "PIN": "Add to my order for today",
+        "UNPIN": "Remove from my order for today",
+        "PIN_FIRST": "Move to top",
+        "IGNORE": "Ignore",
+        "NEW_URGENT": "An urgent task arrived after you planned your day:",
+        "POSTPONE": "Move to tomorrow",
+        "POSTPONED": "Planned for tomorrow: {task}",
+        "PLAN_ERROR": "Could not save your plan for today.",
+        "LATER": "{count} planned for later",
+        "MISSED": "{count} planned tasks were left undone.",
+        "PASS_TO_TODAY": "Move them to today",
+        "PLAN_TIME": "≈ {time}",
+        "PLAN_OVERLOAD": "≈ {time} · over 8 h",
+        "AI": {
+          "BUTTON": "Plan my day (AI)",
+          "TITLE": "My day plan",
+          "LOADING": "Building your plan…",
+          "REGENERATE": "Regenerate",
+          "CLOSE": "Close",
+          "LATER": "Can wait until tomorrow",
+          "ERROR": "Could not build the plan.",
+          "DISCLAIMER": "AI suggestion: it does not change your order. Review it before following it."
+        }
+      }
     },
     "MODAL": {
       "TITLE_CREATE": "Create case",
@@ -791,6 +859,18 @@
         "follow_up": {
           "LABEL": "Automatic follow-up",
           "HELP": "Drafts customer follow-ups based on the case status."
+        },
+        "day_plan": {
+          "LABEL": "My day plan",
+          "HELP": "In «My day», explains in which order and time blocks to do the tasks and what can wait until tomorrow. It does not change the order."
+        },
+        "business_summary": {
+          "LABEL": "Business summary",
+          "HELP": "In the «Business summary», «Explain my week» tells how the business is doing, what's worrying and what to do today. Uses only the summary figures."
+        },
+        "conversation_analysis": {
+          "LABEL": "Conversation analysis",
+          "HELP": "In the «Business summary», analyzes on demand a sample of the period's conversations: topics, upset customers, missed sales and repeated complaints. Sends conversation text to OpenAI."
         }
       },
       "SUGGESTION": {
@@ -1178,7 +1258,8 @@
       "outcome_set": "Opportunity outcome",
       "postponed": "Opportunity postponed",
       "resumed": "Opportunity resumed",
-      "amount_changed": "Commercial data"
+      "amount_changed": "Commercial data",
+      "commitment_changed": "Customer commitment"
     },
     "COLUMNS_CFG": {
       "ADD_BUTTON": "Add column",
@@ -1216,7 +1297,10 @@
       "LEVEL_LABEL": "Level:",
       "VIEW_FULL": "View",
       "NO_TRANSITIONS": "No transitions available",
-      "LOADING": "Loading case…"
+      "LOADING": "Loading case…",
+      "PARENT_PROJECT": "Project",
+      "BACK_TO_PROJECT": "Back to project",
+      "BACK_TO_METRICS": "Back to metrics"
     },
     "MEETINGS": {
       "TITLE": "Scheduled tasks",
@@ -1480,10 +1564,148 @@
           "AMOUNT": "Amount",
           "WEIGHTED": "Weighted",
           "PAST": "Overdue date",
-          "EMPTY": "No open opportunity has an expected close date."
+          "EMPTY": "No open opportunity has an expected close date.",
+          "COMMITTED": "Committed"
         },
         "TABLE_VIEW": "View as table",
-        "CHART_VIEW": "View as bars"
+        "CHART_VIEW": "View as bars",
+        "TABS": {
+          "overview": "How are we doing?",
+          "money": "Money at stake",
+          "monthly": "Month by month",
+          "losses": "Why do we lose?"
+        },
+        "TAB_HELP": {
+          "overview": "What was decided in the period",
+          "money": "What is open today: how much, in which stage and what needs attention. To see what's coming, filter by expected close.",
+          "monthly": "Month against month, with its own window (independent of the period). Calculated on demand.",
+          "losses": "What was lost and cancelled in the period, by reason"
+        },
+        "CALC": {
+          "CALCULATE": "Calculate",
+          "REFRESH": "Refresh",
+          "RECALCULATE": "Recalculate",
+          "DONE": "Calculated {ago}",
+          "FILTERS_CHANGED": "Filters changed since the calculation: these numbers belong to the previous filters."
+        },
+        "OVERVIEW": {
+          "SAME": "= same as {range}",
+          "POINTS": "{n} pts",
+          "AVG_TICKET": "Average deal",
+          "AVG_TICKET_SUB": "average amount won",
+          "RECOVERED": "Recovered",
+          "RECOVERED_SUB": "were lost and later won",
+          "RANKING": "Sales ranking",
+          "RANK_LINE": "{won} won · {rate} win rate · {open} open",
+          "VS_RANGE": "vs {range}",
+          "PROMISES": "Promises kept",
+          "PROMISES_SUB": "{kept} of {decided} committed were won on time, without moving the date"
+        },
+        "MONEY": {
+          "CLOSING": "Closing this month",
+          "STALE_TITLE": "Stalled opportunities",
+          "STALE_DESCRIPTION": "Checks every open opportunity and flags those over {days} days without changing stage.",
+          "THRESHOLD": "Days without moving",
+          "THRESHOLD_OPTION": "Over {days} days",
+          "STALE_RESULT": "{count} opportunities have been over {days} days in the same stage (flagged ⚠ in the funnel and below).",
+          "STALE_NONE": "No opportunity has been over {days} days without moving.",
+          "ATTENTION": "Need attention",
+          "ATTENTION_HELP": "Overdue promises first (the customer committed and hasn't paid), then overdue expected closes and, if calculated, stale ones. Click to open.",
+          "ATTENTION_NONE": "Nothing urgent: no overdue promises or closes.",
+          "OPPORTUNITY": "Opportunity",
+          "WHY": "Why",
+          "CLOSE_OVERDUE": "Close overdue ({date})",
+          "STALE_DAYS": "{days} days without moving",
+          "COMMITTED_WEEK": "Committed this week",
+          "COMMITTED_WEEK_SUB": "{count} the customer promised to pay this week",
+          "COMMITTED_MONTH": "Committed this month",
+          "COMMITTED_MONTH_SUB": "{count} promised this month · {overdue} overdue promises",
+          "CLOSING_SPLIT": "{count} opportunities · confirmed {confirmed} · probable {probable} (weighted)",
+          "PROMISE_OVERDUE": "Promised to pay on {date}"
+        },
+        "MONTHLY": {
+          "TITLE": {
+            "last_12": "Month by month · last 12 months",
+            "this_year": "Month by month · this year",
+            "last_year": "Month by month · last year"
+          },
+          "DESCRIPTION": "Compares month against month: won vs lost, win rate and new opportunities.",
+          "WON": "Won",
+          "LOST": "Lost",
+          "RATE": "Win rate",
+          "CREATED": "New",
+          "WON_VALUE": "Amount won",
+          "MEASURE": {
+            "count": "Count",
+            "amount": "Amount"
+          },
+          "PICK_CURRENCY": "Pick a currency to see amounts.",
+          "CHART_DECIDED": "Won vs lost",
+          "CHART_RATE": "Win rate",
+          "CHART_CREATED": "New opportunities",
+          "SPAN": "Window",
+          "SPANS": {
+            "last_12": "Last 12 months",
+            "this_year": "This year",
+            "last_year": "Last year"
+          }
+        },
+        "LOSSES": {
+          "LOST": "Lost",
+          "CANCELLED": "Cancelled",
+          "SHARE": "{pct} of what was decided in the period",
+          "TITLE_lost": "Loss reasons",
+          "TITLE_cancelled": "Cancellation reasons",
+          "NONE": "None in the period."
+        },
+        "SNAPSHOT": "Today's snapshot",
+        "SNAPSHOT_HINT": "What is open today does not depend on a period: an opportunity opened months ago is still in play. Filter by expected close below.",
+        "COMPARED_WITH": "compared with {range}"
+      },
+      "FUNNEL": {
+        "TITLE": "Sales funnel",
+        "SUBTITLE": "{count} open opportunities by stage · won in the period at the bottom",
+        "WON": "Won",
+        "IN_PERIOD": "(in the period)",
+        "WEIGHTED": "Weighted:",
+        "STAGE": "Stage",
+        "COUNT": "Count",
+        "CURRENCY": "Currency",
+        "ALL_CURRENCIES": "All currencies",
+        "CLOSE_LABEL": "Expected close",
+        "CLOSE_HINT": "Only narrows open opportunities; won ones still follow the period.",
+        "CLOSE": {
+          "any": "Close: any date",
+          "overdue": "Close: overdue",
+          "this_week": "Close: this week",
+          "this_month": "Close: this month",
+          "next_month": "Close: next month",
+          "this_quarter": "Close: this quarter",
+          "none": "Close: no date"
+        },
+        "SHOW_WEIGHTED": "Weighted value",
+        "SHOW_LOST": "Lost and cancelled",
+        "LOST": "Lost: {count}",
+        "CANCELLED": "Cancelled: {count}",
+        "WAITING": "{label} (outside the funnel): {count}",
+        "NO_STAGE": "No stage: {count}",
+        "EMPTY": "No open or won opportunities with these filters.",
+        "STALE_CHIP": "⚠ {count} stalled +{days} d"
+      },
+      "COMMITMENT": {
+        "LABEL": "Committed by the customer",
+        "HINT": "Check it when the customer already told you when they pay or sign. The close date becomes the promised date.",
+        "NOTE": "Commitment note",
+        "NOTE_PLACEHOLDER": "E.g. «Pays on Friday, confirmed by WhatsApp»",
+        "DATE": "Committed date",
+        "COMMITTED_ON": "Committed · {date}",
+        "PROMISE_OVERDUE": "Promise overdue · {date}",
+        "EVENTS": {
+          "set": "Committed for {on}",
+          "moved": "Moved the committed date: {from} → {to}",
+          "removed": "Commitment removed",
+          "note": "Commitment note changed"
+        }
       }
     },
     "WORK_ORDER": {
@@ -1685,23 +1907,8 @@
         "category_id": "Category",
         "ticket_kind": "Kind",
         "assignee_id": "Owner",
-        "created": "Created",
-        "close": "Expected close",
-        "closed": "Closing date",
-        "visit": "Scheduled visit",
         "billable": "Billable",
-        "due": "Target date"
-      },
-      "CLOSED": {
-        "this_month": "This month",
-        "last_month": "Last month",
-        "last_30": "Last 30 days",
-        "last_90": "Last 90 days"
-      },
-      "CLOSE": {
-        "this_month": "This month",
-        "next_30": "Next 30 days",
-        "overdue": "Overdue"
+        "date": "Date"
       },
       "RESULT": "Outcome",
       "STATUS_LABEL": "Status",
@@ -1719,13 +1926,6 @@
         "90": "Last 90 days",
         "all": "All history"
       },
-      "PERIODS": {
-        "7d": "7 days",
-        "30d": "30 days",
-        "90d": "90 days",
-        "365d": "12 months",
-        "all": "All"
-      },
       "ALL_AGENTS": "All owners",
       "ALL_TEAMS": "All teams",
       "STAGE_LABEL": "Stage",
@@ -1738,11 +1938,6 @@
         "finished": "Finished",
         "closed": "Closed",
         "cancelled": "Cancelled"
-      },
-      "VISIT": {
-        "today": "Today",
-        "this_week": "This week",
-        "overdue": "Overdue"
       },
       "BILLABLE": {
         "yes": "Yes",
@@ -1760,7 +1955,45 @@
         "closed": "Closed",
         "cancelled": "Cancelled"
       },
-      "PROJECT_OVERDUE_ALERT": "Late ({count})"
+      "PROJECT_OVERDUE_ALERT": "Late ({count})",
+      "CAL_PERIODS": {
+        "LABEL": "Period",
+        "this_month": "This month",
+        "last_month": "Last month",
+        "this_quarter": "This quarter",
+        "last_quarter": "Last quarter",
+        "this_year": "This year",
+        "last_year": "Last year",
+        "custom": "Custom",
+        "FROM": "From",
+        "TO": "To",
+        "INVALID": "«From» must be before «To»"
+      },
+      "COMMITTED_ONLY": "Committed only",
+      "COMMITTED_ONLY_HINT": "Only opportunities the customer already committed to pay. Combines with the other filters and the overdue-close alert.",
+      "DATE_FIELD": "Which date?",
+      "DATE_WHEN": "When?",
+      "DATE_FIELDS": {
+        "close": "Close / promise",
+        "closed": "Closed on",
+        "closed_commercial": "Won or lost on",
+        "created": "Created",
+        "visit": "Visit",
+        "due": "Target date"
+      },
+      "DATE_PRESETS": {
+        "overdue": "Overdue",
+        "today": "Today",
+        "this_week": "This week",
+        "next_week": "Next week",
+        "this_month": "This month",
+        "next_month": "Next month",
+        "next_30": "Next 30 days",
+        "last_month": "Last month",
+        "last_30": "Last 30 days",
+        "last_90": "Last 90 days",
+        "custom": "Custom"
+      }
     },
     "CREATE": {
       "TITLE": "New: {name}",
@@ -1880,6 +2113,184 @@
           "FINISHED": "Finished",
           "ON_TIME": "On time"
         }
+      }
+    },
+    "TASK_PRIORITY": {
+      "PAGE_TITLE": "Tasks: «My day» priority",
+      "INTRO": "«My day» sorts each agent's pending tasks by a score: each situation adds the points below. More points = higher up. A negative weight subtracts; 0 ignores it.",
+      "GROUPS": {
+        "DUE": "Task due date",
+        "PRIORITY": "Task priority",
+        "PROJECT": "Project",
+        "SUPPORT": "Support (SLA)",
+        "WORK_ORDER": "Work order",
+        "COMMERCIAL": "Opportunity",
+        "OTHER": "Planning and others",
+        "ALERT": "Alert"
+      },
+      "WEIGHTS": {
+        "overdue": "Task overdue (base)",
+        "overdue_per_day": "Per day overdue",
+        "overdue_days_max": "Max points for overdue days",
+        "due_today": "Due today",
+        "due_tomorrow": "Due tomorrow",
+        "due_week": "Due in the next 7 days",
+        "priority_urgent": "Urgent priority",
+        "priority_high": "High priority",
+        "priority_medium": "Medium priority",
+        "project_overdue": "Project behind schedule",
+        "milestone": "Project milestone",
+        "project_due_soon": "Project due in 7 days or less",
+        "sla_overdue": "SLA breached",
+        "sla_at_risk": "SLA at risk",
+        "case_urgent": "Urgent case",
+        "visit_overdue": "Visit overdue",
+        "visit_today": "Visit today",
+        "close_soon": "Expected close overdue or within 7 days",
+        "planned_missed": "Planned for a past day",
+        "age_per_day": "Age: per day",
+        "age_max": "Max points for age",
+        "waiting": "Case on hold (customer / third party)",
+        "urgent_score": "Alert «New urgent» from this score"
+      },
+      "EXAMPLE_PROJECT": "Example A · urgent task, 2 days overdue, from a project behind schedule",
+      "EXAMPLE_SUPPORT": "Example B · medium task due today, from a case with breached SLA",
+      "EXAMPLE_PROJECT_FIRST": "With these weights, A goes before B.",
+      "EXAMPLE_SUPPORT_FIRST": "With these weights, B goes before A.",
+      "EXAMPLE_TIE": "With these weights, A and B tie (the one due first wins).",
+      "DEFAULT_WAS": "(default: {value})",
+      "RESTORE": "Restore defaults",
+      "SAVE": "Save",
+      "SAVED": "Weights saved.",
+      "SAVE_ERROR": "Could not save the weights."
+    },
+    "BUSINESS_SUMMARY": {
+      "TITLE": "Business summary",
+      "COMPARED_WITH": "compared with {range}",
+      "LOADING": "Loading summary…",
+      "ERROR": "Could not load the summary.",
+      "FORBIDDEN": "You don't have access to the Business summary. Ask an administrator.",
+      "VS": "vs {range}",
+      "SAME": "= same as {range}",
+      "POINTS": "{n} pts",
+      "MINUTES": "{n} min",
+      "HOURS": "{h} h {m} min",
+      "SEE": "View",
+      "MORE": "See the numbers →",
+      "ATTENTION_TITLE": "What needs your attention",
+      "ATTENTION_NONE": "Nothing urgent: all up to date.",
+      "ATTENTION": {
+        "promises_overdue": "{count} overdue payment promises ({amount})",
+        "sla_overdue": "{count} support cases past SLA",
+        "visits_overdue": "{count} overdue visits not done",
+        "projects_late": "{count} late projects",
+        "close_overdue": "{count} opportunities with an overdue expected close (review date)",
+        "unattended_conversations": "{count} unattended conversations"
+      },
+      "AI": {
+        "TITLE": "Explain my week",
+        "EXPLAIN": "Explain my week",
+        "AGAIN": "Explain again",
+        "HINT": "AI tells you in 30 seconds how the business is doing, what's worrying and what to do today, using this screen's figures.",
+        "good": "Going well",
+        "watch": "Worrying",
+        "today": "Today I'd do",
+        "DISCLAIMER": "AI-generated from these figures; review before deciding.",
+        "ERROR": "Could not generate the explanation."
+      },
+      "SALES": {
+        "TITLE": "Sales · how much did we sell and what's coming?",
+        "WON": "Sold (won)",
+        "WON_SUB": "{count} won opportunities",
+        "WIN_RATE": "Win rate",
+        "COMMITTED_WEEK": "Coming this week",
+        "COMMITTED_SUB": "{count} committed by the customer",
+        "COMMITTED_MONTH": "Coming this month",
+        "OVERDUE_SUB": "{count} overdue promises",
+        "OPEN": "In play",
+        "OPEN_SUB": "{count} open · weighted {weighted}"
+      },
+      "SUPPORT": {
+        "TITLE": "Support · are we serving well?",
+        "OPEN": "Open cases",
+        "CREATED_SUB": "{count} new in the period",
+        "SLA_OVERDUE": "Past SLA",
+        "AT_RISK_SUB": "{count} at risk",
+        "FIRST_RESPONSE": "First response (average)",
+        "CSAT": "Satisfaction",
+        "CSAT_SUB": "{count} surveys"
+      },
+      "WORK_ORDERS": {
+        "TITLE": "Work orders · are we delivering in the field?",
+        "OPEN": "Open orders",
+        "TO_SCHEDULE_SUB": "{count} to schedule",
+        "VISITS_OVERDUE": "Overdue visits",
+        "ON_TIME": "Finished on time",
+        "FINISHED_SUB": "{count} finished in the period",
+        "SIGNOFF": "Awaiting sign-off"
+      },
+      "PROJECTS": {
+        "TITLE": "Projects · on time?",
+        "OPEN": "Open projects",
+        "LATE": "Late",
+        "MILESTONES_SUB": "{count} overdue milestones",
+        "AT_RISK": "At risk",
+        "OVER_BUDGET": "Over budget"
+      },
+      "PEOPLE": {
+        "TOP_SELLERS": "Who is selling?",
+        "NO_SALES": "No won opportunities in the period.",
+        "WON": "{count} won",
+        "MOST_OVERDUE": "Who has the most overdue?",
+        "NONE_OVERDUE": "No one has overdue cases.",
+        "OVERDUE": "{count} overdue"
+      },
+      "ACCESS": {
+        "TITLE": "Business summary · Who can see it",
+        "INTRO": "Administrators always see it. Check the agents who can also see it (e.g. a sales manager or a supervisor).",
+        "ALWAYS": "Administrator · always",
+        "SAVE": "Save",
+        "SAVED": "Permissions saved",
+        "SAVE_ERROR": "Could not save permissions"
+      },
+      "CONVERSATIONS": {
+        "TITLE": "Conversations · how are we serving on chat?",
+        "NEW": "New conversations",
+        "RESOLVED_SUB": "{count} resolved",
+        "UNATTENDED": "Unattended now",
+        "OPEN_SUB": "{open} open · {unassigned} unassigned",
+        "FIRST_RESPONSE": "First response (average)",
+        "RESOLUTION": "Resolution time",
+        "CSAT": "Satisfaction",
+        "BY_CHANNEL": "By channel",
+        "NONE": "No conversations in the period.",
+        "TOP_LABELS": "What are they about? (top labels)",
+        "NO_LABELS": "No conversation in the period has labels."
+      },
+      "CHANNELS": {
+        "whatsapp": "WhatsApp",
+        "web_widget": "Website chat",
+        "email": "Email",
+        "api": "API",
+        "facebook_page": "Facebook",
+        "instagram": "Instagram",
+        "telegram": "Telegram",
+        "sms": "SMS",
+        "twilio_sms": "SMS / WhatsApp (Twilio)",
+        "line": "LINE"
+      },
+      "ANALYSIS": {
+        "TITLE": "AI conversation analysis",
+        "DESCRIPTION": "Reads a sample of up to 150 conversations from the period and finds topics, upset customers, missed sales and repeated complaints. Costs tokens: on demand.",
+        "SAMPLE": "Sample analyzed: {count} conversations",
+        "EMPTY": "No conversations in the period to analyze.",
+        "COUNT": "{count} conv.",
+        "topics": "What are they talking about?",
+        "complaints": "Repeated complaints",
+        "lost_sales": "Missed sales (no opportunity)",
+        "upset": "Upset customers",
+        "DISCLAIMER": "AI-generated from a sample; review the conversations before acting.",
+        "ERROR": "Could not analyze."
       }
     }
   }

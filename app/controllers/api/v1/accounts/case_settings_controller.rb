@@ -32,7 +32,9 @@ class Api::V1::Accounts::CaseSettingsController < Api::V1::Accounts::BaseControl
   end
 
   def setting_params
-    permitted = params.require(:case_setting).permit(:reopen_window_days, :reopen_on_customer_reply, :default_currency)
+    permitted = params.require(:case_setting).permit(:reopen_window_days, :reopen_on_customer_reply, :default_currency,
+                                                     task_priority_weights: Cases::TaskPriorityScore::DEFAULT_WEIGHTS.keys,
+                                                     business_summary_user_ids: [])
     # La ventana no puede ser negativa; 0 = sin límite.
     permitted[:reopen_window_days] = [permitted[:reopen_window_days].to_i, 0].max if permitted.key?(:reopen_window_days)
     # Plan-Clase-Comercial F3 — código ISO de 3 letras (MXN, USD…).
@@ -44,7 +46,13 @@ class Api::V1::Accounts::CaseSettingsController < Api::V1::Accounts::BaseControl
     {
       reopen_window_days: @setting.reopen_window_days,
       reopen_on_customer_reply: @setting.reopen_on_customer_reply,
-      default_currency: @setting.default_currency
+      default_currency: @setting.default_currency,
+      # Plan-Bandeja-Prioridad F3 — vigentes y de fábrica (para «Restaurar»).
+      task_priority_weights: @setting.task_priority_weights_effective,
+      task_priority_defaults: Cases::TaskPriorityScore::DEFAULT_WEIGHTS,
+      # «Resumen del negocio»: quién más puede verlo y si el usuario actual puede.
+      business_summary_user_ids: @setting.business_summary_user_ids,
+      can_view_business_summary: @setting.business_summary_visible_to?(current_user)
     }
   end
 end

@@ -20,16 +20,22 @@ class Cases::OrchestratorService
     @conversation = conversation
   end
 
-  def find_active_ticket
-    CaseTicket
-      .where(account: @account, contact: @contact)
-      .where.not(status: %w[closed cancelled])
-      .order(created_at: :desc)
-      .first
+  # Con `case_class`, solo un caso vigente de ESA clase: una venta abierta no
+  # absorbe una solicitud de soporte ni al revés (mismo criterio que la
+  # Automatización, ver find_active_ticket_for_automation).
+  def find_active_ticket(case_class: nil)
+    scope = CaseTicket.where(account: @account, contact: @contact).where.not(status: %w[closed cancelled])
+    scope = scope.of_class(case_class) if case_class.present?
+    scope.order(created_at: :desc).first
+  end
+
+  # La clase de un tipo de la cuenta (o la del tipo por defecto, si no se pide uno).
+  def case_class_for(case_type_id)
+    resolve_case_type(case_type_id)&.case_class || 'support'
   end
 
   def find_or_create_from_message(message, tracking: nil)
-    ticket = find_active_ticket
+    ticket = find_active_ticket(case_class: default_case_type&.case_class)
     return ticket if ticket
 
     ticket = CaseTicket.create!(
@@ -267,10 +273,13 @@ class Cases::OrchestratorService
     Rails.logger.error("[GestorTickets] enqueue ai classify: #{e.message}")
   end
 
-  # Tipo de caso por defecto de la cuenta (el primero por posición).
-  # Garantiza que la cuenta tenga sus tipos por defecto creados.
+  # Tipo de caso por defecto de la cuenta: el primero por posición DE SOPORTE (un
+  # alta sin tipo —mensaje entrante, IA no disponible— nunca debe volverse una
+  # oportunidad, una orden o un proyecto solo porque ese tipo quedó primero en la
+  # lista). Garantiza que la cuenta tenga sus tipos por defecto creados.
   def default_case_type
-    CaseType.ensure_defaults_for(@account).first
+    types = CaseType.ensure_defaults_for(@account).to_a
+    types.find { |t| (t.case_class.presence || 'support') == 'support' } || types.first
   end
 
   def resolve_case_type(case_type_id)

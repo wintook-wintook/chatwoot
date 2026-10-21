@@ -195,3 +195,19 @@ La continuación (menú por clase, clase fija, Comercial y Soporte completos) es
 
 ## 🔗 Relacionado
 [[00-Indice]] · [[Trampas]] · [[Plan-Columnas-Por-Tipo]] · [[Pendiente]]
+
+## Métricas → pestaña «Embudo» (2026-10-21)
+
+- Métricas de Comercial con dos pestañas: **Generales** (lo de siempre) y **Embudo**
+  (`commercial/CommercialFunnel.vue`). La pestaña se recuerda (`metrics.tab`).
+- Embudo clásico de forma fija (las franjas se angostan siempre igual; los números van
+  escritos): una franja por etapa EN CURSO, en el orden de las columnas del tipo (también las
+  vacías, en 0; sin tipo = unión de las etapas de los tipos Comerciales) y al final las
+  **Ganadas del período** (verde de estado + ✔). Pospuestas («en espera») y «Sin etapa» van
+  aparte, abajo. Vista de tabla equivalente.
+- Filtros propios (no tocan Generales, se recuerdan en `funnel`): **moneda**, **cierre
+  estimado** (vencido / este mes / próximo / trimestre / sin fecha — solo acota lo abierto) y
+  casillas **Valor ponderado** y **Perdidas y canceladas**.
+- Backend (`PipelineBuilder`): params `currency` y `close`; `currencies`; `stages[].waiting`
+  (columna cuyos estados son solo de espera); `summary.cancelled_value`.
+- Color: azul secuencial claro→oscuro (avance); texto con contraste ≥ 4.5:1 en ambos modos.

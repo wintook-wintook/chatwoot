@@ -2,9 +2,10 @@
 import {
   COMMERCIAL_RESULTS,
   activeFineKeys,
-  closeRange,
+  dateRange,
   emptyFineFilters,
   fineFiltersToParams,
+  normalizeFineFilters,
   alertApplies,
   classAlertParams,
   scopeToParams,
@@ -26,7 +27,9 @@ describe('caseFilters', () => {
       filters({
         priority: 'high',
         origin: 'whatsapp',
-        created_from: '2026-10-01',
+        date_field: 'created',
+        date_preset: 'custom',
+        date_from: '2026-10-01',
       }),
       'support',
       'mine'
@@ -40,7 +43,11 @@ describe('caseFilters', () => {
 
   it('Comercial no usa origen y traduce el cierre estimado', () => {
     const params = fineFiltersToParams(
-      filters({ origin: 'web', close: 'this_month' }),
+      filters({
+        origin: 'web',
+        date_field: 'close',
+        date_preset: 'this_month',
+      }),
       'commercial',
       'mine'
     );
@@ -50,22 +57,60 @@ describe('caseFilters', () => {
     });
   });
 
-  it('las fechas siguen al resultado: Ganadas usa la fecha de cierre', () => {
-    const f = filters({ close: 'overdue', closed: 'last_month' });
+  it('una sola fecha: la que no aplica a lo que se ve no cuenta (ni salta a otra)', () => {
+    const won = filters({ date_field: 'closed', date_preset: 'last_month' });
     expect(
-      fineFiltersToParams(f, 'commercial', 'mine', { outcome: 'won' })
+      fineFiltersToParams(won, 'commercial', 'mine', { outcome: 'won' })
     ).toEqual({ closed_from: '2026-09-01', closed_to: '2026-09-30' });
+    // «Ganada o perdida el» no aplica en En curso ni en el Tablero.
     expect(
-      fineFiltersToParams(f, 'commercial', 'mine', { outcome: 'active' })
+      activeFineKeys(won, 'commercial', 'mine', { outcome: 'active' })
+    ).toEqual([]);
+    expect(activeFineKeys(won, 'commercial', 'mine', { board: true })).toEqual(
+      []
+    );
+    const late = filters({ date_field: 'close', date_preset: 'overdue' });
+    expect(
+      fineFiltersToParams(late, 'commercial', 'mine', { outcome: 'active' })
     ).toEqual({ expected_close_to: '2026-10-19' });
-    // Todas: aplican las dos; en el Tablero nunca la fecha de cierre.
-    expect(activeFineKeys(f, 'commercial', 'mine', { outcome: '' })).toEqual([
-      'close',
-      'closed',
-    ]);
-    expect(activeFineKeys(f, 'commercial', 'mine', { board: true })).toEqual([
-      'close',
-    ]);
+  });
+
+  it('Comercial: comprometidas esta semana / próxima semana / rango', () => {
+    // 20 oct 2026 es martes: semana del lunes 19 al domingo 25.
+    const week = filters({ date_field: 'close', date_preset: 'this_week' });
+    expect(fineFiltersToParams(week, 'commercial', 'mine')).toEqual({
+      expected_close_from: '2026-10-19',
+      expected_close_to: '2026-10-25',
+    });
+    expect(dateRange('next_week')).toEqual({
+      from: '2026-10-26',
+      to: '2026-11-01',
+    });
+    expect(dateRange('custom', { from: '2026-09-01', to: '' })).toEqual({
+      from: '2026-09-01',
+      to: '',
+    });
+  });
+
+  it('traduce los filtros guardados con una clave por fecha', () => {
+    expect(
+      normalizeFineFilters({ close: 'next_30', priority: 'high' })
+    ).toEqual(
+      filters({ date_field: 'close', date_preset: 'next_30', priority: 'high' })
+    );
+    expect(
+      normalizeFineFilters({ created_from: '2026-10-01', created_to: '' })
+    ).toEqual(
+      filters({
+        date_field: 'created',
+        date_preset: 'custom',
+        date_from: '2026-10-01',
+      })
+    );
+    expect(
+      normalizeFineFilters({ visit: 'overdue', closed: 'last_30' })
+    ).toEqual(filters({ date_field: 'visit', date_preset: 'overdue' }));
+    expect(normalizeFineFilters(null)).toEqual(filters({}));
   });
 
   it('Orden: etapa → estados; visita y facturable; cierre solo en etapas cerradas', () => {
@@ -75,9 +120,9 @@ describe('caseFilters', () => {
     });
     expect(stageToParams('')).toEqual({});
     const f = filters({
-      visit: 'this_week',
+      date_field: 'visit',
+      date_preset: 'this_week',
       billable: 'no',
-      closed: 'last_30',
     });
     // 20 oct 2026 es martes: la semana va del lunes 19 al domingo 25.
     expect(
@@ -87,12 +132,18 @@ describe('caseFilters', () => {
       visit_to: '2026-10-25',
       billable: false,
     });
+    // En Cerradas la visita no aplica; «Cerrado el» sí.
     expect(
       fineFiltersToParams(f, 'work_order', 'mine', { stage: 'closed' })
-    ).toEqual({
-      billable: false,
-      closed_from: '2026-09-20',
-      closed_to: '2026-10-20',
+    ).toEqual({ billable: false });
+    const closed = filters({ date_field: 'closed', date_preset: 'last_30' });
+    expect(
+      fineFiltersToParams(closed, 'work_order', 'mine', { stage: 'closed' })
+    ).toEqual({ closed_from: '2026-09-20', closed_to: '2026-10-20' });
+    // Visita vencida = sigue abierta con la hora de la visita pasada.
+    const late = filters({ date_field: 'visit', date_preset: 'overdue' });
+    expect(fineFiltersToParams(late, 'work_order', 'mine')).toEqual({
+      visit_overdue: true,
     });
   });
 
@@ -118,7 +169,7 @@ describe('caseFilters', () => {
   });
 
   it('Soporte: la fecha de cierre no aplica en Pendientes', () => {
-    const f = filters({ closed: 'last_30' });
+    const f = filters({ date_field: 'closed', date_preset: 'last_30' });
     expect(activeFineKeys(f, 'support', 'mine', { status: 'pending' })).toEqual(
       []
     );
@@ -149,9 +200,9 @@ describe('caseFilters', () => {
     ]);
   });
 
-  it('presets de cierre y alcance', () => {
-    expect(closeRange('overdue')).toEqual({ from: '', to: '2026-10-19' });
-    expect(closeRange('next_30')).toEqual({
+  it('presets de fecha y alcance', () => {
+    expect(dateRange('overdue')).toEqual({ from: '', to: '2026-10-19' });
+    expect(dateRange('next_30')).toEqual({
       from: '2026-10-20',
       to: '2026-11-19',
     });

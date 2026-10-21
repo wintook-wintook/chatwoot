@@ -1,0 +1,196 @@
+REVISIÓN DE CREACIÓN DE CASOS
+Kontrolya · módulo de casos · 21 oct 2026
+Para: técnico que configura automatizaciones y agentes
+Rama: feat/nva_oportunidad
+
+Qué revisar en las automatizaciones y en los Agentes IA que crean casos, después de
+los cambios de clases de caso (Soporte, Comercial, Orden de trabajo, Proyecto) y de
+oportunidades comprometidas.
+
+
+================================================================================
+QUÉ CAMBIÓ EN EL SISTEMA
+================================================================================
+
+Hay cuatro caminos que crean casos sin que una persona los dé de alta: la acción
+«Asignar Caso» de Automatización, la directiva @crear_ticket de los Agentes IA, el
+alta básica cuando la IA no está disponible y @solicitudes. Se ajustaron así:
+
+1. @crear_ticket (anti-duplicado) — CORREGIDO
+   Antes: si el cliente tenía CUALQUIER caso abierto, lo reusaba. Con una oportunidad
+   de venta abierta, una solicitud de soporte respondía «Ya tienes el caso OPO-12 en
+   curso».
+   Ahora: solo reusa un caso abierto DE LA MISMA CLASE: la del tipo= de la directiva,
+   o Soporte si no lo trae. Si la IA elige un tipo de otra clase, revisa también esa
+   clase.
+
+2. Tipo por defecto — CORREGIDO
+   Antes: el primero de la lista de tipos. Si alguien dejaba primero una oportunidad
+   o una orden, los casos sin tipo nacían de esa clase.
+   Ahora: siempre el primer tipo de SOPORTE.
+
+3. IA que arma el caso — MEJORADO
+   Antes: veía solo el nombre de cada tipo.
+   Ahora: ve también la clase y qué significa (Comercial = cotización o venta,
+   Orden = trabajo en sitio, etc.).
+
+4. Mensajes del Agente IA — CORREGIDO
+   Antes: se anotaban en el caso abierto más reciente del cliente, aunque fuera una
+   venta.
+   Ahora: se anotan en el caso de ESA conversación; si no tiene, en el más reciente.
+
+5. Automatización «Asignar Caso» — MEJORADO
+   Antes: la lista mostraba solo el nombre del tipo.
+   Ahora: muestra «Tipo · Clase», por ejemplo «Oportunidad Big · Comercial».
+
+Estos cambios no modifican automatizaciones ni agentes existentes: cambian cómo se
+comportan. Por eso hay que revisarlos.
+
+
+================================================================================
+1. AUTOMATIZACIONES CON «ASIGNAR CASO»
+================================================================================
+
+En Configuración → Automatización, abre cada regla que tenga la acción Asignar Caso.
+
+[ ] Confirma el tipo y su clase
+    Ahora la lista dice la clase. Revisa que la regla cree lo que se espera: un
+    ticket de soporte, una oportunidad, una orden o un proyecto.
+
+[ ] Cuidado con las reglas que crean oportunidades
+    Una regla «Conversación creada → Asignar Caso: Oportunidad» sin más condiciones
+    convierte en venta cada conversación nueva, incluidas las de soporte. Ponle
+    condiciones: bandeja, etiqueta, atributo o palabra clave.
+
+[ ] Dos reglas de clases distintas abren dos casos
+    Si una regla asigna un tipo de Soporte y otra uno Comercial a la misma
+    conversación, quedan DOS casos, uno de cada clase. Antes el segundo pisaba al
+    primero. Si no quieres eso, deja una sola.
+
+[ ] Proyectos por automatización
+    Un proyecto es un trabajo largo con fases. Crearlo desde una conversación rara
+    vez tiene sentido; revisa si alguna regla lo hace sin querer.
+
+Qué hace «Asignar Caso» según la situación de la conversación:
+
+  - Tiene un caso abierto de la MISMA clase
+      → Le cambia el tipo; la etapa se reacomoda en las columnas del tipo nuevo.
+  - Tiene un caso abierto de OTRA clase
+      → Crea un caso nuevo; el otro no se toca.
+  - Su caso está cerrado, resuelto o cancelado
+      → Crea un caso nuevo.
+  - Se elige «Ninguno»
+      → Quita el tipo del caso vigente, excepto si es una oportunidad: a una
+        oportunidad no se le quita la clase.
+
+
+================================================================================
+2. AGENTES IA CON @crear_ticket
+================================================================================
+
+En Agentes IA, busca los Entrenamientos (prompt complementario) que tengan
+@crear_ticket.
+
+[ ] Una directiva por rama, con su tipo
+    En un agente con ramas (por ejemplo, Soporte, Comercial y Administrativo), pon
+    en cada rama su propio @crear_ticket(tipo=…). El tipo decide la clase, y con eso
+    qué caso abierto se reusa.
+
+      @ruta(Soporte)    … @crear_ticket(tipo=Soporte)
+      @ruta(Comercial)  … @crear_ticket(tipo=Oportunidad)
+
+[ ] El nombre del tipo debe existir
+    tipo= busca el tipo por nombre exacto (no importan mayúsculas). Si el tipo se
+    renombró o no existe, NO marca error: el tipo lo elige la IA. Compara cada tipo=
+    con los nombres actuales en Configuración → Tipos de caso.
+
+[ ] Rama Comercial: ¿debe crear una oportunidad?
+    Si la rama comercial lleva @crear_ticket(tipo=Oportunidad), cada cliente
+    interesado abre una oportunidad en el embudo, y si ya tiene una abierta se suma
+    a esa. Si prefieres que la venta la abra una persona, quita la directiva de esa
+    rama.
+
+[ ] Que «Clasificación» de IA esté encendida
+    El caso bien armado (título, descripción, tipo, campos) depende de la acción
+    Clasificación en Configuración → Inteligencia Artificial. Si está apagada o no
+    hay clave de OpenAI, se crea un caso básico de Soporte con el mensaje como título.
+
+[ ] Campos obligatorios del tipo
+    Si el tipo tiene campos obligatorios, el agente los pide al cliente hasta dos
+    veces antes de crear el caso. Revisa que esas preguntas tengan sentido en cada
+    canal.
+
+[ ] @estado_ticket no informa ventas
+    Cuando el cliente pregunta «¿cómo va mi caso?», el agente informa solo tickets de
+    Soporte y Órdenes de trabajo. Las oportunidades no se informan al cliente, a
+    propósito.
+
+Parámetros que siguen igual: prioridad=alta|media|baja|urgente y fallback=true
+(primero responde la base de conocimiento y el caso se crea solo si no resolvió).
+
+
+================================================================================
+3. ORDEN DE LOS TIPOS DE CASO
+================================================================================
+
+En la cuenta 1 hay cinco tipos en la MISMA POSICIÓN (0): Soporte, Desarrollo a
+medida, Diseño Agente IA, Oportunidad Big e Implementa CRM Admin. Ya no afecta la
+creación automática, porque el tipo por defecto siempre es de Soporte, pero sí el
+orden en que aparecen en las listas.
+
+[ ] Reordena los tipos
+    En Configuración → Tipos de caso, deja primero el tipo de Soporte que debe usarse
+    cuando no se indica otro.
+
+
+================================================================================
+4. PRUEBAS PARA CADA AGENTE
+================================================================================
+
+Hazlas con un contacto de prueba, en el canal real del agente.
+
+1) Venta abierta + falla
+   Crea al contacto una oportunidad abierta. Después escribe por el canal «no me
+   funciona el sistema».
+   Esperado: se crea un ticket de Soporte nuevo, y el agente responde «Tu caso SOP-…
+   fue registrado», no «Ya tienes el caso OPO-…».
+
+2) Segunda falla
+   En la misma conversación, escribe otra falla.
+   Esperado: el agente la suma al ticket de Soporte abierto («Ya tienes el caso
+   SOP-…»), sin crear otro.
+
+3) Rama comercial
+   Pide una cotización.
+   Esperado: si la rama tiene tipo=Oportunidad, se usa la oportunidad abierta o se
+   crea una. Si no tiene la directiva, no se crea caso.
+
+4) Charla sin solicitud
+   Escribe «gracias, eso era todo».
+   Esperado: no se crea ni se vincula ningún caso.
+
+5) Automatización
+   Dispara cada regla de «Asignar Caso» con una conversación de prueba.
+   Esperado: se crea el caso de la clase indicada en la lista («Tipo · Clase»).
+
+
+================================================================================
+PARA EL DESARROLLADOR
+================================================================================
+
+Archivos que cambiaron (sin commit todavía), con respaldo _20261021 junto a cada uno:
+
+  - app/services/cases/orchestrator_service.rb
+      find_active_ticket(case_class:), case_class_for y el tipo por defecto de Soporte.
+  - app/services/cases/ticket_creator_service.rb
+      El anti-duplicado por clase, también para la clase que elige el intake.
+  - app/services/cases/ai/intake.rb
+      La lista de tipos con su clase.
+  - app/jobs/contact_tracking_response_analyzer_job.rb
+      El caso de la conversación primero.
+  - app/javascript/dashboard/composables/useAutomation.js
+      «Tipo · Clase» en la lista.
+  - Pruebas: spec/services/cases/ticket_creator_service_spec.rb (6, pasan).
+
+Ya fallaban antes: 7 pruebas de spec/jobs/contact_tracking_response_analyzer_job_spec.rb
+(calendario y citas) fallan igual con el archivo original; no se deben a estos cambios.
