@@ -344,7 +344,7 @@ export default {
 
 <template>
   <div class="flex flex-col flex-1 min-h-0 overflow-y-auto text-sm">
-    <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
+    <p class="mb-3 text-sm text-slate-600 dark:text-slate-300">
       {{ draft.trim() ? t('HINT') : t('EMPTY') }}
     </p>
     <p
@@ -362,9 +362,7 @@ export default {
     </p>
 
     <section v-for="bloque in groups" :key="bloque.group" class="mb-4">
-      <h4
-        class="mb-2 text-xs font-semibold tracking-wide uppercase text-slate-600 dark:text-slate-300"
-      >
+      <h4 class="mb-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
         {{ t(`GROUP_${bloque.group.toUpperCase()}`) }}
       </h4>
 
@@ -483,17 +481,15 @@ export default {
       v-if="draft.trim()"
       class="p-3 mb-4 border rounded-md border-slate-100 dark:border-slate-700"
     >
-      <h4
-        class="mb-1 text-xs font-semibold tracking-wide uppercase text-slate-600 dark:text-slate-300"
-      >
+      <h4 class="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
         {{ t('SUGGEST_TITLE') }}
       </h4>
-      <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">
+      <p class="mb-2 text-sm text-slate-600 dark:text-slate-300">
         {{ t('SUGGEST_HELP') }}
       </p>
       <p
         v-if="isSuggesting"
-        class="mb-0 text-xs text-slate-500 dark:text-slate-400"
+        class="mb-0 text-sm text-slate-600 dark:text-slate-300"
       >
         {{ t('SUGGEST_RUNNING') }}
       </p>
@@ -516,7 +512,7 @@ export default {
       <template v-if="suggestions !== null && !isSuggesting">
         <p
           v-if="!suggestions.length"
-          class="mb-0 text-xs text-slate-500 dark:text-slate-400"
+          class="mb-0 text-sm text-slate-600 dark:text-slate-300"
         >
           {{ t('SUGGEST_NONE') }}
         </p>

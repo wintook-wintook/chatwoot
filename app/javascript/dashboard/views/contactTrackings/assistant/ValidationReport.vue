@@ -57,7 +57,7 @@ export default {
 
 <template>
   <div>
-    <p v-if="!validation" class="text-xs text-slate-500 dark:text-slate-400">
+    <p v-if="!validation" class="text-sm text-slate-600 dark:text-slate-300">
       {{ $t('TRACKING_ASSISTANT_VIEW.REPORT_EMPTY') }}
     </p>
 
@@ -95,7 +95,7 @@ export default {
 
     <p
       v-if="validation && validation.default_route"
-      class="text-xs text-slate-500 dark:text-slate-400 mb-3"
+      class="text-sm text-slate-600 dark:text-slate-300 mb-3"
     >
       {{ $t('TRACKING_ASSISTANT_VIEW.REPORT_DEFAULT') }}:
       {{ validation.default_route }}

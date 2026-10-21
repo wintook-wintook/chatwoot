@@ -90,7 +90,9 @@ export default {
 <template>
   <woot-modal :show="show" size="dry-run-wide" :on-close="() => $emit('close')">
     <div class="flex flex-col p-8 h-[80vh]">
-      <h2 class="mb-1 text-lg font-medium text-slate-800 dark:text-slate-100">
+      <h2
+        class="mb-1 text-base font-semibold leading-6 text-slate-800 dark:text-slate-50"
+      >
         {{ $t('TRACKING_ASSISTANT_VIEW.DRY_RUN_TITLE') }}
       </h2>
       <p class="mb-4 text-xs shrink-0 text-slate-500 dark:text-slate-400">

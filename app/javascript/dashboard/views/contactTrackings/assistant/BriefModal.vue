@@ -370,7 +370,9 @@ export default {
       :class="ready ? 'h-[80vh]' : 'max-h-[80vh]'"
     >
       <div class="shrink-0">
-        <h2 class="!m-0 text-lg font-medium text-slate-800 dark:text-slate-100">
+        <h2
+          class="!m-0 text-base font-semibold leading-6 text-slate-800 dark:text-slate-50"
+        >
           {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_TITLE') }}
         </h2>
         <p class="!m-0 mt-1 text-xs text-slate-600 dark:text-slate-300">
@@ -449,7 +451,7 @@ export default {
         >
           <div class="h-full bg-woot-500" :style="{ width: `${percent}%` }" />
         </div>
-        <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
+        <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
           {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_CAN_CLOSE') }}
         </p>
       </div>
@@ -785,7 +787,7 @@ export default {
 
           <p
             v-if="questions.length"
-            class="!m-0 text-xs text-slate-500 dark:text-slate-400"
+            class="!m-0 text-sm text-slate-600 dark:text-slate-300"
           >
             {{ $t('TRACKING_ASSISTANT_VIEW.BRIEF_ASK_EMPTY_HINT') }}
           </p>

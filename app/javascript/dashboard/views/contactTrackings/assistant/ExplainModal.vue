@@ -37,7 +37,9 @@ export default {
 <template>
   <woot-modal :show="show" :on-close="() => $emit('close')">
     <div class="flex flex-col gap-3 p-8 text-sm max-h-[80vh] overflow-y-auto">
-      <h2 class="!m-0 text-lg font-medium text-slate-800 dark:text-slate-100">
+      <h2
+        class="!m-0 text-base font-semibold leading-6 text-slate-800 dark:text-slate-50"
+      >
         {{ $t('TRACKING_ASSISTANT_VIEW.EXPLAIN_TITLE') }}
       </h2>
       <pre
@@ -46,7 +48,7 @@ export default {
       >
       <p
         v-if="result && result.section"
-        class="!m-0 text-xs text-slate-500 dark:text-slate-400"
+        class="!m-0 text-sm text-slate-600 dark:text-slate-300"
       >
         {{
           $t('TRACKING_ASSISTANT_VIEW.EXPLAIN_SECTION', {
@@ -108,7 +110,7 @@ export default {
           <p class="!m-0 font-semibold text-slate-800 dark:text-slate-100">
             {{ $t('TRACKING_ASSISTANT_VIEW.EXPLAIN_INTERPRETATION') }}
           </p>
-          <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
+          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ $t('TRACKING_ASSISTANT_VIEW.EXPLAIN_INTERPRETATION_HINT') }}
           </p>
           <p v-if="interpretation.explanation" class="!m-0">

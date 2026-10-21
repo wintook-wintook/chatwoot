@@ -112,11 +112,12 @@ export default {
             $t('TRACKING_ASSISTANT_VIEW.VERSION_LABEL', { number: version.n })
           }}
         </span>
-        <span
-          class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-        >
-          {{ sourceLabel(version.source) }}
-        </span>
+        <woot-label
+          small
+          class="!mb-0"
+          color-scheme="secondary"
+          :title="sourceLabel(version.source)"
+        />
         <span class="text-slate-400 dark:text-slate-500">
           {{ time(version.at) }}
         </span>

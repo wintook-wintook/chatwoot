@@ -40,11 +40,9 @@ export default {
     },
     // Tres motivos distintos para una lista vacía, y se dicen distinto.
     emptyMessage() {
-      const clave = !this.sections.length
-        ? 'SECTION_FIND_EMPTY'
-        : this.available.length
-        ? 'ROUTE_FIND_NO_MATCH'
-        : 'SECTION_FIND_ALL_TAKEN';
+      let clave = 'SECTION_FIND_ALL_TAKEN';
+      if (!this.sections.length) clave = 'SECTION_FIND_EMPTY';
+      else if (this.available.length) clave = 'ROUTE_FIND_NO_MATCH';
       return this.$t(`TRACKING_TEMPLATES.FORM.TRAINING.${clave}`);
     },
     filtered() {
@@ -79,10 +77,12 @@ export default {
   <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
     <div class="flex flex-col gap-4 p-8 text-sm max-h-[85vh]">
       <div class="shrink-0">
-        <h2 class="!m-0 text-lg font-medium text-slate-800 dark:text-slate-100">
+        <h2
+          class="!m-0 text-base font-semibold leading-6 text-slate-800 dark:text-slate-50"
+        >
           {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.SECTION_FIND_TITLE') }}
         </h2>
-        <p class="!mt-1 !mb-0 text-xs text-slate-500 dark:text-slate-400">
+        <p class="!mt-1 !mb-0 text-sm text-slate-600 dark:text-slate-300">
           {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.SECTION_FIND_HINT') }}
         </p>
       </div>
@@ -99,7 +99,7 @@ export default {
 
       <p
         v-if="isLoading"
-        class="!m-0 text-xs text-slate-500 dark:text-slate-400"
+        class="!m-0 text-sm text-slate-600 dark:text-slate-300"
       >
         {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.SECTION_FIND_LOADING') }}
       </p>
@@ -119,7 +119,7 @@ export default {
           <div class="flex items-start gap-2">
             <div class="flex-1 min-w-0">
               <p
-                class="!m-0 text-xs font-semibold tracking-wide uppercase text-slate-800 dark:text-slate-100"
+                class="!m-0 text-sm font-semibold text-slate-800 dark:text-slate-100"
               >
                 {{ seccion.title }}
                 <span class="font-normal normal-case text-slate-400">
@@ -131,7 +131,7 @@ export default {
                 </span>
               </p>
               <p
-                class="!mt-0.5 !mb-0 text-xs text-slate-500 dark:text-slate-400"
+                class="!mt-0.5 !mb-0 text-sm text-slate-600 dark:text-slate-300"
               >
                 {{ $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_FIND_AGENTS') }}:
                 {{ (seccion.agents || []).join(' · ') }}

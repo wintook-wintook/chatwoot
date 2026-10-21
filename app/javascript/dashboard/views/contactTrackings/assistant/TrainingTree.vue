@@ -376,7 +376,7 @@ export default {
           @click="$emit('editSection', block.index)"
         >
           <span
-            class="text-xs font-semibold tracking-wide uppercase shrink-0 text-slate-700 dark:text-slate-200"
+            class="text-sm font-semibold shrink-0 text-slate-700 dark:text-slate-200"
           >
             {{ sectionName(block) }}
           </span>
@@ -428,7 +428,7 @@ export default {
               "
             />
             <span
-              class="text-xs font-semibold tracking-wide uppercase shrink-0 text-slate-700 dark:text-slate-200"
+              class="text-sm font-semibold shrink-0 text-slate-700 dark:text-slate-200"
             >
               {{ sectionName(block) }}
             </span>
