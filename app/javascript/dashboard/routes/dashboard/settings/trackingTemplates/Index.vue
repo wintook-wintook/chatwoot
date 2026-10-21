@@ -765,7 +765,7 @@ export default {
                   <tr
                     v-for="template in pagedTemplates"
                     :key="template.id"
-                    class="cursor-pointer hover:bg-slate-25 dark:hover:bg-slate-800"
+                    class="transition-colors cursor-pointer hover:bg-woot-75 dark:hover:bg-woot-800/40"
                     @click="openAgent(template)"
                   >
                     <td class="py-4 pr-4 font-medium">

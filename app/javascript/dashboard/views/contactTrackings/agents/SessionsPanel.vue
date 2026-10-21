@@ -263,7 +263,7 @@ export default {
             <tr
               v-for="row in pagedSessions"
               :key="row.id"
-              class="cursor-pointer hover:bg-slate-25 dark:hover:bg-slate-800"
+              class="transition-colors cursor-pointer hover:bg-woot-75 dark:hover:bg-woot-800/40"
               @click="$emit('open', row)"
             >
               <td class="max-w-xs py-4 pr-4 font-medium truncate">
