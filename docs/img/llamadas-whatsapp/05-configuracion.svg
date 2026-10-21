@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/></marker></defs>
+  <rect width="940" height="600" fill="#f4f6f9"/>
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28">Pestaña «Llamadas» del inbox</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Todo se guarda en provider_config del canal · solo whatsapp_cloud · solo con la bandera whatsapp_calls</text>
+  <rect x="40" y="90" width="470" height="486" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <g font-size="13" fill="#151b28">
+    <text x="64" y="124" font-weight="800">Activar llamadas de WhatsApp</text>
+    <rect x="440" y="110" width="44" height="22" rx="11" fill="#2563eb"/><circle cx="473" cy="121" r="8" fill="#fff"/>
+    <path d="M64,146 H486" stroke="#f1f5f9"/>
+    <text x="64" y="172" font-weight="700">Tipo de llamadas</text>
+    <rect x="64" y="184" width="130" height="30" rx="6" fill="#2563eb"/><text x="129" y="204" fill="#fff" text-anchor="middle" font-weight="700">Ambas</text>
+    <rect x="198" y="184" width="140" height="30" rx="6" fill="#fff" stroke="#cbd5e1"/><text x="268" y="204" text-anchor="middle">Solo entrantes</text>
+    <rect x="342" y="184" width="140" height="30" rx="6" fill="#fff" stroke="#cbd5e1"/><text x="412" y="204" text-anchor="middle">Solo salientes</text>
+    <path d="M64,236 H486" stroke="#f1f5f9"/>
+    <text x="64" y="262" font-weight="700">¿A quién le suena?</text>
+    <rect x="64" y="274" width="418" height="30" rx="6" fill="#fff" stroke="#cbd5e1"/><text x="76" y="294">En cascada: asignado → en línea del inbox → todos ▾</text>
+    <path d="M64,326 H486" stroke="#f1f5f9"/>
+    <text x="64" y="352" font-weight="700">Grabar llamadas</text>
+    <rect x="440" y="338" width="44" height="22" rx="11" fill="#cbd5e1"/><circle cx="451" cy="349" r="8" fill="#fff"/>
+    <text x="64" y="372" font-size="11.5" fill="#5c6675">El audio queda como adjunto en la burbuja de la llamada</text>
+    <path d="M64,392 H486" stroke="#f1f5f9"/>
+    <text x="64" y="418" font-weight="700">Si se pierde una llamada</text>
+    <g font-size="12.5">
+      <rect x="64" y="430" width="14" height="14" rx="3" fill="#2563eb"/><text x="86" y="442">Nota privada en la conversación</text>
+      <rect x="64" y="452" width="14" height="14" rx="3" fill="#2563eb"/><text x="86" y="464">Etiqueta «llamada-perdida»</text>
+      <rect x="64" y="474" width="14" height="14" rx="3" fill="#fff" stroke="#94a3b8"/><text x="86" y="486">Crear ticket (tipo …)</text>
+      <rect x="64" y="496" width="14" height="14" rx="3" fill="#fff" stroke="#94a3b8"/><text x="86" y="508">Inscribir a seguimiento (plantilla …)</text>
+      <rect x="64" y="518" width="14" height="14" rx="3" fill="#fff" stroke="#94a3b8"/><text x="86" y="530">Mensaje al cliente «Te devolvemos la llamada»</text>
+    </g>
+    <text x="64" y="560" font-size="11.5" fill="#5c6675">Ninguna marcada = no hace nada (solo la burbuja «Perdida»)</text>
+  </g>
+  <g stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#a)">
+    <path d="M512,121 H560"/><path d="M512,199 H560"/><path d="M512,289 H560"/><path d="M512,349 H560"/><path d="M512,480 H560"/>
+  </g>
+  <g font-size="12" fill="#151b28">
+    <text x="568" y="117" font-weight="700">calling_enabled</text><text x="568" y="133" fill="#5c6675">Meta: settings calling ENABLED + webhook «calls»</text>
+    <text x="568" y="195" font-weight="700">calling_direction: both | inbound | outbound</text><text x="568" y="211" fill="#5c6675">sin entrantes: Meta las rechaza</text><text x="568" y="227" fill="#5c6675">sin salientes: no aparece el botón Llamar</text>
+    <text x="568" y="285" font-weight="700">ring_strategy: cascade | all_online</text><text x="568" y="301" fill="#5c6675">ver diagrama 06</text>
+    <text x="568" y="345" font-weight="700">recording_enabled</text><text x="568" y="361" fill="#5c6675">se congela al crear cada llamada</text>
+    <text x="568" y="476" font-weight="700">missed_call_actions: [ … ]</text><text x="568" y="492" fill="#5c6675">lista opcional, ver diagrama 07</text>
+  </g>
+</svg>

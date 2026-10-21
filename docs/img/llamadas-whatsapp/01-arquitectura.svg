@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 470" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#64748b"/></marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/></marker>
+  </defs>
+  <rect width="940" height="470" fill="#f4f6f9"/>
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28">Señalización vs. audio</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Chatwoot solo pasa texto (SDP y estados); el audio va directo del navegador a Meta</text>
+
+  <rect x="40" y="120" width="220" height="130" rx="12" fill="#fff" stroke="#16a34a" stroke-width="2"/>
+  <text x="60" y="152" font-size="18" font-weight="800" fill="#151b28">Meta</text>
+  <text x="60" y="174" font-size="12.5" fill="#5c6675">WhatsApp Cloud API</text>
+  <text x="60" y="196" font-size="12" fill="#5c6675">Graph v22.0 · /{phone}/calls</text>
+  <text x="60" y="216" font-size="12" fill="#5c6675">webhook field = calls</text>
+
+  <rect x="360" y="120" width="220" height="130" rx="12" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+  <text x="380" y="152" font-size="18" font-weight="800" fill="#151b28">Chatwoot</text>
+  <text x="380" y="174" font-size="12.5" fill="#5c6675">Rails + Sidekiq (cola critical)</text>
+  <text x="380" y="196" font-size="12" fill="#5c6675">tabla calls · burbuja voice_call</text>
+  <text x="380" y="216" font-size="12" fill="#5c6675">sin audio, sin servidor de medios</text>
+
+  <rect x="680" y="120" width="220" height="130" rx="12" fill="#fff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="700" y="152" font-size="18" font-weight="800" fill="#151b28">Navegador</text>
+  <text x="700" y="174" font-size="12.5" fill="#5c6675">del agente (HTTPS)</text>
+  <text x="700" y="196" font-size="12" fill="#5c6675">micrófono · RTCPeerConnection</text>
+  <text x="700" y="216" font-size="12" fill="#5c6675">widget flotante</text>
+
+  <path d="M262,160 L356,160" stroke="#64748b" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
+  <text x="309" y="152" font-size="11" fill="#5c6675" text-anchor="middle">webhook</text>
+  <path d="M356,200 L264,200" stroke="#64748b" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
+  <text x="309" y="194" font-size="11" fill="#5c6675" text-anchor="middle">POST calls</text>
+
+  <path d="M582,160 L676,160" stroke="#64748b" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
+  <text x="629" y="152" font-size="11" fill="#5c6675" text-anchor="middle">ActionCable</text>
+  <path d="M676,200 L584,200" stroke="#64748b" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
+  <text x="629" y="194" font-size="11" fill="#5c6675" text-anchor="middle">REST</text>
+
+  <path d="M150,252 L150,330 L790,330 L790,252" stroke="#16a34a" stroke-width="3" fill="none" stroke-dasharray="9 6" marker-start="url(#g)" marker-end="url(#g)"/>
+  <rect x="330" y="314" width="280" height="32" rx="16" fill="#dcfce7"/>
+  <text x="470" y="335" font-size="13" font-weight="700" fill="#166534" text-anchor="middle">AUDIO WebRTC (Opus) — directo</text>
+
+  <rect x="40" y="378" width="860" height="66" rx="10" fill="#fff" stroke="#e2e8f0"/>
+  <text x="60" y="404" font-size="12.5" fill="#151b28"><tspan font-weight="700">STUN</tspan> stun.l.google.com:19302 descubre la IP pública del navegador · <tspan font-weight="700">TURN</tspan> solo si una red bloquea UDP</text>
+  <text x="60" y="428" font-size="12.5" fill="#151b28">La pestaña del agente debe estar abierta para que suene · si se cierra a media llamada se manda <tspan font-weight="700">terminate</tspan> (keepalive)</text>
+</svg>

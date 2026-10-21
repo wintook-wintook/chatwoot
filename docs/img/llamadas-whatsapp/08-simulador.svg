@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 470" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker></defs>
+  <rect width="940" height="470" fill="#f4f6f9"/>
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28">Avanzar sin número: Meta simulada</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Solo en dev · WHATSAPP_CALLS_SIMULATOR=true · el «cliente» es otra pestaña que emite un tono de prueba</text>
+  <rect x="40" y="110" width="250" height="150" rx="12" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+  <text x="60" y="140" font-size="16" font-weight="800" fill="#151b28">Cliente simulado</text>
+  <g font-size="12" fill="#5c6675"><text x="60" y="164">pestaña aparte, solo en dev</text><text x="60" y="186">[Llamar al inbox] [Colgar]</text><text x="60" y="208">tono 440 Hz o su micrófono</text><text x="60" y="230">propio RTCPeerConnection</text></g>
+  <rect x="345" y="110" width="250" height="150" rx="12" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+  <text x="365" y="140" font-size="16" font-weight="800" fill="#151b28">Chatwoot</text>
+  <g font-size="12" fill="#5c6675"><text x="365" y="164">CallsSimulatorProvider en lugar</text><text x="365" y="182">de WhatsappCloudCalls:</text><text x="365" y="204">accept/terminate → no va a Meta,</text><text x="365" y="222">reenvía el SDP a la pestaña cliente</text><text x="365" y="244">por ActionCable</text></g>
+  <rect x="650" y="110" width="250" height="150" rx="12" fill="#fff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="670" y="140" font-size="16" font-weight="800" fill="#151b28">Dashboard del agente</text>
+  <g font-size="12" fill="#5c6675"><text x="670" y="164">el mismo código real:</text><text x="670" y="186">widget, Contestar, burbuja,</text><text x="670" y="208">grabación, acciones de</text><text x="670" y="230">llamada perdida</text></g>
+  <g stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#a)"><path d="M292,160 H341"/><path d="M597,160 H646"/><path d="M646,220 H599"/><path d="M341,220 H294"/></g>
+  <text x="316" y="152" font-size="10.5" fill="#5c6675" text-anchor="middle">webhook</text><text x="621" y="152" font-size="10.5" fill="#5c6675" text-anchor="middle">cable</text>
+  <text x="621" y="212" font-size="10.5" fill="#5c6675" text-anchor="middle">accept</text><text x="316" y="212" font-size="10.5" fill="#5c6675" text-anchor="middle">answer</text>
+  <path d="M165,262 L165,300 L775,300 L775,262" stroke="#16a34a" stroke-width="3" fill="none" stroke-dasharray="9 6"/>
+  <text x="470" y="294" font-size="12.5" font-weight="700" fill="#166534" text-anchor="middle">audio real WebRTC entre las dos pestañas</text>
+  <rect x="40" y="330" width="420" height="116" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <text x="60" y="356" font-size="14" font-weight="800" fill="#15803d">Se puede probar sin número</text>
+  <g font-size="12.5" fill="#151b28"><text x="60" y="380">• F1–F8 completas: datos, servicios, API, widget,</text><text x="72" y="398">audio, grabación, configuración, llamada perdida</text><text x="60" y="422">• payloads de webhook idénticos a los de Meta (specs v4.19)</text></g>
+  <rect x="480" y="330" width="420" height="116" rx="12" fill="#fff" stroke="#e2e8f0"/>
+  <text x="500" y="356" font-size="14" font-weight="800" fill="#b45309">Necesita número real (F0 y F9)</text>
+  <g font-size="12.5" fill="#151b28"><text x="500" y="380">• activar calling en Meta, suscripción «calls»</text><text x="500" y="402">• NAT/firewall reales, permiso del cliente,</text><text x="512" y="420">tiempos reales de Meta, costo por minuto</text></g>
+</svg>

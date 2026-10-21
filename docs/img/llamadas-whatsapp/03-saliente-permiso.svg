@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 660" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+  <marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+  <rect width="940" height="660" fill="#f4f6f9"/>
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28">Llamada saliente y permiso</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Meta exige que el cliente haya aceptado recibir llamadas del negocio</text>
+  <g font-size="14" font-weight="800" text-anchor="middle" fill="#151b28">
+    <rect x="50" y="92" width="150" height="34" rx="8" fill="#fff" stroke="#7c3aed" stroke-width="2"/><text x="125" y="114">Navegador</text>
+    <rect x="300" y="92" width="140" height="34" rx="8" fill="#fff" stroke="#2563eb" stroke-width="2"/><text x="370" y="114">Chatwoot</text>
+    <rect x="540" y="92" width="120" height="34" rx="8" fill="#fff" stroke="#16a34a" stroke-width="2"/><text x="600" y="114">Meta</text>
+    <rect x="760" y="92" width="120" height="34" rx="8" fill="#fff" stroke="#94a3b8"/><text x="820" y="114">Cliente</text>
+  </g>
+  <g stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 4"><path d="M125,126 V630"/><path d="M370,126 V630"/><path d="M600,126 V630"/><path d="M820,126 V630"/></g>
+  <text x="40" y="150" font-size="12" font-weight="800" fill="#b91c1c">A · SIN PERMISO</text>
+  <g stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#a)">
+    <path d="M125,175 H366"/><path d="M370,200 H596"/><path d="M370,262 H596"/><path d="M600,282 H816"/>
+    <path d="M820,312 H604"/><path d="M600,332 H374"/><path d="M370,352 H129"/>
+  </g>
+  <path d="M600,222 H374" stroke="#dc2626" stroke-width="1.8" fill="none" marker-end="url(#r)"/>
+  <g font-size="12" fill="#151b28">
+    <text x="245" y="168" text-anchor="middle">Llamar · initiate {sdp_offer}</text>
+    <text x="483" y="193" text-anchor="middle">POST calls connect</text>
+    <text x="487" y="216" text-anchor="middle" fill="#b91c1c" font-weight="700">error 138006 sin permiso</text>
+    <text x="483" y="256" text-anchor="middle">mensaje call_permission_request</text>
+    <text x="710" y="276" text-anchor="middle">«¿Permites llamadas?»</text>
+    <text x="710" y="306" text-anchor="middle">Permitir</text>
+    <text x="487" y="326" text-anchor="middle">webhook call_permission_reply</text>
+    <text x="247" y="346" text-anchor="middle" font-weight="700">permission_granted</text>
+  </g>
+  <text x="140" y="245" font-size="11" fill="#5c6675">422 · aviso «se pidió permiso»</text>
+  <text x="140" y="260" font-size="11" fill="#5c6675">máx. 1 solicitud / 5 min</text>
+  <path d="M40,380 H900" stroke="#cbd5e1"/>
+  <text x="40" y="404" font-size="12" font-weight="800" fill="#15803d">B · CON PERMISO</text>
+  <g stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#a)">
+    <path d="M125,425 H366"/><path d="M370,445 H596"/><path d="M600,465 H816"/><path d="M600,495 H374"/>
+    <path d="M370,515 H129"/><path d="M820,545 H604"/><path d="M600,565 H374"/><path d="M370,585 H129"/>
+  </g>
+  <g font-size="12" fill="#151b28">
+    <text x="245" y="418" text-anchor="middle">initiate {sdp_offer}</text>
+    <text x="483" y="439" text-anchor="middle">POST calls connect</text>
+    <text x="710" y="459" text-anchor="middle">timbra</text>
+    <text x="487" y="489" text-anchor="middle">connect · SDP answer</text>
+    <text x="247" y="509" text-anchor="middle">outbound_connected</text>
+    <text x="710" y="539" text-anchor="middle">contesta</text>
+    <text x="487" y="559" text-anchor="middle">status ACCEPTED</text>
+    <text x="247" y="579" text-anchor="middle" font-weight="700">outbound_accepted · en curso</text>
+  </g>
+  <text x="380" y="530" font-size="11" fill="#5c6675">⚠ el connect llega ~20 s antes de contestar</text>
+  <rect x="125" y="600" width="695" height="24" rx="12" fill="#dcfce7"/>
+  <text x="472" y="617" font-size="12.5" font-weight="700" fill="#166534" text-anchor="middle">AUDIO directo · el cronómetro y la grabación arrancan con ACCEPTED</text>
+</svg>
