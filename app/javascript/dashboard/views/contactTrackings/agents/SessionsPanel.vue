@@ -1,8 +1,9 @@
 <script>
 // feat/agentes_ia_unificado — «EN CONSTRUCCIÓN», ahora en la lista de Agentes IA
 // ============================================================================
-// Las conversaciones del Asistente de todos los administradores de la cuenta: las
-// que siguen a medias y, con el filtro, las que ya se guardaron. Antes era una
+// Las conversaciones del Asistente de todos los administradores de la cuenta que
+// siguen a medias. Las ya publicadas no se listan (pedido del usuario, 21/10/2026):
+// su agente está en la pestaña Agentes y su historial en Versiones. Antes era una
 // pestaña del Asistente; ahora vive junto a los agentes, y abrir una lleva a su
 // espacio (el del agente si ya tiene uno, o el de «agente nuevo»).
 // La tabla es la misma de antes (ordenable, paginada en memoria), con el estilo de
@@ -24,7 +25,6 @@ import {
 const SESSIONS_PER_PAGE = 10;
 const SESSION_COLUMNS = {
   id: NUMBER,
-  status: TEXT,
   title: TEXT,
   creator: TEXT,
   template_name: TEXT,
@@ -40,7 +40,6 @@ export default {
     return {
       sessions: [],
       isLoading: false,
-      sessionsFilter: 'open',
       sessionsPage: 1,
       SESSIONS_PER_PAGE,
       sessionsSort: { key: 'updated_at', order: 'desc' },
@@ -51,37 +50,12 @@ export default {
     openSessions() {
       return this.sessions.filter(sesion => sesion.status === 'open');
     },
-    savedSessions() {
-      return this.sessions.filter(sesion => sesion.status === 'saved');
-    },
     visibleSessions() {
-      if (this.sessionsFilter === 'saved') return this.savedSessions;
-      if (this.sessionsFilter === 'all') return this.sessions;
       return this.openSessions;
-    },
-    sessionFilters() {
-      return [
-        {
-          id: 'open',
-          label: 'SESSIONS_FILTER_OPEN',
-          count: this.openSessions.length,
-        },
-        {
-          id: 'saved',
-          label: 'SESSIONS_FILTER_SAVED',
-          count: this.savedSessions.length,
-        },
-        {
-          id: 'all',
-          label: 'SESSIONS_FILTER_ALL',
-          count: this.sessions.length,
-        },
-      ];
     },
     sessionHeaders() {
       return [
         { key: 'id', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ID' },
-        { key: 'status', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_STATUS' },
         { key: 'title', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TITLE' },
         {
           key: 'creator',
@@ -150,10 +124,6 @@ export default {
       this.sessionsSort = nextOrder(this.sessionsSort, key);
       this.sessionsPage = 1;
     },
-    setFilter(id) {
-      this.sessionsFilter = id;
-      this.sessionsPage = 1;
-    },
     async discardSession(row) {
       this.discardTarget = row;
       const borrar = await this.$refs.discardSessionDialog.showConfirmation();
@@ -188,23 +158,6 @@ export default {
     <p class="mb-4 text-base shrink-0 text-slate-600 dark:text-slate-300">
       {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_HINT') }}
     </p>
-
-    <div class="flex flex-wrap items-center gap-2 mb-2 shrink-0">
-      <woot-button
-        v-for="filtro in sessionFilters"
-        :key="filtro.id"
-        size="small"
-        :variant="sessionsFilter === filtro.id ? 'smooth' : 'clear'"
-        :color-scheme="sessionsFilter === filtro.id ? 'primary' : 'secondary'"
-        @click="setFilter(filtro.id)"
-      >
-        {{
-          $t(`TRACKING_ASSISTANT_VIEW.${filtro.label}`, {
-            count: filtro.count,
-          })
-        }}
-      </woot-button>
-    </div>
 
     <woot-loading-state
       v-if="isLoading"
@@ -255,20 +208,6 @@ export default {
                  mismo día y el mismo agente al hablar de ellas. -->
               <td class="py-4 pr-4 text-slate-500 dark:text-slate-400">
                 #{{ row.id }}
-              </td>
-              <td class="py-4 pr-4">
-                <woot-label
-                  small
-                  class="!mb-0"
-                  :color-scheme="
-                    row.status === 'saved' ? 'success' : 'secondary'
-                  "
-                  :title="
-                    row.status === 'saved'
-                      ? $t('TRACKING_ASSISTANT_VIEW.SESSIONS_SAVED')
-                      : $t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN')
-                  "
-                />
               </td>
               <td class="max-w-xs py-4 pr-4 font-medium truncate">
                 {{
