@@ -112,3 +112,22 @@ Referencia: Ajustes › Respuestas predefinidas, Registros de auditoría y la co
 
 Migración: `20261021210000_add_base_version_to_tracking_assistant_sessions`.
 Pruebas: servidor 737 ejemplos (solo las 3 fallas previas de la Galería); navegador 165.
+
+---
+
+## Pendiente: un agente con varias bandejas (anotado 21/10/2026)
+
+Hoy cada agente tiene una sola bandeja (`inbox_id`) y en la práctica **1 agente = 1 canal**: la Ficha exige bandeja, y las automatizaciones y la asignación desde la conversación solo ofrecen los agentes de esa bandeja (los que no tienen bandeja no aparecen). Para usar un agente en otro canal hay que duplicarlo.
+
+Propuesta: `inbox_ids` (lista) con migración que copia la bandeja actual; `inbox_id` se queda sincronizada un tiempo.
+
+| Dónde | Cambio |
+|---|---|
+| Automatización: elegir agente (`useAutomation.js`) | agentes con **alguna** de las bandejas de la condición |
+| Automatización: al ejecutarse (`action_service.rb`) | la bandeja de la conversación si está en la lista; si no, no asigna |
+| Asignar desde la conversación (`ContactTrackingModal.vue`) | filtra por «la lista incluye esta bandeja» |
+| Masiva, campañas continuas, importar, `/sigue` | elegir la bandeja al asignar (con una sola, automática) |
+| Ficha: plantillas de WhatsApp por intento | **decisión abierta**: A) por bandeja (recomendada) · B) solo misma WABA · C) mismas por nombre |
+| Asistente, lista, versiones | probar con cualquiera; varias etiquetas; versionar la lista |
+
+Fases propuestas: 1 datos · 2 automatizaciones y conversación · 3 masiva/campañas/importar/`/sigue` · 4 Ficha · 5 Asistente/lista/versiones. Antes: plan con diagramas.
