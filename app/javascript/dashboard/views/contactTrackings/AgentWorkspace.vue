@@ -268,6 +268,7 @@ export default {
           v-else-if="section === 'versions' && templateId"
           :key="`versions-${templateId}-${reloadKey}`"
           :template-id="templateId"
+          :can-restore="isAdmin"
           class="flex-1 min-h-0 overflow-auto"
           @restored="onRestored"
         />

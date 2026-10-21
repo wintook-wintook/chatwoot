@@ -636,6 +636,11 @@
     },
     "PUBLISH_CTA": "Publicar cambios",
     "CREATE_CTA": "Crear el Agente IA",
-    "PUBLISHED": "Listo: quedó publicado y se guardó como versión."
+    "PUBLISHED": "Listo: quedó publicado y se guardó como versión.",
+    "STALE_TITLE": "El agente cambió desde que empezaste",
+    "STALE_DESCRIPTION": "Partiste de la v{base}, pero ya va en la v{version} ({author}, {at}). Si publicas, tu borrador reemplaza ese cambio; lo anterior queda en Versiones por si hay que restaurarlo.",
+    "STALE_SOMEONE": "otra persona",
+    "STALE_YES": "Publicar de todos modos",
+    "STALE_NO": "Revisar primero"
   }
 }

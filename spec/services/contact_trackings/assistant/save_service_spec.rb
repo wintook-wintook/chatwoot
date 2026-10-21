@@ -84,6 +84,45 @@ RSpec.describe ContactTrackings::Assistant::SaveService do
       expect(template.versions.ordered.first).to have_attributes(source: 'configured', note: 'Foro A → Foro B')
     end
 
+    # feat/agentes_ia_unificado: publicar no pisa en silencio un cambio de otro.
+    describe 'si el Entrenamiento cambió desde que la conversación partió de él' do
+      let(:sesion) do
+        TrackingAssistantSession.new(account: account, user: user).tap do |s|
+          s.link_template(template.id)
+          s.save!
+        end
+      end
+
+      before do
+        sesion
+        template.update!(complementary_prompt: 'lo que publicó otro admin')
+      end
+
+      it 'no publica y dice qué versión lo cambió' do
+        resultado = guardar(draft: draft_ok, mode: 'replace', params: { template_id: template.id, session_id: sesion.id })
+
+        expect(resultado.error).to eq(:stale_draft)
+        expect(resultado.details).to include(base_version: sesion.base_version, version: template.versions.maximum(:version))
+        expect(template.reload.complementary_prompt).to eq('lo que publicó otro admin')
+      end
+
+      it 'con force publica de todos modos y queda en Versiones' do
+        resultado = guardar(draft: draft_ok, mode: 'replace',
+                            params: { template_id: template.id, session_id: sesion.id, force: 'true' })
+
+        expect(resultado).to be_success
+        expect(template.reload.complementary_prompt).to eq(draft_ok)
+      end
+    end
+
+    it 'una conversación sin versión de partida (anterior a esto) publica como antes' do
+      sesion = TrackingAssistantSession.create!(account: account, user: user, tracking_template: template)
+      template.update!(complementary_prompt: 'cambió')
+
+      expect(guardar(draft: draft_ok, mode: 'replace', params: { template_id: template.id, session_id: sesion.id }))
+        .to be_success
+    end
+
     it 'no toca un agente de otra cuenta' do
       ajeno = create(:account).tracking_templates.create!(name: 'Ajeno', objective: 'Otro objetivo')
 

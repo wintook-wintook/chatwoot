@@ -16,6 +16,8 @@ import { diffHunks, diffStats } from '../assistant/lineDiff';
 export default {
   props: {
     templateId: { type: Number, required: true },
+    // Restaurar cambia el Entrenamiento: solo admin (el servidor también lo exige).
+    canRestore: { type: Boolean, default: false },
   },
   emits: ['restored'],
   data() {
@@ -240,7 +242,7 @@ export default {
                     @click="toggle(version)"
                   />
                   <woot-button
-                    v-if="version.version !== latestVersion"
+                    v-if="canRestore && version.version !== latestVersion"
                     v-tooltip.top="t('RESTORE')"
                     variant="smooth"
                     size="tiny"

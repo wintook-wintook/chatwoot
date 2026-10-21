@@ -204,6 +204,8 @@ export default {
       sessionMeta: null,
       isSaving: false,
       saveError: '',
+      // Conflicto al publicar: { base_version, version, source, author, at }.
+      staleDetails: null,
       validateTimer: null,
       // F6 — probar sin enviar nada. Se dispara con botón, nunca al teclear.
       // El historial no se borra al editar el Entrenamiento: las corridas viejas
@@ -332,6 +334,15 @@ export default {
             : this.$t('TRACKING_ASSISTANT_VIEW.PANEL_INSTRUCTIONS_EMPTY'),
         },
       ];
+    },
+    staleDescription() {
+      const d = this.staleDetails || {};
+      return this.$t('TRACKING_ASSISTANT_VIEW.STALE_DESCRIPTION', {
+        base: d.base_version,
+        version: d.version,
+        author: d.author || this.$t('TRACKING_ASSISTANT_VIEW.STALE_SOMEONE'),
+        at: d.at ? new Date(d.at).toLocaleString() : '',
+      });
     },
     // Con un agente abierto, guardar es publicar el borrador en él (deja versión);
     // sin agente, es crearlo.
@@ -510,7 +521,8 @@ export default {
       this.validateDraft();
     },
     // feat/agentes_ia_unificado — qué abrir: la conversación pedida; si no, la que el
-    // agente tenga a medias (su borrador sin publicar: salir del espacio no lo pierde);
+    // agente tenga a medias DE QUIEN ENTRA (las de otros admins se retoman a propósito
+    // desde «En construcción»; salir del espacio no pierde la propia);
     // si no, el agente tal como está publicado; sin agente, uno nuevo.
     async openFromProps() {
       if (this.initialSessionId) {
@@ -530,7 +542,10 @@ export default {
         const { data } = await AssistantAPI.getSessions();
         const sesion = (data || [])
           .filter(
-            s => s.status === 'open' && s.tracking_template_id === templateId
+            s =>
+              s.mine &&
+              s.status === 'open' &&
+              s.tracking_template_id === templateId
           )
           .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
         if (!sesion) return false;
@@ -1373,13 +1388,27 @@ export default {
         );
         this.$emit('saved', data.tracking_template_id);
       } catch (error) {
-        const details = error?.response?.data?.details;
+        const respuesta = error?.response?.data || {};
+        if (respuesta.error === 'stale_draft') {
+          this.isSaving = false;
+          await this.confirmStalePublish(payload, respuesta.details || {});
+          return;
+        }
+        const details = respuesta.details;
         this.saveError = Array.isArray(details)
           ? details.join(' · ')
           : this.$t('TRACKING_ASSISTANT_VIEW.ERROR_SAVE');
       } finally {
         this.isSaving = false;
       }
+    },
+    // feat/agentes_ia_unificado — el Entrenamiento del agente cambió desde que esta
+    // conversación partió de él. Se dice qué versión, quién y cuándo; publicar de
+    // todos modos lo reemplaza (lo anterior queda en Versiones para restaurarlo).
+    async confirmStalePublish(payload, details) {
+      this.staleDetails = details;
+      const publicar = await this.$refs.staleDialog.showConfirmation();
+      if (publicar) await this.saveDraft({ ...payload, force: true });
     },
   },
 };
@@ -1964,6 +1993,13 @@ export default {
       @suggest="runSuggestedTests"
     />
 
+    <woot-confirm-modal
+      ref="staleDialog"
+      :title="$t('TRACKING_ASSISTANT_VIEW.STALE_TITLE')"
+      :description="staleDescription"
+      :confirm-label="$t('TRACKING_ASSISTANT_VIEW.STALE_YES')"
+      :cancel-label="$t('TRACKING_ASSISTANT_VIEW.STALE_NO')"
+    />
     <SaveModal
       :show="showSaveModal"
       :templates="templates"

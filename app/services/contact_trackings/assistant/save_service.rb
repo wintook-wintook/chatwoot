@@ -96,6 +96,9 @@ class ContactTrackings::Assistant::SaveService
     template = @account.tracking_templates.find_by(id: @params[:template_id])
     return Result.new(error: :template_not_found) if template.nil?
 
+    conflicto = stale_draft(template)
+    return Result.new(error: :stale_draft, details: conflicto) if conflicto
+
     # El anterior se guarda ANTES de pisarlo; si el update falla, no se perdió nada.
     template.previous_complementary_prompt = template.complementary_prompt
     template.complementary_prompt = @draft
@@ -114,6 +117,33 @@ class ContactTrackings::Assistant::SaveService
     template.calendar_integration_ids = UserCalendarIntegration.where(account: @account, id: pedidos).pluck(:id)
   end
 
+  # feat/agentes_ia_unificado — ¿el Entrenamiento del agente cambió desde que esta
+  # conversación partió de él? Otro admin publicó, se restauró una versión o se editó
+  # la ficha: publicar lo pisaría sin que nadie se entere. Se avisa con la versión que
+  # lo cambió, quién y cuándo; `force` publica de todos modos (queda en Versiones).
+  # Sin base (conversación anterior a esto) no se revisa.
+  def stale_draft(template)
+    return if ActiveModel::Type::Boolean.new.cast(@params[:force])
+
+    base = session_record&.base_version
+    return if base.nil? || !prompt_changed_since?(template, base)
+
+    ultima = template.versions.includes(:user).ordered.first
+    { base_version: base, version: ultima&.version, source: ultima&.source,
+      author: ultima&.author_name, at: ultima&.created_at }
+  end
+
+  def prompt_changed_since?(template, base)
+    base_prompt = template.versions.find_by(version: base)&.snapshot&.dig('complementary_prompt')
+    base_prompt.present? && base_prompt != template.complementary_prompt
+  end
+
+  def session_record
+    return @session_record if defined?(@session_record)
+
+    @session_record = TrackingAssistantSession.find_by(id: @params[:session_id], account_id: @account.id)
+  end
+
   # feat/agentes_ia_unificado — la versión del agente hereda el origen de la sesión.
   # Lo cambiado desde que se cargó o se guardó por última vez: si todo salió de la
   # pestaña «Configurar», es `configured`; si no, `assistant` (chat o editor). La nota
@@ -127,8 +157,7 @@ class ContactTrackings::Assistant::SaveService
   end
 
   def changes_since_checkpoint
-    sesion = TrackingAssistantSession.find_by(id: @params[:session_id], account_id: @account.id)
-    versiones = Array(sesion&.draft_versions)
+    versiones = Array(session_record&.draft_versions)
     corte = versiones.rindex { |v| %w[loaded saved].include?(v['source']) }
     corte ? versiones[(corte + 1)..] : versiones
   end

@@ -28,9 +28,9 @@ const esperar = () =>
     setTimeout(resolve);
   });
 
-const montar = () =>
+const montar = (canRestore = true) =>
   shallowMount(AgentVersions, {
-    propsData: { templateId: 7 },
+    propsData: { templateId: 7, canRestore },
     mocks: {
       $t: (clave, args) => (args ? `${clave}:${JSON.stringify(args)}` : clave),
     },
@@ -91,6 +91,14 @@ describe('AgentVersions', () => {
 
     expect(TrackingTemplatesAPI.restoreVersion).toHaveBeenCalledWith(7, 10);
     expect(wrapper.emitted('restored')).toBeTruthy();
+  });
+
+  it('sin permiso de admin no aparece Restaurar', async () => {
+    const conPermiso = montar(true);
+    const sinPermiso = montar(false);
+    await esperar();
+    expect(conPermiso.findAll('[icon="arrow-clockwise"]').length).toBe(2);
+    expect(sinPermiso.findAll('[icon="arrow-clockwise"]').length).toBe(0);
   });
 
   it('si se cancela, no restaura', async () => {

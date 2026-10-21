@@ -332,6 +332,7 @@ class AssistantAPI extends ApiClient {
     templateId,
     sessionId,
     calendarIntegrationIds = null,
+    force = false,
   }) {
     const body = {
       draft,
@@ -343,6 +344,9 @@ class AssistantAPI extends ApiClient {
       template_id: templateId,
       session_id: sessionId,
     };
+    // feat/agentes_ia_unificado: publicar aunque el agente haya cambiado desde que
+    // esta conversación partió de él (el servidor avisó con stale_draft).
+    if (force) body.force = true;
     // Solo si el Entrenamiento agenda: sin la llave, el agente conserva los que tiene.
     if (calendarIntegrationIds)
       body.calendar_integration_ids = calendarIntegrationIds;

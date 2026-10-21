@@ -6,6 +6,7 @@ require 'rails_helper'
 RSpec.describe 'Tracking Template Versions API', type: :request do
   let!(:account)  { create(:account) }
   let(:agent)     { create(:user, account: account, role: :agent) }
+  let(:admin)     { create(:user, account: account, role: :administrator) }
   let(:inbox)     { create(:inbox, account: account) }
   let!(:template) do
     create(:tracking_template, account: account, inbox: inbox, name: 'Cobranza',
@@ -71,12 +72,23 @@ RSpec.describe 'Tracking Template Versions API', type: :request do
   end
 
   describe 'POST restore' do
+    # feat/agentes_ia_unificado: restaurar cambia el Entrenamiento, que es de admin.
+    it 'no deja restaurar a un agente sin rol de administrador' do
+      template.update!(complementary_prompt: 'Algo que no funcionó.')
+      primera = template.versions.find_by(version: 1)
+
+      post "#{base_url}/#{primera.id}/restore", headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(template.reload.complementary_prompt).to eq('Algo que no funcionó.')
+    end
+
     it 'devuelve el agente al contenido de esa versión y deja constancia' do
       original = template.complementary_prompt
       template.update!(complementary_prompt: 'Algo que no funcionó.')
       primera = template.versions.find_by(version: 1)
 
-      post "#{base_url}/#{primera.id}/restore", headers: agent.create_new_auth_token, as: :json
+      post "#{base_url}/#{primera.id}/restore", headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:success)
       expect(template.reload.complementary_prompt).to eq(original)
@@ -92,7 +104,7 @@ RSpec.describe 'Tracking Template Versions API', type: :request do
       primera = template.versions.find_by(version: 1)
 
       expect do
-        post "#{base_url}/#{primera.id}/restore", headers: agent.create_new_auth_token, as: :json
+        post "#{base_url}/#{primera.id}/restore", headers: admin.create_new_auth_token, as: :json
       end.to change { template.versions.count }.from(2).to(3)
     end
 
@@ -104,7 +116,7 @@ RSpec.describe 'Tracking Template Versions API', type: :request do
       primera = template.versions.find_by(version: 1)
       inbox.destroy!
 
-      post "#{base_url}/#{primera.id}/restore", headers: agent.create_new_auth_token, as: :json
+      post "#{base_url}/#{primera.id}/restore", headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:success)
       expect(template.reload.inbox_id).to be_nil

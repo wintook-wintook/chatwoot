@@ -13,6 +13,9 @@
 class Api::V1::Accounts::TrackingTemplates::VersionsController < Api::V1::Accounts::BaseController
   before_action :fetch_tracking_template
   before_action :fetch_version, only: [:show, :restore]
+  # feat/agentes_ia_unificado: restaurar cambia el Entrenamiento, que solo editan los
+  # administradores (el Asistente es de admin). Ver y comparar, cualquiera con acceso.
+  before_action :ensure_administrator, only: [:restore]
 
   def index
     versions = @tracking_template.versions.includes(:user).ordered.to_a
@@ -40,6 +43,12 @@ class Api::V1::Accounts::TrackingTemplates::VersionsController < Api::V1::Accoun
   end
 
   private
+
+  def ensure_administrator
+    return if Current.account_user&.administrator?
+
+    render json: { error: I18n.t('errors.unauthorized') }, status: :unauthorized
+  end
 
   def fetch_tracking_template
     @tracking_template = Current.account.tracking_templates.find(params[:tracking_template_id])

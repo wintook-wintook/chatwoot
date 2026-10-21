@@ -636,6 +636,11 @@
     },
     "PUBLISH_CTA": "Publish changes",
     "CREATE_CTA": "Create the AI Agent",
-    "PUBLISHED": "Done: it is published and saved as a version."
+    "PUBLISHED": "Done: it is published and saved as a version.",
+    "STALE_TITLE": "The agent changed since you started",
+    "STALE_DESCRIPTION": "You started from v{base}, but it is now at v{version} ({author}, {at}). Publishing replaces that change with your draft; the previous one stays in Versions in case it needs restoring.",
+    "STALE_SOMEONE": "someone else",
+    "STALE_YES": "Publish anyway",
+    "STALE_NO": "Review first"
   }
 }

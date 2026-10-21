@@ -99,3 +99,16 @@ Referencia: Ajustes › Respuestas predefinidas, Registros de auditoría y la co
 | B | Espacio del agente, Versiones | `BackButton` (con `back-url` a la lista: sin él haría `router.go(-1)`) + `BaseSettingsHeader` (objetivo como descripción, bandeja y versión activa como `woot-label`), `woot-tabs` horizontales en lugar del menú lateral, Versiones como tabla nativa con el diff bajo la fila | ver `git log` |
 | C | Ficha (`EditTemplate.vue`) | campos sin clases propias (estilo global de `_base.scss`; textareas con `!h-auto`), títulos de campo con la tipografía del `<label>` nativo, errores con `.error`, título solo en el alta. Línea base de eslint 169 → 153 | `7c87d9d1` |
 | D | Asistente por dentro | títulos de los 12 modales con la tipografía de `woot-modal-header` (sin cambiar su estructura), títulos de sección sin mayúsculas (`text-sm font-semibold`), comprobador y origen de versión con `woot-label`, 29 párrafos de ayuda a `text-sm` slate-600 (help-text nativo). Datos chicos (contadores, fechas) siguen en `text-xs`; el editor no cambia | ver `git log` |
+
+---
+
+## Arreglos de seguridad del flujo (21/10/2026)
+
+| # | Problema | Arreglo |
+|---|---|---|
+| 2 | Publicar desde el Asistente pisaba en silencio un cambio hecho después (otro admin, restaurar, la ficha) | La conversación guarda `base_version` (de qué versión del agente partió, al ligarse). Al publicar, si el Entrenamiento cambió desde esa versión, `SaveService` responde `stale_draft` con la versión, autor y fecha; el Asistente pregunta y «Publicar de todos modos» reenvía con `force`. Conversaciones anteriores (sin base) publican como antes |
+| 3 | Al abrir un agente se retomaba el borrador de cualquier admin | Solo el propio (`mine`); los de otros se retoman a propósito desde «En construcción» |
+| 4 | Cualquier usuario podía restaurar versiones | `restore` exige administrador (401 si no) y el botón solo aparece para admin |
+
+Migración: `20261021210000_add_base_version_to_tracking_assistant_sessions`.
+Pruebas: servidor 737 ejemplos (solo las 3 fallas previas de la Galería); navegador 165.
