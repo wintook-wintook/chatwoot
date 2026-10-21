@@ -418,7 +418,10 @@
     },
     "SESSIONS": {
       "LOADING": "Loading conversations…",
-      "DISCARD": "Delete conversation"
+      "DISCARD": "Delete conversation",
+      "LAST_CHANGE": "Last change",
+      "NO_CHANGES": "Opened, no changes yet",
+      "AND_MORE": "(and {count} more)"
     },
     "RESOURCES_LOADING": "Loading resources…",
     "REVIEW": {

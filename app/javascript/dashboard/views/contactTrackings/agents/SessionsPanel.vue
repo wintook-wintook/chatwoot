@@ -24,8 +24,8 @@ import {
 // es sobre lo que ya está en memoria.
 const SESSIONS_PER_PAGE = 10;
 const SESSION_COLUMNS = {
-  id: NUMBER,
   title: TEXT,
+  last_change: TEXT,
   creator: TEXT,
   template_name: TEXT,
   routes: NUMBER,
@@ -50,13 +50,20 @@ export default {
     openSessions() {
       return this.sessions.filter(sesion => sesion.status === 'open');
     },
+    // Con «Último cambio» ya armado, para mostrarlo y poder ordenar por él.
     visibleSessions() {
-      return this.openSessions;
+      return this.openSessions.map(row => ({
+        ...row,
+        last_change: this.lastChange(row),
+      }));
     },
     sessionHeaders() {
       return [
-        { key: 'id', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ID' },
         { key: 'title', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TITLE' },
+        {
+          key: 'last_change',
+          label: 'TRACKING_TEMPLATES.SESSIONS.LAST_CHANGE',
+        },
         {
           key: 'creator',
           label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_CREATOR',
@@ -137,6 +144,33 @@ export default {
         useAlert(this.$t('TRACKING_ASSISTANT_VIEW.SESSION_DISCARD_ERROR'));
       }
     },
+    // «Último cambio» (en lugar del id, pedido del usuario 21/10/2026): lo último que
+    // pasó en el borrador, de lo más útil a lo más básico — lo que declaró el
+    // Asistente, las notas de «Configurar», o las piezas tocadas a mano.
+    lastChange(row) {
+      const versiones = row.versions || [];
+      const ultima = versiones[versiones.length - 1];
+      const t = (key, args) =>
+        this.$t(`TRACKING_TEMPLATES.SESSIONS.${key}`, args);
+      if (!ultima || ultima.source === 'loaded') return t('NO_CHANGES');
+
+      const origen = this.$t(
+        `TRACKING_ASSISTANT_VIEW.LOG_SOURCE_${String(
+          ultima.source
+        ).toUpperCase()}`
+      );
+      const lista = items => {
+        const mas = items.length - 2;
+        const base = items.slice(0, 2).join(' · ');
+        return mas > 0 ? `${base} ${t('AND_MORE', { count: mas })}` : base;
+      };
+      let detalle = ultima.summary || '';
+      if (!detalle && (ultima.notes || []).length)
+        detalle = lista(ultima.notes);
+      if (!detalle && (ultima.changes || []).length)
+        detalle = lista(ultima.changes);
+      return detalle ? `${origen}: ${detalle}` : origen;
+    },
     formatDate(value) {
       if (!value) return '—';
       return new Date(value).toLocaleString(undefined, {
@@ -203,15 +237,15 @@ export default {
               class="cursor-pointer hover:bg-slate-25 dark:hover:bg-slate-800"
               @click="$emit('open', row)"
             >
-              <!-- El id de la fila: lo único que distingue dos conversaciones del
-                 mismo día y el mismo agente al hablar de ellas. -->
-              <td class="py-4 pr-4 text-slate-500 dark:text-slate-400">
-                #{{ row.id }}
-              </td>
               <td class="max-w-xs py-4 pr-4 font-medium truncate">
                 {{
                   row.title || $t('TRACKING_ASSISTANT_VIEW.SESSIONS_UNTITLED')
                 }}
+              </td>
+              <td class="max-w-sm py-4 pr-4 text-sm">
+                <div class="line-clamp-2" :title="row.last_change">
+                  {{ row.last_change }}
+                </div>
               </td>
               <td class="py-4 pr-4">
                 {{
