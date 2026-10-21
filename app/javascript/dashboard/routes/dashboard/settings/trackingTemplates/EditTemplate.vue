@@ -45,6 +45,13 @@ export default {
       default: 'edit',
       validator: val => ['create', 'edit'].includes(val),
     },
+    // feat/agentes_ia_unificado: en el espacio del agente, el Entrenamiento de un
+    // admin se edita en su sección (borrador + versiones). Aquí no se muestra ni se
+    // manda: guardar la ficha nunca pisa con texto viejo lo publicado allá.
+    hideTraining: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ['save', 'cancel'],
   data() {
@@ -326,6 +333,14 @@ export default {
     agendasTabIndex() {
       return this.reglasTabIndex + 1;
     },
+    // woot-tabs numera por POSICIÓN: sin la pestaña Entrenamiento, la posición 1 es
+    // Reglas. Esto traduce posición ↔ panel (activeContextTab sigue siendo el panel).
+    contextPanels() {
+      return this.hideTraining ? [0, 2, 3, 4] : [0, 1, 2, 3, 4];
+    },
+    activeContextPosition() {
+      return Math.max(0, this.contextPanels.indexOf(this.activeContextTab));
+    },
     // proyecto@ai_agent_attachments: tab "📎 Archivos" tras "📅 Agendas"
     archivosTabIndex() {
       return this.agendasTabIndex + 1;
@@ -597,10 +612,12 @@ export default {
       if (!this.isCreateMode) {
         payload.id = this.form.id;
       }
+      if (this.hideTraining)
+        delete payload.tracking_template.complementary_prompt;
       this.$emit('save', payload);
     },
-    onContextTabChange(index) {
-      this.activeContextTab = index;
+    onContextTabChange(position) {
+      this.activeContextTab = this.contextPanels[position];
     },
     onTopTabChange(index) {
       this.topTab = index;
@@ -1298,11 +1315,15 @@ export default {
         <div class="flex items-end justify-between">
           <woot-tabs
             class="context-tabs [&_.tabs]:p-0 [&_.tabs]:mb-0 flex-1"
-            :index="activeContextTab"
+            :index="activeContextPosition"
             @change="onContextTabChange"
           >
             <woot-tabs-item name="Contexto IA *" :show-badge="false" />
-            <woot-tabs-item name="Entrenamiento *" :show-badge="false" />
+            <woot-tabs-item
+              v-if="!hideTraining"
+              name="Entrenamiento *"
+              :show-badge="false"
+            />
             <woot-tabs-item name="Reglas" :show-badge="false" />
             <woot-tabs-item name="Agendas" :show-badge="false" />
             <woot-tabs-item name="Archivos" :show-badge="false" />

@@ -633,6 +633,9 @@
       "UPDATE_LOADED": "Versión nueva cargada en el editor. Revísala y guarda si te sirve.",
       "UPDATE_LOAD_ERROR": "No se pudo cargar la versión nueva.",
       "UPDATE_SAVE_ERROR": "No se pudo guardar. Inténtalo de nuevo."
-    }
+    },
+    "PUBLISH_CTA": "Publicar cambios",
+    "CREATE_CTA": "Crear el Agente IA",
+    "PUBLISHED": "Listo: quedó publicado y se guardó como versión."
   }
 }

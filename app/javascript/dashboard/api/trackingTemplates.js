@@ -53,6 +53,25 @@ class TrackingTemplatesAPI extends ApiClient {
   unpublish(templateId) {
     return axios.delete(`${this.url}/${templateId}/publication`);
   }
+
+  // feat/agentes_ia_unificado — versiones del agente: { versions: [...] } sin el texto.
+  getVersions(templateId) {
+    return axios.get(`${this.url}/${templateId}/versions`);
+  }
+
+  // Una versión con su snapshot y el diff contra la anterior (o contra compareWith).
+  getVersion(templateId, versionId, compareWith = null) {
+    return axios.get(`${this.url}/${templateId}/versions/${versionId}`, {
+      params: compareWith ? { compare_with: compareWith } : {},
+    });
+  }
+
+  // Restaurar avanza: deja una versión nueva con origen «restore».
+  restoreVersion(templateId, versionId) {
+    return axios.post(
+      `${this.url}/${templateId}/versions/${versionId}/restore`
+    );
+  }
 }
 
 export default new TrackingTemplatesAPI();

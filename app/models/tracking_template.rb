@@ -13,6 +13,7 @@
 #  id                            :bigint           not null, primary key
 #  adaptation_answers            :jsonb            not null
 #  ai_context                    :text
+#  archived_at                   :datetime
 #  booking_calendar_ids          :jsonb            not null
 #  calendar_event_duration       :integer          default(30)
 #  calendar_integration_ids      :jsonb            not null

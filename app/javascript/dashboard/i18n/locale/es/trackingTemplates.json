@@ -18,7 +18,8 @@
       "CHANNEL": "Canal",
       "ACTIONS": "Acciones",
       "CREATED_BY": "Creado por",
-      "CREATED_AT": "Creado"
+      "CREATED_AT": "Creado",
+      "REVIEW": "Revisión"
     },
     "FORM": {
       "NAME": {
@@ -261,8 +262,6 @@
       "TIMEZONE_INHERIT": "Usar la del canal (inbox)",
       "TIMEZONE_HELP": "Zona horaria con la que se ofrecen los horarios, se muestra la hora al cliente y se crea el evento. Si la dejas vacía, se usa la del canal."
     },
-    "IMPROVE_WITH_ASSISTANT": "Mejorar con el Asistente",
-    "HEADER_BTN_ASSISTANT": "Armar con el Asistente",
     "PUBLISH": {
       "BUTTON": "Publicar prompt",
       "BADGE": "Publicado v{version}",
@@ -327,6 +326,78 @@
       },
       "UPDATE_BADGE": "v{version} disponible",
       "UPDATE_HINT": "El autor publicó una versión nueva. Ábrelo en el Asistente para ver los cambios."
+    },
+    "LIST_TABS": {
+      "AGENTS": "Agentes",
+      "SESSIONS": "En construcción",
+      "RESOURCES": "Recursos"
+    },
+    "NEW_AGENT": {
+      "BUTTON": "Nuevo agente",
+      "ASSISTANT": "Con el Asistente (conversar, pegar o importar)",
+      "GALLERY": "Bajar de la Galería",
+      "FORM": "Formulario en blanco"
+    },
+    "OPEN_PROFILE": "Abrir la ficha",
+    "WORKSPACE": {
+      "BACK": "Agentes IA",
+      "NEW_TITLE": "Agente nuevo",
+      "ACTIVE_VERSION": "v{number} activa",
+      "SECTION_TRAINING": "Entrenamiento",
+      "SECTION_PROFILE": "Ficha",
+      "SECTION_VERSIONS": "Versiones",
+      "AGENT_ROLE_HINT": "El Entrenamiento con el Asistente lo editan los administradores.",
+      "VERSIONS": {
+        "HINT": "Cada guardado que cambia lo que hace el agente queda aquí, con desde dónde se hizo. Restaurar no borra nada: la versión elegida vuelve como una nueva.",
+        "LOADING": "Cargando versiones…",
+        "EMPTY": "Todavía no hay versiones: la primera se guarda con el próximo cambio.",
+        "LABEL": "v{number}",
+        "ACTIVE": "Activa",
+        "CHANGED": "Cambió: {fields}",
+        "SHOW_DIFF": "Ver cambios",
+        "HIDE_DIFF": "Ocultar cambios",
+        "RESTORE": "Restaurar",
+        "COMPARE_WITH": "Comparar con",
+        "COMPARE_PREVIOUS": "la anterior",
+        "NO_CHANGES": "No hay diferencias con esa versión.",
+        "STATS": "(+{added} −{removed})",
+        "SKIP": "⋯ {count} línea(s) iguales",
+        "LOAD_ERROR": "No se pudo cargar la versión.",
+        "RESTORE_TITLE": "¿Restaurar esta versión?",
+        "RESTORE_DESCRIPTION": "El agente vuelve a como estaba en la v{number}. No se borra nada: queda guardado como una versión nueva.",
+        "RESTORE_YES": "Sí, restaurar",
+        "RESTORE_NO": "Cancelar",
+        "RESTORED": "Listo: la v{number} volvió como v{version}.",
+        "RESTORE_ERROR": "No se pudo restaurar. Intenta otra vez.",
+        "SOURCE": {
+          "CREATE": "Alta",
+          "MANUAL": "A mano (ficha)",
+          "ASSISTANT": "Asistente",
+          "CONFIGURED": "Configurar",
+          "IMPORT": "Importado",
+          "GALLERY": "Galería",
+          "RESTORE": "Restaurada",
+          "BASELINE": "Estado inicial"
+        },
+        "FIELD": {
+          "NAME": "Nombre",
+          "OBJECTIVE": "Objetivo",
+          "AI_CONTEXT": "Contexto IA",
+          "COMPLEMENTARY_PROMPT": "Entrenamiento",
+          "INBOX_ID": "Bandeja",
+          "TAGS": "Etiquetas",
+          "WHATSAPP_TEMPLATES": "Plantillas de WhatsApp",
+          "KEYWORD_ACTIONS": "Palabras clave",
+          "RETRY_INTERVAL_VALUE": "Intervalo entre intentos",
+          "RETRY_INTERVAL_UNIT": "Unidad del intervalo",
+          "CALENDAR_INTEGRATION_IDS": "Calendarios",
+          "BOOKING_CALENDAR_IDS": "Calendarios para agendar",
+          "SLOTS_PRESENTATION": "Presentación de horarios",
+          "CALENDAR_EVENT_DURATION": "Duración de la cita",
+          "TIMEZONE": "Zona horaria",
+          "KBASE_HOOK_ID": "Integración de conocimiento"
+        }
+      }
     }
   },
   "TRACKING_IMPORT": {

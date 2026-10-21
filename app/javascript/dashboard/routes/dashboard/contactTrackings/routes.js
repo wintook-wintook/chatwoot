@@ -1,5 +1,13 @@
 // proyecto@contact_tracking — Dashboard de Seguimientos
 import { frontendURL } from '../../../helper/URLHelper';
+import {
+  ROLES,
+  CONVERSATION_PERMISSIONS,
+} from 'dashboard/constants/permissions.js';
+
+// feat/agentes_ia_unificado: la lista y el espacio del agente reciben a quien antes
+// entraba por Ajustes › Agentes IA (también roles personalizados).
+const AGENTS_PERMISSIONS = [...ROLES, ...CONVERSATION_PERMISSIONS];
 
 export const routes = [
   {
@@ -12,15 +20,35 @@ export const routes = [
     // proyecto@contact_tracking — Agentes IA dentro del dashboard (reutiliza la vista de Settings)
     path: frontendURL('accounts/:accountId/tracking-dashboard/agents'),
     name: 'contact_trackings_agents',
-    meta: { permissions: ['administrator', 'agent'] },
+    meta: { permissions: AGENTS_PERMISSIONS },
     component: () => import('../settings/trackingTemplates/Index.vue'),
   },
   {
-    // proyecto@asistente_agentes_ia — generador de Entrenamientos
+    // feat/agentes_ia_unificado — el espacio de un agente: Entrenamiento (el
+    // Asistente), Ficha y Versiones. :templateId es un número o «new».
+    path: frontendURL(
+      'accounts/:accountId/tracking-dashboard/agents/:templateId(\\d+|new)'
+    ),
+    name: 'contact_trackings_agent',
+    meta: { permissions: AGENTS_PERMISSIONS },
+    component: () =>
+      import('../../../views/contactTrackings/AgentWorkspace.vue'),
+  },
+  {
+    // proyecto@asistente_agentes_ia — el Asistente ya no es una pantalla aparte: vive
+    // dentro del espacio del agente. Los enlaces viejos (?template_id=N, ?nuevo=1)
+    // llegan al mismo lugar.
     path: frontendURL('accounts/:accountId/tracking-dashboard/assistant'),
     name: 'contact_trackings_assistant',
     meta: { permissions: ['administrator'] },
-    component: () => import('../../../views/contactTrackings/Assistant.vue'),
+    redirect: to => ({
+      name: 'contact_trackings_agent',
+      params: {
+        accountId: to.params.accountId,
+        templateId: to.query.template_id ? String(to.query.template_id) : 'new',
+      },
+      query: { seccion: 'training' },
+    }),
   },
   {
     path: frontendURL('accounts/:accountId/tracking-dashboard/metrics'),
