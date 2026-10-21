@@ -86,6 +86,7 @@ class ContactTrackings::Assistant::InterviewTurn
   # no queda una sesión a medias que la pantalla ofrezca retomar sin contenido.
   def record_turn(result)
     sesion = session_record || TrackingAssistantSession.new(account: @account, user: @user)
+    sesion.link_template(@params['template_id'])
     turnos = with_stored_changes(sesion, messages) + [assistant_turn(result)]
     ContactTrackings::Assistant::SessionVersions.new(sesion, on_screen: @params['draft'], delivered: delivered_draft)
                                                 .record(result)

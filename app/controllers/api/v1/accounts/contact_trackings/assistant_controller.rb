@@ -181,7 +181,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   # `building` solo viajan si vinieron: su ausencia significa algo (ver abajo).
   def interview_args
     args = { 'messages' => interview_messages, 'draft' => params[:draft], 'one_shot' => params[:one_shot],
-             'session_id' => params[:session_id], 'inbox_id' => inbox&.id, 'locale' => I18n.locale.to_s }
+             'session_id' => params[:session_id], 'inbox_id' => inbox&.id, 'locale' => I18n.locale.to_s,
+             'template_id' => params[:template_id] }
     args['delivered_draft'] = delivered_draft if params.key?(:delivered_draft)
     args['building'] = building_param if params.key?(:building)
     args
@@ -233,7 +234,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   end
 
   def save_params
-    params.permit(:name, :objective, :ai_context, :inbox_id, :template_id, :session_id, calendar_integration_ids: [])
+    params.permit(:name, :objective, :ai_context, :inbox_id, :template_id, :session_id, :force, calendar_integration_ids: [])
   end
 
   # nil = el cliente no sabe si la entrevista sigue abierta (se deduce de las marcas).

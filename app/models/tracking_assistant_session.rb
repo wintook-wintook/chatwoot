@@ -5,6 +5,7 @@
 # Table name: tracking_assistant_sessions
 #
 #  id                   :bigint           not null, primary key
+#  base_version         :integer
 #  draft                :text
 #  draft_versions       :jsonb            not null
 #  messages             :jsonb            not null
@@ -87,8 +88,12 @@ class TrackingAssistantSession < ApplicationRecord
   # es trabajo del equipo, y quedaba escondido en la conversación de quien lo armó.
   # El módulo es de administradores (ver el controlador), así que "toda la cuenta"
   # son ellos.
+  #
+  # Solo las abiertas (feat/agentes_ia_unificado, 21/10/2026): una que ya terminó en
+  # un agente está en la lista de Agentes, con su historial en Versiones. Además el
+  # tope (LIST_LIMIT) ya no lo gastan conversaciones cerradas.
   def self.listable_for(account)
-    where(account: account, status: %w[open saved])
+    where(account: account, status: 'open')
       .includes(:tracking_template, :user).recent_first.limit(LIST_LIMIT)
   end
 
@@ -242,6 +247,21 @@ class TrackingAssistantSession < ApplicationRecord
   # El guardado automático de lo editado a mano (ver add_version, autosave:).
   # Lo configurado en «Configurar» es su propia versión, con sus notas: no la pisa el
   # siguiente guardado automático (eso solo pasa entre autoguardados seguidos).
+  # feat/agentes_ia_unificado — una conversación abierta sobre un agente queda ligada
+  # a él desde el primer guardado, no recién al publicar: así el espacio del agente
+  # retoma su borrador al volver, y «En construcción» la abre en ese agente (publicar
+  # lo actualiza en vez de crear otro). Solo un agente de la misma cuenta, y solo si
+  # la conversación no tenía uno. No guarda.
+  #
+  # Anota también de qué versión del agente parte (base_version): al publicar,
+  # SaveService avisa si el Entrenamiento cambió desde entonces.
+  def link_template(template_id)
+    return if tracking_template_id.present? || template_id.blank?
+
+    self.tracking_template = account.tracking_templates.find_by(id: template_id)
+    self.base_version = tracking_template&.versions&.maximum(:version)
+  end
+
   def autosave!(draft, source: 'manual', notes: nil)
     if source == 'configured'
       add_version(draft: draft, source: 'configured', notes: notes)

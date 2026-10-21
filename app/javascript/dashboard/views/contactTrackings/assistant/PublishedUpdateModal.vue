@@ -144,7 +144,7 @@ export default {
               }"
             >{{ line.type === 'del' ? '− ' : line.type === 'add' ? '+ ' : '  ' }}{{ line.text }}</span></template></pre>
           </div>
-          <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
+          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.UPDATE_NOTE') }}
           </p>
           <div class="flex flex-wrap justify-end gap-2">

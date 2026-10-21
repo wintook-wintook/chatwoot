@@ -26,6 +26,7 @@ class Api::V1::Accounts::ContactTrackings::AssistantAutosaveController < Api::V1
     return render json: { error: 'blank_draft' }, status: :unprocessable_entity if draft.strip.empty?
 
     sesion = find_session || TrackingAssistantSession.new(account: Current.account, user: Current.user)
+    sesion.link_template(params[:template_id])
     sesion.autosave!(draft, **version_info)
     render json: { session_id: sesion.id, versions: sesion.version_list, session: meta(sesion) }
   rescue ActiveRecord::RecordInvalid => e

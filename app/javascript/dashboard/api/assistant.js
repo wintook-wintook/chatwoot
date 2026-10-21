@@ -46,6 +46,7 @@ class AssistantAPI extends ApiClient {
       deliveredDraft = null,
       building = null,
       turnId = null,
+      templateId = null,
     } = {}
   ) {
     const body = {
@@ -59,6 +60,8 @@ class AssistantAPI extends ApiClient {
     if (deliveredDraft !== null) body.delivered_draft = deliveredDraft;
     // La entrevista sigue abierta. Sin la llave, el backend lo deduce de las marcas.
     if (building !== null) body.building = building;
+    // feat/agentes_ia_unificado: el agente que se edita; liga la conversación a él.
+    if (templateId) body.template_id = templateId;
     // Con él, el backend va dejando la etapa en curso para getProgress. Hace falta
     // siempre: el turno corre en segundo plano y el resultado se pide por este id.
     body.turn_id = turnId || newTurnId();
@@ -201,12 +204,19 @@ class AssistantAPI extends ApiClient {
 
   // Guardado automático de lo editado a mano: crea la conversación si todavía no hay.
   // source: 'configured' (pestaña «Configurar») queda como su propia versión, con notes.
-  autosaveDraft(draft, sessionId = null, { source = null, notes = [] } = {}) {
+  // templateId (feat/agentes_ia_unificado): el agente que se edita; liga la
+  // conversación a él desde el primer guardado.
+  autosaveDraft(
+    draft,
+    sessionId = null,
+    { source = null, notes = [], templateId = null } = {}
+  ) {
     return axios.put(`${this.url}/autosave`, {
       draft,
       session_id: sessionId,
       source,
       notes,
+      template_id: templateId,
     });
   }
 
@@ -322,6 +332,7 @@ class AssistantAPI extends ApiClient {
     templateId,
     sessionId,
     calendarIntegrationIds = null,
+    force = false,
   }) {
     const body = {
       draft,
@@ -333,6 +344,9 @@ class AssistantAPI extends ApiClient {
       template_id: templateId,
       session_id: sessionId,
     };
+    // feat/agentes_ia_unificado: publicar aunque el agente haya cambiado desde que
+    // esta conversación partió de él (el servidor avisó con stale_draft).
+    if (force) body.force = true;
     // Solo si el Entrenamiento agenda: sin la llave, el agente conserva los que tiene.
     if (calendarIntegrationIds)
       body.calendar_integration_ids = calendarIntegrationIds;

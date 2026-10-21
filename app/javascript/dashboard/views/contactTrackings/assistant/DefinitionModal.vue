@@ -71,17 +71,19 @@ export default {
   <woot-modal :show="show" size="medium" :on-close="() => $emit('close')">
     <div class="flex flex-col gap-4 p-8 text-sm max-h-[85vh] overflow-y-auto">
       <div>
-        <h2 class="!m-0 text-lg font-medium text-slate-800 dark:text-slate-100">
+        <h2
+          class="!m-0 text-base font-semibold leading-6 text-slate-800 dark:text-slate-50"
+        >
           {{ $t('TRACKING_ASSISTANT_VIEW.DEFINITION_TITLE') }}
         </h2>
-        <p class="!mt-1 !mb-0 text-xs text-slate-500 dark:text-slate-400">
+        <p class="!mt-1 !mb-0 text-sm text-slate-600 dark:text-slate-300">
           {{ $t('TRACKING_ASSISTANT_VIEW.DEFINITION_HINT') }}
         </p>
       </div>
 
       <p
         v-if="agentName"
-        class="!m-0 text-xs text-slate-500 dark:text-slate-400"
+        class="!m-0 text-sm text-slate-600 dark:text-slate-300"
       >
         {{ $t('TRACKING_ASSISTANT_VIEW.DEFINITION_NAME', { name: agentName }) }}
       </p>
