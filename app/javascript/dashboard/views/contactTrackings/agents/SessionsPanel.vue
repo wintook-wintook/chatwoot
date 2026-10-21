@@ -35,7 +35,7 @@ const SESSION_COLUMNS = {
 
 export default {
   components: { TableFooter },
-  emits: ['open', 'count'],
+  emits: ['open'],
   data() {
     return {
       sessions: [],
@@ -97,7 +97,6 @@ export default {
     sessions(list) {
       const pages = Math.max(1, Math.ceil(list.length / SESSIONS_PER_PAGE));
       if (this.sessionsPage > pages) this.sessionsPage = pages;
-      this.$emit('count', this.openSessions.length);
     },
   },
   mounted() {

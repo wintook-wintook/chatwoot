@@ -85,7 +85,6 @@ export default {
       // Del más actual al menos actual por fecha de actualización (pedido del usuario).
       agentsSort: { key: 'updated_at', order: 'desc' },
       showNewMenu: false,
-      openSessionsCount: null,
       // Lo que dijo el comprobador de cada agente, por id.
       auditById: {},
     };
@@ -108,7 +107,6 @@ export default {
         this.isAdmin && {
           id: 'sessions',
           label: 'TRACKING_TEMPLATES.LIST_TABS.SESSIONS',
-          count: this.openSessionsCount,
         },
         this.isAdmin && {
           id: 'resources',
@@ -588,7 +586,6 @@ export default {
           ref="sessions"
           class="flex-1 min-h-0 mt-6"
           @open="openSession"
-          @count="openSessionsCount = $event"
         />
         <InventoryPanel
           v-if="listTab === 'resources'"
