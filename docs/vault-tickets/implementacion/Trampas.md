@@ -117,6 +117,18 @@ tags: [tickets, trampas, gotchas, critico]
    pierde). Dejar **una línea en blanco** entre el bloque de `annotate` y el comentario del modelo.
    También reescribe modelos de otras ramas (columnas de la base compartida): revisar `git status
    app/models` tras migrar y no commitear lo ajeno.
+25. **`<fluent-icon icon="x">` agrega `-outline` solo** — `Icon.vue` busca `${icon}-${type}` (tipo
+   por defecto `outline`). En `dashboard-icons.json` las llaves ya traen el sufijo
+   (`briefcase-outline`), así que en la plantilla va **sin** él: `icon="briefcase"`. Con el sufijo
+   busca `briefcase-outline-outline`, lanza «Icon not found» y el componente que lo usa no se
+   pinta. Verificar: `grep '"<nombre>-outline"' app/javascript/shared/components/FluentIcon/dashboard-icons.json`.
+26. **Tailwind de este proyecto NO tiene `blue` ni `emerald`** (ni el resto de la paleta por
+   defecto) — `tailwind.config.js` reemplaza `theme.colors` con `theme/colors.js`: `woot` (marca,
+   cambia con el tema de la cuenta), `green`, `slate`, `red`, `amber`, `yellow`, `violet`, `teal`,
+   `sky`, `indigo`, `orange`… Una clase `bg-blue-500` o `bg-emerald-600` **no genera CSS**: no falla
+   nada, simplemente no pinta (el embudo de Comercial salió sin franjas, solo números). Antes de
+   usar un color: `grep -n "^  <color>:" theme/colors.js`. Para verificar una clase, compilar
+   Tailwind solo sobre el archivo (`npx tailwindcss -c <config con content=[archivo]> -i in.css`).
 
 ## 🔗 Relacionado
 - [[Pruebas-en-browser]] · [[Feature-flag-case_management]] · [[Historial-de-implementacion]] · [[Vistas-guardadas]]

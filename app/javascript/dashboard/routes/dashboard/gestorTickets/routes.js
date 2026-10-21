@@ -134,6 +134,30 @@ export const routes = [
     component: () =>
       import('../../../views/gestorTickets/CommercialConfig.vue'),
   },
+  // Plan-Bandeja-Prioridad F3 — pesos del puntaje de «Mi día».
+  {
+    path: frontendURL('accounts/:accountId/tickets/task-settings'),
+    name: 'gestorTickets_task_settings',
+    meta: { permissions: ['administrator'] },
+    component: () =>
+      import('../../../views/gestorTickets/TaskPriorityConfig.vue'),
+  },
+  // «Resumen del negocio»: la ruta es de agente; el backend decide quién lo ve
+  // (administradores y autorizados) y el menú lo oculta a los demás.
+  {
+    path: frontendURL('accounts/:accountId/tickets/summary'),
+    name: 'gestorTickets_business_summary',
+    meta: AGENT,
+    component: () =>
+      import('../../../views/gestorTickets/summary/BusinessSummary.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/tickets/summary-access'),
+    name: 'gestorTickets_business_summary_access',
+    meta: { permissions: ['administrator'] },
+    component: () =>
+      import('../../../views/gestorTickets/summary/BusinessSummaryAccess.vue'),
+  },
   {
     path: frontendURL('accounts/:accountId/tickets/settings'),
     name: 'gestorTickets_settings',

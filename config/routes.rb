@@ -258,7 +258,10 @@ Rails.application.routes.draw do
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
           # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
-          resources :case_tasks, only: [:index], controller: 'case_tasks_index'
+          resources :case_tasks, only: [:index], controller: 'case_tasks_index' do
+            put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»
+            post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA
+          end
           resources :case_types, only: [:index, :create, :update, :destroy] do
             resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K
             # @tickets_cases — columnas del Kanban por tipo (Opción A+)
@@ -751,8 +754,13 @@ Rails.application.routes.draw do
               get :velocity
               get :stalled
               get :pipeline # Plan-Clase-Comercial F5
+              get :pipeline_stale   # Plan-Metricas-Comercial M2 — estancadas (a pedido)
+              get :pipeline_monthly # Plan-Metricas-Comercial M3 — mes a mes (a pedido)
               get :work_orders # Plan-Clase-Orden-de-Trabajo F3
               get :projects # Plan-Clase-Proyecto P3
+              get :business_summary # «Resumen del negocio» (admin + autorizados)
+              post :business_summary_ai # «Explícame la semana»
+              post :business_summary_conversations_ai # análisis de conversaciones (IA, a pedido)
             end
           end
         end

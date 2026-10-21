@@ -19,6 +19,24 @@ export const OUTCOME_BADGE = {
 export const POSTPONED_BADGE =
   'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
 
+// Plan-Metricas-Comercial — comprometida por el cliente (abierta) y promesa
+// vencida (la fecha comprometida ya pasó sin ganarla).
+export const COMMITTED_BADGE =
+  'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-200';
+export const PROMISE_OVERDUE_BADGE =
+  'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
+
+// ¿Abierta y comprometida? ¿Y ya se le pasó la fecha prometida?
+export const isOpenCommitted = ticket =>
+  !!ticket &&
+  !!ticket.committed &&
+  !ticket.outcome &&
+  !['closed', 'cancelled'].includes(ticket.status);
+export const promiseOverdue = (ticket, today) =>
+  isOpenCommitted(ticket) &&
+  !!ticket.expected_close_at &&
+  String(ticket.expected_close_at).slice(0, 10) < today;
+
 // 25000.5 + 'MXN' → "$25,000.50 MXN". Sin monto → '—'. Una moneda desconocida
 // para Intl no rompe: cae a número con el código al lado.
 export const formatMoney = (amount, currency) => {
@@ -70,4 +88,14 @@ export const isoDayFromToday = (days = 0) => {
   d.setDate(d.getDate() + days);
   const pad = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+// [{ currency, amount }] → "$1,000 MXN · $500 USD"; vacío → '—'. `field` elige
+// la columna (amount / weighted). Nunca suma monedas distintas.
+export const moneyList = (values, field = 'amount') => {
+  const list = (values || []).filter(
+    v => v[field] !== undefined && v[field] !== null
+  );
+  if (!list.length) return '—';
+  return list.map(v => formatMoney(v[field], v.currency)).join(' · ');
 };

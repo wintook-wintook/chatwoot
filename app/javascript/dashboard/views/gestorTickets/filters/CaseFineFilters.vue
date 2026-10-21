@@ -4,18 +4,21 @@
   lo que aplica a la clase (ver FINE_FILTERS_BY_CLASS) y a lo que se ve —estado
   o resultado; ver fineKeyApplies— y, a su lado, lo activo como etiquetas con ✕
   + «Limpiar». Cada cambio se aplica al momento (v-model).
+  Plan-Metricas-Comercial — UNA fecha a la vez, arriba: «¿Qué fecha?» (las de la
+  clase que aplican a lo que se ve) + «¿Cuándo?» (adelante: vencidas, esta
+  semana…; atrás: este mes, últimos 30…; o un rango personalizado).
 -->
 <script>
 import { mapGetters } from 'vuex';
 import {
   BILLABLE_OPTIONS,
-  CLOSE_PRESETS,
-  CLOSED_PRESETS,
-  VISIT_PRESETS,
   FINE_FILTERS_BY_CLASS,
   activeFineKeys,
+  availableDateFields,
+  datePresetsFor,
   emptyFineFilters,
   fineKeyApplies,
+  shownDateField,
 } from 'dashboard/helper/caseFilters';
 import { formatDay } from 'dashboard/helper/caseCommercial';
 import { forType } from 'dashboard/helper/caseClassification';
@@ -79,14 +82,14 @@ export default {
     origins() {
       return ORIGINS;
     },
-    closePresets() {
-      return CLOSE_PRESETS;
+    dateFields() {
+      return availableDateFields(this.caseClass, this.context);
     },
-    closedPresets() {
-      return CLOSED_PRESETS;
+    dateField() {
+      return shownDateField(this.value, this.caseClass, this.context);
     },
-    visitPresets() {
-      return VISIT_PRESETS;
+    datePresets() {
+      return datePresetsFor(this.dateField);
     },
     billableOptions() {
       return BILLABLE_OPTIONS;
@@ -126,15 +129,49 @@ export default {
       this.$emit('input', { ...this.value, [key]: val });
     },
     remove(key) {
-      if (key === 'created') {
+      if (key === 'date') {
         this.$emit('input', {
           ...this.value,
-          created_from: '',
-          created_to: '',
+          date_preset: '',
+          date_from: '',
+          date_to: '',
         });
         return;
       }
       this.set(key, '');
+    },
+    // Cambiar de fecha conserva el «¿cuándo?» si también existe para la nueva
+    // (este mes, esta semana…); si no (vencidas → alta), lo suelta.
+    setDateField(field) {
+      const keep = datePresetsFor(field).includes(this.value.date_preset);
+      this.$emit('input', {
+        ...this.value,
+        date_field: field,
+        date_preset: keep ? this.value.date_preset : '',
+      });
+    },
+    // Se guarda también la fecha que se ve en el combo (si no se tocó, es la de
+    // entrada de la clase).
+    setDatePreset(preset) {
+      this.$emit('input', {
+        ...this.value,
+        date_field: this.dateField,
+        date_preset: preset,
+      });
+    },
+    setDateBound(key, val) {
+      this.$emit('input', {
+        ...this.value,
+        date_field: this.dateField,
+        [key]: val,
+      });
+    },
+    dateFieldLabel(field) {
+      const key =
+        field === 'closed' && this.caseClass === 'commercial'
+          ? 'closed_commercial'
+          : field;
+      return this.$t(`CASE_TICKETS.FILTERS.DATE_FIELDS.${key}`);
     },
     clear() {
       this.$emit('input', emptyFineFilters());
@@ -171,24 +208,21 @@ export default {
           ).replace(/^— /, '')}`;
         case 'assignee_id':
           return `${name}: ${this.findName(this.agents, v.assignee_id)}`;
-        case 'close':
-          return `${name}: ${this.$t(`CASE_TICKETS.FILTERS.CLOSE.${v.close}`)}`;
-        case 'due':
-          return `${name}: ${this.$t(`CASE_TICKETS.FILTERS.CLOSE.${v.due}`)}`;
-        case 'closed':
-          return `${name}: ${this.$t(
-            `CASE_TICKETS.FILTERS.CLOSED.${v.closed}`
-          )}`;
-        case 'visit':
-          return `${name}: ${this.$t(`CASE_TICKETS.FILTERS.VISIT.${v.visit}`)}`;
+        case 'date': {
+          const when =
+            v.date_preset === 'custom'
+              ? `${v.date_from ? formatDay(v.date_from) : '…'} – ${
+                  v.date_to ? formatDay(v.date_to) : '…'
+                }`
+              : this.$t(`CASE_TICKETS.FILTERS.DATE_PRESETS.${v.date_preset}`);
+          return `${this.dateFieldLabel(
+            v.date_field || this.dateField
+          )}: ${when}`;
+        }
         case 'billable':
           return `${name}: ${this.$t(
             `CASE_TICKETS.FILTERS.BILLABLE.${v.billable}`
           )}`;
-        case 'created':
-          return `${name}: ${
-            v.created_from ? formatDay(v.created_from) : '…'
-          } – ${v.created_to ? formatDay(v.created_to) : '…'}`;
         default:
           return name;
       }
@@ -215,54 +249,63 @@ export default {
         v-if="open"
         class="absolute left-0 z-50 grid w-[34rem] max-w-[90vw] grid-cols-2 gap-3 p-4 mt-1 bg-white border rounded-lg shadow-lg top-full dark:bg-slate-800 border-slate-100 dark:border-slate-700 [&_select]:!mb-0 [&_input]:!mb-0"
       >
-        <!-- Plan-Clase-Proyecto P1 — fecha objetivo (mismos rangos que el cierre) -->
-        <label v-if="available.includes('due')" class="flex flex-col gap-1">
-          <span class="text-xs text-slate-500 dark:text-slate-400">
-            {{ fieldLabel('due') }}
-          </span>
-          <select
-            :value="value.due"
-            class="text-sm"
-            @change="set('due', $event.target.value)"
+        <!-- Fecha: una a la vez («¿Qué fecha?» + «¿Cuándo?») -->
+        <div
+          v-if="available.includes('date')"
+          class="grid grid-cols-2 col-span-2 gap-3 pb-3 border-b border-slate-100 dark:border-slate-700"
+        >
+          <label class="flex flex-col gap-1">
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              {{ $t('CASE_TICKETS.FILTERS.DATE_FIELD') }}
+            </span>
+            <select
+              :value="dateField"
+              class="text-sm"
+              @change="setDateField($event.target.value)"
+            >
+              <option v-for="f in dateFields" :key="f" :value="f">
+                {{ dateFieldLabel(f) }}
+              </option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              {{ $t('CASE_TICKETS.FILTERS.DATE_WHEN') }}
+            </span>
+            <select
+              :value="value.date_preset"
+              class="text-sm"
+              @change="setDatePreset($event.target.value)"
+            >
+              <option value="">{{ $t('CASE_TICKETS.FILTERS.ANY') }}</option>
+              <option v-for="p in datePresets" :key="p" :value="p">
+                {{ $t(`CASE_TICKETS.FILTERS.DATE_PRESETS.${p}`) }}
+              </option>
+            </select>
+          </label>
+          <div
+            v-if="value.date_preset === 'custom'"
+            class="flex items-center col-span-2 gap-2"
           >
-            <option value="">{{ $t('CASE_TICKETS.FILTERS.ANY') }}</option>
-            <option v-for="p in closePresets" :key="p" :value="p">
-              {{ $t(`CASE_TICKETS.FILTERS.CLOSE.${p}`) }}
-            </option>
-          </select>
-        </label>
-
-        <label v-if="available.includes('close')" class="flex flex-col gap-1">
-          <span class="text-xs text-slate-500 dark:text-slate-400">
-            {{ fieldLabel('close') }}
-          </span>
-          <select
-            :value="value.close"
-            class="text-sm"
-            @change="set('close', $event.target.value)"
-          >
-            <option value="">{{ $t('CASE_TICKETS.FILTERS.ANY') }}</option>
-            <option v-for="p in closePresets" :key="p" :value="p">
-              {{ $t(`CASE_TICKETS.FILTERS.CLOSE.${p}`) }}
-            </option>
-          </select>
-        </label>
-
-        <label v-if="available.includes('visit')" class="flex flex-col gap-1">
-          <span class="text-xs text-slate-500 dark:text-slate-400">
-            {{ fieldLabel('visit') }}
-          </span>
-          <select
-            :value="value.visit"
-            class="text-sm"
-            @change="set('visit', $event.target.value)"
-          >
-            <option value="">{{ $t('CASE_TICKETS.FILTERS.ANY') }}</option>
-            <option v-for="p in visitPresets" :key="p" :value="p">
-              {{ $t(`CASE_TICKETS.FILTERS.VISIT.${p}`) }}
-            </option>
-          </select>
-        </label>
+            <input
+              type="date"
+              class="text-sm"
+              :value="value.date_from"
+              :max="value.date_to || undefined"
+              :aria-label="$t('CASE_TICKETS.FILTERS.CAL_PERIODS.FROM')"
+              @change="setDateBound('date_from', $event.target.value)"
+            />
+            <span class="text-slate-400">–</span>
+            <input
+              type="date"
+              class="text-sm"
+              :value="value.date_to"
+              :min="value.date_from || undefined"
+              :aria-label="$t('CASE_TICKETS.FILTERS.CAL_PERIODS.TO')"
+              @change="setDateBound('date_to', $event.target.value)"
+            />
+          </div>
+        </div>
 
         <label
           v-if="available.includes('billable')"
@@ -279,22 +322,6 @@ export default {
             <option value="">{{ $t('CASE_TICKETS.FILTERS.ANY') }}</option>
             <option v-for="o in billableOptions" :key="o" :value="o">
               {{ $t(`CASE_TICKETS.FILTERS.BILLABLE.${o}`) }}
-            </option>
-          </select>
-        </label>
-
-        <label v-if="available.includes('closed')" class="flex flex-col gap-1">
-          <span class="text-xs text-slate-500 dark:text-slate-400">
-            {{ fieldLabel('closed') }}
-          </span>
-          <select
-            :value="value.closed"
-            class="text-sm"
-            @change="set('closed', $event.target.value)"
-          >
-            <option value="">{{ $t('CASE_TICKETS.FILTERS.ANY') }}</option>
-            <option v-for="p in closedPresets" :key="p" :value="p">
-              {{ $t(`CASE_TICKETS.FILTERS.CLOSED.${p}`) }}
             </option>
           </select>
         </label>
@@ -409,30 +436,6 @@ export default {
             </option>
           </select>
         </label>
-
-        <div
-          v-if="available.includes('created')"
-          class="flex flex-col col-span-2 gap-1"
-        >
-          <span class="text-xs text-slate-500 dark:text-slate-400">
-            {{ fieldLabel('created') }}
-          </span>
-          <div class="flex items-center gap-2">
-            <input
-              type="date"
-              class="text-sm"
-              :value="value.created_from"
-              @change="set('created_from', $event.target.value)"
-            />
-            <span class="text-slate-400">–</span>
-            <input
-              type="date"
-              class="text-sm"
-              :value="value.created_to"
-              @change="set('created_to', $event.target.value)"
-            />
-          </div>
-        </div>
       </div>
     </div>
 

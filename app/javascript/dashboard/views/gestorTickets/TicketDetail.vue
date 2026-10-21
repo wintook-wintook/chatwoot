@@ -648,15 +648,32 @@ export default {
     isProject() {
       return !!this.ticket?.is_project;
     },
+    // Proyecto al que pertenece el caso (null si no está dentro de uno).
+    parentProject() {
+      return this.ticket?.parent_project || null;
+    },
     isCommercial() {
       return !!this.ticket?.is_commercial;
     },
     // Plan-Casos E1 — «Volver» lleva a la lista de la clase del caso.
     backRoute() {
+      if (this.returnPath) return this.returnPath;
       return {
         name: CLASS_VIEW_ROUTES.list,
         params: { caseClass: caseClassOfTicket(this.ticket) },
       };
+    },
+    // Abierto desde otra pantalla (p. ej. Métricas) que mandó `?back=<ruta>`:
+    // «Volver» regresa ahí. Solo rutas internas de la app.
+    returnPath() {
+      const back = this.$route.query.back;
+      if (typeof back !== 'string') return null;
+      return back.startsWith('/app/') ? back : null;
+    },
+    backLabel() {
+      if (this.returnPath && this.returnPath.split('?')[0].endsWith('/metrics'))
+        return this.$t('CASE_TICKETS.DETAIL.BACK_TO_METRICS');
+      return this.$t('CASE_TICKETS.DETAIL.BACK');
     },
     canEscalate() {
       const t = this.ticket;
@@ -1932,16 +1949,34 @@ export default {
     <div
       class="flex flex-col flex-shrink-0 gap-2 px-6 py-4 bg-white border-b dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
     >
-      <woot-button
-        size="small"
-        variant="clear"
-        color-scheme="secondary"
-        icon="chevron-left"
-        class="self-start"
-        @click="$router.push(backRoute)"
-      >
-        {{ $t('CASE_TICKETS.DETAIL.BACK') }}
-      </woot-button>
+      <div class="flex flex-wrap items-center gap-2">
+        <woot-button
+          size="small"
+          variant="clear"
+          color-scheme="secondary"
+          icon="chevron-left"
+          @click="$router.push(backRoute)"
+        >
+          {{ backLabel }}
+        </woot-button>
+        <!-- Caso dentro de un proyecto: se ve de dónde viene y se vuelve a él. -->
+        <button
+          v-if="parentProject"
+          type="button"
+          class="flex items-center min-w-0 gap-1 px-2 py-1 text-xs font-medium border rounded-full text-indigo-700 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 dark:text-indigo-300 dark:border-indigo-800 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50"
+          :title="$t('CASE_TICKETS.DETAIL.BACK_TO_PROJECT')"
+          @click="openRelatedTicket(parentProject.id)"
+        >
+          <fluent-icon icon="briefcase" size="12" />
+          <span>{{ $t('CASE_TICKETS.DETAIL.PARENT_PROJECT') }}</span>
+          <span v-if="parentProject.folio" class="font-mono">
+            {{ `#${parentProject.folio}` }}
+          </span>
+          <span class="max-w-xs font-normal truncate">
+            {{ `· ${parentProject.title}` }}
+          </span>
+        </button>
+      </div>
 
       <div v-if="ticket" class="flex items-start justify-between gap-4">
         <div class="flex flex-col gap-1 min-w-0">

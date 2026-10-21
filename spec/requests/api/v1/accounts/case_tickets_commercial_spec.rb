@@ -49,6 +49,32 @@ RSpec.describe 'Case Tickets API — oportunidades' do
     expect(response).to have_http_status(:unprocessable_entity)
   end
 
+  # Plan-Metricas-Comercial — «Comprometida por el cliente».
+  it 'marca la oportunidad como comprometida, exige la fecha y filtra por ella' do
+    opp = opportunity(amount: 1000)
+    patch_json("#{base}/#{opp.id}", case_ticket: { committed: true })
+    expect(response).to have_http_status(:unprocessable_entity)
+
+    patch_json("#{base}/#{opp.id}", case_ticket: { committed: true, expected_close_at: '2026-10-24',
+                                                   commit_note: 'Deposita el viernes' })
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['case_ticket']).to include('committed' => true, 'commit_note' => 'Deposita el viernes',
+                                                           'expected_close_at' => '2026-10-24')
+    expect(opp.case_events.where(event_type: :commitment_changed).last.payload).to include('action' => 'set')
+
+    opportunity(amount: 5, expected_close_at: '2026-10-01')
+    get base, params: { committed: true, case_class: 'commercial' }, headers: admin.create_new_auth_token
+    expect(response.parsed_body['case_tickets'].pluck('id')).to eq([opp.id])
+
+    # El aviso «Cierre vencido» con la casilla cuenta solo las promesas vencidas.
+    travel_to(Date.new(2026, 10, 28)) do
+      get base, params: { case_class: 'commercial' }, headers: admin.create_new_auth_token
+      expect(response.parsed_body['meta']['alert_count']).to eq(2)
+      get base, params: { committed: true, case_class: 'commercial' }, headers: admin.create_new_auth_token
+      expect(response.parsed_body['meta']['alert_count']).to eq(1)
+    end
+  end
+
   it 'no ofrece resolver, cancelar ni cerrar como transición' do
     get "#{base}/#{opportunity.id}", headers: admin.create_new_auth_token
     expect(response.parsed_body['case_ticket']['can_transition_to']).not_to include('resolved', 'cancelled', 'closed')

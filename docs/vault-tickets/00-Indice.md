@@ -60,6 +60,10 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 - [[Plan-Clase-Comercial]] — 💼 plan: Clase de caso (Soporte/Comercial/…) + oportunidades (F0–F5 hechas)
 - [[Plan-Clase-Proyecto]] — 📐 plan: clase Proyecto (P1 hecha; hijos, hitos, línea de tiempo y métricas pendientes)
 - [[Plan-Clase-Orden-de-Trabajo]] — 🛠️ plan: clase Orden de trabajo y capacidades por clase (F1 hecha)
+- [[Plan-Metricas-Comercial]] — 📊 plan: Métricas de Comercial en 4 pestañas (¿Cómo vamos? · Dinero en juego · Mes a mes · ¿Por qué perdemos?) — M1–M4 hechas
+- [[Plan-Resumen-Negocio]] — «Resumen del negocio» para el dueño: todas las clases en una pantalla, acceso por casilla, IA «Explícame la semana»
+- [[Plan-Empresa-Un-Solo-Hombre]] — 🧭 plan ABIERTO (en pausa): empresa de un solo hombre, todo ligado y automatizado (agentes hacen todo, el humano solo las excepciones) · base: docs/kontrolya_operacion_autonoma_analisis.md
+- [[Plan-Bandeja-Prioridad]] — 🎯 plan: «Mi día» en la bandeja de tareas, orden por puntaje de urgencia, pesos configurables y plan con IA (F1–F4 hechas)
 - [[Plan-Casos-Hoja-de-ruta]] — 🧭 hoja de ruta: menú por clase (E1 hecho), clase fija, Comercial y Soporte completos
 - [[Historial-de-implementacion]] — changelog de todo lo resuelto
 

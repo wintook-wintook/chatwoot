@@ -15,6 +15,8 @@
 #  closure_cause              :text
 #  closure_solution           :text
 #  closure_type               :integer
+#  commit_note                :text
+#  committed_at               :datetime
 #  conformity_note            :text
 #  currency                   :string(3)
 #  custom_attributes          :jsonb            not null
@@ -75,6 +77,7 @@
 # Indexes
 #
 #  index_case_tickets_on_account_and_folio            (account_id,folio) UNIQUE WHERE (folio IS NOT NULL)
+#  index_case_tickets_on_account_committed            (account_id,committed_at) WHERE (committed_at IS NOT NULL)
 #  index_case_tickets_on_account_id_and_case_type_id  (account_id,case_type_id)
 #  index_case_tickets_on_account_id_and_contact_id    (account_id,contact_id)
 #  index_case_tickets_on_account_id_and_due_at        (account_id,due_at)
@@ -142,8 +145,13 @@ class CaseTicket < ApplicationRecord
   # cancela como un ticket; termina en `closed` con un resultado (won/lost/cancelled).
   COMMERCIAL_BLOCKED_STATUSES = %w[resolved validating cancelled].freeze
   COMMERCIAL_STATUS_MSG = 'Una oportunidad se cierra con un resultado: ganada, perdida o cancelada'
-  # Datos de la oportunidad editables desde la ficha y el alta.
-  COMMERCIAL_FIELDS = %w[amount currency expected_close_at probability].freeze
+  # Datos de la oportunidad editables desde la ficha y el alta. `committed` es la
+  # casilla «Comprometida por el cliente» (escribe `committed_at`, ver #committed=).
+  COMMERCIAL_FIELDS = %w[amount currency expected_close_at probability committed commit_note].freeze
+  # Columnas que cambian al guardar esos datos (lo que se registra en el historial).
+  COMMERCIAL_COLUMNS = %w[amount currency expected_close_at probability committed_at commit_note].freeze
+  COMMITMENT_COLUMNS = %w[committed_at commit_note].freeze
+  COMMITMENT_DATE_MSG = 'es obligatoria si el cliente se comprometió (es la fecha que prometió)'
   # Plan-Clase-Orden-de-Trabajo F2a — datos de la orden que se editan (la conformidad
   # —received_by/received_at/conformity_note— solo se llena al cerrar).
   WORK_ORDER_FIELDS = %w[work_address estimated_hours actual_hours billable].freeze
@@ -254,6 +262,10 @@ class CaseTicket < ApplicationRecord
   validates :probability, numericality: { only_integer: true, in: 0..100 }, allow_nil: true
   validates :amount,      numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :currency,    format: { with: /\A[A-Z]{3}\z/ }, allow_nil: true
+  # Plan-Metricas-Comercial — comprometida: la fecha de cierre pasa a ser la que
+  # prometió el cliente, así que no puede quedar vacía.
+  validate  :commitment_has_date
+  validates :commit_note, length: { maximum: 500 }, allow_blank: true
   validates :estimated_hours, :actual_hours, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :work_address, length: { maximum: 255 }, allow_blank: true
   validates :budget_hours, :budget_amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
@@ -523,20 +535,48 @@ class CaseTicket < ApplicationRecord
     self
   end
 
+  # Plan-Metricas-Comercial — casilla «Comprometida por el cliente». Marcarla
+  # guarda cuándo (si ya estaba, se conserva); desmarcarla borra marca y nota.
+  def committed=(value)
+    if ActiveModel::Type::Boolean.new.cast(value)
+      self.committed_at ||= Time.current
+    else
+      self.committed_at = nil
+      self.commit_note = nil
+    end
+  end
+
+  def committed?
+    committed_at.present?
+  end
+
   # Asigna (sin guardar) los datos comerciales recibidos y devuelve lo que cambia,
   # para registrarlo con log_commercial_change! una vez guardado.
   def assign_commercial_data(data)
     data = data.to_h.stringify_keys.slice(*COMMERCIAL_FIELDS)
     data['currency'] = data['currency'].to_s.strip.upcase.presence if data.key?('currency')
+    data['commit_note'] = data['commit_note'].to_s.strip.presence if data.key?('commit_note')
     assign_attributes(data)
-    changes_to_save.slice(*COMMERCIAL_FIELDS)
+    changes_to_save.slice(*COMMERCIAL_COLUMNS)
   end
 
+  # Monto/moneda/cierre/probabilidad → `amount_changed`. El compromiso va aparte
+  # (`commitment_changed`: set · moved · removed · note) para poder medir si las
+  # promesas se cumplen y cuántas veces se movieron.
   def log_commercial_change!(changes, actor: nil)
     return if changes.blank?
 
-    case_events.create!(account: account, event_type: :amount_changed, origin: actor ? :agent : :system,
-                        actor: actor, payload: changes.transform_values { |from, to| { from: from, to: to } })
+    origin = actor ? :agent : :system
+    commitment = commitment_payload(changes)
+    plain = changes.except(*COMMITMENT_COLUMNS)
+    if plain.present?
+      case_events.create!(account: account, event_type: :amount_changed, origin: origin, actor: actor,
+                          payload: plain.transform_values { |from, to| { from: from, to: to } })
+    end
+    return unless commitment
+
+    case_events.create!(account: account, event_type: :commitment_changed, origin: origin, actor: actor,
+                        payload: commitment)
   end
 
   # Plan-Clase-Orden-de-Trabajo F2a — igual que los datos comerciales: asigna (sin
@@ -834,6 +874,32 @@ class CaseTicket < ApplicationRecord
     end
     attrs.merge!(postponed_until: nil, postpone_reason_id: nil) if leaving_postponement?(new_status)
     attrs
+  end
+
+  def commitment_has_date
+    errors.add(:expected_close_at, COMMITMENT_DATE_MSG) if committed? && expected_close_at.blank?
+  end
+
+  def commitment_payload(changes)
+    marked = commitment_mark_payload(changes['committed_at'])
+    return marked if marked
+    return unless committed?
+
+    if changes.key?('expected_close_at')
+      from, to = changes['expected_close_at']
+      return { action: 'moved', from: from, to: to }
+    end
+    { action: 'note', note: commit_note } if changes.key?('commit_note')
+  end
+
+  # Se marcó o se quitó la casilla (nil si no cambió).
+  def commitment_mark_payload(change)
+    return unless change
+
+    was, now = change
+    return { action: 'removed' } if now.nil?
+
+    { action: 'set', on: expected_close_at, note: commit_note }.compact if was.nil?
   end
 
   def project_due_after_start

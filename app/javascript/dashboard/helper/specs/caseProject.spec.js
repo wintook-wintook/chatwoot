@@ -40,7 +40,11 @@ describe('caseProject', () => {
     expect(stageToParams('execution', 'project')).toEqual({
       statuses: 'in_progress,escalated',
     });
-    const f = { ...emptyFineFilters(), due: 'overdue' };
+    const f = {
+      ...emptyFineFilters(),
+      date_field: 'due',
+      date_preset: 'overdue',
+    };
     expect(
       fineFiltersToParams(f, 'project', 'mine', { stage: 'planning' })
     ).toEqual({ project_due_to: '2026-10-19' });

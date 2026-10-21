@@ -10,8 +10,9 @@ import CaseClassSwitcher from './CaseClassSwitcher.vue'; // Plan-Casos E1
 import CaseTypeSelect from './filters/CaseTypeSelect.vue'; // Plan-Casos E1.1
 import { loadCaseState, saveCaseState } from '../../helper/caseClasses';
 // Plan-Casos E1.3 — mismo período que las Métricas comerciales.
-import { METRIC_PERIODS as PERIODS } from '../../helper/caseFilters';
-import MetricsPeriodPicker from './filters/MetricsPeriodPicker.vue';
+import { dayString } from 'dashboard/helper/caseMetricsPeriod';
+import caseMetricsPeriodMixin from 'dashboard/mixins/caseMetricsPeriodMixin';
+import CalendarPeriodPicker from './filters/CalendarPeriodPicker.vue';
 
 const CLOSED_STATUSES = ['closed', 'cancelled'];
 
@@ -105,15 +106,15 @@ export default {
     DoughnutChart,
     CaseClassSwitcher,
     CaseTypeSelect,
-    MetricsPeriodPicker,
+    CalendarPeriodPicker,
   },
+  mixins: [caseMetricsPeriodMixin],
   props: {
     // Plan-Casos E1 — estas son las métricas de Soporte (ver ClassMetrics.vue).
     caseClass: { type: String, default: 'support' },
   },
   data() {
     return {
-      selectedPeriod: '30d',
       caseTypeId: '', // Plan-Casos E1.1 — tipo junto al selector de clase
       assigneeId: '', // Plan-Casos E1.3 — responsable
       teamId: '', // Plan-Casos E1.3 — equipo
@@ -138,7 +139,7 @@ export default {
 
     // key que cambia con el período para forzar re-render de los charts
     chartKey() {
-      return this.selectedPeriod;
+      return [this.period, this.customFrom, this.customTo].join('|');
     },
 
     activeStatuses() {
@@ -434,8 +435,7 @@ export default {
     const st = loadCaseState(this.$route.params.accountId, this.caseClass);
     this.caseTypeId = st.type ?? '';
     const saved = st.metrics || {};
-    if (PERIODS.some(p => p.key === saved.period))
-      this.selectedPeriod = saved.period;
+    this.restorePeriod(saved);
     this.assigneeId = saved.assigneeId || '';
     this.teamId = saved.teamId || '';
     this.$store.dispatch('agents/get');
@@ -448,18 +448,17 @@ export default {
       saveCaseState(this.$route.params.accountId, this.caseClass, {
         type: this.caseTypeId,
         metrics: {
-          period: this.selectedPeriod,
+          ...this.periodState(),
           assigneeId: this.assigneeId,
           teamId: this.teamId,
         },
       });
-      const period = PERIODS.find(p => p.key === this.selectedPeriod);
       const params = {};
-      if (period?.days) {
-        const from = new Date();
-        from.setDate(from.getDate() - period.days);
-        params.date_from = from.toISOString().split('T')[0];
-        params.date_to = new Date().toISOString().split('T')[0];
+      const r = this.periodRangeOf();
+      if (r) {
+        // Días locales; el backend toma `date_to` completo (hasta el fin del día).
+        params.date_from = dayString(r.from);
+        params.date_to = dayString(new Date(r.to.getTime() - 1));
       }
       if (this.caseTypeId) params.case_type_id = this.caseTypeId;
       if (this.assigneeId) params.assignee_id = this.assigneeId;
@@ -468,10 +467,6 @@ export default {
     },
     onTypeChange(id) {
       this.caseTypeId = id;
-      this.fetch();
-    },
-    selectPeriod(key) {
-      this.selectedPeriod = key;
       this.fetch();
     },
     minutesToText(m) {
@@ -552,7 +547,13 @@ export default {
             {{ t.name }}
           </option>
         </select>
-        <MetricsPeriodPicker :value="selectedPeriod" @input="selectPeriod" />
+        <CalendarPeriodPicker
+          :value="period"
+          :from="customFrom"
+          :to="customTo"
+          @input="setPeriod"
+          @custom="setCustom"
+        />
       </div>
     </div>
 

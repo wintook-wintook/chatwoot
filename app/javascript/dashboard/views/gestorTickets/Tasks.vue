@@ -16,13 +16,24 @@ import MessageFormatter from 'shared/helpers/MessageFormatter';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import caseAiWriter from 'dashboard/mixins/caseAiWriter';
 import { LocalStorage } from 'shared/helpers/localStorage';
+import MyDay from './tasks/MyDay.vue';
+import { formatDay } from 'dashboard/helper/caseCommercial';
+import {
+  ESTIMATE_OPTIONS,
+  formatMinutes,
+  addDays,
+  localDay,
+  plannedAfterDue,
+} from 'dashboard/helper/caseTaskPriority';
 
 // Filtros rápidos por ámbito de asignación (mismo patrón que el Kanban).
+// Plan-Bandeja-Prioridad F1 — «Mi día» (orden sugerido); «Vencidas» se quitó:
+// ya está en el filtro «Vence».
 const QUICK_FILTERS = [
   { key: 'mine', label: 'MINE' },
   { key: 'unassigned', label: 'UNASSIGNED' },
   { key: 'all', label: 'ALL' },
-  { key: 'overdue', label: 'OVERDUE' },
+  { key: 'my_day', label: 'MY_DAY' },
 ];
 
 const PRIORITY_DOT = {
@@ -71,6 +82,7 @@ const SORTABLE_FIELDS = [
   'requester',
   'assignee',
   'due_at',
+  'planned_on',
   'status',
 ];
 
@@ -82,6 +94,7 @@ export default {
     WootMessageEditor,
     WootDropdownMenu,
     WootDropdownItem,
+    MyDay,
   },
   mixins: [caseAiWriter],
   data() {
@@ -94,7 +107,6 @@ export default {
         {}
       ),
       searchDebounce: null,
-      overdueCount: 0,
       currentPage: 1,
       perPage: PER_PAGE,
       // Orden en SERVIDOR desde el encabezado de la tabla (igual que el listado
@@ -118,6 +130,8 @@ export default {
         due_at: '',
         status: 'pending',
         priority: 'medium',
+        estimated_minutes: '', // Plan-Bandeja-Prioridad F1
+        planned_on: '', // «Programada para» (fecha sin hora)
         // Solicitante: fijo si ya existe (requester_locked=true); en tareas
         // antiguas sin solicitante se puede elegir de la lista y se guarda.
         requester_name: '',
@@ -174,10 +188,30 @@ export default {
         _row_key: `${row.item_type}-${row.id}`,
       }));
     },
-    // El dropdown de responsable solo tiene sentido en Todas / Vencidas: en "Mis
-    // tareas" el responsable ya soy yo y en "Sin asignar" no hay responsable.
+    // El dropdown de responsable solo tiene sentido en Todas: en «Mías» y «Mi
+    // día» el responsable ya soy yo y en «No asignadas» no hay responsable.
     showAssigneeFilter() {
-      return ['all', 'overdue'].includes(this.quickFilter);
+      return this.quickFilter === 'all';
+    },
+    // Plan-Bandeja-Prioridad F1 — «Mi día»: mis pendientes en orden sugerido.
+    isMyDay() {
+      return this.quickFilter === 'my_day';
+    },
+    estimateOptions() {
+      return ESTIMATE_OPTIONS;
+    },
+    // F4 — «Plan de mi día»: IA encendida, con OpenAI y la acción no apagada.
+    dayPlanAi() {
+      const c = this.$store.getters['caseTickets/getAiConfig'];
+      if (!c || !c.enabled || !c.available) return false;
+      return ((c.modes && c.modes.day_plan) || 'suggest') !== 'off';
+    },
+    // «Programada para» después del vencimiento: se avisa, no se bloquea.
+    plannedLate() {
+      return plannedAfterDue(
+        this.form.planned_on,
+        this.toIsoUtc(this.form.due_at)
+      );
     },
     priorityOptions() {
       return this.$t('CASE_TICKETS.PRIORITIES');
@@ -392,6 +426,31 @@ export default {
           ),
         },
         {
+          // Plan-Bandeja-Prioridad — «Programada para»: cuándo piensa hacerla
+          // quien la hace (el vencimiento es el compromiso). En ámbar si quedó
+          // después del vencimiento.
+          field: 'planned_on',
+          key: 'planned_on',
+          title: this.$t('CASE_TICKETS.TASKS.TABLE.PLANNED'),
+          align: 'left',
+          width: 120,
+          sortBy: this.sortConfig.planned_on || '',
+          renderBodyCell: ({ row }) =>
+            row.planned_on ? (
+              <span
+                class={
+                  plannedAfterDue(row.planned_on, row.due_at)
+                    ? 'text-xs font-semibold text-amber-700 dark:text-amber-300'
+                    : 'text-xs text-slate-600 dark:text-slate-300'
+                }
+              >
+                {formatDay(row.planned_on)}
+              </span>
+            ) : (
+              <span class="text-slate-300 dark:text-slate-600">—</span>
+            ),
+        },
+        {
           // @tickets_cases — Estado y firma de completado en UNA columna: tener
           // "Estado: Concluida" al lado de la fecha decía dos veces lo mismo.
           //   pendiente → botón rojo "Completar" (el propio botón es el estado)
@@ -493,8 +552,8 @@ export default {
   mounted() {
     this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchTypes');
+    this.$store.dispatch('caseTickets/fetchAiConfig'); // F4 — ¿IA «Plan de mi día»?
     this.fetch();
-    this.refreshOverdueCount();
   },
   methods: {
     // ── Preferencias de filtros (por cuenta y agente) ──────────────
@@ -550,17 +609,30 @@ export default {
       if (this.filters.assignee_id !== '') return this.filters.assignee_id;
       if (this.quickFilter === 'unassigned') return 'unassigned';
       if (this.quickFilter === 'mine') return this.currentUserID;
-      return 'all'; // all / overdue
+      return 'all';
     },
     buildParams() {
+      // «Mi día»: el orden lo da el puntaje del servidor; solo aplican el tipo
+      // y la búsqueda.
+      if (this.isMyDay) {
+        const p = {
+          mode: 'my_day',
+          assignee_id: this.currentUserID,
+          page: this.currentPage,
+          day: localDay(), // F2 — el plan es del día LOCAL del agente
+        };
+        if (this.filters.case_type_id)
+          p.case_type_id = this.filters.case_type_id;
+        if (this.filters.q) p.q = this.filters.q;
+        return p;
+      }
       const p = { assignee_id: this.resolveAssignee(), page: this.currentPage };
       if (this.filters.status) p.status = this.filters.status;
       if (this.filters.case_type_id) p.case_type_id = this.filters.case_type_id;
       if (this.filters.requester_id) p.requester_id = this.filters.requester_id;
       if (this.filters.item_type) p.item_type = this.filters.item_type;
       if (this.filters.q) p.q = this.filters.q;
-      const due = this.quickFilter === 'overdue' ? 'overdue' : this.filters.due;
-      if (due) p.due = due;
+      if (this.filters.due) p.due = this.filters.due;
       if (this.sortBy) {
         p.sort_by = this.sortBy;
         p.sort_order = this.sortOrder || 'asc';
@@ -579,19 +651,6 @@ export default {
           Math.ceil(this.totalCount / this.perPage)
         );
         this.$store.dispatch('caseTickets/fetchMyTasks', this.buildParams());
-      }
-    },
-    async refreshOverdueCount() {
-      try {
-        const { data } = await CaseTasksAPI.getMine({
-          assignee_id: 'all',
-          status: 'pending',
-          due: 'overdue',
-          page: 1,
-        });
-        this.overdueCount = (data.meta && data.meta.count) || 0;
-      } catch (e) {
-        this.overdueCount = 0;
       }
     },
     onQuickTabChange(index) {
@@ -630,10 +689,9 @@ export default {
       this.currentPage = 1;
       this.fetch();
     },
-    // Actualiza la tabla (y el contador de vencidas) conservando filtros y página.
+    // Actualiza la tabla conservando filtros y página.
     refresh() {
       this.fetch();
-      this.refreshOverdueCount();
     },
     changePage(page) {
       this.currentPage = page;
@@ -846,6 +904,8 @@ export default {
         due_at: this.toInputDate(task.due_at),
         status: task.status || 'pending',
         priority: task.priority || 'medium',
+        estimated_minutes: task.estimated_minutes || '',
+        planned_on: task.planned_on || '',
         // Con solicitante: se muestra fijo. Sin solicitante (tarea antigua): la
         // lista queda editable para asignarlo y guardarlo.
         requester_name: (task.requester && task.requester.name) || '',
@@ -869,7 +929,6 @@ export default {
           icon: 'checkmark',
         });
         this.fetch();
-        this.refreshOverdueCount();
       } catch (e) {
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.COMPLETE_ERROR'),
@@ -888,6 +947,8 @@ export default {
         due_at: this.toIsoUtc(this.form.due_at),
         status: this.form.status || 'pending',
         priority: this.form.priority || 'medium',
+        estimated_minutes: this.form.estimated_minutes || null,
+        planned_on: this.form.planned_on || null,
       };
       // Solicitante editable (tarea sin solicitante previo): se manda para fijarlo.
       if (!this.form.requester_locked) {
@@ -902,7 +963,6 @@ export default {
         );
         this.showModal = false;
         this.fetch();
-        this.refreshOverdueCount();
       } catch (e) {
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.INBOX.SAVE_ERROR'),
@@ -934,7 +994,6 @@ export default {
           variant: 'danger',
         });
         this.fetch();
-        this.refreshOverdueCount();
       } catch (e) {
         this.$emitter.emit('newToastMessage', {
           message: this.$t('CASE_TICKETS.TASKS.INBOX.DELETE_ERROR'),
@@ -979,6 +1038,47 @@ export default {
       const d = new Date(local);
       return Number.isNaN(d.getTime()) ? null : d.toISOString();
     },
+    minutesLabel(value) {
+      return formatMinutes(value);
+    },
+    // Plan-Bandeja-Prioridad F2 — guarda el orden propio del día (la vista ya
+    // lo muestra; si falla, se recarga lo que quedó en el servidor).
+    async savePlan(taskIds) {
+      try {
+        await CaseTasksAPI.saveMyDayPlan(localDay(), taskIds);
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.TASKS.MY_DAY.PLAN_ERROR'),
+        });
+      }
+      this.fetch();
+    },
+    // «Posponer a mañana»: la programa para mañana (sale sola del orden de hoy).
+    // El vencimiento NO se toca: es el compromiso, no la planeación.
+    async postpone(task) {
+      if (!task.case_ticket) return;
+      try {
+        await CaseTasksAPI.updateTask(task.case_ticket.id, task.id, {
+          planned_on: addDays(localDay(), 1),
+        });
+        this.$emitter.emit('caseToastMessage', {
+          message: this.$t('CASE_TICKETS.TASKS.MY_DAY.POSTPONED', {
+            task: task.title,
+          }),
+          icon: 'snooze',
+        });
+      } catch (e) {
+        this.$emitter.emit('newToastMessage', {
+          message: this.$t('CASE_TICKETS.TASKS.INBOX.SAVE_ERROR'),
+        });
+      }
+      this.fetch();
+    },
+    // «Mi día» — abrir la tarea: editar, o ver si el caso está cerrado.
+    openFromMyDay(row) {
+      if (this.ticketFrozen(row)) this.openView(row);
+      else this.openEdit(row);
+    },
     quickTabLabel(key) {
       return this.$t(`CASE_TICKETS.TASKS.INBOX.TABS.${key}`);
     },
@@ -1004,8 +1104,7 @@ export default {
           :key="f.key"
           :index="i"
           :name="quickTabLabel(f.key)"
-          :count="f.key === 'overdue' ? overdueCount : 0"
-          :show-badge="f.key === 'overdue' && overdueCount > 0"
+          :show-badge="false"
         />
       </woot-tabs>
 
@@ -1025,6 +1124,7 @@ export default {
             {{ $t('CASE_TICKETS.TASKS.INBOX.REFRESH') }}
           </woot-button>
           <select
+            v-if="!isMyDay"
             v-model="filters.status"
             class="!mb-0 text-sm w-36"
             @change="onFilterChange"
@@ -1040,6 +1140,7 @@ export default {
             </option>
           </select>
           <select
+            v-if="!isMyDay"
             v-model="filters.item_type"
             class="!mb-0 text-sm w-36"
             @change="onFilterChange"
@@ -1067,9 +1168,9 @@ export default {
             </option>
           </select>
           <select
+            v-if="!isMyDay"
             v-model="filters.due"
             class="!mb-0 text-sm w-36"
-            :disabled="quickFilter === 'overdue'"
             @change="onFilterChange"
           >
             <option value="">
@@ -1086,6 +1187,7 @@ export default {
             </option>
           </select>
           <select
+            v-if="!isMyDay"
             v-model="filters.requester_id"
             class="!mb-0 text-sm w-40"
             @change="onFilterChange"
@@ -1144,6 +1246,34 @@ export default {
     >
       {{ $t('CASE_TICKETS.LIST.LOADING') }}
     </div>
+    <!-- Plan-Bandeja-Prioridad F1 — «Mi día»: orden sugerido + agenda de hoy. -->
+    <template v-else-if="isMyDay">
+      <MyDay
+        :rows="tasks"
+        :meta="meta"
+        :page="currentPage"
+        :per-page="perPage"
+        :completing-id="completingId"
+        :ai-enabled="dayPlanAi"
+        @openTask="openFromMyDay"
+        @openTicket="openTicket"
+        @openMeeting="openMeetingTicket"
+        @complete="complete"
+        @plan="savePlan"
+        @postpone="postpone"
+      />
+      <div
+        v-if="totalCount > perPage"
+        class="flex-shrink-0 bg-white border-t dark:bg-slate-900 border-slate-50 dark:border-slate-800/50"
+      >
+        <TableFooter
+          :current-page="currentPage"
+          :total-count="totalCount"
+          :page-size="perPage"
+          @pageChange="changePage"
+        />
+      </div>
+    </template>
     <!-- Empty state -->
     <div
       v-else-if="!tasks.length"
@@ -1345,6 +1475,28 @@ export default {
               />
             </label>
 
+            <!-- Plan-Bandeja-Prioridad — cuándo PIENSA hacerla quien la hace
+                 (distinto del vencimiento). Hoy = entra a su «Mi día». -->
+            <label class="flex-1">
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CASE_TICKETS.TASKS.MODAL.PLANNED_LABEL')
+              }}</span>
+              <input
+                v-model="form.planned_on"
+                type="date"
+                :readonly="viewing"
+                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+              />
+              <span
+                v-if="plannedLate"
+                class="block mt-1 text-xs text-amber-700 dark:text-amber-300"
+              >
+                {{ $t('CASE_TICKETS.TASKS.MODAL.PLANNED_AFTER_DUE') }}
+              </span>
+            </label>
+          </div>
+
+          <div class="flex gap-3">
             <label class="flex-1">
               <span class="text-sm text-slate-700 dark:text-slate-200">{{
                 $t('CASE_TICKETS.TASKS.MODAL.PRIORITY_LABEL')
@@ -1356,6 +1508,21 @@ export default {
                   :value="key"
                 >
                   {{ label }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Plan-Bandeja-Prioridad F1 — suma a la carga de «Mi día». -->
+            <label class="flex-1">
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CASE_TICKETS.TASKS.MODAL.ESTIMATE_LABEL')
+              }}</span>
+              <select v-model="form.estimated_minutes" :disabled="viewing">
+                <option value="">
+                  {{ $t('CASE_TICKETS.TASKS.MODAL.ESTIMATE_NONE') }}
+                </option>
+                <option v-for="m in estimateOptions" :key="m" :value="m">
+                  {{ minutesLabel(m) }}
                 </option>
               </select>
             </label>

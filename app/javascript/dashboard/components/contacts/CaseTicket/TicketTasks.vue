@@ -15,6 +15,11 @@ import WootDropdownMenu from 'shared/components/ui/dropdown/DropdownMenu.vue';
 import WootDropdownItem from 'shared/components/ui/dropdown/DropdownItem.vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 import caseAiWriter from 'dashboard/mixins/caseAiWriter';
+import {
+  ESTIMATE_OPTIONS,
+  formatMinutes,
+  plannedAfterDue,
+} from 'dashboard/helper/caseTaskPriority';
 
 const PER_PAGE = 10;
 
@@ -77,6 +82,8 @@ export default {
         status: 'pending',
         priority: 'medium',
         milestone: false,
+        estimated_minutes: '', // Plan-Bandeja-Prioridad F1
+        planned_on: '', // «Programada para» (fecha sin hora)
         // Solicitante: si ya existe se muestra fijo (requester_locked=true); en
         // tareas antiguas sin solicitante se puede elegir de la lista y se guarda.
         requester_name: '',
@@ -119,6 +126,16 @@ export default {
     // Etiquetas de prioridad: las mismas que usa el ticket, para no traducir dos veces.
     priorityOptions() {
       return this.$t('CASE_TICKETS.PRIORITIES');
+    },
+    estimateOptions() {
+      return ESTIMATE_OPTIONS;
+    },
+    // «Programada para» después del vencimiento: se avisa, no se bloquea.
+    plannedLate() {
+      return plannedAfterDue(
+        this.form.planned_on,
+        this.toIsoUtc(this.form.due_at)
+      );
     },
     // Filtro de texto: título, descripción y responsable.
     filteredTasks() {
@@ -604,6 +621,9 @@ export default {
     priorityLabel(key) {
       return this.priorityOptions[key] || key;
     },
+    minutesLabel(value) {
+      return formatMinutes(value);
+    },
     openCreate() {
       this.editingId = null;
       this.viewing = false;
@@ -615,6 +635,8 @@ export default {
         status: 'pending',
         priority: 'medium',
         milestone: false,
+        estimated_minutes: '', // Plan-Bandeja-Prioridad F1
+        planned_on: '', // «Programada para» (fecha sin hora)
         // Solicitante = agente actual al crear (fijo; el backend lo confirma).
         requester_name: this.currentUserName,
         requester_id: '',
@@ -649,6 +671,8 @@ export default {
         status: task.status || 'pending',
         priority: task.priority || 'medium',
         milestone: !!task.milestone,
+        estimated_minutes: task.estimated_minutes || '',
+        planned_on: task.planned_on || '',
         // Con solicitante: se muestra fijo. Sin solicitante (tarea antigua): la
         // lista queda editable para asignarlo y guardarlo.
         requester_name: (task.requester && task.requester.name) || '',
@@ -666,6 +690,8 @@ export default {
         due_at: this.toIsoUtc(this.form.due_at),
         status: this.form.status || 'pending',
         priority: this.form.priority || 'medium',
+        estimated_minutes: this.form.estimated_minutes || null,
+        planned_on: this.form.planned_on || null,
       };
       if (this.allowMilestones) payload.milestone = !!this.form.milestone;
       // Solicitante editable (tarea sin solicitante previo): se manda para fijarlo.
@@ -1073,6 +1099,28 @@ export default {
               />
             </label>
 
+            <!-- Plan-Bandeja-Prioridad — cuándo PIENSA hacerla quien la hace
+                 (distinto del vencimiento). Hoy = entra a su «Mi día». -->
+            <label class="flex-1">
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CASE_TICKETS.TASKS.MODAL.PLANNED_LABEL')
+              }}</span>
+              <input
+                v-model="form.planned_on"
+                type="date"
+                :readonly="viewing"
+                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+              />
+              <span
+                v-if="plannedLate"
+                class="block mt-1 text-xs text-amber-700 dark:text-amber-300"
+              >
+                {{ $t('CASE_TICKETS.TASKS.MODAL.PLANNED_AFTER_DUE') }}
+              </span>
+            </label>
+          </div>
+
+          <div class="flex gap-3">
             <label class="flex-1">
               <span class="text-sm text-slate-700 dark:text-slate-200">{{
                 $t('CASE_TICKETS.TASKS.MODAL.PRIORITY_LABEL')
@@ -1084,6 +1132,21 @@ export default {
                   :value="key"
                 >
                   {{ label }}
+                </option>
+              </select>
+            </label>
+
+            <!-- Plan-Bandeja-Prioridad F1 — suma a la carga de «Mi día». -->
+            <label class="flex-1">
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CASE_TICKETS.TASKS.MODAL.ESTIMATE_LABEL')
+              }}</span>
+              <select v-model="form.estimated_minutes" :disabled="viewing">
+                <option value="">
+                  {{ $t('CASE_TICKETS.TASKS.MODAL.ESTIMATE_NONE') }}
+                </option>
+                <option v-for="m in estimateOptions" :key="m" :value="m">
+                  {{ minutesLabel(m) }}
                 </option>
               </select>
             </label>

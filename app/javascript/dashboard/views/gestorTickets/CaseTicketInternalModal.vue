@@ -20,6 +20,7 @@ import {
 } from 'dashboard/helper/caseWorkOrder';
 import { isProjectType, projectPayload } from 'dashboard/helper/caseProject';
 import ContactPicker from './ContactPicker.vue';
+import CommitmentFields from './commercial/CommitmentFields.vue'; // Plan-Metricas-Comercial
 
 // Espejo de Cases::PriorityMatrix (backend). impacto × urgencia → prioridad.
 const PRIORITY_MATRIX = {
@@ -30,7 +31,7 @@ const PRIORITY_MATRIX = {
 
 export default {
   name: 'CaseTicketInternalModal',
-  components: { ContactPicker },
+  components: { ContactPicker, CommitmentFields },
   props: {
     show: { type: Boolean, default: false },
     // @tickets_cases — si viene un ticket, el modal es de EDICIÓN.
@@ -60,6 +61,8 @@ export default {
         currency: '',
         expected_close_at: '',
         probability: '',
+        committed: false,
+        commit_note: '',
         // Plan-Clase-Orden-de-Trabajo F2a — datos de la orden (solo ese tipo).
         work_address: '',
         estimated_hours: '',
@@ -319,6 +322,8 @@ export default {
         currency: t.currency ?? '',
         expected_close_at: t.expected_close_at ?? '',
         probability: t.probability ?? '',
+        committed: !!t.committed,
+        commit_note: t.commit_note ?? '',
       };
       this.customValues = { ...(t.custom_attributes ?? {}) };
     },
@@ -377,6 +382,8 @@ export default {
         currency: f.currency.trim().toUpperCase() || undefined,
         expected_close_at: f.expected_close_at || undefined,
         probability: f.probability === '' ? undefined : f.probability,
+        committed: f.committed || undefined,
+        commit_note: (f.committed && f.commit_note.trim()) || undefined,
       };
     },
     // Solo lo que cambió (undefined = no se toca; null = quitar).
@@ -427,6 +434,9 @@ export default {
               .toUpperCase() || null,
           expected_close_at: f.expected_close_at || null,
           probability: f.probability === '' ? null : f.probability,
+          committed: !!f.committed,
+          commit_note:
+            (f.committed && String(f.commit_note || '').trim()) || null,
         });
       }
       try {
@@ -647,12 +657,17 @@ export default {
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
-                  {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.EXPECTED_CLOSE') }}
+                  {{
+                    form.committed
+                      ? $t('CASE_TICKETS.COMMERCIAL.COMMITMENT.DATE')
+                      : $t('CASE_TICKETS.COMMERCIAL.FIELDS.EXPECTED_CLOSE')
+                  }}
                 </span>
                 <input
                   v-model="form.expected_close_at"
                   type="date"
                   class="input"
+                  :required="form.committed"
                 />
               </label>
               <label class="flex flex-col gap-1">
@@ -669,6 +684,11 @@ export default {
                   class="input"
                 />
               </label>
+              <!-- Plan-Metricas-Comercial — el cliente ya se comprometió -->
+              <CommitmentFields
+                :committed.sync="form.committed"
+                :note.sync="form.commit_note"
+              />
             </div>
 
             <!-- Plan-Clase-Orden-de-Trabajo F2a — datos de la orden (alta y edición) -->

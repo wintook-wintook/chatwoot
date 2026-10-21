@@ -13,21 +13,23 @@ import CaseReportsAPI from 'dashboard/api/caseReports';
 import { formatHours } from 'dashboard/helper/caseWorkOrder';
 import CaseClassSwitcher from '../CaseClassSwitcher.vue';
 import CaseTypeSelect from '../filters/CaseTypeSelect.vue';
-import MetricsPeriodPicker from '../filters/MetricsPeriodPicker.vue';
+import CalendarPeriodPicker from '../filters/CalendarPeriodPicker.vue';
 import { loadCaseState, saveCaseState } from 'dashboard/helper/caseClasses';
-import { METRIC_PERIODS as PERIODS } from 'dashboard/helper/caseFilters';
+// Plan-Metricas-Comercial — mismo período de calendario que Comercial.
+import { toEpoch } from 'dashboard/helper/caseMetricsPeriod';
+import caseMetricsPeriodMixin from 'dashboard/mixins/caseMetricsPeriodMixin';
 
 const BASE = 'CASE_TICKETS.PROJECT.METRICS';
 
 export default {
   name: 'ProjectMetrics',
-  components: { CaseClassSwitcher, CaseTypeSelect, MetricsPeriodPicker },
+  components: { CaseClassSwitcher, CaseTypeSelect, CalendarPeriodPicker },
+  mixins: [caseMetricsPeriodMixin],
   props: {
     caseClass: { type: String, default: 'project' },
   },
   data() {
     return {
-      period: '90d',
       caseTypeId: '',
       assigneeId: '',
       teamId: '',
@@ -107,7 +109,7 @@ export default {
     const st = loadCaseState(this.$route.params.accountId, this.caseClass);
     const saved = st.metrics || {};
     this.caseTypeId = st.type ?? '';
-    if (PERIODS.some(p => p.key === saved.period)) this.period = saved.period;
+    this.restorePeriod(saved);
     this.assigneeId = saved.assigneeId || '';
     this.teamId = saved.teamId || '';
     this.fetch();
@@ -117,16 +119,15 @@ export default {
       return this.$t(`${BASE}.${key}`, params);
     },
     filters() {
-      const period = PERIODS.find(p => p.key === this.period);
       const f = {
         caseTypeId: this.caseTypeId || undefined,
         assigneeId: this.assigneeId || undefined,
         teamId: this.teamId || undefined,
       };
-      if (period?.days) {
-        const now = Math.floor(Date.now() / 1000);
-        f.from = now - period.days * 86400;
-        f.to = now;
+      const r = this.periodRangeOf();
+      if (r) {
+        f.from = toEpoch(r.from);
+        f.to = toEpoch(r.to);
       }
       return f;
     },
@@ -134,7 +135,7 @@ export default {
       saveCaseState(this.$route.params.accountId, this.caseClass, {
         type: this.caseTypeId,
         metrics: {
-          period: this.period,
+          ...this.periodState(),
           assigneeId: this.assigneeId,
           teamId: this.teamId,
         },
@@ -154,10 +155,6 @@ export default {
     },
     onTypeChange(id) {
       this.caseTypeId = id;
-      this.fetch();
-    },
-    setPeriod(key) {
-      this.period = key;
       this.fetch();
     },
     pct(value) {
@@ -218,7 +215,13 @@ export default {
               {{ tm.name }}
             </option>
           </select>
-          <MetricsPeriodPicker :value="period" @input="setPeriod" />
+          <CalendarPeriodPicker
+            :value="period"
+            :from="customFrom"
+            :to="customTo"
+            @input="setPeriod"
+            @custom="setCustom"
+          />
         </div>
       </div>
       <p class="m-0 text-xs text-slate-500 dark:text-slate-400">

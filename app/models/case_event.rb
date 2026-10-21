@@ -80,7 +80,9 @@ class CaseEvent < ApplicationRecord
     # @tickets_cases — Plan-Clase-Orden-de-Trabajo F2a. Al FINAL, sin reordenar nada de arriba.
     work_order_changed: 39, # cambiaron los datos de la orden (dirección, horas, facturable)
     # @tickets_cases — Plan-Clase-Proyecto P1. Al FINAL, sin reordenar nada de arriba.
-    project_changed:    40  # cambiaron los datos del proyecto (fechas, presupuesto, avance)
+    project_changed:    40, # cambiaron los datos del proyecto (fechas, presupuesto, avance)
+    # @tickets_cases — Plan-Metricas-Comercial. Al FINAL, sin reordenar nada de arriba.
+    commitment_changed: 41  # el cliente se comprometió / movió la fecha / se quitó (payload.action)
   }
 
   enum origin: { bot: 0, agent: 1, system: 2 }

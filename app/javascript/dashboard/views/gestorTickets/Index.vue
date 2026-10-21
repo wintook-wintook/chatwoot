@@ -165,11 +165,13 @@
         :stage="stageFilter"
         :sla-only="slaOverdueOnly"
         :sla-count="slaOverdueCount"
+        :committed-only="committedOnly"
         @scope="applyFilter"
         @status="onStatusChange"
         @outcome="onOutcomeChange"
         @stage="onStageChange"
         @sla="onSlaChange"
+        @committed="onCommittedChange"
       >
         <template #before>
           <CaseTypeSelect
@@ -444,6 +446,7 @@ import {
   SCOPES,
   emptyFineFilters,
   fineFiltersToParams,
+  normalizeFineFilters,
   scopeToParams,
   statusForResult,
   stageToParams,
@@ -469,10 +472,15 @@ import {
 import { formatHours } from 'dashboard/helper/caseWorkOrder'; // Plan-Clase-Orden-de-Trabajo F2b
 import {
   COMMERCIAL_CLASS,
+  COMMITTED_BADGE,
   OUTCOME_BADGE,
   POSTPONED_BADGE,
+  PROMISE_OVERDUE_BADGE,
   formatDay,
   formatMoney,
+  isOpenCommitted,
+  isoDayFromToday,
+  promiseOverdue,
 } from 'dashboard/helper/caseCommercial';
 
 // Los 13 estados de ticket (sin los estados SLA que comparten el bloque STATUSES).
@@ -535,13 +543,20 @@ const VIEW_QUERY_VERSION = 2;
 // Cualquier `query` guardado (v1 o v2) → forma completa y comparable.
 const normalizeViewQuery = (q = {}) => {
   const { postponed: legacyPostponed, ...savedFine } = q.fine || {};
-  const fine = { ...emptyFineFilters(), ...savedFine };
+  // Las fechas viejas (una clave por fecha) pasan al bloque único de fecha.
+  const fine = normalizeFineFilters(savedFine);
   if (!q.fine) {
     fine.priority = q.priority || '';
     fine.origin = q.origin || '';
     const [from, to] = Array.isArray(q.date_range) ? q.date_range : [];
-    fine.created_from = from || '';
-    fine.created_to = to || '';
+    if (from || to) {
+      Object.assign(fine, {
+        date_field: 'created',
+        date_preset: 'custom',
+        date_from: from || '',
+        date_to: to || '',
+      });
+    }
   }
   // v1 tenía «SLA vencidos» como pestaña: ahora es «Todos» + el aviso de SLA.
   const legacySla = q.quick === 'sla_overdue';
@@ -556,6 +571,7 @@ const normalizeViewQuery = (q = {}) => {
     stage: q.stage || '', // Plan-Clase-Orden-de-Trabajo F2b
     quick,
     sla_overdue: !!q.sla_overdue || legacySla,
+    committed: !!q.committed, // Plan-Metricas-Comercial — «Solo comprometidas»
     case_type_id: q.case_type_id || '',
     fine,
     sort_by: q.sort_by || 'created_at',
@@ -626,6 +642,7 @@ export default {
       // vencido aparte, y los filtros finos del botón «Filtros».
       activeFilter: 'mine',
       slaOverdueOnly: false,
+      committedOnly: false, // Plan-Metricas-Comercial — «Solo comprometidas»
       fine: emptyFineFilters(),
       activeType: '', // '' = todos, o un case_type_id
       outcomeFilter: '', // Plan-Clase-Comercial F4 — won|lost|cancelled
@@ -806,6 +823,7 @@ export default {
         stage: this.stageFilter,
         quick: this.activeFilter,
         sla_overdue: this.slaOverdueOnly,
+        committed: this.committedOnly,
         case_type_id: this.activeType,
         fine: this.fine,
         sort_by: this.sortBy,
@@ -871,22 +889,37 @@ export default {
           key: 'folio',
           title: this.$t('CASE_TICKETS.TABLE.FOLIO'),
           align: 'left',
-          width: 130,
+          width: this.activeType ? 130 : 170,
           // Folio en gris oscuro; el SLA va en un punto delante (verde a tiempo,
           // ámbar en riesgo, rojo vencido) con su nombre al pasar el mouse.
           // Solo las clases con SLA (Soporte) llevan punto.
+          // Con «Todos los tipos», debajo va el tipo de caso (punto de su color).
           renderBodyCell: ({ row }) => (
-            <span class="inline-flex items-center gap-1.5 font-mono text-sm font-semibold whitespace-nowrap text-slate-700 dark:text-slate-200">
-              {!classHasSla(row.case_type?.case_class || 'support') ? null : (
-                <span
-                  class={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${this.slaDotColor(
-                    row.sla_status
-                  )}`}
-                  title={this.statusLabel(row.sla_status || 'on_time')}
-                />
-              )}
-              {row.folio || '—'}
-            </span>
+            <div class="min-w-0">
+              <span class="inline-flex items-center gap-1.5 font-mono text-sm font-semibold whitespace-nowrap text-slate-700 dark:text-slate-200">
+                {!classHasSla(row.case_type?.case_class || 'support') ? null : (
+                  <span
+                    class={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${this.slaDotColor(
+                      row.sla_status
+                    )}`}
+                    title={this.statusLabel(row.sla_status || 'on_time')}
+                  />
+                )}
+                {row.folio || '—'}
+              </span>
+              {!this.activeType && row.case_type ? (
+                <p
+                  class="flex items-center gap-1.5 m-0 mt-1 text-xs truncate text-slate-500 dark:text-slate-400"
+                  title={row.case_type.name}
+                >
+                  <span
+                    class="inline-block w-2 h-2 rounded-sm flex-shrink-0"
+                    style={{ backgroundColor: row.case_type.color }}
+                  />
+                  <span class="truncate">{row.case_type.name}</span>
+                </p>
+              ) : null}
+            </div>
           ),
         },
         {
@@ -902,7 +935,7 @@ export default {
                 {row.contact_name || this.noContactName(row)}
               </p>
               <div class="flex items-center gap-2 mt-1 min-w-0">
-                {row.case_type ? (
+                {row.case_type && this.activeType ? (
                   <span
                     class={`${PILL} text-white flex-shrink-0`}
                     style={{ backgroundColor: row.case_type.color }}
@@ -1046,14 +1079,20 @@ export default {
       this.search = st.search || '';
       this.activeFilter = SCOPES.includes(st.scope) ? st.scope : 'mine';
       this.slaOverdueOnly = !!st.sla;
+      this.committedOnly = !!st.committed;
       const { postponed: legacyPostponed, ...savedFine } = st.fine || {};
-      this.fine = { ...emptyFineFilters(), ...savedFine };
+      this.fine = normalizeFineFilters(savedFine);
       this.activeType = st.type ?? '';
       this.statusFilter = list.status ?? 'pending';
       // Comercial arranca en «En curso»; '' guardado = el agente eligió «Todas».
       this.outcomeFilter =
         list.outcome ??
         (this.isCommercialList ? DEFAULT_COMMERCIAL_RESULT : '');
+      // «Comprometidas» fue un resultado del combo un rato: ahora es la casilla.
+      if (this.outcomeFilter === 'committed') {
+        this.outcomeFilter = DEFAULT_COMMERCIAL_RESULT;
+        this.committedOnly = true;
+      }
       // E1.3 — «Solo pospuestas» (filtro fino) pasó a ser el resultado Pospuestas.
       if (legacyPostponed && this.isCommercialList) {
         this.outcomeFilter = 'postponed';
@@ -1076,6 +1115,7 @@ export default {
         search: this.search,
         scope: this.activeFilter,
         sla: this.slaOverdueOnly,
+        committed: this.committedOnly,
         fine: this.fine,
         type: this.activeType,
         list: {
@@ -1151,6 +1191,8 @@ export default {
         delete filters.status;
         Object.assign(filters, stageToParams(this.stageFilter, this.caseClass));
       }
+      // Plan-Metricas-Comercial — se suma a todo (también al aviso de cierre vencido).
+      if (this.isCommercialList && this.committedOnly) filters.committed = true;
       // Aviso rojo de Órdenes / Comercial (el de Soporte va arriba, por SLA).
       if (this.slaOverdueOnly && alertApplies(this.alertContext)) {
         Object.assign(filters, classAlertParams(this.caseClass));
@@ -1217,6 +1259,10 @@ export default {
       this.slaOverdueOnly = on;
       this.onFilterChange();
     },
+    onCommittedChange(on) {
+      this.committedOnly = on;
+      this.onFilterChange();
+    },
     onFineChange(fine) {
       this.fine = fine;
       this.onFilterChange();
@@ -1265,6 +1311,7 @@ export default {
       this.stageFilter = q.stage;
       this.activeFilter = q.quick;
       this.slaOverdueOnly = q.sla_overdue;
+      this.committedOnly = q.committed;
       this.fine = q.fine;
       this.activeType = this.resolveSavedType(q.case_type_id, view.name);
       this.sortBy = this.sortFields.includes(q.sort_by)
@@ -1331,6 +1378,7 @@ export default {
       this.stageFilter = this.hasStageFilter ? DEFAULT_WORK_ORDER_STAGE : '';
       this.activeFilter = 'mine';
       this.slaOverdueOnly = false;
+      this.committedOnly = false;
       this.fine = emptyFineFilters();
       this.activeType = '';
       this.currentPage = 1;
@@ -1712,9 +1760,33 @@ export default {
       const column = (row.case_type?.columns || []).find(
         c => c.id === row.case_type_column_id
       );
-      return (
+      const stage = (
         <span class={`${badge} ${STAGE_PILL}`}>
           {column ? column.label : this.statusLabel(this.displayStatus(row))}
+        </span>
+      );
+      if (!isOpenCommitted(row)) return stage;
+      return (
+        <span class="flex flex-wrap items-center gap-1">
+          {stage}
+          {this.committedPill(row, badge)}
+        </span>
+      );
+    },
+    // Plan-Metricas-Comercial — «Comprometida · 24 oct» / «Promesa vencida · 24 oct».
+    committedPill(row, badge) {
+      const overdue = promiseOverdue(row, isoDayFromToday(0));
+      const key = overdue ? 'PROMISE_OVERDUE' : 'COMMITTED_ON';
+      return (
+        <span
+          class={`${badge} ${
+            overdue ? PROMISE_OVERDUE_BADGE : COMMITTED_BADGE
+          }`}
+          title={row.commit_note || ''}
+        >
+          {this.$t(`CASE_TICKETS.COMMERCIAL.COMMITMENT.${key}`, {
+            date: formatDay(row.expected_close_at),
+          })}
         </span>
       );
     },

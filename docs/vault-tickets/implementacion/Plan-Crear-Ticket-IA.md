@@ -414,3 +414,19 @@ prioridad_final  +  etiqueta de riesgo en el ticket (visible para el asesor)
 > Fuera de estas tres (y por tanto fuera de Fase 1/2): intake multimodal
 > (voz/imagen), confirmación interactiva con botones, auto-cierre + CSAT y SLA
 > proactivo. Se documentarán en un plan aparte si se retoman.
+
+## Ajuste por clases de caso (2026-10-21)
+
+- **Anti-duplicado por clase** (§11.2): `find_active_ticket(case_class:)`. Antes reusaba
+  cualquier caso abierto del contacto: con una oportunidad abierta, una solicitud de soporte
+  respondía «ya tienes el caso X» con la venta. Ahora se revisa con la clase del tipo de la
+  directiva (`tipo=`) o la del tipo por defecto y, si el intake eligió un tipo de otra clase,
+  también con esa (después del gate `ticket_worthy`).
+- **Tipo por defecto = primer tipo de Soporte** (no el primero de la lista): el alta sin IA y
+  `find_or_create_from_message` nunca crean una oportunidad/orden/proyecto por posición.
+- **El intake ve la clase** de cada tipo (Soporte / Comercial / Orden de trabajo / Proyecto,
+  con qué significa) para elegir bien.
+- **Hook del job de seguimientos**: el `message_received` / primera respuesta se anota en el
+  caso de ESA conversación (antes: el más reciente del contacto, de cualquier clase).
+- **Automatización «Asignar Caso»**: el selector muestra «Tipo · Clase».
+- Specs: `spec/services/cases/ticket_creator_service_spec.rb` (6).

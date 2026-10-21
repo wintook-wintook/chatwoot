@@ -86,7 +86,8 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
 
   def task_params
     permitted = params.require(:case_task).permit(:title, :description, :status, :priority, :assignee_id, :due_at, :position,
-                                                  :milestone) # Plan-Clase-Proyecto P2 — hito
+                                                  :milestone, # Plan-Clase-Proyecto P2 — hito
+                                                  :estimated_minutes, :planned_on) # Plan-Bandeja-Prioridad
     # El asignado debe ser un usuario de la cuenta (si no, queda sin asignar).
     permitted[:assignee_id] = Current.account.users.where(id: permitted[:assignee_id]).pick(:id) if permitted.key?(:assignee_id)
     permitted
@@ -148,7 +149,6 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
       # @tickets_cases — solicitante (quién abrió la tarea), solo lectura.
       requester: ref_user(task.requester),
       due_at: task.due_at,
-      milestone: task.milestone, # Plan-Clase-Proyecto P2
       position: task.position,
       created_at: task.created_at,
       # @tickets_cases P4 — firma de completado (quién y cuándo).
@@ -161,7 +161,13 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
       # quedó DESPUÉS de su vencimiento (mismo marcador hermano que la tarea
       # vencida). Mapa agrupado: una consulta por request, no una por fila.
       meetings_beyond_due: meetings_beyond_due_map[task.id] || 0
-    }
+    }.merge(plan_fields(task))
+  end
+
+  # Plan-Clase-Proyecto P2 (hito) · Plan-Bandeja-Prioridad (duración estimada y
+  # «Programada para»).
+  def plan_fields(task)
+    { milestone: task.milestone, estimated_minutes: task.estimated_minutes, planned_on: task.planned_on }
   end
 
   # id de tarea → nº de reuniones vivas que caen después del vencimiento de esa

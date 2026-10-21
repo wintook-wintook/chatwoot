@@ -52,6 +52,11 @@ export default {
       if (!this.isValid(next)) next = this.allowAll ? '' : this.options[0].id;
       if (String(next) !== String(this.value)) this.$emit('input', next);
     },
+    isSelected(id) {
+      const current =
+        this.value === null || this.value === undefined ? '' : this.value;
+      return String(current) === String(id);
+    },
     isValid(id) {
       if (id === '' || id === null || id === undefined) return this.allowAll;
       return this.options.some(t => String(t.id) === String(id));
@@ -66,17 +71,25 @@ export default {
 };
 </script>
 
+<!-- La opción elegida se marca en cada <option> (`selected`), no con :value en
+     el <select>: si las opciones llegan después del valor (los tipos cargan
+     tarde), el <select> se quedaba mostrando «Todos los tipos» con un tipo
+     aplicado. -->
 <template>
   <select
-    :value="value"
     class="!mb-0 text-sm w-48"
     :aria-label="$t('CASE_TICKETS.FILTERS.TYPE')"
     @change="onChange"
   >
-    <option v-if="allowAll" value="">
+    <option v-if="allowAll" value="" :selected="isSelected('')">
       {{ $t('CASE_TICKETS.FILTERS.ALL_TYPES') }}
     </option>
-    <option v-for="t in options" :key="t.id" :value="t.id">
+    <option
+      v-for="t in options"
+      :key="t.id"
+      :value="t.id"
+      :selected="isSelected(t.id)"
+    >
       {{ t.name }}
     </option>
   </select>

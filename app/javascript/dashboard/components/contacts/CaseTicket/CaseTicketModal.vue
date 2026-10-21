@@ -16,6 +16,8 @@ import {
 } from 'dashboard/helper/caseWorkOrder';
 import { isProjectType, projectPayload } from 'dashboard/helper/caseProject';
 import CaseTimeline from './CaseTimeline.vue';
+// Plan-Metricas-Comercial — «Comprometida por el cliente».
+import CommitmentFields from 'dashboard/views/gestorTickets/commercial/CommitmentFields.vue';
 
 // Espejo de Cases::PriorityMatrix (backend). impacto × urgencia → prioridad.
 const PRIORITY_MATRIX = {
@@ -26,7 +28,7 @@ const PRIORITY_MATRIX = {
 
 export default {
   name: 'CaseTicketModal',
-  components: { CaseTimeline },
+  components: { CaseTimeline, CommitmentFields },
   props: {
     show: { type: Boolean, default: false },
     contactId: { type: [Number, String], required: true },
@@ -48,6 +50,8 @@ export default {
         currency: '',
         expected_close_at: '',
         probability: '',
+        committed: false,
+        commit_note: '',
         // Plan-Clase-Orden-de-Trabajo F2a — solo se envían si el tipo es una orden.
         work_address: '',
         estimated_hours: '',
@@ -358,6 +362,8 @@ export default {
         currency: f.currency.trim().toUpperCase() || undefined,
         expected_close_at: f.expected_close_at || undefined,
         probability: f.probability === '' ? undefined : f.probability,
+        committed: f.committed || undefined,
+        commit_note: (f.committed && f.commit_note.trim()) || undefined,
       };
     },
     resetForm() {
@@ -368,6 +374,8 @@ export default {
         currency: '',
         expected_close_at: '',
         probability: '',
+        committed: false,
+        commit_note: '',
         // Plan-Clase-Orden-de-Trabajo F2a — solo se envían si el tipo es una orden.
         work_address: '',
         estimated_hours: '',
@@ -791,12 +799,17 @@ export default {
                 <span
                   class="text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
-                  {{ $t('CASE_TICKETS.COMMERCIAL.FIELDS.EXPECTED_CLOSE') }}
+                  {{
+                    form.committed
+                      ? $t('CASE_TICKETS.COMMERCIAL.COMMITMENT.DATE')
+                      : $t('CASE_TICKETS.COMMERCIAL.FIELDS.EXPECTED_CLOSE')
+                  }}
                 </span>
                 <input
                   v-model="form.expected_close_at"
                   type="date"
                   class="input"
+                  :required="form.committed"
                 />
               </label>
               <label class="flex flex-col gap-1">
@@ -813,6 +826,11 @@ export default {
                   class="input"
                 />
               </label>
+              <!-- Plan-Metricas-Comercial — el cliente ya se comprometió -->
+              <CommitmentFields
+                :committed.sync="form.committed"
+                :note.sync="form.commit_note"
+              />
             </div>
 
             <!-- Servicio afectado -->

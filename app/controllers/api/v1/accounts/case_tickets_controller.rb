@@ -112,6 +112,7 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
     per_page = [[params.fetch(:per_page, PER_PAGE_DEFAULT).to_i, 1].max, PER_PAGE_MAX].min
     tickets  = tickets.page(params[:page]).per(per_page)
 
+    @parent_projects = parent_projects_for(tickets) # una consulta para toda la página
     render json: {
       case_tickets: tickets.map { |t| ticket_json(t) },
       meta: pagination_meta(tickets).merge(
@@ -884,8 +885,23 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       progress:         summary ? summary[:progress] : ticket.progress,
       progress_manual:  ticket.progress,
       project_summary:  summary,
-      project_overdue:  ticket.project_overdue?
+      project_overdue:  ticket.project_overdue?,
+      parent_project:   parent_project_json(ticket)
     }
+  end
+
+  # Proyecto al que pertenece el caso (orden o ticket dentro de un proyecto), para
+  # mostrarlo en el detalle y volver a él. En el index viene precargado.
+  def parent_project_json(ticket)
+    return nil if ticket.project?
+
+    project = @parent_projects ? @parent_projects[ticket.id] : ticket.parent_project
+    project && { id: project.id, folio: project.folio, title: project.title }
+  end
+
+  def parent_projects_for(tickets)
+    CaseTicketRelation.project_member.where(ticket_id: tickets.map(&:id))
+                      .includes(:related_ticket).to_h { |rel| [rel.ticket_id, rel.related_ticket] }
   end
 
   # Plan-Clase-Comercial F3 — datos de la oportunidad (nil fuera de Comercial).
@@ -896,6 +912,9 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       currency:          ticket.currency,
       expected_close_at: ticket.expected_close_at,
       probability:       ticket.probability,
+      committed:         ticket.committed?, # Plan-Metricas-Comercial — «Comprometida por el cliente»
+      committed_at:      ticket.committed_at,
+      commit_note:       ticket.commit_note,
       outcome:           ticket.outcome,
       outcome_at:        ticket.outcome_at,
       outcome_reason_id: ticket.outcome_reason_id,
@@ -1299,7 +1318,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
   end
 
   # Plan-Casos E1.1 — filtros finos de oportunidades: cierre estimado en un
-  # rango (`expected_close_from`/`_to`, YYYY-MM-DD) y solo pospuestas.
+  # rango (`expected_close_from`/`_to`, YYYY-MM-DD), solo pospuestas y solo
+  # comprometidas (`committed`, Plan-Metricas-Comercial).
   def apply_commercial_filters(tickets)
     from = parse_filter_date(params[:expected_close_from])
     to   = parse_filter_date(params[:expected_close_to])
@@ -1310,7 +1330,15 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       postponed = ActiveModel::Type::Boolean.new.cast(params[:postponed])
       tickets = postponed ? tickets.where.not(postponed_until: nil) : tickets.where(postponed_until: nil)
     end
-    tickets
+    apply_committed_filter(tickets)
+  end
+
+  # committed=true → solo comprometidas por el cliente; false → sin compromiso.
+  def apply_committed_filter(tickets)
+    return tickets if params[:committed].blank?
+
+    committed = ActiveModel::Type::Boolean.new.cast(params[:committed])
+    committed ? tickets.where.not(committed_at: nil) : tickets.where(committed_at: nil)
   end
 
   # Plan-Clase-Proyecto P1 — fecha objetivo (`project_due_from`/`project_due_to`).
@@ -1331,7 +1359,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
       late = CaseMeeting.active.where(starts_at: ...Time.current).select(:case_ticket_id)
       tickets.of_class('work_order').where(id: late)
     when 'commercial'
-      tickets.of_class('commercial').where(case_tickets: { expected_close_at: ...Date.current })
+      # Con «Solo comprometidas» (`committed`) cuenta las promesas vencidas.
+      apply_committed_filter(tickets.of_class('commercial').where(case_tickets: { expected_close_at: ...Date.current }))
     when 'project'
       tickets.of_class('project').where(case_tickets: { project_due_on: ...Date.current })
     else

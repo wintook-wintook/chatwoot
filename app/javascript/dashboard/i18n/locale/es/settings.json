@@ -286,6 +286,7 @@
     "TICKET_AI": "Inteligencia Artificial",
     "TICKET_PORTALS": "Portales del cliente",
     "TICKET_COMMERCIAL_SETTINGS": "Comercial",
+    "TICKET_TASK_SETTINGS": "Tareas",
     "TICKET_SETTINGS": "Ajustes del módulo",
     "TICKET_CONFIG": "Configuración de folio",
     "TICKET_GROUP_DEFINITIONS": "Definiciones",
@@ -360,7 +361,9 @@
     "CASES_LIST": "Lista",
     "CASES_BOARD": "Tablero",
     "CASES_METRICS": "Métricas",
-    "CASES_GROUP_CONFIG": "Configuración"
+    "CASES_GROUP_CONFIG": "Configuración",
+    "BUSINESS_SUMMARY": "Resumen del negocio",
+    "BUSINESS_SUMMARY_ACCESS": "Resumen del negocio: acceso"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Facturación",

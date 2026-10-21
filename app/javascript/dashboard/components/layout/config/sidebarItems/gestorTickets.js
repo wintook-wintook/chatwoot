@@ -31,7 +31,10 @@ const gestorTickets = accountId => {
       'gestorTickets_portals',
       'gestorTickets_settings',
       'gestorTickets_commercial_settings',
+      'gestorTickets_task_settings',
       'gestorTickets_config',
+      'gestorTickets_business_summary',
+      'gestorTickets_business_summary_access',
     ],
     menuItems: [
       // ── Operación (de la clase elegida en el selector) ──
@@ -49,13 +52,6 @@ const gestorTickets = accountId => {
         toState: url('kanban'),
         toStateName: 'gestorTickets_class_board',
       },
-      {
-        icon: 'document',
-        label: 'CASES_METRICS',
-        hasSubMenu: false,
-        toState: url('metrics'),
-        toStateName: 'gestorTickets_class_metrics',
-      },
       // Tareas: de todas las clases (bandeja personal).
       {
         icon: 'checkmark-circle',
@@ -63,6 +59,23 @@ const gestorTickets = accountId => {
         hasSubMenu: false,
         toState: url('tasks'),
         toStateName: 'gestorTickets_tasks',
+      },
+      {
+        icon: 'document',
+        label: 'CASES_METRICS',
+        hasSubMenu: false,
+        toState: url('metrics'),
+        toStateName: 'gestorTickets_class_metrics',
+      },
+      // «Resumen del negocio» — todas las clases en una pantalla, para el dueño.
+      // Solo administradores y los agentes que ellos autoricen (visibleGetter).
+      {
+        icon: 'briefcase',
+        label: 'BUSINESS_SUMMARY',
+        hasSubMenu: false,
+        toState: url('summary'),
+        toStateName: 'gestorTickets_business_summary',
+        visibleGetter: 'caseTickets/getCanViewBusinessSummary',
       },
       // ── Configuración (solo administrador) ──
       {
@@ -128,6 +141,22 @@ const gestorTickets = accountId => {
             translate: true,
             toState: url('commercial-settings'),
             toStateName: 'gestorTickets_commercial_settings',
+          },
+          {
+            id: 'ticket-task-settings',
+            label: 'TICKET_TASK_SETTINGS',
+            icon: 'clipboard',
+            translate: true,
+            toState: url('task-settings'),
+            toStateName: 'gestorTickets_task_settings',
+          },
+          {
+            id: 'ticket-business-summary-access',
+            label: 'BUSINESS_SUMMARY_ACCESS',
+            icon: 'lock-shield',
+            translate: true,
+            toState: url('summary-access'),
+            toStateName: 'gestorTickets_business_summary_access',
           },
           {
             id: 'ticket-settings',
