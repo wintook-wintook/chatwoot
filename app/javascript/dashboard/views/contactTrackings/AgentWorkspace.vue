@@ -2,7 +2,8 @@
 // feat/agentes_ia_unificado — ESPACIO DEL AGENTE
 // ============================================================================
 // Todo lo de un Agente IA en una sola pantalla, sin ir y venir entre «Agentes IA»
-// y «Asistente»:
+// y «Asistente». Contenedor, encabezado (BaseSettingsHeader + BackButton) y
+// pestañas (woot-tabs) como la configuración de un inbox (fase B del ajuste visual):
 //
 //   ← Agentes IA   Nombre · Bandeja · v12
 //   ┌──────────────┬───────────────────────────────────────────┐
@@ -28,9 +29,17 @@ import Assistant from './Assistant.vue';
 import AgentVersions from './agents/AgentVersions.vue';
 import TemplateForm from 'dashboard/routes/dashboard/settings/trackingTemplates/EditTemplate.vue';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
+import BaseSettingsHeader from 'dashboard/routes/dashboard/settings/components/BaseSettingsHeader.vue';
+import BackButton from 'dashboard/components/widgets/BackButton.vue';
 
 export default {
-  components: { Assistant, AgentVersions, TemplateForm },
+  components: {
+    Assistant,
+    AgentVersions,
+    TemplateForm,
+    BaseSettingsHeader,
+    BackButton,
+  },
   data() {
     return {
       section: null,
@@ -75,6 +84,23 @@ export default {
     },
     inboxName() {
       return (this.template && this.template.inbox_name) || '';
+    },
+    // BaseSettingsHeader pide descripción: el objetivo del agente, o qué es esto.
+    description() {
+      if (this.template && this.template.objective)
+        return this.template.objective;
+      return this.isNew ? this.t('NEW_DESCRIPTION') : '';
+    },
+    // woot-tabs numera por POSICIÓN y las pestañas cambian según el rol y si el
+    // agente ya existe: se traduce posición ↔ sección.
+    sectionPosition() {
+      return Math.max(
+        0,
+        this.sections.findIndex(item => item.id === this.section)
+      );
+    },
+    listRoute() {
+      return { name: 'contact_trackings_agents' };
     },
     versionLabel() {
       return this.latestVersion
@@ -167,61 +193,54 @@ export default {
 </script>
 
 <template>
-  <div class="flex flex-col flex-1 w-full h-full min-h-0 p-4 overflow-hidden">
-    <div class="flex flex-wrap items-center gap-3 mb-3 shrink-0">
-      <woot-sidemenu-icon />
-      <woot-button
-        variant="clear"
-        color-scheme="secondary"
-        size="small"
-        icon="chevron-left"
-        @click="goBack"
-      >
-        {{ t('BACK') }}
-      </woot-button>
-      <h1
-        class="!m-0 text-xl font-bold truncate text-slate-800 dark:text-slate-100"
-      >
-        {{ title }}
-      </h1>
-      <span
-        v-if="inboxName"
-        class="px-2 py-0.5 text-xs rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
-      >
-        {{ inboxName }}
-      </span>
-      <span
-        v-if="versionLabel"
-        class="px-2 py-0.5 text-xs rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-      >
-        {{ versionLabel }}
-      </span>
-    </div>
+  <div
+    class="flex flex-col w-full h-full p-6 overflow-hidden bg-white sm:py-8 lg:px-16 dark:bg-slate-900 font-inter"
+  >
+    <div class="flex flex-col flex-1 w-full min-h-0 mx-auto max-w-8xl">
+      <div class="shrink-0">
+        <BackButton compact :back-url="listRoute" :button-label="t('BACK')" />
+        <BaseSettingsHeader :title="title" :description="description">
+          <template #actions>
+            <woot-label
+              v-if="inboxName"
+              small
+              color-scheme="primary"
+              class="!mb-0"
+              :title="inboxName"
+            />
+            <woot-label
+              v-if="versionLabel"
+              small
+              color-scheme="success"
+              class="!mb-0"
+              :title="versionLabel"
+            />
+          </template>
+        </BaseSettingsHeader>
 
-    <div class="flex flex-1 min-h-0 gap-4">
-      <nav class="flex flex-col w-44 gap-1 shrink-0" role="tablist">
-        <woot-button
-          v-for="item in sections"
-          :key="item.id"
-          size="small"
-          :variant="section === item.id ? 'smooth' : 'clear'"
-          :color-scheme="section === item.id ? 'primary' : 'secondary'"
-          class="!justify-start"
-          role="tab"
-          :aria-selected="section === item.id"
-          @click="goSection(item.id)"
+        <woot-tabs
+          class="mt-4"
+          :index="sectionPosition"
+          :border="false"
+          @change="goSection(sections[$event].id)"
         >
-          {{ t(item.label) }}
-        </woot-button>
+          <woot-tabs-item
+            v-for="(item, position) in sections"
+            :key="item.id"
+            :index="position"
+            :name="t(item.label)"
+            :show-badge="false"
+          />
+        </woot-tabs>
         <p
           v-if="!isAdmin"
-          class="!mt-3 text-xs text-slate-500 dark:text-slate-400"
+          class="mt-2 mb-0 text-sm text-slate-500 dark:text-slate-400"
         >
           {{ t('AGENT_ROLE_HINT') }}
         </p>
-      </nav>
+      </div>
 
-      <div class="flex flex-col flex-1 min-w-0 min-h-0">
+      <div class="flex flex-col flex-1 min-h-0 mt-6">
         <Assistant
           v-if="section === 'training'"
           :key="`training-${reloadKey}`"
@@ -249,6 +268,7 @@ export default {
           v-else-if="section === 'versions' && templateId"
           :key="`versions-${templateId}-${reloadKey}`"
           :template-id="templateId"
+          class="flex-1 min-h-0 overflow-auto"
           @restored="onRestored"
         />
       </div>

@@ -396,8 +396,17 @@
           "CALENDAR_EVENT_DURATION": "Appointment length",
           "TIMEZONE": "Time zone",
           "KBASE_HOOK_ID": "Knowledge integration"
+        },
+        "COLUMNS": {
+          "VERSION": "Version",
+          "SOURCE": "Source",
+          "NOTE": "Note",
+          "CHANGED": "What changed",
+          "AUTHOR": "Author",
+          "DATE": "Date"
         }
-      }
+      },
+      "NEW_DESCRIPTION": "Build it with the Assistant: chat, paste or import a prompt, or download it from the Gallery."
     },
     "SESSIONS": {
       "LOADING": "Loading conversations…",

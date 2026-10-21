@@ -396,8 +396,17 @@
           "CALENDAR_EVENT_DURATION": "Duración de la cita",
           "TIMEZONE": "Zona horaria",
           "KBASE_HOOK_ID": "Integración de conocimiento"
+        },
+        "COLUMNS": {
+          "VERSION": "Versión",
+          "SOURCE": "Origen",
+          "NOTE": "Nota",
+          "CHANGED": "Qué cambió",
+          "AUTHOR": "Autor",
+          "DATE": "Fecha"
         }
-      }
+      },
+      "NEW_DESCRIPTION": "Ármalo con el Asistente: conversa, pega o importa un prompt, o bájalo de la Galería."
     },
     "SESSIONS": {
       "LOADING": "Cargando conversaciones…",

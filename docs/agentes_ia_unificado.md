@@ -86,3 +86,16 @@ La tabla `tracking_template_versions` ya existía en `chatwoot_dev` (del F4 reve
   5. «+ Nuevo agente ▾» → Bajar de la Galería → al bajar, la ruta pasa a ese agente con «Configurar» abierto.
   6. Pestaña «En construcción» → retomar una conversación → abre en su agente.
   7. Entrar con un usuario agente: solo Ficha y Versiones.
+
+---
+
+## Ajuste visual a los componentes nativos (21/10/2026)
+
+Referencia: Ajustes › Respuestas predefinidas, Registros de auditoría y la configuración de un inbox.
+
+| Fase | Pantallas | Qué cambió | Commit |
+|---|---|---|---|
+| A | Lista, «En construcción», «Recursos» | contenedor de `SettingsWrapper` (`p-6 sm:py-8 lg:px-16`, `max-w-8xl`, `font-inter`), `BaseSettingsHeader` con «+ Nuevo agente» en `actions`, `woot-tabs`, tablas nativas (`divide-y`, `py-4 pr-4`, sin tarjeta), `TableFooter` con su clase nativa, `woot-loading-state`, `woot-label` para estados, botones de fila `tiny` | `fa66206a` |
+| B | Espacio del agente, Versiones | `BackButton` (con `back-url` a la lista: sin él haría `router.go(-1)`) + `BaseSettingsHeader` (objetivo como descripción, bandeja y versión activa como `woot-label`), `woot-tabs` horizontales en lugar del menú lateral, Versiones como tabla nativa con el diff bajo la fila | ver `git log` |
+| C | Ficha (`EditTemplate.vue`) | pendiente: campos con el estilo global, tamaños de texto nativos (a mano, sin `--fix`) | — |
+| D | Asistente por dentro | pendiente: etiquetas, botones y títulos nativos; el editor se queda | — |
