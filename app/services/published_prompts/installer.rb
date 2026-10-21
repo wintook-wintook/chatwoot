@@ -59,7 +59,10 @@ class PublishedPrompts::Installer
       keyword_actions: @publication.keyword_actions,
       user: @user,
       published_prompt: @publication,
-      published_prompt_version: @publication.version # F7: para avisar de versiones nuevas
+      published_prompt_version: @publication.version, # F7: para avisar de versiones nuevas
+      # feat/agentes_ia_unificado: la primera versión del agente dice que vino de la Galería
+      version_source: 'gallery',
+      version_note: "#{@publication.title} · v#{@publication.version}".truncate(255)
     }.merge(@publication.settings.slice(*PublishedPrompts::Snapshot::SETTINGS).symbolize_keys)
   end
 

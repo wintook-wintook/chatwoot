@@ -61,6 +61,29 @@ RSpec.describe ContactTrackings::Assistant::SaveService do
       expect(template.previous_complementary_prompt).to eq('el viejo')
     end
 
+    # feat/agentes_ia_unificado: la versión del agente dice desde dónde se hizo.
+    it 'deja una versión del agente con el origen y lo declarado en la sesión' do
+      sesion = TrackingAssistantSession.create!(account: account, user: user, tracking_template: template)
+      sesion.add_version(draft: 'el viejo', source: 'loaded')
+      sesion.add_version(draft: draft_ok, source: 'assistant', summary: 'Agregó la ruta soporte')
+      sesion.save!
+
+      guardar(draft: draft_ok, mode: 'replace', params: { template_id: template.id, session_id: sesion.id })
+
+      expect(template.versions.ordered.first).to have_attributes(source: 'assistant', note: 'Agregó la ruta soporte')
+    end
+
+    it 'si todo salió de «Configurar», la versión es configured' do
+      sesion = TrackingAssistantSession.create!(account: account, user: user, tracking_template: template)
+      sesion.add_version(draft: 'el viejo', source: 'loaded')
+      sesion.add_version(draft: draft_ok, source: 'configured', notes: ['Foro A → Foro B'])
+      sesion.save!
+
+      guardar(draft: draft_ok, mode: 'replace', params: { template_id: template.id, session_id: sesion.id })
+
+      expect(template.versions.ordered.first).to have_attributes(source: 'configured', note: 'Foro A → Foro B')
+    end
+
     it 'no toca un agente de otra cuenta' do
       ajeno = create(:account).tracking_templates.create!(name: 'Ajeno', objective: 'Otro objetivo')
 

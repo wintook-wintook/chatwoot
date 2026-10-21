@@ -78,6 +78,7 @@ class ContactTrackings::Assistant::SaveService
 
   def create
     template = @account.tracking_templates.new(
+      **version_origin,
       name: @params[:name],
       objective: @params[:objective],
       # Solo lo que la persona dijo en la conversación. Vacío es una respuesta
@@ -98,6 +99,7 @@ class ContactTrackings::Assistant::SaveService
     # El anterior se guarda ANTES de pisarlo; si el update falla, no se perdió nada.
     template.previous_complementary_prompt = template.complementary_prompt
     template.complementary_prompt = @draft
+    template.assign_attributes(version_origin)
     assign_calendars(template)
     template.save ? saved(template) : Result.new(error: :invalid, details: template.errors.full_messages)
   end
@@ -110,6 +112,25 @@ class ContactTrackings::Assistant::SaveService
 
     pedidos = Array(@params[:calendar_integration_ids]).map(&:to_i)
     template.calendar_integration_ids = UserCalendarIntegration.where(account: @account, id: pedidos).pluck(:id)
+  end
+
+  # feat/agentes_ia_unificado — la versión del agente hereda el origen de la sesión.
+  # Lo cambiado desde que se cargó o se guardó por última vez: si todo salió de la
+  # pestaña «Configurar», es `configured`; si no, `assistant` (chat o editor). La nota
+  # junta lo que el Asistente declaró de cada cambio.
+  def version_origin
+    cambios = changes_since_checkpoint
+    fuentes = cambios.pluck('source').uniq - %w[loaded saved]
+    source = fuentes.present? && fuentes.all?('configured') ? 'configured' : 'assistant'
+    notas = cambios.flat_map { |v| [v['summary'], *Array(v['notes'])] }.compact_blank.uniq
+    { version_source: source, version_note: notas.join(' · ').truncate(255).presence }
+  end
+
+  def changes_since_checkpoint
+    sesion = TrackingAssistantSession.find_by(id: @params[:session_id], account_id: @account.id)
+    versiones = Array(sesion&.draft_versions)
+    corte = versiones.rindex { |v| %w[loaded saved].include?(v['source']) }
+    corte ? versiones[(corte + 1)..] : versiones
   end
 
   # Un inbox de otra cuenta no se liga: se ignora, igual que hace el inventario.
