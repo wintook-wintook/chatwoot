@@ -398,6 +398,11 @@
           "KBASE_HOOK_ID": "Knowledge integration"
         }
       }
-    }
+    },
+    "SESSIONS": {
+      "LOADING": "Loading conversations…",
+      "DISCARD": "Delete conversation"
+    },
+    "RESOURCES_LOADING": "Loading resources…"
   }
 }

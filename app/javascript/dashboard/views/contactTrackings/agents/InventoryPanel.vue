@@ -3,7 +3,8 @@
 // ============================================================================
 // El catálogo del motor (cada directiva con su estado en la cuenta y los nombres
 // exactos para copiar) y las frases de clientes. Antes era una pestaña del
-// Asistente; vale para todos los agentes, así que vive en la lista.
+// Asistente; vale para todos los agentes, así que vive en la lista. Textos con los
+// tamaños de las pantallas nativas (fase A del ajuste visual).
 // ============================================================================
 import AssistantAPI from 'dashboard/api/assistant';
 import EngineCatalog from '../assistant/EngineCatalog.vue';
@@ -46,36 +47,36 @@ export default {
 </script>
 
 <template>
-  <div class="flex-1 min-h-0 overflow-y-auto">
-    <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
+  <div class="text-slate-700 dark:text-slate-300">
+    <p class="mb-4 text-base text-slate-600 dark:text-slate-300">
       {{ $t('TRACKING_ASSISTANT_VIEW.CATALOG_HINT') }}
     </p>
-    <p v-if="error" class="mb-3 text-xs text-red-600 dark:text-red-400">
+    <woot-loading-state
+      v-if="isLoading && !inventory"
+      :message="$t('TRACKING_TEMPLATES.RESOURCES_LOADING')"
+    />
+    <p v-if="error" class="mb-4 text-sm text-red-600 dark:text-red-400">
       {{ error }}
     </p>
 
     <EngineCatalog :catalog="catalog" />
 
-    <section
-      class="p-4 mt-4 bg-white border rounded-lg dark:bg-slate-800 border-slate-100 dark:border-slate-700"
-    >
-      <h3 class="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
+    <section class="pt-6 mt-6 border-t border-slate-50 dark:border-slate-800">
+      <h3
+        class="mb-1 text-lg font-semibold font-interDisplay text-slate-900 dark:text-slate-25"
+      >
         {{ $t('TRACKING_ASSISTANT_VIEW.PHRASES_TITLE') }}
       </h3>
-      <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
+      <p class="mb-4 text-base text-slate-600 dark:text-slate-300">
         {{ $t('TRACKING_ASSISTANT_VIEW.PHRASES_HINT') }}
       </p>
       <ul class="grid gap-1 md:grid-cols-2">
-        <li
-          v-for="phrase in phrases"
-          :key="phrase"
-          class="text-xs text-slate-600 dark:text-slate-400"
-        >
+        <li v-for="phrase in phrases" :key="phrase" class="text-sm">
           · {{ phrase }}
         </li>
         <li
           v-if="!phrases.length"
-          class="text-xs text-slate-400 dark:text-slate-500"
+          class="text-sm text-slate-500 dark:text-slate-400"
         >
           {{ $t('TRACKING_ASSISTANT_VIEW.PHRASES_EMPTY') }}
         </li>

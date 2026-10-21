@@ -23,6 +23,7 @@ import TemplateForm from './EditTemplate.vue';
 import ImportModal from './ImportModal.vue'; // proyecto@import_seguimiento
 import PublishPromptModal from './PublishPromptModal.vue'; // proyecto@publicar_prompts
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import AssistantAPI from 'dashboard/api/assistant';
 import SessionsPanel from 'dashboard/views/contactTrackings/agents/SessionsPanel.vue';
 import InventoryPanel from 'dashboard/views/contactTrackings/agents/InventoryPanel.vue';
@@ -42,6 +43,7 @@ export default {
     ImportModal,
     PublishPromptModal,
     TableFooter,
+    BaseSettingsHeader,
     SessionsPanel,
     InventoryPanel,
   },
@@ -91,6 +93,14 @@ export default {
           label: 'TRACKING_TEMPLATES.LIST_TABS.RESOURCES',
         },
       ].filter(Boolean);
+    },
+    // woot-tabs numera por POSICIÓN: dos de las tres pestañas son solo de admin, así
+    // que se traduce posición ↔ pestaña (igual que en el Asistente y en la ficha).
+    listTabPosition() {
+      return Math.max(
+        0,
+        this.listTabs.findIndex(tab => tab.id === this.listTab)
+      );
     },
     // proyecto@publicar_prompts — lo marca el super admin; sin él no se ve nada de publicar.
     canPublishPrompts() {
@@ -221,12 +231,15 @@ export default {
     auditLabel(row) {
       return AUDIT_STATUS_LABEL[row.status] || AUDIT_STATUS_LABEL.empty;
     },
-    auditClass(row) {
-      if (row.status === 'broken')
-        return 'text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-300';
-      if (row.status === 'routed')
-        return 'text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-300';
-      return 'text-slate-600 bg-slate-100 dark:bg-slate-700 dark:text-slate-300';
+    // El color del woot-label: roto en rojo, con rutas en verde, el resto neutro.
+    auditScheme(row) {
+      if (row.status === 'broken') return 'alert';
+      if (row.status === 'routed') return 'success';
+      return 'secondary';
+    },
+    auditTitle(row) {
+      const etiqueta = this.$t(this.auditLabel(row));
+      return row.defects ? `${etiqueta} · ${row.defects}` : etiqueta;
     },
     onPageChange(page) {
       this.currentPage = page;
@@ -328,373 +341,341 @@ export default {
         day: 'numeric',
       });
     },
-    truncateText(text, maxLength = 60) {
-      if (!text) return '-';
-      return text.length > maxLength
-        ? text.substring(0, maxLength) + '...'
-        : text;
-    },
   },
 };
 </script>
 
 <template>
-  <div class="flex flex-col flex-1 min-h-0 overflow-hidden p-4">
-    <!-- Header (siempre visible) -->
-    <div class="flex items-center justify-between mb-4 shrink-0">
-      <div class="flex items-center gap-2">
-        <woot-sidemenu-icon />
-        <div>
-          <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">
-            {{ $t('TRACKING_TEMPLATES.HEADER') }}
-          </h1>
-          <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
-            {{ $t('TRACKING_TEMPLATES.DESCRIPTION') }}
-          </p>
-        </div>
-      </div>
-      <div v-if="isListView" class="flex items-center gap-2">
-        <!-- proyecto@import_seguimiento: botón "Importar desde Excel" oculto
-             (v-if="false"). Se conserva el código para reactivarlo si hace falta. -->
-        <woot-button
-          v-if="false"
-          variant="smooth"
-          color-scheme="secondary"
-          icon="arrow-upload"
-          @click="showImportModal = true"
-        >
-          {{ $t('TRACKING_IMPORT.BTN_OPEN') }}
-        </woot-button>
-        <!-- feat/agentes_ia_unificado — una sola puerta para un agente nuevo, con
-             las formas de empezarlo. El Asistente y la Galería abren el espacio del
-             agente nuevo; el formulario en blanco sigue siendo esta misma vista. -->
-        <div class="relative">
+  <!-- feat/agentes_ia_unificado (fase A): mismo contenedor, encabezado, pestañas,
+       tabla y paginado que las pantallas nativas de Ajustes (SettingsWrapper,
+       BaseSettingsHeader, Respuestas predefinidas, Registros de auditoría). -->
+  <div
+    class="flex flex-col w-full h-full p-6 overflow-auto bg-white sm:py-8 lg:px-16 dark:bg-slate-900 font-inter"
+  >
+    <div class="flex flex-col w-full mx-auto max-w-8xl">
+      <BaseSettingsHeader
+        :title="$t('TRACKING_TEMPLATES.HEADER')"
+        :description="$t('TRACKING_TEMPLATES.DESCRIPTION')"
+      >
+        <template #actions>
+          <!-- El formulario en blanco no es una ruta: «Volver» regresa a la lista
+               (BackButton haría router.go(-1) y sacaría de la pantalla). -->
           <woot-button
-            icon="add"
-            color-scheme="success"
-            @click="showNewMenu = !showNewMenu"
+            v-if="isFormView"
+            variant="smooth"
+            color-scheme="secondary"
+            icon="chevron-left"
+            @click="goBackToList"
           >
-            {{ $t('TRACKING_TEMPLATES.NEW_AGENT.BUTTON') }}
+            {{ $t('TRACKING_TEMPLATES.BACK_TO_LIST') }}
           </woot-button>
-          <div
-            v-if="showNewMenu"
-            v-on-clickaway="() => (showNewMenu = false)"
-            class="dropdown-pane dropdown-pane--open !right-0 !left-auto !top-10 w-72"
+          <!-- proyecto@import_seguimiento: botón "Importar desde Excel" oculto
+               (v-if="false"). Se conserva el código para reactivarlo si hace falta. -->
+          <woot-button
+            v-if="false"
+            variant="smooth"
+            color-scheme="secondary"
+            icon="arrow-upload"
+            @click="showImportModal = true"
           >
-            <woot-dropdown-menu>
-              <woot-dropdown-item v-if="isAdmin">
-                <woot-button
-                  variant="clear"
-                  color-scheme="secondary"
-                  size="small"
-                  icon="wand"
-                  @click="newAgent()"
+            {{ $t('TRACKING_IMPORT.BTN_OPEN') }}
+          </woot-button>
+          <!-- Una sola puerta para un agente nuevo, con las formas de empezarlo. -->
+          <div v-if="isListView" class="relative">
+            <woot-button
+              class="rounded-md button nice"
+              icon="add-circle"
+              @click="showNewMenu = !showNewMenu"
+            >
+              {{ $t('TRACKING_TEMPLATES.NEW_AGENT.BUTTON') }}
+            </woot-button>
+            <div
+              v-if="showNewMenu"
+              v-on-clickaway="() => (showNewMenu = false)"
+              class="dropdown-pane dropdown-pane--open !right-0 !left-auto !top-10 w-72"
+            >
+              <woot-dropdown-menu>
+                <woot-dropdown-item v-if="isAdmin">
+                  <woot-button
+                    variant="clear"
+                    color-scheme="secondary"
+                    size="small"
+                    icon="wand"
+                    @click="newAgent()"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.NEW_AGENT.ASSISTANT') }}
+                  </woot-button>
+                </woot-dropdown-item>
+                <woot-dropdown-item v-if="isAdmin">
+                  <woot-button
+                    variant="clear"
+                    color-scheme="secondary"
+                    size="small"
+                    icon="globe"
+                    @click="newAgent({ galeria: '1' })"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.NEW_AGENT.GALLERY') }}
+                  </woot-button>
+                </woot-dropdown-item>
+                <woot-dropdown-item>
+                  <woot-button
+                    variant="clear"
+                    color-scheme="secondary"
+                    size="small"
+                    icon="document"
+                    @click="goToCreateForm"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.NEW_AGENT.FORM') }}
+                  </woot-button>
+                </woot-dropdown-item>
+              </woot-dropdown-menu>
+            </div>
+          </div>
+        </template>
+      </BaseSettingsHeader>
+
+      <!-- VISTA: FORMULARIO (agente nuevo en blanco) -->
+      <div v-if="isFormView" class="mt-6">
+        <TemplateForm
+          :mode="formMode"
+          :template-data="selectedTemplate || {}"
+          @save="onFormSave"
+          @cancel="goBackToList"
+        />
+      </div>
+
+      <template v-else>
+        <woot-tabs
+          v-if="listTabs.length > 1"
+          class="mt-4"
+          :index="listTabPosition"
+          :border="false"
+          @change="listTab = listTabs[$event].id"
+        >
+          <woot-tabs-item
+            v-for="(tab, position) in listTabs"
+            :key="tab.id"
+            :index="position"
+            :name="$t(tab.label)"
+            :count="tab.count || 0"
+            :show-badge="!!tab.count"
+          />
+        </woot-tabs>
+
+        <SessionsPanel
+          v-if="isAdmin"
+          v-show="listTab === 'sessions'"
+          class="mt-6"
+          @open="openSession"
+          @count="openSessionsCount = $event"
+        />
+        <InventoryPanel v-if="listTab === 'resources'" class="mt-6" />
+
+        <!-- VISTA: LISTA -->
+        <div
+          v-else-if="listTab === 'agents'"
+          class="mt-6 text-slate-700 dark:text-slate-300"
+        >
+          <div
+            v-if="hasTemplates"
+            class="flex flex-wrap items-center gap-3 mb-2"
+          >
+            <div class="relative flex-1 min-w-[12rem] max-w-md">
+              <fluent-icon
+                icon="search"
+                size="16"
+                class="absolute -translate-y-1/2 left-3 top-1/2 text-slate-400"
+              />
+              <input
+                type="search"
+                class="!mb-0 !pl-9"
+                :value="searchQuery"
+                :placeholder="$t('TRACKING_TEMPLATES.SEARCH_PLACEHOLDER')"
+                @input="searchQuery = $event.target.value"
+              />
+            </div>
+            <select
+              class="!mb-0 !w-56"
+              :value="selectedInboxFilter"
+              @change="selectedInboxFilter = $event.target.value"
+            >
+              <option value="">
+                {{ $t('TRACKING_TEMPLATES.ALL_CHANNELS') }}
+              </option>
+              <option
+                v-for="inbox in usedInboxes"
+                :key="inbox.id"
+                :value="inbox.id"
+              >
+                {{ inbox.name }}
+              </option>
+            </select>
+          </div>
+
+          <woot-loading-state
+            v-if="uiFlags.fetchingList"
+            :message="$t('TRACKING_TEMPLATES.LOADING')"
+          />
+          <p
+            v-else-if="!hasTemplates"
+            class="flex flex-col items-center justify-center h-full py-8 text-base text-slate-600 dark:text-slate-300"
+          >
+            {{ $t('TRACKING_TEMPLATES.NO_TEMPLATES') }}
+          </p>
+          <p
+            v-else-if="!hasResults"
+            class="flex flex-col items-center justify-center h-full py-8 text-base text-slate-600 dark:text-slate-300"
+          >
+            {{ $t('TRACKING_TEMPLATES.NO_RESULTS') }}
+          </p>
+
+          <div v-else class="min-w-full overflow-x-auto">
+            <table
+              class="min-w-full divide-y divide-slate-75 dark:divide-slate-700"
+            >
+              <thead>
+                <th
+                  v-if="isAdmin"
+                  class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
                 >
-                  {{ $t('TRACKING_TEMPLATES.NEW_AGENT.ASSISTANT') }}
-                </woot-button>
-              </woot-dropdown-item>
-              <woot-dropdown-item v-if="isAdmin">
-                <woot-button
-                  variant="clear"
-                  color-scheme="secondary"
-                  size="small"
-                  icon="globe"
-                  @click="newAgent({ galeria: '1' })"
+                  {{ $t('TRACKING_TEMPLATES.TABLE.REVIEW') }}
+                </th>
+                <th
+                  class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
                 >
-                  {{ $t('TRACKING_TEMPLATES.NEW_AGENT.GALLERY') }}
-                </woot-button>
-              </woot-dropdown-item>
-              <woot-dropdown-item>
-                <woot-button
-                  variant="clear"
-                  color-scheme="secondary"
-                  size="small"
-                  icon="document"
-                  @click="goToCreateForm"
+                  {{ $t('TRACKING_TEMPLATES.TABLE.NAME') }}
+                </th>
+                <th
+                  class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
                 >
-                  {{ $t('TRACKING_TEMPLATES.NEW_AGENT.FORM') }}
-                </woot-button>
-              </woot-dropdown-item>
-            </woot-dropdown-menu>
+                  {{ $t('TRACKING_TEMPLATES.TABLE.OBJECTIVE') }}
+                </th>
+                <th
+                  class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('TRACKING_TEMPLATES.TABLE.CHANNEL') }}
+                </th>
+                <th
+                  class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_BY') }}
+                </th>
+                <th
+                  class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
+                >
+                  {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_AT') }}
+                </th>
+                <th class="py-4" />
+              </thead>
+              <tbody
+                class="divide-y divide-slate-50 dark:divide-slate-800 text-slate-700 dark:text-slate-300"
+              >
+                <tr
+                  v-for="template in pagedTemplates"
+                  :key="template.id"
+                  class="cursor-pointer hover:bg-slate-25 dark:hover:bg-slate-800"
+                  @click="openAgent(template)"
+                >
+                  <!-- El comprobador (antes otra tabla en el Asistente); el primer
+                       defecto sale al pasar el mouse. -->
+                  <td v-if="isAdmin" class="py-4 pr-4">
+                    <woot-label
+                      v-if="auditFor(template)"
+                      v-tooltip.top="auditFor(template).headline || ''"
+                      small
+                      :title="auditTitle(auditFor(template))"
+                      :color-scheme="auditScheme(auditFor(template))"
+                      class="!mb-0"
+                    />
+                  </td>
+                  <td class="py-4 pr-4 font-medium">
+                    {{ template.name }}
+                    <!-- proyecto@publicar_prompts (F7): el autor publicó una versión nueva -->
+                    <woot-label
+                      v-if="template.published_prompt_update"
+                      v-tooltip.top="
+                        $t('TRACKING_TEMPLATES.PUBLISH.UPDATE_HINT')
+                      "
+                      small
+                      :title="updateLabel(template)"
+                      color-scheme="warning"
+                      class="!mb-0 ltr:ml-2 rtl:mr-2"
+                    />
+                    <!-- proyecto@publicar_prompts -->
+                    <woot-label
+                      v-if="canPublishPrompts && isPublished(template)"
+                      small
+                      :title="publishedLabel(template)"
+                      color-scheme="success"
+                      class="!mb-0 ltr:ml-2 rtl:mr-2"
+                    />
+                  </td>
+                  <td class="max-w-xs py-4 pr-4">
+                    <div class="line-clamp-2" :title="template.objective">
+                      {{ template.objective || '-' }}
+                    </div>
+                  </td>
+                  <td class="py-4 pr-4">
+                    <woot-label
+                      v-if="template.inbox_id"
+                      small
+                      :title="getInboxName(template)"
+                      color-scheme="primary"
+                      class="!mb-0"
+                    />
+                    <span v-else>-</span>
+                  </td>
+                  <td class="py-4 pr-4">
+                    {{ getCreatorName(template) }}
+                  </td>
+                  <td class="py-4 pr-4 whitespace-nowrap">
+                    {{ formatDate(template.created_at) }}
+                  </td>
+                  <!-- «Mejorar con el Asistente» ya no es un botón: abrir el agente
+                       lleva a su espacio, con el Asistente en «Entrenamiento». -->
+                  <td class="py-4">
+                    <div class="flex justify-end gap-1" @click.stop>
+                      <!-- proyecto@publicar_prompts — solo el usuario autorizado -->
+                      <woot-button
+                        v-if="canPublishPrompts"
+                        v-tooltip.top="$t('TRACKING_TEMPLATES.PUBLISH.BUTTON')"
+                        variant="smooth"
+                        size="tiny"
+                        color-scheme="secondary"
+                        icon="share"
+                        @click="templateToPublish = template"
+                      />
+                      <woot-button
+                        v-tooltip.top="$t('TRACKING_TEMPLATES.OPEN_PROFILE')"
+                        variant="smooth"
+                        size="tiny"
+                        color-scheme="secondary"
+                        icon="edit"
+                        @click="openAgent(template, 'profile')"
+                      />
+                      <woot-button
+                        v-tooltip.top="$t('TRACKING_TEMPLATES.DELETE.TITLE')"
+                        variant="smooth"
+                        size="tiny"
+                        color-scheme="alert"
+                        icon="dismiss-circle"
+                        @click="openDeleteConfirm(template)"
+                      />
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <TableFooter
+              :current-page="currentPage"
+              :total-count="filteredTemplates.length"
+              :page-size="perPage"
+              class="border-t border-slate-50 dark:border-slate-800 !px-0 py-4"
+              @pageChange="onPageChange"
+            />
           </div>
         </div>
-      </div>
-      <woot-button
-        v-else
-        variant="smooth"
-        color-scheme="secondary"
-        icon="chevron-left"
-        @click="goBackToList"
-      >
-        {{ $t('TRACKING_TEMPLATES.BACK_TO_LIST') }}
-      </woot-button>
-    </div>
-
-    <!-- VISTA: FORMULARIO -->
-    <div v-if="isFormView" class="flex-1 min-h-0 overflow-auto">
-      <TemplateForm
-        :mode="formMode"
-        :template-data="selectedTemplate || {}"
-        @save="onFormSave"
-        @cancel="goBackToList"
-      />
-    </div>
-
-    <!-- feat/agentes_ia_unificado — pestañas de la lista (botones y no woot-tabs:
-         woot-tabs renumera por posición y aquí dos de tres son solo de admin). -->
-    <div
-      v-if="isListView && listTabs.length > 1"
-      class="flex flex-wrap items-center gap-1 mb-3 shrink-0"
-      role="tablist"
-    >
-      <woot-button
-        v-for="tab in listTabs"
-        :key="tab.id"
-        size="small"
-        :variant="listTab === tab.id ? 'smooth' : 'clear'"
-        :color-scheme="listTab === tab.id ? 'primary' : 'secondary'"
-        role="tab"
-        :aria-selected="listTab === tab.id"
-        @click="listTab = tab.id"
-      >
-        {{ $t(tab.label) }}
-        <span v-if="tab.count" class="ml-1 text-xs opacity-70">
-          ({{ tab.count }})
-        </span>
-      </woot-button>
-    </div>
-
-    <SessionsPanel
-      v-if="isListView && isAdmin"
-      v-show="listTab === 'sessions'"
-      @open="openSession"
-      @count="openSessionsCount = $event"
-    />
-    <InventoryPanel v-if="isListView && listTab === 'resources'" />
-
-    <!-- VISTA: LISTA -->
-    <div
-      v-else-if="isListView && listTab === 'agents'"
-      class="flex flex-col flex-1 min-h-0"
-    >
-      <!-- Filtros (estilo unificado con el listado de Seguimientos) -->
-      <div
-        v-if="hasTemplates"
-        class="flex items-center gap-3 mb-4 shrink-0 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-      >
-        <div class="relative flex-1 min-w-[120px]">
-          <fluent-icon
-            icon="search"
-            size="16"
-            class="absolute -translate-y-1/2 left-2 top-1/2 text-slate-400"
-          />
-          <input
-            type="text"
-            :value="searchQuery"
-            :placeholder="$t('TRACKING_TEMPLATES.SEARCH_PLACEHOLDER')"
-            class="box-border w-full h-9 m-0 text-sm rounded-md border border-solid border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 pl-8 pr-2 outline-none focus:border-woot-500 dark:focus:border-woot-600"
-            @input="searchQuery = $event.target.value"
-          />
-        </div>
-        <select
-          :value="selectedInboxFilter"
-          class="box-border shrink-0 w-44 h-9 text-sm rounded-md border border-solid border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-2 outline-none focus:border-woot-500 dark:focus:border-woot-600"
-          @change="selectedInboxFilter = $event.target.value"
-        >
-          <option value="">{{ $t('TRACKING_TEMPLATES.ALL_CHANNELS') }}</option>
-          <option
-            v-for="inbox in usedInboxes"
-            :key="inbox.id"
-            :value="inbox.id"
-          >
-            {{ inbox.name }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Loading -->
-      <div
-        v-if="uiFlags.fetchingList"
-        class="flex items-center justify-center py-12"
-      >
-        <span class="text-slate-500 dark:text-slate-400">
-          {{ $t('TRACKING_TEMPLATES.LOADING') }}
-        </span>
-      </div>
-
-      <!-- Empty state -->
-      <div
-        v-else-if="!hasTemplates"
-        class="flex flex-col items-center justify-center py-16 text-center"
-      >
-        <fluent-icon
-          icon="document-outline"
-          size="48"
-          class="text-slate-300 dark:text-slate-600 mb-4"
-        />
-        <p class="text-slate-500 dark:text-slate-400 max-w-md">
-          {{ $t('TRACKING_TEMPLATES.NO_TEMPLATES') }}
-        </p>
-      </div>
-
-      <!-- No results -->
-      <div
-        v-else-if="!hasResults"
-        class="flex flex-col items-center justify-center py-12 text-center"
-      >
-        <p class="text-slate-500 dark:text-slate-400">
-          {{ $t('TRACKING_TEMPLATES.NO_RESULTS') }}
-        </p>
-      </div>
-
-      <!-- Table -->
-      <div
-        v-else
-        class="flex-1 min-h-0 overflow-auto rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700"
-      >
-        <table class="w-full text-sm">
-          <thead class="sticky top-0 z-10 bg-white dark:bg-slate-800">
-            <tr
-              class="text-left text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700"
-            >
-              <th v-if="isAdmin" class="p-3">
-                {{ $t('TRACKING_TEMPLATES.TABLE.REVIEW') }}
-              </th>
-              <th class="p-3">
-                {{ $t('TRACKING_TEMPLATES.TABLE.NAME') }}
-              </th>
-              <th class="p-3">
-                {{ $t('TRACKING_TEMPLATES.TABLE.OBJECTIVE') }}
-              </th>
-              <th class="p-3">
-                {{ $t('TRACKING_TEMPLATES.TABLE.CHANNEL') }}
-              </th>
-              <th class="p-3">
-                {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_BY') }}
-              </th>
-              <th class="p-3 whitespace-nowrap">
-                {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_AT') }}
-              </th>
-              <th class="p-3 text-right whitespace-nowrap">
-                {{ $t('TRACKING_TEMPLATES.TABLE.ACTIONS') }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="template in pagedTemplates"
-              :key="template.id"
-              class="border-b cursor-pointer border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
-              @click="openAgent(template)"
-            >
-              <!-- feat/agentes_ia_unificado — lo que antes era la tabla «Agentes IA»
-                   del Asistente: el comprobador, con el primer defecto a la mano. -->
-              <td v-if="isAdmin" class="p-3">
-                <span
-                  v-if="auditFor(template)"
-                  v-tooltip="auditFor(template).headline || ''"
-                  class="text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap"
-                  :class="auditClass(auditFor(template))"
-                >
-                  {{ $t(auditLabel(auditFor(template))) }}
-                  <template v-if="auditFor(template).defects">
-                    · {{ auditFor(template).defects }}
-                  </template>
-                </span>
-              </td>
-              <td class="p-3">
-                <span
-                  class="text-sm font-medium text-slate-800 dark:text-slate-200"
-                >
-                  {{ template.name }}
-                </span>
-                <!-- proyecto@publicar_prompts (F7): el autor publicó una versión nueva -->
-                <woot-label
-                  v-if="template.published_prompt_update"
-                  v-tooltip="$t('TRACKING_TEMPLATES.PUBLISH.UPDATE_HINT')"
-                  small
-                  :title="updateLabel(template)"
-                  color-scheme="warning"
-                  class="ltr:ml-2 rtl:mr-2 text-xs"
-                />
-                <!-- proyecto@publicar_prompts -->
-                <woot-label
-                  v-if="canPublishPrompts && isPublished(template)"
-                  small
-                  :title="publishedLabel(template)"
-                  color-scheme="success"
-                  class="ltr:ml-2 rtl:mr-2 text-xs"
-                />
-              </td>
-              <td class="p-3">
-                <span class="text-sm text-slate-600 dark:text-slate-400">
-                  {{ truncateText(template.objective) }}
-                </span>
-              </td>
-              <td class="p-3">
-                <span
-                  v-if="template.inbox_id"
-                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-woot-50 text-woot-700 dark:bg-woot-800/30 dark:text-woot-300"
-                >
-                  {{ getInboxName(template) }}
-                </span>
-                <span v-else class="text-xs text-slate-400">-</span>
-              </td>
-              <td class="p-3">
-                <span class="text-xs text-slate-600 dark:text-slate-400">
-                  {{ getCreatorName(template) }}
-                </span>
-              </td>
-              <td class="p-3 whitespace-nowrap">
-                <span class="text-xs text-slate-500 dark:text-slate-400">
-                  {{ formatDate(template.created_at) }}
-                </span>
-              </td>
-              <td class="p-3 text-right">
-                <!-- «Mejorar con el Asistente» ya no es un botón: abrir el agente
-                     lleva a su espacio, con el Asistente en «Entrenamiento». -->
-                <div class="flex items-center justify-end gap-2" @click.stop>
-                  <!-- proyecto@publicar_prompts — solo el usuario autorizado -->
-                  <woot-button
-                    v-if="canPublishPrompts"
-                    v-tooltip="$t('TRACKING_TEMPLATES.PUBLISH.BUTTON')"
-                    variant="smooth"
-                    size="small"
-                    color-scheme="secondary"
-                    icon="share"
-                    @click="templateToPublish = template"
-                  />
-                  <woot-button
-                    v-tooltip="$t('TRACKING_TEMPLATES.OPEN_PROFILE')"
-                    variant="smooth"
-                    size="small"
-                    color-scheme="secondary"
-                    icon="edit"
-                    @click="openAgent(template, 'profile')"
-                  />
-                  <woot-button
-                    variant="smooth"
-                    size="small"
-                    color-scheme="alert"
-                    icon="delete"
-                    @click="openDeleteConfirm(template)"
-                  />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Paginado nativo (uniforme con Campañas y el listado de Seguimientos) -->
-      <TableFooter
-        v-if="hasResults"
-        class="mt-3 shrink-0 border-t border-slate-75 dark:border-slate-700/50"
-        :current-page="currentPage"
-        :total-count="filteredTemplates.length"
-        :page-size="perPage"
-        @pageChange="onPageChange"
-      />
+      </template>
 
       <!-- Import Modal - proyecto@import_seguimiento -->
       <ImportModal :show="showImportModal" @close="showImportModal = false" />

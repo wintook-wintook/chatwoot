@@ -398,7 +398,12 @@
           "KBASE_HOOK_ID": "Integración de conocimiento"
         }
       }
-    }
+    },
+    "SESSIONS": {
+      "LOADING": "Cargando conversaciones…",
+      "DISCARD": "Borrar conversación"
+    },
+    "RESOURCES_LOADING": "Cargando recursos…"
   },
   "TRACKING_IMPORT": {
     "BTN_OPEN": "Importar desde Excel",
