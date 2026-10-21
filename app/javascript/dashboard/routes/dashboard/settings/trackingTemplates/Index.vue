@@ -487,7 +487,7 @@ export default {
                 class="absolute -translate-y-1/2 left-3 top-1/2 text-slate-400"
               />
               <input
-                type="search"
+                type="text"
                 class="!mb-0 !pl-9"
                 :value="searchQuery"
                 :placeholder="$t('TRACKING_TEMPLATES.SEARCH_PLACEHOLDER')"
