@@ -181,7 +181,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantController < Api::V1::Accoun
   # `building` solo viajan si vinieron: su ausencia significa algo (ver abajo).
   def interview_args
     args = { 'messages' => interview_messages, 'draft' => params[:draft], 'one_shot' => params[:one_shot],
-             'session_id' => params[:session_id], 'inbox_id' => inbox&.id, 'locale' => I18n.locale.to_s }
+             'session_id' => params[:session_id], 'inbox_id' => inbox&.id, 'locale' => I18n.locale.to_s,
+             'template_id' => params[:template_id] }
     args['delivered_draft'] = delivered_draft if params.key?(:delivered_draft)
     args['building'] = building_param if params.key?(:building)
     args

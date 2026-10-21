@@ -477,7 +477,8 @@ export default {
       try {
         const { data } = await AssistantAPI.autosaveDraft(
           texto,
-          this.sessionId
+          this.sessionId,
+          { templateId: this.editingTemplateId }
         );
         this.lastAutosaved = texto;
         this.sessionId = data.session_id || this.sessionId;
@@ -785,6 +786,7 @@ export default {
             deliveredDraft: this.lastDelivered,
             building: this.isBuilding,
             turnId,
+            templateId: this.editingTemplateId,
           }
         );
         this.sessionId = data.session_id || this.sessionId;
@@ -1339,7 +1341,7 @@ export default {
         const { data } = await AssistantAPI.autosaveDraft(
           text,
           this.sessionId,
-          { source: 'configured', notes }
+          { source: 'configured', notes, templateId: this.editingTemplateId }
         );
         this.lastAutosaved = text;
         this.sessionId = data.session_id || this.sessionId;

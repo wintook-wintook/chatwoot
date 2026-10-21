@@ -242,6 +242,17 @@ class TrackingAssistantSession < ApplicationRecord
   # El guardado automático de lo editado a mano (ver add_version, autosave:).
   # Lo configurado en «Configurar» es su propia versión, con sus notas: no la pisa el
   # siguiente guardado automático (eso solo pasa entre autoguardados seguidos).
+  # feat/agentes_ia_unificado — una conversación abierta sobre un agente queda ligada
+  # a él desde el primer guardado, no recién al publicar: así el espacio del agente
+  # retoma su borrador al volver, y «En construcción» la abre en ese agente (publicar
+  # lo actualiza en vez de crear otro). Solo un agente de la misma cuenta, y solo si
+  # la conversación no tenía uno. No guarda.
+  def link_template(template_id)
+    return if tracking_template_id.present? || template_id.blank?
+
+    self.tracking_template = account.tracking_templates.find_by(id: template_id)
+  end
+
   def autosave!(draft, source: 'manual', notes: nil)
     if source == 'configured'
       add_version(draft: draft, source: 'configured', notes: notes)
