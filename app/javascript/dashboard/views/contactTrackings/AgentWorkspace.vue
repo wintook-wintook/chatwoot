@@ -194,7 +194,7 @@ export default {
 
 <template>
   <div
-    class="flex flex-col w-full h-full p-6 overflow-hidden bg-white sm:py-8 lg:px-16 dark:bg-slate-900 font-inter"
+    class="flex flex-col flex-1 w-full h-full min-h-0 p-6 overflow-hidden bg-white sm:py-8 lg:px-16 dark:bg-slate-900 font-inter"
   >
     <div class="flex flex-col flex-1 w-full min-h-0 mx-auto max-w-8xl">
       <div class="shrink-0">

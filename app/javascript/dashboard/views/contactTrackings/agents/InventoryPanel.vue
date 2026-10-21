@@ -47,7 +47,7 @@ export default {
 </script>
 
 <template>
-  <div class="text-slate-700 dark:text-slate-300">
+  <div class="overflow-y-auto text-slate-700 dark:text-slate-300">
     <p class="mb-4 text-base text-slate-600 dark:text-slate-300">
       {{ $t('TRACKING_ASSISTANT_VIEW.CATALOG_HINT') }}
     </p>

@@ -348,12 +348,15 @@ export default {
 <template>
   <!-- feat/agentes_ia_unificado (fase A): mismo contenedor, encabezado, pestañas,
        tabla y paginado que las pantallas nativas de Ajustes (SettingsWrapper,
-       BaseSettingsHeader, Respuestas predefinidas, Registros de auditoría). -->
+       BaseSettingsHeader, Respuestas predefinidas, Registros de auditoría).
+       La pantalla no se desplaza: encabezado, pestañas, filtros y paginado quedan
+       fijos y solo la tabla hace scroll por dentro (pedido del usuario). -->
   <div
-    class="flex flex-col w-full h-full p-6 overflow-auto bg-white sm:py-8 lg:px-16 dark:bg-slate-900 font-inter"
+    class="flex flex-col flex-1 w-full h-full min-h-0 p-6 overflow-hidden bg-white sm:py-8 lg:px-16 dark:bg-slate-900 font-inter"
   >
-    <div class="flex flex-col w-full mx-auto max-w-8xl">
+    <div class="flex flex-col flex-1 w-full min-h-0 mx-auto max-w-8xl">
       <BaseSettingsHeader
+        class="shrink-0"
         :title="$t('TRACKING_TEMPLATES.HEADER')"
         :description="$t('TRACKING_TEMPLATES.DESCRIPTION')"
       >
@@ -435,7 +438,7 @@ export default {
       </BaseSettingsHeader>
 
       <!-- VISTA: FORMULARIO (agente nuevo en blanco) -->
-      <div v-if="isFormView" class="mt-6">
+      <div v-if="isFormView" class="flex-1 min-h-0 mt-6 overflow-auto">
         <TemplateForm
           :mode="formMode"
           :template-data="selectedTemplate || {}"
@@ -447,7 +450,7 @@ export default {
       <template v-else>
         <woot-tabs
           v-if="listTabs.length > 1"
-          class="mt-4"
+          class="mt-4 shrink-0"
           :index="listTabPosition"
           :border="false"
           @change="listTab = listTabs[$event].id"
@@ -465,20 +468,23 @@ export default {
         <SessionsPanel
           v-if="isAdmin"
           v-show="listTab === 'sessions'"
-          class="mt-6"
+          class="flex-1 min-h-0 mt-6"
           @open="openSession"
           @count="openSessionsCount = $event"
         />
-        <InventoryPanel v-if="listTab === 'resources'" class="mt-6" />
+        <InventoryPanel
+          v-if="listTab === 'resources'"
+          class="flex-1 min-h-0 mt-6"
+        />
 
         <!-- VISTA: LISTA -->
         <div
           v-else-if="listTab === 'agents'"
-          class="mt-6 text-slate-700 dark:text-slate-300"
+          class="flex flex-col flex-1 min-h-0 mt-6 text-slate-700 dark:text-slate-300"
         >
           <div
             v-if="hasTemplates"
-            class="flex flex-wrap items-center gap-3 mb-2"
+            class="flex flex-wrap items-center gap-3 mb-2 shrink-0"
           >
             <div class="relative flex-1 min-w-[12rem] max-w-md">
               <fluent-icon
@@ -529,148 +535,152 @@ export default {
             {{ $t('TRACKING_TEMPLATES.NO_RESULTS') }}
           </p>
 
-          <div v-else class="min-w-full overflow-x-auto">
-            <table
-              class="min-w-full divide-y divide-slate-75 dark:divide-slate-700"
-            >
-              <thead>
-                <th
-                  v-if="isAdmin"
-                  class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
-                >
-                  {{ $t('TRACKING_TEMPLATES.TABLE.REVIEW') }}
-                </th>
-                <th
-                  class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
-                >
-                  {{ $t('TRACKING_TEMPLATES.TABLE.NAME') }}
-                </th>
-                <th
-                  class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
-                >
-                  {{ $t('TRACKING_TEMPLATES.TABLE.OBJECTIVE') }}
-                </th>
-                <th
-                  class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
-                >
-                  {{ $t('TRACKING_TEMPLATES.TABLE.CHANNEL') }}
-                </th>
-                <th
-                  class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
-                >
-                  {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_BY') }}
-                </th>
-                <th
-                  class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
-                >
-                  {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_AT') }}
-                </th>
-                <th class="py-4" />
-              </thead>
-              <tbody
-                class="divide-y divide-slate-50 dark:divide-slate-800 text-slate-700 dark:text-slate-300"
+          <div v-else class="flex flex-col flex-1 min-h-0">
+            <div class="flex-1 min-h-0 overflow-auto">
+              <table
+                class="min-w-full divide-y divide-slate-75 dark:divide-slate-700"
               >
-                <tr
-                  v-for="template in pagedTemplates"
-                  :key="template.id"
-                  class="cursor-pointer hover:bg-slate-25 dark:hover:bg-slate-800"
-                  @click="openAgent(template)"
+                <thead class="sticky top-0 z-10 bg-white dark:bg-slate-900">
+                  <th
+                    v-if="isAdmin"
+                    class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.TABLE.REVIEW') }}
+                  </th>
+                  <th
+                    class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.TABLE.NAME') }}
+                  </th>
+                  <th
+                    class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.TABLE.OBJECTIVE') }}
+                  </th>
+                  <th
+                    class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.TABLE.CHANNEL') }}
+                  </th>
+                  <th
+                    class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_BY') }}
+                  </th>
+                  <th
+                    class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_AT') }}
+                  </th>
+                  <th class="py-4" />
+                </thead>
+                <tbody
+                  class="divide-y divide-slate-50 dark:divide-slate-800 text-slate-700 dark:text-slate-300"
                 >
-                  <!-- El comprobador (antes otra tabla en el Asistente); el primer
+                  <tr
+                    v-for="template in pagedTemplates"
+                    :key="template.id"
+                    class="cursor-pointer hover:bg-slate-25 dark:hover:bg-slate-800"
+                    @click="openAgent(template)"
+                  >
+                    <!-- El comprobador (antes otra tabla en el Asistente); el primer
                        defecto sale al pasar el mouse. -->
-                  <td v-if="isAdmin" class="py-4 pr-4">
-                    <woot-label
-                      v-if="auditFor(template)"
-                      v-tooltip.top="auditFor(template).headline || ''"
-                      small
-                      :title="auditTitle(auditFor(template))"
-                      :color-scheme="auditScheme(auditFor(template))"
-                      class="!mb-0"
-                    />
-                  </td>
-                  <td class="py-4 pr-4 font-medium">
-                    {{ template.name }}
-                    <!-- proyecto@publicar_prompts (F7): el autor publicó una versión nueva -->
-                    <woot-label
-                      v-if="template.published_prompt_update"
-                      v-tooltip.top="
-                        $t('TRACKING_TEMPLATES.PUBLISH.UPDATE_HINT')
-                      "
-                      small
-                      :title="updateLabel(template)"
-                      color-scheme="warning"
-                      class="!mb-0 ltr:ml-2 rtl:mr-2"
-                    />
-                    <!-- proyecto@publicar_prompts -->
-                    <woot-label
-                      v-if="canPublishPrompts && isPublished(template)"
-                      small
-                      :title="publishedLabel(template)"
-                      color-scheme="success"
-                      class="!mb-0 ltr:ml-2 rtl:mr-2"
-                    />
-                  </td>
-                  <td class="max-w-xs py-4 pr-4">
-                    <div class="line-clamp-2" :title="template.objective">
-                      {{ template.objective || '-' }}
-                    </div>
-                  </td>
-                  <td class="py-4 pr-4">
-                    <woot-label
-                      v-if="template.inbox_id"
-                      small
-                      :title="getInboxName(template)"
-                      color-scheme="primary"
-                      class="!mb-0"
-                    />
-                    <span v-else>-</span>
-                  </td>
-                  <td class="py-4 pr-4">
-                    {{ getCreatorName(template) }}
-                  </td>
-                  <td class="py-4 pr-4 whitespace-nowrap">
-                    {{ formatDate(template.created_at) }}
-                  </td>
-                  <!-- «Mejorar con el Asistente» ya no es un botón: abrir el agente
+                    <td v-if="isAdmin" class="py-4 pr-4">
+                      <woot-label
+                        v-if="auditFor(template)"
+                        v-tooltip.top="auditFor(template).headline || ''"
+                        small
+                        :title="auditTitle(auditFor(template))"
+                        :color-scheme="auditScheme(auditFor(template))"
+                        class="!mb-0"
+                      />
+                    </td>
+                    <td class="py-4 pr-4 font-medium">
+                      {{ template.name }}
+                      <!-- proyecto@publicar_prompts (F7): el autor publicó una versión nueva -->
+                      <woot-label
+                        v-if="template.published_prompt_update"
+                        v-tooltip.top="
+                          $t('TRACKING_TEMPLATES.PUBLISH.UPDATE_HINT')
+                        "
+                        small
+                        :title="updateLabel(template)"
+                        color-scheme="warning"
+                        class="!mb-0 ltr:ml-2 rtl:mr-2"
+                      />
+                      <!-- proyecto@publicar_prompts -->
+                      <woot-label
+                        v-if="canPublishPrompts && isPublished(template)"
+                        small
+                        :title="publishedLabel(template)"
+                        color-scheme="success"
+                        class="!mb-0 ltr:ml-2 rtl:mr-2"
+                      />
+                    </td>
+                    <td class="max-w-xs py-4 pr-4">
+                      <div class="line-clamp-2" :title="template.objective">
+                        {{ template.objective || '-' }}
+                      </div>
+                    </td>
+                    <td class="py-4 pr-4">
+                      <woot-label
+                        v-if="template.inbox_id"
+                        small
+                        :title="getInboxName(template)"
+                        color-scheme="primary"
+                        class="!mb-0"
+                      />
+                      <span v-else>-</span>
+                    </td>
+                    <td class="py-4 pr-4">
+                      {{ getCreatorName(template) }}
+                    </td>
+                    <td class="py-4 pr-4 whitespace-nowrap">
+                      {{ formatDate(template.created_at) }}
+                    </td>
+                    <!-- «Mejorar con el Asistente» ya no es un botón: abrir el agente
                        lleva a su espacio, con el Asistente en «Entrenamiento». -->
-                  <td class="py-4">
-                    <div class="flex justify-end gap-1" @click.stop>
-                      <!-- proyecto@publicar_prompts — solo el usuario autorizado -->
-                      <woot-button
-                        v-if="canPublishPrompts"
-                        v-tooltip.top="$t('TRACKING_TEMPLATES.PUBLISH.BUTTON')"
-                        variant="smooth"
-                        size="tiny"
-                        color-scheme="secondary"
-                        icon="share"
-                        @click="templateToPublish = template"
-                      />
-                      <woot-button
-                        v-tooltip.top="$t('TRACKING_TEMPLATES.OPEN_PROFILE')"
-                        variant="smooth"
-                        size="tiny"
-                        color-scheme="secondary"
-                        icon="edit"
-                        @click="openAgent(template, 'profile')"
-                      />
-                      <woot-button
-                        v-tooltip.top="$t('TRACKING_TEMPLATES.DELETE.TITLE')"
-                        variant="smooth"
-                        size="tiny"
-                        color-scheme="alert"
-                        icon="dismiss-circle"
-                        @click="openDeleteConfirm(template)"
-                      />
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    <td class="py-4">
+                      <div class="flex justify-end gap-1" @click.stop>
+                        <!-- proyecto@publicar_prompts — solo el usuario autorizado -->
+                        <woot-button
+                          v-if="canPublishPrompts"
+                          v-tooltip.top="
+                            $t('TRACKING_TEMPLATES.PUBLISH.BUTTON')
+                          "
+                          variant="smooth"
+                          size="tiny"
+                          color-scheme="secondary"
+                          icon="share"
+                          @click="templateToPublish = template"
+                        />
+                        <woot-button
+                          v-tooltip.top="$t('TRACKING_TEMPLATES.OPEN_PROFILE')"
+                          variant="smooth"
+                          size="tiny"
+                          color-scheme="secondary"
+                          icon="edit"
+                          @click="openAgent(template, 'profile')"
+                        />
+                        <woot-button
+                          v-tooltip.top="$t('TRACKING_TEMPLATES.DELETE.TITLE')"
+                          variant="smooth"
+                          size="tiny"
+                          color-scheme="alert"
+                          icon="dismiss-circle"
+                          @click="openDeleteConfirm(template)"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <TableFooter
               :current-page="currentPage"
               :total-count="filteredTemplates.length"
               :page-size="perPage"
-              class="border-t border-slate-50 dark:border-slate-800 !px-0 py-4"
+              class="border-t shrink-0 border-slate-50 dark:border-slate-800 !px-0 py-4"
               @pageChange="onPageChange"
             />
           </div>

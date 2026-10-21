@@ -183,12 +183,13 @@ export default {
 </script>
 
 <template>
-  <div class="text-slate-700 dark:text-slate-300">
-    <p class="mb-4 text-base text-slate-600 dark:text-slate-300">
+  <!-- Solo la tabla hace scroll; la ayuda, los filtros y el paginado quedan fijos. -->
+  <div class="flex flex-col min-h-0 text-slate-700 dark:text-slate-300">
+    <p class="mb-4 text-base shrink-0 text-slate-600 dark:text-slate-300">
       {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_HINT') }}
     </p>
 
-    <div class="flex flex-wrap items-center gap-2 mb-2">
+    <div class="flex flex-wrap items-center gap-2 mb-2 shrink-0">
       <woot-button
         v-for="filtro in sessionFilters"
         :key="filtro.id"
@@ -216,102 +217,113 @@ export default {
       {{ $t('TRACKING_ASSISTANT_VIEW.SESSIONS_EMPTY') }}
     </p>
 
-    <div v-else class="min-w-full overflow-x-auto">
-      <table class="min-w-full divide-y divide-slate-75 dark:divide-slate-700">
-        <thead>
-          <th
-            v-for="col in sessionHeaders"
-            :key="col.key"
-            class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
-          >
-            <button
-              class="flex items-center p-0 cursor-pointer"
-              @click="sortSessionsBy(col.key)"
-            >
-              <span class="mb-0 whitespace-nowrap">{{ $t(col.label) }}</span>
-              <fluent-icon
-                v-if="sortIcon(col.key)"
-                class="ml-2"
-                :icon="sortIcon(col.key)"
-              />
-            </button>
-          </th>
-          <th class="py-4" />
-        </thead>
-        <tbody
-          class="divide-y divide-slate-50 dark:divide-slate-800 text-slate-700 dark:text-slate-300"
+    <div v-else class="flex flex-col flex-1 min-h-0">
+      <div class="flex-1 min-h-0 overflow-auto">
+        <table
+          class="min-w-full divide-y divide-slate-75 dark:divide-slate-700"
         >
-          <tr
-            v-for="row in pagedSessions"
-            :key="row.id"
-            class="cursor-pointer hover:bg-slate-25 dark:hover:bg-slate-800"
-            @click="$emit('open', row)"
+          <thead class="sticky top-0 z-10 bg-white dark:bg-slate-900">
+            <th
+              v-for="col in sessionHeaders"
+              :key="col.key"
+              class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+            >
+              <button
+                class="flex items-center p-0 cursor-pointer"
+                @click="sortSessionsBy(col.key)"
+              >
+                <span class="mb-0 whitespace-nowrap">{{ $t(col.label) }}</span>
+                <fluent-icon
+                  v-if="sortIcon(col.key)"
+                  class="ml-2"
+                  :icon="sortIcon(col.key)"
+                />
+              </button>
+            </th>
+            <th class="py-4" />
+          </thead>
+          <tbody
+            class="divide-y divide-slate-50 dark:divide-slate-800 text-slate-700 dark:text-slate-300"
           >
-            <!-- El id de la fila: lo único que distingue dos conversaciones del
+            <tr
+              v-for="row in pagedSessions"
+              :key="row.id"
+              class="cursor-pointer hover:bg-slate-25 dark:hover:bg-slate-800"
+              @click="$emit('open', row)"
+            >
+              <!-- El id de la fila: lo único que distingue dos conversaciones del
                  mismo día y el mismo agente al hablar de ellas. -->
-            <td class="py-4 pr-4 text-slate-500 dark:text-slate-400">
-              #{{ row.id }}
-            </td>
-            <td class="py-4 pr-4">
-              <woot-label
-                small
-                class="!mb-0"
-                :color-scheme="row.status === 'saved' ? 'success' : 'secondary'"
-                :title="
-                  row.status === 'saved'
-                    ? $t('TRACKING_ASSISTANT_VIEW.SESSIONS_SAVED')
-                    : $t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN')
-                "
-              />
-            </td>
-            <td class="max-w-xs py-4 pr-4 font-medium truncate">
-              {{ row.title || $t('TRACKING_ASSISTANT_VIEW.SESSIONS_UNTITLED') }}
-            </td>
-            <td class="py-4 pr-4">
-              {{
-                row.creator || $t('TRACKING_ASSISTANT_VIEW.SESSIONS_NO_CREATOR')
-              }}
-            </td>
-            <td class="py-4 pr-4">
-              {{ row.template_name || '-' }}
-            </td>
-            <td class="py-4 pr-4">
-              {{ row.routes }}
-            </td>
-            <td class="py-4 pr-4 whitespace-nowrap">
-              {{ formatDate(row.created_at) }}
-            </td>
-            <td class="py-4 pr-4 whitespace-nowrap">
-              {{ formatDate(row.updated_at) }}
-            </td>
-            <td class="py-4">
-              <div class="flex justify-end gap-1" @click.stop>
-                <woot-button
-                  v-tooltip.top="$t('TRACKING_ASSISTANT_VIEW.SESSIONS_RESUME')"
-                  variant="smooth"
-                  size="tiny"
-                  color-scheme="secondary"
-                  icon="edit"
-                  @click="$emit('open', row)"
+              <td class="py-4 pr-4 text-slate-500 dark:text-slate-400">
+                #{{ row.id }}
+              </td>
+              <td class="py-4 pr-4">
+                <woot-label
+                  small
+                  class="!mb-0"
+                  :color-scheme="
+                    row.status === 'saved' ? 'success' : 'secondary'
+                  "
+                  :title="
+                    row.status === 'saved'
+                      ? $t('TRACKING_ASSISTANT_VIEW.SESSIONS_SAVED')
+                      : $t('TRACKING_ASSISTANT_VIEW.SESSIONS_OPEN')
+                  "
                 />
-                <woot-button
-                  v-tooltip.top="$t('TRACKING_TEMPLATES.SESSIONS.DISCARD')"
-                  variant="smooth"
-                  size="tiny"
-                  color-scheme="alert"
-                  icon="dismiss-circle"
-                  @click="discardSession(row)"
-                />
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+              <td class="max-w-xs py-4 pr-4 font-medium truncate">
+                {{
+                  row.title || $t('TRACKING_ASSISTANT_VIEW.SESSIONS_UNTITLED')
+                }}
+              </td>
+              <td class="py-4 pr-4">
+                {{
+                  row.creator ||
+                  $t('TRACKING_ASSISTANT_VIEW.SESSIONS_NO_CREATOR')
+                }}
+              </td>
+              <td class="py-4 pr-4">
+                {{ row.template_name || '-' }}
+              </td>
+              <td class="py-4 pr-4">
+                {{ row.routes }}
+              </td>
+              <td class="py-4 pr-4 whitespace-nowrap">
+                {{ formatDate(row.created_at) }}
+              </td>
+              <td class="py-4 pr-4 whitespace-nowrap">
+                {{ formatDate(row.updated_at) }}
+              </td>
+              <td class="py-4">
+                <div class="flex justify-end gap-1" @click.stop>
+                  <woot-button
+                    v-tooltip.top="
+                      $t('TRACKING_ASSISTANT_VIEW.SESSIONS_RESUME')
+                    "
+                    variant="smooth"
+                    size="tiny"
+                    color-scheme="secondary"
+                    icon="edit"
+                    @click="$emit('open', row)"
+                  />
+                  <woot-button
+                    v-tooltip.top="$t('TRACKING_TEMPLATES.SESSIONS.DISCARD')"
+                    variant="smooth"
+                    size="tiny"
+                    color-scheme="alert"
+                    icon="dismiss-circle"
+                    @click="discardSession(row)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <TableFooter
         :current-page="sessionsPage"
         :total-count="visibleSessions.length"
         :page-size="SESSIONS_PER_PAGE"
-        class="border-t border-slate-50 dark:border-slate-800 !px-0 py-4"
+        class="border-t shrink-0 border-slate-50 dark:border-slate-800 !px-0 py-4"
         @pageChange="sessionsPage = $event"
       />
     </div>
