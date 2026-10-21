@@ -72,7 +72,12 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
                    validation: ContactTrackings::Assistant::ValidatorService.new(texto, account: Current.account).call }
   end
 
+  # feat/agentes_ia_unificado: un agente en uso no se borra. Se dice en qué (seguimientos
+  # activos, campañas, automatizaciones) para que la pantalla lo explique.
   def destroy
+    uso = @tracking_template.usage
+    return render json: { error: 'in_use', usage: uso }, status: :unprocessable_entity if @tracking_template.in_use?(uso)
+
     @tracking_template.destroy!
     head :ok
   end

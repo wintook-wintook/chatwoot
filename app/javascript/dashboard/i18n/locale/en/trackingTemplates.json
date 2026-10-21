@@ -19,7 +19,8 @@
       "ACTIONS": "Actions",
       "CREATED_BY": "Created by",
       "CREATED_AT": "Created",
-      "REVIEW": "Review"
+      "REVIEW": "Review",
+      "CREATED_BY_HINT": "Created by {name}"
     },
     "FORM": {
       "NAME": {
@@ -208,6 +209,12 @@
       "API": {
         "SUCCESS_MESSAGE": "AI Agent deleted successfully",
         "ERROR_MESSAGE": "Could not delete the AI agent"
+      },
+      "IN_USE": {
+        "MESSAGE": "«{name}» cannot be deleted because it is in use: {reasons}. Remove it from there first.",
+        "TRACKINGS": "{count} active tracking(s)",
+        "CAMPAIGNS": "{count} campaign(s)",
+        "AUTOMATIONS": "automation(s): {names}"
       }
     },
     "SAVE_AS_TEMPLATE": {
@@ -412,6 +419,14 @@
       "LOADING": "Loading conversations…",
       "DISCARD": "Delete conversation"
     },
-    "RESOURCES_LOADING": "Loading resources…"
+    "RESOURCES_LOADING": "Loading resources…",
+    "REVIEW": {
+      "HINT": "Checker result on the published Training. Green «with topics»: working routes. Grey «conversational»: no topics, answers with the model only (not an error). Grey «no Training»: no instructions. Red «does not run · N»: N errors the engine cannot run; open it and the Training marks where they are.",
+      "ROUTED": "With topics: it has working routes; it classifies what the customer asks and answers by topic.",
+      "CONVERSATIONAL": "Conversational: it declares no topics and answers with the model only. Not an error.",
+      "EMPTY": "No Training: it answers without its own instructions.",
+      "BROKEN": "Does not run: it has errors the engine cannot run; that part does nothing and fails silently.",
+      "FIRST_ERROR": "First error: {message}"
+    }
   }
 }

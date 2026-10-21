@@ -114,6 +114,34 @@ class TrackingTemplate < ApplicationRecord
   before_save :sync_training_structure, if: :will_save_change_to_complementary_prompt?
   after_save :record_version
 
+  # feat/agentes_ia_unificado — en qué se está usando, para no borrarlo a ciegas:
+  #   active_trackings  seguimientos que todavía corren con él (no los terminados)
+  #   campaigns         campañas que lo usan, aunque estén terminadas (la llave foránea
+  #                     no deja borrarlo: antes salía un «no se pudo eliminar» sin motivo)
+  #   automations       nombres de las automatizaciones que lo asignan (quedarían
+  #                     sin hacer nada, sin avisar)
+  def usage
+    {
+      active_trackings: ContactTracking.where(tracking_template_id: id,
+                                              status: ContactTrackings::Eligibility::ACTIVE_STATUSES).count,
+      campaigns: TrackingCampaign.where(tracking_template_id: id).count,
+      automations: automations_using.map(&:name)
+    }
+  end
+
+  def in_use?(uso = usage)
+    uso[:active_trackings].positive? || uso[:campaigns].positive? || uso[:automations].any?
+  end
+
+  # La acción guarda el id en action_params (como número o como texto).
+  def automations_using
+    AutomationRule.where(account_id: account_id).select do |regla|
+      Array(regla.actions).any? do |accion|
+        accion['action_name'] == 'assign_tracking_template' && Array(accion['action_params']).map(&:to_s).include?(id.to_s)
+      end
+    end
+  end
+
   # La estructura para mostrar: la guardada, o la del texto si el agente es anterior a
   # la columna y todavía no se corrió el backfill, o si la guardada quedó vieja —
   # las ramas empezaron a viajar en campos después del backfill, y una estructura sin

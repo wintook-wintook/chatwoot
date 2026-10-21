@@ -237,6 +237,18 @@ export default {
       if (row.status === 'routed') return 'success';
       return 'secondary';
     },
+    // Qué significa el estado y, si no ejecuta, el primer error.
+    auditTooltip(row) {
+      const estado = String(row.status || 'empty').toUpperCase();
+      const significado = this.$t(`TRACKING_TEMPLATES.REVIEW.${estado}`);
+      if (!row.headline) return significado;
+      return `${significado} ${this.$t(
+        'TRACKING_TEMPLATES.REVIEW.FIRST_ERROR',
+        {
+          message: row.headline,
+        }
+      )}`;
+    },
     auditTitle(row) {
       const etiqueta = this.$t(this.auditLabel(row));
       return row.defects ? `${etiqueta} · ${row.defects}` : etiqueta;
@@ -300,10 +312,31 @@ export default {
         );
         useAlert(this.$t('TRACKING_TEMPLATES.DELETE.API.SUCCESS_MESSAGE'));
       } catch (error) {
-        useAlert(this.$t('TRACKING_TEMPLATES.DELETE.API.ERROR_MESSAGE'));
+        const respuesta =
+          (error && error.response && error.response.data) || {};
+        useAlert(
+          respuesta.error === 'in_use'
+            ? this.inUseMessage(this.templateToDelete, respuesta.usage || {})
+            : this.$t('TRACKING_TEMPLATES.DELETE.API.ERROR_MESSAGE')
+        );
       } finally {
         this.closeDeleteConfirm();
       }
+    },
+    // feat/agentes_ia_unificado: un agente en uso no se borra; se dice en qué se usa.
+    inUseMessage(template, uso) {
+      const t = (key, args) =>
+        this.$t(`TRACKING_TEMPLATES.DELETE.IN_USE.${key}`, args);
+      const motivos = [];
+      if (uso.active_trackings)
+        motivos.push(t('TRACKINGS', { count: uso.active_trackings }));
+      if (uso.campaigns) motivos.push(t('CAMPAIGNS', { count: uso.campaigns }));
+      if (uso.automations && uso.automations.length)
+        motivos.push(t('AUTOMATIONS', { names: uso.automations.join(', ') }));
+      return t('MESSAGE', {
+        name: (template && template.name) || '',
+        reasons: motivos.join(' · '),
+      });
     },
     // proyecto@publicar_prompts
     isPublished(template) {
@@ -333,12 +366,20 @@ export default {
       }
       return '-';
     },
+    // dd/mm/aaaa hh:mm (pedido del usuario, 21/10/2026).
     formatDate(dateString) {
       if (!dateString) return '-';
-      return new Date(dateString).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
+      const fecha = new Date(dateString);
+      const dos = n => String(n).padStart(2, '0');
+      return `${dos(fecha.getDate())}/${dos(
+        fecha.getMonth() + 1
+      )}/${fecha.getFullYear()} ${dos(fecha.getHours())}:${dos(
+        fecha.getMinutes()
+      )}`;
+    },
+    creatorHint(template) {
+      return this.$t('TRACKING_TEMPLATES.TABLE.CREATED_BY_HINT', {
+        name: this.getCreatorName(template),
       });
     },
   },
@@ -540,39 +581,48 @@ export default {
               <table
                 class="min-w-full divide-y divide-slate-75 dark:divide-slate-700"
               >
+                <!-- Orden pedido por el usuario (21/10/2026): Nombre · Objetivo · Canal ·
+                     Revisión · Acciones · Fecha. «Creado por» va en el tooltip de la fecha. -->
                 <thead class="sticky top-0 z-10 bg-white dark:bg-slate-900">
                   <th
-                    v-if="isAdmin"
-                    class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
-                  >
-                    {{ $t('TRACKING_TEMPLATES.TABLE.REVIEW') }}
-                  </th>
-                  <th
-                    class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+                    class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
                     {{ $t('TRACKING_TEMPLATES.TABLE.NAME') }}
                   </th>
                   <th
-                    class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+                    class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
                     {{ $t('TRACKING_TEMPLATES.TABLE.OBJECTIVE') }}
                   </th>
                   <th
-                    class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+                    class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
                     {{ $t('TRACKING_TEMPLATES.TABLE.CHANNEL') }}
                   </th>
                   <th
-                    class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+                    v-if="isAdmin"
+                    class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
-                    {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_BY') }}
+                    <span class="inline-flex items-center gap-1">
+                      {{ $t('TRACKING_TEMPLATES.TABLE.REVIEW') }}
+                      <fluent-icon
+                        v-tooltip.top="$t('TRACKING_TEMPLATES.REVIEW.HINT')"
+                        icon="info"
+                        size="14"
+                        class="cursor-help text-slate-500 dark:text-slate-400"
+                      />
+                    </span>
+                  </th>
+                  <th
+                    class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
+                  >
+                    {{ $t('TRACKING_TEMPLATES.TABLE.ACTIONS') }}
                   </th>
                   <th
                     class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
                     {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_AT') }}
                   </th>
-                  <th class="py-4" />
                 </thead>
                 <tbody
                   class="divide-y divide-slate-50 dark:divide-slate-800 text-slate-700 dark:text-slate-300"
@@ -583,18 +633,6 @@ export default {
                     class="cursor-pointer hover:bg-slate-25 dark:hover:bg-slate-800"
                     @click="openAgent(template)"
                   >
-                    <!-- El comprobador (antes otra tabla en el Asistente); el primer
-                       defecto sale al pasar el mouse. -->
-                    <td v-if="isAdmin" class="py-4 pr-4">
-                      <woot-label
-                        v-if="auditFor(template)"
-                        v-tooltip.top="auditFor(template).headline || ''"
-                        small
-                        :title="auditTitle(auditFor(template))"
-                        :color-scheme="auditScheme(auditFor(template))"
-                        class="!mb-0"
-                      />
-                    </td>
                     <td class="py-4 pr-4 font-medium">
                       {{ template.name }}
                       <!-- proyecto@publicar_prompts (F7): el autor publicó una versión nueva -->
@@ -632,16 +670,21 @@ export default {
                       />
                       <span v-else>-</span>
                     </td>
+                    <!-- El comprobador sobre el Entrenamiento publicado. El tooltip dice
+                         qué significa el estado y, si no ejecuta, el primer error. -->
+                    <td v-if="isAdmin" class="py-4 pr-4">
+                      <woot-label
+                        v-if="auditFor(template)"
+                        v-tooltip.top="auditTooltip(auditFor(template))"
+                        small
+                        :title="auditTitle(auditFor(template))"
+                        :color-scheme="auditScheme(auditFor(template))"
+                        class="!mb-0 cursor-help"
+                      />
+                    </td>
                     <td class="py-4 pr-4">
-                      {{ getCreatorName(template) }}
-                    </td>
-                    <td class="py-4 pr-4 whitespace-nowrap">
-                      {{ formatDate(template.created_at) }}
-                    </td>
-                    <!-- «Mejorar con el Asistente» ya no es un botón: abrir el agente
-                       lleva a su espacio, con el Asistente en «Entrenamiento». -->
-                    <td class="py-4">
-                      <div class="flex justify-end gap-1" @click.stop>
+                      <!-- Abrir o editar = clic en la fila: aquí solo lo que no es abrir. -->
+                      <div class="flex items-center gap-2" @click.stop>
                         <!-- proyecto@publicar_prompts — solo el usuario autorizado -->
                         <woot-button
                           v-if="canPublishPrompts"
@@ -649,28 +692,26 @@ export default {
                             $t('TRACKING_TEMPLATES.PUBLISH.BUTTON')
                           "
                           variant="smooth"
-                          size="tiny"
-                          color-scheme="secondary"
-                          icon="share"
+                          size="small"
+                          color-scheme="primary"
+                          icon="globe"
                           @click="templateToPublish = template"
-                        />
-                        <woot-button
-                          v-tooltip.top="$t('TRACKING_TEMPLATES.OPEN_PROFILE')"
-                          variant="smooth"
-                          size="tiny"
-                          color-scheme="secondary"
-                          icon="edit"
-                          @click="openAgent(template, 'profile')"
                         />
                         <woot-button
                           v-tooltip.top="$t('TRACKING_TEMPLATES.DELETE.TITLE')"
                           variant="smooth"
-                          size="tiny"
+                          size="small"
                           color-scheme="alert"
-                          icon="dismiss-circle"
+                          icon="delete"
                           @click="openDeleteConfirm(template)"
                         />
                       </div>
+                    </td>
+                    <td
+                      v-tooltip.top="creatorHint(template)"
+                      class="py-4 pr-4 whitespace-nowrap"
+                    >
+                      {{ formatDate(template.created_at) }}
                     </td>
                   </tr>
                 </tbody>

@@ -19,7 +19,8 @@
       "ACTIONS": "Acciones",
       "CREATED_BY": "Creado por",
       "CREATED_AT": "Creado",
-      "REVIEW": "Revisión"
+      "REVIEW": "Revisión",
+      "CREATED_BY_HINT": "Creado por {name}"
     },
     "FORM": {
       "NAME": {
@@ -208,6 +209,12 @@
       "API": {
         "SUCCESS_MESSAGE": "Agente IA eliminado correctamente",
         "ERROR_MESSAGE": "No se pudo eliminar el agente IA"
+      },
+      "IN_USE": {
+        "MESSAGE": "No se puede borrar «{name}» porque está en uso: {reasons}. Quítalo de ahí primero.",
+        "TRACKINGS": "{count} seguimiento(s) activo(s)",
+        "CAMPAIGNS": "{count} campaña(s)",
+        "AUTOMATIONS": "automatización(es): {names}"
       }
     },
     "SAVE_AS_TEMPLATE": {
@@ -412,7 +419,15 @@
       "LOADING": "Cargando conversaciones…",
       "DISCARD": "Borrar conversación"
     },
-    "RESOURCES_LOADING": "Cargando recursos…"
+    "RESOURCES_LOADING": "Cargando recursos…",
+    "REVIEW": {
+      "HINT": "Resultado del comprobador sobre el Entrenamiento publicado. Verde «con temas»: rutas que funcionan. Gris «conversacional»: sin temas, contesta solo con el modelo (no es un error). Gris «sin Entrenamiento»: no tiene instrucciones. Rojo «no ejecuta · N»: N errores que el motor no puede ejecutar; ábrelo y el Entrenamiento te marca dónde están.",
+      "ROUTED": "Con temas: tiene rutas que funcionan; clasifica lo que pide el cliente y responde según el tema.",
+      "CONVERSATIONAL": "Conversacional: no declara temas y contesta solo con el modelo. No es un error.",
+      "EMPTY": "Sin Entrenamiento: responde sin instrucciones propias.",
+      "BROKEN": "No ejecuta: tiene errores que el motor no puede ejecutar; esa parte no hace nada y falla sin avisar.",
+      "FIRST_ERROR": "Primer error: {message}"
+    }
   },
   "TRACKING_IMPORT": {
     "BTN_OPEN": "Importar desde Excel",
