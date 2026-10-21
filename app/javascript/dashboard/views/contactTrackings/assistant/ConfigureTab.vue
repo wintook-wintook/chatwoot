@@ -15,6 +15,11 @@
 // Asistente, que lo pone en el editor y lo guarda como versión «Configurado». Esta
 // pestaña no guarda nada por su cuenta. Lo que se crea (fuente, etiqueta, archivo)
 // avisa con ASSISTANT_SOURCES_CHANGED, igual que desde la ruta.
+//
+// feat/configurar_siempre: lo que ya existe (✔) sale junto a lo que falta y también se
+// puede cambiar por otra fuente de la cuenta o por una nueva creada aquí. La búsqueda de
+// datos de otro negocio corre sola al abrir la pestaña; se recuerda por texto, así que
+// solo vuelve a llamar a la IA si el Entrenamiento cambió desde la última búsqueda.
 // Plan: docs/adaptar_prompts_publicados_plan.md
 // ============================================================================
 import { mapGetters } from 'vuex';
@@ -28,6 +33,10 @@ import { ASSISTANT_SOURCES_CHANGED } from './sourceDirective';
 
 const GROUPS = ['business', 'sources', 'case_types', 'outside'];
 
+// La pestaña se destruye al cambiar a otra; la última búsqueda con IA queda aquí para no
+// repetirla con el mismo texto.
+const suggestionCache = { text: null, variables: [] };
+
 export default {
   components: { AddSourceModal },
   props: {
@@ -39,7 +48,6 @@ export default {
   data() {
     return {
       answers: {},
-      showOk: false,
       isApplying: false,
       creatingSource: null,
       savingSource: false,
@@ -47,6 +55,9 @@ export default {
       // F7: lo que el modelo señaló como datos de un negocio (null = no se ha buscado).
       suggestions: null,
       chosenSuggestions: [],
+      // Con qué texto se buscó (para ofrecer «Buscar otra vez» si cambió).
+      suggestedFor: null,
+      suggestError: null,
       isSuggesting: false,
       isMarking: false,
     };
@@ -59,10 +70,14 @@ export default {
     ready() {
       return this.items.filter(item => item.status === 'ok');
     },
+    // En cada grupo, primero lo que falta y luego lo que ya existe.
     groups() {
       return GROUPS.map(group => ({
         group,
-        items: this.missing.filter(item => item.group === group),
+        items: [
+          ...this.missing.filter(item => item.group === group),
+          ...this.ready.filter(item => item.group === group),
+        ],
       })).filter(bloque => bloque.items.length);
     },
     // Solo lo que tiene valor: un campo vacío deja la marca como estaba.
@@ -80,9 +95,18 @@ export default {
     canApply() {
       return Object.keys(this.filledAnswers).length > 0 && !this.isApplying;
     },
-    okToggleLabel() {
-      const flecha = this.showOk ? '▾' : '▸';
-      return `${flecha} ${this.t('OK_TOGGLE', { count: this.ready.length })}`;
+    // Lo que ya existe se crea en blanco: el nombre actual ya está tomado.
+    creatingInitial() {
+      const item = this.creatingSource;
+      if (!item) return null;
+      return this.isOk(item) ? { ...item.create, name: '' } : item.create;
+    },
+    canSearchAgain() {
+      return (
+        this.suggestions !== null &&
+        !this.isSuggesting &&
+        this.suggestedFor !== this.draft
+      );
     },
   },
   watch: {
@@ -92,7 +116,7 @@ export default {
       immediate: true,
       handler(lista) {
         const faltan = lista.filter(i => i.status === 'missing');
-        const vigentes = new Set(faltan.map(i => i.key));
+        const vigentes = new Set(lista.map(i => i.key));
         const respuestas = Object.fromEntries(
           Object.entries(this.answers).filter(([key]) => vigentes.has(key))
         );
@@ -104,6 +128,9 @@ export default {
         this.answers = respuestas;
       },
     },
+  },
+  mounted() {
+    this.autoSuggest();
   },
   methods: {
     t(key, args) {
@@ -117,8 +144,8 @@ export default {
       if (item.kind === 'variable') return item.name;
       return item.wrote || item.name || this.kindLabel(item);
     },
-    readyLabel(item) {
-      return `✔ ${this.title(item)}`;
+    isOk(item) {
+      return item.status === 'ok';
     },
     // ↗: se abre en otra pestaña del navegador.
     linkLabel(item) {
@@ -131,8 +158,23 @@ export default {
     isSource(item) {
       return item.fix === 'create_inline';
     },
+    // Para lo que ya existe no se ofrece el mismo nombre: cambiarlo por sí mismo no hace nada.
+    optionsFor(item) {
+      const opciones = Array.isArray(item.options) ? item.options : [];
+      if (!this.isOk(item)) return opciones;
+      const actual = String(item.name || '').toLowerCase();
+      return opciones.filter(opcion => opcion.toLowerCase() !== actual);
+    },
     hasOptions(item) {
-      return Array.isArray(item.options) && item.options.length > 0;
+      return this.optionsFor(item).length > 0;
+    },
+    selectPlaceholder(item) {
+      if (this.isOk(item)) return this.t('CHANGE_TO');
+      return item.fix === 'select' ? this.t('CHOOSE') : this.t('USE_OTHER');
+    },
+    createLabel(item) {
+      if (this.isOk(item)) return this.t('CREATE_OTHER');
+      return this.t('CREATE_SOURCE', { name: item.name });
     },
     setAnswer(key, value) {
       this.answers = { ...this.answers, [key]: value };
@@ -152,12 +194,19 @@ export default {
       emitter.emit(ASSISTANT_SOURCES_CHANGED);
     },
     // ── Crear la fuente ahí mismo (mismo modal y misma API que desde la ruta) ──
+    // Si reemplaza a una que ya existía, la nueva queda elegida para «Aplicar».
     async createSource(payload) {
+      const item = this.creatingSource;
       this.savingSource = true;
       try {
         await KnowledgeBaseAPI.createSource(this.accountId, payload);
         this.creatingSource = null;
-        useAlert(this.t('SOURCE_ADDED'));
+        if (item && this.isOk(item)) {
+          this.setAnswer(item.key, payload.name);
+          useAlert(this.t('SOURCE_ADDED_CHANGE', { name: payload.name }));
+        } else {
+          useAlert(this.t('SOURCE_ADDED'));
+        }
         this.refresh();
       } catch (error) {
         const respuesta =
@@ -215,19 +264,39 @@ export default {
       }
     },
     // ── F7: el modelo propone datos de un negocio; los elegidos pasan a variables ──
+    // Al abrir la pestaña: lo ya buscado con este mismo texto se reusa sin llamar a la IA.
+    autoSuggest() {
+      if (!this.draft.trim()) return;
+      if (suggestionCache.text === this.draft) {
+        this.showSuggestions(suggestionCache.variables, this.draft);
+        return;
+      }
+      this.suggest();
+    },
     async suggest() {
+      const texto = this.draft;
       this.isSuggesting = true;
+      this.suggestError = null;
       try {
-        const { data } = await AssistantAPI.suggestVariables(this.draft);
-        if (data.error)
-          useAlert(this.t(`SUGGEST_ERROR_${data.error.toUpperCase()}`));
-        this.suggestions = (data.variables || []).map(v => ({ ...v }));
-        this.chosenSuggestions = this.suggestions.map(v => v.text);
+        const { data } = await AssistantAPI.suggestVariables(texto);
+        if (data.error) {
+          this.suggestError = `SUGGEST_ERROR_${data.error.toUpperCase()}`;
+          return;
+        }
+        const variables = data.variables || [];
+        suggestionCache.text = texto;
+        suggestionCache.variables = variables;
+        this.showSuggestions(variables, texto);
       } catch (error) {
-        useAlert(this.t('SUGGEST_ERROR_FAILED'));
+        this.suggestError = 'SUGGEST_ERROR_FAILED';
       } finally {
         this.isSuggesting = false;
       }
+    },
+    showSuggestions(variables, texto) {
+      this.suggestions = variables.map(v => ({ ...v }));
+      this.chosenSuggestions = this.suggestions.map(v => v.text);
+      this.suggestedFor = texto;
     },
     async markVariables() {
       const elegidas = (this.suggestions || []).filter(v =>
@@ -247,6 +316,7 @@ export default {
         this.$emit('applied', { ...data, notes: notas });
         useAlert(this.t('MARKED', { count: elegidas.length }));
         this.suggestions = null;
+        suggestionCache.text = null;
       } catch (error) {
         const respuesta =
           (error && error.response && error.response.data) || {};
@@ -312,6 +382,9 @@ export default {
             <span v-if="item.occurrences > 1">
               {{ t('PLACES', { count: item.occurrences }) }}
             </span>
+            <span v-if="isOk(item)" class="text-green-700 dark:text-green-400">
+              {{ t('OK_BADGE') }}
+            </span>
           </span>
           <span
             class="font-mono text-xs break-all text-slate-800 dark:text-slate-100"
@@ -337,7 +410,7 @@ export default {
             @input="setAnswer(item.key, $event.target.value)"
           />
 
-          <!-- create_inline: crear la fuente o la etiqueta ahí mismo -->
+          <!-- create_inline: crear la fuente ahí mismo (o una nueva en lugar de la que ya existe) -->
           <woot-button
             v-if="isSource(item)"
             size="tiny"
@@ -345,10 +418,10 @@ export default {
             icon="add"
             @click="creatingSource = item"
           >
-            {{ t('CREATE_SOURCE', { name: item.name }) }}
+            {{ createLabel(item) }}
           </woot-button>
 
-          <!-- create_inline / select: usar una que ya existe en la cuenta -->
+          <!-- create_inline / select: usar otra que ya existe en la cuenta -->
           <select
             v-if="
               (item.fix === 'create_inline' || item.fix === 'select') &&
@@ -359,10 +432,10 @@ export default {
             @change="setAnswer(item.key, $event.target.value)"
           >
             <option value="">
-              {{ item.fix === 'select' ? t('CHOOSE') : t('USE_OTHER') }}
+              {{ selectPlaceholder(item) }}
             </option>
             <option
-              v-for="opcion in item.options"
+              v-for="opcion in optionsFor(item)"
               :key="`${item.key}-${opcion}`"
               :value="opcion"
             >
@@ -371,7 +444,7 @@ export default {
           </select>
 
           <!-- upload: el archivo con el nombre que pide el prompt -->
-          <template v-if="item.fix === 'upload'">
+          <template v-if="item.fix === 'upload' && !isOk(item)">
             <label
               v-if="templateId"
               class="!mb-0 button tiny smooth"
@@ -418,17 +491,29 @@ export default {
       <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">
         {{ t('SUGGEST_HELP') }}
       </p>
+      <p
+        v-if="isSuggesting"
+        class="mb-0 text-xs text-slate-500 dark:text-slate-400"
+      >
+        {{ t('SUGGEST_RUNNING') }}
+      </p>
+      <p
+        v-else-if="suggestError"
+        class="mb-2 text-xs text-amber-800 dark:text-amber-400"
+      >
+        {{ t(suggestError) }}
+      </p>
       <woot-button
-        v-if="suggestions === null"
+        v-if="!isSuggesting && (suggestions === null || canSearchAgain)"
         size="small"
         variant="smooth"
         icon="search"
-        :is-loading="isSuggesting"
+        :class="{ 'mb-2': suggestions !== null }"
         @click="suggest"
       >
-        {{ t('SUGGEST_BUTTON') }}
+        {{ suggestions === null ? t('SUGGEST_BUTTON') : t('SUGGEST_AGAIN') }}
       </woot-button>
-      <template v-else>
+      <template v-if="suggestions !== null && !isSuggesting">
         <p
           v-if="!suggestions.length"
           class="mb-0 text-xs text-slate-500 dark:text-slate-400"
@@ -472,25 +557,6 @@ export default {
       </template>
     </section>
 
-    <div v-if="ready.length" class="mb-4">
-      <button
-        type="button"
-        class="text-xs text-slate-500 dark:text-slate-400"
-        @click="showOk = !showOk"
-      >
-        {{ okToggleLabel }}
-      </button>
-      <ul v-if="showOk" class="mt-1 ml-4 list-none">
-        <li
-          v-for="item in ready"
-          :key="item.key"
-          class="font-mono text-xs text-slate-600 dark:text-slate-300"
-        >
-          {{ readyLabel(item) }}
-        </li>
-      </ul>
-    </div>
-
     <div
       v-if="draft.trim()"
       class="flex flex-wrap items-center justify-between gap-2 pt-2 mt-auto"
@@ -518,7 +584,7 @@ export default {
     <AddSourceModal
       :show="!!creatingSource"
       :saving="savingSource"
-      :initial="creatingSource ? creatingSource.create : null"
+      :initial="creatingInitial"
       @close="creatingSource = null"
       @save="createSource"
     />

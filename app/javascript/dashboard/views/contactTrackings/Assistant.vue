@@ -326,21 +326,6 @@ export default {
     editingTemplateId() {
       return this.editingTemplate ? this.editingTemplate.id : null;
     },
-    // Un agente bajado de la Galería trae cosas de la cuenta de su autor.
-    isDownloadedTemplate() {
-      const id = this.editingTemplateId;
-      const template = id && this.templates.find(t => t.id === id);
-      return Boolean(template && template.published_prompt_id);
-    },
-    // D1: la pestaña aparece con pendientes, en un agente bajado (aunque ya esté
-    // completo, para ver los ✔) y mientras se está en ella (no desaparece al aplicar).
-    showConfigureTab() {
-      return (
-        this.adaptationMissing > 0 ||
-        this.isDownloadedTemplate ||
-        this.draftTab === 'configure'
-      );
-    },
     // Las líneas del texto con hallazgos, para pintarlas en el editor.
     draftLineMarks() {
       return lineMarks(this.draft, this.validation);
@@ -1988,9 +1973,10 @@ export default {
                     >
                       {{ $t('TRACKING_ASSISTANT_VIEW.DRAFT_TAB_EDITOR') }}
                     </button>
-                    <!-- proyecto@adaptar_prompts_publicados: lo que falta en la cuenta -->
+                    <!-- proyecto@adaptar_prompts_publicados: lo que usa de la cuenta.
+                         Siempre a la vista: aunque no falte nada, ahí se cambia una
+                         fuente por otra y la IA busca datos de otro negocio. -->
                     <button
-                      v-if="showConfigureTab"
                       class="mr-3 pb-0.5 border-b-2"
                       :class="
                         draftTab === 'configure'
