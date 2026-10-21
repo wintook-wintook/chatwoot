@@ -428,6 +428,7 @@
       "EMPTY": "No Training: it answers without its own instructions.",
       "BROKEN": "Does not run: it has errors the engine cannot run; that part does nothing and fails silently.",
       "FIRST_ERROR": "First error: {message}"
-    }
+    },
+    "REFRESH": "Refresh"
   }
 }

@@ -81,6 +81,7 @@ export default {
       perPage: 10,
       // feat/agentes_ia_unificado
       listTab: 'agents',
+      isRefreshing: false,
       // Del más actual al menos actual por fecha de actualización (pedido del usuario).
       agentsSort: { key: 'updated_at', order: 'desc' },
       showNewMenu: false,
@@ -393,6 +394,24 @@ export default {
     refreshTemplates() {
       this.$store.dispatch('trackingTemplates/get');
     },
+    // «Actualizar»: recarga la pestaña que se está viendo, sin vaciar la tabla.
+    async refreshCurrent() {
+      this.isRefreshing = true;
+      try {
+        if (this.listTab === 'sessions') {
+          await this.$refs.sessions.fetchSessions();
+        } else if (this.listTab === 'resources') {
+          await this.$refs.inventory.fetchInventory();
+        } else {
+          await Promise.all([
+            this.$store.dispatch('trackingTemplates/get'),
+            this.isAdmin ? this.fetchAudit() : null,
+          ]);
+        }
+      } finally {
+        this.isRefreshing = false;
+      }
+    },
     getInboxName(template) {
       return template.inbox_name || '-';
     },
@@ -469,6 +488,17 @@ export default {
             @click="showImportModal = true"
           >
             {{ $t('TRACKING_IMPORT.BTN_OPEN') }}
+          </woot-button>
+          <woot-button
+            v-if="isListView"
+            v-tooltip.top="$t('TRACKING_TEMPLATES.REFRESH')"
+            variant="smooth"
+            color-scheme="secondary"
+            icon="arrow-clockwise"
+            :is-loading="isRefreshing"
+            @click="refreshCurrent"
+          >
+            {{ $t('TRACKING_TEMPLATES.REFRESH') }}
           </woot-button>
           <!-- Una sola puerta para un agente nuevo, con las formas de empezarlo. -->
           <div v-if="isListView" class="relative">
@@ -555,12 +585,14 @@ export default {
         <SessionsPanel
           v-if="isAdmin"
           v-show="listTab === 'sessions'"
+          ref="sessions"
           class="flex-1 min-h-0 mt-6"
           @open="openSession"
           @count="openSessionsCount = $event"
         />
         <InventoryPanel
           v-if="listTab === 'resources'"
+          ref="inventory"
           class="flex-1 min-h-0 mt-6"
         />
 
@@ -606,7 +638,7 @@ export default {
           </div>
 
           <woot-loading-state
-            v-if="uiFlags.fetchingList"
+            v-if="uiFlags.fetchingList && !hasTemplates"
             :message="$t('TRACKING_TEMPLATES.LOADING')"
           />
           <p

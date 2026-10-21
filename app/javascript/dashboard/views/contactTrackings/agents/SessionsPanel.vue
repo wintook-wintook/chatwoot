@@ -160,7 +160,7 @@ export default {
     </p>
 
     <woot-loading-state
-      v-if="isLoading"
+      v-if="isLoading && !sessions.length"
       :message="$t('TRACKING_TEMPLATES.SESSIONS.LOADING')"
     />
     <p

@@ -428,7 +428,8 @@
       "EMPTY": "Sin Entrenamiento: responde sin instrucciones propias.",
       "BROKEN": "No ejecuta: tiene errores que el motor no puede ejecutar; esa parte no hace nada y falla sin avisar.",
       "FIRST_ERROR": "Primer error: {message}"
-    }
+    },
+    "REFRESH": "Actualizar"
   },
   "TRACKING_IMPORT": {
     "BTN_OPEN": "Importar desde Excel",
