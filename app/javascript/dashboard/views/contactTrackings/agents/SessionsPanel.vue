@@ -57,6 +57,8 @@ export default {
         last_change: this.lastChange(row),
       }));
     },
+    // Mismo orden que la tabla de Agentes (pedido del usuario, 21/10/2026): los datos,
+    // luego Acciones, y las fechas al final.
     sessionHeaders() {
       return [
         { key: 'title', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TITLE' },
@@ -73,6 +75,10 @@ export default {
           label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_TEMPLATE',
         },
         { key: 'routes', label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_ROUTES' },
+      ];
+    },
+    dateHeaders() {
+      return [
         {
           key: 'created_at',
           label: 'TRACKING_ASSISTANT_VIEW.SESSIONS_COL_CREATED',
@@ -171,15 +177,16 @@ export default {
         detalle = lista(ultima.changes);
       return detalle ? `${origen}: ${detalle}` : origen;
     },
+    // dd/mm/aaaa hh:mm, igual que la tabla de Agentes.
     formatDate(value) {
-      if (!value) return '—';
-      return new Date(value).toLocaleString(undefined, {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      if (!value) return '-';
+      const fecha = new Date(value);
+      const dos = n => String(n).padStart(2, '0');
+      return `${dos(fecha.getDate())}/${dos(
+        fecha.getMonth() + 1
+      )}/${fecha.getFullYear()} ${dos(fecha.getHours())}:${dos(
+        fecha.getMinutes()
+      )}`;
     },
   },
 };
@@ -212,13 +219,13 @@ export default {
             <th
               v-for="col in sessionHeaders"
               :key="col.key"
-              class="py-4 pr-4 font-semibold text-left text-slate-700 dark:text-slate-300"
+              class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
             >
               <button
                 class="flex items-center p-0 cursor-pointer"
                 @click="sortSessionsBy(col.key)"
               >
-                <span class="mb-0 whitespace-nowrap">{{ $t(col.label) }}</span>
+                <span class="mb-0">{{ $t(col.label) }}</span>
                 <fluent-icon
                   v-if="sortIcon(col.key)"
                   class="ml-2"
@@ -226,11 +233,33 @@ export default {
                 />
               </button>
             </th>
-            <th class="py-4" />
+            <th
+              class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
+            >
+              {{ $t('TRACKING_TEMPLATES.TABLE.ACTIONS') }}
+            </th>
+            <th
+              v-for="col in dateHeaders"
+              :key="col.key"
+              class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
+            >
+              <button
+                class="flex items-center p-0 cursor-pointer"
+                @click="sortSessionsBy(col.key)"
+              >
+                <span class="mb-0">{{ $t(col.label) }}</span>
+                <fluent-icon
+                  v-if="sortIcon(col.key)"
+                  class="ml-2"
+                  :icon="sortIcon(col.key)"
+                />
+              </button>
+            </th>
           </thead>
           <tbody
             class="divide-y divide-slate-50 dark:divide-slate-800 text-slate-700 dark:text-slate-300"
           >
+            <!-- Retomar = clic en la fila (sin lápiz, igual que Agentes). -->
             <tr
               v-for="row in pagedSessions"
               :key="row.id"
@@ -259,33 +288,23 @@ export default {
               <td class="py-4 pr-4">
                 {{ row.routes }}
               </td>
+              <td class="py-4 pr-4">
+                <div class="flex items-center gap-2" @click.stop>
+                  <woot-button
+                    v-tooltip.top="$t('TRACKING_TEMPLATES.SESSIONS.DISCARD')"
+                    variant="smooth"
+                    size="small"
+                    color-scheme="alert"
+                    icon="delete"
+                    @click="discardSession(row)"
+                  />
+                </div>
+              </td>
               <td class="py-4 pr-4 whitespace-nowrap">
                 {{ formatDate(row.created_at) }}
               </td>
               <td class="py-4 pr-4 whitespace-nowrap">
                 {{ formatDate(row.updated_at) }}
-              </td>
-              <td class="py-4">
-                <div class="flex justify-end gap-1" @click.stop>
-                  <woot-button
-                    v-tooltip.top="
-                      $t('TRACKING_ASSISTANT_VIEW.SESSIONS_RESUME')
-                    "
-                    variant="smooth"
-                    size="tiny"
-                    color-scheme="secondary"
-                    icon="edit"
-                    @click="$emit('open', row)"
-                  />
-                  <woot-button
-                    v-tooltip.top="$t('TRACKING_TEMPLATES.SESSIONS.DISCARD')"
-                    variant="smooth"
-                    size="tiny"
-                    color-scheme="alert"
-                    icon="dismiss-circle"
-                    @click="discardSession(row)"
-                  />
-                </div>
               </td>
             </tr>
           </tbody>
