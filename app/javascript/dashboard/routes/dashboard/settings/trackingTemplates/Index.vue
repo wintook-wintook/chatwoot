@@ -25,11 +25,30 @@ import PublishPromptModal from './PublishPromptModal.vue'; // proyecto@publicar_
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import AssistantAPI from 'dashboard/api/assistant';
+import {
+  sortRows,
+  nextOrder,
+  NUMBER,
+  DATE,
+  TEXT,
+} from 'dashboard/views/contactTrackings/assistant/tableSort';
 import SessionsPanel from 'dashboard/views/contactTrackings/agents/SessionsPanel.vue';
 import InventoryPanel from 'dashboard/views/contactTrackings/agents/InventoryPanel.vue';
 
 // Explícito y no armado por concatenación (igual que en el Asistente): un estado nuevo
 // del backend se ve como «Sin Entrenamiento» antes que como un cartel en blanco.
+// Columnas ordenables de la tabla de Agentes (el mismo ordenador que «En
+// construcción»). inbox_label y review_rank se calculan por fila (sortableTemplates).
+const AGENT_COLUMNS = {
+  name: TEXT,
+  objective: TEXT,
+  inbox_label: TEXT,
+  review_rank: NUMBER,
+  updated_at: DATE,
+};
+// Para ordenar por Revisión: lo que no ejecuta arriba (y con más errores primero).
+const REVIEW_RANK = { broken: 3, empty: 2, conversational: 1, routed: 0 };
+
 const AUDIT_STATUS_LABEL = {
   broken: 'TRACKING_ASSISTANT_VIEW.AUDIT_BROKEN',
   routed: 'TRACKING_ASSISTANT_VIEW.AUDIT_ROUTED',
@@ -62,6 +81,8 @@ export default {
       perPage: 10,
       // feat/agentes_ia_unificado
       listTab: 'agents',
+      // Del más actual al menos actual por fecha de actualización (pedido del usuario).
+      agentsSort: { key: 'updated_at', order: 'desc' },
       showNewMenu: false,
       openSessionsCount: null,
       // Lo que dijo el comprobador de cada agente, por id.
@@ -136,9 +157,24 @@ export default {
       return result;
     },
     // Página actual de la lista filtrada (paginado en cliente).
+    sortableTemplates() {
+      return this.filteredTemplates.map(template => {
+        const audit = this.auditById[template.id];
+        return {
+          ...template,
+          inbox_label: template.inbox_id ? this.getInboxName(template) : '',
+          review_rank: audit
+            ? (REVIEW_RANK[audit.status] || 0) * 1000 + (audit.defects || 0)
+            : -1,
+        };
+      });
+    },
+    sortedTemplates() {
+      return sortRows(this.sortableTemplates, this.agentsSort, AGENT_COLUMNS);
+    },
     pagedTemplates() {
       const start = (this.currentPage - 1) * this.perPage;
-      return this.filteredTemplates.slice(start, start + this.perPage);
+      return this.sortedTemplates.slice(start, start + this.perPage);
     },
     totalPages() {
       return Math.max(
@@ -366,6 +402,15 @@ export default {
       }
       return '-';
     },
+    sortAgentsBy(key) {
+      this.agentsSort = nextOrder(this.agentsSort, key);
+      this.currentPage = 1;
+    },
+    // Flecha del encabezado ordenado, como en Respuestas predefinidas.
+    sortIcon(key) {
+      if (this.agentsSort.key !== key) return '';
+      return this.agentsSort.order === 'desc' ? 'chevron-up' : 'chevron-down';
+    },
     // dd/mm/aaaa hh:mm (pedido del usuario, 21/10/2026).
     formatDate(dateString) {
       if (!dateString) return '-';
@@ -379,6 +424,7 @@ export default {
     },
     creatorHint(template) {
       return this.$t('TRACKING_TEMPLATES.TABLE.CREATED_BY_HINT', {
+        date: this.formatDate(template.created_at),
         name: this.getCreatorName(template),
       });
     },
@@ -587,24 +633,72 @@ export default {
                   <th
                     class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
-                    {{ $t('TRACKING_TEMPLATES.TABLE.NAME') }}
+                    <button
+                      class="flex items-center p-0 cursor-pointer"
+                      @click="sortAgentsBy('name')"
+                    >
+                      <span class="mb-0">{{
+                        $t('TRACKING_TEMPLATES.TABLE.NAME')
+                      }}</span>
+                      <fluent-icon
+                        v-if="sortIcon('name')"
+                        class="ml-2"
+                        :icon="sortIcon('name')"
+                      />
+                    </button>
                   </th>
                   <th
                     class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
-                    {{ $t('TRACKING_TEMPLATES.TABLE.OBJECTIVE') }}
+                    <button
+                      class="flex items-center p-0 cursor-pointer"
+                      @click="sortAgentsBy('objective')"
+                    >
+                      <span class="mb-0">{{
+                        $t('TRACKING_TEMPLATES.TABLE.OBJECTIVE')
+                      }}</span>
+                      <fluent-icon
+                        v-if="sortIcon('objective')"
+                        class="ml-2"
+                        :icon="sortIcon('objective')"
+                      />
+                    </button>
                   </th>
                   <th
                     class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
-                    {{ $t('TRACKING_TEMPLATES.TABLE.CHANNEL') }}
+                    <button
+                      class="flex items-center p-0 cursor-pointer"
+                      @click="sortAgentsBy('inbox_label')"
+                    >
+                      <span class="mb-0">{{
+                        $t('TRACKING_TEMPLATES.TABLE.CHANNEL')
+                      }}</span>
+                      <fluent-icon
+                        v-if="sortIcon('inbox_label')"
+                        class="ml-2"
+                        :icon="sortIcon('inbox_label')"
+                      />
+                    </button>
                   </th>
                   <th
                     v-if="isAdmin"
                     class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
                     <span class="inline-flex items-center gap-1">
-                      {{ $t('TRACKING_TEMPLATES.TABLE.REVIEW') }}
+                      <button
+                        class="flex items-center p-0 cursor-pointer"
+                        @click="sortAgentsBy('review_rank')"
+                      >
+                        <span class="mb-0">{{
+                          $t('TRACKING_TEMPLATES.TABLE.REVIEW')
+                        }}</span>
+                        <fluent-icon
+                          v-if="sortIcon('review_rank')"
+                          class="ml-2"
+                          :icon="sortIcon('review_rank')"
+                        />
+                      </button>
                       <fluent-icon
                         v-tooltip.top="$t('TRACKING_TEMPLATES.REVIEW.HINT')"
                         icon="info"
@@ -621,7 +715,19 @@ export default {
                   <th
                     class="py-4 pr-4 font-semibold text-left whitespace-nowrap text-slate-700 dark:text-slate-300"
                   >
-                    {{ $t('TRACKING_TEMPLATES.TABLE.CREATED_AT') }}
+                    <button
+                      class="flex items-center p-0 cursor-pointer"
+                      @click="sortAgentsBy('updated_at')"
+                    >
+                      <span class="mb-0">{{
+                        $t('TRACKING_TEMPLATES.TABLE.UPDATED_AT')
+                      }}</span>
+                      <fluent-icon
+                        v-if="sortIcon('updated_at')"
+                        class="ml-2"
+                        :icon="sortIcon('updated_at')"
+                      />
+                    </button>
                   </th>
                 </thead>
                 <tbody
@@ -711,7 +817,7 @@ export default {
                       v-tooltip.top="creatorHint(template)"
                       class="py-4 pr-4 whitespace-nowrap"
                     >
-                      {{ formatDate(template.created_at) }}
+                      {{ formatDate(template.updated_at) }}
                     </td>
                   </tr>
                 </tbody>

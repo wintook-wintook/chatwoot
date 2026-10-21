@@ -20,7 +20,8 @@
       "CREATED_BY": "Created by",
       "CREATED_AT": "Created",
       "REVIEW": "Review",
-      "CREATED_BY_HINT": "Created by {name}"
+      "CREATED_BY_HINT": "Created on {date} by {name}",
+      "UPDATED_AT": "Updated"
     },
     "FORM": {
       "NAME": {
