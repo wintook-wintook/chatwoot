@@ -5,6 +5,7 @@
 # Table name: case_type_columns
 #
 #  id           :bigint           not null, primary key
+#  advance_mode :integer          default("suggest"), not null
 #  color        :string           default("#64748b"), not null
 #  label        :string           not null
 #  outcome      :integer
@@ -37,6 +38,9 @@ class CaseTypeColumn < ApplicationRecord
   belongs_to :account
   belongs_to :case_type
   has_many   :case_tickets, dependent: :nullify
+  # Plan-Plantilla-Tareas-Etapa — tareas que nacen al entrar a esta etapa.
+  has_many   :task_templates, -> { ordered }, class_name: 'CaseTypeColumnTask', dependent: :destroy,
+                                              inverse_of: :case_type_column
 
   validates :label, presence: true, length: { maximum: 60 }
   validates :color, presence: true
@@ -46,6 +50,9 @@ class CaseTypeColumn < ApplicationRecord
   enum outcome: { won: 0, lost: 1, cancelled: 2 }, _prefix: :outcome
   validates :probability, numericality: { only_integer: true, in: 0..100 }, allow_nil: true
   validate  :outcome_column_is_closed
+  # Plan-Plantilla-Tareas-Etapa — al terminar las tareas obligatorias: sugerir pasar a
+  # la siguiente etapa (defecto), pasar sola o no hacer nada. Valores nuevos al final.
+  enum advance_mode: { suggest: 0, automatic: 1, manual: 2 }, _prefix: :advance
 
   scope :ordered, -> { order(:position, :id) }
 

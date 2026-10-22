@@ -63,6 +63,10 @@ aquí (para que Claude cargue solo lo relevante y ahorre contexto).
 - [[Plan-Metricas-Comercial]] — 📊 plan: Métricas de Comercial en 4 pestañas (¿Cómo vamos? · Dinero en juego · Mes a mes · ¿Por qué perdemos?) — M1–M4 hechas
 - [[Plan-Resumen-Negocio]] — «Resumen del negocio» para el dueño: todas las clases en una pantalla, acceso por casilla, IA «Explícame la semana»
 - [[Plan-Empresa-Un-Solo-Hombre]] — 🧭 plan ABIERTO (en pausa): empresa de un solo hombre, todo ligado y automatizado (agentes hacen todo, el humano solo las excepciones) · base: docs/kontrolya_operacion_autonoma_analisis.md
+- [[Plan-Delegar-Agente-Caso]] — 🤖 plan (sin programar): delegar un caso a un agente IA; la Automatización es el eje, catálogo único de acciones y cada agente con sus automatizaciones · motor del plan de un solo hombre
+- [[Plan-Plantilla-Tareas-Etapa]] — ✅ hecho (T1–T4): plantilla, tareas al entrar, avance y «Documenta…», qué mueve cada etapa: plantilla de tareas por etapa en cada tipo de caso; se crean al entrar a la etapa, avance «sugerir» al terminar las obligatorias, nunca avanza sin documentar
+- [[Plan-Inicio-Mi-Resumen]] — ✅ hecho: Inicio «Mi resumen» donde aterriza cada usuario (avisos, Mi día, agenda, conversaciones, casos, semana) y preferencia «Al iniciar sesión, ir a»
+- [[Cambiar-Clase-Tipo]] — ✅ hecho: cambiar de clase un tipo; con casos se crea el tipo nuevo y el de antes queda retirado con sus casos tal cual
 - [[Plan-Bandeja-Prioridad]] — 🎯 plan: «Mi día» en la bandeja de tareas, orden por puntaje de urgencia, pesos configurables y plan con IA (F1–F4 hechas)
 - [[Plan-Casos-Hoja-de-ruta]] — 🧭 hoja de ruta: menú por clase (E1 hecho), clase fija, Comercial y Soporte completos
 - [[Historial-de-implementacion]] — changelog de todo lo resuelto

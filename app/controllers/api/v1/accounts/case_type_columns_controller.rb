@@ -18,7 +18,8 @@ class Api::V1::Accounts::CaseTypeColumnsController < Api::V1::Accounts::BaseCont
   before_action :set_column, only: %i[update destroy]
 
   def index
-    render json: { case_type_columns: @case_type.case_type_columns.ordered.map { |c| column_json(c) } }
+    columns = @case_type.case_type_columns.ordered.includes(:task_templates)
+    render json: { case_type_columns: columns.map { |c| column_json(c) } }
   end
 
   def create
@@ -74,7 +75,8 @@ class Api::V1::Accounts::CaseTypeColumnsController < Api::V1::Accounts::BaseCont
   end
 
   def column_params
-    params.require(:case_type_column).permit(:label, :color, :position, :outcome, :probability, statuses: [])
+    params.require(:case_type_column).permit(:label, :color, :position, :outcome, :probability, :advance_mode,
+                                             statuses: [])
   end
 
   def replace_params
@@ -88,8 +90,14 @@ class Api::V1::Accounts::CaseTypeColumnsController < Api::V1::Accounts::BaseCont
       color: column.color,
       position: column.position,
       statuses: column.statuses,
-      outcome: column.outcome,         # Plan-Clase-Comercial F3 — columna final del embudo
-      probability: column.probability
-    }
+      outcome: column.outcome, # Plan-Clase-Comercial F3 — columna final del embudo
+      probability: column.probability,
+      advance_mode: column.advance_mode, # Plan-Plantilla-Tareas-Etapa — al terminar las obligatorias
+      tasks_count: column.task_templates.size
+    }.merge(movers[column.id] || {}) # T4 — qué la mueve (obligatorias, reglas, avisos)
+  end
+
+  def movers
+    @movers ||= Cases::StageMovers.new(@case_type).call
   end
 end

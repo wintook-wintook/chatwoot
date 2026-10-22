@@ -68,3 +68,5 @@ IA), período de calendario, filtros de una sola fecha.
 ## Bitácora
 
 - 2026-10-21 — Se abre el plan a partir del análisis. En pausa: el usuario va a pasar otros puntos.
+- 2026-10-22 — Se diseña el motor en [[Plan-Delegar-Agente-Caso]]: la Automatización es el eje (eventos de caso y de agente), catálogo único de acciones y cada agente con sus automatizaciones. Cubre F0, F2 y F3. Solo plan.
+- 2026-10-22 — Hecha la puerta de entrada del humano: [[Plan-Inicio-Mi-Resumen]] (Inicio con avisos por peso, Mi día, agenda, conversaciones, casos y semana).

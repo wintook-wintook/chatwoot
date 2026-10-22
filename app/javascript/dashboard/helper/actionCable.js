@@ -212,6 +212,15 @@ class ActionCableConnector extends BaseActionCableConnector {
         key: 'CASE_TICKETS.TASKS.INBOX.TOAST_COMPLETED',
         icon: 'checkmark-circle',
       },
+      // Plan-Plantilla-Tareas-Etapa — tareas nuevas de la etapa y etapa lista.
+      case_stage_tasks: {
+        key: 'CASE_TICKETS.TASKS.INBOX.TOAST_STAGE_TASKS',
+        icon: 'checkmark-circle',
+      },
+      case_stage_ready: {
+        key: 'CASE_TICKETS.TASKS.INBOX.TOAST_STAGE_READY',
+        icon: 'checkmark-circle',
+      },
     };
     const n = data && data.notification;
     const conf = n && TOAST_MAP[n.notification_type];

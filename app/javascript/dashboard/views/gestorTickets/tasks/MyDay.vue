@@ -16,12 +16,13 @@ import { LocalStorage } from 'shared/helpers/localStorage';
 import { formatMinutes, localDay } from 'dashboard/helper/caseTaskPriority';
 import MyDayTaskRow from './MyDayTaskRow.vue';
 import MyDayAiPlan from './MyDayAiPlan.vue';
+import MyDayNotices from './MyDayNotices.vue';
 
 const DISMISSED_KEY = 'case_tickets::my_day_dismissed';
 
 export default {
   name: 'MyDay',
-  components: { Draggable: draggable, MyDayTaskRow, MyDayAiPlan },
+  components: { Draggable: draggable, MyDayTaskRow, MyDayAiPlan, MyDayNotices },
   props: {
     rows: { type: Array, default: () => [] },
     meta: { type: Object, default: () => ({}) },
@@ -187,6 +188,8 @@ export default {
     class="flex flex-col flex-1 min-h-0 gap-4 px-6 py-4 overflow-auto lg:flex-row"
   >
     <section class="flex flex-col flex-1 min-w-0 gap-3">
+      <!-- «Tienes avisos importantes»: avisos sin leer de la campanita, por peso. -->
+      <MyDayNotices />
       <!-- Carga del día: lo vencido + lo que vence hoy. -->
       <div
         class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600 dark:text-slate-300"

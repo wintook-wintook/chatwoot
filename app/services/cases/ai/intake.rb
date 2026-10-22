@@ -29,7 +29,7 @@ class Cases::Ai::Intake < Cases::Ai::BaseService
   # policy:            prompt complementario sin las directivas técnicas.
   def extract(conversation_text:, policy: nil)
     # [id, nombre, clase]: la clase le dice a la IA para qué es cada tipo.
-    types      = @account.case_types.order(:position).pluck(:id, :name, :case_class)
+    types      = @account.case_types.active.order(:position).pluck(:id, :name, :case_class)
     # Plan-Clase-Comercial F2: [id, nombre, case_type_id]; NULL = global. El tipo
     # se elige en la misma respuesta, así que se listan todos con su etiqueta y
     # `sanitize` descarta los que no sean del tipo elegido.

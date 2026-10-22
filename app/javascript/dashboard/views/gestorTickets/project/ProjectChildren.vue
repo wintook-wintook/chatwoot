@@ -52,8 +52,8 @@ export default {
       return !!this.ticket.is_frozen;
     },
     childTypes() {
-      return (this.types || []).filter(t =>
-        CHILD_CLASSES.includes(t.case_class || 'support')
+      return (this.types || []).filter(
+        t => !t.retired && CHILD_CLASSES.includes(t.case_class || 'support')
       );
     },
   },

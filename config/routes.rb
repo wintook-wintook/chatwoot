@@ -257,6 +257,8 @@ Rails.application.routes.draw do
               post :project # Plan-Clase-Proyecto P2 — crear proyecto desde una oportunidad ganada
             end
             resources :case_events, only: [:index]
+            # @tickets_cases — ligar (o crear) la conversación de un caso que no tiene
+            resource :case_conversation, only: [:create], path: 'conversation'
             # @tickets_cases 2E — relaciones entre tickets
             resources :case_ticket_relations, only: [:index, :create, :destroy], path: 'relations'
             # @tickets_cases — tareas/subtareas del ticket
@@ -284,16 +286,25 @@ Rails.application.routes.draw do
             resources :case_meeting_series, only: [:create, :update, :destroy], path: 'meeting-series'
           end
           resources :case_rules, only: [:index, :create, :update, :destroy]
+          # @tickets_cases — «Tienes avisos importantes» de Mi día (avisos sin leer con peso)
+          resources :case_notices, only: [:index]
+          # @tickets_cases — «Mi resumen» de la página Inicio
+          resource :my_summary, only: [:show], controller: 'my_summary'
           # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
           resources :case_tasks, only: [:index], controller: 'case_tasks_index' do
             put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»
             post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA
           end
           resources :case_types, only: [:index, :create, :update, :destroy] do
+            post :change_class, on: :member # cambiar de clase: tipo nuevo + retirar el de antes
             resources :case_type_fields, only: [:index, :create, :update, :destroy], path: 'fields' # @tickets_cases 2K
             # @tickets_cases — columnas del Kanban por tipo (Opción A+)
             resources :case_type_columns, only: [:index, :create, :update, :destroy], path: 'columns' do
               put :replace, on: :collection
+              # Plan-Plantilla-Tareas-Etapa — tareas plantilla de la etapa
+              resources :case_type_column_tasks, only: [:index, :create, :update, :destroy], path: 'tasks' do
+                put :reorder, on: :collection
+              end
             end
           end
           resources :case_services, only: [:index, :create, :update, :destroy] # @tickets_cases 2B

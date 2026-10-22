@@ -59,11 +59,14 @@ export function useAutomation() {
 
   // @tickets_cases — con su clase («Instalación · Órdenes»): hay tipos con el
   // mismo nombre en clases distintas y la clase decide qué caso se crea.
+  // Sin los tipos retirados: ya no reciben casos nuevos.
   const caseTypeOptions = computed(() =>
-    (caseTypes.value || []).map(ct => ({
-      id: ct.id,
-      name: `${ct.name} · ${t(`${classI18nBase(ct.case_class)}.NAME`)}`,
-    }))
+    (caseTypes.value || [])
+      .filter(ct => !ct.retired)
+      .map(ct => ({
+        id: ct.id,
+        name: `${ct.name} · ${t(`${classI18nBase(ct.case_class)}.NAME`)}`,
+      }))
   );
 
   const statusFilterOptions = computed(() => {

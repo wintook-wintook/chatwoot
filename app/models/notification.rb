@@ -54,7 +54,11 @@ class Notification < ApplicationRecord
     case_task_completed: 12,
     # diag/llamadas_whatsapp (F8) — llamada de WhatsApp que nadie contestó (actor: la
     # conversación). Append al final, como las de tareas: nace apagada para email/push.
-    missed_call: 13
+    missed_call: 13,
+    # Plan-Plantilla-Tareas-Etapa — nacieron tus tareas al entrar a una etapa (una por
+    # persona y etapa) y la etapa quedó lista para pasar. Solo campanita + toast.
+    case_stage_tasks: 14,
+    case_stage_ready: 15
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -65,6 +69,8 @@ class Notification < ApplicationRecord
   after_update_commit :dispatch_update_event
 
   PRIMARY_ACTORS = %w[Conversation CaseTicket].freeze # @tickets_cases Fase A
+  CASE_TITLE_TYPES = %w[case_ticket_assignment case_task_assignment case_task_completed
+                        case_stage_tasks case_stage_ready].freeze
 
   def push_event_data
     # Secondary actor could be nil for cases like system assigning conversation
@@ -116,7 +122,9 @@ class Notification < ApplicationRecord
       'case_ticket_assignment' => 'notifications.notification_title.case_ticket_assignment',
       'case_task_assignment' => 'notifications.notification_title.case_task_assignment',
       'case_task_completed' => 'notifications.notification_title.case_task_completed',
-      'missed_call' => 'notifications.notification_title.missed_call'
+      'missed_call' => 'notifications.notification_title.missed_call',
+      'case_stage_tasks' => 'notifications.notification_title.case_stage_tasks',
+      'case_stage_ready' => 'notifications.notification_title.case_stage_ready'
     }
 
     i18n_key = notification_title_map[notification_type]
@@ -128,7 +136,7 @@ class Notification < ApplicationRecord
       I18n.t(i18n_key)
     elsif notification_type == 'missed_call'
       I18n.t(i18n_key, name: meta&.dig('contact_name').to_s, display_id: conversation.display_id)
-    elsif %w[case_ticket_assignment case_task_assignment case_task_completed].include?(notification_type)
+    elsif CASE_TITLE_TYPES.include?(notification_type)
       I18n.t(i18n_key, folio: primary_actor.folio)
     elsif %w[conversation_assignment assigned_conversation_new_message participating_conversation_new_message
              conversation_mention].include?(notification_type)
@@ -156,7 +164,7 @@ class Notification < ApplicationRecord
       primary_actor.title.to_s
     when 'missed_call'
       primary_actor.inbox&.name.to_s
-    when 'case_task_assignment', 'case_task_completed'
+    when 'case_task_assignment', 'case_task_completed', 'case_stage_tasks', 'case_stage_ready'
       # primary_actor es el TICKET (ruteo reusado); el nombre de la tarea viaja en meta.
       meta&.dig('task_title').to_s
     else

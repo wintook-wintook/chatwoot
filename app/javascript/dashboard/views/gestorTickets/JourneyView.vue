@@ -391,6 +391,28 @@ export default {
           .filter(Boolean)
           .join(' · ');
       }
+      if (type === 'stage_advanced') {
+        return this.$t('CASE_TICKETS.STAGE_ADVANCE.EVENT', {
+          from: p.from,
+          to: p.to,
+        });
+      }
+      // Plan-Plantilla-Tareas-Etapa — nacieron las tareas de la etapa.
+      if (type === 'stage_tasks_added') {
+        return this.$t('CASE_TICKETS.TASKS.STAGE.EVENT', {
+          count: p.count,
+          stage: p.stage,
+          titles: (p.titles || []).join(', '),
+        });
+      }
+      // Se ligó (o se creó) la conversación del caso.
+      if (type === 'conversation_link') {
+        const key = p.created ? 'EVENT_CREATED' : 'EVENT';
+        return this.$t(`CASE_TICKETS.CONVERSATION_ACTIONS.${key}`, {
+          id: p.display_id,
+          inbox: p.inbox_name || '—',
+        });
+      }
       // Plan-Metricas-Comercial — compromiso del cliente: se marcó, se movió la
       // fecha, se quitó o cambió la nota.
       if (type === 'commitment_changed') {

@@ -9,13 +9,14 @@ import { mapGetters } from 'vuex';
 import { VeTable } from 'vue-easytable';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import TypeFormModal from './typeDetail/TypeFormModal.vue';
+import ChangeClassModal from './typeDetail/ChangeClassModal.vue';
 import { CASE_CLASSES } from 'dashboard/helper/caseClasses';
 
 const PER_PAGE_OPTIONS = [25, 50, 100];
 
 export default {
   name: 'TicketTypes',
-  components: { VeTable, TableFooter, TypeFormModal },
+  components: { VeTable, TableFooter, TypeFormModal, ChangeClassModal },
   data() {
     return {
       showModal: false,
@@ -28,6 +29,7 @@ export default {
       perPageOptions: PER_PAGE_OPTIONS,
       // @tickets_cases — Plan-Clase-Comercial: 'all' | 'support' | 'commercial'.
       classFilter: 'all',
+      changingClass: null, // tipo al que se le cambia la clase
       // Fila = abrir el detalle del tipo; los botones de acción cortan la
       // propagación para no navegar.
       eventCustomOption: {
@@ -102,6 +104,16 @@ export default {
               {row.itil_enabled && (
                 <span class="flex-shrink-0 px-1.5 py-0.5 text-xs font-medium rounded bg-woot-100 text-woot-700 dark:bg-woot-800 dark:text-woot-100">
                   ITIL
+                </span>
+              )}
+              {row.retired && (
+                <span
+                  class="flex-shrink-0 px-1.5 py-0.5 text-xs font-medium rounded bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                  title={this.$t('CASE_TICKETS.TYPES.RETIRED_HINT', {
+                    count: row.cases_count || 0,
+                  })}
+                >
+                  {this.$t('CASE_TICKETS.TYPES.RETIRED')}
                 </span>
               )}
             </div>
@@ -191,6 +203,16 @@ export default {
                 title={this.$t('CASE_TICKETS.TYPES.EDIT_TITLE')}
                 onClick={() => this.openEdit(row)}
               />
+              {!row.retired && (
+                <woot-button
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="arrow-swap"
+                  title={this.$t('CASE_TICKETS.TYPES.CHANGE_CLASS.BUTTON')}
+                  onClick={() => this.openChangeClass(row)}
+                />
+              )}
               <woot-button
                 size="tiny"
                 variant="clear"
@@ -217,6 +239,13 @@ export default {
     this.$store.dispatch('caseTickets/fetchTypes');
   },
   methods: {
+    openChangeClass(type) {
+      this.changingClass = type;
+    },
+    onClassChanged() {
+      this.changingClass = null;
+      this.$store.dispatch('caseTickets/fetchTypes');
+    },
     fieldsCount(type) {
       return (type.custom_fields || []).length;
     },
@@ -430,6 +459,14 @@ export default {
       :message-value="deleteMessageValue"
       :confirm-text="$t('CASE_TICKETS.TYPES.DELETE.YES')"
       :reject-text="$t('CASE_TICKETS.TYPES.DELETE.NO')"
+    />
+    <!-- Cambiar de clase: con casos crea el tipo nuevo y retira este -->
+    <ChangeClassModal
+      v-if="changingClass"
+      :show="!!changingClass"
+      :type="changingClass"
+      @close="changingClass = null"
+      @changed="onClassChanged"
     />
   </div>
 </template>

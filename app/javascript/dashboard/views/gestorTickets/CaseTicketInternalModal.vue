@@ -12,7 +12,11 @@
 <script>
 import { mapGetters } from 'vuex';
 import { forType, idAvailable } from 'dashboard/helper/caseClassification';
-import { DEFAULT_CASE_CLASS, typesOfClass } from 'dashboard/helper/caseClasses';
+import {
+  DEFAULT_CASE_CLASS,
+  creatableTypes,
+  typesOfClass,
+} from 'dashboard/helper/caseClasses';
 import { isCommercialType } from 'dashboard/helper/caseCommercial';
 import {
   isWorkOrderType,
@@ -98,9 +102,14 @@ export default {
     // Hoja de ruta E1.4 — al editar, solo tipos de la clase del caso (la clase es
     // fija; un caso sin tipo cuenta como Soporte).
     typeOptions() {
-      if (this.isEdit) return typesOfClass(this.types, this.ticketClass);
-      if (!this.caseClass) return this.types || [];
-      return typesOfClass(this.types, this.caseClass);
+      // Sin los tipos retirados (al editar se conserva el suyo, aunque esté retirado).
+      if (this.isEdit)
+        return creatableTypes(
+          typesOfClass(this.types, this.ticketClass),
+          this.ticket && this.ticket.case_type_id
+        );
+      if (!this.caseClass) return creatableTypes(this.types);
+      return creatableTypes(typesOfClass(this.types, this.caseClass));
     },
     ticketClass() {
       const type = (this.types || []).find(

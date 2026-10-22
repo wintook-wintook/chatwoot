@@ -38,6 +38,35 @@ class CaseTypeColumnsAPI extends ApiClient {
     return axios.delete(`${this.columnsUrl(caseTypeId)}/${columnId}`);
   }
 
+  // Plan-Plantilla-Tareas-Etapa — tareas plantilla de una etapa.
+  tasksUrl(caseTypeId, columnId) {
+    return `${this.columnsUrl(caseTypeId)}/${columnId}/tasks`;
+  }
+
+  getTasks(caseTypeId, columnId) {
+    return axios.get(this.tasksUrl(caseTypeId, columnId));
+  }
+
+  createTask(caseTypeId, columnId, task) {
+    return axios.post(this.tasksUrl(caseTypeId, columnId), { task });
+  }
+
+  updateTask(caseTypeId, columnId, taskId, task) {
+    return axios.patch(`${this.tasksUrl(caseTypeId, columnId)}/${taskId}`, {
+      task,
+    });
+  }
+
+  deleteTask(caseTypeId, columnId, taskId) {
+    return axios.delete(`${this.tasksUrl(caseTypeId, columnId)}/${taskId}`);
+  }
+
+  reorderTasks(caseTypeId, columnId, ids) {
+    return axios.put(`${this.tasksUrl(caseTypeId, columnId)}/reorder`, {
+      ids,
+    });
+  }
+
   // Guarda el set completo de columnas del tipo en una transacción.
   replaceColumns(caseTypeId, columns) {
     return axios.put(`${this.columnsUrl(caseTypeId)}/replace`, { columns });

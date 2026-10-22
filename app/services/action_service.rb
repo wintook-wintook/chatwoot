@@ -113,7 +113,8 @@ class ActionService
       return
     end
 
-    case_type = @account.case_types.find_by(id: case_type_id)
+    # Un tipo retirado (cambió de clase) ya no recibe casos nuevos.
+    case_type = @account.case_types.active.find_by(id: case_type_id)
     return if case_type.blank?
 
     # Plan-Clase-Comercial F3 (hallazgo #4): un tipo de OTRA clase no convierte en
