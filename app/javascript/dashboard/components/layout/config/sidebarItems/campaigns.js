@@ -11,7 +11,8 @@ const campaigns = accountId => ({
     'contact_trackings_campaigns',
     'contact_trackings_campaign_detail',
     'contact_trackings_metrics',
-    'contact_trackings_assistant', // proyecto@asistente_agentes_ia
+    'contact_trackings_assistant', // proyecto@asistente_agentes_ia (redirige)
+    'contact_trackings_agent', // feat/agentes_ia_unificado — espacio del agente
   ],
   menuItems: [
     // proyecto@contact_tracking — antes en la sección "Agente de Seguimientos"
@@ -38,17 +39,8 @@ const campaigns = accountId => ({
       toState: frontendURL(`accounts/${accountId}/tracking-dashboard/agents`),
       toStateName: 'contact_trackings_agents',
     },
-    // proyecto@asistente_agentes_ia — va pegado a Agentes IA porque es donde se
-    // escribe el Entrenamiento que este asistente genera.
-    {
-      icon: 'wand',
-      label: 'TRACKING_ASSISTANT',
-      hasSubMenu: false,
-      toState: frontendURL(
-        `accounts/${accountId}/tracking-dashboard/assistant`
-      ),
-      toStateName: 'contact_trackings_assistant',
-    },
+    // feat/agentes_ia_unificado: «Asistente» ya no es una entrada aparte; vive
+    // dentro del espacio de cada agente (Agentes IA › un agente › Entrenamiento).
     {
       icon: 'arrow-swap',
       label: 'ONGOING',

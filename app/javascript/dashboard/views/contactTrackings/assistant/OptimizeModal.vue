@@ -61,10 +61,12 @@ export default {
   <woot-modal :show="show" size="dry-run-wide" :on-close="() => $emit('close')">
     <div class="flex flex-col gap-3 p-8 h-[80vh] text-sm">
       <div class="shrink-0">
-        <h2 class="mb-1 text-lg font-medium text-slate-800 dark:text-slate-100">
+        <h2
+          class="mb-1 text-base font-semibold leading-6 text-slate-800 dark:text-slate-50"
+        >
           {{ $t('TRACKING_ASSISTANT_VIEW.OPTIMIZE_TITLE') }}
         </h2>
-        <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
+        <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
           {{ $t('TRACKING_ASSISTANT_VIEW.OPTIMIZE_HINT') }}
         </p>
       </div>

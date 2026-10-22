@@ -147,11 +147,12 @@ RSpec.describe TrackingAssistantSession do
   end
 
   describe '.listable_for' do
-    it 'muestra las abiertas y las que terminaron en un agente' do
+    # feat/agentes_ia_unificado: las que ya terminaron en un agente están en Agentes.
+    it 'muestra solo las abiertas, no las que ya terminaron en un agente' do
       abierta = sesion
-      guardada = sesion(status: 'saved')
+      sesion(status: 'saved')
 
-      expect(described_class.listable_for(account)).to contain_exactly(abierta, guardada)
+      expect(described_class.listable_for(account)).to contain_exactly(abierta)
     end
 
     # Descartar no borra la fila: la saca de la vista. Un clic de más en una

@@ -95,6 +95,12 @@ Rails.application.routes.draw do
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
             # proyecto@publicar_prompts: publicar el prompt para que otras cuentas lo bajen
             resource :publication, only: [:show, :create, :destroy], module: :tracking_templates
+            # feat/agentes_ia_unificado (rescate F4): historial, diff y restauración
+            resources :versions, only: [:index, :show], module: :tracking_templates do
+              member do
+                post :restore
+              end
+            end
           end
           # @query_databases — conexiones a ERPs + consultas predefinidas + consola
           resources :external_db_connections, only: [:index, :show, :create, :update, :destroy] do
