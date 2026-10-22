@@ -88,6 +88,17 @@ describe('Ventana de llamada', () => {
     ).toBe(false);
   });
 
+  it('suena el tono que eligió la bandeja (marimba si no eligió)', () => {
+    const sonando = { 'whatsappCalls/getIncoming': { id: 5, inbox_id: 3 } };
+    expect(montar(sonando).vm.ringtoneName).toBe('marimba');
+
+    const conTono = montar({
+      ...sonando,
+      'inboxes/getInbox': () => ({ whatsapp_calls: { ringtone: 'classic' } }),
+    });
+    expect(conTono.vm.ringtoneName).toBe('classic');
+  });
+
   it('los avisos del store se muestran traducidos', async () => {
     const wrapper = montar();
     wrapper.vm.$options.watch.notice.call(wrapper.vm, {

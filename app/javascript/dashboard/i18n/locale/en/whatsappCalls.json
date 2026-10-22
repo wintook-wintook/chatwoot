@@ -104,6 +104,16 @@
         "CASCADE": "The assignee if online; otherwise online inbox agents; if nobody, everyone",
         "ALL_ONLINE": "All online inbox agents (front desk)"
       },
+      "RINGTONE_TITLE": "Ringtone",
+      "RINGTONE_HINT": "What agents hear when a call comes in. These are original tones: the real WhatsApp ringtone cannot be used.",
+      "RINGTONE_PLAY": "Listen",
+      "RINGTONE_STOP": "Stop",
+      "RINGTONE": {
+        "MARIMBA": "Marimba (WhatsApp style)",
+        "CLASSIC": "Classic phone",
+        "DIGITAL": "Digital",
+        "BELL": "Bell"
+      },
       "PERMISSION_TITLE": "Permission request message",
       "PERMISSION_HINT": "WhatsApp requires the customer's permission before you call. This text is sent with an «Allow calls» button (at most once a day and twice a week).",
       "RECORDING_TITLE": "Record calls",

@@ -104,6 +104,16 @@
         "CASCADE": "Al asignado si está en línea; si no, a los en línea de la bandeja; si no hay nadie, a todos",
         "ALL_ONLINE": "A todos los en línea de la bandeja (recepción)"
       },
+      "RINGTONE_TITLE": "Tono del timbre",
+      "RINGTONE_HINT": "Lo que oyen los agentes cuando entra una llamada. Son tonos propios: el tono real de WhatsApp no se puede usar.",
+      "RINGTONE_PLAY": "Escuchar",
+      "RINGTONE_STOP": "Detener",
+      "RINGTONE": {
+        "MARIMBA": "Marimba (estilo WhatsApp)",
+        "CLASSIC": "Teléfono clásico",
+        "DIGITAL": "Digital",
+        "BELL": "Campana"
+      },
       "PERMISSION_TITLE": "Mensaje para pedir permiso",
       "PERMISSION_HINT": "WhatsApp pide permiso del cliente antes de que le llames. Se le envía este texto con el botón «Permitir llamadas» (máximo 1 vez al día y 2 por semana).",
       "RECORDING_TITLE": "Grabar las llamadas",

@@ -3,7 +3,8 @@
 // ============================================================================
 // Flota sobre el dashboard (arrastrable, como la del webphone de Wavoip; las dos
 // conviven: esa solo aparece con una llamada de Wavoip). Se monta una vez en App.vue.
-//   sonando    quién llama + bandeja · Contestar / Rechazar · timbre en bucle
+//   sonando    quién llama + bandeja · Contestar / Rechazar · timbre en bucle (el tono
+//              que eligió la bandeja: helper/whatsappCallRingtone.js)
 //   en curso   cronómetro · Silenciar · Colgar · ir a la conversación
 //   saliente   «Conectando…» → «Sonando…» → en curso · Colgar
 //   grabando   (F7, P1) punto rojo y el guion para que el agente avise en voz; al
@@ -15,8 +16,10 @@ import { useAlert } from 'dashboard/composables';
 import Draggable from 'dashboard/components/layout/webphoneComponents/Draggable.vue';
 import Thumbnail from 'dashboard/components/widgets/Thumbnail.vue';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper';
-
-const RINGTONE = '/audio/dashboard/bell.mp3';
+import {
+  createRingtone,
+  DEFAULT_RINGTONE,
+} from 'dashboard/helper/whatsappCallRingtone';
 
 export default {
   components: { Draggable, Thumbnail },
@@ -41,10 +44,18 @@ export default {
     callerName() {
       return this.caller.name || this.caller.phone || this.t('UNKNOWN');
     },
+    inbox() {
+      return (
+        (this.call && this.getInbox(this.call.inbox_id || this.call.inboxId)) ||
+        {}
+      );
+    },
     inboxName() {
-      const inbox =
-        this.call && this.getInbox(this.call.inbox_id || this.call.inboxId);
-      return (inbox && inbox.name) || '';
+      return this.inbox.name || '';
+    },
+    ringtoneName() {
+      const llamadas = this.inbox.whatsapp_calls || {};
+      return llamadas.ringtone || DEFAULT_RINGTONE;
     },
     isRinging() {
       return Boolean(this.incoming) && !this.active;
@@ -105,16 +116,12 @@ export default {
       return this.$t(`WHATSAPP_CALLS.WIDGET.${key}`, args);
     },
     startRingtone() {
-      try {
-        this.ringtone = new Audio(RINGTONE);
-        this.ringtone.loop = true;
-        this.ringtone.play().catch(() => {});
-      } catch (error) {
-        this.ringtone = null;
-      }
+      this.stopRingtone();
+      this.ringtone = createRingtone(this.ringtoneName);
+      this.ringtone.start();
     },
     stopRingtone() {
-      if (this.ringtone) this.ringtone.pause();
+      if (this.ringtone) this.ringtone.stop();
       this.ringtone = null;
     },
     answer() {

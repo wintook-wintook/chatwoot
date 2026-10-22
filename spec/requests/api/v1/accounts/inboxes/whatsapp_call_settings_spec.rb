@@ -91,6 +91,14 @@ RSpec.describe 'Configuración de llamadas de una bandeja' do
     expect(response.parsed_body['missed_call_options']['campaigns'].pluck('id')).to eq([campana.id])
   end
 
+  it 'el tono del timbre: uno de la lista; uno inventado no se guarda' do
+    guardar(ringtone: 'classic')
+    expect(response.parsed_body['ringtone']).to eq('classic')
+
+    guardar(ringtone: 'whatsapp-original.mp3')
+    expect(response.parsed_body['ringtone']).to eq('classic')
+  end
+
   it 'apagar' do
     guardar(enabled: true)
     guardar(enabled: false)

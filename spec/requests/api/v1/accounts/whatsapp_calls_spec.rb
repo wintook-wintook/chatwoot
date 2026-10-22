@@ -23,7 +23,7 @@ RSpec.describe 'Llamadas de WhatsApp — API' do
     get "/api/v1/accounts/#{account.id}/inboxes", headers: agente.create_new_auth_token, as: :json
 
     bandeja = response.parsed_body['payload'].find { |i| i['id'] == channel.inbox.id }
-    expect(bandeja['whatsapp_calls']).to eq('inbound' => true, 'outbound' => true, 'recording' => false)
+    expect(bandeja['whatsapp_calls']).to eq('inbound' => true, 'outbound' => true, 'recording' => false, 'ringtone' => nil)
   end
 
   it 'un agente que no es de la bandeja no puede' do

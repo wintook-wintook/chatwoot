@@ -496,6 +496,22 @@ para las demás), `ringing_timeout_job_spec` (3), +2 `call_spec`, +1 `whatsapp_c
 +1 `WhatsappCallsPage.spec.js`. Total de llamadas: **~125 de servidor + 39 de navegador**.
 El único fallo en la corrida (`notification_spec:14`) ya fallaba antes: espera la base vacía.
 
+### Tono del timbre *(extra, 22/10/2026)*
+
+A pedido: elegir cómo suena una llamada entrante. El tono real de WhatsApp tiene derechos de Meta y
+no se usa; los tonos se **generan en el navegador** (Web Audio, sin archivos):
+`marimba` (estilo WhatsApp, por omisión) · `classic` (teléfono, 440+480 Hz trinado) · `digital`
+(tres pitidos) · `bell` (la campana de siempre, `bell.mp3`).
+
+| Pieza | Archivo |
+|---|---|
+| Generador de tonos (`createRingtone(nombre, { veces })`) | `helper/whatsappCallRingtone.js` |
+| Por bandeja: `provider_config.ringtone`, solo de la lista; viaja en `inbox.whatsapp_calls.ringtone` | `WhatsappCallSettingsController` (`RINGTONES`), `_inbox.json.jbuilder` |
+| Selector + botón «Escuchar» en la pestaña «Llamadas» | `WhatsappCallsPage.vue` |
+| La ventana de llamada toca el de la bandeja | `WhatsappCallWidget.vue` |
+
+Pruebas: `whatsappCallRingtone.spec.js` (7), +1 widget, +1 `whatsapp_call_settings_spec`.
+
 ### F0 — Requisitos de Meta *(cuando haya número)*
 
 - [ ] Número `whatsapp_cloud` con la Calling API disponible: **límite de mensajería ≥ 2,000 conversaciones

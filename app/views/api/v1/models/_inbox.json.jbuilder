@@ -122,6 +122,7 @@ if resource.whatsapp?
       json.inbound resource.channel.inbound_calls_allowed?
       json.outbound resource.channel.outbound_calls_allowed?
       json.recording resource.channel.recording_enabled?
+      json.ringtone resource.channel.provider_config['ringtone'] # nil = el de omisión (marimba)
     end
   end
 end

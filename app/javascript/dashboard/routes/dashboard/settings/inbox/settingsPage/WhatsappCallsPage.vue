@@ -10,6 +10,10 @@
 import { useAlert } from 'dashboard/composables';
 import SettingsSection from 'dashboard/components/SettingsSection.vue';
 import WhatsappCallSettingsAPI from 'dashboard/api/whatsappCallSettings';
+import {
+  createRingtone,
+  RINGTONES,
+} from 'dashboard/helper/whatsappCallRingtone';
 
 const MISSED_ACTIONS = ['note', 'label', 'ticket', 'tracking', 'auto_reply'];
 const MISSED_FIELDS = [
@@ -34,6 +38,7 @@ export default {
         enabled: false,
         direction: 'both',
         ring_strategy: 'cascade',
+        ringtone: 'marimba',
         call_permission_request_body: '',
         recording_enabled: false,
         recording_notice: '',
@@ -44,6 +49,8 @@ export default {
         missed_call_auto_reply: '',
       },
       missedActions: MISSED_ACTIONS,
+      ringtones: RINGTONES,
+      preview: null,
     };
   },
   computed: {
@@ -75,6 +82,9 @@ export default {
   mounted() {
     this.load();
   },
+  beforeDestroy() {
+    this.stopPreview();
+  },
   methods: {
     t(key, args) {
       return this.$t(`WHATSAPP_CALLS.SETTINGS.${key}`, args);
@@ -85,6 +95,7 @@ export default {
         enabled: data.enabled,
         direction: data.direction,
         ring_strategy: data.ring_strategy,
+        ringtone: data.ringtone || 'marimba',
         call_permission_request_body: data.call_permission_request_body,
         recording_enabled: data.recording_enabled,
         recording_notice: data.recording_notice,
@@ -93,6 +104,20 @@ export default {
         this.form[campo] = data[campo];
       });
       this.form.missed_call_actions = [...(data.missed_call_actions || [])];
+    },
+    // Escuchar el tono elegido una vez (o detenerlo).
+    playPreview() {
+      if (this.preview) {
+        this.stopPreview();
+        return;
+      }
+      this.preview = createRingtone(this.form.ringtone, { veces: 1 });
+      this.preview.start();
+      setTimeout(this.stopPreview, 3500);
+    },
+    stopPreview() {
+      if (this.preview) this.preview.stop();
+      this.preview = null;
     },
     hasMissedAction(accion) {
       return this.form.missed_call_actions.includes(accion);
@@ -212,6 +237,32 @@ export default {
           <option value="cascade">{{ t('RING.CASCADE') }}</option>
           <option value="all_online">{{ t('RING.ALL_ONLINE') }}</option>
         </select>
+      </SettingsSection>
+
+      <SettingsSection
+        :title="t('RINGTONE_TITLE')"
+        :sub-title="t('RINGTONE_HINT')"
+      >
+        <div class="flex items-center gap-2">
+          <select
+            v-model="form.ringtone"
+            class="!mb-0"
+            :disabled="!acceptsInbound"
+            @change="stopPreview"
+          >
+            <option v-for="tono in ringtones" :key="tono" :value="tono">
+              {{ t(`RINGTONE.${tono.toUpperCase()}`) }}
+            </option>
+          </select>
+          <woot-button
+            variant="smooth"
+            color-scheme="secondary"
+            :icon="preview ? 'dismiss-circle' : 'play-circle'"
+            @click="playPreview"
+          >
+            {{ preview ? t('RINGTONE_STOP') : t('RINGTONE_PLAY') }}
+          </woot-button>
+        </div>
       </SettingsSection>
 
       <SettingsSection

@@ -4,7 +4,7 @@
 # diag/llamadas_whatsapp (F6) — LA PESTAÑA «LLAMADAS» DE UNA BANDEJA DE WHATSAPP
 # ================================================================================
 #   GET   inboxes/:inbox_id/whatsapp_call_settings   lo que hay + estado en Meta
-#   PATCH inboxes/:inbox_id/whatsapp_call_settings   { enabled, direction, ring_strategy,
+#   PATCH inboxes/:inbox_id/whatsapp_call_settings   { enabled, direction, ring_strategy, ringtone,
 #           recording_enabled, recording_notice, call_permission_request_body,
 #           missed_call_actions[], missed_call_label, missed_call_case_type_id,
 #           missed_call_campaign_id, missed_call_auto_reply }   (F8)
@@ -16,6 +16,8 @@
 # ================================================================================
 class Api::V1::Accounts::Inboxes::WhatsappCallSettingsController < Api::V1::Accounts::BaseController
   RING_STRATEGIES = %w[cascade all_online].freeze
+  # Tonos del timbre (helper/whatsappCallRingtone.js); el primero es el de omisión.
+  RINGTONES = %w[marimba classic digital bell].freeze
   MAX_TEXT = 1024
 
   before_action :set_channel, :ensure_administrator, :ensure_supported
@@ -67,13 +69,19 @@ class Api::V1::Accounts::Inboxes::WhatsappCallSettingsController < Api::V1::Acco
   end
 
   def other_settings
-    cambios = {}
-    cambios['ring_strategy'] = params[:ring_strategy] if RING_STRATEGIES.include?(params[:ring_strategy])
+    cambios = choice_settings
     cambios['recording_enabled'] = ActiveModel::Type::Boolean.new.cast(params[:recording_enabled]) if params.key?(:recording_enabled)
     %w[recording_notice call_permission_request_body missed_call_label missed_call_auto_reply].each do |llave|
       cambios[llave] = params[llave].to_s.strip.first(MAX_TEXT) if params.key?(llave)
     end
     cambios.merge(missed_call_settings)
+  end
+
+  # Las que solo aceptan un valor de su lista.
+  def choice_settings
+    { 'ring_strategy' => RING_STRATEGIES, 'ringtone' => RINGTONES }.each_with_object({}) do |(llave, validos), cambios|
+      cambios[llave] = params[llave] if validos.include?(params[llave])
+    end
   end
 
   # F8: qué hacer con una llamada perdida (Calls::MissedCallService).
@@ -113,6 +121,7 @@ class Api::V1::Accounts::Inboxes::WhatsappCallSettingsController < Api::V1::Acco
       enabled: config['calling_enabled'] == true,
       direction: @channel.calling_direction,
       ring_strategy: RING_STRATEGIES.include?(config['ring_strategy']) ? config['ring_strategy'] : 'cascade',
+      ringtone: RINGTONES.include?(config['ringtone']) ? config['ringtone'] : RINGTONES.first,
       recording_enabled: @channel.recording_enabled?,
       recording_notice: config['recording_notice'].to_s,
       call_permission_request_body: config['call_permission_request_body'].to_s,
