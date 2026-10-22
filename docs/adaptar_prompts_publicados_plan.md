@@ -730,3 +730,49 @@ No se le pide: los datos se marcan en la ventana «Publicar prompt» de la ficha
 **Pila de pruebas:** inventario, aplicador, controlador, análisis, comprobador, TagDictionary y
 auditoría ajustados; 979 ejemplos de contact_trackings, 1 falla ya conocida y ajena (Galería
 «hides unpublished ones», por la publicación #12 real de chatwoot_dev).
+
+---
+
+## F8 — «Configurar» siempre a la vista (rama `feat/configurar_siempre`, 21/10/2026)
+
+**Qué se pidió:** que la pestaña salga siempre, que lo que ya existe también se pueda cambiar
+por otra fuente o por una nueva, y que la IA busque los datos de otro negocio sin dar clic.
+
+**Qué se hizo**
+
+| Antes | Ahora |
+|---|---|
+| La pestaña salía solo con faltantes o en un agente bajado de la Galería | Sale **siempre** (`Assistant.vue`, se quitó `showConfigureTab`) |
+| Lo que ya existía iba en una lista plegada «Ya lo tienes (N)», solo de lectura | Va en su grupo, después de lo que falta, con **✔ ya lo tienes**, **Cambiar por…** (sin repetir el nombre actual) y **Crear otra** |
+| «Buscar datos de negocio con IA» con clic | Corre **sola al abrir la pestaña**; se recuerda por texto y solo vuelve a llamar a la IA si el Entrenamiento cambió (botón «Buscar otra vez (el texto cambió)») |
+| Un error de la IA salía como alerta | Sale escrito en la sección (no molesta en cada apertura) |
+
+**Cómo funciona**
+
+```
+ Abrir «Configurar»
+   ├─ inventario (sin IA) ── falta ✖ ──► Crear «X» · o usa uno que ya tienes…
+   │                       └─ existe ✔ ─► Crear otra · Cambiar por…
+   │                                         │ (la nueva queda elegida)
+   │                                         ▼
+   │                                    «Aplicar» → AdaptationApplier reemplaza
+   │                                    todas las apariciones (sin cambio en servidor)
+   └─ IA: ¿mismo texto que la última búsqueda? ── sí ─► muestra lo guardado
+                                                └ no ─► suggest_variables
+```
+
+- El servidor no cambió: `AdaptationApplier` ya reemplazaba por llave sin mirar el estado, y
+  `AdaptationInventory` ya mandaba `options` también para lo que existe.
+- «Crear otra» abre `AddSourceModal` con el nombre en blanco (el actual ya está tomado).
+- No se ofrece subir archivo para un archivo que ya existe.
+
+**Pila de pruebas**
+
+- `ConfigureTab.spec.js` (6): orden falta→existe, opciones sin el nombre actual, «Crear otra» en
+  blanco y la respuesta se conserva, IA automática y sin repetir con el mismo texto, sin texto no
+  llama, el error se muestra en la pestaña.
+- Con el prompt real de la sesión #4130 (cuenta 2): `@buscar_foro(Foro_Sentidos_Creativos)` →
+  «Foro_Prueba» reemplaza las 11 apariciones; «Cambiar por…» ofrece «Foro Kontrolya».
+- En navegador: pendiente.
+
+**Cómo pedírselo al Asistente:** no hace falta; abre la pestaña «Configurar» del agente.

@@ -51,7 +51,7 @@
 # hubo y por qué no entraron.
 # ================================================================================
 class TrackingCampaignEntry < ApplicationRecord
-  SOURCES = %w[batch automation].freeze
+  SOURCES = %w[batch automation missed_call].freeze # missed_call: diag/llamadas_whatsapp (F8)
   STATUSES = %w[enrolled skipped].freeze
   REASONS = %w[campaign_closed already_enrolled active_tracking not_contactable outside_window daily_cap].freeze
 

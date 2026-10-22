@@ -101,7 +101,7 @@ export default {
           <p class="!m-0 text-xs text-slate-700 dark:text-slate-200">
             {{ text(card, 'WHAT') }}
           </p>
-          <p class="!m-0 text-xs text-slate-500 dark:text-slate-400">
+          <p class="!m-0 text-sm text-slate-600 dark:text-slate-300">
             <span class="font-medium">
               {{ $t('TRACKING_ASSISTANT_VIEW.CATALOG_NEEDS') }}
             </span>

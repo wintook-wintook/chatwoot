@@ -5,8 +5,9 @@ module MessageFilterHelpers
     incoming? || outgoing?
   end
 
+  # diag/llamadas_whatsapp: la burbuja de una llamada no va a bots ni webhooks externos
   def webhook_sendable?
-    incoming? || outgoing? || template?
+    (incoming? || outgoing? || template?) && !voice_call?
   end
 
   def slack_hook_sendable?

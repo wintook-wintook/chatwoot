@@ -865,12 +865,16 @@ RSpec.describe 'Asistente de Agentes IA — inventario' do
       expect(response.parsed_body['updated_at']).to be_present
     end
 
-    it 'dice en qué agente terminó la que se guardó' do
+    # feat/agentes_ia_unificado: la lista es solo de abiertas; una abierta ya va ligada
+    # a su agente desde el primer guardado, y las publicadas no se listan.
+    it 'dice de qué agente es la abierta y no lista las ya publicadas' do
       template = account.tracking_templates.create!(name: 'Soporte', objective: 'Resolver dudas')
+      abierta = crear_sesion(tracking_template: template)
       crear_sesion(status: 'saved', tracking_template: template)
 
       listar
 
+      expect(response.parsed_body.pluck('id')).to eq([abierta.id])
       expect(response.parsed_body.first).to include('template_name' => 'Soporte')
     end
 

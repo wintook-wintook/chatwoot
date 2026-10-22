@@ -43,7 +43,8 @@ class CaseTicketListener < BaseListener
   private
 
   def reopen_candidate?(message)
-    message.present? && message.incoming? && message.conversation_id.present?
+    # diag/llamadas_whatsapp: una llamada no reabre un ticket (no es una respuesta escrita)
+    message.present? && message.incoming? && !message.voice_call? && message.conversation_id.present?
   end
 
   # Un ticket puede haber sido reabierto y vuelto a cerrar; interesa el último.

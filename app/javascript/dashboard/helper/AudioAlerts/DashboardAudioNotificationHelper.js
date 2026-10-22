@@ -155,6 +155,12 @@ class DashboardAudioNotificationHelper {
       return;
     }
 
+    // diag/llamadas_whatsapp: la burbuja de una llamada no es un mensaje nuevo; la
+    // llamada ya suena con su propio timbre (WhatsappCallWidget) y la perdida avisa en la campana.
+    if (message.content_type === 'voice_call') {
+      return;
+    }
+
     // If the message type is not incoming or private, then dismiss the alert
     const { message_type: messageType, private: isPrivate } = message;
     if (messageType !== MESSAGE_TYPE.INCOMING && !isPrivate) {

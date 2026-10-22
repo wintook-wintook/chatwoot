@@ -216,6 +216,32 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_27_150000) do
     t.index ["account_id"], name: "index_automation_rules_on_account_id"
   end
 
+  create_table "calls", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "message_id"
+    t.bigint "accepted_by_agent_id"
+    t.string "provider_call_id", null: false
+    t.integer "provider", default: 1, null: false
+    t.integer "direction", null: false
+    t.string "status", default: "ringing", null: false
+    t.datetime "started_at"
+    t.integer "duration_seconds"
+    t.string "end_reason"
+    t.jsonb "meta", default: {}, null: false
+    t.jsonb "ring_state", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "contact_id"], name: "index_calls_on_account_id_and_contact_id"
+    t.index ["account_id", "conversation_id"], name: "index_calls_on_account_id_and_conversation_id"
+    t.index ["account_id", "created_at"], name: "index_calls_on_account_id_and_created_at"
+    t.index ["message_id"], name: "index_calls_on_message_id"
+    t.index ["provider", "created_at"], name: "index_calls_ringing_on_provider_and_created_at", where: "((status)::text = 'ringing'::text)"
+    t.index ["provider", "provider_call_id"], name: "index_calls_on_provider_and_provider_call_id", unique: true
+  end
+
   create_table "campaigns", force: :cascade do |t|
     t.integer "display_id", null: false
     t.string "title", null: false
@@ -1727,6 +1753,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_27_150000) do
     t.jsonb "draft_versions", default: [], null: false
     t.text "instructions"
     t.string "name"
+    t.integer "base_version"
     t.index ["account_id", "user_id", "status", "updated_at"], name: "idx_tracking_assistant_sessions_lookup"
     t.index ["tracking_template_id"], name: "index_tracking_assistant_sessions_on_tracking_template_id"
     t.index ["user_id"], name: "index_tracking_assistant_sessions_on_user_id"
@@ -1810,6 +1837,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_27_150000) do
     t.index ["tracking_campaign_id"], name: "index_tracking_deliveries_on_tracking_campaign_id"
   end
 
+  create_table "tracking_template_versions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "tracking_template_id", null: false
+    t.bigint "user_id"
+    t.integer "version", default: 1, null: false
+    t.string "source", default: "manual", null: false
+    t.string "note"
+    t.jsonb "snapshot", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_tracking_template_versions_on_account_id"
+    t.index ["tracking_template_id", "version"], name: "index_tracking_template_versions_on_template_and_version", unique: true
+  end
+
   create_table "tracking_templates", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -1836,8 +1876,10 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_27_150000) do
     t.bigint "published_prompt_id"
     t.integer "published_prompt_version"
     t.jsonb "adaptation_answers", default: {}, null: false
+    t.datetime "archived_at"
     t.index ["account_id", "name"], name: "index_tracking_templates_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_tracking_templates_on_account_id"
+    t.index ["archived_at"], name: "index_tracking_templates_on_archived_at"
     t.index ["inbox_id"], name: "index_tracking_templates_on_inbox_id"
     t.index ["kbase_hook_id"], name: "index_tracking_templates_on_kbase_hook_id"
     t.index ["published_prompt_id"], name: "index_tracking_templates_on_published_prompt_id"
@@ -2050,6 +2092,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_27_150000) do
   add_foreign_key "tracking_deliveries", "contact_trackings", on_delete: :cascade
   add_foreign_key "tracking_deliveries", "messages", on_delete: :nullify
   add_foreign_key "tracking_deliveries", "tracking_campaigns", on_delete: :nullify
+  add_foreign_key "tracking_template_versions", "accounts"
+  add_foreign_key "tracking_template_versions", "tracking_templates", on_delete: :cascade
+  add_foreign_key "tracking_template_versions", "users", on_delete: :nullify
   add_foreign_key "tracking_templates", "accounts"
   add_foreign_key "tracking_templates", "inboxes"
   add_foreign_key "tracking_templates", "published_prompts", on_delete: :nullify

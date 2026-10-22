@@ -187,7 +187,8 @@
       "SOURCE": {
         "batch": "Lote",
         "automation": "Automatización",
-        "automation_named": "Automatización \"{name}\""
+        "automation_named": "Automatización \"{name}\"",
+        "missed_call": "Llamada perdida"
       },
       "STATUS": {
         "enrolled": "Inscrito",

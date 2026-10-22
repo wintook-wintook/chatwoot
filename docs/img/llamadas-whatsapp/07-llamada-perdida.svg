@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 470" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker></defs>
+  <rect width="940" height="470" fill="#f4f6f9"/>
+  <text x="40" y="46" font-size="26" font-weight="800" fill="#151b28">Llamada perdida → acciones opcionales</text>
+  <text x="40" y="68" font-size="13" fill="#5c6675">Se marcan las que quieras en el inbox; ninguna marcada = no hace nada extra</text>
+  <rect x="40" y="190" width="200" height="90" rx="12" fill="#fff" stroke="#64748b" stroke-width="2"/>
+  <text x="140" y="224" font-size="15" font-weight="800" fill="#151b28" text-anchor="middle">Call → perdida</text>
+  <text x="140" y="246" font-size="11.5" fill="#5c6675" text-anchor="middle">Calls::MissedCallJob</text>
+  <text x="140" y="263" font-size="11.5" fill="#5c6675" text-anchor="middle">(una sola vez por llamada)</text>
+  <g stroke="#475569" stroke-width="1.6" fill="none" marker-end="url(#a)">
+    <path d="M242,235 C300,235 300,112 356,112"/><path d="M242,235 C310,235 310,180 356,180"/><path d="M242,235 H356"/>
+    <path d="M242,235 C310,235 310,300 356,300"/><path d="M242,235 C300,235 300,370 356,370"/>
+  </g>
+  <g font-size="13">
+    <rect x="360" y="90" width="540" height="44" rx="8" fill="#fff" stroke="#e2e8f0"/>
+    <text x="376" y="110" font-weight="800" fill="#151b28">Nota privada</text><text x="376" y="126" font-size="11.5" fill="#5c6675">«Llamada perdida de Juan · 10:32 · sonó a: Ana, Luis» — solo la ven los agentes</text>
+    <rect x="360" y="158" width="540" height="44" rx="8" fill="#fff" stroke="#e2e8f0"/>
+    <text x="376" y="178" font-weight="800" fill="#151b28">Etiqueta</text><text x="376" y="194" font-size="11.5" fill="#5c6675">«llamada-perdida» en la conversación → filtrable, vistas guardadas, automatizaciones</text>
+    <rect x="360" y="213" width="540" height="44" rx="8" fill="#fff" stroke="#e2e8f0"/>
+    <text x="376" y="233" font-weight="800" fill="#151b28">Ticket</text><text x="376" y="249" font-size="11.5" fill="#5c6675">CaseTicket del tipo elegido, ligado a la conversación (módulo Tickets)</text>
+    <rect x="360" y="278" width="540" height="44" rx="8" fill="#fff" stroke="#e2e8f0"/>
+    <text x="376" y="298" font-weight="800" fill="#151b28">Seguimiento</text><text x="376" y="314" font-size="11.5" fill="#5c6675">inscribe al contacto en la plantilla de seguimiento elegida (contact_tracking)</text>
+    <rect x="360" y="348" width="540" height="44" rx="8" fill="#fff" stroke="#e2e8f0"/>
+    <text x="376" y="368" font-weight="800" fill="#151b28">Mensaje al cliente</text><text x="376" y="384" font-size="11.5" fill="#5c6675">texto editable «Vimos tu llamada, te la devolvemos en breve» (ventana 24 h — verificar)</text>
+  </g>
+  <text x="40" y="430" font-size="12.5" fill="#151b28">La <tspan font-weight="700">notificación al agente</tspan> (campana del dashboard) va siempre, no es configurable.</text>
+  <text x="40" y="450" font-size="12.5" fill="#5c6675">Cada acción falla sola: si el ticket no se puede crear, la nota y la etiqueta sí se aplican.</text>
+</svg>

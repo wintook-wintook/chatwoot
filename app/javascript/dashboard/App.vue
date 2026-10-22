@@ -19,6 +19,7 @@ import {
 } from './helper/pushHelper';
 import ReconnectService from 'dashboard/helper/ReconnectService';
 import Webphone from './components/layout/webphoneComponents/Webphone.vue';
+import WhatsappCallWidget from './components/widgets/calls/WhatsappCallWidget.vue'; // diag/llamadas_whatsapp
 
 export default {
   name: 'App',
@@ -34,6 +35,7 @@ export default {
     UpgradeBanner,
     PendingEmailVerificationBanner,
     Webphone,
+    WhatsappCallWidget,
   },
   data() {
     return {
@@ -130,6 +132,7 @@ export default {
     :dir="isRTL ? 'rtl' : 'ltr'"
   >
     <webphone />
+    <WhatsappCallWidget v-if="currentAccountId" />
     <UpdateBanner :latest-chatwoot-version="latestChatwootVersion" />
     <template v-if="currentAccountId">
       <PendingEmailVerificationBanner v-if="hideOnOnboardingView" />

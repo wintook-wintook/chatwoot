@@ -104,7 +104,7 @@
     "SAVE_CONTEXT_HINT": "Business facts you mentioned in the conversation. Empty is fine: the assistant doesn't fill in what you didn't tell it, because the agent would quote it as true.",
     "SAVE_FROM_TEMPLATE": "This Training came from “%{name}”. Saving replaces its own and keeps a copy of the previous one.",
     "TAB_SESSIONS": "In progress",
-    "SESSIONS_HINT": "Agents built in the Assistant by every admin in the account: the ones still in progress and, with the filter, the ones already saved as an AI Agent. Resume one to continue where it was left.",
+    "SESSIONS_HINT": "Agents being built in the Assistant that are not published yet, from every administrator in the account. Resume one to continue where it was left; published ones are in Agents.",
     "SESSIONS_RESUME": "Resume",
     "SESSIONS_SAVED": "saved",
     "SESSIONS_OPEN": "in progress",
@@ -518,7 +518,7 @@
     "LOG_SOURCE_CONFIGURED": "Configured",
     "DRAFT_TAB_CONFIGURE": "Set up",
     "CONFIGURE": {
-      "HINT": "What this Training uses that your account doesn't have yet. Fill it in or create it here and apply it: it is written into the text and kept as a version.",
+      "HINT": "What this Training uses from your account. Fill in or create what's missing here; what you already have (✔) can be swapped for another. Applying writes it into the text and keeps it as a version.",
       "EMPTY": "Write or paste a Training to see what your account is missing.",
       "ALL_DONE": "Your account already has everything this Training needs.",
       "GROUP_BUSINESS": "Your business details",
@@ -556,7 +556,12 @@
       "SOURCE_ADDED": "Source created. Checking again…",
       "SOURCE_ADD_ERROR": "The source could not be created.",
       "GOOGLE_DISABLED": "It exists, but Google is not enabled for your account.",
-      "OK_TOGGLE": "You already have it ({count})",
+      "OK_BADGE": "✔ you have it",
+      "CHANGE_TO": "Change to…",
+      "CREATE_OTHER": "Create another",
+      "SOURCE_ADDED_CHANGE": "Source “{name}” created. Apply to use it instead of the previous one.",
+      "SUGGEST_RUNNING": "Searching with AI…",
+      "SUGGEST_AGAIN": "Search again (the text changed)",
       "REMEMBERED": "Some fields already have what you set up before in this agent. Review them and apply.",
       "SUGGEST_TITLE": "Does it bring another business's details?",
       "SUGGEST_HELP": "If this Training comes from another company, AI points out its name, phones, hours or address. The ones you pick move to «Your business details» so you can put yours.",
@@ -628,6 +633,14 @@
       "UPDATE_LOADED": "New version loaded in the editor. Review it and save if it works for you.",
       "UPDATE_LOAD_ERROR": "Couldn't load the new version.",
       "UPDATE_SAVE_ERROR": "Couldn't save. Try again."
-    }
+    },
+    "PUBLISH_CTA": "Publish changes",
+    "CREATE_CTA": "Create the AI Agent",
+    "PUBLISHED": "Done: it is published and saved as a version.",
+    "STALE_TITLE": "The agent changed since you started",
+    "STALE_DESCRIPTION": "You started from v{base}, but it is now at v{version} ({author}, {at}). Publishing replaces that change with your draft; the previous one stays in Versions in case it needs restoring.",
+    "STALE_SOMEONE": "someone else",
+    "STALE_YES": "Publish anyway",
+    "STALE_NO": "Review first"
   }
 }

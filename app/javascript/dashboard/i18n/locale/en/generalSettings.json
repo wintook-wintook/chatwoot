@@ -92,6 +92,7 @@
       "sla_missed_next_response": "SLA Missed",
       "sla_missed_resolution": "SLA Missed",
       "case_ticket_assignment": "Case Assigned",
+      "missed_call": "Missed call",
       "case_task_assignment": "Task assigned",
       "case_task_completed": "Task completed",
       "case_stage_tasks": "New tasks",

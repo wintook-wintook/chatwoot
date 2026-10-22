@@ -284,7 +284,7 @@ export default {
           >
             {{ selected.title }}
           </h3>
-          <p class="mb-0 text-xs text-slate-500 dark:text-slate-400">
+          <p class="mb-0 text-sm text-slate-600 dark:text-slate-300">
             {{ metaText(selected) }}
           </p>
           <p
@@ -338,7 +338,7 @@ export default {
               </ul>
               <p
                 v-if="alreadyHave.length"
-                class="mt-2 mb-0 text-xs text-slate-500 dark:text-slate-400"
+                class="mt-2 mb-0 text-sm text-slate-600 dark:text-slate-300"
               >
                 {{
                   $t('TRACKING_ASSISTANT_VIEW.GALLERY.CONFIGURE_READY', {
@@ -346,7 +346,7 @@ export default {
                   })
                 }}
               </p>
-              <p class="mt-2 mb-0 text-xs text-slate-500 dark:text-slate-400">
+              <p class="mt-2 mb-0 text-sm text-slate-600 dark:text-slate-300">
                 {{ $t('TRACKING_ASSISTANT_VIEW.GALLERY.CONFIGURE_HINT') }}
               </p>
             </template>

@@ -231,3 +231,9 @@ case_ai_follow_up_scan_job:
   class: "Cases::Ai::FollowUpScanJob"
   queue: scheduled_jobs
   description: "Draft AI follow-up messages for stale waiting CaseTickets"
+
+# diag/llamadas_whatsapp (F8): cada 30 s — las llamadas que se quedaron sonando quedan «Perdida».
+calls_ringing_timeout_job:
+  cron: '*/30 * * * * *'
+  class: 'Calls::RingingTimeoutJob'
+  queue: scheduled_jobs
