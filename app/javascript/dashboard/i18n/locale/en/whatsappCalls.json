@@ -75,6 +75,39 @@
         "REJECTED": "Rejected",
         "FAILED": "Failed"
       }
+    },
+    "SETTINGS": {
+      "TAB": "Calls",
+      "LOADING": "Loading call settings…",
+      "LOAD_ERROR": "Could not load call settings.",
+      "FEATURE_DISABLED": "WhatsApp calls are not enabled for this account. Ask the super admin to enable the «whatsapp_calls» flag.",
+      "SIMULATOR_ON": "You are using the simulated Meta: enabling changes nothing in Meta and calls are tested with the simulated customer.",
+      "OPEN_SIMULATOR": "Open the simulated customer",
+      "ENABLE_TITLE": "WhatsApp calls",
+      "ENABLE_HINT": "Answer and make WhatsApp calls from the browser. Only works with the official API (Cloud API) and a number Meta allows for calls.",
+      "ON": "Enabled",
+      "OFF": "Disabled",
+      "META_STATUS": "Status in Meta: {status}",
+      "MANUAL_WEBHOOK": "This inbox is set up manually: in your Meta App dashboard (WhatsApp → Configuration → Webhooks) tick the «calls» field, or calls won't arrive.",
+      "DIRECTION_TITLE": "Call types",
+      "DIRECTION_HINT": "With «outbound only», your customers won't see the call button in WhatsApp.",
+      "DIRECTION": {
+        "BOTH": "Inbound and outbound",
+        "INBOUND": "Inbound only (they call you)",
+        "OUTBOUND": "Outbound only (you call)"
+      },
+      "RING_TITLE": "Who rings?",
+      "RING_HINT": "All of them ring at once and the first to answer takes it.",
+      "RING": {
+        "CASCADE": "The assignee if online; otherwise online inbox agents; if nobody, everyone",
+        "ALL_ONLINE": "All online inbox agents (front desk)"
+      },
+      "PERMISSION_TITLE": "Permission request message",
+      "PERMISSION_HINT": "WhatsApp requires the customer's permission before you call. This text is sent with an «Allow calls» button (at most once a day and twice a week).",
+      "SAVE": "Save",
+      "SAVED": "Done: call settings saved.",
+      "SAVE_ERROR": "Could not save.",
+      "META_ERROR": "Meta did not allow it: {message}"
     }
   }
 }

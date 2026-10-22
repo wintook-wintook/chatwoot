@@ -26,6 +26,7 @@ es:
     # diag/llamadas_whatsapp
     whatsapp:
       calls:
+        not_supported: Las llamadas solo funcionan con la API oficial de WhatsApp (Cloud API).
         not_allowed: Solo los agentes de esta bandeja y los administradores pueden usar sus llamadas.
         outbound_disabled: Esta bandeja no tiene activadas las llamadas salientes.
         sdp_offer_required: Falta la oferta de audio del navegador (sdp_offer).

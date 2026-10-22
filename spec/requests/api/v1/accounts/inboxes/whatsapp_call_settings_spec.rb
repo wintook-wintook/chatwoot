@@ -1,0 +1,75 @@
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+# diag/llamadas_whatsapp (F6) — la pestaña «Llamadas» de una bandeja.
+RSpec.describe 'Configuración de llamadas de una bandeja' do
+  let(:account) { create(:account) }
+  let(:admin) { create(:user, account: account, role: :administrator) }
+  let(:channel) do
+    account.enable_features!('whatsapp_calls')
+    create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
+  end
+  let(:url) { "/api/v1/accounts/#{account.id}/inboxes/#{channel.inbox.id}/whatsapp_call_settings" }
+  let(:meta) { instance_double(Whatsapp::Providers::WhatsappCloudService, update_calling_status: true, calling_settings: { 'status' => 'NOT_SET' }) }
+
+  before { allow_any_instance_of(Channel::Whatsapp).to receive(:calls_provider).and_return(meta) } # rubocop:disable RSpec/AnyInstance
+
+  def guardar(params)
+    patch url, params: params, headers: admin.create_new_auth_token, as: :json
+  end
+
+  it 'muestra lo que hay y el estado en Meta' do
+    get url, headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body).to include('feature_enabled' => true, 'enabled' => false, 'direction' => 'both',
+                                            'ring_strategy' => 'cascade', 'meta_status' => { 'status' => 'NOT_SET' })
+  end
+
+  it 'solo administradores' do
+    agente = create(:user, account: account, role: :agent)
+    get url, headers: agente.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unauthorized)
+  end
+
+  it 'una bandeja unoapi no tiene llamadas' do
+    otra = create(:channel_whatsapp, account: account, provider: 'unoapi', sync_templates: false, validate_provider_config: false)
+    get "/api/v1/accounts/#{account.id}/inboxes/#{otra.inbox.id}/whatsapp_call_settings", headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+  end
+
+  it 'prender habla con Meta y guarda el tipo; las bandejas a mano quedan con aviso de webhook' do
+    guardar(enabled: true, direction: 'outbound', ring_strategy: 'all_online', call_permission_request_body: '¿Te llamamos?')
+
+    expect(meta).to have_received(:update_calling_status).with('ENABLED', icon: 'DISABLE_ALL')
+    expect(response.parsed_body).to include('enabled' => true, 'direction' => 'outbound', 'ring_strategy' => 'all_online',
+                                            'call_permission_request_body' => '¿Te llamamos?', 'calls_webhook' => 'manual')
+  end
+
+  it 'si Meta no deja, responde 422 con su mensaje y no queda prendida' do
+    allow(meta).to receive(:update_calling_status).and_raise('Límite de mensajería insuficiente')
+
+    guardar(enabled: true)
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq('Límite de mensajería insuficiente')
+    expect(channel.reload.provider_config['calling_enabled']).to be_nil
+  end
+
+  it 'cambiar el tipo estando prendida vuelve a avisar a Meta; cambiar a quién suena no' do
+    guardar(enabled: true, direction: 'both')
+    guardar(ring_strategy: 'all_online')
+    expect(meta).to have_received(:update_calling_status).once
+
+    guardar(direction: 'outbound')
+    expect(meta).to have_received(:update_calling_status).with('ENABLED', icon: 'DISABLE_ALL')
+  end
+
+  it 'apagar' do
+    guardar(enabled: true)
+    guardar(enabled: false)
+
+    expect(response.parsed_body['enabled']).to be(false)
+    expect(meta).to have_received(:update_calling_status).with('DISABLED')
+  end
+end

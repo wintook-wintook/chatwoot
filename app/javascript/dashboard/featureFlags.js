@@ -46,6 +46,7 @@ export const FEATURE_FLAGS = {
   CASE_PROJECT: 'case_project', // Plan-Clase-Proyecto P1
   // @query_databases — Conexión ERP dentro de Base de Conocimiento
   ERP_CONNECTION: 'erp_connection',
+  WHATSAPP_CALLS: 'whatsapp_calls', // diag/llamadas_whatsapp
   // @waba_templates — Gestión de plantillas de WhatsApp desde Configuración
   WHATSAPP_TEMPLATES: 'whatsapp_templates',
   // @knowledge_sources — Tab de Configuración dentro de Base de Conocimiento

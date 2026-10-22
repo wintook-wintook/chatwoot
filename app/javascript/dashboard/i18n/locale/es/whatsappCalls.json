@@ -75,6 +75,39 @@
         "REJECTED": "Rechazada",
         "FAILED": "Falló"
       }
+    },
+    "SETTINGS": {
+      "TAB": "Llamadas",
+      "LOADING": "Cargando la configuración de llamadas…",
+      "LOAD_ERROR": "No se pudo cargar la configuración de llamadas.",
+      "FEATURE_DISABLED": "Esta cuenta no tiene activadas las llamadas de WhatsApp. Pídele al super admin que active la bandera «whatsapp_calls».",
+      "SIMULATOR_ON": "Estás usando la Meta simulada: activar no cambia nada en Meta y las llamadas se prueban con el cliente simulado.",
+      "OPEN_SIMULATOR": "Abrir el cliente simulado",
+      "ENABLE_TITLE": "Llamadas de WhatsApp",
+      "ENABLE_HINT": "Contesta y haz llamadas de WhatsApp desde el navegador. Solo funciona con la API oficial (Cloud API) y un número que Meta permita para llamadas.",
+      "ON": "Activadas",
+      "OFF": "Apagadas",
+      "META_STATUS": "Estado en Meta: {status}",
+      "MANUAL_WEBHOOK": "Esta bandeja está configurada a mano: en el panel de tu App de Meta (WhatsApp → Configuración → Webhooks) marca el campo «calls», o no llegarán las llamadas.",
+      "DIRECTION_TITLE": "Tipo de llamadas",
+      "DIRECTION_HINT": "Con «solo salientes», a tus clientes no les aparece el botón de llamar en WhatsApp.",
+      "DIRECTION": {
+        "BOTH": "Entrantes y salientes",
+        "INBOUND": "Solo entrantes (te llaman)",
+        "OUTBOUND": "Solo salientes (tú llamas)"
+      },
+      "RING_TITLE": "¿A quién le suena?",
+      "RING_HINT": "Suenan todos a la vez y la toma el primero que contesta.",
+      "RING": {
+        "CASCADE": "Al asignado si está en línea; si no, a los en línea de la bandeja; si no hay nadie, a todos",
+        "ALL_ONLINE": "A todos los en línea de la bandeja (recepción)"
+      },
+      "PERMISSION_TITLE": "Mensaje para pedir permiso",
+      "PERMISSION_HINT": "WhatsApp pide permiso del cliente antes de que le llames. Se le envía este texto con el botón «Permitir llamadas» (máximo 1 vez al día y 2 por semana).",
+      "SAVE": "Guardar",
+      "SAVED": "Listo: se guardó la configuración de llamadas.",
+      "SAVE_ERROR": "No se pudo guardar.",
+      "META_ERROR": "Meta no lo permitió: {message}"
     }
   }
 }

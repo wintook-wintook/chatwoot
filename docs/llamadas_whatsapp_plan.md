@@ -415,6 +415,22 @@ Specs existentes de conversación y store: las mismas 6 fallas que sin el cambio
 - Pestaña **Llamadas** en Configuración del inbox (§4.1). El texto del permiso es editable.
 - `ring_strategy` aplicado en el `Broadcaster`; `calling_direction` aplicado en el servicio de entrantes y en `initiate`.
 
+**✅ Hecho (22/10/2026)**
+
+| Pieza | Archivo |
+|---|---|
+| API de la pestaña (ver / guardar; solo admin y solo whatsapp_cloud). Prender o cambiar el tipo habla con Meta (o la simulada); si Meta lo rechaza: 422 con su mensaje y no queda prendida. A quién suena, texto del permiso y grabación se guardan sin tocar Meta | `app/controllers/api/v1/accounts/inboxes/whatsapp_call_settings_controller.rb`, ruta `inboxes/:id/whatsapp_call_settings` |
+| Pestaña «Llamadas» (solo WhatsApp Cloud + bandera de la cuenta): activar (con el estado en Meta), tipo, a quién le suena, mensaje de permiso; aviso de webhook manual («marca calls en tu App de Meta»); aviso y enlace al cliente simulado si está encendido | `settingsPage/WhatsappCallsPage.vue`, `inbox/Settings.vue` |
+| Bandera en el dashboard | `featureFlags.js` (`WHATSAPP_CALLS`) |
+
+Con esto ya no hace falta la consola para activar llamadas en una bandeja.
+La grabación (interruptor y aviso al cliente) se agrega a esta pestaña en **F7**; las acciones de
+llamada perdida, en **F8**.
+
+Pila de pruebas: `whatsapp_call_settings_spec` (7: ver, solo admin, unoapi no, prender con tipo,
+Meta rechaza, cambiar tipo vuelve a avisar a Meta pero cambiar a quién suena no, apagar),
+`WhatsappCallsPage.spec.js` (3). Total de llamadas: **91 de servidor + 35 de navegador**.
+
 ### F7 — Grabación *(sin número)*
 
 - `MediaRecorder` en el composable (48 kbps Opus, remux a OGG si hay utilidad equivalente en el fork;

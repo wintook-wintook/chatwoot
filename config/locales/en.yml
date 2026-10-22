@@ -40,6 +40,7 @@ en:
     # diag/llamadas_whatsapp
     whatsapp:
       calls:
+        not_supported: Calls only work with the official WhatsApp API (Cloud API).
         not_allowed: Only this inbox's agents and administrators can use its calls.
         outbound_disabled: Outbound calls are not enabled for this inbox.
         sdp_offer_required: The browser's audio offer (sdp_offer) is missing.
