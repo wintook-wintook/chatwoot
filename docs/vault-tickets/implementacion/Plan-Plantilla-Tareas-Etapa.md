@@ -139,8 +139,8 @@ Por etapa: **«Al terminar las obligatorias»** → Sugerir (defecto) · Automá
   regla o «al terminar las tareas obligatorias»). Pruebas: `stage_movers_spec.rb` (4); 267 de
   casos pasan. Pendientes fuera del plan: notificar al responsable (tareas nuevas / etapa lista)
   y marcar como obligatoria una tarea creada a mano.
-- 2026-10-22 — **Extras.** (1) Avisos en la campanita: tipos `case_stage_tasks` (13) y
-  `case_stage_ready` (14) en `Notification`; `Cases::StageNotifier` manda UN aviso por persona al
+- 2026-10-22 — **Extras.** (1) Avisos en la campanita: tipos `case_stage_tasks` (14) y
+  `case_stage_ready` (15) en `Notification` (el 13 es `missed_call`, de llamadas, en develop); `Cases::StageNotifier` manda UN aviso por persona al
   nacer sus tareas de la etapa (tarea de equipo sin persona → a todo el equipo) y avisa al
   responsable cuando la etapa queda lista (o hay que documentar); nunca a quien hizo el
   movimiento; texto en el idioma de la cuenta; toast en `actionCable.js`. (2) Casilla
