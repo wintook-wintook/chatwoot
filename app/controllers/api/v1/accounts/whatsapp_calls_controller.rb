@@ -8,6 +8,8 @@
 #   POST whatsapp_calls/:id/reject                       rechazar
 #   POST whatsapp_calls/:id/terminate                    colgar
 #   POST whatsapp_calls/initiate        { conversation_id, sdp_offer }  llamar
+#   POST whatsapp_calls/:id/upload_recording  { recording }  la grabación (F7), multipart;
+#        idempotente: la primera que llega se queda ({ status: uploaded | already_uploaded })
 #
 # Pueden usarlo los agentes de la bandeja y los administradores (P4).
 #   409  otro agente ya contestó, o la llamada ya terminó: el dashboard quita el timbre
@@ -17,10 +19,11 @@
 # Portado de la v4.19 (enterprise/app/controllers/api/v1/accounts/whatsapp_calls_controller.rb).
 # ================================================================================
 class Api::V1::Accounts::WhatsappCallsController < Api::V1::Accounts::BaseController
-  before_action :set_call, only: %i[show accept reject terminate]
+  before_action :set_call, only: %i[show accept reject terminate upload_recording]
   before_action :set_conversation, only: :initiate
   before_action :ensure_inbox_access
   before_action :ensure_outbound_allowed, :ensure_sdp_offer, only: :initiate
+  before_action :ensure_recording_allowed, only: :upload_recording
 
   rescue_from Voice::CallErrors::NotRinging, Voice::CallErrors::CallFailed, with: :render_call_error
   rescue_from Voice::CallErrors::AlreadyAccepted, Voice::CallErrors::CallAlreadyEnded, with: :render_conflict
@@ -42,6 +45,14 @@ class Api::V1::Accounts::WhatsappCallsController < Api::V1::Accounts::BaseContro
   def terminate
     call_service.terminate
     render json: call_json
+  end
+
+  # La grabación la hace el navegador del agente (mezcla de su micrófono y la voz del
+  # cliente) y la sube al colgar; queda como audio del mensaje de la llamada.
+  def upload_recording
+    estado = @call.message.with_lock { attach_recording }
+    Voice::CallMessageBuilder.new(@call).mark_recorded! if estado == 'uploaded'
+    render json: { status: estado }
   end
 
   def initiate
@@ -84,6 +95,25 @@ class Api::V1::Accounts::WhatsappCallsController < Api::V1::Accounts::BaseContro
   # El source_id del contact_inbox es el wa_id con el que WhatsApp conoce al cliente.
   def recipient
     @conversation.contact_inbox&.source_id.presence || @conversation.contact.phone_number.to_s.delete('+')
+  end
+
+  # El navegador ya revisa recording_enabled, pero una pestaña abierta antes del cambio
+  # trae el código viejo: aquí se vuelve a revisar.
+  def ensure_recording_allowed
+    archivo = params[:recording]
+    error = if !@call.recording_enabled? then 'recording_disabled'
+            elsif !archivo.respond_to?(:content_type) then 'no_recording'
+            elsif !archivo.content_type.to_s.start_with?('audio/', 'video/webm') then 'recording_not_audio'
+            elsif @call.message.nil? then 'no_message'
+            end
+    render_unprocessable(I18n.t("errors.whatsapp.calls.#{error}")) if error
+  end
+
+  def attach_recording
+    return 'already_uploaded' if @call.message.attachments.exists?(file_type: :audio)
+
+    @call.message.attachments.create!(account_id: @call.account_id, file_type: :audio, file: params[:recording])
+    'uploaded'
   end
 
   def call_service

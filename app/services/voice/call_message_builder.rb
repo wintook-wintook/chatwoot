@@ -29,6 +29,16 @@ class Voice::CallMessageBuilder
     message
   end
 
+  # F7: avisa a la conversación que el mensaje ya trae el audio (el adjunto solo no
+  # dispara la actualización de la burbuja).
+  def mark_recorded!
+    message = call.message
+    return unless message
+
+    datos = (message.content_attributes['data'] || {}).merge('recorded' => true)
+    message.reload.update!(content_attributes: message.content_attributes.merge('data' => datos))
+  end
+
   private
 
   def create_message!

@@ -65,6 +65,15 @@ RSpec.describe 'Configuración de llamadas de una bandeja' do
     expect(meta).to have_received(:update_calling_status).with('ENABLED', icon: 'DISABLE_ALL')
   end
 
+  # F7: la grabación y su aviso se guardan sin tocar Meta
+  it 'grabar y el texto del aviso' do
+    guardar(recording_enabled: true, recording_notice: '  Grabamos esta llamada.  ')
+
+    expect(response.parsed_body).to include('recording_enabled' => true, 'recording_notice' => 'Grabamos esta llamada.',
+                                            'default_recording_notice' => I18n.t('conversations.messages.whatsapp.call_recording_notice'))
+    expect(meta).not_to have_received(:update_calling_status)
+  end
+
   it 'apagar' do
     guardar(enabled: true)
     guardar(enabled: false)

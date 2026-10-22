@@ -29,6 +29,7 @@ class Whatsapp::CallService
       claim_conversation
       broadcaster.to_ringers(:accepted, accepted_by_agent_id: agent.id)
     end
+    recording_notice!
     call
   end
 
@@ -100,6 +101,11 @@ class Whatsapp::CallService
   def conversation_call_status!
     conversation = call.conversation
     conversation.update!(additional_attributes: (conversation.additional_attributes || {}).merge('call_status' => call.display_status))
+  end
+
+  # F7 (P1): si se graba, el cliente recibe el aviso por WhatsApp.
+  def recording_notice!
+    Voice::RecordingNoticeService.new(call: call, agent: agent).perform
   end
 
   def broadcaster

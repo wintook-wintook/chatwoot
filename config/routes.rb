@@ -98,6 +98,7 @@ Rails.application.routes.draw do
               post :accept
               post :reject
               post :terminate
+              post :upload_recording
             end
             collection do
               post :initiate

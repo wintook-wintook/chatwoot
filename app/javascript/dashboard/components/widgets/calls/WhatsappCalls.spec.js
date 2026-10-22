@@ -67,6 +67,27 @@ describe('Ventana de llamada', () => {
     expect(wrapper.vm.statusText).toBe('01:05');
   });
 
+  // F7 (P1): el guion para avisar en voz, solo con la llamada en curso y grabando
+  it('grabando: muestra el aviso y el guion; sonando o sin grabación, no', () => {
+    const activa = recording => ({
+      'whatsappCalls/getActive': { id: 5, status: 'in_progress', recording },
+    });
+    const grabando = montar(activa(true));
+    expect(grabando.vm.isRecording).toBe(true);
+    expect(grabando.html()).toContain('WHATSAPP_CALLS.WIDGET.RECORDING_SCRIPT');
+
+    expect(montar(activa(false)).vm.isRecording).toBe(false);
+    expect(
+      montar({
+        'whatsappCalls/getActive': {
+          id: 5,
+          status: 'ringing',
+          recording: true,
+        },
+      }).vm.isRecording
+    ).toBe(false);
+  });
+
   it('los avisos del store se muestran traducidos', async () => {
     const wrapper = montar();
     wrapper.vm.$options.watch.notice.call(wrapper.vm, {

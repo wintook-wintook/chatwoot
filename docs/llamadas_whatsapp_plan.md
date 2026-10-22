@@ -438,6 +438,30 @@ Meta rechaza, cambiar tipo vuelve a avisar a Meta pero cambiar a quién suena no
 - `upload_recording` en el controlador, idempotente; respeta `meta.recording_enabled`.
 - Reproductor en la burbuja. Aviso al cliente según la decisión pendiente.
 
+**✅ Hecho (22/10/2026)**
+
+| Pieza | Archivo |
+|---|---|
+| Grabar en el navegador: mezcla micrófono + voz del cliente (AudioContext) y graba Opus 48 kbps. Entrante: desde que el agente contesta. Saliente: desde el ACCEPTED de Meta (no graba el timbre). Al colgar —agente o cliente— pasa a OGG y la sube | `helper/whatsappCallSession.js` (`finishCall`, `armRecorder`, `uploadRecording`), `store/modules/whatsappCalls.js` |
+| WebM → OGG (sin re-codificar; el WebM de MediaRecorder no trae duración y falla en celulares). Copiado tal cual de la v4.19 | `components/widgets/WootWriter/utils/webmOpusToOgg.js` |
+| Subida: `POST whatsapp_calls/:id/upload_recording` (multipart), idempotente con candado sobre el mensaje; 422 si la llamada no se graba (pestaña vieja), si no es audio o si falta. El audio queda como adjunto del mensaje de la llamada y `data.recorded = true` refresca la burbuja | `whatsapp_calls_controller.rb`, `Voice::CallMessageBuilder#mark_recorded!` |
+| Reproductor | ninguno nuevo: `Message.vue` ya pinta los adjuntos de audio debajo de la burbuja |
+| P1, aviso al cliente: mensaje normal de WhatsApp al pasar a «en curso» (texto de la bandeja o el de ejemplo), una vez por llamada; si no se puede mandar (ventana de 24 h cerrada en una saliente) la llamada sigue | `Voice::RecordingNoticeService` (desde `CallService#accept` y el ACCEPTED de la saliente) |
+| P1, guion del agente: punto rojo «Grabando» y la frase para decirlo en voz | `WhatsappCallWidget.vue` |
+| Pestaña «Llamadas»: interruptor de grabación y texto del aviso | `WhatsappCallsPage.vue`, `default_recording_notice` en el API |
+
+Cómo funciona: la decisión de grabar se toma al crear la llamada (`meta.recording_enabled`
+copiado de la bandeja); cambiar la bandeja a media llamada no la afecta.
+Límite conocido: si el agente cierra la pestaña a media llamada, esa grabación se pierde (vive
+en su navegador). Con el simulador, el aviso por WhatsApp se intenta mandar de verdad al número
+simulado y falla (queda en el log); la llamada no se entera.
+
+Pila de pruebas: `recording_notice_service_spec` (4), `whatsapp_call_recording_spec` (4),
++1 en `incoming_call_service_spec` y +1 en `whatsapp_call_settings_spec`; navegador: +4 en
+`whatsappCallSession.spec.js`, +1 widget, +1 pestaña. Se arreglaron 2 pruebas que contaban
+todas las llamadas de la base (la de dev ya tiene llamadas reales). Total de llamadas:
+**101 de servidor + 38 de navegador**.
+
 ### F8 — Timeout y llamada perdida *(sin número)*
 
 - `Calls::RingingTimeoutJob` cada 30 s (`config/schedule.yml`): entrantes en `ringing` con más de 60 s → `no_answer`.

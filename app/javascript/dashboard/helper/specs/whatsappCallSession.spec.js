@@ -1,12 +1,18 @@
+/* eslint-disable max-classes-per-file */
 import * as session from '../whatsappCallSession';
 import WhatsappCallsAPI from 'dashboard/api/whatsappCalls';
+import { remuxWebmToOgg } from 'dashboard/components/widgets/WootWriter/utils/webmOpusToOgg';
 
 vi.mock('dashboard/api/whatsappCalls', () => ({
   default: {
     initiate: vi.fn(),
     accept: vi.fn(),
     terminate: vi.fn().mockResolvedValue(),
+    uploadRecording: vi.fn().mockResolvedValue(),
   },
+}));
+vi.mock('dashboard/components/widgets/WootWriter/utils/webmOpusToOgg', () => ({
+  remuxWebmToOgg: vi.fn(),
 }));
 
 // Un RTCPeerConnection de prueba: sus métodos no necesitan usar `this`.
@@ -39,11 +45,92 @@ class FakePeer {
 
   close() {}
 }
+
+class FakeStream {
+  constructor() {
+    this.tracks = [];
+  }
+
+  getTracks() {
+    return this.tracks;
+  }
+
+  getAudioTracks() {
+    return this.tracks;
+  }
+
+  addTrack(track) {
+    this.tracks.push(track);
+  }
+}
+
+class FakeRecorder {
+  static isTypeSupported() {
+    return true;
+  }
+
+  constructor(stream, opciones) {
+    this.state = 'inactive';
+    this.opciones = opciones;
+    this.listeners = [];
+    FakeRecorder.last = this;
+  }
+
+  start() {
+    this.state = 'recording';
+    this.ondataavailable({ data: new Blob(['x'], { type: 'audio/webm' }) });
+  }
+
+  stop() {
+    this.state = 'inactive';
+    this.listeners.forEach(fn => fn());
+  }
+
+  addEventListener(nombre, fn) {
+    if (nombre === 'stop') this.listeners.push(fn);
+  }
+}
+
+class FakeAudioContext {
+  constructor() {
+    this.state = 'running';
+  }
+
+  async resume() {}
+
+  async close() {
+    this.state = 'closed';
+  }
+
+  createMediaStreamDestination() {
+    return { stream: new FakeStream() };
+  }
+
+  createMediaStreamSource() {
+    return { connect() {} };
+  }
+}
 /* eslint-enable class-methods-use-this, no-empty-function */
+
+// El cliente ya se oye: llega su pista de audio.
+const llegaVozDelCliente = () => {
+  const remoto = new FakeStream();
+  remoto.addTrack({ kind: 'audio', stop() {} });
+  FakePeer.last.ontrack({ streams: [remoto] });
+};
 
 describe('Sesión WebRTC de llamadas de WhatsApp', () => {
   beforeEach(() => {
     global.RTCPeerConnection = FakePeer;
+    global.MediaStream = FakeStream;
+    global.AudioContext = FakeAudioContext;
+    window.MediaRecorder = FakeRecorder;
+    window.HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue();
+    FakeRecorder.last = null;
+    WhatsappCallsAPI.uploadRecording.mockClear();
+    remuxWebmToOgg.mockImplementation(
+      async () => new Blob(['ogg'], { type: 'audio/ogg' })
+    );
     global.navigator.mediaDevices = {
       getUserMedia: vi
         .fn()
@@ -90,6 +177,67 @@ describe('Sesión WebRTC de llamadas de WhatsApp', () => {
     await session.answerIncoming({ id: 5, sdp_offer: 'v=0', ice_servers: [] });
     await session.hangup();
     expect(WhatsappCallsAPI.terminate).toHaveBeenCalledWith(5);
+    expect(session.hasActiveCall()).toBe(false);
+  });
+
+  // F7 — grabación
+  it('con grabación: graba desde que contesta y al colgar sube el OGG', async () => {
+    WhatsappCallsAPI.accept.mockResolvedValue({ data: { id: 5 } });
+    await session.answerIncoming({
+      id: 5,
+      sdp_offer: 'v=0',
+      ice_servers: [],
+      recording_enabled: true,
+    });
+    llegaVozDelCliente();
+    expect(session.isRecording()).toBe(true);
+    expect(FakeRecorder.last.opciones.audioBitsPerSecond).toBe(48000);
+
+    await session.hangup();
+    expect(WhatsappCallsAPI.terminate).toHaveBeenCalledWith(5);
+    const [id, archivo, nombre] =
+      WhatsappCallsAPI.uploadRecording.mock.calls[0];
+    expect([id, archivo.type, nombre]).toEqual([5, 'audio/ogg', 'llamada.ogg']);
+  });
+
+  it('sin grabación no graba ni sube nada', async () => {
+    WhatsappCallsAPI.accept.mockResolvedValue({ data: { id: 5 } });
+    await session.answerIncoming({ id: 5, sdp_offer: 'v=0', ice_servers: [] });
+    llegaVozDelCliente();
+    expect(session.isRecording()).toBe(false);
+
+    await session.hangup();
+    expect(WhatsappCallsAPI.uploadRecording).not.toHaveBeenCalled();
+  });
+
+  it('saliente: no graba el timbre, solo desde que el cliente contesta', async () => {
+    WhatsappCallsAPI.initiate.mockResolvedValue({
+      data: { id: 11, recording_enabled: true },
+    });
+    await session.startOutbound(9);
+    llegaVozDelCliente();
+    expect(session.isRecording()).toBe(false);
+
+    session.armRecorder(11);
+    expect(session.isRecording()).toBe(true);
+  });
+
+  it('si cuelga el cliente, también se sube lo grabado', async () => {
+    WhatsappCallsAPI.accept.mockResolvedValue({ data: { id: 5 } });
+    await session.answerIncoming({
+      id: 5,
+      sdp_offer: 'v=0',
+      ice_servers: [],
+      recording_enabled: true,
+    });
+    llegaVozDelCliente();
+
+    await session.finishCall();
+    expect(WhatsappCallsAPI.uploadRecording).toHaveBeenCalledWith(
+      5,
+      expect.any(Blob),
+      'llamada.ogg'
+    );
     expect(session.hasActiveCall()).toBe(false);
   });
 });

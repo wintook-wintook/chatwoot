@@ -27,6 +27,10 @@ es:
     whatsapp:
       calls:
         not_supported: Las llamadas solo funcionan con la API oficial de WhatsApp (Cloud API).
+        recording_disabled: "Esta llamada no se graba: la grabación estaba apagada cuando empezó."
+        no_recording: "Falta el archivo de la grabación."
+        recording_not_audio: "La grabación debe ser un archivo de audio."
+        no_message: "La llamada no tiene mensaje en la conversación."
         not_allowed: Solo los agentes de esta bandeja y los administradores pueden usar sus llamadas.
         outbound_disabled: Esta bandeja no tiene activadas las llamadas salientes.
         sdp_offer_required: Falta la oferta de audio del navegador (sdp_offer).
@@ -150,6 +154,7 @@ es:
         whatsapp: Llamada de WhatsApp
       whatsapp:
         call_permission_request_body: "¿Nos permites llamarte por WhatsApp? Así te atendemos más rápido."
+        call_recording_notice: "Te avisamos que esta llamada se graba para darte una mejor atención."
       instagram_story_content: "%{story_sender} te mencionó en la historia: "
       instagram_deleted_story_content: Esta historia ya no está disponible.
       deleted: Este mensaje se ha eliminado

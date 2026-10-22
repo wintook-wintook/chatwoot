@@ -8,6 +8,8 @@ vi.mock('dashboard/helper/whatsappCallSession', () => ({
   applyOutboundAnswer: vi.fn(),
   hangup: vi.fn().mockResolvedValue(),
   cleanup: vi.fn(),
+  finishCall: vi.fn().mockResolvedValue(),
+  armRecorder: vi.fn(),
   toggleMute: vi.fn().mockReturnValue(true),
 }));
 vi.mock('dashboard/api/whatsappCalls', () => ({
@@ -48,11 +50,12 @@ describe('whatsappCalls — eventos', () => {
     expect(ctx.state.incoming).toBeNull();
   });
 
-  it('al terminar la activa, limpia el audio', () => {
+  it('al terminar la activa, cierra el audio y sube lo grabado', () => {
+    session.finishCall.mockResolvedValue();
     const ctx = contexto({ active: { id: 5 } });
     actions.onEnded(ctx, { id: 5 });
     expect(ctx.state.active).toBeNull();
-    expect(session.cleanup).toHaveBeenCalled();
+    expect(session.finishCall).toHaveBeenCalled();
   });
 
   it('cuando el cliente contesta la saliente, arranca el cronómetro', () => {
@@ -60,6 +63,7 @@ describe('whatsappCalls — eventos', () => {
     actions.onOutboundAccepted(ctx, { id: 7 });
     expect(ctx.state.active.status).toBe('in_progress');
     expect(ctx.state.active.startedAt).toBeTruthy();
+    expect(session.armRecorder).toHaveBeenCalledWith(7);
   });
 
   it('el permiso concedido deja un aviso para el widget', () => {

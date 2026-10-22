@@ -60,7 +60,9 @@
       "CALL_ERROR": "No se pudo llamar. {message}",
       "PERMISSION_REQUESTED": "El cliente todavía no permite llamadas: se le envió la solicitud por WhatsApp. Te avisamos cuando acepte.",
       "PERMISSION_LIMIT": "El cliente no ha permitido llamadas y ya se le pidió hace poco (WhatsApp limita las solicitudes). Podrás pedirlo otra vez el {date}.",
-      "PERMISSION_GRANTED": "{name} permitió que le llames por WhatsApp. Ya puedes llamarle."
+      "PERMISSION_GRANTED": "{name} permitió que le llames por WhatsApp. Ya puedes llamarle.",
+      "RECORDING": "Grabando",
+      "RECORDING_SCRIPT": "Avísale al cliente: «Te comento que esta llamada se graba para darte una mejor atención.» También le llegó el aviso por WhatsApp."
     },
     "BUBBLE": {
       "INBOUND": "Llamada entrante",
@@ -104,6 +106,12 @@
       },
       "PERMISSION_TITLE": "Mensaje para pedir permiso",
       "PERMISSION_HINT": "WhatsApp pide permiso del cliente antes de que le llames. Se le envía este texto con el botón «Permitir llamadas» (máximo 1 vez al día y 2 por semana).",
+      "RECORDING_TITLE": "Grabar las llamadas",
+      "RECORDING_HINT": "Se graba lo que dicen el agente y el cliente desde que contestan, y el audio queda en la burbuja de la llamada. Se graba en el navegador del agente: si cierra la pestaña a media llamada, esa grabación se pierde.",
+      "RECORDING_ON": "Se graban",
+      "RECORDING_OFF": "No se graban",
+      "RECORDING_NOTICE_LABEL": "Aviso al cliente",
+      "RECORDING_NOTICE_HINT": "Se le envía por WhatsApp en cuanto contesta. Déjalo vacío para usar el texto de ejemplo. Al agente se le muestra además un guion para decirlo en voz.",
       "SAVE": "Guardar",
       "SAVED": "Listo: se guardó la configuración de llamadas.",
       "SAVE_ERROR": "No se pudo guardar.",

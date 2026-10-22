@@ -58,7 +58,7 @@ RSpec.describe Whatsapp::IncomingCallService do
     it 'sin la bandera de la cuenta no hace nada' do
       channel.account.disable_features!('whatsapp_calls')
       procesar(connect_offer('wacid.5'))
-      expect(Call.count).to eq(0)
+      expect(Call.find_by(provider_call_id: 'wacid.5')).to be_nil
     end
   end
 
@@ -117,6 +117,15 @@ RSpec.describe Whatsapp::IncomingCallService do
       procesar(statuses: [{ id: 'wacid.out', type: 'call', status: 'ACCEPTED', timestamp: 1_760_000_000 }])
 
       expect(call.reload).to have_attributes(status: 'in_progress', started_at: Time.zone.at(1_760_000_000))
+    end
+
+    # F7 (P1): en la saliente el aviso sale cuando el cliente contesta
+    it 'si se graba, al contestar el cliente se le manda el aviso' do
+      call.merge_meta!('recording_enabled' => true)
+      procesar(statuses: [{ id: 'wacid.out', type: 'call', status: 'ACCEPTED', timestamp: 1_760_000_000 }])
+
+      expect(conversation.messages.where(content_type: :text, message_type: :outgoing).pluck(:content))
+        .to eq([I18n.t('conversations.messages.whatsapp.call_recording_notice')])
     end
   end
 end

@@ -69,7 +69,7 @@ RSpec.describe 'Llamadas de WhatsApp — API' do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body).to include('status' => 'permission_requested', 'conversation_id' => conversation.display_id)
-      expect(Call.count).to eq(0)
+      expect(Call.where(conversation: conversation)).to be_empty
     end
 
     it 'en una bandeja de solo entrantes no se puede' do

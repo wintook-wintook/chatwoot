@@ -60,7 +60,9 @@
       "CALL_ERROR": "Could not call. {message}",
       "PERMISSION_REQUESTED": "The customer does not allow calls yet: the request was sent on WhatsApp. We'll let you know when they accept.",
       "PERMISSION_LIMIT": "The customer has not allowed calls and was asked recently (WhatsApp limits requests). You can ask again on {date}.",
-      "PERMISSION_GRANTED": "{name} allowed you to call them on WhatsApp. You can call now."
+      "PERMISSION_GRANTED": "{name} allowed you to call them on WhatsApp. You can call now.",
+      "RECORDING": "Recording",
+      "RECORDING_SCRIPT": "Let the customer know: \"This call is recorded so we can serve you better.\" They also got the notice on WhatsApp."
     },
     "BUBBLE": {
       "INBOUND": "Incoming call",
@@ -104,6 +106,12 @@
       },
       "PERMISSION_TITLE": "Permission request message",
       "PERMISSION_HINT": "WhatsApp requires the customer's permission before you call. This text is sent with an «Allow calls» button (at most once a day and twice a week).",
+      "RECORDING_TITLE": "Record calls",
+      "RECORDING_HINT": "Both the agent and the customer are recorded from the moment the call is answered, and the audio stays in the call bubble. Recording happens in the agent's browser: closing the tab mid-call loses that recording.",
+      "RECORDING_ON": "Recorded",
+      "RECORDING_OFF": "Not recorded",
+      "RECORDING_NOTICE_LABEL": "Notice to the customer",
+      "RECORDING_NOTICE_HINT": "Sent on WhatsApp as soon as the call is answered. Leave it empty to use the sample text. The agent also sees a script to say it out loud.",
       "SAVE": "Save",
       "SAVED": "Done: call settings saved.",
       "SAVE_ERROR": "Could not save.",

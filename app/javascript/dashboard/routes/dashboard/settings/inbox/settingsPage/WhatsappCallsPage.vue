@@ -4,7 +4,8 @@
 // Activar · tipo (ambas / solo entrantes / solo salientes) · a quién le suena
 // (cascada / todos en línea) · texto con que se pide permiso al cliente.
 // Prender o cambiar el tipo habla con Meta (o la Meta simulada); si Meta lo rechaza,
-// se muestra su mensaje. La grabación (F7) y la llamada perdida (F8) se agregan aquí.
+// se muestra su mensaje. Grabación (F7): interruptor y el aviso que recibe el cliente.
+// La llamada perdida (F8) se agrega aquí.
 // ============================================================================
 import { useAlert } from 'dashboard/composables';
 import SettingsSection from 'dashboard/components/SettingsSection.vue';
@@ -25,6 +26,8 @@ export default {
         direction: 'both',
         ring_strategy: 'cascade',
         call_permission_request_body: '',
+        recording_enabled: false,
+        recording_notice: '',
       },
     };
   },
@@ -61,6 +64,8 @@ export default {
         direction: data.direction,
         ring_strategy: data.ring_strategy,
         call_permission_request_body: data.call_permission_request_body,
+        recording_enabled: data.recording_enabled,
+        recording_notice: data.recording_notice,
       };
     },
     async load() {
@@ -186,6 +191,40 @@ export default {
           :placeholder="settings.default_permission_body"
           :disabled="!form.enabled || form.direction === 'inbound'"
         />
+      </SettingsSection>
+
+      <SettingsSection
+        :title="t('RECORDING_TITLE')"
+        :sub-title="t('RECORDING_HINT')"
+      >
+        <div
+          class="flex items-center gap-3"
+          :class="{ 'pointer-events-none opacity-50': !form.enabled }"
+        >
+          <woot-switch
+            id="whatsapp_calls_recording"
+            v-model="form.recording_enabled"
+          />
+          <span class="text-sm text-slate-600 dark:text-slate-300">
+            {{
+              form.recording_enabled ? t('RECORDING_ON') : t('RECORDING_OFF')
+            }}
+          </span>
+        </div>
+        <label class="mt-4">
+          {{ t('RECORDING_NOTICE_LABEL') }}
+          <textarea
+            v-model="form.recording_notice"
+            rows="2"
+            class="!h-auto"
+            maxlength="1024"
+            :placeholder="settings.default_recording_notice"
+            :disabled="!form.enabled || !form.recording_enabled"
+          />
+        </label>
+        <p class="mt-1 mb-0 text-xs text-slate-500 dark:text-slate-400">
+          {{ t('RECORDING_NOTICE_HINT') }}
+        </p>
       </SettingsSection>
 
       <SettingsSection :show-border="false">

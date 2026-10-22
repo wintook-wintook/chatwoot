@@ -14,6 +14,9 @@ const CONFIG = {
   direction: 'both',
   ring_strategy: 'cascade',
   call_permission_request_body: '',
+  recording_enabled: false,
+  recording_notice: '',
+  default_recording_notice: 'Esta llamada se graba.',
   default_permission_body: '¿Te llamamos?',
   calls_webhook: null,
   simulator: false,
@@ -78,6 +81,24 @@ describe('Pestaña Llamadas de la bandeja', () => {
     expect(dispatch).toHaveBeenCalledWith('inboxes/get');
     expect(wrapper.vm.needsManualWebhook).toBe(true);
     expect(useAlert).toHaveBeenCalledWith('WHATSAPP_CALLS.SETTINGS.SAVED');
+  });
+
+  it('la grabación y su aviso se guardan con lo demás', async () => {
+    WhatsappCallSettingsAPI.update.mockResolvedValue({ data: CONFIG });
+    const { wrapper } = montar();
+    await esperar();
+    wrapper.vm.form.recording_enabled = true;
+    wrapper.vm.form.recording_notice = 'Grabamos.';
+
+    await wrapper.vm.save();
+
+    expect(WhatsappCallSettingsAPI.update).toHaveBeenCalledWith(
+      3,
+      expect.objectContaining({
+        recording_enabled: true,
+        recording_notice: 'Grabamos.',
+      })
+    );
   });
 
   it('si Meta no deja, muestra su mensaje', async () => {

@@ -55,6 +55,7 @@ class Whatsapp::IncomingCallService
       update_call!(call, 'in_progress', started_at: started_at)
       Calls::Broadcaster.new(call: call).to_caller(:outbound_accepted)
     end
+    Voice::RecordingNoticeService.new(call: call.reload).perform
   end
 
   def handle_connect(evento)

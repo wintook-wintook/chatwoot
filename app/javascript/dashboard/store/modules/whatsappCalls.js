@@ -2,7 +2,8 @@
 // ============================================================================
 // incoming  la entrante que suena en esta pestaña (de voice_call.incoming)
 // active    la llamada en curso o la saliente que está sonando del lado del cliente:
-//           { id, conversationId, inboxId, direction, status, startedAt, caller, muted }
+//           { id, conversationId, inboxId, direction, status, startedAt, caller, muted,
+//             recording } — recording: se graba (F7), el widget le muestra el guion al agente
 // Los eventos de ActionCable (helper/actionCable.js) llegan a las acciones `on*`.
 // El audio vive en helper/whatsappCallSession.js. Los avisos van a `notice` ({ key,
 // args }) y los muestra el widget (aquí no hay $t).
@@ -25,7 +26,11 @@ export const getters = {
 };
 
 const notice = (commit, key, args = {}) =>
-  commit('SET_NOTICE', { key: `WHATSAPP_CALLS.WIDGET.${key}`, args, at: Date.now() });
+  commit('SET_NOTICE', {
+    key: `WHATSAPP_CALLS.WIDGET.${key}`,
+    args,
+    at: Date.now(),
+  });
 
 export const actions = {
   // ── Eventos de ActionCable ───────────────────────────────────────────────
@@ -36,15 +41,21 @@ export const actions = {
   },
   onAccepted({ commit, state: $state, rootGetters }, data) {
     const yo = rootGetters.getCurrentUserID;
-    if ($state.incoming && $state.incoming.id === data.id && data.accepted_by_agent_id !== yo) {
+    if (
+      $state.incoming &&
+      $state.incoming.id === data.id &&
+      data.accepted_by_agent_id !== yo
+    ) {
       commit('SET_INCOMING', null);
     }
   },
   onEnded({ commit, state: $state }, data) {
-    if ($state.incoming && $state.incoming.id === data.id) commit('SET_INCOMING', null);
+    if ($state.incoming && $state.incoming.id === data.id)
+      commit('SET_INCOMING', null);
     if ($state.active && $state.active.id === data.id) {
-      session.cleanup();
       commit('SET_ACTIVE', null);
+      // Colgó el cliente: se sube lo grabado antes de soltar todo.
+      session.finishCall().catch(() => {});
     }
   },
   async onOutboundConnected(_context, data) {
@@ -52,7 +63,12 @@ export const actions = {
   },
   onOutboundAccepted({ commit, state: $state }, data) {
     if ($state.active && $state.active.id === data.id) {
-      commit('SET_ACTIVE', { ...$state.active, status: 'in_progress', startedAt: Date.now() });
+      commit('SET_ACTIVE', {
+        ...$state.active,
+        status: 'in_progress',
+        startedAt: Date.now(),
+      });
+      session.armRecorder(data.id);
     }
   },
   onPermissionGranted({ commit }, data) {
@@ -76,6 +92,7 @@ export const actions = {
         startedAt: Date.now(),
         caller: llamada.caller,
         muted: false,
+        recording: data.recording_enabled === true,
       });
     } catch (error) {
       commit('SET_INCOMING', null);
@@ -112,7 +129,11 @@ export const actions = {
       direction: 'outbound',
       status: 'connecting',
       startedAt: null,
-      caller: { name: contacto.name, phone: contacto.phone_number, avatar: contacto.thumbnail },
+      caller: {
+        name: contacto.name,
+        phone: contacto.phone_number,
+        avatar: contacto.thumbnail,
+      },
       muted: false,
     });
     try {
@@ -121,16 +142,27 @@ export const actions = {
         commit('SET_ACTIVE', null);
         const { status, next_allowed_at: siguiente } = resultado.permission;
         if (status === 'permission_limit') {
-          notice(commit, 'PERMISSION_LIMIT', { date: new Date(siguiente).toLocaleString() });
+          notice(commit, 'PERMISSION_LIMIT', {
+            date: new Date(siguiente).toLocaleString(),
+          });
         } else {
           notice(commit, 'PERMISSION_REQUESTED');
         }
         return;
       }
-      commit('SET_ACTIVE', { ...$state.active, id: resultado.call.id, status: 'ringing' });
+      commit('SET_ACTIVE', {
+        ...$state.active,
+        id: resultado.call.id,
+        status: 'ringing',
+        recording: resultado.call.recording_enabled === true,
+      });
     } catch (error) {
       commit('SET_ACTIVE', null);
-      const mensaje = error && error.response && error.response.data && error.response.data.error;
+      const mensaje =
+        error &&
+        error.response &&
+        error.response.data &&
+        error.response.data.error;
       notice(commit, 'CALL_ERROR', { message: mensaje || '' });
     }
   },

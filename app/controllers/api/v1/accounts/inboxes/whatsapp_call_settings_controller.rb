@@ -93,6 +93,7 @@ class Api::V1::Accounts::Inboxes::WhatsappCallSettingsController < Api::V1::Acco
       recording_notice: config['recording_notice'].to_s,
       call_permission_request_body: config['call_permission_request_body'].to_s,
       default_permission_body: I18n.t('conversations.messages.whatsapp.call_permission_request_body'),
+      default_recording_notice: I18n.t('conversations.messages.whatsapp.call_recording_notice'),
       calls_webhook: config['calls_webhook'],
       simulator: Whatsapp::Providers::CallsSimulator.enabled?,
       meta_status: meta_status
