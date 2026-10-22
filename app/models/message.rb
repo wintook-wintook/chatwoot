@@ -92,7 +92,8 @@ class Message < ApplicationRecord
     incoming_email: 8,
     input_csat: 9,
     integrations: 10,
-    sticker: 11
+    sticker: 11,
+    voice_call: 12 # diag/llamadas_whatsapp: la burbuja de una llamada (estado, duración, quién la tomó)
   }
   enum status: { progress: -1, sent: 0, delivered: 1, read: 2, failed: 3 }
   # [:submitted_email, :items, :submitted_values] : Used for bot message types
@@ -101,9 +102,10 @@ class Message < ApplicationRecord
   # [:deleted] : Used to denote whether the message was deleted by the agent
   # [:external_created_at] : Can specify if the message was created at a different timestamp externally
   # [:external_error : Can specify if the message creation failed due to an error at external API
+  # [:data] : diag/llamadas_whatsapp — datos de la llamada de una burbuja voice_call
   store :content_attributes, accessors: [:submitted_email, :items, :submitted_values, :email, :in_reply_to, :deleted,
                                          :external_created_at, :story_sender, :story_id, :external_error,
-                                         :translations, :in_reply_to_external_id, :in_reply_to_interactive_id, :is_unsupported], coder: JSON
+                                         :translations, :in_reply_to_external_id, :in_reply_to_interactive_id, :is_unsupported, :data], coder: JSON
 
   store :external_source_ids, accessors: [:slack], coder: JSON, prefix: :external_source_id
 

@@ -238,6 +238,31 @@ Al cerrar cada fase se registra aquí qué se hizo, cómo funciona y su pila de 
 - `config/features.yml`: `whatsapp_calls`. `lib/redis/redis_keys.rb`: lápida.
 - Pruebas: migración sube/baja; diff de `schema.rb` solo con lo propio.
 
+**✅ Hecho (22/10/2026)**
+
+| Pieza | Archivo |
+|---|---|
+| Tabla `calls` (1 migración en lugar de 4; `provider` deja el 0 para Twilio y usa 1 = whatsapp) | `db/migrate/20261022100000_create_calls.rb` |
+| Modelo recortado: estados, `missed?`, `recording_enabled?` (se decide al crear), `merge_meta!`, `default_ice_servers`, `push_event_data` | `app/models/call.rb` |
+| Burbuja `voice_call: 12` + `content_attributes.data` | `app/models/message.rb` |
+| `has_many :calls` | `account.rb`, `inbox.rb`, `conversation.rb`, `contact.rb` |
+| Bandera `whatsapp_calls` (por cuenta, apagada) | `config/features.yml` |
+| Llaves Redis: candado por llamada y lápida del terminate | `lib/redis/redis_keys.rb` |
+
+Cómo funciona: todavía nada lo usa; es la base para F2 (webhook) y F3 (servicios). Una llamada
+nace `ringing`, pasa a `in_progress` al contestar y termina en `completed`/`no_answer`/`failed`/
+`rejected`. «Perdida» = entrante terminal sin agente que la tomara.
+
+Pila de pruebas: `spec/models/call_spec.rb` (15: estados, perdida, grabación, `merge_meta!`, STUN,
+datos para el dashboard, burbuja voice_call). Migración probada hacia abajo y hacia arriba (7
+índices). Specs de Message/Account/Inbox/Conversation: mismas 12 fallas que sin el cambio (dependen
+de datos reales de `chatwoot_dev`).
+
+⚠️ Banderas: con `whatsapp_calls` van **62**. `feature_flags` es `bigint` con signo: cabe **una
+más** (la 63); la 64 desbordaría. Antes de agregar otra, revisar.
+
+Cómo pedírselo al Asistente: no aplica (base de datos).
+
 ### F2 — Provider de Meta y webhook *(sin número)*
 
 - `app/services/whatsapp/providers/whatsapp_cloud_calls.rb` (módulo, Graph `v22.0`): `pre_accept_call`,
