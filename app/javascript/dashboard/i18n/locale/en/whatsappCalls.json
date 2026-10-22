@@ -1,0 +1,44 @@
+{
+  "WHATSAPP_CALLS": {
+    "SIMULATOR": {
+      "TITLE": "Simulated customer",
+      "DESCRIPTION": "Test WhatsApp calls without a number: this page acts as the customer's phone. It uses the real path (Meta webhook and services) and real audio with the agent's tab.",
+      "DISABLED": "The simulated Meta is off. To use it, the server must have WHATSAPP_CALLS_SIMULATOR=true (development only).",
+      "NO_INBOXES": "No inboxes with calls enabled in this account. Enable the whatsapp_calls flag and calls on a WhatsApp Cloud inbox.",
+      "INBOX": "Inbox (business number)",
+      "SOURCE": "Customer audio",
+      "SOURCE_TONE": "Test tone (440 Hz)",
+      "SOURCE_MIC": "Microphone",
+      "WA_ID": "Customer number (wa_id)",
+      "NAME": "Customer name",
+      "CALL": "Call the business",
+      "HANG_UP": "Hang up",
+      "ANSWER": "Answer",
+      "REJECT": "Reject",
+      "BUSINESS_CALLING": "📞 The business is calling you",
+      "PERMISSION_TITLE": "The business asks permission to call you:",
+      "ALLOW": "Allow calls",
+      "DENY": "Don't allow",
+      "LOG_TITLE": "Log",
+      "LOG_EMPTY": "Nothing has happened yet.",
+      "STATE": {
+        "IDLE": "No call",
+        "CALLING": "Ringing at the business…",
+        "RINGING": "You are being called",
+        "IN_CALL": "In call"
+      },
+      "LOG": {
+        "CALLING": "You called the business; it is ringing",
+        "HUNG_UP": "You hung up",
+        "ANSWERED": "You answered the business call",
+        "REJECTED": "You rejected the business call",
+        "ALLOWED": "You allowed calls",
+        "DENIED": "You did not allow calls",
+        "AGENT_ANSWERED": "The agent answered",
+        "AGENT_ENDED": "The business ended the call ({reason})",
+        "BUSINESS_CALLING": "The business is calling you",
+        "PERMISSION_ASKED": "The business asked permission to call you"
+      }
+    }
+  }
+}

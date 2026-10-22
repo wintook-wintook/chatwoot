@@ -97,6 +97,14 @@ class Channel::Whatsapp < ApplicationRecord
     provider_config['recording_enabled'] == true
   end
 
+  # Con quién se hablan las llamadas: la Calling API de Meta, o la Meta simulada (F4) si
+  # WHATSAPP_CALLS_SIMULATOR=true en development. Todo lo de llamadas pasa por aquí.
+  def calls_provider
+    return Whatsapp::Providers::CallsSimulator.new(whatsapp_channel: self) if Whatsapp::Providers::CallsSimulator.enabled?
+
+    provider_service
+  end
+
   # Activa en Meta (y oculta el botón de llamar al cliente si son «solo salientes») y
   # suscribe el campo `calls` del webhook cuando Chatwoot maneja la suscripción. Se guarda
   # sin validar: la validación vuelve a consultar las credenciales en Meta y podría fallar
@@ -106,7 +114,7 @@ class Channel::Whatsapp < ApplicationRecord
     raise 'La cuenta no tiene activadas las llamadas de WhatsApp' unless account.feature_enabled?('whatsapp_calls')
 
     direction = 'both' unless CALLING_DIRECTIONS.include?(direction)
-    provider_service.update_calling_status('ENABLED', icon: direction == 'outbound' ? 'DISABLE_ALL' : 'DEFAULT')
+    calls_provider.update_calling_status('ENABLED', icon: direction == 'outbound' ? 'DISABLE_ALL' : 'DEFAULT')
     self.provider_config = provider_config.merge('calling_enabled' => true, 'calling_direction' => direction,
                                                  'calls_webhook' => subscribe_calls_webhook ? 'auto' : 'manual')
     save!(validate: false)
@@ -117,7 +125,7 @@ class Channel::Whatsapp < ApplicationRecord
   def disable_voice_calling!
     self.provider_config = provider_config.merge('calling_enabled' => false)
     save!(validate: false)
-    provider_service.update_calling_status('DISABLED') if voice_calling_supported?
+    calls_provider.update_calling_status('DISABLED') if voice_calling_supported?
   rescue StandardError => e
     Rails.logger.warn "[WHATSAPP CALL] no se pudo apagar en Meta la bandeja #{id}: #{e.message}"
   end
@@ -136,6 +144,7 @@ class Channel::Whatsapp < ApplicationRecord
   # Solo las bandejas del registro integrado: ahí Chatwoot es dueño de la suscripción. En las
   # configuradas a mano los campos se marcan en la App de Meta (no se toca su callback).
   def subscribe_calls_webhook
+    return true if Whatsapp::Providers::CallsSimulator.enabled?
     return false unless provider_config['source'] == 'embedded_signup'
 
     callback_url = "#{ENV.fetch('FRONTEND_URL', '')}/webhooks/whatsapp/#{CGI.escape(phone_number)}"

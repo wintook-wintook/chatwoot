@@ -63,7 +63,7 @@ class Whatsapp::CallPermissionRequestService
   def send_request
     texto = inbox.channel.provider_config['call_permission_request_body'].presence ||
             I18n.t('conversations.messages.whatsapp.call_permission_request_body')
-    inbox.channel.provider_service.send_call_permission_request(recipient, texto)
+    inbox.channel.calls_provider.send_call_permission_request(recipient, texto)
   rescue StandardError => e
     Rails.logger.warn "[WHATSAPP CALL] no se pudo pedir permiso: #{e.class} #{e.message}"
     nil

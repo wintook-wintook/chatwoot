@@ -71,7 +71,7 @@ class Whatsapp::IncomingCallService
   def create_inbound(evento)
     unless inbox.channel.inbound_calls_allowed?
       Rails.logger.info "[WHATSAPP CALL] bandeja #{inbox.id} sin entrantes: se rechaza #{evento[:id]}"
-      inbox.channel.provider_service.reject_call(evento[:id])
+      inbox.channel.calls_provider.reject_call(evento[:id])
       return
     end
 

@@ -45,7 +45,7 @@ class Api::V1::Accounts::WhatsappCallsController < Api::V1::Accounts::BaseContro
   end
 
   def initiate
-    respuesta = @inbox.channel.provider_service.initiate_call(recipient, params[:sdp_offer])
+    respuesta = @inbox.channel.calls_provider.initiate_call(recipient, params[:sdp_offer])
     @call = create_outbound_call(respuesta.dig('calls', 0, 'id') || respuesta['call_id'])
     render json: call_json
   rescue Voice::CallErrors::NoCallPermission

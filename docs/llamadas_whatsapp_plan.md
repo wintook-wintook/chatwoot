@@ -348,6 +348,32 @@ existentes de mensajes, listeners y WhatsApp: las mismas 35 fallas que sin el ca
 - `Whatsapp::Providers::CallsSimulator` + ruta y página de cliente simulado (solo dev).
 - Pruebas: la pestaña simulada dispara el webhook y la llamada aparece en la conversación.
 
+**✅ Hecho (22/10/2026)**
+
+| Pieza | Archivo |
+|---|---|
+| Meta simulada: mismos métodos que la Calling API; deja «señales» en Redis para el cliente y arma webhooks con la forma exacta de Meta; pide permiso como Meta (138006 hasta que el cliente acepta) | `app/services/whatsapp/providers/calls_simulator.rb` |
+| Todo lo de llamadas pasa por `Channel::Whatsapp#calls_provider` (Meta real o simulada) | `channel/whatsapp.rb`, servicios de F3, controlador |
+| Lo que hace el cliente (llamar, contestar, colgar, permitir, recoger señales): encola el webhook en el job real | `app/controllers/api/v1/accounts/whatsapp_call_simulator_controller.rb` |
+| Página «Cliente simulado» (admin): tono de 440 Hz o micrófono, audio WebRTC real con la pestaña del agente, bitácora | `views/whatsappCalls/CallSimulator.vue`, ruta `accounts/:id/whatsapp-call-simulator` |
+| Textos (archivo nuevo, lo usan también F5/F6) | `i18n/locale/{es,en}/whatsappCalls.json` |
+
+Seguridad: solo existe con `WHATSAPP_CALLS_SIMULATOR=true` **y** en development/test (en
+producción `enabled?` es false y el controlador responde 404); solo administradores.
+
+**Cómo encenderlo en develop.wintook.com** (no se ha hecho; cambia el entorno):
+1. `WHATSAPP_CALLS_SIMULATOR=true` en el entorno de `chatwoot-dev.service` y reiniciarlo.
+2. Super admin → cuenta → activar la bandera `whatsapp_calls`.
+3. Activar llamadas en una bandeja whatsapp_cloud (hasta F6, por consola:
+   `Channel::Whatsapp.find(<id>).enable_voice_calling!` — con el simulador no toca Meta).
+4. Abrir `/app/accounts/<id>/whatsapp-call-simulator` en una pestaña y el dashboard en otra.
+   El lado del agente (contestar, llamar) llega con **F5**.
+
+Pila de pruebas: `whatsapp_call_simulator_spec` (4, de punta a punta en el servidor: cliente
+llama → job real → suena → el agente contesta por la API → el cliente recoge el answer →
+cuelga → completed; y saliente sin permiso → permiso → suena en el cliente),
+`CallSimulator.spec.js` (4). Total de llamadas: 83 de servidor + 4 de navegador.
+
 ### F5 — Tiempo real, WebRTC y UI *(sin número)*
 
 - `Calls::Broadcaster` (§4.2) + eventos en `helper/actionCable.js`.

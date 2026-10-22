@@ -1,0 +1,44 @@
+{
+  "WHATSAPP_CALLS": {
+    "SIMULATOR": {
+      "TITLE": "Cliente simulado",
+      "DESCRIPTION": "Prueba las llamadas de WhatsApp sin número: esta página hace de celular del cliente. Usa el camino real (webhook de Meta y servicios) y audio real con la pestaña del agente.",
+      "DISABLED": "La Meta simulada está apagada. Para usarla, el servidor debe tener WHATSAPP_CALLS_SIMULATOR=true (solo en desarrollo).",
+      "NO_INBOXES": "No hay bandejas con llamadas activadas en esta cuenta. Activa la bandera whatsapp_calls y las llamadas de una bandeja de WhatsApp Cloud.",
+      "INBOX": "Bandeja (número del negocio)",
+      "SOURCE": "Audio del cliente",
+      "SOURCE_TONE": "Tono de prueba (440 Hz)",
+      "SOURCE_MIC": "Micrófono",
+      "WA_ID": "Número del cliente (wa_id)",
+      "NAME": "Nombre del cliente",
+      "CALL": "Llamar al negocio",
+      "HANG_UP": "Colgar",
+      "ANSWER": "Contestar",
+      "REJECT": "Rechazar",
+      "BUSINESS_CALLING": "📞 El negocio te está llamando",
+      "PERMISSION_TITLE": "El negocio pide permiso para llamarte:",
+      "ALLOW": "Permitir llamadas",
+      "DENY": "No permitir",
+      "LOG_TITLE": "Bitácora",
+      "LOG_EMPTY": "Todavía no pasa nada.",
+      "STATE": {
+        "IDLE": "Sin llamada",
+        "CALLING": "Sonando en el negocio…",
+        "RINGING": "Te están llamando",
+        "IN_CALL": "En llamada"
+      },
+      "LOG": {
+        "CALLING": "Llamaste al negocio; está sonando",
+        "HUNG_UP": "Colgaste",
+        "ANSWERED": "Contestaste la llamada del negocio",
+        "REJECTED": "Rechazaste la llamada del negocio",
+        "ALLOWED": "Permitiste que te llamen",
+        "DENIED": "No permitiste que te llamen",
+        "AGENT_ANSWERED": "El agente contestó",
+        "AGENT_ENDED": "El negocio terminó la llamada ({reason})",
+        "BUSINESS_CALLING": "El negocio te está llamando",
+        "PERMISSION_ASKED": "El negocio pidió permiso para llamarte"
+      }
+    }
+  }
+}

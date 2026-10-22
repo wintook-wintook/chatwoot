@@ -68,7 +68,7 @@ class Whatsapp::CallService
   end
 
   def provider!(metodo, *)
-    ok = call.inbox.channel.provider_service.public_send(metodo, call.provider_call_id, *)
+    ok = call.inbox.channel.calls_provider.public_send(metodo, call.provider_call_id, *)
     raise Voice::CallErrors::CallFailed, "Meta #{metodo} falló" unless ok
   rescue Voice::CallErrors::CallFailed
     raise
