@@ -171,3 +171,9 @@
 # IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
 - name: case_project
   enabled: false
+# diag/llamadas_whatsapp — llamadas de voz de WhatsApp Cloud API (contestar y llamar desde
+# el navegador). Off por defecto; se activa por cuenta en el super admin. Además, cada
+# bandeja whatsapp_cloud las activa en su pestaña «Llamadas».
+# IMPORTANTE: agregar SIEMPRE al final (la posición define el bit en feature_flags / FlagShihTzu).
+- name: whatsapp_calls
+  enabled: false

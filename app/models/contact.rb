@@ -73,6 +73,7 @@ class Contact < ApplicationRecord
                                  inverse_of: :agent_contact
   # ================================================================================
   has_many :conversations, dependent: :destroy_async
+  has_many :calls, dependent: :destroy_async # diag/llamadas_whatsapp
   has_many :contact_inboxes, dependent: :destroy_async
   has_many :csat_survey_responses, dependent: :destroy_async
   has_many :inboxes, through: :contact_inboxes

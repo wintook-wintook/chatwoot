@@ -37,6 +37,18 @@ en:
     inbox_deletetion_response: Your inbox deletion request will be processed in some time.
 
   errors:
+    # diag/llamadas_whatsapp
+    whatsapp:
+      calls:
+        not_supported: Calls only work with the official WhatsApp API (Cloud API).
+        recording_disabled: "This call is not recorded: recording was off when it started."
+        no_recording: "The recording file is missing."
+        recording_not_audio: "The recording must be an audio file."
+        no_message: "The call has no message in the conversation."
+        not_allowed: Only this inbox's agents and administrators can use its calls.
+        outbound_disabled: Outbound calls are not enabled for this inbox.
+        sdp_offer_required: The browser's audio offer (sdp_offer) is missing.
+        permission_request_failed: Could not ask the customer for permission to call.
     validations:
       presence: must not be blank
     webhook:
@@ -145,6 +157,7 @@ en:
       case_ticket_assignment: "Ticket %{folio} has been assigned to you"
       case_task_assignment: "A task was assigned to you in ticket %{folio}"
       case_task_completed: "A task was completed in ticket %{folio}"
+      missed_call: "Missed call from %{name} (conversation #%{display_id})"
     calendar_event_reminder:
       body: "\"%{title}\" starts in %{minutes} minutes"
       no_title: "Untitled event"
@@ -152,12 +165,36 @@ en:
     no_content: "No content"
   conversations:
     messages:
+      # diag/llamadas_whatsapp
+      voice_call:
+        whatsapp: WhatsApp call
+      whatsapp:
+        call_permission_request_body: "May we call you on WhatsApp? It helps us assist you faster."
+        call_recording_notice: "Just so you know, this call is recorded so we can serve you better."
+        missed_call_auto_reply: "We saw your call and could not answer. We will call you back as soon as we can."
       instagram_story_content: "%{story_sender} mentioned you in the story: "
       instagram_deleted_story_content: This story is no longer available.
       deleted: This message was deleted
       delivery_status:
         error_code: "Error code: %{error_code}"
     activity:
+      # diag/llamadas_whatsapp
+      whatsapp_call:
+        missed_actions:
+          missed: "Missed call from %{name}. It rang for: %{agents}."
+          missed_nobody: "Missed call from %{name}. No agents were available to answer."
+          ticket_no_type: "Missed call: no ticket was created because no type is selected in the inbox «Calls» tab."
+          ticket_title: "Missed call from %{name}"
+          ticket_created: "Missed call: ticket %{folio} was created."
+          ticket_note: "Missed call from %{name} (conversation #%{display_id})."
+          ticket_noted: "Missed call: a note was added to the open ticket %{folio}."
+          tracking_no_campaign: "Missed call: not enrolled in a follow-up because no campaign is selected in the inbox «Calls» tab."
+          tracking_enrolled: "Missed call: enrolled in the «%{campaign}» campaign."
+          tracking_active: "Missed call: not enrolled in «%{campaign}» because there is already an active follow-up in this inbox."
+          tracking_skipped: "Missed call: not enrolled in «%{campaign}» (reason: %{reason})."
+          auto_reply_window_closed: "Missed call: no message was sent to the customer because the WhatsApp 24 h window is closed."
+        permission_requested: "%{contact_name} was asked for permission to be called on WhatsApp"
+        permission_granted: "%{contact_name} allowed us to call them on WhatsApp"
       status:
         resolved: "Conversation was marked resolved by %{user_name}"
         contact_resolved: "Conversation was resolved by %{contact_name}"

@@ -91,7 +91,8 @@
       "sla_missed_first_response": "SLA Missed",
       "sla_missed_next_response": "SLA Missed",
       "sla_missed_resolution": "SLA Missed",
-      "case_ticket_assignment": "Case Assigned"
+      "case_ticket_assignment": "Case Assigned",
+      "missed_call": "Missed call"
     }
   },
   "NETWORK": {

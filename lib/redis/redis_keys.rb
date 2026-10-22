@@ -55,4 +55,8 @@ module Redis::RedisKeys
   IG_MESSAGE_MUTEX = 'IG_MESSAGE_CREATE_LOCK::%<sender_id>s::%<ig_account_id>s'.freeze
   SLACK_MESSAGE_MUTEX = 'SLACK_MESSAGE_LOCK::%<conversation_id>s::%<reference_id>s'.freeze
   EMAIL_MESSAGE_MUTEX = 'EMAIL_CHANNEL_LOCK::%<inbox_id>s'.freeze
+  # diag/llamadas_whatsapp — eventos de una misma llamada uno a la vez (connect/status/terminate)
+  WHATSAPP_CALL_MUTEX = 'WHATSAPP_CALL_LOCK::%<inbox_id>s::%<call_id>s'.freeze
+  # Un terminate que llegó antes que su connect: el connect lo consume (60 s)
+  WHATSAPP_CALL_TERMINATE_TOMBSTONE = 'WHATSAPP_CALL_TERMINATE::%<call_id>s'.freeze
 end

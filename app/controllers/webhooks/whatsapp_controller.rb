@@ -52,7 +52,13 @@ class Webhooks::WhatsappController < ActionController::API
   def process_payload
     # WebhookJob.perform_later('https://webhook.site/9e2659b6-6448-46cc-a3f4-8ee5fd7dfab2', params.to_unsafe_hash)
     modified_params = transform_payload(params.to_unsafe_hash)
-    Webhooks::WhatsappEventsJob.perform_later(modified_params)
+    # diag/llamadas_whatsapp: llamadas y respuestas al «Permitir llamadas» van a su propia
+    # cola (critical); el resto sigue igual.
+    if Webhooks::WhatsappCallEventsJob.handles?(modified_params.with_indifferent_access)
+      Webhooks::WhatsappCallEventsJob.perform_later(modified_params)
+    else
+      Webhooks::WhatsappEventsJob.perform_later(modified_params)
+    end
   end
 
   private

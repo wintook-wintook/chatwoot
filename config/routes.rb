@@ -83,6 +83,27 @@ Rails.application.routes.draw do
           # Sinónimos nativos (esquema legacy wintook; reemplaza al servicio WINTOOK_BOT)
           resources :palabras_sinonimos, only: [:index, :create, :update, :destroy]
           resources :sinonimos_semanticos, only: [:index]
+          # diag/llamadas_whatsapp (F4): el «cliente simulado» (solo con la Meta simulada)
+          resource :whatsapp_call_simulator, only: [], controller: 'whatsapp_call_simulator' do
+            get :inboxes
+            get :signals
+            post :call
+            post :answer
+            post :hangup
+            post :permission
+          end
+          # diag/llamadas_whatsapp (F3): contestar, rechazar, colgar y llamar
+          resources :whatsapp_calls, only: [:show] do
+            member do
+              post :accept
+              post :reject
+              post :terminate
+              post :upload_recording
+            end
+            collection do
+              post :initiate
+            end
+          end
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
@@ -537,6 +558,8 @@ Rails.application.routes.draw do
             get :agent_bot, on: :member
             post :set_agent_bot, on: :member
             delete :avatar, on: :member
+            # diag/llamadas_whatsapp (F6): la pestaña «Llamadas»
+            resource :whatsapp_call_settings, only: [:show, :update], module: :inboxes
           end
           resources :inbox_members, only: [:create, :show], param: :inbox_id do
             collection do
