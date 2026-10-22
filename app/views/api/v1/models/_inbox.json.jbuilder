@@ -116,4 +116,12 @@ json.provider resource.channel.try(:provider)
 if resource.whatsapp?
   json.message_templates resource.channel.try(:message_templates)
   json.provider_config resource.channel.try(:provider_config) if Current.account_user&.administrator?
+  # diag/llamadas_whatsapp (F5): qué llamadas permite (el botón «Llamar» y el widget lo leen)
+  if resource.channel.try(:voice_calling_supported?)
+    json.whatsapp_calls do
+      json.inbound resource.channel.inbound_calls_allowed?
+      json.outbound resource.channel.outbound_calls_allowed?
+      json.recording resource.channel.recording_enabled?
+    end
+  end
 end

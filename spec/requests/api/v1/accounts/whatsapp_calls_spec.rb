@@ -18,6 +18,14 @@ RSpec.describe 'Llamadas de WhatsApp — API' do
     create(:inbox_member, inbox: channel.inbox, user: agente)
   end
 
+  # F5: el botón «Llamar» y el widget leen esto de la bandeja (cualquier agente, no solo admin)
+  it 'la bandeja dice qué llamadas permite' do
+    get "/api/v1/accounts/#{account.id}/inboxes", headers: agente.create_new_auth_token, as: :json
+
+    bandeja = response.parsed_body['payload'].find { |i| i['id'] == channel.inbox.id }
+    expect(bandeja['whatsapp_calls']).to eq('inbound' => true, 'outbound' => true, 'recording' => false)
+  end
+
   it 'un agente que no es de la bandeja no puede' do
     post "#{base}/#{call.id}/accept", params: { sdp_answer: 'v=0' }, headers: ajeno.create_new_auth_token, as: :json
     expect(response).to have_http_status(:forbidden)

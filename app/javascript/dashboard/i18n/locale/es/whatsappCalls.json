@@ -39,6 +39,42 @@
         "BUSINESS_CALLING": "El negocio te está llamando",
         "PERMISSION_ASKED": "El negocio pidió permiso para llamarte"
       }
+    },
+    "WIDGET": {
+      "TITLE": "Llamada de WhatsApp",
+      "UNKNOWN": "Número desconocido",
+      "INCOMING": "Te están llamando…",
+      "CONNECTING": "Conectando…",
+      "RINGING": "Sonando…",
+      "ANSWER": "Contestar",
+      "REJECT": "Rechazar",
+      "HANG_UP": "Colgar",
+      "MUTE": "Silenciar",
+      "UNMUTE": "Quitar silencio",
+      "OPEN_CONVERSATION": "Ir a la conversación",
+      "CALL_BUTTON": "Llamar",
+      "CALL_BUTTON_HINT": "Llamar al cliente por WhatsApp desde el navegador",
+      "ALREADY_TAKEN": "Otro agente ya contestó la llamada.",
+      "ANSWER_ERROR": "No se pudo contestar. Revisa que el navegador tenga permiso para usar el micrófono.",
+      "BUSY": "Ya tienes una llamada en curso.",
+      "CALL_ERROR": "No se pudo llamar. {message}",
+      "PERMISSION_REQUESTED": "El cliente todavía no permite llamadas: se le envió la solicitud por WhatsApp. Te avisamos cuando acepte.",
+      "PERMISSION_LIMIT": "El cliente no ha permitido llamadas y ya se le pidió hace poco (WhatsApp limita las solicitudes). Podrás pedirlo otra vez el {date}.",
+      "PERMISSION_GRANTED": "{name} permitió que le llames por WhatsApp. Ya puedes llamarle."
+    },
+    "BUBBLE": {
+      "INBOUND": "Llamada entrante",
+      "OUTBOUND": "Llamada saliente",
+      "HANDLED_BY": "Atendida por {name}",
+      "STATUS": {
+        "RINGING": "Sonando",
+        "IN_PROGRESS": "En curso",
+        "COMPLETED": "Contestada",
+        "MISSED": "Perdida",
+        "NO_ANSWER": "Sin respuesta",
+        "REJECTED": "Rechazada",
+        "FAILED": "Falló"
+      }
     }
   }
 }

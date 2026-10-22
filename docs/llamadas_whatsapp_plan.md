@@ -384,6 +384,31 @@ cuelga → completed; y saliente sin permiso → permiso → suena en el cliente
 - `widgets/conversation/bubble/VoiceCall.vue` y botón **Llamar** en la cabecera.
 - Pruebas: Chrome y Firefox; micrófono negado; dos pestañas; dos agentes.
 
+**✅ Hecho (22/10/2026)**
+
+| Pieza | Archivo |
+|---|---|
+| Audio en el navegador (WebRTC): contestar (offer → answer), llamar (offer; el SDP de Meta se aplica aunque llegue antes que el id), colgar, silenciar, `terminate` con `fetch keepalive` al cerrar la pestaña | `helper/whatsappCallSession.js` |
+| Estado: la que suena y la activa; eventos `voice_call.*` → acciones; avisos en `notice` (los muestra el widget, que tiene `$t`) | `store/modules/whatsappCalls.js` (+ `store/index.js`) |
+| Eventos de ActionCable, solo de la cuenta abierta | `helper/actionCable.js` |
+| Ventana flotante arrastrable (como la del webphone de Wavoip, con `Draggable` + `Thumbnail`): sonando con timbre (Contestar/Rechazar), en curso (cronómetro, Silenciar, Colgar, ir a la conversación), saliente (Conectando → Sonando) | `components/widgets/calls/WhatsappCallWidget.vue`, montada en `App.vue` |
+| Burbuja de llamada: entrante/saliente, estado (contestada, **perdida**, rechazada…), duración, quién la atendió | `widgets/conversation/bubble/VoiceCall.vue`, `Message.vue` |
+| Botón «Llamar» en la cabecera, solo si la bandeja permite salientes | `components/widgets/calls/WhatsappCallButton.vue`, `ConversationHeader.vue` |
+| La bandeja dice qué llamadas permite (`whatsapp_calls: { inbound, outbound, recording }`, visible para agentes) | `app/views/api/v1/models/_inbox.json.jbuilder` |
+| Textos | `i18n/locale/{es,en}/whatsappCalls.json` (WIDGET, BUBBLE) |
+
+Notas:
+- No hay íconos `call-inbound/outbound/missed` en el fork: la burbuja usa `call` con el color del
+  estado y una flecha (hacia adentro / hacia afuera).
+- El webphone de Wavoip y esta ventana conviven (cada una solo aparece con su llamada).
+- Con una llamada en curso, otra entrante no interrumpe en esa pestaña (la toman otros agentes).
+
+Pila de pruebas (navegador, 28 + 4 del simulador): store (11: sonar, contestó otro, terminó,
+cliente contestó, permiso concedido, contestar, 409, rechazar, llamar, sin permiso, silenciar),
+sesión WebRTC (4, con `RTCPeerConnection` falso: SDP antes del id, 422 de permiso, contestar,
+colgar), burbuja (3), ventana y botón (6). Servidor: la bandeja expone `whatsapp_calls` (+1).
+Specs existentes de conversación y store: las mismas 6 fallas que sin el cambio.
+
 ### F6 — Configuración *(sin número; el "Activar" real se prueba en F9)*
 
 - Endpoints en `InboxesController` (solo admin): `update_calling` (activa/desactiva en Meta y guarda llaves).

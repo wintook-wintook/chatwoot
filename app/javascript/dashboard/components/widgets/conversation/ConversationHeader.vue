@@ -5,6 +5,7 @@ import BackButton from '../BackButton.vue';
 import inboxMixin from 'shared/mixins/inboxMixin';
 import InboxName from '../InboxName.vue';
 import MoreActions from './MoreActions.vue';
+import WhatsappCallButton from '../calls/WhatsappCallButton.vue'; // diag/llamadas_whatsapp
 import Thumbnail from '../Thumbnail.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
 import wootConstants from 'dashboard/constants/globals';
@@ -23,6 +24,7 @@ export default {
     BackButton,
     InboxName,
     MoreActions,
+    WhatsappCallButton,
     Thumbnail,
     SLACardLabel,
     Linear,
@@ -196,6 +198,7 @@ export default {
         :class="{ 'justify-end': isContactPanelOpen }">
         <SLACardLabel v-if="hasSlaPolicyId" :chat="chat" show-extended-info />
         <Linear v-if="isLinearIntegrationEnabled && isLinearFeatureEnabled" :conversation-id="currentChat.id" />
+        <WhatsappCallButton :conversation="currentChat" />
         <!-- <MoreActions :conversation-id="currentChat.id" />-->
         <more-actions :conversation-id="currentChat.id" :chatBot="chatBot" />
       </div>
