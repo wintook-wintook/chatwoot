@@ -97,6 +97,13 @@ describe('Ventana de llamada', () => {
       'inboxes/getInbox': () => ({ whatsapp_calls: { ringtone: 'classic' } }),
     });
     expect(conTono.vm.ringtoneName).toBe('classic');
+
+    // Pestaña con la bandeja vieja en memoria: manda el tono que trae la llamada.
+    const vieja = montar({
+      'whatsappCalls/getIncoming': { id: 5, inbox_id: 3, ringtone: 'digital' },
+      'inboxes/getInbox': () => ({ whatsapp_calls: { ringtone: 'classic' } }),
+    });
+    expect(vieja.vm.ringtoneName).toBe('digital');
   });
 
   it('los avisos del store se muestran traducidos', async () => {

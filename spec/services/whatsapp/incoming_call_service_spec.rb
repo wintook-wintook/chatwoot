@@ -32,6 +32,14 @@ RSpec.describe Whatsapp::IncomingCallService do
         .with(agente.pubsub_token, hash_including(event: 'voice_call.incoming', data: hash_including(sdp_offer: 'v=0 offer')))
     end
 
+    it 'el aviso trae el tono de la bandeja (una pestaña vieja no lo tiene al día)' do
+      inbox.channel.update_columns(provider_config: inbox.channel.provider_config.merge('ringtone' => 'digital')) # rubocop:disable Rails/SkipsModelValidations
+      procesar(connect_offer('wacid.tono'))
+
+      expect(ActionCable.server).to have_received(:broadcast)
+        .with(agente.pubsub_token, hash_including(event: 'voice_call.incoming', data: hash_including(ringtone: 'digital')))
+    end
+
     it 'cae en la conversación abierta del contacto, igual que un mensaje' do
       contact_inbox = ContactInboxWithContactBuilder.new(source_id: '5215512345678', inbox: inbox,
                                                          contact_attributes: { name: 'Juan' }).perform

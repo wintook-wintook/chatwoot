@@ -85,7 +85,10 @@ class Whatsapp::IncomingCallService
 
   def ring_payload(call)
     contacto = call.contact
+    # ringtone viaja aquí (no solo en la bandeja del store): una pestaña abierta antes de cambiarlo
+    # tocaría el viejo.
     { sdp_offer: call.sdp_offer, ice_servers: call.ice_servers, recording_enabled: call.recording_enabled?,
+      ringtone: call.inbox.channel.provider_config['ringtone'],
       caller: { name: contacto.name, phone: contacto.phone_number, avatar: contacto.avatar_url } }
   end
 

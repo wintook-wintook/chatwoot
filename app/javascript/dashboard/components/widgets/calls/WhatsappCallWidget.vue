@@ -53,9 +53,14 @@ export default {
     inboxName() {
       return this.inbox.name || '';
     },
+    // El que trae el aviso de la llamada (siempre al día); si no, el de la bandeja.
     ringtoneName() {
       const llamadas = this.inbox.whatsapp_calls || {};
-      return llamadas.ringtone || DEFAULT_RINGTONE;
+      return (
+        (this.incoming && this.incoming.ringtone) ||
+        llamadas.ringtone ||
+        DEFAULT_RINGTONE
+      );
     },
     isRinging() {
       return Boolean(this.incoming) && !this.active;
