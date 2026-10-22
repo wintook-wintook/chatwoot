@@ -276,6 +276,32 @@ Cómo pedírselo al Asistente: no aplica (base de datos).
 - `FacebookApiClient#subscribe_webhook` con `subscribed_fields` (+`calls` si algún inbox del WABA lo tiene).
 - Pruebas: spec del job con los payloads de los specs de v4.19.
 
+**✅ Hecho (22/10/2026)**
+
+| Pieza | Archivo |
+|---|---|
+| Calling API de Meta (v22.0): contestar (pre_accept + accept), rechazar, colgar, llamar (`NoCallPermission` con 138006), pedir permiso, activar/desactivar (oculta el botón de llamar con «solo salientes»), leer configuración | `app/services/whatsapp/providers/whatsapp_cloud_calls.rb` (incluido en `WhatsappCloudService`) |
+| Errores de llamada | `app/services/voice/call_errors.rb` |
+| Bandeja: `voice_enabled?` (bandera de cuenta + activada), `calling_direction` (both/inbound/outbound), `inbound/outbound_calls_allowed?`, `recording_enabled?`, `enable_voice_calling!`, `disable_voice_calling!` | `app/models/channel/whatsapp.rb` |
+| Suscribir `calls` solo en bandejas de registro integrado (`calls_webhook: auto`); las configuradas a mano quedan `manual` (el admin marca `calls` en su App de Meta, F6 lo avisa) | `Channel::Whatsapp#subscribe_calls_webhook`, `FacebookApiClient#subscribe_webhook(subscribed_fields:)` |
+| Webhook: el controlador manda llamadas y respuestas de permiso a un job propio en cola `critical`, con candado por llamada (reintenta si está ocupado) | `app/controllers/webhooks/whatsapp_controller.rb`, `app/jobs/webhooks/whatsapp_call_events_job.rb` |
+| Búsqueda del canal del webhook, compartida con el job de mensajes | `app/jobs/concerns/whatsapp_channel_lookup.rb` |
+
+Cómo funciona: un webhook `field=calls` (o un `call_permission_reply`) ya no cae en el job de
+mensajes; va a `WhatsappCallEventsJob`, que no hace nada si la cuenta no tiene la bandera o la
+bandeja no tiene llamadas activadas. Los servicios a los que despacha
+(`Whatsapp::IncomingCallService`, `Whatsapp::CallPermissionReplyService`) llegan en **F3**: con la
+bandera apagada (por omisión) no se llega a ellos.
+
+Activar llamadas cambia la configuración del número **en Meta**; apagarlas lo hace primero en
+Chatwoot y luego en Meta sin trabarse si Meta falla.
+
+Pila de pruebas (27): `whatsapp_cloud_calls_spec` (11, con WebMock: cuerpos que se mandan a Meta,
+138006, mensajes de error), `channel/whatsapp_calls_spec` (8: bandera, direcciones, auto/manual,
+Meta rechaza → no queda activada, apagar sin trabarse), `whatsapp_call_events_job_spec` (5: cola,
+reconocimiento, despacho, permiso, apagadas), controlador (+1). Specs de WhatsApp existentes: las
+mismas 36 fallas que sin el cambio.
+
 ### F3 — Servicios y API *(sin número)*
 
 - Portados quitando Twilio, push VoIP y transcripción: `Whatsapp::IncomingCallService`,
