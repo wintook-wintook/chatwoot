@@ -17,6 +17,16 @@ const CONFIG = {
   recording_enabled: false,
   recording_notice: '',
   default_recording_notice: 'Esta llamada se graba.',
+  missed_call_actions: ['note'],
+  missed_call_label: '',
+  missed_call_case_type_id: null,
+  missed_call_campaign_id: null,
+  missed_call_auto_reply: '',
+  missed_call_options: {
+    labels: ['ventas'],
+    case_types: [{ id: 4, name: 'Soporte' }],
+    campaigns: [],
+  },
   default_permission_body: '¿Te llamamos?',
   calls_webhook: null,
   simulator: false,
@@ -97,6 +107,25 @@ describe('Pestaña Llamadas de la bandeja', () => {
       expect.objectContaining({
         recording_enabled: true,
         recording_notice: 'Grabamos.',
+      })
+    );
+  });
+
+  it('llamada perdida: marcar y desmarcar acciones y guardarlas con su tipo de ticket', async () => {
+    WhatsappCallSettingsAPI.update.mockResolvedValue({ data: CONFIG });
+    const { wrapper } = montar();
+    await esperar();
+
+    wrapper.vm.toggleMissedAction('note');
+    wrapper.vm.toggleMissedAction('ticket');
+    wrapper.vm.form.missed_call_case_type_id = 4;
+    await wrapper.vm.save();
+
+    expect(WhatsappCallSettingsAPI.update).toHaveBeenCalledWith(
+      3,
+      expect.objectContaining({
+        missed_call_actions: ['ticket'],
+        missed_call_case_type_id: 4,
       })
     );
   });

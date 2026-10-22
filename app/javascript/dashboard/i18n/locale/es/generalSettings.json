@@ -91,7 +91,8 @@
       "sla_missed_first_response": "SLA no cumplido",
       "sla_missed_next_response": "SLA no cumplido",
       "sla_missed_resolution": "SLA no cumplido",
-      "case_ticket_assignment": "Caso asignado"
+      "case_ticket_assignment": "Caso asignado",
+      "missed_call": "Llamada perdida"
     }
   },
   "NETWORK": {

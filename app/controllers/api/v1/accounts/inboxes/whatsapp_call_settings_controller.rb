@@ -5,7 +5,9 @@
 # ================================================================================
 #   GET   inboxes/:inbox_id/whatsapp_call_settings   lo que hay + estado en Meta
 #   PATCH inboxes/:inbox_id/whatsapp_call_settings   { enabled, direction, ring_strategy,
-#           recording_enabled, recording_notice, call_permission_request_body }
+#           recording_enabled, recording_notice, call_permission_request_body,
+#           missed_call_actions[], missed_call_label, missed_call_case_type_id,
+#           missed_call_campaign_id, missed_call_auto_reply }   (F8)
 #
 # Solo administradores y solo bandejas whatsapp_cloud. Prender (o cambiar el tipo, que
 # cambia si el cliente ve el botón de llamar) habla con Meta — o con la Meta simulada —
@@ -68,10 +70,32 @@ class Api::V1::Accounts::Inboxes::WhatsappCallSettingsController < Api::V1::Acco
     cambios = {}
     cambios['ring_strategy'] = params[:ring_strategy] if RING_STRATEGIES.include?(params[:ring_strategy])
     cambios['recording_enabled'] = ActiveModel::Type::Boolean.new.cast(params[:recording_enabled]) if params.key?(:recording_enabled)
-    %w[recording_notice call_permission_request_body].each do |llave|
+    %w[recording_notice call_permission_request_body missed_call_label missed_call_auto_reply].each do |llave|
       cambios[llave] = params[llave].to_s.strip.first(MAX_TEXT) if params.key?(llave)
     end
+    cambios.merge(missed_call_settings)
+  end
+
+  # F8: qué hacer con una llamada perdida (Calls::MissedCallService).
+  def missed_call_settings
+    cambios = {}
+    if params.key?(:missed_call_actions)
+      cambios['missed_call_actions'] = Calls::MissedCallService::ACTIONS & Array(params[:missed_call_actions]).map(&:to_s)
+    end
+    { 'missed_call_case_type_id' => Current.account.case_types, 'missed_call_campaign_id' => Current.account.tracking_campaigns }
+      .each do |llave, opciones|
+      cambios[llave] = opciones.find_by(id: params[llave])&.id if params.key?(llave)
+    end
     cambios
+  end
+
+  # Lo que se puede elegir en la pestaña para la llamada perdida.
+  def missed_call_options
+    {
+      labels: Current.account.labels.order(:title).pluck(:title),
+      case_types: Current.account.case_types.order(:position).map { |tipo| { id: tipo.id, name: tipo.name } },
+      campaigns: Current.account.tracking_campaigns.order(created_at: :desc).map { |c| { id: c.id, name: c.name, status: c.status } }
+    }
   end
 
   # Lo que dice Meta del número (o la simulada). nil si no se pudo leer.
@@ -97,6 +121,19 @@ class Api::V1::Accounts::Inboxes::WhatsappCallSettingsController < Api::V1::Acco
       calls_webhook: config['calls_webhook'],
       simulator: Whatsapp::Providers::CallsSimulator.enabled?,
       meta_status: meta_status
+    }.merge(missed_call_json(config))
+  end
+
+  def missed_call_json(config)
+    {
+      missed_call_actions: Array(config['missed_call_actions']),
+      missed_call_label: config['missed_call_label'].to_s,
+      missed_call_case_type_id: config['missed_call_case_type_id'],
+      missed_call_campaign_id: config['missed_call_campaign_id'],
+      missed_call_auto_reply: config['missed_call_auto_reply'].to_s,
+      default_missed_call_label: Calls::MissedCallService::DEFAULT_LABEL,
+      default_missed_call_auto_reply: I18n.t('conversations.messages.whatsapp.missed_call_auto_reply'),
+      missed_call_options: missed_call_options
     }
   end
 end

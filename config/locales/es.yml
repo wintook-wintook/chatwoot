@@ -142,6 +142,7 @@ es:
       case_ticket_assignment: "El ticket %{folio} te ha sido asignado"
       case_task_assignment: "Se te asignó una tarea en el ticket %{folio}"
       case_task_completed: "Se completó una tarea en el ticket %{folio}"
+      missed_call: "Llamada perdida de %{name} (conversación #%{display_id})"
     calendar_event_reminder:
       body: "\"%{title}\" comienza en %{minutes} minutos"
       no_title: "Evento sin título"
@@ -155,6 +156,7 @@ es:
       whatsapp:
         call_permission_request_body: "¿Nos permites llamarte por WhatsApp? Así te atendemos más rápido."
         call_recording_notice: "Te avisamos que esta llamada se graba para darte una mejor atención."
+        missed_call_auto_reply: "Vimos tu llamada y no pudimos contestar. Te la devolvemos en cuanto podamos."
       instagram_story_content: "%{story_sender} te mencionó en la historia: "
       instagram_deleted_story_content: Esta historia ya no está disponible.
       deleted: Este mensaje se ha eliminado
@@ -163,6 +165,19 @@ es:
     activity:
       # diag/llamadas_whatsapp
       whatsapp_call:
+        missed_actions:
+          missed: "Llamada perdida de %{name}. Sonó a: %{agents}."
+          missed_nobody: "Llamada perdida de %{name}. No había agentes para contestar."
+          ticket_no_type: "Llamada perdida: no se creó ticket porque falta elegir el tipo en la pestaña «Llamadas» de la bandeja."
+          ticket_title: "Llamada perdida de %{name}"
+          ticket_created: "Llamada perdida: se creó el ticket %{folio}."
+          ticket_note: "Llamada perdida de %{name} (conversación #%{display_id})."
+          ticket_noted: "Llamada perdida: se agregó una nota al ticket abierto %{folio}."
+          tracking_no_campaign: "Llamada perdida: no se inscribió en un seguimiento porque falta elegir la campaña en la pestaña «Llamadas» de la bandeja."
+          tracking_enrolled: "Llamada perdida: se inscribió en la campaña «%{campaign}»."
+          tracking_active: "Llamada perdida: no se inscribió en «%{campaign}» porque ya tiene un seguimiento activo en esta bandeja."
+          tracking_skipped: "Llamada perdida: no se inscribió en «%{campaign}» (motivo: %{reason})."
+          auto_reply_window_closed: "Llamada perdida: no se le envió mensaje al cliente porque la ventana de 24 h de WhatsApp está cerrada."
         permission_requested: "Se le pidió a %{contact_name} permiso para llamarle por WhatsApp"
         permission_granted: "%{contact_name} permitió que le llamemos por WhatsApp"
       status:

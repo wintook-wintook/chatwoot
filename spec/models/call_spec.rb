@@ -92,4 +92,24 @@ RSpec.describe Call do
   it 'se borra junto con su conversación' do
     expect(call.conversation.calls).to eq([call])
   end
+
+  # F8: los servicios hacen update!(status) y luego merge_meta! (reload) dentro del mismo candado
+  describe 'al quedar perdida' do
+    let(:call) { create(:call) }
+
+    it 'encola sus acciones una vez, aunque después se recargue' do
+      expect do
+        call.with_lock do
+          call.update!(status: 'no_answer')
+          call.merge_meta!('ended_at' => 1)
+        end
+      end.to have_enqueued_job(Calls::MissedCallJob).with(call.id).exactly(:once)
+    end
+
+    it 'una contestada o una saliente no' do
+      saliente = create(:call, direction: :outgoing)
+      expect { saliente.update!(status: 'no_answer') }.not_to have_enqueued_job(Calls::MissedCallJob)
+      expect { call.update!(status: 'in_progress', accepted_by_agent: create(:user)) }.not_to have_enqueued_job(Calls::MissedCallJob)
+    end
+  end
 end

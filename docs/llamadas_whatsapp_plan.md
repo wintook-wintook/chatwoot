@@ -467,6 +467,35 @@ todas las llamadas de la base (la de dev ya tiene llamadas reales). Total de lla
 - `Calls::RingingTimeoutJob` cada 30 s (`config/schedule.yml`): entrantes en `ringing` con más de 60 s → `no_answer`.
 - `Calls::MissedCallJob` y las acciones de §4.5. Selectores de tipo de ticket y plantilla de seguimiento en la pestaña.
 
+**✅ Hecho (22/10/2026)**
+
+| Pieza | Archivo |
+|---|---|
+| Timbre que no se contesta: cada 30 s; entrante con más de 60 s sonando → `reject_call` en Meta, «Perdida» (`no_answer`, `ring_timeout`), se quita el timbre en todas las pestañas. Saliente: la cuelga Meta; si su aviso no llegó, a los 3 min | `app/jobs/calls/ringing_timeout_job.rb`, `config/schedule.yml` (`*/30 * * * * *`) |
+| Detección: al pasar a un estado final sin agente (`Call#missed?`), venga de Meta, del agente o del timbre | `Call` (`after_update` anota, `after_commit` encola `Calls::MissedCallJob`) |
+| Acciones, una vez por llamada (`meta.missed_actions_done_at`), cada una por su lado | `app/services/calls/missed_call_service.rb` |
+| Campana siempre (a quienes les sonó + asignado), tipo de notificación nuevo `missed_call` (13; nace apagado para correo/push) | `Notification`, `NOTIFICATIONS_PAGE.TYPE_LABEL.missed_call` |
+| Pestaña «Llamadas» → «Cuando nadie contesta»: casillas + etiqueta (se crea si no existe), tipo de ticket, campaña, texto al cliente; solo opciones de la cuenta | `WhatsappCallsPage.vue`, `WhatsappCallSettingsController#missed_call_settings` |
+
+Cambios respecto al plan:
+- Las líneas para el agente son **mensajes de actividad** (la línea gris), no notas privadas: una nota
+  saliente dispara los ganchos de salientes (botseller, palabras clave).
+- Seguimiento (P3) se elige por **campaña**, no por plantilla: pasa por `TrackingCampaigns::Enroll`, el
+  mismo camino que la automatización «Agregar a campaña» (fuente nueva `missed_call` en las
+  inscripciones). Si ya hay un seguimiento activo en la bandeja, se omite y queda la línea.
+- Ventana de 24 h para el mensaje al cliente: se exige que el cliente haya **escrito** en las últimas
+  24 h (la llamada no cuenta hasta confirmar en F0). `Conversation#can_reply?` no sirve aquí: solo
+  revisa la ventana si el canal trae la url de Graph.
+
+Error encontrado y corregido: los servicios hacen `update!(status)` y luego `merge_meta!` (que recarga),
+así que para el commit `saved_change_to_status?` ya era falso y la perdida nunca se habría detectado.
+
+Pila de pruebas: `missed_call_service_spec` (11: campana una vez, contestada no, nota+etiqueta,
+ticket nuevo / nota al abierto, campaña / activo omitido, mensaje con y sin ventana, una falla no
+para las demás), `ringing_timeout_job_spec` (3), +2 `call_spec`, +1 `whatsapp_call_settings_spec`,
++1 `WhatsappCallsPage.spec.js`. Total de llamadas: **~125 de servidor + 39 de navegador**.
+El único fallo en la corrida (`notification_spec:14`) ya fallaba antes: espera la base vacía.
+
 ### F0 — Requisitos de Meta *(cuando haya número)*
 
 - [ ] Número `whatsapp_cloud` con la Calling API disponible: **límite de mensajería ≥ 2,000 conversaciones

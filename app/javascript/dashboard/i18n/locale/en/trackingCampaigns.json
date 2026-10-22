@@ -187,7 +187,8 @@
       "SOURCE": {
         "batch": "Batch",
         "automation": "Automation",
-        "automation_named": "Automation \"{name}\""
+        "automation_named": "Automation \"{name}\"",
+        "missed_call": "Missed call"
       },
       "STATUS": {
         "enrolled": "Enrolled",

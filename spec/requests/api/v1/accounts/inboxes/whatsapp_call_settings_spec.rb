@@ -74,6 +74,23 @@ RSpec.describe 'Configuración de llamadas de una bandeja' do
     expect(meta).not_to have_received(:update_calling_status)
   end
 
+  # F8: qué hacer con una llamada perdida; solo opciones de la propia cuenta
+  it 'las acciones de llamada perdida y lo que se puede elegir' do
+    tipo = CaseType.create!(account: account, name: 'Soporte', color: '#3b82f6')
+    ajeno = CaseType.create!(account: create(:account), name: 'Otro', color: '#3b82f6')
+    campana = create(:tracking_campaign, account: account)
+
+    guardar(missed_call_actions: %w[note ticket borrar_todo], missed_call_case_type_id: ajeno.id,
+            missed_call_campaign_id: campana.id, missed_call_label: 'perdidas')
+    expect(response.parsed_body).to include('missed_call_actions' => %w[note ticket], 'missed_call_case_type_id' => nil,
+                                            'missed_call_campaign_id' => campana.id, 'missed_call_label' => 'perdidas')
+
+    guardar(missed_call_case_type_id: tipo.id)
+    expect(response.parsed_body['missed_call_case_type_id']).to eq(tipo.id)
+    expect(response.parsed_body['missed_call_options']['case_types']).to include('id' => tipo.id, 'name' => 'Soporte')
+    expect(response.parsed_body['missed_call_options']['campaigns'].pluck('id')).to eq([campana.id])
+  end
+
   it 'apagar' do
     guardar(enabled: true)
     guardar(enabled: false)

@@ -77,6 +77,12 @@ class Call < ApplicationRecord
   # La decisión de grabar se toma al crearla (P1/F7): la de la bandeja en ese momento.
   before_create { self.recording_enabled = inbox&.channel.try(:recording_enabled?) || false if meta['recording_enabled'].nil? }
 
+  # F8: al quedar perdida, sus acciones (notificación, nota, ticket…) en segundo plano.
+  # Se anota al guardar: los servicios hacen merge_meta! (reload) después del update! y para
+  # el commit saved_change_to_status? ya se perdió.
+  after_update { @became_missed = true if saved_change_to_status? && missed? }
+  after_commit :enqueue_missed_call_actions, if: -> { @became_missed }
+
   scope :active, -> { where.not(status: TERMINAL_STATUSES) }
   scope :ringing, -> { where(status: 'ringing') }
 
@@ -129,6 +135,11 @@ class Call < ApplicationRecord
 
   def to_number
     incoming? ? inbox.channel.try(:phone_number) : contact&.phone_number
+  end
+
+  def enqueue_missed_call_actions
+    @became_missed = false
+    Calls::MissedCallJob.perform_later(id)
   end
 
   # Lo que viaja al dashboard (burbuja, widget, eventos).
