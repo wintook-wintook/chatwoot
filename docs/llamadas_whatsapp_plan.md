@@ -3,8 +3,8 @@
 **Rama:** `diag/llamadas_whatsapp` (derivada de `develop` @ `4fc45d91`)
 **Base:** Chatwoot fork 3.13.6 (Rails 7.0.8, Vue 2.7 + Vuex, webpack 4)
 **Referencia:** Chatwoot oficial v4.19.0 en `/opt/chatwoot_v4190` (solo lectura)
-**Fecha:** 2026-10-21 · **Versión del plan:** 2 (con decisiones del usuario)
-**Estado:** Documento de plan (sin implementar)
+**Fecha:** 2026-10-22 · **Versión del plan:** 3 (requisitos de Meta confirmados y preguntas abiertas resueltas)
+**Estado:** F1 en curso
 
 ---
 
@@ -24,6 +24,15 @@ saliente, contestada o perdida, duración, quién atendió y, si se activa, la g
 | U3 | ¿A quién le suena? | Recomendación aceptada para revisión: **en cascada** (ver §4.3) con opción alterna *Todos en línea* |
 | U4 | ¿Se puede avanzar sin número? | **Sí**: F1–F8 con una **Meta simulada** (§4.6); F0 y F9 esperan al número real |
 | U5 | ¿Qué pasa con una llamada perdida? | **Acciones opcionales** por inbox: nada / nota privada / etiqueta / ticket / seguimiento / mensaje al cliente |
+
+### Decisiones del 22/10/2026 (antes «Preguntas abiertas»)
+
+| # | Pregunta | Decisión | Fase |
+|---|---|---|---|
+| P1 | Aviso de grabación | Mensaje automático de WhatsApp al contestar (texto configurable por bandeja, `recording_notice`) **y** guion para el agente | F7 |
+| P2 | Ticket por llamada perdida | Si el contacto ya tiene un ticket **abierto del mismo tipo**, se le agrega una nota; si no, se crea uno nuevo | F8 |
+| P3 | Seguimiento si ya hay uno activo | Se **omite** y queda una nota privada que lo dice (igual que las automatizaciones: un seguimiento activo por contacto y canal) | F8 |
+| P4 | Quién puede llamar | **Agentes asignados a la bandeja y administradores** (los mismos que pueden contestar) | F3/F5 |
 
 ---
 
@@ -48,8 +57,15 @@ Consecuencias:
 ### 2.2 Llamada saliente y permiso
 
 Meta no deja llamar a quien no dio permiso. El primer intento devuelve el error **138006**;
-Chatwoot manda entonces el mensaje interactivo `call_permission_request` (máx. 1 cada 5 min
-por conversación). Cuando el cliente acepta llega `call_permission_reply` y se avisa al agente.
+Chatwoot manda entonces el mensaje interactivo `call_permission_request`. Cuando el cliente acepta
+llega `call_permission_reply` y se avisa al agente.
+
+Reglas de Meta (confirmadas 22/10/2026; la v4.19 usaba 5 min, aquí se respeta lo de Meta):
+- **Máx. 1 solicitud al día y 2 por semana** por cliente y número. El servidor lleva la cuenta y,
+  si ya no se puede pedir, el botón **Llamar** lo dice en vez de intentarlo.
+- **Si el cliente llamó primero**, el permiso queda dado **7 días** sin pedirlo (con «Permitir que te
+  llamen» activo).
+- El permiso pedido dura **7 días**; luego hay que volver a pedirlo.
 
 ![Llamada saliente y permiso](img/llamadas-whatsapp/03-saliente-permiso.svg)
 
@@ -146,8 +162,8 @@ Opción alterna `all_online`: ignora al asignado y suena a todos los que están 
   límite conocido.
 - **Aviso al cliente:** la ley mexicana de datos personales pide informar. Como el audio no pasa
   por el servidor, no se puede reproducir una locución. Opciones: (a) enviar el texto
-  `recording_notice` por WhatsApp al contestar; (b) que el agente lo diga (guion). Decisión
-  pendiente (P-abierta 1).
+  `recording_notice` por WhatsApp al contestar; (b) que el agente lo diga (guion). **Decisión P1:
+  las dos**.
 
 ### 4.5 Llamada perdida (U5)
 
@@ -162,8 +178,8 @@ sin `accepted_by_agent_id`). Al detectarla, `Calls::MissedCallJob` corre **una s
 | Nada | `[]` | Solo la burbuja «Perdida» y la notificación | — |
 | Nota privada | `private_note` | Mensaje `private: true`: «Llamada perdida de X · hora · sonó a: …» | `Messages::MessageBuilder` |
 | Etiqueta | `label` (+ nombre, por omisión `llamada-perdida`) | Agrega la etiqueta a la conversación | `conversation.add_labels` |
-| Ticket | `ticket` (+ `case_type_id`) | Crea `CaseTicket` ligado a la conversación | Módulo Tickets (`Cases::*`, folio) |
-| Seguimiento | `tracking` (+ `tracking_template_id`) | Inscribe al contacto en la plantilla de seguimiento | `ContactTrackings::*` (la misma lógica que la inscripción masiva) |
+| Ticket | `ticket` (+ `case_type_id`) | **P2:** si hay ticket abierto del mismo tipo para el contacto, le agrega una nota; si no, crea un `CaseTicket` ligado a la conversación | Módulo Tickets (`Cases::*`, folio) |
+| Seguimiento | `tracking` (+ `tracking_template_id`) | **P3:** inscribe al contacto; si ya tiene un seguimiento activo en el canal, se omite y queda nota privada | `ContactTrackings::*` (la misma lógica que la inscripción masiva) |
 | Mensaje al cliente | `auto_reply` (+ texto) | «Vimos tu llamada, te la devolvemos en breve» | `SendReplyJob` normal |
 
 - La **notificación al agente** (campana del dashboard) va siempre.
@@ -284,7 +300,13 @@ Al cerrar cada fase se registra aquí qué se hizo, cómo funciona y su pila de 
 
 ### F0 — Requisitos de Meta *(cuando haya número)*
 
-- [ ] Número `whatsapp_cloud` con la Calling API disponible (país, límite de mensajería mínimo vigente, App con webhook `calls`).
+- [ ] Número `whatsapp_cloud` con la Calling API disponible: **límite de mensajería ≥ 2,000 conversaciones
+      iniciadas por el negocio en 24 h**, número registrado y verificado, App con webhook `calls`.
+      Revisión del 22/10/2026 del único número de dev (inbox 1563, +52 1 312 140 1826, cuenta 2):
+      `CLOUD_API` ✅ · calidad `GREEN` ✅ · `calling: NOT_SET` (disponible, apagado) ✅ ·
+      **nombre visible `DECLINED`** ⚠️ · **verificación `EXPIRED`** ⚠️ · límite de mensajería no
+      legible con el token. Pendiente del usuario: corregir nombre y verificación en WhatsApp Manager,
+      o usar un **número de prueba / sandbox de Meta**.
 - [ ] Países donde no se permiten llamadas iniciadas por el negocio (revisar México y los de los clientes).
 - [ ] Costo por minuto de las salientes (las entrantes no se cobran; verificar tarifa vigente).
 - [ ] ¿Se puede ocultar el botón de llamada al cliente? (`call_icon_visibility`)
@@ -333,10 +355,7 @@ Estas mismas pruebas, salvo P6, P7 y P13, se corren antes contra la Meta simulad
 
 ## 7. Preguntas abiertas
 
-1. **Aviso de grabación:** ¿mensaje automático de WhatsApp al contestar, guion para el agente, o ambos?
-2. **Ticket por llamada perdida:** ¿un ticket por cada llamada perdida, o reusar el ticket abierto del contacto si ya hay uno?
-3. **Seguimiento:** si el contacto ya está inscrito en un seguimiento activo, ¿se omite o se reinscribe?
-4. **Permisos:** ¿cualquier agente del inbox puede llamar, o solo ciertos roles (cruza con el módulo de Permisos del sistema)?
+Resueltas el 22/10/2026: ver «Decisiones del 22/10/2026» en la sección 1 (P1–P4).
 
 ---
 
