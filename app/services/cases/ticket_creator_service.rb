@@ -280,7 +280,7 @@ class Cases::TicketCreatorService
   def resolve_case_type_id(overrides, fields)
     name = overrides['tipo']
     if name.present?
-      id = @account.case_types.where('LOWER(name) = ?', name.downcase).pick(:id)
+      id = @account.case_types.active.where('LOWER(name) = ?', name.downcase).pick(:id)
       return id if id
     end
     fields['case_type_id']

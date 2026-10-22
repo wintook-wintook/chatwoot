@@ -195,6 +195,25 @@
         "LABEL": "Confirm new password",
         "ERROR": "Password confirmation must match the password",
         "PLACEHOLDER": "Please re-enter your new password"
+      },
+      "LANDING": {
+        "TITLE": "When you sign in, go to",
+        "NOTE": "The page you see first when you open Kontrolya.",
+        "SAVED": "Done: next time you sign in you'll go there",
+        "OPTIONS": {
+          "summary": {
+            "LABEL": "Home (My summary)",
+            "HINT": "Your notices, the most urgent of My day, your agenda, your conversations and your cases"
+          },
+          "conversations": {
+            "LABEL": "Conversations",
+            "HINT": "The conversations inbox, as always"
+          },
+          "my_day": {
+            "LABEL": "My day",
+            "HINT": "Your tasks in the order it makes sense to do them"
+          }
+        }
       }
     }
   },
@@ -363,7 +382,8 @@
     "CASES_METRICS": "Metrics",
     "CASES_GROUP_CONFIG": "Settings",
     "BUSINESS_SUMMARY": "Business summary",
-    "BUSINESS_SUMMARY_ACCESS": "Business summary: access"
+    "BUSINESS_SUMMARY_ACCESS": "Business summary: access",
+    "HOME_SUMMARY": "Home"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",

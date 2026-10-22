@@ -133,6 +133,12 @@ en:
         recorded_at: Recorded date
 
   notifications:
+    case_stages:
+      tasks:
+        one: "1 new task · stage %{stage}: %{titles}"
+        other: "%{count} new tasks · stage %{stage}: %{titles}"
+      stage_ready: "The tasks for %{stage} are done: move to %{next}?"
+      stage_ready_doc: "The tasks for %{stage} are done: document to move to %{next}"
     notification_title:
       conversation_creation: "A conversation (#%{display_id}) has been created in %{inbox_name}"
       conversation_assignment: "A conversation (#%{display_id}) has been assigned to you"
@@ -145,6 +151,8 @@ en:
       case_ticket_assignment: "Ticket %{folio} has been assigned to you"
       case_task_assignment: "A task was assigned to you in ticket %{folio}"
       case_task_completed: "A task was completed in ticket %{folio}"
+      case_stage_tasks: "You have new tasks in case %{folio}"
+      case_stage_ready: "Case %{folio} is ready to move to the next stage"
     calendar_event_reminder:
       body: "\"%{title}\" starts in %{minutes} minutes"
       no_title: "Untitled event"

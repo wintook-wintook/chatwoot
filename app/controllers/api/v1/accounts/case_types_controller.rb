@@ -16,7 +16,8 @@
 # ================================================================================
 
 class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
-  before_action :set_type, only: %i[update destroy]
+  before_action :set_type, only: %i[update destroy change_class]
+  before_action :check_admin_authorization?, only: :change_class
 
   # Clases que la UI ofrece y el flag de cuenta que exige cada una.
   OFFERED_CLASSES = %w[support commercial work_order project].freeze
@@ -43,7 +44,7 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
 
   def update
     if class_change_requested?
-      return render json: { error: 'La clase no se puede cambiar. Crea un tipo nuevo de la otra clase' },
+      return render json: { error: 'Para cambiar la clase usa «Cambiar de clase»' },
                     status: :unprocessable_entity
     end
 
@@ -52,6 +53,19 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
     else
       render json: { error: @type.errors.full_messages }, status: :unprocessable_entity
     end
+  end
+
+  # POST /case_types/:id/change_class { case_class }
+  # Con casos: crea el tipo en la otra clase y retira este (sus casos se quedan tal
+  # cual); sin casos: cambia directo. Ver Cases::TypeClassChange.
+  def change_class
+    return render json: { error: class_error(params[:case_class]) }, status: :unprocessable_entity if class_error(params[:case_class])
+
+    result = Cases::TypeClassChange.new(@type, params[:case_class]).call
+    render json: { case_type: type_json(result.type), retired: result.retired && type_json(result.retired),
+                   kept_cases: result.kept_cases, automations: result.automations, rules: result.rules }
+  rescue ArgumentError, ActiveRecord::RecordInvalid => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   def destroy
@@ -107,6 +121,10 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
       itil_enabled: type.itil_enabled,
       # @tickets_cases — clase del tipo (support/commercial/…); el ticket la hereda.
       case_class: type.case_class,
+      # Retirado (cambió de clase): conserva sus casos, ya no se usa para crear nuevos.
+      retired: type.retired?,
+      retired_at: type.retired_at,
+      cases_count: cases_counts[type.id] || 0,
       # @tickets_cases 2K — campos personalizados para render dinámico en alta/detalle.
       custom_fields: type.case_type_fields.ordered.map { |f| field_json(f) },
       # @tickets_cases — columnas del Kanban propias del tipo (Opción A+). Viajan
@@ -115,6 +133,10 @@ class Api::V1::Accounts::CaseTypesController < Api::V1::Accounts::BaseController
       created_at: type.created_at,
       updated_at: type.updated_at
     }
+  end
+
+  def cases_counts
+    @cases_counts ||= CaseTicket.where(account_id: Current.account.id).group(:case_type_id).count
   end
 
   def field_json(field)

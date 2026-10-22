@@ -91,7 +91,11 @@
       "sla_missed_first_response": "SLA Missed",
       "sla_missed_next_response": "SLA Missed",
       "sla_missed_resolution": "SLA Missed",
-      "case_ticket_assignment": "Case Assigned"
+      "case_ticket_assignment": "Case Assigned",
+      "case_task_assignment": "Task assigned",
+      "case_task_completed": "Task completed",
+      "case_stage_tasks": "New tasks",
+      "case_stage_ready": "Stage ready"
     }
   },
   "NETWORK": {

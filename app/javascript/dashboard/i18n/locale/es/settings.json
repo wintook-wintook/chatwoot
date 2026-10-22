@@ -195,6 +195,25 @@
         "LABEL": "Confirmar nueva contraseña",
         "ERROR": "La confirmación de la contraseña debe coincidir con la contraseña",
         "PLACEHOLDER": "Por favor reingresa tu nueva contraseña"
+      },
+      "LANDING": {
+        "TITLE": "Al iniciar sesión, ir a",
+        "NOTE": "La página que ves primero cuando entras a Kontrolya.",
+        "SAVED": "Listo: la próxima vez que entres irás ahí",
+        "OPTIONS": {
+          "summary": {
+            "LABEL": "Inicio (Mi resumen)",
+            "HINT": "Tus avisos, lo más urgente de Mi día, tu agenda, tus conversaciones y tus casos"
+          },
+          "conversations": {
+            "LABEL": "Conversaciones",
+            "HINT": "La bandeja de conversaciones, como siempre"
+          },
+          "my_day": {
+            "LABEL": "Mi día",
+            "HINT": "Tus tareas en el orden en que conviene hacerlas"
+          }
+        }
       }
     }
   },
@@ -363,7 +382,8 @@
     "CASES_METRICS": "Métricas",
     "CASES_GROUP_CONFIG": "Configuración",
     "BUSINESS_SUMMARY": "Resumen del negocio",
-    "BUSINESS_SUMMARY_ACCESS": "Resumen del negocio: acceso"
+    "BUSINESS_SUMMARY_ACCESS": "Resumen del negocio: acceso",
+    "HOME_SUMMARY": "Inicio"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Facturación",

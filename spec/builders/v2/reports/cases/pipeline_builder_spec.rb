@@ -52,12 +52,14 @@ RSpec.describe V2::Reports::Cases::PipelineBuilder do
 
   describe 'Plan-Metricas-Comercial' do
     it 'M1 — compara lo decidido con el período anterior de la misma duración' do
+      # La ganada del `before` se cerró a la hora REAL: `until` sale de esa hora, no
+      # de la fecha fija del travel_to (si no, la prueba falla cualquier otro día).
+      real_now = Time.current
       travel_to Time.zone.parse('2026-10-21 12:00') do
         old = opportunity(amount: 900, currency: 'MXN')
         old.close_with_outcome!(:won, reason_id: won_reason.id)
         old.update!(outcome_at: 20.days.ago)
-        # `until` con margen: la ganada del `before` se cerró a la hora real de hoy.
-        params = { since: 10.days.ago.to_i.to_s, until: 1.day.from_now.to_i.to_s }
+        params = { since: 10.days.ago.to_i.to_s, until: (real_now + 1.day).to_i.to_s }
         built = described_class.new(account: account, params: params).build
 
         expect(built[:summary][:won_count]).to eq(1)

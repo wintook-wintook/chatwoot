@@ -51,7 +51,11 @@ class Notification < ApplicationRecord
     # Nacen apagados para email/push (account_user solo enciende conversation_assignment)
     # y no se exponen en preferencias → solo campanita + toast. Append al final.
     case_task_assignment: 11,
-    case_task_completed: 12
+    case_task_completed: 12,
+    # Plan-Plantilla-Tareas-Etapa — nacieron tus tareas al entrar a una etapa (una por
+    # persona y etapa) y la etapa quedó lista para pasar. Solo campanita + toast.
+    case_stage_tasks: 13,
+    case_stage_ready: 14
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -62,6 +66,8 @@ class Notification < ApplicationRecord
   after_update_commit :dispatch_update_event
 
   PRIMARY_ACTORS = %w[Conversation CaseTicket].freeze # @tickets_cases Fase A
+  CASE_TITLE_TYPES = %w[case_ticket_assignment case_task_assignment case_task_completed
+                        case_stage_tasks case_stage_ready].freeze
 
   def push_event_data
     # Secondary actor could be nil for cases like system assigning conversation
@@ -112,7 +118,9 @@ class Notification < ApplicationRecord
       'calendar_event_reminder' => 'notifications.notification_title.calendar_event_reminder',
       'case_ticket_assignment' => 'notifications.notification_title.case_ticket_assignment',
       'case_task_assignment' => 'notifications.notification_title.case_task_assignment',
-      'case_task_completed' => 'notifications.notification_title.case_task_completed'
+      'case_task_completed' => 'notifications.notification_title.case_task_completed',
+      'case_stage_tasks' => 'notifications.notification_title.case_stage_tasks',
+      'case_stage_ready' => 'notifications.notification_title.case_stage_ready'
     }
 
     i18n_key = notification_title_map[notification_type]
@@ -122,7 +130,7 @@ class Notification < ApplicationRecord
       I18n.t(i18n_key, display_id: conversation.display_id, inbox_name: primary_actor.inbox.name)
     elsif notification_type == 'calendar_event_reminder'
       I18n.t(i18n_key)
-    elsif %w[case_ticket_assignment case_task_assignment case_task_completed].include?(notification_type)
+    elsif CASE_TITLE_TYPES.include?(notification_type)
       I18n.t(i18n_key, folio: primary_actor.folio)
     elsif %w[conversation_assignment assigned_conversation_new_message participating_conversation_new_message
              conversation_mention].include?(notification_type)
@@ -148,7 +156,7 @@ class Notification < ApplicationRecord
       I18n.t('notifications.calendar_event_reminder.body', title: title, minutes: minutes)
     when 'case_ticket_assignment'
       primary_actor.title.to_s
-    when 'case_task_assignment', 'case_task_completed'
+    when 'case_task_assignment', 'case_task_completed', 'case_stage_tasks', 'case_stage_ready'
       # primary_actor es el TICKET (ruteo reusado); el nombre de la tarea viaja en meta.
       meta&.dig('task_title').to_s
     else

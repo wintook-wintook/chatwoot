@@ -548,6 +548,9 @@ export default {
     // Antes del primer fetch, para que la bandeja abra ya con los filtros
     // que este agente dejó puestos la última vez.
     this.restoreFilters();
+    // «Mi resumen» → «Ver todo» abre directo en una pestaña (?tab=my_day).
+    const { tab } = this.$route.query || {};
+    if (QUICK_FILTERS.some(f => f.key === tab)) this.quickFilter = tab;
   },
   mounted() {
     this.$store.dispatch('agents/get');

@@ -127,7 +127,8 @@ class Api::V1::Accounts::CaseTicketsController < Api::V1::Accounts::BaseControll
 
   # GET /api/v1/accounts/:account_id/case_tickets/:id
   def show
-    render json: { case_ticket: ticket_json(@ticket) }
+    # Plan-Plantilla-Tareas-Etapa T3 — avance de la etapa (solo en el detalle).
+    render json: { case_ticket: ticket_json(@ticket).merge(stage_advance: Cases::StageAdvance.new(@ticket).summary) }
   end
 
   # POST /api/v1/accounts/:account_id/case_tickets

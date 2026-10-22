@@ -16,6 +16,7 @@ import {
 } from 'dashboard/helper/caseWorkOrder';
 import { isProjectType, projectPayload } from 'dashboard/helper/caseProject';
 import CaseTimeline from './CaseTimeline.vue';
+import { creatableTypes } from 'dashboard/helper/caseClasses';
 // Plan-Metricas-Comercial — «Comprometida por el cliente».
 import CommitmentFields from 'dashboard/views/gestorTickets/commercial/CommitmentFields.vue';
 
@@ -104,6 +105,10 @@ export default {
     priorityRowClass() {
       if (this.isWorkOrder) return 'flex flex-wrap items-start';
       return this.itilEnabled ? 'grid grid-cols-3' : '';
+    },
+    // Tipos con los que se crea un caso (sin los retirados).
+    newCaseTypes() {
+      return creatableTypes(this.types);
     },
     // Tipo de caso elegido en el form.
     selectedType() {
@@ -248,8 +253,8 @@ export default {
       this.view = this.tickets.length ? 'list' : 'create';
     });
     this.$store.dispatch('caseTickets/fetchTypes').then(() => {
-      if (!this.form.case_type_id && this.types.length) {
-        this.form.case_type_id = this.types[0].id;
+      if (!this.form.case_type_id && this.newCaseTypes.length) {
+        this.form.case_type_id = this.newCaseTypes[0].id;
       }
     });
     this.$store.dispatch('caseTickets/fetchServices');
@@ -368,7 +373,7 @@ export default {
     },
     resetForm() {
       this.form = {
-        case_type_id: this.types.length ? this.types[0].id : null,
+        case_type_id: this.newCaseTypes.length ? this.newCaseTypes[0].id : null,
         ticket_kind: 'service_request',
         amount: '',
         currency: '',
@@ -636,7 +641,7 @@ export default {
                 {{ $t('CASE_TICKETS.MODAL.CASE_TYPE_LABEL') }}
               </span>
               <select v-model="form.case_type_id" class="input" required>
-                <option v-for="t in types" :key="t.id" :value="t.id">
+                <option v-for="t in newCaseTypes" :key="t.id" :value="t.id">
                   {{ t.name }}
                 </option>
               </select>

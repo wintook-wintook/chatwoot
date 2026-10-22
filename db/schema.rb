@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_10_26_130000) do
+ActiveRecord::Schema[7.0].define(version: 2026_10_27_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -488,10 +488,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_26_130000) do
     t.date "planned_on"
     t.integer "focus_position"
     t.datetime "focused_at"
+    t.bigint "case_type_column_task_id"
+    t.bigint "case_type_column_id"
+    t.boolean "required", default: false, null: false
+    t.bigint "team_id"
+    t.bigint "documentation_for_column_id"
     t.index ["account_id", "priority"], name: "index_case_tasks_on_account_id_and_priority"
     t.index ["account_id"], name: "index_case_tasks_on_account_id"
     t.index ["assignee_id", "planned_on"], name: "index_case_tasks_on_assignee_id_and_planned_on"
     t.index ["assignee_id"], name: "index_case_tasks_on_assignee_id"
+    t.index ["case_ticket_id", "case_type_column_task_id"], name: "index_case_tasks_on_ticket_and_template"
     t.index ["case_ticket_id", "position"], name: "index_case_tasks_on_case_ticket_id_and_position"
     t.index ["case_ticket_id", "sequence"], name: "index_case_tasks_on_case_ticket_id_and_sequence"
     t.index ["case_ticket_id"], name: "index_case_tasks_on_case_ticket_id"
@@ -603,6 +609,26 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_26_130000) do
     t.index ["requester_id"], name: "index_case_tickets_on_requester_id"
   end
 
+  create_table "case_type_column_tasks", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "case_type_column_id", null: false
+    t.string "title", null: false
+    t.text "description"
+    t.boolean "required", default: true, null: false
+    t.integer "due_after_hours"
+    t.integer "priority", default: 1, null: false
+    t.integer "estimated_minutes"
+    t.integer "assignee_mode", default: 0, null: false
+    t.bigint "assignee_id"
+    t.bigint "team_id"
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_case_type_column_tasks_on_account_id"
+    t.index ["case_type_column_id", "position"], name: "index_column_tasks_on_column_and_position"
+    t.index ["case_type_column_id"], name: "index_case_type_column_tasks_on_case_type_column_id"
+  end
+
   create_table "case_type_columns", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "case_type_id", null: false
@@ -614,6 +640,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_26_130000) do
     t.datetime "updated_at", null: false
     t.integer "outcome"
     t.integer "probability"
+    t.integer "advance_mode", default: 0, null: false
     t.index ["account_id"], name: "index_case_type_columns_on_account_id"
     t.index ["case_type_id", "position"], name: "index_case_type_columns_on_type_and_position"
   end
@@ -646,6 +673,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_26_130000) do
     t.boolean "public", default: false, null: false
     t.boolean "itil_enabled", default: false, null: false
     t.integer "case_class", default: 0, null: false
+    t.datetime "retired_at"
     t.index ["account_id", "case_class"], name: "index_case_types_on_account_id_and_case_class"
     t.index ["account_id", "position"], name: "index_case_types_on_account_id_and_position"
   end
@@ -1956,6 +1984,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_26_130000) do
   add_foreign_key "case_tasks", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "completed_by_id", on_delete: :nullify
   add_foreign_key "case_tasks", "users", column: "requester_id", on_delete: :nullify
+  add_foreign_key "case_tasks", "case_type_column_tasks", on_delete: :nullify
+  add_foreign_key "case_tasks", "case_type_columns", on_delete: :nullify
+  add_foreign_key "case_tasks", "case_type_columns", column: "documentation_for_column_id", on_delete: :nullify
   add_foreign_key "case_tickets", "case_outcome_reasons", column: "outcome_reason_id", on_delete: :nullify
   add_foreign_key "case_tickets", "case_outcome_reasons", column: "postpone_reason_id", on_delete: :nullify
   add_foreign_key "case_tickets", "case_type_columns", on_delete: :nullify
@@ -1964,6 +1995,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_26_130000) do
   add_foreign_key "case_tickets", "conversations", on_delete: :nullify
   add_foreign_key "case_tickets", "users", column: "locked_by_id", on_delete: :nullify
   add_foreign_key "case_tickets", "users", column: "requester_id", on_delete: :nullify
+  add_foreign_key "case_type_column_tasks", "accounts"
+  add_foreign_key "case_type_column_tasks", "case_type_columns", on_delete: :cascade
   add_foreign_key "case_type_columns", "accounts"
   add_foreign_key "case_type_columns", "case_types", on_delete: :cascade
   add_foreign_key "case_type_fields", "accounts"

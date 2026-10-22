@@ -11,12 +11,15 @@
 
 class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   FROZEN_MSG = 'Ticket cerrado: no se pueden modificar las tareas. Reábrelo si necesitas cambiarlas.'
+  DOC_TASK_MSG = 'Esta tarea se completa sola cuando documentas el paso a la siguiente etapa'
 
   before_action :set_ticket
   before_action :set_task, only: %i[update destroy]
+  before_action :reject_manual_documentation, only: :update
 
   def index
-    render json: { case_tasks: @ticket.case_tasks.ordered.map { |t| task_json(t) } }
+    render json: { case_tasks: @ticket.case_tasks.ordered.includes(:case_type_column, :team).map { |t| task_json(t) },
+                   stage_plan: Cases::StagePlan.new(@ticket).as_json } # Plan-Plantilla-Tareas-Etapa
   end
 
   def create
@@ -72,6 +75,13 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
 
   private
 
+  # Plan-Plantilla-Tareas-Etapa T3 — «Documenta…» se completa sola al documentar.
+  def reject_manual_documentation
+    return unless @task.documentation_for_column_id && task_params[:status].to_s == 'done'
+
+    render json: { error: DOC_TASK_MSG }, status: :unprocessable_entity
+  end
+
   def set_ticket
     @ticket = Current.account.case_tickets.find(params[:case_ticket_id])
   rescue ActiveRecord::RecordNotFound
@@ -87,10 +97,20 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   def task_params
     permitted = params.require(:case_task).permit(:title, :description, :status, :priority, :assignee_id, :due_at, :position,
                                                   :milestone, # Plan-Clase-Proyecto P2 — hito
-                                                  :estimated_minutes, :planned_on) # Plan-Bandeja-Prioridad
+                                                  :estimated_minutes, :planned_on, # Plan-Bandeja-Prioridad
+                                                  :required) # Plan-Plantilla-Tareas-Etapa
     # El asignado debe ser un usuario de la cuenta (si no, queda sin asignar).
     permitted[:assignee_id] = Current.account.users.where(id: permitted[:assignee_id]).pick(:id) if permitted.key?(:assignee_id)
-    permitted
+    stage_of_required(permitted)
+  end
+
+  # Plan-Plantilla-Tareas-Etapa — una tarea manual marcada obligatoria cuenta para la
+  # etapa en la que está el caso (si no venía de una).
+  def stage_of_required(permitted)
+    return permitted unless ActiveModel::Type::Boolean.new.cast(permitted[:required])
+    return permitted if @task&.case_type_column_id
+
+    permitted.merge(case_type_column_id: @ticket.current_stage_column&.id)
   end
 
   # F5 — al completar la tarea, cancelar sus reuniones futuras; al mover el
@@ -167,7 +187,10 @@ class Api::V1::Accounts::CaseTasksController < Api::V1::Accounts::BaseController
   # Plan-Clase-Proyecto P2 (hito) · Plan-Bandeja-Prioridad (duración estimada y
   # «Programada para»).
   def plan_fields(task)
-    { milestone: task.milestone, estimated_minutes: task.estimated_minutes, planned_on: task.planned_on }
+    { milestone: task.milestone, estimated_minutes: task.estimated_minutes, planned_on: task.planned_on,
+      # Plan-Plantilla-Tareas-Etapa — nació de la plantilla de una etapa.
+      required: task.required, stage: task.case_type_column&.label, team: task.team && { id: task.team.id, name: task.team.name },
+      documentation: task.documentation_for_column_id.present? }
   end
 
   # id de tarea → nº de reuniones vivas que caen después del vencimiento de esa

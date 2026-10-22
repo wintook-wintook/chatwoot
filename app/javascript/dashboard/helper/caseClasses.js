@@ -60,6 +60,14 @@ export const CLASS_VIEW_ROUTES = {
 export const enabledCaseClasses = isEnabled =>
   CASE_CLASSES.filter(c => !c.flag || isEnabled(c.flag));
 
+// Tipos con los que se puede CREAR (o al que se puede cambiar) un caso: sin los
+// retirados (cambiaron de clase; conservan sus casos, no reciben nuevos). Los
+// filtros de Lista y Tablero sí los muestran, para seguir trabajando esos casos.
+export const creatableTypes = (types, keepId = null) =>
+  (types || []).filter(
+    t => !t.retired || (keepId !== null && String(t.id) === String(keepId))
+  );
+
 // ── Estado guardado (Plan-Casos E1.2) ──────────────────────────────────────
 // Todo lo que el agente deja elegido se recuerda en localStorage, por cuenta:
 // la última clase, y POR CLASE un solo objeto que comparten Lista, Tablero y

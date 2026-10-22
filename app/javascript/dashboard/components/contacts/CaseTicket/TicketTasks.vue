@@ -56,6 +56,8 @@ export default {
   data() {
     return {
       tasks: [],
+      // Plan-Plantilla-Tareas-Etapa — etapa actual y las siguientes con plantilla.
+      stagePlan: { current: null, upcoming: [] },
       isLoading: false,
       isSaving: false,
       // Paginación en cliente: un ticket tiene decenas de tareas, no miles;
@@ -82,6 +84,8 @@ export default {
         status: 'pending',
         priority: 'medium',
         milestone: false,
+        required: false, // Plan-Plantilla-Tareas-Etapa — obligatoria para avanzar
+        documentation: false,
         estimated_minutes: '', // Plan-Bandeja-Prioridad F1
         planned_on: '', // «Programada para» (fecha sin hora)
         // Solicitante: si ya existe se muestra fijo (requester_locked=true); en
@@ -247,6 +251,27 @@ export default {
                     {this.$t('CASE_TICKETS.TASKS.MILESTONE')}
                   </span>
                 ) : null}
+                {row.required ? (
+                  <span
+                    class="mr-2 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 no-underline inline-block"
+                    title={
+                      row.stage
+                        ? this.$t('CASE_TICKETS.TASKS.STAGE.REQUIRED_HINT', {
+                            stage: row.stage,
+                          })
+                        : ''
+                    }
+                  >
+                    {this.$t('CASE_TICKETS.TASKS.STAGE.REQUIRED')}
+                  </span>
+                ) : null}
+                {row.team && !row.assignee ? (
+                  <span class="mr-2 px-1.5 py-0.5 text-[10px] rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 no-underline inline-block">
+                    {this.$t('CASE_TICKETS.TASKS.STAGE.TEAM', {
+                      team: row.team.name,
+                    })}
+                  </span>
+                ) : null}
                 {row.title}
               </p>
               {row.description ? (
@@ -353,6 +378,17 @@ export default {
                 return (
                   <span class="text-sm text-slate-600 dark:text-slate-300">
                     {this.statusLabel(row.status)}
+                  </span>
+                );
+              }
+              // Plan-Plantilla-Tareas-Etapa T3 — «Documenta…» no se palomea a mano.
+              if (row.documentation) {
+                return (
+                  <span
+                    class="text-xs text-amber-700 dark:text-amber-300"
+                    title={this.$t('CASE_TICKETS.TASKS.STAGE.DOC_HINT')}
+                  >
+                    {this.$t('CASE_TICKETS.TASKS.STAGE.DOC_AUTO')}
                   </span>
                 );
               }
@@ -540,6 +576,7 @@ export default {
       try {
         const { data } = await CaseTasksAPI.getAll(this.ticketId);
         this.tasks = data.case_tasks || [];
+        this.stagePlan = data.stage_plan || { current: null, upcoming: [] };
       } finally {
         this.isLoading = false;
       }
@@ -635,6 +672,8 @@ export default {
         status: 'pending',
         priority: 'medium',
         milestone: false,
+        required: false, // Plan-Plantilla-Tareas-Etapa — obligatoria para avanzar
+        documentation: false,
         estimated_minutes: '', // Plan-Bandeja-Prioridad F1
         planned_on: '', // «Programada para» (fecha sin hora)
         // Solicitante = agente actual al crear (fijo; el backend lo confirma).
@@ -671,6 +710,8 @@ export default {
         status: task.status || 'pending',
         priority: task.priority || 'medium',
         milestone: !!task.milestone,
+        required: !!task.required,
+        documentation: !!task.documentation,
         estimated_minutes: task.estimated_minutes || '',
         planned_on: task.planned_on || '',
         // Con solicitante: se muestra fijo. Sin solicitante (tarea antigua): la
@@ -694,6 +735,8 @@ export default {
         planned_on: this.form.planned_on || null,
       };
       if (this.allowMilestones) payload.milestone = !!this.form.milestone;
+      if (this.stagePlan.current && !this.form.documentation)
+        payload.required = !!this.form.required;
       // Solicitante editable (tarea sin solicitante previo): se manda para fijarlo.
       if (!this.form.requester_locked) {
         payload.requester_id = this.form.requester_id || '';
@@ -931,6 +974,45 @@ export default {
       class="flex-shrink-0 !px-0 border-t border-slate-75 dark:border-slate-700"
       @pageChange="changePage"
     />
+
+    <!-- Plan-Plantilla-Tareas-Etapa — tareas de las siguientes etapas (todavía
+         no son tareas del caso: nacen al entrar a cada etapa). -->
+    <div
+      v-if="stagePlan.upcoming.length"
+      class="flex flex-col flex-shrink-0 gap-2 pt-3 mt-3 border-t border-slate-75 dark:border-slate-700"
+    >
+      <p class="m-0 text-xs font-semibold text-slate-500 dark:text-slate-400">
+        {{ $t('CASE_TICKETS.TASKS.STAGE.UPCOMING') }}
+        <span class="font-normal">
+          · {{ $t('CASE_TICKETS.TASKS.STAGE.UPCOMING_HINT') }}
+        </span>
+      </p>
+      <div
+        v-for="stage in stagePlan.upcoming"
+        :key="stage.id"
+        class="flex flex-col gap-1"
+      >
+        <span class="text-xs font-medium text-slate-600 dark:text-slate-300">
+          {{ stage.label }}
+        </span>
+        <ul class="flex flex-col gap-0.5 p-0 m-0 list-none">
+          <li
+            v-for="(t, i) in stage.tasks"
+            :key="i"
+            class="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500"
+          >
+            <fluent-icon icon="checkmark-circle" size="12" />
+            <span>{{ t.title }}</span>
+            <span
+              v-if="t.required"
+              class="text-[10px] text-slate-400 dark:text-slate-500"
+            >
+              · {{ $t('CASE_TICKETS.TASKS.STAGE.REQUIRED') }}
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
 
     <!-- Modal de alta / edición -->
     <woot-modal
@@ -1179,6 +1261,29 @@ export default {
             </span>
             <span class="text-xs text-slate-400 dark:text-slate-500">
               {{ $t('CASE_TICKETS.TASKS.MILESTONE_HINT') }}
+            </span>
+          </label>
+
+          <!-- Plan-Plantilla-Tareas-Etapa — cuenta para pasar a la siguiente etapa -->
+          <label
+            v-if="stagePlan.current && !form.documentation"
+            class="flex items-center gap-2 mt-3"
+          >
+            <input
+              v-model="form.required"
+              type="checkbox"
+              class="!mb-0"
+              :disabled="viewing"
+            />
+            <span class="text-sm text-slate-700 dark:text-slate-200">
+              {{ $t('CASE_TICKETS.TASKS.STAGE.REQUIRED_LABEL') }}
+            </span>
+            <span class="text-xs text-slate-400 dark:text-slate-500">
+              {{
+                $t('CASE_TICKETS.TASKS.STAGE.REQUIRED_FORM_HINT', {
+                  stage: stagePlan.current.label,
+                })
+              }}
             </span>
           </label>
 
