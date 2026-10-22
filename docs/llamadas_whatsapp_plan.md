@@ -316,6 +316,33 @@ mismas 36 fallas que sin el cambio.
   llamada terminada → 409; initiate sin permiso → 422 `permission_requested`; initiate con
   `inbound` → 422). Ojo: RSpec corre contra `chatwoot_dev`.
 
+**✅ Hecho (22/10/2026)**
+
+| Pieza | Archivo |
+|---|---|
+| Eventos de Meta: connect (oferta → nueva llamada que suena; respuesta → saliente lista), ACCEPTED (contestó de verdad), terminate (completed / no_answer / failed), lápida de 60 s si el terminate llega antes | `app/services/whatsapp/incoming_call_service.rb` |
+| Crear la entrante: contacto y conversación con el **mismo criterio que un mensaje** (wa_id; la abierta o la única) | `app/services/voice/inbound_call_builder.rb` |
+| Burbuja `voice_call` y su actualización (estado, duración, quién la tomó) | `app/services/voice/call_message_builder.rb` |
+| Contestar / rechazar / colgar bajo candado (AlreadyAccepted, CallAlreadyEnded; si Meta falla no se toca el estado) | `app/services/whatsapp/call_service.rb` |
+| Pedir permiso con los **límites de Meta** (1/día, 2/semana por cliente y número; historial en el contacto por bandeja) | `app/services/whatsapp/call_permission_request_service.rb` |
+| Respuesta del cliente (por wamid; avisa a quien pidió + asignado) | `app/services/whatsapp/call_permission_reply_service.rb` |
+| A quién llega cada aviso (cascada / todos en línea; recuerda a quién sonó) — **adelantado de F5** porque los servicios lo usan | `app/services/calls/broadcaster.rb` |
+| API: show, accept, reject, terminate, initiate (P4: agentes de la bandeja + admins; 409 en carreras; 422 con permiso pedido / límite) | `app/controllers/api/v1/accounts/whatsapp_calls_controller.rb`, `config/routes.rb` |
+| Textos (es/en): burbuja, mensaje de permiso al cliente (tú), actividades, errores | `config/locales/es.yml`, `en.yml` |
+| **D6**: la burbuja no se envía al cliente, ni la ven seguimientos, Agentes IA, bot ERP, palabras clave, BotSeller, bot del inbox, integraciones, webhooks externos ni automatizaciones; no reabre tickets. Sí llega al dashboard y a notificaciones | `Message` (callbacks), `Base::SendOnChannelService`, `MessageFilterHelpers#webhook_sendable?`, listeners de automatización, tickets e integraciones |
+
+Hallazgo importante: sin la guarda de D6, la burbuja de una **saliente** se habría enviado al
+cliente por WhatsApp como texto («Llamada de WhatsApp»), porque todo mensaje saliente pasa por
+`SendReplyJob`.
+
+Alcance: llamar solo desde una conversación (desde la ficha del contacto, después).
+
+Pila de pruebas: 74 de llamadas en verde (F1–F3): `incoming_call_service_spec` (12),
+`call_service_spec` (7), `call_permission_request_service_spec` (6), `whatsapp_calls_spec`
+(API, 6), `message_voice_call_spec` (D6, 4), `broadcaster_spec` (5) + las de F1/F2. Specs
+existentes de mensajes, listeners y WhatsApp: las mismas 35 fallas que sin el cambio
+(comprobado corriendo exactamente esas 35 sin el cambio).
+
 ### F4 — Meta simulada *(sin número)*
 
 - `Whatsapp::Providers::CallsSimulator` + ruta y página de cliente simulado (solo dev).

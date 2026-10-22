@@ -83,6 +83,17 @@ Rails.application.routes.draw do
           # Sinónimos nativos (esquema legacy wintook; reemplaza al servicio WINTOOK_BOT)
           resources :palabras_sinonimos, only: [:index, :create, :update, :destroy]
           resources :sinonimos_semanticos, only: [:index]
+          # diag/llamadas_whatsapp (F3): contestar, rechazar, colgar y llamar
+          resources :whatsapp_calls, only: [:show] do
+            member do
+              post :accept
+              post :reject
+              post :terminate
+            end
+            collection do
+              post :initiate
+            end
+          end
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations

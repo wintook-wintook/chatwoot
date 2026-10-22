@@ -137,16 +137,18 @@ class Message < ApplicationRecord
 
   # ⭐ SENTIMENT ANALYSIS - proyecto@contact_tracking
   # Analiza respuestas de clientes y ajusta seguimientos automáticamente
-  after_create_commit :analyze_for_active_trackings, if: :incoming?
+  # diag/llamadas_whatsapp: la burbuja de una llamada (voice_call) no es algo que el
+  # cliente escribió ni que se le mande: no la ven seguimientos, bots ni palabras clave.
+  after_create_commit :analyze_for_active_trackings, if: :incoming?, unless: :voice_call?
 
   # @query_databases — Modo B: si el inbox tiene un bot cobrador con consulta IA, responde.
-  after_create_commit :respond_via_erp_bot, if: :incoming?
+  after_create_commit :respond_via_erp_bot, if: :incoming?, unless: :voice_call?
 
   # proyecto@contact_tracking: evalúa keywords de acción en mensajes salientes
-  after_create_commit :check_keyword_actions_for_outgoing, unless: :incoming?
+  after_create_commit :check_keyword_actions_for_outgoing, unless: -> { incoming? || voice_call? }
 
   # proyecto@botseller_webhook_saliente: notifica a INTERNAL_WEBHOOK_URL también en salientes
-  after_create_commit :dispatch_botseller_for_outgoing, if: :outgoing?
+  after_create_commit :dispatch_botseller_for_outgoing, if: :outgoing?, unless: :voice_call?
 
   after_update_commit :dispatch_update_event
 

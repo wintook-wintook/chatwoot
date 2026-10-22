@@ -23,6 +23,13 @@ es:
     reset_password_failure: '¡Uh ho! No hemos podido encontrar ningún usuario con el correo electrónico especificado.'
     inbox_deletetion_response: Su solicitud de eliminación de la bandeja de entrada será procesada en algún tiempo.
   errors:
+    # diag/llamadas_whatsapp
+    whatsapp:
+      calls:
+        not_allowed: Solo los agentes de esta bandeja y los administradores pueden usar sus llamadas.
+        outbound_disabled: Esta bandeja no tiene activadas las llamadas salientes.
+        sdp_offer_required: Falta la oferta de audio del navegador (sdp_offer).
+        permission_request_failed: No se pudo pedir permiso al cliente para llamarle.
     validations:
       presence: no debe estar en blanco
     webhook:
@@ -137,12 +144,21 @@ es:
     no_content: "Sin contenido"
   conversations:
     messages:
+      # diag/llamadas_whatsapp
+      voice_call:
+        whatsapp: Llamada de WhatsApp
+      whatsapp:
+        call_permission_request_body: "¿Nos permites llamarte por WhatsApp? Así te atendemos más rápido."
       instagram_story_content: "%{story_sender} te mencionó en la historia: "
       instagram_deleted_story_content: Esta historia ya no está disponible.
       deleted: Este mensaje se ha eliminado
       delivery_status:
         error_code: "Código de error: %{error_code}"
     activity:
+      # diag/llamadas_whatsapp
+      whatsapp_call:
+        permission_requested: "Se le pidió a %{contact_name} permiso para llamarle por WhatsApp"
+        permission_granted: "%{contact_name} permitió que le llamemos por WhatsApp"
       status:
         resolved: "La conversación fue marcada por %{user_name}"
         contact_resolved: "Conversación fue resuelta por %{contact_name}"
