@@ -611,6 +611,17 @@ export default {
       }
     },
 
+    // Embudo de contactos — cambiar de embudo desde el combo del encabezado; la
+    // dirección queda en kanban/type/<id> para poder guardarla o compartirla.
+    onFunnelSelect(event) {
+      const typeId = Number(event.target.value);
+      if (!typeId || typeId === Number(this.selectedProcessId)) return;
+      this.$router.push({
+        name: 'kanban_type',
+        params: { accountId: this.$route.params.accountId, typeId },
+      });
+    },
+
     switchToManagement() {
       this.activeView = 'management';
       this.$router.push({
@@ -833,9 +844,18 @@ export default {
             <span v-if="statusFilter" class="kanban-badge-success">
               Status: {{ statusFilter }}
             </span>
-            <span v-if="selectedKanbanType && !label && !statusFilter" class="kanban-badge-purple">
-              {{ selectedKanbanType.name }}
-            </span>
+            <!-- Embudo de contactos: aquí adentro se elige qué embudo ver (la
+                 configuración de los embudos está en Ajustes). -->
+            <label v-if="kanbanTypes.length && !label && !statusFilter"
+              class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+              {{ $t('KANBAN.FUNNEL.BOARD.PICKER') }}
+              <select :value="selectedProcessId" class="!mb-0 !py-1 !h-8 text-sm w-auto min-w-[10rem]"
+                @change="onFunnelSelect">
+                <option v-for="funnel in kanbanTypes" :key="funnel.id" :value="funnel.id">
+                  {{ funnel.name }}
+                </option>
+              </select>
+            </label>
           </div>
           <woot-button variant="clear" size="small" icon="arrow-clockwise" :is-loading="isLoading"
             @click="refreshBoardData"

@@ -191,7 +191,13 @@ export default {
         t => String(t.id) === String(this.filters.case_type_id)
       );
       return (
-        type?.name || this.$t(`CASE_TICKETS.CLASSES.${this.caseClassKey}.NAME`)
+        type?.name ||
+        // Ventas crea «+ Oportunidad» (la cosa), no «+ Ventas» (la clase).
+        this.$t(
+          this.$te(`CASE_TICKETS.CLASSES.${this.caseClassKey}.NEW`)
+            ? `CASE_TICKETS.CLASSES.${this.caseClassKey}.NEW`
+            : `CASE_TICKETS.CLASSES.${this.caseClassKey}.NAME`
+        )
       );
     },
     boardTitle() {

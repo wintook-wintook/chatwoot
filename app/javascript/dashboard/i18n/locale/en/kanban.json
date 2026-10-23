@@ -29,6 +29,7 @@
       },
       "BOARD": {
         "SECTION": "Contact funnel",
+        "PICKER": "Funnel",
         "AUTO_MOVE": "Automatic movement",
         "AUTO_MOVE_HELP": "The conversation itself moves its card: when it arrives, is answered, is labeled, an appointment is set or its case is created. It only moves forward; moving by hand always wins.",
         "ENTRY_INBOXES": "Inboxes that enter automatically",
@@ -65,7 +66,7 @@
         "CASE_CLASS": "Of class",
         "CASE_CLASSES": {
           "any": "Any",
-          "commercial": "Commercial",
+          "commercial": "Sales",
           "support": "Support",
           "work_order": "Work order",
           "project": "Project"
