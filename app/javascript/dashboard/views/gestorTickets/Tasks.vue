@@ -29,11 +29,12 @@ import {
 // Filtros rápidos por ámbito de asignación (mismo patrón que el Kanban).
 // Plan-Bandeja-Prioridad F1 — «Mi día» (orden sugerido); «Vencidas» se quitó:
 // ya está en el filtro «Vence».
+// Mi día primero: es con lo que se empieza el día (el menú abre ahí).
 const QUICK_FILTERS = [
+  { key: 'my_day', label: 'MY_DAY' },
   { key: 'mine', label: 'MINE' },
   { key: 'unassigned', label: 'UNASSIGNED' },
   { key: 'all', label: 'ALL' },
-  { key: 'my_day', label: 'MY_DAY' },
 ];
 
 const PRIORITY_DOT = {
@@ -100,7 +101,8 @@ export default {
   data() {
     return {
       quickFilters: QUICK_FILTERS,
-      quickFilter: 'mine',
+      // La primera vez abre en Mi día; después, en la última pestaña usada.
+      quickFilter: 'my_day',
       // Un juego de filtros por pestaña (ver `filters`, que apunta al de la activa).
       tabFilters: QUICK_FILTERS.reduce(
         (acc, f) => ({ ...acc, [f.key]: defaultTabFilters() }),

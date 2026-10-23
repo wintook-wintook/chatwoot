@@ -11,11 +11,9 @@ import kanban from './sidebarItems/kanban'; // Añade esta línea
 import gestorTickets from './sidebarItems/gestorTickets'; // @tickets_cases
 
 import { getSidebarItemsV2 } from './sidebarItems/v2';
+import { MENU_V2 } from './menuVersion';
 
-// Menú v2 (reacomodo: Inicio, Conversaciones, Ventas, Servicio, Agenda, Clientes,
-// Agentes IA, Informes, Ajustes). En `false` vuelve el menú anterior tal cual:
-// ese es el respaldo para regresarlo.
-export const MENU_V2 = true;
+export { MENU_V2 };
 
 const getSidebarItemsV1 = accountId => ({
   primaryMenu: primaryMenu(accountId),

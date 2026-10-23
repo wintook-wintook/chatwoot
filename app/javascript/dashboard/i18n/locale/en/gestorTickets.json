@@ -994,17 +994,17 @@
       "PREFIX_PLACEHOLDER": "SOP",
       "CLASS": {
         "LABEL": "Case class",
-        "HELP": "The class defines the behavior: Support handles tickets; Commercial handles opportunities (amount, pipeline, won/lost); Work order handles planned work (scheduling, technician, hours); Project handles phased work (target date, budget, progress). It is chosen when the type is created and cannot be changed later.",
+        "HELP": "The class defines the behavior: Support handles tickets; Sales handles opportunities (amount, pipeline, won/lost); Work order handles planned work (scheduling, technician, hours); Project handles phased work (target date, budget, progress). It is chosen when the type is created and cannot be changed later.",
         "OPTIONS": {
           "SUPPORT": "Support",
-          "COMMERCIAL": "Commercial",
+          "COMMERCIAL": "Sales",
           "WORK_ORDER": "Work order",
           "PROJECT": "Project"
         },
         "FILTER": {
           "ALL": "All",
           "SUPPORT": "Support",
-          "COMMERCIAL": "Commercial",
+          "COMMERCIAL": "Sales",
           "WORK_ORDER": "Work order",
           "PROJECT": "Project"
         },
@@ -1294,7 +1294,7 @@
       "outcome_set": "Opportunity outcome",
       "postponed": "Opportunity postponed",
       "resumed": "Opportunity resumed",
-      "amount_changed": "Commercial data",
+      "amount_changed": "Opportunity data",
       "commitment_changed": "Customer commitment",
       "conversation_link": "Conversation linked",
       "stage_tasks_added": "Stage tasks",
@@ -1515,7 +1515,7 @@
       "TOAST_DUE_ALIGNED": "Task due date moved to {date}"
     },
     "COMMERCIAL": {
-      "NO_TYPES": "There are no Commercial case types yet. Create one in Case types.",
+      "NO_TYPES": "There are no opportunity types yet. Create one of class Sales in Case types.",
       "FIELDS": {
         "AMOUNT": "Amount",
         "CURRENCY": "Currency",
@@ -1540,11 +1540,11 @@
       },
       "COLUMN_TOTAL": "Column total",
       "PANEL": {
-        "TITLE": "Commercial data",
+        "TITLE": "Opportunity data",
         "SAVE": "Save",
         "CANCEL": "Discard",
-        "SAVED": "Commercial data saved",
-        "SAVE_ERROR": "Could not save the commercial data",
+        "SAVED": "Opportunity data saved",
+        "SAVE_ERROR": "Could not save the opportunity data",
         "PROBABILITY_HINT": "When the opportunity moves to another stage, it takes that column's probability.",
         "FROZEN": "The opportunity is closed: reopen it to change its data."
       },
@@ -1591,8 +1591,8 @@
         "CURRENCY_INVALID": "Use a 3-letter code, e.g. USD",
         "REASONS_TITLE": "Closing reasons",
         "REASONS_DESC": "What is chosen when marking an opportunity as won, lost, postponed or cancelled. If an outcome has active reasons, choosing one is required. Deactivate a reason instead of deleting it to keep the history.",
-        "PAGE_TITLE": "Commercial",
-        "DISABLED": "The Commercial class is not active in this account.",
+        "PAGE_TITLE": "Sales",
+        "DISABLED": "The Sales class is not active in this account.",
         "GROUPS": {
           "won": "Won",
           "lost": "Lost",
@@ -1919,11 +1919,16 @@
     },
     "CLASSES": {
       "SWITCHER_LABEL": "Case class",
+      "VIEW_LABEL": "View as",
+      "VIEW_BOARD": "Board",
+      "VIEW_LIST": "List",
+      "VIEW_DASHBOARD": "Dashboard",
       "COMMERCIAL": {
-        "NAME": "Commercial",
+        "NAME": "Sales",
+        "NEW": "Opportunity",
         "LIST": "Opportunities",
         "BOARD": "Pipeline",
-        "METRICS": "Sales metrics",
+        "METRICS": "Sales dashboard",
         "SCOPES": {
           "mine": "Mine",
           "unassigned": "Unassigned",

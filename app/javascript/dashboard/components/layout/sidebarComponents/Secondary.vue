@@ -65,6 +65,19 @@ export default {
   // @tickets_cases — los ítems con `visibleGetter` dependen de la configuración
   // del módulo de casos: se pide una vez cuando el menú los trae.
   watch: {
+    // Menú v2: al estar en una pantalla de un grupo plegable, el grupo se abre.
+    '$route.name': {
+      immediate: true,
+      handler(name) {
+        const items = (this.menuConfig && this.menuConfig.menuItems) || [];
+        const group = items.find(
+          item =>
+            item.collapsible &&
+            (item.children || []).some(child => child.toStateName === name)
+        );
+        if (group) this.openGroup = group.toState;
+      },
+    },
     menuConfig: {
       immediate: true,
       handler(config) {

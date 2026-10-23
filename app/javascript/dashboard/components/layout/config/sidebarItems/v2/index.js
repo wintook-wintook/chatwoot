@@ -16,6 +16,7 @@ import {
   CLASS_VIEW_ROUTES,
   DEFAULT_CASE_CLASS,
   lastCaseClass,
+  lastCaseView,
 } from '../../../../../helper/caseClasses';
 import conversations from '../conversations';
 import contacts from '../contacts';
@@ -52,6 +53,48 @@ const CASE_SETTINGS_ROUTES = [
   'gestorTickets_business_summary_access',
 ];
 
+// Lo que se usa todo el día y no es configuración técnica: pasa de Ajustes a
+// Ventas (las mismas pantallas y direcciones; solo cambia el menú).
+const SALES_TOOLS = ['whatsapp_templates_index', 'labels_list', 'canned_list'];
+const SALES_TOOL_ROUTES = [...SALES_TOOLS, 'whatsapp_templates_wrapper'];
+// Los campos extra del contacto: pasan de Ajustes a Clientes.
+const CLIENT_TOOLS = ['attributes_list'];
+// Lo que define qué sabe y qué hace la IA: pasa de Ajustes a Agentes IA.
+const AI_TOOLS = [
+  'knowledge_sources_list',
+  'chatgpt_list',
+  'website_sketch_list',
+  'automation_list',
+];
+// En Ajustes «Agentes IA» (plantillas) solo redirigía a la lista de Agentes IA.
+const DUPLICATED_SETTINGS = ['tracking_templates_list'];
+// Todo lo que sale de Ajustes (opciones y rutas).
+const MOVED_SETTINGS = [
+  ...SALES_TOOLS,
+  ...CLIENT_TOOLS,
+  ...AI_TOOLS,
+  ...DUPLICATED_SETTINGS,
+];
+const MOVED_SETTINGS_ROUTES = [
+  ...SALES_TOOL_ROUTES,
+  ...CLIENT_TOOLS,
+  ...AI_TOOLS,
+  ...DUPLICATED_SETTINGS,
+];
+
+// Lo que soporte ajusta mientras opera: pasa de Ajustes › Casos y etapas a Servicio.
+const SERVICE_TOOLS = [
+  'gestorTickets_classification',
+  'gestorTickets_sla',
+  'gestorTickets_portals',
+];
+// «Prioridad de Mi día» se ajusta según cómo trabaja el equipo: pasa a Agenda.
+const AGENDA_TOOLS = ['gestorTickets_task_settings'];
+// Lo que sale de Ajustes › Casos y etapas hacia las áreas.
+const MOVED_CASE_SETTINGS = [...SERVICE_TOOLS, ...AGENDA_TOOLS];
+// El Centro de ayuda (`accounts/:id/portals...`) trae su propio menú interno.
+const HELP_CENTER_PATH = /\/accounts\/\d+\/portals(\/|$)/;
+
 const routeName = route => (route && route.name) || '';
 
 // Clase de la pantalla de casos en la que se está (null fuera de ellas).
@@ -69,6 +112,34 @@ const serviceClass = (route, accountId) => {
   if (current && current !== COMMERCIAL) return current;
   const last = lastCaseClass(accountId);
   return last !== COMMERCIAL ? last : DEFAULT_CASE_CLASS;
+};
+
+// Las opciones tal como estaban en Ajustes (íconos, permisos y flags).
+const settingsItems = (accountId, names) =>
+  names
+    .map(name =>
+      settings(accountId).menuItems.find(item => item.toStateName === name)
+    )
+    .filter(Boolean);
+
+const caseSettingsGroup = accountId =>
+  gestorTickets(accountId).menuItems.find(item => item.collapsible);
+const caseSettingsChildren = accountId =>
+  (caseSettingsGroup(accountId) || {}).children || [];
+
+// Una sola opción por área para sus casos: adentro se elige la forma de ver
+// (Lista | Tablero | Dashboard, ver CaseClassSwitcher) y la opción vuelve a
+// la última usada. Se marca activa en las tres vistas y en el detalle.
+const casesItem = (accountId, caseClass, label, fallbackView) => {
+  const view = lastCaseView(accountId, caseClass, fallbackView);
+  return {
+    icon: 'list',
+    label,
+    featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+    toState: frontendURL(`accounts/${accountId}/tickets/${caseClass}/${view}`),
+    toStateName: CLASS_VIEW_ROUTES[view],
+    activeRoutes: [...CLASS_ROUTES, 'gestorTickets_detail'],
+  };
 };
 
 export const primaryMenuV2 = (accountId, route) => {
@@ -89,6 +160,22 @@ export const primaryMenuV2 = (accountId, route) => {
       toState: url('dashboard'),
       toStateName: 'home',
     },
+    // Sin casos, Agenda es el calendario; sin calendario, las tareas.
+    {
+      icon: 'calendar',
+      key: 'agenda',
+      label: 'AGENDA',
+      featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+      toState: url('tickets/tasks?tab=my_day'),
+      toStateName: 'gestorTickets_tasks',
+      alternatives: [
+        {
+          featureFlag: FEATURE_FLAGS.GOOGLE_CALENDAR,
+          toState: url('google-calendar'),
+          toStateName: 'google_calendar',
+        },
+      ],
+    },
     {
       icon: 'heart-handshake',
       key: 'ventas',
@@ -106,22 +193,6 @@ export const primaryMenuV2 = (accountId, route) => {
       toState: url(`tickets/${serviceClass(route, accountId)}/list`),
       toStateName: CLASS_VIEW_ROUTES.list,
     },
-    // Sin casos, Agenda es el calendario; sin calendario, las tareas.
-    {
-      icon: 'calendar',
-      key: 'agenda',
-      label: 'AGENDA',
-      featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
-      toState: url('tickets/tasks'),
-      toStateName: 'gestorTickets_tasks',
-      alternatives: [
-        {
-          featureFlag: FEATURE_FLAGS.GOOGLE_CALENDAR,
-          toState: url('google-calendar'),
-          toStateName: 'google_calendar',
-        },
-      ],
-    },
     {
       icon: 'book-contacts',
       key: 'contacts',
@@ -131,19 +202,20 @@ export const primaryMenuV2 = (accountId, route) => {
       toStateName: 'contacts_dashboard',
     },
     {
-      icon: 'bot',
+      icon: 'megaphone',
       key: 'campaigns',
+      label: 'CAMPAIGNS_V2',
+      featureFlag: FEATURE_FLAGS.CAMPAIGNS,
+      toState: url('tracking-dashboard/campaigns'),
+      toStateName: 'contact_trackings_campaigns',
+    },
+    {
+      icon: 'bot',
+      key: 'agentes',
       label: 'AI_AGENTS',
       featureFlag: FEATURE_FLAGS.CAMPAIGNS,
-      toState: url('tracking-dashboard'),
-      toStateName: 'contact_trackings_dashboard',
-      alternatives: [
-        {
-          featureFlag: FEATURE_FLAGS.CAPTAIN,
-          toState: url('captain'),
-          toStateName: 'captain',
-        },
-      ],
+      toState: url('tracking-dashboard/agents'),
+      toStateName: 'contact_trackings_agents',
     },
     {
       icon: 'arrow-trending-lines',
@@ -152,15 +224,6 @@ export const primaryMenuV2 = (accountId, route) => {
       featureFlag: FEATURE_FLAGS.REPORTS,
       toState: url('reports'),
       toStateName: 'account_overview_reports',
-    },
-    {
-      icon: 'library',
-      key: 'helpcenter',
-      label: 'HELP_CENTER.TITLE',
-      featureFlag: FEATURE_FLAGS.HELP_CENTER,
-      alwaysVisibleOnChatwootInstances: true,
-      toState: url('portals'),
-      toStateName: 'default_portal_articles',
     },
     {
       icon: 'settings',
@@ -219,16 +282,16 @@ const conversationsV2 = accountId => {
 };
 
 const ventas = accountId => {
-  const tickets = path => frontendURL(`accounts/${accountId}/tickets/${path}`);
   return {
     parentNav: 'ventas',
-    // La lista de embudos (y «Agregar embudo») es la misma sección dinámica del
-    // menú del tablero de conversaciones.
-    extraSections: 'kanban',
-    routes: KANBAN_ROUTES,
+    routes: [...KANBAN_ROUTES, ...SALES_TOOL_ROUTES],
     matches: route =>
       KANBAN_ROUTES.includes(routeName(route)) ||
+      SALES_TOOL_ROUTES.includes(routeName(route)) ||
       caseClassOf(route, accountId) === COMMERCIAL,
+    // Dos opciones: los prospectos (qué embudo ver se elige DENTRO del tablero;
+    // crearlos y configurarlos, en Ajustes › Embudos de contactos) y las
+    // oportunidades (Lista | Tablero | Dashboard adentro).
     menuItems: [
       {
         icon: 'kanban',
@@ -236,73 +299,146 @@ const ventas = accountId => {
         toState: frontendURL(`accounts/${accountId}/kanban`),
         toStateName: 'kanban_dashboard',
       },
-      {
-        icon: 'list',
-        label: 'OPPORTUNITIES',
-        featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
-        toState: tickets(`${COMMERCIAL}/list`),
-        toStateName: CLASS_VIEW_ROUTES.list,
-      },
-      {
-        icon: 'table-switch',
-        label: 'OPPORTUNITY_BOARD',
-        featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
-        toState: tickets(`${COMMERCIAL}/board`),
-        toStateName: CLASS_VIEW_ROUTES.board,
-      },
-      {
-        icon: 'document',
-        label: 'SALES_METRICS',
-        featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
-        toState: tickets(`${COMMERCIAL}/metrics`),
-        toStateName: CLASS_VIEW_ROUTES.metrics,
-      },
+      casesItem(accountId, COMMERCIAL, 'OPPORTUNITIES', 'board'),
+      // Mismos ítems (íconos, permisos y flags) que tenían en Ajustes.
+      ...settingsItems(accountId, SALES_TOOLS),
     ],
   };
 };
 
 const servicio = (accountId, route) => {
   const klass = serviceClass(route, accountId);
-  const tickets = path => frontendURL(`accounts/${accountId}/tickets/${path}`);
   return {
     parentNav: 'servicio',
     routes: [],
     matches: route_ => {
+      if (SERVICE_TOOLS.includes(routeName(route_))) return true;
       const current = caseClassOf(route_, accountId);
       return !!current && current !== COMMERCIAL;
     },
     menuItems: [
+      casesItem(accountId, klass, 'SERVICE_CASES', 'list'),
+      // Mismos ítems (íconos y permisos de administrador) que en Casos y etapas.
+      ...caseSettingsChildren(accountId)
+        .filter(child => SERVICE_TOOLS.includes(child.toStateName))
+        .map(child => ({
+          ...child,
+          featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+        })),
       {
-        icon: 'list',
-        label: 'SERVICE_CASES',
-        toState: tickets(`${klass}/list`),
-        toStateName: CLASS_VIEW_ROUTES.list,
-      },
-      {
-        icon: 'table-switch',
-        label: 'SERVICE_BOARD',
-        toState: tickets(`${klass}/board`),
-        toStateName: CLASS_VIEW_ROUTES.board,
-      },
-      {
-        icon: 'document',
-        label: 'SERVICE_METRICS',
-        toState: tickets(`${klass}/metrics`),
-        toStateName: CLASS_VIEW_ROUTES.metrics,
+        icon: 'library',
+        label: 'HELP_CENTER.TITLE',
+        featureFlag: FEATURE_FLAGS.HELP_CENTER,
+        toState: frontendURL(`accounts/${accountId}/portals`),
+        toStateName: 'default_portal_articles',
       },
     ],
   };
 };
 
+// Dentro del Centro de ayuda manda su propio menú: este registro, sin opciones,
+// solo marca Servicio en el menú principal (Secondary no pinta un menú vacío).
+const centroDeAyuda = () => ({
+  parentNav: 'servicio',
+  routes: [],
+  matches: route => HELP_CENTER_PATH.test((route && route.path) || ''),
+  menuItems: [],
+});
+
+// Informes: primero la foto del negocio y los dashboards de cada área (en el
+// orden del menú; llevan a la misma pantalla que su botón «Dashboard»), luego,
+// plegado, el detalle de conversaciones de Chatwoot con nombres claros. El SLA
+// de Chatwoot sale del menú (se confunde con el SLA de Servicio).
+const REPORTS_GROUP = [
+  ['account_overview_reports', 'REPORTS_LIVE'],
+  ['conversation_reports', 'REPORTS_CONVERSATION'],
+  ['agent_reports', 'REPORTS_BY_AGENT'],
+  ['team_reports', 'REPORTS_BY_TEAM'],
+  ['inbox_reports', 'REPORTS_BY_INBOX'],
+  ['label_reports', 'REPORTS_BY_LABEL'],
+  ['csat_reports', 'REPORTS_CSAT_V2'],
+  ['bot_reports', 'REPORTS_BOT'],
+];
+
+const informes = (accountId, route) => {
+  const base = reports(accountId);
+  const byName = name => base.menuItems.find(item => item.toStateName === name);
+  const dashboard = (toState, toStateName, label) => ({
+    icon: 'arrow-trending-lines',
+    label,
+    featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+    toState: frontendURL(`accounts/${accountId}/${toState}`),
+    toStateName,
+  });
+  return {
+    ...base,
+    menuItems: [
+      byName('business_summary_reports'),
+      dashboard(
+        `tickets/${COMMERCIAL}/metrics`,
+        CLASS_VIEW_ROUTES.metrics,
+        'SALES_DASHBOARD'
+      ),
+      dashboard(
+        `tickets/${serviceClass(route, accountId)}/metrics`,
+        CLASS_VIEW_ROUTES.metrics,
+        'SERVICE_DASHBOARD'
+      ),
+      {
+        ...dashboard(
+          'tracking-dashboard/metrics',
+          'contact_trackings_metrics',
+          'CAMPAIGNS_DASHBOARD_REPORT'
+        ),
+        featureFlag: FEATURE_FLAGS.CAMPAIGNS,
+      },
+      {
+        icon: 'chat',
+        label: 'REPORTS_GROUP_CONVERSATIONS',
+        hasSubMenu: true,
+        collapsible: true,
+        toState: 'reports_group_conversations',
+        toStateName: 'account_overview_reports',
+        children: REPORTS_GROUP.filter(([name]) => byName(name)).map(
+          ([name, label]) => {
+            const item = byName(name);
+            return {
+              id: `report-${name}`,
+              label,
+              icon: item.icon,
+              translate: true,
+              featureFlag: item.featureFlag,
+              toState: item.toState,
+              toStateName: name,
+            };
+          }
+        ),
+      },
+    ].filter(Boolean),
+  };
+};
+
+// Una sola opción de Tareas (Mi día | Mías | No asignadas | Todas van adentro) que
+// abre en Mi día; el calendario; y la prioridad de Mi día (solo administrador).
+// Clientes = lo de Contactos + los atributos personalizados.
+const clientes = accountId => {
+  const base = contacts(accountId);
+  return {
+    ...base,
+    routes: [...base.routes, ...CLIENT_TOOLS],
+    menuItems: [...base.menuItems, ...settingsItems(accountId, CLIENT_TOOLS)],
+  };
+};
+
 const agenda = accountId => ({
   parentNav: 'agenda',
-  routes: ['gestorTickets_tasks', 'google_calendar'],
+  routes: ['gestorTickets_tasks', 'google_calendar', ...AGENDA_TOOLS],
   menuItems: [
     {
       icon: 'checkmark-circle',
       label: 'TASKS_V2',
       featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
-      toState: frontendURL(`accounts/${accountId}/tickets/tasks`),
+      toState: frontendURL(`accounts/${accountId}/tickets/tasks?tab=my_day`),
       toStateName: 'gestorTickets_tasks',
     },
     {
@@ -312,39 +448,76 @@ const agenda = accountId => ({
       toState: frontendURL(`accounts/${accountId}/google-calendar`),
       toStateName: 'google_calendar',
     },
+    ...caseSettingsChildren(accountId)
+      .filter(child => AGENDA_TOOLS.includes(child.toStateName))
+      .map(child => ({
+        ...child,
+        label: 'MY_DAY_PRIORITY',
+        featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+      })),
   ],
 });
 
-const agentesIa = accountId => {
-  const base = campaigns(accountId);
-  return {
-    ...base,
-    routes: [...base.routes, 'captain'],
-    menuItems: [
-      ...base.menuItems,
-      {
-        icon: 'captain',
-        label: 'ASSISTANT',
-        featureFlag: FEATURE_FLAGS.CAPTAIN,
-        toState: frontendURL(`accounts/${accountId}/captain`),
-        toStateName: 'captain',
-      },
-    ],
-  };
-};
+// Los dos menús salen del de Campañas de antes (mismos ítems, íconos y rutas) más
+// lo de IA que estaba en Ajustes. Capitán (Captain, el producto externo de
+// Chatwoot) ya no tiene acceso desde el menú: nuestros Agentes IA hacen lo mismo.
+const campaignItem = (accountId, name, label) => ({
+  ...campaigns(accountId).menuItems.find(item => item.toStateName === name),
+  label,
+});
+
+const agentesIa = accountId => ({
+  parentNav: 'agentes',
+  routes: [
+    'contact_trackings_agents',
+    'contact_trackings_agent',
+    'contact_trackings_assistant',
+    'contact_trackings_dashboard',
+    ...AI_TOOLS,
+    ...DUPLICATED_SETTINGS,
+  ],
+  menuItems: [
+    campaignItem(accountId, 'contact_trackings_agents', 'AI_AGENT_LIST'),
+    campaignItem(accountId, 'contact_trackings_dashboard', 'TRACKINGS'),
+    ...settingsItems(accountId, AI_TOOLS),
+  ],
+});
+
+const campanas = accountId => ({
+  parentNav: 'campaigns',
+  routes: [
+    'contact_trackings_campaigns',
+    'contact_trackings_campaign_detail',
+    'ongoing_campaigns',
+    'one_off',
+    'contact_trackings_metrics',
+  ],
+  menuItems: [
+    campaignItem(accountId, 'contact_trackings_campaigns', 'CAMPAIGNS_AI'),
+    campaignItem(accountId, 'ongoing_campaigns', 'CAMPAIGNS_WEB'),
+    campaignItem(accountId, 'one_off', 'CAMPAIGNS_SMS'),
+    campaignItem(accountId, 'contact_trackings_metrics', 'CAMPAIGNS_DASHBOARD'),
+  ],
+});
 
 // Ajustes = la configuración de antes + la de casos (el mismo grupo colapsable
 // que tenía el menú de Casos) + los embudos de contactos.
 const ajustes = accountId => {
   const base = settings(accountId);
-  const caseGroup = gestorTickets(accountId).menuItems.find(
-    item => item.collapsible
-  );
+  const caseGroup = caseSettingsGroup(accountId);
   return {
     ...base,
-    routes: [...base.routes, ...CASE_SETTINGS_ROUTES, 'kanban_types_list'],
+    routes: [
+      ...base.routes.filter(name => !MOVED_SETTINGS_ROUTES.includes(name)),
+      ...CASE_SETTINGS_ROUTES.filter(
+        name => !MOVED_CASE_SETTINGS.includes(name)
+      ),
+      'kanban_types_list',
+    ],
     menuItems: [
-      ...base.menuItems,
+      ...base.menuItems.filter(
+        item => !MOVED_SETTINGS.includes(item.toStateName)
+      ),
       {
         icon: 'kanban',
         label: 'CONTACT_FUNNELS',
@@ -356,6 +529,9 @@ const ajustes = accountId => {
         ? [
             {
               ...caseGroup,
+              children: caseGroup.children.filter(
+                child => !MOVED_CASE_SETTINGS.includes(child.toStateName)
+              ),
               label: 'CASES_AND_STAGES',
               featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
             },
@@ -372,11 +548,13 @@ export const getSidebarItemsV2 = (accountId, route) => ({
   secondaryMenu: [
     ventas(accountId),
     servicio(accountId, route),
+    centroDeAyuda(),
     inicio(accountId),
     conversationsV2(accountId),
-    contacts(accountId),
-    reports(accountId),
+    clientes(accountId),
+    informes(accountId, route),
     agentesIa(accountId),
+    campanas(accountId),
     agenda(accountId),
     ajustes(accountId),
   ],
