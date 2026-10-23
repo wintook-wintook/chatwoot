@@ -49,6 +49,8 @@ class TrackingDispatch::Claim
                              NOT EXISTS (SELECT 1 FROM tracking_campaigns tc
                                          WHERE tc.id = contact_trackings.tracking_campaign_id AND tc.status = 'paused')
                            SQL
+    # feat/licencias (F3): una cuenta suspendida no despacha; al reactivarla sale lo pendiente.
+    scope = scope.where.not(account_id: Account.where(status: :suspended).select(:id))
     accounts = TrackingDispatch::Settings.account_scope
     accounts == :all ? scope : scope.where(account_id: accounts)
   end

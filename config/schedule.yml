@@ -266,3 +266,15 @@ tracking_campaigns_prospect_score_job:
   class: "TrackingCampaigns::ProspectScoreJob"
   queue: scheduled_jobs
   description: "Recalculate prospect scores of active prospecting campaigns"
+
+# feat/licencias (F3) — vencer licencias, promover la cola y suspender (cada hora, minuto 5).
+licenses_expiration_job:
+  cron: '5 * * * *'
+  class: 'Licenses::ExpirationJob'
+  queue: scheduled_jobs
+
+# feat/licencias (F3) — avisos 10 y 5 días antes de vencer (diario 15:00 UTC = 9:00 CDMX).
+licenses_reminder_job:
+  cron: '0 15 * * *'
+  class: 'Licenses::ReminderJob'
+  queue: scheduled_jobs

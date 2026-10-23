@@ -12,6 +12,8 @@ class ContactTrackingJob < ApplicationJob
 
   # ⭐ GPT-style: incluir historial real de conversación en el prompt
   GPT_HISTORY_ENABLED = ENV.fetch('TRACKING_GPT_HISTORY_ENABLED', 'false') == 'true'
+  # feat/licencias (F3): cada cuánto se reintenta el primer mensaje de una cuenta suspendida.
+  SILENCED_RETRY = 1.hour
 
   def perform(tracking_id)
     tracking = ContactTracking.find_by(id: tracking_id)
@@ -20,6 +22,7 @@ class ContactTrackingJob < ApplicationJob
     # (TrackingDispatch::SendJob). Un job viejo que quedó en Sidekiq no debe enviar en paralelo.
     return if tracking.dispatched?
     return block_pending_setup(tracking) if ContactTrackings::PendingSetup.blocked?(tracking)
+    return defer_silenced(tracking) if Licenses::Silence.silenced?(tracking.account)
 
     # ⭐ LOCK PESIMISTA: Evita ejecución simultánea del mismo tracking
     tracking.with_lock do
@@ -95,6 +98,13 @@ class ContactTrackingJob < ApplicationJob
     motivo = ContactTrackings::PendingSetup.message(tracking)
     Rails.logger.warn "[ContactTracking] ⛔ Tracking #{tracking.id}: #{motivo}"
     tracking.update_columns(status: 'failed', last_error: motivo.truncate(250), updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # feat/licencias (F3): cuenta suspendida. No es un error del seguimiento: se reprograma y,
+  # cuando la cuenta se reactive (renovación), sale solo.
+  def defer_silenced(tracking)
+    Rails.logger.info "[ContactTracking] 🔇 Tracking #{tracking.id}: cuenta #{tracking.account_id} suspendida, se reintenta en 1 h"
+    self.class.set(wait: SILENCED_RETRY).perform_later(tracking.id)
   end
 
   # Decide por dónde sale el intento (plantilla, sesión con IA u otro canal) y lo envía.

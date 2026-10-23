@@ -934,6 +934,58 @@ La pantalla llega en F2b.
 **Cómo probarlo**: en el super admin marcar la cuenta como «Cuenta de Wintook» y a tu usuario
 «Gestionar licencias»; recargar el dashboard de esa cuenta: aparece «Licencias» en el menú.
 
+
+### F3 — Vencimientos, avisos y silencio ✅ (23/10/2026)
+
+**Qué se hizo**
+
+| Pieza | Archivo |
+|---|---|
+| Vencer, promover la cola y suspender (cada hora, minuto 5) | `app/services/licenses/expiration_service.rb`, `app/jobs/licenses/expiration_job.rb`, `config/schedule.yml` |
+| Avisos 10 y 5 días antes (diario 15:00 UTC = 9:00 CDMX) | `app/services/licenses/reminder_service.rb`, `app/jobs/licenses/reminder_job.rb` |
+| Correo a los administradores, en el idioma de la cuenta | `app/mailers/administrator_notifications/license_notifications_mailer.rb` + `expiring.liquid` |
+| Silencio del motor con la cuenta suspendida | `app/services/licenses/silence.rb` + analizador, `ContactTrackingJob`, `TrackingDispatch::Claim`/`SendJob`, `Calls::MissedCallService`, `WhatsappCallEventsJob` |
+| WhatsApp guarda los mensajes de una cuenta suspendida | `app/jobs/concerns/whatsapp_channel_lookup.rb` |
+
+**Cómo funciona**
+
+```
+ Cada hora — Licenses::ExpirationService
+   activa con expires_at pasado → expired
+     ├─ hay programada → se promueve (conserva su inicio; si también venció, sigue a la próxima)
+     │                    y reactiva la cuenta si estaba suspendida
+     └─ no hay → cuenta suspendida (interruptor encendido y no es «Cuenta de Wintook»)
+   programada cuyo inicio ya pasó y sin activa → se promueve
+   interruptor encendido: cuentas con licencia, sin activa ni cola y aún activas → suspendidas
+
+ Diario — Licenses::ReminderService (solo con el interruptor encendido)
+   activa con ≤ 10 días → correo «vence en N días» (una vez); ≤ 5 días → otro (una vez)
+   no a cuentas de Wintook ni a las que ya tienen periodo en cola
+
+ Cuenta suspendida — Licenses::Silence
+   entran y se guardan los mensajes de todos los canales (WhatsApp incluido)
+   Agente IA no contesta · primer mensaje del seguimiento se reprograma cada hora
+   campañas no se toman / vuelven a la fila · llamada perdida sin mensaje al cliente
+   llamadas entrantes ignoradas (nadie puede entrar a contestar)
+ Al renovar (emitir «ya» o promover la cola) la cuenta se reactiva y todo retoma solo.
+```
+
+- El correo escribe la fecha como dd/mm/aaaa: el español del proyecto no trae
+  `date.formats.long` y `I18n.l` habría fallado (lo detectó la prueba).
+- El banner en el dashboard llega con la vista del cliente (F5).
+- Los jobs se cargan al arrancar Sidekiq: en dev hay que reiniciar `chatwoot-dev` para que
+  empiecen a correr.
+
+**Pila de pruebas** (108 de licencias y de lo tocado, en verde)
+
+- `expiration_service_spec.rb`: vence y suspende, promueve sin corte, encadena atrasadas, promover reactiva, Wintook nunca, suspende las viejas al encender, apagado solo marca, no toca vigentes.
+- `reminder_service_spec.rb`: 10 y 5 días una sola vez, no con más de 10 / Wintook / con cola, apagado no avisa.
+- `license_notifications_mailer_spec.rb`: destinatarios, asunto en español, plan y cuenta.
+- `silence_spec.rb`: qué es callada, el despachador no toma de una suspendida, el primer mensaje se reprograma sin quedar fallido.
+- `missed_call_service_spec.rb`: con la cuenta suspendida no se manda y queda dicho.
+- `whatsapp_events_job_spec.rb`: actualizado — con la cuenta suspendida el mensaje se guarda.
+- Existentes del despachador, `SendJob` y llamadas: en verde.
+
 ---
 
 ### Bitácora de versiones

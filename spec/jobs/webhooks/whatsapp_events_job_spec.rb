@@ -71,14 +71,15 @@ RSpec.describe Webhooks::WhatsappEventsJob do
       job.perform_now(phone_number: 'random_phone_number')
     end
 
-    it 'will not enqueue Whatsapp::IncomingMessageWhatsappCloudService if account is suspended' do
+    # feat/licencias (F3): una cuenta suspendida ya no descarta mensajes; se guardan y el motor
+    # no contesta (Licenses::Silence).
+    it 'still stores the message when the account is suspended' do
       account = channel.account
       account.update!(status: :suspended)
       allow(Whatsapp::IncomingMessageWhatsappCloudService).to receive(:new).and_return(process_service)
       allow(Whatsapp::IncomingMessageService).to receive(:new).and_return(process_service)
 
-      expect(Whatsapp::IncomingMessageWhatsappCloudService).not_to receive(:new)
-      expect(Whatsapp::IncomingMessageService).not_to receive(:new)
+      expect(process_service).to receive(:perform)
       job.perform_now(params)
     end
   end

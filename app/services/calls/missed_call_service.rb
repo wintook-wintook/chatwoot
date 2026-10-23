@@ -135,6 +135,7 @@ class Calls::MissedCallService
   end
 
   def auto_reply!
+    return activity(t('auto_reply_account_suspended')) if Licenses::Silence.silenced?(call.account) # feat/licencias (F3)
     return activity(t('auto_reply_window_closed')) unless window_open?
 
     texto = config['missed_call_auto_reply'].to_s.strip.presence ||
