@@ -104,6 +104,34 @@ RSpec.describe 'Api::V1::Accounts::ContactTrackings::AssistantAdaptationControll
       expect(body['items'].pluck('key')).to include('var:nombre del negocio')
     end
 
+    # feat/reemplazo_directo_variables
+    it 'with a value writes it directly and remembers it in the saved agent' do
+      template = create(:tracking_template, account: account)
+
+      post "#{base_url}/mark_variables", params: { text: pegado, tracking_template_id: template.id,
+                                                   variables: [{ text: 'Grúas del Norte', label: 'Nombre del negocio', value: 'Grúas del Sur' }] },
+                                         headers: admin.create_new_auth_token, as: :json
+
+      body = response.parsed_body
+      expect(body['text']).to eq("@ruta(ventas: precios): {{doc:Grúas del Norte}}\nSomos Grúas del Sur.")
+      expect(body['items'].find { |i| i['key'] == 'var:nombre del negocio' }).to include('status' => 'ok', 'current' => 'Grúas del Sur')
+      expect(template.reload.adaptation_answers).to eq('var:nombre del negocio' => 'Grúas del Sur')
+    end
+
+    it 'without a saved agent remembers it in the conversation, and apply changes it later' do
+      sesion = TrackingAssistantSession.create!(account: account, user: admin)
+
+      post "#{base_url}/mark_variables", params: { text: 'Somos Grúas del Norte.', session_id: sesion.id,
+                                                   variables: [{ text: 'Grúas del Norte', label: 'Nombre', value: 'Grúas del Sur' }] },
+                                         headers: admin.create_new_auth_token, as: :json
+      expect(sesion.reload.adaptation_answers).to eq('var:nombre' => 'Grúas del Sur')
+
+      post "#{base_url}/apply", params: { text: 'Somos Grúas del Sur.', session_id: sesion.id, answers: { 'var:nombre' => 'Autos MX' } },
+                                headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to include('text' => 'Somos Autos MX.', 'applied' => ['var:nombre'])
+      expect(sesion.reload.adaptation_answers).to eq('var:nombre' => 'Autos MX')
+    end
+
     it 'refuses a text that is not in the prose' do
       post "#{base_url}/mark_variables", params: { text: pegado, variables: [{ text: 'Monterrey', label: 'Ciudad' }] },
                                          headers: admin.create_new_auth_token, as: :json
@@ -124,6 +152,22 @@ RSpec.describe 'Api::V1::Accounts::ContactTrackings::AssistantAdaptationControll
       post "#{base_url}/suggest_variables", params: { text: 'Somos Grúas' }, headers: admin.create_new_auth_token, as: :json
 
       expect(response.parsed_body).to eq('variables' => [{ 'text' => 'Grúas', 'label' => 'Nombre', 'count' => 1 }])
+    end
+
+    # feat/reemplazo_directo_variables: el valor ya reemplazado es de este negocio.
+    it 'does not offer again what was already written in this agent' do
+      template = create(:tracking_template, account: account, adaptation_answers: { 'var:nombre' => 'Creatividad Comercial' })
+      sugerencias = ContactTrackings::Assistant::VariableSuggestions::Result.new(
+        variables: [{ 'text' => 'creatividad comercial', 'label' => 'Nombre', 'count' => 4 },
+                    { 'text' => 'Foro X', 'label' => 'Sitio', 'count' => 1 }]
+      )
+      servicio = instance_double(ContactTrackings::Assistant::VariableSuggestions, call: sugerencias)
+      allow(ContactTrackings::Assistant::VariableSuggestions).to receive(:new).and_return(servicio)
+
+      post "#{base_url}/suggest_variables", params: { text: 'Somos Creatividad Comercial', tracking_template_id: template.id },
+                                            headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['variables'].pluck('text')).to eq(['Foro X'])
     end
   end
 end

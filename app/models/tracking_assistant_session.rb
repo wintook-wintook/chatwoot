@@ -5,6 +5,7 @@
 # Table name: tracking_assistant_sessions
 #
 #  id                   :bigint           not null, primary key
+#  adaptation_answers   :jsonb            not null
 #  base_version         :integer
 #  draft                :text
 #  draft_versions       :jsonb            not null
@@ -241,7 +242,17 @@ class TrackingAssistantSession < ApplicationRecord
       add_version(draft: draft, source: 'saved', summary: template.name)
       self.draft = draft
     end
+    carry_adaptation_answers(template)
     update!(status: 'saved', tracking_template: template)
+  end
+
+  # feat/reemplazo_directo_variables — lo reemplazado en «Configurar» antes de que hubiera
+  # agente pasa al agente, para poder cambiarlo después desde ahí. Sin validaciones a
+  # propósito, igual que AssistantAdaptationController#remember.
+  def carry_adaptation_answers(template)
+    return if adaptation_answers.blank?
+
+    template.update_column(:adaptation_answers, template.adaptation_answers.to_h.merge(adaptation_answers)) # rubocop:disable Rails/SkipsModelValidations
   end
 
   # El guardado automático de lo editado a mano (ver add_version, autosave:).

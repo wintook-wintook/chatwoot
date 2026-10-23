@@ -382,34 +382,43 @@ class AssistantAPI extends ApiClient {
 
   // proyecto@adaptar_prompts_publicados — pestaña «Configurar».
   // Qué le falta a este texto en la cuenta → { items }
-  getAdaptation(text, templateId = null) {
+  getAdaptation(text, templateId = null, sessionId = null) {
     return axios.post(`${this.url}/adaptation`, {
       text,
       tracking_template_id: templateId,
+      session_id: sessionId,
     });
   }
 
   // Escribe en el texto lo configurado ({ key: valor }); no guarda nada.
   // → { text, applied, rejected, items, validation }
-  applyAdaptation(text, answers, templateId = null) {
+  applyAdaptation(text, answers, templateId = null, sessionId = null) {
     return axios.post(`${this.url}/adaptation/apply`, {
       text,
       answers,
       tracking_template_id: templateId,
+      session_id: sessionId,
     });
   }
 
   // F7: el modelo propone qué textos son datos de un negocio → { variables: [{ text, label, count }] }
-  suggestVariables(text) {
-    return axios.post(`${this.url}/adaptation/suggest_variables`, { text });
+  // Sin los valores ya reemplazados en este agente o conversación.
+  suggestVariables(text, templateId = null, sessionId = null) {
+    return axios.post(`${this.url}/adaptation/suggest_variables`, {
+      text,
+      tracking_template_id: templateId,
+      session_id: sessionId,
+    });
   }
 
-  // F7: los elegidos pasan a <PENDIENTE: label>; no guarda → { text, items, validation }
-  markVariables(text, variables, templateId = null) {
+  // F7: los elegidos se reemplazan por su `value` (sin valor, por <PENDIENTE: label>); el
+  // texto no se guarda, lo reemplazado sí se recuerda → { text, items, validation }
+  markVariables(text, variables, templateId = null, sessionId = null) {
     return axios.post(`${this.url}/adaptation/mark_variables`, {
       text,
       variables,
       tracking_template_id: templateId,
+      session_id: sessionId,
     });
   }
 }

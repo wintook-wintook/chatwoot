@@ -2,10 +2,10 @@
 // feat/agentes_ia_unificado — ESPACIO DEL AGENTE
 // ============================================================================
 // Todo lo de un Agente IA en una sola pantalla, sin ir y venir entre «Agentes IA»
-// y «Asistente». Contenedor, encabezado (BaseSettingsHeader + BackButton) y
+// y «Asistente». Contenedor, encabezado (BaseSettingsHeader, con «← Agentes IA» a la derecha) y
 // pestañas (woot-tabs) como la configuración de un inbox (fase B del ajuste visual):
 //
-//   ← Agentes IA   Nombre · Bandeja · v12
+//   Nombre                    ← Agentes IA · Bandeja · v12
 //   ┌──────────────┬───────────────────────────────────────────┐
 //   │ Entrenamiento│  el Asistente (Estructura/Chat + Editor,   │  solo admin
 //   │ Ficha        │  Configurar…) · «Publicar cambios»         │
@@ -30,7 +30,6 @@ import AgentVersions from './agents/AgentVersions.vue';
 import TemplateForm from 'dashboard/routes/dashboard/settings/trackingTemplates/EditTemplate.vue';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import BaseSettingsHeader from 'dashboard/routes/dashboard/settings/components/BaseSettingsHeader.vue';
-import BackButton from 'dashboard/components/widgets/BackButton.vue';
 
 export default {
   components: {
@@ -38,7 +37,6 @@ export default {
     AgentVersions,
     TemplateForm,
     BaseSettingsHeader,
-    BackButton,
   },
   data() {
     return {
@@ -98,9 +96,6 @@ export default {
         0,
         this.sections.findIndex(item => item.id === this.section)
       );
-    },
-    listRoute() {
-      return { name: 'contact_trackings_agents' };
     },
     versionLabel() {
       return this.latestVersion
@@ -198,23 +193,34 @@ export default {
   >
     <div class="flex flex-col flex-1 w-full min-h-0 mx-auto max-w-8xl">
       <div class="shrink-0">
-        <BackButton compact :back-url="listRoute" :button-label="t('BACK')" />
         <BaseSettingsHeader :title="title" :description="description">
           <template #actions>
-            <woot-label
-              v-if="inboxName"
-              small
-              color-scheme="primary"
-              class="!mb-0"
-              :title="inboxName"
-            />
-            <woot-label
-              v-if="versionLabel"
-              small
-              color-scheme="success"
-              class="!mb-0"
-              :title="versionLabel"
-            />
+            <!-- «← Agentes IA» subió aquí (pedido 22/10/2026), igual que «Volver» de la
+               lista de Agentes IA; las etiquetas de al lado con su mismo alto (h-10). -->
+            <div class="flex items-center gap-2">
+              <woot-button
+                variant="smooth"
+                color-scheme="secondary"
+                icon="chevron-left"
+                @click="goBack"
+              >
+                {{ t('BACK') }}
+              </woot-button>
+              <woot-label
+                v-if="inboxName"
+                small
+                color-scheme="primary"
+                class="!mb-0 !mr-0 !h-10 !px-3 !text-sm !font-semibold !rounded-md"
+                :title="inboxName"
+              />
+              <woot-label
+                v-if="versionLabel"
+                small
+                color-scheme="success"
+                class="!mb-0 !mr-0 !h-10 !px-3 !text-sm !rounded-md"
+                :title="versionLabel"
+              />
+            </div>
           </template>
         </BaseSettingsHeader>
 

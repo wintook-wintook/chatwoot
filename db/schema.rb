@@ -1754,6 +1754,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_10_27_150000) do
     t.text "instructions"
     t.string "name"
     t.integer "base_version"
+    t.jsonb "adaptation_answers", default: {}, null: false
     t.index ["account_id", "user_id", "status", "updated_at"], name: "idx_tracking_assistant_sessions_lookup"
     t.index ["tracking_template_id"], name: "index_tracking_assistant_sessions_on_tracking_template_id"
     t.index ["user_id"], name: "index_tracking_assistant_sessions_on_user_id"

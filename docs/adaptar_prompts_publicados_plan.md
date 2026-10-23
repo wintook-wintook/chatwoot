@@ -776,3 +776,64 @@ por otra fuente o por una nueva, y que la IA busque los datos de otro negocio si
 - En navegador: pendiente.
 
 **Cómo pedírselo al Asistente:** no hace falta; abre la pestaña «Configurar» del agente.
+
+---
+
+## F9 — Reemplazo directo y cambiar después (rama `feat/reemplazo_directo_variables`, 22/10/2026)
+
+**Qué se pidió:** el usuario escribió su nombre de negocio en la caja de la sugerencia creyendo
+que era el reemplazo. «Convertir en variables» era un paso de más: dejaba `<PENDIENTE:>`, el
+agente quedaba bloqueado, y había que ir a «Datos de tu negocio» y aplicar. Además, una vez
+aplicado el dato desaparecía de la pestaña y solo se podía cambiar a mano.
+
+**Qué se hizo**
+
+| Antes | Ahora |
+|---|---|
+| Casilla + caja con el nombre de la variable + «Convertir en variables (n)» | Texto encontrado, su nombre (solo lectura) y caja **«Cambiar por»** + **«Reemplazar (n)»**; cuenta solo las que tienen valor |
+| Convertir dejaba `<PENDIENTE: X>` y luego había que aplicar | Se escribe el valor directo en un paso; el agente nunca queda bloqueado |
+| Lo aplicado se recordaba solo en un agente guardado | También en la conversación «En construcción» (`tracking_assistant_sessions.adaptation_answers`); pasa al agente al guardarlo (`mark_saved!`) |
+| Un dato aplicado desaparecía de «Configurar» | Sale en «Datos de tu negocio» ✔ con **«Ahora dice: X»** y una caja para el nuevo valor; «Aplicar» cambia el valor anterior por el nuevo |
+| El reemplazo podía tocar `- kontrolya:` de [ALCANCE POR RAMA] y `#interes-kontrolya` | Esas llaves y todas las `#etiquetas` quedan protegidas, igual que directivas y líneas `@ruta` |
+| Reemplazos en cadena (`Grúas` dentro de `Grúas del Sur` recién escrito) | Una sola pasada con fichas temporales |
+
+**Cómo funciona**
+
+```
+ «¿Trae datos de otro negocio?»                       (la IA propone, sola al abrir)
+   Sentidos Creativos (4 lugares) · Nombre del negocio
+   Cambiar por [ Creatividad Comercial ]  → «Reemplazar (1)»
+        │ POST mark_variables { variables: [{ text, label, value }], session_id | template_id }
+        ▼
+   PublishedPrompts::Variables.apply  — value presente: se escribe tal cual (solo prosa)
+   remember  → agente.adaptation_answers  ó  sesión.adaptation_answers
+               { "var:nombre del negocio" => "Creatividad Comercial" }
+        ▼
+ «Datos de tu negocio»  Nombre del negocio ✔  Ahora dice: «Creatividad Comercial»  [ nuevo valor ]
+        │ «Aplicar al Entrenamiento» → POST apply (previous = lo recordado)
+        ▼
+   AdaptationApplier#replace_variable — sin marca: valor anterior → nuevo (prosa protegida)
+```
+
+- Al publicar nunca viaja un valor (`Publisher#checked_variables` lo quita): la copia necesita la marca.
+- Las marcas `<PENDIENTE:>` de un prompt bajado de la Galería funcionan igual que antes.
+- Sin `session_id` ni agente (borrador nunca autoguardado) se reemplaza igual, pero no se recuerda.
+
+**Pila de pruebas**
+
+- `variables_spec.rb`: valor directo; una pasada (`Grúas` no reemplaza dentro de `Grúas del Sur`);
+  `- kontrolya:` y `#interes-kontrolya` intactos; valor que es otra marca rechazado; `normalize` conserva el valor.
+- `adaptation_applier_spec.rb`: sin marca cambia el valor anterior solo en prosa; sin anterior → `not_found`.
+- `adaptation_inventory_spec.rb`: dato recordado que sigue en el texto sale ✔ con `current`; con marca, prellenado.
+- `assistant_adaptation_controller_spec.rb`: con valor escribe y recuerda en el agente; sin agente
+  recuerda en la conversación y `apply` lo cambia después.
+- `tracking_assistant_session_spec.rb`: `mark_saved!` pasa lo recordado al agente.
+- `ConfigureTab.spec.js`: «Reemplazar» manda solo las que tienen valor con `session_id`; dato lleno muestra
+  «Ahora dice» y pide el nuevo valor.
+- Con el prompt real de la sesión #4355 (cuenta 2), en memoria: «Sentidos Creativos» → «Creatividad
+  Comercial» en 4 lugares, las 11 `@buscar_foro(Foro_Sentidos_Creativos)` intactas; después → «Grúas del Sur».
+- En navegador: pendiente.
+
+**Cómo usarlo:** pestaña «Configurar» → «¿Trae datos de otro negocio?» → escribe el tuyo en
+«Cambiar por» → «Reemplazar». Para cambiarlo después: «Datos de tu negocio» → nuevo valor →
+«Aplicar al Entrenamiento».

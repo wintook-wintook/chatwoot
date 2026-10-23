@@ -18,9 +18,14 @@
 # ahí dejaría la copia bloqueada para siempre (ContactTrackings::PendingSetup).
 #
 # Nunca dentro de una directiva ({{doc:Grúas}}, @buscar_foro(Grúas)), de una línea
-# @ruta ni de otra marca: ahí el texto es un nombre que el motor busca, no prosa. Sin
+# @ruta, de otra marca, de la llave de una ruta en [ALCANCE POR RAMA] («- kontrolya:») ni
+# de una #etiqueta: ahí el texto es un nombre que el motor busca, no prosa. Sin
 # distinguir mayúsculas; los textos largos primero, así «Grúas del Norte» gana sobre
 # «Grúas».
+#
+# feat/reemplazo_directo_variables: en la pestaña «Configurar» una variable puede traer
+# `value` y entonces se escribe ese valor en lugar de la marca (un paso, sin dejar al
+# agente bloqueado). Al publicar nunca lleva valor: la copia necesita la marca.
 # Plan: docs/adaptar_prompts_publicados_plan.md
 # ================================================================================
 
@@ -30,12 +35,16 @@ module PublishedPrompts::Variables
   MAX = 30
   TEXT_LENGTH = (3..200)
   LABEL_RE = /\A[^<>\n]{1,60}\z/
+  VALUE_MAX = ContactTrackings::Assistant::AdaptationApplier::MAX_VALUE
 
-  # Lo que no se toca: directivas, líneas @ruta y marcas <PENDIENTE:>.
+  # Lo que no se toca: directivas, líneas @ruta, marcas <PENDIENTE:>, la llave de una ruta
+  # al inicio de su línea («- kontrolya:») y las #etiquetas.
   PROTECTED_RE = /
     \{\{[^}]*\}\}                                              |
     @[a-z_]+\([^)\n]*\)                                        |
     ^[ \t]*@ruta[^\n]*$                                        |
+    ^[ \t]*-[ \t]*[a-z0-9_]+(?=[ \t]*:)                        |
+    \#[[:alnum:]_-]+                                           |
     #{ContactTrackings::Assistant::PendingMarkers::RE.source}
   /ix
 
@@ -53,7 +62,11 @@ module PublishedPrompts::Variables
 
     datos = variable.with_indifferent_access
     text = datos[:text].to_s.squish
-    { 'text' => text, 'label' => datos[:label].to_s.squish } if text.present?
+    return if text.blank?
+
+    limpia = { 'text' => text, 'label' => datos[:label].to_s.squish }
+    value = datos[:value].to_s.squish
+    value.present? ? limpia.merge('value' => value) : limpia
   end
 
   # Cuántas veces aparece en la prosa (fuera de lo protegido).
@@ -61,10 +74,17 @@ module PublishedPrompts::Variables
     prose(text).sum { |pieza| pieza.scan(pattern(needle)).size }
   end
 
+  # Primero cada texto pasa a una ficha (\u0001n\u0001) y al final las fichas a su valor:
+  # así un texto corto no vuelve a reemplazarse dentro del valor que dejó uno largo
+  # («Grúas» dentro de «Grúas del Sur»).
   def apply(text, variables)
     ordered = variables.sort_by { |v| -v['text'].size }
-    ordered.reduce(text.to_s) do |actual, variable|
-      replace_in_prose(actual, variable['text'], "<PENDIENTE: #{variable['label']}>")
+    con_fichas = ordered.each_with_index.reduce(text.to_s) do |actual, (variable, i)|
+      replace_in_prose(actual, variable['text'], "\u0001#{i}\u0001")
+    end
+    con_fichas.gsub(/\u0001(\d+)\u0001/) do
+      variable = ordered[Regexp.last_match(1).to_i]
+      variable['value'].presence || "<PENDIENTE: #{variable['label']}>"
     end
   end
 
@@ -74,7 +94,15 @@ module PublishedPrompts::Variables
       next I18n.t('published_prompts.variables.text_length', text: variable['text']) unless TEXT_LENGTH.cover?(variable['text'].size)
       next I18n.t('published_prompts.variables.label_invalid', text: variable['text']) unless variable['label'].match?(LABEL_RE)
       next I18n.t('published_prompts.variables.not_found', text: variable['text']) if count(prompt, variable['text']).zero?
+      next I18n.t('published_prompts.variables.value_invalid', text: variable['text']) unless value_ok?(variable['value'])
     end
+  end
+
+  # Sin valor es una marca. Con valor, ni muy largo ni otra marca dentro.
+  def value_ok?(value)
+    return true if value.nil?
+
+    value.size <= VALUE_MAX && !ContactTrackings::Assistant::PendingMarkers.pending?(value)
   end
 
   def validate!(variables, prompt)

@@ -23,6 +23,9 @@
 # del texto queda byte por byte igual. Aplicar dos veces da el mismo texto (la llave vieja
 # ya no está).
 #
+# Un dato que ya se llenó (sin marca) se cambia buscando su valor anterior, que viene en
+# `previous` (lo recordado en el agente o en la conversación).
+#
 # Un valor que rompería la directiva (un «}}» dentro de {{doc:}}, un «)» dentro de
 # @buscar_foro) no se aplica: vuelve en `rejected` con el motivo. Un valor vacío deja la
 # marca como estaba. Las llaves que no se escriben en el texto (calendar, inbox,
@@ -63,9 +66,12 @@ class ContactTrackings::Assistant::AdaptationApplier
     'case_type' => :replace_case_type
   }.freeze
 
-  def initialize(text, answers)
+  # previous: lo aplicado antes ({ "var:nombre del negocio" => "Grúas del Sur" }), para
+  # cambiar un dato que ya no tiene marca (feat/reemplazo_directo_variables).
+  def initialize(text, answers, previous: {})
     @text = text.to_s
     @answers = answers.to_h
+    @previous = previous.to_h
     @applied = []
     @rejected = []
   end
@@ -127,11 +133,17 @@ class ContactTrackings::Assistant::AdaptationApplier
   end
 
   # La llave es "var:<etiqueta en minúsculas>"; la marca puede venir con otras mayúsculas.
+  # Sin marca, el valor anterior (si se conoce) pasa al nuevo, solo en la prosa: con la
+  # misma protección que al convertir (PublishedPrompts::Variables).
   def replace_variable(name, value)
-    @text.gsub(ContactTrackings::Assistant::PendingMarkers::RE) do |marca|
+    con_marca = @text.gsub(ContactTrackings::Assistant::PendingMarkers::RE) do |marca|
       etiqueta = marca[/:\s*([^>]+)>/, 1].to_s.strip.presence || marca
       etiqueta.casecmp?(name) ? value : marca
     end
+    anterior = @previous["var:#{name}"].to_s
+    return con_marca if con_marca != @text || anterior.blank?
+
+    PublishedPrompts::Variables.replace_in_prose(@text, anterior, value)
   end
 
   # En bloque y no como cadena de reemplazo: un «\1» en el valor no se interpreta.

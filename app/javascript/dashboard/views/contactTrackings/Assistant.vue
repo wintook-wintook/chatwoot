@@ -32,6 +32,7 @@
 // que no ejecuta nada es exactamente el problema que este módulo vino a arreglar.
 // ============================================================================
 import { useAlert } from 'dashboard/composables';
+import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import AssistantAPI from 'dashboard/api/assistant';
 import TrackingTemplatesAPI from 'dashboard/api/trackingTemplates';
 import EmptyState from 'dashboard/components/widgets/EmptyState.vue';
@@ -103,6 +104,10 @@ const SHOW_CHAT = true;
 // Las pestañas «Versiones» y «Cambios» del Entrenamiento. Escondidas el 20/10/2026
 // por el momento; el historial se sigue guardando igual.
 const SHOW_HISTORY_TABS = false;
+
+// «Canal del agente» y sus modelos en la barra de arriba. Escondido el 22/10/2026 a
+// pedido: el canal sale solo del agente que se edita (loadTemplate → setInbox).
+const SHOW_INBOX_PICKER = false;
 
 // feat/agentes_ia_unificado (21/10/2026): el Asistente ya no es una pantalla con
 // pestañas propias. Vive dentro del espacio de cada agente (AgentWorkspace) y recibe
@@ -304,6 +309,9 @@ export default {
     showChat() {
       return SHOW_CHAT;
     },
+    showInboxPicker() {
+      return SHOW_INBOX_PICKER;
+    },
     showHistoryTabs() {
       return SHOW_HISTORY_TABS;
     },
@@ -424,6 +432,12 @@ export default {
     },
     initialSessionId(id) {
       if (id && id !== this.sessionId) this.openFromProps();
+    },
+    // «Configurar» pide su lista al abrirse: cargar una conversación, un agente o una
+    // versión la deja vacía, y antes solo se volvía a pedir al editar el texto (sin
+    // eso decía «ya tiene todo» y no mostraba nada, 23/10/2026).
+    draftTab(tab) {
+      if (tab === 'configure') this.fetchAdaptation();
     },
     // Los calendarios se piden al abrir Guardar y solo si el agente agenda: la
     // lista consulta Google por cada cuenta conectada.
@@ -1171,6 +1185,20 @@ export default {
         .slice(selectionStart, selectionEnd)
         .trim();
     },
+    // Queda todo seleccionado en el editor: se ve qué se copió.
+    async copyDraft() {
+      const editor = this.$refs.draftEditor;
+      if (editor) {
+        editor.focus();
+        editor.select();
+      }
+      try {
+        await copyTextToClipboard(this.draft);
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.COPY_DRAFT_DONE'));
+      } catch (error) {
+        useAlert(this.$t('TRACKING_ASSISTANT_VIEW.COPY_DRAFT_ERROR'));
+      }
+    },
     explainSelection() {
       if (this.draftSelection) this.explainFragment(this.draftSelection);
     },
@@ -1328,7 +1356,8 @@ export default {
       try {
         const { data } = await AssistantAPI.getAdaptation(
           texto,
-          this.editingTemplateId
+          this.editingTemplateId,
+          this.sessionId
         );
         // Una respuesta vieja (se siguió escribiendo) no pisa a la nueva.
         if (texto === this.draft) this.adaptationItems = data.items || [];
@@ -1452,7 +1481,7 @@ export default {
               @rename="renameSession"
             />
             <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <div class="flex flex-col gap-0.5 text-xs">
+              <div v-if="showInboxPicker" class="flex flex-col gap-0.5 text-xs">
                 <div class="flex items-center gap-2">
                   <label
                     for="assistant-inbox"
@@ -1757,6 +1786,19 @@ export default {
                       :pending-count="draftPendingCount"
                     />
                   </button>
+                  <!-- Seleccionar todo el Entrenamiento y copiarlo (pedido 22/10/2026).
+                     Solo en la pestaña Entrenamiento, donde se ve el texto. -->
+                  <woot-button
+                    v-if="draftTab === 'editor' && draft.trim()"
+                    variant="clear"
+                    size="tiny"
+                    color-scheme="secondary"
+                    icon="copy"
+                    :title="$t('TRACKING_ASSISTANT_VIEW.COPY_DRAFT_HINT')"
+                    @click="copyDraft"
+                  >
+                    {{ $t('TRACKING_ASSISTANT_VIEW.COPY_DRAFT') }}
+                  </woot-button>
                 </div>
                 <ChangeLog
                   v-if="draftTab === 'log'"
@@ -1768,6 +1810,7 @@ export default {
                   :items="adaptationItems"
                   :draft="draft"
                   :template-id="editingTemplateId"
+                  :session-id="sessionId"
                   :loading="isAdapting"
                   @applied="onAdaptationApplied"
                 />
