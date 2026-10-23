@@ -87,6 +87,14 @@ describe('Menú v2', () => {
     );
   });
 
+  it('Inicio no tiene opción de avisos', () => {
+    const inicio = menuFor(route('my_summary'));
+    expect(inicio.menuItems.map(i => i.label)).toEqual([
+      'MY_SUMMARY',
+      'MY_BUSINESS',
+    ]);
+  });
+
   it('Inicio, Agenda, Agentes IA y Vista de bandeja', () => {
     expect(menuFor(route('notifications_index')).parentNav).toBe('inicio');
     expect(menuFor(route('gestorTickets_business_summary')).parentNav).toBe(

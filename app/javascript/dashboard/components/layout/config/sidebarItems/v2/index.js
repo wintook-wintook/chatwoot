@@ -172,6 +172,8 @@ export const primaryMenuV2 = (accountId, route) => {
   ];
 };
 
+// Sin opción de avisos: ya están en la campanita y en «Tienes avisos importantes»
+// de Mi resumen. Su página sigue marcando Inicio.
 const inicio = accountId => ({
   parentNav: 'inicio',
   routes: [
@@ -186,12 +188,6 @@ const inicio = accountId => ({
       featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
       toState: frontendURL(`accounts/${accountId}/start`),
       toStateName: 'my_summary',
-    },
-    {
-      icon: 'alert',
-      label: 'MY_NOTICES',
-      toState: frontendURL(`accounts/${accountId}/notifications`),
-      toStateName: 'notifications_index',
     },
     {
       icon: 'briefcase',
