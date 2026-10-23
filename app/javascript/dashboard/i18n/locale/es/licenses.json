@@ -135,6 +135,31 @@
       "BY_PLAN_HINT": "Licencias activas hoy, agrupadas por plan.",
       "BY_PLAN_SERIES": "Cuentas activas",
       "BY_PLAN_EMPTY": "Todavía no hay licencias activas."
+    },
+    "ACCOUNT_VIEW": {
+      "TITLE": "Licencia",
+      "DESCRIPTION": "El plan de esta cuenta, cuántos agentes puede tener y cuándo vence.",
+      "NONE": "Esta cuenta no tiene licencia asignada.",
+      "NO_CURRENT": "Sin licencia vigente",
+      "STATE_ACTIVE": "Vigente",
+      "STATE_DEMO": "Demo",
+      "STATE_EXPIRED": "Vencida",
+      "AGENTS": "Agentes",
+      "STARTED": "Inicio",
+      "EXPIRES": "Vence",
+      "DAYS_LEFT": "Quedan {count} días",
+      "EXPIRED_HINT": "La licencia venció. Para renovarla, ponte en contacto con nosotros.",
+      "NEXT_TITLE": "Siguiente periodo",
+      "NEXT_TEXT": "{name}: del {from} al {to}, con {agents} agentes. Empieza solo cuando termine el actual.",
+      "READ_ONLY": "Solo lectura. Para cambiar de plan o renovar, ponte en contacto con nosotros."
+    },
+    "BANNER": {
+      "MESSAGE": "Tu licencia vence en {count} días. Si no se renueva, la cuenta se suspende.",
+      "ACTION": "Ver licencia"
+    },
+    "SUSPENDED": {
+      "TITLE": "Tu licencia venció",
+      "MESSAGE": "Nadie puede entrar a esta cuenta hasta que se renueve la licencia. Los mensajes de tus clientes se siguen guardando y estarán aquí al renovar. Ponte en contacto con nosotros para renovarla."
     }
   }
 }

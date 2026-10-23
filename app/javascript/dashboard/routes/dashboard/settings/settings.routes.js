@@ -32,6 +32,7 @@ import trackingTemplates from './trackingTemplates/trackingTemplates.routes'; //
 import knowledgeSources from './knowledgeSources/knowledgeSources.routes'; // @knowledge_sources
 import whatsappTemplates from './whatsappTemplates/whatsappTemplates.routes'; // @waba_templates
 import googleCalendar from './googleCalendar/googleCalendar.routes'; // proyecto@google_calendar
+import license from './license/license.routes'; // feat/licencias (F5)
 
 export default {
   routes: [
@@ -60,6 +61,7 @@ export default {
     ...billing.routes,
     ...campaigns.routes,
     ...canned.routes,
+    ...license.routes, // feat/licencias (F5)
     ...chatgpt.routes,
     ...inbox.routes,
     ...integrations.routes,

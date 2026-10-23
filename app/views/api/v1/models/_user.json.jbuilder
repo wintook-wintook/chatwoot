@@ -25,6 +25,7 @@ json.accounts do
     json.id account_user.account_id
     json.name account_user.account.name
     json.status account_user.account.status
+    json.license_expired account_user.account.license_expired? # feat/licencias (F5): pantalla de vencida
     json.active_at account_user.active_at
     json.role account_user.role
     json.permissions account_user.permissions

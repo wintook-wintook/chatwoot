@@ -135,6 +135,31 @@
       "BY_PLAN_HINT": "Licenses active today, grouped by plan.",
       "BY_PLAN_SERIES": "Active accounts",
       "BY_PLAN_EMPTY": "No active licenses yet."
+    },
+    "ACCOUNT_VIEW": {
+      "TITLE": "License",
+      "DESCRIPTION": "This account's plan, how many agents it can have and when it expires.",
+      "NONE": "This account has no license assigned.",
+      "NO_CURRENT": "No active license",
+      "STATE_ACTIVE": "Active",
+      "STATE_DEMO": "Demo",
+      "STATE_EXPIRED": "Expired",
+      "AGENTS": "Agents",
+      "STARTED": "Started",
+      "EXPIRES": "Expires",
+      "DAYS_LEFT": "{count} days left",
+      "EXPIRED_HINT": "The license expired. To renew it, get in touch with us.",
+      "NEXT_TITLE": "Next period",
+      "NEXT_TEXT": "{name}: from {from} to {to}, with {agents} agents. It starts when the current one ends.",
+      "READ_ONLY": "Read only. To change plan or renew, get in touch with us."
+    },
+    "BANNER": {
+      "MESSAGE": "Your license expires in {count} days. If it is not renewed, the account will be suspended.",
+      "ACTION": "View license"
+    },
+    "SUSPENDED": {
+      "TITLE": "Your license expired",
+      "MESSAGE": "Nobody can access this account until the license is renewed. Your customers' messages are still being saved and will be here when you renew. Get in touch with us to renew it."
     }
   }
 }

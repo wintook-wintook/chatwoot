@@ -1033,6 +1033,52 @@ La pantalla llega en F2b.
   (conversión no), una sola serie con color del tema.
 - En navegador: pendiente (incluye mirar la gráfica dibujada).
 
+
+### F5 — Vista del cliente ✅ (23/10/2026)
+
+**Qué se hizo**
+
+| Pieza | Archivo |
+|---|---|
+| La cuenta sabe su licencia (`license` en accounts/show; nil = fuera de licencia) | `account_licensable.rb` (`license_summary`), `accounts/show.json.jbuilder` |
+| El usuario sabe si su cuenta venció por licencia | `account_licensable.rb` (`license_expired?`), `_user.json.jbuilder` |
+| Configuración › Licencia (solo lectura, administradores, solo si la cuenta tiene licencia) | `routes/dashboard/settings/license/`, `sidebarItems/settings.js` (`visibleGetter`), `store/modules/accounts.js` (`currentAccountHasLicense`) |
+| Aviso arriba del dashboard a 10 días o menos | `components/app/LicenseExpiringBanner.vue`, `App.vue` |
+| Pantalla de licencia vencida | `routes/dashboard/suspended/Index.vue` |
+
+**Cómo se ve**
+
+```
+ Configuración › Licencia
+   Profesional [Vigente]
+   Agentes 4 / 5  ▓▓▓▓▓▓▓▓░░      Inicio 01/10/2026      Vence 30/10/2026 · Quedan 7 días
+   Siguiente periodo: Profesional, del 30/10/2026 al 28/04/2027, con 5 agentes.
+   Solo lectura. Para cambiar de plan o renovar, ponte en contacto con nosotros.
+
+ Aviso (administradores, ≤ 10 días, sin periodo en cola; se cierra por el día):
+   ⚠ Tu licencia vence en 7 días. Si no se renueva, la cuenta se suspende.   [ Ver licencia ] ✕
+
+ Cuenta suspendida por licencia:
+   Tu licencia venció — Nadie puede entrar hasta que se renueve. Los mensajes de tus clientes
+   se siguen guardando y estarán aquí al renovar. Ponte en contacto con nosotros para renovarla.
+```
+
+- La sección y el aviso no salen en cuentas fuera de licencia: funcionan como siempre.
+- Una cuenta suspendida a mano (sin licencia vencida) sigue viendo el aviso genérico de Chatwoot.
+- Componentes nativos: `BaseSettingsHeader`, `woot-label`, `Banner`, `EmptyState`.
+
+**Pila de pruebas**
+
+- `spec/controllers/api/v1/accounts/licenses/account_license_view_spec.rb`: sin licencia nada, con licencia periodo/agentes/siguiente, el perfil marca la cuenta vencida.
+- `components/app/LicenseExpiringBanner.spec.js`: 10 días sí / 11 no, no con cola / sin licencia / sin ser administrador, cerrado no vuelve el mismo día.
+- Batería completa de licencias: 111 de servidor + 21 de pantallas en verde.
+- En navegador: pendiente.
+
+---
+
+**Módulo completo (F0–F5).** Para encenderlo: Super admin › Configuración › Licencias ›
+«Aplicar licencias». Antes conviene probar en el navegador las pantallas de F2b, F4 y F5.
+
 ---
 
 ### Bitácora de versiones

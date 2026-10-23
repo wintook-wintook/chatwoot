@@ -9,6 +9,7 @@ import UpdateBanner from './components/app/UpdateBanner.vue';
 import UpgradeBanner from './components/app/UpgradeBanner.vue';
 import PaymentPendingBanner from './components/app/PaymentPendingBanner.vue';
 import PendingEmailVerificationBanner from './components/app/PendingEmailVerificationBanner.vue';
+import LicenseExpiringBanner from './components/app/LicenseExpiringBanner.vue'; // feat/licencias
 import vueActionCable from './helper/actionCable';
 import WootSnackbarBox from './components/SnackbarContainer.vue';
 import { setColorTheme, applyColorTint } from './helper/themeHelper';
@@ -34,6 +35,7 @@ export default {
     WootSnackbarBox,
     UpgradeBanner,
     PendingEmailVerificationBanner,
+    LicenseExpiringBanner,
     Webphone,
     WhatsappCallWidget,
   },
@@ -137,6 +139,7 @@ export default {
     <template v-if="currentAccountId">
       <PendingEmailVerificationBanner v-if="hideOnOnboardingView" />
       <PaymentPendingBanner v-if="hideOnOnboardingView" />
+      <LicenseExpiringBanner v-if="hideOnOnboardingView" />
       <UpgradeBanner />
     </template>
     <transition name="fade" mode="out-in">
