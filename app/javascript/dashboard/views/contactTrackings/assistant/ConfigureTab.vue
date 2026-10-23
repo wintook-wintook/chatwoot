@@ -20,6 +20,11 @@
 // puede cambiar por otra fuente de la cuenta o por una nueva creada aquí. La búsqueda de
 // datos de otro negocio corre sola al abrir la pestaña; se recuerda por texto, así que
 // solo vuelve a llamar a la IA si el Entrenamiento cambió desde la última búsqueda.
+//
+// feat/reemplazo_directo_variables: a cada dato que señala la IA se le escribe al lado
+// el valor propio y «Reemplazar» lo cambia en el texto en un solo paso (sin pasar por
+// <PENDIENTE:>). Lo reemplazado se recuerda en el agente —o en la conversación si aún
+// no hay agente— y sale en «Datos de tu negocio» con «Ahora dice: …» para cambiarlo.
 // Plan: docs/adaptar_prompts_publicados_plan.md
 // ============================================================================
 import { mapGetters } from 'vuex';
@@ -43,6 +48,7 @@ export default {
     items: { type: Array, default: () => [] },
     draft: { type: String, default: '' },
     templateId: { type: Number, default: null },
+    sessionId: { type: [Number, String], default: null },
     loading: { type: Boolean, default: false },
   },
   data() {
@@ -52,9 +58,9 @@ export default {
       creatingSource: null,
       savingSource: false,
       uploadingKey: null,
-      // F7: lo que el modelo señaló como datos de un negocio (null = no se ha buscado).
+      // F7: lo que el modelo señaló como datos de un negocio (null = no se ha buscado),
+      // cada uno con el `value` propio que se escribe al lado.
       suggestions: null,
-      chosenSuggestions: [],
       // Con qué texto se buscó (para ofrecer «Buscar otra vez» si cambió).
       suggestedFor: null,
       suggestError: null,
@@ -101,6 +107,16 @@ export default {
       if (!item) return null;
       return this.isOk(item) ? { ...item.create, name: '' } : item.create;
     },
+    // Solo las que tienen valor: una caja vacía deja ese texto como estaba.
+    filledSuggestions() {
+      return (this.suggestions || []).filter(v => String(v.value || '').trim());
+    },
+    // Qué va a cambiar «Reemplazar»: los usuarios creían que se cambiaba todo lo listado.
+    replaceNote() {
+      if (!this.filledSuggestions.length) return this.t('REPLACE_NOTE_NONE');
+      const lista = this.filledSuggestions.map(v => `«${v.text}»`).join(', ');
+      return this.t('REPLACE_NOTE', { list: lista });
+    },
     canSearchAgain() {
       return (
         this.suggestions !== null &&
@@ -136,6 +152,9 @@ export default {
     t(key, args) {
       return this.$t(`TRACKING_ASSISTANT_VIEW.CONFIGURE.${key}`, args);
     },
+    places(count) {
+      return count === 1 ? this.t('PLACE_ONE') : this.t('PLACES', { count });
+    },
     kindLabel(item) {
       return this.t(`KIND.${item.kind.toUpperCase()}`);
     },
@@ -146,6 +165,11 @@ export default {
     },
     isOk(item) {
       return item.status === 'ok';
+    },
+    valuePlaceholder(item) {
+      return item.current
+        ? this.t('NEW_VALUE_PLACEHOLDER')
+        : this.t('VALUE_PLACEHOLDER');
     },
     // ↗: se abre en otra pestaña del navegador.
     linkLabel(item) {
@@ -249,7 +273,8 @@ export default {
         const { data } = await AssistantAPI.applyAdaptation(
           this.draft,
           respuestas,
-          this.templateId
+          this.templateId,
+          this.sessionId
         );
         if (data.applied.length) {
           const notas = data.applied.map(key => `${key} → ${respuestas[key]}`);
@@ -263,7 +288,7 @@ export default {
         this.isApplying = false;
       }
     },
-    // ── F7: el modelo propone datos de un negocio; los elegidos pasan a variables ──
+    // ── F7: el modelo propone datos de un negocio; se reemplazan por los tuyos ──
     // Al abrir la pestaña: lo ya buscado con este mismo texto se reusa sin llamar a la IA.
     autoSuggest() {
       if (!this.draft.trim()) return;
@@ -278,7 +303,11 @@ export default {
       this.isSuggesting = true;
       this.suggestError = null;
       try {
-        const { data } = await AssistantAPI.suggestVariables(texto);
+        const { data } = await AssistantAPI.suggestVariables(
+          texto,
+          this.templateId,
+          this.sessionId
+        );
         if (data.error) {
           this.suggestError = `SUGGEST_ERROR_${data.error.toUpperCase()}`;
           return;
@@ -294,25 +323,25 @@ export default {
       }
     },
     showSuggestions(variables, texto) {
-      this.suggestions = variables.map(v => ({ ...v }));
-      this.chosenSuggestions = this.suggestions.map(v => v.text);
+      this.suggestions = variables.map(v => ({ ...v, value: '' }));
       this.suggestedFor = texto;
     },
     async markVariables() {
-      const elegidas = (this.suggestions || []).filter(v =>
-        this.chosenSuggestions.includes(v.text)
-      );
+      const elegidas = this.filledSuggestions.map(v => ({
+        text: v.text,
+        label: v.label,
+        value: v.value.trim(),
+      }));
       if (!elegidas.length) return;
       this.isMarking = true;
       try {
         const { data } = await AssistantAPI.markVariables(
           this.draft,
-          elegidas.map(v => ({ text: v.text, label: v.label })),
-          this.templateId
+          elegidas,
+          this.templateId,
+          this.sessionId
         );
-        const notas = elegidas.map(
-          v => `${v.text} → ${this.t('MARKED_NOTE', { label: v.label })}`
-        );
+        const notas = elegidas.map(v => `${v.text} → ${v.value}`);
         this.$emit('applied', { ...data, notes: notas });
         useAlert(this.t('MARKED', { count: elegidas.length }));
         this.suggestions = null;
@@ -378,7 +407,7 @@ export default {
           >
             {{ kindLabel(item) }}
             <span v-if="item.occurrences > 1">
-              {{ t('PLACES', { count: item.occurrences }) }}
+              {{ places(item.occurrences) }}
             </span>
             <span v-if="isOk(item)" class="text-green-700 dark:text-green-400">
               {{ t('OK_BADGE') }}
@@ -388,6 +417,12 @@ export default {
             class="font-mono text-xs break-all text-slate-800 dark:text-slate-100"
           >
             {{ title(item) }}
+          </span>
+          <span
+            v-if="item.current"
+            class="block text-xs break-all text-slate-600 dark:text-slate-300"
+          >
+            {{ t('CURRENT_VALUE', { value: item.current }) }}
           </span>
           <span
             v-if="item.reason === 'google_disabled'"
@@ -404,7 +439,7 @@ export default {
             type="text"
             class="flex-1 !mb-0 !py-1 text-xs"
             :value="answerFor(item.key)"
-            :placeholder="t('VALUE_PLACEHOLDER')"
+            :placeholder="valuePlaceholder(item)"
             @input="setAnswer(item.key, $event.target.value)"
           />
 
@@ -516,39 +551,54 @@ export default {
         >
           {{ t('SUGGEST_NONE') }}
         </p>
-        <label
+        <div
           v-for="sugerencia in suggestions"
           :key="sugerencia.text"
-          class="flex flex-wrap items-center gap-2 !mb-1 text-xs"
+          class="flex flex-wrap items-center gap-2 py-2 text-xs border-b border-slate-100 dark:border-slate-700"
         >
-          <input
-            v-model="chosenSuggestions"
-            type="checkbox"
-            class="!mb-0"
-            :value="sugerencia.text"
-          />
-          <span class="font-mono break-all text-slate-800 dark:text-slate-100">
-            {{ sugerencia.text }}
-          </span>
-          <span class="text-slate-500 dark:text-slate-400">
-            {{ t('PLACES', { count: sugerencia.count }) }}
-          </span>
-          <input
-            v-model="sugerencia.label"
-            type="text"
-            class="flex-1 min-w-[8rem] !mb-0 !py-1 text-xs"
-            maxlength="60"
-          />
-        </label>
+          <div class="flex-1 min-w-[10rem]">
+            <span
+              class="font-mono break-all text-slate-800 dark:text-slate-100"
+            >
+              {{ sugerencia.text }}
+            </span>
+            <span class="text-slate-500 dark:text-slate-400">
+              {{ places(sugerencia.count) }}
+            </span>
+            <span class="block text-slate-500 dark:text-slate-400">
+              {{ sugerencia.label }}
+            </span>
+          </div>
+          <label
+            class="flex items-center flex-1 min-w-[14rem] gap-2 !mb-0 text-xs"
+          >
+            <span class="text-slate-600 dark:text-slate-300">
+              {{ t('REPLACE_WITH') }}
+            </span>
+            <input
+              v-model="sugerencia.value"
+              type="text"
+              class="flex-1 !mb-0 !py-1 text-xs"
+              :placeholder="t('REPLACE_PLACEHOLDER')"
+              maxlength="500"
+            />
+          </label>
+        </div>
+        <p
+          v-if="suggestions.length"
+          class="mt-2 mb-0 text-xs text-slate-600 dark:text-slate-300"
+        >
+          {{ replaceNote }}
+        </p>
         <woot-button
           v-if="suggestions.length"
           class="mt-2"
           size="small"
-          :is-disabled="!chosenSuggestions.length"
+          :is-disabled="!filledSuggestions.length"
           :is-loading="isMarking"
           @click="markVariables"
         >
-          {{ t('MARK_BUTTON', { count: chosenSuggestions.length }) }}
+          {{ t('MARK_BUTTON', { count: filledSuggestions.length }) }}
         </woot-button>
       </template>
     </section>

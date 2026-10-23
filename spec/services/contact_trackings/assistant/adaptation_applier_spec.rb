@@ -16,6 +16,22 @@ RSpec.describe ContactTrackings::Assistant::AdaptationApplier do
     expect(resultado.applied).to eq(['var:nombre del negocio'])
   end
 
+  # feat/reemplazo_directo_variables
+  it 'sin marca, cambia el valor anterior por el nuevo, solo en la prosa' do
+    texto = 'Somos Grúas del Sur. @buscar_foro(Grúas del Sur) Adiós de grúas del sur.'
+    resultado = described_class.new(texto, { 'var:nombre del negocio' => 'Autos MX' },
+                                    previous: { 'var:nombre del negocio' => 'Grúas del Sur' }).call
+
+    expect(resultado.text).to eq('Somos Autos MX. @buscar_foro(Grúas del Sur) Adiós de Autos MX.')
+    expect(resultado.applied).to eq(['var:nombre del negocio'])
+  end
+
+  it 'sin marca y sin valor anterior, no lo encuentra' do
+    resultado = aplicar('Somos Grúas del Sur.', 'var:nombre del negocio' => 'Autos MX')
+
+    expect(resultado.rejected).to eq([{ key: 'var:nombre del negocio', reason: 'not_found' }])
+  end
+
   it 'cambia solo la fuente nombrada y deja el resto del texto igual' do
     texto = "@ruta(ventas: precio): {{doc:Precios}} -> @crear_ticket(tipo=Ventas)\nVer {{ doc : precios }} y {{doc:Otro}}."
     resultado = aplicar(texto, 'google_doc:precios' => 'Lista 2026')

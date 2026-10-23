@@ -60,7 +60,7 @@ class PublishedPrompts::Publisher
   private
 
   def checked_variables(variables)
-    lista = variables.nil? ? Array(publication.variables) : PublishedPrompts::Variables.normalize(variables)
+    lista = variables.nil? ? Array(publication.variables) : PublishedPrompts::Variables.normalize(variables).map { |v| v.except('value') }
     PublishedPrompts::Variables.validate!(lista, @template.complementary_prompt)
     lista
   end

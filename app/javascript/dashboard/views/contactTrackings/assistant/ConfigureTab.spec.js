@@ -30,9 +30,9 @@ const DOC_FALTA = {
   options: ['Lista 2026'],
 };
 
-const montar = (draft, items = [FORO_OK, DOC_FALTA]) =>
+const montar = (draft, items = [FORO_OK, DOC_FALTA], extra = {}) =>
   shallowMount(ConfigureTab, {
-    propsData: { items, draft },
+    propsData: { items, draft, ...extra },
     mocks: {
       $t: clave => clave,
       $store: { getters: { getCurrentAccountId: 1 } },
@@ -111,5 +111,64 @@ describe('ConfigureTab', () => {
     await esperar();
     expect(wrapper.vm.suggestError).toBe('SUGGEST_ERROR_NO_API_KEY');
     expect(wrapper.vm.suggestions).toBeNull();
+  });
+
+  // feat/reemplazo_directo_variables
+  it('«Reemplazar» manda solo las que tienen valor, con la conversación', async () => {
+    AssistantAPI.suggestVariables.mockResolvedValue({
+      data: {
+        variables: [
+          { text: 'Sentidos Creativos', label: 'Nombre del negocio' },
+          { text: '55 1234 5678', label: 'Teléfono' },
+        ],
+      },
+    });
+    AssistantAPI.markVariables.mockReset();
+    AssistantAPI.markVariables.mockResolvedValue({
+      data: { text: 'nuevo', items: [], validation: null },
+    });
+    const wrapper = montar('texto F', [], { sessionId: 4355 });
+    await esperar();
+    expect(wrapper.vm.filledSuggestions).toHaveLength(0);
+    expect(wrapper.vm.replaceNote).toBe(
+      'TRACKING_ASSISTANT_VIEW.CONFIGURE.REPLACE_NOTE_NONE'
+    );
+
+    wrapper.vm.suggestions[0].value = '  Creatividad Comercial ';
+    await wrapper.vm.markVariables();
+
+    expect(AssistantAPI.markVariables).toHaveBeenCalledWith(
+      'texto F',
+      [
+        {
+          text: 'Sentidos Creativos',
+          label: 'Nombre del negocio',
+          value: 'Creatividad Comercial',
+        },
+      ],
+      null,
+      4355
+    );
+    expect(wrapper.emitted('applied')[0][0].notes).toEqual([
+      'Sentidos Creativos → Creatividad Comercial',
+    ]);
+    expect(wrapper.vm.suggestions).toBeNull();
+  });
+
+  it('un dato ya reemplazado dice lo que tiene ahora y pide el nuevo valor', () => {
+    const lleno = {
+      key: 'var:nombre del negocio',
+      group: 'business',
+      kind: 'variable',
+      name: 'Nombre del negocio',
+      status: 'ok',
+      fix: 'text',
+      current: 'Creatividad Comercial',
+    };
+    const wrapper = montar('', [lleno]);
+    expect(wrapper.text()).toContain('CURRENT_VALUE');
+    expect(wrapper.find('input[type="text"]').attributes('placeholder')).toBe(
+      'TRACKING_ASSISTANT_VIEW.CONFIGURE.NEW_VALUE_PLACEHOLDER'
+    );
   });
 });

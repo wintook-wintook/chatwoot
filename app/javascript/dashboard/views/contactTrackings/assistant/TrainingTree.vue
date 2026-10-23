@@ -12,14 +12,13 @@
 // Solo dibuja y avisa qué se tocó: las operaciones sobre los bloques viven en
 // trainingBlocks.js y el texto lo arma Ruby (training_preview).
 //
-// Medido sobre 28 agentes: hasta 31 secciones y 7 ramas en uno solo, así que el
-// grupo de secciones se pliega solo cuando pasa de 8 — y 19 de 28 no tienen ninguna
-// rama, por eso el grupo vacío se ve igual, con su "Agregar rama".
+// Medido sobre 28 agentes: hasta 31 secciones y 7 ramas en uno solo — y 19 de 28 no
+// tienen ninguna rama, por eso el grupo vacío se ve igual, con su "Agregar rama".
+// Los grupos arrancan siempre abiertos (22/10/2026: el de secciones ya no se pliega
+// solo con 8 o más; se pliega a mano).
 // ============================================================================
 import Draggable from 'vuedraggable';
 import { routeLines, defaultRouteName } from './trainingBlocks';
-
-const COLLAPSE_FROM = 8;
 
 export default {
   components: { Draggable },
@@ -76,21 +75,6 @@ export default {
     },
     movableSections() {
       return this.sections.filter(b => b.type === 'section');
-    },
-    tooManySections() {
-      return this.sections.length >= COLLAPSE_FROM;
-    },
-  },
-  watch: {
-    // Otro agente (o el mismo separado de nuevo): con muchas secciones, plegadas.
-    'value.blocks': {
-      immediate: true,
-      handler() {
-        this.open = {
-          ...this.open,
-          sections: !this.tooManySections,
-        };
-      },
     },
   },
   methods: {
